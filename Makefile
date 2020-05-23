@@ -27,20 +27,21 @@ all: fabric
 fabric:
 	@${p4-build} fabric ""
 
-fabric-simple:
-	@${p4-build} fabric-simple "-DWITH_SIMPLE_NEXT"
+# Profiles which are not completed yet.
+# fabric-simple:
+# 	@${p4-build} fabric-simple "-DWITH_SIMPLE_NEXT"
 
-fabric-bng:
-	@${p4-build} fabric-bng "-DWITH_BNG -DWITHOUT_XCONNECT"
+# fabric-bng:
+# 	@${p4-build} fabric-bng "-DWITH_BNG -DWITHOUT_XCONNECT"
 
-fabric-int:
-	@${p4-build} fabric-int "-DWITH_INT_SOURCE -DWITH_INT_TRANSIT"
+# fabric-int:
+# 	@${p4-build} fabric-int "-DWITH_INT_SOURCE -DWITH_INT_TRANSIT"
 
-fabric-spgw:
-	@${p4-build} fabric-spgw "-DWITH_SPGW"
+# fabric-spgw:
+# 	@${p4-build} fabric-spgw "-DWITH_SPGW"
 
-fabric-spgw-int:
-	@${p4-build} fabric-spgw-int "-DWITH_SPGW -DWITH_INT_SOURCE -DWITH_INT_TRANSIT"
+# fabric-spgw-int:
+# 	@${p4-build} fabric-spgw-int "-DWITH_SPGW -DWITH_INT_SOURCE -DWITH_INT_TRANSIT"
 
 # Reuse the same container to persist mvn repo cache.
 _create_mvn_container:
