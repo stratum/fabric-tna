@@ -137,7 +137,9 @@ parser FabricIngressParser (packet_in  packet,
 control FabricIngressDeparser(packet_out packet,
     /* Fabric.p4 */
     inout parsed_headers_t hdr,
-    in fabric_metadata_t fabric_metadata) {
+    in fabric_metadata_t fabric_metadata,
+    /* TNA */
+    in ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr) {
     Mirror() mirror;
 
     apply {
@@ -281,7 +283,9 @@ parser FabricEgressParser (packet_in packet,
 control FabricEgressDeparser(packet_out packet,
     /* Fabric.p4 */
     inout parsed_headers_t hdr,
-    in fabric_metadata_t fabric_metadata) {
+    in fabric_metadata_t fabric_metadata,
+    /* TNA */
+    in egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr) {
     Checksum() ipv4_checksum;
 
     apply {
