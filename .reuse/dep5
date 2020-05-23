@@ -1,0 +1,8 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: Stratum
+Upstream-Contact: Stratum dev <stratum-dev@lists.stratumproject.org>
+Source: https://github.com/stratum/stratum
+
+Files: src/main/resources/**/*.txt src/main/resources/**/*.json src/main/resources/**/*.bin
+Copyright: 2020-present Open Networking Foundation
+License: Apache-2.0
