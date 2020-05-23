@@ -63,13 +63,5 @@ function do_p4c() {
 }
 
 do_p4c "montara" ${MONTARA_CPU_PORT}
+do_p4c "mavericks" ${MAVERICKS_CPU_PORT}
 
-
-# docker run -v "$PWD:/fabric-tna" --workdir /fabric-tna --rm "opennetworking/bf-sde:$BF_SDE_VERSION" \
-# p4c --target tofino --arch tna \
-# -I "$REPO_ROOT/src/main/p4/" \
-# --p4runtime-files "$REPO_ROOT/src/main/resources/p4c-out/fabric/p4info.txt" \
-# -g --verbose 2 \
-# -DCPU_PORT=192 \
-# -o "$REPO_ROOT/src/main/resources/p4c-out/fabric/" \
-# p4src/fabric.p4
