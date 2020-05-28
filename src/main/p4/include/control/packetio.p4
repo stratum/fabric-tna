@@ -4,7 +4,7 @@
 #include "../header.p4"
 
 control PacketIoIngress(inout parsed_headers_t hdr,
-                        inout fabric_metadata_t fabric_metadata,
+                        inout fabric_ingress_metadata_t fabric_md,
                         inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm) {
 
     apply {
@@ -19,13 +19,13 @@ control PacketIoIngress(inout parsed_headers_t hdr,
 }
 
 control PacketIoEgress(inout parsed_headers_t hdr,
-                       inout fabric_metadata_t fabric_metadata,
+                       inout fabric_egress_metadata_t fabric_md,
                        in egress_intrinsic_metadata_t eg_intr_md) {
 
     apply {
         if (eg_intr_md.egress_port == CPU_PORT) {
             hdr.packet_in.setValid();
-            hdr.packet_in.ingress_port = fabric_metadata.ctrl.ingress_port;
+            hdr.packet_in.ingress_port = fabric_md.ingress_port;
             // No need to process through the rest of the pipeline.
             exit;
         }

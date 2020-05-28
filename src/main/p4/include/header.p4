@@ -110,58 +110,94 @@ header icmp_t {
 }
 
 // Custom metadata definition
-header ip_metadata_t {
-    bit<16> ip_eth_type;
-    bit<8>  ip_proto;
-    bool    ipv4_checksum_err;
-    @padding bit<7> padding;
-}
 @flexible
 @pa_auto_init_metadata
-header vlan_metadata_t {
+struct fabric_ingress_metadata_t {
     vlan_id_t       vlan_id;
     bit<3>          vlan_pri;
     bit<1>          vlan_cfi;
 #ifdef WITH_DOUBLE_VLAN_TERMINATION
+    bool            push_double_vlan;
     vlan_id_t       inner_vlan_id;
     bit<3>          inner_vlan_pri;
     bit<1>          inner_vlan_cfi;
 #endif // WITH_DOUBLE_VLAN_TERMINATION
-}
-@pa_auto_init_metadata
-@pa_container_size("ingress", "fabric_metadata.mpls.mpls_label", 32)
-header mpls_metadata_t {
+    bit<16> ip_eth_type;
+    bit<8>  ip_proto;
+    bool    ipv4_checksum_err;
     mpls_label_t    mpls_label;
-    @padding bit<4> padding;
     bit<8>          mpls_ttl;
-}
-header l4_metadata_t {
-    bit<16>       l4_sport;
-    bit<16>       l4_dport;
-}
-@pa_container_size("egress", "fabric_metadata.ctrl.ingress_port", 16)
-@pa_auto_init_metadata
-header control_metadata_t {
+    bit<16>         l4_sport;
+    bit<16>         l4_dport;
     bool            skip_forwarding;
     bool            skip_next;
     fwd_type_t      fwd_type;
     next_id_t       next_id;
     bool            is_multicast;
-    bool            push_double_vlan;
     bool            is_mirror;
     MirrorId_t      mirror_id;
-    @padding bit<5> padding;
+}
+
+@flexible
+@pa_auto_init_metadata
+struct fabric_egress_metadata_t {
+    vlan_id_t       vlan_id;
+    bit<3>          vlan_pri;
+    bit<1>          vlan_cfi;
+#ifdef WITH_DOUBLE_VLAN_TERMINATION
+    bool            push_double_vlan;
+    vlan_id_t       inner_vlan_id;
+    bit<3>          inner_vlan_pri;
+    bit<1>          inner_vlan_cfi;
+#endif // WITH_DOUBLE_VLAN_TERMINATION
+    bit<16> ip_eth_type;
+    bit<8>  ip_proto;
+    bool    ipv4_checksum_err;
+    mpls_label_t    mpls_label;
+    bit<8>          mpls_ttl;
+    bit<16>         l4_sport;
+    bit<16>         l4_dport;
+    next_id_t       next_id;
+    bool            is_multicast;
+    bool            is_mirror;
+    MirrorId_t      mirror_id;
     PortId_t        ingress_port;
 }
-struct fabric_metadata_t {
-    vlan_metadata_t vlan;
-    mpls_metadata_t mpls;
-    ip_metadata_t ip;
-    l4_metadata_t l4;
-    control_metadata_t ctrl;
+
+header bridge_metadata_t {
+    vlan_id_t       vlan_id;
+    bit<3>          vlan_pri;
+    bit<1>          vlan_cfi;
+#ifdef WITH_DOUBLE_VLAN_TERMINATION
+    @padding bit<7> _pad0;
+    bool            push_double_vlan;
+    vlan_id_t       inner_vlan_id;
+    bit<3>          inner_vlan_pri;
+    bit<1>          inner_vlan_cfi;
+#endif // WITH_DOUBLE_VLAN_TERMINATION
+    bit<16> ip_eth_type;
+    bit<8>  ip_proto;
+
+    @padding bit<4> _pad0;
+    mpls_label_t    mpls_label;
+    bit<8>          mpls_ttl;
+
+    bit<16>         l4_sport;
+    bit<16>         l4_dport;
+
+    @padding bit<6> _pad1;
+    bool            is_multicast;
+    bool            is_mirror;
+
+    @padding bit<6> _pad2;
+    MirrorId_t      mirror_id;
+
+    @padding bit<7> _pad3;
+    PortId_t        ingress_port;
 }
 
 struct parsed_headers_t {
+    bridge_metadata_t bridge_md;
     ethernet_t ethernet;
     vlan_tag_t vlan_tag;
 #if defined(WITH_XCONNECT) || defined(WITH_DOUBLE_VLAN_TERMINATION)
