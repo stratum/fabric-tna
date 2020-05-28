@@ -49,6 +49,7 @@ function do_p4c() {
       ${pp_flags} ${OTHER_PP_FLAGS} \
       ${p4c_flags} \
       --p4runtime-files ${P4C_OUT}/${pltf}/p4info.txt \
+      --p4runtime-force-std-externs \
       ${DIR}/fabric-tna.p4
   )
 
