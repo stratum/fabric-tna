@@ -13,12 +13,12 @@
 #include "include/control/forwarding.p4"
 #include "include/control/acl.p4"
 #include "include/control/next.p4"
-// #include "include/checksum.p4"
+#include "include/bridge_md.p4"
 
 control FabricIngress (
     /* Fabric.p4 */
     inout parsed_headers_t hdr,
-    inout fabric_metadata_t fabric_metadata,
+    inout fabric_ingress_metadata_t fabric_md,
     /* TNA */
     in    ingress_intrinsic_metadata_t               ig_intr_md,
     in    ingress_intrinsic_metadata_from_parser_t   ig_prsr_md,
@@ -32,14 +32,18 @@ control FabricIngress (
     Next() next;
 
     apply {
-        pkt_io_ingress.apply(hdr, fabric_metadata, ig_tm_md);
-        filtering.apply(hdr, fabric_metadata, ig_intr_md);
-        if (!fabric_metadata.ctrl.skip_forwarding) {
-           forwarding.apply(hdr, fabric_metadata);
+        pkt_io_ingress.apply(hdr, fabric_md, ig_tm_md);
+        filtering.apply(hdr, fabric_md, ig_intr_md);
+        if (!fabric_md.skip_forwarding) {
+           forwarding.apply(hdr, fabric_md);
         }
-        acl.apply(hdr, fabric_metadata, ig_intr_md, ig_dprsr_md, ig_tm_md);
-        if (!fabric_metadata.ctrl.skip_next) {
-            next.apply(hdr, fabric_metadata, ig_intr_md, ig_tm_md);
+        acl.apply(hdr, fabric_md, ig_intr_md, ig_dprsr_md, ig_tm_md);
+        if (!fabric_md.skip_next) {
+            next.apply(hdr, fabric_md, ig_intr_md, ig_tm_md);
+        }
+
+        if (ig_tm_md.bypass_egress == 1w0) {
+            set_up_bridge_md(hdr.bridge_md, ig_intr_md, fabric_md);
         }
     }
 }
@@ -47,7 +51,7 @@ control FabricIngress (
 control FabricEgress (
     /* Fabric.p4 */
     inout parsed_headers_t hdr,
-    inout fabric_metadata_t fabric_metadata,
+    inout fabric_egress_metadata_t fabric_md,
     /* TNA */
     in    egress_intrinsic_metadata_t                  eg_intr_md,
     in    egress_intrinsic_metadata_from_parser_t      eg_prsr_md,
@@ -58,8 +62,8 @@ control FabricEgress (
     EgressNextControl() egress_next;
 
     apply {
-        pkt_io_egress.apply(hdr, fabric_metadata, eg_intr_md);
-        egress_next.apply(hdr, fabric_metadata, eg_intr_md, eg_dprsr_md);
+        pkt_io_egress.apply(hdr, fabric_md, eg_intr_md);
+        egress_next.apply(hdr, fabric_md, eg_intr_md, eg_dprsr_md);
     }
 }
 

@@ -7,7 +7,7 @@
 #include "../header.p4"
 
 control Filtering (inout parsed_headers_t hdr,
-                   inout fabric_metadata_t fabric_metadata,
+                   inout fabric_ingress_metadata_t fabric_md,
                    in ingress_intrinsic_metadata_t ig_intr_md) {
 
     /*
@@ -20,8 +20,8 @@ control Filtering (inout parsed_headers_t hdr,
     action deny() {
         // Packet from unconfigured port. Skip forwarding and next block.
         // Do ACL table in case we want to punt to cpu.
-        fabric_metadata.ctrl.skip_forwarding = true;
-        fabric_metadata.ctrl.skip_next = true;
+        fabric_md.skip_forwarding = true;
+        fabric_md.skip_next = true;
         ingress_port_vlan_counter.count();
     }
 
@@ -31,7 +31,7 @@ control Filtering (inout parsed_headers_t hdr,
     }
 
     action permit_with_internal_vlan(vlan_id_t vlan_id) {
-        fabric_metadata.vlan.vlan_id = vlan_id;
+        fabric_md.vlan_id = vlan_id;
         permit();
     }
 
@@ -72,7 +72,7 @@ control Filtering (inout parsed_headers_t hdr,
     DirectCounter<bit<64>>(CounterType_t.PACKETS_AND_BYTES) fwd_classifier_counter;
 
     action set_forwarding_type(fwd_type_t fwd_type) {
-        fabric_metadata.ctrl.fwd_type = fwd_type;
+        fabric_md.fwd_type = fwd_type;
         fwd_classifier_counter.count();
     }
 
@@ -81,7 +81,7 @@ control Filtering (inout parsed_headers_t hdr,
             ig_intr_md.ingress_port        : exact @name("ig_port");
             hdr.ethernet.dst_addr          : ternary @name("eth_dst");
             hdr.eth_type.value             : ternary @name("eth_type");
-            fabric_metadata.ip.ip_eth_type : exact @name("ip_eth_type");
+            fabric_md.ip_eth_type : exact @name("ip_eth_type");
         }
         actions = {
             set_forwarding_type;
@@ -95,23 +95,23 @@ control Filtering (inout parsed_headers_t hdr,
         // Initialize lookup metadata. Packets without a VLAN header will be
         // treated as belonging to a default VLAN ID (see parser).
         if (hdr.vlan_tag.isValid()) {
-            fabric_metadata.vlan.vlan_id = hdr.vlan_tag.vlan_id;
-            fabric_metadata.vlan.vlan_pri = hdr.vlan_tag.pri;
-            fabric_metadata.vlan.vlan_cfi = hdr.vlan_tag.cfi;
+            fabric_md.vlan_id = hdr.vlan_tag.vlan_id;
+            fabric_md.vlan_pri = hdr.vlan_tag.pri;
+            fabric_md.vlan_cfi = hdr.vlan_tag.cfi;
         }
         #ifdef WITH_DOUBLE_VLAN_TERMINATION
         if (hdr.inner_vlan_tag.isValid()) {
-            fabric_metadata.vlan.inner_vlan_id = hdr.inner_vlan_tag.vlan_id;
-            fabric_metadata.vlan.inner_vlan_pri = hdr.inner_vlan_tag.pri;
-            fabric_metadata.vlan.inner_vlan_cfi = hdr.inner_vlan_tag.cfi;
+            fabric_md.inner_vlan_id = hdr.inner_vlan_tag.vlan_id;
+            fabric_md.inner_vlan_pri = hdr.inner_vlan_tag.pri;
+            fabric_md.inner_vlan_cfi = hdr.inner_vlan_tag.cfi;
         }
         #endif // WITH_DOUBLE_VLAN_TERMINATION
         if (!hdr.mpls.isValid()) {
             // Packets with a valid MPLS header will have
-            // fabric_metadata.mpls_ttl set to the packet's MPLS ttl value (see
+            // fabric_md.mpls_ttl set to the packet's MPLS ttl value (see
             // parser). In any case, if we are forwarding via MPLS, ttl will be
             // decremented in egress.
-            fabric_metadata.mpls.mpls_ttl = DEFAULT_MPLS_TTL + 1;
+            fabric_md.mpls_ttl = DEFAULT_MPLS_TTL + 1;
         }
 
         ingress_port_vlan.apply();

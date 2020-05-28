@@ -8,7 +8,7 @@
 #include "../header.p4"
 
 control Acl (inout parsed_headers_t hdr,
-             inout fabric_metadata_t fabric_metadata,
+             inout fabric_ingress_metadata_t fabric_md,
              in ingress_intrinsic_metadata_t ig_intr_md,
              inout ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr,
              inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm) {
@@ -19,27 +19,27 @@ control Acl (inout parsed_headers_t hdr,
     DirectCounter<bit<64>>(CounterType_t.PACKETS_AND_BYTES) acl_counter;
 
     action set_next_id_acl(next_id_t next_id) {
-        fabric_metadata.ctrl.next_id = next_id;
+        fabric_md.next_id = next_id;
         acl_counter.count();
     }
 
     // Send immendiatelly to CPU - skip the rest of ingress.
     action punt_to_cpu() {
         ig_intr_md_for_tm.ucast_egress_port = CPU_PORT;
-        fabric_metadata.ctrl.skip_next = true;
+        fabric_md.skip_next = true;
         acl_counter.count();
     }
 
     // Set mirror with session/clone id
     action set_clone_session_id(bit<32> clone_id) {
-        fabric_metadata.ctrl.is_mirror = true;
-        fabric_metadata.ctrl.mirror_id = clone_id[9:0];
+        fabric_md.is_mirror = true;
+        fabric_md.mirror_id = clone_id[9:0];
         acl_counter.count();
     }
 
     action drop() {
         ig_intr_md_for_dprsr.drop_ctl = 1;
-        fabric_metadata.ctrl.skip_next = true;
+        fabric_md.skip_next = true;
         acl_counter.count();
     }
 
@@ -50,9 +50,9 @@ control Acl (inout parsed_headers_t hdr,
     table acl {
         key = {
             ig_intr_md.ingress_port: ternary @name("ig_port"); // 9
-            fabric_metadata.ip.ip_proto: ternary @name("ip_proto"); // 8
-            fabric_metadata.l4.l4_sport: ternary @name("l4_sport"); // 16
-            fabric_metadata.l4.l4_dport: ternary @name("l4_dport"); // 16
+            fabric_md.ip_proto: ternary @name("ip_proto"); // 8
+            fabric_md.l4_sport: ternary @name("l4_sport"); // 16
+            fabric_md.l4_dport: ternary @name("l4_dport"); // 16
             hdr.ethernet.dst_addr: ternary @name("eth_dst"); // 48
             hdr.ethernet.src_addr: ternary @name("eth_src"); // 48
             hdr.vlan_tag.vlan_id: ternary @name("vlan_id"); // 12
