@@ -4,6 +4,7 @@
 
 MAVERICKS_CPU_PORT=320
 MONTARA_CPU_PORT=192
+SDE_DOCKER_IMG=${SDE_DOCKER_IMG:-opennetworking/bf-sde:9.2.0}
 
 # DIR is this file directory.
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
@@ -56,6 +57,7 @@ function do_p4c() {
   # Copy only the relevant files to the pipeconf resources
   mkdir -p ${DEST_DIR}/${pltf}/pipe
   cp ${P4C_OUT}/${pltf}/p4info.txt ${DEST_DIR}/${pltf}
+  cp ${P4C_OUT}/${pltf}/bfrt.json ${DEST_DIR}/${pltf}
   cp ${P4C_OUT}/${pltf}/pipe/context.json ${DEST_DIR}/${pltf}/pipe
   cp ${P4C_OUT}/${pltf}/pipe/tofino.bin ${DEST_DIR}/${pltf}/pipe
   echo "${cpu_port}" > ${DEST_DIR}/${pltf}/cpu_port.txt

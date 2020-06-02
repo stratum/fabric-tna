@@ -275,8 +275,8 @@ control EgressNextControl (inout parsed_headers_t hdr,
         // If VLAN is already valid, we overwrite it with a potentially new VLAN
         // ID, and same CFI, PRI, and eth_type values found in ingress.
         hdr.vlan_tag.setValid();
-        hdr.vlan_tag.cfi = fabric_md.vlan_cfi;
-        hdr.vlan_tag.pri = fabric_md.vlan_pri;
+        // hdr.vlan_tag.cfi = fabric_md.vlan_cfi;
+        // hdr.vlan_tag.pri = fabric_md.vlan_pri;
         hdr.vlan_tag.eth_type = ETHERTYPE_VLAN;
         hdr.vlan_tag.vlan_id = fabric_md.vlan_id;
     }
@@ -286,8 +286,8 @@ control EgressNextControl (inout parsed_headers_t hdr,
     action push_inner_vlan() {
         // Push inner VLAN TAG, rewriting correclty the outer vlan eth_type
         hdr.inner_vlan_tag.setValid();
-        hdr.inner_vlan_tag.cfi = fabric_md.inner_vlan_cfi;
-        hdr.inner_vlan_tag.pri = fabric_md.inner_vlan_pri;
+        // hdr.inner_vlan_tag.cfi = fabric_md.inner_vlan_cfi;
+        // hdr.inner_vlan_tag.pri = fabric_md.inner_vlan_pri;
         hdr.inner_vlan_tag.vlan_id = fabric_md.inner_vlan_id;
         hdr.inner_vlan_tag.eth_type = ETHERTYPE_VLAN;
         hdr.vlan_tag.eth_type = ETHERTYPE_VLAN;

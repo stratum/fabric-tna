@@ -25,7 +25,7 @@ build: clean $(PROFILES) pipeconf
 all: fabric
 
 fabric:
-	@${p4-build} fabric ""
+	@${p4-build} fabric "-DWITH_DOUBLE_VLAN_TERMINATION"
 
 # Profiles which are not completed yet.
 # fabric-simple:

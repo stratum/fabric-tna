@@ -13,7 +13,6 @@
 #include "include/control/forwarding.p4"
 #include "include/control/acl.p4"
 #include "include/control/next.p4"
-#include "include/bridge_md.p4"
 
 control FabricIngress (
     /* Fabric.p4 */
@@ -43,7 +42,18 @@ control FabricIngress (
         }
 
         if (ig_tm_md.bypass_egress == 1w0) {
-            set_up_bridge_md(hdr.bridge_md, ig_intr_md, fabric_md);
+            hdr.bridge_md.setValid();
+            hdr.bridge_md.is_multicast = fabric_md.is_multicast;
+            hdr.bridge_md.ingress_port = ig_intr_md.ingress_port;
+            hdr.bridge_md.ip_eth_type = fabric_md.ip_eth_type;
+            hdr.bridge_md.ip_proto = fabric_md.ip_proto;
+            hdr.bridge_md.mpls_label = fabric_md.mpls_label;
+            hdr.bridge_md.mpls_ttl = fabric_md.mpls_ttl;
+            hdr.bridge_md.vlan_id = fabric_md.vlan_id;
+#ifdef WITH_DOUBLE_VLAN_TERMINATION
+            hdr.bridge_md.push_double_vlan = fabric_md.push_double_vlan;
+            hdr.bridge_md.inner_vlan_id = fabric_md.inner_vlan_id;
+#endif // WITH_DOUBLE_VLAN_TERMINATION
         }
     }
 }
