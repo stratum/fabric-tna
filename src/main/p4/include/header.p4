@@ -8,14 +8,12 @@
 
 @controller_header("packet_in")
 header packet_in_header_t {
-    PortId_t ingress_port;
-    bit<7> _pad;
+    bit<16> ingress_port;
 }
 
 @controller_header("packet_out")
 header packet_out_header_t {
-    PortId_t egress_port;
-    bit<7> _pad;
+    bit<16> egress_port;
 }
 
 header ethernet_t {
@@ -141,59 +139,32 @@ struct fabric_ingress_metadata_t {
 @flexible
 @pa_auto_init_metadata
 struct fabric_egress_metadata_t {
+    bool            is_multicast;
+    PortId_t        ingress_port;
     vlan_id_t       vlan_id;
-    bit<3>          vlan_pri;
-    bit<1>          vlan_cfi;
+    mpls_label_t    mpls_label;
+    bit<8>          mpls_ttl;
 #ifdef WITH_DOUBLE_VLAN_TERMINATION
     bool            push_double_vlan;
     vlan_id_t       inner_vlan_id;
-    bit<3>          inner_vlan_pri;
-    bit<1>          inner_vlan_cfi;
 #endif // WITH_DOUBLE_VLAN_TERMINATION
-    bit<16> ip_eth_type;
-    bit<8>  ip_proto;
-    bool    ipv4_checksum_err;
-    mpls_label_t    mpls_label;
-    bit<8>          mpls_ttl;
-    bit<16>         l4_sport;
-    bit<16>         l4_dport;
-    next_id_t       next_id;
-    bool            is_multicast;
-    bool            is_mirror;
-    MirrorId_t      mirror_id;
-    PortId_t        ingress_port;
+    bit<16>         ip_eth_type;
+    bit<8>          ip_proto;
 }
 
+@flexible
 header bridge_metadata_t {
-    vlan_id_t       vlan_id;
-    bit<3>          vlan_pri;
-    bit<1>          vlan_cfi;
-#ifdef WITH_DOUBLE_VLAN_TERMINATION
-    @padding bit<7> _pad0;
-    bool            push_double_vlan;
-    vlan_id_t       inner_vlan_id;
-    bit<3>          inner_vlan_pri;
-    bit<1>          inner_vlan_cfi;
-#endif // WITH_DOUBLE_VLAN_TERMINATION
-    bit<16> ip_eth_type;
-    bit<8>  ip_proto;
-
-    @padding bit<4> _pad0;
     mpls_label_t    mpls_label;
     bit<8>          mpls_ttl;
-
-    bit<16>         l4_sport;
-    bit<16>         l4_dport;
-
-    @padding bit<6> _pad1;
     bool            is_multicast;
-    bool            is_mirror;
-
-    @padding bit<6> _pad2;
-    MirrorId_t      mirror_id;
-
-    @padding bit<7> _pad3;
     PortId_t        ingress_port;
+    vlan_id_t       vlan_id;
+#ifdef WITH_DOUBLE_VLAN_TERMINATION
+    bool            push_double_vlan;
+    vlan_id_t       inner_vlan_id;
+#endif // WITH_DOUBLE_VLAN_TERMINATION
+    bit<16>         ip_eth_type;
+    bit<8>          ip_proto;
 }
 
 struct parsed_headers_t {
