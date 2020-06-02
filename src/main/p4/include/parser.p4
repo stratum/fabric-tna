@@ -6,12 +6,11 @@
 
 #include "header.p4"
 #include "define.p4"
-#include "bridge_md.p4"
 
 parser FabricIngressParser (packet_in  packet,
     /* Fabric.p4 */
     out parsed_headers_t               hdr,
-    out fabric_ingress_metadata_t            fabric_md,
+    out fabric_ingress_metadata_t      fabric_md,
     /* TNA */
     out ingress_intrinsic_metadata_t   ig_intr_md) {
     Checksum() ipv4_checksum;
@@ -33,17 +32,21 @@ parser FabricIngressParser (packet_in  packet,
 
     state parse_ethernet {
         packet.extract(hdr.ethernet);
-        fabric_md.vlan_id = DEFAULT_VLAN_ID;
         transition select(packet.lookahead<bit<16>>()){
             ETHERTYPE_QINQ: parse_vlan_tag;
             ETHERTYPE_QINQ_NON_STD: parse_vlan_tag;
             ETHERTYPE_VLAN: parse_vlan_tag;
-            default: parse_eth_type;
+            default: parse_untagged_packet;
         }
     }
 
     state parse_vlan_tag {
         packet.extract(hdr.vlan_tag);
+        // Initialize lookup metadata. Packets without a VLAN header will be
+        // treated as belonging to a default VLAN ID
+        fabric_md.vlan_id = hdr.vlan_tag.vlan_id;
+        fabric_md.vlan_pri = hdr.vlan_tag.pri;
+        fabric_md.vlan_cfi = hdr.vlan_tag.cfi;
         transition select(packet.lookahead<bit<16>>()){
 #if defined(WITH_XCONNECT) || defined(WITH_DOUBLE_VLAN_TERMINATION)
             ETHERTYPE_VLAN: parse_inner_vlan_tag;
@@ -55,16 +58,27 @@ parser FabricIngressParser (packet_in  packet,
 #if defined(WITH_XCONNECT) || defined(WITH_DOUBLE_VLAN_TERMINATION)
     state parse_inner_vlan_tag {
         packet.extract(hdr.inner_vlan_tag);
+        fabric_md.inner_vlan_id = hdr.inner_vlan_tag.vlan_id;
+        fabric_md.inner_vlan_pri = hdr.inner_vlan_tag.pri;
+        fabric_md.inner_vlan_cfi = hdr.inner_vlan_tag.cfi;
         transition parse_eth_type;
     }
 #endif // WITH_XCONNECT || WITH_DOUBLE_VLAN_TERMINATION
+
+    state parse_untagged_packet {
+        // Sets default vlan
+        fabric_md.vlan_id = DEFAULT_VLAN_ID;
+        fabric_md.vlan_pri = 3w0;
+        fabric_md.vlan_cfi = 1w0;
+        transition parse_eth_type;
+    }
 
     state parse_eth_type {
         packet.extract(hdr.eth_type);
         transition select(hdr.eth_type.value) {
             ETHERTYPE_MPLS: parse_mpls;
-            ETHERTYPE_IPV4: parse_ipv4;
-            ETHERTYPE_IPV6: parse_ipv6;
+            ETHERTYPE_IPV4: parse_non_mpls_headers;
+            ETHERTYPE_IPV6: parse_non_mpls_headers;
             default: accept;
         }
     }
@@ -83,6 +97,19 @@ parser FabricIngressParser (packet_in  packet,
             IP_VERSION_4: parse_ipv4;
             IP_VERSION_6: parse_ipv6;
             default: parse_ethernet;
+        }
+    }
+
+    state parse_non_mpls_headers {
+        // Packets with a valid MPLS header will have
+        // fabric_md.mpls_ttl set to the packet's MPLS ttl value (see
+        // parser). In any case, if we are forwarding via MPLS, ttl will be
+        // decremented in egress.
+        fabric_md.mpls_ttl = DEFAULT_MPLS_TTL + 1;
+        transition select(hdr.eth_type.value) {
+            ETHERTYPE_IPV4: parse_ipv4;
+            ETHERTYPE_IPV6: parse_ipv6;
+            default: accept;
         }
     }
 
@@ -171,6 +198,7 @@ parser FabricEgressParser (packet_in packet,
     /* TNA */
     out egress_intrinsic_metadata_t eg_intr_md) {
     bit<6> last_ipv4_dscp = 0;
+    bridge_metadata_t bridge_md;
 
     state start {
         packet.extract(eg_intr_md);
@@ -178,26 +206,18 @@ parser FabricEgressParser (packet_in packet,
     }
 
     state parse_bridge_metadata {
-        packet.extract(hdr.bridge_md);
-        fabric_md.vlan_id = hdr.bridge_md.vlan_id;
-        fabric_md.vlan_pri = hdr.bridge_md.vlan_pri;
-        fabric_md.vlan_cfi = hdr.bridge_md.vlan_cfi;
+        packet.extract(bridge_md);
+        fabric_md.vlan_id = bridge_md.vlan_id;
 #ifdef WITH_DOUBLE_VLAN_TERMINATION
-        fabric_md.push_double_vlan = hdr.bridge_md.push_double_vlan;
-        fabric_md.inner_vlan_id = hdr.bridge_md.inner_vlan_id;
-        fabric_md.inner_vlan_pri = hdr.bridge_md.inner_vlan_pri;
-        fabric_md.inner_vlan_cfi = hdr.bridge_md.inner_vlan_cfi;
+        fabric_md.push_double_vlan = bridge_md.push_double_vlan;
+        fabric_md.inner_vlan_id = bridge_md.inner_vlan_id;
 #endif // WITH_DOUBLE_VLAN_TERMINATION
-        fabric_md.ip_eth_type = hdr.bridge_md.ip_eth_type;
-        fabric_md.ip_proto = hdr.bridge_md.ip_proto;
-        fabric_md.mpls_label = hdr.bridge_md.mpls_label;
-        fabric_md.mpls_ttl = hdr.bridge_md.mpls_ttl;
-        fabric_md.l4_sport = hdr.bridge_md.l4_sport;
-        fabric_md.l4_dport = hdr.bridge_md.l4_dport;
-        fabric_md.is_multicast = hdr.bridge_md.is_multicast;
-        fabric_md.is_mirror = hdr.bridge_md.is_mirror;
-        fabric_md.mirror_id = hdr.bridge_md.mirror_id;
-        fabric_md.ingress_port = hdr.bridge_md.ingress_port;
+        fabric_md.ip_eth_type = bridge_md.ip_eth_type;
+        fabric_md.ip_proto = bridge_md.ip_proto;
+        fabric_md.mpls_label = bridge_md.mpls_label;
+        fabric_md.mpls_ttl = bridge_md.mpls_ttl;
+        fabric_md.is_multicast = bridge_md.is_multicast;
+        fabric_md.ingress_port = bridge_md.ingress_port;
         transition parse_ethernet;
     }
 

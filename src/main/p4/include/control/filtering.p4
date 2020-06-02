@@ -81,7 +81,7 @@ control Filtering (inout parsed_headers_t hdr,
             ig_intr_md.ingress_port        : exact @name("ig_port");
             hdr.ethernet.dst_addr          : ternary @name("eth_dst");
             hdr.eth_type.value             : ternary @name("eth_type");
-            fabric_md.ip_eth_type : exact @name("ip_eth_type");
+            fabric_md.ip_eth_type          : exact @name("ip_eth_type");
         }
         actions = {
             set_forwarding_type;
@@ -92,28 +92,6 @@ control Filtering (inout parsed_headers_t hdr,
     }
 
     apply {
-        // Initialize lookup metadata. Packets without a VLAN header will be
-        // treated as belonging to a default VLAN ID (see parser).
-        if (hdr.vlan_tag.isValid()) {
-            fabric_md.vlan_id = hdr.vlan_tag.vlan_id;
-            fabric_md.vlan_pri = hdr.vlan_tag.pri;
-            fabric_md.vlan_cfi = hdr.vlan_tag.cfi;
-        }
-        #ifdef WITH_DOUBLE_VLAN_TERMINATION
-        if (hdr.inner_vlan_tag.isValid()) {
-            fabric_md.inner_vlan_id = hdr.inner_vlan_tag.vlan_id;
-            fabric_md.inner_vlan_pri = hdr.inner_vlan_tag.pri;
-            fabric_md.inner_vlan_cfi = hdr.inner_vlan_tag.cfi;
-        }
-        #endif // WITH_DOUBLE_VLAN_TERMINATION
-        if (!hdr.mpls.isValid()) {
-            // Packets with a valid MPLS header will have
-            // fabric_md.mpls_ttl set to the packet's MPLS ttl value (see
-            // parser). In any case, if we are forwarding via MPLS, ttl will be
-            // decremented in egress.
-            fabric_md.mpls_ttl = DEFAULT_MPLS_TTL + 1;
-        }
-
         ingress_port_vlan.apply();
         fwd_classifier.apply();
     }
