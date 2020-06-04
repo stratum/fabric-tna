@@ -1,0 +1,36 @@
+# Copyright 2019-present Open Networking Foundation
+# SPDX-License-Identifier: Apache-2.0
+# _checkenv and run_tests defined in fabric-p4test/<target>/Makefile
+# which imports this file
+
+all: fabric fabric-bng fabric-spgw fabric-int fabric-spgw-int
+
+fabric: _checkenv
+ifndef TEST
+	$(eval TEST = all ^spgw ^int ^bng ^dth ^multicast ^xconnect)
+endif
+	$(call run_tests,fabric,$(TEST))
+
+fabric-bng: _checkenv
+ifndef TEST
+	$(eval TEST = all ^spgw ^int ^xconnect)
+endif
+	$(call run_tests,fabric-bng,$(TEST))
+
+fabric-spgw: _checkenv
+ifndef TEST
+	$(eval TEST = all ^int ^bng ^dth)
+endif
+	$(call run_tests,fabric-spgw,$(TEST))
+
+fabric-spgw-int: _checkenv
+ifndef TEST
+	$(eval TEST = all ^int-full ^bng ^dth)
+endif
+	$(call run_tests,fabric-spgw-int,$(TEST))
+
+fabric-int: _checkenv
+ifndef TEST
+	$(eval TEST = all ^spgw ^int-full ^bng ^dth)
+endif
+	$(call run_tests,fabric-int,$(TEST))
