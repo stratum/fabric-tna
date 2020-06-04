@@ -13,7 +13,7 @@ mvn_container := mvn-build-${curr_dir_sha}
 onos_url := http://${ONOS_HOST}:8181/onos
 onos_curl := curl --fail -sSL --user onos:rocks --noproxy localhost
 
-pipeconf_app_name := org.opencord.fabric-tna
+pipeconf_app_name := org.stratumproject.fabric-tna
 pipeconf_oar_file := $(shell ls -1 ${curr_dir}/target/fabric-tna-*.oar)
 
 p4-build := ./src/main/p4/build.sh

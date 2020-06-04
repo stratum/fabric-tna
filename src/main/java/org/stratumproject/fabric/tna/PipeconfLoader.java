@@ -1,6 +1,7 @@
 // Copyright 2020-present Open Networking Foundation
 // SPDX-License-Identifier: Apache-2.0
-package org.opencord.fabric.tofino;
+
+package org.stratumproject.fabric.tna;
 
 import org.onosproject.core.CoreService;
 import org.onosproject.net.pi.model.DefaultPiPipeconf;
@@ -30,17 +31,17 @@ import static org.osgi.framework.wiring.BundleWiring.LISTRESOURCES_RECURSE;
 import static org.slf4j.LoggerFactory.getLogger;
 
 /**
- * Component responsible for registering Tofino-specific versions
- * of the fabric pipeconf at app activation.
+ * Component responsible for registering the fabric-tna pipeconf
+ * at app activation.
  */
 @Component(immediate = true)
 public class PipeconfLoader {
 
-    private static final String APP_NAME = "org.opencord.fabric-tofino";
+    private static final String APP_NAME = "org.stratumproject.fabric-tna";
 
     private static Logger log = getLogger(PipeconfLoader.class);
 
-    private static final String BASE_PIPECONF_ID = "org.opencord";
+    private static final String BASE_PIPECONF_ID = "org.stratumproject";
     private static final String P4C_OUT_PATH = "/p4c-out";
     // p4c-out/<profile>/<platform>
     private static final String P4C_RES_BASE_PATH = P4C_OUT_PATH + "/%s/%s/%s/";
