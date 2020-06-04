@@ -14,7 +14,7 @@ SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
         <version>2.2.2</version>
     </parent>
 
-    <groupId>org.opencord</groupId>
+    <groupId>org.stratumproject</groupId>
     <artifactId>fabric-tna</artifactId>
     <version>1.0.0-SNAPSHOT</version>
     <packaging>bundle</packaging>
@@ -22,21 +22,18 @@ SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
     <description>
         Pipeconf to use Trellis with Barefoot Tofino-based devices
     </description>
-    <url>http://www.opencord.org</url>
+    <url>https://www.stratumproject.org</url>
 
     <properties>
-        <onos.app.name>org.opencord.fabric-tna</onos.app.name>
-        <onos.app.title>Tofino-enabled Fabric Pipeconf</onos.app.title>
-        <onos.app.origin>http://www.opencord.org</onos.app.origin>
+        <onos.app.name>org.stratumproject.fabric-tna</onos.app.name>
+        <onos.app.title>Fabric-TNA Pipeconf</onos.app.title>
+        <onos.app.origin>https://www.stratumproject.org</onos.app.origin>
         <onos.app.category>Pipeline</onos.app.category>
-        <onos.app.url>http://www.opencord.org</onos.app.url>
+        <onos.app.url>https://www.stratumproject.org</onos.app.url>
         <onos.app.readme>
-            Provides pipeconfs based on fabric.p4 to use Trellis with Barefoot
-            Tofino-based devices.
+            Provides pipeconfs based on fabric-tna.p4 to use Trellis with
+            Intel/Barefoot Tofino-based devices.
         </onos.app.readme>
-        <onos.app.requires>
-            org.onosproject.pipelines.fabric
-        </onos.app.requires>
     </properties>
 
     <dependencies>
@@ -60,6 +57,19 @@ SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
             <version>${onos.version}</version>
             <scope>provided</scope>
         </dependency>
+
+        <dependency>
+            <groupId>org.onosproject</groupId>
+            <artifactId>onos-core-serializers</artifactId>
+            <version>${onos.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.onosproject</groupId>
+            <artifactId>onos-protocols-p4runtime-api</artifactId>
+            <version>${onos.version}</version>
+        </dependency>
+
     </dependencies>
 
     <build>

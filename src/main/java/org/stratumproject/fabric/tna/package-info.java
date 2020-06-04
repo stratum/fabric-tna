@@ -2,6 +2,6 @@
 // SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 
 /**
- * Fabric-tna pipeconf loader app.
+ * Fabric-TNA pipeconf loader app.
  */
-package org.opencord.fabric.tofino;
+package org.stratumproject.fabric.tna;

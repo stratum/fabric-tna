@@ -135,10 +135,8 @@ new Tofino-specific pipeconfs in the system, depending on the `fabric-tna.p4`
 profiles compiled before and the Barefoot SDE/p4c version used:
 
 ```
-New pipeconf registered: org.opencord.fabric.tofino.mavericks_sde_9_0_0 (fingerprint=...)
-New pipeconf registered: org.opencord.fabric.tofino.montara_sde_9_0_0 (fingerprint=...)
-New pipeconf registered: org.opencord.fabric-bng.tofino.mavericks_sde_9_0_0 (fingerprint=...)
-New pipeconf registered: org.opencord.fabric-bng.tofino.montara_sde_9_0_0 (fingerprint=...)
+New pipeconf registered: org.stratumproject.fabric.tofino.mavericks_sde_9_2_0 (fingerprint=...)
+New pipeconf registered: org.stratumproject.fabric.tofino.montara_sde_9_2_0 (fingerprint=...)
 ...
 ```
 
@@ -213,7 +211,7 @@ provided in `tofino-netcfg.json`, for example:
       "basic": {
         "managementAddress": "grpc://10.0.0.1:28000?device_id=1",
         "driver": "stratum-tofino",
-        "pipeconf": "org.opencord.fabric.tofino.montara_sde_9_0_0"
+        "pipeconf": "org.stratumproject.fabric.tofino.montara_sde_9_2_0"
       }
     }
   }
@@ -224,7 +222,7 @@ provided in `tofino-netcfg.json`, for example:
 
 To report issues when compiling `fabric-tna.p4` for Tofino (i.e., compiler errors), please contact Intel/Barefoot support.
 
-To get help with ONOS and the fabric pipeconf, please contact
+To get help with ONOS and the fabric-tna pipeconf, please contact
 <brigade-p4@onosproject.org> (this is a public mailing list, please beware of
 not discussing information under Intel/Barefoot NDA)
 
