@@ -38,7 +38,7 @@ fi
 
 fabricProfile=$1
 if [ -z "${fabricProfile}" ]; then
-    echo "fabric profile is not set"
+    echo "fabric-tna profile is not set"
     exit 1
 fi
 
