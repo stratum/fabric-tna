@@ -222,8 +222,7 @@ provided in `tofino-netcfg.json`, for example:
 
 ## Support
 
-To report issues when compiling `fabric-tna.p4` for Tofino (i.e., compiler errors),
-please contact Intel/Barefoot support.
+To report issues when compiling `fabric-tna.p4` for Tofino (i.e., compiler errors), please contact Intel/Barefoot support.
 
 To get help with ONOS and the fabric pipeconf, please contact
 <brigade-p4@onosproject.org> (this is a public mailing list, please beware of

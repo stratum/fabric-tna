@@ -1,9 +1,3 @@
 # Copyright 2020-present Open Networking Foundation
 # SPDX-License-Identifier: Apache-2.0
-tmp
-target
-.vscode
-*.pyc
-ptf.log
-ptf.pcap
-ptf/run/tm/log
+workspace(name = "com_github_opennetworkinglab_fabric_p4test")

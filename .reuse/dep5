@@ -6,3 +6,7 @@ Source: https://github.com/stratum/stratum
 Files: src/main/resources/**/*.txt src/main/resources/**/*.json src/main/resources/**/*.bin
 Copyright: 2020-present Open Networking Foundation
 License: Apache-2.0
+
+Files: **/*.json *.json
+Copyright: 2020-present Open Networking Foundation
+License: Apache-2.0
