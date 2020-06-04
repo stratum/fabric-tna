@@ -1,5 +1,5 @@
 {
-  "build_date": "Tue Jun  2 16:17:07 2020",
+  "build_date": "Wed Jun  3 07:27:58 2020",
   "schema_version": "1.11.0",
   "compiler_version": "9.2.0",
   "target": "tofino",
@@ -661,8 +661,8 @@
               "field_msb": 0,
               "field_lsb": 0,
               "field_width": 1,
-              "phv_msb": 4,
-              "phv_lsb": 4,
+              "phv_msb": 5,
+              "phv_lsb": 5,
               "is_compiler_generated": false,
               "is_pov": false,
               "live_start": 0,
@@ -680,6 +680,20 @@
               "is_compiler_generated": false,
               "is_pov": false,
               "live_start": 0,
+              "live_end": "deparser",
+              "mutually_exclusive_with": []
+            },
+            {
+              "position_offset": 198,
+              "field_name": "ig_intr_md_for_tm.copy_to_cpu",
+              "field_msb": 0,
+              "field_lsb": 0,
+              "field_width": 1,
+              "phv_msb": 4,
+              "phv_lsb": 4,
+              "is_compiler_generated": false,
+              "is_pov": false,
+              "live_start": "parser",
               "live_end": "deparser",
               "mutually_exclusive_with": []
             },
@@ -1090,7 +1104,7 @@
           "container_type": "normal",
           "records": [
             {
-              "position_offset": 200,
+              "position_offset": 201,
               "field_name": "ig_intr_md_for_tm.ucast_egress_port",
               "field_msb": 8,
               "field_lsb": 0,
@@ -1111,7 +1125,7 @@
           "container_type": "normal",
           "records": [
             {
-              "position_offset": 198,
+              "position_offset": 199,
               "field_name": "ig_intr_md_for_tm.mcast_grp_a",
               "field_msb": 15,
               "field_lsb": 0,
@@ -1480,7 +1494,7 @@
               "pov_headers": [
                 {
                   "bit_index": 0,
-                  "position_offset": 210,
+                  "position_offset": 211,
                   "header_name": "hdr.packet_out.$valid",
                   "hidden": false
                 }
@@ -1502,7 +1516,7 @@
               "pov_headers": [
                 {
                   "bit_index": 1,
-                  "position_offset": 204,
+                  "position_offset": 205,
                   "header_name": "hdr.ethernet.$valid",
                   "hidden": false
                 }
@@ -1524,7 +1538,7 @@
               "pov_headers": [
                 {
                   "bit_index": 2,
-                  "position_offset": 213,
+                  "position_offset": 214,
                   "header_name": "hdr.vlan_tag.$valid",
                   "hidden": false
                 }
@@ -1546,7 +1560,7 @@
               "pov_headers": [
                 {
                   "bit_index": 3,
-                  "position_offset": 202,
+                  "position_offset": 203,
                   "header_name": "hdr.bridge_md.$valid",
                   "hidden": false
                 }
@@ -1568,7 +1582,7 @@
               "pov_headers": [
                 {
                   "bit_index": 4,
-                  "position_offset": 206,
+                  "position_offset": 207,
                   "header_name": "hdr.inner_vlan_tag.$valid",
                   "hidden": false
                 }
@@ -1590,7 +1604,7 @@
               "pov_headers": [
                 {
                   "bit_index": 5,
-                  "position_offset": 203,
+                  "position_offset": 204,
                   "header_name": "hdr.eth_type.$valid",
                   "hidden": false
                 }
@@ -1612,7 +1626,7 @@
               "pov_headers": [
                 {
                   "bit_index": 6,
-                  "position_offset": 209,
+                  "position_offset": 210,
                   "header_name": "hdr.mpls.$valid",
                   "hidden": false
                 }
@@ -1634,7 +1648,7 @@
               "pov_headers": [
                 {
                   "bit_index": 7,
-                  "position_offset": 207,
+                  "position_offset": 208,
                   "header_name": "hdr.ipv4.$valid",
                   "hidden": false
                 }
@@ -1656,7 +1670,7 @@
               "pov_headers": [
                 {
                   "bit_index": 8,
-                  "position_offset": 211,
+                  "position_offset": 212,
                   "header_name": "hdr.tcp.$valid",
                   "hidden": false
                 }
@@ -1678,7 +1692,7 @@
               "pov_headers": [
                 {
                   "bit_index": 9,
-                  "position_offset": 212,
+                  "position_offset": 213,
                   "header_name": "hdr.udp.$valid",
                   "hidden": false
                 }
@@ -1700,7 +1714,7 @@
               "pov_headers": [
                 {
                   "bit_index": 10,
-                  "position_offset": 205,
+                  "position_offset": 206,
                   "header_name": "hdr.icmp.$valid",
                   "hidden": false
                 }
@@ -1722,7 +1736,7 @@
               "pov_headers": [
                 {
                   "bit_index": 11,
-                  "position_offset": 208,
+                  "position_offset": 209,
                   "header_name": "hdr.ipv6.$valid",
                   "hidden": false
                 }
@@ -4334,8 +4348,8 @@
               "field_msb": 0,
               "field_lsb": 0,
               "field_width": 1,
-              "phv_msb": 4,
-              "phv_lsb": 4,
+              "phv_msb": 5,
+              "phv_lsb": 5,
               "is_compiler_generated": false,
               "is_pov": false,
               "live_start": 0,
@@ -4353,6 +4367,20 @@
               "is_compiler_generated": false,
               "is_pov": false,
               "live_start": 0,
+              "live_end": "deparser",
+              "mutually_exclusive_with": []
+            },
+            {
+              "position_offset": 198,
+              "field_name": "ig_intr_md_for_tm.copy_to_cpu",
+              "field_msb": 0,
+              "field_lsb": 0,
+              "field_width": 1,
+              "phv_msb": 4,
+              "phv_lsb": 4,
+              "is_compiler_generated": false,
+              "is_pov": false,
+              "live_start": "parser",
               "live_end": "deparser",
               "mutually_exclusive_with": []
             },
@@ -4763,7 +4791,7 @@
           "container_type": "normal",
           "records": [
             {
-              "position_offset": 200,
+              "position_offset": 201,
               "field_name": "ig_intr_md_for_tm.ucast_egress_port",
               "field_msb": 8,
               "field_lsb": 0,
@@ -4784,7 +4812,7 @@
           "container_type": "normal",
           "records": [
             {
-              "position_offset": 198,
+              "position_offset": 199,
               "field_name": "ig_intr_md_for_tm.mcast_grp_a",
               "field_msb": 15,
               "field_lsb": 0,
@@ -5153,7 +5181,7 @@
               "pov_headers": [
                 {
                   "bit_index": 0,
-                  "position_offset": 210,
+                  "position_offset": 211,
                   "header_name": "hdr.packet_out.$valid",
                   "hidden": false
                 }
@@ -5175,7 +5203,7 @@
               "pov_headers": [
                 {
                   "bit_index": 1,
-                  "position_offset": 204,
+                  "position_offset": 205,
                   "header_name": "hdr.ethernet.$valid",
                   "hidden": false
                 }
@@ -5197,7 +5225,7 @@
               "pov_headers": [
                 {
                   "bit_index": 2,
-                  "position_offset": 213,
+                  "position_offset": 214,
                   "header_name": "hdr.vlan_tag.$valid",
                   "hidden": false
                 }
@@ -5219,7 +5247,7 @@
               "pov_headers": [
                 {
                   "bit_index": 3,
-                  "position_offset": 202,
+                  "position_offset": 203,
                   "header_name": "hdr.bridge_md.$valid",
                   "hidden": false
                 }
@@ -5241,7 +5269,7 @@
               "pov_headers": [
                 {
                   "bit_index": 4,
-                  "position_offset": 206,
+                  "position_offset": 207,
                   "header_name": "hdr.inner_vlan_tag.$valid",
                   "hidden": false
                 }
@@ -5263,7 +5291,7 @@
               "pov_headers": [
                 {
                   "bit_index": 5,
-                  "position_offset": 203,
+                  "position_offset": 204,
                   "header_name": "hdr.eth_type.$valid",
                   "hidden": false
                 }
@@ -5285,7 +5313,7 @@
               "pov_headers": [
                 {
                   "bit_index": 6,
-                  "position_offset": 209,
+                  "position_offset": 210,
                   "header_name": "hdr.mpls.$valid",
                   "hidden": false
                 }
@@ -5307,7 +5335,7 @@
               "pov_headers": [
                 {
                   "bit_index": 7,
-                  "position_offset": 207,
+                  "position_offset": 208,
                   "header_name": "hdr.ipv4.$valid",
                   "hidden": false
                 }
@@ -5329,7 +5357,7 @@
               "pov_headers": [
                 {
                   "bit_index": 8,
-                  "position_offset": 211,
+                  "position_offset": 212,
                   "header_name": "hdr.tcp.$valid",
                   "hidden": false
                 }
@@ -5351,7 +5379,7 @@
               "pov_headers": [
                 {
                   "bit_index": 9,
-                  "position_offset": 212,
+                  "position_offset": 213,
                   "header_name": "hdr.udp.$valid",
                   "hidden": false
                 }
@@ -5373,7 +5401,7 @@
               "pov_headers": [
                 {
                   "bit_index": 10,
-                  "position_offset": 205,
+                  "position_offset": 206,
                   "header_name": "hdr.icmp.$valid",
                   "hidden": false
                 }
@@ -5395,7 +5423,7 @@
               "pov_headers": [
                 {
                   "bit_index": 11,
-                  "position_offset": 208,
+                  "position_offset": 209,
                   "header_name": "hdr.ipv6.$valid",
                   "hidden": false
                 }
@@ -8007,8 +8035,8 @@
               "field_msb": 0,
               "field_lsb": 0,
               "field_width": 1,
-              "phv_msb": 4,
-              "phv_lsb": 4,
+              "phv_msb": 5,
+              "phv_lsb": 5,
               "is_compiler_generated": false,
               "is_pov": false,
               "live_start": 0,
@@ -8026,6 +8054,20 @@
               "is_compiler_generated": false,
               "is_pov": false,
               "live_start": 0,
+              "live_end": "deparser",
+              "mutually_exclusive_with": []
+            },
+            {
+              "position_offset": 198,
+              "field_name": "ig_intr_md_for_tm.copy_to_cpu",
+              "field_msb": 0,
+              "field_lsb": 0,
+              "field_width": 1,
+              "phv_msb": 4,
+              "phv_lsb": 4,
+              "is_compiler_generated": false,
+              "is_pov": false,
+              "live_start": 2,
               "live_end": "deparser",
               "mutually_exclusive_with": []
             },
@@ -8436,7 +8478,7 @@
           "container_type": "normal",
           "records": [
             {
-              "position_offset": 200,
+              "position_offset": 201,
               "field_name": "ig_intr_md_for_tm.ucast_egress_port",
               "field_msb": 8,
               "field_lsb": 0,
@@ -8457,7 +8499,7 @@
           "container_type": "normal",
           "records": [
             {
-              "position_offset": 198,
+              "position_offset": 199,
               "field_name": "ig_intr_md_for_tm.mcast_grp_a",
               "field_msb": 15,
               "field_lsb": 0,
@@ -8826,7 +8868,7 @@
               "pov_headers": [
                 {
                   "bit_index": 0,
-                  "position_offset": 210,
+                  "position_offset": 211,
                   "header_name": "hdr.packet_out.$valid",
                   "hidden": false
                 }
@@ -8848,7 +8890,7 @@
               "pov_headers": [
                 {
                   "bit_index": 1,
-                  "position_offset": 204,
+                  "position_offset": 205,
                   "header_name": "hdr.ethernet.$valid",
                   "hidden": false
                 }
@@ -8870,7 +8912,7 @@
               "pov_headers": [
                 {
                   "bit_index": 2,
-                  "position_offset": 213,
+                  "position_offset": 214,
                   "header_name": "hdr.vlan_tag.$valid",
                   "hidden": false
                 }
@@ -8892,7 +8934,7 @@
               "pov_headers": [
                 {
                   "bit_index": 3,
-                  "position_offset": 202,
+                  "position_offset": 203,
                   "header_name": "hdr.bridge_md.$valid",
                   "hidden": false
                 }
@@ -8914,7 +8956,7 @@
               "pov_headers": [
                 {
                   "bit_index": 4,
-                  "position_offset": 206,
+                  "position_offset": 207,
                   "header_name": "hdr.inner_vlan_tag.$valid",
                   "hidden": false
                 }
@@ -8936,7 +8978,7 @@
               "pov_headers": [
                 {
                   "bit_index": 5,
-                  "position_offset": 203,
+                  "position_offset": 204,
                   "header_name": "hdr.eth_type.$valid",
                   "hidden": false
                 }
@@ -8958,7 +9000,7 @@
               "pov_headers": [
                 {
                   "bit_index": 6,
-                  "position_offset": 209,
+                  "position_offset": 210,
                   "header_name": "hdr.mpls.$valid",
                   "hidden": false
                 }
@@ -8980,7 +9022,7 @@
               "pov_headers": [
                 {
                   "bit_index": 7,
-                  "position_offset": 207,
+                  "position_offset": 208,
                   "header_name": "hdr.ipv4.$valid",
                   "hidden": false
                 }
@@ -9002,7 +9044,7 @@
               "pov_headers": [
                 {
                   "bit_index": 8,
-                  "position_offset": 211,
+                  "position_offset": 212,
                   "header_name": "hdr.tcp.$valid",
                   "hidden": false
                 }
@@ -9024,7 +9066,7 @@
               "pov_headers": [
                 {
                   "bit_index": 9,
-                  "position_offset": 212,
+                  "position_offset": 213,
                   "header_name": "hdr.udp.$valid",
                   "hidden": false
                 }
@@ -9046,7 +9088,7 @@
               "pov_headers": [
                 {
                   "bit_index": 10,
-                  "position_offset": 205,
+                  "position_offset": 206,
                   "header_name": "hdr.icmp.$valid",
                   "hidden": false
                 }
@@ -9068,7 +9110,7 @@
               "pov_headers": [
                 {
                   "bit_index": 11,
-                  "position_offset": 208,
+                  "position_offset": 209,
                   "header_name": "hdr.ipv6.$valid",
                   "hidden": false
                 }
@@ -11680,8 +11722,8 @@
               "field_msb": 0,
               "field_lsb": 0,
               "field_width": 1,
-              "phv_msb": 4,
-              "phv_lsb": 4,
+              "phv_msb": 5,
+              "phv_lsb": 5,
               "is_compiler_generated": false,
               "is_pov": false,
               "live_start": 0,
@@ -11699,6 +11741,20 @@
               "is_compiler_generated": false,
               "is_pov": false,
               "live_start": 0,
+              "live_end": "deparser",
+              "mutually_exclusive_with": []
+            },
+            {
+              "position_offset": 198,
+              "field_name": "ig_intr_md_for_tm.copy_to_cpu",
+              "field_msb": 0,
+              "field_lsb": 0,
+              "field_width": 1,
+              "phv_msb": 4,
+              "phv_lsb": 4,
+              "is_compiler_generated": false,
+              "is_pov": false,
+              "live_start": 2,
               "live_end": "deparser",
               "mutually_exclusive_with": []
             },
@@ -12109,7 +12165,7 @@
           "container_type": "normal",
           "records": [
             {
-              "position_offset": 200,
+              "position_offset": 201,
               "field_name": "ig_intr_md_for_tm.ucast_egress_port",
               "field_msb": 8,
               "field_lsb": 0,
@@ -12130,7 +12186,7 @@
           "container_type": "normal",
           "records": [
             {
-              "position_offset": 198,
+              "position_offset": 199,
               "field_name": "ig_intr_md_for_tm.mcast_grp_a",
               "field_msb": 15,
               "field_lsb": 0,
@@ -12499,7 +12555,7 @@
               "pov_headers": [
                 {
                   "bit_index": 0,
-                  "position_offset": 210,
+                  "position_offset": 211,
                   "header_name": "hdr.packet_out.$valid",
                   "hidden": false
                 }
@@ -12521,7 +12577,7 @@
               "pov_headers": [
                 {
                   "bit_index": 1,
-                  "position_offset": 204,
+                  "position_offset": 205,
                   "header_name": "hdr.ethernet.$valid",
                   "hidden": false
                 }
@@ -12543,7 +12599,7 @@
               "pov_headers": [
                 {
                   "bit_index": 2,
-                  "position_offset": 213,
+                  "position_offset": 214,
                   "header_name": "hdr.vlan_tag.$valid",
                   "hidden": false
                 }
@@ -12565,7 +12621,7 @@
               "pov_headers": [
                 {
                   "bit_index": 3,
-                  "position_offset": 202,
+                  "position_offset": 203,
                   "header_name": "hdr.bridge_md.$valid",
                   "hidden": false
                 }
@@ -12587,7 +12643,7 @@
               "pov_headers": [
                 {
                   "bit_index": 4,
-                  "position_offset": 206,
+                  "position_offset": 207,
                   "header_name": "hdr.inner_vlan_tag.$valid",
                   "hidden": false
                 }
@@ -12609,7 +12665,7 @@
               "pov_headers": [
                 {
                   "bit_index": 5,
-                  "position_offset": 203,
+                  "position_offset": 204,
                   "header_name": "hdr.eth_type.$valid",
                   "hidden": false
                 }
@@ -12631,7 +12687,7 @@
               "pov_headers": [
                 {
                   "bit_index": 6,
-                  "position_offset": 209,
+                  "position_offset": 210,
                   "header_name": "hdr.mpls.$valid",
                   "hidden": false
                 }
@@ -12653,7 +12709,7 @@
               "pov_headers": [
                 {
                   "bit_index": 7,
-                  "position_offset": 207,
+                  "position_offset": 208,
                   "header_name": "hdr.ipv4.$valid",
                   "hidden": false
                 }
@@ -12675,7 +12731,7 @@
               "pov_headers": [
                 {
                   "bit_index": 8,
-                  "position_offset": 211,
+                  "position_offset": 212,
                   "header_name": "hdr.tcp.$valid",
                   "hidden": false
                 }
@@ -12697,7 +12753,7 @@
               "pov_headers": [
                 {
                   "bit_index": 9,
-                  "position_offset": 212,
+                  "position_offset": 213,
                   "header_name": "hdr.udp.$valid",
                   "hidden": false
                 }
@@ -12719,7 +12775,7 @@
               "pov_headers": [
                 {
                   "bit_index": 10,
-                  "position_offset": 205,
+                  "position_offset": 206,
                   "header_name": "hdr.icmp.$valid",
                   "hidden": false
                 }
@@ -12741,7 +12797,7 @@
               "pov_headers": [
                 {
                   "bit_index": 11,
-                  "position_offset": 208,
+                  "position_offset": 209,
                   "header_name": "hdr.ipv6.$valid",
                   "hidden": false
                 }
@@ -15353,8 +15409,8 @@
               "field_msb": 0,
               "field_lsb": 0,
               "field_width": 1,
-              "phv_msb": 4,
-              "phv_lsb": 4,
+              "phv_msb": 5,
+              "phv_lsb": 5,
               "is_compiler_generated": false,
               "is_pov": false,
               "live_start": "parser",
@@ -15372,6 +15428,20 @@
               "is_compiler_generated": false,
               "is_pov": false,
               "live_start": 0,
+              "live_end": "deparser",
+              "mutually_exclusive_with": []
+            },
+            {
+              "position_offset": 198,
+              "field_name": "ig_intr_md_for_tm.copy_to_cpu",
+              "field_msb": 0,
+              "field_lsb": 0,
+              "field_width": 1,
+              "phv_msb": 4,
+              "phv_lsb": 4,
+              "is_compiler_generated": false,
+              "is_pov": false,
+              "live_start": 2,
               "live_end": "deparser",
               "mutually_exclusive_with": []
             },
@@ -15782,7 +15852,7 @@
           "container_type": "normal",
           "records": [
             {
-              "position_offset": 200,
+              "position_offset": 201,
               "field_name": "ig_intr_md_for_tm.ucast_egress_port",
               "field_msb": 8,
               "field_lsb": 0,
@@ -15803,7 +15873,7 @@
           "container_type": "normal",
           "records": [
             {
-              "position_offset": 198,
+              "position_offset": 199,
               "field_name": "ig_intr_md_for_tm.mcast_grp_a",
               "field_msb": 15,
               "field_lsb": 0,
@@ -16172,7 +16242,7 @@
               "pov_headers": [
                 {
                   "bit_index": 0,
-                  "position_offset": 210,
+                  "position_offset": 211,
                   "header_name": "hdr.packet_out.$valid",
                   "hidden": false
                 }
@@ -16194,7 +16264,7 @@
               "pov_headers": [
                 {
                   "bit_index": 1,
-                  "position_offset": 204,
+                  "position_offset": 205,
                   "header_name": "hdr.ethernet.$valid",
                   "hidden": false
                 }
@@ -16216,7 +16286,7 @@
               "pov_headers": [
                 {
                   "bit_index": 2,
-                  "position_offset": 213,
+                  "position_offset": 214,
                   "header_name": "hdr.vlan_tag.$valid",
                   "hidden": false
                 }
@@ -16238,7 +16308,7 @@
               "pov_headers": [
                 {
                   "bit_index": 3,
-                  "position_offset": 202,
+                  "position_offset": 203,
                   "header_name": "hdr.bridge_md.$valid",
                   "hidden": false
                 }
@@ -16260,7 +16330,7 @@
               "pov_headers": [
                 {
                   "bit_index": 4,
-                  "position_offset": 206,
+                  "position_offset": 207,
                   "header_name": "hdr.inner_vlan_tag.$valid",
                   "hidden": false
                 }
@@ -16282,7 +16352,7 @@
               "pov_headers": [
                 {
                   "bit_index": 5,
-                  "position_offset": 203,
+                  "position_offset": 204,
                   "header_name": "hdr.eth_type.$valid",
                   "hidden": false
                 }
@@ -16304,7 +16374,7 @@
               "pov_headers": [
                 {
                   "bit_index": 6,
-                  "position_offset": 209,
+                  "position_offset": 210,
                   "header_name": "hdr.mpls.$valid",
                   "hidden": false
                 }
@@ -16326,7 +16396,7 @@
               "pov_headers": [
                 {
                   "bit_index": 7,
-                  "position_offset": 207,
+                  "position_offset": 208,
                   "header_name": "hdr.ipv4.$valid",
                   "hidden": false
                 }
@@ -16348,7 +16418,7 @@
               "pov_headers": [
                 {
                   "bit_index": 8,
-                  "position_offset": 211,
+                  "position_offset": 212,
                   "header_name": "hdr.tcp.$valid",
                   "hidden": false
                 }
@@ -16370,7 +16440,7 @@
               "pov_headers": [
                 {
                   "bit_index": 9,
-                  "position_offset": 212,
+                  "position_offset": 213,
                   "header_name": "hdr.udp.$valid",
                   "hidden": false
                 }
@@ -16392,7 +16462,7 @@
               "pov_headers": [
                 {
                   "bit_index": 10,
-                  "position_offset": 205,
+                  "position_offset": 206,
                   "header_name": "hdr.icmp.$valid",
                   "hidden": false
                 }
@@ -16414,7 +16484,7 @@
               "pov_headers": [
                 {
                   "bit_index": 11,
-                  "position_offset": 208,
+                  "position_offset": 209,
                   "header_name": "hdr.ipv6.$valid",
                   "hidden": false
                 }
@@ -19026,8 +19096,8 @@
               "field_msb": 0,
               "field_lsb": 0,
               "field_width": 1,
-              "phv_msb": 4,
-              "phv_lsb": 4,
+              "phv_msb": 5,
+              "phv_lsb": 5,
               "is_compiler_generated": false,
               "is_pov": false,
               "live_start": "parser",
@@ -19045,6 +19115,20 @@
               "is_compiler_generated": false,
               "is_pov": false,
               "live_start": 0,
+              "live_end": "deparser",
+              "mutually_exclusive_with": []
+            },
+            {
+              "position_offset": 198,
+              "field_name": "ig_intr_md_for_tm.copy_to_cpu",
+              "field_msb": 0,
+              "field_lsb": 0,
+              "field_width": 1,
+              "phv_msb": 4,
+              "phv_lsb": 4,
+              "is_compiler_generated": false,
+              "is_pov": false,
+              "live_start": 2,
               "live_end": "deparser",
               "mutually_exclusive_with": []
             },
@@ -19455,7 +19539,7 @@
           "container_type": "normal",
           "records": [
             {
-              "position_offset": 200,
+              "position_offset": 201,
               "field_name": "ig_intr_md_for_tm.ucast_egress_port",
               "field_msb": 8,
               "field_lsb": 0,
@@ -19476,7 +19560,7 @@
           "container_type": "normal",
           "records": [
             {
-              "position_offset": 198,
+              "position_offset": 199,
               "field_name": "ig_intr_md_for_tm.mcast_grp_a",
               "field_msb": 15,
               "field_lsb": 0,
@@ -19845,7 +19929,7 @@
               "pov_headers": [
                 {
                   "bit_index": 0,
-                  "position_offset": 210,
+                  "position_offset": 211,
                   "header_name": "hdr.packet_out.$valid",
                   "hidden": false
                 }
@@ -19867,7 +19951,7 @@
               "pov_headers": [
                 {
                   "bit_index": 1,
-                  "position_offset": 204,
+                  "position_offset": 205,
                   "header_name": "hdr.ethernet.$valid",
                   "hidden": false
                 }
@@ -19889,7 +19973,7 @@
               "pov_headers": [
                 {
                   "bit_index": 2,
-                  "position_offset": 213,
+                  "position_offset": 214,
                   "header_name": "hdr.vlan_tag.$valid",
                   "hidden": false
                 }
@@ -19911,7 +19995,7 @@
               "pov_headers": [
                 {
                   "bit_index": 3,
-                  "position_offset": 202,
+                  "position_offset": 203,
                   "header_name": "hdr.bridge_md.$valid",
                   "hidden": false
                 }
@@ -19933,7 +20017,7 @@
               "pov_headers": [
                 {
                   "bit_index": 4,
-                  "position_offset": 206,
+                  "position_offset": 207,
                   "header_name": "hdr.inner_vlan_tag.$valid",
                   "hidden": false
                 }
@@ -19955,7 +20039,7 @@
               "pov_headers": [
                 {
                   "bit_index": 5,
-                  "position_offset": 203,
+                  "position_offset": 204,
                   "header_name": "hdr.eth_type.$valid",
                   "hidden": false
                 }
@@ -19977,7 +20061,7 @@
               "pov_headers": [
                 {
                   "bit_index": 6,
-                  "position_offset": 209,
+                  "position_offset": 210,
                   "header_name": "hdr.mpls.$valid",
                   "hidden": false
                 }
@@ -19999,7 +20083,7 @@
               "pov_headers": [
                 {
                   "bit_index": 7,
-                  "position_offset": 207,
+                  "position_offset": 208,
                   "header_name": "hdr.ipv4.$valid",
                   "hidden": false
                 }
@@ -20021,7 +20105,7 @@
               "pov_headers": [
                 {
                   "bit_index": 8,
-                  "position_offset": 211,
+                  "position_offset": 212,
                   "header_name": "hdr.tcp.$valid",
                   "hidden": false
                 }
@@ -20043,7 +20127,7 @@
               "pov_headers": [
                 {
                   "bit_index": 9,
-                  "position_offset": 212,
+                  "position_offset": 213,
                   "header_name": "hdr.udp.$valid",
                   "hidden": false
                 }
@@ -20065,7 +20149,7 @@
               "pov_headers": [
                 {
                   "bit_index": 10,
-                  "position_offset": 205,
+                  "position_offset": 206,
                   "header_name": "hdr.icmp.$valid",
                   "hidden": false
                 }
@@ -20087,7 +20171,7 @@
               "pov_headers": [
                 {
                   "bit_index": 11,
-                  "position_offset": 208,
+                  "position_offset": 209,
                   "header_name": "hdr.ipv6.$valid",
                   "hidden": false
                 }
@@ -22699,8 +22783,8 @@
               "field_msb": 0,
               "field_lsb": 0,
               "field_width": 1,
-              "phv_msb": 4,
-              "phv_lsb": 4,
+              "phv_msb": 5,
+              "phv_lsb": 5,
               "is_compiler_generated": false,
               "is_pov": false,
               "live_start": "parser",
@@ -22718,6 +22802,20 @@
               "is_compiler_generated": false,
               "is_pov": false,
               "live_start": 0,
+              "live_end": "deparser",
+              "mutually_exclusive_with": []
+            },
+            {
+              "position_offset": 198,
+              "field_name": "ig_intr_md_for_tm.copy_to_cpu",
+              "field_msb": 0,
+              "field_lsb": 0,
+              "field_width": 1,
+              "phv_msb": 4,
+              "phv_lsb": 4,
+              "is_compiler_generated": false,
+              "is_pov": false,
+              "live_start": 2,
               "live_end": "deparser",
               "mutually_exclusive_with": []
             },
@@ -23128,7 +23226,7 @@
           "container_type": "normal",
           "records": [
             {
-              "position_offset": 200,
+              "position_offset": 201,
               "field_name": "ig_intr_md_for_tm.ucast_egress_port",
               "field_msb": 8,
               "field_lsb": 0,
@@ -23149,7 +23247,7 @@
           "container_type": "normal",
           "records": [
             {
-              "position_offset": 198,
+              "position_offset": 199,
               "field_name": "ig_intr_md_for_tm.mcast_grp_a",
               "field_msb": 15,
               "field_lsb": 0,
@@ -23518,7 +23616,7 @@
               "pov_headers": [
                 {
                   "bit_index": 0,
-                  "position_offset": 210,
+                  "position_offset": 211,
                   "header_name": "hdr.packet_out.$valid",
                   "hidden": false
                 }
@@ -23540,7 +23638,7 @@
               "pov_headers": [
                 {
                   "bit_index": 1,
-                  "position_offset": 204,
+                  "position_offset": 205,
                   "header_name": "hdr.ethernet.$valid",
                   "hidden": false
                 }
@@ -23562,7 +23660,7 @@
               "pov_headers": [
                 {
                   "bit_index": 2,
-                  "position_offset": 213,
+                  "position_offset": 214,
                   "header_name": "hdr.vlan_tag.$valid",
                   "hidden": false
                 }
@@ -23584,7 +23682,7 @@
               "pov_headers": [
                 {
                   "bit_index": 3,
-                  "position_offset": 202,
+                  "position_offset": 203,
                   "header_name": "hdr.bridge_md.$valid",
                   "hidden": false
                 }
@@ -23606,7 +23704,7 @@
               "pov_headers": [
                 {
                   "bit_index": 4,
-                  "position_offset": 206,
+                  "position_offset": 207,
                   "header_name": "hdr.inner_vlan_tag.$valid",
                   "hidden": false
                 }
@@ -23628,7 +23726,7 @@
               "pov_headers": [
                 {
                   "bit_index": 5,
-                  "position_offset": 203,
+                  "position_offset": 204,
                   "header_name": "hdr.eth_type.$valid",
                   "hidden": false
                 }
@@ -23650,7 +23748,7 @@
               "pov_headers": [
                 {
                   "bit_index": 6,
-                  "position_offset": 209,
+                  "position_offset": 210,
                   "header_name": "hdr.mpls.$valid",
                   "hidden": false
                 }
@@ -23672,7 +23770,7 @@
               "pov_headers": [
                 {
                   "bit_index": 7,
-                  "position_offset": 207,
+                  "position_offset": 208,
                   "header_name": "hdr.ipv4.$valid",
                   "hidden": false
                 }
@@ -23694,7 +23792,7 @@
               "pov_headers": [
                 {
                   "bit_index": 8,
-                  "position_offset": 211,
+                  "position_offset": 212,
                   "header_name": "hdr.tcp.$valid",
                   "hidden": false
                 }
@@ -23716,7 +23814,7 @@
               "pov_headers": [
                 {
                   "bit_index": 9,
-                  "position_offset": 212,
+                  "position_offset": 213,
                   "header_name": "hdr.udp.$valid",
                   "hidden": false
                 }
@@ -23738,7 +23836,7 @@
               "pov_headers": [
                 {
                   "bit_index": 10,
-                  "position_offset": 205,
+                  "position_offset": 206,
                   "header_name": "hdr.icmp.$valid",
                   "hidden": false
                 }
@@ -23760,7 +23858,7 @@
               "pov_headers": [
                 {
                   "bit_index": 11,
-                  "position_offset": 208,
+                  "position_offset": 209,
                   "header_name": "hdr.ipv6.$valid",
                   "hidden": false
                 }
@@ -26372,8 +26470,8 @@
               "field_msb": 0,
               "field_lsb": 0,
               "field_width": 1,
-              "phv_msb": 4,
-              "phv_lsb": 4,
+              "phv_msb": 5,
+              "phv_lsb": 5,
               "is_compiler_generated": false,
               "is_pov": false,
               "live_start": "parser",
@@ -26391,6 +26489,20 @@
               "is_compiler_generated": false,
               "is_pov": false,
               "live_start": 0,
+              "live_end": "deparser",
+              "mutually_exclusive_with": []
+            },
+            {
+              "position_offset": 198,
+              "field_name": "ig_intr_md_for_tm.copy_to_cpu",
+              "field_msb": 0,
+              "field_lsb": 0,
+              "field_width": 1,
+              "phv_msb": 4,
+              "phv_lsb": 4,
+              "is_compiler_generated": false,
+              "is_pov": false,
+              "live_start": 2,
               "live_end": "deparser",
               "mutually_exclusive_with": []
             },
@@ -26801,7 +26913,7 @@
           "container_type": "normal",
           "records": [
             {
-              "position_offset": 200,
+              "position_offset": 201,
               "field_name": "ig_intr_md_for_tm.ucast_egress_port",
               "field_msb": 8,
               "field_lsb": 0,
@@ -26822,7 +26934,7 @@
           "container_type": "normal",
           "records": [
             {
-              "position_offset": 198,
+              "position_offset": 199,
               "field_name": "ig_intr_md_for_tm.mcast_grp_a",
               "field_msb": 15,
               "field_lsb": 0,
@@ -27191,7 +27303,7 @@
               "pov_headers": [
                 {
                   "bit_index": 0,
-                  "position_offset": 210,
+                  "position_offset": 211,
                   "header_name": "hdr.packet_out.$valid",
                   "hidden": false
                 }
@@ -27213,7 +27325,7 @@
               "pov_headers": [
                 {
                   "bit_index": 1,
-                  "position_offset": 204,
+                  "position_offset": 205,
                   "header_name": "hdr.ethernet.$valid",
                   "hidden": false
                 }
@@ -27235,7 +27347,7 @@
               "pov_headers": [
                 {
                   "bit_index": 2,
-                  "position_offset": 213,
+                  "position_offset": 214,
                   "header_name": "hdr.vlan_tag.$valid",
                   "hidden": false
                 }
@@ -27257,7 +27369,7 @@
               "pov_headers": [
                 {
                   "bit_index": 3,
-                  "position_offset": 202,
+                  "position_offset": 203,
                   "header_name": "hdr.bridge_md.$valid",
                   "hidden": false
                 }
@@ -27279,7 +27391,7 @@
               "pov_headers": [
                 {
                   "bit_index": 4,
-                  "position_offset": 206,
+                  "position_offset": 207,
                   "header_name": "hdr.inner_vlan_tag.$valid",
                   "hidden": false
                 }
@@ -27301,7 +27413,7 @@
               "pov_headers": [
                 {
                   "bit_index": 5,
-                  "position_offset": 203,
+                  "position_offset": 204,
                   "header_name": "hdr.eth_type.$valid",
                   "hidden": false
                 }
@@ -27323,7 +27435,7 @@
               "pov_headers": [
                 {
                   "bit_index": 6,
-                  "position_offset": 209,
+                  "position_offset": 210,
                   "header_name": "hdr.mpls.$valid",
                   "hidden": false
                 }
@@ -27345,7 +27457,7 @@
               "pov_headers": [
                 {
                   "bit_index": 7,
-                  "position_offset": 207,
+                  "position_offset": 208,
                   "header_name": "hdr.ipv4.$valid",
                   "hidden": false
                 }
@@ -27367,7 +27479,7 @@
               "pov_headers": [
                 {
                   "bit_index": 8,
-                  "position_offset": 211,
+                  "position_offset": 212,
                   "header_name": "hdr.tcp.$valid",
                   "hidden": false
                 }
@@ -27389,7 +27501,7 @@
               "pov_headers": [
                 {
                   "bit_index": 9,
-                  "position_offset": 212,
+                  "position_offset": 213,
                   "header_name": "hdr.udp.$valid",
                   "hidden": false
                 }
@@ -27411,7 +27523,7 @@
               "pov_headers": [
                 {
                   "bit_index": 10,
-                  "position_offset": 205,
+                  "position_offset": 206,
                   "header_name": "hdr.icmp.$valid",
                   "hidden": false
                 }
@@ -27433,7 +27545,7 @@
               "pov_headers": [
                 {
                   "bit_index": 11,
-                  "position_offset": 208,
+                  "position_offset": 209,
                   "header_name": "hdr.ipv6.$valid",
                   "hidden": false
                 }
@@ -30045,8 +30157,8 @@
               "field_msb": 0,
               "field_lsb": 0,
               "field_width": 1,
-              "phv_msb": 4,
-              "phv_lsb": 4,
+              "phv_msb": 5,
+              "phv_lsb": 5,
               "is_compiler_generated": false,
               "is_pov": false,
               "live_start": "parser",
@@ -30064,6 +30176,20 @@
               "is_compiler_generated": false,
               "is_pov": false,
               "live_start": 0,
+              "live_end": "deparser",
+              "mutually_exclusive_with": []
+            },
+            {
+              "position_offset": 198,
+              "field_name": "ig_intr_md_for_tm.copy_to_cpu",
+              "field_msb": 0,
+              "field_lsb": 0,
+              "field_width": 1,
+              "phv_msb": 4,
+              "phv_lsb": 4,
+              "is_compiler_generated": false,
+              "is_pov": false,
+              "live_start": 2,
               "live_end": "deparser",
               "mutually_exclusive_with": []
             },
@@ -30474,7 +30600,7 @@
           "container_type": "normal",
           "records": [
             {
-              "position_offset": 200,
+              "position_offset": 201,
               "field_name": "ig_intr_md_for_tm.ucast_egress_port",
               "field_msb": 8,
               "field_lsb": 0,
@@ -30495,7 +30621,7 @@
           "container_type": "normal",
           "records": [
             {
-              "position_offset": 198,
+              "position_offset": 199,
               "field_name": "ig_intr_md_for_tm.mcast_grp_a",
               "field_msb": 15,
               "field_lsb": 0,
@@ -30864,7 +30990,7 @@
               "pov_headers": [
                 {
                   "bit_index": 0,
-                  "position_offset": 210,
+                  "position_offset": 211,
                   "header_name": "hdr.packet_out.$valid",
                   "hidden": false
                 }
@@ -30886,7 +31012,7 @@
               "pov_headers": [
                 {
                   "bit_index": 1,
-                  "position_offset": 204,
+                  "position_offset": 205,
                   "header_name": "hdr.ethernet.$valid",
                   "hidden": false
                 }
@@ -30908,7 +31034,7 @@
               "pov_headers": [
                 {
                   "bit_index": 2,
-                  "position_offset": 213,
+                  "position_offset": 214,
                   "header_name": "hdr.vlan_tag.$valid",
                   "hidden": false
                 }
@@ -30930,7 +31056,7 @@
               "pov_headers": [
                 {
                   "bit_index": 3,
-                  "position_offset": 202,
+                  "position_offset": 203,
                   "header_name": "hdr.bridge_md.$valid",
                   "hidden": false
                 }
@@ -30952,7 +31078,7 @@
               "pov_headers": [
                 {
                   "bit_index": 4,
-                  "position_offset": 206,
+                  "position_offset": 207,
                   "header_name": "hdr.inner_vlan_tag.$valid",
                   "hidden": false
                 }
@@ -30974,7 +31100,7 @@
               "pov_headers": [
                 {
                   "bit_index": 5,
-                  "position_offset": 203,
+                  "position_offset": 204,
                   "header_name": "hdr.eth_type.$valid",
                   "hidden": false
                 }
@@ -30996,7 +31122,7 @@
               "pov_headers": [
                 {
                   "bit_index": 6,
-                  "position_offset": 209,
+                  "position_offset": 210,
                   "header_name": "hdr.mpls.$valid",
                   "hidden": false
                 }
@@ -31018,7 +31144,7 @@
               "pov_headers": [
                 {
                   "bit_index": 7,
-                  "position_offset": 207,
+                  "position_offset": 208,
                   "header_name": "hdr.ipv4.$valid",
                   "hidden": false
                 }
@@ -31040,7 +31166,7 @@
               "pov_headers": [
                 {
                   "bit_index": 8,
-                  "position_offset": 211,
+                  "position_offset": 212,
                   "header_name": "hdr.tcp.$valid",
                   "hidden": false
                 }
@@ -31062,7 +31188,7 @@
               "pov_headers": [
                 {
                   "bit_index": 9,
-                  "position_offset": 212,
+                  "position_offset": 213,
                   "header_name": "hdr.udp.$valid",
                   "hidden": false
                 }
@@ -31084,7 +31210,7 @@
               "pov_headers": [
                 {
                   "bit_index": 10,
-                  "position_offset": 205,
+                  "position_offset": 206,
                   "header_name": "hdr.icmp.$valid",
                   "hidden": false
                 }
@@ -31106,7 +31232,7 @@
               "pov_headers": [
                 {
                   "bit_index": 11,
-                  "position_offset": 208,
+                  "position_offset": 209,
                   "header_name": "hdr.ipv6.$valid",
                   "hidden": false
                 }
@@ -33718,8 +33844,8 @@
               "field_msb": 0,
               "field_lsb": 0,
               "field_width": 1,
-              "phv_msb": 4,
-              "phv_lsb": 4,
+              "phv_msb": 5,
+              "phv_lsb": 5,
               "is_compiler_generated": false,
               "is_pov": false,
               "live_start": "parser",
@@ -33737,6 +33863,20 @@
               "is_compiler_generated": false,
               "is_pov": false,
               "live_start": 0,
+              "live_end": "deparser",
+              "mutually_exclusive_with": []
+            },
+            {
+              "position_offset": 198,
+              "field_name": "ig_intr_md_for_tm.copy_to_cpu",
+              "field_msb": 0,
+              "field_lsb": 0,
+              "field_width": 1,
+              "phv_msb": 4,
+              "phv_lsb": 4,
+              "is_compiler_generated": false,
+              "is_pov": false,
+              "live_start": 2,
               "live_end": "deparser",
               "mutually_exclusive_with": []
             },
@@ -34147,7 +34287,7 @@
           "container_type": "normal",
           "records": [
             {
-              "position_offset": 200,
+              "position_offset": 201,
               "field_name": "ig_intr_md_for_tm.ucast_egress_port",
               "field_msb": 8,
               "field_lsb": 0,
@@ -34168,7 +34308,7 @@
           "container_type": "normal",
           "records": [
             {
-              "position_offset": 198,
+              "position_offset": 199,
               "field_name": "ig_intr_md_for_tm.mcast_grp_a",
               "field_msb": 15,
               "field_lsb": 0,
@@ -34537,7 +34677,7 @@
               "pov_headers": [
                 {
                   "bit_index": 0,
-                  "position_offset": 210,
+                  "position_offset": 211,
                   "header_name": "hdr.packet_out.$valid",
                   "hidden": false
                 }
@@ -34559,7 +34699,7 @@
               "pov_headers": [
                 {
                   "bit_index": 1,
-                  "position_offset": 204,
+                  "position_offset": 205,
                   "header_name": "hdr.ethernet.$valid",
                   "hidden": false
                 }
@@ -34581,7 +34721,7 @@
               "pov_headers": [
                 {
                   "bit_index": 2,
-                  "position_offset": 213,
+                  "position_offset": 214,
                   "header_name": "hdr.vlan_tag.$valid",
                   "hidden": false
                 }
@@ -34603,7 +34743,7 @@
               "pov_headers": [
                 {
                   "bit_index": 3,
-                  "position_offset": 202,
+                  "position_offset": 203,
                   "header_name": "hdr.bridge_md.$valid",
                   "hidden": false
                 }
@@ -34625,7 +34765,7 @@
               "pov_headers": [
                 {
                   "bit_index": 4,
-                  "position_offset": 206,
+                  "position_offset": 207,
                   "header_name": "hdr.inner_vlan_tag.$valid",
                   "hidden": false
                 }
@@ -34647,7 +34787,7 @@
               "pov_headers": [
                 {
                   "bit_index": 5,
-                  "position_offset": 203,
+                  "position_offset": 204,
                   "header_name": "hdr.eth_type.$valid",
                   "hidden": false
                 }
@@ -34669,7 +34809,7 @@
               "pov_headers": [
                 {
                   "bit_index": 6,
-                  "position_offset": 209,
+                  "position_offset": 210,
                   "header_name": "hdr.mpls.$valid",
                   "hidden": false
                 }
@@ -34691,7 +34831,7 @@
               "pov_headers": [
                 {
                   "bit_index": 7,
-                  "position_offset": 207,
+                  "position_offset": 208,
                   "header_name": "hdr.ipv4.$valid",
                   "hidden": false
                 }
@@ -34713,7 +34853,7 @@
               "pov_headers": [
                 {
                   "bit_index": 8,
-                  "position_offset": 211,
+                  "position_offset": 212,
                   "header_name": "hdr.tcp.$valid",
                   "hidden": false
                 }
@@ -34735,7 +34875,7 @@
               "pov_headers": [
                 {
                   "bit_index": 9,
-                  "position_offset": 212,
+                  "position_offset": 213,
                   "header_name": "hdr.udp.$valid",
                   "hidden": false
                 }
@@ -34757,7 +34897,7 @@
               "pov_headers": [
                 {
                   "bit_index": 10,
-                  "position_offset": 205,
+                  "position_offset": 206,
                   "header_name": "hdr.icmp.$valid",
                   "hidden": false
                 }
@@ -34779,7 +34919,7 @@
               "pov_headers": [
                 {
                   "bit_index": 11,
-                  "position_offset": 208,
+                  "position_offset": 209,
                   "header_name": "hdr.ipv6.$valid",
                   "hidden": false
                 }
@@ -37391,8 +37531,8 @@
               "field_msb": 0,
               "field_lsb": 0,
               "field_width": 1,
-              "phv_msb": 4,
-              "phv_lsb": 4,
+              "phv_msb": 5,
+              "phv_lsb": 5,
               "is_compiler_generated": false,
               "is_pov": false,
               "live_start": "parser",
@@ -37410,6 +37550,20 @@
               "is_compiler_generated": false,
               "is_pov": false,
               "live_start": 0,
+              "live_end": "deparser",
+              "mutually_exclusive_with": []
+            },
+            {
+              "position_offset": 198,
+              "field_name": "ig_intr_md_for_tm.copy_to_cpu",
+              "field_msb": 0,
+              "field_lsb": 0,
+              "field_width": 1,
+              "phv_msb": 4,
+              "phv_lsb": 4,
+              "is_compiler_generated": false,
+              "is_pov": false,
+              "live_start": 2,
               "live_end": "deparser",
               "mutually_exclusive_with": []
             },
@@ -37820,7 +37974,7 @@
           "container_type": "normal",
           "records": [
             {
-              "position_offset": 200,
+              "position_offset": 201,
               "field_name": "ig_intr_md_for_tm.ucast_egress_port",
               "field_msb": 8,
               "field_lsb": 0,
@@ -37841,7 +37995,7 @@
           "container_type": "normal",
           "records": [
             {
-              "position_offset": 198,
+              "position_offset": 199,
               "field_name": "ig_intr_md_for_tm.mcast_grp_a",
               "field_msb": 15,
               "field_lsb": 0,
@@ -38210,7 +38364,7 @@
               "pov_headers": [
                 {
                   "bit_index": 0,
-                  "position_offset": 210,
+                  "position_offset": 211,
                   "header_name": "hdr.packet_out.$valid",
                   "hidden": false
                 }
@@ -38232,7 +38386,7 @@
               "pov_headers": [
                 {
                   "bit_index": 1,
-                  "position_offset": 204,
+                  "position_offset": 205,
                   "header_name": "hdr.ethernet.$valid",
                   "hidden": false
                 }
@@ -38254,7 +38408,7 @@
               "pov_headers": [
                 {
                   "bit_index": 2,
-                  "position_offset": 213,
+                  "position_offset": 214,
                   "header_name": "hdr.vlan_tag.$valid",
                   "hidden": false
                 }
@@ -38276,7 +38430,7 @@
               "pov_headers": [
                 {
                   "bit_index": 3,
-                  "position_offset": 202,
+                  "position_offset": 203,
                   "header_name": "hdr.bridge_md.$valid",
                   "hidden": false
                 }
@@ -38298,7 +38452,7 @@
               "pov_headers": [
                 {
                   "bit_index": 4,
-                  "position_offset": 206,
+                  "position_offset": 207,
                   "header_name": "hdr.inner_vlan_tag.$valid",
                   "hidden": false
                 }
@@ -38320,7 +38474,7 @@
               "pov_headers": [
                 {
                   "bit_index": 5,
-                  "position_offset": 203,
+                  "position_offset": 204,
                   "header_name": "hdr.eth_type.$valid",
                   "hidden": false
                 }
@@ -38342,7 +38496,7 @@
               "pov_headers": [
                 {
                   "bit_index": 6,
-                  "position_offset": 209,
+                  "position_offset": 210,
                   "header_name": "hdr.mpls.$valid",
                   "hidden": false
                 }
@@ -38364,7 +38518,7 @@
               "pov_headers": [
                 {
                   "bit_index": 7,
-                  "position_offset": 207,
+                  "position_offset": 208,
                   "header_name": "hdr.ipv4.$valid",
                   "hidden": false
                 }
@@ -38386,7 +38540,7 @@
               "pov_headers": [
                 {
                   "bit_index": 8,
-                  "position_offset": 211,
+                  "position_offset": 212,
                   "header_name": "hdr.tcp.$valid",
                   "hidden": false
                 }
@@ -38408,7 +38562,7 @@
               "pov_headers": [
                 {
                   "bit_index": 9,
-                  "position_offset": 212,
+                  "position_offset": 213,
                   "header_name": "hdr.udp.$valid",
                   "hidden": false
                 }
@@ -38430,7 +38584,7 @@
               "pov_headers": [
                 {
                   "bit_index": 10,
-                  "position_offset": 205,
+                  "position_offset": 206,
                   "header_name": "hdr.icmp.$valid",
                   "hidden": false
                 }
@@ -38452,7 +38606,7 @@
               "pov_headers": [
                 {
                   "bit_index": 11,
-                  "position_offset": 208,
+                  "position_offset": 209,
                   "header_name": "hdr.ipv6.$valid",
                   "hidden": false
                 }
@@ -41064,8 +41218,8 @@
               "field_msb": 0,
               "field_lsb": 0,
               "field_width": 1,
-              "phv_msb": 4,
-              "phv_lsb": 4,
+              "phv_msb": 5,
+              "phv_lsb": 5,
               "is_compiler_generated": false,
               "is_pov": false,
               "live_start": "parser",
@@ -41083,6 +41237,20 @@
               "is_compiler_generated": false,
               "is_pov": false,
               "live_start": 0,
+              "live_end": "deparser",
+              "mutually_exclusive_with": []
+            },
+            {
+              "position_offset": 198,
+              "field_name": "ig_intr_md_for_tm.copy_to_cpu",
+              "field_msb": 0,
+              "field_lsb": 0,
+              "field_width": 1,
+              "phv_msb": 4,
+              "phv_lsb": 4,
+              "is_compiler_generated": false,
+              "is_pov": false,
+              "live_start": 2,
               "live_end": "deparser",
               "mutually_exclusive_with": []
             },
@@ -41493,7 +41661,7 @@
           "container_type": "normal",
           "records": [
             {
-              "position_offset": 200,
+              "position_offset": 201,
               "field_name": "ig_intr_md_for_tm.ucast_egress_port",
               "field_msb": 8,
               "field_lsb": 0,
@@ -41514,7 +41682,7 @@
           "container_type": "normal",
           "records": [
             {
-              "position_offset": 198,
+              "position_offset": 199,
               "field_name": "ig_intr_md_for_tm.mcast_grp_a",
               "field_msb": 15,
               "field_lsb": 0,
@@ -41883,7 +42051,7 @@
               "pov_headers": [
                 {
                   "bit_index": 0,
-                  "position_offset": 210,
+                  "position_offset": 211,
                   "header_name": "hdr.packet_out.$valid",
                   "hidden": false
                 }
@@ -41905,7 +42073,7 @@
               "pov_headers": [
                 {
                   "bit_index": 1,
-                  "position_offset": 204,
+                  "position_offset": 205,
                   "header_name": "hdr.ethernet.$valid",
                   "hidden": false
                 }
@@ -41927,7 +42095,7 @@
               "pov_headers": [
                 {
                   "bit_index": 2,
-                  "position_offset": 213,
+                  "position_offset": 214,
                   "header_name": "hdr.vlan_tag.$valid",
                   "hidden": false
                 }
@@ -41949,7 +42117,7 @@
               "pov_headers": [
                 {
                   "bit_index": 3,
-                  "position_offset": 202,
+                  "position_offset": 203,
                   "header_name": "hdr.bridge_md.$valid",
                   "hidden": false
                 }
@@ -41971,7 +42139,7 @@
               "pov_headers": [
                 {
                   "bit_index": 4,
-                  "position_offset": 206,
+                  "position_offset": 207,
                   "header_name": "hdr.inner_vlan_tag.$valid",
                   "hidden": false
                 }
@@ -41993,7 +42161,7 @@
               "pov_headers": [
                 {
                   "bit_index": 5,
-                  "position_offset": 203,
+                  "position_offset": 204,
                   "header_name": "hdr.eth_type.$valid",
                   "hidden": false
                 }
@@ -42015,7 +42183,7 @@
               "pov_headers": [
                 {
                   "bit_index": 6,
-                  "position_offset": 209,
+                  "position_offset": 210,
                   "header_name": "hdr.mpls.$valid",
                   "hidden": false
                 }
@@ -42037,7 +42205,7 @@
               "pov_headers": [
                 {
                   "bit_index": 7,
-                  "position_offset": 207,
+                  "position_offset": 208,
                   "header_name": "hdr.ipv4.$valid",
                   "hidden": false
                 }
@@ -42059,7 +42227,7 @@
               "pov_headers": [
                 {
                   "bit_index": 8,
-                  "position_offset": 211,
+                  "position_offset": 212,
                   "header_name": "hdr.tcp.$valid",
                   "hidden": false
                 }
@@ -42081,7 +42249,7 @@
               "pov_headers": [
                 {
                   "bit_index": 9,
-                  "position_offset": 212,
+                  "position_offset": 213,
                   "header_name": "hdr.udp.$valid",
                   "hidden": false
                 }
@@ -42103,7 +42271,7 @@
               "pov_headers": [
                 {
                   "bit_index": 10,
-                  "position_offset": 205,
+                  "position_offset": 206,
                   "header_name": "hdr.icmp.$valid",
                   "hidden": false
                 }
@@ -42125,7 +42293,7 @@
               "pov_headers": [
                 {
                   "bit_index": 11,
-                  "position_offset": 208,
+                  "position_offset": 209,
                   "header_name": "hdr.ipv6.$valid",
                   "hidden": false
                 }
@@ -48000,7 +48168,7 @@
               "action_format": [
                 {
                   "action_name": "packetio27",
-                  "action_handle": 536870945,
+                  "action_handle": 536870946,
                   "table_name": "--END_OF_PIPELINE--",
                   "next_table": 0,
                   "next_table_full": 21,
@@ -48029,7 +48197,7 @@
       "actions": [
         {
           "name": "packetio27",
-          "handle": 536870945,
+          "handle": 536870946,
           "primitives": [
             {
               "name": "AddHeaderPrimitive",
@@ -48063,7 +48231,7 @@
           "is_action_meter_color_aware": false
         }
       ],
-      "default_action_handle": 536870945,
+      "default_action_handle": 536870946,
       "action_profile": "",
       "default_next_table_mask": 0,
       "default_next_table_default": 0,
@@ -48966,7 +49134,7 @@
               "action_format": [
                 {
                   "action_name": "fabrictna45",
-                  "action_handle": 536870944,
+                  "action_handle": 536870945,
                   "table_name": "--END_OF_PIPELINE--",
                   "next_table": 0,
                   "next_table_full": 16,
@@ -48995,7 +49163,7 @@
       "actions": [
         {
           "name": "fabrictna45",
-          "handle": 536870944,
+          "handle": 536870945,
           "primitives": [
             {
               "name": "AddHeaderPrimitive",
@@ -49029,7 +49197,7 @@
           "is_action_meter_color_aware": false
         }
       ],
-      "default_action_handle": 536870944,
+      "default_action_handle": 536870945,
       "action_profile": "",
       "default_next_table_mask": 0,
       "default_next_table_default": 0,
@@ -55519,7 +55687,7 @@
               "action_format": [
                 {
                   "action_name": "packetio28",
-                  "action_handle": 536870946,
+                  "action_handle": 536870947,
                   "table_name": "--END_OF_PIPELINE--",
                   "next_table": 0,
                   "next_table_full": 255,
@@ -55542,7 +55710,7 @@
       "actions": [
         {
           "name": "packetio28",
-          "handle": 536870946,
+          "handle": 536870947,
           "primitives": [
             {
               "name": "ModifyFieldPrimitive",
@@ -55572,7 +55740,7 @@
           "is_action_meter_color_aware": false
         }
       ],
-      "default_action_handle": 536870946,
+      "default_action_handle": 536870947,
       "action_profile": "",
       "default_next_table_mask": 0,
       "default_next_table_default": 0,
@@ -56450,7 +56618,7 @@
               "action_format": [
                 {
                   "action_name": "FabricEgress.egress_next.set_mpls",
-                  "action_handle": 536870949,
+                  "action_handle": 536870950,
                   "table_name": "--END_OF_PIPELINE--",
                   "next_table": 0,
                   "next_table_full": 24,
@@ -56479,7 +56647,7 @@
       "actions": [
         {
           "name": "FabricEgress.egress_next.set_mpls",
-          "handle": 536870949,
+          "handle": 536870950,
           "primitives": [
             {
               "name": "AddHeaderPrimitive",
@@ -56541,7 +56709,7 @@
           "is_action_meter_color_aware": false
         }
       ],
-      "default_action_handle": 536870949,
+      "default_action_handle": 536870950,
       "action_profile": "",
       "default_next_table_mask": 0,
       "default_next_table_default": 0,
@@ -57448,7 +57616,7 @@
               "action_format": [
                 {
                   "action_name": "FabricEgress.egress_next.pop_mpls_if_present",
-                  "action_handle": 536870948,
+                  "action_handle": 536870949,
                   "table_name": "--END_OF_PIPELINE--",
                   "next_table": 0,
                   "next_table_full": 24,
@@ -57477,7 +57645,7 @@
       "actions": [
         {
           "name": "FabricEgress.egress_next.pop_mpls_if_present",
-          "handle": 536870948,
+          "handle": 536870949,
           "primitives": [
             {
               "name": "RemoveHeaderPrimitive",
@@ -57511,7 +57679,7 @@
           "is_action_meter_color_aware": false
         }
       ],
-      "default_action_handle": 536870948,
+      "default_action_handle": 536870949,
       "action_profile": "",
       "default_next_table_mask": 0,
       "default_next_table_default": 0,
@@ -58414,7 +58582,7 @@
               "action_format": [
                 {
                   "action_name": "next325",
-                  "action_handle": 536870947,
+                  "action_handle": 536870948,
                   "table_name": "--END_OF_PIPELINE--",
                   "next_table": 0,
                   "next_table_full": 33,
@@ -58443,7 +58611,7 @@
       "actions": [
         {
           "name": "next325",
-          "handle": 536870947,
+          "handle": 536870948,
           "primitives": [
             {
               "name": "DropPrimitive",
@@ -58471,7 +58639,7 @@
           "is_action_meter_color_aware": false
         }
       ],
-      "default_action_handle": 536870947,
+      "default_action_handle": 536870948,
       "action_profile": "",
       "default_next_table_mask": 0,
       "default_next_table_default": 0,
@@ -59048,7 +59216,7 @@
                   ]
                 },
                 {
-                  "action_name": "FabricIngress.acl.set_clone_session_id",
+                  "action_name": "FabricIngress.acl.copy_to_cpu",
                   "action_handle": 536870929,
                   "table_name": "--END_OF_PIPELINE--",
                   "next_table": 0,
@@ -59065,13 +59233,30 @@
                   "immediate_fields": []
                 },
                 {
-                  "action_name": "FabricIngress.acl.drop",
+                  "action_name": "FabricIngress.acl.set_clone_session_id",
                   "action_handle": 536870930,
                   "table_name": "--END_OF_PIPELINE--",
                   "next_table": 0,
                   "next_table_full": 48,
                   "vliw_instruction": 3,
                   "vliw_instruction_full": 70,
+                  "next_tables": [
+                    {
+                      "next_table_name": "FabricIngress.next.xconnect",
+                      "next_table_logical_id": 0,
+                      "next_table_stage_no": 3
+                    }
+                  ],
+                  "immediate_fields": []
+                },
+                {
+                  "action_name": "FabricIngress.acl.drop",
+                  "action_handle": 536870931,
+                  "table_name": "--END_OF_PIPELINE--",
+                  "next_table": 0,
+                  "next_table_full": 48,
+                  "vliw_instruction": 4,
+                  "vliw_instruction_full": 72,
                   "next_tables": [
                     {
                       "next_table_name": "FabricIngress.next.xconnect",
@@ -59093,7 +59278,7 @@
                       "param_type": "constant",
                       "const_value": 1,
                       "param_shift": 0,
-                      "dest_start": 4,
+                      "dest_start": 5,
                       "dest_width": 1
                     },
                     {
@@ -59109,19 +59294,19 @@
                       "param_type": "constant",
                       "const_value": 1,
                       "param_shift": 0,
-                      "dest_start": 12,
+                      "dest_start": 13,
                       "dest_width": 1
                     }
                   ]
                 },
                 {
                   "action_name": "FabricIngress.acl.nop_acl",
-                  "action_handle": 536870931,
+                  "action_handle": 536870932,
                   "table_name": "--END_OF_PIPELINE--",
                   "next_table": 0,
                   "next_table_full": 48,
-                  "vliw_instruction": 4,
-                  "vliw_instruction_full": 72,
+                  "vliw_instruction": 5,
+                  "vliw_instruction_full": 74,
                   "next_tables": [
                     {
                       "next_table_name": "FabricIngress.next.xconnect",
@@ -59258,8 +59443,55 @@
           "is_action_meter_color_aware": false
         },
         {
-          "name": "FabricIngress.acl.set_clone_session_id",
+          "name": "FabricIngress.acl.copy_to_cpu",
           "handle": 536870929,
+          "primitives": [
+            {
+              "name": "CountPrimitive",
+              "dst": { "type": "counter", "name": "FabricIngress.acl.acl_counter" }
+            },
+            {
+              "name": "ModifyFieldPrimitive",
+              "operation": "set",
+              "dst": { "type": "phv", "name": "ig_intr_md_for_tm.copy_to_cpu" },
+              "dst_mask": { "type": "immediate", "name": "1" },
+              "src1": { "type": "immediate", "name": "1" }
+            },
+            {
+              "name": "ModifyFieldPrimitive",
+              "operation": "set",
+              "dst": { "type": "phv", "name": "hdr.bridge_md.push_double_vlan" },
+              "dst_mask": { "type": "immediate", "name": "1" },
+              "src1": { "type": "immediate", "name": "0" }
+            }
+          ],
+          "direct_resources": [
+            {
+              "resource_name": "FabricIngress.acl.acl_counter",
+              "handle": 67108869
+            }
+          ],
+          "indirect_resources": [],
+          "allowed_as_hit_action": true,
+          "allowed_as_default_action": true,
+          "disallowed_as_default_action_reason": "",
+          "is_compiler_added_action": false,
+          "constant_default_action": false,
+          "p4_parameters": [],
+          "override_meter_addr": false,
+          "override_meter_addr_pfe": false,
+          "override_meter_full_addr": 0,
+          "override_stat_addr": false,
+          "override_stat_addr_pfe": false,
+          "override_stat_full_addr": 0,
+          "override_stateful_addr": false,
+          "override_stateful_addr_pfe": false,
+          "override_stateful_full_addr": 0,
+          "is_action_meter_color_aware": false
+        },
+        {
+          "name": "FabricIngress.acl.set_clone_session_id",
+          "handle": 536870930,
           "primitives": [
             {
               "name": "CountPrimitive",
@@ -59313,7 +59545,7 @@
         },
         {
           "name": "FabricIngress.acl.drop",
-          "handle": 536870930,
+          "handle": 536870931,
           "primitives": [
             {
               "name": "CountPrimitive",
@@ -59365,7 +59597,7 @@
         },
         {
           "name": "FabricIngress.acl.nop_acl",
-          "handle": 536870931,
+          "handle": 536870932,
           "primitives": [
             {
               "name": "CountPrimitive",
@@ -59404,7 +59636,7 @@
           "is_action_meter_color_aware": false
         }
       ],
-      "default_action_handle": 536870931,
+      "default_action_handle": 536870932,
       "action_profile": "",
       "default_next_table_mask": 0,
       "default_next_table_default": 0,
@@ -60462,7 +60694,7 @@
               "action_format": [
                 {
                   "action_name": "next357",
-                  "action_handle": 536870956,
+                  "action_handle": 536870957,
                   "table_name": "--END_OF_PIPELINE--",
                   "next_table": 0,
                   "next_table_full": 51,
@@ -60491,7 +60723,7 @@
       "actions": [
         {
           "name": "next357",
-          "handle": 536870956,
+          "handle": 536870957,
           "primitives": [
             {
               "name": "DirectAluPrimitive",
@@ -60522,7 +60754,7 @@
           "is_action_meter_color_aware": false
         }
       ],
-      "default_action_handle": 536870956,
+      "default_action_handle": 536870957,
       "action_profile": "",
       "default_next_table_mask": 0,
       "default_next_table_default": 0,
@@ -61422,7 +61654,7 @@
               "action_format": [
                 {
                   "action_name": "next363",
-                  "action_handle": 536870958,
+                  "action_handle": 536870959,
                   "table_name": "--END_OF_PIPELINE--",
                   "next_table": 0,
                   "next_table_full": 50,
@@ -61451,7 +61683,7 @@
       "actions": [
         {
           "name": "next363",
-          "handle": 536870958,
+          "handle": 536870959,
           "primitives": [
             {
               "name": "DirectAluPrimitive",
@@ -61482,7 +61714,7 @@
           "is_action_meter_color_aware": false
         }
       ],
-      "default_action_handle": 536870958,
+      "default_action_handle": 536870959,
       "action_profile": "",
       "default_next_table_mask": 0,
       "default_next_table_default": 0,
@@ -62382,7 +62614,7 @@
               "action_format": [
                 {
                   "action_name": "next368",
-                  "action_handle": 536870960,
+                  "action_handle": 536870961,
                   "table_name": "--END_OF_PIPELINE--",
                   "next_table": 0,
                   "next_table_full": 49,
@@ -62411,7 +62643,7 @@
       "actions": [
         {
           "name": "next368",
-          "handle": 536870960,
+          "handle": 536870961,
           "primitives": [
             {
               "name": "DirectAluPrimitive",
@@ -62442,7 +62674,7 @@
           "is_action_meter_color_aware": false
         }
       ],
-      "default_action_handle": 536870960,
+      "default_action_handle": 536870961,
       "action_profile": "",
       "default_next_table_mask": 0,
       "default_next_table_default": 0,
@@ -62491,7 +62723,7 @@
         }
       ],
       "stateful_table_refs": [],
-      "default_action_handle": 536870934,
+      "default_action_handle": 536870935,
       "action_profile": "",
       "default_next_table_mask": 0,
       "default_next_table_default": 0,
@@ -66864,7 +67096,7 @@
             "action_format": [
               {
                 "action_name": "nop",
-                "action_handle": 536870934,
+                "action_handle": 536870935,
                 "table_name": "--END_OF_PIPELINE--",
                 "next_table": 4294967295,
                 "next_table_full": 65,
@@ -66881,7 +67113,7 @@
               },
               {
                 "action_name": "FabricIngress.next.output_xconnect",
-                "action_handle": 536870932,
+                "action_handle": 536870933,
                 "table_name": "--END_OF_PIPELINE--",
                 "next_table": 0,
                 "next_table_full": 65,
@@ -66906,7 +67138,7 @@
               },
               {
                 "action_name": "FabricIngress.next.set_next_id_xconnect",
-                "action_handle": 536870933,
+                "action_handle": 536870934,
                 "table_name": "--END_OF_PIPELINE--",
                 "next_table": 0,
                 "next_table_full": 65,
@@ -67680,7 +67912,7 @@
       "actions": [
         {
           "name": "nop",
-          "handle": 536870934,
+          "handle": 536870935,
           "primitives": [],
           "direct_resources": [],
           "indirect_resources": [],
@@ -67702,7 +67934,7 @@
         },
         {
           "name": "FabricIngress.next.output_xconnect",
-          "handle": 536870932,
+          "handle": 536870933,
           "primitives": [
             {
               "name": "CountPrimitive",
@@ -67752,7 +67984,7 @@
         },
         {
           "name": "FabricIngress.next.set_next_id_xconnect",
-          "handle": 536870933,
+          "handle": 536870934,
           "primitives": [
             {
               "name": "CountPrimitive",
@@ -67820,7 +68052,7 @@
           "size": 0
         }
       ],
-      "condition_fields": [ { "name": "fabric_md.skip_next", "start_bit": 4, "bit_width": 1 } ],
+      "condition_fields": [ { "name": "fabric_md.skip_next", "start_bit": 5, "bit_width": 1 } ],
       "condition": "(!fabric_md.skip_next)",
       "size": 0
     },
@@ -68732,7 +68964,7 @@
               "action_format": [
                 {
                   "action_name": "next370",
-                  "action_handle": 536870961,
+                  "action_handle": 536870962,
                   "table_name": "--END_OF_PIPELINE--",
                   "next_table": 0,
                   "next_table_full": 52,
@@ -68761,7 +68993,7 @@
       "actions": [
         {
           "name": "next370",
-          "handle": 536870961,
+          "handle": 536870962,
           "primitives": [
             {
               "name": "DropPrimitive",
@@ -68789,7 +69021,7 @@
           "is_action_meter_color_aware": false
         }
       ],
-      "default_action_handle": 536870961,
+      "default_action_handle": 536870962,
       "action_profile": "",
       "default_next_table_mask": 0,
       "default_next_table_default": 0,
@@ -69689,7 +69921,7 @@
               "action_format": [
                 {
                   "action_name": "next365",
-                  "action_handle": 536870959,
+                  "action_handle": 536870960,
                   "table_name": "--END_OF_PIPELINE--",
                   "next_table": 0,
                   "next_table_full": 52,
@@ -69718,7 +69950,7 @@
       "actions": [
         {
           "name": "next365",
-          "handle": 536870959,
+          "handle": 536870960,
           "primitives": [
             {
               "name": "DropPrimitive",
@@ -69746,7 +69978,7 @@
           "is_action_meter_color_aware": false
         }
       ],
-      "default_action_handle": 536870959,
+      "default_action_handle": 536870960,
       "action_profile": "",
       "default_next_table_mask": 0,
       "default_next_table_default": 0,
@@ -70646,7 +70878,7 @@
               "action_format": [
                 {
                   "action_name": "next359",
-                  "action_handle": 536870957,
+                  "action_handle": 536870958,
                   "table_name": "--END_OF_PIPELINE--",
                   "next_table": 0,
                   "next_table_full": 52,
@@ -70675,7 +70907,7 @@
       "actions": [
         {
           "name": "next359",
-          "handle": 536870957,
+          "handle": 536870958,
           "primitives": [
             {
               "name": "DropPrimitive",
@@ -70703,7 +70935,7 @@
           "is_action_meter_color_aware": false
         }
       ],
-      "default_action_handle": 536870957,
+      "default_action_handle": 536870958,
       "action_profile": "",
       "default_next_table_mask": 0,
       "default_next_table_default": 0,
@@ -71603,7 +71835,7 @@
               "action_format": [
                 {
                   "action_name": "FabricEgress.egress_next.push_inner_vlan",
-                  "action_handle": 536870951,
+                  "action_handle": 536870952,
                   "table_name": "--END_OF_PIPELINE--",
                   "next_table": 0,
                   "next_table_full": 64,
@@ -71632,7 +71864,7 @@
       "actions": [
         {
           "name": "FabricEgress.egress_next.push_inner_vlan",
-          "handle": 536870951,
+          "handle": 536870952,
           "primitives": [
             {
               "name": "AddHeaderPrimitive",
@@ -71680,7 +71912,7 @@
           "is_action_meter_color_aware": false
         }
       ],
-      "default_action_handle": 536870951,
+      "default_action_handle": 536870952,
       "action_profile": "",
       "default_next_table_mask": 0,
       "default_next_table_default": 0,
@@ -72583,7 +72815,7 @@
               "action_format": [
                 {
                   "action_name": "next341",
-                  "action_handle": 536870952,
+                  "action_handle": 536870953,
                   "table_name": "--END_OF_PIPELINE--",
                   "next_table": 0,
                   "next_table_full": 68,
@@ -72612,7 +72844,7 @@
       "actions": [
         {
           "name": "next341",
-          "handle": 536870952,
+          "handle": 536870953,
           "primitives": [
             {
               "name": "RemoveHeaderPrimitive",
@@ -72639,7 +72871,7 @@
           "is_action_meter_color_aware": false
         }
       ],
-      "default_action_handle": 536870952,
+      "default_action_handle": 536870953,
       "action_profile": "",
       "default_next_table_mask": 0,
       "default_next_table_default": 0,
@@ -73518,7 +73750,7 @@
               "action_format": [
                 {
                   "action_name": "FabricEgress.egress_next.push_vlan",
-                  "action_handle": 536870950,
+                  "action_handle": 536870951,
                   "table_name": "--END_OF_PIPELINE--",
                   "next_table": 0,
                   "next_table_full": 255,
@@ -73541,7 +73773,7 @@
       "actions": [
         {
           "name": "FabricEgress.egress_next.push_vlan",
-          "handle": 536870950,
+          "handle": 536870951,
           "primitives": [
             {
               "name": "AddHeaderPrimitive",
@@ -73575,7 +73807,7 @@
           "is_action_meter_color_aware": false
         }
       ],
-      "default_action_handle": 536870950,
+      "default_action_handle": 536870951,
       "action_profile": "",
       "default_next_table_mask": 0,
       "default_next_table_default": 0,
@@ -73602,7 +73834,7 @@
         }
       ],
       "stateful_table_refs": [],
-      "default_action_handle": 536870943,
+      "default_action_handle": 536870944,
       "action_profile": "",
       "default_next_table_mask": 0,
       "default_next_table_default": 0,
@@ -76679,7 +76911,7 @@
             "action_format": [
               {
                 "action_name": "nop",
-                "action_handle": 536870943,
+                "action_handle": 536870944,
                 "table_name": "--END_OF_PIPELINE--",
                 "next_table": 4294967295,
                 "next_table_full": 66,
@@ -76696,7 +76928,7 @@
               },
               {
                 "action_name": "FabricIngress.next.set_vlan",
-                "action_handle": 536870941,
+                "action_handle": 536870942,
                 "table_name": "--END_OF_PIPELINE--",
                 "next_table": 0,
                 "next_table_full": 66,
@@ -76728,7 +76960,7 @@
               },
               {
                 "action_name": "FabricIngress.next.set_double_vlan",
-                "action_handle": 536870942,
+                "action_handle": 536870943,
                 "table_name": "--END_OF_PIPELINE--",
                 "next_table": 0,
                 "next_table_full": 66,
@@ -77456,7 +77688,7 @@
       "actions": [
         {
           "name": "nop",
-          "handle": 536870943,
+          "handle": 536870944,
           "primitives": [],
           "direct_resources": [],
           "indirect_resources": [],
@@ -77478,7 +77710,7 @@
         },
         {
           "name": "FabricIngress.next.set_vlan",
-          "handle": 536870941,
+          "handle": 536870942,
           "primitives": [
             {
               "name": "CountPrimitive",
@@ -77528,7 +77760,7 @@
         },
         {
           "name": "FabricIngress.next.set_double_vlan",
-          "handle": 536870942,
+          "handle": 536870943,
           "primitives": [
             {
               "name": "CountPrimitive",
@@ -77655,7 +77887,7 @@
         }
       ],
       "stateful_table_refs": [],
-      "default_action_handle": 536870940,
+      "default_action_handle": 536870941,
       "action_profile": "",
       "default_next_table_mask": 0,
       "default_next_table_default": 0,
@@ -80708,7 +80940,7 @@
             "action_format": [
               {
                 "action_name": "nop",
-                "action_handle": 536870940,
+                "action_handle": 536870941,
                 "table_name": "--END_OF_PIPELINE--",
                 "next_table": 4294967295,
                 "next_table_full": 67,
@@ -80725,7 +80957,7 @@
               },
               {
                 "action_name": "FabricIngress.next.set_mcast_group_id",
-                "action_handle": 536870939,
+                "action_handle": 536870940,
                 "table_name": "--END_OF_PIPELINE--",
                 "next_table": 0,
                 "next_table_full": 67,
@@ -81384,7 +81616,7 @@
       "actions": [
         {
           "name": "nop",
-          "handle": 536870940,
+          "handle": 536870941,
           "primitives": [],
           "direct_resources": [],
           "indirect_resources": [],
@@ -81406,7 +81638,7 @@
         },
         {
           "name": "FabricIngress.next.set_mcast_group_id",
-          "handle": 536870939,
+          "handle": 536870940,
           "primitives": [
             {
               "name": "CountPrimitive",
@@ -81532,7 +81764,7 @@
         }
       ],
       "stateful_table_refs": [],
-      "default_action_handle": 536870938,
+      "default_action_handle": 536870939,
       "action_profile": "FabricIngress.next.hashed_profile",
       "default_next_table_mask": 0,
       "default_next_table_default": 0,
@@ -84729,7 +84961,7 @@
             "action_format": [
               {
                 "action_name": "nop",
-                "action_handle": 536870938,
+                "action_handle": 536870939,
                 "table_name": "--END_OF_PIPELINE--",
                 "next_table": 4294967295,
                 "next_table_full": 255,
@@ -84740,7 +84972,7 @@
               },
               {
                 "action_name": "FabricIngress.next.output_hashed",
-                "action_handle": 536870935,
+                "action_handle": 536870936,
                 "table_name": "--END_OF_PIPELINE--",
                 "next_table": 0,
                 "next_table_full": 255,
@@ -84751,7 +84983,7 @@
               },
               {
                 "action_name": "FabricIngress.next.routing_hashed",
-                "action_handle": 536870936,
+                "action_handle": 536870937,
                 "table_name": "--END_OF_PIPELINE--",
                 "next_table": 0,
                 "next_table_full": 255,
@@ -84762,7 +84994,7 @@
               },
               {
                 "action_name": "FabricIngress.next.mpls_routing_hashed",
-                "action_handle": 536870937,
+                "action_handle": 536870938,
                 "table_name": "--END_OF_PIPELINE--",
                 "next_table": 0,
                 "next_table_full": 255,
@@ -85572,7 +85804,7 @@
       "actions": [
         {
           "name": "nop",
-          "handle": 536870938,
+          "handle": 536870939,
           "primitives": [],
           "direct_resources": [],
           "indirect_resources": [],
@@ -85594,7 +85826,7 @@
         },
         {
           "name": "FabricIngress.next.output_hashed",
-          "handle": 536870935,
+          "handle": 536870936,
           "primitives": [
             {
               "name": "CountPrimitive",
@@ -85641,7 +85873,7 @@
         },
         {
           "name": "FabricIngress.next.routing_hashed",
-          "handle": 536870936,
+          "handle": 536870937,
           "primitives": [
             {
               "name": "CountPrimitive",
@@ -85704,7 +85936,7 @@
         },
         {
           "name": "FabricIngress.next.mpls_routing_hashed",
-          "handle": 536870937,
+          "handle": 536870938,
           "primitives": [
             {
               "name": "CountPrimitive",
@@ -85922,7 +86154,7 @@
                   ]
                 }
               ],
-              "action_handle": 536870937
+              "action_handle": 536870938
             },
             {
               "memory_word_width": 128,
@@ -85956,7 +86188,7 @@
                   ]
                 }
               ],
-              "action_handle": 536870935
+              "action_handle": 536870936
             },
             {
               "memory_word_width": 128,
@@ -86040,7 +86272,7 @@
                   ]
                 }
               ],
-              "action_handle": 536870936
+              "action_handle": 536870937
             },
             {
               "memory_word_width": 128,
@@ -86064,7 +86296,7 @@
                   ]
                 }
               ],
-              "action_handle": 536870938
+              "action_handle": 536870939
             }
           ],
           "memory_resource_allocation": {
@@ -86076,7 +86308,7 @@
       "actions": [
         {
           "name": "FabricIngress.next.mpls_routing_hashed",
-          "handle": 536870937,
+          "handle": 536870938,
           "p4_parameters": [
             {
               "name": "port_num",
@@ -86096,7 +86328,7 @@
         },
         {
           "name": "FabricIngress.next.output_hashed",
-          "handle": 536870935,
+          "handle": 536870936,
           "p4_parameters": [
             {
               "name": "port_num",
@@ -86108,7 +86340,7 @@
         },
         {
           "name": "FabricIngress.next.routing_hashed",
-          "handle": 536870936,
+          "handle": 536870937,
           "p4_parameters": [
             {
               "name": "port_num",
@@ -86120,7 +86352,7 @@
             { "name": "dmac", "start_bit": 57, "position": 2, "bit_width": 48 }
           ]
         },
-        { "name": "nop", "handle": 536870938, "p4_parameters": [] }
+        { "name": "nop", "handle": 536870939, "p4_parameters": [] }
       ],
       "static_entries": [],
       "how_referenced": "indirect"
@@ -86221,7 +86453,7 @@
         }
       ],
       "stateful_table_refs": [],
-      "default_action_handle": 536870954,
+      "default_action_handle": 536870955,
       "action_profile": "",
       "default_next_table_mask": 0,
       "default_next_table_default": 0,
@@ -88152,7 +88384,7 @@
             "action_format": [
               {
                 "action_name": "nop",
-                "action_handle": 536870954,
+                "action_handle": 536870955,
                 "table_name": "--END_OF_PIPELINE--",
                 "next_table": 4294967295,
                 "next_table_full": 69,
@@ -88169,7 +88401,7 @@
               },
               {
                 "action_name": "FabricEgress.egress_next.pop_vlan",
-                "action_handle": 536870953,
+                "action_handle": 536870954,
                 "table_name": "--END_OF_PIPELINE--",
                 "next_table": 0,
                 "next_table_full": 69,
@@ -88655,7 +88887,7 @@
       "actions": [
         {
           "name": "nop",
-          "handle": 536870954,
+          "handle": 536870955,
           "primitives": [],
           "direct_resources": [],
           "indirect_resources": [],
@@ -88677,7 +88909,7 @@
         },
         {
           "name": "FabricEgress.egress_next.pop_vlan",
-          "handle": 536870953,
+          "handle": 536870954,
           "primitives": [
             {
               "name": "CountPrimitive",
@@ -89625,7 +89857,7 @@
               "action_format": [
                 {
                   "action_name": "FabricEgress.egress_next.push_vlan",
-                  "action_handle": 536870955,
+                  "action_handle": 536870956,
                   "table_name": "--END_OF_PIPELINE--",
                   "next_table": 0,
                   "next_table_full": 255,
@@ -89648,7 +89880,7 @@
       "actions": [
         {
           "name": "FabricEgress.egress_next.push_vlan",
-          "handle": 536870955,
+          "handle": 536870956,
           "primitives": [
             {
               "name": "AddHeaderPrimitive",
@@ -89689,7 +89921,7 @@
           "is_action_meter_color_aware": false
         }
       ],
-      "default_action_handle": 536870955,
+      "default_action_handle": 536870956,
       "action_profile": "",
       "default_next_table_mask": 0,
       "default_next_table_default": 0,
@@ -90106,6 +90338,6 @@
       ]
     }
   ],
-  "run_id": "b1ec2924c8b1f042",
+  "run_id": "73ab34d86c98ec4a",
   "driver_options": { "hash_parity_enabled": false, "high_availability_enabled": true }
 }

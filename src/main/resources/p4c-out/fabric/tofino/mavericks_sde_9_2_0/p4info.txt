@@ -268,6 +268,9 @@ tables {
     id: 16829684
   }
   action_refs {
+    id: 16835757
+  }
+  action_refs {
     id: 16781601
   }
   action_refs {
@@ -542,6 +545,13 @@ actions {
     id: 16829684
     name: "FabricIngress.acl.punt_to_cpu"
     alias: "punt_to_cpu"
+  }
+}
+actions {
+  preamble {
+    id: 16835757
+    name: "FabricIngress.acl.copy_to_cpu"
+    alias: "copy_to_cpu"
   }
 }
 actions {

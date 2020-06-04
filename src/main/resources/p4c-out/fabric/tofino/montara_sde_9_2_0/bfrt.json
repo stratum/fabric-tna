@@ -781,6 +781,13 @@
           "data" : []
         },
         {
+          "id" : 16835757,
+          "name" : "FabricIngress.acl.copy_to_cpu",
+          "action_scope" : "TableAndDefault",
+          "annotations" : [],
+          "data" : []
+        },
+        {
           "id" : 16781601,
           "name" : "FabricIngress.acl.set_clone_session_id",
           "action_scope" : "TableAndDefault",
