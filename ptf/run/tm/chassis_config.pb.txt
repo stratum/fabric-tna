@@ -1,0 +1,109 @@
+# Copyright 2020-present Open Networking Foundation
+# SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
+description: "Tofino Model"
+chassis {
+  platform: PLT_BAREFOOT_TOFINO
+  name: "tofino-model"
+}
+nodes {
+  id: 1
+  name: "tofino-model"
+  slot: 1
+  index: 1
+}
+singleton_ports {
+  id: 0
+  name: "veth1"
+  slot: 1
+  port: 0
+  channel: 1
+  speed_bps: 10000000000
+  config_params {
+    admin_state: ADMIN_STATE_ENABLED
+  }
+  node: 1
+}
+singleton_ports {
+  id: 1
+  name: "veth3"
+  slot: 1
+  port: 1
+  channel: 1
+  speed_bps: 10000000000
+  config_params {
+    admin_state: ADMIN_STATE_ENABLED
+  }
+  node: 1
+}
+singleton_ports {
+  id: 2
+  name: "veth5"
+  slot: 1
+  port: 2
+  channel: 1
+  speed_bps: 10000000000
+  config_params {
+    admin_state: ADMIN_STATE_ENABLED
+  }
+  node: 1
+}
+singleton_ports {
+  id: 3
+  name: "veth7"
+  slot: 1
+  port: 3
+  channel: 1
+  speed_bps: 10000000000
+  config_params {
+    admin_state: ADMIN_STATE_ENABLED
+  }
+  node: 1
+}
+singleton_ports {
+  id: 4
+  name: "veth9"
+  slot: 1
+  port: 4
+  channel: 1
+  speed_bps: 10000000000
+  config_params {
+    admin_state: ADMIN_STATE_ENABLED
+  }
+  node: 1
+}
+singleton_ports {
+  id: 5
+  name: "veth11"
+  slot: 1
+  port: 5
+  channel: 1
+  speed_bps: 10000000000
+  config_params {
+    admin_state: ADMIN_STATE_ENABLED
+  }
+  node: 1
+}
+singleton_ports {
+  id: 6
+  name: "veth13"
+  slot: 1
+  port: 6
+  channel: 1
+  speed_bps: 10000000000
+  config_params {
+    admin_state: ADMIN_STATE_ENABLED
+  }
+  node: 1
+}
+singleton_ports {
+  id: 7
+  name: "veth15"
+  slot: 1
+  port: 7
+  channel: 1
+  speed_bps: 10000000000
+  config_params {
+    admin_state: ADMIN_STATE_ENABLED
+  }
+  node: 1
+}

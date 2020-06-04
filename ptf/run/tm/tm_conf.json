@@ -1,0 +1,36 @@
+{
+    "instance": 0,
+    "chip_list": [
+        {
+            "chip_family": "tofino",
+            "instance": 0,
+            "id": "asic-0"
+        }
+    ],
+    "p4_devices": [
+        {
+            "device-id": 0,
+            "agent0": "lib/libpltfm_mgr.so",
+            "p4_programs": [
+                {
+                    "p4_pipelines": [
+                        {
+                            "p4_pipeline_name": "pipe",
+                            "path": "/p4c-out",
+                            "config": "/p4c-out/pipe/tofino.bin",
+                            "context": "/p4c-out/pipe/context.json",
+                            "pipe_scope": [
+                                0,
+                                1,
+                                2,
+                                3
+                            ]
+                        }
+                    ],
+                    "bfrt-config": "/p4c-out/bf-rt.json",
+                    "program-name": "%PROG_NAME%"
+                }
+            ]
+        }
+    ]
+}
