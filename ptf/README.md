@@ -86,7 +86,7 @@ fail to start or affect test results negatively.
     ./run/tm/run fabric
     ```
 
-    To run a specific test case against a specific fabric profile,
+    To run a specific test case against a specific fabric-tna profile,
     for example `test.FabricBridgingTest` for the `fabric-spgw` profile:
 
     ```
