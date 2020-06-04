@@ -30,6 +30,11 @@ control Acl (inout parsed_headers_t hdr,
         acl_counter.count();
     }
 
+    action copy_to_cpu() {
+        ig_intr_md_for_tm.copy_to_cpu = 1;
+        acl_counter.count();
+    }
+
     // Set mirror with session/clone id
     action set_clone_session_id(bit<32> clone_id) {
         fabric_md.is_mirror = true;
@@ -66,6 +71,7 @@ control Acl (inout parsed_headers_t hdr,
         actions = {
             set_next_id_acl;
             punt_to_cpu;
+            copy_to_cpu;
             set_clone_session_id;
             drop;
             nop_acl;
