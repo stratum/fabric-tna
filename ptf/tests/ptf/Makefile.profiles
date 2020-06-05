@@ -7,7 +7,7 @@ all: fabric fabric-bng fabric-spgw fabric-int fabric-spgw-int
 
 fabric: _checkenv
 ifndef TEST
-	$(eval TEST = all ^spgw ^int ^bng ^dth ^multicast ^xconnect)
+	$(eval TEST = all ^spgw ^int ^bng ^dth ^xconnect)
 endif
 	$(call run_tests,fabric,$(TEST))
 
