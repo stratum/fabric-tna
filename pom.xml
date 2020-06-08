@@ -70,6 +70,12 @@ SPDX-License-Identifier: Apache-2.0
             <version>${onos.version}</version>
         </dependency>
 
+        <dependency>
+            <groupId>org.onosproject</groupId>
+            <artifactId>onos-protocols-p4runtime-model</artifactId>
+            <version>${onos.version}</version>
+        </dependency>
+
     </dependencies>
 
     <build>
