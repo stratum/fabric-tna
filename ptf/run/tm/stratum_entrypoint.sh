@@ -15,7 +15,7 @@ mount -t hugetlbfs nodev /mnt/huge
 # Log files will be copied out of this container once stopped (see run.)
 mkdir /tmp/workdir
 cd /tmp/workdir
-stratum_bf \
+/usr/bin/stratum_bfrt \
     -bf_sde_install=/usr \
     -bf_switchd_background=true \
     -bf_switchd_cfg=/usr/share/stratum/tofino_skip_p4.conf \

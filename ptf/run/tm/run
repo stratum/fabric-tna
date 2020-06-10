@@ -57,12 +57,8 @@ fi
 
 # Find Tofino compiled artifacts
 sdeVer_=$(echo "${SDE_VERSION}" | tr . _) # Replace dots with underscores
-P4C_OUT=${FABRIC_TNA}/src/main/resources/p4c-out/${fabricProfile}/tofino/mavericks_sde_${sdeVer_}
+P4C_OUT=${FABRIC_TNA}/src/main/resources/p4c-out/${fabricProfile}/stratum_bfrt/mavericks_sde_${sdeVer_}
 echo "*** Using P4 compiler output in ${P4C_OUT}..."
-if [ ! -f "${P4C_OUT}"/pipe/tofino.bin ]; then
-    echo "ERROR: missing tofino.bin in ${P4C_OUT}"
-    exit 1
-fi
 
 # Fix a name for each container so we can stop them
 randomNum=${RANDOM}
@@ -117,6 +113,8 @@ docker run --name ${testerRunName} -it --privileged --rm \
     --network "container:${tmRunName}" \
     -v "${FP4TEST_ROOT}":/fabric-p4test \
     -v "${P4C_OUT}":/p4c-out \
+    -e DEVICE=stratum-bfrt \
+    -e "DEVICE_CONFIG=--tofino-pipeline-tar /p4c-out/pipeline.tar.bz2" \
     --entrypoint /fabric-p4test/run/tm/start_test.sh \
     "${FP4TEST_DOCKER_IMG}" \
     ${@}
