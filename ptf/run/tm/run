@@ -15,6 +15,7 @@ SDE_VERSION=${SDE_VERSION:-9.2.0}
 # Use image sha to pin a specific stratum_bmv2 build and have reproducible runs.
 # We could instrument CI to test on both a stable version and the latest one.
 STRATUM_BF_DOCKER_IMG=${STRATUM_BF_DOCKER_IMG:-stratumproject/stratum-bf:9.2.0}
+STRATUM_BF_DOCKER_FLAG=${STRATUM_BF_DOCKER_FLAG:-}
 
 if [[ -z "${FABRIC_TNA}" ]]; then
     echo "ERROR: FABRIC_TNA env not defined"
@@ -104,6 +105,7 @@ docker run --name ${stratumBfRunName} -d --privileged \
     --network "container:${tmRunName}" \
     -v "${DIR}":/workdir -w /workdir \
     --entrypoint ./stratum_entrypoint.sh \
+    ${STRATUM_BF_DOCKER_FLAG} \
     "${STRATUM_BF_DOCKER_IMG}"
 sleep 5
 wait_for ${stratumBfRunName} 28000 60
