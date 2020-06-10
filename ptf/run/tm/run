@@ -15,6 +15,7 @@ SDE_VERSION=${SDE_VERSION:-9.2.0}
 # Use image sha to pin a specific stratum_bmv2 build and have reproducible runs.
 # We could instrument CI to test on both a stable version and the latest one.
 STRATUM_BF_DOCKER_IMG=${STRATUM_BF_DOCKER_IMG:-stratumproject/stratum-bf:9.2.0}
+STRATUM_BF_DOCKER_FLAG=${STRATUM_BF_DOCKER_FLAG:-}
 
 if [[ -z "${FABRIC_TNA}" ]]; then
     echo "ERROR: FABRIC_TNA env not defined"
@@ -57,12 +58,8 @@ fi
 
 # Find Tofino compiled artifacts
 sdeVer_=$(echo "${SDE_VERSION}" | tr . _) # Replace dots with underscores
-P4C_OUT=${FABRIC_TNA}/src/main/resources/p4c-out/${fabricProfile}/tofino/mavericks_sde_${sdeVer_}
+P4C_OUT=${FABRIC_TNA}/src/main/resources/p4c-out/${fabricProfile}/stratum_bfrt/mavericks_sde_${sdeVer_}
 echo "*** Using P4 compiler output in ${P4C_OUT}..."
-if [ ! -f "${P4C_OUT}"/pipe/tofino.bin ]; then
-    echo "ERROR: missing tofino.bin in ${P4C_OUT}"
-    exit 1
-fi
 
 # Fix a name for each container so we can stop them
 randomNum=${RANDOM}
@@ -108,6 +105,7 @@ docker run --name ${stratumBfRunName} -d --privileged \
     --network "container:${tmRunName}" \
     -v "${DIR}":/workdir -w /workdir \
     --entrypoint ./stratum_entrypoint.sh \
+    ${STRATUM_BF_DOCKER_FLAG} \
     "${STRATUM_BF_DOCKER_IMG}"
 sleep 5
 wait_for ${stratumBfRunName} 28000 60
@@ -117,6 +115,8 @@ docker run --name ${testerRunName} -it --privileged --rm \
     --network "container:${tmRunName}" \
     -v "${FP4TEST_ROOT}":/fabric-p4test \
     -v "${P4C_OUT}":/p4c-out \
+    -e DEVICE=stratum-bfrt \
+    -e "DEVICE_CONFIG=--tofino-pipeline-tar /p4c-out/pipeline.tar.bz2" \
     --entrypoint /fabric-p4test/run/tm/start_test.sh \
     "${FP4TEST_DOCKER_IMG}" \
     ${@}

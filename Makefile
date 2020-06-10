@@ -16,7 +16,7 @@ onos_curl := curl --fail -sSL --user onos:rocks --noproxy localhost
 pipeconf_app_name := org.stratumproject.fabric-tna
 pipeconf_oar_file := $(shell ls -1 ${curr_dir}/target/fabric-tna-*.oar)
 
-p4-build := ./src/main/p4/build.sh
+p4-build := ./p4src/build.sh
 
 .PHONY: pipeconf
 
@@ -81,5 +81,5 @@ clean:
 
 deep-clean: clean
 	-rm -rf target
-	-rm -rf p4c-out
+	-rm -rf src/main/resources/p4c-out
 	-docker rm ${mvn_container} > /dev/null 2>&1
