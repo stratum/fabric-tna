@@ -66,7 +66,7 @@ export STRATUM_BF_DOCKER_FLAG="-v /path/to/stratum-bfrt:/usr/bin/stratum_bfrt"
 
 # To develop the pipeline with bf_switchd + bfrt_python CLI
 
-Another way to manage the pipeline is to use bfrt_python CLI. This CLI also helps the developer which table keys and table data are supported by a table. (e.g., $MATCH_PRIORITY)
+Another way to manage the pipeline is to use bfrt_python CLI. This CLI also helps the developer to understand which table keys and data are supported by a table. (e.g., $MATCH_PRIORITY)
 
 The Docker image `opennetworking/bf-sde:9.2.0-bfrt` includes SDE with all profiles.
 
