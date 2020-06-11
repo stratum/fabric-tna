@@ -1,9 +1,9 @@
 {
-  "build_date": "Wed Jun 10 08:11:56 2020",
+  "build_date": "Thu Jun 11 16:38:33 2020",
   "schema_version": "1.11.0",
   "compiler_version": "9.2.0",
   "target": "tofino",
-  "program_name": "fabric-tna",
+  "program_name": "fabric_tna",
   "learn_quanta": [],
   "parser": {
     "ingress": [
@@ -46664,7 +46664,7 @@
                   "vliw_instruction_full": 68,
                   "next_tables": [
                     {
-                      "next_table_name": "tbl_fabrictna45",
+                      "next_table_name": "tbl_fabric_tna45",
                       "next_table_logical_id": 4,
                       "next_table_stage_no": 0
                     }
@@ -48269,7 +48269,7 @@
     {
       "direction": "ingress",
       "handle": 16777221,
-      "name": "tbl_fabrictna45",
+      "name": "tbl_fabric_tna45",
       "table_type": "match",
       "size": 0,
       "match_attributes": {
@@ -49133,7 +49133,7 @@
               "memory_resource_allocation": null,
               "action_format": [
                 {
-                  "action_name": "fabrictna45",
+                  "action_name": "fabric_tna45",
                   "action_handle": 536870945,
                   "table_name": "--END_OF_PIPELINE--",
                   "next_table": 0,
@@ -49162,7 +49162,7 @@
       "stateful_table_refs": [],
       "actions": [
         {
-          "name": "fabrictna45",
+          "name": "fabric_tna45",
           "handle": 536870945,
           "primitives": [
             {
@@ -49209,7 +49209,7 @@
     },
     {
       "direction": "ingress",
-      "attached_to": "tbl_fabrictna45",
+      "attached_to": "tbl_fabric_tna45",
       "handle": 1879048194,
       "name": "cond-28",
       "table_type": "condition",
@@ -49218,7 +49218,7 @@
           "next_tables": { "false": 16, "true": 4 },
           "memory_resource_allocation": { "memory_unit": 2, "memory_type": "gateway", "payload_buses": [] },
           "pack_format": [],
-          "next_table_names": { "false": "", "true": "tbl_fabrictna45" },
+          "next_table_names": { "false": "", "true": "tbl_fabric_tna45" },
           "logical_table_id": 4,
           "stage_number": 0,
           "stage_table_type": "gateway",
@@ -90338,6 +90338,6 @@
       ]
     }
   ],
-  "run_id": "25abd4e425c1f0d1",
+  "run_id": "51a550de853ecc83",
   "driver_options": { "hash_parity_enabled": false, "high_availability_enabled": true }
 }
