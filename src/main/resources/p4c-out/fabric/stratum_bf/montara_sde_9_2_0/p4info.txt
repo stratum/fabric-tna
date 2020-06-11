@@ -42,7 +42,7 @@ tables {
   }
   const_default_action_id: 16836487
   direct_resource_ids: 318814845
-  size: 1024
+  size: 2048
 }
 tables {
   preamble {
@@ -79,7 +79,7 @@ tables {
   }
   const_default_action_id: 16840921
   direct_resource_ids: 318811056
-  size: 1024
+  size: 128
 }
 tables {
   preamble {
@@ -109,7 +109,7 @@ tables {
   }
   const_default_action_id: 16819938
   direct_resource_ids: 318782987
-  size: 1024
+  size: 2048
 }
 tables {
   preamble {
@@ -133,13 +133,14 @@ tables {
   }
   const_default_action_id: 16819938
   direct_resource_ids: 318830188
-  size: 1024
+  size: 2048
 }
 tables {
   preamble {
     id: 33569937
     name: "FabricIngress.forwarding.routing_v4"
     alias: "routing_v4"
+    annotations: "@alpm(1)"
   }
   match_fields {
     id: 1
@@ -158,13 +159,14 @@ tables {
     annotations: "@defaultonly"
     scope: DEFAULT_ONLY
   }
-  size: 1024
+  size: 30000
 }
 tables {
   preamble {
     id: 33555495
     name: "FabricIngress.forwarding.routing_v6"
     alias: "routing_v6"
+    annotations: "@alpm(1)"
   }
   match_fields {
     id: 1
@@ -181,7 +183,7 @@ tables {
     scope: DEFAULT_ONLY
   }
   const_default_action_id: 16819938
-  size: 1024
+  size: 1000
 }
 tables {
   preamble {
@@ -281,7 +283,7 @@ tables {
   }
   const_default_action_id: 16827694
   direct_resource_ids: 318815483
-  size: 1024
+  size: 2048
 }
 tables {
   preamble {
@@ -308,7 +310,7 @@ tables {
   }
   const_default_action_id: 16819938
   direct_resource_ids: 318806340
-  size: 1024
+  size: 2048
 }
 tables {
   preamble {
@@ -341,7 +343,7 @@ tables {
   }
   const_default_action_id: 16819938
   direct_resource_ids: 318824131
-  size: 1024
+  size: 4096
 }
 tables {
   preamble {
@@ -372,7 +374,7 @@ tables {
   const_default_action_id: 16819938
   implementation_id: 285274751
   direct_resource_ids: 318797344
-  size: 1024
+  size: 2048
 }
 tables {
   preamble {
@@ -396,7 +398,7 @@ tables {
   }
   const_default_action_id: 16819938
   direct_resource_ids: 318814436
-  size: 1024
+  size: 2048
 }
 tables {
   preamble {
@@ -426,7 +428,7 @@ tables {
   }
   const_default_action_id: 16819938
   direct_resource_ids: 318817765
-  size: 1024
+  size: 2048
 }
 actions {
   preamble {
@@ -721,7 +723,7 @@ action_profiles {
   }
   table_ids: 33577058
   with_selector: true
-  size: 1024
+  size: 32768
   max_group_size: 16
 }
 direct_counters {

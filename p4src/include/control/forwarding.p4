@@ -70,27 +70,25 @@ control Forwarding (inout parsed_headers_t hdr,
     /*
      * IPv4 Routing Table.
      */
-#ifdef WTIH_DEBUG
+#ifdef WITH_DEBUG
     DirectCounter<bit<64>>(CounterType_t.PACKETS_AND_BYTES) routing_v4_counter;
 #endif // WITH_DEBUG
 
     action set_next_id_routing_v4(next_id_t next_id) {
         set_next_id(next_id);
-#ifdef WTIH_DEBUG
+#ifdef WITH_DEBUG
         routing_v4_counter.count();
 #endif // WITH_DEBUG
     }
 
     action nop_routing_v4() {
         // no-op
-#ifdef WTIH_DEBUG
+#ifdef WITH_DEBUG
         routing_v4_counter.count();
 #endif // WITH_DEBUG
     }
 
-    #ifdef _ROUTING_V4_TABLE_ANNOT
-    _ROUTING_V4_TABLE_ANNOT
-    #endif
+    @alpm(1)
     table routing_v4 {
         key = {
             hdr.ipv4.dst_addr: lpm @name("ipv4_dst");
@@ -101,7 +99,7 @@ control Forwarding (inout parsed_headers_t hdr,
             @defaultonly nop;
         }
         default_action = nop();
-#ifdef WTIH_DEBUG
+#ifdef WITH_DEBUG
         counters = routing_v4_counter;
 #endif // WITH_DEBUG
         size = ROUTING_V4_TABLE_SIZE;
@@ -110,17 +108,18 @@ control Forwarding (inout parsed_headers_t hdr,
     /*
      * IPv6 Routing Table.
      */
-#ifdef WTIH_DEBUG
+#ifdef WITH_DEBUG
     DirectCounter<bit<64>>(CounterType_t.PACKETS_AND_BYTES) routing_v6_counter;
 #endif // WITH_DEBUG
 
     action set_next_id_routing_v6(next_id_t next_id) {
         set_next_id(next_id);
-#ifdef WTIH_DEBUG
+#ifdef WITH_DEBUG
         routing_v6_counter.count();
 #endif // WITH_DEBUG
     }
 
+    @alpm(1)
     table routing_v6 {
         key = {
             hdr.ipv6.dst_addr: lpm @name("ipv6_dst");
@@ -130,7 +129,7 @@ control Forwarding (inout parsed_headers_t hdr,
             @defaultonly nop;
         }
         const default_action = nop();
-#ifdef WTIH_DEBUG
+#ifdef WITH_DEBUG
         counters = routing_v6_counter;
 #endif // WITH_DEBUG
         size = ROUTING_V6_TABLE_SIZE;
