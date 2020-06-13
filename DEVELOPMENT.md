@@ -70,13 +70,16 @@ Another way to manage the pipeline is to use bfrt_python CLI. This CLI also help
 
 The Docker image `opennetworking/bf-sde:9.2.0-bfrt` includes SDE with all profiles.
 
+The original compiler outputs are required for bfrt_python CLI.
+Make sure `tmp` directory exists in the root of this repo after executing `make fabric` command.
+
 To use this image:
 
 ```bash
 cd fabric-tna # enter this dir
 
 # Start the Docker container with privileged and mount this directory
-docker run -it --rm -v $PWD:$PWD --privileged --name tofino-model opennetworking/bf-sde:9.2.0-bfrt
+docker run -it --rm -v $PWD:$PWD -w $PWD --privileged --name tofino-model opennetworking/bf-sde:9.2.0-bfrt
 
 # Set up veth pairs
 veth_setup.sh
@@ -85,7 +88,7 @@ veth_setup.sh
 dma_setup.sh
 
 # Start the Tofino Model with fabric_tna pipeline
-./run_tofino_model.sh -c /Users/tsengyi/fabric-tna/tmp/fabric/mavericks_sde_9_2_0/fabric_tna.conf -p fabric_tna
+$SDE/run_tofino_model.sh -c tmp/fabric/mavericks_sde_9_2_0/fabric_tna.conf -p fabric_tna
 ```
 
 After the Tofino Model started, use `docker exec` command to start another bash shell so we can start the bf_switchd
@@ -94,7 +97,7 @@ After the Tofino Model started, use `docker exec` command to start another bash 
 docker exec -it tofino-model bash
 
 # Start the bf_switchd process
-./run_switchd.sh -c /Users/tsengyi/fabric-tna/tmp/fabric/mavericks_sde_9_2_0/fabric_tna.conf
+$SDE/run_switchd.sh -c tmp/fabric/mavericks_sde_9_2_0/fabric_tna.conf
 ```
 
 Now you can use `bfrt_python` command to manage the pipeline.
