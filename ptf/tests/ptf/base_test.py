@@ -84,24 +84,16 @@ def format_pkt_match(received_pkt, expected_pkt):
         sys.stdout.close()
         sys.stdout = stdout_save  # Restore the original stdout.
 
-def format_normal_match(expected, received):
-    # Taken from PTF dataplane class
-    stdout_save = sys.stdout
-    try:
-        # The scapy packet dissection methods print directly to stdout,
-        # so we have to redirect stdout to a string.
-        sys.stdout = StringIO()
 
-        print("========== EXPECTED ==========")
-        print(expected)
-        print("========== RECEIVED ==========")
-        print(received)
-        print("==============================")
+def format_exp_rcv(expected, received):
+    buf = ""
+    buf += "========== EXPECTED ==========\n"
+    buf += expected
+    buf += "========== RECEIVED =========="
+    buf += received
+    buf += "=============================="
+    return buf
 
-        return sys.stdout.getvalue()
-    finally:
-        sys.stdout.close()
-        sys.stdout = stdout_save  # Restore the original stdout.
 
 # Used to indicate that the gRPC error Status object returned by the server has
 # an incorrect format.
@@ -333,7 +325,7 @@ class P4RuntimeTest(BaseTest):
 
     def verify_p4runtime_entity(self, expected, received):
         if expected != received:
-            self.fail("Received entity is not the expected one\n" + format_normal_match(expected, received))
+            self.fail("Received entity is not the expected one\n" + format_exp_rcv(expected, received))
 
     def get_stream_packet(self, type_, timeout=1):
         start = time.time()

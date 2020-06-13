@@ -955,19 +955,21 @@ class ActionProfileGroupModificationTest(FabricTest):
 
     @autocleanup
     def doRunTest(self):
+        # Insert members
         mbr_ids = []
         for port_num in range(1, 4):
             req, _ = self.add_next_hashed_group_member("output_hashed", [("port_num", stringify(port_num, 2))])
             member_installed = req.updates[0].entity.action_profile_member
             mbr_ids.append(member_installed.member_id)
 
-
+        # Insert group with member-1 and member-2
         grp_id = 1
         req, _ = self.add_next_hashed_group(grp_id, mbr_ids[:2])
         expected_action_profile_group = req.updates[0].entity.action_profile_group
         received_action_profile_group = self.read_next_hashed_group(grp_id)
         self.verify_p4runtime_entity(expected_action_profile_group, received_action_profile_group)
 
+        # Modify group with member-2 and member-3
         req, _ = self.modify_next_hashed_group(grp_id, mbr_ids[1:], grp_size=2)
         expected_action_profile_group = req.updates[0].entity.action_profile_group
         received_action_profile_group = self.read_next_hashed_group(grp_id)
