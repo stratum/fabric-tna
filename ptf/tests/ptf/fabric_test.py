@@ -344,10 +344,21 @@ class FabricTest(P4RuntimeTest):
             mk.append(self.Ternary(
                 "eth_dst", eth_dstAddr_, eth_dstAddr_mask_))
         next_id_ = stringify(next_id, 4)
-        self.send_request_add_entry_to_action(
+        return self.send_request_add_entry_to_action(
             "forwarding.bridging", mk,
             "forwarding.set_next_id_bridging", [("next_id", next_id_)],
             DEFAULT_PRIORITY)
+
+    def read_bridging_entry(self, vlan_id, eth_dstAddr, eth_dstAddr_mask):
+        vlan_id_ = stringify(vlan_id, 2)
+        mk = [self.Exact("vlan_id", vlan_id_)]
+        if eth_dstAddr is not None:
+            eth_dstAddr_ = mac_to_binary(eth_dstAddr)
+            eth_dstAddr_mask_ = mac_to_binary(eth_dstAddr_mask)
+            mk.append(self.Ternary(
+                "eth_dst", eth_dstAddr_, eth_dstAddr_mask_))
+        return self.read_table_entry("forwarding.bridging", mk,
+                                     DEFAULT_PRIORITY)
 
     def add_forwarding_routing_v4_entry(self, ipv4_dstAddr, ipv4_pLen,
                                         next_id):
@@ -582,6 +593,25 @@ class FabricTest(P4RuntimeTest):
             replica.egress_port = port
             replica.instance = 1
         return req, self.write_request(req)
+
+    def add_next_hashed_group_member(self, action_name, params):
+        mbr_id = self.get_next_mbr_id()
+        return self.send_request_add_member("FabricIngress.next.hashed_profile",
+                                            mbr_id, action_name, params)
+
+    def add_next_hashed_group(self, grp_id, mbr_ids):
+        return self.send_request_add_group("FabricIngress.next.hashed_profile", grp_id,
+                                           grp_size=len(mbr_ids), mbr_ids=mbr_ids)
+
+    def modify_next_hashed_group(self, grp_id, mbr_ids, grp_size):
+        return self.send_request_modify_group("FabricIngress.next.hashed_profile", grp_id,
+                                              grp_size, mbr_ids)
+
+    def read_next_hashed_group_member(self, mbr_id):
+        return self.read_action_profile_member("FabricIngress.next.hashed_profile", mbr_id)
+
+    def read_next_hashed_group(self, group_id):
+        return self.read_action_profile_group("FabricIngress.next.hashed_profile", group_id)
 
 
 class BridgingTest(FabricTest):

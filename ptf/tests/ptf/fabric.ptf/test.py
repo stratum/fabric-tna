@@ -7,7 +7,7 @@ from itertools import combinations
 from ptf.testutils import group
 from scapy.layers.ppp import PPPoED
 
-from base_test import autocleanup
+from base_test import autocleanup, stringify
 from fabric_test import *
 
 from unittest import skip
@@ -904,3 +904,76 @@ class FabricDoubleTaggedHostDownstream(DoubleVlanTerminationTest):
                 pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
                     pktlen=120)
                 self.doRunTest(pkt, in_tagged)
+
+@group("p4r-function")
+class TableEntryReadWriteTest(FabricTest):
+
+    @autocleanup
+    def doRunTest(self):
+        req, _ = self.add_bridging_entry(1, "00:00:00:00:00:01", "ff:ff:ff:ff:ff:ff", 1)
+        expected_bridging_entry = req.updates[0].entity.table_entry
+        received_bridging_entry = self.read_bridging_entry(1, "00:00:00:00:00:01", "ff:ff:ff:ff:ff:ff")
+        self.verify_p4runtime_entity(expected_bridging_entry, received_bridging_entry)
+
+    def runTest(self):
+        self.doRunTest()
+
+@group("p4r-function")
+class ActionProfileMemberReadWriteTest(FabricTest):
+
+    @autocleanup
+    def doRunTest(self):
+        req, _ = self.add_next_hashed_group_member("output_hashed", [("port_num", stringify(1, 2))])
+        expected_action_profile_member = req.updates[0].entity.action_profile_member
+        mbr_id = expected_action_profile_member.member_id
+        received_action_profile_member = self.read_next_hashed_group_member(mbr_id)
+        self.verify_p4runtime_entity(expected_action_profile_member, received_action_profile_member)
+
+    def runTest(self):
+        self.doRunTest()
+
+@group("p4r-function")
+class ActionProfileGroupReadWriteTest(FabricTest):
+
+    @autocleanup
+    def doRunTest(self):
+        req, _ = self.add_next_hashed_group_member("output_hashed", [("port_num", stringify(1, 2))])
+        member_installed = req.updates[0].entity.action_profile_member
+        mbr_id = member_installed.member_id
+
+        grp_id = 1
+        req, _ = self.add_next_hashed_group(grp_id, [mbr_id])
+        expected_action_profile_group = req.updates[0].entity.action_profile_group
+        received_action_profile_group = self.read_next_hashed_group(grp_id)
+        self.verify_p4runtime_entity(expected_action_profile_group, received_action_profile_group)
+
+    def runTest(self):
+        self.doRunTest()
+
+@group("p4r-function")
+class ActionProfileGroupModificationTest(FabricTest):
+
+    @autocleanup
+    def doRunTest(self):
+        # Insert members
+        mbr_ids = []
+        for port_num in range(1, 4):
+            req, _ = self.add_next_hashed_group_member("output_hashed", [("port_num", stringify(port_num, 2))])
+            member_installed = req.updates[0].entity.action_profile_member
+            mbr_ids.append(member_installed.member_id)
+
+        # Insert group with member-1 and member-2
+        grp_id = 1
+        req, _ = self.add_next_hashed_group(grp_id, mbr_ids[:2])
+        expected_action_profile_group = req.updates[0].entity.action_profile_group
+        received_action_profile_group = self.read_next_hashed_group(grp_id)
+        self.verify_p4runtime_entity(expected_action_profile_group, received_action_profile_group)
+
+        # Modify group with member-2 and member-3
+        req, _ = self.modify_next_hashed_group(grp_id, mbr_ids[1:], grp_size=2)
+        expected_action_profile_group = req.updates[0].entity.action_profile_group
+        received_action_profile_group = self.read_next_hashed_group(grp_id)
+        self.verify_p4runtime_entity(expected_action_profile_group, received_action_profile_group)
+
+    def runTest(self):
+        self.doRunTest()
