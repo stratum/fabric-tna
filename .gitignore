@@ -9,4 +9,8 @@ ptf.pcap
 ptf/run/tm/log
 .idea
 *.iml
-
+*.pcap
+model_0.log
+pcap_output
+*.log
+zlog-cfg-cur
