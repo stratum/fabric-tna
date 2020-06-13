@@ -85,6 +85,16 @@ def format_pkt_match(received_pkt, expected_pkt):
         sys.stdout = stdout_save  # Restore the original stdout.
 
 
+def format_exp_rcv(expected, received):
+    buf = ""
+    buf += "========== EXPECTED ==========\n"
+    buf += expected
+    buf += "========== RECEIVED =========="
+    buf += received
+    buf += "=============================="
+    return buf
+
+
 # Used to indicate that the gRPC error Status object returned by the server has
 # an incorrect format.
 class P4RuntimeErrorFormatException(Exception):
@@ -312,6 +322,10 @@ class P4RuntimeTest(BaseTest):
 
         self.send_packet_out(packet_out)
         testutils.verify_packet(self, pkt, out_port)
+
+    def verify_p4runtime_entity(self, expected, received):
+        if expected != received:
+            self.fail("Received entity is not the expected one\n" + format_exp_rcv(expected, received))
 
     def get_stream_packet(self, type_, timeout=1):
         start = time.time()
@@ -542,6 +556,23 @@ class P4RuntimeTest(BaseTest):
         self.push_update_modify_member(req, ap_name, mbr_id, a_name, params)
         return req, self.write_request(req, store=False)
 
+    def push_update_modify_group(self, req, ap_name, grp_id, grp_size, mbr_ids):
+        update = req.updates.add()
+        update.type = p4runtime_pb2.Update.MODIFY
+        ap_group = update.entity.action_profile_group
+        ap_group.action_profile_id = self.get_ap_id(ap_name)
+        ap_group.group_id = grp_id
+        for mbr_id in mbr_ids:
+            member = ap_group.members.add()
+            member.member_id = mbr_id
+            member.weight = 1
+        ap_group.max_size = grp_size
+
+    def send_request_modify_group(self, ap_name, grp_id, grp_size=32, mbr_ids=()):
+        req = self.get_new_write_request()
+        self.push_update_modify_group(req, ap_name, grp_id, grp_size, mbr_ids)
+        return req, self.write_request(req, store=False)
+
     def push_update_add_group(self, req, ap_name, grp_id, grp_size=32,
                               mbr_ids=()):
         update = req.updates.add()
@@ -652,6 +683,47 @@ class P4RuntimeTest(BaseTest):
             if entity.HasField("counter_entry"):
                 return entity.counter_entry
         return None
+
+    def read_table_entry(self, t_name, mk, priority=0):
+        req = self.get_new_read_request()
+        entity = req.entities.add()
+        table_entry = entity.table_entry
+        table_entry.table_id = self.get_table_id(t_name)
+        table_entry.priority = priority
+        if mk is not None:
+            self.set_match_key(table_entry, t_name, mk)
+        else:
+            table_entry.is_default_action = True
+
+        for entity in self.read_request(req):
+            if entity.HasField("table_entry"):
+                return entity.table_entry
+        return None
+
+    def read_action_profile_member(self, ap_name, mbr_id):
+        req = self.get_new_read_request()
+        entity = req.entities.add()
+        action_profile_member = entity.action_profile_member
+        action_profile_member.action_profile_id = self.get_ap_id(ap_name)
+        action_profile_member.member_id = mbr_id
+
+        for entity in self.read_request(req):
+            if entity.HasField("action_profile_member"):
+                return entity.action_profile_member
+        return None
+
+    def read_action_profile_group(self, ap_name, grp_id):
+        req = self.get_new_read_request()
+        entity = req.entities.add()
+        action_profile_member = entity.action_profile_group
+        action_profile_member.action_profile_id = self.get_ap_id(ap_name)
+        action_profile_member.group_id = grp_id
+
+        for entity in self.read_request(req):
+            if entity.HasField("action_profile_group"):
+                return entity.action_profile_group
+        return None
+
 
     # iterates over all requests in reverse order; if they are INSERT updates,
     # replay them as DELETE updates; this is a convenient way to clean-up a lot
