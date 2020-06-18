@@ -977,3 +977,40 @@ class ActionProfileGroupModificationTest(FabricTest):
 
     def runTest(self):
         self.doRunTest()
+
+@group("p4r-function")
+class MulticastGroupReadWriteTest(FabricTest):
+
+    @autocleanup
+    def doRunTest(self):
+        grp_id = 10
+        egress_ports = [1, 2, 3]
+        req, _ = self.add_mcast_group(grp_id, egress_ports)
+        expected_mc_entry = req.updates[0].entity.packet_replication_engine_entry.multicast_group_entry
+        received_mc_entry = self.read_mcast_group(grp_id)
+        self.verify_p4runtime_entity(expected_mc_entry, received_mc_entry)
+
+
+    def runTest(self):
+        self.doRunTest()
+
+
+@group("p4r-function")
+class MulticastGroupModificationTest(FabricTest):
+
+    @autocleanup
+    def doRunTest(self):
+        # Add group with egress port 1, 2, and 3
+        grp_id = 10
+        egress_ports = [1, 2, 3]
+        self.add_mcast_group(grp_id, egress_ports)
+
+        # Modify the group with egress port 2, 3, and 4
+        egress_ports = [2, 3, 4]
+        req, _ = self.modify_mcast_group(grp_id, egress_ports)
+        expected_mc_entry = req.updates[0].entity.packet_replication_engine_entry.multicast_group_entry
+        received_mc_entry = self.read_mcast_group(grp_id)
+        self.verify_p4runtime_entity(expected_mc_entry, received_mc_entry)
+
+    def runTest(self):
+        self.doRunTest()

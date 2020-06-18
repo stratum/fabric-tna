@@ -566,10 +566,10 @@ class FabricTest(P4RuntimeTest):
                 ])
         self.add_next_hashed_group_action(next_id, grp_id, actions)
 
-    def add_mcast_group(self, group_id, ports):
+    def write_mcast_group(self, group_id, ports, update_type):
         req = self.get_new_write_request()
         update = req.updates.add()
-        update.type = p4runtime_pb2.Update.INSERT
+        update.type = update_type
         pre_entry = update.entity.packet_replication_engine_entry
         mg_entry = pre_entry.multicast_group_entry
         mg_entry.multicast_group_id = group_id
@@ -578,6 +578,12 @@ class FabricTest(P4RuntimeTest):
             replica.egress_port = port
             replica.instance = 0
         return req, self.write_request(req)
+
+    def add_mcast_group(self, group_id, ports):
+        return self.write_mcast_group(group_id, ports, p4runtime_pb2.Update.INSERT)
+
+    def modify_mcast_group(self, group_id, ports):
+        return self.write_mcast_group(group_id, ports, p4runtime_pb2.Update.MODIFY)
 
     def add_clone_group(self, clone_id, ports):
         req = self.get_new_write_request()
@@ -612,6 +618,19 @@ class FabricTest(P4RuntimeTest):
 
     def read_next_hashed_group(self, group_id):
         return self.read_action_profile_group("FabricIngress.next.hashed_profile", group_id)
+
+    def read_mcast_group(self, group_id):
+        req = self.get_new_read_request()
+        entity = req.entities.add()
+        multicast_group = entity.packet_replication_engine_entry.multicast_group_entry
+        multicast_group.multicast_group_id = group_id
+
+        for entity in self.read_request(req):
+            if entity.HasField("packet_replication_engine_entry"):
+                pre_entry = entity.packet_replication_engine_entry
+                if pre_entry.HasField("multicast_group_entry"):
+                    return pre_entry.multicast_group_entry
+        return None
 
 
 class BridgingTest(FabricTest):
