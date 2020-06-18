@@ -689,8 +689,6 @@ class ArpBroadcastTest(FabricTest):
         self.add_next_multicast(next_id, mcast_group_id)
         # Add the multicast group
         self.add_mcast_group(mcast_group_id, all_ports)
-        # Add the clone group
-        self.add_clone_group(CPU_CLONE_SESSION_ID, [self.cpu_port])
         for port in untagged_ports:
             self.set_egress_vlan_pop(port, vlan_id)
 
