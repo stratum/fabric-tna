@@ -984,8 +984,8 @@ class MulticastGroupReadWriteTest(FabricTest):
     @autocleanup
     def doRunTest(self):
         grp_id = 10
-        egress_ports = [1, 2, 3]
-        req, _ = self.add_mcast_group(grp_id, egress_ports)
+        replicas = [(0, 1), (0, 2), (0, 3)]  # (instance, port)
+        req, _ = self.add_mcast_group(grp_id, replicas)
         expected_mc_entry = req.updates[0].entity.packet_replication_engine_entry.multicast_group_entry
         received_mc_entry = self.read_mcast_group(grp_id)
         self.verify_p4runtime_entity(expected_mc_entry, received_mc_entry)
@@ -998,19 +998,23 @@ class MulticastGroupReadWriteTest(FabricTest):
 @group("p4r-function")
 class MulticastGroupModificationTest(FabricTest):
 
-    @autocleanup
+    # Not using the auto cleanup since the Stratum modifies the
+    # multicast node table internally
     def doRunTest(self):
-        # Add group with egress port 1, 2, and 3
+        # Add group with egress port 1~3 (instance 1 and 2)
         grp_id = 10
-        egress_ports = [1, 2, 3]
-        self.add_mcast_group(grp_id, egress_ports)
+        replicas = [(1, 1), (1, 2), (1, 3), (2, 1), (2, 2), (2, 3)]  # (instance, port)
+        self.add_mcast_group(grp_id, replicas)
 
-        # Modify the group with egress port 2, 3, and 4
-        egress_ports = [2, 3, 4]
-        req, _ = self.modify_mcast_group(grp_id, egress_ports)
+        # Modify the group with egress port 2~4 (instance 2 and 3)
+        replicas = [(2, 2), (2, 3), (2, 4), (3, 2), (3, 3), (3, 4)]  # (instance, port)
+        req, _ = self.modify_mcast_group(grp_id, replicas)
         expected_mc_entry = req.updates[0].entity.packet_replication_engine_entry.multicast_group_entry
         received_mc_entry = self.read_mcast_group(grp_id)
         self.verify_p4runtime_entity(expected_mc_entry, received_mc_entry)
+
+        # Cleanup
+        self.delete_mcast_group(grp_id)
 
     def runTest(self):
         self.doRunTest()
