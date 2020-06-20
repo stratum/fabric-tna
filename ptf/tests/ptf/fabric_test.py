@@ -566,24 +566,27 @@ class FabricTest(P4RuntimeTest):
                 ])
         self.add_next_hashed_group_action(next_id, grp_id, actions)
 
-    def write_mcast_group(self, group_id, ports, update_type):
+    def write_mcast_group(self, group_id, replicas, update_type):
         req = self.get_new_write_request()
         update = req.updates.add()
         update.type = update_type
         pre_entry = update.entity.packet_replication_engine_entry
         mg_entry = pre_entry.multicast_group_entry
         mg_entry.multicast_group_id = group_id
-        for port in ports:
+        for node_id, port in replicas:
             replica = mg_entry.replicas.add()
             replica.egress_port = port
-            replica.instance = 0
+            replica.instance = node_id
         return req, self.write_request(req)
 
-    def add_mcast_group(self, group_id, ports):
-        return self.write_mcast_group(group_id, ports, p4runtime_pb2.Update.INSERT)
+    def add_mcast_group(self, group_id, replicas):
+        return self.write_mcast_group(group_id, replicas, p4runtime_pb2.Update.INSERT)
 
-    def modify_mcast_group(self, group_id, ports):
-        return self.write_mcast_group(group_id, ports, p4runtime_pb2.Update.MODIFY)
+    def modify_mcast_group(self, group_id, replicas):
+        return self.write_mcast_group(group_id, replicas, p4runtime_pb2.Update.MODIFY)
+
+    def delete_mcast_group(self, group_id):
+        return self.write_mcast_group(group_id, [], p4runtime_pb2.Update.DELETE)
 
     def add_clone_group(self, clone_id, ports):
         req = self.get_new_write_request()
@@ -706,8 +709,9 @@ class ArpBroadcastTest(FabricTest):
         self.add_bridging_entry(vlan_id, zero_mac_addr, zero_mac_addr, next_id)
         self.add_forwarding_acl_copy_to_cpu(eth_type=ETH_TYPE_ARP)
         self.add_next_multicast(next_id, mcast_group_id)
-        # Add the multicast group
-        self.add_mcast_group(mcast_group_id, all_ports)
+        # Add the multicast group, here we use instance id 1 by default
+        replicas = [(1, port) for port in all_ports]
+        self.add_mcast_group(mcast_group_id, replicas)
         for port in untagged_ports:
             self.set_egress_vlan_pop(port, vlan_id)
 
