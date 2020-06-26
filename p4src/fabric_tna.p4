@@ -94,7 +94,7 @@ control FabricIngressB(
         if (ig_tm_md.bypass_egress == 1w0) {
             hdr.bridge_md.setValid();
             hdr.bridge_md.is_multicast = fabric_md.is_multicast;
-            hdr.bridge_md.ingress_port = ig_intr_md.ingress_port;
+            hdr.bridge_md.ingress_port = fabric_md.ingress_port;
             hdr.bridge_md.ip_eth_type = fabric_md.ip_eth_type;
             hdr.bridge_md.ip_proto = fabric_md.ip_proto;
             hdr.bridge_md.mpls_label = fabric_md.mpls_label;
@@ -137,24 +137,29 @@ control FabricEgress (
 // Packet comes into ingress profile_a. The packet travels to egress profile_b, then to
 // ingress profile_b and finally to egress profile_a.
 
-// Packet flow: ingress_a, egress_b, ingress_b, egress_a
+// Packet flow: -> ingress_a --TM--> egress_b --+ (loopback)
+//              <- egress_a <--TM-- ingress_b <-+
 
 // For tofino model:
 // --int-port-loop=<pipe_bitmap> (0xA)
 
 Pipeline(
+    // ingress_a
     FabricIngressParser(),
     FabricIngress(),
     FabricIngressDeparser(),
+    // egress_a
     FabricEgressParser(),
     FabricEgress(),
     FabricEgressDeparser()
 ) pipeline_profile_a;
 
 Pipeline(
+    // ingress_b
     FabricIngressParserB(),
     FabricIngressB(),
     FabricIngressDeparser(),
+    // egress_b (empty)
     FabricEgressParserB(),
     FabricEgressB(),
     FabricEgressDeparserB()

@@ -42,7 +42,8 @@ function do_p4c() {
   echo "*** Output in ${P4C_OUT}/${pltf}"
   pp_flags="-DCPU_PORT=${cpu_port}"
   p4c_flags="--auto-init-metadata"
-  mkdir -p ${P4C_OUT}/${pltf}
+  rm -rf ${P4C_OUT}/${pltf}
+  mkdir ${P4C_OUT}/${pltf}
   (
     $P4C_CMD --arch tna -g --create-graphs --verbose 2 \
       -o ${P4C_OUT}/${pltf} -I ${P4_SRC_DIR} \
@@ -53,24 +54,21 @@ function do_p4c() {
       ${DIR}/fabric_tna.p4
   )
 
-  # Copy only the relevant files to the pipeconf resources.
-  mkdir -p "${DEST_DIR}/stratum_bf/${pltf}/pipe"
-  cp "${P4C_OUT}/${pltf}/p4info.txt" "${DEST_DIR}/stratum_bf/${pltf}"
-  cp "${P4C_OUT}/${pltf}/bfrt.json" "${DEST_DIR}/stratum_bf/${pltf}"
-  cp "${P4C_OUT}/${pltf}/pipe/context.json" "${DEST_DIR}/stratum_bf/${pltf}/pipe"
-  cp "${P4C_OUT}/${pltf}/pipe/tofino.bin" "${DEST_DIR}/stratum_bf/${pltf}/pipe"
-  echo "${cpu_port}" > "${DEST_DIR}/stratum_bf/${pltf}/cpu_port.txt"
-
   # New pipeline format which uses tar bal
   rm -rf "${DEST_DIR}/stratum_bfrt/${pltf}"
-  mkdir -p "${DEST_DIR}/stratum_bfrt/${pltf}"
+  mkdir "${DEST_DIR}/stratum_bfrt/${pltf}"
   tar cf "pipeline.tar.bz2" -C "${P4C_OUT}/${pltf}" .
   mv "pipeline.tar.bz2" "${DEST_DIR}/stratum_bfrt/${pltf}/"
+  # FIXME: instrument tm entrypoint to untar pipeline.tar.bz2
+  #  Instead of copying the same content next to it
   cp "${P4C_OUT}/${pltf}/p4info.txt" "${DEST_DIR}/stratum_bfrt/${pltf}/"
   cp "${P4C_OUT}/${pltf}/bfrt.json" "${DEST_DIR}/stratum_bfrt/${pltf}/"
-  cp -r "${P4C_OUT}/${pltf}/pipeline_profile_a" "${DEST_DIR}/stratum_bfrt/${pltf}/pipeline_profile_a"
-  cp -r "${P4C_OUT}/${pltf}/pipeline_profile_b" "${DEST_DIR}/stratum_bfrt/${pltf}/pipeline_profile_b"
-  cp -r "${P4C_OUT}/${pltf}/pipe" "${DEST_DIR}/stratum_bfrt/${pltf}/pipe"
+  mkdir "${DEST_DIR}/stratum_bfrt/${pltf}/pipeline_profile_a"
+  mkdir "${DEST_DIR}/stratum_bfrt/${pltf}/pipeline_profile_b"
+  cp "${P4C_OUT}/${pltf}/pipeline_profile_a/context.json" "${DEST_DIR}/stratum_bfrt/${pltf}/pipeline_profile_a/"
+  cp "${P4C_OUT}/${pltf}/pipeline_profile_a/tofino.bin" "${DEST_DIR}/stratum_bfrt/${pltf}/pipeline_profile_a/"
+  cp "${P4C_OUT}/${pltf}/pipeline_profile_b/context.json" "${DEST_DIR}/stratum_bfrt/${pltf}/pipeline_profile_b/"
+  cp "${P4C_OUT}/${pltf}/pipeline_profile_b/tofino.bin" "${DEST_DIR}/stratum_bfrt/${pltf}/pipeline_profile_b/"
   echo "${cpu_port}" > "${DEST_DIR}/stratum_bfrt/${pltf}/cpu_port.txt"
 }
 

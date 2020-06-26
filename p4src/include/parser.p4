@@ -213,6 +213,7 @@ parser FabricIngressParserB(packet_in  packet,
         fabric_md.fwd_type = bridge_md.fwd_type;
         fabric_md.vlan_id = bridge_md.vlan_id;
         fabric_md.is_multicast = bridge_md.is_multicast;
+        fabric_md.ingress_port = bridge_md.ingress_port;
         transition parse_ethernet;
     }
 

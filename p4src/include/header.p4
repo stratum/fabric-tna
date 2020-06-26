@@ -111,6 +111,7 @@ header icmp_t {
 @flexible
 @pa_auto_init_metadata
 struct fabric_ingress_metadata_t {
+    PortId_t        ingress_port; // Original ingress port from ingress_a
     vlan_id_t       vlan_id;
     bit<3>          vlan_pri;
     bit<1>          vlan_cfi;
