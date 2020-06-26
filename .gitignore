@@ -14,3 +14,4 @@ model_0.log
 pcap_output
 *.log
 zlog-cfg-cur
+*.DS_Store

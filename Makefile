@@ -27,6 +27,12 @@ all: fabric
 fabric:
 	@${p4-build} fabric "-DWITH_DOUBLE_VLAN_TERMINATION"
 
+p4i:
+	docker run -d --rm --name p4i -v${curr_dir}:${curr_dir} -w ${curr_dir} -p 3000:3000/tcp opennetworking/bf-sde:9.2.0 p4i
+
+p4i-stop:
+	docker kill p4i
+
 # Profiles which are not completed yet.
 # fabric-simple:
 # 	@${p4-build} fabric-simple "-DWITH_SIMPLE_NEXT"

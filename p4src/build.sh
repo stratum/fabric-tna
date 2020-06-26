@@ -72,8 +72,6 @@ function do_p4c() {
   cp -r "${P4C_OUT}/${pltf}/pipeline_profile_b" "${DEST_DIR}/stratum_bfrt/${pltf}/pipeline_profile_b"
   cp -r "${P4C_OUT}/${pltf}/pipe" "${DEST_DIR}/stratum_bfrt/${pltf}/pipe"
   echo "${cpu_port}" > "${DEST_DIR}/stratum_bfrt/${pltf}/cpu_port.txt"
-
-  echo
 }
 
 do_p4c "montara" "${MONTARA_CPU_PORT}"
