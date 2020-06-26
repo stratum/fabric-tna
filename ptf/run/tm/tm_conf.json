@@ -15,19 +15,27 @@
                 {
                     "p4_pipelines": [
                         {
-                            "p4_pipeline_name": "pipe",
+                            "p4_pipeline_name": "pipeline_profile_a",
                             "path": "/p4c-out",
-                            "config": "/p4c-out/pipe/tofino.bin",
-                            "context": "/p4c-out/pipe/context.json",
+                            "config": "/p4c-out/pipeline_profile_a/tofino.bin",
+                            "context": "/p4c-out/pipeline_profile_a/context.json",
                             "pipe_scope": [
                                 0,
+                                2
+                            ]
+                        },
+                        {
+                            "p4_pipeline_name": "pipeline_profile_b",
+                            "path": "/p4c-out",
+                            "config": "/p4c-out/pipeline_profile_b/tofino.bin",
+                            "context": "/p4c-out/pipeline_profile_b/context.json",
+                            "pipe_scope": [
                                 1,
-                                2,
                                 3
                             ]
                         }
                     ],
-                    "bfrt-config": "/p4c-out/bf-rt.json",
+                    "bfrt-config": "/p4c-out/bfrt.json",
                     "program-name": "%PROG_NAME%"
                 }
             ]
