@@ -210,7 +210,7 @@ control Next (inout parsed_headers_t hdr,
 
     /*
      * Multicast
-     * Maps next IDs to PRE multicat group IDs.
+     * Maps next IDs to PRE multicast group IDs.
      */
     DirectCounter<bit<64>>(CounterType_t.PACKETS_AND_BYTES) multicast_counter;
 

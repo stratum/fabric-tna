@@ -931,7 +931,7 @@ class ActionProfileMemberReadWriteTest(FabricTest):
 
     @autocleanup
     def doRunTest(self):
-        req, _ = self.add_next_hashed_group_member("output_hashed", [("port_num", stringify(1, 2))])
+        req, _ = self.add_next_hashed_group_member("FabricIngressB.next.output_hashed", [("port_num", stringify(1, 2))])
         expected_action_profile_member = req.updates[0].entity.action_profile_member
         mbr_id = expected_action_profile_member.member_id
         received_action_profile_member = self.read_next_hashed_group_member(mbr_id)
@@ -946,7 +946,7 @@ class ActionProfileGroupReadWriteTest(FabricTest):
 
     @autocleanup
     def doRunTest(self):
-        req, _ = self.add_next_hashed_group_member("output_hashed", [("port_num", stringify(1, 2))])
+        req, _ = self.add_next_hashed_group_member("FabricIngressB.next.output_hashed", [("port_num", stringify(1, 2))])
         member_installed = req.updates[0].entity.action_profile_member
         mbr_id = member_installed.member_id
 
@@ -968,7 +968,7 @@ class ActionProfileGroupModificationTest(FabricTest):
         # Insert members
         mbr_ids = []
         for port_num in range(1, 4):
-            req, _ = self.add_next_hashed_group_member("output_hashed", [("port_num", stringify(port_num, 2))])
+            req, _ = self.add_next_hashed_group_member("FabricIngressB.next.output_hashed", [("port_num", stringify(port_num, 2))])
             member_installed = req.updates[0].entity.action_profile_member
             mbr_ids.append(member_installed.member_id)
 

@@ -28,5 +28,7 @@ cd /tmp/workdir
     -stderrthreshold=0 \
     -v=0 \
     -persistent_config_dir=/tmp \
+    -stderrthreshold=0 \
+    -v=2 \
     -write_req_log_file=./p4rt-write-reqs.log \
     > ./stratum_bf.log 2>&1

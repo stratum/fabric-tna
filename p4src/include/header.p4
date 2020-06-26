@@ -111,6 +111,7 @@ header icmp_t {
 @flexible
 @pa_auto_init_metadata
 struct fabric_ingress_metadata_t {
+    PortId_t        ingress_port; // Original ingress port from ingress_a
     vlan_id_t       vlan_id;
     bit<3>          vlan_pri;
     bit<1>          vlan_cfi;
@@ -165,6 +166,10 @@ header bridge_metadata_t {
 #endif // WITH_DOUBLE_VLAN_TERMINATION
     bit<16>         ip_eth_type;
     bit<8>          ip_proto;
+    bool            skip_forwarding;
+    bool            skip_next;
+    next_id_t       next_id;
+    fwd_type_t      fwd_type;
 }
 
 struct parsed_headers_t {
