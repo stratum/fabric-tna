@@ -291,7 +291,7 @@ class FabricTest(P4RuntimeTest):
             inner_vlan_id_mask_ = stringify(4095, 2)
             matches.append(self.Ternary("inner_vlan_id", inner_vlan_id_, inner_vlan_id_mask_))
 
-        self.send_request_add_entry_to_action(
+        return self.send_request_add_entry_to_action(
             "filtering.ingress_port_vlan",
             matches,
             "filtering." + action_name, action_params,

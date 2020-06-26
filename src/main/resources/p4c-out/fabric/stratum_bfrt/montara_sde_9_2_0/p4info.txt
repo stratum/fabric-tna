@@ -724,6 +724,17 @@ action_profiles {
   size: 1024
   max_group_size: 16
 }
+counters {
+  preamble {
+    id: 302010299
+    name: "FabricIngress.filtering.traffic_class_counter"
+    alias: "traffic_class_counter"
+  }
+  spec {
+    unit: BOTH
+  }
+  size: 8
+}
 direct_counters {
   preamble {
     id: 318814845

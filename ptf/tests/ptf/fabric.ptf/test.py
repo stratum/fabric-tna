@@ -4,6 +4,7 @@
 
 from itertools import combinations
 
+from ptf import testutils
 from ptf.testutils import group
 from scapy.layers.ppp import PPPoED
 
@@ -11,6 +12,7 @@ from base_test import autocleanup, stringify
 from fabric_test import *
 
 from unittest import skip
+from time import sleep
 
 vlan_confs = {
     "tag->tag": [True, True],
@@ -916,6 +918,7 @@ class TableEntryReadWriteTest(FabricTest):
         self.verify_p4runtime_entity(expected_bridging_entry, received_bridging_entry)
 
     def runTest(self):
+        print("")
         self.doRunTest()
 
 @group("p4r-function")
@@ -930,6 +933,7 @@ class ActionProfileMemberReadWriteTest(FabricTest):
         self.verify_p4runtime_entity(expected_action_profile_member, received_action_profile_member)
 
     def runTest(self):
+        print("")
         self.doRunTest()
 
 @group("p4r-function")
@@ -948,6 +952,7 @@ class ActionProfileGroupReadWriteTest(FabricTest):
         self.verify_p4runtime_entity(expected_action_profile_group, received_action_profile_group)
 
     def runTest(self):
+        print("")
         self.doRunTest()
 
 @group("p4r-function")
@@ -976,6 +981,7 @@ class ActionProfileGroupModificationTest(FabricTest):
         self.verify_p4runtime_entity(expected_action_profile_group, received_action_profile_group)
 
     def runTest(self):
+        print("")
         self.doRunTest()
 
 @group("p4r-function")
@@ -990,8 +996,8 @@ class MulticastGroupReadWriteTest(FabricTest):
         received_mc_entry = self.read_mcast_group(grp_id)
         self.verify_p4runtime_entity(expected_mc_entry, received_mc_entry)
 
-
     def runTest(self):
+        print("")
         self.doRunTest()
 
 
@@ -1017,4 +1023,49 @@ class MulticastGroupModificationTest(FabricTest):
         self.delete_mcast_group(grp_id)
 
     def runTest(self):
+        print("")
+        self.doRunTest()
+
+@group("p4r-function")
+class CounterTest(BridgingTest):
+
+    @autocleanup
+    def doRunTest(self):
+        pkt = getattr(testutils, "simple_tcp_packet")(pktlen=120)
+        self.runBridgingTest(False, False, pkt)
+        # Check direct counters from 'ingress_port_vlan' table
+        table_entries = [req.updates[0].entity.table_entry for req in self.reqs
+                         if req.updates[0].entity.HasField('table_entry')]
+        table_entries = [te for te in table_entries
+                         if te.table_id == self.get_table_id('ingress_port_vlan')]
+
+        for table_entry in table_entries:
+            self.read_direct_counter(table_entry)
+
+        # Wait counter being synced
+        sleep(1)
+        for table_entry in table_entries:
+            direct_counter = self.read_direct_counter(table_entry)
+            # Here, both table entries hits once with a
+            # simple TCP packet(120 bytes + 2*2 bytes checksum inserted by scapy)
+            if direct_counter.data.byte_count != 124 or \
+                direct_counter.data.packet_count != 1:
+                self.fail("Incorrect direct counter value:\n" + direct_counter)
+
+        # Read indirect counter (traffic_class_counter)
+        # Here we are trying to read counter for traffic class "0"
+        # which means how many traffic for bridging
+        self.read_counter("traffic_class_counter", 0, "BOTH")
+        # Wait counter being synced
+        sleep(1)
+        counter_entry = self.read_counter("traffic_class_counter", 0, "BOTH")
+
+        # In the bridging test we sent two TCP packets and both packets
+        # are classified as bridging class.
+        if counter_entry.data.byte_count != 248 or \
+            counter_entry.data.packet_count != 2:
+            self.fail("Incorrect direct counter value:\n" + counter_entry)
+
+    def runTest(self):
+        print("")
         self.doRunTest()
