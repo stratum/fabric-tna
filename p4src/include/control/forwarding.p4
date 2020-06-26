@@ -9,11 +9,17 @@
 
 
 control Forwarding (inout parsed_headers_t hdr,
+                    inout ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr,
                     inout fabric_ingress_metadata_t fabric_md) {
 
     @hidden
     action set_next_id(next_id_t next_id) {
         fabric_md.next_id = next_id;
+    }
+
+    action drop() {
+        ig_intr_md_for_dprsr.drop_ctl = 1;
+        fabric_md.skip_next = true;
     }
 
     /*
@@ -36,9 +42,9 @@ control Forwarding (inout parsed_headers_t hdr,
         }
         actions = {
             set_next_id_bridging;
-            @defaultonly nop;
+            @defaultonly drop;
         }
-        const default_action = nop();
+        const default_action = drop();
         counters = bridging_counter;
         size = BRIDGING_TABLE_SIZE;
     }

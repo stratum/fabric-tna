@@ -419,7 +419,7 @@ class FabricTest(P4RuntimeTest):
         egress_port_ = stringify(egress_port, 2)
         self.add_next_hashed_indirect_action(
             next_id,
-            "next.output_hashed", [("port_num", egress_port_)])
+            "FabricIngressB.next.output_hashed", [("port_num", egress_port_)])
 
     def add_next_output_simple(self, next_id, egress_port):
         next_id_ = stringify(next_id, 4)
@@ -491,7 +491,7 @@ class FabricTest(P4RuntimeTest):
     def add_next_hashed_indirect_action(self, next_id, action_name, params):
         next_id_ = stringify(next_id, 4)
         mbr_id = self.get_next_mbr_id()
-        self.send_request_add_member("FabricIngress.next.hashed_profile",
+        self.send_request_add_member("FabricIngressB.next.hashed_profile",
                                      mbr_id, action_name, params)
         self.send_request_add_entry_to_member(
             "next.hashed", [self.Exact("next_id", next_id_)], mbr_id)
@@ -504,8 +504,8 @@ class FabricTest(P4RuntimeTest):
         for action in actions:
             mbr_id = self.get_next_mbr_id()
             mbr_ids.append(mbr_id)
-            self.send_request_add_member("FabricIngress.next.hashed_profile", mbr_id, *action)
-        self.send_request_add_group("FabricIngress.next.hashed_profile", grp_id,
+            self.send_request_add_member("FabricIngressB.next.hashed_profile", mbr_id, *action)
+        self.send_request_add_group("FabricIngressB.next.hashed_profile", grp_id,
                                     grp_size=len(mbr_ids), mbr_ids=mbr_ids)
         self.send_request_add_entry_to_group(
             "next.hashed",
@@ -605,22 +605,22 @@ class FabricTest(P4RuntimeTest):
 
     def add_next_hashed_group_member(self, action_name, params):
         mbr_id = self.get_next_mbr_id()
-        return self.send_request_add_member("FabricIngress.next.hashed_profile",
+        return self.send_request_add_member("FabricIngressB.next.hashed_profile",
                                             mbr_id, action_name, params)
 
     def add_next_hashed_group(self, grp_id, mbr_ids):
-        return self.send_request_add_group("FabricIngress.next.hashed_profile", grp_id,
+        return self.send_request_add_group("FabricIngressB.next.hashed_profile", grp_id,
                                            grp_size=len(mbr_ids), mbr_ids=mbr_ids)
 
     def modify_next_hashed_group(self, grp_id, mbr_ids, grp_size):
-        return self.send_request_modify_group("FabricIngress.next.hashed_profile", grp_id,
+        return self.send_request_modify_group("FabricIngressB.next.hashed_profile", grp_id,
                                               grp_size, mbr_ids)
 
     def read_next_hashed_group_member(self, mbr_id):
-        return self.read_action_profile_member("FabricIngress.next.hashed_profile", mbr_id)
+        return self.read_action_profile_member("FabricIngressB.next.hashed_profile", mbr_id)
 
     def read_next_hashed_group(self, group_id):
-        return self.read_action_profile_group("FabricIngress.next.hashed_profile", group_id)
+        return self.read_action_profile_group("FabricIngressB.next.hashed_profile", group_id)
 
     def read_mcast_group(self, group_id):
         req = self.get_new_read_request()

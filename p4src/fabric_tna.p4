@@ -26,17 +26,67 @@ control FabricIngress (
 
     PacketIoIngress() pkt_io_ingress;
     Filtering() filtering;
-    Forwarding() forwarding;
     Acl() acl;
-    Next() next;
 
     apply {
         pkt_io_ingress.apply(hdr, fabric_md, ig_tm_md);
         filtering.apply(hdr, fabric_md, ig_intr_md);
-        if (!fabric_md.skip_forwarding) {
-           forwarding.apply(hdr, fabric_md);
-        }
         acl.apply(hdr, fabric_md, ig_intr_md, ig_dprsr_md, ig_tm_md);
+
+        // Send to loopback port of odd pipe (0->1, 2->3).
+        if (ig_dprsr_md.drop_ctl != 1 && ig_tm_md.ucast_egress_port != CPU_PORT) {
+            ig_tm_md.ucast_egress_port = 0x80 | ig_intr_md.ingress_port;
+        }
+
+        if (ig_tm_md.bypass_egress == 1w0) {
+            hdr.bridge_md.setValid();
+            hdr.bridge_md.is_multicast = fabric_md.is_multicast;
+            hdr.bridge_md.ingress_port = ig_intr_md.ingress_port;
+            hdr.bridge_md.ip_eth_type = fabric_md.ip_eth_type;
+            hdr.bridge_md.ip_proto = fabric_md.ip_proto;
+            hdr.bridge_md.mpls_label = fabric_md.mpls_label;
+            hdr.bridge_md.mpls_ttl = fabric_md.mpls_ttl;
+            hdr.bridge_md.vlan_id = fabric_md.vlan_id;
+            hdr.bridge_md.skip_forwarding = fabric_md.skip_forwarding;
+            hdr.bridge_md.skip_next = fabric_md.skip_next;
+            hdr.bridge_md.fwd_type = fabric_md.fwd_type;
+#ifdef WITH_DOUBLE_VLAN_TERMINATION
+            hdr.bridge_md.push_double_vlan = fabric_md.push_double_vlan;
+            hdr.bridge_md.inner_vlan_id = fabric_md.inner_vlan_id;
+#endif // WITH_DOUBLE_VLAN_TERMINATION
+        }
+    }
+}
+
+control FabricEgressB(
+    /* Fabric.p4 */
+    inout parsed_headers_t hdr,
+    inout fabric_egress_metadata_t fabric_md,
+    /* TNA */
+    in    egress_intrinsic_metadata_t                  eg_intr_md,
+    in    egress_intrinsic_metadata_from_parser_t      eg_prsr_md,
+    inout egress_intrinsic_metadata_for_deparser_t     eg_dprsr_md,
+    inout egress_intrinsic_metadata_for_output_port_t  eg_oport_md) {
+    apply {}
+}
+
+control FabricIngressB(
+    /* Fabric.p4 */
+    inout parsed_headers_t hdr,
+    inout fabric_ingress_metadata_t fabric_md,
+    /* TNA */
+    in    ingress_intrinsic_metadata_t               ig_intr_md,
+    in    ingress_intrinsic_metadata_from_parser_t   ig_prsr_md,
+    inout ingress_intrinsic_metadata_for_deparser_t  ig_dprsr_md,
+    inout ingress_intrinsic_metadata_for_tm_t        ig_tm_md) {
+
+    Forwarding() forwarding;
+    Next() next;
+
+    apply {
+        if (!fabric_md.skip_forwarding) {
+           forwarding.apply(hdr, ig_dprsr_md, fabric_md);
+        }
         if (!fabric_md.skip_next) {
             next.apply(hdr, fabric_md, ig_intr_md, ig_tm_md);
         }
@@ -50,10 +100,6 @@ control FabricIngress (
             hdr.bridge_md.mpls_label = fabric_md.mpls_label;
             hdr.bridge_md.mpls_ttl = fabric_md.mpls_ttl;
             hdr.bridge_md.vlan_id = fabric_md.vlan_id;
-#ifdef WITH_DOUBLE_VLAN_TERMINATION
-            hdr.bridge_md.push_double_vlan = fabric_md.push_double_vlan;
-            hdr.bridge_md.inner_vlan_id = fabric_md.inner_vlan_id;
-#endif // WITH_DOUBLE_VLAN_TERMINATION
         }
     }
 }
@@ -77,6 +123,25 @@ control FabricEgress (
     }
 }
 
+// Pipeline(
+//     FabricIngressParser(),
+//     FabricIngress(),
+//     FabricIngressDeparser(),
+//     FabricEgressParser(),
+//     FabricEgress(),
+//     FabricEgressDeparser()
+// ) pipe;
+
+// Switch(pipe) main;
+
+// Packet comes into ingress profile_a. The packet travels to egress profile_b, then to
+// ingress profile_b and finally to egress profile_a.
+
+// Packet flow: ingress_a, egress_b, ingress_b, egress_a
+
+// For tofino model:
+// --int-port-loop=<pipe_bitmap> (0xA)
+
 Pipeline(
     FabricIngressParser(),
     FabricIngress(),
@@ -84,6 +149,15 @@ Pipeline(
     FabricEgressParser(),
     FabricEgress(),
     FabricEgressDeparser()
-) pipe;
+) pipeline_profile_a;
 
-Switch(pipe) main;
+Pipeline(
+    FabricIngressParserB(),
+    FabricIngressB(),
+    FabricIngressDeparser(),
+    FabricEgressParserB(),
+    FabricEgressB(),
+    FabricEgressDeparserB()
+) pipeline_profile_b;
+
+Switch(pipeline_profile_a, pipeline_profile_b) main;

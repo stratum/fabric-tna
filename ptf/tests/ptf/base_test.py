@@ -240,8 +240,16 @@ class P4RuntimeTest(BaseTest):
                             "direct_counters"]:
             for obj in getattr(self.p4info, p4_obj_type):
                 pre = obj.preamble
+                # Build name from "name" field
                 suffix = None
                 for s in reversed(pre.name.split(".")):
+                    suffix = s if suffix is None else s + "." + suffix
+                    key = (p4_obj_type, suffix)
+                    self.p4info_obj_map[key] = obj
+                    suffix_count[key] += 1
+                # Build name from "alias" field
+                suffix = None
+                for s in reversed(pre.alias.split(".")):
                     suffix = s if suffix is None else s + "." + suffix
                     key = (p4_obj_type, suffix)
                     self.p4info_obj_map[key] = obj
