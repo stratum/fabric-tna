@@ -97,6 +97,8 @@ control Forwarding (inout parsed_headers_t hdr,
     #ifdef _ROUTING_V4_TABLE_ANNOT
     _ROUTING_V4_TABLE_ANNOT
     #endif
+    @alpm(1)
+    @alpm_partitions(4096)
     table routing_v4 {
         key = {
             hdr.ipv4.dst_addr: lpm @name("ipv4_dst");
