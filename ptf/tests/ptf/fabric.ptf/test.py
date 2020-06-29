@@ -1052,13 +1052,19 @@ class CounterTest(BridgingTest):
                 direct_counter.data.packet_count != 1:
                 self.fail("Incorrect direct counter value:\n" + direct_counter)
 
-        # Read indirect counter (traffic_class_counter)
+        try:
+            self.get_counter("fwd_type_counter")
+        except Exception as ex:
+            print("Unable to find indirect counter `fwd_type_counter`, skip")
+            return
+
+        # Read indirect counter (fwd_type_counter)
         # Here we are trying to read counter for traffic class "0"
         # which means how many traffic for bridging
-        self.read_counter("traffic_class_counter", 0, "BOTH")
+        self.read_indirect_counter("fwd_type_counter", 0, "BOTH")
         # Wait counter being synced
         sleep(1)
-        counter_entry = self.read_counter("traffic_class_counter", 0, "BOTH")
+        counter_entry = self.read_indirect_counter("fwd_type_counter", 0, "BOTH")
 
         # In the bridging test we sent two TCP packets and both packets
         # are classified as bridging class.

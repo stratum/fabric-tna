@@ -677,7 +677,7 @@ class P4RuntimeTest(BaseTest):
         return None
 
 
-    def read_counter(self, c_name, c_index, typ):
+    def read_indirect_counter(self, c_name, c_index, typ):
         # Check counter type with P4Info
         counter = self.get_counter(c_name)
         counter_type_unit = p4info_pb2.CounterSpec.Unit.items()[counter.spec.unit][0]
