@@ -665,7 +665,19 @@ class P4RuntimeTest(BaseTest):
         self.push_update_add_entry_to_group(req, t_name, mk, grp_id)
         return req, self.write_request(req, store=(mk is not None))
 
-    def read_counter(self, c_name, c_index, typ):
+    def read_direct_counter(self, table_entry):
+        req = self.get_new_read_request()
+        entity = req.entities.add()
+        direct_counter_entry = entity.direct_counter_entry
+        direct_counter_entry.table_entry.CopyFrom(table_entry)
+
+        for entity in self.read_request(req):
+            if entity.HasField("direct_counter_entry"):
+                return entity.direct_counter_entry
+        return None
+
+
+    def read_indirect_counter(self, c_name, c_index, typ):
         # Check counter type with P4Info
         counter = self.get_counter(c_name)
         counter_type_unit = p4info_pb2.CounterSpec.Unit.items()[counter.spec.unit][0]

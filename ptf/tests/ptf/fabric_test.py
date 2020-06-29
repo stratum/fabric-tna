@@ -291,7 +291,7 @@ class FabricTest(P4RuntimeTest):
             inner_vlan_id_mask_ = stringify(4095, 2)
             matches.append(self.Ternary("inner_vlan_id", inner_vlan_id_, inner_vlan_id_mask_))
 
-        self.send_request_add_entry_to_action(
+        return self.send_request_add_entry_to_action(
             "filtering.ingress_port_vlan",
             matches,
             "filtering." + action_name, action_params,
@@ -1079,11 +1079,11 @@ class PacketInTest(FabricTest):
 class SpgwSimpleTest(IPv4UnicastTest):
 
     def read_pkt_count(self, c_name, idx):
-        counter = self.read_counter(c_name, idx, typ="PACKETS")
+        counter = self.read_indirect_counter(c_name, idx, typ="PACKETS")
         return counter.data.packet_count
 
     def read_byte_count(self, c_name, idx):
-        counter = self.read_counter(c_name, idx, typ="BYTES")
+        counter = self.read_indirect_counter(c_name, idx, typ="BYTES")
         return counter.data.byte_count
 
     def add_ue_pool(self, ip_prefix, prefix_len):
@@ -1592,11 +1592,11 @@ class PppoeTest(DoubleVlanTerminationTest):
         self.set_upstream_pppoe_cp_table(pppoe_codes=pppoe_cp_codes)
 
     def read_pkt_count(self, c_name, line_id):
-        counter = self.read_counter(c_name, line_id, typ="PACKETS")
+        counter = self.read_indirect_counter(c_name, line_id, typ="PACKETS")
         return counter.data.packet_count
 
     def read_byte_count(self, c_name, line_id):
-        counter = self.read_counter(c_name, line_id, typ="BYTES")
+        counter = self.read_indirect_counter(c_name, line_id, typ="BYTES")
         return counter.data.byte_count
 
     def read_pkt_count_upstream(self, type, line_id):
