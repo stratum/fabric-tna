@@ -76,6 +76,13 @@ control Filtering (inout parsed_headers_t hdr,
         fwd_classifier_counter.count();
     }
 
+    /*
+     * Counter that collects classes for all traffics.
+     */
+#ifdef WTIH_DEBUG
+    Counter<bit<64>, bit<3>>(8, CounterType_t.PACKETS_AND_BYTES) fwd_type_counter;
+#endif
+
     table fwd_classifier {
         key = {
             ig_intr_md.ingress_port        : exact @name("ig_port");
@@ -94,5 +101,8 @@ control Filtering (inout parsed_headers_t hdr,
     apply {
         ingress_port_vlan.apply();
         fwd_classifier.apply();
+#ifdef WTIH_DEBUG
+        fwd_type_counter.count(fabric_md.fwd_type);
+#endif
     }
 }
