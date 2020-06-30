@@ -25,6 +25,8 @@ cd /tmp/workdir
     -grpc_max_recv_msg_size=256 \
     -log_dir=./ \
     -logtostderr=true \
+    -stderrthreshold=0 \
+    -v=0 \
     -persistent_config_dir=/tmp \
     -write_req_log_file=./p4rt-write-reqs.log \
     > ./stratum_bf.log 2>&1
