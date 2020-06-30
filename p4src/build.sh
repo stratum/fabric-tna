@@ -57,6 +57,7 @@ function do_p4c() {
   mkdir -p "${DEST_DIR}/stratum_bf/${pltf}/pipe"
   cp "${P4C_OUT}/${pltf}/p4info.txt" "${DEST_DIR}/stratum_bf/${pltf}"
   cp "${P4C_OUT}/${pltf}/bfrt.json" "${DEST_DIR}/stratum_bf/${pltf}"
+  cp "${P4C_OUT}/${pltf}/fabric_tna.conf" "${DEST_DIR}/stratum_bf/${pltf}"
   cp "${P4C_OUT}/${pltf}/pipe/context.json" "${DEST_DIR}/stratum_bf/${pltf}/pipe"
   cp "${P4C_OUT}/${pltf}/pipe/tofino.bin" "${DEST_DIR}/stratum_bf/${pltf}/pipe"
   echo "${cpu_port}" > "${DEST_DIR}/stratum_bf/${pltf}/cpu_port.txt"
