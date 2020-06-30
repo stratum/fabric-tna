@@ -55,7 +55,6 @@ function do_p4c() {
 
   # Copy only the relevant files to the pipeconf resources.
   mkdir -p "${DEST_DIR}/stratum_bf/${pltf}/pipe"
-  cp "${P4C_OUT}/${pltf}/fabric_tna.conf" "${DEST_DIR}/stratum_bf/${pltf}"
   cp "${P4C_OUT}/${pltf}/p4info.txt" "${DEST_DIR}/stratum_bf/${pltf}"
   cp "${P4C_OUT}/${pltf}/bfrt.json" "${DEST_DIR}/stratum_bf/${pltf}"
   cp "${P4C_OUT}/${pltf}/fabric_tna.conf" "${DEST_DIR}/stratum_bf/${pltf}"
