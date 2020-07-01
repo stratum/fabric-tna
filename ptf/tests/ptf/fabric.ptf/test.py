@@ -917,6 +917,12 @@ class TableEntryReadWriteTest(FabricTest):
         received_bridging_entry = self.read_bridging_entry(1, "00:00:00:00:00:01", "ff:ff:ff:ff:ff:ff")
         self.verify_p4runtime_entity(expected_bridging_entry, received_bridging_entry)
 
+        req, _ = self.add_forwarding_acl_punt_to_cpu(ETH_TYPE_IPV4)
+        expected_acl_entry = req.updates[0].entity.table_entry
+        mk = [self.Ternary("eth_type", expected_acl_entry.match[0].ternary.value, expected_acl_entry.match[0].ternary.mask)]
+        received_acl_entry = self.read_table_entry("acl.acl", mk)
+        self.verify_p4runtime_entity(expected_acl_entry, received_acl_entry)
+
     def runTest(self):
         print("")
         self.doRunTest()

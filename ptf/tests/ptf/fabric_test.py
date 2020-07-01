@@ -380,7 +380,7 @@ class FabricTest(P4RuntimeTest):
     def add_forwarding_acl_punt_to_cpu(self, eth_type=None):
         eth_type_ = stringify(eth_type, 2)
         eth_type_mask = stringify(0xFFFF, 2)
-        self.send_request_add_entry_to_action(
+        return self.send_request_add_entry_to_action(
             "acl.acl",
             [self.Ternary("eth_type", eth_type_, eth_type_mask)],
             "acl.punt_to_cpu", [],
