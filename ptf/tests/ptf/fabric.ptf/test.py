@@ -1040,17 +1040,12 @@ class CounterTest(BridgingTest):
                          if te.table_id == self.get_table_id('ingress_port_vlan')]
 
         for table_entry in table_entries:
-            self.read_direct_counter(table_entry)
-
-        # Wait counter being synced
-        sleep(1)
-        for table_entry in table_entries:
             direct_counter = self.read_direct_counter(table_entry)
             # Here, both table entries hits once with a
             # simple TCP packet(120 bytes + 2*2 bytes checksum inserted by scapy)
             if direct_counter.data.byte_count != 124 or \
                 direct_counter.data.packet_count != 1:
-                self.fail("Incorrect direct counter value:\n" + direct_counter)
+                self.fail("Incorrect direct counter value:\n" + str(direct_counter))
 
         try:
             self.get_counter("fwd_type_counter")
@@ -1061,16 +1056,13 @@ class CounterTest(BridgingTest):
         # Read indirect counter (fwd_type_counter)
         # Here we are trying to read counter for traffic class "0"
         # which means how many traffic for bridging
-        self.read_indirect_counter("fwd_type_counter", 0, "BOTH")
-        # Wait counter being synced
-        sleep(1)
         counter_entry = self.read_indirect_counter("fwd_type_counter", 0, "BOTH")
 
         # In the bridging test we sent two TCP packets and both packets
         # are classified as bridging class.
         if counter_entry.data.byte_count != 248 or \
             counter_entry.data.packet_count != 2:
-            self.fail("Incorrect direct counter value:\n" + counter_entry)
+            self.fail("Incorrect direct counter value:\n" + str(counter_entry))
 
     def runTest(self):
         print("")
