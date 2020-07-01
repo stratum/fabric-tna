@@ -88,9 +88,9 @@ def format_pkt_match(received_pkt, expected_pkt):
 def format_exp_rcv(expected, received):
     buf = ""
     buf += "========== EXPECTED ==========\n"
-    buf += expected
-    buf += "========== RECEIVED =========="
-    buf += received
+    buf += str(expected)
+    buf += "========== RECEIVED ==========\n"
+    buf += str(received)
     buf += "=============================="
     return buf
 
