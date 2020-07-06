@@ -676,6 +676,15 @@ class P4RuntimeTest(BaseTest):
                 return entity.direct_counter_entry
         return None
 
+    def write_direct_counter(self, table_entry, byte_count, packet_count):
+        req = self.get_new_write_request()
+        update = req.updates.add()
+        update.type = p4runtime_pb2.Update.MODIFY
+        direct_counter_entry = update.entity.direct_counter_entry
+        direct_counter_entry.table_entry.CopyFrom(table_entry)
+        direct_counter_entry.data.byte_count = byte_count
+        direct_counter_entry.data.packet_count = packet_count
+        return req, self.write_request(req, store=False)
 
     def read_indirect_counter(self, c_name, c_index, typ):
         # Check counter type with P4Info

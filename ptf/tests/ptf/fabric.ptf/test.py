@@ -1047,6 +1047,20 @@ class CounterTest(BridgingTest):
                 direct_counter.data.packet_count != 1:
                 self.fail("Incorrect direct counter value:\n" + str(direct_counter))
 
+        # Check that direct counters can be set/cleared.
+        for table_entry in table_entries:
+            self.write_direct_counter(table_entry, 0, 0)
+            direct_counter = self.read_direct_counter(table_entry)
+            if direct_counter.data.byte_count != 0 or \
+                direct_counter.data.packet_count != 0:
+                self.fail("Incorrect direct counter value:\n" + str(direct_counter))
+
+            self.write_direct_counter(table_entry, 1024, 1024)
+            direct_counter = self.read_direct_counter(table_entry)
+            if direct_counter.data.byte_count != 1024 or \
+                direct_counter.data.packet_count != 1024:
+                self.fail("Incorrect direct counter value:\n" + str(direct_counter))
+
         try:
             self.get_counter("fwd_type_counter")
         except Exception as ex:
