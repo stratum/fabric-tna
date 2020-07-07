@@ -919,8 +919,7 @@ class TableEntryReadWriteTest(FabricTest):
 
         req, _ = self.add_forwarding_acl_punt_to_cpu(ETH_TYPE_IPV4)
         expected_acl_entry = req.updates[0].entity.table_entry
-        mk = [self.Ternary("eth_type", expected_acl_entry.match[0].ternary.value, expected_acl_entry.match[0].ternary.mask)]
-        received_acl_entry = self.read_table_entry("acl.acl", mk, expected_acl_entry.priority)
+        received_acl_entry = self.read_forwarding_acl_punt_to_cpu(ETH_TYPE_IPV4)
         self.verify_p4runtime_entity(expected_acl_entry, received_acl_entry)
 
     def runTest(self):
