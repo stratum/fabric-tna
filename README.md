@@ -20,8 +20,8 @@ To use ONOS to control a Tofino-enabled switch, you will need to run the
 
 ## Requirements
 
-* Barefoot SDE >= 9.0.0 (with the P4_16 compiler for Tofino)
-* ONOS >= 2.2.2
+* Barefoot SDE >= 9.2.0 (with the P4_16 compiler for Tofino)
+* ONOS >= 2.2.3
 * Docker (to run the build scripts without worrying about dependencies)
 * cURL (to interact with the ONOS REST APIs)
 
@@ -84,7 +84,7 @@ make argument (or environment variable) to a Docker image that can be downloaded
 via `docker pull`, for example:
 
 ```bash
-make build SDE_DOCKER_IMG=my-docker-repo/bf-sde:9.0.0 PROFILES=all
+make build SDE_DOCKER_IMG=my-docker-repo/bf-sde:9.2.0 PROFILES=all
 ```
 
 The build script will use `docker run` to invoke the `bf-p4c` command inside the
@@ -98,7 +98,7 @@ Dockerfile.
 
 ### 1 - Get and run ONOS
 
-The minimum required ONOS version that works with this pipeconf is 2.2.2.
+The minimum required ONOS version that works with this pipeconf is 2.2.3.
 
 You can either build from sources (using the `onos-2.2` or `master` branch), or
 run one the released versions:
@@ -135,8 +135,8 @@ new Tofino-specific pipeconfs in the system, depending on the `fabric-tna.p4`
 profiles compiled before and the Barefoot SDE/p4c version used:
 
 ```
-New pipeconf registered: org.stratumproject.fabric.tofino.mavericks_sde_9_2_0 (fingerprint=...)
-New pipeconf registered: org.stratumproject.fabric.tofino.montara_sde_9_2_0 (fingerprint=...)
+New pipeconf registered: org.stratumproject.fabric.stratum_bfrt.mavericks_sde_9_2_0 (fingerprint=...)
+New pipeconf registered: org.stratumproject.fabric.stratum_bfrt.montara_sde_9_2_0 (fingerprint=...)
 ...
 ```
 
