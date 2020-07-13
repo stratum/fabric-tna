@@ -910,9 +910,53 @@ class FabricDoubleTaggedHostDownstream(DoubleVlanTerminationTest):
 
 @group("p4r-function")
 class TableEntryReadWriteTest(FabricTest):
+    @autocleanup
+    def doRunWildcardAllTablesTest(self):
+        req, _ = self.add_forwarding_acl_punt_to_cpu(ETH_TYPE_IPV4)
+        req, _ = self.add_bridging_entry(1, "00:00:00:00:00:01", "ff:ff:ff:ff:ff:ff", 1)
+        req, _ = self.add_next_hashed_group_member("output_hashed", [("port_num", stringify(1, 2))])
+        self.add_forwarding_routing_v4_entry(HOST2_IPV4, 24, 400)
+
+        req_all = self.get_new_read_request()
+        entity = req_all.entities.add()
+        table_entry = entity.table_entry
+        table_entry.table_id = 0
+        table_entry.priority = 0
+        print(req_all)
+        resp = self.read_request(req_all)
+        print(resp)
+        if len(resp) != 3:
+            self.fail("Expected 3 table entries")
+        pass
 
     @autocleanup
-    def doRunTest(self):
+    def doRunWildcardSingleTableTest(self):
+        req1, _ = self.add_forwarding_acl_punt_to_cpu(ETH_TYPE_IPV4)
+        req2, _ = self.add_forwarding_acl_punt_to_cpu(ETH_TYPE_ARP)
+        req3, _ = self.add_forwarding_acl_punt_to_cpu(ETH_TYPE_VLAN)
+
+        # received_acl_entry = self.read_forwarding_acl_punt_to_cpu(None, priority=0)
+        req_all = self.get_new_read_request()
+        entity = req_all.entities.add()
+        table_entry = entity.table_entry
+        table_entry.table_id = self.get_table_id("acl.acl")
+        table_entry.priority = 0
+        # match = table_entry.match.add()
+        # match.field_id = self.get_mf_id("acl.acl", "eth_type")
+        # match.ternary.value = stringify(0, 2)
+        # match.ternary.mask = stringify(0, 2)
+        # for mf in [self.Ternary("eth_type", stringify(0, 2), stringify(0, 2))]:
+        #     mf_id = self.get_mf_id("acl.acl", "eth_type")
+        #     mf.add_to(mf_id, table_entry.match)
+        print(req_all)
+        resp = self.read_request(req_all)
+        print(resp)
+        # for req in [req1, req2, req3]:
+        #     expected_entry = req.updates[0].entity.table_entry
+        #     self.verify_p4runtime_entity(expected_entry, req_all[])
+
+    @autocleanup
+    def doRunSingleEntryTest(self):
         req, _ = self.add_bridging_entry(1, "00:00:00:00:00:01", "ff:ff:ff:ff:ff:ff", 1)
         expected_bridging_entry = req.updates[0].entity.table_entry
         received_bridging_entry = self.read_bridging_entry(1, "00:00:00:00:00:01", "ff:ff:ff:ff:ff:ff")
@@ -925,7 +969,9 @@ class TableEntryReadWriteTest(FabricTest):
 
     def runTest(self):
         print("")
-        self.doRunTest()
+        self.doRunSingleEntryTest()
+        self.doRunWildcardSingleTableTest()
+        self.doRunWildcardAllTablesTest()
 
 @group("p4r-function")
 class ActionProfileMemberReadWriteTest(FabricTest):
