@@ -569,8 +569,12 @@ class FabricTest(P4RuntimeTest):
         )
 
     def read_forwarding_acl_punt_to_cpu(self, eth_type=None, priority=DEFAULT_PRIORITY):
-        eth_type_ = stringify(eth_type, 2)
-        eth_type_mask_ = stringify(0xFFFF, 2)
+        if eth_type:
+            eth_type_ = stringify(eth_type, 2)
+            eth_type_mask_ = stringify(0xFFFF, 2)
+        else:
+            eth_type_ = stringify(0, 2)
+            eth_type_mask_ = stringify(0, 2)
         mk = [self.Ternary("eth_type", eth_type_, eth_type_mask_)]
         return self.read_table_entry("acl.acl", mk, priority)
 
