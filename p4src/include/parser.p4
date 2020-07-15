@@ -115,6 +115,8 @@ parser FabricIngressParser (packet_in  packet,
 
     state parse_ipv4 {
         packet.extract(hdr.ipv4);
+        fabric_md.ipv4_src_addr = hdr.ipv4.src_addr;
+        fabric_md.ipv4_dst_addr = hdr.ipv4.dst_addr;
         fabric_md.ip_proto = hdr.ipv4.protocol;
         fabric_md.ip_eth_type = ETHERTYPE_IPV4;
         last_ipv4_dscp = hdr.ipv4.dscp;
@@ -153,6 +155,9 @@ parser FabricIngressParser (packet_in  packet,
         fabric_md.l4_sport = hdr.udp.sport;
         fabric_md.l4_dport = hdr.udp.dport;
         transition select(hdr.udp.dport) {
+#ifdef WITH_SPGW
+            UDP_PORT_GTPU: parse_gtpu;
+#endif // WITH_SPGW
             default: accept;
         }
     }
@@ -161,6 +166,39 @@ parser FabricIngressParser (packet_in  packet,
         packet.extract(hdr.icmp);
         transition accept;
     }
+
+#ifdef WITH_SPGW
+    state parse_gtpu {
+        packet.extract(hdr.gtpu);
+        transition parse_inner_ipv4;
+    }
+
+    state parse_inner_ipv4 {
+        packet.extract(hdr.inner_ipv4);
+        last_ipv4_dscp = hdr.ipv4.dscp;
+        transition select(hdr.inner_ipv4.protocol) {
+            PROTO_TCP: parse_inner_tcp;
+            PROTO_UDP: parse_inner_udp;
+            PROTO_ICMP: parse_inner_icmp;
+            default: accept;
+        }
+    }
+
+    state parse_inner_tcp {
+        packet.extract(hdr.inner_tcp);
+        transition accept;
+    }
+
+    state parse_inner_udp {
+        packet.extract(hdr.inner_udp);
+        default: accept;
+    }
+
+    state parse_inner_icmp {
+        packet.extract(hdr.inner_icmp);
+        transition accept;
+    }
+#endif // WITH_SPGW
 }
 
 control FabricIngressDeparser(packet_out packet,
@@ -212,6 +250,13 @@ parser FabricEgressParser (packet_in packet,
         fabric_md.push_double_vlan = bridge_md.push_double_vlan;
         fabric_md.inner_vlan_id = bridge_md.inner_vlan_id;
 #endif // WITH_DOUBLE_VLAN_TERMINATION
+#ifdef WITH_SPGW
+        fabric_md.gtpu_teid = bridge_md.teid;
+        fabric_md.gtpu_tunnel_sip = bridge_md.gtpu_tunnel_sip;
+        fabric_md.gtpu_tunnel_dip = bridge_md.gtpu_tunnel_dip;
+        fabric_md.gtpu_tunnel_sport = bridge_md.gtpu_tunnel_sport;
+        fabric_md.pdr_ctr_id = bridge_md.pdr_ctr_id;
+#endif // WITH_SPGW
         fabric_md.ip_eth_type = bridge_md.ip_eth_type;
         fabric_md.ip_proto = bridge_md.ip_proto;
         fabric_md.mpls_label = bridge_md.mpls_label;

@@ -29,10 +29,22 @@ control FabricIngress (
     Forwarding() forwarding;
     Acl() acl;
     Next() next;
+#ifdef WITH_SPGW
+    SpgwPreprocess() spgw_preprocess;
+    SpgwIngress() spgw_ingress;
+#endif // WITH_SPGW
 
     apply {
         pkt_io_ingress.apply(hdr, fabric_md, ig_tm_md);
+#ifdef WITH_SPGW
+        spgw_preprocess.apply(hdr, fabric_md);
+#endif // WITH_SPGW
         filtering.apply(hdr, fabric_md, ig_intr_md);
+#ifdef WITH_SPGW
+        if (!fabric_md.skip_spgw) {
+            spgw_ingress.apply(hdr, fabric_md);
+        }
+#endif // WITH_SPGW
         if (!fabric_md.skip_forwarding) {
            forwarding.apply(hdr, fabric_md);
         }
@@ -54,6 +66,13 @@ control FabricIngress (
             hdr.bridge_md.push_double_vlan = fabric_md.push_double_vlan;
             hdr.bridge_md.inner_vlan_id = fabric_md.inner_vlan_id;
 #endif // WITH_DOUBLE_VLAN_TERMINATION
+#ifdef WITH_SPGW
+            hdr.bridge_md.gtpu_teid         = fabric_md.gtpu_teid;
+            hdr.bridge_md.gtpu_tunnel_sip   = fabric_md.gtpu_tunnel_sip
+            hdr.bridge_md.gtpu_tunnel_dip   = fabric_md.gtpu_tunnel_dip
+            hdr.bridge_md.gtpu_tunnel_sport = fabric_md.gtpu_tunnel_sport
+            hdr.bridge_md.pdr_ctr_id        = fabric_md.pdr_ctr_id;
+#endif // WITH_SPGW
         }
     }
 }
@@ -70,10 +89,16 @@ control FabricEgress (
 
     PacketIoEgress() pkt_io_egress;
     EgressNextControl() egress_next;
+#ifdef WITH_SPGW
+    SpgwEgress() spgw_egress;
+#endif // WITH_SPGW
 
     apply {
         pkt_io_egress.apply(hdr, fabric_md, eg_intr_md);
         egress_next.apply(hdr, fabric_md, eg_intr_md, eg_dprsr_md);
+#ifdef WITH_SPGW
+        spgw_egress.apply(hdr, fabric_md);
+#endif // WITH_SPGW
     }
 }
 

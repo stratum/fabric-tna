@@ -111,6 +111,8 @@ header icmp_t {
 @flexible
 @pa_auto_init_metadata
 struct fabric_ingress_metadata_t {
+    bit<32>         ipv4_src_addr;
+    bit<32>         ipv4_dst_addr;
     vlan_id_t       vlan_id;
     bit<3>          vlan_pri;
     bit<1>          vlan_cfi;
@@ -134,6 +136,16 @@ struct fabric_ingress_metadata_t {
     bool            is_multicast;
     bool            is_mirror;
     MirrorId_t      mirror_id;
+#ifdef WITH_SPGW
+    bool            needs_gtpu_encap;
+    teid_t          gtpu_teid;
+    bit<32>         gtpu_tunnel_sip;
+    bit<32>         gtpu_tunnel_dip;
+    bit<16>         gtpu_tunnel_sport;
+    pdr_ctr_id_t    pdr_ctr_id;
+    SpgwInterfaceType   spgw_src_iface;
+    SpgwDirection       spgw_direction;
+#endif // WITH_SPGW
 }
 
 @flexible
@@ -150,6 +162,13 @@ struct fabric_egress_metadata_t {
 #endif // WITH_DOUBLE_VLAN_TERMINATION
     bit<16>         ip_eth_type;
     bit<8>          ip_proto;
+#ifdef WITH_SPGW
+    teid_t          gtpu_teid;
+    bit<32>         gtpu_tunnel_sip;
+    bit<32>         gtpu_tunnel_dip;
+    bit<16>         gtpu_tunnel_sport;
+    pdr_ctr_id_t    pdr_ctr_id;
+#endif // WITH_SPGW
 }
 
 @flexible
@@ -165,6 +184,14 @@ header bridge_metadata_t {
 #endif // WITH_DOUBLE_VLAN_TERMINATION
     bit<16>         ip_eth_type;
     bit<8>          ip_proto;
+#ifdef WITH_SPGW
+    bool            gtpu_needs_encap;
+    teid_t          gtpu_teid;
+    bit<32>         gtpu_tunnel_sip;
+    bit<32>         gtpu_tunnel_dip;
+    bit<16>         gtpu_tunnel_sport;
+    pdr_ctr_id_t    pdr_ctr_id;
+#endif // WITH_SPGW
 }
 
 struct parsed_headers_t {
