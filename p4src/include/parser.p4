@@ -186,11 +186,15 @@ parser FabricIngressParser (packet_in  packet,
 
     state parse_inner_tcp {
         packet.extract(hdr.inner_tcp);
+        fabric_md.l4_sport = hdr.inner_tcp.sport;
+        fabric_md.l4_dport = hdr.inner_tcp.dport;
         transition accept;
     }
 
     state parse_inner_udp {
         packet.extract(hdr.inner_udp);
+        fabric_md.l4_sport = hdr.inner_udp.sport;
+        fabric_md.l4_dport = hdr.inner_udp.dport;
         default: accept;
     }
 
@@ -226,6 +230,14 @@ control FabricIngressDeparser(packet_out packet,
         packet.emit(hdr.tcp);
         packet.emit(hdr.udp);
         packet.emit(hdr.icmp);
+#ifdef WITH_SPGW
+        // in case we parsed a GTPU packet but did not decap it
+        packet.emit(hdr.gtpu);
+        packet.emit(hdr.inner_ipv4);
+        packet.emit(hdr.inner_tcp);
+        packet.emit(hdr.inner_udp);
+        packet.emit(hdr.inner_icmp);
+#endif // WITH_SPGW
     }
 }
 
@@ -392,6 +404,11 @@ control FabricEgressDeparser(packet_out packet,
 #endif // WITH_XCONNECT || WITH_DOUBLE_VLAN_TERMINATION
         packet.emit(hdr.eth_type);
         packet.emit(hdr.mpls);
+#ifdef WITH_SPGW
+        packet.emit(hdr.outer_ipv4);
+        packet.emit(hdr.outer_udp);
+        packet.emit(hdr.gtpu);
+#endif // WITH_SPGW
         packet.emit(hdr.ipv4);
         packet.emit(hdr.ipv6);
         packet.emit(hdr.tcp);

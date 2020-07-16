@@ -107,6 +107,21 @@ header icmp_t {
     bit<64> timestamp;
 }
 
+#ifdef WITH_SPGW
+// GTPU v1
+header gtpu_t {
+    bit<3>  version;    /* version */
+    bit<1>  pt;         /* protocol type */
+    bit<1>  spare;      /* reserved */
+    bit<1>  ex_flag;    /* next extension hdr present? */
+    bit<1>  seq_flag;   /* sequence no. */
+    bit<1>  npdu_flag;  /* n-pdn number present ? */
+    bit<8>  msgtype;    /* message type */
+    bit<16> msglen;     /* message length */
+    teid_t  teid;       /* tunnel endpoint id */
+}
+#endif // WITH_SPGW
+
 // Custom metadata definition
 @flexible
 @pa_auto_init_metadata
@@ -137,14 +152,22 @@ struct fabric_ingress_metadata_t {
     bool            is_mirror;
     MirrorId_t      mirror_id;
 #ifdef WITH_SPGW
+    bit<16>         inner_l4_sport;
+    bit<16>         inner_l4_dport;
     bool            needs_gtpu_encap;
+    bool            needs_gtpu_decap;
+    bool            pdr_hit;
+    bool            far_dropped;
+    bool            notify_spgwc;
+    bool            skip_spgw;
+    far_id_t        far_id;
     teid_t          gtpu_teid;
     bit<32>         gtpu_tunnel_sip;
     bit<32>         gtpu_tunnel_dip;
     bit<16>         gtpu_tunnel_sport;
     pdr_ctr_id_t    pdr_ctr_id;
-    SpgwInterfaceType   spgw_src_iface;
-    SpgwDirection       spgw_direction;
+    SpgwInterface   spgw_src_iface;
+    SpgwDirection   spgw_direction;
 #endif // WITH_SPGW
 }
 
@@ -208,6 +231,14 @@ struct parsed_headers_t {
     tcp_t tcp;
     udp_t udp;
     icmp_t icmp;
+#ifdef WITH_SPGW
+    ipv4_t outer_ipv4;
+    udp_t outer_udp;
+    gtpu_t gtpu;
+    tcp_t inner_tcp;
+    udp_t inner_udp;
+    icmp_t inner_icmp;
+#endif // WITH_SPGW
     packet_out_header_t packet_out;
     packet_in_header_t packet_in;
 }
