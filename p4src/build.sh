@@ -62,12 +62,14 @@ function do_p4c() {
   cp "${P4C_OUT}/${pltf}/pipe/tofino.bin" "${DEST_DIR}/stratum_bf/${pltf}/pipe"
   echo "${cpu_port}" > "${DEST_DIR}/stratum_bf/${pltf}/cpu_port.txt"
 
-  # New pipeline format which uses tar bal
+  # New pipeline format which uses tar ball
   mkdir -p "${DEST_DIR}/stratum_bfrt/${pltf}"
   tar cf "pipeline.tar.bz2" -C "${DEST_DIR}/stratum_bf/${pltf}" .
   mv "pipeline.tar.bz2" "${DEST_DIR}/stratum_bfrt/${pltf}/"
   cp "${P4C_OUT}/${pltf}/p4info.txt" "${DEST_DIR}/stratum_bfrt/${pltf}/"
   echo "${cpu_port}" > "${DEST_DIR}/stratum_bfrt/${pltf}/cpu_port.txt"
+
+  rm "${DEST_DIR}/stratum_bf/${pltf}/fabric_tna.conf"
 
   echo
 }
