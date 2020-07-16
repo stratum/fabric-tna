@@ -47,7 +47,7 @@ control SpgwIngress(
         actions = {
             set_source_iface;
         }
-        const default_action = set_source_iface(SpgwInterfaceType.UNKNOWN, SpgwDirection.UNKNOWN, true);
+        const default_action = set_source_iface(SpgwInterface.UNKNOWN, SpgwDirection.UNKNOWN, true);
     }
 
 
@@ -55,7 +55,7 @@ control SpgwIngress(
     //===== PDR Tables ======//
     //=============================//
 
-    action set_pdr_attributes(ctr_id_t ctr_id,
+    action set_pdr_attributes(pdr_ctr_id_t ctr_id,
                               far_id_t far_id,
                               bool needs_gtpu_decap) {
         fabric_md.pdr_hit = true;
@@ -67,6 +67,7 @@ control SpgwIngress(
     // These two tables scale well and cover the average case PDR
     table downlink_pdr_lookup {
         key = {
+            // only available ipv4 header
             hdr.ipv4.dst_addr : exact @name("ue_addr");
         }
         actions = {
@@ -91,14 +92,14 @@ control SpgwIngress(
             // GTPU
             hdr.gtpu.isValid()          : ternary @name("gtpu_is_valid");
             hdr.gtpu.teid               : ternary @name("teid");
-            // SDF (5-tuple)
-            // outer
+            // SDF
+            // outer 5-tuple
             hdr.ipv4.src_addr           : ternary @name("ipv4_src");
             hdr.ipv4.dst_addr           : ternary @name("ipv4_dst");
             hdr.ipv4.protocol           : ternary @name("ip_proto");
             fabric_md.l4_sport          : ternary @name("l4_sport");
             fabric_md.l4_dport          : ternary @name("l4_dport");
-            // inner
+            // inner 5-tuple
             hdr.inner_ipv4.src_addr     : ternary @name("inner_ipv4_src");
             hdr.inner_ipv4.dst_addr     : ternary @name("inner_ipv4_dst");
             hdr.inner_ipv4.protocol     : ternary @name("inner_ip_proto");
@@ -152,7 +153,7 @@ control SpgwIngress(
             load_tunnel_far_attributes;
         }
         // default is drop and don't notify CP
-        const default_action = load_normal_far_attributes(1w1, 1w0);
+        const default_action = load_normal_far_attributes(true, true);
     }
 
 
@@ -165,8 +166,8 @@ control SpgwIngress(
 
     @hidden 
     action decap_inner_common() {
-        // Correct parser-set metadata
-        fabric_md.ip_eth_type   = ETHERTYPE_IPV4
+        // Correct parser-set metadata to use the inner header values
+        fabric_md.ip_eth_type   = ETHERTYPE_IPV4;
         fabric_md.ip_proto      = hdr.inner_ipv4.protocol;
         fabric_md.ipv4_src_addr = hdr.inner_ipv4.src_addr;
         fabric_md.ipv4_dst_addr = hdr.inner_ipv4.dst_addr;
@@ -179,26 +180,25 @@ control SpgwIngress(
     }
     action decap_inner_tcp() {
         decap_inner_common();
+        hdr.udp.setInvalid();
         hdr.tcp = hdr.inner_tcp;
         hdr.inner_tcp.setInvalid();
-        hdr.udp.setInvalid();
     }
     action decap_inner_udp() {
         decap_inner_common();
-        hdr.udp = hdr.inner_udp();
+        hdr.udp = hdr.inner_udp;
         hdr.inner_udp.setInvalid();
     }
     action decap_inner_icmp() {
         decap_inner_common();
+        hdr.udp.setInvalid();
         hdr.icmp = hdr.inner_icmp;
         hdr.inner_icmp.setInvalid();
-        hdr.udp.setInvalid();
     }
     action decap_inner_unknown() {
         decap_inner_common();
         hdr.udp.setInvalid();
     }
-
     table decap_gtpu {
         key = {
             hdr.inner_tcp.isValid()     : exact;
@@ -226,7 +226,7 @@ control SpgwIngress(
     apply {
 
         // Interfaces
-        interface_lookup.apply()
+        interface_lookup.apply();
 
         // If interface table missed, or the interface skips PDRs/FARs (TODO: is that a thing?)
         if (fabric_md.skip_spgw) return;
@@ -247,7 +247,7 @@ control SpgwIngress(
         
         // GTPU Decapsulate
         if (fabric_md.needs_gtpu_decap) {
-            decap_gtpu.apply()
+            decap_gtpu.apply();
         }
 
         // FARs
@@ -257,7 +257,7 @@ control SpgwIngress(
         if (fabric_md.notify_spgwc) {
             // TODO: cpu clone session here
         }
-        if (fabric_md.spgw.far_dropped) {
+        if (fabric_md.far_dropped) {
             // Do dropping in the same way as fabric's filtering.p4, so we can traverse
             // the ACL table, which is good for cases like DHCP.
             fabric_md.skip_forwarding = true;
@@ -279,7 +279,7 @@ control SpgwIngress(
 //====================================//
 control SpgwEgress(
         inout parsed_headers_t hdr,
-        inout fabric_ingress_metadata_t fabric_md) {
+        inout fabric_egress_metadata_t fabric_md) {
 
     Counter<bit<64>, bit<16>>(MAX_PDR_COUNTERS, CounterType_t.PACKETS_AND_BYTES) pdr_counter;
 

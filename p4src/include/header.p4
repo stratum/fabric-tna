@@ -152,6 +152,7 @@ struct fabric_ingress_metadata_t {
     bool            is_mirror;
     MirrorId_t      mirror_id;
 #ifdef WITH_SPGW
+    bit<16>         spgw_ipv4_len;
     bit<16>         inner_l4_sport;
     bit<16>         inner_l4_dport;
     bool            inner_ipv4_checksum_err;
@@ -187,6 +188,9 @@ struct fabric_egress_metadata_t {
     bit<16>         ip_eth_type;
     bit<8>          ip_proto;
 #ifdef WITH_SPGW
+    bit<16>         spgw_ipv4_len;
+    bool            needs_gtpu_encap;
+    bool            skip_spgw;
     teid_t          gtpu_teid;
     bit<32>         gtpu_tunnel_sip;
     bit<32>         gtpu_tunnel_dip;
@@ -209,7 +213,9 @@ header bridge_metadata_t {
     bit<16>         ip_eth_type;
     bit<8>          ip_proto;
 #ifdef WITH_SPGW
-    bool            gtpu_needs_encap;
+    bit<16>         spgw_ipv4_len;
+    bool            needs_gtpu_encap;
+    bool            skip_spgw;
     teid_t          gtpu_teid;
     bit<32>         gtpu_tunnel_sip;
     bit<32>         gtpu_tunnel_dip;
@@ -236,6 +242,7 @@ struct parsed_headers_t {
     ipv4_t outer_ipv4;
     udp_t outer_udp;
     gtpu_t gtpu;
+    ipv4_t inner_ipv4;
     tcp_t inner_tcp;
     udp_t inner_udp;
     icmp_t inner_icmp;

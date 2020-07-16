@@ -14,7 +14,9 @@ parser FabricIngressParser (packet_in  packet,
     /* TNA */
     out ingress_intrinsic_metadata_t   ig_intr_md) {
     Checksum() ipv4_checksum;
+#ifdef WITH_SPGW
     Checksum() inner_ipv4_checksum;
+#endif // WITH_SPGW
     bit<6> last_ipv4_dscp = 0;
 
     state start {
@@ -176,7 +178,7 @@ parser FabricIngressParser (packet_in  packet,
 
     state parse_inner_ipv4 {
         packet.extract(hdr.inner_ipv4);
-        last_ipv4_dscp = hdr.ipv4.dscp;
+        last_ipv4_dscp = hdr.inner_ipv4.dscp;
         inner_ipv4_checksum.add(hdr.inner_ipv4);
         fabric_md.inner_ipv4_checksum_err = inner_ipv4_checksum.verify();
         transition select(hdr.inner_ipv4.protocol) {
@@ -189,16 +191,16 @@ parser FabricIngressParser (packet_in  packet,
 
     state parse_inner_tcp {
         packet.extract(hdr.inner_tcp);
-        fabric_md.l4_sport = hdr.inner_tcp.sport;
-        fabric_md.l4_dport = hdr.inner_tcp.dport;
+        fabric_md.inner_l4_sport = hdr.inner_tcp.sport;
+        fabric_md.inner_l4_dport = hdr.inner_tcp.dport;
         transition accept;
     }
 
     state parse_inner_udp {
         packet.extract(hdr.inner_udp);
-        fabric_md.l4_sport = hdr.inner_udp.sport;
-        fabric_md.l4_dport = hdr.inner_udp.dport;
-        default: accept;
+        fabric_md.inner_l4_sport = hdr.inner_udp.sport;
+        fabric_md.inner_l4_dport = hdr.inner_udp.dport;
+        transition accept;
     }
 
     state parse_inner_icmp {
@@ -266,7 +268,10 @@ parser FabricEgressParser (packet_in packet,
         fabric_md.inner_vlan_id = bridge_md.inner_vlan_id;
 #endif // WITH_DOUBLE_VLAN_TERMINATION
 #ifdef WITH_SPGW
-        fabric_md.gtpu_teid = bridge_md.teid;
+        fabric_md.spgw_ipv4_len = bridge_md.spgw_ipv4_len;
+        fabric_md.needs_gtpu_encap = bridge_md.needs_gtpu_encap;
+        fabric_md.skip_spgw = bridge_md.skip_spgw;
+        fabric_md.gtpu_teid = bridge_md.gtpu_teid;
         fabric_md.gtpu_tunnel_sip = bridge_md.gtpu_tunnel_sip;
         fabric_md.gtpu_tunnel_dip = bridge_md.gtpu_tunnel_dip;
         fabric_md.gtpu_tunnel_sport = bridge_md.gtpu_tunnel_sport;

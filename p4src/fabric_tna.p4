@@ -13,6 +13,9 @@
 #include "include/control/forwarding.p4"
 #include "include/control/acl.p4"
 #include "include/control/next.p4"
+#ifdef WITH_SPGW
+#include "include/control/spgw.p4"
+#endif // WITH_SPGW
 
 control FabricIngress (
     /* Fabric.p4 */
@@ -61,10 +64,13 @@ control FabricIngress (
             hdr.bridge_md.inner_vlan_id = fabric_md.inner_vlan_id;
 #endif // WITH_DOUBLE_VLAN_TERMINATION
 #ifdef WITH_SPGW
+            hdr.bridge_md.spgw_ipv4_len     = fabric_md.spgw_ipv4_len;
+            hdr.bridge_md.needs_gtpu_encap  = fabric_md.needs_gtpu_encap;
+            hdr.bridge_md.skip_spgw         = fabric_md.skip_spgw;
             hdr.bridge_md.gtpu_teid         = fabric_md.gtpu_teid;
-            hdr.bridge_md.gtpu_tunnel_sip   = fabric_md.gtpu_tunnel_sip
-            hdr.bridge_md.gtpu_tunnel_dip   = fabric_md.gtpu_tunnel_dip
-            hdr.bridge_md.gtpu_tunnel_sport = fabric_md.gtpu_tunnel_sport
+            hdr.bridge_md.gtpu_tunnel_sip   = fabric_md.gtpu_tunnel_sip;
+            hdr.bridge_md.gtpu_tunnel_dip   = fabric_md.gtpu_tunnel_dip;
+            hdr.bridge_md.gtpu_tunnel_sport = fabric_md.gtpu_tunnel_sport;
             hdr.bridge_md.pdr_ctr_id        = fabric_md.pdr_ctr_id;
 #endif // WITH_SPGW
         }
