@@ -154,6 +154,7 @@ struct fabric_ingress_metadata_t {
 #ifdef WITH_SPGW
     bit<16>         inner_l4_sport;
     bit<16>         inner_l4_dport;
+    bool            inner_ipv4_checksum_err;
     bool            needs_gtpu_encap;
     bool            needs_gtpu_decap;
     bool            pdr_hit;

@@ -26,6 +26,10 @@ control SpgwIngress(
         inout fabric_ingress_metadata_t fabric_md) {
 
 
+    //=============================//
+    //===== Interface Tables ======//
+    //=============================//
+
     action set_source_iface(SpgwInterface src_iface, SpgwDirection direction, 
                             bool skip_spgw) {
         // Interface type can be access, core, n6_lan, etc (see InterfaceType enum)
@@ -34,7 +38,6 @@ control SpgwIngress(
         fabric_md.spgw_direction = direction;
         fabric_md.skip_spgw      = skip_spgw;
     }
-
     // TODO: check also that gtpu.msgtype == GTP_GPDU... somewhere
     table interface_lookup {
         key = {
@@ -48,21 +51,9 @@ control SpgwIngress(
     }
 
 
-    Counter<bit<64>, bit<16>>(MAX_PDR_COUNTERS, CounterType_t.PACKETS_AND_BYTES) pdr_counter;
-
-    @hidden
-    action gtpu_decap() {
-        // grab information from the tunnel that we'll need later
-        fabric_md.gtpu_teid = hdr.gtpu.teid;
-        fabric_md.gtpu_tunnel_sip = hdr.outer_ipv4.dst_addr;
-        // update metadata src and dst addresses with the inner packet 
-        fabric_md.ipv4_src_addr = hdr.ipv4.src_addr;
-        fabric_md.ipv4_dst_addr = hdr.ipv4.dst_addr;
-        // decap
-        outer_ipv4.setInvalid();
-        outer_udp.setInvalid();
-        gtpu.setInvalid();
-    }
+    //=============================//
+    //===== PDR Tables ======//
+    //=============================//
 
     action set_pdr_attributes(ctr_id_t ctr_id,
                               far_id_t far_id,
@@ -120,6 +111,10 @@ control SpgwIngress(
         const default_action = set_pdr_attributes(DEFAULT_PDR_CTR_ID, DEFAULT_FAR_ID, false);
     }
 
+    //=============================//
+    //===== FAR Tables ======//
+    //=============================//
+
     action load_normal_far_attributes(bool drop,
                                       bool notify_cp) {
         // general far attributes
@@ -159,6 +154,14 @@ control SpgwIngress(
         // default is drop and don't notify CP
         const default_action = load_normal_far_attributes(1w1, 1w0);
     }
+
+
+
+    //=============================//
+    //===== Misc Things ======//
+    //=============================//
+
+    Counter<bit<64>, bit<16>>(MAX_PDR_COUNTERS, CounterType_t.PACKETS_AND_BYTES) pdr_counter;
 
     @hidden 
     action decap_inner_common() {
@@ -217,6 +220,9 @@ control SpgwIngress(
         size = 4;
     }
 
+    //=============================//
+    //===== Apply Block ======//
+    //=============================//
     apply {
 
         // Interfaces
@@ -268,6 +274,9 @@ control SpgwIngress(
 }
 
 
+//====================================//
+//============== Egress ==============//
+//====================================//
 control SpgwEgress(
         inout parsed_headers_t hdr,
         inout fabric_ingress_metadata_t fabric_md) {
@@ -320,60 +329,6 @@ control SpgwEgress(
         if (fabric_md.needs_gtpu_encap) {
             gtpu_encap();
         }
-    }
-}
-
-
-control update_gtpu_checksum(
-        inout ipv4_t gtpu_ipv4,
-        inout udp_t  gtpu_udp,
-        in    gtpu_t gtpu,
-        in    ipv4_t ipv4,
-        in    udp_t  udp
-    ) {
-    apply {
-        // Compute outer IPv4 checksum.
-        update_checksum(gtpu_ipv4.isValid(),
-            {
-                gtpu_ipv4.version,
-                gtpu_ipv4.ihl,
-                gtpu_ipv4.dscp,
-                gtpu_ipv4.ecn,
-                gtpu_ipv4.total_len,
-                gtpu_ipv4.identification,
-                gtpu_ipv4.flags,
-                gtpu_ipv4.frag_offset,
-                gtpu_ipv4.ttl,
-                gtpu_ipv4.protocol,
-                gtpu_ipv4.src_addr,
-                gtpu_ipv4.dst_addr
-            },
-            gtpu_ipv4.hdr_checksum,
-            HashAlgorithm.csum16
-        );
-
-#ifdef WITH_SPGW_UDP_CSUM_UPDATE
-        // Compute outer UDP checksum.
-        update_checksum_with_payload(gtpu_udp.isValid(),
-            {
-                gtpu_ipv4.src_addr,
-                gtpu_ipv4.dst_addr,
-                8w0,
-                gtpu_ipv4.protocol,
-                gtpu_udp.len,
-                gtpu_udp.sport,
-                gtpu_udp.dport,
-                gtpu_udp.len,
-                gtpu,
-                ipv4,
-                // FIXME: we are assuming only UDP for downlink packets
-                // How to conditionally switch between UDP/TCP/ICMP?
-                udp
-            },
-            gtpu_udp.checksum,
-            HashAlgorithm.csum16
-        );
-#endif // WITH_SPGW_UDP_CSUM_UPDATE
     }
 }
 

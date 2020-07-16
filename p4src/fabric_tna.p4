@@ -30,21 +30,15 @@ control FabricIngress (
     Acl() acl;
     Next() next;
 #ifdef WITH_SPGW
-    SpgwPreprocess() spgw_preprocess;
     SpgwIngress() spgw_ingress;
 #endif // WITH_SPGW
 
     apply {
         pkt_io_ingress.apply(hdr, fabric_md, ig_tm_md);
 #ifdef WITH_SPGW
-        spgw_preprocess.apply(hdr, fabric_md);
+        spgw_ingress.apply(hdr, fabric_md);
 #endif // WITH_SPGW
         filtering.apply(hdr, fabric_md, ig_intr_md);
-#ifdef WITH_SPGW
-        if (!fabric_md.skip_spgw) {
-            spgw_ingress.apply(hdr, fabric_md);
-        }
-#endif // WITH_SPGW
         if (!fabric_md.skip_forwarding) {
            forwarding.apply(hdr, fabric_md);
         }

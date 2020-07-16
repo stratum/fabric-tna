@@ -14,6 +14,7 @@ parser FabricIngressParser (packet_in  packet,
     /* TNA */
     out ingress_intrinsic_metadata_t   ig_intr_md) {
     Checksum() ipv4_checksum;
+    Checksum() inner_ipv4_checksum;
     bit<6> last_ipv4_dscp = 0;
 
     state start {
@@ -176,6 +177,8 @@ parser FabricIngressParser (packet_in  packet,
     state parse_inner_ipv4 {
         packet.extract(hdr.inner_ipv4);
         last_ipv4_dscp = hdr.ipv4.dscp;
+        inner_ipv4_checksum.add(hdr.inner_ipv4);
+        fabric_md.inner_ipv4_checksum_err = inner_ipv4_checksum.verify();
         transition select(hdr.inner_ipv4.protocol) {
             PROTO_TCP: parse_inner_tcp;
             PROTO_UDP: parse_inner_udp;
@@ -377,6 +380,9 @@ control FabricEgressDeparser(packet_out packet,
     /* TNA */
     in egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr) {
     Checksum() ipv4_checksum;
+#ifdef WITH_SPGW
+    Checksum() outer_ipv4_checksum;
+#endif // WITH_SPGW
 
     apply {
         if (hdr.ipv4.isValid()) {
@@ -396,6 +402,24 @@ control FabricEgressDeparser(packet_out packet,
             });
         }
         // TODO: update TCP/UDP checksum
+#ifdef WITH_SPGW
+        if (hdr.outer_ipv4.isValid()) {
+            hdr.outer_ipv4.hdr_checksum = outer_ipv4_checksum.update({
+                hdr.outer_ipv4.version,
+                hdr.outer_ipv4.ihl,
+                hdr.outer_ipv4.dscp,
+                hdr.outer_ipv4.ecn,
+                hdr.outer_ipv4.total_len,
+                hdr.outer_ipv4.identification,
+                hdr.outer_ipv4.flags,
+                hdr.outer_ipv4.frag_offset,
+                hdr.outer_ipv4.ttl,
+                hdr.outer_ipv4.protocol,
+                hdr.outer_ipv4.src_addr,
+                hdr.outer_ipv4.dst_addr
+            });
+        }
+#endif // WITH_SPGW
         packet.emit(hdr.packet_in);
         packet.emit(hdr.ethernet);
         packet.emit(hdr.vlan_tag);
