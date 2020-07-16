@@ -16,3 +16,5 @@ pcap_output
 zlog-cfg-cur
 .DS_Store
 *.swp
+logs/
+graphs/
