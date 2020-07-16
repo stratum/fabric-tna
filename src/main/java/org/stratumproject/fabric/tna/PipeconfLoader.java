@@ -69,7 +69,6 @@ public class PipeconfLoader {
     private static final String TOFINO_CTX_JSON = "pipe/context.json";
     private static final String PIPELINE_TAR = "pipeline.tar.bz2";
 
-
     @Activate
     public void activate() {
         coreService.registerApplication(APP_NAME);
@@ -156,6 +155,9 @@ public class PipeconfLoader {
         return DefaultPiPipeconf.builder()
                 .withId(new PiPipeconfId(format(
                         "%s.%s.stratum_bf.%s", BASE_PIPECONF_ID, profile, platform)))
+                .withPipelineModel(parseP4Info(p4InfoUrl))
+                .addBehaviour(PiPipelineInterpreter.class, FabricInterpreter.class)
+                .addBehaviour(Pipeliner.class, FabricPipeliner.class)
                 .addExtension(ExtensionType.TOFINO_BIN, tofinoBinUrl)
                 .addExtension(ExtensionType.TOFINO_CONTEXT_JSON, contextJsonUrl)
                 .addExtension(ExtensionType.P4_INFO_TEXT, p4InfoUrl)
