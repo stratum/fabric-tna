@@ -195,12 +195,13 @@ def pkt_add_mpls(pkt, label, ttl, cos=0, s=1):
            pkt[Ether].payload
 
 
-def pkt_add_gtp(pkt, out_ipv4_src, out_ipv4_dst, teid):
+def pkt_add_gtp(pkt, out_ipv4_src, out_ipv4_dst, teid,
+                sport=DEFAULT_GTP_TUNNEL_SPORT, dport=UDP_GTP_PORT):
     payload = pkt[Ether].payload
     return Ether(src=pkt[Ether].src, dst=pkt[Ether].dst) / \
            IP(src=out_ipv4_src, dst=out_ipv4_dst, tos=0,
               id=0x1513, flags=0, frag=0) / \
-           UDP(sport=UDP_GTP_PORT, dport=UDP_GTP_PORT, chksum=0) / \
+           UDP(sport=sport, dport=dport, chksum=0) / \
            GTPU(teid=teid) / \
            payload
 
