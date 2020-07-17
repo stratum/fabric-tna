@@ -39,7 +39,7 @@ control FabricIngress (
     apply {
         pkt_io_ingress.apply(hdr, fabric_md, ig_tm_md);
 #ifdef WITH_SPGW
-        spgw_ingress.apply(hdr, fabric_md);
+        spgw_ingress.apply(hdr, fabric_md, ig_tm_md);
 #endif // WITH_SPGW
         filtering.apply(hdr, fabric_md, ig_intr_md);
         if (!fabric_md.skip_forwarding) {

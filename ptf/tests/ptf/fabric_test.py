@@ -32,6 +32,7 @@ DEFAULT_MPLS_TTL = 64
 MIN_PKT_LEN = 80
 
 UDP_GTP_PORT = 2152
+DEFAULT_GTP_TUNNEL_SPORT = 1234 # arbitrary, but different from 2152
 
 ETH_TYPE_ARP = 0x0806
 ETH_TYPE_IPV4 = 0x0800
@@ -1196,7 +1197,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         )
 
     def add_tunnel_far(self, far_id, teid, tunnel_src_addr, tunnel_dst_addr,
-                       tunnel_src_port=2152, drop=False, notify_cp=False):
+                       tunnel_src_port=DEFAULT_GTP_TUNNEL_SPORT, drop=False, notify_cp=False):
         return self._add_far(
             far_id,
             "FabricIngress.spgw_ingress.load_tunnel_far_attributes",

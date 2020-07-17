@@ -15,8 +15,11 @@
 #define NUM_FARS 2*NUM_UES
 
 control SpgwIngress(
-        inout parsed_headers_t hdr,
-        inout fabric_ingress_metadata_t fabric_md) {
+        /* Fabric.p4 */
+        inout parsed_headers_t                      hdr,
+        inout fabric_ingress_metadata_t             fabric_md,
+        /* TNA */
+        inout ingress_intrinsic_metadata_for_tm_t   ig_tm_md) {
 
 
     //=============================//
@@ -66,7 +69,7 @@ control SpgwIngress(
         actions = {
             set_pdr_attributes;
         }
-        size=NUM_DOWNLINK_PDRS;
+        size = NUM_DOWNLINK_PDRS;
     }
     table uplink_pdr_lookup {
         key = {
@@ -78,7 +81,7 @@ control SpgwIngress(
         actions = {
             set_pdr_attributes;
         }
-        size=NUM_UPLINK_PDRS;
+        size = NUM_UPLINK_PDRS;
     }
     // This table scales poorly and covers uncommon PDRs
     table flexible_pdr_lookup {
@@ -150,7 +153,7 @@ control SpgwIngress(
         }
         // default is drop and don't notify CP
         const default_action = load_normal_far_attributes(true, true);
-        size=NUM_FARS;
+        size = NUM_FARS;
     }
 
 
@@ -196,6 +199,7 @@ control SpgwIngress(
         decap_inner_common();
         hdr.udp.setInvalid();
     }
+    @hidden
     table decap_gtpu {
         key = {
             hdr.inner_tcp.isValid()     : exact;
@@ -252,7 +256,8 @@ control SpgwIngress(
         far_lookup.apply();
 
         if (fabric_md.notify_spgwc) {
-            // TODO: cpu clone session here
+            // TODO: should notification involve something other than cloning?
+            ig_tm_md.copy_to_cpu = 1;
         }
         if (fabric_md.far_dropped) {
             // Do dropping in the same way as fabric's filtering.p4, so we can traverse
@@ -297,14 +302,14 @@ control SpgwEgress(
         hdr.outer_ipv4.protocol = PROTO_UDP;
         hdr.outer_ipv4.src_addr = fabric_md.gtpu_tunnel_sip;
         hdr.outer_ipv4.dst_addr = fabric_md.gtpu_tunnel_dip;
-        hdr.outer_ipv4.hdr_checksum = 0; // Updated never
+        hdr.outer_ipv4.hdr_checksum = 0; // Updated later
 
         hdr.outer_udp.setValid();
         hdr.outer_udp.sport = fabric_md.gtpu_tunnel_sport;
         hdr.outer_udp.dport = UDP_PORT_GTPU;
         hdr.outer_udp.len = fabric_md.spgw_ipv4_len
                 + (UDP_HDR_SIZE + GTP_HDR_SIZE);
-        hdr.outer_udp.checksum = 0; // Updated later, if WITH_SPGW_UDP_CSUM_UPDATE
+        hdr.outer_udp.checksum = 0; // Updated never, due to difficulties in handling different inner headers
 
 
         hdr.gtpu.setValid();
