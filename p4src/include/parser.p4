@@ -150,7 +150,11 @@ parser FabricIngressParser (packet_in  packet,
         packet.extract(hdr.tcp);
         fabric_md.l4_sport = hdr.tcp.sport;
         fabric_md.l4_dport = hdr.tcp.dport;
+#ifdef WITH_INT
+        transition parse_int;
+#else
         transition accept;
+#endif // WITH_INT
     }
 
     state parse_udp {
@@ -158,10 +162,13 @@ parser FabricIngressParser (packet_in  packet,
         fabric_md.l4_sport = hdr.udp.sport;
         fabric_md.l4_dport = hdr.udp.dport;
         transition select(hdr.udp.dport) {
-#ifdef WITH_SPGW
+#if defined(WITH_INT)
+            default: parse_int;
+#elif defined(WITH_SPGW)
             UDP_PORT_GTPU: parse_gtpu;
-#endif // WITH_SPGW
+#else
             default: accept;
+#endif // WITH_INT
         }
     }
 
@@ -169,6 +176,52 @@ parser FabricIngressParser (packet_in  packet,
         packet.extract(hdr.icmp);
         transition accept;
     }
+
+#ifdef WITH_INT
+    state parse_int {
+        transition select(last_ipv4_dscp) {
+            INT_DSCP &&& INT_DSCP: parse_intl4_shim;
+            default: accept;
+        }
+    }
+
+    state parse_intl4_shim {
+        packet.extract(hdr.intl4_shim);
+        transition parse_int_header;
+    }
+
+    state parse_int_header {
+        packet.extract(hdr.int_header);
+        // If there is no INT metadata but the INT header (plus shim and tail)
+        // exists, default value of length field in shim header should be
+        // INT_HEADER_LEN_WORDS.
+        transition select (hdr.intl4_shim.len_words) {
+            INT_HEADER_LEN_WORDS: parse_intl4_tail;
+            default: parse_int_data;
+        }
+    }
+
+    state parse_int_data {
+#ifdef WITH_INT_SINK
+        // Parse INT metadata stack, but not tail
+        packet.extract(hdr.int_data, (bit<32>) (hdr.intl4_shim.len_words - INT_HEADER_LEN_WORDS) << 5);
+        transition parse_intl4_tail;
+#else // not interested in INT data
+        transition accept;
+#endif // WITH_INT_SINK
+    }
+
+    state parse_intl4_tail {
+        packet.extract(hdr.intl4_tail);
+        transition select(hdr.udp.isValid(), fabric_md.l4_dport) {
+#ifdef WITH_SPGW
+            true, UDP_PORT_GTPU: parse_gtpu;
+#else
+            default: accept;
+#endif // WITH_SPGW
+        }
+    }
+#endif // WITH_INT
 
 #ifdef WITH_SPGW
     state parse_gtpu {
@@ -208,6 +261,7 @@ parser FabricIngressParser (packet_in  packet,
         transition accept;
     }
 #endif // WITH_SPGW
+
 }
 
 control FabricIngressDeparser(packet_out packet,
@@ -219,8 +273,13 @@ control FabricIngressDeparser(packet_out packet,
     Mirror() mirror;
 
     apply {
-        if (fabric_md.is_mirror) {
-            mirror.emit(fabric_md.mirror_id);
+        if (fabric_md.need_mirror) {
+            // mirror.emit<bridge_metadata_for_mirror_t>(fabric_md.mirror_id,
+            // {
+            //     BridgeMetadataType.BRIDGE_MD_MIRROR_INGRESS_TO_EGRESS,
+            //     fabric_md.mirror_id,
+            //     0
+            // });
         }
         packet.emit(hdr.bridge_md);
         packet.emit(hdr.ethernet);
@@ -235,6 +294,24 @@ control FabricIngressDeparser(packet_out packet,
         packet.emit(hdr.tcp);
         packet.emit(hdr.udp);
         packet.emit(hdr.icmp);
+#ifdef WITH_INT
+        packet.emit(hdr.intl4_shim);
+        packet.emit(hdr.int_header);
+#ifdef WITH_INT_TRANSIT
+        packet.emit(hdr.int_switch_id);
+        packet.emit(hdr.int_port_ids);
+        packet.emit(hdr.int_hop_latency);
+        packet.emit(hdr.int_q_occupancy);
+        packet.emit(hdr.int_ingress_tstamp);
+        packet.emit(hdr.int_egress_tstamp);
+        packet.emit(hdr.int_q_congestion);
+        packet.emit(hdr.int_egress_tx_util);
+#endif // WITH_INT_TRANSIT
+#ifdef WITH_INT_SINK
+        packet.emit(hdr.int_data);
+#endif // WITH_INT_SINK
+        packet.emit(hdr.intl4_tail);
+#endif // WITH_INT
 #ifdef WITH_SPGW
         // in case we parsed a GTPU packet but did not decap it
         packet.emit(hdr.gtpu);
@@ -254,9 +331,21 @@ parser FabricEgressParser (packet_in packet,
     out egress_intrinsic_metadata_t eg_intr_md) {
     bit<6> last_ipv4_dscp = 0;
     bridge_metadata_t bridge_md;
+    bridge_metadata_for_mirror_t mirror_md;
 
     state start {
         packet.extract(eg_intr_md);
+        BridgeMetadataType bridge_md_type = packet.lookahead<BridgeMetadataType>();
+        transition select(bridge_md_type) {
+            BridgeMetadataType.BRIDGE_MD_MIRROR_INGRESS_TO_EGRESS: parse_mirror_bridge_metadata;
+            default: parse_bridge_metadata;
+        }
+    }
+
+    state parse_mirror_bridge_metadata {
+        packet.extract(mirror_md);
+        fabric_md.is_mirror = true;
+        fabric_md.mirror_id = mirror_md.mirror_id;
         transition parse_bridge_metadata;
     }
 

@@ -34,8 +34,8 @@ fabric:
 # fabric-bng:
 # 	@${p4-build} fabric-bng "-DWITH_BNG -DWITHOUT_XCONNECT"
 
-# fabric-int:
-# 	@${p4-build} fabric-int "-DWITH_INT_SOURCE -DWITH_INT_TRANSIT"
+fabric-int:
+	@${p4-build} fabric-int "-DWITH_INT_SOURCE -DWITH_INT_TRANSIT"
 
 fabric-spgw:
 	@${p4-build} fabric-spgw "-DWITH_SPGW"

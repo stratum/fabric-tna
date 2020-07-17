@@ -1,6 +1,8 @@
 // Copyright 2020-present Open Networking Foundation
 // SPDX-License-Identifier: Apache-2.0
 
+#include <tna.p4>
+
 #ifndef __DEFINE__
 #define __DEFINE__
 
@@ -116,31 +118,21 @@ const vlan_id_t DEFAULT_VLAN_ID = 12w4094;
 const bit<8> DEFAULT_MPLS_TTL = 64;
 const bit<8> DEFAULT_IPV4_TTL = 64;
 
-/* indicate INT at LSB of DSCP */
-const bit<6> INT_DSCP = 0x1;
-
-// Length of the whole INT header,
-// including shim and tail, excluding metadata stack.
-const bit<8> INT_HEADER_LEN_WORDS = 4;
-const bit<16> INT_HEADER_LEN_BYTES = 16;
-
-const bit<8> CPU_MIRROR_SESSION_ID = 250;
-const bit<32> REPORT_MIRROR_SESSION_ID = 500;
-
-const bit<4> NPROTO_ETHERNET = 0;
-const bit<4> NPROTO_TELEMETRY_DROP_HEADER = 1;
-const bit<4> NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER = 2;
-
-const bit<6> HW_ID = 1;
-const bit<8> REPORT_FIXED_HEADER_LEN = 12;
-const bit<8> DROP_REPORT_HEADER_LEN = 12;
-const bit<8> LOCAL_REPORT_HEADER_LEN = 16;
-const bit<8> ETH_HEADER_LEN = 14;
-const bit<8> IPV4_MIN_HEAD_LEN = 20;
-const bit<8> UDP_HEADER_LEN = 8;
-
 action nop() {
     NoAction();
 }
 
+// INT
+#if defined(WITH_INT_SOURCE) || defined(WITH_INT_TRANSIT) || defined(WITH_INT_SINK)
+#define WITH_INT
 #endif
+
+// Bridge metadata type
+enum bit<2> BridgeMetadataType {
+    BRIDGE_MD_INGRESS_TO_EGRESS = 0,
+    BRIDGE_MD_EGRESS_TO_INGRESS = 1,
+    BRIDGE_MD_MIRROR_INGRESS_TO_EGRESS = 2,
+    BRIDGE_MD_MIRROR_EGRESS_TO_INGRESS = 3
+}
+#endif // __DEFINE__
+

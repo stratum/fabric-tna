@@ -6,6 +6,10 @@
 
 #include "define.p4"
 
+#ifdef WITH_INT
+#include "int/header.p4"
+#endif
+
 @controller_header("packet_in")
 header packet_in_header_t {
     bit<16> ingress_port;
@@ -149,7 +153,7 @@ struct fabric_ingress_metadata_t {
     fwd_type_t      fwd_type;
     next_id_t       next_id;
     bool            is_multicast;
-    bool            is_mirror;
+    bool            need_mirror;
     MirrorId_t      mirror_id;
 #ifdef WITH_SPGW
     bit<16>         spgw_ipv4_len;
@@ -171,6 +175,12 @@ struct fabric_ingress_metadata_t {
     SpgwInterface   spgw_src_iface;
     SpgwDirection   spgw_direction;
 #endif // WITH_SPGW
+#ifdef WITH_INT
+    IntDeviceType int_device_type;
+    bit<32> int_switch_id;
+    bit<8>  int_new_words;
+    bit<16> int_new_bytes;
+#endif
 }
 
 @flexible
@@ -197,10 +207,21 @@ struct fabric_egress_metadata_t {
     bit<16>         gtpu_tunnel_sport;
     pdr_ctr_id_t    pdr_ctr_id;
 #endif // WITH_SPGW
+    bit<16>         l4_sport;
+    bit<16>         l4_dport;
+    bool            is_mirror;
+    MirrorId_t      mirror_id;
+#ifdef WITH_INT
+    IntDeviceType int_device_type;
+    bit<32> int_switch_id;
+    bit<8>  int_new_words;
+    bit<16> int_new_bytes;
+#endif
 }
 
 @flexible
 header bridge_metadata_t {
+    BridgeMetadataType bridge_md_type;
     mpls_label_t    mpls_label;
     bit<8>          mpls_ttl;
     bool            is_multicast;
@@ -222,6 +243,20 @@ header bridge_metadata_t {
     bit<16>         gtpu_tunnel_sport;
     pdr_ctr_id_t    pdr_ctr_id;
 #endif // WITH_SPGW
+    bit<16>         l4_sport;
+    bit<16>         l4_dport;
+#ifdef WITH_INT
+    IntDeviceType int_device_type;
+    bit<32> int_switch_id;
+    bit<8>  int_new_words;
+    bit<16> int_new_bytes;
+#endif // WITH_INT
+}
+
+header bridge_metadata_for_mirror_t {
+    BridgeMetadataType bridge_md_type;
+    MirrorId_t mirror_id;
+    @padding bit<4> pad;
 }
 
 struct parsed_headers_t {
@@ -249,6 +284,36 @@ struct parsed_headers_t {
 #endif // WITH_SPGW
     packet_out_header_t packet_out;
     packet_in_header_t packet_in;
+    // INT specific headers
+
+#ifdef WITH_INT
+#ifdef WITH_INT_SINK
+    // INT Report encap
+    ethernet_t report_ethernet;
+    eth_type_t report_eth_type;
+    ipv4_t report_ipv4;
+    udp_t report_udp;
+    // INT Report header (support only fixed)
+    report_fixed_header_t report_fixed_header;
+    // local_report_t report_local;
+#endif // WITH_INT_SINK
+    intl4_shim_t intl4_shim;
+    int_header_t int_header;
+    intl4_tail_t intl4_tail;
+#ifdef WITH_INT_SINK
+    int_data_t int_data;
+#endif
+#ifdef WITH_INT_TRANSIT
+    int_switch_id_t int_switch_id;
+    int_port_ids_t int_port_ids;
+    int_hop_latency_t int_hop_latency;
+    int_q_occupancy_t int_q_occupancy;
+    int_ingress_tstamp_t int_ingress_tstamp;
+    int_egress_tstamp_t int_egress_tstamp;
+    int_q_congestion_t int_q_congestion;
+    int_egress_port_tx_util_t int_egress_tx_util;
+#endif // WITH_INT_TRANSIT
+#endif // WITH_INT
 }
 
 #endif

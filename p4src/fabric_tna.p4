@@ -17,6 +17,10 @@
 #include "include/control/spgw.p4"
 #endif // WITH_SPGW
 
+#ifdef WITH_INT
+#include "include/int/main.p4"
+#endif
+
 control FabricIngress (
     /* Fabric.p4 */
     inout parsed_headers_t hdr,
@@ -36,6 +40,10 @@ control FabricIngress (
     SpgwIngress() spgw_ingress;
 #endif // WITH_SPGW
 
+#ifdef WITH_INT
+    IntIngress() int_ingress;
+#endif // WITH_INT
+
     apply {
         pkt_io_ingress.apply(hdr, fabric_md, ig_tm_md);
 #ifdef WITH_SPGW
@@ -50,8 +58,13 @@ control FabricIngress (
             next.apply(hdr, fabric_md, ig_intr_md, ig_tm_md);
         }
 
+#if defined(WITH_INT_SOURCE) || defined(WITH_INT_SINK)
+        int_ingress.apply(hdr, fabric_md, ig_intr_md, ig_tm_md);
+#endif
+
         if (ig_tm_md.bypass_egress == 1w0) {
             hdr.bridge_md.setValid();
+            hdr.bridge_md.bridge_md_type = BridgeMetadataType.BRIDGE_MD_INGRESS_TO_EGRESS;
             hdr.bridge_md.is_multicast = fabric_md.is_multicast;
             hdr.bridge_md.ingress_port = ig_intr_md.ingress_port;
             hdr.bridge_md.ip_eth_type = fabric_md.ip_eth_type;
@@ -59,6 +72,8 @@ control FabricIngress (
             hdr.bridge_md.mpls_label = fabric_md.mpls_label;
             hdr.bridge_md.mpls_ttl = fabric_md.mpls_ttl;
             hdr.bridge_md.vlan_id = fabric_md.vlan_id;
+            hdr.bridge_md.l4_sport = fabric_md.l4_sport;
+            hdr.bridge_md.l4_dport = fabric_md.l4_dport;
 #ifdef WITH_DOUBLE_VLAN_TERMINATION
             hdr.bridge_md.push_double_vlan = fabric_md.push_double_vlan;
             hdr.bridge_md.inner_vlan_id = fabric_md.inner_vlan_id;
@@ -73,6 +88,12 @@ control FabricIngress (
             hdr.bridge_md.gtpu_tunnel_sport = fabric_md.gtpu_tunnel_sport;
             hdr.bridge_md.pdr_ctr_id        = fabric_md.pdr_ctr_id;
 #endif // WITH_SPGW
+#ifdef WITH_INT
+            hdr.bridge_md.int_device_type = fabric_md.int_device_type;
+            hdr.bridge_md.int_switch_id = fabric_md.int_switch_id;
+            hdr.bridge_md.int_new_words = fabric_md.int_new_words;
+            hdr.bridge_md.int_new_bytes = fabric_md.int_new_bytes;
+#endif
         }
     }
 }
@@ -92,6 +113,9 @@ control FabricEgress (
 #ifdef WITH_SPGW
     SpgwEgress() spgw_egress;
 #endif // WITH_SPGW
+#ifdef WITH_INT
+    IntEgress() int_egress;
+#endif // WITH_INT
 
     apply {
         pkt_io_egress.apply(hdr, fabric_md, eg_intr_md);
@@ -99,6 +123,9 @@ control FabricEgress (
 #ifdef WITH_SPGW
         spgw_egress.apply(hdr, fabric_md);
 #endif // WITH_SPGW
+#ifdef WITH_INT
+        int_egress.apply(hdr, fabric_md, eg_intr_md, eg_dprsr_md);
+#endif
     }
 }
 

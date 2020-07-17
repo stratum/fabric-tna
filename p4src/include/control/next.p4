@@ -320,7 +320,7 @@ control EgressNextControl (inout parsed_headers_t hdr,
     }
 
     apply {
-        if (fabric_md.is_multicast == true
+        if (fabric_md.is_multicast
              && fabric_md.ingress_port == eg_intr_md.egress_port) {
             eg_dprsr_md.drop_ctl = 1;
         }
@@ -332,7 +332,7 @@ control EgressNextControl (inout parsed_headers_t hdr,
         }
 
 #ifdef WITH_DOUBLE_VLAN_TERMINATION
-        if (fabric_md.push_double_vlan == true) {
+        if (fabric_md.push_double_vlan) {
             // Double VLAN termination.
             push_vlan();
             push_inner_vlan();
