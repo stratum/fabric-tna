@@ -6,10 +6,6 @@
 
 #define MAX_PORTS 511
 
-#ifndef WITHOUT_XCONNECT
-#define WITH_XCONNECT
-#endif
-
 #ifndef CPU_PORT
 #deinfe CPU_PORT 192
 #endif
