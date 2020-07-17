@@ -134,6 +134,7 @@ control SpgwIngress(
         // GTP tunnel attributes
         fabric_md.needs_gtpu_encap = true;
         fabric_md.gtpu_teid = teid;
+        fabric_md.gtpu_tunnel_sport = tunnel_src_port;
         fabric_md.gtpu_tunnel_sip = tunnel_src_addr;
         fabric_md.gtpu_tunnel_dip = tunnel_dst_addr;
         // update metadata for correct routing/hashing
@@ -303,7 +304,7 @@ control SpgwEgress(
         hdr.outer_ipv4.hdr_checksum = 0; // Updated never
 
         hdr.outer_udp.setValid();
-        hdr.outer_udp.sport = fabric_md.gtpu_tunnel_sport;;
+        hdr.outer_udp.sport = fabric_md.gtpu_tunnel_sport;
         hdr.outer_udp.dport = UDP_PORT_GTPU;
         hdr.outer_udp.len = fabric_md.spgw_ipv4_len
                 + (UDP_HDR_SIZE + GTP_HDR_SIZE);
