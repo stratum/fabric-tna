@@ -1032,6 +1032,30 @@ class MulticastGroupModificationTest(FabricTest):
         self.doRunTest()
 
 @group("p4r-function")
+class CloneSessionReadWriteTest(FabricTest):
+
+    # No autocleanup because we test deletes explicitly
+    def doRunTest(self):
+        # Add group with egress port 1 (instance 1)
+        grp_id = 10
+        replicas = [(0, 1)]  # (instance, port)
+        self.add_clone_group(grp_id, replicas)
+
+        # Modify the group with egress port 2 (instance 2)
+        replicas = [(0, 2)]  # (instance, port)
+        req, _ = self.modify_clone_group(grp_id, replicas)
+        expected_clone_entry = req.updates[0].entity.packet_replication_engine_entry.clone_session_entry
+        received_clone_entry = self.read_clone_group(grp_id)
+        self.verify_p4runtime_entity(expected_clone_entry, received_clone_entry)
+
+        # Cleanup
+        self.delete_clone_group(grp_id)
+
+    def runTest(self):
+        print("")
+        self.doRunTest()
+
+@group("p4r-function")
 class CounterTest(BridgingTest):
 
     @autocleanup
