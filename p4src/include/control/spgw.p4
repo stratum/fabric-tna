@@ -17,9 +17,15 @@
 #ifndef __SPGW__
 #define __SPGW__
 
-#define MAX_PDR_COUNTERS 1024
 #define DEFAULT_PDR_CTR_ID 0
 #define DEFAULT_FAR_ID 0
+
+#define NUM_UES 2048
+
+#define MAX_PDR_COUNTERS 2*NUM_UES
+#define NUM_UPLINK_PDRS NUM_UES
+#define NUM_DOWNLINK_PDRS NUM_UES
+#define NUM_FARS 2*NUM_UES
 
 control SpgwIngress(
         inout parsed_headers_t hdr,
@@ -73,6 +79,7 @@ control SpgwIngress(
         actions = {
             set_pdr_attributes;
         }
+        size=NUM_DOWNLINK_PDRS;
     }
     table uplink_pdr_lookup {
         key = {
@@ -84,6 +91,7 @@ control SpgwIngress(
         actions = {
             set_pdr_attributes;
         }
+        size=NUM_UPLINK_PDRS;
     }
     // This table scales poorly and covers uncommon PDRs
     table flexible_pdr_lookup {
@@ -155,6 +163,7 @@ control SpgwIngress(
         }
         // default is drop and don't notify CP
         const default_action = load_normal_far_attributes(true, true);
+        size=NUM_FARS;
     }
 
 
