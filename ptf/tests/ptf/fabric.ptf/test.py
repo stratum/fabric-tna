@@ -37,7 +37,6 @@ class FabricBridgingTest(BridgingTest):
                 self.doRunTest(tagged[0], tagged[1], pkt)
 
 
-@skip("Not working and its not Robert's fault")
 @group("xconnect")
 class FabricDoubleVlanXConnectTest(DoubleVlanXConnectTest):
     @autocleanup
