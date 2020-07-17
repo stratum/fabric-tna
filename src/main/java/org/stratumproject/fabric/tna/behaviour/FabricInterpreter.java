@@ -267,6 +267,6 @@ public class FabricInterpreter extends AbstractFabricHandlerBehavior
         if (!port.equals(CONTROLLER)) {
             return Optional.empty();
         }
-        return capabilities.cpuPort();
+        return Optional.empty();
     }
 }

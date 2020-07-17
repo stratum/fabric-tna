@@ -23,7 +23,8 @@ control PacketIoEgress(inout parsed_headers_t hdr,
                        in egress_intrinsic_metadata_t eg_intr_md) {
 
     apply {
-        if (eg_intr_md.egress_port == CPU_PORT) {
+        if (eg_intr_md.egress_port == CPU_PORT_PCIE_2_PIPE
+              || eg_intr_md.egress_port == CPU_PORT_PCIE_4_PIPE) {
             hdr.packet_in.setValid();
             hdr.packet_in.ingress_port = (bit<16>)fabric_md.ingress_port;
             // No need to process through the rest of the pipeline.

@@ -10,8 +10,12 @@
 #define WITH_XCONNECT
 #endif
 
-#ifndef CPU_PORT
-#deinfe CPU_PORT 192
+#ifndef CPU_PORT_PCIE_2_PIPE
+#define CPU_PORT_PCIE_2_PIPE 192
+#endif
+
+#ifndef CPU_PORT_PCIE_4_PIPE
+#define CPU_PORT_PCIE_4_PIPE 320
 #endif
 
 #if ! defined(WITH_SIMPLE_NEXT)

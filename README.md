@@ -135,8 +135,7 @@ new Tofino-specific pipeconfs in the system, depending on the `fabric-tna.p4`
 profiles compiled before and the Barefoot SDE/p4c version used:
 
 ```
-New pipeconf registered: org.stratumproject.fabric.stratum_bfrt.mavericks_sde_9_2_0 (fingerprint=...)
-New pipeconf registered: org.stratumproject.fabric.stratum_bfrt.montara_sde_9_2_0 (fingerprint=...)
+New pipeconf registered: org.stratumproject.fabric.stratum_bfrt.tofino-tna_sde_9_2_0 (fingerprint=...)
 ...
 ```
 
@@ -211,7 +210,7 @@ provided in `tofino-netcfg.json`, for example:
       "basic": {
         "managementAddress": "grpc://10.0.0.1:28000?device_id=1",
         "driver": "stratum-tofino",
-        "pipeconf": "org.stratumproject.fabric.tofino.montara_sde_9_2_0"
+        "pipeconf": "org.stratumproject.fabric.tofino.fabric_tna_sde_9_2_0"
       }
     }
   }

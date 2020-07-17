@@ -4,7 +4,7 @@
       "basic": {
         "managementAddress": "grpc://10.0.0.1:28000?device_id=1",
         "driver": "stratum-tofino",
-        "pipeconf": "org.stratumproject.fabric-tna.tofino.montara_sde_9_2_0"
+        "pipeconf": "org.stratumproject.fabric-tna.tofino.fabric_tna_sde_9_2_0"
       }
     }
   }

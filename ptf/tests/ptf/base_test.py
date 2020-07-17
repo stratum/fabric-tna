@@ -198,10 +198,6 @@ class P4RuntimeTest(BaseTest):
         if self.device_id is None:
             self.fail("Device ID is not set")
 
-        self.cpu_port = int(testutils.test_param_get("cpu_port"))
-        if self.cpu_port is None:
-            self.fail("CPU port is not set")
-
         self.device = testutils.test_param_get("device")
         if self.device is None:
             self.fail("Device is not set")

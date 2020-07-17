@@ -64,7 +64,6 @@ public class PipeconfLoader {
     private static final String STRATUM_BF = "stratum_bf";
     private static final String STRATUM_BFRT = "stratum_bfrt";
     private static final String P4INFO_TXT = "p4info.txt";
-    private static final String CPU_PORT_TXT = "cpu_port.txt";
     private static final String TOFINO_BIN = "pipe/tofino.bin";
     private static final String TOFINO_CTX_JSON = "pipe/context.json";
     private static final String PIPELINE_TAR = "pipeline.tar.bz2";
@@ -144,13 +143,10 @@ public class PipeconfLoader {
                 P4C_RES_BASE_PATH + TOFINO_CTX_JSON, profile, STRATUM_BF, platform));
         final URL p4InfoUrl = this.getClass().getResource(format(
                 P4C_RES_BASE_PATH + P4INFO_TXT, profile, STRATUM_BF, platform));
-        final URL cpuPortUrl = this.getClass().getResource(format(
-                P4C_RES_BASE_PATH + CPU_PORT_TXT, profile, STRATUM_BF, platform));
 
         checkFileExists(tofinoBinUrl, TOFINO_BIN);
         checkFileExists(contextJsonUrl, TOFINO_CTX_JSON);
         checkFileExists(p4InfoUrl, P4INFO_TXT);
-        checkFileExists(cpuPortUrl, CPU_PORT_TXT);
 
         return DefaultPiPipeconf.builder()
                 .withId(new PiPipeconfId(format(
@@ -161,7 +157,6 @@ public class PipeconfLoader {
                 .addExtension(ExtensionType.TOFINO_BIN, tofinoBinUrl)
                 .addExtension(ExtensionType.TOFINO_CONTEXT_JSON, contextJsonUrl)
                 .addExtension(ExtensionType.P4_INFO_TEXT, p4InfoUrl)
-                .addExtension(ExtensionType.CPU_PORT_TXT, cpuPortUrl)
                 .build();
     }
 
@@ -172,12 +167,9 @@ public class PipeconfLoader {
                 P4C_RES_BASE_PATH + PIPELINE_TAR, profile, STRATUM_BFRT, platform));
         final URL p4InfoUrl = this.getClass().getResource(format(
                 P4C_RES_BASE_PATH + P4INFO_TXT, profile, STRATUM_BFRT, platform));
-        final URL cpuPortUrl = this.getClass().getResource(format(
-                P4C_RES_BASE_PATH + CPU_PORT_TXT, profile, STRATUM_BFRT, platform));
 
         checkFileExists(tofinoPipelineTarUrl, PIPELINE_TAR);
         checkFileExists(p4InfoUrl, P4INFO_TXT);
-        checkFileExists(cpuPortUrl, CPU_PORT_TXT);
 
         return DefaultPiPipeconf.builder()
                 .withId(new PiPipeconfId(format(
@@ -187,7 +179,6 @@ public class PipeconfLoader {
                 .addBehaviour(Pipeliner.class, FabricPipeliner.class)
                 .addExtension(ExtensionType.RAW_DEVICE_CONFIG, tofinoPipelineTarUrl)
                 .addExtension(ExtensionType.P4_INFO_TEXT, p4InfoUrl)
-                .addExtension(ExtensionType.CPU_PORT_TXT, cpuPortUrl)
                 .build();
     }
 

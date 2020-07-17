@@ -13,7 +13,6 @@ import java.io.InputStreamReader;
 import java.util.Optional;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static org.onosproject.net.pi.model.PiPipeconf.ExtensionType.CPU_PORT_TXT;
 import static org.slf4j.LoggerFactory.getLogger;
 
 /**
@@ -32,36 +31,6 @@ public class FabricCapabilities {
     public boolean hasHashedTable() {
         return pipeconf.pipelineModel()
                 .table(FabricConstants.FABRIC_INGRESS_NEXT_HASHED).isPresent();
-    }
-
-    public Optional<Integer> cpuPort() {
-        // This is probably brittle, but needed to dynamically get the CPU port
-        // for different platforms.
-        if (!pipeconf.extension(CPU_PORT_TXT).isPresent()) {
-            log.warn("Missing {} extension in pipeconf {}", CPU_PORT_TXT, pipeconf.id());
-            return Optional.empty();
-        }
-        try {
-            final InputStream stream = pipeconf.extension(CPU_PORT_TXT).get();
-            final BufferedReader buff = new BufferedReader(
-                    new InputStreamReader(stream));
-            final String str = buff.readLine();
-            buff.close();
-            if (str == null) {
-                log.error("Empty CPU port file for {}", pipeconf.id());
-                return Optional.empty();
-            }
-            try {
-                return Optional.of(Integer.parseInt(str));
-            } catch (NumberFormatException e) {
-                log.error("Invalid CPU port for {}: {}", pipeconf.id(), str);
-                return Optional.empty();
-            }
-        } catch (IOException e) {
-            log.error("Unable to read CPU port file of {}: {}",
-                    pipeconf.id(), e.getMessage());
-            return Optional.empty();
-        }
     }
 
     public boolean supportDoubleVlanTerm() {

@@ -88,7 +88,7 @@ veth_setup.sh
 dma_setup.sh
 
 # Start the Tofino Model with fabric_tna pipeline
-$SDE/run_tofino_model.sh -c tmp/fabric/mavericks_sde_9_2_0/fabric_tna.conf -p fabric_tna
+$SDE/run_tofino_model.sh -c tmp/fabric/fabric_tna_sde_9_2_0/fabric_tna.conf -p fabric_tna
 ```
 
 After the Tofino Model started, use `docker exec` command to start another bash shell so we can start the bf_switchd
@@ -97,7 +97,7 @@ After the Tofino Model started, use `docker exec` command to start another bash 
 docker exec -it tofino-model bash
 
 # Start the bf_switchd process
-$SDE/run_switchd.sh -c tmp/fabric/mavericks_sde_9_2_0/fabric_tna.conf
+$SDE/run_switchd.sh -c tmp/fabric/fabric_tna_sde_9_2_0/fabric_tna.conf
 ```
 
 Now you can use `bfrt_python` command to manage the pipeline.

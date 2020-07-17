@@ -20,7 +20,8 @@ parser FabricIngressParser (packet_in  packet,
         packet.extract(ig_intr_md);
         packet.advance(PORT_METADATA_SIZE);
         transition select(ig_intr_md.ingress_port) {
-            CPU_PORT: parse_packet_out;
+            CPU_PORT_PCIE_2_PIPE: parse_packet_out;
+            CPU_PORT_PCIE_4_PIPE: parse_packet_out;
             default: parse_ethernet;
         }
     }

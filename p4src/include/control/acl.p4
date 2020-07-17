@@ -25,7 +25,8 @@ control Acl (inout parsed_headers_t hdr,
 
     // Send immendiatelly to CPU - skip the rest of ingress.
     action punt_to_cpu() {
-        ig_intr_md_for_tm.ucast_egress_port = CPU_PORT;
+        ig_intr_md_for_tm.copy_to_cpu = 1;
+        ig_intr_md_for_dprsr.drop_ctl = 1;
         fabric_md.skip_next = true;
         acl_counter.count();
     }

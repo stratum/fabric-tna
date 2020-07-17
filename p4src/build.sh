@@ -2,8 +2,6 @@
 # Copyright 2020-present Open Networking Foundation
 # SPDX-License-Identifier: Apache-2.0
 
-MAVERICKS_CPU_PORT=320
-MONTARA_CPU_PORT=192
 SDE_DOCKER_IMG=${SDE_DOCKER_IMG:-opennetworking/bf-sde:9.2.0}
 
 # DIR is this file directory.
@@ -37,10 +35,8 @@ SDE_VER=$( ${P4C_CMD} --version | cut -d' ' -f2 )
 # shellcheck disable=SC2086
 function do_p4c() {
   pltf="$1_sde_${SDE_VER//./_}"
-  cpu_port=$2
   echo "*** Compiling profile '${PROFILE}' for ${pltf} platform..."
   echo "*** Output in ${P4C_OUT}/${pltf}"
-  pp_flags="-DCPU_PORT=${cpu_port}"
   p4c_flags="--auto-init-metadata"
   mkdir -p ${P4C_OUT}/${pltf}
   (
@@ -60,19 +56,16 @@ function do_p4c() {
   cp "${P4C_OUT}/${pltf}/fabric_tna.conf" "${DEST_DIR}/stratum_bf/${pltf}"
   cp "${P4C_OUT}/${pltf}/pipe/context.json" "${DEST_DIR}/stratum_bf/${pltf}/pipe"
   cp "${P4C_OUT}/${pltf}/pipe/tofino.bin" "${DEST_DIR}/stratum_bf/${pltf}/pipe"
-  echo "${cpu_port}" > "${DEST_DIR}/stratum_bf/${pltf}/cpu_port.txt"
 
   # New pipeline format which uses tar ball
   mkdir -p "${DEST_DIR}/stratum_bfrt/${pltf}"
   tar cf "pipeline.tar.bz2" -C "${DEST_DIR}/stratum_bf/${pltf}" .
   mv "pipeline.tar.bz2" "${DEST_DIR}/stratum_bfrt/${pltf}/"
   cp "${P4C_OUT}/${pltf}/p4info.txt" "${DEST_DIR}/stratum_bfrt/${pltf}/"
-  echo "${cpu_port}" > "${DEST_DIR}/stratum_bfrt/${pltf}/cpu_port.txt"
 
   rm "${DEST_DIR}/stratum_bf/${pltf}/fabric_tna.conf"
 
   echo
 }
 
-do_p4c "montara" "${MONTARA_CPU_PORT}"
-do_p4c "mavericks" "${MAVERICKS_CPU_PORT}"
+do_p4c "fabric_tna"

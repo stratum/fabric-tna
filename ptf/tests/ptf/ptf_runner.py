@@ -169,7 +169,7 @@ def update_config(p4info_path, bmv2_json_path, tofino_bin_path,
         stream_recv_thread.join()
 
 
-def run_test(p4info_path, grpc_addr, device_id, cpu_port, ptfdir, port_map_path,
+def run_test(p4info_path, grpc_addr, device_id, ptfdir, port_map_path,
              device, platform=None, extra_args=()):
     """
     Runs PTF tests included in provided directory.
@@ -206,7 +206,6 @@ def run_test(p4info_path, grpc_addr, device_id, cpu_port, ptfdir, port_map_path,
     test_params = 'p4info=\'{}\''.format(p4info_path)
     test_params += ';grpcaddr=\'{}\''.format(grpc_addr)
     test_params += ';device_id=\'{}\''.format(device_id)
-    test_params += ';cpu_port=\'{}\''.format(cpu_port)
     test_params += ';device=\'{}\''.format(device)
     if platform is not None:
         test_params += ';pltfm=\'{}\''.format(platform)
@@ -265,9 +264,6 @@ def main():
     parser.add_argument('--device-id',
                         help='Device id for device under test',
                         type=int, default=1)
-    parser.add_argument('--cpu-port',
-                        help='CPU port ID of device under test',
-                        type=int, required=True)
     parser.add_argument('--ptf-dir',
                         help='Directory containing PTF tests',
                         type=str, required=True)
@@ -340,7 +336,6 @@ def main():
         success = run_test(p4info_path=args.p4info,
                            device_id=args.device_id,
                            grpc_addr=args.grpc_addr,
-                           cpu_port=args.cpu_port,
                            ptfdir=args.ptf_dir,
                            port_map_path=args.port_map,
                            platform=args.platform,
