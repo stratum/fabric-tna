@@ -62,8 +62,8 @@ control Acl (inout parsed_headers_t hdr,
             hdr.ethernet.src_addr: ternary @name("eth_src"); // 48
             hdr.vlan_tag.vlan_id: ternary @name("vlan_id"); // 12
             hdr.eth_type.value: ternary @name("eth_type"); //16
-            hdr.ipv4.src_addr: ternary @name("ipv4_src"); // 32
-            hdr.ipv4.dst_addr: ternary @name("ipv4_dst"); // 32
+            fabric_md.ipv4_src_addr: ternary @name("ipv4_src"); // 32
+            fabric_md.ipv4_dst_addr: ternary @name("ipv4_dst"); // 32
             hdr.icmp.icmp_type: ternary @name("icmp_type"); // 8
             hdr.icmp.icmp_code: ternary @name("icmp_code"); // 8
         }
