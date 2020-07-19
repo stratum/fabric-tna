@@ -56,13 +56,15 @@ control IntTransit (
     @hidden
     action int_set_header_4() {
         hdr.int_ingress_tstamp.setValid();
+        // FIXME(Yi): Should be ingress timestamp from ingress parser?
         hdr.int_ingress_tstamp.ingress_tstamp = (bit<32>) eg_intr_md.enq_tstamp;
     }
     // Egress timestamp.
     @hidden
     action int_set_header_5() {
         hdr.int_egress_tstamp.setValid();
-        hdr.int_egress_tstamp.egress_tstamp = (bit<32>)(eg_intr_md.enq_tstamp + eg_intr_md.deq_timedelta);
+        // FIXME(Yi): multiple assign action in single
+        hdr.int_egress_tstamp.egress_tstamp = 0;//(bit<32>)(eg_intr_md.enq_tstamp + eg_intr_md.deq_timedelta);
     }
     // Queue congestion.
     @hidden
@@ -358,6 +360,7 @@ control IntTransit (
             (0xE) : int_set_header_0003_i14();
             (0xF) : int_set_header_0003_i15();
         }
+        size = 16;
     }
 
     // Table to process instruction bits 4-7.
@@ -402,6 +405,7 @@ control IntTransit (
             (0xE) : int_set_header_0407_i14();
             (0xF) : int_set_header_0407_i15();
         }
+        size = 16;
     }
 
     apply {

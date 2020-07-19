@@ -372,6 +372,14 @@ parser FabricEgressParser (packet_in packet,
         fabric_md.mpls_ttl = bridge_md.mpls_ttl;
         fabric_md.is_multicast = bridge_md.is_multicast;
         fabric_md.ingress_port = bridge_md.ingress_port;
+        fabric_md.l4_sport = bridge_md.l4_sport;
+        fabric_md.l4_dport = bridge_md.l4_dport;
+#ifdef WITH_INT
+        fabric_md.int_device_type = bridge_md.int_device_type;
+        fabric_md.int_switch_id = bridge_md.int_switch_id;
+        fabric_md.int_new_words = bridge_md.int_new_words;
+        fabric_md.int_new_bytes = bridge_md.int_new_bytes;
+#endif
         transition parse_ethernet;
     }
 
@@ -532,6 +540,24 @@ control FabricEgressDeparser(packet_out packet,
         packet.emit(hdr.tcp);
         packet.emit(hdr.udp);
         packet.emit(hdr.icmp);
+#ifdef WITH_INT
+        packet.emit(hdr.intl4_shim);
+        packet.emit(hdr.int_header);
+#ifdef WITH_INT_TRANSIT
+        packet.emit(hdr.int_switch_id);
+        packet.emit(hdr.int_port_ids);
+        packet.emit(hdr.int_hop_latency);
+        packet.emit(hdr.int_q_occupancy);
+        packet.emit(hdr.int_ingress_tstamp);
+        packet.emit(hdr.int_egress_tstamp);
+        packet.emit(hdr.int_q_congestion);
+        packet.emit(hdr.int_egress_tx_util);
+#endif // WITH_INT_TRANSIT
+#ifdef WITH_INT_SINK
+        packet.emit(hdr.int_data);
+#endif // WITH_INT_SINK
+        packet.emit(hdr.intl4_tail);
+#endif // WITH_INT
     }
 }
 

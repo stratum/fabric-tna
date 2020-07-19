@@ -7,7 +7,7 @@
 #include <tna.p4>
 
 /* indicate INT at LSB of DSCP */
-const bit<6> INT_DSCP = 0x17;
+const bit<6> INT_DSCP = 0x1;
 
 // Length of the whole INT header,
 // including shim and tail, excluding metadata stack.
