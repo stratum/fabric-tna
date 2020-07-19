@@ -372,8 +372,6 @@ parser FabricEgressParser (packet_in packet,
         fabric_md.mpls_ttl = bridge_md.mpls_ttl;
         fabric_md.is_multicast = bridge_md.is_multicast;
         fabric_md.ingress_port = bridge_md.ingress_port;
-        fabric_md.l4_sport = bridge_md.l4_sport;
-        fabric_md.l4_dport = bridge_md.l4_dport;
 #ifdef WITH_INT
         fabric_md.int_device_type = bridge_md.int_device_type;
         fabric_md.int_switch_id = bridge_md.int_switch_id;
@@ -459,13 +457,25 @@ parser FabricEgressParser (packet_in packet,
 
     state parse_tcp {
         packet.extract(hdr.tcp);
+        fabric_md.l4_sport = hdr.tcp.sport;
+        fabric_md.l4_dport = hdr.tcp.dport;
+#ifdef WITH_INT
+        transition parse_int;
+#else
         transition accept;
+#endif // WITH_INT
     }
 
     state parse_udp {
         packet.extract(hdr.udp);
+        fabric_md.l4_sport = hdr.udp.sport;
+        fabric_md.l4_dport = hdr.udp.dport;
         transition select(hdr.udp.dport) {
+#ifdef WITH_INT
+            default: parse_int;
+#else
             default: accept;
+#endif // WITH_INT
         }
     }
 
@@ -473,6 +483,46 @@ parser FabricEgressParser (packet_in packet,
         packet.extract(hdr.icmp);
         transition accept;
     }
+
+#ifdef WITH_INT
+    state parse_int {
+        transition select(last_ipv4_dscp) {
+            INT_DSCP &&& INT_DSCP: parse_intl4_shim;
+            default: accept;
+        }
+    }
+
+    state parse_intl4_shim {
+        packet.extract(hdr.intl4_shim);
+        transition parse_int_header;
+    }
+
+    state parse_int_header {
+        packet.extract(hdr.int_header);
+        // If there is no INT metadata but the INT header (plus shim and tail)
+        // exists, default value of length field in shim header should be
+        // INT_HEADER_LEN_WORDS.
+        transition select (hdr.intl4_shim.len_words) {
+            INT_HEADER_LEN_WORDS: parse_intl4_tail;
+            default: parse_int_data;
+        }
+    }
+
+    state parse_int_data {
+#ifdef WITH_INT_SINK
+        // Parse INT metadata stack, but not tail
+        packet.extract(hdr.int_data, (bit<32>) (hdr.intl4_shim.len_words - INT_HEADER_LEN_WORDS) << 5);
+        transition parse_intl4_tail;
+#else // not interested in INT data
+        transition accept;
+#endif // WITH_INT_SINK
+    }
+
+    state parse_intl4_tail {
+        packet.extract(hdr.intl4_tail);
+        transition accept;
+    }
+#endif // WITH_INT
 }
 
 control FabricEgressDeparser(packet_out packet,

@@ -72,8 +72,6 @@ control FabricIngress (
             hdr.bridge_md.mpls_label = fabric_md.mpls_label;
             hdr.bridge_md.mpls_ttl = fabric_md.mpls_ttl;
             hdr.bridge_md.vlan_id = fabric_md.vlan_id;
-            hdr.bridge_md.l4_sport = fabric_md.l4_sport;
-            hdr.bridge_md.l4_dport = fabric_md.l4_dport;
 #ifdef WITH_DOUBLE_VLAN_TERMINATION
             hdr.bridge_md.push_double_vlan = fabric_md.push_double_vlan;
             hdr.bridge_md.inner_vlan_id = fabric_md.inner_vlan_id;
