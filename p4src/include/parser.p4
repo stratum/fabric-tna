@@ -14,6 +14,9 @@ parser FabricIngressParser (packet_in  packet,
     /* TNA */
     out ingress_intrinsic_metadata_t   ig_intr_md) {
     Checksum() ipv4_checksum;
+#ifdef WITH_SPGW
+    Checksum() inner_ipv4_checksum;
+#endif // WITH_SPGW
     bit<6> last_ipv4_dscp = 0;
 
     state start {
@@ -115,6 +118,8 @@ parser FabricIngressParser (packet_in  packet,
 
     state parse_ipv4 {
         packet.extract(hdr.ipv4);
+        fabric_md.ipv4_src_addr = hdr.ipv4.src_addr;
+        fabric_md.ipv4_dst_addr = hdr.ipv4.dst_addr;
         fabric_md.ip_proto = hdr.ipv4.protocol;
         fabric_md.ip_eth_type = ETHERTYPE_IPV4;
         last_ipv4_dscp = hdr.ipv4.dscp;
@@ -153,6 +158,9 @@ parser FabricIngressParser (packet_in  packet,
         fabric_md.l4_sport = hdr.udp.sport;
         fabric_md.l4_dport = hdr.udp.dport;
         transition select(hdr.udp.dport) {
+#ifdef WITH_SPGW
+            UDP_PORT_GTPU: parse_gtpu;
+#endif // WITH_SPGW
             default: accept;
         }
     }
@@ -161,6 +169,45 @@ parser FabricIngressParser (packet_in  packet,
         packet.extract(hdr.icmp);
         transition accept;
     }
+
+#ifdef WITH_SPGW
+    state parse_gtpu {
+        packet.extract(hdr.gtpu);
+        transition parse_inner_ipv4;
+    }
+
+    state parse_inner_ipv4 {
+        packet.extract(hdr.inner_ipv4);
+        last_ipv4_dscp = hdr.inner_ipv4.dscp;
+        inner_ipv4_checksum.add(hdr.inner_ipv4);
+        fabric_md.inner_ipv4_checksum_err = inner_ipv4_checksum.verify();
+        transition select(hdr.inner_ipv4.protocol) {
+            PROTO_TCP: parse_inner_tcp;
+            PROTO_UDP: parse_inner_udp;
+            PROTO_ICMP: parse_inner_icmp;
+            default: accept;
+        }
+    }
+
+    state parse_inner_tcp {
+        packet.extract(hdr.inner_tcp);
+        fabric_md.inner_l4_sport = hdr.inner_tcp.sport;
+        fabric_md.inner_l4_dport = hdr.inner_tcp.dport;
+        transition accept;
+    }
+
+    state parse_inner_udp {
+        packet.extract(hdr.inner_udp);
+        fabric_md.inner_l4_sport = hdr.inner_udp.sport;
+        fabric_md.inner_l4_dport = hdr.inner_udp.dport;
+        transition accept;
+    }
+
+    state parse_inner_icmp {
+        packet.extract(hdr.inner_icmp);
+        transition accept;
+    }
+#endif // WITH_SPGW
 }
 
 control FabricIngressDeparser(packet_out packet,
@@ -188,6 +235,14 @@ control FabricIngressDeparser(packet_out packet,
         packet.emit(hdr.tcp);
         packet.emit(hdr.udp);
         packet.emit(hdr.icmp);
+#ifdef WITH_SPGW
+        // in case we parsed a GTPU packet but did not decap it
+        packet.emit(hdr.gtpu);
+        packet.emit(hdr.inner_ipv4);
+        packet.emit(hdr.inner_tcp);
+        packet.emit(hdr.inner_udp);
+        packet.emit(hdr.inner_icmp);
+#endif // WITH_SPGW
     }
 }
 
@@ -212,6 +267,16 @@ parser FabricEgressParser (packet_in packet,
         fabric_md.push_double_vlan = bridge_md.push_double_vlan;
         fabric_md.inner_vlan_id = bridge_md.inner_vlan_id;
 #endif // WITH_DOUBLE_VLAN_TERMINATION
+#ifdef WITH_SPGW
+        fabric_md.spgw_ipv4_len = bridge_md.spgw_ipv4_len;
+        fabric_md.needs_gtpu_encap = bridge_md.needs_gtpu_encap;
+        fabric_md.skip_spgw = bridge_md.skip_spgw;
+        fabric_md.gtpu_teid = bridge_md.gtpu_teid;
+        fabric_md.gtpu_tunnel_sip = bridge_md.gtpu_tunnel_sip;
+        fabric_md.gtpu_tunnel_dip = bridge_md.gtpu_tunnel_dip;
+        fabric_md.gtpu_tunnel_sport = bridge_md.gtpu_tunnel_sport;
+        fabric_md.pdr_ctr_id = bridge_md.pdr_ctr_id;
+#endif // WITH_SPGW
         fabric_md.ip_eth_type = bridge_md.ip_eth_type;
         fabric_md.ip_proto = bridge_md.ip_proto;
         fabric_md.mpls_label = bridge_md.mpls_label;
@@ -320,6 +385,9 @@ control FabricEgressDeparser(packet_out packet,
     /* TNA */
     in egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr) {
     Checksum() ipv4_checksum;
+#ifdef WITH_SPGW
+    Checksum() outer_ipv4_checksum;
+#endif // WITH_SPGW
 
     apply {
         if (hdr.ipv4.isValid()) {
@@ -339,6 +407,24 @@ control FabricEgressDeparser(packet_out packet,
             });
         }
         // TODO: update TCP/UDP checksum
+#ifdef WITH_SPGW
+        if (hdr.outer_ipv4.isValid()) {
+            hdr.outer_ipv4.hdr_checksum = outer_ipv4_checksum.update({
+                hdr.outer_ipv4.version,
+                hdr.outer_ipv4.ihl,
+                hdr.outer_ipv4.dscp,
+                hdr.outer_ipv4.ecn,
+                hdr.outer_ipv4.total_len,
+                hdr.outer_ipv4.identification,
+                hdr.outer_ipv4.flags,
+                hdr.outer_ipv4.frag_offset,
+                hdr.outer_ipv4.ttl,
+                hdr.outer_ipv4.protocol,
+                hdr.outer_ipv4.src_addr,
+                hdr.outer_ipv4.dst_addr
+            });
+        }
+#endif // WITH_SPGW
         packet.emit(hdr.packet_in);
         packet.emit(hdr.ethernet);
         packet.emit(hdr.vlan_tag);
@@ -347,6 +433,11 @@ control FabricEgressDeparser(packet_out packet,
 #endif // WITH_XCONNECT || WITH_DOUBLE_VLAN_TERMINATION
         packet.emit(hdr.eth_type);
         packet.emit(hdr.mpls);
+#ifdef WITH_SPGW
+        packet.emit(hdr.outer_ipv4);
+        packet.emit(hdr.outer_udp);
+        packet.emit(hdr.gtpu);
+#endif // WITH_SPGW
         packet.emit(hdr.ipv4);
         packet.emit(hdr.ipv6);
         packet.emit(hdr.tcp);
