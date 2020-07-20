@@ -19,6 +19,10 @@ parser FabricIngressParser (packet_in  packet,
 #endif // WITH_SPGW
     bit<6> last_ipv4_dscp = 0;
 
+    // FIXME(Yi): Is it possible to use (hdr.udp.isValid() + fabric_md.l4_dport)
+    // in ingress::parse_intl4_tail?
+    bit<1> udp_valid = 0;
+
     state start {
         packet.extract(ig_intr_md);
         packet.advance(PORT_METADATA_SIZE);
@@ -150,6 +154,7 @@ parser FabricIngressParser (packet_in  packet,
         packet.extract(hdr.tcp);
         fabric_md.l4_sport = hdr.tcp.sport;
         fabric_md.l4_dport = hdr.tcp.dport;
+        udp_valid = 1w0;
 #ifdef WITH_INT
         transition parse_int;
 #else
@@ -161,11 +166,13 @@ parser FabricIngressParser (packet_in  packet,
         packet.extract(hdr.udp);
         fabric_md.l4_sport = hdr.udp.sport;
         fabric_md.l4_dport = hdr.udp.dport;
+        udp_valid = 1w1;
         transition select(hdr.udp.dport) {
 #if defined(WITH_INT)
             default: parse_int;
 #elif defined(WITH_SPGW)
             UDP_PORT_GTPU: parse_gtpu;
+            default: accept;
 #else
             default: accept;
 #endif // WITH_INT
@@ -174,7 +181,12 @@ parser FabricIngressParser (packet_in  packet,
 
     state parse_icmp {
         packet.extract(hdr.icmp);
+        udp_valid = 1w0;
+#ifdef WITH_INT
+        transition parse_int;
+#else
         transition accept;
+#endif // WITH_INT
     }
 
 #ifdef WITH_INT
@@ -213,13 +225,14 @@ parser FabricIngressParser (packet_in  packet,
 
     state parse_intl4_tail {
         packet.extract(hdr.intl4_tail);
-        transition select(hdr.udp.isValid(), fabric_md.l4_dport) {
 #ifdef WITH_SPGW
-            true, UDP_PORT_GTPU: parse_gtpu;
-#else
+        transition select(udp_valid, fabric_md.l4_dport) {
+            (1, UDP_PORT_GTPU): parse_gtpu;
             default: accept;
-#endif // WITH_SPGW
         }
+#else
+        transition accept;
+#endif // WITH_SPGW
     }
 #endif // WITH_INT
 
@@ -470,18 +483,20 @@ parser FabricEgressParser (packet_in packet,
         packet.extract(hdr.udp);
         fabric_md.l4_sport = hdr.udp.sport;
         fabric_md.l4_dport = hdr.udp.dport;
-        transition select(hdr.udp.dport) {
 #ifdef WITH_INT
-            default: parse_int;
+        transition parse_int;
 #else
-            default: accept;
+        transition accept;
 #endif // WITH_INT
-        }
     }
 
     state parse_icmp {
         packet.extract(hdr.icmp);
+#ifdef WITH_INT
+        transition parse_int;
+#else
         transition accept;
+#endif // WITH_INT
     }
 
 #ifdef WITH_INT
