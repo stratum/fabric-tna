@@ -18,13 +18,9 @@ parser FabricIngressParser (packet_in  packet,
     Checksum() inner_ipv4_checksum;
 #endif // WITH_SPGW
     bit<6> last_ipv4_dscp = 0;
-    // FIXME(Yi): Is it possible to use (hdr.udp.isValid() + fabric_md.l4_dport)
-    // in ingress::parse_intl4_tail?
-    // Using parser counter for now so we aren't blocked on this - Robert
-    ParserCounter() counter;
+    bit<8> last_ipv4_proto = 0;
 
     state start {
-        counter.set(8w0);  // Counter is zero until UDP is parsed
         packet.extract(ig_intr_md);
         packet.advance(PORT_METADATA_SIZE);
         transition select(ig_intr_md.ingress_port) {
@@ -128,6 +124,7 @@ parser FabricIngressParser (packet_in  packet,
         fabric_md.ip_proto = hdr.ipv4.protocol;
         fabric_md.ip_eth_type = ETHERTYPE_IPV4;
         last_ipv4_dscp = hdr.ipv4.dscp;
+        last_ipv4_proto = hdr.ipv4.protocol;
         ipv4_checksum.add(hdr.ipv4);
         fabric_md.ipv4_checksum_err = ipv4_checksum.verify();
         // Need header verification?
@@ -166,7 +163,6 @@ parser FabricIngressParser (packet_in  packet,
         packet.extract(hdr.udp);
         fabric_md.l4_sport = hdr.udp.sport;
         fabric_md.l4_dport = hdr.udp.dport;
-        counter.set(8w1);  // Set counter nonzero as a hacky signal that UDP was parsed
         transition select(hdr.udp.dport) {
 #if defined(WITH_INT)
             default: parse_int;
@@ -192,8 +188,8 @@ parser FabricIngressParser (packet_in  packet,
 
     // go here after INT parsing if WITH_SPGW is defined
     state parse_l4_continued {
-        transition select(counter.is_zero(), fabric_md.l4_dport) {
-            (false, UDP_PORT_GTPU): parse_gtpu;
+        transition select(last_ipv4_proto, fabric_md.l4_dport) {
+            (PROTO_UDP, UDP_PORT_GTPU): parse_gtpu;
             default: accept;
         }
     }
