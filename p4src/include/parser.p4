@@ -18,12 +18,13 @@ parser FabricIngressParser (packet_in  packet,
     Checksum() inner_ipv4_checksum;
 #endif // WITH_SPGW
     bit<6> last_ipv4_dscp = 0;
-
     // FIXME(Yi): Is it possible to use (hdr.udp.isValid() + fabric_md.l4_dport)
     // in ingress::parse_intl4_tail?
-    bit<1> udp_valid = 0;
+    // Using parser counter for now so we aren't blocked on this - Robert
+    ParserCounter() counter;
 
     state start {
+        counter.set(8w0);  // Counter is zero until UDP is parsed
         packet.extract(ig_intr_md);
         packet.advance(PORT_METADATA_SIZE);
         transition select(ig_intr_md.ingress_port) {
@@ -154,7 +155,6 @@ parser FabricIngressParser (packet_in  packet,
         packet.extract(hdr.tcp);
         fabric_md.l4_sport = hdr.tcp.sport;
         fabric_md.l4_dport = hdr.tcp.dport;
-        udp_valid = 1w0;
 #ifdef WITH_INT
         transition parse_int;
 #else
@@ -166,7 +166,7 @@ parser FabricIngressParser (packet_in  packet,
         packet.extract(hdr.udp);
         fabric_md.l4_sport = hdr.udp.sport;
         fabric_md.l4_dport = hdr.udp.dport;
-        udp_valid = 1w1;
+        counter.set(8w1);  // Set counter nonzero as a hacky signal that UDP was parsed
         transition select(hdr.udp.dport) {
 #if defined(WITH_INT)
             default: parse_int;
@@ -181,7 +181,6 @@ parser FabricIngressParser (packet_in  packet,
 
     state parse_icmp {
         packet.extract(hdr.icmp);
-        udp_valid = 1w0;
 #ifdef WITH_INT
         transition parse_int;
 #else
@@ -190,10 +189,25 @@ parser FabricIngressParser (packet_in  packet,
     }
 
 #ifdef WITH_INT
+
+    // go here after INT parsing if WITH_SPGW is defined
+    state parse_l4_continued {
+        transition select(counter.is_zero(), fabric_md.l4_dport) {
+            (false, UDP_PORT_GTPU): parse_gtpu;
+            default: accept;
+        }
+    }
+    // FIXME: Every accept transition in INT parsing should go to 
+    //         parse_l4_continued instead if WITH_SPGW is defined
+
     state parse_int {
         transition select(last_ipv4_dscp) {
             INT_DSCP &&& INT_DSCP: parse_intl4_shim;
+#ifdef WITH_SPGW
+            default: parse_l4_continued;
+#else
             default: accept;
+#endif // WITH_SPGW
         }
     }
 
@@ -226,10 +240,7 @@ parser FabricIngressParser (packet_in  packet,
     state parse_intl4_tail {
         packet.extract(hdr.intl4_tail);
 #ifdef WITH_SPGW
-        transition select(udp_valid, fabric_md.l4_dport) {
-            (1, UDP_PORT_GTPU): parse_gtpu;
-            default: accept;
-        }
+        transition parse_l4_continued;
 #else
         transition accept;
 #endif // WITH_SPGW
