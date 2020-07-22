@@ -42,7 +42,8 @@ header intl4_tail_t {
 header int_data_t {
     // Maximum int metadata stack size in bits:
     // (0xFF -4) * 32 (excluding INT shim header, tail header and INT header)
-    varbit<8032> data;
+    // Allocate 16 metadata (16 * 4 * 8) for now
+    varbit<512> data;
 }
 #endif // WITH_INT_SINK
 
