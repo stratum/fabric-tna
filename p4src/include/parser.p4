@@ -189,21 +189,17 @@ parser FabricIngressParser (packet_in  packet,
     // go here after INT parsing if WITH_SPGW is defined
     state parse_l4_continued {
         transition select(last_ipv4_proto, fabric_md.l4_dport) {
+#ifdef WITH_SPGW
             (PROTO_UDP, UDP_PORT_GTPU): parse_gtpu;
+#endif // WITH_SPGW
             default: accept;
         }
     }
-    // FIXME: Every accept transition in INT parsing should go to 
-    //         parse_l4_continued instead if WITH_SPGW is defined
 
     state parse_int {
         transition select(last_ipv4_dscp) {
             INT_DSCP &&& INT_DSCP: parse_intl4_shim;
-#ifdef WITH_SPGW
             default: parse_l4_continued;
-#else
-            default: accept;
-#endif // WITH_SPGW
         }
     }
 
@@ -229,17 +225,13 @@ parser FabricIngressParser (packet_in  packet,
         packet.extract(hdr.int_data, (bit<32>) (hdr.intl4_shim.len_words - INT_HEADER_LEN_WORDS) << 5);
         transition parse_intl4_tail;
 #else // not interested in INT data
-        transition accept;
+        transition parse_l4_continued;
 #endif // WITH_INT_SINK
     }
 
     state parse_intl4_tail {
         packet.extract(hdr.intl4_tail);
-#ifdef WITH_SPGW
         transition parse_l4_continued;
-#else
-        transition accept;
-#endif // WITH_SPGW
     }
 #endif // WITH_INT
 
