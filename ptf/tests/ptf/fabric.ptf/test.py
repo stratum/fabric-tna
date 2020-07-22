@@ -1042,7 +1042,24 @@ class MulticastGroupReadWriteTest(FabricTest):
     @autocleanup
     def doRunTest(self):
         grp_id = 10
-        replicas = [(0, 1), (0, 2), (0, 3)]  # (instance, port)
+        replicas = [(0, 1), (0, 2), (0, 3), (1, 4), (1, 5)]  # (instance, port)
+        req, _ = self.add_mcast_group(grp_id, replicas)
+        expected_mc_entry = req.updates[0].entity.packet_replication_engine_entry.multicast_group_entry
+        received_mc_entry = self.read_mcast_group(grp_id)
+        self.verify_p4runtime_entity(expected_mc_entry, received_mc_entry)
+
+        # Add second group with high id
+        grp_id = 0xffff
+        replicas = [(0, 1), (0, 2), (0, 3), (1, 4), (1, 5)]  # (instance, port)
+        req, _ = self.add_mcast_group(grp_id, replicas)
+        expected_mc_entry = req.updates[0].entity.packet_replication_engine_entry.multicast_group_entry
+        received_mc_entry = self.read_mcast_group(grp_id)
+        self.verify_p4runtime_entity(expected_mc_entry, received_mc_entry)
+
+    @autocleanup
+    def emptyReplicaTest(self):
+        grp_id = 20
+        replicas = []  # (instance, port)
         req, _ = self.add_mcast_group(grp_id, replicas)
         expected_mc_entry = req.updates[0].entity.packet_replication_engine_entry.multicast_group_entry
         received_mc_entry = self.read_mcast_group(grp_id)
@@ -1051,6 +1068,7 @@ class MulticastGroupReadWriteTest(FabricTest):
     def runTest(self):
         print("")
         self.doRunTest()
+        self.emptyReplicaTest()
 
 
 @group("p4r-function")
@@ -1058,6 +1076,7 @@ class MulticastGroupModificationTest(FabricTest):
 
     # Not using the auto cleanup since the Stratum modifies the
     # multicast node table internally
+    @autocleanup
     def doRunTest(self):
         # Add group with egress port 1~3 (instance 1 and 2)
         grp_id = 10
@@ -1070,9 +1089,6 @@ class MulticastGroupModificationTest(FabricTest):
         expected_mc_entry = req.updates[0].entity.packet_replication_engine_entry.multicast_group_entry
         received_mc_entry = self.read_mcast_group(grp_id)
         self.verify_p4runtime_entity(expected_mc_entry, received_mc_entry)
-
-        # Cleanup
-        self.delete_mcast_group(grp_id)
 
     def runTest(self):
         print("")
@@ -1090,6 +1106,8 @@ class CounterTest(BridgingTest):
                          if req.updates[0].entity.HasField('table_entry')]
         table_entries = [te for te in table_entries
                          if te.table_id == self.get_table_id('ingress_port_vlan')]
+        for table_entry in table_entries:
+            table_entry.ClearField("action")
 
         for table_entry in table_entries:
             direct_counter = self.read_direct_counter(table_entry)
