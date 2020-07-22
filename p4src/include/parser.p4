@@ -7,12 +7,19 @@
 #include "header.p4"
 #include "define.p4"
 
+#ifdef WITH_INT
+#include "int/data_parser.p4"
+#endif // WITH_INT
+
 parser FabricIngressParser (packet_in  packet,
     /* Fabric.p4 */
     out parsed_headers_t               hdr,
     out fabric_ingress_metadata_t      fabric_md,
     /* TNA */
     out ingress_intrinsic_metadata_t   ig_intr_md) {
+#ifdef WITH_INT
+    IntDataParser() int_data_parser;
+#endif
     Checksum() ipv4_checksum;
 #ifdef WITH_SPGW
     Checksum() inner_ipv4_checksum;
@@ -212,18 +219,12 @@ parser FabricIngressParser (packet_in  packet,
 
     state parse_int_header {
         packet.extract(hdr.int_header);
-        // If there is no INT metadata but the INT header (plus shim and tail)
-        // exists, default value of length field in shim header should be
-        // INT_HEADER_LEN_WORDS.
-        transition select (hdr.intl4_shim.len_words) {
-            INT_HEADER_LEN_WORDS: parse_intl4_tail;
-            default: parse_int_data;
-        }
+        transition parse_int_data;
     }
 
     state parse_int_data {
         // Parse INT metadata stack, but not tail
-        packet.extract(hdr.int_data, (bit<32>) (hdr.intl4_shim.len_words - INT_HEADER_LEN_WORDS) << 5);
+        int_data_parser.apply(packet, hdr, hdr.intl4_shim.len_words);
         transition parse_intl4_tail;
     }
 
@@ -268,10 +269,11 @@ parser FabricIngressParser (packet_in  packet,
 
     state parse_inner_icmp {
         packet.extract(hdr.inner_icmp);
+        fabric_md.inner_l4_sport = 0; // Invalid
+        fabric_md.inner_l4_dport = 0; // Invalid
         transition accept;
     }
 #endif // WITH_SPGW
-
 }
 
 control FabricIngressDeparser(packet_out packet,
@@ -308,9 +310,7 @@ control FabricIngressDeparser(packet_out packet,
         packet.emit(hdr.int_q_congestion);
         packet.emit(hdr.int_egress_tx_util);
 #endif // WITH_INT_TRANSIT
-#ifdef WITH_INT_SINK
         packet.emit(hdr.int_data);
-#endif // WITH_INT_SINK
         packet.emit(hdr.intl4_tail);
 #endif // WITH_INT
 #ifdef WITH_SPGW
@@ -330,6 +330,9 @@ parser FabricEgressParser (packet_in packet,
     out fabric_egress_metadata_t fabric_md,
     /* TNA */
     out egress_intrinsic_metadata_t eg_intr_md) {
+#ifdef WITH_INT
+    IntDataParser() int_data_parser;
+#endif
     bit<6> last_ipv4_dscp = 0;
     bridge_metadata_t bridge_md;
 
@@ -490,18 +493,12 @@ parser FabricEgressParser (packet_in packet,
 
     state parse_int_header {
         packet.extract(hdr.int_header);
-        // If there is no INT metadata but the INT header (plus shim and tail)
-        // exists, default value of length field in shim header should be
-        // INT_HEADER_LEN_WORDS.
-        transition select (hdr.intl4_shim.len_words) {
-            INT_HEADER_LEN_WORDS: parse_intl4_tail;
-            default: parse_int_data;
-        }
+        transition parse_int_data;
     }
 
     state parse_int_data {
         // Parse INT metadata stack, but not tail
-        packet.extract(hdr.int_data, (bit<32>) (hdr.intl4_shim.len_words - INT_HEADER_LEN_WORDS) << 5);
+        int_data_parser.apply(packet, hdr, hdr.intl4_shim.len_words);
         transition parse_intl4_tail;
     }
 
@@ -590,9 +587,7 @@ control FabricEgressDeparser(packet_out packet,
         packet.emit(hdr.int_q_congestion);
         packet.emit(hdr.int_egress_tx_util);
 #endif // WITH_INT_TRANSIT
-#ifdef WITH_INT_SINK
         packet.emit(hdr.int_data);
-#endif // WITH_INT_SINK
         packet.emit(hdr.intl4_tail);
 #endif // WITH_INT
     }

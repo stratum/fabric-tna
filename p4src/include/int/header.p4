@@ -27,7 +27,7 @@ header int_header_t {
 header intl4_shim_t {
     bit<8> int_type;
     bit<8> rsvd1;
-    bit<8> len_words; // 4-byte words.
+    bit<8> len_words;
     bit<8> rsvd2;
 }
 // INT tail header for TCP/UDP - 4 bytes
@@ -38,14 +38,9 @@ header intl4_tail_t {
     bit<6> dscp;
 }
 
-#ifdef WITH_INT_SINK
 header int_data_t {
-    // Maximum int metadata stack size in bits:
-    // (0xFF -4) * 32 (excluding INT shim header, tail header and INT header)
-    // Allocate 16 metadata (16 * 4 * 8) for now
-    varbit<32> data;
+    bit<32> data; // 1 word
 }
-#endif // WITH_INT_SINK
 
 #ifdef WITH_INT_TRANSIT
 // INT meta-value headers - 4 bytes each

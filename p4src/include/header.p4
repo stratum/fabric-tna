@@ -295,9 +295,7 @@ struct parsed_headers_t {
     intl4_shim_t intl4_shim;
     int_header_t int_header;
     intl4_tail_t intl4_tail;
-#ifdef WITH_INT_SINK
-    int_data_t int_data;
-#endif
+    int_data_t[24] int_data;
 #ifdef WITH_INT_TRANSIT
     int_switch_id_t int_switch_id;
     int_port_ids_t int_port_ids;
