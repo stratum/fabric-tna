@@ -65,9 +65,6 @@ control IntIngress (
 
 #ifdef WITH_INT_SINK
         tb_set_sink.apply();
-        if(fabric_md.int_device_type == IntDeviceType.SINK) {
-            fabric_md.mirror_id = REPORT_MIRROR_SESSION_ID;
-        }
 #endif // WITH_INT_SINK
     }
 }
@@ -105,14 +102,8 @@ control IntEgress (
                 int_transit.apply(hdr, fabric_md, eg_intr_md, eg_dprsr_md);
 #endif // WITH_INT_TRANSIT
 #ifdef WITH_INT_SINK
-                if (fabric_md.is_mirror && fabric_md.mirror_id == REPORT_MIRROR_SESSION_ID) {
-                    /* send int report */
-                    int_report.apply(hdr, fabric_md, eg_intr_md, eg_dprsr_md);
-                }
-                if (fabric_md.int_device_type == IntDeviceType.SINK) {
-                    // int sink
-                    int_sink.apply(hdr, fabric_md);
-                }
+                // TODO: Set up mirror and meadata which forwards INT information to
+                // resubmit port.
 #endif // WITH_INT_SINK
             }
         }

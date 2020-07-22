@@ -222,13 +222,9 @@ parser FabricIngressParser (packet_in  packet,
     }
 
     state parse_int_data {
-#ifdef WITH_INT_SINK
         // Parse INT metadata stack, but not tail
         packet.extract(hdr.int_data, (bit<32>) (hdr.intl4_shim.len_words - INT_HEADER_LEN_WORDS) << 5);
         transition parse_intl4_tail;
-#else // not interested in INT data
-        transition parse_l4_continued;
-#endif // WITH_INT_SINK
     }
 
     state parse_intl4_tail {
@@ -368,8 +364,6 @@ parser FabricEgressParser (packet_in packet,
 #ifdef WITH_INT
         fabric_md.int_device_type = bridge_md.int_device_type;
         fabric_md.int_switch_id = bridge_md.int_switch_id;
-        fabric_md.int_new_words = bridge_md.int_new_words;
-        fabric_md.int_new_bytes = bridge_md.int_new_bytes;
 #endif
         transition parse_ethernet;
     }
@@ -506,13 +500,9 @@ parser FabricEgressParser (packet_in packet,
     }
 
     state parse_int_data {
-#ifdef WITH_INT_SINK
         // Parse INT metadata stack, but not tail
         packet.extract(hdr.int_data, (bit<32>) (hdr.intl4_shim.len_words - INT_HEADER_LEN_WORDS) << 5);
         transition parse_intl4_tail;
-#else // not interested in INT data
-        transition accept;
-#endif // WITH_INT_SINK
     }
 
     state parse_intl4_tail {

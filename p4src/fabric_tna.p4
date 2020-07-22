@@ -89,8 +89,6 @@ control FabricIngress (
 #ifdef WITH_INT
             hdr.bridge_md.int_device_type = fabric_md.int_device_type;
             hdr.bridge_md.int_switch_id = fabric_md.int_switch_id;
-            hdr.bridge_md.int_new_words = fabric_md.int_new_words;
-            hdr.bridge_md.int_new_bytes = fabric_md.int_new_bytes;
 #endif
         }
     }

@@ -153,8 +153,6 @@ struct fabric_ingress_metadata_t {
     fwd_type_t      fwd_type;
     next_id_t       next_id;
     bool            is_multicast;
-    bool            need_mirror;
-    MirrorId_t      mirror_id;
 #ifdef WITH_SPGW
     bit<16>         spgw_ipv4_len;
     bit<16>         inner_l4_sport;
@@ -178,8 +176,6 @@ struct fabric_ingress_metadata_t {
 #ifdef WITH_INT
     IntDeviceType int_device_type;
     bit<32> int_switch_id;
-    bit<8>  int_new_words;
-    bit<16> int_new_bytes;
 #endif
 }
 
@@ -285,7 +281,6 @@ struct parsed_headers_t {
     packet_out_header_t packet_out;
     packet_in_header_t packet_in;
     // INT specific headers
-
 #ifdef WITH_INT
 #ifdef WITH_INT_SINK
     // INT Report encap
