@@ -177,6 +177,8 @@ parser FabricIngressParser (packet_in  packet,
 
     state parse_icmp {
         packet.extract(hdr.icmp);
+        fabric_md.l4_sport = 0; // Invalid
+        fabric_md.l4_dport = 0; // Invalid
 #ifdef WITH_INT
         transition parse_int;
 #else
@@ -282,17 +284,8 @@ control FabricIngressDeparser(packet_out packet,
     in fabric_ingress_metadata_t fabric_md,
     /* TNA */
     in ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr) {
-    Mirror() mirror;
 
     apply {
-        if (fabric_md.need_mirror) {
-            // mirror.emit<bridge_metadata_for_mirror_t>(fabric_md.mirror_id,
-            // {
-            //     BridgeMetadataType.BRIDGE_MD_MIRROR_INGRESS_TO_EGRESS,
-            //     fabric_md.mirror_id,
-            //     0
-            // });
-        }
         packet.emit(hdr.bridge_md);
         packet.emit(hdr.ethernet);
         packet.emit(hdr.vlan_tag);
@@ -343,21 +336,9 @@ parser FabricEgressParser (packet_in packet,
     out egress_intrinsic_metadata_t eg_intr_md) {
     bit<6> last_ipv4_dscp = 0;
     bridge_metadata_t bridge_md;
-    bridge_metadata_for_mirror_t mirror_md;
 
     state start {
         packet.extract(eg_intr_md);
-        BridgeMetadataType bridge_md_type = packet.lookahead<BridgeMetadataType>();
-        transition select(bridge_md_type) {
-            BridgeMetadataType.BRIDGE_MD_MIRROR_INGRESS_TO_EGRESS: parse_mirror_bridge_metadata;
-            default: parse_bridge_metadata;
-        }
-    }
-
-    state parse_mirror_bridge_metadata {
-        packet.extract(mirror_md);
-        fabric_md.is_mirror = true;
-        fabric_md.mirror_id = mirror_md.mirror_id;
         transition parse_bridge_metadata;
     }
 
@@ -491,6 +472,8 @@ parser FabricEgressParser (packet_in packet,
 
     state parse_icmp {
         packet.extract(hdr.icmp);
+        fabric_md.l4_sport = 0; // Invalid
+        fabric_md.l4_dport = 0; // Invalid
 #ifdef WITH_INT
         transition parse_int;
 #else
