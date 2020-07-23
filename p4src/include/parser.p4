@@ -184,13 +184,7 @@ parser FabricIngressParser (packet_in  packet,
 
     state parse_icmp {
         packet.extract(hdr.icmp);
-        fabric_md.l4_sport = 0; // Invalid
-        fabric_md.l4_dport = 0; // Invalid
-#ifdef WITH_INT
-        transition parse_int;
-#else
         transition accept;
-#endif // WITH_INT
     }
 
 #ifdef WITH_INT
@@ -269,8 +263,6 @@ parser FabricIngressParser (packet_in  packet,
 
     state parse_inner_icmp {
         packet.extract(hdr.inner_icmp);
-        fabric_md.inner_l4_sport = 0; // Invalid
-        fabric_md.inner_l4_dport = 0; // Invalid
         transition accept;
     }
 #endif // WITH_SPGW
