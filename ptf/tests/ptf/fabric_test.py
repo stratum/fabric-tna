@@ -1637,6 +1637,79 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
                                 prefix_len=32, exp_pkt=exp_pkt,
                                 tagged1=tagged1, tagged2=tagged2, mpls=mpls)
 
+    def runUplinkIntTransitTest(self, ue_out_pkt, tagged1, tagged2, mpls,
+                                switch_id=1, max_int_hop=5, instructions=[],
+                                ignore_csum=True, prev_hops=0):
+        ctr_id = 1
+        dst_mac = HOST2_MAC
+
+        gtp_pkt = pkt_add_gtp(ue_out_pkt, out_ipv4_src=S1U_ENB_IPV4,
+                              out_ipv4_dst=S1U_SGW_IPV4, teid=TEID_1)
+
+        # Set up INT tables and INT headers (srouce and transit)
+        ig_port = self.port1
+        eg_port = self.port2
+        hop_metadata, _ = self.get_int_metadata(instructions, switch_id, ig_port, eg_port)
+        int_pkt = self.get_int_pkt(pkt=gtp_pkt, instructions=instructions, max_hop=max_int_hop,
+                                   transit_hops=prev_hops,
+                                   hop_metadata=hop_metadata)
+
+        exp_pkt = ue_out_pkt.copy()
+        exp_pkt[Ether].src = exp_pkt[Ether].dst
+        exp_pkt[Ether].dst = dst_mac
+        if not mpls:
+            exp_pkt[IP].ttl = exp_pkt[IP].ttl - 1
+        else:
+            exp_pkt = pkt_add_mpls(exp_pkt, MPLS_LABEL_2, DEFAULT_MPLS_TTL)
+        if tagged2:
+            exp_pkt = pkt_add_vlan(exp_pkt, VLAN_ID_2)
+
+        # Add INT headers into expected packet
+        exp_pkt = self.get_int_pkt(pkt=exp_pkt, instructions=instructions, max_hop=max_int_hop,
+                                   transit_hops=prev_hops,
+                                   hop_metadata=hop_metadata)
+
+        # Set up INT tables
+        ins_cnt = len(instructions)
+        self.setup_transit(switch_id)
+
+        # Add new metadata to the packet
+        new_metadata, masked_ins_cnt = self.get_int_metadata(
+            instructions=instructions, switch_id=switch_id,
+            ig_port=ig_port, eg_port=eg_port)
+
+        proto = UDP if UDP in ue_out_pkt else TCP
+
+        exp_pkt[INT_L45_HEAD].length += len(instructions)
+        exp_pkt[INT_META_HDR].total_hop_cnt += 1
+        exp_pkt[INT_META_HDR].payload = new_metadata + str(exp_pkt[INT_META_HDR].payload)
+
+        if ignore_csum or masked_ins_cnt > 0:
+            mask_pkt = Mask(exp_pkt)
+            if ignore_csum:
+                csum_offset = len(exp_pkt) - len(exp_pkt[IP].payload) \
+                              + (6 if proto is UDP else 16)
+                mask_pkt.set_do_not_care(csum_offset * 8, 2 * 8)
+            if masked_ins_cnt > 0:
+                offset_metadata = len(exp_pkt) - len(exp_pkt[proto].payload) \
+                                  + len(INT_L45_HEAD()) + len(INT_META_HDR()) \
+                                  + (ins_cnt - masked_ins_cnt) * 4
+                mask_pkt.set_do_not_care(offset_metadata * 8, masked_ins_cnt * 4 * 8)
+            exp_pkt = mask_pkt
+
+        # Set up SPGW tables
+        self.setup_uplink(
+            s1u_sgw_addr=S1U_SGW_IPV4,
+            teid=TEID_1,
+            ue_addr=ue_out_pkt[IP].src,
+            ctr_id=ctr_id
+        )
+
+        self.runIPv4UnicastTest(pkt=int_pkt, dst_ipv4=ue_out_pkt[IP].dst,
+                                next_hop_mac=dst_mac,
+                                prefix_len=32, exp_pkt=exp_pkt,
+                                tagged1=tagged1, tagged2=tagged2, mpls=mpls)
+
 class PppoeTest(DoubleVlanTerminationTest):
 
     def set_line_map(self, s_tag, c_tag, line_id):
