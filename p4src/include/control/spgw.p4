@@ -26,7 +26,7 @@ control SpgwIngress(
     //===== Interface Tables ======//
     //=============================//
 
-    action set_source_iface(SpgwInterface src_iface, SpgwDirection direction, 
+    action set_source_iface(SpgwInterface src_iface, SpgwDirection direction,
                             bool skip_spgw) {
         // Interface type can be access, core, n6_lan, etc (see InterfaceType enum)
         // If interface is from the control plane, direction can be either up or down
@@ -163,16 +163,21 @@ control SpgwIngress(
     //=============================//
 
     Counter<bit<64>, bit<16>>(MAX_PDR_COUNTERS, CounterType_t.PACKETS_AND_BYTES) pdr_counter;
+    bit<16> new_ipv4_total_len;
+    bit<16> new_udp_len;
 
-    @hidden 
+    @hidden
     action decap_inner_common() {
         // Correct parser-set metadata to use the inner header values
-        fabric_md.ip_eth_type   = ETHERTYPE_IPV4;
-        fabric_md.ip_proto      = hdr.inner_ipv4.protocol;
-        fabric_md.ipv4_src_addr = hdr.inner_ipv4.src_addr;
-        fabric_md.ipv4_dst_addr = hdr.inner_ipv4.dst_addr;
-        fabric_md.l4_sport      = fabric_md.inner_l4_sport;
-        fabric_md.l4_dport      = fabric_md.inner_l4_dport;
+        fabric_md.ip_eth_type    = ETHERTYPE_IPV4;
+        fabric_md.ip_proto       = hdr.inner_ipv4.protocol;
+        fabric_md.ipv4_src_addr  = hdr.inner_ipv4.src_addr;
+        fabric_md.ipv4_dst_addr  = hdr.inner_ipv4.dst_addr;
+        // New IPv4 length:
+        // original length minus length of UDP, GTPU, and IPv4(inner)
+        new_ipv4_total_len = hdr.ipv4.total_len - 36;
+        fabric_md.l4_sport       = fabric_md.inner_l4_sport;
+        fabric_md.l4_dport       = fabric_md.inner_l4_dport;
         // Move GTPU and inner L3 headers out
         hdr.ipv4 = hdr.inner_ipv4;
         hdr.inner_ipv4.setInvalid();
@@ -186,6 +191,9 @@ control SpgwIngress(
     }
     action decap_inner_udp() {
         decap_inner_common();
+        // new UDP len:
+        // original length minus innder UDP, innder IPv4, and GTPU
+        new_udp_len = hdr.udp.len - 36;
         hdr.udp = hdr.inner_udp;
         hdr.inner_udp.setInvalid();
     }
@@ -245,10 +253,19 @@ control SpgwIngress(
             flexible_pdr_lookup.apply();
         }
         pdr_counter.count(fabric_md.pdr_ctr_id);
-        
+
         // GTPU Decapsulate
         if (fabric_md.needs_gtpu_decap) {
             decap_gtpu.apply();
+
+            // Correct IPv4 total_len and UDP len field
+            // will be skipped if invalid
+            if (hdr.ipv4.isValid()) {
+                hdr.ipv4.total_len = new_ipv4_total_len;
+            }
+            if (hdr.udp.isValid()) {
+                hdr.udp.len = new_udp_len;
+            }
         }
 
         // FARs
