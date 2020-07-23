@@ -891,6 +891,19 @@ class FabricTest(P4RuntimeTest):
     def verify_mcast_group(self, group_id, expected_multicast_group):
         return self.verify_multicast_group(group_id, expected_multicast_group)
 
+    def read_all_mcast_groups(self):
+        groups = []
+        req = self.get_new_read_request()
+        entity = req.entities.add()
+        multicast_group = entity.packet_replication_engine_entry.multicast_group_entry
+        multicast_group.multicast_group_id = 0
+        for entity in self.read_request(req):
+            if entity.HasField("packet_replication_engine_entry"):
+                pre_entry = entity.packet_replication_engine_entry
+                if pre_entry.HasField("multicast_group_entry"):
+                    groups.append(pre_entry.multicast_group_entry)
+        return groups
+
 
 class BridgingTest(FabricTest):
     def runBridgingTest(self, tagged1, tagged2, pkt):
