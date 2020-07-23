@@ -585,68 +585,67 @@ class SpgwUplinkTest(SpgwSimpleTest):
                     self.doRunTest(pkt, tagged[0], tagged[1], mpls)
 
 
-# @group("spgw")
-# @unittest.skip("INT transit capability not yet supported")
-# class SpgwDownlinkMPLS_INT_Test(SpgwMPLSTest):
-#     @autocleanup
-#     def runTest(self):
-#         self.setup_int()
-#
-#         dport = 5060
-#
-#         # int_type=hop-by-hop
-#         int_shim = INT_L45_HEAD(int_type=1, length=4)
-#         # ins_cnt: 5 = switch id + ports + q occupancy + ig port + eg port)
-#         # max_hop_count: 3
-#         # total_hop_count: 0
-#         # instruction_mask_0003: 0xd = switch id (0), ports (1), q occupancy (3)
-#         # instruction_mask_0407: 0xc = ig timestamp (4), eg timestamp (5)
-#         int_header = "\x00\x05\x03\x00\xdc\x00\x00\x00"
-#         # IP proto (UDP), UDP dport (4096)
-#         int_tail = INT_L45_TAIL(next_proto=17, proto_param=dport)
-#
-#         payload = "\xab" * 128
-#         inner_udp = UDP(sport=5061, dport=dport, chksum=0)
-#         # IP tos is 0x04 to enable INT
-#         pkt = Ether(src=self.DMAC_2, dst=self.SWITCH_MAC_2) / \
-#               IP(tos=0x04, src=S1U_ENB_IPV4, dst=UE_IPV4) / \
-#               inner_udp / \
-#               int_shim / int_header / int_tail / \
-#               payload
-#
-#         exp_int_shim = INT_L45_HEAD(int_type=1, length=9)
-#         # total_hop_count: 1
-#         exp_int_header = "\x00\x05\x03\x01\xdc\x00\x00\x00"
-#         # switch id: 1
-#         exp_int_metadata = "\x00\x00\x00\x01"
-#         # ig port: port2, eg port: port2
-#         exp_int_metadata += stringify(self.port2, 2) + stringify(self.port1, 2)
-#         # q id: 0, q occupancy: ?
-#         exp_int_metadata += "\x00\x00\x00\x00"
-#         # ig timestamp: ?
-#         # eg timestamp: ?
-#         exp_int_metadata += "\x00\x00\x00\x00" * 2
-#
-#         exp_int = exp_int_shim / exp_int_header / exp_int_metadata / int_tail
-#
-#         exp_pkt = Ether(src=self.SWITCH_MAC_1, dst=self.DMAC_1) / \
-#                   MPLS(label=self.mpls_label, cos=0, s=1, ttl=64) / \
-#                   IP(tos=0, id=0x1513, flags=0, frag=0,
-#                      src=S1U_SGW_IPV4, dst=S1U_ENB_IPV4) / \
-#                   UDP(sport=UDP_GTP_PORT, dport=UDP_GTP_PORT, chksum=0) / \
-#                   make_gtp(20 + len(inner_udp) + len(exp_int) + len(payload), 1) / \
-#                   IP(tos=0x04, src=S1U_ENB_IPV4, dst=UE_IPV4, ttl=64) / \
-#                   inner_udp / \
-#                   exp_int / \
-#                   payload
-#         # We mask off the timestamps as well as the queue occupancy
-#         exp_pkt = Mask(exp_pkt)
-#         offset_metadata = 14 + 4 + 20 + 8 + 8 + 20 + 8 + 4 + 8
-#         exp_pkt.set_do_not_care((offset_metadata + 9) * 8, 11 * 8)
-#
-#         testutils.send_packet(self, self.port2, str(pkt))
-#         testutils.verify_packet(self, exp_pkt, self.port1)
+@group("spgw-int")
+class SpgwUplinkIntSourceTest(SpgwIntTest):
 
+    @autocleanup
+    def doRunTest(self, pkt, tagged1, tagged2, mpls, instructions=[]):
+        self.runUplinkSourceTest(ue_out_pkt=pkt, tagged1=tagged1,
+                                 tagged2=tagged2, mpls=mpls,
+                                 instructions=instructions)
+
+    def runTest(self):
+        instr_sets = [
+            [INT_SWITCH_ID, INT_IG_EG_PORT],
+            [INT_SWITCH_ID, INT_IG_EG_PORT, INT_IG_TSTAMP, INT_EG_TSTAMP, INT_QUEUE_OCCUPANCY]
+        ]
+        print ""
+        for vlan_conf, tagged in vlan_confs.items():
+            for pkt_type in ["tcp", "udp"]: # TODO: Support ICMP
+                for mpls in [False, True]:
+                    if mpls and tagged[1]:
+                            continue
+                    for instrs in instr_sets:
+                        print "Testing VLAN=%s, pkt=%s, mpls=%s, instructions=%s..." \
+                            % (vlan_conf, pkt_type, mpls,
+                               ",".join([INT_INS_TO_NAME[i] for i in instrs]))
+                        pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
+                            eth_src=HOST1_MAC, eth_dst=SWITCH_MAC,
+                            ip_src=HOST1_IPV4, ip_dst=HOST2_IPV4,
+                            pktlen=MIN_PKT_LEN
+                        )
+                        self.doRunTest(pkt, tagged[0], tagged[1], mpls, instrs)
+
+@group("spgw-int")
+class SpgwUplinkIntSourceAndTransitTest(SpgwIntTest):
+
+    @autocleanup
+    def doRunTest(self, pkt, tagged1, tagged2, mpls, instructions=[]):
+        self.runUplinkIntSourceTest(ue_out_pkt=pkt, tagged1=tagged1,
+                                    tagged2=tagged2, mpls=mpls,
+                                    instructions=instructions, with_transit=True)
+
+    def runTest(self):
+        instr_sets = [
+            [INT_SWITCH_ID, INT_IG_EG_PORT],
+            [INT_SWITCH_ID, INT_IG_EG_PORT, INT_IG_TSTAMP, INT_EG_TSTAMP, INT_QUEUE_OCCUPANCY]
+        ]
+        print ""
+        for vlan_conf, tagged in vlan_confs.items():
+            for pkt_type in ["tcp", "udp"]: # TODO: Support ICMP
+                for mpls in [False, True]:
+                    if mpls and tagged[1]:
+                            continue
+                    for instrs in instr_sets:
+                        print "Testing VLAN=%s, pkt=%s, mpls=%s, instructions=%s..." \
+                            % (vlan_conf, pkt_type, mpls,
+                               ",".join([INT_INS_TO_NAME[i] for i in instrs]))
+                        pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
+                            eth_src=HOST1_MAC, eth_dst=SWITCH_MAC,
+                            ip_src=HOST1_IPV4, ip_dst=HOST2_IPV4,
+                            pktlen=MIN_PKT_LEN
+                        )
+                        self.doRunTest(pkt, tagged[0], tagged[1], mpls, instrs)
 
 @group("int")
 class FabricIntSourceTest(IntTest):

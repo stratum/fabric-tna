@@ -1557,6 +1557,85 @@ class IntTest(IPv4UnicastTest):
                                 tagged1=tagged1, tagged2=tagged2, mpls=mpls,
                                 prefix_len=32, exp_pkt=exp_pkt)
 
+class SpgwIntTest(SpgwSimpleTest, IntTest):
+
+    def runUplinkIntSourceTest(self, ue_out_pkt, tagged1, tagged2, mpls,
+                      instructions=[], with_transit=False, ignore_csum=True,
+                      switch_id=1, max_int_hop=4):
+
+        # Set up SPGW tables and GTPU headers
+        ctr_id = 1
+        dst_mac = HOST2_MAC
+
+        gtp_pkt = pkt_add_gtp(ue_out_pkt, out_ipv4_src=S1U_ENB_IPV4,
+                              out_ipv4_dst=S1U_SGW_IPV4, teid=TEID_1)
+        exp_pkt = ue_out_pkt.copy()
+        exp_pkt[Ether].src = exp_pkt[Ether].dst
+        exp_pkt[Ether].dst = dst_mac
+        if not mpls:
+            exp_pkt[IP].ttl = exp_pkt[IP].ttl - 1
+        else:
+            exp_pkt = pkt_add_mpls(exp_pkt, MPLS_LABEL_2, DEFAULT_MPLS_TTL)
+        if tagged2:
+            exp_pkt = pkt_add_vlan(exp_pkt, VLAN_ID_2)
+
+        self.setup_uplink(
+            s1u_sgw_addr=S1U_SGW_IPV4,
+            teid=TEID_1,
+            ue_addr=ue_out_pkt[IP].src,
+            ctr_id=ctr_id
+        )
+
+        # Set up INT tables and INT headers (srouce and transit)
+        ig_port = self.port1
+        eg_port = self.port2
+
+        # Based on packet for UE traffic
+        proto = UDP if UDP in ue_out_pkt else TCP
+        ipv4_src = ue_out_pkt[IP].src
+        ipv4_dst = ue_out_pkt[IP].dst
+        sport = ue_out_pkt[proto].sport
+        dport = ue_out_pkt[proto].dport
+
+        instructions = set(instructions)
+        ins_cnt = len(instructions)
+
+        self.setup_source_port(ig_port)
+        self.setup_source_flow(
+            ipv4_src=ipv4_src, ipv4_dst=ipv4_dst, sport=sport, dport=dport,
+            instructions=instructions, max_hop=max_int_hop)
+
+        if with_transit:
+            self.setup_transit(switch_id)
+            int_metadata, masked_ins_cnt = self.get_int_metadata(
+                instructions=instructions, switch_id=switch_id,
+                ig_port=ig_port, eg_port=eg_port)
+        else:
+            int_metadata, masked_ins_cnt = "", ins_cnt
+
+        # Note that we modify the `exp_pkt` from SPGW test.
+        exp_pkt = self.get_int_pkt(
+            pkt=exp_pkt, instructions=instructions, max_hop=max_int_hop,
+            transit_hops=1 if with_transit else 0,
+            hop_metadata=int_metadata)
+
+        if with_transit or ignore_csum:
+            mask_pkt = Mask(exp_pkt)
+            if with_transit:
+                offset_metadata = len(exp_pkt) - len(exp_pkt[proto].payload) \
+                                  + len(INT_L45_HEAD()) + len(INT_META_HDR()) \
+                                  + (ins_cnt - masked_ins_cnt) * 4
+                mask_pkt.set_do_not_care(offset_metadata * 8, masked_ins_cnt * 4 * 8)
+            if ignore_csum:
+                csum_offset = len(exp_pkt) - len(exp_pkt[IP].payload) \
+                              + (6 if proto is UDP else 16)
+                mask_pkt.set_do_not_care(csum_offset * 8, 2 * 8)
+            exp_pkt = mask_pkt
+
+        self.runIPv4UnicastTest(pkt=gtp_pkt, dst_ipv4=ue_out_pkt[IP].dst,
+                                next_hop_mac=dst_mac,
+                                prefix_len=32, exp_pkt=exp_pkt,
+                                tagged1=tagged1, tagged2=tagged2, mpls=mpls)
 
 class PppoeTest(DoubleVlanTerminationTest):
 

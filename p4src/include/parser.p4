@@ -224,7 +224,7 @@ parser FabricIngressParser (packet_in  packet,
 
     state parse_int_data {
         // Parse INT metadata stack, but not tail
-        int_data_parser.apply(packet, hdr, hdr.intl4_shim.len_words);
+        int_data_parser.apply(packet, hdr);
         transition parse_intl4_tail;
     }
 
@@ -498,7 +498,7 @@ parser FabricEgressParser (packet_in packet,
 
     state parse_int_data {
         // Parse INT metadata stack, but not tail
-        int_data_parser.apply(packet, hdr, hdr.intl4_shim.len_words);
+        int_data_parser.apply(packet, hdr);
         transition parse_intl4_tail;
     }
 

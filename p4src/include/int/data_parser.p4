@@ -5,10 +5,9 @@
 
 #include "define.p4"
 
-parser IntDataParser(packet_in packet, inout parsed_headers_t hdr,
-in bit<8> foo) {
+parser IntDataParser(packet_in packet, inout parsed_headers_t hdr) {
     state start {
-        transition select(foo) {
+        transition select(hdr.intl4_shim.len_words) {
             INT_HEADER_LEN_WORDS: accept; // Header and tail only
             // Maximum 3 hops supports (8 metadata * 3)
             8w5: parse_int_data_1;
