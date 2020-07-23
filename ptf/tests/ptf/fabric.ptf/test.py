@@ -1056,6 +1056,11 @@ class MulticastGroupReadWriteTest(FabricTest):
         received_mc_entry = self.read_mcast_group(grp_id)
         self.verify_p4runtime_entity(expected_mc_entry, received_mc_entry)
 
+        # Read all groups
+        received_mc_entries = self.read_all_mcast_groups()
+        if len(received_mc_entries) != 2:
+            self.fail("Incorrect number of mcast groups")
+
     @autocleanup
     def emptyReplicaTest(self):
         grp_id = 20
