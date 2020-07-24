@@ -18,7 +18,7 @@ control IntTransit (
         hdr.int_port_ids.egress_port_id = (bit<16>) eg_intr_md.egress_port;
         hdr.int_ingress_tstamp.ingress_tstamp = (bit<32>)fabric_md.ig_tstamp;
         hdr.int_egress_tstamp.egress_tstamp = (bit<32>)eg_prsr_md.global_tstamp;
-        hdr.int_hop_latency.hop_latency = (bit<32>)eg_prsr_md.global_tstamp - (bit<32>)fabric_md.ig_tstamp;
+        hdr.int_hop_latency.hop_latency = (bit<32>)(eg_prsr_md.global_tstamp - fabric_md.ig_tstamp);
         hdr.int_q_occupancy.q_id = (bit<8>)eg_intr_md.egress_qid;
         hdr.int_q_occupancy.q_occupancy = (bit<24>)eg_intr_md.enq_qdepth;
         hdr.int_q_congestion.q_id = (bit<8>)eg_intr_md.egress_qid;
