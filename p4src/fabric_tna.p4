@@ -117,7 +117,7 @@ control FabricEgress (
         pkt_io_egress.apply(hdr, fabric_md, eg_intr_md);
         egress_next.apply(hdr, fabric_md, eg_intr_md, eg_dprsr_md);
 #ifdef WITH_INT
-        int_egress.apply(hdr, fabric_md, eg_intr_md, eg_dprsr_md);
+        int_egress.apply(hdr, fabric_md, eg_intr_md, eg_prsr_md);
 #endif
 #ifdef WITH_SPGW
         spgw_egress.apply(hdr, fabric_md);

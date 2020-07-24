@@ -9,79 +9,39 @@ control IntTransit (
     inout parsed_headers_t hdr,
     inout fabric_egress_metadata_t fabric_md,
     in    egress_intrinsic_metadata_t eg_intr_md,
-    inout egress_intrinsic_metadata_for_deparser_t eg_dprsr_md) {
+    in    egress_intrinsic_metadata_from_parser_t eg_prsr_md) {
 
     action init_metadata(bit<32> switch_id) {
         fabric_md.int_device_type = IntDeviceType.TRANSIT;
-#ifdef _INT_INIT_METADATA
-        // Allow other targets to initialize INT metadata in their own way.
-        _INT_INIT_METADATA
-#else
-        fabric_md.int_switch_id = switch_id;
-#endif // _INT_INIT_METADATA
-    }
-
-#ifdef _INT_METADATA_ACTIONS
-    _INT_METADATA_ACTIONS
-#else
-    // Switch ID.
-    @hidden
-    action int_set_header_0() {
-        hdr.int_switch_id.setValid();
-        hdr.int_switch_id.switch_id = fabric_md.int_switch_id;
-    }
-    // Port IDs.
-    @hidden
-    action int_set_header_1() {
-        hdr.int_port_ids.setValid();
+        hdr.int_switch_id.switch_id = switch_id;
         hdr.int_port_ids.ingress_port_id = (bit<16>) fabric_md.ingress_port;
         hdr.int_port_ids.egress_port_id = (bit<16>) eg_intr_md.egress_port;
-    }
-    // Hop latency.
-    @hidden
-    action int_set_header_2() {
-        hdr.int_hop_latency.setValid();
-        // FIXME(Yi): should this be the delta between ingress/egress timestamp?
-        hdr.int_hop_latency.hop_latency = (bit<32>) eg_intr_md.deq_timedelta;
-    }
-    // Queue occupancy.
-    @hidden
-    action int_set_header_3() {
-        hdr.int_q_occupancy.setValid();
-        // TODO: We assume only one.
-        hdr.int_q_occupancy.q_id = 8w0;
-        hdr.int_q_occupancy.q_occupancy = (bit<24>) eg_intr_md.deq_qdepth;
-    }
-    // Ingress timestamp.
-    @hidden
-    action int_set_header_4() {
-        hdr.int_ingress_tstamp.setValid();
-        // FIXME(Yi): Should be ingress timestamp from ingress parser?
-        hdr.int_ingress_tstamp.ingress_tstamp = (bit<32>) eg_intr_md.enq_tstamp;
-    }
-    // Egress timestamp.
-    @hidden
-    action int_set_header_5() {
-        hdr.int_egress_tstamp.setValid();
-        // FIXME(Yi): multiple assign action in single
-        hdr.int_egress_tstamp.egress_tstamp = 0;//(bit<32>)(eg_intr_md.enq_tstamp + eg_intr_md.deq_timedelta);
-    }
-    // Queue congestion.
-    @hidden
-    action int_set_header_6() {
-        hdr.int_q_congestion.setValid();
-        // TODO: support queue congestion.
-        hdr.int_q_congestion.q_id = 8w0;
-        hdr.int_q_congestion.q_congestion = 24w0;
-    }
-    // Egress port utilization.
-    @hidden
-    action int_set_header_7() {
-        hdr.int_egress_tx_util.setValid();
-        // TODO: implement tx utilization support in BMv2.
+        hdr.int_ingress_tstamp.ingress_tstamp = (bit<32>)fabric_md.ig_tstamp;
+        hdr.int_egress_tstamp.egress_tstamp = (bit<32>)eg_prsr_md.global_tstamp;
+        hdr.int_hop_latency.hop_latency = (bit<32>)eg_prsr_md.global_tstamp - (bit<32>)fabric_md.ig_tstamp;
+        hdr.int_q_occupancy.q_id = (bit<8>)eg_intr_md.egress_qid;
+        hdr.int_q_occupancy.q_occupancy = (bit<24>)eg_intr_md.enq_qdepth;
+        hdr.int_q_congestion.q_id = (bit<8>)eg_intr_md.egress_qid;
+        hdr.int_q_congestion.q_congestion = (bit<24>)eg_intr_md.enq_congest_stat;
         hdr.int_egress_tx_util.egress_port_tx_util = 32w0;
     }
-#endif // _INT_METADATA_ACTIONS
+
+    @hidden
+    action int_set_header_0() { hdr.int_switch_id.setValid(); }
+    @hidden
+    action int_set_header_1() { hdr.int_port_ids.setValid(); }
+    @hidden
+    action int_set_header_2() { hdr.int_hop_latency.setValid(); }
+    @hidden
+    action int_set_header_3() { hdr.int_q_occupancy.setValid(); }
+    @hidden
+    action int_set_header_4() { hdr.int_ingress_tstamp.setValid(); }
+    @hidden
+    action int_set_header_5() { hdr.int_egress_tstamp.setValid(); }
+    @hidden
+    action int_set_header_6() { hdr.int_q_congestion.setValid(); }
+    @hidden
+    action int_set_header_7() { hdr.int_egress_tx_util.setValid(); }
 
     // Actions to keep track of the new metadata added.
     @hidden

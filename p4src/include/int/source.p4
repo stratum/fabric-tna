@@ -9,8 +9,7 @@
 control IntSource (
     inout parsed_headers_t hdr,
     inout fabric_egress_metadata_t fabric_md,
-    in    egress_intrinsic_metadata_t eg_intr_md,
-    inout egress_intrinsic_metadata_for_deparser_t eg_dprsr_md) {
+    in    egress_intrinsic_metadata_t eg_intr_m) {
 
     @hidden
     action int_source(bit<8> max_hop, bit<5> ins_cnt, bit<4> ins_mask0003, bit<4> ins_mask0407) {

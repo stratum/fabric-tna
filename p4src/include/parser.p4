@@ -28,6 +28,7 @@ parser FabricIngressParser (packet_in  packet,
     state start {
         packet.extract(ig_intr_md);
         packet.advance(PORT_METADATA_SIZE);
+        hdr.bridge_md.ig_tstamp = ig_intr_md.ingress_mac_tstamp;
         transition select(ig_intr_md.ingress_port) {
             CPU_PORT: parse_packet_out;
             default: parse_ethernet;

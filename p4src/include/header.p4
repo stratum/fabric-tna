@@ -187,6 +187,7 @@ struct fabric_egress_metadata_t {
     vlan_id_t       vlan_id;
     mpls_label_t    mpls_label;
     bit<8>          mpls_ttl;
+    bit<48>         ig_tstamp;
 #ifdef WITH_DOUBLE_VLAN_TERMINATION
     bool            push_double_vlan;
     vlan_id_t       inner_vlan_id;
@@ -226,6 +227,7 @@ header bridge_metadata_t {
     bool            is_multicast;
     PortId_t        ingress_port;
     vlan_id_t       vlan_id;
+    bit<48>         ig_tstamp;
 #ifdef WITH_DOUBLE_VLAN_TERMINATION
     bool            push_double_vlan;
     vlan_id_t       inner_vlan_id;
