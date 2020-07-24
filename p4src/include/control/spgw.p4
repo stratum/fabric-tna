@@ -137,7 +137,7 @@ control SpgwIngress(
         fabric_md.gtpu_tunnel_dip = tunnel_dst_addr;
         // update metadata for correct routing/hashing
         fabric_md.ipv4_src_addr = tunnel_src_addr;
-        fabric_md.ipv4_dst_addr = tunnel_dst_addr
+        fabric_md.ipv4_dst_addr = tunnel_dst_addr;
     }
 
 
