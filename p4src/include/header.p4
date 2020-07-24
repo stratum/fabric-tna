@@ -111,7 +111,7 @@ header icmp_t {
     bit<64> timestamp;
 }
 
-#ifdef WITH_SPGW
+#ifdef WITH_GTPU
 // GTPU v1
 header gtpu_t {
     bit<3>  version;    /* version */
@@ -124,7 +124,7 @@ header gtpu_t {
     bit<16> msglen;     /* message length */
     teid_t  teid;       /* tunnel endpoint id */
 }
-#endif // WITH_SPGW
+#endif // WITH_GTPU
 
 // Custom metadata definition
 @flexible
@@ -153,7 +153,7 @@ struct fabric_ingress_metadata_t {
     fwd_type_t      fwd_type;
     next_id_t       next_id;
     bool            is_multicast;
-#ifdef WITH_SPGW
+#ifdef WITH_GTPU
     bit<16>         spgw_ipv4_len;
     bit<16>         inner_l4_sport;
     bit<16>         inner_l4_dport;
@@ -172,7 +172,7 @@ struct fabric_ingress_metadata_t {
     pdr_ctr_id_t    pdr_ctr_id;
     SpgwInterface   spgw_src_iface;
     SpgwDirection   spgw_direction;
-#endif // WITH_SPGW
+#endif // WITH_GTPU
 #ifdef WITH_INT
     IntDeviceType int_device_type;
     bit<32> int_switch_id;
@@ -193,7 +193,7 @@ struct fabric_egress_metadata_t {
 #endif // WITH_DOUBLE_VLAN_TERMINATION
     bit<16>         ip_eth_type;
     bit<8>          ip_proto;
-#ifdef WITH_SPGW
+#ifdef WITH_GTPU
     bit<16>         spgw_ipv4_len;
     bool            needs_gtpu_encap;
     bool            skip_spgw;
@@ -205,7 +205,7 @@ struct fabric_egress_metadata_t {
     bool            inner_ipv4_checksum_err;
     bit<16>         inner_l4_sport;
     bit<16>         inner_l4_dport;
-#endif // WITH_SPGW
+#endif // WITH_GTPU
     bit<16>         l4_sport;
     bit<16>         l4_dport;
     bool            is_mirror;
@@ -232,7 +232,7 @@ header bridge_metadata_t {
 #endif // WITH_DOUBLE_VLAN_TERMINATION
     bit<16>         ip_eth_type;
     bit<8>          ip_proto;
-#ifdef WITH_SPGW
+#ifdef WITH_GTPU
     bit<16>         spgw_ipv4_len;
     bool            needs_gtpu_encap;
     bool            skip_spgw;
@@ -241,7 +241,7 @@ header bridge_metadata_t {
     bit<32>         gtpu_tunnel_dip;
     bit<16>         gtpu_tunnel_sport;
     pdr_ctr_id_t    pdr_ctr_id;
-#endif // WITH_SPGW
+#endif // WITH_GTPU
     bit<16>         l4_sport;
     bit<16>         l4_dport;
 #ifdef WITH_INT
@@ -272,7 +272,7 @@ struct parsed_headers_t {
     tcp_t tcp;
     udp_t udp;
     icmp_t icmp;
-#ifdef WITH_SPGW
+#ifdef WITH_GTPU
     ipv4_t outer_ipv4;
     udp_t outer_udp;
     gtpu_t gtpu;
@@ -280,7 +280,7 @@ struct parsed_headers_t {
     tcp_t inner_tcp;
     udp_t inner_udp;
     icmp_t inner_icmp;
-#endif // WITH_SPGW
+#endif // WITH_GTPU
     packet_out_header_t packet_out;
     packet_in_header_t packet_in;
     // INT specific headers
