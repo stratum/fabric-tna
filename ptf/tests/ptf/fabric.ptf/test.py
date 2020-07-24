@@ -590,9 +590,9 @@ class SpgwUplinkIntSourceTest(SpgwIntTest):
 
     @autocleanup
     def doRunTest(self, pkt, tagged1, tagged2, mpls, instructions=[]):
-        self.runUplinkSourceTest(ue_out_pkt=pkt, tagged1=tagged1,
-                                 tagged2=tagged2, mpls=mpls,
-                                 instructions=instructions)
+        self.runUplinkIntSourceTest(ue_out_pkt=pkt, tagged1=tagged1,
+                                    tagged2=tagged2, mpls=mpls,
+                                    instructions=instructions)
 
     def runTest(self):
         instr_sets = [
@@ -632,7 +632,7 @@ class SpgwUplinkIntSourceAndTransitTest(SpgwIntTest):
         ]
         print ""
         for vlan_conf, tagged in vlan_confs.items():
-            for pkt_type in ["tcp", "udp"]: # TODO: Support ICMP
+            for pkt_type in ["tcp", "udp"]:
                 for mpls in [False, True]:
                     if mpls and tagged[1]:
                             continue
@@ -664,7 +664,7 @@ class SpgwUplinkIntTransitTest(SpgwIntTest):
         ]
         print ""
         for vlan_conf, tagged in vlan_confs.items():
-            for pkt_type in ["tcp", "udp"]: # TODO: Support ICMP
+            for pkt_type in ["tcp", "udp"]:
                 for mpls in [False, True]:
                     if mpls and tagged[1]:
                             continue

@@ -40,35 +40,6 @@ control IntIngress (
         size = MAX_PORTS;
     }
 
-    @hidden
-    action reset_ip_and_int_tail() {
-        hdr.intl4_tail.dest_port = fabric_md.l4_dport;
-        hdr.intl4_tail.dscp = hdr.ipv4.dscp;
-        // Follow the current protocol of IPv4
-        // since we are not changing the protocol when
-        // we add the INT headers to the packet.
-        hdr.intl4_tail.next_proto = hdr.ipv4.protocol;
-        hdr.ipv4.dscp = INT_DSCP;
-    }
-
-    @hidden
-    table tb_check_ip_dscp {
-        key = {
-            hdr.ipv4.isValid(): exact;
-            hdr.ipv4.dscp:      ternary;
-        }
-        actions = {
-            nop;
-            reset_ip_and_int_tail;
-        }
-        size = 2;
-        const entries = {
-            (true, INT_DSCP &&& 0x3f): nop();
-            (true, _): reset_ip_and_int_tail();
-        }
-        const default_action = nop();
-    }
-
 #ifdef WITH_INT_SINK
 
     action int_set_sink () {
@@ -91,10 +62,6 @@ control IntIngress (
     apply {
         fabric_md.int_device_type = IntDeviceType.UNKNOWN;
         tb_set_source.apply();
-
-        // Need to check the IP DSCP field since the SPGW pipeline
-        // may override the IP header.
-        tb_check_ip_dscp.apply();
 
 #ifdef WITH_INT_SINK
         tb_set_sink.apply();

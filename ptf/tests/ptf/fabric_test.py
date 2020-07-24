@@ -1643,18 +1643,19 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         ctr_id = 1
         dst_mac = HOST2_MAC
 
-        gtp_pkt = pkt_add_gtp(ue_out_pkt, out_ipv4_src=S1U_ENB_IPV4,
-                              out_ipv4_dst=S1U_SGW_IPV4, teid=TEID_1)
-
         # Set up INT tables and INT headers (srouce and transit)
         ig_port = self.port1
         eg_port = self.port2
         hop_metadata, _ = self.get_int_metadata(instructions, switch_id, ig_port, eg_port)
-        int_pkt = self.get_int_pkt(pkt=gtp_pkt, instructions=instructions, max_hop=max_int_hop,
+        int_pkt = self.get_int_pkt(pkt=ue_out_pkt, instructions=instructions, max_hop=max_int_hop,
                                    transit_hops=prev_hops,
                                    hop_metadata=hop_metadata)
 
-        exp_pkt = ue_out_pkt.copy()
+        # Apply GTPU encapsulation
+        gtp_pkt = pkt_add_gtp(ue_out_pkt, out_ipv4_src=S1U_ENB_IPV4,
+                              out_ipv4_dst=S1U_SGW_IPV4, teid=TEID_1)
+
+        exp_pkt = int_pkt.copy()
         exp_pkt[Ether].src = exp_pkt[Ether].dst
         exp_pkt[Ether].dst = dst_mac
         if not mpls:
@@ -1664,16 +1665,11 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         if tagged2:
             exp_pkt = pkt_add_vlan(exp_pkt, VLAN_ID_2)
 
-        # Add INT headers into expected packet
-        exp_pkt = self.get_int_pkt(pkt=exp_pkt, instructions=instructions, max_hop=max_int_hop,
-                                   transit_hops=prev_hops,
-                                   hop_metadata=hop_metadata)
-
         # Set up INT tables
         ins_cnt = len(instructions)
         self.setup_transit(switch_id)
 
-        # Add new metadata to the packet
+        # Add new INT metadata headers into expected packet
         new_metadata, masked_ins_cnt = self.get_int_metadata(
             instructions=instructions, switch_id=switch_id,
             ig_port=ig_port, eg_port=eg_port)
