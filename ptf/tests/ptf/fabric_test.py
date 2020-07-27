@@ -674,7 +674,7 @@ class FabricTest(P4RuntimeTest):
                     groups.append(pre_entry.multicast_group_entry)
         return groups
 
-    def read_clone_group(self, clone_id):
+    def read_clone_session(self, clone_id):
         req = self.get_new_read_request()
         entity = req.entities.add()
         clone_session = entity.packet_replication_engine_entry.clone_session_entry
@@ -686,6 +686,19 @@ class FabricTest(P4RuntimeTest):
                 if pre_entry.HasField("clone_session_entry"):
                     return pre_entry.clone_session_entry
         return None
+
+    def read_all_clone_sessions(self):
+        sessions = []
+        req = self.get_new_read_request()
+        entity = req.entities.add()
+        clone_session = entity.packet_replication_engine_entry.clone_session_entry
+        clone_session.session_id = 0
+        for entity in self.read_request(req):
+            if entity.HasField("packet_replication_engine_entry"):
+                pre_entry = entity.packet_replication_engine_entry
+                if pre_entry.HasField("clone_session_entry"):
+                    sessions.append(pre_entry.clone_session_entry)
+        return sessions
 
 class BridgingTest(FabricTest):
 
