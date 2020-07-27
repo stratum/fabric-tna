@@ -25,7 +25,7 @@ build: clean $(PROFILES) pipeconf
 all: fabric
 
 fabric:
-	@${p4-build} fabric "-DWITH_DOUBLE_VLAN_TERMINATION"
+	@${p4-build} fabric ""
 
 # Profiles which are not completed yet.
 # fabric-simple:
@@ -37,8 +37,8 @@ fabric:
 # fabric-int:
 # 	@${p4-build} fabric-int "-DWITH_INT_SOURCE -DWITH_INT_TRANSIT"
 
-# fabric-spgw:
-# 	@${p4-build} fabric-spgw "-DWITH_SPGW"
+fabric-spgw:
+	@${p4-build} fabric-spgw "-DWITH_SPGW"
 
 # fabric-spgw-int:
 # 	@${p4-build} fabric-spgw-int "-DWITH_SPGW -DWITH_INT_SOURCE -DWITH_INT_TRANSIT"

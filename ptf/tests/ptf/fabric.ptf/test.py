@@ -37,6 +37,7 @@ class FabricBridgingTest(BridgingTest):
                 self.doRunTest(tagged[0], tagged[1], pkt)
 
 
+@skip("XConnect Currently Unsupported")
 @group("xconnect")
 class FabricDoubleVlanXConnectTest(DoubleVlanXConnectTest):
     @autocleanup
@@ -909,9 +910,53 @@ class FabricDoubleTaggedHostDownstream(DoubleVlanTerminationTest):
 
 @group("p4r-function")
 class TableEntryReadWriteTest(FabricTest):
+    @autocleanup
+    def doRunWildcardAllTablesTest(self):
+        req, _ = self.add_forwarding_acl_punt_to_cpu(ETH_TYPE_IPV4)
+        req, _ = self.add_bridging_entry(1, "00:00:00:00:00:01", "ff:ff:ff:ff:ff:ff", 1)
+        req, _ = self.add_next_hashed_group_member("output_hashed", [("port_num", stringify(1, 2))])
+        self.add_forwarding_routing_v4_entry(HOST2_IPV4, 24, 400)
+
+        req_all = self.get_new_read_request()
+        entity = req_all.entities.add()
+        table_entry = entity.table_entry
+        table_entry.table_id = 0
+        table_entry.priority = 0
+        print(req_all)
+        resp = self.read_request(req_all)
+        print(resp)
+        if len(resp) != 3:
+            self.fail("Expected 3 table entries")
+        pass
 
     @autocleanup
-    def doRunTest(self):
+    def doRunWildcardSingleTableTest(self):
+        req1, _ = self.add_forwarding_acl_punt_to_cpu(ETH_TYPE_IPV4)
+        req2, _ = self.add_forwarding_acl_punt_to_cpu(ETH_TYPE_ARP)
+        req3, _ = self.add_forwarding_acl_punt_to_cpu(ETH_TYPE_VLAN)
+
+        # received_acl_entry = self.read_forwarding_acl_punt_to_cpu(None, priority=0)
+        req_all = self.get_new_read_request()
+        entity = req_all.entities.add()
+        table_entry = entity.table_entry
+        table_entry.table_id = self.get_table_id("acl.acl")
+        table_entry.priority = 0
+        # match = table_entry.match.add()
+        # match.field_id = self.get_mf_id("acl.acl", "eth_type")
+        # match.ternary.value = stringify(0, 2)
+        # match.ternary.mask = stringify(0, 2)
+        # for mf in [self.Ternary("eth_type", stringify(0, 2), stringify(0, 2))]:
+        #     mf_id = self.get_mf_id("acl.acl", "eth_type")
+        #     mf.add_to(mf_id, table_entry.match)
+        print(req_all)
+        resp = self.read_request(req_all)
+        print(resp)
+        # for req in [req1, req2, req3]:
+        #     expected_entry = req.updates[0].entity.table_entry
+        #     self.verify_p4runtime_entity(expected_entry, req_all[])
+
+    @autocleanup
+    def doRunSingleEntryTest(self):
         req, _ = self.add_bridging_entry(1, "00:00:00:00:00:01", "ff:ff:ff:ff:ff:ff", 1)
         expected_bridging_entry = req.updates[0].entity.table_entry
         received_bridging_entry = self.read_bridging_entry(1, "00:00:00:00:00:01", "ff:ff:ff:ff:ff:ff")
@@ -924,7 +969,9 @@ class TableEntryReadWriteTest(FabricTest):
 
     def runTest(self):
         print("")
-        self.doRunTest()
+        self.doRunSingleEntryTest()
+        self.doRunWildcardSingleTableTest()
+        self.doRunWildcardAllTablesTest()
 
 @group("p4r-function")
 class ActionProfileMemberReadWriteTest(FabricTest):
@@ -995,7 +1042,29 @@ class MulticastGroupReadWriteTest(FabricTest):
     @autocleanup
     def doRunTest(self):
         grp_id = 10
-        replicas = [(0, 1), (0, 2), (0, 3)]  # (instance, port)
+        replicas = [(0, 1), (0, 2), (0, 3), (1, 4), (1, 5)]  # (instance, port)
+        req, _ = self.add_mcast_group(grp_id, replicas)
+        expected_mc_entry = req.updates[0].entity.packet_replication_engine_entry.multicast_group_entry
+        received_mc_entry = self.read_mcast_group(grp_id)
+        self.verify_p4runtime_entity(expected_mc_entry, received_mc_entry)
+
+        # Add second group with high id
+        grp_id = 0xffff
+        replicas = [(0, 1), (0, 2), (0, 3), (1, 4), (1, 5)]  # (instance, port)
+        req, _ = self.add_mcast_group(grp_id, replicas)
+        expected_mc_entry = req.updates[0].entity.packet_replication_engine_entry.multicast_group_entry
+        received_mc_entry = self.read_mcast_group(grp_id)
+        self.verify_p4runtime_entity(expected_mc_entry, received_mc_entry)
+
+        # Read all groups
+        received_mc_entries = self.read_all_mcast_groups()
+        if len(received_mc_entries) != 2:
+            self.fail("Incorrect number of mcast groups")
+
+    @autocleanup
+    def emptyReplicaTest(self):
+        grp_id = 20
+        replicas = []  # (instance, port)
         req, _ = self.add_mcast_group(grp_id, replicas)
         expected_mc_entry = req.updates[0].entity.packet_replication_engine_entry.multicast_group_entry
         received_mc_entry = self.read_mcast_group(grp_id)
@@ -1004,6 +1073,7 @@ class MulticastGroupReadWriteTest(FabricTest):
     def runTest(self):
         print("")
         self.doRunTest()
+        self.emptyReplicaTest()
 
 
 @group("p4r-function")
@@ -1011,6 +1081,7 @@ class MulticastGroupModificationTest(FabricTest):
 
     # Not using the auto cleanup since the Stratum modifies the
     # multicast node table internally
+    @autocleanup
     def doRunTest(self):
         # Add group with egress port 1~3 (instance 1 and 2)
         grp_id = 10
@@ -1023,9 +1094,6 @@ class MulticastGroupModificationTest(FabricTest):
         expected_mc_entry = req.updates[0].entity.packet_replication_engine_entry.multicast_group_entry
         received_mc_entry = self.read_mcast_group(grp_id)
         self.verify_p4runtime_entity(expected_mc_entry, received_mc_entry)
-
-        # Cleanup
-        self.delete_mcast_group(grp_id)
 
     def runTest(self):
         print("")
@@ -1067,6 +1135,8 @@ class CounterTest(BridgingTest):
                          if req.updates[0].entity.HasField('table_entry')]
         table_entries = [te for te in table_entries
                          if te.table_id == self.get_table_id('ingress_port_vlan')]
+        for table_entry in table_entries:
+            table_entry.ClearField("action")
 
         for table_entry in table_entries:
             direct_counter = self.read_direct_counter(table_entry)

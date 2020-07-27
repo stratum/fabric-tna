@@ -32,6 +32,7 @@ DEFAULT_MPLS_TTL = 64
 MIN_PKT_LEN = 80
 
 UDP_GTP_PORT = 2152
+DEFAULT_GTP_TUNNEL_SPORT = 1234 # arbitrary, but different from 2152
 
 ETH_TYPE_ARP = 0x0806
 ETH_TYPE_IPV4 = 0x0800
@@ -67,6 +68,12 @@ HOST4_IPV4 = "10.0.4.1"
 S1U_ENB_IPV4 = "119.0.0.10"
 S1U_SGW_IPV4 = "140.0.0.2"
 UE_IPV4 = "16.255.255.252"
+
+SPGW_DIRECTION_UPLINK = 1
+SPGW_DIRECTION_DOWNLINK = 2
+SPGW_IFACE_ACCESS = 1
+SPGW_IFACE_CORE = 2
+
 
 VLAN_ID_1 = 100
 VLAN_ID_2 = 200
@@ -188,12 +195,13 @@ def pkt_add_mpls(pkt, label, ttl, cos=0, s=1):
            pkt[Ether].payload
 
 
-def pkt_add_gtp(pkt, out_ipv4_src, out_ipv4_dst, teid):
+def pkt_add_gtp(pkt, out_ipv4_src, out_ipv4_dst, teid,
+                sport=DEFAULT_GTP_TUNNEL_SPORT, dport=UDP_GTP_PORT):
     payload = pkt[Ether].payload
     return Ether(src=pkt[Ether].src, dst=pkt[Ether].dst) / \
            IP(src=out_ipv4_src, dst=out_ipv4_dst, tos=0,
               id=0x1513, flags=0, frag=0) / \
-           UDP(sport=UDP_GTP_PORT, dport=UDP_GTP_PORT, chksum=0) / \
+           UDP(sport=sport, dport=dport, chksum=0) / \
            GTPU(teid=teid) / \
            payload
 
@@ -386,8 +394,12 @@ class FabricTest(P4RuntimeTest):
             "acl.punt_to_cpu", [], priority)
 
     def read_forwarding_acl_punt_to_cpu(self, eth_type=None, priority=DEFAULT_PRIORITY):
-        eth_type_ = stringify(eth_type, 2)
-        eth_type_mask_ = stringify(0xFFFF, 2)
+        if eth_type:
+            eth_type_ = stringify(eth_type, 2)
+            eth_type_mask_ = stringify(0xFFFF, 2)
+        else:
+            eth_type_ = stringify(0, 2)
+            eth_type_mask_ = stringify(0, 2)
         mk = [self.Ternary("eth_type", eth_type_, eth_type_mask_)]
         return self.read_table_entry("acl.acl", mk, priority)
 
@@ -649,6 +661,19 @@ class FabricTest(P4RuntimeTest):
                     return pre_entry.multicast_group_entry
         return None
 
+    def read_all_mcast_groups(self):
+        groups = []
+        req = self.get_new_read_request()
+        entity = req.entities.add()
+        multicast_group = entity.packet_replication_engine_entry.multicast_group_entry
+        multicast_group.multicast_group_id = 0
+        for entity in self.read_request(req):
+            if entity.HasField("packet_replication_engine_entry"):
+                pre_entry = entity.packet_replication_engine_entry
+                if pre_entry.HasField("multicast_group_entry"):
+                    groups.append(pre_entry.multicast_group_entry)
+        return groups
+      
     def read_clone_group(self, clone_id):
         req = self.get_new_read_request()
         entity = req.entities.add()
@@ -1119,21 +1144,37 @@ class SpgwSimpleTest(IPv4UnicastTest):
 
         self.push_update_add_entry_to_action(
             req,
-            "spgw_ingress.downlink_filter_table",
-            [self.Lpm("ipv4_prefix", ip_prefix_, prefix_len)],
-            "nop", [],
+            "FabricIngress.spgw_ingress.interface_lookup",
+            [
+                self.Lpm("ipv4_dst_addr", ip_prefix_, prefix_len),
+                self.Exact("gtpu_is_valid", stringify(0, 1))
+            ],
+            "FabricIngress.spgw_ingress.set_source_iface",
+            [
+                ("src_iface", stringify(SPGW_IFACE_CORE, 1)),
+                ("direction", stringify(SPGW_DIRECTION_DOWNLINK, 1)),
+                ("skip_spgw", stringify(0, 1)),
+            ],
         )
         self.write_request(req)
 
-    def add_s1u_iface(self, s1u_addr):
+    def add_s1u_iface(self, s1u_addr, prefix_len=32):
         req = self.get_new_write_request()
         s1u_addr_ = ipv4_to_binary(s1u_addr)
 
         self.push_update_add_entry_to_action(
             req,
-            "spgw_ingress.uplink_filter_table",
-            [self.Exact("gtp_ipv4_dst", s1u_addr_)],
-            "nop", [],
+            "FabricIngress.spgw_ingress.interface_lookup",
+            [
+                self.Lpm("ipv4_dst_addr", s1u_addr_, prefix_len),
+                self.Exact("gtpu_is_valid", stringify(1, 1))
+            ],
+            "FabricIngress.spgw_ingress.set_source_iface",
+            [
+                ("src_iface", stringify(SPGW_IFACE_ACCESS, 1)),
+                ("direction", stringify(SPGW_DIRECTION_UPLINK, 1)),
+                ("skip_spgw", stringify(0, 1)),
+            ],
         )
         self.write_request(req)
 
@@ -1142,16 +1183,17 @@ class SpgwSimpleTest(IPv4UnicastTest):
         req = self.get_new_write_request()
         self.push_update_add_entry_to_action(
             req,
-            "spgw_ingress.uplink_pdr_lookup",
+            "FabricIngress.spgw_ingress.uplink_pdr_lookup",
             [
                 self.Exact("ue_addr", ipv4_to_binary(ue_addr)),
                 self.Exact("teid", stringify(teid, 4)),
                 self.Exact("tunnel_ipv4_dst", ipv4_to_binary(tunnel_dst_addr)),
             ],
-            "spgw_ingress.set_pdr_attributes",
+            "FabricIngress.spgw_ingress.set_pdr_attributes",
             [
-                ("ctr_id", stringify(ctr_id, 4)),
-                ("far_id", stringify(far_id, 4))
+                ("ctr_id", stringify(ctr_id, 2)),
+                ("far_id", stringify(far_id, 4)),
+                ("needs_gtpu_decap", stringify(1, 1))
             ],
         )
         self.write_request(req)
@@ -1161,12 +1203,13 @@ class SpgwSimpleTest(IPv4UnicastTest):
 
         self.push_update_add_entry_to_action(
             req,
-            "spgw_ingress.downlink_pdr_lookup",
+            "FabricIngress.spgw_ingress.downlink_pdr_lookup",
             [self.Exact("ue_addr", ipv4_to_binary(ue_addr))],
-            "spgw_ingress.set_pdr_attributes",
+            "FabricIngress.spgw_ingress.set_pdr_attributes",
             [
-                ("ctr_id", stringify(ctr_id, 4)),
-                ("far_id", stringify(far_id, 4))
+                ("ctr_id", stringify(ctr_id, 2)),
+                ("far_id", stringify(far_id, 4)),
+                ("needs_gtpu_decap", stringify(0, 1))
             ],
         )
         self.write_request(req)
@@ -1175,7 +1218,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         req = self.get_new_write_request()
         self.push_update_add_entry_to_action(
             req,
-            "spgw_ingress.far_lookup",
+            "FabricIngress.spgw_ingress.far_lookup",
             [self.Exact("far_id", stringify(far_id, 4))],
             action_name,
             action_params,
@@ -1185,7 +1228,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
     def add_normal_far(self, far_id, drop=False, notify_cp=False):
         return self._add_far(
             far_id,
-            "spgw_ingress.load_normal_far_attributes",
+            "FabricIngress.spgw_ingress.load_normal_far_attributes",
             [
                 ("drop", stringify(drop, 1)),
                 ("notify_cp", stringify(notify_cp, 1)),
@@ -1193,14 +1236,15 @@ class SpgwSimpleTest(IPv4UnicastTest):
         )
 
     def add_tunnel_far(self, far_id, teid, tunnel_src_addr, tunnel_dst_addr,
-                       drop=False, notify_cp=False):
+                       tunnel_src_port=DEFAULT_GTP_TUNNEL_SPORT, drop=False, notify_cp=False):
         return self._add_far(
             far_id,
-            "spgw_ingress.load_tunnel_far_attributes",
+            "FabricIngress.spgw_ingress.load_tunnel_far_attributes",
             [
                 ("drop", stringify(drop, 1)),
                 ("notify_cp", stringify(notify_cp, 1)),
                 ("teid", stringify(teid, 4)),
+                ("tunnel_src_port", stringify(tunnel_src_port, 2)),
                 ("tunnel_src_addr", ipv4_to_binary(tunnel_src_addr)),
                 ("tunnel_dst_addr", ipv4_to_binary(tunnel_dst_addr)),
             ]
@@ -1221,7 +1265,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
 
         req = self.get_new_write_request()
 
-        action_name = "spgw_ingress.set_pdr_attributes"
+        action_name = "FabricIngress.spgw_ingress.set_pdr_attributes"
         action_args = [("ctr_id", stringify(ctr_id, 4)),
                         ("far_id", stringify(far_id, 4))]
 
@@ -1281,7 +1325,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             ctr_id=ctr_id
         )
 
-        ingress_pdr_pkt_ctr1 = self.read_pkt_count("spgw_ingress.pdr_counter", ctr_id)
+        ingress_pdr_pkt_ctr1 = self.read_pkt_count("FabricIngress.spgw_ingress.pdr_counter", ctr_id)
 
         self.runIPv4UnicastTest(pkt=gtp_pkt, dst_ipv4=ue_out_pkt[IP].dst,
                                 next_hop_mac=dst_mac,
@@ -1289,7 +1333,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
                                 tagged1=tagged1, tagged2=tagged2, mpls=mpls)
 
         # Verify the PDR packet counter increased
-        ingress_pdr_pkt_ctr2 = self.read_pkt_count("spgw_ingress.pdr_counter", ctr_id)
+        ingress_pdr_pkt_ctr2 = self.read_pkt_count("FabricIngress.spgw_ingress.pdr_counter", ctr_id)
         ctr_increase = ingress_pdr_pkt_ctr2 - ingress_pdr_pkt_ctr1
         if ctr_increase != 1:
             self.fail("PDR packet counter incremented by %d instead of 1!" % ctr_increase)
@@ -1321,7 +1365,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             ctr_id=ctr_id,
         )
 
-        ingress_pdr_pkt_ctr1 = self.read_pkt_count("spgw_ingress.pdr_counter", ctr_id)
+        ingress_pdr_pkt_ctr1 = self.read_pkt_count("FabricIngress.spgw_ingress.pdr_counter", ctr_id)
 
         self.runIPv4UnicastTest(pkt=pkt, dst_ipv4=exp_pkt[IP].dst,
                                 next_hop_mac=dst_mac,
@@ -1329,11 +1373,10 @@ class SpgwSimpleTest(IPv4UnicastTest):
                                 tagged1=tagged1, tagged2=tagged2, mpls=mpls)
 
         # Verify the PDR packet counter increased
-        ingress_pdr_pkt_ctr2 = self.read_pkt_count("spgw_ingress.pdr_counter", ctr_id)
+        ingress_pdr_pkt_ctr2 = self.read_pkt_count("FabricIngress.spgw_ingress.pdr_counter", ctr_id)
         ctr_increase = ingress_pdr_pkt_ctr2 - ingress_pdr_pkt_ctr1
         if ctr_increase != 1:
             self.fail("PDR packet counter incremented by %d instead of 1!" % ctr_increase)
-
 
 class IntTest(IPv4UnicastTest):
     def setup_transit(self, switch_id):

@@ -21,7 +21,7 @@ make fabric
 Obtain a Docker image which includes the stratum-bfrt binary and libraries:
 
 ```bash
-scp onlbuilder@10.254.1.15:~/stratum-images/stratum-bfrt-9.2.0.tgz ./
+scp onlbuilder@10.254.1.15:~/stratum-images/stratum-bfrt-9.2.0.tgz /tmp
 docker load < /tmp/stratum-bfrt-9.2.0.tgz
 ```
 

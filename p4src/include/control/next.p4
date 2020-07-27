@@ -189,8 +189,8 @@ control Next (inout parsed_headers_t hdr,
     table hashed {
         key = {
             fabric_md.next_id: exact @name("next_id");
-            hdr.ipv4.dst_addr: selector;
-            hdr.ipv4.src_addr: selector;
+            fabric_md.ipv4_dst_addr: selector;
+            fabric_md.ipv4_src_addr: selector;
             fabric_md.ip_proto: selector;
             fabric_md.l4_sport: selector;
             fabric_md.l4_dport: selector;
