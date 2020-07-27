@@ -605,7 +605,7 @@ class FabricTest(P4RuntimeTest):
     def delete_mcast_group(self, group_id):
         return self.write_mcast_group(group_id, [], p4runtime_pb2.Update.DELETE)
 
-    def write_clone_group(self, clone_id, replicas, update_type):
+    def write_clone_session(self, clone_id, replicas, update_type):
         req = self.get_new_write_request()
         update = req.updates.add()
         update.type = update_type
@@ -620,14 +620,14 @@ class FabricTest(P4RuntimeTest):
             replica.instance = instance
         return req, self.write_request(req)
 
-    def add_clone_group(self, clone_id, replicas):
-        return self.write_clone_group(clone_id, replicas, p4runtime_pb2.Update.INSERT)
+    def add_clone_session(self, clone_id, replicas):
+        return self.write_clone_session(clone_id, replicas, p4runtime_pb2.Update.INSERT)
 
-    def modify_clone_group(self, clone_id, replicas):
-        return self.write_clone_group(clone_id, replicas, p4runtime_pb2.Update.MODIFY)
+    def modify_clone_session(self, clone_id, replicas):
+        return self.write_clone_session(clone_id, replicas, p4runtime_pb2.Update.MODIFY)
 
-    def delete_clone_group(self, clone_id):
-        return self.write_clone_group(clone_id, [], p4runtime_pb2.Update.DELETE)
+    def delete_clone_session(self, clone_id):
+        return self.write_clone_session(clone_id, [], p4runtime_pb2.Update.DELETE)
 
     def add_next_hashed_group_member(self, action_name, params):
         mbr_id = self.get_next_mbr_id()
@@ -673,7 +673,7 @@ class FabricTest(P4RuntimeTest):
                 if pre_entry.HasField("multicast_group_entry"):
                     groups.append(pre_entry.multicast_group_entry)
         return groups
-      
+
     def read_clone_group(self, clone_id):
         req = self.get_new_read_request()
         entity = req.entities.add()
