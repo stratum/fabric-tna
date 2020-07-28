@@ -1689,6 +1689,42 @@ class MulticastGroupModificationTest(FabricTest):
         print("")
         self.doRunTest()
 
+@group("p4r-function")
+class CloneSessionTest(FabricTest):
+
+    @autocleanup
+    def doRunTest(self):
+        # Add session with egress port 1 (instance 1)
+        session_id = 10
+        replicas = [(0, 1)]  # (instance, port)
+        req, _ = self.add_clone_session(session_id, replicas)
+        expected_clone_entry = req.updates[0].entity.packet_replication_engine_entry.clone_session_entry
+        received_clone_entry = self.read_clone_session(session_id)
+        self.verify_p4runtime_entity(expected_clone_entry, received_clone_entry)
+
+        # Modify the session with egress port 2 (instance 2)
+        replicas = [(0, 2)]  # (instance, port)
+        req, _ = self.modify_clone_session(session_id, replicas)
+        expected_clone_entry = req.updates[0].entity.packet_replication_engine_entry.clone_session_entry
+        received_clone_entry = self.read_clone_session(session_id)
+        self.verify_p4runtime_entity(expected_clone_entry, received_clone_entry)
+
+        # Add second session with high id
+        session_id = 1015
+        replicas = [(0, 1)]  # (instance, port)
+        req, _ = self.add_clone_session(session_id, replicas)
+        expected_clone_entry = req.updates[0].entity.packet_replication_engine_entry.clone_session_entry
+        received_clone_entry = self.read_clone_session(session_id)
+        self.verify_p4runtime_entity(expected_clone_entry, received_clone_entry)
+
+        # Read all session
+        received_clone_sessions = self.read_all_clone_sessions()
+        if len(received_clone_sessions) != 2:
+            self.fail("Incorrect number of clone sessions")
+
+    def runTest(self):
+        print("")
+        self.doRunTest()
 
 @group("p4rt")
 class CounterTest(BridgingTest):
