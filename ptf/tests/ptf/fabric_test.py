@@ -605,20 +605,29 @@ class FabricTest(P4RuntimeTest):
     def delete_mcast_group(self, group_id):
         return self.write_mcast_group(group_id, [], p4runtime_pb2.Update.DELETE)
 
-    def add_clone_group(self, clone_id, ports):
+    def write_clone_session(self, clone_id, replicas, update_type):
         req = self.get_new_write_request()
         update = req.updates.add()
-        update.type = p4runtime_pb2.Update.INSERT
+        update.type = update_type
         pre_entry = update.entity.packet_replication_engine_entry
         clone_entry = pre_entry.clone_session_entry
         clone_entry.session_id = clone_id
         clone_entry.class_of_service = 0
         clone_entry.packet_length_bytes = 0
-        for port in ports:
+        for instance, port in replicas:
             replica = clone_entry.replicas.add()
             replica.egress_port = port
-            replica.instance = 1
+            replica.instance = instance
         return req, self.write_request(req)
+
+    def add_clone_session(self, clone_id, replicas):
+        return self.write_clone_session(clone_id, replicas, p4runtime_pb2.Update.INSERT)
+
+    def modify_clone_session(self, clone_id, replicas):
+        return self.write_clone_session(clone_id, replicas, p4runtime_pb2.Update.MODIFY)
+
+    def delete_clone_session(self, clone_id):
+        return self.write_clone_session(clone_id, [], p4runtime_pb2.Update.DELETE)
 
     def add_next_hashed_group_member(self, action_name, params):
         mbr_id = self.get_next_mbr_id()
@@ -664,6 +673,32 @@ class FabricTest(P4RuntimeTest):
                 if pre_entry.HasField("multicast_group_entry"):
                     groups.append(pre_entry.multicast_group_entry)
         return groups
+
+    def read_clone_session(self, clone_id):
+        req = self.get_new_read_request()
+        entity = req.entities.add()
+        clone_session = entity.packet_replication_engine_entry.clone_session_entry
+        clone_session.session_id = clone_id
+
+        for entity in self.read_request(req):
+            if entity.HasField("packet_replication_engine_entry"):
+                pre_entry = entity.packet_replication_engine_entry
+                if pre_entry.HasField("clone_session_entry"):
+                    return pre_entry.clone_session_entry
+        return None
+
+    def read_all_clone_sessions(self):
+        sessions = []
+        req = self.get_new_read_request()
+        entity = req.entities.add()
+        clone_session = entity.packet_replication_engine_entry.clone_session_entry
+        clone_session.session_id = 0
+        for entity in self.read_request(req):
+            if entity.HasField("packet_replication_engine_entry"):
+                pre_entry = entity.packet_replication_engine_entry
+                if pre_entry.HasField("clone_session_entry"):
+                    sessions.append(pre_entry.clone_session_entry)
+        return sessions
 
 class BridgingTest(FabricTest):
 
