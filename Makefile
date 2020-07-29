@@ -22,7 +22,7 @@ p4-build := ./p4src/build.sh
 
 build: clean $(PROFILES) pipeconf
 
-all: fabric
+all: fabric fabric-spgw
 
 fabric:
 	@${p4-build} fabric ""
