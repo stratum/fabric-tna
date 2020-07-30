@@ -11,6 +11,7 @@ const bit<6> INT_DSCP = 0x1;
 
 // Length of the whole INT header,
 // including shim and tail, excluding metadata stack.
+// 2 for int_header, 1 for shim, 1 for tail
 const bit<8> INT_HEADER_LEN_WORDS = 4;
 const bit<16> INT_HEADER_LEN_BYTES = 16;
 

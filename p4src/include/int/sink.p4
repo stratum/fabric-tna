@@ -7,7 +7,8 @@
 
 control IntSink (
     inout parsed_headers_t hdr,
-    inout fabric_egress_metadata_t fabric_md) {
+    inout fabric_egress_metadata_t fabric_md,
+    in    egress_intrinsic_metadata_t eg_intr_md) {
 
     Hash<bit<16>>(HashAlgorithm_t.IDENTITY) field_size_modifier;
     bit<16> bytes_removed;
@@ -33,7 +34,21 @@ control IntSink (
         size = 1;
     }
 
+    table tb_set_sink {
+        key = {
+            eg_intr_md.egress_port: exact @name("eg_port");
+        }
+        actions = {
+            nop;
+        }
+        const default_action = nop();
+        size = MAX_PORTS;
+    }
+
     apply {
+        if (!tb_set_sink.apply().hit) {
+            return;
+        }
         tbl_restore_header_len_field.apply();
 
         hdr.udp.dport = hdr.intl4_tail.dest_port;

@@ -11,6 +11,17 @@ control IntSource (
     inout fabric_egress_metadata_t fabric_md,
     in    egress_intrinsic_metadata_t eg_intr_m) {
 
+    table tb_set_source {
+        key = {
+            fabric_md.ingress_port: exact @name("ig_port");
+        }
+        actions = {
+            nop;
+        }
+        const default_action = nop();
+        size = MAX_PORTS;
+    }
+
     @hidden
     action int_source(bit<8> max_hop, bit<5> ins_cnt, bit<4> ins_mask0003, bit<4> ins_mask0407) {
         // Insert INT shim header.
@@ -62,7 +73,9 @@ control IntSource (
     }
 
     apply {
-        tb_int_source.apply();
+        if (tb_set_source.apply().hit) {
+            tb_int_source.apply();
+        }
     }
 }
 #endif

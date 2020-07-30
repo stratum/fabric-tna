@@ -372,6 +372,10 @@ control IntTransit (
     }
 
     apply {
+        // TODO: check total_hop_cnt and max_hop_cnt
+        if (hdr.int_header.total_hop_cnt == hdr.int_header.max_hop_cnt) {
+            return;
+        }
         if(tb_int_insert.apply().hit) {
             tb_int_inst_0003.apply();
             tb_int_inst_0407.apply();
