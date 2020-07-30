@@ -8,12 +8,33 @@
 control IntSink (
     inout parsed_headers_t hdr,
     inout fabric_egress_metadata_t fabric_md) {
+
+    Hash<bit<16>>(HashAlgorithm_t.IDENTITY) field_size_modifier;
     bit<16> bytes_removed;
+
+    action restore_header_len_field() {
+        bytes_removed = field_size_modifier.get<bit<10>>(hdr.intl4_shim.len_words ++ 2w0);
+        hdr.ipv4.total_len = hdr.ipv4.total_len - bytes_removed;
+        hdr.udp.len = hdr.udp.len - bytes_removed;
+    }
+
+    table tbl_restore_header_len_field {
+        key = {
+            hdr.intl4_shim.isValid(): exact;
+        }
+        actions = {
+            restore_header_len_field;
+            @defaultonly nop;
+        }
+        default_action = nop;
+        const entries = {
+            true: restore_header_len_field;
+        }
+        size = 1;
+    }
+
     apply {
-        // restore length fields of IPv4 header and UDP header
-        bytes_removed = (bit<16>) (hdr.intl4_shim.len_words << 5w2);
-        // hdr.ipv4.total_len = hdr.ipv4.total_len - bytes_removed;
-        // hdr.udp.len = hdr.udp.len - bytes_removed;
+        tbl_restore_header_len_field.apply();
 
         hdr.udp.dport = hdr.intl4_tail.dest_port;
         hdr.ipv4.dscp = hdr.intl4_tail.dscp;
