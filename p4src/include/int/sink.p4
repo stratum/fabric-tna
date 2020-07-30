@@ -12,8 +12,8 @@ control IntSink (
     apply {
         // restore length fields of IPv4 header and UDP header
         bytes_removed = (bit<16>) (hdr.intl4_shim.len_words << 5w2);
-        // hdr.ipv4.total_len = hdr.ipv4.total_len - fabric_md.foo;
-        // hdr.udp.len = hdr.udp.len - len_bytes;
+        // hdr.ipv4.total_len = hdr.ipv4.total_len - bytes_removed;
+        // hdr.udp.len = hdr.udp.len - bytes_removed;
 
         hdr.udp.dport = hdr.intl4_tail.dest_port;
         hdr.ipv4.dscp = hdr.intl4_tail.dscp;
