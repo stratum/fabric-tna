@@ -40,10 +40,6 @@ control FabricIngress (
     SpgwIngress() spgw_ingress;
 #endif // WITH_SPGW
 
-#ifdef WITH_INT
-    IntIngress() int_ingress;
-#endif // WITH_INT
-
     apply {
         pkt_io_ingress.apply(hdr, fabric_md, ig_tm_md);
 #ifdef WITH_SPGW
@@ -57,10 +53,6 @@ control FabricIngress (
         if (!fabric_md.skip_next) {
             next.apply(hdr, fabric_md, ig_intr_md, ig_tm_md);
         }
-
-#if defined(WITH_INT_SOURCE) || defined(WITH_INT_SINK)
-        int_ingress.apply(hdr, fabric_md, ig_intr_md, ig_tm_md);
-#endif
 
         if (ig_tm_md.bypass_egress == 1w0) {
             hdr.bridge_md.setValid();
@@ -86,10 +78,6 @@ control FabricIngress (
             hdr.bridge_md.gtpu_tunnel_sport = fabric_md.gtpu_tunnel_sport;
             hdr.bridge_md.pdr_ctr_id        = fabric_md.pdr_ctr_id;
 #endif // WITH_SPGW
-#ifdef WITH_INT
-            hdr.bridge_md.int_device_type = fabric_md.int_device_type;
-            hdr.bridge_md.int_switch_id = fabric_md.int_switch_id;
-#endif
         }
     }
 }

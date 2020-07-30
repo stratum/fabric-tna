@@ -42,7 +42,7 @@ parser FabricIngressParser (packet_in  packet,
 
     state parse_ethernet {
         packet.extract(hdr.ethernet);
-        transition select(packet.lookahead<bit<16>>()){
+        transition select(packet.lookahead<bit<16>>()) {
             ETHERTYPE_QINQ: parse_vlan_tag;
             ETHERTYPE_QINQ_NON_STD: parse_vlan_tag;
             ETHERTYPE_VLAN: parse_vlan_tag;
@@ -57,7 +57,7 @@ parser FabricIngressParser (packet_in  packet,
         fabric_md.vlan_id = hdr.vlan_tag.vlan_id;
         fabric_md.vlan_pri = hdr.vlan_tag.pri;
         fabric_md.vlan_cfi = hdr.vlan_tag.cfi;
-        transition select(packet.lookahead<bit<16>>()){
+        transition select(packet.lookahead<bit<16>>()) {
 #if defined(WITH_XCONNECT) || defined(WITH_DOUBLE_VLAN_TERMINATION)
             ETHERTYPE_VLAN: parse_inner_vlan_tag;
 #endif // WITH_XCONNECT || WITH_DOUBLE_VLAN_TERMINATION
@@ -318,7 +318,9 @@ control FabricIngressDeparser(packet_out packet,
         packet.emit(hdr.int_q_congestion);
         packet.emit(hdr.int_egress_tx_util);
 #endif // WITH_INT_TRANSIT
+#ifndef WITH_INT_SINK // WITHOUT the INT Sink
         packet.emit(hdr.int_data);
+#endif // !WITH_INT_SINK
         packet.emit(hdr.intl4_tail);
 #endif // WITH_INT
     }
@@ -367,16 +369,12 @@ parser FabricEgressParser (packet_in packet,
         fabric_md.mpls_ttl = bridge_md.mpls_ttl;
         fabric_md.is_multicast = bridge_md.is_multicast;
         fabric_md.ingress_port = bridge_md.ingress_port;
-#ifdef WITH_INT
-        fabric_md.int_device_type = bridge_md.int_device_type;
-        fabric_md.int_switch_id = bridge_md.int_switch_id;
-#endif
         transition parse_ethernet;
     }
 
     state parse_ethernet {
         packet.extract(hdr.ethernet);
-        transition select(packet.lookahead<bit<16>>()){
+        transition select(packet.lookahead<bit<16>>()) {
             ETHERTYPE_QINQ: parse_vlan_tag;
             ETHERTYPE_QINQ_NON_STD: parse_vlan_tag;
             ETHERTYPE_VLAN: parse_vlan_tag;
@@ -386,7 +384,7 @@ parser FabricEgressParser (packet_in packet,
 
     state parse_vlan_tag {
         packet.extract(hdr.vlan_tag);
-        transition select(packet.lookahead<bit<16>>()){
+        transition select(packet.lookahead<bit<16>>()) {
 #if defined(WITH_XCONNECT) || defined(WITH_DOUBLE_VLAN_TERMINATION)
             ETHERTYPE_VLAN: parse_inner_vlan_tag;
 #endif // WITH_XCONNECT || WITH_DOUBLE_VLAN_TERMINATION
@@ -578,6 +576,7 @@ control FabricEgressMirror(
     in fabric_egress_metadata_t fabric_md) {
     Mirror() mirror;
     apply {
+#ifdef WITH_INT_SINK
         if (fabric_md.mirror_session_id == MIRROR_SESSION_ID_INT_REPORT) {
             mirror.emit<int_mirror_metadata_t>(fabric_md.mirror_session_id, {
                 fabric_md.bridge_md_type,
@@ -589,12 +588,9 @@ control FabricEgressMirror(
                 fabric_md.int_ingress_tstamp,
                 fabric_md.int_egress_tstamp
                 // FIXME: include all INT metadata from previous node.
-                // hdr.int_data[0],
-                // hdr.int_data[1],
-                // hdr.int_data[2],
-                // hdr.int_data[3]
             });
         }
+#endif // WITH_INT_SINK
     }
 }
 
@@ -666,7 +662,7 @@ control FabricEgressDeparser(packet_out packet,
         packet.emit(hdr.udp);
         packet.emit(hdr.icmp);
 
-#if defined(WITH_INT_TRANSIT) || defined(WITH_INT_SOURCE)
+#ifdef WITH_INT
         packet.emit(hdr.intl4_shim);
         packet.emit(hdr.int_header);
 #ifdef WITH_INT_TRANSIT
@@ -679,7 +675,9 @@ control FabricEgressDeparser(packet_out packet,
         packet.emit(hdr.int_q_congestion);
         packet.emit(hdr.int_egress_tx_util);
 #endif // WITH_INT_TRANSIT
+#ifndef WITH_INT_SINK // WITHOUT the INT Sink
         packet.emit(hdr.int_data);
+#endif // !WITH_INT_SINK
         packet.emit(hdr.intl4_tail);
 #endif // defined(WITH_INT_TRANSIT) || defined(WITH_INT_SOURCE)
     }

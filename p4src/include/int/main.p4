@@ -18,57 +18,6 @@
 // #include "report.p4"
 #endif // WITH_INT_SINK
 
-control IntIngress (
-    inout parsed_headers_t hdr,
-    inout fabric_ingress_metadata_t fabric_md,
-    in    ingress_intrinsic_metadata_t ig_intr_md,
-    inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm) {
-
-    action int_set_source () {
-        fabric_md.int_device_type = IntDeviceType.SOURCE;
-    }
-
-    table tb_set_source {
-        key = {
-            ig_intr_md.ingress_port: exact @name("ig_port");
-        }
-        actions = {
-            int_set_source;
-            @defaultonly nop();
-        }
-        const default_action = nop();
-        size = MAX_PORTS;
-    }
-
-#ifdef WITH_INT_SINK
-
-    action int_set_sink () {
-        fabric_md.int_device_type = IntDeviceType.SINK;
-    }
-
-    table tb_set_sink {
-        key = {
-            ig_intr_md_for_tm.ucast_egress_port: exact @name("eg_spec");
-        }
-        actions = {
-            int_set_sink;
-            @defaultonly nop();
-        }
-        const default_action = nop();
-        size = MAX_PORTS;
-    }
-#endif // WITH_INT_SINK
-
-    apply {
-        fabric_md.int_device_type = IntDeviceType.UNKNOWN;
-        tb_set_source.apply();
-
-#ifdef WITH_INT_SINK
-        tb_set_sink.apply();
-#endif // WITH_INT_SINK
-    }
-}
-
 control IntEgress (
     inout parsed_headers_t hdr,
     inout fabric_egress_metadata_t fabric_md,
@@ -87,7 +36,50 @@ control IntEgress (
     IntSink() int_sink;
 #endif  // WITH_INT_SINK
 
+
+    action int_set_source () {
+        fabric_md.int_device_type = IntDeviceType.SOURCE;
+    }
+
+    table tb_set_source {
+        key = {
+            fabric_md.ingress_port: exact @name("ig_port");
+        }
+        actions = {
+            int_set_source;
+            @defaultonly nop();
+        }
+        const default_action = nop();
+        size = MAX_PORTS;
+    }
+
+#ifdef WITH_INT_SINK
+
+    action int_set_sink () {
+        fabric_md.int_device_type = IntDeviceType.SINK;
+    }
+
+    table tb_set_sink {
+        key = {
+            eg_intr_md.egress_port: exact @name("eg_spec");
+        }
+        actions = {
+            int_set_sink;
+            @defaultonly nop();
+        }
+        const default_action = nop();
+        size = MAX_PORTS;
+    }
+#endif // WITH_INT_SINK
+
     apply {
+        fabric_md.int_device_type = IntDeviceType.UNKNOWN;
+        tb_set_source.apply();
+#ifdef WITH_INT_SINK
+        tb_set_sink.apply();
+#endif // WITH_INT_SINK
+
+
         if (fabric_md.ingress_port != CPU_PORT &&
             eg_intr_md.egress_port != CPU_PORT &&
             (hdr.udp.isValid() || hdr.tcp.isValid())) {

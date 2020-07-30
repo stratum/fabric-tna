@@ -9,35 +9,37 @@ parser IntDataParser(packet_in packet, inout parsed_headers_t hdr) {
     state start {
         transition select(hdr.intl4_shim.len_words) {
             INT_HEADER_LEN_WORDS: accept; // Header and tail only
-            // Maximum 3 hops supports (8 metadata * 3)
+#ifndef WITH_INT_SINK // WITHOUT the INT Sink
             8w5: parse_int_data_1;
             8w6: parse_int_data_2;
             8w7: parse_int_data_3;
             8w8: parse_int_data_4;
-            // 8w9: parse_int_data_5;
-            // 8w10: parse_int_data_6;
-            // 8w11: parse_int_data_7;
-            // 8w12: parse_int_data_8;
-            // 8w13: parse_int_data_9;
-            // 8w14: parse_int_data_10;
-            // 8w15: parse_int_data_11;
-            // 8w16: parse_int_data_12;
-            // 8w17: parse_int_data_13;
-            // 8w18: parse_int_data_14;
-            // 8w19: parse_int_data_15;
-            // 8w20: parse_int_data_16;
-            // 8w21: parse_int_data_17;
-            // 8w22: parse_int_data_18;
-            // 8w23: parse_int_data_19;
-            // 8w24: parse_int_data_20;
-            // 8w25: parse_int_data_21;
-            // 8w26: parse_int_data_22;
-            // 8w27: parse_int_data_23;
-            // 8w28: parse_int_data_24;
+            8w9: parse_int_data_5;
+            8w10: parse_int_data_6;
+            8w11: parse_int_data_7;
+            8w12: parse_int_data_8;
+            8w13: parse_int_data_9;
+            8w14: parse_int_data_10;
+            8w15: parse_int_data_11;
+            8w16: parse_int_data_12;
+            8w17: parse_int_data_13;
+            8w18: parse_int_data_14;
+            8w19: parse_int_data_15;
+            8w20: parse_int_data_16;
+            8w21: parse_int_data_17;
+            8w22: parse_int_data_18;
+            8w23: parse_int_data_19;
+            8w24: parse_int_data_20;
+            8w25: parse_int_data_21;
+            8w26: parse_int_data_22;
+            8w27: parse_int_data_23;
+            8w28: parse_int_data_24;
+#endif // !WITH_INT_SINK
             default: reject; // Oversized int data, TODO: mark error
         }
     }
 
+#ifndef WITH_INT_SINK // WITHOUT the INT Sink
     state parse_int_data_1 {
         packet.extract(hdr.int_data[0]);
         transition accept;
@@ -64,8 +66,6 @@ parser IntDataParser(packet_in packet, inout parsed_headers_t hdr) {
         transition accept;
     }
 
-// Not supported
-/*
     state parse_int_data_5 {
         packet.extract(hdr.int_data[0]);
         packet.extract(hdr.int_data[1]);
@@ -435,6 +435,6 @@ parser IntDataParser(packet_in packet, inout parsed_headers_t hdr) {
         packet.extract(hdr.int_data[23]);
         transition accept;
     }
-    */
+#endif // !WITH_INT_SINK
 }
 #endif // __INT_DATA_PARSER__

@@ -45,26 +45,30 @@ control IntTransit (
     // Actions to keep track of the new metadata added.
     @hidden
     action add_1() {
-        fabric_md.int_new_words = fabric_md.int_new_words + 1;
-        fabric_md.int_new_bytes = fabric_md.int_new_bytes + 4;
+        hdr.intl4_shim.len_words = hdr.intl4_shim.len_words + 1;
+        hdr.ipv4.total_len = hdr.ipv4.total_len + 4;
+        hdr.udp.len = hdr.udp.len + 4;
     }
 
     @hidden
     action add_2() {
-        fabric_md.int_new_words = fabric_md.int_new_words + 2;
-        fabric_md.int_new_bytes = fabric_md.int_new_bytes + 8;
+        hdr.intl4_shim.len_words = hdr.intl4_shim.len_words + 2;
+        hdr.ipv4.total_len = hdr.ipv4.total_len + 8;
+        hdr.udp.len = hdr.udp.len + 8;
     }
 
     @hidden
     action add_3() {
-        fabric_md.int_new_words = fabric_md.int_new_words + 3;
-        fabric_md.int_new_bytes = fabric_md.int_new_bytes + 12;
+        hdr.intl4_shim.len_words = hdr.intl4_shim.len_words + 3;
+        hdr.ipv4.total_len = hdr.ipv4.total_len + 12;
+        hdr.udp.len = hdr.udp.len + 12;
     }
 
     @hidden
     action add_4() {
-        fabric_md.int_new_words = fabric_md.int_new_words + 4;
-        fabric_md.int_new_bytes = fabric_md.int_new_bytes + 16;
+        hdr.intl4_shim.len_words = hdr.intl4_shim.len_words + 4;
+        hdr.ipv4.total_len = hdr.ipv4.total_len + 16;
+        hdr.udp.len = hdr.udp.len + 16;
     }
 
     // Action function for bits 0-3 combinations, 0 is msb, 3 is lsb.
@@ -373,16 +377,6 @@ control IntTransit (
             tb_int_inst_0407.apply();
             // Increment hop cnt
             hdr.int_header.total_hop_cnt = hdr.int_header.total_hop_cnt + 1;
-            // Update headers lengths.
-            if (hdr.ipv4.isValid()) {
-                hdr.ipv4.total_len = hdr.ipv4.total_len + fabric_md.int_new_bytes;
-            }
-            if (hdr.udp.isValid()) {
-                hdr.udp.len = hdr.udp.len + fabric_md.int_new_bytes;
-            }
-            if (hdr.intl4_shim.isValid()) {
-                hdr.intl4_shim.len_words = hdr.intl4_shim.len_words + fabric_md.int_new_words;
-            }
         }
     }
 }
