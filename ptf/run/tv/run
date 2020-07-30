@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+
+set -e
+
+# Tester image
+# Contains PTF and tvutils libraries, as well as P4RT, gNMI, and TV Python bindings
+#TESTER_DOCKER_IMG=stratumproject/testvectors:ptf@sha256:6eff3274b13b8ec5f218c7275f79e33177c5af6cc5e5ed793d064ac2f6ec5698
+TESTER_DOCKER_IMG=stratumproject/testvectors:ptf
+SDE_VERSION=${SDE_VERSION:-9.2.0}
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
+FP4TEST_ROOT="${DIR}"/../..
+FABRIC_TNA="${FP4TEST_ROOT}"/..
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
+ROOT_DIR=${DIR}/../..
+
+if [[ -z "${ONOS_ROOT}" ]]; then
+    echo "ERROR: ONOS_ROOT env not defined"
+    exit 1
+fi
+if [[ -z "${FABRIC_TNA}" ]]; then
+    echo "ERROR: FABRIC_TNA env not defined"
+    exit 1
+fi
+if [[ -z "${SDE_VERSION}" ]]; then
+    echo "ERROR: SDE_VERSION env not defined"
+    exit 1
+fi
+fabricProfile=$1
+if [ -z "${fabricProfile}" ]; then
+    echo "fabric profile is not set"
+    exit 1
+fi
+
+# Find Tofino compiled artifacts
+sdeVer_=$(echo "${SDE_VERSION}" | tr . _) # Replace dots with underscores
+#TOFINO_P4C_OUT=${FABRIC_TNA}/src/main/resources/p4c-out/${fabricProfile}/stratum_bfrt/montara_sde_${sdeVer_}
+TOFINO_P4C_OUT=${FABRIC_TNA}/src/main/resources/p4c-out/${fabricProfile}/stratum_bfrt/mavericks_sde_${sdeVer_}
+
+echo "*** Using P4 compiler output in ${TOFINO_P4C_OUT}..."
+if [ ! -f "${TOFINO_P4C_OUT}"/pipe/tofino.bin ]; then
+    echo "ERROR: missing tofino.bin in ${TOFINO_P4C_OUT}"
+    exit 1
+fi
+
+# BMv2 compiled artifacts
+BMV2_P4C_OUT=${ONOS_ROOT}/pipelines/fabric/impl/src/main/resources/p4c-out/${fabricProfile}/bmv2/default
+
+# Clean up old logs (if any)
+rm -rf "${DIR}"/log
+mkdir "${DIR}"/log
+
+rnd=${RANDOM}
+
+# tester
+# Run and show log
+testerRunName=tester-${rnd}
+echo "*** Starting ${testerRunName} with ${TESTER_DOCKER_IMG}..."
+# Do not attach stdin if running in an environment without it (e.g., Jenkins)
+it=$(test -t 0 && echo "-it" || echo "-t")
+docker run --name ${testerRunName} ${it} --privileged --rm \
+    -v "${ROOT_DIR}":/fabric-p4test \
+    -v "${BMV2_P4C_OUT}":/bmv2_p4c_out \
+    -v "${TOFINO_P4C_OUT}":/tofino_p4c_out \
+    "${TESTER_DOCKER_IMG}" \
+    bash /fabric-p4test/run/tv/start_test.sh "${FABRIC_PROFILE}" ${@}

@@ -24,33 +24,37 @@ vlan_confs = {
 
 class FabricBridgingTest(BridgingTest):
     @autocleanup
-    def doRunTest(self, tagged1, tagged2, pkt):
+    def doRunTest(self, tagged1, tagged2, pkt, tc_name):
         self.runBridgingTest(tagged1, tagged2, pkt)
 
     def runTest(self):
         print ""
         for vlan_conf, tagged in vlan_confs.items():
             for pkt_type in ["tcp", "udp", "icmp"]:
+                pktlen = 120
+                tc_name = pkt_type + "_VLAN_" + vlan_conf + "_" + str(pktlen)
                 print "Testing %s packet with VLAN %s.." % (pkt_type, vlan_conf)
                 pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
-                    pktlen=120)
-                self.doRunTest(tagged[0], tagged[1], pkt)
+                    pktlen=pktlen)
+                self.doRunTest(tagged[0], tagged[1], pkt, tc_name=tc_name)
 
 
 @skip("XConnect Currently Unsupported")
 @group("xconnect")
 class FabricDoubleVlanXConnectTest(DoubleVlanXConnectTest):
     @autocleanup
-    def doRunTest(self, pkt):
+    def doRunTest(self, pkt, tc_name):
         self.runXConnectTest(pkt)
 
     def runTest(self):
         print ""
         for pkt_type in ["tcp", "udp", "icmp"]:
+            pktlen = 120
+            tc_name = pkt_type + "_" + str(pktlen)
             print "Testing %s packet..." % pkt_type
             pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
-                pktlen=120)
-            self.doRunTest(pkt)
+                pktlen=pktlen)
+            self.doRunTest(pkt, tc_name=tc_name)
 
 
 @group("multicast")
@@ -82,7 +86,7 @@ class FabricArpBroadcastMixedTest(ArpBroadcastTest):
 
 class FabricIPv4UnicastTest(IPv4UnicastTest):
     @autocleanup
-    def doRunTest(self, pkt, mac_dest, tagged1, tagged2):
+    def doRunTest(self, pkt, mac_dest, tagged1, tagged2, tc_name):
         self.runIPv4UnicastTest(
             pkt, mac_dest, prefix_len=24, tagged1=tagged1, tagged2=tagged2)
 
@@ -90,6 +94,7 @@ class FabricIPv4UnicastTest(IPv4UnicastTest):
         print ""
         for vlan_conf, tagged in vlan_confs.items():
             for pkt_type in ["tcp", "udp", "icmp"]:
+                tc_name = pkt_type + "_VLAN_" + vlan_conf
                 print "Testing %s packet with VLAN %s..." \
                       % (pkt_type, vlan_conf)
                 pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
@@ -97,7 +102,7 @@ class FabricIPv4UnicastTest(IPv4UnicastTest):
                     ip_src=HOST1_IPV4, ip_dst=HOST2_IPV4,
                     pktlen=MIN_PKT_LEN
                 )
-                self.doRunTest(pkt, HOST2_MAC, tagged[0], tagged[1])
+                self.doRunTest(pkt, HOST2_MAC, tagged[0], tagged[1], tc_name=tc_name)
 
 
 class FabricIPv4UnicastGtpTest(IPv4UnicastTest):
@@ -144,9 +149,9 @@ class FabricIPv4UnicastGroupTest(FabricTest):
             eth_src=SWITCH_MAC, eth_dst=HOST3_MAC,
             ip_src=HOST1_IPV4, ip_dst=HOST2_IPV4, ip_ttl=63)
 
-        testutils.send_packet(self, self.port1, str(pkt_from1))
-        testutils.verify_any_packet_any_port(
-            self, [exp_pkt_to2, exp_pkt_to3], [self.port2, self.port3])
+        self.send_packet(self.port1, str(pkt_from1))
+        self.verify_any_packet_any_port(
+            [exp_pkt_to2, exp_pkt_to3], [self.port2, self.port3])
 
 
 class FabricIPv4UnicastGroupTestAllPortTcpSport(FabricTest):
@@ -181,9 +186,9 @@ class FabricIPv4UnicastGroupTestAllPortTcpSport(FabricTest):
             exp_pkt_to3 = testutils.simple_tcp_packet(
                 eth_src=SWITCH_MAC, eth_dst=HOST3_MAC,
                 ip_src=HOST1_IPV4, ip_dst=HOST2_IPV4, ip_ttl=63, tcp_sport=test_tcp_sport)
-            testutils.send_packet(self, self.port1, str(pkt_from1))
-            out_port_indx = testutils.verify_any_packet_any_port(
-                self, [exp_pkt_to2, exp_pkt_to3], [self.port2, self.port3])
+            self.send_packet(self.port1, str(pkt_from1))
+            out_port_indx = self.verify_any_packet_any_port(
+                [exp_pkt_to2, exp_pkt_to3], [self.port2, self.port3])
             tcpsport_toport[out_port_indx] = test_tcp_sport
 
         pkt_toport2 = testutils.simple_tcp_packet(
@@ -198,14 +203,14 @@ class FabricIPv4UnicastGroupTestAllPortTcpSport(FabricTest):
         exp_pkt_to3 = testutils.simple_tcp_packet(
             eth_src=SWITCH_MAC, eth_dst=HOST3_MAC,
             ip_src=HOST1_IPV4, ip_dst=HOST2_IPV4, ip_ttl=63, tcp_sport=tcpsport_toport[1])
-        testutils.send_packet(self, self.port1, str(pkt_toport2))
-        testutils.send_packet(self, self.port1, str(pkt_toport3))
+        self.send_packet(self.port1, str(pkt_toport2))
+        self.send_packet(self.port1, str(pkt_toport3))
         # In this assertion we are verifying:
         #  1) all ports of the same group are used almost once
         #  2) consistency of the forwarding decision, i.e. packets with the same 5-tuple
         #     fields are always forwarded out of the same port
-        testutils.verify_each_packet_on_each_port(
-            self, [exp_pkt_to2, exp_pkt_to3], [self.port2, self.port3])
+        self.verify_each_packet_on_each_port(
+            [exp_pkt_to2, exp_pkt_to3], [self.port2, self.port3])
 
 
 class FabricIPv4UnicastGroupTestAllPortTcpDport(FabricTest):
@@ -240,9 +245,9 @@ class FabricIPv4UnicastGroupTestAllPortTcpDport(FabricTest):
             exp_pkt_to3 = testutils.simple_tcp_packet(
                 eth_src=SWITCH_MAC, eth_dst=HOST3_MAC,
                 ip_src=HOST1_IPV4, ip_dst=HOST2_IPV4, ip_ttl=63, tcp_dport=test_tcp_dport)
-            testutils.send_packet(self, self.port1, str(pkt_from1))
-            out_port_indx = testutils.verify_any_packet_any_port(
-                self, [exp_pkt_to2, exp_pkt_to3], [self.port2, self.port3])
+            self.send_packet(self.port1, str(pkt_from1))
+            out_port_indx = self.verify_any_packet_any_port(
+                [exp_pkt_to2, exp_pkt_to3], [self.port2, self.port3])
             tcpdport_toport[out_port_indx] = test_tcp_dport
 
         pkt_toport2 = testutils.simple_tcp_packet(
@@ -257,14 +262,14 @@ class FabricIPv4UnicastGroupTestAllPortTcpDport(FabricTest):
         exp_pkt_to3 = testutils.simple_tcp_packet(
             eth_src=SWITCH_MAC, eth_dst=HOST3_MAC,
             ip_src=HOST1_IPV4, ip_dst=HOST2_IPV4, ip_ttl=63, tcp_dport=tcpdport_toport[1])
-        testutils.send_packet(self, self.port1, str(pkt_toport2))
-        testutils.send_packet(self, self.port1, str(pkt_toport3))
+        self.send_packet(self.port1, str(pkt_toport2))
+        self.send_packet(self.port1, str(pkt_toport3))
         # In this assertion we are verifying:
         #  1) all ports of the same group are used almost once
         #  2) consistency of the forwarding decision, i.e. packets with the same 5-tuple
         #     fields are always forwarded out of the same port
-        testutils.verify_each_packet_on_each_port(
-            self, [exp_pkt_to2, exp_pkt_to3], [self.port2, self.port3])
+        self.verify_each_packet_on_each_port(
+            [exp_pkt_to2, exp_pkt_to3], [self.port2, self.port3])
 
 
 class FabricIPv4UnicastGroupTestAllPortIpSrc(FabricTest):
@@ -300,9 +305,9 @@ class FabricIPv4UnicastGroupTestAllPortIpSrc(FabricTest):
             exp_pkt_to3 = getattr(testutils, "simple_%s_packet" % pkt_type)(
                 eth_src=SWITCH_MAC, eth_dst=HOST3_MAC,
                 ip_src=test_ipsource, ip_dst=HOST2_IPV4, ip_ttl=63)
-            testutils.send_packet(self, self.port1, str(pkt_from1))
-            out_port_indx = testutils.verify_any_packet_any_port(
-                self, [exp_pkt_to2, exp_pkt_to3], [self.port2, self.port3])
+            self.send_packet(self.port1, str(pkt_from1))
+            out_port_indx = self.verify_any_packet_any_port(
+                [exp_pkt_to2, exp_pkt_to3], [self.port2, self.port3])
             ipsource_toport[out_port_indx] = test_ipsource
 
         pkt_toport2 = getattr(testutils, "simple_%s_packet" % pkt_type)(
@@ -317,14 +322,14 @@ class FabricIPv4UnicastGroupTestAllPortIpSrc(FabricTest):
         exp_pkt_to3 = getattr(testutils, "simple_%s_packet" % pkt_type)(
             eth_src=SWITCH_MAC, eth_dst=HOST3_MAC,
             ip_src=ipsource_toport[1], ip_dst=HOST2_IPV4, ip_ttl=63)
-        testutils.send_packet(self, self.port1, str(pkt_toport2))
-        testutils.send_packet(self, self.port1, str(pkt_toport3))
+        self.send_packet(self.port1, str(pkt_toport2))
+        self.send_packet(self.port1, str(pkt_toport3))
         # In this assertion we are verifying:
         #  1) all ports of the same group are used almost once
         #  2) consistency of the forwarding decision, i.e. packets with the same 5-tuple
         #     fields are always forwarded out of the same port
-        testutils.verify_each_packet_on_each_port(
-            self, [exp_pkt_to2, exp_pkt_to3], [self.port2, self.port3])
+        self.verify_each_packet_on_each_port(
+            [exp_pkt_to2, exp_pkt_to3], [self.port2, self.port3])
 
     def runTest(self):
         self.IPv4UnicastGroupTestAllPortL4SrcIp("tcp")
@@ -369,9 +374,9 @@ class FabricIPv4UnicastGroupTestAllPortIpDst(FabricTest):
             exp_pkt_to3 = getattr(testutils, "simple_%s_packet" % pkt_type)(
                 eth_src=SWITCH_MAC, eth_dst=HOST3_MAC,
                 ip_src=HOST1_IPV4, ip_dst=test_ipdst, ip_ttl=63)
-            testutils.send_packet(self, self.port1, str(pkt_from1))
-            out_port_indx = testutils.verify_any_packet_any_port(
-                self, [exp_pkt_to2, exp_pkt_to3], [self.port2, self.port3])
+            self.send_packet(self.port1, str(pkt_from1))
+            out_port_indx = self.verify_any_packet_any_port(
+                [exp_pkt_to2, exp_pkt_to3], [self.port2, self.port3])
             ipdst_toport[out_port_indx] = test_ipdst
 
         pkt_toport2 = getattr(testutils, "simple_%s_packet" % pkt_type)(
@@ -386,14 +391,14 @@ class FabricIPv4UnicastGroupTestAllPortIpDst(FabricTest):
         exp_pkt_to3 = getattr(testutils, "simple_%s_packet" % pkt_type)(
             eth_src=SWITCH_MAC, eth_dst=HOST3_MAC,
             ip_src=HOST1_IPV4, ip_dst=ipdst_toport[1], ip_ttl=63)
-        testutils.send_packet(self, self.port1, str(pkt_toport2))
-        testutils.send_packet(self, self.port1, str(pkt_toport3))
+        self.send_packet(self.port1, str(pkt_toport2))
+        self.send_packet(self.port1, str(pkt_toport3))
         # In this assertion we are verifying:
         #  1) all ports of the same group are used almost once
         #  2) consistency of the forwarding decision, i.e. packets with the same 5-tuple
         #     fields are always forwarded out of the same port
-        testutils.verify_each_packet_on_each_port(
-            self, [exp_pkt_to2, exp_pkt_to3], [self.port2, self.port3])
+        self.verify_each_packet_on_each_port(
+            [exp_pkt_to2, exp_pkt_to3], [self.port2, self.port3])
 
     def runTest(self):
         self.IPv4UnicastGroupTestAllPortL4DstIp("tcp")
@@ -425,13 +430,13 @@ class FabricIPv4MPLSTest(FabricTest):
                 "ttl": DEFAULT_MPLS_TTL}],
             inner_frame=pkt_1to2[IP:])
 
-        testutils.send_packet(self, self.port1, str(pkt_1to2))
-        testutils.verify_packets(self, exp_pkt_1to2, [self.port2])
+        self.send_packet(self.port1, str(pkt_1to2))
+        self.verify_packets(exp_pkt_1to2, [self.port2])
 
 
 class FabricIPv4MplsGroupTest(IPv4UnicastTest):
     @autocleanup
-    def doRunTest(self, pkt, mac_dest, tagged1):
+    def doRunTest(self, pkt, mac_dest, tagged1, tc_name):
         self.runIPv4UnicastTest(
             pkt, mac_dest, prefix_len=24, tagged1=tagged1, tagged2=False,
             mpls=True)
@@ -440,6 +445,7 @@ class FabricIPv4MplsGroupTest(IPv4UnicastTest):
         print ""
         for tagged1 in [True, False]:
             for pkt_type in ["tcp", "udp", "icmp"]:
+                tc_name = pkt_type + "_tagged_" + str(tagged1)
                 print "Testing %s packet with tagged=%s..." \
                       % (pkt_type, tagged1)
                 pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
@@ -447,18 +453,19 @@ class FabricIPv4MplsGroupTest(IPv4UnicastTest):
                     ip_src=HOST1_IPV4, ip_dst=HOST2_IPV4,
                     pktlen=MIN_PKT_LEN
                 )
-                self.doRunTest(pkt, HOST2_MAC, tagged1)
+                self.doRunTest(pkt, HOST2_MAC, tagged1, tc_name=tc_name)
 
 
 class FabricMplsSegmentRoutingTest(MplsSegmentRoutingTest):
     @autocleanup
-    def doRunTest(self, pkt, mac_dest, next_hop_spine):
+    def doRunTest(self, pkt, mac_dest, next_hop_spine, tc_name):
         self.runMplsSegmentRoutingTest(pkt, mac_dest, next_hop_spine)
 
     def runTest(self):
         print ""
         for pkt_type in ["tcp", "udp", "icmp"]:
             for next_hop_spine in [True, False]:
+                tc_name = pkt_type + "_next_hop_spine_" + str(next_hop_spine)
                 print "Testing %s packet, next_hop_spine=%s..." \
                       % (pkt_type, next_hop_spine)
                 pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
@@ -466,7 +473,7 @@ class FabricMplsSegmentRoutingTest(MplsSegmentRoutingTest):
                     ip_src=HOST1_IPV4, ip_dst=HOST2_IPV4,
                     pktlen=MIN_PKT_LEN
                 )
-                self.doRunTest(pkt, HOST2_MAC, next_hop_spine)
+                self.doRunTest(pkt, HOST2_MAC, next_hop_spine, tc_name=tc_name)
 
 
 @group("packetio")
@@ -532,15 +539,15 @@ class FabricDefaultVlanPacketInTest(FabricTest):
         pkt = testutils.simple_eth_packet(pktlen=MIN_PKT_LEN)
         self.add_forwarding_acl_punt_to_cpu(eth_type=pkt[Ether].type)
         for port in [self.port1, self.port2]:
-            testutils.send_packet(self, port, str(pkt))
+            self.send_packet(port, str(pkt))
             self.verify_packet_in(pkt, port)
-        testutils.verify_no_other_packets(self)
+        self.verify_no_other_packets()
 
 
 @group("spgw")
 class SpgwDownlinkTest(SpgwSimpleTest):
     @autocleanup
-    def doRunTest(self, pkt, tagged1, tagged2, mpls):
+    def doRunTest(self, pkt, tagged1, tagged2, mpls, tc_name):
         self.runDownlinkTest(pkt=pkt, tagged1=tagged1,
                              tagged2=tagged2, mpls=mpls)
 
@@ -551,6 +558,7 @@ class SpgwDownlinkTest(SpgwSimpleTest):
                 for mpls in [False, True]:
                     if mpls and tagged[1]:
                         continue
+                    tc_name = "VLAN_" + vlan_conf + "_" + pkt_type + "_mpls_" + str(mpls)
                     print "Testing VLAN=%s, pkt=%s, mpls=%s..." \
                           % (vlan_conf, pkt_type, mpls)
                     pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
@@ -558,7 +566,7 @@ class SpgwDownlinkTest(SpgwSimpleTest):
                         ip_src=HOST1_IPV4, ip_dst=HOST2_IPV4,
                         pktlen=MIN_PKT_LEN
                     )
-                    self.doRunTest(pkt, tagged[0], tagged[1], mpls)
+                    self.doRunTest(pkt, tagged[0], tagged[1], mpls, tc_name=tc_name)
 
 
 @group("spgw")
