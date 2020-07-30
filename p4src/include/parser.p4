@@ -582,11 +582,9 @@ control FabricEgressMirror(
                 fabric_md.bridge_md_type,
                 fabric_md.int_len_words,
                 fabric_md.int_switch_id,
-                fabric_md.int_hop_latency,
-                fabric_md.int_q_id,
-                fabric_md.int_q_occupancy,
-                fabric_md.int_ingress_tstamp,
-                fabric_md.int_egress_tstamp
+                fabric_md.int_ingress_port_id,
+                fabric_md.int_egress_port_id,
+                fabric_md.int_hop_latency
                 // FIXME: include all INT metadata from previous node.
             });
         }

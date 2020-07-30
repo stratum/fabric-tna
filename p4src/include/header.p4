@@ -212,11 +212,9 @@ struct fabric_egress_metadata_t {
     bit<32> int_switch_id;
 #ifdef WITH_INT_SINK
     bit<8> int_len_words;
+    bit<16> int_ingress_port_id;
+    bit<16> int_egress_port_id;
     bit<32> int_hop_latency;
-    bit<8> int_q_id;
-    bit<24> int_q_occupancy;
-    bit<32> int_ingress_tstamp;
-    bit<32> int_egress_tstamp;
 #endif // WITH_INT_SINK
 #endif // WITH_INT
 }
