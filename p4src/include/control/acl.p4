@@ -36,9 +36,9 @@ control Acl (inout parsed_headers_t hdr,
     }
 
     // Set mirror with session/clone id
-    action set_clone_session_id(bit<32> clone_id) {
-        fabric_md.is_mirror = true;
-        fabric_md.mirror_id = clone_id[9:0];
+    action set_clone_session_id(MirrorId_t clone_id) {
+        ig_intr_md_for_dprsr.mirror_type = MIRROR_TYPE_I2E;
+        fabric_md.mirror_id = clone_id;
         acl_counter.count();
     }
 

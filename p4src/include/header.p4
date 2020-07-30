@@ -149,7 +149,6 @@ struct fabric_ingress_metadata_t {
     fwd_type_t      fwd_type;
     next_id_t       next_id;
     bool            is_multicast;
-    bool            is_mirror;
     MirrorId_t      mirror_id;
 #ifdef WITH_SPGW
     bit<16>         spgw_ipv4_len;

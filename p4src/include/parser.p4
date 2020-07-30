@@ -210,6 +210,10 @@ parser FabricIngressParser (packet_in  packet,
 #endif // WITH_SPGW
 }
 
+// TODO(max): check if empty header is needed.
+header mirror_h {
+}
+
 control FabricIngressDeparser(packet_out packet,
     /* Fabric.p4 */
     inout parsed_headers_t hdr,
@@ -219,8 +223,8 @@ control FabricIngressDeparser(packet_out packet,
     Mirror() mirror;
 
     apply {
-        if (fabric_md.is_mirror) {
-            mirror.emit(fabric_md.mirror_id);
+        if (ig_intr_md_for_dprsr.mirror_type == MIRROR_TYPE_I2E) {
+            mirror.emit<mirror_h>(fabric_md.mirror_id, {});
         }
         packet.emit(hdr.bridge_md);
         packet.emit(hdr.ethernet);

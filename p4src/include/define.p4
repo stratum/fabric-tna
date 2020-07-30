@@ -139,6 +139,14 @@ const bit<8> ETH_HEADER_LEN = 14;
 const bit<8> IPV4_MIN_HEAD_LEN = 20;
 const bit<8> UDP_HEADER_LEN = 8;
 
+#if __TARGET_TOFINO__ == 1
+typedef bit<3> mirror_type_t;
+#else
+typedef bit<4> mirror_type_t;
+#endif
+const mirror_type_t MIRROR_TYPE_I2E = 1;
+const mirror_type_t MIRROR_TYPE_E2E = 2;
+
 action nop() {
     NoAction();
 }

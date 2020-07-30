@@ -1100,14 +1100,16 @@ class MulticastGroupModificationTest(FabricTest):
         self.doRunTest()
 
 @group("p4r-function")
-class CloneSessionTest(FabricTest):
+class CloneSessionTest(BridgingTest):
 
     @autocleanup
     def doRunTest(self):
         # Add session with egress port 1 (instance 1)
         session_id = 10
+        cos = 1
+        pkt_len = 512
         replicas = [(0, 1)]  # (instance, port)
-        req, _ = self.add_clone_session(session_id, replicas)
+        req, _ = self.add_clone_session(session_id, replicas, cos, pkt_len)
         expected_clone_entry = req.updates[0].entity.packet_replication_engine_entry.clone_session_entry
         received_clone_entry = self.read_clone_session(session_id)
         self.verify_p4runtime_entity(expected_clone_entry, received_clone_entry)
@@ -1132,9 +1134,34 @@ class CloneSessionTest(FabricTest):
         if len(received_clone_sessions) != 2:
             self.fail("Incorrect number of clone sessions")
 
+    @autocleanup
+    def dataPlaneTest(self):
+        session_id = 10
+        self.add_forwarding_acl_set_clone_session_id(ETH_TYPE_IPV4, session_id)
+        req, _ = self.add_clone_session(session_id, [(0, 8)], cos=1, packet_length_bytes=512)
+        received_clone_entry = self.read_clone_session(session_id)
+        print(received_clone_entry)
+
+        pkt_from1 = testutils.simple_ip_packet(
+            eth_src=HOST1_MAC, eth_dst=SWITCH_MAC,
+            ip_src=HOST1_IPV4, ip_dst=HOST2_IPV4, ip_ttl=64)
+        self.runBridgingTest(False, False, pkt_from1)
+        # exp_pkt_to2 = testutils.simple_tcp_packet(
+        #     eth_src=SWITCH_MAC, eth_dst=HOST2_MAC,
+        #     ip_src=HOST1_IPV4, ip_dst=HOST2_IPV4, ip_ttl=63)
+        # exp_pkt_to3 = testutils.simple_tcp_packet(
+        #     eth_src=SWITCH_MAC, eth_dst=HOST3_MAC,
+        #     ip_src=HOST1_IPV4, ip_dst=HOST2_IPV4, ip_ttl=63)
+
+        # testutils.send_packet(self, self.port1, str(pkt_from1))
+        # testutils.verify_packet(self, pkt_from1, self.port2)
+        # testutils.verify_any_packet_any_port(
+        #     self, [exp_pkt_to2, exp_pkt_to3], [self.port2, self.port3])
+
     def runTest(self):
         print("")
         self.doRunTest()
+        self.dataPlaneTest()
 
 @group("p4r-function")
 class CounterTest(BridgingTest):

@@ -414,7 +414,7 @@ class FabricTest(P4RuntimeTest):
     def add_forwarding_acl_set_clone_session_id(self, eth_type=None, clone_group_id=None):
         eth_type_ = stringify(eth_type, 2)
         eth_type_mask = stringify(0xFFFF, 2)
-        clone_group_id_ = stringify(clone_group_id, 4)
+        clone_group_id_ = stringify(clone_group_id, 2)
         self.send_request_add_entry_to_action(
             "acl.acl",
             [self.Ternary("eth_type", eth_type_, eth_type_mask)],
@@ -605,29 +605,29 @@ class FabricTest(P4RuntimeTest):
     def delete_mcast_group(self, group_id):
         return self.write_mcast_group(group_id, [], p4runtime_pb2.Update.DELETE)
 
-    def write_clone_session(self, clone_id, replicas, update_type):
+    def write_clone_session(self, clone_id, replicas, cos, packet_length_bytes, update_type):
         req = self.get_new_write_request()
         update = req.updates.add()
         update.type = update_type
         pre_entry = update.entity.packet_replication_engine_entry
         clone_entry = pre_entry.clone_session_entry
         clone_entry.session_id = clone_id
-        clone_entry.class_of_service = 0
-        clone_entry.packet_length_bytes = 0
+        clone_entry.class_of_service = cos
+        clone_entry.packet_length_bytes = packet_length_bytes
         for instance, port in replicas:
             replica = clone_entry.replicas.add()
             replica.egress_port = port
             replica.instance = instance
         return req, self.write_request(req)
 
-    def add_clone_session(self, clone_id, replicas):
-        return self.write_clone_session(clone_id, replicas, p4runtime_pb2.Update.INSERT)
+    def add_clone_session(self, clone_id, replicas, cos=0, packet_length_bytes=0):
+        return self.write_clone_session(clone_id, replicas, cos, packet_length_bytes, p4runtime_pb2.Update.INSERT)
 
-    def modify_clone_session(self, clone_id, replicas):
-        return self.write_clone_session(clone_id, replicas, p4runtime_pb2.Update.MODIFY)
+    def modify_clone_session(self, clone_id, replicas, cos=0, packet_length_bytes=0):
+        return self.write_clone_session(clone_id, replicas, cos, packet_length_bytes, p4runtime_pb2.Update.MODIFY)
 
     def delete_clone_session(self, clone_id):
-        return self.write_clone_session(clone_id, [], p4runtime_pb2.Update.DELETE)
+        return self.write_clone_session(clone_id, [], 0, 0, packet_length_bytes, p4runtime_pb2.Update.DELETE)
 
     def add_next_hashed_group_member(self, action_name, params):
         mbr_id = self.get_next_mbr_id()
