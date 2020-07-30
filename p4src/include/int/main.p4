@@ -93,7 +93,7 @@ control IntEgress (
                 int_transit.apply(hdr, fabric_md, eg_intr_md, eg_prsr_md);
 #endif // WITH_INT_TRANSIT
 #ifdef WITH_INT_SINK
-                // int_sink.apply(hdr, fabric_md);
+                int_sink.apply(hdr, fabric_md);
 #endif // WITH_INT_SINK
             }
         }
