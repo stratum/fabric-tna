@@ -35,13 +35,13 @@ fabric:
 # 	@${p4-build} fabric-bng "-DWITH_BNG -DWITHOUT_XCONNECT"
 
 fabric-int:
-	@${p4-build} fabric-int "-DWITH_INT_SOURCE -DWITH_INT_TRANSIT"
+	@${p4-build} fabric-int "-DWITH_INT_SOURCE -DWITH_INT_TRANSIT -DWITH_INT_SINK"
 
 fabric-spgw:
 	@${p4-build} fabric-spgw "-DWITH_SPGW"
 
 fabric-spgw-int:
-	@${p4-build} fabric-spgw-int "-DWITH_SPGW -DWITH_INT_SOURCE -DWITH_INT_TRANSIT"
+	@${p4-build} fabric-spgw-int "-DWITH_SPGW -DWITH_INT_SOURCE -DWITH_INT_TRANSIT -DWITH_INT_SINK"
 
 # Reuse the same container to persist mvn repo cache.
 _create_mvn_container:

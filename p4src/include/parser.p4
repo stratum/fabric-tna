@@ -346,6 +346,7 @@ parser FabricEgressParser (packet_in packet,
     state parse_bridge_metadata {
         packet.extract(bridge_md);
         fabric_md.vlan_id = bridge_md.vlan_id;
+        fabric_md.mirror_session_id = MIRROR_SESSION_ID_INVALID;
 #ifdef WITH_DOUBLE_VLAN_TERMINATION
         fabric_md.push_double_vlan = bridge_md.push_double_vlan;
         fabric_md.inner_vlan_id = bridge_md.inner_vlan_id;
@@ -572,6 +573,31 @@ parser FabricEgressParser (packet_in packet,
 #endif // WITH_GTPU
 }
 
+control FabricEgressMirror(
+    in parsed_headers_t hdr,
+    in fabric_egress_metadata_t fabric_md) {
+    Mirror() mirror;
+    apply {
+        if (fabric_md.mirror_session_id == MIRROR_SESSION_ID_INT_REPORT) {
+            mirror.emit<int_mirror_metadata_t>(fabric_md.mirror_session_id, {
+                fabric_md.bridge_md_type,
+                fabric_md.int_len_words,
+                fabric_md.int_switch_id,
+                fabric_md.int_hop_latency,
+                fabric_md.int_q_id,
+                fabric_md.int_q_occupancy,
+                fabric_md.int_ingress_tstamp,
+                fabric_md.int_egress_tstamp
+                // FIXME: include all INT metadata from previous node.
+                // hdr.int_data[0],
+                // hdr.int_data[1],
+                // hdr.int_data[2],
+                // hdr.int_data[3]
+            });
+        }
+    }
+}
+
 control FabricEgressDeparser(packet_out packet,
     /* Fabric.p4 */
     inout parsed_headers_t hdr,
@@ -579,6 +605,7 @@ control FabricEgressDeparser(packet_out packet,
     /* TNA */
     in egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr) {
     Checksum() ipv4_checksum;
+    FabricEgressMirror() egress_mirror;
 #ifdef WITH_GTPU
     Checksum() outer_ipv4_checksum;
 #endif // WITH_GTPU
@@ -619,6 +646,7 @@ control FabricEgressDeparser(packet_out packet,
             });
         }
 #endif // WITH_GTPU
+        egress_mirror.apply(hdr, fabric_md);
         packet.emit(hdr.packet_in);
         packet.emit(hdr.ethernet);
         packet.emit(hdr.vlan_tag);
@@ -637,7 +665,8 @@ control FabricEgressDeparser(packet_out packet,
         packet.emit(hdr.tcp);
         packet.emit(hdr.udp);
         packet.emit(hdr.icmp);
-#ifdef WITH_INT
+
+#if defined(WITH_INT_TRANSIT) || defined(WITH_INT_SOURCE)
         packet.emit(hdr.intl4_shim);
         packet.emit(hdr.int_header);
 #ifdef WITH_INT_TRANSIT
@@ -652,7 +681,7 @@ control FabricEgressDeparser(packet_out packet,
 #endif // WITH_INT_TRANSIT
         packet.emit(hdr.int_data);
         packet.emit(hdr.intl4_tail);
-#endif // WITH_INT
+#endif // defined(WITH_INT_TRANSIT) || defined(WITH_INT_SOURCE)
     }
 }
 

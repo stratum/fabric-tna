@@ -12,7 +12,6 @@ control IntTransit (
     in    egress_intrinsic_metadata_from_parser_t eg_prsr_md) {
 
     action init_metadata(bit<32> switch_id) {
-        fabric_md.int_device_type = IntDeviceType.TRANSIT;
         hdr.int_switch_id.switch_id = switch_id;
         hdr.int_port_ids.ingress_port_id = (bit<16>) fabric_md.ingress_port;
         hdr.int_port_ids.egress_port_id = (bit<16>) eg_intr_md.egress_port;
@@ -369,23 +368,21 @@ control IntTransit (
     }
 
     apply {
-        tb_int_insert.apply();
-        if (fabric_md.int_device_type != IntDeviceType.TRANSIT) {
-            return;
-        }
-        tb_int_inst_0003.apply();
-        tb_int_inst_0407.apply();
-        // Increment hop cnt
-        hdr.int_header.total_hop_cnt = hdr.int_header.total_hop_cnt + 1;
-        // Update headers lengths.
-        if (hdr.ipv4.isValid()) {
-            hdr.ipv4.total_len = hdr.ipv4.total_len + fabric_md.int_new_bytes;
-        }
-        if (hdr.udp.isValid()) {
-            hdr.udp.len = hdr.udp.len + fabric_md.int_new_bytes;
-        }
-        if (hdr.intl4_shim.isValid()) {
-            hdr.intl4_shim.len_words = hdr.intl4_shim.len_words + fabric_md.int_new_words;
+        if(tb_int_insert.apply().hit) {
+            tb_int_inst_0003.apply();
+            tb_int_inst_0407.apply();
+            // Increment hop cnt
+            hdr.int_header.total_hop_cnt = hdr.int_header.total_hop_cnt + 1;
+            // Update headers lengths.
+            if (hdr.ipv4.isValid()) {
+                hdr.ipv4.total_len = hdr.ipv4.total_len + fabric_md.int_new_bytes;
+            }
+            if (hdr.udp.isValid()) {
+                hdr.udp.len = hdr.udp.len + fabric_md.int_new_bytes;
+            }
+            if (hdr.intl4_shim.isValid()) {
+                hdr.intl4_shim.len_words = hdr.intl4_shim.len_words + fabric_md.int_new_words;
+            }
         }
     }
 }

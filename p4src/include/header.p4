@@ -209,14 +209,22 @@ struct fabric_egress_metadata_t {
 #endif // WITH_GTPU
     bit<16>         l4_sport;
     bit<16>         l4_dport;
-    bool            is_mirror;
-    MirrorId_t      mirror_id;
+    BridgeMetadataType bridge_md_type;
+    MirrorId_t      mirror_session_id;
 #ifdef WITH_INT
     IntDeviceType int_device_type;
     bit<32> int_switch_id;
     bit<8>  int_new_words;
     bit<16> int_new_bytes;
-#endif
+#ifdef WITH_INT_SINK
+    bit<8> int_len_words;
+    bit<32> int_hop_latency;
+    bit<8> int_q_id;
+    bit<24> int_q_occupancy;
+    bit<32> int_ingress_tstamp;
+    bit<32> int_egress_tstamp;
+#endif // WITH_INT_SINK
+#endif // WITH_INT
 }
 
 @flexible
@@ -254,11 +262,6 @@ header bridge_metadata_t {
 #endif // WITH_INT
 }
 
-header bridge_metadata_for_mirror_t {
-    BridgeMetadataType bridge_md_type;
-    MirrorId_t mirror_id;
-    @padding bit<4> pad;
-}
 
 struct parsed_headers_t {
     bridge_metadata_t bridge_md;
@@ -300,7 +303,7 @@ struct parsed_headers_t {
     intl4_shim_t intl4_shim;
     int_header_t int_header;
     intl4_tail_t intl4_tail;
-    int_data_t[24] int_data;
+    int_data_t[4] int_data;
 #ifdef WITH_INT_TRANSIT
     int_switch_id_t int_switch_id;
     int_port_ids_t int_port_ids;

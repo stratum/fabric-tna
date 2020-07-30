@@ -15,7 +15,7 @@
 
 #ifdef WITH_INT_SINK
 #include "sink.p4"
-#include "report.p4"
+// #include "report.p4"
 #endif // WITH_INT_SINK
 
 control IntIngress (
@@ -101,7 +101,7 @@ control IntEgress (
                 int_transit.apply(hdr, fabric_md, eg_intr_md, eg_prsr_md);
 #endif // WITH_INT_TRANSIT
 #ifdef WITH_INT_SINK
-                int_sink.apply(hdr, fabric_md, eg_intr_md);
+                // int_sink.apply(hdr, fabric_md);
 #endif // WITH_INT_SINK
             }
         }

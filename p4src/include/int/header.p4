@@ -112,6 +112,17 @@ header_union local_report_t {
     drop_report_header_t drop_report_header;
     local_report_header_t local_report_header;
 }
+
+header int_mirror_metadata_t {
+    BridgeMetadataType bridge_md_type;
+    bit<8> len_words;
+    bit<32> switch_id;
+    bit<32> hop_latency;
+    bit<8> q_id;
+    bit<24> q_occupancy;
+    bit<32> ingress_tstamp;
+    bit<32> egress_tstamp;
+}
 #endif // WITH_INT_SINK
 
 #endif

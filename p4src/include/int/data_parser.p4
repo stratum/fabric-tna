@@ -14,26 +14,26 @@ parser IntDataParser(packet_in packet, inout parsed_headers_t hdr) {
             8w6: parse_int_data_2;
             8w7: parse_int_data_3;
             8w8: parse_int_data_4;
-            8w9: parse_int_data_5;
-            8w10: parse_int_data_6;
-            8w11: parse_int_data_7;
-            8w12: parse_int_data_8;
-            8w13: parse_int_data_9;
-            8w14: parse_int_data_10;
-            8w15: parse_int_data_11;
-            8w16: parse_int_data_12;
-            8w17: parse_int_data_13;
-            8w18: parse_int_data_14;
-            8w19: parse_int_data_15;
-            8w20: parse_int_data_16;
-            8w21: parse_int_data_17;
-            8w22: parse_int_data_18;
-            8w23: parse_int_data_19;
-            8w24: parse_int_data_20;
-            8w25: parse_int_data_21;
-            8w26: parse_int_data_22;
-            8w27: parse_int_data_23;
-            8w28: parse_int_data_24;
+            // 8w9: parse_int_data_5;
+            // 8w10: parse_int_data_6;
+            // 8w11: parse_int_data_7;
+            // 8w12: parse_int_data_8;
+            // 8w13: parse_int_data_9;
+            // 8w14: parse_int_data_10;
+            // 8w15: parse_int_data_11;
+            // 8w16: parse_int_data_12;
+            // 8w17: parse_int_data_13;
+            // 8w18: parse_int_data_14;
+            // 8w19: parse_int_data_15;
+            // 8w20: parse_int_data_16;
+            // 8w21: parse_int_data_17;
+            // 8w22: parse_int_data_18;
+            // 8w23: parse_int_data_19;
+            // 8w24: parse_int_data_20;
+            // 8w25: parse_int_data_21;
+            // 8w26: parse_int_data_22;
+            // 8w27: parse_int_data_23;
+            // 8w28: parse_int_data_24;
             default: reject; // Oversized int data, TODO: mark error
         }
     }
@@ -64,6 +64,8 @@ parser IntDataParser(packet_in packet, inout parsed_headers_t hdr) {
         transition accept;
     }
 
+// Not supported
+/*
     state parse_int_data_5 {
         packet.extract(hdr.int_data[0]);
         packet.extract(hdr.int_data[1]);
@@ -433,5 +435,6 @@ parser IntDataParser(packet_in packet, inout parsed_headers_t hdr) {
         packet.extract(hdr.int_data[23]);
         transition accept;
     }
+    */
 }
 #endif // __INT_DATA_PARSER__
