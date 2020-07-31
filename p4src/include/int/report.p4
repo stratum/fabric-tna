@@ -10,6 +10,8 @@ control IntReport (
     inout fabric_egress_metadata_t fabric_md,
     in    egress_intrinsic_metadata_t eg_intr_md) {
 
+    Random<bit<16>>() ip_id_gen;
+
     @hidden
     action add_report_fixed_header() {
         /* Device should include its own INT metadata as embedded,
@@ -54,11 +56,12 @@ control IntReport (
         hdr.report_ipv4.ihl = 4w5;
         hdr.report_ipv4.dscp = 6w0;
         hdr.report_ipv4.ecn = 2w0;
-        /* Total Len is report_ipv4_len + report_udp_len + report_fixed_hdr_len + ethernet_len + ipv4_totalLen */
-        hdr.report_ipv4.total_len = (bit<16>) IPV4_MIN_HEAD_LEN + (bit<16>) UDP_HEADER_LEN +
-                                (bit<16>) REPORT_FIXED_HEADER_LEN +  (bit<16>) ETH_HEADER_LEN + hdr.ipv4.total_len;
+        /* Total Len is report_ipv4_len + report_udp_len + report_fixed_hdr_len + local report length */
+        hdr.report_ipv4.total_len = IPV4_MIN_HEAD_LEN + UDP_HEADER_LEN +
+                                    REPORT_FIXED_HEADER_LEN + LOCAL_REPORT_HEADER_LEN +
+                                    fabric_md.mirror_pkt_len;
         /* Dont Fragment bit should be set */
-        hdr.report_ipv4.identification = 0;
+        hdr.report_ipv4.identification = ip_id_gen.get();
         hdr.report_ipv4.flags = 0;
         hdr.report_ipv4.frag_offset = 0;
         hdr.report_ipv4.ttl = 64;
@@ -70,8 +73,7 @@ control IntReport (
         hdr.report_udp.setValid();
         hdr.report_udp.sport = 0;
         hdr.report_udp.dport = mon_port;
-        hdr.report_udp.len =  (bit<16>) UDP_HEADER_LEN + (bit<16>) REPORT_FIXED_HEADER_LEN +
-                                    (bit<16>) ETH_HEADER_LEN + hdr.ipv4.total_len;
+        hdr.report_udp.len = UDP_HEADER_LEN + REPORT_FIXED_HEADER_LEN + LOCAL_REPORT_HEADER_LEN + fabric_md.mirror_pkt_len;
 
         add_report_fixed_header();
     }

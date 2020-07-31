@@ -62,6 +62,7 @@ control IntSink (
         fabric_md.int_q_occupancy = hdr.int_q_occupancy.q_occupancy;
         fabric_md.int_ingress_tstamp = hdr.int_ingress_tstamp.ingress_tstamp;
         fabric_md.int_egress_tstamp = hdr.int_egress_tstamp.egress_tstamp;
+        fabric_md.mirror_pkt_len = ETH_HEADER_LEN + hdr.ipv4.total_len;
 
         hdr.int_header.setInvalid();
         hdr.intl4_shim.setInvalid();

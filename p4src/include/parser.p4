@@ -366,7 +366,10 @@ parser FabricEgressParser (packet_in packet,
         fabric_md.int_q_occupancy = int_mirror_md.q_occupancy;
         fabric_md.int_ingress_tstamp = int_mirror_md.ingress_tstamp;
         fabric_md.int_egress_tstamp = int_mirror_md.egress_tstamp;
-        transition parse_ethernet;
+        fabric_md.mirror_pkt_len = int_mirror_md.mirror_pkt_len;
+        fabric_md.vlan_id = DEFAULT_VLAN_ID;
+        // The original packet should be the payload of report packet.
+        transition accept;
 #else
         transition reject;
 #endif // WITH_INT_SINK
@@ -614,7 +617,8 @@ control FabricEgressMirror(
                 fabric_md.int_q_id,
                 fabric_md.int_q_occupancy,
                 fabric_md.int_ingress_tstamp,
-                fabric_md.int_egress_tstamp
+                fabric_md.int_egress_tstamp,
+                fabric_md.mirror_pkt_len
                 // FIXME: include all INT metadata from previous node.
             });
         }

@@ -22,12 +22,12 @@ const bit<4> NPROTO_TELEMETRY_DROP_HEADER = 1;
 const bit<4> NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER = 2;
 
 const bit<6> HW_ID = 1;
-const bit<8> REPORT_FIXED_HEADER_LEN = 12;
-const bit<8> DROP_REPORT_HEADER_LEN = 12;
-const bit<8> LOCAL_REPORT_HEADER_LEN = 16;
-const bit<8> ETH_HEADER_LEN = 14;
-const bit<8> IPV4_MIN_HEAD_LEN = 20;
-const bit<8> UDP_HEADER_LEN = 8;
+const bit<16> REPORT_FIXED_HEADER_LEN = 12;
+const bit<16> DROP_REPORT_HEADER_LEN = 12;
+const bit<16> LOCAL_REPORT_HEADER_LEN = 16;
+const bit<16> ETH_HEADER_LEN = 14;
+const bit<16> IPV4_MIN_HEAD_LEN = 20;
+const bit<16> UDP_HEADER_LEN = 8;
 
 enum bit<2> IntDeviceType {
   UNKNOWN = 0,
