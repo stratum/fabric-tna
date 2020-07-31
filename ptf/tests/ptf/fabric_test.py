@@ -627,7 +627,7 @@ class FabricTest(P4RuntimeTest):
         return self.write_clone_session(clone_id, replicas, cos, packet_length_bytes, p4runtime_pb2.Update.MODIFY)
 
     def delete_clone_session(self, clone_id):
-        return self.write_clone_session(clone_id, [], 0, 0, packet_length_bytes, p4runtime_pb2.Update.DELETE)
+        return self.write_clone_session(clone_id, [], 0, 0, p4runtime_pb2.Update.DELETE)
 
     def add_next_hashed_group_member(self, action_name, params):
         mbr_id = self.get_next_mbr_id()
