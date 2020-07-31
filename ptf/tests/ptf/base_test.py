@@ -633,6 +633,16 @@ class P4RuntimeTest(BaseTest):
         self.push_update_add_entry_to_action(req, t_name, mk, a_name, params, priority)
         return req, self.write_request(req, store=(mk is not None))
 
+    def send_request_modify_default_action(self, t_name, a_name, params):
+        req = self.get_new_write_request()
+        update = req.updates.add()
+        update.type = p4runtime_pb2.Update.MODIFY
+        table_entry = update.entity.table_entry
+        table_entry.table_id = self.get_table_id(t_name)
+        table_entry.is_default_action = True
+        self.set_action_entry(table_entry, a_name, params)
+        return req, self.write_request(req, store=False)
+
     def push_update_add_entry_to_member(self, req, t_name, mk, mbr_id):
         update = req.updates.add()
         update.type = p4runtime_pb2.Update.INSERT

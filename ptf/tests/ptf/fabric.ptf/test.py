@@ -861,6 +861,34 @@ class FabricIntTransitTest(IntTest):
 
 
 @group("int")
+class FabricIntSourceTransitSinkTest(IntTest):
+    @autocleanup
+    def doRunTest(self, vlan_conf, tagged, pkt_type, instrs, mpls):
+        print "Testing VLAN=%s, pkt=%s, mpls=%s, instructions=%s..." \
+              % (vlan_conf, pkt_type, mpls,
+                 ",".join([INT_INS_TO_NAME[i] for i in instrs]))
+        pkt = getattr(testutils, "simple_%s_packet" % pkt_type)()
+        self.runIntSourceTransitSinkTest(pkt=pkt,
+                                         tagged1=tagged[0],
+                                         tagged2=tagged[1],
+                                         mpls=mpls,
+                                         instructions=instrs)
+
+    def runTest(self):
+        instr_sets = [
+            [INT_SWITCH_ID, INT_IG_EG_PORT],
+            [INT_SWITCH_ID, INT_IG_EG_PORT, INT_IG_TSTAMP, INT_EG_TSTAMP, INT_QUEUE_OCCUPANCY]
+        ]
+        print ""
+        for vlan_conf, tagged in vlan_confs.items():
+            for pkt_type in ["udp", "tcp"]:
+                for mpls in [False, True]:
+                    for instrs in instr_sets:
+                        if mpls and tagged[1]:
+                            continue
+                        self.doRunTest(vlan_conf, tagged, pkt_type, instrs, mpls)
+
+# @group("int")
 @group("int-full")
 class FabricIntTransitFullTest(IntTest):
     @autocleanup

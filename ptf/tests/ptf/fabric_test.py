@@ -51,6 +51,8 @@ ETH_TYPE_MPLS_UNICAST = 0x8847
 INT_META_HDR = xnt.INT_META_HDR
 INT_L45_HEAD = xnt.INT_L45_HEAD
 INT_L45_TAIL = xnt.INT_L45_TAIL
+INT_L45_REPORT_FIXED = xnt.INT_L45_REPORT_FIXED
+INT_L45_LOCAL_REPORT = xnt.INT_L45_LOCAL_REPORT
 
 BROADCAST_MAC = ":".join(["ff"] * 6)
 MAC_MASK = ":".join(["ff"] * 6)
@@ -107,8 +109,11 @@ INT_INS_TO_NAME = {
     INT_EG_TSTAMP: "eg_tstamp",
     INT_QUEUE_CONGESTION: "queue_congestion",
     INT_EG_PORT_TX: "eg_port_tx"
-
 }
+
+INT_REPORT_MIRROR_ID = 7
+INT_REPORT_PORT = 3344
+bind_layers(UDP, INT_L45_REPORT_FIXED, dport=INT_REPORT_PORT)
 
 PPPOE_CODE_SESSION_STAGE = 0x00
 
@@ -613,7 +618,7 @@ class FabricTest(P4RuntimeTest):
         for port in ports:
             replica = clone_entry.replicas.add()
             replica.egress_port = port
-            replica.instance = 1
+            replica.instance = 0 # set to 0 because we don't support it yet.
         return req, self.write_request(req)
 
     def add_next_hashed_group_member(self, action_name, params):
@@ -751,7 +756,7 @@ class IPv4UnicastTest(FabricTest):
                            exp_pkt=None, exp_pkt_base=None, next_id=None,
                            next_vlan=None, mpls=False, dst_ipv4=None,
                            routed_eth_types=(ETH_TYPE_IPV4,),
-                           verify_pkt=True):
+                           verify_pkt=True, with_another_pkt_later=False):
         """
         Execute an IPv4 unicast routing test.
         :param pkt: input packet
@@ -773,6 +778,8 @@ class IPv4UnicastTest(FabricTest):
             classifier table to process packets via routing
         :param verify_pkt: whether packets are expected to be forwarded or
             dropped
+        :param with_another_pkt_later: another packet(s) will be verified outside
+            this function
         """
         if IP not in pkt or Ether not in pkt:
             self.fail("Cannot do IPv4 test with packet that is not IP")
@@ -842,7 +849,9 @@ class IPv4UnicastTest(FabricTest):
 
         if verify_pkt:
             testutils.verify_packet(self, exp_pkt, self.port2)
-        testutils.verify_no_other_packets(self)
+
+        if not with_another_pkt_later:
+            testutils.verify_no_other_packets(self)
 
 
 class DoubleVlanTerminationTest(FabricTest):
@@ -1352,7 +1361,27 @@ class IntTest(IPv4UnicastTest):
         self.send_request_add_entry_to_action(
             "tb_set_source",
             [self.Exact("ig_port", source_port_)],
-            "int_set_source", [])
+            "nop", [])
+
+    def setup_sink_port(self, sink_port):
+        sink_port = stringify(sink_port, 2)
+        self.send_request_add_entry_to_action(
+            "tb_set_sink",
+            [self.Exact("eg_port", sink_port)],
+            "nop", [])
+
+    def setup_report_flow(self, port, src_mac, mon_mac, src_ip, mon_ip, mon_port):
+        self.add_clone_group(INT_REPORT_MIRROR_ID, [port])
+        self.send_request_add_entry_to_action(
+            "tb_generate_report",
+            [self.Exact("fabric_md.mirror_session_id", stringify(INT_REPORT_MIRROR_ID, 2))],
+            "do_report_encapsulation", [
+                ("src_mac", mac_to_binary(src_mac)),
+                ("mon_mac", mac_to_binary(mon_mac)),
+                ("src_ip", ipv4_to_binary(src_ip)),
+                ("mon_ip", ipv4_to_binary(mon_ip)),
+                ("mon_port", stringify(mon_port, 2))
+            ])
 
     def get_ins_mask(self, instructions):
         return reduce(ior, instructions)
@@ -1426,6 +1455,14 @@ class IntTest(IPv4UnicastTest):
                 ("ins_mask0003", ins_mask0003_),
                 ("ins_mask0407", ins_mask0407_)
             ], priority=DEFAULT_PRIORITY)
+
+    def build_int_local_report(self, src_mac, dst_mac, src_ip, dst_ip,
+                               ig_port, eg_port, sw_id=1, original_packet=None):
+        pkt = Ether(src=src_mac, dst=dst_mac) / IP(src=src_ip, dst=dst_ip) / \
+              UDP(sport=0, chksum=0) / \
+              INT_L45_REPORT_FIXED(nproto=2, f=1, hw_id=1) / \
+              INT_L45_LOCAL_REPORT(switch_id=sw_id, ingress_port_id=ig_port, egress_port_id=eg_port) / \
+              original_packet
 
     def runIntSourceTest(self, pkt, tagged1, tagged2, instructions,
                          with_transit=True, ignore_csum=False, switch_id=1,
@@ -1556,6 +1593,56 @@ class IntTest(IPv4UnicastTest):
         self.runIPv4UnicastTest(pkt=pkt, next_hop_mac=HOST2_MAC,
                                 tagged1=tagged1, tagged2=tagged2, mpls=mpls,
                                 prefix_len=32, exp_pkt=exp_pkt)
+
+    # Note: we only support one hop for now
+    def runIntSourceTransitSinkTest(self, pkt, tagged1, tagged2,
+                                    instructions, ignore_csum=False, switch_id=1,
+                                    mpls=False, max_hop=1):
+        if IP not in pkt:
+            self.fail("Packet is not IP")
+        if UDP not in pkt and TCP not in pkt:
+            self.fail("Packet must be UDP or TCP for INT tests")
+
+        ig_port = self.port1
+        eg_port = self.port2
+        collector_port = self.port3
+        ipv4_src = pkt[IP].src
+        ipv4_dst = pkt[IP].dst
+        proto = UDP if UDP in pkt else TCP
+        sport = pkt[proto].sport
+        dport = pkt[proto].dport
+
+        # We should expected to receive an routed packet with no INT headers.
+        # Build exp pkt using the input one.
+        exp_pkt = pkt.copy()
+        exp_pkt = pkt_route(exp_pkt, HOST2_MAC)
+        if not mpls:
+            exp_pkt = pkt_decrement_ttl(exp_pkt)
+        if tagged2 and Dot1Q not in exp_pkt:
+            exp_pkt = pkt_add_vlan(exp_pkt, vlan_vid=VLAN_ID_2)
+        if mpls:
+            exp_pkt = pkt_add_mpls(exp_pkt, label=MPLS_LABEL_2, ttl=DEFAULT_MPLS_TTL)
+
+        # We should also expected an INT report packet comes from "resubmit port"
+        exp_int_pkt = self.build_int_local_report(SWITCH_MAC, HOST3_MAC, SWITCH_IPV4, HOST3_IPV4,
+                                                  ig_port, eg_port, sw_id=1, original_packet=exp_pkt)
+
+        # Set up source, transit, and sink table
+        self.setup_source_port(ig_port)
+        self.setup_source_flow(
+            ipv4_src=ipv4_src, ipv4_dst=ipv4_dst, sport=sport, dport=dport,
+            instructions=instructions, max_hop=max_hop)
+        self.setup_transit(switch_id)
+        self.setup_sink_port(eg_port)
+        self.setup_report_flow(collector_port, SWITCH_MAC, HOST3_MAC,
+                               SWITCH_IPV4, HOST3_IPV4, INT_REPORT_PORT)
+
+        self.runIPv4UnicastTest(pkt=pkt, next_hop_mac=HOST2_MAC,
+                                tagged1=tagged1, tagged2=tagged2, mpls=mpls,
+                                prefix_len=32, with_another_pkt_later=True)
+
+        testutils.verify_packet(self, exp_int_pkt, collector_port)
+        testutils.verify_no_other_packets(self)
 
 class SpgwIntTest(SpgwSimpleTest, IntTest):
 
