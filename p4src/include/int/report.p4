@@ -77,7 +77,9 @@ control IntReport (
     }
 
     table tb_generate_report {
-        key = { }
+        key = {
+            fabric_md.mirror_session_id: exact;
+        }
         actions = {
             do_report_encapsulation;
             @defaultonly nop();
