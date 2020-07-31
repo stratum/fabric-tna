@@ -211,10 +211,13 @@ struct fabric_egress_metadata_t {
     IntDeviceType int_device_type;
     bit<32> int_switch_id;
 #ifdef WITH_INT_SINK
-    bit<8> int_len_words;
+    // things we want to put in INT report
     bit<16> int_ingress_port_id;
     bit<16> int_egress_port_id;
-    bit<32> int_hop_latency;
+    bit<8>  int_q_id;
+    bit<24> int_q_occupancy;
+    bit<32> int_ingress_tstamp;
+    bit<32> int_egress_tstamp;
 #endif // WITH_INT_SINK
 #endif // WITH_INT
 }
@@ -277,9 +280,14 @@ struct parsed_headers_t {
     // INT specific headers
 #ifdef WITH_INT
 #ifdef WITH_INT_SINK
+    // INT Report encap
+    ethernet_t report_ethernet;
+    eth_type_t report_eth_type;
+    ipv4_t report_ipv4;
+    udp_t report_udp;
     // INT Report header (support only fixed)
     report_fixed_header_t report_fixed_header;
-    // local_report_t report_local;
+    local_report_header_t local_report_header;
 #endif // WITH_INT_SINK
     intl4_shim_t intl4_shim;
     int_header_t int_header;

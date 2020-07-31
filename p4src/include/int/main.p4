@@ -15,7 +15,7 @@
 
 #ifdef WITH_INT_SINK
 #include "sink.p4"
-// #include "report.p4"
+#include "report.p4"
 #endif // WITH_INT_SINK
 
 control IntEgress (
@@ -34,9 +34,13 @@ control IntEgress (
 
 #ifdef WITH_INT_SINK
     IntSink() int_sink;
+    IntReport() int_report;
 #endif  // WITH_INT_SINK
 
     apply {
+#ifdef WITH_INT_SINK
+        int_report.apply(hdr, fabric_md, eg_intr_md);
+#endif
         if (fabric_md.ingress_port != CPU_PORT &&
             eg_intr_md.egress_port != CPU_PORT &&
             (hdr.udp.isValid() || hdr.tcp.isValid())) {

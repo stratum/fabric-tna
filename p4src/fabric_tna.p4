@@ -56,7 +56,7 @@ control FabricIngress (
 
         if (ig_tm_md.bypass_egress == 1w0) {
             hdr.bridge_md.setValid();
-            hdr.bridge_md.bridge_md_type = BridgeMetadataType.BRIDGE_MD_INGRESS_TO_EGRESS;
+            hdr.bridge_md.bridge_md_type = BridgeMetadataType.INGRESS_TO_EGRESS;
             hdr.bridge_md.is_multicast = fabric_md.is_multicast;
             hdr.bridge_md.ingress_port = ig_intr_md.ingress_port;
             hdr.bridge_md.ip_eth_type = fabric_md.ip_eth_type;

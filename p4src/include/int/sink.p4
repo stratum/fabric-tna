@@ -13,21 +13,21 @@ control IntSink (
     Hash<bit<16>>(HashAlgorithm_t.IDENTITY) field_size_modifier;
     bit<16> bytes_removed;
 
-    action restore_header_len_field() {
+    action calculate_removed_bytes() {
         bytes_removed = field_size_modifier.get<bit<10>>(hdr.intl4_shim.len_words ++ 2w0);
     }
 
-    table tbl_restore_header_len_field {
+    table tbl_calculate_removed_bytes {
         key = {
             hdr.intl4_shim.isValid(): exact;
         }
         actions = {
-            restore_header_len_field;
+            calculate_removed_bytes;
             @defaultonly nop;
         }
         default_action = nop;
         const entries = {
-            true: restore_header_len_field;
+            true: calculate_removed_bytes;
         }
         size = 1;
     }
@@ -47,20 +47,22 @@ control IntSink (
         if (!tb_set_sink.apply().hit) {
             return;
         }
-        tbl_restore_header_len_field.apply();
+        bytes_removed = 0;
+        tbl_calculate_removed_bytes.apply();
 
         hdr.ipv4.total_len = hdr.ipv4.total_len - bytes_removed;
         hdr.udp.len = hdr.udp.len - bytes_removed;
         hdr.udp.dport = hdr.intl4_tail.dest_port;
         hdr.ipv4.dscp = hdr.intl4_tail.dscp;
 
-        fabric_md.int_len_words = hdr.intl4_shim.len_words;
         fabric_md.int_switch_id = hdr.int_switch_id.switch_id;
         fabric_md.int_ingress_port_id = hdr.int_port_ids.ingress_port_id;
         fabric_md.int_egress_port_id = hdr.int_port_ids.egress_port_id;
-        fabric_md.int_hop_latency = hdr.int_hop_latency.hop_latency;
+        fabric_md.int_q_id = hdr.int_q_occupancy.q_id;
+        fabric_md.int_q_occupancy = hdr.int_q_occupancy.q_occupancy;
+        fabric_md.int_ingress_tstamp = hdr.int_ingress_tstamp.ingress_tstamp;
+        fabric_md.int_egress_tstamp = hdr.int_egress_tstamp.egress_tstamp;
 
-        // remove all the INT information from the packet
         hdr.int_header.setInvalid();
         hdr.intl4_shim.setInvalid();
         hdr.intl4_tail.setInvalid();
@@ -73,33 +75,8 @@ control IntSink (
         hdr.int_q_congestion.setInvalid();
         hdr.int_egress_tx_util.setInvalid();
 
-        // fabric_md.bridge_md_type = BridgeMetadataType.BRIDGE_MD_MIRROR_EGRESS_TO_EGRESS;
-
-        // TODO: include all INT data from previous nodes
-        // hdr.int_data[0].setInvalid();
-        // hdr.int_data[1].setInvalid();
-        // hdr.int_data[2].setInvalid();
-        // hdr.int_data[3].setInvalid();
-        // hdr.int_data[4].setInvalid();
-        // hdr.int_data[5].setInvalid();
-        // hdr.int_data[6].setInvalid();
-        // hdr.int_data[7].setInvalid();
-        // hdr.int_data[8].setInvalid();
-        // hdr.int_data[9].setInvalid();
-        // hdr.int_data[10].setInvalid();
-        // hdr.int_data[11].setInvalid();
-        // hdr.int_data[12].setInvalid();
-        // hdr.int_data[13].setInvalid();
-        // hdr.int_data[14].setInvalid();
-        // hdr.int_data[15].setInvalid();
-        // hdr.int_data[16].setInvalid();
-        // hdr.int_data[17].setInvalid();
-        // hdr.int_data[18].setInvalid();
-        // hdr.int_data[19].setInvalid();
-        // hdr.int_data[20].setInvalid();
-        // hdr.int_data[21].setInvalid();
-        // hdr.int_data[22].setInvalid();
-        // hdr.int_data[23].setInvalid();
+        fabric_md.bridge_md_type = BridgeMetadataType.MIRROR_EGRESS_TO_EGRESS;
+        fabric_md.mirror_session_id = REPORT_MIRROR_SESSION_ID;
     }
 }
 #endif

@@ -338,11 +338,39 @@ parser FabricEgressParser (packet_in packet,
 #ifdef WITH_INT
     IntDataParser() int_data_parser;
 #endif
+#ifdef WITH_INT_SINK
+    int_mirror_metadata_t int_mirror_md;
+#endif
     bridge_metadata_t bridge_md;
 
     state start {
         packet.extract(eg_intr_md);
-        transition parse_bridge_metadata;
+        BridgeMetadataType bridge_md_type = packet.lookahead<BridgeMetadataType>();
+        transition select(bridge_md_type) {
+            BridgeMetadataType.INGRESS_TO_EGRESS: parse_bridge_metadata;
+            BridgeMetadataType.MIRROR_EGRESS_TO_EGRESS: parse_egress_mirror_metadata;
+            default: reject;
+        }
+    }
+
+    state parse_egress_mirror_metadata {
+        // TODO: to support different mirror headers
+        //       by adding a "mirror_type" field.
+#ifdef WITH_INT_SINK
+        packet.extract(int_mirror_md);
+        fabric_md.mirror_session_id = REPORT_MIRROR_SESSION_ID;
+        fabric_md.int_switch_id = int_mirror_md.switch_id;
+        fabric_md.int_ingress_port_id = int_mirror_md.ingress_port_id;
+        fabric_md.int_egress_port_id = int_mirror_md.egress_port_id;
+        fabric_md.int_q_id = int_mirror_md.q_id;
+        fabric_md.int_q_occupancy = int_mirror_md.q_occupancy;
+        fabric_md.int_ingress_tstamp = int_mirror_md.ingress_tstamp;
+        fabric_md.int_egress_tstamp = int_mirror_md.egress_tstamp;
+        transition parse_ethernet;
+#else
+        transition reject;
+#endif // WITH_INT_SINK
+
     }
 
     state parse_bridge_metadata {
@@ -577,14 +605,16 @@ control FabricEgressMirror(
     Mirror() mirror;
     apply {
 #ifdef WITH_INT_SINK
-        if (fabric_md.mirror_session_id == MIRROR_SESSION_ID_INT_REPORT) {
+        if (fabric_md.mirror_session_id == REPORT_MIRROR_SESSION_ID) {
             mirror.emit<int_mirror_metadata_t>(fabric_md.mirror_session_id, {
                 fabric_md.bridge_md_type,
-                fabric_md.int_len_words,
                 fabric_md.int_switch_id,
                 fabric_md.int_ingress_port_id,
                 fabric_md.int_egress_port_id,
-                fabric_md.int_hop_latency
+                fabric_md.int_q_id,
+                fabric_md.int_q_occupancy,
+                fabric_md.int_ingress_tstamp,
+                fabric_md.int_egress_tstamp
                 // FIXME: include all INT metadata from previous node.
             });
         }
@@ -642,6 +672,14 @@ control FabricEgressDeparser(packet_out packet,
 #endif // WITH_GTPU
         egress_mirror.apply(hdr, fabric_md);
         packet.emit(hdr.packet_in);
+#ifdef WITH_INT_SINK
+        packet.emit(hdr.report_ethernet);
+        packet.emit(hdr.report_eth_type);
+        packet.emit(hdr.report_ipv4);
+        packet.emit(hdr.report_udp);
+        packet.emit(hdr.report_fixed_header);
+        packet.emit(hdr.local_report_header);
+#endif // WITH_INT_SINK
         packet.emit(hdr.ethernet);
         packet.emit(hdr.vlan_tag);
 #if defined(WITH_XCONNECT) || defined(WITH_DOUBLE_VLAN_TERMINATION)
@@ -659,7 +697,6 @@ control FabricEgressDeparser(packet_out packet,
         packet.emit(hdr.tcp);
         packet.emit(hdr.udp);
         packet.emit(hdr.icmp);
-
 #ifdef WITH_INT
         packet.emit(hdr.intl4_shim);
         packet.emit(hdr.int_header);

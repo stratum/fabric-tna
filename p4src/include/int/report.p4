@@ -8,8 +8,7 @@
 control IntReport (
     inout parsed_headers_t hdr,
     inout fabric_egress_metadata_t fabric_md,
-    in    egress_intrinsic_metadata_t eg_intr_md,
-    inout egress_intrinsic_metadata_for_deparser_t eg_dprsr_md) {
+    in    egress_intrinsic_metadata_t eg_intr_md) {
 
     @hidden
     action add_report_fixed_header() {
@@ -19,7 +18,7 @@ control IntReport (
         hdr.report_fixed_header.setValid();
         hdr.report_fixed_header.ver = 0;
         /* only support for flow_watchlist */
-        hdr.report_fixed_header.nproto = NPROTO_ETHERNET;
+        hdr.report_fixed_header.nproto = NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER;
         hdr.report_fixed_header.d = 0;
         hdr.report_fixed_header.q = 0;
         hdr.report_fixed_header.f = 1;
@@ -28,16 +27,25 @@ control IntReport (
         hdr.report_fixed_header.hw_id = HW_ID;
         // TODO how save a variable and increment
         hdr.report_fixed_header.seq_no = 0;
-        //TODO how to get timestamp from ingress ns
         hdr.report_fixed_header.ingress_tstamp = (bit<32>) eg_intr_md.enq_tstamp;
+        // Local report
+        hdr.local_report_header.setValid();
+        hdr.local_report_header.switch_id = fabric_md.int_switch_id;
+        hdr.local_report_header.ingress_port_id = fabric_md.int_ingress_port_id;
+        hdr.local_report_header.egress_port_id = fabric_md.int_egress_port_id;
+        hdr.local_report_header.queue_id = fabric_md.int_q_id;
+        hdr.local_report_header.queue_occupancy = fabric_md.int_q_occupancy;
+        hdr.local_report_header.egress_tstamp = fabric_md.int_egress_tstamp;
     }
 
-    action do_report_encapsulation(mac_addr_t src_mac, mac_addr_t mon_mac, ipv4_addr_t src_ip,
-                        ipv4_addr_t mon_ip, l4_port_t mon_port) {
+    action do_report_encapsulation(mac_addr_t src_mac, mac_addr_t mon_mac,
+                                   ipv4_addr_t src_ip, ipv4_addr_t mon_ip,
+                                   l4_port_t mon_port) {
         //Report Ethernet Header
         hdr.report_ethernet.setValid();
         hdr.report_ethernet.dst_addr = mon_mac;
         hdr.report_ethernet.src_addr = src_mac;
+        hdr.report_eth_type.setValid();
         hdr.report_eth_type.value = ETHERTYPE_IPV4;
 
         //Report IPV4 Header
@@ -53,7 +61,7 @@ control IntReport (
         hdr.report_ipv4.identification = 0;
         hdr.report_ipv4.flags = 0;
         hdr.report_ipv4.frag_offset = 0;
-        hdr.report_ipv4.ttl = 0xFF;
+        hdr.report_ipv4.ttl = 64;
         hdr.report_ipv4.protocol = PROTO_UDP;
         hdr.report_ipv4.src_addr = src_ip;
         hdr.report_ipv4.dst_addr = mon_ip;
@@ -68,17 +76,14 @@ control IntReport (
         add_report_fixed_header();
     }
 
-    /* Cloned packet instance_type is PKT_INSTANCE_TYPE_INGRESS_CLONE=1
-     * Packet is forwarded according to the mirroring_add command
-     */
     table tb_generate_report {
-        key = {
-        }
+        key = { }
         actions = {
             do_report_encapsulation;
             @defaultonly nop();
         }
         default_action = nop;
+        size = 1;
     }
 
     apply {
