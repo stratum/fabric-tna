@@ -90,6 +90,8 @@ control IntReport (
 
     apply {
         tb_generate_report.apply();
+        // Reset the mirror ID so the deparser will not mirror the packet again.
+        fabric_md.mirror_session_id = MIRROR_SESSION_ID_INVALID;
     }
 }
 #endif
