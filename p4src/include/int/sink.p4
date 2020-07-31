@@ -15,8 +15,6 @@ control IntSink (
 
     action restore_header_len_field() {
         bytes_removed = field_size_modifier.get<bit<10>>(hdr.intl4_shim.len_words ++ 2w0);
-        hdr.ipv4.total_len = hdr.ipv4.total_len - bytes_removed;
-        hdr.udp.len = hdr.udp.len - bytes_removed;
     }
 
     table tbl_restore_header_len_field {
@@ -51,6 +49,8 @@ control IntSink (
         }
         tbl_restore_header_len_field.apply();
 
+        hdr.ipv4.total_len = hdr.ipv4.total_len - bytes_removed;
+        hdr.udp.len = hdr.udp.len - bytes_removed;
         hdr.udp.dport = hdr.intl4_tail.dest_port;
         hdr.ipv4.dscp = hdr.intl4_tail.dscp;
 
@@ -72,6 +72,8 @@ control IntSink (
         hdr.int_egress_tstamp.setInvalid();
         hdr.int_q_congestion.setInvalid();
         hdr.int_egress_tx_util.setInvalid();
+
+        // fabric_md.bridge_md_type = BridgeMetadataType.BRIDGE_MD_MIRROR_EGRESS_TO_EGRESS;
 
         // TODO: include all INT data from previous nodes
         // hdr.int_data[0].setInvalid();
@@ -98,7 +100,6 @@ control IntSink (
         // hdr.int_data[21].setInvalid();
         // hdr.int_data[22].setInvalid();
         // hdr.int_data[23].setInvalid();
-        // fabric_md.bridge_md_type = BridgeMetadataType.BRIDGE_MD_MIRROR_EGRESS_TO_EGRESS;
     }
 }
 #endif
