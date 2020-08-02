@@ -269,6 +269,7 @@ struct parsed_headers_t {
 #ifdef WITH_GTPU
     ipv4_t outer_ipv4;
     udp_t outer_udp;
+    gtpu_t outer_gtpu;
     gtpu_t gtpu;
     ipv4_t inner_ipv4;
     tcp_t inner_tcp;

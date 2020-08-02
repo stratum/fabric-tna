@@ -310,16 +310,16 @@ control SpgwEgress(
         hdr.outer_udp.checksum = 0; // Updated never, due to difficulties in handling different inner headers
 
 
-        hdr.gtpu.setValid();
-        hdr.gtpu.version = GTPU_VERSION;
-        hdr.gtpu.pt = GTP_PROTOCOL_TYPE_GTP;
-        hdr.gtpu.spare = 0;
-        hdr.gtpu.ex_flag = 0;
-        hdr.gtpu.seq_flag = 0;
-        hdr.gtpu.npdu_flag = 0;
-        hdr.gtpu.msgtype = GTP_GPDU;
-        hdr.gtpu.msglen = hdr.ipv4.total_len;
-        hdr.gtpu.teid = fabric_md.gtpu_teid;
+        hdr.outer_gtpu.setValid();
+        hdr.outer_gtpu.version = GTPU_VERSION;
+        hdr.outer_gtpu.pt = GTP_PROTOCOL_TYPE_GTP;
+        hdr.outer_gtpu.spare = 0;
+        hdr.outer_gtpu.ex_flag = 0;
+        hdr.outer_gtpu.seq_flag = 0;
+        hdr.outer_gtpu.npdu_flag = 0;
+        hdr.outer_gtpu.msgtype = GTP_GPDU;
+        hdr.outer_gtpu.msglen = hdr.ipv4.total_len;
+        hdr.outer_gtpu.teid = fabric_md.gtpu_teid;
     }
 
     apply {

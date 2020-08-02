@@ -710,13 +710,22 @@ control FabricEgressDeparser(packet_out packet,
 #ifdef WITH_GTPU
         packet.emit(hdr.outer_ipv4);
         packet.emit(hdr.outer_udp);
-        packet.emit(hdr.gtpu);
+        packet.emit(hdr.outer_gtpu);
 #endif // WITH_GTPU
         packet.emit(hdr.ipv4);
         packet.emit(hdr.ipv6);
         packet.emit(hdr.tcp);
         packet.emit(hdr.udp);
         packet.emit(hdr.icmp);
+#ifdef WITH_GTPU
+        // in case we parsed a GTPU packet but did not decap it
+        // these should never happen at the same time as the outer GTPU tunnel headers
+        packet.emit(hdr.gtpu);
+        packet.emit(hdr.inner_ipv4);
+        packet.emit(hdr.inner_tcp);
+        packet.emit(hdr.inner_udp);
+        packet.emit(hdr.inner_icmp);
+#endif // WITH_GTPU
 #ifdef WITH_INT
         packet.emit(hdr.intl4_shim);
         packet.emit(hdr.int_header);
