@@ -366,7 +366,6 @@ parser FabricEgressParser (packet_in packet,
         fabric_md.int_q_occupancy = int_mirror_md.q_occupancy;
         fabric_md.int_ingress_tstamp = int_mirror_md.ingress_tstamp;
         fabric_md.int_egress_tstamp = int_mirror_md.egress_tstamp;
-        fabric_md.mirror_pkt_len = int_mirror_md.mirror_pkt_len;
         fabric_md.vlan_id = DEFAULT_VLAN_ID;
         // The original packet should be the payload of report packet.
         transition accept;
@@ -617,8 +616,7 @@ control FabricEgressMirror(
                 fabric_md.int_q_id,
                 fabric_md.int_q_occupancy,
                 fabric_md.int_ingress_tstamp,
-                fabric_md.int_egress_tstamp,
-                fabric_md.mirror_pkt_len
+                fabric_md.int_egress_tstamp
                 // FIXME: include all INT metadata from previous node.
             });
         }
@@ -674,6 +672,24 @@ control FabricEgressDeparser(packet_out packet,
             });
         }
 #endif // WITH_GTPU
+#ifdef WITH_INT_SINK
+        if (hdr.report_ipv4.isValid()) {
+            hdr.report_ipv4.hdr_checksum = ipv4_checksum.update({
+                hdr.report_ipv4.version,
+                hdr.report_ipv4.ihl,
+                hdr.report_ipv4.dscp,
+                hdr.report_ipv4.ecn,
+                hdr.report_ipv4.total_len,
+                hdr.report_ipv4.identification,
+                hdr.report_ipv4.flags,
+                hdr.report_ipv4.frag_offset,
+                hdr.report_ipv4.ttl,
+                hdr.report_ipv4.protocol,
+                hdr.report_ipv4.src_addr,
+                hdr.report_ipv4.dst_addr
+            });
+        }
+#endif // WITH_INT_SINK
         egress_mirror.apply(hdr, fabric_md);
         packet.emit(hdr.packet_in);
 #ifdef WITH_INT_SINK

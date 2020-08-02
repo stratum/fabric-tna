@@ -218,7 +218,6 @@ struct fabric_egress_metadata_t {
     bit<24> int_q_occupancy;
     bit<32> int_ingress_tstamp;
     bit<32> int_egress_tstamp;
-    bit<16> mirror_pkt_len;
 #endif // WITH_INT_SINK
 #endif // WITH_INT
 }

@@ -112,8 +112,17 @@ INT_INS_TO_NAME = {
 }
 
 INT_REPORT_MIRROR_ID = 7
-INT_REPORT_PORT = 3344
+INT_REPORT_PORT = 32766
+NPROTO_ETHERNET = 0
+NPROTO_TELEMETRY_DROP_HEADER = 1
+NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER = 2
 bind_layers(UDP, INT_L45_REPORT_FIXED, dport=INT_REPORT_PORT)
+bind_layers(INT_L45_REPORT_FIXED, INT_L45_LOCAL_REPORT,
+            nproto=NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER)
+bind_layers(INT_L45_LOCAL_REPORT, Ether)
+
+INT_COLLECTOR_MAC = "00:1e:67:d2:ee:ee"
+INT_COLLECTOR_IPV4 = "192.168.99.254"
 
 PPPOE_CODE_SESSION_STAGE = 0x00
 
@@ -240,6 +249,10 @@ class FabricTest(P4RuntimeTest):
         self.port1 = self.swports(1)
         self.port2 = self.swports(2)
         self.port3 = self.swports(3)
+        self.recirculate_port_0 = 68
+        self.recirculate_port_1 = 196
+        self.recirculate_port_2 = 324
+        self.recirculate_port_3 = 452
 
     def setup_int(self):
         self.send_request_add_entry_to_action(
@@ -1371,7 +1384,7 @@ class IntTest(IPv4UnicastTest):
             "nop", [])
 
     def setup_report_flow(self, port, src_mac, mon_mac, src_ip, mon_ip, mon_port):
-        self.add_clone_group(INT_REPORT_MIRROR_ID, [port])
+        self.add_clone_group(INT_REPORT_MIRROR_ID, [self.recirculate_port_0])
         self.send_request_add_entry_to_action(
             "tb_generate_report",
             [self.Exact("fabric_md.mirror_session_id", stringify(INT_REPORT_MIRROR_ID, 2))],
@@ -1458,11 +1471,25 @@ class IntTest(IPv4UnicastTest):
 
     def build_int_local_report(self, src_mac, dst_mac, src_ip, dst_ip,
                                ig_port, eg_port, sw_id=1, original_packet=None):
-        pkt = Ether(src=src_mac, dst=dst_mac) / IP(src=src_ip, dst=dst_ip) / \
+        pkt = Ether(src=src_mac, dst=dst_mac) / IP(src=src_ip, dst=dst_ip, ttl=63) / \
               UDP(sport=0, chksum=0) / \
               INT_L45_REPORT_FIXED(nproto=2, f=1, hw_id=1) / \
               INT_L45_LOCAL_REPORT(switch_id=sw_id, ingress_port_id=ig_port, egress_port_id=eg_port) / \
               original_packet
+
+        mask_pkt = Mask(pkt)
+        # IPv4 identifcation
+        offset_ip = len(Ether())
+        mask_pkt.set_do_not_care_scapy(IP, "id")
+        # The reason we also ignore IP checksum is because the `id` field is random.
+        mask_pkt.set_do_not_care_scapy(IP, "chksum")
+        mask_pkt.set_do_not_care_scapy(UDP, "chksum")
+        mask_pkt.set_do_not_care_scapy(INT_L45_REPORT_FIXED, "ingress_tstamp")
+        mask_pkt.set_do_not_care_scapy(INT_L45_LOCAL_REPORT, "queue_id")
+        mask_pkt.set_do_not_care_scapy(INT_L45_LOCAL_REPORT, "queue_occupancy")
+        mask_pkt.set_do_not_care_scapy(INT_L45_LOCAL_REPORT, "egress_tstamp")
+
+        return mask_pkt
 
     def runIntSourceTest(self, pkt, tagged1, tagged2, instructions,
                          with_transit=True, ignore_csum=False, switch_id=1,
@@ -1624,8 +1651,9 @@ class IntTest(IPv4UnicastTest):
             exp_pkt = pkt_add_mpls(exp_pkt, label=MPLS_LABEL_2, ttl=DEFAULT_MPLS_TTL)
 
         # We should also expected an INT report packet comes from "resubmit port"
-        exp_int_pkt = self.build_int_local_report(SWITCH_MAC, HOST3_MAC, SWITCH_IPV4, HOST3_IPV4,
-                                                  ig_port, eg_port, sw_id=1, original_packet=exp_pkt)
+        exp_int_pkt_masked = \
+            self.build_int_local_report(SWITCH_MAC, INT_COLLECTOR_MAC, SWITCH_IPV4, INT_COLLECTOR_IPV4,
+                                        ig_port, eg_port, sw_id=1, original_packet=exp_pkt)
 
         # Set up source, transit, and sink table
         self.setup_source_port(ig_port)
@@ -1634,14 +1662,27 @@ class IntTest(IPv4UnicastTest):
             instructions=instructions, max_hop=max_hop)
         self.setup_transit(switch_id)
         self.setup_sink_port(eg_port)
-        self.setup_report_flow(collector_port, SWITCH_MAC, HOST3_MAC,
-                               SWITCH_IPV4, HOST3_IPV4, INT_REPORT_PORT)
+        self.setup_report_flow(collector_port, SWITCH_MAC, SWITCH_MAC,
+                               SWITCH_IPV4, INT_COLLECTOR_IPV4, INT_REPORT_PORT)
+
+        # Set up entries for recirculate packet
+        self.setup_port(self.recirculate_port_0, DEFAULT_VLAN)
+        self.setup_port(collector_port, DEFAULT_VLAN)
+        self.set_forwarding_type(self.recirculate_port_0, SWITCH_MAC,
+                                 ETH_TYPE_IPV4, FORWARDING_TYPE_UNICAST_IPV4)
+        # Here we use next-id 101 since `runIPv4UnicastTest` will use 100 by default
+        next_id = 101
+        prefix_len = 32
+        self.add_forwarding_routing_v4_entry(INT_COLLECTOR_IPV4, prefix_len, next_id)
+        self.add_next_routing(next_id, collector_port, SWITCH_MAC, INT_COLLECTOR_MAC)
+        self.add_next_vlan(next_id, DEFAULT_VLAN)
+        # End of setting up entries for recirculate report packet
 
         self.runIPv4UnicastTest(pkt=pkt, next_hop_mac=HOST2_MAC,
                                 tagged1=tagged1, tagged2=tagged2, mpls=mpls,
                                 prefix_len=32, with_another_pkt_later=True)
 
-        testutils.verify_packet(self, exp_int_pkt, collector_port)
+        testutils.verify_packet(self, exp_int_pkt_masked, collector_port)
         testutils.verify_no_other_packets(self)
 
 class SpgwIntTest(SpgwSimpleTest, IntTest):

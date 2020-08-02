@@ -56,10 +56,15 @@ control IntReport (
         hdr.report_ipv4.ihl = 4w5;
         hdr.report_ipv4.dscp = 6w0;
         hdr.report_ipv4.ecn = 2w0;
-        /* Total Len is report_ipv4_len + report_udp_len + report_fixed_hdr_len + local report length */
-        hdr.report_ipv4.total_len = IPV4_MIN_HEAD_LEN + UDP_HEADER_LEN +
-                                    REPORT_FIXED_HEADER_LEN + LOCAL_REPORT_HEADER_LEN +
-                                    fabric_md.mirror_pkt_len;
+        // IPv4 Total length is length of
+        // IPv4(20) + UDP(8) + Fixed report header(12) + Local report(16) + Original packet
+        // The original packet length should be the one from egress intrinsic metadata minus
+        // the length of mirror data (21 bytes) and CRC (4 bytes).
+        hdr.report_ipv4.total_len = IPV4_MIN_HEAD_LEN + UDP_HEADER_LEN
+                                    + REPORT_FIXED_HEADER_LEN + LOCAL_REPORT_HEADER_LEN
+                                    - REPORT_MIRROR_HEADER_LEN
+                                    - CRC_CHECKSUM_LEN
+                                    + eg_intr_md.pkt_length ;
         /* Dont Fragment bit should be set */
         hdr.report_ipv4.identification = ip_id_gen.get();
         hdr.report_ipv4.flags = 0;
@@ -73,8 +78,12 @@ control IntReport (
         hdr.report_udp.setValid();
         hdr.report_udp.sport = 0;
         hdr.report_udp.dport = mon_port;
-        hdr.report_udp.len = UDP_HEADER_LEN + REPORT_FIXED_HEADER_LEN + LOCAL_REPORT_HEADER_LEN + fabric_md.mirror_pkt_len;
-
+        // See IPv4 length
+        hdr.report_udp.len = UDP_HEADER_LEN + REPORT_FIXED_HEADER_LEN
+                             + LOCAL_REPORT_HEADER_LEN
+                             - REPORT_MIRROR_HEADER_LEN
+                             - CRC_CHECKSUM_LEN
+                             + eg_intr_md.pkt_length ;
         add_report_fixed_header();
     }
 
