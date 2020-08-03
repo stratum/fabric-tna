@@ -100,7 +100,7 @@ class FabricIPv4UnicastTest(IPv4UnicastTest):
                 self.doRunTest(pkt, HOST2_MAC, tagged[0], tagged[1])
 
 
-class FabricIPv4UnicastGtpTest(IPv4UnicastTest):
+class FabricIPv4UnicastGtpPassthroughTest(IPv4UnicastTest):
     @autocleanup
     def runTest(self):
         # Assert that GTP packets not meant to be processed by spgw.p4 are
@@ -582,7 +582,8 @@ class SpgwUplinkTest(SpgwSimpleTest):
                     )
                     self.doRunTest(pkt, tagged[0], tagged[1], mpls)
 
-
+@group("int")
+@group("spgw")
 @group("spgw-int")
 class SpgwUplinkIntSourceTest(SpgwIntTest):
 
@@ -614,6 +615,8 @@ class SpgwUplinkIntSourceTest(SpgwIntTest):
                         )
                         self.doRunTest(pkt, tagged[0], tagged[1], mpls, instrs)
 
+@group("int")
+@group("spgw")
 @group("spgw-int")
 class SpgwUplinkIntSourceAndTransitTest(SpgwIntTest):
 
@@ -645,7 +648,8 @@ class SpgwUplinkIntSourceAndTransitTest(SpgwIntTest):
                         )
                         self.doRunTest(pkt, tagged[0], tagged[1], mpls, instrs)
 
-
+@group("int")
+@group("spgw")
 @group("spgw-int")
 class SpgwUplinkIntTransitTest(SpgwIntTest):
 
@@ -678,6 +682,8 @@ class SpgwUplinkIntTransitTest(SpgwIntTest):
                             )
                             self.doRunTest(pkt, tagged[0], tagged[1], mpls, instrs, prev_hops)
 
+@group("int")
+@group("spgw")
 @group("spgw-int")
 class SpgwDownlinkIntSourceTest(SpgwIntTest):
     @autocleanup
@@ -708,6 +714,8 @@ class SpgwDownlinkIntSourceTest(SpgwIntTest):
                         )
                         self.doRunTest(pkt, tagged[0], tagged[1], mpls, instrs)
 
+@group("int")
+@group("spgw")
 @group("spgw-int")
 class SpgwDownlinkIntSourceAndTransitTest(SpgwIntTest):
     @autocleanup
@@ -738,6 +746,8 @@ class SpgwDownlinkIntSourceAndTransitTest(SpgwIntTest):
                         )
                         self.doRunTest(pkt, tagged[0], tagged[1], mpls, instrs)
 
+@group("int")
+@group("spgw")
 @group("spgw-int")
 class SpgwDownlinkIntTransitTest(SpgwIntTest):
 
@@ -886,7 +896,7 @@ class FabricIntSourceTransitSinkTest(IntTest):
                             continue
                         self.doRunTest(vlan_conf, tagged, pkt_type, instrs, mpls)
 
-# @group("int")
+@group("int")
 @group("int-full")
 class FabricIntTransitFullTest(IntTest):
     @autocleanup
@@ -1059,7 +1069,7 @@ class FabricDoubleTaggedHostDownstream(DoubleVlanTerminationTest):
                     pktlen=120)
                 self.doRunTest(pkt, in_tagged)
 
-@group("p4r-function")
+@group("p4rt")
 class TableEntryReadWriteTest(FabricTest):
 
     @autocleanup
@@ -1078,7 +1088,7 @@ class TableEntryReadWriteTest(FabricTest):
         print("")
         self.doRunTest()
 
-@group("p4r-function")
+@group("p4rt")
 class ActionProfileMemberReadWriteTest(FabricTest):
 
     @autocleanup
@@ -1093,7 +1103,7 @@ class ActionProfileMemberReadWriteTest(FabricTest):
         print("")
         self.doRunTest()
 
-@group("p4r-function")
+@group("p4rt")
 class ActionProfileGroupReadWriteTest(FabricTest):
 
     @autocleanup
@@ -1112,7 +1122,7 @@ class ActionProfileGroupReadWriteTest(FabricTest):
         print("")
         self.doRunTest()
 
-@group("p4r-function")
+@group("p4rt")
 class ActionProfileGroupModificationTest(FabricTest):
 
     @autocleanup
@@ -1141,7 +1151,7 @@ class ActionProfileGroupModificationTest(FabricTest):
         print("")
         self.doRunTest()
 
-@group("p4r-function")
+@group("p4rt")
 class MulticastGroupReadWriteTest(FabricTest):
 
     @autocleanup
@@ -1158,7 +1168,7 @@ class MulticastGroupReadWriteTest(FabricTest):
         self.doRunTest()
 
 
-@group("p4r-function")
+@group("p4rt")
 class MulticastGroupModificationTest(FabricTest):
 
     # Not using the auto cleanup since the Stratum modifies the
@@ -1183,7 +1193,7 @@ class MulticastGroupModificationTest(FabricTest):
         print("")
         self.doRunTest()
 
-@group("p4r-function")
+@group("p4rt")
 class CounterTest(BridgingTest):
 
     @autocleanup

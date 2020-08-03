@@ -3,34 +3,36 @@
 # _checkenv and run_tests defined in fabric-p4test/<target>/Makefile
 # which imports this file
 
+PTF_FILTER ?=
+
 all: fabric fabric-bng fabric-spgw fabric-int fabric-spgw-int
 
 fabric: _checkenv
 ifndef TEST
-	$(eval TEST = all ^spgw ^int ^bng ^dth ^xconnect)
+	$(eval TEST = all ^spgw ^int ^bng ^dth ^xconnect $(PTF_FILTER))
 endif
 	$(call run_tests,fabric,$(TEST))
 
 fabric-bng: _checkenv
 ifndef TEST
-	$(eval TEST = all ^spgw ^int ^xconnect)
+	$(eval TEST = all ^spgw ^int ^xconnect $(PTF_FILTER))
 endif
 	$(call run_tests,fabric-bng,$(TEST))
 
 fabric-spgw: _checkenv
 ifndef TEST
-	$(eval TEST = all ^int ^bng ^dth)
+	$(eval TEST = all ^int ^bng ^dth $(PTF_FILTER))
 endif
 	$(call run_tests,fabric-spgw,$(TEST))
 
 fabric-spgw-int: _checkenv
 ifndef TEST
-	$(eval TEST = all ^int-full ^bng ^dth)
+	$(eval TEST = all ^int-full ^bng ^dth $(PTF_FILTER))
 endif
 	$(call run_tests,fabric-spgw-int,$(TEST))
 
 fabric-int: _checkenv
 ifndef TEST
-	$(eval TEST = all ^spgw ^int-full ^bng ^dth)
+	$(eval TEST = all ^spgw ^int-full ^bng ^dth $(PTF_FILTER))
 endif
 	$(call run_tests,fabric-int,$(TEST))
