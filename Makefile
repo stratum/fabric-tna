@@ -45,7 +45,13 @@ fabric-spgw:
 # fabric-spgw-int:
 # 	@${p4-build} fabric-spgw-int "-DWITH_SPGW -DWITH_INT_SOURCE -DWITH_INT_TRANSIT"
 
-_mvn_package:
+constants:
+	docker run -v $(curr_dir):/root -w /root \
+		--entrypoint ./util/gen-p4-constants.py onosproject/fabric-p4test:latest \
+		-o /root/src/main/java/org/stratumproject/fabric/tna/behaviour/FabricConstants.java \
+		fabric /root/src/main/resources/p4c-out/fabric-spgw/stratum_bf/mavericks_sde_9_2_0/p4info.txt
+
+_mvn_package: constants
 	$(info *** Building ONOS app...)
 	@mkdir -p target
 	docker run --rm -v ${curr_dir}:/mvn-src -w /mvn-src \
