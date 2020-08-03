@@ -115,6 +115,8 @@ header_union local_report_t {
 
 header int_mirror_metadata_t {
     BridgeMetadataType bridge_md_type;
+    @padding bit<6> pad0;
+    MirrorId_t mirror_session_id;
     bit<32> switch_id;
     bit<16> ingress_port_id;
     bit<16> egress_port_id;

@@ -87,6 +87,8 @@ public final class P4InfoConstants {
             PiMatchFieldId.of("mpls_label");
     public static final PiMatchFieldId HDR_NEXT_ID =
             PiMatchFieldId.of("next_id");
+    public static final PiMatchFieldId HDR_PIPE_ID =
+            PiMatchFieldId.of("pipe_id");
     public static final PiMatchFieldId HDR_SRC_IFACE =
             PiMatchFieldId.of("src_iface");
     public static final PiMatchFieldId HDR_TEID = PiMatchFieldId.of("teid");
@@ -103,6 +105,8 @@ public final class P4InfoConstants {
             PiTableId.of("FabricEgress.egress_next.egress_vlan");
     public static final PiTableId FABRIC_EGRESS_INT_EGRESS_INT_REPORT_TB_GENERATE_REPORT =
             PiTableId.of("FabricEgress.int_egress.int_report.tb_generate_report");
+    public static final PiTableId FABRIC_EGRESS_INT_EGRESS_INT_SINK_TB_SET_MIRROR_SESSION_ID =
+            PiTableId.of("FabricEgress.int_egress.int_sink.tb_set_mirror_session_id");
     public static final PiTableId FABRIC_EGRESS_INT_EGRESS_INT_SINK_TB_SET_SINK =
             PiTableId.of("FabricEgress.int_egress.int_sink.tb_set_sink");
     public static final PiTableId FABRIC_EGRESS_INT_EGRESS_INT_SOURCE_TB_INT_SOURCE =
@@ -170,6 +174,8 @@ public final class P4InfoConstants {
             PiActionId.of("FabricEgress.egress_next.pop_vlan");
     public static final PiActionId FABRIC_EGRESS_INT_EGRESS_INT_REPORT_DO_REPORT_ENCAPSULATION =
             PiActionId.of("FabricEgress.int_egress.int_report.do_report_encapsulation");
+    public static final PiActionId FABRIC_EGRESS_INT_EGRESS_INT_SINK_SET_MIRROR_SESSION_ID =
+            PiActionId.of("FabricEgress.int_egress.int_sink.set_mirror_session_id");
     public static final PiActionId FABRIC_EGRESS_INT_EGRESS_INT_SOURCE_INT_SOURCE_DSCP =
             PiActionId.of("FabricEgress.int_egress.int_source.int_source_dscp");
     public static final PiActionId FABRIC_EGRESS_INT_EGRESS_INT_TRANSIT_INIT_METADATA =
@@ -259,6 +265,7 @@ public final class P4InfoConstants {
             PiActionParamId.of("notify_cp");
     public static final PiActionParamId PORT_NUM =
             PiActionParamId.of("port_num");
+    public static final PiActionParamId SID = PiActionParamId.of("sid");
     public static final PiActionParamId SKIP_SPGW =
             PiActionParamId.of("skip_spgw");
     public static final PiActionParamId SMAC = PiActionParamId.of("smac");

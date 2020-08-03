@@ -45,6 +45,21 @@ control IntSink (
         size = MAX_PORTS;
     }
 
+
+    action set_mirror_session_id(MirrorId_t sid) {
+        fabric_md.mirror_session_id = sid;
+    }
+
+    table tb_set_mirror_session_id {
+        key = {
+            fabric_md.ingress_port[8:7]: exact @name("pipe_id");
+        }
+        actions = {
+            set_mirror_session_id;
+        }
+        size = 4;
+    }
+
     apply {
         if (!tb_set_sink.apply().hit) {
             return;
@@ -78,7 +93,7 @@ control IntSink (
         hdr.int_egress_tx_util.setInvalid();
 
         fabric_md.bridge_md_type = BridgeMetadataType.MIRROR_EGRESS_TO_EGRESS;
-        fabric_md.mirror_session_id = REPORT_MIRROR_SESSION_ID;
+        tb_set_mirror_session_id.apply();
     }
 }
 #endif

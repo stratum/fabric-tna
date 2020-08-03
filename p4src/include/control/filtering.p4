@@ -56,6 +56,33 @@ control Filtering (inout parsed_headers_t hdr,
         size = PORT_VLAN_TABLE_SIZE;
     }
 
+#ifdef WITH_INT_SINK
+    @hidden
+    action set_recirculate_pkt_vlan(vlan_id_t vlan_id) {
+        fabric_md.vlan_id = vlan_id;
+        // make the pipeline to handle it
+        fabric_md.skip_forwarding = false;
+        fabric_md.skip_next = false;
+    }
+    @hidden
+    table recirculate_port_vlan {
+        key = {
+            ig_intr_md.ingress_port    : exact @name("ig_port");
+            hdr.vlan_tag.isValid()     : exact @name("vlan_is_valid");
+        }
+        actions = {
+            set_recirculate_pkt_vlan;
+        }
+        size = 4;
+        const entries = {
+            (PIPE_0_REC_PORT, false): set_recirculate_pkt_vlan(DEFAULT_VLAN_ID);
+            (PIPE_1_REC_PORT, false): set_recirculate_pkt_vlan(DEFAULT_VLAN_ID);
+            (PIPE_2_REC_PORT, false): set_recirculate_pkt_vlan(DEFAULT_VLAN_ID);
+            (PIPE_3_REC_PORT, false): set_recirculate_pkt_vlan(DEFAULT_VLAN_ID);
+        }
+    }
+#endif // WITH_INT_SINK
+
     /*
      * Forwarding Classifier.
      *
@@ -98,9 +125,37 @@ control Filtering (inout parsed_headers_t hdr,
         size = FWD_CLASSIFIER_TABLE_SIZE;
     }
 
+#ifdef WITH_INT_SINK
+    @hidden
+    action set_recirculate_pkt_type(fwd_type_t fwd_type) {
+        fabric_md.fwd_type = fwd_type;
+    }
+    @hidden
+    table recirculate_pkt_classifier {
+        key = {
+            ig_intr_md.ingress_port        : exact @name("ig_port");
+            fabric_md.ip_eth_type          : exact @name("ip_eth_type");
+        }
+        actions = {
+            set_recirculate_pkt_type;
+        }
+        size = 4;
+        const entries = {
+            (PIPE_0_REC_PORT, ETHERTYPE_IPV4): set_recirculate_pkt_type(FWD_IPV4_UNICAST);
+            (PIPE_1_REC_PORT, ETHERTYPE_IPV4): set_recirculate_pkt_type(FWD_IPV4_UNICAST);
+            (PIPE_2_REC_PORT, ETHERTYPE_IPV4): set_recirculate_pkt_type(FWD_IPV4_UNICAST);
+            (PIPE_3_REC_PORT, ETHERTYPE_IPV4): set_recirculate_pkt_type(FWD_IPV4_UNICAST);
+        }
+    }
+#endif // WITH_INT_SINK
+
     apply {
         ingress_port_vlan.apply();
         fwd_classifier.apply();
+#ifdef WITH_INT_SINK
+        recirculate_port_vlan.apply();
+        recirculate_pkt_classifier.apply();
+#endif // WITH_INT_SINK
 #ifdef WTIH_DEBUG
         fwd_type_counter.count(fabric_md.fwd_type);
 #endif

@@ -111,7 +111,10 @@ INT_INS_TO_NAME = {
     INT_EG_PORT_TX: "eg_port_tx"
 }
 
-INT_REPORT_MIRROR_ID = 299
+INT_REPORT_MIRROR_ID_0 = 300
+INT_REPORT_MIRROR_ID_1 = 301
+INT_REPORT_MIRROR_ID_2 = 302
+INT_REPORT_MIRROR_ID_3 = 303
 INT_REPORT_PORT = 32766
 NPROTO_ETHERNET = 0
 NPROTO_TELEMETRY_DROP_HEADER = 1
@@ -1384,16 +1387,24 @@ class IntTest(IPv4UnicastTest):
             "nop", [])
 
     def setup_report_flow(self, port, src_mac, mon_mac, src_ip, mon_ip, mon_port):
-        self.add_clone_group(INT_REPORT_MIRROR_ID, [self.recirculate_port_0])
         self.send_request_add_entry_to_action(
             "tb_generate_report",
-            [self.Exact("fabric_md.mirror_session_id", stringify(INT_REPORT_MIRROR_ID, 2))],
+            [self.Exact("fabric_md.mirror_session_id", stringify(INT_REPORT_MIRROR_ID_0, 2))],
             "do_report_encapsulation", [
                 ("src_mac", mac_to_binary(src_mac)),
                 ("mon_mac", mac_to_binary(mon_mac)),
                 ("src_ip", ipv4_to_binary(src_ip)),
                 ("mon_ip", ipv4_to_binary(mon_ip)),
                 ("mon_port", stringify(mon_port, 2))
+            ])
+
+    def setup_report_mirror_flow(self, pipe_id, mirror_id, port):
+        self.add_clone_group(mirror_id, [port])
+        self.send_request_add_entry_to_action(
+            "tb_set_mirror_session_id",
+            [self.Exact("pipe_id", stringify(pipe_id, 1))],
+            "set_mirror_session_id", [
+                ("sid", stringify(mirror_id, 2))
             ])
 
     def get_ins_mask(self, instructions):
@@ -1665,12 +1676,13 @@ class IntTest(IPv4UnicastTest):
         self.setup_sink_port(eg_port)
         self.setup_report_flow(collector_port, SWITCH_MAC, SWITCH_MAC,
                                SWITCH_IPV4, INT_COLLECTOR_IPV4, INT_REPORT_PORT)
+        self.setup_report_mirror_flow(0, INT_REPORT_MIRROR_ID_0, self.recirculate_port_0)
+        self.setup_report_mirror_flow(1, INT_REPORT_MIRROR_ID_1, self.recirculate_port_1)
+        self.setup_report_mirror_flow(2, INT_REPORT_MIRROR_ID_2, self.recirculate_port_2)
+        self.setup_report_mirror_flow(3, INT_REPORT_MIRROR_ID_3, self.recirculate_port_3)
 
-        # Set up entries for recirculate packet
-        self.setup_port(self.recirculate_port_0, DEFAULT_VLAN)
+        # Set up entries for report packet
         self.setup_port(collector_port, DEFAULT_VLAN)
-        self.set_forwarding_type(self.recirculate_port_0, SWITCH_MAC,
-                                 ETH_TYPE_IPV4, FORWARDING_TYPE_UNICAST_IPV4)
         # Here we use next-id 101 since `runIPv4UnicastTest` will use 100 by default
         next_id = 101
         prefix_len = 32
@@ -2049,12 +2061,13 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         self.setup_sink_port(eg_port)
         self.setup_report_flow(collector_port, SWITCH_MAC, SWITCH_MAC,
                                SWITCH_IPV4, INT_COLLECTOR_IPV4, INT_REPORT_PORT)
+        self.setup_report_mirror_flow(0, INT_REPORT_MIRROR_ID_0, self.recirculate_port_0)
+        self.setup_report_mirror_flow(1, INT_REPORT_MIRROR_ID_1, self.recirculate_port_1)
+        self.setup_report_mirror_flow(2, INT_REPORT_MIRROR_ID_2, self.recirculate_port_2)
+        self.setup_report_mirror_flow(3, INT_REPORT_MIRROR_ID_3, self.recirculate_port_3)
 
-        # Set up entries for recirculate packet
-        self.setup_port(self.recirculate_port_0, DEFAULT_VLAN)
+        # Set up entries for report packet
         self.setup_port(collector_port, DEFAULT_VLAN)
-        self.set_forwarding_type(self.recirculate_port_0, SWITCH_MAC,
-                                 ETH_TYPE_IPV4, FORWARDING_TYPE_UNICAST_IPV4)
         # Here we use next-id 101 since `runIPv4UnicastTest` will use 100 by default
         next_id = 101
         prefix_len = 32
@@ -2121,12 +2134,13 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         self.setup_sink_port(eg_port)
         self.setup_report_flow(collector_port, SWITCH_MAC, SWITCH_MAC,
                                SWITCH_IPV4, INT_COLLECTOR_IPV4, INT_REPORT_PORT)
+        self.setup_report_mirror_flow(0, INT_REPORT_MIRROR_ID_0, self.recirculate_port_0)
+        self.setup_report_mirror_flow(1, INT_REPORT_MIRROR_ID_1, self.recirculate_port_1)
+        self.setup_report_mirror_flow(2, INT_REPORT_MIRROR_ID_2, self.recirculate_port_2)
+        self.setup_report_mirror_flow(3, INT_REPORT_MIRROR_ID_3, self.recirculate_port_3)
 
-        # Set up entries for recirculate packet
-        self.setup_port(self.recirculate_port_0, DEFAULT_VLAN)
+        # Set up entries for report packet
         self.setup_port(collector_port, DEFAULT_VLAN)
-        self.set_forwarding_type(self.recirculate_port_0, SWITCH_MAC,
-                                 ETH_TYPE_IPV4, FORWARDING_TYPE_UNICAST_IPV4)
         # Here we use next-id 101 since `runIPv4UnicastTest` will use 100 by default
         next_id = 101
         prefix_len = 32

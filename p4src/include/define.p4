@@ -133,13 +133,19 @@ action nop() {
 
 // Bridge metadata type
 enum bit<8> BridgeMetadataType {
-    INGRESS_TO_EGRESS = 0,
-    EGRESS_TO_INGRESS = 1,
-    MIRROR_INGRESS_TO_EGRESS = 2,
-    MIRROR_EGRESS_TO_EGRESS = 3
+    INVALID = 0,
+    INGRESS_TO_EGRESS = 1,
+    EGRESS_TO_INGRESS = 2,
+    MIRROR_INGRESS_TO_EGRESS = 3,
+    MIRROR_EGRESS_TO_EGRESS = 4
 }
 
 const MirrorId_t MIRROR_SESSION_ID_INVALID = 0;
+
+const PortId_t PIPE_0_REC_PORT = 0x44;
+const PortId_t PIPE_1_REC_PORT = 0xC4;
+const PortId_t PIPE_2_REC_PORT = 0x144;
+const PortId_t PIPE_3_REC_PORT = 0x1C4;
 
 #endif // __DEFINE__
 

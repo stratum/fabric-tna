@@ -358,7 +358,8 @@ parser FabricEgressParser (packet_in packet,
         //       by adding a "mirror_type" field.
 #ifdef WITH_INT_SINK
         packet.extract(int_mirror_md);
-        fabric_md.mirror_session_id = REPORT_MIRROR_SESSION_ID;
+        fabric_md.bridge_md_type = BridgeMetadataType.INVALID;
+        fabric_md.mirror_session_id = int_mirror_md.mirror_session_id;
         fabric_md.int_switch_id = int_mirror_md.switch_id;
         fabric_md.int_ingress_port_id = int_mirror_md.ingress_port_id;
         fabric_md.int_egress_port_id = int_mirror_md.egress_port_id;
@@ -607,9 +608,11 @@ control FabricEgressMirror(
     Mirror() mirror;
     apply {
 #ifdef WITH_INT_SINK
-        if (fabric_md.mirror_session_id == REPORT_MIRROR_SESSION_ID) {
+        if (fabric_md.bridge_md_type == BridgeMetadataType.MIRROR_EGRESS_TO_EGRESS) {
             mirror.emit<int_mirror_metadata_t>(fabric_md.mirror_session_id, {
                 fabric_md.bridge_md_type,
+                0, // padding
+                fabric_md.mirror_session_id,
                 fabric_md.int_switch_id,
                 fabric_md.int_ingress_port_id,
                 fabric_md.int_egress_port_id,
@@ -617,7 +620,6 @@ control FabricEgressMirror(
                 fabric_md.int_q_occupancy,
                 fabric_md.int_ingress_tstamp,
                 fabric_md.int_egress_tstamp
-                // FIXME: include all INT metadata from previous node.
             });
         }
 #endif // WITH_INT_SINK

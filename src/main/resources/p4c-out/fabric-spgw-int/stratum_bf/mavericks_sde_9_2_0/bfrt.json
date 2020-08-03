@@ -2090,6 +2090,65 @@
       "attributes" : ["EntryScope"]
     },
     {
+      "name" : "pipe.FabricEgress.int_egress.int_sink.tb_set_mirror_session_id",
+      "id" : 33586123,
+      "table_type" : "MatchAction_Direct",
+      "size" : 4,
+      "annotations" : [],
+      "depends_on" : [],
+      "has_const_default_action" : false,
+      "key" : [
+        {
+          "id" : 1,
+          "name" : "pipe_id",
+          "repeated" : false,
+          "annotations" : [],
+          "mandatory" : false,
+          "match_type" : "Exact",
+          "type" : {
+            "type" : "bytes",
+            "width" : 2
+          }
+        }
+      ],
+      "action_specs" : [
+        {
+          "id" : 16812849,
+          "name" : "FabricEgress.int_egress.int_sink.set_mirror_session_id",
+          "action_scope" : "TableAndDefault",
+          "annotations" : [],
+          "data" : [
+            {
+              "id" : 1,
+              "name" : "sid",
+              "repeated" : false,
+              "mandatory" : true,
+              "read_only" : false,
+              "annotations" : [],
+              "type" : {
+                "type" : "bytes",
+                "width" : 10
+              }
+            }
+          ]
+        },
+        {
+          "id" : 16800567,
+          "name" : "NoAction",
+          "action_scope" : "DefaultOnly",
+          "annotations" : [
+            {
+              "name" : "@defaultonly"
+            }
+          ],
+          "data" : []
+        }
+      ],
+      "data" : [],
+      "supported_operations" : [],
+      "attributes" : ["EntryScope"]
+    },
+    {
       "name" : "pipe.FabricEgress.int_egress.int_report.tb_generate_report",
       "id" : 33567899,
       "table_type" : "MatchAction_Direct",
