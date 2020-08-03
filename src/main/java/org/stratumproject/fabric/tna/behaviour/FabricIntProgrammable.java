@@ -3,6 +3,7 @@
 
 package org.stratumproject.fabric.tna.behaviour;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
@@ -12,7 +13,6 @@ import org.onosproject.net.behaviour.inbandtelemetry.IntDeviceConfig;
 import org.onosproject.net.behaviour.inbandtelemetry.IntMetadataType;
 import org.onosproject.net.behaviour.inbandtelemetry.IntObjective;
 import org.onosproject.net.behaviour.inbandtelemetry.IntProgrammable;
-import org.onosproject.net.config.NetworkConfigService;
 import org.onosproject.net.device.DeviceService;
 import org.onosproject.net.flow.DefaultFlowRule;
 import org.onosproject.net.flow.DefaultTrafficSelector;
@@ -27,10 +27,14 @@ import org.onosproject.net.flow.criteria.IPCriterion;
 import org.onosproject.net.flow.criteria.PiCriterion;
 import org.onosproject.net.flow.criteria.TcpPortCriterion;
 import org.onosproject.net.flow.criteria.UdpPortCriterion;
+import org.onosproject.net.group.DefaultGroupDescription;
+import org.onosproject.net.group.DefaultGroupKey;
+import org.onosproject.net.group.GroupBuckets;
+import org.onosproject.net.group.GroupDescription;
+import org.onosproject.net.group.GroupKey;
+import org.onosproject.net.group.GroupService;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
-import org.osgi.service.component.annotations.Reference;
-import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.stratumproject.fabric.tna.PipeconfLoader;
 
 import java.util.Set;
@@ -38,10 +42,11 @@ import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 import static org.onlab.util.ImmutableByteSequence.copyFrom;
+import static org.onosproject.net.group.DefaultGroupBucket.createCloneGroupBucket;
+import static org.stratumproject.fabric.tna.behaviour.FabricUtils.KRYO;
 
 /**
- * Implementation of INT programmable behavior for fabric.p4. Currently supports
- * only SOURCE and TRANSIT functionalities.
+ * Implementation of INT programmable behavior for fabric.p4.
  */
 public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         implements IntProgrammable {
@@ -50,6 +55,14 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
     // For now we support only one hop.
     private static final int MAXHOP = 1;
     private static final int PORTMASK = 0xffff;
+    private static final int REPORT_MIRROR_SESSION_ID = 299;
+    private static final GroupKey REPORT_CLONE_GROUP_KEY = new DefaultGroupKey(
+            KRYO.serialize(REPORT_MIRROR_SESSION_ID));
+
+    private static final int RECIRC_PORT_PIPE0 = 68;
+    // private static final int RECIRC_PORT_PIPE1 = 196;
+    // private static final int RECIRC_PORT_PIPE2 = 324;
+    // private static final int RECIRC_PORT_PIPE3 = 452;
 
     private static final Set<Criterion.Type> SUPPORTED_CRITERION = Sets.newHashSet(
             Criterion.Type.IPV4_DST, Criterion.Type.IPV4_SRC,
@@ -58,15 +71,15 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
             Criterion.Type.IP_PROTO);
 
     private static final Set<TableId> TABLES_TO_CLEANUP = Sets.newHashSet(
-            P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_TRANSIT_TB_INT_INSERT,
-            P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_SOURCE_TB_SET_SOURCE,
+            P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_REPORT_TB_GENERATE_REPORT,
             P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_SINK_TB_SET_SINK,
             P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_SOURCE_TB_INT_SOURCE,
-            P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_REPORT_TB_GENERATE_REPORT
+            P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_SOURCE_TB_SET_SOURCE,
+            P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_TRANSIT_TB_INT_INSERT
     );
 
-    @Reference(cardinality = ReferenceCardinality.MANDATORY)
     private FlowRuleService flowRuleService;
+    private GroupService groupService;
 
     private DeviceId deviceId;
     private ApplicationId appId;
@@ -91,8 +104,8 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
     private boolean setupBehaviour() {
         deviceId = this.data().deviceId();
         flowRuleService = handler().get(FlowRuleService.class);
+        groupService = handler().get(GroupService.class);
         final var coreService = handler().get(CoreService.class);
-        final var cfgService = handler().get(NetworkConfigService.class);
         appId = coreService.getAppId(PipeconfLoader.APP_NAME);
         if (appId == null) {
             log.warn("Application ID is null. Cannot initialize behaviour.");
@@ -155,6 +168,18 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 .build();
 
         flowRuleService.applyFlowRules(transitFlowRule);
+
+        // Mirroring session for report cloning.
+        final var bucketList = ImmutableList.of(
+                createCloneGroupBucket(DefaultTrafficTreatment.builder()
+                        .setOutput(PortNumber.portNumber(RECIRC_PORT_PIPE0))
+                        .build()));
+        final var groupDescription = new DefaultGroupDescription(
+                deviceId, GroupDescription.Type.CLONE,
+                new GroupBuckets(bucketList),
+                REPORT_CLONE_GROUP_KEY, REPORT_MIRROR_SESSION_ID, appId);
+        groupService.addGroup(groupDescription);
+
         return true;
     }
 
@@ -263,12 +288,14 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 data().deviceId()).spliterator(), false)
                 .filter(f -> TABLES_TO_CLEANUP.contains(f.table()))
                 .forEach(flowRuleService::removeFlowRules);
+        groupService.removeGroup(deviceId, REPORT_CLONE_GROUP_KEY, appId);
     }
 
     @Override
     public boolean supportsFunctionality(IntFunctionality functionality) {
-        // Sink not fully supported yet.
-        return functionality == IntFunctionality.SOURCE || functionality == IntFunctionality.TRANSIT;
+        return functionality == IntFunctionality.SOURCE ||
+                functionality == IntFunctionality.TRANSIT ||
+                functionality == IntFunctionality.SINK;
     }
 
     private FlowRule buildWatchlistEntry(IntObjective obj) {
@@ -429,10 +456,10 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         FlowRule reportRule = buildReportEntry(cfg);
         if (reportRule != null) {
             flowRuleService.applyFlowRules(reportRule);
-            log.info("Report entry {} has been added to {}", reportRule, this.data().deviceId());
+            log.info("Report rule added to {} [{}]", this.data().deviceId(), reportRule);
             return true;
         } else {
-            log.warn("Failed to add report entry on {}", this.data().deviceId());
+            log.warn("Failed to add report rule to {}", this.data().deviceId());
             return false;
         }
     }
@@ -445,19 +472,19 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
 
         PiActionParam srcMacParam = new PiActionParam(
                 P4InfoConstants.SRC_MAC,
-                copyFrom(cfg.sinkMac().toBytes()));
+                cfg.sinkMac().toBytes());
         PiActionParam nextHopMacParam = new PiActionParam(
                 P4InfoConstants.MON_MAC,
-                copyFrom(cfg.collectorNextHopMac().toBytes()));
+                cfg.collectorNextHopMac().toBytes());
         PiActionParam srcIpParam = new PiActionParam(
                 P4InfoConstants.SRC_IP,
-                copyFrom(cfg.sinkIp().toOctets()));
+                cfg.sinkIp().toOctets());
         PiActionParam monIpParam = new PiActionParam(
                 P4InfoConstants.MON_IP,
-                copyFrom(cfg.collectorIp().toOctets()));
+                cfg.collectorIp().toOctets());
         PiActionParam monPortParam = new PiActionParam(
                 P4InfoConstants.MON_PORT,
-                copyFrom(cfg.collectorPort().toInt()));
+                cfg.collectorPort().toInt());
         PiAction reportAction = PiAction.builder()
                 .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_REPORT_DO_REPORT_ENCAPSULATION)
                 .withParameter(srcMacParam)

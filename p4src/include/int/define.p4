@@ -15,7 +15,7 @@ const bit<6> INT_DSCP = 0x1;
 const bit<8> INT_HEADER_LEN_WORDS = 4;
 const bit<16> INT_HEADER_LEN_BYTES = 16;
 
-const MirrorId_t REPORT_MIRROR_SESSION_ID = 7;
+const MirrorId_t REPORT_MIRROR_SESSION_ID = 299;
 
 const bit<4> NPROTO_ETHERNET = 0;
 const bit<4> NPROTO_TELEMETRY_DROP_HEADER = 1;

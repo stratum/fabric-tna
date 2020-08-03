@@ -442,8 +442,7 @@ class NextObjectiveTranslator
         final int groupId = obj.id();
         // Use DefaultGroupKey instead of PiGroupKey as we don't have any
         // action profile to apply to the groups of ALL type.
-        final GroupKey groupKey = new DefaultGroupKey(
-                FabricPipeliner.KRYO.serialize(groupId));
+        final GroupKey groupKey = new DefaultGroupKey(KRYO.serialize(groupId));
 
         resultBuilder.addGroup(
                 new DefaultGroupDescription(

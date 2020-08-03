@@ -3,12 +3,10 @@
 
 package org.stratumproject.fabric.tna.behaviour.pipeliner;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import org.onlab.packet.MacAddress;
-import org.onosproject.core.ApplicationId;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.flow.DefaultTrafficSelector;
@@ -23,12 +21,6 @@ import org.onosproject.net.flow.criteria.MplsCriterion;
 import org.onosproject.net.flow.criteria.VlanIdCriterion;
 import org.onosproject.net.flowobjective.ForwardingObjective;
 import org.onosproject.net.flowobjective.ObjectiveError;
-import org.onosproject.net.group.DefaultGroupDescription;
-import org.onosproject.net.group.DefaultGroupKey;
-import org.onosproject.net.group.GroupBucket;
-import org.onosproject.net.group.GroupBuckets;
-import org.onosproject.net.group.GroupDescription;
-import org.onosproject.net.group.GroupKey;
 import org.onosproject.net.pi.model.PiActionId;
 import org.onosproject.net.pi.model.PiTableId;
 import org.onosproject.net.pi.runtime.PiAction;
@@ -36,13 +28,11 @@ import org.onosproject.net.pi.runtime.PiActionParam;
 import org.stratumproject.fabric.tna.behaviour.FabricCapabilities;
 import org.stratumproject.fabric.tna.behaviour.P4InfoConstants;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
-import static org.onosproject.net.group.DefaultGroupBucket.createCloneGroupBucket;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.criterionNotNull;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.outputPort;
 
@@ -267,24 +257,6 @@ class ForwardingObjectiveTranslator
         }
         resultBuilder.addFlowRule(flowRule(
                 obj, P4InfoConstants.FABRIC_INGRESS_ACL_ACL, obj.selector()));
-    }
-
-    private DefaultGroupDescription createCloneGroup(
-            ApplicationId appId,
-            int cloneSessionId,
-            PortNumber outPort) {
-        final GroupKey groupKey = new DefaultGroupKey(
-                FabricPipeliner.KRYO.serialize(cloneSessionId));
-
-        final List<GroupBucket> bucketList = ImmutableList.of(
-                createCloneGroupBucket(DefaultTrafficTreatment.builder()
-                                               .setOutput(outPort)
-                                               .build()));
-        final DefaultGroupDescription cloneGroup = new DefaultGroupDescription(
-                deviceId, GroupDescription.Type.CLONE,
-                new GroupBuckets(bucketList),
-                groupKey, cloneSessionId, appId);
-        return cloneGroup;
     }
 
     private FlowRule flowRule(
