@@ -5,6 +5,7 @@ package org.stratumproject.fabric.tna.behaviour;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
+import org.onlab.packet.MacAddress;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
 import org.onosproject.net.DeviceId;
@@ -13,7 +14,7 @@ import org.onosproject.net.behaviour.inbandtelemetry.IntDeviceConfig;
 import org.onosproject.net.behaviour.inbandtelemetry.IntMetadataType;
 import org.onosproject.net.behaviour.inbandtelemetry.IntObjective;
 import org.onosproject.net.behaviour.inbandtelemetry.IntProgrammable;
-import org.onosproject.net.device.DeviceService;
+import org.onosproject.net.config.NetworkConfigService;
 import org.onosproject.net.flow.DefaultFlowRule;
 import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
@@ -34,6 +35,7 @@ import org.onosproject.net.group.GroupDescription;
 import org.onosproject.net.group.GroupService;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
+import org.onosproject.segmentrouting.config.SegmentRoutingDeviceConfig;
 import org.stratumproject.fabric.tna.PipeconfLoader;
 
 import java.util.List;
@@ -75,6 +77,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
 
     private FlowRuleService flowRuleService;
     private GroupService groupService;
+    private NetworkConfigService cfgService;
 
     private DeviceId deviceId;
     private ApplicationId appId;
@@ -89,8 +92,8 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
     }
 
     /**
-     * Create a new instance of this behaviour. Used by the abstract projectable
-     * model (i.e., {@link org.onosproject.net.Device#as(Class)}.
+     * Create a new instance of this behaviour. Used by the abstract projectable model (i.e., {@link
+     * org.onosproject.net.Device#as(Class)}.
      */
     public FabricIntProgrammable() {
         super();
@@ -100,6 +103,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         deviceId = this.data().deviceId();
         flowRuleService = handler().get(FlowRuleService.class);
         groupService = handler().get(GroupService.class);
+        cfgService = handler().get(NetworkConfigService.class);
         final var coreService = handler().get(CoreService.class);
         appId = coreService.getAppId(PipeconfLoader.APP_NAME);
         if (appId == null) {
@@ -116,28 +120,15 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
             return false;
         }
 
-        // FIXME: create config class for INT to allow specifying arbitrary
-        //  switch IDs. The one for the GeneralDeviceProvider was temporary and
-        //  now has been removed. For now we use the chassis ID, which is always 0
-        //  for P4runtime devices.
-        // final GeneralProviderDeviceConfig cfg = cfgService.getConfig(
-        //         deviceId, GeneralProviderDeviceConfig.class);
-        // if (cfg == null) {
-        //     log.warn("Missing GeneralProviderDevice config for {}", deviceId);
-        //     return false;
-        // }
-        // final String switchId = cfg.protocolsInfo().containsKey("int") ?
-        //         cfg.protocolsInfo().get("int").configValues().get("switchId")
-        //         : null;
-        // if (switchId == null || switchId.isEmpty()) {
-        //     log.warn("Missing INT device config for {}", deviceId);
-        //     return false;
-        // }
+        final var cfg = cfgService.getConfig(
+                deviceId, SegmentRoutingDeviceConfig.class);
+        if (cfg == null) {
+            log.warn("Missing SegmentRoutingDeviceConfig config for {}", deviceId);
+            return false;
+        }
 
         PiActionParam transitIdParam = new PiActionParam(
-                P4InfoConstants.SWITCH_ID,
-                copyFrom(handler().get(DeviceService.class)
-                        .getDevice(deviceId).chassisId().id()));
+                P4InfoConstants.SWITCH_ID, cfg.nodeSidIPv4());
 
         PiAction transitAction = PiAction.builder()
                 .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_TRANSIT_INIT_METADATA)
@@ -314,8 +305,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 .filter(f -> TABLES_TO_CLEANUP.contains(f.table()))
                 .forEach(flowRuleService::removeFlowRules);
 
-        for (int pipeId = 0; pipeId < REPORT_MIRROR_SESSION_ID_LIST.size(); pipeId++) {
-            final var reportSessionId = REPORT_MIRROR_SESSION_ID_LIST.get(pipeId);
+        for (final Integer reportSessionId : REPORT_MIRROR_SESSION_ID_LIST) {
             final var groupKey = new DefaultGroupKey(
                     KRYO.serialize(reportSessionId));
             groupService.removeGroup(deviceId, groupKey, appId);
@@ -446,12 +436,12 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
     }
 
     /**
-     * Returns a subset of Criterion from given selector, which is unsupported
-     * by this INT pipeline.
+     * Returns a subset of Criterion from given selector, which is unsupported by this INT
+     * pipeline.
      *
      * @param selector a traffic selector
-     * @return a subset of Criterion from given selector, unsupported by this
-     * INT pipeline, empty if all criteria are supported.
+     * @return a subset of Criterion from given selector, unsupported by this INT pipeline, empty if
+     * all criteria are supported.
      */
     private Set<Criterion> unsupportedSelectors(TrafficSelector selector) {
         return selector.criteria().stream()
@@ -495,27 +485,38 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         }
     }
 
-    private FlowRule buildReportEntry(IntDeviceConfig cfg) {
+    private FlowRule buildReportEntry(IntDeviceConfig intCfg) {
 
         if (!setupBehaviour()) {
             return null;
         }
 
+        final var srCfg = cfgService.getConfig(
+                deviceId, SegmentRoutingDeviceConfig.class);
+        if (srCfg == null) {
+            log.error("Missing SegmentRoutingDeviceConfig config for {}, " +
+                    "cannot derive source IP for INT reports", deviceId);
+            return null;
+        }
+
+        final var srcIp = srCfg.routerIpv4();
+        log.info("For {} overriding sink IPv4 addr ({}) " +
+                "with segmentrouting ipv4Loopback ({}), also ignoring MAC addresses",
+                deviceId, intCfg.sinkIp(), srcIp);
+
+
         PiActionParam srcMacParam = new PiActionParam(
-                P4InfoConstants.SRC_MAC,
-                cfg.sinkMac().toBytes());
+                P4InfoConstants.SRC_MAC, MacAddress.ZERO.toBytes());
         PiActionParam nextHopMacParam = new PiActionParam(
-                P4InfoConstants.MON_MAC,
-                cfg.collectorNextHopMac().toBytes());
+                P4InfoConstants.MON_MAC, MacAddress.ZERO.toBytes());
         PiActionParam srcIpParam = new PiActionParam(
-                P4InfoConstants.SRC_IP,
-                cfg.sinkIp().toOctets());
+                P4InfoConstants.SRC_IP, srcIp.toOctets());
         PiActionParam monIpParam = new PiActionParam(
                 P4InfoConstants.MON_IP,
-                cfg.collectorIp().toOctets());
+                intCfg.collectorIp().toOctets());
         PiActionParam monPortParam = new PiActionParam(
                 P4InfoConstants.MON_PORT,
-                cfg.collectorPort().toInt());
+                intCfg.collectorPort().toInt());
         PiAction reportAction = PiAction.builder()
                 .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_REPORT_DO_REPORT_ENCAPSULATION)
                 .withParameter(srcMacParam)
