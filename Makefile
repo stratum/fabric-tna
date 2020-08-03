@@ -80,6 +80,6 @@ clean:
 	-rm -rf src/main/resources/p4c-out
 
 deep-clean: clean
+	-rm -rf tmp
 	-rm -rf target
-	-rm -rf src/main/resources/p4c-out
 	-docker rm ${mvn_container} > /dev/null 2>&1
