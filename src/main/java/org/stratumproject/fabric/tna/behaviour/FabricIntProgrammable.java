@@ -6,12 +6,12 @@ package org.stratumproject.fabric.tna.behaviour;
 import com.google.common.collect.Sets;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
-import org.onosproject.net.behaviour.inbandtelemetry.IntMetadataType;
-import org.onosproject.net.behaviour.inbandtelemetry.IntDeviceConfig;
-import org.onosproject.net.behaviour.inbandtelemetry.IntObjective;
-import org.onosproject.net.behaviour.inbandtelemetry.IntProgrammable;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.PortNumber;
+import org.onosproject.net.behaviour.inbandtelemetry.IntDeviceConfig;
+import org.onosproject.net.behaviour.inbandtelemetry.IntMetadataType;
+import org.onosproject.net.behaviour.inbandtelemetry.IntObjective;
+import org.onosproject.net.behaviour.inbandtelemetry.IntProgrammable;
 import org.onosproject.net.config.NetworkConfigService;
 import org.onosproject.net.device.DeviceService;
 import org.onosproject.net.flow.DefaultFlowRule;
@@ -27,12 +27,11 @@ import org.onosproject.net.flow.criteria.IPCriterion;
 import org.onosproject.net.flow.criteria.PiCriterion;
 import org.onosproject.net.flow.criteria.TcpPortCriterion;
 import org.onosproject.net.flow.criteria.UdpPortCriterion;
-import org.onosproject.net.pi.model.PiTableId;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
-import org.stratumproject.fabric.tna.PipeconfLoader;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
+import org.stratumproject.fabric.tna.PipeconfLoader;
 
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -47,11 +46,10 @@ import static org.onlab.util.ImmutableByteSequence.copyFrom;
 public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         implements IntProgrammable {
 
-    // TODO: change this value to the value of diameter of a network.
     private static final int DEFAULT_PRIORITY = 10000;
-    private static final int MAXHOP = 64;
+    // For now we support only one hop.
+    private static final int MAXHOP = 1;
     private static final int PORTMASK = 0xffff;
-    private static final int PKT_INSTANCE_TYPE_INGRESS_CLONE = 1;
 
     private static final Set<Criterion.Type> SUPPORTED_CRITERION = Sets.newHashSet(
             Criterion.Type.IPV4_DST, Criterion.Type.IPV4_SRC,
@@ -59,12 +57,12 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
             Criterion.Type.TCP_SRC, Criterion.Type.TCP_DST,
             Criterion.Type.IP_PROTO);
 
-    private static final Set<PiTableId> TABLES_TO_CLEANUP = Sets.newHashSet(
-            FabricConstants.FABRIC_EGRESS_PROCESS_INT_MAIN_PROCESS_INT_TRANSIT_TB_INT_INSERT,
-            FabricConstants.FABRIC_INGRESS_PROCESS_SET_SOURCE_SINK_TB_SET_SOURCE,
-            FabricConstants.FABRIC_INGRESS_PROCESS_SET_SOURCE_SINK_TB_SET_SINK,
-            FabricConstants.FABRIC_EGRESS_PROCESS_INT_MAIN_PROCESS_INT_SOURCE_TB_INT_SOURCE,
-            FabricConstants.FABRIC_EGRESS_PROCESS_INT_MAIN_PROCESS_INT_REPORT_TB_GENERATE_REPORT
+    private static final Set<TableId> TABLES_TO_CLEANUP = Sets.newHashSet(
+            P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_TRANSIT_TB_INT_INSERT,
+            P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_SOURCE_TB_SET_SOURCE,
+            P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_SINK_TB_SET_SINK,
+            P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_SOURCE_TB_INT_SOURCE,
+            P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_REPORT_TB_GENERATE_REPORT
     );
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
@@ -129,12 +127,12 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         // }
 
         PiActionParam transitIdParam = new PiActionParam(
-                FabricConstants.SWITCH_ID,
+                P4InfoConstants.SWITCH_ID,
                 copyFrom(handler().get(DeviceService.class)
                         .getDevice(deviceId).chassisId().id()));
 
         PiAction transitAction = PiAction.builder()
-                .withId(FabricConstants.FABRIC_EGRESS_PROCESS_INT_MAIN_PROCESS_INT_TRANSIT_INIT_METADATA)
+                .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_TRANSIT_INIT_METADATA)
                 .withParameter(transitIdParam)
                 .build();
         TrafficTreatment treatment = DefaultTrafficTreatment.builder()
@@ -142,7 +140,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 .build();
         TrafficSelector selector = DefaultTrafficSelector.builder()
                 .matchPi(PiCriterion.builder().matchExact(
-                        FabricConstants.HDR_INT_IS_VALID, (byte) 0x01)
+                        P4InfoConstants.HDR_INT_IS_VALID, (byte) 0x01)
                         .build())
                 .build();
 
@@ -153,7 +151,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 .withPriority(DEFAULT_PRIORITY)
                 .makePermanent()
                 .forDevice(deviceId)
-                .forTable(FabricConstants.FABRIC_EGRESS_PROCESS_INT_MAIN_PROCESS_INT_TRANSIT_TB_INT_INSERT)
+                .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_TRANSIT_TB_INT_INSERT)
                 .build();
 
         flowRuleService.applyFlowRules(transitFlowRule);
@@ -168,13 +166,13 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         }
 
         PiCriterion ingressCriterion = PiCriterion.builder()
-                .matchExact(FabricConstants.HDR_IG_PORT, port.toLong())
+                .matchExact(P4InfoConstants.HDR_IG_PORT, port.toLong())
                 .build();
         TrafficSelector srcSelector = DefaultTrafficSelector.builder()
                 .matchPi(ingressCriterion)
                 .build();
         PiAction setSourceAct = PiAction.builder()
-                .withId(FabricConstants.FABRIC_INGRESS_PROCESS_SET_SOURCE_SINK_INT_SET_SOURCE)
+                .withId(P4InfoConstants.NOP)
                 .build();
         TrafficTreatment srcTreatment = DefaultTrafficTreatment.builder()
                 .piTableAction(setSourceAct)
@@ -186,7 +184,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 .withPriority(DEFAULT_PRIORITY)
                 .makePermanent()
                 .forDevice(deviceId)
-                .forTable(FabricConstants.FABRIC_INGRESS_PROCESS_SET_SOURCE_SINK_TB_SET_SOURCE)
+                .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_SOURCE_TB_SET_SOURCE)
                 .build();
         flowRuleService.applyFlowRules(srcFlowRule);
         return true;
@@ -200,13 +198,13 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         }
 
         PiCriterion egressCriterion = PiCriterion.builder()
-                .matchExact(FabricConstants.HDR_EG_PORT, port.toLong())
+                .matchExact(P4InfoConstants.HDR_EG_PORT, port.toLong())
                 .build();
         TrafficSelector sinkSelector = DefaultTrafficSelector.builder()
                 .matchPi(egressCriterion)
                 .build();
         PiAction setSinkAct = PiAction.builder()
-                .withId(FabricConstants.FABRIC_INGRESS_PROCESS_SET_SOURCE_SINK_INT_SET_SINK)
+                .withId(P4InfoConstants.NOP)
                 .build();
         TrafficTreatment sinkTreatment = DefaultTrafficTreatment.builder()
                 .piTableAction(setSinkAct)
@@ -218,7 +216,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 .withPriority(DEFAULT_PRIORITY)
                 .makePermanent()
                 .forDevice(deviceId)
-                .forTable(FabricConstants.FABRIC_INGRESS_PROCESS_SET_SOURCE_SINK_TB_SET_SINK)
+                .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_SINK_TB_SET_SINK)
                 .build();
         flowRuleService.applyFlowRules(sinkFlowRule);
         return true;
@@ -263,8 +261,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
 
         StreamSupport.stream(flowRuleService.getFlowEntries(
                 data().deviceId()).spliterator(), false)
-                .filter(f -> f.table().type() == TableId.Type.PIPELINE_INDEPENDENT)
-                .filter(f -> TABLES_TO_CLEANUP.contains((PiTableId) f.table()))
+                .filter(f -> TABLES_TO_CLEANUP.contains(f.table()))
                 .forEach(flowRuleService::removeFlowRules);
     }
 
@@ -277,20 +274,20 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
     private FlowRule buildWatchlistEntry(IntObjective obj) {
         int instructionBitmap = buildInstructionBitmap(obj.metadataTypes());
         PiActionParam maxHopParam = new PiActionParam(
-                FabricConstants.MAX_HOP,
+                P4InfoConstants.MAX_HOP,
                 copyFrom(MAXHOP));
         PiActionParam instCntParam = new PiActionParam(
-                FabricConstants.INS_CNT,
+                P4InfoConstants.INS_CNT,
                 copyFrom(Integer.bitCount(instructionBitmap)));
         PiActionParam inst0003Param = new PiActionParam(
-                FabricConstants.INS_MASK0003,
+                P4InfoConstants.INS_MASK0003,
                 copyFrom((instructionBitmap >> 12) & 0xF));
         PiActionParam inst0407Param = new PiActionParam(
-                FabricConstants.INS_MASK0407,
+                P4InfoConstants.INS_MASK0407,
                 copyFrom((instructionBitmap >> 8) & 0xF));
 
         PiAction intSourceAction = PiAction.builder()
-                .withId(FabricConstants.FABRIC_EGRESS_PROCESS_INT_MAIN_PROCESS_INT_SOURCE_INT_SOURCE_DSCP)
+                .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_SOURCE_INT_SOURCE_DSCP)
                 .withParameter(maxHopParam)
                 .withParameter(instCntParam)
                 .withParameter(inst0003Param)
@@ -313,28 +310,28 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 case TCP_SRC:
                     sBuilder.matchPi(
                             PiCriterion.builder().matchTernary(
-                                    FabricConstants.HDR_L4_SPORT,
+                                    P4InfoConstants.HDR_L4_SPORT,
                                     ((TcpPortCriterion) criterion).tcpPort().toInt(), PORTMASK)
                                     .build());
                     break;
                 case UDP_SRC:
                     sBuilder.matchPi(
                             PiCriterion.builder().matchTernary(
-                                    FabricConstants.HDR_L4_SPORT,
+                                    P4InfoConstants.HDR_L4_SPORT,
                                     ((UdpPortCriterion) criterion).udpPort().toInt(), PORTMASK)
                                     .build());
                     break;
                 case TCP_DST:
                     sBuilder.matchPi(
                             PiCriterion.builder().matchTernary(
-                                    FabricConstants.HDR_L4_DPORT,
+                                    P4InfoConstants.HDR_L4_DPORT,
                                     ((TcpPortCriterion) criterion).tcpPort().toInt(), PORTMASK)
                                     .build());
                     break;
                 case UDP_DST:
                     sBuilder.matchPi(
                             PiCriterion.builder().matchTernary(
-                                    FabricConstants.HDR_L4_DPORT,
+                                    P4InfoConstants.HDR_L4_DPORT,
                                     ((UdpPortCriterion) criterion).udpPort().toInt(), PORTMASK)
                                     .build());
                     break;
@@ -348,7 +345,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 .withSelector(sBuilder.build())
                 .withTreatment(instTreatment)
                 .withPriority(DEFAULT_PRIORITY)
-                .forTable(FabricConstants.FABRIC_EGRESS_PROCESS_INT_MAIN_PROCESS_INT_SOURCE_TB_INT_SOURCE)
+                .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_SOURCE_TB_INT_SOURCE)
                 .fromApp(appId)
                 .makePermanent()
                 .build();
@@ -429,42 +426,40 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
     }
 
     private boolean setupIntReportInternal(IntDeviceConfig cfg) {
-        // Report not fully supported yet.
-        return true;
-        // FlowRule reportRule = buildReportEntry(cfg, PKT_INSTANCE_TYPE_INGRESS_CLONE);
-        // if (reportRule != null) {
-        //     flowRuleService.applyFlowRules(reportRule);
-        //     log.info("Report entry {} has been added to {}", reportRule, this.data().deviceId());
-        //     return true;
-        // } else {
-        //     log.warn("Failed to add report entry on {}", this.data().deviceId());
-        //     return false;
-        // }
+        FlowRule reportRule = buildReportEntry(cfg);
+        if (reportRule != null) {
+            flowRuleService.applyFlowRules(reportRule);
+            log.info("Report entry {} has been added to {}", reportRule, this.data().deviceId());
+            return true;
+        } else {
+            log.warn("Failed to add report entry on {}", this.data().deviceId());
+            return false;
+        }
     }
 
-    private FlowRule buildReportEntry(IntDeviceConfig cfg, int type) {
+    private FlowRule buildReportEntry(IntDeviceConfig cfg) {
 
         if (!setupBehaviour()) {
             return null;
         }
 
         PiActionParam srcMacParam = new PiActionParam(
-                FabricConstants.SRC_MAC,
+                P4InfoConstants.SRC_MAC,
                 copyFrom(cfg.sinkMac().toBytes()));
         PiActionParam nextHopMacParam = new PiActionParam(
-                FabricConstants.MON_MAC,
+                P4InfoConstants.MON_MAC,
                 copyFrom(cfg.collectorNextHopMac().toBytes()));
         PiActionParam srcIpParam = new PiActionParam(
-                FabricConstants.SRC_IP,
+                P4InfoConstants.SRC_IP,
                 copyFrom(cfg.sinkIp().toOctets()));
         PiActionParam monIpParam = new PiActionParam(
-                FabricConstants.MON_IP,
+                P4InfoConstants.MON_IP,
                 copyFrom(cfg.collectorIp().toOctets()));
         PiActionParam monPortParam = new PiActionParam(
-                FabricConstants.MON_PORT,
+                P4InfoConstants.MON_PORT,
                 copyFrom(cfg.collectorPort().toInt()));
         PiAction reportAction = PiAction.builder()
-                .withId(FabricConstants.FABRIC_EGRESS_PROCESS_INT_MAIN_PROCESS_INT_REPORT_DO_REPORT_ENCAPSULATION)
+                .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_REPORT_DO_REPORT_ENCAPSULATION)
                 .withParameter(srcMacParam)
                 .withParameter(nextHopMacParam)
                 .withParameter(srcIpParam)
@@ -481,7 +476,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 .withPriority(DEFAULT_PRIORITY)
                 .makePermanent()
                 .forDevice(this.data().deviceId())
-                .forTable(FabricConstants.FABRIC_EGRESS_PROCESS_INT_MAIN_PROCESS_INT_REPORT_TB_GENERATE_REPORT)
+                .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_REPORT_TB_GENERATE_REPORT)
                 .build();
     }
 

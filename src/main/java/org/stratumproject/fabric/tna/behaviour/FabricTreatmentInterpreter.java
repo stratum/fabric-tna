@@ -35,14 +35,14 @@ final class FabricTreatmentInterpreter {
     private final FabricCapabilities capabilities;
     private static final ImmutableMap<PiTableId, PiActionId> NOP_ACTIONS =
             ImmutableMap.<PiTableId, PiActionId>builder()
-                    .put(FabricConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN,
-                         FabricConstants.FABRIC_INGRESS_FILTERING_PERMIT)
-                    .put(FabricConstants.FABRIC_INGRESS_FORWARDING_ROUTING_V4,
-                         FabricConstants.FABRIC_INGRESS_FORWARDING_NOP_ROUTING_V4)
-                    .put(FabricConstants.FABRIC_INGRESS_ACL_ACL,
-                         FabricConstants.FABRIC_INGRESS_ACL_NOP_ACL)
-                    .put(FabricConstants.FABRIC_EGRESS_EGRESS_NEXT_EGRESS_VLAN,
-                         FabricConstants.FABRIC_EGRESS_EGRESS_NEXT_POP_VLAN)
+                    .put(P4InfoConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN,
+                         P4InfoConstants.FABRIC_INGRESS_FILTERING_PERMIT)
+                    .put(P4InfoConstants.FABRIC_INGRESS_FORWARDING_ROUTING_V4,
+                         P4InfoConstants.FABRIC_INGRESS_FORWARDING_NOP_ROUTING_V4)
+                    .put(P4InfoConstants.FABRIC_INGRESS_ACL_ACL,
+                         P4InfoConstants.FABRIC_INGRESS_ACL_NOP_ACL)
+                    .put(P4InfoConstants.FABRIC_EGRESS_EGRESS_NEXT_EGRESS_VLAN,
+                         P4InfoConstants.FABRIC_EGRESS_EGRESS_NEXT_POP_VLAN)
                     .build();
 
 
@@ -53,7 +53,7 @@ final class FabricTreatmentInterpreter {
     static PiAction mapFilteringTreatment(TrafficTreatment treatment, PiTableId tableId)
             throws PiInterpreterException {
 
-        if (!tableId.equals(FabricConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN)) {
+        if (!tableId.equals(P4InfoConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN)) {
             // Mapping for other tables of the filtering block must be handled
             // in the pipeliner.
             tableException(tableId);
@@ -68,9 +68,9 @@ final class FabricTreatmentInterpreter {
         final ModVlanIdInstruction setVlanInst = (ModVlanIdInstruction) l2InstructionOrFail(
                 treatment, VLAN_ID, tableId);
         return PiAction.builder()
-                .withId(FabricConstants.FABRIC_INGRESS_FILTERING_PERMIT_WITH_INTERNAL_VLAN)
+                .withId(P4InfoConstants.FABRIC_INGRESS_FILTERING_PERMIT_WITH_INTERNAL_VLAN)
                 .withParameter(new PiActionParam(
-                        FabricConstants.VLAN_ID, setVlanInst.vlanId().toShort()))
+                        P4InfoConstants.VLAN_ID, setVlanInst.vlanId().toShort()))
                 .build();
     }
 
@@ -86,43 +86,46 @@ final class FabricTreatmentInterpreter {
         return null;
     }
 
-    PiAction mapNextTreatment(TrafficTreatment treatment, PiTableId tableId)
+    static PiAction mapNextTreatment(TrafficTreatment treatment, PiTableId tableId)
             throws PiInterpreterException {
-        if (tableId == FabricConstants.FABRIC_INGRESS_NEXT_NEXT_VLAN) {
+        if (tableId == P4InfoConstants.FABRIC_INGRESS_NEXT_NEXT_VLAN) {
             return mapNextVlanTreatment(treatment, tableId);
-        } else if (tableId == FabricConstants.FABRIC_INGRESS_NEXT_HASHED) {
+        } else if (tableId == P4InfoConstants.FABRIC_INGRESS_NEXT_HASHED) {
             return mapNextHashedOrSimpleTreatment(treatment, tableId, false);
-        } else if (tableId == FabricConstants.FABRIC_INGRESS_NEXT_SIMPLE) {
-            return mapNextHashedOrSimpleTreatment(treatment, tableId, true);
-        } else if (tableId == FabricConstants.FABRIC_INGRESS_NEXT_XCONNECT) {
-            return mapNextXconnect(treatment, tableId);
+        // TODO: add profile with simple next or remove references
+        // } else if (tableId == FabricConstants.FABRIC_INGRESS_NEXT_SIMPLE) {
+        //     return mapNextHashedOrSimpleTreatment(treatment, tableId, true);
+        // TODO: re-enable support for xconnext
+        // } else if (tableId == FabricConstants.FABRIC_INGRESS_NEXT_XCONNECT) {
+        //     return mapNextXconnect(treatment, tableId);
         }
         throw new PiInterpreterException(format(
                 "Treatment mapping not supported for table '%s'", tableId));
     }
 
-    private PiAction mapNextVlanTreatment(TrafficTreatment treatment, PiTableId tableId)
+    private static PiAction mapNextVlanTreatment(TrafficTreatment treatment, PiTableId tableId)
             throws PiInterpreterException {
         final List<ModVlanIdInstruction> modVlanIdInst = l2InstructionsOrFail(treatment, VLAN_ID, tableId)
                 .stream().map(i -> (ModVlanIdInstruction) i).collect(Collectors.toList());
         if (modVlanIdInst.size() == 1) {
-            return PiAction.builder().withId(FabricConstants.FABRIC_INGRESS_NEXT_SET_VLAN)
+            return PiAction.builder().withId(P4InfoConstants.FABRIC_INGRESS_NEXT_SET_VLAN)
                     .withParameter(new PiActionParam(
-                            FabricConstants.VLAN_ID,
+                            P4InfoConstants.VLAN_ID,
                             modVlanIdInst.get(0).vlanId().toShort()))
                     .build();
         }
-        if (modVlanIdInst.size() == 2 && capabilities.supportDoubleVlanTerm()) {
-            return PiAction.builder()
-                    .withId(FabricConstants.FABRIC_INGRESS_NEXT_SET_DOUBLE_VLAN)
-                    .withParameter(new PiActionParam(
-                            FabricConstants.INNER_VLAN_ID,
-                            modVlanIdInst.get(0).vlanId().toShort()))
-                    .withParameter(new PiActionParam(
-                            FabricConstants.OUTER_VLAN_ID,
-                            modVlanIdInst.get(1).vlanId().toShort()))
-                    .build();
-        }
+        // TODO: re-enable support for double-vlan
+        // if (modVlanIdInst.size() == 2 && capabilities.supportDoubleVlanTerm()) {
+        //     return PiAction.builder()
+        //             .withId(FabricConstants.FABRIC_INGRESS_NEXT_SET_DOUBLE_VLAN)
+        //             .withParameter(new PiActionParam(
+        //                     FabricConstants.INNER_VLAN_ID,
+        //                     modVlanIdInst.get(0).vlanId().toShort()))
+        //             .withParameter(new PiActionParam(
+        //                     FabricConstants.OUTER_VLAN_ID,
+        //                     modVlanIdInst.get(1).vlanId().toShort()))
+        //             .build();
+        // }
         throw new PiInterpreterException("Too many VLAN instructions");
     }
 
@@ -145,47 +148,54 @@ final class FabricTreatmentInterpreter {
                 treatment, MPLS_LABEL);
 
         final PiAction.Builder actionBuilder = PiAction.builder()
-                .withParameter(new PiActionParam(FabricConstants.PORT_NUM, outPort.toLong()));
+                .withParameter(new PiActionParam(P4InfoConstants.PORT_NUM, outPort.toLong()));
 
         if (ethDst != null && ethSrc != null) {
             actionBuilder.withParameter(new PiActionParam(
-                    FabricConstants.SMAC, ethSrc.mac().toBytes()));
+                    P4InfoConstants.SMAC, ethSrc.mac().toBytes()));
             actionBuilder.withParameter(new PiActionParam(
-                    FabricConstants.DMAC, ethDst.mac().toBytes()));
+                    P4InfoConstants.DMAC, ethDst.mac().toBytes()));
             if (mplsLabel != null) {
                 // mpls_routing_hashed
                 return actionBuilder
-                        .withParameter(new PiActionParam(FabricConstants.LABEL, mplsLabel.label().toInt()))
-                        .withId(simple ? FabricConstants.FABRIC_INGRESS_NEXT_MPLS_ROUTING_SIMPLE
-                                        : FabricConstants.FABRIC_INGRESS_NEXT_MPLS_ROUTING_HASHED)
+                        .withParameter(new PiActionParam(P4InfoConstants.LABEL, mplsLabel.label().toInt()))
+                        .withId(P4InfoConstants.FABRIC_INGRESS_NEXT_MPLS_ROUTING_HASHED)
+                        // TODO: add profile with simple next or remove references
+                        // .withId(simple ? FabricConstants.FABRIC_INGRESS_NEXT_MPLS_ROUTING_SIMPLE
+                        //                 : FabricConstants.FABRIC_INGRESS_NEXT_MPLS_ROUTING_HASHED)
                         .build();
             } else {
                 // routing_hashed
                 return actionBuilder
-                        .withId(simple ? FabricConstants.FABRIC_INGRESS_NEXT_ROUTING_SIMPLE
-                                        : FabricConstants.FABRIC_INGRESS_NEXT_ROUTING_HASHED)
+                        .withId(P4InfoConstants.FABRIC_INGRESS_NEXT_ROUTING_HASHED)
+                        // TODO: add profile with simple next or remove references
+                        // .withId(simple ? FabricConstants.FABRIC_INGRESS_NEXT_ROUTING_SIMPLE
+                        //                 : FabricConstants.FABRIC_INGRESS_NEXT_ROUTING_HASHED)
                         .build();
             }
         } else {
             // output_hashed
             return actionBuilder
-                    .withId(simple ? FabricConstants.FABRIC_INGRESS_NEXT_OUTPUT_SIMPLE
-                                    : FabricConstants.FABRIC_INGRESS_NEXT_OUTPUT_HASHED)
+                    .withId(P4InfoConstants.FABRIC_INGRESS_NEXT_OUTPUT_HASHED)
+                    // TODO: add profile with simple next or remove references
+                    // .withId(simple ? FabricConstants.FABRIC_INGRESS_NEXT_OUTPUT_SIMPLE
+                    //                 : FabricConstants.FABRIC_INGRESS_NEXT_OUTPUT_HASHED)
                     .build();
         }
     }
 
-    private static PiAction mapNextXconnect(
-            TrafficTreatment treatment, PiTableId tableId)
-            throws PiInterpreterException {
-        final PortNumber outPort = ((OutputInstruction) instructionOrFail(
-                treatment, OUTPUT, tableId)).port();
-        return PiAction.builder()
-                .withId(FabricConstants.FABRIC_INGRESS_NEXT_OUTPUT_XCONNECT)
-                .withParameter(new PiActionParam(
-                        FabricConstants.PORT_NUM, outPort.toLong()))
-                .build();
-    }
+    // TODO: re-enable support for xconnext
+    // private static PiAction mapNextXconnect(
+    //         TrafficTreatment treatment, PiTableId tableId)
+    //         throws PiInterpreterException {
+    //     final PortNumber outPort = ((OutputInstruction) instructionOrFail(
+    //             treatment, OUTPUT, tableId)).port();
+    //     return PiAction.builder()
+    //             .withId(FabricConstants.FABRIC_INGRESS_NEXT_OUTPUT_XCONNECT)
+    //             .withParameter(new PiActionParam(
+    //                     FabricConstants.PORT_NUM, outPort.toLong()))
+    //             .build();
+    // }
 
     static PiAction mapAclTreatment(TrafficTreatment treatment, PiTableId tableId)
             throws PiInterpreterException {
@@ -206,7 +216,7 @@ final class FabricTreatmentInterpreter {
             throws PiInterpreterException {
         l2InstructionOrFail(treatment, VLAN_POP, tableId);
         return PiAction.builder()
-                .withId(FabricConstants.FABRIC_EGRESS_EGRESS_NEXT_POP_VLAN)
+                .withId(P4InfoConstants.FABRIC_EGRESS_EGRESS_NEXT_POP_VLAN)
                 .build();
 
     }

@@ -135,6 +135,7 @@ class ConstantClassGenerator(object):
     def const_line(self, name, type, constructor):
         var_name = self.convert_camel_to_all_caps(name)
         if type == PI_HF_FIELD_ID:
+            var_name = var_name.replace('$VALID$', 'VALID')
             var_name = HF_VAR_PREFIX + var_name
         val = constructor % (name,)
 

@@ -2055,52 +2055,6 @@
       "attributes" : ["EntryScope"]
     },
     {
-      "name" : "pipe.FabricEgress.int_egress.int_sink.tbl_calculate_removed_bytes",
-      "id" : 33608823,
-      "table_type" : "MatchAction_Direct",
-      "size" : 1,
-      "annotations" : [],
-      "depends_on" : [],
-      "has_const_default_action" : false,
-      "key" : [
-        {
-          "id" : 1,
-          "name" : "hdr.intl4_shim.$valid",
-          "repeated" : false,
-          "annotations" : [],
-          "mandatory" : false,
-          "match_type" : "Exact",
-          "type" : {
-            "type" : "bytes",
-            "width" : 1
-          }
-        }
-      ],
-      "action_specs" : [
-        {
-          "id" : 16837543,
-          "name" : "FabricEgress.int_egress.int_sink.calculate_removed_bytes",
-          "action_scope" : "TableAndDefault",
-          "annotations" : [],
-          "data" : []
-        },
-        {
-          "id" : 16819938,
-          "name" : "nop",
-          "action_scope" : "DefaultOnly",
-          "annotations" : [
-            {
-              "name" : "@defaultonly"
-            }
-          ],
-          "data" : []
-        }
-      ],
-      "data" : [],
-      "supported_operations" : [],
-      "attributes" : ["EntryScope", "ConstTable"]
-    },
-    {
       "name" : "pipe.FabricEgress.int_egress.int_sink.tb_set_sink",
       "id" : 33606820,
       "table_type" : "MatchAction_Direct",

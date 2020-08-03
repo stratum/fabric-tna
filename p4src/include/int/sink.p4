@@ -13,10 +13,12 @@ control IntSink (
     Hash<bit<16>>(HashAlgorithm_t.IDENTITY) field_size_modifier;
     bit<16> bytes_removed;
 
+    @hidden
     action calculate_removed_bytes() {
         bytes_removed = field_size_modifier.get<bit<10>>(hdr.intl4_shim.len_words ++ 2w0);
     }
 
+    @hidden
     table tbl_calculate_removed_bytes {
         key = {
             hdr.intl4_shim.isValid(): exact;
