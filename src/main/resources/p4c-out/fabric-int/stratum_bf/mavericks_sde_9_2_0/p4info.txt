@@ -355,29 +355,6 @@ tables {
 }
 tables {
   preamble {
-    id: 33618256
-    name: "FabricIngress.int_ingress.tb_set_source"
-    alias: "tb_set_source"
-  }
-  match_fields {
-    id: 1
-    name: "ig_port"
-    bitwidth: 9
-    match_type: EXACT
-  }
-  action_refs {
-    id: 16818681
-  }
-  action_refs {
-    id: 16819938
-    annotations: "@defaultonly"
-    scope: DEFAULT_ONLY
-  }
-  const_default_action_id: 16819938
-  size: 511
-}
-tables {
-  preamble {
     id: 33586443
     name: "FabricEgress.egress_next.egress_vlan"
     alias: "egress_vlan"
@@ -405,6 +382,24 @@ tables {
   const_default_action_id: 16819938
   direct_resource_ids: 318817765
   size: 1024
+}
+tables {
+  preamble {
+    id: 33587720
+    name: "FabricEgress.int_egress.int_source.tb_set_source"
+    alias: "tb_set_source"
+  }
+  match_fields {
+    id: 1
+    name: "ig_port"
+    bitwidth: 9
+    match_type: EXACT
+  }
+  action_refs {
+    id: 16819938
+  }
+  const_default_action_id: 16819938
+  size: 511
 }
 tables {
   preamble {
@@ -468,6 +463,69 @@ tables {
     scope: DEFAULT_ONLY
   }
   const_default_action_id: 16819938
+  size: 1
+}
+tables {
+  preamble {
+    id: 33608823
+    name: "FabricEgress.int_egress.int_sink.tbl_calculate_removed_bytes"
+    alias: "tbl_calculate_removed_bytes"
+  }
+  match_fields {
+    id: 1
+    name: "hdr.intl4_shim.$valid$"
+    bitwidth: 1
+    match_type: EXACT
+  }
+  action_refs {
+    id: 16837543
+  }
+  action_refs {
+    id: 16819938
+    annotations: "@defaultonly"
+    scope: DEFAULT_ONLY
+  }
+  size: 1
+  is_const_table: true
+}
+tables {
+  preamble {
+    id: 33606820
+    name: "FabricEgress.int_egress.int_sink.tb_set_sink"
+    alias: "tb_set_sink"
+  }
+  match_fields {
+    id: 1
+    name: "eg_port"
+    bitwidth: 9
+    match_type: EXACT
+  }
+  action_refs {
+    id: 16819938
+  }
+  const_default_action_id: 16819938
+  size: 511
+}
+tables {
+  preamble {
+    id: 33567899
+    name: "FabricEgress.int_egress.int_report.tb_generate_report"
+    alias: "tb_generate_report"
+  }
+  match_fields {
+    id: 1
+    name: "fabric_md.mirror_session_id"
+    bitwidth: 10
+    match_type: EXACT
+  }
+  action_refs {
+    id: 16791418
+  }
+  action_refs {
+    id: 16819938
+    annotations: "@defaultonly"
+    scope: DEFAULT_ONLY
+  }
   size: 1
 }
 actions {
@@ -697,13 +755,6 @@ actions {
 }
 actions {
   preamble {
-    id: 16818681
-    name: "FabricIngress.int_ingress.int_set_source"
-    alias: "int_set_source"
-  }
-}
-actions {
-  preamble {
     id: 16800567
     name: "NoAction"
     alias: "NoAction"
@@ -753,6 +804,45 @@ actions {
     id: 1
     name: "switch_id"
     bitwidth: 32
+  }
+}
+actions {
+  preamble {
+    id: 16837543
+    name: "FabricEgress.int_egress.int_sink.calculate_removed_bytes"
+    alias: "calculate_removed_bytes"
+  }
+}
+actions {
+  preamble {
+    id: 16791418
+    name: "FabricEgress.int_egress.int_report.do_report_encapsulation"
+    alias: "do_report_encapsulation"
+  }
+  params {
+    id: 1
+    name: "src_mac"
+    bitwidth: 48
+  }
+  params {
+    id: 2
+    name: "mon_mac"
+    bitwidth: 48
+  }
+  params {
+    id: 3
+    name: "src_ip"
+    bitwidth: 32
+  }
+  params {
+    id: 4
+    name: "mon_ip"
+    bitwidth: 32
+  }
+  params {
+    id: 5
+    name: "mon_port"
+    bitwidth: 16
   }
 }
 action_profiles {

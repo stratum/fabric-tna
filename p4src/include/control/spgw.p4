@@ -87,6 +87,7 @@ control SpgwIngress(
     table flexible_pdr_lookup {
         key = {
             fabric_md.spgw_src_iface    : ternary @name("src_iface");
+            fabric_md.spgw_direction    : ternary @name("direction");
             // GTPU
             hdr.gtpu.isValid()          : ternary @name("gtpu_is_valid");
             hdr.gtpu.teid               : ternary @name("teid");

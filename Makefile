@@ -22,7 +22,7 @@ p4-build := ./p4src/build.sh
 
 build: clean $(PROFILES) pipeconf
 
-all: fabric
+all: fabric fabric-spgw fabric-int fabric-spgw-int
 
 fabric:
 	@${p4-build} fabric ""
@@ -80,6 +80,6 @@ clean:
 	-rm -rf src/main/resources/p4c-out
 
 deep-clean: clean
+	-rm -rf tmp
 	-rm -rf target
-	-rm -rf src/main/resources/p4c-out
 	-docker rm ${mvn_container} > /dev/null 2>&1
