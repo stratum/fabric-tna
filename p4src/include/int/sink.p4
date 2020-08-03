@@ -52,12 +52,18 @@ control IntSink (
 
     table tb_set_mirror_session_id {
         key = {
-            fabric_md.ingress_port[8:7]: exact @name("pipe_id");
+            fabric_md.ingress_port: ternary;
         }
         actions = {
             set_mirror_session_id;
         }
         size = 4;
+        const entries = {
+            9w0x000 &&& 0x180: set_mirror_session_id(300);
+            9w0x080 &&& 0x180: set_mirror_session_id(301);
+            9w0x100 &&& 0x180: set_mirror_session_id(302);
+            9w0x180 &&& 0x180: set_mirror_session_id(303);
+        }
     }
 
     apply {

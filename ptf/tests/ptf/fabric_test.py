@@ -1400,12 +1400,15 @@ class IntTest(IPv4UnicastTest):
 
     def setup_report_mirror_flow(self, pipe_id, mirror_id, port):
         self.add_clone_group(mirror_id, [port])
-        self.send_request_add_entry_to_action(
-            "tb_set_mirror_session_id",
-            [self.Exact("pipe_id", stringify(pipe_id, 1))],
-            "set_mirror_session_id", [
-                ("sid", stringify(mirror_id, 2))
-            ])
+        # TODO: We plan to set up this table by using the control
+        # plane so we don't need to hard code the session id
+        # in pipeline.
+        # self.send_request_add_entry_to_action(
+        #     "tb_set_mirror_session_id",
+        #     [self.Exact("pipe_id", stringify(pipe_id, 1))],
+        #     "set_mirror_session_id", [
+        #         ("sid", stringify(mirror_id, 2))
+        #     ])
 
     def get_ins_mask(self, instructions):
         return reduce(ior, instructions)

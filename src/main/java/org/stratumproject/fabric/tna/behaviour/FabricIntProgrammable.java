@@ -192,8 +192,8 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                     .forDevice(deviceId)
                     .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_SINK_TB_SET_MIRROR_SESSION_ID)
                     .build();
-
-            flowRuleService.applyFlowRules(setMirrorIdRule);
+            // TODO: Now table entries in this this table are static
+            // flowRuleService.applyFlowRules(setMirrorIdRule);
         }
 
         return true;
