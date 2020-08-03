@@ -79,6 +79,13 @@ netcfg:
 		${onos_url}/v1/network/configuration -d@./tofino-netcfg.json
 	@echo
 
+p4i:
+	$(info *** Started p4i app at http://localhost:3000)
+	docker run -d --rm --name p4i -v${curr_dir}:${curr_dir} -w ${curr_dir} -p 3000:3000/tcp opennetworking/bf-sde:9.2.0 p4i
+
+p4i-stop:
+	docker kill p4i
+
 clean:
 	-rm -rf src/main/resources/p4c-out
 
