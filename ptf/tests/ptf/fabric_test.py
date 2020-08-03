@@ -1997,6 +1997,153 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
                                 prefix_len=32, exp_pkt=exp_pkt,
                                 tagged1=tagged1, tagged2=tagged2, mpls=mpls)
 
+
+    def runUplinkIntSourceTransitSinkTest(self, pkt, tagged1, tagged2,
+                                          instructions, switch_id=1,
+                                          mpls=False, max_hop=1):
+        # Build packet from eNB
+        # Add GTPU header to the original packet
+        gtp_pkt = pkt_add_gtp(pkt, out_ipv4_src=S1U_ENB_IPV4,
+                              out_ipv4_dst=S1U_SGW_IPV4, teid=TEID_1)
+        ig_port = self.port1
+        eg_port = self.port2
+        proto = UDP if UDP in pkt else TCP
+        ipv4_src = pkt[IP].src
+        ipv4_dst = pkt[IP].dst
+        sport = pkt[proto].sport
+        dport = pkt[proto].dport
+        collector_port = self.port3
+
+        # We should expected to receive an routed packet with no INT and GTPU headers.
+        # Build exp pkt using the input one.
+        exp_pkt = pkt.copy()
+        exp_pkt = pkt_route(exp_pkt, HOST2_MAC)
+        if not mpls:
+            exp_pkt = pkt_decrement_ttl(exp_pkt)
+        if tagged2 and Dot1Q not in exp_pkt:
+            exp_pkt = pkt_add_vlan(exp_pkt, vlan_vid=VLAN_ID_2)
+        if mpls:
+            exp_pkt = pkt_add_mpls(exp_pkt, label=MPLS_LABEL_2, ttl=DEFAULT_MPLS_TTL)
+
+        # We should also expected an INT report packet comes from "resubmit port"
+        exp_int_report_pkt_masked = \
+            self.build_int_local_report(SWITCH_MAC, INT_COLLECTOR_MAC, SWITCH_IPV4, INT_COLLECTOR_IPV4,
+                                        ig_port, eg_port, sw_id=1, original_packet=exp_pkt)
+
+        # Set up entries for uplink
+        self.setup_uplink(
+            s1u_sgw_addr=S1U_SGW_IPV4,
+            teid=TEID_1,
+            ue_addr=pkt[IP].src,
+            ctr_id=1
+        )
+
+        # Set up source, transit, and sink table
+        # Note that we are monitoring the inner packet.
+        self.setup_source_port(ig_port)
+        self.setup_source_flow(
+            ipv4_src=ipv4_src, ipv4_dst=ipv4_dst,
+            sport=sport, dport=dport,
+            instructions=instructions, max_hop=max_hop)
+        self.setup_transit(switch_id)
+        self.setup_sink_port(eg_port)
+        self.setup_report_flow(collector_port, SWITCH_MAC, SWITCH_MAC,
+                               SWITCH_IPV4, INT_COLLECTOR_IPV4, INT_REPORT_PORT)
+
+        # Set up entries for recirculate packet
+        self.setup_port(self.recirculate_port_0, DEFAULT_VLAN)
+        self.setup_port(collector_port, DEFAULT_VLAN)
+        self.set_forwarding_type(self.recirculate_port_0, SWITCH_MAC,
+                                 ETH_TYPE_IPV4, FORWARDING_TYPE_UNICAST_IPV4)
+        # Here we use next-id 101 since `runIPv4UnicastTest` will use 100 by default
+        next_id = 101
+        prefix_len = 32
+        self.add_forwarding_routing_v4_entry(INT_COLLECTOR_IPV4, prefix_len, next_id)
+        self.add_next_routing(next_id, collector_port, SWITCH_MAC, INT_COLLECTOR_MAC)
+        self.add_next_vlan(next_id, DEFAULT_VLAN)
+        # End of setting up entries for recirculate report packet
+
+        self.runIPv4UnicastTest(pkt=gtp_pkt, dst_ipv4=pkt[IP].dst,
+                                exp_pkt=exp_pkt, next_hop_mac=HOST2_MAC,
+                                tagged1=tagged1, tagged2=tagged2, mpls=mpls,
+                                prefix_len=32, with_another_pkt_later=True)
+
+        testutils.verify_packet(self, exp_int_report_pkt_masked, collector_port)
+        testutils.verify_no_other_packets(self)
+
+
+    def runDownlinkIntSourceTransitSinkTest(self, pkt, tagged1, tagged2,
+                                            instructions, switch_id=1,
+                                            mpls=False, max_hop=1):
+        ig_port = self.port1
+        eg_port = self.port2
+        proto = UDP if UDP in pkt else TCP
+        ipv4_src = pkt[IP].src
+        ipv4_dst = pkt[IP].dst
+        sport = pkt[proto].sport
+        dport = pkt[proto].dport
+        collector_port = self.port3
+
+        # We should expected to receive an packet with GTPU headers.
+        exp_pkt = pkt.copy()
+        if not mpls:
+            exp_pkt = pkt_decrement_ttl(exp_pkt)
+        exp_pkt = pkt_add_gtp(exp_pkt, out_ipv4_src=S1U_SGW_IPV4,
+                              out_ipv4_dst=S1U_ENB_IPV4, teid=TEID_1)
+        exp_pkt = pkt_route(exp_pkt, HOST2_MAC)
+        if tagged2 and Dot1Q not in exp_pkt:
+            exp_pkt = pkt_add_vlan(exp_pkt, vlan_vid=VLAN_ID_2)
+        if mpls:
+            exp_pkt = pkt_add_mpls(exp_pkt, label=MPLS_LABEL_2, ttl=DEFAULT_MPLS_TTL)
+
+        # We should also expected an INT report packet comes from "resubmit port"
+        exp_int_report_pkt_masked = \
+            self.build_int_local_report(SWITCH_MAC, INT_COLLECTOR_MAC, SWITCH_IPV4, INT_COLLECTOR_IPV4,
+                                        ig_port, eg_port, sw_id=1, original_packet=exp_pkt)
+
+        # Set up entries for downlink
+        self.setup_downlink(
+            s1u_sgw_addr=S1U_SGW_IPV4,
+            s1u_enb_addr=S1U_ENB_IPV4,
+            teid=TEID_1,
+            ue_addr=ipv4_dst,
+            ctr_id=2,
+        )
+
+        # Set up source, transit, and sink table
+        # Note that we are monitoring the inner packet.
+        self.setup_source_port(ig_port)
+        self.setup_source_flow(
+            ipv4_src=ipv4_src, ipv4_dst=ipv4_dst,
+            sport=sport, dport=dport,
+            instructions=instructions, max_hop=max_hop)
+        self.setup_transit(switch_id)
+        self.setup_sink_port(eg_port)
+        self.setup_report_flow(collector_port, SWITCH_MAC, SWITCH_MAC,
+                               SWITCH_IPV4, INT_COLLECTOR_IPV4, INT_REPORT_PORT)
+
+        # Set up entries for recirculate packet
+        self.setup_port(self.recirculate_port_0, DEFAULT_VLAN)
+        self.setup_port(collector_port, DEFAULT_VLAN)
+        self.set_forwarding_type(self.recirculate_port_0, SWITCH_MAC,
+                                 ETH_TYPE_IPV4, FORWARDING_TYPE_UNICAST_IPV4)
+        # Here we use next-id 101 since `runIPv4UnicastTest` will use 100 by default
+        next_id = 101
+        prefix_len = 32
+        self.add_forwarding_routing_v4_entry(INT_COLLECTOR_IPV4, prefix_len, next_id)
+        self.add_next_routing(next_id, collector_port, SWITCH_MAC, INT_COLLECTOR_MAC)
+        self.add_next_vlan(next_id, DEFAULT_VLAN)
+        # End of setting up entries for recirculate report packet
+
+        self.runIPv4UnicastTest(pkt=pkt, dst_ipv4=S1U_ENB_IPV4,
+                                next_hop_mac=HOST2_MAC,
+                                prefix_len=32, exp_pkt=exp_pkt,
+                                tagged1=tagged1, tagged2=tagged2, mpls=mpls,
+                                with_another_pkt_later=True)
+
+        testutils.verify_packet(self, exp_int_report_pkt_masked, collector_port)
+        testutils.verify_no_other_packets(self)
+
 class PppoeTest(DoubleVlanTerminationTest):
 
     def set_line_map(self, s_tag, c_tag, line_id):

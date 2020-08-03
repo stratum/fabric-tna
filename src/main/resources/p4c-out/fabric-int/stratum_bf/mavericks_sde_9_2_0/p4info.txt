@@ -467,29 +467,6 @@ tables {
 }
 tables {
   preamble {
-    id: 33608823
-    name: "FabricEgress.int_egress.int_sink.tbl_calculate_removed_bytes"
-    alias: "tbl_calculate_removed_bytes"
-  }
-  match_fields {
-    id: 1
-    name: "hdr.intl4_shim.$valid$"
-    bitwidth: 1
-    match_type: EXACT
-  }
-  action_refs {
-    id: 16837543
-  }
-  action_refs {
-    id: 16819938
-    annotations: "@defaultonly"
-    scope: DEFAULT_ONLY
-  }
-  size: 1
-  is_const_table: true
-}
-tables {
-  preamble {
     id: 33606820
     name: "FabricEgress.int_egress.int_sink.tb_set_sink"
     alias: "tb_set_sink"
@@ -804,13 +781,6 @@ actions {
     id: 1
     name: "switch_id"
     bitwidth: 32
-  }
-}
-actions {
-  preamble {
-    id: 16837543
-    name: "FabricEgress.int_egress.int_sink.calculate_removed_bytes"
-    alias: "calculate_removed_bytes"
   }
 }
 actions {
