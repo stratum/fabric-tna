@@ -31,12 +31,12 @@ import org.onosproject.net.group.DefaultGroupDescription;
 import org.onosproject.net.group.DefaultGroupKey;
 import org.onosproject.net.group.GroupBuckets;
 import org.onosproject.net.group.GroupDescription;
-import org.onosproject.net.group.GroupKey;
 import org.onosproject.net.group.GroupService;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
 import org.stratumproject.fabric.tna.PipeconfLoader;
 
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -55,14 +55,8 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
     // For now we support only one hop.
     private static final int MAXHOP = 1;
     private static final int PORTMASK = 0xffff;
-    private static final int REPORT_MIRROR_SESSION_ID = 299;
-    private static final GroupKey REPORT_CLONE_GROUP_KEY = new DefaultGroupKey(
-            KRYO.serialize(REPORT_MIRROR_SESSION_ID));
-
-    private static final int RECIRC_PORT_PIPE0 = 68;
-    // private static final int RECIRC_PORT_PIPE1 = 196;
-    // private static final int RECIRC_PORT_PIPE2 = 324;
-    // private static final int RECIRC_PORT_PIPE3 = 452;
+    private static final List<Integer> REPORT_MIRROR_SESSION_ID_LIST = ImmutableList.of(300, 301, 302, 303);
+    private static final List<Integer> RECIRC_PORTS = ImmutableList.of(0x44, 0xc4, 0x144, 0x1c4);
 
     private static final Set<Criterion.Type> SUPPORTED_CRITERION = Sets.newHashSet(
             Criterion.Type.IPV4_DST, Criterion.Type.IPV4_SRC,
@@ -75,7 +69,8 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
             P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_SINK_TB_SET_SINK,
             P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_SOURCE_TB_INT_SOURCE,
             P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_SOURCE_TB_SET_SOURCE,
-            P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_TRANSIT_TB_INT_INSERT
+            P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_TRANSIT_TB_INT_INSERT,
+            P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_SINK_TB_SET_MIRROR_SESSION_ID
     );
 
     private FlowRuleService flowRuleService;
@@ -169,16 +164,46 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
 
         flowRuleService.applyFlowRules(transitFlowRule);
 
-        // Mirroring session for report cloning.
-        final var bucketList = ImmutableList.of(
-                createCloneGroupBucket(DefaultTrafficTreatment.builder()
-                        .setOutput(PortNumber.portNumber(RECIRC_PORT_PIPE0))
-                        .build()));
-        final var groupDescription = new DefaultGroupDescription(
-                deviceId, GroupDescription.Type.CLONE,
-                new GroupBuckets(bucketList),
-                REPORT_CLONE_GROUP_KEY, REPORT_MIRROR_SESSION_ID, appId);
-        groupService.addGroup(groupDescription);
+        // Mirroring sessions for report cloning.
+        for (int pipeId = 0; pipeId < REPORT_MIRROR_SESSION_ID_LIST.size(); pipeId++) {
+            final var reportSessionId = REPORT_MIRROR_SESSION_ID_LIST.get(pipeId);
+            final var bucketList = ImmutableList.of(
+                    createCloneGroupBucket(DefaultTrafficTreatment.builder()
+                            .setOutput(PortNumber.portNumber(RECIRC_PORTS.get(pipeId)))
+                            .build()));
+            final var groupKey = new DefaultGroupKey(
+                    KRYO.serialize(reportSessionId));
+            final var groupDescription = new DefaultGroupDescription(
+                    deviceId, GroupDescription.Type.CLONE,
+                    new GroupBuckets(bucketList),
+                    groupKey, reportSessionId, appId);
+            groupService.addGroup(groupDescription);
+
+            final var setMirrorIdAction = PiAction.builder()
+                    .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_SINK_SET_MIRROR_SESSION_ID)
+                    .withParameter(new PiActionParam(P4InfoConstants.SID, reportSessionId))
+                    .build();
+            final var setMirrorIdTreatment = DefaultTrafficTreatment.builder()
+                    .piTableAction(setMirrorIdAction)
+                    .build();
+            final var pipeIdSelector = DefaultTrafficSelector.builder()
+                    .matchPi(PiCriterion.builder().matchExact(
+                            P4InfoConstants.HDR_PIPE_ID,
+                            pipeId
+                    ).build())
+                    .build();
+            final var setMirrorIdRule = DefaultFlowRule.builder()
+                    .withSelector(pipeIdSelector)
+                    .withTreatment(setMirrorIdTreatment)
+                    .fromApp(appId)
+                    .withPriority(DEFAULT_PRIORITY)
+                    .makePermanent()
+                    .forDevice(deviceId)
+                    .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_SINK_TB_SET_MIRROR_SESSION_ID)
+                    .build();
+
+            flowRuleService.applyFlowRules(setMirrorIdRule);
+        }
 
         return true;
     }
@@ -288,7 +313,13 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 data().deviceId()).spliterator(), false)
                 .filter(f -> TABLES_TO_CLEANUP.contains(f.table()))
                 .forEach(flowRuleService::removeFlowRules);
-        groupService.removeGroup(deviceId, REPORT_CLONE_GROUP_KEY, appId);
+
+        for (int pipeId = 0; pipeId < REPORT_MIRROR_SESSION_ID_LIST.size(); pipeId++) {
+            final var reportSessionId = REPORT_MIRROR_SESSION_ID_LIST.get(pipeId);
+            final var groupKey = new DefaultGroupKey(
+                    KRYO.serialize(reportSessionId));
+            groupService.removeGroup(deviceId, groupKey, appId);
+        }
     }
 
     @Override
