@@ -99,8 +99,28 @@ control IntReport (
         size = 1;
     }
 
+    @hidden
+    action fix_dscp_bit() {
+        hdr.ipv4.dscp = INT_DSCP;
+    }
+
+    @hidden
+    table fix_dscp {
+        key = {
+            fabric_md.ingress_port: ternary;
+        }
+        actions = {
+            fix_dscp_bit;
+        }
+        const entries = {
+            68 &&& 0x7f: fix_dscp_bit;
+        }
+        size = 1;
+    }
+
     apply {
         tb_generate_report.apply();
+        fix_dscp.apply();
         // Reset the mirror ID so the deparser will not mirror the packet again.
         fabric_md.mirror_session_id = MIRROR_SESSION_ID_INVALID;
     }
