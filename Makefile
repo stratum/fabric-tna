@@ -83,6 +83,6 @@ clean:
 	-rm -rf src/main/resources/p4c-out
 
 deep-clean: clean
+	-rm -rf tmp
 	-rm -rf target
-	-rm -rf src/main/resources/p4c-out
 	-docker volume rm ${mvn_cache_docker_volume} > /dev/null 2>&1
