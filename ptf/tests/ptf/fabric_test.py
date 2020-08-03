@@ -1471,7 +1471,8 @@ class IntTest(IPv4UnicastTest):
 
     def build_int_local_report(self, src_mac, dst_mac, src_ip, dst_ip,
                                ig_port, eg_port, sw_id=1, original_packet=None):
-        pkt = Ether(src=src_mac, dst=dst_mac) / IP(src=src_ip, dst=dst_ip, ttl=63) / \
+        # Note: scapy doesn't support dscp field, use tos.
+        pkt = Ether(src=src_mac, dst=dst_mac) / IP(src=src_ip, dst=dst_ip, ttl=63, tos=4) / \
               UDP(sport=0, chksum=0) / \
               INT_L45_REPORT_FIXED(nproto=2, f=1, hw_id=1) / \
               INT_L45_LOCAL_REPORT(switch_id=sw_id, ingress_port_id=ig_port, egress_port_id=eg_port) / \
@@ -1621,9 +1622,9 @@ class IntTest(IPv4UnicastTest):
                                 tagged1=tagged1, tagged2=tagged2, mpls=mpls,
                                 prefix_len=32, exp_pkt=exp_pkt)
 
-    # Note: we only support one hop for now
+    # Note: we only support one hop for now, so we put everything together in single device.
     def runIntSourceTransitSinkTest(self, pkt, tagged1, tagged2,
-                                    instructions, ignore_csum=False, switch_id=1,
+                                    instructions, switch_id=1,
                                     mpls=False, max_hop=1):
         if IP not in pkt:
             self.fail("Packet is not IP")
@@ -1651,7 +1652,7 @@ class IntTest(IPv4UnicastTest):
             exp_pkt = pkt_add_mpls(exp_pkt, label=MPLS_LABEL_2, ttl=DEFAULT_MPLS_TTL)
 
         # We should also expected an INT report packet comes from "resubmit port"
-        exp_int_pkt_masked = \
+        exp_int_report_pkt_masked = \
             self.build_int_local_report(SWITCH_MAC, INT_COLLECTOR_MAC, SWITCH_IPV4, INT_COLLECTOR_IPV4,
                                         ig_port, eg_port, sw_id=1, original_packet=exp_pkt)
 
@@ -1682,7 +1683,7 @@ class IntTest(IPv4UnicastTest):
                                 tagged1=tagged1, tagged2=tagged2, mpls=mpls,
                                 prefix_len=32, with_another_pkt_later=True)
 
-        testutils.verify_packet(self, exp_int_pkt_masked, collector_port)
+        testutils.verify_packet(self, exp_int_report_pkt_masked, collector_port)
         testutils.verify_no_other_packets(self)
 
 class SpgwIntTest(SpgwSimpleTest, IntTest):
