@@ -5,6 +5,7 @@ package org.stratumproject.fabric.tna;
 
 import org.onosproject.core.CoreService;
 import org.onosproject.net.behaviour.Pipeliner;
+import org.onosproject.net.behaviour.inbandtelemetry.IntProgrammable;
 import org.onosproject.net.pi.model.DefaultPiPipeconf;
 import org.onosproject.net.pi.model.PiPipeconf;
 import org.onosproject.net.pi.model.PiPipeconf.ExtensionType;
@@ -22,6 +23,7 @@ import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.onosproject.p4runtime.model.P4InfoParser;
 import org.onosproject.p4runtime.model.P4InfoParserException;
 import org.slf4j.Logger;
+import org.stratumproject.fabric.tna.behaviour.FabricIntProgrammable;
 import org.stratumproject.fabric.tna.behaviour.FabricInterpreter;
 import org.stratumproject.fabric.tna.behaviour.pipeliner.FabricPipeliner;
 
@@ -43,7 +45,7 @@ import static org.slf4j.LoggerFactory.getLogger;
 @Component(immediate = true)
 public class PipeconfLoader {
 
-    private static final String APP_NAME = "org.stratumproject.fabric-tna";
+    public static final String APP_NAME = "org.stratumproject.fabric-tna";
 
     private static Logger log = getLogger(PipeconfLoader.class);
 
@@ -68,6 +70,9 @@ public class PipeconfLoader {
     private static final String TOFINO_BIN = "pipe/tofino.bin";
     private static final String TOFINO_CTX_JSON = "pipe/context.json";
     private static final String PIPELINE_TAR = "pipeline.tar.bz2";
+
+    private static final String INT_PROFILE_SUFFIX = "-int";
+    private static final String FULL_PROFILE_SUFFIX = "-full";
 
     @Activate
     public void activate() {
@@ -179,7 +184,7 @@ public class PipeconfLoader {
         checkFileExists(p4InfoUrl, P4INFO_TXT);
         checkFileExists(cpuPortUrl, CPU_PORT_TXT);
 
-        return DefaultPiPipeconf.builder()
+        final var builder = DefaultPiPipeconf.builder()
                 .withId(new PiPipeconfId(format(
                         "%s.%s.stratum_bfrt.%s", BASE_PIPECONF_ID, profile, platform)))
                 .withPipelineModel(parseP4Info(p4InfoUrl))
@@ -187,8 +192,15 @@ public class PipeconfLoader {
                 .addBehaviour(Pipeliner.class, FabricPipeliner.class)
                 .addExtension(ExtensionType.RAW_DEVICE_CONFIG, tofinoPipelineTarUrl)
                 .addExtension(ExtensionType.P4_INFO_TEXT, p4InfoUrl)
-                .addExtension(ExtensionType.CPU_PORT_TXT, cpuPortUrl)
-                .build();
+                .addExtension(ExtensionType.CPU_PORT_TXT, cpuPortUrl);
+
+        // Add IntProgrammable behaviour for INT-enabled profiles.
+        if (profile.endsWith(INT_PROFILE_SUFFIX) ||
+                profile.endsWith(FULL_PROFILE_SUFFIX)) {
+            builder.addBehaviour(IntProgrammable.class, FabricIntProgrammable.class);
+        }
+
+        return builder.build();
     }
 
     private void checkFileExists(URL url, String name)
