@@ -132,6 +132,17 @@ class ConstantClassGenerator(object):
         for mtr in p4info.meters:
             self.meters.add(mtr.preamble.name)
 
+        self.headers = sorted(self.headers)
+        self.header_fields = sorted(self.header_fields)
+        self.tables = sorted(self.tables)
+        self.counters = sorted(self.counters)
+        self.direct_counters = sorted(self.direct_counters)
+        self.actions = sorted(self.actions)
+        self.action_params = sorted(self.action_params)
+        self.action_profiles = sorted(self.action_profiles)
+        self.packet_metadata = sorted(self.packet_metadata)
+        self.meters = sorted(self.meters)
+
     def const_line(self, name, type, constructor):
         var_name = self.convert_camel_to_all_caps(name)
         if type == PI_HF_FIELD_ID:
