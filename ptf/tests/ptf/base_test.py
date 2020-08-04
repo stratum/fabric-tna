@@ -713,7 +713,11 @@ class P4RuntimeTest(BaseTest):
         update.type = p4runtime_pb2.Update.INSERT
         table_entry = update.entity.table_entry
         table_entry.table_id = self.get_table_id(t_name)
-        self.set_match_key(table_entry, t_name, mk)
+        if mk is not None:
+            self.set_match_key(table_entry, t_name, mk)
+            update.type = p4runtime_pb2.Update.MODIFY
+        else:
+            table_entry.is_default_action = True
         table_entry.action.action_profile_member_id = mbr_id
 
     def send_request_add_entry_to_member(self, t_name, mk, mbr_id):
@@ -726,7 +730,11 @@ class P4RuntimeTest(BaseTest):
         update.type = p4runtime_pb2.Update.INSERT
         table_entry = update.entity.table_entry
         table_entry.table_id = self.get_table_id(t_name)
-        self.set_match_key(table_entry, t_name, mk)
+        if mk is not None:
+            self.set_match_key(table_entry, t_name, mk)
+        else:
+            table_entry.is_default_action = True
+            update.type = p4runtime_pb2.Update.MODIFY
         table_entry.action.action_profile_group_id = grp_id
 
     def send_request_add_entry_to_group(self, t_name, mk, grp_id):

@@ -13,6 +13,12 @@ from ptf.testutils import group
 from scapy.layers.inet import IP
 from scapy.layers.ppp import PPPoED
 
+from base_test import autocleanup, stringify, P4RuntimeException
+from fabric_test import *
+
+from unittest import skip
+from time import sleep
+
 vlan_confs = {
     "tag->tag": [True, True],
     "untag->untag": [False, False],
@@ -1543,6 +1549,39 @@ class TableEntryReadWriteTest(FabricTest):
         self.doRunWildcardSingleTableTest()
         self.doRunWildcardAllTablesTest()
 
+@group("p4r-function")
+class TableDefaultActionTest(FabricTest):
+
+    @autocleanup
+    def doRunTest(self):
+        next_id_ = stringify(1234, 4)
+        req, _ = self.send_request_add_entry_to_action(
+            "forwarding.routing_v4",
+            None,
+            "forwarding.set_next_id_routing_v4", [("next_id", next_id_)])
+        expected_default_action = req.updates[0].entity.table_entry
+        received_default_action = self.read_table_entry("forwarding.routing_v4", None)
+        self.verify_p4runtime_entity(expected_default_action, received_default_action)
+
+        # Try to insert / delete default entry
+        try:
+            req.updates[0].type = p4runtime_pb2.Update.INSERT
+            self.write_request(req, store=False)
+        except P4RuntimeException:
+            pass
+        else:
+            self.fail("Inserting a default action should not be allowed")
+        try:
+            req.updates[0].type = p4runtime_pb2.Update.DELETE
+            self.write_request(req, store=False)
+        except P4RuntimeException:
+            pass
+        else:
+            self.fail("Deleting a default action should not be allowed")
+
+    def runTest(self):
+        print("")
+        self.doRunTest()
 
 @group("p4rt")
 class ActionProfileMemberReadWriteTest(FabricTest):
