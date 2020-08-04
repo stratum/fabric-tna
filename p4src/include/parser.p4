@@ -28,7 +28,6 @@ parser FabricIngressParser (packet_in  packet,
     state start {
         packet.extract(ig_intr_md);
         packet.advance(PORT_METADATA_SIZE);
-        hdr.bridge_md.ig_tstamp = ig_intr_md.ingress_mac_tstamp;
         transition select(ig_intr_md.ingress_port) {
             CPU_PORT: parse_packet_out;
             default: parse_ethernet;
@@ -620,7 +619,10 @@ control FabricEgressMirror(
                 fabric_md.int_q_id,
                 fabric_md.int_q_occupancy,
                 fabric_md.int_ingress_tstamp,
-                fabric_md.int_egress_tstamp
+                fabric_md.int_egress_tstamp,
+                0, // padding
+                fabric_md.int_hw_id,
+                fabric_md.int_seq_no
             });
         }
 #endif // WITH_INT_SINK

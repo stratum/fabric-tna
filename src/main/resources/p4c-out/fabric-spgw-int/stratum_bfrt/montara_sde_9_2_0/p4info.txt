@@ -1141,6 +1141,11 @@ actions {
     name: "sid"
     bitwidth: 10
   }
+  params {
+    id: 2
+    name: "hw_id"
+    bitwidth: 6
+  }
 }
 actions {
   preamble {

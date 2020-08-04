@@ -108,7 +108,7 @@ docker run --name ${stratumBfRunName} -d --privileged \
     ${STRATUM_BF_DOCKER_FLAG} \
     "${STRATUM_BF_DOCKER_IMG}"
 sleep 5
-wait_for ${stratumBfRunName} 28000 60
+wait_for ${stratumBfRunName} 28000 600
 
 testerDevice="stratum-bf"
 if [[ "${STRATUM_BF_DOCKER_IMG}" == *"stratum-bfrt"* ]]; then
