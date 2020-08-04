@@ -15,3 +15,5 @@ zlog-cfg-cur
 *.swp
 logs/
 graphs/
+mvn_settings.xml
+dependencies.xml

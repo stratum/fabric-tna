@@ -109,9 +109,7 @@ class FabricIPv4UnicastGtpTest(IPv4UnicastTest):
     @autocleanup
     def runTest(self):
         # Assert that GTP packets not meant to be processed by spgw.p4 are
-        # forwarded using the outer IP+UDP headers. For spgw.p4 to kick in
-        # outer IP dst should be in a subnet defined at compile time (see
-        # fabric.p4's parser).
+        # forwarded using the outer IP+UDP headers.
         inner_udp = UDP(sport=5061, dport=5060) / ("\xab" * 128)
         pkt = Ether(src=HOST1_MAC, dst=SWITCH_MAC) / \
               IP(src=HOST3_IPV4, dst=HOST4_IPV4) / \

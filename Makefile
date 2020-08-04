@@ -8,7 +8,9 @@ curr_dir := $(patsubst %/,%,$(dir $(mkfile_path)))
 curr_dir_sha := $(shell echo -n "$(curr_dir)" | shasum | cut -c1-7)
 
 mvn_image := maven:3.6.1-jdk-11-slim
-mvn_container := mvn-build-${curr_dir_sha}
+mvn_cache_docker_volume := mvn-cache-${curr_dir_sha}
+# By default use docker volume, but allow passing a directory
+MVN_CACHE ?= ${mvn_cache_docker_volume}
 
 onos_url := http://${ONOS_HOST}:8181/onos
 onos_curl := curl --fail -sSL --user onos:rocks --noproxy localhost
@@ -43,18 +45,19 @@ fabric-spgw:
 # fabric-spgw-int:
 # 	@${p4-build} fabric-spgw-int "-DWITH_SPGW -DWITH_INT_SOURCE -DWITH_INT_TRANSIT"
 
-# Reuse the same container to persist mvn repo cache.
-_create_mvn_container:
-	@if ! docker container ls -a --format '{{.Names}}' | grep -q ${mvn_container} ; then \
-		docker create -v ${curr_dir}:/mvn-src -w /mvn-src --name ${mvn_container} ${mvn_image} mvn clean package verify; \
-	fi
+constants:
+	docker run -v $(curr_dir):/root -w /root \
+		--entrypoint ./util/gen-p4-constants.py onosproject/fabric-p4test:latest \
+		-o /root/src/main/java/org/stratumproject/fabric/tna/behaviour/FabricConstants.java \
+		fabric /root/src/main/resources/p4c-out/fabric-spgw/stratum_bf/mavericks_sde_9_2_0/p4info.txt
 
-_mvn_package:
+_mvn_package: constants
 	$(info *** Building ONOS app...)
 	@mkdir -p target
-	@docker start -a -i ${mvn_container}
+	docker run --rm -v ${curr_dir}:/mvn-src -w /mvn-src \
+		-v ${MVN_CACHE}:/root/.m2 ${mvn_image} mvn clean install
 
-pipeconf: _create_mvn_container _mvn_package
+pipeconf: _mvn_package
 	$(info *** ONOS pipeconf .oar package created succesfully)
 	@ls -1 ${curr_dir}/target/*.oar
 
@@ -80,6 +83,6 @@ clean:
 	-rm -rf src/main/resources/p4c-out
 
 deep-clean: clean
+	-rm -rf tmp
 	-rm -rf target
-	-rm -rf src/main/resources/p4c-out
-	-docker rm ${mvn_container} > /dev/null 2>&1
+	-docker volume rm ${mvn_cache_docker_volume} > /dev/null 2>&1

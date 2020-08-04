@@ -287,7 +287,7 @@ def main():
     parser.add_argument('--device',
                         help='Target device',
                         type=str, action="store", required=True,
-                        choices=['tofino', 'bmv2', 'stratum-bmv2', 'stratum-bfrt'])
+                        choices=['stratum-bf', 'bmv2', 'stratum-bmv2', 'stratum-bfrt'])
     parser.add_argument('--p4info',
                         help='Location of p4info proto in text format',
                         type=str, action="store", required=True)
@@ -344,7 +344,7 @@ def main():
     if not os.path.exists(args.p4info):
         error("P4Info file {} not found".format(args.p4info))
         sys.exit(1)
-    if device == 'tofino':
+    if device == 'stratum-bf':
         if not os.path.exists(args.tofino_bin):
             error("Tofino binary config file {} not found".format(
                 args.tofino_bin))

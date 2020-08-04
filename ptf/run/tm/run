@@ -110,13 +110,18 @@ docker run --name ${stratumBfRunName} -d --privileged \
 sleep 5
 wait_for ${stratumBfRunName} 28000 60
 
+testerDevice="stratum-bf"
+if [[ "${STRATUM_BF_DOCKER_IMG}" == *"stratum-bfrt"* ]]; then
+  echo "*** Detected stratum-bfrt..."
+  testerDevice="stratum-bfrt"
+fi
+
 echo "*** Starting ${testerRunName}..."
 docker run --name ${testerRunName} -it --privileged --rm \
     --network "container:${tmRunName}" \
     -v "${FP4TEST_ROOT}":/fabric-p4test \
     -v "${P4C_OUT}":/p4c-out \
-    -e DEVICE=stratum-bfrt \
-    -e "DEVICE_CONFIG=--tofino-pipeline-tar /p4c-out/pipeline.tar.bz2" \
+    -e DEVICE=${testerDevice} \
     --entrypoint /fabric-p4test/run/tm/start_test.sh \
     "${TESTER_DOCKER_IMG}" \
     ${@}
