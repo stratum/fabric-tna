@@ -536,7 +536,7 @@ class FabricDefaultVlanPacketInTest(FabricTest):
 
 
 @group("spgw")
-class SpgwDownlinkTest(SpgwSimpleTest):
+class FabricSpgwDownlinkTest(SpgwSimpleTest):
     @autocleanup
     def doRunTest(self, pkt, tagged1, tagged2, mpls):
         self.runDownlinkTest(pkt=pkt, tagged1=tagged1,
@@ -560,7 +560,7 @@ class SpgwDownlinkTest(SpgwSimpleTest):
 
 
 @group("spgw")
-class SpgwUplinkTest(SpgwSimpleTest):
+class FabricSpgwUplinkTest(SpgwSimpleTest):
     @autocleanup
     def doRunTest(self, pkt, tagged1, tagged2, mpls):
         self.runUplinkTest(ue_out_pkt=pkt, tagged1=tagged1,
@@ -585,7 +585,7 @@ class SpgwUplinkTest(SpgwSimpleTest):
 @group("int")
 @group("spgw")
 @group("spgw-int")
-class SpgwUplinkIntSourceTest(SpgwIntTest):
+class FabricSpgwUplinkIntSourceTest(SpgwIntTest):
 
     @autocleanup
     def doRunTest(self, pkt, tagged1, tagged2, mpls, instructions=[]):
@@ -618,7 +618,7 @@ class SpgwUplinkIntSourceTest(SpgwIntTest):
 @group("int")
 @group("spgw")
 @group("spgw-int")
-class SpgwUplinkIntSourceAndTransitTest(SpgwIntTest):
+class FabricSpgwUplinkIntSourceAndTransitTest(SpgwIntTest):
 
     @autocleanup
     def doRunTest(self, pkt, tagged1, tagged2, mpls, instructions=[]):
@@ -651,7 +651,7 @@ class SpgwUplinkIntSourceAndTransitTest(SpgwIntTest):
 @group("int")
 @group("spgw")
 @group("spgw-int")
-class SpgwUplinkIntTransitTest(SpgwIntTest):
+class FabricSpgwUplinkIntTransitTest(SpgwIntTest):
 
     @autocleanup
     def doRunTest(self, pkt, tagged1, tagged2, mpls, instructions=[], prev_hops=0):
@@ -685,7 +685,7 @@ class SpgwUplinkIntTransitTest(SpgwIntTest):
 @group("int")
 @group("spgw")
 @group("spgw-int")
-class SpgwDownlinkIntSourceTest(SpgwIntTest):
+class FabricSpgwDownlinkIntSourceTest(SpgwIntTest):
     @autocleanup
     def doRunTest(self, pkt, tagged1, tagged2, mpls, instructions):
         self.runDownlinkIntSourceTest(pkt=pkt, tagged1=tagged1,
@@ -717,7 +717,7 @@ class SpgwDownlinkIntSourceTest(SpgwIntTest):
 @group("int")
 @group("spgw")
 @group("spgw-int")
-class SpgwDownlinkIntSourceAndTransitTest(SpgwIntTest):
+class FabricSpgwDownlinkIntSourceAndTransitTest(SpgwIntTest):
     @autocleanup
     def doRunTest(self, pkt, tagged1, tagged2, mpls, instructions):
         self.runDownlinkIntSourceTest(pkt=pkt, tagged1=tagged1,
@@ -749,7 +749,7 @@ class SpgwDownlinkIntSourceAndTransitTest(SpgwIntTest):
 @group("int")
 @group("spgw")
 @group("spgw-int")
-class SpgwDownlinkIntTransitTest(SpgwIntTest):
+class FabricSpgwDownlinkIntTransitTest(SpgwIntTest):
 
     @autocleanup
     def doRunTest(self, pkt, tagged1, tagged2, mpls, instructions=[], prev_hops=0):
@@ -785,7 +785,7 @@ class SpgwDownlinkIntTransitTest(SpgwIntTest):
 @group("int")
 @group("spgw")
 @group("spgw-int")
-class FabricUplinkIntSourceTransitSinkTest(SpgwIntTest):
+class FabricSpgwUplinkIntSourceTransitSinkTest(SpgwIntTest):
     @autocleanup
     def doRunTest(self, vlan_conf, tagged, pkt_type, instrs, mpls):
         print "Testing VLAN=%s, pkt=%s, mpls=%s, instructions=%s..." \
@@ -816,7 +816,7 @@ class FabricUplinkIntSourceTransitSinkTest(SpgwIntTest):
 @group("int")
 @group("spgw")
 @group("spgw-int")
-class FabricDownlinkIntSourceTransitSinkTest(SpgwIntTest):
+class FabricSpgwDownlinkIntSourceTransitSinkTest(SpgwIntTest):
     @autocleanup
     def doRunTest(self, vlan_conf, tagged, pkt_type, instrs, mpls):
         print "Testing VLAN=%s, pkt=%s, mpls=%s, instructions=%s..." \
