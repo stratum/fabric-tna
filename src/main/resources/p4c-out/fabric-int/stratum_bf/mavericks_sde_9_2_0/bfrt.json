@@ -1510,10 +1510,10 @@
       "name" : "pipe.FabricEgress.int_egress.int_report.tb_generate_report",
       "id" : 33567899,
       "table_type" : "MatchAction_Direct",
-      "size" : 1,
+      "size" : 4,
       "annotations" : [],
       "depends_on" : [],
-      "has_const_default_action" : false,
+      "has_const_default_action" : true,
       "key" : [
         {
           "id" : 1,

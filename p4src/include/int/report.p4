@@ -95,8 +95,8 @@ control IntReport (
             do_report_encapsulation;
             @defaultonly nop();
         }
-        default_action = nop;
-        size = 1;
+        const default_action = nop;
+        size = 4;
     }
 
     @hidden
@@ -107,15 +107,18 @@ control IntReport (
     @hidden
     table fix_dscp {
         key = {
-            fabric_md.ingress_port: ternary;
+            fabric_md.ingress_port: exact;
         }
         actions = {
             fix_dscp_bit;
         }
         const entries = {
-            68 &&& 0x7f: fix_dscp_bit;
+            0x44: fix_dscp_bit;
+            0xC4: fix_dscp_bit;
+            0x144: fix_dscp_bit;
+            0x1C4: fix_dscp_bit;
         }
-        size = 1;
+        size = 4;
     }
 
     apply {

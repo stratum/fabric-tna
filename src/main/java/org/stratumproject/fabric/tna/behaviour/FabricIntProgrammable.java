@@ -4,6 +4,7 @@
 package org.stratumproject.fabric.tna.behaviour;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.onlab.packet.MacAddress;
 import org.onosproject.core.ApplicationId;
@@ -170,30 +171,30 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                     groupKey, reportSessionId, appId);
             groupService.addGroup(groupDescription);
 
-            final var setMirrorIdAction = PiAction.builder()
-                    .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_SINK_SET_MIRROR_SESSION_ID)
-                    .withParameter(new PiActionParam(P4InfoConstants.SID, reportSessionId))
-                    .build();
-            final var setMirrorIdTreatment = DefaultTrafficTreatment.builder()
-                    .piTableAction(setMirrorIdAction)
-                    .build();
-            final var pipeIdSelector = DefaultTrafficSelector.builder()
-                    .matchPi(PiCriterion.builder().matchExact(
-                            P4InfoConstants.HDR_PIPE_ID,
-                            pipeId
-                    ).build())
-                    .build();
-            final var setMirrorIdRule = DefaultFlowRule.builder()
-                    .withSelector(pipeIdSelector)
-                    .withTreatment(setMirrorIdTreatment)
-                    .fromApp(appId)
-                    .withPriority(DEFAULT_PRIORITY)
-                    .makePermanent()
-                    .forDevice(deviceId)
-                    .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_SINK_TB_SET_MIRROR_SESSION_ID)
-                    .build();
             // TODO: Now table entries in this this table are static
-            // flowRuleService.applyFlowRules(setMirrorIdRule);
+//            final var setMirrorIdAction = PiAction.builder()
+//                    .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_SINK_SET_MIRROR_SESSION_ID)
+//                    .withParameter(new PiActionParam(P4InfoConstants.SID, reportSessionId))
+//                    .build();
+//            final var setMirrorIdTreatment = DefaultTrafficTreatment.builder()
+//                    .piTableAction(setMirrorIdAction)
+//                    .build();
+//            final var pipeIdSelector = DefaultTrafficSelector.builder()
+//                    .matchPi(PiCriterion.builder().matchExact(
+//                            P4InfoConstants.HDR_PIPE_ID,
+//                            pipeId
+//                    ).build())
+//                    .build();
+//            final var setMirrorIdRule = DefaultFlowRule.builder()
+//                    .withSelector(pipeIdSelector)
+//                    .withTreatment(setMirrorIdTreatment)
+//                    .fromApp(appId)
+//                    .withPriority(DEFAULT_PRIORITY)
+//                    .makePermanent()
+//                    .forDevice(deviceId)
+//                    .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_SINK_TB_SET_MIRROR_SESSION_ID)
+//                    .build();
+//             flowRuleService.applyFlowRules(setMirrorIdRule);
         }
 
         return true;
@@ -474,10 +475,12 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
     }
 
     private boolean setupIntReportInternal(IntDeviceConfig cfg) {
-        FlowRule reportRule = buildReportEntry(cfg);
-        if (reportRule != null) {
-            flowRuleService.applyFlowRules(reportRule);
-            log.info("Report rule added to {} [{}]", this.data().deviceId(), reportRule);
+        List<FlowRule> reportRules = buildReportEntries(cfg);
+        if (reportRules != null) {
+            reportRules.forEach(reportRule -> {
+                flowRuleService.applyFlowRules(reportRule);
+                log.info("Report rule added to {} [{}]", this.data().deviceId(), reportRule);
+            });
             return true;
         } else {
             log.warn("Failed to add report rule to {}", this.data().deviceId());
@@ -485,7 +488,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         }
     }
 
-    private FlowRule buildReportEntry(IntDeviceConfig intCfg) {
+    private List<FlowRule> buildReportEntries(IntDeviceConfig intCfg) {
 
         if (!setupBehaviour()) {
             return null;
@@ -529,14 +532,25 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 .piTableAction(reportAction)
                 .build();
 
-        return DefaultFlowRule.builder()
-                .withTreatment(treatment)
-                .fromApp(appId)
-                .withPriority(DEFAULT_PRIORITY)
-                .makePermanent()
-                .forDevice(this.data().deviceId())
-                .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_REPORT_TB_GENERATE_REPORT)
-                .build();
+        List<FlowRule> entries = Lists.newArrayList();
+        for (Integer mirrorSessionId : REPORT_MIRROR_SESSION_ID_LIST) {
+            TrafficSelector selector = DefaultTrafficSelector.builder()
+                    .matchPi(PiCriterion.builder()
+                            .matchExact(P4InfoConstants.HDR_FABRIC_MD_MIRROR_SESSION_ID,
+                                        mirrorSessionId)
+                            .build())
+            .build();
+            entries.add(DefaultFlowRule.builder()
+                    .withSelector(selector)
+                    .withTreatment(treatment)
+                    .fromApp(appId)
+                    .withPriority(DEFAULT_PRIORITY)
+                    .makePermanent()
+                    .forDevice(this.data().deviceId())
+                    .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_REPORT_TB_GENERATE_REPORT)
+                    .build());
+        }
+        return entries;
     }
 
 }

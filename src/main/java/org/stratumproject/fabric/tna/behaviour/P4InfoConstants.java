@@ -44,6 +44,8 @@ public final class P4InfoConstants {
             PiMatchFieldId.of("eth_src");
     public static final PiMatchFieldId HDR_ETH_TYPE =
             PiMatchFieldId.of("eth_type");
+    public static final PiMatchFieldId HDR_FABRIC_MD_INGRESS_PORT =
+            PiMatchFieldId.of("fabric_md.ingress_port");
     public static final PiMatchFieldId HDR_FABRIC_MD_MIRROR_SESSION_ID =
             PiMatchFieldId.of("fabric_md.mirror_session_id");
     public static final PiMatchFieldId HDR_FAR_ID = PiMatchFieldId.of("far_id");
@@ -87,8 +89,6 @@ public final class P4InfoConstants {
             PiMatchFieldId.of("mpls_label");
     public static final PiMatchFieldId HDR_NEXT_ID =
             PiMatchFieldId.of("next_id");
-    public static final PiMatchFieldId HDR_PIPE_ID =
-            PiMatchFieldId.of("pipe_id");
     public static final PiMatchFieldId HDR_SRC_IFACE =
             PiMatchFieldId.of("src_iface");
     public static final PiMatchFieldId HDR_TEID = PiMatchFieldId.of("teid");

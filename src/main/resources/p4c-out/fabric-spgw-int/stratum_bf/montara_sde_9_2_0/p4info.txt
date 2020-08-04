@@ -723,7 +723,8 @@ tables {
     annotations: "@defaultonly"
     scope: DEFAULT_ONLY
   }
-  size: 1
+  const_default_action_id: 16819938
+  size: 4
 }
 actions {
   preamble {
