@@ -1447,14 +1447,25 @@
       "key" : [
         {
           "id" : 1,
-          "name" : "pipe_id",
+          "name" : "fabric_md.ingress_port",
+          "repeated" : false,
+          "annotations" : [],
+          "mandatory" : false,
+          "match_type" : "Ternary",
+          "type" : {
+            "type" : "bytes",
+            "width" : 9
+          }
+        },
+        {
+          "id" : 65537,
+          "name" : "$MATCH_PRIORITY",
           "repeated" : false,
           "annotations" : [],
           "mandatory" : false,
           "match_type" : "Exact",
           "type" : {
-            "type" : "bytes",
-            "width" : 2
+            "type" : "uint32"
           }
         }
       ],
@@ -1493,7 +1504,7 @@
       ],
       "data" : [],
       "supported_operations" : [],
-      "attributes" : ["EntryScope"]
+      "attributes" : ["EntryScope", "ConstTable"]
     },
     {
       "name" : "pipe.FabricEgress.int_egress.int_report.tb_generate_report",

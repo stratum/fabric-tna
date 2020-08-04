@@ -491,9 +491,9 @@ tables {
   }
   match_fields {
     id: 1
-    name: "pipe_id"
-    bitwidth: 2
-    match_type: EXACT
+    name: "fabric_md.ingress_port"
+    bitwidth: 9
+    match_type: TERNARY
   }
   action_refs {
     id: 16812849
@@ -504,6 +504,7 @@ tables {
     scope: DEFAULT_ONLY
   }
   size: 4
+  is_const_table: true
 }
 tables {
   preamble {
