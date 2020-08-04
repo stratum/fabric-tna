@@ -29,7 +29,7 @@ control IntReport (
         hdr.report_fixed_header.hw_id = HW_ID;
         // TODO how save a variable and increment
         hdr.report_fixed_header.seq_no = 0;
-        hdr.report_fixed_header.ingress_tstamp = (bit<32>) eg_intr_md.enq_tstamp;
+        hdr.report_fixed_header.ingress_tstamp = fabric_md.int_ingress_tstamp;
         // Local report
         hdr.local_report_header.setValid();
         hdr.local_report_header.switch_id = fabric_md.int_switch_id;
