@@ -306,11 +306,12 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 .filter(f -> TABLES_TO_CLEANUP.contains(f.table()))
                 .forEach(flowRuleService::removeFlowRules);
 
-        for (final Integer reportSessionId : REPORT_MIRROR_SESSION_ID_LIST) {
-            final var groupKey = new DefaultGroupKey(
-                    KRYO.serialize(reportSessionId));
-            groupService.removeGroup(deviceId, groupKey, appId);
-        }
+        // FIXME: saw issue with clone groups disappearing when inserting.deleting watchlist rules
+        // for (final Integer reportSessionId : REPORT_MIRROR_SESSION_ID_LIST) {
+        //     final var groupKey = new DefaultGroupKey(
+        //             KRYO.serialize(reportSessionId));
+        //     groupService.removeGroup(deviceId, groupKey, appId);
+        // }
     }
 
     @Override
