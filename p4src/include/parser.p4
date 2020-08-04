@@ -400,6 +400,7 @@ parser FabricEgressParser (packet_in packet,
         fabric_md.mpls_ttl = bridge_md.mpls_ttl;
         fabric_md.is_multicast = bridge_md.is_multicast;
         fabric_md.ingress_port = bridge_md.ingress_port;
+        fabric_md.ig_tstamp = bridge_md.ig_tstamp;
         transition parse_ethernet;
     }
 
