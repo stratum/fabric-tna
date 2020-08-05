@@ -284,7 +284,6 @@ control SpgwEgress(
 
     Counter<bit<64>, bit<16>>(MAX_PDR_COUNTERS, CounterType_t.PACKETS_AND_BYTES) pdr_counter;
 
-
     @hidden
     action gtpu_encap() {
         hdr.outer_ipv4.setValid();
@@ -329,6 +328,9 @@ control SpgwEgress(
 
         if (fabric_md.needs_gtpu_encap) {
             gtpu_encap();
+#ifdef WITH_INT_SINK
+            fabric_md.int_skip_gtpu_headers = 1;
+#endif
         }
     }
 }

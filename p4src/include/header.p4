@@ -220,6 +220,7 @@ struct fabric_egress_metadata_t {
     bit<32> int_egress_tstamp;
     bit<6>  int_hw_id;
     bit<32> int_seq_no;
+    bit<8>  int_skip_gtpu_headers;
 #endif // WITH_INT_SINK
 #endif // WITH_INT
 }

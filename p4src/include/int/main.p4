@@ -54,6 +54,10 @@ control IntEgress (
 #ifdef WITH_INT_SINK
                 int_sink.apply(hdr, fabric_md, eg_intr_md);
 #endif // WITH_INT_SINK
+#ifdef WITH_SPGW
+                // We will set this later in spgw egress pipeline.
+                fabric_md.int_skip_gtpu_headers = 0;
+#endif // WITH_SPGW
             }
         }
     }

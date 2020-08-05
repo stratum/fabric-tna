@@ -1484,13 +1484,13 @@ class IntTest(IPv4UnicastTest):
             ], priority=DEFAULT_PRIORITY)
 
     def build_int_local_report(self, src_mac, dst_mac, src_ip, dst_ip,
-                               ig_port, eg_port, sw_id=1, original_packet=None):
+                               ig_port, eg_port, sw_id=1, inner_packet=None):
         # Note: scapy doesn't support dscp field, use tos.
         pkt = Ether(src=src_mac, dst=dst_mac) / IP(src=src_ip, dst=dst_ip, ttl=63, tos=4) / \
               UDP(sport=0, chksum=0) / \
               INT_L45_REPORT_FIXED(nproto=2, f=1, hw_id=0) / \
               INT_L45_LOCAL_REPORT(switch_id=sw_id, ingress_port_id=ig_port, egress_port_id=eg_port) / \
-              original_packet
+              inner_packet
 
         mask_pkt = Mask(pkt)
         # IPv4 identifcation
@@ -2103,20 +2103,25 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
 
         # We should expected to receive an packet with GTPU headers.
         exp_pkt = pkt.copy()
+        inner_exp_pkt = pkt.copy()
         if not mpls:
             exp_pkt = pkt_decrement_ttl(exp_pkt)
+            inner_exp_pkt = pkt_decrement_ttl(inner_exp_pkt)
         exp_pkt = pkt_add_gtp(exp_pkt, out_ipv4_src=S1U_SGW_IPV4,
                               out_ipv4_dst=S1U_ENB_IPV4, teid=TEID_1)
         exp_pkt = pkt_route(exp_pkt, HOST2_MAC)
+        inner_exp_pkt = pkt_route(inner_exp_pkt, HOST2_MAC)
         if tagged2 and Dot1Q not in exp_pkt:
             exp_pkt = pkt_add_vlan(exp_pkt, vlan_vid=VLAN_ID_2)
+            inner_exp_pkt = pkt_add_vlan(inner_exp_pkt, vlan_vid=VLAN_ID_2)
         if mpls:
             exp_pkt = pkt_add_mpls(exp_pkt, label=MPLS_LABEL_2, ttl=DEFAULT_MPLS_TTL)
+            inner_exp_pkt = pkt_add_mpls(inner_exp_pkt, label=MPLS_LABEL_2, ttl=DEFAULT_MPLS_TTL)
 
         # We should also expected an INT report packet comes from "resubmit port"
         exp_int_report_pkt_masked = \
             self.build_int_local_report(SWITCH_MAC, INT_COLLECTOR_MAC, SWITCH_IPV4, INT_COLLECTOR_IPV4,
-                                        ig_port, eg_port, sw_id=1, original_packet=exp_pkt)
+                                        ig_port, eg_port, sw_id=1, inner_packet=inner_exp_pkt)
 
         # Set up entries for downlink
         self.setup_downlink(

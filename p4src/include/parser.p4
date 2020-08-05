@@ -366,14 +366,61 @@ parser FabricEgressParser (packet_in packet,
         fabric_md.int_q_occupancy = int_mirror_md.q_occupancy;
         fabric_md.int_ingress_tstamp = int_mirror_md.ingress_tstamp;
         fabric_md.int_egress_tstamp = int_mirror_md.egress_tstamp;
+        fabric_md.int_skip_gtpu_headers = int_mirror_md.skip_gtpu_headers;
         fabric_md.vlan_id = DEFAULT_VLAN_ID;
         // The original packet should be the payload of report packet.
-        transition accept;
+
+#ifdef WITH_SPGW
+        transition select(int_mirror_md.skip_gtpu_headers) {
+            1: skip_gtpu_headers_eth;
+            default: accept;
+        }
+#else
+        default: accept;
+#endif // WITH_SPGW
 #else
         transition reject;
 #endif // WITH_INT_SINK
-
     }
+
+#if defined(WITH_SPGW) && defined(WITH_INT_SINK)
+    state skip_gtpu_headers_eth {
+        packet.extract(hdr.ethernet);
+        transition select(packet.lookahead<bit<16>>()) {
+            ETHERTYPE_VLAN: skip_gtpu_headers_vlan;
+            default: skip_gtpu_headers_eth_type;
+        }
+    }
+
+    state skip_gtpu_headers_vlan {
+        packet.extract(hdr.vlan_tag);
+        transition skip_gtpu_headers_eth_type;
+    }
+
+    state skip_gtpu_headers_eth_type {
+        packet.extract(hdr.eth_type);
+        transition select(hdr.eth_type.value) {
+            ETHERTYPE_MPLS: skip_gtpu_headers_mpls;
+            default: skip_gtpu_headers;
+        }
+    }
+
+    state skip_gtpu_headers_mpls {
+        packet.extract(hdr.mpls);
+        fabric_md.mpls_label = hdr.mpls.label;
+        // Add 1 here since the egress next block will decrease
+        // the MPLS TTL but we want to leave it unchanged.
+        fabric_md.mpls_ttl = DEFAULT_MPLS_TTL + 1;
+        transition skip_gtpu_headers;
+    }
+
+    state skip_gtpu_headers {
+        // Skip IP/UDP/GTPU headers: (20 + 8 + 8)*8 bits
+        packet.advance(288);
+        transition accept;
+    }
+
+#endif // defined(WITH_SPGW) && defined(WITH_INT_SINK)
 
     state parse_bridge_metadata {
         packet.extract(bridge_md);
@@ -619,7 +666,8 @@ control FabricEgressMirror(
                 fabric_md.int_q_id,
                 fabric_md.int_q_occupancy,
                 fabric_md.int_ingress_tstamp,
-                fabric_md.int_egress_tstamp
+                fabric_md.int_egress_tstamp,
+                fabric_md.int_skip_gtpu_headers
             });
         }
 #endif // WITH_INT_SINK

@@ -152,6 +152,14 @@ control IntReport (
         tb_generate_report.apply();
         fix_dscp.apply();
         tb_set_report_seq_no_and_hw_id.apply();
+
+#ifdef WITH_SPGW
+        if (fabric_md.int_skip_gtpu_headers == 1) {
+            // Need to remove IP, UDP, and GTPU headers (36 bytes)
+            hdr.report_ipv4.total_len = hdr.report_ipv4.total_len - 36;
+            hdr.report_udp.len = hdr.report_udp.len - 36;
+        }
+#endif // WITH_SPGW
     }
 }
 #endif

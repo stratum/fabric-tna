@@ -124,6 +124,9 @@ header int_mirror_metadata_t {
     bit<24> q_occupancy;
     bit<32> ingress_tstamp;
     bit<32> egress_tstamp;
+#ifdef WITH_SPGW
+    bit<8> skip_gtpu_headers;
+#endif // WITH_SPGW
 }
 #endif // WITH_INT_SINK
 
