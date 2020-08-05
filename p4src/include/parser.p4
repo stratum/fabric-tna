@@ -619,10 +619,7 @@ control FabricEgressMirror(
                 fabric_md.int_q_id,
                 fabric_md.int_q_occupancy,
                 fabric_md.int_ingress_tstamp,
-                fabric_md.int_egress_tstamp,
-                0, // padding
-                fabric_md.int_hw_id,
-                fabric_md.int_seq_no
+                fabric_md.int_egress_tstamp
             });
         }
 #endif // WITH_INT_SINK

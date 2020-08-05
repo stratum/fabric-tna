@@ -13,14 +13,6 @@ control IntSink (
     Hash<bit<16>>(HashAlgorithm_t.IDENTITY) field_size_modifier;
     bit<16> bytes_removed;
 
-    Register<bit<32>, bit<6>>(1024) seq_number;
-    RegisterAction<bit<32>, bit<6>, bit<32>>(seq_number) get_seq_number = {
-        void apply(inout bit<32> reg, out bit<32> rv) {
-            reg = reg + 1;
-            rv = reg;
-        }
-    };
-
     @hidden
     action calculate_removed_bytes() {
         bytes_removed = field_size_modifier.get<bit<10>>(hdr.intl4_shim.len_words ++ 2w0);
@@ -54,10 +46,9 @@ control IntSink (
     }
 
 
-    action set_mirror_session_id(MirrorId_t sid, bit<6> hw_id) {
+    action set_mirror_session_id(MirrorId_t sid) {
         fabric_md.mirror_session_id = sid;
-        fabric_md.int_hw_id = hw_id;
-        fabric_md.int_seq_no = get_seq_number.execute(hw_id);
+
     }
 
     table tb_set_mirror_session_id {
@@ -69,10 +60,10 @@ control IntSink (
         }
         size = 4;
         const entries = {
-            9w0x000 &&& 0x180: set_mirror_session_id(300, 0);
-            9w0x080 &&& 0x180: set_mirror_session_id(301, 1);
-            9w0x100 &&& 0x180: set_mirror_session_id(302, 2);
-            9w0x180 &&& 0x180: set_mirror_session_id(303, 3);
+            9w0x000 &&& 0x180: set_mirror_session_id(300);
+            9w0x080 &&& 0x180: set_mirror_session_id(301);
+            9w0x100 &&& 0x180: set_mirror_session_id(302);
+            9w0x180 &&& 0x180: set_mirror_session_id(303);
         }
     }
 

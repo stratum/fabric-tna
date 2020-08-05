@@ -11,6 +11,14 @@ control IntReport (
     in    egress_intrinsic_metadata_t eg_intr_md) {
 
     Random<bit<16>>() ip_id_gen;
+    @hidden
+    Register<bit<32>, bit<6>>(1024) seq_number;
+    RegisterAction<bit<32>, bit<6>, bit<32>>(seq_number) get_seq_number = {
+        void apply(inout bit<32> reg, out bit<32> rv) {
+            reg = reg + 1;
+            rv = reg;
+        }
+    };
 
     @hidden
     action add_report_fixed_header() {
@@ -25,10 +33,6 @@ control IntReport (
         hdr.report_fixed_header.q = 0;
         hdr.report_fixed_header.f = 1;
         hdr.report_fixed_header.rsvd = 0;
-        //TODO how to get information specific to the switch
-        hdr.report_fixed_header.hw_id = HW_ID;
-        // TODO how save a variable and increment
-        hdr.report_fixed_header.seq_no = 0;
         hdr.report_fixed_header.ingress_tstamp = fabric_md.int_ingress_tstamp;
         // Local report
         hdr.local_report_header.setValid();
@@ -121,9 +125,33 @@ control IntReport (
         size = 4;
     }
 
+    @hidden
+    action set_report_seq_no_and_hw_id(bit<6> hw_id) {
+        hdr.report_fixed_header.hw_id = hw_id;
+        hdr.report_fixed_header.seq_no = get_seq_number.execute(hw_id);
+    }
+
+    @hidden
+    table tb_set_report_seq_no_and_hw_id {
+        key = {
+            eg_intr_md.egress_port: ternary;
+        }
+        actions = {
+            set_report_seq_no_and_hw_id;
+        }
+        size = 4;
+        const entries = {
+            9w0x000 &&& 0x180: set_report_seq_no_and_hw_id(0);
+            9w0x080 &&& 0x180: set_report_seq_no_and_hw_id(1);
+            9w0x100 &&& 0x180: set_report_seq_no_and_hw_id(2);
+            9w0x180 &&& 0x180: set_report_seq_no_and_hw_id(3);
+        }
+    }
+
     apply {
         tb_generate_report.apply();
         fix_dscp.apply();
+        tb_set_report_seq_no_and_hw_id.apply();
     }
 }
 #endif

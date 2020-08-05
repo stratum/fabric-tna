@@ -1488,7 +1488,7 @@ class IntTest(IPv4UnicastTest):
         # Note: scapy doesn't support dscp field, use tos.
         pkt = Ether(src=src_mac, dst=dst_mac) / IP(src=src_ip, dst=dst_ip, ttl=63, tos=4) / \
               UDP(sport=0, chksum=0) / \
-              INT_L45_REPORT_FIXED(nproto=2, f=1, hw_id=1) / \
+              INT_L45_REPORT_FIXED(nproto=2, f=1, hw_id=0) / \
               INT_L45_LOCAL_REPORT(switch_id=sw_id, ingress_port_id=ig_port, egress_port_id=eg_port) / \
               original_packet
 
@@ -1500,6 +1500,7 @@ class IntTest(IPv4UnicastTest):
         mask_pkt.set_do_not_care_scapy(IP, "chksum")
         mask_pkt.set_do_not_care_scapy(UDP, "chksum")
         mask_pkt.set_do_not_care_scapy(INT_L45_REPORT_FIXED, "ingress_tstamp")
+        mask_pkt.set_do_not_care_scapy(INT_L45_REPORT_FIXED, "seq_no")
         mask_pkt.set_do_not_care_scapy(INT_L45_LOCAL_REPORT, "queue_id")
         mask_pkt.set_do_not_care_scapy(INT_L45_LOCAL_REPORT, "queue_occupancy")
         mask_pkt.set_do_not_care_scapy(INT_L45_LOCAL_REPORT, "egress_tstamp")

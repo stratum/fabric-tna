@@ -2140,18 +2140,6 @@
                 "type" : "bytes",
                 "width" : 10
               }
-            },
-            {
-              "id" : 2,
-              "name" : "hw_id",
-              "repeated" : false,
-              "mandatory" : true,
-              "read_only" : false,
-              "annotations" : [],
-              "type" : {
-                "type" : "bytes",
-                "width" : 6
-              }
             }
           ]
         },
@@ -2634,8 +2622,8 @@
       "attributes" : ["DynamicHashing"]
     },
     {
-      "name" : "pipe.FabricEgress.int_egress.int_sink.seq_number",
-      "id" : 2332070410,
+      "name" : "pipe.FabricEgress.int_egress.int_report.seq_number",
+      "id" : 2332040423,
       "table_type" : "Register",
       "size" : 1024,
       "depends_on" : [],
@@ -2658,7 +2646,7 @@
           "read_only" : false,
           "singleton" : {
             "id" : 1,
-            "name" : "FabricEgress.int_egress.int_sink.seq_number.f1",
+            "name" : "FabricEgress.int_egress.int_report.seq_number.f1",
             "repeated" : false,
             "annotations" : [
               {

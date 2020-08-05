@@ -26,7 +26,7 @@ const bit<16> LOCAL_REPORT_HEADER_LEN = 16;
 const bit<16> ETH_HEADER_LEN = 14;
 const bit<16> IPV4_MIN_HEAD_LEN = 20;
 const bit<16> UDP_HEADER_LEN = 8;
-const bit<16> REPORT_MIRROR_HEADER_LEN = 28;
+const bit<16> REPORT_MIRROR_HEADER_LEN = 23;
 const bit<16> CRC_CHECKSUM_LEN = 4;
 
 enum bit<2> IntDeviceType {

@@ -124,9 +124,6 @@ header int_mirror_metadata_t {
     bit<24> q_occupancy;
     bit<32> ingress_tstamp;
     bit<32> egress_tstamp;
-    @padding bit<2> pad1;
-    bit<6>  hw_id;
-    bit<32> seq_no;
 }
 #endif // WITH_INT_SINK
 
