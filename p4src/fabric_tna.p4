@@ -18,7 +18,7 @@
 #endif // WITH_SPGW
 
 #ifdef WITH_INT
-#include "include/int/main.p4"
+#include "include/int/int.p4"
 #endif
 
 control FabricIngress (
