@@ -1,41 +1,33 @@
+# Copyright 2020-present Open Networking Foundation
+# SPDX-License-Identifier: Apache-2.0
+
+DEVICE ?= stratum-bf
+PORTMAP ?= port_map.veth.json
+GRPCADDR ?= 127.0.0.1:28000
+CPUPORT ?= 320
+
+DEVICE_CONFIG_BF := --tofino-bin /p4c-out/pipe/tofino.bin --tofino-ctx-json /p4c-out/pipe/context.json
+DEVICE_CONFIG_BFRT := --tofino-pipeline-tar /p4c-out/pipeline.tar.bz2
+
+ifeq ($(DEVICE),stratum-bfrt)
+config := $(DEVICE_CONFIG_BFRT)
+else
+config := $(DEVICE_CONFIG_BF)
+endif
+
 define run_tests
-$(if $(filter $(DEVICE),tofino),
 python -u ptf_runner.py --device $(DEVICE) --port-map $(PORTMAP) \
 	--ptf-dir fabric.ptf --cpu-port $(CPUPORT) --device-id 1 \
 	--grpc-addr $(GRPCADDR) \
-	--p4info /tofino_p4c_out/p4info.txt \
-	--tofino-bin /tofino_p4c_out/pipe/tofino.bin \
-	--tofino-ctx-json /tofino_p4c_out/pipe/context.json \
-	--generate-tv \
-	$(2),
-python -u ptf_runner.py --device $(DEVICE) --port-map $(PORTMAP) \
-	--ptf-dir fabric.ptf --cpu-port $(CPUPORT) --device-id 1 \
-	--grpc-addr $(GRPCADDR) \
-	--p4info /bmv2_p4c_out/p4info.txt \
-	--bmv2-json /bmv2_p4c_out/bmv2.json \
+	--p4info /p4c-out/p4info.txt \
+	$(config) \
 	--generate-tv \
 	$(2)
-)
 endef
 
 .DEFAULT_GOAL := all
 
+#Nothing to check
 _checkenv:
-ifndef DEVICE
-	$(eval DEVICE = tofino)
-endif
-ifndef PORTMAP
-	$(eval PORTMAP = port_map.veth.json)
-endif
-ifndef GRPCADDR
-	$(eval GRPCADDR = 127.0.0.1:28000)
-endif
-ifndef CPUPORT
-ifeq ($(DEVICE),tofino)
-$(eval CPUPORT = 192)
-#$(eval CPUPORT = 320)
-else
-$(eval CPUPORT = 255)
-endif
-endif
+
 include ../../tests/ptf/Makefile.profiles
