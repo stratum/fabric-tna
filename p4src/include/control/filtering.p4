@@ -56,7 +56,7 @@ control Filtering (inout parsed_headers_t hdr,
         size = PORT_VLAN_TABLE_SIZE;
     }
 
-#ifdef WITH_INT_SINK
+#ifdef WITH_INT
     @hidden
     action set_recirculate_pkt_vlan(vlan_id_t vlan_id) {
         fabric_md.common.vlan_id = vlan_id;
@@ -81,7 +81,7 @@ control Filtering (inout parsed_headers_t hdr,
             (PIPE_3_REC_PORT, false): set_recirculate_pkt_vlan(DEFAULT_VLAN_ID);
         }
     }
-#endif // WITH_INT_SINK
+#endif // WITH_INT
 
     /*
      * Forwarding Classifier.
@@ -125,7 +125,7 @@ control Filtering (inout parsed_headers_t hdr,
         size = FWD_CLASSIFIER_TABLE_SIZE;
     }
 
-#ifdef WITH_INT_SINK
+#ifdef WITH_INT
     @hidden
     action set_recirculate_pkt_type(fwd_type_t fwd_type) {
         fabric_md.fwd_type = fwd_type;
@@ -147,15 +147,15 @@ control Filtering (inout parsed_headers_t hdr,
             (PIPE_3_REC_PORT, ETHERTYPE_IPV4): set_recirculate_pkt_type(FWD_IPV4_UNICAST);
         }
     }
-#endif // WITH_INT_SINK
+#endif // WITH_INT
 
     apply {
         ingress_port_vlan.apply();
         fwd_classifier.apply();
-#ifdef WITH_INT_SINK
+#ifdef WITH_INT
         recirculate_port_vlan.apply();
         recirculate_pkt_classifier.apply();
-#endif // WITH_INT_SINK
+#endif // WITH_INT
 #ifdef WTIH_DEBUG
         fwd_type_counter.count(fabric_md.fwd_type);
 #endif // WTIH_DEBUG

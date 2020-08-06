@@ -5,18 +5,7 @@
 #ifndef __INT_MAIN__
 #define __INT_MAIN__
 
-#ifdef WITH_INT_SOURCE
-#include "source.p4"
-#endif // WITH_INT_SOURCE
-
-#ifdef WITH_INT_TRANSIT
-#include "transit.p4"
-#endif // WITH_INT_TRANSIT
-
-#ifdef WITH_INT_SINK
-#include "sink.p4"
-#include "report.p4"
-#endif // WITH_INT_SINK
+#define TBL_FLOW_WATCH_SIZE 64
 
 control IntEgress (
     inout parsed_headers_t hdr,
@@ -24,40 +13,183 @@ control IntEgress (
     in    egress_intrinsic_metadata_t eg_intr_md,
     in egress_intrinsic_metadata_from_parser_t eg_prsr_md) {
 
-#ifdef WITH_INT_SOURCE
-    IntSource() int_source;
-#endif  // WITH_INT_SOURCE
+    Random<bit<16>>() ip_id_gen;
+    @hidden
+    Register<bit<32>, bit<6>>(1024) seq_number;
+    RegisterAction<bit<32>, bit<6>, bit<32>>(seq_number) get_seq_number = {
+        void apply(inout bit<32> reg, out bit<32> rv) {
+            reg = reg + 1;
+            rv = reg;
+        }
+    };
 
-#ifdef WITH_INT_TRANSIT
-    IntTransit() int_transit;
-#endif  // WITH_INT_TRANSIT
+    @hidden
+    action add_report_fixed_header() {
+        /* Device should include its own INT metadata as embedded,
+         * we'll not use fabric_report_header for this purpose.
+         */
+        hdr.report_fixed_header.setValid();
+        hdr.report_fixed_header.ver = 0;
+        /* only support for flow_watchlist */
+        hdr.report_fixed_header.nproto = NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER;
+        hdr.report_fixed_header.d = 0;
+        hdr.report_fixed_header.q = 0;
+        hdr.report_fixed_header.f = 1;
+        hdr.report_fixed_header.rsvd = 0;
+        hdr.report_fixed_header.ingress_tstamp = fabric_md.int_mirror_md.ingress_tstamp;
+        // Local report
+        hdr.local_report_header.setValid();
+        hdr.local_report_header.switch_id = fabric_md.int_mirror_md.switch_id;
+        hdr.local_report_header.ingress_port_id = fabric_md.int_mirror_md.ingress_port_id;
+        hdr.local_report_header.egress_port_id = fabric_md.int_mirror_md.egress_port_id;
+        hdr.local_report_header.queue_id = fabric_md.int_mirror_md.queue_id;
+        hdr.local_report_header.queue_occupancy = fabric_md.int_mirror_md.queue_occupancy;
+        hdr.local_report_header.egress_tstamp = fabric_md.int_mirror_md.egress_tstamp;
+    }
 
-#ifdef WITH_INT_SINK
-    IntSink() int_sink;
-    IntReport() int_report;
-#endif  // WITH_INT_SINK
+    action do_report_encapsulation(mac_addr_t src_mac, mac_addr_t mon_mac,
+                                   ipv4_addr_t src_ip, ipv4_addr_t mon_ip,
+                                   l4_port_t mon_port) {
+        //Report Ethernet Header
+        hdr.report_ethernet.setValid();
+        hdr.report_ethernet.dst_addr = mon_mac;
+        hdr.report_ethernet.src_addr = src_mac;
+        hdr.report_eth_type.setValid();
+        hdr.report_eth_type.value = ETHERTYPE_IPV4;
+
+        //Report IPV4 Header
+        hdr.report_ipv4.setValid();
+        hdr.report_ipv4.version = 4w4;
+        hdr.report_ipv4.ihl = 4w5;
+        hdr.report_ipv4.dscp = INT_DSCP;
+        hdr.report_ipv4.ecn = 2w0;
+        // IPv4 Total length is length of
+        // IPv4(20) + UDP(8) + Fixed report header(12) + Local report(16) + Original packet
+        // The original packet length should be the one from egress intrinsic metadata minus
+        // the length of mirror data (21 bytes) and CRC (4 bytes).
+        hdr.report_ipv4.total_len = IPV4_MIN_HEAD_LEN + UDP_HEADER_LEN
+                                    + REPORT_FIXED_HEADER_LEN + LOCAL_REPORT_HEADER_LEN
+                                    - REPORT_MIRROR_HEADER_LEN
+                                    - CRC_CHECKSUM_LEN
+                                    + eg_intr_md.pkt_length ;
+        /* Dont Fragment bit should be set */
+        hdr.report_ipv4.identification = ip_id_gen.get();
+        hdr.report_ipv4.flags = 0;
+        hdr.report_ipv4.frag_offset = 0;
+        hdr.report_ipv4.ttl = 64;
+        hdr.report_ipv4.protocol = PROTO_UDP;
+        hdr.report_ipv4.src_addr = src_ip;
+        hdr.report_ipv4.dst_addr = mon_ip;
+
+        //Report UDP Header
+        hdr.report_udp.setValid();
+        hdr.report_udp.sport = 0;
+        hdr.report_udp.dport = mon_port;
+        // See IPv4 length
+        hdr.report_udp.len = UDP_HEADER_LEN + REPORT_FIXED_HEADER_LEN
+                             + LOCAL_REPORT_HEADER_LEN
+                             - REPORT_MIRROR_HEADER_LEN
+                             - CRC_CHECKSUM_LEN
+                             + eg_intr_md.pkt_length ;
+        add_report_fixed_header();
+    }
+
+    table tbl_generate_report {
+        key = {
+            fabric_md.int_mirror_md.isValid(): exact @name("int_mirror_valid");
+        }
+        actions = {
+            do_report_encapsulation;
+            @defaultonly nop();
+        }
+        const default_action = nop;
+        const size = 1;
+    }
+
+    @hidden
+    action set_report_seq_no_and_hw_id(bit<6> hw_id) {
+        hdr.report_fixed_header.hw_id = hw_id;
+        hdr.report_fixed_header.seq_no = get_seq_number.execute(hw_id);
+    }
+
+    @hidden
+    table tb_set_report_seq_no_and_hw_id {
+        key = {
+            eg_intr_md.egress_port: ternary;
+        }
+        actions = {
+            set_report_seq_no_and_hw_id;
+        }
+        const size = 4;
+        const entries = {
+            9w0x000 &&& 0x180: set_report_seq_no_and_hw_id(0);
+            9w0x080 &&& 0x180: set_report_seq_no_and_hw_id(1);
+            9w0x100 &&& 0x180: set_report_seq_no_and_hw_id(2);
+            9w0x180 &&& 0x180: set_report_seq_no_and_hw_id(3);
+        }
+    }
+
+    action watch_flow(bit<32> switch_id) {
+        fabric_md.int_mirror_md.setValid();
+        fabric_md.int_mirror_md.bridge_md_type = BridgeMetadataType.MIRROR_EGRESS_TO_EGRESS;
+        fabric_md.int_mirror_md.switch_id = switch_id;
+        fabric_md.int_mirror_md.ingress_port_id = (bit<16>) fabric_md.common.ingress_port;
+        fabric_md.int_mirror_md.egress_port_id = (bit<16>) eg_intr_md.egress_port;
+        fabric_md.int_mirror_md.queue_id = (bit<8>)eg_intr_md.egress_qid;
+        fabric_md.int_mirror_md.queue_occupancy = (bit<24>)eg_intr_md.enq_qdepth;
+        fabric_md.int_mirror_md.ingress_tstamp = fabric_md.common.ingress_timestamp[31:0];
+        fabric_md.int_mirror_md.egress_tstamp = eg_prsr_md.global_tstamp[31:0];
+#ifdef WITH_SPGW
+        // We will set this later in spgw egress pipeline.
+        fabric_md.int_mirror_md.skip_gtpu_headers = 0;
+#endif
+    }
+
+    table tbl_flow_watch {
+        key = {
+            hdr.ipv4.src_addr: ternary @name("ipv4_src");
+            hdr.ipv4.dst_addr: ternary @name("ipv4_dst");
+            fabric_md.common.l4_sport: ternary @name("l4_sport");
+            fabric_md.common.l4_dport: ternary @name("l4_dport");
+        }
+        actions = {
+            watch_flow;
+            @defaultonly nop();
+        }
+        const default_action = nop();
+        const size = TBL_FLOW_WATCH_SIZE;
+    }
+
+    @hidden
+    action set_mirror_session_id(MirrorId_t sid) {
+        fabric_md.int_mirror_md.mirror_session_id = sid;
+    }
+
+    @hidden
+    table tb_set_mirror_session_id {
+        key = {
+            fabric_md.common.ingress_port: ternary;
+        }
+        actions = {
+            set_mirror_session_id;
+        }
+        size = 4;
+        const entries = {
+            9w0x000 &&& 0x180: set_mirror_session_id(300);
+            9w0x080 &&& 0x180: set_mirror_session_id(301);
+            9w0x100 &&& 0x180: set_mirror_session_id(302);
+            9w0x180 &&& 0x180: set_mirror_session_id(303);
+        }
+    }
 
     apply {
-#ifdef WITH_INT_SINK
-        int_report.apply(hdr, fabric_md, eg_intr_md);
-#endif
-        if (fabric_md.common.ingress_port != CPU_PORT &&
-            eg_intr_md.egress_port != CPU_PORT &&
-            (hdr.udp.isValid() || hdr.tcp.isValid())) {
-#ifdef WITH_INT_SOURCE
-            int_source.apply(hdr, fabric_md, eg_intr_md);
-#endif // WITH_INT_SOURCE
-            if(hdr.int_header.isValid()) {
-#ifdef WITH_INT_TRANSIT
-                int_transit.apply(hdr, fabric_md, eg_intr_md, eg_prsr_md);
-#endif // WITH_INT_TRANSIT
-#ifdef WITH_INT_SINK
-                int_sink.apply(hdr, fabric_md, eg_intr_md);
-#endif // WITH_INT_SINK
-#ifdef WITH_SPGW
-                // We will set this later in spgw egress pipeline.
-                fabric_md.int_mirror_md.skip_gtpu_headers = 0;
-#endif // WITH_SPGW
+        if(tbl_generate_report.apply().hit) {
+            tb_set_report_seq_no_and_hw_id.apply();
+        } else {
+            if (fabric_md.common.ingress_port != CPU_PORT &&
+                eg_intr_md.egress_port != CPU_PORT) {
+                tbl_flow_watch.apply();
+                tb_set_mirror_session_id.apply();
             }
         }
     }

@@ -191,9 +191,9 @@ struct fabric_egress_metadata_t {
 #ifdef WITH_GTPU
     bool              inner_ipv4_checksum_err;
 #endif // WITH_GTPU
-#ifdef WITH_INT_SINK
+#ifdef WITH_INT
     int_mirror_metadata_t int_mirror_md;
-#endif // WITH_INT_SINK
+#endif // WITH_INT
 }
 
 struct parsed_headers_t {
@@ -223,8 +223,6 @@ struct parsed_headers_t {
     packet_in_header_t packet_in;
     // INT specific headers
 #ifdef WITH_INT
-#ifdef WITH_INT_SINK
-    // INT Report encap
     ethernet_t report_ethernet;
     eth_type_t report_eth_type;
     ipv4_t report_ipv4;
@@ -232,23 +230,6 @@ struct parsed_headers_t {
     // INT Report header (support only fixed)
     report_fixed_header_t report_fixed_header;
     local_report_header_t local_report_header;
-#endif // WITH_INT_SINK
-    intl4_shim_t intl4_shim;
-    int_header_t int_header;
-    intl4_tail_t intl4_tail;
-#ifndef WITH_INT_SINK
-    int_data_t[24] int_data;
-#endif // !WITH_INT_SINK
-#ifdef WITH_INT_TRANSIT
-    int_switch_id_t int_switch_id;
-    int_port_ids_t int_port_ids;
-    int_hop_latency_t int_hop_latency;
-    int_q_occupancy_t int_q_occupancy;
-    int_ingress_tstamp_t int_ingress_tstamp;
-    int_egress_tstamp_t int_egress_tstamp;
-    int_q_congestion_t int_q_congestion;
-    int_egress_port_tx_util_t int_egress_tx_util;
-#endif // WITH_INT_TRANSIT
 #endif // WITH_INT
 }
 

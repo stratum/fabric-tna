@@ -41,25 +41,17 @@ control FabricIngress (
 #endif // WITH_SPGW
 
     apply {
-        fabric_md.common.setValid();
-        fabric_md.common.bridge_md_type = BridgeMetadataType.INGRESS_TO_EGRESS;
-        fabric_md.common.ingress_port = ig_intr_md.ingress_port;
-        fabric_md.common.ingress_timestamp = ig_intr_md.ingress_mac_tstamp;
-
         pkt_io_ingress.apply(hdr, fabric_md, ig_tm_md);
 #ifdef WITH_SPGW
         spgw_ingress.apply(hdr, fabric_md, ig_tm_md);
 #endif // WITH_SPGW
         filtering.apply(hdr, fabric_md, ig_intr_md);
         if (!fabric_md.skip_forwarding) {
-           forwarding.apply(hdr, fabric_md);
+            forwarding.apply(hdr, fabric_md);
         }
         acl.apply(hdr, fabric_md, ig_intr_md, ig_dprsr_md, ig_tm_md);
         if (!fabric_md.skip_next) {
             next.apply(hdr, fabric_md, ig_intr_md, ig_tm_md);
-        }
-        if (ig_tm_md.bypass_egress == 1w1) {
-            fabric_md.common.setInvalid();
         }
     }
 }

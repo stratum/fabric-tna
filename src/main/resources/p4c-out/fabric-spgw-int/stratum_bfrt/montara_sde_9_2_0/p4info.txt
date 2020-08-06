@@ -1174,6 +1174,18 @@ actions {
     bitwidth: 16
   }
 }
+actions {
+  preamble {
+    id: 16787100
+    name: "FabricEgress.int_egress.int_report.set_report_seq_no_and_hw_id"
+    alias: "set_report_seq_no_and_hw_id"
+  }
+  params {
+    id: 1
+    name: "hw_id"
+    bitwidth: 6
+  }
+}
 action_profiles {
   preamble {
     id: 285274751

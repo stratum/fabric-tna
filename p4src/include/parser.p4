@@ -7,19 +7,12 @@
 #include "header.p4"
 #include "define.p4"
 
-#ifdef WITH_INT
-#include "int/data_parser.p4"
-#endif // WITH_INT
-
 parser FabricIngressParser (packet_in  packet,
     /* Fabric.p4 */
     out parsed_headers_t               hdr,
     out fabric_ingress_metadata_t      fabric_md,
     /* TNA */
     out ingress_intrinsic_metadata_t   ig_intr_md) {
-#ifdef WITH_INT
-    IntDataParser() int_data_parser;
-#endif
     Checksum() ipv4_checksum;
 #ifdef WITH_GTPU
     Checksum() inner_ipv4_checksum;
@@ -28,6 +21,10 @@ parser FabricIngressParser (packet_in  packet,
     state start {
         packet.extract(ig_intr_md);
         packet.advance(PORT_METADATA_SIZE);
+        fabric_md.common.setValid();
+        fabric_md.common.bridge_md_type = BridgeMetadataType.INGRESS_TO_EGRESS;
+        fabric_md.common.ingress_port = ig_intr_md.ingress_port;
+        fabric_md.common.ingress_timestamp = ig_intr_md.ingress_mac_tstamp;
         transition select(ig_intr_md.ingress_port) {
             CPU_PORT: parse_packet_out;
             default: parse_ethernet;
@@ -142,11 +139,7 @@ parser FabricIngressParser (packet_in  packet,
         packet.extract(hdr.tcp);
         fabric_md.common.l4_sport = hdr.tcp.sport;
         fabric_md.common.l4_dport = hdr.tcp.dport;
-#ifdef WITH_INT
-        transition parse_int;
-#else
         transition accept;
-#endif // WITH_INT
     }
 
     state parse_udp {
@@ -156,18 +149,8 @@ parser FabricIngressParser (packet_in  packet,
         transition select(hdr.udp.dport) {
 #ifdef WITH_GTPU
             UDP_PORT_GTPU: parse_gtpu;
-#ifdef WITH_INT
-            default: parse_int;
-#else
-            default: accept;
-#endif // WITH_INT
-#else // WITH_GTPU
-#ifdef WITH_INT
-            default: parse_int;
-#else
-            default: accept;
-#endif // WITH_INT
 #endif // WITH_GTPU
+            default: accept;
         }
     }
 
@@ -175,45 +158,6 @@ parser FabricIngressParser (packet_in  packet,
         packet.extract(hdr.icmp);
         transition accept;
     }
-
-#ifdef WITH_INT
-    state parse_int {
-        transition select(hdr.ipv4.dscp) {
-            INT_DSCP &&& INT_DSCP: parse_intl4_shim;
-            default: accept;
-        }
-    }
-
-#ifdef WITH_GTPU
-    state parse_inner_int {
-        transition select(hdr.inner_ipv4.dscp) {
-            INT_DSCP &&& INT_DSCP: parse_intl4_shim;
-            default: accept;
-        }
-    }
-#endif
-
-    state parse_intl4_shim {
-        packet.extract(hdr.intl4_shim);
-        transition parse_int_header;
-    }
-
-    state parse_int_header {
-        packet.extract(hdr.int_header);
-        transition parse_int_data;
-    }
-
-    state parse_int_data {
-        // Parse INT metadata stack, but not tail
-        int_data_parser.apply(packet, hdr);
-        transition parse_intl4_tail;
-    }
-
-    state parse_intl4_tail {
-        packet.extract(hdr.intl4_tail);
-        transition accept;
-    }
-#endif // WITH_INT
 
 #ifdef WITH_GTPU
     state parse_gtpu {
@@ -237,22 +181,14 @@ parser FabricIngressParser (packet_in  packet,
         packet.extract(hdr.inner_tcp);
         fabric_md.common.inner_l4_sport = hdr.inner_tcp.sport;
         fabric_md.common.inner_l4_dport = hdr.inner_tcp.dport;
-#ifdef WITH_INT
-        transition parse_inner_int;
-#else
         transition accept;
-#endif // WITH_INT
     }
 
     state parse_inner_udp {
         packet.extract(hdr.inner_udp);
         fabric_md.common.inner_l4_sport = hdr.inner_udp.sport;
         fabric_md.common.inner_l4_dport = hdr.inner_udp.dport;
-#ifdef WITH_INT
-        transition parse_inner_int;
-#else
         transition accept;
-#endif // WITH_INT
     }
 
     state parse_inner_icmp {
@@ -291,24 +227,6 @@ control FabricIngressDeparser(packet_out packet,
         packet.emit(hdr.inner_udp);
         packet.emit(hdr.inner_icmp);
 #endif // WITH_GTPU
-#ifdef WITH_INT
-        packet.emit(hdr.intl4_shim);
-        packet.emit(hdr.int_header);
-#ifdef WITH_INT_TRANSIT
-        packet.emit(hdr.int_switch_id);
-        packet.emit(hdr.int_port_ids);
-        packet.emit(hdr.int_hop_latency);
-        packet.emit(hdr.int_q_occupancy);
-        packet.emit(hdr.int_ingress_tstamp);
-        packet.emit(hdr.int_egress_tstamp);
-        packet.emit(hdr.int_q_congestion);
-        packet.emit(hdr.int_egress_tx_util);
-#endif // WITH_INT_TRANSIT
-#ifndef WITH_INT_SINK // WITHOUT the INT Sink
-        packet.emit(hdr.int_data);
-#endif // !WITH_INT_SINK
-        packet.emit(hdr.intl4_tail);
-#endif // WITH_INT
     }
 }
 
@@ -322,9 +240,6 @@ parser FabricEgressParser (packet_in packet,
     Checksum() inner_ipv4_checksum;
 #endif // WITH_GTPU
 #ifdef WITH_INT
-    IntDataParser() int_data_parser;
-#endif
-#ifdef WITH_INT_SINK
     int_mirror_metadata_t int_mirror_md;
 #endif
 
@@ -346,7 +261,7 @@ parser FabricEgressParser (packet_in packet,
     state parse_egress_mirror_metadata {
         // TODO: to support different mirror headers
         //       by adding a "mirror_type" field.
-#ifdef WITH_INT_SINK
+#ifdef WITH_INT
         packet.extract(fabric_md.int_mirror_md);
         fabric_md.common.bridge_md_type = fabric_md.int_mirror_md.bridge_md_type;
         fabric_md.common.vlan_id = DEFAULT_VLAN_ID;
@@ -361,10 +276,10 @@ parser FabricEgressParser (packet_in packet,
 #endif // WITH_SPGW
 #else
         transition reject;
-#endif // WITH_INT_SINK
+#endif // WITH_INT
     }
 
-#if defined(WITH_SPGW) && defined(WITH_INT_SINK)
+#if defined(WITH_SPGW) && defined(WITH_INT)
     state skip_gtpu_headers_eth {
         packet.extract(hdr.ethernet);
         transition select(packet.lookahead<bit<16>>()) {
@@ -401,7 +316,7 @@ parser FabricEgressParser (packet_in packet,
         transition accept;
     }
 
-#endif // defined(WITH_SPGW) && defined(WITH_INT_SINK)
+#endif // defined(WITH_SPGW) && defined(WITH_INT)
 
     state parse_ethernet {
         packet.extract(hdr.ethernet);
@@ -474,11 +389,7 @@ parser FabricEgressParser (packet_in packet,
 
     state parse_tcp {
         packet.extract(hdr.tcp);
-#ifdef WITH_INT
-        transition parse_int;
-#else
         transition accept;
-#endif // WITH_INT
     }
 
     state parse_udp {
@@ -486,18 +397,8 @@ parser FabricEgressParser (packet_in packet,
         transition select(hdr.udp.dport) {
 #ifdef WITH_GTPU
             UDP_PORT_GTPU: parse_gtpu;
-#ifdef WITH_INT
-            default: parse_int;
-#else
-            default: accept;
-#endif // WITH_INT
-#else // WITH_GTPU
-#ifdef WITH_INT
-            default: parse_int;
-#else
-            default: accept;
-#endif // WITH_INT
 #endif // WITH_GTPU
+            default: accept;
         }
     }
 
@@ -505,45 +406,6 @@ parser FabricEgressParser (packet_in packet,
         packet.extract(hdr.icmp);
         transition accept;
     }
-
-#ifdef WITH_INT
-    state parse_int {
-        transition select(hdr.ipv4.dscp) {
-            INT_DSCP &&& INT_DSCP: parse_intl4_shim;
-            default: accept;
-        }
-    }
-
-#ifdef WITH_GTPU
-    state parse_inner_int {
-        transition select(hdr.inner_ipv4.dscp) {
-            INT_DSCP &&& INT_DSCP: parse_intl4_shim;
-            default: accept;
-        }
-    }
-#endif // WITH_GTPU
-
-    state parse_intl4_shim {
-        packet.extract(hdr.intl4_shim);
-        transition parse_int_header;
-    }
-
-    state parse_int_header {
-        packet.extract(hdr.int_header);
-        transition parse_int_data;
-    }
-
-    state parse_int_data {
-        // Parse INT metadata stack, but not tail
-        int_data_parser.apply(packet, hdr);
-        transition parse_intl4_tail;
-    }
-
-    state parse_intl4_tail {
-        packet.extract(hdr.intl4_tail);
-        transition accept;
-    }
-#endif // WITH_INT
 
 #ifdef WITH_GTPU
     state parse_gtpu {
@@ -565,20 +427,12 @@ parser FabricEgressParser (packet_in packet,
 
     state parse_inner_tcp {
         packet.extract(hdr.inner_tcp);
-#ifdef WITH_INT
-        transition parse_inner_int;
-#else
         transition accept;
-#endif // WITH_INT
     }
 
     state parse_inner_udp {
         packet.extract(hdr.inner_udp);
-#ifdef WITH_INT
-        transition parse_inner_int;
-#else
         transition accept;
-#endif // WITH_INT
     }
 
     state parse_inner_icmp {
@@ -593,12 +447,12 @@ control FabricEgressMirror(
     in fabric_egress_metadata_t fabric_md) {
     Mirror() mirror;
     apply {
-#ifdef WITH_INT_SINK
+#ifdef WITH_INT
         if (fabric_md.int_mirror_md.isValid()) {
             mirror.emit<int_mirror_metadata_t>(fabric_md.int_mirror_md.mirror_session_id,
                                                fabric_md.int_mirror_md);
         }
-#endif // WITH_INT_SINK
+#endif // WITH_INT
     }
 }
 
@@ -650,7 +504,7 @@ control FabricEgressDeparser(packet_out packet,
             });
         }
 #endif // WITH_GTPU
-#ifdef WITH_INT_SINK
+#ifdef WITH_INT
         if (hdr.report_ipv4.isValid()) {
             hdr.report_ipv4.hdr_checksum = ipv4_checksum.update({
                 hdr.report_ipv4.version,
@@ -667,17 +521,17 @@ control FabricEgressDeparser(packet_out packet,
                 hdr.report_ipv4.dst_addr
             });
         }
-#endif // WITH_INT_SINK
+#endif // WITH_INT
         egress_mirror.apply(hdr, fabric_md);
         packet.emit(hdr.packet_in);
-#ifdef WITH_INT_SINK
+#ifdef WITH_INT
         packet.emit(hdr.report_ethernet);
         packet.emit(hdr.report_eth_type);
         packet.emit(hdr.report_ipv4);
         packet.emit(hdr.report_udp);
         packet.emit(hdr.report_fixed_header);
         packet.emit(hdr.local_report_header);
-#endif // WITH_INT_SINK
+#endif // WITH_INT
         packet.emit(hdr.ethernet);
         packet.emit(hdr.vlan_tag);
 #if defined(WITH_XCONNECT) || defined(WITH_DOUBLE_VLAN_TERMINATION)
@@ -704,24 +558,6 @@ control FabricEgressDeparser(packet_out packet,
         packet.emit(hdr.inner_udp);
         packet.emit(hdr.inner_icmp);
 #endif // WITH_GTPU
-#ifdef WITH_INT
-        packet.emit(hdr.intl4_shim);
-        packet.emit(hdr.int_header);
-#ifdef WITH_INT_TRANSIT
-        packet.emit(hdr.int_switch_id);
-        packet.emit(hdr.int_port_ids);
-        packet.emit(hdr.int_hop_latency);
-        packet.emit(hdr.int_q_occupancy);
-        packet.emit(hdr.int_ingress_tstamp);
-        packet.emit(hdr.int_egress_tstamp);
-        packet.emit(hdr.int_q_congestion);
-        packet.emit(hdr.int_egress_tx_util);
-#endif // WITH_INT_TRANSIT
-#ifndef WITH_INT_SINK // WITHOUT the INT Sink
-        packet.emit(hdr.int_data);
-#endif // !WITH_INT_SINK
-        packet.emit(hdr.intl4_tail);
-#endif // defined(WITH_INT_TRANSIT) || defined(WITH_INT_SOURCE)
     }
 }
 

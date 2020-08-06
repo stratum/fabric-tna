@@ -37,13 +37,13 @@ fabric:
 # 	@${p4-build} fabric-bng "-DWITH_BNG -DWITHOUT_XCONNECT"
 
 fabric-int:
-	@${p4-build} fabric-int "-DWITH_INT_SOURCE -DWITH_INT_TRANSIT -DWITH_INT_SINK"
+	@${p4-build} fabric-int "-DWITH_INT"
 
 fabric-spgw:
 	@${p4-build} fabric-spgw "-DWITH_SPGW"
 
 fabric-spgw-int:
-	@${p4-build} fabric-spgw-int "-DWITH_SPGW -DWITH_INT_SOURCE -DWITH_INT_TRANSIT -DWITH_INT_SINK"
+	@${p4-build} fabric-spgw-int "-DWITH_SPGW -DWITH_INT"
 
 constants:
 	docker run -v $(curr_dir):/root -w /root \

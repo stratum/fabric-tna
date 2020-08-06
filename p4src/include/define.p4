@@ -126,11 +126,6 @@ action nop() {
     NoAction();
 }
 
-// INT
-#if defined(WITH_INT_SOURCE) || defined(WITH_INT_TRANSIT) || defined(WITH_INT_SINK)
-#define WITH_INT
-#endif
-
 // Bridge metadata type
 enum bit<8> BridgeMetadataType {
     INVALID = 0,
