@@ -31,7 +31,7 @@ control IntEgress (
          */
         hdr.report_fixed_header.setValid();
         hdr.report_fixed_header.ver = 0;
-        /* only support for int_collectlist */
+        /* only support for int_collectorlist */
         hdr.report_fixed_header.nproto = NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER;
         hdr.report_fixed_header.d = 0;
         hdr.report_fixed_header.q = 0;
@@ -130,7 +130,7 @@ control IntEgress (
         }
     }
 
-    action set_int_metadata(bit<32> switch_id) {
+    action collect(bit<32> switch_id) {
         fabric_md.int_mirror_md.setValid();
         fabric_md.int_mirror_md.bridge_md_type = BridgedMetadataType_t.MIRROR_EGRESS_TO_EGRESS;
         fabric_md.int_mirror_md.switch_id = switch_id;
@@ -146,7 +146,7 @@ control IntEgress (
 #endif
     }
 
-    table collect {
+    table collector {
         key = {
             hdr.ipv4.src_addr: ternary @name("ipv4_src");
             hdr.ipv4.dst_addr: ternary @name("ipv4_dst");
@@ -154,11 +154,11 @@ control IntEgress (
             fabric_md.bridged.l4_dport: range @name("l4_dport");
         }
         actions = {
-            set_int_metadata;
+            collect;
             @defaultonly nop();
         }
         const default_action = nop();
-        const size = COLLECT_TABLE_SIZE;
+        const size = COLLECTOR_TABLE_SIZE;
     }
 
     @hidden
@@ -184,13 +184,14 @@ control IntEgress (
     }
 
     apply {
-        if(report.apply().hit) {
+        if (report.apply().hit) {
             report_seq_no_and_hw_id.apply();
         } else {
             if (fabric_md.bridged.ig_port != CPU_PORT &&
                 eg_intr_md.egress_port != CPU_PORT) {
-                collect.apply();
-                mirror_session_id.apply();
+                if (collector.apply().hit) {
+                    mirror_session_id.apply();
+                }
             }
         }
     }
