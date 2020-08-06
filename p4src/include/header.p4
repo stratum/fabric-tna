@@ -111,7 +111,7 @@ header icmp_t {
     bit<64> timestamp;
 }
 
-#ifdef WITH_GTPU
+#ifdef WITH_SPGW
 // GTPU v1
 header gtpu_t {
     bit<3>  version;    /* version */
@@ -124,7 +124,7 @@ header gtpu_t {
     bit<16> msglen;     /* message length */
     teid_t  teid;       /* tunnel endpoint id */
 }
-#endif // WITH_GTPU
+#endif // WITH_SPGW
 
 // Custom metadata definition
 
@@ -147,7 +147,7 @@ header bridge_metadata_t {
     bool            push_double_vlan;
     vlan_id_t       inner_vlan_id;
 #endif // WITH_DOUBLE_VLAN_TERMINATION
-#ifdef WITH_GTPU
+#ifdef WITH_SPGW
     bit<16>         spgw_ipv4_len;
     bool            needs_gtpu_encap;
     bool            skip_spgw;
@@ -158,7 +158,7 @@ header bridge_metadata_t {
     pdr_ctr_id_t    pdr_ctr_id;
     bit<16>         inner_l4_sport;
     bit<16>         inner_l4_dport;
-#endif // WITH_GTPU
+#endif // WITH_SPGW
 }
 
 // Ingress pipeline-only metadata
@@ -172,7 +172,7 @@ struct fabric_ingress_metadata_t {
     bool              skip_next;
     fwd_type_t        fwd_type;
     next_id_t         next_id;
-#ifdef WITH_GTPU
+#ifdef WITH_SPGW
     bool              inner_ipv4_checksum_err;
     bool              needs_gtpu_decap;
     bool              pdr_hit;
@@ -181,16 +181,16 @@ struct fabric_ingress_metadata_t {
     far_id_t          far_id;
     SpgwInterface     spgw_src_iface;
     SpgwDirection     spgw_direction;
-#endif // WITH_GTPU
+#endif // WITH_SPGW
 }
 
 // Egress pipeline-only metadata
 @flexible
 struct fabric_egress_metadata_t {
     bridge_metadata_t common;
-#ifdef WITH_GTPU
+#ifdef WITH_SPGW
     bool              inner_ipv4_checksum_err;
-#endif // WITH_GTPU
+#endif // WITH_SPGW
 #ifdef WITH_INT
     int_mirror_metadata_t int_mirror_md;
 #endif // WITH_INT
@@ -209,7 +209,7 @@ struct parsed_headers_t {
     tcp_t tcp;
     udp_t udp;
     icmp_t icmp;
-#ifdef WITH_GTPU
+#ifdef WITH_SPGW
     ipv4_t outer_ipv4;
     udp_t outer_udp;
     gtpu_t outer_gtpu;
@@ -218,7 +218,7 @@ struct parsed_headers_t {
     tcp_t inner_tcp;
     udp_t inner_udp;
     icmp_t inner_icmp;
-#endif // WITH_GTPU
+#endif // WITH_SPGW
     packet_out_header_t packet_out;
     packet_in_header_t packet_in;
     // INT specific headers

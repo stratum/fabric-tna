@@ -17,7 +17,11 @@ const bit<16> DROP_REPORT_HEADER_LEN = 12;
 const bit<16> LOCAL_REPORT_HEADER_LEN = 16;
 const bit<16> IPV4_MIN_HEAD_LEN = 20;
 const bit<16> UDP_HEADER_LEN = 8;
+#ifdef WITH_SPGW
 const bit<16> REPORT_MIRROR_HEADER_LEN = 24;
+#else
+const bit<16> REPORT_MIRROR_HEADER_LEN = 23;
+#endif // WITH_SPGW
 const bit<16> CRC_CHECKSUM_LEN = 4;
 
 #endif  // __INT_DEFINE__

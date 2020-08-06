@@ -83,10 +83,6 @@ enum bit<8> SpgwInterface {
     CONTROL_PLANE = 0x5 // N4 and N4-u
 }
 
-#ifdef WITH_SPGW
-#define WITH_GTPU
-#endif
-
 const bit<16> ETHERTYPE_QINQ = 0x88A8;
 const bit<16> ETHERTYPE_QINQ_NON_STD = 0x9100;
 const bit<16> ETHERTYPE_VLAN = 0x8100;

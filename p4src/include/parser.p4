@@ -14,9 +14,9 @@ parser FabricIngressParser (packet_in  packet,
     /* TNA */
     out ingress_intrinsic_metadata_t   ig_intr_md) {
     Checksum() ipv4_checksum;
-#ifdef WITH_GTPU
+#ifdef WITH_SPGW
     Checksum() inner_ipv4_checksum;
-#endif // WITH_GTPU
+#endif // WITH_SPGW
 
     state start {
         packet.extract(ig_intr_md);
@@ -147,9 +147,9 @@ parser FabricIngressParser (packet_in  packet,
         fabric_md.common.l4_sport = hdr.udp.sport;
         fabric_md.common.l4_dport = hdr.udp.dport;
         transition select(hdr.udp.dport) {
-#ifdef WITH_GTPU
+#ifdef WITH_SPGW
             UDP_PORT_GTPU: parse_gtpu;
-#endif // WITH_GTPU
+#endif // WITH_SPGW
             default: accept;
         }
     }
@@ -159,7 +159,7 @@ parser FabricIngressParser (packet_in  packet,
         transition accept;
     }
 
-#ifdef WITH_GTPU
+#ifdef WITH_SPGW
     state parse_gtpu {
         packet.extract(hdr.gtpu);
         transition parse_inner_ipv4;
@@ -195,7 +195,7 @@ parser FabricIngressParser (packet_in  packet,
         packet.extract(hdr.inner_icmp);
         transition accept;
     }
-#endif // WITH_GTPU
+#endif // WITH_SPGW
 }
 
 control FabricIngressDeparser(packet_out packet,
@@ -219,14 +219,14 @@ control FabricIngressDeparser(packet_out packet,
         packet.emit(hdr.tcp);
         packet.emit(hdr.udp);
         packet.emit(hdr.icmp);
-#ifdef WITH_GTPU
+#ifdef WITH_SPGW
         // in case we parsed a GTPU packet but did not decap it
         packet.emit(hdr.gtpu);
         packet.emit(hdr.inner_ipv4);
         packet.emit(hdr.inner_tcp);
         packet.emit(hdr.inner_udp);
         packet.emit(hdr.inner_icmp);
-#endif // WITH_GTPU
+#endif // WITH_SPGW
     }
 }
 
@@ -236,9 +236,9 @@ parser FabricEgressParser (packet_in packet,
     out fabric_egress_metadata_t fabric_md,
     /* TNA */
     out egress_intrinsic_metadata_t eg_intr_md) {
-#ifdef WITH_GTPU
+#ifdef WITH_SPGW
     Checksum() inner_ipv4_checksum;
-#endif // WITH_GTPU
+#endif // WITH_SPGW
 #ifdef WITH_INT
     int_mirror_metadata_t int_mirror_md;
 #endif
@@ -395,9 +395,9 @@ parser FabricEgressParser (packet_in packet,
     state parse_udp {
         packet.extract(hdr.udp);
         transition select(hdr.udp.dport) {
-#ifdef WITH_GTPU
+#ifdef WITH_SPGW
             UDP_PORT_GTPU: parse_gtpu;
-#endif // WITH_GTPU
+#endif // WITH_SPGW
             default: accept;
         }
     }
@@ -407,7 +407,7 @@ parser FabricEgressParser (packet_in packet,
         transition accept;
     }
 
-#ifdef WITH_GTPU
+#ifdef WITH_SPGW
     state parse_gtpu {
         packet.extract(hdr.gtpu);
         transition parse_inner_ipv4;
@@ -439,7 +439,7 @@ parser FabricEgressParser (packet_in packet,
         packet.extract(hdr.inner_icmp);
         transition accept;
     }
-#endif // WITH_GTPU
+#endif // WITH_SPGW
 }
 
 control FabricEgressMirror(
@@ -464,9 +464,9 @@ control FabricEgressDeparser(packet_out packet,
     in egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr) {
     Checksum() ipv4_checksum;
     FabricEgressMirror() egress_mirror;
-#ifdef WITH_GTPU
+#ifdef WITH_SPGW
     Checksum() outer_ipv4_checksum;
-#endif // WITH_GTPU
+#endif // WITH_SPGW
 
     apply {
         if (hdr.ipv4.isValid()) {
@@ -486,7 +486,7 @@ control FabricEgressDeparser(packet_out packet,
             });
         }
         // TODO: update TCP/UDP checksum
-#ifdef WITH_GTPU
+#ifdef WITH_SPGW
         if (hdr.outer_ipv4.isValid()) {
             hdr.outer_ipv4.hdr_checksum = outer_ipv4_checksum.update({
                 hdr.outer_ipv4.version,
@@ -503,7 +503,7 @@ control FabricEgressDeparser(packet_out packet,
                 hdr.outer_ipv4.dst_addr
             });
         }
-#endif // WITH_GTPU
+#endif // WITH_SPGW
 #ifdef WITH_INT
         if (hdr.report_ipv4.isValid()) {
             hdr.report_ipv4.hdr_checksum = ipv4_checksum.update({
@@ -539,17 +539,17 @@ control FabricEgressDeparser(packet_out packet,
 #endif // WITH_XCONNECT || WITH_DOUBLE_VLAN_TERMINATION
         packet.emit(hdr.eth_type);
         packet.emit(hdr.mpls);
-#ifdef WITH_GTPU
+#ifdef WITH_SPGW
         packet.emit(hdr.outer_ipv4);
         packet.emit(hdr.outer_udp);
         packet.emit(hdr.outer_gtpu);
-#endif // WITH_GTPU
+#endif // WITH_SPGW
         packet.emit(hdr.ipv4);
         packet.emit(hdr.ipv6);
         packet.emit(hdr.tcp);
         packet.emit(hdr.udp);
         packet.emit(hdr.icmp);
-#ifdef WITH_GTPU
+#ifdef WITH_SPGW
         // in case we parsed a GTPU packet but did not decap it
         // these should never happen at the same time as the outer GTPU tunnel headers
         packet.emit(hdr.gtpu);
@@ -557,7 +557,7 @@ control FabricEgressDeparser(packet_out packet,
         packet.emit(hdr.inner_tcp);
         packet.emit(hdr.inner_udp);
         packet.emit(hdr.inner_icmp);
-#endif // WITH_GTPU
+#endif // WITH_SPGW
     }
 }
 
