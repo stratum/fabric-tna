@@ -134,8 +134,8 @@ control IntEgress (
         fabric_md.int_mirror_md.setValid();
         fabric_md.int_mirror_md.bridge_md_type = BridgedMetadataType_t.MIRROR_EGRESS_TO_EGRESS;
         fabric_md.int_mirror_md.switch_id = switch_id;
-        fabric_md.int_mirror_md.ig_port = (bit<16>) fabric_md.bridged.ig_port;
-        fabric_md.int_mirror_md.eg_port = (bit<16>) eg_intr_md.egress_port;
+        fabric_md.int_mirror_md.ig_port = (bit<16>)fabric_md.bridged.ig_port;
+        fabric_md.int_mirror_md.eg_port = (bit<16>)eg_intr_md.egress_port;
         fabric_md.int_mirror_md.queue_id = (bit<8>)eg_intr_md.egress_qid;
         fabric_md.int_mirror_md.queue_occupancy = (bit<24>)eg_intr_md.enq_qdepth;
         fabric_md.int_mirror_md.ig_tstamp = fabric_md.bridged.ig_tstamp[31:0];
@@ -186,6 +186,9 @@ control IntEgress (
     apply {
         if (report.apply().hit) {
             report_seq_no_and_hw_id.apply();
+            // Remove the INT mirror metadata to prevent
+            // infinity loop
+            fabric_md.int_mirror_md.setInvalid();
         } else {
             if (fabric_md.bridged.ig_port != CPU_PORT &&
                 eg_intr_md.egress_port != CPU_PORT) {
