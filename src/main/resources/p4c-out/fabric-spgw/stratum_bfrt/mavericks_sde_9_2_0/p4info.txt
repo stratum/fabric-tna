@@ -265,6 +265,9 @@ tables {
     id: 16835757
   }
   action_refs {
+    id: 16781601
+  }
+  action_refs {
     id: 16820765
   }
   action_refs {
@@ -711,6 +714,18 @@ actions {
     id: 16835757
     name: "FabricIngress.acl.copy_to_cpu"
     alias: "copy_to_cpu"
+  }
+}
+actions {
+  preamble {
+    id: 16781601
+    name: "FabricIngress.acl.set_clone_session_id"
+    alias: "set_clone_session_id"
+  }
+  params {
+    id: 1
+    name: "clone_id"
+    bitwidth: 32
   }
 }
 actions {
