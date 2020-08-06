@@ -12,6 +12,7 @@ control PacketIoIngress(inout parsed_headers_t hdr,
             ig_intr_md_for_tm.ucast_egress_port = hdr.packet_out.egress_port[8:0];
             hdr.packet_out.setInvalid();
             ig_intr_md_for_tm.bypass_egress = 1;
+            fabric_md.bridged.setInvalid();
             // No need for ingress processing, straight to egress.
             exit;
         }
