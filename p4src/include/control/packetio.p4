@@ -25,7 +25,7 @@ control PacketIoEgress(inout parsed_headers_t hdr,
     apply {
         if (eg_intr_md.egress_port == CPU_PORT) {
             hdr.packet_in.setValid();
-            hdr.packet_in.ingress_port = (bit<16>)fabric_md.ingress_port;
+            hdr.packet_in.ingress_port = (bit<16>)fabric_md.bridged.ig_port;
             // No need to process through the rest of the pipeline.
             exit;
         }

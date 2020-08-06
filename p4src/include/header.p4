@@ -128,17 +128,19 @@ header gtpu_t {
 
 // Custom metadata definition
 
-// The common metadata which will shares between
+// Common metadata which is shared between
 // ingress and egress pipeline.
 @flexible
-header bridge_metadata_t {
-    BridgeMetadataType bridge_md_type;
+header bridged_metadata_t {
+    BridgedMetadataType_t bridge_md_type;
     bool            is_multicast;
-    PortId_t        ingress_port;
+    PortId_t        ig_port;
     vlan_id_t       vlan_id;
+    // bit<3>          vlan_pri;
+    // bit<1>          vlan_cfi;
     mpls_label_t    mpls_label;
     bit<8>          mpls_ttl;
-    bit<48>         ingress_timestamp;
+    bit<48>         ig_tstamp;
     bit<16>         ip_eth_type;
     bit<8>          ip_proto;
     bit<16>         l4_sport;
@@ -146,6 +148,8 @@ header bridge_metadata_t {
 #ifdef WITH_DOUBLE_VLAN_TERMINATION
     bool            push_double_vlan;
     vlan_id_t       inner_vlan_id;
+    // bit<3>          inner_vlan_pri;
+    // bit<1>          inner_vlan_cfi;
 #endif // WITH_DOUBLE_VLAN_TERMINATION
 #ifdef WITH_SPGW
     bit<16>         spgw_ipv4_len;
@@ -164,9 +168,9 @@ header bridge_metadata_t {
 // Ingress pipeline-only metadata
 @flexible
 struct fabric_ingress_metadata_t {
-    bridge_metadata_t common;
-    bit<32>           ipv4_src_addr;
-    bit<32>           ipv4_dst_addr;
+    bridged_metadata_t bridged;
+    bit<32>           ipv4_src;
+    bit<32>           ipv4_dst;
     bool              ipv4_checksum_err;
     bool              skip_forwarding;
     bool              skip_next;
@@ -187,7 +191,7 @@ struct fabric_ingress_metadata_t {
 // Egress pipeline-only metadata
 @flexible
 struct fabric_egress_metadata_t {
-    bridge_metadata_t common;
+    bridged_metadata_t bridged;
 #ifdef WITH_SPGW
     bool              inner_ipv4_checksum_err;
 #endif // WITH_SPGW
@@ -227,7 +231,6 @@ struct parsed_headers_t {
     eth_type_t report_eth_type;
     ipv4_t report_ipv4;
     udp_t report_udp;
-    // INT Report header (support only fixed)
     report_fixed_header_t report_fixed_header;
     local_report_header_t local_report_header;
 #endif // WITH_INT

@@ -31,7 +31,7 @@ control Forwarding (inout parsed_headers_t hdr,
     //  with a multi-table/algorithmic approach?
     table bridging {
         key = {
-            fabric_md.common.vlan_id     : exact @name("vlan_id");
+            fabric_md.bridged.vlan_id     : exact @name("vlan_id");
             hdr.ethernet.dst_addr        : ternary @name("eth_dst");
         }
         actions = {
@@ -49,14 +49,14 @@ control Forwarding (inout parsed_headers_t hdr,
     DirectCounter<bit<64>>(CounterType_t.PACKETS_AND_BYTES) mpls_counter;
 
     action pop_mpls_and_next(next_id_t next_id) {
-        fabric_md.common.mpls_label = 0;
+        fabric_md.bridged.mpls_label = 0;
         set_next_id(next_id);
         mpls_counter.count();
     }
 
     table mpls {
         key = {
-            fabric_md.common.mpls_label : exact @name("mpls_label");
+            fabric_md.bridged.mpls_label : exact @name("mpls_label");
         }
         actions = {
             pop_mpls_and_next;
@@ -90,7 +90,7 @@ control Forwarding (inout parsed_headers_t hdr,
 
     table routing_v4 {
         key = {
-            fabric_md.ipv4_dst_addr: lpm @name("ipv4_dst");
+            fabric_md.ipv4_dst: lpm @name("ipv4_dst");
         }
         actions = {
             set_next_id_routing_v4;

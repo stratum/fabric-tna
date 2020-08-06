@@ -5,13 +5,14 @@
 #ifndef __INT_MAIN__
 #define __INT_MAIN__
 
-#define TBL_FLOW_WATCH_SIZE 64
+#include "define.p4"
+#include "header.p4"
 
 control IntEgress (
     inout parsed_headers_t hdr,
     inout fabric_egress_metadata_t fabric_md,
     in    egress_intrinsic_metadata_t eg_intr_md,
-    in egress_intrinsic_metadata_from_parser_t eg_prsr_md) {
+    in    egress_intrinsic_metadata_from_parser_t eg_prsr_md) {
 
     Random<bit<16>>() ip_id_gen;
     @hidden
@@ -30,21 +31,21 @@ control IntEgress (
          */
         hdr.report_fixed_header.setValid();
         hdr.report_fixed_header.ver = 0;
-        /* only support for flow_watchlist */
+        /* only support for int_collectlist */
         hdr.report_fixed_header.nproto = NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER;
         hdr.report_fixed_header.d = 0;
         hdr.report_fixed_header.q = 0;
         hdr.report_fixed_header.f = 1;
         hdr.report_fixed_header.rsvd = 0;
-        hdr.report_fixed_header.ingress_tstamp = fabric_md.int_mirror_md.ingress_tstamp;
+        hdr.report_fixed_header.ingress_tstamp = fabric_md.int_mirror_md.ig_tstamp;
         // Local report
         hdr.local_report_header.setValid();
         hdr.local_report_header.switch_id = fabric_md.int_mirror_md.switch_id;
-        hdr.local_report_header.ingress_port_id = fabric_md.int_mirror_md.ingress_port_id;
-        hdr.local_report_header.egress_port_id = fabric_md.int_mirror_md.egress_port_id;
+        hdr.local_report_header.ingress_port_id = fabric_md.int_mirror_md.ig_port;
+        hdr.local_report_header.egress_port_id = fabric_md.int_mirror_md.eg_port;
         hdr.local_report_header.queue_id = fabric_md.int_mirror_md.queue_id;
         hdr.local_report_header.queue_occupancy = fabric_md.int_mirror_md.queue_occupancy;
-        hdr.local_report_header.egress_tstamp = fabric_md.int_mirror_md.egress_tstamp;
+        hdr.local_report_header.egress_tstamp = fabric_md.int_mirror_md.eg_tstamp;
     }
 
     action do_report_encapsulation(mac_addr_t src_mac, mac_addr_t mon_mac,
@@ -71,7 +72,7 @@ control IntEgress (
                                     + REPORT_FIXED_HEADER_LEN + LOCAL_REPORT_HEADER_LEN
                                     - REPORT_MIRROR_HEADER_LEN
                                     - CRC_CHECKSUM_LEN
-                                    + eg_intr_md.pkt_length ;
+                                    + eg_intr_md.pkt_length;
         /* Dont Fragment bit should be set */
         hdr.report_ipv4.identification = ip_id_gen.get();
         hdr.report_ipv4.flags = 0;
@@ -90,11 +91,11 @@ control IntEgress (
                              + LOCAL_REPORT_HEADER_LEN
                              - REPORT_MIRROR_HEADER_LEN
                              - CRC_CHECKSUM_LEN
-                             + eg_intr_md.pkt_length ;
+                             + eg_intr_md.pkt_length;
         add_report_fixed_header();
     }
 
-    table tbl_generate_report {
+    table report {
         key = {
             fabric_md.int_mirror_md.isValid(): exact @name("int_mirror_valid");
         }
@@ -102,7 +103,7 @@ control IntEgress (
             do_report_encapsulation;
             @defaultonly nop();
         }
-        const default_action = nop;
+        default_action = nop;
         const size = 1;
     }
 
@@ -113,7 +114,7 @@ control IntEgress (
     }
 
     @hidden
-    table tb_set_report_seq_no_and_hw_id {
+    table report_seq_no_and_hw_id {
         key = {
             eg_intr_md.egress_port: ternary;
         }
@@ -122,42 +123,42 @@ control IntEgress (
         }
         const size = 4;
         const entries = {
-            9w0x000 &&& 0x180: set_report_seq_no_and_hw_id(0);
-            9w0x080 &&& 0x180: set_report_seq_no_and_hw_id(1);
-            9w0x100 &&& 0x180: set_report_seq_no_and_hw_id(2);
-            9w0x180 &&& 0x180: set_report_seq_no_and_hw_id(3);
+            PIPE_0_PORTS_MATCH: set_report_seq_no_and_hw_id(0);
+            PIPE_1_PORTS_MATCH: set_report_seq_no_and_hw_id(1);
+            PIPE_2_PORTS_MATCH: set_report_seq_no_and_hw_id(2);
+            PIPE_3_PORTS_MATCH: set_report_seq_no_and_hw_id(3);
         }
     }
 
-    action watch_flow(bit<32> switch_id) {
+    action set_int_metadata(bit<32> switch_id) {
         fabric_md.int_mirror_md.setValid();
-        fabric_md.int_mirror_md.bridge_md_type = BridgeMetadataType.MIRROR_EGRESS_TO_EGRESS;
+        fabric_md.int_mirror_md.bridge_md_type = BridgedMetadataType_t.MIRROR_EGRESS_TO_EGRESS;
         fabric_md.int_mirror_md.switch_id = switch_id;
-        fabric_md.int_mirror_md.ingress_port_id = (bit<16>) fabric_md.common.ingress_port;
-        fabric_md.int_mirror_md.egress_port_id = (bit<16>) eg_intr_md.egress_port;
+        fabric_md.int_mirror_md.ig_port = (bit<16>) fabric_md.bridged.ig_port;
+        fabric_md.int_mirror_md.eg_port = (bit<16>) eg_intr_md.egress_port;
         fabric_md.int_mirror_md.queue_id = (bit<8>)eg_intr_md.egress_qid;
         fabric_md.int_mirror_md.queue_occupancy = (bit<24>)eg_intr_md.enq_qdepth;
-        fabric_md.int_mirror_md.ingress_tstamp = fabric_md.common.ingress_timestamp[31:0];
-        fabric_md.int_mirror_md.egress_tstamp = eg_prsr_md.global_tstamp[31:0];
+        fabric_md.int_mirror_md.ig_tstamp = fabric_md.bridged.ig_tstamp[31:0];
+        fabric_md.int_mirror_md.eg_tstamp = eg_prsr_md.global_tstamp[31:0];
 #ifdef WITH_SPGW
         // We will set this later in spgw egress pipeline.
         fabric_md.int_mirror_md.skip_gtpu_headers = 0;
 #endif
     }
 
-    table tbl_flow_watch {
+    table collect {
         key = {
             hdr.ipv4.src_addr: ternary @name("ipv4_src");
             hdr.ipv4.dst_addr: ternary @name("ipv4_dst");
-            fabric_md.common.l4_sport: ternary @name("l4_sport");
-            fabric_md.common.l4_dport: ternary @name("l4_dport");
+            fabric_md.bridged.l4_sport: range @name("l4_sport");
+            fabric_md.bridged.l4_dport: range @name("l4_dport");
         }
         actions = {
-            watch_flow;
+            set_int_metadata;
             @defaultonly nop();
         }
         const default_action = nop();
-        const size = TBL_FLOW_WATCH_SIZE;
+        const size = COLLECT_TABLE_SIZE;
     }
 
     @hidden
@@ -166,30 +167,30 @@ control IntEgress (
     }
 
     @hidden
-    table tb_set_mirror_session_id {
+    table mirror_session_id {
         key = {
-            fabric_md.common.ingress_port: ternary;
+            fabric_md.bridged.ig_port: ternary;
         }
         actions = {
             set_mirror_session_id;
         }
         size = 4;
         const entries = {
-            9w0x000 &&& 0x180: set_mirror_session_id(300);
-            9w0x080 &&& 0x180: set_mirror_session_id(301);
-            9w0x100 &&& 0x180: set_mirror_session_id(302);
-            9w0x180 &&& 0x180: set_mirror_session_id(303);
+            PIPE_0_PORTS_MATCH: set_mirror_session_id(300);
+            PIPE_1_PORTS_MATCH: set_mirror_session_id(301);
+            PIPE_2_PORTS_MATCH: set_mirror_session_id(302);
+            PIPE_3_PORTS_MATCH: set_mirror_session_id(303);
         }
     }
 
     apply {
-        if(tbl_generate_report.apply().hit) {
-            tb_set_report_seq_no_and_hw_id.apply();
+        if(report.apply().hit) {
+            report_seq_no_and_hw_id.apply();
         } else {
-            if (fabric_md.common.ingress_port != CPU_PORT &&
+            if (fabric_md.bridged.ig_port != CPU_PORT &&
                 eg_intr_md.egress_port != CPU_PORT) {
-                tbl_flow_watch.apply();
-                tb_set_mirror_session_id.apply();
+                collect.apply();
+                mirror_session_id.apply();
             }
         }
     }

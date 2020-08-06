@@ -56,7 +56,7 @@
 #define PKT_INSTANCE_TYPE_REPLICATION 5
 #define PKT_INSTANCE_TYPE_RESUBMIT 6
 
-typedef bit<8>  fwd_type_t;
+typedef bit<3>  fwd_type_t;
 typedef bit<32> next_id_t;
 typedef bit<20> mpls_label_t;
 typedef bit<48> mac_addr_t;
@@ -123,7 +123,7 @@ action nop() {
 }
 
 // Bridge metadata type
-enum bit<8> BridgeMetadataType {
+enum bit<8> BridgedMetadataType_t {
     INVALID = 0,
     INGRESS_TO_EGRESS = 1,
     EGRESS_TO_INGRESS = 2,

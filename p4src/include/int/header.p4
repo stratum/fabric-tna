@@ -45,18 +45,18 @@ header_union local_report_t {
 }
 
 header int_mirror_metadata_t {
-    BridgeMetadataType bridge_md_type;
-    @padding bit<6>    _pad0;
-    MirrorId_t         mirror_session_id;
-    bit<32>            switch_id;
-    bit<16>            ingress_port_id;
-    bit<16>            egress_port_id;
-    bit<8>             queue_id;
-    bit<24>            queue_occupancy;
-    bit<32>            ingress_tstamp;
-    bit<32>            egress_tstamp;
+    BridgedMetadataType_t bridge_md_type;
+    bit<6>                _pad0;
+    MirrorId_t            mirror_session_id;
+    bit<32>               switch_id;
+    bit<16>               ig_port;
+    bit<16>               eg_port;
+    bit<8>                queue_id;
+    bit<24>               queue_occupancy;
+    bit<32>               ig_tstamp;
+    bit<32>               eg_tstamp;
 #ifdef WITH_SPGW
-    bit<8>             skip_gtpu_headers;
+    bit<8>                skip_gtpu_headers;
 #endif // WITH_SPGW
 }
 
