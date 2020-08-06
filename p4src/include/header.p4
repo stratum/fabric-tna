@@ -127,119 +127,26 @@ header gtpu_t {
 #endif // WITH_GTPU
 
 // Custom metadata definition
-@flexible
-@pa_auto_init_metadata
-struct fabric_ingress_metadata_t {
-    bit<32>         ipv4_src_addr;
-    bit<32>         ipv4_dst_addr;
-    vlan_id_t       vlan_id;
-    bit<3>          vlan_pri;
-    bit<1>          vlan_cfi;
-#ifdef WITH_DOUBLE_VLAN_TERMINATION
-    bool            push_double_vlan;
-    vlan_id_t       inner_vlan_id;
-    bit<3>          inner_vlan_pri;
-    bit<1>          inner_vlan_cfi;
-#endif // WITH_DOUBLE_VLAN_TERMINATION
-    bit<16> ip_eth_type;
-    bit<8>  ip_proto;
-    bool    ipv4_checksum_err;
-    mpls_label_t    mpls_label;
-    bit<8>          mpls_ttl;
-    bit<16>         l4_sport;
-    bit<16>         l4_dport;
-    bool            skip_forwarding;
-    bool            skip_next;
-    fwd_type_t      fwd_type;
-    next_id_t       next_id;
-    bool            is_multicast;
-#ifdef WITH_GTPU
-    bit<16>         spgw_ipv4_len;
-    bit<16>         inner_l4_sport;
-    bit<16>         inner_l4_dport;
-    bool            inner_ipv4_checksum_err;
-    bool            needs_gtpu_encap;
-    bool            needs_gtpu_decap;
-    bool            pdr_hit;
-    bool            far_dropped;
-    bool            notify_spgwc;
-    bool            skip_spgw;
-    far_id_t        far_id;
-    teid_t          gtpu_teid;
-    bit<32>         gtpu_tunnel_sip;
-    bit<32>         gtpu_tunnel_dip;
-    bit<16>         gtpu_tunnel_sport;
-    pdr_ctr_id_t    pdr_ctr_id;
-    SpgwInterface   spgw_src_iface;
-    SpgwDirection   spgw_direction;
-#endif // WITH_GTPU
-}
 
-@flexible
-@pa_auto_init_metadata
-struct fabric_egress_metadata_t {
-    bool            is_multicast;
-    PortId_t        ingress_port;
-    vlan_id_t       vlan_id;
-    mpls_label_t    mpls_label;
-    bit<8>          mpls_ttl;
-    bit<48>         ig_tstamp;
-#ifdef WITH_DOUBLE_VLAN_TERMINATION
-    bool            push_double_vlan;
-    vlan_id_t       inner_vlan_id;
-#endif // WITH_DOUBLE_VLAN_TERMINATION
-    bit<16>         ip_eth_type;
-    bit<8>          ip_proto;
-#ifdef WITH_GTPU
-    bit<16>         spgw_ipv4_len;
-    bool            needs_gtpu_encap;
-    bool            skip_spgw;
-    teid_t          gtpu_teid;
-    bit<32>         gtpu_tunnel_sip;
-    bit<32>         gtpu_tunnel_dip;
-    bit<16>         gtpu_tunnel_sport;
-    pdr_ctr_id_t    pdr_ctr_id;
-    bool            inner_ipv4_checksum_err;
-    bit<16>         inner_l4_sport;
-    bit<16>         inner_l4_dport;
-#endif // WITH_GTPU
-    bit<16>         l4_sport;
-    bit<16>         l4_dport;
-    BridgeMetadataType bridge_md_type;
-    MirrorId_t      mirror_session_id;
-#ifdef WITH_INT
-    IntDeviceType int_device_type;
-    bit<32> int_switch_id;
-#ifdef WITH_INT_SINK
-    // things we want to put in INT report
-    bit<16> int_ingress_port_id;
-    bit<16> int_egress_port_id;
-    bit<8>  int_q_id;
-    bit<24> int_q_occupancy;
-    bit<32> int_ingress_tstamp;
-    bit<32> int_egress_tstamp;
-    bit<6>  int_hw_id;
-    bit<32> int_seq_no;
-    bit<8>  int_skip_gtpu_headers;
-#endif // WITH_INT_SINK
-#endif // WITH_INT
-}
-
+// The common metadata which will shares between
+// ingress and egress pipeline.
 @flexible
 header bridge_metadata_t {
     BridgeMetadataType bridge_md_type;
-    mpls_label_t    mpls_label;
-    bit<8>          mpls_ttl;
     bool            is_multicast;
     PortId_t        ingress_port;
     vlan_id_t       vlan_id;
-    bit<48>         ig_tstamp;
+    mpls_label_t    mpls_label;
+    bit<8>          mpls_ttl;
+    bit<48>         ingress_timestamp;
+    bit<16>         ip_eth_type;
+    bit<8>          ip_proto;
+    bit<16>         l4_sport;
+    bit<16>         l4_dport;
 #ifdef WITH_DOUBLE_VLAN_TERMINATION
     bool            push_double_vlan;
     vlan_id_t       inner_vlan_id;
 #endif // WITH_DOUBLE_VLAN_TERMINATION
-    bit<16>         ip_eth_type;
-    bit<8>          ip_proto;
 #ifdef WITH_GTPU
     bit<16>         spgw_ipv4_len;
     bool            needs_gtpu_encap;
@@ -249,14 +156,47 @@ header bridge_metadata_t {
     bit<32>         gtpu_tunnel_dip;
     bit<16>         gtpu_tunnel_sport;
     pdr_ctr_id_t    pdr_ctr_id;
+    bit<16>         inner_l4_sport;
+    bit<16>         inner_l4_dport;
 #endif // WITH_GTPU
-    bit<16>         l4_sport;
-    bit<16>         l4_dport;
 }
 
+// Ingress pipeline-only metadata
+@flexible
+struct fabric_ingress_metadata_t {
+    bridge_metadata_t common;
+    bit<32>           ipv4_src_addr;
+    bit<32>           ipv4_dst_addr;
+    bool              ipv4_checksum_err;
+    bool              skip_forwarding;
+    bool              skip_next;
+    fwd_type_t        fwd_type;
+    next_id_t         next_id;
+#ifdef WITH_GTPU
+    bool              inner_ipv4_checksum_err;
+    bool              needs_gtpu_decap;
+    bool              pdr_hit;
+    bool              far_dropped;
+    bool              notify_spgwc;
+    far_id_t          far_id;
+    SpgwInterface     spgw_src_iface;
+    SpgwDirection     spgw_direction;
+#endif // WITH_GTPU
+}
+
+// Egress pipeline-only metadata
+@flexible
+struct fabric_egress_metadata_t {
+    bridge_metadata_t common;
+#ifdef WITH_GTPU
+    bool              inner_ipv4_checksum_err;
+#endif // WITH_GTPU
+#ifdef WITH_INT_SINK
+    int_mirror_metadata_t int_mirror_md;
+#endif // WITH_INT_SINK
+}
 
 struct parsed_headers_t {
-    bridge_metadata_t bridge_md;
     ethernet_t ethernet;
     vlan_tag_t vlan_tag;
 #if defined(WITH_XCONNECT) || defined(WITH_DOUBLE_VLAN_TERMINATION)

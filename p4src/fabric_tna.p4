@@ -41,6 +41,11 @@ control FabricIngress (
 #endif // WITH_SPGW
 
     apply {
+        fabric_md.common.setValid();
+        fabric_md.common.bridge_md_type = BridgeMetadataType.INGRESS_TO_EGRESS;
+        fabric_md.common.ingress_port = ig_intr_md.ingress_port;
+        fabric_md.common.ingress_timestamp = ig_intr_md.ingress_mac_tstamp;
+
         pkt_io_ingress.apply(hdr, fabric_md, ig_tm_md);
 #ifdef WITH_SPGW
         spgw_ingress.apply(hdr, fabric_md, ig_tm_md);
@@ -53,32 +58,8 @@ control FabricIngress (
         if (!fabric_md.skip_next) {
             next.apply(hdr, fabric_md, ig_intr_md, ig_tm_md);
         }
-
-        if (ig_tm_md.bypass_egress == 1w0) {
-            hdr.bridge_md.setValid();
-            hdr.bridge_md.bridge_md_type = BridgeMetadataType.INGRESS_TO_EGRESS;
-            hdr.bridge_md.is_multicast = fabric_md.is_multicast;
-            hdr.bridge_md.ingress_port = ig_intr_md.ingress_port;
-            hdr.bridge_md.ip_eth_type = fabric_md.ip_eth_type;
-            hdr.bridge_md.ip_proto = fabric_md.ip_proto;
-            hdr.bridge_md.mpls_label = fabric_md.mpls_label;
-            hdr.bridge_md.mpls_ttl = fabric_md.mpls_ttl;
-            hdr.bridge_md.vlan_id = fabric_md.vlan_id;
-            hdr.bridge_md.ig_tstamp = ig_intr_md.ingress_mac_tstamp;
-#ifdef WITH_DOUBLE_VLAN_TERMINATION
-            hdr.bridge_md.push_double_vlan = fabric_md.push_double_vlan;
-            hdr.bridge_md.inner_vlan_id = fabric_md.inner_vlan_id;
-#endif // WITH_DOUBLE_VLAN_TERMINATION
-#ifdef WITH_SPGW
-            hdr.bridge_md.spgw_ipv4_len     = fabric_md.spgw_ipv4_len;
-            hdr.bridge_md.needs_gtpu_encap  = fabric_md.needs_gtpu_encap;
-            hdr.bridge_md.skip_spgw         = fabric_md.skip_spgw;
-            hdr.bridge_md.gtpu_teid         = fabric_md.gtpu_teid;
-            hdr.bridge_md.gtpu_tunnel_sip   = fabric_md.gtpu_tunnel_sip;
-            hdr.bridge_md.gtpu_tunnel_dip   = fabric_md.gtpu_tunnel_dip;
-            hdr.bridge_md.gtpu_tunnel_sport = fabric_md.gtpu_tunnel_sport;
-            hdr.bridge_md.pdr_ctr_id        = fabric_md.pdr_ctr_id;
-#endif // WITH_SPGW
+        if (ig_tm_md.bypass_egress == 1w1) {
+            fabric_md.common.setInvalid();
         }
     }
 }

@@ -41,7 +41,7 @@ control IntEgress (
 #ifdef WITH_INT_SINK
         int_report.apply(hdr, fabric_md, eg_intr_md);
 #endif
-        if (fabric_md.ingress_port != CPU_PORT &&
+        if (fabric_md.common.ingress_port != CPU_PORT &&
             eg_intr_md.egress_port != CPU_PORT &&
             (hdr.udp.isValid() || hdr.tcp.isValid())) {
 #ifdef WITH_INT_SOURCE
@@ -56,7 +56,7 @@ control IntEgress (
 #endif // WITH_INT_SINK
 #ifdef WITH_SPGW
                 // We will set this later in spgw egress pipeline.
-                fabric_md.int_skip_gtpu_headers = 0;
+                fabric_md.int_mirror_md.skip_gtpu_headers = 0;
 #endif // WITH_SPGW
             }
         }

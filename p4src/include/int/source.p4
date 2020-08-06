@@ -13,7 +13,7 @@ control IntSource (
 
     table tb_set_source {
         key = {
-            fabric_md.ingress_port: exact @name("ig_port");
+            fabric_md.common.ingress_port: exact @name("ig_port");
         }
         actions = {
             nop;
@@ -46,7 +46,7 @@ control IntSource (
         // Insert INT tail header.
         hdr.intl4_tail.setValid();
         hdr.intl4_tail.next_proto = hdr.ipv4.protocol;
-        hdr.intl4_tail.dest_port = fabric_md.l4_dport;
+        hdr.intl4_tail.dest_port = fabric_md.common.l4_dport;
         hdr.intl4_tail.dscp = hdr.ipv4.dscp;
         // Update IP and UDP (if not valid we don't care) lens (in bytes).
         hdr.ipv4.total_len = hdr.ipv4.total_len + INT_HEADER_LEN_BYTES;
@@ -62,8 +62,8 @@ control IntSource (
         key = {
             hdr.ipv4.src_addr: ternary @name("ipv4_src");
             hdr.ipv4.dst_addr: ternary @name("ipv4_dst");
-            fabric_md.l4_sport: ternary @name("l4_sport");
-            fabric_md.l4_dport: ternary @name("l4_dport");
+            fabric_md.common.l4_sport: ternary @name("l4_sport");
+            fabric_md.common.l4_dport: ternary @name("l4_dport");
         }
         actions = {
             int_source_dscp;

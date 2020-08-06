@@ -29,11 +29,4 @@ const bit<16> UDP_HEADER_LEN = 8;
 const bit<16> REPORT_MIRROR_HEADER_LEN = 24;
 const bit<16> CRC_CHECKSUM_LEN = 4;
 
-enum bit<2> IntDeviceType {
-  UNKNOWN = 0,
-  SOURCE  = 1,
-  TRANSIT = 2,
-  SINK    = 3
-}
-
 #endif  // __INT_DEFINE__

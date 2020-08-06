@@ -47,13 +47,13 @@ control IntSink (
 
 
     action set_mirror_session_id(MirrorId_t sid) {
-        fabric_md.mirror_session_id = sid;
+        fabric_md.int_mirror_md.mirror_session_id = sid;
 
     }
 
     table tb_set_mirror_session_id {
         key = {
-            fabric_md.ingress_port: ternary;
+            fabric_md.common.ingress_port: ternary;
         }
         actions = {
             set_mirror_session_id;
@@ -79,13 +79,15 @@ control IntSink (
         hdr.udp.dport = hdr.intl4_tail.dest_port;
         hdr.ipv4.dscp = hdr.intl4_tail.dscp;
 
-        fabric_md.int_switch_id = hdr.int_switch_id.switch_id;
-        fabric_md.int_ingress_port_id = hdr.int_port_ids.ingress_port_id;
-        fabric_md.int_egress_port_id = hdr.int_port_ids.egress_port_id;
-        fabric_md.int_q_id = hdr.int_q_occupancy.q_id;
-        fabric_md.int_q_occupancy = hdr.int_q_occupancy.q_occupancy;
-        fabric_md.int_ingress_tstamp = hdr.int_ingress_tstamp.ingress_tstamp;
-        fabric_md.int_egress_tstamp = hdr.int_egress_tstamp.egress_tstamp;
+        fabric_md.int_mirror_md.setValid();
+        fabric_md.int_mirror_md.bridge_md_type = BridgeMetadataType.MIRROR_EGRESS_TO_EGRESS;
+        fabric_md.int_mirror_md.switch_id = hdr.int_switch_id.switch_id;
+        fabric_md.int_mirror_md.ingress_port_id = hdr.int_port_ids.ingress_port_id;
+        fabric_md.int_mirror_md.egress_port_id = hdr.int_port_ids.egress_port_id;
+        fabric_md.int_mirror_md.queue_id = hdr.int_q_occupancy.q_id;
+        fabric_md.int_mirror_md.queue_occupancy = hdr.int_q_occupancy.q_occupancy;
+        fabric_md.int_mirror_md.ingress_tstamp = hdr.int_ingress_tstamp.ingress_tstamp;
+        fabric_md.int_mirror_md.egress_tstamp = hdr.int_egress_tstamp.egress_tstamp;
 
         hdr.int_header.setInvalid();
         hdr.intl4_shim.setInvalid();
@@ -99,7 +101,6 @@ control IntSink (
         hdr.int_q_congestion.setInvalid();
         hdr.int_egress_tx_util.setInvalid();
 
-        fabric_md.bridge_md_type = BridgeMetadataType.MIRROR_EGRESS_TO_EGRESS;
         tb_set_mirror_session_id.apply();
     }
 }

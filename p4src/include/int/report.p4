@@ -33,15 +33,15 @@ control IntReport (
         hdr.report_fixed_header.q = 0;
         hdr.report_fixed_header.f = 1;
         hdr.report_fixed_header.rsvd = 0;
-        hdr.report_fixed_header.ingress_tstamp = fabric_md.int_ingress_tstamp;
+        hdr.report_fixed_header.ingress_tstamp = fabric_md.int_mirror_md.ingress_tstamp;
         // Local report
         hdr.local_report_header.setValid();
-        hdr.local_report_header.switch_id = fabric_md.int_switch_id;
-        hdr.local_report_header.ingress_port_id = fabric_md.int_ingress_port_id;
-        hdr.local_report_header.egress_port_id = fabric_md.int_egress_port_id;
-        hdr.local_report_header.queue_id = fabric_md.int_q_id;
-        hdr.local_report_header.queue_occupancy = fabric_md.int_q_occupancy;
-        hdr.local_report_header.egress_tstamp = fabric_md.int_egress_tstamp;
+        hdr.local_report_header.switch_id = fabric_md.int_mirror_md.switch_id;
+        hdr.local_report_header.ingress_port_id = fabric_md.int_mirror_md.ingress_port_id;
+        hdr.local_report_header.egress_port_id = fabric_md.int_mirror_md.egress_port_id;
+        hdr.local_report_header.queue_id = fabric_md.int_mirror_md.queue_id;
+        hdr.local_report_header.queue_occupancy = fabric_md.int_mirror_md.queue_occupancy;
+        hdr.local_report_header.egress_tstamp = fabric_md.int_mirror_md.egress_tstamp;
     }
 
     action do_report_encapsulation(mac_addr_t src_mac, mac_addr_t mon_mac,
@@ -93,7 +93,7 @@ control IntReport (
 
     table tb_generate_report {
         key = {
-            fabric_md.mirror_session_id: exact;
+            fabric_md.int_mirror_md.mirror_session_id: exact;
         }
         actions = {
             do_report_encapsulation;
@@ -111,7 +111,7 @@ control IntReport (
     @hidden
     table fix_dscp {
         key = {
-            fabric_md.ingress_port: exact;
+            fabric_md.common.ingress_port: exact;
         }
         actions = {
             fix_dscp_bit;
@@ -154,7 +154,7 @@ control IntReport (
         tb_set_report_seq_no_and_hw_id.apply();
 
 #ifdef WITH_SPGW
-        if (fabric_md.int_skip_gtpu_headers == 1) {
+        if (fabric_md.int_mirror_md.skip_gtpu_headers == 1) {
             // Need to remove IP, UDP, and GTPU headers (36 bytes)
             hdr.report_ipv4.total_len = hdr.report_ipv4.total_len - 36;
             hdr.report_udp.len = hdr.report_udp.len - 36;

@@ -56,7 +56,7 @@
 #define PKT_INSTANCE_TYPE_REPLICATION 5
 #define PKT_INSTANCE_TYPE_RESUBMIT 6
 
-typedef bit<3>  fwd_type_t;
+typedef bit<8>  fwd_type_t;
 typedef bit<32> next_id_t;
 typedef bit<20> mpls_label_t;
 typedef bit<48> mac_addr_t;
