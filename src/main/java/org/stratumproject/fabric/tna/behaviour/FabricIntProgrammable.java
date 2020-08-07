@@ -4,15 +4,14 @@
 package org.stratumproject.fabric.tna.behaviour;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import org.onlab.packet.Ip4Address;
 import org.onlab.packet.MacAddress;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.behaviour.inbandtelemetry.IntDeviceConfig;
-import org.onosproject.net.behaviour.inbandtelemetry.IntMetadataType;
 import org.onosproject.net.behaviour.inbandtelemetry.IntObjective;
 import org.onosproject.net.behaviour.inbandtelemetry.IntProgrammable;
 import org.onosproject.net.config.NetworkConfigService;
@@ -31,8 +30,10 @@ import org.onosproject.net.flow.criteria.TcpPortCriterion;
 import org.onosproject.net.flow.criteria.UdpPortCriterion;
 import org.onosproject.net.group.DefaultGroupDescription;
 import org.onosproject.net.group.DefaultGroupKey;
+import org.onosproject.net.group.GroupBucket;
 import org.onosproject.net.group.GroupBuckets;
 import org.onosproject.net.group.GroupDescription;
+import org.onosproject.net.group.GroupKey;
 import org.onosproject.net.group.GroupService;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
@@ -44,7 +45,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
-import static org.onlab.util.ImmutableByteSequence.copyFrom;
 import static org.onosproject.net.group.DefaultGroupBucket.createCloneGroupBucket;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.KRYO;
 
@@ -55,25 +55,17 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         implements IntProgrammable {
 
     private static final int DEFAULT_PRIORITY = 10000;
-    // For now we support only one hop.
-    private static final int MAXHOP = 1;
-    private static final int PORTMASK = 0xffff;
     private static final List<Integer> REPORT_MIRROR_SESSION_ID_LIST = ImmutableList.of(300, 301, 302, 303);
     private static final List<Integer> RECIRC_PORTS = ImmutableList.of(0x44, 0xc4, 0x144, 0x1c4);
 
     private static final Set<Criterion.Type> SUPPORTED_CRITERION = Sets.newHashSet(
             Criterion.Type.IPV4_DST, Criterion.Type.IPV4_SRC,
             Criterion.Type.UDP_SRC, Criterion.Type.UDP_DST,
-            Criterion.Type.TCP_SRC, Criterion.Type.TCP_DST,
-            Criterion.Type.IP_PROTO);
+            Criterion.Type.TCP_SRC, Criterion.Type.TCP_DST);
 
     private static final Set<TableId> TABLES_TO_CLEANUP = Sets.newHashSet(
-            P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_REPORT_TB_GENERATE_REPORT,
-            P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_SINK_TB_SET_SINK,
-            P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_SOURCE_TB_INT_SOURCE,
-            P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_SOURCE_TB_SET_SOURCE,
-            P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_TRANSIT_TB_INT_INSERT,
-            P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_SINK_TB_SET_MIRROR_SESSION_ID
+            P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_COLLECTOR,
+            P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_REPORT
     );
 
     private FlowRuleService flowRuleService;
@@ -105,7 +97,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         flowRuleService = handler().get(FlowRuleService.class);
         groupService = handler().get(GroupService.class);
         cfgService = handler().get(NetworkConfigService.class);
-        final var coreService = handler().get(CoreService.class);
+        final CoreService coreService = handler().get(CoreService.class);
         appId = coreService.getAppId(PipeconfLoader.APP_NAME);
         if (appId == null) {
             log.warn("Application ID is null. Cannot initialize behaviour.");
@@ -121,80 +113,52 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
             return false;
         }
 
-        final var cfg = cfgService.getConfig(
+        final SegmentRoutingDeviceConfig cfg = cfgService.getConfig(
                 deviceId, SegmentRoutingDeviceConfig.class);
         if (cfg == null) {
             log.warn("Missing SegmentRoutingDeviceConfig config for {}", deviceId);
             return false;
         }
 
-        PiActionParam transitIdParam = new PiActionParam(
-                P4InfoConstants.SWITCH_ID, cfg.nodeSidIPv4());
-
-        PiAction transitAction = PiAction.builder()
-                .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_TRANSIT_INIT_METADATA)
-                .withParameter(transitIdParam)
-                .build();
-        TrafficTreatment treatment = DefaultTrafficTreatment.builder()
-                .piTableAction(transitAction)
-                .build();
-        TrafficSelector selector = DefaultTrafficSelector.builder()
-                .matchPi(PiCriterion.builder().matchExact(
-                        P4InfoConstants.HDR_INT_IS_VALID, (byte) 0x01)
-                        .build())
-                .build();
-
-        FlowRule transitFlowRule = DefaultFlowRule.builder()
-                .withSelector(selector)
-                .withTreatment(treatment)
-                .fromApp(appId)
-                .withPriority(DEFAULT_PRIORITY)
-                .makePermanent()
-                .forDevice(deviceId)
-                .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_TRANSIT_TB_INT_INSERT)
-                .build();
-
-        flowRuleService.applyFlowRules(transitFlowRule);
-
         // Mirroring sessions for report cloning.
         for (int pipeId = 0; pipeId < REPORT_MIRROR_SESSION_ID_LIST.size(); pipeId++) {
-            final var reportSessionId = REPORT_MIRROR_SESSION_ID_LIST.get(pipeId);
-            final var bucketList = ImmutableList.of(
+            final int reportSessionId = REPORT_MIRROR_SESSION_ID_LIST.get(pipeId);
+            final List<GroupBucket> bucketList = ImmutableList.of(
                     createCloneGroupBucket(DefaultTrafficTreatment.builder()
                             .setOutput(PortNumber.portNumber(RECIRC_PORTS.get(pipeId)))
                             .build()));
-            final var groupKey = new DefaultGroupKey(
+            final GroupKey groupKey = new DefaultGroupKey(
                     KRYO.serialize(reportSessionId));
-            final var groupDescription = new DefaultGroupDescription(
+            final GroupDescription groupDescription = new DefaultGroupDescription(
                     deviceId, GroupDescription.Type.CLONE,
                     new GroupBuckets(bucketList),
                     groupKey, reportSessionId, appId);
             groupService.addGroup(groupDescription);
 
             // TODO: Now table entries in this this table are static
-//            final var setMirrorIdAction = PiAction.builder()
-//                    .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_SINK_SET_MIRROR_SESSION_ID)
-//                    .withParameter(new PiActionParam(P4InfoConstants.SID, reportSessionId))
-//                    .build();
-//            final var setMirrorIdTreatment = DefaultTrafficTreatment.builder()
-//                    .piTableAction(setMirrorIdAction)
-//                    .build();
-//            final var pipeIdSelector = DefaultTrafficSelector.builder()
-//                    .matchPi(PiCriterion.builder().matchExact(
-//                            P4InfoConstants.HDR_PIPE_ID,
-//                            pipeId
-//                    ).build())
-//                    .build();
-//            final var setMirrorIdRule = DefaultFlowRule.builder()
-//                    .withSelector(pipeIdSelector)
-//                    .withTreatment(setMirrorIdTreatment)
-//                    .fromApp(appId)
-//                    .withPriority(DEFAULT_PRIORITY)
-//                    .makePermanent()
-//                    .forDevice(deviceId)
-//                    .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_SINK_TB_SET_MIRROR_SESSION_ID)
-//                    .build();
-//             flowRuleService.applyFlowRules(setMirrorIdRule);
+            //            final PiAction setMirrorIdAction = PiAction.builder()
+            //                    .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_SINK_SET_MIRROR_SESSION_ID)
+            //                    .withParameter(new PiActionParam(P4InfoConstants.SID, reportSessionId))
+            //                    .build();
+            //            final TrafficTreatment setMirrorIdTreatment = DefaultTrafficTreatment.builder()
+            //                    .piTableAction(setMirrorIdAction)
+            //                    .build();
+            //            final TrafficSelector pipeIdSelector = DefaultTrafficSelector.builder()
+            //                    .matchPi(PiCriterion.builder().matchExact(
+            //                            P4InfoConstants.HDR_PIPE_ID,
+            //                            pipeId
+            //                    ).build())
+            //                    .build();
+            //            final FlowRUle setMirrorIdRule = DefaultFlowRule.builder()
+            //                    .withSelector(pipeIdSelector)
+            //                    .withTreatment(setMirrorIdTreatment)
+            //                    .fromApp(appId)
+            //                    .withPriority(DEFAULT_PRIORITY)
+            //                    .makePermanent()
+            //                    .forDevice(deviceId)
+            //                    .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_SINK_TB_SET_MIRROR_SESSION_ID)
+            //                    .build();
+            //             flowRuleService.applyFlowRules(setMirrorIdRule);
         }
 
         return true;
@@ -202,66 +166,12 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
 
     @Override
     public boolean setSourcePort(PortNumber port) {
-
-        if (!setupBehaviour()) {
-            return false;
-        }
-
-        PiCriterion ingressCriterion = PiCriterion.builder()
-                .matchExact(P4InfoConstants.HDR_IG_PORT, port.toLong())
-                .build();
-        TrafficSelector srcSelector = DefaultTrafficSelector.builder()
-                .matchPi(ingressCriterion)
-                .build();
-        PiAction setSourceAct = PiAction.builder()
-                .withId(P4InfoConstants.NOP)
-                .build();
-        TrafficTreatment srcTreatment = DefaultTrafficTreatment.builder()
-                .piTableAction(setSourceAct)
-                .build();
-        FlowRule srcFlowRule = DefaultFlowRule.builder()
-                .withSelector(srcSelector)
-                .withTreatment(srcTreatment)
-                .fromApp(appId)
-                .withPriority(DEFAULT_PRIORITY)
-                .makePermanent()
-                .forDevice(deviceId)
-                .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_SOURCE_TB_SET_SOURCE)
-                .build();
-        flowRuleService.applyFlowRules(srcFlowRule);
-        return true;
+        return setupBehaviour();
     }
 
     @Override
     public boolean setSinkPort(PortNumber port) {
-
-        if (!setupBehaviour()) {
-            return false;
-        }
-
-        PiCriterion egressCriterion = PiCriterion.builder()
-                .matchExact(P4InfoConstants.HDR_EG_PORT, port.toLong())
-                .build();
-        TrafficSelector sinkSelector = DefaultTrafficSelector.builder()
-                .matchPi(egressCriterion)
-                .build();
-        PiAction setSinkAct = PiAction.builder()
-                .withId(P4InfoConstants.NOP)
-                .build();
-        TrafficTreatment sinkTreatment = DefaultTrafficTreatment.builder()
-                .piTableAction(setSinkAct)
-                .build();
-        FlowRule sinkFlowRule = DefaultFlowRule.builder()
-                .withSelector(sinkSelector)
-                .withTreatment(sinkTreatment)
-                .fromApp(appId)
-                .withPriority(DEFAULT_PRIORITY)
-                .makePermanent()
-                .forDevice(deviceId)
-                .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_SINK_TB_SET_SINK)
-                .build();
-        flowRuleService.applyFlowRules(sinkFlowRule);
-        return true;
+        return setupBehaviour();
     }
 
     @Override
@@ -321,120 +231,90 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 functionality == IntFunctionality.SINK;
     }
 
-    private FlowRule buildWatchlistEntry(IntObjective obj) {
-        int instructionBitmap = buildInstructionBitmap(obj.metadataTypes());
-        PiActionParam maxHopParam = new PiActionParam(
-                P4InfoConstants.MAX_HOP,
-                copyFrom(MAXHOP));
-        PiActionParam instCntParam = new PiActionParam(
-                P4InfoConstants.INS_CNT,
-                copyFrom(Integer.bitCount(instructionBitmap)));
-        PiActionParam inst0003Param = new PiActionParam(
-                P4InfoConstants.INS_MASK0003,
-                copyFrom((instructionBitmap >> 12) & 0xF));
-        PiActionParam inst0407Param = new PiActionParam(
-                P4InfoConstants.INS_MASK0407,
-                copyFrom((instructionBitmap >> 8) & 0xF));
+    private FlowRule buildCollectorEntry(IntObjective obj) {
+        final SegmentRoutingDeviceConfig cfg = cfgService.getConfig(
+                deviceId, SegmentRoutingDeviceConfig.class);
+        if (cfg == null) {
+            log.warn("Missing SegmentRoutingDeviceConfig config for {}", deviceId);
+            return null;
+        }
 
-        PiAction intSourceAction = PiAction.builder()
-                .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_SOURCE_INT_SOURCE_DSCP)
-                .withParameter(maxHopParam)
-                .withParameter(instCntParam)
-                .withParameter(inst0003Param)
-                .withParameter(inst0407Param)
+        final PiActionParam switchIdParam = new PiActionParam(
+                P4InfoConstants.SWITCH_ID, cfg.nodeSidIPv4());
+
+        final PiAction collectorAction = PiAction.builder()
+                .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_COLLECT)
+                .withParameter(switchIdParam)
                 .build();
 
-        TrafficTreatment instTreatment = DefaultTrafficTreatment.builder()
-                .piTableAction(intSourceAction)
+        final TrafficTreatment collectorTreatment = DefaultTrafficTreatment.builder()
+                .piTableAction(collectorAction)
                 .build();
 
-        TrafficSelector.Builder sBuilder = DefaultTrafficSelector.builder();
-        for (Criterion criterion : obj.selector().criteria()) {
+        final TrafficSelector selector = buildCollectorSelector(obj.selector().criteria());
+
+        return DefaultFlowRule.builder()
+                .forDevice(deviceId)
+                .withSelector(selector)
+                .withTreatment(collectorTreatment)
+                .withPriority(DEFAULT_PRIORITY)
+                .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_COLLECTOR)
+                .fromApp(appId)
+                .makePermanent()
+                .build();
+    }
+
+    private TrafficSelector buildCollectorSelector(Set<Criterion> criteria) {
+        TrafficSelector.Builder builder = DefaultTrafficSelector.builder();
+        for (Criterion criterion : criteria) {
             switch (criterion.type()) {
                 case IPV4_SRC:
-                    sBuilder.matchIPSrc(((IPCriterion) criterion).ip());
+                    builder.matchIPSrc(((IPCriterion) criterion).ip());
                     break;
                 case IPV4_DST:
-                    sBuilder.matchIPDst(((IPCriterion) criterion).ip());
+                    builder.matchIPDst(((IPCriterion) criterion).ip());
                     break;
                 case TCP_SRC:
-                    sBuilder.matchPi(
-                            PiCriterion.builder().matchTernary(
+                    // TODO: Match a range of TCP port
+                    builder.matchPi(
+                            PiCriterion.builder().matchRange(
                                     P4InfoConstants.HDR_L4_SPORT,
-                                    ((TcpPortCriterion) criterion).tcpPort().toInt(), PORTMASK)
+                                    ((TcpPortCriterion) criterion).tcpPort().toInt(),
+                                    ((TcpPortCriterion) criterion).tcpPort().toInt())
                                     .build());
                     break;
                 case UDP_SRC:
-                    sBuilder.matchPi(
+                    // TODO: Match a range of UDP port
+                    builder.matchPi(
                             PiCriterion.builder().matchTernary(
                                     P4InfoConstants.HDR_L4_SPORT,
-                                    ((UdpPortCriterion) criterion).udpPort().toInt(), PORTMASK)
+                                    ((UdpPortCriterion) criterion).udpPort().toInt(),
+                                    ((UdpPortCriterion) criterion).udpPort().toInt())
                                     .build());
                     break;
                 case TCP_DST:
-                    sBuilder.matchPi(
-                            PiCriterion.builder().matchTernary(
+                    // TODO: Match a range of TCP port
+                    builder.matchPi(
+                            PiCriterion.builder().matchRange(
                                     P4InfoConstants.HDR_L4_DPORT,
-                                    ((TcpPortCriterion) criterion).tcpPort().toInt(), PORTMASK)
+                                    ((TcpPortCriterion) criterion).tcpPort().toInt(),
+                                    ((TcpPortCriterion) criterion).tcpPort().toInt())
                                     .build());
                     break;
                 case UDP_DST:
-                    sBuilder.matchPi(
-                            PiCriterion.builder().matchTernary(
+                    // TODO: Match a range of UDP port
+                    builder.matchPi(
+                            PiCriterion.builder().matchRange(
                                     P4InfoConstants.HDR_L4_DPORT,
-                                    ((UdpPortCriterion) criterion).udpPort().toInt(), PORTMASK)
+                                    ((UdpPortCriterion) criterion).udpPort().toInt(),
+                                    ((UdpPortCriterion) criterion).udpPort().toInt())
                                     .build());
                     break;
                 default:
                     log.warn("Unsupported criterion type: {}", criterion.type());
             }
         }
-
-        return DefaultFlowRule.builder()
-                .forDevice(deviceId)
-                .withSelector(sBuilder.build())
-                .withTreatment(instTreatment)
-                .withPriority(DEFAULT_PRIORITY)
-                .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_SOURCE_TB_INT_SOURCE)
-                .fromApp(appId)
-                .makePermanent()
-                .build();
-    }
-
-    private int buildInstructionBitmap(Set<IntMetadataType> metadataTypes) {
-        int instBitmap = 0;
-        for (IntMetadataType metadataType : metadataTypes) {
-            switch (metadataType) {
-                case SWITCH_ID:
-                    instBitmap |= (1 << 15);
-                    break;
-                case L1_PORT_ID:
-                    instBitmap |= (1 << 14);
-                    break;
-                case HOP_LATENCY:
-                    instBitmap |= (1 << 13);
-                    break;
-                case QUEUE_OCCUPANCY:
-                    instBitmap |= (1 << 12);
-                    break;
-                case INGRESS_TIMESTAMP:
-                    instBitmap |= (1 << 11);
-                    break;
-                case EGRESS_TIMESTAMP:
-                    instBitmap |= (1 << 10);
-                    break;
-                case L2_PORT_ID:
-                    instBitmap |= (1 << 9);
-                    break;
-                case EGRESS_TX_UTIL:
-                    instBitmap |= (1 << 8);
-                    break;
-                default:
-                    log.info("Unsupported metadata type {}. Ignoring...", metadataType);
-                    break;
-            }
-        }
-        return instBitmap;
+        return builder.build();
     }
 
     /**
@@ -458,7 +338,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
             return false;
         }
 
-        FlowRule flowRule = buildWatchlistEntry(obj);
+        final FlowRule flowRule = buildCollectorEntry(obj);
         if (flowRule != null) {
             if (install) {
                 flowRuleService.applyFlowRules(flowRule);
@@ -476,12 +356,10 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
     }
 
     private boolean setupIntReportInternal(IntDeviceConfig cfg) {
-        List<FlowRule> reportRules = buildReportEntries(cfg);
-        if (reportRules != null) {
-            reportRules.forEach(reportRule -> {
-                flowRuleService.applyFlowRules(reportRule);
-                log.info("Report rule added to {} [{}]", this.data().deviceId(), reportRule);
-            });
+        FlowRule reportRule = buildReportEntry(cfg);
+        if (reportRule != null) {
+            flowRuleService.applyFlowRules(reportRule);
+            log.info("Report rule added to {} [{}]", this.data().deviceId(), reportRule);
             return true;
         } else {
             log.warn("Failed to add report rule to {}", this.data().deviceId());
@@ -489,13 +367,13 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         }
     }
 
-    private List<FlowRule> buildReportEntries(IntDeviceConfig intCfg) {
+    private FlowRule buildReportEntry(IntDeviceConfig intCfg) {
 
         if (!setupBehaviour()) {
             return null;
         }
 
-        final var srCfg = cfgService.getConfig(
+        final SegmentRoutingDeviceConfig srCfg = cfgService.getConfig(
                 deviceId, SegmentRoutingDeviceConfig.class);
         if (srCfg == null) {
             log.error("Missing SegmentRoutingDeviceConfig config for {}, " +
@@ -503,11 +381,10 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
             return null;
         }
 
-        final var srcIp = srCfg.routerIpv4();
+        final Ip4Address srcIp = srCfg.routerIpv4();
         log.info("For {} overriding sink IPv4 addr ({}) " +
-                "with segmentrouting ipv4Loopback ({}), also ignoring MAC addresses",
+                        "with segmentrouting ipv4Loopback ({}), also ignoring MAC addresses",
                 deviceId, intCfg.sinkIp(), srcIp);
-
 
         PiActionParam srcMacParam = new PiActionParam(
                 P4InfoConstants.SRC_MAC, MacAddress.ZERO.toBytes());
@@ -522,7 +399,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 P4InfoConstants.MON_PORT,
                 intCfg.collectorPort().toInt());
         PiAction reportAction = PiAction.builder()
-                .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_REPORT_DO_REPORT_ENCAPSULATION)
+                .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_REPORT_ENCAPSULATION)
                 .withParameter(srcMacParam)
                 .withParameter(nextHopMacParam)
                 .withParameter(srcIpParam)
@@ -533,25 +410,19 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 .piTableAction(reportAction)
                 .build();
 
-        List<FlowRule> entries = Lists.newArrayList();
-        for (Integer mirrorSessionId : REPORT_MIRROR_SESSION_ID_LIST) {
-            TrafficSelector selector = DefaultTrafficSelector.builder()
-                    .matchPi(PiCriterion.builder()
-                            .matchExact(P4InfoConstants.HDR_FABRIC_MD_MIRROR_SESSION_ID,
-                                        mirrorSessionId)
-                            .build())
-            .build();
-            entries.add(DefaultFlowRule.builder()
-                    .withSelector(selector)
-                    .withTreatment(treatment)
-                    .fromApp(appId)
-                    .withPriority(DEFAULT_PRIORITY)
-                    .makePermanent()
-                    .forDevice(this.data().deviceId())
-                    .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_REPORT_TB_GENERATE_REPORT)
-                    .build());
-        }
-        return entries;
+        TrafficSelector selector = DefaultTrafficSelector.builder()
+                .matchPi(PiCriterion.builder()
+                        .matchExact(P4InfoConstants.HDR_INT_MIRROR_VALID, 1)
+                        .build())
+                .build();
+        return DefaultFlowRule.builder()
+                .withSelector(selector)
+                .withTreatment(treatment)
+                .fromApp(appId)
+                .withPriority(DEFAULT_PRIORITY)
+                .makePermanent()
+                .forDevice(this.data().deviceId())
+                .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_REPORT)
+                .build();
     }
-
 }

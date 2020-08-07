@@ -41,10 +41,7 @@ import static org.onosproject.net.PortNumber.CONTROLLER;
 import static org.onosproject.net.PortNumber.FLOOD;
 import static org.onosproject.net.flow.instructions.Instruction.Type.OUTPUT;
 import static org.onosproject.net.pi.model.PiPacketOperationType.PACKET_OUT;
-import static org.stratumproject.fabric.tna.behaviour.FabricTreatmentInterpreter.mapAclTreatment;
-import static org.stratumproject.fabric.tna.behaviour.FabricTreatmentInterpreter.mapFilteringTreatment;
-import static org.stratumproject.fabric.tna.behaviour.FabricTreatmentInterpreter.mapForwardingTreatment;
-import static org.stratumproject.fabric.tna.behaviour.FabricTreatmentInterpreter.mapNextTreatment;
+import static org.stratumproject.fabric.tna.behaviour.FabricTreatmentInterpreter.*;
 
 /**
  * Interpreter for fabric-tna pipeline.
@@ -165,7 +162,7 @@ public class FabricInterpreter extends AbstractFabricHandlerBehavior
         } else if (NEXT_CTRL_TBLS.contains(piTableId)) {
             return mapNextTreatment(treatment, piTableId);
         } else if (E_NEXT_CTRL_TBLS.contains(piTableId)) {
-            return FabricTreatmentInterpreter.mapEgressNextTreatment(treatment, piTableId);
+            return mapEgressNextTreatment(treatment, piTableId);
         } else {
             throw new PiInterpreterException(format(
                     "Treatment mapping not supported for table '%s'", piTableId));
