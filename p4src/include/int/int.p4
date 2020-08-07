@@ -67,8 +67,8 @@ control IntEgress (
         // IPv4 Total length is length of
         // IPv4(20) + UDP(8) + Fixed report header(12) + Local report(16) + Original packet
         // The original packet length should be the one from egress intrinsic metadata minus
-        // the length of mirror data (21 bytes) and CRC (4 bytes).
-        hdr.report_ipv4.total_len = IPV4_MIN_HEAD_LEN + UDP_HEADER_LEN
+        // the length of mirror data (23/24 bytes) and CRC (4 bytes).
+        hdr.report_ipv4.total_len = IPV4_HDR_SIZE + UDP_HDR_SIZE
                                     + REPORT_FIXED_HEADER_LEN + LOCAL_REPORT_HEADER_LEN
                                     - REPORT_MIRROR_HEADER_LEN
                                     - CRC_CHECKSUM_LEN
@@ -87,7 +87,7 @@ control IntEgress (
         hdr.report_udp.sport = 0;
         hdr.report_udp.dport = mon_port;
         // See IPv4 length
-        hdr.report_udp.len = UDP_HEADER_LEN + REPORT_FIXED_HEADER_LEN
+        hdr.report_udp.len = UDP_HDR_SIZE + REPORT_FIXED_HEADER_LEN
                              + LOCAL_REPORT_HEADER_LEN
                              - REPORT_MIRROR_HEADER_LEN
                              - CRC_CHECKSUM_LEN
@@ -189,6 +189,14 @@ control IntEgress (
             // Remove the INT mirror metadata to prevent
             // infinity loop
             fabric_md.int_mirror_md.setInvalid();
+
+            if (fabric_md.int_mirror_md.skip_gtpu_headers == 1) {
+                // Need to remove length of IP, UDP, and GTPU headers (36 bytes)
+                // if we encapsulate the packet with GTPU.
+                hdr.report_ipv4.total_len = hdr.report_ipv4.total_len - (IPV4_HDR_SIZE + UDP_HDR_SIZE + GTP_HDR_SIZE);
+                hdr.report_udp.len = hdr.report_udp.len - (IPV4_HDR_SIZE + UDP_HDR_SIZE + GTP_HDR_SIZE);
+            }
+
         } else {
             if (fabric_md.bridged.ig_port != CPU_PORT &&
                 eg_intr_md.egress_port != CPU_PORT) {

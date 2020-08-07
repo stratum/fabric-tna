@@ -73,7 +73,8 @@ header int_mirror_metadata_t {
     bit<32>               ig_tstamp;
     bit<32>               eg_tstamp;
 #ifdef WITH_SPGW
-    bit<8>                skip_gtpu_headers;
+    bit<7>                _pad1;
+    bit<1>                skip_gtpu_headers;
 #endif // WITH_SPGW
 }
 
