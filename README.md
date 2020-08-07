@@ -58,9 +58,9 @@ The above command will build the `fabric-tna.p4` profiles specified in the
 | ------------------------|----------------------------------------------------|
 | `fabric`                | Basic profile                                      |
 | `fabric-bng`            | With BNG user plane support (Not available)        |
-| `fabric-spgw`           | With SPGW user plane support (Not available)       |
-| `fabric-int`            | With INT source and transit (Not available)        |
-| `fabric-spgw-int`       | WITH SPGW and INT support (Not available)          |
+| `fabric-spgw`           | With SPGW user plane support                       |
+| `fabric-int`            | With INT support                                   |
+| `fabric-spgw-int`       | WITH SPGW and INT support                          |
 
 Check the `Makefile` for other profiles.
 
