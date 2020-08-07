@@ -584,412 +584,64 @@ class FabricSpgwUplinkTest(SpgwSimpleTest):
 
 @group("int")
 @group("spgw")
-@group("spgw-int")
-class FabricSpgwUplinkIntSourceTest(SpgwIntTest):
-
+class FabricSpgwUplinkIntTest(SpgwIntTest):
     @autocleanup
-    def doRunTest(self, pkt, tagged1, tagged2, mpls, instructions=[]):
-        self.runUplinkIntSourceTest(ue_out_pkt=pkt, tagged1=tagged1,
-                                    tagged2=tagged2, mpls=mpls,
-                                    instructions=instructions)
+    def doRunTest(self, vlan_conf, tagged, pkt_type, mpls):
+        print "Testing VLAN=%s, pkt=%s, mpls=%s" \
+              % (vlan_conf, pkt_type, mpls)
+        pkt = getattr(testutils, "simple_%s_packet" % pkt_type)()
+        self.runSpgwUplinkIntTest(pkt=pkt, tagged1=tagged[0],
+                                  tagged2=tagged[1], mpls=mpls)
 
     def runTest(self):
-        instr_sets = [
-            [INT_SWITCH_ID, INT_IG_EG_PORT],
-            [INT_SWITCH_ID, INT_IG_EG_PORT, INT_IG_TSTAMP, INT_EG_TSTAMP, INT_QUEUE_OCCUPANCY]
-        ]
         print ""
         for vlan_conf, tagged in vlan_confs.items():
-            for pkt_type in ["tcp", "udp"]: # TODO: Support ICMP
-                for mpls in [False, True]:
-                    if mpls and tagged[1]:
-                            continue
-                    for instrs in instr_sets:
-                        print "Testing VLAN=%s, pkt=%s, mpls=%s, instructions=%s..." \
-                            % (vlan_conf, pkt_type, mpls,
-                               ",".join([INT_INS_TO_NAME[i] for i in instrs]))
-                        pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
-                            eth_src=HOST1_MAC, eth_dst=SWITCH_MAC,
-                            ip_src=HOST1_IPV4, ip_dst=HOST2_IPV4,
-                            pktlen=MIN_PKT_LEN
-                        )
-                        self.doRunTest(pkt, tagged[0], tagged[1], mpls, instrs)
-
-@group("int")
-@group("spgw")
-@group("spgw-int")
-class FabricSpgwUplinkIntSourceAndTransitTest(SpgwIntTest):
-
-    @autocleanup
-    def doRunTest(self, pkt, tagged1, tagged2, mpls, instructions=[]):
-        self.runUplinkIntSourceTest(ue_out_pkt=pkt, tagged1=tagged1,
-                                    tagged2=tagged2, mpls=mpls,
-                                    instructions=instructions, with_transit=True)
-
-    def runTest(self):
-        instr_sets = [
-            [INT_SWITCH_ID, INT_IG_EG_PORT],
-            [INT_SWITCH_ID, INT_IG_EG_PORT, INT_IG_TSTAMP, INT_EG_TSTAMP, INT_QUEUE_OCCUPANCY]
-        ]
-        print ""
-        for vlan_conf, tagged in vlan_confs.items():
-            for pkt_type in ["tcp", "udp"]:
-                for mpls in [False, True]:
-                    if mpls and tagged[1]:
-                            continue
-                    for instrs in instr_sets:
-                        print "Testing VLAN=%s, pkt=%s, mpls=%s, instructions=%s..." \
-                            % (vlan_conf, pkt_type, mpls,
-                               ",".join([INT_INS_TO_NAME[i] for i in instrs]))
-                        pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
-                            eth_src=HOST1_MAC, eth_dst=SWITCH_MAC,
-                            ip_src=HOST1_IPV4, ip_dst=HOST2_IPV4,
-                            pktlen=MIN_PKT_LEN
-                        )
-                        self.doRunTest(pkt, tagged[0], tagged[1], mpls, instrs)
-
-@group("int")
-@group("spgw")
-@group("spgw-int")
-class FabricSpgwUplinkIntTransitTest(SpgwIntTest):
-
-    @autocleanup
-    def doRunTest(self, pkt, tagged1, tagged2, mpls, instructions=[], prev_hops=0):
-        self.runUplinkIntTransitTest(ue_out_pkt=pkt, tagged1=tagged1,
-                                     tagged2=tagged2, mpls=mpls,
-                                     instructions=instructions)
-
-    def runTest(self):
-        instr_sets = [
-            [INT_SWITCH_ID, INT_IG_EG_PORT],
-            [INT_SWITCH_ID, INT_IG_EG_PORT, INT_IG_TSTAMP, INT_EG_TSTAMP, INT_QUEUE_OCCUPANCY]
-        ]
-        print ""
-        for vlan_conf, tagged in vlan_confs.items():
-            for pkt_type in ["tcp", "udp"]:
-                for mpls in [False, True]:
-                    if mpls and tagged[1]:
-                            continue
-                    for instrs in instr_sets:
-                        for prev_hops in [0, 3]:
-                            print "Testing VLAN=%s, pkt=%s, mpls=%s, instructions=%s..." \
-                                % (vlan_conf, pkt_type, mpls,
-                                ",".join([INT_INS_TO_NAME[i] for i in instrs]))
-                            pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
-                                eth_src=HOST1_MAC, eth_dst=SWITCH_MAC,
-                                ip_src=HOST1_IPV4, ip_dst=HOST2_IPV4,
-                                pktlen=MIN_PKT_LEN
-                            )
-                            self.doRunTest(pkt, tagged[0], tagged[1], mpls, instrs, prev_hops)
-
-@group("int")
-@group("spgw")
-@group("spgw-int")
-class FabricSpgwDownlinkIntSourceTest(SpgwIntTest):
-    @autocleanup
-    def doRunTest(self, pkt, tagged1, tagged2, mpls, instructions):
-        self.runDownlinkIntSourceTest(pkt=pkt, tagged1=tagged1,
-                                      tagged2=tagged2, mpls=mpls,
-                                      instructions=instructions)
-
-    def runTest(self):
-        instr_sets = [
-            [INT_SWITCH_ID, INT_IG_EG_PORT],
-            [INT_SWITCH_ID, INT_IG_EG_PORT, INT_IG_TSTAMP, INT_EG_TSTAMP, INT_QUEUE_OCCUPANCY]
-        ]
-        print ""
-        for vlan_conf, tagged in vlan_confs.items():
-            for pkt_type in ["tcp", "udp"]:
+            for pkt_type in ["udp", "tcp", "icmp"]:
                 for mpls in [False, True]:
                     if mpls and tagged[1]:
                         continue
-                    for instrs in instr_sets:
-                        print "Testing VLAN=%s, pkt=%s, mpls=%s, instructions=%s..." \
-                            % (vlan_conf, pkt_type, mpls,
-                               ",".join([INT_INS_TO_NAME[i] for i in instrs]))
-                        pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
-                            eth_src=HOST1_MAC, eth_dst=SWITCH_MAC,
-                            ip_src=HOST1_IPV4, ip_dst=HOST2_IPV4,
-                            pktlen=MIN_PKT_LEN
-                        )
-                        self.doRunTest(pkt, tagged[0], tagged[1], mpls, instrs)
+                    self.doRunTest(vlan_conf, tagged, pkt_type, mpls)
 
 @group("int")
 @group("spgw")
-@group("spgw-int")
-class FabricSpgwDownlinkIntSourceAndTransitTest(SpgwIntTest):
+class FabricSpgwDownlinkIntTest(SpgwIntTest):
     @autocleanup
-    def doRunTest(self, pkt, tagged1, tagged2, mpls, instructions):
-        self.runDownlinkIntSourceTest(pkt=pkt, tagged1=tagged1,
-                                      tagged2=tagged2, mpls=mpls,
-                                      instructions=instructions, with_transit=True)
+    def doRunTest(self, vlan_conf, tagged, pkt_type, mpls):
+        print "Testing VLAN=%s, pkt=%s, mpls=%s..." \
+              % (vlan_conf, pkt_type, mpls)
+        pkt = getattr(testutils, "simple_%s_packet" % pkt_type)()
+        self.runSpgwDownlinkIntTest(pkt=pkt, tagged1=tagged[0],
+                                    tagged2=tagged[1], mpls=mpls)
 
     def runTest(self):
-        instr_sets = [
-            [INT_SWITCH_ID, INT_IG_EG_PORT],
-            [INT_SWITCH_ID, INT_IG_EG_PORT, INT_IG_TSTAMP, INT_EG_TSTAMP, INT_QUEUE_OCCUPANCY]
-        ]
         print ""
         for vlan_conf, tagged in vlan_confs.items():
-            for pkt_type in ["tcp", "udp"]:
+            for pkt_type in ["udp", "tcp", "icmp"]:
                 for mpls in [False, True]:
                     if mpls and tagged[1]:
                         continue
-                    for instrs in instr_sets:
-                        print "Testing VLAN=%s, pkt=%s, mpls=%s, instructions=%s..." \
-                            % (vlan_conf, pkt_type, mpls,
-                               ",".join([INT_INS_TO_NAME[i] for i in instrs]))
-                        pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
-                            eth_src=HOST1_MAC, eth_dst=SWITCH_MAC,
-                            ip_src=HOST1_IPV4, ip_dst=HOST2_IPV4,
-                            pktlen=MIN_PKT_LEN
-                        )
-                        self.doRunTest(pkt, tagged[0], tagged[1], mpls, instrs)
+                    self.doRunTest(vlan_conf, tagged, pkt_type, mpls)
 
 @group("int")
-@group("spgw")
-@group("spgw-int")
-class FabricSpgwDownlinkIntTransitTest(SpgwIntTest):
-
+class FabricIntTest(IntTest):
     @autocleanup
-    def doRunTest(self, pkt, tagged1, tagged2, mpls, instructions=[], prev_hops=0):
-        self.runDownlinkIntTransitTest(pkt=pkt, tagged1=tagged1,
-                                       tagged2=tagged2, mpls=mpls,
-                                       instructions=instructions)
+    def doRunTest(self, vlan_conf, tagged, pkt_type, mpls):
+        print "Testing VLAN=%s, pkt=%s, mpls=%s..." \
+              % (vlan_conf, pkt_type, mpls)
+        pkt = getattr(testutils, "simple_%s_packet" % pkt_type)()
+        self.runIntTest(pkt=pkt,
+                        tagged1=tagged[0],
+                        tagged2=tagged[1],
+                        mpls=mpls)
 
     def runTest(self):
-        instr_sets = [
-            [INT_SWITCH_ID, INT_IG_EG_PORT],
-            [INT_SWITCH_ID, INT_IG_EG_PORT, INT_IG_TSTAMP, INT_EG_TSTAMP, INT_QUEUE_OCCUPANCY]
-        ]
         print ""
         for vlan_conf, tagged in vlan_confs.items():
-            for pkt_type in ["tcp", "udp"]:
+            for pkt_type in ["udp", "tcp", "icmp"]:
                 for mpls in [False, True]:
                     if mpls and tagged[1]:
-                            continue
-                    for instrs in instr_sets:
-                        for prev_hops in [0, 3]:
-                            print "Testing VLAN=%s, pkt=%s, mpls=%s, prev_hops=%d, instructions=%s..." \
-                                % (vlan_conf, pkt_type, mpls,
-                                prev_hops,
-                                ",".join([INT_INS_TO_NAME[i] for i in instrs]))
-                            pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
-                                eth_src=HOST1_MAC, eth_dst=SWITCH_MAC,
-                                ip_src=HOST1_IPV4, ip_dst=HOST2_IPV4,
-                                pktlen=MIN_PKT_LEN
-                            )
-                            self.doRunTest(pkt, tagged[0], tagged[1], mpls, instrs, prev_hops)
-
-
-@group("int")
-@group("spgw")
-@group("spgw-int")
-class FabricSpgwUplinkIntSourceTransitSinkTest(SpgwIntTest):
-    @autocleanup
-    def doRunTest(self, vlan_conf, tagged, pkt_type, instrs, mpls):
-        print "Testing VLAN=%s, pkt=%s, mpls=%s, instructions=%s..." \
-              % (vlan_conf, pkt_type, mpls,
-                 ",".join([INT_INS_TO_NAME[i] for i in instrs]))
-        pkt = getattr(testutils, "simple_%s_packet" % pkt_type)()
-        self.runUplinkIntSourceTransitSinkTest(pkt=pkt,
-                                               tagged1=tagged[0],
-                                               tagged2=tagged[1],
-                                               mpls=mpls,
-                                               instructions=instrs)
-
-    def runTest(self):
-        instr_sets = [
-            [INT_SWITCH_ID, INT_IG_EG_PORT],
-            [INT_SWITCH_ID, INT_IG_EG_PORT, INT_IG_TSTAMP, INT_EG_TSTAMP, INT_QUEUE_OCCUPANCY]
-        ]
-        print ""
-        for vlan_conf, tagged in vlan_confs.items():
-            for pkt_type in ["udp", "tcp"]:
-                for mpls in [False, True]:
-                    for instrs in instr_sets:
-                        if mpls and tagged[1]:
-                            continue
-                        self.doRunTest(vlan_conf, tagged, pkt_type, instrs, mpls)
-
-
-@group("int")
-@group("spgw")
-@group("spgw-int")
-class FabricSpgwDownlinkIntSourceTransitSinkTest(SpgwIntTest):
-    @autocleanup
-    def doRunTest(self, vlan_conf, tagged, pkt_type, instrs, mpls):
-        print "Testing VLAN=%s, pkt=%s, mpls=%s, instructions=%s..." \
-              % (vlan_conf, pkt_type, mpls,
-                 ",".join([INT_INS_TO_NAME[i] for i in instrs]))
-        pkt = getattr(testutils, "simple_%s_packet" % pkt_type)()
-        self.runDownlinkIntSourceTransitSinkTest(pkt=pkt,
-                                                 tagged1=tagged[0],
-                                                 tagged2=tagged[1],
-                                                 mpls=mpls,
-                                                 instructions=instrs)
-
-    def runTest(self):
-        instr_sets = [
-            [INT_SWITCH_ID, INT_IG_EG_PORT],
-            [INT_SWITCH_ID, INT_IG_EG_PORT, INT_IG_TSTAMP, INT_EG_TSTAMP, INT_QUEUE_OCCUPANCY]
-        ]
-        print ""
-        for vlan_conf, tagged in vlan_confs.items():
-            for pkt_type in ["udp", "tcp"]:
-                for mpls in [False, True]:
-                    for instrs in instr_sets:
-                        if mpls and tagged[1]:
-                            continue
-                        self.doRunTest(vlan_conf, tagged, pkt_type, instrs, mpls)
-
-
-@group("int")
-class FabricIntSourceTest(IntTest):
-    @autocleanup
-    def doRunTest(self, **kwargs):
-        self.runIntSourceTest(**kwargs)
-
-    def runTest(self):
-        instr_sets = [
-            [INT_SWITCH_ID, INT_IG_EG_PORT],
-            [INT_SWITCH_ID, INT_IG_EG_PORT, INT_IG_TSTAMP, INT_EG_TSTAMP, INT_QUEUE_OCCUPANCY]
-        ]
-        print ""
-        for vlan_conf, tagged in vlan_confs.items():
-            for pkt_type in ["udp", "tcp"]:
-                for instrs in instr_sets:
-                    print "Testing VLAN=%s, pkt=%s, instructions=%s..." \
-                          % (vlan_conf, pkt_type,
-                             ",".join([INT_INS_TO_NAME[i] for i in instrs]))
-                    pkt = getattr(testutils, "simple_%s_packet" % pkt_type)()
-                    self.doRunTest(pkt=pkt, instructions=instrs,
-                                   with_transit=False, ignore_csum=True,
-                                   tagged1=tagged[0], tagged2=tagged[1])
-
-
-@group("int")
-class FabricIntSourceAndTransitTest(IntTest):
-    @autocleanup
-    def doRunTest(self, vlan_conf, tagged, pkt_type, mpls, instrs):
-        print "Testing VLAN=%s, pkt=%s, mpls=%s, instructions=%s..." \
-              % (vlan_conf, pkt_type, mpls,
-                 ",".join([INT_INS_TO_NAME[i] for i in instrs]))
-        pkt = getattr(testutils, "simple_%s_packet" % pkt_type)()
-        self.runIntSourceTest(pkt=pkt, instructions=instrs,
-                              with_transit=True, ignore_csum=True,
-                              tagged1=tagged[0], tagged2=tagged[1], mpls=mpls)
-
-    def runTest(self):
-        instr_sets = [
-            [INT_SWITCH_ID, INT_IG_EG_PORT],
-            [INT_SWITCH_ID, INT_IG_EG_PORT, INT_IG_TSTAMP, INT_EG_TSTAMP,
-             INT_QUEUE_OCCUPANCY]
-        ]
-        print ""
-        for vlan_conf, tagged in vlan_confs.items():
-            for pkt_type in ["udp", "tcp"]:
-                for mpls in [False, True]:
-                    for instrs in instr_sets:
-                        if mpls and tagged[1]:
-                            continue
-                        self.doRunTest(vlan_conf, tagged, pkt_type, mpls,
-                                       instrs)
-
-
-@group("int")
-class FabricIntTransitTest(IntTest):
-    @autocleanup
-    def doRunTest(self, vlan_conf, tagged, pkt_type, prev_hops, instrs, mpls):
-        print "Testing VLAN=%s, pkt=%s, mpls=%s, prev_hops=%s, instructions=%s..." \
-              % (vlan_conf, pkt_type, mpls, prev_hops,
-                 ",".join([INT_INS_TO_NAME[i] for i in instrs]))
-        pkt = getattr(testutils, "simple_%s_packet" % pkt_type)()
-        hop_metadata, _ = self.get_int_metadata(instrs, 0xCAFEBABE, 0xDEAD, 0xBEEF)
-        int_pkt = self.get_int_pkt(pkt=pkt, instructions=instrs, max_hop=50,
-                                   transit_hops=prev_hops,
-                                   hop_metadata=hop_metadata)
-        self.runIntTransitTest(pkt=int_pkt,
-                               tagged1=tagged[0],
-                               tagged2=tagged[1],
-                               ignore_csum=1, mpls=mpls)
-
-    def runTest(self):
-        instr_sets = [
-            [INT_SWITCH_ID, INT_IG_EG_PORT],
-            [INT_SWITCH_ID, INT_IG_EG_PORT, INT_IG_TSTAMP, INT_EG_TSTAMP, INT_QUEUE_OCCUPANCY]
-        ]
-        print ""
-        for vlan_conf, tagged in vlan_confs.items():
-            for pkt_type in ["udp", "tcp"]:
-                for mpls in [False, True]:
-                    for prev_hops in [0, 3]:
-                        for instrs in instr_sets:
-                            if mpls and tagged[1]:
-                                continue
-                            self.doRunTest(vlan_conf, tagged, pkt_type,
-                                           prev_hops, instrs, mpls)
-
-
-@group("int")
-class FabricIntSourceTransitSinkTest(IntTest):
-    @autocleanup
-    def doRunTest(self, vlan_conf, tagged, pkt_type, instrs, mpls):
-        print "Testing VLAN=%s, pkt=%s, mpls=%s, instructions=%s..." \
-              % (vlan_conf, pkt_type, mpls,
-                 ",".join([INT_INS_TO_NAME[i] for i in instrs]))
-        pkt = getattr(testutils, "simple_%s_packet" % pkt_type)()
-        self.runIntSourceTransitSinkTest(pkt=pkt,
-                                         tagged1=tagged[0],
-                                         tagged2=tagged[1],
-                                         mpls=mpls,
-                                         instructions=instrs)
-
-    def runTest(self):
-        instr_sets = [
-            [INT_SWITCH_ID, INT_IG_EG_PORT],
-            [INT_SWITCH_ID, INT_IG_EG_PORT, INT_IG_TSTAMP, INT_EG_TSTAMP, INT_QUEUE_OCCUPANCY]
-        ]
-        print ""
-        for vlan_conf, tagged in vlan_confs.items():
-            for pkt_type in ["udp", "tcp"]:
-                for mpls in [False, True]:
-                    for instrs in instr_sets:
-                        if mpls and tagged[1]:
-                            continue
-                        self.doRunTest(vlan_conf, tagged, pkt_type, instrs, mpls)
-
-@group("int")
-@group("int-full")
-class FabricIntTransitFullTest(IntTest):
-    @autocleanup
-    def doRunTest(self, **kwargs):
-        self.runIntTransitTest(**kwargs)
-
-    def runTest(self):
-        instr_sets = []
-        for num_instr in range(1, len(INT_ALL_INSTRUCTIONS) + 1):
-            instr_sets.extend(combinations(INT_ALL_INSTRUCTIONS, num_instr))
-        print ""
-        for vlan_conf, tagged in vlan_confs.items():
-            for pkt_type in ["udp"]:
-                for prev_hops in [0, 3]:
-                    for instructions in instr_sets:
-                        print "Testing VLAN=%s, pkt=%s, prev_hops=%s, instructions=%s..." \
-                              % (vlan_conf, pkt_type, prev_hops,
-                                 ",".join([INT_INS_TO_NAME[i] for i in
-                                           instructions]))
-                        pkt = getattr(testutils,
-                                      "simple_%s_packet" % pkt_type)()
-                        hop_metadata, _ = self.get_int_metadata(
-                            instructions, 0xCAFEBABE, 0xDEAD, 0xBEEF)
-                        int_pkt = self.get_int_pkt(
-                            pkt=pkt, instructions=instructions, max_hop=50,
-                            transit_hops=prev_hops, hop_metadata=hop_metadata)
-                        self.doRunTest(
-                            pkt=int_pkt, tagged1=tagged[0], tagged2=tagged[1],
-                            ignore_csum=1)
-
+                        continue
+                    self.doRunTest(vlan_conf, tagged, pkt_type, mpls)
 
 @group("bng")
 class FabricPppoeUpstreamTest(PppoeTest):
