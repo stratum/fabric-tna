@@ -190,13 +190,14 @@ control IntEgress (
             // infinity loop
             fabric_md.int_mirror_md.setInvalid();
 
+#ifdef WITH_SPGW
             if (fabric_md.int_mirror_md.skip_gtpu_headers == 1) {
                 // Need to remove length of IP, UDP, and GTPU headers (36 bytes)
                 // if we encapsulate the packet with GTPU.
                 hdr.report_ipv4.total_len = hdr.report_ipv4.total_len - (IPV4_HDR_SIZE + UDP_HDR_SIZE + GTP_HDR_SIZE);
                 hdr.report_udp.len = hdr.report_udp.len - (IPV4_HDR_SIZE + UDP_HDR_SIZE + GTP_HDR_SIZE);
             }
-
+#endif // WITH_SPGW
         } else {
             if (fabric_md.bridged.ig_port != CPU_PORT &&
                 eg_intr_md.egress_port != CPU_PORT) {
