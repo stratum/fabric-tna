@@ -776,26 +776,6 @@
           "data" : []
         },
         {
-          "id" : 16781601,
-          "name" : "FabricIngress.acl.set_clone_session_id",
-          "action_scope" : "TableAndDefault",
-          "annotations" : [],
-          "data" : [
-            {
-              "id" : 1,
-              "name" : "clone_id",
-              "repeated" : false,
-              "mandatory" : true,
-              "read_only" : false,
-              "annotations" : [],
-              "type" : {
-                "type" : "bytes",
-                "width" : 32
-              }
-            }
-          ]
-        },
-        {
           "id" : 16820765,
           "name" : "FabricIngress.acl.drop",
           "action_scope" : "TableAndDefault",
@@ -1440,90 +1420,6 @@
         },
         {
           "id" : 1,
-          "name" : "hdr.bridge_md.$valid",
-          "repeated" : false,
-          "annotations" : [],
-          "mandatory" : false,
-          "match_type" : "Ternary",
-          "type" : {
-            "type" : "bytes",
-            "width" : 1
-          }
-        },
-        {
-          "id" : 2,
-          "name" : "hdr.bridge_md.mpls_label",
-          "repeated" : false,
-          "annotations" : [],
-          "mandatory" : false,
-          "match_type" : "Ternary",
-          "type" : {
-            "type" : "bytes",
-            "width" : 20
-          }
-        },
-        {
-          "id" : 3,
-          "name" : "hdr.bridge_md.mpls_ttl",
-          "repeated" : false,
-          "annotations" : [],
-          "mandatory" : false,
-          "match_type" : "Ternary",
-          "type" : {
-            "type" : "bytes",
-            "width" : 8
-          }
-        },
-        {
-          "id" : 4,
-          "name" : "hdr.bridge_md.ingress_port",
-          "repeated" : false,
-          "annotations" : [],
-          "mandatory" : false,
-          "match_type" : "Ternary",
-          "type" : {
-            "type" : "bytes",
-            "width" : 9
-          }
-        },
-        {
-          "id" : 5,
-          "name" : "hdr.bridge_md.vlan_id",
-          "repeated" : false,
-          "annotations" : [],
-          "mandatory" : false,
-          "match_type" : "Ternary",
-          "type" : {
-            "type" : "bytes",
-            "width" : 12
-          }
-        },
-        {
-          "id" : 6,
-          "name" : "hdr.bridge_md.ip_eth_type",
-          "repeated" : false,
-          "annotations" : [],
-          "mandatory" : false,
-          "match_type" : "Ternary",
-          "type" : {
-            "type" : "bytes",
-            "width" : 16
-          }
-        },
-        {
-          "id" : 7,
-          "name" : "hdr.bridge_md.ip_proto",
-          "repeated" : false,
-          "annotations" : [],
-          "mandatory" : false,
-          "match_type" : "Ternary",
-          "type" : {
-            "type" : "bytes",
-            "width" : 8
-          }
-        },
-        {
-          "id" : 8,
           "name" : "hdr.ethernet.$valid",
           "repeated" : false,
           "annotations" : [],
@@ -1535,7 +1431,7 @@
           }
         },
         {
-          "id" : 9,
+          "id" : 2,
           "name" : "hdr.ethernet.dst_addr",
           "repeated" : false,
           "annotations" : [],
@@ -1547,7 +1443,7 @@
           }
         },
         {
-          "id" : 10,
+          "id" : 3,
           "name" : "hdr.ethernet.src_addr",
           "repeated" : false,
           "annotations" : [],
@@ -1559,7 +1455,7 @@
           }
         },
         {
-          "id" : 11,
+          "id" : 4,
           "name" : "hdr.vlan_tag.$valid",
           "repeated" : false,
           "annotations" : [],
@@ -1571,7 +1467,7 @@
           }
         },
         {
-          "id" : 12,
+          "id" : 5,
           "name" : "hdr.vlan_tag.eth_type",
           "repeated" : false,
           "annotations" : [],
@@ -1583,7 +1479,7 @@
           }
         },
         {
-          "id" : 13,
+          "id" : 6,
           "name" : "hdr.vlan_tag.pri",
           "repeated" : false,
           "annotations" : [],
@@ -1595,7 +1491,7 @@
           }
         },
         {
-          "id" : 14,
+          "id" : 7,
           "name" : "hdr.vlan_tag.cfi",
           "repeated" : false,
           "annotations" : [],
@@ -1607,7 +1503,7 @@
           }
         },
         {
-          "id" : 15,
+          "id" : 8,
           "name" : "hdr.vlan_tag.vlan_id",
           "repeated" : false,
           "annotations" : [],
@@ -1619,7 +1515,7 @@
           }
         },
         {
-          "id" : 16,
+          "id" : 9,
           "name" : "hdr.eth_type.$valid",
           "repeated" : false,
           "annotations" : [],
@@ -1631,7 +1527,7 @@
           }
         },
         {
-          "id" : 17,
+          "id" : 10,
           "name" : "hdr.eth_type.value",
           "repeated" : false,
           "annotations" : [],
@@ -1643,7 +1539,7 @@
           }
         },
         {
-          "id" : 18,
+          "id" : 11,
           "name" : "hdr.mpls.$valid",
           "repeated" : false,
           "annotations" : [],
@@ -1655,7 +1551,7 @@
           }
         },
         {
-          "id" : 19,
+          "id" : 12,
           "name" : "hdr.mpls.label",
           "repeated" : false,
           "annotations" : [],
@@ -1667,7 +1563,7 @@
           }
         },
         {
-          "id" : 20,
+          "id" : 13,
           "name" : "hdr.mpls.tc",
           "repeated" : false,
           "annotations" : [],
@@ -1679,7 +1575,7 @@
           }
         },
         {
-          "id" : 21,
+          "id" : 14,
           "name" : "hdr.mpls.bos",
           "repeated" : false,
           "annotations" : [],
@@ -1691,7 +1587,7 @@
           }
         },
         {
-          "id" : 22,
+          "id" : 15,
           "name" : "hdr.mpls.ttl",
           "repeated" : false,
           "annotations" : [],
@@ -1703,7 +1599,7 @@
           }
         },
         {
-          "id" : 23,
+          "id" : 16,
           "name" : "hdr.ipv4.$valid",
           "repeated" : false,
           "annotations" : [],
@@ -1715,7 +1611,7 @@
           }
         },
         {
-          "id" : 24,
+          "id" : 17,
           "name" : "hdr.ipv4.version",
           "repeated" : false,
           "annotations" : [],
@@ -1727,7 +1623,7 @@
           }
         },
         {
-          "id" : 25,
+          "id" : 18,
           "name" : "hdr.ipv4.ihl",
           "repeated" : false,
           "annotations" : [],
@@ -1739,7 +1635,7 @@
           }
         },
         {
-          "id" : 26,
+          "id" : 19,
           "name" : "hdr.ipv4.dscp",
           "repeated" : false,
           "annotations" : [],
@@ -1751,7 +1647,7 @@
           }
         },
         {
-          "id" : 27,
+          "id" : 20,
           "name" : "hdr.ipv4.ecn",
           "repeated" : false,
           "annotations" : [],
@@ -1763,7 +1659,7 @@
           }
         },
         {
-          "id" : 28,
+          "id" : 21,
           "name" : "hdr.ipv4.total_len",
           "repeated" : false,
           "annotations" : [],
@@ -1775,7 +1671,7 @@
           }
         },
         {
-          "id" : 29,
+          "id" : 22,
           "name" : "hdr.ipv4.identification",
           "repeated" : false,
           "annotations" : [],
@@ -1787,7 +1683,7 @@
           }
         },
         {
-          "id" : 30,
+          "id" : 23,
           "name" : "hdr.ipv4.flags",
           "repeated" : false,
           "annotations" : [],
@@ -1799,7 +1695,7 @@
           }
         },
         {
-          "id" : 31,
+          "id" : 24,
           "name" : "hdr.ipv4.frag_offset",
           "repeated" : false,
           "annotations" : [],
@@ -1811,7 +1707,7 @@
           }
         },
         {
-          "id" : 32,
+          "id" : 25,
           "name" : "hdr.ipv4.ttl",
           "repeated" : false,
           "annotations" : [],
@@ -1823,7 +1719,7 @@
           }
         },
         {
-          "id" : 33,
+          "id" : 26,
           "name" : "hdr.ipv4.protocol",
           "repeated" : false,
           "annotations" : [],
@@ -1835,7 +1731,7 @@
           }
         },
         {
-          "id" : 34,
+          "id" : 27,
           "name" : "hdr.ipv4.hdr_checksum",
           "repeated" : false,
           "annotations" : [],
@@ -1847,7 +1743,7 @@
           }
         },
         {
-          "id" : 35,
+          "id" : 28,
           "name" : "hdr.ipv4.src_addr",
           "repeated" : false,
           "annotations" : [],
@@ -1859,7 +1755,7 @@
           }
         },
         {
-          "id" : 36,
+          "id" : 29,
           "name" : "hdr.ipv4.dst_addr",
           "repeated" : false,
           "annotations" : [],
@@ -1871,7 +1767,7 @@
           }
         },
         {
-          "id" : 37,
+          "id" : 30,
           "name" : "hdr.ipv6.$valid",
           "repeated" : false,
           "annotations" : [],
@@ -1883,7 +1779,7 @@
           }
         },
         {
-          "id" : 38,
+          "id" : 31,
           "name" : "hdr.ipv6.version",
           "repeated" : false,
           "annotations" : [],
@@ -1895,7 +1791,7 @@
           }
         },
         {
-          "id" : 39,
+          "id" : 32,
           "name" : "hdr.ipv6.traffic_class",
           "repeated" : false,
           "annotations" : [],
@@ -1907,7 +1803,7 @@
           }
         },
         {
-          "id" : 40,
+          "id" : 33,
           "name" : "hdr.ipv6.flow_label",
           "repeated" : false,
           "annotations" : [],
@@ -1919,7 +1815,7 @@
           }
         },
         {
-          "id" : 41,
+          "id" : 34,
           "name" : "hdr.ipv6.payload_len",
           "repeated" : false,
           "annotations" : [],
@@ -1931,7 +1827,7 @@
           }
         },
         {
-          "id" : 42,
+          "id" : 35,
           "name" : "hdr.ipv6.next_hdr",
           "repeated" : false,
           "annotations" : [],
@@ -1943,7 +1839,7 @@
           }
         },
         {
-          "id" : 43,
+          "id" : 36,
           "name" : "hdr.ipv6.hop_limit",
           "repeated" : false,
           "annotations" : [],
@@ -1955,7 +1851,7 @@
           }
         },
         {
-          "id" : 44,
+          "id" : 37,
           "name" : "hdr.ipv6.src_addr",
           "repeated" : false,
           "annotations" : [],
@@ -1967,7 +1863,7 @@
           }
         },
         {
-          "id" : 45,
+          "id" : 38,
           "name" : "hdr.ipv6.dst_addr",
           "repeated" : false,
           "annotations" : [],
@@ -1979,7 +1875,7 @@
           }
         },
         {
-          "id" : 46,
+          "id" : 39,
           "name" : "hdr.tcp.$valid",
           "repeated" : false,
           "annotations" : [],
@@ -1991,7 +1887,7 @@
           }
         },
         {
-          "id" : 47,
+          "id" : 40,
           "name" : "hdr.tcp.sport",
           "repeated" : false,
           "annotations" : [],
@@ -2003,7 +1899,7 @@
           }
         },
         {
-          "id" : 48,
+          "id" : 41,
           "name" : "hdr.tcp.dport",
           "repeated" : false,
           "annotations" : [],
@@ -2015,7 +1911,7 @@
           }
         },
         {
-          "id" : 49,
+          "id" : 42,
           "name" : "hdr.tcp.seq_no",
           "repeated" : false,
           "annotations" : [],
@@ -2027,7 +1923,7 @@
           }
         },
         {
-          "id" : 50,
+          "id" : 43,
           "name" : "hdr.tcp.ack_no",
           "repeated" : false,
           "annotations" : [],
@@ -2039,7 +1935,7 @@
           }
         },
         {
-          "id" : 51,
+          "id" : 44,
           "name" : "hdr.tcp.data_offset",
           "repeated" : false,
           "annotations" : [],
@@ -2051,7 +1947,7 @@
           }
         },
         {
-          "id" : 52,
+          "id" : 45,
           "name" : "hdr.tcp.res",
           "repeated" : false,
           "annotations" : [],
@@ -2063,7 +1959,7 @@
           }
         },
         {
-          "id" : 53,
+          "id" : 46,
           "name" : "hdr.tcp.ecn",
           "repeated" : false,
           "annotations" : [],
@@ -2075,7 +1971,7 @@
           }
         },
         {
-          "id" : 54,
+          "id" : 47,
           "name" : "hdr.tcp.ctrl",
           "repeated" : false,
           "annotations" : [],
@@ -2087,7 +1983,7 @@
           }
         },
         {
-          "id" : 55,
+          "id" : 48,
           "name" : "hdr.tcp.window",
           "repeated" : false,
           "annotations" : [],
@@ -2099,7 +1995,7 @@
           }
         },
         {
-          "id" : 56,
+          "id" : 49,
           "name" : "hdr.tcp.checksum",
           "repeated" : false,
           "annotations" : [],
@@ -2111,7 +2007,7 @@
           }
         },
         {
-          "id" : 57,
+          "id" : 50,
           "name" : "hdr.tcp.urgent_ptr",
           "repeated" : false,
           "annotations" : [],
@@ -2123,7 +2019,7 @@
           }
         },
         {
-          "id" : 58,
+          "id" : 51,
           "name" : "hdr.udp.$valid",
           "repeated" : false,
           "annotations" : [],
@@ -2135,7 +2031,7 @@
           }
         },
         {
-          "id" : 59,
+          "id" : 52,
           "name" : "hdr.udp.sport",
           "repeated" : false,
           "annotations" : [],
@@ -2147,7 +2043,7 @@
           }
         },
         {
-          "id" : 60,
+          "id" : 53,
           "name" : "hdr.udp.dport",
           "repeated" : false,
           "annotations" : [],
@@ -2159,7 +2055,7 @@
           }
         },
         {
-          "id" : 61,
+          "id" : 54,
           "name" : "hdr.udp.len",
           "repeated" : false,
           "annotations" : [],
@@ -2171,7 +2067,7 @@
           }
         },
         {
-          "id" : 62,
+          "id" : 55,
           "name" : "hdr.udp.checksum",
           "repeated" : false,
           "annotations" : [],
@@ -2183,7 +2079,7 @@
           }
         },
         {
-          "id" : 63,
+          "id" : 56,
           "name" : "hdr.icmp.$valid",
           "repeated" : false,
           "annotations" : [],
@@ -2195,7 +2091,7 @@
           }
         },
         {
-          "id" : 64,
+          "id" : 57,
           "name" : "hdr.icmp.icmp_type",
           "repeated" : false,
           "annotations" : [],
@@ -2207,7 +2103,7 @@
           }
         },
         {
-          "id" : 65,
+          "id" : 58,
           "name" : "hdr.icmp.icmp_code",
           "repeated" : false,
           "annotations" : [],
@@ -2219,7 +2115,7 @@
           }
         },
         {
-          "id" : 66,
+          "id" : 59,
           "name" : "hdr.icmp.checksum",
           "repeated" : false,
           "annotations" : [],
@@ -2231,7 +2127,7 @@
           }
         },
         {
-          "id" : 67,
+          "id" : 60,
           "name" : "hdr.icmp.identifier",
           "repeated" : false,
           "annotations" : [],
@@ -2243,7 +2139,7 @@
           }
         },
         {
-          "id" : 68,
+          "id" : 61,
           "name" : "hdr.icmp.sequence_number",
           "repeated" : false,
           "annotations" : [],
@@ -2255,7 +2151,7 @@
           }
         },
         {
-          "id" : 69,
+          "id" : 62,
           "name" : "hdr.icmp.timestamp",
           "repeated" : false,
           "annotations" : [],
@@ -2267,7 +2163,7 @@
           }
         },
         {
-          "id" : 70,
+          "id" : 63,
           "name" : "hdr.packet_out.$valid",
           "repeated" : false,
           "annotations" : [],
@@ -2279,7 +2175,7 @@
           }
         },
         {
-          "id" : 71,
+          "id" : 64,
           "name" : "hdr.packet_out.egress_port",
           "repeated" : false,
           "annotations" : [],
@@ -2291,7 +2187,7 @@
           }
         },
         {
-          "id" : 72,
+          "id" : 65,
           "name" : "hdr.packet_in.$valid",
           "repeated" : false,
           "annotations" : [],
@@ -2303,7 +2199,7 @@
           }
         },
         {
-          "id" : 73,
+          "id" : 66,
           "name" : "hdr.packet_in.ingress_port",
           "repeated" : false,
           "annotations" : [],
@@ -2315,32 +2211,32 @@
           }
         },
         {
-          "id" : 74,
-          "name" : "fabric_md.ipv4_src_addr",
+          "id" : 67,
+          "name" : "fabric_md.bridged.bridge_md_type",
           "repeated" : false,
           "annotations" : [],
           "mandatory" : false,
           "match_type" : "Ternary",
           "type" : {
             "type" : "bytes",
-            "width" : 32
+            "width" : 8
           }
         },
         {
-          "id" : 75,
-          "name" : "fabric_md.ipv4_dst_addr",
+          "id" : 68,
+          "name" : "fabric_md.bridged.ig_port",
           "repeated" : false,
           "annotations" : [],
           "mandatory" : false,
           "match_type" : "Ternary",
           "type" : {
             "type" : "bytes",
-            "width" : 32
+            "width" : 9
           }
         },
         {
-          "id" : 76,
-          "name" : "fabric_md.vlan_id",
+          "id" : 69,
+          "name" : "fabric_md.bridged.vlan_id",
           "repeated" : false,
           "annotations" : [],
           "mandatory" : false,
@@ -2351,56 +2247,8 @@
           }
         },
         {
-          "id" : 77,
-          "name" : "fabric_md.vlan_pri",
-          "repeated" : false,
-          "annotations" : [],
-          "mandatory" : false,
-          "match_type" : "Ternary",
-          "type" : {
-            "type" : "bytes",
-            "width" : 3
-          }
-        },
-        {
-          "id" : 78,
-          "name" : "fabric_md.vlan_cfi",
-          "repeated" : false,
-          "annotations" : [],
-          "mandatory" : false,
-          "match_type" : "Ternary",
-          "type" : {
-            "type" : "bytes",
-            "width" : 1
-          }
-        },
-        {
-          "id" : 79,
-          "name" : "fabric_md.ip_eth_type",
-          "repeated" : false,
-          "annotations" : [],
-          "mandatory" : false,
-          "match_type" : "Ternary",
-          "type" : {
-            "type" : "bytes",
-            "width" : 16
-          }
-        },
-        {
-          "id" : 80,
-          "name" : "fabric_md.ip_proto",
-          "repeated" : false,
-          "annotations" : [],
-          "mandatory" : false,
-          "match_type" : "Ternary",
-          "type" : {
-            "type" : "bytes",
-            "width" : 8
-          }
-        },
-        {
-          "id" : 81,
-          "name" : "fabric_md.mpls_label",
+          "id" : 70,
+          "name" : "fabric_md.bridged.mpls_label",
           "repeated" : false,
           "annotations" : [],
           "mandatory" : false,
@@ -2411,8 +2259,8 @@
           }
         },
         {
-          "id" : 82,
-          "name" : "fabric_md.mpls_ttl",
+          "id" : 71,
+          "name" : "fabric_md.bridged.mpls_ttl",
           "repeated" : false,
           "annotations" : [],
           "mandatory" : false,
@@ -2423,8 +2271,20 @@
           }
         },
         {
-          "id" : 83,
-          "name" : "fabric_md.l4_sport",
+          "id" : 72,
+          "name" : "fabric_md.bridged.ig_tstamp",
+          "repeated" : false,
+          "annotations" : [],
+          "mandatory" : false,
+          "match_type" : "Ternary",
+          "type" : {
+            "type" : "bytes",
+            "width" : 48
+          }
+        },
+        {
+          "id" : 73,
+          "name" : "fabric_md.bridged.ip_eth_type",
           "repeated" : false,
           "annotations" : [],
           "mandatory" : false,
@@ -2435,8 +2295,20 @@
           }
         },
         {
-          "id" : 84,
-          "name" : "fabric_md.l4_dport",
+          "id" : 74,
+          "name" : "fabric_md.bridged.ip_proto",
+          "repeated" : false,
+          "annotations" : [],
+          "mandatory" : false,
+          "match_type" : "Ternary",
+          "type" : {
+            "type" : "bytes",
+            "width" : 8
+          }
+        },
+        {
+          "id" : 75,
+          "name" : "fabric_md.bridged.l4_sport",
           "repeated" : false,
           "annotations" : [],
           "mandatory" : false,
@@ -2447,7 +2319,43 @@
           }
         },
         {
-          "id" : 85,
+          "id" : 76,
+          "name" : "fabric_md.bridged.l4_dport",
+          "repeated" : false,
+          "annotations" : [],
+          "mandatory" : false,
+          "match_type" : "Ternary",
+          "type" : {
+            "type" : "bytes",
+            "width" : 16
+          }
+        },
+        {
+          "id" : 77,
+          "name" : "fabric_md.ipv4_src",
+          "repeated" : false,
+          "annotations" : [],
+          "mandatory" : false,
+          "match_type" : "Ternary",
+          "type" : {
+            "type" : "bytes",
+            "width" : 32
+          }
+        },
+        {
+          "id" : 78,
+          "name" : "fabric_md.ipv4_dst",
+          "repeated" : false,
+          "annotations" : [],
+          "mandatory" : false,
+          "match_type" : "Ternary",
+          "type" : {
+            "type" : "bytes",
+            "width" : 32
+          }
+        },
+        {
+          "id" : 79,
           "name" : "fabric_md.fwd_type",
           "repeated" : false,
           "annotations" : [],
@@ -2459,7 +2367,7 @@
           }
         },
         {
-          "id" : 86,
+          "id" : 80,
           "name" : "fabric_md.next_id",
           "repeated" : false,
           "annotations" : [],
@@ -2471,19 +2379,7 @@
           }
         },
         {
-          "id" : 87,
-          "name" : "fabric_md.mirror_id",
-          "repeated" : false,
-          "annotations" : [],
-          "mandatory" : false,
-          "match_type" : "Ternary",
-          "type" : {
-            "type" : "bytes",
-            "width" : 10
-          }
-        },
-        {
-          "id" : 88,
+          "id" : 81,
           "name" : "ig_intr_md.resubmit_flag",
           "repeated" : false,
           "annotations" : [],
@@ -2495,7 +2391,7 @@
           }
         },
         {
-          "id" : 89,
+          "id" : 82,
           "name" : "ig_intr_md._pad1",
           "repeated" : false,
           "annotations" : [],
@@ -2507,7 +2403,7 @@
           }
         },
         {
-          "id" : 90,
+          "id" : 83,
           "name" : "ig_intr_md.packet_version",
           "repeated" : false,
           "annotations" : [],
@@ -2519,7 +2415,7 @@
           }
         },
         {
-          "id" : 91,
+          "id" : 84,
           "name" : "ig_intr_md._pad2",
           "repeated" : false,
           "annotations" : [],
@@ -2531,7 +2427,7 @@
           }
         },
         {
-          "id" : 92,
+          "id" : 85,
           "name" : "ig_intr_md.ingress_port",
           "repeated" : false,
           "annotations" : [],
@@ -2543,7 +2439,7 @@
           }
         },
         {
-          "id" : 93,
+          "id" : 86,
           "name" : "ig_intr_md.ingress_mac_tstamp",
           "repeated" : false,
           "annotations" : [],
@@ -2555,7 +2451,7 @@
           }
         },
         {
-          "id" : 94,
+          "id" : 87,
           "name" : "ig_prsr_md.global_tstamp",
           "repeated" : false,
           "annotations" : [],
@@ -2567,7 +2463,7 @@
           }
         },
         {
-          "id" : 95,
+          "id" : 88,
           "name" : "ig_prsr_md.global_ver",
           "repeated" : false,
           "annotations" : [],
@@ -2579,7 +2475,7 @@
           }
         },
         {
-          "id" : 96,
+          "id" : 89,
           "name" : "ig_prsr_md.parser_err",
           "repeated" : false,
           "annotations" : [],
@@ -2591,7 +2487,7 @@
           }
         },
         {
-          "id" : 97,
+          "id" : 90,
           "name" : "ig_dprsr_md.drop_ctl",
           "repeated" : false,
           "annotations" : [],
@@ -2603,7 +2499,7 @@
           }
         },
         {
-          "id" : 98,
+          "id" : 91,
           "name" : "ig_dprsr_md.digest_type",
           "repeated" : false,
           "annotations" : [],
@@ -2615,7 +2511,7 @@
           }
         },
         {
-          "id" : 99,
+          "id" : 92,
           "name" : "ig_dprsr_md.resubmit_type",
           "repeated" : false,
           "annotations" : [],
@@ -2627,7 +2523,7 @@
           }
         },
         {
-          "id" : 100,
+          "id" : 93,
           "name" : "ig_dprsr_md.mirror_type",
           "repeated" : false,
           "annotations" : [],
@@ -2639,7 +2535,7 @@
           }
         },
         {
-          "id" : 101,
+          "id" : 94,
           "name" : "ig_tm_md.ucast_egress_port",
           "repeated" : false,
           "annotations" : [],
@@ -2651,7 +2547,7 @@
           }
         },
         {
-          "id" : 102,
+          "id" : 95,
           "name" : "ig_tm_md.bypass_egress",
           "repeated" : false,
           "annotations" : [],
@@ -2663,7 +2559,7 @@
           }
         },
         {
-          "id" : 103,
+          "id" : 96,
           "name" : "ig_tm_md.deflect_on_drop",
           "repeated" : false,
           "annotations" : [],
@@ -2675,7 +2571,7 @@
           }
         },
         {
-          "id" : 104,
+          "id" : 97,
           "name" : "ig_tm_md.ingress_cos",
           "repeated" : false,
           "annotations" : [],
@@ -2687,7 +2583,7 @@
           }
         },
         {
-          "id" : 105,
+          "id" : 98,
           "name" : "ig_tm_md.qid",
           "repeated" : false,
           "annotations" : [],
@@ -2699,7 +2595,7 @@
           }
         },
         {
-          "id" : 106,
+          "id" : 99,
           "name" : "ig_tm_md.icos_for_copy_to_cpu",
           "repeated" : false,
           "annotations" : [],
@@ -2711,7 +2607,7 @@
           }
         },
         {
-          "id" : 107,
+          "id" : 100,
           "name" : "ig_tm_md.copy_to_cpu",
           "repeated" : false,
           "annotations" : [],
@@ -2723,7 +2619,7 @@
           }
         },
         {
-          "id" : 108,
+          "id" : 101,
           "name" : "ig_tm_md.packet_color",
           "repeated" : false,
           "annotations" : [],
@@ -2735,7 +2631,7 @@
           }
         },
         {
-          "id" : 109,
+          "id" : 102,
           "name" : "ig_tm_md.disable_ucast_cutthru",
           "repeated" : false,
           "annotations" : [],
@@ -2747,7 +2643,7 @@
           }
         },
         {
-          "id" : 110,
+          "id" : 103,
           "name" : "ig_tm_md.enable_mcast_cutthru",
           "repeated" : false,
           "annotations" : [],
@@ -2759,7 +2655,7 @@
           }
         },
         {
-          "id" : 111,
+          "id" : 104,
           "name" : "ig_tm_md.mcast_grp_a",
           "repeated" : false,
           "annotations" : [],
@@ -2771,7 +2667,7 @@
           }
         },
         {
-          "id" : 112,
+          "id" : 105,
           "name" : "ig_tm_md.mcast_grp_b",
           "repeated" : false,
           "annotations" : [],
@@ -2783,7 +2679,7 @@
           }
         },
         {
-          "id" : 113,
+          "id" : 106,
           "name" : "ig_tm_md.level1_mcast_hash",
           "repeated" : false,
           "annotations" : [],
@@ -2795,7 +2691,7 @@
           }
         },
         {
-          "id" : 114,
+          "id" : 107,
           "name" : "ig_tm_md.level2_mcast_hash",
           "repeated" : false,
           "annotations" : [],
@@ -2807,7 +2703,7 @@
           }
         },
         {
-          "id" : 115,
+          "id" : 108,
           "name" : "ig_tm_md.level1_exclusion_id",
           "repeated" : false,
           "annotations" : [],
@@ -2819,7 +2715,7 @@
           }
         },
         {
-          "id" : 116,
+          "id" : 109,
           "name" : "ig_tm_md.level2_exclusion_id",
           "repeated" : false,
           "annotations" : [],
@@ -2831,7 +2727,7 @@
           }
         },
         {
-          "id" : 117,
+          "id" : 110,
           "name" : "ig_tm_md.rid",
           "repeated" : false,
           "annotations" : [],
@@ -2911,104 +2807,6 @@
                 "read_only" : true,
                 "singleton" : {
                   "id" : 1,
-                  "name" : "hdr.bridge_md.$valid",
-                  "repeated" : false,
-                  "annotations" : [],
-                  "type" : {
-                    "type" : "bytes",
-                    "width" : 1
-                  }
-                }
-              },
-              {
-                "mandatory" : false,
-                "read_only" : true,
-                "singleton" : {
-                  "id" : 2,
-                  "name" : "hdr.bridge_md.mpls_label",
-                  "repeated" : false,
-                  "annotations" : [],
-                  "type" : {
-                    "type" : "bytes",
-                    "width" : 20
-                  }
-                }
-              },
-              {
-                "mandatory" : false,
-                "read_only" : true,
-                "singleton" : {
-                  "id" : 3,
-                  "name" : "hdr.bridge_md.mpls_ttl",
-                  "repeated" : false,
-                  "annotations" : [],
-                  "type" : {
-                    "type" : "bytes",
-                    "width" : 8
-                  }
-                }
-              },
-              {
-                "mandatory" : false,
-                "read_only" : true,
-                "singleton" : {
-                  "id" : 4,
-                  "name" : "hdr.bridge_md.ingress_port",
-                  "repeated" : false,
-                  "annotations" : [],
-                  "type" : {
-                    "type" : "bytes",
-                    "width" : 9
-                  }
-                }
-              },
-              {
-                "mandatory" : false,
-                "read_only" : true,
-                "singleton" : {
-                  "id" : 5,
-                  "name" : "hdr.bridge_md.vlan_id",
-                  "repeated" : false,
-                  "annotations" : [],
-                  "type" : {
-                    "type" : "bytes",
-                    "width" : 12
-                  }
-                }
-              },
-              {
-                "mandatory" : false,
-                "read_only" : true,
-                "singleton" : {
-                  "id" : 6,
-                  "name" : "hdr.bridge_md.ip_eth_type",
-                  "repeated" : false,
-                  "annotations" : [],
-                  "type" : {
-                    "type" : "bytes",
-                    "width" : 16
-                  }
-                }
-              },
-              {
-                "mandatory" : false,
-                "read_only" : true,
-                "singleton" : {
-                  "id" : 7,
-                  "name" : "hdr.bridge_md.ip_proto",
-                  "repeated" : false,
-                  "annotations" : [],
-                  "type" : {
-                    "type" : "bytes",
-                    "width" : 8
-                  }
-                }
-              },
-              {
-                "mandatory" : false,
-                "read_only" : true,
-                "singleton" : {
-                  "id" : 8,
                   "name" : "hdr.ethernet.$valid",
                   "repeated" : false,
                   "annotations" : [],
@@ -3022,7 +2820,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 9,
+                  "id" : 2,
                   "name" : "hdr.ethernet.dst_addr",
                   "repeated" : false,
                   "annotations" : [],
@@ -3036,7 +2834,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 10,
+                  "id" : 3,
                   "name" : "hdr.ethernet.src_addr",
                   "repeated" : false,
                   "annotations" : [],
@@ -3050,7 +2848,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 11,
+                  "id" : 4,
                   "name" : "hdr.vlan_tag.$valid",
                   "repeated" : false,
                   "annotations" : [],
@@ -3064,7 +2862,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 12,
+                  "id" : 5,
                   "name" : "hdr.vlan_tag.eth_type",
                   "repeated" : false,
                   "annotations" : [],
@@ -3078,7 +2876,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 13,
+                  "id" : 6,
                   "name" : "hdr.vlan_tag.pri",
                   "repeated" : false,
                   "annotations" : [],
@@ -3092,7 +2890,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 14,
+                  "id" : 7,
                   "name" : "hdr.vlan_tag.cfi",
                   "repeated" : false,
                   "annotations" : [],
@@ -3106,7 +2904,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 15,
+                  "id" : 8,
                   "name" : "hdr.vlan_tag.vlan_id",
                   "repeated" : false,
                   "annotations" : [],
@@ -3120,7 +2918,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 16,
+                  "id" : 9,
                   "name" : "hdr.eth_type.$valid",
                   "repeated" : false,
                   "annotations" : [],
@@ -3134,7 +2932,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 17,
+                  "id" : 10,
                   "name" : "hdr.eth_type.value",
                   "repeated" : false,
                   "annotations" : [],
@@ -3148,7 +2946,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 18,
+                  "id" : 11,
                   "name" : "hdr.mpls.$valid",
                   "repeated" : false,
                   "annotations" : [],
@@ -3162,7 +2960,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 19,
+                  "id" : 12,
                   "name" : "hdr.mpls.label",
                   "repeated" : false,
                   "annotations" : [],
@@ -3176,7 +2974,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 20,
+                  "id" : 13,
                   "name" : "hdr.mpls.tc",
                   "repeated" : false,
                   "annotations" : [],
@@ -3190,7 +2988,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 21,
+                  "id" : 14,
                   "name" : "hdr.mpls.bos",
                   "repeated" : false,
                   "annotations" : [],
@@ -3204,7 +3002,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 22,
+                  "id" : 15,
                   "name" : "hdr.mpls.ttl",
                   "repeated" : false,
                   "annotations" : [],
@@ -3218,7 +3016,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 23,
+                  "id" : 16,
                   "name" : "hdr.ipv4.$valid",
                   "repeated" : false,
                   "annotations" : [],
@@ -3232,7 +3030,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 24,
+                  "id" : 17,
                   "name" : "hdr.ipv4.version",
                   "repeated" : false,
                   "annotations" : [],
@@ -3246,7 +3044,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 25,
+                  "id" : 18,
                   "name" : "hdr.ipv4.ihl",
                   "repeated" : false,
                   "annotations" : [],
@@ -3260,7 +3058,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 26,
+                  "id" : 19,
                   "name" : "hdr.ipv4.dscp",
                   "repeated" : false,
                   "annotations" : [],
@@ -3274,7 +3072,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 27,
+                  "id" : 20,
                   "name" : "hdr.ipv4.ecn",
                   "repeated" : false,
                   "annotations" : [],
@@ -3288,7 +3086,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 28,
+                  "id" : 21,
                   "name" : "hdr.ipv4.total_len",
                   "repeated" : false,
                   "annotations" : [],
@@ -3302,7 +3100,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 29,
+                  "id" : 22,
                   "name" : "hdr.ipv4.identification",
                   "repeated" : false,
                   "annotations" : [],
@@ -3316,7 +3114,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 30,
+                  "id" : 23,
                   "name" : "hdr.ipv4.flags",
                   "repeated" : false,
                   "annotations" : [],
@@ -3330,7 +3128,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 31,
+                  "id" : 24,
                   "name" : "hdr.ipv4.frag_offset",
                   "repeated" : false,
                   "annotations" : [],
@@ -3344,7 +3142,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 32,
+                  "id" : 25,
                   "name" : "hdr.ipv4.ttl",
                   "repeated" : false,
                   "annotations" : [],
@@ -3358,7 +3156,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 33,
+                  "id" : 26,
                   "name" : "hdr.ipv4.protocol",
                   "repeated" : false,
                   "annotations" : [],
@@ -3372,7 +3170,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 34,
+                  "id" : 27,
                   "name" : "hdr.ipv4.hdr_checksum",
                   "repeated" : false,
                   "annotations" : [],
@@ -3386,7 +3184,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 35,
+                  "id" : 28,
                   "name" : "hdr.ipv4.src_addr",
                   "repeated" : false,
                   "annotations" : [],
@@ -3400,7 +3198,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 36,
+                  "id" : 29,
                   "name" : "hdr.ipv4.dst_addr",
                   "repeated" : false,
                   "annotations" : [],
@@ -3414,7 +3212,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 37,
+                  "id" : 30,
                   "name" : "hdr.ipv6.$valid",
                   "repeated" : false,
                   "annotations" : [],
@@ -3428,7 +3226,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 38,
+                  "id" : 31,
                   "name" : "hdr.ipv6.version",
                   "repeated" : false,
                   "annotations" : [],
@@ -3442,7 +3240,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 39,
+                  "id" : 32,
                   "name" : "hdr.ipv6.traffic_class",
                   "repeated" : false,
                   "annotations" : [],
@@ -3456,7 +3254,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 40,
+                  "id" : 33,
                   "name" : "hdr.ipv6.flow_label",
                   "repeated" : false,
                   "annotations" : [],
@@ -3470,7 +3268,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 41,
+                  "id" : 34,
                   "name" : "hdr.ipv6.payload_len",
                   "repeated" : false,
                   "annotations" : [],
@@ -3484,7 +3282,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 42,
+                  "id" : 35,
                   "name" : "hdr.ipv6.next_hdr",
                   "repeated" : false,
                   "annotations" : [],
@@ -3498,7 +3296,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 43,
+                  "id" : 36,
                   "name" : "hdr.ipv6.hop_limit",
                   "repeated" : false,
                   "annotations" : [],
@@ -3512,7 +3310,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 44,
+                  "id" : 37,
                   "name" : "hdr.ipv6.src_addr",
                   "repeated" : false,
                   "annotations" : [],
@@ -3526,7 +3324,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 45,
+                  "id" : 38,
                   "name" : "hdr.ipv6.dst_addr",
                   "repeated" : false,
                   "annotations" : [],
@@ -3540,7 +3338,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 46,
+                  "id" : 39,
                   "name" : "hdr.tcp.$valid",
                   "repeated" : false,
                   "annotations" : [],
@@ -3554,7 +3352,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 47,
+                  "id" : 40,
                   "name" : "hdr.tcp.sport",
                   "repeated" : false,
                   "annotations" : [],
@@ -3568,7 +3366,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 48,
+                  "id" : 41,
                   "name" : "hdr.tcp.dport",
                   "repeated" : false,
                   "annotations" : [],
@@ -3582,7 +3380,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 49,
+                  "id" : 42,
                   "name" : "hdr.tcp.seq_no",
                   "repeated" : false,
                   "annotations" : [],
@@ -3596,7 +3394,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 50,
+                  "id" : 43,
                   "name" : "hdr.tcp.ack_no",
                   "repeated" : false,
                   "annotations" : [],
@@ -3610,7 +3408,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 51,
+                  "id" : 44,
                   "name" : "hdr.tcp.data_offset",
                   "repeated" : false,
                   "annotations" : [],
@@ -3624,7 +3422,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 52,
+                  "id" : 45,
                   "name" : "hdr.tcp.res",
                   "repeated" : false,
                   "annotations" : [],
@@ -3638,7 +3436,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 53,
+                  "id" : 46,
                   "name" : "hdr.tcp.ecn",
                   "repeated" : false,
                   "annotations" : [],
@@ -3652,7 +3450,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 54,
+                  "id" : 47,
                   "name" : "hdr.tcp.ctrl",
                   "repeated" : false,
                   "annotations" : [],
@@ -3666,7 +3464,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 55,
+                  "id" : 48,
                   "name" : "hdr.tcp.window",
                   "repeated" : false,
                   "annotations" : [],
@@ -3680,7 +3478,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 56,
+                  "id" : 49,
                   "name" : "hdr.tcp.checksum",
                   "repeated" : false,
                   "annotations" : [],
@@ -3694,7 +3492,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 57,
+                  "id" : 50,
                   "name" : "hdr.tcp.urgent_ptr",
                   "repeated" : false,
                   "annotations" : [],
@@ -3708,7 +3506,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 58,
+                  "id" : 51,
                   "name" : "hdr.udp.$valid",
                   "repeated" : false,
                   "annotations" : [],
@@ -3722,7 +3520,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 59,
+                  "id" : 52,
                   "name" : "hdr.udp.sport",
                   "repeated" : false,
                   "annotations" : [],
@@ -3736,7 +3534,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 60,
+                  "id" : 53,
                   "name" : "hdr.udp.dport",
                   "repeated" : false,
                   "annotations" : [],
@@ -3750,7 +3548,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 61,
+                  "id" : 54,
                   "name" : "hdr.udp.len",
                   "repeated" : false,
                   "annotations" : [],
@@ -3764,7 +3562,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 62,
+                  "id" : 55,
                   "name" : "hdr.udp.checksum",
                   "repeated" : false,
                   "annotations" : [],
@@ -3778,7 +3576,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 63,
+                  "id" : 56,
                   "name" : "hdr.icmp.$valid",
                   "repeated" : false,
                   "annotations" : [],
@@ -3792,7 +3590,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 64,
+                  "id" : 57,
                   "name" : "hdr.icmp.icmp_type",
                   "repeated" : false,
                   "annotations" : [],
@@ -3806,7 +3604,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 65,
+                  "id" : 58,
                   "name" : "hdr.icmp.icmp_code",
                   "repeated" : false,
                   "annotations" : [],
@@ -3820,7 +3618,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 66,
+                  "id" : 59,
                   "name" : "hdr.icmp.checksum",
                   "repeated" : false,
                   "annotations" : [],
@@ -3834,7 +3632,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 67,
+                  "id" : 60,
                   "name" : "hdr.icmp.identifier",
                   "repeated" : false,
                   "annotations" : [],
@@ -3848,7 +3646,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 68,
+                  "id" : 61,
                   "name" : "hdr.icmp.sequence_number",
                   "repeated" : false,
                   "annotations" : [],
@@ -3862,7 +3660,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 69,
+                  "id" : 62,
                   "name" : "hdr.icmp.timestamp",
                   "repeated" : false,
                   "annotations" : [],
@@ -3876,7 +3674,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 70,
+                  "id" : 63,
                   "name" : "hdr.packet_out.$valid",
                   "repeated" : false,
                   "annotations" : [],
@@ -3890,7 +3688,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 71,
+                  "id" : 64,
                   "name" : "hdr.packet_out.egress_port",
                   "repeated" : false,
                   "annotations" : [],
@@ -3904,7 +3702,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 72,
+                  "id" : 65,
                   "name" : "hdr.packet_in.$valid",
                   "repeated" : false,
                   "annotations" : [],
@@ -3918,7 +3716,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 73,
+                  "id" : 66,
                   "name" : "hdr.packet_in.ingress_port",
                   "repeated" : false,
                   "annotations" : [],
@@ -3932,13 +3730,13 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 74,
-                  "name" : "fabric_md.ipv4_src_addr",
+                  "id" : 67,
+                  "name" : "fabric_md.bridged.bridge_md_type",
                   "repeated" : false,
                   "annotations" : [],
                   "type" : {
                     "type" : "bytes",
-                    "width" : 32
+                    "width" : 8
                   }
                 }
               },
@@ -3946,13 +3744,13 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 75,
-                  "name" : "fabric_md.ipv4_dst_addr",
+                  "id" : 68,
+                  "name" : "fabric_md.bridged.ig_port",
                   "repeated" : false,
                   "annotations" : [],
                   "type" : {
                     "type" : "bytes",
-                    "width" : 32
+                    "width" : 9
                   }
                 }
               },
@@ -3960,8 +3758,8 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 76,
-                  "name" : "fabric_md.vlan_id",
+                  "id" : 69,
+                  "name" : "fabric_md.bridged.vlan_id",
                   "repeated" : false,
                   "annotations" : [],
                   "type" : {
@@ -3974,64 +3772,8 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 77,
-                  "name" : "fabric_md.vlan_pri",
-                  "repeated" : false,
-                  "annotations" : [],
-                  "type" : {
-                    "type" : "bytes",
-                    "width" : 3
-                  }
-                }
-              },
-              {
-                "mandatory" : false,
-                "read_only" : true,
-                "singleton" : {
-                  "id" : 78,
-                  "name" : "fabric_md.vlan_cfi",
-                  "repeated" : false,
-                  "annotations" : [],
-                  "type" : {
-                    "type" : "bytes",
-                    "width" : 1
-                  }
-                }
-              },
-              {
-                "mandatory" : false,
-                "read_only" : true,
-                "singleton" : {
-                  "id" : 79,
-                  "name" : "fabric_md.ip_eth_type",
-                  "repeated" : false,
-                  "annotations" : [],
-                  "type" : {
-                    "type" : "bytes",
-                    "width" : 16
-                  }
-                }
-              },
-              {
-                "mandatory" : false,
-                "read_only" : true,
-                "singleton" : {
-                  "id" : 80,
-                  "name" : "fabric_md.ip_proto",
-                  "repeated" : false,
-                  "annotations" : [],
-                  "type" : {
-                    "type" : "bytes",
-                    "width" : 8
-                  }
-                }
-              },
-              {
-                "mandatory" : false,
-                "read_only" : true,
-                "singleton" : {
-                  "id" : 81,
-                  "name" : "fabric_md.mpls_label",
+                  "id" : 70,
+                  "name" : "fabric_md.bridged.mpls_label",
                   "repeated" : false,
                   "annotations" : [],
                   "type" : {
@@ -4044,8 +3786,8 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 82,
-                  "name" : "fabric_md.mpls_ttl",
+                  "id" : 71,
+                  "name" : "fabric_md.bridged.mpls_ttl",
                   "repeated" : false,
                   "annotations" : [],
                   "type" : {
@@ -4058,8 +3800,22 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 83,
-                  "name" : "fabric_md.l4_sport",
+                  "id" : 72,
+                  "name" : "fabric_md.bridged.ig_tstamp",
+                  "repeated" : false,
+                  "annotations" : [],
+                  "type" : {
+                    "type" : "bytes",
+                    "width" : 48
+                  }
+                }
+              },
+              {
+                "mandatory" : false,
+                "read_only" : true,
+                "singleton" : {
+                  "id" : 73,
+                  "name" : "fabric_md.bridged.ip_eth_type",
                   "repeated" : false,
                   "annotations" : [],
                   "type" : {
@@ -4072,8 +3828,22 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 84,
-                  "name" : "fabric_md.l4_dport",
+                  "id" : 74,
+                  "name" : "fabric_md.bridged.ip_proto",
+                  "repeated" : false,
+                  "annotations" : [],
+                  "type" : {
+                    "type" : "bytes",
+                    "width" : 8
+                  }
+                }
+              },
+              {
+                "mandatory" : false,
+                "read_only" : true,
+                "singleton" : {
+                  "id" : 75,
+                  "name" : "fabric_md.bridged.l4_sport",
                   "repeated" : false,
                   "annotations" : [],
                   "type" : {
@@ -4086,7 +3856,49 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 85,
+                  "id" : 76,
+                  "name" : "fabric_md.bridged.l4_dport",
+                  "repeated" : false,
+                  "annotations" : [],
+                  "type" : {
+                    "type" : "bytes",
+                    "width" : 16
+                  }
+                }
+              },
+              {
+                "mandatory" : false,
+                "read_only" : true,
+                "singleton" : {
+                  "id" : 77,
+                  "name" : "fabric_md.ipv4_src",
+                  "repeated" : false,
+                  "annotations" : [],
+                  "type" : {
+                    "type" : "bytes",
+                    "width" : 32
+                  }
+                }
+              },
+              {
+                "mandatory" : false,
+                "read_only" : true,
+                "singleton" : {
+                  "id" : 78,
+                  "name" : "fabric_md.ipv4_dst",
+                  "repeated" : false,
+                  "annotations" : [],
+                  "type" : {
+                    "type" : "bytes",
+                    "width" : 32
+                  }
+                }
+              },
+              {
+                "mandatory" : false,
+                "read_only" : true,
+                "singleton" : {
+                  "id" : 79,
                   "name" : "fabric_md.fwd_type",
                   "repeated" : false,
                   "annotations" : [],
@@ -4100,7 +3912,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 86,
+                  "id" : 80,
                   "name" : "fabric_md.next_id",
                   "repeated" : false,
                   "annotations" : [],
@@ -4114,21 +3926,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 87,
-                  "name" : "fabric_md.mirror_id",
-                  "repeated" : false,
-                  "annotations" : [],
-                  "type" : {
-                    "type" : "bytes",
-                    "width" : 10
-                  }
-                }
-              },
-              {
-                "mandatory" : false,
-                "read_only" : true,
-                "singleton" : {
-                  "id" : 88,
+                  "id" : 81,
                   "name" : "ig_intr_md.resubmit_flag",
                   "repeated" : false,
                   "annotations" : [],
@@ -4142,7 +3940,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 89,
+                  "id" : 82,
                   "name" : "ig_intr_md._pad1",
                   "repeated" : false,
                   "annotations" : [],
@@ -4156,7 +3954,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 90,
+                  "id" : 83,
                   "name" : "ig_intr_md.packet_version",
                   "repeated" : false,
                   "annotations" : [],
@@ -4170,7 +3968,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 91,
+                  "id" : 84,
                   "name" : "ig_intr_md._pad2",
                   "repeated" : false,
                   "annotations" : [],
@@ -4184,7 +3982,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 92,
+                  "id" : 85,
                   "name" : "ig_intr_md.ingress_port",
                   "repeated" : false,
                   "annotations" : [],
@@ -4198,7 +3996,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 93,
+                  "id" : 86,
                   "name" : "ig_intr_md.ingress_mac_tstamp",
                   "repeated" : false,
                   "annotations" : [],
@@ -4212,7 +4010,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 94,
+                  "id" : 87,
                   "name" : "ig_prsr_md.global_tstamp",
                   "repeated" : false,
                   "annotations" : [],
@@ -4226,7 +4024,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 95,
+                  "id" : 88,
                   "name" : "ig_prsr_md.global_ver",
                   "repeated" : false,
                   "annotations" : [],
@@ -4240,7 +4038,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 96,
+                  "id" : 89,
                   "name" : "ig_prsr_md.parser_err",
                   "repeated" : false,
                   "annotations" : [],
@@ -4254,7 +4052,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 97,
+                  "id" : 90,
                   "name" : "ig_dprsr_md.drop_ctl",
                   "repeated" : false,
                   "annotations" : [],
@@ -4268,7 +4066,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 98,
+                  "id" : 91,
                   "name" : "ig_dprsr_md.digest_type",
                   "repeated" : false,
                   "annotations" : [],
@@ -4282,7 +4080,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 99,
+                  "id" : 92,
                   "name" : "ig_dprsr_md.resubmit_type",
                   "repeated" : false,
                   "annotations" : [],
@@ -4296,7 +4094,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 100,
+                  "id" : 93,
                   "name" : "ig_dprsr_md.mirror_type",
                   "repeated" : false,
                   "annotations" : [],
@@ -4310,7 +4108,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 101,
+                  "id" : 94,
                   "name" : "ig_tm_md.ucast_egress_port",
                   "repeated" : false,
                   "annotations" : [],
@@ -4324,7 +4122,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 102,
+                  "id" : 95,
                   "name" : "ig_tm_md.bypass_egress",
                   "repeated" : false,
                   "annotations" : [],
@@ -4338,7 +4136,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 103,
+                  "id" : 96,
                   "name" : "ig_tm_md.deflect_on_drop",
                   "repeated" : false,
                   "annotations" : [],
@@ -4352,7 +4150,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 104,
+                  "id" : 97,
                   "name" : "ig_tm_md.ingress_cos",
                   "repeated" : false,
                   "annotations" : [],
@@ -4366,7 +4164,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 105,
+                  "id" : 98,
                   "name" : "ig_tm_md.qid",
                   "repeated" : false,
                   "annotations" : [],
@@ -4380,7 +4178,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 106,
+                  "id" : 99,
                   "name" : "ig_tm_md.icos_for_copy_to_cpu",
                   "repeated" : false,
                   "annotations" : [],
@@ -4394,7 +4192,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 107,
+                  "id" : 100,
                   "name" : "ig_tm_md.copy_to_cpu",
                   "repeated" : false,
                   "annotations" : [],
@@ -4408,7 +4206,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 108,
+                  "id" : 101,
                   "name" : "ig_tm_md.packet_color",
                   "repeated" : false,
                   "annotations" : [],
@@ -4422,7 +4220,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 109,
+                  "id" : 102,
                   "name" : "ig_tm_md.disable_ucast_cutthru",
                   "repeated" : false,
                   "annotations" : [],
@@ -4436,7 +4234,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 110,
+                  "id" : 103,
                   "name" : "ig_tm_md.enable_mcast_cutthru",
                   "repeated" : false,
                   "annotations" : [],
@@ -4450,7 +4248,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 111,
+                  "id" : 104,
                   "name" : "ig_tm_md.mcast_grp_a",
                   "repeated" : false,
                   "annotations" : [],
@@ -4464,7 +4262,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 112,
+                  "id" : 105,
                   "name" : "ig_tm_md.mcast_grp_b",
                   "repeated" : false,
                   "annotations" : [],
@@ -4478,7 +4276,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 113,
+                  "id" : 106,
                   "name" : "ig_tm_md.level1_mcast_hash",
                   "repeated" : false,
                   "annotations" : [],
@@ -4492,7 +4290,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 114,
+                  "id" : 107,
                   "name" : "ig_tm_md.level2_mcast_hash",
                   "repeated" : false,
                   "annotations" : [],
@@ -4506,7 +4304,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 115,
+                  "id" : 108,
                   "name" : "ig_tm_md.level1_exclusion_id",
                   "repeated" : false,
                   "annotations" : [],
@@ -4520,7 +4318,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 116,
+                  "id" : 109,
                   "name" : "ig_tm_md.level2_exclusion_id",
                   "repeated" : false,
                   "annotations" : [],
@@ -4534,7 +4332,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 117,
+                  "id" : 110,
                   "name" : "ig_tm_md.rid",
                   "repeated" : false,
                   "annotations" : [],
@@ -4775,90 +4573,6 @@
         },
         {
           "id" : 1,
-          "name" : "hdr.bridge_md.$valid",
-          "repeated" : false,
-          "annotations" : [],
-          "mandatory" : false,
-          "match_type" : "Ternary",
-          "type" : {
-            "type" : "bytes",
-            "width" : 1
-          }
-        },
-        {
-          "id" : 2,
-          "name" : "hdr.bridge_md.mpls_label",
-          "repeated" : false,
-          "annotations" : [],
-          "mandatory" : false,
-          "match_type" : "Ternary",
-          "type" : {
-            "type" : "bytes",
-            "width" : 20
-          }
-        },
-        {
-          "id" : 3,
-          "name" : "hdr.bridge_md.mpls_ttl",
-          "repeated" : false,
-          "annotations" : [],
-          "mandatory" : false,
-          "match_type" : "Ternary",
-          "type" : {
-            "type" : "bytes",
-            "width" : 8
-          }
-        },
-        {
-          "id" : 4,
-          "name" : "hdr.bridge_md.ingress_port",
-          "repeated" : false,
-          "annotations" : [],
-          "mandatory" : false,
-          "match_type" : "Ternary",
-          "type" : {
-            "type" : "bytes",
-            "width" : 9
-          }
-        },
-        {
-          "id" : 5,
-          "name" : "hdr.bridge_md.vlan_id",
-          "repeated" : false,
-          "annotations" : [],
-          "mandatory" : false,
-          "match_type" : "Ternary",
-          "type" : {
-            "type" : "bytes",
-            "width" : 12
-          }
-        },
-        {
-          "id" : 6,
-          "name" : "hdr.bridge_md.ip_eth_type",
-          "repeated" : false,
-          "annotations" : [],
-          "mandatory" : false,
-          "match_type" : "Ternary",
-          "type" : {
-            "type" : "bytes",
-            "width" : 16
-          }
-        },
-        {
-          "id" : 7,
-          "name" : "hdr.bridge_md.ip_proto",
-          "repeated" : false,
-          "annotations" : [],
-          "mandatory" : false,
-          "match_type" : "Ternary",
-          "type" : {
-            "type" : "bytes",
-            "width" : 8
-          }
-        },
-        {
-          "id" : 8,
           "name" : "hdr.ethernet.$valid",
           "repeated" : false,
           "annotations" : [],
@@ -4870,7 +4584,7 @@
           }
         },
         {
-          "id" : 9,
+          "id" : 2,
           "name" : "hdr.ethernet.dst_addr",
           "repeated" : false,
           "annotations" : [],
@@ -4882,7 +4596,7 @@
           }
         },
         {
-          "id" : 10,
+          "id" : 3,
           "name" : "hdr.ethernet.src_addr",
           "repeated" : false,
           "annotations" : [],
@@ -4894,7 +4608,7 @@
           }
         },
         {
-          "id" : 11,
+          "id" : 4,
           "name" : "hdr.vlan_tag.$valid",
           "repeated" : false,
           "annotations" : [],
@@ -4906,7 +4620,7 @@
           }
         },
         {
-          "id" : 12,
+          "id" : 5,
           "name" : "hdr.vlan_tag.eth_type",
           "repeated" : false,
           "annotations" : [],
@@ -4918,7 +4632,7 @@
           }
         },
         {
-          "id" : 13,
+          "id" : 6,
           "name" : "hdr.vlan_tag.pri",
           "repeated" : false,
           "annotations" : [],
@@ -4930,7 +4644,7 @@
           }
         },
         {
-          "id" : 14,
+          "id" : 7,
           "name" : "hdr.vlan_tag.cfi",
           "repeated" : false,
           "annotations" : [],
@@ -4942,7 +4656,7 @@
           }
         },
         {
-          "id" : 15,
+          "id" : 8,
           "name" : "hdr.vlan_tag.vlan_id",
           "repeated" : false,
           "annotations" : [],
@@ -4954,7 +4668,7 @@
           }
         },
         {
-          "id" : 16,
+          "id" : 9,
           "name" : "hdr.eth_type.$valid",
           "repeated" : false,
           "annotations" : [],
@@ -4966,7 +4680,7 @@
           }
         },
         {
-          "id" : 17,
+          "id" : 10,
           "name" : "hdr.eth_type.value",
           "repeated" : false,
           "annotations" : [],
@@ -4978,7 +4692,7 @@
           }
         },
         {
-          "id" : 18,
+          "id" : 11,
           "name" : "hdr.mpls.$valid",
           "repeated" : false,
           "annotations" : [],
@@ -4990,7 +4704,7 @@
           }
         },
         {
-          "id" : 19,
+          "id" : 12,
           "name" : "hdr.mpls.label",
           "repeated" : false,
           "annotations" : [],
@@ -5002,7 +4716,7 @@
           }
         },
         {
-          "id" : 20,
+          "id" : 13,
           "name" : "hdr.mpls.tc",
           "repeated" : false,
           "annotations" : [],
@@ -5014,7 +4728,7 @@
           }
         },
         {
-          "id" : 21,
+          "id" : 14,
           "name" : "hdr.mpls.bos",
           "repeated" : false,
           "annotations" : [],
@@ -5026,7 +4740,7 @@
           }
         },
         {
-          "id" : 22,
+          "id" : 15,
           "name" : "hdr.mpls.ttl",
           "repeated" : false,
           "annotations" : [],
@@ -5038,7 +4752,7 @@
           }
         },
         {
-          "id" : 23,
+          "id" : 16,
           "name" : "hdr.ipv4.$valid",
           "repeated" : false,
           "annotations" : [],
@@ -5050,7 +4764,7 @@
           }
         },
         {
-          "id" : 24,
+          "id" : 17,
           "name" : "hdr.ipv4.version",
           "repeated" : false,
           "annotations" : [],
@@ -5062,7 +4776,7 @@
           }
         },
         {
-          "id" : 25,
+          "id" : 18,
           "name" : "hdr.ipv4.ihl",
           "repeated" : false,
           "annotations" : [],
@@ -5074,7 +4788,7 @@
           }
         },
         {
-          "id" : 26,
+          "id" : 19,
           "name" : "hdr.ipv4.dscp",
           "repeated" : false,
           "annotations" : [],
@@ -5086,7 +4800,7 @@
           }
         },
         {
-          "id" : 27,
+          "id" : 20,
           "name" : "hdr.ipv4.ecn",
           "repeated" : false,
           "annotations" : [],
@@ -5098,7 +4812,7 @@
           }
         },
         {
-          "id" : 28,
+          "id" : 21,
           "name" : "hdr.ipv4.total_len",
           "repeated" : false,
           "annotations" : [],
@@ -5110,7 +4824,7 @@
           }
         },
         {
-          "id" : 29,
+          "id" : 22,
           "name" : "hdr.ipv4.identification",
           "repeated" : false,
           "annotations" : [],
@@ -5122,7 +4836,7 @@
           }
         },
         {
-          "id" : 30,
+          "id" : 23,
           "name" : "hdr.ipv4.flags",
           "repeated" : false,
           "annotations" : [],
@@ -5134,7 +4848,7 @@
           }
         },
         {
-          "id" : 31,
+          "id" : 24,
           "name" : "hdr.ipv4.frag_offset",
           "repeated" : false,
           "annotations" : [],
@@ -5146,7 +4860,7 @@
           }
         },
         {
-          "id" : 32,
+          "id" : 25,
           "name" : "hdr.ipv4.ttl",
           "repeated" : false,
           "annotations" : [],
@@ -5158,7 +4872,7 @@
           }
         },
         {
-          "id" : 33,
+          "id" : 26,
           "name" : "hdr.ipv4.protocol",
           "repeated" : false,
           "annotations" : [],
@@ -5170,7 +4884,7 @@
           }
         },
         {
-          "id" : 34,
+          "id" : 27,
           "name" : "hdr.ipv4.hdr_checksum",
           "repeated" : false,
           "annotations" : [],
@@ -5182,7 +4896,7 @@
           }
         },
         {
-          "id" : 35,
+          "id" : 28,
           "name" : "hdr.ipv4.src_addr",
           "repeated" : false,
           "annotations" : [],
@@ -5194,7 +4908,7 @@
           }
         },
         {
-          "id" : 36,
+          "id" : 29,
           "name" : "hdr.ipv4.dst_addr",
           "repeated" : false,
           "annotations" : [],
@@ -5206,7 +4920,7 @@
           }
         },
         {
-          "id" : 37,
+          "id" : 30,
           "name" : "hdr.ipv6.$valid",
           "repeated" : false,
           "annotations" : [],
@@ -5218,7 +4932,7 @@
           }
         },
         {
-          "id" : 38,
+          "id" : 31,
           "name" : "hdr.ipv6.version",
           "repeated" : false,
           "annotations" : [],
@@ -5230,7 +4944,7 @@
           }
         },
         {
-          "id" : 39,
+          "id" : 32,
           "name" : "hdr.ipv6.traffic_class",
           "repeated" : false,
           "annotations" : [],
@@ -5242,7 +4956,7 @@
           }
         },
         {
-          "id" : 40,
+          "id" : 33,
           "name" : "hdr.ipv6.flow_label",
           "repeated" : false,
           "annotations" : [],
@@ -5254,7 +4968,7 @@
           }
         },
         {
-          "id" : 41,
+          "id" : 34,
           "name" : "hdr.ipv6.payload_len",
           "repeated" : false,
           "annotations" : [],
@@ -5266,7 +4980,7 @@
           }
         },
         {
-          "id" : 42,
+          "id" : 35,
           "name" : "hdr.ipv6.next_hdr",
           "repeated" : false,
           "annotations" : [],
@@ -5278,7 +4992,7 @@
           }
         },
         {
-          "id" : 43,
+          "id" : 36,
           "name" : "hdr.ipv6.hop_limit",
           "repeated" : false,
           "annotations" : [],
@@ -5290,7 +5004,7 @@
           }
         },
         {
-          "id" : 44,
+          "id" : 37,
           "name" : "hdr.ipv6.src_addr",
           "repeated" : false,
           "annotations" : [],
@@ -5302,7 +5016,7 @@
           }
         },
         {
-          "id" : 45,
+          "id" : 38,
           "name" : "hdr.ipv6.dst_addr",
           "repeated" : false,
           "annotations" : [],
@@ -5314,7 +5028,7 @@
           }
         },
         {
-          "id" : 46,
+          "id" : 39,
           "name" : "hdr.tcp.$valid",
           "repeated" : false,
           "annotations" : [],
@@ -5326,7 +5040,7 @@
           }
         },
         {
-          "id" : 47,
+          "id" : 40,
           "name" : "hdr.tcp.sport",
           "repeated" : false,
           "annotations" : [],
@@ -5338,7 +5052,7 @@
           }
         },
         {
-          "id" : 48,
+          "id" : 41,
           "name" : "hdr.tcp.dport",
           "repeated" : false,
           "annotations" : [],
@@ -5350,7 +5064,7 @@
           }
         },
         {
-          "id" : 49,
+          "id" : 42,
           "name" : "hdr.tcp.seq_no",
           "repeated" : false,
           "annotations" : [],
@@ -5362,7 +5076,7 @@
           }
         },
         {
-          "id" : 50,
+          "id" : 43,
           "name" : "hdr.tcp.ack_no",
           "repeated" : false,
           "annotations" : [],
@@ -5374,7 +5088,7 @@
           }
         },
         {
-          "id" : 51,
+          "id" : 44,
           "name" : "hdr.tcp.data_offset",
           "repeated" : false,
           "annotations" : [],
@@ -5386,7 +5100,7 @@
           }
         },
         {
-          "id" : 52,
+          "id" : 45,
           "name" : "hdr.tcp.res",
           "repeated" : false,
           "annotations" : [],
@@ -5398,7 +5112,7 @@
           }
         },
         {
-          "id" : 53,
+          "id" : 46,
           "name" : "hdr.tcp.ecn",
           "repeated" : false,
           "annotations" : [],
@@ -5410,7 +5124,7 @@
           }
         },
         {
-          "id" : 54,
+          "id" : 47,
           "name" : "hdr.tcp.ctrl",
           "repeated" : false,
           "annotations" : [],
@@ -5422,7 +5136,7 @@
           }
         },
         {
-          "id" : 55,
+          "id" : 48,
           "name" : "hdr.tcp.window",
           "repeated" : false,
           "annotations" : [],
@@ -5434,7 +5148,7 @@
           }
         },
         {
-          "id" : 56,
+          "id" : 49,
           "name" : "hdr.tcp.checksum",
           "repeated" : false,
           "annotations" : [],
@@ -5446,7 +5160,7 @@
           }
         },
         {
-          "id" : 57,
+          "id" : 50,
           "name" : "hdr.tcp.urgent_ptr",
           "repeated" : false,
           "annotations" : [],
@@ -5458,7 +5172,7 @@
           }
         },
         {
-          "id" : 58,
+          "id" : 51,
           "name" : "hdr.udp.$valid",
           "repeated" : false,
           "annotations" : [],
@@ -5470,7 +5184,7 @@
           }
         },
         {
-          "id" : 59,
+          "id" : 52,
           "name" : "hdr.udp.sport",
           "repeated" : false,
           "annotations" : [],
@@ -5482,7 +5196,7 @@
           }
         },
         {
-          "id" : 60,
+          "id" : 53,
           "name" : "hdr.udp.dport",
           "repeated" : false,
           "annotations" : [],
@@ -5494,7 +5208,7 @@
           }
         },
         {
-          "id" : 61,
+          "id" : 54,
           "name" : "hdr.udp.len",
           "repeated" : false,
           "annotations" : [],
@@ -5506,7 +5220,7 @@
           }
         },
         {
-          "id" : 62,
+          "id" : 55,
           "name" : "hdr.udp.checksum",
           "repeated" : false,
           "annotations" : [],
@@ -5518,7 +5232,7 @@
           }
         },
         {
-          "id" : 63,
+          "id" : 56,
           "name" : "hdr.icmp.$valid",
           "repeated" : false,
           "annotations" : [],
@@ -5530,7 +5244,7 @@
           }
         },
         {
-          "id" : 64,
+          "id" : 57,
           "name" : "hdr.icmp.icmp_type",
           "repeated" : false,
           "annotations" : [],
@@ -5542,7 +5256,7 @@
           }
         },
         {
-          "id" : 65,
+          "id" : 58,
           "name" : "hdr.icmp.icmp_code",
           "repeated" : false,
           "annotations" : [],
@@ -5554,7 +5268,7 @@
           }
         },
         {
-          "id" : 66,
+          "id" : 59,
           "name" : "hdr.icmp.checksum",
           "repeated" : false,
           "annotations" : [],
@@ -5566,7 +5280,7 @@
           }
         },
         {
-          "id" : 67,
+          "id" : 60,
           "name" : "hdr.icmp.identifier",
           "repeated" : false,
           "annotations" : [],
@@ -5578,7 +5292,7 @@
           }
         },
         {
-          "id" : 68,
+          "id" : 61,
           "name" : "hdr.icmp.sequence_number",
           "repeated" : false,
           "annotations" : [],
@@ -5590,7 +5304,7 @@
           }
         },
         {
-          "id" : 69,
+          "id" : 62,
           "name" : "hdr.icmp.timestamp",
           "repeated" : false,
           "annotations" : [],
@@ -5602,7 +5316,7 @@
           }
         },
         {
-          "id" : 70,
+          "id" : 63,
           "name" : "hdr.packet_out.$valid",
           "repeated" : false,
           "annotations" : [],
@@ -5614,7 +5328,7 @@
           }
         },
         {
-          "id" : 71,
+          "id" : 64,
           "name" : "hdr.packet_out.egress_port",
           "repeated" : false,
           "annotations" : [],
@@ -5626,7 +5340,7 @@
           }
         },
         {
-          "id" : 72,
+          "id" : 65,
           "name" : "hdr.packet_in.$valid",
           "repeated" : false,
           "annotations" : [],
@@ -5638,7 +5352,7 @@
           }
         },
         {
-          "id" : 73,
+          "id" : 66,
           "name" : "hdr.packet_in.ingress_port",
           "repeated" : false,
           "annotations" : [],
@@ -5650,32 +5364,8 @@
           }
         },
         {
-          "id" : 76,
-          "name" : "fabric_md.vlan_id",
-          "repeated" : false,
-          "annotations" : [],
-          "mandatory" : false,
-          "match_type" : "Ternary",
-          "type" : {
-            "type" : "bytes",
-            "width" : 12
-          }
-        },
-        {
-          "id" : 79,
-          "name" : "fabric_md.ip_eth_type",
-          "repeated" : false,
-          "annotations" : [],
-          "mandatory" : false,
-          "match_type" : "Ternary",
-          "type" : {
-            "type" : "bytes",
-            "width" : 16
-          }
-        },
-        {
-          "id" : 80,
-          "name" : "fabric_md.ip_proto",
+          "id" : 67,
+          "name" : "fabric_md.bridged.bridge_md_type",
           "repeated" : false,
           "annotations" : [],
           "mandatory" : false,
@@ -5686,32 +5376,8 @@
           }
         },
         {
-          "id" : 81,
-          "name" : "fabric_md.mpls_label",
-          "repeated" : false,
-          "annotations" : [],
-          "mandatory" : false,
-          "match_type" : "Ternary",
-          "type" : {
-            "type" : "bytes",
-            "width" : 20
-          }
-        },
-        {
-          "id" : 82,
-          "name" : "fabric_md.mpls_ttl",
-          "repeated" : false,
-          "annotations" : [],
-          "mandatory" : false,
-          "match_type" : "Ternary",
-          "type" : {
-            "type" : "bytes",
-            "width" : 8
-          }
-        },
-        {
-          "id" : 118,
-          "name" : "fabric_md.ingress_port",
+          "id" : 68,
+          "name" : "fabric_md.bridged.ig_port",
           "repeated" : false,
           "annotations" : [],
           "mandatory" : false,
@@ -5722,7 +5388,103 @@
           }
         },
         {
-          "id" : 119,
+          "id" : 69,
+          "name" : "fabric_md.bridged.vlan_id",
+          "repeated" : false,
+          "annotations" : [],
+          "mandatory" : false,
+          "match_type" : "Ternary",
+          "type" : {
+            "type" : "bytes",
+            "width" : 12
+          }
+        },
+        {
+          "id" : 70,
+          "name" : "fabric_md.bridged.mpls_label",
+          "repeated" : false,
+          "annotations" : [],
+          "mandatory" : false,
+          "match_type" : "Ternary",
+          "type" : {
+            "type" : "bytes",
+            "width" : 20
+          }
+        },
+        {
+          "id" : 71,
+          "name" : "fabric_md.bridged.mpls_ttl",
+          "repeated" : false,
+          "annotations" : [],
+          "mandatory" : false,
+          "match_type" : "Ternary",
+          "type" : {
+            "type" : "bytes",
+            "width" : 8
+          }
+        },
+        {
+          "id" : 72,
+          "name" : "fabric_md.bridged.ig_tstamp",
+          "repeated" : false,
+          "annotations" : [],
+          "mandatory" : false,
+          "match_type" : "Ternary",
+          "type" : {
+            "type" : "bytes",
+            "width" : 48
+          }
+        },
+        {
+          "id" : 73,
+          "name" : "fabric_md.bridged.ip_eth_type",
+          "repeated" : false,
+          "annotations" : [],
+          "mandatory" : false,
+          "match_type" : "Ternary",
+          "type" : {
+            "type" : "bytes",
+            "width" : 16
+          }
+        },
+        {
+          "id" : 74,
+          "name" : "fabric_md.bridged.ip_proto",
+          "repeated" : false,
+          "annotations" : [],
+          "mandatory" : false,
+          "match_type" : "Ternary",
+          "type" : {
+            "type" : "bytes",
+            "width" : 8
+          }
+        },
+        {
+          "id" : 75,
+          "name" : "fabric_md.bridged.l4_sport",
+          "repeated" : false,
+          "annotations" : [],
+          "mandatory" : false,
+          "match_type" : "Ternary",
+          "type" : {
+            "type" : "bytes",
+            "width" : 16
+          }
+        },
+        {
+          "id" : 76,
+          "name" : "fabric_md.bridged.l4_dport",
+          "repeated" : false,
+          "annotations" : [],
+          "mandatory" : false,
+          "match_type" : "Ternary",
+          "type" : {
+            "type" : "bytes",
+            "width" : 16
+          }
+        },
+        {
+          "id" : 111,
           "name" : "eg_intr_md._pad0",
           "repeated" : false,
           "annotations" : [],
@@ -5734,7 +5496,7 @@
           }
         },
         {
-          "id" : 120,
+          "id" : 112,
           "name" : "eg_intr_md.egress_port",
           "repeated" : false,
           "annotations" : [],
@@ -5746,7 +5508,7 @@
           }
         },
         {
-          "id" : 121,
+          "id" : 113,
           "name" : "eg_intr_md._pad1",
           "repeated" : false,
           "annotations" : [],
@@ -5758,7 +5520,7 @@
           }
         },
         {
-          "id" : 122,
+          "id" : 114,
           "name" : "eg_intr_md.enq_qdepth",
           "repeated" : false,
           "annotations" : [],
@@ -5770,7 +5532,7 @@
           }
         },
         {
-          "id" : 123,
+          "id" : 115,
           "name" : "eg_intr_md._pad2",
           "repeated" : false,
           "annotations" : [],
@@ -5782,7 +5544,7 @@
           }
         },
         {
-          "id" : 124,
+          "id" : 116,
           "name" : "eg_intr_md.enq_congest_stat",
           "repeated" : false,
           "annotations" : [],
@@ -5794,7 +5556,7 @@
           }
         },
         {
-          "id" : 125,
+          "id" : 117,
           "name" : "eg_intr_md._pad3",
           "repeated" : false,
           "annotations" : [],
@@ -5806,7 +5568,7 @@
           }
         },
         {
-          "id" : 126,
+          "id" : 118,
           "name" : "eg_intr_md.enq_tstamp",
           "repeated" : false,
           "annotations" : [],
@@ -5818,7 +5580,7 @@
           }
         },
         {
-          "id" : 127,
+          "id" : 119,
           "name" : "eg_intr_md._pad4",
           "repeated" : false,
           "annotations" : [],
@@ -5830,7 +5592,7 @@
           }
         },
         {
-          "id" : 128,
+          "id" : 120,
           "name" : "eg_intr_md.deq_qdepth",
           "repeated" : false,
           "annotations" : [],
@@ -5842,7 +5604,7 @@
           }
         },
         {
-          "id" : 129,
+          "id" : 121,
           "name" : "eg_intr_md._pad5",
           "repeated" : false,
           "annotations" : [],
@@ -5854,7 +5616,7 @@
           }
         },
         {
-          "id" : 130,
+          "id" : 122,
           "name" : "eg_intr_md.deq_congest_stat",
           "repeated" : false,
           "annotations" : [],
@@ -5866,7 +5628,7 @@
           }
         },
         {
-          "id" : 131,
+          "id" : 123,
           "name" : "eg_intr_md.app_pool_congest_stat",
           "repeated" : false,
           "annotations" : [],
@@ -5878,7 +5640,7 @@
           }
         },
         {
-          "id" : 132,
+          "id" : 124,
           "name" : "eg_intr_md._pad6",
           "repeated" : false,
           "annotations" : [],
@@ -5890,7 +5652,7 @@
           }
         },
         {
-          "id" : 133,
+          "id" : 125,
           "name" : "eg_intr_md.deq_timedelta",
           "repeated" : false,
           "annotations" : [],
@@ -5902,7 +5664,7 @@
           }
         },
         {
-          "id" : 134,
+          "id" : 126,
           "name" : "eg_intr_md.egress_rid",
           "repeated" : false,
           "annotations" : [],
@@ -5914,7 +5676,7 @@
           }
         },
         {
-          "id" : 135,
+          "id" : 127,
           "name" : "eg_intr_md._pad7",
           "repeated" : false,
           "annotations" : [],
@@ -5926,7 +5688,7 @@
           }
         },
         {
-          "id" : 136,
+          "id" : 128,
           "name" : "eg_intr_md.egress_rid_first",
           "repeated" : false,
           "annotations" : [],
@@ -5938,7 +5700,7 @@
           }
         },
         {
-          "id" : 137,
+          "id" : 129,
           "name" : "eg_intr_md._pad8",
           "repeated" : false,
           "annotations" : [],
@@ -5950,7 +5712,7 @@
           }
         },
         {
-          "id" : 138,
+          "id" : 130,
           "name" : "eg_intr_md.egress_qid",
           "repeated" : false,
           "annotations" : [],
@@ -5962,7 +5724,7 @@
           }
         },
         {
-          "id" : 139,
+          "id" : 131,
           "name" : "eg_intr_md._pad9",
           "repeated" : false,
           "annotations" : [],
@@ -5974,7 +5736,7 @@
           }
         },
         {
-          "id" : 140,
+          "id" : 132,
           "name" : "eg_intr_md.egress_cos",
           "repeated" : false,
           "annotations" : [],
@@ -5986,7 +5748,7 @@
           }
         },
         {
-          "id" : 141,
+          "id" : 133,
           "name" : "eg_intr_md._pad10",
           "repeated" : false,
           "annotations" : [],
@@ -5998,7 +5760,7 @@
           }
         },
         {
-          "id" : 142,
+          "id" : 134,
           "name" : "eg_intr_md.deflection_flag",
           "repeated" : false,
           "annotations" : [],
@@ -6010,7 +5772,7 @@
           }
         },
         {
-          "id" : 143,
+          "id" : 135,
           "name" : "eg_intr_md.pkt_length",
           "repeated" : false,
           "annotations" : [],
@@ -6022,7 +5784,7 @@
           }
         },
         {
-          "id" : 144,
+          "id" : 136,
           "name" : "eg_prsr_md.global_tstamp",
           "repeated" : false,
           "annotations" : [],
@@ -6034,7 +5796,7 @@
           }
         },
         {
-          "id" : 145,
+          "id" : 137,
           "name" : "eg_prsr_md.global_ver",
           "repeated" : false,
           "annotations" : [],
@@ -6046,7 +5808,7 @@
           }
         },
         {
-          "id" : 146,
+          "id" : 138,
           "name" : "eg_prsr_md.parser_err",
           "repeated" : false,
           "annotations" : [],
@@ -6058,7 +5820,7 @@
           }
         },
         {
-          "id" : 147,
+          "id" : 139,
           "name" : "eg_dprsr_md.drop_ctl",
           "repeated" : false,
           "annotations" : [],
@@ -6070,7 +5832,7 @@
           }
         },
         {
-          "id" : 148,
+          "id" : 140,
           "name" : "eg_dprsr_md.mirror_type",
           "repeated" : false,
           "annotations" : [],
@@ -6082,7 +5844,7 @@
           }
         },
         {
-          "id" : 149,
+          "id" : 141,
           "name" : "eg_dprsr_md.coalesce_flush",
           "repeated" : false,
           "annotations" : [],
@@ -6094,7 +5856,7 @@
           }
         },
         {
-          "id" : 150,
+          "id" : 142,
           "name" : "eg_dprsr_md.coalesce_length",
           "repeated" : false,
           "annotations" : [],
@@ -6106,7 +5868,7 @@
           }
         },
         {
-          "id" : 151,
+          "id" : 143,
           "name" : "eg_oport_md.capture_tstamp_on_tx",
           "repeated" : false,
           "annotations" : [],
@@ -6118,7 +5880,7 @@
           }
         },
         {
-          "id" : 152,
+          "id" : 144,
           "name" : "eg_oport_md.update_delay_on_tx",
           "repeated" : false,
           "annotations" : [],
@@ -6130,7 +5892,7 @@
           }
         },
         {
-          "id" : 153,
+          "id" : 145,
           "name" : "eg_oport_md.force_tx_error",
           "repeated" : false,
           "annotations" : [],
@@ -6210,104 +5972,6 @@
                 "read_only" : true,
                 "singleton" : {
                   "id" : 1,
-                  "name" : "hdr.bridge_md.$valid",
-                  "repeated" : false,
-                  "annotations" : [],
-                  "type" : {
-                    "type" : "bytes",
-                    "width" : 1
-                  }
-                }
-              },
-              {
-                "mandatory" : false,
-                "read_only" : true,
-                "singleton" : {
-                  "id" : 2,
-                  "name" : "hdr.bridge_md.mpls_label",
-                  "repeated" : false,
-                  "annotations" : [],
-                  "type" : {
-                    "type" : "bytes",
-                    "width" : 20
-                  }
-                }
-              },
-              {
-                "mandatory" : false,
-                "read_only" : true,
-                "singleton" : {
-                  "id" : 3,
-                  "name" : "hdr.bridge_md.mpls_ttl",
-                  "repeated" : false,
-                  "annotations" : [],
-                  "type" : {
-                    "type" : "bytes",
-                    "width" : 8
-                  }
-                }
-              },
-              {
-                "mandatory" : false,
-                "read_only" : true,
-                "singleton" : {
-                  "id" : 4,
-                  "name" : "hdr.bridge_md.ingress_port",
-                  "repeated" : false,
-                  "annotations" : [],
-                  "type" : {
-                    "type" : "bytes",
-                    "width" : 9
-                  }
-                }
-              },
-              {
-                "mandatory" : false,
-                "read_only" : true,
-                "singleton" : {
-                  "id" : 5,
-                  "name" : "hdr.bridge_md.vlan_id",
-                  "repeated" : false,
-                  "annotations" : [],
-                  "type" : {
-                    "type" : "bytes",
-                    "width" : 12
-                  }
-                }
-              },
-              {
-                "mandatory" : false,
-                "read_only" : true,
-                "singleton" : {
-                  "id" : 6,
-                  "name" : "hdr.bridge_md.ip_eth_type",
-                  "repeated" : false,
-                  "annotations" : [],
-                  "type" : {
-                    "type" : "bytes",
-                    "width" : 16
-                  }
-                }
-              },
-              {
-                "mandatory" : false,
-                "read_only" : true,
-                "singleton" : {
-                  "id" : 7,
-                  "name" : "hdr.bridge_md.ip_proto",
-                  "repeated" : false,
-                  "annotations" : [],
-                  "type" : {
-                    "type" : "bytes",
-                    "width" : 8
-                  }
-                }
-              },
-              {
-                "mandatory" : false,
-                "read_only" : true,
-                "singleton" : {
-                  "id" : 8,
                   "name" : "hdr.ethernet.$valid",
                   "repeated" : false,
                   "annotations" : [],
@@ -6321,7 +5985,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 9,
+                  "id" : 2,
                   "name" : "hdr.ethernet.dst_addr",
                   "repeated" : false,
                   "annotations" : [],
@@ -6335,7 +5999,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 10,
+                  "id" : 3,
                   "name" : "hdr.ethernet.src_addr",
                   "repeated" : false,
                   "annotations" : [],
@@ -6349,7 +6013,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 11,
+                  "id" : 4,
                   "name" : "hdr.vlan_tag.$valid",
                   "repeated" : false,
                   "annotations" : [],
@@ -6363,7 +6027,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 12,
+                  "id" : 5,
                   "name" : "hdr.vlan_tag.eth_type",
                   "repeated" : false,
                   "annotations" : [],
@@ -6377,7 +6041,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 13,
+                  "id" : 6,
                   "name" : "hdr.vlan_tag.pri",
                   "repeated" : false,
                   "annotations" : [],
@@ -6391,7 +6055,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 14,
+                  "id" : 7,
                   "name" : "hdr.vlan_tag.cfi",
                   "repeated" : false,
                   "annotations" : [],
@@ -6405,7 +6069,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 15,
+                  "id" : 8,
                   "name" : "hdr.vlan_tag.vlan_id",
                   "repeated" : false,
                   "annotations" : [],
@@ -6419,7 +6083,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 16,
+                  "id" : 9,
                   "name" : "hdr.eth_type.$valid",
                   "repeated" : false,
                   "annotations" : [],
@@ -6433,7 +6097,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 17,
+                  "id" : 10,
                   "name" : "hdr.eth_type.value",
                   "repeated" : false,
                   "annotations" : [],
@@ -6447,7 +6111,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 18,
+                  "id" : 11,
                   "name" : "hdr.mpls.$valid",
                   "repeated" : false,
                   "annotations" : [],
@@ -6461,7 +6125,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 19,
+                  "id" : 12,
                   "name" : "hdr.mpls.label",
                   "repeated" : false,
                   "annotations" : [],
@@ -6475,7 +6139,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 20,
+                  "id" : 13,
                   "name" : "hdr.mpls.tc",
                   "repeated" : false,
                   "annotations" : [],
@@ -6489,7 +6153,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 21,
+                  "id" : 14,
                   "name" : "hdr.mpls.bos",
                   "repeated" : false,
                   "annotations" : [],
@@ -6503,7 +6167,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 22,
+                  "id" : 15,
                   "name" : "hdr.mpls.ttl",
                   "repeated" : false,
                   "annotations" : [],
@@ -6517,7 +6181,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 23,
+                  "id" : 16,
                   "name" : "hdr.ipv4.$valid",
                   "repeated" : false,
                   "annotations" : [],
@@ -6531,7 +6195,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 24,
+                  "id" : 17,
                   "name" : "hdr.ipv4.version",
                   "repeated" : false,
                   "annotations" : [],
@@ -6545,7 +6209,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 25,
+                  "id" : 18,
                   "name" : "hdr.ipv4.ihl",
                   "repeated" : false,
                   "annotations" : [],
@@ -6559,7 +6223,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 26,
+                  "id" : 19,
                   "name" : "hdr.ipv4.dscp",
                   "repeated" : false,
                   "annotations" : [],
@@ -6573,7 +6237,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 27,
+                  "id" : 20,
                   "name" : "hdr.ipv4.ecn",
                   "repeated" : false,
                   "annotations" : [],
@@ -6587,7 +6251,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 28,
+                  "id" : 21,
                   "name" : "hdr.ipv4.total_len",
                   "repeated" : false,
                   "annotations" : [],
@@ -6601,7 +6265,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 29,
+                  "id" : 22,
                   "name" : "hdr.ipv4.identification",
                   "repeated" : false,
                   "annotations" : [],
@@ -6615,7 +6279,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 30,
+                  "id" : 23,
                   "name" : "hdr.ipv4.flags",
                   "repeated" : false,
                   "annotations" : [],
@@ -6629,7 +6293,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 31,
+                  "id" : 24,
                   "name" : "hdr.ipv4.frag_offset",
                   "repeated" : false,
                   "annotations" : [],
@@ -6643,7 +6307,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 32,
+                  "id" : 25,
                   "name" : "hdr.ipv4.ttl",
                   "repeated" : false,
                   "annotations" : [],
@@ -6657,7 +6321,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 33,
+                  "id" : 26,
                   "name" : "hdr.ipv4.protocol",
                   "repeated" : false,
                   "annotations" : [],
@@ -6671,7 +6335,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 34,
+                  "id" : 27,
                   "name" : "hdr.ipv4.hdr_checksum",
                   "repeated" : false,
                   "annotations" : [],
@@ -6685,7 +6349,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 35,
+                  "id" : 28,
                   "name" : "hdr.ipv4.src_addr",
                   "repeated" : false,
                   "annotations" : [],
@@ -6699,7 +6363,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 36,
+                  "id" : 29,
                   "name" : "hdr.ipv4.dst_addr",
                   "repeated" : false,
                   "annotations" : [],
@@ -6713,7 +6377,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 37,
+                  "id" : 30,
                   "name" : "hdr.ipv6.$valid",
                   "repeated" : false,
                   "annotations" : [],
@@ -6727,7 +6391,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 38,
+                  "id" : 31,
                   "name" : "hdr.ipv6.version",
                   "repeated" : false,
                   "annotations" : [],
@@ -6741,7 +6405,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 39,
+                  "id" : 32,
                   "name" : "hdr.ipv6.traffic_class",
                   "repeated" : false,
                   "annotations" : [],
@@ -6755,7 +6419,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 40,
+                  "id" : 33,
                   "name" : "hdr.ipv6.flow_label",
                   "repeated" : false,
                   "annotations" : [],
@@ -6769,7 +6433,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 41,
+                  "id" : 34,
                   "name" : "hdr.ipv6.payload_len",
                   "repeated" : false,
                   "annotations" : [],
@@ -6783,7 +6447,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 42,
+                  "id" : 35,
                   "name" : "hdr.ipv6.next_hdr",
                   "repeated" : false,
                   "annotations" : [],
@@ -6797,7 +6461,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 43,
+                  "id" : 36,
                   "name" : "hdr.ipv6.hop_limit",
                   "repeated" : false,
                   "annotations" : [],
@@ -6811,7 +6475,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 44,
+                  "id" : 37,
                   "name" : "hdr.ipv6.src_addr",
                   "repeated" : false,
                   "annotations" : [],
@@ -6825,7 +6489,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 45,
+                  "id" : 38,
                   "name" : "hdr.ipv6.dst_addr",
                   "repeated" : false,
                   "annotations" : [],
@@ -6839,7 +6503,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 46,
+                  "id" : 39,
                   "name" : "hdr.tcp.$valid",
                   "repeated" : false,
                   "annotations" : [],
@@ -6853,7 +6517,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 47,
+                  "id" : 40,
                   "name" : "hdr.tcp.sport",
                   "repeated" : false,
                   "annotations" : [],
@@ -6867,7 +6531,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 48,
+                  "id" : 41,
                   "name" : "hdr.tcp.dport",
                   "repeated" : false,
                   "annotations" : [],
@@ -6881,7 +6545,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 49,
+                  "id" : 42,
                   "name" : "hdr.tcp.seq_no",
                   "repeated" : false,
                   "annotations" : [],
@@ -6895,7 +6559,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 50,
+                  "id" : 43,
                   "name" : "hdr.tcp.ack_no",
                   "repeated" : false,
                   "annotations" : [],
@@ -6909,7 +6573,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 51,
+                  "id" : 44,
                   "name" : "hdr.tcp.data_offset",
                   "repeated" : false,
                   "annotations" : [],
@@ -6923,7 +6587,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 52,
+                  "id" : 45,
                   "name" : "hdr.tcp.res",
                   "repeated" : false,
                   "annotations" : [],
@@ -6937,7 +6601,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 53,
+                  "id" : 46,
                   "name" : "hdr.tcp.ecn",
                   "repeated" : false,
                   "annotations" : [],
@@ -6951,7 +6615,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 54,
+                  "id" : 47,
                   "name" : "hdr.tcp.ctrl",
                   "repeated" : false,
                   "annotations" : [],
@@ -6965,7 +6629,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 55,
+                  "id" : 48,
                   "name" : "hdr.tcp.window",
                   "repeated" : false,
                   "annotations" : [],
@@ -6979,7 +6643,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 56,
+                  "id" : 49,
                   "name" : "hdr.tcp.checksum",
                   "repeated" : false,
                   "annotations" : [],
@@ -6993,7 +6657,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 57,
+                  "id" : 50,
                   "name" : "hdr.tcp.urgent_ptr",
                   "repeated" : false,
                   "annotations" : [],
@@ -7007,7 +6671,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 58,
+                  "id" : 51,
                   "name" : "hdr.udp.$valid",
                   "repeated" : false,
                   "annotations" : [],
@@ -7021,7 +6685,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 59,
+                  "id" : 52,
                   "name" : "hdr.udp.sport",
                   "repeated" : false,
                   "annotations" : [],
@@ -7035,7 +6699,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 60,
+                  "id" : 53,
                   "name" : "hdr.udp.dport",
                   "repeated" : false,
                   "annotations" : [],
@@ -7049,7 +6713,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 61,
+                  "id" : 54,
                   "name" : "hdr.udp.len",
                   "repeated" : false,
                   "annotations" : [],
@@ -7063,7 +6727,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 62,
+                  "id" : 55,
                   "name" : "hdr.udp.checksum",
                   "repeated" : false,
                   "annotations" : [],
@@ -7077,7 +6741,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 63,
+                  "id" : 56,
                   "name" : "hdr.icmp.$valid",
                   "repeated" : false,
                   "annotations" : [],
@@ -7091,7 +6755,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 64,
+                  "id" : 57,
                   "name" : "hdr.icmp.icmp_type",
                   "repeated" : false,
                   "annotations" : [],
@@ -7105,7 +6769,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 65,
+                  "id" : 58,
                   "name" : "hdr.icmp.icmp_code",
                   "repeated" : false,
                   "annotations" : [],
@@ -7119,7 +6783,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 66,
+                  "id" : 59,
                   "name" : "hdr.icmp.checksum",
                   "repeated" : false,
                   "annotations" : [],
@@ -7133,7 +6797,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 67,
+                  "id" : 60,
                   "name" : "hdr.icmp.identifier",
                   "repeated" : false,
                   "annotations" : [],
@@ -7147,7 +6811,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 68,
+                  "id" : 61,
                   "name" : "hdr.icmp.sequence_number",
                   "repeated" : false,
                   "annotations" : [],
@@ -7161,7 +6825,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 69,
+                  "id" : 62,
                   "name" : "hdr.icmp.timestamp",
                   "repeated" : false,
                   "annotations" : [],
@@ -7175,7 +6839,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 70,
+                  "id" : 63,
                   "name" : "hdr.packet_out.$valid",
                   "repeated" : false,
                   "annotations" : [],
@@ -7189,7 +6853,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 71,
+                  "id" : 64,
                   "name" : "hdr.packet_out.egress_port",
                   "repeated" : false,
                   "annotations" : [],
@@ -7203,7 +6867,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 72,
+                  "id" : 65,
                   "name" : "hdr.packet_in.$valid",
                   "repeated" : false,
                   "annotations" : [],
@@ -7217,7 +6881,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 73,
+                  "id" : 66,
                   "name" : "hdr.packet_in.ingress_port",
                   "repeated" : false,
                   "annotations" : [],
@@ -7231,36 +6895,8 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 76,
-                  "name" : "fabric_md.vlan_id",
-                  "repeated" : false,
-                  "annotations" : [],
-                  "type" : {
-                    "type" : "bytes",
-                    "width" : 12
-                  }
-                }
-              },
-              {
-                "mandatory" : false,
-                "read_only" : true,
-                "singleton" : {
-                  "id" : 79,
-                  "name" : "fabric_md.ip_eth_type",
-                  "repeated" : false,
-                  "annotations" : [],
-                  "type" : {
-                    "type" : "bytes",
-                    "width" : 16
-                  }
-                }
-              },
-              {
-                "mandatory" : false,
-                "read_only" : true,
-                "singleton" : {
-                  "id" : 80,
-                  "name" : "fabric_md.ip_proto",
+                  "id" : 67,
+                  "name" : "fabric_md.bridged.bridge_md_type",
                   "repeated" : false,
                   "annotations" : [],
                   "type" : {
@@ -7273,36 +6909,8 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 81,
-                  "name" : "fabric_md.mpls_label",
-                  "repeated" : false,
-                  "annotations" : [],
-                  "type" : {
-                    "type" : "bytes",
-                    "width" : 20
-                  }
-                }
-              },
-              {
-                "mandatory" : false,
-                "read_only" : true,
-                "singleton" : {
-                  "id" : 82,
-                  "name" : "fabric_md.mpls_ttl",
-                  "repeated" : false,
-                  "annotations" : [],
-                  "type" : {
-                    "type" : "bytes",
-                    "width" : 8
-                  }
-                }
-              },
-              {
-                "mandatory" : false,
-                "read_only" : true,
-                "singleton" : {
-                  "id" : 118,
-                  "name" : "fabric_md.ingress_port",
+                  "id" : 68,
+                  "name" : "fabric_md.bridged.ig_port",
                   "repeated" : false,
                   "annotations" : [],
                   "type" : {
@@ -7315,7 +6923,119 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 119,
+                  "id" : 69,
+                  "name" : "fabric_md.bridged.vlan_id",
+                  "repeated" : false,
+                  "annotations" : [],
+                  "type" : {
+                    "type" : "bytes",
+                    "width" : 12
+                  }
+                }
+              },
+              {
+                "mandatory" : false,
+                "read_only" : true,
+                "singleton" : {
+                  "id" : 70,
+                  "name" : "fabric_md.bridged.mpls_label",
+                  "repeated" : false,
+                  "annotations" : [],
+                  "type" : {
+                    "type" : "bytes",
+                    "width" : 20
+                  }
+                }
+              },
+              {
+                "mandatory" : false,
+                "read_only" : true,
+                "singleton" : {
+                  "id" : 71,
+                  "name" : "fabric_md.bridged.mpls_ttl",
+                  "repeated" : false,
+                  "annotations" : [],
+                  "type" : {
+                    "type" : "bytes",
+                    "width" : 8
+                  }
+                }
+              },
+              {
+                "mandatory" : false,
+                "read_only" : true,
+                "singleton" : {
+                  "id" : 72,
+                  "name" : "fabric_md.bridged.ig_tstamp",
+                  "repeated" : false,
+                  "annotations" : [],
+                  "type" : {
+                    "type" : "bytes",
+                    "width" : 48
+                  }
+                }
+              },
+              {
+                "mandatory" : false,
+                "read_only" : true,
+                "singleton" : {
+                  "id" : 73,
+                  "name" : "fabric_md.bridged.ip_eth_type",
+                  "repeated" : false,
+                  "annotations" : [],
+                  "type" : {
+                    "type" : "bytes",
+                    "width" : 16
+                  }
+                }
+              },
+              {
+                "mandatory" : false,
+                "read_only" : true,
+                "singleton" : {
+                  "id" : 74,
+                  "name" : "fabric_md.bridged.ip_proto",
+                  "repeated" : false,
+                  "annotations" : [],
+                  "type" : {
+                    "type" : "bytes",
+                    "width" : 8
+                  }
+                }
+              },
+              {
+                "mandatory" : false,
+                "read_only" : true,
+                "singleton" : {
+                  "id" : 75,
+                  "name" : "fabric_md.bridged.l4_sport",
+                  "repeated" : false,
+                  "annotations" : [],
+                  "type" : {
+                    "type" : "bytes",
+                    "width" : 16
+                  }
+                }
+              },
+              {
+                "mandatory" : false,
+                "read_only" : true,
+                "singleton" : {
+                  "id" : 76,
+                  "name" : "fabric_md.bridged.l4_dport",
+                  "repeated" : false,
+                  "annotations" : [],
+                  "type" : {
+                    "type" : "bytes",
+                    "width" : 16
+                  }
+                }
+              },
+              {
+                "mandatory" : false,
+                "read_only" : true,
+                "singleton" : {
+                  "id" : 111,
                   "name" : "eg_intr_md._pad0",
                   "repeated" : false,
                   "annotations" : [],
@@ -7329,7 +7049,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 120,
+                  "id" : 112,
                   "name" : "eg_intr_md.egress_port",
                   "repeated" : false,
                   "annotations" : [],
@@ -7343,7 +7063,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 121,
+                  "id" : 113,
                   "name" : "eg_intr_md._pad1",
                   "repeated" : false,
                   "annotations" : [],
@@ -7357,7 +7077,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 122,
+                  "id" : 114,
                   "name" : "eg_intr_md.enq_qdepth",
                   "repeated" : false,
                   "annotations" : [],
@@ -7371,7 +7091,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 123,
+                  "id" : 115,
                   "name" : "eg_intr_md._pad2",
                   "repeated" : false,
                   "annotations" : [],
@@ -7385,7 +7105,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 124,
+                  "id" : 116,
                   "name" : "eg_intr_md.enq_congest_stat",
                   "repeated" : false,
                   "annotations" : [],
@@ -7399,7 +7119,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 125,
+                  "id" : 117,
                   "name" : "eg_intr_md._pad3",
                   "repeated" : false,
                   "annotations" : [],
@@ -7413,7 +7133,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 126,
+                  "id" : 118,
                   "name" : "eg_intr_md.enq_tstamp",
                   "repeated" : false,
                   "annotations" : [],
@@ -7427,7 +7147,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 127,
+                  "id" : 119,
                   "name" : "eg_intr_md._pad4",
                   "repeated" : false,
                   "annotations" : [],
@@ -7441,7 +7161,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 128,
+                  "id" : 120,
                   "name" : "eg_intr_md.deq_qdepth",
                   "repeated" : false,
                   "annotations" : [],
@@ -7455,7 +7175,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 129,
+                  "id" : 121,
                   "name" : "eg_intr_md._pad5",
                   "repeated" : false,
                   "annotations" : [],
@@ -7469,7 +7189,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 130,
+                  "id" : 122,
                   "name" : "eg_intr_md.deq_congest_stat",
                   "repeated" : false,
                   "annotations" : [],
@@ -7483,7 +7203,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 131,
+                  "id" : 123,
                   "name" : "eg_intr_md.app_pool_congest_stat",
                   "repeated" : false,
                   "annotations" : [],
@@ -7497,7 +7217,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 132,
+                  "id" : 124,
                   "name" : "eg_intr_md._pad6",
                   "repeated" : false,
                   "annotations" : [],
@@ -7511,7 +7231,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 133,
+                  "id" : 125,
                   "name" : "eg_intr_md.deq_timedelta",
                   "repeated" : false,
                   "annotations" : [],
@@ -7525,7 +7245,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 134,
+                  "id" : 126,
                   "name" : "eg_intr_md.egress_rid",
                   "repeated" : false,
                   "annotations" : [],
@@ -7539,7 +7259,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 135,
+                  "id" : 127,
                   "name" : "eg_intr_md._pad7",
                   "repeated" : false,
                   "annotations" : [],
@@ -7553,7 +7273,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 136,
+                  "id" : 128,
                   "name" : "eg_intr_md.egress_rid_first",
                   "repeated" : false,
                   "annotations" : [],
@@ -7567,7 +7287,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 137,
+                  "id" : 129,
                   "name" : "eg_intr_md._pad8",
                   "repeated" : false,
                   "annotations" : [],
@@ -7581,7 +7301,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 138,
+                  "id" : 130,
                   "name" : "eg_intr_md.egress_qid",
                   "repeated" : false,
                   "annotations" : [],
@@ -7595,7 +7315,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 139,
+                  "id" : 131,
                   "name" : "eg_intr_md._pad9",
                   "repeated" : false,
                   "annotations" : [],
@@ -7609,7 +7329,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 140,
+                  "id" : 132,
                   "name" : "eg_intr_md.egress_cos",
                   "repeated" : false,
                   "annotations" : [],
@@ -7623,7 +7343,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 141,
+                  "id" : 133,
                   "name" : "eg_intr_md._pad10",
                   "repeated" : false,
                   "annotations" : [],
@@ -7637,7 +7357,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 142,
+                  "id" : 134,
                   "name" : "eg_intr_md.deflection_flag",
                   "repeated" : false,
                   "annotations" : [],
@@ -7651,7 +7371,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 143,
+                  "id" : 135,
                   "name" : "eg_intr_md.pkt_length",
                   "repeated" : false,
                   "annotations" : [],
@@ -7665,7 +7385,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 144,
+                  "id" : 136,
                   "name" : "eg_prsr_md.global_tstamp",
                   "repeated" : false,
                   "annotations" : [],
@@ -7679,7 +7399,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 145,
+                  "id" : 137,
                   "name" : "eg_prsr_md.global_ver",
                   "repeated" : false,
                   "annotations" : [],
@@ -7693,7 +7413,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 146,
+                  "id" : 138,
                   "name" : "eg_prsr_md.parser_err",
                   "repeated" : false,
                   "annotations" : [],
@@ -7707,7 +7427,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 147,
+                  "id" : 139,
                   "name" : "eg_dprsr_md.drop_ctl",
                   "repeated" : false,
                   "annotations" : [],
@@ -7721,7 +7441,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 148,
+                  "id" : 140,
                   "name" : "eg_dprsr_md.mirror_type",
                   "repeated" : false,
                   "annotations" : [],
@@ -7735,7 +7455,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 149,
+                  "id" : 141,
                   "name" : "eg_dprsr_md.coalesce_flush",
                   "repeated" : false,
                   "annotations" : [],
@@ -7749,7 +7469,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 150,
+                  "id" : 142,
                   "name" : "eg_dprsr_md.coalesce_length",
                   "repeated" : false,
                   "annotations" : [],
@@ -7763,7 +7483,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 151,
+                  "id" : 143,
                   "name" : "eg_oport_md.capture_tstamp_on_tx",
                   "repeated" : false,
                   "annotations" : [],
@@ -7777,7 +7497,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 152,
+                  "id" : 144,
                   "name" : "eg_oport_md.update_delay_on_tx",
                   "repeated" : false,
                   "annotations" : [],
@@ -7791,7 +7511,7 @@
                 "mandatory" : false,
                 "read_only" : true,
                 "singleton" : {
-                  "id" : 153,
+                  "id" : 145,
                   "name" : "eg_oport_md.force_tx_error",
                   "repeated" : false,
                   "annotations" : [],
