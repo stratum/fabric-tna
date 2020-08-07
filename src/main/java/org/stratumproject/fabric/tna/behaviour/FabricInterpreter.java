@@ -65,9 +65,9 @@ public class FabricInterpreter extends AbstractFabricHandlerBehavior
     private static final Set<PiTableId> NEXT_CTRL_TBLS = ImmutableSet.of(
             P4InfoConstants.FABRIC_INGRESS_NEXT_NEXT_VLAN,
             // TODO: add profile with simple next or remove references
-            // FabricConstants.FABRIC_INGRESS_NEXT_SIMPLE,
+            // P4InfoConstants.FABRIC_INGRESS_NEXT_SIMPLE,
             // TODO: re-enable support for xconnext
-            // FabricConstants.FABRIC_INGRESS_NEXT_XCONNECT,
+            // P4InfoConstants.FABRIC_INGRESS_NEXT_XCONNECT,
             P4InfoConstants.FABRIC_INGRESS_NEXT_HASHED);
     private static final Set<PiTableId> E_NEXT_CTRL_TBLS = ImmutableSet.of(
             P4InfoConstants.FABRIC_EGRESS_EGRESS_NEXT_EGRESS_VLAN);
@@ -83,7 +83,7 @@ public class FabricInterpreter extends AbstractFabricHandlerBehavior
                     .put(Criterion.Type.MPLS_LABEL, P4InfoConstants.HDR_MPLS_LABEL)
                     .put(Criterion.Type.VLAN_VID, P4InfoConstants.HDR_VLAN_ID)
                     // TODO: re-enable support for double-vlan
-                    // .put(Criterion.Type.INNER_VLAN_VID, FabricConstants.HDR_INNER_VLAN_ID)
+                    // .put(Criterion.Type.INNER_VLAN_VID, P4InfoConstants.HDR_INNER_VLAN_ID)
                     .put(Criterion.Type.IPV4_DST, P4InfoConstants.HDR_IPV4_DST)
                     .put(Criterion.Type.IPV4_SRC, P4InfoConstants.HDR_IPV4_SRC)
                     .put(Criterion.Type.IPV6_DST, P4InfoConstants.HDR_IPV6_DST)

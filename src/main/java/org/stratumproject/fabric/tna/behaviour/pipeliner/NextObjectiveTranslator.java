@@ -196,7 +196,7 @@ class NextObjectiveTranslator
         //         obj.nextTreatments(), true).get(0).treatment();
         //
         // resultBuilder.addFlowRule(flowRule(
-        //         obj, FabricConstants.FABRIC_INGRESS_NEXT_SIMPLE,
+        //         obj, P4InfoConstants.FABRIC_INGRESS_NEXT_SIMPLE,
         //         selector, treatment));
         //
         // handleEgress(obj, treatment, resultBuilder, false);
@@ -330,10 +330,10 @@ class NextObjectiveTranslator
     //             .build();
     //
     //     resultBuilder.addFlowRule(flowRule(
-    //             obj, FabricConstants.FABRIC_INGRESS_NEXT_XCONNECT,
+    //             obj, P4InfoConstants.FABRIC_INGRESS_NEXT_XCONNECT,
     //             selector1, treatment1));
     //     resultBuilder.addFlowRule(flowRule(
-    //             obj, FabricConstants.FABRIC_INGRESS_NEXT_XCONNECT,
+    //             obj, P4InfoConstants.FABRIC_INGRESS_NEXT_XCONNECT,
     //             selector2, treatment2));
     //
     // }

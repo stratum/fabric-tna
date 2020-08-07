@@ -67,9 +67,9 @@ public class FabricCapabilities {
     public boolean supportDoubleVlanTerm() {
         // TODO: re-enable support for double-vlan
         // if (pipeconf.pipelineModel()
-        //         .table(FabricConstants.FABRIC_INGRESS_NEXT_NEXT_VLAN).isPresent()) {
-        //     return pipeconf.pipelineModel().table(FabricConstants.FABRIC_INGRESS_NEXT_NEXT_VLAN)
-        //             .get().action(FabricConstants.FABRIC_INGRESS_NEXT_SET_DOUBLE_VLAN)
+        //         .table(P4InfoConstants.FABRIC_INGRESS_NEXT_NEXT_VLAN).isPresent()) {
+        //     return pipeconf.pipelineModel().table(P4InfoConstants.FABRIC_INGRESS_NEXT_NEXT_VLAN)
+        //             .get().action(P4InfoConstants.FABRIC_INGRESS_NEXT_SET_DOUBLE_VLAN)
         //             .isPresent();
         // }
         return false;
@@ -84,7 +84,7 @@ public class FabricCapabilities {
     //  */
     // public boolean supportBng() {
     //     return pipeconf.pipelineModel()
-    //             .counter(FabricConstants.FABRIC_INGRESS_BNG_INGRESS_DOWNSTREAM_C_LINE_RX)
+    //             .counter(P4InfoConstants.FABRIC_INGRESS_BNG_INGRESS_DOWNSTREAM_C_LINE_RX)
     //             .isPresent();
     // }
 
@@ -100,7 +100,7 @@ public class FabricCapabilities {
     //         return 0;
     //     }
     //     return pipeconf.pipelineModel()
-    //             .counter(FabricConstants.FABRIC_INGRESS_BNG_INGRESS_DOWNSTREAM_C_LINE_RX)
+    //             .counter(P4InfoConstants.FABRIC_INGRESS_BNG_INGRESS_DOWNSTREAM_C_LINE_RX)
     //             .orElseThrow().size();
     // }
 }
