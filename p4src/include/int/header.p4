@@ -44,6 +44,23 @@ header_union local_report_t {
     local_report_header_t local_report_header;
 }
 
+// Since we don't parse the packet in the egress parser if
+// we receive a packet from egress mirror, the compiler
+// may mark the mirror metadata and other headers (e.g., IPv4)
+// as mutually exclusive.
+// Here we set the mirror metadata with "no overlay" to prevent this.
+@pa_no_overlay("egress", "fabric_md.int_mirror_md.bridge_md_type")
+@pa_no_overlay("egress", "fabric_md.int_mirror_md.mirror_session_id")
+@pa_no_overlay("egress", "fabric_md.int_mirror_md.switch_id")
+@pa_no_overlay("egress", "fabric_md.int_mirror_md.ig_port")
+@pa_no_overlay("egress", "fabric_md.int_mirror_md.eg_port")
+@pa_no_overlay("egress", "fabric_md.int_mirror_md.queue_id")
+@pa_no_overlay("egress", "fabric_md.int_mirror_md.queue_occupancy")
+@pa_no_overlay("egress", "fabric_md.int_mirror_md.ig_tstamp")
+@pa_no_overlay("egress", "fabric_md.int_mirror_md.eg_tstamp")
+#ifdef WITH_SPGW
+@pa_no_overlay("egress", "fabric_md.int_mirror_md.skip_gtpu_headers")
+#endif // WITH_SPGW
 header int_mirror_metadata_t {
     BridgedMetadataType_t bridge_md_type;
     bit<6>                _pad0;
