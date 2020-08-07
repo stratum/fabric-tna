@@ -356,7 +356,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
     }
 
     private boolean setupIntReportInternal(IntDeviceConfig cfg) {
-        FlowRule reportRule = buildReportEntry(cfg);
+        final FlowRule reportRule = buildReportEntry(cfg);
         if (reportRule != null) {
             flowRuleService.applyFlowRules(reportRule);
             log.info("Report rule added to {} [{}]", this.data().deviceId(), reportRule);
@@ -386,19 +386,19 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                         "with segmentrouting ipv4Loopback ({}), also ignoring MAC addresses",
                 deviceId, intCfg.sinkIp(), srcIp);
 
-        PiActionParam srcMacParam = new PiActionParam(
+        final PiActionParam srcMacParam = new PiActionParam(
                 P4InfoConstants.SRC_MAC, MacAddress.ZERO.toBytes());
-        PiActionParam nextHopMacParam = new PiActionParam(
+        final PiActionParam nextHopMacParam = new PiActionParam(
                 P4InfoConstants.MON_MAC, MacAddress.ZERO.toBytes());
-        PiActionParam srcIpParam = new PiActionParam(
+        final PiActionParam srcIpParam = new PiActionParam(
                 P4InfoConstants.SRC_IP, srcIp.toOctets());
-        PiActionParam monIpParam = new PiActionParam(
+        final PiActionParam monIpParam = new PiActionParam(
                 P4InfoConstants.MON_IP,
                 intCfg.collectorIp().toOctets());
-        PiActionParam monPortParam = new PiActionParam(
+        final PiActionParam monPortParam = new PiActionParam(
                 P4InfoConstants.MON_PORT,
                 intCfg.collectorPort().toInt());
-        PiAction reportAction = PiAction.builder()
+        final PiAction reportAction = PiAction.builder()
                 .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_REPORT_ENCAPSULATION)
                 .withParameter(srcMacParam)
                 .withParameter(nextHopMacParam)
@@ -406,11 +406,10 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 .withParameter(monIpParam)
                 .withParameter(monPortParam)
                 .build();
-        TrafficTreatment treatment = DefaultTrafficTreatment.builder()
+        final TrafficTreatment treatment = DefaultTrafficTreatment.builder()
                 .piTableAction(reportAction)
                 .build();
-
-        TrafficSelector selector = DefaultTrafficSelector.builder()
+        final TrafficSelector selector = DefaultTrafficSelector.builder()
                 .matchPi(PiCriterion.builder()
                         .matchExact(P4InfoConstants.HDR_INT_MIRROR_VALID, 1)
                         .build())

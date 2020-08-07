@@ -191,9 +191,9 @@ struct fabric_ingress_metadata_t {
 // Egress pipeline-only metadata
 @flexible
 struct fabric_egress_metadata_t {
-    bridged_metadata_t bridged;
+    bridged_metadata_t    bridged;
 #ifdef WITH_SPGW
-    bool              inner_ipv4_checksum_err;
+    bool                  inner_ipv4_checksum_err;
 #endif // WITH_SPGW
 #ifdef WITH_INT
     int_mirror_metadata_t int_mirror_md;

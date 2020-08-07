@@ -73,8 +73,8 @@ parser FabricIngressParser (packet_in  packet,
     state parse_untagged_packet {
         // Sets default vlan
         fabric_md.bridged.vlan_id = DEFAULT_VLAN_ID;
-        // fabric_md.bridged.vlan_cfi = 0;
-        // fabric_md.bridged.vlan_pri = 0;
+        // fabric_md.bridged.vlan_cfi = 3w0;
+        // fabric_md.bridged.vlan_pri = 1w0;
         transition parse_eth_type;
     }
 
@@ -317,8 +317,8 @@ parser FabricEgressParser (packet_in packet,
     }
 
     state skip_gtpu_headers {
-        // Skip IP/UDP/GTPU headers: (20 + 8 + 8)*8 bits
-        packet.advance(288);
+        // Skip IP/UDP/GTPU headers (bits)
+        packet.advance((IPV4_HDR_SIZE + UDP_HDR_SIZE + GTP_HDR_SIZE) * 8);
         transition accept;
     }
 

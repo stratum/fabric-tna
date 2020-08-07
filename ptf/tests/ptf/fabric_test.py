@@ -1397,6 +1397,7 @@ class IntTest(IPv4UnicastTest):
         ipv4_src_ = ipv4_to_binary(ipv4_src)
         ipv4_dst_ = ipv4_to_binary(ipv4_dst)
         ipv4_mask = ipv4_to_binary("255.255.255.255")
+        # Use full range of TCP/UDP ports by default.
         sport_low = stringify(0, 2)
         sport_high = stringify(0xFFFF, 2)
         dport_low = stringify(0, 2)
@@ -1476,7 +1477,7 @@ class IntTest(IPv4UnicastTest):
         if mpls:
             exp_pkt = pkt_add_mpls(exp_pkt, label=MPLS_LABEL_2, ttl=DEFAULT_MPLS_TTL)
 
-        # We should also expected an INT report packet comes from "resubmit port"
+        # We should also expected an INT report packet
         exp_int_report_pkt_masked = \
             self.build_int_local_report(SWITCH_MAC, INT_COLLECTOR_MAC, SWITCH_IPV4, INT_COLLECTOR_IPV4,
                                         ig_port, eg_port, switch_id, exp_pkt)
@@ -1498,7 +1499,7 @@ class IntTest(IPv4UnicastTest):
         self.add_forwarding_routing_v4_entry(INT_COLLECTOR_IPV4, prefix_len, next_id)
         self.add_next_routing(next_id, collector_port, SWITCH_MAC, INT_COLLECTOR_MAC)
         self.add_next_vlan(next_id, DEFAULT_VLAN)
-        # End of setting up entries for recirculate report packet
+        # End of setting up entries for report packet
 
         self.runIPv4UnicastTest(pkt=pkt, next_hop_mac=HOST2_MAC,
                                 tagged1=tagged1, tagged2=tagged2, mpls=mpls,
@@ -1541,7 +1542,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         if mpls:
             exp_pkt = pkt_add_mpls(exp_pkt, label=MPLS_LABEL_2, ttl=DEFAULT_MPLS_TTL)
 
-        # We should also expected an INT report packet comes from "resubmit port"
+        # We should also expected an INT report packet
         exp_int_report_pkt_masked = \
             self.build_int_local_report(SWITCH_MAC, INT_COLLECTOR_MAC, SWITCH_IPV4, INT_COLLECTOR_IPV4,
                                         ig_port, eg_port, switch_id, exp_pkt)
@@ -1572,7 +1573,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         self.add_forwarding_routing_v4_entry(INT_COLLECTOR_IPV4, prefix_len, next_id)
         self.add_next_routing(next_id, collector_port, SWITCH_MAC, INT_COLLECTOR_MAC)
         self.add_next_vlan(next_id, DEFAULT_VLAN)
-        # End of setting up entries for recirculate report packet
+        # End of setting up entries for report packet
         self.runIPv4UnicastTest(pkt=gtp_pkt, dst_ipv4=pkt[IP].dst,
                                 exp_pkt=exp_pkt, next_hop_mac=HOST2_MAC,
                                 tagged1=tagged1, tagged2=tagged2, mpls=mpls,
@@ -1616,7 +1617,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             exp_pkt = pkt_add_mpls(exp_pkt, label=MPLS_LABEL_2, ttl=DEFAULT_MPLS_TTL)
             inner_exp_pkt = pkt_add_mpls(inner_exp_pkt, label=MPLS_LABEL_2, ttl=DEFAULT_MPLS_TTL)
 
-        # We should also expected an INT report packet comes from "resubmit port"
+        # We should also expected an INT report packet
         exp_int_report_pkt_masked = \
             self.build_int_local_report(SWITCH_MAC, INT_COLLECTOR_MAC, SWITCH_IPV4, INT_COLLECTOR_IPV4,
                                         ig_port, eg_port, switch_id, inner_exp_pkt)

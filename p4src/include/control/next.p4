@@ -188,9 +188,9 @@ control Next (inout parsed_headers_t hdr,
 
     table hashed {
         key = {
-            fabric_md.next_id         : exact @name("next_id");
-            fabric_md.ipv4_dst   : selector;
-            fabric_md.ipv4_src   : selector;
+            fabric_md.next_id          : exact @name("next_id");
+            fabric_md.ipv4_dst         : selector;
+            fabric_md.ipv4_src         : selector;
             fabric_md.bridged.ip_proto : selector;
             fabric_md.bridged.l4_sport : selector;
             fabric_md.bridged.l4_dport : selector;
@@ -266,7 +266,7 @@ control EgressNextControl (inout parsed_headers_t hdr,
         hdr.mpls.label = fabric_md.bridged.mpls_label;
         hdr.mpls.tc = 3w0;
         hdr.mpls.bos = 1w1; // BOS = TRUE
-        hdr.mpls.ttl = fabric_md.bridged.mpls_ttl; // Will Decrement after push.
+        hdr.mpls.ttl = fabric_md.bridged.mpls_ttl; // Will be decremented after push.
         hdr.eth_type.value = ETHERTYPE_MPLS;
     }
 
@@ -307,7 +307,7 @@ control EgressNextControl (inout parsed_headers_t hdr,
     table egress_vlan {
         key = {
             fabric_md.bridged.vlan_id : exact @name("vlan_id");
-            eg_intr_md.egress_port   : exact @name("eg_port");
+            eg_intr_md.egress_port    : exact @name("eg_port");
         }
         actions = {
             pop_vlan;

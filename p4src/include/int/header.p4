@@ -47,7 +47,7 @@ header_union local_report_t {
 // Since we don't parse the packet in the egress parser if
 // we receive a packet from egress mirror, the compiler
 // may mark the mirror metadata and other headers (e.g., IPv4)
-// as mutually exclusive.
+// as "mutually exclusive".
 // Here we set the mirror metadata with "no overlay" to prevent this.
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.bridge_md_type")
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.mirror_session_id")
@@ -78,4 +78,4 @@ header int_mirror_metadata_t {
 #endif // WITH_SPGW
 }
 
-#endif
+#endif // __INT_HEADER__

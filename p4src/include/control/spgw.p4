@@ -30,8 +30,8 @@ control SpgwIngress(
                             bool skip_spgw) {
         // Interface type can be access, core, n6_lan, etc (see InterfaceType enum)
         // If interface is from the control plane, direction can be either up or down
-        fabric_md.spgw_src_iface   = src_iface;
-        fabric_md.spgw_direction   = direction;
+        fabric_md.spgw_src_iface    = src_iface;
+        fabric_md.spgw_direction    = direction;
         fabric_md.bridged.skip_spgw = skip_spgw;
     }
 
@@ -88,24 +88,24 @@ control SpgwIngress(
     // This table scales poorly and covers uncommon PDRs
     table flexible_pdr_lookup {
         key = {
-            fabric_md.spgw_src_iface    : ternary @name("src_iface");
-            fabric_md.spgw_direction    : ternary @name("direction");
+            fabric_md.spgw_src_iface         : ternary @name("src_iface");
+            fabric_md.spgw_direction         : ternary @name("direction");
             // GTPU
-            hdr.gtpu.isValid()          : ternary @name("gtpu_is_valid");
-            hdr.gtpu.teid               : ternary @name("teid");
+            hdr.gtpu.isValid()               : ternary @name("gtpu_is_valid");
+            hdr.gtpu.teid                    : ternary @name("teid");
             // SDF
             // outer 5-tuple
-            hdr.ipv4.src_addr           : ternary @name("ipv4_src");
-            hdr.ipv4.dst_addr           : ternary @name("ipv4_dst");
-            hdr.ipv4.protocol           : ternary @name("ip_proto");
-            fabric_md.bridged.l4_sport          : ternary @name("l4_sport");
-            fabric_md.bridged.l4_dport          : ternary @name("l4_dport");
+            hdr.ipv4.src_addr                : ternary @name("ipv4_src");
+            hdr.ipv4.dst_addr                : ternary @name("ipv4_dst");
+            hdr.ipv4.protocol                : ternary @name("ip_proto");
+            fabric_md.bridged.l4_sport       : ternary @name("l4_sport");
+            fabric_md.bridged.l4_dport       : ternary @name("l4_dport");
             // inner 5-tuple
-            hdr.inner_ipv4.src_addr     : ternary @name("inner_ipv4_src");
-            hdr.inner_ipv4.dst_addr     : ternary @name("inner_ipv4_dst");
-            hdr.inner_ipv4.protocol     : ternary @name("inner_ip_proto");
-            fabric_md.bridged.inner_l4_sport    : ternary @name("inner_l4_sport");
-            fabric_md.bridged.inner_l4_dport    : ternary @name("inner_l4_dport");
+            hdr.inner_ipv4.src_addr          : ternary @name("inner_ipv4_src");
+            hdr.inner_ipv4.dst_addr          : ternary @name("inner_ipv4_dst");
+            hdr.inner_ipv4.protocol          : ternary @name("inner_ip_proto");
+            fabric_md.bridged.inner_l4_sport : ternary @name("inner_l4_sport");
+            fabric_md.bridged.inner_l4_dport : ternary @name("inner_l4_dport");
         }
         actions = {
             set_pdr_attributes;
@@ -165,12 +165,12 @@ control SpgwIngress(
     @hidden
     action decap_inner_common() {
         // Correct parser-set metadata to use the inner header values
-        fabric_md.bridged.ip_eth_type    = ETHERTYPE_IPV4;
-        fabric_md.bridged.ip_proto       = hdr.inner_ipv4.protocol;
-        fabric_md.ipv4_src  = hdr.inner_ipv4.src_addr;
-        fabric_md.ipv4_dst  = hdr.inner_ipv4.dst_addr;
-        fabric_md.bridged.l4_sport       = fabric_md.bridged.inner_l4_sport;
-        fabric_md.bridged.l4_dport       = fabric_md.bridged.inner_l4_dport;
+        fabric_md.bridged.ip_eth_type = ETHERTYPE_IPV4;
+        fabric_md.bridged.ip_proto    = hdr.inner_ipv4.protocol;
+        fabric_md.ipv4_src            = hdr.inner_ipv4.src_addr;
+        fabric_md.ipv4_dst            = hdr.inner_ipv4.dst_addr;
+        fabric_md.bridged.l4_sport    = fabric_md.bridged.inner_l4_sport;
+        fabric_md.bridged.l4_dport    = fabric_md.bridged.inner_l4_dport;
         // Move GTPU and inner L3 headers out
         hdr.ipv4 = hdr.inner_ipv4;
         hdr.inner_ipv4.setInvalid();
@@ -200,9 +200,9 @@ control SpgwIngress(
     @hidden
     table decap_gtpu {
         key = {
-            hdr.inner_tcp.isValid()     : exact;
-            hdr.inner_udp.isValid()     : exact;
-            hdr.inner_icmp.isValid()    : exact;
+            hdr.inner_tcp.isValid()  : exact;
+            hdr.inner_udp.isValid()  : exact;
+            hdr.inner_icmp.isValid() : exact;
         }
         actions = {
             decap_inner_tcp;

@@ -133,6 +133,7 @@ enum bit<8> BridgedMetadataType_t {
 
 const MirrorId_t MIRROR_SESSION_ID_INVALID = 0;
 
+// Recirculate ports for each pipeline.
 const PortId_t PIPE_0_REC_PORT = 0x44;
 const PortId_t PIPE_1_REC_PORT = 0xC4;
 const PortId_t PIPE_2_REC_PORT = 0x144;
