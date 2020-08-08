@@ -5,15 +5,30 @@ package org.stratumproject.fabric.tna.behaviour;
 import com.google.common.collect.ImmutableList;
 import org.junit.Before;
 import org.junit.Test;
+import org.onlab.packet.Data;
+import org.onlab.packet.Ethernet;
 import org.onlab.packet.MacAddress;
 import org.onlab.packet.MplsLabel;
 import org.onlab.packet.VlanId;
 import org.onlab.util.ImmutableByteSequence;
+import org.onosproject.net.ConnectPoint;
+import org.onosproject.net.DeviceId;
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
 import org.onosproject.net.flow.TrafficTreatment;
+import org.onosproject.net.packet.DefaultInboundPacket;
+import org.onosproject.net.packet.DefaultOutboundPacket;
+import org.onosproject.net.packet.InboundPacket;
+import org.onosproject.net.packet.OutboundPacket;
+import org.onosproject.net.pi.model.PiPacketOperationType;
+import org.onosproject.net.pi.model.PiPipelineInterpreter;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
+import org.onosproject.net.pi.runtime.PiPacketMetadata;
+import org.onosproject.net.pi.runtime.PiPacketOperation;
+
+import java.nio.ByteBuffer;
+import java.util.Collection;
 
 import static org.easymock.EasyMock.createNiceMock;
 import static org.easymock.EasyMock.expect;
@@ -29,6 +44,7 @@ public class FabricInterpreterTest {
     private static final MacAddress SRC_MAC = MacAddress.valueOf("00:00:00:00:00:01");
     private static final MacAddress DST_MAC = MacAddress.valueOf("00:00:00:00:00:02");
     private static final MplsLabel MPLS_10 = MplsLabel.mplsLabel(10);
+    private static final DeviceId DEVICE_ID = DeviceId.deviceId("device:1");
 
     private FabricInterpreter interpreter;
 
@@ -197,5 +213,64 @@ public class FabricInterpreterTest {
                 .withParameter(vlanParam)
                 .build();
         assertEquals(expectedAction, mappedAction);
+    }
+
+    @Test
+    public void testMapOutboundPacket() throws PiPipelineInterpreter.PiInterpreterException,
+            ImmutableByteSequence.ByteSequenceTrimException {
+        PortNumber outputPort = PortNumber.portNumber(1);
+        TrafficTreatment outputTreatment = DefaultTrafficTreatment.builder()
+                .setOutput(outputPort)
+                .build();
+        ByteBuffer data = ByteBuffer.allocate(64);
+        OutboundPacket outPkt = new DefaultOutboundPacket(DEVICE_ID, outputTreatment, data);
+        Collection<PiPacketOperation> result = interpreter.mapOutboundPacket(outPkt);
+        assertEquals(result.size(), 1);
+
+        PiPacketMetadata expectedMetadata = PiPacketMetadata.builder()
+                .withId(P4InfoConstants.EGRESS_PORT)
+                .withValue(ImmutableByteSequence.copyFrom(outputPort.toLong()).fit(9))
+                .build();
+        PiPacketOperation expectedPktOp = PiPacketOperation.builder()
+                .withType(PiPacketOperationType.PACKET_OUT)
+                .withData(ImmutableByteSequence.copyFrom(data))
+                .withMetadata(expectedMetadata)
+                .build();
+
+        assertEquals(result.iterator().next(), expectedPktOp);
+    }
+
+    @Test
+    public void testMapInboundPacket() throws ImmutableByteSequence.ByteSequenceTrimException,
+            PiPipelineInterpreter.PiInterpreterException {
+        PortNumber inputPort = PortNumber.portNumber(1);
+        PiPacketMetadata pktInMetadata = PiPacketMetadata.builder()
+                .withId(P4InfoConstants.INGRESS_PORT)
+                .withValue(ImmutableByteSequence.copyFrom(inputPort.toLong()).fit(9))
+                .build();
+        Ethernet packet = new Ethernet();
+        packet.setDestinationMACAddress(SRC_MAC);
+        packet.setSourceMACAddress(DST_MAC);
+        packet.setEtherType((short) 0xBA00);
+        packet.setPayload(new Data());
+
+        PiPacketOperation pktInOp = PiPacketOperation.builder()
+                .withMetadata(pktInMetadata)
+                .withData(ImmutableByteSequence.copyFrom(packet.serialize()))
+                .withType(PiPacketOperationType.PACKET_IN)
+                .build();
+        InboundPacket result = interpreter.mapInboundPacket(pktInOp, DEVICE_ID);
+
+        ConnectPoint receiveFrom = new ConnectPoint(DEVICE_ID, inputPort);
+        InboundPacket expectedInboundPacket
+                = new DefaultInboundPacket(receiveFrom, packet, null);
+
+
+        assertEquals(result.receivedFrom(), expectedInboundPacket.receivedFrom());
+        assertEquals(result.parsed(), expectedInboundPacket.parsed());
+        assertEquals(result.cookie(), expectedInboundPacket.cookie());
+
+        // TODO: compare unparsed payload
+//        assertEquals(result.unparsed(), expectedInboundPacket.unparsed());
     }
 }
