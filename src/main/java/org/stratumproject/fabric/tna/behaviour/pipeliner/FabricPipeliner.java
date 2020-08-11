@@ -5,14 +5,19 @@ package org.stratumproject.fabric.tna.behaviour.pipeliner;
 
 import com.google.common.collect.ImmutableList;
 import org.onlab.util.SharedExecutors;
+import org.onosproject.core.ApplicationId;
+import org.onosproject.core.CoreService;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.behaviour.NextGroup;
 import org.onosproject.net.behaviour.Pipeliner;
 import org.onosproject.net.behaviour.PipelinerContext;
+import org.onosproject.net.flow.DefaultFlowRule;
+import org.onosproject.net.flow.DefaultTrafficTreatment;
 import org.onosproject.net.flow.FlowRule;
 import org.onosproject.net.flow.FlowRuleOperations;
 import org.onosproject.net.flow.FlowRuleService;
+import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.net.flowobjective.FilteringObjective;
 import org.onosproject.net.flowobjective.FlowObjectiveStore;
 import org.onosproject.net.flowobjective.ForwardingObjective;
@@ -23,9 +28,13 @@ import org.onosproject.net.flowobjective.Objective;
 import org.onosproject.net.flowobjective.ObjectiveError;
 import org.onosproject.net.group.GroupDescription;
 import org.onosproject.net.group.GroupService;
+import org.onosproject.net.pi.runtime.PiAction;
+import org.onosproject.net.pi.runtime.PiActionParam;
 import org.slf4j.Logger;
 import org.stratumproject.fabric.tna.behaviour.AbstractFabricHandlerBehavior;
 import org.stratumproject.fabric.tna.behaviour.FabricCapabilities;
+import org.stratumproject.fabric.tna.behaviour.P4InfoConstants;
+import org.stratumproject.fabric.tna.PipeconfLoader;
 
 import java.util.Collection;
 import java.util.List;
@@ -48,11 +57,14 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
         implements Pipeliner {
 
     private static final Logger log = getLogger(FabricPipeliner.class);
+    private static final int DEFAULT_FLOW_PRIORITY = 100;
 
     protected DeviceId deviceId;
+    protected ApplicationId appId;
     protected FlowRuleService flowRuleService;
     protected GroupService groupService;
     protected FlowObjectiveStore flowObjectiveStore;
+    protected CoreService coreService;
 
     private FilteringObjectiveTranslator filteringTranslator;
     private ForwardingObjectiveTranslator forwardingTranslator;
@@ -86,6 +98,10 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
         this.filteringTranslator = new FilteringObjectiveTranslator(deviceId, capabilities);
         this.forwardingTranslator = new ForwardingObjectiveTranslator(deviceId, capabilities);
         this.nextTranslator = new NextObjectiveTranslator(deviceId, capabilities);
+        this.coreService = context.directory().get(CoreService.class);
+        this.appId = coreService.getAppId(PipeconfLoader.APP_NAME);
+
+        initializePipeline();
     }
 
     @Override
@@ -126,6 +142,28 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
         return fabricNextGroup.nextMappings().stream()
                 .map(m -> format("%s -> %s", fabricNextGroup.type(), m))
                 .collect(Collectors.toList());
+    }
+
+    protected void initializePipeline() {
+        final PiActionParam param = new PiActionParam(P4InfoConstants.CPU_PORT, capabilities.cpuPort().get());
+        final PiAction action = PiAction.builder()
+                .withId(P4InfoConstants.FABRIC_EGRESS_PKT_IO_EGRESS_SET_CPU_PORT)
+                .withParameter(param)
+                .build();
+        final TrafficTreatment treatment = DefaultTrafficTreatment.builder()
+                .piTableAction(action)
+                .build();
+        FlowRule rule = DefaultFlowRule.builder()
+                .forDevice(deviceId)
+                .withTreatment(treatment)
+                .withPriority(DEFAULT_FLOW_PRIORITY)
+                .fromApp(appId)
+                .makePermanent()
+                .forTable(P4InfoConstants.FABRIC_EGRESS_PKT_IO_EGRESS_SWITCH_INFO)
+                .build();
+        final FlowRuleOperations.Builder ops = FlowRuleOperations.builder();
+        ops.add(rule);
+        flowRuleService.apply(ops.build());
     }
 
     private void handleResult(Objective obj, ObjectiveTranslation result) {

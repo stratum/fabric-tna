@@ -53,6 +53,7 @@ public class FabricInterpreter extends AbstractFabricHandlerBehavior
     private static final int CPU_LOOPBACK_MODE_DISABLED = 0;
     private static final int CPU_LOOPBACK_MODE_DIRECT = 1;
     private static final int CPU_LOOPBACK_MODE_INGRESS = 2;
+    private static final int ETHER_TYPE_PACKET_IO = 0xBF01;
 
     // Group tables by control block.
     private static final Set<PiTableId> FILTERING_CTRL_TBLS = ImmutableSet.of(
@@ -198,6 +199,10 @@ public class FabricInterpreter extends AbstractFabricHandlerBehavior
             builder.add(PiPacketMetadata.builder()
                     .withId(P4InfoConstants.PAD0)
                     .withValue(copyFrom(0))
+                    .build());
+            builder.add(PiPacketMetadata.builder()
+                    .withId(P4InfoConstants.ETHER_TYPE)
+                    .withValue(copyFrom(ETHER_TYPE_PACKET_IO))
                     .build());
             return builder.build();
         } catch (ImmutableByteSequence.ByteSequenceTrimException e) {

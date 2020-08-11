@@ -16,11 +16,14 @@ header packet_in_header_t {
     bit<7>   _pad0;
 }
 
+// This header must have a pseudo ethertype at offset 12, to be parseable as an
+// Ethernet frame in the ingress parser.
 @controller_header("packet_out")
 header packet_out_header_t {
     PortId_t          egress_port;
     CpuLoopbackMode_t cpu_loopback_mode;
-    bit<5>            pad0;
+    @padding bit<85>  pad0;
+    bit<16>           ether_type;
 }
 
 header ethernet_t {
@@ -195,6 +198,7 @@ struct fabric_ingress_metadata_t {
 @flexible
 struct fabric_egress_metadata_t {
     bridged_metadata_t    bridged;
+    PortId_t              cpu_port;
 #ifdef WITH_SPGW
     bool                  inner_ipv4_checksum_err;
 #endif // WITH_SPGW
