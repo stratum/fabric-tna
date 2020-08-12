@@ -1,0 +1,19 @@
+# This workflow will build the pipeconf Java project with Maven
+
+name: Java CI with Maven
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Build pipeconf with Maven
+      run: make pipeconf MVN_FLAGS="-Pci-verify"
