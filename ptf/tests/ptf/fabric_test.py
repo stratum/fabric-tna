@@ -1371,7 +1371,7 @@ class IntTest(IPv4UnicastTest):
         self.send_request_add_entry_to_action(
             "report",
             [self.Exact("int_mirror_valid", stringify(1, 1))],
-            "do_report_encapsulation", [
+            "do_report_encap", [
                 ("src_mac", mac_to_binary(src_mac)),
                 ("mon_mac", mac_to_binary(mon_mac)),
                 ("src_ip", ipv4_to_binary(src_ip)),
@@ -1412,13 +1412,13 @@ class IntTest(IPv4UnicastTest):
             dport_high = stringify(dport, 2)
 
         self.send_request_add_entry_to_action(
-            "collector",
+            "watchlist",
             [self.Ternary("ipv4_src", ipv4_src_, ipv4_mask),
              self.Ternary("ipv4_dst", ipv4_dst_, ipv4_mask),
              self.Range("l4_sport", sport_low, sport_high),
              self.Range("l4_dport", dport_low, dport_high),
              ],
-            "collect", [
+            "init_metadata", [
                 ("switch_id", switch_id_)
             ], priority=DEFAULT_PRIORITY)
 

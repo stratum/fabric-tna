@@ -31,8 +31,8 @@ control Forwarding (inout parsed_headers_t hdr,
     //  with a multi-table/algorithmic approach?
     table bridging {
         key = {
-            fabric_md.bridged.vlan_id     : exact @name("vlan_id");
-            hdr.ethernet.dst_addr        : ternary @name("eth_dst");
+            fabric_md.bridged.vlan_id : exact @name("vlan_id");
+            hdr.ethernet.dst_addr     : ternary @name("eth_dst");
         }
         actions = {
             set_next_id_bridging;

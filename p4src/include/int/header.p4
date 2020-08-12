@@ -16,14 +16,14 @@ header report_fixed_header_t {
     bit<15> rsvd;
     bit<6>  hw_id;
     bit<32> seq_no;
-    bit<32> ingress_tstamp;
+    bit<32> ig_tstamp;
 }
 
 // Telemetry drop report header
 header drop_report_header_t {
     bit<32> switch_id;
-    bit<16> ingress_port_id;
-    bit<16> egress_port_id;
+    bit<16> ig_port;
+    bit<16> eg_port;
     bit<8>  queue_id;
     bit<8>  drop_reason;
     bit<16> pad;
@@ -32,11 +32,11 @@ header drop_report_header_t {
 // Switch Local Report Header
 header local_report_header_t {
     bit<32> switch_id;
-    bit<16> ingress_port_id;
-    bit<16> egress_port_id;
+    bit<16> ig_port;
+    bit<16> eg_port;
     bit<8>  queue_id;
     bit<24> queue_occupancy;
-    bit<32> egress_tstamp;
+    bit<32> eg_tstamp;
 }
 
 header_union local_report_t {
@@ -49,7 +49,7 @@ header_union local_report_t {
 // may mark the mirror metadata and other headers (e.g., IPv4)
 // as "mutually exclusive".
 // Here we set the mirror metadata with "no overlay" to prevent this.
-@pa_no_overlay("egress", "fabric_md.int_mirror_md.bridge_md_type")
+@pa_no_overlay("egress", "fabric_md.int_mirror_md.bridged_md_type")
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.mirror_session_id")
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.switch_id")
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.ig_port")
@@ -62,7 +62,7 @@ header_union local_report_t {
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.skip_gtpu_headers")
 #endif // WITH_SPGW
 header int_mirror_metadata_t {
-    BridgedMetadataType_t bridge_md_type;
+    BridgedMdType_t bridged_md_type;
     bit<6>                _pad0;
     MirrorId_t            mirror_session_id;
     bit<32>               switch_id;

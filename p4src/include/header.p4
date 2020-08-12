@@ -132,7 +132,7 @@ header gtpu_t {
 // ingress and egress pipeline.
 @flexible
 header bridged_metadata_t {
-    BridgedMetadataType_t bridge_md_type;
+    BridgedMdType_t bridged_md_type;
     bool            is_multicast;
     PortId_t        ig_port;
     vlan_id_t       vlan_id;
@@ -169,22 +169,22 @@ header bridged_metadata_t {
 @flexible
 struct fabric_ingress_metadata_t {
     bridged_metadata_t bridged;
-    bit<32>           ipv4_src;
-    bit<32>           ipv4_dst;
-    bool              ipv4_checksum_err;
-    bool              skip_forwarding;
-    bool              skip_next;
-    fwd_type_t        fwd_type;
-    next_id_t         next_id;
+    bit<32>            ipv4_src;
+    bit<32>            ipv4_dst;
+    bool               ipv4_checksum_err;
+    bool               skip_forwarding;
+    bool               skip_next;
+    fwd_type_t         fwd_type;
+    next_id_t          next_id;
 #ifdef WITH_SPGW
-    bool              inner_ipv4_checksum_err;
-    bool              needs_gtpu_decap;
-    bool              pdr_hit;
-    bool              far_dropped;
-    bool              notify_spgwc;
-    far_id_t          far_id;
-    SpgwInterface     spgw_src_iface;
-    SpgwDirection     spgw_direction;
+    bool               inner_ipv4_checksum_err;
+    bool               needs_gtpu_decap;
+    bool               pdr_hit;
+    bool               far_dropped;
+    bool               notify_spgwc;
+    far_id_t           far_id;
+    SpgwInterface      spgw_src_iface;
+    SpgwDirection      spgw_direction;
 #endif // WITH_SPGW
 }
 

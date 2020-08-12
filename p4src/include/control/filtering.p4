@@ -35,8 +35,6 @@ control Filtering (inout parsed_headers_t hdr,
         permit();
     }
 
-    // FIXME: remove the use of ternary match on inner VLAN.
-    // Use multi-table approach to remove ternary matching
     table ingress_port_vlan {
         key = {
             ig_intr_md.ingress_port    : exact @name("ig_port");
@@ -55,33 +53,6 @@ control Filtering (inout parsed_headers_t hdr,
         counters = ingress_port_vlan_counter;
         size = PORT_VLAN_TABLE_SIZE;
     }
-
-#ifdef WITH_INT
-    @hidden
-    action set_recirculate_pkt_vlan(vlan_id_t vlan_id) {
-        fabric_md.bridged.vlan_id = vlan_id;
-        // make the pipeline to handle it
-        fabric_md.skip_forwarding = false;
-        fabric_md.skip_next = false;
-    }
-    @hidden
-    table recirculate_port_vlan {
-        key = {
-            ig_intr_md.ingress_port    : exact @name("ig_port");
-            hdr.vlan_tag.isValid()     : exact @name("vlan_is_valid");
-        }
-        actions = {
-            set_recirculate_pkt_vlan;
-        }
-        size = 4;
-        const entries = {
-            (PIPE_0_REC_PORT, false): set_recirculate_pkt_vlan(DEFAULT_VLAN_ID);
-            (PIPE_1_REC_PORT, false): set_recirculate_pkt_vlan(DEFAULT_VLAN_ID);
-            (PIPE_2_REC_PORT, false): set_recirculate_pkt_vlan(DEFAULT_VLAN_ID);
-            (PIPE_3_REC_PORT, false): set_recirculate_pkt_vlan(DEFAULT_VLAN_ID);
-        }
-    }
-#endif // WITH_INT
 
     /*
      * Forwarding Classifier.
@@ -126,25 +97,57 @@ control Filtering (inout parsed_headers_t hdr,
     }
 
 #ifdef WITH_INT
+    // FIXME: remove tables but use if on apply block on int report flag
+    //  Since INT reports come in from the recirculation port, we need to bridge
+    //  metadata to carry such int report flag. We could re-use a special eth-type
+    //  as for packet-outs when that will be ready.
+
     @hidden
-    action set_recirculate_pkt_type(fwd_type_t fwd_type) {
-        fabric_md.fwd_type = fwd_type;
+    action set_recirculate_pkt_vlan(vlan_id_t vlan_id) {
+        fabric_md.bridged.vlan_id = vlan_id;
+        // make the pipeline to handle it
+        fabric_md.skip_forwarding = false;
+        fabric_md.skip_next = false;
     }
+
     @hidden
-    table recirculate_pkt_classifier {
+    table recirc_ingress_port_vlan {
         key = {
-            ig_intr_md.ingress_port        : exact @name("ig_port");
-            fabric_md.bridged.ip_eth_type   : exact @name("ip_eth_type");
+            ig_intr_md.ingress_port    : exact @name("ig_port");
+            hdr.vlan_tag.isValid()     : exact @name("vlan_is_valid");
         }
         actions = {
-            set_recirculate_pkt_type;
+            set_recirculate_pkt_vlan;
         }
         size = 4;
         const entries = {
-            (PIPE_0_REC_PORT, ETHERTYPE_IPV4): set_recirculate_pkt_type(FWD_IPV4_UNICAST);
-            (PIPE_1_REC_PORT, ETHERTYPE_IPV4): set_recirculate_pkt_type(FWD_IPV4_UNICAST);
-            (PIPE_2_REC_PORT, ETHERTYPE_IPV4): set_recirculate_pkt_type(FWD_IPV4_UNICAST);
-            (PIPE_3_REC_PORT, ETHERTYPE_IPV4): set_recirculate_pkt_type(FWD_IPV4_UNICAST);
+            (RECIRC_PORT_PIPE_0, false): set_recirculate_pkt_vlan(DEFAULT_VLAN_ID);
+            (RECIRC_PORT_PIPE_1, false): set_recirculate_pkt_vlan(DEFAULT_VLAN_ID);
+            (RECIRC_PORT_PIPE_2, false): set_recirculate_pkt_vlan(DEFAULT_VLAN_ID);
+            (RECIRC_PORT_PIPE_3, false): set_recirculate_pkt_vlan(DEFAULT_VLAN_ID);
+        }
+    }
+
+    @hidden
+    action recirc_set_forwarding_type(fwd_type_t fwd_type) {
+        fabric_md.fwd_type = fwd_type;
+    }
+
+    @hidden
+    table recirc_fwd_classifier {
+        key = {
+            ig_intr_md.ingress_port        : exact @name("ig_port");
+            fabric_md.bridged.ip_eth_type  : exact @name("ip_eth_type");
+        }
+        actions = {
+            recirc_set_forwarding_type;
+        }
+        size = 4;
+        const entries = {
+            (RECIRC_PORT_PIPE_0, ETHERTYPE_IPV4): recirc_set_forwarding_type(FWD_IPV4_UNICAST);
+            (RECIRC_PORT_PIPE_1, ETHERTYPE_IPV4): recirc_set_forwarding_type(FWD_IPV4_UNICAST);
+            (RECIRC_PORT_PIPE_2, ETHERTYPE_IPV4): recirc_set_forwarding_type(FWD_IPV4_UNICAST);
+            (RECIRC_PORT_PIPE_3, ETHERTYPE_IPV4): recirc_set_forwarding_type(FWD_IPV4_UNICAST);
         }
     }
 #endif // WITH_INT
@@ -153,8 +156,8 @@ control Filtering (inout parsed_headers_t hdr,
         ingress_port_vlan.apply();
         fwd_classifier.apply();
 #ifdef WITH_INT
-        recirculate_port_vlan.apply();
-        recirculate_pkt_classifier.apply();
+        recirc_ingress_port_vlan.apply();
+        recirc_fwd_classifier.apply();
 #endif // WITH_INT
 #ifdef WTIH_DEBUG
         fwd_type_counter.count(fabric_md.fwd_type);

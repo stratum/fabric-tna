@@ -123,21 +123,21 @@ action nop() {
 }
 
 // Bridge metadata type
-enum bit<8> BridgedMetadataType_t {
+enum bit<8> BridgedMdType_t {
     INVALID = 0,
-    INGRESS_TO_EGRESS = 1,
-    EGRESS_TO_INGRESS = 2,
-    MIRROR_INGRESS_TO_EGRESS = 3,
-    MIRROR_EGRESS_TO_EGRESS = 4
+    // Ingress to egress.
+    I2E = 1,
+    // Egress to egress mirror used for INT reports.
+    INT_MIRROR = 2
 }
 
 const MirrorId_t MIRROR_SESSION_ID_INVALID = 0;
 
-// Recirculate ports for each pipeline.
-const PortId_t PIPE_0_REC_PORT = 0x44;
-const PortId_t PIPE_1_REC_PORT = 0xC4;
-const PortId_t PIPE_2_REC_PORT = 0x144;
-const PortId_t PIPE_3_REC_PORT = 0x1C4;
+// Recirculation ports for each HW pipe.
+const PortId_t RECIRC_PORT_PIPE_0 = 0x44;
+const PortId_t RECIRC_PORT_PIPE_1 = 0xC4;
+const PortId_t RECIRC_PORT_PIPE_2 = 0x144;
+const PortId_t RECIRC_PORT_PIPE_3 = 0x1C4;
 
 #endif // __DEFINE__
 

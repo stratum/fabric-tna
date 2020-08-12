@@ -22,7 +22,7 @@ parser FabricIngressParser (packet_in  packet,
         packet.extract(ig_intr_md);
         packet.advance(PORT_METADATA_SIZE);
         fabric_md.bridged.setValid();
-        fabric_md.bridged.bridge_md_type = BridgedMetadataType_t.INGRESS_TO_EGRESS;
+        fabric_md.bridged.bridged_md_type = BridgedMdType_t.I2E;
         fabric_md.bridged.ig_port = ig_intr_md.ingress_port;
         fabric_md.bridged.ig_tstamp = ig_intr_md.ingress_mac_tstamp;
         transition select(ig_intr_md.ingress_port) {
@@ -41,7 +41,7 @@ parser FabricIngressParser (packet_in  packet,
         transition select(packet.lookahead<bit<16>>()) {
             ETHERTYPE_QINQ: parse_vlan_tag;
             ETHERTYPE_VLAN &&& 0xFEFF: parse_vlan_tag; // 0x8100, 0x9100
-            default: parse_untagged_packet;
+            default: parse_untagged;
         }
     }
 
@@ -70,7 +70,7 @@ parser FabricIngressParser (packet_in  packet,
     }
 #endif // WITH_XCONNECT || WITH_DOUBLE_VLAN_TERMINATION
 
-    state parse_untagged_packet {
+    state parse_untagged {
         // Sets default vlan
         fabric_md.bridged.vlan_id = DEFAULT_VLAN_ID;
         // fabric_md.bridged.vlan_cfi = 3w0;
@@ -251,25 +251,23 @@ parser FabricEgressParser (packet_in packet,
 
     state start {
         packet.extract(eg_intr_md);
-        BridgedMetadataType_t bridge_md_type = packet.lookahead<BridgedMetadataType_t>();
-        transition select(bridge_md_type) {
-            BridgedMetadataType_t.INGRESS_TO_EGRESS: parse_bridge_metadata;
-            BridgedMetadataType_t.MIRROR_EGRESS_TO_EGRESS: parse_egress_mirror_metadata;
+        BridgedMdType_t bridged_md_type = packet.lookahead<BridgedMdType_t>();
+        transition select(bridged_md_type) {
+            BridgedMdType_t.I2E: parse_bridged_md;
+            BridgedMdType_t.INT_MIRROR: parse_int_mirror_md;
             default: reject;
         }
     }
 
-    state parse_bridge_metadata {
+    state parse_bridged_md {
         packet.extract(fabric_md.bridged);
         transition parse_ethernet;
     }
 
-    state parse_egress_mirror_metadata {
-        // TODO: to support different mirror headers
-        //       by adding a "mirror_type" field.
+    state parse_int_mirror_md {
 #ifdef WITH_INT
         packet.extract(fabric_md.int_mirror_md);
-        fabric_md.bridged.bridge_md_type = fabric_md.int_mirror_md.bridge_md_type;
+        fabric_md.bridged.bridged_md_type = fabric_md.int_mirror_md.bridged_md_type;
         fabric_md.bridged.vlan_id = DEFAULT_VLAN_ID;
 
 #ifdef WITH_SPGW
@@ -285,6 +283,8 @@ parser FabricEgressParser (packet_in packet,
 #endif // WITH_INT
     }
 
+// FIXME: is there a better way of this? e.g., can we do regular parsing of all
+// h eaders and then set the gtpu ones as invalid in the egress pipe?
 #if defined(WITH_SPGW) && defined(WITH_INT)
     state skip_gtpu_headers_eth {
         packet.extract(hdr.ethernet);

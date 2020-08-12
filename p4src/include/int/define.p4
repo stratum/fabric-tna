@@ -20,12 +20,14 @@ const bit<16> REPORT_MIRROR_HEADER_LEN = 24;
 #else
 const bit<16> REPORT_MIRROR_HEADER_LEN = 23;
 #endif // WITH_SPGW
-const bit<16> CRC_CHECKSUM_LEN = 4;
+const bit<16> ETH_FCS_LEN = 4;
+
+
 
 #define PIPE_0_PORTS_MATCH 9w0x000 &&& 0x180
 #define PIPE_1_PORTS_MATCH 9w0x080 &&& 0x180
 #define PIPE_2_PORTS_MATCH 9w0x100 &&& 0x180
 #define PIPE_3_PORTS_MATCH 9w0x180 &&& 0x180
-#define COLLECTOR_TABLE_SIZE 64
+#define WATCHLIST_TABLE_SIZE 64
 
 #endif  // __INT_DEFINE__
