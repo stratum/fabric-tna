@@ -7,6 +7,7 @@ target
 ptf.log
 ptf.pcap
 ptf/run/tm/log
+src/main/resources/p4c-out
 .idea
 *.iml
 *.pcap
