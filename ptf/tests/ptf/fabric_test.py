@@ -1291,7 +1291,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
                                 prefix_len=32, exp_pkt=exp_pkt,
                                 tagged1=tagged1, tagged2=tagged2, mpls=mpls)
 
-         Verify the PDR packet counter increased
+        # Verify the PDR packet counter increased
         ingress_pdr_pkt_ctr2 = self.read_pkt_count("FabricIngress.spgw_ingress.pdr_counter", ctr_id)
         ctr_increase = ingress_pdr_pkt_ctr2 - ingress_pdr_pkt_ctr1
         if ctr_increase != 1:
