@@ -19,5 +19,5 @@ jobs:
       uses: actions/setup-java@v1
       with:
         java-version: 11
-    - name: Build with Maven
-      run: mvn -B install -P ci-verify --file pom.xml
+    - name: Build pipeconf with Maven
+      run: make pipeconf MVN_FLAGS="-Pci-verify"

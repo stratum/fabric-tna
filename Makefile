@@ -11,6 +11,7 @@ mvn_image := maven:3.6.1-jdk-11-slim
 mvn_cache_docker_volume := mvn-cache-${curr_dir_sha}
 # By default use docker volume, but allow passing a directory
 MVN_CACHE ?= ${mvn_cache_docker_volume}
+MVN_FLAGS ?=
 
 onos_url := http://${ONOS_HOST}:8181/onos
 onos_curl := curl --fail -sSL --user onos:rocks --noproxy localhost
@@ -55,7 +56,7 @@ _mvn_package: constants
 	$(info *** Building ONOS app...)
 	@mkdir -p target
 	docker run --rm -v ${curr_dir}:/mvn-src -w /mvn-src \
-		-v ${MVN_CACHE}:/root/.m2 ${mvn_image} mvn clean install
+		-v ${MVN_CACHE}:/root/.m2 ${mvn_image} mvn ${MVN_FLAGS} clean install
 
 pipeconf: _mvn_package
 	$(info *** ONOS pipeconf .oar package created succesfully)
