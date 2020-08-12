@@ -18,4 +18,6 @@ jobs:
     - name: Build pipeconf with Maven
       run: make pipeconf MVN_FLAGS="-Pci-verify -Pcoverage"
     - name: Upload test coverage results
-      run: CODECOV_TOKEN=uuid-repo-token bash <(curl -s https://codecov.io/bash)
+      run: bash <(curl -s https://codecov.io/bash)
+      env:
+        CODECOV_TOKEN: 75f36e70-2caf-46ab-9b76-7a1b9a419ebd
