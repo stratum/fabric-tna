@@ -1,5 +1,4 @@
-# This workflow will build a Java project with Maven
-# For more information see: https://help.github.com/actions/language-and-framework-guides/building-and-testing-java-with-maven
+# This workflow will build the pipeconf Java project with Maven
 
 name: Java CI with Maven
 
@@ -21,4 +20,4 @@ jobs:
       with:
         java-version: 11
     - name: Build with Maven
-      run: mvn -B install --file pom.xml
+      run: mvn -B install -P ci-verify --file pom.xml
