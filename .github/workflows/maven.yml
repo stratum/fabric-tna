@@ -16,4 +16,6 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Build pipeconf with Maven
-      run: make pipeconf MVN_FLAGS="-Pci-verify"
+      run: make pipeconf MVN_FLAGS="-Pci-verify -Pcoverage"
+    - name: Upload test coverage results
+      run: CODECOV_TOKEN=uuid-repo-token bash <(curl -s https://codecov.io/bash)
