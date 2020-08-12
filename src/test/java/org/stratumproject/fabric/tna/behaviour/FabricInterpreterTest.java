@@ -129,25 +129,24 @@ public class FabricInterpreterTest {
 
     /* Next control block */
 
-    /**
-     * Map treatment to output action.
-     * TODO: Currently, this test is invalid since we don't include
-     * this table in the pipeline.
-     */
-//    @Test
-//    public void testNextTreatmentSimpleOutput() throws Exception {
-//        TrafficTreatment treatment = DefaultTrafficTreatment.builder()
-//                .setOutput(PORT_1)
-//                .build();
-//        PiAction mappedAction = interpreter.mapTreatment(
-//                treatment, P4InfoConstants.FABRIC_INGRESS_NEXT_SIMPLE);
-//        PiActionParam param = new PiActionParam(P4InfoConstants.PORT_NUM, PORT_1.toLong());
-//        PiAction expectedAction = PiAction.builder()
-//                .withId(P4InfoConstants.FABRIC_INGRESS_NEXT_OUTPUT_SIMPLE)
-//                .withParameter(param)
-//                .build();
-//        assertEquals(expectedAction, mappedAction);
-//    }
+    // TODO: add profile with simple next or remove test
+    // /**
+    //  * Map treatment to output action for simple next.
+    //  */
+    // @Test
+    // public void testNextTreatmentSimpleOutput() throws Exception {
+    //     TrafficTreatment treatment = DefaultTrafficTreatment.builder()
+    //             .setOutput(PORT_1)
+    //             .build();
+    //     PiAction mappedAction = interpreter.mapTreatment(
+    //             treatment, P4InfoConstants.FABRIC_INGRESS_NEXT_SIMPLE);
+    //     PiActionParam param = new PiActionParam(P4InfoConstants.PORT_NUM, PORT_1.toLong());
+    //     PiAction expectedAction = PiAction.builder()
+    //             .withId(P4InfoConstants.FABRIC_INGRESS_NEXT_OUTPUT_SIMPLE)
+    //             .withParameter(param)
+    //             .build();
+    //     assertEquals(expectedAction, mappedAction);
+    // }
 
     /**
      * Map treatment for hashed table to routing v4 action.
@@ -263,14 +262,13 @@ public class FabricInterpreterTest {
 
         ConnectPoint receiveFrom = new ConnectPoint(DEVICE_ID, inputPort);
         InboundPacket expectedInboundPacket
-                = new DefaultInboundPacket(receiveFrom, packet, null);
+                = new DefaultInboundPacket(receiveFrom, packet, ByteBuffer.wrap(packet.serialize()));
 
 
         assertEquals(result.receivedFrom(), expectedInboundPacket.receivedFrom());
         assertEquals(result.parsed(), expectedInboundPacket.parsed());
         assertEquals(result.cookie(), expectedInboundPacket.cookie());
 
-        // TODO: compare unparsed payload
-//        assertEquals(result.unparsed(), expectedInboundPacket.unparsed());
+        assertEquals(result.unparsed(), expectedInboundPacket.unparsed());
     }
 }
