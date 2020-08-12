@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 package org.stratumproject.fabric.tna.behaviour.pipeliner;
 
-import org.junit.Test;
 import org.onlab.packet.IpPrefix;
 import org.onlab.packet.MacAddress;
 import org.onlab.packet.MplsLabel;
@@ -21,7 +20,8 @@ import static org.easymock.EasyMock.replay;
 
 public class FabricPipelinerTest {
     static final ApplicationId APP_ID = TestApplicationId.create("FabricPipelinerTest");
-    static final ApplicationId XCONNECT_APP_ID = TestApplicationId.create("FabricPipelinerTest.xconnect");
+    // TODO: re-enable support for xconnext
+    // static final ApplicationId XCONNECT_APP_ID = TestApplicationId.create("FabricPipelinerTest.xconnect");
     static final DeviceId DEVICE_ID = DeviceId.deviceId("device:bmv2:11");
     static final int PRIORITY = 100;
     static final PortNumber PORT_1 = PortNumber.portNumber(1);
@@ -41,22 +41,19 @@ public class FabricPipelinerTest {
             .build();
 
     FabricCapabilities capabilitiesHashed;
-    FabricCapabilities capabilitiesSimple;
+    // TODO: add profile with simple next or remove references
+    // FabricCapabilities capabilitiesSimple;
 
     void doSetup() {
         this.capabilitiesHashed = createNiceMock(FabricCapabilities.class);
-        this.capabilitiesSimple = createNiceMock(FabricCapabilities.class);
+        // TODO: add profile with simple next or remove tests
+       //  this.capabilitiesSimple = createNiceMock(FabricCapabilities.class);
         expect(capabilitiesHashed.hasHashedTable()).andReturn(true).anyTimes();
         expect(capabilitiesHashed.supportDoubleVlanTerm()).andReturn(true).anyTimes();
-        expect(capabilitiesSimple.hasHashedTable()).andReturn(false).anyTimes();
-        expect(capabilitiesSimple.supportDoubleVlanTerm()).andReturn(true).anyTimes();
+        // TODO: add profile with simple next or remove tests
+        // expect(capabilitiesSimple.hasHashedTable()).andReturn(false).anyTimes();
+        // expect(capabilitiesSimple.supportDoubleVlanTerm()).andReturn(true).anyTimes();
         replay(capabilitiesHashed);
-        replay(capabilitiesSimple);
-    }
-
-    @Test
-    public void fakeTest() {
-        // Needed otherwise Bazel complains about a test class without test cases.
-        assert true;
+        // replay(capabilitiesSimple);
     }
 }

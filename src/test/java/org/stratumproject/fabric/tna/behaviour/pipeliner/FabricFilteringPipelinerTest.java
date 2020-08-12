@@ -48,9 +48,8 @@ public class FabricFilteringPipelinerTest extends FabricPipelinerTest {
     }
 
     /**
-     * Creates one rule for ingress_port_vlan table and 3 rules for
-     * fwd_classifier table (IPv4, IPv6 and MPLS unicast) when the condition is
-     * VLAN + MAC.
+     * Creates one rule for ingress_port_vlan table and 3 rules for fwd_classifier table (IPv4, IPv6
+     * and MPLS unicast) when the condition is VLAN + MAC.
      */
     @Test
     public void testRouterMacAndVlanFilter() throws FabricPipelinerException {
@@ -89,26 +88,14 @@ public class FabricFilteringPipelinerTest extends FabricPipelinerTest {
                 Ethernet.MPLS_UNICAST,
                 FilteringObjectiveTranslator.FWD_MPLS));
 
-//        ObjectiveTranslation.Builder expectedTranslationBuilder = ObjectiveTranslation.builder()
-//                .addFlowRule(inportFlowRuleExpected);
-//        for (FlowRule flowRule : classifierV4FlowRuleExpected) {
-//            expectedTranslationBuilder.addFlowRule(flowRule);
-//        }
-//        for (FlowRule flowRule : classifierV6FlowRuleExpected) {
-//            expectedTranslationBuilder.addFlowRule(flowRule);
-//        }
-//        for (FlowRule flowRule : classifierMplsFlowRuleExpected) {
-//            expectedTranslationBuilder.addFlowRule(flowRule);
-//        }
         ObjectiveTranslation expectedTranslation = buildExpectedTranslation(expectedFlowRules);
 
         assertEquals(expectedTranslation, actualTranslation);
     }
 
     /**
-     * Creates one rule for ingress_port_vlan table and one rule for
-     * fwd_classifier table (IPv4 multicast) when the condition is ipv4
-     * multicast mac address.
+     * Creates one rule for ingress_port_vlan table and one rule for fwd_classifier table (IPv4
+     * multicast) when the condition is ipv4 multicast mac address.
      */
     @Test
     public void testIpv4MulticastFwdClass() throws FabricPipelinerException {
@@ -150,9 +137,8 @@ public class FabricFilteringPipelinerTest extends FabricPipelinerTest {
     }
 
     /**
-     * Creates one rule for ingress_port_vlan table and one rule for
-     * fwd_classifier table (IPv6 multicast) when the condition is ipv6
-     * multicast mac address.
+     * Creates one rule for ingress_port_vlan table and one rule for fwd_classifier table (IPv6
+     * multicast) when the condition is ipv6 multicast mac address.
      */
     @Test
     public void testIpv6MulticastFwdClass() throws FabricPipelinerException {
@@ -193,9 +179,8 @@ public class FabricFilteringPipelinerTest extends FabricPipelinerTest {
     }
 
     /**
-     * Creates only one rule for ingress_port_vlan table if there is no
-     * condition of destination mac address. The packet will be handled by
-     * bridging table by default.
+     * Creates only one rule for ingress_port_vlan table if there is no condition of destination mac
+     * address. The packet will be handled by bridging table by default.
      */
     @Test
     public void testFwdBridging() throws Exception {
@@ -245,7 +230,7 @@ public class FabricFilteringPipelinerTest extends FabricPipelinerTest {
                 .withPriority(PRIORITY)
                 .withSelector(selector.build())
                 .withTreatment(DefaultTrafficTreatment.builder()
-                                       .piTableAction(piAction).build())
+                        .piTableAction(piAction).build())
                 .fromApp(APP_ID)
                 .forDevice(DEVICE_ID)
                 .makePermanent()
@@ -261,9 +246,9 @@ public class FabricFilteringPipelinerTest extends FabricPipelinerTest {
     }
 
     /**
-     * Test double VLAN pop filtering objective Creates one rule for
-     * ingress_port_vlan table and 3 rules for fwd_classifier table (IPv4, IPv6
-     * and MPLS unicast) when the condition is MAC + VLAN + INNER_VLAN.
+     * Test double VLAN pop filtering objective Creates one rule for ingress_port_vlan table and 3
+     * rules for fwd_classifier table (IPv4, IPv6 and MPLS unicast) when the condition is MAC + VLAN
+     * + INNER_VLAN.
      */
     @Test
     public void testPopVlan() throws FabricPipelinerException {
@@ -275,8 +260,8 @@ public class FabricFilteringPipelinerTest extends FabricPipelinerTest {
                 .withPriority(PRIORITY)
                 .fromApp(APP_ID)
                 .withMeta(DefaultTrafficTreatment.builder()
-                                  .popVlan()
-                                  .build())
+                        .popVlan()
+                        .build())
                 .permit()
                 .add();
         ObjectiveTranslation actualTranslation = translator.translate(filteringObjective);
@@ -387,7 +372,7 @@ public class FabricFilteringPipelinerTest extends FabricPipelinerTest {
                 .withPriority(PRIORITY)
                 .withSelector(selector.build())
                 .withTreatment(DefaultTrafficTreatment.builder()
-                                       .piTableAction(piAction).build())
+                        .piTableAction(piAction).build())
                 .fromApp(APP_ID)
                 .forDevice(DEVICE_ID)
                 .makePermanent()
@@ -403,7 +388,7 @@ public class FabricFilteringPipelinerTest extends FabricPipelinerTest {
                                              VlanId innerVlanId) {
         PiCriterion.Builder piCriterionBuilder = PiCriterion.builder()
                 .matchExact(P4InfoConstants.HDR_VLAN_IS_VALID,
-                            vlanValid(vlanId) ? ONE : ZERO);
+                        vlanValid(vlanId) ? ONE : ZERO);
         return piCriterionBuilder.build();
     }
 
@@ -413,7 +398,7 @@ public class FabricFilteringPipelinerTest extends FabricPipelinerTest {
                                                                 short ethType,
                                                                 byte fwdClass) {
         PiActionParam classParam = new PiActionParam(P4InfoConstants.FWD_TYPE,
-                                                     ImmutableByteSequence.copyFrom(fwdClass));
+                ImmutableByteSequence.copyFrom(fwdClass));
         PiAction fwdClassifierAction = PiAction.builder()
                 .withId(P4InfoConstants.FABRIC_INGRESS_FILTERING_SET_FORWARDING_TYPE)
                 .withParameter(classParam)
@@ -434,18 +419,18 @@ public class FabricFilteringPipelinerTest extends FabricPipelinerTest {
             return buildExpectedFwdClassifierRulesMpls(fwdClassifierAction, treatment, sbuilder);
         }
         sbuilder.matchPi(PiCriterion.builder()
-                                 .matchExact(P4InfoConstants.HDR_IP_ETH_TYPE, ethType)
-                                 .build());
+                .matchExact(P4InfoConstants.HDR_IP_ETH_TYPE, ethType)
+                .build());
         TrafficSelector selector = sbuilder.build();
         return List.of(DefaultFlowRule.builder()
-                               .withPriority(PRIORITY)
-                               .withSelector(selector)
-                               .withTreatment(treatment)
-                               .fromApp(APP_ID)
-                               .forDevice(DEVICE_ID)
-                               .makePermanent()
-                               .forTable(P4InfoConstants.FABRIC_INGRESS_FILTERING_FWD_CLASSIFIER)
-                               .build());
+                .withPriority(PRIORITY)
+                .withSelector(selector)
+                .withTreatment(treatment)
+                .fromApp(APP_ID)
+                .forDevice(DEVICE_ID)
+                .makePermanent()
+                .forTable(P4InfoConstants.FABRIC_INGRESS_FILTERING_FWD_CLASSIFIER)
+                .build());
     }
 
     private Collection<FlowRule> buildExpectedFwdClassifierRulesMpls(PiAction fwdClassifierAction,
@@ -455,34 +440,34 @@ public class FabricFilteringPipelinerTest extends FabricPipelinerTest {
         Collection<FlowRule> flowRules = Lists.newArrayList();
         TrafficSelector selectorIpv4 = selectorBuilder
                 .add(PiCriterion.builder()
-                             .matchTernary(P4InfoConstants.HDR_ETH_TYPE, Ethernet.MPLS_UNICAST, EXACT_MATCH_ETH_TYPE)
-                             .matchExact(P4InfoConstants.HDR_IP_ETH_TYPE, Ethernet.TYPE_IPV4)
-                             .build())
+                        .matchTernary(P4InfoConstants.HDR_ETH_TYPE, Ethernet.MPLS_UNICAST, EXACT_MATCH_ETH_TYPE)
+                        .matchExact(P4InfoConstants.HDR_IP_ETH_TYPE, Ethernet.TYPE_IPV4)
+                        .build())
                 .build();
         TrafficSelector selectorIpv6 = selectorBuilder
                 .add(PiCriterion.builder()
-                             .matchTernary(P4InfoConstants.HDR_ETH_TYPE, Ethernet.MPLS_UNICAST, EXACT_MATCH_ETH_TYPE)
-                             .matchExact(P4InfoConstants.HDR_IP_ETH_TYPE, Ethernet.TYPE_IPV6)
-                             .build())
+                        .matchTernary(P4InfoConstants.HDR_ETH_TYPE, Ethernet.MPLS_UNICAST, EXACT_MATCH_ETH_TYPE)
+                        .matchExact(P4InfoConstants.HDR_IP_ETH_TYPE, Ethernet.TYPE_IPV6)
+                        .build())
                 .build();
         flowRules.add(DefaultFlowRule.builder()
-                              .withPriority(PRIORITY + 1)
-                              .withSelector(selectorIpv4)
-                              .withTreatment(treatment)
-                              .fromApp(APP_ID)
-                              .forDevice(DEVICE_ID)
-                              .makePermanent()
-                              .forTable(P4InfoConstants.FABRIC_INGRESS_FILTERING_FWD_CLASSIFIER)
-                              .build());
+                .withPriority(PRIORITY + 1)
+                .withSelector(selectorIpv4)
+                .withTreatment(treatment)
+                .fromApp(APP_ID)
+                .forDevice(DEVICE_ID)
+                .makePermanent()
+                .forTable(P4InfoConstants.FABRIC_INGRESS_FILTERING_FWD_CLASSIFIER)
+                .build());
         flowRules.add(DefaultFlowRule.builder()
-                              .withPriority(PRIORITY + 1)
-                              .withSelector(selectorIpv6)
-                              .withTreatment(treatment)
-                              .fromApp(APP_ID)
-                              .forDevice(DEVICE_ID)
-                              .makePermanent()
-                              .forTable(P4InfoConstants.FABRIC_INGRESS_FILTERING_FWD_CLASSIFIER)
-                              .build());
+                .withPriority(PRIORITY + 1)
+                .withSelector(selectorIpv6)
+                .withTreatment(treatment)
+                .fromApp(APP_ID)
+                .forDevice(DEVICE_ID)
+                .makePermanent()
+                .forTable(P4InfoConstants.FABRIC_INGRESS_FILTERING_FWD_CLASSIFIER)
+                .build());
         return flowRules;
     }
 
