@@ -1,5 +1,5 @@
 {
-  "build_date": "Fri Aug  7 08:39:28 2020",
+  "build_date": "Wed Aug 12 07:31:41 2020",
   "schema_version": "1.11.0",
   "compiler_version": "9.2.0",
   "target": "tofino",
@@ -232,7 +232,7 @@
         "parser_state_id": 15
       },
       {
-        "parser_name": "parse_untagged_packet",
+        "parser_name": "parse_untagged",
         "match_registers": [],
         "tcam_rows": [ 223 ],
         "uses_pvs": false,
@@ -269,7 +269,7 @@
         "parser_state_id": 1
       },
       {
-        "parser_name": "parse_bridge_metadata",
+        "parser_name": "parse_bridged_md",
         "match_registers": [],
         "tcam_rows": [ 251 ],
         "uses_pvs": false,
@@ -1942,7 +1942,7 @@
           "records": [
             {
               "position_offset": 4,
-              "field_name": "fabric_md.bridged.bridge_md_type",
+              "field_name": "fabric_md.bridged.bridged_md_type",
               "field_msb": 7,
               "field_lsb": 0,
               "field_width": 1,
@@ -5304,7 +5304,7 @@
           "records": [
             {
               "position_offset": 4,
-              "field_name": "fabric_md.bridged.bridge_md_type",
+              "field_name": "fabric_md.bridged.bridged_md_type",
               "field_msb": 7,
               "field_lsb": 0,
               "field_width": 1,
@@ -8666,7 +8666,7 @@
           "records": [
             {
               "position_offset": 4,
-              "field_name": "fabric_md.bridged.bridge_md_type",
+              "field_name": "fabric_md.bridged.bridged_md_type",
               "field_msb": 7,
               "field_lsb": 0,
               "field_width": 1,
@@ -12028,7 +12028,7 @@
           "records": [
             {
               "position_offset": 4,
-              "field_name": "fabric_md.bridged.bridge_md_type",
+              "field_name": "fabric_md.bridged.bridged_md_type",
               "field_msb": 7,
               "field_lsb": 0,
               "field_width": 1,
@@ -15390,7 +15390,7 @@
           "records": [
             {
               "position_offset": 4,
-              "field_name": "fabric_md.bridged.bridge_md_type",
+              "field_name": "fabric_md.bridged.bridged_md_type",
               "field_msb": 7,
               "field_lsb": 0,
               "field_width": 1,
@@ -18752,7 +18752,7 @@
           "records": [
             {
               "position_offset": 4,
-              "field_name": "fabric_md.bridged.bridge_md_type",
+              "field_name": "fabric_md.bridged.bridged_md_type",
               "field_msb": 7,
               "field_lsb": 0,
               "field_width": 1,
@@ -22114,7 +22114,7 @@
           "records": [
             {
               "position_offset": 4,
-              "field_name": "fabric_md.bridged.bridge_md_type",
+              "field_name": "fabric_md.bridged.bridged_md_type",
               "field_msb": 7,
               "field_lsb": 0,
               "field_width": 1,
@@ -25476,7 +25476,7 @@
           "records": [
             {
               "position_offset": 4,
-              "field_name": "fabric_md.bridged.bridge_md_type",
+              "field_name": "fabric_md.bridged.bridged_md_type",
               "field_msb": 7,
               "field_lsb": 0,
               "field_width": 1,
@@ -28838,7 +28838,7 @@
           "records": [
             {
               "position_offset": 4,
-              "field_name": "fabric_md.bridged.bridge_md_type",
+              "field_name": "fabric_md.bridged.bridged_md_type",
               "field_msb": 7,
               "field_lsb": 0,
               "field_width": 1,
@@ -32200,7 +32200,7 @@
           "records": [
             {
               "position_offset": 4,
-              "field_name": "fabric_md.bridged.bridge_md_type",
+              "field_name": "fabric_md.bridged.bridged_md_type",
               "field_msb": 7,
               "field_lsb": 0,
               "field_width": 1,
@@ -35562,7 +35562,7 @@
           "records": [
             {
               "position_offset": 4,
-              "field_name": "fabric_md.bridged.bridge_md_type",
+              "field_name": "fabric_md.bridged.bridged_md_type",
               "field_msb": 7,
               "field_lsb": 0,
               "field_width": 1,
@@ -38924,7 +38924,7 @@
           "records": [
             {
               "position_offset": 4,
-              "field_name": "fabric_md.bridged.bridge_md_type",
+              "field_name": "fabric_md.bridged.bridged_md_type",
               "field_msb": 7,
               "field_lsb": 0,
               "field_width": 1,
@@ -76989,7 +76989,7 @@
       "name": "fabric_md.bridged",
       "fields": [
         {
-          "name": "bridge_md_type",
+          "name": "bridged_md_type",
           "slice": { "start_bit": 0, "bit_width": 8 }
         },
         { "name": "mpls_ttl", "slice": { "start_bit": 0, "bit_width": 8 } },
@@ -77009,6 +77009,6 @@
       ]
     }
   ],
-  "run_id": "69afa5e35b20c1e9",
+  "run_id": "660aee2efd24ad85",
   "driver_options": { "hash_parity_enabled": false, "high_availability_enabled": true }
 }

@@ -396,7 +396,7 @@ tables {
     match_type: EXACT
   }
   action_refs {
-    id: 16789681
+    id: 16794611
   }
   action_refs {
     id: 16819938
@@ -407,9 +407,9 @@ tables {
 }
 tables {
   preamble {
-    id: 33595123
-    name: "FabricEgress.int_egress.collector"
-    alias: "collector"
+    id: 33561696
+    name: "FabricEgress.int_egress.watchlist"
+    alias: "watchlist"
   }
   match_fields {
     id: 1
@@ -425,18 +425,24 @@ tables {
   }
   match_fields {
     id: 3
+    name: "ip_proto"
+    bitwidth: 8
+    match_type: TERNARY
+  }
+  match_fields {
+    id: 4
     name: "l4_sport"
     bitwidth: 16
     match_type: RANGE
   }
   match_fields {
-    id: 4
+    id: 5
     name: "l4_dport"
     bitwidth: 16
     match_type: RANGE
   }
   action_refs {
-    id: 16788756
+    id: 16827278
   }
   action_refs {
     id: 16819938
@@ -687,9 +693,9 @@ actions {
 }
 actions {
   preamble {
-    id: 16789681
-    name: "FabricEgress.int_egress.do_report_encapsulation"
-    alias: "do_report_encapsulation"
+    id: 16794611
+    name: "FabricEgress.int_egress.do_report_encap"
+    alias: "do_report_encap"
   }
   params {
     id: 1
@@ -719,9 +725,9 @@ actions {
 }
 actions {
   preamble {
-    id: 16788756
-    name: "FabricEgress.int_egress.collect"
-    alias: "collect"
+    id: 16827278
+    name: "FabricEgress.int_egress.init_metadata"
+    alias: "init_metadata"
   }
   params {
     id: 1

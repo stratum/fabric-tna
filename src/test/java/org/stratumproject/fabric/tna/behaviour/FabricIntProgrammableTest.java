@@ -53,8 +53,8 @@ import static org.easymock.EasyMock.expectLastCall;
 import static org.easymock.EasyMock.replay;
 import static org.easymock.EasyMock.reset;
 import static org.easymock.EasyMock.verify;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Tests for fabric INT programmable behaviour.
@@ -285,7 +285,7 @@ public class FabricIntProgrammableTest {
                 P4InfoConstants.MON_PORT,
                 COLLECTOR_PORT.toInt());
         final PiAction reportAction = PiAction.builder()
-                .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_REPORT_ENCAPSULATION)
+                .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_REPORT_ENCAP)
                 .withParameter(srcMacParam)
                 .withParameter(nextHopMacParam)
                 .withParameter(srcIpParam)
@@ -374,7 +374,7 @@ public class FabricIntProgrammableTest {
         }
 
         PiAction expectedPiAction = PiAction.builder()
-                .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_COLLECT)
+                .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INIT_METADATA)
                 .withParameter(new PiActionParam(P4InfoConstants.SWITCH_ID, NODE_SID_IPV4))
                 .build();
         TrafficTreatment expectedTreatment = DefaultTrafficTreatment.builder()
@@ -386,7 +386,7 @@ public class FabricIntProgrammableTest {
                 .withTreatment(expectedTreatment)
                 .fromApp(APP_ID)
                 .withPriority(DEFAULT_PRIORITY)
-                .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_COLLECTOR)
+                .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_WATCHLIST)
                 .makePermanent()
                 .build();
     }

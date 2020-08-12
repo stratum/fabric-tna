@@ -15,26 +15,9 @@ import org.onosproject.net.behaviour.inbandtelemetry.IntDeviceConfig;
 import org.onosproject.net.behaviour.inbandtelemetry.IntObjective;
 import org.onosproject.net.behaviour.inbandtelemetry.IntProgrammable;
 import org.onosproject.net.config.NetworkConfigService;
-import org.onosproject.net.flow.DefaultFlowRule;
-import org.onosproject.net.flow.DefaultTrafficSelector;
-import org.onosproject.net.flow.DefaultTrafficTreatment;
-import org.onosproject.net.flow.FlowRule;
-import org.onosproject.net.flow.FlowRuleService;
-import org.onosproject.net.flow.TableId;
-import org.onosproject.net.flow.TrafficSelector;
-import org.onosproject.net.flow.TrafficTreatment;
-import org.onosproject.net.flow.criteria.Criterion;
-import org.onosproject.net.flow.criteria.IPCriterion;
-import org.onosproject.net.flow.criteria.PiCriterion;
-import org.onosproject.net.flow.criteria.TcpPortCriterion;
-import org.onosproject.net.flow.criteria.UdpPortCriterion;
-import org.onosproject.net.group.DefaultGroupDescription;
-import org.onosproject.net.group.DefaultGroupKey;
-import org.onosproject.net.group.GroupBucket;
-import org.onosproject.net.group.GroupBuckets;
-import org.onosproject.net.group.GroupDescription;
-import org.onosproject.net.group.GroupKey;
-import org.onosproject.net.group.GroupService;
+import org.onosproject.net.flow.*;
+import org.onosproject.net.flow.criteria.*;
+import org.onosproject.net.group.*;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
 import org.onosproject.segmentrouting.config.SegmentRoutingDeviceConfig;
@@ -64,7 +47,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
             Criterion.Type.TCP_SRC, Criterion.Type.TCP_DST);
 
     private static final Set<TableId> TABLES_TO_CLEANUP = Sets.newHashSet(
-            P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_COLLECTOR,
+            P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_WATCHLIST,
             P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_REPORT
     );
 
@@ -158,12 +141,12 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
 
     @Override
     public boolean setSourcePort(PortNumber port) {
-        return setupBehaviour();
+        return true;
     }
 
     @Override
     public boolean setSinkPort(PortNumber port) {
-        return setupBehaviour();
+        return true;
     }
 
     @Override
@@ -235,7 +218,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 P4InfoConstants.SWITCH_ID, cfg.nodeSidIPv4());
 
         final PiAction collectorAction = PiAction.builder()
-                .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_COLLECT)
+                .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INIT_METADATA)
                 .withParameter(switchIdParam)
                 .build();
 
@@ -250,7 +233,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 .withSelector(selector)
                 .withTreatment(collectorTreatment)
                 .withPriority(DEFAULT_PRIORITY)
-                .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_COLLECTOR)
+                .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_WATCHLIST)
                 .fromApp(appId)
                 .makePermanent()
                 .build();
@@ -391,7 +374,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 P4InfoConstants.MON_PORT,
                 intCfg.collectorPort().toInt());
         final PiAction reportAction = PiAction.builder()
-                .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_REPORT_ENCAPSULATION)
+                .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_REPORT_ENCAP)
                 .withParameter(srcMacParam)
                 .withParameter(nextHopMacParam)
                 .withParameter(srcIpParam)

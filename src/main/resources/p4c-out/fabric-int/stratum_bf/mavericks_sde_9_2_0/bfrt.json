@@ -1189,8 +1189,8 @@
       ],
       "action_specs" : [
         {
-          "id" : 16789681,
-          "name" : "FabricEgress.int_egress.do_report_encapsulation",
+          "id" : 16794611,
+          "name" : "FabricEgress.int_egress.do_report_encap",
           "action_scope" : "TableAndDefault",
           "annotations" : [],
           "data" : [
@@ -1273,8 +1273,8 @@
       "attributes" : ["EntryScope"]
     },
     {
-      "name" : "pipe.FabricEgress.int_egress.collector",
-      "id" : 33595123,
+      "name" : "pipe.FabricEgress.int_egress.watchlist",
+      "id" : 33561696,
       "table_type" : "MatchAction_Direct",
       "size" : 64,
       "annotations" : [],
@@ -1307,6 +1307,18 @@
         },
         {
           "id" : 3,
+          "name" : "ip_proto",
+          "repeated" : false,
+          "annotations" : [],
+          "mandatory" : false,
+          "match_type" : "Ternary",
+          "type" : {
+            "type" : "bytes",
+            "width" : 8
+          }
+        },
+        {
+          "id" : 4,
           "name" : "l4_sport",
           "repeated" : false,
           "annotations" : [],
@@ -1318,7 +1330,7 @@
           }
         },
         {
-          "id" : 4,
+          "id" : 5,
           "name" : "l4_dport",
           "repeated" : false,
           "annotations" : [],
@@ -1343,8 +1355,8 @@
       ],
       "action_specs" : [
         {
-          "id" : 16788756,
-          "name" : "FabricEgress.int_egress.collect",
+          "id" : 16827278,
+          "name" : "FabricEgress.int_egress.init_metadata",
           "action_scope" : "TableAndDefault",
           "annotations" : [],
           "data" : [
@@ -2576,7 +2588,7 @@
         },
         {
           "id" : 76,
-          "name" : "hdr.report_fixed_header.ingress_tstamp",
+          "name" : "hdr.report_fixed_header.ig_tstamp",
           "repeated" : false,
           "annotations" : [],
           "mandatory" : false,
@@ -2612,7 +2624,7 @@
         },
         {
           "id" : 79,
-          "name" : "hdr.local_report_header.ingress_port_id",
+          "name" : "hdr.local_report_header.ig_port",
           "repeated" : false,
           "annotations" : [],
           "mandatory" : false,
@@ -2624,7 +2636,7 @@
         },
         {
           "id" : 80,
-          "name" : "hdr.local_report_header.egress_port_id",
+          "name" : "hdr.local_report_header.eg_port",
           "repeated" : false,
           "annotations" : [],
           "mandatory" : false,
@@ -2660,7 +2672,7 @@
         },
         {
           "id" : 83,
-          "name" : "hdr.local_report_header.egress_tstamp",
+          "name" : "hdr.local_report_header.eg_tstamp",
           "repeated" : false,
           "annotations" : [],
           "mandatory" : false,
@@ -2672,7 +2684,7 @@
         },
         {
           "id" : 84,
-          "name" : "fabric_md.bridged.bridge_md_type",
+          "name" : "fabric_md.bridged.bridged_md_type",
           "repeated" : false,
           "annotations" : [],
           "mandatory" : false,
@@ -4317,7 +4329,7 @@
                 "read_only" : true,
                 "singleton" : {
                   "id" : 76,
-                  "name" : "hdr.report_fixed_header.ingress_tstamp",
+                  "name" : "hdr.report_fixed_header.ig_tstamp",
                   "repeated" : false,
                   "annotations" : [],
                   "type" : {
@@ -4359,7 +4371,7 @@
                 "read_only" : true,
                 "singleton" : {
                   "id" : 79,
-                  "name" : "hdr.local_report_header.ingress_port_id",
+                  "name" : "hdr.local_report_header.ig_port",
                   "repeated" : false,
                   "annotations" : [],
                   "type" : {
@@ -4373,7 +4385,7 @@
                 "read_only" : true,
                 "singleton" : {
                   "id" : 80,
-                  "name" : "hdr.local_report_header.egress_port_id",
+                  "name" : "hdr.local_report_header.eg_port",
                   "repeated" : false,
                   "annotations" : [],
                   "type" : {
@@ -4415,7 +4427,7 @@
                 "read_only" : true,
                 "singleton" : {
                   "id" : 83,
-                  "name" : "hdr.local_report_header.egress_tstamp",
+                  "name" : "hdr.local_report_header.eg_tstamp",
                   "repeated" : false,
                   "annotations" : [],
                   "type" : {
@@ -4429,7 +4441,7 @@
                 "read_only" : true,
                 "singleton" : {
                   "id" : 84,
-                  "name" : "fabric_md.bridged.bridge_md_type",
+                  "name" : "fabric_md.bridged.bridged_md_type",
                   "repeated" : false,
                   "annotations" : [],
                   "type" : {
@@ -6171,7 +6183,7 @@
         },
         {
           "id" : 76,
-          "name" : "hdr.report_fixed_header.ingress_tstamp",
+          "name" : "hdr.report_fixed_header.ig_tstamp",
           "repeated" : false,
           "annotations" : [],
           "mandatory" : false,
@@ -6207,7 +6219,7 @@
         },
         {
           "id" : 79,
-          "name" : "hdr.local_report_header.ingress_port_id",
+          "name" : "hdr.local_report_header.ig_port",
           "repeated" : false,
           "annotations" : [],
           "mandatory" : false,
@@ -6219,7 +6231,7 @@
         },
         {
           "id" : 80,
-          "name" : "hdr.local_report_header.egress_port_id",
+          "name" : "hdr.local_report_header.eg_port",
           "repeated" : false,
           "annotations" : [],
           "mandatory" : false,
@@ -6255,7 +6267,7 @@
         },
         {
           "id" : 83,
-          "name" : "hdr.local_report_header.egress_tstamp",
+          "name" : "hdr.local_report_header.eg_tstamp",
           "repeated" : false,
           "annotations" : [],
           "mandatory" : false,
@@ -6267,7 +6279,7 @@
         },
         {
           "id" : 84,
-          "name" : "fabric_md.bridged.bridge_md_type",
+          "name" : "fabric_md.bridged.bridged_md_type",
           "repeated" : false,
           "annotations" : [],
           "mandatory" : false,
@@ -8032,7 +8044,7 @@
                 "read_only" : true,
                 "singleton" : {
                   "id" : 76,
-                  "name" : "hdr.report_fixed_header.ingress_tstamp",
+                  "name" : "hdr.report_fixed_header.ig_tstamp",
                   "repeated" : false,
                   "annotations" : [],
                   "type" : {
@@ -8074,7 +8086,7 @@
                 "read_only" : true,
                 "singleton" : {
                   "id" : 79,
-                  "name" : "hdr.local_report_header.ingress_port_id",
+                  "name" : "hdr.local_report_header.ig_port",
                   "repeated" : false,
                   "annotations" : [],
                   "type" : {
@@ -8088,7 +8100,7 @@
                 "read_only" : true,
                 "singleton" : {
                   "id" : 80,
-                  "name" : "hdr.local_report_header.egress_port_id",
+                  "name" : "hdr.local_report_header.eg_port",
                   "repeated" : false,
                   "annotations" : [],
                   "type" : {
@@ -8130,7 +8142,7 @@
                 "read_only" : true,
                 "singleton" : {
                   "id" : 83,
-                  "name" : "hdr.local_report_header.egress_tstamp",
+                  "name" : "hdr.local_report_header.eg_tstamp",
                   "repeated" : false,
                   "annotations" : [],
                   "type" : {
@@ -8144,7 +8156,7 @@
                 "read_only" : true,
                 "singleton" : {
                   "id" : 84,
-                  "name" : "fabric_md.bridged.bridge_md_type",
+                  "name" : "fabric_md.bridged.bridged_md_type",
                   "repeated" : false,
                   "annotations" : [],
                   "type" : {

@@ -2212,7 +2212,7 @@
         },
         {
           "id" : 67,
-          "name" : "fabric_md.bridged.bridge_md_type",
+          "name" : "fabric_md.bridged.bridged_md_type",
           "repeated" : false,
           "annotations" : [],
           "mandatory" : false,
@@ -3731,7 +3731,7 @@
                 "read_only" : true,
                 "singleton" : {
                   "id" : 67,
-                  "name" : "fabric_md.bridged.bridge_md_type",
+                  "name" : "fabric_md.bridged.bridged_md_type",
                   "repeated" : false,
                   "annotations" : [],
                   "type" : {
@@ -5365,7 +5365,7 @@
         },
         {
           "id" : 67,
-          "name" : "fabric_md.bridged.bridge_md_type",
+          "name" : "fabric_md.bridged.bridged_md_type",
           "repeated" : false,
           "annotations" : [],
           "mandatory" : false,
@@ -6896,7 +6896,7 @@
                 "read_only" : true,
                 "singleton" : {
                   "id" : 67,
-                  "name" : "fabric_md.bridged.bridge_md_type",
+                  "name" : "fabric_md.bridged.bridged_md_type",
                   "repeated" : false,
                   "annotations" : [],
                   "type" : {

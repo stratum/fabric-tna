@@ -86,10 +86,10 @@ public final class P4InfoConstants {
     // Table IDs
     public static final PiTableId FABRIC_EGRESS_EGRESS_NEXT_EGRESS_VLAN =
             PiTableId.of("FabricEgress.egress_next.egress_vlan");
-    public static final PiTableId FABRIC_EGRESS_INT_EGRESS_COLLECTOR =
-            PiTableId.of("FabricEgress.int_egress.collector");
     public static final PiTableId FABRIC_EGRESS_INT_EGRESS_REPORT =
             PiTableId.of("FabricEgress.int_egress.report");
+    public static final PiTableId FABRIC_EGRESS_INT_EGRESS_WATCHLIST =
+            PiTableId.of("FabricEgress.int_egress.watchlist");
     public static final PiTableId FABRIC_INGRESS_ACL_ACL =
             PiTableId.of("FabricIngress.acl.acl");
     public static final PiTableId FABRIC_INGRESS_FILTERING_FWD_CLASSIFIER =
@@ -147,10 +147,10 @@ public final class P4InfoConstants {
     // Action IDs
     public static final PiActionId FABRIC_EGRESS_EGRESS_NEXT_POP_VLAN =
             PiActionId.of("FabricEgress.egress_next.pop_vlan");
-    public static final PiActionId FABRIC_EGRESS_INT_EGRESS_COLLECT =
-            PiActionId.of("FabricEgress.int_egress.collect");
-    public static final PiActionId FABRIC_EGRESS_INT_EGRESS_DO_REPORT_ENCAPSULATION =
-            PiActionId.of("FabricEgress.int_egress.do_report_encapsulation");
+    public static final PiActionId FABRIC_EGRESS_INT_EGRESS_DO_REPORT_ENCAP =
+            PiActionId.of("FabricEgress.int_egress.do_report_encap");
+    public static final PiActionId FABRIC_EGRESS_INT_EGRESS_INIT_METADATA =
+            PiActionId.of("FabricEgress.int_egress.init_metadata");
     public static final PiActionId FABRIC_INGRESS_ACL_COPY_TO_CPU =
             PiActionId.of("FabricIngress.acl.copy_to_cpu");
     public static final PiActionId FABRIC_INGRESS_ACL_DROP =
