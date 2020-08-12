@@ -93,10 +93,10 @@ final class FabricTreatmentInterpreter {
         } else if (tableId == P4InfoConstants.FABRIC_INGRESS_NEXT_HASHED) {
             return mapNextHashedOrSimpleTreatment(treatment, tableId, false);
         // TODO: add profile with simple next or remove references
-        // } else if (tableId == FabricConstants.FABRIC_INGRESS_NEXT_SIMPLE) {
+        // } else if (tableId == P4InfoConstants.FABRIC_INGRESS_NEXT_SIMPLE) {
         //     return mapNextHashedOrSimpleTreatment(treatment, tableId, true);
         // TODO: re-enable support for xconnext
-        // } else if (tableId == FabricConstants.FABRIC_INGRESS_NEXT_XCONNECT) {
+        // } else if (tableId == P4InfoConstants.FABRIC_INGRESS_NEXT_XCONNECT) {
         //     return mapNextXconnect(treatment, tableId);
         }
         throw new PiInterpreterException(format(
@@ -117,12 +117,12 @@ final class FabricTreatmentInterpreter {
         // TODO: re-enable support for double-vlan
         // if (modVlanIdInst.size() == 2 && capabilities.supportDoubleVlanTerm()) {
         //     return PiAction.builder()
-        //             .withId(FabricConstants.FABRIC_INGRESS_NEXT_SET_DOUBLE_VLAN)
+        //             .withId(P4InfoConstants.FABRIC_INGRESS_NEXT_SET_DOUBLE_VLAN)
         //             .withParameter(new PiActionParam(
-        //                     FabricConstants.INNER_VLAN_ID,
+        //                     P4InfoConstants.INNER_VLAN_ID,
         //                     modVlanIdInst.get(0).vlanId().toShort()))
         //             .withParameter(new PiActionParam(
-        //                     FabricConstants.OUTER_VLAN_ID,
+        //                     P4InfoConstants.OUTER_VLAN_ID,
         //                     modVlanIdInst.get(1).vlanId().toShort()))
         //             .build();
         // }
@@ -161,16 +161,16 @@ final class FabricTreatmentInterpreter {
                         .withParameter(new PiActionParam(P4InfoConstants.LABEL, mplsLabel.label().toInt()))
                         .withId(P4InfoConstants.FABRIC_INGRESS_NEXT_MPLS_ROUTING_HASHED)
                         // TODO: add profile with simple next or remove references
-                        // .withId(simple ? FabricConstants.FABRIC_INGRESS_NEXT_MPLS_ROUTING_SIMPLE
-                        //                 : FabricConstants.FABRIC_INGRESS_NEXT_MPLS_ROUTING_HASHED)
+                        // .withId(simple ? P4InfoConstants.FABRIC_INGRESS_NEXT_MPLS_ROUTING_SIMPLE
+                        //                 : P4InfoConstants.FABRIC_INGRESS_NEXT_MPLS_ROUTING_HASHED)
                         .build();
             } else {
                 // routing_hashed
                 return actionBuilder
                         .withId(P4InfoConstants.FABRIC_INGRESS_NEXT_ROUTING_HASHED)
                         // TODO: add profile with simple next or remove references
-                        // .withId(simple ? FabricConstants.FABRIC_INGRESS_NEXT_ROUTING_SIMPLE
-                        //                 : FabricConstants.FABRIC_INGRESS_NEXT_ROUTING_HASHED)
+                        // .withId(simple ? P4InfoConstants.FABRIC_INGRESS_NEXT_ROUTING_SIMPLE
+                        //                 : P4InfoConstants.FABRIC_INGRESS_NEXT_ROUTING_HASHED)
                         .build();
             }
         } else {
@@ -178,8 +178,8 @@ final class FabricTreatmentInterpreter {
             return actionBuilder
                     .withId(P4InfoConstants.FABRIC_INGRESS_NEXT_OUTPUT_HASHED)
                     // TODO: add profile with simple next or remove references
-                    // .withId(simple ? FabricConstants.FABRIC_INGRESS_NEXT_OUTPUT_SIMPLE
-                    //                 : FabricConstants.FABRIC_INGRESS_NEXT_OUTPUT_HASHED)
+                    // .withId(simple ? P4InfoConstants.FABRIC_INGRESS_NEXT_OUTPUT_SIMPLE
+                    //                 : P4InfoConstants.FABRIC_INGRESS_NEXT_OUTPUT_HASHED)
                     .build();
         }
     }
@@ -191,9 +191,9 @@ final class FabricTreatmentInterpreter {
     //     final PortNumber outPort = ((OutputInstruction) instructionOrFail(
     //             treatment, OUTPUT, tableId)).port();
     //     return PiAction.builder()
-    //             .withId(FabricConstants.FABRIC_INGRESS_NEXT_OUTPUT_XCONNECT)
+    //             .withId(P4InfoConstants.FABRIC_INGRESS_NEXT_OUTPUT_XCONNECT)
     //             .withParameter(new PiActionParam(
-    //                     FabricConstants.PORT_NUM, outPort.toLong()))
+    //                     P4InfoConstants.PORT_NUM, outPort.toLong()))
     //             .build();
     // }
 

@@ -40,6 +40,7 @@ SPDX-License-Identifier: Apache-2.0
     </properties>
 
     <dependencies>
+        <!-- Build -->
         <dependency>
             <groupId>org.onosproject</groupId>
             <artifactId>onos-api</artifactId>
@@ -87,6 +88,28 @@ SPDX-License-Identifier: Apache-2.0
             <artifactId>segmentrouting-app</artifactId>
             <version>3.0.0-SNAPSHOT</version>
             <scope>provided</scope>
+        </dependency>
+
+        <!-- Tests -->
+        <dependency>
+            <groupId>org.onosproject</groupId>
+            <artifactId>onos-api</artifactId>
+            <version>${onos.version}</version>
+            <classifier>tests</classifier>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.onosproject</groupId>
+            <artifactId>onos-core-common</artifactId>
+            <version>${onos.version}</version>
+            <classifier>tests</classifier>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.onosproject</groupId>
+            <artifactId>onlab-junit</artifactId>
+            <version>${onos.version}</version>
+            <scope>test</scope>
         </dependency>
 
     </dependencies>

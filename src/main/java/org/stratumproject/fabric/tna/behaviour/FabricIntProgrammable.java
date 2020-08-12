@@ -108,15 +108,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
 
     @Override
     public boolean init() {
-
         if (!setupBehaviour()) {
-            return false;
-        }
-
-        final SegmentRoutingDeviceConfig cfg = cfgService.getConfig(
-                deviceId, SegmentRoutingDeviceConfig.class);
-        if (cfg == null) {
-            log.warn("Missing SegmentRoutingDeviceConfig config for {}", deviceId);
             return false;
         }
 

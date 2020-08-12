@@ -61,6 +61,11 @@ pipeconf: _mvn_package
 	$(info *** ONOS pipeconf .oar package created succesfully)
 	@ls -1 ${curr_dir}/target/*.oar
 
+pipeconf-test: _mvn_package
+	$(info *** Testing ONOS pipeconf)
+	docker run --rm -v $(curr_dir}:mvn-src -w /mvn-src \
+		-v ${MVN_CACHE}:/root/.m2 ${mvn_image} mvn test
+
 pipeconf-install:
 	$(info *** Installing and activating pipeconf app in ONOS at ${ONOS_HOST}...)
 	${onos_curl} -X POST -HContent-Type:application/octet-stream \
