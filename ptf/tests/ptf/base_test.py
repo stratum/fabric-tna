@@ -618,13 +618,14 @@ class P4RuntimeTest(BaseTest):
 
     def push_update_add_entry_to_action(self, req, t_name, mk, a_name, params, priority=0):
         update = req.updates.add()
-        update.type = p4runtime_pb2.Update.INSERT
         table_entry = update.entity.table_entry
         table_entry.table_id = self.get_table_id(t_name)
         table_entry.priority = priority
         if mk is None or len(mk) == 0:
             table_entry.is_default_action = True
+            update.type = p4runtime_pb2.Update.MODIFY
         else:
+            update.type = p4runtime_pb2.Update.INSERT
             self.set_match_key(table_entry, t_name, mk)
         self.set_action_entry(table_entry, a_name, params)
 

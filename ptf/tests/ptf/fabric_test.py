@@ -41,6 +41,8 @@ ETH_TYPE_QINQ = 0x88a8
 ETH_TYPE_PPPOE = 0x8864
 ETH_TYPE_MPLS_UNICAST = 0x8847
 
+ETH_TYPE_LOOPBACK = 0xBF02
+
 # In case the "correct" version of scapy (from p4lang) is not installed, we
 # provide the INT header formats in xnt.py
 # import scapy.main
@@ -59,6 +61,7 @@ MAC_MASK = ":".join(["ff"] * 6)
 SWITCH_MAC = "00:00:00:00:aa:01"
 SWITCH_IPV4 = "192.168.0.1"
 
+ZERO_MAC = "00:00:00:00:00:00"
 HOST1_MAC = "00:00:00:00:00:01"
 HOST2_MAC = "00:00:00:00:00:02"
 HOST3_MAC = "00:00:00:00:00:03"

@@ -963,3 +963,42 @@ class CounterTest(BridgingTest):
     def runTest(self):
         print("")
         self.doRunTest()
+
+
+class FabricLoopbackModeTest(IPv4UnicastTest):
+
+    @autocleanup
+    def doRunTest(self, pkt, next_hop_mac):
+        # Enable on both ingress and egress pipe
+        self.send_request_add_entry_to_action(
+            "FabricEgress.loopback_testing.enable",
+            None,
+            "FabricEgress.loopback_testing.on", [])
+        self.send_request_add_entry_to_action(
+            "FabricIngress.loopback_testing.punt_to_cpu",
+            None,
+            "FabricIngress.loopback_testing.on", [])
+        # Since we cannot put interfaces in loopback mode, verify that output
+        # packet has fake loopback ether type...
+        routed_pkt = pkt_decrement_ttl(pkt_route(pkt, next_hop_mac))
+        loopback_pkt = Ether(type=ETH_TYPE_LOOPBACK, src=ZERO_MAC, dst=ZERO_MAC) / routed_pkt
+        self.runIPv4UnicastTest(
+            pkt, next_hop_mac=next_hop_mac, prefix_len=24,
+            exp_pkt=loopback_pkt)
+        # ...and re-inject to trigger packet-in, which should come in without
+        # fake ether type.
+        testutils.send_packet(self, self.port2, str(loopback_pkt))
+        self.verify_packet_in(routed_pkt, self.port2)
+        testutils.verify_no_other_packets(self)
+
+
+    def runTest(self):
+        print ""
+        for pkt_type in ["tcp", "udp", "icmp"]:
+            print "Testing %s packet..." % pkt_type
+            pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
+                eth_src=HOST1_MAC, eth_dst=SWITCH_MAC,
+                ip_src=HOST1_IPV4, ip_dst=HOST2_IPV4,
+                pktlen=MIN_PKT_LEN
+            )
+            self.doRunTest(pkt, HOST2_MAC)

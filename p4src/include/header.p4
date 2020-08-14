@@ -176,6 +176,7 @@ struct fabric_ingress_metadata_t {
     bool               skip_next;
     fwd_type_t         fwd_type;
     next_id_t          next_id;
+    bool               is_loopback;
 #ifdef WITH_SPGW
     bool               inner_ipv4_checksum_err;
     bool               needs_gtpu_decap;
@@ -200,7 +201,14 @@ struct fabric_egress_metadata_t {
 #endif // WITH_INT
 }
 
+header fake_ethernet_t {
+    @padding bit<48> _pad0;
+    @padding bit<48> _pad1;
+    bit<16> ether_type;
+}
+
 struct parsed_headers_t {
+    fake_ethernet_t fake_ethernet;
     ethernet_t ethernet;
     vlan_tag_t vlan_tag;
 #if defined(WITH_XCONNECT) || defined(WITH_DOUBLE_VLAN_TERMINATION)
