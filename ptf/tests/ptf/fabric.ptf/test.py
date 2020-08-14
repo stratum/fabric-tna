@@ -23,6 +23,7 @@ vlan_confs = {
 
 
 class FabricBridgingTest(BridgingTest):
+
     @tvsetup
     @autocleanup
     def doRunTest(self, tagged1, tagged2, pkt, tc_name):
@@ -43,6 +44,7 @@ class FabricBridgingTest(BridgingTest):
 @skip("XConnect Currently Unsupported")
 @group("xconnect")
 class FabricDoubleVlanXConnectTest(DoubleVlanXConnectTest):
+
     @tvsetup
     @autocleanup
     def doRunTest(self, pkt, tc_name):
@@ -61,6 +63,7 @@ class FabricDoubleVlanXConnectTest(DoubleVlanXConnectTest):
 
 @group("multicast")
 class FabricArpBroadcastUntaggedTest(ArpBroadcastTest):
+
     @tvsetup
     @autocleanup
     def runTest(self):
@@ -71,6 +74,7 @@ class FabricArpBroadcastUntaggedTest(ArpBroadcastTest):
 
 @group("multicast")
 class FabricArpBroadcastTaggedTest(ArpBroadcastTest):
+
     @tvsetup
     @autocleanup
     def runTest(self):
@@ -81,6 +85,7 @@ class FabricArpBroadcastTaggedTest(ArpBroadcastTest):
 
 @group("multicast")
 class FabricArpBroadcastMixedTest(ArpBroadcastTest):
+
     @tvsetup
     @autocleanup
     def runTest(self):
@@ -90,6 +95,7 @@ class FabricArpBroadcastMixedTest(ArpBroadcastTest):
 
 
 class FabricIPv4UnicastTest(IPv4UnicastTest):
+
     @tvsetup
     @autocleanup
     def doRunTest(self, pkt, mac_dest, tagged1, tagged2, tc_name):
@@ -112,6 +118,7 @@ class FabricIPv4UnicastTest(IPv4UnicastTest):
 
 
 class FabricIPv4UnicastGtpPassthroughTest(IPv4UnicastTest):
+
     @tvsetup
     @autocleanup
     def runTest(self):
@@ -128,6 +135,7 @@ class FabricIPv4UnicastGtpPassthroughTest(IPv4UnicastTest):
 
 
 class FabricIPv4UnicastGroupTest(FabricTest):
+
     @tvsetup
     @autocleanup
     def runTest(self):
@@ -161,6 +169,7 @@ class FabricIPv4UnicastGroupTest(FabricTest):
 
 
 class FabricIPv4UnicastGroupTestAllPortTcpSport(FabricTest):
+
     @tvsetup
     @autocleanup
     def runTest(self):
@@ -221,6 +230,7 @@ class FabricIPv4UnicastGroupTestAllPortTcpSport(FabricTest):
 
 
 class FabricIPv4UnicastGroupTestAllPortTcpDport(FabricTest):
+
     @tvsetup
     @autocleanup
     def runTest(self):
@@ -281,6 +291,7 @@ class FabricIPv4UnicastGroupTestAllPortTcpDport(FabricTest):
 
 
 class FabricIPv4UnicastGroupTestAllPortIpSrc(FabricTest):
+
     @tvsetup
     @autocleanup
     def IPv4UnicastGroupTestAllPortL4SrcIp(self, pkt_type):
@@ -346,6 +357,7 @@ class FabricIPv4UnicastGroupTestAllPortIpSrc(FabricTest):
 
 
 class FabricIPv4UnicastGroupTestAllPortIpDst(FabricTest):
+
     @tvsetup
     @autocleanup
     def IPv4UnicastGroupTestAllPortL4DstIp(self, pkt_type):
@@ -416,6 +428,7 @@ class FabricIPv4UnicastGroupTestAllPortIpDst(FabricTest):
 
 
 class FabricIPv4MPLSTest(FabricTest):
+
     @tvsetup
     @autocleanup
     def runTest(self):
@@ -446,6 +459,7 @@ class FabricIPv4MPLSTest(FabricTest):
 
 
 class FabricIPv4MplsGroupTest(IPv4UnicastTest):
+
     @tvsetup
     @autocleanup
     def doRunTest(self, pkt, mac_dest, tagged1, tc_name):
@@ -469,6 +483,7 @@ class FabricIPv4MplsGroupTest(IPv4UnicastTest):
 
 
 class FabricMplsSegmentRoutingTest(MplsSegmentRoutingTest):
+
     @tvsetup
     @autocleanup
     def doRunTest(self, pkt, mac_dest, next_hop_spine, tc_name):
@@ -491,6 +506,7 @@ class FabricMplsSegmentRoutingTest(MplsSegmentRoutingTest):
 
 @group("packetio")
 class FabricArpPacketOutTest(PacketOutTest):
+
     @tvsetup
     @autocleanup
     def runTest(self):
@@ -500,6 +516,7 @@ class FabricArpPacketOutTest(PacketOutTest):
 
 @group("packetio")
 class FabricShortIpPacketOutTest(PacketOutTest):
+
     @tvsetup
     @autocleanup
     def runTest(self):
@@ -509,6 +526,7 @@ class FabricShortIpPacketOutTest(PacketOutTest):
 
 @group("packetio")
 class FabricLongIpPacketOutTest(PacketOutTest):
+
     @tvsetup
     @autocleanup
     def runTest(self):
@@ -518,6 +536,7 @@ class FabricLongIpPacketOutTest(PacketOutTest):
 
 @group("packetio")
 class FabricArpPacketInTest(PacketInTest):
+
     @tvsetup
     @autocleanup
     def runTest(self):
@@ -527,6 +546,7 @@ class FabricArpPacketInTest(PacketInTest):
 
 @group("packetio")
 class FabricLongIpPacketInTest(PacketInTest):
+
     @tvsetup
     @autocleanup
     def runTest(self):
@@ -536,6 +556,7 @@ class FabricLongIpPacketInTest(PacketInTest):
 
 @group("packetio")
 class FabricShortIpPacketInTest(PacketInTest):
+
     @tvsetup
     @autocleanup
     def runTest(self):
@@ -545,6 +566,7 @@ class FabricShortIpPacketInTest(PacketInTest):
 
 @group("packetio")
 class FabricTaggedPacketInTest(PacketInTest):
+
     @tvsetup
     @autocleanup
     def runTest(self):
@@ -554,6 +576,7 @@ class FabricTaggedPacketInTest(PacketInTest):
 
 @group("packetio")
 class FabricDefaultVlanPacketInTest(FabricTest):
+
     @tvsetup
     @autocleanup
     def runTest(self):
@@ -567,6 +590,7 @@ class FabricDefaultVlanPacketInTest(FabricTest):
 
 @group("spgw")
 class FabricSpgwDownlinkTest(SpgwSimpleTest):
+
     @tvsetup
     @autocleanup
     def doRunTest(self, pkt, tagged1, tagged2, mpls, tc_name):
@@ -593,6 +617,7 @@ class FabricSpgwDownlinkTest(SpgwSimpleTest):
 
 @group("spgw")
 class FabricSpgwUplinkTest(SpgwSimpleTest):
+
     @tvsetup
     @autocleanup
     def doRunTest(self, pkt, tagged1, tagged2, mpls):
@@ -618,6 +643,7 @@ class FabricSpgwUplinkTest(SpgwSimpleTest):
 @group("int")
 @group("spgw")
 class FabricSpgwUplinkIntTest(SpgwIntTest):
+
     @tvsetup
     @autocleanup
     def doRunTest(self, vlan_conf, tagged, pkt_type, mpls):
@@ -639,6 +665,7 @@ class FabricSpgwUplinkIntTest(SpgwIntTest):
 @group("int")
 @group("spgw")
 class FabricSpgwDownlinkIntTest(SpgwIntTest):
+
     @tvsetup
     @autocleanup
     def doRunTest(self, vlan_conf, tagged, pkt_type, mpls):
@@ -659,6 +686,7 @@ class FabricSpgwDownlinkIntTest(SpgwIntTest):
 
 @group("int")
 class FabricIntTest(IntTest):
+
     @tvsetup
     @autocleanup
     def doRunTest(self, vlan_conf, tagged, pkt_type, mpls):

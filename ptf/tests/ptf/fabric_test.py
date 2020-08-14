@@ -14,8 +14,7 @@ from scapy.layers.inet import IP, UDP, TCP
 from scapy.layers.l2 import Ether, Dot1Q
 from scapy.layers.ppp import PPPoE, PPP
 from scapy.fields import BitField, ByteField, ShortField, IntField
-from scapy.packet import bind_layers
-
+from scapy.packet import bind_layers, Packet
 
 import xnt
 from base_test import P4RuntimeTest, stringify, mac_to_binary, ipv4_to_binary
@@ -952,9 +951,9 @@ class DoubleVlanTerminationTest(FabricTest):
         if in_tagged and not pkt_is_tagged:
             pkt = pkt_add_vlan(pkt, vlan_vid=in_vlan)
 
-        testutils.send_packet(self, self.port1, str(pkt))
+        self.send_packet(self.port1, str(pkt))
         if verify_pkt:
-            testutils.verify_packet(self, exp_pkt, self.port2)
+            self.verify_packet( exp_pkt, self.port2)
         self.verify_no_other_packets()
 
     def runPopAndRouteTest(self, pkt, next_hop_mac,
@@ -1053,9 +1052,9 @@ class DoubleVlanTerminationTest(FabricTest):
                 exp_pkt = pkt_add_mpls(exp_pkt, label=mpls_label,
                                        ttl=DEFAULT_MPLS_TTL)
 
-        testutils.send_packet(self, self.port1, str(pkt))
+        self.send_packet(self.port1, str(pkt))
         if verify_pkt:
-            testutils.verify_packet(self, exp_pkt, self.port2)
+            self.verify_packet( exp_pkt, self.port2)
         self.verify_no_other_packets()
 
 
@@ -1508,8 +1507,8 @@ class IntTest(IPv4UnicastTest):
                                 tagged1=tagged1, tagged2=tagged2, mpls=mpls,
                                 prefix_len=32, with_another_pkt_later=True)
 
-        testutils.verify_packet(self, exp_int_report_pkt_masked, collector_port)
-        testutils.verify_no_other_packets(self)
+        self.verify_packet( exp_int_report_pkt_masked, collector_port)
+        self.verify_no_other_packets()
 
 class SpgwIntTest(SpgwSimpleTest, IntTest):
 
@@ -1581,8 +1580,8 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
                                 tagged1=tagged1, tagged2=tagged2, mpls=mpls,
                                 prefix_len=32, with_another_pkt_later=True)
 
-        testutils.verify_packet(self, exp_int_report_pkt_masked, collector_port)
-        testutils.verify_no_other_packets(self)
+        self.verify_packet( exp_int_report_pkt_masked, collector_port)
+        self.verify_no_other_packets()
 
 
     def runSpgwDownlinkIntTest(self, pkt, tagged1, tagged2,
@@ -1658,8 +1657,8 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
                                 tagged1=tagged1, tagged2=tagged2, mpls=mpls,
                                 with_another_pkt_later=True)
 
-        testutils.verify_packet(self, exp_int_report_pkt_masked, collector_port)
-        testutils.verify_no_other_packets(self)
+        self.verify_packet( exp_int_report_pkt_masked, collector_port)
+        self.verify_no_other_packets()
 
 class PppoeTest(DoubleVlanTerminationTest):
 
@@ -1825,7 +1824,7 @@ class PppoeTest(DoubleVlanTerminationTest):
         old_dropped = self.read_byte_count_upstream("dropped", line_id)
         old_control = self.read_pkt_count_upstream("control", line_id)
 
-        testutils.send_packet(self, self.port1, str(pppoed_pkt))
+        self.send_packet(self.port1, str(pppoed_pkt))
         self.verify_packet_in(pppoed_pkt, self.port1)
         self.verify_no_other_packets()
 
