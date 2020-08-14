@@ -656,6 +656,10 @@ class FabricTest(P4RuntimeTest):
     def read_next_hashed_group(self, group_id):
         return self.read_action_profile_group("FabricIngress.next.hashed_profile", group_id)
 
+    def verify_next_hashed_group(self, group_id, expected_action_profile_group):
+        return self.verify_action_profile_group("FabricIngress.next.hashed_profile", group_id,
+                                                expected_action_profile_group)
+
     def read_mcast_group(self, group_id):
         req = self.get_new_read_request()
         entity = req.entities.add()
@@ -668,6 +672,9 @@ class FabricTest(P4RuntimeTest):
                 if pre_entry.HasField("multicast_group_entry"):
                     return pre_entry.multicast_group_entry
         return None
+
+    def verify_mcast_group(self, group_id, expected_multicast_group):
+        return self.verify_multicast_group(group_id, expected_multicast_group)
 
 
 class BridgingTest(FabricTest):
@@ -696,10 +703,9 @@ class BridgingTest(FabricTest):
             pkt2 = pkt_add_vlan(pkt2, vlan_vid=vlan_id)
             exp_pkt = pkt_add_vlan(exp_pkt, vlan_vid=vlan_id)
 
-        testutils.send_packet(self, self.port1, str(pkt))
-        testutils.send_packet(self, self.port2, str(pkt2))
-        testutils.verify_each_packet_on_each_port(
-            self, [exp_pkt, exp_pkt2], [self.port2, self.port1])
+        self.send_packet(self.port1, str(pkt))
+        self.send_packet(self.port2, str(pkt2))
+        self.verify_each_packet_on_each_port([exp_pkt, exp_pkt2], [self.port2, self.port1])
 
 
 class DoubleVlanXConnectTest(FabricTest):
@@ -719,11 +725,11 @@ class DoubleVlanXConnectTest(FabricTest):
         pkt = pkt_add_vlan(pkt, vlan_vid=vlan_id_outer)
         exp_pkt = pkt_decrement_ttl(pkt.copy())
 
-        testutils.send_packet(self, self.port1, str(pkt))
-        testutils.verify_packet(self, exp_pkt, self.port2)
+        self.send_packet(self.port1, str(pkt))
+        self.verify_packet(exp_pkt, self.port2)
 
-        testutils.send_packet(self, self.port2, str(pkt))
-        testutils.verify_packet(self, exp_pkt, self.port1)
+        self.send_packet(self.port2, str(pkt))
+        self.verify_packet(exp_pkt, self.port1)
 
 
 class ArpBroadcastTest(FabricTest):
@@ -751,18 +757,18 @@ class ArpBroadcastTest(FabricTest):
 
         for inport in all_ports:
             pkt_to_send = vlan_arp_pkt if inport in tagged_ports else arp_pkt
-            testutils.send_packet(self, inport, str(pkt_to_send))
+            self.send_packet(inport, str(pkt_to_send))
             # Pkt should be received on CPU and on all ports, except the ingress one.
             self.verify_packet_in(exp_pkt=pkt_to_send, exp_in_port=inport)
             verify_tagged_ports = set(tagged_ports)
             verify_tagged_ports.discard(inport)
             for tport in verify_tagged_ports:
-                testutils.verify_packet(self, vlan_arp_pkt, tport)
+                self.verify_packet(vlan_arp_pkt, tport)
             verify_untagged_ports = set(untagged_ports)
             verify_untagged_ports.discard(inport)
             for uport in verify_untagged_ports:
-                testutils.verify_packet(self, arp_pkt, uport)
-        testutils.verify_no_other_packets(self)
+                self.verify_packet(arp_pkt, uport)
+        self.verify_no_other_packets()
 
 
 class IPv4UnicastTest(FabricTest):
@@ -861,13 +867,13 @@ class IPv4UnicastTest(FabricTest):
         if tagged1 and not pkt_is_tagged:
             pkt = pkt_add_vlan(pkt, vlan_vid=vlan1)
 
-        testutils.send_packet(self, self.port1, str(pkt))
+        self.send_packet(self.port1, str(pkt))
 
         if verify_pkt:
-            testutils.verify_packet(self, exp_pkt, self.port2)
+            self.verify_packet(exp_pkt, self.port2)
 
         if not with_another_pkt_later:
-            testutils.verify_no_other_packets(self)
+            self.verify_no_other_packets()
 
 
 class DoubleVlanTerminationTest(FabricTest):
@@ -949,7 +955,7 @@ class DoubleVlanTerminationTest(FabricTest):
         testutils.send_packet(self, self.port1, str(pkt))
         if verify_pkt:
             testutils.verify_packet(self, exp_pkt, self.port2)
-        testutils.verify_no_other_packets(self)
+        self.verify_no_other_packets()
 
     def runPopAndRouteTest(self, pkt, next_hop_mac,
                            prefix_len=24,
@@ -1050,7 +1056,7 @@ class DoubleVlanTerminationTest(FabricTest):
         testutils.send_packet(self, self.port1, str(pkt))
         if verify_pkt:
             testutils.verify_packet(self, exp_pkt, self.port2)
-        testutils.verify_no_other_packets(self)
+        self.verify_no_other_packets()
 
 
 class MplsSegmentRoutingTest(FabricTest):
@@ -1090,15 +1096,15 @@ class MplsSegmentRoutingTest(FabricTest):
         else:
             exp_pkt = pkt_add_mpls(exp_pkt, label, mpls_ttl - 1)
 
-        testutils.send_packet(self, self.port1, str(pkt))
-        testutils.verify_packet(self, exp_pkt, self.port2)
+        self.send_packet(self.port1, str(pkt))
+        self.verify_packet(exp_pkt, self.port2)
 
 
 class PacketOutTest(FabricTest):
     def runPacketOutTest(self, pkt):
         for port in [self.port1, self.port2]:
             self.verify_packet_out(pkt, out_port=port)
-        testutils.verify_no_other_packets(self)
+        self.verify_no_other_packets()
 
 
 class PacketInTest(FabricTest):
@@ -1109,9 +1115,9 @@ class PacketInTest(FabricTest):
                 self.set_ingress_port_vlan(port, True, vlan_id, vlan_id)
             else:
                 self.set_ingress_port_vlan(port, False, 0, vlan_id)
-            testutils.send_packet(self, port, str(pkt))
+            self.send_packet(port, str(pkt))
             self.verify_packet_in(pkt, port)
-        testutils.verify_no_other_packets(self)
+        self.verify_no_other_packets()
 
 
 class SpgwSimpleTest(IPv4UnicastTest):
@@ -1821,7 +1827,7 @@ class PppoeTest(DoubleVlanTerminationTest):
 
         testutils.send_packet(self, self.port1, str(pppoed_pkt))
         self.verify_packet_in(pppoed_pkt, self.port1)
-        testutils.verify_no_other_packets(self)
+        self.verify_no_other_packets()
 
         if not self.is_bmv2():
             time.sleep(1)
@@ -1846,7 +1852,7 @@ class PppoeTest(DoubleVlanTerminationTest):
         pppoed_pkt = pkt_add_vlan(pppoed_pkt, vlan_vid=vlan_id_outer)
 
         self.verify_packet_out(pppoed_pkt, self.port1)
-        testutils.verify_no_other_packets(self)
+        self.verify_no_other_packets()
 
     def runDownstreamV4Test(self, pkt, in_tagged, line_enabled):
         s_tag = vlan_id_outer = 888
