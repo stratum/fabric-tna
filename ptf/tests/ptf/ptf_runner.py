@@ -20,6 +20,9 @@ from collections import OrderedDict
 import google.protobuf.text_format
 import grpc
 from p4.v1 import p4runtime_pb2, p4runtime_pb2_grpc
+from testvector import tvutils
+from portmap import pmutils
+from target import targetutils
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("PTF runner")
@@ -81,10 +84,44 @@ def build_tofino_pipeline_tar_config(pipeline_tar_path):
 
 def update_config(p4info_path, bmv2_json_path, tofino_bin_path,
                   tofino_cxt_json_path, tofino_pipeline_tar_path,
-                  grpc_addr, device_id):
+                  grpc_addr, device_id, generate_tv=False):
     """
     Performs a SetForwardingPipelineConfig on the device
     """
+    # Build pipeline config request
+    request = p4runtime_pb2.SetForwardingPipelineConfigRequest()
+    request.device_id = device_id
+    election_id = request.election_id
+    election_id.high = 0
+    election_id.low = 1
+    config = request.config
+    with open(p4info_path, 'r') as p4info_f:
+        google.protobuf.text_format.Merge(p4info_f.read(), config.p4info)
+    if bmv2_json_path is not None:
+        device_config = build_bmv2_config(bmv2_json_path)
+    elif tofino_pipeline_tar_path is not None:
+        device_config = build_tofino_pipeline_tar_config(tofino_pipeline_tar_path)
+    else:
+        device_config = build_tofino_config("name", tofino_bin_path,
+                                                tofino_cxt_json_path)
+    config.p4_device_config = device_config
+    request.action = p4runtime_pb2.SetForwardingPipelineConfigRequest.VERIFY_AND_COMMIT
+
+    if generate_tv:
+        # Create new target proto object for testvectors
+        if bmv2_json_path is not None:
+            tv_target = targetutils.get_new_target(grpc_addr, target_id="bmv2")
+        else:
+            tv_target = targetutils.get_new_target(grpc_addr, target_id="tofino")
+        # Write the target proto object to testvectors/target.pb.txt
+        targetutils.write_to_file(tv_target, os.getcwd())
+        # Create new testvector for set pipeline config and write to testvectors/PipelineConfig.pb.txt
+        tv = tvutils.get_new_testvector()
+        tv_name = "PipelineConfig"
+        tc = tvutils.get_new_testcase(tv, tv_name)
+        tvutils.add_pipeline_config_operation(tc, request)
+        tvutils.write_to_file(tv, os.getcwd(), tv_name)
+        return True
     channel = grpc.insecure_channel(grpc_addr)
     stub = p4runtime_pb2_grpc.P4RuntimeStub(channel)
 
@@ -139,24 +176,6 @@ def update_config(p4info_path, bmv2_json_path, tofino_bin_path,
         return False
 
     try:
-        # Set pipeline config.
-        request = p4runtime_pb2.SetForwardingPipelineConfigRequest()
-        request.device_id = device_id
-        election_id = request.election_id
-        election_id.high = 0
-        election_id.low = 1
-        config = request.config
-        with open(p4info_path, 'r') as p4info_f:
-            google.protobuf.text_format.Merge(p4info_f.read(), config.p4info)
-        if bmv2_json_path is not None:
-            device_config = build_bmv2_config(bmv2_json_path)
-        elif tofino_pipeline_tar_path is not None:
-            device_config = build_tofino_pipeline_tar_config(tofino_pipeline_tar_path)
-        else:
-            device_config = build_tofino_config("name", tofino_bin_path,
-                                                tofino_cxt_json_path)
-        config.p4_device_config = device_config
-        request.action = p4runtime_pb2.SetForwardingPipelineConfigRequest.VERIFY_AND_COMMIT
         try:
             stub.SetForwardingPipelineConfig(request)
         except Exception as e:
@@ -170,7 +189,7 @@ def update_config(p4info_path, bmv2_json_path, tofino_bin_path,
 
 
 def run_test(p4info_path, grpc_addr, device_id, cpu_port, ptfdir, port_map_path,
-             device, platform=None, extra_args=()):
+             device, platform=None, generate_tv=False, extra_args=()):
     """
     Runs PTF tests included in provided directory.
     Device must be running and configfured with appropriate P4 program.
@@ -181,12 +200,36 @@ def run_test(p4info_path, grpc_addr, device_id, cpu_port, ptfdir, port_map_path,
     port_map = OrderedDict()
     with open(port_map_path, 'r') as port_map_f:
         port_list = json.load(port_map_f)
+        if generate_tv:
+            # interfaces string to be used to create interfaces in test runner container
+            interfaces = ""
+            # Create new portmap proto object for testvectors
+            tv_portmap = pmutils.get_new_portmap()
         for entry in port_list:
             p4_port = entry["p4_port"]
             iface_name = entry["iface_name"]
             port_map[p4_port] = iface_name
+            if generate_tv:
+                # Append iface_name to interfaces
+                interfaces = interfaces + " " + iface_name
+                # Append new entry to tv proto object
+                pmutils.add_new_entry(tv_portmap, p4_port, iface_name)
+    if generate_tv:
+        # ptf needs the interfaces mentioned in portmap to be running on container
+        # For generate_tv option, we don't strat bmv2 or tofino model container
+        # This is a work around to create those interfaces on testrunner contiainer
+        try:
+            cmd = os.getcwd() + "/../../run/tv/setup_interfaces.sh" + interfaces
+            p = subprocess.Popen([cmd], shell=True)
+            p.wait()
+        except Exception as e:
+            print e
+            error("Error when creating interfaces")
+            return False
+        # Write the portmap proto object to testvectors/portmap.pb.txt
+        pmutils.write_to_file(tv_portmap, os.getcwd())
 
-    if not check_ifaces(port_map.values()):
+    if not generate_tv and not check_ifaces(port_map.values()):
         error("Some interfaces are missing")
         return False
 
@@ -208,6 +251,7 @@ def run_test(p4info_path, grpc_addr, device_id, cpu_port, ptfdir, port_map_path,
     test_params += ';device_id=\'{}\''.format(device_id)
     test_params += ';cpu_port=\'{}\''.format(cpu_port)
     test_params += ';device=\'{}\''.format(device)
+    test_params += ';generate_tv=\'{}\''.format(generate_tv)
     if platform is not None:
         test_params += ';pltfm=\'{}\''.format(platform)
     cmd.append('--test-params={}'.format(test_params))
@@ -283,6 +327,9 @@ def main():
     parser.add_argument('--skip-test',
                         help='Skip test execution (useful to perform only pipeline configuration)',
                         action="store_true", default=False)
+    parser.add_argument('--generate-tv',
+                        help='Skip test execution',
+                        action="store_true", default=False)
     args, unknown_args = parser.parse_known_args()
 
     if not check_ptf():
@@ -332,7 +379,8 @@ def main():
                                 tofino_cxt_json_path=tofino_ctx_json,
                                 tofino_pipeline_tar_path=tofino_pipeline_tar,
                                 grpc_addr=args.grpc_addr,
-                                device_id=args.device_id)
+                                device_id=args.device_id,
+                                generate_tv=args.generate_tv)
     if not success:
         sys.exit(2)
 
@@ -345,6 +393,7 @@ def main():
                            port_map_path=args.port_map,
                            platform=args.platform,
                            device=device,
+                           generate_tv=args.generate_tv,
                            extra_args=unknown_args)
 
     if not success:

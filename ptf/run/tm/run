@@ -8,9 +8,9 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
 FP4TEST_ROOT="${DIR}"/../..
 FABRIC_TNA="${FP4TEST_ROOT}"/..
 
-# PTF tester image
-# TODO: depend on a simple tester image (this image contains also BMv2)
-FP4TEST_DOCKER_IMG=${FP4TEST_DOCKER_IMG:-onosproject/fabric-p4test:latest}
+# Tester image
+# Contains PTF and tvutils libraries, as well as P4RT, gNMI, and TV Python bindings
+TESTER_DOCKER_IMG=stratumproject/testvectors:ptf@sha256:32241613c6b0fb56cd9ddb753df31c7355492a1d0d1b0b535efa227f717e44d0
 SDE_VERSION=${SDE_VERSION:-9.2.0}
 # Use image sha to pin a specific stratum_bmv2 build and have reproducible runs.
 # We could instrument CI to test on both a stable version and the latest one.
@@ -65,7 +65,7 @@ echo "*** Using P4 compiler output in ${P4C_OUT}..."
 randomNum=${RANDOM}
 tmRunName=tofino-model-${randomNum}
 stratumBfRunName=stratum-bf-${randomNum}
-testerRunName=fabric-p4test-${randomNum}
+testerRunName=tester-${randomNum}
 
 function stop() {
     set +e
@@ -123,5 +123,5 @@ docker run --name ${testerRunName} -it --privileged --rm \
     -v "${P4C_OUT}":/p4c-out \
     -e DEVICE=${testerDevice} \
     --entrypoint /fabric-p4test/run/tm/start_test.sh \
-    "${FP4TEST_DOCKER_IMG}" \
+    "${TESTER_DOCKER_IMG}" \
     ${@}

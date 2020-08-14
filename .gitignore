@@ -4,9 +4,6 @@ tmp
 target
 .vscode
 *.pyc
-ptf.log
-ptf.pcap
-ptf/run/tm/log
 .idea
 *.iml
 *.pcap
