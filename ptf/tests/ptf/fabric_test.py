@@ -1389,7 +1389,7 @@ class IntTest(IPv4UnicastTest):
         #     ])
 
 
-    def setup_collector_flow(self, ipv4_src, ipv4_dst, sport, dport, switch_id):
+    def setup_watchlist_flow(self, ipv4_src, ipv4_dst, sport, dport, switch_id):
         switch_id_ = stringify(switch_id, 4)
         ipv4_src_ = ipv4_to_binary(ipv4_src)
         ipv4_dst_ = ipv4_to_binary(ipv4_dst)
@@ -1480,7 +1480,7 @@ class IntTest(IPv4UnicastTest):
                                         ig_port, eg_port, switch_id, exp_pkt)
 
         # Set collector, report table, and mirror sessions
-        self.setup_collector_flow(ipv4_src, ipv4_dst, sport, dport, switch_id)
+        self.setup_watchlist_flow(ipv4_src, ipv4_dst, sport, dport, switch_id)
         self.setup_report_flow(collector_port, SWITCH_MAC, SWITCH_MAC,
                                SWITCH_IPV4, INT_COLLECTOR_IPV4, INT_REPORT_PORT)
         self.setup_report_mirror_flow(0, INT_REPORT_MIRROR_ID_0, self.recirculate_port_0)
@@ -1554,7 +1554,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
 
         # Set collector, report table, and mirror sessions
         # Note that we are monitoring the inner packet.
-        self.setup_collector_flow(ipv4_src, ipv4_dst, sport, dport, switch_id)
+        self.setup_watchlist_flow(ipv4_src, ipv4_dst, sport, dport, switch_id)
         self.setup_report_flow(collector_port, SWITCH_MAC, SWITCH_MAC,
                                SWITCH_IPV4, INT_COLLECTOR_IPV4, INT_REPORT_PORT)
         self.setup_report_mirror_flow(0, INT_REPORT_MIRROR_ID_0, self.recirculate_port_0)
@@ -1630,7 +1630,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
 
         # Set collector, report table, and mirror sessions
         # Note that we are monitoring the inner packet.
-        self.setup_collector_flow(ipv4_src, ipv4_dst, sport, dport, switch_id)
+        self.setup_watchlist_flow(ipv4_src, ipv4_dst, sport, dport, switch_id)
         self.setup_report_flow(collector_port, SWITCH_MAC, SWITCH_MAC,
                                SWITCH_IPV4, INT_COLLECTOR_IPV4, INT_REPORT_PORT)
         self.setup_report_mirror_flow(0, INT_REPORT_MIRROR_ID_0, self.recirculate_port_0)
