@@ -14,6 +14,7 @@ from StringIO import StringIO
 from collections import Counter
 from functools import wraps, partial
 from unittest import SkipTest
+import random
 
 import google.protobuf.text_format
 import grpc
@@ -27,6 +28,7 @@ from p4.v1 import p4runtime_pb2, p4runtime_pb2_grpc
 from ptf import config
 from ptf.base_tests import BaseTest
 from ptf.dataplane import match_exp_pkt
+from testvector import tvutils
 
 
 # See https://gist.github.com/carymrobbins/8940382
@@ -181,11 +183,6 @@ class P4RuntimeException(Exception):
 class P4RuntimeTest(BaseTest):
     def setUp(self):
         BaseTest.setUp(self)
-
-        # Setting up PTF dataplane
-        self.dataplane = ptf.dataplane_instance
-        self.dataplane.flush()
-
         self._swports = []
         for device, port, ifname in config["interfaces"]:
             self._swports.append(port)
@@ -210,9 +207,6 @@ class P4RuntimeTest(BaseTest):
         if pltfm is not None and pltfm == 'hw' and getattr(self, "_skip_on_hw", False):
             raise SkipTest("Skipping test in HW")
 
-        self.channel = grpc.insecure_channel(grpc_addr)
-        self.stub = p4runtime_pb2_grpc.P4RuntimeStub(self.channel)
-
         proto_txt_path = testutils.test_param_get("p4info")
         # print "Importing p4info proto from", proto_txt_path
         self.p4info = p4info_pb2.P4Info()
@@ -226,7 +220,24 @@ class P4RuntimeTest(BaseTest):
         self.reqs = []
 
         self.election_id = 1
-        self.set_up_stream()
+        if testutils.test_param_get("generate_tv") == 'True':
+            self.generate_tv = True
+        else:
+            self.generate_tv = False
+        if testutils.test_param_get("loopback") == 'True':
+            self.loopback = True
+        else:
+            self.loopback = False
+        if self.generate_tv:
+            self.tv_list = []
+            self.tv_name = self.__class__.__name__
+        else:
+            # Setting up PTF dataplane
+            self.dataplane = ptf.dataplane_instance
+            self.dataplane.flush()
+            self.channel = grpc.insecure_channel(grpc_addr)
+            self.stub = p4runtime_pb2_grpc.P4RuntimeStub(self.channel)
+            self.set_up_stream()
 
     def is_bmv2(self):
         return self.device is "bmv2"
@@ -286,7 +297,10 @@ class P4RuntimeTest(BaseTest):
             self.fail("Failed to establish handshake")
 
     def tearDown(self):
-        self.tear_down_stream()
+        if self.generate_tv:
+            tvutils.write_tv_list_to_files(self.tv_list, os.getcwd(), self.tv_name)
+        else:
+            self.tear_down_stream()
         BaseTest.tearDown(self)
 
     def tear_down_stream(self):
@@ -301,16 +315,24 @@ class P4RuntimeTest(BaseTest):
             return msg.packet
 
     def verify_packet_in(self, exp_pkt, exp_in_port, timeout=2):
-        pkt_in_msg = self.get_packet_in(timeout=timeout)
         in_port_ = stringify(exp_in_port, 2)
-        rx_in_port_ = pkt_in_msg.metadata[0].value
-        if in_port_ != rx_in_port_:
-            rx_inport = struct.unpack("!h", rx_in_port_)[0]
-            self.fail("Wrong packet-in ingress port, expected {} but received was {}"
-                      .format(exp_in_port, rx_inport))
-        rx_pkt = Ether(pkt_in_msg.payload)
-        if not match_exp_pkt(exp_pkt, rx_pkt):
-            self.fail("Received packet-in is not the expected one\n" + format_pkt_match(rx_pkt, exp_pkt))
+        if self.generate_tv:
+            exp_pkt_in = p4runtime_pb2.PacketIn()
+            exp_pkt_in.payload = str(exp_pkt)
+            ingress_physical_port = exp_pkt_in.metadata.add()
+            ingress_physical_port.metadata_id = 0
+            ingress_physical_port.value = in_port_
+            tvutils.add_packet_in_expectation(self.tc, exp_pkt_in)
+        else:
+            pkt_in_msg = self.get_packet_in(timeout=timeout)
+            rx_in_port_ = pkt_in_msg.metadata[0].value
+            if in_port_ != rx_in_port_:
+                rx_inport = struct.unpack("!h", rx_in_port_)[0]
+                self.fail("Wrong packet-in ingress port, expected {} but received was {}"
+                          .format(exp_in_port, rx_inport))
+            rx_pkt = Ether(pkt_in_msg.payload)
+            if not match_exp_pkt(exp_pkt, rx_pkt):
+                self.fail("Received packet-in is not the expected one\n" + format_pkt_match(rx_pkt, exp_pkt))
 
     def verify_packet_out(self, pkt, out_port):
         port_hex = stringify(out_port, 2)
@@ -321,11 +343,15 @@ class P4RuntimeTest(BaseTest):
         egress_physical_port.value = port_hex
 
         self.send_packet_out(packet_out)
-        testutils.verify_packet(self, pkt, out_port)
+        self.verify_packet(pkt, out_port)
 
     def verify_p4runtime_entity(self, expected, received):
-        if expected != received:
+        if not self.generate_tv and expected != received:
             self.fail("Received entity is not the expected one\n" + format_exp_rcv(expected, received))
+
+    def verify_no_other_packets(self):
+        if not self.generate_tv:
+            testutils.verify_no_other_packets(self)
 
     def get_stream_packet(self, type_, timeout=1):
         start = time.time()
@@ -345,7 +371,10 @@ class P4RuntimeTest(BaseTest):
     def send_packet_out(self, packet):
         packet_out_req = p4runtime_pb2.StreamMessageRequest()
         packet_out_req.packet.CopyFrom(packet)
-        self.stream_out_q.put(packet_out_req)
+        if self.generate_tv:
+            tvutils.add_packet_out_operation(self.tc, packet)
+        else:
+            self.stream_out_q.put(packet_out_req)
 
     def swports(self, idx):
         if idx >= len(self._swports):
@@ -378,6 +407,47 @@ class P4RuntimeTest(BaseTest):
             if mf.name == mf_name:
                 return mf.id
         raise Exception("Match field '%s' not found in table '%s'" % (mf_name, table_name))
+
+    def send_packet(self, port, pkt):
+        if self.generate_tv:
+            tvutils.add_traffic_stimulus(self.tc, port, pkt)
+        else:
+            testutils.send_packet(self, port, str(pkt))
+
+    def verify_packet(self, exp_pkt, port):
+        port_list = []
+        port_list.append(port)
+        if self.generate_tv:
+            tvutils.add_traffic_expectation(self.tc, port_list, exp_pkt)
+        else:
+            testutils.verify_packet(self, exp_pkt, port)
+
+    def verify_each_packet_on_each_port(self, packets, ports):
+        if self.generate_tv:
+            for i in range(len(packets)):
+                port_list = []
+                port_list.append(ports[i])
+                tvutils.add_traffic_expectation(self.tc, port_list, packets[i])
+        else:
+            testutils.verify_each_packet_on_each_port(self, packets, ports)
+
+    def verify_packets(self, pkt, ports):
+        if self.generate_tv:
+            for port in ports:
+                port_list = []
+                port_list.append(port)
+                tvutils.add_traffic_expectation(self.tc, port_list, pkt)
+        else:
+            testutils.verify_packets(self, pkt, ports)
+
+    def verify_any_packet_any_port(self, pkts, ports):
+        if self.generate_tv:
+            for pkt in pkts:
+                tvutils.add_traffic_expectation(self.tc, ports, pkt)
+            # workaround to return a port value
+            return random.randint(0, 1)
+        else:
+            return testutils.verify_any_packet_any_port(self, pkts, ports)
 
     # These are attempts at convenience functions aimed at making writing
     # P4Runtime PTF tests easier.
@@ -497,20 +567,29 @@ class P4RuntimeTest(BaseTest):
 
     def read_request(self, req):
         entities = []
-        try:
-            for resp in self.stub.Read(req):
-                entities.extend(resp.entities)
-        except grpc.RpcError as e:
-            if e.code() != grpc.StatusCode.UNKNOWN:
-                raise e
-            raise P4RuntimeException(e)
-        return entities
+        if self.generate_tv:
+            return entities
+        else:
+            try:
+                for resp in self.stub.Read(req):
+                    entities.extend(resp.entities)
+            except grpc.RpcError as e:
+                if e.code() != grpc.StatusCode.UNKNOWN:
+                    raise e
+                raise P4RuntimeException(e)
+            return entities
 
     def write_request(self, req, store=True):
-        rep = self._write(req)
-        if store:
-            self.reqs.append(req)
-        return rep
+        if self.generate_tv:
+            tvutils.add_write_operation(self.tc, req)
+            if store:
+                self.reqs.append(req)
+            return None
+        else:
+            rep = self._write(req)
+            if store:
+                self.reqs.append(req)
+            return rep
 
     def get_new_write_request(self):
         req = p4runtime_pb2.WriteRequest()
@@ -525,6 +604,9 @@ class P4RuntimeTest(BaseTest):
         req.device_id = self.device_id
         return req
 
+    def get_new_read_response(self):
+        resp = p4runtime_pb2.ReadResponse()
+        return resp
     #
     # Convenience functions to build and send P4Runtime write requests
     #
@@ -745,11 +827,112 @@ class P4RuntimeTest(BaseTest):
                 return entity.action_profile_group
         return None
 
+    def verify_action_profile_group(self, ap_name, grp_id, expected_action_profile_group):
+        req = self.get_new_read_request()
+        entity = req.entities.add()
+        action_profile_member = entity.action_profile_group
+        action_profile_member.action_profile_id = self.get_ap_id(ap_name)
+        action_profile_member.group_id = grp_id
+
+        if self.generate_tv:
+            exp_resp = self.get_new_read_response()
+            entity = exp_resp.entities.add()
+            entity.action_profile_group.CopyFrom(expected_action_profile_group)
+            # add to list
+            exp_resps = []
+            exp_resps.append(exp_resp)
+            tvutils.add_read_expectation(self.tc, req, exp_resps)
+            return None
+        for entity in self.read_request(req):
+            if entity.HasField("action_profile_group"):
+                self.verify_p4runtime_entity(entity.action_profile_group, expected_action_profile_group)
+        return None
+
+    def verify_multicast_group(self, group_id, expected_multicast_group):
+        req = self.get_new_read_request()
+        entity = req.entities.add()
+        multicast_group = entity.packet_replication_engine_entry.multicast_group_entry
+        multicast_group.multicast_group_id = group_id
+
+        if self.generate_tv:
+            exp_resp = self.get_new_read_response()
+            entity = exp_resp.entities.add()
+            entity.packet_replication_engine_entry.multicast_group_entry.CopyFrom(expected_multicast_group)
+            # add to list
+            exp_resps = []
+            exp_resps.append(exp_resp)
+            tvutils.add_read_expectation(self.tc, req, exp_resps)
+            return None
+        for entity in self.read_request(req):
+            if entity.HasField("packet_replication_engine_entry"):
+                pre_entry = entity.packet_replication_engine_entry
+                if pre_entry.HasField("multicast_group_entry"):
+                    self.verify_p4runtime_entity(pre_entry.multicast_group_entry, expected_multicast_group)
+
+    def verify_direct_counter(self, table_entry, expected_byte_count, expected_packet_count):
+        req = self.get_new_read_request()
+        entity = req.entities.add()
+        direct_counter_entry = entity.direct_counter_entry
+        direct_counter_entry.table_entry.CopyFrom(table_entry)
+
+        if self.generate_tv:
+            exp_resp = self.get_new_read_response()
+            entity = exp_resp.entities.add()
+            entity.direct_counter_entry.table_entry.CopyFrom(table_entry)
+            entity.direct_counter_entry.data.byte_count = expected_byte_count
+            entity.direct_counter_entry.data.packet_count = expected_packet_count
+            # add to list
+            exp_resps = []
+            exp_resps.append(exp_resp)
+            tvutils.add_read_expectation(self.tc, req, exp_resps)
+            return None
+
+        for entity in self.read_request(req):
+            if entity.HasField("direct_counter_entry"):
+                direct_counter = entity.direct_counter_entry
+                if direct_counter.data.byte_count != expected_byte_count or \
+                        direct_counter.data.packet_count != expected_packet_count:
+                    self.fail("Incorrect direct counter value:\n" + str(direct_counter))
+        return None
+
+    def verify_indirect_counter(self, c_name, c_index, typ, expected_byte_count, expected_packet_count):
+        # Check counter type with P4Info
+        counter = self.get_counter(c_name)
+        counter_type_unit = p4info_pb2.CounterSpec.Unit.items()[counter.spec.unit][0]
+        if counter_type_unit != "BOTH" and counter_type_unit != typ:
+            raise Exception("Counter " + c_name + " is of type " + counter_type_unit + ", but requested: " + typ)
+        req = self.get_new_read_request()
+        entity = req.entities.add()
+        counter_entry = entity.counter_entry
+        c_id = self.get_counter_id(c_name)
+        counter_entry.counter_id = c_id
+        index = counter_entry.index
+        index.index = c_index
+
+        if self.generate_tv:
+            exp_resp = self.get_new_read_response()
+            entity = exp_resp.entities.add()
+            entity.counter_entry.table_entry.CopyFrom(table_entry)
+            entity.counter_entry.data.byte_count = expected_byte_count
+            entity.counter_entry.data.packet_count = expected_packet_count
+            # add to list
+            exp_resps = []
+            exp_resps.append(exp_resp)
+            tvutils.add_read_expectation(self.tc, req, exp_resps)
+            return None
+
+        for entity in self.read_request(req):
+            if entity.HasField("counter_entry"):
+                counter_entry = entity.counter_entry
+                if counter_entry.data.byte_count != expected_byte_count or \
+                        counter_entry.data.packet_count != expected_packet_count:
+                    self.fail("Incorrect direct counter value:\n" + str(dcounter))
+        return None
 
     # iterates over all requests in reverse order; if they are INSERT updates,
     # replay them as DELETE updates; this is a convenient way to clean-up a lot
     # of switch state
-    def undo_write_requests(self, reqs):
+    def undo_write_requests(self, reqs, create_new_tv=True):
         updates = []
         for req in reversed(reqs):
             for update in reversed(req.updates):
@@ -759,7 +942,14 @@ class P4RuntimeTest(BaseTest):
         for update in updates:
             update.type = p4runtime_pb2.Update.DELETE
             new_req.updates.add().CopyFrom(update)
-        self._write(new_req)
+        if self.generate_tv:
+            if len(reqs) != 0:
+                if create_new_tv:
+                    self.tc = tvutils.get_new_testcase(self.tv)
+                    self.tc.test_case_id = "Undo Write Requests"
+                tvutils.add_write_operation(self.tc, new_req)
+        else:
+            self._write(new_req)
 
 
 # Add p4info object and object id "getters" for each object type; these are just
@@ -803,7 +993,30 @@ def autocleanup(f):
             return f(*args, **kwargs)
         finally:
             test.undo_write_requests(test.reqs)
+    return handle
 
+
+# this decorator should be used on the runTest method of P4Runtime PTF tests
+# on using this decorator, new testvector instance is initiated before running
+# runTest method and finally generated testvector is appended to list which will
+# be written to files in the P4RuntimeTest tearDown method.
+def tvsetup(f):
+    @wraps(f)
+    def handle(*args, **kwargs):
+        test = args[0]
+        assert (isinstance(test, P4RuntimeTest))
+        try:
+            if test.generate_tv:
+                if 'tc_name' in kwargs:
+                    test.tv = tvutils.get_new_testvector()
+                    test.tc = tvutils.get_new_testcase(test.tv, kwargs['tc_name'])
+                else:
+                    test.tv = tvutils.get_new_testvector()
+                    test.tc = tvutils.get_new_testcase(test.tv, test.tv_name)
+            return f(*args, **kwargs)
+        finally:
+            if test.generate_tv:
+                test.tv_list.append(test.tv)
     return handle
 
 
