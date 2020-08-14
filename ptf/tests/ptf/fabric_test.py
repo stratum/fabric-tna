@@ -1548,7 +1548,6 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         self.setup_uplink(
             s1u_sgw_addr=S1U_SGW_IPV4,
             teid=TEID_1,
-            ue_addr=pkt[IP].src,
             ctr_id=1
         )
 
