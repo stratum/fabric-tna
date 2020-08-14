@@ -8,7 +8,7 @@ from ptf import testutils
 from ptf.testutils import group
 from scapy.layers.ppp import PPPoED
 
-from base_test import autocleanup, stringify
+from base_test import autocleanup, tvsetup, stringify
 from fabric_test import *
 
 from unittest import skip
@@ -23,6 +23,7 @@ vlan_confs = {
 
 
 class FabricBridgingTest(BridgingTest):
+    @tvsetup
     @autocleanup
     def doRunTest(self, tagged1, tagged2, pkt, tc_name):
         self.runBridgingTest(tagged1, tagged2, pkt)
@@ -42,6 +43,7 @@ class FabricBridgingTest(BridgingTest):
 @skip("XConnect Currently Unsupported")
 @group("xconnect")
 class FabricDoubleVlanXConnectTest(DoubleVlanXConnectTest):
+    @tvsetup
     @autocleanup
     def doRunTest(self, pkt, tc_name):
         self.runXConnectTest(pkt)
@@ -59,6 +61,7 @@ class FabricDoubleVlanXConnectTest(DoubleVlanXConnectTest):
 
 @group("multicast")
 class FabricArpBroadcastUntaggedTest(ArpBroadcastTest):
+    @tvsetup
     @autocleanup
     def runTest(self):
         self.runArpBroadcastTest(
@@ -68,6 +71,7 @@ class FabricArpBroadcastUntaggedTest(ArpBroadcastTest):
 
 @group("multicast")
 class FabricArpBroadcastTaggedTest(ArpBroadcastTest):
+    @tvsetup
     @autocleanup
     def runTest(self):
         self.runArpBroadcastTest(
@@ -77,6 +81,7 @@ class FabricArpBroadcastTaggedTest(ArpBroadcastTest):
 
 @group("multicast")
 class FabricArpBroadcastMixedTest(ArpBroadcastTest):
+    @tvsetup
     @autocleanup
     def runTest(self):
         self.runArpBroadcastTest(
@@ -85,6 +90,7 @@ class FabricArpBroadcastMixedTest(ArpBroadcastTest):
 
 
 class FabricIPv4UnicastTest(IPv4UnicastTest):
+    @tvsetup
     @autocleanup
     def doRunTest(self, pkt, mac_dest, tagged1, tagged2, tc_name):
         self.runIPv4UnicastTest(
@@ -106,6 +112,7 @@ class FabricIPv4UnicastTest(IPv4UnicastTest):
 
 
 class FabricIPv4UnicastGtpTest(IPv4UnicastTest):
+    @tvsetup
     @autocleanup
     def runTest(self):
         # Assert that GTP packets not meant to be processed by spgw.p4 are
@@ -121,6 +128,7 @@ class FabricIPv4UnicastGtpTest(IPv4UnicastTest):
 
 
 class FabricIPv4UnicastGroupTest(FabricTest):
+    @tvsetup
     @autocleanup
     def runTest(self):
         vlan_id = 10
@@ -153,6 +161,7 @@ class FabricIPv4UnicastGroupTest(FabricTest):
 
 
 class FabricIPv4UnicastGroupTestAllPortTcpSport(FabricTest):
+    @tvsetup
     @autocleanup
     def runTest(self):
         # In this test we check that packets are forwarded to all ports when we change
@@ -212,6 +221,7 @@ class FabricIPv4UnicastGroupTestAllPortTcpSport(FabricTest):
 
 
 class FabricIPv4UnicastGroupTestAllPortTcpDport(FabricTest):
+    @tvsetup
     @autocleanup
     def runTest(self):
         # In this test we check that packets are forwarded to all ports when we change
@@ -271,6 +281,7 @@ class FabricIPv4UnicastGroupTestAllPortTcpDport(FabricTest):
 
 
 class FabricIPv4UnicastGroupTestAllPortIpSrc(FabricTest):
+    @tvsetup
     @autocleanup
     def IPv4UnicastGroupTestAllPortL4SrcIp(self, pkt_type):
         # In this test we check that packets are forwarded to all ports when we change
@@ -335,6 +346,7 @@ class FabricIPv4UnicastGroupTestAllPortIpSrc(FabricTest):
 
 
 class FabricIPv4UnicastGroupTestAllPortIpDst(FabricTest):
+    @tvsetup
     @autocleanup
     def IPv4UnicastGroupTestAllPortL4DstIp(self, pkt_type):
         # In this test we check that packets are forwarded to all ports when we change
@@ -404,6 +416,7 @@ class FabricIPv4UnicastGroupTestAllPortIpDst(FabricTest):
 
 
 class FabricIPv4MPLSTest(FabricTest):
+    @tvsetup
     @autocleanup
     def runTest(self):
         vlan_id = 10
@@ -433,6 +446,7 @@ class FabricIPv4MPLSTest(FabricTest):
 
 
 class FabricIPv4MplsGroupTest(IPv4UnicastTest):
+    @tvsetup
     @autocleanup
     def doRunTest(self, pkt, mac_dest, tagged1, tc_name):
         self.runIPv4UnicastTest(
@@ -455,6 +469,7 @@ class FabricIPv4MplsGroupTest(IPv4UnicastTest):
 
 
 class FabricMplsSegmentRoutingTest(MplsSegmentRoutingTest):
+    @tvsetup
     @autocleanup
     def doRunTest(self, pkt, mac_dest, next_hop_spine, tc_name):
         self.runMplsSegmentRoutingTest(pkt, mac_dest, next_hop_spine)
@@ -476,6 +491,7 @@ class FabricMplsSegmentRoutingTest(MplsSegmentRoutingTest):
 
 @group("packetio")
 class FabricArpPacketOutTest(PacketOutTest):
+    @tvsetup
     @autocleanup
     def runTest(self):
         pkt = testutils.simple_arp_packet(pktlen=MIN_PKT_LEN)
@@ -484,6 +500,7 @@ class FabricArpPacketOutTest(PacketOutTest):
 
 @group("packetio")
 class FabricShortIpPacketOutTest(PacketOutTest):
+    @tvsetup
     @autocleanup
     def runTest(self):
         pkt = testutils.simple_ip_packet(pktlen=MIN_PKT_LEN)
@@ -492,6 +509,7 @@ class FabricShortIpPacketOutTest(PacketOutTest):
 
 @group("packetio")
 class FabricLongIpPacketOutTest(PacketOutTest):
+    @tvsetup
     @autocleanup
     def runTest(self):
         pkt = testutils.simple_ip_packet(pktlen=160)
@@ -500,6 +518,7 @@ class FabricLongIpPacketOutTest(PacketOutTest):
 
 @group("packetio")
 class FabricArpPacketInTest(PacketInTest):
+    @tvsetup
     @autocleanup
     def runTest(self):
         pkt = testutils.simple_arp_packet(pktlen=MIN_PKT_LEN)
@@ -508,6 +527,7 @@ class FabricArpPacketInTest(PacketInTest):
 
 @group("packetio")
 class FabricLongIpPacketInTest(PacketInTest):
+    @tvsetup
     @autocleanup
     def runTest(self):
         pkt = testutils.simple_ip_packet(pktlen=160)
@@ -516,6 +536,7 @@ class FabricLongIpPacketInTest(PacketInTest):
 
 @group("packetio")
 class FabricShortIpPacketInTest(PacketInTest):
+    @tvsetup
     @autocleanup
     def runTest(self):
         pkt = testutils.simple_ip_packet(pktlen=MIN_PKT_LEN)
@@ -524,6 +545,7 @@ class FabricShortIpPacketInTest(PacketInTest):
 
 @group("packetio")
 class FabricTaggedPacketInTest(PacketInTest):
+    @tvsetup
     @autocleanup
     def runTest(self):
         pkt = testutils.simple_ip_packet(dl_vlan_enable=True, vlan_vid=10, pktlen=160)
@@ -532,6 +554,7 @@ class FabricTaggedPacketInTest(PacketInTest):
 
 @group("packetio")
 class FabricDefaultVlanPacketInTest(FabricTest):
+    @tvsetup
     @autocleanup
     def runTest(self):
         pkt = testutils.simple_eth_packet(pktlen=MIN_PKT_LEN)
@@ -544,6 +567,7 @@ class FabricDefaultVlanPacketInTest(FabricTest):
 
 @group("spgw")
 class SpgwDownlinkTest(SpgwSimpleTest):
+    @tvsetup
     @autocleanup
     def doRunTest(self, pkt, tagged1, tagged2, mpls, tc_name):
         self.runDownlinkTest(pkt=pkt, tagged1=tagged1,
@@ -569,6 +593,7 @@ class SpgwDownlinkTest(SpgwSimpleTest):
 
 @group("spgw")
 class SpgwUplinkTest(SpgwSimpleTest):
+    @tvsetup
     @autocleanup
     def doRunTest(self, pkt, tagged1, tagged2, mpls):
         self.runUplinkTest(ue_out_pkt=pkt, tagged1=tagged1,
@@ -656,6 +681,7 @@ class SpgwUplinkTest(SpgwSimpleTest):
 
 @group("int")
 class FabricIntSourceTest(IntTest):
+    @tvsetup
     @autocleanup
     def doRunTest(self, **kwargs):
         self.runIntSourceTest(**kwargs)
@@ -680,6 +706,7 @@ class FabricIntSourceTest(IntTest):
 
 @group("int")
 class FabricIntSourceAndTransitTest(IntTest):
+    @tvsetup
     @autocleanup
     def doRunTest(self, vlan_conf, tagged, pkt_type, mpls, instrs):
         print "Testing VLAN=%s, pkt=%s, mpls=%s, instructions=%s..." \
@@ -709,6 +736,7 @@ class FabricIntSourceAndTransitTest(IntTest):
 
 @group("int")
 class FabricIntTransitTest(IntTest):
+    @tvsetup
     @autocleanup
     def doRunTest(self, vlan_conf, tagged, pkt_type, prev_hops, instrs, mpls):
         print "Testing VLAN=%s, pkt=%s, mpls=%s, prev_hops=%s, instructions=%s..." \
@@ -744,6 +772,7 @@ class FabricIntTransitTest(IntTest):
 @group("int")
 @group("int-full")
 class FabricIntTransitFullTest(IntTest):
+    @tvsetup
     @autocleanup
     def doRunTest(self, **kwargs):
         self.runIntTransitTest(**kwargs)
@@ -776,6 +805,7 @@ class FabricIntTransitFullTest(IntTest):
 @group("bng")
 class FabricPppoeUpstreamTest(PppoeTest):
 
+    @tvsetup
     @autocleanup
     def doRunTest(self, pkt, tagged2, mpls, line_enabled):
         self.runUpstreamV4Test(pkt, tagged2, mpls, line_enabled)
@@ -799,6 +829,7 @@ class FabricPppoeUpstreamTest(PppoeTest):
 @group("bng")
 class FabricPppoeControlPacketInTest(PppoeTest):
 
+    @tvsetup
     @autocleanup
     def doRunTest(self, pkt, line_mapped):
         self.runControlPacketInTest(pkt, line_mapped)
@@ -828,6 +859,7 @@ class FabricPppoeControlPacketInTest(PppoeTest):
 @group("bng")
 class FabricPppoeControlPacketOutTest(PppoeTest):
 
+    @tvsetup
     @autocleanup
     def doRunTest(self, pkt):
         self.runControlPacketOutTest(pkt)
@@ -855,6 +887,7 @@ class FabricPppoeControlPacketOutTest(PppoeTest):
 @group("bng")
 class FabricPppoeDownstreamTest(PppoeTest):
 
+    @tvsetup
     @autocleanup
     def doRunTest(self, pkt, in_tagged, line_enabled):
         self.runDownstreamV4Test(pkt, in_tagged, line_enabled)
@@ -875,6 +908,7 @@ class FabricPppoeDownstreamTest(PppoeTest):
 @group("dth")
 class FabricDoubleTaggedHostUpstream(DoubleVlanTerminationTest):
 
+    @tvsetup
     @autocleanup
     def doRunTest(self, pkt, out_tagged, mpls):
         self.runPopAndRouteTest(pkt, next_hop_mac=HOST2_MAC,
@@ -898,6 +932,7 @@ class FabricDoubleTaggedHostUpstream(DoubleVlanTerminationTest):
 @group("dth")
 class FabricDoubleTaggedHostDownstream(DoubleVlanTerminationTest):
 
+    @tvsetup
     @autocleanup
     def doRunTest(self, pkt, in_tagged):
         self.runRouteAndPushTest(pkt, next_hop_mac=HOST2_MAC,
@@ -914,9 +949,11 @@ class FabricDoubleTaggedHostDownstream(DoubleVlanTerminationTest):
                     pktlen=120)
                 self.doRunTest(pkt, in_tagged)
 
+
 @group("p4r-function")
 class TableEntryReadWriteTest(FabricTest):
 
+    @tvsetup
     @autocleanup
     def doRunTest(self):
         req, _ = self.add_bridging_entry(1, "00:00:00:00:00:01", "ff:ff:ff:ff:ff:ff", 1)
@@ -933,9 +970,11 @@ class TableEntryReadWriteTest(FabricTest):
         print("")
         self.doRunTest()
 
+
 @group("p4r-function")
 class ActionProfileMemberReadWriteTest(FabricTest):
 
+    @tvsetup
     @autocleanup
     def doRunTest(self):
         req, _ = self.add_next_hashed_group_member("output_hashed", [("port_num", stringify(1, 2))])
@@ -948,9 +987,11 @@ class ActionProfileMemberReadWriteTest(FabricTest):
         print("")
         self.doRunTest()
 
+
 @group("p4r-function")
 class ActionProfileGroupReadWriteTest(FabricTest):
 
+    @tvsetup
     @autocleanup
     def doRunTest(self):
         req, _ = self.add_next_hashed_group_member("output_hashed", [("port_num", stringify(1, 2))])
@@ -960,16 +1001,17 @@ class ActionProfileGroupReadWriteTest(FabricTest):
         grp_id = 1
         req, _ = self.add_next_hashed_group(grp_id, [mbr_id])
         expected_action_profile_group = req.updates[0].entity.action_profile_group
-        received_action_profile_group = self.read_next_hashed_group(grp_id)
-        self.verify_p4runtime_entity(expected_action_profile_group, received_action_profile_group)
+        self.verify_next_hashed_group(grp_id, expected_action_profile_group)
 
     def runTest(self):
         print("")
         self.doRunTest()
 
+
 @group("p4r-function")
 class ActionProfileGroupModificationTest(FabricTest):
 
+    @tvsetup
     @autocleanup
     def doRunTest(self):
         # Insert members
@@ -996,17 +1038,18 @@ class ActionProfileGroupModificationTest(FabricTest):
         print("")
         self.doRunTest()
 
+
 @group("p4r-function")
 class MulticastGroupReadWriteTest(FabricTest):
 
+    @tvsetup
     @autocleanup
     def doRunTest(self):
         grp_id = 10
         replicas = [(0, 1), (0, 2), (0, 3)]  # (instance, port)
         req, _ = self.add_mcast_group(grp_id, replicas)
         expected_mc_entry = req.updates[0].entity.packet_replication_engine_entry.multicast_group_entry
-        received_mc_entry = self.read_mcast_group(grp_id)
-        self.verify_p4runtime_entity(expected_mc_entry, received_mc_entry)
+        self.verify_mcast_group(grp_id, expected_mc_entry)
 
     def runTest(self):
         print("")
@@ -1018,6 +1061,7 @@ class MulticastGroupModificationTest(FabricTest):
 
     # Not using the auto cleanup since the Stratum modifies the
     # multicast node table internally
+    @tvsetup
     def doRunTest(self):
         # Add group with egress port 1~3 (instance 1 and 2)
         grp_id = 10
@@ -1028,8 +1072,7 @@ class MulticastGroupModificationTest(FabricTest):
         replicas = [(2, 2), (2, 3), (2, 4), (3, 2), (3, 3), (3, 4)]  # (instance, port)
         req, _ = self.modify_mcast_group(grp_id, replicas)
         expected_mc_entry = req.updates[0].entity.packet_replication_engine_entry.multicast_group_entry
-        received_mc_entry = self.read_mcast_group(grp_id)
-        self.verify_p4runtime_entity(expected_mc_entry, received_mc_entry)
+        self.verify_mcast_group(grp_id, expected_mc_entry)
 
         # Cleanup
         self.delete_mcast_group(grp_id)
@@ -1038,9 +1081,11 @@ class MulticastGroupModificationTest(FabricTest):
         print("")
         self.doRunTest()
 
+
 @group("p4r-function")
 class CounterTest(BridgingTest):
 
+    @tvsetup
     @autocleanup
     def doRunTest(self):
         pkt = getattr(testutils, "simple_tcp_packet")(pktlen=120)
@@ -1051,27 +1096,18 @@ class CounterTest(BridgingTest):
         table_entries = [te for te in table_entries
                          if te.table_id == self.get_table_id('ingress_port_vlan')]
 
+        # Here, both table entries hits once with a
+        # simple TCP packet(120 bytes + 2*2 bytes checksum inserted by scapy)
         for table_entry in table_entries:
-            direct_counter = self.read_direct_counter(table_entry)
-            # Here, both table entries hits once with a
-            # simple TCP packet(120 bytes + 2*2 bytes checksum inserted by scapy)
-            if direct_counter.data.byte_count != 124 or \
-                direct_counter.data.packet_count != 1:
-                self.fail("Incorrect direct counter value:\n" + str(direct_counter))
+            self.verify_direct_counter(table_entry, 124, 1)
 
         # Check that direct counters can be set/cleared.
         for table_entry in table_entries:
             self.write_direct_counter(table_entry, 0, 0)
-            direct_counter = self.read_direct_counter(table_entry)
-            if direct_counter.data.byte_count != 0 or \
-                direct_counter.data.packet_count != 0:
-                self.fail("Incorrect direct counter value:\n" + str(direct_counter))
+            self.verify_direct_counter(table_entry, 0, 0)
 
             self.write_direct_counter(table_entry, 1024, 1024)
-            direct_counter = self.read_direct_counter(table_entry)
-            if direct_counter.data.byte_count != 1024 or \
-                direct_counter.data.packet_count != 1024:
-                self.fail("Incorrect direct counter value:\n" + str(direct_counter))
+            self.verify_direct_counter(table_entry, 1024, 1024)
 
         try:
             self.get_counter("fwd_type_counter")
@@ -1082,13 +1118,9 @@ class CounterTest(BridgingTest):
         # Read indirect counter (fwd_type_counter)
         # Here we are trying to read counter for traffic class "0"
         # which means how many traffic for bridging
-        counter_entry = self.read_indirect_counter("fwd_type_counter", 0, "BOTH")
-
         # In the bridging test we sent two TCP packets and both packets
         # are classified as bridging class.
-        if counter_entry.data.byte_count != 248 or \
-            counter_entry.data.packet_count != 2:
-            self.fail("Incorrect direct counter value:\n" + str(counter_entry))
+        self.verify_indirect_counter("fwd_type_counter", 0, "BOTH", 248, 2)
 
     def runTest(self):
         print("")

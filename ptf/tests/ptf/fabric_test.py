@@ -635,6 +635,10 @@ class FabricTest(P4RuntimeTest):
     def read_next_hashed_group(self, group_id):
         return self.read_action_profile_group("FabricIngress.next.hashed_profile", group_id)
 
+    def verify_next_hashed_group(self, group_id, expected_action_profile_group):
+        return self.verify_action_profile_group("FabricIngress.next.hashed_profile", group_id,
+                                                expected_action_profile_group)
+
     def read_mcast_group(self, group_id):
         req = self.get_new_read_request()
         entity = req.entities.add()
@@ -647,6 +651,9 @@ class FabricTest(P4RuntimeTest):
                 if pre_entry.HasField("multicast_group_entry"):
                     return pre_entry.multicast_group_entry
         return None
+
+    def verify_mcast_group(self, group_id, expected_multicast_group):
+        return self.verify_multicast_group(group_id, expected_multicast_group)
 
 
 class BridgingTest(FabricTest):

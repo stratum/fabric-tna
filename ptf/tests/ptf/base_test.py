@@ -346,9 +346,7 @@ class P4RuntimeTest(BaseTest):
         self.verify_packet(pkt, out_port)
 
     def verify_p4runtime_entity(self, expected, received):
-        if self.generate_tv:
-            print "verification for tv"
-        elif expected != received:
+        if not self.generate_tv and expected != received:
             self.fail("Received entity is not the expected one\n" + format_exp_rcv(expected, received))
 
     def verify_no_other_packets(self):
@@ -606,6 +604,9 @@ class P4RuntimeTest(BaseTest):
         req.device_id = self.device_id
         return req
 
+    def get_new_read_response(self):
+        resp = p4runtime_pb2.ReadResponse()
+        return resp
     #
     # Convenience functions to build and send P4Runtime write requests
     #
@@ -826,6 +827,107 @@ class P4RuntimeTest(BaseTest):
                 return entity.action_profile_group
         return None
 
+    def verify_action_profile_group(self, ap_name, grp_id, expected_action_profile_group):
+        req = self.get_new_read_request()
+        entity = req.entities.add()
+        action_profile_member = entity.action_profile_group
+        action_profile_member.action_profile_id = self.get_ap_id(ap_name)
+        action_profile_member.group_id = grp_id
+
+        if self.generate_tv:
+            exp_resp = self.get_new_read_response()
+            entity = exp_resp.entities.add()
+            entity.action_profile_group.CopyFrom(expected_action_profile_group)
+            # add to list
+            exp_resps = []
+            exp_resps.append(exp_resp)
+            tvutils.add_read_expectation(self.tc, req, exp_resps)
+            return None
+        for entity in self.read_request(req):
+            if entity.HasField("action_profile_group"):
+                self.verify_p4runtime_entity(entity.action_profile_group, expected_action_profile_group)
+        return None
+
+    def verify_multicast_group(self, group_id, expected_multicast_group):
+        req = self.get_new_read_request()
+        entity = req.entities.add()
+        multicast_group = entity.packet_replication_engine_entry.multicast_group_entry
+        multicast_group.multicast_group_id = group_id
+
+        if self.generate_tv:
+            exp_resp = self.get_new_read_response()
+            entity = exp_resp.entities.add()
+            entity.packet_replication_engine_entry.multicast_group_entry.CopyFrom(expected_multicast_group)
+            # add to list
+            exp_resps = []
+            exp_resps.append(exp_resp)
+            tvutils.add_read_expectation(self.tc, req, exp_resps)
+            return None
+        for entity in self.read_request(req):
+            if entity.HasField("packet_replication_engine_entry"):
+                pre_entry = entity.packet_replication_engine_entry
+                if pre_entry.HasField("multicast_group_entry"):
+                    self.verify_p4runtime_entity(pre_entry.multicast_group_entry, expected_multicast_group)
+
+    def verify_direct_counter(self, table_entry, expected_byte_count, expected_packet_count):
+        req = self.get_new_read_request()
+        entity = req.entities.add()
+        direct_counter_entry = entity.direct_counter_entry
+        direct_counter_entry.table_entry.CopyFrom(table_entry)
+
+        if self.generate_tv:
+            exp_resp = self.get_new_read_response()
+            entity = exp_resp.entities.add()
+            entity.direct_counter_entry.table_entry.CopyFrom(table_entry)
+            entity.direct_counter_entry.data.byte_count = expected_byte_count
+            entity.direct_counter_entry.data.packet_count = expected_packet_count
+            # add to list
+            exp_resps = []
+            exp_resps.append(exp_resp)
+            tvutils.add_read_expectation(self.tc, req, exp_resps)
+            return None
+
+        for entity in self.read_request(req):
+            if entity.HasField("direct_counter_entry"):
+                direct_counter = entity.direct_counter_entry
+                if direct_counter.data.byte_count != expected_byte_count or \
+                        direct_counter.data.packet_count != expected_packet_count:
+                    self.fail("Incorrect direct counter value:\n" + str(direct_counter))
+        return None
+
+    def verify_indirect_counter(self, c_name, c_index, typ, expected_byte_count, expected_packet_count):
+        # Check counter type with P4Info
+        counter = self.get_counter(c_name)
+        counter_type_unit = p4info_pb2.CounterSpec.Unit.items()[counter.spec.unit][0]
+        if counter_type_unit != "BOTH" and counter_type_unit != typ:
+            raise Exception("Counter " + c_name + " is of type " + counter_type_unit + ", but requested: " + typ)
+        req = self.get_new_read_request()
+        entity = req.entities.add()
+        counter_entry = entity.counter_entry
+        c_id = self.get_counter_id(c_name)
+        counter_entry.counter_id = c_id
+        index = counter_entry.index
+        index.index = c_index
+
+        if self.generate_tv:
+            exp_resp = self.get_new_read_response()
+            entity = exp_resp.entities.add()
+            entity.counter_entry.table_entry.CopyFrom(table_entry)
+            entity.counter_entry.data.byte_count = expected_byte_count
+            entity.counter_entry.data.packet_count = expected_packet_count
+            # add to list
+            exp_resps = []
+            exp_resps.append(exp_resp)
+            tvutils.add_read_expectation(self.tc, req, exp_resps)
+            return None
+
+        for entity in self.read_request(req):
+            if entity.HasField("counter_entry"):
+                counter_entry = entity.counter_entry
+                if counter_entry.data.byte_count != expected_byte_count or \
+                        counter_entry.data.packet_count != expected_packet_count:
+                    self.fail("Incorrect direct counter value:\n" + str(dcounter))
+        return None
 
     # iterates over all requests in reverse order; if they are INSERT updates,
     # replay them as DELETE updates; this is a convenient way to clean-up a lot
@@ -888,6 +990,22 @@ def autocleanup(f):
         test = args[0]
         assert (isinstance(test, P4RuntimeTest))
         try:
+            return f(*args, **kwargs)
+        finally:
+            test.undo_write_requests(test.reqs)
+    return handle
+
+
+# this decorator should be used on the runTest method of P4Runtime PTF tests
+# on using this decorator, new testvector instance is initiated before running
+# runTest method and finally generated testvector is appended to list which will
+# be written to files in the P4RuntimeTest tearDown method.
+def tvsetup(f):
+    @wraps(f)
+    def handle(*args, **kwargs):
+        test = args[0]
+        assert (isinstance(test, P4RuntimeTest))
+        try:
             if test.generate_tv:
                 if 'tc_name' in kwargs:
                     test.tv = tvutils.get_new_testvector()
@@ -897,10 +1015,8 @@ def autocleanup(f):
                     test.tc = tvutils.get_new_testcase(test.tv, test.tv_name)
             return f(*args, **kwargs)
         finally:
-            test.undo_write_requests(test.reqs)
             if test.generate_tv:
                 test.tv_list.append(test.tv)
-
     return handle
 
 
