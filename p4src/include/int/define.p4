@@ -22,6 +22,10 @@ const bit<16> REPORT_MIRROR_HEADER_LEN = 23;
 #endif // WITH_SPGW
 const bit<16> ETH_FCS_LEN = 4;
 
+const MirrorId_t REPORT_MIRROR_SESS_PIPE_0 = 300;
+const MirrorId_t REPORT_MIRROR_SESS_PIPE_1 = 301;
+const MirrorId_t REPORT_MIRROR_SESS_PIPE_2 = 302;
+const MirrorId_t REPORT_MIRROR_SESS_PIPE_3 = 303;
 
 
 #define PIPE_0_PORTS_MATCH 9w0x000 &&& 0x180

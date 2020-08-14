@@ -4,6 +4,7 @@
 package org.stratumproject.fabric.tna.behaviour;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import org.onlab.packet.Ip4Address;
 import org.onlab.packet.MacAddress;
@@ -30,17 +31,15 @@ import org.onosproject.net.flow.criteria.TcpPortCriterion;
 import org.onosproject.net.flow.criteria.UdpPortCriterion;
 import org.onosproject.net.group.DefaultGroupDescription;
 import org.onosproject.net.group.DefaultGroupKey;
-import org.onosproject.net.group.GroupBucket;
 import org.onosproject.net.group.GroupBuckets;
 import org.onosproject.net.group.GroupDescription;
-import org.onosproject.net.group.GroupKey;
 import org.onosproject.net.group.GroupService;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
 import org.onosproject.segmentrouting.config.SegmentRoutingDeviceConfig;
 import org.stratumproject.fabric.tna.PipeconfLoader;
 
-import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -55,8 +54,18 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         implements IntProgrammable {
 
     private static final int DEFAULT_PRIORITY = 10000;
-    private static final List<Integer> REPORT_MIRROR_SESSION_ID_LIST = ImmutableList.of(300, 301, 302, 303);
-    private static final List<Integer> RECIRC_PORTS = ImmutableList.of(0x44, 0xc4, 0x144, 0x1c4);
+
+    private static final Map<Integer, Integer> QUAD_PIPE_MIRROR_SESS_TO_RECIRC_PORTS =
+            ImmutableMap.<Integer, Integer>builder()
+                    .put(300, 0x44)
+                    .put(301, 0xc4)
+                    .put(302, 0x144)
+                    .put(303, 0x1c4).build();
+
+    private static final Map<Integer, Integer> DUAL_PIPE_MIRROR_SESS_TO_RECIRC_PORTS =
+            ImmutableMap.<Integer, Integer>builder()
+                    .put(300, 0x44)
+                    .put(301, 0xc4).build();
 
     private static final Set<Criterion.Type> SUPPORTED_CRITERION = Sets.newHashSet(
             Criterion.Type.IPV4_DST, Criterion.Type.IPV4_SRC,
@@ -112,46 +121,36 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
             return false;
         }
 
-        // Mirroring sessions for report cloning.
-        for (int pipeId = 0; pipeId < REPORT_MIRROR_SESSION_ID_LIST.size(); pipeId++) {
-            final int reportSessionId = REPORT_MIRROR_SESSION_ID_LIST.get(pipeId);
-            final List<GroupBucket> bucketList = ImmutableList.of(
-                    createCloneGroupBucket(DefaultTrafficTreatment.builder()
-                            .setOutput(PortNumber.portNumber(RECIRC_PORTS.get(pipeId)))
-                            .build()));
-            final GroupKey groupKey = new DefaultGroupKey(
-                    KRYO.serialize(reportSessionId));
-            final GroupDescription groupDescription = new DefaultGroupDescription(
-                    deviceId, GroupDescription.Type.CLONE,
-                    new GroupBuckets(bucketList),
-                    groupKey, reportSessionId, appId);
-            groupService.addGroup(groupDescription);
-
-            // TODO: Now table entries in this this table are static
-            //            final PiAction setMirrorIdAction = PiAction.builder()
-            //                    .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_SINK_SET_MIRROR_SESSION_ID)
-            //                    .withParameter(new PiActionParam(P4InfoConstants.SID, reportSessionId))
-            //                    .build();
-            //            final TrafficTreatment setMirrorIdTreatment = DefaultTrafficTreatment.builder()
-            //                    .piTableAction(setMirrorIdAction)
-            //                    .build();
-            //            final TrafficSelector pipeIdSelector = DefaultTrafficSelector.builder()
-            //                    .matchPi(PiCriterion.builder().matchExact(
-            //                            P4InfoConstants.HDR_PIPE_ID,
-            //                            pipeId
-            //                    ).build())
-            //                    .build();
-            //            final FlowRUle setMirrorIdRule = DefaultFlowRule.builder()
-            //                    .withSelector(pipeIdSelector)
-            //                    .withTreatment(setMirrorIdTreatment)
-            //                    .fromApp(appId)
-            //                    .withPriority(DEFAULT_PRIORITY)
-            //                    .makePermanent()
-            //                    .forDevice(deviceId)
-            //                    .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_SINK_TB_SET_MIRROR_SESSION_ID)
-            //                    .build();
-            //             flowRuleService.applyFlowRules(setMirrorIdRule);
+        final Map<Integer, Integer> sessionToPortMap;
+        final var hwPipeCount = capabilities.hwPipeCount();
+        switch (hwPipeCount) {
+            case 4:
+                sessionToPortMap = QUAD_PIPE_MIRROR_SESS_TO_RECIRC_PORTS;
+                break;
+            case 2:
+                sessionToPortMap = DUAL_PIPE_MIRROR_SESS_TO_RECIRC_PORTS;
+                break;
+            default:
+                log.error("{} it not a valid HW pipe count", hwPipeCount);
+                return false;
         }
+
+        // Mirroring sessions for report cloning.
+        sessionToPortMap.entrySet().stream()
+                .map(entry -> {
+                    final var sessionId = entry.getKey();
+                    final var port = entry.getValue();
+                    final var buckets = ImmutableList.of(
+                            createCloneGroupBucket(DefaultTrafficTreatment.builder()
+                                    .setOutput(PortNumber.portNumber(port))
+                                    .build()));
+                    return new DefaultGroupDescription(
+                            deviceId, GroupDescription.Type.CLONE,
+                            new GroupBuckets(buckets),
+                            new DefaultGroupKey(KRYO.serialize(sessionId)),
+                            sessionId, appId);
+                })
+                .forEach(groupService::addGroup);
 
         return true;
     }

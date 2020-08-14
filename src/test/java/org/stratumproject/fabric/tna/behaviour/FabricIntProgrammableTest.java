@@ -86,6 +86,7 @@ public class FabricIntProgrammableTest {
         capabilities = createNiceMock(FabricCapabilities.class);
         expect(capabilities.hasHashedTable()).andReturn(true).anyTimes();
         expect(capabilities.supportDoubleVlanTerm()).andReturn(false).anyTimes();
+        expect(capabilities.hwPipeCount()).andReturn(4).anyTimes();
         replay(capabilities);
 
         // Segment routing config.

@@ -21,12 +21,31 @@ import static org.slf4j.LoggerFactory.getLogger;
  */
 public class FabricCapabilities {
 
+    private static final String MAVERICKS = "mavericks";
+    private static final String MONTARA = "montara";
+
     private final Logger log = getLogger(getClass());
 
     private final PiPipeconf pipeconf;
 
     public FabricCapabilities(PiPipeconf pipeconf) {
         this.pipeconf = checkNotNull(pipeconf);
+    }
+
+    public int hwPipeCount() {
+        // FIXME: use chip type (or platform name) when Stratum will support
+        //  reading that via gNMI. Until then, we need to rely on the
+        //  pipeconf name (which prevents us from using chip-independent
+        //  pipeconfs).
+        final var id = pipeconf.id().toString();
+        if (id.contains(MONTARA)) {
+            return 2;
+        } else if (id.contains(MAVERICKS)) {
+            return 4;
+        } else {
+            log.error("Unable to derive HW pipe count from pipeconf ID: {}", id);
+            return 0;
+        }
     }
 
     public boolean hasHashedTable() {

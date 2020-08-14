@@ -164,10 +164,10 @@ control IntEgress (
         }
         size = 4;
         const entries = {
-            PIPE_0_PORTS_MATCH: set_mirror_session_id(300);
-            PIPE_1_PORTS_MATCH: set_mirror_session_id(301);
-            PIPE_2_PORTS_MATCH: set_mirror_session_id(302);
-            PIPE_3_PORTS_MATCH: set_mirror_session_id(303);
+            PIPE_0_PORTS_MATCH: set_mirror_session_id(REPORT_MIRROR_SESS_PIPE_0);
+            PIPE_1_PORTS_MATCH: set_mirror_session_id(REPORT_MIRROR_SESS_PIPE_1);
+            PIPE_2_PORTS_MATCH: set_mirror_session_id(REPORT_MIRROR_SESS_PIPE_2);
+            PIPE_3_PORTS_MATCH: set_mirror_session_id(REPORT_MIRROR_SESS_PIPE_3);
         }
     }
 
