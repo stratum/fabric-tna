@@ -930,7 +930,6 @@ class P4RuntimeTest(BaseTest):
                 if update.type == p4runtime_pb2.Update.INSERT or \
                         self.is_default_action_update(update):
                     updates.append(update)
-
         new_req = self.get_new_write_request()
         for update in updates:
             if self.is_default_action_update(update):
@@ -990,6 +989,7 @@ def autocleanup(f):
             return f(*args, **kwargs)
         finally:
             test.undo_write_requests(test.reqs)
+            test.reqs = []
     return handle
 
 

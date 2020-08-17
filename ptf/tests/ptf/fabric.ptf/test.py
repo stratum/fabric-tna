@@ -1026,6 +1026,7 @@ class CounterTest(BridgingTest):
         self.doRunTest()
 
 
+# FIXME: remove when will start running TVs on hardware
 class FabricLoopbackModeTest(IPv4UnicastTest):
 
     @tvsetup
