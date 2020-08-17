@@ -1042,7 +1042,7 @@ class FabricLoopbackModeTest(IPv4UnicastTest):
             None,
             "FabricIngress.loopback_testing.on", [])
         # Since we cannot put interfaces in loopback mode, verify that output
-        # packet has fake loopback ether type...
+        # packet has fake ether type for loopback...
         routed_pkt = pkt_decrement_ttl(pkt_route(pkt, next_hop_mac))
         loopback_pkt = Ether(type=ETH_TYPE_LOOPBACK, src=ZERO_MAC, dst=ZERO_MAC) / routed_pkt
         self.runIPv4UnicastTest(

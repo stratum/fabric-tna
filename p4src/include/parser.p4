@@ -50,7 +50,7 @@ parser FabricIngressParser (packet_in  packet,
         fabric_md.is_loopback = true;
         packet.advance(ETH_HDR_SIZE*8);
         // No need to parse other headers, pkt should be punted to CPU as-is,
-        // without further changes..
+        // without further changes.
         transition accept;
     }
 
