@@ -1,6 +1,8 @@
 // Copyright 2020-present Open Networking Foundation
 // SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 
+#include <tna.p4>
+
 #ifndef __DEFINE__
 #define __DEFINE__
 
@@ -116,31 +118,26 @@ const vlan_id_t DEFAULT_VLAN_ID = 12w4094;
 const bit<8> DEFAULT_MPLS_TTL = 64;
 const bit<8> DEFAULT_IPV4_TTL = 64;
 
-/* indicate INT at LSB of DSCP */
-const bit<6> INT_DSCP = 0x1;
-
-// Length of the whole INT header,
-// including shim and tail, excluding metadata stack.
-const bit<8> INT_HEADER_LEN_WORDS = 4;
-const bit<16> INT_HEADER_LEN_BYTES = 16;
-
-const bit<8> CPU_MIRROR_SESSION_ID = 250;
-const bit<32> REPORT_MIRROR_SESSION_ID = 500;
-
-const bit<4> NPROTO_ETHERNET = 0;
-const bit<4> NPROTO_TELEMETRY_DROP_HEADER = 1;
-const bit<4> NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER = 2;
-
-const bit<6> HW_ID = 1;
-const bit<8> REPORT_FIXED_HEADER_LEN = 12;
-const bit<8> DROP_REPORT_HEADER_LEN = 12;
-const bit<8> LOCAL_REPORT_HEADER_LEN = 16;
-const bit<8> ETH_HEADER_LEN = 14;
-const bit<8> IPV4_MIN_HEAD_LEN = 20;
-const bit<8> UDP_HEADER_LEN = 8;
-
 action nop() {
     NoAction();
 }
 
-#endif
+// Bridge metadata type
+enum bit<8> BridgedMdType_t {
+    INVALID = 0,
+    // Ingress to egress.
+    I2E = 1,
+    // Egress to egress mirror used for INT reports.
+    INT_MIRROR = 2
+}
+
+const MirrorId_t MIRROR_SESSION_ID_INVALID = 0;
+
+// Recirculation ports for each HW pipe.
+const PortId_t RECIRC_PORT_PIPE_0 = 0x44;
+const PortId_t RECIRC_PORT_PIPE_1 = 0xC4;
+const PortId_t RECIRC_PORT_PIPE_2 = 0x144;
+const PortId_t RECIRC_PORT_PIPE_3 = 0x1C4;
+
+#endif // __DEFINE__
+

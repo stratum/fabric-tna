@@ -4,6 +4,7 @@ tmp
 target
 .vscode
 *.pyc
+src/main/resources/p4c-out
 .idea
 *.iml
 *.pcap

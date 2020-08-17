@@ -3,6 +3,7 @@
 
 package org.stratumproject.fabric.tna.behaviour;
 
+import org.onlab.util.KryoNamespace;
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flow.TrafficTreatment;
@@ -12,6 +13,8 @@ import org.onosproject.net.flow.instructions.Instructions;
 import org.onosproject.net.flow.instructions.L2ModificationInstruction;
 import org.onosproject.net.flowobjective.DefaultNextTreatment;
 import org.onosproject.net.flowobjective.NextTreatment;
+import org.onosproject.store.serializers.KryoNamespaces;
+import org.stratumproject.fabric.tna.behaviour.pipeliner.FabricPipeliner;
 
 import java.util.Collection;
 import java.util.List;
@@ -24,6 +27,11 @@ import static java.lang.String.format;
  * Utility class with methods common to fabric-tna pipeconf operations.
  */
 public final class FabricUtils {
+
+    public static final KryoNamespace KRYO = new KryoNamespace.Builder()
+            .register(KryoNamespaces.API)
+            .register(FabricPipeliner.FabricNextGroup.class)
+            .build("FabricTnaPipeconf");
 
     private FabricUtils() {
         // Hides constructor.

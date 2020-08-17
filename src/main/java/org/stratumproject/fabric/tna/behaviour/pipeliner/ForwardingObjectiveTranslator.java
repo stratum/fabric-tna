@@ -3,12 +3,10 @@
 
 package org.stratumproject.fabric.tna.behaviour.pipeliner;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import org.onlab.packet.MacAddress;
-import org.onosproject.core.ApplicationId;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.flow.DefaultTrafficSelector;
@@ -23,26 +21,18 @@ import org.onosproject.net.flow.criteria.MplsCriterion;
 import org.onosproject.net.flow.criteria.VlanIdCriterion;
 import org.onosproject.net.flowobjective.ForwardingObjective;
 import org.onosproject.net.flowobjective.ObjectiveError;
-import org.onosproject.net.group.DefaultGroupDescription;
-import org.onosproject.net.group.DefaultGroupKey;
-import org.onosproject.net.group.GroupBucket;
-import org.onosproject.net.group.GroupBuckets;
-import org.onosproject.net.group.GroupDescription;
-import org.onosproject.net.group.GroupKey;
 import org.onosproject.net.pi.model.PiActionId;
 import org.onosproject.net.pi.model.PiTableId;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
 import org.stratumproject.fabric.tna.behaviour.FabricCapabilities;
-import org.stratumproject.fabric.tna.behaviour.FabricConstants;
+import org.stratumproject.fabric.tna.behaviour.P4InfoConstants;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
-import static org.onosproject.net.group.DefaultGroupBucket.createCloneGroupBucket;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.criterionNotNull;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.outputPort;
 
@@ -80,14 +70,14 @@ class ForwardingObjectiveTranslator
             Criterion.Type.PROTOCOL_INDEPENDENT);
 
     private static final Map<PiTableId, PiActionId> NEXT_ID_ACTIONS = ImmutableMap.<PiTableId, PiActionId>builder()
-            .put(FabricConstants.FABRIC_INGRESS_FORWARDING_BRIDGING,
-                 FabricConstants.FABRIC_INGRESS_FORWARDING_SET_NEXT_ID_BRIDGING)
-            .put(FabricConstants.FABRIC_INGRESS_FORWARDING_ROUTING_V4,
-                 FabricConstants.FABRIC_INGRESS_FORWARDING_SET_NEXT_ID_ROUTING_V4)
-            .put(FabricConstants.FABRIC_INGRESS_FORWARDING_ROUTING_V6,
-                 FabricConstants.FABRIC_INGRESS_FORWARDING_SET_NEXT_ID_ROUTING_V6)
-            .put(FabricConstants.FABRIC_INGRESS_FORWARDING_MPLS,
-                 FabricConstants.FABRIC_INGRESS_FORWARDING_POP_MPLS_AND_NEXT)
+            .put(P4InfoConstants.FABRIC_INGRESS_FORWARDING_BRIDGING,
+                 P4InfoConstants.FABRIC_INGRESS_FORWARDING_SET_NEXT_ID_BRIDGING)
+            .put(P4InfoConstants.FABRIC_INGRESS_FORWARDING_ROUTING_V4,
+                 P4InfoConstants.FABRIC_INGRESS_FORWARDING_SET_NEXT_ID_ROUTING_V4)
+            .put(P4InfoConstants.FABRIC_INGRESS_FORWARDING_ROUTING_V6,
+                 P4InfoConstants.FABRIC_INGRESS_FORWARDING_SET_NEXT_ID_ROUTING_V6)
+            .put(P4InfoConstants.FABRIC_INGRESS_FORWARDING_MPLS,
+                 P4InfoConstants.FABRIC_INGRESS_FORWARDING_POP_MPLS_AND_NEXT)
             .build();
 
     ForwardingObjectiveTranslator(DeviceId deviceId, FabricCapabilities capabilities) {
@@ -189,7 +179,7 @@ class ForwardingObjectiveTranslator
         }
 
         resultBuilder.addFlowRule(flowRule(
-                obj, FabricConstants.FABRIC_INGRESS_FORWARDING_BRIDGING, selector.build()));
+                obj, P4InfoConstants.FABRIC_INGRESS_FORWARDING_BRIDGING, selector.build()));
     }
 
     private void ipv4RoutingRule(ForwardingObjective obj, Set<Criterion> criteriaWithMeta,
@@ -208,7 +198,7 @@ class ForwardingObjectiveTranslator
                 .build();
 
         resultBuilder.addFlowRule(flowRule(
-                obj, FabricConstants.FABRIC_INGRESS_FORWARDING_ROUTING_V4, selector));
+                obj, P4InfoConstants.FABRIC_INGRESS_FORWARDING_ROUTING_V4, selector));
     }
 
     private void defaultIpv4Route(ForwardingObjective obj,
@@ -219,7 +209,7 @@ class ForwardingObjectiveTranslator
                 .add();
         final TrafficSelector selector = DefaultTrafficSelector.emptySelector();
         resultBuilder.addFlowRule(flowRule(
-                defaultObj, FabricConstants.FABRIC_INGRESS_FORWARDING_ROUTING_V4, selector));
+                defaultObj, P4InfoConstants.FABRIC_INGRESS_FORWARDING_ROUTING_V4, selector));
     }
 
     private void mplsRule(ForwardingObjective obj, Set<Criterion> criteriaWithMeta,
@@ -233,7 +223,7 @@ class ForwardingObjectiveTranslator
                 .build();
 
         resultBuilder.addFlowRule(flowRule(
-                obj, FabricConstants.FABRIC_INGRESS_FORWARDING_MPLS, selector));
+                obj, P4InfoConstants.FABRIC_INGRESS_FORWARDING_MPLS, selector));
     }
 
     private void aclRule(ForwardingObjective obj,
@@ -249,42 +239,24 @@ class ForwardingObjectiveTranslator
                 final PiAction aclAction;
                 if (treatment.clearedDeferred()) {
                     aclAction = PiAction.builder()
-                            .withId(FabricConstants.FABRIC_INGRESS_ACL_PUNT_TO_CPU)
+                            .withId(P4InfoConstants.FABRIC_INGRESS_ACL_PUNT_TO_CPU)
                             .build();
                 } else {
                     // Action is COPY_TO_CPU
                     aclAction = PiAction.builder()
-                            .withId(FabricConstants.FABRIC_INGRESS_ACL_COPY_TO_CPU)
+                            .withId(P4InfoConstants.FABRIC_INGRESS_ACL_COPY_TO_CPU)
                             .build();
                 }
                 final TrafficTreatment piTreatment = DefaultTrafficTreatment.builder()
                         .piTableAction(aclAction)
                         .build();
                 resultBuilder.addFlowRule(flowRule(
-                        obj, FabricConstants.FABRIC_INGRESS_ACL_ACL, obj.selector(), piTreatment));
+                        obj, P4InfoConstants.FABRIC_INGRESS_ACL_ACL, obj.selector(), piTreatment));
                 return;
             }
         }
         resultBuilder.addFlowRule(flowRule(
-                obj, FabricConstants.FABRIC_INGRESS_ACL_ACL, obj.selector()));
-    }
-
-    private DefaultGroupDescription createCloneGroup(
-            ApplicationId appId,
-            int cloneSessionId,
-            PortNumber outPort) {
-        final GroupKey groupKey = new DefaultGroupKey(
-                FabricPipeliner.KRYO.serialize(cloneSessionId));
-
-        final List<GroupBucket> bucketList = ImmutableList.of(
-                createCloneGroupBucket(DefaultTrafficTreatment.builder()
-                                               .setOutput(outPort)
-                                               .build()));
-        final DefaultGroupDescription cloneGroup = new DefaultGroupDescription(
-                deviceId, GroupDescription.Type.CLONE,
-                new GroupBuckets(bucketList),
-                groupKey, cloneSessionId, appId);
-        return cloneGroup;
+                obj, P4InfoConstants.FABRIC_INGRESS_ACL_ACL, obj.selector()));
     }
 
     private FlowRule flowRule(
@@ -312,7 +284,7 @@ class ForwardingObjectiveTranslator
     }
 
     private static PiAction setNextIdAction(Integer nextId, PiActionId actionId) {
-        final PiActionParam nextIdParam = new PiActionParam(FabricConstants.NEXT_ID, nextId);
+        final PiActionParam nextIdParam = new PiActionParam(P4InfoConstants.NEXT_ID, nextId);
         return PiAction.builder()
                 .withId(actionId)
                 .withParameter(nextIdParam)

@@ -34,3 +34,26 @@ class INT_L45_TAIL(Packet):
     fields_desc = [XByteField("next_proto", 0x01),
                    XShortField("proto_param", 0x0000),
                    XByteField("rsvd", 0x00)]
+
+
+class INT_L45_REPORT_FIXED(Packet):
+    name = "INT_L45_REPORT_FIXED"
+    fields_desc = [BitField("ver", 0, 4),
+                   BitField("nproto", 0, 4),
+                   BitField("d", 0, 1),
+                   BitField("q", 0, 1),
+                   BitField("f", 0, 1),
+                   BitField("rsvd", 0, 15),
+                   BitField("hw_id", 1, 6),
+                   XIntField("seq_no", 0),
+                   XIntField("ingress_tstamp", 0)]
+
+
+class INT_L45_LOCAL_REPORT(Packet):
+    name = "INT_L45_LOCAL_REPORT"
+    fields_desc = [XIntField("switch_id", 0),
+                   XShortField("ingress_port_id", 0),
+                   XShortField("egress_port_id", 0),
+                   BitField("queue_id", 0, 8),
+                   BitField("queue_occupancy", 0, 24),
+                   XIntField("egress_tstamp", 0)]

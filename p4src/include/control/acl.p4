@@ -35,13 +35,6 @@ control Acl (inout parsed_headers_t hdr,
         acl_counter.count();
     }
 
-    // Set mirror with session/clone id
-    action set_clone_session_id(bit<32> clone_id) {
-        fabric_md.is_mirror = true;
-        fabric_md.mirror_id = clone_id[9:0];
-        acl_counter.count();
-    }
-
     action drop() {
         ig_intr_md_for_dprsr.drop_ctl = 1;
         fabric_md.skip_next = true;
@@ -54,25 +47,24 @@ control Acl (inout parsed_headers_t hdr,
 
     table acl {
         key = {
-            ig_intr_md.ingress_port: ternary @name("ig_port"); // 9
-            fabric_md.ip_proto: ternary @name("ip_proto"); // 8
-            fabric_md.l4_sport: ternary @name("l4_sport"); // 16
-            fabric_md.l4_dport: ternary @name("l4_dport"); // 16
-            hdr.ethernet.dst_addr: ternary @name("eth_dst"); // 48
-            hdr.ethernet.src_addr: ternary @name("eth_src"); // 48
-            hdr.vlan_tag.vlan_id: ternary @name("vlan_id"); // 12
-            hdr.eth_type.value: ternary @name("eth_type"); //16
-            fabric_md.ipv4_src_addr: ternary @name("ipv4_src"); // 32
-            fabric_md.ipv4_dst_addr: ternary @name("ipv4_dst"); // 32
-            hdr.icmp.icmp_type: ternary @name("icmp_type"); // 8
-            hdr.icmp.icmp_code: ternary @name("icmp_code"); // 8
+            ig_intr_md.ingress_port    : ternary @name("ig_port");   // 9
+            fabric_md.bridged.ip_proto : ternary @name("ip_proto");  // 8
+            fabric_md.bridged.l4_sport : ternary @name("l4_sport");  // 16
+            fabric_md.bridged.l4_dport : ternary @name("l4_dport");  // 16
+            hdr.ethernet.dst_addr      : ternary @name("eth_dst");   // 48
+            hdr.ethernet.src_addr      : ternary @name("eth_src");   // 48
+            hdr.vlan_tag.vlan_id       : ternary @name("vlan_id");   // 12
+            hdr.eth_type.value         : ternary @name("eth_type");  // 16
+            fabric_md.ipv4_src         : ternary @name("ipv4_src");  // 32
+            fabric_md.ipv4_dst         : ternary @name("ipv4_dst");  // 32
+            hdr.icmp.icmp_type         : ternary @name("icmp_type"); // 8
+            hdr.icmp.icmp_code         : ternary @name("icmp_code"); // 8
         }
 
         actions = {
             set_next_id_acl;
             punt_to_cpu;
             copy_to_cpu;
-            set_clone_session_id;
             drop;
             nop_acl;
         }

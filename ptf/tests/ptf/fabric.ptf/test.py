@@ -23,6 +23,7 @@ vlan_confs = {
 
 
 class FabricBridgingTest(BridgingTest):
+
     @tvsetup
     @autocleanup
     def doRunTest(self, tagged1, tagged2, pkt, tc_name):
@@ -43,6 +44,7 @@ class FabricBridgingTest(BridgingTest):
 @skip("XConnect Currently Unsupported")
 @group("xconnect")
 class FabricDoubleVlanXConnectTest(DoubleVlanXConnectTest):
+
     @tvsetup
     @autocleanup
     def doRunTest(self, pkt, tc_name):
@@ -61,6 +63,7 @@ class FabricDoubleVlanXConnectTest(DoubleVlanXConnectTest):
 
 @group("multicast")
 class FabricArpBroadcastUntaggedTest(ArpBroadcastTest):
+
     @tvsetup
     @autocleanup
     def runTest(self):
@@ -71,6 +74,7 @@ class FabricArpBroadcastUntaggedTest(ArpBroadcastTest):
 
 @group("multicast")
 class FabricArpBroadcastTaggedTest(ArpBroadcastTest):
+
     @tvsetup
     @autocleanup
     def runTest(self):
@@ -81,6 +85,7 @@ class FabricArpBroadcastTaggedTest(ArpBroadcastTest):
 
 @group("multicast")
 class FabricArpBroadcastMixedTest(ArpBroadcastTest):
+
     @tvsetup
     @autocleanup
     def runTest(self):
@@ -90,6 +95,7 @@ class FabricArpBroadcastMixedTest(ArpBroadcastTest):
 
 
 class FabricIPv4UnicastTest(IPv4UnicastTest):
+
     @tvsetup
     @autocleanup
     def doRunTest(self, pkt, mac_dest, tagged1, tagged2, tc_name):
@@ -111,7 +117,8 @@ class FabricIPv4UnicastTest(IPv4UnicastTest):
                 self.doRunTest(pkt, HOST2_MAC, tagged[0], tagged[1], tc_name=tc_name)
 
 
-class FabricIPv4UnicastGtpTest(IPv4UnicastTest):
+class FabricIPv4UnicastGtpPassthroughTest(IPv4UnicastTest):
+
     @tvsetup
     @autocleanup
     def runTest(self):
@@ -128,6 +135,7 @@ class FabricIPv4UnicastGtpTest(IPv4UnicastTest):
 
 
 class FabricIPv4UnicastGroupTest(FabricTest):
+
     @tvsetup
     @autocleanup
     def runTest(self):
@@ -161,6 +169,7 @@ class FabricIPv4UnicastGroupTest(FabricTest):
 
 
 class FabricIPv4UnicastGroupTestAllPortTcpSport(FabricTest):
+
     @tvsetup
     @autocleanup
     def runTest(self):
@@ -221,6 +230,7 @@ class FabricIPv4UnicastGroupTestAllPortTcpSport(FabricTest):
 
 
 class FabricIPv4UnicastGroupTestAllPortTcpDport(FabricTest):
+
     @tvsetup
     @autocleanup
     def runTest(self):
@@ -281,6 +291,7 @@ class FabricIPv4UnicastGroupTestAllPortTcpDport(FabricTest):
 
 
 class FabricIPv4UnicastGroupTestAllPortIpSrc(FabricTest):
+
     @tvsetup
     @autocleanup
     def IPv4UnicastGroupTestAllPortL4SrcIp(self, pkt_type):
@@ -346,6 +357,7 @@ class FabricIPv4UnicastGroupTestAllPortIpSrc(FabricTest):
 
 
 class FabricIPv4UnicastGroupTestAllPortIpDst(FabricTest):
+
     @tvsetup
     @autocleanup
     def IPv4UnicastGroupTestAllPortL4DstIp(self, pkt_type):
@@ -416,6 +428,7 @@ class FabricIPv4UnicastGroupTestAllPortIpDst(FabricTest):
 
 
 class FabricIPv4MPLSTest(FabricTest):
+
     @tvsetup
     @autocleanup
     def runTest(self):
@@ -446,6 +459,7 @@ class FabricIPv4MPLSTest(FabricTest):
 
 
 class FabricIPv4MplsGroupTest(IPv4UnicastTest):
+
     @tvsetup
     @autocleanup
     def doRunTest(self, pkt, mac_dest, tagged1, tc_name):
@@ -469,6 +483,7 @@ class FabricIPv4MplsGroupTest(IPv4UnicastTest):
 
 
 class FabricMplsSegmentRoutingTest(MplsSegmentRoutingTest):
+
     @tvsetup
     @autocleanup
     def doRunTest(self, pkt, mac_dest, next_hop_spine, tc_name):
@@ -491,6 +506,7 @@ class FabricMplsSegmentRoutingTest(MplsSegmentRoutingTest):
 
 @group("packetio")
 class FabricArpPacketOutTest(PacketOutTest):
+
     @tvsetup
     @autocleanup
     def runTest(self):
@@ -500,6 +516,7 @@ class FabricArpPacketOutTest(PacketOutTest):
 
 @group("packetio")
 class FabricShortIpPacketOutTest(PacketOutTest):
+
     @tvsetup
     @autocleanup
     def runTest(self):
@@ -509,6 +526,7 @@ class FabricShortIpPacketOutTest(PacketOutTest):
 
 @group("packetio")
 class FabricLongIpPacketOutTest(PacketOutTest):
+
     @tvsetup
     @autocleanup
     def runTest(self):
@@ -518,6 +536,7 @@ class FabricLongIpPacketOutTest(PacketOutTest):
 
 @group("packetio")
 class FabricArpPacketInTest(PacketInTest):
+
     @tvsetup
     @autocleanup
     def runTest(self):
@@ -527,6 +546,7 @@ class FabricArpPacketInTest(PacketInTest):
 
 @group("packetio")
 class FabricLongIpPacketInTest(PacketInTest):
+
     @tvsetup
     @autocleanup
     def runTest(self):
@@ -536,6 +556,7 @@ class FabricLongIpPacketInTest(PacketInTest):
 
 @group("packetio")
 class FabricShortIpPacketInTest(PacketInTest):
+
     @tvsetup
     @autocleanup
     def runTest(self):
@@ -545,6 +566,7 @@ class FabricShortIpPacketInTest(PacketInTest):
 
 @group("packetio")
 class FabricTaggedPacketInTest(PacketInTest):
+
     @tvsetup
     @autocleanup
     def runTest(self):
@@ -554,6 +576,7 @@ class FabricTaggedPacketInTest(PacketInTest):
 
 @group("packetio")
 class FabricDefaultVlanPacketInTest(FabricTest):
+
     @tvsetup
     @autocleanup
     def runTest(self):
@@ -566,7 +589,8 @@ class FabricDefaultVlanPacketInTest(FabricTest):
 
 
 @group("spgw")
-class SpgwDownlinkTest(SpgwSimpleTest):
+class FabricSpgwDownlinkTest(SpgwSimpleTest):
+
     @tvsetup
     @autocleanup
     def doRunTest(self, pkt, tagged1, tagged2, mpls, tc_name):
@@ -592,7 +616,8 @@ class SpgwDownlinkTest(SpgwSimpleTest):
 
 
 @group("spgw")
-class SpgwUplinkTest(SpgwSimpleTest):
+class FabricSpgwUplinkTest(SpgwSimpleTest):
+
     @tvsetup
     @autocleanup
     def doRunTest(self, pkt, tagged1, tagged2, mpls):
@@ -615,192 +640,72 @@ class SpgwUplinkTest(SpgwSimpleTest):
                     )
                     self.doRunTest(pkt, tagged[0], tagged[1], mpls)
 
-
-# @group("spgw")
-# @unittest.skip("INT transit capability not yet supported")
-# class SpgwDownlinkMPLS_INT_Test(SpgwMPLSTest):
-#     @autocleanup
-#     def runTest(self):
-#         self.setup_int()
-#
-#         dport = 5060
-#
-#         # int_type=hop-by-hop
-#         int_shim = INT_L45_HEAD(int_type=1, length=4)
-#         # ins_cnt: 5 = switch id + ports + q occupancy + ig port + eg port)
-#         # max_hop_count: 3
-#         # total_hop_count: 0
-#         # instruction_mask_0003: 0xd = switch id (0), ports (1), q occupancy (3)
-#         # instruction_mask_0407: 0xc = ig timestamp (4), eg timestamp (5)
-#         int_header = "\x00\x05\x03\x00\xdc\x00\x00\x00"
-#         # IP proto (UDP), UDP dport (4096)
-#         int_tail = INT_L45_TAIL(next_proto=17, proto_param=dport)
-#
-#         payload = "\xab" * 128
-#         inner_udp = UDP(sport=5061, dport=dport, chksum=0)
-#         # IP tos is 0x04 to enable INT
-#         pkt = Ether(src=self.DMAC_2, dst=self.SWITCH_MAC_2) / \
-#               IP(tos=0x04, src=S1U_ENB_IPV4, dst=UE_IPV4) / \
-#               inner_udp / \
-#               int_shim / int_header / int_tail / \
-#               payload
-#
-#         exp_int_shim = INT_L45_HEAD(int_type=1, length=9)
-#         # total_hop_count: 1
-#         exp_int_header = "\x00\x05\x03\x01\xdc\x00\x00\x00"
-#         # switch id: 1
-#         exp_int_metadata = "\x00\x00\x00\x01"
-#         # ig port: port2, eg port: port2
-#         exp_int_metadata += stringify(self.port2, 2) + stringify(self.port1, 2)
-#         # q id: 0, q occupancy: ?
-#         exp_int_metadata += "\x00\x00\x00\x00"
-#         # ig timestamp: ?
-#         # eg timestamp: ?
-#         exp_int_metadata += "\x00\x00\x00\x00" * 2
-#
-#         exp_int = exp_int_shim / exp_int_header / exp_int_metadata / int_tail
-#
-#         exp_pkt = Ether(src=self.SWITCH_MAC_1, dst=self.DMAC_1) / \
-#                   MPLS(label=self.mpls_label, cos=0, s=1, ttl=64) / \
-#                   IP(tos=0, id=0x1513, flags=0, frag=0,
-#                      src=S1U_SGW_IPV4, dst=S1U_ENB_IPV4) / \
-#                   UDP(sport=UDP_GTP_PORT, dport=UDP_GTP_PORT, chksum=0) / \
-#                   make_gtp(20 + len(inner_udp) + len(exp_int) + len(payload), 1) / \
-#                   IP(tos=0x04, src=S1U_ENB_IPV4, dst=UE_IPV4, ttl=64) / \
-#                   inner_udp / \
-#                   exp_int / \
-#                   payload
-#         # We mask off the timestamps as well as the queue occupancy
-#         exp_pkt = Mask(exp_pkt)
-#         offset_metadata = 14 + 4 + 20 + 8 + 8 + 20 + 8 + 4 + 8
-#         exp_pkt.set_do_not_care((offset_metadata + 9) * 8, 11 * 8)
-#
-#         testutils.send_packet(self, self.port2, str(pkt))
-#         testutils.verify_packet(self, exp_pkt, self.port1)
-
-
 @group("int")
-class FabricIntSourceTest(IntTest):
+@group("spgw")
+class FabricSpgwUplinkIntTest(SpgwIntTest):
+
     @tvsetup
     @autocleanup
-    def doRunTest(self, **kwargs):
-        self.runIntSourceTest(**kwargs)
-
-    def runTest(self):
-        instr_sets = [
-            [INT_SWITCH_ID, INT_IG_EG_PORT],
-            [INT_SWITCH_ID, INT_IG_EG_PORT, INT_IG_TSTAMP, INT_EG_TSTAMP, INT_QUEUE_OCCUPANCY]
-        ]
-        print ""
-        for vlan_conf, tagged in vlan_confs.items():
-            for pkt_type in ["udp", "tcp"]:
-                for instrs in instr_sets:
-                    print "Testing VLAN=%s, pkt=%s, instructions=%s..." \
-                          % (vlan_conf, pkt_type,
-                             ",".join([INT_INS_TO_NAME[i] for i in instrs]))
-                    pkt = getattr(testutils, "simple_%s_packet" % pkt_type)()
-                    self.doRunTest(pkt=pkt, instructions=instrs,
-                                   with_transit=False, ignore_csum=True,
-                                   tagged1=tagged[0], tagged2=tagged[1])
-
-
-@group("int")
-class FabricIntSourceAndTransitTest(IntTest):
-    @tvsetup
-    @autocleanup
-    def doRunTest(self, vlan_conf, tagged, pkt_type, mpls, instrs):
-        print "Testing VLAN=%s, pkt=%s, mpls=%s, instructions=%s..." \
-              % (vlan_conf, pkt_type, mpls,
-                 ",".join([INT_INS_TO_NAME[i] for i in instrs]))
+    def doRunTest(self, vlan_conf, tagged, pkt_type, mpls):
+        print "Testing VLAN=%s, pkt=%s, mpls=%s" \
+              % (vlan_conf, pkt_type, mpls)
         pkt = getattr(testutils, "simple_%s_packet" % pkt_type)()
-        self.runIntSourceTest(pkt=pkt, instructions=instrs,
-                              with_transit=True, ignore_csum=True,
-                              tagged1=tagged[0], tagged2=tagged[1], mpls=mpls)
+        self.runSpgwUplinkIntTest(pkt=pkt, tagged1=tagged[0],
+                                  tagged2=tagged[1], mpls=mpls)
 
     def runTest(self):
-        instr_sets = [
-            [INT_SWITCH_ID, INT_IG_EG_PORT],
-            [INT_SWITCH_ID, INT_IG_EG_PORT, INT_IG_TSTAMP, INT_EG_TSTAMP,
-             INT_QUEUE_OCCUPANCY]
-        ]
         print ""
         for vlan_conf, tagged in vlan_confs.items():
-            for pkt_type in ["udp", "tcp"]:
+            for pkt_type in ["udp", "tcp", "icmp"]:
                 for mpls in [False, True]:
-                    for instrs in instr_sets:
-                        if mpls and tagged[1]:
-                            continue
-                        self.doRunTest(vlan_conf, tagged, pkt_type, mpls,
-                                       instrs)
-
+                    if mpls and tagged[1]:
+                        continue
+                    self.doRunTest(vlan_conf, tagged, pkt_type, mpls)
 
 @group("int")
-class FabricIntTransitTest(IntTest):
+@group("spgw")
+class FabricSpgwDownlinkIntTest(SpgwIntTest):
+
     @tvsetup
     @autocleanup
-    def doRunTest(self, vlan_conf, tagged, pkt_type, prev_hops, instrs, mpls):
-        print "Testing VLAN=%s, pkt=%s, mpls=%s, prev_hops=%s, instructions=%s..." \
-              % (vlan_conf, pkt_type, mpls, prev_hops,
-                 ",".join([INT_INS_TO_NAME[i] for i in instrs]))
+    def doRunTest(self, vlan_conf, tagged, pkt_type, mpls):
+        print "Testing VLAN=%s, pkt=%s, mpls=%s..." \
+              % (vlan_conf, pkt_type, mpls)
         pkt = getattr(testutils, "simple_%s_packet" % pkt_type)()
-        hop_metadata, _ = self.get_int_metadata(instrs, 0xCAFEBABE, 0xDEAD, 0xBEEF)
-        int_pkt = self.get_int_pkt(pkt=pkt, instructions=instrs, max_hop=50,
-                                   transit_hops=prev_hops,
-                                   hop_metadata=hop_metadata)
-        self.runIntTransitTest(pkt=int_pkt,
-                               tagged1=tagged[0],
-                               tagged2=tagged[1],
-                               ignore_csum=1, mpls=mpls)
+        self.runSpgwDownlinkIntTest(pkt=pkt, tagged1=tagged[0],
+                                    tagged2=tagged[1], mpls=mpls)
 
     def runTest(self):
-        instr_sets = [
-            [INT_SWITCH_ID, INT_IG_EG_PORT],
-            [INT_SWITCH_ID, INT_IG_EG_PORT, INT_IG_TSTAMP, INT_EG_TSTAMP, INT_QUEUE_OCCUPANCY]
-        ]
         print ""
         for vlan_conf, tagged in vlan_confs.items():
-            for pkt_type in ["udp", "tcp"]:
+            for pkt_type in ["udp", "tcp", "icmp"]:
                 for mpls in [False, True]:
-                    for prev_hops in [0, 3]:
-                        for instrs in instr_sets:
-                            if mpls and tagged[1]:
-                                continue
-                            self.doRunTest(vlan_conf, tagged, pkt_type,
-                                           prev_hops, instrs, mpls)
-
+                    if mpls and tagged[1]:
+                        continue
+                    self.doRunTest(vlan_conf, tagged, pkt_type, mpls)
 
 @group("int")
-@group("int-full")
-class FabricIntTransitFullTest(IntTest):
+class FabricIntTest(IntTest):
+
     @tvsetup
     @autocleanup
-    def doRunTest(self, **kwargs):
-        self.runIntTransitTest(**kwargs)
+    def doRunTest(self, vlan_conf, tagged, pkt_type, mpls):
+        print "Testing VLAN=%s, pkt=%s, mpls=%s..." \
+              % (vlan_conf, pkt_type, mpls)
+        pkt = getattr(testutils, "simple_%s_packet" % pkt_type)()
+        self.runIntTest(pkt=pkt,
+                        tagged1=tagged[0],
+                        tagged2=tagged[1],
+                        mpls=mpls)
 
     def runTest(self):
-        instr_sets = []
-        for num_instr in range(1, len(INT_ALL_INSTRUCTIONS) + 1):
-            instr_sets.extend(combinations(INT_ALL_INSTRUCTIONS, num_instr))
         print ""
         for vlan_conf, tagged in vlan_confs.items():
-            for pkt_type in ["udp"]:
-                for prev_hops in [0, 3]:
-                    for instructions in instr_sets:
-                        print "Testing VLAN=%s, pkt=%s, prev_hops=%s, instructions=%s..." \
-                              % (vlan_conf, pkt_type, prev_hops,
-                                 ",".join([INT_INS_TO_NAME[i] for i in
-                                           instructions]))
-                        pkt = getattr(testutils,
-                                      "simple_%s_packet" % pkt_type)()
-                        hop_metadata, _ = self.get_int_metadata(
-                            instructions, 0xCAFEBABE, 0xDEAD, 0xBEEF)
-                        int_pkt = self.get_int_pkt(
-                            pkt=pkt, instructions=instructions, max_hop=50,
-                            transit_hops=prev_hops, hop_metadata=hop_metadata)
-                        self.doRunTest(
-                            pkt=int_pkt, tagged1=tagged[0], tagged2=tagged[1],
-                            ignore_csum=1)
-
+            for pkt_type in ["udp", "tcp", "icmp"]:
+                for mpls in [False, True]:
+                    if mpls and tagged[1]:
+                        continue
+                    self.doRunTest(vlan_conf, tagged, pkt_type, mpls)
 
 @group("bng")
 class FabricPppoeUpstreamTest(PppoeTest):
@@ -949,8 +854,7 @@ class FabricDoubleTaggedHostDownstream(DoubleVlanTerminationTest):
                     pktlen=120)
                 self.doRunTest(pkt, in_tagged)
 
-
-@group("p4r-function")
+@group("p4rt")
 class TableEntryReadWriteTest(FabricTest):
 
     @tvsetup
@@ -970,8 +874,7 @@ class TableEntryReadWriteTest(FabricTest):
         print("")
         self.doRunTest()
 
-
-@group("p4r-function")
+@group("p4rt")
 class ActionProfileMemberReadWriteTest(FabricTest):
 
     @tvsetup
@@ -987,8 +890,7 @@ class ActionProfileMemberReadWriteTest(FabricTest):
         print("")
         self.doRunTest()
 
-
-@group("p4r-function")
+@group("p4rt")
 class ActionProfileGroupReadWriteTest(FabricTest):
 
     @tvsetup
@@ -1007,8 +909,7 @@ class ActionProfileGroupReadWriteTest(FabricTest):
         print("")
         self.doRunTest()
 
-
-@group("p4r-function")
+@group("p4rt")
 class ActionProfileGroupModificationTest(FabricTest):
 
     @tvsetup
@@ -1038,8 +939,7 @@ class ActionProfileGroupModificationTest(FabricTest):
         print("")
         self.doRunTest()
 
-
-@group("p4r-function")
+@group("p4rt")
 class MulticastGroupReadWriteTest(FabricTest):
 
     @tvsetup
@@ -1056,7 +956,7 @@ class MulticastGroupReadWriteTest(FabricTest):
         self.doRunTest()
 
 
-@group("p4r-function")
+@group("p4rt")
 class MulticastGroupModificationTest(FabricTest):
 
     # Not using the auto cleanup since the Stratum modifies the
@@ -1081,8 +981,7 @@ class MulticastGroupModificationTest(FabricTest):
         print("")
         self.doRunTest()
 
-
-@group("p4r-function")
+@group("p4rt")
 class CounterTest(BridgingTest):
 
     @tvsetup

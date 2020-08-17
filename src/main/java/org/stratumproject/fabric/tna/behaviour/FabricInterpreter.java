@@ -41,6 +41,7 @@ import static org.onosproject.net.PortNumber.CONTROLLER;
 import static org.onosproject.net.PortNumber.FLOOD;
 import static org.onosproject.net.flow.instructions.Instruction.Type.OUTPUT;
 import static org.onosproject.net.pi.model.PiPacketOperationType.PACKET_OUT;
+import static org.stratumproject.fabric.tna.behaviour.FabricTreatmentInterpreter.*;
 
 /**
  * Interpreter for fabric-tna pipeline.
@@ -52,56 +53,59 @@ public class FabricInterpreter extends AbstractFabricHandlerBehavior
 
     // Group tables by control block.
     private static final Set<PiTableId> FILTERING_CTRL_TBLS = ImmutableSet.of(
-            FabricConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN,
-            FabricConstants.FABRIC_INGRESS_FILTERING_FWD_CLASSIFIER);
+            P4InfoConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN,
+            P4InfoConstants.FABRIC_INGRESS_FILTERING_FWD_CLASSIFIER);
     private static final Set<PiTableId> FORWARDING_CTRL_TBLS = ImmutableSet.of(
-            FabricConstants.FABRIC_INGRESS_FORWARDING_MPLS,
-            FabricConstants.FABRIC_INGRESS_FORWARDING_ROUTING_V4,
-            FabricConstants.FABRIC_INGRESS_FORWARDING_ROUTING_V6,
-            FabricConstants.FABRIC_INGRESS_FORWARDING_BRIDGING);
+            P4InfoConstants.FABRIC_INGRESS_FORWARDING_MPLS,
+            P4InfoConstants.FABRIC_INGRESS_FORWARDING_ROUTING_V4,
+            P4InfoConstants.FABRIC_INGRESS_FORWARDING_ROUTING_V6,
+            P4InfoConstants.FABRIC_INGRESS_FORWARDING_BRIDGING);
     private static final Set<PiTableId> ACL_CTRL_TBLS = ImmutableSet.of(
-            FabricConstants.FABRIC_INGRESS_ACL_ACL);
+            P4InfoConstants.FABRIC_INGRESS_ACL_ACL);
     private static final Set<PiTableId> NEXT_CTRL_TBLS = ImmutableSet.of(
-            FabricConstants.FABRIC_INGRESS_NEXT_NEXT_VLAN,
-            FabricConstants.FABRIC_INGRESS_NEXT_SIMPLE,
-            FabricConstants.FABRIC_INGRESS_NEXT_HASHED,
-            FabricConstants.FABRIC_INGRESS_NEXT_XCONNECT);
+            P4InfoConstants.FABRIC_INGRESS_NEXT_NEXT_VLAN,
+            // TODO: add profile with simple next or remove references
+            // P4InfoConstants.FABRIC_INGRESS_NEXT_SIMPLE,
+            // TODO: re-enable support for xconnext
+            // P4InfoConstants.FABRIC_INGRESS_NEXT_XCONNECT,
+            P4InfoConstants.FABRIC_INGRESS_NEXT_HASHED);
     private static final Set<PiTableId> E_NEXT_CTRL_TBLS = ImmutableSet.of(
-            FabricConstants.FABRIC_EGRESS_EGRESS_NEXT_EGRESS_VLAN);
+            P4InfoConstants.FABRIC_EGRESS_EGRESS_NEXT_EGRESS_VLAN);
 
     private static final ImmutableMap<Criterion.Type, PiMatchFieldId> CRITERION_MAP =
             ImmutableMap.<Criterion.Type, PiMatchFieldId>builder()
-                    .put(Criterion.Type.IN_PORT, FabricConstants.HDR_IG_PORT)
-                    .put(Criterion.Type.ETH_DST, FabricConstants.HDR_ETH_DST)
-                    .put(Criterion.Type.ETH_SRC, FabricConstants.HDR_ETH_SRC)
-                    .put(Criterion.Type.ETH_DST_MASKED, FabricConstants.HDR_ETH_DST)
-                    .put(Criterion.Type.ETH_SRC_MASKED, FabricConstants.HDR_ETH_SRC)
-                    .put(Criterion.Type.ETH_TYPE, FabricConstants.HDR_ETH_TYPE)
-                    .put(Criterion.Type.MPLS_LABEL, FabricConstants.HDR_MPLS_LABEL)
-                    .put(Criterion.Type.VLAN_VID, FabricConstants.HDR_VLAN_ID)
-                    .put(Criterion.Type.INNER_VLAN_VID, FabricConstants.HDR_INNER_VLAN_ID)
-                    .put(Criterion.Type.IPV4_DST, FabricConstants.HDR_IPV4_DST)
-                    .put(Criterion.Type.IPV4_SRC, FabricConstants.HDR_IPV4_SRC)
-                    .put(Criterion.Type.IPV6_DST, FabricConstants.HDR_IPV6_DST)
-                    .put(Criterion.Type.IP_PROTO, FabricConstants.HDR_IP_PROTO)
-                    .put(Criterion.Type.ICMPV6_TYPE, FabricConstants.HDR_ICMP_TYPE)
-                    .put(Criterion.Type.ICMPV6_CODE, FabricConstants.HDR_ICMP_CODE)
-                    .put(Criterion.Type.UDP_DST, FabricConstants.HDR_L4_DPORT)
-                    .put(Criterion.Type.UDP_SRC, FabricConstants.HDR_L4_SPORT)
-                    .put(Criterion.Type.UDP_DST_MASKED, FabricConstants.HDR_L4_DPORT)
-                    .put(Criterion.Type.UDP_SRC_MASKED, FabricConstants.HDR_L4_SPORT)
-                    .put(Criterion.Type.TCP_DST, FabricConstants.HDR_L4_DPORT)
-                    .put(Criterion.Type.TCP_SRC, FabricConstants.HDR_L4_SPORT)
-                    .put(Criterion.Type.TCP_DST_MASKED, FabricConstants.HDR_L4_DPORT)
-                    .put(Criterion.Type.TCP_SRC_MASKED, FabricConstants.HDR_L4_SPORT)
+                    .put(Criterion.Type.IN_PORT, P4InfoConstants.HDR_IG_PORT)
+                    .put(Criterion.Type.ETH_DST, P4InfoConstants.HDR_ETH_DST)
+                    .put(Criterion.Type.ETH_SRC, P4InfoConstants.HDR_ETH_SRC)
+                    .put(Criterion.Type.ETH_DST_MASKED, P4InfoConstants.HDR_ETH_DST)
+                    .put(Criterion.Type.ETH_SRC_MASKED, P4InfoConstants.HDR_ETH_SRC)
+                    .put(Criterion.Type.ETH_TYPE, P4InfoConstants.HDR_ETH_TYPE)
+                    .put(Criterion.Type.MPLS_LABEL, P4InfoConstants.HDR_MPLS_LABEL)
+                    .put(Criterion.Type.VLAN_VID, P4InfoConstants.HDR_VLAN_ID)
+                    // TODO: re-enable support for double-vlan
+                    // .put(Criterion.Type.INNER_VLAN_VID, P4InfoConstants.HDR_INNER_VLAN_ID)
+                    .put(Criterion.Type.IPV4_DST, P4InfoConstants.HDR_IPV4_DST)
+                    .put(Criterion.Type.IPV4_SRC, P4InfoConstants.HDR_IPV4_SRC)
+                    .put(Criterion.Type.IPV6_DST, P4InfoConstants.HDR_IPV6_DST)
+                    .put(Criterion.Type.IP_PROTO, P4InfoConstants.HDR_IP_PROTO)
+                    .put(Criterion.Type.ICMPV6_TYPE, P4InfoConstants.HDR_ICMP_TYPE)
+                    .put(Criterion.Type.ICMPV6_CODE, P4InfoConstants.HDR_ICMP_CODE)
+                    .put(Criterion.Type.UDP_DST, P4InfoConstants.HDR_L4_DPORT)
+                    .put(Criterion.Type.UDP_SRC, P4InfoConstants.HDR_L4_SPORT)
+                    .put(Criterion.Type.UDP_DST_MASKED, P4InfoConstants.HDR_L4_DPORT)
+                    .put(Criterion.Type.UDP_SRC_MASKED, P4InfoConstants.HDR_L4_SPORT)
+                    .put(Criterion.Type.TCP_DST, P4InfoConstants.HDR_L4_DPORT)
+                    .put(Criterion.Type.TCP_SRC, P4InfoConstants.HDR_L4_SPORT)
+                    .put(Criterion.Type.TCP_DST_MASKED, P4InfoConstants.HDR_L4_DPORT)
+                    .put(Criterion.Type.TCP_SRC_MASKED, P4InfoConstants.HDR_L4_SPORT)
                     .build();
 
     private static final PiAction NOP = PiAction.builder()
-            .withId(FabricConstants.NOP).build();
+            .withId(P4InfoConstants.NOP).build();
 
     private static final ImmutableMap<PiTableId, PiAction> DEFAULT_ACTIONS =
             ImmutableMap.<PiTableId, PiAction>builder()
-                    .put(FabricConstants.FABRIC_INGRESS_FORWARDING_ROUTING_V4, NOP)
+                    .put(P4InfoConstants.FABRIC_INGRESS_FORWARDING_ROUTING_V4, NOP)
                     .build();
 
     private FabricTreatmentInterpreter treatmentInterpreter;
@@ -150,15 +154,15 @@ public class FabricInterpreter extends AbstractFabricHandlerBehavior
     public PiAction mapTreatment(TrafficTreatment treatment, PiTableId piTableId)
             throws PiInterpreterException {
         if (FILTERING_CTRL_TBLS.contains(piTableId)) {
-            return treatmentInterpreter.mapFilteringTreatment(treatment, piTableId);
+            return mapFilteringTreatment(treatment, piTableId);
         } else if (FORWARDING_CTRL_TBLS.contains(piTableId)) {
-            return treatmentInterpreter.mapForwardingTreatment(treatment, piTableId);
+            return mapForwardingTreatment(treatment, piTableId);
         } else if (ACL_CTRL_TBLS.contains(piTableId)) {
-            return treatmentInterpreter.mapAclTreatment(treatment, piTableId);
+            return mapAclTreatment(treatment, piTableId);
         } else if (NEXT_CTRL_TBLS.contains(piTableId)) {
-            return treatmentInterpreter.mapNextTreatment(treatment, piTableId);
+            return mapNextTreatment(treatment, piTableId);
         } else if (E_NEXT_CTRL_TBLS.contains(piTableId)) {
-            return treatmentInterpreter.mapEgressNextTreatment(treatment, piTableId);
+            return mapEgressNextTreatment(treatment, piTableId);
         } else {
             throw new PiInterpreterException(format(
                     "Treatment mapping not supported for table '%s'", piTableId));
@@ -180,7 +184,7 @@ public class FabricInterpreter extends AbstractFabricHandlerBehavior
             throws PiInterpreterException {
         try {
             return PiPacketMetadata.builder()
-                    .withId(FabricConstants.EGRESS_PORT)
+                    .withId(P4InfoConstants.EGRESS_PORT)
                     .withValue(copyFrom(portNumber).fit(PORT_BITWIDTH))
                     .build();
         } catch (ImmutableByteSequence.ByteSequenceTrimException e) {
@@ -241,7 +245,7 @@ public class FabricInterpreter extends AbstractFabricHandlerBehavior
 
         // Returns the ingress port packet metadata.
         Optional<PiPacketMetadata> packetMetadata = packetIn.metadatas()
-                .stream().filter(m -> m.id().equals(FabricConstants.INGRESS_PORT))
+                .stream().filter(m -> m.id().equals(P4InfoConstants.INGRESS_PORT))
                 .findFirst();
 
         if (packetMetadata.isPresent()) {
@@ -253,7 +257,7 @@ public class FabricInterpreter extends AbstractFabricHandlerBehavior
         } else {
             throw new PiInterpreterException(format(
                     "Missing metadata '%s' in packet-in received from '%s': %s",
-                    FabricConstants.INGRESS_PORT, deviceId, packetIn));
+                    P4InfoConstants.INGRESS_PORT, deviceId, packetIn));
         }
     }
 
