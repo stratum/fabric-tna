@@ -689,15 +689,6 @@ class P4RuntimeTest(BaseTest):
         self.push_update_set_group_membership(req, ap_name, grp_id, mbr_ids)
         return req, self.write_request(req, store=False)
 
-    #
-    # for all add_entry function, use mk == None for default entry
-    #
-    # TODO(antonin): The current P4Runtime reference implementation on p4lang
-    # does not support resetting the default entry (i.e. a DELETE operation on
-    # the default entry), which is why we make sure not to include it in the
-    # list used for autocleanup, by passing store=False to write_request calls.
-    #
-
     def push_update_add_entry_to_action(self, req, t_name, mk, a_name, params, priority=0):
         update = req.updates.add()
         table_entry = update.entity.table_entry
@@ -714,39 +705,33 @@ class P4RuntimeTest(BaseTest):
     def send_request_add_entry_to_action(self, t_name, mk, a_name, params, priority=0):
         req = self.get_new_write_request()
         self.push_update_add_entry_to_action(req, t_name, mk, a_name, params, priority)
-        return req, self.write_request(req, store=(mk is not None))
+        return req, self.write_request(req)
 
     def push_update_add_entry_to_member(self, req, t_name, mk, mbr_id):
         update = req.updates.add()
         update.type = p4runtime_pb2.Update.INSERT
         table_entry = update.entity.table_entry
         table_entry.table_id = self.get_table_id(t_name)
-        if mk is not None:
-            self.set_match_key(table_entry, t_name, mk)
-        else:
-            table_entry.is_default_action = True
+        self.set_match_key(table_entry, t_name, mk)
         table_entry.action.action_profile_member_id = mbr_id
 
     def send_request_add_entry_to_member(self, t_name, mk, mbr_id):
         req = self.get_new_write_request()
         self.push_update_add_entry_to_member(req, t_name, mk, mbr_id)
-        return req, self.write_request(req, store=(mk is not None))
+        return req, self.write_request(req)
 
     def push_update_add_entry_to_group(self, req, t_name, mk, grp_id):
         update = req.updates.add()
         update.type = p4runtime_pb2.Update.INSERT
         table_entry = update.entity.table_entry
         table_entry.table_id = self.get_table_id(t_name)
-        if mk is not None:
-            self.set_match_key(table_entry, t_name, mk)
-        else:
-            table_entry.is_default_action = True
+        self.set_match_key(table_entry, t_name, mk)
         table_entry.action.action_profile_group_id = grp_id
 
     def send_request_add_entry_to_group(self, t_name, mk, grp_id):
         req = self.get_new_write_request()
         self.push_update_add_entry_to_group(req, t_name, mk, grp_id)
-        return req, self.write_request(req, store=(mk is not None))
+        return req, self.write_request(req)
 
     def read_direct_counter(self, table_entry):
         req = self.get_new_read_request()
@@ -930,6 +915,11 @@ class P4RuntimeTest(BaseTest):
                     self.fail("Incorrect direct counter value:\n" + str(dcounter))
         return None
 
+    def is_default_action_update(self, update):
+        return update.type == p4runtime_pb2.Update.MODIFY and \
+            update.entity.WhichOneof("entity") == "table_entry" and \
+                update.entity.table_entry.is_default_action
+
     # iterates over all requests in reverse order; if they are INSERT updates,
     # replay them as DELETE updates; this is a convenient way to clean-up a lot
     # of switch state
@@ -937,11 +927,17 @@ class P4RuntimeTest(BaseTest):
         updates = []
         for req in reversed(reqs):
             for update in reversed(req.updates):
-                if update.type == p4runtime_pb2.Update.INSERT:
+                if update.type == p4runtime_pb2.Update.INSERT or \
+                        self.is_default_action_update(update):
                     updates.append(update)
+
         new_req = self.get_new_write_request()
         for update in updates:
-            update.type = p4runtime_pb2.Update.DELETE
+            if self.is_default_action_update(update):
+                # Reset table default entry to original one
+                update.entity.table_entry.ClearField("action")
+            else:
+                update.type = p4runtime_pb2.Update.DELETE
             new_req.updates.add().CopyFrom(update)
         if self.generate_tv:
             if len(reqs) != 0:
