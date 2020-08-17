@@ -1028,6 +1028,7 @@ class CounterTest(BridgingTest):
 
 class FabricLoopbackModeTest(IPv4UnicastTest):
 
+    @tvsetup
     @autocleanup
     def doRunTest(self, pkt, next_hop_mac):
         # Enable on both ingress and egress pipe
@@ -1048,9 +1049,9 @@ class FabricLoopbackModeTest(IPv4UnicastTest):
             exp_pkt=loopback_pkt)
         # ...and re-inject to trigger packet-in, which should come in without
         # fake ether type.
-        testutils.send_packet(self, self.port2, str(loopback_pkt))
+        self.send_packet(self.port2, str(loopback_pkt))
         self.verify_packet_in(routed_pkt, self.port2)
-        testutils.verify_no_other_packets(self)
+        self.verify_no_other_packets()
 
 
     def runTest(self):
