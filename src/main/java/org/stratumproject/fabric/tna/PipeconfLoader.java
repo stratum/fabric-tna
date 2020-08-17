@@ -118,9 +118,10 @@ public class PipeconfLoader {
         String target = pieces[2];
         String platform = pieces[3];
 
+        final DefaultPiPipeconf.Builder builder;
         if (target.equals(STRATUM_BF)) {
             try {
-                return stratumBfPipeconf(profile, platform);
+                builder = stratumBfPipeconf(profile, platform);
             } catch (FileNotFoundException e) {
                 log.warn("Unable to build pipeconf at {} because file is missing: {}",
                          path, e.getMessage());
@@ -128,20 +129,31 @@ public class PipeconfLoader {
             }
         } else if (target.equals(STRATUM_BFRT)) {
             try {
-                return stratumBfRtPipeconf(profile, platform);
+                builder = stratumBfRtPipeconf(profile, platform);
             } catch (FileNotFoundException e) {
                 log.warn("Unable to build pipeconf at {} because file is missing: {}",
                          path, e.getMessage());
                 return null;
             }
+        } else {
+            log.warn("Unknown target '{}', skipping pipeconf build at '{}'...",
+                    target, path);
+            return null;
         }
 
-        log.warn("Unknown target '{}', skipping pipeconf build at '{}'...",
-                 target, path);
-        return null;
+        builder.addBehaviour(PiPipelineInterpreter.class, FabricInterpreter.class)
+                .addBehaviour(Pipeliner.class, FabricPipeliner.class);
+
+        // Add IntProgrammable behaviour for INT-enabled profiles.
+        if (profile.endsWith(INT_PROFILE_SUFFIX) ||
+                profile.endsWith(FULL_PROFILE_SUFFIX)) {
+            builder.addBehaviour(IntProgrammable.class, FabricIntProgrammable.class);
+        }
+
+        return builder.build();
     }
 
-    private PiPipeconf stratumBfPipeconf(String profile, String platform)
+    private DefaultPiPipeconf.Builder stratumBfPipeconf(String profile, String platform)
             throws FileNotFoundException {
         final URL tofinoBinUrl = this.getClass().getResource(format(
                 P4C_RES_BASE_PATH + TOFINO_BIN, profile, STRATUM_BF, platform));
@@ -161,16 +173,14 @@ public class PipeconfLoader {
                 .withId(new PiPipeconfId(format(
                         "%s.%s.stratum_bf.%s", BASE_PIPECONF_ID, profile, platform)))
                 .withPipelineModel(parseP4Info(p4InfoUrl))
-                .addBehaviour(PiPipelineInterpreter.class, FabricInterpreter.class)
-                .addBehaviour(Pipeliner.class, FabricPipeliner.class)
                 .addExtension(ExtensionType.TOFINO_BIN, tofinoBinUrl)
                 .addExtension(ExtensionType.TOFINO_CONTEXT_JSON, contextJsonUrl)
                 .addExtension(ExtensionType.P4_INFO_TEXT, p4InfoUrl)
-                .addExtension(ExtensionType.CPU_PORT_TXT, cpuPortUrl)
-                .build();
+                .addExtension(ExtensionType.CPU_PORT_TXT, cpuPortUrl);
+
     }
 
-    private PiPipeconf stratumBfRtPipeconf(String profile, String platform)
+    private DefaultPiPipeconf.Builder stratumBfRtPipeconf(String profile, String platform)
             throws FileNotFoundException {
 
         final URL tofinoPipelineTarUrl = this.getClass().getResource(format(
@@ -184,23 +194,13 @@ public class PipeconfLoader {
         checkFileExists(p4InfoUrl, P4INFO_TXT);
         checkFileExists(cpuPortUrl, CPU_PORT_TXT);
 
-        final var builder = DefaultPiPipeconf.builder()
+        return DefaultPiPipeconf.builder()
                 .withId(new PiPipeconfId(format(
                         "%s.%s.stratum_bfrt.%s", BASE_PIPECONF_ID, profile, platform)))
                 .withPipelineModel(parseP4Info(p4InfoUrl))
-                .addBehaviour(PiPipelineInterpreter.class, FabricInterpreter.class)
-                .addBehaviour(Pipeliner.class, FabricPipeliner.class)
                 .addExtension(ExtensionType.RAW_DEVICE_CONFIG, tofinoPipelineTarUrl)
                 .addExtension(ExtensionType.P4_INFO_TEXT, p4InfoUrl)
                 .addExtension(ExtensionType.CPU_PORT_TXT, cpuPortUrl);
-
-        // Add IntProgrammable behaviour for INT-enabled profiles.
-        if (profile.endsWith(INT_PROFILE_SUFFIX) ||
-                profile.endsWith(FULL_PROFILE_SUFFIX)) {
-            builder.addBehaviour(IntProgrammable.class, FabricIntProgrammable.class);
-        }
-
-        return builder.build();
     }
 
     private void checkFileExists(URL url, String name)

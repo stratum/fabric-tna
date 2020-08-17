@@ -4,7 +4,6 @@
 package org.stratumproject.fabric.tna.behaviour.pipeliner;
 
 import com.google.common.collect.ImmutableList;
-import org.onlab.util.KryoNamespace;
 import org.onlab.util.SharedExecutors;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.PortNumber;
@@ -24,7 +23,6 @@ import org.onosproject.net.flowobjective.Objective;
 import org.onosproject.net.flowobjective.ObjectiveError;
 import org.onosproject.net.group.GroupDescription;
 import org.onosproject.net.group.GroupService;
-import org.onosproject.store.serializers.KryoNamespaces;
 import org.slf4j.Logger;
 import org.stratumproject.fabric.tna.behaviour.AbstractFabricHandlerBehavior;
 import org.stratumproject.fabric.tna.behaviour.FabricCapabilities;
@@ -38,6 +36,7 @@ import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static org.slf4j.LoggerFactory.getLogger;
+import static org.stratumproject.fabric.tna.behaviour.FabricUtils.KRYO;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.outputPort;
 
 /**
@@ -49,11 +48,6 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
         implements Pipeliner {
 
     private static final Logger log = getLogger(FabricPipeliner.class);
-
-    protected static final KryoNamespace KRYO = new KryoNamespace.Builder()
-            .register(KryoNamespaces.API)
-            .register(FabricNextGroup.class)
-            .build("FabricPipeliner");
 
     protected DeviceId deviceId;
     protected FlowRuleService flowRuleService;
@@ -232,7 +226,7 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
     private void removeNextGroup(NextObjective obj) {
         final NextGroup removed = flowObjectiveStore.removeNextGroup(obj.id());
         if (removed == null) {
-            log.debug("NextGroup {} was not found in FlowObjectiveStore");
+            log.debug("NextGroup {} was not found in FlowObjectiveStore", obj.id());
         }
     }
 
@@ -263,7 +257,7 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
     /**
      * NextGroup implementation.
      */
-    private static class FabricNextGroup implements NextGroup {
+    public static class FabricNextGroup implements NextGroup {
 
         private final NextObjective.Type type;
         private final List<String> nextMappings;

@@ -18,7 +18,8 @@ cd /tmp/workdir
 
 stratumBin=/usr/bin/stratum_bf
 if test -f "/usr/bin/stratum_bfrt"; then
-    stratumBin=/usr/bin/stratum_bfrt
+    stratumBin="/usr/bin/stratum_bfrt \
+      -bfrt_table_sync_timeout_ms 10000"
 fi
 
 ${stratumBin} \

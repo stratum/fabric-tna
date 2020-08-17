@@ -27,7 +27,7 @@ import org.onosproject.net.flowobjective.ObjectiveError;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
 import org.stratumproject.fabric.tna.behaviour.FabricCapabilities;
-import org.stratumproject.fabric.tna.behaviour.FabricConstants;
+import org.stratumproject.fabric.tna.behaviour.P4InfoConstants;
 import org.stratumproject.fabric.tna.behaviour.FabricUtils;
 
 import java.util.Collection;
@@ -55,7 +55,7 @@ class FilteringObjectiveTranslator
     private static final short ETH_TYPE_EXACT_MASK = (short) 0xFFFF;
 
     private static final PiAction DENY = PiAction.builder()
-            .withId(FabricConstants.FABRIC_INGRESS_FILTERING_DENY)
+            .withId(P4InfoConstants.FABRIC_INGRESS_FILTERING_DENY)
             .build();
 
 
@@ -155,7 +155,7 @@ class FilteringObjectiveTranslator
         }
 
         final PiCriterion piCriterion = PiCriterion.builder()
-                .matchExact(FabricConstants.HDR_VLAN_IS_VALID, outerVlanValid ? ONE : ZERO)
+                .matchExact(P4InfoConstants.HDR_VLAN_IS_VALID, outerVlanValid ? ONE : ZERO)
                 .build();
 
         final TrafficSelector.Builder selector = DefaultTrafficSelector.builder()
@@ -178,7 +178,7 @@ class FilteringObjectiveTranslator
                     ? DefaultTrafficTreatment.emptyTreatment() : obj.meta();
         }
         resultBuilder.addFlowRule(flowRule(
-                obj, FabricConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN,
+                obj, P4InfoConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN,
                 selector.build(), treatment));
     }
 
@@ -257,9 +257,9 @@ class FilteringObjectiveTranslator
         // this is due to overlap on ternary matching.
         TrafficTreatment treatment = fwdClassifierTreatment(FWD_MPLS);
         final PiCriterion ethTypeMplsIpv4 = PiCriterion.builder()
-                .matchTernary(FabricConstants.HDR_ETH_TYPE,
+                .matchTernary(P4InfoConstants.HDR_ETH_TYPE,
                               Ethernet.MPLS_UNICAST, ETH_TYPE_EXACT_MASK)
-                .matchExact(FabricConstants.HDR_IP_ETH_TYPE,
+                .matchExact(P4InfoConstants.HDR_IP_ETH_TYPE,
                             Ethernet.TYPE_IPV4)
                 .build();
         final TrafficSelector selectorMplsIpv4 = DefaultTrafficSelector.builder()
@@ -269,9 +269,9 @@ class FilteringObjectiveTranslator
                 .build();
 
         final PiCriterion ethTypeMplsIpv6 = PiCriterion.builder()
-                .matchTernary(FabricConstants.HDR_ETH_TYPE,
+                .matchTernary(P4InfoConstants.HDR_ETH_TYPE,
                               Ethernet.MPLS_UNICAST, ETH_TYPE_EXACT_MASK)
-                .matchExact(FabricConstants.HDR_IP_ETH_TYPE,
+                .matchExact(P4InfoConstants.HDR_IP_ETH_TYPE,
                             Ethernet.TYPE_IPV6)
                 .build();
         final TrafficSelector selectorMplsIpv6 = DefaultTrafficSelector.builder()
@@ -281,9 +281,9 @@ class FilteringObjectiveTranslator
                 .build();
 
         return List.of(
-                flowRule(obj, FabricConstants.FABRIC_INGRESS_FILTERING_FWD_CLASSIFIER,
+                flowRule(obj, P4InfoConstants.FABRIC_INGRESS_FILTERING_FWD_CLASSIFIER,
                          selectorMplsIpv4, treatment, obj.priority() + 1),
-                flowRule(obj, FabricConstants.FABRIC_INGRESS_FILTERING_FWD_CLASSIFIER,
+                flowRule(obj, P4InfoConstants.FABRIC_INGRESS_FILTERING_FWD_CLASSIFIER,
                          selectorMplsIpv6, treatment, obj.priority() + 1)
         );
     }
@@ -296,7 +296,7 @@ class FilteringObjectiveTranslator
         // i.e., if the packet has an IP header, ip_eth_type should
         // contain the corresponding eth_type (for IPv4 or IPv6)
         final PiCriterion ethTypeCriterion = PiCriterion.builder()
-                .matchExact(FabricConstants.HDR_IP_ETH_TYPE, ethType)
+                .matchExact(P4InfoConstants.HDR_IP_ETH_TYPE, ethType)
                 .build();
         final TrafficSelector selector = DefaultTrafficSelector.builder()
                 .matchInPort(inPort)
@@ -305,14 +305,14 @@ class FilteringObjectiveTranslator
                         ? MacAddress.EXACT_MASK : dstMacMask)
                 .build();
         return flowRule(
-                obj, FabricConstants.FABRIC_INGRESS_FILTERING_FWD_CLASSIFIER,
+                obj, P4InfoConstants.FABRIC_INGRESS_FILTERING_FWD_CLASSIFIER,
                 selector, treatment);
     }
 
     private TrafficTreatment fwdClassifierTreatment(byte fwdType) {
-        final PiActionParam param = new PiActionParam(FabricConstants.FWD_TYPE, fwdType);
+        final PiActionParam param = new PiActionParam(P4InfoConstants.FWD_TYPE, fwdType);
         final PiAction action = PiAction.builder()
-                .withId(FabricConstants.FABRIC_INGRESS_FILTERING_SET_FORWARDING_TYPE)
+                .withId(P4InfoConstants.FABRIC_INGRESS_FILTERING_SET_FORWARDING_TYPE)
                 .withParameter(param)
                 .build();
         return DefaultTrafficTreatment.builder()

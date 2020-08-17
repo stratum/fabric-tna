@@ -11,6 +11,7 @@ mvn_image := maven:3.6.1-jdk-11-slim
 mvn_cache_docker_volume := mvn-cache-${curr_dir_sha}
 # By default use docker volume, but allow passing a directory
 MVN_CACHE ?= ${mvn_cache_docker_volume}
+MVN_FLAGS ?=
 
 onos_url := http://${ONOS_HOST}:8181/onos
 onos_curl := curl --fail -sSL --user onos:rocks --noproxy localhost
@@ -24,7 +25,7 @@ p4-build := ./p4src/build.sh
 
 build: clean $(PROFILES) pipeconf
 
-all: fabric fabric-spgw
+all: fabric fabric-spgw fabric-int fabric-spgw-int
 
 fabric:
 	@${p4-build} fabric ""
@@ -36,30 +37,35 @@ fabric:
 # fabric-bng:
 # 	@${p4-build} fabric-bng "-DWITH_BNG -DWITHOUT_XCONNECT"
 
-# fabric-int:
-# 	@${p4-build} fabric-int "-DWITH_INT_SOURCE -DWITH_INT_TRANSIT"
+fabric-int:
+	@${p4-build} fabric-int "-DWITH_INT"
 
 fabric-spgw:
 	@${p4-build} fabric-spgw "-DWITH_SPGW"
 
-# fabric-spgw-int:
-# 	@${p4-build} fabric-spgw-int "-DWITH_SPGW -DWITH_INT_SOURCE -DWITH_INT_TRANSIT"
+fabric-spgw-int:
+	@${p4-build} fabric-spgw-int "-DWITH_SPGW -DWITH_INT"
 
 constants:
 	docker run -v $(curr_dir):/root -w /root \
 		--entrypoint ./util/gen-p4-constants.py onosproject/fabric-p4test:latest \
-		-o /root/src/main/java/org/stratumproject/fabric/tna/behaviour/FabricConstants.java \
-		fabric /root/src/main/resources/p4c-out/fabric-spgw/stratum_bf/mavericks_sde_9_2_0/p4info.txt
+		-o /root/src/main/java/org/stratumproject/fabric/tna/behaviour/P4InfoConstants.java \
+		p4info /root/src/main/resources/p4c-out/fabric-spgw-int/stratum_bf/mavericks_sde_9_2_0/p4info.txt
 
 _mvn_package: constants
 	$(info *** Building ONOS app...)
 	@mkdir -p target
 	docker run --rm -v ${curr_dir}:/mvn-src -w /mvn-src \
-		-v ${MVN_CACHE}:/root/.m2 ${mvn_image} mvn clean install
+		-v ${MVN_CACHE}:/root/.m2 ${mvn_image} mvn ${MVN_FLAGS} clean install
 
 pipeconf: _mvn_package
 	$(info *** ONOS pipeconf .oar package created succesfully)
 	@ls -1 ${curr_dir}/target/*.oar
+
+pipeconf-test: _mvn_package
+	$(info *** Testing ONOS pipeconf)
+	docker run --rm -v $(curr_dir}:mvn-src -w /mvn-src \
+		-v ${MVN_CACHE}:/root/.m2 ${mvn_image} mvn test
 
 pipeconf-install:
 	$(info *** Installing and activating pipeconf app in ONOS at ${ONOS_HOST}...)
@@ -88,8 +94,8 @@ p4i-stop:
 
 clean:
 	-rm -rf src/main/resources/p4c-out
-
-deep-clean: clean
 	-rm -rf tmp
 	-rm -rf target
+
+deep-clean: clean
 	-docker volume rm ${mvn_cache_docker_volume} > /dev/null 2>&1

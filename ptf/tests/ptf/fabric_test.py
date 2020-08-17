@@ -14,8 +14,7 @@ from scapy.layers.inet import IP, UDP, TCP
 from scapy.layers.l2 import Ether, Dot1Q
 from scapy.layers.ppp import PPPoE, PPP
 from scapy.fields import BitField, ByteField, ShortField, IntField
-from scapy.packet import bind_layers
-
+from scapy.packet import bind_layers, Packet
 
 import xnt
 from base_test import P4RuntimeTest, stringify, mac_to_binary, ipv4_to_binary
@@ -51,6 +50,8 @@ ETH_TYPE_MPLS_UNICAST = 0x8847
 INT_META_HDR = xnt.INT_META_HDR
 INT_L45_HEAD = xnt.INT_L45_HEAD
 INT_L45_TAIL = xnt.INT_L45_TAIL
+INT_L45_REPORT_FIXED = xnt.INT_L45_REPORT_FIXED
+INT_L45_LOCAL_REPORT = xnt.INT_L45_LOCAL_REPORT
 
 BROADCAST_MAC = ":".join(["ff"] * 6)
 MAC_MASK = ":".join(["ff"] * 6)
@@ -107,8 +108,23 @@ INT_INS_TO_NAME = {
     INT_EG_TSTAMP: "eg_tstamp",
     INT_QUEUE_CONGESTION: "queue_congestion",
     INT_EG_PORT_TX: "eg_port_tx"
-
 }
+
+INT_REPORT_MIRROR_ID_0 = 300
+INT_REPORT_MIRROR_ID_1 = 301
+INT_REPORT_MIRROR_ID_2 = 302
+INT_REPORT_MIRROR_ID_3 = 303
+INT_REPORT_PORT = 32766
+NPROTO_ETHERNET = 0
+NPROTO_TELEMETRY_DROP_HEADER = 1
+NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER = 2
+bind_layers(UDP, INT_L45_REPORT_FIXED, dport=INT_REPORT_PORT)
+bind_layers(INT_L45_REPORT_FIXED, INT_L45_LOCAL_REPORT,
+            nproto=NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER)
+bind_layers(INT_L45_LOCAL_REPORT, Ether)
+
+INT_COLLECTOR_MAC = "00:1e:67:d2:ee:ee"
+INT_COLLECTOR_IPV4 = "192.168.99.254"
 
 PPPOE_CODE_SESSION_STAGE = 0x00
 
@@ -235,6 +251,10 @@ class FabricTest(P4RuntimeTest):
         self.port1 = self.swports(1)
         self.port2 = self.swports(2)
         self.port3 = self.swports(3)
+        self.recirculate_port_0 = 68
+        self.recirculate_port_1 = 196
+        self.recirculate_port_2 = 324
+        self.recirculate_port_3 = 452
 
     def setup_int(self):
         self.send_request_add_entry_to_action(
@@ -613,7 +633,7 @@ class FabricTest(P4RuntimeTest):
         for port in ports:
             replica = clone_entry.replicas.add()
             replica.egress_port = port
-            replica.instance = 1
+            replica.instance = 0 # set to 0 because we don't support it yet.
         return req, self.write_request(req)
 
     def add_next_hashed_group_member(self, action_name, params):
@@ -757,7 +777,7 @@ class IPv4UnicastTest(FabricTest):
                            exp_pkt=None, exp_pkt_base=None, next_id=None,
                            next_vlan=None, mpls=False, dst_ipv4=None,
                            routed_eth_types=(ETH_TYPE_IPV4,),
-                           verify_pkt=True):
+                           verify_pkt=True, with_another_pkt_later=False):
         """
         Execute an IPv4 unicast routing test.
         :param pkt: input packet
@@ -779,6 +799,8 @@ class IPv4UnicastTest(FabricTest):
             classifier table to process packets via routing
         :param verify_pkt: whether packets are expected to be forwarded or
             dropped
+        :param with_another_pkt_later: another packet(s) will be verified outside
+            this function
         """
         if IP not in pkt or Ether not in pkt:
             self.fail("Cannot do IPv4 test with packet that is not IP")
@@ -848,7 +870,9 @@ class IPv4UnicastTest(FabricTest):
 
         if verify_pkt:
             self.verify_packet(exp_pkt, self.port2)
-        self.verify_no_other_packets()
+
+        if not with_another_pkt_later:
+            self.verify_no_other_packets()
 
 
 class DoubleVlanTerminationTest(FabricTest):
@@ -927,9 +951,9 @@ class DoubleVlanTerminationTest(FabricTest):
         if in_tagged and not pkt_is_tagged:
             pkt = pkt_add_vlan(pkt, vlan_vid=in_vlan)
 
-        testutils.send_packet(self, self.port1, str(pkt))
+        self.send_packet(self.port1, str(pkt))
         if verify_pkt:
-            testutils.verify_packet(self, exp_pkt, self.port2)
+            self.verify_packet( exp_pkt, self.port2)
         self.verify_no_other_packets()
 
     def runPopAndRouteTest(self, pkt, next_hop_mac,
@@ -1028,9 +1052,9 @@ class DoubleVlanTerminationTest(FabricTest):
                 exp_pkt = pkt_add_mpls(exp_pkt, label=mpls_label,
                                        ttl=DEFAULT_MPLS_TTL)
 
-        testutils.send_packet(self, self.port1, str(pkt))
+        self.send_packet(self.port1, str(pkt))
         if verify_pkt:
-            testutils.verify_packet(self, exp_pkt, self.port2)
+            self.verify_packet( exp_pkt, self.port2)
         self.verify_no_other_packets()
 
 
@@ -1344,222 +1368,297 @@ class SpgwSimpleTest(IPv4UnicastTest):
             self.fail("PDR packet counter incremented by %d instead of 1!" % ctr_increase)
 
 class IntTest(IPv4UnicastTest):
-    def setup_transit(self, switch_id):
+
+    def setup_report_flow(self, port, src_mac, mon_mac, src_ip, mon_ip, mon_port):
         self.send_request_add_entry_to_action(
-            "tb_int_insert",
-            [self.Exact("int_is_valid", stringify(1, 1))],
-            "init_metadata", [("switch_id", stringify(switch_id, 4))])
+            "report",
+            [self.Exact("int_mirror_valid", stringify(1, 1))],
+            "do_report_encap", [
+                ("src_mac", mac_to_binary(src_mac)),
+                ("mon_mac", mac_to_binary(mon_mac)),
+                ("src_ip", ipv4_to_binary(src_ip)),
+                ("mon_ip", ipv4_to_binary(mon_ip)),
+                ("mon_port", stringify(mon_port, 2))
+            ])
 
-    def setup_source_port(self, source_port):
-        source_port_ = stringify(source_port, 2)
-        self.send_request_add_entry_to_action(
-            "tb_set_source",
-            [self.Exact("ig_port", source_port_)],
-            "int_set_source", [])
+    def setup_report_mirror_flow(self, pipe_id, mirror_id, port):
+        self.add_clone_group(mirror_id, [port])
+        # TODO: We plan to set up this table by using the control
+        # plane so we don't need to hard code the session id
+        # in pipeline.
+        # self.send_request_add_entry_to_action(
+        #     "tb_set_mirror_session_id",
+        #     [self.Exact("pipe_id", stringify(pipe_id, 1))],
+        #     "set_mirror_session_id", [
+        #         ("sid", stringify(mirror_id, 2))
+        #     ])
 
-    def get_ins_mask(self, instructions):
-        return reduce(ior, instructions)
 
-    def get_ins_from_mask(self, ins_mask):
-        instructions = []
-        for i in range(16):
-            ins = ins_mask & (1 << i)
-            if ins:
-                instructions.append(ins)
-        return instructions
-
-    def get_int_pkt(self, pkt, instructions, max_hop, transit_hops=0, hop_metadata=None):
-        proto = UDP if UDP in pkt else TCP
-        int_pkt = pkt.copy()
-        int_pkt[IP].tos = 0x04
-        shim_len = 4 + len(instructions) * transit_hops
-        int_shim = INT_L45_HEAD(int_type=1, length=shim_len)
-        int_header = INT_META_HDR(
-            ins_cnt=len(instructions),
-            max_hop_cnt=max_hop,
-            total_hop_cnt=transit_hops,
-            inst_mask=self.get_ins_mask(instructions))
-        int_tail = INT_L45_TAIL(next_proto=pkt[IP].proto, proto_param=pkt[proto].dport)
-        metadata = "".join([hop_metadata] * transit_hops)
-        int_payload = int_shim / int_header / metadata / int_tail
-        int_pkt[proto].payload = int_payload / int_pkt[proto].payload
-        return int_pkt
-
-    def get_int_metadata(self, instructions, switch_id, ig_port, eg_port):
-        int_metadata = ""
-        masked_ins_cnt = len(instructions)
-        if INT_SWITCH_ID in instructions:
-            int_metadata += stringify(switch_id, 4)
-            masked_ins_cnt -= 1
-        if INT_IG_EG_PORT in instructions:
-            int_metadata += stringify(ig_port, 2) + stringify(eg_port, 2)
-            masked_ins_cnt -= 1
-        int_metadata += "".join(["\x00\x00\x00\x00"] * masked_ins_cnt)
-        return int_metadata, masked_ins_cnt
-
-    def setup_source_flow(self, ipv4_src, ipv4_dst, sport, dport, instructions, max_hop):
+    def setup_watchlist_flow(self, ipv4_src, ipv4_dst, sport, dport, switch_id):
+        switch_id_ = stringify(switch_id, 4)
         ipv4_src_ = ipv4_to_binary(ipv4_src)
         ipv4_dst_ = ipv4_to_binary(ipv4_dst)
         ipv4_mask = ipv4_to_binary("255.255.255.255")
-        sport_ = stringify(sport, 2)
-        dport_ = stringify(dport, 2)
-        port_mask = stringify(65535, 2)
+        # Use full range of TCP/UDP ports by default.
+        sport_low = stringify(0, 2)
+        sport_high = stringify(0xFFFF, 2)
+        dport_low = stringify(0, 2)
+        dport_high = stringify(0xFFFF, 2)
 
-        instructions = set(instructions)
-        ins_mask = self.get_ins_mask(instructions)
-        ins_cnt = len(instructions)
-        ins_mask0407 = (ins_mask >> 8) & 0xF
-        ins_mask0003 = ins_mask >> 12
+        if sport:
+            sport_low = stringify(sport, 2)
+            sport_high = stringify(sport, 2)
 
-        max_hop_ = stringify(max_hop, 1)
-        ins_cnt_ = stringify(ins_cnt, 1)
-        ins_mask0003_ = stringify(ins_mask0003, 1)
-        ins_mask0407_ = stringify(ins_mask0407, 1)
+        if dport:
+            dport_low = stringify(dport, 2)
+            dport_high = stringify(dport, 2)
 
         self.send_request_add_entry_to_action(
-            "tb_int_source",
+            "watchlist",
             [self.Ternary("ipv4_src", ipv4_src_, ipv4_mask),
              self.Ternary("ipv4_dst", ipv4_dst_, ipv4_mask),
-             self.Ternary("l4_sport", sport_, port_mask),
-             self.Ternary("l4_dport", dport_, port_mask),
+             self.Range("l4_sport", sport_low, sport_high),
+             self.Range("l4_dport", dport_low, dport_high),
              ],
-            "int_source_dscp", [
-                ("max_hop", max_hop_),
-                ("ins_cnt", ins_cnt_),
-                ("ins_mask0003", ins_mask0003_),
-                ("ins_mask0407", ins_mask0407_)
+            "init_metadata", [
+                ("switch_id", switch_id_)
             ], priority=DEFAULT_PRIORITY)
 
-    def runIntSourceTest(self, pkt, tagged1, tagged2, instructions,
-                         with_transit=True, ignore_csum=False, switch_id=1,
-                         max_hop=5, mpls=False):
+    def build_int_local_report(self, src_mac, dst_mac, src_ip, dst_ip,
+                               ig_port, eg_port, sw_id=1, inner_packet=None):
+        # Note: scapy doesn't support dscp field, use tos.
+        pkt = Ether(src=src_mac, dst=dst_mac) / IP(src=src_ip, dst=dst_ip, ttl=63, tos=4) / \
+              UDP(sport=0, chksum=0) / \
+              INT_L45_REPORT_FIXED(nproto=2, f=1, hw_id=0) / \
+              INT_L45_LOCAL_REPORT(switch_id=sw_id, ingress_port_id=ig_port, egress_port_id=eg_port) / \
+              inner_packet
+
+        mask_pkt = Mask(pkt)
+        # IPv4 identifcation
+        offset_ip = len(Ether())
+        mask_pkt.set_do_not_care_scapy(IP, "id")
+        # The reason we also ignore IP checksum is because the `id` field is random.
+        mask_pkt.set_do_not_care_scapy(IP, "chksum")
+        mask_pkt.set_do_not_care_scapy(UDP, "chksum")
+        mask_pkt.set_do_not_care_scapy(INT_L45_REPORT_FIXED, "ingress_tstamp")
+        mask_pkt.set_do_not_care_scapy(INT_L45_REPORT_FIXED, "seq_no")
+        mask_pkt.set_do_not_care_scapy(INT_L45_LOCAL_REPORT, "queue_id")
+        mask_pkt.set_do_not_care_scapy(INT_L45_LOCAL_REPORT, "queue_occupancy")
+        mask_pkt.set_do_not_care_scapy(INT_L45_LOCAL_REPORT, "egress_tstamp")
+
+        return mask_pkt
+
+    def runIntTest(self, pkt, tagged1, tagged2,
+                   switch_id=1, mpls=False):
         if IP not in pkt:
             self.fail("Packet is not IP")
-        if UDP not in pkt and TCP not in pkt:
-            self.fail("Packet must be UDP or TCP for INT tests")
-        proto = UDP if UDP in pkt else TCP
 
-        # will use runIPv4UnicastTest
-        dst_mac = HOST2_MAC
         ig_port = self.port1
         eg_port = self.port2
-
+        collector_port = self.port3
         ipv4_src = pkt[IP].src
         ipv4_dst = pkt[IP].dst
-        sport = pkt[proto].sport
-        dport = pkt[proto].dport
-
-        instructions = set(instructions)
-        ins_cnt = len(instructions)
-
-        self.setup_source_port(ig_port)
-        self.setup_source_flow(
-            ipv4_src=ipv4_src, ipv4_dst=ipv4_dst, sport=sport, dport=dport,
-            instructions=instructions, max_hop=max_hop)
-        if with_transit:
-            self.setup_transit(switch_id)
-
-        if with_transit:
-            int_metadata, masked_ins_cnt = self.get_int_metadata(
-                instructions=instructions, switch_id=switch_id,
-                ig_port=ig_port, eg_port=eg_port)
+        if UDP in pkt:
+            sport = pkt[UDP].sport
+            dport = pkt[UDP].dport
+        elif TCP in pkt:
+            sport = pkt[TCP].sport
+            dport = pkt[TCP].dport
         else:
-            int_metadata, masked_ins_cnt = "", ins_cnt
+            sport = None
+            dport = None
 
-        exp_pkt = self.get_int_pkt(
-            pkt=pkt, instructions=instructions, max_hop=max_hop,
-            transit_hops=1 if with_transit else 0,
-            hop_metadata=int_metadata)
-
-        exp_pkt[Ether].src = exp_pkt[Ether].dst
-        exp_pkt[Ether].dst = dst_mac
-        if not mpls:
-            exp_pkt[IP].ttl = exp_pkt[IP].ttl - 1
-        else:
-            exp_pkt = pkt_add_mpls(exp_pkt, MPLS_LABEL_2, DEFAULT_MPLS_TTL)
-
-        if tagged2:
-            # VLAN if tagged1 will be added by runIPv4UnicastTest
-            exp_pkt = pkt_add_vlan(exp_pkt, VLAN_ID_2)
-
-        if with_transit or ignore_csum:
-            mask_pkt = Mask(exp_pkt)
-            if with_transit:
-                offset_metadata = len(exp_pkt) - len(exp_pkt[proto].payload) \
-                                  + len(INT_L45_HEAD()) + len(INT_META_HDR()) \
-                                  + (ins_cnt - masked_ins_cnt) * 4
-                mask_pkt.set_do_not_care(offset_metadata * 8, masked_ins_cnt * 4 * 8)
-            if ignore_csum:
-                csum_offset = len(exp_pkt) - len(exp_pkt[IP].payload) \
-                              + (6 if proto is UDP else 16)
-                mask_pkt.set_do_not_care(csum_offset * 8, 2 * 8)
-            exp_pkt = mask_pkt
-
-        self.runIPv4UnicastTest(pkt=pkt, next_hop_mac=HOST2_MAC, prefix_len=32,
-                                exp_pkt=exp_pkt,
-                                tagged1=tagged1, tagged2=tagged2, mpls=mpls)
-
-    def runIntTransitTest(self, pkt, tagged1, tagged2,
-                          ignore_csum=False, switch_id=1, mpls=False):
-        if IP not in pkt:
-            self.fail("Packet is not IP")
-        if UDP not in pkt and TCP not in pkt:
-            self.fail("Packet must be UDP or TCP for INT tests")
-        if INT_META_HDR not in pkt:
-            self.fail("Packet must have INT_META_HDR")
-        if INT_L45_HEAD not in pkt:
-            self.fail("Packet must have INT_L45_HEAD")
-
-        proto = UDP if UDP in pkt else TCP
-
-        # will use runIPv4UnicastTest
-        dst_mac = HOST2_MAC
-        ig_port = self.port1
-        eg_port = self.port2
-
-        self.setup_transit(switch_id)
-
-        instructions = self.get_ins_from_mask(pkt[INT_META_HDR].inst_mask)
-        ins_cnt = len(instructions)
-        assert ins_cnt == pkt[INT_META_HDR].ins_cnt
-
-        # Forge expected packet based on pkt's ins_mask
-        new_metadata, masked_ins_cnt = self.get_int_metadata(
-            instructions=instructions, switch_id=switch_id,
-            ig_port=ig_port, eg_port=eg_port)
+        # We should expected to receive an routed packet.
+        # Build exp pkt using the input one.
         exp_pkt = pkt.copy()
-        exp_pkt[INT_L45_HEAD].length += pkt[INT_META_HDR].ins_cnt
-        exp_pkt[INT_META_HDR].total_hop_cnt += 1
-        exp_pkt[INT_META_HDR].payload = new_metadata + str(exp_pkt[INT_META_HDR].payload)
-
-        exp_pkt[Ether].src = exp_pkt[Ether].dst
-        exp_pkt[Ether].dst = dst_mac
+        exp_pkt = pkt_route(exp_pkt, HOST2_MAC)
         if not mpls:
-            exp_pkt[IP].ttl = exp_pkt[IP].ttl - 1
-        else:
-            exp_pkt = pkt_add_mpls(exp_pkt, MPLS_LABEL_2, DEFAULT_MPLS_TTL)
+            exp_pkt = pkt_decrement_ttl(exp_pkt)
+        if tagged2 and Dot1Q not in exp_pkt:
+            exp_pkt = pkt_add_vlan(exp_pkt, vlan_vid=VLAN_ID_2)
+        if mpls:
+            exp_pkt = pkt_add_mpls(exp_pkt, label=MPLS_LABEL_2, ttl=DEFAULT_MPLS_TTL)
 
-        if tagged2:
-            # VLAN if tagged1 will be added by runIPv4UnicastTest
-            exp_pkt = pkt_add_vlan(exp_pkt, VLAN_ID_2)
+        # We should also expected an INT report packet
+        exp_int_report_pkt_masked = \
+            self.build_int_local_report(SWITCH_MAC, INT_COLLECTOR_MAC, SWITCH_IPV4, INT_COLLECTOR_IPV4,
+                                        ig_port, eg_port, switch_id, exp_pkt)
 
-        if ignore_csum or masked_ins_cnt > 0:
-            mask_pkt = Mask(exp_pkt)
-            if ignore_csum:
-                csum_offset = len(exp_pkt) - len(exp_pkt[IP].payload) \
-                              + (6 if proto is UDP else 16)
-                mask_pkt.set_do_not_care(csum_offset * 8, 2 * 8)
-            if masked_ins_cnt > 0:
-                offset_metadata = len(exp_pkt) - len(exp_pkt[proto].payload) \
-                                  + len(INT_L45_HEAD()) + len(INT_META_HDR()) \
-                                  + (ins_cnt - masked_ins_cnt) * 4
-                mask_pkt.set_do_not_care(offset_metadata * 8, masked_ins_cnt * 4 * 8)
-            exp_pkt = mask_pkt
+        # Set collector, report table, and mirror sessions
+        self.setup_watchlist_flow(ipv4_src, ipv4_dst, sport, dport, switch_id)
+        self.setup_report_flow(collector_port, SWITCH_MAC, SWITCH_MAC,
+                               SWITCH_IPV4, INT_COLLECTOR_IPV4, INT_REPORT_PORT)
+        self.setup_report_mirror_flow(0, INT_REPORT_MIRROR_ID_0, self.recirculate_port_0)
+        self.setup_report_mirror_flow(1, INT_REPORT_MIRROR_ID_1, self.recirculate_port_1)
+        self.setup_report_mirror_flow(2, INT_REPORT_MIRROR_ID_2, self.recirculate_port_2)
+        self.setup_report_mirror_flow(3, INT_REPORT_MIRROR_ID_3, self.recirculate_port_3)
+
+        # Set up entries for report packet
+        self.setup_port(collector_port, DEFAULT_VLAN)
+        # Here we use next-id 101 since `runIPv4UnicastTest` will use 100 by default
+        next_id = 101
+        prefix_len = 32
+        self.add_forwarding_routing_v4_entry(INT_COLLECTOR_IPV4, prefix_len, next_id)
+        self.add_next_routing(next_id, collector_port, SWITCH_MAC, INT_COLLECTOR_MAC)
+        self.add_next_vlan(next_id, DEFAULT_VLAN)
+        # End of setting up entries for report packet
 
         self.runIPv4UnicastTest(pkt=pkt, next_hop_mac=HOST2_MAC,
                                 tagged1=tagged1, tagged2=tagged2, mpls=mpls,
-                                prefix_len=32, exp_pkt=exp_pkt)
+                                prefix_len=32, with_another_pkt_later=True)
 
+        self.verify_packet( exp_int_report_pkt_masked, collector_port)
+        self.verify_no_other_packets()
+
+class SpgwIntTest(SpgwSimpleTest, IntTest):
+
+    def runSpgwUplinkIntTest(self, pkt, tagged1, tagged2,
+                             switch_id=1, mpls=False):
+        # Build packet from eNB
+        # Add GTPU header to the original packet
+        gtp_pkt = pkt_add_gtp(pkt, out_ipv4_src=S1U_ENB_IPV4,
+                              out_ipv4_dst=S1U_SGW_IPV4, teid=TEID_1)
+        ig_port = self.port1
+        eg_port = self.port2
+        collector_port = self.port3
+        ipv4_src = pkt[IP].src
+        ipv4_dst = pkt[IP].dst
+        if UDP in pkt:
+            sport = pkt[UDP].sport
+            dport = pkt[UDP].dport
+        elif TCP in pkt:
+            sport = pkt[TCP].sport
+            dport = pkt[TCP].dport
+        else:
+            sport = None
+            dport = None
+
+        # We should expected to receive an routed packet with no GTPU headers.
+        # Build exp pkt using the input one.
+        exp_pkt = pkt.copy()
+        exp_pkt = pkt_route(exp_pkt, HOST2_MAC)
+        if not mpls:
+            exp_pkt = pkt_decrement_ttl(exp_pkt)
+        if tagged2 and Dot1Q not in exp_pkt:
+            exp_pkt = pkt_add_vlan(exp_pkt, vlan_vid=VLAN_ID_2)
+        if mpls:
+            exp_pkt = pkt_add_mpls(exp_pkt, label=MPLS_LABEL_2, ttl=DEFAULT_MPLS_TTL)
+
+        # We should also expected an INT report packet
+        exp_int_report_pkt_masked = \
+            self.build_int_local_report(SWITCH_MAC, INT_COLLECTOR_MAC, SWITCH_IPV4, INT_COLLECTOR_IPV4,
+                                        ig_port, eg_port, switch_id, exp_pkt)
+
+        # Set up entries for uplink
+        self.setup_uplink(
+            s1u_sgw_addr=S1U_SGW_IPV4,
+            teid=TEID_1,
+            ctr_id=1
+        )
+
+        # Set collector, report table, and mirror sessions
+        # Note that we are monitoring the inner packet.
+        self.setup_watchlist_flow(ipv4_src, ipv4_dst, sport, dport, switch_id)
+        self.setup_report_flow(collector_port, SWITCH_MAC, SWITCH_MAC,
+                               SWITCH_IPV4, INT_COLLECTOR_IPV4, INT_REPORT_PORT)
+        self.setup_report_mirror_flow(0, INT_REPORT_MIRROR_ID_0, self.recirculate_port_0)
+        self.setup_report_mirror_flow(1, INT_REPORT_MIRROR_ID_1, self.recirculate_port_1)
+        self.setup_report_mirror_flow(2, INT_REPORT_MIRROR_ID_2, self.recirculate_port_2)
+        self.setup_report_mirror_flow(3, INT_REPORT_MIRROR_ID_3, self.recirculate_port_3)
+
+        # Set up entries for report packet
+        self.setup_port(collector_port, DEFAULT_VLAN)
+        # Here we use next-id 101 since `runIPv4UnicastTest` will use 100 by default
+        next_id = 101
+        prefix_len = 32
+        self.add_forwarding_routing_v4_entry(INT_COLLECTOR_IPV4, prefix_len, next_id)
+        self.add_next_routing(next_id, collector_port, SWITCH_MAC, INT_COLLECTOR_MAC)
+        self.add_next_vlan(next_id, DEFAULT_VLAN)
+        # End of setting up entries for report packet
+        self.runIPv4UnicastTest(pkt=gtp_pkt, dst_ipv4=pkt[IP].dst,
+                                exp_pkt=exp_pkt, next_hop_mac=HOST2_MAC,
+                                tagged1=tagged1, tagged2=tagged2, mpls=mpls,
+                                prefix_len=32, with_another_pkt_later=True)
+
+        self.verify_packet( exp_int_report_pkt_masked, collector_port)
+        self.verify_no_other_packets()
+
+
+    def runSpgwDownlinkIntTest(self, pkt, tagged1, tagged2,
+                               switch_id=1, mpls=False):
+        ig_port = self.port1
+        eg_port = self.port2
+        ipv4_src = pkt[IP].src
+        ipv4_dst = pkt[IP].dst
+        collector_port = self.port3
+        if UDP in pkt:
+            sport = pkt[UDP].sport
+            dport = pkt[UDP].dport
+        elif TCP in pkt:
+            sport = pkt[TCP].sport
+            dport = pkt[TCP].dport
+        else:
+            sport = None
+            dport = None
+
+        # We should expected to receive an packet with GTPU headers.
+        exp_pkt = pkt.copy()
+        inner_exp_pkt = pkt.copy()
+        if not mpls:
+            exp_pkt = pkt_decrement_ttl(exp_pkt)
+            inner_exp_pkt = pkt_decrement_ttl(inner_exp_pkt)
+        exp_pkt = pkt_add_gtp(exp_pkt, out_ipv4_src=S1U_SGW_IPV4,
+                              out_ipv4_dst=S1U_ENB_IPV4, teid=TEID_1)
+        exp_pkt = pkt_route(exp_pkt, HOST2_MAC)
+        inner_exp_pkt = pkt_route(inner_exp_pkt, HOST2_MAC)
+        if tagged2 and Dot1Q not in exp_pkt:
+            exp_pkt = pkt_add_vlan(exp_pkt, vlan_vid=VLAN_ID_2)
+            inner_exp_pkt = pkt_add_vlan(inner_exp_pkt, vlan_vid=VLAN_ID_2)
+        if mpls:
+            exp_pkt = pkt_add_mpls(exp_pkt, label=MPLS_LABEL_2, ttl=DEFAULT_MPLS_TTL)
+            inner_exp_pkt = pkt_add_mpls(inner_exp_pkt, label=MPLS_LABEL_2, ttl=DEFAULT_MPLS_TTL)
+
+        # We should also expected an INT report packet
+        exp_int_report_pkt_masked = \
+            self.build_int_local_report(SWITCH_MAC, INT_COLLECTOR_MAC, SWITCH_IPV4, INT_COLLECTOR_IPV4,
+                                        ig_port, eg_port, switch_id, inner_exp_pkt)
+
+        # Set up entries for downlink
+        self.setup_downlink(
+            s1u_sgw_addr=S1U_SGW_IPV4,
+            s1u_enb_addr=S1U_ENB_IPV4,
+            teid=TEID_1,
+            ue_addr=ipv4_dst,
+            ctr_id=2,
+        )
+
+        # Set collector, report table, and mirror sessions
+        # Note that we are monitoring the inner packet.
+        self.setup_watchlist_flow(ipv4_src, ipv4_dst, sport, dport, switch_id)
+        self.setup_report_flow(collector_port, SWITCH_MAC, SWITCH_MAC,
+                               SWITCH_IPV4, INT_COLLECTOR_IPV4, INT_REPORT_PORT)
+        self.setup_report_mirror_flow(0, INT_REPORT_MIRROR_ID_0, self.recirculate_port_0)
+        self.setup_report_mirror_flow(1, INT_REPORT_MIRROR_ID_1, self.recirculate_port_1)
+        self.setup_report_mirror_flow(2, INT_REPORT_MIRROR_ID_2, self.recirculate_port_2)
+        self.setup_report_mirror_flow(3, INT_REPORT_MIRROR_ID_3, self.recirculate_port_3)
+
+        # Set up entries for report packet
+        self.setup_port(collector_port, DEFAULT_VLAN)
+        # Here we use next-id 101 since `runIPv4UnicastTest` will use 100 by default
+        next_id = 101
+        prefix_len = 32
+        self.add_forwarding_routing_v4_entry(INT_COLLECTOR_IPV4, prefix_len, next_id)
+        self.add_next_routing(next_id, collector_port, SWITCH_MAC, INT_COLLECTOR_MAC)
+        self.add_next_vlan(next_id, DEFAULT_VLAN)
+        # End of setting up entries for report packet
+        self.runIPv4UnicastTest(pkt=pkt, dst_ipv4=S1U_ENB_IPV4,
+                                next_hop_mac=HOST2_MAC,
+                                prefix_len=32, exp_pkt=exp_pkt,
+                                tagged1=tagged1, tagged2=tagged2, mpls=mpls,
+                                with_another_pkt_later=True)
+
+        self.verify_packet( exp_int_report_pkt_masked, collector_port)
+        self.verify_no_other_packets()
 
 class PppoeTest(DoubleVlanTerminationTest):
 
@@ -1725,7 +1824,7 @@ class PppoeTest(DoubleVlanTerminationTest):
         old_dropped = self.read_byte_count_upstream("dropped", line_id)
         old_control = self.read_pkt_count_upstream("control", line_id)
 
-        testutils.send_packet(self, self.port1, str(pppoed_pkt))
+        self.send_packet(self.port1, str(pppoed_pkt))
         self.verify_packet_in(pppoed_pkt, self.port1)
         self.verify_no_other_packets()
 

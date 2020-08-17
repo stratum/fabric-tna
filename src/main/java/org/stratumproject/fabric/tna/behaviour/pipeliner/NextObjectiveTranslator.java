@@ -34,7 +34,7 @@ import org.onosproject.net.pi.runtime.PiActionParam;
 import org.onosproject.net.pi.runtime.PiActionProfileGroupId;
 import org.onosproject.net.pi.runtime.PiGroupKey;
 import org.stratumproject.fabric.tna.behaviour.FabricCapabilities;
-import org.stratumproject.fabric.tna.behaviour.FabricConstants;
+import org.stratumproject.fabric.tna.behaviour.P4InfoConstants;
 import org.stratumproject.fabric.tna.behaviour.FabricUtils;
 
 import java.util.Collection;
@@ -76,13 +76,16 @@ class NextObjectiveTranslator
                 break;
             case BROADCAST:
                 if (isXconnect(obj)) {
-                    xconnectNext(obj, resultBuilder);
+                    // TODO: re-enable support for xconnext
+                    // xconnectNext(obj, resultBuilder);
+                    log.warn("Xconnect not supported [{}]", obj);
+                    return ObjectiveTranslation.ofError(ObjectiveError.UNSUPPORTED);
                 } else {
                     multicastNext(obj, resultBuilder);
                 }
                 break;
             default:
-                log.warn("Unsupported NextObjective type '{}'", obj);
+                log.warn("Unsupported NextObjective type [{}]", obj);
                 return ObjectiveTranslation.ofError(ObjectiveError.UNSUPPORTED);
         }
 
@@ -149,11 +152,11 @@ class NextObjectiveTranslator
 
         final TrafficSelector selector = nextIdSelector(obj.id());
         final TrafficTreatment.Builder treatmentBuilder = DefaultTrafficTreatment.builder();
-        vlanIdList.stream().forEach(vlanId -> treatmentBuilder.setVlanId(vlanId));
+        vlanIdList.forEach(treatmentBuilder::setVlanId);
         final TrafficTreatment treatment = treatmentBuilder.build();
 
         resultBuilder.addFlowRule(flowRule(
-                obj, FabricConstants.FABRIC_INGRESS_NEXT_NEXT_VLAN,
+                obj, P4InfoConstants.FABRIC_INGRESS_NEXT_NEXT_VLAN,
                 selector, treatment));
     }
 
@@ -183,19 +186,22 @@ class NextObjectiveTranslator
                 obj.nextTreatments(), true);
 
         if (forceSimple && treatments.size() > 1) {
-            log.warn("Forcing SIMPLE behavior for NextObjective with {} treatments []",
+            log.warn("Forcing SIMPLE behavior for NextObjective with {} treatments [{}]",
                      treatments.size(), obj);
         }
 
         // If not forcing, we are essentially extracting the only available treatment.
-        final TrafficTreatment treatment = defaultNextTreatments(
-                obj.nextTreatments(), true).get(0).treatment();
-
-        resultBuilder.addFlowRule(flowRule(
-                obj, FabricConstants.FABRIC_INGRESS_NEXT_SIMPLE,
-                selector, treatment));
-
-        handleEgress(obj, treatment, resultBuilder, false);
+        // TODO: add profile with simple next or remove references
+        // final TrafficTreatment treatment = defaultNextTreatments(
+        //         obj.nextTreatments(), true).get(0).treatment();
+        //
+        // resultBuilder.addFlowRule(flowRule(
+        //         obj, P4InfoConstants.FABRIC_INGRESS_NEXT_SIMPLE,
+        //         selector, treatment));
+        //
+        // handleEgress(obj, treatment, resultBuilder, false);
+        throw new FabricPipelinerException("Simple next table not supported",
+                ObjectiveError.UNSUPPORTED);
     }
 
     private void hashedNext(NextObjective obj,
@@ -221,7 +227,7 @@ class NextObjectiveTranslator
                 .build();
 
         resultBuilder.addFlowRule(flowRule(
-                obj, FabricConstants.FABRIC_INGRESS_NEXT_HASHED,
+                obj, P4InfoConstants.FABRIC_INGRESS_NEXT_HASHED,
                 selector, treatment));
     }
 
@@ -262,7 +268,7 @@ class NextObjectiveTranslator
         }
 
         final PiCriterion egressVlanTableMatch = PiCriterion.builder()
-                .matchExact(FabricConstants.HDR_EG_PORT, outPort.toLong())
+                .matchExact(P4InfoConstants.HDR_EG_PORT, outPort.toLong())
                 .build();
         final TrafficSelector selector = DefaultTrafficSelector.builder()
                 .matchPi(egressVlanTableMatch)
@@ -273,7 +279,7 @@ class NextObjectiveTranslator
                 .build();
 
         resultBuilder.addFlowRule(flowRule(
-                obj, FabricConstants.FABRIC_EGRESS_EGRESS_NEXT_EGRESS_VLAN,
+                obj, P4InfoConstants.FABRIC_EGRESS_EGRESS_NEXT_EGRESS_VLAN,
                 selector, treatment));
     }
 
@@ -283,53 +289,54 @@ class NextObjectiveTranslator
 
     private TrafficSelector.Builder nextIdSelectorBuilder(int nextId) {
         final PiCriterion nextIdCriterion = PiCriterion.builder()
-                .matchExact(FabricConstants.HDR_NEXT_ID, nextId)
+                .matchExact(P4InfoConstants.HDR_NEXT_ID, nextId)
                 .build();
         return DefaultTrafficSelector.builder()
                 .matchPi(nextIdCriterion);
     }
 
-    private void xconnectNext(NextObjective obj, ObjectiveTranslation.Builder resultBuilder)
-            throws FabricPipelinerException {
-
-        final Collection<DefaultNextTreatment> defaultNextTreatments =
-                defaultNextTreatments(obj.nextTreatments(), true);
-
-        final List<PortNumber> outPorts = defaultNextTreatments.stream()
-                .map(DefaultNextTreatment::treatment)
-                .map(FabricUtils::outputPort)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toList());
-
-        if (outPorts.size() != 2) {
-            throw new FabricPipelinerException(format(
-                    "Handling XCONNECT with %d treatments (ports), but expected is 2",
-                    defaultNextTreatments.size()), ObjectiveError.UNSUPPORTED);
-        }
-
-        final PortNumber port1 = outPorts.get(0);
-        final PortNumber port2 = outPorts.get(1);
-        final TrafficSelector selector1 = nextIdSelectorBuilder(obj.id())
-                .matchInPort(port1)
-                .build();
-        final TrafficTreatment treatment1 = DefaultTrafficTreatment.builder()
-                .setOutput(port2)
-                .build();
-        final TrafficSelector selector2 = nextIdSelectorBuilder(obj.id())
-                .matchInPort(port2)
-                .build();
-        final TrafficTreatment treatment2 = DefaultTrafficTreatment.builder()
-                .setOutput(port1)
-                .build();
-
-        resultBuilder.addFlowRule(flowRule(
-                obj, FabricConstants.FABRIC_INGRESS_NEXT_XCONNECT,
-                selector1, treatment1));
-        resultBuilder.addFlowRule(flowRule(
-                obj, FabricConstants.FABRIC_INGRESS_NEXT_XCONNECT,
-                selector2, treatment2));
-
-    }
+    // TODO: re-enable support for xconnext
+    // private void xconnectNext(NextObjective obj, ObjectiveTranslation.Builder resultBuilder)
+    //         throws FabricPipelinerException {
+    //
+    //     final Collection<DefaultNextTreatment> defaultNextTreatments =
+    //             defaultNextTreatments(obj.nextTreatments(), true);
+    //
+    //     final List<PortNumber> outPorts = defaultNextTreatments.stream()
+    //             .map(DefaultNextTreatment::treatment)
+    //             .map(FabricUtils::outputPort)
+    //             .filter(Objects::nonNull)
+    //             .collect(Collectors.toList());
+    //
+    //     if (outPorts.size() != 2) {
+    //         throw new FabricPipelinerException(format(
+    //                 "Handling XCONNECT with %d treatments (ports), but expected is 2",
+    //                 defaultNextTreatments.size()), ObjectiveError.UNSUPPORTED);
+    //     }
+    //
+    //     final PortNumber port1 = outPorts.get(0);
+    //     final PortNumber port2 = outPorts.get(1);
+    //     final TrafficSelector selector1 = nextIdSelectorBuilder(obj.id())
+    //             .matchInPort(port1)
+    //             .build();
+    //     final TrafficTreatment treatment1 = DefaultTrafficTreatment.builder()
+    //             .setOutput(port2)
+    //             .build();
+    //     final TrafficSelector selector2 = nextIdSelectorBuilder(obj.id())
+    //             .matchInPort(port2)
+    //             .build();
+    //     final TrafficTreatment treatment2 = DefaultTrafficTreatment.builder()
+    //             .setOutput(port1)
+    //             .build();
+    //
+    //     resultBuilder.addFlowRule(flowRule(
+    //             obj, P4InfoConstants.FABRIC_INGRESS_NEXT_XCONNECT,
+    //             selector1, treatment1));
+    //     resultBuilder.addFlowRule(flowRule(
+    //             obj, P4InfoConstants.FABRIC_INGRESS_NEXT_XCONNECT,
+    //             selector2, treatment2));
+    //
+    // }
 
     private void multicastNext(NextObjective obj,
                                ObjectiveTranslation.Builder resultBuilder)
@@ -345,9 +352,9 @@ class NextObjectiveTranslator
 
         final TrafficSelector selector = nextIdSelector(obj.id());
         final PiActionParam groupIdParam = new PiActionParam(
-                FabricConstants.GROUP_ID, groupId);
+                P4InfoConstants.GROUP_ID, groupId);
         final PiAction setMcGroupAction = PiAction.builder()
-                .withId(FabricConstants.FABRIC_INGRESS_NEXT_SET_MCAST_GROUP_ID)
+                .withId(P4InfoConstants.FABRIC_INGRESS_NEXT_SET_MCAST_GROUP_ID)
                 .withParameter(groupIdParam)
                 .build();
         final TrafficTreatment treatment = DefaultTrafficTreatment.builder()
@@ -355,7 +362,7 @@ class NextObjectiveTranslator
                 .build();
 
         resultBuilder.addFlowRule(flowRule(
-                obj, FabricConstants.FABRIC_INGRESS_NEXT_MULTICAST,
+                obj, P4InfoConstants.FABRIC_INGRESS_NEXT_MULTICAST,
                 selector, treatment));
     }
 
@@ -363,7 +370,7 @@ class NextObjectiveTranslator
                             ObjectiveTranslation.Builder resultBuilder)
             throws FabricPipelinerException {
 
-        final PiTableId hashedTableId = FabricConstants.FABRIC_INGRESS_NEXT_HASHED;
+        final PiTableId hashedTableId = P4InfoConstants.FABRIC_INGRESS_NEXT_HASHED;
         final List<DefaultNextTreatment> defaultNextTreatments =
                 defaultNextTreatments(obj.nextTreatments(), true);
         final List<TrafficTreatment> piTreatments = Lists.newArrayList();
@@ -382,7 +389,7 @@ class NextObjectiveTranslator
         final int groupId = obj.id();
         final PiGroupKey groupKey = new PiGroupKey(
                 hashedTableId,
-                FabricConstants.FABRIC_INGRESS_NEXT_HASHED_SELECTOR,
+                P4InfoConstants.FABRIC_INGRESS_NEXT_HASHED_PROFILE,
                 groupId);
 
         resultBuilder.addGroup(new DefaultGroupDescription(
@@ -435,8 +442,7 @@ class NextObjectiveTranslator
         final int groupId = obj.id();
         // Use DefaultGroupKey instead of PiGroupKey as we don't have any
         // action profile to apply to the groups of ALL type.
-        final GroupKey groupKey = new DefaultGroupKey(
-                FabricPipeliner.KRYO.serialize(groupId));
+        final GroupKey groupKey = new DefaultGroupKey(KRYO.serialize(groupId));
 
         resultBuilder.addGroup(
                 new DefaultGroupDescription(

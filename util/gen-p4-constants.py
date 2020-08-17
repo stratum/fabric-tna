@@ -1,25 +1,14 @@
 #!/usr/bin/env python2.7
+# Copyright 2020-present Open Networking Foundation
+# SPDX-License-Identifier: Apache-2.0
 # -*- utf-8 -*-
 import argparse
 import google.protobuf.text_format as tf
 import re
 from p4.config.v1 import p4info_pb2
 
-copyright = '''/*
- * Copyright 2020-present Open Networking Foundation
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+copyright = '''// Copyright 2020-present Open Networking Foundation
+// SPDX-License-Identifier: Apache-2.0
 '''
 
 imports = '''
@@ -132,9 +121,21 @@ class ConstantClassGenerator(object):
         for mtr in p4info.meters:
             self.meters.add(mtr.preamble.name)
 
+        self.headers = sorted(self.headers)
+        self.header_fields = sorted(self.header_fields)
+        self.tables = sorted(self.tables)
+        self.counters = sorted(self.counters)
+        self.direct_counters = sorted(self.direct_counters)
+        self.actions = sorted(self.actions)
+        self.action_params = sorted(self.action_params)
+        self.action_profiles = sorted(self.action_profiles)
+        self.packet_metadata = sorted(self.packet_metadata)
+        self.meters = sorted(self.meters)
+
     def const_line(self, name, type, constructor):
         var_name = self.convert_camel_to_all_caps(name)
         if type == PI_HF_FIELD_ID:
+            var_name = var_name.replace('$VALID$', 'VALID')
             var_name = HF_VAR_PREFIX + var_name
         val = constructor % (name,)
 
