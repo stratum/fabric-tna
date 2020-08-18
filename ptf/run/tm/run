@@ -117,7 +117,9 @@ if [[ "${STRATUM_BF_DOCKER_IMG}" == *"stratum-bfrt"* ]]; then
 fi
 
 echo "*** Starting ${testerRunName}..."
-docker run --name ${testerRunName} -it --privileged --rm \
+# Do not attach stdin if running in an environment without it (e.g., Jenkins)
+it=$(test -t 0 && echo "-it" || echo "-t")
+docker run --name ${testerRunName} ${it} --privileged --rm \
     --network "container:${tmRunName}" \
     -v "${FP4TEST_ROOT}":/fabric-p4test \
     -v "${P4C_OUT}":/p4c-out \
