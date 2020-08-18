@@ -42,7 +42,13 @@ function do_p4c() {
   cpu_port=$2
   echo "*** Compiling profile '${PROFILE}' for ${pltf} platform..."
   echo "*** Output in ${P4C_OUT}/${pltf}"
-  pp_flags="-DCPU_PORT=${cpu_port}"
+  pp_flags=""
+  if [[ "$1" == "montara" ]]; then
+    pp_flags="-DCPU_PORT=${cpu_port} -DTARGET_TOFINO_CHIP_32D=1"
+  else
+    pp_flags="-DCPU_PORT=${cpu_port} -DTARGET_TOFINO_CHIP_64D=1"
+  fi
+  echo "pp_flags=$pp_flags"
   p4c_flags="--auto-init-metadata"
   mkdir -p ${P4C_OUT}/${pltf}
   (

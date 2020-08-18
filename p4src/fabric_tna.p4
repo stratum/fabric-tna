@@ -4,6 +4,7 @@
 #include <core.p4>
 #include <tna.p4>
 
+#include "include/platform.p4"
 #include "include/define.p4"
 #include "include/size.p4"
 #include "include/header.p4"
@@ -96,4 +97,5 @@ Pipeline(
     FabricEgressDeparser()
 ) pipe;
 
+PLATFORM_ANNOTATION
 Switch(pipe) main;
