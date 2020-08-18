@@ -90,6 +90,8 @@ public final class P4InfoConstants {
             PiTableId.of("FabricEgress.int_egress.report");
     public static final PiTableId FABRIC_EGRESS_INT_EGRESS_WATCHLIST =
             PiTableId.of("FabricEgress.int_egress.watchlist");
+    public static final PiTableId FABRIC_EGRESS_LOOPBACK_TESTING_ENABLE =
+            PiTableId.of("FabricEgress.loopback_testing.enable");
     public static final PiTableId FABRIC_INGRESS_ACL_ACL =
             PiTableId.of("FabricIngress.acl.acl");
     public static final PiTableId FABRIC_INGRESS_FILTERING_FWD_CLASSIFIER =
@@ -104,6 +106,8 @@ public final class P4InfoConstants {
             PiTableId.of("FabricIngress.forwarding.routing_v4");
     public static final PiTableId FABRIC_INGRESS_FORWARDING_ROUTING_V6 =
             PiTableId.of("FabricIngress.forwarding.routing_v6");
+    public static final PiTableId FABRIC_INGRESS_LOOPBACK_TESTING_PUNT_TO_CPU =
+            PiTableId.of("FabricIngress.loopback_testing.punt_to_cpu");
     public static final PiTableId FABRIC_INGRESS_NEXT_HASHED =
             PiTableId.of("FabricIngress.next.hashed");
     public static final PiTableId FABRIC_INGRESS_NEXT_MULTICAST =
@@ -151,6 +155,10 @@ public final class P4InfoConstants {
             PiActionId.of("FabricEgress.int_egress.do_report_encap");
     public static final PiActionId FABRIC_EGRESS_INT_EGRESS_INIT_METADATA =
             PiActionId.of("FabricEgress.int_egress.init_metadata");
+    public static final PiActionId FABRIC_EGRESS_LOOPBACK_TESTING_OFF =
+            PiActionId.of("FabricEgress.loopback_testing.off");
+    public static final PiActionId FABRIC_EGRESS_LOOPBACK_TESTING_ON =
+            PiActionId.of("FabricEgress.loopback_testing.on");
     public static final PiActionId FABRIC_INGRESS_ACL_COPY_TO_CPU =
             PiActionId.of("FabricIngress.acl.copy_to_cpu");
     public static final PiActionId FABRIC_INGRESS_ACL_DROP =
@@ -179,6 +187,10 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.forwarding.set_next_id_routing_v4");
     public static final PiActionId FABRIC_INGRESS_FORWARDING_SET_NEXT_ID_ROUTING_V6 =
             PiActionId.of("FabricIngress.forwarding.set_next_id_routing_v6");
+    public static final PiActionId FABRIC_INGRESS_LOOPBACK_TESTING_OFF =
+            PiActionId.of("FabricIngress.loopback_testing.off");
+    public static final PiActionId FABRIC_INGRESS_LOOPBACK_TESTING_ON =
+            PiActionId.of("FabricIngress.loopback_testing.on");
     public static final PiActionId FABRIC_INGRESS_NEXT_MPLS_ROUTING_HASHED =
             PiActionId.of("FabricIngress.next.mpls_routing_hashed");
     public static final PiActionId FABRIC_INGRESS_NEXT_OUTPUT_HASHED =
