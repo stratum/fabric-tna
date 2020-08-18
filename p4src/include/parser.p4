@@ -27,26 +27,26 @@ parser FabricIngressParser (packet_in  packet,
         fabric_md.bridged.ig_tstamp = ig_intr_md.ingress_mac_tstamp;
         transition select(ig_intr_md.ingress_port) {
             CPU_PORT: parse_packet_out;
-            default: parse_fake_ethernet;
+            default: check_ethernet;
         }
     }
 
     state parse_packet_out {
         packet.extract(hdr.packet_out);
-        transition parse_fake_ethernet;
+        transition check_ethernet;
     }
 
-    state parse_fake_ethernet {
+    state check_ethernet {
         // We use ethernet-like headers to signal the presence of custom
         // metadata before the actual ethernet frame.
         fake_ethernet_t tmp = packet.lookahead<fake_ethernet_t>();
         transition select(tmp.ether_type) {
-            ETHERTYPE_LOOPBACK: set_loopback_flag;
+            ETHERTYPE_LOOPBACK: set_loopback_and_strip_fake_ethernet;
             default: parse_ethernet;
         }
     }
 
-    state set_loopback_flag {
+    state set_loopback_and_strip_fake_ethernet {
         fabric_md.is_loopback = true;
         packet.advance(ETH_HDR_SIZE*8);
         // No need to parse other headers, pkt should be punted to CPU as-is,
