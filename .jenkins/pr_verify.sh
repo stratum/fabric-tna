@@ -35,7 +35,7 @@ if [ -n "$modified" ]; then
 fi
 
 # FIXME: add target to Makefile to build all profiles
-echo "Run PTF tests for all profile"
+echo "Run PTF tests for all profiles"
 SDE_DOCKER_IMG=${SDE_BASE_DOCKER_IMG}-tm ./ptf/run/tm/run fabric
 SDE_DOCKER_IMG=${SDE_BASE_DOCKER_IMG}-tm ./ptf/run/tm/run fabric-int
 SDE_DOCKER_IMG=${SDE_BASE_DOCKER_IMG}-tm ./ptf/run/tm/run fabric-spgw
