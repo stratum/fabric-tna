@@ -2,10 +2,14 @@
 # Copyright 2020-present Open Networking Foundation
 # SPDX-License-Identifier: Apache-2.0
 
+# The Jenkins job executing this script is maintained in the ONOS ci-management
+# repo:
+# https://gerrit.onosproject.org/plugins/gitiles/ci-management/+/refs/heads/master/jjb/templates/fabric-tna-jobs.yaml
+
 # exit on errors
 set -exu -o pipefail
 
-SDE_BASE_DOCKER_IMG=SDE_DOCKER_IMG=opennetworking/bf-sde:9.2.0
+SDE_BASE_DOCKER_IMG=opennetworking/bf-sde:9.2.0
 
 echo "Build all profiles using SDE ${SDE_BASE_DOCKER_IMG}..."
 make all SDE_DOCKER_IMG=${SDE_BASE_DOCKER_IMG}-p4c
