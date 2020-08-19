@@ -2,9 +2,14 @@
 # Copyright 2020-present Open Networking Foundation
 # SPDX-License-Identifier: Apache-2.0
 
-# The Jenkins job executing this script is maintained in the ONOS ci-management
-# repo:
+# The Jenkins job `fabric-tna-pr-verify` executing this script is maintained in
+# the ONOS ci-management repo:
 # https://gerrit.onosproject.org/plugins/gitiles/ci-management/+/refs/heads/master/jjb/templates/fabric-tna-jobs.yaml
+#
+# This job should be executed for each pull request.
+
+# TODO (carmelo): consider using a declarative Jenkins pipeline definition so we
+# can parallelize some of the tasks.
 
 # exit on errors
 set -exu -o pipefail
