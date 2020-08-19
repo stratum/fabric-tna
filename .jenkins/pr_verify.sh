@@ -18,7 +18,8 @@ echo "Build and verify Java pipeconf"
 make pipeconf MVN_FLAGS="-Pci-verify -Pcoverage"
 
 echo "Upload coverage to codecov"
-bash <(curl -s https://codecov.io/bash)
+export CODECOV_TOKEN=75f36e70-2caf-46ab-9b76-7a1b9a419ebd
+curl -s https://codecov.io/bash | bash
 
 modified=$(git status --porcelain)
 if [ -n "$modified" ]; then
