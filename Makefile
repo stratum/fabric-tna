@@ -52,7 +52,7 @@ constants:
 		-o /root/src/main/java/org/stratumproject/fabric/tna/behaviour/P4InfoConstants.java \
 		p4info /root/src/main/resources/p4c-out/fabric-spgw-int/stratum_bf/mavericks_sde_9_2_0/p4info.txt
 
-_mvn_package: constants
+_mvn_package:
 	$(info *** Building ONOS app...)
 	@mkdir -p target
 	docker run --rm -v ${curr_dir}:/mvn-src -w /mvn-src \
