@@ -5,15 +5,14 @@ SPDX-License-Identifier: Apache-2.0
 
 # Fabric-TNA Pipeconf
 
-This repository contains instructions and scripts to compile and use
-`fabric-tna.p4` on Intel/Barefoot Tofino-enabled switches.
+[![Build Status](https://jenkins.onosproject.org/buildStatus/icon?job=fabric-tna-postmerge)](https://jenkins.onosproject.org/job/fabric-tna-postmerge/)
 
-[fabric.p4][fabric.p4] is a P4 program distributed as part of ONOS, designed to
-work with [Trellis](trellis), a set of SDN applications running on top of ONOS
+This repository contains `fabric-tna.p4`, a P4 program designed to work with
+[Trellis](trellis), a set of SDN applications running on top of ONOS
 to provide the control plane for an IP fabric based on MPLS segment-routing.
 
-`fabric-tna.p4` is a new P4 program which ports the original `fabric.p4` to
-the Tofino Native Architecture(TNA).
+`fabric-tna.p4` is based on the Tofino Native Architecture (TNA), hence it
+can be used to program any switch based on the Intel Barefoot Tofino ASIC.
 
 To use ONOS to control a Tofino-enabled switch, you will need to run the
 [Stratum][stratum] agent on the switch.
@@ -32,9 +31,9 @@ Pipeconfs are distrubuted as ONOS applications, hence using the `.oar`
 packaging. The following steps provide instructions on how to generate an oar
 package that includes a compiled version of `fabric-tna.p4` that works on Tofino.
 
-* `src/main/java`: contains Java code that implements the ONOS app responsible
-  for registering the Tofino-enabled pipeconfs in ONOS;
-* `src/main/p4`: contains code to compile fabric-tna.p4 for Tofino.
+* `src/main/java`: contains Java code that implements the ONOS drivers to control
+  a switch programmed with `fabric-tna.p4`
+* `p4src`: contains the P4 code
 
 To learn more about pipeconfs and how ONOS supports P4-programmable devices:
 <https://github.com/opennetworkinglab/ngsdn-tutorial>
@@ -66,14 +65,14 @@ Check the `Makefile` for other profiles.
 
 To build all profiles: `PROFILES=all`.
 
-To build a subset of the available profiles: `PROFILES="fabric fabric-bng"`
+To build a subset of the available profiles: `PROFILES="fabric fabric-int"`
 
 The P4 compiler outputs to include in the `.oar` package (such as `tofino.bin`,
 `context.json`, and `p4info.txt`) will be placed under
 `src/main/resources/p4c-out`.
 
 When done, the pipeconf `.oar` package can be found in
-`target/fabric-tofino-<VERSION>.oar`
+`target/fabric-tna-<VERSION>.oar`
 
 #### Using containerized version of the Barefoot SDE / p4c compilers
 
