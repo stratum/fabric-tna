@@ -340,7 +340,7 @@ control SpgwEgress(
 
     apply {
         if (fabric_md.bridged.skip_spgw) return;
-        if (fabric_md.bridged.to_spgw_offload) {
+        if (!fabric_md.bridged.to_spgw_offload) {
             // Don't count packets destined for an offload device. They might get dropped
             pdr_counter.count(fabric_md.bridged.pdr_ctr_id);
         }
