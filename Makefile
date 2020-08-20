@@ -92,6 +92,9 @@ p4i:
 p4i-stop:
 	docker kill p4i
 
+reuse-lint:
+	docker run --rm -v ${curr_dir}:/fabric-tna -w /fabric-tna omecproject/reuse-verify:latest reuse lint
+
 clean:
 	-rm -rf src/main/resources/p4c-out
 	-rm -rf tmp
