@@ -152,6 +152,7 @@ header bridged_metadata_t {
     // bit<1>          inner_vlan_cfi;
 #endif // WITH_DOUBLE_VLAN_TERMINATION
 #ifdef WITH_SPGW
+    bool            to_spgw_offload;
     bit<16>         spgw_ipv4_len;
     bool            needs_gtpu_encap;
     bool            skip_spgw;

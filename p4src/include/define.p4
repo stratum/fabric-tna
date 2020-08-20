@@ -80,7 +80,8 @@ enum bit<8> SpgwInterface {
     CORE          = 0x2,
     N6_LAN        = 0x3, // unused
     VN_INTERNAL   = 0x4, // unused
-    CONTROL_PLANE = 0x5 // N4 and N4-u
+    CONTROL_PLANE = 0x5, // N4 and N4-u
+    FROM_OFFLOAD  = 0x6 // for buffer and qos devices
 }
 
 const bit<16> ETHERTYPE_QINQ = 0x88A8;

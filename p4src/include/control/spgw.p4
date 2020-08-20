@@ -60,8 +60,19 @@ control SpgwIngress(
         fabric_md.needs_gtpu_decap = needs_gtpu_decap;
     }
 
-    // These two tables scale well and cover the average case PDR
-    table downlink_pdr_lookup {
+    // The non-flexible PDR lookups scale well and cover the average case PDR
+    table from_offload_pdr_lookup {
+        key = {
+            // Packets from offload devices will always be encapped.
+            // Match on only the UE addr to improve scaling
+            hdr.inner_ipv4.dst_addr : exact @name("ue_addr");
+        }
+        actions = {
+            set_pdr_attributes;
+        }
+        size = NUM_DOWNLINK_PDRS;
+    }
+    table from_core_pdr_lookup {
         key = {
             // only available ipv4 header
             hdr.ipv4.dst_addr : exact @name("ue_addr");
@@ -72,7 +83,7 @@ control SpgwIngress(
         size = NUM_DOWNLINK_PDRS;
     }
 
-    table uplink_pdr_lookup {
+    table from_access_pdr_lookup {
         key = {
             hdr.ipv4.dst_addr           : exact @name("tunnel_ipv4_dst");
             hdr.gtpu.teid               : exact @name("teid");
@@ -123,6 +134,7 @@ control SpgwIngress(
     }
     action load_tunnel_far_attributes(bool      drop,
                                       bool      notify_cp,
+                                      bool      to_offload,
                                       bit<16>   tunnel_src_port,
                                       bit<32>   tunnel_src_addr,
                                       bit<32>   tunnel_dst_addr,
@@ -130,6 +142,8 @@ control SpgwIngress(
         // general far attributes
         fabric_md.far_dropped = drop;
         fabric_md.notify_spgwc = notify_cp;
+        // If the packet is destined for an offload device
+        fabric_md.bridged.to_spgw_offload = to_offload;
         // GTP tunnel attributes
         fabric_md.bridged.needs_gtpu_encap = true;
         fabric_md.bridged.gtpu_teid = teid;
@@ -150,7 +164,7 @@ control SpgwIngress(
             load_tunnel_far_attributes;
         }
         // default is drop and don't notify CP
-        const default_action = load_normal_far_attributes(true, true);
+        const default_action = load_normal_far_attributes(true, false);
         size = NUM_FARS;
     }
 
@@ -231,16 +245,21 @@ control SpgwIngress(
         // PDRs
         // Try the efficient PDR tables first (This PDR partitioning only works
         // if the PDRs do not overlap. FIXME: does this assumption hold?)
-        if (hdr.gtpu.isValid()) {
-            uplink_pdr_lookup.apply();
+        if (fabric_md.spgw_src_iface == SpgwInterface.FROM_OFFLOAD) {
+            from_offload_pdr_lookup.apply();
+        } else if (fabric_md.spgw_src_iface == SpgwInterface.ACCESS) {
+            from_access_pdr_lookup.apply();
         } else {
-            downlink_pdr_lookup.apply();
+            from_core_pdr_lookup.apply();
         }
         // Inefficient PDR table if efficient tables missed
         if (!fabric_md.pdr_hit) {
             flexible_pdr_lookup.apply();
         }
-        pdr_counter.count(fabric_md.bridged.pdr_ctr_id);
+        if (fabric_md.spgw_src_iface != SpgwInterface.FROM_OFFLOAD) {
+            // Packets from an offload device have already been counted by ingress
+            pdr_counter.count(fabric_md.bridged.pdr_ctr_id);
+        }
 
         // GTPU Decapsulate
         if (fabric_md.needs_gtpu_decap) {
@@ -321,7 +340,10 @@ control SpgwEgress(
 
     apply {
         if (fabric_md.bridged.skip_spgw) return;
-        pdr_counter.count(fabric_md.bridged.pdr_ctr_id);
+        if (fabric_md.bridged.to_spgw_offload) {
+            // Don't count packets destined for an offload device. They might get dropped
+            pdr_counter.count(fabric_md.bridged.pdr_ctr_id);
+        }
 
         if (fabric_md.bridged.needs_gtpu_encap) {
             gtpu_encap();
