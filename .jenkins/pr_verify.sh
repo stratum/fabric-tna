@@ -20,16 +20,18 @@ echo "Build all profiles using SDE ${SDE_BASE_DOCKER_IMG}..."
 make all SDE_DOCKER_IMG=${SDE_BASE_DOCKER_IMG}-p4c
 
 echo "Build and verify Java pipeconf"
-make pipeconf MVN_FLAGS="-Pci-verify -Pcoverage"
+make constants pipeconf MVN_FLAGS="-Pci-verify -Pcoverage"
 
 echo "Upload coverage to codecov"
 export CODECOV_TOKEN=75f36e70-2caf-46ab-9b76-7a1b9a419ebd
 curl -s https://codecov.io/bash | bash
 
+# Since the Java build is based on auto-generated P4InfoConstants.java (make
+# constants above), check that checked-in file is up-to-date:
 modified=$(git status --porcelain)
 if [ -n "$modified" ]; then
   echo "The following build artifacts do not correspond to the expected ones,"
-  echo "please run the build locally before pushing a new change, or add to .gitignore:"
+  echo "please run the build locally before pushing a new change:"
   echo "$modified"
   exit 1
 fi
