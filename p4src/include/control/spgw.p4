@@ -326,7 +326,7 @@ control SpgwEgress(
         if (fabric_md.bridged.needs_gtpu_encap) {
             gtpu_encap();
 #ifdef WITH_INT
-            fabric_md.int_mirror_md.skip_gtpu_headers = 1;
+            fabric_md.int_mirror_md.strip_gtpu = 1;
 #endif // WITH_INT
         }
     }

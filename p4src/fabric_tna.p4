@@ -13,7 +13,6 @@
 #include "include/control/forwarding.p4"
 #include "include/control/acl.p4"
 #include "include/control/next.p4"
-#include "include/control/loopback.p4"
 #ifdef WITH_SPGW
 #include "include/control/spgw.p4"
 #endif // WITH_SPGW
@@ -37,14 +36,12 @@ control FabricIngress (
     Forwarding() forwarding;
     Acl() acl;
     Next() next;
-    LoopbackTestingIngress() loopback_testing;
 #ifdef WITH_SPGW
     SpgwIngress() spgw_ingress;
 #endif // WITH_SPGW
 
     apply {
-        loopback_testing.apply(hdr, fabric_md, ig_tm_md, ig_dprsr_md);
-        pkt_io_ingress.apply(hdr, fabric_md, ig_tm_md);
+        pkt_io_ingress.apply(hdr, fabric_md, ig_tm_md, ig_dprsr_md);
 #ifdef WITH_SPGW
         spgw_ingress.apply(hdr, fabric_md, ig_tm_md);
 #endif // WITH_SPGW
@@ -71,7 +68,6 @@ control FabricEgress (
 
     PacketIoEgress() pkt_io_egress;
     EgressNextControl() egress_next;
-    LoopbackTestingEgress() loopback_testing;
 #ifdef WITH_SPGW
     SpgwEgress() spgw_egress;
 #endif // WITH_SPGW
@@ -88,7 +84,6 @@ control FabricEgress (
 #ifdef WITH_SPGW
         spgw_egress.apply(hdr, fabric_md);
 #endif // WITH_SPGW
-        loopback_testing.apply(hdr, fabric_md, eg_intr_md);
     }
 }
 

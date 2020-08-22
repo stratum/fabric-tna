@@ -40,7 +40,8 @@ ETH_TYPE_QINQ = 0x88a8
 ETH_TYPE_PPPOE = 0x8864
 ETH_TYPE_MPLS_UNICAST = 0x8847
 
-ETH_TYPE_LOOPBACK = 0xBF02
+ETH_TYPE_CPU_LOOPBACK_INGRESS = 0xBF02
+ETH_TYPE_CPU_LOOPBACK_EGRESS = 0xBF03
 
 # In case the "correct" version of scapy (from p4lang) is not installed, we
 # provide the INT header formats in xnt.py
@@ -780,7 +781,8 @@ class IPv4UnicastTest(FabricTest):
                            exp_pkt=None, exp_pkt_base=None, next_id=None,
                            next_vlan=None, mpls=False, dst_ipv4=None,
                            routed_eth_types=(ETH_TYPE_IPV4,),
-                           verify_pkt=True, with_another_pkt_later=False):
+                           verify_pkt=True, with_another_pkt_later=False,
+                           no_send=False):
         """
         Execute an IPv4 unicast routing test.
         :param pkt: input packet
@@ -804,6 +806,8 @@ class IPv4UnicastTest(FabricTest):
             dropped
         :param with_another_pkt_later: another packet(s) will be verified outside
             this function
+        :param send_via_cpu_loopback: send packet via packet-out with for CPU
+            loopback
         """
         if IP not in pkt or Ether not in pkt:
             self.fail("Cannot do IPv4 test with packet that is not IP")
@@ -868,6 +872,9 @@ class IPv4UnicastTest(FabricTest):
 
         if tagged1 and not pkt_is_tagged:
             pkt = pkt_add_vlan(pkt, vlan_vid=vlan1)
+
+        if no_send:
+            return
 
         self.send_packet(self.port1, str(pkt))
 

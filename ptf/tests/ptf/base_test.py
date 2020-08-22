@@ -334,15 +334,23 @@ class P4RuntimeTest(BaseTest):
             if not match_exp_pkt(exp_pkt, rx_pkt):
                 self.fail("Received packet-in is not the expected one\n" + format_pkt_match(rx_pkt, exp_pkt))
 
-    def verify_packet_out(self, pkt, out_port):
-        port_hex = stringify(out_port, 2)
+    def build_packet_out(self, pkt, port, do_cpu_loopback=False):
+        port_hex = stringify(port, 2)
         packet_out = p4runtime_pb2.PacketOut()
         packet_out.payload = str(pkt)
         egress_physical_port = packet_out.metadata.add()
         egress_physical_port.metadata_id = 1
         egress_physical_port.value = port_hex
+        cpu_loopback = packet_out.metadata.add()
+        cpu_loopback.metadata_id = 2
+        cpu_loopback.value = stringify(1 if do_cpu_loopback else 0, 1)
+        pad0 = packet_out.metadata.add()
+        pad0.metadata_id = 3
+        pad0.value = stringify(0, 1)
+        return packet_out
 
-        self.send_packet_out(packet_out)
+    def verify_packet_out(self, pkt, out_port):
+        self.send_packet_out(self.build_packet_out(pkt, out_port))
         self.verify_packet(pkt, out_port)
 
     def verify_p4runtime_entity(self, expected, received):

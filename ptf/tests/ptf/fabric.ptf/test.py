@@ -1032,25 +1032,21 @@ class FabricLoopbackModeTest(IPv4UnicastTest):
     @tvsetup
     @autocleanup
     def doRunTest(self, pkt, next_hop_mac):
-        # Enable on both ingress and egress pipe
-        self.send_request_add_entry_to_action(
-            "FabricEgress.loopback_testing.enable",
-            None,
-            "FabricEgress.loopback_testing.on", [])
-        self.send_request_add_entry_to_action(
-            "FabricIngress.loopback_testing.punt_to_cpu",
-            None,
-            "FabricIngress.loopback_testing.on", [])
         # Since we cannot put interfaces in loopback mode, verify that output
         # packet has fake ether type for loopback...
-        routed_pkt = pkt_decrement_ttl(pkt_route(pkt, next_hop_mac))
-        loopback_pkt = Ether(type=ETH_TYPE_LOOPBACK, src=ZERO_MAC, dst=ZERO_MAC) / routed_pkt
         self.runIPv4UnicastTest(
-            pkt, next_hop_mac=next_hop_mac, prefix_len=24,
-            exp_pkt=loopback_pkt)
-        # ...and re-inject to trigger packet-in, which should come in without
-        # fake ether type.
-        self.send_packet(self.port2, str(loopback_pkt))
+            pkt, next_hop_mac=next_hop_mac, prefix_len=24, no_send=True)
+        exp_pkt_1 = Ether(type=ETH_TYPE_CPU_LOOPBACK_INGRESS,
+                          src=ZERO_MAC, dst=ZERO_MAC) / pkt
+        routed_pkt = pkt_decrement_ttl(pkt_route(pkt, next_hop_mac))
+        exp_pkt_2 = Ether(type=ETH_TYPE_CPU_LOOPBACK_EGRESS,
+                          src=ZERO_MAC, dst=ZERO_MAC) / routed_pkt
+        self.send_packet_out(self.build_packet_out(
+            pkt, self.port1, do_cpu_loopback=True))
+        self.verify_packet(exp_pkt_1, self.port1)
+        self.send_packet(self.port1, str(exp_pkt_1))
+        self.verify_packet(exp_pkt_2, self.port2)
+        self.send_packet(self.port2, str(exp_pkt_2))
         self.verify_packet_in(routed_pkt, self.port2)
         self.verify_no_other_packets()
 

@@ -12,12 +12,15 @@
 
 @controller_header("packet_in")
 header packet_in_header_t {
-    bit<16> ingress_port;
+    bit<9> ingress_port;
+    bit<7> _pad0;
 }
 
 @controller_header("packet_out")
 header packet_out_header_t {
-    bit<16> egress_port;
+    bit<9> egress_port;
+    bit<1> cpu_loopback;
+    bit<6> _pad0;
 }
 
 header ethernet_t {
@@ -176,7 +179,6 @@ struct fabric_ingress_metadata_t {
     bool               skip_next;
     fwd_type_t         fwd_type;
     next_id_t          next_id;
-    bool               is_loopback;
 #ifdef WITH_SPGW
     bool               inner_ipv4_checksum_err;
     bool               needs_gtpu_decap;

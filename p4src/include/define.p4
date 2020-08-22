@@ -94,9 +94,10 @@ const bit<16> ETHERTYPE_ARP  = 0x0806;
 const bit<16> ETHERTYPE_PPPOED = 0x8863;
 const bit<16> ETHERTYPE_PPPOES = 0x8864;
 
-// Fake ether type used to signal that a packet is entering the pipe a second
-// time because of loopback testing.
-const bit<16> ETHERTYPE_LOOPBACK = 0xBF02;
+// Fake ether types used to distinghuish regular packets from those used for
+// CPU-based loopback testing.
+const bit<16> ETHERTYPE_CPU_LOOPBACK_INGRESS = 0xBF02;
+const bit<16> ETHERTYPE_CPU_LOOPBACK_EGRESS = 0xBF03;
 
 const bit<16> PPPOE_PROTOCOL_IP4 = 0x0021;
 const bit<16> PPPOE_PROTOCOL_IP6 = 0x0057;
