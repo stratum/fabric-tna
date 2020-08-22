@@ -23,7 +23,7 @@ control PacketIoIngress(inout parsed_headers_t hdr,
         } else if (hdr.fake_ethernet.isValid() &&
                 hdr.fake_ethernet.ether_type == ETHERTYPE_CPU_LOOPBACK_EGRESS) {
             // This is a CPU loopback packet that has been processed by the
-            // egress pipe, and is now entering the ingress pipe a second time.
+            // egress pipe, and i has entered the ingress pipe a second time.
             // Punt to CPU now.
             hdr.fake_ethernet.setInvalid();
             ig_intr_md_for_tm.copy_to_cpu = 1;

@@ -806,8 +806,8 @@ class IPv4UnicastTest(FabricTest):
             dropped
         :param with_another_pkt_later: another packet(s) will be verified outside
             this function
-        :param send_via_cpu_loopback: send packet via packet-out with for CPU
-            loopback
+        :param no_send: if true insert table entries but do not send
+            (or verify) packets
         """
         if IP not in pkt or Ether not in pkt:
             self.fail("Cannot do IPv4 test with packet that is not IP")
