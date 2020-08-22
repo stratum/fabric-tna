@@ -368,14 +368,14 @@ parser FabricEgressParser (packet_in packet,
     }
 
     state parse_ipv4 {
-#ifdef WITH_INT
+#if defined(WITH_INT) && defined(WITH_SPGW)
         transition select(is_int_and_strip_gtpu) {
             1: strip_gtpu_and_accept;
             default: do_parse_ipv4;
         }
 #else
         transition do_parse_ipv4;
-#endif // WITH_INT
+#endif // defined(WITH_INT) && defined(WITH_SPGW)
     }
 
     state strip_gtpu_and_accept {
