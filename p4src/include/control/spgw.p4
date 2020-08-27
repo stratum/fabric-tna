@@ -13,7 +13,7 @@
 #define NUM_UPLINK_PDRS NUM_UES
 #define NUM_DOWNLINK_PDRS NUM_UES
 #define NUM_FARS 2*NUM_UES
-#define MAX_BUFFERED_PACKETS = 1024
+#define MAX_BUFFERED_PACKETS 1024
 
 control SpgwIngress(
         /* Fabric.p4 */
@@ -31,6 +31,7 @@ control SpgwIngress(
         fabric_md.bridged.spgw_src_iface    = src_iface;
         fabric_md.spgw_direction    = direction;
         fabric_md.bridged.needs_buffering = false;
+        fabric_md.from_buffer = true;
         // Packets coming from offload devices will have some context saved in repurposed header fields
         fabric_md.buffered_packet_count = hdr.gtpu.teid;
         fabric_md.bridged.far_id = hdr.gtpu_options.first_short;
@@ -42,6 +43,7 @@ control SpgwIngress(
         fabric_md.spgw_direction    = direction;
         // has to be initialized to an impossible value
         fabric_md.buffered_packet_count = MAX_BUFFERED_PACKETS + 1;
+        fabric_md.from_buffer = false;
     }
 
     table interface_lookup {
@@ -101,8 +103,8 @@ control SpgwIngress(
     action load_normal_far_attributes(bool drop,
                                       bool notify_cp) {
         // Do dropping in the same way as fabric's filtering.p4
-        fabric_md.skip_forwarding = drop || fabric_md.skip_forwarding;
-        fabric_md.skip_next = drop || fabric_md.skip_next;
+        fabric_md.skip_forwarding = fabric_md.skip_forwarding;
+        fabric_md.skip_next = fabric_md.skip_next;
 
         fabric_md.notify_spgwc = notify_cp;
     }
@@ -211,7 +213,7 @@ control SpgwIngress(
     //===== Buffer Offload Things ======//
     //==================================//
 
-    Register<paired_32bit,_>(NUM_FARS) buffer_count_register;
+    Register<bit<32>,_>(NUM_FARS) buffer_count_register;
 
     RegisterAction<bit<32>, _, bit<32>>(buffer_count_register) _write_buffered_count = {
         void apply(inout bit<32> value, out bit<32> rv) {
@@ -239,27 +241,29 @@ control SpgwIngress(
         }
     };
 
+    @hidden
     action write_buffered_count() {
         _write_buffered_count.execute(fabric_md.bridged.far_id);
     }
+    @hidden
     action get_buffered_count() {
         fabric_md.buffered_packet_count = _get_buffered_count.execute(fabric_md.bridged.far_id);
     }
-
-    table get_or_check_packet_identifier {
+    @hidden
+    table get_or_check_buffered_count {
         key = {
             fabric_md.bridged.needs_buffering : exact;
-            fabric_md.bridge.spgw_src_iface : ternary;
+            fabric_md.from_buffer : exact;
         }
         actions = {
-            get_packet_identifier;
-            check_packet_identifier;
+            get_buffered_count;
+            write_buffered_count;
         }
         const entries = {
             // If a packet is headed to the buffer, generate an identifier
-            (true, 0 && 0) : generate_packet_signature();
+            (true, false) : get_buffered_count();
             // If a packet came from the buffer, check the identifier
-            (false, SpgwInterface.FROM_BUFFER) : check_buffer_path();
+            (false, true) : write_buffered_count();
         }
         size = 2;
     }
@@ -312,7 +316,7 @@ control SpgwIngress(
             pdr_counter.count(fabric_md.bridged.pdr_ctr_id);
         }
 
-        get_or_check_packet_identifier.apply();
+        get_or_check_buffered_count.apply();
 
         // GTPU Decapsulate
         if (fabric_md.needs_gtpu_decap) {

@@ -186,7 +186,7 @@ parser FabricIngressParser (packet_in  packet,
 #ifdef WITH_SPGW
     state parse_gtpu {
         packet.extract(hdr.gtpu);
-        transition(hdr.gtpu.seq_flag) {
+        transition select(hdr.gtpu.seq_flag) {
             0 : parse_inner_ipv4;
             default : parse_gtpu_options;
         }
@@ -443,7 +443,7 @@ parser FabricEgressParser (packet_in packet,
 #ifdef WITH_SPGW
     state parse_gtpu {
         packet.extract(hdr.gtpu);
-        transition(hdr.gtpu.seq_flag) {
+        transition select(hdr.gtpu.seq_flag) {
             0 : parse_inner_ipv4;
             default : parse_gtpu_options;
         }

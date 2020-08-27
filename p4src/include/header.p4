@@ -164,7 +164,8 @@ header bridged_metadata_t {
 #endif // WITH_DOUBLE_VLAN_TERMINATION
 #ifdef WITH_SPGW
     far_id_t        far_id;
-    bool            to_spgw_offload;
+    bool            needs_buffering;
+    SpgwInterface   spgw_src_iface;
     bit<16>         spgw_ipv4_len;
     bool            needs_gtpu_encap;
     bool            skip_spgw;
@@ -191,12 +192,13 @@ struct fabric_ingress_metadata_t {
     next_id_t          next_id;
     bool               is_loopback;
 #ifdef WITH_SPGW
+    bit<32>            buffered_packet_count;
+    bool               from_buffer;
     bool               inner_ipv4_checksum_err;
     bool               needs_gtpu_decap;
     bool               pdr_hit;
     bool               far_dropped;
     bool               notify_spgwc;
-    SpgwInterface      spgw_src_iface;
     SpgwDirection      spgw_direction;
 #endif // WITH_SPGW
 }
@@ -237,7 +239,9 @@ struct parsed_headers_t {
     ipv4_t outer_ipv4;
     udp_t outer_udp;
     gtpu_t outer_gtpu;
+    gtpu_options_t outer_gtpu_options;
     gtpu_t gtpu;
+    gtpu_options_t gtpu_options;
     ipv4_t inner_ipv4;
     tcp_t inner_tcp;
     udp_t inner_udp;

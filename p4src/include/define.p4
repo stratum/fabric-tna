@@ -71,7 +71,7 @@ typedef bit<16> pdr_ctr_id_t;
 enum bit<2> SpgwDirection {
     UNKNOWN             = 0x0,
     UPLINK              = 0x1,
-    DOWNLINK            = 0x2,
+    DOWNLINK            = 0x2
 }
 enum bit<2> SpgwInterface {
     UNKNOWN       = 0x0,
