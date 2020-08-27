@@ -4,16 +4,21 @@
 #ifndef __SPGW__
 #define __SPGW__
 
-#define DEFAULT_PDR_CTR_ID 0
-#define DEFAULT_FAR_ID 0
-
+#ifndef NUM_UES
 #define NUM_UES 2048
+#endif // NUM_UES
+
+#ifndef MAX_BUFFERED_PACKETS
+#define MAX_BUFFERED_PACKETS 1024
+#endif // MAX_BUFFERED_PACKETS
 
 #define MAX_PDR_COUNTERS 2*NUM_UES
 #define NUM_UPLINK_PDRS NUM_UES
 #define NUM_DOWNLINK_PDRS NUM_UES
 #define NUM_FARS 2*NUM_UES
-#define MAX_BUFFERED_PACKETS 1024
+
+#define DEFAULT_PDR_CTR_ID 0
+#define DEFAULT_FAR_ID 0
 
 control SpgwIngress(
         /* Fabric.p4 */
@@ -30,19 +35,22 @@ control SpgwIngress(
     action set_source_offload_iface(SpgwInterface src_iface, SpgwDirection direction) {
         fabric_md.bridged.spgw_src_iface    = src_iface;
         fabric_md.spgw_direction    = direction;
-        fabric_md.bridged.needs_buffering = false;
         fabric_md.from_buffer = true;
         // Packets coming from offload devices will have some context saved in repurposed header fields
         fabric_md.buffered_packet_count = hdr.gtpu.teid;
+        // PDR context
         fabric_md.bridged.far_id = hdr.gtpu_options.first_short;
         fabric_md.bridged.pdr_ctr_id = hdr.gtpu_options.second_short;
+        fabric_md.needs_gtpu_decap = true;
+        fabric_md.bridged.needs_buffering = false;
     }
 
     action set_source_iface(SpgwInterface src_iface, SpgwDirection direction) {
         fabric_md.bridged.spgw_src_iface    = src_iface;
         fabric_md.spgw_direction    = direction;
-        // has to be initialized to an impossible value
+        // has to be initialized to an impossible value TODO: is that still the case?
         fabric_md.buffered_packet_count = MAX_BUFFERED_PACKETS + 1;
+        // needed to circumvent compiler bug in matching spgw_src_iface in a const entry
         fabric_md.from_buffer = false;
     }
 
@@ -212,6 +220,7 @@ control SpgwIngress(
     //==================================//
     //===== Buffer Offload Things ======//
     //==================================//
+#define BUFFER_REG_INDEX fabric_md.bridged.far_id
 
     Register<bit<32>,_>(NUM_FARS) buffer_count_register;
 
@@ -228,9 +237,6 @@ control SpgwIngress(
 
     RegisterAction<bit<32>, _, bit<32>>(buffer_count_register) _get_buffered_count = {
         void apply(inout bit<32> value, out bit<32> rv) {
-            bit<32> old_value;
-            old_value = value;
-                
             // value = min(MAX_BUFFERED_PACKETS, value + 1)
             if (value >= MAX_BUFFERED_PACKETS)
                 value = MAX_BUFFERED_PACKETS;
@@ -241,13 +247,24 @@ control SpgwIngress(
         }
     };
 
+    RegisterAction<bit<32>, _, bit<32>>(buffer_count_register) _clear_buffered_count = {
+        void apply(inout bit<32> value, out bit<32> rv) {
+            value = 0;
+            rv = 0;
+        }
+    };
+
     @hidden
     action write_buffered_count() {
-        _write_buffered_count.execute(fabric_md.bridged.far_id);
+        _write_buffered_count.execute(BUFFER_REG_INDEX);
     }
     @hidden
     action get_buffered_count() {
-        fabric_md.buffered_packet_count = _get_buffered_count.execute(fabric_md.bridged.far_id);
+        fabric_md.buffered_packet_count = _get_buffered_count.execute(BUFFER_REG_INDEX);
+    }
+    @hidden
+    action clear_buffered_count() {
+        _clear_buffered_count.execute(BUFFER_REG_INDEX);
     }
     @hidden
     table get_or_check_buffered_count {
@@ -258,14 +275,18 @@ control SpgwIngress(
         actions = {
             get_buffered_count;
             write_buffered_count;
+            clear_buffered_count;
         }
         const entries = {
-            // If a packet is headed to the buffer, generate an identifier
-            (true, false) : get_buffered_count();
-            // If a packet came from the buffer, check the identifier
-            (false, true) : write_buffered_count();
+            // If a packet is headed to the buffer, increment and get the buffer count
+            (true,  false) : get_buffered_count();
+            // If a packet came from the buffer, compare the attached and stored counts
+            (false, true)  : write_buffered_count();
+            // Ensure the count is 0 if buffering isn't occurring
+            // Necessary to do in dataplane until stratum supports clearing registers
+            (false, false) : clear_buffered_count();
         }
-        size = 2;
+        size = 3;
     }
 
 
