@@ -301,44 +301,43 @@ control SpgwIngress(
             downlink_pdr_lookup.apply();
         }
 
-        if (fabric_md.bridged.skip_spgw) {
-            return;
-        }
-        if (!fabric_md.from_buffer) {
-            // Packets from an offload device have already been counted by ingress
-            pdr_counter.count(fabric_md.bridged.pdr_ctr_id);
-        }
+        if (!fabric_md.bridged.skip_spgw) {
+            if (!fabric_md.from_buffer) {
+                // Packets from an offload device have already been counted by ingress
+                pdr_counter.count(fabric_md.bridged.pdr_ctr_id);
+            }
 
-        // GTPU Decapsulate
-        if (fabric_md.needs_gtpu_decap) {
-            decap_gtpu.apply();
+            // GTPU Decapsulate
+            if (fabric_md.needs_gtpu_decap) {
+                decap_gtpu.apply();
+            }
+
+            // Redirect to a buffering device if needed and allowed,
+            // or load FAR info
+            if (fabric_md.bridged.needs_buffering && 
+                fabric_md.buffered_packet_count != MAX_BUFFERED_PACKETS) {
+                buffer_redirect.apply();
+            } else {
+                far_lookup.apply();
+                // In case needs_buffering was true but we hit MAX_BUFFERED_PACKETS
+                fabric_md.bridged.needs_buffering = false;
+            }
+
+            /* Leave out until notification feature is actually needed
+            if (fabric_md.notify_spgwc) {
+                // TODO: Should notification involve something other than cloning?
+                // Maybe generate a digest instead?
+                ig_tm_md.copy_to_cpu = 1;
+            }
+            */
+
+            // Nothing to be done immediately for forwarding or encapsulation.
+            // Forwarding is done by other parts of fabric.p4, and
+            // encapsulation is done in the egress
+
+            // Needed for correct GTPU encapsulation in egress
+            fabric_md.bridged.spgw_ipv4_len = hdr.ipv4.total_len;
         }
-
-        // Redirect to a buffering device if needed and allowed,
-        // or load FAR info
-        if (fabric_md.bridged.needs_buffering && 
-            fabric_md.buffered_packet_count != MAX_BUFFERED_PACKETS) {
-            buffer_redirect.apply();
-        } else {
-            // In case needs_buffering was true but we hit MAX_BUFFERED_PACKETS
-            fabric_md.bridged.needs_buffering = false;
-            far_lookup.apply();
-        }
-
-        /* Leave out until notification feature is actually needed
-        if (fabric_md.notify_spgwc) {
-            // TODO: Should notification involve something other than cloning?
-            // Maybe generate a digest instead?
-            ig_tm_md.copy_to_cpu = 1;
-        }
-        */
-
-        // Nothing to be done immediately for forwarding or encapsulation.
-        // Forwarding is done by other parts of fabric.p4, and
-        // encapsulation is done in the egress
-
-        // Needed for correct GTPU encapsulation in egress
-        fabric_md.bridged.spgw_ipv4_len = hdr.ipv4.total_len;
     }
 }
 
