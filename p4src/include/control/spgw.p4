@@ -13,6 +13,7 @@
 #define NUM_UPLINK_PDRS NUM_UES
 #define NUM_DOWNLINK_PDRS NUM_UES
 #define NUM_FARS 2*NUM_UES
+#define MAX_BUFFERED_PACKETS = 1024
 
 control SpgwIngress(
         /* Fabric.p4 */
@@ -26,25 +27,32 @@ control SpgwIngress(
     //===== Interface Tables ======//
     //=============================//
 
-    action set_source_iface(SpgwInterface src_iface, SpgwDirection direction,
-                            bool skip_spgw) {
-        // Interface type can be access, core, n6_lan, etc (see InterfaceType enum)
-        // If interface is from the control plane, direction can be either up or down
-        fabric_md.spgw_src_iface    = src_iface;
+    action set_source_offload_iface(SpgwInterface src_iface, SpgwDirection direction) {
+        fabric_md.bridged.spgw_src_iface    = src_iface;
         fabric_md.spgw_direction    = direction;
-        fabric_md.bridged.skip_spgw = skip_spgw;
+        fabric_md.bridged.needs_buffering = false;
+        // Packets coming from offload devices will have some context saved in repurposed header fields
+        fabric_md.buffered_packet_count = hdr.gtpu.teid;
+        fabric_md.bridged.far_id = hdr.gtpu_options.first_short;
+        fabric_md.bridged.pdr_ctr_id = hdr.gtpu_options.second_short;
     }
 
-    // TODO: check also that gtpu.msgtype == GTP_GPDU... somewhere
+    action set_source_iface(SpgwInterface src_iface, SpgwDirection direction) {
+        fabric_md.bridged.spgw_src_iface    = src_iface;
+        fabric_md.spgw_direction    = direction;
+        // has to be initialized to an impossible value
+        fabric_md.buffered_packet_count = MAX_BUFFERED_PACKETS + 1;
+    }
+
     table interface_lookup {
         key = {
-            hdr.ipv4.dst_addr  : lpm    @name("ipv4_dst_addr");  // outermost header
+            hdr.ipv4.dst_addr  : lpm    @name("ipv4_dst_addr");  // outermost IPv4 header
             hdr.gtpu.isValid() : exact  @name("gtpu_is_valid");
         }
         actions = {
             set_source_iface;
         }
-        const default_action = set_source_iface(SpgwInterface.UNKNOWN, SpgwDirection.UNKNOWN, true);
+        const default_action = set_source_iface(SpgwInterface.UNKNOWN, SpgwDirection.UNKNOWN);
     }
 
     //=============================//
@@ -53,26 +61,15 @@ control SpgwIngress(
 
     action set_pdr_attributes(pdr_ctr_id_t ctr_id,
                               far_id_t far_id,
-                              bool needs_gtpu_decap) {
-        fabric_md.pdr_hit = true;
-        fabric_md.far_id = far_id;
+                              bool needs_gtpu_decap,
+                              bool needs_buffering) {
+        fabric_md.bridged.far_id = far_id;
         fabric_md.bridged.pdr_ctr_id = ctr_id;
         fabric_md.needs_gtpu_decap = needs_gtpu_decap;
+        fabric_md.bridged.needs_buffering = needs_buffering;
     }
 
-    // The non-flexible PDR lookups scale well and cover the average case PDR
-    table from_offload_pdr_lookup {
-        key = {
-            // Packets from offload devices will always be encapped.
-            // Match on only the UE addr to improve scaling
-            hdr.inner_ipv4.dst_addr : exact @name("ue_addr");
-        }
-        actions = {
-            set_pdr_attributes;
-        }
-        size = NUM_DOWNLINK_PDRS;
-    }
-    table from_core_pdr_lookup {
+    table downlink_pdr_lookup {
         key = {
             // only available ipv4 header
             hdr.ipv4.dst_addr : exact @name("ue_addr");
@@ -81,9 +78,10 @@ control SpgwIngress(
             set_pdr_attributes;
         }
         size = NUM_DOWNLINK_PDRS;
+        const default_action = set_pdr_attributes(DEFAULT_PDR_CTR_ID, DEFAULT_FAR_ID, false, false);
     }
 
-    table from_access_pdr_lookup {
+    table uplink_pdr_lookup {
         key = {
             hdr.ipv4.dst_addr           : exact @name("tunnel_ipv4_dst");
             hdr.gtpu.teid               : exact @name("teid");
@@ -92,35 +90,9 @@ control SpgwIngress(
             set_pdr_attributes;
         }
         size = NUM_UPLINK_PDRS;
+        const default_action = set_pdr_attributes(DEFAULT_PDR_CTR_ID, DEFAULT_FAR_ID, true, false);
     }
 
-    // This table scales poorly and covers uncommon PDRs
-    table flexible_pdr_lookup {
-        key = {
-            fabric_md.spgw_src_iface         : ternary @name("src_iface");
-            fabric_md.spgw_direction         : ternary @name("direction");
-            // GTPU
-            hdr.gtpu.isValid()               : ternary @name("gtpu_is_valid");
-            hdr.gtpu.teid                    : ternary @name("teid");
-            // SDF
-            // outer 5-tuple
-            hdr.ipv4.src_addr                : ternary @name("ipv4_src");
-            hdr.ipv4.dst_addr                : ternary @name("ipv4_dst");
-            hdr.ipv4.protocol                : ternary @name("ip_proto");
-            fabric_md.bridged.l4_sport       : ternary @name("l4_sport");
-            fabric_md.bridged.l4_dport       : ternary @name("l4_dport");
-            // inner 5-tuple
-            hdr.inner_ipv4.src_addr          : ternary @name("inner_ipv4_src");
-            hdr.inner_ipv4.dst_addr          : ternary @name("inner_ipv4_dst");
-            hdr.inner_ipv4.protocol          : ternary @name("inner_ip_proto");
-            fabric_md.bridged.inner_l4_sport : ternary @name("inner_l4_sport");
-            fabric_md.bridged.inner_l4_dport : ternary @name("inner_l4_dport");
-        }
-        actions = {
-            set_pdr_attributes;
-        }
-        const default_action = set_pdr_attributes(DEFAULT_PDR_CTR_ID, DEFAULT_FAR_ID, false);
-    }
 
     //=============================//
     //===== FAR Tables ======//
@@ -128,22 +100,20 @@ control SpgwIngress(
 
     action load_normal_far_attributes(bool drop,
                                       bool notify_cp) {
-        // general far attributes
-        fabric_md.far_dropped = drop;
-        fabric_md.notify_spgwc   = notify_cp;
+        // Do dropping in the same way as fabric's filtering.p4
+        fabric_md.skip_forwarding = drop || fabric_md.skip_forwarding;
+        fabric_md.skip_next = drop || fabric_md.skip_next;
+
+        fabric_md.notify_spgwc = notify_cp;
     }
+
     action load_tunnel_far_attributes(bool      drop,
                                       bool      notify_cp,
-                                      bool      to_offload,
                                       bit<16>   tunnel_src_port,
                                       bit<32>   tunnel_src_addr,
                                       bit<32>   tunnel_dst_addr,
                                       teid_t    teid) {
-        // general far attributes
-        fabric_md.far_dropped = drop;
-        fabric_md.notify_spgwc = notify_cp;
-        // If the packet is destined for an offload device
-        fabric_md.bridged.to_spgw_offload = to_offload;
+        load_normal_far_attributes(drop, notify_cp);
         // GTP tunnel attributes
         fabric_md.bridged.needs_gtpu_encap = true;
         fabric_md.bridged.gtpu_teid = teid;
@@ -157,7 +127,7 @@ control SpgwIngress(
 
     table far_lookup {
         key = {
-            fabric_md.far_id : exact @name("far_id");
+            fabric_md.bridged.far_id : exact @name("far_id");
         }
         actions = {
             load_normal_far_attributes;
@@ -167,6 +137,8 @@ control SpgwIngress(
         const default_action = load_normal_far_attributes(true, false);
         size = NUM_FARS;
     }
+
+
 
     //=============================//
     //===== Misc Things ======//
@@ -188,23 +160,27 @@ control SpgwIngress(
         hdr.inner_ipv4.setInvalid();
         hdr.gtpu.setInvalid();
     }
+    @hidden
     action decap_inner_tcp() {
         decap_inner_common();
         hdr.udp.setInvalid();
         hdr.tcp = hdr.inner_tcp;
         hdr.inner_tcp.setInvalid();
     }
+    @hidden
     action decap_inner_udp() {
         decap_inner_common();
         hdr.udp = hdr.inner_udp;
         hdr.inner_udp.setInvalid();
     }
+    @hidden
     action decap_inner_icmp() {
         decap_inner_common();
         hdr.udp.setInvalid();
         hdr.icmp = hdr.inner_icmp;
         hdr.inner_icmp.setInvalid();
     }
+    @hidden
     action decap_inner_unknown() {
         decap_inner_common();
         hdr.udp.setInvalid();
@@ -231,54 +207,132 @@ control SpgwIngress(
         size = 4;
     }
 
+    //==================================//
+    //===== Buffer Offload Things ======//
+    //==================================//
+
+    Register<paired_32bit,_>(NUM_FARS) buffer_count_register;
+
+    RegisterAction<bit<32>, _, bit<32>>(buffer_count_register) _write_buffered_count = {
+        void apply(inout bit<32> value, out bit<32> rv) {
+            // check if the count retrieved from the packet header equals the count we have saved
+            if (value == fabric_md.buffered_packet_count)
+                // if it was, the buffer loop is empty, so buffer no more packets
+                value = MAX_BUFFERED_PACKETS;
+            // retval is ignored
+            rv = 0;
+        }
+    };
+
+    RegisterAction<bit<32>, _, bit<32>>(buffer_count_register) _get_buffered_count = {
+        void apply(inout bit<32> value, out bit<32> rv) {
+            bit<32> old_value;
+            old_value = value;
+                
+            // value = min(MAX_BUFFERED_PACKETS, value + 1)
+            if (value >= MAX_BUFFERED_PACKETS)
+                value = MAX_BUFFERED_PACKETS;
+            else
+                value = value + 1;
+
+            rv = value;
+        }
+    };
+
+    action write_buffered_count() {
+        _write_buffered_count.execute(fabric_md.bridged.far_id);
+    }
+    action get_buffered_count() {
+        fabric_md.buffered_packet_count = _get_buffered_count.execute(fabric_md.bridged.far_id);
+    }
+
+    table get_or_check_packet_identifier {
+        key = {
+            fabric_md.bridged.needs_buffering : exact;
+            fabric_md.bridge.spgw_src_iface : ternary;
+        }
+        actions = {
+            get_packet_identifier;
+            check_packet_identifier;
+        }
+        const entries = {
+            // If a packet is headed to the buffer, generate an identifier
+            (true, 0 && 0) : generate_packet_signature();
+            // If a packet came from the buffer, check the identifier
+            (false, SpgwInterface.FROM_BUFFER) : check_buffer_path();
+        }
+        size = 2;
+    }
+
+
+    action load_buffer_tunnel_attributes(bit<32> tunnel_src_addr,
+                                      bit<32> tunnel_dst_addr) {
+        // Basically a normal GTPU tunnel encapsulation, but the
+        // TEID stores the buffered packet count
+        load_tunnel_far_attributes(false, false, UDP_PORT_GTPU,
+                                tunnel_src_addr, tunnel_dst_addr,
+                                fabric_md.buffered_packet_count);
+    }
+
+
+    // This is only a programmable table and not a constant action because the 
+    table buffer_redirect {
+        key = {
+            fabric_md.bridged.needs_buffering : exact @name("needs_buffering");
+        }
+        actions = {
+            load_buffer_tunnel_attributes;
+        }
+        size = 1;
+    }
+
+
     //=============================//
     //===== Apply Block ======//
     //=============================//
     apply {
 
-        // Interfaces
+        // Interface table, which gates entrance to this pipeline
         interface_lookup.apply();
 
-        // If interface table missed, or the interface skips PDRs/FARs (TODO: is that a thing?)
-        if (fabric_md.bridged.skip_spgw) return;
-
-        // PDRs
-        // Try the efficient PDR tables first (This PDR partitioning only works
-        // if the PDRs do not overlap. FIXME: does this assumption hold?)
-        if (fabric_md.spgw_src_iface == SpgwInterface.FROM_OFFLOAD) {
-            from_offload_pdr_lookup.apply();
-        } else if (fabric_md.spgw_src_iface == SpgwInterface.ACCESS) {
-            from_access_pdr_lookup.apply();
+        // Packet Detection Rule tables
+        if (hdr.gtpu.isValid()) {
+            uplink_pdr_lookup.apply();
         } else {
-            from_core_pdr_lookup.apply();
+            downlink_pdr_lookup.apply();
         }
-        // Inefficient PDR table if efficient tables missed
-        if (!fabric_md.pdr_hit) {
-            flexible_pdr_lookup.apply();
-        }
-        if (fabric_md.spgw_src_iface != SpgwInterface.FROM_OFFLOAD) {
+
+        // Don't check interface result for exiting pipeline until after PDR tables, 
+        //  to allow PDR and interface tables to share a stage
+        if (fabric_md.bridged.spgw_src_iface == SpgwInterface.UNKNOWN) {
+            return;
+        } 
+        if (fabric_md.bridged.spgw_src_iface != SpgwInterface.FROM_BUFFER) {
             // Packets from an offload device have already been counted by ingress
             pdr_counter.count(fabric_md.bridged.pdr_ctr_id);
         }
+
+        get_or_check_packet_identifier.apply();
 
         // GTPU Decapsulate
         if (fabric_md.needs_gtpu_decap) {
             decap_gtpu.apply();
         }
 
-        // FARs
-        // Load FAR info
-        far_lookup.apply();
+        // Load FAR info, or redirect to a buffering device
+        if (fabric_md.bridged.needs_buffering && 
+            fabric_md.buffered_packet_count != MAX_BUFFERED_PACKETS) {
+            buffer_redirect.apply();
+        } else {
+            // In case needs_buffering was true but we hit MAX_BUFFERED_PACKETS
+            fabric_md.bridged.needs_buffering = false;
+            far_lookup.apply();
+        }
 
         if (fabric_md.notify_spgwc) {
-            // TODO: should notification involve something other than cloning?
+            // TODO: Should notification involve something other than cloning?
+            // Maybe generate a digest instead?
             ig_tm_md.copy_to_cpu = 1;
-        }
-        if (fabric_md.far_dropped) {
-            // Do dropping in the same way as fabric's filtering.p4, so we can traverse
-            // the ACL table, which is good for cases like DHCP.
-            fabric_md.skip_forwarding = true;
-            fabric_md.skip_next = true;
         }
 
         // Nothing to be done immediately for forwarding or encapsulation.
@@ -338,19 +392,34 @@ control SpgwEgress(
         hdr.outer_gtpu.teid = fabric_md.bridged.gtpu_teid;
     }
 
+    @hidden
+    action save_context_for_buffering() {
+        // Packet signature was in fabric_md.bridged.gtpu_teid, so it is already saved
+        // in hdr.outer_gtpu.teid
+        hdr.outer_gtpu.seq_flag = 1; // signal that options are present
+        hdr.outer_gtpu_options.setValid();
+        hdr.outer_gtpu_options.first_short = fabric_md.bridged.far_id;
+        hdr.outer_gtpu_options.second_short = fabric_md.bridged.pdr_ctr_id;
+    }
+
     apply {
-        if (fabric_md.bridged.skip_spgw) return;
-        if (!fabric_md.bridged.to_spgw_offload) {
-            // Don't count packets destined for an offload device. They might get dropped
-            pdr_counter.count(fabric_md.bridged.pdr_ctr_id);
-        }
+
+        if (fabric_md.bridged.spgw_src_iface == SpgwInterface.UNKNOWN) return;
 
         if (fabric_md.bridged.needs_gtpu_encap) {
             gtpu_encap();
+            if (fabric_md.bridged.needs_buffering) {
+                save_context_for_buffering();
+            }
 #ifdef WITH_INT
             fabric_md.int_mirror_md.skip_gtpu_headers = 1;
 #endif // WITH_INT
         }
+
+        if (!fabric_md.bridged.needs_buffering) {
+            // Only count packets in egress if they are not destined for an offload
+            pdr_counter.count(fabric_md.bridged.pdr_ctr_id);
+        } 
     }
 }
 #endif // __SPGW__

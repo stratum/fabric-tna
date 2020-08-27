@@ -66,22 +66,18 @@ typedef bit<16> l4_port_t;
 
 // SPGW types
 typedef bit<32> teid_t;
-typedef bit<32> far_id_t;
+typedef bit<16> far_id_t;
 typedef bit<16> pdr_ctr_id_t;
 enum bit<2> SpgwDirection {
     UNKNOWN             = 0x0,
     UPLINK              = 0x1,
     DOWNLINK            = 0x2,
-    OTHER               = 0x3
 }
-enum bit<8> SpgwInterface {
+enum bit<2> SpgwInterface {
     UNKNOWN       = 0x0,
     ACCESS        = 0x1,
     CORE          = 0x2,
-    N6_LAN        = 0x3, // unused
-    VN_INTERNAL   = 0x4, // unused
-    CONTROL_PLANE = 0x5, // N4 and N4-u
-    FROM_OFFLOAD  = 0x6 // for buffer and qos devices
+    FROM_BUFFER   = 0x3
 }
 
 const bit<16> ETHERTYPE_QINQ = 0x88A8;

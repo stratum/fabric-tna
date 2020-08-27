@@ -117,12 +117,23 @@ header gtpu_t {
     bit<3>  version;    /* version */
     bit<1>  pt;         /* protocol type */
     bit<1>  spare;      /* reserved */
-    bit<1>  ex_flag;    /* next extension hdr present? */
-    bit<1>  seq_flag;   /* sequence no. */
+    bit<1>  ex_flag;    /* next extension hdr present ? */
+    bit<1>  seq_flag;   /* sequence number present ? */
     bit<1>  npdu_flag;  /* n-pdn number present ? */
     bit<8>  msgtype;    /* message type */
     bit<16> msglen;     /* message length */
     teid_t  teid;       /* tunnel endpoint id */
+}
+// GTPU optional fields
+header gtpu_options_t {
+    // This should actually be three fields: sequence number, N-PDU number,
+    // and next extension header type, but we're going to use the space to 
+    // save pipeline context when packets are sent to offload devices. 
+    // Putting gibberish in the next extension header type field is ok 
+    // if we ensure ex_flag == 0, signalling that the field should not be 
+    // interpreted by a parser. Otherwise corruption could occur.
+    bit<16> first_short;
+    bit<16> second_short;
 }
 #endif // WITH_SPGW
 
@@ -152,6 +163,7 @@ header bridged_metadata_t {
     // bit<1>          inner_vlan_cfi;
 #endif // WITH_DOUBLE_VLAN_TERMINATION
 #ifdef WITH_SPGW
+    far_id_t        far_id;
     bool            to_spgw_offload;
     bit<16>         spgw_ipv4_len;
     bool            needs_gtpu_encap;
@@ -184,7 +196,6 @@ struct fabric_ingress_metadata_t {
     bool               pdr_hit;
     bool               far_dropped;
     bool               notify_spgwc;
-    far_id_t           far_id;
     SpgwInterface      spgw_src_iface;
     SpgwDirection      spgw_direction;
 #endif // WITH_SPGW
