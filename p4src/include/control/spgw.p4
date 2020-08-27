@@ -301,7 +301,7 @@ control SpgwIngress(
             downlink_pdr_lookup.apply();
         }
 
-        if (!fabric_md.bridged.skip_spgw) {
+        if (fabric_md.bridged.skip_spgw) {
             return;
         }
         if (!fabric_md.from_buffer) {
