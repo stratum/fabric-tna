@@ -165,7 +165,6 @@ header bridged_metadata_t {
 #ifdef WITH_SPGW
     far_id_t        far_id;
     bool            needs_buffering;
-    SpgwInterface   spgw_src_iface;
     bit<16>         spgw_ipv4_len;
     bool            needs_gtpu_encap;
     bool            skip_spgw;

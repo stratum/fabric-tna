@@ -28,13 +28,45 @@ control SpgwIngress(
         inout ingress_intrinsic_metadata_for_tm_t   ig_tm_md) {
 
 
-    //=============================//
-    //===== Interface Tables ======//
-    //=============================//
+    //==================================//
+    //===== Buffer Offload Things ======//
+    //==================================//
 
-    action set_source_offload_iface(SpgwInterface src_iface, SpgwDirection direction) {
-        fabric_md.bridged.spgw_src_iface    = src_iface;
-        fabric_md.spgw_direction    = direction;
+    Register<bit<32>,_>(NUM_FARS) buffer_count_register;
+
+    RegisterAction<bit<32>, _, bit<32>>(buffer_count_register) _write_buffered_count = {
+        void apply(inout bit<32> value, out bit<32> rv) {
+            // check if the count retrieved from the packet header equals the count we have saved
+            if (value == fabric_md.buffered_packet_count)
+                // if it was, the buffer loop is empty, so buffer no more packets
+                value = MAX_BUFFERED_PACKETS;
+            // retval is ignored
+            rv = 0;
+        }
+    };
+
+    RegisterAction<bit<32>, _, bit<32>>(buffer_count_register) _get_buffered_count = {
+        void apply(inout bit<32> value, out bit<32> rv) {
+            // value = min(MAX_BUFFERED_PACKETS, value + 1)
+            if (value >= MAX_BUFFERED_PACKETS)
+                value = MAX_BUFFERED_PACKETS;
+            else
+                value = value + 1;
+
+            rv = value;
+        }
+    };
+
+    RegisterAction<bit<32>, _, bit<32>>(buffer_count_register) _clear_buffered_count = {
+        void apply(inout bit<32> value, out bit<32> rv) {
+            value = 0;
+            rv = 0;
+        }
+    };
+
+    @hidden
+    action _receive_from_buffer() {
+        fabric_md.bridged.skip_spgw = false;
         fabric_md.from_buffer = true;
         // Packets coming from offload devices will have some context saved in repurposed header fields
         fabric_md.buffered_packet_count = hdr.gtpu.teid;
@@ -43,40 +75,52 @@ control SpgwIngress(
         fabric_md.bridged.pdr_ctr_id = hdr.gtpu_options.second_short;
         fabric_md.needs_gtpu_decap = true;
         fabric_md.bridged.needs_buffering = false;
+        // Store the received buffer count
+        _write_buffered_count.execute(hdr.gtpu_options.first_short);
     }
-
-    action set_source_iface(SpgwInterface src_iface, SpgwDirection direction) {
-        fabric_md.bridged.spgw_src_iface    = src_iface;
-        fabric_md.spgw_direction    = direction;
-        // has to be initialized to an impossible value TODO: is that still the case?
-        fabric_md.buffered_packet_count = MAX_BUFFERED_PACKETS + 1;
-        // needed to circumvent compiler bug in matching spgw_src_iface in a const entry
-        fabric_md.from_buffer = false;
-    }
-
-    table interface_lookup {
+    @hidden
+    table receive_from_buffer {
         key = {
-            hdr.ipv4.dst_addr  : lpm    @name("ipv4_dst_addr");  // outermost IPv4 header
-            hdr.gtpu.isValid() : exact  @name("gtpu_is_valid");
+            hdr.gtpu_options.isValid() : exact;
         }
         actions = {
-            set_source_iface;
+            _receive_from_buffer;
         }
-        const default_action = set_source_iface(SpgwInterface.UNKNOWN, SpgwDirection.UNKNOWN);
+        const entries = {
+            (true) : _receive_from_buffer();
+        }
+        size = 1;
     }
+
 
     //=============================//
     //===== PDR Tables ======//
     //=============================//
 
-    action set_pdr_attributes(pdr_ctr_id_t ctr_id,
+    action pdr_miss() {
+        fabric_md.bridged.skip_spgw = true;
+    }
+
+    action set_pdr_buffer_attributes(pdr_ctr_id_t ctr_id,
                               far_id_t far_id,
-                              bool needs_gtpu_decap,
-                              bool needs_buffering) {
+                              bool needs_gtpu_decap) {
+        fabric_md.bridged.skip_spgw = false;
         fabric_md.bridged.far_id = far_id;
         fabric_md.bridged.pdr_ctr_id = ctr_id;
         fabric_md.needs_gtpu_decap = needs_gtpu_decap;
-        fabric_md.bridged.needs_buffering = needs_buffering;
+        fabric_md.bridged.needs_buffering = true;
+        fabric_md.buffered_packet_count = _get_buffered_count.execute(far_id);
+    }
+
+    action set_pdr_attributes(pdr_ctr_id_t ctr_id,
+                              far_id_t far_id,
+                              bool needs_gtpu_decap) {
+        fabric_md.bridged.skip_spgw = false;
+        fabric_md.bridged.far_id = far_id;
+        fabric_md.bridged.pdr_ctr_id = ctr_id;
+        fabric_md.needs_gtpu_decap = needs_gtpu_decap;
+        fabric_md.bridged.needs_buffering = false;
+        _clear_buffered_count.execute(far_id);
     }
 
     table downlink_pdr_lookup {
@@ -86,9 +130,11 @@ control SpgwIngress(
         }
         actions = {
             set_pdr_attributes;
+            set_pdr_buffer_attributes;
+            pdr_miss;
         }
         size = NUM_DOWNLINK_PDRS;
-        const default_action = set_pdr_attributes(DEFAULT_PDR_CTR_ID, DEFAULT_FAR_ID, false, false);
+        const default_action = pdr_miss();
     }
 
     table uplink_pdr_lookup {
@@ -98,9 +144,10 @@ control SpgwIngress(
         }
         actions = {
             set_pdr_attributes;
+            pdr_miss;
         }
         size = NUM_UPLINK_PDRS;
-        const default_action = set_pdr_attributes(DEFAULT_PDR_CTR_ID, DEFAULT_FAR_ID, true, false);
+        const default_action = pdr_miss();
     }
 
 
@@ -111,10 +158,10 @@ control SpgwIngress(
     action load_normal_far_attributes(bool drop,
                                       bool notify_cp) {
         // Do dropping in the same way as fabric's filtering.p4
-        fabric_md.skip_forwarding = fabric_md.skip_forwarding;
-        fabric_md.skip_next = fabric_md.skip_next;
+        fabric_md.skip_forwarding = drop;
+        fabric_md.skip_next = drop;
 
-        fabric_md.notify_spgwc = notify_cp;
+        fabric_md.notify_spgwc = notify_cp; // currently does nothing
     }
 
     action load_tunnel_far_attributes(bool      drop,
@@ -149,10 +196,31 @@ control SpgwIngress(
     }
 
 
-
     //=============================//
     //===== Misc Things ======//
     //=============================//
+
+    action load_buffer_tunnel_attributes(bit<32> tunnel_src_addr,
+                                      bit<32> tunnel_dst_addr) {
+        // Basically a normal GTPU tunnel encapsulation, but the
+        // TEID stores the buffered packet count, and in egress
+        // some metadata will be saved in GTPU options
+        load_tunnel_far_attributes(false, false, UDP_PORT_GTPU,
+                                tunnel_src_addr, tunnel_dst_addr,
+                                fabric_md.buffered_packet_count);
+    }
+
+    // This is a table and not an apply block action because the 
+    // tunnel source and dest addresses need to be writeable at runtime
+    table buffer_redirect {
+        key = {
+            fabric_md.bridged.needs_buffering : exact @name("needs_buffering");
+        }
+        actions = {
+            load_buffer_tunnel_attributes;
+        }
+        size = 1;
+    }
 
     Counter<bit<64>, bit<16>>(MAX_PDR_COUNTERS, CounterType_t.PACKETS_AND_BYTES) pdr_counter;
 
@@ -217,99 +285,6 @@ control SpgwIngress(
         size = 4;
     }
 
-    //==================================//
-    //===== Buffer Offload Things ======//
-    //==================================//
-#define BUFFER_REG_INDEX fabric_md.bridged.far_id
-
-    Register<bit<32>,_>(NUM_FARS) buffer_count_register;
-
-    RegisterAction<bit<32>, _, bit<32>>(buffer_count_register) _write_buffered_count = {
-        void apply(inout bit<32> value, out bit<32> rv) {
-            // check if the count retrieved from the packet header equals the count we have saved
-            if (value == fabric_md.buffered_packet_count)
-                // if it was, the buffer loop is empty, so buffer no more packets
-                value = MAX_BUFFERED_PACKETS;
-            // retval is ignored
-            rv = 0;
-        }
-    };
-
-    RegisterAction<bit<32>, _, bit<32>>(buffer_count_register) _get_buffered_count = {
-        void apply(inout bit<32> value, out bit<32> rv) {
-            // value = min(MAX_BUFFERED_PACKETS, value + 1)
-            if (value >= MAX_BUFFERED_PACKETS)
-                value = MAX_BUFFERED_PACKETS;
-            else
-                value = value + 1;
-
-            rv = value;
-        }
-    };
-
-    RegisterAction<bit<32>, _, bit<32>>(buffer_count_register) _clear_buffered_count = {
-        void apply(inout bit<32> value, out bit<32> rv) {
-            value = 0;
-            rv = 0;
-        }
-    };
-
-    @hidden
-    action write_buffered_count() {
-        _write_buffered_count.execute(BUFFER_REG_INDEX);
-    }
-    @hidden
-    action get_buffered_count() {
-        fabric_md.buffered_packet_count = _get_buffered_count.execute(BUFFER_REG_INDEX);
-    }
-    @hidden
-    action clear_buffered_count() {
-        _clear_buffered_count.execute(BUFFER_REG_INDEX);
-    }
-    @hidden
-    table get_or_check_buffered_count {
-        key = {
-            fabric_md.bridged.needs_buffering : exact;
-            fabric_md.from_buffer : exact;
-        }
-        actions = {
-            get_buffered_count;
-            write_buffered_count;
-            clear_buffered_count;
-        }
-        const entries = {
-            // If a packet is headed to the buffer, increment and get the buffer count
-            (true,  false) : get_buffered_count();
-            // If a packet came from the buffer, compare the attached and stored counts
-            (false, true)  : write_buffered_count();
-            // Ensure the count is 0 if buffering isn't occurring
-            // Necessary to do in dataplane until stratum supports clearing registers
-            (false, false) : clear_buffered_count();
-        }
-        size = 3;
-    }
-
-
-    action load_buffer_tunnel_attributes(bit<32> tunnel_src_addr,
-                                      bit<32> tunnel_dst_addr) {
-        // Basically a normal GTPU tunnel encapsulation, but the
-        // TEID stores the buffered packet count
-        load_tunnel_far_attributes(false, false, UDP_PORT_GTPU,
-                                tunnel_src_addr, tunnel_dst_addr,
-                                fabric_md.buffered_packet_count);
-    }
-
-
-    // This is only a programmable table and not a constant action because the 
-    table buffer_redirect {
-        key = {
-            fabric_md.bridged.needs_buffering : exact @name("needs_buffering");
-        }
-        actions = {
-            load_buffer_tunnel_attributes;
-        }
-        size = 1;
-    }
 
 
     //=============================//
@@ -317,34 +292,30 @@ control SpgwIngress(
     //=============================//
     apply {
 
-        // Interface table, which gates entrance to this pipeline
-        interface_lookup.apply();
-
         // Packet Detection Rule tables
-        if (hdr.gtpu.isValid()) {
+        if (hdr.gtpu_options.isValid()) {
+            receive_from_buffer.apply();
+        } else if (hdr.gtpu.isValid()) {
             uplink_pdr_lookup.apply();
         } else {
             downlink_pdr_lookup.apply();
         }
 
-        // Don't check interface result for exiting pipeline until after PDR tables, 
-        //  to allow PDR and interface tables to share a stage
-        if (fabric_md.bridged.spgw_src_iface == SpgwInterface.UNKNOWN) {
+        if (!fabric_md.bridged.skip_spgw) {
             return;
-        } 
-        if (fabric_md.bridged.spgw_src_iface != SpgwInterface.FROM_BUFFER) {
+        }
+        if (!fabric_md.from_buffer) {
             // Packets from an offload device have already been counted by ingress
             pdr_counter.count(fabric_md.bridged.pdr_ctr_id);
         }
-
-        get_or_check_buffered_count.apply();
 
         // GTPU Decapsulate
         if (fabric_md.needs_gtpu_decap) {
             decap_gtpu.apply();
         }
 
-        // Load FAR info, or redirect to a buffering device
+        // Redirect to a buffering device if needed and allowed,
+        // or load FAR info
         if (fabric_md.bridged.needs_buffering && 
             fabric_md.buffered_packet_count != MAX_BUFFERED_PACKETS) {
             buffer_redirect.apply();
@@ -354,11 +325,13 @@ control SpgwIngress(
             far_lookup.apply();
         }
 
+        /* Leave out until notification feature is actually needed
         if (fabric_md.notify_spgwc) {
             // TODO: Should notification involve something other than cloning?
             // Maybe generate a digest instead?
             ig_tm_md.copy_to_cpu = 1;
         }
+        */
 
         // Nothing to be done immediately for forwarding or encapsulation.
         // Forwarding is done by other parts of fabric.p4, and
@@ -429,7 +402,7 @@ control SpgwEgress(
 
     apply {
 
-        if (fabric_md.bridged.spgw_src_iface == SpgwInterface.UNKNOWN) return;
+        if (fabric_md.bridged.skip_spgw) return;
 
         if (fabric_md.bridged.needs_gtpu_encap) {
             gtpu_encap();
