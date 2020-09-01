@@ -1216,7 +1216,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             "FabricIngress.spgw_ingress.set_pdr_attributes",
             [
                 ("ctr_id", stringify(ctr_id, 2)),
-                ("far_id", stringify(far_id, 2)),
+                ("far_id", stringify(far_id, 4)),
                 ("needs_gtpu_decap", stringify(1, 1))
             ],
         )
@@ -1234,7 +1234,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             action_name,
             [
                 ("ctr_id", stringify(ctr_id, 2)),
-                ("far_id", stringify(far_id, 2)),
+                ("far_id", stringify(far_id, 4)),
                 ("needs_gtpu_decap", stringify(0, 1))
             ],
         )
@@ -1262,7 +1262,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         self.push_update_add_entry_to_action(
             req,
             "FabricIngress.spgw_ingress.far_lookup",
-            [self.Exact("far_id", stringify(far_id, 2))],
+            [self.Exact("far_id", stringify(far_id, 4))],
             action_name,
             action_params,
         )
@@ -1413,8 +1413,8 @@ class SpgwSimpleTest(IPv4UnicastTest):
         exp_pkt = pkt_add_gtp(exp_pkt,
                               out_ipv4_src=BUFF_FACING_IFACE_IPV4,
                               out_ipv4_dst=BUFF_DEVICE_IPV4,
-                              teid=packets_sent_to_buffer,
-                              gtpu_option_short1=far_id,
+                              teid=far_id,
+                              gtpu_option_short1=packets_sent_to_buffer,
                               gtpu_option_short2=ctr_id,
                               sport=UDP_GTP_PORT)
         if mpls:
@@ -1493,8 +1493,8 @@ class SpgwSimpleTest(IPv4UnicastTest):
         exp_pkt_to_buffer = pkt_add_gtp(exp_pkt_to_buffer,
                                         out_ipv4_src=BUFF_FACING_IFACE_IPV4,
                                         out_ipv4_dst=BUFF_DEVICE_IPV4,
-                                        teid=packets_sent_to_buffer,
-                                        gtpu_option_short1=far_id,
+                                        teid=far_id,
+                                        gtpu_option_short1=packets_sent_to_buffer,
                                         gtpu_option_short2=ctr_id,
                                         sport=UDP_GTP_PORT)
 
@@ -1505,8 +1505,8 @@ class SpgwSimpleTest(IPv4UnicastTest):
         pkt_from_buffer = pkt_add_gtp(pkt_from_buffer,
                                       out_ipv4_src=BUFF_DEVICE_IPV4,
                                       out_ipv4_dst=BUFF_FACING_IFACE_IPV4,
-                                      teid=packets_sent_to_buffer,
-                                      gtpu_option_short1=far_id,
+                                      teid=far_id,
+                                      gtpu_option_short1=packets_sent_to_buffer,
                                       gtpu_option_short2=ctr_id,
                                       sport=UDP_GTP_PORT)
 

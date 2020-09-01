@@ -66,8 +66,9 @@ typedef bit<32> ipv4_addr_t;
 typedef bit<16> l4_port_t;
 
 // SPGW types
+#define BUFF_REG_CELL_WIDTH 16
 typedef bit<32> teid_t;
-typedef bit<16> far_id_t;
+typedef bit<32> far_id_t;
 typedef bit<16> pdr_ctr_id_t;
 enum bit<2> SpgwDirection {
     UNKNOWN             = 0x0,

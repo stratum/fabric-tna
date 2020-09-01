@@ -163,7 +163,7 @@ header bridged_metadata_t {
     // bit<1>          inner_vlan_cfi;
 #endif // WITH_DOUBLE_VLAN_TERMINATION
 #ifdef WITH_SPGW
-    far_id_t        far_id;
+    bit<BUFF_REG_CELL_WIDTH> buffered_packet_count;
     bool            needs_buffering;
     bit<16>         spgw_ipv4_len;
     bool            needs_gtpu_encap;
@@ -191,8 +191,8 @@ struct fabric_ingress_metadata_t {
     next_id_t          next_id;
     bool               is_loopback;
 #ifdef WITH_SPGW
+    far_id_t        far_id;
     bool               far_will_encap;
-    bit<32>            buffered_packet_count;
     bool               from_buffer;
     bool               inner_ipv4_checksum_err;
     bool               needs_gtpu_decap;

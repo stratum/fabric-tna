@@ -17,9 +17,6 @@
 #define NUM_DOWNLINK_PDRS NUM_UES
 #define NUM_FARS 2*NUM_UES
 
-#define DEFAULT_PDR_CTR_ID 0
-#define DEFAULT_FAR_ID 0
-
 control SpgwIngress(
         /* Fabric.p4 */
         inout parsed_headers_t                      hdr,
@@ -32,12 +29,12 @@ control SpgwIngress(
     //===== Buffer Offload Things ======//
     //==================================//
 
-    Register<bit<32>,_>(NUM_FARS) buffer_count_register;
+    Register<bit<BUFF_REG_CELL_WIDTH>,_>(NUM_FARS) buffer_count_register;
 
-    RegisterAction<bit<32>, _, bit<32>>(buffer_count_register) _write_buffered_count = {
-        void apply(inout bit<32> value, out bit<32> rv) {
+    RegisterAction<bit<BUFF_REG_CELL_WIDTH>, _, bit<16>>(buffer_count_register) _write_buffered_count = {
+        void apply(inout bit<BUFF_REG_CELL_WIDTH> value, out bit<16> rv) {
             // check if the count retrieved from the packet header equals the count we have saved
-            if (value == fabric_md.buffered_packet_count)
+            if (value == fabric_md.bridged.buffered_packet_count)
                 // if it was, the buffer loop is empty, so buffer no more packets
                 value = MAX_BUFFERED_PACKETS;
             // retval is ignored
@@ -45,8 +42,8 @@ control SpgwIngress(
         }
     };
 
-    RegisterAction<bit<32>, _, bit<32>>(buffer_count_register) _get_buffered_count = {
-        void apply(inout bit<32> value, out bit<32> rv) {
+    RegisterAction<bit<BUFF_REG_CELL_WIDTH>, _, bit<16>>(buffer_count_register) _get_buffered_count = {
+        void apply(inout bit<BUFF_REG_CELL_WIDTH> value, out bit<16> rv) {
             // value = min(MAX_BUFFERED_PACKETS, value + 1)
             if (value >= MAX_BUFFERED_PACKETS)
                 value = MAX_BUFFERED_PACKETS;
@@ -57,8 +54,8 @@ control SpgwIngress(
         }
     };
 
-    RegisterAction<bit<32>, _, bit<32>>(buffer_count_register) _clear_buffered_count = {
-        void apply(inout bit<32> value, out bit<32> rv) {
+    RegisterAction<bit<BUFF_REG_CELL_WIDTH>, _, bit<16>>(buffer_count_register) _clear_buffered_count = {
+        void apply(inout bit<BUFF_REG_CELL_WIDTH> value, out bit<16> rv) {
             value = 0;
             rv = 0;
         }
@@ -69,14 +66,14 @@ control SpgwIngress(
         fabric_md.bridged.skip_spgw = false;
         fabric_md.from_buffer = true;
         // Packets coming from offload devices will have some context saved in repurposed header fields
-        fabric_md.buffered_packet_count = hdr.gtpu.teid;
+        fabric_md.bridged.buffered_packet_count = hdr.gtpu_options.first_short;
         // PDR context
-        fabric_md.bridged.far_id = hdr.gtpu_options.first_short;
+        fabric_md.far_id = hdr.gtpu.teid;
         fabric_md.bridged.pdr_ctr_id = hdr.gtpu_options.second_short;
         fabric_md.needs_gtpu_decap = true;
         fabric_md.bridged.needs_buffering = false;
-        // Store the received buffer count
-        _write_buffered_count.execute(hdr.gtpu_options.first_short);
+        // Store the received buffer count, using the received FAR ID as the register index
+        _write_buffered_count.execute(hdr.gtpu.teid);
     }
     @hidden
     table receive_from_buffer {
@@ -106,10 +103,10 @@ control SpgwIngress(
                               bool needs_gtpu_decap) {
         fabric_md.bridged.skip_spgw = false;
         fabric_md.bridged.needs_buffering = true;
-        fabric_md.bridged.far_id = far_id;
+        fabric_md.far_id = far_id;
         fabric_md.bridged.pdr_ctr_id = ctr_id;
         fabric_md.needs_gtpu_decap = needs_gtpu_decap;
-        fabric_md.buffered_packet_count = _get_buffered_count.execute(far_id);
+        fabric_md.bridged.buffered_packet_count = _get_buffered_count.execute(far_id);
     }
 
     action set_pdr_attributes(pdr_ctr_id_t ctr_id,
@@ -117,7 +114,7 @@ control SpgwIngress(
                               bool needs_gtpu_decap) {
         fabric_md.bridged.skip_spgw = false;
         fabric_md.bridged.needs_buffering = false;
-        fabric_md.bridged.far_id = far_id;
+        fabric_md.far_id = far_id;
         fabric_md.bridged.pdr_ctr_id = ctr_id;
         fabric_md.needs_gtpu_decap = needs_gtpu_decap;
         _clear_buffered_count.execute(far_id);
@@ -200,7 +197,7 @@ control SpgwIngress(
 
     table far_lookup {
         key = {
-            fabric_md.bridged.far_id : exact @name("far_id");
+            fabric_md.far_id : exact @name("far_id");
         }
         actions = {
             load_uplink_far_attributes;
@@ -224,7 +221,7 @@ control SpgwIngress(
         // some metadata will be saved in GTPU options
         load_downlink_far_attributes(false, false, UDP_PORT_GTPU,
                                 tunnel_src_addr, tunnel_dst_addr,
-                                fabric_md.buffered_packet_count);
+                                fabric_md.far_id);
     }
 
     // This is a table and not an apply block action because the 
@@ -329,7 +326,7 @@ control SpgwIngress(
             // Redirect to a buffering device if needed and allowed,
             // or load FAR info
             if (fabric_md.bridged.needs_buffering && 
-                fabric_md.buffered_packet_count != MAX_BUFFERED_PACKETS) {
+                fabric_md.bridged.buffered_packet_count != MAX_BUFFERED_PACKETS) {
                 buffer_redirect.apply();
             } else {
                 far_lookup.apply();
@@ -411,11 +408,11 @@ control SpgwEgress(
 
     @hidden
     action save_context_for_buffering() {
-        // Packet signature was in fabric_md.bridged.gtpu_teid, so it is already saved
+        // FAR ID was earlier placed in fabric_md.bridged.gtpu_teid, so it is already saved
         // in hdr.outer_gtpu.teid
         hdr.outer_gtpu.seq_flag = 1; // signal that options are present
         hdr.outer_gtpu_options.setValid();
-        hdr.outer_gtpu_options.first_short = fabric_md.bridged.far_id;
+        hdr.outer_gtpu_options.first_short = fabric_md.bridged.buffered_packet_count;
         hdr.outer_gtpu_options.second_short = fabric_md.bridged.pdr_ctr_id;
         // Correct header length fields to include gtpu options
         hdr.outer_udp.len = hdr.ipv4.total_len
