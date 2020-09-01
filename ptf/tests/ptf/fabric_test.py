@@ -804,8 +804,7 @@ class IPv4UnicastTest(FabricTest):
                            exp_pkt=None, exp_pkt_base=None, next_id=None,
                            next_vlan=None, mpls=False, dst_ipv4=None,
                            routed_eth_types=(ETH_TYPE_IPV4,),
-                           verify_pkt=True, with_another_pkt_later=False,
-                           setup=True):
+                           verify_pkt=True, with_another_pkt_later=False):
         """
         Execute an IPv4 unicast routing test.
         :param pkt: input packet
@@ -829,8 +828,6 @@ class IPv4UnicastTest(FabricTest):
             dropped
         :param with_another_pkt_later: another packet(s) will be verified outside
             this function
-        :param setup: whether table entries need to be installed before a packet
-            is sent and verified
         """
         if IP not in pkt or Ether not in pkt:
             self.fail("Cannot do IPv4 test with packet that is not IP")
@@ -861,26 +858,25 @@ class IPv4UnicastTest(FabricTest):
             dst_ipv4 = pkt[IP].dst
         switch_mac = pkt[Ether].dst
 
-        if setup:
-            # Setup ports.
-            self.setup_port(self.port1, vlan1, tagged1)
-            self.setup_port(self.port2, vlan2, tagged2)
+        # Setup ports.
+        self.setup_port(self.port1, vlan1, tagged1)
+        self.setup_port(self.port2, vlan2, tagged2)
 
-            # Forwarding type -> routing v4
-            for eth_type in routed_eth_types:
-                self.set_forwarding_type(self.port1, switch_mac, eth_type,
-                                         FORWARDING_TYPE_UNICAST_IPV4)
+        # Forwarding type -> routing v4
+        for eth_type in routed_eth_types:
+            self.set_forwarding_type(self.port1, switch_mac, eth_type,
+                                     FORWARDING_TYPE_UNICAST_IPV4)
 
-            # Routing entry.
-            self.add_forwarding_routing_v4_entry(dst_ipv4, prefix_len, next_id)
+        # Routing entry.
+        self.add_forwarding_routing_v4_entry(dst_ipv4, prefix_len, next_id)
 
-            if not mpls:
-                self.add_next_routing(next_id, self.port2, switch_mac, next_hop_mac)
-                self.add_next_vlan(next_id, vlan2)
-            else:
-                params = [self.port2, switch_mac, next_hop_mac, mpls_label]
-                self.add_next_mpls_routing_group(next_id, group_id, [params])
-                self.add_next_vlan(next_id, DEFAULT_VLAN)
+        if not mpls:
+            self.add_next_routing(next_id, self.port2, switch_mac, next_hop_mac)
+            self.add_next_vlan(next_id, vlan2)
+        else:
+            params = [self.port2, switch_mac, next_hop_mac, mpls_label]
+            self.add_next_mpls_routing_group(next_id, group_id, [params])
+            self.add_next_vlan(next_id, DEFAULT_VLAN)
 
         if exp_pkt is None:
             # Build exp pkt using the input one.
