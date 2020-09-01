@@ -804,7 +804,8 @@ class IPv4UnicastTest(FabricTest):
                            exp_pkt=None, exp_pkt_base=None, next_id=None,
                            next_vlan=None, mpls=False, dst_ipv4=None,
                            routed_eth_types=(ETH_TYPE_IPV4,),
-                           verify_pkt=True, with_another_pkt_later=False):
+                           verify_pkt=True, with_another_pkt_later=False,
+                           setup=True):
         """
         Execute an IPv4 unicast routing test.
         :param pkt: input packet
@@ -828,6 +829,8 @@ class IPv4UnicastTest(FabricTest):
             dropped
         :param with_another_pkt_later: another packet(s) will be verified outside
             this function
+        :param setup: whether table entries need to be installed before a packet
+            is sent and verified
         """
         if IP not in pkt or Ether not in pkt:
             self.fail("Cannot do IPv4 test with packet that is not IP")
@@ -858,25 +861,26 @@ class IPv4UnicastTest(FabricTest):
             dst_ipv4 = pkt[IP].dst
         switch_mac = pkt[Ether].dst
 
-        # Setup ports.
-        self.setup_port(self.port1, vlan1, tagged1)
-        self.setup_port(self.port2, vlan2, tagged2)
+        if setup:
+            # Setup ports.
+            self.setup_port(self.port1, vlan1, tagged1)
+            self.setup_port(self.port2, vlan2, tagged2)
 
-        # Forwarding type -> routing v4
-        for eth_type in routed_eth_types:
-            self.set_forwarding_type(self.port1, switch_mac, eth_type,
-                                     FORWARDING_TYPE_UNICAST_IPV4)
+            # Forwarding type -> routing v4
+            for eth_type in routed_eth_types:
+                self.set_forwarding_type(self.port1, switch_mac, eth_type,
+                                         FORWARDING_TYPE_UNICAST_IPV4)
 
-        # Routing entry.
-        self.add_forwarding_routing_v4_entry(dst_ipv4, prefix_len, next_id)
+            # Routing entry.
+            self.add_forwarding_routing_v4_entry(dst_ipv4, prefix_len, next_id)
 
-        if not mpls:
-            self.add_next_routing(next_id, self.port2, switch_mac, next_hop_mac)
-            self.add_next_vlan(next_id, vlan2)
-        else:
-            params = [self.port2, switch_mac, next_hop_mac, mpls_label]
-            self.add_next_mpls_routing_group(next_id, group_id, [params])
-            self.add_next_vlan(next_id, DEFAULT_VLAN)
+            if not mpls:
+                self.add_next_routing(next_id, self.port2, switch_mac, next_hop_mac)
+                self.add_next_vlan(next_id, vlan2)
+            else:
+                params = [self.port2, switch_mac, next_hop_mac, mpls_label]
+                self.add_next_mpls_routing_group(next_id, group_id, [params])
+                self.add_next_vlan(next_id, DEFAULT_VLAN)
 
         if exp_pkt is None:
             # Build exp pkt using the input one.
@@ -1395,7 +1399,6 @@ class SpgwSimpleTest(IPv4UnicastTest):
                 self.fail("PDR packet counter incremented by %d instead of 1!" % ctr_increase)
 
     def runBufferedDownlinkTest(self, pkt, tagged1, tagged2, mpls):
-
         packets_sent_to_buffer = 1
         far_id = 2
         ctr_id = 2
@@ -1408,13 +1411,12 @@ class SpgwSimpleTest(IPv4UnicastTest):
         if not mpls:
             exp_pkt[IP].ttl = exp_pkt[IP].ttl - 1
         exp_pkt = pkt_add_gtp(exp_pkt,
-                                             out_ipv4_src=BUFF_FACING_IFACE_IPV4,
-                                             out_ipv4_dst=BUFF_DEVICE_IPV4,
-                                             teid=packets_sent_to_buffer,
-                                             gtpu_option_short1=far_id,
-                                             gtpu_option_short2=ctr_id,
-                                             sport=UDP_GTP_PORT
-                                             )
+                              out_ipv4_src=BUFF_FACING_IFACE_IPV4,
+                              out_ipv4_dst=BUFF_DEVICE_IPV4,
+                              teid=packets_sent_to_buffer,
+                              gtpu_option_short1=far_id,
+                              gtpu_option_short2=ctr_id,
+                              sport=UDP_GTP_PORT)
         if mpls:
             exp_pkt = pkt_add_mpls(exp_pkt, MPLS_LABEL_2, DEFAULT_MPLS_TTL)
         if tagged2:
@@ -1429,60 +1431,89 @@ class SpgwSimpleTest(IPv4UnicastTest):
             far_id=far_id
         )
 
+        # Clear out the buffer count register by sending a packet before enabling buffering
+        self.runIPv4UnicastTest(pkt=pkt, dst_ipv4=exp_pkt[IP].dst,
+                                next_hop_mac=exp_pkt[Ether].dst,
+                                prefix_len=32, exp_pkt=exp_pkt,
+                                tagged1=tagged1, tagged2=tagged2, mpls=mpls,
+                                verify_pkt=False)
+
         # turn on buffering by modifying the PDR
         self.add_downlink_pdr(ctr_id=ctr_id, far_id=far_id, ue_addr=ue_ipv4, buffering=True, modify=True)
         # and by adding a buffering redirection rule
         self.add_buffer_redirect(BUFF_FACING_IFACE_IPV4, BUFF_DEVICE_IPV4)
 
-        # normal downlink without buffering
+        # Send a packet that is expected to be sent to the buffer
         self.runIPv4UnicastTest(pkt=pkt, dst_ipv4=exp_pkt[IP].dst,
                                 next_hop_mac=exp_pkt[Ether].dst,
                                 prefix_len=32, exp_pkt=exp_pkt,
-                                tagged1=tagged1, tagged2=tagged2, mpls=mpls)
+                                tagged1=tagged1, tagged2=tagged2, mpls=mpls,
+                                setup=False)
 
 
-    def runBufferReleaseDownlinkTest(self, pkt):
-        #BUFF_FACING_IFACE_IPV4 = "140.0.0.3"
-        #BUFF_DEVICE_IPV4 = "20.0.0.1"
-
-        packets_sent_to_buffer=1
-        far_id = 2
-        ctr_id = 2
+    def runFullBufferedDownlinkTest(self, pkt):
+        vlan = DEFAULT_VLAN
+        enodeb_next_id = 200
+        buffer_next_id = 300
+        enodeb_mac = HOST2_MAC
+        buffer_mac = BUFF_DEVICE_MAC
+        switch_mac = pkt[Ether].dst
         ue_ipv4 = pkt[IP].dst
 
-        ue_mac = HOST2_MAC
-        offload_mac = BUFF_DEVICE_MAC
-        switch_mac = pkt[Ether].dst
+        packets_sent_to_buffer = 1
+        far_id = 2
+        ctr_id = 2
 
-        # the intermediate packet from the SPGW to the buffer device
-        exp_pkt_towards_buffer = pkt.copy()
-        exp_pkt_towards_buffer[Ether].src = switch_mac
-        exp_pkt_towards_buffer[Ether].dst = offload_mac
-        exp_pkt_towards_buffer[IP].ttl = exp_pkt_towards_buffer[IP].ttl - 1
-        exp_pkt_towards_buffer = pkt_add_gtp(exp_pkt_towards_buffer,
-                                    out_ipv4_src=BUFF_FACING_IFACE_IPV4,
-                                    out_ipv4_dst=BUFF_DEVICE_IPV4,
-                                    teid=packets_sent_to_buffer,
-                                    gtpu_option_short1=far_id,
-                                    gtpu_option_short2=ctr_id
-                                    )
+        # Forwarding type -> routing v4
+        self.set_forwarding_type(self.port1, switch_mac, ETH_TYPE_IPV4,
+                                 FORWARDING_TYPE_UNICAST_IPV4)
+        self.set_forwarding_type(self.port3, switch_mac, ETH_TYPE_IPV4,
+                                 FORWARDING_TYPE_UNICAST_IPV4)
 
-        # intermediate packet from the buffer device to the SPGW
+        # Setup ports.
+        self.setup_port(self.port1, vlan, False)  # upstream
+        self.setup_port(self.port2, vlan, False)  # enodeb
+        self.setup_port(self.port3, vlan, False)  # buffer
+
+        # Routing entries
+        self.add_forwarding_routing_v4_entry(ipv4_dstAddr=S1U_ENB_IPV4, ipv4_pLen=32, next_id=enodeb_next_id)
+        self.add_forwarding_routing_v4_entry(ipv4_dstAddr=BUFF_DEVICE_IPV4, ipv4_pLen=32, next_id=buffer_next_id)
+
+        # Next entries
+        self.add_next_routing(enodeb_next_id, self.port2, switch_mac, enodeb_mac)
+        self.add_next_routing(buffer_next_id, self.port3, switch_mac, buffer_mac)
+        self.add_next_vlan(enodeb_next_id, vlan)
+        self.add_next_vlan(buffer_next_id, vlan)
+
+        # Packet that we expect to receive at the buffering device
+        exp_pkt_to_buffer = pkt.copy()
+        exp_pkt_to_buffer[Ether].src = switch_mac
+        exp_pkt_to_buffer[Ether].dst = buffer_mac
+        exp_pkt_to_buffer[IP].ttl = exp_pkt_to_buffer[IP].ttl - 1
+        exp_pkt_to_buffer = pkt_add_gtp(exp_pkt_to_buffer,
+                                        out_ipv4_src=BUFF_FACING_IFACE_IPV4,
+                                        out_ipv4_dst=BUFF_DEVICE_IPV4,
+                                        teid=packets_sent_to_buffer,
+                                        gtpu_option_short1=far_id,
+                                        gtpu_option_short2=ctr_id,
+                                        sport=UDP_GTP_PORT)
+
+        # Packet that the buffer will release to the switch
         pkt_from_buffer = pkt.copy()
-        pkt_from_buffer[Ether].src = offload_mac
+        pkt_from_buffer[Ether].src = buffer_mac
         pkt_from_buffer[Ether].dst = switch_mac
         pkt_from_buffer = pkt_add_gtp(pkt_from_buffer,
-                                    out_ipv4_src=BUFF_DEVICE_IPV4,
-                                    out_ipv4_dst=BUFF_FACING_IFACE_IPV4,
-                                    teid=packets_sent_to_buffer,
-                                    gtpu_option_short1=far_id,
-                                    gtpu_option_short2=ctr_id
-                                    )
+                                      out_ipv4_src=BUFF_DEVICE_IPV4,
+                                      out_ipv4_dst=BUFF_FACING_IFACE_IPV4,
+                                      teid=packets_sent_to_buffer,
+                                      gtpu_option_short1=far_id,
+                                      gtpu_option_short2=ctr_id,
+                                      sport=UDP_GTP_PORT)
 
         # the final packet from the SPGW to the ENB
         exp_pkt = pkt.copy()
         exp_pkt[Ether].src = switch_mac
-        exp_pkt[Ether].dst = ue_mac
+        exp_pkt[Ether].dst = enodeb_mac
         exp_pkt[IP].ttl = exp_pkt[IP].ttl - 1
         exp_pkt = pkt_add_gtp(exp_pkt, out_ipv4_src=S1U_SGW_IPV4,
                               out_ipv4_dst=S1U_ENB_IPV4, teid=TEID_1)
@@ -1496,133 +1527,43 @@ class SpgwSimpleTest(IPv4UnicastTest):
             far_id=far_id
         )
 
-        # normal downlink without buffering
-        self.runIPv4UnicastTest(pkt=pkt, dst_ipv4=exp_pkt[IP].dst,
-                                next_hop_mac=dst_mac,
-                                prefix_len=32, exp_pkt=exp_pkt,
-                                tagged1=tagged1, tagged2=tagged2, mpls=mpls)
+        # FIXME: break these path checks into separate unit tests once register cells can be written
 
-
-        # turn on buffering by modifying the PDR
-        self.add_downlink_pdr(ctr_id=ctr_id, far_id=far_id, ue_addr=ue_addr, buffering=True,modify=True)
-
-
-
-        # Routing entry.
-        self.add_forwarding_routing_v4_entry(dst_ipv4, prefix_len, next_id)
-
-        self.add_next_routing(next_id, self.port2, switch_mac, next_hop_mac)
-        self.add_next_vlan(next_id, DEFAULT_VLAN)
-
-
-        self.runIPv4UnicastTest(pkt=pkt, dst_ipv4=BUFF_DEVICE_IPV4,
-                                next_hop_mac=offload_mac,
-                                prefix_len=32, exp_pkt=exp_pkt_towards_buffer,
-                                tagged1=False, tagged2=False, mpls=False)
-
-    def runBufferedDownlinkTestV2(self, pkt, next_hop_mac,
-                           tagged1=False, tagged2=False, prefix_len=24,
-                           exp_pkt=None, exp_pkt_base=None, next_id=None,
-                           next_vlan=None, mpls=False, dst_ipv4=None,
-                           routed_eth_types=(ETH_TYPE_IPV4,),
-                           verify_pkt=True, with_another_pkt_later=False):
-        """
-        Execute an IPv4 unicast routing test.
-        :param pkt: input packet
-        :param next_hop_mac: MAC address of the next hop
-        :param tagged1: if the input port should expect VLAN tagged packets
-        :param tagged2: if the output port should expect VLAN tagged packets
-        :param prefix_len: prefix length to use in the routing table
-        :param exp_pkt: expected packet, if none one will be built using the
-            input packet
-        :param exp_pkt_base: if not none, it will be used to build the expected
-            output packet.
-        :param next_id: value to use as next ID
-        :param next_vlan: value to use as next VLAN
-        :param mpls: whether the packet should be routed to the spines using
-            MPLS SR
-        :param dst_ipv4: if not none, this value will be used as IPv4 dst to
-            configure tables
-        :param routed_eth_types: eth type values used to configure the
-            classifier table to process packets via routing
-        :param verify_pkt: whether packets are expected to be forwarded or
-            dropped
-        :param with_another_pkt_later: another packet(s) will be verified outside
-            this function
-        """
-        if IP not in pkt or Ether not in pkt:
-            self.fail("Cannot do IPv4 test with packet that is not IP")
-        if mpls and tagged2:
-            self.fail("Cannot do MPLS test with egress port tagged (tagged2)")
-
-        # If the input pkt has a VLAN tag, use that to configure tables.
-        pkt_is_tagged = False
-        if Dot1Q in pkt:
-            vlan1 = pkt[Dot1Q].vlan
-            tagged1 = True
-            pkt_is_tagged = True
-        else:
-            vlan1 = VLAN_ID_1
-
-        if mpls:
-            # If MPLS test, port2 is assumed to be a spine port, with
-            # default vlan untagged.
-            vlan2 = DEFAULT_VLAN
-            assert not tagged2
-        else:
-            vlan2 = VLAN_ID_2 if next_vlan is None else next_vlan
-
-        next_id = 100 if next_id is None else next_id
-        group_id = next_id
-        mpls_label = MPLS_LABEL_2
-        if dst_ipv4 is None:
-            dst_ipv4 = pkt[IP].dst
-        switch_mac = pkt[Ether].dst
-
-        # Setup ports.
-        self.setup_port(self.port1, vlan1, tagged1)
-        self.setup_port(self.port2, vlan2, tagged2)
-
-        # Forwarding type -> routing v4
-        for eth_type in routed_eth_types:
-            self.set_forwarding_type(self.port1, switch_mac, eth_type,
-                                     FORWARDING_TYPE_UNICAST_IPV4)
-
-        # Routing entry.
-        self.add_forwarding_routing_v4_entry(dst_ipv4, prefix_len, next_id)
-
-        if not mpls:
-            self.add_next_routing(next_id, self.port2, switch_mac, next_hop_mac)
-            self.add_next_vlan(next_id, vlan2)
-        else:
-            params = [self.port2, switch_mac, next_hop_mac, mpls_label]
-            self.add_next_mpls_routing_group(next_id, group_id, [params])
-            self.add_next_vlan(next_id, DEFAULT_VLAN)
-
-        if exp_pkt is None:
-            # Build exp pkt using the input one.
-            exp_pkt = pkt.copy() if not exp_pkt_base else exp_pkt_base
-            exp_pkt = pkt_route(exp_pkt, next_hop_mac)
-            if not mpls:
-                exp_pkt = pkt_decrement_ttl(exp_pkt)
-            if tagged2 and Dot1Q not in exp_pkt:
-                exp_pkt = pkt_add_vlan(exp_pkt, vlan_vid=vlan2)
-            if mpls:
-                exp_pkt = pkt_add_mpls(exp_pkt, label=mpls_label,
-                                       ttl=DEFAULT_MPLS_TTL)
-
-        if tagged1 and not pkt_is_tagged:
-            pkt = pkt_add_vlan(pkt, vlan_vid=vlan1)
-
+        print "Verifying non-buffered path..."
+        # Verify packets travel normally before buffering is enabled (also clears out the buffer count register)
         self.send_packet(self.port1, str(pkt))
+        self.verify_packet(exp_pkt, self.port2)
+        self.verify_no_other_packets()
+        print "done."
 
-        if verify_pkt:
-            self.verify_packet(exp_pkt, self.port2)
+        # Turn on buffering by modifying the PDR
+        self.add_downlink_pdr(ctr_id=ctr_id, far_id=far_id, ue_addr=ue_ipv4, buffering=True, modify=True)
+        # and by adding a buffering redirection rule
+        self.add_buffer_redirect(BUFF_FACING_IFACE_IPV4, BUFF_DEVICE_IPV4)
 
-        if not with_another_pkt_later:
-            self.verify_no_other_packets()
+        print "Verifying upstream->switch->buffer path..."
+        # Send a packet that should be redirected to the buffer
+        self.send_packet(self.port1, str(pkt))
+        # Check that it arrived at the buffer
+        self.verify_packet(exp_pkt_to_buffer, self.port3)
+        self.verify_no_other_packets()
+        print "done."
 
+        print "Verifying buffer->switch->enodeb path..."
+        # Release a packet from the buffer
+        self.send_packet(self.port3, str(pkt_from_buffer))
+        # Check that it arrived at the enodeb
+        self.verify_packet(exp_pkt, self.port2)
+        self.verify_no_other_packets()
+        print "done."
 
+        print "Verifying upstream->switch->enodeb path..."
+        # Check that empty buffer detection worked,
+        # by checking that new packets are not redirected to the buffer
+        self.send_packet(self.port1, str(pkt))
+        self.verify_packet(exp_pkt, self.port2)
+        self.verify_no_other_packets()
+        print "done."
 
 
 

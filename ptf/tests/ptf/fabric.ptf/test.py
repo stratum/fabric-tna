@@ -588,7 +588,7 @@ class FabricDefaultVlanPacketInTest(FabricTest):
         self.verify_no_other_packets()
 
 @group("spgw")
-class FabricSpgwBufferedDownlinkTest(SpgwSimpleTest):
+class FabricSpgwBufferedDownlinkPartialTest(SpgwSimpleTest):
 
     @tvsetup
     @autocleanup
@@ -612,6 +612,24 @@ class FabricSpgwBufferedDownlinkTest(SpgwSimpleTest):
                         pktlen=MIN_PKT_LEN
                     )
                     self.doRunTest(pkt, tagged[0], tagged[1], mpls, tc_name=tc_name)
+
+@group("spgw")
+class FabricSpgwBufferedDownlinkFullTest(SpgwSimpleTest):
+    @tvsetup
+    @autocleanup
+    def doRunTest(self, pkt, tc_name):
+        self.runFullBufferedDownlinkTest(pkt)
+
+    def runTest(self):
+        print ""
+        for pkt_type in ["tcp", "udp", "icmp"]:
+            print "Testing %s..." % pkt_type
+            pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
+                eth_src=HOST1_MAC, eth_dst=SWITCH_MAC,
+                ip_src=HOST1_IPV4, ip_dst=HOST2_IPV4,
+                pktlen=MIN_PKT_LEN
+            )
+            self.doRunTest(pkt, tc_name=pkt_type)
 
 @group("spgw")
 class FabricSpgwDownlinkTest(SpgwSimpleTest):

@@ -166,6 +166,8 @@ control SpgwIngress(
         // which is *currently* a safe assumption.
         fabric_md.ipv4_src            = hdr.inner_ipv4.src_addr;
         fabric_md.ipv4_dst            = hdr.inner_ipv4.dst_addr;
+        fabric_md.bridged.l4_sport    = fabric_md.bridged.inner_l4_sport;
+        fabric_md.bridged.l4_dport    = fabric_md.bridged.inner_l4_dport;
     }
 
     action load_downlink_far_attributes(bool      drop,
@@ -187,6 +189,8 @@ control SpgwIngress(
         // update metadata for correct routing/hashing
         fabric_md.ipv4_src = tunnel_src_addr;
         fabric_md.ipv4_dst = tunnel_dst_addr;
+        fabric_md.bridged.l4_sport    = tunnel_src_port;
+        fabric_md.bridged.l4_dport    = UDP_PORT_GTPU;
     }
 
     action far_miss() {
@@ -244,12 +248,13 @@ control SpgwIngress(
         fabric_md.bridged.ip_proto    = hdr.inner_ipv4.protocol;
         //fabric_md.ipv4_src            = hdr.inner_ipv4.src_addr;
         //fabric_md.ipv4_dst            = hdr.inner_ipv4.dst_addr;
-        fabric_md.bridged.l4_sport    = fabric_md.bridged.inner_l4_sport;
-        fabric_md.bridged.l4_dport    = fabric_md.bridged.inner_l4_dport;
+        //fabric_md.bridged.l4_sport    = fabric_md.bridged.inner_l4_sport;
+        //fabric_md.bridged.l4_dport    = fabric_md.bridged.inner_l4_dport;
         // Move GTPU and inner L3 headers out
         hdr.ipv4 = hdr.inner_ipv4;
         hdr.inner_ipv4.setInvalid();
         hdr.gtpu.setInvalid();
+        hdr.gtpu_options.setInvalid();
     }
     @hidden
     action decap_inner_tcp() {
