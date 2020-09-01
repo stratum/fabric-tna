@@ -13,7 +13,7 @@ from scapy.contrib.mpls import MPLS
 from scapy.layers.inet import IP, UDP, TCP
 from scapy.layers.l2 import Ether, Dot1Q
 from scapy.layers.ppp import PPPoE, PPP
-from scapy.fields import BitField, ByteField, ShortField, IntField
+from scapy.fields import BitField, ByteField, ShortField, IntField, ConditionalField, XBitField
 from scapy.packet import bind_layers, Packet
 
 import xnt
@@ -75,6 +75,10 @@ HOST4_IPV4 = "10.0.4.1"
 S1U_ENB_IPV4 = "119.0.0.10"
 S1U_SGW_IPV4 = "140.0.0.2"
 UE_IPV4 = "16.255.255.252"
+# SPGW buffer tunnel addresses
+BUFF_FACING_IFACE_IPV4 = "140.0.0.3"
+BUFF_DEVICE_IPV4 = "20.0.0.1"
+BUFF_DEVICE_MAC ="00:00:00:00:bb:01"
 
 SPGW_DIRECTION_UPLINK = 1
 SPGW_DIRECTION_DOWNLINK = 2
@@ -162,7 +166,7 @@ class GTPU(Packet):
         ShortField("length", None),
         IntField("teid", 0),
         ConditionalField(
-           XBitField("seq", 0, 16),
+           XBitField("seq_num", 0, 16),
            lambda pkt:pkt.E == 1 or pkt.S == 1 or pkt.PN == 1),
        ConditionalField(
            ByteField("npdu", 0),
@@ -1218,7 +1222,6 @@ class SpgwSimpleTest(IPv4UnicastTest):
         req = self.get_new_write_request()
         action_name = "FabricIngress.spgw_ingress.set_pdr%s_attributes" \
                             % ("_buffer" if buffering else "")
-        print(action_name)
 
         self.push_update_add_entry_to_action(
             req,
@@ -1261,21 +1264,21 @@ class SpgwSimpleTest(IPv4UnicastTest):
         )
         self.write_request(req)
 
-    def add_normal_far(self, far_id, drop=False, notify_cp=False):
+    def add_uplink_far(self, far_id, drop=False, notify_cp=False):
         return self._add_far(
             far_id,
-            "FabricIngress.spgw_ingress.load_normal_far_attributes",
+            "FabricIngress.spgw_ingress.load_uplink_far_attributes",
             [
                 ("drop", stringify(drop, 1)),
                 ("notify_cp", stringify(notify_cp, 1)),
             ]
         )
 
-    def add_tunnel_far(self, far_id, teid, tunnel_src_addr, tunnel_dst_addr,
-                       tunnel_src_port=DEFAULT_GTP_TUNNEL_SPORT, drop=False, notify_cp=False):
+    def add_downlink_far(self, far_id, teid, tunnel_src_addr, tunnel_dst_addr,
+                         tunnel_src_port=DEFAULT_GTP_TUNNEL_SPORT, drop=False, notify_cp=False):
         return self._add_far(
             far_id,
-            "FabricIngress.spgw_ingress.load_tunnel_far_attributes",
+            "FabricIngress.spgw_ingress.load_downlink_far_attributes",
             [
                 ("drop", stringify(drop, 1)),
                 ("notify_cp", stringify(notify_cp, 1)),
@@ -1285,33 +1288,6 @@ class SpgwSimpleTest(IPv4UnicastTest):
                 ("tunnel_dst_addr", ipv4_to_binary(tunnel_dst_addr)),
             ]
         )
-
-    def add_flexible_pdr(self, ctr_id, far_id,
-                         s1u_sgw_addr=None, s1u_sgw_addr_mask=None,
-                         teid=None, teid_mask=None,
-                         src_addr=None, src_addr_mask=None,
-                         dst_addr=None, dst_addr_mask=None,
-                         ip_proto=None, ip_proto_mask=None,
-                         l4_sport=None, l4_sport_mask=None,
-                         l4_dport=None, l4_dport_mask=None,
-                         uplink=False, downlink=False,):
-
-        raise Exception("Flexible PDR insertion not yet implemented")
-        assert(downlink or uplink)
-
-        req = self.get_new_write_request()
-
-        action_name = "FabricIngress.spgw_ingress.set_pdr_attributes"
-        action_args = [("ctr_id", stringify(ctr_id, 4)),
-                        ("far_id", stringify(far_id, 4))]
-
-        ALL_ONES_32 = stringify((1 << 32) - 1, 4)
-        ALL_ONES_16 = stringify((1 << 16) - 1, 2)
-        ALL_ONES_8 = stringify((1 << 8) - 1, 1)
-
-        match_keys = []
-        if src_addr:
-            match_keys.append(self.Ternary("ipv4_src", ipv4_to_binary(src_addr), ))
 
     def setup_uplink(self, s1u_sgw_addr, teid, ctr_id, far_id=None):
         if far_id is None:
@@ -1323,7 +1299,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             far_id=far_id,
             teid=teid,
             tunnel_dst_addr=s1u_sgw_addr)
-        self.add_normal_far(far_id=far_id)
+        self.add_uplink_far(far_id=far_id)
 
     def setup_downlink(self, s1u_sgw_addr, s1u_enb_addr, teid, ue_addr, ctr_id, far_id=None):
         if far_id is None:
@@ -1331,7 +1307,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
 
         self.add_ue_pool(ip_prefix=ue_addr, prefix_len=32)
         self.add_downlink_pdr(ctr_id=ctr_id, far_id=far_id, ue_addr=ue_addr)
-        self.add_tunnel_far(
+        self.add_downlink_far(
             far_id=far_id,
             teid=teid,
             tunnel_src_addr=s1u_sgw_addr,
@@ -1359,6 +1335,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             ctr_id=ctr_id
         )
 
+        ingress_pdr_pkt_ctr1 = 0
         if VERIFY_PDR_COUNTERS:
             ingress_pdr_pkt_ctr1 = self.read_pkt_count("FabricIngress.spgw_ingress.pdr_counter", ctr_id)
 
@@ -1401,6 +1378,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             ctr_id=ctr_id,
         )
 
+        ingress_pdr_pkt_ctr1 = 0
         if VERIFY_PDR_COUNTERS:
             ingress_pdr_pkt_ctr1 = self.read_pkt_count("FabricIngress.spgw_ingress.pdr_counter", ctr_id)
 
@@ -1415,6 +1393,238 @@ class SpgwSimpleTest(IPv4UnicastTest):
             ctr_increase = ingress_pdr_pkt_ctr2 - ingress_pdr_pkt_ctr1
             if ctr_increase != 1:
                 self.fail("PDR packet counter incremented by %d instead of 1!" % ctr_increase)
+
+    def runBufferedDownlinkTest(self, pkt, tagged1, tagged2, mpls):
+
+        packets_sent_to_buffer = 1
+        far_id = 2
+        ctr_id = 2
+        ue_ipv4 = pkt[IP].dst
+
+        # pkt transmitted to the buffering device
+        exp_pkt = pkt.copy()
+        exp_pkt[Ether].src = pkt[Ether].dst
+        exp_pkt[Ether].dst = BUFF_DEVICE_MAC
+        if not mpls:
+            exp_pkt[IP].ttl = exp_pkt[IP].ttl - 1
+        exp_pkt = pkt_add_gtp(exp_pkt,
+                                             out_ipv4_src=BUFF_FACING_IFACE_IPV4,
+                                             out_ipv4_dst=BUFF_DEVICE_IPV4,
+                                             teid=packets_sent_to_buffer,
+                                             gtpu_option_short1=far_id,
+                                             gtpu_option_short2=ctr_id,
+                                             sport=UDP_GTP_PORT
+                                             )
+        if mpls:
+            exp_pkt = pkt_add_mpls(exp_pkt, MPLS_LABEL_2, DEFAULT_MPLS_TTL)
+        if tagged2:
+            exp_pkt = pkt_add_vlan(exp_pkt, VLAN_ID_2)
+
+        self.setup_downlink(
+            s1u_sgw_addr=S1U_SGW_IPV4,
+            s1u_enb_addr=S1U_ENB_IPV4,
+            teid=TEID_1,
+            ue_addr=ue_ipv4,
+            ctr_id=ctr_id,
+            far_id=far_id
+        )
+
+        # turn on buffering by modifying the PDR
+        self.add_downlink_pdr(ctr_id=ctr_id, far_id=far_id, ue_addr=ue_ipv4, buffering=True, modify=True)
+        # and by adding a buffering redirection rule
+        self.add_buffer_redirect(BUFF_FACING_IFACE_IPV4, BUFF_DEVICE_IPV4)
+
+        # normal downlink without buffering
+        self.runIPv4UnicastTest(pkt=pkt, dst_ipv4=exp_pkt[IP].dst,
+                                next_hop_mac=exp_pkt[Ether].dst,
+                                prefix_len=32, exp_pkt=exp_pkt,
+                                tagged1=tagged1, tagged2=tagged2, mpls=mpls)
+
+
+    def runBufferReleaseDownlinkTest(self, pkt):
+        #BUFF_FACING_IFACE_IPV4 = "140.0.0.3"
+        #BUFF_DEVICE_IPV4 = "20.0.0.1"
+
+        packets_sent_to_buffer=1
+        far_id = 2
+        ctr_id = 2
+        ue_ipv4 = pkt[IP].dst
+
+        ue_mac = HOST2_MAC
+        offload_mac = BUFF_DEVICE_MAC
+        switch_mac = pkt[Ether].dst
+
+        # the intermediate packet from the SPGW to the buffer device
+        exp_pkt_towards_buffer = pkt.copy()
+        exp_pkt_towards_buffer[Ether].src = switch_mac
+        exp_pkt_towards_buffer[Ether].dst = offload_mac
+        exp_pkt_towards_buffer[IP].ttl = exp_pkt_towards_buffer[IP].ttl - 1
+        exp_pkt_towards_buffer = pkt_add_gtp(exp_pkt_towards_buffer,
+                                    out_ipv4_src=BUFF_FACING_IFACE_IPV4,
+                                    out_ipv4_dst=BUFF_DEVICE_IPV4,
+                                    teid=packets_sent_to_buffer,
+                                    gtpu_option_short1=far_id,
+                                    gtpu_option_short2=ctr_id
+                                    )
+
+        # intermediate packet from the buffer device to the SPGW
+        pkt_from_buffer = pkt.copy()
+        pkt_from_buffer[Ether].src = offload_mac
+        pkt_from_buffer[Ether].dst = switch_mac
+        pkt_from_buffer = pkt_add_gtp(pkt_from_buffer,
+                                    out_ipv4_src=BUFF_DEVICE_IPV4,
+                                    out_ipv4_dst=BUFF_FACING_IFACE_IPV4,
+                                    teid=packets_sent_to_buffer,
+                                    gtpu_option_short1=far_id,
+                                    gtpu_option_short2=ctr_id
+                                    )
+
+        # the final packet from the SPGW to the ENB
+        exp_pkt = pkt.copy()
+        exp_pkt[Ether].src = switch_mac
+        exp_pkt[Ether].dst = ue_mac
+        exp_pkt[IP].ttl = exp_pkt[IP].ttl - 1
+        exp_pkt = pkt_add_gtp(exp_pkt, out_ipv4_src=S1U_SGW_IPV4,
+                              out_ipv4_dst=S1U_ENB_IPV4, teid=TEID_1)
+
+        self.setup_downlink(
+            s1u_sgw_addr=S1U_SGW_IPV4,
+            s1u_enb_addr=S1U_ENB_IPV4,
+            teid=TEID_1,
+            ue_addr=ue_ipv4,
+            ctr_id=ctr_id,
+            far_id=far_id
+        )
+
+        # normal downlink without buffering
+        self.runIPv4UnicastTest(pkt=pkt, dst_ipv4=exp_pkt[IP].dst,
+                                next_hop_mac=dst_mac,
+                                prefix_len=32, exp_pkt=exp_pkt,
+                                tagged1=tagged1, tagged2=tagged2, mpls=mpls)
+
+
+        # turn on buffering by modifying the PDR
+        self.add_downlink_pdr(ctr_id=ctr_id, far_id=far_id, ue_addr=ue_addr, buffering=True,modify=True)
+
+
+
+        # Routing entry.
+        self.add_forwarding_routing_v4_entry(dst_ipv4, prefix_len, next_id)
+
+        self.add_next_routing(next_id, self.port2, switch_mac, next_hop_mac)
+        self.add_next_vlan(next_id, DEFAULT_VLAN)
+
+
+        self.runIPv4UnicastTest(pkt=pkt, dst_ipv4=BUFF_DEVICE_IPV4,
+                                next_hop_mac=offload_mac,
+                                prefix_len=32, exp_pkt=exp_pkt_towards_buffer,
+                                tagged1=False, tagged2=False, mpls=False)
+
+    def runBufferedDownlinkTestV2(self, pkt, next_hop_mac,
+                           tagged1=False, tagged2=False, prefix_len=24,
+                           exp_pkt=None, exp_pkt_base=None, next_id=None,
+                           next_vlan=None, mpls=False, dst_ipv4=None,
+                           routed_eth_types=(ETH_TYPE_IPV4,),
+                           verify_pkt=True, with_another_pkt_later=False):
+        """
+        Execute an IPv4 unicast routing test.
+        :param pkt: input packet
+        :param next_hop_mac: MAC address of the next hop
+        :param tagged1: if the input port should expect VLAN tagged packets
+        :param tagged2: if the output port should expect VLAN tagged packets
+        :param prefix_len: prefix length to use in the routing table
+        :param exp_pkt: expected packet, if none one will be built using the
+            input packet
+        :param exp_pkt_base: if not none, it will be used to build the expected
+            output packet.
+        :param next_id: value to use as next ID
+        :param next_vlan: value to use as next VLAN
+        :param mpls: whether the packet should be routed to the spines using
+            MPLS SR
+        :param dst_ipv4: if not none, this value will be used as IPv4 dst to
+            configure tables
+        :param routed_eth_types: eth type values used to configure the
+            classifier table to process packets via routing
+        :param verify_pkt: whether packets are expected to be forwarded or
+            dropped
+        :param with_another_pkt_later: another packet(s) will be verified outside
+            this function
+        """
+        if IP not in pkt or Ether not in pkt:
+            self.fail("Cannot do IPv4 test with packet that is not IP")
+        if mpls and tagged2:
+            self.fail("Cannot do MPLS test with egress port tagged (tagged2)")
+
+        # If the input pkt has a VLAN tag, use that to configure tables.
+        pkt_is_tagged = False
+        if Dot1Q in pkt:
+            vlan1 = pkt[Dot1Q].vlan
+            tagged1 = True
+            pkt_is_tagged = True
+        else:
+            vlan1 = VLAN_ID_1
+
+        if mpls:
+            # If MPLS test, port2 is assumed to be a spine port, with
+            # default vlan untagged.
+            vlan2 = DEFAULT_VLAN
+            assert not tagged2
+        else:
+            vlan2 = VLAN_ID_2 if next_vlan is None else next_vlan
+
+        next_id = 100 if next_id is None else next_id
+        group_id = next_id
+        mpls_label = MPLS_LABEL_2
+        if dst_ipv4 is None:
+            dst_ipv4 = pkt[IP].dst
+        switch_mac = pkt[Ether].dst
+
+        # Setup ports.
+        self.setup_port(self.port1, vlan1, tagged1)
+        self.setup_port(self.port2, vlan2, tagged2)
+
+        # Forwarding type -> routing v4
+        for eth_type in routed_eth_types:
+            self.set_forwarding_type(self.port1, switch_mac, eth_type,
+                                     FORWARDING_TYPE_UNICAST_IPV4)
+
+        # Routing entry.
+        self.add_forwarding_routing_v4_entry(dst_ipv4, prefix_len, next_id)
+
+        if not mpls:
+            self.add_next_routing(next_id, self.port2, switch_mac, next_hop_mac)
+            self.add_next_vlan(next_id, vlan2)
+        else:
+            params = [self.port2, switch_mac, next_hop_mac, mpls_label]
+            self.add_next_mpls_routing_group(next_id, group_id, [params])
+            self.add_next_vlan(next_id, DEFAULT_VLAN)
+
+        if exp_pkt is None:
+            # Build exp pkt using the input one.
+            exp_pkt = pkt.copy() if not exp_pkt_base else exp_pkt_base
+            exp_pkt = pkt_route(exp_pkt, next_hop_mac)
+            if not mpls:
+                exp_pkt = pkt_decrement_ttl(exp_pkt)
+            if tagged2 and Dot1Q not in exp_pkt:
+                exp_pkt = pkt_add_vlan(exp_pkt, vlan_vid=vlan2)
+            if mpls:
+                exp_pkt = pkt_add_mpls(exp_pkt, label=mpls_label,
+                                       ttl=DEFAULT_MPLS_TTL)
+
+        if tagged1 and not pkt_is_tagged:
+            pkt = pkt_add_vlan(pkt, vlan_vid=vlan1)
+
+        self.send_packet(self.port1, str(pkt))
+
+        if verify_pkt:
+            self.verify_packet(exp_pkt, self.port2)
+
+        if not with_another_pkt_later:
+            self.verify_no_other_packets()
+
+
+
+
 
 class IntTest(IPv4UnicastTest):
 

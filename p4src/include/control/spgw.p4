@@ -105,10 +105,10 @@ control SpgwIngress(
                               far_id_t far_id,
                               bool needs_gtpu_decap) {
         fabric_md.bridged.skip_spgw = false;
+        fabric_md.bridged.needs_buffering = true;
         fabric_md.bridged.far_id = far_id;
         fabric_md.bridged.pdr_ctr_id = ctr_id;
         fabric_md.needs_gtpu_decap = needs_gtpu_decap;
-        fabric_md.bridged.needs_buffering = true;
         fabric_md.buffered_packet_count = _get_buffered_count.execute(far_id);
     }
 
@@ -116,10 +116,10 @@ control SpgwIngress(
                               far_id_t far_id,
                               bool needs_gtpu_decap) {
         fabric_md.bridged.skip_spgw = false;
+        fabric_md.bridged.needs_buffering = false;
         fabric_md.bridged.far_id = far_id;
         fabric_md.bridged.pdr_ctr_id = ctr_id;
         fabric_md.needs_gtpu_decap = needs_gtpu_decap;
-        fabric_md.bridged.needs_buffering = false;
         _clear_buffered_count.execute(far_id);
     }
 
@@ -152,25 +152,32 @@ control SpgwIngress(
 
 
     //=============================//
-    //===== FAR Tables ======//
+    //======== FAR Tables =========//
     //=============================//
 
-    action load_normal_far_attributes(bool drop,
+    action load_uplink_far_attributes(bool drop,
                                       bool notify_cp) {
         // Do dropping in the same way as fabric's filtering.p4
         fabric_md.skip_forwarding = drop;
         fabric_md.skip_next = drop;
-
         fabric_md.notify_spgwc = notify_cp; // currently does nothing
+        // Assign the metadata src/dst here to reduce spgw pipeline depth.
+        // This assumes that uplink FARs will only apply to packets that arrived encapped,
+        // which is *currently* a safe assumption.
+        fabric_md.ipv4_src            = hdr.inner_ipv4.src_addr;
+        fabric_md.ipv4_dst            = hdr.inner_ipv4.dst_addr;
     }
 
-    action load_tunnel_far_attributes(bool      drop,
+    action load_downlink_far_attributes(bool      drop,
                                       bool      notify_cp,
                                       bit<16>   tunnel_src_port,
                                       bit<32>   tunnel_src_addr,
                                       bit<32>   tunnel_dst_addr,
                                       teid_t    teid) {
-        load_normal_far_attributes(drop, notify_cp);
+        // Do dropping in the same way as fabric's filtering.p4
+        fabric_md.skip_forwarding = drop;
+        fabric_md.skip_next = drop;
+        fabric_md.notify_spgwc = notify_cp; // currently does nothing
         // GTP tunnel attributes
         fabric_md.bridged.needs_gtpu_encap = true;
         fabric_md.bridged.gtpu_teid = teid;
@@ -182,22 +189,28 @@ control SpgwIngress(
         fabric_md.ipv4_dst = tunnel_dst_addr;
     }
 
+    action far_miss() {
+        fabric_md.skip_forwarding = true;
+        fabric_md.skip_next = true;
+    }
+
     table far_lookup {
         key = {
             fabric_md.bridged.far_id : exact @name("far_id");
         }
         actions = {
-            load_normal_far_attributes;
-            load_tunnel_far_attributes;
+            load_uplink_far_attributes;
+            load_downlink_far_attributes;
+            far_miss;
         }
         // default is drop and don't notify CP
-        const default_action = load_normal_far_attributes(true, false);
+        const default_action = far_miss();
         size = NUM_FARS;
     }
 
 
     //=============================//
-    //===== Misc Things ======//
+    //======= Misc Things =========//
     //=============================//
 
     action load_buffer_tunnel_attributes(bit<32> tunnel_src_addr,
@@ -205,7 +218,7 @@ control SpgwIngress(
         // Basically a normal GTPU tunnel encapsulation, but the
         // TEID stores the buffered packet count, and in egress
         // some metadata will be saved in GTPU options
-        load_tunnel_far_attributes(false, false, UDP_PORT_GTPU,
+        load_downlink_far_attributes(false, false, UDP_PORT_GTPU,
                                 tunnel_src_addr, tunnel_dst_addr,
                                 fabric_md.buffered_packet_count);
     }
@@ -229,8 +242,8 @@ control SpgwIngress(
         // Correct parser-set metadata to use the inner header values
         fabric_md.bridged.ip_eth_type = ETHERTYPE_IPV4;
         fabric_md.bridged.ip_proto    = hdr.inner_ipv4.protocol;
-        fabric_md.ipv4_src            = hdr.inner_ipv4.src_addr;
-        fabric_md.ipv4_dst            = hdr.inner_ipv4.dst_addr;
+        //fabric_md.ipv4_src            = hdr.inner_ipv4.src_addr;
+        //fabric_md.ipv4_dst            = hdr.inner_ipv4.dst_addr;
         fabric_md.bridged.l4_sport    = fabric_md.bridged.inner_l4_sport;
         fabric_md.bridged.l4_dport    = fabric_md.bridged.inner_l4_dport;
         // Move GTPU and inner L3 headers out
@@ -307,10 +320,6 @@ control SpgwIngress(
                 pdr_counter.count(fabric_md.bridged.pdr_ctr_id);
             }
 
-            // GTPU Decapsulate
-            if (fabric_md.needs_gtpu_decap) {
-                decap_gtpu.apply();
-            }
 
             // Redirect to a buffering device if needed and allowed,
             // or load FAR info
@@ -319,6 +328,12 @@ control SpgwIngress(
                 buffer_redirect.apply();
             } else {
                 far_lookup.apply();
+                // GTPU Decapsulate is placed after far_lookup to flatten a dependency
+                // caused by both tables accessing hdr.inner_ipv4
+                if (fabric_md.needs_gtpu_decap) {
+                    decap_gtpu.apply();
+                }
+
                 // In case needs_buffering was true but we hit MAX_BUFFERED_PACKETS
                 fabric_md.bridged.needs_buffering = false;
             }
@@ -397,6 +412,12 @@ control SpgwEgress(
         hdr.outer_gtpu_options.setValid();
         hdr.outer_gtpu_options.first_short = fabric_md.bridged.far_id;
         hdr.outer_gtpu_options.second_short = fabric_md.bridged.pdr_ctr_id;
+        // Correct header length fields to include gtpu options
+        hdr.outer_udp.len = hdr.ipv4.total_len
+                        + (UDP_HDR_SIZE + GTP_HDR_SIZE + GTPU_OPTIONS_SIZE);
+        hdr.outer_ipv4.total_len = hdr.ipv4.total_len
+                        + (IPV4_HDR_SIZE + UDP_HDR_SIZE + GTP_HDR_SIZE + GTPU_OPTIONS_SIZE);
+        hdr.outer_gtpu.msglen = hdr.ipv4.total_len + GTPU_OPTIONS_SIZE;
     }
 
     apply {

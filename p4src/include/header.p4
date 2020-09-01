@@ -191,6 +191,7 @@ struct fabric_ingress_metadata_t {
     next_id_t          next_id;
     bool               is_loopback;
 #ifdef WITH_SPGW
+    bool               far_will_encap;
     bit<32>            buffered_packet_count;
     bool               from_buffer;
     bool               inner_ipv4_checksum_err;
