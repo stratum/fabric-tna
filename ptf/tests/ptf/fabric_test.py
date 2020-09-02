@@ -1394,60 +1394,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             if ctr_increase != 1:
                 self.fail("PDR packet counter incremented by %d instead of 1!" % ctr_increase)
 
-    def runBufferedDownlinkTest(self, pkt, tagged1, tagged2, mpls):
-        packets_sent_to_buffer = 1
-        far_id = 2
-        ctr_id = 2
-        ue_ipv4 = pkt[IP].dst
-
-        # pkt transmitted to the buffering device
-        exp_pkt = pkt.copy()
-        exp_pkt[Ether].src = pkt[Ether].dst
-        exp_pkt[Ether].dst = BUFF_DEVICE_MAC
-        if not mpls:
-            exp_pkt[IP].ttl = exp_pkt[IP].ttl - 1
-        exp_pkt = pkt_add_gtp(exp_pkt,
-                              out_ipv4_src=BUFF_FACING_IFACE_IPV4,
-                              out_ipv4_dst=BUFF_DEVICE_IPV4,
-                              teid=far_id,
-                              gtpu_option_short1=packets_sent_to_buffer,
-                              gtpu_option_short2=ctr_id,
-                              sport=UDP_GTP_PORT)
-        if mpls:
-            exp_pkt = pkt_add_mpls(exp_pkt, MPLS_LABEL_2, DEFAULT_MPLS_TTL)
-        if tagged2:
-            exp_pkt = pkt_add_vlan(exp_pkt, VLAN_ID_2)
-
-        self.setup_downlink(
-            s1u_sgw_addr=S1U_SGW_IPV4,
-            s1u_enb_addr=S1U_ENB_IPV4,
-            teid=TEID_1,
-            ue_addr=ue_ipv4,
-            ctr_id=ctr_id,
-            far_id=far_id
-        )
-
-        # Clear out the buffer count register by sending a packet before enabling buffering
-        self.runIPv4UnicastTest(pkt=pkt, dst_ipv4=exp_pkt[IP].dst,
-                                next_hop_mac=exp_pkt[Ether].dst,
-                                prefix_len=32, exp_pkt=exp_pkt,
-                                tagged1=tagged1, tagged2=tagged2, mpls=mpls,
-                                verify_pkt=False)
-
-        # turn on buffering by modifying the PDR
-        self.add_downlink_pdr(ctr_id=ctr_id, far_id=far_id, ue_addr=ue_ipv4, buffering=True, modify=True)
-        # and by adding a buffering redirection rule
-        self.add_buffer_redirect(BUFF_FACING_IFACE_IPV4, BUFF_DEVICE_IPV4)
-
-        # Send a packet that is expected to be sent to the buffer
-        self.runIPv4UnicastTest(pkt=pkt, dst_ipv4=exp_pkt[IP].dst,
-                                next_hop_mac=exp_pkt[Ether].dst,
-                                prefix_len=32, exp_pkt=exp_pkt,
-                                tagged1=tagged1, tagged2=tagged2, mpls=mpls,
-                                setup=False)
-
-
-    def runFullBufferedDownlinkTest(self, pkt):
+    def runBufferedDownlinkTest(self, pkt):
         vlan = DEFAULT_VLAN
         enodeb_next_id = 200
         buffer_next_id = 300
@@ -1530,7 +1477,6 @@ class SpgwSimpleTest(IPv4UnicastTest):
         self.send_packet(self.port1, str(pkt))
         self.verify_packet(exp_pkt, self.port2)
         self.verify_no_other_packets()
-        print "done."
 
         # Turn on buffering by modifying the PDR
         self.add_downlink_pdr(ctr_id=ctr_id, far_id=far_id, ue_addr=ue_ipv4, buffering=True, modify=True)
@@ -1543,7 +1489,6 @@ class SpgwSimpleTest(IPv4UnicastTest):
         # Check that it arrived at the buffer
         self.verify_packet(exp_pkt_to_buffer, self.port3)
         self.verify_no_other_packets()
-        print "done."
 
         print "Verifying buffer->switch->enodeb path..."
         # Release a packet from the buffer
@@ -1551,7 +1496,6 @@ class SpgwSimpleTest(IPv4UnicastTest):
         # Check that it arrived at the enodeb
         self.verify_packet(exp_pkt, self.port2)
         self.verify_no_other_packets()
-        print "done."
 
         print "Verifying upstream->switch->enodeb path..."
         # Check that empty buffer detection worked,
@@ -1559,7 +1503,6 @@ class SpgwSimpleTest(IPv4UnicastTest):
         self.send_packet(self.port1, str(pkt))
         self.verify_packet(exp_pkt, self.port2)
         self.verify_no_other_packets()
-        print "done."
 
 
 
