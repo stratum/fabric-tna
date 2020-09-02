@@ -173,8 +173,8 @@ header bridged_metadata_t {
     bit<32>         gtpu_tunnel_dip;
     bit<16>         gtpu_tunnel_sport;
     pdr_ctr_id_t    pdr_ctr_id;
-    bit<16>         inner_l4_sport;
-    bit<16>         inner_l4_dport;
+    bit<16>         innermost_l4_sport;
+    bit<16>         innermost_l4_dport;
 #endif // WITH_SPGW
 }
 

@@ -138,8 +138,13 @@ control IntEgress (
             hdr.ipv4.src_addr          : ternary @name("ipv4_src");
             hdr.ipv4.dst_addr          : ternary @name("ipv4_dst");
             fabric_md.bridged.ip_proto : ternary @name("ip_proto");
+#ifdef WITH_SPGW
+            fabric_md.bridged.innermost_l4_sport : range @name("l4_sport");
+            fabric_md.bridged.innermost_l4_dport : range @name("l4_dport");
+#else // WITH_SPGW
             fabric_md.bridged.l4_sport : range @name("l4_sport");
             fabric_md.bridged.l4_dport : range @name("l4_dport");
+#endif // WITH_SPGW
         }
         actions = {
             init_metadata;

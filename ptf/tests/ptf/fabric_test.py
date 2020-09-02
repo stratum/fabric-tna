@@ -1156,49 +1156,6 @@ class SpgwSimpleTest(IPv4UnicastTest):
         counter = self.read_indirect_counter(c_name, idx, typ="BYTES")
         return counter.data.byte_count
 
-    def add_ue_pool(self, ip_prefix, prefix_len):
-        return # table deleted
-        req = self.get_new_write_request()
-
-        ip_prefix_ = ipv4_to_binary(ip_prefix)
-
-        self.push_update_add_entry_to_action(
-            req,
-            "FabricIngress.spgw_ingress.interface_lookup",
-            [
-                self.Lpm("ipv4_dst_addr", ip_prefix_, prefix_len),
-                self.Exact("gtpu_is_valid", stringify(0, 1))
-            ],
-            "FabricIngress.spgw_ingress.set_source_iface",
-            [
-                ("src_iface", stringify(SPGW_IFACE_CORE, 1)),
-                ("direction", stringify(SPGW_DIRECTION_DOWNLINK, 1)),
-                ("skip_spgw", stringify(0, 1)),
-            ],
-        )
-        self.write_request(req)
-
-    def add_s1u_iface(self, s1u_addr, prefix_len=32):
-        return # table deleted
-        req = self.get_new_write_request()
-        s1u_addr_ = ipv4_to_binary(s1u_addr)
-
-        self.push_update_add_entry_to_action(
-            req,
-            "FabricIngress.spgw_ingress.interface_lookup",
-            [
-                self.Lpm("ipv4_dst_addr", s1u_addr_, prefix_len),
-                self.Exact("gtpu_is_valid", stringify(1, 1))
-            ],
-            "FabricIngress.spgw_ingress.set_source_iface",
-            [
-                ("src_iface", stringify(SPGW_IFACE_ACCESS, 1)),
-                ("direction", stringify(SPGW_DIRECTION_UPLINK, 1)),
-                ("skip_spgw", stringify(0, 1)),
-            ],
-        )
-        self.write_request(req)
-
     def add_uplink_pdr(self, ctr_id, far_id,
                         teid, tunnel_dst_addr):
         req = self.get_new_write_request()
@@ -1293,7 +1250,6 @@ class SpgwSimpleTest(IPv4UnicastTest):
         if far_id is None:
             far_id = 23  # 23 is the most random number less than 100
 
-        self.add_s1u_iface(s1u_sgw_addr)
         self.add_uplink_pdr(
             ctr_id=ctr_id,
             far_id=far_id,
@@ -1305,7 +1261,6 @@ class SpgwSimpleTest(IPv4UnicastTest):
         if far_id is None:
             far_id = 24  # the second most random  number
 
-        self.add_ue_pool(ip_prefix=ue_addr, prefix_len=32)
         self.add_downlink_pdr(ctr_id=ctr_id, far_id=far_id, ue_addr=ue_addr)
         self.add_downlink_far(
             far_id=far_id,

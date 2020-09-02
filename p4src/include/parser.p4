@@ -211,15 +211,15 @@ parser FabricIngressParser (packet_in  packet,
 
     state parse_inner_tcp {
         packet.extract(hdr.inner_tcp);
-        fabric_md.bridged.inner_l4_sport = hdr.inner_tcp.sport;
-        fabric_md.bridged.inner_l4_dport = hdr.inner_tcp.dport;
+        fabric_md.bridged.innermost_l4_sport = hdr.inner_tcp.sport;
+        fabric_md.bridged.innermost_l4_dport = hdr.inner_tcp.dport;
         transition accept;
     }
 
     state parse_inner_udp {
         packet.extract(hdr.inner_udp);
-        fabric_md.bridged.inner_l4_sport = hdr.inner_udp.sport;
-        fabric_md.bridged.inner_l4_dport = hdr.inner_udp.dport;
+        fabric_md.bridged.innermost_l4_sport = hdr.inner_udp.sport;
+        fabric_md.bridged.innermost_l4_dport = hdr.inner_udp.dport;
         transition accept;
     }
 
