@@ -52,7 +52,7 @@ control SpgwIngress(
         fabric_md.needs_gtpu_decap = true;
         fabric_md.from_dbuf = true;
         fabric_md.bridged.needs_dbuf = false;
-        // Packets coming from offload devices will have some pipeline context saved in a GTPU extension header
+        // Packets coming from dbuf will have some pipeline context saved in a GTPU extension header
         fabric_md.dbuf_queue_id = hdr.gtpu.teid;
         fabric_md.bridged.dbuf_packet_count = hdr.gtpu_ext_up4.dbuf_pkt_count;
         fabric_md.bridged.spgw_next_id = hdr.gtpu_ext_up4.next_id;

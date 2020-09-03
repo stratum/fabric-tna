@@ -19,8 +19,6 @@ from scapy.packet import bind_layers, Packet
 import xnt
 from base_test import P4RuntimeTest, stringify, mac_to_binary, ipv4_to_binary
 
-# Set to False if reading counters breaks the tofino model
-VERIFY_PDR_COUNTERS = False
 
 DEFAULT_PRIORITY = 10
 
@@ -75,7 +73,6 @@ HOST4_IPV4 = "10.0.4.1"
 S1U_ENB_IPV4 = "119.0.0.10"
 S1U_SGW_IPV4 = "140.0.0.2"
 UE_IPV4 = "16.255.255.252"
-# SPGW buffer tunnel addresses
 DBUF_FACING_IFACE_IPV4 = "140.0.0.3"
 DBUF_IPV4 = "20.0.0.1"
 DBUF_MAC = "00:00:00:00:bb:01"
@@ -1296,24 +1293,20 @@ class SpgwSimpleTest(IPv4UnicastTest):
             ctr_id=ctr_id
         )
 
-        ingress_pdr_pkt_ctr1 = 0
-        if VERIFY_PDR_COUNTERS:
-            ingress_pdr_pkt_ctr1 = self.read_pkt_count("FabricIngress.spgw_ingress.pdr_counter", ctr_id)
+        ingress_pdr_pkt_ctr1 = self.read_pkt_count("FabricIngress.spgw_ingress.pdr_counter", ctr_id)
 
         self.runIPv4UnicastTest(pkt=gtp_pkt, dst_ipv4=ue_out_pkt[IP].dst,
                                 next_hop_mac=dst_mac,
                                 prefix_len=32, exp_pkt=exp_pkt,
                                 tagged1=tagged1, tagged2=tagged2, mpls=mpls)
 
-        if VERIFY_PDR_COUNTERS:
-            # Verify the PDR packet counter increased
-            ingress_pdr_pkt_ctr2 = self.read_pkt_count("FabricIngress.spgw_ingress.pdr_counter", ctr_id)
-            ctr_increase = ingress_pdr_pkt_ctr2 - ingress_pdr_pkt_ctr1
-            if ctr_increase != 1:
-                self.fail("PDR packet counter incremented by %d instead of 1!" % ctr_increase)
+        # Verify the PDR packet counter increased
+        ingress_pdr_pkt_ctr2 = self.read_pkt_count("FabricIngress.spgw_ingress.pdr_counter", ctr_id)
+        ctr_increase = ingress_pdr_pkt_ctr2 - ingress_pdr_pkt_ctr1
+        if ctr_increase != 1:
+            self.fail("PDR packet counter incremented by %d instead of 1!" % ctr_increase)
 
     def runDownlinkTest(self, pkt, tagged1, tagged2, mpls):
-
         ctr_id = 2
         dst_mac = HOST2_MAC
         ue_ipv4 = pkt[IP].dst
@@ -1339,35 +1332,34 @@ class SpgwSimpleTest(IPv4UnicastTest):
             ctr_id=ctr_id,
         )
 
-        ingress_pdr_pkt_ctr1 = 0
-        if VERIFY_PDR_COUNTERS:
-            ingress_pdr_pkt_ctr1 = self.read_pkt_count("FabricIngress.spgw_ingress.pdr_counter", ctr_id)
+        ingress_pdr_pkt_ctr1 = self.read_pkt_count("FabricIngress.spgw_ingress.pdr_counter", ctr_id)
 
         self.runIPv4UnicastTest(pkt=pkt, dst_ipv4=exp_pkt[IP].dst,
                                 next_hop_mac=dst_mac,
                                 prefix_len=32, exp_pkt=exp_pkt,
                                 tagged1=tagged1, tagged2=tagged2, mpls=mpls)
 
-        if VERIFY_PDR_COUNTERS:
-            # Verify the PDR packet counter increased
-            ingress_pdr_pkt_ctr2 = self.read_pkt_count("FabricIngress.spgw_ingress.pdr_counter", ctr_id)
-            ctr_increase = ingress_pdr_pkt_ctr2 - ingress_pdr_pkt_ctr1
-            if ctr_increase != 1:
-                self.fail("PDR packet counter incremented by %d instead of 1!" % ctr_increase)
+        # Verify the PDR packet counter increased
+        ingress_pdr_pkt_ctr2 = self.read_pkt_count("FabricIngress.spgw_ingress.pdr_counter", ctr_id)
+        ctr_increase = ingress_pdr_pkt_ctr2 - ingress_pdr_pkt_ctr1
+        if ctr_increase != 1:
+            self.fail("PDR packet counter incremented by %d instead of 1!" % ctr_increase)
 
     def runBufferedDownlinkTest(self, pkt):
         vlan = DEFAULT_VLAN
         enodeb_next_id = 200
-        buffer_next_id = 300
+        dbuf_next_id = 300
         enodeb_mac = HOST2_MAC
-        buffer_mac = DBUF_MAC
+        dbuf_mac = DBUF_MAC
         switch_mac = pkt[Ether].dst
         ue_ipv4 = pkt[IP].dst
         dbuf_queue_id = 15
 
-        packets_sent_to_buffer = 1
+        packets_sent_to_dbuf = 1
         far_id = 2
         ctr_id = 2
+
+        # TODO: verify ingress/egress counters in this test
 
         # Forwarding type -> routing v4
         self.set_forwarding_type(self.port1, switch_mac, ETH_TYPE_IPV4,
@@ -1378,25 +1370,25 @@ class SpgwSimpleTest(IPv4UnicastTest):
         # Setup ports.
         self.setup_port(self.port1, vlan, False)  # upstream
         self.setup_port(self.port2, vlan, False)  # enodeb
-        self.setup_port(self.port3, vlan, False)  # buffer
+        self.setup_port(self.port3, vlan, False)  # dbuf
 
         # Routing entries
         self.add_forwarding_routing_v4_entry(ipv4_dstAddr=S1U_ENB_IPV4, ipv4_pLen=32, next_id=enodeb_next_id)
-        self.add_forwarding_routing_v4_entry(ipv4_dstAddr=DBUF_IPV4, ipv4_pLen=32, next_id=buffer_next_id)
+        self.add_forwarding_routing_v4_entry(ipv4_dstAddr=DBUF_IPV4, ipv4_pLen=32, next_id=dbuf_next_id)
 
         # Next entries
         self.add_next_routing(enodeb_next_id, self.port2, switch_mac, enodeb_mac)
-        self.add_next_routing(buffer_next_id, self.port3, switch_mac, buffer_mac)
+        self.add_next_routing(dbuf_next_id, self.port3, switch_mac, dbuf_mac)
         self.add_next_vlan(enodeb_next_id, vlan)
-        self.add_next_vlan(buffer_next_id, vlan)
+        self.add_next_vlan(dbuf_next_id, vlan)
 
         # GTPU extension header that stores pipeline state, will be sent to/from dbuf
-        ext_hdr = GTPU_UP4_ExtensionHeader(dbuf_pkt_count=packets_sent_to_buffer, next_id=far_id, ctr_id=ctr_id)
+        ext_hdr = GTPU_UP4_ExtensionHeader(dbuf_pkt_count=packets_sent_to_dbuf, next_id=far_id, ctr_id=ctr_id)
 
-        # Packet that we expect to receive at the buffering device
+        # Packet that we expect to receive at dbuf
         exp_pkt_to_dbuf = pkt.copy()
         exp_pkt_to_dbuf[Ether].src = switch_mac
-        exp_pkt_to_dbuf[Ether].dst = buffer_mac
+        exp_pkt_to_dbuf[Ether].dst = dbuf_mac
         exp_pkt_to_dbuf[IP].ttl = exp_pkt_to_dbuf[IP].ttl - 1
         exp_pkt_to_dbuf = pkt_add_gtp(exp_pkt_to_dbuf,
                                       out_ipv4_src=DBUF_FACING_IFACE_IPV4,
@@ -1405,9 +1397,9 @@ class SpgwSimpleTest(IPv4UnicastTest):
                                       sport=UDP_GTP_PORT,
                                       gtpu_ext_hdr=ext_hdr)
 
-        # Packet that the buffer will release to the switch
+        # Packet that dbuf will release to the switch
         pkt_from_dbuf = pkt.copy()
-        pkt_from_dbuf[Ether].src = buffer_mac
+        pkt_from_dbuf[Ether].src = dbuf_mac
         pkt_from_dbuf[Ether].dst = switch_mac
         pkt_from_dbuf = pkt_add_gtp(pkt_from_dbuf,
                                     out_ipv4_src=DBUF_IPV4,
@@ -1437,34 +1429,33 @@ class SpgwSimpleTest(IPv4UnicastTest):
         # FIXME: break these path checks into separate unit tests once register cells can be written
 
         print "Verifying non-dbuf path..."
-        # Verify packets travel normally before buffering is enabled (also clears out the buffer count register)
+        # Verify packets travel normally before dbuf redirection is enabled (also clears out the dbuf count register)
         self.send_packet(self.port1, str(pkt))
         self.verify_packet(exp_pkt, self.port2)
         self.verify_no_other_packets()
 
-        # Turn on buffering by modifying the PDR
+        # Turn on dbuf redirection by modifying the PDR
         self.add_downlink_pdr(ctr_id=ctr_id, far_id=far_id, ue_addr=ue_ipv4, buffering=True, modify=True,
                               queue_id=dbuf_queue_id)
-        # and by adding a buffering redirection rule
+        # and by adding a dbuf redirection rule
         self.add_dbuf_redirect(DBUF_FACING_IFACE_IPV4, DBUF_IPV4)
 
         print "Verifying upstream->switch->dbuf path..."
-        # Send a packet that should be redirected to the buffer
+        # Send a packet that should be redirected to dbuf
         self.send_packet(self.port1, str(pkt))
-        # Check that it arrived at the buffer
+        # Check that it arrived at dbuf
         self.verify_packet(exp_pkt_to_dbuf, self.port3)
         self.verify_no_other_packets()
 
         print "Verifying dbuf->switch->enodeb path..."
-        # Release a packet from the buffer
+        # Release a packet from dbuf
         self.send_packet(self.port3, str(pkt_from_dbuf))
         # Check that it arrived at the enodeb
         self.verify_packet(exp_pkt, self.port2)
         self.verify_no_other_packets()
 
         print "Verifying upstream->switch->enodeb path..."
-        # Check that empty buffer detection worked,
-        # by checking that new packets are not redirected to the buffer
+        # Check that empty dbuf detection worked, by checking that new packets are not redirected to dbuf
         self.send_packet(self.port1, str(pkt))
         self.verify_packet(exp_pkt, self.port2)
         self.verify_no_other_packets()
