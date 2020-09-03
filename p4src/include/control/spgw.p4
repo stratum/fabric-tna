@@ -4,24 +4,6 @@
 #ifndef __SPGW__
 #define __SPGW__
 
-#ifndef NUM_UES
-#define NUM_UES 2048
-#endif
-
-#ifndef MAX_PACKETS_TO_DBUF
-#define MAX_PACKETS_TO_DBUF 1024
-#endif
-
-#ifndef NUM_DBUF_QUEUES
-#define NUM_DBUF_QUEUES NUM_UES
-#endif
-
-#define MAX_PDR_COUNTERS 2*NUM_UES
-#define MAX_UPLINK_SPGW_FLOWS NUM_UES
-#define MAX_DOWNLINK_SPGW_FLOWS NUM_UES
-#define MAX_SPGW_FORWARDING_ACTIONS 2*NUM_UES
-
-
 control SpgwIngress(
         /* Fabric.p4 */
         inout parsed_headers_t                      hdr,

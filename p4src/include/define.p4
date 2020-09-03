@@ -58,6 +58,23 @@
 #define PKT_INSTANCE_TYPE_REPLICATION 5
 #define PKT_INSTANCE_TYPE_RESUBMIT 6
 
+#ifndef NUM_UES
+#define NUM_UES 2048
+#endif
+
+#ifndef MAX_PACKETS_TO_DBUF
+#define MAX_PACKETS_TO_DBUF 1024
+#endif
+
+#ifndef NUM_DBUF_QUEUES
+#define NUM_DBUF_QUEUES NUM_UES
+#endif
+
+#define MAX_PDR_COUNTERS 2*NUM_UES
+#define MAX_UPLINK_SPGW_FLOWS NUM_UES
+#define MAX_DOWNLINK_SPGW_FLOWS NUM_UES
+#define MAX_SPGW_FORWARDING_ACTIONS 2*NUM_UES
+
 typedef bit<3>  fwd_type_t;
 typedef bit<32> next_id_t;
 typedef bit<20> mpls_label_t;
