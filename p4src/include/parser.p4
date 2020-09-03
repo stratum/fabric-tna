@@ -186,14 +186,22 @@ parser FabricIngressParser (packet_in  packet,
 #ifdef WITH_SPGW
     state parse_gtpu {
         packet.extract(hdr.gtpu);
-        transition select(hdr.gtpu.seq_flag) {
-            0 : parse_inner_ipv4;
+        transition select(hdr.gtpu.ex_flag, hdr.gtpu.seq_flag, hdr.gtpu.npdu_flag) {
+            (0,0,0) : parse_inner_ipv4;
             default : parse_gtpu_options;
         }
     }
 
     state parse_gtpu_options {
         packet.extract(hdr.gtpu_options);
+        transition select(hdr.gtpu_options.next_ext) {
+            GTPU_EXT_TYPE_UP4 : parse_gtpu_ext_up4;
+            default: parse_inner_ipv4;
+        }
+    }
+
+    state parse_gtpu_ext_up4 {
+        packet.extract(hdr.gtpu_ext_up4);
         transition parse_inner_ipv4;
     }
 
@@ -255,6 +263,7 @@ control FabricIngressDeparser(packet_out packet,
         // in case we parsed a GTPU packet but did not decap it
         packet.emit(hdr.gtpu);
         packet.emit(hdr.gtpu_options);
+        packet.emit(hdr.gtpu_ext_up4);
         packet.emit(hdr.inner_ipv4);
         packet.emit(hdr.inner_tcp);
         packet.emit(hdr.inner_udp);
@@ -443,14 +452,22 @@ parser FabricEgressParser (packet_in packet,
 #ifdef WITH_SPGW
     state parse_gtpu {
         packet.extract(hdr.gtpu);
-        transition select(hdr.gtpu.seq_flag) {
-            0 : parse_inner_ipv4;
+        transition select(hdr.gtpu.ex_flag, hdr.gtpu.seq_flag, hdr.gtpu.npdu_flag) {
+            (0,0,0) : parse_inner_ipv4;
             default : parse_gtpu_options;
         }
     }
 
     state parse_gtpu_options {
         packet.extract(hdr.gtpu_options);
+        transition select(hdr.gtpu_options.next_ext) {
+            GTPU_EXT_TYPE_UP4 : parse_gtpu_ext_up4;
+            default: parse_inner_ipv4;
+        }
+    }
+
+    state parse_gtpu_ext_up4 {
+        packet.extract(hdr.gtpu_ext_up4);
         transition parse_inner_ipv4;
     }
 
@@ -587,6 +604,7 @@ control FabricEgressDeparser(packet_out packet,
         packet.emit(hdr.outer_udp);
         packet.emit(hdr.outer_gtpu);
         packet.emit(hdr.outer_gtpu_options);
+        packet.emit(hdr.outer_gtpu_ext_up4);
 #endif // WITH_SPGW
         packet.emit(hdr.ipv4);
         packet.emit(hdr.ipv6);
@@ -598,6 +616,7 @@ control FabricEgressDeparser(packet_out packet,
         // these should never happen at the same time as the outer GTPU tunnel headers
         packet.emit(hdr.gtpu);
         packet.emit(hdr.gtpu_options);
+        packet.emit(hdr.gtpu_ext_up4);
         packet.emit(hdr.inner_ipv4);
         packet.emit(hdr.inner_tcp);
         packet.emit(hdr.inner_udp);

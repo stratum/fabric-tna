@@ -6,16 +6,21 @@
 
 #ifndef NUM_UES
 #define NUM_UES 2048
-#endif // NUM_UES
+#endif
 
-#ifndef MAX_BUFFERED_PACKETS
-#define MAX_BUFFERED_PACKETS 1024
-#endif // MAX_BUFFERED_PACKETS
+#ifndef MAX_PACKETS_TO_DBUF
+#define MAX_PACKETS_TO_DBUF 1024
+#endif
+
+#ifndef NUM_DBUF_QUEUES
+#define NUM_DBUF_QUEUES NUM_UES
+#endif
 
 #define MAX_PDR_COUNTERS 2*NUM_UES
-#define NUM_UPLINK_PDRS NUM_UES
-#define NUM_DOWNLINK_PDRS NUM_UES
-#define NUM_FARS 2*NUM_UES
+#define MAX_UPLINK_SPGW_FLOWS NUM_UES
+#define MAX_DOWNLINK_SPGW_FLOWS NUM_UES
+#define MAX_SPGW_FORWARDING_ACTIONS 2*NUM_UES
+
 
 control SpgwIngress(
         /* Fabric.p4 */
@@ -24,29 +29,27 @@ control SpgwIngress(
         /* TNA */
         inout ingress_intrinsic_metadata_for_tm_t   ig_tm_md) {
 
-
     //==================================//
-    //===== Buffer Offload Things ======//
+    //===== DBuf Offload Things ======//
     //==================================//
 
-    Register<bit<BUFF_REG_CELL_WIDTH>,_>(NUM_FARS) buffer_count_register;
-
-    RegisterAction<bit<BUFF_REG_CELL_WIDTH>, _, bit<16>>(buffer_count_register) _write_buffered_count = {
-        void apply(inout bit<BUFF_REG_CELL_WIDTH> value, out bit<16> rv) {
+    Register<dbuf_count_t,_>(NUM_DBUF_QUEUES) dbuf_count_register;
+    RegisterAction<dbuf_count_t, _, dbuf_count_t>(dbuf_count_register) _write_dbuf_count = {
+        void apply(inout dbuf_count_t value, out dbuf_count_t rv) {
             // check if the count retrieved from the packet header equals the count we have saved
-            if (value == fabric_md.bridged.buffered_packet_count)
-                // if it was, the buffer loop is empty, so buffer no more packets
-                value = MAX_BUFFERED_PACKETS;
+            if (value == fabric_md.bridged.dbuf_packet_count)
+                // if it was, the dbuf loop is empty, so send no more packets to dbuf
+                value = MAX_PACKETS_TO_DBUF;
             // retval is ignored
             rv = 0;
         }
     };
 
-    RegisterAction<bit<BUFF_REG_CELL_WIDTH>, _, bit<16>>(buffer_count_register) _get_buffered_count = {
-        void apply(inout bit<BUFF_REG_CELL_WIDTH> value, out bit<16> rv) {
-            // value = min(MAX_BUFFERED_PACKETS, value + 1)
-            if (value >= MAX_BUFFERED_PACKETS)
-                value = MAX_BUFFERED_PACKETS;
+    RegisterAction<dbuf_count_t, _, dbuf_count_t>(dbuf_count_register) _get_dbuf_count = {
+        void apply(inout dbuf_count_t value, out dbuf_count_t rv) {
+            // value = min(MAX_PACKETS_TO_DBUF, value + 1)
+            if (value >= MAX_PACKETS_TO_DBUF)
+                value = MAX_PACKETS_TO_DBUF;
             else
                 value = value + 1;
 
@@ -54,112 +57,119 @@ control SpgwIngress(
         }
     };
 
-    RegisterAction<bit<BUFF_REG_CELL_WIDTH>, _, bit<16>>(buffer_count_register) _clear_buffered_count = {
-        void apply(inout bit<BUFF_REG_CELL_WIDTH> value, out bit<16> rv) {
+    RegisterAction<dbuf_count_t, _, dbuf_count_t>(dbuf_count_register) _clear_dbuf_count = {
+        void apply(inout dbuf_count_t value, out dbuf_count_t rv) {
             value = 0;
             rv = 0;
         }
     };
 
     @hidden
-    action _receive_from_buffer() {
+    action _receive_from_dbuf() {
         fabric_md.bridged.skip_spgw = false;
-        fabric_md.from_buffer = true;
-        // Packets coming from offload devices will have some context saved in repurposed header fields
-        fabric_md.bridged.buffered_packet_count = hdr.gtpu_options.first_short;
-        // PDR context
-        fabric_md.far_id = hdr.gtpu.teid;
-        fabric_md.bridged.pdr_ctr_id = hdr.gtpu_options.second_short;
         fabric_md.needs_gtpu_decap = true;
-        fabric_md.bridged.needs_buffering = false;
-        // Store the received buffer count, using the received FAR ID as the register index
-        _write_buffered_count.execute(hdr.gtpu.teid);
+        fabric_md.from_dbuf = true;
+        fabric_md.bridged.needs_dbuf = false;
+        // Packets coming from offload devices will have some pipeline context saved in a GTPU extension header
+        fabric_md.dbuf_queue_id = hdr.gtpu.teid;
+        fabric_md.bridged.dbuf_packet_count = hdr.gtpu_ext_up4.dbuf_pkt_count;
+        fabric_md.bridged.spgw_next_id = hdr.gtpu_ext_up4.next_id;
+        fabric_md.bridged.pdr_ctr_id = hdr.gtpu_ext_up4.ctr_id;
+        // Store the received dbuf packet count
+        _write_dbuf_count.execute(fabric_md.dbuf_queue_id);
     }
     @hidden
-    table receive_from_buffer {
+    table receive_from_dbuf {
         key = {
-            hdr.gtpu_options.isValid() : exact;
+            hdr.gtpu_ext_up4.isValid() : exact;
         }
         actions = {
-            _receive_from_buffer;
+            _receive_from_dbuf;
         }
         const entries = {
-            (true) : _receive_from_buffer();
+            (true) : _receive_from_dbuf();
         }
         size = 1;
     }
-
 
     //=============================//
     //===== PDR Tables ======//
     //=============================//
 
-    action pdr_miss() {
+    action flow_lookup_miss() {
         fabric_md.bridged.skip_spgw = true;
     }
 
-    action set_pdr_buffer_attributes(pdr_ctr_id_t ctr_id,
-                              far_id_t far_id,
-                              bool needs_gtpu_decap) {
-        fabric_md.bridged.skip_spgw = false;
-        fabric_md.bridged.needs_buffering = true;
-        fabric_md.far_id = far_id;
-        fabric_md.bridged.pdr_ctr_id = ctr_id;
-        fabric_md.needs_gtpu_decap = needs_gtpu_decap;
-        fabric_md.bridged.buffered_packet_count = _get_buffered_count.execute(far_id);
+    action set_uplink_flow_attributes(pdr_ctr_id_t ctr_id,
+                                      spgw_next_id_t spgw_next_id) {
+            fabric_md.bridged.skip_spgw = false;
+            fabric_md.bridged.needs_dbuf = false;
+            fabric_md.needs_gtpu_decap = true;
+            fabric_md.bridged.spgw_next_id = spgw_next_id;
+            fabric_md.bridged.pdr_ctr_id = ctr_id;
     }
 
-    action set_pdr_attributes(pdr_ctr_id_t ctr_id,
-                              far_id_t far_id,
-                              bool needs_gtpu_decap) {
+    action set_buffered_downlink_flow_attributes(pdr_ctr_id_t ctr_id,
+                                        spgw_next_id_t spgw_next_id,
+                                        dbuf_queue_id_t dbuf_queue_id) {
         fabric_md.bridged.skip_spgw = false;
-        fabric_md.bridged.needs_buffering = false;
-        fabric_md.far_id = far_id;
+        fabric_md.bridged.needs_dbuf = true;
+        fabric_md.needs_gtpu_decap = false;
+        fabric_md.bridged.spgw_next_id = spgw_next_id;
         fabric_md.bridged.pdr_ctr_id = ctr_id;
-        fabric_md.needs_gtpu_decap = needs_gtpu_decap;
-        _clear_buffered_count.execute(far_id);
+        fabric_md.dbuf_queue_id = dbuf_queue_id;
+        fabric_md.bridged.dbuf_packet_count = _get_dbuf_count.execute(dbuf_queue_id);
     }
 
-    table downlink_pdr_lookup {
+    // FIXME: remove dbuf_queue_id from action parameters once registers can be cleared by stratum
+    action set_downlink_flow_attributes(pdr_ctr_id_t ctr_id,
+                               spgw_next_id_t spgw_next_id,
+                               dbuf_queue_id_t dbuf_queue_id) {
+        fabric_md.bridged.skip_spgw = false;
+        fabric_md.bridged.needs_dbuf = false;
+        fabric_md.needs_gtpu_decap = false;
+        fabric_md.bridged.spgw_next_id = spgw_next_id;
+        fabric_md.bridged.pdr_ctr_id = ctr_id;
+        fabric_md.dbuf_queue_id = dbuf_queue_id;
+        _clear_dbuf_count.execute(dbuf_queue_id);  // workaround for control plane's inability to clear registers
+    }
+
+    table downlink_flow_lookup {
         key = {
             // only available ipv4 header
             hdr.ipv4.dst_addr : exact @name("ue_addr");
         }
         actions = {
-            set_pdr_attributes;
-            set_pdr_buffer_attributes;
-            pdr_miss;
+            set_downlink_flow_attributes;
+            set_buffered_downlink_flow_attributes;
+            @defaultonly flow_lookup_miss;
         }
-        size = NUM_DOWNLINK_PDRS;
-        const default_action = pdr_miss();
+        size = MAX_DOWNLINK_SPGW_FLOWS;
+        const default_action = flow_lookup_miss();
     }
 
-    table uplink_pdr_lookup {
+    table uplink_flow_lookup {
         key = {
             hdr.ipv4.dst_addr           : exact @name("tunnel_ipv4_dst");
             hdr.gtpu.teid               : exact @name("teid");
         }
         actions = {
-            set_pdr_attributes;
-            pdr_miss;
+            set_uplink_flow_attributes;
+            @defaultonly flow_lookup_miss;
         }
-        size = NUM_UPLINK_PDRS;
-        const default_action = pdr_miss();
+        size = MAX_UPLINK_SPGW_FLOWS;
+        const default_action = flow_lookup_miss();
     }
 
 
     //=============================//
     //======== FAR Tables =========//
     //=============================//
-
-    action load_uplink_far_attributes(bool drop,
-                                      bool notify_cp) {
-        // Do dropping in the same way as fabric's filtering.p4
-        fabric_md.skip_forwarding = drop;
-        fabric_md.skip_next = drop;
-        fabric_md.notify_spgwc = notify_cp; // currently does nothing
-        // Assign the metadata src/dst here to reduce spgw pipeline depth.
-        // This assumes that uplink FARs will only apply to packets that arrived encapped,
+    @hidden
+    action _correct_metadata_for_gtpu_decap() {
+        // Assign these metadata fields in forwarding actions instead of in the decap table to
+        // reduce spgw pipeline depth.
+        // This assumes that non-tunneling forwarding will only apply to packets that arrived encapped,
         // which is *currently* a safe assumption.
         fabric_md.ipv4_src            = hdr.inner_ipv4.src_addr;
         fabric_md.ipv4_dst            = hdr.inner_ipv4.dst_addr;
@@ -167,16 +177,21 @@ control SpgwIngress(
         fabric_md.bridged.l4_dport    = fabric_md.bridged.innermost_l4_dport;
     }
 
-    action load_downlink_far_attributes(bool      drop,
-                                      bool      notify_cp,
-                                      bit<16>   tunnel_src_port,
+    action normal_forwarding_action() {
+        _correct_metadata_for_gtpu_decap();
+    }
+
+    action dropped_forwarding_action() {
+        // Do dropping in the same way as fabric's filtering.p4
+        fabric_md.skip_forwarding = true;
+        fabric_md.skip_next = true;
+        _correct_metadata_for_gtpu_decap();
+    }
+
+    action tunneled_forwarding_action(bit<16>   tunnel_src_port,
                                       bit<32>   tunnel_src_addr,
                                       bit<32>   tunnel_dst_addr,
                                       teid_t    teid) {
-        // Do dropping in the same way as fabric's filtering.p4
-        fabric_md.skip_forwarding = drop;
-        fabric_md.skip_next = drop;
-        fabric_md.notify_spgwc = notify_cp; // currently does nothing
         // GTP tunnel attributes
         fabric_md.bridged.needs_gtpu_encap = true;
         fabric_md.bridged.gtpu_teid = teid;
@@ -193,23 +208,18 @@ control SpgwIngress(
 
     }
 
-    action far_miss() {
-        fabric_md.skip_forwarding = true;
-        fabric_md.skip_next = true;
-    }
-
-    table far_lookup {
+    table forwarding_actions {
         key = {
-            fabric_md.far_id : exact @name("far_id");
+            fabric_md.bridged.spgw_next_id : exact @name("spgw_next_id");
         }
         actions = {
-            load_uplink_far_attributes;
-            load_downlink_far_attributes;
-            far_miss;
+            normal_forwarding_action;
+            dropped_forwarding_action;
+            tunneled_forwarding_action;
         }
-        // default is drop and don't notify CP
-        const default_action = far_miss();
-        size = NUM_FARS;
+        // default is the average case, to reduce table size
+        default_action = normal_forwarding_action();
+        size = MAX_SPGW_FORWARDING_ACTIONS;
     }
 
 
@@ -217,24 +227,22 @@ control SpgwIngress(
     //======= Misc Things =========//
     //=============================//
 
-    action load_buffer_tunnel_attributes(bit<32> tunnel_src_addr,
-                                      bit<32> tunnel_dst_addr) {
+    action load_dbuf_tunnel_attributes(bit<32> tunnel_src_addr, bit<32> tunnel_dst_addr) {
         // Basically a normal GTPU tunnel encapsulation, but the
-        // TEID stores the buffered packet count, and in egress
-        // some metadata will be saved in GTPU options
-        load_downlink_far_attributes(false, false, UDP_PORT_GTPU,
-                                tunnel_src_addr, tunnel_dst_addr,
-                                fabric_md.far_id);
+        // TEID stores the dbuf queue index, and in egress some metadata will be
+        // preserved in a GTPU extension for the packet's return to this pipeline
+        tunneled_forwarding_action(UDP_PORT_GTPU, tunnel_src_addr, tunnel_dst_addr,
+                                    (teid_t) fabric_md.dbuf_queue_id);
     }
 
     // This is a table and not an apply block action because the 
     // tunnel source and dest addresses need to be writeable at runtime
-    table buffer_redirect {
+    table redirect_to_dbuf {
         key = {
-            fabric_md.bridged.needs_buffering : exact @name("needs_buffering");
+            fabric_md.bridged.needs_dbuf : exact @name("needs_dbuf");
         }
         actions = {
-            load_buffer_tunnel_attributes;
+            load_dbuf_tunnel_attributes;
         }
         size = 1;
     }
@@ -246,16 +254,14 @@ control SpgwIngress(
         // Correct parser-set metadata to use the inner header values
         fabric_md.bridged.ip_eth_type = ETHERTYPE_IPV4;
         fabric_md.bridged.ip_proto    = hdr.inner_ipv4.protocol;
-        // These 4 metadata updates have been moved to the FAR table to reduce pipeline depth
-        // fabric_md.ipv4_src            = hdr.inner_ipv4.src_addr;
-        // fabric_md.ipv4_dst            = hdr.inner_ipv4.dst_addr;
-        // fabric_md.bridged.l4_sport    = fabric_md.bridged.innermost_l4_sport;
-        // fabric_md.bridged.l4_dport    = fabric_md.bridged.innermost_l4_dport;
+        // Ideally, _correct_metadata_for_gtpu_decap() would be called here, but it is called
+        // by the forwarding action table instead to reduce pipeline depth
         // Move GTPU and inner L3 headers out
         hdr.ipv4 = hdr.inner_ipv4;
         hdr.inner_ipv4.setInvalid();
         hdr.gtpu.setInvalid();
         hdr.gtpu_options.setInvalid();
+        hdr.gtpu_ext_up4.setInvalid();
     }
     @hidden
     action decap_inner_tcp() {
@@ -310,57 +316,46 @@ control SpgwIngress(
     //===== Apply Block ======//
     //=============================//
     apply {
-
         // Packet Detection Rule tables
-        if (hdr.gtpu_options.isValid()) {
-            receive_from_buffer.apply();
+        if (hdr.gtpu_ext_up4.isValid()) {
+            receive_from_dbuf.apply();
         } else if (hdr.gtpu.isValid()) {
-            uplink_pdr_lookup.apply();
+            uplink_flow_lookup.apply();
         } else {
-            downlink_pdr_lookup.apply();
-            // Ensure metadata innermost ports are set for the unencapped case
+            downlink_flow_lookup.apply();
+            // Ensure metadata innermost ports are set correctly for the unencapped case.
+            // Placing this in the parser is more correct but increases complexity
             fabric_md.bridged.innermost_l4_sport = fabric_md.bridged.l4_sport;
             fabric_md.bridged.innermost_l4_dport = fabric_md.bridged.l4_dport;
         }
 
         if (!fabric_md.bridged.skip_spgw) {
-            if (!fabric_md.from_buffer) {
-                // Packets from an offload device have already been counted by ingress
+            if (!fabric_md.from_dbuf) {
+                // Packets from dbuf have already been counted by ingress
                 pdr_counter.count(fabric_md.bridged.pdr_ctr_id);
             }
 
-
-            // Redirect to a buffering device if needed and allowed,
-            // or load FAR info
-            if (fabric_md.bridged.needs_buffering && 
-                fabric_md.bridged.buffered_packet_count != MAX_BUFFERED_PACKETS) {
-                buffer_redirect.apply();
+            // Redirect to dbuf if needed and allowed, otherwise forward the packet
+            if (fabric_md.bridged.needs_dbuf && 
+                fabric_md.bridged.dbuf_packet_count != MAX_PACKETS_TO_DBUF) {
+                redirect_to_dbuf.apply();
             } else {
-                far_lookup.apply();
-                // GTPU Decapsulate is placed after far_lookup to flatten a dependency
+                forwarding_actions.apply();
+                // GTPU Decapsulate is placed after forwarding_actions to flatten a dependency
                 // caused by both tables accessing hdr.inner_ipv4
                 if (fabric_md.needs_gtpu_decap) {
                     decap_gtpu.apply();
                 }
 
-                // In case needs_buffering was true but we hit MAX_BUFFERED_PACKETS
-                fabric_md.bridged.needs_buffering = false;
+                // In case needs_dbuf was true but we hit MAX_PACKETS_TO_DBUF
+                fabric_md.bridged.needs_dbuf = false;
             }
 
-            /* Leave out until notification feature is actually needed
-            if (fabric_md.notify_spgwc) {
-                // TODO: Should notification involve something other than cloning?
-                // Maybe generate a digest instead?
-                ig_tm_md.copy_to_cpu = 1;
-            }
-            */
+            /* TODO: Read fabric_md.notify_spgwc here and notify the CP, once that feature is needed*/
 
             // Nothing to be done immediately for forwarding or encapsulation.
             // Forwarding is done by other parts of fabric.p4, and
             // encapsulation is done in the egress
-
-            // Needed for correct GTPU encapsulation in egress
-            fabric_md.bridged.spgw_ipv4_len = hdr.ipv4.total_len;
         }
     }
 }
@@ -414,19 +409,25 @@ control SpgwEgress(
     }
 
     @hidden
-    action save_context_for_buffering() {
-        // FAR ID was earlier placed in fabric_md.bridged.gtpu_teid, so it is already saved
-        // in hdr.outer_gtpu.teid
-        hdr.outer_gtpu.seq_flag = 1; // signal that options are present
+    action save_context_for_dbuf() {
+        // Add GTPU options
+        hdr.outer_gtpu.ex_flag = 1; // signal that options are present
         hdr.outer_gtpu_options.setValid();
-        hdr.outer_gtpu_options.first_short = fabric_md.bridged.buffered_packet_count;
-        hdr.outer_gtpu_options.second_short = fabric_md.bridged.pdr_ctr_id;
-        // Correct header length fields to include gtpu options
+        hdr.outer_gtpu_options.next_ext = GTPU_EXT_TYPE_UP4;
+        // Add our custom GTPU extension
+        hdr.outer_gtpu_ext_up4.setValid();
+        hdr.outer_gtpu_ext_up4.ext_len = GTPU_EXT_UP4_SIZE;
+        hdr.outer_gtpu_ext_up4.dbuf_pkt_count = fabric_md.bridged.dbuf_packet_count;
+        hdr.outer_gtpu_ext_up4.next_id = fabric_md.bridged.spgw_next_id;
+        hdr.outer_gtpu_ext_up4.ctr_id = fabric_md.bridged.pdr_ctr_id;
+        hdr.outer_gtpu_ext_up4.next_ext = 0;
+
+        // Correct header length fields to include sizes of gtpu options and extension
         hdr.outer_udp.len = hdr.ipv4.total_len
-                        + (UDP_HDR_SIZE + GTP_HDR_SIZE + GTPU_OPTIONS_SIZE);
+                        + (UDP_HDR_SIZE + GTP_HDR_SIZE + GTPU_OPTIONS_SIZE + GTPU_EXT_UP4_SIZE);
         hdr.outer_ipv4.total_len = hdr.ipv4.total_len
-                        + (IPV4_HDR_SIZE + UDP_HDR_SIZE + GTP_HDR_SIZE + GTPU_OPTIONS_SIZE);
-        hdr.outer_gtpu.msglen = hdr.ipv4.total_len + GTPU_OPTIONS_SIZE;
+                        + (IPV4_HDR_SIZE + UDP_HDR_SIZE + GTP_HDR_SIZE + GTPU_OPTIONS_SIZE + GTPU_EXT_UP4_SIZE);
+        hdr.outer_gtpu.msglen = hdr.ipv4.total_len + (GTPU_OPTIONS_SIZE + GTPU_EXT_UP4_SIZE);
     }
 
     apply {
@@ -435,15 +436,15 @@ control SpgwEgress(
 
         if (fabric_md.bridged.needs_gtpu_encap) {
             gtpu_encap();
-            if (fabric_md.bridged.needs_buffering) {
-                save_context_for_buffering();
+            if (fabric_md.bridged.needs_dbuf) {
+                save_context_for_dbuf();
             }
 #ifdef WITH_INT
             fabric_md.int_mirror_md.skip_gtpu_headers = 1;
 #endif // WITH_INT
         }
 
-        if (!fabric_md.bridged.needs_buffering) {
+        if (!fabric_md.bridged.needs_dbuf) {
             // Only count packets in egress if they are not destined for an offload
             pdr_counter.count(fabric_md.bridged.pdr_ctr_id);
         } 

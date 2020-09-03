@@ -126,15 +126,21 @@ header gtpu_t {
 }
 // GTPU optional fields
 header gtpu_options_t {
-    // This should actually be three fields: sequence number, N-PDU number,
-    // and next extension header type, but we're going to use the space to 
-    // save pipeline context when packets are sent to offload devices. 
-    // Putting gibberish in the next extension header type field is ok 
-    // if we ensure ex_flag == 0, signalling that the field should not be 
-    // interpreted by a parser. Otherwise corruption could occur.
-    bit<16> first_short;
-    bit<16> second_short;
+    bit<16>     seq_num;        /* Sequence number */
+    bit<8>      n_pdu_num;      /* N-PDU number */
+    bit<8>      next_ext;       /* Next extension header */
 }
+
+header gtpu_extension_up4_t {
+    // GTPU extension headers must have size a multiple of 4-octet units
+    bit<8>              ext_len;  // Mandatory for all extensions. Extension hdr length as a multiple of 4-octet units
+    dbuf_count_t        dbuf_pkt_count;
+    spgw_next_id_t      next_id;
+    pdr_ctr_id_t        ctr_id;
+    bit<8>              next_ext; // Mandatory for all extensions. The next GTPU extension header. 0 if no next header
+}
+
+
 #endif // WITH_SPGW
 
 // Custom metadata definition
@@ -163,16 +169,16 @@ header bridged_metadata_t {
     // bit<1>          inner_vlan_cfi;
 #endif // WITH_DOUBLE_VLAN_TERMINATION
 #ifdef WITH_SPGW
-    bit<BUFF_REG_CELL_WIDTH> buffered_packet_count;
-    bool            needs_buffering;
-    bit<16>         spgw_ipv4_len;
+    dbuf_count_t    dbuf_packet_count;
+    bool            needs_dbuf;
     bool            needs_gtpu_encap;
     bool            skip_spgw;
+    spgw_next_id_t  spgw_next_id;
+    pdr_ctr_id_t    pdr_ctr_id;
     teid_t          gtpu_teid;
     bit<32>         gtpu_tunnel_sip;
     bit<32>         gtpu_tunnel_dip;
     bit<16>         gtpu_tunnel_sport;
-    pdr_ctr_id_t    pdr_ctr_id;
     bit<16>         innermost_l4_sport;
     bit<16>         innermost_l4_dport;
 #endif // WITH_SPGW
@@ -191,15 +197,11 @@ struct fabric_ingress_metadata_t {
     next_id_t          next_id;
     bool               is_loopback;
 #ifdef WITH_SPGW
-    far_id_t        far_id;
-    bool               far_will_encap;
-    bool               from_buffer;
+    dbuf_queue_id_t    dbuf_queue_id;
+    bool               from_dbuf;
     bool               inner_ipv4_checksum_err;
     bool               needs_gtpu_decap;
-    bool               pdr_hit;
-    bool               far_dropped;
     bool               notify_spgwc;
-    SpgwDirection      spgw_direction;
 #endif // WITH_SPGW
 }
 
@@ -240,8 +242,10 @@ struct parsed_headers_t {
     udp_t outer_udp;
     gtpu_t outer_gtpu;
     gtpu_options_t outer_gtpu_options;
+    gtpu_extension_up4_t outer_gtpu_ext_up4;
     gtpu_t gtpu;
     gtpu_options_t gtpu_options;
+    gtpu_extension_up4_t gtpu_ext_up4;
     ipv4_t inner_ipv4;
     tcp_t inner_tcp;
     udp_t inner_udp;

@@ -43,6 +43,7 @@
 #define UDP_HDR_SIZE 8
 #define GTP_HDR_SIZE 8
 #define GTPU_OPTIONS_SIZE 4
+#define GTPU_EXT_UP4_SIZE 8
 
 #define UDP_PORT_GTPU 2152
 #define GTP_GPDU 0xff
@@ -66,21 +67,13 @@ typedef bit<32> ipv4_addr_t;
 typedef bit<16> l4_port_t;
 
 // SPGW types
-#define BUFF_REG_CELL_WIDTH 16
+const   bit<8>  GTPU_EXT_TYPE_UP4 = 0x3f;  // two most significant bits are 0, to signal comprehension is optional
 typedef bit<32> teid_t;
-typedef bit<32> far_id_t;
+typedef bit<16> spgw_next_id_t;
 typedef bit<16> pdr_ctr_id_t;
-enum bit<2> SpgwDirection {
-    UNKNOWN             = 0x0,
-    UPLINK              = 0x1,
-    DOWNLINK            = 0x2
-}
-enum bit<2> SpgwInterface {
-    UNKNOWN       = 0x0,
-    ACCESS        = 0x1,
-    CORE          = 0x2,
-    FROM_BUFFER   = 0x3
-}
+typedef bit<16> dbuf_count_t;  // Must be 8, 16, or 32 bits, because this will be used as a register cell type
+typedef bit<32> dbuf_queue_id_t;
+
 
 const bit<16> ETHERTYPE_QINQ = 0x88A8;
 const bit<16> ETHERTYPE_QINQ_NON_STD = 0x9100;

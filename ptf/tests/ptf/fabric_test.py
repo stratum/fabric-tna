@@ -76,9 +76,9 @@ S1U_ENB_IPV4 = "119.0.0.10"
 S1U_SGW_IPV4 = "140.0.0.2"
 UE_IPV4 = "16.255.255.252"
 # SPGW buffer tunnel addresses
-BUFF_FACING_IFACE_IPV4 = "140.0.0.3"
-BUFF_DEVICE_IPV4 = "20.0.0.1"
-BUFF_DEVICE_MAC ="00:00:00:00:bb:01"
+DBUF_FACING_IFACE_IPV4 = "140.0.0.3"
+DBUF_IPV4 = "20.0.0.1"
+DBUF_MAC = "00:00:00:00:bb:01"
 
 SPGW_DIRECTION_UPLINK = 1
 SPGW_DIRECTION_DOWNLINK = 2
@@ -185,9 +185,23 @@ class GTPU(Packet):
         return pkt
 
 
+
+class GTPU_UP4_ExtensionHeader(Packet):
+    name = "GTP-U UP4 Extension Header"
+    fields_desc = [
+        ByteField("ext_len", 8),
+        ShortField("dbuf_pkt_count", 0),
+        ShortField("next_id", 0),
+        ShortField("ctr_id", 0),
+        ByteField("next_ext", 0)
+    ]
+
+
 # Register our GTPU header with scapy for dissection
 bind_layers(UDP, GTPU, dport=UDP_GTP_PORT)
+bind_layers(GTPU, GTPU_UP4_ExtensionHeader, E=1, next_ext=0x3f)
 bind_layers(GTPU, IP)
+bind_layers(GTPU_UP4_ExtensionHeader, IP)
 
 
 def pkt_mac_swap(pkt):
@@ -232,14 +246,12 @@ def pkt_add_mpls(pkt, label, ttl, cos=0, s=1):
 
 def pkt_add_gtp(pkt, out_ipv4_src, out_ipv4_dst, teid,
                 sport=DEFAULT_GTP_TUNNEL_SPORT, dport=UDP_GTP_PORT,
-                gtpu_option_short1=None, gtpu_option_short2=None):
+                gtpu_ext_hdr=None):
     payload = pkt[Ether].payload
     gtpu = GTPU(teid=teid)
-    if gtpu_option_short1 != None or gtpu_option_short2 != None:
-        seq_num = gtpu_option_short1 or 0
-        npdu = (gtpu_option_short2 or 0) >> 8
-        next_ext = (gtpu_option_short2 or 0) & 0xff
-        gtpu=GTPU(teid=teid, S=1, seq_num=seq_num, npdu=npdu, next_ext=next_ext)
+    if gtpu_ext_hdr:
+        gtpu.E = 1
+        gtpu = gtpu / gtpu_ext_hdr
 
     return Ether(src=pkt[Ether].src, dst=pkt[Ether].dst) / \
            IP(src=out_ipv4_src, dst=out_ipv4_dst, tos=0,
@@ -1161,34 +1173,33 @@ class SpgwSimpleTest(IPv4UnicastTest):
         req = self.get_new_write_request()
         self.push_update_add_entry_to_action(
             req,
-            "FabricIngress.spgw_ingress.uplink_pdr_lookup",
+            "FabricIngress.spgw_ingress.uplink_flow_lookup",
             [
                 self.Exact("teid", stringify(teid, 4)),
                 self.Exact("tunnel_ipv4_dst", ipv4_to_binary(tunnel_dst_addr)),
             ],
-            "FabricIngress.spgw_ingress.set_pdr_attributes",
+            "FabricIngress.spgw_ingress.set_uplink_flow_attributes",
             [
                 ("ctr_id", stringify(ctr_id, 2)),
-                ("far_id", stringify(far_id, 4)),
-                ("needs_gtpu_decap", stringify(1, 1))
+                ("spgw_next_id", stringify(far_id, 2)),
             ],
         )
         self.write_request(req)
 
-    def add_downlink_pdr(self, ctr_id, far_id, ue_addr, buffering=False, modify=False):
+    def add_downlink_pdr(self, ctr_id, far_id, ue_addr, queue_id=1, buffering=False, modify=False):
         req = self.get_new_write_request()
-        action_name = "FabricIngress.spgw_ingress.set_pdr%s_attributes" \
-                            % ("_buffer" if buffering else "")
+        action_name = "FabricIngress.spgw_ingress.set%s_downlink_flow_attributes" \
+                      % ("_buffered" if buffering else "")
 
         self.push_update_add_entry_to_action(
             req,
-            "FabricIngress.spgw_ingress.downlink_pdr_lookup",
+            "FabricIngress.spgw_ingress.downlink_flow_lookup",
             [self.Exact("ue_addr", ipv4_to_binary(ue_addr))],
             action_name,
             [
                 ("ctr_id", stringify(ctr_id, 2)),
-                ("far_id", stringify(far_id, 4)),
-                ("needs_gtpu_decap", stringify(0, 1))
+                ("spgw_next_id", stringify(far_id, 2)),
+                ("dbuf_queue_id", stringify(queue_id, 4))
             ],
         )
         if modify:
@@ -1196,13 +1207,13 @@ class SpgwSimpleTest(IPv4UnicastTest):
                 update.type = p4runtime_pb2.Update.MODIFY
         self.write_request(req)
 
-    def add_buffer_redirect(self, tunnel_src_addr, tunnel_dst_addr):
+    def add_dbuf_redirect(self, tunnel_src_addr, tunnel_dst_addr):
         req = self.get_new_write_request()
         self.push_update_add_entry_to_action(
             req,
-            "FabricIngress.spgw_ingress.buffer_redirect",
-            [self.Exact("needs_buffering", stringify(1, 1))],
-            "FabricIngress.spgw_ingress.load_buffer_tunnel_attributes",
+            "FabricIngress.spgw_ingress.redirect_to_dbuf",
+            [self.Exact("needs_dbuf", stringify(1, 1))],
+            "FabricIngress.spgw_ingress.load_dbuf_tunnel_attributes",
             [
                 ("tunnel_src_addr", ipv4_to_binary(tunnel_src_addr)),
                 ("tunnel_dst_addr", ipv4_to_binary(tunnel_dst_addr))
@@ -1214,31 +1225,26 @@ class SpgwSimpleTest(IPv4UnicastTest):
         req = self.get_new_write_request()
         self.push_update_add_entry_to_action(
             req,
-            "FabricIngress.spgw_ingress.far_lookup",
-            [self.Exact("far_id", stringify(far_id, 4))],
+            "FabricIngress.spgw_ingress.forwarding_actions",
+            [self.Exact("spgw_next_id", stringify(far_id, 2))],
             action_name,
             action_params,
         )
         self.write_request(req)
 
-    def add_uplink_far(self, far_id, drop=False, notify_cp=False):
+    def add_uplink_far(self, far_id):
         return self._add_far(
             far_id,
-            "FabricIngress.spgw_ingress.load_uplink_far_attributes",
-            [
-                ("drop", stringify(drop, 1)),
-                ("notify_cp", stringify(notify_cp, 1)),
-            ]
+            "FabricIngress.spgw_ingress.normal_forwarding_action",
+            []
         )
 
     def add_downlink_far(self, far_id, teid, tunnel_src_addr, tunnel_dst_addr,
-                         tunnel_src_port=DEFAULT_GTP_TUNNEL_SPORT, drop=False, notify_cp=False):
+                         tunnel_src_port=DEFAULT_GTP_TUNNEL_SPORT):
         return self._add_far(
             far_id,
-            "FabricIngress.spgw_ingress.load_downlink_far_attributes",
+            "FabricIngress.spgw_ingress.tunneled_forwarding_action",
             [
-                ("drop", stringify(drop, 1)),
-                ("notify_cp", stringify(notify_cp, 1)),
                 ("teid", stringify(teid, 4)),
                 ("tunnel_src_port", stringify(tunnel_src_port, 2)),
                 ("tunnel_src_addr", ipv4_to_binary(tunnel_src_addr)),
@@ -1257,11 +1263,11 @@ class SpgwSimpleTest(IPv4UnicastTest):
             tunnel_dst_addr=s1u_sgw_addr)
         self.add_uplink_far(far_id=far_id)
 
-    def setup_downlink(self, s1u_sgw_addr, s1u_enb_addr, teid, ue_addr, ctr_id, far_id=None):
+    def setup_downlink(self, s1u_sgw_addr, s1u_enb_addr, teid, ue_addr, ctr_id, far_id=None, queue_id=1):
         if far_id is None:
             far_id = 24  # the second most random  number
 
-        self.add_downlink_pdr(ctr_id=ctr_id, far_id=far_id, ue_addr=ue_addr)
+        self.add_downlink_pdr(ctr_id=ctr_id, far_id=far_id, ue_addr=ue_addr, queue_id=queue_id)
         self.add_downlink_far(
             far_id=far_id,
             teid=teid,
@@ -1354,9 +1360,10 @@ class SpgwSimpleTest(IPv4UnicastTest):
         enodeb_next_id = 200
         buffer_next_id = 300
         enodeb_mac = HOST2_MAC
-        buffer_mac = BUFF_DEVICE_MAC
+        buffer_mac = DBUF_MAC
         switch_mac = pkt[Ether].dst
         ue_ipv4 = pkt[IP].dst
+        dbuf_queue_id = 15
 
         packets_sent_to_buffer = 1
         far_id = 2
@@ -1375,7 +1382,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
 
         # Routing entries
         self.add_forwarding_routing_v4_entry(ipv4_dstAddr=S1U_ENB_IPV4, ipv4_pLen=32, next_id=enodeb_next_id)
-        self.add_forwarding_routing_v4_entry(ipv4_dstAddr=BUFF_DEVICE_IPV4, ipv4_pLen=32, next_id=buffer_next_id)
+        self.add_forwarding_routing_v4_entry(ipv4_dstAddr=DBUF_IPV4, ipv4_pLen=32, next_id=buffer_next_id)
 
         # Next entries
         self.add_next_routing(enodeb_next_id, self.port2, switch_mac, enodeb_mac)
@@ -1383,30 +1390,31 @@ class SpgwSimpleTest(IPv4UnicastTest):
         self.add_next_vlan(enodeb_next_id, vlan)
         self.add_next_vlan(buffer_next_id, vlan)
 
+        # GTPU extension header that stores pipeline state, will be sent to/from dbuf
+        ext_hdr = GTPU_UP4_ExtensionHeader(dbuf_pkt_count=packets_sent_to_buffer, next_id=far_id, ctr_id=ctr_id)
+
         # Packet that we expect to receive at the buffering device
-        exp_pkt_to_buffer = pkt.copy()
-        exp_pkt_to_buffer[Ether].src = switch_mac
-        exp_pkt_to_buffer[Ether].dst = buffer_mac
-        exp_pkt_to_buffer[IP].ttl = exp_pkt_to_buffer[IP].ttl - 1
-        exp_pkt_to_buffer = pkt_add_gtp(exp_pkt_to_buffer,
-                                        out_ipv4_src=BUFF_FACING_IFACE_IPV4,
-                                        out_ipv4_dst=BUFF_DEVICE_IPV4,
-                                        teid=far_id,
-                                        gtpu_option_short1=packets_sent_to_buffer,
-                                        gtpu_option_short2=ctr_id,
-                                        sport=UDP_GTP_PORT)
+        exp_pkt_to_dbuf = pkt.copy()
+        exp_pkt_to_dbuf[Ether].src = switch_mac
+        exp_pkt_to_dbuf[Ether].dst = buffer_mac
+        exp_pkt_to_dbuf[IP].ttl = exp_pkt_to_dbuf[IP].ttl - 1
+        exp_pkt_to_dbuf = pkt_add_gtp(exp_pkt_to_dbuf,
+                                      out_ipv4_src=DBUF_FACING_IFACE_IPV4,
+                                      out_ipv4_dst=DBUF_IPV4,
+                                      teid=dbuf_queue_id,
+                                      sport=UDP_GTP_PORT,
+                                      gtpu_ext_hdr=ext_hdr)
 
         # Packet that the buffer will release to the switch
-        pkt_from_buffer = pkt.copy()
-        pkt_from_buffer[Ether].src = buffer_mac
-        pkt_from_buffer[Ether].dst = switch_mac
-        pkt_from_buffer = pkt_add_gtp(pkt_from_buffer,
-                                      out_ipv4_src=BUFF_DEVICE_IPV4,
-                                      out_ipv4_dst=BUFF_FACING_IFACE_IPV4,
-                                      teid=far_id,
-                                      gtpu_option_short1=packets_sent_to_buffer,
-                                      gtpu_option_short2=ctr_id,
-                                      sport=UDP_GTP_PORT)
+        pkt_from_dbuf = pkt.copy()
+        pkt_from_dbuf[Ether].src = buffer_mac
+        pkt_from_dbuf[Ether].dst = switch_mac
+        pkt_from_dbuf = pkt_add_gtp(pkt_from_dbuf,
+                                    out_ipv4_src=DBUF_IPV4,
+                                    out_ipv4_dst=DBUF_FACING_IFACE_IPV4,
+                                    teid=dbuf_queue_id,
+                                    sport=UDP_GTP_PORT,
+                                    gtpu_ext_hdr=ext_hdr)
 
         # the final packet from the SPGW to the ENB
         exp_pkt = pkt.copy()
@@ -1422,32 +1430,34 @@ class SpgwSimpleTest(IPv4UnicastTest):
             teid=TEID_1,
             ue_addr=ue_ipv4,
             ctr_id=ctr_id,
-            far_id=far_id
+            far_id=far_id,
+            queue_id=dbuf_queue_id
         )
 
         # FIXME: break these path checks into separate unit tests once register cells can be written
 
-        print "Verifying non-buffered path..."
+        print "Verifying non-dbuf path..."
         # Verify packets travel normally before buffering is enabled (also clears out the buffer count register)
         self.send_packet(self.port1, str(pkt))
         self.verify_packet(exp_pkt, self.port2)
         self.verify_no_other_packets()
 
         # Turn on buffering by modifying the PDR
-        self.add_downlink_pdr(ctr_id=ctr_id, far_id=far_id, ue_addr=ue_ipv4, buffering=True, modify=True)
+        self.add_downlink_pdr(ctr_id=ctr_id, far_id=far_id, ue_addr=ue_ipv4, buffering=True, modify=True,
+                              queue_id=dbuf_queue_id)
         # and by adding a buffering redirection rule
-        self.add_buffer_redirect(BUFF_FACING_IFACE_IPV4, BUFF_DEVICE_IPV4)
+        self.add_dbuf_redirect(DBUF_FACING_IFACE_IPV4, DBUF_IPV4)
 
-        print "Verifying upstream->switch->buffer path..."
+        print "Verifying upstream->switch->dbuf path..."
         # Send a packet that should be redirected to the buffer
         self.send_packet(self.port1, str(pkt))
         # Check that it arrived at the buffer
-        self.verify_packet(exp_pkt_to_buffer, self.port3)
+        self.verify_packet(exp_pkt_to_dbuf, self.port3)
         self.verify_no_other_packets()
 
-        print "Verifying buffer->switch->enodeb path..."
+        print "Verifying dbuf->switch->enodeb path..."
         # Release a packet from the buffer
-        self.send_packet(self.port3, str(pkt_from_buffer))
+        self.send_packet(self.port3, str(pkt_from_dbuf))
         # Check that it arrived at the enodeb
         self.verify_packet(exp_pkt, self.port2)
         self.verify_no_other_packets()
