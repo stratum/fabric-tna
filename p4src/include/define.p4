@@ -94,7 +94,7 @@ const bit<16> ETHERTYPE_ARP  = 0x0806;
 const bit<16> ETHERTYPE_PPPOED = 0x8863;
 const bit<16> ETHERTYPE_PPPOES = 0x8864;
 
-// Fake ether types used to distinghuish regular packets from those used for
+// Fake ether types used to distinguish regular packets from those used for
 // CPU-based loopback testing.
 const bit<16> ETHERTYPE_CPU_LOOPBACK_INGRESS = 0xBF02;
 const bit<16> ETHERTYPE_CPU_LOOPBACK_EGRESS = 0xBF03;
@@ -145,4 +145,3 @@ const PortId_t RECIRC_PORT_PIPE_2 = 0x144;
 const PortId_t RECIRC_PORT_PIPE_3 = 0x1C4;
 
 #endif // __DEFINE__
-
