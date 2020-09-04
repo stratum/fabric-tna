@@ -186,6 +186,8 @@ control IntEgress (
                     - (IPV4_HDR_SIZE + UDP_HDR_SIZE + GTP_HDR_SIZE);
             }
 #endif // WITH_SPGW
+            // Reports don't need to go through the rest of the egress pipe.
+            exit;
         } else {
             if (fabric_md.bridged.ig_port != CPU_PORT &&
                 eg_intr_md.egress_port != CPU_PORT) {

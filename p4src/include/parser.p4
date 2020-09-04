@@ -53,6 +53,7 @@ parser FabricIngressParser (packet_in  packet,
     }
 
     state parse_fake_ethernet_and_accept {
+        // Will punt to CPU as-is, no need to parse further.
         packet.extract(hdr.fake_ethernet);
         transition accept;
     }
@@ -308,14 +309,16 @@ parser FabricEgressParser (packet_in packet,
     state check_ethernet {
         fake_ethernet_t tmp = packet.lookahead<fake_ethernet_t>();
         transition select(tmp.ether_type) {
-            ETHERTYPE_CPU_LOOPBACK_INGRESS: parse_fake_ethernet;
-            ETHERTYPE_CPU_LOOPBACK_EGRESS: parse_fake_ethernet;
+            ETHERTYPE_CPU_LOOPBACK_INGRESS: set_cpu_loopback_egress;
+            ETHERTYPE_CPU_LOOPBACK_EGRESS: reject;
             default: parse_ethernet;
         }
     }
 
-    state parse_fake_ethernet {
-        packet.extract(hdr.fake_ethernet);
+    state set_cpu_loopback_egress {
+        hdr.fake_ethernet.setValid();
+        hdr.fake_ethernet.ether_type = ETHERTYPE_CPU_LOOPBACK_EGRESS;
+        packet.advance(ETH_HDR_SIZE * 8);
         transition parse_ethernet;
     }
 
@@ -349,7 +352,7 @@ parser FabricEgressParser (packet_in packet,
         packet.extract(hdr.eth_type);
         transition select(hdr.eth_type.value) {
             ETHERTYPE_MPLS: parse_mpls;
-            ETHERTYPE_IPV4: parse_ipv4;
+            ETHERTYPE_IPV4: check_ipv4;
             ETHERTYPE_IPV6: parse_ipv6;
             default: accept;
         }
@@ -361,20 +364,20 @@ parser FabricEgressParser (packet_in packet,
         // Assume header after MPLS header is IPv4/IPv6
         // Lookup first 4 bits for version
         transition select(packet.lookahead<bit<IP_VER_LENGTH>>()) {
-            IP_VERSION_4: parse_ipv4;
+            IP_VERSION_4: check_ipv4;
             IP_VERSION_6: parse_ipv6;
             default: reject;
         }
     }
 
-    state parse_ipv4 {
+    state check_ipv4 {
 #if defined(WITH_INT) && defined(WITH_SPGW)
         transition select(is_int_and_strip_gtpu) {
             1: strip_gtpu_and_accept;
-            default: do_parse_ipv4;
+            default: parse_ipv4;
         }
 #else
-        transition do_parse_ipv4;
+        transition parse_ipv4;
 #endif // defined(WITH_INT) && defined(WITH_SPGW)
     }
 
@@ -383,7 +386,7 @@ parser FabricEgressParser (packet_in packet,
         transition accept;
     }
 
-    state do_parse_ipv4 {
+    state parse_ipv4 {
         packet.extract(hdr.ipv4);
         // Need header verification?
         transition select(hdr.ipv4.protocol) {

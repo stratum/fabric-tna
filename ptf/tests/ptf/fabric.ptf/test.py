@@ -1027,7 +1027,8 @@ class CounterTest(BridgingTest):
 
 
 # FIXME: remove when will start running TVs on hardware
-class FabricLoopbackModeTest(IPv4UnicastTest):
+class FabricIpv4UnicastLoopbackModeTest(IPv4UnicastTest):
+    """Emulates TV loopback mode for Ipv4UnicastTest"""
 
     @tvsetup
     @autocleanup
@@ -1050,7 +1051,6 @@ class FabricLoopbackModeTest(IPv4UnicastTest):
         self.verify_packet_in(routed_pkt, self.port2)
         self.verify_no_other_packets()
 
-
     def runTest(self):
         print ""
         for pkt_type in ["tcp", "udp", "icmp"]:
@@ -1061,3 +1061,40 @@ class FabricLoopbackModeTest(IPv4UnicastTest):
                 pktlen=MIN_PKT_LEN
             )
             self.doRunTest(pkt, HOST2_MAC)
+
+
+# FIXME: remove when will start running TVs on hardware
+class FabricPacketInLoopbackModeTest(FabricTest):
+    """Emulates TV loopback mode for packet-in tests"""
+
+    @tvsetup
+    @autocleanup
+    def doRunTest(self, pkt, tagged):
+        self.add_forwarding_acl_punt_to_cpu(eth_type=pkt[Ether].type)
+        if tagged:
+            pkt = pkt_add_vlan(pkt, VLAN_ID_1)
+        exp_pkt_1 = Ether(type=ETH_TYPE_CPU_LOOPBACK_INGRESS,
+                          src=ZERO_MAC, dst=ZERO_MAC) / pkt
+        for port in [self.port1, self.port2]:
+            if tagged:
+                self.set_ingress_port_vlan(port, True, VLAN_ID_1, VLAN_ID_1)
+            else:
+                self.set_ingress_port_vlan(port, False, 0, VLAN_ID_1)
+            self.send_packet_out(self.build_packet_out(
+                pkt, port, do_cpu_loopback=True))
+            self.verify_packet(exp_pkt_1, port)
+            self.send_packet(port, str(exp_pkt_1))
+            self.verify_packet_in(pkt, port)
+        self.verify_no_other_packets()
+
+    @tvsetup
+    @autocleanup
+    def runTest(self):
+        print ""
+        for pkt_type in ["tcp", "udp", "icmp", "arp"]:
+            for tagged in [True, False]:
+                print "Testing %s packet, tagged=%s..." % (pkt_type, tagged)
+                pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
+                    pktlen=MIN_PKT_LEN
+                )
+                self.doRunTest(pkt, tagged)
