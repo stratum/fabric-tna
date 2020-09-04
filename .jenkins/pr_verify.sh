@@ -14,10 +14,11 @@
 # exit on errors
 set -exu -o pipefail
 
-SDE_BASE_DOCKER_IMG=opennetworking/bf-sde:9.2.0
+sdeVer="9.2.0"
+sdeBaseDockerImg=opennetworking/bf-sde:${sdeVer}
 
-echo "Build all profiles using SDE ${SDE_BASE_DOCKER_IMG}..."
-make all SDE_DOCKER_IMG=${SDE_BASE_DOCKER_IMG}-p4c
+echo "Build all profiles using SDE ${sdeBaseDockerImg}..."
+make all SDE_DOCKER_IMG=${sdeBaseDockerImg}-p4c
 
 echo "Build and verify Java pipeconf"
 make constants pipeconf MVN_FLAGS="-Pci-verify -Pcoverage"
@@ -38,7 +39,9 @@ fi
 
 # FIXME: add target to Makefile to build all profiles
 echo "Run PTF tests for all profiles"
-SDE_DOCKER_IMG=${SDE_BASE_DOCKER_IMG}-tm ./ptf/run/tm/run fabric
-SDE_DOCKER_IMG=${SDE_BASE_DOCKER_IMG}-tm ./ptf/run/tm/run fabric-int
-SDE_DOCKER_IMG=${SDE_BASE_DOCKER_IMG}-tm ./ptf/run/tm/run fabric-spgw
-SDE_DOCKER_IMG=${SDE_BASE_DOCKER_IMG}-tm ./ptf/run/tm/run fabric-spgw-int
+export STRATUM_BF_DOCKER_IMG=registry.aetherproject.org/tost/stratum-bfrt:${sdeVer}
+export SDE_DOCKER_IMG=${sdeBaseDockerImg}-tm
+./ptf/run/tm/run fabric
+./ptf/run/tm/run fabric-int
+./ptf/run/tm/run fabric-spgw
+./ptf/run/tm/run fabric-spgw-int
