@@ -18,9 +18,9 @@ header packet_in_header_t {
 
 @controller_header("packet_out")
 header packet_out_header_t {
-    bit<9> egress_port;
-    bit<1> cpu_loopback;
-    bit<6> _pad0;
+    PortId_t          egress_port;
+    CpuLoopbackMode_t cpu_loopback_mode;
+    bit<5>            _pad0;
 }
 
 header ethernet_t {

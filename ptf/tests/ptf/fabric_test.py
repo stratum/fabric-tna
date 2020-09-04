@@ -43,6 +43,10 @@ ETH_TYPE_MPLS_UNICAST = 0x8847
 ETH_TYPE_CPU_LOOPBACK_INGRESS = 0xBF02
 ETH_TYPE_CPU_LOOPBACK_EGRESS = 0xBF03
 
+CPU_LOOPBACK_MODE_DISABLED = 0
+CPU_LOOPBACK_MODE_DIRECT = 1
+CPU_LOOPBACK_MODE_INGRESS = 2
+
 # In case the "correct" version of scapy (from p4lang) is not installed, we
 # provide the INT header formats in xnt.py
 # import scapy.main
@@ -259,6 +263,23 @@ class FabricTest(P4RuntimeTest):
         self.recirculate_port_1 = 196
         self.recirculate_port_2 = 324
         self.recirculate_port_3 = 452
+
+    def build_packet_out(self, pkt, port, cpu_loopback_mode=CPU_LOOPBACK_MODE_DISABLED):
+        packet_out = p4runtime_pb2.PacketOut()
+        packet_out.payload = str(pkt)
+        # egress_port
+        md1 = packet_out.metadata.add()
+        md1.metadata_id = 1
+        md1.value = stringify(port, 2)
+        # cpu_loopback_mode
+        md2 = packet_out.metadata.add()
+        md2.metadata_id = 2
+        md2.value = stringify(cpu_loopback_mode, 1)
+        # pad0
+        md3 = packet_out.metadata.add()
+        md3.metadata_id = 3
+        md3.value = stringify(0, 1)
+        return packet_out
 
     def setup_int(self):
         self.send_request_add_entry_to_action(

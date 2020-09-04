@@ -2,17 +2,13 @@
 # Copyright 2018-present Open Networking Foundation
 # SPDX-License-Identifier: Apache-2.0
 
-from itertools import combinations
+from unittest import skip
 
-from ptf import testutils
 from ptf.testutils import group
 from scapy.layers.ppp import PPPoED
 
-from base_test import autocleanup, tvsetup, stringify
+from base_test import autocleanup, tvsetup
 from fabric_test import *
-
-from unittest import skip
-from time import sleep
 
 vlan_confs = {
     "tag->tag": [True, True],
@@ -1043,7 +1039,7 @@ class FabricIpv4UnicastLoopbackModeTest(IPv4UnicastTest):
         exp_pkt_2 = Ether(type=ETH_TYPE_CPU_LOOPBACK_EGRESS,
                           src=ZERO_MAC, dst=ZERO_MAC) / routed_pkt
         self.send_packet_out(self.build_packet_out(
-            pkt, self.port1, do_cpu_loopback=True))
+            pkt, self.port1, cpu_loopback_mode=CPU_LOOPBACK_MODE_INGRESS))
         self.verify_packet(exp_pkt_1, self.port1)
         self.send_packet(self.port1, str(exp_pkt_1))
         self.verify_packet(exp_pkt_2, self.port2)
@@ -1081,7 +1077,7 @@ class FabricPacketInLoopbackModeTest(FabricTest):
             else:
                 self.set_ingress_port_vlan(port, False, 0, VLAN_ID_1)
             self.send_packet_out(self.build_packet_out(
-                pkt, port, do_cpu_loopback=True))
+                pkt, port, cpu_loopback_mode=CPU_LOOPBACK_MODE_INGRESS))
             self.verify_packet(exp_pkt_1, port)
             self.send_packet(port, str(exp_pkt_1))
             self.verify_packet_in(pkt, port)
@@ -1098,3 +1094,32 @@ class FabricPacketInLoopbackModeTest(FabricTest):
                     pktlen=MIN_PKT_LEN
                 )
                 self.doRunTest(pkt, tagged)
+
+
+# FIXME: remove when will start running TVs on hardware
+class FabricPacketOutLoopbackModeTest(FabricTest):
+    """Emulates TV loopback mode for packet-out tests"""
+
+    @tvsetup
+    @autocleanup
+    def doRunTest(self, pkt):
+        exp_pkt_1 = Ether(type=ETH_TYPE_CPU_LOOPBACK_EGRESS,
+                          src=ZERO_MAC, dst=ZERO_MAC) / pkt
+        for port in [self.port1, self.port2]:
+            self.send_packet_out(self.build_packet_out(
+                pkt, port, cpu_loopback_mode=CPU_LOOPBACK_MODE_DIRECT))
+            self.verify_packet(exp_pkt_1, port)
+            self.send_packet(port, str(exp_pkt_1))
+            self.verify_packet_in(pkt, port)
+        self.verify_no_other_packets()
+
+    @tvsetup
+    @autocleanup
+    def runTest(self):
+        print ""
+        for pkt_type in ["tcp", "udp", "icmp", "arp"]:
+            print "Testing %s packet..." % pkt_type
+            pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
+                pktlen=MIN_PKT_LEN
+            )
+            self.doRunTest(pkt)
