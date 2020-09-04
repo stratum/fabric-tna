@@ -136,14 +136,14 @@ enum bit<8> BridgedMdType_t {
     INT_MIRROR = 2
 }
 
-// Modes for CPU loopback testing, where a process can inject packets throught
+// Modes for CPU loopback testing, where a process can inject packets through
 // the CPU port (P4RT packet-out) and expect the same to be delivered back to
-// the CPU (P4RT packet-in). All modes requires front-panel ports to be set in
-// loopbcak mode.
+// the CPU (P4RT packet-in). All modes require front-panel ports to be set in
+// loopback mode.
 enum bit<2> CpuLoopbackMode_t {
     // Default mode.
     DISABLED = 0,
-    // Signals that the packet-out should be treated as regular one.
+    // Signals that the packet-out should be treated as a regular one.
     DIRECT = 1,
     // Signals that the packet-out should be processed again by the ingress
     // pipeline as if it was a packet coming from a front-panel port (defined by
