@@ -13,46 +13,37 @@ Set the following environment variables:
 export SDE_DOCKER_IMG=opennetworking/bf-sde:9.2.0
 ```
 
-Start the build:
+Build the P4 program specifying the desired profile:
 
 ```bash
 make fabric
 ```
 
-# To run the PTF test
+# Run PTF tests using stratum-bfrt
 
-Obtain a Docker image which includes the stratum-bfrt binary and libraries:
+Obtain credentials for the Aether internal registry and pull the latest
+stratum-bfrt Docker image:
 
 ```bash
-scp onlbuilder@10.254.1.15:~/stratum-images/stratum-bfrt-9.2.0.tgz /tmp
-docker load < /tmp/stratum-bfrt-9.2.0.tgz
+docker pull registry.aetherproject.org/tost/stratum-bfrt:9.2.0
 ```
 
-NOTE: If you don't have access to 10.254.1.15 (buildsrv) ask Yi, Carmelo, or someone else in the Stratum team to add your SSH key.
-
-Set the following environment variables:
-
-```bash
-# The Stratum Docker image which includes the stratum-bfrt binary and libraries
-export STRATUM_BF_DOCKER_IMG=stratumproject/stratum-bfrt:9.2.0
-# The Docker image which includes the Tofino Model.
-# This should be the same used in the build step before.
-export SDE_DOCKER_IMG=opennetworking/bf-sde:9.2.0
-```
-
-Start the test:
+Start the tests for the same profile built in the previous step, after setting
+the `STRATUM_BF_DOCKER_IMG` env:
 
 ```bash
+export STRATUM_BF_DOCKER_IMG=registry.aetherproject.org/tost/stratum-bfrt:9.2.0
 ./ptf/run/tm/run fabric
 ```
 
-To run the PTF test with test case
-The name of test will be `test.[test class]`
-You can find test case in `ptf/tests/ptf/fabric.ptf/test.py`, for example
+To run PTF for a specific test case:
 
 ```bash
 ./ptf/run/tm/run fabric TEST=test.FabricBridgingTest
 ```
+
+The value of `TEST` should be `test.[test class]`, you can find test classes in
+`ptf/tests/ptf/fabric.ptf/test.py`.
 
 For more instructions on how to run PTF tests, including where to
 find logs, check `ptf/README.md`.
