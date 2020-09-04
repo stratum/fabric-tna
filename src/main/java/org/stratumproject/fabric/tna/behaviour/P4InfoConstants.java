@@ -251,8 +251,8 @@ public final class P4InfoConstants {
     public static final PiActionProfileId FABRIC_INGRESS_NEXT_HASHED_PROFILE =
             PiActionProfileId.of("FabricIngress.next.hashed_profile");
     // Packet Metadata IDs
-    public static final PiPacketMetadataId CPU_LOOPBACK =
-            PiPacketMetadataId.of("cpu_loopback");
+    public static final PiPacketMetadataId CPU_LOOPBACK_MODE =
+            PiPacketMetadataId.of("cpu_loopback_mode");
     public static final PiPacketMetadataId EGRESS_PORT =
             PiPacketMetadataId.of("egress_port");
     public static final PiPacketMetadataId INGRESS_PORT =
