@@ -11,7 +11,7 @@ SPDX-License-Identifier: Apache-2.0
     <parent>
         <groupId>org.onosproject</groupId>
         <artifactId>onos-dependencies</artifactId>
-        <version>2.2.4-b3</version>
+        <version>2.2.4</version>
     </parent>
 
     <groupId>org.stratumproject</groupId>
@@ -25,18 +25,9 @@ SPDX-License-Identifier: Apache-2.0
     <url>https://www.stratumproject.org</url>
 
     <properties>
-        <onos.app.name>org.stratumproject.fabric-tna</onos.app.name>
-        <onos.app.title>Fabric-TNA Pipeconf</onos.app.title>
-        <onos.app.origin>https://www.stratumproject.org</onos.app.origin>
-        <onos.app.category>Pipeline</onos.app.category>
-        <onos.app.url>https://www.stratumproject.org</onos.app.url>
-        <onos.app.readme>
-            Provides pipeconfs based on fabric-tna.p4 to use Trellis with
-            Intel/Barefoot Tofino-based devices.
-        </onos.app.readme>
-        <onos.app.requires>
-            org.onosproject.protocols.p4runtime
-        </onos.app.requires>
+        <trellis.api.groupId>org.onosproject</trellis.api.groupId>
+        <trellis.api.artifactId>segmentrouting-api</trellis.api.artifactId>
+        <trellis.api.version>3.0.0-SNAPSHOT</trellis.api.version>
     </properties>
 
     <dependencies>
@@ -45,6 +36,13 @@ SPDX-License-Identifier: Apache-2.0
             <groupId>org.onosproject</groupId>
             <artifactId>onos-api</artifactId>
             <version>${onos.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>${trellis.api.groupId}</groupId>
+            <artifactId>${trellis.api.artifactId}</artifactId>
+            <version>${trellis.api.version}</version>
             <scope>provided</scope>
         </dependency>
 
