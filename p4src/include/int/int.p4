@@ -7,11 +7,108 @@
 #include "define.p4"
 #include "header.p4"
 
+
+control FlowReportFilter(
+    inout parsed_headers_t hdr,
+    inout fabric_egress_metadata_t fabric_md,
+    in    egress_intrinsic_metadata_t eg_intr_md) {
+
+    Hash<bit<16>>(HashAlgorithm_t.CRC16) flow_state_hasher;
+    bit<16> flow_state_hash;
+
+    bit<3> report;
+
+    // Filter array which stores the hash of a flow state(ports, latency)
+    // and the index is the hash of the packet.
+    Register<bit<16>, bit<16>>(65535, 0) filter1;
+    Register<bit<16>, bit<16>>(65535, 0) filter2;
+
+    // Meaning of the result:
+    // 0b000: nothing changed
+    // 0b100: cannot find the stored value, new flow
+    // 0b001: stored value in the first filter is different to the previous one.
+    // 0b010: stored value in the second filter is different to the previous one.
+    RegisterAction<bit<16>, bit<16>, bit<3>>(filter1) filter_get_and_set1 = {
+        void apply(inout bit<16> stored_flow_state_hash, out bit<3> result) {
+            if (stored_flow_state_hash == 0) {
+                // No flow hash stored, new flow
+                result = 0b100;
+            } else if (stored_flow_state_hash != flow_state_hash) {
+                // Flow might changed(in/out port or latency)
+                result = 0b001;
+            } else {
+                // nothing changed.
+                result = 0b000;
+            }
+            stored_flow_state_hash = flow_state_hash;
+        }
+    };
+
+    RegisterAction<bit<16>, bit<16>, bit<3>>(filter2) filter_get_and_set2 = {
+        void apply(inout bit<16> stored_flow_state_hash, out bit<3> result) {
+            if (stored_flow_state_hash == 0) {
+                // No flow hash stored, new flow
+                result = 0b100;
+            } else if (stored_flow_state_hash != flow_state_hash) {
+                // Flow might changed(in/out port or latency)
+                result = 0b010;
+            } else {
+                // nothing changed.
+                result = 0b000;
+            }
+            stored_flow_state_hash = flow_state_hash;
+        }
+    };
+
+    action quantize(bit<32> qmask) {
+        fabric_md.hop_latency = fabric_md.hop_latency & qmask;
+    }
+
+    table quantize_hop_latency {
+        key = {}
+        actions = {
+            @defaultonly quantize;
+            @defaultonly nop;
+        }
+        default_action = nop;
+    }
+
+    action drop_report() {
+        fabric_md.int_mirror_md.setInvalid();
+    }
+
+    table flow_filter {
+        key = {
+            report: exact;
+        }
+        actions = {
+            drop_report;
+            @defaultonly nop;
+        }
+        size = 1;
+        const entries = {
+            0: drop_report;
+        }
+        const default_action = nop;
+    }
+
+    apply {
+        quantize_hop_latency.apply();
+        flow_state_hash = flow_state_hasher.get({fabric_md.bridged.ig_port, eg_intr_md.egress_port, fabric_md.hop_latency});
+        report = filter_get_and_set1.execute(fabric_md.bridged.packet_hash[31:16]);
+        report = report | filter_get_and_set2.execute(fabric_md.bridged.packet_hash[15:0]);
+        flow_filter.apply();
+    }
+}
+
 control IntEgress (
     inout parsed_headers_t hdr,
     inout fabric_egress_metadata_t fabric_md,
     in    egress_intrinsic_metadata_t eg_intr_md,
     in    egress_intrinsic_metadata_from_parser_t eg_prsr_md) {
+
+    Hash<bit<32>>(HashAlgorithm_t.IDENTITY) tstamp_hash;
+    FlowReportFilter() flow_report_filter;
 
     @hidden
     Random<bit<16>>() ip_id_gen;
@@ -189,11 +286,12 @@ control IntEgress (
             // Reports don't need to go through the rest of the egress pipe.
             exit;
         } else {
+            fabric_md.hop_latency = tstamp_hash.get({eg_prsr_md.global_tstamp - fabric_md.bridged.ig_tstamp});
             if (fabric_md.bridged.ig_port != CPU_PORT &&
                 eg_intr_md.egress_port != CPU_PORT) {
-                if (watchlist.apply().hit) {
-                    mirror_session_id.apply();
-                }
+                mirror_session_id.apply();
+                watchlist.apply();
+                flow_report_filter.apply(hdr, fabric_md, eg_intr_md);
             }
         }
     }

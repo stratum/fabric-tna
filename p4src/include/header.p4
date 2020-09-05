@@ -147,8 +147,9 @@ header bridged_metadata_t {
     bit<48>         ig_tstamp;
     bit<16>         ip_eth_type;
     bit<8>          ip_proto;
-    bit<16>         l4_sport;
-    bit<16>         l4_dport;
+    l4_port_t       l4_sport;
+    l4_port_t       l4_dport;
+    fabric_hash_t   packet_hash;
 #ifdef WITH_DOUBLE_VLAN_TERMINATION
     bool            push_double_vlan;
     vlan_id_t       inner_vlan_id;
@@ -200,6 +201,7 @@ struct fabric_egress_metadata_t {
 #endif // WITH_SPGW
 #ifdef WITH_INT
     int_mirror_metadata_t int_mirror_md;
+    bit<32>               hop_latency;
 #endif // WITH_INT
 }
 
