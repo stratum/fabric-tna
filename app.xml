@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Copyright 2020-present Open Networking Foundation
+SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
+-->
+<app name="org.stratumproject.fabric-tna" origin="Open Networking Foundation"
+     version="${project.version}"
+     category="Pipeline" url="https://stratumproject.org"
+     title="Fabric-TNA Pipeconf"
+     featuresRepo="mvn:${project.groupId}/${project.artifactId}/${project.version}/xml/features"
+     features="${project.artifactId}" apps="org.onosproject.protocols.p4runtime">
+    <description>${project.description}</description>
+    <artifact>mvn:${project.groupId}/${project.artifactId}/${project.version}</artifact>
+    <artifact>mvn:${trellis.api.groupId}/${trellis.api.artifactId}/${trellis.api.version}</artifact>
+</app>

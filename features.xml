@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!--
+Copyright 2020-present Open Networking Foundation
+SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
+-->
+<features xmlns="http://karaf.apache.org/xmlns/features/v1.2.0" name="${project.artifactId}-${project.version}">
+    <feature name="${project.artifactId}" version="${project.version}"
+             description="${project.description}">
+        <bundle>mvn:${project.groupId}/${project.artifactId}/${project.version}</bundle>
+        <bundle>mvn:${trellis.api.groupId}/${trellis.api.artifactId}/${trellis.api.version}</bundle>
+    </feature>
+</features>
