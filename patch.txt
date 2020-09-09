@@ -1,0 +1,37 @@
+diff --git a/.gitignore b/.gitignore
+index d0bf97c..3dded80 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -18,3 +18,5 @@ zlog-cfg-cur
+ *.swp
+ logs/
+ graphs/
++mvn_settings.xml
++dependencies.xml
+diff --git a/p4src/build.sh b/p4src/build.sh
+index 4439b17..30c0d19 100755
+--- a/p4src/build.sh
++++ b/p4src/build.sh
+@@ -20,6 +20,8 @@ OTHER_PP_FLAGS=$2
+ # PWD is the directory where this script is called from (should be the root of
+ # this repo).
+ P4C_OUT=${ROOT_DIR}/tmp/${PROFILE}
++# Prevent the creation by docker run
++mkdir -p "${P4C_OUT}"
+ 
+ # Where the compiler output should be placed to be included in the pipeconf.
+ DEST_DIR=${ROOT_DIR}/src/main/resources/p4c-out/${PROFILE}
+diff --git a/pom.xml b/pom.xml
+index aefff68..bfa629b 100644
+--- a/pom.xml
++++ b/pom.xml
+@@ -34,6 +34,9 @@ SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
+             Provides pipeconfs based on fabric-tna.p4 to use Trellis with
+             Intel/Barefoot Tofino-based devices.
+         </onos.app.readme>
++        <onos.app.requires>
++            org.onosproject.protocols.p4runtime
++        </onos.app.requires>
+     </properties>
+ 
+     <dependencies>
