@@ -37,11 +37,11 @@ control PacketIoIngress(inout parsed_headers_t hdr,
         const default_action = nop();
         size = 3;
         const entries = {
-            (CpuLoopbackMode_t.DISABLED): do_packet_out();
+            CpuLoopbackMode_t.DISABLED: do_packet_out();
             // Pkt should go directly to CPU after port loopback.
-            (CpuLoopbackMode_t.DIRECT): do_cpu_loopback(ETHERTYPE_CPU_LOOPBACK_EGRESS);
+            CpuLoopbackMode_t.DIRECT: do_cpu_loopback(ETHERTYPE_CPU_LOOPBACK_EGRESS);
             // Pkt should go again through ingress after port loopback.
-            (CpuLoopbackMode_t.INGRESS): do_cpu_loopback(ETHERTYPE_CPU_LOOPBACK_INGRESS);
+            CpuLoopbackMode_t.INGRESS: do_cpu_loopback(ETHERTYPE_CPU_LOOPBACK_INGRESS);
         }
     }
 
