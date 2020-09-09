@@ -1096,7 +1096,7 @@ class FabricPacketInLoopbackModeTest(FabricTest):
                 self.doRunTest(pkt, tagged)
 
 
-# FIXME: remove when will start running TVs on hardware
+# FIXME: remove when we start running TVs on hardware
 class FabricPacketOutLoopbackModeTest(FabricTest):
     """Emulates TV loopback mode for packet-out tests"""
 
