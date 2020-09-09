@@ -268,17 +268,17 @@ class FabricTest(P4RuntimeTest):
         packet_out = p4runtime_pb2.PacketOut()
         packet_out.payload = str(pkt)
         # egress_port
-        md1 = packet_out.metadata.add()
-        md1.metadata_id = 1
-        md1.value = stringify(port, 2)
+        port_md = packet_out.metadata.add()
+        port_md.metadata_id = 1
+        port_md.value = stringify(port, 2)
         # cpu_loopback_mode
-        md2 = packet_out.metadata.add()
-        md2.metadata_id = 2
-        md2.value = stringify(cpu_loopback_mode, 1)
+        cpu_loopback_mode_md = packet_out.metadata.add()
+        cpu_loopback_mode_md.metadata_id = 2
+        cpu_loopback_mode_md.value = stringify(cpu_loopback_mode, 1)
         # pad0
-        md3 = packet_out.metadata.add()
-        md3.metadata_id = 3
-        md3.value = stringify(0, 1)
+        pad0_md = packet_out.metadata.add()
+        pad0_md.metadata_id = 3
+        pad0_md.value = stringify(0, 1)
         return packet_out
 
     def setup_int(self):
