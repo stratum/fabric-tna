@@ -12,8 +12,8 @@
 
 @controller_header("packet_in")
 header packet_in_header_t {
-    bit<9> ingress_port;
-    bit<7> _pad0;
+    PortId_t ingress_port;
+    bit<7>   _pad0;
 }
 
 @controller_header("packet_out")
