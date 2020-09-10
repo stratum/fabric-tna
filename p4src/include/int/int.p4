@@ -73,10 +73,12 @@ control FlowReportFilter(
         default_action = nop;
     }
 
+    @hidden
     action drop_report() {
         fabric_md.int_mirror_md.setInvalid();
     }
 
+    @hidden
     table flow_filter {
         key = {
             report: exact;
@@ -107,7 +109,6 @@ control IntEgress (
     in    egress_intrinsic_metadata_t eg_intr_md,
     in    egress_intrinsic_metadata_from_parser_t eg_prsr_md) {
 
-    Hash<bit<32>>(HashAlgorithm_t.IDENTITY) tstamp_hash;
     FlowReportFilter() flow_report_filter;
 
     @hidden
@@ -286,7 +287,8 @@ control IntEgress (
             // Reports don't need to go through the rest of the egress pipe.
             exit;
         } else {
-            fabric_md.hop_latency = tstamp_hash.get({eg_prsr_md.global_tstamp - fabric_md.bridged.ig_tstamp});
+            fabric_md.hop_latency =
+                eg_prsr_md.global_tstamp[31:0] - fabric_md.bridged.ig_tstamp[31:0];
             if (fabric_md.bridged.ig_port != CPU_PORT &&
                 eg_intr_md.egress_port != CPU_PORT) {
                 mirror_session_id.apply();
