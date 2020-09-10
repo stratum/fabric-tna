@@ -1424,6 +1424,15 @@ class IntTest(IPv4UnicastTest):
         #         ("sid", stringify(mirror_id, 2))
         #     ])
 
+    # quantize the hop latency before generate the hash
+    # value of flow state (ig/eg ports, latency)
+    def set_up_quantize_hop_latency_rule(self, qmask=0xf0000000):
+        self.send_request_add_entry_to_action(
+            "quantize_hop_latency",
+            [],
+            "quantize", [
+                ("qmask", stringify(qmask, 4))
+            ])
 
     def setup_watchlist_flow(self, ipv4_src, ipv4_dst, sport, dport, switch_id):
         switch_id_ = stringify(switch_id, 4)
@@ -1515,6 +1524,9 @@ class IntTest(IPv4UnicastTest):
             self.build_int_local_report(SWITCH_MAC, INT_COLLECTOR_MAC, SWITCH_IPV4, INT_COLLECTOR_IPV4,
                                         ig_port, eg_port, switch_id, exp_pkt)
 
+        # Strip out last 28 bits of hop latency value since the software
+        # switch is not running in a stable throughpout(51ms~248ms on a laptop).
+        self.set_up_quantize_hop_latency_rule(qmask=0xf0000000)
         # Set collector, report table, and mirror sessions
         self.setup_watchlist_flow(ipv4_src, ipv4_dst, sport, dport, switch_id)
         self.setup_report_flow(collector_port, SWITCH_MAC, SWITCH_MAC,
