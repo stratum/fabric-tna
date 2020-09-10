@@ -41,16 +41,20 @@ parser FabricIngressParser (packet_in  packet,
         // metadata before the actual ethernet frame.
         fake_ethernet_t tmp = packet.lookahead<fake_ethernet_t>();
         transition select(tmp.ether_type) {
-            ETHERTYPE_LOOPBACK: set_loopback_and_strip_fake_ethernet;
+            ETHERTYPE_CPU_LOOPBACK_INGRESS: parse_fake_ethernet;
+            ETHERTYPE_CPU_LOOPBACK_EGRESS: parse_fake_ethernet_and_accept;
             default: parse_ethernet;
         }
     }
 
-    state set_loopback_and_strip_fake_ethernet {
-        fabric_md.is_loopback = true;
-        packet.advance(ETH_HDR_SIZE*8);
-        // No need to parse other headers, pkt should be punted to CPU as-is,
-        // without further changes.
+    state parse_fake_ethernet {
+        packet.extract(hdr.fake_ethernet);
+        transition parse_ethernet;
+    }
+
+    state parse_fake_ethernet_and_accept {
+        // Will punt to CPU as-is, no need to parse further.
+        packet.extract(hdr.fake_ethernet);
         transition accept;
     }
 
@@ -116,7 +120,7 @@ parser FabricIngressParser (packet_in  packet,
         transition select(packet.lookahead<bit<IP_VER_LENGTH>>()) {
             IP_VERSION_4: parse_ipv4;
             IP_VERSION_6: parse_ipv6;
-            default: parse_ethernet;
+            default: reject;
         }
     }
 
@@ -231,6 +235,7 @@ control FabricIngressDeparser(packet_out packet,
 
     apply {
         packet.emit(fabric_md.bridged);
+        packet.emit(hdr.fake_ethernet);
         packet.emit(hdr.ethernet);
         packet.emit(hdr.vlan_tag);
 #if defined(WITH_XCONNECT) || defined(WITH_DOUBLE_VLAN_TERMINATION)
@@ -263,9 +268,8 @@ parser FabricEgressParser (packet_in packet,
 #ifdef WITH_SPGW
     Checksum() inner_ipv4_checksum;
 #endif // WITH_SPGW
-#ifdef WITH_INT
-    int_mirror_metadata_t int_mirror_md;
-#endif
+
+    bit<1> is_int_and_strip_gtpu = 0;
 
     state start {
         packet.extract(eg_intr_md);
@@ -279,7 +283,7 @@ parser FabricEgressParser (packet_in packet,
 
     state parse_bridged_md {
         packet.extract(fabric_md.bridged);
-        transition parse_ethernet;
+        transition check_ethernet;
     }
 
     state parse_int_mirror_md {
@@ -287,60 +291,36 @@ parser FabricEgressParser (packet_in packet,
         packet.extract(fabric_md.int_mirror_md);
         fabric_md.bridged.bridged_md_type = fabric_md.int_mirror_md.bridged_md_type;
         fabric_md.bridged.vlan_id = DEFAULT_VLAN_ID;
-
 #ifdef WITH_SPGW
-        transition select(fabric_md.int_mirror_md.skip_gtpu_headers) {
-            1: skip_gtpu_headers_eth;
+        is_int_and_strip_gtpu = fabric_md.int_mirror_md.strip_gtpu;
+        transition select(is_int_and_strip_gtpu) {
+            1: check_ethernet;
             default: accept;
         }
 #else
         transition accept;
 #endif // WITH_SPGW
 #else
+        // Should never be here.
         transition reject;
 #endif // WITH_INT
     }
 
-// FIXME: is there a better way of this? e.g., can we do regular parsing of all
-// h eaders and then set the gtpu ones as invalid in the egress pipe?
-#if defined(WITH_SPGW) && defined(WITH_INT)
-    state skip_gtpu_headers_eth {
-        packet.extract(hdr.ethernet);
-        transition select(packet.lookahead<bit<16>>()) {
-            ETHERTYPE_VLAN: skip_gtpu_headers_vlan;
-            default: skip_gtpu_headers_eth_type;
+    state check_ethernet {
+        fake_ethernet_t tmp = packet.lookahead<fake_ethernet_t>();
+        transition select(tmp.ether_type) {
+            ETHERTYPE_CPU_LOOPBACK_INGRESS: set_cpu_loopback_egress;
+            ETHERTYPE_CPU_LOOPBACK_EGRESS: reject;
+            default: parse_ethernet;
         }
     }
 
-    state skip_gtpu_headers_vlan {
-        packet.extract(hdr.vlan_tag);
-        transition skip_gtpu_headers_eth_type;
+    state set_cpu_loopback_egress {
+        hdr.fake_ethernet.setValid();
+        hdr.fake_ethernet.ether_type = ETHERTYPE_CPU_LOOPBACK_EGRESS;
+        packet.advance(ETH_HDR_SIZE * 8);
+        transition parse_ethernet;
     }
-
-    state skip_gtpu_headers_eth_type {
-        packet.extract(hdr.eth_type);
-        transition select(hdr.eth_type.value) {
-            ETHERTYPE_MPLS: skip_gtpu_headers_mpls;
-            default: skip_gtpu_headers;
-        }
-    }
-
-    state skip_gtpu_headers_mpls {
-        packet.extract(hdr.mpls);
-        fabric_md.bridged.mpls_label = hdr.mpls.label;
-        // Add 1 here since the egress next block will decrease
-        // the MPLS TTL but we want to leave it unchanged.
-        fabric_md.bridged.mpls_ttl = DEFAULT_MPLS_TTL + 1;
-        transition skip_gtpu_headers;
-    }
-
-    state skip_gtpu_headers {
-        // Skip IP/UDP/GTPU headers (bits)
-        packet.advance((IPV4_HDR_SIZE + UDP_HDR_SIZE + GTP_HDR_SIZE) * 8);
-        transition accept;
-    }
-
-#endif // defined(WITH_SPGW) && defined(WITH_INT)
 
     state parse_ethernet {
         packet.extract(hdr.ethernet);
@@ -372,7 +352,7 @@ parser FabricEgressParser (packet_in packet,
         packet.extract(hdr.eth_type);
         transition select(hdr.eth_type.value) {
             ETHERTYPE_MPLS: parse_mpls;
-            ETHERTYPE_IPV4: parse_ipv4;
+            ETHERTYPE_IPV4: check_ipv4;
             ETHERTYPE_IPV6: parse_ipv6;
             default: accept;
         }
@@ -384,10 +364,26 @@ parser FabricEgressParser (packet_in packet,
         // Assume header after MPLS header is IPv4/IPv6
         // Lookup first 4 bits for version
         transition select(packet.lookahead<bit<IP_VER_LENGTH>>()) {
-            IP_VERSION_4: parse_ipv4;
+            IP_VERSION_4: check_ipv4;
             IP_VERSION_6: parse_ipv6;
-            default: parse_ethernet;
+            default: reject;
         }
+    }
+
+    state check_ipv4 {
+#if defined(WITH_INT) && defined(WITH_SPGW)
+        transition select(is_int_and_strip_gtpu) {
+            1: strip_gtpu_and_accept;
+            default: parse_ipv4;
+        }
+#else
+        transition parse_ipv4;
+#endif // defined(WITH_INT) && defined(WITH_SPGW)
+    }
+
+    state strip_gtpu_and_accept {
+        packet.advance((IPV4_HDR_SIZE + UDP_HDR_SIZE + GTP_HDR_SIZE) * 8);
+        transition accept;
     }
 
     state parse_ipv4 {

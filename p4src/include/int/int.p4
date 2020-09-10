@@ -129,7 +129,7 @@ control IntEgress (
         fabric_md.int_mirror_md.eg_tstamp = eg_prsr_md.global_tstamp[31:0];
 #ifdef WITH_SPGW
         // We will set this later in spgw egress pipeline.
-        fabric_md.int_mirror_md.skip_gtpu_headers = 0;
+        fabric_md.int_mirror_md.strip_gtpu = 0;
 #endif
     }
 
@@ -177,7 +177,7 @@ control IntEgress (
             // Remove the INT mirror metadata to prevent egress mirroring again.
             fabric_md.int_mirror_md.setInvalid();
 #ifdef WITH_SPGW
-            if (fabric_md.int_mirror_md.skip_gtpu_headers == 1) {
+            if (fabric_md.int_mirror_md.strip_gtpu == 1) {
                 // We need to remove length of IP, UDP, and GTPU headers
                 // since we only monitor the packet inside the GTP tunnel.
                 hdr.report_ipv4.total_len = hdr.report_ipv4.total_len
@@ -186,6 +186,8 @@ control IntEgress (
                     - (IPV4_HDR_SIZE + UDP_HDR_SIZE + GTP_HDR_SIZE);
             }
 #endif // WITH_SPGW
+            // Reports don't need to go through the rest of the egress pipe.
+            exit;
         } else {
             if (fabric_md.bridged.ig_port != CPU_PORT &&
                 eg_intr_md.egress_port != CPU_PORT) {
