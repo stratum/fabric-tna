@@ -94,9 +94,10 @@ const bit<16> ETHERTYPE_ARP  = 0x0806;
 const bit<16> ETHERTYPE_PPPOED = 0x8863;
 const bit<16> ETHERTYPE_PPPOES = 0x8864;
 
-// Fake ether type used to signal that a packet is entering the pipe a second
-// time because of loopback testing.
-const bit<16> ETHERTYPE_LOOPBACK = 0xBF02;
+// Fake ether types used to distinguish regular packets from those used for
+// CPU-based loopback testing.
+const bit<16> ETHERTYPE_CPU_LOOPBACK_INGRESS = 0xBF02;
+const bit<16> ETHERTYPE_CPU_LOOPBACK_EGRESS = 0xBF03;
 
 const bit<16> PPPOE_PROTOCOL_IP4 = 0x0021;
 const bit<16> PPPOE_PROTOCOL_IP6 = 0x0057;
@@ -135,6 +136,21 @@ enum bit<8> BridgedMdType_t {
     INT_MIRROR = 2
 }
 
+// Modes for CPU loopback testing, where a process can inject packets through
+// the CPU port (P4RT packet-out) and expect the same to be delivered back to
+// the CPU (P4RT packet-in). All modes require front-panel ports to be set in
+// loopback mode.
+enum bit<2> CpuLoopbackMode_t {
+    // Default mode.
+    DISABLED = 0,
+    // Signals that the packet-out should be treated as a regular one.
+    DIRECT = 1,
+    // Signals that the packet-out should be processed again by the ingress
+    // pipeline as if it was a packet coming from a front-panel port (defined by
+    // hdr.packet_out.egress_port)
+    INGRESS = 2
+}
+
 const MirrorId_t MIRROR_SESSION_ID_INVALID = 0;
 
 // Recirculation ports for each HW pipe.
@@ -144,4 +160,3 @@ const PortId_t RECIRC_PORT_PIPE_2 = 0x144;
 const PortId_t RECIRC_PORT_PIPE_3 = 0x1C4;
 
 #endif // __DEFINE__
-

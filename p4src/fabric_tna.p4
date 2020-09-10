@@ -13,7 +13,6 @@
 #include "include/control/forwarding.p4"
 #include "include/control/acl.p4"
 #include "include/control/next.p4"
-#include "include/control/loopback.p4"
 #ifdef WITH_SPGW
 #include "include/control/spgw.p4"
 #endif // WITH_SPGW
@@ -37,14 +36,12 @@ control FabricIngress (
     Forwarding() forwarding;
     Acl() acl;
     Next() next;
-    LoopbackTestingIngress() loopback_testing;
 #ifdef WITH_SPGW
     SpgwIngress() spgw_ingress;
 #endif // WITH_SPGW
 
     apply {
-        loopback_testing.apply(hdr, fabric_md, ig_tm_md, ig_dprsr_md);
-        pkt_io_ingress.apply(hdr, fabric_md, ig_tm_md);
+        pkt_io_ingress.apply(hdr, fabric_md, ig_tm_md, ig_dprsr_md);
 #ifdef WITH_SPGW
         spgw_ingress.apply(hdr, fabric_md, ig_tm_md);
 #endif // WITH_SPGW
@@ -71,7 +68,6 @@ control FabricEgress (
 
     PacketIoEgress() pkt_io_egress;
     EgressNextControl() egress_next;
-    LoopbackTestingEgress() loopback_testing;
 #ifdef WITH_SPGW
     SpgwEgress() spgw_egress;
 #endif // WITH_SPGW
@@ -80,15 +76,29 @@ control FabricEgress (
 #endif // WITH_INT
 
     apply {
+#ifdef WITH_INT
+        // FIXME: Parser wrongly extracts stuff on the validity bits (POVs) of
+        // INT report headers. Without this workaround, such POVs share a PHV
+        // container with a bridged md field. When parser extracts bridged md,
+        // POVs get written by values adjacent to the extracted bridged md
+        // field. Using @pa_no_overlay for POVs doesn't have any effect.
+        // According to BA-1141, POVs are never shared... is this a compiler
+        // bug? Calling setInvalid() causes the compiler to allocate these 4
+        // POVs on a non-shared container, but it burns stage 0 for the INT
+        // report generation path (not a big deal).
+        hdr.report_ethernet.setInvalid();
+        hdr.report_eth_type.setInvalid();
+        hdr.report_ipv4.setInvalid();
+        hdr.report_udp.setInvalid();
+#endif // WITH_INT
         pkt_io_egress.apply(hdr, fabric_md, eg_intr_md);
-        egress_next.apply(hdr, fabric_md, eg_intr_md, eg_dprsr_md);
 #ifdef WITH_INT
         int_egress.apply(hdr, fabric_md, eg_intr_md, eg_prsr_md);
 #endif
+        egress_next.apply(hdr, fabric_md, eg_intr_md, eg_dprsr_md);
 #ifdef WITH_SPGW
         spgw_egress.apply(hdr, fabric_md);
 #endif // WITH_SPGW
-        loopback_testing.apply(hdr, fabric_md, eg_intr_md);
     }
 }
 

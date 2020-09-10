@@ -40,7 +40,12 @@ ETH_TYPE_QINQ = 0x88a8
 ETH_TYPE_PPPOE = 0x8864
 ETH_TYPE_MPLS_UNICAST = 0x8847
 
-ETH_TYPE_LOOPBACK = 0xBF02
+ETH_TYPE_CPU_LOOPBACK_INGRESS = 0xBF02
+ETH_TYPE_CPU_LOOPBACK_EGRESS = 0xBF03
+
+CPU_LOOPBACK_MODE_DISABLED = 0
+CPU_LOOPBACK_MODE_DIRECT = 1
+CPU_LOOPBACK_MODE_INGRESS = 2
 
 # In case the "correct" version of scapy (from p4lang) is not installed, we
 # provide the INT header formats in xnt.py
@@ -258,6 +263,23 @@ class FabricTest(P4RuntimeTest):
         self.recirculate_port_1 = 196
         self.recirculate_port_2 = 324
         self.recirculate_port_3 = 452
+
+    def build_packet_out(self, pkt, port, cpu_loopback_mode=CPU_LOOPBACK_MODE_DISABLED):
+        packet_out = p4runtime_pb2.PacketOut()
+        packet_out.payload = str(pkt)
+        # egress_port
+        port_md = packet_out.metadata.add()
+        port_md.metadata_id = 1
+        port_md.value = stringify(port, 2)
+        # cpu_loopback_mode
+        cpu_loopback_mode_md = packet_out.metadata.add()
+        cpu_loopback_mode_md.metadata_id = 2
+        cpu_loopback_mode_md.value = stringify(cpu_loopback_mode, 1)
+        # pad0
+        pad0_md = packet_out.metadata.add()
+        pad0_md.metadata_id = 3
+        pad0_md.value = stringify(0, 1)
+        return packet_out
 
     def setup_int(self):
         self.send_request_add_entry_to_action(
@@ -780,7 +802,8 @@ class IPv4UnicastTest(FabricTest):
                            exp_pkt=None, exp_pkt_base=None, next_id=None,
                            next_vlan=None, mpls=False, dst_ipv4=None,
                            routed_eth_types=(ETH_TYPE_IPV4,),
-                           verify_pkt=True, with_another_pkt_later=False):
+                           verify_pkt=True, with_another_pkt_later=False,
+                           no_send=False):
         """
         Execute an IPv4 unicast routing test.
         :param pkt: input packet
@@ -804,6 +827,8 @@ class IPv4UnicastTest(FabricTest):
             dropped
         :param with_another_pkt_later: another packet(s) will be verified outside
             this function
+        :param no_send: if true insert table entries but do not send
+            (or verify) packets
         """
         if IP not in pkt or Ether not in pkt:
             self.fail("Cannot do IPv4 test with packet that is not IP")
@@ -868,6 +893,9 @@ class IPv4UnicastTest(FabricTest):
 
         if tagged1 and not pkt_is_tagged:
             pkt = pkt_add_vlan(pkt, vlan_vid=vlan1)
+
+        if no_send:
+            return
 
         self.send_packet(self.port1, str(pkt))
 
