@@ -16,6 +16,7 @@ control IntEgress (
     @hidden
     Random<bit<16>>() ip_id_gen;
     @hidden
+    @stratum("clear_interval_ms: 1")
     Register<bit<32>, bit<6>>(1024) seq_number;
     RegisterAction<bit<32>, bit<6>, bit<32>>(seq_number) get_seq_number = {
         void apply(inout bit<32> reg, out bit<32> rv) {

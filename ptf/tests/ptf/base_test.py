@@ -248,7 +248,7 @@ class P4RuntimeTest(BaseTest):
         self.p4info_obj_map = {}
         suffix_count = Counter()
         for p4_obj_type in ["tables", "action_profiles", "actions", "counters",
-                            "direct_counters"]:
+                            "direct_counters", "registers"]:
             for obj in getattr(self.p4info, p4_obj_type):
                 pre = obj.preamble
                 suffix = None
@@ -766,6 +766,29 @@ class P4RuntimeTest(BaseTest):
                 return entity.counter_entry
         return None
 
+    def write_register(self, reg_name, index, data):
+        req = self.get_new_write_request()
+        update = req.updates.add()
+        update.type = p4runtime_pb2.Update.MODIFY
+        register_entry = update.entity.register_entry
+        register_entry.register_id = self.get_register_id(reg_name)
+        register_entry.index.index = index
+        register_entry.data.CopyFrom(data)
+
+        return req, self.write_request(req, store=False)
+
+    def read_register(self, reg_name, index):
+        req = self.get_new_read_request()
+        entity = req.entities.add()
+        register_entry = entity.register_entry
+        register_entry.register_id = self.get_register_id(reg_name)
+        register_entry.index.index = index
+
+        for entity in self.read_request(req):
+            if entity.HasField("register_entry"):
+                return entity.register_entry
+        return None
+
     def read_table_entry(self, t_name, mk, priority=0):
         req = self.get_new_read_request()
         entity = req.entities.add()
@@ -949,7 +972,8 @@ for obj_type, nickname in [("tables", "table"),
                            ("action_profiles", "ap"),
                            ("actions", "action"),
                            ("counters", "counter"),
-                           ("direct_counters", "direct_counter")]:
+                           ("direct_counters", "direct_counter"),
+                           ("registers", "register")]:
     name = "_".join(["get", nickname])
     setattr(P4RuntimeTest, name, partialmethod(
         P4RuntimeTest.get_obj, obj_type))

@@ -1022,6 +1022,25 @@ class CounterTest(BridgingTest):
         self.doRunTest()
 
 
+@group("p4rt")
+class RegisterTest(FabricTest):
+    @tvsetup
+    @autocleanup
+    def doRunTest(self):
+        index = 1
+        reg = self.read_register("pipe.FabricEgress.int_egress.seq_number", index)
+        print(reg)
+
+        data = p4data_pb2.P4Data()
+        data.bitstring = stringify(1234, 4)
+        req, _ = self.write_register("pipe.FabricEgress.int_egress.seq_number", index, data)
+
+        print(self.read_register("pipe.FabricEgress.int_egress.seq_number", index))
+
+    def runTest(self):
+        print("")
+        self.doRunTest()
+
 # FIXME: remove when will start running TVs on hardware
 class FabricIpv4UnicastLoopbackModeTest(IPv4UnicastTest):
     """Emulates TV loopback mode for Ipv4UnicastTest"""
