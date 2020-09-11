@@ -137,6 +137,7 @@ header gtpu_t {
 header bridged_metadata_t {
     BridgedMdType_t bridged_md_type;
     bool            is_multicast;
+    fwd_type_t      fwd_type;
     PortId_t        ig_port;
     vlan_id_t       vlan_id;
     // bit<3>          vlan_pri;
@@ -177,7 +178,6 @@ struct fabric_ingress_metadata_t {
     bool               ipv4_checksum_err;
     bool               skip_forwarding;
     bool               skip_next;
-    fwd_type_t         fwd_type;
     next_id_t          next_id;
 #ifdef WITH_SPGW
     bool               inner_ipv4_checksum_err;
