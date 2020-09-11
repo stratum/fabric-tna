@@ -9,6 +9,7 @@ import time
 import xnt
 from base_test import P4RuntimeTest, ipv4_to_binary, mac_to_binary, stringify, tvcreate
 from p4.v1 import p4runtime_pb2
+from p4.v1 import p4data_pb2
 from ptf import testutils as testutils
 from ptf.mask import Mask
 from scapy.contrib.mpls import MPLS
