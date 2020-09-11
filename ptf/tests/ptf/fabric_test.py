@@ -736,6 +736,31 @@ class BridgingTest(FabricTest):
         self.verify_each_packet_on_each_port([exp_pkt, exp_pkt2], [self.port2, self.port1])
 
 
+class DoubleTaggedBridgingTest(FabricTest):
+
+    def runDoubleTaggedBridgingTest(self, pkt):
+        vlan_id = 10
+        inner_vlan_id = 11
+        mac_src = pkt[Ether].src
+        mac_dst = pkt[Ether].dst
+        self.setup_port(self.port1, vlan_id, True)
+        self.setup_port(self.port2, vlan_id, True)
+        # miss on filtering.fwd_classifier => bridging
+        self.add_bridging_entry(vlan_id, mac_src, MAC_MASK, 10)
+        self.add_bridging_entry(vlan_id, mac_dst, MAC_MASK, 20)
+        self.add_next_output(10, self.port1)
+        self.add_next_output(20, self.port2)
+
+        pkt = pkt_add_vlan(pkt, vlan_vid=vlan_id)
+        pkt = pkt_add_inner_vlan(pkt, vlan_vid=inner_vlan_id)
+        pkt2 = pkt_mac_swap(pkt.copy())
+        exp_pkt = pkt.copy()
+        exp_pkt2 = pkt2.copy()
+
+        self.send_packet(self.port1, str(pkt))
+        self.send_packet(self.port2, str(pkt2))
+        self.verify_each_packet_on_each_port([exp_pkt, exp_pkt2], [self.port2, self.port1])
+
 class DoubleVlanXConnectTest(FabricTest):
 
     def runXConnectTest(self, pkt):

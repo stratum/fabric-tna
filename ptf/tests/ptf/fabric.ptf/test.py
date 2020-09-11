@@ -37,6 +37,23 @@ class FabricBridgingTest(BridgingTest):
                 self.doRunTest(tagged[0], tagged[1], pkt, tc_name=tc_name)
 
 
+class FabricDoubleTaggedBridgingTest(DoubleTaggedBridgingTest):
+
+    @tvsetup
+    @autocleanup
+    def doRunTest(self, pkt, tc_name):
+        self.runDoubleTaggedBridgingTest(pkt)
+
+    def runTest(self):
+        print ""
+        for pkt_type in ["tcp", "udp", "icmp"]:
+            pktlen = 120
+            tc_name = pkt_type + "_DOUBLE_TAGGED" + "_" + str(pktlen)
+            print "Testing double tagged %s packet .." % (pkt_type)
+            pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(pktlen=pktlen)
+            self.doRunTest(pkt, tc_name=tc_name)
+
+
 @skip("XConnect Currently Unsupported")
 @group("xconnect")
 class FabricDoubleVlanXConnectTest(DoubleVlanXConnectTest):
