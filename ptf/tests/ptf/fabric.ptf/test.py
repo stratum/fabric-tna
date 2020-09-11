@@ -94,23 +94,26 @@ class FabricIPv4UnicastTest(IPv4UnicastTest):
 
     @tvsetup
     @autocleanup
-    def doRunTest(self, pkt, mac_dest, tagged1, tagged2, tc_name):
+    def doRunTest(self, pkt, mac_dest, prefix_len, tagged1, tagged2, tc_name):
         self.runIPv4UnicastTest(
-            pkt, mac_dest, prefix_len=24, tagged1=tagged1, tagged2=tagged2)
+            pkt, mac_dest, prefix_len=prefix_len, tagged1=tagged1, tagged2=tagged2)
 
     def runTest(self):
         print ""
         for vlan_conf, tagged in vlan_confs.items():
             for pkt_type in ["tcp", "udp", "icmp"]:
-                tc_name = pkt_type + "_VLAN_" + vlan_conf
-                print "Testing %s packet with VLAN %s..." \
-                      % (pkt_type, vlan_conf)
-                pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
-                    eth_src=HOST1_MAC, eth_dst=SWITCH_MAC,
-                    ip_src=HOST1_IPV4, ip_dst=HOST2_IPV4,
-                    pktlen=MIN_PKT_LEN
-                )
-                self.doRunTest(pkt, HOST2_MAC, tagged[0], tagged[1], tc_name=tc_name)
+                for dest_ip in [HOST2_IPV4, DEFAULT_ROUTE_IPV4]:
+                    for prefix_len in [PREFIX_DEFAULT_ROUTE, PREFIX_SUBNET, PREFIX_HOST]:
+                        for pkt_len in [MIN_PKT_LEN, 1500]:
+                            tc_name = pkt_type + "_VLAN_" + vlan_conf
+                            print "Testing %s packet with VLAN %s, DEST_IP %s/%s, SIZE=%s..." % \
+                                (pkt_type, vlan_conf, dest_ip, prefix_len, pkt_len)
+                            pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
+                                eth_src=HOST1_MAC, eth_dst=SWITCH_MAC,
+                                ip_src=HOST1_IPV4, ip_dst=dest_ip,
+                                pktlen=pkt_len
+                            )
+                            self.doRunTest(pkt, HOST2_MAC, prefix_len, tagged[0], tagged[1], tc_name=tc_name)
 
 
 class FabricIPv4UnicastGtpPassthroughTest(IPv4UnicastTest):
