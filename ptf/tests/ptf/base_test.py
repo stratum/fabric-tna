@@ -1,4 +1,5 @@
 # Copyright 2013-present Barefoot Networks, Inc.
+# Copyright 2020-present Open Networking Foundation.
 # SPDX-License-Identifier: Apache-2.0
 
 #
@@ -24,7 +25,7 @@ import scapy.packet
 import scapy.utils
 from google.rpc import status_pb2, code_pb2
 from p4.config.v1 import p4info_pb2
-from p4.v1 import p4runtime_pb2, p4runtime_pb2_grpc
+from p4.v1 import p4runtime_pb2, p4runtime_pb2_grpc, p4data_pb2
 from ptf import config
 from ptf.base_tests import BaseTest
 from ptf.dataplane import match_exp_pkt
@@ -806,6 +807,30 @@ class P4RuntimeTest(BaseTest):
                 return entity.action_profile_group
         return None
 
+    def read_register(self, register_name, register_index=None):
+        req = self.get_new_read_request()
+        entity = req.entities.add()
+        register_entry = entity.register_entry
+        register_entry.register_id = self.get_register_id(register_name)
+        if register_index:
+            register_entry.index.index = register_index
+
+        for entity in self.read_request(req):
+            if entity.HasField("register_entry"):
+                return entity.register_entry
+        return None
+
+    def write_register(self, register_name, register_index, data):
+        assert(isinstance(data, p4data_pb2.P4Data))
+        req = self.get_new_write_request()
+        update = req.updates.add()
+        update.type = p4runtime_pb2.Update.MODIFY
+        register_entry = update.entity.register_entry
+        register_entry.register_id = self.get_register_id(register_name)
+        register_entry.index = register_index.index = register_index
+        register_entry.data.CopyFrom(data)
+        return req, self.write_request(req)
+
     def verify_action_profile_group(self, ap_name, grp_id, expected_action_profile_group):
         req = self.get_new_read_request()
         entity = req.entities.add()
@@ -913,6 +938,48 @@ class P4RuntimeTest(BaseTest):
             update.entity.WhichOneof("entity") == "table_entry" and \
                 update.entity.table_entry.is_default_action
 
+    def is_register_update(self, update):
+        return update.type == p4runtime_pb2.Update.MODIFY and \
+            update.entity.WhichOneof("entity") == "register_entry"
+
+    def reset_p4_data(self, data):
+        assert(isinstance(data, p4data_pb2.P4Data))
+        field = data.WhichOneof('data')
+        assert(field is not None)
+        if field == "bitstring":
+            data.bitstring = b''
+        elif field == "varbit":
+            data.varbit.bitstring = b''
+        elif field == "bool":
+            data.bool = False
+        elif field == "tuple":
+            for d in data.tuple.members:
+                self.reset_p4_data(d)
+        elif field == "struct":
+            for d in data.struct.members:
+                self.reset_p4_data(d)
+        elif field == "header":
+            data.header.is_valid = False
+            data.header.bitstrings = b''
+        elif field == "header_union":
+            data.header_union.valid_header_name = ''
+            data.header_union.valid_header.Clear()
+        elif field == "header_stack":
+            for h in data.header_stack.entries:
+                h.Clear()
+        elif field == "header_union_stack":
+            for hu in data.header_union_stack.entries:
+                hu.valid_header_name = ''
+                hu.valid_header.Clear()
+        elif field == "enum":
+            data.enum = ''
+        elif field == "error":
+            data.error = ''
+        elif field == "enum_value":
+            data.enum_value = b''
+        else:
+            raise Exception("Unsupported data field: %s" % (field))
+
     # iterates over all requests in reverse order; if they are INSERT updates,
     # replay them as DELETE updates; this is a convenient way to clean-up a lot
     # of switch state
@@ -928,6 +995,8 @@ class P4RuntimeTest(BaseTest):
             if self.is_default_action_update(update):
                 # Reset table default entry to original one
                 update.entity.table_entry.ClearField("action")
+            elif self.is_register_update(update):
+                self.reset_p4_data(update.register_entry.data)
             else:
                 update.type = p4runtime_pb2.Update.DELETE
             new_req.updates.add().CopyFrom(update)
@@ -949,7 +1018,8 @@ for obj_type, nickname in [("tables", "table"),
                            ("action_profiles", "ap"),
                            ("actions", "action"),
                            ("counters", "counter"),
-                           ("direct_counters", "direct_counter")]:
+                           ("direct_counters", "direct_counter"),
+                           ("registers", "register")]:
     name = "_".join(["get", nickname])
     setattr(P4RuntimeTest, name, partialmethod(
         P4RuntimeTest.get_obj, obj_type))
