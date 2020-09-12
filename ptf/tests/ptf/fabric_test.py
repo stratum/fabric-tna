@@ -1489,33 +1489,19 @@ class IntTest(IPv4UnicastTest):
 
         return mask_pkt
 
-    def reset_flow_filter_value(self, pkt):
-        data = p4data_pb2.P4Data()
-        data.bitstring = b'\x00\x00'
-
-        # Index of filter is the hash of 5-tuple from the packet.
-        five_tuple = ipv4_to_binary(pkt['IP'].dst)
-        five_tuple += ipv4_to_binary(pkt['IP'].src)
-        five_tuple += stringify(pkt['IP'].proto, 1)
-
-        if 'TCP' in pkt:
-            five_tuple += stringify(pkt['TCP'].sport, 2)
-            five_tuple += stringify(pkt['TCP'].dport, 2)
-        elif 'UDP' in pkt:
-            five_tuple += stringify(pkt['UDP'].sport, 2)
-            five_tuple += stringify(pkt['UDP'].dport, 2)
-
-        register_index = zlib.crc32(five_tuple)
-
-        self.write_register("fabric_egress.int_egress.flow_filter.filter1", register_index, data)
-        self.write_register("fabric_egress.int_egress.flow_filter.filter2", register_index, data)
+    def set_up_flow_filter(self, pkt):
+        self.send_request_add_entry_to_action(
+            "flow_filter",
+            [self.Exact("report", stringify(1, 1))],
+            "drop_report",
+            [])
 
     def runIntTest(self, pkt, tagged1, tagged2,
-                   switch_id=1, mpls=False):
+                   switch_id=1, mpls=False,
+                   expect_int_report=True):
         # Need to reset the register before every test since the
         # flow report filter will drop report if the flow id(hash value of 5-tuple)
         # is already exists in the filter register.
-        self.reset_flow_filter_value(pkt)
         if IP not in pkt:
             self.fail("Packet is not IP")
 
@@ -1550,9 +1536,6 @@ class IntTest(IPv4UnicastTest):
             self.build_int_local_report(SWITCH_MAC, INT_COLLECTOR_MAC, SWITCH_IPV4, INT_COLLECTOR_IPV4,
                                         ig_port, eg_port, switch_id, exp_pkt)
 
-        # Strip out last 28 bits of hop latency value since the software
-        # switch is not running in a stable throughpout(50ms~250ms on a laptop).
-        self.set_up_quantize_hop_latency_rule(qmask=0xf0000000)
         # Set collector, report table, and mirror sessions
         self.setup_watchlist_flow(ipv4_src, ipv4_dst, sport, dport, switch_id)
         self.setup_report_flow(collector_port, SWITCH_MAC, SWITCH_MAC,
@@ -1576,7 +1559,8 @@ class IntTest(IPv4UnicastTest):
                                 tagged1=tagged1, tagged2=tagged2, mpls=mpls,
                                 prefix_len=32, with_another_pkt_later=True)
 
-        self.verify_packet(exp_int_report_pkt_masked, collector_port)
+        if expect_int_report:
+            self.verify_packet(exp_int_report_pkt_masked, collector_port)
         self.verify_no_other_packets()
 
 class SpgwIntTest(SpgwSimpleTest, IntTest):
@@ -1649,7 +1633,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
                                 tagged1=tagged1, tagged2=tagged2, mpls=mpls,
                                 prefix_len=32, with_another_pkt_later=True)
 
-        self.verify_packet( exp_int_report_pkt_masked, collector_port)
+        self.verify_packet(exp_int_report_pkt_masked, collector_port)
         self.verify_no_other_packets()
 
 
