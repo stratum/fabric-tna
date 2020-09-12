@@ -70,7 +70,7 @@ control Filtering (inout parsed_headers_t hdr,
     DirectCounter<bit<64>>(CounterType_t.PACKETS_AND_BYTES) fwd_classifier_counter;
 
     action set_forwarding_type(fwd_type_t fwd_type) {
-        fabric_md.fwd_type = fwd_type;
+        fabric_md.bridged.fwd_type = fwd_type;
         fwd_classifier_counter.count();
     }
 
@@ -130,7 +130,7 @@ control Filtering (inout parsed_headers_t hdr,
 
     @hidden
     action recirc_set_forwarding_type(fwd_type_t fwd_type) {
-        fabric_md.fwd_type = fwd_type;
+        fabric_md.bridged.fwd_type = fwd_type;
     }
 
     @hidden
@@ -160,7 +160,7 @@ control Filtering (inout parsed_headers_t hdr,
         recirc_fwd_classifier.apply();
 #endif // WITH_INT
 #ifdef WTIH_DEBUG
-        fwd_type_counter.count(fabric_md.fwd_type);
+        fwd_type_counter.count(fabric_md.bridged.fwd_type);
 #endif // WTIH_DEBUG
     }
 }
