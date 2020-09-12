@@ -715,9 +715,9 @@ class BridgingTest(FabricTest):
         self.add_next_output(10, self.port1)
         self.add_next_output(20, self.port2)
 
-        exp_pkt = pkt_decrement_ttl(pkt.copy())
+        exp_pkt = pkt.copy()
         pkt2 = pkt_mac_swap(pkt.copy())
-        exp_pkt2 = pkt_decrement_ttl(pkt2.copy())
+        exp_pkt2 = pkt2.copy()
 
         if tagged1:
             pkt = pkt_add_vlan(pkt, vlan_vid=vlan_id)

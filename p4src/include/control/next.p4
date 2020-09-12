@@ -358,12 +358,12 @@ control EgressNextControl (inout parsed_headers_t hdr,
                 eg_dprsr_md.drop_ctl = 1;
             }
         } else {
-            if (hdr.ipv4.isValid()) {
+            if (hdr.ipv4.isValid() && fabric_md.bridged.fwd_type != FWD_BRIDGING) {
                 hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
                 if (hdr.ipv4.ttl == 0) {
                     eg_dprsr_md.drop_ctl = 1;
                 }
-            } else if (hdr.ipv6.isValid()) {
+            } else if (hdr.ipv6.isValid() && fabric_md.bridged.fwd_type != FWD_BRIDGING) {
                 hdr.ipv6.hop_limit = hdr.ipv6.hop_limit - 1;
                 if (hdr.ipv6.hop_limit == 0) {
                     eg_dprsr_md.drop_ctl = 1;
