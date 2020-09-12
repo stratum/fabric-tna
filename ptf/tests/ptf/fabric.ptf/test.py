@@ -703,6 +703,38 @@ class FabricIntTest(IntTest):
                         continue
                     self.doRunTest(vlan_conf, tagged, pkt_type, mpls)
 
+
+@group("int")
+class FabricIntelligentIntTest(IntTest):
+
+    @tvsetup
+    @autocleanup
+    def doRunTest(self, vlan_conf, tagged, pkt_type, mpls, expect_int_report):
+        self.set_up_quantize_hop_latency_rule(qmask=0xf0000000)
+        self.set_up_flow_filter()
+        print "Testing VLAN=%s, pkt=%s, mpls=%s..." \
+              % (vlan_conf, pkt_type, mpls)
+        pkt = getattr(testutils, "simple_%s_packet" % pkt_type)()
+        self.runIntTest(pkt=pkt,
+                        tagged1=tagged[0],
+                        tagged2=tagged[1],
+                        mpls=mpls,
+                        expect_int_report=expect_int_report)
+
+    def runTest(self):
+        print ""
+        for pkt_type in ["udp", "tcp", "icmp"]:
+            expect_int_report = True
+            for vlan_conf, tagged in vlan_confs.items():
+                for mpls in [False, True]:
+                    if mpls and tagged[1]:
+                        continue
+                    self.doRunTest(vlan_conf, tagged, pkt_type, mpls, expect_int_report)
+
+                    # We should expect not receving any report after the first
+                    # report since packet uses 5-tuple as flow ID.
+                    expect_int_report = False
+
 @group("bng")
 class FabricPppoeUpstreamTest(PppoeTest):
 

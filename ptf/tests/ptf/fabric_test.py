@@ -1489,10 +1489,10 @@ class IntTest(IPv4UnicastTest):
 
         return mask_pkt
 
-    def set_up_flow_filter(self, pkt):
+    def set_up_flow_filter(self):
         self.send_request_add_entry_to_action(
             "flow_filter",
-            [self.Exact("report", stringify(1, 1))],
+            [self.Exact("report", stringify(0, 1))],
             "drop_report",
             [])
 
