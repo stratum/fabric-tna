@@ -747,7 +747,7 @@ class DoubleVlanXConnectTest(FabricTest):
 
         pkt = pkt_add_vlan(pkt, vlan_vid=vlan_id_inner)
         pkt = pkt_add_vlan(pkt, vlan_vid=vlan_id_outer)
-        exp_pkt = pkt_decrement_ttl(pkt.copy())
+        exp_pkt = pkt.copy()
 
         self.send_packet(self.port1, str(pkt))
         self.verify_packet(exp_pkt, self.port2)
