@@ -1036,6 +1036,8 @@ class RegisterTest(FabricTest):
         req, _ = self.write_register("pipe.FabricEgress.int_egress.seq_number", index, data)
 
         print(self.read_register("pipe.FabricEgress.int_egress.seq_number", index))
+        time.sleep(3)
+        print(self.read_register("pipe.FabricEgress.int_egress.seq_number", index))
 
     def runTest(self):
         print("")
