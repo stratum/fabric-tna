@@ -12,7 +12,7 @@ control PacketHasher(
     Hash<fabric_hash_t>(HashAlgorithm_t.CRC32) ipv6_hasher;
     Hash<fabric_hash_t>(HashAlgorithm_t.CRC32) non_ip_hasher;
     apply {
-        if (fabric_md.fwd_type == FWD_IPV4_UNICAST) {
+        if (fabric_md.bridged.fwd_type == FWD_IPV4_UNICAST) {
             fabric_md.bridged.packet_hash = ipv4_hasher.get({
                 fabric_md.ipv4_dst,
                 fabric_md.ipv4_src,
@@ -20,7 +20,7 @@ control PacketHasher(
                 fabric_md.bridged.l4_sport,
                 fabric_md.bridged.l4_dport
             });
-        } else if (fabric_md.fwd_type == FWD_IPV6_UNICAST) {
+        } else if (fabric_md.bridged.fwd_type == FWD_IPV6_UNICAST) {
             fabric_md.bridged.packet_hash = ipv6_hasher.get({
                 hdr.ipv6.dst_addr, // TODO: may replace with fabric_md.ipv6_dst
                 hdr.ipv6.src_addr, // if available.
