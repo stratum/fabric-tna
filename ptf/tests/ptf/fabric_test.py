@@ -5,9 +5,8 @@
 import struct
 import time
 from operator import ior
-import zlib
 
-from p4.v1 import p4runtime_pb2, p4data_pb2
+from p4.v1 import p4runtime_pb2
 from ptf import testutils as testutils
 from ptf.mask import Mask
 from scapy.contrib.mpls import MPLS
