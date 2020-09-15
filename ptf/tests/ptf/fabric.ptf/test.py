@@ -705,7 +705,7 @@ class FabricIntTest(IntTest):
 
 
 @group("int")
-class FabricIntelligentIntTest(IntTest):
+class FabricIntelligentIntFlowReportTest(IntTest):
 
     @tvsetup
     @autocleanup
@@ -734,6 +734,37 @@ class FabricIntelligentIntTest(IntTest):
                     # We should expect not receving any report after the first
                     # report since packet uses 5-tuple as flow ID.
                     expect_int_report = False
+
+@group("int")
+class FabricIntelligentIntFlowChangeReportTest(IntTest):
+
+    @tvsetup
+    @autocleanup
+    def doRunTest(self, ig_port, eg_port, expect_int_report, ip_src, ip_dst):
+        self.set_up_quantize_hop_latency_rule(qmask=0xf0000000)
+        self.set_up_flow_filter()
+        print "Testing ig_port=%d, eg_port=%d, expect_int_report=%s..." \
+              % (ig_port, eg_port, expect_int_report)
+        pkt = testutils.simple_tcp_packet()
+        self.runIntTest(pkt=pkt,
+                        ig_port=ig_port,
+                        eg_port=eg_port,
+                        expect_int_report=expect_int_report,
+                        ip_src=ip_src,
+                        ip_dst=ip_dst)
+
+    def runTest(self):
+        print("")
+        # Test with ingress port changed
+        for ig_port, eg_port, expect_int_report in [(self.port1, self.port2, True), (self.port1, self.port2, False), (self.port4, self.port2, True)]:
+            self.doRunTest(ig_port=ig_port, eg_port=eg_port,
+                           ip_src='10.0.0.1', ip_dst='10.0.0.2',
+                           expect_int_report=expect_int_report)
+        # Test with egress port changed, here we use UDP to make sure we are using a different flow
+        for ig_port, eg_port, expect_int_report in [(self.port1, self.port2, True), (self.port1, self.port2, False), (self.port1, self.port4, True)]:
+            self.doRunTest(ig_port=ig_port, eg_port=eg_port,
+                           ip_src='192.168.0.1', ip_dst='192.168.0.2',
+                           expect_int_report=expect_int_report)
 
 @group("bng")
 class FabricPppoeUpstreamTest(PppoeTest):
