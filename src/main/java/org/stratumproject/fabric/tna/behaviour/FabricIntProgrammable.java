@@ -39,6 +39,7 @@ import org.onosproject.net.pi.runtime.PiActionParam;
 import org.onosproject.segmentrouting.config.SegmentRoutingDeviceConfig;
 import org.stratumproject.fabric.tna.PipeconfLoader;
 
+import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -76,6 +77,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
             P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_WATCHLIST,
             P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_REPORT
     );
+    private static final long DEFAULT_QMASK = 0xffff0000;
 
     private FlowRuleService flowRuleService;
     private GroupService groupService;
@@ -351,11 +353,53 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         if (reportRule != null) {
             flowRuleService.applyFlowRules(reportRule);
             log.info("Report rule added to {} [{}]", this.data().deviceId(), reportRule);
-            return true;
         } else {
             log.warn("Failed to add report rule to {}", this.data().deviceId());
             return false;
         }
+        final Collection<FlowRule> flowFilterRule = buildFlowFilterRules();
+        flowFilterRule.forEach(flowRuleService::applyFlowRules);
+        log.info("Report rule added to {} [{}]", this.data().deviceId(), flowFilterRule);
+        return true;
+    }
+
+    private Collection<FlowRule> buildFlowFilterRules() {
+        final Collection<FlowRule> result = Sets.newHashSet();
+        // Quantize hop latency rule
+        // TODO: Add qmask config to INT config.
+        final PiActionParam quantizeVal = new PiActionParam(P4InfoConstants.QMASK, DEFAULT_QMASK);
+        final PiAction quantizeAction =
+                PiAction.builder()
+                .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_QUANTIZE)
+                .withParameter(quantizeVal)
+                .build();
+        final TrafficTreatment quantizeTreatment = DefaultTrafficTreatment.builder()
+                .piTableAction(quantizeAction)
+                .build();
+        result.add(DefaultFlowRule.builder()
+                .forDevice(deviceId)
+                .makePermanent()
+                .withPriority(DEFAULT_PRIORITY)
+                .withTreatment(quantizeTreatment)
+                .fromApp(appId)
+                .build());
+        // Flow filter rule
+        final PiAction dropReportAction =
+                PiAction.builder()
+                        .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_DROP_REPORT)
+                        .build();
+        final TrafficTreatment dropReportTreatment = DefaultTrafficTreatment.builder()
+                .piTableAction(dropReportAction)
+                .build();
+        result.add(DefaultFlowRule.builder()
+                .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_FLOW_FILTER)
+                .makePermanent()
+                .withPriority(DEFAULT_PRIORITY)
+                .withTreatment(dropReportTreatment)
+                .forDevice(deviceId)
+                .fromApp(appId)
+                .build());
+        return result;
     }
 
     private FlowRule buildReportEntry(IntDeviceConfig intCfg) {

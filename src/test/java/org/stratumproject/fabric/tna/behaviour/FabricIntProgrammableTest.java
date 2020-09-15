@@ -5,6 +5,7 @@ package org.stratumproject.fabric.tna.behaviour;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -42,6 +43,7 @@ import org.stratumproject.fabric.tna.PipeconfLoader;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Collection;
 import java.util.Set;
 
 import static org.easymock.EasyMock.anyObject;
@@ -73,6 +75,7 @@ public class FabricIntProgrammableTest {
     private static final int DEFAULT_PRIORITY = 10000;
     private static final IpAddress COLLECTOR_IP = IpAddress.valueOf("10.128.0.1");
     private static final TpPort COLLECTOR_PORT = TpPort.tpPort(32766);
+    private static final int DEFAULT_QMASK = 0xffff0000;
 
     private FabricIntProgrammable intProgrammable;
     private FabricCapabilities capabilities;
@@ -257,9 +260,14 @@ public class FabricIntProgrammableTest {
                 .withCollectorNextHopMac(MacAddress.BROADCAST)
                 .build();
         final FlowRule expectedFlow = buildReportFlow();
+        final Collection<FlowRule> flowFilterRules = buildFlowReportFilterRules();
         reset(flowRuleService);
         flowRuleService.applyFlowRules(eq(expectedFlow));
         expectLastCall().andVoid().once();
+        flowFilterRules.forEach(flowRule -> {
+            flowRuleService.applyFlowRules(eq(flowRule));
+            expectLastCall().andVoid().once();
+        });
         replay(flowRuleService);
         assertTrue(intProgrammable.setupIntConfig(intConfig));
         verify(flowRuleService);
@@ -310,6 +318,44 @@ public class FabricIntProgrammableTest {
                 .forDevice(DEVICE_ID)
                 .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_REPORT)
                 .build();
+    }
+
+    private Collection<FlowRule> buildFlowReportFilterRules() {
+        final Collection<FlowRule> result = Sets.newHashSet();
+        // Quantize hop latency rule
+        final PiActionParam quantizeVal = new PiActionParam(P4InfoConstants.QMASK, DEFAULT_QMASK);
+        final PiAction quantizeAction =
+                PiAction.builder()
+                        .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_QUANTIZE)
+                        .withParameter(quantizeVal)
+                        .build();
+        final TrafficTreatment quantizeTreatment = DefaultTrafficTreatment.builder()
+                .piTableAction(quantizeAction)
+                .build();
+        result.add(DefaultFlowRule.builder()
+                .forDevice(DEVICE_ID)
+                .makePermanent()
+                .withPriority(DEFAULT_PRIORITY)
+                .withTreatment(quantizeTreatment)
+                .fromApp(APP_ID)
+                .build());
+        // Flow filter rule
+        final PiAction dropReportAction =
+                PiAction.builder()
+                        .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_DROP_REPORT)
+                        .build();
+        final TrafficTreatment dropReportTreatment = DefaultTrafficTreatment.builder()
+                .piTableAction(dropReportAction)
+                .build();
+        result.add(DefaultFlowRule.builder()
+                .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_FLOW_FILTER)
+                .makePermanent()
+                .withPriority(DEFAULT_PRIORITY)
+                .withTreatment(dropReportTreatment)
+                .forDevice(DEVICE_ID)
+                .fromApp(APP_ID)
+                .build());
+        return result;
     }
 
     private IntObjective buildIntObjective(byte protocol) {
