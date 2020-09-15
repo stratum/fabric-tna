@@ -755,12 +755,12 @@ class FabricIntelligentIntFlowChangeReportTest(IntTest):
 
     def runTest(self):
         print("")
-        # Test with ingress port changed
+        # Test with ingress port changed.
         for ig_port, eg_port, expect_int_report in [(self.port1, self.port2, True), (self.port1, self.port2, False), (self.port4, self.port2, True)]:
             self.doRunTest(ig_port=ig_port, eg_port=eg_port,
                            ip_src='10.0.0.1', ip_dst='10.0.0.2',
                            expect_int_report=expect_int_report)
-        # Test with egress port changed, here we use UDP to make sure we are using a different flow
+        # Test with egress port changed.
         for ig_port, eg_port, expect_int_report in [(self.port1, self.port2, True), (self.port1, self.port2, False), (self.port1, self.port4, True)]:
             self.doRunTest(ig_port=ig_port, eg_port=eg_port,
                            ip_src='192.168.0.1', ip_dst='192.168.0.2',
