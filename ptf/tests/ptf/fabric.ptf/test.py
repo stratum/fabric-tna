@@ -142,7 +142,7 @@ class FabricIPv4UnicastTest(IPv4UnicastTest):
             for pkt_type in ["tcp", "udp", "icmp"]:
                 for prefix_len in prefix_list:
                     for pkt_len in [MIN_PKT_LEN, 1500]:
-                        tc_name = pkt_type + "_VLAN_" + vlan_conf
+                        tc_name = pkt_type + "_VLAN_" + vlan_conf + "_" + ip_dst + "/" + str(prefix_len) + "_" + str(pkt_len)
                         print "Testing %s packet with VLAN %s, IP dest %s/%s, size %s..." % \
                             (pkt_type, vlan_conf, ip_dst, prefix_len, pkt_len)
                         pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
