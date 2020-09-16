@@ -22,8 +22,12 @@ from base_test import P4RuntimeTest, stringify, mac_to_binary, ipv4_to_binary
 DEFAULT_PRIORITY = 10
 
 FORWARDING_TYPE_BRIDGING = 0
-FORWARDING_TYPE_UNICAST_IPV4 = 2
 FORWARDING_TYPE_MPLS = 1
+FORWARDING_TYPE_UNICAST_IPV4 = 2
+FORWARDING_TYPE_IPV4_MULTICAST = 3;
+FORWARDING_TYPE_IPV6_UNICAST = 4;
+FORWARDING_TYPE_IPV6_MULTICAST = 5;
+FORWARDING_TYPE_UNKNOWN = 7;
 
 CPU_CLONE_SESSION_ID = 511
 
@@ -62,6 +66,8 @@ INT_L45_LOCAL_REPORT = xnt.INT_L45_LOCAL_REPORT
 
 BROADCAST_MAC = ":".join(["ff"] * 6)
 MAC_MASK = ":".join(["ff"] * 6)
+MCAST_MAC = "01:00:5e:00:00:00"
+MCAST_MASK = "ff:ff:ff:80:00:00"
 SWITCH_MAC = "00:00:00:00:aa:01"
 SWITCH_IPV4 = "192.168.0.1"
 
@@ -363,11 +369,11 @@ class FabricTest(P4RuntimeTest):
              self.Exact("eg_port", egress_port)],
             "egress_next.pop_vlan", [])
 
-    def set_forwarding_type(self, ingress_port, eth_dstAddr, ethertype=ETH_TYPE_IPV4,
+    def set_forwarding_type(self, ingress_port, eth_dstAddr, eth_dstMask=MAC_MASK, ethertype=ETH_TYPE_IPV4,
                             fwd_type=FORWARDING_TYPE_UNICAST_IPV4):
         ingress_port_ = stringify(ingress_port, 2)
         eth_dstAddr_ = mac_to_binary(eth_dstAddr)
-        eth_mask_ = mac_to_binary(MAC_MASK)
+        eth_mask_ = mac_to_binary(eth_dstMask)
         if ethertype == ETH_TYPE_IPV4:
             ethertype_ = stringify(0, 2)
             ethertype_mask_ = stringify(0, 2)
@@ -933,6 +939,51 @@ class IPv4UnicastTest(FabricTest):
 
         if not with_another_pkt_later:
             self.verify_no_other_packets()
+
+
+class IPv4MulticastTest(FabricTest):
+    def runIPv4MulticastTest(self, pkt, in_port, out_ports, in_vlan, out_vlan):
+        if Dot1Q in pkt:
+            print "runIPv4MulticastTest() expects untagged packets"
+            return
+
+        # Initialize
+        internal_in_vlan = in_vlan if in_vlan != None else 4094
+        interanl_out_vlan = out_vlan if out_vlan != None else 4094
+        dst_ipv4 = pkt[IP].dst
+        prefix_len = 32
+        next_id = 1
+        mcast_group_id = 1
+
+        # Set port VLAN
+        self.setup_port(in_port, internal_in_vlan, in_vlan != None)
+        for out_port in out_ports:
+            self.setup_port(out_port, interanl_out_vlan, out_vlan != None)
+
+        # Set forwarding type to IPv4 multicast
+        self.set_forwarding_type(in_port, MCAST_MAC, MCAST_MASK, ETH_TYPE_IPV4, FORWARDING_TYPE_IPV4_MULTICAST)
+
+        # Set IPv4 routing table entry
+        self.add_forwarding_routing_v4_entry(dst_ipv4, prefix_len, next_id)
+
+        # Add next table entry
+        self.add_next_multicast(next_id, mcast_group_id)
+        self.add_next_vlan(next_id, interanl_out_vlan)
+
+        # Add multicast group
+        replicas = [(1, port) for port in out_ports]
+        self.add_mcast_group(mcast_group_id, replicas)
+
+        # Prepare packets
+        expect_pkt = pkt_decrement_ttl(pkt.copy())
+        pkt = pkt_add_vlan(pkt, vlan_vid=in_vlan) if in_vlan != None else pkt
+        expect_pkt = pkt_add_vlan(expect_pkt, vlan_vid=out_vlan) if out_vlan != None else expect_pkt
+
+        # Send packets and verify
+        self.send_packet(in_port, str(pkt))
+        for out_port in out_ports:
+            self.verify_packet(expect_pkt, out_port)
+        self.verify_no_other_packets()
 
 
 class DoubleVlanTerminationTest(FabricTest):

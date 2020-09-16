@@ -106,6 +106,24 @@ class FabricArpBroadcastMixedTest(ArpBroadcastTest):
             tagged_ports=[self.port2, self.port3],
             untagged_ports=[self.port1])
 
+@group("multicast")
+class FabricIPv4MulticastTest(IPv4MulticastTest):
+
+    @tvsetup
+    @autocleanup
+    def doRunTest(self, in_vlan, out_vlan):
+        pkt = testutils.simple_udp_packet(eth_dst='01:00:5e:00:00:01', ip_dst="224.0.0.1")
+        in_port = 1
+        out_ports = [2, 3]
+        self.runIPv4MulticastTest(pkt, in_port, out_ports, in_vlan, out_vlan)
+
+    def runTest(self):
+        self.doRunTest(None, None)
+        self.doRunTest(None, 10)
+        self.doRunTest(10, None)
+        self.doRunTest(10, 10)
+        self.doRunTest(10, 11)
+
 
 class FabricIPv4UnicastTest(IPv4UnicastTest):
 
