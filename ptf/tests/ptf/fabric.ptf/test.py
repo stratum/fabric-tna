@@ -113,8 +113,8 @@ class FabricIPv4MulticastTest(IPv4MulticastTest):
     @autocleanup
     def doRunTest(self, in_vlan, out_vlan):
         pkt = testutils.simple_udp_packet(eth_dst='01:00:5e:00:00:01', ip_dst="224.0.0.1")
-        in_port = 1
-        out_ports = [2, 3]
+        in_port = self.port1
+        out_ports = [self.port2, self.port3]
         self.runIPv4MulticastTest(pkt, in_port, out_ports, in_vlan, out_vlan)
 
     def runTest(self):
