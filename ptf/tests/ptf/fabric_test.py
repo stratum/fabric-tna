@@ -900,8 +900,8 @@ class IPv4UnicastTest(FabricTest):
 
         # Forwarding type -> routing v4
         for eth_type in routed_eth_types:
-            self.set_forwarding_type(self.port1, switch_mac, eth_type,
-                                     FORWARDING_TYPE_UNICAST_IPV4)
+            self.set_forwarding_type(self.port1, switch_mac, ethertype=eth_type,
+                                     fwd_type=FORWARDING_TYPE_UNICAST_IPV4)
 
         # Routing entry.
         self.add_forwarding_routing_v4_entry(dst_ipv4, prefix_len, next_id)
@@ -949,7 +949,7 @@ class IPv4MulticastTest(FabricTest):
 
         # Initialize
         internal_in_vlan = in_vlan if in_vlan != None else 4094
-        interanl_out_vlan = out_vlan if out_vlan != None else 4094
+        internal_out_vlan = out_vlan if out_vlan != None else 4094
         dst_ipv4 = pkt[IP].dst
         prefix_len = 32
         next_id = 1
@@ -958,17 +958,18 @@ class IPv4MulticastTest(FabricTest):
         # Set port VLAN
         self.setup_port(in_port, internal_in_vlan, in_vlan != None)
         for out_port in out_ports:
-            self.setup_port(out_port, interanl_out_vlan, out_vlan != None)
+            self.setup_port(out_port, internal_out_vlan, out_vlan != None)
 
         # Set forwarding type to IPv4 multicast
-        self.set_forwarding_type(in_port, MCAST_MAC, MCAST_MASK, ETH_TYPE_IPV4, FORWARDING_TYPE_IPV4_MULTICAST)
+        self.set_forwarding_type(in_port, MCAST_MAC, MCAST_MASK,
+            ethertype=ETH_TYPE_IPV4, fwd_type=FORWARDING_TYPE_IPV4_MULTICAST)
 
         # Set IPv4 routing table entry
         self.add_forwarding_routing_v4_entry(dst_ipv4, prefix_len, next_id)
 
         # Add next table entry
         self.add_next_multicast(next_id, mcast_group_id)
-        self.add_next_vlan(next_id, interanl_out_vlan)
+        self.add_next_vlan(next_id, internal_out_vlan)
 
         # Add multicast group
         replicas = [(1, port) for port in out_ports]
@@ -1039,8 +1040,8 @@ class DoubleVlanTerminationTest(FabricTest):
 
         # Forwarding type -> routing v4
         for eth_type in routed_eth_types:
-            self.set_forwarding_type(self.port1, switch_mac, eth_type,
-                                     FORWARDING_TYPE_UNICAST_IPV4)
+            self.set_forwarding_type(self.port1, switch_mac, ethertype=eth_type,
+                                     fwd_type=FORWARDING_TYPE_UNICAST_IPV4)
 
         # Routing entry.
         self.add_forwarding_routing_v4_entry(dst_ipv4, prefix_len, next_id)
@@ -1137,8 +1138,8 @@ class DoubleVlanTerminationTest(FabricTest):
 
         # Forwarding type -> routing v4
         for eth_type in routed_eth_types:
-            self.set_forwarding_type(self.port1, switch_mac, eth_type,
-                                     FORWARDING_TYPE_UNICAST_IPV4)
+            self.set_forwarding_type(self.port1, switch_mac, ethertype=eth_type,
+                                     fwd_type=FORWARDING_TYPE_UNICAST_IPV4)
         self.add_forwarding_routing_v4_entry(dst_ipv4, prefix_len, next_id)
 
         if not mpls:
@@ -1186,8 +1187,8 @@ class MplsSegmentRoutingTest(FabricTest):
         self.setup_port(self.port1, DEFAULT_VLAN, False)
         self.setup_port(self.port2, DEFAULT_VLAN, False)
         # Forwarding type -> mpls
-        self.set_forwarding_type(self.port1, switch_mac, ETH_TYPE_MPLS_UNICAST,
-                                 FORWARDING_TYPE_MPLS)
+        self.set_forwarding_type(self.port1, switch_mac, ethertype=ETH_TYPE_MPLS_UNICAST,
+                                 fwd_type=FORWARDING_TYPE_MPLS)
         # Mpls entry.
         self.add_forwarding_mpls_entry(label, next_id)
 

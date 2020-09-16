@@ -134,21 +134,28 @@ class FabricIPv4UnicastTest(IPv4UnicastTest):
             pkt, mac_dest, prefix_len=prefix_len, tagged1=tagged1, tagged2=tagged2)
 
     def runTest(self):
+        self.runTestInternal(HOST2_IPV4, [PREFIX_DEFAULT_ROUTE, PREFIX_SUBNET, PREFIX_HOST])
+
+    def runTestInternal(self, ip_dst, prefix_list):
         print ""
         for vlan_conf, tagged in vlan_confs.items():
             for pkt_type in ["tcp", "udp", "icmp"]:
-                for dest_ip in [HOST2_IPV4, DEFAULT_ROUTE_IPV4]:
-                    for prefix_len in [PREFIX_DEFAULT_ROUTE, PREFIX_SUBNET, PREFIX_HOST]:
-                        for pkt_len in [MIN_PKT_LEN, 1500]:
-                            tc_name = pkt_type + "_VLAN_" + vlan_conf
-                            print "Testing %s packet with VLAN %s, DEST_IP %s/%s, SIZE=%s..." % \
-                                (pkt_type, vlan_conf, dest_ip, prefix_len, pkt_len)
-                            pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
-                                eth_src=HOST1_MAC, eth_dst=SWITCH_MAC,
-                                ip_src=HOST1_IPV4, ip_dst=dest_ip,
-                                pktlen=pkt_len
-                            )
-                            self.doRunTest(pkt, HOST2_MAC, prefix_len, tagged[0], tagged[1], tc_name=tc_name)
+                for prefix_len in prefix_list:
+                    for pkt_len in [MIN_PKT_LEN, 1500]:
+                        tc_name = pkt_type + "_VLAN_" + vlan_conf
+                        print "Testing %s packet with VLAN %s, IP dest %s/%s, size %s..." % \
+                            (pkt_type, vlan_conf, ip_dst, prefix_len, pkt_len)
+                        pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
+                            eth_src=HOST1_MAC, eth_dst=SWITCH_MAC,
+                            ip_src=HOST1_IPV4, ip_dst=ip_dst,
+                            pktlen=pkt_len
+                        )
+                        self.doRunTest(pkt, HOST2_MAC, prefix_len, tagged[0], tagged[1], tc_name=tc_name)
+
+class FabricIPv4UnicastDefaultRouteTest(FabricIPv4UnicastTest):
+
+    def runTest(self):
+        self.runTestInternal(DEFAULT_ROUTE_IPV4, [PREFIX_DEFAULT_ROUTE])
 
 
 class FabricIPv4UnicastGtpPassthroughTest(IPv4UnicastTest):
@@ -175,8 +182,8 @@ class FabricIPv4UnicastGroupTest(FabricTest):
     def runTest(self):
         vlan_id = 10
         self.set_ingress_port_vlan(self.port1, False, 0, vlan_id)
-        self.set_forwarding_type(self.port1, SWITCH_MAC, 0x800,
-                                 FORWARDING_TYPE_UNICAST_IPV4)
+        self.set_forwarding_type(self.port1, SWITCH_MAC, ethertype=ETH_TYPE_IPV4,
+                                 fwd_type=FORWARDING_TYPE_UNICAST_IPV4)
         self.add_forwarding_routing_v4_entry(HOST2_IPV4, 24, 300)
         grp_id = 66
         mbrs = [
@@ -211,8 +218,8 @@ class FabricIPv4UnicastGroupTestAllPortTcpSport(FabricTest):
         # one of the 5-tuple header values. In this case tcp-source-port
         vlan_id = 10
         self.set_ingress_port_vlan(self.port1, False, 0, vlan_id)
-        self.set_forwarding_type(self.port1, SWITCH_MAC, 0x800,
-                                 FORWARDING_TYPE_UNICAST_IPV4)
+        self.set_forwarding_type(self.port1, SWITCH_MAC, ethertype=ETH_TYPE_IPV4,
+                                 fwd_type=FORWARDING_TYPE_UNICAST_IPV4)
         self.add_forwarding_routing_v4_entry(HOST2_IPV4, 24, 300)
         grp_id = 66
         mbrs = [
@@ -272,8 +279,8 @@ class FabricIPv4UnicastGroupTestAllPortTcpDport(FabricTest):
         # one of the 5-tuple header values. In this case tcp-dst-port
         vlan_id = 10
         self.set_ingress_port_vlan(self.port1, False, 0, vlan_id)
-        self.set_forwarding_type(self.port1, SWITCH_MAC, 0x800,
-                                 FORWARDING_TYPE_UNICAST_IPV4)
+        self.set_forwarding_type(self.port1, SWITCH_MAC, ethertype=ETH_TYPE_IPV4,
+                                 fwd_type=FORWARDING_TYPE_UNICAST_IPV4)
         self.add_forwarding_routing_v4_entry(HOST2_IPV4, 24, 300)
         grp_id = 66
         mbrs = [
@@ -334,8 +341,8 @@ class FabricIPv4UnicastGroupTestAllPortIpSrc(FabricTest):
         # In this case IP source for tcp and udp packets
         vlan_id = 10
         self.set_ingress_port_vlan(self.port1, False, 0, vlan_id)
-        self.set_forwarding_type(self.port1, SWITCH_MAC, 0x800,
-                                 FORWARDING_TYPE_UNICAST_IPV4)
+        self.set_forwarding_type(self.port1, SWITCH_MAC, ethertype=ETH_TYPE_IPV4,
+                                 fwd_type=FORWARDING_TYPE_UNICAST_IPV4)
         self.add_forwarding_routing_v4_entry(HOST2_IPV4, 24, 300)
         grp_id = 66
         mbrs = [
@@ -400,8 +407,8 @@ class FabricIPv4UnicastGroupTestAllPortIpDst(FabricTest):
         # In this case IP dest for tcp and udp packets
         vlan_id = 10
         self.set_ingress_port_vlan(self.port1, False, 0, vlan_id)
-        self.set_forwarding_type(self.port1, SWITCH_MAC, 0x800,
-                                 FORWARDING_TYPE_UNICAST_IPV4)
+        self.set_forwarding_type(self.port1, SWITCH_MAC, ethertype=ETH_TYPE_IPV4,
+                                 fwd_type=FORWARDING_TYPE_UNICAST_IPV4)
         self.add_forwarding_routing_v4_entry(HOST2_IPV4, 24, 300)
         grp_id = 66
         mbrs = [
@@ -468,8 +475,8 @@ class FabricIPv4MPLSTest(FabricTest):
     def runTest(self):
         vlan_id = 10
         self.set_ingress_port_vlan(self.port1, False, 0, vlan_id)
-        self.set_forwarding_type(self.port1, SWITCH_MAC, 0x800,
-                                 FORWARDING_TYPE_UNICAST_IPV4)
+        self.set_forwarding_type(self.port1, SWITCH_MAC, ethertype=ETH_TYPE_IPV4,
+                                 fwd_type=FORWARDING_TYPE_UNICAST_IPV4)
         self.add_forwarding_routing_v4_entry(HOST2_IPV4, 24, 400)
         mpls_label = 0xaba
         self.add_next_mpls_routing(
