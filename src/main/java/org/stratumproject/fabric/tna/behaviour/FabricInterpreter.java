@@ -50,6 +50,9 @@ public class FabricInterpreter extends AbstractFabricHandlerBehavior
         implements PiPipelineInterpreter {
 
     private static final int PORT_BITWIDTH = 9;
+    private static final int CPU_LOOPBACK_MODE_DISABLED = 0;
+    private static final int CPU_LOOPBACK_MODE_DIRECT = 1;
+    private static final int CPU_LOOPBACK_MODE_INGRESS = 2;
 
     // Group tables by control block.
     private static final Set<PiTableId> FILTERING_CTRL_TBLS = ImmutableSet.of(
@@ -172,21 +175,31 @@ public class FabricInterpreter extends AbstractFabricHandlerBehavior
     private PiPacketOperation createPiPacketOperation(
             DeviceId deviceId, ByteBuffer data, long portNumber)
             throws PiInterpreterException {
-        PiPacketMetadata metadata = createPacketMetadata(portNumber);
+        Collection<PiPacketMetadata> metadata = createPacketMetadata(portNumber);
         return PiPacketOperation.builder()
                 .withType(PACKET_OUT)
                 .withData(copyFrom(data))
-                .withMetadatas(ImmutableList.of(metadata))
+                .withMetadatas(metadata)
                 .build();
     }
 
-    private PiPacketMetadata createPacketMetadata(long portNumber)
+    private Collection<PiPacketMetadata> createPacketMetadata(long portNumber)
             throws PiInterpreterException {
         try {
-            return PiPacketMetadata.builder()
+            ImmutableList.Builder<PiPacketMetadata> builder = ImmutableList.builder();
+            builder.add(PiPacketMetadata.builder()
                     .withId(P4InfoConstants.EGRESS_PORT)
                     .withValue(copyFrom(portNumber).fit(PORT_BITWIDTH))
-                    .build();
+                    .build());
+            builder.add(PiPacketMetadata.builder()
+                    .withId(P4InfoConstants.CPU_LOOPBACK_MODE)
+                    .withValue(copyFrom(CPU_LOOPBACK_MODE_DISABLED))
+                    .build());
+            builder.add(PiPacketMetadata.builder()
+                    .withId(P4InfoConstants.PAD0)
+                    .withValue(copyFrom(0))
+                    .build());
+            return builder.build();
         } catch (ImmutableByteSequence.ByteSequenceTrimException e) {
             throw new PiInterpreterException(format(
                     "Port number '%d' too big, %s", portNumber, e.getMessage()));

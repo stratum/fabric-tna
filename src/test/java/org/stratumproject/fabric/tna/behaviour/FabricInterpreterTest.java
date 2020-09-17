@@ -226,17 +226,26 @@ public class FabricInterpreterTest {
         Collection<PiPacketOperation> result = interpreter.mapOutboundPacket(outPkt);
         assertEquals(result.size(), 1);
 
-        PiPacketMetadata expectedMetadata = PiPacketMetadata.builder()
+        ImmutableList.Builder<PiPacketMetadata> builder = ImmutableList.builder();
+        builder.add(PiPacketMetadata.builder()
                 .withId(P4InfoConstants.EGRESS_PORT)
                 .withValue(ImmutableByteSequence.copyFrom(outputPort.toLong()).fit(9))
-                .build();
+                .build());
+        builder.add(PiPacketMetadata.builder()
+                .withId(P4InfoConstants.CPU_LOOPBACK_MODE)
+                .withValue(ImmutableByteSequence.copyFrom(0))
+                .build());
+        builder.add(PiPacketMetadata.builder()
+                .withId(P4InfoConstants.PAD0)
+                .withValue(ImmutableByteSequence.copyFrom(0))
+                .build());
         PiPacketOperation expectedPktOp = PiPacketOperation.builder()
                 .withType(PiPacketOperationType.PACKET_OUT)
                 .withData(ImmutableByteSequence.copyFrom(data))
-                .withMetadata(expectedMetadata)
+                .withMetadatas(builder.build())
                 .build();
 
-        assertEquals(result.iterator().next(), expectedPktOp);
+        assertEquals(expectedPktOp, result.iterator().next());
     }
 
     @Test
