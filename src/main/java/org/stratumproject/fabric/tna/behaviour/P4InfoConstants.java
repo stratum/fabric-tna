@@ -1,3 +1,4 @@
+// Do not modify this file manually, use `make constants` to generate this file.
 // Copyright 2020-present Open Networking Foundation
 // SPDX-License-Identifier: Apache-2.0
 
@@ -255,7 +256,13 @@ public final class P4InfoConstants {
             PiPacketMetadataId.of("cpu_loopback_mode");
     public static final PiPacketMetadataId EGRESS_PORT =
             PiPacketMetadataId.of("egress_port");
+    public static final PiPacketMetadataId ETHER_TYPE =
+            PiPacketMetadataId.of("ether_type");
     public static final PiPacketMetadataId INGRESS_PORT =
             PiPacketMetadataId.of("ingress_port");
+<<<<<<< HEAD
     public static final PiPacketMetadataId PAD0 = PiPacketMetadataId.of("pad0");
 }
+=======
+}
+>>>>>>> small tweak to the gen-p4-constants script

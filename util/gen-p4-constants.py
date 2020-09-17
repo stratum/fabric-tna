@@ -7,7 +7,8 @@ import google.protobuf.text_format as tf
 import re
 from p4.config.v1 import p4info_pb2
 
-copyright = '''// Copyright 2020-present Open Networking Foundation
+copyright = '''// Do not modify this file manually, use `make constants` to generate this file.
+// Copyright 2020-present Open Networking Foundation
 // SPDX-License-Identifier: Apache-2.0
 '''
 
@@ -25,7 +26,7 @@ PKG_FMT = 'package %s;'
 DEFAULT_PKG_PATH = 'org.stratumproject.fabric.tna.%s'
 
 CLASS_OPEN = 'public final class %s {'
-CLASS_CLOSE = '}'
+CLASS_CLOSE = '}\n'
 
 DEFAULT_CONSTRUCTOR = '''
     // hide default constructor
