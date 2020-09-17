@@ -161,9 +161,7 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
                 .makePermanent()
                 .forTable(P4InfoConstants.FABRIC_EGRESS_PKT_IO_EGRESS_SWITCH_INFO)
                 .build();
-        final FlowRuleOperations.Builder ops = FlowRuleOperations.builder();
-        ops.add(rule);
-        flowRuleService.apply(ops.build());
+        flowRuleService.applyFlowRules(rule);
     }
 
     private void handleResult(Objective obj, ObjectiveTranslation result) {
