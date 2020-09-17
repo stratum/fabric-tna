@@ -92,8 +92,6 @@ public final class P4InfoConstants {
             PiTableId.of("FabricEgress.int_egress.report");
     public static final PiTableId FABRIC_EGRESS_INT_EGRESS_WATCHLIST =
             PiTableId.of("FabricEgress.int_egress.watchlist");
-    public static final PiTableId FABRIC_EGRESS_PKT_IO_EGRESS_SWITCH_INFO =
-            PiTableId.of("FabricEgress.pkt_io_egress.switch_info");
     public static final PiTableId FABRIC_INGRESS_ACL_ACL =
             PiTableId.of("FabricIngress.acl.acl");
     public static final PiTableId FABRIC_INGRESS_FILTERING_FWD_CLASSIFIER =
@@ -155,8 +153,6 @@ public final class P4InfoConstants {
             PiActionId.of("FabricEgress.int_egress.do_report_encap");
     public static final PiActionId FABRIC_EGRESS_INT_EGRESS_INIT_METADATA =
             PiActionId.of("FabricEgress.int_egress.init_metadata");
-    public static final PiActionId FABRIC_EGRESS_PKT_IO_EGRESS_SET_CPU_PORT =
-            PiActionId.of("FabricEgress.pkt_io_egress.set_cpu_port");
     public static final PiActionId FABRIC_INGRESS_ACL_COPY_TO_CPU =
             PiActionId.of("FabricIngress.acl.copy_to_cpu");
     public static final PiActionId FABRIC_INGRESS_ACL_DROP =
@@ -214,8 +210,6 @@ public final class P4InfoConstants {
     public static final PiActionId NO_ACTION = PiActionId.of("NoAction");
     public static final PiActionId NOP = PiActionId.of("nop");
     // Action Param IDs
-    public static final PiActionParamId CPU_PORT =
-            PiActionParamId.of("cpu_port");
     public static final PiActionParamId CTR_ID = PiActionParamId.of("ctr_id");
     public static final PiActionParamId DIRECTION =
             PiActionParamId.of("direction");
@@ -263,19 +257,7 @@ public final class P4InfoConstants {
             PiPacketMetadataId.of("cpu_loopback_mode");
     public static final PiPacketMetadataId EGRESS_PORT =
             PiPacketMetadataId.of("egress_port");
-    public static final PiPacketMetadataId ETHER_TYPE =
-            PiPacketMetadataId.of("ether_type");
     public static final PiPacketMetadataId INGRESS_PORT =
             PiPacketMetadataId.of("ingress_port");
-<<<<<<< HEAD
-<<<<<<< HEAD
     public static final PiPacketMetadataId PAD0 = PiPacketMetadataId.of("pad0");
-=======
-    public static final PiPacketMetadataId PAD0 = PiPacketMetadataId.of("pad0");
-    public static final PiPacketMetadataId PAD1 = PiPacketMetadataId.of("pad1");
-    public static final PiPacketMetadataId PAD2 = PiPacketMetadataId.of("pad2");
->>>>>>> regenerate constants
 }
-=======
-}
->>>>>>> small tweak to the gen-p4-constants script
