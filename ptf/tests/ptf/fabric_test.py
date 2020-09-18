@@ -276,6 +276,10 @@ class FabricTest(P4RuntimeTest):
         self.recirculate_port_3 = 452
         self.setup_cpu_port()
 
+    def tearDown(self):
+        self.reset_cpu_port()
+        P4RuntimeTest.tearDown(self)
+
     def build_packet_out(self, pkt, port, cpu_loopback_mode=CPU_LOOPBACK_MODE_DISABLED):
         packet_out = p4runtime_pb2.PacketOut()
         packet_out.payload = str(pkt)
@@ -339,10 +343,20 @@ class FabricTest(P4RuntimeTest):
             self.set_egress_vlan_pop(egress_port=port_id, vlan_id=vlan_id)
 
     def setup_cpu_port(self):
-        self.send_request_add_entry_to_action(
+        req = self.get_new_write_request()
+        self.push_update_add_entry_to_action(req,
             "FabricEgress.pkt_io_egress.switch_info", None,
             "FabricEgress.pkt_io_egress.set_cpu_port",
             [("cpu_port", stringify(self.cpu_port, 2))])
+        return req, self.write_request(req, store=False)
+
+    def reset_cpu_port(self):
+        req = self.get_new_write_request()
+        self.push_update_add_entry_to_action(req,
+            "FabricEgress.pkt_io_egress.switch_info", None,
+            "nop",
+            [])
+        return req, self.write_request(req, store=False)
 
     def set_ingress_port_vlan(self, ingress_port,
                               vlan_valid=False,
