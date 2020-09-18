@@ -1429,8 +1429,6 @@ class IntTest(IPv4UnicastTest):
         #         ("sid", stringify(mirror_id, 2))
         #     ])
 
-    # quantize the hop latency before generate the hash
-    # value of flow state (ig/eg ports, latency)
     def set_up_quantize_hop_latency_rule(self, qmask=0xf0000000):
         self.send_request_add_entry_to_action(
             "quantize_hop_latency",
@@ -1492,13 +1490,6 @@ class IntTest(IPv4UnicastTest):
         mask_pkt.set_do_not_care_scapy(INT_L45_LOCAL_REPORT, "egress_tstamp")
 
         return mask_pkt
-
-    def set_up_flow_filter(self):
-        self.send_request_add_entry_to_action(
-            "flow_filter",
-            [self.Exact("report", stringify(0, 1))],
-            "drop_report",
-            [])
 
     def runIntTest(self, pkt, tagged1=False,
                    tagged2=False,

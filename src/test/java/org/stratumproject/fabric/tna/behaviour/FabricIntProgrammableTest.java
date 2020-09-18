@@ -5,7 +5,6 @@ package org.stratumproject.fabric.tna.behaviour;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -43,7 +42,6 @@ import org.stratumproject.fabric.tna.PipeconfLoader;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Collection;
 import java.util.Set;
 
 import static org.easymock.EasyMock.anyObject;
@@ -260,14 +258,12 @@ public class FabricIntProgrammableTest {
                 .withCollectorNextHopMac(MacAddress.BROADCAST)
                 .build();
         final FlowRule expectedFlow = buildReportFlow();
-        final Collection<FlowRule> flowFilterRules = buildFlowReportFilterRules();
+        final FlowRule quantificationRule = buildQuantificationRule();
         reset(flowRuleService);
         flowRuleService.applyFlowRules(eq(expectedFlow));
         expectLastCall().andVoid().once();
-        flowFilterRules.forEach(flowRule -> {
-            flowRuleService.applyFlowRules(eq(flowRule));
-            expectLastCall().andVoid().once();
-        });
+        flowRuleService.applyFlowRules(eq(quantificationRule));
+        expectLastCall().andVoid().once();
         replay(flowRuleService);
         assertTrue(intProgrammable.setupIntConfig(intConfig));
         verify(flowRuleService);
@@ -320,9 +316,9 @@ public class FabricIntProgrammableTest {
                 .build();
     }
 
-    private Collection<FlowRule> buildFlowReportFilterRules() {
-        final Collection<FlowRule> result = Sets.newHashSet();
-        // Quantize hop latency rule
+    private FlowRule buildQuantificationRule() {
+        // Quantify hop latency rule
+        // TODO: Read qmask config from the INT device config.
         final PiActionParam quantizeVal = new PiActionParam(P4InfoConstants.QMASK, DEFAULT_QMASK);
         final PiAction quantizeAction =
                 PiAction.builder()
@@ -332,30 +328,13 @@ public class FabricIntProgrammableTest {
         final TrafficTreatment quantizeTreatment = DefaultTrafficTreatment.builder()
                 .piTableAction(quantizeAction)
                 .build();
-        result.add(DefaultFlowRule.builder()
+        return DefaultFlowRule.builder()
                 .forDevice(DEVICE_ID)
                 .makePermanent()
                 .withPriority(DEFAULT_PRIORITY)
                 .withTreatment(quantizeTreatment)
                 .fromApp(APP_ID)
-                .build());
-        // Flow filter rule
-        final PiAction dropReportAction =
-                PiAction.builder()
-                        .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_DROP_REPORT)
-                        .build();
-        final TrafficTreatment dropReportTreatment = DefaultTrafficTreatment.builder()
-                .piTableAction(dropReportAction)
                 .build();
-        result.add(DefaultFlowRule.builder()
-                .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_FLOW_FILTER)
-                .makePermanent()
-                .withPriority(DEFAULT_PRIORITY)
-                .withTreatment(dropReportTreatment)
-                .forDevice(DEVICE_ID)
-                .fromApp(APP_ID)
-                .build());
-        return result;
     }
 
     private IntObjective buildIntObjective(byte protocol) {

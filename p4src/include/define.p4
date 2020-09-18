@@ -63,7 +63,7 @@ typedef bit<48> mac_addr_t;
 typedef bit<12> vlan_id_t;
 typedef bit<32> ipv4_addr_t;
 typedef bit<16> l4_port_t;
-typedef bit<32> fabric_hash_t;
+typedef bit<32> flow_hash_t;
 
 // SPGW types
 typedef bit<32> teid_t;

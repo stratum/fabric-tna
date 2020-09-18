@@ -37,7 +37,7 @@ control FabricIngress (
     Forwarding() forwarding;
     Acl() acl;
     Next() next;
-    PacketHasher() packet_hasher;
+    Hasher() hasher;
 #ifdef WITH_SPGW
     SpgwIngress() spgw_ingress;
 #endif // WITH_SPGW
@@ -51,7 +51,7 @@ control FabricIngress (
         if (!fabric_md.skip_forwarding) {
             forwarding.apply(hdr, fabric_md);
         }
-        packet_hasher.apply(hdr, fabric_md);
+        hasher.apply(hdr, fabric_md);
         acl.apply(hdr, fabric_md, ig_intr_md, ig_dprsr_md, ig_tm_md);
         if (!fabric_md.skip_next) {
             next.apply(hdr, fabric_md, ig_intr_md, ig_tm_md);

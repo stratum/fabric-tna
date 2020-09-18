@@ -149,7 +149,7 @@ header bridged_metadata_t {
     bit<8>          ip_proto;
     l4_port_t       l4_sport;
     l4_port_t       l4_dport;
-    fabric_hash_t   packet_hash;
+    flow_hash_t   packet_hash;
 #ifdef WITH_DOUBLE_VLAN_TERMINATION
     bool            push_double_vlan;
     vlan_id_t       inner_vlan_id;

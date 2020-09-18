@@ -19,24 +19,25 @@ control FlowReportFilter(
 
     bit<1> report;
 
-    // Filter array which stores the hash of a flow state(ports, latency)
-    // and the index is the hash of the packet.
-    Register<bit<16>, bit<16>>(65535, 0) filter1;
-    Register<bit<16>, bit<16>>(65535, 0) filter2;
+    // Bloom filter storing the state of each flow (ports and hop latency).
+    // We use it to trigger report generation only for the first packet of a new flow, or for
+    // packets which state has changed wrt the previous packet of the same flow.
+    Register<flow_report_filter_index_t, bit<16>>(1 << FLOW_REPORT_FILTER_WIDTH, 0) filter1;
+    Register<flow_report_filter_index_t, bit<16>>(1 << FLOW_REPORT_FILTER_WIDTH, 0) filter2;
 
     // Meaning of the result:
     // 0: nothing changed.
-    // 1: new report or state changed.
+    // 1: new flow or state changed.
     RegisterAction<bit<16>, bit<16>, bit<1>>(filter1) filter_get_and_set1 = {
         void apply(inout bit<16> stored_flow_state_hash, out bit<1> result) {
             if (stored_flow_state_hash == 0) {
                 // No flow hash stored, new flow
                 result = 1;
             } else if (stored_flow_state_hash != flow_state_hash) {
-                // Flow might changed(in/out port or latency)
+                // Flow state changed
                 result = 1;
             } else {
-                // nothing changed.
+                // nothing changed
                 result = 0;
             }
             stored_flow_state_hash = flow_state_hash;
@@ -67,25 +68,8 @@ control FlowReportFilter(
         key = {}
         actions = {
             @defaultonly quantize;
-            @defaultonly nop;
         }
-        default_action = nop;
-    }
-
-    action drop_report() {
-        fabric_md.int_mirror_md.setInvalid();
-    }
-
-    table flow_filter {
-        key = {
-            report: exact;
-        }
-        actions = {
-            drop_report;
-            @defaultonly nop;
-        }
-        size = 1;
-        const default_action = nop;
+        default_action = quantize(0xffffffff);
     }
 
     apply {
@@ -93,7 +77,9 @@ control FlowReportFilter(
         flow_state_hash = flow_state_hasher.get({fabric_md.bridged.ig_port, eg_intr_md.egress_port, fabric_md.hop_latency});
         report = filter_get_and_set1.execute(fabric_md.bridged.packet_hash[31:16]);
         report = report | filter_get_and_set2.execute(fabric_md.bridged.packet_hash[15:0]);
-        flow_filter.apply();
+        if (report == 0) {
+            fabric_md.int_mirror_md.setInvalid();
+        }
     }
 }
 

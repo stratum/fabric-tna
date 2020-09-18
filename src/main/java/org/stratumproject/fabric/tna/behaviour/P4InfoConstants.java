@@ -72,7 +72,6 @@ public final class P4InfoConstants {
             PiMatchFieldId.of("mpls_label");
     public static final PiMatchFieldId HDR_NEXT_ID =
             PiMatchFieldId.of("next_id");
-    public static final PiMatchFieldId HDR_REPORT = PiMatchFieldId.of("report");
     public static final PiMatchFieldId HDR_SRC_IFACE =
             PiMatchFieldId.of("src_iface");
     public static final PiMatchFieldId HDR_TEID = PiMatchFieldId.of("teid");
@@ -87,8 +86,6 @@ public final class P4InfoConstants {
     // Table IDs
     public static final PiTableId FABRIC_EGRESS_EGRESS_NEXT_EGRESS_VLAN =
             PiTableId.of("FabricEgress.egress_next.egress_vlan");
-    public static final PiTableId FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_FLOW_FILTER =
-            PiTableId.of("FabricEgress.int_egress.flow_report_filter.flow_filter");
     public static final PiTableId FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_QUANTIZE_HOP_LATENCY =
             PiTableId.of("FabricEgress.int_egress.flow_report_filter.quantize_hop_latency");
     public static final PiTableId FABRIC_EGRESS_INT_EGRESS_REPORT =
@@ -154,8 +151,6 @@ public final class P4InfoConstants {
             PiActionId.of("FabricEgress.egress_next.pop_vlan");
     public static final PiActionId FABRIC_EGRESS_INT_EGRESS_DO_REPORT_ENCAP =
             PiActionId.of("FabricEgress.int_egress.do_report_encap");
-    public static final PiActionId FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_DROP_REPORT =
-            PiActionId.of("FabricEgress.int_egress.flow_report_filter.drop_report");
     public static final PiActionId FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_QUANTIZE =
             PiActionId.of("FabricEgress.int_egress.flow_report_filter.quantize");
     public static final PiActionId FABRIC_EGRESS_INT_EGRESS_INIT_METADATA =
