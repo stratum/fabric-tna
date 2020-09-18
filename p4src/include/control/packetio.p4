@@ -70,7 +70,10 @@ control PacketIoEgress(inout parsed_headers_t hdr,
     }
 
     table switch_info {
-        actions = { set_cpu_port; }
+        actions = {
+            set_cpu_port;
+            @defaultonly nop;
+        }
     }
 
     apply {
