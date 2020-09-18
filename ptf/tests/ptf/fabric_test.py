@@ -44,7 +44,7 @@ ETH_TYPE_QINQ = 0x88a8
 ETH_TYPE_PPPOE = 0x8864
 ETH_TYPE_MPLS_UNICAST = 0x8847
 
-ETH_TYPE_PACKET_IO = 0xBF01
+ETH_TYPE_PACKET_OUT = 0xBF01
 ETH_TYPE_CPU_LOOPBACK_INGRESS = 0xBF02
 ETH_TYPE_CPU_LOOPBACK_EGRESS = 0xBF03
 
@@ -298,7 +298,7 @@ class FabricTest(P4RuntimeTest):
         # ether type
         ether_type_md = packet_out.metadata.add()
         ether_type_md.metadata_id = 4
-        ether_type_md.value = stringify(ETH_TYPE_PACKET_IO, 2)
+        ether_type_md.value = stringify(ETH_TYPE_PACKET_OUT, 2)
         return packet_out
 
     def setup_int(self):
