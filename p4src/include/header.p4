@@ -20,7 +20,7 @@ header packet_in_header_t {
 header packet_out_header_t {
     PortId_t          egress_port;
     CpuLoopbackMode_t cpu_loopback_mode;
-    bit<5>            _pad0;
+    bit<5>            pad0;
 }
 
 header ethernet_t {
