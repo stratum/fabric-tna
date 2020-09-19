@@ -264,4 +264,5 @@ public final class P4InfoConstants {
             PiPacketMetadataId.of("egress_port");
     public static final PiPacketMetadataId INGRESS_PORT =
             PiPacketMetadataId.of("ingress_port");
+    public static final PiPacketMetadataId PAD0 = PiPacketMetadataId.of("pad0");
 }
