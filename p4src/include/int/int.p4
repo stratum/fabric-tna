@@ -16,6 +16,7 @@ control FlowReportFilter(
 
     Hash<bit<16>>(HashAlgorithm_t.CRC16) flow_state_hasher;
     bit<16> flow_state_hash;
+    bit<32> hop_latency;
 
     bit<1> report;
 
@@ -50,7 +51,7 @@ control FlowReportFilter(
                 // No flow hash stored, new flow
                 result = 1;
             } else if (stored_flow_state_hash != flow_state_hash) {
-                // Flow might changed(in/out port or latency)
+                // Flow state changed
                 result = 1;
             } else {
                 // nothing changed.
@@ -61,7 +62,7 @@ control FlowReportFilter(
     };
 
     action quantize(bit<32> qmask) {
-        fabric_md.hop_latency = fabric_md.hop_latency & qmask;
+        hop_latency = hop_latency & qmask;
     }
 
     table quantize_hop_latency {
@@ -73,10 +74,11 @@ control FlowReportFilter(
     }
 
     apply {
+        hop_latency = eg_prsr_md.global_tstamp[31:0] - fabric_md.bridged.ig_tstamp[31:0];
         quantize_hop_latency.apply();
-        flow_state_hash = flow_state_hasher.get({fabric_md.bridged.ig_port, eg_intr_md.egress_port, fabric_md.hop_latency});
-        report = filter_get_and_set1.execute(fabric_md.bridged.packet_hash[31:16]);
-        report = report | filter_get_and_set2.execute(fabric_md.bridged.packet_hash[15:0]);
+        flow_state_hash = flow_state_hasher.get({fabric_md.bridged.ig_port, eg_intr_md.egress_port, hop_latency});
+        report = filter_get_and_set1.execute(fabric_md.bridged.flow_hash[31:16]);
+        report = report | filter_get_and_set2.execute(fabric_md.bridged.flow_hash[15:0]);
         if (report == 0) {
             fabric_md.int_mirror_md.setInvalid();
         }
@@ -267,8 +269,6 @@ control IntEgress (
             // Reports don't need to go through the rest of the egress pipe.
             exit;
         } else {
-            fabric_md.hop_latency =
-                eg_prsr_md.global_tstamp[31:0] - fabric_md.bridged.ig_tstamp[31:0];
             if (fabric_md.bridged.ig_port != CPU_PORT &&
                 eg_intr_md.egress_port != CPU_PORT) {
                 mirror_session_id.apply();

@@ -356,13 +356,13 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
             log.warn("Failed to add report rule to {}", this.data().deviceId());
             return false;
         }
-        final FlowRule quantificationRule = buildQuantificationRule();
-        flowRuleService.applyFlowRules(quantificationRule);
-        log.info("Report rule added to {} [{}]", this.data().deviceId(), quantificationRule);
+        final FlowRule quantizationRule = buildQuantizeRule();
+        flowRuleService.applyFlowRules(quantizationRule);
+        log.info("Report rule added to {} [{}]", this.data().deviceId(), quantizationRule);
         return true;
     }
 
-    private FlowRule buildQuantificationRule() {
+    private FlowRule buildQuantizeRule() {
         // Quantify hop latency rule
         // TODO: Read qmask config from the INT device config.
         final PiActionParam quantizeVal = new PiActionParam(P4InfoConstants.QMASK, DEFAULT_QMASK);

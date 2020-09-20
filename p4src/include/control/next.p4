@@ -189,7 +189,7 @@ control Next (inout parsed_headers_t hdr,
     table hashed {
         key = {
             fabric_md.next_id             : exact @name("next_id");
-            fabric_md.bridged.packet_hash : selector;
+            fabric_md.bridged.flow_hash : selector;
         }
         actions = {
             output_hashed;
