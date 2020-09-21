@@ -42,7 +42,6 @@ function do_p4c() {
   cpu_port=$2
   echo "*** Compiling profile '${PROFILE}' for ${pltf} platform..."
   echo "*** Output in ${P4C_OUT}/${pltf}"
-  pp_flags="-DCPU_PORT=${cpu_port}"
   p4c_flags="--auto-init-metadata"
   mkdir -p ${P4C_OUT}/${pltf}
   (

@@ -1128,8 +1128,6 @@ class FabricPacketInLoopbackModeTest(FabricTest):
             self.verify_packet_in(pkt, port)
         self.verify_no_other_packets()
 
-    @tvsetup
-    @autocleanup
     def runTest(self):
         print ""
         for pkt_type in ["tcp", "udp", "icmp", "arp"]:
@@ -1158,8 +1156,6 @@ class FabricPacketOutLoopbackModeTest(FabricTest):
             self.verify_packet_in(pkt, port)
         self.verify_no_other_packets()
 
-    @tvsetup
-    @autocleanup
     def runTest(self):
         print ""
         for pkt_type in ["tcp", "udp", "icmp", "arp"]:
