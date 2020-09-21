@@ -189,11 +189,8 @@ control IntEgress (
             // Reports don't need to go through the rest of the egress pipe.
             exit;
         } else {
-            if (fabric_md.bridged.ig_port != CPU_PORT &&
-                eg_intr_md.egress_port != CPU_PORT) {
-                if (watchlist.apply().hit) {
-                    mirror_session_id.apply();
-                }
+            if (watchlist.apply().hit) {
+                mirror_session_id.apply();
             }
         }
     }

@@ -9,8 +9,8 @@ control PacketIoIngress(inout parsed_headers_t hdr,
                         inout ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr) {
     @hidden
     action do_packet_out() {
-        hdr.packet_out.setInvalid();
         ig_intr_md_for_tm.ucast_egress_port = hdr.packet_out.egress_port;
+        hdr.packet_out.setInvalid();
         // Straight to output port.
         fabric_md.bridged.setInvalid();
         ig_intr_md_for_tm.bypass_egress = 1;
@@ -65,8 +65,21 @@ control PacketIoEgress(inout parsed_headers_t hdr,
                        inout fabric_egress_metadata_t fabric_md,
                        in egress_intrinsic_metadata_t eg_intr_md) {
 
+    action set_cpu_port(PortId_t cpu_port) {
+        fabric_md.cpu_port = cpu_port;
+    }
+
+    table switch_info {
+        actions = {
+            set_cpu_port;
+            @defaultonly nop;
+        }
+    }
+
     apply {
-        if (eg_intr_md.egress_port == CPU_PORT) {
+        switch_info.apply();
+        // Check if this is a clone of a copy_to_cpu packet.
+        if (eg_intr_md.egress_port == fabric_md.cpu_port) {
             hdr.packet_in.setValid();
             hdr.packet_in.ingress_port = fabric_md.bridged.ig_port;
             hdr.fake_ethernet.setInvalid();

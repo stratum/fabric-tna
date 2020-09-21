@@ -236,6 +236,10 @@ public class FabricInterpreterTest {
                 .withValue(ImmutableByteSequence.copyFrom(0))
                 .build());
         builder.add(PiPacketMetadata.builder()
+                .withId(P4InfoConstants.ETHER_TYPE)
+                .withValue(ImmutableByteSequence.copyFrom(0xBF01))
+                .build());
+        builder.add(PiPacketMetadata.builder()
                 .withId(P4InfoConstants.PAD0)
                 .withValue(ImmutableByteSequence.copyFrom(0))
                 .build());

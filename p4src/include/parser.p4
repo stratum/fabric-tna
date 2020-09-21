@@ -25,14 +25,6 @@ parser FabricIngressParser (packet_in  packet,
         fabric_md.bridged.bridged_md_type = BridgedMdType_t.I2E;
         fabric_md.bridged.ig_port = ig_intr_md.ingress_port;
         fabric_md.bridged.ig_tstamp = ig_intr_md.ingress_mac_tstamp;
-        transition select(ig_intr_md.ingress_port) {
-            CPU_PORT: parse_packet_out;
-            default: check_ethernet;
-        }
-    }
-
-    state parse_packet_out {
-        packet.extract(hdr.packet_out);
         transition check_ethernet;
     }
 
@@ -43,6 +35,7 @@ parser FabricIngressParser (packet_in  packet,
         transition select(tmp.ether_type) {
             ETHERTYPE_CPU_LOOPBACK_INGRESS: parse_fake_ethernet;
             ETHERTYPE_CPU_LOOPBACK_EGRESS: parse_fake_ethernet_and_accept;
+            ETHERTYPE_PACKET_OUT: parse_packet_out;
             default: parse_ethernet;
         }
     }
@@ -56,6 +49,11 @@ parser FabricIngressParser (packet_in  packet,
         // Will punt to CPU as-is, no need to parse further.
         packet.extract(hdr.fake_ethernet);
         transition accept;
+    }
+
+    state parse_packet_out {
+        packet.extract(hdr.packet_out);
+        transition parse_ethernet;
     }
 
     state parse_ethernet {
@@ -273,6 +271,7 @@ parser FabricEgressParser (packet_in packet,
 
     state start {
         packet.extract(eg_intr_md);
+        fabric_md.cpu_port = 0;
         BridgedMdType_t bridged_md_type = packet.lookahead<BridgedMdType_t>();
         transition select(bridged_md_type) {
             BridgedMdType_t.I2E: parse_bridged_md;
