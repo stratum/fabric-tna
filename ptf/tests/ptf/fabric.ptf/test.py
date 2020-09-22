@@ -689,8 +689,8 @@ class FabricSpgwUplinkIntTest(SpgwIntTest):
     @tvsetup
     @autocleanup
     def doRunTest(self, vlan_conf, tagged, pkt_type, mpls, prefix_base):
-        print "Testing VLAN=%s, pkt=%s, mpls=%s" \
-              % (vlan_conf, pkt_type, mpls)
+        print "Testing VLAN=%s, pkt=%s, mpls=%s, prefix=192.168.%s.0..." \
+              % (vlan_conf, pkt_type, mpls, prefix_base)
         pkt = getattr(testutils, "simple_%s_packet" % pkt_type)()
         # Change the IP prefix to ensure we are using differnt
         # flow for diffrent test cases since the flow report filter
@@ -717,8 +717,8 @@ class FabricSpgwDownlinkIntTest(SpgwIntTest):
     @tvsetup
     @autocleanup
     def doRunTest(self, vlan_conf, tagged, pkt_type, mpls, prefix_base):
-        print "Testing VLAN=%s, pkt=%s, mpls=%s..." \
-              % (vlan_conf, pkt_type, mpls)
+        print "Testing VLAN=%s, pkt=%s, mpls=%s, prefix=192.168.%s.0..." \
+              % (vlan_conf, pkt_type, mpls, prefix_base)
         pkt = getattr(testutils, "simple_%s_packet" % pkt_type)()
         # Change the IP prefix to ensure we are using differnt
         # flow for diffrent test cases since the flow report filter
@@ -744,8 +744,8 @@ class FabricIntTest(IntTest):
     @tvsetup
     @autocleanup
     def doRunTest(self, vlan_conf, tagged, pkt_type, mpls, prefix_base):
-        print "Testing VLAN=%s, pkt=%s, mpls=%s..." \
-              % (vlan_conf, pkt_type, mpls)
+        print "Testing VLAN=%s, pkt=%s, mpls=%s, prefix=192.168.%s.0..." \
+              % (vlan_conf, pkt_type, mpls, prefix_base)
         pkt = getattr(testutils, "simple_%s_packet" % pkt_type)()
         # Change the IP prefix to ensure we are using differnt
         # flow for diffrent test cases since the flow report filter
