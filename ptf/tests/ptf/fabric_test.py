@@ -254,6 +254,22 @@ def pkt_decrement_ttl(pkt):
     return pkt
 
 
+# Change the IP source and destination prefix of the packet.
+def pkt_change_ip_prefix(pkt, ip_prefix):
+    ip_prefix_vals = ip_prefix.split('.')
+    assert len(ip_prefix_vals) <= 4
+    assert IP in pkt
+    ip_src = pkt[IP].src.split('.')
+    ip_dst = pkt[IP].dst.split('.')
+    i = 0
+    for val in ip_prefix_vals:
+        ip_src[i] = val
+        ip_dst[i] = val
+        i += 1
+    pkt[IP].src = '.'.join(ip_src)
+    pkt[IP].dst = '.'.join(ip_dst)
+
+
 class FabricTest(P4RuntimeTest):
 
     def __init__(self):

@@ -688,29 +688,27 @@ class FabricSpgwUplinkIntTest(SpgwIntTest):
 
     @tvsetup
     @autocleanup
-    def doRunTest(self, vlan_conf, tagged, pkt_type, mpls, ip_dst_base):
+    def doRunTest(self, vlan_conf, tagged, pkt_type, mpls, prefix_base):
         print "Testing VLAN=%s, pkt=%s, mpls=%s" \
               % (vlan_conf, pkt_type, mpls)
         pkt = getattr(testutils, "simple_%s_packet" % pkt_type)()
-        # Change the IP destination to ensure we are using differnt
+        # Change the IP prefix to ensure we are using differnt
         # flow for diffrent test cases since the flow report filter
         # might disable the report.
-        ip_dst = pkt[IP].dst.split('.')
-        ip_dst[3] = '{}'.format(ip_dst_base)
-        pkt[IP].dst = '.'.join(ip_dst)
+        pkt_change_ip_prefix(pkt, '192.168.{}'.format(prefix_base))
         self.runSpgwUplinkIntTest(pkt=pkt, tagged1=tagged[0],
                                   tagged2=tagged[1], mpls=mpls)
 
     def runTest(self):
         print ""
         for pkt_type in ["udp", "tcp", "icmp"]:
-            ip_dst_base = 2
+            prefix_base = 10
             for vlan_conf, tagged in vlan_confs.items():
                 for mpls in [False, True]:
                     if mpls and tagged[1]:
                         continue
-                    self.doRunTest(vlan_conf, tagged, pkt_type, mpls, ip_dst_base)
-                    ip_dst_base += 1
+                    self.doRunTest(vlan_conf, tagged, pkt_type, mpls, prefix_base)
+                    prefix_base += 1
 
 @group("int")
 @group("spgw")
@@ -718,45 +716,41 @@ class FabricSpgwDownlinkIntTest(SpgwIntTest):
 
     @tvsetup
     @autocleanup
-    def doRunTest(self, vlan_conf, tagged, pkt_type, mpls, ip_dst_base):
+    def doRunTest(self, vlan_conf, tagged, pkt_type, mpls, prefix_base):
         print "Testing VLAN=%s, pkt=%s, mpls=%s..." \
               % (vlan_conf, pkt_type, mpls)
         pkt = getattr(testutils, "simple_%s_packet" % pkt_type)()
-        # Change the IP destination to ensure we are using differnt
+        # Change the IP prefix to ensure we are using differnt
         # flow for diffrent test cases since the flow report filter
         # might disable the report.
-        ip_dst = pkt[IP].dst.split('.')
-        ip_dst[3] = '{}'.format(ip_dst_base)
-        pkt[IP].dst = '.'.join(ip_dst)
+        pkt_change_ip_prefix(pkt, '192.168.{}'.format(prefix_base))
         self.runSpgwDownlinkIntTest(pkt=pkt, tagged1=tagged[0],
                                     tagged2=tagged[1], mpls=mpls)
 
     def runTest(self):
         print ""
         for pkt_type in ["udp", "tcp", "icmp"]:
-            ip_dst_base = 2
+            prefix_base = 30
             for vlan_conf, tagged in vlan_confs.items():
                 for mpls in [False, True]:
                     if mpls and tagged[1]:
                         continue
-                    self.doRunTest(vlan_conf, tagged, pkt_type, mpls, ip_dst_base)
-                    ip_dst_base += 1
+                    self.doRunTest(vlan_conf, tagged, pkt_type, mpls, prefix_base)
+                    prefix_base += 1
 
 @group("int")
 class FabricIntTest(IntTest):
 
     @tvsetup
     @autocleanup
-    def doRunTest(self, vlan_conf, tagged, pkt_type, mpls, ip_dst_base):
+    def doRunTest(self, vlan_conf, tagged, pkt_type, mpls, prefix_base):
         print "Testing VLAN=%s, pkt=%s, mpls=%s..." \
               % (vlan_conf, pkt_type, mpls)
         pkt = getattr(testutils, "simple_%s_packet" % pkt_type)()
-        # Change the IP destination to ensure we are using differnt
+        # Change the IP prefix to ensure we are using differnt
         # flow for diffrent test cases since the flow report filter
         # might disable the report.
-        ip_dst = pkt[IP].dst.split('.')
-        ip_dst[3] = '{}'.format(ip_dst_base)
-        pkt[IP].dst = '.'.join(ip_dst)
+        pkt_change_ip_prefix(pkt, '192.168.{}'.format(prefix_base))
         self.runIntTest(pkt=pkt,
                         tagged1=tagged[0],
                         tagged2=tagged[1],
@@ -765,13 +759,13 @@ class FabricIntTest(IntTest):
     def runTest(self):
         print ""
         for pkt_type in ["udp", "tcp", "icmp"]:
-            ip_dst_base = 2
+            prefix_base = 50
             for vlan_conf, tagged in vlan_confs.items():
                 for mpls in [False, True]:
                     if mpls and tagged[1]:
                         continue
-                    self.doRunTest(vlan_conf, tagged, pkt_type, mpls, ip_dst_base)
-                    ip_dst_base += 1
+                    self.doRunTest(vlan_conf, tagged, pkt_type, mpls, prefix_base)
+                    prefix_base += 1
 
 
 @group("int")
@@ -784,6 +778,10 @@ class FabricIntelligentIntFlowReportTest(IntTest):
         print "Testing VLAN=%s, pkt=%s, mpls=%s..." \
               % (vlan_conf, pkt_type, mpls)
         pkt = getattr(testutils, "simple_%s_packet" % pkt_type)()
+        # Change the IP prefix to ensure we are using differnt
+        # flow for diffrent test cases since the flow report filter
+        # might disable the report.
+        pkt_change_ip_prefix(pkt, '192.168.70')
         self.runIntTest(pkt=pkt,
                         tagged1=tagged[0],
                         tagged2=tagged[1],
@@ -814,6 +812,10 @@ class FabricFlowReportFilterChangeTest(IntTest):
         print "Testing ig_port=%d, eg_port=%d, expect_int_report=%s..." \
               % (ig_port, eg_port, expect_int_report)
         pkt = testutils.simple_tcp_packet()
+        # Change the IP prefix to ensure we are using differnt
+        # flow for diffrent test cases since the flow report filter
+        # might disable the report.
+        pkt_change_ip_prefix(pkt, '192.168.90')
         self.runIntTest(pkt=pkt,
                         ig_port=ig_port,
                         eg_port=eg_port,
