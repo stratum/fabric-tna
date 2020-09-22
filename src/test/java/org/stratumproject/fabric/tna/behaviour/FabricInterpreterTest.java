@@ -229,19 +229,23 @@ public class FabricInterpreterTest {
         ImmutableList.Builder<PiPacketMetadata> builder = ImmutableList.builder();
         builder.add(PiPacketMetadata.builder()
                 .withId(P4InfoConstants.EGRESS_PORT)
-                .withValue(ImmutableByteSequence.copyFrom(outputPort.toLong()).fit(9))
+                .withValue(ImmutableByteSequence.copyFrom(outputPort.toLong())
+                        .fit(P4InfoConstants.EGRESS_PORT_BITWIDTH))
                 .build());
         builder.add(PiPacketMetadata.builder()
                 .withId(P4InfoConstants.CPU_LOOPBACK_MODE)
-                .withValue(ImmutableByteSequence.copyFrom(0))
+                .withValue(ImmutableByteSequence.copyFrom(0)
+                        .fit(P4InfoConstants.CPU_LOOPBACK_MODE_BITWIDTH))
                 .build());
         builder.add(PiPacketMetadata.builder()
                 .withId(P4InfoConstants.ETHER_TYPE)
-                .withValue(ImmutableByteSequence.copyFrom(0xBF01))
+                .withValue(ImmutableByteSequence.copyFrom(0xBF01)
+                        .fit(P4InfoConstants.ETHER_TYPE_BITWIDTH))
                 .build());
         builder.add(PiPacketMetadata.builder()
                 .withId(P4InfoConstants.PAD0)
-                .withValue(ImmutableByteSequence.copyFrom(0))
+                .withValue(ImmutableByteSequence.copyFrom(0)
+                        .fit(P4InfoConstants.PAD0_BITWIDTH))
                 .build());
         PiPacketOperation expectedPktOp = PiPacketOperation.builder()
                 .withType(PiPacketOperationType.PACKET_OUT)

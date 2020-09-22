@@ -261,11 +261,16 @@ public final class P4InfoConstants {
     // Packet Metadata IDs
     public static final PiPacketMetadataId CPU_LOOPBACK_MODE =
             PiPacketMetadataId.of("cpu_loopback_mode");
+    public static final int CPU_LOOPBACK_MODE_BITWIDTH = 2;
     public static final PiPacketMetadataId EGRESS_PORT =
             PiPacketMetadataId.of("egress_port");
+    public static final int EGRESS_PORT_BITWIDTH = 9;
     public static final PiPacketMetadataId ETHER_TYPE =
             PiPacketMetadataId.of("ether_type");
+    public static final int ETHER_TYPE_BITWIDTH = 16;
     public static final PiPacketMetadataId INGRESS_PORT =
             PiPacketMetadataId.of("ingress_port");
+    public static final int INGRESS_PORT_BITWIDTH = 9;
     public static final PiPacketMetadataId PAD0 = PiPacketMetadataId.of("pad0");
+    public static final int PAD0_BITWIDTH = 85;
 }

@@ -65,10 +65,14 @@ PI_ACT_PROF_ID_CST = 'PiActionProfileId.of("%s")'
 PI_PKT_META_ID = 'PiPacketMetadataId'
 PI_PKT_META_ID_CST = 'PiPacketMetadataId.of("%s")'
 
+PI_PKT_META_BITWIDTH = 'int'
+PI_PKT_META_BITWIDTH_CST = '%s'
+
 PI_METER_ID = 'PiMeterId'
 PI_METER_ID_CST = 'PiMeterId.of("%s")'
 
 HF_VAR_PREFIX = 'HDR_'
+BITWIDTH_VAR_SUFFIX = '_BITWIDTH'
 
 
 class ConstantClassGenerator(object):
@@ -81,6 +85,7 @@ class ConstantClassGenerator(object):
     action_params = set()
     action_profiles = set()
     packet_metadata = set()
+    packet_metadata_bitwidth = dict()
     meters = set()
 
     # https://stackoverflow.com/questions/1175208/elegant-python-function-to-convert-camelcase-to-snake-case
@@ -120,6 +125,7 @@ class ConstantClassGenerator(object):
         for cpm in p4info.controller_packet_metadata:
             for mta in cpm.metadata:
                 self.packet_metadata.add(mta.name)
+                self.packet_metadata_bitwidth[mta.name] = mta.bitwidth
         for mtr in p4info.meters:
             self.meters.add(mtr.preamble.name)
 
@@ -134,12 +140,12 @@ class ConstantClassGenerator(object):
         self.packet_metadata = sorted(self.packet_metadata)
         self.meters = sorted(self.meters)
 
-    def const_line(self, name, type, constructor):
+    def const_line(self, name, type, constructor, value=None):
         var_name = self.convert_camel_to_all_caps(name)
         if type == PI_HF_FIELD_ID:
             var_name = var_name.replace('$VALID$', 'VALID')
             var_name = HF_VAR_PREFIX + var_name
-        val = constructor % (name,)
+        val = constructor % (name if value is None else value,)
 
         line = CONST_FMT % (type, var_name, val)
         if len(line) > 80:
@@ -200,6 +206,10 @@ class ConstantClassGenerator(object):
             if not pmeta.startswith("_"):
                 lines.append(
                     self.const_line(pmeta, PI_PKT_META_ID, PI_PKT_META_ID_CST))
+                lines.append(
+                    self.const_line(pmeta + BITWIDTH_VAR_SUFFIX, PI_PKT_META_BITWIDTH,
+                                    PI_PKT_META_BITWIDTH_CST,
+                                    value=self.packet_metadata_bitwidth[pmeta]))
 
         if len(self.meters) is not 0:
             lines.append('    // Meter IDs')
