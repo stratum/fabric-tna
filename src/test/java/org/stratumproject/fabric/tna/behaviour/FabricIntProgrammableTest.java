@@ -258,11 +258,11 @@ public class FabricIntProgrammableTest {
                 .withCollectorNextHopMac(MacAddress.BROADCAST)
                 .build();
         final FlowRule expectedFlow = buildReportFlow();
-        final FlowRule quantificationRule = buildQuantificationRule();
+        final FlowRule quantizationRule = buildQuantizationRule();
         reset(flowRuleService);
         flowRuleService.applyFlowRules(eq(expectedFlow));
         expectLastCall().andVoid().once();
-        flowRuleService.applyFlowRules(eq(quantificationRule));
+        flowRuleService.applyFlowRules(eq(quantizationRule));
         expectLastCall().andVoid().once();
         replay(flowRuleService);
         assertTrue(intProgrammable.setupIntConfig(intConfig));
@@ -316,7 +316,7 @@ public class FabricIntProgrammableTest {
                 .build();
     }
 
-    private FlowRule buildQuantificationRule() {
+    private FlowRule buildQuantizationRule() {
         // Quantify hop latency rule
         // TODO: Read qmask config from the INT device config.
         final PiActionParam quantizeVal = new PiActionParam(P4InfoConstants.QMASK, DEFAULT_QMASK);
