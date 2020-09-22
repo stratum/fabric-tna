@@ -41,7 +41,11 @@ import static org.onosproject.net.PortNumber.CONTROLLER;
 import static org.onosproject.net.PortNumber.FLOOD;
 import static org.onosproject.net.flow.instructions.Instruction.Type.OUTPUT;
 import static org.onosproject.net.pi.model.PiPacketOperationType.PACKET_OUT;
-import static org.stratumproject.fabric.tna.behaviour.FabricTreatmentInterpreter.*;
+import static org.stratumproject.fabric.tna.behaviour.FabricTreatmentInterpreter.mapAclTreatment;
+import static org.stratumproject.fabric.tna.behaviour.FabricTreatmentInterpreter.mapEgressNextTreatment;
+import static org.stratumproject.fabric.tna.behaviour.FabricTreatmentInterpreter.mapFilteringTreatment;
+import static org.stratumproject.fabric.tna.behaviour.FabricTreatmentInterpreter.mapForwardingTreatment;
+import static org.stratumproject.fabric.tna.behaviour.FabricTreatmentInterpreter.mapNextTreatment;
 
 /**
  * Interpreter for fabric-tna pipeline.
@@ -49,7 +53,6 @@ import static org.stratumproject.fabric.tna.behaviour.FabricTreatmentInterpreter
 public class FabricInterpreter extends AbstractFabricHandlerBehavior
         implements PiPipelineInterpreter {
 
-    private static final int PORT_BITWIDTH = 9;
     private static final int CPU_LOOPBACK_MODE_DISABLED = 0;
     private static final int CPU_LOOPBACK_MODE_DIRECT = 1;
     private static final int CPU_LOOPBACK_MODE_INGRESS = 2;
@@ -190,19 +193,23 @@ public class FabricInterpreter extends AbstractFabricHandlerBehavior
             ImmutableList.Builder<PiPacketMetadata> builder = ImmutableList.builder();
             builder.add(PiPacketMetadata.builder()
                     .withId(P4InfoConstants.EGRESS_PORT)
-                    .withValue(copyFrom(portNumber).fit(PORT_BITWIDTH))
+                    .withValue(copyFrom(portNumber)
+                            .fit(P4InfoConstants.EGRESS_PORT_BITWIDTH))
                     .build());
             builder.add(PiPacketMetadata.builder()
                     .withId(P4InfoConstants.CPU_LOOPBACK_MODE)
-                    .withValue(copyFrom(CPU_LOOPBACK_MODE_DISABLED))
+                    .withValue(copyFrom(CPU_LOOPBACK_MODE_DISABLED)
+                            .fit(P4InfoConstants.CPU_LOOPBACK_MODE_BITWIDTH))
                     .build());
             builder.add(PiPacketMetadata.builder()
                     .withId(P4InfoConstants.PAD0)
-                    .withValue(copyFrom(0))
+                    .withValue(copyFrom(0)
+                            .fit(P4InfoConstants.PAD0_BITWIDTH))
                     .build());
             builder.add(PiPacketMetadata.builder()
                     .withId(P4InfoConstants.ETHER_TYPE)
-                    .withValue(copyFrom(ETHER_TYPE_PACKET_OUT))
+                    .withValue(copyFrom(ETHER_TYPE_PACKET_OUT)
+                            .fit(P4InfoConstants.ETHER_TYPE_BITWIDTH))
                     .build());
             return builder.build();
         } catch (ImmutableByteSequence.ByteSequenceTrimException e) {
