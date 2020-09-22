@@ -51,5 +51,5 @@ for d in ./tmp/*/; do
 
   rm -rf "logs/${profile}"
   mkdir -p "logs/${profile}"
-  mv prf/run/log "logs/${profile}"
+  mv ptf/run/tm/log "logs/${profile}"
 done
