@@ -419,7 +419,7 @@ class FabricTest(P4RuntimeTest):
             [("fwd_type", fwd_type_)],
             priority=DEFAULT_PRIORITY)
 
-    def add_bridging_entry(self, vlan_id, eth_dstAddr, eth_dstAddr_mask, next_id):
+    def add_bridging_entry(self, vlan_id, eth_dstAddr, eth_dstAddr_mask, next_id, priority=DEFAULT_PRIORITY):
         vlan_id_ = stringify(vlan_id, 2)
         mk = [self.Exact("vlan_id", vlan_id_)]
         if eth_dstAddr is not None:
@@ -431,7 +431,7 @@ class FabricTest(P4RuntimeTest):
         return self.send_request_add_entry_to_action(
             "forwarding.bridging", mk,
             "forwarding.set_next_id_bridging", [("next_id", next_id_)],
-            DEFAULT_PRIORITY)
+            priority)
 
     def read_bridging_entry(self, vlan_id, eth_dstAddr, eth_dstAddr_mask):
         vlan_id_ = stringify(vlan_id, 2)
@@ -763,6 +763,49 @@ class BridgingTest(FabricTest):
         self.verify_each_packet_on_each_port([exp_pkt, exp_pkt2], [self.port2, self.port1])
 
 
+class BridgingPriorityTest(FabricTest):
+
+    def runBridgingPriorityTest(self):
+        zero_mac_addr = ":".join(["00"] * 6)
+        low_priority = 5
+        high_priority = 100
+
+        vlan_id = 10
+        next_id = vlan_id
+        mcast_group_id = vlan_id
+        mac_src = HOST1_MAC
+        mac_dst = HOST2_MAC
+        all_ports = [self.port1, self.port2, self.port3]
+        for port in all_ports:
+            self.setup_port(port, vlan_id, False)
+
+        # Add unicast bridging rule
+        self.add_bridging_entry(vlan_id, mac_dst, MAC_MASK, 20, high_priority)
+        self.add_next_output(20, self.port2)
+
+        # Add broadcast bridging rule
+        self.add_bridging_entry(vlan_id, zero_mac_addr, zero_mac_addr, next_id, low_priority)
+        self.add_next_multicast(next_id, mcast_group_id)
+        # Add the multicast group, here we use instance id 1 by default
+        replicas = [(1, port) for port in all_ports]
+        self.add_mcast_group(mcast_group_id, replicas)
+
+        # Create packet with unicast dst_mac. This packet should be send to port 2 only
+        pkt=testutils.simple_eth_packet(eth_dst=HOST2_MAC)
+        exp_pkt = pkt.copy()
+        self.send_packet(self.port1, str(pkt))
+        self.verify_packet(exp_pkt, self.port2)
+        self.verify_no_other_packets()
+
+        # Create packet with unknown dst_mac. This packet should be broadcasted
+        pkt=testutils.simple_eth_packet(eth_dst='ff:ff:ff:ff:ff:ff')
+        exp_pkt = pkt.copy()
+        self.send_packet(self.port1, str(pkt))
+        self.verify_packet(exp_pkt, self.port2)
+        self.verify_packet(exp_pkt, self.port3)
+        self.verify_no_other_packets()
+
+
 class DoubleTaggedBridgingTest(FabricTest):
 
     def runDoubleTaggedBridgingTest(self, pkt):
@@ -787,6 +830,7 @@ class DoubleTaggedBridgingTest(FabricTest):
         self.send_packet(self.port1, str(pkt))
         self.send_packet(self.port2, str(pkt2))
         self.verify_each_packet_on_each_port([exp_pkt, exp_pkt2], [self.port2, self.port1])
+
 
 class DoubleVlanXConnectTest(FabricTest):
 
