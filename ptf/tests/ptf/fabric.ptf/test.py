@@ -37,6 +37,13 @@ class FabricBridgingTest(BridgingTest):
                 self.doRunTest(tagged[0], tagged[1], pkt, tc_name=tc_name)
 
 
+class FabricBridgingPriorityTest(BridgingPriorityTest):
+    @tvsetup
+    @autocleanup
+    def runTest(self):
+        self.runBridgingPriorityTest()
+
+
 class FabricDoubleTaggedBridgingTest(DoubleTaggedBridgingTest):
 
     @tvsetup
