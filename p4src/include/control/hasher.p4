@@ -15,16 +15,16 @@ control Hasher(
     apply {
         if (hdr.ipv4.isValid()) {
             fabric_md.bridged.flow_hash = ipv4_hasher.get({
-                fabric_md.ipv4_dst,
-                fabric_md.ipv4_src,
+                hdr.ipv4.src_addr,
+                hdr.ipv4.dst_addr,
                 fabric_md.bridged.ip_proto,
                 fabric_md.bridged.l4_sport,
                 fabric_md.bridged.l4_dport
             });
         } else if (hdr.ipv6.isValid()) {
             fabric_md.bridged.flow_hash = ipv6_hasher.get({
-                hdr.ipv6.dst_addr, // TODO: may replace with fabric_md.ipv6_dst
-                hdr.ipv6.src_addr, // if available.
+                hdr.ipv6.src_addr,
+                hdr.ipv6.dst_addr,
                 fabric_md.bridged.ip_proto,
                 fabric_md.bridged.l4_sport,
                 fabric_md.bridged.l4_dport
