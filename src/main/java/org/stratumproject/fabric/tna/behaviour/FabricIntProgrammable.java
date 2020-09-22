@@ -76,7 +76,6 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
             P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_WATCHLIST,
             P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_REPORT
     );
-    private static final long DEFAULT_QMASK = 0xffff0000;
 
     private FlowRuleService flowRuleService;
     private GroupService groupService;
@@ -356,16 +355,16 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
             log.warn("Failed to add report rule to {}", this.data().deviceId());
             return false;
         }
-        final FlowRule quantizationRule = buildQuantizeRule();
+        final FlowRule quantizationRule = buildQuantizeRule(cfg.minFlowHopLatencyChangeNs());
         flowRuleService.applyFlowRules(quantizationRule);
         log.info("Report rule added to {} [{}]", this.data().deviceId(), quantizationRule);
         return true;
     }
 
-    private FlowRule buildQuantizeRule() {
+    private FlowRule buildQuantizeRule(int minFlowHopLatencyChangeNs) {
+        final long qmask = translateFromNsToQmask(minFlowHopLatencyChangeNs);
         // Quantify hop latency rule
-        // TODO: Read qmask config from the INT device config.
-        final PiActionParam quantizeVal = new PiActionParam(P4InfoConstants.QMASK, DEFAULT_QMASK);
+        final PiActionParam quantizeVal = new PiActionParam(P4InfoConstants.QMASK, qmask);
         final PiAction quantizeAction =
                 PiAction.builder()
                 .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_QUANTIZE)
@@ -381,6 +380,15 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 .withTreatment(quantizeTreatment)
                 .fromApp(appId)
                 .build();
+    }
+
+    private long translateFromNsToQmask(int minFlowHopLatencyChangeNs) {
+        long qmask = 1;
+        while (qmask != 0xffffffff && qmask < minFlowHopLatencyChangeNs) {
+            qmask <<= 1;
+            qmask += 1;
+        }
+        return 0xffffffffL & ~qmask;
     }
 
     private FlowRule buildReportEntry(IntDeviceConfig intCfg) {

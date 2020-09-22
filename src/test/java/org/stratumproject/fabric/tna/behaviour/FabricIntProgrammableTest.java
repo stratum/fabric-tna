@@ -73,7 +73,6 @@ public class FabricIntProgrammableTest {
     private static final int DEFAULT_PRIORITY = 10000;
     private static final IpAddress COLLECTOR_IP = IpAddress.valueOf("10.128.0.1");
     private static final TpPort COLLECTOR_PORT = TpPort.tpPort(32766);
-    private static final int DEFAULT_QMASK = 0xffff0000;
 
     private FabricIntProgrammable intProgrammable;
     private FabricCapabilities capabilities;
@@ -256,6 +255,7 @@ public class FabricIntProgrammableTest {
                 .withSinkIp(IpAddress.valueOf("10.192.19.180"))
                 .withSinkMac(MacAddress.NONE)
                 .withCollectorNextHopMac(MacAddress.BROADCAST)
+                .withMinFlowHopLatencyChangeNs(300)
                 .build();
         final FlowRule expectedFlow = buildReportFlow();
         final FlowRule quantizationRule = buildQuantizationRule();
@@ -318,7 +318,7 @@ public class FabricIntProgrammableTest {
 
     private FlowRule buildQuantizationRule() {
         // Quantify hop latency rule
-        final PiActionParam quantizeVal = new PiActionParam(P4InfoConstants.QMASK, DEFAULT_QMASK);
+        final PiActionParam quantizeVal = new PiActionParam(P4InfoConstants.QMASK, 0xfffffe00);
         final PiAction quantizeAction =
                 PiAction.builder()
                         .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_QUANTIZE)
