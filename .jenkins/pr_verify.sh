@@ -52,4 +52,6 @@ for d in ./tmp/*/; do
   rm -rf "logs/${profile}"
   mkdir -p "logs/${profile}"
   mv ptf/run/tm/log "logs/${profile}"
+  mv ptf/tests/ptf/ptf.log "logs/${profile}/"
+  mv ptf/tests/ptf/ptf.pcap "logs/${profile}/"
 done
