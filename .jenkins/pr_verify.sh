@@ -37,11 +37,15 @@ if [ -n "$modified" ]; then
   exit 1
 fi
 
-# FIXME: add target to Makefile to build all profiles
-echo "Run PTF tests for all profiles"
+# Run PTF tests for all profiles we just built
 export STRATUM_BF_DOCKER_IMG=registry.aetherproject.org/tost/stratum-bfrt:${sdeVer}
 export SDE_DOCKER_IMG=${sdeBaseDockerImg}-tm
-./ptf/run/tm/run fabric
-./ptf/run/tm/run fabric-int
-./ptf/run/tm/run fabric-spgw
-./ptf/run/tm/run fabric-spgw-int
+for d in ./tmp/*/; do
+  profile=$(basename "${d}")
+
+  echo "Run PTF tests for profile ${profile}"
+  ./ptf/run/tm/run "${profile}"
+
+  echo "Verify TV generation for profile ${profile}"
+  ./ptf/run/tv/run "${profile}"
+done

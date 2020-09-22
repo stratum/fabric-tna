@@ -1010,6 +1010,20 @@ def tvsetup(f):
     return handle
 
 
+# This decorator should be used on the runTest method of P4Runtime PTF tests.
+# On using this decorator TestVector generation is skipped for the test.
+# This doesn't change the current behavior for executing ptf tests.
+def tvskip(f):
+    @wraps(f)
+    def handle(*args, **kwargs):
+        test = args[0]
+        assert (isinstance(test, P4RuntimeTest))
+        if testutils.test_param_get("generate_tv") == 'True':
+            raise SkipTest("TestVector generation for " + str(test))
+        return f(*args, **kwargs)
+    return handle
+
+
 def skip_on_hw(cls):
     cls._skip_on_hw = True
     return cls

@@ -269,12 +269,9 @@ control IntEgress (
             // Reports don't need to go through the rest of the egress pipe.
             exit;
         } else {
-            if (fabric_md.bridged.ig_port != CPU_PORT &&
-                eg_intr_md.egress_port != CPU_PORT) {
-                mirror_session_id.apply();
-                watchlist.apply();
-                flow_report_filter.apply(hdr, fabric_md, eg_intr_md, eg_prsr_md);
-            }
+            mirror_session_id.apply();
+            watchlist.apply();
+            flow_report_filter.apply(hdr, fabric_md, eg_intr_md, eg_prsr_md);
         }
     }
 }

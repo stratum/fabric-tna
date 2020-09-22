@@ -7,7 +7,7 @@ from unittest import skip
 from ptf.testutils import group
 from scapy.layers.ppp import PPPoED
 
-from base_test import autocleanup, tvsetup
+from base_test import autocleanup, tvsetup, tvskip
 from fabric_test import *
 
 vlan_confs = {
@@ -632,7 +632,7 @@ class FabricDefaultVlanPacketInTest(FabricTest):
 @group("spgw")
 class FabricSpgwDownlinkTest(SpgwSimpleTest):
 
-    @tvsetup
+    @tvskip
     @autocleanup
     def doRunTest(self, pkt, tagged1, tagged2, mpls, tc_name):
         self.runDownlinkTest(pkt=pkt, tagged1=tagged1,
@@ -659,7 +659,7 @@ class FabricSpgwDownlinkTest(SpgwSimpleTest):
 @group("spgw")
 class FabricSpgwUplinkTest(SpgwSimpleTest):
 
-    @tvsetup
+    @tvskip
     @autocleanup
     def doRunTest(self, pkt, tagged1, tagged2, mpls):
         self.runUplinkTest(ue_out_pkt=pkt, tagged1=tagged1,
@@ -1201,8 +1201,6 @@ class FabricPacketInLoopbackModeTest(FabricTest):
             self.verify_packet_in(pkt, port)
         self.verify_no_other_packets()
 
-    @tvsetup
-    @autocleanup
     def runTest(self):
         print ""
         for pkt_type in ["tcp", "udp", "icmp", "arp"]:
@@ -1231,8 +1229,6 @@ class FabricPacketOutLoopbackModeTest(FabricTest):
             self.verify_packet_in(pkt, port)
         self.verify_no_other_packets()
 
-    @tvsetup
-    @autocleanup
     def runTest(self):
         print ""
         for pkt_type in ["tcp", "udp", "icmp", "arp"]:

@@ -44,6 +44,7 @@ ETH_TYPE_QINQ = 0x88a8
 ETH_TYPE_PPPOE = 0x8864
 ETH_TYPE_MPLS_UNICAST = 0x8847
 
+ETH_TYPE_PACKET_OUT = 0xBF01
 ETH_TYPE_CPU_LOOPBACK_INGRESS = 0xBF02
 ETH_TYPE_CPU_LOOPBACK_EGRESS = 0xBF03
 
@@ -290,6 +291,10 @@ class FabricTest(P4RuntimeTest):
         pad0_md = packet_out.metadata.add()
         pad0_md.metadata_id = 3
         pad0_md.value = stringify(0, 1)
+        # ether type
+        ether_type_md = packet_out.metadata.add()
+        ether_type_md.metadata_id = 4
+        ether_type_md.value = stringify(ETH_TYPE_PACKET_OUT, 2)
         return packet_out
 
     def setup_int(self):
@@ -332,6 +337,22 @@ class FabricTest(P4RuntimeTest):
             self.set_ingress_port_vlan(ingress_port=port_id,
                                        vlan_valid=False, internal_vlan_id=vlan_id)
             self.set_egress_vlan_pop(egress_port=port_id, vlan_id=vlan_id)
+
+    def setup_cpu_port(self):
+        req = self.get_new_write_request()
+        self.push_update_add_entry_to_action(req,
+            "FabricEgress.pkt_io_egress.switch_info", None,
+            "FabricEgress.pkt_io_egress.set_cpu_port",
+            [("cpu_port", stringify(self.cpu_port, 2))])
+        return req, self.write_request(req, store=False)
+
+    def reset_cpu_port(self):
+        req = self.get_new_write_request()
+        self.push_update_add_entry_to_action(req,
+            "FabricEgress.pkt_io_egress.switch_info", None,
+            "nop",
+            [])
+        return req, self.write_request(req)
 
     def set_ingress_port_vlan(self, ingress_port,
                               vlan_valid=False,
@@ -1225,6 +1246,7 @@ class PacketOutTest(FabricTest):
 
 class PacketInTest(FabricTest):
     def runPacketInTest(self, pkt, eth_type, tagged=False, vlan_id=10):
+        self.setup_cpu_port()
         self.add_forwarding_acl_punt_to_cpu(eth_type=eth_type)
         for port in [self.port1, self.port2]:
             if tagged:

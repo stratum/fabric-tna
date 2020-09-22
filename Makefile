@@ -47,7 +47,7 @@ fabric-spgw-int:
 	@${p4-build} fabric-spgw-int "-DWITH_SPGW -DWITH_INT"
 
 constants:
-	docker run -v $(curr_dir):/root -w /root \
+	docker run -v $(curr_dir):/root -w /root --rm \
 		--entrypoint ./util/gen-p4-constants.py onosproject/fabric-p4test:latest \
 		-o /root/src/main/java/org/stratumproject/fabric/tna/behaviour/P4InfoConstants.java \
 		p4info /root/src/main/resources/p4c-out/fabric-spgw-int/stratum_bf/mavericks_sde_9_2_0/p4info.txt

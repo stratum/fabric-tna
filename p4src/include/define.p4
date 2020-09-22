@@ -8,10 +8,6 @@
 
 #define MAX_PORTS 511
 
-#ifndef CPU_PORT
-#deinfe CPU_PORT 192
-#endif
-
 #if ! defined(WITH_SIMPLE_NEXT)
 #define WITH_HASHED_NEXT
 #endif
@@ -94,6 +90,7 @@ const bit<16> ETHERTYPE_IPV6 = 0x86dd;
 const bit<16> ETHERTYPE_ARP  = 0x0806;
 const bit<16> ETHERTYPE_PPPOED = 0x8863;
 const bit<16> ETHERTYPE_PPPOES = 0x8864;
+const bit<16> ETHERTYPE_PACKET_OUT = 0xBF01;
 
 // Fake ether types used to distinguish regular packets from those used for
 // CPU-based loopback testing.
