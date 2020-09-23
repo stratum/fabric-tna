@@ -384,13 +384,13 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
 
     /**
      * Gets a suitable quantization mask for a minimal latency change.
-     * For example, if we want to ignore any latency that smaller than 256ns
-     * The pipeline will use mask 0xffffff00 which makes the last 8-bit of latency change zero.
-     * Note that if the value of latency change is not power of 2 (2^n).
-     * We will find the closest value which can mask out the minimal latency change
+     * For example, if we want to ignore any latency that smaller than 256ns,
+     * the pipeline will use mask 0xffffff00 which makes the last 8-bit of
+     * hop latency change to zero.
+     * Note that if the value of latency change is not power of 2 (2^n),
+     * we will find the closest value which can mask out the minimal latency change
      * For example, if we expect to ignore latency change which is smaller than 300ns,
-     * the mask will be 0xffffff00 which will make the last 8-bit of latency change zero, which
-     * is same as 256.
+     * the mask will be 0xffffff00 which is same as 256.
      *
      * @param minFlowHopLatencyChangeNs the minimal latency change we want to ignore
      * @return the suitable quantization mask
