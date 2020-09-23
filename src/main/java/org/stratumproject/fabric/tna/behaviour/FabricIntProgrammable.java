@@ -362,7 +362,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
     }
 
     private FlowRule buildQuantizeRule(int minFlowHopLatencyChangeNs) {
-        final long qmask = translateFromNsToQmask(minFlowHopLatencyChangeNs);
+        final long qmask = getSuitableQmaskForLatencyChange(minFlowHopLatencyChangeNs);
         // Quantify hop latency rule
         final PiActionParam quantizeVal = new PiActionParam(P4InfoConstants.QMASK, qmask);
         final PiAction quantizeAction =
@@ -382,13 +382,26 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 .build();
     }
 
-    private long translateFromNsToQmask(int minFlowHopLatencyChangeNs) {
-        long qmask = 1;
-        while (qmask != 0xffffffff && qmask < minFlowHopLatencyChangeNs) {
+    /**
+     * Gets a suitable quantization mask for a minimal latency change.
+     * For example, if we want to ignore any latency that smaller than 256ns
+     * The pipeline will use mask 0xffffff00 which makes the last 8-bit of latency change zero.
+     * Note that if the value of latency change is not power of 2 (2^n).
+     * We will find the closest value which can mask out the minimal latency change
+     * For example, if we expect to ignore latency change which is smaller than 300ns,
+     * the mask will be 0xffffff00 which will make the last 8-bit of latency change zero, which
+     * is same as 256.
+     *
+     * @param minFlowHopLatencyChangeNs the minimal latency change we want to ignore
+     * @return the suitable quantization mask
+     */
+    private long getSuitableQmaskForLatencyChange(int minFlowHopLatencyChangeNs) {
+        long qmask = 0xffffffff;
+        while (minFlowHopLatencyChangeNs > 1) {
+            minFlowHopLatencyChangeNs /= 2;
             qmask <<= 1;
-            qmask += 1;
         }
-        return 0xffffffffL & ~qmask;
+        return 0xffffffffL & qmask;
     }
 
     private FlowRule buildReportEntry(IntDeviceConfig intCfg) {

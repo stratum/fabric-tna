@@ -258,7 +258,7 @@ public class FabricIntProgrammableTest {
                 .withMinFlowHopLatencyChangeNs(300)
                 .build();
         final FlowRule expectedFlow = buildReportFlow();
-        final FlowRule quantizationRule = buildQuantizationRule();
+        final FlowRule quantizationRule = buildQuantizationRule(0xffffff00);
         reset(flowRuleService);
         flowRuleService.applyFlowRules(eq(expectedFlow));
         expectLastCall().andVoid().once();
@@ -316,9 +316,9 @@ public class FabricIntProgrammableTest {
                 .build();
     }
 
-    private FlowRule buildQuantizationRule() {
+    private FlowRule buildQuantizationRule(long qmask) {
         // Quantify hop latency rule
-        final PiActionParam quantizeVal = new PiActionParam(P4InfoConstants.QMASK, 0xfffffe00);
+        final PiActionParam quantizeVal = new PiActionParam(P4InfoConstants.QMASK, qmask);
         final PiAction quantizeAction =
                 PiAction.builder()
                         .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_QUANTIZE)
