@@ -4,6 +4,7 @@
 
 import struct
 import time
+import socket
 from operator import ior
 
 from p4.v1 import p4runtime_pb2
@@ -24,10 +25,10 @@ DEFAULT_PRIORITY = 10
 FORWARDING_TYPE_BRIDGING = 0
 FORWARDING_TYPE_MPLS = 1
 FORWARDING_TYPE_UNICAST_IPV4 = 2
-FORWARDING_TYPE_IPV4_MULTICAST = 3;
-FORWARDING_TYPE_IPV6_UNICAST = 4;
-FORWARDING_TYPE_IPV6_MULTICAST = 5;
-FORWARDING_TYPE_UNKNOWN = 7;
+FORWARDING_TYPE_IPV4_MULTICAST = 3
+FORWARDING_TYPE_IPV6_UNICAST = 4
+FORWARDING_TYPE_IPV6_MULTICAST = 5
+FORWARDING_TYPE_UNKNOWN = 7
 
 CPU_CLONE_SESSION_ID = 511
 
@@ -256,6 +257,10 @@ def pkt_decrement_ttl(pkt):
 
 class FabricTest(P4RuntimeTest):
 
+    # An IP pool which will be shared by all FabricTests
+    # Start from 172.16.0.0
+    next_single_use_ips = 0xAC100000
+
     def __init__(self):
         super(FabricTest, self).__init__()
         self.next_mbr_id = 1
@@ -265,11 +270,16 @@ class FabricTest(P4RuntimeTest):
         self.next_mbr_id = self.next_mbr_id + 1
         return mbr_id
 
+    def get_single_use_ip(self):
+        FabricTest.next_single_use_ips += 1
+        return socket.inet_ntoa(struct.pack("!I", FabricTest.next_single_use_ips))
+
     def setUp(self):
         super(FabricTest, self).setUp()
         self.port1 = self.swports(1)
         self.port2 = self.swports(2)
         self.port3 = self.swports(3)
+        self.port4 = self.swports(4)
         self.recirculate_port_0 = 68
         self.recirculate_port_1 = 196
         self.recirculate_port_2 = 324
@@ -903,7 +913,7 @@ class IPv4UnicastTest(FabricTest):
                            next_vlan=None, mpls=False, dst_ipv4=None,
                            routed_eth_types=(ETH_TYPE_IPV4,),
                            verify_pkt=True, with_another_pkt_later=False,
-                           no_send=False):
+                           no_send=False, ig_port=None, eg_port=None):
         """
         Execute an IPv4 unicast routing test.
         :param pkt: input packet
@@ -934,6 +944,10 @@ class IPv4UnicastTest(FabricTest):
             self.fail("Cannot do IPv4 test with packet that is not IP")
         if mpls and tagged2:
             self.fail("Cannot do MPLS test with egress port tagged (tagged2)")
+        if ig_port is None:
+            ig_port = self.port1
+        if eg_port is None:
+            eg_port = self.port2
 
         # If the input pkt has a VLAN tag, use that to configure tables.
         pkt_is_tagged = False
@@ -960,22 +974,22 @@ class IPv4UnicastTest(FabricTest):
         switch_mac = pkt[Ether].dst
 
         # Setup ports.
-        self.setup_port(self.port1, vlan1, tagged1)
-        self.setup_port(self.port2, vlan2, tagged2)
+        self.setup_port(ig_port, vlan1, tagged1)
+        self.setup_port(eg_port, vlan2, tagged2)
 
         # Forwarding type -> routing v4
         for eth_type in routed_eth_types:
-            self.set_forwarding_type(self.port1, switch_mac, ethertype=eth_type,
+            self.set_forwarding_type(ig_port, switch_mac, ethertype=eth_type,
                                      fwd_type=FORWARDING_TYPE_UNICAST_IPV4)
 
         # Routing entry.
         self.add_forwarding_routing_v4_entry(dst_ipv4, prefix_len, next_id)
 
         if not mpls:
-            self.add_next_routing(next_id, self.port2, switch_mac, next_hop_mac)
+            self.add_next_routing(next_id, eg_port, switch_mac, next_hop_mac)
             self.add_next_vlan(next_id, vlan2)
         else:
-            params = [self.port2, switch_mac, next_hop_mac, mpls_label]
+            params = [eg_port, switch_mac, next_hop_mac, mpls_label]
             self.add_next_mpls_routing_group(next_id, group_id, [params])
             self.add_next_vlan(next_id, DEFAULT_VLAN)
 
@@ -997,10 +1011,10 @@ class IPv4UnicastTest(FabricTest):
         if no_send:
             return
 
-        self.send_packet(self.port1, str(pkt))
+        self.send_packet(ig_port, str(pkt))
 
         if verify_pkt:
-            self.verify_packet(exp_pkt, self.port2)
+            self.verify_packet(exp_pkt, eg_port)
 
         if not with_another_pkt_later:
             self.verify_no_other_packets()
@@ -1571,6 +1585,13 @@ class IntTest(IPv4UnicastTest):
         #         ("sid", stringify(mirror_id, 2))
         #     ])
 
+    def set_up_quantize_hop_latency_rule(self, qmask=0xf0000000):
+        self.send_request_add_entry_to_action(
+            "quantize_hop_latency",
+            [],
+            "quantize", [
+                ("qmask", stringify(qmask, 4))
+            ])
 
     def setup_watchlist_flow(self, ipv4_src, ipv4_dst, sport, dport, switch_id):
         switch_id_ = stringify(switch_id, 4)
@@ -1626,13 +1647,29 @@ class IntTest(IPv4UnicastTest):
 
         return mask_pkt
 
-    def runIntTest(self, pkt, tagged1, tagged2,
-                   switch_id=1, mpls=False):
+    def runIntTest(self, pkt, tagged1=False,
+                   tagged2=False,
+                   switch_id=1,
+                   mpls=False,
+                   ig_port=None,
+                   eg_port=None,
+                   expect_int_report=True,
+                   ip_src=None,
+                   ip_dst=None):
         if IP not in pkt:
             self.fail("Packet is not IP")
 
-        ig_port = self.port1
-        eg_port = self.port2
+        # Override IP if set
+        if ip_src:
+            pkt[IP].src = ip_src
+        if ip_dst:
+            pkt[IP].dst = ip_dst
+
+        if ig_port is None:
+            ig_port = self.port1
+        if eg_port is None:
+            eg_port = self.port2
+
         collector_port = self.port3
         ipv4_src = pkt[IP].src
         ipv4_dst = pkt[IP].dst
@@ -1683,9 +1720,11 @@ class IntTest(IPv4UnicastTest):
 
         self.runIPv4UnicastTest(pkt=pkt, next_hop_mac=HOST2_MAC,
                                 tagged1=tagged1, tagged2=tagged2, mpls=mpls,
-                                prefix_len=32, with_another_pkt_later=True)
+                                prefix_len=32, with_another_pkt_later=True,
+                                ig_port=ig_port, eg_port=eg_port)
 
-        self.verify_packet( exp_int_report_pkt_masked, collector_port)
+        if expect_int_report:
+            self.verify_packet(exp_int_report_pkt_masked, collector_port)
         self.verify_no_other_packets()
 
 class SpgwIntTest(SpgwSimpleTest, IntTest):
@@ -1758,7 +1797,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
                                 tagged1=tagged1, tagged2=tagged2, mpls=mpls,
                                 prefix_len=32, with_another_pkt_later=True)
 
-        self.verify_packet( exp_int_report_pkt_masked, collector_port)
+        self.verify_packet(exp_int_report_pkt_masked, collector_port)
         self.verify_no_other_packets()
 
 

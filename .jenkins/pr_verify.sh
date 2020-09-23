@@ -48,4 +48,10 @@ for d in ./tmp/*/; do
 
   echo "Verify TV generation for profile ${profile}"
   ./ptf/run/tv/run "${profile}"
+
+  rm -rf "logs/${profile}"
+  mkdir -p "logs/${profile}"
+  mv ptf/run/tm/log "logs/${profile}"
+  mv ptf/tests/ptf/ptf.log "logs/${profile}/"
+  mv ptf/tests/ptf/ptf.pcap "logs/${profile}/"
 done

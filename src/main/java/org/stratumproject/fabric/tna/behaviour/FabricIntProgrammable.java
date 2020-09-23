@@ -76,6 +76,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
             P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_WATCHLIST,
             P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_REPORT
     );
+    private static final long DEFAULT_QMASK = 0xffff0000;
 
     private FlowRuleService flowRuleService;
     private GroupService groupService;
@@ -351,11 +352,35 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         if (reportRule != null) {
             flowRuleService.applyFlowRules(reportRule);
             log.info("Report rule added to {} [{}]", this.data().deviceId(), reportRule);
-            return true;
         } else {
             log.warn("Failed to add report rule to {}", this.data().deviceId());
             return false;
         }
+        final FlowRule quantizationRule = buildQuantizeRule();
+        flowRuleService.applyFlowRules(quantizationRule);
+        log.info("Report rule added to {} [{}]", this.data().deviceId(), quantizationRule);
+        return true;
+    }
+
+    private FlowRule buildQuantizeRule() {
+        // Quantify hop latency rule
+        // TODO: Read qmask config from the INT device config.
+        final PiActionParam quantizeVal = new PiActionParam(P4InfoConstants.QMASK, DEFAULT_QMASK);
+        final PiAction quantizeAction =
+                PiAction.builder()
+                .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_QUANTIZE)
+                .withParameter(quantizeVal)
+                .build();
+        final TrafficTreatment quantizeTreatment = DefaultTrafficTreatment.builder()
+                .piTableAction(quantizeAction)
+                .build();
+        return DefaultFlowRule.builder()
+                .forDevice(deviceId)
+                .makePermanent()
+                .withPriority(DEFAULT_PRIORITY)
+                .withTreatment(quantizeTreatment)
+                .fromApp(appId)
+                .build();
     }
 
     private FlowRule buildReportEntry(IntDeviceConfig intCfg) {

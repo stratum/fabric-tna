@@ -34,4 +34,7 @@ const MirrorId_t REPORT_MIRROR_SESS_PIPE_3 = 303;
 #define PIPE_3_PORTS_MATCH 9w0x180 &&& 0x180
 #define WATCHLIST_TABLE_SIZE 64
 
+#define FLOW_REPORT_FILTER_WIDTH 16
+typedef bit<FLOW_REPORT_FILTER_WIDTH> flow_report_filter_index_t;
+
 #endif  // __INT_DEFINE__

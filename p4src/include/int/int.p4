@@ -7,11 +7,92 @@
 #include "define.p4"
 #include "header.p4"
 
+
+control FlowReportFilter(
+    inout parsed_headers_t hdr,
+    inout fabric_egress_metadata_t fabric_md,
+    in    egress_intrinsic_metadata_t eg_intr_md,
+    in    egress_intrinsic_metadata_from_parser_t eg_prsr_md) {
+
+    Hash<bit<16>>(HashAlgorithm_t.CRC16) flow_state_hasher;
+    bit<16> flow_state_hash;
+    bit<32> hop_latency;
+    bit<1> report;
+
+    // Bloom filter storing the hashed state of each flow (ports and hop latency).
+    // We use it to trigger report generation only for the first packet of a new flow, or for
+    // packets which state has changed with respect to the previous packet of the same flow.
+    @switchstack("register_reset_interval_ms: 1000")
+    Register<flow_report_filter_index_t, bit<16>>(1 << FLOW_REPORT_FILTER_WIDTH, 0) filter1;
+    @switchstack("register_reset_interval_ms: 1000")
+    Register<flow_report_filter_index_t, bit<16>>(1 << FLOW_REPORT_FILTER_WIDTH, 0) filter2;
+
+    // Meaning of the result:
+    // 0: Nothing changed.
+    // 1: New flow or state hash changed.
+    RegisterAction<bit<16>, flow_report_filter_index_t, bit<1>>(filter1) filter_get_and_set1 = {
+        void apply(inout bit<16> stored_flow_state_hash, out bit<1> result) {
+            if (stored_flow_state_hash == 0) {
+                // No state hash stored, new flow.
+                result = 1;
+            } else if (stored_flow_state_hash != flow_state_hash) {
+                // State hash changed.
+                result = 1;
+            } else {
+                // Nothing changed.
+                result = 0;
+            }
+            stored_flow_state_hash = flow_state_hash;
+        }
+    };
+
+    RegisterAction<bit<16>, flow_report_filter_index_t, bit<1>>(filter2) filter_get_and_set2 = {
+        void apply(inout bit<16> stored_flow_state_hash, out bit<1> result) {
+            if (stored_flow_state_hash == 0) {
+                // No state hash stored, new flow.
+                result = 1;
+            } else if (stored_flow_state_hash != flow_state_hash) {
+                // State hash changed.
+                result = 1;
+            } else {
+                // Nothing changed.
+                result = 0;
+            }
+            stored_flow_state_hash = flow_state_hash;
+        }
+    };
+
+    action quantize(bit<32> qmask) {
+        hop_latency = hop_latency & qmask;
+    }
+
+    table quantize_hop_latency {
+        key = {}
+        actions = {
+            @defaultonly quantize;
+        }
+        default_action = quantize(0xffffffff);
+    }
+
+    apply {
+        hop_latency = eg_prsr_md.global_tstamp[31:0] - fabric_md.bridged.ig_tstamp[31:0];
+        quantize_hop_latency.apply();
+        flow_state_hash = flow_state_hasher.get({fabric_md.bridged.ig_port, eg_intr_md.egress_port, hop_latency});
+        report = filter_get_and_set1.execute(fabric_md.bridged.flow_hash[31:16]);
+        report = report | filter_get_and_set2.execute(fabric_md.bridged.flow_hash[15:0]);
+        if (report == 0) {
+            fabric_md.int_mirror_md.setInvalid();
+        }
+    }
+}
+
 control IntEgress (
     inout parsed_headers_t hdr,
     inout fabric_egress_metadata_t fabric_md,
     in    egress_intrinsic_metadata_t eg_intr_md,
     in    egress_intrinsic_metadata_from_parser_t eg_prsr_md) {
+
+    FlowReportFilter() flow_report_filter;
 
     @hidden
     Random<bit<16>>() ip_id_gen;
@@ -189,9 +270,9 @@ control IntEgress (
             // Reports don't need to go through the rest of the egress pipe.
             exit;
         } else {
-            if (watchlist.apply().hit) {
-                mirror_session_id.apply();
-            }
+            mirror_session_id.apply();
+            watchlist.apply();
+            flow_report_filter.apply(hdr, fabric_md, eg_intr_md, eg_prsr_md);
         }
     }
 }
