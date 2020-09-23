@@ -257,7 +257,7 @@ def pkt_decrement_ttl(pkt):
 
 class FabricTest(P4RuntimeTest):
 
-    # An IP pool which will be shared to all FabricTests
+    # An IP pool which will be shared by all FabricTests
     # Start from 172.16.0.0
     next_single_use_ips = 0xAC100000
 

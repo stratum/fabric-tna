@@ -704,7 +704,6 @@ class FabricSpgwUplinkIntTest(SpgwIntTest):
     def runTest(self):
         print ""
         for pkt_type in ["udp", "tcp", "icmp"]:
-            prefix_base = 10
             for vlan_conf, tagged in vlan_confs.items():
                 for mpls in [False, True]:
                     if mpls and tagged[1]:
@@ -770,7 +769,7 @@ class FabricIntTest(IntTest):
 
 
 @group("int")
-class FabricIntelligentIntFlowReportTest(IntTest):
+class FabricFlowReportFilterNoChangeTest(IntTest):
 
     @tvsetup
     @autocleanup
