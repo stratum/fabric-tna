@@ -4,6 +4,7 @@
 
 import struct
 import time
+import socket
 from operator import ior
 
 from p4.v1 import p4runtime_pb2
@@ -24,10 +25,10 @@ DEFAULT_PRIORITY = 10
 FORWARDING_TYPE_BRIDGING = 0
 FORWARDING_TYPE_MPLS = 1
 FORWARDING_TYPE_UNICAST_IPV4 = 2
-FORWARDING_TYPE_IPV4_MULTICAST = 3;
-FORWARDING_TYPE_IPV6_UNICAST = 4;
-FORWARDING_TYPE_IPV6_MULTICAST = 5;
-FORWARDING_TYPE_UNKNOWN = 7;
+FORWARDING_TYPE_IPV4_MULTICAST = 3
+FORWARDING_TYPE_IPV6_UNICAST = 4
+FORWARDING_TYPE_IPV6_MULTICAST = 5
+FORWARDING_TYPE_UNKNOWN = 7
 
 CPU_CLONE_SESSION_ID = 511
 
@@ -254,23 +255,11 @@ def pkt_decrement_ttl(pkt):
     return pkt
 
 
-# Change the IP source and destination prefix of the packet.
-def pkt_change_ip_prefix(pkt, ip_prefix):
-    ip_prefix_vals = ip_prefix.split('.')
-    assert len(ip_prefix_vals) <= 4
-    assert IP in pkt
-    ip_src = pkt[IP].src.split('.')
-    ip_dst = pkt[IP].dst.split('.')
-    i = 0
-    for val in ip_prefix_vals:
-        ip_src[i] = val
-        ip_dst[i] = val
-        i += 1
-    pkt[IP].src = '.'.join(ip_src)
-    pkt[IP].dst = '.'.join(ip_dst)
-
-
 class FabricTest(P4RuntimeTest):
+
+    # An IP pool which will be shared to all FabricTests
+    # Start from 172.16.0.0
+    next_single_use_ips = 0xAC100000
 
     def __init__(self):
         super(FabricTest, self).__init__()
@@ -280,6 +269,10 @@ class FabricTest(P4RuntimeTest):
         mbr_id = self.next_mbr_id
         self.next_mbr_id = self.next_mbr_id + 1
         return mbr_id
+
+    def get_single_use_ip(self):
+        FabricTest.next_single_use_ips += 1
+        return socket.inet_ntoa(struct.pack("!I", FabricTest.next_single_use_ips))
 
     def setUp(self):
         super(FabricTest, self).setUp()

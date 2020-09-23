@@ -205,7 +205,6 @@ struct fabric_egress_metadata_t {
 #endif // WITH_SPGW
 #ifdef WITH_INT
     int_mirror_metadata_t int_mirror_md;
-    bit<32>               hop_latency;
 #endif // WITH_INT
 }
 
