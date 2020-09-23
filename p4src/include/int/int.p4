@@ -20,43 +20,43 @@ control FlowReportFilter(
 
     bit<1> report;
 
-    // Bloom filter storing the state of each flow (ports and hop latency).
+    // Bloom filter storing the hashed state of each flow (ports and hop latency).
     // We use it to trigger report generation only for the first packet of a new flow, or for
-    // packets which state has changed wrt the previous packet of the same flow.
+    // packets which state has changed with respect to the previous packet of the same flow.
     @switchstack("register_reset_interval_ms: 1000")
     Register<flow_report_filter_index_t, bit<16>>(1 << FLOW_REPORT_FILTER_WIDTH, 0) filter1;
     @switchstack("register_reset_interval_ms: 1000")
     Register<flow_report_filter_index_t, bit<16>>(1 << FLOW_REPORT_FILTER_WIDTH, 0) filter2;
 
     // Meaning of the result:
-    // 0: nothing changed.
-    // 1: new flow or state changed.
-    RegisterAction<bit<16>, bit<16>, bit<1>>(filter1) filter_get_and_set1 = {
+    // 0: Nothing changed.
+    // 1: New flow or state hash changed.
+    RegisterAction<bit<16>, flow_report_filter_index_t, bit<1>>(filter1) filter_get_and_set1 = {
         void apply(inout bit<16> stored_flow_state_hash, out bit<1> result) {
             if (stored_flow_state_hash == 0) {
-                // No flow hash stored, new flow
+                // No state hash stored, new flow.
                 result = 1;
             } else if (stored_flow_state_hash != flow_state_hash) {
-                // Flow state changed
+                // State hash changed.
                 result = 1;
             } else {
-                // nothing changed
+                // Nothing changed.
                 result = 0;
             }
             stored_flow_state_hash = flow_state_hash;
         }
     };
 
-    RegisterAction<bit<16>, bit<16>, bit<1>>(filter2) filter_get_and_set2 = {
+    RegisterAction<bit<16>, flow_report_filter_index_t, bit<1>>(filter2) filter_get_and_set2 = {
         void apply(inout bit<16> stored_flow_state_hash, out bit<1> result) {
             if (stored_flow_state_hash == 0) {
-                // No flow hash stored, new flow
+                // No state hash stored, new flow.
                 result = 1;
             } else if (stored_flow_state_hash != flow_state_hash) {
-                // Flow state changed
+                // State hash changed.
                 result = 1;
             } else {
-                // nothing changed.
+                // Nothing changed.
                 result = 0;
             }
             stored_flow_state_hash = flow_state_hash;

@@ -703,8 +703,8 @@ class FabricSpgwUplinkIntTest(SpgwIntTest):
 
     def runTest(self):
         print ""
-        for pkt_type in ["udp", "tcp", "icmp"]:
-            for vlan_conf, tagged in vlan_confs.items():
+        for vlan_conf, tagged in vlan_confs.items():
+            for pkt_type in ["udp", "tcp", "icmp"]:
                 for mpls in [False, True]:
                     if mpls and tagged[1]:
                         continue
@@ -731,8 +731,8 @@ class FabricSpgwDownlinkIntTest(SpgwIntTest):
 
     def runTest(self):
         print ""
-        for pkt_type in ["udp", "tcp", "icmp"]:
-            for vlan_conf, tagged in vlan_confs.items():
+        for vlan_conf, tagged in vlan_confs.items():
+            for pkt_type in ["udp", "tcp", "icmp"]:
                 for mpls in [False, True]:
                     if mpls and tagged[1]:
                         continue
@@ -760,8 +760,8 @@ class FabricIntTest(IntTest):
 
     def runTest(self):
         print ""
-        for pkt_type in ["udp", "tcp", "icmp"]:
-            for vlan_conf, tagged in vlan_confs.items():
+        for vlan_conf, tagged in vlan_confs.items():
+            for pkt_type in ["udp", "tcp", "icmp"]:
                 for mpls in [False, True]:
                     if mpls and tagged[1]:
                         continue
@@ -803,6 +803,7 @@ class FabricFlowReportFilterNoChangeTest(IntTest):
                     # We should expect not receving any report after the first
                     # report since packet uses 5-tuple as flow ID.
                     expect_int_report = False
+
 
 @group("int")
 class FabricFlowReportFilterChangeTest(IntTest):
@@ -847,6 +848,7 @@ class FabricFlowReportFilterChangeTest(IntTest):
             self.doRunTest(ig_port=ig_port, eg_port=eg_port,
                            ip_src=ip_src, ip_dst=ip_dst,
                            expect_int_report=expect_int_report)
+
 
 @group("bng")
 class FabricPppoeUpstreamTest(PppoeTest):

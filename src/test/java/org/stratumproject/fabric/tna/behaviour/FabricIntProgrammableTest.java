@@ -318,7 +318,6 @@ public class FabricIntProgrammableTest {
 
     private FlowRule buildQuantizationRule() {
         // Quantify hop latency rule
-        // TODO: Read qmask config from the INT device config.
         final PiActionParam quantizeVal = new PiActionParam(P4InfoConstants.QMASK, DEFAULT_QMASK);
         final PiAction quantizeAction =
                 PiAction.builder()

@@ -1615,7 +1615,7 @@ class IntTest(IPv4UnicastTest):
         if IP not in pkt:
             self.fail("Packet is not IP")
 
-        # override IP if set
+        # Override IP if set
         if ip_src:
             pkt[IP].src = ip_src
         if ip_dst:
