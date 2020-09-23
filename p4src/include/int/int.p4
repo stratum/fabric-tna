@@ -17,7 +17,6 @@ control FlowReportFilter(
     Hash<bit<16>>(HashAlgorithm_t.CRC16) flow_state_hasher;
     bit<16> flow_state_hash;
     bit<32> hop_latency;
-
     bit<1> report;
 
     // Bloom filter storing the hashed state of each flow (ports and hop latency).
