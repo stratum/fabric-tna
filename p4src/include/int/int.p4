@@ -24,9 +24,9 @@ control FlowReportFilter(
     // We use it to trigger report generation only for the first packet of a new flow, or for
     // packets which state has changed wrt the previous packet of the same flow.
     @switchstack("register_reset_interval_ms: 1000")
-    Register<flow_report_filter_index_t, bit<16>>((1 << FLOW_REPORT_FILTER_WIDTH) - 1, 0) filter1;
+    Register<flow_report_filter_index_t, bit<16>>(1 << FLOW_REPORT_FILTER_WIDTH, 0) filter1;
     @switchstack("register_reset_interval_ms: 1000")
-    Register<flow_report_filter_index_t, bit<16>>((1 << FLOW_REPORT_FILTER_WIDTH) - 1, 0) filter2;
+    Register<flow_report_filter_index_t, bit<16>>(1 << FLOW_REPORT_FILTER_WIDTH, 0) filter2;
 
     // Meaning of the result:
     // 0: nothing changed.
