@@ -111,12 +111,6 @@ control SpgwIngress(
         fabric_md.bridged.skip_spgw = skip_spgw;
     }
 
-    action receive_from_dbuf(SpgwInterface src_iface, SpgwDirection direction,
-                            bool skip_spgw) {
-        set_source_iface(src_iface, direction, skip_spgw);
-        fabric_md.from_dbuf = true;
-    }
-
     // TODO: check also that gtpu.msgtype == GTP_GPDU... somewhere
     table interface_lookup {
         key = {
@@ -125,7 +119,6 @@ control SpgwIngress(
         }
         actions = {
             set_source_iface;
-            receive_from_dbuf;
         }
         const default_action = set_source_iface(SpgwInterface.UNKNOWN, SpgwDirection.UNKNOWN, true);
     }
@@ -246,8 +239,7 @@ control SpgwIngress(
 
         // Interfaces
         if (interface_lookup.apply().hit) {
-
-            if (fabric_md.from_dbuf) {
+            if (fabric_md.spgw_src_iface == SpgwInterface.FROM_DBUF) {
                 decap_gtpu_from_dbuf.apply(hdr, fabric_md);
             }
             // PDRs

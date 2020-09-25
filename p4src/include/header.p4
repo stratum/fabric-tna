@@ -183,7 +183,6 @@ struct fabric_ingress_metadata_t {
     bool               skip_next;
     next_id_t          next_id;
 #ifdef WITH_SPGW
-    bool               from_dbuf;
     bool               inner_ipv4_checksum_err;
     bool               needs_gtpu_decap;
     bool               pdr_hit;

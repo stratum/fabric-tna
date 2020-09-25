@@ -183,8 +183,6 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.spgw_ingress.load_normal_far_attributes");
     public static final PiActionId FABRIC_INGRESS_SPGW_INGRESS_LOAD_TUNNEL_FAR_ATTRIBUTES =
             PiActionId.of("FabricIngress.spgw_ingress.load_tunnel_far_attributes");
-    public static final PiActionId FABRIC_INGRESS_SPGW_INGRESS_RECEIVE_FROM_DBUF =
-            PiActionId.of("FabricIngress.spgw_ingress.receive_from_dbuf");
     public static final PiActionId FABRIC_INGRESS_SPGW_INGRESS_SET_PDR_ATTRIBUTES =
             PiActionId.of("FabricIngress.spgw_ingress.set_pdr_attributes");
     public static final PiActionId FABRIC_INGRESS_SPGW_INGRESS_SET_SOURCE_IFACE =
