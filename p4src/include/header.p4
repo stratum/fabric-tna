@@ -202,6 +202,8 @@ struct fabric_egress_metadata_t {
     PortId_t              cpu_port;
 #ifdef WITH_SPGW
     bool                  inner_ipv4_checksum_err;
+    bit<16>               outer_ipv4_len_additive;
+    bit<16>               outer_udp_len_additive;
 #endif // WITH_SPGW
 #ifdef WITH_INT
     int_mirror_metadata_t int_mirror_md;
