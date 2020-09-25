@@ -18,7 +18,7 @@ from scapy.packet import bind_layers, Packet
 from testvector import tvutils
 
 import xnt
-from base_test import P4RuntimeTest, stringify, mac_to_binary, ipv4_to_binary
+from base_test import P4RuntimeTest, stringify, mac_to_binary, ipv4_to_binary, tvcreate
 
 DEFAULT_PRIORITY = 10
 
@@ -275,35 +275,11 @@ class FabricTest(P4RuntimeTest):
         self.recirculate_port_1 = 196
         self.recirculate_port_2 = 324
         self.recirculate_port_3 = 452
-        if self.generate_tv:
-            self.tv_setup()
-        else:
-            self.setup_cpu_port()
+        self.setup_switch_info()
 
     def tearDown(self):
-        if self.generate_tv:
-            self.tv_teardown()
-        else:
-            self.reset_cpu_port()
+        self.reset_switch_info()
         P4RuntimeTest.tearDown(self)
-
-    def tv_setup(self):
-        self.tv = tvutils.get_new_testvector()
-        tv_name = "setup_cpu_port"
-        self.tc = tvutils.get_new_testcase(self.tv, tv_name)
-        self.setup_cpu_port()
-        # TestVector file is stored in ptf/testvectors/<test_class>/setup folder
-        # e.g. for FabricIPv4UnicastTest, setup tv is ptf/testvectors/FabricIPv4UnicastTest/setup/setup_cpu_port.pb.txt
-        tv_folder = os.path.join(os.getcwd(), "testvectors", self.__class__.__name__, "setup")
-        tvutils.write_to_file(self.tv, tv_folder, tv_name, create_tv_sub_dir=False)
-
-    def tv_teardown(self):
-        self.tv = tvutils.get_new_testvector()
-        tv_name = "reset_cpu_port"
-        self.tc = tvutils.get_new_testcase(self.tv, tv_name)
-        self.reset_cpu_port()
-        tv_folder = os.path.join(os.getcwd(), "testvectors", self.__class__.__name__, "teardown")
-        tvutils.write_to_file(self.tv, tv_folder, tv_name, create_tv_sub_dir=False)
 
     def build_packet_out(self, pkt, port, cpu_loopback_mode=CPU_LOOPBACK_MODE_DISABLED):
         packet_out = p4runtime_pb2.PacketOut()
@@ -367,7 +343,8 @@ class FabricTest(P4RuntimeTest):
                                        vlan_valid=False, internal_vlan_id=vlan_id)
             self.set_egress_vlan_pop(egress_port=port_id, vlan_id=vlan_id)
 
-    def setup_cpu_port(self):
+    @tvcreate("setup/setup_switch_info")
+    def setup_switch_info(self):
         req = self.get_new_write_request()
         self.push_update_add_entry_to_action(req,
             "FabricEgress.pkt_io_egress.switch_info", None,
@@ -375,7 +352,8 @@ class FabricTest(P4RuntimeTest):
             [("cpu_port", stringify(self.cpu_port, 2))])
         return req, self.write_request(req, store=False)
 
-    def reset_cpu_port(self):
+    @tvcreate("teardown/reset_switch_info")
+    def reset_switch_info(self):
         req = self.get_new_write_request()
         self.push_update_add_entry_to_action(req,
             "FabricEgress.pkt_io_egress.switch_info", None,
