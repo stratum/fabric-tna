@@ -367,9 +367,9 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         final PiActionParam quantizeVal = new PiActionParam(P4InfoConstants.QMASK, qmask);
         final PiAction quantizeAction =
                 PiAction.builder()
-                .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_QUANTIZE)
-                .withParameter(quantizeVal)
-                .build();
+                        .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_QUANTIZE)
+                        .withParameter(quantizeVal)
+                        .build();
         final TrafficTreatment quantizeTreatment = DefaultTrafficTreatment.builder()
                 .piTableAction(quantizeAction)
                 .build();
@@ -395,7 +395,10 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
      * @param minFlowHopLatencyChangeNs the minimal latency change we want to ignore
      * @return the suitable quantization mask
      */
-    private long getSuitableQmaskForLatencyChange(int minFlowHopLatencyChangeNs) {
+    public long getSuitableQmaskForLatencyChange(int minFlowHopLatencyChangeNs) {
+        if (minFlowHopLatencyChangeNs < 0) {
+            throw new IllegalArgumentException("Flow latency change value must equal or greater than zero.");
+        }
         long qmask = 0xffffffff;
         while (minFlowHopLatencyChangeNs > 1) {
             minFlowHopLatencyChangeNs /= 2;

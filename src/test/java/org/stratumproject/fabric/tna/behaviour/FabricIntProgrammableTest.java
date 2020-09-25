@@ -53,6 +53,7 @@ import static org.easymock.EasyMock.expectLastCall;
 import static org.easymock.EasyMock.replay;
 import static org.easymock.EasyMock.reset;
 import static org.easymock.EasyMock.verify;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -274,6 +275,29 @@ public class FabricIntProgrammableTest {
         assertTrue(intProgrammable.supportsFunctionality(IntProgrammable.IntFunctionality.SOURCE));
         assertTrue(intProgrammable.supportsFunctionality(IntProgrammable.IntFunctionality.TRANSIT));
         assertTrue(intProgrammable.supportsFunctionality(IntProgrammable.IntFunctionality.SINK));
+    }
+
+    @Test
+    public void testUtilityMethods() {
+        assertEquals(0xffffffffL, intProgrammable.getSuitableQmaskForLatencyChange(0));
+        assertEquals(0xffffffffL, intProgrammable.getSuitableQmaskForLatencyChange(1));
+        assertEquals(0xfffffffeL, intProgrammable.getSuitableQmaskForLatencyChange(2));
+        assertEquals(0xffffff00L, intProgrammable.getSuitableQmaskForLatencyChange(256));
+        assertEquals(0xffffff00L, intProgrammable.getSuitableQmaskForLatencyChange(300));
+        assertEquals(0xffff0000L, intProgrammable.getSuitableQmaskForLatencyChange(65536));
+        assertEquals(0xffff0000L, intProgrammable.getSuitableQmaskForLatencyChange(100000));
+        assertEquals(0xf0000000L, intProgrammable.getSuitableQmaskForLatencyChange(1 << 28));
+        assertEquals(0xf0000000L, intProgrammable.getSuitableQmaskForLatencyChange((1 << 28) + 10));
+        assertEquals(0xc0000000L, intProgrammable.getSuitableQmaskForLatencyChange(1 << 30));
+        assertEquals(0xc0000000L, intProgrammable.getSuitableQmaskForLatencyChange(0x40000000));
+        assertEquals(0xc0000000L, intProgrammable.getSuitableQmaskForLatencyChange(0x7fffffff));
+
+        // Illegal argument.
+        try {
+            intProgrammable.getSuitableQmaskForLatencyChange(-1);
+        } catch (IllegalArgumentException e) {
+            assertEquals(e.getMessage(), "Flow latency change value must equal or greater than zero.");
+        }
     }
 
     private FlowRule buildReportFlow() {
