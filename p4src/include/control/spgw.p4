@@ -14,19 +14,8 @@
 #define NUM_DOWNLINK_PDRS NUM_UES
 #define NUM_FARS 2*NUM_UES
 
-control SpgwIngress(
-        /* Fabric.p4 */
-        inout parsed_headers_t                      hdr,
-        inout fabric_ingress_metadata_t             fabric_md,
-        /* TNA */
-        inout ingress_intrinsic_metadata_for_tm_t   ig_tm_md) {
-
-    //=============================//
-    //===== Misc Things ======//
-    //=============================//
-
-    Counter<bit<64>, bit<16>>(MAX_PDR_COUNTERS, CounterType_t.PACKETS_AND_BYTES) pdr_counter;
-
+control DecapGtpu(inout parsed_headers_t            hdr,
+                  inout fabric_ingress_metadata_t   fabric_md) {
     @hidden
     action decap_inner_common() {
         // Correct parser-set metadata to use the inner header values
@@ -41,23 +30,27 @@ control SpgwIngress(
         hdr.inner_ipv4.setInvalid();
         hdr.gtpu.setInvalid();
     }
+    @hidden
     action decap_inner_tcp() {
         decap_inner_common();
         hdr.udp.setInvalid();
         hdr.tcp = hdr.inner_tcp;
         hdr.inner_tcp.setInvalid();
     }
+    @hidden
     action decap_inner_udp() {
         decap_inner_common();
         hdr.udp = hdr.inner_udp;
         hdr.inner_udp.setInvalid();
     }
+    @hidden
     action decap_inner_icmp() {
         decap_inner_common();
         hdr.udp.setInvalid();
         hdr.icmp = hdr.inner_icmp;
         hdr.inner_icmp.setInvalid();
     }
+    @hidden
     action decap_inner_unknown() {
         decap_inner_common();
         hdr.udp.setInvalid();
@@ -83,6 +76,26 @@ control SpgwIngress(
         }
         size = 4;
     }
+    apply {
+        decap_gtpu.apply();
+    }
+}
+
+control SpgwIngress(
+        /* Fabric.p4 */
+        inout parsed_headers_t                      hdr,
+        inout fabric_ingress_metadata_t             fabric_md,
+        /* TNA */
+        inout ingress_intrinsic_metadata_for_tm_t   ig_tm_md) {
+
+    //=============================//
+    //===== Misc Things ======//
+    //=============================//
+
+    Counter<bit<64>, bit<16>>(MAX_PDR_COUNTERS, CounterType_t.PACKETS_AND_BYTES) pdr_counter;
+
+    DecapGtpu() decap_gtpu_from_dbuf;
+    DecapGtpu() decap_gtpu;
 
 
     //=============================//
@@ -98,43 +111,21 @@ control SpgwIngress(
         fabric_md.bridged.skip_spgw = skip_spgw;
     }
 
-    action receive_tcp_from_dbuf(SpgwInterface src_iface, SpgwDirection direction,
+    action receive_from_dbuf(SpgwInterface src_iface, SpgwDirection direction,
                             bool skip_spgw) {
         set_source_iface(src_iface, direction, skip_spgw);
-        decap_inner_tcp();
+        fabric_md.from_dbuf = true;
     }
-    action receive_udp_from_dbuf(SpgwInterface src_iface, SpgwDirection direction,
-                            bool skip_spgw) {
-        set_source_iface(src_iface, direction, skip_spgw);
-        decap_inner_udp();
-    }
-    action receive_icmp_from_dbuf(SpgwInterface src_iface, SpgwDirection direction,
-                            bool skip_spgw) {
-        set_source_iface(src_iface, direction, skip_spgw);
-        decap_inner_icmp();
-    }
-    action receive_unknown_from_dbuf(SpgwInterface src_iface, SpgwDirection direction,
-                            bool skip_spgw) {
-        set_source_iface(src_iface, direction, skip_spgw);
-        decap_inner_unknown();
-    }
-
 
     // TODO: check also that gtpu.msgtype == GTP_GPDU... somewhere
     table interface_lookup {
         key = {
             hdr.ipv4.dst_addr  : lpm    @name("ipv4_dst_addr");  // outermost header
             hdr.gtpu.isValid() : exact  @name("gtpu_is_valid");
-            hdr.inner_tcp.isValid()  : ternary @name("inner_tcp_is_valid");
-            hdr.inner_udp.isValid()  : ternary @name("inner_udp_is_valid");
-            hdr.inner_icmp.isValid() : ternary @name("inner_icmp_is_valid");
         }
         actions = {
             set_source_iface;
-            receive_tcp_from_dbuf;
-            receive_udp_from_dbuf;
-            receive_icmp_from_dbuf;
-            receive_unknown_from_dbuf;
+            receive_from_dbuf;
         }
         const default_action = set_source_iface(SpgwInterface.UNKNOWN, SpgwDirection.UNKNOWN, true);
     }
@@ -255,6 +246,10 @@ control SpgwIngress(
 
         // Interfaces
         if (interface_lookup.apply().hit) {
+
+            if (fabric_md.from_dbuf) {
+                decap_gtpu_from_dbuf.apply(hdr, fabric_md);
+            }
             // PDRs
             if (hdr.gtpu.isValid()) {
                 uplink_pdr_lookup.apply();
@@ -265,7 +260,7 @@ control SpgwIngress(
 
             // GTPU Decapsulate
             if (fabric_md.needs_gtpu_decap) {
-                decap_gtpu.apply();
+                decap_gtpu.apply(hdr, fabric_md);
             }
 
             // FARs
