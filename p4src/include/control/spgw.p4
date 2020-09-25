@@ -282,14 +282,13 @@ control SpgwEgress(
     Counter<bit<64>, bit<16>>(MAX_PDR_COUNTERS, CounterType_t.PACKETS_AND_BYTES) pdr_counter;
 
     @hidden
-    action gtpu_encap() {
+    action _gtpu_encap(bit<16> outer_ipv4_len_additive, bit<16> outer_udp_len_additive) {
         hdr.outer_ipv4.setValid();
         hdr.outer_ipv4.version = IP_VERSION_4;
         hdr.outer_ipv4.ihl = IPV4_MIN_IHL;
         hdr.outer_ipv4.dscp = 0;
         hdr.outer_ipv4.ecn = 0;
-        hdr.outer_ipv4.total_len = hdr.ipv4.total_len
-                + (IPV4_HDR_SIZE + UDP_HDR_SIZE + GTP_HDR_SIZE);
+        hdr.outer_ipv4.total_len = fabric_md.bridged.spgw_ipv4_len + outer_ipv4_len_additive;
         hdr.outer_ipv4.identification = 0x1513; /* From NGIC. TODO: Needs to be dynamic */
         hdr.outer_ipv4.flags = 0;
         hdr.outer_ipv4.frag_offset = 0;
@@ -302,10 +301,8 @@ control SpgwEgress(
         hdr.outer_udp.setValid();
         hdr.outer_udp.sport = fabric_md.bridged.gtpu_tunnel_sport;
         hdr.outer_udp.dport = UDP_PORT_GTPU;
-        hdr.outer_udp.len = hdr.ipv4.total_len
-                + (UDP_HDR_SIZE + GTP_HDR_SIZE);
+        hdr.outer_udp.len = fabric_md.bridged.spgw_ipv4_len + outer_udp_len_additive;
         hdr.outer_udp.checksum = 0; // Updated never, due to difficulties in handling different inner headers
-
 
         hdr.outer_gtpu.setValid();
         hdr.outer_gtpu.version = GTPU_VERSION;
@@ -315,19 +312,35 @@ control SpgwEgress(
         hdr.outer_gtpu.seq_flag = 0;
         hdr.outer_gtpu.npdu_flag = 0;
         hdr.outer_gtpu.msgtype = GTP_GPDU;
-        hdr.outer_gtpu.msglen = hdr.ipv4.total_len;
+        hdr.outer_gtpu.msglen = fabric_md.bridged.spgw_ipv4_len;
         hdr.outer_gtpu.teid = fabric_md.bridged.gtpu_teid;
-    }
 
-    apply {
-        if (fabric_md.bridged.skip_spgw) return;
-        pdr_counter.count(fabric_md.bridged.pdr_ctr_id);
-
-        if (fabric_md.bridged.needs_gtpu_encap) {
-            gtpu_encap();
 #ifdef WITH_INT
             fabric_md.int_mirror_md.strip_gtpu = 1;
 #endif // WITH_INT
+    }
+
+    @hidden
+    table gtpu_encap_if_needed {
+        key = {
+            fabric_md.bridged.needs_gtpu_encap : exact;
+        }
+        actions = {
+            _gtpu_encap;
+        }
+        const entries = {
+            (true) : _gtpu_encap(
+                (bit<16>)(IPV4_HDR_SIZE + UDP_HDR_SIZE + GTP_HDR_SIZE), 
+                (bit<16>)(UDP_HDR_SIZE + GTP_HDR_SIZE)
+            );
+        }
+        size = 1;
+    }
+
+    apply {
+        if (!fabric_md.bridged.skip_spgw) {
+            pdr_counter.count(fabric_md.bridged.pdr_ctr_id);
+            gtpu_encap_if_needed.apply();
         }
     }
 }
