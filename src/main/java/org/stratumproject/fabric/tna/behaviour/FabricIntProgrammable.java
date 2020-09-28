@@ -355,9 +355,9 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
             log.warn("Failed to add report rule to {}", this.data().deviceId());
             return false;
         }
-        final FlowRule quantizationRule = buildQuantizeRule(cfg.minFlowHopLatencyChangeNs());
-        flowRuleService.applyFlowRules(quantizationRule);
-        log.info("Report rule added to {} [{}]", this.data().deviceId(), quantizationRule);
+        final FlowRule quantizeRule = buildQuantizeRule(cfg.minFlowHopLatencyChangeNs());
+        flowRuleService.applyFlowRules(quantizeRule);
+        log.info("Report rule added to {} [{}]", this.data().deviceId(), quantizeRule);
         return true;
     }
 
