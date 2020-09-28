@@ -33,6 +33,7 @@
 #ifndef IP_VERSION_6
 #define IP_VERSION_6 6
 #endif
+#define ETH_TYPE_LENGTH 16
 
 #define ETH_HDR_SIZE 14
 #define IPV4_HDR_SIZE 20

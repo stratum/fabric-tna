@@ -267,7 +267,8 @@ parser FabricEgressParser (packet_in packet,
     Checksum() inner_ipv4_checksum;
 #endif // WITH_SPGW
 
-    bit<1> is_int_and_strip_gtpu = 0;
+    bit<1> is_int = 0;
+    bit<1> strip_gtpu = 0;
 
     state start {
         packet.extract(eg_intr_md);
@@ -282,6 +283,7 @@ parser FabricEgressParser (packet_in packet,
 
     state parse_bridged_md {
         packet.extract(fabric_md.bridged);
+        is_int = 0;
         transition check_ethernet;
     }
 
@@ -290,9 +292,10 @@ parser FabricEgressParser (packet_in packet,
         packet.extract(fabric_md.int_mirror_md);
         fabric_md.bridged.bridged_md_type = fabric_md.int_mirror_md.bridged_md_type;
         fabric_md.bridged.vlan_id = DEFAULT_VLAN_ID;
+        is_int = 1;
 #ifdef WITH_SPGW
-        is_int_and_strip_gtpu = fabric_md.int_mirror_md.strip_gtpu;
-        transition select(is_int_and_strip_gtpu) {
+        strip_gtpu = fabric_md.int_mirror_md.strip_gtpu;
+        transition select(strip_gtpu) {
             1: check_ethernet;
             default: accept;
         }
@@ -326,7 +329,7 @@ parser FabricEgressParser (packet_in packet,
         transition select(packet.lookahead<bit<16>>()) {
             ETHERTYPE_QINQ: parse_vlan_tag;
             ETHERTYPE_VLAN &&& 0xFEFF: parse_vlan_tag;
-            default: parse_eth_type;
+            default: check_eth_type;
         }
     }
 
@@ -336,21 +339,64 @@ parser FabricEgressParser (packet_in packet,
 #if defined(WITH_XCONNECT) || defined(WITH_DOUBLE_VLAN_TERMINATION)
             ETHERTYPE_VLAN: parse_inner_vlan_tag;
 #endif // WITH_XCONNECT || WITH_DOUBLE_VLAN_TERMINATION
-            default: parse_eth_type;
+            default: check_eth_type;
         }
     }
 
 #if defined(WITH_XCONNECT) || defined(WITH_DOUBLE_VLAN_TERMINATION)
     state parse_inner_vlan_tag {
         packet.extract(hdr.inner_vlan_tag);
-        transition parse_eth_type;
+        transition check_eth_type;
     }
 #endif // WITH_XCONNECT || WITH_DOUBLE_VLAN_TERMINATION
+
+    state check_eth_type {
+        transition select(packet.lookahead<bit<ETH_TYPE_LENGTH>>()) {
+            ETHERTYPE_MPLS: check_mpls;
+            ETHERTYPE_IPV4: parse_eth_type;
+            ETHERTYPE_IPV6: parse_eth_type;
+        }
+    }
+
+    state check_mpls {
+#ifdef WITH_INT
+        transition select(is_int) {
+            1: strip_mpls;
+            default: parse_eth_type;
+        }
+#else
+        transition parse_eth_type;
+#endif // WITH_INT
+    }
+
+    state strip_mpls {
+        // Skip ether type
+        packet.advance(ETH_TYPE_LENGTH);
+        // Skip MPLS header
+        packet.advance(MPLS_HDR_SIZE * 8);
+        // Sets ether type
+        transition select(packet.lookahead<bit<IP_VER_LENGTH>>()) {
+            IP_VERSION_4: strip_mpls_ipv4;
+            IP_VERSION_6: strip_mpls_ipv6;
+            default: reject;
+        }
+    }
+
+    state strip_mpls_ipv4 {
+        hdr.eth_type.setValid();
+        hdr.eth_type.value = ETHERTYPE_IPV4;
+        transition check_ipv4;
+    }
+
+    state strip_mpls_ipv6 {
+        hdr.eth_type.setValid();
+        hdr.eth_type.value = ETHERTYPE_IPV6;
+        transition parse_ipv6;
+    }
 
     state parse_eth_type {
         packet.extract(hdr.eth_type);
         transition select(hdr.eth_type.value) {
-            ETHERTYPE_MPLS: parse_mpls;
             ETHERTYPE_IPV4: check_ipv4;
             ETHERTYPE_IPV6: parse_ipv6;
             default: accept;
@@ -371,7 +417,7 @@ parser FabricEgressParser (packet_in packet,
 
     state check_ipv4 {
 #if defined(WITH_INT) && defined(WITH_SPGW)
-        transition select(is_int_and_strip_gtpu) {
+        transition select(strip_gtpu) {
             1: strip_gtpu_and_accept;
             default: parse_ipv4;
         }

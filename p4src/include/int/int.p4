@@ -258,11 +258,6 @@ control IntEgress (
             // Remove the INT mirror metadata to prevent egress mirroring again.
             fabric_md.int_mirror_md.setInvalid();
             if (hdr.mpls.isValid()) {
-                // Remove MPLS in INT report.
-                hdr.mpls.setInvalid();
-                // Assuming there's an IP header after the MPLS one.
-                hdr.eth_type.value = fabric_md.bridged.ip_eth_type;
-
                 hdr.report_ipv4.total_len = hdr.report_ipv4.total_len - MPLS_HDR_SIZE;
                 hdr.report_udp.len = hdr.report_udp.len - MPLS_HDR_SIZE;
             }
