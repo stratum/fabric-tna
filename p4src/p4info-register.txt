@@ -4,6 +4,7 @@ registers {
     name: "pipe.FabricEgress.int_egress.flow_report_filter.filter1"
     alias: "filter1"
     annotations: "@switchstack(\"register_reset_interval_ms: 1000\")"
+    annotations: "@switchstack(\"register_reset_value: 0\")"
   }
   type_spec {
     bitstring {
@@ -20,6 +21,7 @@ registers {
     name: "pipe.FabricEgress.int_egress.flow_report_filter.filter2"
     alias: "filter2"
     annotations: "@switchstack(\"register_reset_interval_ms: 1000\")"
+    annotations: "@switchstack(\"register_reset_value: 0\")"
   }
   type_spec {
     bitstring {
