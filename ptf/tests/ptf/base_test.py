@@ -1024,6 +1024,39 @@ def tvskip(f):
     return handle
 
 
+# This decorator should be used for creating standalone TestVectors.
+# On using this decorator TestVectors are generated for the P4RT operations in the calling method.
+# This doesn't change the current behavior for executing ptf tests.
+def tvcreate(name):
+    def wrapper(f):
+        @wraps(f)
+        def handle(*args, **kwargs):
+            test = args[0]
+            assert (isinstance(test, P4RuntimeTest))
+            try:
+                if test.generate_tv:
+                    # If name contains "/", last string is considered as tv_name and
+                    # prefix is considered as sub directory to be created under testvectors/<ptf_test_class_name>
+                    # e.g. If name argument is "setup/setup_switch_info" for FabricIPv4UnicastTest,
+                    # the testvector is saved as testvectors/FabricIPv4UnicastTest/setup/setup_switch_info.pb.txt
+                    names = name.rsplit("/", 1)
+                    if(len(names) > 1):
+                        sub_dir = names[0]
+                        tv_name = names[1]
+                    else:
+                        sub_dir = ""
+                        tv_name = names[0]
+                    test.tv = tvutils.get_new_testvector()
+                    test.tc = tvutils.get_new_testcase(test.tv, tv_name)
+                return f(*args, **kwargs)
+            finally:
+                if test.generate_tv:
+                    tv_folder = os.path.join(os.getcwd(), "testvectors", test.__class__.__name__, sub_dir)
+                    tvutils.write_to_file(test.tv, tv_folder, tv_name, create_tv_sub_dir=False)
+        return handle
+    return wrapper
+
+
 def skip_on_hw(cls):
     cls._skip_on_hw = True
     return cls
