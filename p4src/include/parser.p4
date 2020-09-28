@@ -267,8 +267,12 @@ parser FabricEgressParser (packet_in packet,
     Checksum() inner_ipv4_checksum;
 #endif // WITH_SPGW
 
+#ifdef WITH_INT
     bit<1> is_int = 0;
+#ifdef WITH_SPGW
     bit<1> strip_gtpu = 0;
+#endif // WITH_SPGW
+#endif // WITH_INT
 
     state start {
         packet.extract(eg_intr_md);
@@ -300,7 +304,7 @@ parser FabricEgressParser (packet_in packet,
             default: accept;
         }
 #else
-        transition accept;
+        transition check_ethernet;
 #endif // WITH_SPGW
 #else
         // Should never be here.
