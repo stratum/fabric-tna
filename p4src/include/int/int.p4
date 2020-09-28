@@ -257,6 +257,12 @@ control IntEgress (
             report_seq_no_and_hw_id.apply();
             // Remove the INT mirror metadata to prevent egress mirroring again.
             fabric_md.int_mirror_md.setInvalid();
+            if (hdr.mpls.isValid()) {
+                // Remove MPLS in INT report.
+                hdr.mpls.setInvalid();
+                // Assuming there's an IP header after the MPLS one.
+                hdr.eth_type.value = fabric_md.bridged.ip_eth_type;
+            }
 #ifdef WITH_SPGW
             if (fabric_md.int_mirror_md.strip_gtpu == 1) {
                 // We need to remove length of IP, UDP, and GTPU headers
