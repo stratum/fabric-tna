@@ -41,10 +41,9 @@ fi
 SDE_VER=$( ${P4C_CMD} --version | cut -d' ' -f2 )
 
 # shellcheck disable=SC2086
-function do_p4c() {
-  pltf="$1_sde_${SDE_VER//./_}"
-  cpu_port=$2
-  echo "*** Compiling profile '${PROFILE}' for ${pltf} platform..."
+function base_build() {
+  pltf="sde_${SDE_VER//./_}"
+  echo "*** Compiling profile '${PROFILE}' for ${pltf}..."
   echo "*** Output in ${P4C_OUT}/${pltf}"
   p4c_flags="--auto-init-metadata"
   mkdir -p ${P4C_OUT}/${pltf}
@@ -57,6 +56,13 @@ function do_p4c() {
       --p4runtime-force-std-externs \
       ${DIR}/fabric_tna.p4
   )
+}
+
+# shellcheck disable=SC2086
+function gen_profile() {
+  output_dir="${P4C_OUT}/sde_${SDE_VER//./_}"
+  pltf="$1_sde_${SDE_VER//./_}"
+  cpu_port=$2
 
   # Adds register information to p4info file
   # TODO: remove this part when compiler support it.
@@ -67,20 +73,20 @@ function do_p4c() {
   # Copy only the relevant files to the pipeconf resources.
   mkdir -p "${DEST_DIR}/stratum_bf/${pltf}/pipe"
   mkdir -p "${DEST_DIR}/stratum_bfrt/${pltf}/pipe"
-  cp "${P4C_OUT}/${pltf}/p4info.txt" "${DEST_DIR}/stratum_bf/${pltf}"
-  cp "${P4C_OUT}/${pltf}/bfrt.json" "${DEST_DIR}/stratum_bf/${pltf}"
-  cp "${P4C_OUT}/${pltf}/fabric_tna.conf" "${DEST_DIR}/stratum_bf/${pltf}"
-  cp "${P4C_OUT}/${pltf}/pipe/context.json" "${DEST_DIR}/stratum_bf/${pltf}/pipe"
-  cp "${P4C_OUT}/${pltf}/pipe/tofino.bin" "${DEST_DIR}/stratum_bf/${pltf}/pipe"
-  cp "${P4C_OUT}/${pltf}/pipe/context.json" "${DEST_DIR}/stratum_bfrt/${pltf}/pipe/"
-  cp "${P4C_OUT}/${pltf}/pipe/tofino.bin" "${DEST_DIR}/stratum_bfrt/${pltf}/pipe/"
+  cp "${output_dir}/p4info.txt" "${DEST_DIR}/stratum_bf/${pltf}"
+  cp "${output_dir}/bfrt.json" "${DEST_DIR}/stratum_bf/${pltf}"
+  cp "${output_dir}/fabric_tna.conf" "${DEST_DIR}/stratum_bf/${pltf}"
+  cp "${output_dir}/pipe/context.json" "${DEST_DIR}/stratum_bf/${pltf}/pipe"
+  cp "${output_dir}/pipe/tofino.bin" "${DEST_DIR}/stratum_bf/${pltf}/pipe"
+  cp "${output_dir}/pipe/context.json" "${DEST_DIR}/stratum_bfrt/${pltf}/pipe/"
+  cp "${output_dir}/pipe/tofino.bin" "${DEST_DIR}/stratum_bfrt/${pltf}/pipe/"
   echo "${cpu_port}" > "${DEST_DIR}/stratum_bf/${pltf}/cpu_port.txt"
 
   # New pipeline format which uses tar ball
   mkdir -p "${DEST_DIR}/stratum_bfrt/${pltf}"
   tar cf "pipeline.tar.bz2" -C "${DEST_DIR}/stratum_bf/${pltf}" .
   mv "pipeline.tar.bz2" "${DEST_DIR}/stratum_bfrt/${pltf}/"
-  cp "${P4C_OUT}/${pltf}/p4info.txt" "${DEST_DIR}/stratum_bfrt/${pltf}/"
+  cp "${output_dir}/p4info.txt" "${DEST_DIR}/stratum_bfrt/${pltf}/"
   echo "${cpu_port}" > "${DEST_DIR}/stratum_bfrt/${pltf}/cpu_port.txt"
 
   rm "${DEST_DIR}/stratum_bf/${pltf}/fabric_tna.conf"
@@ -88,5 +94,6 @@ function do_p4c() {
   echo
 }
 
-do_p4c "montara" "${MONTARA_CPU_PORT}"
-do_p4c "mavericks" "${MAVERICKS_CPU_PORT}"
+base_build
+gen_profile "montara" "${MONTARA_CPU_PORT}"
+gen_profile "mavericks" "${MAVERICKS_CPU_PORT}"
