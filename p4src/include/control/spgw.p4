@@ -296,7 +296,6 @@ control SpgwEgress(
 
     bit<16> outer_ipv4_len_additive;
     bit<16> outer_udp_len_additive;
-    bool skip_pdr_counter = false;
 
     /*
     This roundabout action is used to circumvent a bug of unknown origin that was experienced
@@ -347,10 +346,6 @@ control SpgwEgress(
 #ifdef WITH_INT
             fabric_md.int_mirror_md.strip_gtpu = 1;
 #endif // WITH_INT
-    }
-
-    action do_skip_pdr_counter() {
-        skip_pdr_counter = true;
     }
 
     @hidden
