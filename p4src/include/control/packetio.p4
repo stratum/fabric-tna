@@ -74,6 +74,7 @@ control PacketIoEgress(inout parsed_headers_t hdr,
             set_cpu_port;
             @defaultonly nop;
         }
+        default_action = nop;
     }
 
     apply {
