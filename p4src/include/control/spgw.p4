@@ -240,6 +240,7 @@ control SpgwIngress(
         // Interfaces
         if (interface_lookup.apply().hit) {
             if (fabric_md.spgw_src_iface == SpgwInterface.FROM_DBUF) {
+                fabric_md.bridged.skip_egress_pdr_ctr = true;
                 decap_gtpu_from_dbuf.apply(hdr, fabric_md);
             }
             // PDRs
@@ -248,7 +249,9 @@ control SpgwIngress(
             } else {
                 downlink_pdr_lookup.apply();
             }
-            pdr_counter.count(fabric_md.bridged.pdr_ctr_id);
+            if (fabric_md.spgw_src_iface != SpgwInterface.FROM_DBUF) {
+                pdr_counter.count(fabric_md.bridged.pdr_ctr_id);
+            }
 
             // GTPU Decapsulate
             if (fabric_md.needs_gtpu_decap) {

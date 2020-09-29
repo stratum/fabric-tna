@@ -188,12 +188,8 @@ control Next (inout parsed_headers_t hdr,
 
     table hashed {
         key = {
-            fabric_md.next_id          : exact @name("next_id");
-            fabric_md.ipv4_dst         : selector;
-            fabric_md.ipv4_src         : selector;
-            fabric_md.bridged.ip_proto : selector;
-            fabric_md.bridged.l4_sport : selector;
-            fabric_md.bridged.l4_dport : selector;
+            fabric_md.next_id           : exact @name("next_id");
+            fabric_md.bridged.flow_hash : selector;
         }
         actions = {
             output_hashed;

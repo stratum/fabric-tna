@@ -74,6 +74,8 @@ public final class P4InfoConstants {
     // Table IDs
     public static final PiTableId FABRIC_EGRESS_EGRESS_NEXT_EGRESS_VLAN =
             PiTableId.of("FabricEgress.egress_next.egress_vlan");
+    public static final PiTableId FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_QUANTIZE_HOP_LATENCY =
+            PiTableId.of("FabricEgress.int_egress.flow_report_filter.quantize_hop_latency");
     public static final PiTableId FABRIC_EGRESS_INT_EGRESS_REPORT =
             PiTableId.of("FabricEgress.int_egress.report");
     public static final PiTableId FABRIC_EGRESS_INT_EGRESS_WATCHLIST =
@@ -137,6 +139,8 @@ public final class P4InfoConstants {
             PiActionId.of("FabricEgress.egress_next.pop_vlan");
     public static final PiActionId FABRIC_EGRESS_INT_EGRESS_DO_REPORT_ENCAP =
             PiActionId.of("FabricEgress.int_egress.do_report_encap");
+    public static final PiActionId FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_QUANTIZE =
+            PiActionId.of("FabricEgress.int_egress.flow_report_filter.quantize");
     public static final PiActionId FABRIC_EGRESS_INT_EGRESS_INIT_METADATA =
             PiActionId.of("FabricEgress.int_egress.init_metadata");
     public static final PiActionId FABRIC_EGRESS_PKT_IO_EGRESS_SET_CPU_PORT =
@@ -214,6 +218,7 @@ public final class P4InfoConstants {
             PiActionParamId.of("notify_cp");
     public static final PiActionParamId PORT_NUM =
             PiActionParamId.of("port_num");
+    public static final PiActionParamId QMASK = PiActionParamId.of("qmask");
     public static final PiActionParamId SKIP_SPGW =
             PiActionParamId.of("skip_spgw");
     public static final PiActionParamId SMAC = PiActionParamId.of("smac");
