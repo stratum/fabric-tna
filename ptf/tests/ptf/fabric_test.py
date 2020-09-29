@@ -1337,13 +1337,13 @@ class SpgwSimpleTest(IPv4UnicastTest):
     def _add_spgw_iface(self, iface_addr, prefix_len, iface_enum, dir_enum, gtpu_valid):
         req = self.get_new_write_request()
 
-        ip_prefix_ = ipv4_to_binary(ip_prefix)
+        _iface_addr = ipv4_to_binary(iface_addr)
 
         self.push_update_add_entry_to_action(
             req,
             "FabricIngress.spgw_ingress.interface_lookup",
             [
-                self.Lpm("ipv4_dst_addr", iface_addr, prefix_len),
+                self.Lpm("ipv4_dst_addr", _iface_addr, prefix_len),
                 self.Exact("gtpu_is_valid", stringify(int(gtpu_valid), 1))
             ],
             "FabricIngress.spgw_ingress.set_source_iface",
@@ -1355,14 +1355,6 @@ class SpgwSimpleTest(IPv4UnicastTest):
         )
         self.write_request(req)
 
-
-    def add_dbuf_iface(self, iface_addr=DBUF_RELEASE_IPV4, prefix_len=32):
-        self._add_spgw_iface(
-                iface_addr = iface_addr,
-                prefix_len = prefix_len,
-                iface_enum = SPGW_IFACE_FROM_DBUF,
-                dir_enum = SPGW_DIRECTION_DOWNLINK,
-                gtpu_valid = True)
 
     def add_ue_pool(self, ip_prefix, prefix_len):
         self._add_spgw_iface(
@@ -1380,15 +1372,39 @@ class SpgwSimpleTest(IPv4UnicastTest):
                 dir_enum = SPGW_DIRECTION_DOWNLINK,
                 gtpu_valid = True)
 
-    def add_far_to_dbuf(self,
+    def add_dbuf_device(self,
                         dbuf_addr=DBUF_IPV4, release_addr=DBUF_RELEASE_IPV4,
-                        dbuf_far_id=DBUF_FAR_ID, dbuf_teid=DBUF_TEID):
+                        dbuf_far_id=DBUF_FAR_ID, dbuf_teid=DBUF_TEID,
+                        release_addr_prefix_len=32):
+        # Switch interface for traffic to/from dbuf device
+        self._add_spgw_iface(
+                iface_addr = release_addr,
+                prefix_len = release_addr_prefix_len,
+                iface_enum = SPGW_IFACE_FROM_DBUF,
+                dir_enum = SPGW_DIRECTION_DOWNLINK,
+                gtpu_valid = True)
+
+        # FAR that tunnels to the dbuf device
         self.add_tunnel_far(
                 far_id = dbuf_far_id,
                 teid = dbuf_teid,
                 tunnel_src_addr = release_addr,
                 tunnel_dst_addr = dbuf_addr)
 
+        # PDR counter blacklist entry to not count packets in egress destined for dbuf
+        req = self.get_new_write_request()
+        self.push_update_add_entry_to_action(
+            req,
+            "FabricEgress.spgw_egress.pdr_counter_blacklist",
+            [
+                self.Exact("tunnel_src", ipv4_to_binary(release_addr)),
+                self.Exact("tunnel_dst", ipv4_to_binary(dbuf_addr)),
+                self.Exact("teid", stringify(dbuf_teid, 4)),
+            ],
+            "FabricEgress.spgw_egress.do_skip_pdr_counter",
+            [],
+        )
+        self.write_request(req)
 
     def add_uplink_pdr(self, ctr_id, far_id,
                         teid, tunnel_dst_addr):
@@ -1591,7 +1607,6 @@ class SpgwSimpleTest(IPv4UnicastTest):
         ctr_id = 2
         dst_mac = HOST2_MAC
         ue_ipv4 = pkt[IP].dst
-        dbuf_iface_addr = DBUF_RELEASE_IPV4
 
         exp_pkt = pkt.copy()
 
@@ -1614,34 +1629,32 @@ class SpgwSimpleTest(IPv4UnicastTest):
             ctr_id=ctr_id,
         )
 
-        self.add_dbuf_iface(iface_addr=dbuf_iface_addr)
+        self.add_dbuf_device()
 
         pkt_from_dbuf = pkt.copy()
         pkt_from_dbuf[Ether].src = DBUF_MAC
-        pkt_from_dbuf = pkt_add_gtpu(pkt_from_dbuf, out_ipv4_src=DBUF_IPV4,
-                                     out_ipv4_dst=dbuf_iface_addr, teid=DBUF_TEID)
+        pkt_from_dbuf = pkt_add_gtp(pkt_from_dbuf, out_ipv4_src=DBUF_IPV4,
+                                     out_ipv4_dst=DBUF_RELEASE_IPV4, teid=DBUF_TEID)
 
 
         ingress_pdr_pkt_ctr1 = self.read_pkt_count("FabricIngress.spgw_ingress.pdr_counter", ctr_id)
+        egress_pdr_pkt_ctr1 = self.read_pkt_count("FabricEgress.spgw_egress.pdr_counter", ctr_id)
 
-        self.runIPv4UnicastTest(pkt=pkt, dst_ipv4=exp_pkt[IP].dst,
+        self.runIPv4UnicastTest(pkt=pkt_from_dbuf, dst_ipv4=exp_pkt[IP].dst,
                                 next_hop_mac=dst_mac,
                                 prefix_len=32, exp_pkt=exp_pkt,
                                 tagged1=tagged1, tagged2=tagged2, mpls=mpls)
 
-        # Verify the PDR packet counter increased
+        # Verify the Ingress PDR packet counter did not increase, but the egress did
         ingress_pdr_pkt_ctr2 = self.read_pkt_count("FabricIngress.spgw_ingress.pdr_counter", ctr_id)
-        ctr_increase = ingress_pdr_pkt_ctr2 - ingress_pdr_pkt_ctr1
-        if ctr_increase != 1:
-            self.fail("PDR packet counter incremented by %d instead of 1!" % ctr_increase)
+        egress_pdr_pkt_ctr2 = self.read_pkt_count("FabricEgress.spgw_egress.pdr_counter", ctr_id)
+        ingress_ctr_increase = ingress_pdr_pkt_ctr2 - ingress_pdr_pkt_ctr1
+        egress_ctr_increase = egress_pdr_pkt_ctr2 - egress_pdr_pkt_ctr1
+        if ingress_ctr_increase != 0:
+            self.fail("Ingress PDR packet counter incremented by %d instead of 0!" % ingress_ctr_increase)
+        if egress_ctr_increase != 1:
+            self.fail("Egress PDR packet counter incremented by %d instead of 1!" % egress_ctr_increase)
 
-
-
-    def add_far_to_dbuf(self,
-                        dbuf_addr=DBUF_IPV4, release_addr=DBUF_RELEASE_IPV4,
-                        dbuf_far_id=DBUF_FAR_ID, dbuf_teid=DBUF_TEID):
-
-    def add_dbuf_iface(self, iface_addr=DBUF_RELEASE_IPV4, prefix_len=32):
 
 
 

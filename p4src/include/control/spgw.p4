@@ -198,6 +198,7 @@ control SpgwIngress(
         fabric_md.skip_next = drop;
         ig_tm_md.copy_to_cpu = ((bit<1>)notify_cp) | ig_tm_md.copy_to_cpu;
     }
+
     action load_tunnel_far_attributes(bool      drop,
                                       bool      notify_cp,
                                       bit<16>   tunnel_src_port,
@@ -228,7 +229,7 @@ control SpgwIngress(
             load_tunnel_far_attributes;
         }
         // default is drop and don't notify CP
-        const default_action = load_normal_far_attributes(true, true);
+        const default_action = load_normal_far_attributes(true, false);
         size = NUM_FARS;
     }
 
@@ -240,7 +241,6 @@ control SpgwIngress(
         // Interfaces
         if (interface_lookup.apply().hit) {
             if (fabric_md.spgw_src_iface == SpgwInterface.FROM_DBUF) {
-                fabric_md.bridged.skip_egress_pdr_ctr = true;
                 decap_gtpu_from_dbuf.apply(hdr, fabric_md);
             }
             // PDRs
@@ -284,6 +284,7 @@ control SpgwEgress(
 
     bit<16> outer_ipv4_len_additive;
     bit<16> outer_udp_len_additive;
+    bool skip_pdr_counter = false;
 
     /*
     This roundabout action is used to circumvent a bug of unknown origin that was experienced
@@ -336,6 +337,27 @@ control SpgwEgress(
 #endif // WITH_INT
     }
 
+    action do_skip_pdr_counter() {
+        skip_pdr_counter = true;
+    }
+
+    // Table can be used to skip counting packets that are tunneled towards
+    // offload devices. Not ideal, but lets us avoid adding an extra bool to the
+    // "load_tunnel_far_attributes" parameters
+    table pdr_counter_blacklist {
+        key = {
+            fabric_md.bridged.gtpu_tunnel_sip : exact   @name("tunnel_src");
+            fabric_md.bridged.gtpu_tunnel_dip : exact   @name("tunnel_dst");
+            fabric_md.bridged.gtpu_teid : exact         @name("teid");
+        }
+        actions = {
+            do_skip_pdr_counter;
+            @defaultonly NoAction;
+        }
+        const default_action = NoAction();
+        size = 64;
+    }
+
     @hidden
     table gtpu_encap_if_needed {
         key = {
@@ -345,16 +367,19 @@ control SpgwEgress(
             _gtpu_encap;
         }
         const entries = {
-            (true) : _gtpu_encap();
+            true : _gtpu_encap();
         }
         size = 1;
     }
-
+    
     apply {
         if (!fabric_md.bridged.skip_spgw) {
-            pdr_counter.count(fabric_md.bridged.pdr_ctr_id);
             _preload_length_additives();
             gtpu_encap_if_needed.apply();
+            pdr_counter_blacklist.apply();
+            if (!skip_pdr_counter) {
+                pdr_counter.count(fabric_md.bridged.pdr_ctr_id);
+            }
         }
     }
 }
