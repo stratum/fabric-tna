@@ -53,6 +53,7 @@ import static org.easymock.EasyMock.expectLastCall;
 import static org.easymock.EasyMock.replay;
 import static org.easymock.EasyMock.reset;
 import static org.easymock.EasyMock.verify;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -73,7 +74,6 @@ public class FabricIntProgrammableTest {
     private static final int DEFAULT_PRIORITY = 10000;
     private static final IpAddress COLLECTOR_IP = IpAddress.valueOf("10.128.0.1");
     private static final TpPort COLLECTOR_PORT = TpPort.tpPort(32766);
-    private static final int DEFAULT_QMASK = 0xffff0000;
 
     private FabricIntProgrammable intProgrammable;
     private FabricCapabilities capabilities;
@@ -256,13 +256,14 @@ public class FabricIntProgrammableTest {
                 .withSinkIp(IpAddress.valueOf("10.192.19.180"))
                 .withSinkMac(MacAddress.NONE)
                 .withCollectorNextHopMac(MacAddress.BROADCAST)
+                .withMinFlowHopLatencyChangeNs(300)
                 .build();
         final FlowRule expectedFlow = buildReportFlow();
-        final FlowRule quantizationRule = buildQuantizationRule();
+        final FlowRule quantizeRule = buildQuantizeRule(0xffffff00);
         reset(flowRuleService);
         flowRuleService.applyFlowRules(eq(expectedFlow));
         expectLastCall().andVoid().once();
-        flowRuleService.applyFlowRules(eq(quantizationRule));
+        flowRuleService.applyFlowRules(eq(quantizeRule));
         expectLastCall().andVoid().once();
         replay(flowRuleService);
         assertTrue(intProgrammable.setupIntConfig(intConfig));
@@ -274,6 +275,30 @@ public class FabricIntProgrammableTest {
         assertTrue(intProgrammable.supportsFunctionality(IntProgrammable.IntFunctionality.SOURCE));
         assertTrue(intProgrammable.supportsFunctionality(IntProgrammable.IntFunctionality.TRANSIT));
         assertTrue(intProgrammable.supportsFunctionality(IntProgrammable.IntFunctionality.SINK));
+    }
+
+    @Test
+    public void testUtilityMethods() {
+        assertEquals(0xffffffffL, intProgrammable.getSuitableQmaskForLatencyChange(0));
+        assertEquals(0xffffffffL, intProgrammable.getSuitableQmaskForLatencyChange(1));
+        assertEquals(0xfffffffeL, intProgrammable.getSuitableQmaskForLatencyChange(2));
+        assertEquals(0xffffff00L, intProgrammable.getSuitableQmaskForLatencyChange(256));
+        assertEquals(0xffffff00L, intProgrammable.getSuitableQmaskForLatencyChange(300));
+        assertEquals(0xffff0000L, intProgrammable.getSuitableQmaskForLatencyChange(65536));
+        assertEquals(0xffff0000L, intProgrammable.getSuitableQmaskForLatencyChange(100000));
+        assertEquals(0xf0000000L, intProgrammable.getSuitableQmaskForLatencyChange(1 << 28));
+        assertEquals(0xf0000000L, intProgrammable.getSuitableQmaskForLatencyChange((1 << 28) + 10));
+        assertEquals(0xc0000000L, intProgrammable.getSuitableQmaskForLatencyChange(1 << 30));
+        assertEquals(0xc0000000L, intProgrammable.getSuitableQmaskForLatencyChange(0x40000000));
+        assertEquals(0xc0000000L, intProgrammable.getSuitableQmaskForLatencyChange(0x7fffffff));
+
+        // Illegal argument.
+        try {
+            intProgrammable.getSuitableQmaskForLatencyChange(-1);
+        } catch (IllegalArgumentException e) {
+            assertEquals(e.getMessage(),
+                "Flow latency change value must equal or greater than zero.");
+        }
     }
 
     private FlowRule buildReportFlow() {
@@ -316,13 +341,13 @@ public class FabricIntProgrammableTest {
                 .build();
     }
 
-    private FlowRule buildQuantizationRule() {
+    private FlowRule buildQuantizeRule(long qmask) {
         // Quantify hop latency rule
-        final PiActionParam quantizeVal = new PiActionParam(P4InfoConstants.QMASK, DEFAULT_QMASK);
+        final PiActionParam quantizeMaskParam = new PiActionParam(P4InfoConstants.QMASK, qmask);
         final PiAction quantizeAction =
                 PiAction.builder()
                         .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_QUANTIZE)
-                        .withParameter(quantizeVal)
+                        .withParameter(quantizeMaskParam)
                         .build();
         final TrafficTreatment quantizeTreatment = DefaultTrafficTreatment.builder()
                 .piTableAction(quantizeAction)
