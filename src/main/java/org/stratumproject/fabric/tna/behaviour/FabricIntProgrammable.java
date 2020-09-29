@@ -364,11 +364,11 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
     private FlowRule buildQuantizeRule(int minFlowHopLatencyChangeNs) {
         final long qmask = getSuitableQmaskForLatencyChange(minFlowHopLatencyChangeNs);
         // Quantify hop latency rule
-        final PiActionParam quantizeVal = new PiActionParam(P4InfoConstants.QMASK, qmask);
+        final PiActionParam quantizeMaskParam = new PiActionParam(P4InfoConstants.QMASK, qmask);
         final PiAction quantizeAction =
                 PiAction.builder()
                         .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_QUANTIZE)
-                        .withParameter(quantizeVal)
+                        .withParameter(quantizeMaskParam)
                         .build();
         final TrafficTreatment quantizeTreatment = DefaultTrafficTreatment.builder()
                 .piTableAction(quantizeAction)
@@ -384,20 +384,21 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
 
     /**
      * Gets a suitable quantization mask for a minimal latency change.
-     * For example, if we want to ignore any latency that smaller than 256ns,
-     * the pipeline will use mask 0xffffff00 which makes the last 8-bit of
-     * hop latency change to zero.
+     * For example, if we want to ignore any latency change that smaller
+     * than 256ns, the pipeline will use mask 0xffffff00 which makes
+     * any value from 1 to 255 become zero.
      * Note that if the value of latency change is not power of 2 (2^n),
-     * we will find the closest value which can mask out the minimal latency change
+     * this method will find the closest value which is smaller than the value.
      * For example, if we expect to ignore latency change which is smaller than 300ns,
-     * the mask will be 0xffffff00 which is same as 256.
+     * the method will use the same mask for 256ns, which is also 0xffffff00.
      *
      * @param minFlowHopLatencyChangeNs the minimal latency change we want to ignore
      * @return the suitable quantization mask
      */
     public long getSuitableQmaskForLatencyChange(int minFlowHopLatencyChangeNs) {
         if (minFlowHopLatencyChangeNs < 0) {
-            throw new IllegalArgumentException("Flow latency change value must equal or greater than zero.");
+            throw new IllegalArgumentException(
+                "Flow latency change value must equal or greater than zero.");
         }
         long qmask = 0xffffffff;
         while (minFlowHopLatencyChangeNs > 1) {

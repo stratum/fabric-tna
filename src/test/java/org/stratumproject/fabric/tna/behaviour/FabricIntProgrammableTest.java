@@ -259,7 +259,7 @@ public class FabricIntProgrammableTest {
                 .withMinFlowHopLatencyChangeNs(300)
                 .build();
         final FlowRule expectedFlow = buildReportFlow();
-        final FlowRule quantizeRule = buildquantizeRule(0xffffff00);
+        final FlowRule quantizeRule = buildQuantizeRule(0xffffff00);
         reset(flowRuleService);
         flowRuleService.applyFlowRules(eq(expectedFlow));
         expectLastCall().andVoid().once();
@@ -296,7 +296,8 @@ public class FabricIntProgrammableTest {
         try {
             intProgrammable.getSuitableQmaskForLatencyChange(-1);
         } catch (IllegalArgumentException e) {
-            assertEquals(e.getMessage(), "Flow latency change value must equal or greater than zero.");
+            assertEquals(e.getMessage(),
+                "Flow latency change value must equal or greater than zero.");
         }
     }
 
@@ -340,13 +341,13 @@ public class FabricIntProgrammableTest {
                 .build();
     }
 
-    private FlowRule buildquantizeRule(long qmask) {
+    private FlowRule buildQuantizeRule(long qmask) {
         // Quantify hop latency rule
-        final PiActionParam quantizeVal = new PiActionParam(P4InfoConstants.QMASK, qmask);
+        final PiActionParam quantizeMaskParam = new PiActionParam(P4InfoConstants.QMASK, qmask);
         final PiAction quantizeAction =
                 PiAction.builder()
                         .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_QUANTIZE)
-                        .withParameter(quantizeVal)
+                        .withParameter(quantizeMaskParam)
                         .build();
         final TrafficTreatment quantizeTreatment = DefaultTrafficTreatment.builder()
                 .piTableAction(quantizeAction)
