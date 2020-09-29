@@ -65,13 +65,13 @@ control PacketIoEgress(inout parsed_headers_t hdr,
                        inout fabric_egress_metadata_t fabric_md,
                        in egress_intrinsic_metadata_t eg_intr_md) {
 
-    action set_cpu_port(PortId_t cpu_port) {
+    action set_switch_info(PortId_t cpu_port) {
         fabric_md.cpu_port = cpu_port;
     }
 
     table switch_info {
         actions = {
-            set_cpu_port;
+            set_switch_info;
             @defaultonly nop;
         }
         default_action = nop;
