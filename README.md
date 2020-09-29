@@ -20,7 +20,7 @@ To use ONOS to control a Tofino-enabled switch, you will need to run the
 ## Requirements
 
 * Barefoot SDE >= 9.2.0 (with the P4_16 compiler for Tofino)
-* ONOS >= 2.2.3
+* ONOS >= 2.2.6
 * Docker (to run the build scripts without worrying about dependencies)
 * cURL (to interact with the ONOS REST APIs)
 
@@ -104,7 +104,7 @@ make p4i-stop
 
 ### 1 - Get and run ONOS
 
-The minimum required ONOS version that works with this pipeconf is 2.2.3.
+The minimum required ONOS version that works with this pipeconf is 2.2.6.
 
 You can either build from sources (using the `onos-2.2` or `master` branch), or
 run one the released versions:
