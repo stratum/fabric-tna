@@ -220,6 +220,17 @@ control SpgwIngress(
         fabric_md.ipv4_dst = tunnel_dst_addr;
     }
 
+    action load_dbuf_far_attributes(bool      drop,
+                                      bool      notify_cp,
+                                      bit<16>   tunnel_src_port,
+                                      bit<32>   tunnel_src_addr,
+                                      bit<32>   tunnel_dst_addr,
+                                      teid_t    teid) {
+        load_tunnel_far_attributes(drop, notify_cp, tunnel_src_port, 
+                                   tunnel_src_addr, tunnel_dst_addr, teid);
+        fabric_md.bridged.skip_egress_pdr_ctr = true;
+    }
+
     table far_lookup {
         key = {
             fabric_md.far_id : exact @name("far_id");
@@ -227,6 +238,7 @@ control SpgwIngress(
         actions = {
             load_normal_far_attributes;
             load_tunnel_far_attributes;
+            load_dbuf_far_attributes;
         }
         // default is drop and don't notify CP
         const default_action = load_normal_far_attributes(true, false);
@@ -341,23 +353,6 @@ control SpgwEgress(
         skip_pdr_counter = true;
     }
 
-    // Table can be used to skip counting packets that are tunneled towards
-    // offload devices. Not ideal, but lets us avoid adding an extra bool to the
-    // "load_tunnel_far_attributes" parameters
-    table pdr_counter_blacklist {
-        key = {
-            fabric_md.bridged.gtpu_tunnel_sip : exact   @name("tunnel_src");
-            fabric_md.bridged.gtpu_tunnel_dip : exact   @name("tunnel_dst");
-            fabric_md.bridged.gtpu_teid : exact         @name("teid");
-        }
-        actions = {
-            do_skip_pdr_counter;
-            @defaultonly NoAction;
-        }
-        const default_action = NoAction();
-        size = 64;
-    }
-
     @hidden
     table gtpu_encap_if_needed {
         key = {
@@ -376,8 +371,7 @@ control SpgwEgress(
         if (!fabric_md.bridged.skip_spgw) {
             _preload_length_additives();
             gtpu_encap_if_needed.apply();
-            pdr_counter_blacklist.apply();
-            if (!skip_pdr_counter) {
+            if (!fabric_md.bridged.skip_egress_pdr_ctr) {
                 pdr_counter.count(fabric_md.bridged.pdr_ctr_id);
             }
         }

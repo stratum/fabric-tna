@@ -1385,26 +1385,18 @@ class SpgwSimpleTest(IPv4UnicastTest):
                 gtpu_valid = True)
 
         # FAR that tunnels to the dbuf device
-        self.add_tunnel_far(
-                far_id = dbuf_far_id,
-                teid = dbuf_teid,
-                tunnel_src_addr = release_addr,
-                tunnel_dst_addr = dbuf_addr)
-
-        # PDR counter blacklist entry to not count packets in egress destined for dbuf
-        req = self.get_new_write_request()
-        self.push_update_add_entry_to_action(
-            req,
-            "FabricEgress.spgw_egress.pdr_counter_blacklist",
+        return self._add_far(
+            dbuf_far_id,
+            "FabricIngress.spgw_ingress.load_dbuf_far_attributes",
             [
-                self.Exact("tunnel_src", ipv4_to_binary(release_addr)),
-                self.Exact("tunnel_dst", ipv4_to_binary(dbuf_addr)),
-                self.Exact("teid", stringify(dbuf_teid, 4)),
-            ],
-            "FabricEgress.spgw_egress.do_skip_pdr_counter",
-            [],
+                ("drop", stringify(0, 1)),
+                ("notify_cp", stringify(0, 1)),
+                ("teid", stringify(dbuf_teid, 4)),
+                ("tunnel_src_port", stringify(UDP_GTP_PORT, 2)),
+                ("tunnel_src_addr", ipv4_to_binary(release_addr)),
+                ("tunnel_dst_addr", ipv4_to_binary(dbuf_addr)),
+            ]
         )
-        self.write_request(req)
 
     def add_uplink_pdr(self, ctr_id, far_id,
                         teid, tunnel_dst_addr):
