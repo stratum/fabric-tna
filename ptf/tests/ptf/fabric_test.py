@@ -16,9 +16,10 @@ from scapy.layers.l2 import Ether, Dot1Q
 from scapy.layers.ppp import PPPoE, PPP
 from scapy.fields import BitField, ByteField, ShortField, IntField
 from scapy.packet import bind_layers, Packet
+from testvector import tvutils
 
 import xnt
-from base_test import P4RuntimeTest, stringify, mac_to_binary, ipv4_to_binary
+from base_test import P4RuntimeTest, stringify, mac_to_binary, ipv4_to_binary, tvcreate
 
 DEFAULT_PRIORITY = 10
 
@@ -290,6 +291,11 @@ class FabricTest(P4RuntimeTest):
         self.recirculate_port_1 = 196
         self.recirculate_port_2 = 324
         self.recirculate_port_3 = 452
+        self.setup_switch_info()
+
+    def tearDown(self):
+        self.reset_switch_info()
+        P4RuntimeTest.tearDown(self)
 
     def build_packet_out(self, pkt, port, cpu_loopback_mode=CPU_LOOPBACK_MODE_DISABLED):
         packet_out = p4runtime_pb2.PacketOut()
@@ -353,7 +359,8 @@ class FabricTest(P4RuntimeTest):
                                        vlan_valid=False, internal_vlan_id=vlan_id)
             self.set_egress_vlan_pop(egress_port=port_id, vlan_id=vlan_id)
 
-    def setup_cpu_port(self):
+    @tvcreate("setup/setup_switch_info")
+    def setup_switch_info(self):
         req = self.get_new_write_request()
         self.push_update_add_entry_to_action(req,
             "FabricEgress.pkt_io_egress.switch_info", None,
@@ -361,7 +368,8 @@ class FabricTest(P4RuntimeTest):
             [("cpu_port", stringify(self.cpu_port, 2))])
         return req, self.write_request(req, store=False)
 
-    def reset_cpu_port(self):
+    @tvcreate("teardown/reset_switch_info")
+    def reset_switch_info(self):
         req = self.get_new_write_request()
         self.push_update_add_entry_to_action(req,
             "FabricEgress.pkt_io_egress.switch_info", None,
@@ -1305,7 +1313,6 @@ class PacketOutTest(FabricTest):
 
 class PacketInTest(FabricTest):
     def runPacketInTest(self, pkt, eth_type, tagged=False, vlan_id=10):
-        self.setup_cpu_port()
         self.add_forwarding_acl_punt_to_cpu(eth_type=eth_type)
         for port in [self.port1, self.port2]:
             if tagged:
