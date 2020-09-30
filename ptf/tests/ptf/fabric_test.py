@@ -358,7 +358,7 @@ class FabricTest(P4RuntimeTest):
         req = self.get_new_write_request()
         self.push_update_add_entry_to_action(req,
             "FabricEgress.pkt_io_egress.switch_info", None,
-            "FabricEgress.pkt_io_egress.set_cpu_port",
+            "FabricEgress.pkt_io_egress.set_switch_info",
             [("cpu_port", stringify(self.cpu_port, 2))])
         return req, self.write_request(req, store=False)
 
