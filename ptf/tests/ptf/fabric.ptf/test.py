@@ -691,7 +691,9 @@ class FabricSpgwUplinkTest(SpgwSimpleTest):
 
 @group("spgw")
 class FabricSpgwDownlinkToDbufTest(SpgwSimpleTest):
-
+    """ Tests downlink packets arriving from the PDN being routed to
+        the dbuf device for buffering.
+    """
     @tvskip
     @autocleanup
     def doRunTest(self, pkt, tagged1, tagged2, mpls, tc_name):
@@ -713,7 +715,9 @@ class FabricSpgwDownlinkToDbufTest(SpgwSimpleTest):
 
 @group("spgw")
 class FabricSpgwDownlinkFromDbufTest(SpgwSimpleTest):
-
+    """ Tests downlink packets being drained from the dbuf buffering device back
+        into the switch to be tunneled to the enodeb.
+    """
     @tvskip
     @autocleanup
     def doRunTest(self, pkt, tagged1, tagged2, mpls, tc_name):

@@ -1341,7 +1341,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         counter = self.read_indirect_counter(c_name, idx, typ="BYTES")
         return counter.data.byte_count
 
-    def add_spgw_iface(self, iface_addr, prefix_len, iface_enum, dir_enum, gtpu_valid):
+    def _add_spgw_iface(self, iface_addr, prefix_len, iface_enum, dir_enum, gtpu_valid):
         req = self.get_new_write_request()
 
         iface_addr_ = ipv4_to_binary(iface_addr)
@@ -1364,7 +1364,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
 
 
     def add_ue_pool(self, pool_addr, prefix_len=32):
-        self.add_spgw_iface(
+        self._add_spgw_iface(
                 iface_addr = pool_addr,
                 prefix_len = prefix_len,
                 iface_enum = SPGW_IFACE_CORE,
@@ -1372,7 +1372,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
                 gtpu_valid = False)
 
     def add_s1u_iface(self, s1u_addr, prefix_len=32):
-        self.add_spgw_iface(
+        self._add_spgw_iface(
                 iface_addr = s1u_addr,
                 prefix_len = prefix_len,
                 iface_enum = SPGW_IFACE_ACCESS,
@@ -1383,7 +1383,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
                         dbuf_addr=DBUF_IPV4, drain_dst_addr=DBUF_DRAIN_DST_IPV4,
                         dbuf_far_id=DBUF_FAR_ID, dbuf_teid=DBUF_TEID):
         # Switch interface for traffic to/from dbuf device
-        self.add_spgw_iface(
+        self._add_spgw_iface(
                 iface_addr = drain_dst_addr,
                 prefix_len = 32,
                 iface_enum = SPGW_IFACE_FROM_DBUF,
@@ -1599,7 +1599,8 @@ class SpgwSimpleTest(IPv4UnicastTest):
 
         # Add rules for sending/receiving packets to/from dbuf
         # (receiving isn't done by this test though)
-        self.add_dbuf_device()
+        self.add_dbuf_device(dbuf_addr=DBUF_IPV4, drain_dst_addr=DBUF_DRAIN_DST_IPV4,
+                             dbuf_far_id=DBUF_FAR_ID, dbuf_teid=DBUF_TEID)
 
         # Read SPGW counters before sending the packet
         pdr_pkt_counts = self.read_pdr_counters(DOWNLINK_PDR_CTR_ID)
@@ -1647,7 +1648,8 @@ class SpgwSimpleTest(IPv4UnicastTest):
 
         # Add rules for sending/receiving packets to/from dbuf
         # (sending isn't done by this test though)
-        self.add_dbuf_device()
+        self.add_dbuf_device(dbuf_addr=DBUF_IPV4, drain_dst_addr=DBUF_DRAIN_DST_IPV4,
+                             dbuf_far_id=DBUF_FAR_ID, dbuf_teid=DBUF_TEID)
 
         # Read SPGW counters before sending the packet
         pdr_pkt_counts = self.read_pdr_counters(DOWNLINK_PDR_CTR_ID)
