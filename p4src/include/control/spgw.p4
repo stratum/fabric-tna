@@ -74,7 +74,7 @@ control DecapGtpu(inout parsed_headers_t            hdr,
             (false, true,  false) : decap_inner_udp();
             (false, false, true)  : decap_inner_icmp();
         }
-        size = 4;
+        size = 3;
     }
     apply {
         decap_gtpu.apply();
@@ -361,7 +361,7 @@ control SpgwEgress(
         }
         size = 1;
     }
-    
+
     apply {
         if (!fabric_md.bridged.skip_spgw) {
             _preload_length_additives();
