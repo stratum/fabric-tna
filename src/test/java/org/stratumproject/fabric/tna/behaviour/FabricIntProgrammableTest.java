@@ -358,6 +358,7 @@ public class FabricIntProgrammableTest {
                 .withPriority(DEFAULT_PRIORITY)
                 .withTreatment(quantizeTreatment)
                 .fromApp(APP_ID)
+                .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_QUANTIZE_HOP_LATENCY)
                 .build();
     }
 
