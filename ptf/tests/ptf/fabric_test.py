@@ -83,8 +83,9 @@ HOST1_IPV4 = "10.0.1.1"
 HOST2_IPV4 = "10.0.2.1"
 HOST3_IPV4 = "10.0.3.1"
 HOST4_IPV4 = "10.0.4.1"
-S1U_ENB_IPV4 = "119.0.0.10"
 S1U_SGW_IPV4 = "140.0.0.2"
+S1U_ENB_IPV4 = "119.0.0.10"
+S1U_ENB_MAC = "00:00:00:00:00:eb"
 UE_IPV4 = "16.255.255.252"
 DEFAULT_ROUTE_IPV4 = "0.0.0.0"
 PREFIX_DEFAULT_ROUTE = 0
@@ -93,9 +94,10 @@ PREFIX_HOST = 32
 
 DBUF_MAC = "00:00:00:0d:b0:0f"
 DBUF_IPV4 = "141.0.0.1"
-DBUF_RELEASE_IPV4 = "142.0.0.1"
+DBUF_DRAIN_DST_IPV4 = "142.0.0.1"
 DBUF_FAR_ID = 1023
 DBUF_TEID = 0
+
 
 SPGW_DIRECTION_UPLINK = 1
 SPGW_DIRECTION_DOWNLINK = 2
@@ -111,7 +113,12 @@ DEFAULT_VLAN = 4094
 MPLS_LABEL_1 = 100
 MPLS_LABEL_2 = 200
 
-TEID_1 = 0xeeffc0f0
+UPLINK_TEID   = 0xeeffc0f0
+DOWNLINK_TEID = 0xeeffc0f1
+UPLINK_PDR_CTR_ID = 1
+DOWNLINK_PDR_CTR_ID = 2
+UPLINK_FAR_ID = 23
+DOWNLINK_FAR_ID = 24
 
 # INT instructions
 INT_SWITCH_ID = 1 << 15
@@ -1334,16 +1341,16 @@ class SpgwSimpleTest(IPv4UnicastTest):
         counter = self.read_indirect_counter(c_name, idx, typ="BYTES")
         return counter.data.byte_count
 
-    def _add_spgw_iface(self, iface_addr, prefix_len, iface_enum, dir_enum, gtpu_valid):
+    def add_spgw_iface(self, iface_addr, prefix_len, iface_enum, dir_enum, gtpu_valid):
         req = self.get_new_write_request()
 
-        _iface_addr = ipv4_to_binary(iface_addr)
+        iface_addr_ = ipv4_to_binary(iface_addr)
 
         self.push_update_add_entry_to_action(
             req,
             "FabricIngress.spgw_ingress.interface_lookup",
             [
-                self.Lpm("ipv4_dst_addr", _iface_addr, prefix_len),
+                self.Lpm("ipv4_dst_addr", iface_addr_, prefix_len),
                 self.Exact("gtpu_is_valid", stringify(int(gtpu_valid), 1))
             ],
             "FabricIngress.spgw_ingress.set_source_iface",
@@ -1356,16 +1363,16 @@ class SpgwSimpleTest(IPv4UnicastTest):
         self.write_request(req)
 
 
-    def add_ue_pool(self, ip_prefix, prefix_len):
-        self._add_spgw_iface(
-                iface_addr = ip_prefix,
+    def add_ue_pool(self, pool_addr, prefix_len=32):
+        self.add_spgw_iface(
+                iface_addr = pool_addr,
                 prefix_len = prefix_len,
                 iface_enum = SPGW_IFACE_CORE,
                 dir_enum = SPGW_DIRECTION_DOWNLINK,
                 gtpu_valid = False)
 
     def add_s1u_iface(self, s1u_addr, prefix_len=32):
-        self._add_spgw_iface(
+        self.add_spgw_iface(
                 iface_addr = s1u_addr,
                 prefix_len = prefix_len,
                 iface_enum = SPGW_IFACE_ACCESS,
@@ -1373,13 +1380,12 @@ class SpgwSimpleTest(IPv4UnicastTest):
                 gtpu_valid = True)
 
     def add_dbuf_device(self,
-                        dbuf_addr=DBUF_IPV4, release_addr=DBUF_RELEASE_IPV4,
-                        dbuf_far_id=DBUF_FAR_ID, dbuf_teid=DBUF_TEID,
-                        release_addr_prefix_len=32):
+                        dbuf_addr=DBUF_IPV4, drain_dst_addr=DBUF_DRAIN_DST_IPV4,
+                        dbuf_far_id=DBUF_FAR_ID, dbuf_teid=DBUF_TEID):
         # Switch interface for traffic to/from dbuf device
-        self._add_spgw_iface(
-                iface_addr = release_addr,
-                prefix_len = release_addr_prefix_len,
+        self.add_spgw_iface(
+                iface_addr = drain_dst_addr,
+                prefix_len = 32,
                 iface_enum = SPGW_IFACE_FROM_DBUF,
                 dir_enum = SPGW_DIRECTION_DOWNLINK,
                 gtpu_valid = True)
@@ -1393,7 +1399,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
                 ("notify_cp", stringify(0, 1)),
                 ("teid", stringify(dbuf_teid, 4)),
                 ("tunnel_src_port", stringify(UDP_GTP_PORT, 2)),
-                ("tunnel_src_addr", ipv4_to_binary(release_addr)),
+                ("tunnel_src_addr", ipv4_to_binary(drain_dst_addr)),
                 ("tunnel_dst_addr", ipv4_to_binary(dbuf_addr)),
             ]
         )
@@ -1469,37 +1475,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             ]
         )
 
-    def add_flexible_pdr(self, ctr_id, far_id,
-                         s1u_sgw_addr=None, s1u_sgw_addr_mask=None,
-                         teid=None, teid_mask=None,
-                         src_addr=None, src_addr_mask=None,
-                         dst_addr=None, dst_addr_mask=None,
-                         ip_proto=None, ip_proto_mask=None,
-                         l4_sport=None, l4_sport_mask=None,
-                         l4_dport=None, l4_dport_mask=None,
-                         uplink=False, downlink=False,):
-
-        raise Exception("Flexible PDR insertion not yet implemented")
-        assert(downlink or uplink)
-
-        req = self.get_new_write_request()
-
-        action_name = "FabricIngress.spgw_ingress.set_pdr_attributes"
-        action_args = [("ctr_id", stringify(ctr_id, 4)),
-                        ("far_id", stringify(far_id, 4))]
-
-        ALL_ONES_32 = stringify((1 << 32) - 1, 4)
-        ALL_ONES_16 = stringify((1 << 16) - 1, 2)
-        ALL_ONES_8 = stringify((1 << 8) - 1, 1)
-
-        match_keys = []
-        if src_addr:
-            match_keys.append(self.Ternary("ipv4_src", ipv4_to_binary(src_addr), ))
-
-    def setup_uplink(self, s1u_sgw_addr, teid, ctr_id, far_id=None):
-        if far_id is None:
-            far_id = 23  # 23 is the most random number less than 100
-
+    def setup_uplink(self, s1u_sgw_addr, teid, ctr_id, far_id=UPLINK_FAR_ID):
         self.add_s1u_iface(s1u_sgw_addr)
         self.add_uplink_pdr(
             ctr_id=ctr_id,
@@ -1508,11 +1484,8 @@ class SpgwSimpleTest(IPv4UnicastTest):
             tunnel_dst_addr=s1u_sgw_addr)
         self.add_normal_far(far_id=far_id)
 
-    def setup_downlink(self, s1u_sgw_addr, s1u_enb_addr, teid, ue_addr, ctr_id, far_id=None):
-        if far_id is None:
-            far_id = 24  # the second most random  number
-
-        self.add_ue_pool(ip_prefix=ue_addr, prefix_len=32)
+    def setup_downlink(self, s1u_sgw_addr, s1u_enb_addr, teid, ue_addr, ctr_id, far_id=DOWNLINK_FAR_ID):
+        self.add_ue_pool(ue_addr)
         self.add_downlink_pdr(ctr_id=ctr_id, far_id=far_id, ue_addr=ue_addr)
         self.add_tunnel_far(
             far_id=far_id,
@@ -1520,15 +1493,35 @@ class SpgwSimpleTest(IPv4UnicastTest):
             tunnel_src_addr=s1u_sgw_addr,
             tunnel_dst_addr=s1u_enb_addr)
 
+    def read_pdr_counters(self, ctr_id):
+        ingress_ctr = self.read_pkt_count("FabricIngress.spgw_ingress.pdr_counter", ctr_id)
+        egress_ctr = self.read_pkt_count("FabricEgress.spgw_egress.pdr_counter", ctr_id)
+        return (ingress_ctr, egress_ctr)
+
+    def check_pdr_counters_increased(self, ctr_id, count_tuple,
+                                     exp_ingress_inc=1, exp_egress_inc=1):
+        ingress_ctr = self.read_pkt_count("FabricIngress.spgw_ingress.pdr_counter", ctr_id)
+        egress_ctr = self.read_pkt_count("FabricEgress.spgw_egress.pdr_counter", ctr_id)
+
+        ingress_inc = ingress_ctr - count_tuple[0]
+        egress_inc = egress_ctr - count_tuple[1]
+
+        if ingress_inc != exp_ingress_inc:
+            self.fail("Ingress PDR packet counter incremented by %d instead of $d!" % (ingress_inc, exp_ingress_inc))
+        if egress_inc != exp_egress_inc:
+            self.fail("Egress PDR packet counter incremented by %d instead of %d!" % (egress_inc, exp_egress_inc))
+
     def runUplinkTest(self, ue_out_pkt, tagged1, tagged2, mpls):
-        ctr_id = 1
-        dst_mac = HOST2_MAC
+        upstream_mac = HOST2_MAC
 
         gtp_pkt = pkt_add_gtp(ue_out_pkt, out_ipv4_src=S1U_ENB_IPV4,
-                              out_ipv4_dst=S1U_SGW_IPV4, teid=TEID_1)
+                              out_ipv4_dst=S1U_SGW_IPV4, teid=UPLINK_TEID)
+        gtp_pkt[Ether].src = S1U_ENB_MAC
+        gtp_pkt[Ether].dst = SWITCH_MAC
+
         exp_pkt = ue_out_pkt.copy()
-        exp_pkt[Ether].src = exp_pkt[Ether].dst
-        exp_pkt[Ether].dst = dst_mac
+        exp_pkt[Ether].src = SWITCH_MAC
+        exp_pkt[Ether].dst = upstream_mac
         if not mpls:
             exp_pkt[IP].ttl = exp_pkt[IP].ttl - 1
         else:
@@ -1538,37 +1531,29 @@ class SpgwSimpleTest(IPv4UnicastTest):
 
         self.setup_uplink(
             s1u_sgw_addr=S1U_SGW_IPV4,
-            teid=TEID_1,
-            ctr_id=ctr_id
+            teid=UPLINK_TEID,
+            ctr_id=UPLINK_PDR_CTR_ID
         )
 
-        ingress_pdr_pkt_ctr1 = self.read_pkt_count("FabricIngress.spgw_ingress.pdr_counter", ctr_id)
+        # Read SPGW counters before sending the packet
+        pdr_pkt_counts = self.read_pdr_counters(UPLINK_PDR_CTR_ID)
 
         self.runIPv4UnicastTest(pkt=gtp_pkt, dst_ipv4=ue_out_pkt[IP].dst,
-                                next_hop_mac=dst_mac,
+                                next_hop_mac=upstream_mac,
                                 prefix_len=32, exp_pkt=exp_pkt,
                                 tagged1=tagged1, tagged2=tagged2, mpls=mpls)
 
-        # Verify the PDR packet counter increased
-        ingress_pdr_pkt_ctr2 = self.read_pkt_count("FabricIngress.spgw_ingress.pdr_counter", ctr_id)
-        ctr_increase = ingress_pdr_pkt_ctr2 - ingress_pdr_pkt_ctr1
-        if ctr_increase != 1:
-            self.fail("PDR packet counter incremented by %d instead of 1!" % ctr_increase)
+        # Verify the Ingress and Egress PDR counters increased
+        self.check_pdr_counters_increased(UPLINK_PDR_CTR_ID, pdr_pkt_counts)
 
     def runDownlinkTest(self, pkt, tagged1, tagged2, mpls):
-
-        ctr_id = 2
-        dst_mac = HOST2_MAC
-        ue_ipv4 = pkt[IP].dst
-
         exp_pkt = pkt.copy()
-
-        exp_pkt[Ether].src = exp_pkt[Ether].dst
-        exp_pkt[Ether].dst = dst_mac
+        exp_pkt[Ether].src = SWITCH_MAC
+        exp_pkt[Ether].dst = S1U_ENB_MAC
         if not mpls:
             exp_pkt[IP].ttl = exp_pkt[IP].ttl - 1
         exp_pkt = pkt_add_gtp(exp_pkt, out_ipv4_src=S1U_SGW_IPV4,
-                              out_ipv4_dst=S1U_ENB_IPV4, teid=TEID_1)
+                              out_ipv4_dst=S1U_ENB_IPV4, teid=DOWNLINK_TEID)
         if mpls:
             exp_pkt = pkt_add_mpls(exp_pkt, MPLS_LABEL_2, DEFAULT_MPLS_TTL)
         if tagged2:
@@ -1577,77 +1562,103 @@ class SpgwSimpleTest(IPv4UnicastTest):
         self.setup_downlink(
             s1u_sgw_addr=S1U_SGW_IPV4,
             s1u_enb_addr=S1U_ENB_IPV4,
-            teid=TEID_1,
-            ue_addr=ue_ipv4,
-            ctr_id=ctr_id,
+            teid=DOWNLINK_TEID,
+            ue_addr=UE_IPV4,
+            ctr_id=DOWNLINK_PDR_CTR_ID,
         )
 
-        ingress_pdr_pkt_ctr1 = self.read_pkt_count("FabricIngress.spgw_ingress.pdr_counter", ctr_id)
+        # Read SPGW counters before sending the packet
+        pdr_pkt_counts = self.read_pdr_counters(DOWNLINK_PDR_CTR_ID)
 
         self.runIPv4UnicastTest(pkt=pkt, dst_ipv4=exp_pkt[IP].dst,
-                                next_hop_mac=dst_mac,
+                                next_hop_mac=S1U_ENB_MAC,
                                 prefix_len=32, exp_pkt=exp_pkt,
                                 tagged1=tagged1, tagged2=tagged2, mpls=mpls)
 
-        # Verify the PDR packet counter increased
-        ingress_pdr_pkt_ctr2 = self.read_pkt_count("FabricIngress.spgw_ingress.pdr_counter", ctr_id)
-        ctr_increase = ingress_pdr_pkt_ctr2 - ingress_pdr_pkt_ctr1
-        if ctr_increase != 1:
-            self.fail("PDR packet counter incremented by %d instead of 1!" % ctr_increase)
+        # Verify the Ingress and Egress PDR counters increased
+        self.check_pdr_counters_increased(DOWNLINK_PDR_CTR_ID, pdr_pkt_counts)
 
-    def runDbufReleaseTest(self, pkt, tagged1, tagged2, mpls):
-        ctr_id = 2
-        dst_mac = HOST2_MAC
-        ue_ipv4 = pkt[IP].dst
-
+    def runDownlinkToDbufTest(self, pkt, tagged1, tagged2, mpls):
         exp_pkt = pkt.copy()
-
-        exp_pkt[Ether].src = exp_pkt[Ether].dst
-        exp_pkt[Ether].dst = dst_mac
+        exp_pkt[Ether].src = SWITCH_MAC
+        exp_pkt[Ether].dst = DBUF_MAC
         if not mpls:
             exp_pkt[IP].ttl = exp_pkt[IP].ttl - 1
-        exp_pkt = pkt_add_gtp(exp_pkt, out_ipv4_src=S1U_SGW_IPV4,
-                              out_ipv4_dst=S1U_ENB_IPV4, teid=TEID_1)
+        # add dbuf tunnel
+        exp_pkt = pkt_add_gtp(exp_pkt, out_ipv4_src=DBUF_DRAIN_DST_IPV4,
+                              out_ipv4_dst=DBUF_IPV4, teid=DBUF_TEID,
+                              sport=UDP_GTP_PORT)
         if mpls:
             exp_pkt = pkt_add_mpls(exp_pkt, MPLS_LABEL_2, DEFAULT_MPLS_TTL)
         if tagged2:
             exp_pkt = pkt_add_vlan(exp_pkt, VLAN_ID_2)
 
+        # Add the UE pool interface and the PDR pointing to the DBUF FAR
+        self.add_ue_pool(UE_IPV4)
+        self.add_downlink_pdr(ctr_id=DOWNLINK_PDR_CTR_ID, far_id=DBUF_FAR_ID, ue_addr=UE_IPV4)
+
+        # Add rules for sending/receiving packets to/from dbuf
+        # (receiving isn't done by this test though)
+        self.add_dbuf_device()
+
+        # Read SPGW counters before sending the packet
+        pdr_pkt_counts = self.read_pdr_counters(DOWNLINK_PDR_CTR_ID)
+
+        self.runIPv4UnicastTest(pkt=pkt, dst_ipv4=exp_pkt[IP].dst,
+                                next_hop_mac=DBUF_MAC,
+                                prefix_len=32, exp_pkt=exp_pkt,
+                                tagged1=tagged1, tagged2=tagged2, mpls=mpls)
+
+        # Verify the Ingress PDR packet counter increased, but the egress did not
+        self.check_pdr_counters_increased(DOWNLINK_PDR_CTR_ID, pdr_pkt_counts, exp_egress_inc=0)
+
+    def runDownlinkFromDbufTest(self, pkt, tagged1, tagged2, mpls):
+        """ Tests a packet returning from dbuf to be sent to the enodeb.
+            Similar to a normal downlink test, but the input is gtpu encapped.
+        """
+        # The input packet is from dbuf and is GTPU encapsulated
+        pkt_from_dbuf = pkt.copy()
+        pkt_from_dbuf[Ether].src = DBUF_MAC
+        pkt_from_dbuf[Ether].dst = SWITCH_MAC
+        pkt_from_dbuf = pkt_add_gtp(pkt_from_dbuf, out_ipv4_src=DBUF_IPV4,
+                                    out_ipv4_dst=DBUF_DRAIN_DST_IPV4, teid=DBUF_TEID)
+
+        # A normal downlink packet to the enodeb is the expected output
+        exp_pkt = pkt.copy()
+        exp_pkt[Ether].src = SWITCH_MAC
+        exp_pkt[Ether].dst = S1U_ENB_MAC
+        if not mpls:
+            exp_pkt[IP].ttl = exp_pkt[IP].ttl - 1
+        exp_pkt = pkt_add_gtp(exp_pkt, out_ipv4_src=S1U_SGW_IPV4,
+                              out_ipv4_dst=S1U_ENB_IPV4, teid=DOWNLINK_TEID)
+        if mpls:
+            exp_pkt = pkt_add_mpls(exp_pkt, MPLS_LABEL_2, DEFAULT_MPLS_TTL)
+        if tagged2:
+            exp_pkt = pkt_add_vlan(exp_pkt, VLAN_ID_2)
+
+        # Normal downlink rules
         self.setup_downlink(
             s1u_sgw_addr=S1U_SGW_IPV4,
             s1u_enb_addr=S1U_ENB_IPV4,
-            teid=TEID_1,
-            ue_addr=ue_ipv4,
-            ctr_id=ctr_id,
+            teid=DOWNLINK_TEID,
+            ue_addr=UE_IPV4,
+            ctr_id=DOWNLINK_PDR_CTR_ID,
         )
 
+        # Add rules for sending/receiving packets to/from dbuf
+        # (sending isn't done by this test though)
         self.add_dbuf_device()
 
-        pkt_from_dbuf = pkt.copy()
-        pkt_from_dbuf[Ether].src = DBUF_MAC
-        pkt_from_dbuf = pkt_add_gtp(pkt_from_dbuf, out_ipv4_src=DBUF_IPV4,
-                                     out_ipv4_dst=DBUF_RELEASE_IPV4, teid=DBUF_TEID)
-
-
-        ingress_pdr_pkt_ctr1 = self.read_pkt_count("FabricIngress.spgw_ingress.pdr_counter", ctr_id)
-        egress_pdr_pkt_ctr1 = self.read_pkt_count("FabricEgress.spgw_egress.pdr_counter", ctr_id)
+        # Read SPGW counters before sending the packet
+        pdr_pkt_counts = self.read_pdr_counters(DOWNLINK_PDR_CTR_ID)
 
         self.runIPv4UnicastTest(pkt=pkt_from_dbuf, dst_ipv4=exp_pkt[IP].dst,
-                                next_hop_mac=dst_mac,
+                                next_hop_mac=S1U_ENB_MAC,
                                 prefix_len=32, exp_pkt=exp_pkt,
                                 tagged1=tagged1, tagged2=tagged2, mpls=mpls)
 
         # Verify the Ingress PDR packet counter did not increase, but the egress did
-        ingress_pdr_pkt_ctr2 = self.read_pkt_count("FabricIngress.spgw_ingress.pdr_counter", ctr_id)
-        egress_pdr_pkt_ctr2 = self.read_pkt_count("FabricEgress.spgw_egress.pdr_counter", ctr_id)
-        ingress_ctr_increase = ingress_pdr_pkt_ctr2 - ingress_pdr_pkt_ctr1
-        egress_ctr_increase = egress_pdr_pkt_ctr2 - egress_pdr_pkt_ctr1
-        if ingress_ctr_increase != 0:
-            self.fail("Ingress PDR packet counter incremented by %d instead of 0!" % ingress_ctr_increase)
-        if egress_ctr_increase != 1:
-            self.fail("Egress PDR packet counter incremented by %d instead of 1!" % egress_ctr_increase)
-
-
+        self.check_pdr_counters_increased(DOWNLINK_PDR_CTR_ID, pdr_pkt_counts, exp_ingress_inc=0)
 
 
 class IntTest(IPv4UnicastTest):
@@ -1825,7 +1836,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         # Build packet from eNB
         # Add GTPU header to the original packet
         gtp_pkt = pkt_add_gtp(pkt, out_ipv4_src=S1U_ENB_IPV4,
-                              out_ipv4_dst=S1U_SGW_IPV4, teid=TEID_1)
+                              out_ipv4_dst=S1U_SGW_IPV4, teid=UPLINK_TEID)
         ig_port = self.port1
         eg_port = self.port2
         collector_port = self.port3
@@ -1860,8 +1871,8 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         # Set up entries for uplink
         self.setup_uplink(
             s1u_sgw_addr=S1U_SGW_IPV4,
-            teid=TEID_1,
-            ctr_id=1
+            teid=UPLINK_TEID,
+            ctr_id=UPLINK_PDR_CTR_ID
         )
 
         # Set collector, report table, and mirror sessions
@@ -1916,7 +1927,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             exp_pkt = pkt_decrement_ttl(exp_pkt)
             inner_exp_pkt = pkt_decrement_ttl(inner_exp_pkt)
         exp_pkt = pkt_add_gtp(exp_pkt, out_ipv4_src=S1U_SGW_IPV4,
-                              out_ipv4_dst=S1U_ENB_IPV4, teid=TEID_1)
+                              out_ipv4_dst=S1U_ENB_IPV4, teid=DOWNLINK_TEID)
         exp_pkt = pkt_route(exp_pkt, HOST2_MAC)
         inner_exp_pkt = pkt_route(inner_exp_pkt, HOST2_MAC)
         if tagged2 and Dot1Q not in exp_pkt:
@@ -1935,9 +1946,9 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         self.setup_downlink(
             s1u_sgw_addr=S1U_SGW_IPV4,
             s1u_enb_addr=S1U_ENB_IPV4,
-            teid=TEID_1,
+            teid=DOWNLINK_TEID,
             ue_addr=ipv4_dst,
-            ctr_id=2,
+            ctr_id=DOWNLINK_PDR_CTR_ID,
         )
 
         # Set collector, report table, and mirror sessions

@@ -183,6 +183,8 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.next.set_mcast_group_id");
     public static final PiActionId FABRIC_INGRESS_NEXT_SET_VLAN =
             PiActionId.of("FabricIngress.next.set_vlan");
+    public static final PiActionId FABRIC_INGRESS_SPGW_INGRESS_LOAD_DBUF_FAR_ATTRIBUTES =
+            PiActionId.of("FabricIngress.spgw_ingress.load_dbuf_far_attributes");
     public static final PiActionId FABRIC_INGRESS_SPGW_INGRESS_LOAD_NORMAL_FAR_ATTRIBUTES =
             PiActionId.of("FabricIngress.spgw_ingress.load_normal_far_attributes");
     public static final PiActionId FABRIC_INGRESS_SPGW_INGRESS_LOAD_TUNNEL_FAR_ATTRIBUTES =
