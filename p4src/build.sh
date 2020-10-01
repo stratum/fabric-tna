@@ -56,6 +56,11 @@ function base_build() {
       --p4runtime-force-std-externs \
       ${DIR}/fabric_tna.p4
   )
+  # Adds register information to p4info file
+  # TODO: remove this part when compiler support it.
+  if [[ "$PROFILE" == *int ]]; then
+    $P4INFO_PATCH_SHELL "cat ${DIR}/p4info-register.txt >> ${P4C_OUT}/${pltf}/p4info.txt"
+  fi
 }
 
 # shellcheck disable=SC2086
@@ -63,12 +68,6 @@ function gen_profile() {
   output_dir="${P4C_OUT}/sde_${SDE_VER//./_}"
   pltf="$1_sde_${SDE_VER//./_}"
   cpu_port=$2
-
-  # Adds register information to p4info file
-  # TODO: remove this part when compiler support it.
-  if [[ "$PROFILE" == *int ]]; then
-    $P4INFO_PATCH_SHELL "cat ${DIR}/p4info-register.txt >> ${output_dir}/p4info.txt"
-  fi
 
   # Copy only the relevant files to the pipeconf resources.
   mkdir -p "${DEST_DIR}/stratum_bf/${pltf}/pipe"
