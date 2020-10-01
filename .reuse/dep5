@@ -6,3 +6,8 @@ Source: https://github.com/stratum/fabric-tna
 Files: tofino-netcfg.json ptf/run/tm/tm_conf.json ptf/tests/ptf/port_map*.json src/test/**/*.json
 Copyright: 2020-present Open Networking Foundation
 License: Apache-2.0
+
+# TODO: To be removed after P4 compiler support generating register info.
+Files: p4src/p4info-register.txt
+Copyright: 2020-present Open Networking Foundation
+License: Apache-2.0
