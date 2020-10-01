@@ -379,6 +379,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 .withPriority(DEFAULT_PRIORITY)
                 .withTreatment(quantizeTreatment)
                 .fromApp(appId)
+                .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_QUANTIZE_HOP_LATENCY)
                 .build();
     }
 

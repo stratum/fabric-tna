@@ -14,12 +14,88 @@
 #define NUM_DOWNLINK_PDRS NUM_UES
 #define NUM_FARS 2*NUM_UES
 
+control DecapGtpu(inout parsed_headers_t            hdr,
+                  inout fabric_ingress_metadata_t   fabric_md) {
+    @hidden
+    action decap_inner_common() {
+        // Correct parser-set metadata to use the inner header values
+        fabric_md.bridged.ip_eth_type = ETHERTYPE_IPV4;
+        fabric_md.bridged.ip_proto    = hdr.inner_ipv4.protocol;
+        fabric_md.ipv4_src            = hdr.inner_ipv4.src_addr;
+        fabric_md.ipv4_dst            = hdr.inner_ipv4.dst_addr;
+        fabric_md.bridged.l4_sport    = fabric_md.bridged.inner_l4_sport;
+        fabric_md.bridged.l4_dport    = fabric_md.bridged.inner_l4_dport;
+        // Move GTPU and inner L3 headers out
+        hdr.ipv4 = hdr.inner_ipv4;
+        hdr.inner_ipv4.setInvalid();
+        hdr.gtpu.setInvalid();
+    }
+    @hidden
+    action decap_inner_tcp() {
+        decap_inner_common();
+        hdr.udp.setInvalid();
+        hdr.tcp = hdr.inner_tcp;
+        hdr.inner_tcp.setInvalid();
+    }
+    @hidden
+    action decap_inner_udp() {
+        decap_inner_common();
+        hdr.udp = hdr.inner_udp;
+        hdr.inner_udp.setInvalid();
+    }
+    @hidden
+    action decap_inner_icmp() {
+        decap_inner_common();
+        hdr.udp.setInvalid();
+        hdr.icmp = hdr.inner_icmp;
+        hdr.inner_icmp.setInvalid();
+    }
+    @hidden
+    action decap_inner_unknown() {
+        decap_inner_common();
+        hdr.udp.setInvalid();
+    }
+    @hidden
+    table decap_gtpu {
+        key = {
+            hdr.inner_tcp.isValid()  : exact;
+            hdr.inner_udp.isValid()  : exact;
+            hdr.inner_icmp.isValid() : exact;
+        }
+        actions = {
+            decap_inner_tcp;
+            decap_inner_udp;
+            decap_inner_icmp;
+            decap_inner_unknown;
+        }
+        const default_action = decap_inner_unknown;
+        const entries = {
+            (true,  false, false) : decap_inner_tcp();
+            (false, true,  false) : decap_inner_udp();
+            (false, false, true)  : decap_inner_icmp();
+        }
+        size = 3;
+    }
+    apply {
+        decap_gtpu.apply();
+    }
+}
+
 control SpgwIngress(
         /* Fabric.p4 */
         inout parsed_headers_t                      hdr,
         inout fabric_ingress_metadata_t             fabric_md,
         /* TNA */
         inout ingress_intrinsic_metadata_for_tm_t   ig_tm_md) {
+
+    //=============================//
+    //===== Misc Things ======//
+    //=============================//
+
+    Counter<bit<64>, bit<16>>(MAX_PDR_COUNTERS, CounterType_t.PACKETS_AND_BYTES) pdr_counter;
+
+    DecapGtpu() decap_gtpu_from_dbuf;
+    DecapGtpu() decap_gtpu;
 
 
     //=============================//
@@ -118,9 +194,11 @@ control SpgwIngress(
     action load_normal_far_attributes(bool drop,
                                       bool notify_cp) {
         // general far attributes
-        fabric_md.far_dropped = drop;
-        fabric_md.notify_spgwc   = notify_cp;
+        fabric_md.skip_forwarding = drop;
+        fabric_md.skip_next = drop;
+        ig_tm_md.copy_to_cpu = ((bit<1>)notify_cp) | ig_tm_md.copy_to_cpu;
     }
+
     action load_tunnel_far_attributes(bool      drop,
                                       bool      notify_cp,
                                       bit<16>   tunnel_src_port,
@@ -128,8 +206,9 @@ control SpgwIngress(
                                       bit<32>   tunnel_dst_addr,
                                       teid_t    teid) {
         // general far attributes
-        fabric_md.far_dropped = drop;
-        fabric_md.notify_spgwc = notify_cp;
+        fabric_md.skip_forwarding = drop;
+        fabric_md.skip_next = drop;
+        ig_tm_md.copy_to_cpu = ((bit<1>)notify_cp) | ig_tm_md.copy_to_cpu;
         // GTP tunnel attributes
         fabric_md.bridged.needs_gtpu_encap = true;
         fabric_md.bridged.gtpu_teid = teid;
@@ -141,6 +220,17 @@ control SpgwIngress(
         fabric_md.ipv4_dst = tunnel_dst_addr;
     }
 
+    action load_dbuf_far_attributes(bool      drop,
+                                      bool      notify_cp,
+                                      bit<16>   tunnel_src_port,
+                                      bit<32>   tunnel_src_addr,
+                                      bit<32>   tunnel_dst_addr,
+                                      teid_t    teid) {
+        load_tunnel_far_attributes(drop, notify_cp, tunnel_src_port, 
+                                   tunnel_src_addr, tunnel_dst_addr, teid);
+        fabric_md.bridged.skip_egress_pdr_ctr = true;
+    }
+
     table far_lookup {
         key = {
             fabric_md.far_id : exact @name("far_id");
@@ -148,73 +238,11 @@ control SpgwIngress(
         actions = {
             load_normal_far_attributes;
             load_tunnel_far_attributes;
+            load_dbuf_far_attributes;
         }
         // default is drop and don't notify CP
-        const default_action = load_normal_far_attributes(true, true);
+        const default_action = load_normal_far_attributes(true, false);
         size = NUM_FARS;
-    }
-
-    //=============================//
-    //===== Misc Things ======//
-    //=============================//
-
-    Counter<bit<64>, bit<16>>(MAX_PDR_COUNTERS, CounterType_t.PACKETS_AND_BYTES) pdr_counter;
-
-    @hidden
-    action decap_inner_common() {
-        // Correct parser-set metadata to use the inner header values
-        fabric_md.bridged.ip_eth_type = ETHERTYPE_IPV4;
-        fabric_md.bridged.ip_proto    = hdr.inner_ipv4.protocol;
-        fabric_md.ipv4_src            = hdr.inner_ipv4.src_addr;
-        fabric_md.ipv4_dst            = hdr.inner_ipv4.dst_addr;
-        fabric_md.bridged.l4_sport    = fabric_md.bridged.inner_l4_sport;
-        fabric_md.bridged.l4_dport    = fabric_md.bridged.inner_l4_dport;
-        // Move GTPU and inner L3 headers out
-        hdr.ipv4 = hdr.inner_ipv4;
-        hdr.inner_ipv4.setInvalid();
-        hdr.gtpu.setInvalid();
-    }
-    action decap_inner_tcp() {
-        decap_inner_common();
-        hdr.udp.setInvalid();
-        hdr.tcp = hdr.inner_tcp;
-        hdr.inner_tcp.setInvalid();
-    }
-    action decap_inner_udp() {
-        decap_inner_common();
-        hdr.udp = hdr.inner_udp;
-        hdr.inner_udp.setInvalid();
-    }
-    action decap_inner_icmp() {
-        decap_inner_common();
-        hdr.udp.setInvalid();
-        hdr.icmp = hdr.inner_icmp;
-        hdr.inner_icmp.setInvalid();
-    }
-    action decap_inner_unknown() {
-        decap_inner_common();
-        hdr.udp.setInvalid();
-    }
-    @hidden
-    table decap_gtpu {
-        key = {
-            hdr.inner_tcp.isValid()  : exact;
-            hdr.inner_udp.isValid()  : exact;
-            hdr.inner_icmp.isValid() : exact;
-        }
-        actions = {
-            decap_inner_tcp;
-            decap_inner_udp;
-            decap_inner_icmp;
-            decap_inner_unknown;
-        }
-        const default_action = decap_inner_unknown;
-        const entries = {
-            (true,  false, false) : decap_inner_tcp();
-            (false, true,  false) : decap_inner_udp();
-            (false, false, true)  : decap_inner_icmp();
-        }
-        size = 4;
     }
 
     //=============================//
@@ -223,52 +251,36 @@ control SpgwIngress(
     apply {
 
         // Interfaces
-        interface_lookup.apply();
+        if (interface_lookup.apply().hit) {
+            if (fabric_md.spgw_src_iface == SpgwInterface.FROM_DBUF) {
+                decap_gtpu_from_dbuf.apply(hdr, fabric_md);
+            }
+            // PDRs
+            if (hdr.gtpu.isValid()) {
+                uplink_pdr_lookup.apply();
+            } else {
+                downlink_pdr_lookup.apply();
+            }
+            if (fabric_md.spgw_src_iface != SpgwInterface.FROM_DBUF) {
+                pdr_counter.count(fabric_md.bridged.pdr_ctr_id);
+            }
 
-        // If interface table missed, or the interface skips PDRs/FARs (TODO: is that a thing?)
-        if (fabric_md.bridged.skip_spgw) return;
+            // GTPU Decapsulate
+            if (fabric_md.needs_gtpu_decap) {
+                decap_gtpu.apply(hdr, fabric_md);
+            }
 
-        // PDRs
-        // Try the efficient PDR tables first (This PDR partitioning only works
-        // if the PDRs do not overlap. FIXME: does this assumption hold?)
-        if (hdr.gtpu.isValid()) {
-            uplink_pdr_lookup.apply();
-        } else {
-            downlink_pdr_lookup.apply();
+            // FARs
+            // Load FAR info
+            far_lookup.apply();
+
+            // Nothing to be done immediately for forwarding or encapsulation.
+            // Forwarding is done by other parts of fabric.p4, and
+            // encapsulation is done in the egress
+
+            // Needed for correct GTPU encapsulation in egress
+            fabric_md.bridged.spgw_ipv4_len = hdr.ipv4.total_len;
         }
-        // Inefficient PDR table if efficient tables missed
-        if (!fabric_md.pdr_hit) {
-            flexible_pdr_lookup.apply();
-        }
-        pdr_counter.count(fabric_md.bridged.pdr_ctr_id);
-
-        // GTPU Decapsulate
-        if (fabric_md.needs_gtpu_decap) {
-            decap_gtpu.apply();
-        }
-
-        // FARs
-        // Load FAR info
-        far_lookup.apply();
-
-        if (fabric_md.notify_spgwc) {
-            // TODO: should notification involve something other than cloning?
-            ig_tm_md.copy_to_cpu = 1;
-        }
-        if (fabric_md.far_dropped) {
-            // Do dropping in the same way as fabric's filtering.p4, so we can traverse
-            // the ACL table, which is good for cases like DHCP.
-            fabric_md.skip_forwarding = true;
-            fabric_md.skip_next = true;
-        }
-
-        // Nothing to be done immediately for forwarding or encapsulation.
-        // Forwarding is done by other parts of fabric.p4, and
-        // encapsulation is done in the egress
-
-        // Needed for correct GTPU encapsulation in egress 
-        // TODO: This is from v1model. Is it still needed?
-        fabric_md.bridged.spgw_ipv4_len = hdr.ipv4.total_len;
     }
 }
 
@@ -345,16 +357,18 @@ control SpgwEgress(
             _gtpu_encap;
         }
         const entries = {
-            (true) : _gtpu_encap();
+            true : _gtpu_encap();
         }
         size = 1;
     }
 
     apply {
         if (!fabric_md.bridged.skip_spgw) {
-            pdr_counter.count(fabric_md.bridged.pdr_ctr_id);
             _preload_length_additives();
             gtpu_encap_if_needed.apply();
+            if (!fabric_md.bridged.skip_egress_pdr_ctr) {
+                pdr_counter.count(fabric_md.bridged.pdr_ctr_id);
+            }
         }
     }
 }

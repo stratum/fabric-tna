@@ -23,8 +23,6 @@ public final class P4InfoConstants {
     }
 
     // Header field IDs
-    public static final PiMatchFieldId HDR_DIRECTION =
-            PiMatchFieldId.of("direction");
     public static final PiMatchFieldId HDR_EG_PORT =
             PiMatchFieldId.of("eg_port");
     public static final PiMatchFieldId HDR_ETH_DST =
@@ -42,16 +40,6 @@ public final class P4InfoConstants {
             PiMatchFieldId.of("icmp_type");
     public static final PiMatchFieldId HDR_IG_PORT =
             PiMatchFieldId.of("ig_port");
-    public static final PiMatchFieldId HDR_INNER_IP_PROTO =
-            PiMatchFieldId.of("inner_ip_proto");
-    public static final PiMatchFieldId HDR_INNER_IPV4_DST =
-            PiMatchFieldId.of("inner_ipv4_dst");
-    public static final PiMatchFieldId HDR_INNER_IPV4_SRC =
-            PiMatchFieldId.of("inner_ipv4_src");
-    public static final PiMatchFieldId HDR_INNER_L4_DPORT =
-            PiMatchFieldId.of("inner_l4_dport");
-    public static final PiMatchFieldId HDR_INNER_L4_SPORT =
-            PiMatchFieldId.of("inner_l4_sport");
     public static final PiMatchFieldId HDR_INT_MIRROR_VALID =
             PiMatchFieldId.of("int_mirror_valid");
     public static final PiMatchFieldId HDR_IP_ETH_TYPE =
@@ -74,8 +62,6 @@ public final class P4InfoConstants {
             PiMatchFieldId.of("mpls_label");
     public static final PiMatchFieldId HDR_NEXT_ID =
             PiMatchFieldId.of("next_id");
-    public static final PiMatchFieldId HDR_SRC_IFACE =
-            PiMatchFieldId.of("src_iface");
     public static final PiMatchFieldId HDR_TEID = PiMatchFieldId.of("teid");
     public static final PiMatchFieldId HDR_TUNNEL_IPV4_DST =
             PiMatchFieldId.of("tunnel_ipv4_dst");
@@ -120,8 +106,6 @@ public final class P4InfoConstants {
             PiTableId.of("FabricIngress.spgw_ingress.downlink_pdr_lookup");
     public static final PiTableId FABRIC_INGRESS_SPGW_INGRESS_FAR_LOOKUP =
             PiTableId.of("FabricIngress.spgw_ingress.far_lookup");
-    public static final PiTableId FABRIC_INGRESS_SPGW_INGRESS_FLEXIBLE_PDR_LOOKUP =
-            PiTableId.of("FabricIngress.spgw_ingress.flexible_pdr_lookup");
     public static final PiTableId FABRIC_INGRESS_SPGW_INGRESS_INTERFACE_LOOKUP =
             PiTableId.of("FabricIngress.spgw_ingress.interface_lookup");
     public static final PiTableId FABRIC_INGRESS_SPGW_INGRESS_UPLINK_PDR_LOOKUP =
@@ -159,8 +143,8 @@ public final class P4InfoConstants {
             PiActionId.of("FabricEgress.int_egress.flow_report_filter.quantize");
     public static final PiActionId FABRIC_EGRESS_INT_EGRESS_INIT_METADATA =
             PiActionId.of("FabricEgress.int_egress.init_metadata");
-    public static final PiActionId FABRIC_EGRESS_PKT_IO_EGRESS_SET_CPU_PORT =
-            PiActionId.of("FabricEgress.pkt_io_egress.set_cpu_port");
+    public static final PiActionId FABRIC_EGRESS_PKT_IO_EGRESS_SET_SWITCH_INFO =
+            PiActionId.of("FabricEgress.pkt_io_egress.set_switch_info");
     public static final PiActionId FABRIC_INGRESS_ACL_COPY_TO_CPU =
             PiActionId.of("FabricIngress.acl.copy_to_cpu");
     public static final PiActionId FABRIC_INGRESS_ACL_DROP =
@@ -199,14 +183,8 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.next.set_mcast_group_id");
     public static final PiActionId FABRIC_INGRESS_NEXT_SET_VLAN =
             PiActionId.of("FabricIngress.next.set_vlan");
-    public static final PiActionId FABRIC_INGRESS_SPGW_INGRESS_DECAP_INNER_ICMP =
-            PiActionId.of("FabricIngress.spgw_ingress.decap_inner_icmp");
-    public static final PiActionId FABRIC_INGRESS_SPGW_INGRESS_DECAP_INNER_TCP =
-            PiActionId.of("FabricIngress.spgw_ingress.decap_inner_tcp");
-    public static final PiActionId FABRIC_INGRESS_SPGW_INGRESS_DECAP_INNER_UDP =
-            PiActionId.of("FabricIngress.spgw_ingress.decap_inner_udp");
-    public static final PiActionId FABRIC_INGRESS_SPGW_INGRESS_DECAP_INNER_UNKNOWN =
-            PiActionId.of("FabricIngress.spgw_ingress.decap_inner_unknown");
+    public static final PiActionId FABRIC_INGRESS_SPGW_INGRESS_LOAD_DBUF_FAR_ATTRIBUTES =
+            PiActionId.of("FabricIngress.spgw_ingress.load_dbuf_far_attributes");
     public static final PiActionId FABRIC_INGRESS_SPGW_INGRESS_LOAD_NORMAL_FAR_ATTRIBUTES =
             PiActionId.of("FabricIngress.spgw_ingress.load_normal_far_attributes");
     public static final PiActionId FABRIC_INGRESS_SPGW_INGRESS_LOAD_TUNNEL_FAR_ATTRIBUTES =
