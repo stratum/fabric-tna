@@ -18,7 +18,10 @@ sdeVer="9.2.0"
 sdeBaseDockerImg=opennetworking/bf-sde:${sdeVer}
 
 echo "Build all profiles using SDE ${sdeBaseDockerImg}..."
-make all SDE_DOCKER_IMG=${sdeBaseDockerImg}-p4c
+# Pull first to avoid pulling multiple times in parallel by the make jobs
+docker pull ${sdeBaseDockerImg}-p4c
+# Jenkins uses 8 cores 15G VM
+make -j8 all SDE_DOCKER_IMG=${sdeBaseDockerImg}-p4c
 
 echo "Build and verify Java pipeconf"
 make constants pipeconf MVN_FLAGS="-Pci-verify -Pcoverage"
