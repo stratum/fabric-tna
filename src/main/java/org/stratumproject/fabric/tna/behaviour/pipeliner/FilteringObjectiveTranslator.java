@@ -47,7 +47,7 @@ class FilteringObjectiveTranslator
     // Forwarding types from fabric.p4.
     static final byte FWD_MPLS = 1;
     static final byte FWD_IPV4_ROUTING = 2;
-    static final byte FWD_IPV6_ROUTING = 3;
+    static final byte FWD_IPV6_ROUTING = 4;
 
     private static final byte[] ONE = new byte[]{1};
     private static final byte[] ZERO = new byte[]{0};
