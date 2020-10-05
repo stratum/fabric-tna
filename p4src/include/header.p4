@@ -163,7 +163,6 @@ header bridged_metadata_t {
     bit<16>         spgw_ipv4_len;
     bool            needs_gtpu_encap;
     bool            skip_spgw;
-    bool            skip_egress_pdr_ctr;
     teid_t          gtpu_teid;
     bit<32>         gtpu_tunnel_sip;
     bit<32>         gtpu_tunnel_dip;
