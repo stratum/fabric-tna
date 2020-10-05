@@ -52,6 +52,8 @@ public final class P4InfoConstants {
             PiMatchFieldId.of("ipv4_dst_addr");
     public static final PiMatchFieldId HDR_IPV4_SRC =
             PiMatchFieldId.of("ipv4_src");
+    public static final PiMatchFieldId HDR_IPV4_VALID =
+            PiMatchFieldId.of("ipv4_valid");
     public static final PiMatchFieldId HDR_IPV6_DST =
             PiMatchFieldId.of("ipv6_dst");
     public static final PiMatchFieldId HDR_L4_DPORT =

@@ -218,6 +218,7 @@ control IntEgress (
 
     table watchlist {
         key = {
+            hdr.ipv4.isValid()         : exact @name("ipv4_valid");
             hdr.ipv4.src_addr          : ternary @name("ipv4_src");
             hdr.ipv4.dst_addr          : ternary @name("ipv4_dst");
             fabric_md.bridged.ip_proto : ternary @name("ip_proto");

@@ -1718,11 +1718,13 @@ class IntTest(IPv4UnicastTest):
 
         self.send_request_add_entry_to_action(
             "watchlist",
-            [self.Ternary("ipv4_src", ipv4_src_, ipv4_mask),
-             self.Ternary("ipv4_dst", ipv4_dst_, ipv4_mask),
-             self.Range("l4_sport", sport_low, sport_high),
-             self.Range("l4_dport", dport_low, dport_high),
-             ],
+            [
+                self.Exact("ipv4_valid", stringify(1, 1)),
+                self.Ternary("ipv4_src", ipv4_src_, ipv4_mask),
+                self.Ternary("ipv4_dst", ipv4_dst_, ipv4_mask),
+                self.Range("l4_sport", sport_low, sport_high),
+                self.Range("l4_dport", dport_low, dport_high),
+            ],
             "init_metadata", [
                 ("switch_id", switch_id_)
             ], priority=DEFAULT_PRIORITY)
