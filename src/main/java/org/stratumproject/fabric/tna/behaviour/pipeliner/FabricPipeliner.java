@@ -147,7 +147,7 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
     protected void initializePipeline() {
         final PiActionParam param = new PiActionParam(P4InfoConstants.CPU_PORT, capabilities.cpuPort().get());
         final PiAction action = PiAction.builder()
-                .withId(P4InfoConstants.FABRIC_EGRESS_PKT_IO_EGRESS_SET_CPU_PORT)
+                .withId(P4InfoConstants.FABRIC_EGRESS_PKT_IO_EGRESS_SET_SWITCH_INFO)
                 .withParameter(param)
                 .build();
         final TrafficTreatment treatment = DefaultTrafficTreatment.builder()
