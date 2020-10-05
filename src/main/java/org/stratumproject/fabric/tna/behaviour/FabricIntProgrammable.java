@@ -260,17 +260,9 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         for (Criterion criterion : criteria) {
             switch (criterion.type()) {
                 case IPV4_SRC:
-                    builder.matchPi(
-                            PiCriterion.builder().matchExact(
-                                    P4InfoConstants.HDR_IPV4_VALID,
-                                    1).build());
                     builder.matchIPSrc(((IPCriterion) criterion).ip());
                     break;
                 case IPV4_DST:
-                    builder.matchPi(
-                            PiCriterion.builder().matchExact(
-                                    P4InfoConstants.HDR_IPV4_VALID,
-                                    1).build());
                     builder.matchIPDst(((IPCriterion) criterion).ip());
                     break;
                 case TCP_SRC:

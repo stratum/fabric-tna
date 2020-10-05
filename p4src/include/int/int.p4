@@ -218,7 +218,6 @@ control IntEgress (
 
     table watchlist {
         key = {
-            hdr.ipv4.isValid()         : exact @name("ipv4_valid");
             hdr.ipv4.src_addr          : ternary @name("ipv4_src");
             hdr.ipv4.dst_addr          : ternary @name("ipv4_dst");
             fabric_md.bridged.ip_proto : ternary @name("ip_proto");
@@ -274,7 +273,9 @@ control IntEgress (
             exit;
         } else {
             mirror_session_id.apply();
-            watchlist.apply();
+            if (hdr.ipv4.isValid()) {
+                watchlist.apply();
+            }
             flow_report_filter.apply(hdr, fabric_md, eg_intr_md, eg_prsr_md);
         }
     }
