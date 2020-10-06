@@ -278,7 +278,6 @@ control IntEgress (
                     flow_report_filter.apply(hdr, fabric_md, eg_intr_md, eg_prsr_md);
                 }
             }
-
         }
     }
 }
