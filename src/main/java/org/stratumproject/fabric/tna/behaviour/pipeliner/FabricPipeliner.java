@@ -200,8 +200,9 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
         }
 
         if (log.isTraceEnabled()) {
-            log.info("Objective {} -> Flows {}", objective, flowRules);
+            log.trace("Objective {} -> Flows {}", objective, flowRules);
         }
+
         final FlowRuleOperations.Builder ops = FlowRuleOperations.builder();
         switch (objective.op()) {
             case ADD:
@@ -226,7 +227,7 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
         }
 
         if (log.isTraceEnabled()) {
-            log.info("Objective {} -> Groups {}", objective, groups);
+            log.trace("Objective {} -> Groups {}", objective, groups);
         }
 
         switch (objective.op()) {
