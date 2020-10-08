@@ -353,7 +353,7 @@ parser FabricEgressParser (packet_in packet,
     state check_mpls {
 #ifdef WITH_INT
         transition select(int_parser_flags) {
-            0b01 &&& 0b01: strip_mpls;
+            INT_PARSER_FLAG_STRIP_MPLS &&& 0b01: strip_mpls;
             default: parse_eth_type;
         }
 #else
@@ -411,14 +411,14 @@ parser FabricEgressParser (packet_in packet,
     }
 
     state check_ipv4 {
-#if defined(WITH_INT) && defined(WITH_SPGW)
+#ifdef WITH_INT
         transition select(int_parser_flags) {
-            0b10 &&& 0b10: strip_gtpu_and_accept;
+            INT_PARSER_FLAG_STRIP_GTPU &&& 0b10: strip_gtpu_and_accept;
             default: parse_ipv4;
         }
 #else
         transition parse_ipv4;
-#endif // defined(WITH_INT) && defined(WITH_SPGW)
+#endif // WITH_INT
     }
 
     state strip_gtpu_and_accept {
