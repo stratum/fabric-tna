@@ -126,8 +126,11 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
         }
 
         if (obj.op() == Objective.Operation.MODIFY && obj.type() != NextObjective.Type.SIMPLE) {
-            log.warn("MODIFY operation not yet supported for NextObjective {}, will return failure :(",
+            log.warn("MODIFY operation not yet supported for {} NextObjective, will return failure :(",
                     obj.type());
+            if (log.isTraceEnabled()) {
+                log.trace("Objective {}", obj);
+            }
             return;
         }
 
