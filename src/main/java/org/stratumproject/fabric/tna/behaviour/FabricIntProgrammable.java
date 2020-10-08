@@ -7,10 +7,13 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import org.onlab.packet.Ip4Address;
+import org.onlab.packet.IpAddress;
 import org.onlab.packet.MacAddress;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
 import org.onosproject.net.DeviceId;
+import org.onosproject.net.Host;
+import org.onosproject.net.HostLocation;
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.behaviour.inbandtelemetry.IntDeviceConfig;
 import org.onosproject.net.behaviour.inbandtelemetry.IntObjective;
@@ -34,6 +37,7 @@ import org.onosproject.net.group.DefaultGroupKey;
 import org.onosproject.net.group.GroupBuckets;
 import org.onosproject.net.group.GroupDescription;
 import org.onosproject.net.group.GroupService;
+import org.onosproject.net.host.HostService;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
 import org.onosproject.segmentrouting.config.SegmentRoutingDeviceConfig;
@@ -80,6 +84,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
     private FlowRuleService flowRuleService;
     private GroupService groupService;
     private NetworkConfigService cfgService;
+    private HostService hostService;
 
     private DeviceId deviceId;
     private ApplicationId appId;
@@ -106,6 +111,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         flowRuleService = handler().get(FlowRuleService.class);
         groupService = handler().get(GroupService.class);
         cfgService = handler().get(NetworkConfigService.class);
+        hostService = handler().get(HostService.class);
         final CoreService coreService = handler().get(CoreService.class);
         appId = coreService.getAppId(PipeconfLoader.APP_NAME);
         if (appId == null) {
@@ -399,7 +405,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
     public long getSuitableQmaskForLatencyChange(int minFlowHopLatencyChangeNs) {
         if (minFlowHopLatencyChangeNs < 0) {
             throw new IllegalArgumentException(
-                "Flow latency change value must equal or greater than zero.");
+                    "Flow latency change value must equal or greater than zero.");
         }
         long qmask = 0xffffffff;
         while (minFlowHopLatencyChangeNs > 1) {
@@ -428,6 +434,44 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                         "with segmentrouting ipv4Loopback ({}), also ignoring MAC addresses",
                 deviceId, intCfg.sinkIp(), srcIp);
 
+        // If the device is a spine device, we need to find which
+        // switch is the INT collector attached to.
+        // And find the SID of that device.
+        int sid = -1;
+        if (!srCfg.isEdgeRouter()) {
+            IpAddress collectorIp = intCfg.collectorIp();
+            Set<Host> collectorHosts = hostService.getHostsByIp(collectorIp);
+            if (collectorHosts.isEmpty()) {
+                log.warn("Unable to find collector with IP {}, skip for now.",
+                        collectorIp);
+                return null;
+            }
+            Host collector = collectorHosts.iterator().next();
+            if (collectorHosts.size() > 1) {
+                log.warn("Find more than one host with IP {}, will use {} as collector.",
+                        intCfg.collectorIp(), collector.id());
+            }
+            Set<HostLocation> locations = collector.locations();
+            if (locations.isEmpty()) {
+                log.warn("Unable to find the location of collector {}, skip for now.",
+                        collector.id());
+            }
+            HostLocation location = locations.iterator().next();
+            if (locations.size() > 1) {
+                log.warn("Find more than one location for host {}, will use {}",
+                        collector.id(), location);
+            }
+            DeviceId deviceWithCollector = location.deviceId();
+            SegmentRoutingDeviceConfig cfg = cfgService.getConfig(
+                    deviceWithCollector, SegmentRoutingDeviceConfig.class);
+            if (cfg == null) {
+                log.error("Missing SegmentRoutingDeviceConfig config for {}, " +
+                        "cannot derive SID for collector", deviceWithCollector);
+                return null;
+            }
+            sid = cfg.nodeSidIPv4();
+        }
+
         final PiActionParam srcMacParam = new PiActionParam(
                 P4InfoConstants.SRC_MAC, MacAddress.ZERO.toBytes());
         final PiActionParam nextHopMacParam = new PiActionParam(
@@ -440,14 +484,31 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         final PiActionParam monPortParam = new PiActionParam(
                 P4InfoConstants.MON_PORT,
                 intCfg.collectorPort().toInt());
-        final PiAction reportAction = PiAction.builder()
-                .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_REPORT_ENCAP)
-                .withParameter(srcMacParam)
-                .withParameter(nextHopMacParam)
-                .withParameter(srcIpParam)
-                .withParameter(monIpParam)
-                .withParameter(monPortParam)
-                .build();
+        PiAction reportAction;
+        if (!srCfg.isEdgeRouter() && sid != -1) {
+            final PiActionParam monLabelParam = new PiActionParam(
+                    P4InfoConstants.MON_LABEL,
+                    sid);
+            reportAction = PiAction.builder()
+                    .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_REPORT_ENCAP_MPLS)
+                    .withParameter(srcMacParam)
+                    .withParameter(nextHopMacParam)
+                    .withParameter(srcIpParam)
+                    .withParameter(monIpParam)
+                    .withParameter(monPortParam)
+                    .withParameter(monLabelParam)
+                    .build();
+        } else {
+            reportAction = PiAction.builder()
+                    .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_REPORT_ENCAP)
+                    .withParameter(srcMacParam)
+                    .withParameter(nextHopMacParam)
+                    .withParameter(srcIpParam)
+                    .withParameter(monIpParam)
+                    .withParameter(monPortParam)
+                    .build();
+        }
+
         final TrafficTreatment treatment = DefaultTrafficTreatment.builder()
                 .piTableAction(reportAction)
                 .build();
