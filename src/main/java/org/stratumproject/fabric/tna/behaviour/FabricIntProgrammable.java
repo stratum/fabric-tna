@@ -415,6 +415,39 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         return 0xffffffffL & qmask;
     }
 
+    private int getSidForCollector(IpAddress collectorIp) {
+        Set<Host> collectorHosts = hostService.getHostsByIp(collectorIp);
+        if (collectorHosts.isEmpty()) {
+            log.warn("Unable to find collector with IP {}, skip for now.",
+                    collectorIp);
+            return -1;
+        }
+        Host collector = collectorHosts.iterator().next();
+        if (collectorHosts.size() > 1) {
+            log.warn("Find more than one host with IP {}, will use {} as collector.",
+                    collectorIp, collector.id());
+        }
+        Set<HostLocation> locations = collector.locations();
+        if (locations.isEmpty()) {
+            log.warn("Unable to find the location of collector {}, skip for now.",
+                    collector.id());
+        }
+        HostLocation location = locations.iterator().next();
+        if (locations.size() > 1) {
+            log.warn("Find more than one location for host {}, will use {}",
+                    collector.id(), location);
+        }
+        DeviceId deviceWithCollector = location.deviceId();
+        SegmentRoutingDeviceConfig cfg = cfgService.getConfig(
+                deviceWithCollector, SegmentRoutingDeviceConfig.class);
+        if (cfg == null) {
+            log.error("Missing SegmentRoutingDeviceConfig config for {}, " +
+                    "cannot derive SID for collector", deviceWithCollector);
+            return -1;
+        }
+        return cfg.nodeSidIPv4();
+    }
+
     private FlowRule buildReportEntry(IntDeviceConfig intCfg) {
 
         if (!setupBehaviour()) {
@@ -439,37 +472,12 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         // And find the SID of that device.
         int sid = -1;
         if (!srCfg.isEdgeRouter()) {
-            IpAddress collectorIp = intCfg.collectorIp();
-            Set<Host> collectorHosts = hostService.getHostsByIp(collectorIp);
-            if (collectorHosts.isEmpty()) {
-                log.warn("Unable to find collector with IP {}, skip for now.",
-                        collectorIp);
+            // TODO: replace this to SR API.
+            sid = getSidForCollector(intCfg.collectorIp());
+            if (sid == -1) {
+                // Error log will be shown in getSidForCollector method.
                 return null;
             }
-            Host collector = collectorHosts.iterator().next();
-            if (collectorHosts.size() > 1) {
-                log.warn("Find more than one host with IP {}, will use {} as collector.",
-                        intCfg.collectorIp(), collector.id());
-            }
-            Set<HostLocation> locations = collector.locations();
-            if (locations.isEmpty()) {
-                log.warn("Unable to find the location of collector {}, skip for now.",
-                        collector.id());
-            }
-            HostLocation location = locations.iterator().next();
-            if (locations.size() > 1) {
-                log.warn("Find more than one location for host {}, will use {}",
-                        collector.id(), location);
-            }
-            DeviceId deviceWithCollector = location.deviceId();
-            SegmentRoutingDeviceConfig cfg = cfgService.getConfig(
-                    deviceWithCollector, SegmentRoutingDeviceConfig.class);
-            if (cfg == null) {
-                log.error("Missing SegmentRoutingDeviceConfig config for {}, " +
-                        "cannot derive SID for collector", deviceWithCollector);
-                return null;
-            }
-            sid = cfg.nodeSidIPv4();
         }
 
         final PiActionParam srcMacParam = new PiActionParam(
