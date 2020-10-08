@@ -33,6 +33,7 @@ const MirrorId_t REPORT_MIRROR_SESS_PIPE_3 = 303;
 #define FLOW_REPORT_FILTER_WIDTH 16
 typedef bit<FLOW_REPORT_FILTER_WIDTH> flow_report_filter_index_t;
 
+const bit<2> INT_PARSER_FLAG_STRIP_NOTHING = 0b00;
 const bit<2> INT_PARSER_FLAG_STRIP_GTPU = 0b10;
 const bit<2> INT_PARSER_FLAG_STRIP_MPLS = 0b01;
 
