@@ -210,10 +210,9 @@ control IntEgress (
         fabric_md.int_mirror_md.queue_occupancy = (bit<24>)eg_intr_md.enq_qdepth;
         fabric_md.int_mirror_md.ig_tstamp = fabric_md.bridged.ig_tstamp[31:0];
         fabric_md.int_mirror_md.eg_tstamp = eg_prsr_md.global_tstamp[31:0];
-#ifdef WITH_SPGW
-        // We will set this later in spgw egress pipeline.
-        fabric_md.int_mirror_md.strip_gtpu = 0;
-#endif
+
+        // Let the egress parser know this is an INT mirror.
+        fabric_md.int_mirror_md.int_parser_flags = 0b10;
     }
 
     table watchlist {
@@ -264,7 +263,7 @@ control IntEgress (
                 hdr.report_udp.len = hdr.report_udp.len - MPLS_HDR_SIZE;
             }
 #ifdef WITH_SPGW
-            if (fabric_md.int_mirror_md.strip_gtpu == 1) {
+            if (fabric_md.int_mirror_md.int_parser_flags == 0b11) {
                 // We need to remove length of IP, UDP, and GTPU headers
                 // since we only monitor the packet inside the GTP tunnel.
                 hdr.report_ipv4.total_len = hdr.report_ipv4.total_len
@@ -272,6 +271,7 @@ control IntEgress (
                 hdr.report_udp.len = hdr.report_udp.len
                     - (IPV4_HDR_SIZE + UDP_HDR_SIZE + GTP_HDR_SIZE);
             }
+            // TODO: Fix IP size if we remove the MPLS header.
 #endif // WITH_SPGW
             // Reports don't need to go through the rest of the egress pipe.
             exit;

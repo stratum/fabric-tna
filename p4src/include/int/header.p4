@@ -59,7 +59,7 @@ header_union local_report_t {
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.ig_tstamp")
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.eg_tstamp")
 #ifdef WITH_SPGW
-@pa_no_overlay("egress", "fabric_md.int_mirror_md.strip_gtpu")
+@pa_no_overlay("egress", "fabric_md.int_mirror_md.int_parser_flags")
 #endif // WITH_SPGW
 header int_mirror_metadata_t {
     BridgedMdType_t bridged_md_type;
@@ -72,10 +72,14 @@ header int_mirror_metadata_t {
     bit<24>               queue_occupancy;
     bit<32>               ig_tstamp;
     bit<32>               eg_tstamp;
-#ifdef WITH_SPGW
-    bit<7>                _pad1;
-    bit<1>                strip_gtpu;
-#endif // WITH_SPGW
+    bit<6>                _pad1;
+    // The parser flag for INT, two bits of this indicate
+    // if this packet is an INT packet and needs to strip
+    // GTPU headers.
+    // 0b00: neither an INT packet nor need to strip GTPU
+    // 0b10: it is an INT packet but don't need to strip GTPU
+    // 0b11: it is an INT packet and need to strip GTPU
+    bit<2>                int_parser_flags;
 }
 
 #endif // __INT_HEADER__
