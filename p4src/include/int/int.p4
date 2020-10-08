@@ -211,8 +211,8 @@ control IntEgress (
         fabric_md.int_mirror_md.ig_tstamp = fabric_md.bridged.ig_tstamp[31:0];
         fabric_md.int_mirror_md.eg_tstamp = eg_prsr_md.global_tstamp[31:0];
 
-        // Let the egress parser know this is an INT mirror.
-        fabric_md.int_mirror_md.int_parser_flags = 0b10;
+        // We will change this later if we need to strip anything.
+        fabric_md.int_mirror_md.int_parser_flags = 0b00;
     }
 
     table watchlist {
@@ -263,7 +263,7 @@ control IntEgress (
                 hdr.report_udp.len = hdr.report_udp.len - MPLS_HDR_SIZE;
             }
 #ifdef WITH_SPGW
-            if (fabric_md.int_mirror_md.int_parser_flags == 0b11) {
+            if (fabric_md.int_mirror_md.int_parser_flags & 0b10 == 0b10) {
                 // We need to remove length of IP, UDP, and GTPU headers
                 // since we only monitor the packet inside the GTP tunnel.
                 hdr.report_ipv4.total_len = hdr.report_ipv4.total_len
@@ -271,8 +271,15 @@ control IntEgress (
                 hdr.report_udp.len = hdr.report_udp.len
                     - (IPV4_HDR_SIZE + UDP_HDR_SIZE + GTP_HDR_SIZE);
             }
-            // TODO: Fix IP size if we remove the MPLS header.
 #endif // WITH_SPGW
+            if (fabric_md.int_mirror_md.int_parser_flags & 0b01 == 0b01) {
+                // We need to remove length of MPLS since we don;t include MPLS
+                // header in INT report.
+                hdr.report_ipv4.total_len = hdr.report_ipv4.total_len
+                    - MPLS_HDR_SIZE;
+                hdr.report_udp.len = hdr.report_udp.len
+                    - MPLS_HDR_SIZE;
+            }
             // Reports don't need to go through the rest of the egress pipe.
             exit;
         } else {
@@ -280,6 +287,9 @@ control IntEgress (
             if (hdr.ipv4.isValid()) {
                 if (watchlist.apply().hit) {
                     flow_report_filter.apply(hdr, fabric_md, eg_intr_md, eg_prsr_md);
+                    if (hdr.mpls.isValid()) {
+                        fabric_md.int_mirror_md.int_parser_flags = 0b01;
+                    }
                 }
             }
         }

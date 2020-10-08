@@ -74,11 +74,10 @@ header int_mirror_metadata_t {
     bit<32>               eg_tstamp;
     bit<6>                _pad1;
     // The parser flag for INT, two bits of this indicate
-    // if this packet is an INT packet and needs to strip
-    // GTPU headers.
-    // 0b00: neither an INT packet nor need to strip GTPU
-    // 0b10: it is an INT packet but don't need to strip GTPU
-    // 0b11: it is an INT packet and need to strip GTPU
+    // if the parser needs to strip GTPU or MPLS header.
+    // 0b00: No need to strip anything
+    // 0b1?: Strip GTPU
+    // 0b?1: Strip MPLS
     bit<2>                int_parser_flags;
 }
 

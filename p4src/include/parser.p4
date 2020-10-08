@@ -267,6 +267,10 @@ parser FabricEgressParser (packet_in packet,
     Checksum() inner_ipv4_checksum;
 #endif // WITH_SPGW
 
+#ifdef WITH_INT
+    bit<2> int_parser_flags = 0;
+#endif // WITH_INT
+
     state start {
         packet.extract(eg_intr_md);
         fabric_md.cpu_port = 0;
@@ -288,6 +292,7 @@ parser FabricEgressParser (packet_in packet,
         packet.extract(fabric_md.int_mirror_md);
         fabric_md.bridged.bridged_md_type = fabric_md.int_mirror_md.bridged_md_type;
         fabric_md.bridged.vlan_id = DEFAULT_VLAN_ID;
+        int_parser_flags = fabric_md.int_mirror_md.int_parser_flags;
         transition check_ethernet;
 #else
         // Should never be here.
@@ -347,8 +352,8 @@ parser FabricEgressParser (packet_in packet,
 
     state check_mpls {
 #ifdef WITH_INT
-        transition select(fabric_md.int_mirror_md.int_parser_flags) {
-            0b10 &&& 0b10: strip_mpls;
+        transition select(int_parser_flags) {
+            0b01 &&& 0b01: strip_mpls;
             default: parse_eth_type;
         }
 #else
@@ -356,6 +361,7 @@ parser FabricEgressParser (packet_in packet,
 #endif // WITH_INT
     }
 
+#ifdef WITH_INT
     state strip_mpls {
         // Skip ether type
         packet.advance(ETH_TYPE_LENGTH);
@@ -380,10 +386,12 @@ parser FabricEgressParser (packet_in packet,
         hdr.eth_type.value = ETHERTYPE_IPV6;
         transition parse_ipv6;
     }
+#endif // WITH_INT
 
     state parse_eth_type {
         packet.extract(hdr.eth_type);
         transition select(hdr.eth_type.value) {
+            ETHERTYPE_MPLS: parse_mpls;
             ETHERTYPE_IPV4: check_ipv4;
             ETHERTYPE_IPV6: parse_ipv6;
             default: accept;
@@ -404,8 +412,8 @@ parser FabricEgressParser (packet_in packet,
 
     state check_ipv4 {
 #if defined(WITH_INT) && defined(WITH_SPGW)
-        transition select(fabric_md.int_mirror_md.int_parser_flags) {
-            0b11: strip_gtpu_and_accept;
+        transition select(int_parser_flags) {
+            0b10 &&& 0b10: strip_gtpu_and_accept;
             default: parse_ipv4;
         }
 #else
