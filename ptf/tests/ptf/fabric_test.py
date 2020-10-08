@@ -1690,21 +1690,21 @@ class IntTest(IPv4UnicastTest):
             sport = None
             dport = None
 
-        # We should expected to receive an routed packet.
-        # Build exp pkt using the input one.
-        exp_pkt = pkt.copy()
-        exp_pkt = pkt_route(exp_pkt, HOST2_MAC)
+        # Build expected inner pkt using the input one.
+        int_inner_pkt = pkt.copy()
+        int_inner_pkt = pkt_route(int_inner_pkt, HOST2_MAC)
         if not mpls:
-            exp_pkt = pkt_decrement_ttl(exp_pkt)
-        if tagged2 and Dot1Q not in exp_pkt:
-            exp_pkt = pkt_add_vlan(exp_pkt, vlan_vid=VLAN_ID_2)
-        if mpls:
-            exp_pkt = pkt_add_mpls(exp_pkt, label=MPLS_LABEL_2, ttl=DEFAULT_MPLS_TTL)
+            int_inner_pkt = pkt_decrement_ttl(int_inner_pkt)
+        if tagged2 and Dot1Q not in int_inner_pkt:
+            int_inner_pkt = pkt_add_vlan(int_inner_pkt, vlan_vid=VLAN_ID_2)
+        # Note that we won't add MPLS header to the expected inner
+        # packet since the pipeline will strip out the MPLS header
+        # from it before in the parser.
 
-        # We should also expected an INT report packet
+        # The expected INT report packet
         exp_int_report_pkt_masked = \
             self.build_int_local_report(SWITCH_MAC, INT_COLLECTOR_MAC, SWITCH_IPV4, INT_COLLECTOR_IPV4,
-                                        ig_port, eg_port, switch_id, exp_pkt)
+                                        ig_port, eg_port, switch_id, int_inner_pkt)
 
         # Set collector, report table, and mirror sessions
         self.setup_watchlist_flow(ipv4_src, ipv4_dst, sport, dport, switch_id)
@@ -1759,19 +1759,26 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
 
         # We should expected to receive an routed packet with no GTPU headers.
         # Build exp pkt using the input one.
-        exp_pkt = pkt.copy()
-        exp_pkt = pkt_route(exp_pkt, HOST2_MAC)
+        int_inner_pkt = pkt.copy()
+        int_inner_pkt = pkt_route(int_inner_pkt, HOST2_MAC)
         if not mpls:
-            exp_pkt = pkt_decrement_ttl(exp_pkt)
-        if tagged2 and Dot1Q not in exp_pkt:
-            exp_pkt = pkt_add_vlan(exp_pkt, vlan_vid=VLAN_ID_2)
+            int_inner_pkt = pkt_decrement_ttl(int_inner_pkt)
+        if tagged2 and Dot1Q not in int_inner_pkt:
+            int_inner_pkt = pkt_add_vlan(int_inner_pkt, vlan_vid=VLAN_ID_2)
+        exp_pkt = int_inner_pkt
         if mpls:
-            exp_pkt = pkt_add_mpls(exp_pkt, label=MPLS_LABEL_2, ttl=DEFAULT_MPLS_TTL)
+            # Note that we won't add MPLS header to the expected inner
+            # packet since the pipeline will strip out the MPLS header
+            # from it before in the parser.
+            # This is the packet we expected to be received by the
+            # upstream
+            exp_pkt = pkt_add_mpls(int_inner_pkt, label=MPLS_LABEL_2, ttl=DEFAULT_MPLS_TTL)
+
 
         # We should also expected an INT report packet
         exp_int_report_pkt_masked = \
             self.build_int_local_report(SWITCH_MAC, INT_COLLECTOR_MAC, SWITCH_IPV4, INT_COLLECTOR_IPV4,
-                                        ig_port, eg_port, switch_id, exp_pkt)
+                                        ig_port, eg_port, switch_id, int_inner_pkt)
 
         # Set up entries for uplink
         self.setup_uplink(
@@ -1840,7 +1847,9 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             inner_exp_pkt = pkt_add_vlan(inner_exp_pkt, vlan_vid=VLAN_ID_2)
         if mpls:
             exp_pkt = pkt_add_mpls(exp_pkt, label=MPLS_LABEL_2, ttl=DEFAULT_MPLS_TTL)
-            inner_exp_pkt = pkt_add_mpls(inner_exp_pkt, label=MPLS_LABEL_2, ttl=DEFAULT_MPLS_TTL)
+            # Note that we won't add MPLS header to the expected inner
+            # packet since the pipeline will strip out the MPLS header
+            # from it before in the parser.
 
         # We should also expected an INT report packet
         exp_int_report_pkt_masked = \
