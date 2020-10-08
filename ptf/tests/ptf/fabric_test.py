@@ -1568,17 +1568,25 @@ class SpgwSimpleTest(IPv4UnicastTest):
 
 class IntTest(IPv4UnicastTest):
 
-    def setup_report_flow(self, port, src_mac, mon_mac, src_ip, mon_ip, mon_port):
-        self.send_request_add_entry_to_action(
-            "report",
-            [self.Exact("int_mirror_valid", stringify(1, 1))],
-            "do_report_encap", [
+    def setup_report_flow(self, port, src_mac, mon_mac,
+                          src_ip, mon_ip, mon_port,
+                          collector_mpls_label=None):
+        action = "do_report_encap"
+        action_params = [
                 ("src_mac", mac_to_binary(src_mac)),
                 ("mon_mac", mac_to_binary(mon_mac)),
                 ("src_ip", ipv4_to_binary(src_ip)),
                 ("mon_ip", ipv4_to_binary(mon_ip)),
                 ("mon_port", stringify(mon_port, 2))
-            ])
+            ]
+        if collector_mpls_label is not None:
+            action = "do_report_encap_mpls"
+            action_params.append(("mon_label", stringify(collector_mpls_label, 3)))
+
+        self.send_request_add_entry_to_action(
+            "report",
+            [self.Exact("int_mirror_valid", stringify(1, 1))],
+            action, action_params)
 
     def setup_report_mirror_flow(self, pipe_id, mirror_id, port):
         self.add_clone_group(mirror_id, [port])
@@ -1662,7 +1670,8 @@ class IntTest(IPv4UnicastTest):
                    eg_port=None,
                    expect_int_report=True,
                    ip_src=None,
-                   ip_dst=None):
+                   ip_dst=None,
+                   collector_mpls_label=None):
         if IP not in pkt:
             self.fail("Packet is not IP")
 
@@ -1709,7 +1718,8 @@ class IntTest(IPv4UnicastTest):
         # Set collector, report table, and mirror sessions
         self.setup_watchlist_flow(ipv4_src, ipv4_dst, sport, dport, switch_id)
         self.setup_report_flow(collector_port, SWITCH_MAC, SWITCH_MAC,
-                               SWITCH_IPV4, INT_COLLECTOR_IPV4, INT_REPORT_PORT)
+                               SWITCH_IPV4, INT_COLLECTOR_IPV4, INT_REPORT_PORT,
+                               collector_mpls_label)
         self.setup_report_mirror_flow(0, INT_REPORT_MIRROR_ID_0, self.recirculate_port_0)
         self.setup_report_mirror_flow(1, INT_REPORT_MIRROR_ID_1, self.recirculate_port_1)
         self.setup_report_mirror_flow(2, INT_REPORT_MIRROR_ID_2, self.recirculate_port_2)
@@ -1720,7 +1730,10 @@ class IntTest(IPv4UnicastTest):
         # Here we use next-id 101 since `runIPv4UnicastTest` will use 100 by default
         next_id = 101
         prefix_len = 32
-        self.add_forwarding_routing_v4_entry(INT_COLLECTOR_IPV4, prefix_len, next_id)
+        if collector_mpls_label:
+            self.add_forwarding_mpls_entry(collector_mpls_label, next_id)
+        else:
+            self.add_forwarding_routing_v4_entry(INT_COLLECTOR_IPV4, prefix_len, next_id)
         self.add_next_routing(next_id, collector_port, SWITCH_MAC, INT_COLLECTOR_MAC)
         self.add_next_vlan(next_id, DEFAULT_VLAN)
         # End of setting up entries for report packet

@@ -774,6 +774,35 @@ class FabricIntTest(IntTest):
                         continue
                     self.doRunTest(vlan_conf, tagged, pkt_type, mpls)
 
+@group("int")
+class FabricIntSpineTest(IntTest):
+
+    @tvsetup
+    @autocleanup
+    def doRunTest(self, vlan_conf, tagged, pkt_type, mpls):
+        print "Testing VLAN=%s, pkt=%s, mpls=%s..." \
+              % (vlan_conf, pkt_type, mpls)
+        # Change the IP destination to ensure we are using differnt
+        # flow for diffrent test cases since the flow report filter
+        # might disable the report.
+        # TODO: Remove this part when we are able to reset the register
+        # via P4Runtime.
+        pkt = getattr(testutils, "simple_%s_packet" % pkt_type)\
+            (ip_dst=self.get_single_use_ip())
+        self.runIntTest(pkt=pkt,
+                        tagged1=tagged[0],
+                        tagged2=tagged[1],
+                        mpls=mpls,
+                        collector_mpls_label=MPLS_LABEL_1)
+
+    def runTest(self):
+        print ""
+        for vlan_conf, tagged in vlan_confs.items():
+            for pkt_type in ["udp", "tcp", "icmp"]:
+                for mpls in [False, True]:
+                    if mpls and tagged[1]:
+                        continue
+                    self.doRunTest(vlan_conf, tagged, pkt_type, mpls)
 
 @group("int")
 class FabricFlowReportFilterNoChangeTest(IntTest):

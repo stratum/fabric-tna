@@ -589,6 +589,7 @@ control FabricEgressDeparser(packet_out packet,
 #ifdef WITH_INT
         packet.emit(hdr.report_ethernet);
         packet.emit(hdr.report_eth_type);
+        packet.emit(hdr.report_mpls);
         packet.emit(hdr.report_ipv4);
         packet.emit(hdr.report_udp);
         packet.emit(hdr.report_fixed_header);

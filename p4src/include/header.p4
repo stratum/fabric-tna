@@ -45,7 +45,7 @@ header vlan_tag_t {
 }
 
 header mpls_t {
-    bit<20> label;
+    mpls_label_t label;
     bit<3> tc;
     bit<1> bos;
     bit<8> ttl;
@@ -244,6 +244,7 @@ struct parsed_headers_t {
 #ifdef WITH_INT
     ethernet_t report_ethernet;
     eth_type_t report_eth_type;
+    mpls_t report_mpls;
     ipv4_t report_ipv4;
     udp_t report_udp;
     report_fixed_header_t report_fixed_header;

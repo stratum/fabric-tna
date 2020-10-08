@@ -136,18 +136,22 @@ control Filtering (inout parsed_headers_t hdr,
     @hidden
     table recirc_fwd_classifier {
         key = {
-            ig_intr_md.ingress_port        : exact @name("ig_port");
-            fabric_md.bridged.ip_eth_type  : exact @name("ip_eth_type");
+            ig_intr_md.ingress_port : exact @name("ig_port");
+            hdr.eth_type.value      : exact @name("eth_type");
         }
         actions = {
             recirc_set_forwarding_type;
         }
-        size = 4;
+        size = 8;
         const entries = {
             (RECIRC_PORT_PIPE_0, ETHERTYPE_IPV4): recirc_set_forwarding_type(FWD_IPV4_UNICAST);
             (RECIRC_PORT_PIPE_1, ETHERTYPE_IPV4): recirc_set_forwarding_type(FWD_IPV4_UNICAST);
             (RECIRC_PORT_PIPE_2, ETHERTYPE_IPV4): recirc_set_forwarding_type(FWD_IPV4_UNICAST);
             (RECIRC_PORT_PIPE_3, ETHERTYPE_IPV4): recirc_set_forwarding_type(FWD_IPV4_UNICAST);
+            (RECIRC_PORT_PIPE_0, ETHERTYPE_MPLS): recirc_set_forwarding_type(FWD_MPLS);
+            (RECIRC_PORT_PIPE_1, ETHERTYPE_MPLS): recirc_set_forwarding_type(FWD_MPLS);
+            (RECIRC_PORT_PIPE_2, ETHERTYPE_MPLS): recirc_set_forwarding_type(FWD_MPLS);
+            (RECIRC_PORT_PIPE_3, ETHERTYPE_MPLS): recirc_set_forwarding_type(FWD_MPLS);
         }
     }
 #endif // WITH_INT

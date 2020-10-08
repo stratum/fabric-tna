@@ -155,6 +155,8 @@ public final class P4InfoConstants {
             PiActionId.of("FabricEgress.egress_next.pop_vlan");
     public static final PiActionId FABRIC_EGRESS_INT_EGRESS_DO_REPORT_ENCAP =
             PiActionId.of("FabricEgress.int_egress.do_report_encap");
+    public static final PiActionId FABRIC_EGRESS_INT_EGRESS_DO_REPORT_ENCAP_MPLS =
+            PiActionId.of("FabricEgress.int_egress.do_report_encap_mpls");
     public static final PiActionId FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_QUANTIZE =
             PiActionId.of("FabricEgress.int_egress.flow_report_filter.quantize");
     public static final PiActionId FABRIC_EGRESS_INT_EGRESS_INIT_METADATA =
@@ -232,6 +234,8 @@ public final class P4InfoConstants {
             PiActionParamId.of("group_id");
     public static final PiActionParamId LABEL = PiActionParamId.of("label");
     public static final PiActionParamId MON_IP = PiActionParamId.of("mon_ip");
+    public static final PiActionParamId MON_LABEL =
+            PiActionParamId.of("mon_label");
     public static final PiActionParamId MON_MAC = PiActionParamId.of("mon_mac");
     public static final PiActionParamId MON_PORT =
             PiActionParamId.of("mon_port");

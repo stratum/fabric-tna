@@ -149,7 +149,7 @@ control IntEgress (
         hdr.report_ipv4.identification = ip_id_gen.get();
         hdr.report_ipv4.flags = 0;
         hdr.report_ipv4.frag_offset = 0;
-        hdr.report_ipv4.ttl = 64;
+        hdr.report_ipv4.ttl = DEFAULT_IPV4_TTL;
         hdr.report_ipv4.protocol = PROTO_UDP;
         hdr.report_ipv4.src_addr = src_ip;
         hdr.report_ipv4.dst_addr = mon_ip;
@@ -165,12 +165,25 @@ control IntEgress (
         add_report_fixed_header();
     }
 
+    action do_report_encap_mpls(mac_addr_t src_mac, mac_addr_t mon_mac,
+                                ipv4_addr_t src_ip, ipv4_addr_t mon_ip,
+                                l4_port_t mon_port, mpls_label_t mon_label) {
+        do_report_encap(src_mac, mon_mac, src_ip, mon_ip, mon_port);
+        hdr.report_eth_type.value = ETHERTYPE_MPLS;
+        hdr.report_mpls.setValid();
+        hdr.report_mpls.label = mon_label;
+        hdr.report_mpls.tc = 0;
+        hdr.report_mpls.bos = 1;
+        hdr.report_mpls.ttl = DEFAULT_MPLS_TTL;
+    }
+
     table report {
         key = {
             fabric_md.int_mirror_md.isValid(): exact @name("int_mirror_valid");
         }
         actions = {
             do_report_encap;
+            do_report_encap_mpls;
             @defaultonly nop();
         }
         default_action = nop;
@@ -258,10 +271,6 @@ control IntEgress (
             report_seq_no_and_hw_id.apply();
             // Remove the INT mirror metadata to prevent egress mirroring again.
             fabric_md.int_mirror_md.setInvalid();
-            if (hdr.mpls.isValid()) {
-                hdr.report_ipv4.total_len = hdr.report_ipv4.total_len - MPLS_HDR_SIZE;
-                hdr.report_udp.len = hdr.report_udp.len - MPLS_HDR_SIZE;
-            }
 #ifdef WITH_SPGW
             if (fabric_md.int_mirror_md.int_parser_flags & 0b10 == 0b10) {
                 // We need to remove length of IP, UDP, and GTPU headers
