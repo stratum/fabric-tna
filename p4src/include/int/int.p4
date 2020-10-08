@@ -287,9 +287,6 @@ control IntEgress (
             if (hdr.ipv4.isValid()) {
                 if (watchlist.apply().hit) {
                     flow_report_filter.apply(hdr, fabric_md, eg_intr_md, eg_prsr_md);
-                    if (hdr.mpls.isValid()) {
-                        fabric_md.int_mirror_md.int_parser_flags = 0b01;
-                    }
                 }
             }
         }

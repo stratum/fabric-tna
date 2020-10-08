@@ -332,7 +332,7 @@ control SpgwEgress(
         hdr.outer_gtpu.teid = fabric_md.bridged.gtpu_teid;
 
 #ifdef WITH_INT
-            fabric_md.int_mirror_md.int_parser_flags = 0b11;
+            fabric_md.int_mirror_md.int_parser_flags[1:1] = 1w1;
 #endif // WITH_INT
     }
 
