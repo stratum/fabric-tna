@@ -282,7 +282,7 @@ control IntEgress (
             }
 #endif // WITH_SPGW
             if (fabric_md.int_mirror_md.int_parser_flags & INT_PARSER_FLAG_STRIP_MPLS == INT_PARSER_FLAG_STRIP_MPLS) {
-                // We need to remove length of MPLS since we don;t include MPLS
+                // We need to remove length of MPLS since we don't include MPLS
                 // header in INT report.
                 hdr.report_ipv4.total_len = hdr.report_ipv4.total_len
                     - MPLS_HDR_SIZE;

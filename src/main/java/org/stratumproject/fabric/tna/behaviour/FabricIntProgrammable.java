@@ -472,7 +472,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         // And find the SID of that device.
         int sid = -1;
         if (!srCfg.isEdgeRouter()) {
-            // TODO: replace this to SR API.
+            // TODO: replace this with SR API.
             sid = getSidForCollector(intCfg.collectorIp());
             if (sid == -1) {
                 // Error log will be shown in getSidForCollector method.

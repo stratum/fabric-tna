@@ -750,9 +750,9 @@ class FabricIntTest(IntTest):
 
     @tvsetup
     @autocleanup
-    def doRunTest(self, vlan_conf, tagged, pkt_type, mpls):
-        print "Testing VLAN=%s, pkt=%s, mpls=%s..." \
-              % (vlan_conf, pkt_type, mpls)
+    def doRunTest(self, vlan_conf, tagged, pkt_type, is_next_hop_spine):
+        print "Testing VLAN=%s, pkt=%s, is_next_hop_spine=%s..." \
+              % (vlan_conf, pkt_type, is_next_hop_spine)
         # Change the IP destination to ensure we are using differnt
         # flow for diffrent test cases since the flow report filter
         # might disable the report.
@@ -763,16 +763,16 @@ class FabricIntTest(IntTest):
         self.runIntTest(pkt=pkt,
                         tagged1=tagged[0],
                         tagged2=tagged[1],
-                        mpls=mpls)
+                        is_next_hop_spine=is_next_hop_spine)
 
     def runTest(self):
         print ""
         for vlan_conf, tagged in vlan_confs.items():
             for pkt_type in ["udp", "tcp", "icmp"]:
-                for mpls in [False, True]:
-                    if mpls and tagged[1]:
+                for is_next_hop_spine in [False, True]:
+                    if is_next_hop_spine and tagged[1]:
                         continue
-                    self.doRunTest(vlan_conf, tagged, pkt_type, mpls)
+                    self.doRunTest(vlan_conf, tagged, pkt_type, is_next_hop_spine)
 
 @group("int")
 class FabricIntSpineTest(IntTest):
@@ -793,7 +793,7 @@ class FabricIntSpineTest(IntTest):
                         tagged1=tagged[0],
                         tagged2=tagged[1],
                         mpls=mpls,
-                        collector_mpls_label=MPLS_LABEL_1)
+                        is_device_spine=True)
 
     def runTest(self):
         print ""
@@ -851,12 +851,12 @@ class FabricFlowReportFilterChangeTest(IntTest):
         print "Testing ig_port=%d, eg_port=%d, expect_int_report=%s..." \
               % (ig_port, eg_port, expect_int_report)
         pkt = testutils.simple_tcp_packet()
+        pkt[IP].src = ip_src
+        pkt[IP].dst = ip_dst
         self.runIntTest(pkt=pkt,
                         ig_port=ig_port,
                         eg_port=eg_port,
-                        expect_int_report=expect_int_report,
-                        ip_src=ip_src,
-                        ip_dst=ip_dst)
+                        expect_int_report=expect_int_report)
 
     def runTest(self):
         print("")

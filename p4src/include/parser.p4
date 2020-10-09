@@ -343,7 +343,7 @@ parser FabricEgressParser (packet_in packet,
 #endif // WITH_XCONNECT || WITH_DOUBLE_VLAN_TERMINATION
 
     state check_eth_type {
-        transition select(packet.lookahead<bit<ETH_TYPE_LENGTH>>()) {
+        transition select(packet.lookahead<bit<(ETH_TYPE_SIZE * 8)>>()) {
             ETHERTYPE_MPLS: check_mpls;
             ETHERTYPE_IPV4: parse_eth_type;
             ETHERTYPE_IPV6: parse_eth_type;
@@ -363,11 +363,7 @@ parser FabricEgressParser (packet_in packet,
 
 #ifdef WITH_INT
     state strip_mpls {
-        // Skip ether type
-        packet.advance(ETH_TYPE_LENGTH);
-        // Skip MPLS header
-        packet.advance(MPLS_HDR_SIZE * 8);
-        // Sets ether type
+        packet.advance((ETH_TYPE_SIZE + MPLS_HDR_SIZE) * 8);
         transition select(packet.lookahead<bit<IP_VER_LENGTH>>()) {
             IP_VERSION_4: strip_mpls_ipv4;
             IP_VERSION_6: strip_mpls_ipv6;
