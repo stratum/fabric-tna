@@ -141,9 +141,9 @@ control IntEgress (
         hdr.report_ipv4.ihl = 4w5;
         hdr.report_ipv4.dscp = INT_DSCP;
         hdr.report_ipv4.ecn = 2w0;
-        hdr.report_ipv4.total_len = IPV4_HDR_SIZE + UDP_HDR_SIZE
-                                    + REPORT_FIXED_HEADER_LEN + LOCAL_REPORT_HEADER_LEN
-                                    - REPORT_MIRROR_HEADER_LEN
+        hdr.report_ipv4.total_len = IPV4_HDR_SIZE_BYTES + UDP_HDR_SIZE_BYTES
+                                    + REPORT_FIXED_HEADER_SIZE_BYTES + LOCAL_REPORT_HEADER_SIZE_BYTES
+                                    - REPORT_MIRROR_HEADER_SIZE_BYTES
                                     - ETH_FCS_LEN
                                     + eg_intr_md.pkt_length;
         hdr.report_ipv4.identification = ip_id_gen.get();
@@ -157,9 +157,9 @@ control IntEgress (
         hdr.report_udp.setValid();
         hdr.report_udp.sport = 0;
         hdr.report_udp.dport = mon_port;
-        hdr.report_udp.len = UDP_HDR_SIZE + REPORT_FIXED_HEADER_LEN
-                             + LOCAL_REPORT_HEADER_LEN
-                             - REPORT_MIRROR_HEADER_LEN
+        hdr.report_udp.len = UDP_HDR_SIZE_BYTES + REPORT_FIXED_HEADER_SIZE_BYTES
+                             + LOCAL_REPORT_HEADER_SIZE_BYTES
+                             - REPORT_MIRROR_HEADER_SIZE_BYTES
                              - ETH_FCS_LEN
                              + eg_intr_md.pkt_length;
         add_report_fixed_header();
@@ -264,9 +264,9 @@ control IntEgress (
                 // We need to remove length of IP, UDP, and GTPU headers
                 // since we only monitor the packet inside the GTP tunnel.
                 hdr.report_ipv4.total_len = hdr.report_ipv4.total_len
-                    - (IPV4_HDR_SIZE + UDP_HDR_SIZE + GTP_HDR_SIZE);
+                    - (IPV4_HDR_SIZE_BYTES + UDP_HDR_SIZE_BYTES + GTP_HDR_SIZE_BYTES);
                 hdr.report_udp.len = hdr.report_udp.len
-                    - (IPV4_HDR_SIZE + UDP_HDR_SIZE + GTP_HDR_SIZE);
+                    - (IPV4_HDR_SIZE_BYTES + UDP_HDR_SIZE_BYTES + GTP_HDR_SIZE_BYTES);
             }
 #endif // WITH_SPGW
             // Reports don't need to go through the rest of the egress pipe.
