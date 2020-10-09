@@ -81,13 +81,6 @@ SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
             <scope>provided</scope>
         </dependency>
 
-        <dependency>
-            <groupId>org.onosproject</groupId>
-            <artifactId>segmentrouting-app</artifactId>
-            <version>${trellis.api.version}</version>
-            <scope>provided</scope>
-        </dependency>
-
         <!-- Tests -->
         <dependency>
             <groupId>org.onosproject</groupId>
@@ -107,6 +100,25 @@ SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
             <groupId>org.onosproject</groupId>
             <artifactId>onlab-junit</artifactId>
             <version>${onos.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.google.api.grpc</groupId>
+            <artifactId>proto-google-common-protos</artifactId>
+            <version>[1.12.0,)</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.onosproject</groupId>
+            <artifactId>onos-core-net</artifactId>
+            <version>${onos.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.onosproject</groupId>
+            <artifactId>onos-core-net</artifactId>
+            <version>${onos.version}</version>
+            <classifier>tests</classifier>
             <scope>test</scope>
         </dependency>
 

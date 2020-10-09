@@ -122,4 +122,11 @@ public class FabricCapabilities {
     //             .counter(P4InfoConstants.FABRIC_INGRESS_BNG_INGRESS_DOWNSTREAM_C_LINE_RX)
     //             .orElseThrow().size();
     // }
+
+    // Use the ingress pdr counter to state if spgw is supported or not
+    public boolean supportSpgw() {
+        return pipeconf.pipelineModel()
+                .counter(P4InfoConstants.FABRIC_INGRESS_SPGW_PDR_COUNTER)
+                .isPresent();
+    }
 }

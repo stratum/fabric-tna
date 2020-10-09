@@ -4,6 +4,7 @@ p4src/build
 target
 *.pyc
 src/main/resources/p4c-out
+src/test/resources/p4c-out
 .idea
 *.iml
 *.pcap

@@ -3,6 +3,7 @@
 
 package org.stratumproject.fabric.tna.behaviour;
 
+import com.google.common.collect.ImmutableSet;
 import org.onlab.util.KryoNamespace;
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.flow.TrafficSelector;
@@ -18,6 +19,7 @@ import org.stratumproject.fabric.tna.behaviour.pipeliner.FabricPipeliner;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -36,6 +38,30 @@ public final class FabricUtils {
     private FabricUtils() {
         // Hides constructor.
     }
+
+    public static final Set<Criterion.Type> ACL_CRITERIA = ImmutableSet.of(
+            Criterion.Type.IN_PORT,
+            Criterion.Type.IN_PHY_PORT,
+            Criterion.Type.ETH_DST,
+            Criterion.Type.ETH_DST_MASKED,
+            Criterion.Type.ETH_SRC,
+            Criterion.Type.ETH_SRC_MASKED,
+            Criterion.Type.ETH_TYPE,
+            Criterion.Type.VLAN_VID,
+            Criterion.Type.IP_PROTO,
+            Criterion.Type.IPV4_SRC,
+            Criterion.Type.IPV4_DST,
+            Criterion.Type.TCP_SRC,
+            Criterion.Type.TCP_SRC_MASKED,
+            Criterion.Type.TCP_DST,
+            Criterion.Type.TCP_DST_MASKED,
+            Criterion.Type.UDP_SRC,
+            Criterion.Type.UDP_SRC_MASKED,
+            Criterion.Type.UDP_DST,
+            Criterion.Type.UDP_DST_MASKED,
+            Criterion.Type.ICMPV4_TYPE,
+            Criterion.Type.ICMPV4_CODE,
+            Criterion.Type.PROTOCOL_INDEPENDENT);
 
     public static Criterion criterion(Collection<Criterion> criteria, Criterion.Type type) {
         return criteria.stream()
