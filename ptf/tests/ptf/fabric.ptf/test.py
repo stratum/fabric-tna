@@ -640,7 +640,7 @@ class FabricDefaultVlanPacketInTest(FabricTest):
 @group("spgw")
 class FabricSpgwDownlinkTest(SpgwSimpleTest):
 
-    @tvskip
+    @tvsetup
     @autocleanup
     def doRunTest(self, pkt, tagged1, tagged2, mpls, tc_name):
         self.runDownlinkTest(pkt=pkt, tagged1=tagged1,
@@ -667,7 +667,7 @@ class FabricSpgwDownlinkTest(SpgwSimpleTest):
 @group("spgw")
 class FabricSpgwUplinkTest(SpgwSimpleTest):
 
-    @tvskip
+    @tvsetup
     @autocleanup
     def doRunTest(self, pkt, tagged1, tagged2, mpls):
         self.runUplinkTest(ue_out_pkt=pkt, tagged1=tagged1,
