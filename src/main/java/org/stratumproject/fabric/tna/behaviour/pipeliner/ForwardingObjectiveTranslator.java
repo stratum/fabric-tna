@@ -4,7 +4,6 @@
 package org.stratumproject.fabric.tna.behaviour.pipeliner;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import org.onlab.packet.MacAddress;
 import org.onosproject.net.DeviceId;
@@ -33,6 +32,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
+import static org.stratumproject.fabric.tna.behaviour.FabricUtils.ACL_CRITERIA;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.criterionNotNull;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.outputPort;
 
@@ -44,30 +44,6 @@ class ForwardingObjectiveTranslator
 
     //FIXME: Max number supported by PI
     static final int CLONE_TO_CPU_ID = 511;
-
-    private static final Set<Criterion.Type> ACL_CRITERIA = ImmutableSet.of(
-            Criterion.Type.IN_PORT,
-            Criterion.Type.IN_PHY_PORT,
-            Criterion.Type.ETH_DST,
-            Criterion.Type.ETH_DST_MASKED,
-            Criterion.Type.ETH_SRC,
-            Criterion.Type.ETH_SRC_MASKED,
-            Criterion.Type.ETH_TYPE,
-            Criterion.Type.VLAN_VID,
-            Criterion.Type.IP_PROTO,
-            Criterion.Type.IPV4_SRC,
-            Criterion.Type.IPV4_DST,
-            Criterion.Type.TCP_SRC,
-            Criterion.Type.TCP_SRC_MASKED,
-            Criterion.Type.TCP_DST,
-            Criterion.Type.TCP_DST_MASKED,
-            Criterion.Type.UDP_SRC,
-            Criterion.Type.UDP_SRC_MASKED,
-            Criterion.Type.UDP_DST,
-            Criterion.Type.UDP_DST_MASKED,
-            Criterion.Type.ICMPV4_TYPE,
-            Criterion.Type.ICMPV4_CODE,
-            Criterion.Type.PROTOCOL_INDEPENDENT);
 
     private static final Map<PiTableId, PiActionId> NEXT_ID_ACTIONS = ImmutableMap.<PiTableId, PiActionId>builder()
             .put(P4InfoConstants.FABRIC_INGRESS_FORWARDING_BRIDGING,

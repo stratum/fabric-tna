@@ -3,10 +3,12 @@
 
 package org.stratumproject.fabric.tna.behaviour;
 
+import java.util.Optional;
+
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.driver.AbstractHandlerBehaviour;
 import org.onosproject.net.driver.DriverHandler;
-import org.onosproject.net.pi.model.PiPipeconfId;
+import org.onosproject.net.pi.model.PiPipeconf;
 import org.onosproject.net.pi.service.PiPipeconfService;
 import org.slf4j.Logger;
 
@@ -25,7 +27,9 @@ public abstract class AbstractFabricHandlerBehavior extends AbstractHandlerBehav
 
     protected final Logger log = getLogger(getClass());
 
+    // References to the device capabilities and pipeconf
     protected FabricCapabilities capabilities;
+    protected PiPipeconf pipeconf;
 
     /**
      * Creates a new instance of this behavior with the given capabilities.
@@ -40,6 +44,23 @@ public abstract class AbstractFabricHandlerBehavior extends AbstractHandlerBehav
      */
     protected AbstractFabricHandlerBehavior(FabricCapabilities capabilities) {
         this.capabilities = capabilities;
+    }
+
+    /**
+     * Creates a new instance of this behavior with the given capabilities and pipeconf.
+     * Note: this constructor should be invoked only by other classes of this
+     * package that can retrieve capabilities on their own.
+     * <p>
+     * When using the abstract projectable model (i.e., {@link
+     * org.onosproject.net.Device#as(Class)}, capabilities and pipeconf will be set by the
+     * driver manager when calling {@link #setHandler(DriverHandler)})
+     *
+     * @param capabilities capabilities
+     * @param pipeconf pipeconf
+     */
+    protected AbstractFabricHandlerBehavior(FabricCapabilities capabilities, PiPipeconf pipeconf) {
+        this.capabilities = capabilities;
+        this.pipeconf = pipeconf;
     }
 
     /**
@@ -61,18 +82,13 @@ public abstract class AbstractFabricHandlerBehavior extends AbstractHandlerBehav
             DeviceId deviceId, PiPipeconfService pipeconfService) {
         checkNotNull(deviceId);
         checkNotNull(pipeconfService);
-        // Get pipeconf capabilities.
-        final PiPipeconfId pipeconfId = pipeconfService.ofDevice(deviceId)
-                .orElse(null);
-        if (pipeconfId == null) {
+        // Get pipeconf and device capabilities.
+        Optional<PiPipeconf> pipeconfOptional = pipeconfService.getPipeconf(deviceId);
+        if (pipeconfOptional.isEmpty()) {
             throw new IllegalStateException(format(
-                    "Unable to get pipeconf ID of device %s", deviceId.toString()));
+                    "Pipeconf for '%s' is not registered ", deviceId));
         }
-        if (!pipeconfService.getPipeconf(pipeconfId).isPresent()) {
-            throw new IllegalStateException(format(
-                    "Pipeconf '%s' is not registered ", pipeconfId));
-        }
-        this.capabilities = new FabricCapabilities(
-                pipeconfService.getPipeconf(pipeconfId).get());
+        this.pipeconf = pipeconfOptional.get();
+        this.capabilities = new FabricCapabilities(this.pipeconf);
     }
 }

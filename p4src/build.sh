@@ -26,7 +26,9 @@ mkdir -p "${P4C_OUT}"
 
 # Where the compiler output should be placed to be included in the pipeconf.
 DEST_DIR=${ROOT_DIR}/src/main/resources/p4c-out/${PROFILE}
-
+# Where the pipeconf unit tests expect the compiler output should be placed.
+TEST_DEST_DIR=${ROOT_DIR}/src/test/resources/p4c-out/${PROFILE}
+DIRS=("${DEST_DIR}" "${TEST_DEST_DIR}")
 
 # If SDE_DOCKER_IMG env is set, use containerized version of the compiler
 if [ -z "${SDE_DOCKER_IMG}" ]; then
@@ -75,13 +77,14 @@ function gen_profile() {
   output_dir="${P4C_OUT}/sde_${SDE_VER//./_}"
   pltf="$1_sde_${SDE_VER//./_}"
   cpu_port=$2
-
-  # Copy only the relevant files to the pipeconf resources.
-  mkdir -p "${DEST_DIR}/${pltf}"
-  cp "${output_dir}/p4info.txt" "${DEST_DIR}/${pltf}"
-  echo "${cpu_port}" > "${DEST_DIR}/${pltf}/cpu_port.txt"
-  cp "${output_dir}/pipeline_config.pb.bin" "${DEST_DIR}/${pltf}/"
-  echo
+  for d in "${DIRS[@]}"; do
+    # Copy only the relevant files to the pipeconf resources.
+    mkdir -p "${d}/${pltf}"
+    cp "${output_dir}/p4info.txt" "${d}/${pltf}"
+    echo "${cpu_port}" > "${d}/${pltf}/cpu_port.txt"
+    cp "${output_dir}/pipeline_config.pb.bin" "${d}/${pltf}/"
+    echo
+  done
 }
 
 base_build

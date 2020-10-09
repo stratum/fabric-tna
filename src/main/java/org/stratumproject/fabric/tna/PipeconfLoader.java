@@ -3,7 +3,9 @@
 
 package org.stratumproject.fabric.tna;
 
+import com.google.common.collect.ImmutableList;
 import org.onosproject.core.CoreService;
+import org.onosproject.net.behaviour.PipelineTraceable;
 import org.onosproject.net.behaviour.Pipeliner;
 import org.onosproject.net.behaviour.inbandtelemetry.IntProgrammable;
 import org.onosproject.net.pi.model.DefaultPiPipeconf;
@@ -26,11 +28,19 @@ import org.slf4j.Logger;
 import org.stratumproject.fabric.tna.behaviour.FabricIntProgrammable;
 import org.stratumproject.fabric.tna.behaviour.FabricInterpreter;
 import org.stratumproject.fabric.tna.behaviour.pipeliner.FabricPipeliner;
+import org.stratumproject.fabric.tna.behaviour.traceable.FabricTnaPipelineTraceable;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Collection;
+import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -48,6 +58,8 @@ public class PipeconfLoader {
     public static final String APP_NAME = "org.stratumproject.fabric-tna";
 
     private static Logger log = getLogger(PipeconfLoader.class);
+
+    private static final String TEST_PATH = "target/test-classes";
 
     private static final String BASE_PIPECONF_ID = "org.stratumproject";
     private static final String P4C_OUT_PATH = "/p4c-out";
@@ -126,6 +138,9 @@ public class PipeconfLoader {
         builder.addBehaviour(PiPipelineInterpreter.class, FabricInterpreter.class)
                 .addBehaviour(Pipeliner.class, FabricPipeliner.class);
 
+        // Traceable behavior
+        builder.addBehaviour(PipelineTraceable.class, FabricTnaPipelineTraceable.class);
+
         // Add IntProgrammable behaviour for INT-enabled profiles.
         if (profile.endsWith(INT_PROFILE_SUFFIX) ||
                 profile.endsWith(FULL_PROFILE_SUFFIX)) {
@@ -174,4 +189,37 @@ public class PipeconfLoader {
             throw new IllegalStateException(e);
         }
     }
+
+    /**
+     * Build a test pipeconf for the unit tests.
+     *
+     * @return the test pipeconf
+     * @throws NoSuchElementException if no pipeconf is present*/
+    public List<PiPipeconf> buildAllTestPipeconfs() {
+        // Try to resolve the p4cOut
+        final URL p4cOut = this.getClass().getResource(P4C_OUT_PATH);
+        if (p4cOut == null) {
+            return ImmutableList.of();
+        }
+        // Recursively get the dirs
+        try {
+            List<Path> paths = Files.walk(Paths.get(p4cOut.toURI())).filter(Files::isDirectory)
+                    .collect(Collectors.toList());
+            return paths.stream()
+                    .map(this::buildPipeconfFromPath)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+        } catch (IOException | URISyntaxException e) {
+            log.warn("Unable to build pipeconf because p4cOut is missing {}", e.getMessage());
+        }
+        return ImmutableList.of();
+    }
+
+    private PiPipeconf buildPipeconfFromPath(Path path) {
+        Path pwd = Paths.get(TEST_PATH).toAbsolutePath();
+        Path relative = pwd.relativize(path);
+        return buildPipeconfFromPath(relative.toString());
+    }
+
+
 }
