@@ -267,9 +267,9 @@ parser FabricEgressParser (packet_in packet,
     Checksum() inner_ipv4_checksum;
 #endif // WITH_SPGW
 
-#ifdef WITH_INT
-    bit<1> strip_gtpu = 0;
-#endif // WITH_INT
+#if defined(WITH_INT) && defined(WITH_SPGW)
+    bit<1> is_int_and_strip_gtpu = 0;
+#endif // defined(WITH_INT) && defined(WITH_SPGW)
 
     state start {
         packet.extract(eg_intr_md);
@@ -292,7 +292,9 @@ parser FabricEgressParser (packet_in packet,
         packet.extract(fabric_md.int_mirror_md);
         fabric_md.bridged.bridged_md_type = fabric_md.int_mirror_md.bridged_md_type;
         fabric_md.bridged.vlan_id = DEFAULT_VLAN_ID;
-        strip_gtpu = fabric_md.int_mirror_md.strip_gtpu;
+#ifdef WITH_SPGW
+        is_int_and_strip_gtpu = fabric_md.int_mirror_md.strip_gtpu;
+#endif // WITH_SPGW
         transition check_ethernet;
 #else
         // Should never be here.
@@ -409,14 +411,14 @@ parser FabricEgressParser (packet_in packet,
     }
 
     state check_ipv4 {
-#ifdef WITH_INT
+#if defined(WITH_INT) && defined(WITH_SPGW)
         transition select(strip_gtpu) {
             1: strip_gtpu_and_accept;
             default: parse_ipv4;
         }
 #else
         transition parse_ipv4;
-#endif // WITH_INT
+#endif // defined(WITH_INT) && defined(WITH_SPGW)
     }
 
     state strip_gtpu_and_accept {

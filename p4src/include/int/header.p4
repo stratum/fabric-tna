@@ -58,7 +58,9 @@ header_union local_report_t {
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.queue_occupancy")
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.ig_tstamp")
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.eg_tstamp")
+#ifdef WITH_SPGW
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.strip_gtpu")
+#endif // WITH_SPGW
 header int_mirror_metadata_t {
     BridgedMdType_t bridged_md_type;
     bit<6>                _pad0;

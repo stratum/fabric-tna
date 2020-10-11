@@ -15,7 +15,11 @@ const bit<4> NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER = 2;
 const bit<16> REPORT_FIXED_HEADER_LEN = 12;
 const bit<16> DROP_REPORT_HEADER_LEN = 12;
 const bit<16> LOCAL_REPORT_HEADER_LEN = 16;
+#ifdef WITH_SPGW
 const bit<16> REPORT_MIRROR_HEADER_LEN = 24;
+#else
+const bit<16> REPORT_MIRROR_HEADER_LEN = 23;
+#endif // WITH_SPGW
 const bit<16> ETH_FCS_LEN = 4;
 
 const MirrorId_t REPORT_MIRROR_SESS_PIPE_0 = 300;
@@ -32,9 +36,5 @@ const MirrorId_t REPORT_MIRROR_SESS_PIPE_3 = 303;
 
 #define FLOW_REPORT_FILTER_WIDTH 16
 typedef bit<FLOW_REPORT_FILTER_WIDTH> flow_report_filter_index_t;
-
-const bit<2> INT_PARSER_FLAG_STRIP_NOTHING = 0b00;
-const bit<2> INT_PARSER_FLAG_STRIP_GTPU = 0b10;
-const bit<2> INT_PARSER_FLAG_STRIP_MPLS = 0b01;
 
 #endif  // __INT_DEFINE__

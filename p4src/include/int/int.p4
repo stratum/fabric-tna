@@ -223,9 +223,10 @@ control IntEgress (
         fabric_md.int_mirror_md.queue_occupancy = (bit<24>)eg_intr_md.enq_qdepth;
         fabric_md.int_mirror_md.ig_tstamp = fabric_md.bridged.ig_tstamp[31:0];
         fabric_md.int_mirror_md.eg_tstamp = eg_prsr_md.global_tstamp[31:0];
-
+#ifdef WITH_SPGW
         // We will change this later if we need to strip the GTPU header.
         fabric_md.int_mirror_md.strip_gtpu = 0;
+#endif
     }
 
     table watchlist {
