@@ -264,9 +264,6 @@ control EgressNextControl (inout parsed_headers_t hdr,
         hdr.mpls.bos = 1w1; // BOS = TRUE
         hdr.mpls.ttl = fabric_md.bridged.mpls_ttl; // Will be decremented after push.
         hdr.eth_type.value = ETHERTYPE_MPLS;
-#ifdef WITH_INT
-        fabric_md.int_mirror_md.int_parser_flags[0:0] = 1w1;
-#endif // WITH_INT
     }
 
     @hidden

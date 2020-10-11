@@ -268,7 +268,7 @@ parser FabricEgressParser (packet_in packet,
 #endif // WITH_SPGW
 
 #ifdef WITH_INT
-    bit<2> int_parser_flags = 0;
+    bit<1> strip_gtpu = 0;
 #endif // WITH_INT
 
     state start {
@@ -292,7 +292,7 @@ parser FabricEgressParser (packet_in packet,
         packet.extract(fabric_md.int_mirror_md);
         fabric_md.bridged.bridged_md_type = fabric_md.int_mirror_md.bridged_md_type;
         fabric_md.bridged.vlan_id = DEFAULT_VLAN_ID;
-        int_parser_flags = fabric_md.int_mirror_md.int_parser_flags;
+        strip_gtpu = fabric_md.int_mirror_md.strip_gtpu;
         transition check_ethernet;
 #else
         // Should never be here.
@@ -321,7 +321,11 @@ parser FabricEgressParser (packet_in packet,
         transition select(packet.lookahead<bit<16>>()) {
             ETHERTYPE_QINQ: parse_vlan_tag;
             ETHERTYPE_VLAN &&& 0xFEFF: parse_vlan_tag;
+#ifdef WITH_INT
             default: check_eth_type;
+#else
+            default: parse_eth_type;
+#endif // WITH_INT
         }
     }
 
@@ -331,38 +335,36 @@ parser FabricEgressParser (packet_in packet,
 #if defined(WITH_XCONNECT) || defined(WITH_DOUBLE_VLAN_TERMINATION)
             ETHERTYPE_VLAN: parse_inner_vlan_tag;
 #endif // WITH_XCONNECT || WITH_DOUBLE_VLAN_TERMINATION
+#ifdef WITH_INT
             default: check_eth_type;
+#else
+            default: parse_eth_type;
+#endif // WITH_INT
         }
     }
 
 #if defined(WITH_XCONNECT) || defined(WITH_DOUBLE_VLAN_TERMINATION)
     state parse_inner_vlan_tag {
         packet.extract(hdr.inner_vlan_tag);
+#ifdef WITH_INT
         transition check_eth_type;
+#else
+        transition parse_eth_type;
+#endif // WITH_INT
     }
 #endif // WITH_XCONNECT || WITH_DOUBLE_VLAN_TERMINATION
 
+#ifdef WITH_INT
     state check_eth_type {
         transition select(packet.lookahead<bit<(ETH_TYPE_SIZE * 8)>>()) {
-            ETHERTYPE_MPLS: check_mpls;
+            ETHERTYPE_MPLS: strip_mpls;
             ETHERTYPE_IPV4: parse_eth_type;
             ETHERTYPE_IPV6: parse_eth_type;
         }
     }
 
-    state check_mpls {
-#ifdef WITH_INT
-        transition select(int_parser_flags) {
-            INT_PARSER_FLAG_STRIP_MPLS &&& INT_PARSER_FLAG_STRIP_MPLS: strip_mpls;
-            default: parse_eth_type;
-        }
-#else
-        transition parse_eth_type;
-#endif // WITH_INT
-    }
-
-#ifdef WITH_INT
     state strip_mpls {
+        fabric_md.int_strip_mpls = 1;
         packet.advance((ETH_TYPE_SIZE + MPLS_HDR_SIZE) * 8);
         transition select(packet.lookahead<bit<IP_VER_LENGTH>>()) {
             IP_VERSION_4: strip_mpls_ipv4;
@@ -408,8 +410,8 @@ parser FabricEgressParser (packet_in packet,
 
     state check_ipv4 {
 #ifdef WITH_INT
-        transition select(int_parser_flags) {
-            INT_PARSER_FLAG_STRIP_GTPU &&& INT_PARSER_FLAG_STRIP_GTPU: strip_gtpu_and_accept;
+        transition select(strip_gtpu) {
+            1: strip_gtpu_and_accept;
             default: parse_ipv4;
         }
 #else

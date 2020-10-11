@@ -224,8 +224,8 @@ control IntEgress (
         fabric_md.int_mirror_md.ig_tstamp = fabric_md.bridged.ig_tstamp[31:0];
         fabric_md.int_mirror_md.eg_tstamp = eg_prsr_md.global_tstamp[31:0];
 
-        // We will change this later if we need to strip anything.
-        fabric_md.int_mirror_md.int_parser_flags = INT_PARSER_FLAG_STRIP_NOTHING;
+        // We will change this later if we need to strip the GTPU header.
+        fabric_md.int_mirror_md.strip_gtpu = 0;
     }
 
     table watchlist {
@@ -272,7 +272,7 @@ control IntEgress (
             // Remove the INT mirror metadata to prevent egress mirroring again.
             fabric_md.int_mirror_md.setInvalid();
 #ifdef WITH_SPGW
-            if (fabric_md.int_mirror_md.int_parser_flags & INT_PARSER_FLAG_STRIP_GTPU == INT_PARSER_FLAG_STRIP_GTPU) {
+            if (fabric_md.int_mirror_md.strip_gtpu == 1) {
                 // We need to remove length of IP, UDP, and GTPU headers
                 // since we only monitor the packet inside the GTP tunnel.
                 hdr.report_ipv4.total_len = hdr.report_ipv4.total_len
@@ -281,7 +281,7 @@ control IntEgress (
                     - (IPV4_HDR_SIZE + UDP_HDR_SIZE + GTP_HDR_SIZE);
             }
 #endif // WITH_SPGW
-            if (fabric_md.int_mirror_md.int_parser_flags & INT_PARSER_FLAG_STRIP_MPLS == INT_PARSER_FLAG_STRIP_MPLS) {
+            if (fabric_md.int_strip_mpls == 1) {
                 // We need to remove length of MPLS since we don't include MPLS
                 // header in INT report.
                 hdr.report_ipv4.total_len = hdr.report_ipv4.total_len

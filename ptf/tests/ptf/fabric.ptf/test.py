@@ -779,9 +779,9 @@ class FabricIntSpineTest(IntTest):
 
     @tvsetup
     @autocleanup
-    def doRunTest(self, vlan_conf, tagged, pkt_type, mpls):
+    def doRunTest(self, vlan_conf, tagged, pkt_type, is_next_hop_spine):
         print "Testing VLAN=%s, pkt=%s, mpls=%s..." \
-              % (vlan_conf, pkt_type, mpls)
+              % (vlan_conf, pkt_type, is_next_hop_spine)
         # Change the IP destination to ensure we are using differnt
         # flow for diffrent test cases since the flow report filter
         # might disable the report.
@@ -792,32 +792,32 @@ class FabricIntSpineTest(IntTest):
         self.runIntTest(pkt=pkt,
                         tagged1=tagged[0],
                         tagged2=tagged[1],
-                        mpls=mpls,
+                        is_next_hop_spine=is_next_hop_spine,
                         is_device_spine=True)
 
     def runTest(self):
         print ""
         for vlan_conf, tagged in vlan_confs.items():
             for pkt_type in ["udp", "tcp", "icmp"]:
-                for mpls in [False, True]:
-                    if mpls and tagged[1]:
+                for is_next_hop_spine in [False, True]:
+                    if is_next_hop_spine and tagged[1]:
                         continue
-                    self.doRunTest(vlan_conf, tagged, pkt_type, mpls)
+                    self.doRunTest(vlan_conf, tagged, pkt_type, is_next_hop_spine)
 
 @group("int")
 class FabricFlowReportFilterNoChangeTest(IntTest):
 
     @tvsetup
     @autocleanup
-    def doRunTest(self, vlan_conf, tagged, pkt_type, mpls, expect_int_report, ip_dst):
+    def doRunTest(self, vlan_conf, tagged, pkt_type, is_next_hop_spine, expect_int_report, ip_dst):
         self.set_up_quantize_hop_latency_rule(qmask=0xf0000000)
         print "Testing VLAN=%s, pkt=%s, mpls=%s..." \
-              % (vlan_conf, pkt_type, mpls)
+              % (vlan_conf, pkt_type, is_next_hop_spine)
         pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(ip_dst=ip_dst)
         self.runIntTest(pkt=pkt,
                         tagged1=tagged[0],
                         tagged2=tagged[1],
-                        mpls=mpls,
+                        is_next_hop_spine=is_next_hop_spine,
                         expect_int_report=expect_int_report)
 
     def runTest(self):
@@ -831,10 +831,10 @@ class FabricFlowReportFilterNoChangeTest(IntTest):
             # via P4Runtime.
             ip_dst = self.get_single_use_ip()
             for vlan_conf, tagged in vlan_confs.items():
-                for mpls in [False, True]:
-                    if mpls and tagged[1]:
+                for is_next_hop_spine in [False, True]:
+                    if is_next_hop_spine and tagged[1]:
                         continue
-                    self.doRunTest(vlan_conf, tagged, pkt_type, mpls, expect_int_report, ip_dst)
+                    self.doRunTest(vlan_conf, tagged, pkt_type, is_next_hop_spine, expect_int_report, ip_dst)
 
                     # We should expect not receving any report after the first
                     # report since packet uses 5-tuple as flow ID.
