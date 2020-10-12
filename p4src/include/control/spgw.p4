@@ -266,7 +266,7 @@ control SpgwIngress(
         // Forwarding is done by other parts of fabric.p4, and
         // encapsulation is done in the egress
 
-        // Needed for correct GTPU encapsulation in egress 
+        // Needed for correct GTPU encapsulation in egress
         // TODO: This is from v1model. Is it still needed?
         fabric_md.bridged.spgw_ipv4_len = hdr.ipv4.total_len;
     }
@@ -293,8 +293,8 @@ control SpgwEgress(
     */
     @hidden
     action _preload_length_additives() {
-        outer_ipv4_len_additive = IPV4_HDR_SIZE + UDP_HDR_SIZE + GTP_HDR_SIZE;
-        outer_udp_len_additive = UDP_HDR_SIZE + GTP_HDR_SIZE;
+        outer_ipv4_len_additive = IPV4_HDR_BYTES + UDP_HDR_BYTES + GTP_HDR_BYTES;
+        outer_udp_len_additive = UDP_HDR_BYTES + GTP_HDR_BYTES;
     }
 
     @hidden
