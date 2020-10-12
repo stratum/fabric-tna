@@ -1759,9 +1759,21 @@ class IntTest(IPv4UnicastTest):
         self.verify_no_other_packets()
 
 class SpgwIntTest(SpgwSimpleTest, IntTest):
+    """
+    This test includes two parts:
+    1. Spgw uplink and downlink test which installs entries to route, encap, and decap
+       GTP traffic. The test will also emit the packet and check the expected packet.
+    2. Installs INT related table entries and check the expected report packet. Note
+       that the expected packet in the INT report should be the packet without GTPU
+       headers(IP/UDP/GTPU).
+    """
 
-    def runSpgwUplinkIntTest(self, pkt, tagged1, tagged2,
-                             switch_id=1, mpls=False):
+    def runSpgwUplinkIntTest(self, pkt,
+                             tagged1,
+                             tagged2,
+                             switch_id=1,
+                             is_next_hop_spine=False,
+                             is_device_spine=False):
         # Build packet from eNB
         # Add GTPU header to the original packet
         gtp_pkt = pkt_add_gtp(pkt, out_ipv4_src=S1U_ENB_IPV4,
@@ -1785,12 +1797,12 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         # Build exp pkt using the input one.
         int_inner_pkt = pkt.copy()
         int_inner_pkt = pkt_route(int_inner_pkt, HOST2_MAC)
-        if not mpls:
+        if not is_next_hop_spine:
             int_inner_pkt = pkt_decrement_ttl(int_inner_pkt)
         if tagged2 and Dot1Q not in int_inner_pkt:
             int_inner_pkt = pkt_add_vlan(int_inner_pkt, vlan_vid=VLAN_ID_2)
         exp_pkt = int_inner_pkt
-        if mpls:
+        if is_next_hop_spine:
             # Note that we won't add MPLS header to the expected inner
             # packet since the pipeline will strip out the MPLS header
             # from it before in the parser.
@@ -1815,7 +1827,8 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         # Note that we are monitoring the inner packet.
         self.setup_watchlist_flow(ipv4_src, ipv4_dst, sport, dport, switch_id)
         self.setup_report_flow(collector_port, SWITCH_MAC, SWITCH_MAC,
-                               SWITCH_IPV4, INT_COLLECTOR_IPV4, INT_REPORT_PORT)
+                               SWITCH_IPV4, INT_COLLECTOR_IPV4, INT_REPORT_PORT,
+                               is_device_spine)
         self.setup_report_mirror_flow(0, INT_REPORT_MIRROR_ID_0, self.recirculate_port_0)
         self.setup_report_mirror_flow(1, INT_REPORT_MIRROR_ID_1, self.recirculate_port_1)
         self.setup_report_mirror_flow(2, INT_REPORT_MIRROR_ID_2, self.recirculate_port_2)
@@ -1826,13 +1839,16 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         # Here we use next-id 101 since `runIPv4UnicastTest` will use 100 by default
         next_id = 101
         prefix_len = 32
-        self.add_forwarding_routing_v4_entry(INT_COLLECTOR_IPV4, prefix_len, next_id)
+        if is_device_spine:
+            self.add_forwarding_mpls_entry(MPLS_LABEL_1, next_id)
+        else:
+            self.add_forwarding_routing_v4_entry(INT_COLLECTOR_IPV4, prefix_len, next_id)
         self.add_next_routing(next_id, collector_port, SWITCH_MAC, INT_COLLECTOR_MAC)
         self.add_next_vlan(next_id, DEFAULT_VLAN)
         # End of setting up entries for report packet
         self.runIPv4UnicastTest(pkt=gtp_pkt, dst_ipv4=pkt[IP].dst,
                                 exp_pkt=exp_pkt, next_hop_mac=HOST2_MAC,
-                                tagged1=tagged1, tagged2=tagged2, mpls=mpls,
+                                tagged1=tagged1, tagged2=tagged2, mpls=is_next_hop_spine,
                                 prefix_len=32, with_another_pkt_later=True)
 
         self.verify_packet(exp_int_report_pkt_masked, collector_port)
@@ -1840,7 +1856,8 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
 
 
     def runSpgwDownlinkIntTest(self, pkt, tagged1, tagged2,
-                               switch_id=1, mpls=False):
+                               switch_id=1, is_next_hop_spine=False,
+                               is_device_spine=False):
         ig_port = self.port1
         eg_port = self.port2
         ipv4_src = pkt[IP].src
@@ -1859,7 +1876,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         # We should expected to receive an packet with GTPU headers.
         exp_pkt = pkt.copy()
         inner_exp_pkt = pkt.copy()
-        if not mpls:
+        if not is_next_hop_spine:
             exp_pkt = pkt_decrement_ttl(exp_pkt)
             inner_exp_pkt = pkt_decrement_ttl(inner_exp_pkt)
         exp_pkt = pkt_add_gtp(exp_pkt, out_ipv4_src=S1U_SGW_IPV4,
@@ -1869,11 +1886,11 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         if tagged2 and Dot1Q not in exp_pkt:
             exp_pkt = pkt_add_vlan(exp_pkt, vlan_vid=VLAN_ID_2)
             inner_exp_pkt = pkt_add_vlan(inner_exp_pkt, vlan_vid=VLAN_ID_2)
-        if mpls:
+        if is_next_hop_spine:
             exp_pkt = pkt_add_mpls(exp_pkt, label=MPLS_LABEL_2, ttl=DEFAULT_MPLS_TTL)
             # Note that we won't add MPLS header to the expected inner
             # packet since the pipeline will strip out the MPLS header
-            # from it before in the parser.
+            # from it in the parser.
 
         # We should also expected an INT report packet
         exp_int_report_pkt_masked = \
@@ -1893,7 +1910,8 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         # Note that we are monitoring the inner packet.
         self.setup_watchlist_flow(ipv4_src, ipv4_dst, sport, dport, switch_id)
         self.setup_report_flow(collector_port, SWITCH_MAC, SWITCH_MAC,
-                               SWITCH_IPV4, INT_COLLECTOR_IPV4, INT_REPORT_PORT)
+                               SWITCH_IPV4, INT_COLLECTOR_IPV4, INT_REPORT_PORT,
+                               is_device_spine)
         self.setup_report_mirror_flow(0, INT_REPORT_MIRROR_ID_0, self.recirculate_port_0)
         self.setup_report_mirror_flow(1, INT_REPORT_MIRROR_ID_1, self.recirculate_port_1)
         self.setup_report_mirror_flow(2, INT_REPORT_MIRROR_ID_2, self.recirculate_port_2)
@@ -1904,14 +1922,17 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         # Here we use next-id 101 since `runIPv4UnicastTest` will use 100 by default
         next_id = 101
         prefix_len = 32
-        self.add_forwarding_routing_v4_entry(INT_COLLECTOR_IPV4, prefix_len, next_id)
+        if is_device_spine:
+            self.add_forwarding_mpls_entry(MPLS_LABEL_1, next_id)
+        else:
+            self.add_forwarding_routing_v4_entry(INT_COLLECTOR_IPV4, prefix_len, next_id)
         self.add_next_routing(next_id, collector_port, SWITCH_MAC, INT_COLLECTOR_MAC)
         self.add_next_vlan(next_id, DEFAULT_VLAN)
         # End of setting up entries for report packet
         self.runIPv4UnicastTest(pkt=pkt, dst_ipv4=S1U_ENB_IPV4,
                                 next_hop_mac=HOST2_MAC,
                                 prefix_len=32, exp_pkt=exp_pkt,
-                                tagged1=tagged1, tagged2=tagged2, mpls=mpls,
+                                tagged1=tagged1, tagged2=tagged2, mpls=is_next_hop_spine,
                                 with_another_pkt_later=True)
 
         self.verify_packet( exp_int_report_pkt_masked, collector_port)
