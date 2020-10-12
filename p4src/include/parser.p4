@@ -412,7 +412,7 @@ parser FabricEgressParser (packet_in packet,
 
     state check_ipv4 {
 #if defined(WITH_INT) && defined(WITH_SPGW)
-        transition select(strip_gtpu) {
+        transition select(is_int_and_strip_gtpu) {
             1: strip_gtpu_and_accept;
             default: parse_ipv4;
         }
