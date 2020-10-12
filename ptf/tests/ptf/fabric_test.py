@@ -1777,7 +1777,7 @@ class IntTest(IPv4UnicastTest):
                 self.add_next_routing(next_id, collector_port, SWITCH_MAC, INT_COLLECTOR_MAC)
         self.add_next_vlan(next_id, DEFAULT_VLAN)
         # End of setting up entries for report packet
-
+        # TODO: Use MPLS test instead of IPv4 test if device is spine.
         self.runIPv4UnicastTest(pkt=pkt, next_hop_mac=HOST2_MAC,
                                 tagged1=tagged1, tagged2=tagged2, mpls=is_next_hop_spine,
                                 prefix_len=prefix_len, with_another_pkt_later=True,
@@ -1899,6 +1899,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
                 self.add_next_routing(next_id, collector_port, SWITCH_MAC, INT_COLLECTOR_MAC)
         self.add_next_vlan(next_id, DEFAULT_VLAN)
         # End of setting up entries for report packet
+        # TODO: Use MPLS test instead of IPv4 test if device is spine.
         self.runIPv4UnicastTest(pkt=gtp_pkt, dst_ipv4=pkt[IP].dst,
                                 exp_pkt=exp_pkt, next_hop_mac=HOST2_MAC,
                                 tagged1=tagged1, tagged2=tagged2, mpls=is_next_hop_spine,
@@ -2009,6 +2010,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
                 self.add_next_routing(next_id, collector_port, SWITCH_MAC, INT_COLLECTOR_MAC)
         self.add_next_vlan(next_id, DEFAULT_VLAN)
         # End of setting up entries for report packet
+        # TODO: Use MPLS test instead of IPv4 test if device is spine.
         self.runIPv4UnicastTest(pkt=pkt, dst_ipv4=S1U_ENB_IPV4,
                                 next_hop_mac=HOST2_MAC,
                                 prefix_len=32, exp_pkt=exp_pkt,
