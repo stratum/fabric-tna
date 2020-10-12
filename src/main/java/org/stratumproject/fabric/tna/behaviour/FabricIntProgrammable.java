@@ -44,6 +44,7 @@ import org.onosproject.segmentrouting.config.SegmentRoutingDeviceConfig;
 import org.stratumproject.fabric.tna.PipeconfLoader;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -420,14 +421,15 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
      * TODO: remove this method once we get SR API done.
      *
      * @param collectorIp the IP address of the INT collector
-     * @return the SID of the device, -1 of the device connot be found or there is an error
+     * @return the SID of the device,
+     *         Optional.empty() if we cannot find the SID of the device
      */
-    private int getSidForCollector(IpAddress collectorIp) {
+    private Optional<Integer> getSidForCollector(IpAddress collectorIp) {
         Set<Host> collectorHosts = hostService.getHostsByIp(collectorIp);
         if (collectorHosts.isEmpty()) {
             log.warn("Unable to find collector with IP {}, skip for now.",
                     collectorIp);
-            return -1;
+            return Optional.empty();
         }
         Host collector = collectorHosts.iterator().next();
         if (collectorHosts.size() > 1) {
@@ -450,9 +452,14 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         if (cfg == null) {
             log.error("Missing SegmentRoutingDeviceConfig config for {}, " +
                     "cannot derive SID for collector", deviceWithCollector);
-            return -1;
+            return Optional.empty();
         }
-        return cfg.nodeSidIPv4();
+        if (cfg.nodeSidIPv4() == -1) {
+            log.error("Missing ipv4NodeSid in segment routing config for device {}",
+                    deviceWithCollector);
+            return Optional.empty();
+        }
+        return Optional.of(cfg.nodeSidIPv4());
     }
 
     private FlowRule buildReportEntry(IntDeviceConfig intCfg) {
@@ -474,18 +481,6 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                         "with segmentrouting ipv4Loopback ({}), also ignoring MAC addresses",
                 deviceId, intCfg.sinkIp(), srcIp);
 
-        // If the device is a spine device, we need to find which
-        // switch is the INT collector attached to and find the SID of that device.
-        int sid = -1;
-        if (!srCfg.isEdgeRouter()) {
-            // TODO: replace this with SR API.
-            sid = getSidForCollector(intCfg.collectorIp());
-            if (sid == -1) {
-                // Error log will be shown in getSidForCollector method.
-                return null;
-            }
-        }
-
         final PiActionParam srcMacParam = new PiActionParam(
                 P4InfoConstants.SRC_MAC, MacAddress.ZERO.toBytes());
         final PiActionParam nextHopMacParam = new PiActionParam(
@@ -499,10 +494,19 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 P4InfoConstants.MON_PORT,
                 intCfg.collectorPort().toInt());
         PiAction reportAction;
+
         if (!srCfg.isEdgeRouter()) {
+            // If the device is a spine device, we need to find which
+            // switch is the INT collector attached to and find the SID of that device.
+            // TODO: replace this with SR API.
+            Optional<Integer> sid = getSidForCollector(intCfg.collectorIp());
+            if (sid.isEmpty()) {
+                // Error log will be shown in getSidForCollector method.
+                return null;
+            }
             final PiActionParam monLabelParam = new PiActionParam(
                     P4InfoConstants.MON_LABEL,
-                    sid);
+                    sid.get());
             reportAction = PiAction.builder()
                     .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_REPORT_ENCAP_MPLS)
                     .withParameter(srcMacParam)
