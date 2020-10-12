@@ -18,6 +18,13 @@ vlan_confs = {
     "untag->tag": [False, True],
 }
 
+# Add simple_gtp_packet to testutils so we can use it later
+
+def simple_gtp_packet(ip_src=S1U_ENB_IPV4, ip_dst=S1U_SGW_IPV4, teid=TEID_1):
+    return pkt_add_gtp(testutils.simple_tcp_packet(), out_ipv4_src=ip_src,
+                       out_ipv4_dst=ip_dst, teid=TEID_1)
+
+setattr(testutils, 'simple_gtp_packet', simple_gtp_packet)
 
 class FabricBridgingTest(BridgingTest):
 
@@ -777,7 +784,7 @@ class FabricIntTest(IntTest):
             for is_next_hop_spine in [False, True]:
                 if is_next_hop_spine and tagged[1]:
                     continue
-                for pkt_type in ["udp", "tcp", "icmp"]:
+                for pkt_type in ["udp", "tcp", "icmp", "gtp"]:
                     for is_device_spine in [False, True]:
                         self.doRunTest(vlan_conf, tagged, pkt_type, is_next_hop_spine, is_device_spine)
 
