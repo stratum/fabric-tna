@@ -174,7 +174,7 @@ control IntEgress (
         hdr.report_mpls.label = mon_label;
         hdr.report_mpls.tc = 0;
         hdr.report_mpls.bos = 1;
-        hdr.report_mpls.ttl = fabric_md.bridged.mpls_ttl;
+        hdr.report_mpls.ttl = DEFAULT_MPLS_TTL;
     }
 
     table report {
