@@ -1769,11 +1769,17 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
     """
 
     def runSpgwUplinkIntTest(self, pkt,
-                             tagged1,
-                             tagged2,
-                             switch_id=1,
+                             tagged1=False,
+                             tagged2=False,
                              is_next_hop_spine=False,
                              is_device_spine=False):
+        """
+        :param pkt: the input packet
+        :param tagged1: if the input port should expect VLAN tagged packets
+        :param tagged2: if the output port should expect VLAN tagged packets
+        :param is_next_hop_spine: whether the packet should be routed to the spines using MPLS SR
+        :param is_device_spine: the device is a spine device
+        """
         # Build packet from eNB
         # Add GTPU header to the original packet
         gtp_pkt = pkt_add_gtp(pkt, out_ipv4_src=S1U_ENB_IPV4,
@@ -1781,6 +1787,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         ig_port = self.port1
         eg_port = self.port2
         collector_port = self.port3
+        switch_id=1
         ipv4_src = pkt[IP].src
         ipv4_dst = pkt[IP].dst
         if UDP in pkt:
@@ -1855,14 +1862,24 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         self.verify_no_other_packets()
 
 
-    def runSpgwDownlinkIntTest(self, pkt, tagged1, tagged2,
-                               switch_id=1, is_next_hop_spine=False,
+    def runSpgwDownlinkIntTest(self, pkt,
+                               tagged1=False,
+                               tagged2=False,
+                               is_next_hop_spine=False,
                                is_device_spine=False):
+        """
+        :param pkt: the input packet
+        :param tagged1: if the input port should expect VLAN tagged packets
+        :param tagged2: if the output port should expect VLAN tagged packets
+        :param is_next_hop_spine: whether the packet should be routed to the spines using MPLS SR
+        :param is_device_spine: the device is a spine device
+        """
         ig_port = self.port1
         eg_port = self.port2
+        collector_port = self.port3
+        switch_id=1
         ipv4_src = pkt[IP].src
         ipv4_dst = pkt[IP].dst
-        collector_port = self.port3
         if UDP in pkt:
             sport = pkt[UDP].sport
             dport = pkt[UDP].dport
