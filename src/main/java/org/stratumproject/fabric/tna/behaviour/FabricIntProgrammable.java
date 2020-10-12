@@ -415,6 +415,13 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         return 0xffffffffL & qmask;
     }
 
+    /**
+     * Gets the SID of the device which collector attached to.
+     * TODO: remove this method once we get SR API done.
+     *
+     * @param collectorIp the IP address of the INT collector
+     * @return the SID of the device, -1 of the device connot be found or there is an error
+     */
     private int getSidForCollector(IpAddress collectorIp) {
         Set<Host> collectorHosts = hostService.getHostsByIp(collectorIp);
         if (collectorHosts.isEmpty()) {
@@ -468,8 +475,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 deviceId, intCfg.sinkIp(), srcIp);
 
         // If the device is a spine device, we need to find which
-        // switch is the INT collector attached to.
-        // And find the SID of that device.
+        // switch is the INT collector attached to and find the SID of that device.
         int sid = -1;
         if (!srCfg.isEdgeRouter()) {
             // TODO: replace this with SR API.
@@ -493,7 +499,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 P4InfoConstants.MON_PORT,
                 intCfg.collectorPort().toInt());
         PiAction reportAction;
-        if (!srCfg.isEdgeRouter() && sid != -1) {
+        if (!srCfg.isEdgeRouter()) {
             final PiActionParam monLabelParam = new PiActionParam(
                     P4InfoConstants.MON_LABEL,
                     sid);
