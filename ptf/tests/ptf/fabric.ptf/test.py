@@ -718,12 +718,14 @@ class FabricSpgwUplinkIntTest(SpgwIntTest):
 
     def runTest(self):
         print ""
-        for vlan_conf, tagged in vlan_confs.items():
-            for is_next_hop_spine in [False, True]:
-                if is_next_hop_spine and tagged[1]:
+        for is_device_spine in [False, True]:
+            for vlan_conf, tagged in vlan_confs.items():
+                if is_device_spine and tagged[0] and tagged[1]:
                     continue
-                for pkt_type in ["udp", "tcp", "icmp"]:
-                    for is_device_spine in [False, True]:
+                for is_next_hop_spine in [False, True]:
+                    if is_next_hop_spine and tagged[1]:
+                        continue
+                    for pkt_type in ["udp", "tcp", "icmp"]:
                         self.doRunTest(vlan_conf, tagged, pkt_type, is_next_hop_spine, is_device_spine)
 
 @group("int")
@@ -749,12 +751,14 @@ class FabricSpgwDownlinkIntTest(SpgwIntTest):
 
     def runTest(self):
         print ""
-        for vlan_conf, tagged in vlan_confs.items():
-            for is_next_hop_spine in [False, True]:
-                if is_next_hop_spine and tagged[1]:
+        for is_device_spine in [False, True]:
+            for vlan_conf, tagged in vlan_confs.items():
+                if is_device_spine and tagged[0] and tagged[1]:
                     continue
-                for pkt_type in ["udp", "tcp", "icmp"]:
-                    for is_device_spine in [False, True]:
+                for is_next_hop_spine in [False, True]:
+                    if is_next_hop_spine and tagged[1]:
+                        continue
+                    for pkt_type in ["udp", "tcp", "icmp"]:
                         self.doRunTest(vlan_conf, tagged, pkt_type, is_next_hop_spine, is_device_spine)
 
 @group("int")
@@ -780,12 +784,14 @@ class FabricIntTest(IntTest):
 
     def runTest(self):
         print ""
-        for vlan_conf, tagged in vlan_confs.items():
-            for is_next_hop_spine in [False, True]:
-                if is_next_hop_spine and tagged[1]:
+        for is_device_spine in [False, True]:
+            for vlan_conf, tagged in vlan_confs.items():
+                if is_device_spine and tagged[0] and tagged[1]:
                     continue
-                for pkt_type in ["udp", "tcp", "icmp", "gtp"]:
-                    for is_device_spine in [False, True]:
+                for is_next_hop_spine in [False, True]:
+                    if is_next_hop_spine and tagged[1]:
+                        continue
+                    for pkt_type in ["udp", "tcp", "icmp"]:
                         self.doRunTest(vlan_conf, tagged, pkt_type, is_next_hop_spine, is_device_spine)
 
 @group("int")
