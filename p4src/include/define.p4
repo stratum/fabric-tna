@@ -6,40 +6,19 @@
 #ifndef __DEFINE__
 #define __DEFINE__
 
-#define MAX_PORTS 511
-
 #if ! defined(WITH_SIMPLE_NEXT)
 #define WITH_HASHED_NEXT
 #endif
 
-#ifndef _PKT_OUT_HDR_ANNOT
-#define _PKT_OUT_HDR_ANNOT
-#endif
-
-#ifndef _PRE_INGRESS
-#define _PRE_INGRESS
-#endif
-
-#ifndef _PRE_EGRESS
-#define _PRE_EGRESS
-#endif
-
-#ifndef IP_VER_LENGTH
-#define IP_VER_LENGTH 4
-#endif
-#ifndef IP_VERSION_4
 #define IP_VERSION_4 4
-#endif
-#ifndef IP_VERSION_6
 #define IP_VERSION_6 6
-#endif
 
-#define ETH_TYPE_SIZE 2
-#define ETH_HDR_SIZE 14
-#define IPV4_HDR_SIZE 20
-#define UDP_HDR_SIZE 8
-#define GTP_HDR_SIZE 8
-#define MPLS_HDR_SIZE 4
+#define ETH_TYPE_BYTES 2
+#define IP_VER_BITS 4
+#define IPV4_HDR_BYTES 20
+#define UDP_HDR_BYTES 8
+#define GTP_HDR_BYTES 8
+#define MPLS_HDR_BYTES 4
 
 #define UDP_PORT_GTPU 2152
 #define GTP_GPDU 0xff

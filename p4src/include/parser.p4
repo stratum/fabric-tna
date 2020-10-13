@@ -115,7 +115,7 @@ parser FabricIngressParser (packet_in  packet,
         // There is only one MPLS label for this fabric.
         // Assume header after MPLS header is IPv4/IPv6
         // Lookup first 4 bits for version
-        transition select(packet.lookahead<bit<IP_VER_LENGTH>>()) {
+        transition select(packet.lookahead<bit<IP_VER_BITS>>()) {
             IP_VERSION_4: parse_ipv4;
             IP_VERSION_6: parse_ipv6;
             default: reject;
@@ -314,7 +314,7 @@ parser FabricEgressParser (packet_in packet,
     state set_cpu_loopback_egress {
         hdr.fake_ethernet.setValid();
         hdr.fake_ethernet.ether_type = ETHERTYPE_CPU_LOOPBACK_EGRESS;
-        packet.advance(ETH_HDR_SIZE * 8);
+        packet.advance(ETH_TYPE_BYTES * 8);
         transition parse_ethernet;
     }
 
@@ -358,7 +358,7 @@ parser FabricEgressParser (packet_in packet,
 
 #ifdef WITH_INT
     state check_eth_type {
-        transition select(packet.lookahead<bit<(ETH_TYPE_SIZE * 8)>>()) {
+        transition select(packet.lookahead<bit<(ETH_TYPE_BYTES * 8)>>()) {
             ETHERTYPE_MPLS: strip_mpls;
             ETHERTYPE_IPV4: parse_eth_type;
             ETHERTYPE_IPV6: parse_eth_type;
@@ -366,9 +366,11 @@ parser FabricEgressParser (packet_in packet,
     }
 
     state strip_mpls {
+#ifdef WITH_INT
         fabric_md.int_strip_mpls = 1;
-        packet.advance((ETH_TYPE_SIZE + MPLS_HDR_SIZE) * 8);
-        transition select(packet.lookahead<bit<IP_VER_LENGTH>>()) {
+#endif // WITH_INT
+        packet.advance((ETH_TYPE_BYTES + MPLS_HDR_BYTES) * 8);
+        transition select(packet.lookahead<bit<IP_VER_BITS>>()) {
             IP_VERSION_4: strip_mpls_ipv4;
             IP_VERSION_6: strip_mpls_ipv6;
             default: reject;
@@ -390,7 +392,9 @@ parser FabricEgressParser (packet_in packet,
 
     state parse_eth_type {
         packet.extract(hdr.eth_type);
+#ifdef WITH_INT
         fabric_md.int_strip_mpls = 0;
+#endif // WITH_INT
         transition select(hdr.eth_type.value) {
             ETHERTYPE_MPLS: parse_mpls;
             ETHERTYPE_IPV4: check_ipv4;
@@ -404,7 +408,7 @@ parser FabricEgressParser (packet_in packet,
         // There is only one MPLS label for this fabric.
         // Assume header after MPLS header is IPv4/IPv6
         // Lookup first 4 bits for version
-        transition select(packet.lookahead<bit<IP_VER_LENGTH>>()) {
+        transition select(packet.lookahead<bit<IP_VER_BITS>>()) {
             IP_VERSION_4: check_ipv4;
             IP_VERSION_6: parse_ipv6;
             default: reject;
@@ -423,7 +427,7 @@ parser FabricEgressParser (packet_in packet,
     }
 
     state strip_gtpu_and_accept {
-        packet.advance((IPV4_HDR_SIZE + UDP_HDR_SIZE + GTP_HDR_SIZE) * 8);
+        packet.advance((IPV4_HDR_BYTES + UDP_HDR_BYTES + GTP_HDR_BYTES) * 8);
         transition accept;
     }
 
