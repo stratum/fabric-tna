@@ -18,13 +18,6 @@ vlan_confs = {
     "untag->tag": [False, True],
 }
 
-# Add simple_gtp_packet to testutils so we can use it later
-
-def simple_gtp_packet(ip_src=S1U_ENB_IPV4, ip_dst=S1U_SGW_IPV4, teid=TEID_1):
-    return pkt_add_gtp(testutils.simple_tcp_packet(), out_ipv4_src=ip_src,
-                       out_ipv4_dst=ip_dst, teid=TEID_1)
-
-setattr(testutils, 'simple_gtp_packet', simple_gtp_packet)
 
 class FabricBridgingTest(BridgingTest):
 
@@ -740,7 +733,7 @@ class FabricSpgwDownlinkIntTest(SpgwIntTest):
     @tvsetup
     @autocleanup
     def doRunTest(self, vlan_conf, tagged, pkt_type, is_next_hop_spine, is_device_spine, send_report_to_spine):
-        print "Testing VLAN=%s, pkt=%s, is_next_hop_spine=%s, is_device_spine=%s..." \
+        print "Testing VLAN=%s, pkt=%s, is_next_hop_spine=%s, is_device_spine=%s, send_report_to_spine=%s..." \
               % (vlan_conf, pkt_type, is_next_hop_spine, is_device_spine, send_report_to_spine)
         # Change the IP destination to ensure we are using differnt
         # flow for diffrent test cases since the flow report filter

@@ -281,7 +281,7 @@ control IntEgress (
                     - (IPV4_HDR_BYTES + UDP_HDR_BYTES + GTP_HDR_BYTES);
             }
 #endif // WITH_SPGW
-            if (fabric_md.int_strip_mpls == 1) {
+            if (fabric_md.int_mpls_stripped == 1) {
                 // We need to remove length of MPLS since we don't include MPLS
                 // header in INT report.
                 hdr.report_ipv4.total_len = hdr.report_ipv4.total_len

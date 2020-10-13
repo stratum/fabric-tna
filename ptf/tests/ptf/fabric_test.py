@@ -1585,7 +1585,7 @@ class IntTest(IPv4UnicastTest):
 
     def setup_report_flow(self, port, src_mac, mon_mac,
                           src_ip, mon_ip, mon_port,
-                          is_device_spine=False):
+                          mon_label=None):
         action = "do_report_encap"
         action_params = [
                 ("src_mac", mac_to_binary(src_mac)),
@@ -1594,9 +1594,9 @@ class IntTest(IPv4UnicastTest):
                 ("mon_ip", ipv4_to_binary(mon_ip)),
                 ("mon_port", stringify(mon_port, 2))
             ]
-        if is_device_spine:
+        if mon_label:
             action = "do_report_encap_mpls"
-            action_params.append(("mon_label", stringify(MPLS_LABEL_1, 3)))
+            action_params.append(("mon_label", stringify(mon_label, 3)))
 
         self.send_request_add_entry_to_action(
             "report",
@@ -1753,10 +1753,11 @@ class IntTest(IPv4UnicastTest):
                                         int_report_mpls_label)
 
         # Set collector, report table, and mirror sessions
+        mon_label = MPLS_LABEL_1 if is_device_spine else None
         self.setup_watchlist_flow(ipv4_src, ipv4_dst, sport, dport, switch_id)
         self.setup_report_flow(collector_port, SWITCH_MAC, SWITCH_MAC,
                                SWITCH_IPV4, INT_COLLECTOR_IPV4, INT_REPORT_PORT,
-                               is_device_spine)
+                               mon_label)
         self.setup_report_mirror_flow(0, INT_REPORT_MIRROR_ID_0, self.recirculate_port_0)
         self.setup_report_mirror_flow(1, INT_REPORT_MIRROR_ID_1, self.recirculate_port_1)
         self.setup_report_mirror_flow(2, INT_REPORT_MIRROR_ID_2, self.recirculate_port_2)
@@ -1879,10 +1880,11 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
 
         # Set collector, report table, and mirror sessions
         # Note that we are monitoring the inner packet.
+        mon_label = MPLS_LABEL_1 if is_device_spine else None
         self.setup_watchlist_flow(ipv4_src, ipv4_dst, sport, dport, switch_id)
         self.setup_report_flow(collector_port, SWITCH_MAC, SWITCH_MAC,
                                SWITCH_IPV4, INT_COLLECTOR_IPV4, INT_REPORT_PORT,
-                               is_device_spine)
+                               mon_label)
         self.setup_report_mirror_flow(0, INT_REPORT_MIRROR_ID_0, self.recirculate_port_0)
         self.setup_report_mirror_flow(1, INT_REPORT_MIRROR_ID_1, self.recirculate_port_1)
         self.setup_report_mirror_flow(2, INT_REPORT_MIRROR_ID_2, self.recirculate_port_2)
@@ -1994,10 +1996,11 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
 
         # Set collector, report table, and mirror sessions
         # Note that we are monitoring the inner packet.
+        mon_label = MPLS_LABEL_1 if is_device_spine else None
         self.setup_watchlist_flow(ipv4_src, ipv4_dst, sport, dport, switch_id)
         self.setup_report_flow(collector_port, SWITCH_MAC, SWITCH_MAC,
                                SWITCH_IPV4, INT_COLLECTOR_IPV4, INT_REPORT_PORT,
-                               is_device_spine)
+                               mon_label)
         self.setup_report_mirror_flow(0, INT_REPORT_MIRROR_ID_0, self.recirculate_port_0)
         self.setup_report_mirror_flow(1, INT_REPORT_MIRROR_ID_1, self.recirculate_port_1)
         self.setup_report_mirror_flow(2, INT_REPORT_MIRROR_ID_2, self.recirculate_port_2)

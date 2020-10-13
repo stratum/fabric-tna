@@ -367,7 +367,7 @@ parser FabricEgressParser (packet_in packet,
 
     state strip_mpls {
 #ifdef WITH_INT
-        fabric_md.int_strip_mpls = 1;
+        fabric_md.int_mpls_stripped = 1;
 #endif // WITH_INT
         packet.advance((ETH_TYPE_BYTES + MPLS_HDR_BYTES) * 8);
         transition select(packet.lookahead<bit<IP_VER_BITS>>()) {
@@ -393,7 +393,7 @@ parser FabricEgressParser (packet_in packet,
     state parse_eth_type {
         packet.extract(hdr.eth_type);
 #ifdef WITH_INT
-        fabric_md.int_strip_mpls = 0;
+        fabric_md.int_mpls_stripped = 0;
 #endif // WITH_INT
         transition select(hdr.eth_type.value) {
             ETHERTYPE_MPLS: parse_mpls;
