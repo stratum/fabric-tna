@@ -15,6 +15,7 @@
 
 #define IP_VER_BITS 4
 #define ETH_TYPE_BYTES 2
+#define ETH_HDR_BYTES 14
 #define IPV4_HDR_BYTES 20
 #define UDP_HDR_BYTES 8
 #define GTP_HDR_BYTES 8

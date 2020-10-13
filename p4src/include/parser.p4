@@ -314,7 +314,7 @@ parser FabricEgressParser (packet_in packet,
     state set_cpu_loopback_egress {
         hdr.fake_ethernet.setValid();
         hdr.fake_ethernet.ether_type = ETHERTYPE_CPU_LOOPBACK_EGRESS;
-        packet.advance(ETH_TYPE_BYTES * 8);
+        packet.advance(ETH_HDR_BYTES * 8);
         transition parse_ethernet;
     }
 
