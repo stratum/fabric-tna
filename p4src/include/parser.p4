@@ -390,6 +390,7 @@ parser FabricEgressParser (packet_in packet,
 
     state parse_eth_type {
         packet.extract(hdr.eth_type);
+        fabric_md.int_strip_mpls = 0;
         transition select(hdr.eth_type.value) {
             ETHERTYPE_MPLS: parse_mpls;
             ETHERTYPE_IPV4: check_ipv4;
@@ -470,6 +471,9 @@ parser FabricEgressParser (packet_in packet,
 #ifdef WITH_SPGW
     state parse_gtpu {
         packet.extract(hdr.gtpu);
+#if defined(WITH_INT) && defined(WITH_SPGW)
+        fabric_md.int_strip_gtpu = 1;
+#endif // defined(WITH_INT) && defined(WITH_SPGW)
         transition parse_inner_ipv4;
     }
 
