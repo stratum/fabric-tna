@@ -206,9 +206,6 @@ struct fabric_egress_metadata_t {
 #ifdef WITH_INT
     int_mirror_metadata_t int_mirror_md;
     bit<1>                int_strip_mpls;
-#ifdef WITH_SPGW
-    bit<1>                int_strip_gtpu;
-#endif // WITH_SPGW
 #endif // WITH_INT
 }
 

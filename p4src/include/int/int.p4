@@ -224,7 +224,7 @@ control IntEgress (
         fabric_md.int_mirror_md.ig_tstamp = fabric_md.bridged.ig_tstamp[31:0];
         fabric_md.int_mirror_md.eg_tstamp = eg_prsr_md.global_tstamp[31:0];
 #ifdef WITH_SPGW
-        fabric_md.int_mirror_md.strip_gtpu = fabric_md.int_strip_gtpu;
+        fabric_md.int_mirror_md.strip_gtpu = (bit<1>)(hdr.gtpu.isValid());
 #endif // WITH_SPGW
     }
 

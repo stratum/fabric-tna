@@ -471,9 +471,6 @@ parser FabricEgressParser (packet_in packet,
 #ifdef WITH_SPGW
     state parse_gtpu {
         packet.extract(hdr.gtpu);
-#if defined(WITH_INT) && defined(WITH_SPGW)
-        fabric_md.int_strip_gtpu = 1;
-#endif // defined(WITH_INT) && defined(WITH_SPGW)
         transition parse_inner_ipv4;
     }
 
