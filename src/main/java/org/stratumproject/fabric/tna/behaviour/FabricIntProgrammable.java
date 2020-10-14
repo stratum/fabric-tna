@@ -79,7 +79,8 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
 
     private static final Set<TableId> TABLES_TO_CLEANUP = Sets.newHashSet(
             P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_WATCHLIST,
-            P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_REPORT
+            P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_REPORT,
+            P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_QUANTIZE_HOP_LATENCY
     );
 
     private FlowRuleService flowRuleService;
@@ -440,6 +441,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         if (locations.isEmpty()) {
             log.warn("Unable to find the location of collector {}, skip for now.",
                     collector.id());
+            return Optional.empty();
         }
         HostLocation location = locations.iterator().next();
         if (locations.size() > 1) {
@@ -463,11 +465,6 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
     }
 
     private FlowRule buildReportEntry(IntDeviceConfig intCfg) {
-
-        if (!setupBehaviour()) {
-            return null;
-        }
-
         final SegmentRoutingDeviceConfig srCfg = cfgService.getConfig(
                 deviceId, SegmentRoutingDeviceConfig.class);
         if (srCfg == null) {
