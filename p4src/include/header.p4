@@ -203,9 +203,9 @@ struct fabric_egress_metadata_t {
 #ifdef WITH_SPGW
     bool                  inner_ipv4_checksum_err;
 #endif // WITH_SPGW
+    bit<1>                mpls_stripped;
 #ifdef WITH_INT
     int_mirror_metadata_t int_mirror_md;
-    bit<1>                int_mpls_stripped;
 #endif // WITH_INT
 }
 

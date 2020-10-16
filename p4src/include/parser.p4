@@ -323,11 +323,7 @@ parser FabricEgressParser (packet_in packet,
         transition select(packet.lookahead<bit<16>>()) {
             ETHERTYPE_QINQ: parse_vlan_tag;
             ETHERTYPE_VLAN &&& 0xFEFF: parse_vlan_tag;
-#ifdef WITH_INT
             default: check_eth_type;
-#else
-            default: parse_eth_type;
-#endif // WITH_INT
         }
     }
 
@@ -337,26 +333,17 @@ parser FabricEgressParser (packet_in packet,
 #if defined(WITH_XCONNECT) || defined(WITH_DOUBLE_VLAN_TERMINATION)
             ETHERTYPE_VLAN: parse_inner_vlan_tag;
 #endif // WITH_XCONNECT || WITH_DOUBLE_VLAN_TERMINATION
-#ifdef WITH_INT
             default: check_eth_type;
-#else
-            default: parse_eth_type;
-#endif // WITH_INT
         }
     }
 
 #if defined(WITH_XCONNECT) || defined(WITH_DOUBLE_VLAN_TERMINATION)
     state parse_inner_vlan_tag {
         packet.extract(hdr.inner_vlan_tag);
-#ifdef WITH_INT
         transition check_eth_type;
-#else
-        transition parse_eth_type;
-#endif // WITH_INT
     }
 #endif // WITH_XCONNECT || WITH_DOUBLE_VLAN_TERMINATION
 
-#ifdef WITH_INT
     state check_eth_type {
         transition select(packet.lookahead<bit<(ETH_TYPE_BYTES * 8)>>()) {
             ETHERTYPE_MPLS: strip_mpls;
@@ -366,9 +353,7 @@ parser FabricEgressParser (packet_in packet,
     }
 
     state strip_mpls {
-#ifdef WITH_INT
-        fabric_md.int_mpls_stripped = 1;
-#endif // WITH_INT
+        fabric_md.mpls_stripped = 1;
         packet.advance((ETH_TYPE_BYTES + MPLS_HDR_BYTES) * 8);
         transition select(packet.lookahead<bit<IP_VER_BITS>>()) {
             IP_VERSION_4: strip_mpls_ipv4;
@@ -388,12 +373,11 @@ parser FabricEgressParser (packet_in packet,
         hdr.eth_type.value = ETHERTYPE_IPV6;
         transition parse_ipv6;
     }
-#endif // WITH_INT
 
     state parse_eth_type {
         packet.extract(hdr.eth_type);
 #ifdef WITH_INT
-        fabric_md.int_mpls_stripped = 0;
+        fabric_md.mpls_stripped = 0;
 #endif // WITH_INT
         transition select(hdr.eth_type.value) {
             ETHERTYPE_MPLS: parse_mpls;
@@ -426,10 +410,12 @@ parser FabricEgressParser (packet_in packet,
 #endif // defined(WITH_INT) && defined(WITH_SPGW)
     }
 
+#if defined(WITH_INT) && defined(WITH_SPGW)
     state strip_gtpu_and_accept {
         packet.advance((IPV4_HDR_BYTES + UDP_HDR_BYTES + GTP_HDR_BYTES) * 8);
         transition accept;
     }
+#endif // defined(WITH_INT) && defined(WITH_SPGW)
 
     state parse_ipv4 {
         packet.extract(hdr.ipv4);
