@@ -950,7 +950,7 @@ class IPv4UnicastTest(FabricTest):
         """
         if IP not in pkt or Ether not in pkt:
             self.fail("Cannot do IPv4 test with packet that is not IP")
-        if mpls and tagged2:
+        if is_next_hop_spine and tagged2:
             self.fail("Cannot do MPLS test with egress port tagged (tagged2)")
         if ig_port is None:
             ig_port = self.port1
@@ -966,7 +966,7 @@ class IPv4UnicastTest(FabricTest):
         else:
             vlan1 = VLAN_ID_1
 
-        if mpls:
+        if is_next_hop_spine:
             # If MPLS test, port2 is assumed to be a spine port, with
             # default vlan untagged.
             vlan2 = DEFAULT_VLAN
@@ -993,7 +993,7 @@ class IPv4UnicastTest(FabricTest):
         # Routing entry.
         self.add_forwarding_routing_v4_entry(dst_ipv4, prefix_len, next_id)
 
-        if not mpls:
+        if not is_next_hop_spine:
             self.add_next_routing(next_id, eg_port, switch_mac, next_hop_mac)
             self.add_next_vlan(next_id, vlan2)
         else:
@@ -1005,11 +1005,11 @@ class IPv4UnicastTest(FabricTest):
             # Build exp pkt using the input one.
             exp_pkt = pkt.copy() if not exp_pkt_base else exp_pkt_base
             exp_pkt = pkt_route(exp_pkt, next_hop_mac)
-            if not mpls:
+            if not is_next_hop_spine:
                 exp_pkt = pkt_decrement_ttl(exp_pkt)
             if tagged2 and Dot1Q not in exp_pkt:
                 exp_pkt = pkt_add_vlan(exp_pkt, vlan_vid=vlan2)
-            if mpls:
+            if is_next_hop_spine:
                 exp_pkt = pkt_add_mpls(exp_pkt, label=mpls_label,
                                        ttl=DEFAULT_MPLS_TTL)
 
