@@ -445,6 +445,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         }
         HostLocation location = locations.iterator().next();
         if (locations.size() > 1) {
+            // TODO: revisit this when we want to support dual-homed INT collector.
             log.warn("Find more than one location for host {}, will use {}",
                     collector.id(), location);
         }
