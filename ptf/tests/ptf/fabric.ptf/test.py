@@ -665,6 +665,7 @@ class FabricSpgwDownlinkTest(SpgwSimpleTest):
 
 @group("spgw")
 class FabricSpgwReadWriteSymmetryTest(SpgwReadWriteSymmetryTest):
+    @tvskip
     @autocleanup
     def runTest(self):
         self.runReadWriteSymmetryTest()
