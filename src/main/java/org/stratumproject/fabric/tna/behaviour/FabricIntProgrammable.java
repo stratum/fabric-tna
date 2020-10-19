@@ -76,7 +76,6 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
             P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_WATCHLIST,
             P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_REPORT
     );
-    private static final long DEFAULT_QMASK = 0xffff0000;
 
     private FlowRuleService flowRuleService;
     private GroupService groupService;
@@ -356,21 +355,21 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
             log.warn("Failed to add report rule to {}", this.data().deviceId());
             return false;
         }
-        final FlowRule quantizationRule = buildQuantizeRule();
-        flowRuleService.applyFlowRules(quantizationRule);
-        log.info("Report rule added to {} [{}]", this.data().deviceId(), quantizationRule);
+        final FlowRule quantizeRule = buildQuantizeRule(cfg.minFlowHopLatencyChangeNs());
+        flowRuleService.applyFlowRules(quantizeRule);
+        log.info("Report rule added to {} [{}]", this.data().deviceId(), quantizeRule);
         return true;
     }
 
-    private FlowRule buildQuantizeRule() {
+    private FlowRule buildQuantizeRule(int minFlowHopLatencyChangeNs) {
+        final long qmask = getSuitableQmaskForLatencyChange(minFlowHopLatencyChangeNs);
         // Quantify hop latency rule
-        // TODO: Read qmask config from the INT device config.
-        final PiActionParam quantizeVal = new PiActionParam(P4InfoConstants.QMASK, DEFAULT_QMASK);
+        final PiActionParam quantizeMaskParam = new PiActionParam(P4InfoConstants.QMASK, qmask);
         final PiAction quantizeAction =
                 PiAction.builder()
-                .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_QUANTIZE)
-                .withParameter(quantizeVal)
-                .build();
+                        .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_QUANTIZE)
+                        .withParameter(quantizeMaskParam)
+                        .build();
         final TrafficTreatment quantizeTreatment = DefaultTrafficTreatment.builder()
                 .piTableAction(quantizeAction)
                 .build();
@@ -380,7 +379,34 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 .withPriority(DEFAULT_PRIORITY)
                 .withTreatment(quantizeTreatment)
                 .fromApp(appId)
+                .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_QUANTIZE_HOP_LATENCY)
                 .build();
+    }
+
+    /**
+     * Gets a suitable quantization mask for a minimal latency change.
+     * For example, if we want to ignore any latency change that smaller
+     * than 256ns, the pipeline will use mask 0xffffff00 which makes
+     * any value from 1 to 255 become zero.
+     * Note that if the value of latency change is not power of 2 (2^n),
+     * this method will find the closest value which is smaller than the value.
+     * For example, if we expect to ignore latency change which is smaller than 300ns,
+     * the method will use the same mask for 256ns, which is also 0xffffff00.
+     *
+     * @param minFlowHopLatencyChangeNs the minimal latency change we want to ignore
+     * @return the suitable quantization mask
+     */
+    public long getSuitableQmaskForLatencyChange(int minFlowHopLatencyChangeNs) {
+        if (minFlowHopLatencyChangeNs < 0) {
+            throw new IllegalArgumentException(
+                "Flow latency change value must equal or greater than zero.");
+        }
+        long qmask = 0xffffffff;
+        while (minFlowHopLatencyChangeNs > 1) {
+            minFlowHopLatencyChangeNs /= 2;
+            qmask <<= 1;
+        }
+        return 0xffffffffL & qmask;
     }
 
     private FlowRule buildReportEntry(IntDeviceConfig intCfg) {

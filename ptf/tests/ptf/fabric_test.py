@@ -115,8 +115,8 @@ MPLS_LABEL_2 = 200
 
 UPLINK_TEID   = 0xeeffc0f0
 DOWNLINK_TEID = 0xeeffc0f1
-UPLINK_PDR_CTR_ID = 1
-DOWNLINK_PDR_CTR_ID = 2
+UPLINK_PDR_CTR_IDX = 1
+DOWNLINK_PDR_CTR_IDX = 2
 UPLINK_FAR_ID = 23
 DOWNLINK_FAR_ID = 24
 
@@ -130,18 +130,18 @@ INT_EG_TSTAMP = 1 << 10
 INT_QUEUE_CONGESTION = 1 << 9
 INT_EG_PORT_TX = 1 << 8
 INT_ALL_INSTRUCTIONS = [INT_SWITCH_ID, INT_IG_EG_PORT, INT_HOP_LATENCY,
-                        INT_QUEUE_OCCUPANCY, INT_IG_TSTAMP, INT_EG_TSTAMP,
-                        INT_QUEUE_CONGESTION, INT_EG_PORT_TX]
+                    INT_QUEUE_OCCUPANCY, INT_IG_TSTAMP, INT_EG_TSTAMP,
+                    INT_QUEUE_CONGESTION, INT_EG_PORT_TX]
 
 INT_INS_TO_NAME = {
-    INT_SWITCH_ID: "switch_id",
-    INT_IG_EG_PORT: "ig_eg_port",
-    INT_HOP_LATENCY: "hop_latency",
-    INT_QUEUE_OCCUPANCY: "queue_occupancy",
-    INT_IG_TSTAMP: "ig_tstamp",
-    INT_EG_TSTAMP: "eg_tstamp",
-    INT_QUEUE_CONGESTION: "queue_congestion",
-    INT_EG_PORT_TX: "eg_port_tx"
+INT_SWITCH_ID: "switch_id",
+INT_IG_EG_PORT: "ig_eg_port",
+INT_HOP_LATENCY: "hop_latency",
+INT_QUEUE_OCCUPANCY: "queue_occupancy",
+INT_IG_TSTAMP: "ig_tstamp",
+INT_EG_TSTAMP: "eg_tstamp",
+INT_QUEUE_CONGESTION: "queue_congestion",
+INT_EG_PORT_TX: "eg_port_tx"
 }
 
 INT_REPORT_MIRROR_ID_0 = 300
@@ -154,7 +154,7 @@ NPROTO_TELEMETRY_DROP_HEADER = 1
 NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER = 2
 bind_layers(UDP, INT_L45_REPORT_FIXED, dport=INT_REPORT_PORT)
 bind_layers(INT_L45_REPORT_FIXED, INT_L45_LOCAL_REPORT,
-            nproto=NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER)
+        nproto=NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER)
 bind_layers(INT_L45_LOCAL_REPORT, Ether)
 
 INT_COLLECTOR_MAC = "00:1e:67:d2:ee:ee"
@@ -371,7 +371,7 @@ class FabricTest(P4RuntimeTest):
         req = self.get_new_write_request()
         self.push_update_add_entry_to_action(req,
             "FabricEgress.pkt_io_egress.switch_info", None,
-            "FabricEgress.pkt_io_egress.set_cpu_port",
+            "FabricEgress.pkt_io_egress.set_switch_info",
             [("cpu_port", stringify(self.cpu_port, 2))])
         return req, self.write_request(req, store=False)
 
@@ -1493,15 +1493,26 @@ class SpgwSimpleTest(IPv4UnicastTest):
             tunnel_src_addr=s1u_sgw_addr,
             tunnel_dst_addr=s1u_enb_addr)
 
-    def read_pdr_counters(self, ctr_id):
-        ingress_ctr = self.read_pkt_count("FabricIngress.spgw_ingress.pdr_counter", ctr_id)
-        egress_ctr = self.read_pkt_count("FabricEgress.spgw_egress.pdr_counter", ctr_id)
+    def read_pdr_counters(self, ctr_idx):
+        """ Read and return the ingress and egress PDR counter packet counts for the given index.
+        """
+        if self.generate_tv:
+            # Workaround to ignore counters during testvector generation
+            return None
+        ingress_ctr = self.read_pkt_count("FabricIngress.spgw_ingress.pdr_counter", ctr_idx)
+        egress_ctr = self.read_pkt_count("FabricEgress.spgw_egress.pdr_counter", ctr_idx)
         return (ingress_ctr, egress_ctr)
 
-    def check_pdr_counters_increased(self, ctr_id, count_tuple,
+    def check_pdr_counters_increased(self, ctr_idx, count_tuple,
                                      exp_ingress_inc=1, exp_egress_inc=1):
-        ingress_ctr = self.read_pkt_count("FabricIngress.spgw_ingress.pdr_counter", ctr_id)
-        egress_ctr = self.read_pkt_count("FabricEgress.spgw_egress.pdr_counter", ctr_id)
+        """ Verify that the PDR ingress and egress counters for index 'ctr_idx', given as the pair 'count_tuple',
+            have increased by 'exp_ingress_inc' and 'exp_egress_inc' respectively upon reading.
+        """
+        if self.generate_tv:
+            # Workaround to ignore counters during testvector generation
+            return
+        ingress_ctr = self.read_pkt_count("FabricIngress.spgw_ingress.pdr_counter", ctr_idx)
+        egress_ctr = self.read_pkt_count("FabricEgress.spgw_egress.pdr_counter", ctr_idx)
 
         ingress_inc = ingress_ctr - count_tuple[0]
         egress_inc = egress_ctr - count_tuple[1]
@@ -1532,11 +1543,11 @@ class SpgwSimpleTest(IPv4UnicastTest):
         self.setup_uplink(
             s1u_sgw_addr=S1U_SGW_IPV4,
             teid=UPLINK_TEID,
-            ctr_id=UPLINK_PDR_CTR_ID
+            ctr_id=UPLINK_PDR_CTR_IDX
         )
 
         # Read SPGW counters before sending the packet
-        pdr_pkt_counts = self.read_pdr_counters(UPLINK_PDR_CTR_ID)
+        pdr_pkt_counts = self.read_pdr_counters(UPLINK_PDR_CTR_IDX)
 
         self.runIPv4UnicastTest(pkt=gtp_pkt, dst_ipv4=ue_out_pkt[IP].dst,
                                 next_hop_mac=upstream_mac,
@@ -1544,7 +1555,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
                                 tagged1=tagged1, tagged2=tagged2, mpls=mpls)
 
         # Verify the Ingress and Egress PDR counters increased
-        self.check_pdr_counters_increased(UPLINK_PDR_CTR_ID, pdr_pkt_counts)
+        self.check_pdr_counters_increased(UPLINK_PDR_CTR_IDX, pdr_pkt_counts)
 
     def runDownlinkTest(self, pkt, tagged1, tagged2, mpls):
         exp_pkt = pkt.copy()
@@ -1564,11 +1575,11 @@ class SpgwSimpleTest(IPv4UnicastTest):
             s1u_enb_addr=S1U_ENB_IPV4,
             teid=DOWNLINK_TEID,
             ue_addr=UE_IPV4,
-            ctr_id=DOWNLINK_PDR_CTR_ID,
+            ctr_id=DOWNLINK_PDR_CTR_IDX,
         )
 
         # Read SPGW counters before sending the packet
-        pdr_pkt_counts = self.read_pdr_counters(DOWNLINK_PDR_CTR_ID)
+        pdr_pkt_counts = self.read_pdr_counters(DOWNLINK_PDR_CTR_IDX)
 
         self.runIPv4UnicastTest(pkt=pkt, dst_ipv4=exp_pkt[IP].dst,
                                 next_hop_mac=S1U_ENB_MAC,
@@ -1576,7 +1587,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
                                 tagged1=tagged1, tagged2=tagged2, mpls=mpls)
 
         # Verify the Ingress and Egress PDR counters increased
-        self.check_pdr_counters_increased(DOWNLINK_PDR_CTR_ID, pdr_pkt_counts)
+        self.check_pdr_counters_increased(DOWNLINK_PDR_CTR_IDX, pdr_pkt_counts)
 
     def runDownlinkToDbufTest(self, pkt, tagged1, tagged2, mpls):
         exp_pkt = pkt.copy()
@@ -1595,7 +1606,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
 
         # Add the UE pool interface and the PDR pointing to the DBUF FAR
         self.add_ue_pool(UE_IPV4)
-        self.add_downlink_pdr(ctr_id=DOWNLINK_PDR_CTR_ID, far_id=DBUF_FAR_ID, ue_addr=UE_IPV4)
+        self.add_downlink_pdr(ctr_id=DOWNLINK_PDR_CTR_IDX, far_id=DBUF_FAR_ID, ue_addr=UE_IPV4)
 
         # Add rules for sending/receiving packets to/from dbuf
         # (receiving isn't done by this test though)
@@ -1603,7 +1614,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
                              dbuf_far_id=DBUF_FAR_ID, dbuf_teid=DBUF_TEID)
 
         # Read SPGW counters before sending the packet
-        pdr_pkt_counts = self.read_pdr_counters(DOWNLINK_PDR_CTR_ID)
+        pdr_pkt_counts = self.read_pdr_counters(DOWNLINK_PDR_CTR_IDX)
 
         self.runIPv4UnicastTest(pkt=pkt, dst_ipv4=exp_pkt[IP].dst,
                                 next_hop_mac=DBUF_MAC,
@@ -1611,7 +1622,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
                                 tagged1=tagged1, tagged2=tagged2, mpls=mpls)
 
         # Verify the Ingress PDR packet counter increased, but the egress did not
-        self.check_pdr_counters_increased(DOWNLINK_PDR_CTR_ID, pdr_pkt_counts, exp_egress_inc=0)
+        self.check_pdr_counters_increased(DOWNLINK_PDR_CTR_IDX, pdr_pkt_counts, exp_egress_inc=0)
 
     def runDownlinkFromDbufTest(self, pkt, tagged1, tagged2, mpls):
         """ Tests a packet returning from dbuf to be sent to the enodeb.
@@ -1643,7 +1654,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             s1u_enb_addr=S1U_ENB_IPV4,
             teid=DOWNLINK_TEID,
             ue_addr=UE_IPV4,
-            ctr_id=DOWNLINK_PDR_CTR_ID,
+            ctr_id=DOWNLINK_PDR_CTR_IDX,
         )
 
         # Add rules for sending/receiving packets to/from dbuf
@@ -1652,7 +1663,8 @@ class SpgwSimpleTest(IPv4UnicastTest):
                              dbuf_far_id=DBUF_FAR_ID, dbuf_teid=DBUF_TEID)
 
         # Read SPGW counters before sending the packet
-        pdr_pkt_counts = self.read_pdr_counters(DOWNLINK_PDR_CTR_ID)
+        pdr_pkt_counts = self.read_pdr_counters(DOWNLINK_PDR_CTR_IDX)
+
 
         self.runIPv4UnicastTest(pkt=pkt_from_dbuf, dst_ipv4=exp_pkt[IP].dst,
                                 next_hop_mac=S1U_ENB_MAC,
@@ -1660,8 +1672,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
                                 tagged1=tagged1, tagged2=tagged2, mpls=mpls)
 
         # Verify the Ingress PDR packet counter did not increase, but the egress did
-        self.check_pdr_counters_increased(DOWNLINK_PDR_CTR_ID, pdr_pkt_counts, exp_ingress_inc=0)
-
+        self.check_pdr_counters_increased(DOWNLINK_PDR_CTR_IDX, pdr_pkt_counts, exp_ingress_inc=0)
 
 class IntTest(IPv4UnicastTest):
 
@@ -1874,7 +1885,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         self.setup_uplink(
             s1u_sgw_addr=S1U_SGW_IPV4,
             teid=UPLINK_TEID,
-            ctr_id=UPLINK_PDR_CTR_ID
+            ctr_id=UPLINK_PDR_CTR_IDX
         )
 
         # Set collector, report table, and mirror sessions
@@ -1950,7 +1961,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             s1u_enb_addr=S1U_ENB_IPV4,
             teid=DOWNLINK_TEID,
             ue_addr=ipv4_dst,
-            ctr_id=DOWNLINK_PDR_CTR_ID,
+            ctr_id=DOWNLINK_PDR_CTR_IDX,
         )
 
         # Set collector, report table, and mirror sessions

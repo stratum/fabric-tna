@@ -305,8 +305,8 @@ control SpgwEgress(
     */
     @hidden
     action _preload_length_additives() {
-        outer_ipv4_len_additive = IPV4_HDR_SIZE + UDP_HDR_SIZE + GTP_HDR_SIZE;
-        outer_udp_len_additive = UDP_HDR_SIZE + GTP_HDR_SIZE;
+        outer_ipv4_len_additive = IPV4_HDR_BYTES + UDP_HDR_BYTES + GTP_HDR_BYTES;
+        outer_udp_len_additive = UDP_HDR_BYTES + GTP_HDR_BYTES;
     }
 
     @hidden
