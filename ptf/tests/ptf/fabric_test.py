@@ -99,8 +99,6 @@ DBUF_FAR_ID = 1023
 DBUF_TEID = 0
 
 
-SPGW_DIRECTION_UPLINK = 1
-SPGW_DIRECTION_DOWNLINK = 2
 SPGW_IFACE_ACCESS = 1
 SPGW_IFACE_CORE = 2
 SPGW_IFACE_FROM_DBUF = 3
@@ -1341,23 +1339,21 @@ class SpgwSimpleTest(IPv4UnicastTest):
         counter = self.read_indirect_counter(c_name, idx, typ="BYTES")
         return counter.data.byte_count
 
-    def _add_spgw_iface(self, iface_addr, prefix_len, iface_enum, dir_enum, gtpu_valid):
+    def _add_spgw_iface(self, iface_addr, prefix_len, iface_enum, gtpu_valid):
         req = self.get_new_write_request()
 
         iface_addr_ = ipv4_to_binary(iface_addr)
 
         self.push_update_add_entry_to_action(
             req,
-            "FabricIngress.spgw_ingress.interface_lookup",
+            "FabricIngress.spgw.interfaces",
             [
                 self.Lpm("ipv4_dst_addr", iface_addr_, prefix_len),
                 self.Exact("gtpu_is_valid", stringify(int(gtpu_valid), 1))
             ],
-            "FabricIngress.spgw_ingress.set_source_iface",
+            "FabricIngress.spgw.load_iface",
             [
                 ("src_iface", stringify(iface_enum, 1)),
-                ("direction", stringify(dir_enum, 1)),
-                ("skip_spgw", stringify(0, 1)),
             ],
         )
         self.write_request(req)
@@ -1368,7 +1364,6 @@ class SpgwSimpleTest(IPv4UnicastTest):
                 iface_addr = pool_addr,
                 prefix_len = prefix_len,
                 iface_enum = SPGW_IFACE_CORE,
-                dir_enum = SPGW_DIRECTION_DOWNLINK,
                 gtpu_valid = False)
 
     def add_s1u_iface(self, s1u_addr, prefix_len=32):
@@ -1376,7 +1371,6 @@ class SpgwSimpleTest(IPv4UnicastTest):
                 iface_addr = s1u_addr,
                 prefix_len = prefix_len,
                 iface_enum = SPGW_IFACE_ACCESS,
-                dir_enum = SPGW_DIRECTION_DOWNLINK,
                 gtpu_valid = True)
 
     def add_dbuf_device(self,
@@ -1387,13 +1381,12 @@ class SpgwSimpleTest(IPv4UnicastTest):
                 iface_addr = drain_dst_addr,
                 prefix_len = 32,
                 iface_enum = SPGW_IFACE_FROM_DBUF,
-                dir_enum = SPGW_DIRECTION_DOWNLINK,
                 gtpu_valid = True)
 
         # FAR that tunnels to the dbuf device
         return self._add_far(
             dbuf_far_id,
-            "FabricIngress.spgw_ingress.load_dbuf_far_attributes",
+            "FabricIngress.spgw.load_dbuf_far",
             [
                 ("drop", stringify(0, 1)),
                 ("notify_cp", stringify(0, 1)),
@@ -1409,12 +1402,12 @@ class SpgwSimpleTest(IPv4UnicastTest):
         req = self.get_new_write_request()
         self.push_update_add_entry_to_action(
             req,
-            "FabricIngress.spgw_ingress.uplink_pdr_lookup",
+            "FabricIngress.spgw.uplink_pdrs",
             [
                 self.Exact("teid", stringify(teid, 4)),
                 self.Exact("tunnel_ipv4_dst", ipv4_to_binary(tunnel_dst_addr)),
             ],
-            "FabricIngress.spgw_ingress.set_pdr_attributes",
+            "FabricIngress.spgw.load_pdr",
             [
                 ("ctr_id", stringify(ctr_id, 2)),
                 ("far_id", stringify(far_id, 4)),
@@ -1428,9 +1421,9 @@ class SpgwSimpleTest(IPv4UnicastTest):
 
         self.push_update_add_entry_to_action(
             req,
-            "FabricIngress.spgw_ingress.downlink_pdr_lookup",
+            "FabricIngress.spgw.downlink_pdrs",
             [self.Exact("ue_addr", ipv4_to_binary(ue_addr))],
-            "FabricIngress.spgw_ingress.set_pdr_attributes",
+            "FabricIngress.spgw.load_pdr",
             [
                 ("ctr_id", stringify(ctr_id, 2)),
                 ("far_id", stringify(far_id, 4)),
@@ -1443,7 +1436,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         req = self.get_new_write_request()
         self.push_update_add_entry_to_action(
             req,
-            "FabricIngress.spgw_ingress.far_lookup",
+            "FabricIngress.spgw.fars",
             [self.Exact("far_id", stringify(far_id, 4))],
             action_name,
             action_params,
@@ -1453,7 +1446,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
     def add_normal_far(self, far_id, drop=False, notify_cp=False):
         return self._add_far(
             far_id,
-            "FabricIngress.spgw_ingress.load_normal_far_attributes",
+            "FabricIngress.spgw.load_normal_far",
             [
                 ("drop", stringify(drop, 1)),
                 ("notify_cp", stringify(notify_cp, 1)),
@@ -1464,7 +1457,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
                        tunnel_src_port=DEFAULT_GTP_TUNNEL_SPORT, drop=False, notify_cp=False):
         return self._add_far(
             far_id,
-            "FabricIngress.spgw_ingress.load_tunnel_far_attributes",
+            "FabricIngress.spgw.load_tunnel_far",
             [
                 ("drop", stringify(drop, 1)),
                 ("notify_cp", stringify(notify_cp, 1)),
@@ -1499,8 +1492,8 @@ class SpgwSimpleTest(IPv4UnicastTest):
         if self.generate_tv:
             # Workaround to ignore counters during testvector generation
             return None
-        ingress_ctr = self.read_pkt_count("FabricIngress.spgw_ingress.pdr_counter", ctr_idx)
-        egress_ctr = self.read_pkt_count("FabricEgress.spgw_egress.pdr_counter", ctr_idx)
+        ingress_ctr = self.read_pkt_count("FabricIngress.spgw.pdr_counter", ctr_idx)
+        egress_ctr = self.read_pkt_count("FabricEgress.spgw.pdr_counter", ctr_idx)
         return (ingress_ctr, egress_ctr)
 
     def check_pdr_counters_increased(self, ctr_idx, count_tuple,
@@ -1511,8 +1504,8 @@ class SpgwSimpleTest(IPv4UnicastTest):
         if self.generate_tv:
             # Workaround to ignore counters during testvector generation
             return
-        ingress_ctr = self.read_pkt_count("FabricIngress.spgw_ingress.pdr_counter", ctr_idx)
-        egress_ctr = self.read_pkt_count("FabricEgress.spgw_egress.pdr_counter", ctr_idx)
+        ingress_ctr = self.read_pkt_count("FabricIngress.spgw.pdr_counter", ctr_idx)
+        egress_ctr = self.read_pkt_count("FabricEgress.spgw.pdr_counter", ctr_idx)
 
         ingress_inc = ingress_ctr - count_tuple[0]
         egress_inc = egress_ctr - count_tuple[1]
