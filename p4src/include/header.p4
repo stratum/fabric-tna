@@ -205,9 +205,6 @@ struct fabric_ingress_metadata_t {
 #endif // WITH_SPGW
 }
 
-
-
-
 // Egress pipeline-only metadata
 @flexible
 struct fabric_egress_metadata_t {
