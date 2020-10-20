@@ -131,6 +131,7 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
             if (log.isTraceEnabled()) {
                 log.trace("Objective {}", obj);
             }
+            fail(obj, ObjectiveError.UNSUPPORTED);
             return;
         }
 
