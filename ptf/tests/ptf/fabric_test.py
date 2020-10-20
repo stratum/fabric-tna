@@ -1515,7 +1515,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         if egress_inc != exp_egress_inc:
             self.fail("Egress PDR packet counter incremented by %d instead of %d!" % (egress_inc, exp_egress_inc))
 
-    def runUplinkTest(self, ue_out_pkt, tagged1, tagged2, mpls):
+    def runUplinkTest(self, ue_out_pkt, tagged1, tagged2, is_next_hop_spine):
         upstream_mac = HOST2_MAC
 
         gtp_pkt = pkt_add_gtp(ue_out_pkt, out_ipv4_src=S1U_ENB_IPV4,
@@ -1526,7 +1526,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         exp_pkt = ue_out_pkt.copy()
         exp_pkt[Ether].src = SWITCH_MAC
         exp_pkt[Ether].dst = upstream_mac
-        if not mpls:
+        if not is_next_hop_spine:
             exp_pkt[IP].ttl = exp_pkt[IP].ttl - 1
         else:
             exp_pkt = pkt_add_mpls(exp_pkt, MPLS_LABEL_2, DEFAULT_MPLS_TTL)
@@ -1545,20 +1545,20 @@ class SpgwSimpleTest(IPv4UnicastTest):
         self.runIPv4UnicastTest(pkt=gtp_pkt, dst_ipv4=ue_out_pkt[IP].dst,
                                 next_hop_mac=upstream_mac,
                                 prefix_len=32, exp_pkt=exp_pkt,
-                                tagged1=tagged1, tagged2=tagged2, mpls=mpls)
+                                tagged1=tagged1, tagged2=tagged2, mpls=is_next_hop_spine)
 
         # Verify the Ingress and Egress PDR counters increased
         self.check_pdr_counters_increased(UPLINK_PDR_CTR_IDX, pdr_pkt_counts)
 
-    def runDownlinkTest(self, pkt, tagged1, tagged2, mpls):
+    def runDownlinkTest(self, pkt, tagged1, tagged2, is_next_hop_spine):
         exp_pkt = pkt.copy()
         exp_pkt[Ether].src = SWITCH_MAC
         exp_pkt[Ether].dst = S1U_ENB_MAC
-        if not mpls:
+        if not is_next_hop_spine:
             exp_pkt[IP].ttl = exp_pkt[IP].ttl - 1
         exp_pkt = pkt_add_gtp(exp_pkt, out_ipv4_src=S1U_SGW_IPV4,
                               out_ipv4_dst=S1U_ENB_IPV4, teid=DOWNLINK_TEID)
-        if mpls:
+        if is_next_hop_spine:
             exp_pkt = pkt_add_mpls(exp_pkt, MPLS_LABEL_2, DEFAULT_MPLS_TTL)
         if tagged2:
             exp_pkt = pkt_add_vlan(exp_pkt, VLAN_ID_2)
@@ -1577,22 +1577,22 @@ class SpgwSimpleTest(IPv4UnicastTest):
         self.runIPv4UnicastTest(pkt=pkt, dst_ipv4=exp_pkt[IP].dst,
                                 next_hop_mac=S1U_ENB_MAC,
                                 prefix_len=32, exp_pkt=exp_pkt,
-                                tagged1=tagged1, tagged2=tagged2, mpls=mpls)
+                                tagged1=tagged1, tagged2=tagged2, mpls=is_next_hop_spine)
 
         # Verify the Ingress and Egress PDR counters increased
         self.check_pdr_counters_increased(DOWNLINK_PDR_CTR_IDX, pdr_pkt_counts)
 
-    def runDownlinkToDbufTest(self, pkt, tagged1, tagged2, mpls):
+    def runDownlinkToDbufTest(self, pkt, tagged1, tagged2, is_next_hop_spine):
         exp_pkt = pkt.copy()
         exp_pkt[Ether].src = SWITCH_MAC
         exp_pkt[Ether].dst = DBUF_MAC
-        if not mpls:
+        if not is_next_hop_spine:
             exp_pkt[IP].ttl = exp_pkt[IP].ttl - 1
         # add dbuf tunnel
         exp_pkt = pkt_add_gtp(exp_pkt, out_ipv4_src=DBUF_DRAIN_DST_IPV4,
                               out_ipv4_dst=DBUF_IPV4, teid=DBUF_TEID,
                               sport=UDP_GTP_PORT)
-        if mpls:
+        if is_next_hop_spine:
             exp_pkt = pkt_add_mpls(exp_pkt, MPLS_LABEL_2, DEFAULT_MPLS_TTL)
         if tagged2:
             exp_pkt = pkt_add_vlan(exp_pkt, VLAN_ID_2)
@@ -1612,12 +1612,12 @@ class SpgwSimpleTest(IPv4UnicastTest):
         self.runIPv4UnicastTest(pkt=pkt, dst_ipv4=exp_pkt[IP].dst,
                                 next_hop_mac=DBUF_MAC,
                                 prefix_len=32, exp_pkt=exp_pkt,
-                                tagged1=tagged1, tagged2=tagged2, mpls=mpls)
+                                tagged1=tagged1, tagged2=tagged2, mpls=is_next_hop_spine)
 
         # Verify the Ingress PDR packet counter increased, but the egress did not
         self.check_pdr_counters_increased(DOWNLINK_PDR_CTR_IDX, pdr_pkt_counts, exp_egress_inc=0)
 
-    def runDownlinkFromDbufTest(self, pkt, tagged1, tagged2, mpls):
+    def runDownlinkFromDbufTest(self, pkt, tagged1, tagged2, is_next_hop_spine):
         """ Tests a packet returning from dbuf to be sent to the enodeb.
             Similar to a normal downlink test, but the input is gtpu encapped.
         """
@@ -1632,11 +1632,11 @@ class SpgwSimpleTest(IPv4UnicastTest):
         exp_pkt = pkt.copy()
         exp_pkt[Ether].src = SWITCH_MAC
         exp_pkt[Ether].dst = S1U_ENB_MAC
-        if not mpls:
+        if not is_next_hop_spine:
             exp_pkt[IP].ttl = exp_pkt[IP].ttl - 1
         exp_pkt = pkt_add_gtp(exp_pkt, out_ipv4_src=S1U_SGW_IPV4,
                               out_ipv4_dst=S1U_ENB_IPV4, teid=DOWNLINK_TEID)
-        if mpls:
+        if is_next_hop_spine:
             exp_pkt = pkt_add_mpls(exp_pkt, MPLS_LABEL_2, DEFAULT_MPLS_TTL)
         if tagged2:
             exp_pkt = pkt_add_vlan(exp_pkt, VLAN_ID_2)
@@ -1662,7 +1662,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         self.runIPv4UnicastTest(pkt=pkt_from_dbuf, dst_ipv4=exp_pkt[IP].dst,
                                 next_hop_mac=S1U_ENB_MAC,
                                 prefix_len=32, exp_pkt=exp_pkt,
-                                tagged1=tagged1, tagged2=tagged2, mpls=mpls)
+                                tagged1=tagged1, tagged2=tagged2, mpls=is_next_hop_spine)
 
         # Verify the Ingress PDR packet counter did not increase, but the egress did
         self.check_pdr_counters_increased(DOWNLINK_PDR_CTR_IDX, pdr_pkt_counts, exp_ingress_inc=0)
@@ -1971,7 +1971,7 @@ class IntTest(IPv4UnicastTest):
 class SpgwIntTest(SpgwSimpleTest, IntTest):
 
     def runSpgwUplinkIntTest(self, pkt, tagged1, tagged2,
-                             switch_id=1, mpls=False):
+                             switch_id=1, is_next_hop_spine=False):
         # Build packet from eNB
         # Add GTPU header to the original packet
         gtp_pkt = pkt_add_gtp(pkt, out_ipv4_src=S1U_ENB_IPV4,
@@ -1995,11 +1995,11 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         # Build exp pkt using the input one.
         exp_pkt = pkt.copy()
         exp_pkt = pkt_route(exp_pkt, HOST2_MAC)
-        if not mpls:
+        if not is_next_hop_spine:
             exp_pkt = pkt_decrement_ttl(exp_pkt)
         if tagged2 and Dot1Q not in exp_pkt:
             exp_pkt = pkt_add_vlan(exp_pkt, vlan_vid=VLAN_ID_2)
-        if mpls:
+        if is_next_hop_spine:
             exp_pkt = pkt_add_mpls(exp_pkt, label=MPLS_LABEL_2, ttl=DEFAULT_MPLS_TTL)
 
         # We should also expected an INT report packet
@@ -2035,7 +2035,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         # End of setting up entries for report packet
         self.runIPv4UnicastTest(pkt=gtp_pkt, dst_ipv4=pkt[IP].dst,
                                 exp_pkt=exp_pkt, next_hop_mac=HOST2_MAC,
-                                tagged1=tagged1, tagged2=tagged2, mpls=mpls,
+                                tagged1=tagged1, tagged2=tagged2, mpls=is_next_hop_spine,
                                 prefix_len=32, with_another_pkt_later=True)
 
         self.verify_packet(exp_int_report_pkt_masked, collector_port)
@@ -2043,7 +2043,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
 
 
     def runSpgwDownlinkIntTest(self, pkt, tagged1, tagged2,
-                               switch_id=1, mpls=False):
+                               switch_id=1, is_next_hop_spine=False):
         ig_port = self.port1
         eg_port = self.port2
         ipv4_src = pkt[IP].src
@@ -2062,7 +2062,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         # We should expected to receive an packet with GTPU headers.
         exp_pkt = pkt.copy()
         inner_exp_pkt = pkt.copy()
-        if not mpls:
+        if not is_next_hop_spine:
             exp_pkt = pkt_decrement_ttl(exp_pkt)
             inner_exp_pkt = pkt_decrement_ttl(inner_exp_pkt)
         exp_pkt = pkt_add_gtp(exp_pkt, out_ipv4_src=S1U_SGW_IPV4,
@@ -2072,7 +2072,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         if tagged2 and Dot1Q not in exp_pkt:
             exp_pkt = pkt_add_vlan(exp_pkt, vlan_vid=VLAN_ID_2)
             inner_exp_pkt = pkt_add_vlan(inner_exp_pkt, vlan_vid=VLAN_ID_2)
-        if mpls:
+        if is_next_hop_spine:
             exp_pkt = pkt_add_mpls(exp_pkt, label=MPLS_LABEL_2, ttl=DEFAULT_MPLS_TTL)
             inner_exp_pkt = pkt_add_mpls(inner_exp_pkt, label=MPLS_LABEL_2, ttl=DEFAULT_MPLS_TTL)
 
@@ -2112,7 +2112,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         self.runIPv4UnicastTest(pkt=pkt, dst_ipv4=S1U_ENB_IPV4,
                                 next_hop_mac=HOST2_MAC,
                                 prefix_len=32, exp_pkt=exp_pkt,
-                                tagged1=tagged1, tagged2=tagged2, mpls=mpls,
+                                tagged1=tagged1, tagged2=tagged2, mpls=is_next_hop_spine,
                                 with_another_pkt_later=True)
 
         self.verify_packet( exp_int_report_pkt_masked, collector_port)
