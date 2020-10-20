@@ -714,7 +714,7 @@ class FabricSpgwUplinkIntTest(SpgwIntTest):
         print ""
         for is_device_spine in [False, True]:
             for vlan_conf, tagged in vlan_confs.items():
-                if is_device_spine and tagged[0] and tagged[1]:
+                if is_device_spine and (tagged[0] or tagged[1]):
                     continue
                 for is_next_hop_spine in [False, True]:
                     if is_next_hop_spine and tagged[1]:
@@ -752,7 +752,7 @@ class FabricSpgwDownlinkIntTest(SpgwIntTest):
         print ""
         for is_device_spine in [False, True]:
             for vlan_conf, tagged in vlan_confs.items():
-                if is_device_spine and tagged[0] and tagged[1]:
+                if is_device_spine and (tagged[0] or tagged[1]):
                     continue
                 for is_next_hop_spine in [False, True]:
                     if is_next_hop_spine and tagged[1]:
@@ -790,7 +790,7 @@ class FabricIntTest(IntTest):
         print ""
         for is_device_spine in [False, True]:
             for vlan_conf, tagged in vlan_confs.items():
-                if is_device_spine and tagged[0] and tagged[1]:
+                if is_device_spine and (tagged[0] or tagged[1]):
                     continue
                 for is_next_hop_spine in [False, True]:
                     if is_next_hop_spine and tagged[1]:

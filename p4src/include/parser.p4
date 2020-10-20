@@ -352,6 +352,10 @@ parser FabricEgressParser (packet_in packet,
         }
     }
 
+    // We expect MPLS to be present only for egress-to-egress clones for INT
+    // reporting, in which case we need to remove the MPLS header as not
+    // supported by the collector. For all other cases, the MPLS label is
+    // always managed by the egress pipeline based on the bridge metadata.
     state strip_mpls {
         fabric_md.mpls_stripped = 1;
         packet.advance((ETH_TYPE_BYTES + MPLS_HDR_BYTES) * 8);
@@ -376,26 +380,11 @@ parser FabricEgressParser (packet_in packet,
 
     state parse_eth_type {
         packet.extract(hdr.eth_type);
-#ifdef WITH_INT
         fabric_md.mpls_stripped = 0;
-#endif // WITH_INT
         transition select(hdr.eth_type.value) {
-            ETHERTYPE_MPLS: parse_mpls;
             ETHERTYPE_IPV4: check_ipv4;
             ETHERTYPE_IPV6: parse_ipv6;
             default: accept;
-        }
-    }
-
-    state parse_mpls {
-        packet.extract(hdr.mpls);
-        // There is only one MPLS label for this fabric.
-        // Assume header after MPLS header is IPv4/IPv6
-        // Lookup first 4 bits for version
-        transition select(packet.lookahead<bit<IP_VER_BITS>>()) {
-            IP_VERSION_4: check_ipv4;
-            IP_VERSION_6: parse_ipv6;
-            default: reject;
         }
     }
 
@@ -411,6 +400,8 @@ parser FabricEgressParser (packet_in packet,
     }
 
 #if defined(WITH_INT) && defined(WITH_SPGW)
+    // We strip the GTP-U header because we ant the INT collector to track
+    // the inner flow.
     state strip_gtpu_and_accept {
         packet.advance((IPV4_HDR_BYTES + UDP_HDR_BYTES + GTP_HDR_BYTES) * 8);
         transition accept;
