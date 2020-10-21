@@ -98,6 +98,8 @@ DBUF_DRAIN_DST_IPV4 = "142.0.0.1"
 DBUF_FAR_ID = 1023
 DBUF_TEID = 0
 
+PDR_COUNTER_INGRESS = "FabricIngress.spgw.pdr_counter"
+PDR_COUNTER_EGRESS = "FabricEgress.spgw.pdr_counter"
 
 SPGW_IFACE_ACCESS = 1
 SPGW_IFACE_CORE = 2
@@ -1331,6 +1333,10 @@ class PacketInTest(FabricTest):
 
 class SpgwSimpleTest(IPv4UnicastTest):
 
+    def read_counter(self, c_name, idx):
+        counter = self.read_indirect_counter(c_name, idx, typ="BOTH")
+        return (counter.data.packet_count, counter.data.byte_count)
+
     def read_pkt_count(self, c_name, idx):
         counter = self.read_indirect_counter(c_name, idx, typ="PACKETS")
         return counter.data.packet_count
@@ -1487,33 +1493,47 @@ class SpgwSimpleTest(IPv4UnicastTest):
             tunnel_dst_addr=s1u_enb_addr)
 
     def read_pdr_counters(self, ctr_idx):
-        """ Read and return the ingress and egress PDR counter packet counts for the given index.
+        """ Read and return the ingress and egress PDR counter packet and byte counts for the given index.
         """
         if self.generate_tv:
             # Workaround to ignore counters during testvector generation
             return None
-        ingress_ctr = self.read_pkt_count("FabricIngress.spgw.pdr_counter", ctr_idx)
-        egress_ctr = self.read_pkt_count("FabricEgress.spgw.pdr_counter", ctr_idx)
-        return (ingress_ctr, egress_ctr)
+        ingress_ctr_data = self.read_counter(PDR_COUNTER_INGRESS, ctr_idx)
+        egress_ctr_data = self.read_counter(PDR_COUNTER_EGRESS, ctr_idx)
+        return (ingress_ctr_data, egress_ctr_data)
 
     def check_pdr_counters_increased(self, ctr_idx, count_tuple,
-                                     exp_ingress_inc=1, exp_egress_inc=1):
+                                     exp_ingress_byte_inc, exp_egress_byte_inc,
+                                     exp_ingress_pkt_inc=1, exp_egress_pkt_inc=1):
         """ Verify that the PDR ingress and egress counters for index 'ctr_idx', given as the pair 'count_tuple',
-            have increased by 'exp_ingress_inc' and 'exp_egress_inc' respectively upon reading.
+            have increased by 'exp_ingress_pkt_inc' and 'exp_egress_pkt_inc' respectively upon reading.
         """
         if self.generate_tv:
             # Workaround to ignore counters during testvector generation
             return
-        ingress_ctr = self.read_pkt_count("FabricIngress.spgw.pdr_counter", ctr_idx)
-        egress_ctr = self.read_pkt_count("FabricEgress.spgw.pdr_counter", ctr_idx)
+        old_ingress_ctr_data, old_egress_ctr_data = count_tuple
+        new_ingress_ctr_data, new_egress_ctr_data = self.read_pdr_counters(ctr_idx)
 
-        ingress_inc = ingress_ctr - count_tuple[0]
-        egress_inc = egress_ctr - count_tuple[1]
+        ingress_pkt_inc = new_ingress_ctr_data[0] - old_ingress_ctr_data[0]
+        ingress_byte_inc = int(new_ingress_ctr_data[1] - old_ingress_ctr_data[1])
 
-        if ingress_inc != exp_ingress_inc:
-            self.fail("Ingress PDR packet counter incremented by %d instead of $d!" % (ingress_inc, exp_ingress_inc))
-        if egress_inc != exp_egress_inc:
-            self.fail("Egress PDR packet counter incremented by %d instead of %d!" % (egress_inc, exp_egress_inc))
+        egress_pkt_inc = new_egress_ctr_data[0] - old_egress_ctr_data[0]
+        egress_byte_inc = int(new_egress_ctr_data[1] - old_egress_ctr_data[1])
+
+        if ingress_pkt_inc != exp_ingress_pkt_inc:
+            self.fail("Ingress PDR packet counter incremented by %d instead of $d!" \
+                    % (ingress_pkt_inc, exp_ingress_pkt_inc))
+        if egress_pkt_inc != exp_egress_pkt_inc:
+            self.fail("Egress PDR packet counter incremented by %d instead of %d!" \
+                    % (egress_pkt_inc, exp_egress_pkt_inc))
+
+        if ingress_byte_inc != exp_ingress_byte_inc:
+            self.fail("Ingress PDR byte counter incremented by %d instead of %d!" \
+                    % (ingress_byte_inc, exp_ingress_byte_inc))
+        if egress_byte_inc != exp_egress_byte_inc:
+            self.fail("Egress PDR byte counter incremented by %d instead of %d!" \
+                    % (egress_byte_inc, exp_egress_byte_inc))
+
 
     def runUplinkTest(self, ue_out_pkt, tagged1, tagged2, is_next_hop_spine):
         upstream_mac = HOST2_MAC
@@ -1547,8 +1567,19 @@ class SpgwSimpleTest(IPv4UnicastTest):
                                 prefix_len=32, exp_pkt=exp_pkt,
                                 tagged1=tagged1, tagged2=tagged2, mpls=is_next_hop_spine)
 
+        ingress_bytes = len(gtp_pkt) + 4  # FIXME: where does this 4 come from?
+        egress_bytes = len(exp_pkt) + 50  # FIXME: where does this 50 come from?
+        if tagged1:
+            ingress_bytes += 4  # length of VLAN header
+            egress_bytes += 4  # FIXME: why is this necessary?
+        if not tagged2:
+            egress_bytes += 4  # FIXME: why?
+        if is_next_hop_spine:
+            egress_bytes -= 4  # FIXME: ?????
+
         # Verify the Ingress and Egress PDR counters increased
-        self.check_pdr_counters_increased(UPLINK_PDR_CTR_IDX, pdr_pkt_counts)
+        self.check_pdr_counters_increased(UPLINK_PDR_CTR_IDX, pdr_pkt_counts,
+                ingress_bytes, egress_bytes)
 
     def runDownlinkTest(self, pkt, tagged1, tagged2, is_next_hop_spine):
         exp_pkt = pkt.copy()
@@ -1579,8 +1610,19 @@ class SpgwSimpleTest(IPv4UnicastTest):
                                 prefix_len=32, exp_pkt=exp_pkt,
                                 tagged1=tagged1, tagged2=tagged2, mpls=is_next_hop_spine)
 
+        ingress_bytes = len(pkt) + 4  # FIXME: where does this 4 come from?
+        egress_bytes = len(exp_pkt) + 14  # FIXME: where does this 14 come from?
+        if tagged1:
+            ingress_bytes += 4  # length of VLAN header
+            egress_bytes += 4  # FIXME: why is this necessary?
+        if not tagged2:
+            egress_bytes += 4  # FIXME: why?
+        if is_next_hop_spine:
+            egress_bytes -= 4  # FIXME: ?????
+
         # Verify the Ingress and Egress PDR counters increased
-        self.check_pdr_counters_increased(DOWNLINK_PDR_CTR_IDX, pdr_pkt_counts)
+        self.check_pdr_counters_increased(DOWNLINK_PDR_CTR_IDX, pdr_pkt_counts,
+                ingress_bytes, egress_bytes)
 
     def runDownlinkToDbufTest(self, pkt, tagged1, tagged2, is_next_hop_spine):
         exp_pkt = pkt.copy()
@@ -1614,8 +1656,14 @@ class SpgwSimpleTest(IPv4UnicastTest):
                                 prefix_len=32, exp_pkt=exp_pkt,
                                 tagged1=tagged1, tagged2=tagged2, mpls=is_next_hop_spine)
 
+        ingress_bytes = len(pkt) + 4  # FIXME: where does this 4 come from?
+        egress_bytes = 0
+        if tagged1:
+            ingress_bytes += 4  # length of VLAN header
+
         # Verify the Ingress PDR packet counter increased, but the egress did not
-        self.check_pdr_counters_increased(DOWNLINK_PDR_CTR_IDX, pdr_pkt_counts, exp_egress_inc=0)
+        self.check_pdr_counters_increased(DOWNLINK_PDR_CTR_IDX, pdr_pkt_counts,
+                ingress_bytes, egress_bytes, exp_egress_pkt_inc=0)
 
     def runDownlinkFromDbufTest(self, pkt, tagged1, tagged2, is_next_hop_spine):
         """ Tests a packet returning from dbuf to be sent to the enodeb.
@@ -1664,8 +1712,19 @@ class SpgwSimpleTest(IPv4UnicastTest):
                                 prefix_len=32, exp_pkt=exp_pkt,
                                 tagged1=tagged1, tagged2=tagged2, mpls=is_next_hop_spine)
 
+        ingress_bytes = 0
+        egress_bytes = len(exp_pkt) + 14  # FIXME: where does this 14 come from?
+        if tagged1:
+            egress_bytes += 4  # FIXME: why is this necessary?
+        if not tagged2:
+            egress_bytes += 4  # FIXME: why?
+        if is_next_hop_spine:
+            egress_bytes -= 4  # FIXME: ?????
+
+
         # Verify the Ingress PDR packet counter did not increase, but the egress did
-        self.check_pdr_counters_increased(DOWNLINK_PDR_CTR_IDX, pdr_pkt_counts, exp_ingress_inc=0)
+        self.check_pdr_counters_increased(DOWNLINK_PDR_CTR_IDX, pdr_pkt_counts,
+                ingress_bytes, egress_bytes, exp_ingress_pkt_inc=0)
 
 
 class SpgwReadWriteSymmetryTest(SpgwSimpleTest):
