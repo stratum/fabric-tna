@@ -7,10 +7,13 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import org.onlab.packet.Ip4Address;
+import org.onlab.packet.IpAddress;
 import org.onlab.packet.MacAddress;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
 import org.onosproject.net.DeviceId;
+import org.onosproject.net.Host;
+import org.onosproject.net.HostLocation;
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.behaviour.inbandtelemetry.IntDeviceConfig;
 import org.onosproject.net.behaviour.inbandtelemetry.IntObjective;
@@ -34,12 +37,14 @@ import org.onosproject.net.group.DefaultGroupKey;
 import org.onosproject.net.group.GroupBuckets;
 import org.onosproject.net.group.GroupDescription;
 import org.onosproject.net.group.GroupService;
+import org.onosproject.net.host.HostService;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
 import org.onosproject.segmentrouting.config.SegmentRoutingDeviceConfig;
 import org.stratumproject.fabric.tna.PipeconfLoader;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -74,12 +79,14 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
 
     private static final Set<TableId> TABLES_TO_CLEANUP = Sets.newHashSet(
             P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_WATCHLIST,
-            P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_REPORT
+            P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_REPORT,
+            P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_QUANTIZE_HOP_LATENCY
     );
 
     private FlowRuleService flowRuleService;
     private GroupService groupService;
     private NetworkConfigService cfgService;
+    private HostService hostService;
 
     private DeviceId deviceId;
     private ApplicationId appId;
@@ -106,6 +113,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         flowRuleService = handler().get(FlowRuleService.class);
         groupService = handler().get(GroupService.class);
         cfgService = handler().get(NetworkConfigService.class);
+        hostService = handler().get(HostService.class);
         final CoreService coreService = handler().get(CoreService.class);
         appId = coreService.getAppId(PipeconfLoader.APP_NAME);
         if (appId == null) {
@@ -399,7 +407,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
     public long getSuitableQmaskForLatencyChange(int minFlowHopLatencyChangeNs) {
         if (minFlowHopLatencyChangeNs < 0) {
             throw new IllegalArgumentException(
-                "Flow latency change value must equal or greater than zero.");
+                    "Flow latency change value must equal or greater than zero.");
         }
         long qmask = 0xffffffff;
         while (minFlowHopLatencyChangeNs > 1) {
@@ -409,12 +417,55 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         return 0xffffffffL & qmask;
     }
 
-    private FlowRule buildReportEntry(IntDeviceConfig intCfg) {
-
-        if (!setupBehaviour()) {
-            return null;
+    /**
+     * Gets the SID of the device which collector attached to.
+     * TODO: remove this method once we get SR API done.
+     *
+     * @param collectorIp the IP address of the INT collector
+     * @return the SID of the device,
+     *         Optional.empty() if we cannot find the SID of the device
+     */
+    private Optional<Integer> getSidForCollector(IpAddress collectorIp) {
+        Set<Host> collectorHosts = hostService.getHostsByIp(collectorIp);
+        if (collectorHosts.isEmpty()) {
+            log.warn("Unable to find collector with IP {}, skip for now.",
+                    collectorIp);
+            return Optional.empty();
         }
+        Host collector = collectorHosts.iterator().next();
+        if (collectorHosts.size() > 1) {
+            log.warn("Find more than one host with IP {}, will use {} as collector.",
+                    collectorIp, collector.id());
+        }
+        Set<HostLocation> locations = collector.locations();
+        if (locations.isEmpty()) {
+            log.warn("Unable to find the location of collector {}, skip for now.",
+                    collector.id());
+            return Optional.empty();
+        }
+        HostLocation location = locations.iterator().next();
+        if (locations.size() > 1) {
+            // TODO: revisit this when we want to support dual-homed INT collector.
+            log.warn("Find more than one location for host {}, will use {}",
+                    collector.id(), location);
+        }
+        DeviceId deviceWithCollector = location.deviceId();
+        SegmentRoutingDeviceConfig cfg = cfgService.getConfig(
+                deviceWithCollector, SegmentRoutingDeviceConfig.class);
+        if (cfg == null) {
+            log.error("Missing SegmentRoutingDeviceConfig config for {}, " +
+                    "cannot derive SID for collector", deviceWithCollector);
+            return Optional.empty();
+        }
+        if (cfg.nodeSidIPv4() == -1) {
+            log.error("Missing ipv4NodeSid in segment routing config for device {}",
+                    deviceWithCollector);
+            return Optional.empty();
+        }
+        return Optional.of(cfg.nodeSidIPv4());
+    }
 
+    private FlowRule buildReportEntry(IntDeviceConfig intCfg) {
         final SegmentRoutingDeviceConfig srCfg = cfgService.getConfig(
                 deviceId, SegmentRoutingDeviceConfig.class);
         if (srCfg == null) {
@@ -440,14 +491,40 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         final PiActionParam monPortParam = new PiActionParam(
                 P4InfoConstants.MON_PORT,
                 intCfg.collectorPort().toInt());
-        final PiAction reportAction = PiAction.builder()
-                .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_REPORT_ENCAP)
-                .withParameter(srcMacParam)
-                .withParameter(nextHopMacParam)
-                .withParameter(srcIpParam)
-                .withParameter(monIpParam)
-                .withParameter(monPortParam)
-                .build();
+        PiAction reportAction;
+
+        if (!srCfg.isEdgeRouter()) {
+            // If the device is a spine device, we need to find which
+            // switch is the INT collector attached to and find the SID of that device.
+            // TODO: replace this with SR API.
+            Optional<Integer> sid = getSidForCollector(intCfg.collectorIp());
+            if (sid.isEmpty()) {
+                // Error log will be shown in getSidForCollector method.
+                return null;
+            }
+            final PiActionParam monLabelParam = new PiActionParam(
+                    P4InfoConstants.MON_LABEL,
+                    sid.get());
+            reportAction = PiAction.builder()
+                    .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_REPORT_ENCAP_MPLS)
+                    .withParameter(srcMacParam)
+                    .withParameter(nextHopMacParam)
+                    .withParameter(srcIpParam)
+                    .withParameter(monIpParam)
+                    .withParameter(monPortParam)
+                    .withParameter(monLabelParam)
+                    .build();
+        } else {
+            reportAction = PiAction.builder()
+                    .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_REPORT_ENCAP)
+                    .withParameter(srcMacParam)
+                    .withParameter(nextHopMacParam)
+                    .withParameter(srcIpParam)
+                    .withParameter(monIpParam)
+                    .withParameter(monPortParam)
+                    .build();
+        }
+
         final TrafficTreatment treatment = DefaultTrafficTreatment.builder()
                 .piTableAction(reportAction)
                 .build();
