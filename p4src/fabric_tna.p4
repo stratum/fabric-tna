@@ -39,13 +39,13 @@ control FabricIngress (
     Next() next;
     Hasher() hasher;
 #ifdef WITH_SPGW
-    SpgwIngress() spgw_ingress;
+    SpgwIngress() spgw;
 #endif // WITH_SPGW
 
     apply {
         pkt_io_ingress.apply(hdr, fabric_md, ig_tm_md, ig_dprsr_md);
 #ifdef WITH_SPGW
-        spgw_ingress.apply(hdr, fabric_md, ig_tm_md);
+        spgw.apply(hdr, fabric_md, ig_tm_md);
 #endif // WITH_SPGW
         filtering.apply(hdr, fabric_md, ig_intr_md);
         if (!fabric_md.skip_forwarding) {
@@ -72,7 +72,7 @@ control FabricEgress (
     PacketIoEgress() pkt_io_egress;
     EgressNextControl() egress_next;
 #ifdef WITH_SPGW
-    SpgwEgress() spgw_egress;
+    SpgwEgress() spgw;
 #endif // WITH_SPGW
 #ifdef WITH_INT
     IntEgress() int_egress;
@@ -100,7 +100,7 @@ control FabricEgress (
 #endif
         egress_next.apply(hdr, fabric_md, eg_intr_md, eg_dprsr_md);
 #ifdef WITH_SPGW
-        spgw_egress.apply(hdr, fabric_md);
+        spgw.apply(hdr, fabric_md);
 #endif // WITH_SPGW
     }
 }
