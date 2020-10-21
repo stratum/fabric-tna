@@ -1613,7 +1613,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         self.runIPv4UnicastTest(pkt=pkt, dst_ipv4=exp_pkt[IP].dst,
                                 next_hop_mac=S1U_ENB_MAC,
                                 prefix_len=32, exp_pkt=exp_pkt,
-                                tagged1=tagged1, tagged2=tagged2, mpls=is_next_hop_spine)
+                                tagged1=tagged1, tagged2=tagged2, is_next_hop_spine=is_next_hop_spine)
 
         ingress_bytes = len(pkt) + 4  # FIXME: where does this 4 come from?
         egress_bytes = len(exp_pkt) + 14  # FIXME: where does this 14 come from?
