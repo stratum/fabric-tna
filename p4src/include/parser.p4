@@ -267,7 +267,9 @@ parser FabricEgressParser (packet_in packet,
     Checksum() inner_ipv4_checksum;
 #endif // WITH_SPGW
 
+#if defined(WITH_INT) && defined(WITH_SPGW)
     bit<1> is_int_and_strip_gtpu = 0;
+#endif // defined(WITH_INT) && defined(WITH_SPGW)
 
     state start {
         packet.extract(eg_intr_md);
@@ -292,13 +294,8 @@ parser FabricEgressParser (packet_in packet,
         fabric_md.bridged.vlan_id = DEFAULT_VLAN_ID;
 #ifdef WITH_SPGW
         is_int_and_strip_gtpu = fabric_md.int_mirror_md.strip_gtpu;
-        transition select(is_int_and_strip_gtpu) {
-            1: check_ethernet;
-            default: accept;
-        }
-#else
-        transition accept;
 #endif // WITH_SPGW
+        transition check_ethernet;
 #else
         // Should never be here.
         transition reject;
@@ -317,7 +314,7 @@ parser FabricEgressParser (packet_in packet,
     state set_cpu_loopback_egress {
         hdr.fake_ethernet.setValid();
         hdr.fake_ethernet.ether_type = ETHERTYPE_CPU_LOOPBACK_EGRESS;
-        packet.advance(ETH_TYPE_BYTES * 8);
+        packet.advance(ETH_HDR_BYTES * 8);
         transition parse_ethernet;
     }
 
@@ -326,7 +323,7 @@ parser FabricEgressParser (packet_in packet,
         transition select(packet.lookahead<bit<16>>()) {
             ETHERTYPE_QINQ: parse_vlan_tag;
             ETHERTYPE_VLAN &&& 0xFEFF: parse_vlan_tag;
-            default: parse_eth_type;
+            default: check_eth_type;
         }
     }
 
@@ -336,36 +333,59 @@ parser FabricEgressParser (packet_in packet,
 #if defined(WITH_XCONNECT) || defined(WITH_DOUBLE_VLAN_TERMINATION)
             ETHERTYPE_VLAN: parse_inner_vlan_tag;
 #endif // WITH_XCONNECT || WITH_DOUBLE_VLAN_TERMINATION
-            default: parse_eth_type;
+            default: check_eth_type;
         }
     }
 
 #if defined(WITH_XCONNECT) || defined(WITH_DOUBLE_VLAN_TERMINATION)
     state parse_inner_vlan_tag {
         packet.extract(hdr.inner_vlan_tag);
-        transition parse_eth_type;
+        transition check_eth_type;
     }
 #endif // WITH_XCONNECT || WITH_DOUBLE_VLAN_TERMINATION
 
-    state parse_eth_type {
-        packet.extract(hdr.eth_type);
-        transition select(hdr.eth_type.value) {
-            ETHERTYPE_MPLS: parse_mpls;
-            ETHERTYPE_IPV4: check_ipv4;
-            ETHERTYPE_IPV6: parse_ipv6;
-            default: accept;
+    state check_eth_type {
+        transition select(packet.lookahead<bit<(ETH_TYPE_BYTES * 8)>>()) {
+            ETHERTYPE_MPLS: strip_mpls;
+            ETHERTYPE_IPV4: parse_eth_type;
+            ETHERTYPE_IPV6: parse_eth_type;
         }
     }
 
-    state parse_mpls {
-        packet.extract(hdr.mpls);
-        // There is only one MPLS label for this fabric.
-        // Assume header after MPLS header is IPv4/IPv6
-        // Lookup first 4 bits for version
+    // We expect MPLS to be present only for egress-to-egress clones for INT
+    // reporting, in which case we need to remove the MPLS header as not
+    // supported by the collector. For all other cases, the MPLS label is
+    // always popped in ingress and pushed again in egress (if present in
+    //  bridged metadata).
+    state strip_mpls {
+        fabric_md.mpls_stripped = 1;
+        packet.advance((ETH_TYPE_BYTES + MPLS_HDR_BYTES) * 8);
         transition select(packet.lookahead<bit<IP_VER_BITS>>()) {
-            IP_VERSION_4: check_ipv4;
-            IP_VERSION_6: parse_ipv6;
+            IP_VERSION_4: strip_mpls_ipv4;
+            IP_VERSION_6: strip_mpls_ipv6;
             default: reject;
+        }
+    }
+
+    state strip_mpls_ipv4 {
+        hdr.eth_type.setValid();
+        hdr.eth_type.value = ETHERTYPE_IPV4;
+        transition check_ipv4;
+    }
+
+    state strip_mpls_ipv6 {
+        hdr.eth_type.setValid();
+        hdr.eth_type.value = ETHERTYPE_IPV6;
+        transition parse_ipv6;
+    }
+
+    state parse_eth_type {
+        packet.extract(hdr.eth_type);
+        fabric_md.mpls_stripped = 0;
+        transition select(hdr.eth_type.value) {
+            ETHERTYPE_IPV4: check_ipv4;
+            ETHERTYPE_IPV6: parse_ipv6;
+            default: accept;
         }
     }
 
@@ -380,10 +400,14 @@ parser FabricEgressParser (packet_in packet,
 #endif // defined(WITH_INT) && defined(WITH_SPGW)
     }
 
+#if defined(WITH_INT) && defined(WITH_SPGW)
+    // We strip the GTP-U header because we want the INT collector to track
+    // the inner flow.
     state strip_gtpu_and_accept {
         packet.advance((IPV4_HDR_BYTES + UDP_HDR_BYTES + GTP_HDR_BYTES) * 8);
         transition accept;
     }
+#endif // defined(WITH_INT) && defined(WITH_SPGW)
 
     state parse_ipv4 {
         packet.extract(hdr.ipv4);
@@ -548,6 +572,7 @@ control FabricEgressDeparser(packet_out packet,
 #ifdef WITH_INT
         packet.emit(hdr.report_ethernet);
         packet.emit(hdr.report_eth_type);
+        packet.emit(hdr.report_mpls);
         packet.emit(hdr.report_ipv4);
         packet.emit(hdr.report_udp);
         packet.emit(hdr.report_fixed_header);

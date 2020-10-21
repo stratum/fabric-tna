@@ -5,6 +5,7 @@ package org.stratumproject.fabric.tna.behaviour;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -17,7 +18,10 @@ import org.onlab.packet.TpPort;
 import org.onosproject.TestApplicationId;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
+import org.onosproject.net.DefaultHost;
 import org.onosproject.net.DeviceId;
+import org.onosproject.net.Host;
+import org.onosproject.net.HostLocation;
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.behaviour.inbandtelemetry.IntDeviceConfig;
 import org.onosproject.net.behaviour.inbandtelemetry.IntMetadataType;
@@ -26,15 +30,18 @@ import org.onosproject.net.behaviour.inbandtelemetry.IntProgrammable;
 import org.onosproject.net.config.NetworkConfigService;
 import org.onosproject.net.driver.DriverData;
 import org.onosproject.net.driver.DriverHandler;
+import org.onosproject.net.flow.DefaultFlowEntry;
 import org.onosproject.net.flow.DefaultFlowRule;
 import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
+import org.onosproject.net.flow.FlowEntry;
 import org.onosproject.net.flow.FlowRule;
 import org.onosproject.net.flow.FlowRuleService;
 import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.net.flow.criteria.PiCriterion;
 import org.onosproject.net.group.GroupService;
+import org.onosproject.net.host.HostService;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
 import org.onosproject.segmentrouting.config.SegmentRoutingDeviceConfig;
@@ -42,7 +49,9 @@ import org.stratumproject.fabric.tna.PipeconfLoader;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Collections;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import static org.easymock.EasyMock.anyObject;
 import static org.easymock.EasyMock.anyString;
@@ -66,7 +75,8 @@ public class FabricIntProgrammableTest {
     private static final String SR_CONFIG_KEY = "segmentrouting";
     private static final ApplicationId APP_ID =
             TestApplicationId.create(PipeconfLoader.APP_NAME);
-    private static final DeviceId DEVICE_ID = DeviceId.deviceId("device:1");
+    private static final DeviceId LEAF_DEVICE_ID = DeviceId.deviceId("device:1");
+    private static final DeviceId SPINE_DEVICE_ID = DeviceId.deviceId("device:2");
     private static final IpPrefix IP_SRC = IpPrefix.valueOf("10.0.0.1/24");
     private static final IpPrefix IP_DST = IpPrefix.valueOf("10.0.0.2/24");
     private static final TpPort L4_SRC = TpPort.tpPort(30000);
@@ -74,6 +84,9 @@ public class FabricIntProgrammableTest {
     private static final int DEFAULT_PRIORITY = 10000;
     private static final IpAddress COLLECTOR_IP = IpAddress.valueOf("10.128.0.1");
     private static final TpPort COLLECTOR_PORT = TpPort.tpPort(32766);
+    private static final HostLocation COLLECTOR_LOCATION = new HostLocation(LEAF_DEVICE_ID, PortNumber.P0, 0);
+    private static final Host COLLECTOR_HOST =
+            new DefaultHost(null, null, null, null, COLLECTOR_LOCATION, Sets.newHashSet());
 
     private FabricIntProgrammable intProgrammable;
     private FabricCapabilities capabilities;
@@ -81,6 +94,8 @@ public class FabricIntProgrammableTest {
     private GroupService groupService;
     private NetworkConfigService netcfgService;
     private CoreService coreService;
+    private HostService hostService;
+    private DriverData driverData;
 
     @Before
     public void setup() throws IOException {
@@ -90,32 +105,31 @@ public class FabricIntProgrammableTest {
         expect(capabilities.hwPipeCount()).andReturn(4).anyTimes();
         replay(capabilities);
 
-        // Segment routing config.
-        SegmentRoutingDeviceConfig srCfg = new SegmentRoutingDeviceConfig();
-        InputStream jsonStream = getClass().getResourceAsStream("/sr.json");
-        ObjectMapper mapper = new ObjectMapper();
-        JsonNode jsonNode = mapper.readTree(jsonStream);
-        srCfg.init(DEVICE_ID, SR_CONFIG_KEY, jsonNode, mapper, config -> { });
-
         // Services mock
         flowRuleService = createNiceMock(FlowRuleService.class);
         groupService = createNiceMock(GroupService.class);
         netcfgService = createNiceMock(NetworkConfigService.class);
         coreService = createNiceMock(CoreService.class);
+        hostService = createNiceMock(HostService.class);
         expect(coreService.getAppId(anyString())).andReturn(APP_ID).anyTimes();
-        expect(netcfgService.getConfig(DEVICE_ID, SegmentRoutingDeviceConfig.class))
-                .andReturn(srCfg).anyTimes();
-        replay(coreService, netcfgService);
+
+        expect(netcfgService.getConfig(LEAF_DEVICE_ID, SegmentRoutingDeviceConfig.class))
+                .andReturn(getSrConfig(LEAF_DEVICE_ID, "/sr.json")).anyTimes();
+        expect(netcfgService.getConfig(SPINE_DEVICE_ID, SegmentRoutingDeviceConfig.class))
+                .andReturn(getSrConfig(SPINE_DEVICE_ID, "/sr-spine.json")).anyTimes();
+        expect(hostService.getHostsByIp(COLLECTOR_IP)).andReturn(ImmutableSet.of(COLLECTOR_HOST));
+        replay(coreService, netcfgService, hostService);
 
         DriverHandler driverHandler = createNiceMock(DriverHandler.class);
         expect(driverHandler.get(FlowRuleService.class)).andReturn(flowRuleService).anyTimes();
         expect(driverHandler.get(GroupService.class)).andReturn(groupService).anyTimes();
         expect(driverHandler.get(NetworkConfigService.class)).andReturn(netcfgService).anyTimes();
         expect(driverHandler.get(CoreService.class)).andReturn(coreService).anyTimes();
+        expect(driverHandler.get(HostService.class)).andReturn(hostService).anyTimes();
         replay(driverHandler);
 
-        DriverData driverData = createNiceMock(DriverData.class);
-        expect(driverData.deviceId()).andReturn(DEVICE_ID).anyTimes();
+        driverData = createNiceMock(DriverData.class);
+        expect(driverData.deviceId()).andReturn(LEAF_DEVICE_ID).anyTimes();
         replay(driverData);
 
         intProgrammable = new FabricIntProgrammable(capabilities);
@@ -249,21 +263,37 @@ public class FabricIntProgrammableTest {
      */
     @Test
     public void testSetupIntConfig() {
-        final IntDeviceConfig intConfig = IntDeviceConfig.builder()
-                .enabled(true)
-                .withCollectorIp(COLLECTOR_IP)
-                .withCollectorPort(COLLECTOR_PORT)
-                .withSinkIp(IpAddress.valueOf("10.192.19.180"))
-                .withSinkMac(MacAddress.NONE)
-                .withCollectorNextHopMac(MacAddress.BROADCAST)
-                .withMinFlowHopLatencyChangeNs(300)
-                .build();
-        final FlowRule expectedFlow = buildReportFlow();
-        final FlowRule quantizeRule = buildQuantizeRule(0xffffff00);
+        final IntDeviceConfig intConfig = buildIntDeviceConfig();
+        final FlowRule expectedFlow = buildReportFlow(LEAF_DEVICE_ID, false);
+        final FlowRule quantizeRule = buildQuantizeRule(LEAF_DEVICE_ID, 0xffffff00);
         reset(flowRuleService);
         flowRuleService.applyFlowRules(eq(expectedFlow));
         expectLastCall().andVoid().once();
         flowRuleService.applyFlowRules(eq(quantizeRule));
+        expectLastCall().andVoid().once();
+        replay(flowRuleService);
+        assertTrue(intProgrammable.setupIntConfig(intConfig));
+        verify(flowRuleService);
+    }
+
+    /**
+     * Test "setupIntConfig" function of IntProgrammable for spine device.
+     * We should expected to get a table entry for report table
+     * with do_report_encap_mpls action.
+     */
+    @Test
+    public void testSetupIntConfigOnSpine() {
+        // Override the driver device id data.
+        reset(driverData);
+        expect(driverData.deviceId()).andReturn(SPINE_DEVICE_ID).anyTimes();
+        replay(driverData);
+        final IntDeviceConfig intConfig = buildIntDeviceConfig();
+        final FlowRule expectedReportFlow = buildReportFlow(SPINE_DEVICE_ID, true);
+        final FlowRule expectedQuantizeRule = buildQuantizeRule(SPINE_DEVICE_ID, 0xffffff00);
+        reset(flowRuleService);
+        flowRuleService.applyFlowRules(eq(expectedReportFlow));
+        expectLastCall().andVoid().once();
+        flowRuleService.applyFlowRules(eq(expectedQuantizeRule));
         expectLastCall().andVoid().once();
         replay(flowRuleService);
         assertTrue(intProgrammable.setupIntConfig(intConfig));
@@ -297,11 +327,138 @@ public class FabricIntProgrammableTest {
             intProgrammable.getSuitableQmaskForLatencyChange(-1);
         } catch (IllegalArgumentException e) {
             assertEquals(e.getMessage(),
-                "Flow latency change value must equal or greater than zero.");
+                    "Flow latency change value must equal or greater than zero.");
         }
     }
 
-    private FlowRule buildReportFlow() {
+    @Test
+    public void testCleanup() {
+        Set<FlowEntry> intEntries = ImmutableSet.of(
+                // Watchlist table entry
+                buildFlowEntry(buildExpectedCollectorFlow(IPv4.PROTOCOL_TCP)),
+                buildFlowEntry(buildExpectedCollectorFlow(IPv4.PROTOCOL_UDP)),
+                buildFlowEntry(buildExpectedCollectorFlow(IPv4.PROTOCOL_ICMP)),
+                // Report table entry
+                buildFlowEntry(buildQuantizeRule(LEAF_DEVICE_ID, 0)),
+                buildFlowEntry(buildReportFlow(LEAF_DEVICE_ID, false))
+        );
+        Set<FlowEntry> randomEntries = buildRandomFlowEntries();
+        Set<FlowEntry> entries = Sets.newHashSet(intEntries);
+        entries.addAll(randomEntries);
+        reset(flowRuleService);
+        expect(flowRuleService.getFlowEntries(LEAF_DEVICE_ID))
+                .andReturn(entries)
+                .anyTimes();
+        intEntries.forEach(e -> {
+            flowRuleService.removeFlowRules(e);
+            expectLastCall().once();
+        });
+        replay(flowRuleService);
+        intProgrammable.cleanup();
+        verify(flowRuleService);
+    }
+
+    /**
+     * Test when setup behaviour failed.
+     */
+    @Test
+    public void testSetupBehaviourFailed() {
+        reset(coreService);
+        expect(coreService.getAppId(anyString())).andReturn(null).anyTimes();
+        replay(coreService, flowRuleService);
+        assertFalse(intProgrammable.init());
+        assertFalse(intProgrammable.setupIntConfig(null));
+        assertFalse(intProgrammable.addIntObjective(null));
+        assertFalse(intProgrammable.removeIntObjective(null));
+        intProgrammable.cleanup();
+
+        // Here we expected no flow entries installed
+        verify(flowRuleService);
+    }
+
+    @Test
+    public void testInvalidConfig() {
+        reset(netcfgService);
+        expect(netcfgService.getConfig(LEAF_DEVICE_ID, SegmentRoutingDeviceConfig.class))
+                .andReturn(null).anyTimes();
+        replay(netcfgService, flowRuleService);
+        final IntDeviceConfig intConfig = buildIntDeviceConfig();
+        final IntObjective intObjective = buildIntObjective(IPv4.PROTOCOL_TCP);
+        assertFalse(intProgrammable.setupIntConfig(intConfig));
+        assertFalse(intProgrammable.addIntObjective(intObjective));
+        assertFalse(intProgrammable.removeIntObjective(intObjective));
+        // We expected no flow rules be installed or removed
+        verify(flowRuleService);
+    }
+
+    /**
+     * Test installing report rules on spine but collector host not found.
+     */
+    @Test
+    public void testSetUpSpineButCollectorHostNotFound() {
+        reset(driverData, hostService);
+        expect(driverData.deviceId()).andReturn(SPINE_DEVICE_ID).anyTimes();
+        expect(hostService.getHostsByIp(anyObject())).andReturn(Collections.emptySet()).anyTimes();
+        replay(driverData, hostService, flowRuleService);
+        final IntDeviceConfig intConfig = buildIntDeviceConfig();
+        assertFalse(intProgrammable.setupIntConfig(intConfig));
+        // We expect no flow rules be installed
+        verify(flowRuleService);
+    }
+
+    /**
+     * Test installing report rules on spine but cannot find
+     * the location of the collector host.
+     */
+    @Test
+    public void testSetUpSpineButNoCollectorHostLocation() {
+        reset(driverData, hostService);
+        expect(driverData.deviceId()).andReturn(SPINE_DEVICE_ID).anyTimes();
+        final Host collectorHost = new DefaultHost(null, null, null, null, Sets.newHashSet(), Sets.newHashSet(), true);
+        expect(hostService.getHostsByIp(COLLECTOR_IP)).andReturn(ImmutableSet.of(collectorHost)).anyTimes();
+        replay(driverData, hostService, flowRuleService);
+        final IntDeviceConfig intConfig = buildIntDeviceConfig();
+        assertFalse(intProgrammable.setupIntConfig(intConfig));
+        verify(flowRuleService);
+    }
+
+    /**
+     * Test installing report rules on spine but cannot find
+     * the segment routing config of the leaf.
+     */
+    @Test
+    public void testSetUpSpineButNoLeafConfig() throws IOException {
+        reset(driverData, netcfgService);
+        expect(driverData.deviceId()).andReturn(SPINE_DEVICE_ID).anyTimes();
+        expect(netcfgService.getConfig(LEAF_DEVICE_ID, SegmentRoutingDeviceConfig.class))
+                .andReturn(null).anyTimes();
+        expect(netcfgService.getConfig(SPINE_DEVICE_ID, SegmentRoutingDeviceConfig.class))
+                .andReturn(getSrConfig(SPINE_DEVICE_ID, "/sr-spine.json")).anyTimes();
+        replay(driverData, flowRuleService, netcfgService);
+        final IntDeviceConfig intConfig = buildIntDeviceConfig();
+        assertFalse(intProgrammable.setupIntConfig(intConfig));
+        verify(flowRuleService);
+    }
+
+    /**
+     * Test installing report rules on spine but the config
+     * of leaf is invalid.
+     */
+    @Test
+    public void testSetUpSpineButInvalidLeafConfig() throws IOException {
+        reset(driverData, netcfgService);
+        expect(driverData.deviceId()).andReturn(SPINE_DEVICE_ID).anyTimes();
+        expect(netcfgService.getConfig(LEAF_DEVICE_ID, SegmentRoutingDeviceConfig.class))
+                .andReturn(getSrConfig(SPINE_DEVICE_ID, "/sr-invalid.json")).anyTimes();
+        expect(netcfgService.getConfig(SPINE_DEVICE_ID, SegmentRoutingDeviceConfig.class))
+                .andReturn(getSrConfig(SPINE_DEVICE_ID, "/sr-spine.json")).anyTimes();
+        replay(driverData, flowRuleService, netcfgService);
+        final IntDeviceConfig intConfig = buildIntDeviceConfig();
+        assertFalse(intProgrammable.setupIntConfig(intConfig));
+        verify(flowRuleService);
+    }
+
+    private PiAction buildReportAction(boolean setMpls) {
         final PiActionParam srcMacParam = new PiActionParam(
                 P4InfoConstants.SRC_MAC, MacAddress.ZERO.toBytes());
         final PiActionParam nextHopMacParam = new PiActionParam(
@@ -314,14 +471,26 @@ public class FabricIntProgrammableTest {
         final PiActionParam monPortParam = new PiActionParam(
                 P4InfoConstants.MON_PORT,
                 COLLECTOR_PORT.toInt());
-        final PiAction reportAction = PiAction.builder()
-                .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_REPORT_ENCAP)
+        final PiAction.Builder reportAction = PiAction.builder()
                 .withParameter(srcMacParam)
                 .withParameter(nextHopMacParam)
                 .withParameter(srcIpParam)
                 .withParameter(monIpParam)
-                .withParameter(monPortParam)
-                .build();
+                .withParameter(monPortParam);
+        if (setMpls) {
+            reportAction.withParameter(new PiActionParam(
+                    P4InfoConstants.MON_LABEL,
+                    NODE_SID_IPV4
+            ));
+            reportAction.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_REPORT_ENCAP_MPLS);
+        } else {
+            reportAction.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_REPORT_ENCAP);
+        }
+        return reportAction.build();
+    }
+
+    private FlowRule buildReportFlow(DeviceId deviceId, boolean setMpls) {
+        PiAction reportAction = buildReportAction(setMpls);
         final TrafficTreatment treatment = DefaultTrafficTreatment.builder()
                 .piTableAction(reportAction)
                 .build();
@@ -336,12 +505,12 @@ public class FabricIntProgrammableTest {
                 .fromApp(APP_ID)
                 .withPriority(DEFAULT_PRIORITY)
                 .makePermanent()
-                .forDevice(DEVICE_ID)
+                .forDevice(deviceId)
                 .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_REPORT)
                 .build();
     }
 
-    private FlowRule buildQuantizeRule(long qmask) {
+    private FlowRule buildQuantizeRule(DeviceId deviceId, long qmask) {
         // Quantify hop latency rule
         final PiActionParam quantizeMaskParam = new PiActionParam(P4InfoConstants.QMASK, qmask);
         final PiAction quantizeAction =
@@ -353,7 +522,7 @@ public class FabricIntProgrammableTest {
                 .piTableAction(quantizeAction)
                 .build();
         return DefaultFlowRule.builder()
-                .forDevice(DEVICE_ID)
+                .forDevice(deviceId)
                 .makePermanent()
                 .withPriority(DEFAULT_PRIORITY)
                 .withTreatment(quantizeTreatment)
@@ -432,7 +601,7 @@ public class FabricIntProgrammableTest {
                 .piTableAction(expectedPiAction)
                 .build();
         return DefaultFlowRule.builder()
-                .forDevice(DEVICE_ID)
+                .forDevice(LEAF_DEVICE_ID)
                 .withSelector(expectedSelector.build())
                 .withTreatment(expectedTreatment)
                 .fromApp(APP_ID)
@@ -440,5 +609,64 @@ public class FabricIntProgrammableTest {
                 .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_WATCHLIST)
                 .makePermanent()
                 .build();
+    }
+
+    private IntDeviceConfig buildIntDeviceConfig() {
+        return IntDeviceConfig.builder()
+                .enabled(true)
+                .withCollectorIp(COLLECTOR_IP)
+                .withCollectorPort(COLLECTOR_PORT)
+                .withSinkIp(IpAddress.valueOf("10.192.19.180"))
+                .withSinkMac(MacAddress.NONE)
+                .withCollectorNextHopMac(MacAddress.BROADCAST)
+                .withMinFlowHopLatencyChangeNs(300)
+                .build();
+    }
+
+    private FlowEntry buildFlowEntry(FlowRule flowRule) {
+        return new DefaultFlowEntry(flowRule, FlowEntry.FlowEntryState.ADDED, 1, TimeUnit.SECONDS, 0, 0);
+    }
+
+    private SegmentRoutingDeviceConfig getSrConfig(DeviceId deviceId, String fileName) throws IOException {
+        SegmentRoutingDeviceConfig srCfg = new SegmentRoutingDeviceConfig();
+        InputStream jsonStream = getClass().getResourceAsStream(fileName);
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode jsonNode = mapper.readTree(jsonStream);
+        srCfg.init(deviceId, SR_CONFIG_KEY, jsonNode, mapper, config -> { });
+        return srCfg;
+    }
+
+    private Set<FlowEntry> buildRandomFlowEntries() {
+        FlowRule rule1 = DefaultFlowRule.builder()
+                .withSelector(DefaultTrafficSelector.builder()
+                        .matchTcpDst(TpPort.tpPort(8080))
+                        .build())
+                .withTreatment(DefaultTrafficTreatment.builder()
+                        .setOutput(PortNumber.P0)
+                        .build())
+                .makePermanent()
+                .forTable(0)
+                .withPriority(1)
+                .forDevice(LEAF_DEVICE_ID)
+                .withCookie(123)
+                .build();
+        FlowRule rule2 = DefaultFlowRule.builder()
+                .withSelector(DefaultTrafficSelector.builder()
+                        .matchIPDst(IpPrefix.valueOf("0.0.0.0/0"))
+                        .build())
+                .withTreatment(DefaultTrafficTreatment.builder()
+                        .setEthDst(MacAddress.valueOf("10:00:01:12:23:34"))
+                        .setOutput(PortNumber.portNumber(10))
+                        .build())
+                .makePermanent()
+                .forTable(0)
+                .withPriority(1)
+                .forDevice(LEAF_DEVICE_ID)
+                .withCookie(456)
+                .build();
+        return ImmutableSet.of(
+                buildFlowEntry(rule1),
+                buildFlowEntry(rule2)
+        );
     }
 }
