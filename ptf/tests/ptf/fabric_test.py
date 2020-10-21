@@ -83,19 +83,27 @@ HOST1_IPV4 = "10.0.1.1"
 HOST2_IPV4 = "10.0.2.1"
 HOST3_IPV4 = "10.0.3.1"
 HOST4_IPV4 = "10.0.4.1"
-S1U_ENB_IPV4 = "119.0.0.10"
 S1U_SGW_IPV4 = "140.0.0.2"
+S1U_ENB_IPV4 = "119.0.0.10"
+S1U_ENB_MAC = "00:00:00:00:00:eb"
 UE_IPV4 = "16.255.255.252"
 DEFAULT_ROUTE_IPV4 = "0.0.0.0"
 PREFIX_DEFAULT_ROUTE = 0
 PREFIX_SUBNET = 24
 PREFIX_HOST = 32
 
-SPGW_DIRECTION_UPLINK = 1
-SPGW_DIRECTION_DOWNLINK = 2
+DBUF_MAC = "00:00:00:0d:b0:0f"
+DBUF_IPV4 = "141.0.0.1"
+DBUF_DRAIN_DST_IPV4 = "142.0.0.1"
+DBUF_FAR_ID = 1023
+DBUF_TEID = 0
+
+PDR_COUNTER_INGRESS = "FabricIngress.spgw.pdr_counter"
+PDR_COUNTER_EGRESS = "FabricEgress.spgw.pdr_counter"
+
 SPGW_IFACE_ACCESS = 1
 SPGW_IFACE_CORE = 2
-
+SPGW_IFACE_FROM_DBUF = 3
 
 VLAN_ID_1 = 100
 VLAN_ID_2 = 200
@@ -105,7 +113,12 @@ DEFAULT_VLAN = 4094
 MPLS_LABEL_1 = 100
 MPLS_LABEL_2 = 200
 
-TEID_1 = 0xeeffc0f0
+UPLINK_TEID   = 0xeeffc0f0
+DOWNLINK_TEID = 0xeeffc0f1
+UPLINK_PDR_CTR_IDX = 1
+DOWNLINK_PDR_CTR_IDX = 2
+UPLINK_FAR_ID = 23
+DOWNLINK_FAR_ID = 24
 
 # INT instructions
 INT_SWITCH_ID = 1 << 15
@@ -117,18 +130,18 @@ INT_EG_TSTAMP = 1 << 10
 INT_QUEUE_CONGESTION = 1 << 9
 INT_EG_PORT_TX = 1 << 8
 INT_ALL_INSTRUCTIONS = [INT_SWITCH_ID, INT_IG_EG_PORT, INT_HOP_LATENCY,
-                        INT_QUEUE_OCCUPANCY, INT_IG_TSTAMP, INT_EG_TSTAMP,
-                        INT_QUEUE_CONGESTION, INT_EG_PORT_TX]
+                    INT_QUEUE_OCCUPANCY, INT_IG_TSTAMP, INT_EG_TSTAMP,
+                    INT_QUEUE_CONGESTION, INT_EG_PORT_TX]
 
 INT_INS_TO_NAME = {
-    INT_SWITCH_ID: "switch_id",
-    INT_IG_EG_PORT: "ig_eg_port",
-    INT_HOP_LATENCY: "hop_latency",
-    INT_QUEUE_OCCUPANCY: "queue_occupancy",
-    INT_IG_TSTAMP: "ig_tstamp",
-    INT_EG_TSTAMP: "eg_tstamp",
-    INT_QUEUE_CONGESTION: "queue_congestion",
-    INT_EG_PORT_TX: "eg_port_tx"
+INT_SWITCH_ID: "switch_id",
+INT_IG_EG_PORT: "ig_eg_port",
+INT_HOP_LATENCY: "hop_latency",
+INT_QUEUE_OCCUPANCY: "queue_occupancy",
+INT_IG_TSTAMP: "ig_tstamp",
+INT_EG_TSTAMP: "eg_tstamp",
+INT_QUEUE_CONGESTION: "queue_congestion",
+INT_EG_PORT_TX: "eg_port_tx"
 }
 
 INT_REPORT_MIRROR_ID_0 = 300
@@ -141,7 +154,7 @@ NPROTO_TELEMETRY_DROP_HEADER = 1
 NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER = 2
 bind_layers(UDP, INT_L45_REPORT_FIXED, dport=INT_REPORT_PORT)
 bind_layers(INT_L45_REPORT_FIXED, INT_L45_LOCAL_REPORT,
-            nproto=NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER)
+        nproto=NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER)
 bind_layers(INT_L45_LOCAL_REPORT, Ether)
 
 INT_COLLECTOR_MAC = "00:1e:67:d2:ee:ee"
@@ -1325,6 +1338,10 @@ class PacketInTest(FabricTest):
 
 class SpgwSimpleTest(IPv4UnicastTest):
 
+    def read_counter(self, c_name, idx):
+        counter = self.read_indirect_counter(c_name, idx, typ="BOTH")
+        return (counter.data.packet_count, counter.data.byte_count)
+
     def read_pkt_count(self, c_name, idx):
         counter = self.read_indirect_counter(c_name, idx, typ="PACKETS")
         return counter.data.packet_count
@@ -1333,58 +1350,75 @@ class SpgwSimpleTest(IPv4UnicastTest):
         counter = self.read_indirect_counter(c_name, idx, typ="BYTES")
         return counter.data.byte_count
 
-    def add_ue_pool(self, ip_prefix, prefix_len):
+    def _add_spgw_iface(self, iface_addr, prefix_len, iface_enum, gtpu_valid):
         req = self.get_new_write_request()
 
-        ip_prefix_ = ipv4_to_binary(ip_prefix)
+        iface_addr_ = ipv4_to_binary(iface_addr)
 
         self.push_update_add_entry_to_action(
             req,
-            "FabricIngress.spgw_ingress.interface_lookup",
+            "FabricIngress.spgw.interfaces",
             [
-                self.Lpm("ipv4_dst_addr", ip_prefix_, prefix_len),
-                self.Exact("gtpu_is_valid", stringify(0, 1))
+                self.Lpm("ipv4_dst_addr", iface_addr_, prefix_len),
+                self.Exact("gtpu_is_valid", stringify(int(gtpu_valid), 1))
             ],
-            "FabricIngress.spgw_ingress.set_source_iface",
+            "FabricIngress.spgw.load_iface",
             [
-                ("src_iface", stringify(SPGW_IFACE_CORE, 1)),
-                ("direction", stringify(SPGW_DIRECTION_DOWNLINK, 1)),
-                ("skip_spgw", stringify(0, 1)),
+                ("src_iface", stringify(iface_enum, 1)),
             ],
         )
         self.write_request(req)
+
+
+    def add_ue_pool(self, pool_addr, prefix_len=32):
+        self._add_spgw_iface(
+                iface_addr = pool_addr,
+                prefix_len = prefix_len,
+                iface_enum = SPGW_IFACE_CORE,
+                gtpu_valid = False)
 
     def add_s1u_iface(self, s1u_addr, prefix_len=32):
-        req = self.get_new_write_request()
-        s1u_addr_ = ipv4_to_binary(s1u_addr)
+        self._add_spgw_iface(
+                iface_addr = s1u_addr,
+                prefix_len = prefix_len,
+                iface_enum = SPGW_IFACE_ACCESS,
+                gtpu_valid = True)
 
-        self.push_update_add_entry_to_action(
-            req,
-            "FabricIngress.spgw_ingress.interface_lookup",
+    def add_dbuf_device(self,
+                        dbuf_addr=DBUF_IPV4, drain_dst_addr=DBUF_DRAIN_DST_IPV4,
+                        dbuf_far_id=DBUF_FAR_ID, dbuf_teid=DBUF_TEID):
+        # Switch interface for traffic to/from dbuf device
+        self._add_spgw_iface(
+                iface_addr = drain_dst_addr,
+                prefix_len = 32,
+                iface_enum = SPGW_IFACE_FROM_DBUF,
+                gtpu_valid = True)
+
+        # FAR that tunnels to the dbuf device
+        return self._add_far(
+            dbuf_far_id,
+            "FabricIngress.spgw.load_dbuf_far",
             [
-                self.Lpm("ipv4_dst_addr", s1u_addr_, prefix_len),
-                self.Exact("gtpu_is_valid", stringify(1, 1))
-            ],
-            "FabricIngress.spgw_ingress.set_source_iface",
-            [
-                ("src_iface", stringify(SPGW_IFACE_ACCESS, 1)),
-                ("direction", stringify(SPGW_DIRECTION_UPLINK, 1)),
-                ("skip_spgw", stringify(0, 1)),
-            ],
+                ("drop", stringify(0, 1)),
+                ("notify_cp", stringify(0, 1)),
+                ("teid", stringify(dbuf_teid, 4)),
+                ("tunnel_src_port", stringify(UDP_GTP_PORT, 2)),
+                ("tunnel_src_addr", ipv4_to_binary(drain_dst_addr)),
+                ("tunnel_dst_addr", ipv4_to_binary(dbuf_addr)),
+            ]
         )
-        self.write_request(req)
 
     def add_uplink_pdr(self, ctr_id, far_id,
                         teid, tunnel_dst_addr):
         req = self.get_new_write_request()
         self.push_update_add_entry_to_action(
             req,
-            "FabricIngress.spgw_ingress.uplink_pdr_lookup",
+            "FabricIngress.spgw.uplink_pdrs",
             [
                 self.Exact("teid", stringify(teid, 4)),
                 self.Exact("tunnel_ipv4_dst", ipv4_to_binary(tunnel_dst_addr)),
             ],
-            "FabricIngress.spgw_ingress.set_pdr_attributes",
+            "FabricIngress.spgw.load_pdr",
             [
                 ("ctr_id", stringify(ctr_id, 2)),
                 ("far_id", stringify(far_id, 4)),
@@ -1398,9 +1432,9 @@ class SpgwSimpleTest(IPv4UnicastTest):
 
         self.push_update_add_entry_to_action(
             req,
-            "FabricIngress.spgw_ingress.downlink_pdr_lookup",
+            "FabricIngress.spgw.downlink_pdrs",
             [self.Exact("ue_addr", ipv4_to_binary(ue_addr))],
-            "FabricIngress.spgw_ingress.set_pdr_attributes",
+            "FabricIngress.spgw.load_pdr",
             [
                 ("ctr_id", stringify(ctr_id, 2)),
                 ("far_id", stringify(far_id, 4)),
@@ -1413,7 +1447,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         req = self.get_new_write_request()
         self.push_update_add_entry_to_action(
             req,
-            "FabricIngress.spgw_ingress.far_lookup",
+            "FabricIngress.spgw.fars",
             [self.Exact("far_id", stringify(far_id, 4))],
             action_name,
             action_params,
@@ -1423,7 +1457,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
     def add_normal_far(self, far_id, drop=False, notify_cp=False):
         return self._add_far(
             far_id,
-            "FabricIngress.spgw_ingress.load_normal_far_attributes",
+            "FabricIngress.spgw.load_normal_far",
             [
                 ("drop", stringify(drop, 1)),
                 ("notify_cp", stringify(notify_cp, 1)),
@@ -1434,7 +1468,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
                        tunnel_src_port=DEFAULT_GTP_TUNNEL_SPORT, drop=False, notify_cp=False):
         return self._add_far(
             far_id,
-            "FabricIngress.spgw_ingress.load_tunnel_far_attributes",
+            "FabricIngress.spgw.load_tunnel_far",
             [
                 ("drop", stringify(drop, 1)),
                 ("notify_cp", stringify(notify_cp, 1)),
@@ -1445,37 +1479,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             ]
         )
 
-    def add_flexible_pdr(self, ctr_id, far_id,
-                         s1u_sgw_addr=None, s1u_sgw_addr_mask=None,
-                         teid=None, teid_mask=None,
-                         src_addr=None, src_addr_mask=None,
-                         dst_addr=None, dst_addr_mask=None,
-                         ip_proto=None, ip_proto_mask=None,
-                         l4_sport=None, l4_sport_mask=None,
-                         l4_dport=None, l4_dport_mask=None,
-                         uplink=False, downlink=False,):
-
-        raise Exception("Flexible PDR insertion not yet implemented")
-        assert(downlink or uplink)
-
-        req = self.get_new_write_request()
-
-        action_name = "FabricIngress.spgw_ingress.set_pdr_attributes"
-        action_args = [("ctr_id", stringify(ctr_id, 4)),
-                        ("far_id", stringify(far_id, 4))]
-
-        ALL_ONES_32 = stringify((1 << 32) - 1, 4)
-        ALL_ONES_16 = stringify((1 << 16) - 1, 2)
-        ALL_ONES_8 = stringify((1 << 8) - 1, 1)
-
-        match_keys = []
-        if src_addr:
-            match_keys.append(self.Ternary("ipv4_src", ipv4_to_binary(src_addr), ))
-
-    def setup_uplink(self, s1u_sgw_addr, teid, ctr_id, far_id=None):
-        if far_id is None:
-            far_id = 23  # 23 is the most random number less than 100
-
+    def setup_uplink(self, s1u_sgw_addr, teid, ctr_id, far_id=UPLINK_FAR_ID):
         self.add_s1u_iface(s1u_sgw_addr)
         self.add_uplink_pdr(
             ctr_id=ctr_id,
@@ -1484,11 +1488,8 @@ class SpgwSimpleTest(IPv4UnicastTest):
             tunnel_dst_addr=s1u_sgw_addr)
         self.add_normal_far(far_id=far_id)
 
-    def setup_downlink(self, s1u_sgw_addr, s1u_enb_addr, teid, ue_addr, ctr_id, far_id=None):
-        if far_id is None:
-            far_id = 24  # the second most random  number
-
-        self.add_ue_pool(ip_prefix=ue_addr, prefix_len=32)
+    def setup_downlink(self, s1u_sgw_addr, s1u_enb_addr, teid, ue_addr, ctr_id, far_id=DOWNLINK_FAR_ID):
+        self.add_ue_pool(ue_addr)
         self.add_downlink_pdr(ctr_id=ctr_id, far_id=far_id, ue_addr=ue_addr)
         self.add_tunnel_far(
             far_id=far_id,
@@ -1496,15 +1497,60 @@ class SpgwSimpleTest(IPv4UnicastTest):
             tunnel_src_addr=s1u_sgw_addr,
             tunnel_dst_addr=s1u_enb_addr)
 
+    def read_pdr_counters(self, ctr_idx):
+        """ Read and return the ingress and egress PDR counter packet and byte counts for the given index.
+        """
+        if self.generate_tv:
+            # Workaround to ignore counters during testvector generation
+            return None
+        ingress_ctr_data = self.read_counter(PDR_COUNTER_INGRESS, ctr_idx)
+        egress_ctr_data = self.read_counter(PDR_COUNTER_EGRESS, ctr_idx)
+        return (ingress_ctr_data, egress_ctr_data)
+
+    def check_pdr_counters_increased(self, ctr_idx, count_tuple,
+                                     exp_ingress_byte_inc, exp_egress_byte_inc,
+                                     exp_ingress_pkt_inc=1, exp_egress_pkt_inc=1):
+        """ Verify that the PDR ingress and egress counters for index 'ctr_idx', given as the pair 'count_tuple',
+            have increased by 'exp_ingress_pkt_inc' and 'exp_egress_pkt_inc' respectively upon reading.
+        """
+        if self.generate_tv:
+            # Workaround to ignore counters during testvector generation
+            return
+        old_ingress_ctr_data, old_egress_ctr_data = count_tuple
+        new_ingress_ctr_data, new_egress_ctr_data = self.read_pdr_counters(ctr_idx)
+
+        ingress_pkt_inc = new_ingress_ctr_data[0] - old_ingress_ctr_data[0]
+        ingress_byte_inc = int(new_ingress_ctr_data[1] - old_ingress_ctr_data[1])
+
+        egress_pkt_inc = new_egress_ctr_data[0] - old_egress_ctr_data[0]
+        egress_byte_inc = int(new_egress_ctr_data[1] - old_egress_ctr_data[1])
+
+        if ingress_pkt_inc != exp_ingress_pkt_inc:
+            self.fail("Ingress PDR packet counter incremented by %d instead of $d!" \
+                    % (ingress_pkt_inc, exp_ingress_pkt_inc))
+        if egress_pkt_inc != exp_egress_pkt_inc:
+            self.fail("Egress PDR packet counter incremented by %d instead of %d!" \
+                    % (egress_pkt_inc, exp_egress_pkt_inc))
+
+        if ingress_byte_inc != exp_ingress_byte_inc:
+            self.fail("Ingress PDR byte counter incremented by %d instead of %d!" \
+                    % (ingress_byte_inc, exp_ingress_byte_inc))
+        if egress_byte_inc != exp_egress_byte_inc:
+            self.fail("Egress PDR byte counter incremented by %d instead of %d!" \
+                    % (egress_byte_inc, exp_egress_byte_inc))
+
+
     def runUplinkTest(self, ue_out_pkt, tagged1, tagged2, is_next_hop_spine):
-        ctr_id = 1
-        dst_mac = HOST2_MAC
+        upstream_mac = HOST2_MAC
 
         gtp_pkt = pkt_add_gtp(ue_out_pkt, out_ipv4_src=S1U_ENB_IPV4,
-                              out_ipv4_dst=S1U_SGW_IPV4, teid=TEID_1)
+                              out_ipv4_dst=S1U_SGW_IPV4, teid=UPLINK_TEID)
+        gtp_pkt[Ether].src = S1U_ENB_MAC
+        gtp_pkt[Ether].dst = SWITCH_MAC
+
         exp_pkt = ue_out_pkt.copy()
-        exp_pkt[Ether].src = exp_pkt[Ether].dst
-        exp_pkt[Ether].dst = dst_mac
+        exp_pkt[Ether].src = SWITCH_MAC
+        exp_pkt[Ether].dst = upstream_mac
         if not is_next_hop_spine:
             exp_pkt[IP].ttl = exp_pkt[IP].ttl - 1
         else:
@@ -1514,41 +1560,40 @@ class SpgwSimpleTest(IPv4UnicastTest):
 
         self.setup_uplink(
             s1u_sgw_addr=S1U_SGW_IPV4,
-            teid=TEID_1,
-            ctr_id=ctr_id
+            teid=UPLINK_TEID,
+            ctr_id=UPLINK_PDR_CTR_IDX
         )
 
-        # Workaround to ignore counter verification during testvector generation
-        if not self.generate_tv:
-            ingress_pdr_pkt_ctr1 = self.read_pkt_count("FabricIngress.spgw_ingress.pdr_counter", ctr_id)
+        # Read SPGW counters before sending the packet
+        pdr_pkt_counts = self.read_pdr_counters(UPLINK_PDR_CTR_IDX)
 
         self.runIPv4UnicastTest(pkt=gtp_pkt, dst_ipv4=ue_out_pkt[IP].dst,
-                                next_hop_mac=dst_mac,
+                                next_hop_mac=upstream_mac,
                                 prefix_len=32, exp_pkt=exp_pkt,
                                 tagged1=tagged1, tagged2=tagged2, is_next_hop_spine=is_next_hop_spine)
 
-        # Workaround to ignore counter verification during testvector generation
-        if not self.generate_tv:
-            # Verify the PDR packet counter increased
-            ingress_pdr_pkt_ctr2 = self.read_pkt_count("FabricIngress.spgw_ingress.pdr_counter", ctr_id)
-            ctr_increase = ingress_pdr_pkt_ctr2 - ingress_pdr_pkt_ctr1
-            if ctr_increase != 1:
-                self.fail("PDR packet counter incremented by %d instead of 1!" % ctr_increase)
+        ingress_bytes = len(gtp_pkt) + 4  # FIXME: where does this 4 come from?
+        egress_bytes = len(exp_pkt) + 50  # FIXME: where does this 50 come from?
+        if tagged1:
+            ingress_bytes += 4  # length of VLAN header
+            egress_bytes += 4  # FIXME: why is this necessary?
+        if not tagged2:
+            egress_bytes += 4  # FIXME: why?
+        if is_next_hop_spine:
+            egress_bytes -= 4  # FIXME: ?????
+
+        # Verify the Ingress and Egress PDR counters increased
+        self.check_pdr_counters_increased(UPLINK_PDR_CTR_IDX, pdr_pkt_counts,
+                ingress_bytes, egress_bytes)
 
     def runDownlinkTest(self, pkt, tagged1, tagged2, is_next_hop_spine):
-
-        ctr_id = 2
-        dst_mac = HOST2_MAC
-        ue_ipv4 = pkt[IP].dst
-
         exp_pkt = pkt.copy()
-
-        exp_pkt[Ether].src = exp_pkt[Ether].dst
-        exp_pkt[Ether].dst = dst_mac
+        exp_pkt[Ether].src = SWITCH_MAC
+        exp_pkt[Ether].dst = S1U_ENB_MAC
         if not is_next_hop_spine:
             exp_pkt[IP].ttl = exp_pkt[IP].ttl - 1
         exp_pkt = pkt_add_gtp(exp_pkt, out_ipv4_src=S1U_SGW_IPV4,
-                              out_ipv4_dst=S1U_ENB_IPV4, teid=TEID_1)
+                              out_ipv4_dst=S1U_ENB_IPV4, teid=DOWNLINK_TEID)
         if is_next_hop_spine:
             exp_pkt = pkt_add_mpls(exp_pkt, MPLS_LABEL_2, DEFAULT_MPLS_TTL)
         if tagged2:
@@ -1557,41 +1602,296 @@ class SpgwSimpleTest(IPv4UnicastTest):
         self.setup_downlink(
             s1u_sgw_addr=S1U_SGW_IPV4,
             s1u_enb_addr=S1U_ENB_IPV4,
-            teid=TEID_1,
-            ue_addr=ue_ipv4,
-            ctr_id=ctr_id,
+            teid=DOWNLINK_TEID,
+            ue_addr=UE_IPV4,
+            ctr_id=DOWNLINK_PDR_CTR_IDX,
         )
 
-        # Workaround to ignore counter verification during testvector generation
-        if not self.generate_tv:
-            ingress_pdr_pkt_ctr1 = self.read_pkt_count("FabricIngress.spgw_ingress.pdr_counter", ctr_id)
+        # Read SPGW counters before sending the packet
+        pdr_pkt_counts = self.read_pdr_counters(DOWNLINK_PDR_CTR_IDX)
 
         self.runIPv4UnicastTest(pkt=pkt, dst_ipv4=exp_pkt[IP].dst,
-                                next_hop_mac=dst_mac,
+                                next_hop_mac=S1U_ENB_MAC,
+                                prefix_len=32, exp_pkt=exp_pkt,
+                                tagged1=tagged1, tagged2=tagged2, mpls=is_next_hop_spine)
+
+        ingress_bytes = len(pkt) + 4  # FIXME: where does this 4 come from?
+        egress_bytes = len(exp_pkt) + 14  # FIXME: where does this 14 come from?
+        if tagged1:
+            ingress_bytes += 4  # length of VLAN header
+            egress_bytes += 4  # FIXME: why is this necessary?
+        if not tagged2:
+            egress_bytes += 4  # FIXME: why?
+        if is_next_hop_spine:
+            egress_bytes -= 4  # FIXME: ?????
+
+        # Verify the Ingress and Egress PDR counters increased
+        self.check_pdr_counters_increased(DOWNLINK_PDR_CTR_IDX, pdr_pkt_counts,
+                ingress_bytes, egress_bytes)
+
+    def runDownlinkToDbufTest(self, pkt, tagged1, tagged2, is_next_hop_spine):
+        exp_pkt = pkt.copy()
+        exp_pkt[Ether].src = SWITCH_MAC
+        exp_pkt[Ether].dst = DBUF_MAC
+        if not is_next_hop_spine:
+            exp_pkt[IP].ttl = exp_pkt[IP].ttl - 1
+        # add dbuf tunnel
+        exp_pkt = pkt_add_gtp(exp_pkt, out_ipv4_src=DBUF_DRAIN_DST_IPV4,
+                              out_ipv4_dst=DBUF_IPV4, teid=DBUF_TEID,
+                              sport=UDP_GTP_PORT)
+        if is_next_hop_spine:
+            exp_pkt = pkt_add_mpls(exp_pkt, MPLS_LABEL_2, DEFAULT_MPLS_TTL)
+        if tagged2:
+            exp_pkt = pkt_add_vlan(exp_pkt, VLAN_ID_2)
+
+        # Add the UE pool interface and the PDR pointing to the DBUF FAR
+        self.add_ue_pool(UE_IPV4)
+        self.add_downlink_pdr(ctr_id=DOWNLINK_PDR_CTR_IDX, far_id=DBUF_FAR_ID, ue_addr=UE_IPV4)
+
+        # Add rules for sending/receiving packets to/from dbuf
+        # (receiving isn't done by this test though)
+        self.add_dbuf_device(dbuf_addr=DBUF_IPV4, drain_dst_addr=DBUF_DRAIN_DST_IPV4,
+                             dbuf_far_id=DBUF_FAR_ID, dbuf_teid=DBUF_TEID)
+
+        # Read SPGW counters before sending the packet
+        pdr_pkt_counts = self.read_pdr_counters(DOWNLINK_PDR_CTR_IDX)
+
+        self.runIPv4UnicastTest(pkt=pkt, dst_ipv4=exp_pkt[IP].dst,
+                                next_hop_mac=DBUF_MAC,
                                 prefix_len=32, exp_pkt=exp_pkt,
                                 tagged1=tagged1, tagged2=tagged2, is_next_hop_spine=is_next_hop_spine)
 
-        # Workaround to ignore counter verification during testvector generation
-        if not self.generate_tv:
-            # Verify the PDR packet counter increased
-            ingress_pdr_pkt_ctr2 = self.read_pkt_count("FabricIngress.spgw_ingress.pdr_counter", ctr_id)
-            ctr_increase = ingress_pdr_pkt_ctr2 - ingress_pdr_pkt_ctr1
-            if ctr_increase != 1:
-                self.fail("PDR packet counter incremented by %d instead of 1!" % ctr_increase)
+        ingress_bytes = len(pkt) + 4  # FIXME: where does this 4 come from?
+        egress_bytes = 0
+        if tagged1:
+            ingress_bytes += 4  # length of VLAN header
+
+        # Verify the Ingress PDR packet counter increased, but the egress did not
+        self.check_pdr_counters_increased(DOWNLINK_PDR_CTR_IDX, pdr_pkt_counts,
+                ingress_bytes, egress_bytes, exp_egress_pkt_inc=0)
+
+    def runDownlinkFromDbufTest(self, pkt, tagged1, tagged2, is_next_hop_spine):
+        """ Tests a packet returning from dbuf to be sent to the enodeb.
+            Similar to a normal downlink test, but the input is gtpu encapped.
+        """
+        # The input packet is from dbuf and is GTPU encapsulated
+        pkt_from_dbuf = pkt.copy()
+        pkt_from_dbuf[Ether].src = DBUF_MAC
+        pkt_from_dbuf[Ether].dst = SWITCH_MAC
+        pkt_from_dbuf = pkt_add_gtp(pkt_from_dbuf, out_ipv4_src=DBUF_IPV4,
+                                    out_ipv4_dst=DBUF_DRAIN_DST_IPV4, teid=DBUF_TEID)
+
+        # A normal downlink packet to the enodeb is the expected output
+        exp_pkt = pkt.copy()
+        exp_pkt[Ether].src = SWITCH_MAC
+        exp_pkt[Ether].dst = S1U_ENB_MAC
+        if not is_next_hop_spine:
+            exp_pkt[IP].ttl = exp_pkt[IP].ttl - 1
+        exp_pkt = pkt_add_gtp(exp_pkt, out_ipv4_src=S1U_SGW_IPV4,
+                              out_ipv4_dst=S1U_ENB_IPV4, teid=DOWNLINK_TEID)
+        if is_next_hop_spine:
+            exp_pkt = pkt_add_mpls(exp_pkt, MPLS_LABEL_2, DEFAULT_MPLS_TTL)
+        if tagged2:
+            exp_pkt = pkt_add_vlan(exp_pkt, VLAN_ID_2)
+
+        # Normal downlink rules
+        self.setup_downlink(
+            s1u_sgw_addr=S1U_SGW_IPV4,
+            s1u_enb_addr=S1U_ENB_IPV4,
+            teid=DOWNLINK_TEID,
+            ue_addr=UE_IPV4,
+            ctr_id=DOWNLINK_PDR_CTR_IDX,
+        )
+
+        # Add rules for sending/receiving packets to/from dbuf
+        # (sending isn't done by this test though)
+        self.add_dbuf_device(dbuf_addr=DBUF_IPV4, drain_dst_addr=DBUF_DRAIN_DST_IPV4,
+                             dbuf_far_id=DBUF_FAR_ID, dbuf_teid=DBUF_TEID)
+
+        # Read SPGW counters before sending the packet
+        pdr_pkt_counts = self.read_pdr_counters(DOWNLINK_PDR_CTR_IDX)
+
+
+        self.runIPv4UnicastTest(pkt=pkt_from_dbuf, dst_ipv4=exp_pkt[IP].dst,
+                                next_hop_mac=S1U_ENB_MAC,
+                                prefix_len=32, exp_pkt=exp_pkt,
+                                tagged1=tagged1, tagged2=tagged2, is_next_hop_spine=is_next_hop_spine)
+
+        ingress_bytes = 0
+        egress_bytes = len(exp_pkt) + 14  # FIXME: where does this 14 come from?
+        if tagged1:
+            egress_bytes += 4  # FIXME: why is this necessary?
+        if not tagged2:
+            egress_bytes += 4  # FIXME: why?
+        if is_next_hop_spine:
+            egress_bytes -= 4  # FIXME: ?????
+
+
+        # Verify the Ingress PDR packet counter did not increase, but the egress did
+        self.check_pdr_counters_increased(DOWNLINK_PDR_CTR_IDX, pdr_pkt_counts,
+                ingress_bytes, egress_bytes, exp_ingress_pkt_inc=0)
+
+
+class SpgwReadWriteSymmetryTest(SpgwSimpleTest):
+    """ Verifies all SPGW tables adhere to p4runtime read-write symmetry. This is a
+        temporary unit test, only meant to exist until a better test is written that
+        programmatically verifies read-write symmetry test on all tables and actions
+        found in the p4info.
+    """
+
+    def getActionFromReadEntry(self, table_entry):
+        action = table_entry.action.action
+        action_name = self.get_obj_name_from_id(action.action_id)
+
+        p4info_params = self.get_obj("actions", action_name).params
+        name_list = [""] * len(p4info_params)
+        for param in p4info_params:
+            name_list[param.id - 1] = param.name.encode('ascii', 'ignore')
+
+        params = [(name_list[param.param_id - 1], param.value) for param in action.params]
+        return (action_name, params)
+
+    def writeAndReadEntry(self, table_name, match_keys, action_name, action_params):
+        req = self.get_new_write_request()
+        self.push_update_add_entry_to_action(req,
+                table_name, match_keys, action_name, action_params)
+        self.write_request(req)
+        # 'read' here is past tense
+        read_entry = self.read_table_entry(table_name, match_keys)
+        if read_entry is None:
+            self.fail("Failed to read an entry that was just written! " + \
+                    "Table was %s, action was %s" % (table_name, action_name))
+
+        read_action_name, read_action_params = self.getActionFromReadEntry(read_entry)
+        if not read_action_name.endswith(action_name):
+            self.fail("Read action name does end with written action name" + \
+                    "\n>> Read action name: %s" % read_action_name + \
+                    "\n>> Written action name: %s" % action_name)
+
+        if set(read_action_params) != set(action_params):
+            self.fail("Read action params do not equal written action params" + \
+                    "\n>> Read params: %s" % str(read_action_params) + \
+                    "\n>> Written params: %s" % str(action_params))
+
+    def checkInterfaceTable(self, iface_addr='1.1.1.1', prefix_len=32, gtpu_valid=1,
+                            iface_enum=1):
+        match_keys = [
+                self.Lpm("ipv4_dst_addr", ipv4_to_binary(iface_addr), prefix_len),
+                self.Exact("gtpu_is_valid", stringify(int(gtpu_valid), 1))]
+        action_params = [("src_iface", stringify(iface_enum, 1))]
+        self.writeAndReadEntry(
+                "FabricIngress.spgw.interfaces",
+                match_keys,
+                "FabricIngress.spgw.load_iface",
+                action_params)
+
+    def checkUplinkPdrTable(self,
+            teid=1, tunnel_dst_addr='1.1.1.1', ctr_id=1, far_id=1, decap_flag=1):
+        match_keys = [
+                self.Exact("teid", stringify(teid, 4)),
+                self.Exact("tunnel_ipv4_dst", ipv4_to_binary(tunnel_dst_addr))]
+        action_params = [
+                ("ctr_id", stringify(ctr_id, 2)),
+                ("far_id", stringify(far_id, 4)),
+                ("needs_gtpu_decap", stringify(decap_flag, 1))]
+        self.writeAndReadEntry(
+            "FabricIngress.spgw.uplink_pdrs",
+            match_keys,
+            "FabricIngress.spgw.load_pdr",
+            action_params)
+
+    def checkDownlinkPdrTable(self, ue_addr='1.1.1.1', ctr_id=1, far_id=1, decap_flag=1):
+        match_keys = [self.Exact("ue_addr", ipv4_to_binary(ue_addr))]
+        action_params = [
+                ("ctr_id", stringify(ctr_id, 2)),
+                ("far_id", stringify(far_id, 4)),
+                ("needs_gtpu_decap", stringify(decap_flag, 1))]
+        self.writeAndReadEntry(
+            "FabricIngress.spgw.downlink_pdrs",
+            match_keys,
+            "FabricIngress.spgw.load_pdr",
+            action_params)
+
+    def checkNormalFar(self, far_id=509, drop_flag=1, notify_flag=1):
+        match_keys = [self.Exact("far_id", stringify(far_id, 4))]
+        action_params = [
+                ("drop", stringify(drop_flag, 1)),
+                ("notify_cp", stringify(notify_flag, 1))]
+        self.writeAndReadEntry(
+            "FabricIngress.spgw.fars",
+            match_keys,
+            "FabricIngress.spgw.load_normal_far",
+            action_params)
+
+    def checkTunnelFar(self, far_id=510, drop_flag=1, notify_flag=1, teid=56789,
+            tunnel_src_port=1234, tunnel_src_addr='1.1.1.1', tunnel_dst_addr='2.2.2.2'):
+        match_keys = [self.Exact("far_id", stringify(far_id, 4))]
+        action_params = [
+                ("drop", stringify(drop_flag, 1)),
+                ("notify_cp", stringify(notify_flag, 1)),
+                ("teid", stringify(teid, 4)),
+                ("tunnel_src_port", stringify(tunnel_src_port, 2)),
+                ("tunnel_src_addr", ipv4_to_binary(tunnel_src_addr)),
+                ("tunnel_dst_addr", ipv4_to_binary(tunnel_dst_addr))]
+        self.writeAndReadEntry(
+            "FabricIngress.spgw.fars",
+            match_keys,
+            "FabricIngress.spgw.load_tunnel_far",
+            action_params)
+
+    def checkDbufFar(self, far_id=511, drop_flag=1, notify_flag=1, teid=56789,
+            tunnel_src_port=1234, tunnel_src_addr='1.1.1.1', tunnel_dst_addr='2.2.2.2'):
+        match_keys = [self.Exact("far_id", stringify(far_id, 4))]
+        action_params = [
+                ("drop", stringify(drop_flag, 1)),
+                ("notify_cp", stringify(notify_flag, 1)),
+                ("teid", stringify(teid, 4)),
+                ("tunnel_src_port", stringify(tunnel_src_port, 2)),
+                ("tunnel_src_addr", ipv4_to_binary(tunnel_src_addr)),
+                ("tunnel_dst_addr", ipv4_to_binary(tunnel_dst_addr))]
+        self.writeAndReadEntry(
+            "FabricIngress.spgw.fars",
+            match_keys,
+            "FabricIngress.spgw.load_dbuf_far",
+            action_params)
+
+    def runReadWriteSymmetryTest(self):
+        self.checkInterfaceTable()
+        self.checkUplinkPdrTable()
+        self.checkDownlinkPdrTable()
+        self.checkNormalFar()
+        self.checkTunnelFar()
+        self.checkDbufFar()
+
 
 class IntTest(IPv4UnicastTest):
+    """
+    This test includes two parts:
+    1. Reusing IPv4 unicast routing test to install routing entries,
+       emitting the packet, and check the expected routed packet.
+    2. Installs INT related table entries and create an expected INT report
+       packet to verify the output.
+    """
 
-    def setup_report_flow(self, port, src_mac, mon_mac, src_ip, mon_ip, mon_port):
-        self.send_request_add_entry_to_action(
-            "report",
-            [self.Exact("int_mirror_valid", stringify(1, 1))],
-            "do_report_encap", [
+    def setup_report_flow(self, port, src_mac, mon_mac,
+                          src_ip, mon_ip, mon_port,
+                          mon_label=None):
+        action = "do_report_encap"
+        action_params = [
                 ("src_mac", mac_to_binary(src_mac)),
                 ("mon_mac", mac_to_binary(mon_mac)),
                 ("src_ip", ipv4_to_binary(src_ip)),
                 ("mon_ip", ipv4_to_binary(mon_ip)),
                 ("mon_port", stringify(mon_port, 2))
-            ])
+            ]
+        if mon_label:
+            action = "do_report_encap_mpls"
+            action_params.append(("mon_label", stringify(mon_label, 3)))
+
+        self.send_request_add_entry_to_action(
+            "report",
+            [self.Exact("int_mirror_valid", stringify(1, 1))],
+            action, action_params)
 
     def setup_report_mirror_flow(self, pipe_id, mirror_id, port):
         self.add_clone_group(mirror_id, [port])
@@ -1644,13 +1944,23 @@ class IntTest(IPv4UnicastTest):
             ], priority=DEFAULT_PRIORITY)
 
     def build_int_local_report(self, src_mac, dst_mac, src_ip, dst_ip,
-                               ig_port, eg_port, sw_id=1, inner_packet=None):
+                               ig_port, eg_port, sw_id=1, inner_packet=None,
+                               is_device_spine=False,
+                               mon_label=None):
         # Note: scapy doesn't support dscp field, use tos.
-        pkt = Ether(src=src_mac, dst=dst_mac) / IP(src=src_ip, dst=dst_ip, ttl=63, tos=4) / \
+        pkt = Ether(src=src_mac, dst=dst_mac) / IP(src=src_ip, dst=dst_ip, ttl=64, tos=4) / \
               UDP(sport=0, chksum=0) / \
               INT_L45_REPORT_FIXED(nproto=2, f=1, hw_id=0) / \
               INT_L45_LOCAL_REPORT(switch_id=sw_id, ingress_port_id=ig_port, egress_port_id=eg_port) / \
               inner_packet
+        if mon_label:
+            mpls_ttl = DEFAULT_MPLS_TTL
+            if is_device_spine:
+                # MPLS label swap
+                mpls_ttl -= 1
+            pkt = pkt_add_mpls(pkt, label=mon_label, ttl=mpls_ttl)
+        else:
+            pkt_decrement_ttl(pkt)
 
         mask_pkt = Mask(pkt)
         # IPv4 identifcation
@@ -1667,23 +1977,31 @@ class IntTest(IPv4UnicastTest):
 
         return mask_pkt
 
-    def runIntTest(self, pkt, tagged1=False,
+    def runIntTest(self, pkt,
+                   tagged1=False,
                    tagged2=False,
-                   switch_id=1,
                    is_next_hop_spine=False,
                    ig_port=None,
                    eg_port=None,
                    expect_int_report=True,
-                   ip_src=None,
-                   ip_dst=None):
+                   is_device_spine=False,
+                   send_report_to_spine=False):
+        """
+        :param pkt: the input packet
+        :param tagged1: if the input port should expect VLAN tagged packets
+        :param tagged2: if the output port should expect VLAN tagged packets
+        :param prefix_len: prefix length to use in the routing table
+        :param is_next_hop_spine: whether the packet should be routed
+               to the spines using MPLS SR
+        :param ig_port: the ingress port of the IP uncast packet
+        :param eg_port: the egress port of the IP uncast packet
+        :param expect_int_report: expected to receive the INT report
+        :param is_device_spine: the device is a spine device
+        :param send_report_to_spine: if the report is to be forwarded
+               to a spine (e.g., collector attached to another leaf)
+        """
         if IP not in pkt:
             self.fail("Packet is not IP")
-
-        # Override IP if set
-        if ip_src:
-            pkt[IP].src = ip_src
-        if ip_dst:
-            pkt[IP].dst = ip_dst
 
         if ig_port is None:
             ig_port = self.port1
@@ -1693,6 +2011,7 @@ class IntTest(IPv4UnicastTest):
         collector_port = self.port3
         ipv4_src = pkt[IP].src
         ipv4_dst = pkt[IP].dst
+        switch_id = 1
         if UDP in pkt:
             sport = pkt[UDP].sport
             dport = pkt[UDP].dport
@@ -1703,26 +2022,32 @@ class IntTest(IPv4UnicastTest):
             sport = None
             dport = None
 
-        # We should expected to receive an routed packet.
-        # Build exp pkt using the input one.
-        exp_pkt = pkt.copy()
-        exp_pkt = pkt_route(exp_pkt, HOST2_MAC)
+        # Build expected inner pkt using the input one.
+        int_inner_pkt = pkt.copy()
+        int_inner_pkt = pkt_route(int_inner_pkt, HOST2_MAC)
         if not is_next_hop_spine:
-            exp_pkt = pkt_decrement_ttl(exp_pkt)
-        if tagged2 and Dot1Q not in exp_pkt:
-            exp_pkt = pkt_add_vlan(exp_pkt, vlan_vid=VLAN_ID_2)
-        if is_next_hop_spine:
-            exp_pkt = pkt_add_mpls(exp_pkt, label=MPLS_LABEL_2, ttl=DEFAULT_MPLS_TTL)
+            int_inner_pkt = pkt_decrement_ttl(int_inner_pkt)
+        if tagged2 and Dot1Q not in int_inner_pkt:
+            int_inner_pkt = pkt_add_vlan(int_inner_pkt, vlan_vid=VLAN_ID_2)
+        # Note that we won't add MPLS header to the expected inner
+        # packet since the pipeline will strip out the MPLS header
+        # from it before in the parser.
 
-        # We should also expected an INT report packet
+        # The expected INT report packet
+        int_report_mpls_label = MPLS_LABEL_2 if send_report_to_spine else None
         exp_int_report_pkt_masked = \
-            self.build_int_local_report(SWITCH_MAC, INT_COLLECTOR_MAC, SWITCH_IPV4, INT_COLLECTOR_IPV4,
-                                        ig_port, eg_port, switch_id, exp_pkt)
+            self.build_int_local_report(SWITCH_MAC, INT_COLLECTOR_MAC,
+                                        SWITCH_IPV4, INT_COLLECTOR_IPV4,
+                                        ig_port, eg_port, switch_id,
+                                        int_inner_pkt, is_device_spine,
+                                        int_report_mpls_label)
 
         # Set collector, report table, and mirror sessions
+        mon_label = MPLS_LABEL_1 if is_device_spine else None
         self.setup_watchlist_flow(ipv4_src, ipv4_dst, sport, dport, switch_id)
         self.setup_report_flow(collector_port, SWITCH_MAC, SWITCH_MAC,
-                               SWITCH_IPV4, INT_COLLECTOR_IPV4, INT_REPORT_PORT)
+                               SWITCH_IPV4, INT_COLLECTOR_IPV4, INT_REPORT_PORT,
+                               mon_label)
         self.setup_report_mirror_flow(0, INT_REPORT_MIRROR_ID_0, self.recirculate_port_0)
         self.setup_report_mirror_flow(1, INT_REPORT_MIRROR_ID_1, self.recirculate_port_1)
         self.setup_report_mirror_flow(2, INT_REPORT_MIRROR_ID_2, self.recirculate_port_2)
@@ -1733,14 +2058,31 @@ class IntTest(IPv4UnicastTest):
         # Here we use next-id 101 since `runIPv4UnicastTest` will use 100 by default
         next_id = 101
         prefix_len = 32
-        self.add_forwarding_routing_v4_entry(INT_COLLECTOR_IPV4, prefix_len, next_id)
-        self.add_next_routing(next_id, collector_port, SWITCH_MAC, INT_COLLECTOR_MAC)
+        group_id = next_id
+        if is_device_spine:
+            self.add_forwarding_mpls_entry(MPLS_LABEL_1, next_id)
+            if send_report_to_spine:
+                # Spine to spine
+                params = [collector_port, SWITCH_MAC, INT_COLLECTOR_MAC, MPLS_LABEL_2]
+                self.add_next_mpls_routing_group(next_id, group_id, [params])
+            else:
+                # Spine to leaf
+                self.add_next_routing(next_id, collector_port, SWITCH_MAC, INT_COLLECTOR_MAC)
+        else:
+            self.add_forwarding_routing_v4_entry(INT_COLLECTOR_IPV4, prefix_len, next_id)
+            if send_report_to_spine:
+                # Leaf to spine
+                params = [collector_port, SWITCH_MAC, INT_COLLECTOR_MAC, MPLS_LABEL_2]
+                self.add_next_mpls_routing_group(next_id, group_id, [params])
+            else:
+                # Leaf to host
+                self.add_next_routing(next_id, collector_port, SWITCH_MAC, INT_COLLECTOR_MAC)
         self.add_next_vlan(next_id, DEFAULT_VLAN)
         # End of setting up entries for report packet
-
+        # TODO: Use MPLS test instead of IPv4 test if device is spine.
         self.runIPv4UnicastTest(pkt=pkt, next_hop_mac=HOST2_MAC,
                                 tagged1=tagged1, tagged2=tagged2, is_next_hop_spine=is_next_hop_spine,
-                                prefix_len=32, with_another_pkt_later=True,
+                                prefix_len=prefix_len, with_another_pkt_later=True,
                                 ig_port=ig_port, eg_port=eg_port)
 
         if expect_int_report:
@@ -1748,16 +2090,39 @@ class IntTest(IPv4UnicastTest):
         self.verify_no_other_packets()
 
 class SpgwIntTest(SpgwSimpleTest, IntTest):
+    """
+    This test includes two parts:
+    1. Spgw uplink and downlink test which installs entries to route, encap, and decap
+       GTP traffic. The test will also emit the packet and check the expected packet.
+    2. Installs INT related table entries and check the expected report packet. Note
+       that the expected packet in the INT report should be the packet without GTPU
+       headers(IP/UDP/GTPU).
+    """
 
-    def runSpgwUplinkIntTest(self, pkt, tagged1, tagged2,
-                             switch_id=1, is_next_hop_spine=False):
+    def runSpgwUplinkIntTest(self, pkt,
+                             tagged1=False,
+                             tagged2=False,
+                             is_next_hop_spine=False,
+                             is_device_spine=False,
+                             send_report_to_spine=False):
+        """
+        :param pkt: the input packet
+        :param tagged1: if the input port should expect VLAN tagged packets
+        :param tagged2: if the output port should expect VLAN tagged packets
+        :param is_next_hop_spine: whether the packet should be routed
+               to the spines using MPLS SR
+        :param is_device_spine: the device is a spine device
+        :param send_report_to_spine: if the report is to be forwarded
+               to a spine (e.g., collector attached to another leaf)
+        """
         # Build packet from eNB
         # Add GTPU header to the original packet
         gtp_pkt = pkt_add_gtp(pkt, out_ipv4_src=S1U_ENB_IPV4,
-                              out_ipv4_dst=S1U_SGW_IPV4, teid=TEID_1)
+                              out_ipv4_dst=S1U_SGW_IPV4, teid=UPLINK_TEID)
         ig_port = self.port1
         eg_port = self.port2
         collector_port = self.port3
+        switch_id=1
         ipv4_src = pkt[IP].src
         ipv4_dst = pkt[IP].dst
         if UDP in pkt:
@@ -1772,32 +2137,44 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
 
         # We should expected to receive an routed packet with no GTPU headers.
         # Build exp pkt using the input one.
-        exp_pkt = pkt.copy()
-        exp_pkt = pkt_route(exp_pkt, HOST2_MAC)
+        int_inner_pkt = pkt.copy()
+        int_inner_pkt = pkt_route(int_inner_pkt, HOST2_MAC)
         if not is_next_hop_spine:
-            exp_pkt = pkt_decrement_ttl(exp_pkt)
-        if tagged2 and Dot1Q not in exp_pkt:
-            exp_pkt = pkt_add_vlan(exp_pkt, vlan_vid=VLAN_ID_2)
+            int_inner_pkt = pkt_decrement_ttl(int_inner_pkt)
+        if tagged2 and Dot1Q not in int_inner_pkt:
+            int_inner_pkt = pkt_add_vlan(int_inner_pkt, vlan_vid=VLAN_ID_2)
+        exp_pkt = int_inner_pkt
         if is_next_hop_spine:
-            exp_pkt = pkt_add_mpls(exp_pkt, label=MPLS_LABEL_2, ttl=DEFAULT_MPLS_TTL)
+            # Note that we won't add MPLS header to the expected inner
+            # packet since the pipeline will strip out the MPLS header
+            # from it before in the parser.
+            # This is the packet we expected to be received by the
+            # upstream
+            exp_pkt = pkt_add_mpls(int_inner_pkt, label=MPLS_LABEL_2, ttl=DEFAULT_MPLS_TTL)
+
 
         # We should also expected an INT report packet
+        int_report_mpls_label = MPLS_LABEL_2 if send_report_to_spine else None
         exp_int_report_pkt_masked = \
-            self.build_int_local_report(SWITCH_MAC, INT_COLLECTOR_MAC, SWITCH_IPV4, INT_COLLECTOR_IPV4,
-                                        ig_port, eg_port, switch_id, exp_pkt)
+            self.build_int_local_report(SWITCH_MAC, INT_COLLECTOR_MAC,
+                                        SWITCH_IPV4, INT_COLLECTOR_IPV4,
+                                        ig_port, eg_port, switch_id, int_inner_pkt,
+                                        is_device_spine, int_report_mpls_label)
 
         # Set up entries for uplink
         self.setup_uplink(
             s1u_sgw_addr=S1U_SGW_IPV4,
-            teid=TEID_1,
-            ctr_id=1
+            teid=UPLINK_TEID,
+            ctr_id=UPLINK_PDR_CTR_IDX
         )
 
         # Set collector, report table, and mirror sessions
         # Note that we are monitoring the inner packet.
+        mon_label = MPLS_LABEL_1 if is_device_spine else None
         self.setup_watchlist_flow(ipv4_src, ipv4_dst, sport, dport, switch_id)
         self.setup_report_flow(collector_port, SWITCH_MAC, SWITCH_MAC,
-                               SWITCH_IPV4, INT_COLLECTOR_IPV4, INT_REPORT_PORT)
+                               SWITCH_IPV4, INT_COLLECTOR_IPV4, INT_REPORT_PORT,
+                               mon_label)
         self.setup_report_mirror_flow(0, INT_REPORT_MIRROR_ID_0, self.recirculate_port_0)
         self.setup_report_mirror_flow(1, INT_REPORT_MIRROR_ID_1, self.recirculate_port_1)
         self.setup_report_mirror_flow(2, INT_REPORT_MIRROR_ID_2, self.recirculate_port_2)
@@ -1808,26 +2185,59 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         # Here we use next-id 101 since `runIPv4UnicastTest` will use 100 by default
         next_id = 101
         prefix_len = 32
-        self.add_forwarding_routing_v4_entry(INT_COLLECTOR_IPV4, prefix_len, next_id)
-        self.add_next_routing(next_id, collector_port, SWITCH_MAC, INT_COLLECTOR_MAC)
+        group_id = next_id
+        if is_device_spine:
+            self.add_forwarding_mpls_entry(MPLS_LABEL_1, next_id)
+            if send_report_to_spine:
+                # Spine to spine
+                params = [collector_port, SWITCH_MAC, INT_COLLECTOR_MAC, MPLS_LABEL_2]
+                self.add_next_mpls_routing_group(next_id, group_id, [params])
+            else:
+                # Spine to leaf
+                self.add_next_routing(next_id, collector_port, SWITCH_MAC, INT_COLLECTOR_MAC)
+        else:
+            self.add_forwarding_routing_v4_entry(INT_COLLECTOR_IPV4, prefix_len, next_id)
+            if send_report_to_spine:
+                # Leaf to spine
+                params = [collector_port, SWITCH_MAC, INT_COLLECTOR_MAC, MPLS_LABEL_2]
+                self.add_next_mpls_routing_group(next_id, group_id, [params])
+            else:
+                # Leaf to host
+                self.add_next_routing(next_id, collector_port, SWITCH_MAC, INT_COLLECTOR_MAC)
         self.add_next_vlan(next_id, DEFAULT_VLAN)
         # End of setting up entries for report packet
+        # TODO: Use MPLS test instead of IPv4 test if device is spine.
         self.runIPv4UnicastTest(pkt=gtp_pkt, dst_ipv4=pkt[IP].dst,
                                 exp_pkt=exp_pkt, next_hop_mac=HOST2_MAC,
                                 tagged1=tagged1, tagged2=tagged2, is_next_hop_spine=is_next_hop_spine,
-                                prefix_len=32, with_another_pkt_later=True)
+                                prefix_len=prefix_len, with_another_pkt_later=True)
 
         self.verify_packet(exp_int_report_pkt_masked, collector_port)
         self.verify_no_other_packets()
 
 
-    def runSpgwDownlinkIntTest(self, pkt, tagged1, tagged2,
-                               switch_id=1, is_next_hop_spine=False):
+    def runSpgwDownlinkIntTest(self, pkt,
+                               tagged1=False,
+                               tagged2=False,
+                               is_next_hop_spine=False,
+                               is_device_spine=False,
+                               send_report_to_spine=False):
+        """
+        :param pkt: the input packet
+        :param tagged1: if the input port should expect VLAN tagged packets
+        :param tagged2: if the output port should expect VLAN tagged packets
+        :param is_next_hop_spine: whether the packet should be routed
+               to the spines using MPLS SR
+        :param is_device_spine: the device is a spine device
+        :param send_report_to_spine: if the report is to be forwarded
+               to a spine (e.g., collector attached to another leaf)
+        """
         ig_port = self.port1
         eg_port = self.port2
+        collector_port = self.port3
+        switch_id=1
         ipv4_src = pkt[IP].src
         ipv4_dst = pkt[IP].dst
-        collector_port = self.port3
         if UDP in pkt:
             sport = pkt[UDP].sport
             dport = pkt[UDP].dport
@@ -1840,40 +2250,47 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
 
         # We should expected to receive an packet with GTPU headers.
         exp_pkt = pkt.copy()
-        inner_exp_pkt = pkt.copy()
+        int_inner_pkt = pkt.copy()
         if not is_next_hop_spine:
             exp_pkt = pkt_decrement_ttl(exp_pkt)
-            inner_exp_pkt = pkt_decrement_ttl(inner_exp_pkt)
+            int_inner_pkt = pkt_decrement_ttl(int_inner_pkt)
         exp_pkt = pkt_add_gtp(exp_pkt, out_ipv4_src=S1U_SGW_IPV4,
-                              out_ipv4_dst=S1U_ENB_IPV4, teid=TEID_1)
+                              out_ipv4_dst=S1U_ENB_IPV4, teid=DOWNLINK_TEID)
         exp_pkt = pkt_route(exp_pkt, HOST2_MAC)
-        inner_exp_pkt = pkt_route(inner_exp_pkt, HOST2_MAC)
+        int_inner_pkt = pkt_route(int_inner_pkt, HOST2_MAC)
         if tagged2 and Dot1Q not in exp_pkt:
             exp_pkt = pkt_add_vlan(exp_pkt, vlan_vid=VLAN_ID_2)
-            inner_exp_pkt = pkt_add_vlan(inner_exp_pkt, vlan_vid=VLAN_ID_2)
+            int_inner_pkt = pkt_add_vlan(int_inner_pkt, vlan_vid=VLAN_ID_2)
         if is_next_hop_spine:
             exp_pkt = pkt_add_mpls(exp_pkt, label=MPLS_LABEL_2, ttl=DEFAULT_MPLS_TTL)
-            inner_exp_pkt = pkt_add_mpls(inner_exp_pkt, label=MPLS_LABEL_2, ttl=DEFAULT_MPLS_TTL)
+            # Note that we won't add MPLS header to the expected inner
+            # packet since the pipeline will strip out the MPLS header
+            # from it in the parser.
 
         # We should also expected an INT report packet
+        int_report_mpls_label = MPLS_LABEL_2 if send_report_to_spine else None
         exp_int_report_pkt_masked = \
-            self.build_int_local_report(SWITCH_MAC, INT_COLLECTOR_MAC, SWITCH_IPV4, INT_COLLECTOR_IPV4,
-                                        ig_port, eg_port, switch_id, inner_exp_pkt)
+            self.build_int_local_report(SWITCH_MAC, INT_COLLECTOR_MAC,
+                                        SWITCH_IPV4, INT_COLLECTOR_IPV4,
+                                        ig_port, eg_port, switch_id, int_inner_pkt,
+                                        is_device_spine, int_report_mpls_label)
 
         # Set up entries for downlink
         self.setup_downlink(
             s1u_sgw_addr=S1U_SGW_IPV4,
             s1u_enb_addr=S1U_ENB_IPV4,
-            teid=TEID_1,
+            teid=DOWNLINK_TEID,
             ue_addr=ipv4_dst,
-            ctr_id=2,
+            ctr_id=DOWNLINK_PDR_CTR_IDX,
         )
 
         # Set collector, report table, and mirror sessions
         # Note that we are monitoring the inner packet.
+        mon_label = MPLS_LABEL_1 if is_device_spine else None
         self.setup_watchlist_flow(ipv4_src, ipv4_dst, sport, dport, switch_id)
         self.setup_report_flow(collector_port, SWITCH_MAC, SWITCH_MAC,
-                               SWITCH_IPV4, INT_COLLECTOR_IPV4, INT_REPORT_PORT)
+                               SWITCH_IPV4, INT_COLLECTOR_IPV4, INT_REPORT_PORT,
+                               mon_label)
         self.setup_report_mirror_flow(0, INT_REPORT_MIRROR_ID_0, self.recirculate_port_0)
         self.setup_report_mirror_flow(1, INT_REPORT_MIRROR_ID_1, self.recirculate_port_1)
         self.setup_report_mirror_flow(2, INT_REPORT_MIRROR_ID_2, self.recirculate_port_2)
@@ -1884,17 +2301,35 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         # Here we use next-id 101 since `runIPv4UnicastTest` will use 100 by default
         next_id = 101
         prefix_len = 32
-        self.add_forwarding_routing_v4_entry(INT_COLLECTOR_IPV4, prefix_len, next_id)
-        self.add_next_routing(next_id, collector_port, SWITCH_MAC, INT_COLLECTOR_MAC)
+        group_id = next_id
+        if is_device_spine:
+            self.add_forwarding_mpls_entry(MPLS_LABEL_1, next_id)
+            if send_report_to_spine:
+                # Spine to spine
+                params = [collector_port, SWITCH_MAC, INT_COLLECTOR_MAC, MPLS_LABEL_2]
+                self.add_next_mpls_routing_group(next_id, group_id, [params])
+            else:
+                # Spine to leaf
+                self.add_next_routing(next_id, collector_port, SWITCH_MAC, INT_COLLECTOR_MAC)
+        else:
+            self.add_forwarding_routing_v4_entry(INT_COLLECTOR_IPV4, prefix_len, next_id)
+            if send_report_to_spine:
+                # Leaf to spine
+                params = [collector_port, SWITCH_MAC, INT_COLLECTOR_MAC, MPLS_LABEL_2]
+                self.add_next_mpls_routing_group(next_id, group_id, [params])
+            else:
+                # Leaf to host
+                self.add_next_routing(next_id, collector_port, SWITCH_MAC, INT_COLLECTOR_MAC)
         self.add_next_vlan(next_id, DEFAULT_VLAN)
         # End of setting up entries for report packet
+        # TODO: Use MPLS test instead of IPv4 test if device is spine.
         self.runIPv4UnicastTest(pkt=pkt, dst_ipv4=S1U_ENB_IPV4,
                                 next_hop_mac=HOST2_MAC,
                                 prefix_len=32, exp_pkt=exp_pkt,
                                 tagged1=tagged1, tagged2=tagged2, is_next_hop_spine=is_next_hop_spine,
                                 with_another_pkt_later=True)
 
-        self.verify_packet( exp_int_report_pkt_masked, collector_port)
+        self.verify_packet(exp_int_report_pkt_masked, collector_port)
         self.verify_no_other_packets()
 
 class PppoeTest(DoubleVlanTerminationTest):

@@ -45,7 +45,7 @@ header vlan_tag_t {
 }
 
 header mpls_t {
-    bit<20> label;
+    mpls_label_t label;
     bit<3> tc;
     bit<1> bos;
     bit<8> ttl;
@@ -134,6 +134,29 @@ header gtpu_t {
 
 // Custom metadata definition
 
+
+#ifdef WITH_SPGW
+struct spgw_bridged_metadata_t {
+    bit<16>         ipv4_len_for_encap;
+    bool            needs_gtpu_encap;
+    bool            skip_spgw;
+    bool            skip_egress_pdr_ctr;
+    teid_t          gtpu_teid;
+    ipv4_addr_t     gtpu_tunnel_sip;
+    ipv4_addr_t     gtpu_tunnel_dip;
+    l4_port_t       gtpu_tunnel_sport;
+    pdr_ctr_id_t    pdr_ctr_id;
+}
+
+struct spgw_ingress_metadata_t {
+    bool               needs_gtpu_decap;
+    bool               notify_spgwc;
+    far_id_t           far_id;
+    SpgwInterface      src_iface;
+}
+#endif // WITH_SPGW
+
+
 // Common metadata which is shared between
 // ingress and egress pipeline.
 @flexible
@@ -160,38 +183,25 @@ header bridged_metadata_t {
     // bit<1>          inner_vlan_cfi;
 #endif // WITH_DOUBLE_VLAN_TERMINATION
 #ifdef WITH_SPGW
-    bit<16>         spgw_ipv4_len;
-    bool            needs_gtpu_encap;
-    bool            skip_spgw;
-    teid_t          gtpu_teid;
-    bit<32>         gtpu_tunnel_sip;
-    bit<32>         gtpu_tunnel_dip;
-    bit<16>         gtpu_tunnel_sport;
-    pdr_ctr_id_t    pdr_ctr_id;
-    bit<16>         inner_l4_sport;
-    bit<16>         inner_l4_dport;
+    l4_port_t               inner_l4_sport;
+    l4_port_t               inner_l4_dport;
+    spgw_bridged_metadata_t spgw;
 #endif // WITH_SPGW
 }
 
 // Ingress pipeline-only metadata
 @flexible
 struct fabric_ingress_metadata_t {
-    bridged_metadata_t bridged;
-    bit<32>            ipv4_src;
-    bit<32>            ipv4_dst;
-    bool               ipv4_checksum_err;
-    bool               skip_forwarding;
-    bool               skip_next;
-    next_id_t          next_id;
+    bridged_metadata_t      bridged;
+    bit<32>                 ipv4_src;
+    bit<32>                 ipv4_dst;
+    bool                    ipv4_checksum_err;
+    bool                    skip_forwarding;
+    bool                    skip_next;
+    next_id_t               next_id;
 #ifdef WITH_SPGW
-    bool               inner_ipv4_checksum_err;
-    bool               needs_gtpu_decap;
-    bool               pdr_hit;
-    bool               far_dropped;
-    bool               notify_spgwc;
-    far_id_t           far_id;
-    SpgwInterface      spgw_src_iface;
-    SpgwDirection      spgw_direction;
+    bool                    inner_ipv4_checksum_err;
+    spgw_ingress_metadata_t spgw;
 #endif // WITH_SPGW
 }
 
@@ -203,6 +213,7 @@ struct fabric_egress_metadata_t {
 #ifdef WITH_SPGW
     bool                  inner_ipv4_checksum_err;
 #endif // WITH_SPGW
+    bit<1>                mpls_stripped;
 #ifdef WITH_INT
     int_mirror_metadata_t int_mirror_md;
 #endif // WITH_INT
@@ -244,6 +255,7 @@ struct parsed_headers_t {
 #ifdef WITH_INT
     ethernet_t report_ethernet;
     eth_type_t report_eth_type;
+    mpls_t report_mpls;
     ipv4_t report_ipv4;
     udp_t report_udp;
     report_fixed_header_t report_fixed_header;
