@@ -75,7 +75,7 @@ def build_tofino_config(prog_name, bin_path, cxt_json_path):
     return device_config
 
 
-def build_tofino_pipeline_tar_config(pipeline_tar_path):
+def build_tofino_pipeline_config_config(pipeline_tar_path):
     device_config = ""
     with open(pipeline_tar_path, 'rb') as pipeline_tar_f:
         device_config += pipeline_tar_f.read()
@@ -83,7 +83,7 @@ def build_tofino_pipeline_tar_config(pipeline_tar_path):
 
 
 def update_config(p4info_path, bmv2_json_path, tofino_bin_path,
-                  tofino_cxt_json_path, tofino_pipeline_tar_path,
+                  tofino_cxt_json_path, tofino_pipeline_config_path,
                   grpc_addr, device_id, generate_tv=False):
     """
     Performs a SetForwardingPipelineConfig on the device
@@ -99,8 +99,8 @@ def update_config(p4info_path, bmv2_json_path, tofino_bin_path,
         google.protobuf.text_format.Merge(p4info_f.read(), config.p4info)
     if bmv2_json_path is not None:
         device_config = build_bmv2_config(bmv2_json_path)
-    elif tofino_pipeline_tar_path is not None:
-        device_config = build_tofino_pipeline_tar_config(tofino_pipeline_tar_path)
+    elif tofino_pipeline_config_path is not None:
+        device_config = build_tofino_pipeline_config_config(tofino_pipeline_config_path)
     else:
         device_config = build_tofino_config("name", tofino_bin_path,
                                                 tofino_cxt_json_path)
@@ -294,8 +294,8 @@ def main():
     parser.add_argument('--bmv2-json',
                         help='Location BMv2 JSON output from p4c (if target is bmv2)',
                         type=str, action="store", required=False)
-    parser.add_argument('--tofino-pipeline-tar',
-                        help='Location of Tofino pipeline archive(tar.bz2) which includes pipeline configs',
+    parser.add_argument('--tofino-pipeline-config',
+                        help='Location of Tofino pipeline config binary(pb.bin) which includes pipeline configs',
                         type=str, action="store", required=False)
     parser.add_argument('--tofino-bin',
                         help='Location of Tofino .bin output from p4c (if target is tofino)',
@@ -340,7 +340,7 @@ def main():
     bmv2_json = None
     tofino_ctx_json = None
     tofino_bin = None
-    tofino_pipeline_tar = None
+    tofino_pipeline_config = None
     if not os.path.exists(args.p4info):
         error("P4Info file {} not found".format(args.p4info))
         sys.exit(1)
@@ -361,11 +361,11 @@ def main():
             sys.exit(1)
         bmv2_json = args.bmv2_json
     elif device == 'stratum-bfrt':
-        if not os.path.exists(args.tofino_pipeline_tar):
+        if not os.path.exists(args.tofino_pipeline_config):
             error("Tofino binary config file {} not found".format(
-                args.tofino_pipeline_tar))
+                args.tofino_pipeline_config))
             sys.exit(1)
-        tofino_pipeline_tar = args.tofino_pipeline_tar
+        tofino_pipeline_config = args.tofino_pipeline_config
     if not os.path.exists(args.port_map):
         print("Port map path '{}' does not exist".format(args.port_map))
         sys.exit(1)
@@ -377,7 +377,7 @@ def main():
                                 bmv2_json_path=bmv2_json,
                                 tofino_bin_path=tofino_bin,
                                 tofino_cxt_json_path=tofino_ctx_json,
-                                tofino_pipeline_tar_path=tofino_pipeline_tar,
+                                tofino_pipeline_config_path=tofino_pipeline_config,
                                 grpc_addr=args.grpc_addr,
                                 device_id=args.device_id,
                                 generate_tv=args.generate_tv)

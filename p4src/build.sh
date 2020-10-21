@@ -42,25 +42,31 @@ SDE_VER=$( ${P4C_CMD} --version | cut -d' ' -f2 )
 
 # shellcheck disable=SC2086
 function base_build() {
-  pltf="sde_${SDE_VER//./_}"
+  output_dir="${P4C_OUT}/sde_${SDE_VER//./_}"
   echo "*** Compiling profile '${PROFILE}' for ${pltf}..."
-  echo "*** Output in ${P4C_OUT}/${pltf}"
+  echo "*** Output in ${output_dir}"
   p4c_flags="--auto-init-metadata"
-  mkdir -p ${P4C_OUT}/${pltf}
+  mkdir -p ${output_dir}
   (
     $P4C_CMD --arch tna -g --create-graphs --verbose 2 \
-      -o ${P4C_OUT}/${pltf} -I ${P4_SRC_DIR} \
+      -o ${output_dir} -I ${P4_SRC_DIR} \
       ${pp_flags} ${OTHER_PP_FLAGS} \
       ${p4c_flags} \
-      --p4runtime-files ${P4C_OUT}/${pltf}/p4info.txt \
+      --p4runtime-files ${output_dir}/p4info.txt \
       --p4runtime-force-std-externs \
       ${DIR}/fabric_tna.p4
   )
   # Adds register information to p4info file
   # TODO: remove this part when compiler support it.
   if [[ "$PROFILE" == *int ]]; then
-    $P4INFO_PATCH_SHELL "cat ${DIR}/p4info-register.txt >> ${P4C_OUT}/${pltf}/p4info.txt"
+    $P4INFO_PATCH_SHELL "cat ${DIR}/p4info-register.txt >> ${output_dir}/p4info.txt"
   fi
+
+  # Generate the pipeline config binary
+  docker run --rm -v "${output_dir}:${output_dir}" -w "${output_dir}" \
+    stratumproject/stratum-bf-pipeline-builder:latest \
+    -p4c_conf_file=./fabric_tna.conf \
+    -bf_pipeline_config_binary_file=./pipeline_config.pb.bin
 }
 
 # shellcheck disable=SC2086
@@ -70,26 +76,14 @@ function gen_profile() {
   cpu_port=$2
 
   # Copy only the relevant files to the pipeconf resources.
-  mkdir -p "${DEST_DIR}/stratum_bf/${pltf}/pipe"
-  mkdir -p "${DEST_DIR}/stratum_bfrt/${pltf}/pipe"
-  cp "${output_dir}/p4info.txt" "${DEST_DIR}/stratum_bf/${pltf}"
-  cp "${output_dir}/bfrt.json" "${DEST_DIR}/stratum_bf/${pltf}"
-  cp "${output_dir}/fabric_tna.conf" "${DEST_DIR}/stratum_bf/${pltf}"
-  cp "${output_dir}/pipe/context.json" "${DEST_DIR}/stratum_bf/${pltf}/pipe"
-  cp "${output_dir}/pipe/tofino.bin" "${DEST_DIR}/stratum_bf/${pltf}/pipe"
-  cp "${output_dir}/pipe/context.json" "${DEST_DIR}/stratum_bfrt/${pltf}/pipe/"
-  cp "${output_dir}/pipe/tofino.bin" "${DEST_DIR}/stratum_bfrt/${pltf}/pipe/"
-  echo "${cpu_port}" > "${DEST_DIR}/stratum_bf/${pltf}/cpu_port.txt"
-
-  # New pipeline format which uses tar ball
+  mkdir -p "${DEST_DIR}/stratum_bf/${pltf}"
   mkdir -p "${DEST_DIR}/stratum_bfrt/${pltf}"
-  tar cf "pipeline.tar.bz2" -C "${DEST_DIR}/stratum_bf/${pltf}" .
-  mv "pipeline.tar.bz2" "${DEST_DIR}/stratum_bfrt/${pltf}/"
+  cp "${output_dir}/p4info.txt" "${DEST_DIR}/stratum_bf/${pltf}"
   cp "${output_dir}/p4info.txt" "${DEST_DIR}/stratum_bfrt/${pltf}/"
+  echo "${cpu_port}" > "${DEST_DIR}/stratum_bf/${pltf}/cpu_port.txt"
   echo "${cpu_port}" > "${DEST_DIR}/stratum_bfrt/${pltf}/cpu_port.txt"
-
-  rm "${DEST_DIR}/stratum_bf/${pltf}/fabric_tna.conf"
-
+  cp "${output_dir}/pipeline_config.pb.bin" "${DEST_DIR}/stratum_bfrt/${pltf}/"
+  cp "${output_dir}/pipeline_config.pb.bin" "${DEST_DIR}/stratum_bf/${pltf}/"
   echo
 }
 
