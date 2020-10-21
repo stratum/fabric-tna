@@ -57,9 +57,7 @@ enum bit<8> SpgwInterface {
     UNKNOWN       = 0x0,
     ACCESS        = 0x1,
     CORE          = 0x2,
-    N6_LAN        = 0x3, // unused
-    VN_INTERNAL   = 0x4, // unused
-    CONTROL_PLANE = 0x5 // N4 and N4-u
+    FROM_DBUF     = 0x3
 }
 
 const bit<16> ETHERTYPE_QINQ = 0x88A8;
