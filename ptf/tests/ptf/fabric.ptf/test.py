@@ -514,7 +514,7 @@ class FabricIPv4MplsGroupTest(IPv4UnicastTest):
     def doRunTest(self, pkt, mac_dest, tagged1, tc_name):
         self.runIPv4UnicastTest(
             pkt, mac_dest, prefix_len=24, tagged1=tagged1, tagged2=False,
-            mpls=True)
+            is_next_hop_spine=True)
 
     def runTest(self):
         print ""
@@ -653,8 +653,8 @@ class FabricSpgwDownlinkTest(SpgwSimpleTest):
                 for is_next_hop_spine in [False, True]:
                     if is_next_hop_spine and tagged[1]:
                         continue
-                    tc_name = "VLAN_" + vlan_conf + "_" + pkt_type + "_mpls_" + str(is_next_hop_spine)
-                    print "Testing VLAN=%s, pkt=%s, mpls=%s..." \
+                    tc_name = "VLAN_" + vlan_conf + "_" + pkt_type + "_is_next_hop_spine_" + str(is_next_hop_spine)
+                    print "Testing VLAN=%s, pkt=%s, is_next_hop_spine=%s..." \
                           % (vlan_conf, pkt_type, is_next_hop_spine)
                     pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
                         eth_src=HOST1_MAC, eth_dst=SWITCH_MAC,
@@ -687,7 +687,7 @@ class FabricSpgwUplinkTest(SpgwSimpleTest):
                 for is_next_hop_spine in [False, True]:
                     if is_next_hop_spine and tagged[1]:
                         continue
-                    print "Testing VLAN=%s, pkt=%s, mpls=%s..." \
+                    print "Testing VLAN=%s, pkt=%s, is_next_hop_spine=%s..." \
                           % (vlan_conf, pkt_type, is_next_hop_spine)
                     pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
                         eth_src=HOST1_MAC, eth_dst=SWITCH_MAC,
@@ -874,7 +874,7 @@ class FabricFlowReportFilterNoChangeTest(IntTest):
     @autocleanup
     def doRunTest(self, vlan_conf, tagged, pkt_type, is_next_hop_spine, expect_int_report, ip_dst):
         self.set_up_quantize_hop_latency_rule(qmask=0xf0000000)
-        print "Testing VLAN=%s, pkt=%s, mpls=%s..." \
+        print "Testing VLAN=%s, pkt=%s, is_next_hop_spine=%s..." \
               % (vlan_conf, pkt_type, is_next_hop_spine)
         pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(ip_dst=ip_dst)
         self.runIntTest(pkt=pkt,
@@ -954,23 +954,23 @@ class FabricPppoeUpstreamTest(PppoeTest):
 
     @tvsetup
     @autocleanup
-    def doRunTest(self, pkt, tagged2, mpls, line_enabled):
-        self.runUpstreamV4Test(pkt, tagged2, mpls, line_enabled)
+    def doRunTest(self, pkt, tagged2, is_next_hop_spine, line_enabled):
+        self.runUpstreamV4Test(pkt, tagged2, is_next_hop_spine, line_enabled)
 
     def runTest(self):
         print ""
         for line_enabled in [True, False]:
             for out_tagged in [False, True]:
-                for mpls in [False, True]:
-                    if mpls and out_tagged:
+                for is_next_hop_spine in [False, True]:
+                    if is_next_hop_spine and out_tagged:
                         continue
                     for pkt_type in ["tcp", "udp", "icmp"]:
                         print "Testing %s packet, line_enabled=%s, " \
-                              "out_tagged=%s, mpls=%s ..." \
-                              % (pkt_type, line_enabled, out_tagged, mpls)
+                              "out_tagged=%s, is_next_hop_spine=%s ..." \
+                              % (pkt_type, line_enabled, out_tagged, is_next_hop_spine)
                         pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
                             pktlen=120)
-                        self.doRunTest(pkt, out_tagged, mpls, line_enabled)
+                        self.doRunTest(pkt, out_tagged, is_next_hop_spine, line_enabled)
 
 
 @group("bng")
@@ -1057,23 +1057,23 @@ class FabricDoubleTaggedHostUpstream(DoubleVlanTerminationTest):
 
     @tvsetup
     @autocleanup
-    def doRunTest(self, pkt, out_tagged, mpls):
+    def doRunTest(self, pkt, out_tagged, is_next_hop_spine):
         self.runPopAndRouteTest(pkt, next_hop_mac=HOST2_MAC,
                                 vlan_id=VLAN_ID_1, inner_vlan_id=VLAN_ID_2,
-                                out_tagged=out_tagged, mpls=mpls)
+                                out_tagged=out_tagged, is_next_hop_spine=is_next_hop_spine)
 
     def runTest(self):
         print ""
         for out_tagged in [True, False]:
-            for mpls in [True, False]:
-                if mpls and out_tagged:
+            for is_next_hop_spine in [True, False]:
+                if is_next_hop_spine and out_tagged:
                     continue
                 for pkt_type in ["tcp", "udp", "icmp"]:
                     print "Testing %s packet, out_tagged=%s..." \
                           % (pkt_type, out_tagged)
                     pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
                         pktlen=120)
-                    self.doRunTest(pkt, out_tagged, mpls)
+                    self.doRunTest(pkt, out_tagged, is_next_hop_spine)
 
 
 @group("dth")
