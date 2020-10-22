@@ -58,7 +58,7 @@ fi
 
 # Find Tofino compiled artifacts
 sdeVer_=$(echo "${SDE_VERSION}" | tr . _) # Replace dots with underscores
-P4C_OUT=${FABRIC_TNA}/src/main/resources/p4c-out/${fabricProfile}/stratum_bfrt/mavericks_sde_${sdeVer_}
+P4C_OUT=${FABRIC_TNA}/src/main/resources/p4c-out/${fabricProfile}/mavericks_sde_${sdeVer_}
 echo "*** Using P4 compiler output in ${P4C_OUT}..."
 
 # Fix a name for each container so we can stop them
