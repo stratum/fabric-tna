@@ -6,7 +6,7 @@ GRPCADDR ?= 127.0.0.1:28000
 CPUPORT ?= 320
 
 define run_tests
-	python -u ptf_runner.py --device stratum-bfrt --port-map $(PORTMAP) \
+	python -u ptf_runner.py --port-map $(PORTMAP) \
 		--ptf-dir fabric.ptf --cpu-port $(CPUPORT) --device-id 1 \
 		--grpc-addr $(GRPCADDR) \
 		--p4info /p4c-out/p4info.txt \

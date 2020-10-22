@@ -3,7 +3,7 @@
 # 320 cpu port is for mavericks (65Q)
 
 define run_tests
-	python -u ptf_runner.py --device stratum-bfrt --port-map port_map.veth.json \
+	python -u ptf_runner.py --port-map port_map.veth.json \
 		--ptf-dir fabric.ptf --cpu-port 320 --device-id 1 \
 		--grpc-addr "127.0.0.1:28000" \
 		--p4info /p4c-out/p4info.txt \
