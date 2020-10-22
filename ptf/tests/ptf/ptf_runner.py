@@ -253,7 +253,7 @@ def main():
                         help='Location of p4info proto in text format',
                         type=str, action="store", required=True)
     parser.add_argument('--tofino-pipeline-config',
-                        help='Location of Tofino pipeline config binary(pb.bin) which includes pipeline configs',
+                        help='Location of the Tofino pipeline config binary (pb.bin)',
                         type=str, action="store", required=False)
     parser.add_argument('--grpc-addr',
                         help='Address to use to connect to P4 Runtime server',
