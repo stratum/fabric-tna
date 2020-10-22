@@ -5,6 +5,7 @@
 MAVERICKS_CPU_PORT=320
 MONTARA_CPU_PORT=192
 SDE_DOCKER_IMG=${SDE_DOCKER_IMG:-opennetworking/bf-sde:9.2.0}
+PIPELINE_CONFIG_BUILDER_IMG=${PIPELINE_BUILD_IMG:-"stratumproject/stratum-bf-pipeline-builder:latest"}
 
 # DIR is this file directory.
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
@@ -64,7 +65,7 @@ function base_build() {
 
   # Generate the pipeline config binary
   docker run --rm -v "${output_dir}:${output_dir}" -w "${output_dir}" \
-    stratumproject/stratum-bf-pipeline-builder:latest \
+    ${PIPELINE_CONFIG_BUILDER_IMG} \
     -p4c_conf_file=./fabric_tna.conf \
     -bf_pipeline_config_binary_file=./pipeline_config.pb.bin
 }
