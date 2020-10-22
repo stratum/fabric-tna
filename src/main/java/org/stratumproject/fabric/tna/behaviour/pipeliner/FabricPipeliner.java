@@ -131,6 +131,7 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
             if (log.isTraceEnabled()) {
                 log.trace("Objective {}", obj);
             }
+            fail(obj, ObjectiveError.UNSUPPORTED);
             return;
         }
 
@@ -253,6 +254,7 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
                 groups.forEach(group -> groupService.setBucketsForGroup(
                         deviceId, group.appCookie(), group.buckets(),
                         group.appCookie(), group.appId()));
+                break;
             case REMOVE_FROM_EXISTING:
                 groups.forEach(group -> groupService.removeBucketsFromGroup(
                         deviceId, group.appCookie(), group.buckets(),
