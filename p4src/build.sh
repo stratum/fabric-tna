@@ -76,14 +76,10 @@ function gen_profile() {
   cpu_port=$2
 
   # Copy only the relevant files to the pipeconf resources.
-  mkdir -p "${DEST_DIR}/stratum_bf/${pltf}"
-  mkdir -p "${DEST_DIR}/stratum_bfrt/${pltf}"
-  cp "${output_dir}/p4info.txt" "${DEST_DIR}/stratum_bf/${pltf}"
-  cp "${output_dir}/p4info.txt" "${DEST_DIR}/stratum_bfrt/${pltf}/"
-  echo "${cpu_port}" > "${DEST_DIR}/stratum_bf/${pltf}/cpu_port.txt"
-  echo "${cpu_port}" > "${DEST_DIR}/stratum_bfrt/${pltf}/cpu_port.txt"
-  cp "${output_dir}/pipeline_config.pb.bin" "${DEST_DIR}/stratum_bfrt/${pltf}/"
-  cp "${output_dir}/pipeline_config.pb.bin" "${DEST_DIR}/stratum_bf/${pltf}/"
+  mkdir -p "${DEST_DIR}/${pltf}"
+  cp "${output_dir}/p4info.txt" "${DEST_DIR}/${pltf}"
+  echo "${cpu_port}" > "${DEST_DIR}/${pltf}/cpu_port.txt"
+  cp "${output_dir}/pipeline_config.pb.bin" "${DEST_DIR}/${pltf}/"
   echo
 }
 

@@ -99,7 +99,7 @@ docker run --name ${tmRunName} -d -t --privileged \
     "${SDE_DOCKER_IMG}"
 sleep 5
 
-# Run stratum_bf
+# Run Stratum container
 echo "*** Starting ${stratumBfRunName} (from ${STRATUM_BF_DOCKER_IMG})..."
 docker run --name ${stratumBfRunName} -d --privileged \
     --network "container:${tmRunName}" \
@@ -110,12 +110,6 @@ docker run --name ${stratumBfRunName} -d --privileged \
 sleep 5
 wait_for ${stratumBfRunName} 28000 600
 
-testerDevice="stratum-bf"
-if [[ "${STRATUM_BF_DOCKER_IMG}" == *"stratum-bfrt"* ]]; then
-  echo "*** Detected stratum-bfrt..."
-  testerDevice="stratum-bfrt"
-fi
-
 echo "*** Starting ${testerRunName}..."
 # Do not attach stdin if running in an environment without it (e.g., Jenkins)
 it=$(test -t 0 && echo "-it" || echo "-t")
@@ -123,7 +117,6 @@ docker run --name ${testerRunName} ${it} --privileged --rm \
     --network "container:${tmRunName}" \
     -v "${FP4TEST_ROOT}":/fabric-p4test \
     -v "${P4C_OUT}":/p4c-out \
-    -e DEVICE=${testerDevice} \
     -e PTF_FILTER=${PTF_FILTER} \
     --entrypoint /fabric-p4test/run/tm/start_test.sh \
     "${TESTER_DOCKER_IMG}" \
