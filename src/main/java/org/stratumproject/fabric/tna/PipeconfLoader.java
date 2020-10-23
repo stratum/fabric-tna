@@ -51,8 +51,8 @@ public class PipeconfLoader {
 
     private static final String BASE_PIPECONF_ID = "org.stratumproject";
     private static final String P4C_OUT_PATH = "/p4c-out";
-    // p4c-out/<profile>/<target>/<platform>
-    private static final String P4C_RES_BASE_PATH = P4C_OUT_PATH + "/%s/%s/%s/";
+    // p4c-out/<profile>/<platform>
+    private static final String P4C_RES_BASE_PATH = P4C_OUT_PATH + "/%s/%s/";
     private static final String SEP = File.separator;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
@@ -63,13 +63,9 @@ public class PipeconfLoader {
 
     private Collection<PiPipeconf> pipeconfs;
 
-    private static final String STRATUM_BF = "stratum_bf";
-    private static final String STRATUM_BFRT = "stratum_bfrt";
     private static final String P4INFO_TXT = "p4info.txt";
     private static final String CPU_PORT_TXT = "cpu_port.txt";
-    private static final String TOFINO_BIN = "pipe/tofino.bin";
-    private static final String TOFINO_CTX_JSON = "pipe/context.json";
-    private static final String PIPELINE_TAR = "pipeline.tar.bz2";
+    private static final String PIPELINE_CONFIG = "pipeline_config.pb.bin";
 
     private static final String INT_PROFILE_SUFFIX = "-int";
     private static final String FULL_PROFILE_SUFFIX = "-full";
@@ -109,35 +105,21 @@ public class PipeconfLoader {
 
     private PiPipeconf buildPipeconfFromPath(String path) {
         String[] pieces = path.split(SEP);
-        // We expect a path of 4 elements, e.g.
-        // p4c-out/<profile>/<target>/<platform>
-        if (pieces.length != 4) {
+        // We expect a path of 3 elements, e.g.
+        // p4c-out/<profile>/<platform>
+        // p4c-out/fabric/mavericks_sde_9_2_0
+        if (pieces.length != 3) {
             return null;
         }
         String profile = pieces[1];
-        String target = pieces[2];
-        String platform = pieces[3];
+        String platform = pieces[2];
 
         final DefaultPiPipeconf.Builder builder;
-        if (target.equals(STRATUM_BF)) {
-            try {
-                builder = stratumBfPipeconf(profile, platform);
-            } catch (FileNotFoundException e) {
-                log.warn("Unable to build pipeconf at {} because file is missing: {}",
-                         path, e.getMessage());
-                return null;
-            }
-        } else if (target.equals(STRATUM_BFRT)) {
-            try {
-                builder = stratumBfRtPipeconf(profile, platform);
-            } catch (FileNotFoundException e) {
-                log.warn("Unable to build pipeconf at {} because file is missing: {}",
-                         path, e.getMessage());
-                return null;
-            }
-        } else {
-            log.warn("Unknown target '{}', skipping pipeconf build at '{}'...",
-                    target, path);
+        try {
+            builder = buildPipeconf(profile, platform);
+        } catch (FileNotFoundException e) {
+            log.warn("Got error when building the pipeconf with profile {} and platform {}: {}",
+                    profile, platform, e.getMessage());
             return null;
         }
 
@@ -153,54 +135,27 @@ public class PipeconfLoader {
         return builder.build();
     }
 
-    private DefaultPiPipeconf.Builder stratumBfPipeconf(String profile, String platform)
+    private DefaultPiPipeconf.Builder buildPipeconf(String profile, String platform)
             throws FileNotFoundException {
-        final URL tofinoBinUrl = this.getClass().getResource(format(
-                P4C_RES_BASE_PATH + TOFINO_BIN, profile, STRATUM_BF, platform));
-        final URL contextJsonUrl = this.getClass().getResource(format(
-                P4C_RES_BASE_PATH + TOFINO_CTX_JSON, profile, STRATUM_BF, platform));
+        final URL tofinoPipelineConfigUrl = this.getClass().getResource(format(
+                P4C_RES_BASE_PATH + PIPELINE_CONFIG, profile, platform));
         final URL p4InfoUrl = this.getClass().getResource(format(
-                P4C_RES_BASE_PATH + P4INFO_TXT, profile, STRATUM_BF, platform));
+                P4C_RES_BASE_PATH + P4INFO_TXT, profile, platform));
         final URL cpuPortUrl = this.getClass().getResource(format(
-                P4C_RES_BASE_PATH + CPU_PORT_TXT, profile, STRATUM_BF, platform));
+                P4C_RES_BASE_PATH + CPU_PORT_TXT, profile, platform));
 
-        checkFileExists(tofinoBinUrl, TOFINO_BIN);
-        checkFileExists(contextJsonUrl, TOFINO_CTX_JSON);
+        checkFileExists(tofinoPipelineConfigUrl, PIPELINE_CONFIG);
         checkFileExists(p4InfoUrl, P4INFO_TXT);
         checkFileExists(cpuPortUrl, CPU_PORT_TXT);
 
         return DefaultPiPipeconf.builder()
                 .withId(new PiPipeconfId(format(
-                        "%s.%s.stratum_bf.%s", BASE_PIPECONF_ID, profile, platform)))
+                        "%s.%s.%s", BASE_PIPECONF_ID, profile, platform)))
                 .withPipelineModel(parseP4Info(p4InfoUrl))
-                .addExtension(ExtensionType.TOFINO_BIN, tofinoBinUrl)
-                .addExtension(ExtensionType.TOFINO_CONTEXT_JSON, contextJsonUrl)
+                .addExtension(ExtensionType.RAW_DEVICE_CONFIG, tofinoPipelineConfigUrl)
                 .addExtension(ExtensionType.P4_INFO_TEXT, p4InfoUrl)
                 .addExtension(ExtensionType.CPU_PORT_TXT, cpuPortUrl);
 
-    }
-
-    private DefaultPiPipeconf.Builder stratumBfRtPipeconf(String profile, String platform)
-            throws FileNotFoundException {
-
-        final URL tofinoPipelineTarUrl = this.getClass().getResource(format(
-                P4C_RES_BASE_PATH + PIPELINE_TAR, profile, STRATUM_BFRT, platform));
-        final URL p4InfoUrl = this.getClass().getResource(format(
-                P4C_RES_BASE_PATH + P4INFO_TXT, profile, STRATUM_BFRT, platform));
-        final URL cpuPortUrl = this.getClass().getResource(format(
-                P4C_RES_BASE_PATH + CPU_PORT_TXT, profile, STRATUM_BFRT, platform));
-
-        checkFileExists(tofinoPipelineTarUrl, PIPELINE_TAR);
-        checkFileExists(p4InfoUrl, P4INFO_TXT);
-        checkFileExists(cpuPortUrl, CPU_PORT_TXT);
-
-        return DefaultPiPipeconf.builder()
-                .withId(new PiPipeconfId(format(
-                        "%s.%s.stratum_bfrt.%s", BASE_PIPECONF_ID, profile, platform)))
-                .withPipelineModel(parseP4Info(p4InfoUrl))
-                .addExtension(ExtensionType.RAW_DEVICE_CONFIG, tofinoPipelineTarUrl)
-                .addExtension(ExtensionType.P4_INFO_TEXT, p4InfoUrl)
-                .addExtension(ExtensionType.CPU_PORT_TXT, cpuPortUrl);
     }
 
     private void checkFileExists(URL url, String name)
