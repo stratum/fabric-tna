@@ -5,7 +5,7 @@
 MAVERICKS_CPU_PORT=320
 MONTARA_CPU_PORT=192
 SDE_DOCKER_IMG=${SDE_DOCKER_IMG:-opennetworking/bf-sde:9.2.0}
-PIPELINE_CONFIG_BUILDER_IMG=${PIPELINE_BUILD_IMG:-"stratumproject/stratum-bf-pipeline-builder:latest"}
+PIPELINE_CONFIG_BUILDER_IMG=${PIPELINE_BUILD_IMG:-"stratumproject/stratum-bf-pipeline-builder@sha256:006db61b4c8797cc46f9008549b9d073ccfdc6c2e67641650fcb63afc318846a"}
 
 # DIR is this file directory.
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
