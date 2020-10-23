@@ -49,7 +49,7 @@ control Forwarding (inout parsed_headers_t hdr,
     DirectCounter<bit<64>>(CounterType_t.PACKETS_AND_BYTES) mpls_counter;
 
     action pop_mpls_and_next(next_id_t next_id) {
-        // Don't bother setting the hdr.mpls invalid, we don't emit that.
+        hdr.mpls.setInvalid();
         hdr.eth_type.value = fabric_md.bridged.ip_eth_type;
         fabric_md.bridged.mpls_label = 0;
         set_next_id(next_id);
