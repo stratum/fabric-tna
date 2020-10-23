@@ -150,7 +150,7 @@ public class PipeconfLoader {
 
         return DefaultPiPipeconf.builder()
                 .withId(new PiPipeconfId(format(
-                        "%s.%s.stratum_bf.%s", BASE_PIPECONF_ID, profile, platform)))
+                        "%s.%s.%s", BASE_PIPECONF_ID, profile, platform)))
                 .withPipelineModel(parseP4Info(p4InfoUrl))
                 .addExtension(ExtensionType.RAW_DEVICE_CONFIG, tofinoPipelineConfigUrl)
                 .addExtension(ExtensionType.P4_INFO_TEXT, p4InfoUrl)
