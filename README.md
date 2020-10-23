@@ -141,8 +141,8 @@ new Tofino-specific pipeconfs in the system, depending on the `fabric-tna.p4`
 profiles compiled before and the Barefoot SDE/p4c version used:
 
 ```
-New pipeconf registered: org.stratumproject.fabric.stratum_bfrt.mavericks_sde_9_2_0 (fingerprint=...)
-New pipeconf registered: org.stratumproject.fabric.stratum_bfrt.montara_sde_9_2_0 (fingerprint=...)
+New pipeconf registered: org.stratumproject.fabric.mavericks_sde_9_2_0 (fingerprint=...)
+New pipeconf registered: org.stratumproject.fabric.montara_sde_9_2_0 (fingerprint=...)
 ...
 ```
 
