@@ -765,6 +765,32 @@ class P4RuntimeTest(BaseTest):
                 return entity.counter_entry
         return None
 
+    def write_indirect_counter(self, c_name, c_index, typ, byte_count=None, packet_count=None): 
+        # Check counter type with P4Info
+        counter = self.get_counter(c_name)
+        counter_type_unit = p4info_pb2.CounterSpec.Unit.items()[counter.spec.unit][0]
+        if counter_type_unit != "BOTH" and counter_type_unit != typ:
+            raise Exception("Counter " + c_name + " is of type " + counter_type_unit + ", but requested: " + typ)
+
+        req = self.get_new_write_request()
+        update = req.updates.add()
+        update.type = p4runtime_pb2.Update.MODIFY
+        counter_entry = update.entity.counter_entry
+
+        c_id = self.get_counter_id(c_name)
+        counter_entry.counter_id = c_id
+        index = counter_entry.index
+        index.index = c_index
+
+        counter_data = counter_entry.data
+
+        if counter_type_unit == "BOTH" or counter_type_unit == "BYTES" and byte_count is not None:
+            counter_data.byte_count = byte_count
+        if counter_type_unit == "BOTH" or counter_type_unit == "PACKETS" and packet_count is not None:
+            counter_data.packet_count = packet_count
+        return req, self.write_request(req, store=False)
+        
+
     def read_table_entry(self, t_name, mk, priority=0):
         req = self.get_new_read_request()
         entity = req.entities.add()
@@ -873,7 +899,7 @@ class P4RuntimeTest(BaseTest):
                     self.fail("Incorrect direct counter value:\n" + str(direct_counter))
         return None
 
-    def verify_indirect_counter(self, c_name, c_index, typ, expected_byte_count, expected_packet_count):
+    def verify_indirect_counter(self, c_name, c_index, typ, expected_byte_count=None, expected_packet_count=None):
         # Check counter type with P4Info
         counter = self.get_counter(c_name)
         counter_type_unit = p4info_pb2.CounterSpec.Unit.items()[counter.spec.unit][0]
@@ -890,9 +916,11 @@ class P4RuntimeTest(BaseTest):
         if self.generate_tv:
             exp_resp = self.get_new_read_response()
             entity = exp_resp.entities.add()
-            entity.counter_entry.table_entry.CopyFrom(table_entry)
-            entity.counter_entry.data.byte_count = expected_byte_count
-            entity.counter_entry.data.packet_count = expected_packet_count
+            entity.counter_entry.CopyFrom(counter_entry)
+            if (counter_type_unit == "BOTH" or counter_type_unit == "BYTES") and expected_byte_count is not None:
+                entity.counter_entry.data.byte_count = expected_byte_count
+            if (counter_type_unit == "BOTH" or counter_type_unit == "PACKETS") and expected_packet_count is not None:
+                entity.counter_entry.data.packet_count = expected_packet_count
             # add to list
             exp_resps = []
             exp_resps.append(exp_resp)
@@ -904,7 +932,7 @@ class P4RuntimeTest(BaseTest):
                 counter_entry = entity.counter_entry
                 if counter_entry.data.byte_count != expected_byte_count or \
                         counter_entry.data.packet_count != expected_packet_count:
-                    self.fail("Incorrect direct counter value:\n" + str(dcounter))
+                    self.fail("Incorrect indirect counter value:\n" + str(counter_entry))
         return None
 
     def is_default_action_update(self, update):
