@@ -933,8 +933,8 @@ class P4RuntimeTest(BaseTest):
                 if counter_entry.data.byte_count != expected_byte_count or \
                         counter_entry.data.packet_count != expected_packet_count:
                     self.fail("%s value is not same as expected.\
-                        \nExpected packet count: %d, Received packet count: %d\
-                        \nExpected byte count: %d, Received byte count: %d\n"\
+                        \nActual packet count: %d, Expected packet count: %d\
+                        \nActual byte count: %d, Expected byte count: %d\n"\
                         %(c_name, counter_entry.data.packet_count, expected_packet_count,\
                         counter_entry.data.byte_count, expected_byte_count))
         return None
