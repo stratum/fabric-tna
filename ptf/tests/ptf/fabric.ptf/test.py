@@ -1411,10 +1411,16 @@ class FabricOptimizedFieldDetectorTest(FabricTest):
                     match_mask = match_value
                     match_keys.append(self.Ternary(match.name, match_value, match_mask))
                     priority = 1
+                elif match.match_type == p4info_pb2.MatchField.MatchType.RANGE:
+                    match_low = self.getBytestring(match.bitwidth)
+                    match_high = match_low
+                    match_keys.append(self.Range(match.name, match_low, match_high))
+                    priority = 1
                 else:
-                    print("Skipping table %s because it has unsupported match keys" % table_name)
+                    print("Skipping table %s because it has a unsupported match field %s of type %s"
+                            % (table_name, match.name, match.match_type))
                     return
-            if match_keys == []:
+            if len(match_keys) == 0:
                 # TODO: modify default action here
                 print("Skipping table %s because it is keyless" % table_name)
                 return
@@ -1441,7 +1447,7 @@ class FabricOptimizedFieldDetectorTest(FabricTest):
                 diff = ""
                 for line in difflib.unified_diff(write_entry_s, read_entry_s, fromfile='Wrote', tofile='Read back', n=5, lineterm=""):
                      diff = diff + "\n" + line
-                print("Found parameter that has been optimized out in action \"%s\" of table \"%s\"" % (table_name, action_name))
+                print("Found parameter that has been optimized out in action \"%s\" of table \"%s\"" % (action_name, table_name))
                 print(diff)
                 self.fail("Read does not match previous write!")
 
