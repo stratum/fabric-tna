@@ -8,6 +8,7 @@ import socket
 from operator import ior
 
 from p4.v1 import p4runtime_pb2
+from p4.config.v1 import p4info_pb2
 from ptf import testutils as testutils
 from ptf.mask import Mask
 from scapy.contrib.mpls import MPLS

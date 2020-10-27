@@ -3,6 +3,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from unittest import skip
+import difflib
+import string
 
 from ptf.testutils import group
 from scapy.layers.ppp import PPPoED
@@ -1365,3 +1367,86 @@ class FabricPacketOutLoopbackModeTest(FabricTest):
                 pktlen=MIN_PKT_LEN
             )
             self.doRunTest(pkt)
+
+
+class FabricOptimizedFieldDetectorTest(FabricTest):
+    """Finds action paramters or header fields that were optimized out by the
+    compiler"""
+
+    def getBytestring(self, bitwidth):
+        return stringify(1, (bitwidth + 7) / 8)
+
+    @autocleanup
+    def insert(self, table_name, match_keys, action_name, action_params, priority):
+        req, _ = self.send_request_add_entry_to_action(
+            table_name,
+            match_keys,
+            action_name,
+            action_params,
+            priority
+        )
+        write_entry = req.updates[0].entity.table_entry
+        read_entry = self.read_table_entry(table_name, match_keys, priority)
+        return write_entry, read_entry
+
+    def handleTable(self, table):
+        table_name = self.get_obj_name_from_id(table.preamble.id)
+        priority = 0
+        if table.implementation_id > 0:
+            # TODO: use action profile groups here
+            print("Skipping table %s because it uses indirect actions" % table_name)
+            return
+        for action_ref in table.action_refs:
+            match_keys = []
+            for match in table.match_fields:
+                if match.match_type == p4info_pb2.MatchField.MatchType.EXACT:
+                    match_value = self.getBytestring(match.bitwidth)
+                    match_keys.append(self.Exact(match.name, match_value))
+                elif match.match_type == p4info_pb2.MatchField.MatchType.LPM:
+                    match_value = self.getBytestring(match.bitwidth)
+                    match_len = match.bitwidth
+                    match_keys.append(self.Lpm(match.name, match_value, match_len))
+                elif match.match_type == p4info_pb2.MatchField.MatchType.TERNARY:
+                    match_value = self.getBytestring(match.bitwidth)
+                    match_mask = match_value
+                    match_keys.append(self.Ternary(match.name, match_value, match_mask))
+                    priority = 1
+                else:
+                    print("Skipping table %s because it has unsupported match keys" % table_name)
+                    return
+
+            if action_ref.scope == p4info_pb2.ActionRef.Scope.DEFAULT_ONLY:
+                # TODO: modify default action here
+                continue
+            action_name = self.get_obj_name_from_id(action_ref.id)
+            action = self.get_obj("actions", action_name)
+            action_params = []
+            for param in action.params:
+                param_value = stringify(1, (param.bitwidth + 7) / 8)
+                action_params.append((param.name, param_value))
+            write_entry, read_entry = self.insert(
+                table_name,
+                match_keys,
+                action_name,
+                action_params,
+                priority
+            )
+            if write_entry != read_entry:
+                write_entry_s = string.split("%s" % write_entry, "\n")
+                read_entry_s = string.split("%s" % read_entry, "\n")
+                diff = ""
+                for line in difflib.unified_diff(write_entry_s, read_entry_s, fromfile='Wrote', tofile='Read back', n=5, lineterm=""):
+                     diff = diff + "\n" + line
+                print("Found parameter that has been optimized out in action \"%s\" of table \"%s\"" % (table_name, action_name))
+                print(diff)
+                self.fail("Read does not match previous write!")
+
+    @tvsetup
+    @autocleanup
+    def doRunTest(self):
+        for table in getattr(self.p4info, "tables"):
+            self.handleTable(table)
+
+    def runTest(self):
+        print ""
+        self.doRunTest()
