@@ -1492,12 +1492,12 @@ class SpgwSimpleTest(IPv4UnicastTest):
     def reset_pdr_counters(self, ctr_idx):
         """ Reset the ingress and egress PDR counter packet and byte counts to 0 for the given index.
         """
-        self.write_indirect_counter(PDR_COUNTER_INGRESS, ctr_idx, "BOTH", 0, 0)
-        self.write_indirect_counter(PDR_COUNTER_EGRESS, ctr_idx, "BOTH", 0, 0)
+        self.write_indirect_counter(PDR_COUNTER_INGRESS, ctr_idx, 0, 0)
+        self.write_indirect_counter(PDR_COUNTER_EGRESS, ctr_idx, 0, 0)
 
     def verify_pdr_counters(self, ctr_idx, 
                             exp_ingress_bytes, exp_egress_bytes,
-                            exp_ingress_pkts=1, exp_egress_pkts=1):
+                            exp_ingress_pkts, exp_egress_pkts):
         """ Verify that the PDR ingress and egress counters for index 'ctr_idx' are now 
             'exp_ingress_bytes', 'exp_ingress_pkts' and 'exp_egress_bytes', 'exp_egress_pkts' respectively upon reading.
         """
@@ -1547,7 +1547,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             egress_bytes -= 4  # FIXME: ?????
 
         # Verify the Ingress and Egress PDR counters
-        self.verify_pdr_counters(UPLINK_PDR_CTR_IDX, ingress_bytes, egress_bytes)
+        self.verify_pdr_counters(UPLINK_PDR_CTR_IDX, ingress_bytes, egress_bytes,1,1)
 
     def runDownlinkTest(self, pkt, tagged1, tagged2, is_next_hop_spine):
         exp_pkt = pkt.copy()
@@ -1589,7 +1589,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             egress_bytes -= 4  # FIXME: ?????
 
         # Verify the Ingress and Egress PDR counters
-        self.verify_pdr_counters(DOWNLINK_PDR_CTR_IDX, ingress_bytes, egress_bytes)
+        self.verify_pdr_counters(DOWNLINK_PDR_CTR_IDX, ingress_bytes, egress_bytes,1,1)
 
     def runDownlinkToDbufTest(self, pkt, tagged1, tagged2, is_next_hop_spine):
         exp_pkt = pkt.copy()
@@ -1629,7 +1629,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             ingress_bytes += 4  # length of VLAN header
 
         # Verify the Ingress PDR packet counter increased, but the egress did not
-        self.verify_pdr_counters(DOWNLINK_PDR_CTR_IDX, ingress_bytes, egress_bytes, exp_egress_pkts=0)
+        self.verify_pdr_counters(DOWNLINK_PDR_CTR_IDX, ingress_bytes, egress_bytes, 1, 0)
 
     def runDownlinkFromDbufTest(self, pkt, tagged1, tagged2, is_next_hop_spine):
         """ Tests a packet returning from dbuf to be sent to the enodeb.
@@ -1688,7 +1688,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
 
 
         # Verify the Ingress PDR packet counter did not increase, but the egress did
-        self.verify_pdr_counters(DOWNLINK_PDR_CTR_IDX, ingress_bytes, egress_bytes, exp_ingress_pkts=0)
+        self.verify_pdr_counters(DOWNLINK_PDR_CTR_IDX, ingress_bytes, egress_bytes, 0, 1)
 
 class SpgwReadWriteSymmetryTest(SpgwSimpleTest):
     """ Verifies all SPGW tables adhere to p4runtime read-write symmetry. This is a

@@ -765,12 +765,10 @@ class P4RuntimeTest(BaseTest):
                 return entity.counter_entry
         return None
 
-    def write_indirect_counter(self, c_name, c_index, typ, byte_count=None, packet_count=None): 
-        # Check counter type with P4Info
+    def write_indirect_counter(self, c_name, c_index, byte_count=None, packet_count=None): 
+        # Get counter type with P4Info
         counter = self.get_counter(c_name)
         counter_type_unit = p4info_pb2.CounterSpec.Unit.items()[counter.spec.unit][0]
-        if counter_type_unit != "BOTH" and counter_type_unit != typ:
-            raise Exception("Counter " + c_name + " is of type " + counter_type_unit + ", but requested: " + typ)
 
         req = self.get_new_write_request()
         update = req.updates.add()
@@ -784,9 +782,13 @@ class P4RuntimeTest(BaseTest):
 
         counter_data = counter_entry.data
 
-        if counter_type_unit == "BOTH" or counter_type_unit == "BYTES" and byte_count is not None:
+        if counter_type_unit == "BOTH" or counter_type_unit == "BYTES":
+            if byte_count is None:
+                raise Exception("Counter " + c_name + " is of type " + counter_type_unit + ", byte_count cannot be None")
             counter_data.byte_count = byte_count
-        if counter_type_unit == "BOTH" or counter_type_unit == "PACKETS" and packet_count is not None:
+        if counter_type_unit == "BOTH" or counter_type_unit == "PACKETS":
+            if packet_count is None:
+                raise Exception("Counter " + c_name + " is of type " + counter_type_unit + ", packet_count cannot be None")
             counter_data.packet_count = packet_count
         return req, self.write_request(req, store=False)
         
@@ -899,7 +901,7 @@ class P4RuntimeTest(BaseTest):
                     self.fail("Incorrect direct counter value:\n" + str(direct_counter))
         return None
 
-    def verify_indirect_counter(self, c_name, c_index, typ, expected_byte_count=None, expected_packet_count=None):
+    def verify_indirect_counter(self, c_name, c_index, typ, expected_byte_count=0, expected_packet_count=0):
         # Check counter type with P4Info
         counter = self.get_counter(c_name)
         counter_type_unit = p4info_pb2.CounterSpec.Unit.items()[counter.spec.unit][0]
@@ -917,10 +919,8 @@ class P4RuntimeTest(BaseTest):
             exp_resp = self.get_new_read_response()
             entity = exp_resp.entities.add()
             entity.counter_entry.CopyFrom(counter_entry)
-            if (counter_type_unit == "BOTH" or counter_type_unit == "BYTES") and expected_byte_count is not None:
-                entity.counter_entry.data.byte_count = expected_byte_count
-            if (counter_type_unit == "BOTH" or counter_type_unit == "PACKETS") and expected_packet_count is not None:
-                entity.counter_entry.data.packet_count = expected_packet_count
+            entity.counter_entry.data.byte_count = expected_byte_count
+            entity.counter_entry.data.packet_count = expected_packet_count
             # add to list
             exp_resps = []
             exp_resps.append(exp_resp)
@@ -932,7 +932,11 @@ class P4RuntimeTest(BaseTest):
                 counter_entry = entity.counter_entry
                 if counter_entry.data.byte_count != expected_byte_count or \
                         counter_entry.data.packet_count != expected_packet_count:
-                    self.fail("Incorrect indirect counter value:\n" + str(counter_entry))
+                    self.fail("%s value is not same as expected.\
+                        \nExpected packet count: %d, Received packet count: %d\
+                        \nExpected byte count: %d, Received byte count: %d\n"\
+                        %(c_name, counter_entry.data.packet_count, expected_packet_count,\
+                        counter_entry.data.byte_count, expected_byte_count))
         return None
 
     def is_default_action_update(self, update):
