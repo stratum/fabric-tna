@@ -18,8 +18,9 @@ control Acl (inout parsed_headers_t hdr,
      */
     DirectCounter<bit<64>>(CounterType_t.PACKETS_AND_BYTES) acl_counter;
 
-    action set_next_id_acl(next_id_t next_id) {
+    action set_next_id_acl(next_id_t next_id, bit<8> foo) {
         fabric_md.next_id = next_id;
+        fabric_md.useless = foo;
         acl_counter.count();
     }
 
