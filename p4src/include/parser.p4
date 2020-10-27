@@ -46,14 +46,15 @@ parser FabricIngressParser (packet_in  packet,
     }
 
     state parse_fake_ethernet_and_accept {
-        // Will punt to CPU as-is, no need to parse further.
         packet.extract(hdr.fake_ethernet);
+        // Will punt to CPU as-is. No need to parse further.
         transition accept;
     }
 
     state parse_packet_out {
         packet.extract(hdr.packet_out);
-        transition parse_ethernet;
+        // Will send to requested egress port as-is. No need to parse further.
+        transition accept;
     }
 
     state parse_ethernet {
@@ -234,13 +235,13 @@ control FabricIngressDeparser(packet_out packet,
     apply {
         packet.emit(fabric_md.bridged);
         packet.emit(hdr.fake_ethernet);
+        packet.emit(hdr.packet_in);
         packet.emit(hdr.ethernet);
         packet.emit(hdr.vlan_tag);
 #if defined(WITH_XCONNECT) || defined(WITH_DOUBLE_VLAN_TERMINATION)
         packet.emit(hdr.inner_vlan_tag);
 #endif // WITH_XCONNECT || WITH_DOUBLE_VLAN_TERMINATION
         packet.emit(hdr.eth_type);
-        packet.emit(hdr.mpls);
         packet.emit(hdr.ipv4);
         packet.emit(hdr.ipv6);
         packet.emit(hdr.tcp);

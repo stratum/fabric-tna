@@ -5,6 +5,7 @@
 
 control PacketIoIngress(inout parsed_headers_t hdr,
                         inout fabric_ingress_metadata_t fabric_md,
+                        in    ingress_intrinsic_metadata_t ig_intr_md,
                         inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm,
                         inout ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr) {
     @hidden
@@ -52,10 +53,14 @@ control PacketIoIngress(inout parsed_headers_t hdr,
         } else if (hdr.fake_ethernet.isValid() &&
                        hdr.fake_ethernet.ether_type == ETHERTYPE_CPU_LOOPBACK_EGRESS) {
             // CPU loopback pkt entering the ingress pipe a second time (after
-            // going through egress). Punt to CPU now.
-            hdr.fake_ethernet.setInvalid();
+            // going through egress). Punt to CPU now, skip egress.
             ig_intr_md_for_tm.copy_to_cpu = 1;
             ig_intr_md_for_dprsr.drop_ctl = 1;
+            ig_intr_md_for_tm.bypass_egress = 1;
+            fabric_md.bridged.setInvalid();
+            hdr.fake_ethernet.setInvalid();
+            hdr.packet_in.setValid();
+            hdr.packet_in.ingress_port = ig_intr_md.ingress_port;
             exit;
         }
     }

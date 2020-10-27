@@ -931,7 +931,7 @@ class IPv4UnicastTest(FabricTest):
     def runIPv4UnicastTest(self, pkt, next_hop_mac,
                            tagged1=False, tagged2=False, prefix_len=24,
                            exp_pkt=None, exp_pkt_base=None, next_id=None,
-                           next_vlan=None, mpls=False, dst_ipv4=None,
+                           next_vlan=None, is_next_hop_spine=False, dst_ipv4=None,
                            routed_eth_types=(ETH_TYPE_IPV4,),
                            verify_pkt=True, with_another_pkt_later=False,
                            no_send=False, ig_port=None, eg_port=None):
@@ -948,7 +948,7 @@ class IPv4UnicastTest(FabricTest):
             output packet.
         :param next_id: value to use as next ID
         :param next_vlan: value to use as next VLAN
-        :param mpls: whether the packet should be routed to the spines using
+        :param is_next_hop_spine: whether the packet should be routed to the spines using
             MPLS SR
         :param dst_ipv4: if not none, this value will be used as IPv4 dst to
             configure tables
@@ -963,7 +963,7 @@ class IPv4UnicastTest(FabricTest):
         """
         if IP not in pkt or Ether not in pkt:
             self.fail("Cannot do IPv4 test with packet that is not IP")
-        if mpls and tagged2:
+        if is_next_hop_spine and tagged2:
             self.fail("Cannot do MPLS test with egress port tagged (tagged2)")
         if ig_port is None:
             ig_port = self.port1
@@ -979,7 +979,7 @@ class IPv4UnicastTest(FabricTest):
         else:
             vlan1 = VLAN_ID_1
 
-        if mpls:
+        if is_next_hop_spine:
             # If MPLS test, port2 is assumed to be a spine port, with
             # default vlan untagged.
             vlan2 = DEFAULT_VLAN
@@ -1006,7 +1006,7 @@ class IPv4UnicastTest(FabricTest):
         # Routing entry.
         self.add_forwarding_routing_v4_entry(dst_ipv4, prefix_len, next_id)
 
-        if not mpls:
+        if not is_next_hop_spine:
             self.add_next_routing(next_id, eg_port, switch_mac, next_hop_mac)
             self.add_next_vlan(next_id, vlan2)
         else:
@@ -1018,11 +1018,11 @@ class IPv4UnicastTest(FabricTest):
             # Build exp pkt using the input one.
             exp_pkt = pkt.copy() if not exp_pkt_base else exp_pkt_base
             exp_pkt = pkt_route(exp_pkt, next_hop_mac)
-            if not mpls:
+            if not is_next_hop_spine:
                 exp_pkt = pkt_decrement_ttl(exp_pkt)
             if tagged2 and Dot1Q not in exp_pkt:
                 exp_pkt = pkt_add_vlan(exp_pkt, vlan_vid=vlan2)
-            if mpls:
+            if is_next_hop_spine:
                 exp_pkt = pkt_add_mpls(exp_pkt, label=mpls_label,
                                        ttl=DEFAULT_MPLS_TTL)
 
@@ -1102,18 +1102,20 @@ class DoubleVlanTerminationTest(FabricTest):
         """
         Route and Push test case. The switch output port is expected to send double tagged packets.
         The switch routes the packet to the correct destination and adds the double VLAN tag to it.
-        :param pkt:
-        :param next_hop_mac:
-        :param prefix_len:
-        :param exp_pkt:
-        :param next_id:
-        :param next_vlan_id:
-        :param next_inner_vlan_id:
-        :param in_tagged:
-        :param dst_ipv4:
-        :param routed_eth_types:
-        :param verify_pkt:
-        :return:
+        :param pkt: input packet
+        :param next_hop_mac: MAC address of the next hop
+        :param prefix_len: prefix length to use in the routing table
+        :param exp_pkt: expected packet, if none one will be built using the
+                        input packet
+        :param next_id: value to use as next ID
+        :param next_vlan_id: the new vlan ID that will be set to the packet after routerd
+        :param next_inner_vlan_id: the new inner vlan ID that will be set to the packet after routerd
+        :param in_tagged: the vlan id of the packet when packet enters the pipeline
+        :param dst_ipv4: if not none, this value will be used as IPv4 dst to
+                         configure tables
+        :param routed_eth_types: eth type values used to configure the
+                                 classifier table to process packets via routing
+        :param verify_pkt: whether packets are expected to be forwarded or dropped
         """
 
         if IP not in pkt or Ether not in pkt:
@@ -1175,31 +1177,34 @@ class DoubleVlanTerminationTest(FabricTest):
                            vlan_id=None,
                            inner_vlan_id=None,
                            out_tagged=False,
-                           mpls=False,
+                           is_next_hop_spine=False,
                            dst_ipv4=None,
                            routed_eth_types=(ETH_TYPE_IPV4,),
                            verify_pkt=True):
         """
         Pop and Route test case. The switch port expect to receive double tagged packets.
         The switch removes both VLAN headers from the packet and routes it to the correct destination.
-        :param pkt:
-        :param next_hop_mac:
-        :param prefix_len:
-        :param exp_pkt:
-        :param next_id:
-        :param vlan_id:
-        :param inner_vlan_id:
-        :param out_tagged:
-        :param mpls:
-        :param dst_ipv4:
-        :param routed_eth_types:
-        :param verify_pkt:
-        :return:
+        :param pkt: input packet
+        :param next_hop_mac: MAC address of the next hop
+        :param prefix_len: prefix length to use in the routing table
+        :param exp_pkt: expected packet, if none one will be built using the
+                        input packet
+        :param next_id: value to use as next ID
+        :param vlan_id: the vlan ID that will be add to the test packet
+        :param inner_vlan_id: the inner vlan ID that will be add to the test packet
+        :param out_tagged: the vlan ID that will be set to the packet after routed, none if untagged
+        :param is_next_hop_spine: whether the packet should be routed to the spines using
+                                  MPLS SR
+        :param dst_ipv4: if not none, this value will be used as IPv4 dst to
+                         configure tables
+        :param routed_eth_types: eth type values used to configure the
+                                 classifier table to process packets via routing
+        :param verify_pkt: whether packets are expected to be forwarded or dropped
         """
 
         if IP not in pkt or Ether not in pkt:
             self.fail("Cannot do IPv4 test with packet that is not IP")
-        if mpls and out_tagged:
+        if is_next_hop_spine and out_tagged:
             self.fail("Cannot do MPLS test with egress port tagged (out_tagged)")
 
         if Dot1Q not in pkt:
@@ -1216,7 +1221,7 @@ class DoubleVlanTerminationTest(FabricTest):
                     pkt = pkt_add_vlan(pkt, vlan_vid=vlan_id)
                 else:
                     self.fail("Packet should be without VLANs or with correct VLANs")
-        if mpls:
+        if is_next_hop_spine:
             # If MPLS test, egress_port is assumed to be a spine port, with
             # default vlan untagged.
             next_vlan = DEFAULT_VLAN
@@ -1242,7 +1247,7 @@ class DoubleVlanTerminationTest(FabricTest):
                                      fwd_type=FORWARDING_TYPE_UNICAST_IPV4)
         self.add_forwarding_routing_v4_entry(dst_ipv4, prefix_len, next_id)
 
-        if not mpls:
+        if not is_next_hop_spine:
             self.add_next_routing(next_id, self.port2, switch_mac, next_hop_mac)
             self.add_next_vlan(next_id, next_vlan)
         else:
@@ -1256,11 +1261,11 @@ class DoubleVlanTerminationTest(FabricTest):
             exp_pkt = pkt_route(exp_pkt, next_hop_mac)
             exp_pkt = pkt_remove_vlan(exp_pkt)
             exp_pkt = pkt_remove_vlan(exp_pkt)
-            if not mpls:
+            if not is_next_hop_spine:
                 exp_pkt = pkt_decrement_ttl(exp_pkt)
             if out_tagged and Dot1Q not in exp_pkt:
                 exp_pkt = pkt_add_vlan(exp_pkt, vlan_vid=next_vlan)
-            if mpls:
+            if is_next_hop_spine:
                 exp_pkt = pkt_add_mpls(exp_pkt, label=mpls_label,
                                        ttl=DEFAULT_MPLS_TTL)
 
@@ -1565,7 +1570,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         self.runIPv4UnicastTest(pkt=gtp_pkt, dst_ipv4=ue_out_pkt[IP].dst,
                                 next_hop_mac=upstream_mac,
                                 prefix_len=32, exp_pkt=exp_pkt,
-                                tagged1=tagged1, tagged2=tagged2, mpls=is_next_hop_spine)
+                                tagged1=tagged1, tagged2=tagged2, is_next_hop_spine=is_next_hop_spine)
 
         ingress_bytes = len(gtp_pkt) + 4  # FIXME: where does this 4 come from?
         egress_bytes = len(exp_pkt) + 50  # FIXME: where does this 50 come from?
@@ -1608,7 +1613,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         self.runIPv4UnicastTest(pkt=pkt, dst_ipv4=exp_pkt[IP].dst,
                                 next_hop_mac=S1U_ENB_MAC,
                                 prefix_len=32, exp_pkt=exp_pkt,
-                                tagged1=tagged1, tagged2=tagged2, mpls=is_next_hop_spine)
+                                tagged1=tagged1, tagged2=tagged2, is_next_hop_spine=is_next_hop_spine)
 
         ingress_bytes = len(pkt) + 4  # FIXME: where does this 4 come from?
         egress_bytes = len(exp_pkt) + 14  # FIXME: where does this 14 come from?
@@ -1654,7 +1659,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         self.runIPv4UnicastTest(pkt=pkt, dst_ipv4=exp_pkt[IP].dst,
                                 next_hop_mac=DBUF_MAC,
                                 prefix_len=32, exp_pkt=exp_pkt,
-                                tagged1=tagged1, tagged2=tagged2, mpls=is_next_hop_spine)
+                                tagged1=tagged1, tagged2=tagged2, is_next_hop_spine=is_next_hop_spine)
 
         ingress_bytes = len(pkt) + 4  # FIXME: where does this 4 come from?
         egress_bytes = 0
@@ -1710,7 +1715,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         self.runIPv4UnicastTest(pkt=pkt_from_dbuf, dst_ipv4=exp_pkt[IP].dst,
                                 next_hop_mac=S1U_ENB_MAC,
                                 prefix_len=32, exp_pkt=exp_pkt,
-                                tagged1=tagged1, tagged2=tagged2, mpls=is_next_hop_spine)
+                                tagged1=tagged1, tagged2=tagged2, is_next_hop_spine=is_next_hop_spine)
 
         ingress_bytes = 0
         egress_bytes = len(exp_pkt) + 14  # FIXME: where does this 14 come from?
@@ -2076,7 +2081,7 @@ class IntTest(IPv4UnicastTest):
         # End of setting up entries for report packet
         # TODO: Use MPLS test instead of IPv4 test if device is spine.
         self.runIPv4UnicastTest(pkt=pkt, next_hop_mac=HOST2_MAC,
-                                tagged1=tagged1, tagged2=tagged2, mpls=is_next_hop_spine,
+                                tagged1=tagged1, tagged2=tagged2, is_next_hop_spine=is_next_hop_spine,
                                 prefix_len=prefix_len, with_another_pkt_later=True,
                                 ig_port=ig_port, eg_port=eg_port)
 
@@ -2204,8 +2209,8 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         # TODO: Use MPLS test instead of IPv4 test if device is spine.
         self.runIPv4UnicastTest(pkt=gtp_pkt, dst_ipv4=pkt[IP].dst,
                                 exp_pkt=exp_pkt, next_hop_mac=HOST2_MAC,
-                                tagged1=tagged1, tagged2=tagged2, mpls=is_next_hop_spine,
-                                prefix_len=32, with_another_pkt_later=True)
+                                tagged1=tagged1, tagged2=tagged2, is_next_hop_spine=is_next_hop_spine,
+                                prefix_len=prefix_len, with_another_pkt_later=True)
 
         self.verify_packet(exp_int_report_pkt_masked, collector_port)
         self.verify_no_other_packets()
@@ -2321,7 +2326,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         self.runIPv4UnicastTest(pkt=pkt, dst_ipv4=S1U_ENB_IPV4,
                                 next_hop_mac=HOST2_MAC,
                                 prefix_len=32, exp_pkt=exp_pkt,
-                                tagged1=tagged1, tagged2=tagged2, mpls=is_next_hop_spine,
+                                tagged1=tagged1, tagged2=tagged2, is_next_hop_spine=is_next_hop_spine,
                                 with_another_pkt_later=True)
 
         self.verify_packet(exp_int_report_pkt_masked, collector_port)
@@ -2411,7 +2416,7 @@ class PppoeTest(DoubleVlanTerminationTest):
     def read_byte_count_downstream_tx(self, line_id):
         return self.read_byte_count("bng_egress.downstream.c_line_tx", line_id)
 
-    def runUpstreamV4Test(self, pkt, tagged2, mpls, line_enabled=True):
+    def runUpstreamV4Test(self, pkt, tagged2, is_next_hop_spine, line_enabled=True):
         s_tag = vlan_id_outer = 888
         c_tag = vlan_id_inner = 777
         line_id = 99
@@ -2435,7 +2440,7 @@ class PppoeTest(DoubleVlanTerminationTest):
         exp_pkt = pkt_route(exp_pkt, core_router_mac)
         if tagged2:
             exp_pkt = pkt_add_vlan(exp_pkt, VLAN_ID_3)
-        if mpls:
+        if is_next_hop_spine:
             exp_pkt = pkt_add_mpls(exp_pkt, MPLS_LABEL_2, DEFAULT_MPLS_TTL)
         else:
             exp_pkt = pkt_decrement_ttl(exp_pkt)
@@ -2450,7 +2455,7 @@ class PppoeTest(DoubleVlanTerminationTest):
             pkt=pppoe_pkt, next_hop_mac=core_router_mac,
             exp_pkt=exp_pkt, out_tagged=tagged2,
             vlan_id=s_tag, inner_vlan_id=c_tag, verify_pkt=line_enabled,
-            mpls=mpls)
+            is_next_hop_spine=is_next_hop_spine)
 
         # Verify that upstream counters were updated as expected.
         if not self.is_bmv2():
