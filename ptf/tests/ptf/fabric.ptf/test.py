@@ -1414,6 +1414,10 @@ class FabricOptimizedFieldDetectorTest(FabricTest):
                 else:
                     print("Skipping table %s because it has unsupported match keys" % table_name)
                     return
+            if match_keys == []:
+                # TODO: modify default action here
+                print("Skipping table %s because it is keyless" % table_name)
+                return
 
             if action_ref.scope == p4info_pb2.ActionRef.Scope.DEFAULT_ONLY:
                 # TODO: modify default action here
