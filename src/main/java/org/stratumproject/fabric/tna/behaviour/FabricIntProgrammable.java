@@ -225,9 +225,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
 
     @Override
     public boolean supportsFunctionality(IntFunctionality functionality) {
-        return functionality == IntFunctionality.SOURCE ||
-                functionality == IntFunctionality.TRANSIT ||
-                functionality == IntFunctionality.SINK;
+        return functionality == IntFunctionality.POSTCARD;
     }
 
     private FlowRule buildCollectorEntry(IntObjective obj) {
