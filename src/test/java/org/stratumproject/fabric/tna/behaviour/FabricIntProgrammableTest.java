@@ -302,9 +302,10 @@ public class FabricIntProgrammableTest {
 
     @Test
     public void testSupportsFunctionality() {
-        assertTrue(intProgrammable.supportsFunctionality(IntProgrammable.IntFunctionality.SOURCE));
-        assertTrue(intProgrammable.supportsFunctionality(IntProgrammable.IntFunctionality.TRANSIT));
-        assertTrue(intProgrammable.supportsFunctionality(IntProgrammable.IntFunctionality.SINK));
+        assertFalse(intProgrammable.supportsFunctionality(IntProgrammable.IntFunctionality.SOURCE));
+        assertFalse(intProgrammable.supportsFunctionality(IntProgrammable.IntFunctionality.TRANSIT));
+        assertFalse(intProgrammable.supportsFunctionality(IntProgrammable.IntFunctionality.SINK));
+        assertTrue(intProgrammable.supportsFunctionality(IntProgrammable.IntFunctionality.POSTCARD));
     }
 
     @Test
