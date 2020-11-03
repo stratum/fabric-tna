@@ -1376,6 +1376,8 @@ class FabricOptimizedFieldDetectorTest(FabricTest):
     def getBytestring(self, bitwidth):
         return stringify(1, (bitwidth + 7) / 8)
 
+    # Since the test uses the same match key for tables with multiple actions,
+    # each table entry has to be removed before testing the next.
     @autocleanup
     def insert(self, table_name, match_keys, action_name, action_params, priority):
         req, _ = self.send_request_add_entry_to_action(
@@ -1385,8 +1387,11 @@ class FabricOptimizedFieldDetectorTest(FabricTest):
             action_params,
             priority
         )
-        write_entry = req.updates[0].entity.table_entry
-        read_entry = self.read_table_entry(table_name, match_keys, priority)
+        # Make a deep copy of the requests, because autocleanup will modify the originals.
+        write_entry = p4runtime_pb2.TableEntry()
+        write_entry.CopyFrom(req.updates[0].entity.table_entry)
+        read_entry = p4runtime_pb2.TableEntry()
+        read_entry.CopyFrom(self.read_table_entry(table_name, match_keys, priority))
         return write_entry, read_entry
 
     def handleTable(self, table):
@@ -1420,19 +1425,20 @@ class FabricOptimizedFieldDetectorTest(FabricTest):
                     print("Skipping table %s because it has a unsupported match field %s of type %s"
                             % (table_name, match.name, match.match_type))
                     return
-            if len(match_keys) == 0:
-                # TODO: modify default action here
-                print("Skipping table %s because it is keyless" % table_name)
-                return
-
-            if action_ref.scope == p4info_pb2.ActionRef.Scope.DEFAULT_ONLY:
-                # TODO: modify default action here
-                continue
             action_name = self.get_obj_name_from_id(action_ref.id)
             action = self.get_obj("actions", action_name)
             action_params = []
+            if action_ref.scope == p4info_pb2.ActionRef.Scope.DEFAULT_ONLY:
+                # Modify as default action
+                match_keys = []
+                priority = 0
+            if table.const_default_action_id > 0 and len(match_keys) == 0:
+                # Don't try to modify a const default action
+                print("Skipping action \"%s\" of table \"%s\" because the default action is const"
+                        % (action_name, table_name))
+                continue
             for param in action.params:
-                param_value = stringify(1, (param.bitwidth + 7) / 8)
+                param_value = self.getBytestring(param.bitwidth)
                 action_params.append((param.name, param_value))
             write_entry, read_entry = self.insert(
                 table_name,
@@ -1446,8 +1452,9 @@ class FabricOptimizedFieldDetectorTest(FabricTest):
                 read_entry_s = string.split("%s" % read_entry, "\n")
                 diff = ""
                 for line in difflib.unified_diff(write_entry_s, read_entry_s, fromfile='Wrote', tofile='Read back', n=5, lineterm=""):
-                     diff = diff + "\n" + line
-                print("Found parameter that has been optimized out in action \"%s\" of table \"%s\"" % (action_name, table_name))
+                     diff = diff + line + "\n"
+                print("Found parameter that has been optimized out in action \"%s\" of table \"%s\":"
+                        % (action_name, table_name))
                 print(diff)
                 self.fail("Read does not match previous write!")
 
