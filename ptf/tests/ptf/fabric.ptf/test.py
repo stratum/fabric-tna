@@ -1394,14 +1394,27 @@ class FabricOptimizedFieldDetectorTest(FabricTest):
         read_entry.CopyFrom(self.read_table_entry(table_name, match_keys, priority))
         return write_entry, read_entry
 
+    @autocleanup
+    def insert_action_profile_member(self, action_profile_name, member_id,
+                                     action_name, action_params):
+        req, _ = self.send_request_add_member(
+            action_profile_name,
+            member_id,
+            action_name,
+            action_params
+        )
+        # Make a deep copy of the requests, because autocleanup will modify the originals.
+        write_entry = p4runtime_pb2.ActionProfileMember()
+        write_entry.CopyFrom(req.updates[0].entity.action_profile_member)
+        read_entry = p4runtime_pb2.ActionProfileMember()
+        read_entry.CopyFrom(self.read_action_profile_member(action_profile_name, member_id))
+        return write_entry, read_entry
+
     def handleTable(self, table):
         table_name = self.get_obj_name_from_id(table.preamble.id)
         priority = 0
-        if table.implementation_id > 0:
-            # TODO: use action profile groups here
-            print("Skipping table %s because it uses indirect actions" % table_name)
-            return
         for action_ref in table.action_refs:
+            # Build match
             match_keys = []
             for match in table.match_fields:
                 if match.match_type == p4info_pb2.MatchField.MatchType.EXACT:
@@ -1425,6 +1438,7 @@ class FabricOptimizedFieldDetectorTest(FabricTest):
                     print("Skipping table %s because it has a unsupported match field %s of type %s"
                             % (table_name, match.name, match.match_type))
                     return
+            # Build action
             action_name = self.get_obj_name_from_id(action_ref.id)
             action = self.get_obj("actions", action_name)
             action_params = []
@@ -1440,13 +1454,25 @@ class FabricOptimizedFieldDetectorTest(FabricTest):
             for param in action.params:
                 param_value = self.getBytestring(param.bitwidth)
                 action_params.append((param.name, param_value))
-            write_entry, read_entry = self.insert(
-                table_name,
-                match_keys,
-                action_name,
-                action_params,
-                priority
-            )
+
+            write_entry = None
+            read_entry = None
+            if table.implementation_id > 0:
+                action_profile_name = self.get_obj_name_from_id(table.implementation_id)
+                action_profile = self.get_obj("action_profiles", action_profile_name)
+                member_id = 1
+                write_entry, read_entry = self.insert_action_profile_member(
+                    action_profile_name, member_id, action_name, action_params)
+                # TODO: Test table entries to members?
+            else:
+                write_entry, read_entry = self.insert(
+                    table_name,
+                    match_keys,
+                    action_name,
+                    action_params,
+                    priority
+                )
+            # Send requests and compare state
             if write_entry != read_entry:
                 write_entry_s = string.split("%s" % write_entry, "\n")
                 read_entry_s = string.split("%s" % read_entry, "\n")
