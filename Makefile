@@ -97,7 +97,7 @@ reuse-lint:
 
 clean:
 	-rm -rf src/main/resources/p4c-out
-	-rm -rf tmp
+	-rm -rf p4src/build
 	-rm -rf target
 
 deep-clean: clean
