@@ -71,12 +71,12 @@ function stop() {
     set +e
     echo "*** Stopping ${stratumBfRunName}..."
     docker stop -t0 ${stratumBfRunName} > /dev/null 2>&1
-    docker cp ${stratumBfRunName}:/p4src/build/workdir "${DIR}"/log/stratum-bf > /dev/null 2>&1
+    docker cp ${stratumBfRunName}:/tmp/workdir "${DIR}"/log/stratum-bf > /dev/null 2>&1
     docker rm ${stratumBfRunName} > /dev/null 2>&1
 
     echo "*** Stopping ${tmRunName}..."
     docker stop -t0 ${tmRunName} > /dev/null 2>&1
-    docker cp ${tmRunName}:/p4src/build/workdir "${DIR}"/log/tofino-model > /dev/null 2>&1
+    docker cp ${tmRunName}:/tmp/workdir "${DIR}"/log/tofino-model > /dev/null 2>&1
     docker rm ${tmRunName} > /dev/null 2>&1
 }
 trap stop EXIT
