@@ -155,7 +155,7 @@ def update_config(p4info_path, tofino_pipeline_config_path,
 
 
 def run_test(p4info_path, grpc_addr, device_id, cpu_port, ptfdir, port_map_path,
-             platform=None, generate_tv=False, extra_args=()):
+             platform=None, generate_tv=False, loopback=False, extra_args=()):
     """
     Runs PTF tests included in provided directory.
     Device must be running and configfured with appropriate P4 program.
@@ -217,6 +217,7 @@ def run_test(p4info_path, grpc_addr, device_id, cpu_port, ptfdir, port_map_path,
     test_params += ';device_id=\'{}\''.format(device_id)
     test_params += ';cpu_port=\'{}\''.format(cpu_port)
     test_params += ';generate_tv=\'{}\''.format(generate_tv)
+    test_params += ';loopback=\'{}\''.format(loopback)
     if platform is not None:
         test_params += ';pltfm=\'{}\''.format(platform)
     cmd.append('--test-params={}'.format(test_params))
@@ -280,7 +281,10 @@ def main():
                         help='Skip test execution (useful to perform only pipeline configuration)',
                         action="store_true", default=False)
     parser.add_argument('--generate-tv',
-                        help='Skip test execution',
+                        help='Skip test execution and generate TestVectors',
+                        action="store_true", default=False)
+    parser.add_argument('--loopback',
+                        help='Flag to modify test data for loopback mode',
                         action="store_true", default=False)
     args, unknown_args = parser.parse_known_args()
 
@@ -321,6 +325,7 @@ def main():
                            port_map_path=args.port_map,
                            platform=args.platform,
                            generate_tv=args.generate_tv,
+                           loopback=args.loopback,
                            extra_args=unknown_args)
 
     if not success:
