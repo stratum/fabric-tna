@@ -98,6 +98,8 @@ DBUF_DRAIN_DST_IPV4 = "142.0.0.1"
 DBUF_FAR_ID = 1023
 DBUF_TEID = 0
 
+CPU_LOOPBACK_FAKE_ETHERNET_LENGTH = 14
+
 PDR_COUNTER_INGRESS = "FabricIngress.spgw.pdr_counter"
 PDR_COUNTER_EGRESS = "FabricEgress.spgw.pdr_counter"
 
@@ -1545,6 +1547,9 @@ class SpgwSimpleTest(IPv4UnicastTest):
             egress_bytes += 4  # FIXME: why?
         if is_next_hop_spine:
             egress_bytes -= 4  # FIXME: ?????
+        if self.loopback:
+            ingress_bytes += CPU_LOOPBACK_FAKE_ETHERNET_LENGTH
+            egress_bytes += CPU_LOOPBACK_FAKE_ETHERNET_LENGTH
 
         # Verify the Ingress and Egress PDR counters
         self.verify_pdr_counters(UPLINK_PDR_CTR_IDX, ingress_bytes, egress_bytes,1,1)
@@ -1587,6 +1592,9 @@ class SpgwSimpleTest(IPv4UnicastTest):
             egress_bytes += 4  # FIXME: why?
         if is_next_hop_spine:
             egress_bytes -= 4  # FIXME: ?????
+        if self.loopback:
+            ingress_bytes += CPU_LOOPBACK_FAKE_ETHERNET_LENGTH
+            egress_bytes += CPU_LOOPBACK_FAKE_ETHERNET_LENGTH
 
         # Verify the Ingress and Egress PDR counters
         self.verify_pdr_counters(DOWNLINK_PDR_CTR_IDX, ingress_bytes, egress_bytes,1,1)
@@ -1627,6 +1635,8 @@ class SpgwSimpleTest(IPv4UnicastTest):
         egress_bytes = 0
         if tagged1:
             ingress_bytes += 4  # length of VLAN header
+        if self.loopback:
+            ingress_bytes += CPU_LOOPBACK_FAKE_ETHERNET_LENGTH
 
         # Verify the Ingress PDR packet counter increased, but the egress did not
         self.verify_pdr_counters(DOWNLINK_PDR_CTR_IDX, ingress_bytes, egress_bytes, 1, 0)
@@ -1685,7 +1695,8 @@ class SpgwSimpleTest(IPv4UnicastTest):
             egress_bytes += 4  # FIXME: why?
         if is_next_hop_spine:
             egress_bytes -= 4  # FIXME: ?????
-
+        if self.loopback:
+            egress_bytes += CPU_LOOPBACK_FAKE_ETHERNET_LENGTH
 
         # Verify the Ingress PDR packet counter did not increase, but the egress did
         self.verify_pdr_counters(DOWNLINK_PDR_CTR_IDX, ingress_bytes, egress_bytes, 0, 1)
