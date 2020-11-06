@@ -43,7 +43,7 @@ fi
 # Run PTF tests for all profiles we just built
 export STRATUM_BF_DOCKER_IMG=registry.aetherproject.org/tost/stratum-bfrt:${sdeVer}
 export SDE_DOCKER_IMG=${sdeBaseDockerImg}-tm
-for d in ./tmp/*/; do
+for d in ./p4src/build/*/; do
   profile=$(basename "${d}")
 
   echo "Run PTF tests for profile ${profile}"

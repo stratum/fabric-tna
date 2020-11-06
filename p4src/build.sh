@@ -20,7 +20,7 @@ OTHER_PP_FLAGS=$2
 
 # PWD is the directory where this script is called from (should be the root of
 # this repo).
-P4C_OUT=${ROOT_DIR}/tmp/${PROFILE}
+P4C_OUT=${ROOT_DIR}/p4src/build/${PROFILE}
 # Prevent the creation by docker run to avoid having root owner
 mkdir -p "${P4C_OUT}"
 
