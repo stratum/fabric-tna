@@ -12,6 +12,7 @@ define run_tests
 		--p4info /p4c-out/p4info.txt \
 		--tofino-pipeline-config /p4c-out/pipeline_config.pb.bin \
 		--generate-tv \
+		--loopback \
 		$(2)
 endef
 
