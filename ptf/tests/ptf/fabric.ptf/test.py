@@ -33,8 +33,10 @@ class FabricBridgingTest(BridgingTest):
             for pkt_type in ["tcp", "udp", "icmp"]:
                 pktlen = 120
                 tc_name = pkt_type + "_VLAN_" + vlan_conf + "_" + str(pktlen)
-                print("Testing %s packet with VLAN %s.." % (pkt_type, vlan_conf))
-                pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(pktlen=pktlen)
+                print("Testing {} packet with VLAN {}..".format(pkt_type, vlan_conf))
+                pkt = getattr(testutils, "simple_{}_packet".format(pkt_type))(
+                    pktlen=pktlen
+                )
                 self.doRunTest(tagged[0], tagged[1], pkt, tc_name=tc_name)
 
 
@@ -56,8 +58,8 @@ class FabricDoubleTaggedBridgingTest(DoubleTaggedBridgingTest):
         for pkt_type in ["tcp", "udp", "icmp"]:
             pktlen = 120
             tc_name = pkt_type + "_DOUBLE_TAGGED" + "_" + str(pktlen)
-            print("Testing double tagged %s packet .." % (pkt_type))
-            pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(pktlen=pktlen)
+            print("Testing double tagged {} packet ..".format(pkt_type))
+            pkt = getattr(testutils, "simple_{}_packet".format(pkt_type))(pktlen=pktlen)
             self.doRunTest(pkt, tc_name=tc_name)
 
 
@@ -74,8 +76,8 @@ class FabricDoubleVlanXConnectTest(DoubleVlanXConnectTest):
         for pkt_type in ["tcp", "udp", "icmp"]:
             pktlen = 120
             tc_name = pkt_type + "_" + str(pktlen)
-            print("Testing %s packet..." % pkt_type)
-            pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(pktlen=pktlen)
+            print("Testing {} packet...".format(pkt_type))
+            pkt = getattr(testutils, "simple_{}_packet".format(pkt_type))(pktlen=pktlen)
             self.doRunTest(pkt, tc_name=tc_name)
 
 
@@ -161,9 +163,9 @@ class FabricIPv4UnicastTest(IPv4UnicastTest):
                             + str(pkt_len)
                         )
                         print(
-                            "Testing %s packet with VLAN %s, "
-                            "IP dest %s/%s, size %s..."
-                            % (pkt_type, vlan_conf, ip_dst, prefix_len, pkt_len,)
+                            "Testing {} packet with VLAN {}, IP dest {}/{}, size {}...".format(
+                                pkt_type, vlan_conf, ip_dst, prefix_len, pkt_len
+                            )
                         )
                         pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
                             eth_src=HOST1_MAC,
@@ -249,7 +251,7 @@ class FabricIPv4UnicastGroupTest(FabricTest):
             ip_ttl=63,
         )
 
-        self.send_packet(self.port1, str(pkt_from1))
+        self.send_packet(self.port1, pkt_from1)
         self.verify_any_packet_any_port(
             [exp_pkt_to2, exp_pkt_to3], [self.port2, self.port3]
         )
@@ -307,7 +309,7 @@ class FabricIPv4UnicastGroupTestAllPortTcpSport(FabricTest):
                 ip_ttl=63,
                 tcp_sport=test_tcp_sport,
             )
-            self.send_packet(self.port1, str(pkt_from1))
+            self.send_packet(self.port1, pkt_from1)
             out_port_indx = self.verify_any_packet_any_port(
                 [exp_pkt_to2, exp_pkt_to3], [self.port2, self.port3]
             )
@@ -345,8 +347,8 @@ class FabricIPv4UnicastGroupTestAllPortTcpSport(FabricTest):
             ip_ttl=63,
             tcp_sport=tcpsport_toport[1],
         )
-        self.send_packet(self.port1, str(pkt_toport2))
-        self.send_packet(self.port1, str(pkt_toport3))
+        self.send_packet(self.port1, pkt_toport2)
+        self.send_packet(self.port1, pkt_toport3)
         # In this assertion we are verifying:
         #  1) all ports of the same group are used almost once
         #  2) consistency of the forwarding decision, i.e. packets with the
@@ -408,7 +410,7 @@ class FabricIPv4UnicastGroupTestAllPortTcpDport(FabricTest):
                 ip_ttl=63,
                 tcp_dport=test_tcp_dport,
             )
-            self.send_packet(self.port1, str(pkt_from1))
+            self.send_packet(self.port1, pkt_from1)
             out_port_indx = self.verify_any_packet_any_port(
                 [exp_pkt_to2, exp_pkt_to3], [self.port2, self.port3]
             )
@@ -446,8 +448,8 @@ class FabricIPv4UnicastGroupTestAllPortTcpDport(FabricTest):
             ip_ttl=63,
             tcp_dport=tcpdport_toport[1],
         )
-        self.send_packet(self.port1, str(pkt_toport2))
-        self.send_packet(self.port1, str(pkt_toport3))
+        self.send_packet(self.port1, pkt_toport2)
+        self.send_packet(self.port1, pkt_toport3)
         # In this assertion we are verifying:
         #  1) all ports of the same group are used almost once
         #  2) consistency of the forwarding decision, i.e. packets with the
@@ -508,7 +510,7 @@ class FabricIPv4UnicastGroupTestAllPortIpSrc(FabricTest):
                 ip_dst=HOST2_IPV4,
                 ip_ttl=63,
             )
-            self.send_packet(self.port1, str(pkt_from1))
+            self.send_packet(self.port1, pkt_from1)
             out_port_indx = self.verify_any_packet_any_port(
                 [exp_pkt_to2, exp_pkt_to3], [self.port2, self.port3]
             )
@@ -542,8 +544,8 @@ class FabricIPv4UnicastGroupTestAllPortIpSrc(FabricTest):
             ip_dst=HOST2_IPV4,
             ip_ttl=63,
         )
-        self.send_packet(self.port1, str(pkt_toport2))
-        self.send_packet(self.port1, str(pkt_toport3))
+        self.send_packet(self.port1, pkt_toport2)
+        self.send_packet(self.port1, pkt_toport3)
         # In this assertion we are verifying:
         #  1) all ports of the same group are used almost once
         #  2) consistency of the forwarding decision, i.e. packets with the
@@ -614,7 +616,7 @@ class FabricIPv4UnicastGroupTestAllPortIpDst(FabricTest):
                 ip_dst=test_ipdst,
                 ip_ttl=63,
             )
-            self.send_packet(self.port1, str(pkt_from1))
+            self.send_packet(self.port1, pkt_from1)
             out_port_indx = self.verify_any_packet_any_port(
                 [exp_pkt_to2, exp_pkt_to3], [self.port2, self.port3]
             )
@@ -648,8 +650,8 @@ class FabricIPv4UnicastGroupTestAllPortIpDst(FabricTest):
             ip_dst=ipdst_toport[1],
             ip_ttl=63,
         )
-        self.send_packet(self.port1, str(pkt_toport2))
-        self.send_packet(self.port1, str(pkt_toport3))
+        self.send_packet(self.port1, pkt_toport2)
+        self.send_packet(self.port1, pkt_toport3)
         # In this assertion we are verifying:
         #  1) all ports of the same group are used almost once
         #  2) consistency of the forwarding decision, i.e. packets with the
@@ -694,7 +696,7 @@ class FabricIPv4MPLSTest(FabricTest):
             inner_frame=pkt_1to2[IP:],
         )
 
-        self.send_packet(self.port1, str(pkt_1to2))
+        self.send_packet(self.port1, pkt_1to2)
         self.verify_packets(exp_pkt_1to2, [self.port2])
 
 
@@ -716,7 +718,7 @@ class FabricIPv4MplsGroupTest(IPv4UnicastTest):
         for tagged1 in [True, False]:
             for pkt_type in ["tcp", "udp", "icmp"]:
                 tc_name = pkt_type + "_tagged_" + str(tagged1)
-                print("Testing %s packet with tagged=%s..." % (pkt_type, tagged1))
+                print("Testing {} packet with tagged={}...".format(pkt_type, tagged1))
                 pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
                     eth_src=HOST1_MAC,
                     eth_dst=SWITCH_MAC,
@@ -739,8 +741,9 @@ class FabricMplsSegmentRoutingTest(MplsSegmentRoutingTest):
             for next_hop_spine in [True, False]:
                 tc_name = pkt_type + "_next_hop_spine_" + str(next_hop_spine)
                 print(
-                    "Testing %s packet, next_hop_spine=%s..."
-                    % (pkt_type, next_hop_spine)
+                    "Testing {} packet, next_hop_spine={}...".format(
+                        pkt_type, next_hop_spine
+                    )
                 )
                 pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
                     eth_src=HOST1_MAC,
@@ -823,7 +826,7 @@ class FabricDefaultVlanPacketInTest(FabricTest):
         pkt = testutils.simple_eth_packet(pktlen=MIN_PKT_LEN)
         self.add_forwarding_acl_punt_to_cpu(eth_type=pkt[Ether].type)
         for port in [self.port1, self.port2]:
-            self.send_packet(port, str(pkt))
+            self.send_packet(port, pkt)
             self.verify_packet_in(pkt, port)
         self.verify_no_other_packets()
 
@@ -856,8 +859,9 @@ class FabricSpgwDownlinkTest(SpgwSimpleTest):
                         + str(is_next_hop_spine)
                     )
                     print(
-                        "Testing VLAN=%s, pkt=%s, is_next_hop_spine=%s..."
-                        % (vlan_conf, pkt_type, is_next_hop_spine)
+                        "Testing VLAN={}, pkt={}, is_next_hop_spine={}...".format(
+                            vlan_conf, pkt_type, is_next_hop_spine
+                        )
                     )
                     pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
                         eth_src=HOST1_MAC,
@@ -899,8 +903,9 @@ class FabricSpgwUplinkTest(SpgwSimpleTest):
                     if is_next_hop_spine and tagged[1]:
                         continue
                     print(
-                        "Testing VLAN=%s, pkt=%s, is_next_hop_spine=%s..."
-                        % (vlan_conf, pkt_type, is_next_hop_spine)
+                        "Testing VLAN={}, pkt={}, is_next_hop_spine={}...".format(
+                            vlan_conf, pkt_type, is_next_hop_spine
+                        )
                     )
                     pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
                         eth_src=HOST1_MAC,
@@ -944,8 +949,9 @@ class FabricSpgwDownlinkToDbufTest(SpgwSimpleTest):
                         + str(is_next_hop_spine)
                     )
                     print(
-                        "Testing VLAN=%s, pkt=%s, mpls=%s..."
-                        % (vlan_conf, pkt_type, is_next_hop_spine)
+                        "Testing VLAN={}, pkt={}, mpls={}...".format(
+                            vlan_conf, pkt_type, is_next_hop_spine
+                        )
                     )
                     pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
                         eth_src=HOST1_MAC,
@@ -991,8 +997,9 @@ class FabricSpgwDownlinkFromDbufTest(SpgwSimpleTest):
                         + str(is_next_hop_spine)
                     )
                     print(
-                        "Testing VLAN=%s, pkt=%s, mpls=%s..."
-                        % (vlan_conf, pkt_type, is_next_hop_spine)
+                        "Testing VLAN={}, pkt={}, mpls={}...".format(
+                            vlan_conf, pkt_type, is_next_hop_spine
+                        )
                     )
                     pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
                         eth_src=DBUF_MAC,
@@ -1021,9 +1028,7 @@ class FabricSpgwUplinkIntTest(SpgwIntTest):
         send_report_to_spine,
     ):
         print(
-            "Testing VLAN=%s, pkt=%s, is_next_hop_spine=%s, "
-            "is_device_spine=%s, send_report_to_spine=%s..."
-            % (
+            "Testing VLAN={}, pkt={}, is_next_hop_spine={}, is_device_spine={}, send_report_to_spine={}...".format(
                 vlan_conf,
                 pkt_type,
                 is_next_hop_spine,
@@ -1036,7 +1041,7 @@ class FabricSpgwUplinkIntTest(SpgwIntTest):
         # might disable the report.
         # TODO: Remove this part when we are able to reset the register
         # via P4Runtime.
-        pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
+        pkt = getattr(testutils, "simple_{}_packet".format(pkt_type))(
             ip_dst=self.get_single_use_ip()
         )
         self.runSpgwUplinkIntTest(
@@ -1086,9 +1091,7 @@ class FabricSpgwDownlinkIntTest(SpgwIntTest):
         send_report_to_spine,
     ):
         print(
-            "Testing VLAN=%s, pkt=%s, is_next_hop_spine=%s, "
-            "is_device_spine=%s, send_report_to_spine=%s..."
-            % (
+            "Testing VLAN={}, pkt={}, is_next_hop_spine={}, is_device_spine={}, send_report_to_spine={}...".format(
                 vlan_conf,
                 pkt_type,
                 is_next_hop_spine,
@@ -1101,7 +1104,7 @@ class FabricSpgwDownlinkIntTest(SpgwIntTest):
         # might disable the report.
         # TODO: Remove this part when we are able to reset the register
         # via P4Runtime.
-        pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
+        pkt = getattr(testutils, "simple_{}_packet".format(pkt_type))(
             ip_dst=self.get_single_use_ip()
         )
         self.runSpgwDownlinkIntTest(
@@ -1150,9 +1153,8 @@ class FabricIntTest(IntTest):
         send_report_to_spine,
     ):
         print(
-            "Testing VLAN=%s, pkt=%s, is_next_hop_spine=%s, "
-            "is_device_spine=%s, send_report_to_spine=%s..."
-            % (
+            "Testing VLAN={}, pkt={}, is_next_hop_spine={}, "
+            + "is_device_spine={}, send_report_to_spine={}...".format(
                 vlan_conf,
                 pkt_type,
                 is_next_hop_spine,
@@ -1165,7 +1167,7 @@ class FabricIntTest(IntTest):
         # might disable the report.
         # TODO: Remove this part when we are able to reset the register
         # via P4Runtime.
-        pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
+        pkt = getattr(testutils, "simple_{}_packet".format(pkt_type))(
             ip_dst=self.get_single_use_ip()
         )
         self.runIntTest(
@@ -1209,10 +1211,11 @@ class FabricFlowReportFilterNoChangeTest(IntTest):
     ):
         self.set_up_quantize_hop_latency_rule(qmask=0xF0000000)
         print(
-            "Testing VLAN=%s, pkt=%s, is_next_hop_spine=%s..."
-            % (vlan_conf, pkt_type, is_next_hop_spine)
+            "Testing VLAN={}, pkt={}, is_next_hop_spine={}...".format(
+                vlan_conf, pkt_type, is_next_hop_spine
+            )
         )
-        pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(ip_dst=ip_dst)
+        pkt = getattr(testutils, "simple_{}_packet".format(pkt_type))(ip_dst=ip_dst)
         self.runIntTest(
             pkt=pkt,
             tagged1=tagged[0],
@@ -1256,8 +1259,9 @@ class FabricFlowReportFilterChangeTest(IntTest):
     def doRunTest(self, ig_port, eg_port, expect_int_report, ip_src, ip_dst):
         self.set_up_quantize_hop_latency_rule(qmask=0xF0000000)
         print(
-            "Testing ig_port=%d, eg_port=%d, expect_int_report=%s..."
-            % (ig_port, eg_port, expect_int_report)
+            "Testing ig_port={}, eg_port={}, expect_int_report={}...".format(
+                ig_port, eg_port, expect_int_report
+            )
         )
         pkt = testutils.simple_tcp_packet()
         pkt[IP].src = ip_src
@@ -1321,11 +1325,11 @@ class FabricPppoeUpstreamTest(PppoeTest):
                         continue
                     for pkt_type in ["tcp", "udp", "icmp"]:
                         print(
-                            "Testing %s packet, line_enabled=%s, "
-                            "out_tagged=%s, is_next_hop_spine=%s ..."
-                            % (pkt_type, line_enabled, out_tagged, is_next_hop_spine,)
+                            "Testing {} packet, line_enabled={}, out_tagged={}, is_next_hop_spine={} ...".format(
+                                pkt_type, line_enabled, out_tagged, is_next_hop_spine
+                            )
                         )
-                        pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
+                        pkt = getattr(testutils, "simple_{}_packet".format(pkt_type))(
                             pktlen=120
                         )
                         self.doRunTest(pkt, out_tagged, is_next_hop_spine, line_enabled)
@@ -1355,7 +1359,9 @@ class FabricPppoeControlPacketInTest(PppoeTest):
         print("")
         for line_mapped in [True, False]:
             for pkt_type, pkt in pkts.items():
-                print("Testing %s packet, line_mapped=%s..." % (pkt_type, line_mapped))
+                print(
+                    "Testing {} packet, line_mapped={}...".format(pkt_type, line_mapped)
+                )
                 self.doRunTest(pkt, line_mapped)
 
 
@@ -1382,7 +1388,7 @@ class FabricPppoeControlPacketOutTest(PppoeTest):
 
         print("")
         for pkt_type, pkt in pkts.items():
-            print("Testing %s packet..." % pkt_type)
+            print("Testing {} packet...".format(pkt_type))
             self.doRunTest(pkt)
 
 
@@ -1399,10 +1405,12 @@ class FabricPppoeDownstreamTest(PppoeTest):
             for in_tagged in [False, True]:
                 for pkt_type in ["tcp", "udp", "icmp"]:
                     print(
-                        "Testing %s packet, line_enabled=%s, "
-                        "in_tagged=%s..." % (pkt_type, line_enabled, in_tagged)
+                        "Testing {} packet, line_enabled={}, "
+                        "in_tagged={}...".format(pkt_type, line_enabled, in_tagged)
                     )
-                    pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(pktlen=120)
+                    pkt = getattr(testutils, "simple_{}_packet".format(pkt_type))(
+                        pktlen=120
+                    )
                     self.doRunTest(pkt, in_tagged, line_enabled)
 
 
@@ -1428,9 +1436,13 @@ class FabricDoubleTaggedHostUpstream(DoubleVlanTerminationTest):
                     continue
                 for pkt_type in ["tcp", "udp", "icmp"]:
                     print(
-                        "Testing %s packet, out_tagged=%s..." % (pkt_type, out_tagged)
+                        "Testing {} packet, out_tagged={}...".format(
+                            pkt_type, out_tagged
+                        )
                     )
-                    pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(pktlen=120)
+                    pkt = getattr(testutils, "simple_{}_packet".format(pkt_type))(
+                        pktlen=120
+                    )
                     self.doRunTest(pkt, out_tagged, is_next_hop_spine)
 
 
@@ -1451,8 +1463,10 @@ class FabricDoubleTaggedHostDownstream(DoubleVlanTerminationTest):
         print("")
         for in_tagged in [True, False]:
             for pkt_type in ["tcp", "udp", "icmp"]:
-                print("Testing %s packet, in_tagged=%s..." % (pkt_type, in_tagged))
-                pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(pktlen=120)
+                print("Testing {} packet, in_tagged={}...".format(pkt_type, in_tagged))
+                pkt = getattr(testutils, "simple_{}_packet".format(pkt_type))(
+                    pktlen=120
+                )
                 self.doRunTest(pkt, in_tagged)
 
 
@@ -1678,16 +1692,16 @@ class FabricIpv4UnicastLoopbackModeTest(IPv4UnicastTest):
             )
         )
         self.verify_packet(exp_pkt_1, self.port1)
-        self.send_packet(self.port1, str(exp_pkt_1))
+        self.send_packet(self.port1, exp_pkt_1)
         self.verify_packet(exp_pkt_2, self.port2)
-        self.send_packet(self.port2, str(exp_pkt_2))
+        self.send_packet(self.port2, exp_pkt_2)
         self.verify_packet_in(routed_pkt, self.port2)
         self.verify_no_other_packets()
 
     def runTest(self):
         print("")
         for pkt_type in ["tcp", "udp", "icmp"]:
-            print("Testing %s packet..." % pkt_type)
+            print("Testing {} packet...".format(pkt_type))
             pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
                 eth_src=HOST1_MAC,
                 eth_dst=SWITCH_MAC,
@@ -1722,7 +1736,7 @@ class FabricPacketInLoopbackModeTest(FabricTest):
                 )
             )
             self.verify_packet(exp_pkt_1, port)
-            self.send_packet(port, str(exp_pkt_1))
+            self.send_packet(port, exp_pkt_1)
             self.verify_packet_in(pkt, port)
         self.verify_no_other_packets()
 
@@ -1730,7 +1744,7 @@ class FabricPacketInLoopbackModeTest(FabricTest):
         print("")
         for pkt_type in ["tcp", "udp", "icmp", "arp"]:
             for tagged in [True, False]:
-                print("Testing %s packet, tagged=%s..." % (pkt_type, tagged))
+                print("Testing {} packet, tagged={}...".format(pkt_type, tagged))
                 pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
                     pktlen=MIN_PKT_LEN
                 )
@@ -1754,15 +1768,17 @@ class FabricPacketOutLoopbackModeTest(FabricTest):
                 )
             )
             self.verify_packet(exp_pkt_1, port)
-            self.send_packet(port, str(exp_pkt_1))
+            self.send_packet(port, exp_pkt_1)
             self.verify_packet_in(pkt, port)
         self.verify_no_other_packets()
 
     def runTest(self):
         print("")
         for pkt_type in ["tcp", "udp", "icmp", "arp"]:
-            print("Testing %s packet..." % pkt_type)
-            pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(pktlen=MIN_PKT_LEN)
+            print("Testing {} packet...".format(pkt_type))
+            pkt = getattr(testutils, "simple_{}_packet".format(pkt_type))(
+                pktlen=MIN_PKT_LEN
+            )
             self.doRunTest(pkt)
 
 
