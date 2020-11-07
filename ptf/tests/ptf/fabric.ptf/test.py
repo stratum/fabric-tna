@@ -1379,7 +1379,7 @@ class FabricOptimizedFieldDetectorTest(FabricTest):
     # Since the test uses the same match key for tables with multiple actions,
     # each table entry has to be removed before testing the next.
     @autocleanup
-    def insert(self, table_name, match_keys, action_name, action_params, priority):
+    def insert_table_entry(self, table_name, match_keys, action_name, action_params, priority):
         req, _ = self.send_request_add_entry_to_action(
             table_name,
             match_keys,
@@ -1465,13 +1465,8 @@ class FabricOptimizedFieldDetectorTest(FabricTest):
                     action_profile_name, member_id, action_name, action_params)
                 # TODO: Test table entries to members?
             else:
-                write_entry, read_entry = self.insert(
-                    table_name,
-                    match_keys,
-                    action_name,
-                    action_params,
-                    priority
-                )
+                write_entry, read_entry = self.insert_table_entry(
+                    table_name, match_keys, action_name, action_params, priority)
             # Send requests and compare state
             if write_entry != read_entry:
                 write_entry_s = string.split("%s" % write_entry, "\n")
