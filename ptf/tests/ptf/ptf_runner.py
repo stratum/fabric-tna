@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 
 # Copyright 2013-2018 Barefoot Networks, Inc.
 # Copyright 2018-present Open Networking Foundation
@@ -8,6 +8,7 @@ import argparse
 import json
 import logging
 import os
+import queue
 import re
 import subprocess
 import sys
@@ -17,7 +18,6 @@ from collections import OrderedDict
 
 import google.protobuf.text_format
 import grpc
-import Queue
 from p4.v1 import p4runtime_pb2, p4runtime_pb2_grpc
 from portmap import pmutils
 from target import targetutils
@@ -43,7 +43,7 @@ def check_ifaces(ifaces):
     """
     Checks that required interfaces exist.
     """
-    ifconfig_out = subprocess.check_output(["ifconfig"])
+    ifconfig_out = subprocess.check_output(["ifconfig"]).decode("utf-8")
     iface_list = re.findall(r"^([a-zA-Z0-9]+)", ifconfig_out, re.S | re.M)
     present_ifaces = set(iface_list)
     ifaces = set(ifaces)
@@ -51,7 +51,7 @@ def check_ifaces(ifaces):
 
 
 def build_tofino_pipeline_config(tofino_pipeline_config_path):
-    device_config = ""
+    device_config = b""
     with open(tofino_pipeline_config_path, "rb") as pipeline_config_f:
         device_config += pipeline_config_f.read()
     return device_config
@@ -96,8 +96,8 @@ def update_config(
 
     # Send master arbitration via stream channel
     # This should go in library, to be re-used also by base_test.py.
-    stream_out_q = Queue.Queue()
-    stream_in_q = Queue.Queue()
+    stream_out_q = queue.Queue()
+    stream_in_q = queue.Queue()
 
     def stream_req_iterator():
         while True:
