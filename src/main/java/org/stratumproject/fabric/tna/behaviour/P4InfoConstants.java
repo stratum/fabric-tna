@@ -206,7 +206,6 @@ public final class P4InfoConstants {
     public static final PiActionParamId DMAC = PiActionParamId.of("dmac");
     public static final PiActionParamId DROP = PiActionParamId.of("drop");
     public static final PiActionParamId FAR_ID = PiActionParamId.of("far_id");
-    public static final PiActionParamId FOO = PiActionParamId.of("foo");
     public static final PiActionParamId FWD_TYPE =
             PiActionParamId.of("fwd_type");
     public static final PiActionParamId GROUP_ID =
