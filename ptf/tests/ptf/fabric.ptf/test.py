@@ -1369,6 +1369,7 @@ class FabricPacketOutLoopbackModeTest(FabricTest):
             self.doRunTest(pkt)
 
 
+@group("p4rt")
 class FabricOptimizedFieldDetectorTest(FabricTest):
     """Finds action paramters or header fields that were optimized out by the
     compiler"""
