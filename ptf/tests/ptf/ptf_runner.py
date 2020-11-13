@@ -4,13 +4,11 @@
 # Copyright 2018-present Open Networking Foundation
 # SPDX-License-Identifier: Apache-2.0
 
-import Queue
 import argparse
 import json
 import logging
 import os
 import re
-import struct
 import subprocess
 import sys
 import threading
@@ -19,10 +17,11 @@ from collections import OrderedDict
 
 import google.protobuf.text_format
 import grpc
+import Queue
 from p4.v1 import p4runtime_pb2, p4runtime_pb2_grpc
-from testvector import tvutils
 from portmap import pmutils
 from target import targetutils
+from testvector import tvutils
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("PTF runner")
@@ -44,8 +43,8 @@ def check_ifaces(ifaces):
     """
     Checks that required interfaces exist.
     """
-    ifconfig_out = subprocess.check_output(['ifconfig'])
-    iface_list = re.findall(r'^([a-zA-Z0-9]+)', ifconfig_out, re.S | re.M)
+    ifconfig_out = subprocess.check_output(["ifconfig"])
+    iface_list = re.findall(r"^([a-zA-Z0-9]+)", ifconfig_out, re.S | re.M)
     present_ifaces = set(iface_list)
     ifaces = set(ifaces)
     return ifaces <= present_ifaces
@@ -53,13 +52,14 @@ def check_ifaces(ifaces):
 
 def build_tofino_pipeline_config(tofino_pipeline_config_path):
     device_config = ""
-    with open(tofino_pipeline_config_path, 'rb') as pipeline_config_f:
+    with open(tofino_pipeline_config_path, "rb") as pipeline_config_f:
         device_config += pipeline_config_f.read()
     return device_config
 
 
-def update_config(p4info_path, tofino_pipeline_config_path,
-                  grpc_addr, device_id, generate_tv=False):
+def update_config(
+    p4info_path, tofino_pipeline_config_path, grpc_addr, device_id, generate_tv=False,
+):
     """
     Performs a SetForwardingPipelineConfig on the device
     """
@@ -70,7 +70,7 @@ def update_config(p4info_path, tofino_pipeline_config_path,
     election_id.high = 0
     election_id.low = 1
     config = request.config
-    with open(p4info_path, 'r') as p4info_f:
+    with open(p4info_path, "r") as p4info_f:
         google.protobuf.text_format.Merge(p4info_f.read(), config.p4info)
     device_config = build_tofino_pipeline_config(tofino_pipeline_config_path)
     config.p4_device_config = device_config
@@ -81,7 +81,8 @@ def update_config(p4info_path, tofino_pipeline_config_path,
         tv_target = targetutils.get_new_target(grpc_addr, target_id="tofino")
         # Write the target proto object to testvectors/target.pb.txt
         targetutils.write_to_file(tv_target, os.getcwd())
-        # Create new testvector for set pipeline config and write to testvectors/PipelineConfig.pb.txt
+        # Create new testvector for set pipeline config and write to
+        # testvectors/PipelineConfig.pb.txt
         tv = tvutils.get_new_testvector()
         tv_name = "PipelineConfig"
         tc = tvutils.get_new_testcase(tv, tv_name)
@@ -120,7 +121,7 @@ def update_config(p4info_path, tofino_pipeline_config_path,
                 if not msg.HasField(type_):
                     continue
                 return msg
-        except:  # timeout expired
+        except Exception:  # timeout expired
             pass
         return None
 
@@ -154,8 +155,18 @@ def update_config(p4info_path, tofino_pipeline_config_path,
         stream_recv_thread.join()
 
 
-def run_test(p4info_path, grpc_addr, device_id, cpu_port, ptfdir, port_map_path,
-             platform=None, generate_tv=False, loopback=False, extra_args=()):
+def run_test(
+    p4info_path,
+    grpc_addr,
+    device_id,
+    cpu_port,
+    ptfdir,
+    port_map_path,
+    platform=None,
+    generate_tv=False,
+    loopback=False,
+    extra_args=(),
+):
     """
     Runs PTF tests included in provided directory.
     Device must be running and configfured with appropriate P4 program.
@@ -164,10 +175,11 @@ def run_test(p4info_path, grpc_addr, device_id, cpu_port, ptfdir, port_map_path,
     # "ptf_port" is ignored for now, we assume that ports are provided by
     # increasing values of ptf_port, in the range [0, NUM_IFACES[.
     port_map = OrderedDict()
-    with open(port_map_path, 'r') as port_map_f:
+    with open(port_map_path, "r") as port_map_f:
         port_list = json.load(port_map_f)
         if generate_tv:
-            # interfaces string to be used to create interfaces in test runner container
+            # interfaces string to be used to create interfaces in test runner
+            # container
             interfaces = ""
             # Create new portmap proto object for testvectors
             tv_portmap = pmutils.get_new_portmap()
@@ -181,15 +193,17 @@ def run_test(p4info_path, grpc_addr, device_id, cpu_port, ptfdir, port_map_path,
                 # Append new entry to tv proto object
                 pmutils.add_new_entry(tv_portmap, p4_port, iface_name)
     if generate_tv:
-        # ptf needs the interfaces mentioned in portmap to be running on container
+        # ptf needs the interfaces mentioned in portmap to be running on
+        # container
         # For generate_tv option, we don't strat tofino model container
-        # This is a work around to create those interfaces on testrunner contiainer
+        # This is a work around to create those interfaces on testrunner
+        # contiainer
         try:
             cmd = os.getcwd() + "/../../run/tv/setup_interfaces.sh" + interfaces
             p = subprocess.Popen([cmd], shell=True)
             p.wait()
         except Exception as e:
-            print e
+            print(e)
             error("Error when creating interfaces")
             return False
         # Write the portmap proto object to testvectors/portmap.pb.txt
@@ -203,32 +217,32 @@ def run_test(p4info_path, grpc_addr, device_id, cpu_port, ptfdir, port_map_path,
     # FIXME
     # find base_test.py
     pypath = os.path.dirname(os.path.abspath(__file__))
-    if 'PYTHONPATH' in os.environ:
-        os.environ['PYTHONPATH'] += ":" + pypath
+    if "PYTHONPATH" in os.environ:
+        os.environ["PYTHONPATH"] += ":" + pypath
     else:
-        os.environ['PYTHONPATH'] = pypath
+        os.environ["PYTHONPATH"] = pypath
     for iface_idx, iface_name in port_map.items():
-        ifaces.extend(['-i', '{}@{}'.format(iface_idx, iface_name)])
-    cmd = ['ptf']
-    cmd.extend(['--test-dir', ptfdir])
+        ifaces.extend(["-i", "{}@{}".format(iface_idx, iface_name)])
+    cmd = ["ptf"]
+    cmd.extend(["--test-dir", ptfdir])
     cmd.extend(ifaces)
-    test_params = 'p4info=\'{}\''.format(p4info_path)
-    test_params += ';grpcaddr=\'{}\''.format(grpc_addr)
-    test_params += ';device_id=\'{}\''.format(device_id)
-    test_params += ';cpu_port=\'{}\''.format(cpu_port)
-    test_params += ';generate_tv=\'{}\''.format(generate_tv)
-    test_params += ';loopback=\'{}\''.format(loopback)
+    test_params = "p4info='{}'".format(p4info_path)
+    test_params += ";grpcaddr='{}'".format(grpc_addr)
+    test_params += ";device_id='{}'".format(device_id)
+    test_params += ";cpu_port='{}'".format(cpu_port)
+    test_params += ";generate_tv='{}'".format(generate_tv)
+    test_params += ";loopback='{}'".format(loopback)
     if platform is not None:
-        test_params += ';pltfm=\'{}\''.format(platform)
-    cmd.append('--test-params={}'.format(test_params))
+        test_params += ";pltfm='{}'".format(platform)
+    cmd.append("--test-params={}".format(test_params))
     cmd.extend(extra_args)
-    info("Executing PTF command: {}".format(' '.join(cmd)))
+    info("Executing PTF command: {}".format(" ".join(cmd)))
 
     try:
         # we want the ptf output to be sent to stdout
         p = subprocess.Popen(cmd)
         p.wait()
-    except:
+    except Exception:
         error("Error when running PTF tests")
         return False
     return p.returncode == 0
@@ -236,9 +250,8 @@ def run_test(p4info_path, grpc_addr, device_id, cpu_port, ptfdir, port_map_path,
 
 def check_ptf():
     try:
-        with open(os.devnull, 'w') as devnull:
-            subprocess.check_call(['ptf', '--version'],
-                                  stdout=devnull, stderr=devnull)
+        with open(os.devnull, "w") as devnull:
+            subprocess.check_call(["ptf", "--version"], stdout=devnull, stderr=devnull)
         return True
     except subprocess.CalledProcessError:
         return True
@@ -249,43 +262,70 @@ def check_ptf():
 # noinspection PyTypeChecker
 def main():
     parser = argparse.ArgumentParser(
-        description="Compile the provided P4 program and run PTF tests on it")
-    parser.add_argument('--p4info',
-                        help='Location of p4info proto in text format',
-                        type=str, action="store", required=True)
-    parser.add_argument('--tofino-pipeline-config',
-                        help='Location of the Tofino pipeline config binary (pb.bin)',
-                        type=str, action="store", required=False)
-    parser.add_argument('--grpc-addr',
-                        help='Address to use to connect to P4 Runtime server',
-                        type=str, default='localhost:50051')
-    parser.add_argument('--device-id',
-                        help='Device id for device under test',
-                        type=int, default=1)
-    parser.add_argument('--cpu-port',
-                        help='CPU port ID of device under test',
-                        type=int, required=True)
-    parser.add_argument('--ptf-dir',
-                        help='Directory containing PTF tests',
-                        type=str, required=True)
-    parser.add_argument('--port-map',
-                        help='Path to JSON port mapping',
-                        type=str, required=True)
-    parser.add_argument('--platform',
-                        help='Target platform on which tests are run (if target is tofino)',
-                        type=str, required=False)
-    parser.add_argument('--skip-config',
-                        help='Assume a device with pipeline already configured',
-                        action="store_true", default=False)
-    parser.add_argument('--skip-test',
-                        help='Skip test execution (useful to perform only pipeline configuration)',
-                        action="store_true", default=False)
-    parser.add_argument('--generate-tv',
-                        help='Skip test execution and generate TestVectors',
-                        action="store_true", default=False)
-    parser.add_argument('--loopback',
-                        help='Flag to modify test data for loopback mode',
-                        action="store_true", default=False)
+        description="Compile the provided P4 program and run PTF tests on it"
+    )
+    parser.add_argument(
+        "--p4info",
+        help="Location of p4info proto in text format",
+        type=str,
+        action="store",
+        required=True,
+    )
+    parser.add_argument(
+        "--tofino-pipeline-config",
+        help="Location of the Tofino pipeline config binary " "(pb.bin)",
+        type=str,
+        action="store",
+        required=False,
+    )
+    parser.add_argument(
+        "--grpc-addr",
+        help="Address to use to connect to P4 Runtime server",
+        type=str,
+        default="localhost:50051",
+    )
+    parser.add_argument(
+        "--device-id", help="Device id for device under test", type=int, default=1,
+    )
+    parser.add_argument(
+        "--cpu-port", help="CPU port ID of device under test", type=int, required=True,
+    )
+    parser.add_argument(
+        "--ptf-dir", help="Directory containing PTF tests", type=str, required=True,
+    )
+    parser.add_argument(
+        "--port-map", help="Path to JSON port mapping", type=str, required=True
+    )
+    parser.add_argument(
+        "--platform",
+        help="Target platform on which tests are run " "(if target is tofino)",
+        type=str,
+        required=False,
+    )
+    parser.add_argument(
+        "--skip-config",
+        help="Skip configuring the pipeline to the device",
+        action="store_true",
+        default=False,
+    )
+    parser.add_argument(
+        "--skip-test",
+        help="Skip test execution " "(useful to perform only pipeline configuration)",
+        action="store_true",
+        default=False,
+    )
+    parser.add_argument(
+        "--generate-tv",
+        help="Skip test execution and generate TestVectors",
+        action="store_true",
+        default=False,
+    )
+    parser.add_argument(
+        "--loopback",
+        help="Flag to modify test data for loopback mode",
+        action="store_true",
+        default=False,
+    )
     args, unknown_args = parser.parse_known_args()
 
     if not check_ptf():
@@ -297,8 +337,9 @@ def main():
         error("P4Info file {} not found".format(args.p4info))
         sys.exit(1)
     if not os.path.exists(args.tofino_pipeline_config):
-        error("Tofino binary config file {} not found".format(
-            args.tofino_pipeline_config))
+        error(
+            "Tofino binary config file {} not found".format(args.tofino_pipeline_config)
+        )
         sys.exit(1)
     tofino_pipeline_config = args.tofino_pipeline_config
     if not os.path.exists(args.port_map):
@@ -308,29 +349,33 @@ def main():
     success = True
 
     if not args.skip_config:
-        success = update_config(p4info_path=args.p4info,
-                                tofino_pipeline_config_path=tofino_pipeline_config,
-                                grpc_addr=args.grpc_addr,
-                                device_id=args.device_id,
-                                generate_tv=args.generate_tv)
+        success = update_config(
+            p4info_path=args.p4info,
+            tofino_pipeline_config_path=tofino_pipeline_config,
+            grpc_addr=args.grpc_addr,
+            device_id=args.device_id,
+            generate_tv=args.generate_tv,
+        )
     if not success:
         sys.exit(2)
 
     if not args.skip_test:
-        success = run_test(p4info_path=args.p4info,
-                           device_id=args.device_id,
-                           grpc_addr=args.grpc_addr,
-                           cpu_port=args.cpu_port,
-                           ptfdir=args.ptf_dir,
-                           port_map_path=args.port_map,
-                           platform=args.platform,
-                           generate_tv=args.generate_tv,
-                           loopback=args.loopback,
-                           extra_args=unknown_args)
+        success = run_test(
+            p4info_path=args.p4info,
+            device_id=args.device_id,
+            grpc_addr=args.grpc_addr,
+            cpu_port=args.cpu_port,
+            ptfdir=args.ptf_dir,
+            port_map_path=args.port_map,
+            platform=args.platform,
+            generate_tv=args.generate_tv,
+            loopback=args.loopback,
+            extra_args=unknown_args,
+        )
 
     if not success:
         sys.exit(3)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

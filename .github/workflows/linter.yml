@@ -28,3 +28,6 @@ jobs:
           VALIDATE_YAML: true
           VALIDATE_XML: true
           VALIDATE_BASH: true
+          VALIDATE_PYTHON_BLACK: true
+          VALIDATE_PYTHON_FLAKE8: true
+          VALIDATE_PYTHON_ISORT: true

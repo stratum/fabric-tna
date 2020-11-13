@@ -2,24 +2,21 @@
 # Copyright 2018-present Open Networking Foundation
 # SPDX-License-Identifier: Apache-2.0
 
+import socket
 import struct
 import time
-import socket
-from operator import ior
 
+import xnt
+from base_test import P4RuntimeTest, ipv4_to_binary, mac_to_binary, stringify, tvcreate
 from p4.v1 import p4runtime_pb2
 from ptf import testutils as testutils
 from ptf.mask import Mask
 from scapy.contrib.mpls import MPLS
-from scapy.layers.inet import IP, UDP, TCP
-from scapy.layers.l2 import Ether, Dot1Q
-from scapy.layers.ppp import PPPoE, PPP
-from scapy.fields import BitField, ByteField, ShortField, IntField
-from scapy.packet import bind_layers, Packet
-from testvector import tvutils
-
-import xnt
-from base_test import P4RuntimeTest, stringify, mac_to_binary, ipv4_to_binary, tvcreate
+from scapy.fields import BitField, ByteField, IntField, ShortField
+from scapy.layers.inet import IP, TCP, UDP
+from scapy.layers.l2 import Dot1Q, Ether
+from scapy.layers.ppp import PPP, PPPoE
+from scapy.packet import Packet, bind_layers
 
 DEFAULT_PRIORITY = 10
 
@@ -37,12 +34,12 @@ DEFAULT_MPLS_TTL = 64
 MIN_PKT_LEN = 80
 
 UDP_GTP_PORT = 2152
-DEFAULT_GTP_TUNNEL_SPORT = 1234 # arbitrary, but different from 2152
+DEFAULT_GTP_TUNNEL_SPORT = 1234  # arbitrary, but different from 2152
 
 ETH_TYPE_ARP = 0x0806
 ETH_TYPE_IPV4 = 0x0800
 ETH_TYPE_VLAN = 0x8100
-ETH_TYPE_QINQ = 0x88a8
+ETH_TYPE_QINQ = 0x88A8
 ETH_TYPE_PPPOE = 0x8864
 ETH_TYPE_MPLS_UNICAST = 0x8847
 
@@ -115,8 +112,8 @@ DEFAULT_VLAN = 4094
 MPLS_LABEL_1 = 100
 MPLS_LABEL_2 = 200
 
-UPLINK_TEID   = 0xeeffc0f0
-DOWNLINK_TEID = 0xeeffc0f1
+UPLINK_TEID = 0xEEFFC0F0
+DOWNLINK_TEID = 0xEEFFC0F1
 UPLINK_PDR_CTR_IDX = 1
 DOWNLINK_PDR_CTR_IDX = 2
 UPLINK_FAR_ID = 23
@@ -131,19 +128,26 @@ INT_IG_TSTAMP = 1 << 11
 INT_EG_TSTAMP = 1 << 10
 INT_QUEUE_CONGESTION = 1 << 9
 INT_EG_PORT_TX = 1 << 8
-INT_ALL_INSTRUCTIONS = [INT_SWITCH_ID, INT_IG_EG_PORT, INT_HOP_LATENCY,
-                    INT_QUEUE_OCCUPANCY, INT_IG_TSTAMP, INT_EG_TSTAMP,
-                    INT_QUEUE_CONGESTION, INT_EG_PORT_TX]
+INT_ALL_INSTRUCTIONS = [
+    INT_SWITCH_ID,
+    INT_IG_EG_PORT,
+    INT_HOP_LATENCY,
+    INT_QUEUE_OCCUPANCY,
+    INT_IG_TSTAMP,
+    INT_EG_TSTAMP,
+    INT_QUEUE_CONGESTION,
+    INT_EG_PORT_TX,
+]
 
 INT_INS_TO_NAME = {
-INT_SWITCH_ID: "switch_id",
-INT_IG_EG_PORT: "ig_eg_port",
-INT_HOP_LATENCY: "hop_latency",
-INT_QUEUE_OCCUPANCY: "queue_occupancy",
-INT_IG_TSTAMP: "ig_tstamp",
-INT_EG_TSTAMP: "eg_tstamp",
-INT_QUEUE_CONGESTION: "queue_congestion",
-INT_EG_PORT_TX: "eg_port_tx"
+    INT_SWITCH_ID: "switch_id",
+    INT_IG_EG_PORT: "ig_eg_port",
+    INT_HOP_LATENCY: "hop_latency",
+    INT_QUEUE_OCCUPANCY: "queue_occupancy",
+    INT_IG_TSTAMP: "ig_tstamp",
+    INT_EG_TSTAMP: "eg_tstamp",
+    INT_QUEUE_CONGESTION: "queue_congestion",
+    INT_EG_PORT_TX: "eg_port_tx",
 }
 
 INT_REPORT_MIRROR_ID_0 = 300
@@ -155,8 +159,11 @@ NPROTO_ETHERNET = 0
 NPROTO_TELEMETRY_DROP_HEADER = 1
 NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER = 2
 bind_layers(UDP, INT_L45_REPORT_FIXED, dport=INT_REPORT_PORT)
-bind_layers(INT_L45_REPORT_FIXED, INT_L45_LOCAL_REPORT,
-        nproto=NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER)
+bind_layers(
+    INT_L45_REPORT_FIXED,
+    INT_L45_LOCAL_REPORT,
+    nproto=NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER,
+)
 bind_layers(INT_L45_LOCAL_REPORT, Ether)
 
 INT_COLLECTOR_MAC = "00:1e:67:d2:ee:ee"
@@ -168,7 +175,7 @@ PPPOED_CODE_PADI = 0x09
 PPPOED_CODE_PADO = 0x07
 PPPOED_CODE_PADR = 0x19
 PPPOED_CODE_PADS = 0x65
-PPPOED_CODE_PADT = 0xa7
+PPPOED_CODE_PADT = 0xA7
 
 PPPOED_CODES = (
     PPPOED_CODE_PADI,
@@ -190,7 +197,7 @@ class GTPU(Packet):
         BitField("PN", 0, 1),
         ByteField("gtp_type", 255),
         ShortField("length", None),
-        IntField("teid", 0)
+        IntField("teid", 0),
     ]
 
     def post_build(self, pkt, payload):
@@ -222,47 +229,64 @@ def pkt_route(pkt, mac_dst):
 
 
 def pkt_add_vlan(pkt, vlan_vid=10, vlan_pcp=0, dl_vlan_cfi=0):
-    return Ether(src=pkt[Ether].src, dst=pkt[Ether].dst) / \
-           Dot1Q(prio=vlan_pcp, id=dl_vlan_cfi, vlan=vlan_vid) / \
-           pkt[Ether].payload
+    return (
+        Ether(src=pkt[Ether].src, dst=pkt[Ether].dst)
+        / Dot1Q(prio=vlan_pcp, id=dl_vlan_cfi, vlan=vlan_vid)
+        / pkt[Ether].payload
+    )
 
 
 def pkt_add_inner_vlan(pkt, vlan_vid=10, vlan_pcp=0, dl_vlan_cfi=0):
     assert Dot1Q in pkt
-    return Ether(src=pkt[Ether].src, dst=pkt[Ether].dst, type=ETH_TYPE_VLAN) / \
-           Dot1Q(prio=pkt[Dot1Q].prio, id=pkt[Dot1Q].id, vlan=pkt[Dot1Q].vlan) / \
-           Dot1Q(prio=vlan_pcp, id=dl_vlan_cfi, vlan=vlan_vid) / \
-           pkt[Dot1Q].payload
+    return (
+        Ether(src=pkt[Ether].src, dst=pkt[Ether].dst, type=ETH_TYPE_VLAN)
+        / Dot1Q(prio=pkt[Dot1Q].prio, id=pkt[Dot1Q].id, vlan=pkt[Dot1Q].vlan)
+        / Dot1Q(prio=vlan_pcp, id=dl_vlan_cfi, vlan=vlan_vid)
+        / pkt[Dot1Q].payload
+    )
 
 
 def pkt_add_pppoe(pkt, type, code, session_id):
-    return Ether(src=pkt[Ether].src, dst=pkt[Ether].dst) / \
-           PPPoE(version=1, type=type, code=code, sessionid=session_id) / \
-           PPP() / pkt[Ether].payload
+    return (
+        Ether(src=pkt[Ether].src, dst=pkt[Ether].dst)
+        / PPPoE(version=1, type=type, code=code, sessionid=session_id)
+        / PPP()
+        / pkt[Ether].payload
+    )
 
 
 def pkt_add_mpls(pkt, label, ttl, cos=0, s=1):
-    return Ether(src=pkt[Ether].src, dst=pkt[Ether].dst) / \
-           MPLS(label=label, cos=cos, s=s, ttl=ttl) / \
-           pkt[Ether].payload
+    return (
+        Ether(src=pkt[Ether].src, dst=pkt[Ether].dst)
+        / MPLS(label=label, cos=cos, s=s, ttl=ttl)
+        / pkt[Ether].payload
+    )
 
 
-def pkt_add_gtp(pkt, out_ipv4_src, out_ipv4_dst, teid,
-                sport=DEFAULT_GTP_TUNNEL_SPORT, dport=UDP_GTP_PORT):
+def pkt_add_gtp(
+    pkt,
+    out_ipv4_src,
+    out_ipv4_dst,
+    teid,
+    sport=DEFAULT_GTP_TUNNEL_SPORT,
+    dport=UDP_GTP_PORT,
+):
     payload = pkt[Ether].payload
-    return Ether(src=pkt[Ether].src, dst=pkt[Ether].dst) / \
-           IP(src=out_ipv4_src, dst=out_ipv4_dst, tos=0,
-              id=0x1513, flags=0, frag=0) / \
-           UDP(sport=sport, dport=dport, chksum=0) / \
-           GTPU(teid=teid) / \
-           payload
+    return (
+        Ether(src=pkt[Ether].src, dst=pkt[Ether].dst)
+        / IP(src=out_ipv4_src, dst=out_ipv4_dst, tos=0, id=0x1513, flags=0, frag=0,)
+        / UDP(sport=sport, dport=dport, chksum=0)
+        / GTPU(teid=teid)
+        / payload
+    )
 
 
 def pkt_remove_vlan(pkt):
     assert Dot1Q in pkt
     payload = pkt[Dot1Q:1].payload
-    return Ether(src=pkt[Ether].src, dst=pkt[Ether].dst, type=pkt[Dot1Q:1].type) / \
-           payload
+    return (
+        Ether(src=pkt[Ether].src, dst=pkt[Ether].dst, type=pkt[Dot1Q:1].type) / payload
+    )
 
 
 def pkt_decrement_ttl(pkt):
@@ -329,102 +353,126 @@ class FabricTest(P4RuntimeTest):
 
     def setup_int(self):
         self.send_request_add_entry_to_action(
-            "int_egress.int_prep", None, "int_egress.int_transit",
-            [("switch_id", stringify(1, 4))])
+            "int_egress.int_prep",
+            None,
+            "int_egress.int_transit",
+            [("switch_id", stringify(1, 4))],
+        )
 
         req = self.get_new_write_request()
-        for i in xrange(16):
+        for i in range(16):
             base = "int_set_header_0003_i"
-            mf = self.Exact("hdr.int_header.instruction_mask_0003",
-                            stringify(i, 1))
+            mf = self.Exact("hdr.int_header.instruction_mask_0003", stringify(i, 1))
             action = "int_metadata_insert." + base + str(i)
             self.push_update_add_entry_to_action(
-                req,
-                "int_metadata_insert.int_inst_0003", [mf],
-                action, [])
+                req, "int_metadata_insert.int_inst_0003", [mf], action, []
+            )
         self.write_request(req)
 
         req = self.get_new_write_request()
-        for i in xrange(16):
+        for i in range(16):
             base = "int_set_header_0407_i"
-            mf = self.Exact("hdr.int_header.instruction_mask_0407",
-                            stringify(i, 1))
+            mf = self.Exact("hdr.int_header.instruction_mask_0407", stringify(i, 1))
             action = "int_metadata_insert." + base + str(i)
             self.push_update_add_entry_to_action(
-                req,
-                "int_metadata_insert.int_inst_0407", [mf],
-                action, [])
+                req, "int_metadata_insert.int_inst_0407", [mf], action, []
+            )
         self.write_request(req)
 
-    def setup_port(self, port_id, vlan_id, tagged=False, double_tagged=False, inner_vlan_id=0):
+    def setup_port(
+        self, port_id, vlan_id, tagged=False, double_tagged=False, inner_vlan_id=0,
+    ):
         if double_tagged:
-            self.set_ingress_port_vlan(ingress_port=port_id, vlan_id=vlan_id,
-                                       vlan_valid=True, inner_vlan_id=inner_vlan_id)
+            self.set_ingress_port_vlan(
+                ingress_port=port_id,
+                vlan_id=vlan_id,
+                vlan_valid=True,
+                inner_vlan_id=inner_vlan_id,
+            )
         elif tagged:
-            self.set_ingress_port_vlan(ingress_port=port_id, vlan_id=vlan_id,
-                                       vlan_valid=True)
+            self.set_ingress_port_vlan(
+                ingress_port=port_id, vlan_id=vlan_id, vlan_valid=True
+            )
         else:
-            self.set_ingress_port_vlan(ingress_port=port_id,
-                                       vlan_valid=False, internal_vlan_id=vlan_id)
+            self.set_ingress_port_vlan(
+                ingress_port=port_id, vlan_valid=False, internal_vlan_id=vlan_id,
+            )
             self.set_egress_vlan_pop(egress_port=port_id, vlan_id=vlan_id)
 
     @tvcreate("setup/setup_switch_info")
     def setup_switch_info(self):
         req = self.get_new_write_request()
-        self.push_update_add_entry_to_action(req,
-            "FabricEgress.pkt_io_egress.switch_info", None,
+        self.push_update_add_entry_to_action(
+            req,
+            "FabricEgress.pkt_io_egress.switch_info",
+            None,
             "FabricEgress.pkt_io_egress.set_switch_info",
-            [("cpu_port", stringify(self.cpu_port, 2))])
+            [("cpu_port", stringify(self.cpu_port, 2))],
+        )
         return req, self.write_request(req, store=False)
 
     @tvcreate("teardown/reset_switch_info")
     def reset_switch_info(self):
         req = self.get_new_write_request()
-        self.push_update_add_entry_to_action(req,
-            "FabricEgress.pkt_io_egress.switch_info", None,
-            "nop",
-            [])
+        self.push_update_add_entry_to_action(
+            req, "FabricEgress.pkt_io_egress.switch_info", None, "nop", []
+        )
         return req, self.write_request(req)
 
-    def set_ingress_port_vlan(self, ingress_port,
-                              vlan_valid=False,
-                              vlan_id=0,
-                              internal_vlan_id=0,
-                              inner_vlan_id=None,
-                              ):
+    def set_ingress_port_vlan(
+        self,
+        ingress_port,
+        vlan_valid=False,
+        vlan_id=0,
+        internal_vlan_id=0,
+        inner_vlan_id=None,
+    ):
         ingress_port_ = stringify(ingress_port, 2)
-        vlan_valid_ = '\x01' if vlan_valid else '\x00'
+        vlan_valid_ = "\x01" if vlan_valid else "\x00"
         vlan_id_ = stringify(vlan_id, 2)
         vlan_id_mask_ = stringify(4095 if vlan_valid else 0, 2)
         new_vlan_id_ = stringify(internal_vlan_id, 2)
         action_name = "permit" if vlan_valid else "permit_with_internal_vlan"
         action_params = [] if vlan_valid else [("vlan_id", new_vlan_id_)]
-        matches = [self.Exact("ig_port", ingress_port_),
-                   self.Exact("vlan_is_valid", vlan_valid_),
-                   self.Ternary("vlan_id", vlan_id_, vlan_id_mask_)]
+        matches = [
+            self.Exact("ig_port", ingress_port_),
+            self.Exact("vlan_is_valid", vlan_valid_),
+            self.Ternary("vlan_id", vlan_id_, vlan_id_mask_),
+        ]
         if inner_vlan_id is not None:
             # Match on inner_vlan, only when explicitly requested
             inner_vlan_id_ = stringify(inner_vlan_id, 2)
             inner_vlan_id_mask_ = stringify(4095, 2)
-            matches.append(self.Ternary("inner_vlan_id", inner_vlan_id_, inner_vlan_id_mask_))
+            matches.append(
+                self.Ternary("inner_vlan_id", inner_vlan_id_, inner_vlan_id_mask_)
+            )
 
         return self.send_request_add_entry_to_action(
             "filtering.ingress_port_vlan",
             matches,
-            "filtering." + action_name, action_params,
-            DEFAULT_PRIORITY)
+            "filtering." + action_name,
+            action_params,
+            DEFAULT_PRIORITY,
+        )
 
     def set_egress_vlan_pop(self, egress_port, vlan_id):
         egress_port = stringify(egress_port, 2)
         vlan_id = stringify(vlan_id, 2)
         self.send_request_add_entry_to_action(
             "egress_next.egress_vlan",
-            [self.Exact("vlan_id", vlan_id),
-             self.Exact("eg_port", egress_port)],
-            "egress_next.pop_vlan", [])
+            [self.Exact("vlan_id", vlan_id), self.Exact("eg_port", egress_port)],
+            "egress_next.pop_vlan",
+            [],
+        )
 
-    def set_forwarding_type(self, ingress_port, eth_dstAddr, eth_dstMask=MAC_MASK, ethertype=ETH_TYPE_IPV4,
-                            fwd_type=FORWARDING_TYPE_UNICAST_IPV4):
+    def set_forwarding_type(
+        self,
+        ingress_port,
+        eth_dstAddr,
+        eth_dstMask=MAC_MASK,
+        ethertype=ETH_TYPE_IPV4,
+        fwd_type=FORWARDING_TYPE_UNICAST_IPV4,
+    ):
         ingress_port_ = stringify(ingress_port, 2)
         eth_dstAddr_ = mac_to_binary(eth_dstAddr)
         eth_mask_ = mac_to_binary(eth_dstMask)
@@ -441,30 +489,42 @@ class FabricTest(P4RuntimeTest):
             # TODO: what should we match on? I should never reach this point.
             return
         fwd_type_ = stringify(fwd_type, 1)
-        matches = [self.Exact("ig_port", ingress_port_),
-                   self.Ternary("eth_dst", eth_dstAddr_, eth_mask_),
-                   self.Ternary("eth_type", ethertype_, ethertype_mask_),
-                   self.Exact("ip_eth_type", ip_eth_type)]
+        matches = [
+            self.Exact("ig_port", ingress_port_),
+            self.Ternary("eth_dst", eth_dstAddr_, eth_mask_),
+            self.Ternary("eth_type", ethertype_, ethertype_mask_),
+            self.Exact("ip_eth_type", ip_eth_type),
+        ]
         self.send_request_add_entry_to_action(
             "filtering.fwd_classifier",
             matches,
             "filtering.set_forwarding_type",
             [("fwd_type", fwd_type_)],
-            priority=DEFAULT_PRIORITY)
+            priority=DEFAULT_PRIORITY,
+        )
 
-    def add_bridging_entry(self, vlan_id, eth_dstAddr, eth_dstAddr_mask, next_id, priority=DEFAULT_PRIORITY):
+    def add_bridging_entry(
+        self,
+        vlan_id,
+        eth_dstAddr,
+        eth_dstAddr_mask,
+        next_id,
+        priority=DEFAULT_PRIORITY,
+    ):
         vlan_id_ = stringify(vlan_id, 2)
         mk = [self.Exact("vlan_id", vlan_id_)]
         if eth_dstAddr is not None:
             eth_dstAddr_ = mac_to_binary(eth_dstAddr)
             eth_dstAddr_mask_ = mac_to_binary(eth_dstAddr_mask)
-            mk.append(self.Ternary(
-                "eth_dst", eth_dstAddr_, eth_dstAddr_mask_))
+            mk.append(self.Ternary("eth_dst", eth_dstAddr_, eth_dstAddr_mask_))
         next_id_ = stringify(next_id, 4)
         return self.send_request_add_entry_to_action(
-            "forwarding.bridging", mk,
-            "forwarding.set_next_id_bridging", [("next_id", next_id_)],
-            priority)
+            "forwarding.bridging",
+            mk,
+            "forwarding.set_next_id_bridging",
+            [("next_id", next_id_)],
+            priority,
+        )
 
     def read_bridging_entry(self, vlan_id, eth_dstAddr, eth_dstAddr_mask):
         vlan_id_ = stringify(vlan_id, 2)
@@ -472,19 +532,18 @@ class FabricTest(P4RuntimeTest):
         if eth_dstAddr is not None:
             eth_dstAddr_ = mac_to_binary(eth_dstAddr)
             eth_dstAddr_mask_ = mac_to_binary(eth_dstAddr_mask)
-            mk.append(self.Ternary(
-                "eth_dst", eth_dstAddr_, eth_dstAddr_mask_))
-        return self.read_table_entry("forwarding.bridging", mk,
-                                     DEFAULT_PRIORITY)
+            mk.append(self.Ternary("eth_dst", eth_dstAddr_, eth_dstAddr_mask_))
+        return self.read_table_entry("forwarding.bridging", mk, DEFAULT_PRIORITY)
 
-    def add_forwarding_routing_v4_entry(self, ipv4_dstAddr, ipv4_pLen,
-                                        next_id):
+    def add_forwarding_routing_v4_entry(self, ipv4_dstAddr, ipv4_pLen, next_id):
         ipv4_dstAddr_ = ipv4_to_binary(ipv4_dstAddr)
         next_id_ = stringify(next_id, 4)
         self.send_request_add_entry_to_action(
             "forwarding.routing_v4",
             [self.Lpm("ipv4_dst", ipv4_dstAddr_, ipv4_pLen)],
-            "forwarding.set_next_id_routing_v4", [("next_id", next_id_)])
+            "forwarding.set_next_id_routing_v4",
+            [("next_id", next_id_)],
+        )
 
     def add_forwarding_mpls_entry(self, label, next_id):
         label_ = stringify(label, 3)
@@ -492,7 +551,9 @@ class FabricTest(P4RuntimeTest):
         self.send_request_add_entry_to_action(
             "forwarding.mpls",
             [self.Exact("mpls_label", label_)],
-            "forwarding.pop_mpls_and_next", [("next_id", next_id_)])
+            "forwarding.pop_mpls_and_next",
+            [("next_id", next_id_)],
+        )
 
     def add_forwarding_acl_punt_to_cpu(self, eth_type=None, priority=DEFAULT_PRIORITY):
         eth_type_ = stringify(eth_type, 2)
@@ -500,7 +561,10 @@ class FabricTest(P4RuntimeTest):
         return self.send_request_add_entry_to_action(
             "acl.acl",
             [self.Ternary("eth_type", eth_type_, eth_type_mask_)],
-            "acl.punt_to_cpu", [], priority)
+            "acl.punt_to_cpu",
+            [],
+            priority,
+        )
 
     def read_forwarding_acl_punt_to_cpu(self, eth_type=None, priority=DEFAULT_PRIORITY):
         eth_type_ = stringify(eth_type, 2)
@@ -514,17 +578,24 @@ class FabricTest(P4RuntimeTest):
         self.send_request_add_entry_to_action(
             "acl.acl",
             [self.Ternary("eth_type", eth_type_, eth_type_mask)],
-            "acl.copy_to_cpu", [], DEFAULT_PRIORITY)
+            "acl.copy_to_cpu",
+            [],
+            DEFAULT_PRIORITY,
+        )
 
-    def add_forwarding_acl_set_clone_session_id(self, eth_type=None, clone_group_id=None):
+    def add_forwarding_acl_set_clone_session_id(
+        self, eth_type=None, clone_group_id=None
+    ):
         eth_type_ = stringify(eth_type, 2)
         eth_type_mask = stringify(0xFFFF, 2)
         clone_group_id_ = stringify(clone_group_id, 4)
         self.send_request_add_entry_to_action(
             "acl.acl",
             [self.Ternary("eth_type", eth_type_, eth_type_mask)],
-            "acl.set_clone_session_id", [("clone_id", clone_group_id_)],
-            DEFAULT_PRIORITY)
+            "acl.set_clone_session_id",
+            [("clone_id", clone_group_id_)],
+            DEFAULT_PRIORITY,
+        )
 
     def add_xconnect(self, next_id, port1, port2):
         next_id_ = stringify(next_id, 4)
@@ -533,15 +604,16 @@ class FabricTest(P4RuntimeTest):
         for (inport, outport) in ((port1_, port2_), (port2_, port1_)):
             self.send_request_add_entry_to_action(
                 "next.xconnect",
-                [self.Exact("next_id", next_id_),
-                 self.Exact("ig_port", inport)],
-                "next.output_xconnect", [("port_num", outport)])
+                [self.Exact("next_id", next_id_), self.Exact("ig_port", inport)],
+                "next.output_xconnect",
+                [("port_num", outport)],
+            )
 
     def add_next_output(self, next_id, egress_port):
         egress_port_ = stringify(egress_port, 2)
         self.add_next_hashed_indirect_action(
-            next_id,
-            "next.output_hashed", [("port_num", egress_port_)])
+            next_id, "next.output_hashed", [("port_num", egress_port_)]
+        )
 
     def add_next_output_simple(self, next_id, egress_port):
         next_id_ = stringify(next_id, 4)
@@ -549,7 +621,9 @@ class FabricTest(P4RuntimeTest):
         self.send_request_add_entry_to_action(
             "next.simple",
             [self.Exact("next_id", next_id_)],
-            "next.output_simple", [("port_num", egress_port_)])
+            "next.output_simple",
+            [("port_num", egress_port_)],
+        )
 
     def add_next_multicast(self, next_id, mcast_group_id):
         next_id_ = stringify(next_id, 4)
@@ -557,7 +631,9 @@ class FabricTest(P4RuntimeTest):
         self.send_request_add_entry_to_action(
             "next.multicast",
             [self.Exact("next_id", next_id_)],
-            "next.set_mcast_group_id", [("group_id", mcast_group_id_)])
+            "next.set_mcast_group_id",
+            [("group_id", mcast_group_id_)],
+        )
 
     def add_next_multicast_simple(self, next_id, mcast_group_id):
         next_id_ = stringify(next_id, 4)
@@ -565,7 +641,9 @@ class FabricTest(P4RuntimeTest):
         self.send_request_add_entry_to_action(
             "next.multicast",
             [self.Exact("next_id", next_id_)],
-            "next.set_mcast_group", [("gid", mcast_group_id_)])
+            "next.set_mcast_group",
+            [("gid", mcast_group_id_)],
+        )
 
     def add_next_routing(self, next_id, egress_port, smac, dmac):
         egress_port_ = stringify(egress_port, 2)
@@ -575,8 +653,11 @@ class FabricTest(P4RuntimeTest):
             next_id,
             egress_port,
             [
-                ["next.routing_hashed", [("port_num", egress_port_), ("smac", smac_), ("dmac", dmac_)]]
-            ]
+                [
+                    "next.routing_hashed",
+                    [("port_num", egress_port_), ("smac", smac_), ("dmac", dmac_)],
+                ]
+            ],
         )
 
     def add_next_routing_simple(self, next_id, egress_port, smac, dmac):
@@ -588,7 +669,8 @@ class FabricTest(P4RuntimeTest):
             "next.simple",
             [self.Exact("next_id", next_id_)],
             "next.routing_simple",
-            [("port_num", egress_port_), ("smac", smac_), ("dmac", dmac_)])
+            [("port_num", egress_port_), ("smac", smac_), ("dmac", dmac_)],
+        )
 
     def add_next_vlan(self, next_id, new_vlan_id):
         next_id_ = stringify(next_id, 4)
@@ -597,7 +679,8 @@ class FabricTest(P4RuntimeTest):
             "next.next_vlan",
             [self.Exact("next_id", next_id_)],
             "next.set_vlan",
-            [("vlan_id", vlan_id_)])
+            [("vlan_id", vlan_id_)],
+        )
 
     def add_next_double_vlan(self, next_id, new_vlan_id, new_inner_vlan_id):
         next_id_ = stringify(next_id, 4)
@@ -607,16 +690,18 @@ class FabricTest(P4RuntimeTest):
             "next.next_vlan",
             [self.Exact("next_id", next_id_)],
             "next.set_double_vlan",
-            [("outer_vlan_id", vlan_id_),
-             ("inner_vlan_id", inner_vlan_id_)])
+            [("outer_vlan_id", vlan_id_), ("inner_vlan_id", inner_vlan_id_)],
+        )
 
     def add_next_hashed_indirect_action(self, next_id, action_name, params):
         next_id_ = stringify(next_id, 4)
         mbr_id = self.get_next_mbr_id()
-        self.send_request_add_member("FabricIngress.next.hashed_profile",
-                                     mbr_id, action_name, params)
+        self.send_request_add_member(
+            "FabricIngress.next.hashed_profile", mbr_id, action_name, params
+        )
         self.send_request_add_entry_to_member(
-            "next.hashed", [self.Exact("next_id", next_id_)], mbr_id)
+            "next.hashed", [self.Exact("next_id", next_id_)], mbr_id
+        )
 
     # actions is a tuple (action_name, param_tuples)
     # params_tuples contains a tuple for each param (param_name, param_value)
@@ -626,13 +711,18 @@ class FabricTest(P4RuntimeTest):
         for action in actions:
             mbr_id = self.get_next_mbr_id()
             mbr_ids.append(mbr_id)
-            self.send_request_add_member("FabricIngress.next.hashed_profile", mbr_id, *action)
-        self.send_request_add_group("FabricIngress.next.hashed_profile", grp_id,
-                                    grp_size=len(mbr_ids), mbr_ids=mbr_ids)
+            self.send_request_add_member(
+                "FabricIngress.next.hashed_profile", mbr_id, *action
+            )
+        self.send_request_add_group(
+            "FabricIngress.next.hashed_profile",
+            grp_id,
+            grp_size=len(mbr_ids),
+            mbr_ids=mbr_ids,
+        )
         self.send_request_add_entry_to_group(
-            "next.hashed",
-            [self.Exact("next_id", next_id_)],
-            grp_id)
+            "next.hashed", [self.Exact("next_id", next_id_)], grp_id
+        )
 
     # next_hops is a list of tuples (egress_port, smac, dmac)
     def add_next_routing_group(self, next_id, grp_id, next_hops=None):
@@ -642,10 +732,12 @@ class FabricTest(P4RuntimeTest):
                 egress_port_ = stringify(egress_port, 2)
                 smac_ = mac_to_binary(smac)
                 dmac_ = mac_to_binary(dmac)
-                actions.append([
-                    "next.routing_hashed",
-                    [("port_num", egress_port_), ("smac", smac_), ("dmac", dmac_)]
-                ])
+                actions.append(
+                    [
+                        "next.routing_hashed",
+                        [("port_num", egress_port_), ("smac", smac_), ("dmac", dmac_)],
+                    ]
+                )
         self.add_next_hashed_group_action(next_id, grp_id, actions)
 
     def add_next_mpls_routing(self, next_id, egress_port, smac, dmac, label):
@@ -656,8 +748,13 @@ class FabricTest(P4RuntimeTest):
         self.add_next_hashed_indirect_action(
             next_id,
             "next.mpls_routing_hashed",
-            [("port_num", egress_port_), ("smac", smac_), ("dmac", dmac_),
-             ("label", label_)])
+            [
+                ("port_num", egress_port_),
+                ("smac", smac_),
+                ("dmac", dmac_),
+                ("label", label_),
+            ],
+        )
 
     def add_next_mpls_routing_simple(self, next_id, egress_port, smac, dmac, label):
         next_id_ = stringify(next_id, 4)
@@ -669,8 +766,13 @@ class FabricTest(P4RuntimeTest):
             "next.simple",
             [self.Exact("next_id", next_id_)],
             "next.mpls_routing_simple",
-            [("port_num", egress_port_), ("smac", smac_), ("dmac", dmac_),
-             ("label", label_)])
+            [
+                ("port_num", egress_port_),
+                ("smac", smac_),
+                ("dmac", dmac_),
+                ("label", label_),
+            ],
+        )
 
     # next_hops is a list of tuples (egress_port, smac, dmac)
     def add_next_mpls_routing_group(self, next_id, grp_id, next_hops=None):
@@ -681,11 +783,17 @@ class FabricTest(P4RuntimeTest):
                 smac_ = mac_to_binary(smac)
                 dmac_ = mac_to_binary(dmac)
                 label_ = stringify(label, 3)
-                actions.append([
-                    "next.mpls_routing_hashed",
-                    [("port_num", egress_port_), ("smac", smac_),
-                     ("dmac", dmac_), ("label", label_)]
-                ])
+                actions.append(
+                    [
+                        "next.mpls_routing_hashed",
+                        [
+                            ("port_num", egress_port_),
+                            ("smac", smac_),
+                            ("dmac", dmac_),
+                            ("label", label_),
+                        ],
+                    ]
+                )
         self.add_next_hashed_group_action(next_id, grp_id, actions)
 
     def write_mcast_group(self, group_id, replicas, update_type):
@@ -722,31 +830,44 @@ class FabricTest(P4RuntimeTest):
         for port in ports:
             replica = clone_entry.replicas.add()
             replica.egress_port = port
-            replica.instance = 0 # set to 0 because we don't support it yet.
+            replica.instance = 0  # set to 0 because we don't support it yet.
         return req, self.write_request(req)
 
     def add_next_hashed_group_member(self, action_name, params):
         mbr_id = self.get_next_mbr_id()
-        return self.send_request_add_member("FabricIngress.next.hashed_profile",
-                                            mbr_id, action_name, params)
+        return self.send_request_add_member(
+            "FabricIngress.next.hashed_profile", mbr_id, action_name, params,
+        )
 
     def add_next_hashed_group(self, grp_id, mbr_ids):
-        return self.send_request_add_group("FabricIngress.next.hashed_profile", grp_id,
-                                           grp_size=len(mbr_ids), mbr_ids=mbr_ids)
+        return self.send_request_add_group(
+            "FabricIngress.next.hashed_profile",
+            grp_id,
+            grp_size=len(mbr_ids),
+            mbr_ids=mbr_ids,
+        )
 
     def modify_next_hashed_group(self, grp_id, mbr_ids, grp_size):
-        return self.send_request_modify_group("FabricIngress.next.hashed_profile", grp_id,
-                                              grp_size, mbr_ids)
+        return self.send_request_modify_group(
+            "FabricIngress.next.hashed_profile", grp_id, grp_size, mbr_ids,
+        )
 
     def read_next_hashed_group_member(self, mbr_id):
-        return self.read_action_profile_member("FabricIngress.next.hashed_profile", mbr_id)
+        return self.read_action_profile_member(
+            "FabricIngress.next.hashed_profile", mbr_id
+        )
 
     def read_next_hashed_group(self, group_id):
-        return self.read_action_profile_group("FabricIngress.next.hashed_profile", group_id)
+        return self.read_action_profile_group(
+            "FabricIngress.next.hashed_profile", group_id
+        )
 
     def verify_next_hashed_group(self, group_id, expected_action_profile_group):
-        return self.verify_action_profile_group("FabricIngress.next.hashed_profile", group_id,
-                                                expected_action_profile_group)
+        return self.verify_action_profile_group(
+            "FabricIngress.next.hashed_profile",
+            group_id,
+            expected_action_profile_group,
+        )
 
     def read_mcast_group(self, group_id):
         req = self.get_new_read_request()
@@ -766,7 +887,6 @@ class FabricTest(P4RuntimeTest):
 
 
 class BridgingTest(FabricTest):
-
     def runBridgingTest(self, tagged1, tagged2, pkt):
         vlan_id = 10
         mac_src = pkt[Ether].src
@@ -793,11 +913,12 @@ class BridgingTest(FabricTest):
 
         self.send_packet(self.port1, str(pkt))
         self.send_packet(self.port2, str(pkt2))
-        self.verify_each_packet_on_each_port([exp_pkt, exp_pkt2], [self.port2, self.port1])
+        self.verify_each_packet_on_each_port(
+            [exp_pkt, exp_pkt2], [self.port2, self.port1]
+        )
 
 
 class BridgingPriorityTest(FabricTest):
-
     def runBridgingPriorityTest(self):
         zero_mac_addr = ":".join(["00"] * 6)
         low_priority = 5
@@ -806,7 +927,6 @@ class BridgingPriorityTest(FabricTest):
         vlan_id = 10
         next_id = vlan_id
         mcast_group_id = vlan_id
-        mac_src = HOST1_MAC
         mac_dst = HOST2_MAC
         all_ports = [self.port1, self.port2, self.port3]
         for port in all_ports:
@@ -817,21 +937,24 @@ class BridgingPriorityTest(FabricTest):
         self.add_next_output(20, self.port2)
 
         # Add broadcast bridging rule
-        self.add_bridging_entry(vlan_id, zero_mac_addr, zero_mac_addr, next_id, low_priority)
+        self.add_bridging_entry(
+            vlan_id, zero_mac_addr, zero_mac_addr, next_id, low_priority
+        )
         self.add_next_multicast(next_id, mcast_group_id)
         # Add the multicast group, here we use instance id 1 by default
         replicas = [(1, port) for port in all_ports]
         self.add_mcast_group(mcast_group_id, replicas)
 
-        # Create packet with unicast dst_mac. This packet should be send to port 2 only
-        pkt=testutils.simple_eth_packet(eth_dst=HOST2_MAC)
+        # Create packet with unicast dst_mac. This packet should be send to
+        # port 2 only
+        pkt = testutils.simple_eth_packet(eth_dst=HOST2_MAC)
         exp_pkt = pkt.copy()
         self.send_packet(self.port1, str(pkt))
         self.verify_packet(exp_pkt, self.port2)
         self.verify_no_other_packets()
 
         # Create packet with unknown dst_mac. This packet should be broadcasted
-        pkt=testutils.simple_eth_packet(eth_dst='ff:ff:ff:ff:ff:ff')
+        pkt = testutils.simple_eth_packet(eth_dst="ff:ff:ff:ff:ff:ff")
         exp_pkt = pkt.copy()
         self.send_packet(self.port1, str(pkt))
         self.verify_packet(exp_pkt, self.port2)
@@ -840,7 +963,6 @@ class BridgingPriorityTest(FabricTest):
 
 
 class DoubleTaggedBridgingTest(FabricTest):
-
     def runDoubleTaggedBridgingTest(self, pkt):
         vlan_id = 10
         inner_vlan_id = 11
@@ -862,11 +984,12 @@ class DoubleTaggedBridgingTest(FabricTest):
 
         self.send_packet(self.port1, str(pkt))
         self.send_packet(self.port2, str(pkt2))
-        self.verify_each_packet_on_each_port([exp_pkt, exp_pkt2], [self.port2, self.port1])
+        self.verify_each_packet_on_each_port(
+            [exp_pkt, exp_pkt2], [self.port2, self.port1]
+        )
 
 
 class DoubleVlanXConnectTest(FabricTest):
-
     def runXConnectTest(self, pkt):
         vlan_id_outer = 100
         vlan_id_inner = 200
@@ -915,7 +1038,8 @@ class ArpBroadcastTest(FabricTest):
         for inport in all_ports:
             pkt_to_send = vlan_arp_pkt if inport in tagged_ports else arp_pkt
             self.send_packet(inport, str(pkt_to_send))
-            # Pkt should be received on CPU and on all ports, except the ingress one.
+            # Pkt should be received on CPU and on all ports, except the
+            # ingress one.
             self.verify_packet_in(exp_pkt=pkt_to_send, exp_in_port=inport)
             verify_tagged_ports = set(tagged_ports)
             verify_tagged_ports.discard(inport)
@@ -929,14 +1053,26 @@ class ArpBroadcastTest(FabricTest):
 
 
 class IPv4UnicastTest(FabricTest):
-
-    def runIPv4UnicastTest(self, pkt, next_hop_mac,
-                           tagged1=False, tagged2=False, prefix_len=24,
-                           exp_pkt=None, exp_pkt_base=None, next_id=None,
-                           next_vlan=None, is_next_hop_spine=False, dst_ipv4=None,
-                           routed_eth_types=(ETH_TYPE_IPV4,),
-                           verify_pkt=True, with_another_pkt_later=False,
-                           no_send=False, ig_port=None, eg_port=None):
+    def runIPv4UnicastTest(
+        self,
+        pkt,
+        next_hop_mac,
+        tagged1=False,
+        tagged2=False,
+        prefix_len=24,
+        exp_pkt=None,
+        exp_pkt_base=None,
+        next_id=None,
+        next_vlan=None,
+        is_next_hop_spine=False,
+        dst_ipv4=None,
+        routed_eth_types=(ETH_TYPE_IPV4,),
+        verify_pkt=True,
+        with_another_pkt_later=False,
+        no_send=False,
+        ig_port=None,
+        eg_port=None,
+    ):
         """
         Execute an IPv4 unicast routing test.
         :param pkt: input packet
@@ -950,16 +1086,16 @@ class IPv4UnicastTest(FabricTest):
             output packet.
         :param next_id: value to use as next ID
         :param next_vlan: value to use as next VLAN
-        :param is_next_hop_spine: whether the packet should be routed to the spines using
-            MPLS SR
+        :param is_next_hop_spine: whether the packet should be routed to the
+               spines using MPLS SR
         :param dst_ipv4: if not none, this value will be used as IPv4 dst to
             configure tables
         :param routed_eth_types: eth type values used to configure the
             classifier table to process packets via routing
         :param verify_pkt: whether packets are expected to be forwarded or
             dropped
-        :param with_another_pkt_later: another packet(s) will be verified outside
-            this function
+        :param with_another_pkt_later: another packet(s) will be verified
+               outside this function
         :param no_send: if true insert table entries but do not send
             (or verify) packets
         """
@@ -1002,8 +1138,12 @@ class IPv4UnicastTest(FabricTest):
 
         # Forwarding type -> routing v4
         for eth_type in routed_eth_types:
-            self.set_forwarding_type(ig_port, switch_mac, ethertype=eth_type,
-                                     fwd_type=FORWARDING_TYPE_UNICAST_IPV4)
+            self.set_forwarding_type(
+                ig_port,
+                switch_mac,
+                ethertype=eth_type,
+                fwd_type=FORWARDING_TYPE_UNICAST_IPV4,
+            )
 
         # Routing entry.
         self.add_forwarding_routing_v4_entry(dst_ipv4, prefix_len, next_id)
@@ -1025,8 +1165,7 @@ class IPv4UnicastTest(FabricTest):
             if tagged2 and Dot1Q not in exp_pkt:
                 exp_pkt = pkt_add_vlan(exp_pkt, vlan_vid=vlan2)
             if is_next_hop_spine:
-                exp_pkt = pkt_add_mpls(exp_pkt, label=mpls_label,
-                                       ttl=DEFAULT_MPLS_TTL)
+                exp_pkt = pkt_add_mpls(exp_pkt, label=mpls_label, ttl=DEFAULT_MPLS_TTL)
 
         if tagged1 and not pkt_is_tagged:
             pkt = pkt_add_vlan(pkt, vlan_vid=vlan1)
@@ -1046,25 +1185,30 @@ class IPv4UnicastTest(FabricTest):
 class IPv4MulticastTest(FabricTest):
     def runIPv4MulticastTest(self, pkt, in_port, out_ports, in_vlan, out_vlan):
         if Dot1Q in pkt:
-            print "runIPv4MulticastTest() expects untagged packets"
+            print("runIPv4MulticastTest() expects untagged packets")
             return
 
         # Initialize
-        internal_in_vlan = in_vlan if in_vlan != None else 4094
-        internal_out_vlan = out_vlan if out_vlan != None else 4094
+        internal_in_vlan = in_vlan if in_vlan is not None else 4094
+        internal_out_vlan = out_vlan if out_vlan is not None else 4094
         dst_ipv4 = pkt[IP].dst
         prefix_len = 32
         next_id = 1
         mcast_group_id = 1
 
         # Set port VLAN
-        self.setup_port(in_port, internal_in_vlan, in_vlan != None)
+        self.setup_port(in_port, internal_in_vlan, in_vlan is not None)
         for out_port in out_ports:
-            self.setup_port(out_port, internal_out_vlan, out_vlan != None)
+            self.setup_port(out_port, internal_out_vlan, out_vlan is not None)
 
         # Set forwarding type to IPv4 multicast
-        self.set_forwarding_type(in_port, MCAST_MAC, MCAST_MASK,
-            ethertype=ETH_TYPE_IPV4, fwd_type=FORWARDING_TYPE_IPV4_MULTICAST)
+        self.set_forwarding_type(
+            in_port,
+            MCAST_MAC,
+            MCAST_MASK,
+            ethertype=ETH_TYPE_IPV4,
+            fwd_type=FORWARDING_TYPE_IPV4_MULTICAST,
+        )
 
         # Set IPv4 routing table entry
         self.add_forwarding_routing_v4_entry(dst_ipv4, prefix_len, next_id)
@@ -1079,8 +1223,12 @@ class IPv4MulticastTest(FabricTest):
 
         # Prepare packets
         expect_pkt = pkt_decrement_ttl(pkt.copy())
-        pkt = pkt_add_vlan(pkt, vlan_vid=in_vlan) if in_vlan != None else pkt
-        expect_pkt = pkt_add_vlan(expect_pkt, vlan_vid=out_vlan) if out_vlan != None else expect_pkt
+        pkt = pkt_add_vlan(pkt, vlan_vid=in_vlan) if in_vlan is not None else pkt
+        expect_pkt = (
+            pkt_add_vlan(expect_pkt, vlan_vid=out_vlan)
+            if out_vlan is not None
+            else expect_pkt
+        )
 
         # Send packets and verify
         self.send_packet(in_port, str(pkt))
@@ -1090,34 +1238,44 @@ class IPv4MulticastTest(FabricTest):
 
 
 class DoubleVlanTerminationTest(FabricTest):
-
-    def runRouteAndPushTest(self, pkt, next_hop_mac,
-                            prefix_len=24,
-                            exp_pkt=None,
-                            next_id=None,
-                            next_vlan_id=None,
-                            next_inner_vlan_id=None,
-                            in_tagged=False,
-                            dst_ipv4=None,
-                            routed_eth_types=(ETH_TYPE_IPV4,),
-                            verify_pkt=True):
+    def runRouteAndPushTest(
+        self,
+        pkt,
+        next_hop_mac,
+        prefix_len=24,
+        exp_pkt=None,
+        next_id=None,
+        next_vlan_id=None,
+        next_inner_vlan_id=None,
+        in_tagged=False,
+        dst_ipv4=None,
+        routed_eth_types=(ETH_TYPE_IPV4,),
+        verify_pkt=True,
+    ):
         """
-        Route and Push test case. The switch output port is expected to send double tagged packets.
-        The switch routes the packet to the correct destination and adds the double VLAN tag to it.
+        Route and Push test case. The switch output port is expected to send
+        double tagged packets.
+        The switch routes the packet to the correct destination and adds the
+        double VLAN tag to it.
         :param pkt: input packet
         :param next_hop_mac: MAC address of the next hop
         :param prefix_len: prefix length to use in the routing table
         :param exp_pkt: expected packet, if none one will be built using the
                         input packet
         :param next_id: value to use as next ID
-        :param next_vlan_id: the new vlan ID that will be set to the packet after routerd
-        :param next_inner_vlan_id: the new inner vlan ID that will be set to the packet after routerd
-        :param in_tagged: the vlan id of the packet when packet enters the pipeline
+        :param next_vlan_id: the new vlan ID that will be set to the packet
+                             after routerd
+        :param next_inner_vlan_id: the new inner vlan ID that will be set to
+                                   the packet after routerd
+        :param in_tagged: the vlan id of the packet when packet enters the
+                          pipeline
         :param dst_ipv4: if not none, this value will be used as IPv4 dst to
                          configure tables
         :param routed_eth_types: eth type values used to configure the
-                                 classifier table to process packets via routing
-        :param verify_pkt: whether packets are expected to be forwarded or dropped
+                                 classifier table to process packets via
+                                 routing
+        :param verify_pkt: whether packets are expected to be forwarded or
+                           dropped
         """
 
         if IP not in pkt or Ether not in pkt:
@@ -1140,12 +1298,21 @@ class DoubleVlanTerminationTest(FabricTest):
         # Setup port 1
         self.setup_port(self.port1, vlan_id=in_vlan, tagged=in_tagged)
         # Setup port 2: packets on this port are double tagged packets
-        self.setup_port(self.port2, vlan_id=next_vlan_id, double_tagged=True, inner_vlan_id=next_inner_vlan_id)
+        self.setup_port(
+            self.port2,
+            vlan_id=next_vlan_id,
+            double_tagged=True,
+            inner_vlan_id=next_inner_vlan_id,
+        )
 
         # Forwarding type -> routing v4
         for eth_type in routed_eth_types:
-            self.set_forwarding_type(self.port1, switch_mac, ethertype=eth_type,
-                                     fwd_type=FORWARDING_TYPE_UNICAST_IPV4)
+            self.set_forwarding_type(
+                self.port1,
+                switch_mac,
+                ethertype=eth_type,
+                fwd_type=FORWARDING_TYPE_UNICAST_IPV4,
+            )
 
         # Routing entry.
         self.add_forwarding_routing_v4_entry(dst_ipv4, prefix_len, next_id)
@@ -1169,23 +1336,29 @@ class DoubleVlanTerminationTest(FabricTest):
 
         self.send_packet(self.port1, str(pkt))
         if verify_pkt:
-            self.verify_packet( exp_pkt, self.port2)
+            self.verify_packet(exp_pkt, self.port2)
         self.verify_no_other_packets()
 
-    def runPopAndRouteTest(self, pkt, next_hop_mac,
-                           prefix_len=24,
-                           exp_pkt=None,
-                           next_id=None,
-                           vlan_id=None,
-                           inner_vlan_id=None,
-                           out_tagged=False,
-                           is_next_hop_spine=False,
-                           dst_ipv4=None,
-                           routed_eth_types=(ETH_TYPE_IPV4,),
-                           verify_pkt=True):
+    def runPopAndRouteTest(
+        self,
+        pkt,
+        next_hop_mac,
+        prefix_len=24,
+        exp_pkt=None,
+        next_id=None,
+        vlan_id=None,
+        inner_vlan_id=None,
+        out_tagged=False,
+        is_next_hop_spine=False,
+        dst_ipv4=None,
+        routed_eth_types=(ETH_TYPE_IPV4,),
+        verify_pkt=True,
+    ):
         """
-        Pop and Route test case. The switch port expect to receive double tagged packets.
-        The switch removes both VLAN headers from the packet and routes it to the correct destination.
+        Pop and Route test case. The switch port expect to receive double
+        tagged packets.
+        The switch removes both VLAN headers from the packet and routes it to
+        the correct destination.
         :param pkt: input packet
         :param next_hop_mac: MAC address of the next hop
         :param prefix_len: prefix length to use in the routing table
@@ -1193,15 +1366,19 @@ class DoubleVlanTerminationTest(FabricTest):
                         input packet
         :param next_id: value to use as next ID
         :param vlan_id: the vlan ID that will be add to the test packet
-        :param inner_vlan_id: the inner vlan ID that will be add to the test packet
-        :param out_tagged: the vlan ID that will be set to the packet after routed, none if untagged
-        :param is_next_hop_spine: whether the packet should be routed to the spines using
-                                  MPLS SR
+        :param inner_vlan_id: the inner vlan ID that will be add to the test
+                              packet
+        :param out_tagged: the vlan ID that will be set to the packet after
+                           routed, none if untagged
+        :param is_next_hop_spine: whether the packet should be routed to the
+                                  spines using MPLS SR
         :param dst_ipv4: if not none, this value will be used as IPv4 dst to
                          configure tables
         :param routed_eth_types: eth type values used to configure the
-                                 classifier table to process packets via routing
-        :param verify_pkt: whether packets are expected to be forwarded or dropped
+                                 classifier table to process packets via
+                                 routing
+        :param verify_pkt: whether packets are expected to be forwarded or
+                           dropped
         """
 
         if IP not in pkt or Ether not in pkt:
@@ -1239,14 +1416,23 @@ class DoubleVlanTerminationTest(FabricTest):
         switch_mac = pkt[Ether].dst
 
         # Setup port 1: packets on this port are double tagged packets
-        self.setup_port(self.port1, vlan_id=vlan_id, double_tagged=True, inner_vlan_id=inner_vlan_id)
+        self.setup_port(
+            self.port1,
+            vlan_id=vlan_id,
+            double_tagged=True,
+            inner_vlan_id=inner_vlan_id,
+        )
         # Setup port 2
         self.setup_port(self.port2, vlan_id=next_vlan, tagged=out_tagged)
 
         # Forwarding type -> routing v4
         for eth_type in routed_eth_types:
-            self.set_forwarding_type(self.port1, switch_mac, ethertype=eth_type,
-                                     fwd_type=FORWARDING_TYPE_UNICAST_IPV4)
+            self.set_forwarding_type(
+                self.port1,
+                switch_mac,
+                ethertype=eth_type,
+                fwd_type=FORWARDING_TYPE_UNICAST_IPV4,
+            )
         self.add_forwarding_routing_v4_entry(dst_ipv4, prefix_len, next_id)
 
         if not is_next_hop_spine:
@@ -1268,12 +1454,11 @@ class DoubleVlanTerminationTest(FabricTest):
             if out_tagged and Dot1Q not in exp_pkt:
                 exp_pkt = pkt_add_vlan(exp_pkt, vlan_vid=next_vlan)
             if is_next_hop_spine:
-                exp_pkt = pkt_add_mpls(exp_pkt, label=mpls_label,
-                                       ttl=DEFAULT_MPLS_TTL)
+                exp_pkt = pkt_add_mpls(exp_pkt, label=mpls_label, ttl=DEFAULT_MPLS_TTL)
 
         self.send_packet(self.port1, str(pkt))
         if verify_pkt:
-            self.verify_packet( exp_pkt, self.port2)
+            self.verify_packet(exp_pkt, self.port2)
         self.verify_no_other_packets()
 
 
@@ -1294,8 +1479,12 @@ class MplsSegmentRoutingTest(FabricTest):
         self.setup_port(self.port1, DEFAULT_VLAN, False)
         self.setup_port(self.port2, DEFAULT_VLAN, False)
         # Forwarding type -> mpls
-        self.set_forwarding_type(self.port1, switch_mac, ethertype=ETH_TYPE_MPLS_UNICAST,
-                                 fwd_type=FORWARDING_TYPE_MPLS)
+        self.set_forwarding_type(
+            self.port1,
+            switch_mac,
+            ethertype=ETH_TYPE_MPLS_UNICAST,
+            fwd_type=FORWARDING_TYPE_MPLS,
+        )
         # Mpls entry.
         self.add_forwarding_mpls_entry(label, next_id)
 
@@ -1339,7 +1528,6 @@ class PacketInTest(FabricTest):
 
 
 class SpgwSimpleTest(IPv4UnicastTest):
-
     def read_counter(self, c_name, idx):
         counter = self.read_indirect_counter(c_name, idx, typ="BOTH")
         return (counter.data.packet_count, counter.data.byte_count)
@@ -1354,39 +1542,43 @@ class SpgwSimpleTest(IPv4UnicastTest):
             "FabricIngress.spgw.interfaces",
             [
                 self.Lpm("ipv4_dst_addr", iface_addr_, prefix_len),
-                self.Exact("gtpu_is_valid", stringify(int(gtpu_valid), 1))
+                self.Exact("gtpu_is_valid", stringify(int(gtpu_valid), 1)),
             ],
             "FabricIngress.spgw.load_iface",
-            [
-                ("src_iface", stringify(iface_enum, 1)),
-            ],
+            [("src_iface", stringify(iface_enum, 1))],
         )
         self.write_request(req)
 
-
     def add_ue_pool(self, pool_addr, prefix_len=32):
         self._add_spgw_iface(
-                iface_addr = pool_addr,
-                prefix_len = prefix_len,
-                iface_enum = SPGW_IFACE_CORE,
-                gtpu_valid = False)
+            iface_addr=pool_addr,
+            prefix_len=prefix_len,
+            iface_enum=SPGW_IFACE_CORE,
+            gtpu_valid=False,
+        )
 
     def add_s1u_iface(self, s1u_addr, prefix_len=32):
         self._add_spgw_iface(
-                iface_addr = s1u_addr,
-                prefix_len = prefix_len,
-                iface_enum = SPGW_IFACE_ACCESS,
-                gtpu_valid = True)
+            iface_addr=s1u_addr,
+            prefix_len=prefix_len,
+            iface_enum=SPGW_IFACE_ACCESS,
+            gtpu_valid=True,
+        )
 
-    def add_dbuf_device(self,
-                        dbuf_addr=DBUF_IPV4, drain_dst_addr=DBUF_DRAIN_DST_IPV4,
-                        dbuf_far_id=DBUF_FAR_ID, dbuf_teid=DBUF_TEID):
+    def add_dbuf_device(
+        self,
+        dbuf_addr=DBUF_IPV4,
+        drain_dst_addr=DBUF_DRAIN_DST_IPV4,
+        dbuf_far_id=DBUF_FAR_ID,
+        dbuf_teid=DBUF_TEID,
+    ):
         # Switch interface for traffic to/from dbuf device
         self._add_spgw_iface(
-                iface_addr = drain_dst_addr,
-                prefix_len = 32,
-                iface_enum = SPGW_IFACE_FROM_DBUF,
-                gtpu_valid = True)
+            iface_addr=drain_dst_addr,
+            prefix_len=32,
+            iface_enum=SPGW_IFACE_FROM_DBUF,
+            gtpu_valid=True,
+        )
 
         # FAR that tunnels to the dbuf device
         return self._add_far(
@@ -1399,11 +1591,10 @@ class SpgwSimpleTest(IPv4UnicastTest):
                 ("tunnel_src_port", stringify(UDP_GTP_PORT, 2)),
                 ("tunnel_src_addr", ipv4_to_binary(drain_dst_addr)),
                 ("tunnel_dst_addr", ipv4_to_binary(dbuf_addr)),
-            ]
+            ],
         )
 
-    def add_uplink_pdr(self, ctr_id, far_id,
-                        teid, tunnel_dst_addr):
+    def add_uplink_pdr(self, ctr_id, far_id, teid, tunnel_dst_addr):
         req = self.get_new_write_request()
         self.push_update_add_entry_to_action(
             req,
@@ -1416,7 +1607,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             [
                 ("ctr_id", stringify(ctr_id, 2)),
                 ("far_id", stringify(far_id, 4)),
-                ("needs_gtpu_decap", stringify(1, 1))
+                ("needs_gtpu_decap", stringify(1, 1)),
             ],
         )
         self.write_request(req)
@@ -1432,7 +1623,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             [
                 ("ctr_id", stringify(ctr_id, 2)),
                 ("far_id", stringify(far_id, 4)),
-                ("needs_gtpu_decap", stringify(0, 1))
+                ("needs_gtpu_decap", stringify(0, 1)),
             ],
         )
         self.write_request(req)
@@ -1452,14 +1643,19 @@ class SpgwSimpleTest(IPv4UnicastTest):
         return self._add_far(
             far_id,
             "FabricIngress.spgw.load_normal_far",
-            [
-                ("drop", stringify(drop, 1)),
-                ("notify_cp", stringify(notify_cp, 1)),
-            ]
+            [("drop", stringify(drop, 1)), ("notify_cp", stringify(notify_cp, 1))],
         )
 
-    def add_tunnel_far(self, far_id, teid, tunnel_src_addr, tunnel_dst_addr,
-                       tunnel_src_port=DEFAULT_GTP_TUNNEL_SPORT, drop=False, notify_cp=False):
+    def add_tunnel_far(
+        self,
+        far_id,
+        teid,
+        tunnel_src_addr,
+        tunnel_dst_addr,
+        tunnel_src_port=DEFAULT_GTP_TUNNEL_SPORT,
+        drop=False,
+        notify_cp=False,
+    ):
         return self._add_far(
             far_id,
             "FabricIngress.spgw.load_tunnel_far",
@@ -1470,29 +1666,31 @@ class SpgwSimpleTest(IPv4UnicastTest):
                 ("tunnel_src_port", stringify(tunnel_src_port, 2)),
                 ("tunnel_src_addr", ipv4_to_binary(tunnel_src_addr)),
                 ("tunnel_dst_addr", ipv4_to_binary(tunnel_dst_addr)),
-            ]
+            ],
         )
 
     def setup_uplink(self, s1u_sgw_addr, teid, ctr_id, far_id=UPLINK_FAR_ID):
         self.add_s1u_iface(s1u_sgw_addr)
         self.add_uplink_pdr(
-            ctr_id=ctr_id,
-            far_id=far_id,
-            teid=teid,
-            tunnel_dst_addr=s1u_sgw_addr)
+            ctr_id=ctr_id, far_id=far_id, teid=teid, tunnel_dst_addr=s1u_sgw_addr,
+        )
         self.add_normal_far(far_id=far_id)
 
-    def setup_downlink(self, s1u_sgw_addr, s1u_enb_addr, teid, ue_addr, ctr_id, far_id=DOWNLINK_FAR_ID):
+    def setup_downlink(
+        self, s1u_sgw_addr, s1u_enb_addr, teid, ue_addr, ctr_id, far_id=DOWNLINK_FAR_ID,
+    ):
         self.add_ue_pool(ue_addr)
         self.add_downlink_pdr(ctr_id=ctr_id, far_id=far_id, ue_addr=ue_addr)
         self.add_tunnel_far(
             far_id=far_id,
             teid=teid,
             tunnel_src_addr=s1u_sgw_addr,
-            tunnel_dst_addr=s1u_enb_addr)
+            tunnel_dst_addr=s1u_enb_addr,
+        )
 
     def reset_pdr_counters(self, ctr_idx):
-        """ Reset the ingress and egress PDR counter packet and byte counts to 0 for the given index.
+        """Reset the ingress and egress PDR counter packet and byte counts to
+        0 for the given index.
         """
         self.write_indirect_counter(PDR_COUNTER_INGRESS, ctr_idx, 0, 0)
         self.write_indirect_counter(PDR_COUNTER_EGRESS, ctr_idx, 0, 0)
@@ -1503,14 +1701,22 @@ class SpgwSimpleTest(IPv4UnicastTest):
         """ Verify that the PDR ingress and egress counters for index 'ctr_idx' are now
             'exp_ingress_bytes', 'exp_ingress_pkts' and 'exp_egress_bytes', 'exp_egress_pkts' respectively upon reading.
         """
-        self.verify_indirect_counter(PDR_COUNTER_INGRESS, ctr_idx, "BOTH", exp_ingress_bytes, exp_ingress_pkts)
-        self.verify_indirect_counter(PDR_COUNTER_EGRESS, ctr_idx, "BOTH", exp_egress_bytes, exp_egress_pkts)
+        self.verify_indirect_counter(
+            PDR_COUNTER_INGRESS, ctr_idx, "BOTH", exp_ingress_bytes, exp_ingress_pkts,
+        )
+        self.verify_indirect_counter(
+            PDR_COUNTER_EGRESS, ctr_idx, "BOTH", exp_egress_bytes, exp_egress_pkts,
+        )
 
     def runUplinkTest(self, ue_out_pkt, tagged1, tagged2, is_next_hop_spine):
         upstream_mac = HOST2_MAC
 
-        gtp_pkt = pkt_add_gtp(ue_out_pkt, out_ipv4_src=S1U_ENB_IPV4,
-                              out_ipv4_dst=S1U_SGW_IPV4, teid=UPLINK_TEID)
+        gtp_pkt = pkt_add_gtp(
+            ue_out_pkt,
+            out_ipv4_src=S1U_ENB_IPV4,
+            out_ipv4_dst=S1U_SGW_IPV4,
+            teid=UPLINK_TEID,
+        )
         gtp_pkt[Ether].src = S1U_ENB_MAC
         gtp_pkt[Ether].dst = SWITCH_MAC
 
@@ -1525,21 +1731,26 @@ class SpgwSimpleTest(IPv4UnicastTest):
             exp_pkt = pkt_add_vlan(exp_pkt, VLAN_ID_2)
 
         self.setup_uplink(
-            s1u_sgw_addr=S1U_SGW_IPV4,
-            teid=UPLINK_TEID,
-            ctr_id=UPLINK_PDR_CTR_IDX
+            s1u_sgw_addr=S1U_SGW_IPV4, teid=UPLINK_TEID, ctr_id=UPLINK_PDR_CTR_IDX,
         )
 
         # Clear SPGW counters before sending the packet
         self.reset_pdr_counters(UPLINK_PDR_CTR_IDX)
 
-        self.runIPv4UnicastTest(pkt=gtp_pkt, dst_ipv4=ue_out_pkt[IP].dst,
-                                next_hop_mac=upstream_mac,
-                                prefix_len=32, exp_pkt=exp_pkt,
-                                tagged1=tagged1, tagged2=tagged2, is_next_hop_spine=is_next_hop_spine)
+        self.runIPv4UnicastTest(
+            pkt=gtp_pkt,
+            dst_ipv4=ue_out_pkt[IP].dst,
+            next_hop_mac=upstream_mac,
+            prefix_len=32,
+            exp_pkt=exp_pkt,
+            tagged1=tagged1,
+            tagged2=tagged2,
+            is_next_hop_spine=is_next_hop_spine,
+        )
 
         ingress_bytes = len(gtp_pkt) + 4  # FIXME: where does this 4 come from?
-        egress_bytes = len(exp_pkt) + 50  # FIXME: where does this 50 come from?
+        # FIXME: where does this 50 come from?
+        egress_bytes = len(exp_pkt) + 50
         if tagged1:
             ingress_bytes += 4  # length of VLAN header
             egress_bytes += 4  # FIXME: why is this necessary?
@@ -1552,7 +1763,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             egress_bytes += CPU_LOOPBACK_FAKE_ETHERNET_LENGTH
 
         # Verify the Ingress and Egress PDR counters
-        self.verify_pdr_counters(UPLINK_PDR_CTR_IDX, ingress_bytes, egress_bytes,1,1)
+        self.verify_pdr_counters(UPLINK_PDR_CTR_IDX, ingress_bytes, egress_bytes, 1, 1)
 
     def runDownlinkTest(self, pkt, tagged1, tagged2, is_next_hop_spine):
         exp_pkt = pkt.copy()
@@ -1560,8 +1771,12 @@ class SpgwSimpleTest(IPv4UnicastTest):
         exp_pkt[Ether].dst = S1U_ENB_MAC
         if not is_next_hop_spine:
             exp_pkt[IP].ttl = exp_pkt[IP].ttl - 1
-        exp_pkt = pkt_add_gtp(exp_pkt, out_ipv4_src=S1U_SGW_IPV4,
-                              out_ipv4_dst=S1U_ENB_IPV4, teid=DOWNLINK_TEID)
+        exp_pkt = pkt_add_gtp(
+            exp_pkt,
+            out_ipv4_src=S1U_SGW_IPV4,
+            out_ipv4_dst=S1U_ENB_IPV4,
+            teid=DOWNLINK_TEID,
+        )
         if is_next_hop_spine:
             exp_pkt = pkt_add_mpls(exp_pkt, MPLS_LABEL_2, DEFAULT_MPLS_TTL)
         if tagged2:
@@ -1578,13 +1793,20 @@ class SpgwSimpleTest(IPv4UnicastTest):
         # Clear SPGW counters before sending the packet
         self.reset_pdr_counters(DOWNLINK_PDR_CTR_IDX)
 
-        self.runIPv4UnicastTest(pkt=pkt, dst_ipv4=exp_pkt[IP].dst,
-                                next_hop_mac=S1U_ENB_MAC,
-                                prefix_len=32, exp_pkt=exp_pkt,
-                                tagged1=tagged1, tagged2=tagged2, is_next_hop_spine=is_next_hop_spine)
+        self.runIPv4UnicastTest(
+            pkt=pkt,
+            dst_ipv4=exp_pkt[IP].dst,
+            next_hop_mac=S1U_ENB_MAC,
+            prefix_len=32,
+            exp_pkt=exp_pkt,
+            tagged1=tagged1,
+            tagged2=tagged2,
+            is_next_hop_spine=is_next_hop_spine,
+        )
 
         ingress_bytes = len(pkt) + 4  # FIXME: where does this 4 come from?
-        egress_bytes = len(exp_pkt) + 14  # FIXME: where does this 14 come from?
+        # FIXME: where does this 14 come from?
+        egress_bytes = len(exp_pkt) + 14
         if tagged1:
             ingress_bytes += 4  # length of VLAN header
             egress_bytes += 4  # FIXME: why is this necessary?
@@ -1597,7 +1819,9 @@ class SpgwSimpleTest(IPv4UnicastTest):
             egress_bytes += CPU_LOOPBACK_FAKE_ETHERNET_LENGTH
 
         # Verify the Ingress and Egress PDR counters
-        self.verify_pdr_counters(DOWNLINK_PDR_CTR_IDX, ingress_bytes, egress_bytes,1,1)
+        self.verify_pdr_counters(
+            DOWNLINK_PDR_CTR_IDX, ingress_bytes, egress_bytes, 1, 1
+        )
 
     def runDownlinkToDbufTest(self, pkt, tagged1, tagged2, is_next_hop_spine):
         exp_pkt = pkt.copy()
@@ -1606,9 +1830,13 @@ class SpgwSimpleTest(IPv4UnicastTest):
         if not is_next_hop_spine:
             exp_pkt[IP].ttl = exp_pkt[IP].ttl - 1
         # add dbuf tunnel
-        exp_pkt = pkt_add_gtp(exp_pkt, out_ipv4_src=DBUF_DRAIN_DST_IPV4,
-                              out_ipv4_dst=DBUF_IPV4, teid=DBUF_TEID,
-                              sport=UDP_GTP_PORT)
+        exp_pkt = pkt_add_gtp(
+            exp_pkt,
+            out_ipv4_src=DBUF_DRAIN_DST_IPV4,
+            out_ipv4_dst=DBUF_IPV4,
+            teid=DBUF_TEID,
+            sport=UDP_GTP_PORT,
+        )
         if is_next_hop_spine:
             exp_pkt = pkt_add_mpls(exp_pkt, MPLS_LABEL_2, DEFAULT_MPLS_TTL)
         if tagged2:
@@ -1616,20 +1844,32 @@ class SpgwSimpleTest(IPv4UnicastTest):
 
         # Add the UE pool interface and the PDR pointing to the DBUF FAR
         self.add_ue_pool(UE_IPV4)
-        self.add_downlink_pdr(ctr_id=DOWNLINK_PDR_CTR_IDX, far_id=DBUF_FAR_ID, ue_addr=UE_IPV4)
+        self.add_downlink_pdr(
+            ctr_id=DOWNLINK_PDR_CTR_IDX, far_id=DBUF_FAR_ID, ue_addr=UE_IPV4
+        )
 
         # Add rules for sending/receiving packets to/from dbuf
         # (receiving isn't done by this test though)
-        self.add_dbuf_device(dbuf_addr=DBUF_IPV4, drain_dst_addr=DBUF_DRAIN_DST_IPV4,
-                             dbuf_far_id=DBUF_FAR_ID, dbuf_teid=DBUF_TEID)
+        self.add_dbuf_device(
+            dbuf_addr=DBUF_IPV4,
+            drain_dst_addr=DBUF_DRAIN_DST_IPV4,
+            dbuf_far_id=DBUF_FAR_ID,
+            dbuf_teid=DBUF_TEID,
+        )
 
         # Clear SPGW counters before sending the packet
         self.reset_pdr_counters(DOWNLINK_PDR_CTR_IDX)
 
-        self.runIPv4UnicastTest(pkt=pkt, dst_ipv4=exp_pkt[IP].dst,
-                                next_hop_mac=DBUF_MAC,
-                                prefix_len=32, exp_pkt=exp_pkt,
-                                tagged1=tagged1, tagged2=tagged2, is_next_hop_spine=is_next_hop_spine)
+        self.runIPv4UnicastTest(
+            pkt=pkt,
+            dst_ipv4=exp_pkt[IP].dst,
+            next_hop_mac=DBUF_MAC,
+            prefix_len=32,
+            exp_pkt=exp_pkt,
+            tagged1=tagged1,
+            tagged2=tagged2,
+            is_next_hop_spine=is_next_hop_spine,
+        )
 
         ingress_bytes = len(pkt) + 4  # FIXME: where does this 4 come from?
         egress_bytes = 0
@@ -1638,19 +1878,26 @@ class SpgwSimpleTest(IPv4UnicastTest):
         if self.loopback:
             ingress_bytes += CPU_LOOPBACK_FAKE_ETHERNET_LENGTH
 
-        # Verify the Ingress PDR packet counter increased, but the egress did not
-        self.verify_pdr_counters(DOWNLINK_PDR_CTR_IDX, ingress_bytes, egress_bytes, 1, 0)
+        # Verify the Ingress PDR packet counter increased, but the egress did
+        # not.
+        self.verify_pdr_counters(
+            DOWNLINK_PDR_CTR_IDX, ingress_bytes, egress_bytes, 1, 0
+        )
 
     def runDownlinkFromDbufTest(self, pkt, tagged1, tagged2, is_next_hop_spine):
-        """ Tests a packet returning from dbuf to be sent to the enodeb.
-            Similar to a normal downlink test, but the input is gtpu encapped.
+        """Tests a packet returning from dbuf to be sent to the enodeb.
+        Similar to a normal downlink test, but the input is gtpu encapped.
         """
         # The input packet is from dbuf and is GTPU encapsulated
         pkt_from_dbuf = pkt.copy()
         pkt_from_dbuf[Ether].src = DBUF_MAC
         pkt_from_dbuf[Ether].dst = SWITCH_MAC
-        pkt_from_dbuf = pkt_add_gtp(pkt_from_dbuf, out_ipv4_src=DBUF_IPV4,
-                                    out_ipv4_dst=DBUF_DRAIN_DST_IPV4, teid=DBUF_TEID)
+        pkt_from_dbuf = pkt_add_gtp(
+            pkt_from_dbuf,
+            out_ipv4_src=DBUF_IPV4,
+            out_ipv4_dst=DBUF_DRAIN_DST_IPV4,
+            teid=DBUF_TEID,
+        )
 
         # A normal downlink packet to the enodeb is the expected output
         exp_pkt = pkt.copy()
@@ -1658,8 +1905,12 @@ class SpgwSimpleTest(IPv4UnicastTest):
         exp_pkt[Ether].dst = S1U_ENB_MAC
         if not is_next_hop_spine:
             exp_pkt[IP].ttl = exp_pkt[IP].ttl - 1
-        exp_pkt = pkt_add_gtp(exp_pkt, out_ipv4_src=S1U_SGW_IPV4,
-                              out_ipv4_dst=S1U_ENB_IPV4, teid=DOWNLINK_TEID)
+        exp_pkt = pkt_add_gtp(
+            exp_pkt,
+            out_ipv4_src=S1U_SGW_IPV4,
+            out_ipv4_dst=S1U_ENB_IPV4,
+            teid=DOWNLINK_TEID,
+        )
         if is_next_hop_spine:
             exp_pkt = pkt_add_mpls(exp_pkt, MPLS_LABEL_2, DEFAULT_MPLS_TTL)
         if tagged2:
@@ -1676,19 +1927,30 @@ class SpgwSimpleTest(IPv4UnicastTest):
 
         # Add rules for sending/receiving packets to/from dbuf
         # (sending isn't done by this test though)
-        self.add_dbuf_device(dbuf_addr=DBUF_IPV4, drain_dst_addr=DBUF_DRAIN_DST_IPV4,
-                             dbuf_far_id=DBUF_FAR_ID, dbuf_teid=DBUF_TEID)
+        self.add_dbuf_device(
+            dbuf_addr=DBUF_IPV4,
+            drain_dst_addr=DBUF_DRAIN_DST_IPV4,
+            dbuf_far_id=DBUF_FAR_ID,
+            dbuf_teid=DBUF_TEID,
+        )
 
         # Clear SPGW counters before sending the packet
         self.reset_pdr_counters(DOWNLINK_PDR_CTR_IDX)
 
-        self.runIPv4UnicastTest(pkt=pkt_from_dbuf, dst_ipv4=exp_pkt[IP].dst,
-                                next_hop_mac=S1U_ENB_MAC,
-                                prefix_len=32, exp_pkt=exp_pkt,
-                                tagged1=tagged1, tagged2=tagged2, is_next_hop_spine=is_next_hop_spine)
+        self.runIPv4UnicastTest(
+            pkt=pkt_from_dbuf,
+            dst_ipv4=exp_pkt[IP].dst,
+            next_hop_mac=S1U_ENB_MAC,
+            prefix_len=32,
+            exp_pkt=exp_pkt,
+            tagged1=tagged1,
+            tagged2=tagged2,
+            is_next_hop_spine=is_next_hop_spine,
+        )
 
         ingress_bytes = 0
-        egress_bytes = len(exp_pkt) + 14  # FIXME: where does this 14 come from?
+        # FIXME: where does this 14 come from?
+        egress_bytes = len(exp_pkt) + 14
         if tagged1:
             egress_bytes += 4  # FIXME: why is this necessary?
         if not tagged2:
@@ -1698,14 +1960,18 @@ class SpgwSimpleTest(IPv4UnicastTest):
         if self.loopback:
             egress_bytes += CPU_LOOPBACK_FAKE_ETHERNET_LENGTH
 
-        # Verify the Ingress PDR packet counter did not increase, but the egress did
-        self.verify_pdr_counters(DOWNLINK_PDR_CTR_IDX, ingress_bytes, egress_bytes, 0, 1)
+        # Verify the Ingress PDR packet counter did not increase, but the
+        # egress did
+        self.verify_pdr_counters(
+            DOWNLINK_PDR_CTR_IDX, ingress_bytes, egress_bytes, 0, 1
+        )
+
 
 class SpgwReadWriteSymmetryTest(SpgwSimpleTest):
-    """ Verifies all SPGW tables adhere to p4runtime read-write symmetry. This is a
-        temporary unit test, only meant to exist until a better test is written that
-        programmatically verifies read-write symmetry test on all tables and actions
-        found in the p4info.
+    """Verifies all SPGW tables adhere to p4runtime read-write symmetry.
+    This is a temporary unit test, only meant to exist until a better test
+    is written that programmatically verifies read-write symmetry test on
+    all tables and actions found in the p4info.
     """
 
     def getActionFromReadEntry(self, table_entry):
@@ -1715,114 +1981,156 @@ class SpgwReadWriteSymmetryTest(SpgwSimpleTest):
         p4info_params = self.get_obj("actions", action_name).params
         name_list = [""] * len(p4info_params)
         for param in p4info_params:
-            name_list[param.id - 1] = param.name.encode('ascii', 'ignore')
+            name_list[param.id - 1] = param.name.encode("ascii", "ignore")
 
-        params = [(name_list[param.param_id - 1], param.value) for param in action.params]
+        params = [
+            (name_list[param.param_id - 1], param.value) for param in action.params
+        ]
         return (action_name, params)
 
     def writeAndReadEntry(self, table_name, match_keys, action_name, action_params):
         req = self.get_new_write_request()
-        self.push_update_add_entry_to_action(req,
-                table_name, match_keys, action_name, action_params)
+        self.push_update_add_entry_to_action(
+            req, table_name, match_keys, action_name, action_params
+        )
         self.write_request(req)
         # 'read' here is past tense
         read_entry = self.read_table_entry(table_name, match_keys)
         if read_entry is None:
-            self.fail("Failed to read an entry that was just written! " + \
-                    "Table was %s, action was %s" % (table_name, action_name))
+            self.fail(
+                "Failed to read an entry that was just written! "
+                + "Table was %s, action was %s" % (table_name, action_name)
+            )
 
         read_action_name, read_action_params = self.getActionFromReadEntry(read_entry)
         if not read_action_name.endswith(action_name):
-            self.fail("Read action name does end with written action name" + \
-                    "\n>> Read action name: %s" % read_action_name + \
-                    "\n>> Written action name: %s" % action_name)
+            self.fail(
+                "Read action name does end with written action name"
+                + "\n>> Read action name: %s" % read_action_name
+                + "\n>> Written action name: %s" % action_name
+            )
 
         if set(read_action_params) != set(action_params):
-            self.fail("Read action params do not equal written action params" + \
-                    "\n>> Read params: %s" % str(read_action_params) + \
-                    "\n>> Written params: %s" % str(action_params))
+            self.fail(
+                "Read action params do not equal written action params"
+                + "\n>> Read params: %s" % str(read_action_params)
+                + "\n>> Written params: %s" % str(action_params)
+            )
 
-    def checkInterfaceTable(self, iface_addr='1.1.1.1', prefix_len=32, gtpu_valid=1,
-                            iface_enum=1):
+    def checkInterfaceTable(
+        self, iface_addr="1.1.1.1", prefix_len=32, gtpu_valid=1, iface_enum=1
+    ):
         match_keys = [
-                self.Lpm("ipv4_dst_addr", ipv4_to_binary(iface_addr), prefix_len),
-                self.Exact("gtpu_is_valid", stringify(int(gtpu_valid), 1))]
+            self.Lpm("ipv4_dst_addr", ipv4_to_binary(iface_addr), prefix_len),
+            self.Exact("gtpu_is_valid", stringify(int(gtpu_valid), 1)),
+        ]
         action_params = [("src_iface", stringify(iface_enum, 1))]
         self.writeAndReadEntry(
-                "FabricIngress.spgw.interfaces",
-                match_keys,
-                "FabricIngress.spgw.load_iface",
-                action_params)
+            "FabricIngress.spgw.interfaces",
+            match_keys,
+            "FabricIngress.spgw.load_iface",
+            action_params,
+        )
 
-    def checkUplinkPdrTable(self,
-            teid=1, tunnel_dst_addr='1.1.1.1', ctr_id=1, far_id=1, decap_flag=1):
+    def checkUplinkPdrTable(
+        self, teid=1, tunnel_dst_addr="1.1.1.1", ctr_id=1, far_id=1, decap_flag=1,
+    ):
         match_keys = [
-                self.Exact("teid", stringify(teid, 4)),
-                self.Exact("tunnel_ipv4_dst", ipv4_to_binary(tunnel_dst_addr))]
+            self.Exact("teid", stringify(teid, 4)),
+            self.Exact("tunnel_ipv4_dst", ipv4_to_binary(tunnel_dst_addr)),
+        ]
         action_params = [
-                ("ctr_id", stringify(ctr_id, 2)),
-                ("far_id", stringify(far_id, 4)),
-                ("needs_gtpu_decap", stringify(decap_flag, 1))]
+            ("ctr_id", stringify(ctr_id, 2)),
+            ("far_id", stringify(far_id, 4)),
+            ("needs_gtpu_decap", stringify(decap_flag, 1)),
+        ]
         self.writeAndReadEntry(
             "FabricIngress.spgw.uplink_pdrs",
             match_keys,
             "FabricIngress.spgw.load_pdr",
-            action_params)
+            action_params,
+        )
 
-    def checkDownlinkPdrTable(self, ue_addr='1.1.1.1', ctr_id=1, far_id=1, decap_flag=1):
+    def checkDownlinkPdrTable(
+        self, ue_addr="1.1.1.1", ctr_id=1, far_id=1, decap_flag=1
+    ):
         match_keys = [self.Exact("ue_addr", ipv4_to_binary(ue_addr))]
         action_params = [
-                ("ctr_id", stringify(ctr_id, 2)),
-                ("far_id", stringify(far_id, 4)),
-                ("needs_gtpu_decap", stringify(decap_flag, 1))]
+            ("ctr_id", stringify(ctr_id, 2)),
+            ("far_id", stringify(far_id, 4)),
+            ("needs_gtpu_decap", stringify(decap_flag, 1)),
+        ]
         self.writeAndReadEntry(
             "FabricIngress.spgw.downlink_pdrs",
             match_keys,
             "FabricIngress.spgw.load_pdr",
-            action_params)
+            action_params,
+        )
 
     def checkNormalFar(self, far_id=509, drop_flag=1, notify_flag=1):
         match_keys = [self.Exact("far_id", stringify(far_id, 4))]
         action_params = [
-                ("drop", stringify(drop_flag, 1)),
-                ("notify_cp", stringify(notify_flag, 1))]
+            ("drop", stringify(drop_flag, 1)),
+            ("notify_cp", stringify(notify_flag, 1)),
+        ]
         self.writeAndReadEntry(
             "FabricIngress.spgw.fars",
             match_keys,
             "FabricIngress.spgw.load_normal_far",
-            action_params)
+            action_params,
+        )
 
-    def checkTunnelFar(self, far_id=510, drop_flag=1, notify_flag=1, teid=56789,
-            tunnel_src_port=1234, tunnel_src_addr='1.1.1.1', tunnel_dst_addr='2.2.2.2'):
+    def checkTunnelFar(
+        self,
+        far_id=510,
+        drop_flag=1,
+        notify_flag=1,
+        teid=56789,
+        tunnel_src_port=1234,
+        tunnel_src_addr="1.1.1.1",
+        tunnel_dst_addr="2.2.2.2",
+    ):
         match_keys = [self.Exact("far_id", stringify(far_id, 4))]
         action_params = [
-                ("drop", stringify(drop_flag, 1)),
-                ("notify_cp", stringify(notify_flag, 1)),
-                ("teid", stringify(teid, 4)),
-                ("tunnel_src_port", stringify(tunnel_src_port, 2)),
-                ("tunnel_src_addr", ipv4_to_binary(tunnel_src_addr)),
-                ("tunnel_dst_addr", ipv4_to_binary(tunnel_dst_addr))]
+            ("drop", stringify(drop_flag, 1)),
+            ("notify_cp", stringify(notify_flag, 1)),
+            ("teid", stringify(teid, 4)),
+            ("tunnel_src_port", stringify(tunnel_src_port, 2)),
+            ("tunnel_src_addr", ipv4_to_binary(tunnel_src_addr)),
+            ("tunnel_dst_addr", ipv4_to_binary(tunnel_dst_addr)),
+        ]
         self.writeAndReadEntry(
             "FabricIngress.spgw.fars",
             match_keys,
             "FabricIngress.spgw.load_tunnel_far",
-            action_params)
+            action_params,
+        )
 
-    def checkDbufFar(self, far_id=511, drop_flag=1, notify_flag=1, teid=56789,
-            tunnel_src_port=1234, tunnel_src_addr='1.1.1.1', tunnel_dst_addr='2.2.2.2'):
+    def checkDbufFar(
+        self,
+        far_id=511,
+        drop_flag=1,
+        notify_flag=1,
+        teid=56789,
+        tunnel_src_port=1234,
+        tunnel_src_addr="1.1.1.1",
+        tunnel_dst_addr="2.2.2.2",
+    ):
         match_keys = [self.Exact("far_id", stringify(far_id, 4))]
         action_params = [
-                ("drop", stringify(drop_flag, 1)),
-                ("notify_cp", stringify(notify_flag, 1)),
-                ("teid", stringify(teid, 4)),
-                ("tunnel_src_port", stringify(tunnel_src_port, 2)),
-                ("tunnel_src_addr", ipv4_to_binary(tunnel_src_addr)),
-                ("tunnel_dst_addr", ipv4_to_binary(tunnel_dst_addr))]
+            ("drop", stringify(drop_flag, 1)),
+            ("notify_cp", stringify(notify_flag, 1)),
+            ("teid", stringify(teid, 4)),
+            ("tunnel_src_port", stringify(tunnel_src_port, 2)),
+            ("tunnel_src_addr", ipv4_to_binary(tunnel_src_addr)),
+            ("tunnel_dst_addr", ipv4_to_binary(tunnel_dst_addr)),
+        ]
         self.writeAndReadEntry(
             "FabricIngress.spgw.fars",
             match_keys,
             "FabricIngress.spgw.load_dbuf_far",
-            action_params)
+            action_params,
+        )
 
     def runReadWriteSymmetryTest(self):
         self.checkInterfaceTable()
@@ -1842,17 +2150,17 @@ class IntTest(IPv4UnicastTest):
        packet to verify the output.
     """
 
-    def setup_report_flow(self, port, src_mac, mon_mac,
-                          src_ip, mon_ip, mon_port,
-                          mon_label=None):
+    def setup_report_flow(
+        self, port, src_mac, mon_mac, src_ip, mon_ip, mon_port, mon_label=None
+    ):
         action = "do_report_encap"
         action_params = [
-                ("src_mac", mac_to_binary(src_mac)),
-                ("mon_mac", mac_to_binary(mon_mac)),
-                ("src_ip", ipv4_to_binary(src_ip)),
-                ("mon_ip", ipv4_to_binary(mon_ip)),
-                ("mon_port", stringify(mon_port, 2))
-            ]
+            ("src_mac", mac_to_binary(src_mac)),
+            ("mon_mac", mac_to_binary(mon_mac)),
+            ("src_ip", ipv4_to_binary(src_ip)),
+            ("mon_ip", ipv4_to_binary(mon_ip)),
+            ("mon_port", stringify(mon_port, 2)),
+        ]
         if mon_label:
             action = "do_report_encap_mpls"
             action_params.append(("mon_label", stringify(mon_label, 3)))
@@ -1860,7 +2168,9 @@ class IntTest(IPv4UnicastTest):
         self.send_request_add_entry_to_action(
             "report",
             [self.Exact("int_mirror_valid", stringify(1, 1))],
-            action, action_params)
+            action,
+            action_params,
+        )
 
     def setup_report_mirror_flow(self, pipe_id, mirror_id, port):
         self.add_clone_group(mirror_id, [port])
@@ -1874,13 +2184,10 @@ class IntTest(IPv4UnicastTest):
         #         ("sid", stringify(mirror_id, 2))
         #     ])
 
-    def set_up_quantize_hop_latency_rule(self, qmask=0xf0000000):
+    def set_up_quantize_hop_latency_rule(self, qmask=0xF0000000):
         self.send_request_add_entry_to_action(
-            "quantize_hop_latency",
-            [],
-            "quantize", [
-                ("qmask", stringify(qmask, 4))
-            ])
+            "quantize_hop_latency", [], "quantize", [("qmask", stringify(qmask, 4))],
+        )
 
     def setup_watchlist_flow(self, ipv4_src, ipv4_dst, sport, dport, switch_id):
         switch_id_ = stringify(switch_id, 4)
@@ -1903,25 +2210,41 @@ class IntTest(IPv4UnicastTest):
 
         self.send_request_add_entry_to_action(
             "watchlist",
-            [self.Ternary("ipv4_src", ipv4_src_, ipv4_mask),
-             self.Ternary("ipv4_dst", ipv4_dst_, ipv4_mask),
-             self.Range("l4_sport", sport_low, sport_high),
-             self.Range("l4_dport", dport_low, dport_high),
-             ],
-            "init_metadata", [
-                ("switch_id", switch_id_)
-            ], priority=DEFAULT_PRIORITY)
+            [
+                self.Ternary("ipv4_src", ipv4_src_, ipv4_mask),
+                self.Ternary("ipv4_dst", ipv4_dst_, ipv4_mask),
+                self.Range("l4_sport", sport_low, sport_high),
+                self.Range("l4_dport", dport_low, dport_high),
+            ],
+            "init_metadata",
+            [("switch_id", switch_id_)],
+            priority=DEFAULT_PRIORITY,
+        )
 
-    def build_int_local_report(self, src_mac, dst_mac, src_ip, dst_ip,
-                               ig_port, eg_port, sw_id=1, inner_packet=None,
-                               is_device_spine=False,
-                               mon_label=None):
+    def build_int_local_report(
+        self,
+        src_mac,
+        dst_mac,
+        src_ip,
+        dst_ip,
+        ig_port,
+        eg_port,
+        sw_id=1,
+        inner_packet=None,
+        is_device_spine=False,
+        mon_label=None,
+    ):
         # Note: scapy doesn't support dscp field, use tos.
-        pkt = Ether(src=src_mac, dst=dst_mac) / IP(src=src_ip, dst=dst_ip, ttl=64, tos=4) / \
-              UDP(sport=0, chksum=0) / \
-              INT_L45_REPORT_FIXED(nproto=2, f=1, hw_id=0) / \
-              INT_L45_LOCAL_REPORT(switch_id=sw_id, ingress_port_id=ig_port, egress_port_id=eg_port) / \
-              inner_packet
+        pkt = (
+            Ether(src=src_mac, dst=dst_mac)
+            / IP(src=src_ip, dst=dst_ip, ttl=64, tos=4)
+            / UDP(sport=0, chksum=0)
+            / INT_L45_REPORT_FIXED(nproto=2, f=1, hw_id=0)
+            / INT_L45_LOCAL_REPORT(
+                switch_id=sw_id, ingress_port_id=ig_port, egress_port_id=eg_port,
+            )
+            / inner_packet
+        )
         if mon_label:
             mpls_ttl = DEFAULT_MPLS_TTL
             if is_device_spine:
@@ -1933,9 +2256,9 @@ class IntTest(IPv4UnicastTest):
 
         mask_pkt = Mask(pkt)
         # IPv4 identifcation
-        offset_ip = len(Ether())
         mask_pkt.set_do_not_care_scapy(IP, "id")
-        # The reason we also ignore IP checksum is because the `id` field is random.
+        # The reason we also ignore IP checksum is because the `id` field is
+        # random.
         mask_pkt.set_do_not_care_scapy(IP, "chksum")
         mask_pkt.set_do_not_care_scapy(UDP, "chksum")
         mask_pkt.set_do_not_care_scapy(INT_L45_REPORT_FIXED, "ingress_tstamp")
@@ -1946,15 +2269,18 @@ class IntTest(IPv4UnicastTest):
 
         return mask_pkt
 
-    def runIntTest(self, pkt,
-                   tagged1=False,
-                   tagged2=False,
-                   is_next_hop_spine=False,
-                   ig_port=None,
-                   eg_port=None,
-                   expect_int_report=True,
-                   is_device_spine=False,
-                   send_report_to_spine=False):
+    def runIntTest(
+        self,
+        pkt,
+        tagged1=False,
+        tagged2=False,
+        is_next_hop_spine=False,
+        ig_port=None,
+        eg_port=None,
+        expect_int_report=True,
+        is_device_spine=False,
+        send_report_to_spine=False,
+    ):
         """
         :param pkt: the input packet
         :param tagged1: if the input port should expect VLAN tagged packets
@@ -2004,27 +2330,48 @@ class IntTest(IPv4UnicastTest):
 
         # The expected INT report packet
         int_report_mpls_label = MPLS_LABEL_2 if send_report_to_spine else None
-        exp_int_report_pkt_masked = \
-            self.build_int_local_report(SWITCH_MAC, INT_COLLECTOR_MAC,
-                                        SWITCH_IPV4, INT_COLLECTOR_IPV4,
-                                        ig_port, eg_port, switch_id,
-                                        int_inner_pkt, is_device_spine,
-                                        int_report_mpls_label)
+        exp_int_report_pkt_masked = self.build_int_local_report(
+            SWITCH_MAC,
+            INT_COLLECTOR_MAC,
+            SWITCH_IPV4,
+            INT_COLLECTOR_IPV4,
+            ig_port,
+            eg_port,
+            switch_id,
+            int_inner_pkt,
+            is_device_spine,
+            int_report_mpls_label,
+        )
 
         # Set collector, report table, and mirror sessions
         mon_label = MPLS_LABEL_1 if is_device_spine else None
         self.setup_watchlist_flow(ipv4_src, ipv4_dst, sport, dport, switch_id)
-        self.setup_report_flow(collector_port, SWITCH_MAC, SWITCH_MAC,
-                               SWITCH_IPV4, INT_COLLECTOR_IPV4, INT_REPORT_PORT,
-                               mon_label)
-        self.setup_report_mirror_flow(0, INT_REPORT_MIRROR_ID_0, self.recirculate_port_0)
-        self.setup_report_mirror_flow(1, INT_REPORT_MIRROR_ID_1, self.recirculate_port_1)
-        self.setup_report_mirror_flow(2, INT_REPORT_MIRROR_ID_2, self.recirculate_port_2)
-        self.setup_report_mirror_flow(3, INT_REPORT_MIRROR_ID_3, self.recirculate_port_3)
+        self.setup_report_flow(
+            collector_port,
+            SWITCH_MAC,
+            SWITCH_MAC,
+            SWITCH_IPV4,
+            INT_COLLECTOR_IPV4,
+            INT_REPORT_PORT,
+            mon_label,
+        )
+        self.setup_report_mirror_flow(
+            0, INT_REPORT_MIRROR_ID_0, self.recirculate_port_0
+        )
+        self.setup_report_mirror_flow(
+            1, INT_REPORT_MIRROR_ID_1, self.recirculate_port_1
+        )
+        self.setup_report_mirror_flow(
+            2, INT_REPORT_MIRROR_ID_2, self.recirculate_port_2
+        )
+        self.setup_report_mirror_flow(
+            3, INT_REPORT_MIRROR_ID_3, self.recirculate_port_3
+        )
 
         # Set up entries for report packet
         self.setup_port(collector_port, DEFAULT_VLAN)
-        # Here we use next-id 101 since `runIPv4UnicastTest` will use 100 by default
+        # Here we use next-id 101 since `runIPv4UnicastTest` will use 100 by
+        # default
         next_id = 101
         prefix_len = 32
         group_id = next_id
@@ -2032,48 +2379,76 @@ class IntTest(IPv4UnicastTest):
             self.add_forwarding_mpls_entry(MPLS_LABEL_1, next_id)
             if send_report_to_spine:
                 # Spine to spine
-                params = [collector_port, SWITCH_MAC, INT_COLLECTOR_MAC, MPLS_LABEL_2]
+                params = [
+                    collector_port,
+                    SWITCH_MAC,
+                    INT_COLLECTOR_MAC,
+                    MPLS_LABEL_2,
+                ]
                 self.add_next_mpls_routing_group(next_id, group_id, [params])
             else:
                 # Spine to leaf
-                self.add_next_routing(next_id, collector_port, SWITCH_MAC, INT_COLLECTOR_MAC)
+                self.add_next_routing(
+                    next_id, collector_port, SWITCH_MAC, INT_COLLECTOR_MAC
+                )
         else:
-            self.add_forwarding_routing_v4_entry(INT_COLLECTOR_IPV4, prefix_len, next_id)
+            self.add_forwarding_routing_v4_entry(
+                INT_COLLECTOR_IPV4, prefix_len, next_id
+            )
             if send_report_to_spine:
                 # Leaf to spine
-                params = [collector_port, SWITCH_MAC, INT_COLLECTOR_MAC, MPLS_LABEL_2]
+                params = [
+                    collector_port,
+                    SWITCH_MAC,
+                    INT_COLLECTOR_MAC,
+                    MPLS_LABEL_2,
+                ]
                 self.add_next_mpls_routing_group(next_id, group_id, [params])
             else:
                 # Leaf to host
-                self.add_next_routing(next_id, collector_port, SWITCH_MAC, INT_COLLECTOR_MAC)
+                self.add_next_routing(
+                    next_id, collector_port, SWITCH_MAC, INT_COLLECTOR_MAC
+                )
         self.add_next_vlan(next_id, DEFAULT_VLAN)
         # End of setting up entries for report packet
         # TODO: Use MPLS test instead of IPv4 test if device is spine.
-        self.runIPv4UnicastTest(pkt=pkt, next_hop_mac=HOST2_MAC,
-                                tagged1=tagged1, tagged2=tagged2, is_next_hop_spine=is_next_hop_spine,
-                                prefix_len=prefix_len, with_another_pkt_later=True,
-                                ig_port=ig_port, eg_port=eg_port)
+        self.runIPv4UnicastTest(
+            pkt=pkt,
+            next_hop_mac=HOST2_MAC,
+            tagged1=tagged1,
+            tagged2=tagged2,
+            is_next_hop_spine=is_next_hop_spine,
+            prefix_len=prefix_len,
+            with_another_pkt_later=True,
+            ig_port=ig_port,
+            eg_port=eg_port,
+        )
 
         if expect_int_report:
             self.verify_packet(exp_int_report_pkt_masked, collector_port)
         self.verify_no_other_packets()
 
+
 class SpgwIntTest(SpgwSimpleTest, IntTest):
     """
     This test includes two parts:
-    1. Spgw uplink and downlink test which installs entries to route, encap, and decap
-       GTP traffic. The test will also emit the packet and check the expected packet.
-    2. Installs INT related table entries and check the expected report packet. Note
-       that the expected packet in the INT report should be the packet without GTPU
-       headers(IP/UDP/GTPU).
+    1. Spgw uplink and downlink test which installs entries to route, encap,
+       and decap GTP traffic. The test will also emit the packet and check the
+       expected packet.
+    2. Installs INT related table entries and check the expected report packet.
+       Note that the expected packet in the INT report should be the packet
+       without GTPU headers(IP/UDP/GTPU).
     """
 
-    def runSpgwUplinkIntTest(self, pkt,
-                             tagged1=False,
-                             tagged2=False,
-                             is_next_hop_spine=False,
-                             is_device_spine=False,
-                             send_report_to_spine=False):
+    def runSpgwUplinkIntTest(
+        self,
+        pkt,
+        tagged1=False,
+        tagged2=False,
+        is_next_hop_spine=False,
+        is_device_spine=False,
+        send_report_to_spine=False,
+    ):
         """
         :param pkt: the input packet
         :param tagged1: if the input port should expect VLAN tagged packets
@@ -2086,12 +2461,13 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         """
         # Build packet from eNB
         # Add GTPU header to the original packet
-        gtp_pkt = pkt_add_gtp(pkt, out_ipv4_src=S1U_ENB_IPV4,
-                              out_ipv4_dst=S1U_SGW_IPV4, teid=UPLINK_TEID)
+        gtp_pkt = pkt_add_gtp(
+            pkt, out_ipv4_src=S1U_ENB_IPV4, out_ipv4_dst=S1U_SGW_IPV4, teid=UPLINK_TEID,
+        )
         ig_port = self.port1
         eg_port = self.port2
         collector_port = self.port3
-        switch_id=1
+        switch_id = 1
         ipv4_src = pkt[IP].src
         ipv4_dst = pkt[IP].dst
         if UDP in pkt:
@@ -2119,39 +2495,60 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             # from it before in the parser.
             # This is the packet we expected to be received by the
             # upstream
-            exp_pkt = pkt_add_mpls(int_inner_pkt, label=MPLS_LABEL_2, ttl=DEFAULT_MPLS_TTL)
-
+            exp_pkt = pkt_add_mpls(
+                int_inner_pkt, label=MPLS_LABEL_2, ttl=DEFAULT_MPLS_TTL
+            )
 
         # We should also expected an INT report packet
         int_report_mpls_label = MPLS_LABEL_2 if send_report_to_spine else None
-        exp_int_report_pkt_masked = \
-            self.build_int_local_report(SWITCH_MAC, INT_COLLECTOR_MAC,
-                                        SWITCH_IPV4, INT_COLLECTOR_IPV4,
-                                        ig_port, eg_port, switch_id, int_inner_pkt,
-                                        is_device_spine, int_report_mpls_label)
+        exp_int_report_pkt_masked = self.build_int_local_report(
+            SWITCH_MAC,
+            INT_COLLECTOR_MAC,
+            SWITCH_IPV4,
+            INT_COLLECTOR_IPV4,
+            ig_port,
+            eg_port,
+            switch_id,
+            int_inner_pkt,
+            is_device_spine,
+            int_report_mpls_label,
+        )
 
         # Set up entries for uplink
         self.setup_uplink(
-            s1u_sgw_addr=S1U_SGW_IPV4,
-            teid=UPLINK_TEID,
-            ctr_id=UPLINK_PDR_CTR_IDX
+            s1u_sgw_addr=S1U_SGW_IPV4, teid=UPLINK_TEID, ctr_id=UPLINK_PDR_CTR_IDX,
         )
 
         # Set collector, report table, and mirror sessions
         # Note that we are monitoring the inner packet.
         mon_label = MPLS_LABEL_1 if is_device_spine else None
         self.setup_watchlist_flow(ipv4_src, ipv4_dst, sport, dport, switch_id)
-        self.setup_report_flow(collector_port, SWITCH_MAC, SWITCH_MAC,
-                               SWITCH_IPV4, INT_COLLECTOR_IPV4, INT_REPORT_PORT,
-                               mon_label)
-        self.setup_report_mirror_flow(0, INT_REPORT_MIRROR_ID_0, self.recirculate_port_0)
-        self.setup_report_mirror_flow(1, INT_REPORT_MIRROR_ID_1, self.recirculate_port_1)
-        self.setup_report_mirror_flow(2, INT_REPORT_MIRROR_ID_2, self.recirculate_port_2)
-        self.setup_report_mirror_flow(3, INT_REPORT_MIRROR_ID_3, self.recirculate_port_3)
+        self.setup_report_flow(
+            collector_port,
+            SWITCH_MAC,
+            SWITCH_MAC,
+            SWITCH_IPV4,
+            INT_COLLECTOR_IPV4,
+            INT_REPORT_PORT,
+            mon_label,
+        )
+        self.setup_report_mirror_flow(
+            0, INT_REPORT_MIRROR_ID_0, self.recirculate_port_0
+        )
+        self.setup_report_mirror_flow(
+            1, INT_REPORT_MIRROR_ID_1, self.recirculate_port_1
+        )
+        self.setup_report_mirror_flow(
+            2, INT_REPORT_MIRROR_ID_2, self.recirculate_port_2
+        )
+        self.setup_report_mirror_flow(
+            3, INT_REPORT_MIRROR_ID_3, self.recirculate_port_3
+        )
 
         # Set up entries for report packet
         self.setup_port(collector_port, DEFAULT_VLAN)
-        # Here we use next-id 101 since `runIPv4UnicastTest` will use 100 by default
+        # Here we use next-id 101 since `runIPv4UnicastTest` will use 100 by
+        # default
         next_id = 101
         prefix_len = 32
         group_id = next_id
@@ -2159,38 +2556,63 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             self.add_forwarding_mpls_entry(MPLS_LABEL_1, next_id)
             if send_report_to_spine:
                 # Spine to spine
-                params = [collector_port, SWITCH_MAC, INT_COLLECTOR_MAC, MPLS_LABEL_2]
+                params = [
+                    collector_port,
+                    SWITCH_MAC,
+                    INT_COLLECTOR_MAC,
+                    MPLS_LABEL_2,
+                ]
                 self.add_next_mpls_routing_group(next_id, group_id, [params])
             else:
                 # Spine to leaf
-                self.add_next_routing(next_id, collector_port, SWITCH_MAC, INT_COLLECTOR_MAC)
+                self.add_next_routing(
+                    next_id, collector_port, SWITCH_MAC, INT_COLLECTOR_MAC
+                )
         else:
-            self.add_forwarding_routing_v4_entry(INT_COLLECTOR_IPV4, prefix_len, next_id)
+            self.add_forwarding_routing_v4_entry(
+                INT_COLLECTOR_IPV4, prefix_len, next_id
+            )
             if send_report_to_spine:
                 # Leaf to spine
-                params = [collector_port, SWITCH_MAC, INT_COLLECTOR_MAC, MPLS_LABEL_2]
+                params = [
+                    collector_port,
+                    SWITCH_MAC,
+                    INT_COLLECTOR_MAC,
+                    MPLS_LABEL_2,
+                ]
                 self.add_next_mpls_routing_group(next_id, group_id, [params])
             else:
                 # Leaf to host
-                self.add_next_routing(next_id, collector_port, SWITCH_MAC, INT_COLLECTOR_MAC)
+                self.add_next_routing(
+                    next_id, collector_port, SWITCH_MAC, INT_COLLECTOR_MAC
+                )
         self.add_next_vlan(next_id, DEFAULT_VLAN)
         # End of setting up entries for report packet
         # TODO: Use MPLS test instead of IPv4 test if device is spine.
-        self.runIPv4UnicastTest(pkt=gtp_pkt, dst_ipv4=pkt[IP].dst,
-                                exp_pkt=exp_pkt, next_hop_mac=HOST2_MAC,
-                                tagged1=tagged1, tagged2=tagged2, is_next_hop_spine=is_next_hop_spine,
-                                prefix_len=prefix_len, with_another_pkt_later=True)
+        self.runIPv4UnicastTest(
+            pkt=gtp_pkt,
+            dst_ipv4=pkt[IP].dst,
+            exp_pkt=exp_pkt,
+            next_hop_mac=HOST2_MAC,
+            tagged1=tagged1,
+            tagged2=tagged2,
+            is_next_hop_spine=is_next_hop_spine,
+            prefix_len=prefix_len,
+            with_another_pkt_later=True,
+        )
 
         self.verify_packet(exp_int_report_pkt_masked, collector_port)
         self.verify_no_other_packets()
 
-
-    def runSpgwDownlinkIntTest(self, pkt,
-                               tagged1=False,
-                               tagged2=False,
-                               is_next_hop_spine=False,
-                               is_device_spine=False,
-                               send_report_to_spine=False):
+    def runSpgwDownlinkIntTest(
+        self,
+        pkt,
+        tagged1=False,
+        tagged2=False,
+        is_next_hop_spine=False,
+        is_device_spine=False,
+        send_report_to_spine=False,
+    ):
         """
         :param pkt: the input packet
         :param tagged1: if the input port should expect VLAN tagged packets
@@ -2204,7 +2626,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         ig_port = self.port1
         eg_port = self.port2
         collector_port = self.port3
-        switch_id=1
+        switch_id = 1
         ipv4_src = pkt[IP].src
         ipv4_dst = pkt[IP].dst
         if UDP in pkt:
@@ -2223,8 +2645,12 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         if not is_next_hop_spine:
             exp_pkt = pkt_decrement_ttl(exp_pkt)
             int_inner_pkt = pkt_decrement_ttl(int_inner_pkt)
-        exp_pkt = pkt_add_gtp(exp_pkt, out_ipv4_src=S1U_SGW_IPV4,
-                              out_ipv4_dst=S1U_ENB_IPV4, teid=DOWNLINK_TEID)
+        exp_pkt = pkt_add_gtp(
+            exp_pkt,
+            out_ipv4_src=S1U_SGW_IPV4,
+            out_ipv4_dst=S1U_ENB_IPV4,
+            teid=DOWNLINK_TEID,
+        )
         exp_pkt = pkt_route(exp_pkt, HOST2_MAC)
         int_inner_pkt = pkt_route(int_inner_pkt, HOST2_MAC)
         if tagged2 and Dot1Q not in exp_pkt:
@@ -2238,11 +2664,18 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
 
         # We should also expected an INT report packet
         int_report_mpls_label = MPLS_LABEL_2 if send_report_to_spine else None
-        exp_int_report_pkt_masked = \
-            self.build_int_local_report(SWITCH_MAC, INT_COLLECTOR_MAC,
-                                        SWITCH_IPV4, INT_COLLECTOR_IPV4,
-                                        ig_port, eg_port, switch_id, int_inner_pkt,
-                                        is_device_spine, int_report_mpls_label)
+        exp_int_report_pkt_masked = self.build_int_local_report(
+            SWITCH_MAC,
+            INT_COLLECTOR_MAC,
+            SWITCH_IPV4,
+            INT_COLLECTOR_IPV4,
+            ig_port,
+            eg_port,
+            switch_id,
+            int_inner_pkt,
+            is_device_spine,
+            int_report_mpls_label,
+        )
 
         # Set up entries for downlink
         self.setup_downlink(
@@ -2257,17 +2690,32 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         # Note that we are monitoring the inner packet.
         mon_label = MPLS_LABEL_1 if is_device_spine else None
         self.setup_watchlist_flow(ipv4_src, ipv4_dst, sport, dport, switch_id)
-        self.setup_report_flow(collector_port, SWITCH_MAC, SWITCH_MAC,
-                               SWITCH_IPV4, INT_COLLECTOR_IPV4, INT_REPORT_PORT,
-                               mon_label)
-        self.setup_report_mirror_flow(0, INT_REPORT_MIRROR_ID_0, self.recirculate_port_0)
-        self.setup_report_mirror_flow(1, INT_REPORT_MIRROR_ID_1, self.recirculate_port_1)
-        self.setup_report_mirror_flow(2, INT_REPORT_MIRROR_ID_2, self.recirculate_port_2)
-        self.setup_report_mirror_flow(3, INT_REPORT_MIRROR_ID_3, self.recirculate_port_3)
+        self.setup_report_flow(
+            collector_port,
+            SWITCH_MAC,
+            SWITCH_MAC,
+            SWITCH_IPV4,
+            INT_COLLECTOR_IPV4,
+            INT_REPORT_PORT,
+            mon_label,
+        )
+        self.setup_report_mirror_flow(
+            0, INT_REPORT_MIRROR_ID_0, self.recirculate_port_0
+        )
+        self.setup_report_mirror_flow(
+            1, INT_REPORT_MIRROR_ID_1, self.recirculate_port_1
+        )
+        self.setup_report_mirror_flow(
+            2, INT_REPORT_MIRROR_ID_2, self.recirculate_port_2
+        )
+        self.setup_report_mirror_flow(
+            3, INT_REPORT_MIRROR_ID_3, self.recirculate_port_3
+        )
 
         # Set up entries for report packet
         self.setup_port(collector_port, DEFAULT_VLAN)
-        # Here we use next-id 101 since `runIPv4UnicastTest` will use 100 by default
+        # Here we use next-id 101 since `runIPv4UnicastTest` will use 100 by
+        # default
         next_id = 101
         prefix_len = 32
         group_id = next_id
@@ -2275,34 +2723,56 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             self.add_forwarding_mpls_entry(MPLS_LABEL_1, next_id)
             if send_report_to_spine:
                 # Spine to spine
-                params = [collector_port, SWITCH_MAC, INT_COLLECTOR_MAC, MPLS_LABEL_2]
+                params = [
+                    collector_port,
+                    SWITCH_MAC,
+                    INT_COLLECTOR_MAC,
+                    MPLS_LABEL_2,
+                ]
                 self.add_next_mpls_routing_group(next_id, group_id, [params])
             else:
                 # Spine to leaf
-                self.add_next_routing(next_id, collector_port, SWITCH_MAC, INT_COLLECTOR_MAC)
+                self.add_next_routing(
+                    next_id, collector_port, SWITCH_MAC, INT_COLLECTOR_MAC
+                )
         else:
-            self.add_forwarding_routing_v4_entry(INT_COLLECTOR_IPV4, prefix_len, next_id)
+            self.add_forwarding_routing_v4_entry(
+                INT_COLLECTOR_IPV4, prefix_len, next_id
+            )
             if send_report_to_spine:
                 # Leaf to spine
-                params = [collector_port, SWITCH_MAC, INT_COLLECTOR_MAC, MPLS_LABEL_2]
+                params = [
+                    collector_port,
+                    SWITCH_MAC,
+                    INT_COLLECTOR_MAC,
+                    MPLS_LABEL_2,
+                ]
                 self.add_next_mpls_routing_group(next_id, group_id, [params])
             else:
                 # Leaf to host
-                self.add_next_routing(next_id, collector_port, SWITCH_MAC, INT_COLLECTOR_MAC)
+                self.add_next_routing(
+                    next_id, collector_port, SWITCH_MAC, INT_COLLECTOR_MAC
+                )
         self.add_next_vlan(next_id, DEFAULT_VLAN)
         # End of setting up entries for report packet
         # TODO: Use MPLS test instead of IPv4 test if device is spine.
-        self.runIPv4UnicastTest(pkt=pkt, dst_ipv4=S1U_ENB_IPV4,
-                                next_hop_mac=HOST2_MAC,
-                                prefix_len=32, exp_pkt=exp_pkt,
-                                tagged1=tagged1, tagged2=tagged2, is_next_hop_spine=is_next_hop_spine,
-                                with_another_pkt_later=True)
+        self.runIPv4UnicastTest(
+            pkt=pkt,
+            dst_ipv4=S1U_ENB_IPV4,
+            next_hop_mac=HOST2_MAC,
+            prefix_len=32,
+            exp_pkt=exp_pkt,
+            tagged1=tagged1,
+            tagged2=tagged2,
+            is_next_hop_spine=is_next_hop_spine,
+            with_another_pkt_later=True,
+        )
 
         self.verify_packet(exp_int_report_pkt_masked, collector_port)
         self.verify_no_other_packets()
 
-class PppoeTest(DoubleVlanTerminationTest):
 
+class PppoeTest(DoubleVlanTerminationTest):
     def set_line_map(self, s_tag, c_tag, line_id):
         assert line_id != 0
         s_tag_ = stringify(s_tag, 2)  # outer
@@ -2313,17 +2783,19 @@ class PppoeTest(DoubleVlanTerminationTest):
         self.send_request_add_entry_to_action(
             "bng_ingress.t_line_map",
             [self.Exact("s_tag", s_tag_), self.Exact("c_tag", c_tag_)],
-            "bng_ingress.set_line", [("line_id", line_id_)])
+            "bng_ingress.set_line",
+            [("line_id", line_id_)],
+        )
 
-    def setup_line_v4(self, s_tag, c_tag, line_id, ipv4_addr, mac_src,
-                      pppoe_session_id, enabled=True):
+    def setup_line_v4(
+        self, s_tag, c_tag, line_id, ipv4_addr, mac_src, pppoe_session_id, enabled=True,
+    ):
         assert s_tag != 0
         assert c_tag != 0
         assert line_id != 0
         assert pppoe_session_id != 0
 
         line_id_ = stringify(line_id, 4)
-        mac_src_ = mac_to_binary(mac_src)
         ipv4_addr_ = ipv4_to_binary(ipv4_addr)
         pppoe_session_id_ = stringify(pppoe_session_id, 2)
 
@@ -2334,11 +2806,15 @@ class PppoeTest(DoubleVlanTerminationTest):
             # Enable upstream termination.
             self.send_request_add_entry_to_action(
                 "bng_ingress.upstream.t_pppoe_term_v4",
-                [self.Exact("line_id", line_id_),
-                 # self.Exact("eth_src", mac_src_),
-                 self.Exact("ipv4_src", ipv4_addr_),
-                 self.Exact("pppoe_session_id", pppoe_session_id_)],
-                "bng_ingress.upstream.term_enabled_v4", [])
+                [
+                    self.Exact("line_id", line_id_),
+                    # self.Exact("eth_src", mac_src_),
+                    self.Exact("ipv4_src", ipv4_addr_),
+                    self.Exact("pppoe_session_id", pppoe_session_id_),
+                ],
+                "bng_ingress.upstream.term_enabled_v4",
+                [],
+            )
 
         # Downstream
         if enabled:
@@ -2352,7 +2828,9 @@ class PppoeTest(DoubleVlanTerminationTest):
         self.send_request_add_entry_to_action(
             "bng_ingress.downstream.t_line_session_map",
             [self.Exact("line_id", line_id_)],
-            "bng_ingress.downstream." + a_name, a_params)
+            "bng_ingress.downstream." + a_name,
+            a_params,
+        )
 
     def set_upstream_pppoe_cp_table(self, pppoe_codes=()):
         for code in pppoe_codes:
@@ -2360,7 +2838,10 @@ class PppoeTest(DoubleVlanTerminationTest):
             self.send_request_add_entry_to_action(
                 "bng_ingress.upstream.t_pppoe_cp",
                 [self.Exact("pppoe_code", code_)],
-                "bng_ingress.upstream.punt_to_cpu", [], DEFAULT_PRIORITY)
+                "bng_ingress.upstream.punt_to_cpu",
+                [],
+                DEFAULT_PRIORITY,
+            )
 
     def setup_bng(self, pppoe_cp_codes=PPPOED_CODES):
         self.set_upstream_pppoe_cp_table(pppoe_codes=pppoe_cp_codes)
@@ -2389,22 +2870,29 @@ class PppoeTest(DoubleVlanTerminationTest):
         s_tag = vlan_id_outer = 888
         c_tag = vlan_id_inner = 777
         line_id = 99
-        pppoe_session_id = 0xbeac
+        pppoe_session_id = 0xBEAC
         core_router_mac = HOST1_MAC
 
         self.setup_bng()
         self.setup_line_v4(
-            s_tag=s_tag, c_tag=c_tag, line_id=line_id, ipv4_addr=pkt[IP].src,
-            mac_src=pkt[Ether].src, pppoe_session_id=pppoe_session_id, enabled=line_enabled)
+            s_tag=s_tag,
+            c_tag=c_tag,
+            line_id=line_id,
+            ipv4_addr=pkt[IP].src,
+            mac_src=pkt[Ether].src,
+            pppoe_session_id=pppoe_session_id,
+            enabled=line_enabled,
+        )
 
         # Input is the given packet with double VLAN tags and PPPoE headers.
-        pppoe_pkt = pkt_add_pppoe(pkt, type=1, code=PPPOE_CODE_SESSION_STAGE,
-                                  session_id=pppoe_session_id)
+        pppoe_pkt = pkt_add_pppoe(
+            pkt, type=1, code=PPPOE_CODE_SESSION_STAGE, session_id=pppoe_session_id,
+        )
         pppoe_pkt = pkt_add_vlan(pppoe_pkt, vlan_vid=vlan_id_inner)
         pppoe_pkt = pkt_add_vlan(pppoe_pkt, vlan_vid=vlan_id_outer)
 
-        # Build expected packet from the input one, we expect it to be routed as
-        # if it was without VLAN tags and PPPoE headers.
+        # Build expected packet from the input one, we expect it to be routed
+        # as if it was without VLAN tags and PPPoE headers.
         exp_pkt = pkt.copy()
         exp_pkt = pkt_route(exp_pkt, core_router_mac)
         if tagged2:
@@ -2421,10 +2909,15 @@ class PppoeTest(DoubleVlanTerminationTest):
         old_control = self.read_pkt_count_upstream("control", line_id)
 
         self.runPopAndRouteTest(
-            pkt=pppoe_pkt, next_hop_mac=core_router_mac,
-            exp_pkt=exp_pkt, out_tagged=tagged2,
-            vlan_id=s_tag, inner_vlan_id=c_tag, verify_pkt=line_enabled,
-            is_next_hop_spine=is_next_hop_spine)
+            pkt=pppoe_pkt,
+            next_hop_mac=core_router_mac,
+            exp_pkt=exp_pkt,
+            out_tagged=tagged2,
+            vlan_id=s_tag,
+            inner_vlan_id=c_tag,
+            verify_pkt=line_enabled,
+            is_next_hop_spine=is_next_hop_spine,
+        )
 
         # Verify that upstream counters were updated as expected.
         if not self.is_bmv2():
@@ -2437,7 +2930,8 @@ class PppoeTest(DoubleVlanTerminationTest):
         # No control plane packets here.
         self.assertEqual(new_control, old_control)
 
-        # Using assertGreaterEqual because some targets may or may not count FCS
+        # Using assertGreaterEqual because some targets may or may not count
+        # FCS
         if line_enabled:
             self.assertGreaterEqual(new_terminated, old_terminated + len(pppoe_pkt))
             self.assertEqual(new_dropped, old_dropped)
@@ -2455,8 +2949,7 @@ class PppoeTest(DoubleVlanTerminationTest):
         line_id = 0
         if line_mapped:
             line_id = 99
-            self.set_line_map(
-                s_tag=s_tag, c_tag=c_tag, line_id=line_id)
+            self.set_line_map(s_tag=s_tag, c_tag=c_tag, line_id=line_id)
 
         pppoed_pkt = pkt_add_vlan(pppoed_pkt, vlan_vid=vlan_id_outer)
         pppoed_pkt = pkt_add_inner_vlan(pppoed_pkt, vlan_vid=vlan_id_inner)
@@ -2499,17 +2992,25 @@ class PppoeTest(DoubleVlanTerminationTest):
         c_tag = vlan_id_inner = 777
         line_id = 99
         next_id = 99
-        pppoe_session_id = 0xbeac
+        pppoe_session_id = 0xBEAC
         olt_mac = HOST1_MAC
 
         self.setup_bng()
         self.setup_line_v4(
-            s_tag=s_tag, c_tag=c_tag, line_id=line_id, ipv4_addr=pkt[IP].dst,
-            mac_src=pkt[Ether].src, pppoe_session_id=pppoe_session_id, enabled=line_enabled)
+            s_tag=s_tag,
+            c_tag=c_tag,
+            line_id=line_id,
+            ipv4_addr=pkt[IP].dst,
+            mac_src=pkt[Ether].src,
+            pppoe_session_id=pppoe_session_id,
+            enabled=line_enabled,
+        )
 
         # Build expected packet from the input one, we expect it to be routed
         # and encapsulated in double VLAN tags and PPPoE.
-        exp_pkt = pkt_add_pppoe(pkt, type=1, code=PPPOE_CODE_SESSION_STAGE, session_id=pppoe_session_id)
+        exp_pkt = pkt_add_pppoe(
+            pkt, type=1, code=PPPOE_CODE_SESSION_STAGE, session_id=pppoe_session_id,
+        )
         exp_pkt = pkt_add_vlan(exp_pkt, vlan_vid=vlan_id_outer)
         exp_pkt = pkt_add_inner_vlan(exp_pkt, vlan_vid=vlan_id_inner)
         exp_pkt = pkt_route(exp_pkt, olt_mac)
@@ -2519,16 +3020,23 @@ class PppoeTest(DoubleVlanTerminationTest):
         old_tx_count = self.read_byte_count_downstream_tx(line_id)
 
         self.runRouteAndPushTest(
-            pkt=pkt, next_hop_mac=olt_mac, exp_pkt=exp_pkt,
-            in_tagged=in_tagged, next_id=next_id, next_vlan_id=s_tag, next_inner_vlan_id=c_tag,
-            verify_pkt=line_enabled)
+            pkt=pkt,
+            next_hop_mac=olt_mac,
+            exp_pkt=exp_pkt,
+            in_tagged=in_tagged,
+            next_id=next_id,
+            next_vlan_id=s_tag,
+            next_inner_vlan_id=c_tag,
+            verify_pkt=line_enabled,
+        )
 
         if not self.is_bmv2():
             time.sleep(1)
         new_rx_count = self.read_byte_count_downstream_rx(line_id)
         new_tx_count = self.read_byte_count_downstream_tx(line_id)
 
-        # Using assertGreaterEqual because some targets may or may not count FCS
+        # Using assertGreaterEqual because some targets may or may not count
+        # FCS
         self.assertGreaterEqual(new_rx_count, old_rx_count + len(pkt))
         if line_enabled:
             self.assertGreaterEqual(new_tx_count, old_tx_count + len(pkt))
