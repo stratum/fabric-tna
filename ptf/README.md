@@ -30,8 +30,6 @@ be executed by installing the following dependencies:
 
 ## Steps to run tests on tofino-model with stratum_bf
 
-### Requirements
-
 Steps are similar to the previous case with a few differences:
 
 * You will need to compile fabric-tna.p4 for Tofino;
@@ -58,7 +56,7 @@ fail to start or affect test results negatively.
 1. Clone `fabric-tna` repo and follow instructions to compile fabric.p4 for
    Tofino:
 
-   ```
+   ```bash
    https://github.com/stratum/fabric-tna.git
    cd fabric-tna
    <open README and follow instructions>
@@ -68,13 +66,13 @@ fail to start or affect test results negatively.
    image that can be downloaded via `docker pull` and that contains a Barefoot
    SDE installation, including `tofino-model`:
 
-   ```
+   ```bash
    export SDE_DOCKER_IMG=my-docker-repo/bf-sde:9.0.0
    ```
 
 3. Run PTF tests using the `run/tm/run` script:
 
-    ```
+    ```bash
     ./run/tm/run <profile> [test-case]
     ```
 
@@ -82,14 +80,14 @@ fail to start or affect test results negatively.
 
     To run all test cases for the basic `fabric` profile:
 
-    ```
+    ```bash
     ./run/tm/run fabric
     ```
 
     To run a specific test case against a specific fabric-tna profile,
     for example `test.FabricBridgingTest` for the `fabric-spgw` profile:
 
-    ```
+    ```bash
     ./run/tm/run fabric-spgw TEST=test.FabricBridgingTest
     ```
 

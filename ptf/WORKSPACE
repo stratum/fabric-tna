@@ -1,3 +1,0 @@
-# Copyright 2020-present Open Networking Foundation
-# SPDX-License-Identifier: Apache-2.0
-workspace(name = "com_github_opennetworkinglab_fabric_p4test")
