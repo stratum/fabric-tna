@@ -51,7 +51,7 @@ function base_build() {
   (
     $P4C_CMD --arch tna -g --create-graphs --verbose 2 \
       -o ${output_dir} -I ${P4_SRC_DIR} \
-      ${pp_flags} ${OTHER_PP_FLAGS} \
+      ${OTHER_PP_FLAGS} \
       ${p4c_flags} \
       --p4runtime-files ${output_dir}/p4info.txt \
       --p4runtime-force-std-externs \

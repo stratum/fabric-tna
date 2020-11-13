@@ -106,7 +106,7 @@ docker run --name ${stratumBfRunName} -d --privileged \
     --network "container:${tmRunName}" \
     -v "${DIR}":/workdir -w /workdir \
     --entrypoint ./stratum_entrypoint.sh \
-    ${STRATUM_BF_DOCKER_FLAG} \
+    "${STRATUM_BF_DOCKER_FLAG}" \
     "${STRATUM_BF_DOCKER_IMG}"
 sleep 5
 wait_for ${stratumBfRunName} 28000 600
@@ -114,11 +114,11 @@ wait_for ${stratumBfRunName} 28000 600
 echo "*** Starting ${testerRunName}..."
 # Do not attach stdin if running in an environment without it (e.g., Jenkins)
 it=$(test -t 0 && echo "-it" || echo "-t")
-docker run --name ${testerRunName} ${it} --privileged --rm \
+docker run --name "${testerRunName}" "${it}" --privileged --rm \
     --network "container:${tmRunName}" \
     -v "${FP4TEST_ROOT}":/fabric-p4test \
     -v "${P4C_OUT}":/p4c-out \
-    -e PTF_FILTER=${PTF_FILTER} \
+    -e PTF_FILTER="${PTF_FILTER}" \
     --entrypoint /fabric-p4test/run/tm/start_test.sh \
     "${TESTER_DOCKER_IMG}" \
-    ${@}
+    "${@}"

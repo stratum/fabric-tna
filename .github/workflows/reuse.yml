@@ -1,6 +1,7 @@
 # Copyright 2020-present Open Networking Foundation
 # SPDX-License-Identifier: Apache-2.0
 
+---
 name: REUSE
 
 on:
@@ -10,9 +11,9 @@ on:
     branches: [ master ]
 
 jobs:
-  lint:
+  license-check:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
     - name: reuse lint
-      run: make reuse-lint
+      uses: fsfe/reuse-action@v1

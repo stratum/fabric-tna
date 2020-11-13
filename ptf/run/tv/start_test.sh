@@ -32,7 +32,7 @@ echo "************************************************"
 echo "STARTING TESTVECTOR GENERATION FROM PTF TESTS..."
 echo "************************************************"
 
-make -f "${DIR}"/Makefile ${@}
+make -f "${DIR}"/Makefile "${@}"
 
 echo "************************************************"
 echo "GENERATED TESTVECTORS SUCCESSFULLY :)"
