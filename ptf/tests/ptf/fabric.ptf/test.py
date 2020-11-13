@@ -1485,7 +1485,7 @@ class FabricOptimizedFieldDetectorTest(FabricTest):
                 print("Found parameter that has been optimized out in action \"%s\" of table \"%s\":"
                         % (action_name, table_name))
                 print(diff)
-                # self.fail("Read does not match previous write!")
+                self.fail("Read does not match previous write!")
 
     @tvsetup
     @autocleanup
