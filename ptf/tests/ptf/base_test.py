@@ -18,6 +18,7 @@ from unittest import SkipTest
 
 import google.protobuf.text_format
 import grpc
+import ptf
 import ptf.testutils as testutils
 import Queue
 import scapy.packet
@@ -25,7 +26,7 @@ import scapy.utils
 from google.rpc import code_pb2, status_pb2
 from p4.config.v1 import p4info_pb2
 from p4.v1 import p4runtime_pb2, p4runtime_pb2_grpc
-from ptf import config, dataplane_instance
+from ptf import config
 from ptf.base_tests import BaseTest
 from ptf.dataplane import match_exp_pkt
 from scapy.layers.l2 import Ether
@@ -232,7 +233,7 @@ class P4RuntimeTest(BaseTest):
             self.tv_name = self.__class__.__name__
         else:
             # Setting up PTF dataplane
-            self.dataplane = dataplane_instance
+            self.dataplane = ptf.dataplane_instance
             self.dataplane.flush()
             self.channel = grpc.insecure_channel(grpc_addr)
             self.stub = p4runtime_pb2_grpc.P4RuntimeStub(self.channel)
