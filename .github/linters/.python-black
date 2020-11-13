@@ -1,13 +1,13 @@
 [tool.black]
 line-length = 88
-target-version = ['py37']
+target-version = ['py38', 'py27']
 include = '\.pyi?$'
 exclude = '''
 
 (
   /(
-      \.eggs         # exclude a few common directories in the
-    | \.git          # root of the project
+      \.eggs
+    | \.git
     | \.hg
     | \.mypy_cache
     | \.tox
@@ -16,6 +16,7 @@ exclude = '''
     | buck-out
     | build
     | dist
+    | __pycache__
   )
 )
 '''

@@ -11,7 +11,7 @@ from p4.config.v1 import p4info_pb2
 copyright = """// Copyright 2020-present Open Networking Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-// Do not modify this file manually, use `make constants` to generate this file
+// Do not modify this file manually, use `make constants` to generate this file.
 """
 
 imports = """
