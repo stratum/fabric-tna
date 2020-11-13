@@ -2,7 +2,7 @@
 # Copyright 2020-present Open Networking Foundation
 # SPDX-License-Identifier: Apache-2.0
 
-set -e
+set -ex
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
 FP4TEST_ROOT="${DIR}"/../..
@@ -102,11 +102,12 @@ sleep 5
 
 # Run Stratum container
 echo "*** Starting ${stratumBfRunName} (from ${STRATUM_BF_DOCKER_IMG})..."
+# shellcheck disable=SC2086
 docker run --name ${stratumBfRunName} -d --privileged \
     --network "container:${tmRunName}" \
     -v "${DIR}":/workdir -w /workdir \
     --entrypoint ./stratum_entrypoint.sh \
-    "${STRATUM_BF_DOCKER_FLAG}" \
+    ${STRATUM_BF_DOCKER_FLAG} \
     "${STRATUM_BF_DOCKER_IMG}"
 sleep 5
 wait_for ${stratumBfRunName} 28000 600
@@ -114,6 +115,7 @@ wait_for ${stratumBfRunName} 28000 600
 echo "*** Starting ${testerRunName}..."
 # Do not attach stdin if running in an environment without it (e.g., Jenkins)
 it=$(test -t 0 && echo "-it" || echo "-t")
+# shellcheck disable=SC2068
 docker run --name "${testerRunName}" "${it}" --privileged --rm \
     --network "container:${tmRunName}" \
     -v "${FP4TEST_ROOT}":/fabric-p4test \
@@ -121,4 +123,4 @@ docker run --name "${testerRunName}" "${it}" --privileged --rm \
     -e PTF_FILTER="${PTF_FILTER}" \
     --entrypoint /fabric-p4test/run/tm/start_test.sh \
     "${TESTER_DOCKER_IMG}" \
-    "${@}"
+    ${@}

@@ -53,8 +53,9 @@ testerRunName=tester-${rnd}
 echo "*** Starting ${testerRunName} with ${TESTER_DOCKER_IMG}..."
 # Do not attach stdin if running in an environment without it (e.g., Jenkins)
 it=$(test -t 0 && echo "-it" || echo "-t")
+# shellcheck disable=SC2068
 docker run --name "${testerRunName}" "${it}" --privileged --rm \
     -v "${ROOT_DIR}":/fabric-p4test \
     -v "${P4C_OUT}":/p4c-out \
     "${TESTER_DOCKER_IMG}" \
-    bash /fabric-p4test/run/tv/start_test.sh "${FABRIC_PROFILE}" "${@}"
+    bash /fabric-p4test/run/tv/start_test.sh "${FABRIC_PROFILE}" ${@}
