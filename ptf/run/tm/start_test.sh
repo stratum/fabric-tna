@@ -22,7 +22,8 @@ echo "************************************************"
 echo "STARTING PTF TESTS..."
 echo "************************************************"
 
-make -f "${DIR}"/Makefile "${@}"
+# shellcheck disable=SC2068
+make -f "${DIR}"/Makefile ${@}
 
 echo "************************************************"
 echo "ALL PTF TESTS PASSED :)"
