@@ -1376,7 +1376,8 @@ class FabricOptimizedFieldDetectorTest(FabricTest):
     """Finds action paramters or header fields that were optimized out by the
     compiler"""
 
-    def getBytestring(self, bitwidth):
+    # Returns a byte string encoded value fitting into bitwidth.
+    def generateBytestring(self, bitwidth):
         return stringify(1, (bitwidth + 7) / 8)
 
     # Since the test uses the same match key for tables with multiple actions,
@@ -1425,19 +1426,19 @@ class FabricOptimizedFieldDetectorTest(FabricTest):
             match_keys = []
             for match in table.match_fields:
                 if match.match_type == p4info_pb2.MatchField.MatchType.EXACT:
-                    match_value = self.getBytestring(match.bitwidth)
+                    match_value = self.generateBytestring(match.bitwidth)
                     match_keys.append(self.Exact(match.name, match_value))
                 elif match.match_type == p4info_pb2.MatchField.MatchType.LPM:
-                    match_value = self.getBytestring(match.bitwidth)
+                    match_value = self.generateBytestring(match.bitwidth)
                     match_len = match.bitwidth
                     match_keys.append(self.Lpm(match.name, match_value, match_len))
                 elif match.match_type == p4info_pb2.MatchField.MatchType.TERNARY:
-                    match_value = self.getBytestring(match.bitwidth)
+                    match_value = self.generateBytestring(match.bitwidth)
                     match_mask = match_value
                     match_keys.append(self.Ternary(match.name, match_value, match_mask))
                     priority = 1
                 elif match.match_type == p4info_pb2.MatchField.MatchType.RANGE:
-                    match_low = self.getBytestring(match.bitwidth)
+                    match_low = self.generateBytestring(match.bitwidth)
                     match_high = match_low
                     match_keys.append(self.Range(match.name, match_low, match_high))
                     priority = 1
@@ -1459,7 +1460,7 @@ class FabricOptimizedFieldDetectorTest(FabricTest):
                         % (action_name, table_name))
                 continue
             for param in action.params:
-                param_value = self.getBytestring(param.bitwidth)
+                param_value = self.generateBytestring(param.bitwidth)
                 action_params.append((param.name, param_value))
 
             write_entry = None
