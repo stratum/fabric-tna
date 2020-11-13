@@ -33,7 +33,7 @@ To run PTF for a specific test case:
 ./ptf/run/tm/run fabric TEST=test.FabricBridgingTest
 ```
 
-The value of `TEST` should be `test.[test class]`, you can find test class in
+The value of `TEST` should be `test.[test class]`, you can find test clases in
 `ptf/tests/ptf/fabric.ptf/test.py`.
 
 For more instructions on how to run PTF tests, including where to
