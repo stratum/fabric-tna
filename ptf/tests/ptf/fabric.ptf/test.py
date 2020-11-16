@@ -1475,7 +1475,7 @@ class FabricOptimizedFieldDetectorTest(FabricTest):
             else:
                 write_entry, read_entry = self.insert_table_entry(
                     table_name, match_keys, action_name, action_params, priority)
-            # Send requests and compare state
+            # Check for differences between expected and actual state.
             if write_entry != read_entry:
                 write_entry_s = string.split("%s" % write_entry, "\n")
                 read_entry_s = string.split("%s" % read_entry, "\n")
