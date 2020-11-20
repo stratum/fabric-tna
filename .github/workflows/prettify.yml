@@ -33,10 +33,11 @@ jobs:
       - name: Check if the code is modified
         run: git update-index --refresh || echo "create_pr=1" >> $GITHUB_ENV
       - name: Create pull request
-        uses: peter-evans/create-pull-request@v2.7.0
+        uses: peter-evans/create-pull-request@v3
         with:
           commit-message: Auto-prettify ${{ github.sha }}
           title: "[Test only] Auto-prettify"
           labels: prettify-bot
           branch: prettify-bot
+          delete-branch: true
         if: env.create_pr == 1
