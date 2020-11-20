@@ -20,7 +20,7 @@ To use ONOS to control a Tofino-enabled switch, you will need to run the
 ## Requirements
 
 * Barefoot SDE >= 9.2.0 (with the P4_16 compiler for Tofino)
-* ONOS >= 2.2.6
+* ONOS >= 2.2.7
 * Docker (to run the build scripts without worrying about dependencies)
 * cURL (to interact with the ONOS REST APIs)
 
@@ -38,13 +38,12 @@ package that includes a compiled version of `fabric-tna.p4` that works on Tofino
 To learn more about pipeconfs and how ONOS supports P4-programmable devices:
 <https://github.com/opennetworkinglab/ngsdn-tutorial>
 
-### 1 - Build Tofino-enabled fabric-tna pipeconf
+### Build Tofino-enabled fabric-tna pipeconf
 
 To build `fabric-tna.p4` using the Barefoot compiler and to create the pipeconf
 `.oar` package:
 
 ```bash
-cd fabric-tna # this repo
 make build PROFILES=all
 ```
 
@@ -74,16 +73,16 @@ The P4 compiler outputs to include in the `.oar` package (such as `tofino.bin`,
 When done, the pipeconf `.oar` package can be found in
 `target/fabric-tna-<VERSION>.oar`
 
-#### Using containerized version of the Barefoot SDE / p4c compilers
+#### Using containerized version of the Barefoot SDE / p4c compiler
 
 The previous command expects the `bf-p4c` compiler to be installed locally. As an
 alternative, the build script supports using a Docker-based distribution of the
-Barefoot SDE / p4c compilers. To do so, simply set the `SDE_DOCKER_IMG`
+Barefoot SDE / p4c compiler. To do so, simply set the `SDE_DOCKER_IMG`
 make argument (or environment variable) to a Docker image that can be downloaded
 via `docker pull`, for example:
 
 ```bash
-make build SDE_DOCKER_IMG=my-docker-repo/bf-sde:9.2.0 PROFILES=all
+make build SDE_DOCKER_IMG=my-docker-repo/bf-sde:9.2.0-p4c PROFILES=all
 ```
 
 The build script will use `docker run` to invoke the `bf-p4c` command inside the
@@ -104,7 +103,7 @@ make p4i-stop
 
 ### 1 - Get and run ONOS
 
-The minimum required ONOS version that works with this pipeconf is 2.2.6.
+The minimum required ONOS version that works with this pipeconf is 2.2.7.
 
 You can either build from sources (using the `onos-2.2` or `master` branch), or
 run one the released versions:
@@ -140,7 +139,7 @@ You should see the ONOS log updating with messages notifying the registration of
 new Tofino-specific pipeconfs in the system, depending on the `fabric-tna.p4`
 profiles compiled before and the Barefoot SDE/p4c version used:
 
-```
+```text
 New pipeconf registered: org.stratumproject.fabric.mavericks_sde_9_2_0 (fingerprint=...)
 New pipeconf registered: org.stratumproject.fabric.montara_sde_9_2_0 (fingerprint=...)
 ...
@@ -151,7 +150,7 @@ This is currently a bug and will be fixed soon.**
 
 To check all pipeconfs registered in the system, use the ONOS CLI:
 
-```
+```text
 onos> pipeconfs
 ```
 
@@ -159,7 +158,7 @@ onos> pipeconfs
 
 Activate the Barefoot drivers in ONOS:
 
-```
+```text
 onos> app activate org.onosproject.drivers.barefoot
 ```
 
@@ -181,7 +180,7 @@ values:
 
 Push the `tofino-netcfg.json` to ONOS using the command:
 
-```
+```bash
 make netcfg ONOS_HOST=localhost
 ```
 
@@ -217,7 +216,7 @@ provided in `tofino-netcfg.json`, for example:
       "basic": {
         "managementAddress": "grpc://10.0.0.1:28000?device_id=1",
         "driver": "stratum-tofino",
-        "pipeconf": "org.stratumproject.fabric.tofino.montara_sde_9_2_0"
+        "pipeconf": "org.stratumproject.fabric.montara_sde_9_2_0"
       }
     }
   }
