@@ -19,3 +19,4 @@ graphs/
 mvn_settings.xml
 dependencies.xml
 bf_drivers.log.*
+.venv

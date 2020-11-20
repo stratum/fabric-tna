@@ -6,28 +6,31 @@
 #
 #
 
-import Queue
+import os
+import random
+import struct
 import sys
 import threading
 import time
-from StringIO import StringIO
 from collections import Counter
-from functools import wraps, partial
+from functools import partial, wraps
 from unittest import SkipTest
-import random
 
 import google.protobuf.text_format
 import grpc
 import ptf
 import ptf.testutils as testutils
+import Queue
 import scapy.packet
 import scapy.utils
-from google.rpc import status_pb2, code_pb2
+from google.rpc import code_pb2, status_pb2
 from p4.config.v1 import p4info_pb2
 from p4.v1 import p4runtime_pb2, p4runtime_pb2_grpc
 from ptf import config
 from ptf.base_tests import BaseTest
 from ptf.dataplane import match_exp_pkt
+from scapy.layers.l2 import Ether
+from StringIO import StringIO
 from testvector import tvutils
 
 
@@ -37,8 +40,7 @@ class partialmethod(partial):
     def __get__(self, instance, owner):
         if instance is None:
             return self
-        return partial(self.func, instance,
-                       *(self.args or ()), **(self.keywords or {}))
+        return partial(self.func, instance, *(self.args or ()), **(self.keywords or {}))
 
 
 # Convert integer (with length) to binary byte string
@@ -46,18 +48,18 @@ class partialmethod(partial):
 # See
 # https://stackoverflow.com/questions/16022556/has-python-3-to-bytes-been-back-ported-to-python-2-7
 def stringify(n, length):
-    h = '%x' % n
-    s = ('0' * (len(h) % 2) + h).zfill(length * 2).decode('hex')
+    h = "%x" % n
+    s = ("0" * (len(h) % 2) + h).zfill(length * 2).decode("hex")
     return s
 
 
 def ipv4_to_binary(addr):
-    bytes_ = [int(b, 10) for b in addr.split('.')]
+    bytes_ = [int(b, 10) for b in addr.split(".")]
     return "".join(chr(b) for b in bytes_)
 
 
 def mac_to_binary(addr):
-    bytes_ = [int(b, 16) for b in addr.split(':')]
+    bytes_ = [int(b, 16) for b in addr.split(":")]
     return "".join(chr(b) for b in bytes_)
 
 
@@ -69,17 +71,17 @@ def format_pkt_match(received_pkt, expected_pkt):
         # so we have to redirect stdout to a string.
         sys.stdout = StringIO()
 
-        print "========== EXPECTED =========="
+        print("========== EXPECTED ==========")
         if isinstance(expected_pkt, scapy.packet.Packet):
             scapy.packet.ls(expected_pkt)
-            print '--'
+            print("--")
         scapy.utils.hexdump(expected_pkt)
-        print "========== RECEIVED =========="
+        print("========== RECEIVED ==========")
         if isinstance(received_pkt, scapy.packet.Packet):
             scapy.packet.ls(received_pkt)
-            print '--'
+            print("--")
         scapy.utils.hexdump(received_pkt)
-        print "=============================="
+        print("==============================")
 
         return sys.stdout.getvalue()
     finally:
@@ -107,7 +109,7 @@ class P4RuntimeErrorFormatException(Exception):
 # Used to iterate over the p4.Error messages in a gRPC error Status object
 class P4RuntimeErrorIterator:
     def __init__(self, grpc_error):
-        assert (grpc_error.code() == grpc.StatusCode.UNKNOWN)
+        assert grpc_error.code() == grpc.StatusCode.UNKNOWN
         self.grpc_error = grpc_error
 
         error = None
@@ -136,7 +138,8 @@ class P4RuntimeErrorIterator:
             one_error_any = self.errors[self.idx]
             if not one_error_any.Unpack(p4_error):
                 raise P4RuntimeErrorFormatException(
-                    "Cannot convert Any message to p4.Error")
+                    "Cannot convert Any message to p4.Error"
+                )
             if p4_error.canonical_code == code_pb2.OK:
                 continue
             v = self.idx, p4_error
@@ -149,12 +152,12 @@ class P4RuntimeErrorIterator:
 # a write batch. This means that if we do not wrap the grpc.RpcError inside a
 # custom exception, we can end-up with a non-helpful exception message in case
 # of failure as only the first level will be printed. In this custom exception
-# class, we extract the nested error message (one for each operation included in
-# the batch) in order to print error code + user-facing message.  See P4 Runtime
-# documentation for more details on error-reporting.
+# class, we extract the nested error message (one for each operation included
+# in the batch) in order to print error code + user-facing message.
+# See P4 Runtime documentation for more details on error-reporting.
 class P4RuntimeException(Exception):
     def __init__(self, grpc_error):
-        assert (grpc_error.code() == grpc.StatusCode.UNKNOWN)
+        assert grpc_error.code() == grpc.StatusCode.UNKNOWN
         super(P4RuntimeException, self).__init__()
         self.grpc_error = grpc_error
         self.errors = []
@@ -167,12 +170,13 @@ class P4RuntimeException(Exception):
 
     def __str__(self):
         message = "Error(s) during RPC: {} {}\n".format(
-            self.grpc_error.code(), self.grpc_error.details())
+            self.grpc_error.code(), self.grpc_error.details()
+        )
         for idx, p4_error in self.errors:
-            code_name = code_pb2._CODE.values_by_number[
-                p4_error.canonical_code].name
+            code_name = code_pb2._CODE.values_by_number[p4_error.canonical_code].name
             message += "\t* At index {}: {}, '{}'\n".format(
-                idx, code_name, p4_error.message)
+                idx, code_name, p4_error.message
+            )
         return message
 
 
@@ -189,7 +193,7 @@ class P4RuntimeTest(BaseTest):
 
         grpc_addr = testutils.test_param_get("grpcaddr")
         if grpc_addr is None:
-            grpc_addr = 'localhost:50051'
+            grpc_addr = "localhost:50051"
 
         self.device_id = int(testutils.test_param_get("device_id"))
         if self.device_id is None:
@@ -200,11 +204,11 @@ class P4RuntimeTest(BaseTest):
             self.fail("CPU port is not set")
 
         pltfm = testutils.test_param_get("pltfm")
-        if pltfm is not None and pltfm == 'hw' and getattr(self, "_skip_on_hw", False):
+        if pltfm is not None and pltfm == "hw" and getattr(self, "_skip_on_hw", False):
             raise SkipTest("Skipping test in HW")
 
         proto_txt_path = testutils.test_param_get("p4info")
-        # print "Importing p4info proto from", proto_txt_path
+        # print("Importing p4info proto from", proto_txt_path)
         self.p4info = p4info_pb2.P4Info()
         with open(proto_txt_path, "rb") as fin:
             google.protobuf.text_format.Merge(fin.read(), self.p4info)
@@ -216,11 +220,11 @@ class P4RuntimeTest(BaseTest):
         self.reqs = []
 
         self.election_id = 1
-        if testutils.test_param_get("generate_tv") == 'True':
+        if testutils.test_param_get("generate_tv") == "True":
             self.generate_tv = True
         else:
             self.generate_tv = False
-        if testutils.test_param_get("loopback") == 'True':
+        if testutils.test_param_get("loopback") == "True":
             self.loopback = True
         else:
             self.loopback = False
@@ -241,8 +245,13 @@ class P4RuntimeTest(BaseTest):
         self.p4info_obj_map = {}
         self.p4info_id_to_name = {}
         suffix_count = Counter()
-        for p4_obj_type in ["tables", "action_profiles", "actions", "counters",
-                            "direct_counters"]:
+        for p4_obj_type in [
+            "tables",
+            "action_profiles",
+            "actions",
+            "counters",
+            "direct_counters",
+        ]:
             for obj in getattr(self.p4info, p4_obj_type):
                 pre = obj.preamble
                 suffix = None
@@ -251,7 +260,7 @@ class P4RuntimeTest(BaseTest):
                     key = (p4_obj_type, suffix)
                     self.p4info_obj_map[key] = obj
                     suffix_count[key] += 1
-                self.p4info_id_to_name[pre.id] = pre.name.encode('ascii', 'ignore')
+                self.p4info_id_to_name[pre.id] = pre.name.encode("ascii", "ignore")
         for key, c in suffix_count.items():
             if c > 1:
                 del self.p4info_obj_map[key]
@@ -273,7 +282,8 @@ class P4RuntimeTest(BaseTest):
 
         self.stream = self.stub.StreamChannel(stream_req_iterator())
         self.stream_recv_thread = threading.Thread(
-            target=stream_recv, args=(self.stream,))
+            target=stream_recv, args=(self.stream,)
+        )
         self.stream_recv_thread.start()
 
         self.handshake()
@@ -323,11 +333,16 @@ class P4RuntimeTest(BaseTest):
             rx_in_port_ = pkt_in_msg.metadata[0].value
             if in_port_ != rx_in_port_:
                 rx_inport = struct.unpack("!h", rx_in_port_)[0]
-                self.fail("Wrong packet-in ingress port, expected {} but received was {}"
-                          .format(exp_in_port, rx_inport))
+                self.fail(
+                    "Wrong packet-in ingress port, "
+                    + "expected {} but received was {}".format(exp_in_port, rx_inport)
+                )
             rx_pkt = Ether(pkt_in_msg.payload)
             if not match_exp_pkt(exp_pkt, rx_pkt):
-                self.fail("Received packet-in is not the expected one\n" + format_pkt_match(rx_pkt, exp_pkt))
+                self.fail(
+                    "Received packet-in is not the expected one\n"
+                    + format_pkt_match(rx_pkt, exp_pkt)
+                )
 
     def verify_packet_out(self, pkt, out_port):
         self.send_packet_out(self.build_packet_out(pkt, out_port))
@@ -335,7 +350,10 @@ class P4RuntimeTest(BaseTest):
 
     def verify_p4runtime_entity(self, expected, received):
         if not self.generate_tv and expected != received:
-            self.fail("Received entity is not the expected one\n" + format_exp_rcv(expected, received))
+            self.fail(
+                "Received entity is not the expected one\n"
+                + format_exp_rcv(expected, received)
+            )
 
     def verify_no_other_packets(self):
         if not self.generate_tv:
@@ -352,7 +370,7 @@ class P4RuntimeTest(BaseTest):
                 if not msg.HasField(type_):
                     continue
                 return msg
-        except:  # timeout expired
+        except Exception:  # timeout expired
             pass
         return None
 
@@ -383,13 +401,14 @@ class P4RuntimeTest(BaseTest):
     def get_obj_name_from_id(self, p4info_id):
         return self.p4info_id_to_name[p4info_id]
 
-
     def get_param_id(self, action_name, param_name):
         a = self.get_obj("actions", action_name)
         for p in a.params:
             if p.name == param_name:
                 return p.id
-        raise Exception("Param '%s' not found in action '%s'" % (param_name, action_name))
+        raise Exception(
+            "Param '%s' not found in action '%s'" % (param_name, action_name)
+        )
 
     def get_mf_id(self, table_name, mf_name):
         t = self.get_obj("tables", table_name)
@@ -398,7 +417,9 @@ class P4RuntimeTest(BaseTest):
         for mf in t.match_fields:
             if mf.name == mf_name:
                 return mf.id
-        raise Exception("Match field '%s' not found in table '%s'" % (mf_name, table_name))
+        raise Exception(
+            "Match field '%s' not found in table '%s'" % (mf_name, table_name)
+        )
 
     def send_packet(self, port, pkt):
         if self.generate_tv:
@@ -472,21 +493,20 @@ class P4RuntimeTest(BaseTest):
             mf = mk.add()
             mf.field_id = mf_id
             mf.lpm.prefix_len = self.pLen
-            mf.lpm.value = ''
+            mf.lpm.value = ""
 
             # P4Runtime now has strict rules regarding ternary matches: in the
-            # case of LPM, trailing bits in the value (after prefix) must be set
-            # to 0.
+            # case of LPM, trailing bits in the value (after prefix) must be
+            # set to 0.
             first_byte_masked = self.pLen / 8
-            for i in xrange(first_byte_masked):
+            for i in range(first_byte_masked):
                 mf.lpm.value += self.v[i]
             if first_byte_masked == len(self.v):
                 return
             r = self.pLen % 8
-            mf.lpm.value += chr(
-                ord(self.v[first_byte_masked]) & (0xff << (8 - r)))
+            mf.lpm.value += chr(ord(self.v[first_byte_masked]) & (0xFF << (8 - r)))
             for i in range(first_byte_masked + 1, len(self.v)):
-                mf.lpm.value += '\x00'
+                mf.lpm.value += "\x00"
 
     class Ternary(MF):
         def __init__(self, mf_name, v, mask):
@@ -497,16 +517,16 @@ class P4RuntimeTest(BaseTest):
         def add_to(self, mf_id, mk):
             # P4Runtime mandates that the match field should be omitted for
             # "don't care" ternary matches (i.e. when mask is zero)
-            if all(c == '\x00' for c in self.mask):
+            if all(c == "\x00" for c in self.mask):
                 return
             mf = mk.add()
             mf.field_id = mf_id
-            assert (len(self.mask) == len(self.v))
+            assert len(self.mask) == len(self.v)
             mf.ternary.mask = self.mask
-            mf.ternary.value = ''
+            mf.ternary.value = ""
             # P4Runtime now has strict rules regarding ternary matches: in the
             # case of Ternary, "don't-care" bits in the value must be set to 0
-            for i in xrange(len(self.mask)):
+            for i in range(len(self.mask)):
                 mf.ternary.value += chr(ord(self.v[i]) & ord(self.mask[i]))
 
     class Range(MF):
@@ -520,18 +540,18 @@ class P4RuntimeTest(BaseTest):
             # "don't care" range matches (i.e. when all possible values are
             # included in the range)
             # TODO(antonin): negative values?
-            low_is_zero = all(c == '\x00' for c in self.low)
-            high_is_max = all(c == '\xff' for c in self.high)
+            low_is_zero = all(c == "\x00" for c in self.low)
+            high_is_max = all(c == "\xff" for c in self.high)
             if low_is_zero and high_is_max:
                 return
             mf = mk.add()
             mf.field_id = mf_id
-            assert (len(self.high) == len(self.low))
+            assert len(self.high) == len(self.low)
             mf.range.low = self.low
             mf.range.high = self.high
 
-    # Sets the match key for a p4::TableEntry object. mk needs to be an iterable
-    # object of MF instances
+    # Sets the match key for a p4::TableEntry object. mk needs to be an
+    # iterable object of MF instances
     def set_match_key(self, table_entry, t_name, mk):
         for mf in mk:
             mf_id = self.get_mf_id(t_name, mf.name)
@@ -544,8 +564,8 @@ class P4RuntimeTest(BaseTest):
             param.param_id = self.get_param_id(a_name, p_name)
             param.value = v
 
-    # Sets the action & action data for a p4::TableEntry object. params needs to
-    # be an iterable object of 2-tuples (<param_name>, <value>).
+    # Sets the action & action data for a p4::TableEntry object. params needs
+    # to be an iterable object of 2-tuples (<param_name>, <value>).
     def set_action_entry(self, table_entry, a_name, params):
         self.set_action(table_entry.action.action, a_name, params)
 
@@ -599,12 +619,12 @@ class P4RuntimeTest(BaseTest):
     def get_new_read_response(self):
         resp = p4runtime_pb2.ReadResponse()
         return resp
+
     #
     # Convenience functions to build and send P4Runtime write requests
     #
 
-    def _push_update_member(self, req, ap_name, mbr_id, a_name, params,
-                            update_type):
+    def _push_update_member(self, req, ap_name, mbr_id, a_name, params, update_type):
         update = req.updates.add()
         update.type = update_type
         ap_member = update.entity.action_profile_member
@@ -613,8 +633,9 @@ class P4RuntimeTest(BaseTest):
         self.set_action(ap_member.action, a_name, params)
 
     def push_update_add_member(self, req, ap_name, mbr_id, a_name, params):
-        self._push_update_member(req, ap_name, mbr_id, a_name, params,
-                                 p4runtime_pb2.Update.INSERT)
+        self._push_update_member(
+            req, ap_name, mbr_id, a_name, params, p4runtime_pb2.Update.INSERT
+        )
 
     def send_request_add_member(self, ap_name, mbr_id, a_name, params):
         req = self.get_new_write_request()
@@ -622,8 +643,9 @@ class P4RuntimeTest(BaseTest):
         return req, self.write_request(req)
 
     def push_update_modify_member(self, req, ap_name, mbr_id, a_name, params):
-        self._push_update_member(req, ap_name, mbr_id, a_name, params,
-                                 p4runtime_pb2.Update.MODIFY)
+        self._push_update_member(
+            req, ap_name, mbr_id, a_name, params, p4runtime_pb2.Update.MODIFY
+        )
 
     def send_request_modify_member(self, ap_name, mbr_id, a_name, params):
         req = self.get_new_write_request()
@@ -647,8 +669,7 @@ class P4RuntimeTest(BaseTest):
         self.push_update_modify_group(req, ap_name, grp_id, grp_size, mbr_ids)
         return req, self.write_request(req, store=False)
 
-    def push_update_add_group(self, req, ap_name, grp_id, grp_size=32,
-                              mbr_ids=()):
+    def push_update_add_group(self, req, ap_name, grp_id, grp_size=32, mbr_ids=()):
         update = req.updates.add()
         update.type = p4runtime_pb2.Update.INSERT
         ap_group = update.entity.action_profile_group
@@ -665,8 +686,7 @@ class P4RuntimeTest(BaseTest):
         self.push_update_add_group(req, ap_name, grp_id, grp_size, mbr_ids)
         return req, self.write_request(req)
 
-    def push_update_set_group_membership(self, req, ap_name, grp_id,
-                                         mbr_ids=()):
+    def push_update_set_group_membership(self, req, ap_name, grp_id, mbr_ids=()):
         update = req.updates.add()
         update.type = p4runtime_pb2.Update.MODIFY
         ap_group = update.entity.action_profile_group
@@ -681,7 +701,9 @@ class P4RuntimeTest(BaseTest):
         self.push_update_set_group_membership(req, ap_name, grp_id, mbr_ids)
         return req, self.write_request(req, store=False)
 
-    def push_update_add_entry_to_action(self, req, t_name, mk, a_name, params, priority=0):
+    def push_update_add_entry_to_action(
+        self, req, t_name, mk, a_name, params, priority=0
+    ):
         update = req.updates.add()
         table_entry = update.entity.table_entry
         table_entry.table_id = self.get_table_id(t_name)
@@ -751,7 +773,14 @@ class P4RuntimeTest(BaseTest):
         counter = self.get_counter(c_name)
         counter_type_unit = p4info_pb2.CounterSpec.Unit.items()[counter.spec.unit][0]
         if counter_type_unit != "BOTH" and counter_type_unit != typ:
-            raise Exception("Counter " + c_name + " is of type " + counter_type_unit + ", but requested: " + typ)
+            raise Exception(
+                "Counter "
+                + c_name
+                + " is of type "
+                + counter_type_unit
+                + ", but requested: "
+                + typ
+            )
         req = self.get_new_read_request()
         entity = req.entities.add()
         counter_entry = entity.counter_entry
@@ -765,7 +794,9 @@ class P4RuntimeTest(BaseTest):
                 return entity.counter_entry
         return None
 
-    def write_indirect_counter(self, c_name, c_index, byte_count=None, packet_count=None): 
+    def write_indirect_counter(
+        self, c_name, c_index, byte_count=None, packet_count=None
+    ):
         # Get counter type with P4Info
         counter = self.get_counter(c_name)
         counter_type_unit = p4info_pb2.CounterSpec.Unit.items()[counter.spec.unit][0]
@@ -784,14 +815,25 @@ class P4RuntimeTest(BaseTest):
 
         if counter_type_unit == "BOTH" or counter_type_unit == "BYTES":
             if byte_count is None:
-                raise Exception("Counter " + c_name + " is of type " + counter_type_unit + ", byte_count cannot be None")
+                raise Exception(
+                    "Counter "
+                    + c_name
+                    + " is of type "
+                    + counter_type_unit
+                    + ", byte_count cannot be None"
+                )
             counter_data.byte_count = byte_count
         if counter_type_unit == "BOTH" or counter_type_unit == "PACKETS":
             if packet_count is None:
-                raise Exception("Counter " + c_name + " is of type " + counter_type_unit + ", packet_count cannot be None")
+                raise Exception(
+                    "Counter "
+                    + c_name
+                    + " is of type "
+                    + counter_type_unit
+                    + ", packet_count cannot be None"
+                )
             counter_data.packet_count = packet_count
         return req, self.write_request(req, store=False)
-        
 
     def read_table_entry(self, t_name, mk, priority=0):
         req = self.get_new_read_request()
@@ -833,7 +875,9 @@ class P4RuntimeTest(BaseTest):
                 return entity.action_profile_group
         return None
 
-    def verify_action_profile_group(self, ap_name, grp_id, expected_action_profile_group):
+    def verify_action_profile_group(
+        self, ap_name, grp_id, expected_action_profile_group
+    ):
         req = self.get_new_read_request()
         entity = req.entities.add()
         action_profile_member = entity.action_profile_group
@@ -851,7 +895,9 @@ class P4RuntimeTest(BaseTest):
             return None
         for entity in self.read_request(req):
             if entity.HasField("action_profile_group"):
-                self.verify_p4runtime_entity(entity.action_profile_group, expected_action_profile_group)
+                self.verify_p4runtime_entity(
+                    entity.action_profile_group, expected_action_profile_group
+                )
         return None
 
     def verify_multicast_group(self, group_id, expected_multicast_group):
@@ -863,7 +909,9 @@ class P4RuntimeTest(BaseTest):
         if self.generate_tv:
             exp_resp = self.get_new_read_response()
             entity = exp_resp.entities.add()
-            entity.packet_replication_engine_entry.multicast_group_entry.CopyFrom(expected_multicast_group)
+            entity.packet_replication_engine_entry.multicast_group_entry.CopyFrom(
+                expected_multicast_group
+            )
             # add to list
             exp_resps = []
             exp_resps.append(exp_resp)
@@ -873,9 +921,13 @@ class P4RuntimeTest(BaseTest):
             if entity.HasField("packet_replication_engine_entry"):
                 pre_entry = entity.packet_replication_engine_entry
                 if pre_entry.HasField("multicast_group_entry"):
-                    self.verify_p4runtime_entity(pre_entry.multicast_group_entry, expected_multicast_group)
+                    self.verify_p4runtime_entity(
+                        pre_entry.multicast_group_entry, expected_multicast_group,
+                    )
 
-    def verify_direct_counter(self, table_entry, expected_byte_count, expected_packet_count):
+    def verify_direct_counter(
+        self, table_entry, expected_byte_count, expected_packet_count
+    ):
         req = self.get_new_read_request()
         entity = req.entities.add()
         direct_counter_entry = entity.direct_counter_entry
@@ -896,17 +948,28 @@ class P4RuntimeTest(BaseTest):
         for entity in self.read_request(req):
             if entity.HasField("direct_counter_entry"):
                 direct_counter = entity.direct_counter_entry
-                if direct_counter.data.byte_count != expected_byte_count or \
-                        direct_counter.data.packet_count != expected_packet_count:
+                if (
+                    direct_counter.data.byte_count != expected_byte_count
+                    or direct_counter.data.packet_count != expected_packet_count
+                ):
                     self.fail("Incorrect direct counter value:\n" + str(direct_counter))
         return None
 
-    def verify_indirect_counter(self, c_name, c_index, typ, expected_byte_count=0, expected_packet_count=0):
+    def verify_indirect_counter(
+        self, c_name, c_index, typ, expected_byte_count=0, expected_packet_count=0,
+    ):
         # Check counter type with P4Info
         counter = self.get_counter(c_name)
         counter_type_unit = p4info_pb2.CounterSpec.Unit.items()[counter.spec.unit][0]
         if counter_type_unit != "BOTH" and counter_type_unit != typ:
-            raise Exception("Counter " + c_name + " is of type " + counter_type_unit + ", but requested: " + typ)
+            raise Exception(
+                "Counter "
+                + c_name
+                + " is of type "
+                + counter_type_unit
+                + ", but requested: "
+                + typ
+            )
         req = self.get_new_read_request()
         entity = req.entities.add()
         counter_entry = entity.counter_entry
@@ -930,19 +993,30 @@ class P4RuntimeTest(BaseTest):
         for entity in self.read_request(req):
             if entity.HasField("counter_entry"):
                 counter_entry = entity.counter_entry
-                if counter_entry.data.byte_count != expected_byte_count or \
-                        counter_entry.data.packet_count != expected_packet_count:
-                    self.fail("%s value is not same as expected.\
+                if (
+                    counter_entry.data.byte_count != expected_byte_count
+                    or counter_entry.data.packet_count != expected_packet_count
+                ):
+                    self.fail(
+                        "%s value is not same as expected.\
                         \nActual packet count: %d, Expected packet count: %d\
-                        \nActual byte count: %d, Expected byte count: %d\n"\
-                        %(c_name, counter_entry.data.packet_count, expected_packet_count,\
-                        counter_entry.data.byte_count, expected_byte_count))
+                        \nActual byte count: %d, Expected byte count: %d\n"
+                        % (
+                            c_name,
+                            counter_entry.data.packet_count,
+                            expected_packet_count,
+                            counter_entry.data.byte_count,
+                            expected_byte_count,
+                        )
+                    )
         return None
 
     def is_default_action_update(self, update):
-        return update.type == p4runtime_pb2.Update.MODIFY and \
-            update.entity.WhichOneof("entity") == "table_entry" and \
-                update.entity.table_entry.is_default_action
+        return (
+            update.type == p4runtime_pb2.Update.MODIFY
+            and update.entity.WhichOneof("entity") == "table_entry"
+            and update.entity.table_entry.is_default_action
+        )
 
     # iterates over all requests in reverse order; if they are INSERT updates,
     # replay them as DELETE updates; this is a convenient way to clean-up a lot
@@ -951,8 +1025,10 @@ class P4RuntimeTest(BaseTest):
         updates = []
         for req in reversed(reqs):
             for update in reversed(req.updates):
-                if update.type == p4runtime_pb2.Update.INSERT or \
-                        self.is_default_action_update(update):
+                if (
+                    update.type == p4runtime_pb2.Update.INSERT
+                    or self.is_default_action_update(update)
+                ):
                     updates.append(update)
         new_req = self.get_new_write_request()
         for update in updates:
@@ -972,65 +1048,66 @@ class P4RuntimeTest(BaseTest):
             self._write(new_req)
 
 
-# Add p4info object and object id "getters" for each object type; these are just
-# wrappers around P4RuntimeTest.get_obj and P4RuntimeTest.get_obj_id.
+# Add p4info object and object id "getters" for each object type; these are
+# just wrappers around P4RuntimeTest.get_obj and P4RuntimeTest.get_obj_id.
 # For example: get_table(x) and get_table_id(x) respectively call
 # get_obj("tables", x) and get_obj_id("tables", x)
-for obj_type, nickname in [("tables", "table"),
-                           ("action_profiles", "ap"),
-                           ("actions", "action"),
-                           ("counters", "counter"),
-                           ("direct_counters", "direct_counter")]:
+for obj_type, nickname in [
+    ("tables", "table"),
+    ("action_profiles", "ap"),
+    ("actions", "action"),
+    ("counters", "counter"),
+    ("direct_counters", "direct_counter"),
+]:
     name = "_".join(["get", nickname])
-    setattr(P4RuntimeTest, name, partialmethod(
-        P4RuntimeTest.get_obj, obj_type))
+    setattr(P4RuntimeTest, name, partialmethod(P4RuntimeTest.get_obj, obj_type))
     name = "_".join(["get", nickname, "id"])
-    setattr(P4RuntimeTest, name, partialmethod(
-        P4RuntimeTest.get_obj_id, obj_type))
+    setattr(P4RuntimeTest, name, partialmethod(P4RuntimeTest.get_obj_id, obj_type))
 
 
 # this decorator can be used on the runTest method of P4Runtime PTF tests
-# when it is used, the undo_write_requests will be called at the end of the test
-# (irrespective of whether the test was a failure, a success, or an exception
-# was raised). When this is used, all write requests must be performed through
-# one of the send_request_* convenience functions, or by calling write_request;
-# do not use stub.Write directly!
+# when it is used, the undo_write_requests will be called at the end of the
+# test (irrespective of whether the test was a failure, a success, or an
+# exception was raised). When this is used, all write requests must be
+# performed through one of the send_request_* convenience functions, or by
+# calling write_request; do not use stub.Write directly!
 # most of the time, it is a great idea to use this decorator, as it makes the
 # tests less verbose. In some circumstances, it is difficult to use it, in
 # particular when the test itself issues DELETE request to remove some
 # objects. In this case you will want to do the cleanup yourself (in the
 # tearDown function for example); you can still use undo_write_request which
 # should make things easier.
-# because the PTF test writer needs to choose whether or not to use autocleanup,
-# it seems more appropriate to define a decorator for this rather than do it
-# unconditionally in the P4RuntimeTest tearDown method.
+# because the PTF test writer needs to choose whether or not to use
+# autocleanup, it seems more appropriate to define a decorator for this rather
+# than do it unconditionally in the P4RuntimeTest tearDown method.
 def autocleanup(f):
     @wraps(f)
     def handle(*args, **kwargs):
         test = args[0]
-        assert (isinstance(test, P4RuntimeTest))
+        assert isinstance(test, P4RuntimeTest)
         try:
             return f(*args, **kwargs)
         finally:
             test.undo_write_requests(test.reqs)
             test.reqs = []
+
     return handle
 
 
 # this decorator should be used on the runTest method of P4Runtime PTF tests
 # on using this decorator, new testvector instance is initiated before running
-# runTest method and finally generated testvector is appended to list which will
-# be written to files in the P4RuntimeTest tearDown method.
+# runTest method and finally generated testvector is appended to list which
+# will be written to files in the P4RuntimeTest tearDown method.
 def tvsetup(f):
     @wraps(f)
     def handle(*args, **kwargs):
         test = args[0]
-        assert (isinstance(test, P4RuntimeTest))
+        assert isinstance(test, P4RuntimeTest)
         try:
             if test.generate_tv:
-                if 'tc_name' in kwargs:
+                if "tc_name" in kwargs:
                     test.tv = tvutils.get_new_testvector()
-                    test.tc = tvutils.get_new_testcase(test.tv, kwargs['tc_name'])
+                    test.tc = tvutils.get_new_testcase(test.tv, kwargs["tc_name"])
                 else:
                     test.tv = tvutils.get_new_testvector()
                     test.tc = tvutils.get_new_testcase(test.tv, test.tv_name)
@@ -1038,6 +1115,7 @@ def tvsetup(f):
         finally:
             if test.generate_tv:
                 test.tv_list.append(test.tv)
+
     return handle
 
 
@@ -1048,30 +1126,34 @@ def tvskip(f):
     @wraps(f)
     def handle(*args, **kwargs):
         test = args[0]
-        assert (isinstance(test, P4RuntimeTest))
-        if testutils.test_param_get("generate_tv") == 'True':
+        assert isinstance(test, P4RuntimeTest)
+        if testutils.test_param_get("generate_tv") == "True":
             raise SkipTest("TestVector generation for " + str(test))
         return f(*args, **kwargs)
+
     return handle
 
 
 # This decorator should be used for creating standalone TestVectors.
-# On using this decorator TestVectors are generated for the P4RT operations in the calling method.
+# On using this decorator TestVectors are generated for the P4RT operations in
+# the calling method.
 # This doesn't change the current behavior for executing ptf tests.
 def tvcreate(name):
     def wrapper(f):
         @wraps(f)
         def handle(*args, **kwargs):
             test = args[0]
-            assert (isinstance(test, P4RuntimeTest))
+            assert isinstance(test, P4RuntimeTest)
             try:
                 if test.generate_tv:
-                    # If name contains "/", last string is considered as tv_name and
-                    # prefix is considered as sub directory to be created under testvectors/<ptf_test_class_name>
-                    # e.g. If name argument is "setup/setup_switch_info" for FabricIPv4UnicastTest,
-                    # the testvector is saved as testvectors/FabricIPv4UnicastTest/setup/setup_switch_info.pb.txt
+                    # If name contains "/", last string is considered as
+                    # tv_name and prefix is considered as sub directory to be
+                    # created under testvectors/<ptf_test_class_name>
+                    # e.g. If name argument is "setup/setup_switch_info" for
+                    # FabricIPv4UnicastTest, the testvector is saved as
+                    # testvectors/FabricIPv4UnicastTest/setup/setup_switch_info.pb.txt
                     names = name.rsplit("/", 1)
-                    if(len(names) > 1):
+                    if len(names) > 1:
                         sub_dir = names[0]
                         tv_name = names[1]
                     else:
@@ -1082,9 +1164,15 @@ def tvcreate(name):
                 return f(*args, **kwargs)
             finally:
                 if test.generate_tv:
-                    tv_folder = os.path.join(os.getcwd(), "testvectors", test.__class__.__name__, sub_dir)
-                    tvutils.write_to_file(test.tv, tv_folder, tv_name, create_tv_sub_dir=False)
+                    tv_folder = os.path.join(
+                        os.getcwd(), "testvectors", test.__class__.__name__, sub_dir,
+                    )
+                    tvutils.write_to_file(
+                        test.tv, tv_folder, tv_name, create_tv_sub_dir=False
+                    )
+
         return handle
+
     return wrapper
 
 

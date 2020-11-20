@@ -1,0 +1,40 @@
+# Copyright 2020-present Open Networking Foundation
+# SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
+
+---
+name: Prettify Python Code
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  prettify:
+    name: Prettify
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Set up Python environment
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8.5
+      - name: Install dependencies
+        run: python3 -m pip install black==19.10b0 isort==5.6.4
+      - name: Reformat code with Black
+        run: black --config .github/linters/.python-black .
+      - name: Refotmat code with isort
+        run: isort --sp .github/linters/.isort.cfg .
+      - name: Check if the code is modified
+        run: git update-index --refresh || echo "create_pr=1" >> $GITHUB_ENV
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@v3
+        with:
+          commit-message: Auto-prettify ${{ github.sha }}
+          title: "Auto-prettify"
+          labels: prettify-bot
+          branch: prettify-bot
+          delete-branch: true
+        if: env.create_pr == 1
