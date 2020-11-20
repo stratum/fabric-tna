@@ -14,8 +14,9 @@ TESTER_DOCKER_IMG=stratumproject/testvectors:ptf@sha256:32241613c6b0fb56cd9ddb75
 SDE_VERSION=${SDE_VERSION:-9.2.0}
 # Use image sha to pin a specific stratum_bmv2 build and have reproducible runs.
 # We could instrument CI to test on both a stable version and the latest one.
-STRATUM_BF_DOCKER_IMG=${STRATUM_BF_DOCKER_IMG:-stratumproject/stratum-bf:9.2.0}
+STRATUM_BF_DOCKER_IMG=${STRATUM_BF_DOCKER_IMG:-registry.aetherproject.org/tost/stratum-bfrt:latest-9.2.0}
 STRATUM_BF_DOCKER_FLAG=${STRATUM_BF_DOCKER_FLAG:-}
+SDE_DOCKER_IMG=${SDE_DOCKER_IMG:-opennetworking/bf-sde:9.2.0-tm}
 
 if [[ -z "${FABRIC_TNA}" ]]; then
     echo "ERROR: FABRIC_TNA env not defined"
@@ -101,6 +102,7 @@ sleep 5
 
 # Run Stratum container
 echo "*** Starting ${stratumBfRunName} (from ${STRATUM_BF_DOCKER_IMG})..."
+# shellcheck disable=SC2086
 docker run --name ${stratumBfRunName} -d --privileged \
     --network "container:${tmRunName}" \
     -v "${DIR}":/workdir -w /workdir \
@@ -113,11 +115,12 @@ wait_for ${stratumBfRunName} 28000 600
 echo "*** Starting ${testerRunName}..."
 # Do not attach stdin if running in an environment without it (e.g., Jenkins)
 it=$(test -t 0 && echo "-it" || echo "-t")
-docker run --name ${testerRunName} ${it} --privileged --rm \
+# shellcheck disable=SC2068
+docker run --name "${testerRunName}" "${it}" --privileged --rm \
     --network "container:${tmRunName}" \
     -v "${FP4TEST_ROOT}":/fabric-p4test \
     -v "${P4C_OUT}":/p4c-out \
-    -e PTF_FILTER=${PTF_FILTER} \
+    -e PTF_FILTER="${PTF_FILTER}" \
     --entrypoint /fabric-p4test/run/tm/start_test.sh \
     "${TESTER_DOCKER_IMG}" \
     ${@}

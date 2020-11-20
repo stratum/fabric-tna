@@ -32,6 +32,7 @@ echo "************************************************"
 echo "STARTING TESTVECTOR GENERATION FROM PTF TESTS..."
 echo "************************************************"
 
+# shellcheck disable=SC2068
 make -f "${DIR}"/Makefile ${@}
 
 echo "************************************************"

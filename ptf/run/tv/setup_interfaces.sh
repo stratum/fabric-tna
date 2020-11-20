@@ -4,19 +4,17 @@
 
 set -ex
 
-DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
-
 # From:
 # https://github.com/p4lang/behavioral-model/blob/master/tools/veth_setup.sh
 
-for n in $(seq 1 $#); do
+for _ in $(seq 1 $#); do
     intf0=$1
     intf1="$1_peer"
 	shift
-    if ! ip link show $intf0 &> /dev/null; then
-        ip link add name $intf0 type veth peer name $intf1
-        ip link set dev $intf0 up
-        ip link set dev $intf1 up
+    if ! ip link show "$intf0" &> /dev/null; then
+        ip link add name "$intf0" type veth peer name "$intf1"
+        ip link set dev "$intf0" up
+        ip link set dev "$intf1" up
 
         # Set the MTU of these interfaces to be larger than default of
         # 1500 bytes, so that P4 behavioral-model testing can be done
@@ -26,8 +24,8 @@ for n in $(seq 1 $#); do
         # Ubuntu 18.04.  The ip command is installed in Ubuntu
         # versions since at least 16.04, and probably older versions,
         # too.
-        ip link set $intf0 mtu 9500
-        ip link set $intf1 mtu 9500
+        ip link set "$intf0" mtu 9500
+        ip link set "$intf1" mtu 9500
 
         # Disable IPv6 on the interfaces, so that the Linux kernel
         # will not automatically send IPv6 MDNS, Router Solicitation,

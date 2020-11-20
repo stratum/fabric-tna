@@ -4,7 +4,7 @@
 
 MAVERICKS_CPU_PORT=320
 MONTARA_CPU_PORT=192
-SDE_DOCKER_IMG=${SDE_DOCKER_IMG:-opennetworking/bf-sde:9.2.0}
+SDE_DOCKER_IMG=${SDE_DOCKER_IMG:-opennetworking/bf-sde:9.2.0-p4c}
 PIPELINE_CONFIG_BUILDER_IMG=${PIPELINE_BUILD_IMG:-"stratumproject/stratum-bf-pipeline-builder@sha256:006db61b4c8797cc46f9008549b9d073ccfdc6c2e67641650fcb63afc318846a"}
 
 # DIR is this file directory.
@@ -51,7 +51,7 @@ function base_build() {
   (
     $P4C_CMD --arch tna -g --create-graphs --verbose 2 \
       -o ${output_dir} -I ${P4_SRC_DIR} \
-      ${pp_flags} ${OTHER_PP_FLAGS} \
+      ${OTHER_PP_FLAGS} \
       ${p4c_flags} \
       --p4runtime-files ${output_dir}/p4info.txt \
       --p4runtime-force-std-externs \
