@@ -799,10 +799,10 @@ class P4RuntimeTest(BaseTest):
         table_entry = entity.table_entry
         table_entry.table_id = self.get_table_id(t_name)
         table_entry.priority = priority
-        if mk is not None:
-            self.set_match_key(table_entry, t_name, mk)
-        else:
+        if mk is None or len(mk) == 0:
             table_entry.is_default_action = True
+        else:
+            self.set_match_key(table_entry, t_name, mk)
 
         for entity in self.read_request(req):
             if entity.HasField("table_entry"):
