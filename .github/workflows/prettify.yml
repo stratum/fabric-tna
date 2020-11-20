@@ -9,8 +9,8 @@ on:
     branches: [master]
 
 jobs:
-  check_and_create_prettify_pr:
-    name: Check and create prettify pull request
+  prettify:
+    name: Prettify
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
