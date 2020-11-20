@@ -7,9 +7,6 @@ name: Prettify Python Code
 on:
   push:
     branches: [master]
-  pull_request:
-    # test only, to be removed
-    branches: [master]
 
 jobs:
   check_and_create_prettify_pr:
