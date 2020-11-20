@@ -17,7 +17,7 @@ control FlowReportFilter(
     Hash<bit<16>>(HashAlgorithm_t.CRC16) flow_state_hasher;
     bit<16> flow_state_hash;
     bit<32> hop_latency;
-    bit<1> report;
+    bit<2> report;
 
     // Bloom filter storing the hashed state of each flow (ports and hop latency).
     // We use it to trigger report generation only for the first packet of a new flow, or for
@@ -30,35 +30,32 @@ control FlowReportFilter(
     Register<flow_report_filter_index_t, bit<16>>(1 << FLOW_REPORT_FILTER_WIDTH, 0) filter2;
 
     // Meaning of the result:
-    // 0: Nothing changed.
-    // 1: New flow or state hash changed.
-    RegisterAction<bit<16>, flow_report_filter_index_t, bit<1>>(filter1) filter_get_and_set1 = {
-        void apply(inout bit<16> stored_flow_state_hash, out bit<1> result) {
+    // 0b1x: New flow
+    // 0b01: State change
+    // 0b00: Nothing change
+    @reduction_or_group("filter")
+    RegisterAction<bit<16>, flow_report_filter_index_t, bit<2>>(filter1) filter_get_and_set1 = {
+        void apply(inout bit<16> stored_flow_state_hash, out bit<2> result) {
             if (stored_flow_state_hash == 0) {
                 // No state hash stored, new flow.
-                result = 1;
-            } else if (stored_flow_state_hash != flow_state_hash) {
-                // State hash changed.
-                result = 1;
-            } else {
-                // Nothing changed.
-                result = 0;
+                result = 0b10;
+            } else if (stored_flow_state_hash == flow_state_hash) {
+                // State hash not changed.
+                result = 0b01;
             }
             stored_flow_state_hash = flow_state_hash;
         }
     };
 
-    RegisterAction<bit<16>, flow_report_filter_index_t, bit<1>>(filter2) filter_get_and_set2 = {
-        void apply(inout bit<16> stored_flow_state_hash, out bit<1> result) {
+    @reduction_or_group("filter")
+    RegisterAction<bit<16>, flow_report_filter_index_t, bit<2>>(filter2) filter_get_and_set2 = {
+        void apply(inout bit<16> stored_flow_state_hash, out bit<2> result) {
             if (stored_flow_state_hash == 0) {
                 // No state hash stored, new flow.
-                result = 1;
-            } else if (stored_flow_state_hash != flow_state_hash) {
-                // State hash changed.
-                result = 1;
-            } else {
-                // Nothing changed.
-                result = 0;
+                result = 0b10;
+            } else if (stored_flow_state_hash == flow_state_hash) {
+                // State hash not changed.
+                result = 0b01;
             }
             stored_flow_state_hash = flow_state_hash;
         }
@@ -82,7 +79,7 @@ control FlowReportFilter(
         flow_state_hash = flow_state_hasher.get({fabric_md.bridged.ig_port, eg_intr_md.egress_port, hop_latency});
         report = filter_get_and_set1.execute(fabric_md.bridged.flow_hash[31:16]);
         report = report | filter_get_and_set2.execute(fabric_md.bridged.flow_hash[15:0]);
-        if (report == 0) {
+        if (report == 0b01) {
             fabric_md.int_mirror_md.setInvalid();
         }
     }
