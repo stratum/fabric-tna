@@ -33,7 +33,7 @@ jobs:
         uses: peter-evans/create-pull-request@v3
         with:
           commit-message: Auto-prettify ${{ github.sha }}
-          title: "[Test only] Auto-prettify"
+          title: "Auto-prettify"
           labels: prettify-bot
           branch: prettify-bot
           delete-branch: true
