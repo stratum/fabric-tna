@@ -2,9 +2,9 @@
 # Copyright 2018-present Open Networking Foundation
 # SPDX-License-Identifier: Apache-2.0
 
+from unittest import skip
 import difflib
 import string
-from unittest import skip
 
 from base_test import autocleanup, tvsetup, tvskip
 from fabric_test import *  # noqa
@@ -84,9 +84,12 @@ class FabricArpBroadcastUntaggedTest(ArpBroadcastTest):
     @tvsetup
     @autocleanup
     def runTest(self):
-        self.runArpBroadcastTest(
-            tagged_ports=[], untagged_ports=[self.port1, self.port2, self.port3],
-        )
+
+
+
+
+
+        self.runArpBroadcastTest(tagged_ports=[], untagged_ports=[self.port1, self.port2, self.port3],)
 
 
 @group("multicast")
