@@ -2,17 +2,16 @@
 # Copyright 2018-present Open Networking Foundation
 # SPDX-License-Identifier: Apache-2.0
 
-from unittest import skip
 import difflib
 import string
+from unittest import skip
 
 from base_test import autocleanup, tvsetup, tvskip
 from fabric_test import *  # noqa
+from p4.config.v1 import p4info_pb2
 from ptf.testutils import group
 from scapy.layers.inet import IP
 from scapy.layers.ppp import PPPoED
-
-from p4.config.v1 import p4info_pb2
 
 vlan_confs = {
     "tag->tag": [True, True],
@@ -1778,39 +1777,41 @@ class FabricOptimizedFieldDetectorTest(FabricTest):
     # Since the test uses the same match key for tables with multiple actions,
     # each table entry has to be removed before testing the next.
     @autocleanup
-    def insert_table_entry(self, table_name, match_keys, action_name, action_params, priority):
+    def insert_table_entry(
+        self, table_name, match_keys, action_name, action_params, priority
+    ):
         req, _ = self.send_request_add_entry_to_action(
-            table_name,
-            match_keys,
-            action_name,
-            action_params,
-            priority
+            table_name, match_keys, action_name, action_params, priority
         )
-        # Make a deep copy of the requests, because autocleanup will modify the originals.
+        # Make a deep copy of the requests, because autocleanup will modify the
+        # originals.
         write_entry = p4runtime_pb2.TableEntry()
         write_entry.CopyFrom(req.updates[0].entity.table_entry)
         resp = self.read_table_entry(table_name, match_keys, priority)
         if resp is None:
-            self.fail("Failed to read an entry that was just written! " +
-                      "Table was %s, action was %s" % (table_name, action_name))
+            self.fail(
+                "Failed to read an entry that was just written! "
+                + "Table was %s, action was %s" % (table_name, action_name)
+            )
         read_entry = p4runtime_pb2.TableEntry()
         read_entry.CopyFrom(resp)
         return write_entry, read_entry
 
     @autocleanup
-    def insert_action_profile_member(self, action_profile_name, member_id,
-                                     action_name, action_params):
+    def insert_action_profile_member(
+        self, action_profile_name, member_id, action_name, action_params
+    ):
         req, _ = self.send_request_add_member(
-            action_profile_name,
-            member_id,
-            action_name,
-            action_params
+            action_profile_name, member_id, action_name, action_params
         )
-        # Make a deep copy of the requests, because autocleanup will modify the originals.
+        # Make a deep copy of the requests, because autocleanup will modify the
+        # originals.
         write_entry = p4runtime_pb2.ActionProfileMember()
         write_entry.CopyFrom(req.updates[0].entity.action_profile_member)
         read_entry = p4runtime_pb2.ActionProfileMember()
-        read_entry.CopyFrom(self.read_action_profile_member(action_profile_name, member_id))
+        read_entry.CopyFrom(
+            self.read_action_profile_member(action_profile_name, member_id)
+        )
         return write_entry, read_entry
 
     def handleTable(self, table):
@@ -1838,8 +1839,10 @@ class FabricOptimizedFieldDetectorTest(FabricTest):
                     match_keys.append(self.Range(match.name, match_low, match_high))
                     priority = 1
                 else:
-                    print("Skipping table %s because it has a unsupported match field %s of type %s"
-                            % (table_name, match.name, match.match_type))
+                    print(
+                        "Skipping table %s because it has a unsupported match field %s of type %s"
+                        % (table_name, match.name, match.match_type)
+                    )
                     return
             # Build action
             action_name = self.get_obj_name_from_id(action_ref.id)
@@ -1851,8 +1854,10 @@ class FabricOptimizedFieldDetectorTest(FabricTest):
                 priority = 0
             if table.const_default_action_id > 0 and len(match_keys) == 0:
                 # Don't try to modify a const default action
-                print("Skipping action \"%s\" of table \"%s\" because the default action is const"
-                        % (action_name, table_name))
+                print(
+                    'Skipping action "%s" of table "%s" because the default action is const'
+                    % (action_name, table_name)
+                )
                 continue
             for param in action.params:
                 param_value = self.generateBytestring(param.bitwidth)
@@ -1865,20 +1870,31 @@ class FabricOptimizedFieldDetectorTest(FabricTest):
                 action_profile = self.get_obj("action_profiles", action_profile_name)
                 member_id = 1
                 write_entry, read_entry = self.insert_action_profile_member(
-                    action_profile_name, member_id, action_name, action_params)
+                    action_profile_name, member_id, action_name, action_params
+                )
                 # TODO: Test table entries to members?
             else:
                 write_entry, read_entry = self.insert_table_entry(
-                    table_name, match_keys, action_name, action_params, priority)
+                    table_name, match_keys, action_name, action_params, priority
+                )
             # Check for differences between expected and actual state.
             if write_entry != read_entry:
                 write_entry_s = string.split("%s" % write_entry, "\n")
                 read_entry_s = string.split("%s" % read_entry, "\n")
                 diff = ""
-                for line in difflib.unified_diff(write_entry_s, read_entry_s, fromfile='Wrote', tofile='Read back', n=5, lineterm=""):
-                     diff = diff + line + "\n"
-                print("Found parameter that has been optimized out in action \"%s\" of table \"%s\":"
-                        % (action_name, table_name))
+                for line in difflib.unified_diff(
+                    write_entry_s,
+                    read_entry_s,
+                    fromfile="Wrote",
+                    tofile="Read back",
+                    n=5,
+                    lineterm="",
+                ):
+                    diff = diff + line + "\n"
+                print(
+                    'Found parameter that has been optimized out in action "%s" of table "%s":'
+                    % (action_name, table_name)
+                )
                 print(diff)
                 self.fail("Read does not match previous write!")
 
@@ -1889,5 +1905,5 @@ class FabricOptimizedFieldDetectorTest(FabricTest):
             self.handleTable(table)
 
     def runTest(self):
-        print ""
+        print("")
         self.doRunTest()

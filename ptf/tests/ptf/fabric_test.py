@@ -1695,11 +1695,17 @@ class SpgwSimpleTest(IPv4UnicastTest):
         self.write_indirect_counter(PDR_COUNTER_INGRESS, ctr_idx, 0, 0)
         self.write_indirect_counter(PDR_COUNTER_EGRESS, ctr_idx, 0, 0)
 
-    def verify_pdr_counters(self, ctr_idx,
-                            exp_ingress_bytes, exp_egress_bytes,
-                            exp_ingress_pkts, exp_egress_pkts):
+    def verify_pdr_counters(
+        self,
+        ctr_idx,
+        exp_ingress_bytes,
+        exp_egress_bytes,
+        exp_ingress_pkts,
+        exp_egress_pkts,
+    ):
         """ Verify that the PDR ingress and egress counters for index 'ctr_idx' are now
-            'exp_ingress_bytes', 'exp_ingress_pkts' and 'exp_egress_bytes', 'exp_egress_pkts' respectively upon reading.
+            'exp_ingress_bytes', 'exp_ingress_pkts' and 'exp_egress_bytes',
+            'exp_egress_pkts' respectively upon reading.
         """
         self.verify_indirect_counter(
             PDR_COUNTER_INGRESS, ctr_idx, "BOTH", exp_ingress_bytes, exp_ingress_pkts,
