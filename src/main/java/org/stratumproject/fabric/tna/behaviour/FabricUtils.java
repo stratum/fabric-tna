@@ -99,4 +99,16 @@ public final class FabricUtils {
         }
         return null;
     }
+
+    public static boolean isL2InterfaceConfiguration(TrafficTreatment treatment) {
+        final Instructions.OutputInstruction output = outputInstruction(treatment);
+        final L2ModificationInstruction vlanPop = l2Instruction(treatment,
+                L2ModificationInstruction.L2SubType.VLAN_POP);
+        // 2 instructions - can be only vlan pop and output to port
+        if (treatment.allInstructions().size() == 2 && vlanPop != null && output != null) {
+            return true;
+        }
+        // 1 instruction - can be only output to port
+        return treatment.allInstructions().size() == 1 && output != null;
+    }
 }
