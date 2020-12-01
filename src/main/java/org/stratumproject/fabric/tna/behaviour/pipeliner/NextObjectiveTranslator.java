@@ -237,19 +237,22 @@ class NextObjectiveTranslator
             throws FabricPipelinerException {
         final PortNumber outPort = outputPort(treatment);
         final Instruction popVlanInst = l2Instruction(treatment, VLAN_POP);
-        if (popVlanInst != null && outPort != null) {
+        if (outPort != null) {
             if (strict && treatment.allInstructions().size() > 2) {
                 throw new FabricPipelinerException(
                         "Treatment contains instructions other " +
                                 "than OUTPUT and VLAN_POP, cannot generate " +
                                 "egress rules");
             }
-            egressVlanPop(outPort, obj, resultBuilder);
+            // Do egress configuration only if it is an l2 interface configuration
+            if (isL2InterfaceConfiguration(treatment)) {
+                egressVlan(outPort, obj, popVlanInst, resultBuilder);
+            }
         }
     }
 
-    private void egressVlanPop(PortNumber outPort, NextObjective obj,
-                               ObjectiveTranslation.Builder resultBuilder)
+    private void egressVlan(PortNumber outPort, NextObjective obj, Instruction popVlanInst,
+                            ObjectiveTranslation.Builder resultBuilder)
             throws FabricPipelinerException {
 
         if (obj.meta() == null) {
@@ -262,7 +265,7 @@ class NextObjectiveTranslator
                 obj.meta(), Criterion.Type.VLAN_VID);
         if (vlanIdCriterion == null) {
             throw new FabricPipelinerException(
-                    "Cannot process egress pop VLAN rule, missing VLAN_VID criterion " +
+                    "Cannot process egress VLAN rule, missing VLAN_VID criterion " +
                             "in NextObjective meta",
                     ObjectiveError.BADPARAMS);
         }
@@ -274,13 +277,17 @@ class NextObjectiveTranslator
                 .matchPi(egressVlanTableMatch)
                 .matchVlanId(vlanIdCriterion.vlanId())
                 .build();
-        final TrafficTreatment treatment = DefaultTrafficTreatment.builder()
-                .popVlan()
-                .build();
+        final TrafficTreatment.Builder treatmentBuilder = DefaultTrafficTreatment.builder();
+        // Push or Pop the vlan based on the presence of the popVlanInst
+        if (popVlanInst == null) {
+            treatmentBuilder.pushVlan();
+        } else {
+            treatmentBuilder.popVlan();
+        }
 
         resultBuilder.addFlowRule(flowRule(
                 obj, P4InfoConstants.FABRIC_EGRESS_EGRESS_NEXT_EGRESS_VLAN,
-                selector, treatment));
+                selector, treatmentBuilder.build()));
     }
 
     private TrafficSelector nextIdSelector(int nextId) {
