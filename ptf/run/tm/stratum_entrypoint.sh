@@ -29,7 +29,6 @@ ${stratumBin} \
     -chassis_config_file="${DIR}"/chassis_config.pb.txt \
     -external_stratum_urls=0.0.0.0:28000 \
     -forwarding_pipeline_configs_file=/dev/null \
-    -grpc_max_recv_msg_size=256 \
     -log_dir=./ \
     -logtostderr=true \
     -stderrthreshold=0 \
