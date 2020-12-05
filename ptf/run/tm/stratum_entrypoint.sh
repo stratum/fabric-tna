@@ -36,4 +36,5 @@ ${stratumBin} \
     -v=0 \
     -persistent_config_dir=/tmp \
     -write_req_log_file=./p4rt-write-reqs.log \
+    -enable_onlp=false \
     > ./stratum_bf.log 2>&1
