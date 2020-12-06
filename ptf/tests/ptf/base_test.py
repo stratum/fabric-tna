@@ -15,7 +15,7 @@ import sys
 import threading
 import time
 from collections import Counter
-from functools import partial, wraps
+from functools import partial, partialmethod, wraps
 from io import StringIO
 from unittest import SkipTest
 
@@ -33,15 +33,6 @@ from ptf.base_tests import BaseTest
 from ptf.dataplane import match_exp_pkt
 from scapy.layers.l2 import Ether
 from testvector import tvutils
-
-
-# See https://gist.github.com/carymrobbins/8940382
-# functools.partialmethod is introduced in Python 3.4
-class partialmethod(partial):
-    def __get__(self, instance, owner):
-        if instance is None:
-            return self
-        return partial(self.func, instance, *(self.args or ()), **(self.keywords or {}))
 
 
 # Convert integer (with length) to binary byte string
