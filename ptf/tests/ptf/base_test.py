@@ -487,13 +487,11 @@ class P4RuntimeTest(BaseTest):
             # to 0.
             first_byte_masked = self.pLen // 8
             for i in range(first_byte_masked):
-                mf.lpm.value += self.v[i].to_bytes(1, byteorder="big")
+                mf.lpm.value += stringify(self.v[i], 1)
             if first_byte_masked == len(self.v):
                 return
             r = self.pLen % 8
-            mf.lpm.value += (self.v[first_byte_masked] & (0xFF << (8 - r))).to_bytes(
-                1, byteorder="big"
-            )
+            mf.lpm.value += stringify(self.v[first_byte_masked] & (0xFF << (8 - r)), 1)
             for i in range(first_byte_masked + 1, len(self.v)):
                 mf.lpm.value += b"\x00"
 
@@ -516,9 +514,7 @@ class P4RuntimeTest(BaseTest):
             # P4Runtime now has strict rules regarding ternary matches: in the
             # case of Ternary, "don't-care" bits in the value must be set to 0
             for i in range(len(self.mask)):
-                mf.ternary.value += (self.v[i] & self.mask[i]).to_bytes(
-                    1, byteorder="big"
-                )
+                mf.ternary.value += stringify(self.v[i] & self.mask[i], 1)
 
     class Range(MF):
         def __init__(self, mf_name, low, high):
