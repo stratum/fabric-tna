@@ -1984,7 +1984,7 @@ class SpgwReadWriteSymmetryTest(SpgwSimpleTest):
         p4info_params = self.get_obj("actions", action_name).params
         name_list = [""] * len(p4info_params)
         for param in p4info_params:
-            name_list[param.id - 1] = param.name.encode("ascii", "ignore")
+            name_list[param.id - 1] = param.name
 
         params = [
             (name_list[param.param_id - 1], param.value) for param in action.params
