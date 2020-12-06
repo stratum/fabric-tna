@@ -10,7 +10,7 @@ FABRIC_TNA="${FP4TEST_ROOT}"/..
 
 # Tester image
 # Contains PTF and tvutils libraries, as well as P4RT, gNMI, and TV Python bindings
-TESTER_DOCKER_IMG=stratumproject/testvectors:ptf
+TESTER_DOCKER_IMG=stratumproject/testvectors:ptf-py3@sha256:b50f0704f0be2e023345f8d3ac587f55220a914d8d4abddf8287ef0e89e05f4a
 SDE_VERSION=${SDE_VERSION:-9.2.0}
 # Use image sha to pin a specific stratum_bmv2 build and have reproducible runs.
 # We could instrument CI to test on both a stable version and the latest one.
