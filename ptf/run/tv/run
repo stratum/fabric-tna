@@ -6,7 +6,7 @@ set -e
 
 # Tester image
 # Contains PTF and tvutils libraries, as well as P4RT, gNMI, and TV Python bindings
-TESTER_DOCKER_IMG=stratumproject/testvectors:ptf-py3@sha256:b50f0704f0be2e023345f8d3ac587f55220a914d8d4abddf8287ef0e89e05f4a
+TESTER_DOCKER_IMG=stratumproject/testvectors:ptf-py3
 SDE_VERSION=${SDE_VERSION:-9.2.0}
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
