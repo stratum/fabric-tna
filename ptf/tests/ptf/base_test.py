@@ -245,7 +245,7 @@ class P4RuntimeTest(BaseTest):
                     key = (p4_obj_type, suffix)
                     self.p4info_obj_map[key] = obj
                     suffix_count[key] += 1
-                self.p4info_id_to_name[pre.id] = pre.name.encode("ascii", "ignore")
+                self.p4info_id_to_name[pre.id] = pre.name
         for key, c in suffix_count.items():
             if c > 1:
                 del self.p4info_obj_map[key]
