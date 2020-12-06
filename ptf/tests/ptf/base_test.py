@@ -417,7 +417,7 @@ class P4RuntimeTest(BaseTest):
 
     def send_packet(self, port, pkt):
         if self.generate_tv:
-            tvutils.add_traffic_stimulus(self.tc, port, bytes(pkt))
+            tvutils.add_traffic_stimulus(self.tc, port, pkt)
         else:
             testutils.send_packet(self, port, pkt)
 
@@ -425,7 +425,7 @@ class P4RuntimeTest(BaseTest):
         port_list = []
         port_list.append(port)
         if self.generate_tv:
-            tvutils.add_traffic_expectation(self.tc, port_list, bytes(exp_pkt))
+            tvutils.add_traffic_expectation(self.tc, port_list, exp_pkt)
         else:
             testutils.verify_packet(self, exp_pkt, port)
 
@@ -434,7 +434,7 @@ class P4RuntimeTest(BaseTest):
             for i in range(len(packets)):
                 port_list = []
                 port_list.append(ports[i])
-                tvutils.add_traffic_expectation(self.tc, port_list, bytes(packets[i]))
+                tvutils.add_traffic_expectation(self.tc, port_list, packets[i])
         else:
             testutils.verify_each_packet_on_each_port(self, packets, ports)
 
@@ -443,14 +443,14 @@ class P4RuntimeTest(BaseTest):
             for port in ports:
                 port_list = []
                 port_list.append(port)
-                tvutils.add_traffic_expectation(self.tc, port_list, bytes(pkt))
+                tvutils.add_traffic_expectation(self.tc, port_list, pkt)
         else:
             testutils.verify_packets(self, pkt, ports)
 
     def verify_any_packet_any_port(self, pkts, ports):
         if self.generate_tv:
             for pkt in pkts:
-                tvutils.add_traffic_expectation(self.tc, ports, bytes(pkt))
+                tvutils.add_traffic_expectation(self.tc, ports, pkt)
             # workaround to return a port value
             return random.randint(0, 1)
         else:
