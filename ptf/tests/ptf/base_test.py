@@ -385,7 +385,9 @@ class P4RuntimeTest(BaseTest):
         key = (p4_obj_type, p4_name)
         obj = self.p4info_obj_map.get(key, None)
         if obj is None:
-            raise Exception("Unable to find %s '%s' in p4info" % (p4_obj_type, p4_name))
+            raise Exception(
+                "Unable to find {} '{}' in p4info".format(p4_obj_type, p4_name)
+            )
         return obj
 
     def get_obj_id(self, p4_obj_type, p4_name):
