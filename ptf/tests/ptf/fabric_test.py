@@ -938,9 +938,7 @@ class BridgingPriorityTest(FabricTest):
         self.add_next_output(20, self.port2)
 
         # Add broadcast bridging rule
-        self.add_bridging_entry(
-            vlan_id, None, None, next_id, low_priority
-        )
+        self.add_bridging_entry(vlan_id, None, None, next_id, low_priority)
         self.add_next_multicast(next_id, mcast_group_id)
         # Add the multicast group, here we use instance id 1 by default
         replicas = [(1, port) for port in all_ports]

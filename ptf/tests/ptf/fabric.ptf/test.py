@@ -1154,7 +1154,7 @@ class FabricIntTest(IntTest):
     ):
         print(
             "Testing VLAN={}, pkt={}, is_next_hop_spine={}, "
-            + "is_device_spine={}, send_report_to_spine={}...".format(
+            "is_device_spine={}, send_report_to_spine={}...".format(
                 vlan_conf,
                 pkt_type,
                 is_next_hop_spine,
@@ -1808,7 +1808,7 @@ class FabricOptimizedFieldDetectorTest(FabricTest):
         if resp is None:
             self.fail(
                 "Failed to read an entry that was just written! "
-                + "Table was %s, action was %s" % (table_name, action_name)
+                "Table was {}, action was {}".format(table_name, action_name)
             )
         read_entry = p4runtime_pb2.TableEntry()
         read_entry.CopyFrom(resp)
