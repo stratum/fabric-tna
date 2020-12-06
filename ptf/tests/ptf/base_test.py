@@ -427,7 +427,7 @@ class P4RuntimeTest(BaseTest):
         if self.generate_tv:
             tvutils.add_traffic_expectation(self.tc, port_list, bytes(exp_pkt))
         else:
-            testutils.verify_packet(self, bytes(exp_pkt), port)
+            testutils.verify_packet(self, exp_pkt, port)
 
     def verify_each_packet_on_each_port(self, packets, ports):
         if self.generate_tv:
