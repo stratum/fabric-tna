@@ -1,6 +1,7 @@
 # Copyright 2013-present Barefoot Networks, Inc.
-# Copyright 2018-present Open Networking Foundation
 # SPDX-License-Identifier: Apache-2.0
+# Copyright 2018-present Open Networking Foundation
+# SPDX-License-Identifier: LicenseRef-ONF-Member-1.0
 
 import socket
 import struct

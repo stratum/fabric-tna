@@ -1,5 +1,5 @@
 # Copyright 2019-present Open Networking Foundation
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: LicenseRef-ONF-Member-1.0
 # _checkenv and run_tests defined in fabric-p4test/<target>/Makefile
 # which imports this file
 

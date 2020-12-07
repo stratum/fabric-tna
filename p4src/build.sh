@@ -1,6 +1,6 @@
 #!/bin/bash
 # Copyright 2020-present Open Networking Foundation
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: LicenseRef-ONF-Member-1.0
 
 MAVERICKS_CPU_PORT=320
 MONTARA_CPU_PORT=192

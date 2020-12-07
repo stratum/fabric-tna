@@ -1,5 +1,5 @@
 # Copyright 2020-present Open Networking Foundation
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: LicenseRef-ONF-Member-1.0
 
 PORTMAP ?= port_map.veth.json
 GRPCADDR ?= 127.0.0.1:28000

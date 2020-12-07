@@ -1,5 +1,5 @@
 # Copyright 2020-present Open Networking Foundation
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: LicenseRef-ONF-Member-1.0
 PROFILES ?= all
 ONOS_HOST ?= localhost
 
@@ -94,6 +94,12 @@ p4i-stop:
 
 reuse-lint:
 	docker run --rm -v ${curr_dir}:/fabric-tna -w /fabric-tna omecproject/reuse-verify:latest reuse lint
+
+reuse-addheader:
+	docker run --rm -v ${CURRENT_DIR}:/fabric-tna -w /fabric-tna omecproject/reuse-verify:latest reuse addheader \
+        --copyright "Open Networking Foundation <info@opennetworking.org>" \
+        --license "LicenseRef-ONF-Member-1.0" \
+        --year "2020-present" $(FILE)
 
 clean:
 	-rm -rf src/main/resources/p4c-out

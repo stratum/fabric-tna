@@ -1,5 +1,5 @@
 // Copyright 2017-present Open Networking Foundation
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: LicenseRef-ONF-Member-1.0
 
 package org.stratumproject.fabric.tna.behaviour;
 
