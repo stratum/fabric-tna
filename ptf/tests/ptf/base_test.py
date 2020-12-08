@@ -7,20 +7,22 @@
 #
 
 import os
+import queue
 import random
+import socket
 import struct
 import sys
 import threading
 import time
 from collections import Counter
-from functools import partial, wraps
+from functools import partial, partialmethod, wraps
+from io import StringIO
 from unittest import SkipTest
 
 import google.protobuf.text_format
 import grpc
 import ptf
 import ptf.testutils as testutils
-import Queue
 import scapy.packet
 import scapy.utils
 from google.rpc import code_pb2, status_pb2
@@ -30,37 +32,20 @@ from ptf import config
 from ptf.base_tests import BaseTest
 from ptf.dataplane import match_exp_pkt
 from scapy.layers.l2 import Ether
-from StringIO import StringIO
 from testvector import tvutils
 
 
-# See https://gist.github.com/carymrobbins/8940382
-# functools.partialmethod is introduced in Python 3.4
-class partialmethod(partial):
-    def __get__(self, instance, owner):
-        if instance is None:
-            return self
-        return partial(self.func, instance, *(self.args or ()), **(self.keywords or {}))
-
-
 # Convert integer (with length) to binary byte string
-# Equivalent to Python 3.2 int.to_bytes
-# See
-# https://stackoverflow.com/questions/16022556/has-python-3-to-bytes-been-back-ported-to-python-2-7
 def stringify(n, length):
-    h = "%x" % n
-    s = ("0" * (len(h) % 2) + h).zfill(length * 2).decode("hex")
-    return s
+    return n.to_bytes(length, byteorder="big")
 
 
 def ipv4_to_binary(addr):
-    bytes_ = [int(b, 10) for b in addr.split(".")]
-    return "".join(chr(b) for b in bytes_)
+    return socket.inet_aton(addr)
 
 
 def mac_to_binary(addr):
-    bytes_ = [int(b, 16) for b in addr.split(":")]
-    return "".join(chr(b) for b in bytes_)
+    return bytes.fromhex(addr.replace(":", ""))
 
 
 def format_pkt_match(received_pkt, expected_pkt):
@@ -132,7 +117,7 @@ class P4RuntimeErrorIterator:
     def __iter__(self):
         return self
 
-    def next(self):
+    def __next__(self):
         while self.idx < len(self.errors):
             p4_error = p4runtime_pb2.Error()
             one_error_any = self.errors[self.idx]
@@ -208,7 +193,7 @@ class P4RuntimeTest(BaseTest):
             raise SkipTest("Skipping test in HW")
 
         proto_txt_path = testutils.test_param_get("p4info")
-        # print("Importing p4info proto from", proto_txt_path)
+        # print("Importing p4info proto from {}".format(proto_txt_path))
         self.p4info = p4info_pb2.P4Info()
         with open(proto_txt_path, "rb") as fin:
             google.protobuf.text_format.Merge(fin.read(), self.p4info)
@@ -260,14 +245,14 @@ class P4RuntimeTest(BaseTest):
                     key = (p4_obj_type, suffix)
                     self.p4info_obj_map[key] = obj
                     suffix_count[key] += 1
-                self.p4info_id_to_name[pre.id] = pre.name.encode("ascii", "ignore")
+                self.p4info_id_to_name[pre.id] = pre.name
         for key, c in suffix_count.items():
             if c > 1:
                 del self.p4info_obj_map[key]
 
     def set_up_stream(self):
-        self.stream_out_q = Queue.Queue()
-        self.stream_in_q = Queue.Queue()
+        self.stream_out_q = queue.Queue()
+        self.stream_in_q = queue.Queue()
 
         def stream_req_iterator():
             while True:
@@ -323,7 +308,7 @@ class P4RuntimeTest(BaseTest):
         in_port_ = stringify(exp_in_port, 2)
         if self.generate_tv:
             exp_pkt_in = p4runtime_pb2.PacketIn()
-            exp_pkt_in.payload = str(exp_pkt)
+            exp_pkt_in.payload = bytes(exp_pkt)
             ingress_physical_port = exp_pkt_in.metadata.add()
             ingress_physical_port.metadata_id = 0
             ingress_physical_port.value = in_port_
@@ -391,7 +376,9 @@ class P4RuntimeTest(BaseTest):
         key = (p4_obj_type, p4_name)
         obj = self.p4info_obj_map.get(key, None)
         if obj is None:
-            raise Exception("Unable to find %s '%s' in p4info" % (p4_obj_type, p4_name))
+            raise Exception(
+                "Unable to find {} '{}' in p4info".format(p4_obj_type, p4_name)
+            )
         return obj
 
     def get_obj_id(self, p4_obj_type, p4_name):
@@ -425,7 +412,7 @@ class P4RuntimeTest(BaseTest):
         if self.generate_tv:
             tvutils.add_traffic_stimulus(self.tc, port, pkt)
         else:
-            testutils.send_packet(self, port, str(pkt))
+            testutils.send_packet(self, port, pkt)
 
     def verify_packet(self, exp_pkt, port):
         port_list = []
@@ -493,20 +480,20 @@ class P4RuntimeTest(BaseTest):
             mf = mk.add()
             mf.field_id = mf_id
             mf.lpm.prefix_len = self.pLen
-            mf.lpm.value = ""
+            mf.lpm.value = b""
 
             # P4Runtime now has strict rules regarding ternary matches: in the
-            # case of LPM, trailing bits in the value (after prefix) must be
-            # set to 0.
-            first_byte_masked = self.pLen / 8
+            # case of LPM, trailing bits in the value (after prefix) must be set
+            # to 0.
+            first_byte_masked = self.pLen // 8
             for i in range(first_byte_masked):
-                mf.lpm.value += self.v[i]
+                mf.lpm.value += stringify(self.v[i], 1)
             if first_byte_masked == len(self.v):
                 return
             r = self.pLen % 8
-            mf.lpm.value += chr(ord(self.v[first_byte_masked]) & (0xFF << (8 - r)))
+            mf.lpm.value += stringify(self.v[first_byte_masked] & (0xFF << (8 - r)), 1)
             for i in range(first_byte_masked + 1, len(self.v)):
-                mf.lpm.value += "\x00"
+                mf.lpm.value += b"\x00"
 
     class Ternary(MF):
         def __init__(self, mf_name, v, mask):
@@ -517,17 +504,17 @@ class P4RuntimeTest(BaseTest):
         def add_to(self, mf_id, mk):
             # P4Runtime mandates that the match field should be omitted for
             # "don't care" ternary matches (i.e. when mask is zero)
-            if all(c == "\x00" for c in self.mask):
+            if all(c == b"\x00" for c in self.mask):
                 return
             mf = mk.add()
             mf.field_id = mf_id
             assert len(self.mask) == len(self.v)
             mf.ternary.mask = self.mask
-            mf.ternary.value = ""
+            mf.ternary.value = b""
             # P4Runtime now has strict rules regarding ternary matches: in the
             # case of Ternary, "don't-care" bits in the value must be set to 0
             for i in range(len(self.mask)):
-                mf.ternary.value += chr(ord(self.v[i]) & ord(self.mask[i]))
+                mf.ternary.value += stringify(self.v[i] & self.mask[i], 1)
 
     class Range(MF):
         def __init__(self, mf_name, low, high):
@@ -540,8 +527,8 @@ class P4RuntimeTest(BaseTest):
             # "don't care" range matches (i.e. when all possible values are
             # included in the range)
             # TODO(antonin): negative values?
-            low_is_zero = all(c == "\x00" for c in self.low)
-            high_is_max = all(c == "\xff" for c in self.high)
+            low_is_zero = all(c == b"\x00" for c in self.low)
+            high_is_max = all(c == b"\xff" for c in self.high)
             if low_is_zero and high_is_max:
                 return
             mf = mk.add()
