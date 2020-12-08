@@ -6,7 +6,7 @@ name: Prettify Python Code
 
 on:
   push:
-    branches: [master]
+    branches: [master, main]
 
 jobs:
   prettify:
