@@ -1,5 +1,7 @@
-<!-- Copyright 2020-present Open Networking Foundation -->
-<!-- SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
+<!--
+Copyright 2020-present Open Networking Foundation
+SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
+-->
 # PTF tests for ONOS fabric-tna.p4
 
 This project contains PTF-based tests for fabric-tna.p4, a P4
