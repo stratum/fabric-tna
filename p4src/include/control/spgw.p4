@@ -1,5 +1,5 @@
 // Copyright 2020-present Open Networking Foundation
-// SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
+// SPDX-License-Identifier: Apache-2.0
 
 #ifndef __SPGW__
 #define __SPGW__
@@ -319,7 +319,7 @@ control SpgwEgress(
         hdr.outer_gtpu.teid = fabric_md.bridged.spgw.gtpu_teid;
 
 #ifdef WITH_INT
-            fabric_md.int_mirror_md.strip_gtpu = 1;
+            fabric_md.int_mirror.strip_gtpu = 1;
 #endif // WITH_INT
     }
 

@@ -1,5 +1,5 @@
 // Copyright 2017-present Open Networking Foundation
-// SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
+// SPDX-License-Identifier: Apache-2.0
 
 package org.stratumproject.fabric.tna.behaviour;
 
@@ -82,6 +82,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
             P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_REPORT,
             P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_QUANTIZE_HOP_LATENCY
     );
+    private static final short MIRROR_TYPE_INT_LOCAL_REPORT = 2;
 
     private FlowRuleService flowRuleService;
     private GroupService groupService;
@@ -528,7 +529,8 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 .build();
         final TrafficSelector selector = DefaultTrafficSelector.builder()
                 .matchPi(PiCriterion.builder()
-                        .matchExact(P4InfoConstants.HDR_INT_MIRROR_VALID, 1)
+                        .matchExact(P4InfoConstants.HDR_FABRIC_MD_INT_MIRROR_MIRROR_TYPE,
+                                    MIRROR_TYPE_INT_LOCAL_REPORT)
                         .build())
                 .build();
         return DefaultFlowRule.builder()

@@ -1,12 +1,12 @@
 // Copyright 2017-present Open Networking Foundation
-// SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
+// SPDX-License-Identifier: Apache-2.0
 
 #ifndef __INT_HEADER__
 #define __INT_HEADER__
 
 #include "define.p4"
 
-// Report Telemetry Headers
+// Report Telemetry Headers v0.5
 header report_fixed_header_t {
     bit<4>  ver;
     bit<4>  nproto;
@@ -19,22 +19,21 @@ header report_fixed_header_t {
     bit<32> ig_tstamp;
 }
 
-// Telemetry drop report header
-header drop_report_header_t {
+header common_report_header_t {
     bit<32> switch_id;
     bit<16> ig_port;
     bit<16> eg_port;
     bit<8>  queue_id;
+}
+
+// Telemetry drop report header
+header drop_report_header_t {
     bit<8>  drop_reason;
     bit<16> pad;
 }
 
 // Switch Local Report Header
 header local_report_header_t {
-    bit<32> switch_id;
-    bit<16> ig_port;
-    bit<16> eg_port;
-    bit<8>  queue_id;
     bit<24> queue_occupancy;
     bit<32> eg_tstamp;
 }
@@ -49,33 +48,36 @@ header_union local_report_t {
 // may mark the mirror metadata and other headers (e.g., IPv4)
 // as "mutually exclusive".
 // Here we set the mirror metadata with "no overlay" to prevent this.
-@pa_no_overlay("egress", "fabric_md.int_mirror_md.bridged_md_type")
-@pa_no_overlay("egress", "fabric_md.int_mirror_md.mirror_session_id")
-@pa_no_overlay("egress", "fabric_md.int_mirror_md.switch_id")
-@pa_no_overlay("egress", "fabric_md.int_mirror_md.ig_port")
-@pa_no_overlay("egress", "fabric_md.int_mirror_md.eg_port")
-@pa_no_overlay("egress", "fabric_md.int_mirror_md.queue_id")
-@pa_no_overlay("egress", "fabric_md.int_mirror_md.queue_occupancy")
-@pa_no_overlay("egress", "fabric_md.int_mirror_md.ig_tstamp")
-@pa_no_overlay("egress", "fabric_md.int_mirror_md.eg_tstamp")
+@pa_no_overlay("egress", "fabric_md.int_mirror.bridge_type")
+@pa_no_overlay("egress", "fabric_md.int_mirror.mirror_type")
+@pa_no_overlay("egress", "fabric_md.int_mirror.mirror_session_id")
+@pa_no_overlay("egress", "fabric_md.int_mirror.switch_id")
+@pa_no_overlay("egress", "fabric_md.int_mirror.ig_port")
+@pa_no_overlay("egress", "fabric_md.int_mirror.eg_port")
+@pa_no_overlay("egress", "fabric_md.int_mirror.queue_id")
+@pa_no_overlay("egress", "fabric_md.int_mirror.queue_occupancy")
+@pa_no_overlay("egress", "fabric_md.int_mirror.ig_tstamp")
+@pa_no_overlay("egress", "fabric_md.int_mirror.eg_tstamp")
 #ifdef WITH_SPGW
-@pa_no_overlay("egress", "fabric_md.int_mirror_md.strip_gtpu")
+@pa_no_overlay("egress", "fabric_md.int_mirror.strip_gtpu")
 #endif // WITH_SPGW
 header int_mirror_metadata_t {
-    BridgedMdType_t bridged_md_type;
-    bit<6>                _pad0;
-    MirrorId_t            mirror_session_id;
-    bit<32>               switch_id;
-    bit<16>               ig_port;
-    bit<16>               eg_port;
-    bit<8>                queue_id;
-    bit<24>               queue_occupancy;
-    bit<32>               ig_tstamp;
-    bit<32>               eg_tstamp;
+    BridgeType_t    bridge_type;
+    @padding bit<5> _pad0;
+    MirrorType_t    mirror_type;
+    @padding bit<6> _pad1;
+    MirrorId_t      mirror_session_id;
+    bit<32>         switch_id;
+    bit<16>         ig_port;
+    bit<16>         eg_port;
+    bit<8>          queue_id;
+    bit<24>         queue_occupancy;
+    bit<32>         ig_tstamp;
+    bit<32>         eg_tstamp;
+    bit<8>          drop_reason;
 #ifdef WITH_SPGW
-    bit<7>                _pad1;
-    bit<1>                strip_gtpu;
+    @padding bit<7> _pad2;
+    bit<1>          strip_gtpu;
 #endif // WITH_SPGW
 }
-
 #endif // __INT_HEADER__

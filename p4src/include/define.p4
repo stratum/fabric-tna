@@ -1,5 +1,5 @@
 // Copyright 2020-present Open Networking Foundation
-// SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
+// SPDX-License-Identifier: Apache-2.0
 
 #include <tna.p4>
 
@@ -105,13 +105,18 @@ action nop() {
     NoAction();
 }
 
-// Bridge metadata type
-enum bit<8> BridgedMdType_t {
+enum bit<8> BridgeType_t {
     INVALID = 0,
-    // Ingress to egress.
-    I2E = 1,
-    // Egress to egress mirror used for INT reports.
-    INT_MIRROR = 2
+    INGRESS_TO_EGRESS = 1,
+    INGRESS_MIRROR = 2,
+    EGRESS_MIRROR = 3
+}
+
+enum bit<3> MirrorType_t {
+    INVALID = 0,
+    SIMPLE = 1,
+    INT_LOCAL_REPORT = 2,
+    INT_DROP_REPORT = 3
 }
 
 // Modes for CPU loopback testing, where a process can inject packets through

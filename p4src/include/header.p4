@@ -1,5 +1,5 @@
 // Copyright 2020-present Open Networking Foundation
-// SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
+// SPDX-License-Identifier: Apache-2.0
 
 #ifndef __HEADER__
 #define __HEADER__
@@ -134,6 +134,11 @@ header gtpu_t {
 
 // Custom metadata definition
 
+header common_egress_metadata_t {
+    BridgeType_t    bridge_type;
+    @padding bit<5> _pad;
+    MirrorType_t    mirror_type;
+}
 
 #ifdef WITH_SPGW
 struct spgw_bridged_metadata_t {
@@ -161,26 +166,26 @@ struct spgw_ingress_metadata_t {
 // ingress and egress pipeline.
 @flexible
 header bridged_metadata_t {
-    BridgedMdType_t bridged_md_type;
-    bool            is_multicast;
-    fwd_type_t      fwd_type;
-    PortId_t        ig_port;
-    vlan_id_t       vlan_id;
-    // bit<3>          vlan_pri;
-    // bit<1>          vlan_cfi;
-    mpls_label_t    mpls_label;
-    bit<8>          mpls_ttl;
-    bit<48>         ig_tstamp;
-    bit<16>         ip_eth_type;
-    bit<8>          ip_proto;
-    l4_port_t       l4_sport;
-    l4_port_t       l4_dport;
-    flow_hash_t     flow_hash;
+    BridgeType_t            bridge_type;
+    bool                    is_multicast;
+    fwd_type_t              fwd_type;
+    PortId_t                ig_port;
+    vlan_id_t               vlan_id;
+    // bit<3>                  vlan_pri;
+    // bit<1>                  vlan_cfi;
+    mpls_label_t            mpls_label;
+    bit<8>                  mpls_ttl;
+    bit<48>                 ig_tstamp;
+    bit<16>                 ip_eth_type;
+    bit<8>                  ip_proto;
+    l4_port_t               l4_sport;
+    l4_port_t               l4_dport;
+    flow_hash_t             flow_hash;
 #ifdef WITH_DOUBLE_VLAN_TERMINATION
-    bool            push_double_vlan;
-    vlan_id_t       inner_vlan_id;
-    // bit<3>          inner_vlan_pri;
-    // bit<1>          inner_vlan_cfi;
+    bool                    push_double_vlan;
+    vlan_id_t               inner_vlan_id;
+    // bit<3>                  inner_vlan_pri;
+    // bit<1>                  inner_vlan_cfi;
 #endif // WITH_DOUBLE_VLAN_TERMINATION
 #ifdef WITH_SPGW
     l4_port_t               inner_l4_sport;
@@ -189,10 +194,21 @@ header bridged_metadata_t {
 #endif // WITH_SPGW
 }
 
+@flexible
+@pa_no_overlay("egress", "fabric_md.mirror.bridge_type")
+@pa_no_overlay("egress", "fabric_md.mirror.mirror_type")
+@pa_no_overlay("egress", "fabric_md.mirror.mirror_session_id")
+header mirror_metadata_t {
+    BridgeType_t    bridge_type;
+    MirrorType_t    mirror_type;
+    MirrorId_t      mirror_session_id;
+}
+
 // Ingress pipeline-only metadata
 @flexible
 struct fabric_ingress_metadata_t {
     bridged_metadata_t      bridged;
+    mirror_metadata_t       mirror;
     bit<32>                 ipv4_src;
     bit<32>                 ipv4_dst;
     bool                    ipv4_checksum_err;
@@ -203,19 +219,23 @@ struct fabric_ingress_metadata_t {
     bool                    inner_ipv4_checksum_err;
     spgw_ingress_metadata_t spgw;
 #endif // WITH_SPGW
+#ifdef WITH_INT
+    int_mirror_metadata_t   int_mirror;
+#endif // WITH_INT
 }
 
 // Egress pipeline-only metadata
 @flexible
 struct fabric_egress_metadata_t {
     bridged_metadata_t    bridged;
+    mirror_metadata_t     mirror;
     PortId_t              cpu_port;
 #ifdef WITH_SPGW
     bool                  inner_ipv4_checksum_err;
 #endif // WITH_SPGW
     bit<1>                mpls_stripped;
 #ifdef WITH_INT
-    int_mirror_metadata_t int_mirror_md;
+    int_mirror_metadata_t int_mirror;
 #endif // WITH_INT
 }
 
@@ -259,6 +279,7 @@ struct parsed_headers_t {
     ipv4_t report_ipv4;
     udp_t report_udp;
     report_fixed_header_t report_fixed_header;
+    common_report_header_t common_report_header;
     local_report_header_t local_report_header;
 #endif // WITH_INT
 }

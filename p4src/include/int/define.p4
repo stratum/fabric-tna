@@ -1,5 +1,5 @@
 // Copyright 2020-present Open Networking Foundation
-// SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
+// SPDX-License-Identifier: Apache-2.0
 
 #ifndef __INT_DEFINE__
 #define __INT_DEFINE__
@@ -16,9 +16,9 @@ const bit<16> REPORT_FIXED_HEADER_BYTES = 12;
 const bit<16> DROP_REPORT_HEADER_BYTES = 12;
 const bit<16> LOCAL_REPORT_HEADER_BYTES = 16;
 #ifdef WITH_SPGW
-const bit<16> REPORT_MIRROR_HEADER_BYTES = 24;
+const bit<16> REPORT_MIRROR_HEADER_BYTES = 26;
 #else
-const bit<16> REPORT_MIRROR_HEADER_BYTES = 23;
+const bit<16> REPORT_MIRROR_HEADER_BYTES = 25;
 #endif // WITH_SPGW
 const bit<16> ETH_FCS_LEN = 4;
 
