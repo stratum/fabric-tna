@@ -76,7 +76,13 @@ control FlowReportFilter(
     apply {
         hop_latency = eg_prsr_md.global_tstamp[31:0] - fabric_md.bridged.ig_tstamp[31:0];
         quantize_hop_latency.apply();
-        flow_state_hash = flow_state_hasher.get({fabric_md.bridged.ig_port, eg_intr_md.egress_port, hop_latency});
+        flow_state_hash = flow_state_hasher.get({
+            fabric_md.bridged.ig_port,
+            eg_intr_md.egress_port,
+            hop_latency,
+            fabric_md.bridged.flow_hash,
+            fabric_md.bridged.ig_tstamp[47:30]
+        });
         flags = filter_get_and_set1.execute(fabric_md.bridged.flow_hash[31:16]);
         flags = flags | filter_get_and_set2.execute(fabric_md.bridged.flow_hash[15:0]);
         if (flags == 0b01) {
