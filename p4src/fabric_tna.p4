@@ -96,7 +96,7 @@ control FabricEgress (
 #endif // WITH_INT
         pkt_io_egress.apply(hdr, fabric_md, eg_intr_md);
 #ifdef WITH_INT
-        int_egress.apply(hdr, fabric_md, eg_intr_md, eg_prsr_md);
+        int_egress.apply(hdr, fabric_md, eg_intr_md, eg_prsr_md, eg_dprsr_md);
 #endif
         egress_next.apply(hdr, fabric_md, eg_intr_md, eg_dprsr_md);
 #ifdef WITH_SPGW

@@ -201,7 +201,7 @@ control SpgwIngress(
                          ipv4_addr_t    tunnel_src_addr,
                          ipv4_addr_t    tunnel_dst_addr,
                          teid_t         teid) {
-        load_tunnel_far(drop, notify_cp, tunnel_src_port, 
+        load_tunnel_far(drop, notify_cp, tunnel_src_port,
                                    tunnel_src_addr, tunnel_dst_addr, teid);
         fabric_md.bridged.spgw.skip_egress_pdr_ctr = true;
     }
@@ -319,7 +319,7 @@ control SpgwEgress(
         hdr.outer_gtpu.teid = fabric_md.bridged.spgw.gtpu_teid;
 
 #ifdef WITH_INT
-            fabric_md.int_mirror_md.strip_gtpu = 1;
+            fabric_md.int_mirror.strip_gtpu = 1;
 #endif // WITH_INT
     }
 
