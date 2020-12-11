@@ -17,6 +17,7 @@ control FlowReportFilter(
     Hash<bit<16>>(HashAlgorithm_t.CRC16) flow_state_hasher;
     bit<16> flow_state_hash;
     bit<32> hop_latency;
+    bit<48> timestamp;
     bit<2> flags;
 
     // Bloom filter storing the hashed state of each flow (ports and hop latency).
@@ -61,27 +62,41 @@ control FlowReportFilter(
         }
     };
 
-    action quantize(bit<32> qmask) {
+    action act_quantize_hop_latency(bit<32> qmask) {
         hop_latency = hop_latency & qmask;
     }
 
     table quantize_hop_latency {
         key = {}
         actions = {
-            @defaultonly quantize;
+            @defaultonly act_quantize_hop_latency;
         }
-        default_action = quantize(0xffffffff);
+        default_action = act_quantize_hop_latency(0xffffffff);
+    }
+
+    action act_quantize_timestamp(bit<48> tmask) {
+        timestamp = timestamp & tmask;
+    }
+
+    table quantize_timestamp {
+        key = {}
+        actions = {
+            @defaultonly act_quantize_timestamp;
+        }
+        default_action = act_quantize_timestamp(0xffffc0000000);
     }
 
     apply {
         hop_latency = eg_prsr_md.global_tstamp[31:0] - fabric_md.bridged.ig_tstamp[31:0];
         quantize_hop_latency.apply();
+        timestamp = fabric_md.bridged.ig_tstamp;
+        quantize_timestamp.apply();
         flow_state_hash = flow_state_hasher.get({
             fabric_md.bridged.ig_port,
             eg_intr_md.egress_port,
             hop_latency,
             fabric_md.bridged.flow_hash,
-            fabric_md.bridged.ig_tstamp[47:30]
+            timestamp
         });
         flags = filter_get_and_set1.execute(fabric_md.bridged.flow_hash[31:16]);
         flags = flags | filter_get_and_set2.execute(fabric_md.bridged.flow_hash[15:0]);
