@@ -373,7 +373,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         final PiActionParam quantizeMaskParam = new PiActionParam(P4InfoConstants.QMASK, qmask);
         final PiAction quantizeAction =
                 PiAction.builder()
-                        .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_QUANTIZE)
+                        .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_ACT_QUANTIZE_HOP_LATENCY)
                         .withParameter(quantizeMaskParam)
                         .build();
         final TrafficTreatment quantizeTreatment = DefaultTrafficTreatment.builder()
