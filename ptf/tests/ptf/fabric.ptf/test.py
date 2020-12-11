@@ -1209,6 +1209,7 @@ class FabricFlowReportFilterNoChangeTest(IntTest):
     def doRunTest(
         self, vlan_conf, tagged, pkt_type, is_next_hop_spine, expect_int_report, ip_dst,
     ):
+        self.set_up_quantize_timestamp_rule(tmask=0)
         self.set_up_quantize_hop_latency_rule(qmask=0xF0000000)
         print(
             "Testing VLAN={}, pkt={}, is_next_hop_spine={}...".format(
