@@ -76,6 +76,8 @@ public final class P4InfoConstants {
             PiTableId.of("FabricEgress.egress_next.egress_vlan");
     public static final PiTableId FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_QUANTIZE_HOP_LATENCY =
             PiTableId.of("FabricEgress.int_egress.flow_report_filter.quantize_hop_latency");
+    public static final PiTableId FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_QUANTIZE_TIMESTAMP =
+            PiTableId.of("FabricEgress.int_egress.flow_report_filter.quantize_timestamp");
     public static final PiTableId FABRIC_EGRESS_INT_EGRESS_REPORT =
             PiTableId.of("FabricEgress.int_egress.report");
     public static final PiTableId FABRIC_EGRESS_INT_EGRESS_WATCHLIST =
@@ -141,8 +143,10 @@ public final class P4InfoConstants {
             PiActionId.of("FabricEgress.int_egress.do_report_encap");
     public static final PiActionId FABRIC_EGRESS_INT_EGRESS_DO_REPORT_ENCAP_MPLS =
             PiActionId.of("FabricEgress.int_egress.do_report_encap_mpls");
-    public static final PiActionId FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_QUANTIZE =
-            PiActionId.of("FabricEgress.int_egress.flow_report_filter.quantize");
+    public static final PiActionId FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_ACT_QUANTIZE_HOP_LATENCY =
+            PiActionId.of("FabricEgress.int_egress.flow_report_filter.act_quantize_hop_latency");
+    public static final PiActionId FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_ACT_QUANTIZE_TIMESTAMP =
+            PiActionId.of("FabricEgress.int_egress.flow_report_filter.act_quantize_timestamp");
     public static final PiActionId FABRIC_EGRESS_INT_EGRESS_INIT_METADATA =
             PiActionId.of("FabricEgress.int_egress.init_metadata");
     public static final PiActionId FABRIC_EGRESS_PKT_IO_EGRESS_SET_SWITCH_INFO =
@@ -233,6 +237,7 @@ public final class P4InfoConstants {
     public static final PiActionParamId SWITCH_ID =
             PiActionParamId.of("switch_id");
     public static final PiActionParamId TEID = PiActionParamId.of("teid");
+    public static final PiActionParamId TMASK = PiActionParamId.of("tmask");
     public static final PiActionParamId TUNNEL_DST_ADDR =
             PiActionParamId.of("tunnel_dst_addr");
     public static final PiActionParamId TUNNEL_SRC_ADDR =

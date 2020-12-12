@@ -17,16 +17,13 @@ control FlowReportFilter(
     Hash<bit<16>>(HashAlgorithm_t.CRC16) flow_state_hasher;
     bit<16> flow_state_hash;
     bit<32> hop_latency;
+    bit<48> timestamp;
     bit<2> flags;
 
     // Bloom filter storing the hashed state of each flow (ports and hop latency).
     // We use it to trigger report generation only for the first packet of a new flow, or for
     // packets which state has changed with respect to the previous packet of the same flow.
-    @switchstack("register_reset_interval_ms: 1000")
-    @switchstack("register_reset_value: 0")
     Register<flow_report_filter_index_t, bit<16>>(1 << FLOW_REPORT_FILTER_WIDTH, 0) filter1;
-    @switchstack("register_reset_interval_ms: 1000")
-    @switchstack("register_reset_value: 0")
     Register<flow_report_filter_index_t, bit<16>>(1 << FLOW_REPORT_FILTER_WIDTH, 0) filter2;
 
     // Meaning of the result:
@@ -61,22 +58,42 @@ control FlowReportFilter(
         }
     };
 
-    action quantize(bit<32> qmask) {
+    action act_quantize_hop_latency(bit<32> qmask) {
         hop_latency = hop_latency & qmask;
     }
 
     table quantize_hop_latency {
         key = {}
         actions = {
-            @defaultonly quantize;
+            @defaultonly act_quantize_hop_latency;
         }
-        default_action = quantize(0xffffffff);
+        default_action = act_quantize_hop_latency(0xffffffff);
+    }
+
+    action act_quantize_timestamp(bit<48> tmask) {
+        timestamp = timestamp & tmask;
+    }
+
+    table quantize_timestamp {
+        key = {}
+        actions = {
+            @defaultonly act_quantize_timestamp;
+        }
+        default_action = act_quantize_timestamp(0xffffc0000000);
     }
 
     apply {
         hop_latency = eg_prsr_md.global_tstamp[31:0] - fabric_md.bridged.ig_tstamp[31:0];
         quantize_hop_latency.apply();
-        flow_state_hash = flow_state_hasher.get({fabric_md.bridged.ig_port, eg_intr_md.egress_port, hop_latency});
+        timestamp = fabric_md.bridged.ig_tstamp;
+        quantize_timestamp.apply();
+        flow_state_hash = flow_state_hasher.get({
+            fabric_md.bridged.ig_port,
+            eg_intr_md.egress_port,
+            hop_latency,
+            fabric_md.bridged.flow_hash,
+            timestamp
+        });
         flags = filter_get_and_set1.execute(fabric_md.bridged.flow_hash[31:16]);
         flags = flags | filter_get_and_set2.execute(fabric_md.bridged.flow_hash[15:0]);
         if (flags == 0b01) {

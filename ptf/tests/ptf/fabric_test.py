@@ -2189,7 +2189,12 @@ class IntTest(IPv4UnicastTest):
 
     def set_up_quantize_hop_latency_rule(self, qmask=0xF0000000):
         self.send_request_add_entry_to_action(
-            "quantize_hop_latency", [], "quantize", [("qmask", stringify(qmask, 4))],
+            "quantize_hop_latency", [], "act_quantize_hop_latency", [("qmask", stringify(qmask, 4))],
+        )
+
+    def set_up_quantize_timestamp_rule(self, tmask=0):
+        self.send_request_add_entry_to_action(
+            "quantize_timestamp", [], "act_quantize_timestamp", [("tmask", stringify(tmask, 6))],
         )
 
     def setup_watchlist_flow(self, ipv4_src, ipv4_dst, sport, dport, switch_id):
