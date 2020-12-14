@@ -393,16 +393,12 @@ class FabricTest(P4RuntimeTest):
             self.set_ingress_port_vlan(
                 ingress_port=port_id, vlan_id=vlan_id, vlan_valid=True
             )
-            self.set_egress_vlan(
-                egress_port=port_id, vlan_id=vlan_id, push_vlan=True
-            )
+            self.set_egress_vlan(egress_port=port_id, vlan_id=vlan_id, push_vlan=True)
         else:
             self.set_ingress_port_vlan(
                 ingress_port=port_id, vlan_valid=False, internal_vlan_id=vlan_id,
             )
-            self.set_egress_vlan(
-                egress_port=port_id, vlan_id=vlan_id, push_vlan=False
-            )
+            self.set_egress_vlan(egress_port=port_id, vlan_id=vlan_id, push_vlan=False)
 
     @tvcreate("setup/setup_switch_info")
     def setup_switch_info(self):
@@ -2203,7 +2199,7 @@ class IntTest(IPv4UnicastTest):
             [
                 ("hop_latency_mask", stringify(hop_latency_mask, 4)),
                 ("timestamp_mask", stringify(timestamp_mask, 6)),
-             ],
+            ],
         )
 
     def setup_watchlist_flow(self, ipv4_src, ipv4_dst, sport, dport, switch_id):
