@@ -87,7 +87,7 @@ netcfg:
 
 p4i:
 	$(info *** Started p4i app at http://localhost:3000)
-	docker run -d --rm --name p4i -v${curr_dir}:${curr_dir} -w ${curr_dir} -p 3000:3000/tcp ${SDE_DOCKER_IMG} p4i
+	docker run -d --rm --name p4i -v${curr_dir}:${curr_dir}/p4src/build -w ${curr_dir}/p4src/build -p 3000:3000/tcp ${SDE_DOCKER_IMG} p4i
 
 p4i-stop:
 	docker kill p4i

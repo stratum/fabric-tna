@@ -15,6 +15,8 @@ import org.onlab.packet.IpAddress;
 import org.onlab.packet.IpPrefix;
 import org.onlab.packet.MacAddress;
 import org.onlab.packet.TpPort;
+import org.onlab.util.HexString;
+import org.onlab.util.ImmutableByteSequence;
 import org.onosproject.TestApplicationId;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
@@ -87,6 +89,9 @@ public class FabricIntProgrammableTest {
     private static final HostLocation COLLECTOR_LOCATION = new HostLocation(LEAF_DEVICE_ID, PortNumber.P0, 0);
     private static final Host COLLECTOR_HOST =
             new DefaultHost(null, null, null, null, COLLECTOR_LOCATION, Sets.newHashSet());
+    private static final ImmutableByteSequence DEFAULT_TIMESTAMP_MASK =
+            ImmutableByteSequence.copyFrom(
+                    HexString.fromHexString("ffffc0000000", ""));
 
     private FabricIntProgrammable intProgrammable;
     private FabricCapabilities capabilities;
@@ -265,11 +270,11 @@ public class FabricIntProgrammableTest {
     public void testSetupIntConfig() {
         final IntDeviceConfig intConfig = buildIntDeviceConfig();
         final FlowRule expectedFlow = buildReportFlow(LEAF_DEVICE_ID, false);
-        final FlowRule quantizeRule = buildQuantizeRule(LEAF_DEVICE_ID, 0xffffff00);
+        final FlowRule configRule = buildFilterConfigFlow(LEAF_DEVICE_ID, 0xffffff00);
         reset(flowRuleService);
         flowRuleService.applyFlowRules(eq(expectedFlow));
         expectLastCall().andVoid().once();
-        flowRuleService.applyFlowRules(eq(quantizeRule));
+        flowRuleService.applyFlowRules(eq(configRule));
         expectLastCall().andVoid().once();
         replay(flowRuleService);
         assertTrue(intProgrammable.setupIntConfig(intConfig));
@@ -289,11 +294,11 @@ public class FabricIntProgrammableTest {
         replay(driverData);
         final IntDeviceConfig intConfig = buildIntDeviceConfig();
         final FlowRule expectedReportFlow = buildReportFlow(SPINE_DEVICE_ID, true);
-        final FlowRule expectedQuantizeRule = buildQuantizeRule(SPINE_DEVICE_ID, 0xffffff00);
+        final FlowRule expectedFilterConfigFlow = buildFilterConfigFlow(SPINE_DEVICE_ID, 0xffffff00);
         reset(flowRuleService);
         flowRuleService.applyFlowRules(eq(expectedReportFlow));
         expectLastCall().andVoid().once();
-        flowRuleService.applyFlowRules(eq(expectedQuantizeRule));
+        flowRuleService.applyFlowRules(eq(expectedFilterConfigFlow));
         expectLastCall().andVoid().once();
         replay(flowRuleService);
         assertTrue(intProgrammable.setupIntConfig(intConfig));
@@ -340,7 +345,7 @@ public class FabricIntProgrammableTest {
                 buildFlowEntry(buildExpectedCollectorFlow(IPv4.PROTOCOL_UDP)),
                 buildFlowEntry(buildExpectedCollectorFlow(IPv4.PROTOCOL_ICMP)),
                 // Report table entry
-                buildFlowEntry(buildQuantizeRule(LEAF_DEVICE_ID, 0)),
+                buildFlowEntry(buildFilterConfigFlow(LEAF_DEVICE_ID, 0)),
                 buildFlowEntry(buildReportFlow(LEAF_DEVICE_ID, false))
         );
         Set<FlowEntry> randomEntries = buildRandomFlowEntries();
@@ -511,13 +516,14 @@ public class FabricIntProgrammableTest {
                 .build();
     }
 
-    private FlowRule buildQuantizeRule(DeviceId deviceId, long qmask) {
-        // Quantify hop latency rule
-        final PiActionParam quantizeMaskParam = new PiActionParam(P4InfoConstants.QMASK, qmask);
+    private FlowRule buildFilterConfigFlow(DeviceId deviceId, long qmask) {
+        final PiActionParam hopLatencyMask = new PiActionParam(P4InfoConstants.HOP_LATENCY_MASK, qmask);
+        final PiActionParam timestampMask = new PiActionParam(P4InfoConstants.TIMESTAMP_MASK, DEFAULT_TIMESTAMP_MASK);
         final PiAction quantizeAction =
                 PiAction.builder()
-                        .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_ACT_QUANTIZE_HOP_LATENCY)
-                        .withParameter(quantizeMaskParam)
+                        .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_SET_CONFIG)
+                        .withParameter(hopLatencyMask)
+                        .withParameter(timestampMask)
                         .build();
         final TrafficTreatment quantizeTreatment = DefaultTrafficTreatment.builder()
                 .piTableAction(quantizeAction)
@@ -528,7 +534,7 @@ public class FabricIntProgrammableTest {
                 .withPriority(DEFAULT_PRIORITY)
                 .withTreatment(quantizeTreatment)
                 .fromApp(APP_ID)
-                .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_QUANTIZE_HOP_LATENCY)
+                .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_CONFIG)
                 .build();
     }
 

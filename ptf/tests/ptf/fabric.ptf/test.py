@@ -1209,8 +1209,7 @@ class FabricFlowReportFilterNoChangeTest(IntTest):
     def doRunTest(
         self, vlan_conf, tagged, pkt_type, is_next_hop_spine, expect_int_report, ip_dst,
     ):
-        self.set_up_quantize_timestamp_rule(tmask=0)
-        self.set_up_quantize_hop_latency_rule(qmask=0xF0000000)
+        self.set_up_flow_report_filter_config(hop_latency_mask=0xF0000000, timestamp_mask=0)
         print(
             "Testing VLAN={}, pkt={}, is_next_hop_spine={}...".format(
                 vlan_conf, pkt_type, is_next_hop_spine
@@ -1258,7 +1257,7 @@ class FabricFlowReportFilterChangeTest(IntTest):
     @tvsetup
     @autocleanup
     def doRunTest(self, ig_port, eg_port, expect_int_report, ip_src, ip_dst):
-        self.set_up_quantize_hop_latency_rule(qmask=0xF0000000)
+        self.set_up_flow_report_filter_config(hop_latency_mask=0xF0000000, timestamp_mask=0)
         print(
             "Testing ig_port={}, eg_port={}, expect_int_report={}...".format(
                 ig_port, eg_port, expect_int_report
