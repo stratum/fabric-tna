@@ -14,89 +14,77 @@ control FlowReportFilter(
     in    egress_intrinsic_metadata_t eg_intr_md,
     in    egress_intrinsic_metadata_from_parser_t eg_prsr_md) {
 
-    Hash<bit<16>>(HashAlgorithm_t.CRC16) flow_state_hasher;
-    bit<16> flow_state_hash;
+    // By default report every 2^30 ns (~1 second)
+    const bit<48> DEFAULT_TIMESTAMP_MASK = 0xffffc0000000;
+    // or for hop latency changes greater than 2^8 ns
+    const bit<32> DEFAULT_HOP_LATENCY_MASK = 0xffffff00;
+
+    Hash<bit<16>>(HashAlgorithm_t.CRC16) digester;
+    bit<16> digest;
     bit<32> hop_latency;
     bit<48> timestamp;
-    bit<2> flags;
+    bit<1> flag;
 
-    // Bloom filter storing the hashed state of each flow (ports and hop latency).
-    // We use it to trigger report generation only for the first packet of a new flow, or for
-    // packets which state has changed with respect to the previous packet of the same flow.
+    // Bloom filter with 2 hash functions storing flow digests. The digest is
+    // the hash of:
+    // - flow state (ingress port, egress port, quantized hop latency);
+    // - quantized timestamp (to generate periodic reports).
+    // - 5-tuple hash (to detect collisions);
+    // We use such filter to reduce the volume of reports that the collector has
+    // to ingest. We generate a report only when we detect a change, that is,
+    // when the digest of the packet is different than the one of the previous
+    // packet of the same flow.
+    @hidden
     Register<flow_report_filter_index_t, bit<16>>(1 << FLOW_REPORT_FILTER_WIDTH, 0) filter1;
+    @hidden
     Register<flow_report_filter_index_t, bit<16>>(1 << FLOW_REPORT_FILTER_WIDTH, 0) filter2;
 
     // Meaning of the result:
-    // 0b10: New flow
-    // 0b01: Nothing change
-    // 0b00: State change
+    // 1 digest did NOT change
+    // 0 change detected
     @reduction_or_group("filter")
-    RegisterAction<bit<16>, flow_report_filter_index_t, bit<2>>(filter1) filter_get_and_set1 = {
-        void apply(inout bit<16> stored_flow_state_hash, out bit<2> result) {
-            if (stored_flow_state_hash == 0) {
-                // No state hash stored, new flow.
-                result = 0b10;
-            } else if (stored_flow_state_hash == flow_state_hash) {
-                // State hash not changed.
-                result = 0b01;
-            }
-            stored_flow_state_hash = flow_state_hash;
+    RegisterAction<bit<16>, flow_report_filter_index_t, bit<1>>(filter1) filter_get_and_set1 = {
+        void apply(inout bit<16> stored_digest, out bit<1> result) {
+            result = stored_digest == digest ? 1w1 : 1w0;
+            stored_digest = digest;
         }
     };
 
     @reduction_or_group("filter")
-    RegisterAction<bit<16>, flow_report_filter_index_t, bit<2>>(filter2) filter_get_and_set2 = {
-        void apply(inout bit<16> stored_flow_state_hash, out bit<2> result) {
-            if (stored_flow_state_hash == 0) {
-                // No state hash stored, new flow.
-                result = 0b10;
-            } else if (stored_flow_state_hash == flow_state_hash) {
-                // State hash not changed.
-                result = 0b01;
-            }
-            stored_flow_state_hash = flow_state_hash;
+    RegisterAction<bit<16>, flow_report_filter_index_t, bit<1>>(filter2) filter_get_and_set2 = {
+        void apply(inout bit<16> stored_digest, out bit<1> result) {
+            result = stored_digest == digest ? 1w1 : 1w0;
+            stored_digest = digest;
         }
     };
 
-    action act_quantize_hop_latency(bit<32> qmask) {
-        hop_latency = hop_latency & qmask;
+    action set_config(bit<32> hop_latency_mask, bit<48> timestamp_mask) {
+        hop_latency = hop_latency & hop_latency_mask;
+        timestamp = timestamp & timestamp_mask;
     }
 
-    table quantize_hop_latency {
-        key = {}
+    table config {
         actions = {
-            @defaultonly act_quantize_hop_latency;
+            @defaultonly set_config;
         }
-        default_action = act_quantize_hop_latency(0xffffffff);
-    }
-
-    action act_quantize_timestamp(bit<48> tmask) {
-        timestamp = timestamp & tmask;
-    }
-
-    table quantize_timestamp {
-        key = {}
-        actions = {
-            @defaultonly act_quantize_timestamp;
-        }
-        default_action = act_quantize_timestamp(0xffffc0000000);
+        default_action = set_config(DEFAULT_HOP_LATENCY_MASK, DEFAULT_TIMESTAMP_MASK);
     }
 
     apply {
         hop_latency = eg_prsr_md.global_tstamp[31:0] - fabric_md.bridged.ig_tstamp[31:0];
-        quantize_hop_latency.apply();
         timestamp = fabric_md.bridged.ig_tstamp;
-        quantize_timestamp.apply();
-        flow_state_hash = flow_state_hasher.get({
+        config.apply();
+        digest = digester.get({ // burp!
             fabric_md.bridged.ig_port,
             eg_intr_md.egress_port,
             hop_latency,
             fabric_md.bridged.flow_hash,
             timestamp
         });
-        flags = filter_get_and_set1.execute(fabric_md.bridged.flow_hash[31:16]);
-        flags = flags | filter_get_and_set2.execute(fabric_md.bridged.flow_hash[15:0]);
-        if (flags == 0b01) {
+        flag = filter_get_and_set1.execute(fabric_md.bridged.flow_hash[31:16]);
+        flag = flag | filter_get_and_set2.execute(fabric_md.bridged.flow_hash[15:0]);
+        // Generate report only when ALL register actions detect a change.
+        if (flag == 1) {
             fabric_md.int_mirror_md.setInvalid();
         }
     }

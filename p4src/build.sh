@@ -31,12 +31,8 @@ DEST_DIR=${ROOT_DIR}/src/main/resources/p4c-out/${PROFILE}
 # If SDE_DOCKER_IMG env is set, use containerized version of the compiler
 if [ -z "${SDE_DOCKER_IMG}" ]; then
   P4C_CMD="bf-p4c"
-  # TODO: remove the line below when compiler support register p4 info.
-  P4INFO_PATCH_SHELL="sh -c"
 else
   P4C_CMD="docker run --rm -v ${P4C_OUT}:${P4C_OUT} -v ${P4_SRC_DIR}:${P4_SRC_DIR} -v ${DIR}:${DIR} -w ${DIR} ${SDE_DOCKER_IMG} bf-p4c"
-  # TODO: remove the line below when compiler support register p4 info.
-  P4INFO_PATCH_SHELL="docker run --rm -v ${P4C_OUT}:${P4C_OUT} -v ${DIR}:${DIR} -w ${DIR} busybox sh -c"
 fi
 
 SDE_VER=$( ${P4C_CMD} --version | cut -d' ' -f2 )
@@ -57,11 +53,6 @@ function base_build() {
       --p4runtime-force-std-externs \
       ${DIR}/fabric_tna.p4
   )
-  # Adds register information to p4info file
-  # TODO: remove this part when compiler support it.
-  if [[ "$PROFILE" == *int ]]; then
-    $P4INFO_PATCH_SHELL "cat ${DIR}/p4info-register.txt >> ${output_dir}/p4info.txt"
-  fi
 
   # Generate the pipeline config binary
   docker run --rm -v "${output_dir}:${output_dir}" -w "${output_dir}" \

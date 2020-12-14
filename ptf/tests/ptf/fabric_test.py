@@ -2195,14 +2195,15 @@ class IntTest(IPv4UnicastTest):
         #         ("sid", stringify(mirror_id, 2))
         #     ])
 
-    def set_up_quantize_hop_latency_rule(self, qmask=0xF0000000):
+    def set_up_flow_report_filter_config(self, hop_latency_mask, timestamp_mask):
         self.send_request_add_entry_to_action(
-            "quantize_hop_latency", [], "act_quantize_hop_latency", [("qmask", stringify(qmask, 4))],
-        )
-
-    def set_up_quantize_timestamp_rule(self, tmask=0):
-        self.send_request_add_entry_to_action(
-            "quantize_timestamp", [], "act_quantize_timestamp", [("tmask", stringify(tmask, 6))],
+            "FabricEgress.int_egress.flow_report_filter.config",
+            [],
+            "FabricEgress.int_egress.flow_report_filter.set_config",
+            [
+                ("hop_latency_mask", stringify(hop_latency_mask, 4)),
+                ("timestamp_mask", stringify(timestamp_mask, 6)),
+             ],
         )
 
     def setup_watchlist_flow(self, ipv4_src, ipv4_dst, sport, dport, switch_id):

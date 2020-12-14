@@ -9,6 +9,8 @@ import com.google.common.collect.Sets;
 import org.onlab.packet.Ip4Address;
 import org.onlab.packet.IpAddress;
 import org.onlab.packet.MacAddress;
+import org.onlab.util.HexString;
+import org.onlab.util.ImmutableByteSequence;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
 import org.onosproject.net.DeviceId;
@@ -60,6 +62,12 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
 
     private static final int DEFAULT_PRIORITY = 10000;
 
+    // TODO: make configurable at runtime via netcfg
+    // By default report every 2^30 ns (~1 second)
+    private static final ImmutableByteSequence DEFAULT_TIMESTAMP_MASK =
+            ImmutableByteSequence.copyFrom(
+                    HexString.fromHexString("ffffc0000000", ""));
+
     private static final Map<Integer, Integer> QUAD_PIPE_MIRROR_SESS_TO_RECIRC_PORTS =
             ImmutableMap.<Integer, Integer>builder()
                     .put(300, 0x44)
@@ -80,7 +88,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
     private static final Set<TableId> TABLES_TO_CLEANUP = Sets.newHashSet(
             P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_WATCHLIST,
             P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_REPORT,
-            P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_QUANTIZE_HOP_LATENCY
+            P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_CONFIG
     );
 
     private FlowRuleService flowRuleService;
@@ -361,31 +369,32 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
             log.warn("Failed to add report rule to {}", this.data().deviceId());
             return false;
         }
-        final FlowRule quantizeRule = buildQuantizeRule(cfg.minFlowHopLatencyChangeNs());
-        flowRuleService.applyFlowRules(quantizeRule);
-        log.info("Report rule added to {} [{}]", this.data().deviceId(), quantizeRule);
+        final FlowRule filterConfigRule = buildFlowReportFilterConfigRule(cfg.minFlowHopLatencyChangeNs());
+        flowRuleService.applyFlowRules(filterConfigRule);
+        log.info("Report rule added to {} [{}]", this.data().deviceId(), filterConfigRule);
         return true;
     }
 
-    private FlowRule buildQuantizeRule(int minFlowHopLatencyChangeNs) {
+    private FlowRule buildFlowReportFilterConfigRule(int minFlowHopLatencyChangeNs) {
         final long qmask = getSuitableQmaskForLatencyChange(minFlowHopLatencyChangeNs);
-        // Quantify hop latency rule
-        final PiActionParam quantizeMaskParam = new PiActionParam(P4InfoConstants.QMASK, qmask);
-        final PiAction quantizeAction =
+        final PiActionParam hopLatencyMask = new PiActionParam(P4InfoConstants.HOP_LATENCY_MASK, qmask);
+        final PiActionParam timestampMask = new PiActionParam(P4InfoConstants.TIMESTAMP_MASK, DEFAULT_TIMESTAMP_MASK);
+        final PiAction action =
                 PiAction.builder()
-                        .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_ACT_QUANTIZE_HOP_LATENCY)
-                        .withParameter(quantizeMaskParam)
+                        .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_SET_CONFIG)
+                        .withParameter(hopLatencyMask)
+                        .withParameter(timestampMask)
                         .build();
-        final TrafficTreatment quantizeTreatment = DefaultTrafficTreatment.builder()
-                .piTableAction(quantizeAction)
+        final TrafficTreatment treatment = DefaultTrafficTreatment.builder()
+                .piTableAction(action)
                 .build();
         return DefaultFlowRule.builder()
                 .forDevice(deviceId)
                 .makePermanent()
                 .withPriority(DEFAULT_PRIORITY)
-                .withTreatment(quantizeTreatment)
+                .withTreatment(treatment)
                 .fromApp(appId)
-                .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_QUANTIZE_HOP_LATENCY)
+                .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_CONFIG)
                 .build();
     }
 
