@@ -267,7 +267,7 @@ control EgressNextControl (inout parsed_headers_t hdr,
     }
 
     @hidden
-    action push_outer_vlan() {
+    action push_vlan() {
         // If VLAN is already valid, we overwrite it with a potentially new VLAN
         // ID, and same CFI, PRI, and eth_type values found in ingress.
         hdr.vlan_tag.setValid();
@@ -295,18 +295,8 @@ control EgressNextControl (inout parsed_headers_t hdr,
      */
     DirectCounter<bit<64>>(CounterType_t.PACKETS_AND_BYTES) egress_vlan_counter;
 
-    action push_vlan() {
-        push_outer_vlan();
-        egress_vlan_counter.count();
-    }
-
     action pop_vlan() {
         hdr.vlan_tag.setInvalid();
-        egress_vlan_counter.count();
-    }
-
-    action drop() {
-        eg_dprsr_md.drop_ctl = 1;
         egress_vlan_counter.count();
     }
 
@@ -316,11 +306,10 @@ control EgressNextControl (inout parsed_headers_t hdr,
             eg_intr_md.egress_port    : exact @name("eg_port");
         }
         actions = {
-            push_vlan;
             pop_vlan;
-            @defaultonly drop;
+            @defaultonly nop;
         }
-        const default_action = drop();
+        const default_action = nop();
         counters = egress_vlan_counter;
         size = EGRESS_VLAN_TABLE_SIZE;
     }
@@ -340,14 +329,20 @@ control EgressNextControl (inout parsed_headers_t hdr,
 #ifdef WITH_DOUBLE_VLAN_TERMINATION
         if (fabric_md.bridged.push_double_vlan) {
             // Double VLAN termination.
-            push_outer_vlan();
+            push_vlan();
             push_inner_vlan();
         } else {
             // If no push double vlan, inner_vlan_tag must be popped
             hdr.inner_vlan_tag.setInvalid();
 #endif // WITH_DOUBLE_VLAN_TERMINATION
-            // Port-based VLAN tagging; if there is no match drop the packet!
-            egress_vlan.apply();
+            // Port-based VLAN tagging (by default all
+            // ports are assumed tagged)
+            if (!egress_vlan.apply().hit) {
+                // Push VLAN tag if not the default one.
+                if (fabric_md.bridged.vlan_id != DEFAULT_VLAN_ID) {
+                    push_vlan();
+                }
+            }
 #ifdef WITH_DOUBLE_VLAN_TERMINATION
         }
 #endif // WITH_DOUBLE_VLAN_TERMINATION

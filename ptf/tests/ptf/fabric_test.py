@@ -393,12 +393,11 @@ class FabricTest(P4RuntimeTest):
             self.set_ingress_port_vlan(
                 ingress_port=port_id, vlan_id=vlan_id, vlan_valid=True
             )
-            self.set_egress_vlan(egress_port=port_id, vlan_id=vlan_id, push_vlan=True)
         else:
             self.set_ingress_port_vlan(
                 ingress_port=port_id, vlan_valid=False, internal_vlan_id=vlan_id,
             )
-            self.set_egress_vlan(egress_port=port_id, vlan_id=vlan_id, push_vlan=False)
+            self.set_egress_vlan_pop(egress_port=port_id, vlan_id=vlan_id)
 
     @tvcreate("setup/setup_switch_info")
     def setup_switch_info(self):
@@ -457,14 +456,13 @@ class FabricTest(P4RuntimeTest):
             DEFAULT_PRIORITY,
         )
 
-    def set_egress_vlan(self, egress_port, vlan_id, push_vlan=False):
+    def set_egress_vlan_pop(self, egress_port, vlan_id):
         egress_port = stringify(egress_port, 2)
         vlan_id = stringify(vlan_id, 2)
-        action_name = "push_vlan" if push_vlan else "pop_vlan"
         self.send_request_add_entry_to_action(
             "egress_next.egress_vlan",
             [self.Exact("vlan_id", vlan_id), self.Exact("eg_port", egress_port)],
-            "egress_next." + action_name,
+            "egress_next.pop_vlan",
             [],
         )
 
@@ -1032,10 +1030,8 @@ class ArpBroadcastTest(FabricTest):
         # Add the multicast group, here we use instance id 1 by default
         replicas = [(1, port) for port in all_ports]
         self.add_mcast_group(mcast_group_id, replicas)
-        for port in tagged_ports:
-            self.set_egress_vlan(port, vlan_id, True)
         for port in untagged_ports:
-            self.set_egress_vlan(port, vlan_id, False)
+            self.set_egress_vlan_pop(port, vlan_id)
 
         for inport in all_ports:
             pkt_to_send = vlan_arp_pkt if inport in tagged_ports else arp_pkt

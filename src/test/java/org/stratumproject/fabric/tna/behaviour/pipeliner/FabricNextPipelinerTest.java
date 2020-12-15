@@ -227,45 +227,21 @@ public class FabricNextPipelinerTest extends FabricPipelinerTest {
                 .withTreatment(treatment)
                 .build();
 
-        // Expected egress VLAN_PUSH flow rule.
+        // Expected egress VLAN POP flow rule.
         PiCriterion egressVlanTableMatch = PiCriterion.builder()
-                .matchExact(P4InfoConstants.HDR_EG_PORT, PORT_1.toLong())
+                .matchExact(P4InfoConstants.HDR_EG_PORT, PORT_2.toLong())
                 .build();
         TrafficSelector selectorForEgressVlan = DefaultTrafficSelector.builder()
                 .matchPi(egressVlanTableMatch)
                 .matchVlanId(VLAN_100)
                 .build();
         PiAction piActionForEgressVlan = PiAction.builder()
-                .withId(P4InfoConstants.FABRIC_EGRESS_EGRESS_NEXT_PUSH_VLAN)
+                .withId(P4InfoConstants.FABRIC_EGRESS_EGRESS_NEXT_POP_VLAN)
                 .build();
         TrafficTreatment treatmentForEgressVlan = DefaultTrafficTreatment.builder()
                 .piTableAction(piActionForEgressVlan)
                 .build();
-        FlowRule expectedEgressVlanPushRule = DefaultFlowRule.builder()
-                .withSelector(selectorForEgressVlan)
-                .withTreatment(treatmentForEgressVlan)
-                .forTable(P4InfoConstants.FABRIC_EGRESS_EGRESS_NEXT_EGRESS_VLAN)
-                .makePermanent()
-                .withPriority(nextObjective.priority())
-                .forDevice(DEVICE_ID)
-                .fromApp(APP_ID)
-                .build();
-
-        // Expected egress VLAN POP flow rule.
-        egressVlanTableMatch = PiCriterion.builder()
-                .matchExact(P4InfoConstants.HDR_EG_PORT, PORT_2.toLong())
-                .build();
-        selectorForEgressVlan = DefaultTrafficSelector.builder()
-                .matchPi(egressVlanTableMatch)
-                .matchVlanId(VLAN_100)
-                .build();
-        piActionForEgressVlan = PiAction.builder()
-                .withId(P4InfoConstants.FABRIC_EGRESS_EGRESS_NEXT_POP_VLAN)
-                .build();
-        treatmentForEgressVlan = DefaultTrafficTreatment.builder()
-                .piTableAction(piActionForEgressVlan)
-                .build();
-        FlowRule expectedEgressVlanPopRule = DefaultFlowRule.builder()
+        FlowRule expectedEgressVlanRule = DefaultFlowRule.builder()
                 .withSelector(selectorForEgressVlan)
                 .withTreatment(treatmentForEgressVlan)
                 .forTable(P4InfoConstants.FABRIC_EGRESS_EGRESS_NEXT_EGRESS_VLAN)
@@ -301,8 +277,7 @@ public class FabricNextPipelinerTest extends FabricPipelinerTest {
         ObjectiveTranslation expectedTranslation = ObjectiveTranslation.builder()
                 .addFlowRule(expectedHashedFlowRule)
                 .addFlowRule(vlanMetaFlowRule)
-                .addFlowRule(expectedEgressVlanPushRule)
-                .addFlowRule(expectedEgressVlanPopRule)
+                .addFlowRule(expectedEgressVlanRule)
                 .addGroup(expectedAllGroup)
                 .build();
 
