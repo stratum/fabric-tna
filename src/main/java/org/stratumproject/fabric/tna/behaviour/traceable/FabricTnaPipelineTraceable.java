@@ -5,6 +5,7 @@ package org.stratumproject.fabric.tna.behaviour.traceable;
 
 import com.google.common.collect.Lists;
 import org.onlab.packet.MacAddress;
+import org.onlab.packet.VlanId;
 import org.onlab.util.ImmutableByteSequence;
 import org.onosproject.core.GroupId;
 import org.onosproject.net.ConnectPoint;
@@ -17,6 +18,8 @@ import org.onosproject.net.PipelineTraceablePacket;
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.TrafficSelector;
+import org.onosproject.net.flow.criteria.Criterion;
+import org.onosproject.net.flow.criteria.VlanIdCriterion;
 import org.onosproject.net.group.Group;
 import org.onosproject.net.group.GroupDescription;
 import org.onosproject.net.pi.runtime.PiAction;
@@ -36,6 +39,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import static org.stratumproject.fabric.tna.behaviour.FabricUtils.criterion;
 
 /**
  * Fabric tna implementation of the pipeline traceable behavior.
@@ -65,8 +70,12 @@ public class FabricTnaPipelineTraceable extends AbstractFabricPipelineTraceable 
         FabricTraceableMetadata.Builder metadataBuilder = getMetadata(input.ingressPacket());
         PipelineTraceableOutput.Builder outputBuilder = PipelineTraceableOutput.builder();
         PipelineTraceableHitChain currentHitChain = PipelineTraceableHitChain.emptyHitChain();
+
+        // Update the meta using the packet information.
+        // Emulate partially the job done by the parser
+        FabricTraceableMetadata metadata = updateMetadata(input.ingressPacket(), metadataBuilder);
         PipelineTraceablePacket egressPacket = new PipelineTraceablePacket(
-                input.ingressPacket().packet(), metadataBuilder.build());
+                input.ingressPacket().packet(), metadata);
 
         PipelineTraceableInput ctrlInput = new PipelineTraceableInput(egressPacket, input.ingressPort(),
                 input.deviceState());
@@ -125,21 +134,20 @@ public class FabricTnaPipelineTraceable extends AbstractFabricPipelineTraceable 
         // and go through the egress control block.
         List<PipelineTraceableHitChain> doneHitChains = handleGroup(input.ingressPort(), input.groups(),
                 currentHitChain, outputBuilder);
-
         // If all the hit chains have been blocked - do not proceed
         List<PipelineTraceableHitChain> passedHitChains = doneHitChains.stream()
                 .filter(hitChain -> !hitChain.isDropped())
                 .collect(Collectors.toList());
+        // Save the blocked chains
+        doneHitChains.stream()
+                .filter(hitchain -> !passedHitChains.contains(hitchain))
+                .forEach(outputBuilder::addHitChain);
         // Hit chain has been already saved, set a message, then exit
         if (controllerHitChain == null && passedHitChains.isEmpty()) {
             return outputBuilder.appendToLog("Packet has no output in device " + deviceId + ". Dropping")
                     .dropped()
                     .build();
         }
-        // Save the blocked chains
-        doneHitChains.stream()
-            .filter(hitchain -> !passedHitChains.contains(hitchain))
-            .forEach(outputBuilder::addHitChain);
 
         // Finally, here happens the egress handling where we have to manage
         // all the copies of the packet. We need to set the egress port in the meta
@@ -259,7 +267,7 @@ public class FabricTnaPipelineTraceable extends AbstractFabricPipelineTraceable 
         // Group does not exist in the dataplane
         if (group == null) {
             if (log.isDebugEnabled()) {
-                log.debug("Group {} is null", group.id());
+                log.debug("Group {} is null", metadata.getGroupId());
             }
             currentHitChain.dropped();
             outputBuilder.appendToLog("Null group for groupId " + metadata.getGroupId())
@@ -431,6 +439,17 @@ public class FabricTnaPipelineTraceable extends AbstractFabricPipelineTraceable 
             }
         }
         return new PipelineTraceablePacket(newSelector.build(), newMetadata.build());
+    }
+
+    // Update the meta by loading hdr data
+    private FabricTraceableMetadata updateMetadata(PipelineTraceablePacket currentPacket,
+                                                   FabricTraceableMetadata.Builder metaBuilder) {
+        final VlanIdCriterion vlanCriterion = (VlanIdCriterion) criterion(
+                currentPacket.packet().criteria(), Criterion.Type.VLAN_VID);
+        if (vlanCriterion != null && !vlanCriterion.vlanId().equals(VlanId.NONE)) {
+            metaBuilder.setVlanId(vlanCriterion.vlanId().toShort());
+        }
+        return metaBuilder.build();
     }
 
     private long getOutputFromParams(Collection<PiActionParam> params) {

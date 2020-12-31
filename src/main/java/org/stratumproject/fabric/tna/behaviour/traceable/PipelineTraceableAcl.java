@@ -5,6 +5,7 @@ package org.stratumproject.fabric.tna.behaviour.traceable;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import org.onlab.packet.VlanId;
 import org.onosproject.net.DataPlaneEntity;
 import org.onosproject.net.PipelineTraceableHitChain;
 import org.onosproject.net.PipelineTraceableInput;
@@ -16,6 +17,7 @@ import org.onosproject.net.flow.FlowRule;
 import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flow.criteria.Criterion;
 import org.onosproject.net.flow.criteria.PiCriterion;
+import org.onosproject.net.flow.criteria.VlanIdCriterion;
 import org.onosproject.net.pi.model.PiMatchType;
 import org.onosproject.net.pi.model.PiPipeconf;
 import org.onosproject.net.pi.runtime.PiAction;
@@ -165,10 +167,17 @@ class PipelineTraceableAcl extends AbstractPipelineTraceableCtrl {
         packet.criteria()
                 .stream()
                 .filter(criterion -> ACL_CRITERIA.contains(criterion.type()))
-                .forEach(packetForPiTranslation::add);
+                .forEach(criterion -> {
+                    if (!(criterion instanceof VlanIdCriterion) ||
+                            !((VlanIdCriterion) criterion).vlanId().equals(VlanId.NONE)) {
+                        packetForPiTranslation.add(criterion);
+                    }
+                });
 
         // Add fields coming from the metadata
-        packetForPiTranslation.matchVlanId(metadata.getVlanId());
+        if (!metadata.getVlanId().equals(VlanId.NONE)) {
+            packetForPiTranslation.matchVlanId(metadata.getVlanId());
+        }
 
         try {
             return packetForPiTranslation.matchPi(piCriterionForTranslation.build())

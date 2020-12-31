@@ -63,27 +63,29 @@ public class PipelineTraceableTest {
     static final PortNumber UP_PORT_1 = PortNumber.portNumber("10");
     static final ConnectPoint UP_CP_1 = ConnectPoint.deviceConnectPoint(DEVICE_ID + "/" + UP_PORT_1.toLong());
     static final PortNumber UP_PORT_2 = PortNumber.portNumber("11");
-    static final ConnectPoint UP_CP_2 = ConnectPoint.deviceConnectPoint(DEVICE_ID + "/" + UP_PORT_2.toLong());
     static final PortNumber MEMBER_1 = PortNumber.portNumber("2");
-    static final ConnectPoint MEMBER_1_CP = ConnectPoint.deviceConnectPoint(DEVICE_ID + "/" + MEMBER_1.toLong());
     static final PortNumber MEMBER_2 = PortNumber.portNumber("3");
-    static final ConnectPoint MEMBER_2_CP = ConnectPoint.deviceConnectPoint(DEVICE_ID + "/" + MEMBER_2.toLong());
+    static final PortNumber DOWN_PORT_TAG = PortNumber.portNumber("4");
+    static final ConnectPoint DOWN_CP_TAG = ConnectPoint.deviceConnectPoint(DEVICE_ID + "/" + DOWN_PORT_TAG.toLong());
 
     // IP constants
     static final IpPrefix PUNT_IPV4 = IpPrefix.valueOf("10.0.2.254/32");
+    static final IpPrefix PUNT_IPV4_TAG = IpPrefix.valueOf("10.0.10.254/32");
     static final IpPrefix HOST_IPV4 = IpPrefix.valueOf("10.0.2.1/32");
     static final IpPrefix DEFAULT_IPV4 = IpPrefix.valueOf("0.0.0.0/0");
     static final IpPrefix SUBNET_IPV4 = IpPrefix.valueOf("10.0.3.0/24");
 
     // VLAN constants
-    static final VlanId HOST_VLAN = VlanId.vlanId((short) 100);
     static final VlanId DEFAULT_VLAN = VlanId.vlanId((short) 4094);
+    static final VlanId HOST_VLAN_1 = VlanId.vlanId((short) 100);
+    static final VlanId HOST_VLAN_2 = VlanId.vlanId((short) 200);
 
     // MAC constants
     static final MacAddress LEAF_MAC = MacAddress.valueOf("00:00:00:00:02:04");
     static final MacAddress HOST_MAC = MacAddress.valueOf("00:00:00:00:00:01");
     static final MacAddress SPINE_MAC_1 = MacAddress.valueOf("00:00:00:00:02:26");
     static final MacAddress SPINE_MAC_2 = MacAddress.valueOf("00:00:00:00:02:27");
+    static final MacAddress MISS_MAC = MacAddress.valueOf("00:00:00:00:06:66");
 
     // MPLS constants
     static final MplsLabel MPLS_LABEL = MplsLabel.mplsLabel(204);
@@ -94,6 +96,7 @@ public class PipelineTraceableTest {
     static final int NEXT_MPLS = 3;
     static final int NEXT_BROADCAST = 4;
     static final int NEXT_ECMP = 5;
+    static final int NEXT_BROADCAST_2 = 6;
 
     // GroupId constants
     static final GroupId GROUP_ID_BRIDGING = GroupId.valueOf(NEXT_BRIDGING);
@@ -101,9 +104,11 @@ public class PipelineTraceableTest {
     static final GroupId GROUP_ID_MPLS = GroupId.valueOf(NEXT_MPLS);
     static final GroupId GROUP_ID_BROADCAST = GroupId.valueOf(NEXT_BROADCAST);
     static final GroupId GROUP_ID_ECMP = GroupId.valueOf(NEXT_ECMP);
+    static final GroupId GROUP_ID_BROADCAST_2 = GroupId.valueOf(NEXT_BROADCAST_2);
 
     // Group constants
     static final Set<PortNumber> BRODCAST_PORTS = ImmutableSet.of(DOWN_PORT, MEMBER_1, MEMBER_2);
+    static final Set<PortNumber> BRODCAST_PORTS_2 = ImmutableSet.of(DOWN_PORT_TAG);
 
     // Tests objects
     protected TestDriver testDriver = new TestDriver();
@@ -115,10 +120,12 @@ public class PipelineTraceableTest {
 
     // Test cases
     enum TraceableTest {
-        PUNT_IP,
+        PUNT_IP_UNTAG,
+        PUNT_IP_TAG,
         ARP_UNTAG,
         PUNT_LLDP,
         L2_BRIDG_UNTAG,
+        L2_BRIDG_MISS,
         L2_BROAD_UNTAG,
         L3_UCAST_UNTAG,
         L3_ECMP,
@@ -132,6 +139,13 @@ public class PipelineTraceableTest {
             .matchVlanId(VlanId.NONE)
             .matchEthDst(LEAF_MAC)
             .matchIPDst(PUNT_IPV4)
+            .build();
+    static final TrafficSelector IN_PUNT_IP_PACKET_TAG = DefaultTrafficSelector.builder()
+            .matchInPort(DOWN_PORT_TAG)
+            .matchEthType(IPV4.ethType().toShort())
+            .matchVlanId(HOST_VLAN_2)
+            .matchEthDst(LEAF_MAC)
+            .matchIPDst(PUNT_IPV4_TAG)
             .build();
     static final TrafficSelector IN_ARP_PACKET = DefaultTrafficSelector.builder()
             .matchInPort(DOWN_PORT)
@@ -148,6 +162,12 @@ public class PipelineTraceableTest {
             .matchEthType(IPV4.ethType().toShort())
             .matchVlanId(VlanId.NONE)
             .matchEthDst(HOST_MAC)
+            .build();
+    static final TrafficSelector IN_L2_BRIDG_MISS_PACKET = DefaultTrafficSelector.builder()
+            .matchInPort(DOWN_PORT_TAG)
+            .matchEthType(IPV4.ethType().toShort())
+            .matchVlanId(HOST_VLAN_2)
+            .matchEthDst(MISS_MAC)
             .build();
     static final TrafficSelector IN_L2_BROAD_UNTAG_PACKET = DefaultTrafficSelector.builder()
             .matchInPort(DOWN_PORT)
@@ -220,13 +240,20 @@ public class PipelineTraceableTest {
     static final FabricTraceableMetadata PUNT_IP_METADATA = FabricTraceableMetadata.builder()
             .setIPv4FwdType()
             .setSkipNext()
-            .setVlanId(HOST_VLAN.toShort())
+            .setVlanId(HOST_VLAN_1.toShort())
+            .setNextId(-1)
+            .setPuntToController()
+            .build();
+    static final FabricTraceableMetadata PUNT_IP_METADATA_TAG = FabricTraceableMetadata.builder()
+            .setIPv4FwdType()
+            .setSkipNext()
+            .setVlanId(HOST_VLAN_2.toShort())
             .setNextId(-1)
             .setPuntToController()
             .build();
     static final FabricTraceableMetadata ARP_METADATA = FabricTraceableMetadata.builder()
             .setBridgingFwdType()
-            .setVlanId(HOST_VLAN.toShort())
+            .setVlanId(HOST_VLAN_1.toShort())
             .setNextId(NEXT_BROADCAST)
             .setCopyToController()
             .setGroupId(GROUP_ID_BROADCAST.id())
@@ -264,9 +291,16 @@ public class PipelineTraceableTest {
             .setGroupId(GROUP_ID_BRIDGING.id())
             .setOutPort(MEMBER_1)
             .build();
+    static final FabricTraceableMetadata L2_BRIDG_MISS_METADATA = FabricTraceableMetadata.builder()
+            .setBridgingFwdType()
+            .setVlanId(HOST_VLAN_2.toShort())
+            .setNextId(NEXT_BROADCAST_2)
+            .setGroupId(GROUP_ID_BROADCAST_2.id())
+            .setIsMulticast()
+            .build();
     static final FabricTraceableMetadata L2_BROAD_UNTAG_METADATA = FabricTraceableMetadata.builder()
             .setBridgingFwdType()
-            .setVlanId(HOST_VLAN.toShort())
+            .setVlanId(HOST_VLAN_1.toShort())
             .setNextId(NEXT_BROADCAST)
             .setGroupId(GROUP_ID_BROADCAST.id())
             .setIsMulticast()
