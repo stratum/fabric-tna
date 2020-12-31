@@ -40,7 +40,6 @@ import java.util.Map;
 import java.util.Objects;
 
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.criterion;
-import static org.stratumproject.fabric.tna.behaviour.FabricUtils.criterionNotNull;
 
 /**
  * Implementation of the forwarding control block for fabric-tna.
@@ -289,7 +288,7 @@ class PipelineTraceableForwarding extends AbstractPipelineTraceableCtrl {
     private TrafficSelector getRoutingMatchingFields(TrafficSelector packet,
                                                      PiCriterion.Builder piCriterionBuilder) {
         // Special treatment for the default route
-        final IPCriterion ipDstCriterion = (IPCriterion) criterionNotNull(
+        final IPCriterion ipDstCriterion = (IPCriterion) criterion(
                 packet.criteria(), Criterion.Type.IPV4_DST);
         final PiCriterion piCriterion = (PiCriterion) criterion(
                 packet.criteria(), Criterion.Type.PROTOCOL_INDEPENDENT);
@@ -334,7 +333,7 @@ class PipelineTraceableForwarding extends AbstractPipelineTraceableCtrl {
 
     private TrafficSelector getMplsMatchingFields(TrafficSelector packet,
                                        PiCriterion.Builder piCriterionBuilder) {
-        final MplsCriterion mplsCriterion = (MplsCriterion) criterionNotNull(
+        final MplsCriterion mplsCriterion = (MplsCriterion) criterion(
                 packet.criteria(), Criterion.Type.MPLS_LABEL);
         final PiCriterion piCriterion = (PiCriterion) criterion(
                 packet.criteria(), Criterion.Type.PROTOCOL_INDEPENDENT);

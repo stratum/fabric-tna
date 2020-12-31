@@ -51,14 +51,7 @@ import static org.onlab.packet.EthType.EtherType.LLDP;
 import static org.stratumproject.fabric.tna.behaviour.traceable.FabricTraceableMetadata.FWD_IPV4_UNICAST;
 import static org.stratumproject.fabric.tna.behaviour.traceable.FabricTraceableMetadata.FWD_MPLS;
 import static org.stratumproject.fabric.tna.behaviour.traceable.PipelineTraceableTest.*;
-import static org.stratumproject.fabric.tna.behaviour.traceable.PipelineTraceableTest.TraceableTest.ARP_UNTAG;
-import static org.stratumproject.fabric.tna.behaviour.traceable.PipelineTraceableTest.TraceableTest.L2_BRIDG_UNTAG;
-import static org.stratumproject.fabric.tna.behaviour.traceable.PipelineTraceableTest.TraceableTest.L2_BROAD_UNTAG;
-import static org.stratumproject.fabric.tna.behaviour.traceable.PipelineTraceableTest.TraceableTest.L3_ECMP;
-import static org.stratumproject.fabric.tna.behaviour.traceable.PipelineTraceableTest.TraceableTest.L3_UCAST_UNTAG;
-import static org.stratumproject.fabric.tna.behaviour.traceable.PipelineTraceableTest.TraceableTest.MPLS_ECMP;
-import static org.stratumproject.fabric.tna.behaviour.traceable.PipelineTraceableTest.TraceableTest.PUNT_IP;
-import static org.stratumproject.fabric.tna.behaviour.traceable.PipelineTraceableTest.TraceableTest.PUNT_LLDP;
+import static org.stratumproject.fabric.tna.behaviour.traceable.PipelineTraceableTest.TraceableTest.*;
 
 /**
  * Helper class for dataplane objects related to the Traceable tests.
@@ -70,11 +63,14 @@ final class TraceableDataPlaneObjects {
     }
 
     private static final FlowRule DOWN_PORT_VLAN_FLOW = buildVlanPortRule(
-            DOWN_PORT, VlanId.NONE, VlanId.NONE, HOST_VLAN);
+            DOWN_PORT, VlanId.NONE, VlanId.NONE, HOST_VLAN_1);
     private static final FlowEntry DOWN_PORT_VLAN_FLOW_ENTRY = new DefaultFlowEntry(DOWN_PORT_VLAN_FLOW);
     private static final FlowRule UP_PORT_VLAN_FLOW = buildVlanPortRule(
             UP_PORT_1, VlanId.NONE, VlanId.NONE, DEFAULT_VLAN);
     private static final FlowEntry UP_PORT_VLAN_FLOW_ENTRY = new DefaultFlowEntry(UP_PORT_VLAN_FLOW);
+    private static final FlowRule DOWN_PORT_VLAN_TAG_FLOW = buildVlanPortRule(
+            DOWN_PORT_TAG, HOST_VLAN_2, VlanId.NONE, VlanId.NONE);
+    private static final FlowEntry DOWN_PORT_VLAN_TAG_FLOW_ENTRY = new DefaultFlowEntry(DOWN_PORT_VLAN_TAG_FLOW);
 
     private static final FlowRule FWD_CLASS_IPV4_FLOW_1 = buildIPFwdClassifierRule(
             DOWN_PORT, LEAF_MAC, null, IPV4.ethType().toShort());
@@ -88,11 +84,16 @@ final class TraceableDataPlaneObjects {
     private static final FlowRule FWD_CLASS_IPV4_FLOW_4 = buildMplsFwdClassifierRule(
             UP_PORT_1, LEAF_MAC, IPV6.ethType().toShort());
     private static final FlowEntry FWD_CLASS_IPV4_FLOW_ENTRY_4 = new DefaultFlowEntry(FWD_CLASS_IPV4_FLOW_4);
+    private static final FlowRule FWD_CLASS_IPV4_FLOW_5 = buildIPFwdClassifierRule(
+            DOWN_PORT_TAG, LEAF_MAC, null, IPV4.ethType().toShort());
+    private static final FlowEntry FWD_CLASS_IPV4_FLOW_ENTRY_5 = new DefaultFlowEntry(FWD_CLASS_IPV4_FLOW_5);
 
-    private static final FlowRule L2_BRIDGING_FLOW = buildBridgingRule(HOST_VLAN, HOST_MAC, NEXT_BRIDGING, false);
+    private static final FlowRule L2_BRIDGING_FLOW = buildBridgingRule(HOST_VLAN_1, HOST_MAC, NEXT_BRIDGING, false);
     private static final FlowEntry L2_BRIDGING_FLOW_ENTRY = new DefaultFlowEntry(L2_BRIDGING_FLOW);
-    private static final FlowRule L2_BROADCAST_FLOW = buildBridgingRule(HOST_VLAN, null, NEXT_BROADCAST, true);
+    private static final FlowRule L2_BROADCAST_FLOW = buildBridgingRule(HOST_VLAN_1, null, NEXT_BROADCAST, true);
     private static final FlowEntry L2_BROADCAST_FLOW_ENTRY = new DefaultFlowEntry(L2_BROADCAST_FLOW);
+    private static final FlowRule L2_BROADCAST_FLOW_2 = buildBridgingRule(HOST_VLAN_2, null, NEXT_BROADCAST_2, true);
+    private static final FlowEntry L2_BROADCAST_FLOW_ENTRY_2 = new DefaultFlowEntry(L2_BROADCAST_FLOW_2);
 
     private static final FlowRule IPV4_ROUTING_FLOW = buildIPv4RoutingRule(HOST_IPV4, NEXT_ROUTING);
     private static final FlowEntry IPV4_ROUTING_FLOW_ENTRY = new DefaultFlowEntry(IPV4_ROUTING_FLOW);
@@ -112,17 +113,21 @@ final class TraceableDataPlaneObjects {
     private static final FlowEntry PUNT_LLDP_ACL_FLOW_ENTRY = new DefaultFlowEntry(PUNT_LLDP_ACL_FLOW);
     private static final FlowRule PUNT_BDDP_ACL_FLOW = buildPuntEthTypeAclRule(BDDP.ethType().toShort());
     private static final FlowEntry PUNT_BDDP_ACL_FLOW_ENTRY = new DefaultFlowEntry(PUNT_BDDP_ACL_FLOW);
+    private static final FlowRule PUNT_IP_ACL_FLOW_1 = buildPuntIpAclRule(IPV4.ethType().toShort(), PUNT_IPV4_TAG);
+    private static final FlowEntry PUNT_IP_ACL_FLOW_ENTRY_1 = new DefaultFlowEntry(PUNT_IP_ACL_FLOW_1);
 
-    private static final FlowRule NEXT_VLAN_FLOW_1 = buildNextVlanRule(NEXT_BRIDGING, HOST_VLAN);
+    private static final FlowRule NEXT_VLAN_FLOW_1 = buildNextVlanRule(NEXT_BRIDGING, HOST_VLAN_1);
     private static final FlowEntry NEXT_VLAN_FLOW_ENTRY_1 = new DefaultFlowEntry(NEXT_VLAN_FLOW_1);
-    private static final FlowRule NEXT_VLAN_FLOW_2 = buildNextVlanRule(NEXT_ROUTING, HOST_VLAN);
+    private static final FlowRule NEXT_VLAN_FLOW_2 = buildNextVlanRule(NEXT_ROUTING, HOST_VLAN_1);
     private static final FlowEntry NEXT_VLAN_FLOW_ENTRY_2 = new DefaultFlowEntry(NEXT_VLAN_FLOW_2);
     private static final FlowRule NEXT_VLAN_FLOW_3 = buildNextVlanRule(NEXT_MPLS, DEFAULT_VLAN);
     private static final FlowEntry NEXT_VLAN_FLOW_ENTRY_3 = new DefaultFlowEntry(NEXT_VLAN_FLOW_3);
-    private static final FlowRule NEXT_VLAN_FLOW_4 = buildNextVlanRule(NEXT_BROADCAST, HOST_VLAN);
+    private static final FlowRule NEXT_VLAN_FLOW_4 = buildNextVlanRule(NEXT_BROADCAST, HOST_VLAN_1);
     private static final FlowEntry NEXT_VLAN_FLOW_ENTRY_4 = new DefaultFlowEntry(NEXT_VLAN_FLOW_4);
     private static final FlowRule NEXT_VLAN_FLOW_5 = buildNextVlanRule(NEXT_ECMP, DEFAULT_VLAN);
     private static final FlowEntry NEXT_VLAN_FLOW_ENTRY_5 = new DefaultFlowEntry(NEXT_VLAN_FLOW_5);
+    private static final FlowRule NEXT_VLAN_FLOW_6 = buildNextVlanRule(NEXT_BROADCAST_2, HOST_VLAN_2);
+    private static final FlowEntry NEXT_VLAN_FLOW_ENTRY_6 = new DefaultFlowEntry(NEXT_VLAN_FLOW_6);
 
     private static final FlowRule NEXT_HASHED_FLOW_1 = buildNextHashedRule(NEXT_BRIDGING, GROUP_ID_BRIDGING);
     private static final FlowEntry NEXT_HASHED_FLOW_ENTRY_1 = new DefaultFlowEntry(NEXT_HASHED_FLOW_1);
@@ -135,8 +140,12 @@ final class TraceableDataPlaneObjects {
 
     private static final FlowRule NEXT_MCAST_FLOW = buildNextMcastRule(NEXT_BROADCAST, GROUP_ID_BROADCAST);
     private static final FlowEntry NEXT_MCAST_FLOW_ENTRY = new DefaultFlowEntry(NEXT_MCAST_FLOW);
+    private static final FlowRule NEXT_MCAST_FLOW_2 = buildNextMcastRule(NEXT_BROADCAST_2, GROUP_ID_BROADCAST_2);
+    private static final FlowEntry NEXT_MCAST_FLOW_ENTRY_2 = new DefaultFlowEntry(NEXT_MCAST_FLOW_2);
 
     private static final Group BROADCAST_GROUP = buildMcastGroup(BRODCAST_PORTS, NEXT_BROADCAST, GROUP_ID_BROADCAST);
+    private static final Group BROADCAST_GROUP_2 = buildMcastGroup(BRODCAST_PORTS_2, NEXT_BROADCAST_2,
+            GROUP_ID_BROADCAST_2);
 
     private static final GroupBucket BRIDGING_BUCKET = buildHashedBucket(MEMBER_1, null, null, null);
     private static final GroupBuckets BRIDGING_BUCKETS = new GroupBuckets(ImmutableList.of(BRIDGING_BUCKET));
@@ -157,33 +166,36 @@ final class TraceableDataPlaneObjects {
     private static final GroupBuckets ECMP_BUCKETS = new GroupBuckets(ImmutableList.of(ECMP_BUCKET_1, ECMP_BUCKET_2));
     private static final Group ECMP_GROUP = buildHashedGroup(ECMP_BUCKETS, NEXT_ECMP, GROUP_ID_ECMP);
 
-    private static final FlowRule EGRESS_VLAN_FLOW_1 = buildEgressVlanRule(DOWN_PORT, HOST_VLAN, false);
+    private static final FlowRule EGRESS_VLAN_FLOW_1 = buildEgressVlanRule(DOWN_PORT, HOST_VLAN_1, false);
     private static final FlowEntry EGRESS_VLAN_FLOW_ENTRY_1 = new DefaultFlowEntry(EGRESS_VLAN_FLOW_1);
     private static final FlowRule EGRESS_VLAN_FLOW_2 = buildEgressVlanRule(UP_PORT_1, DEFAULT_VLAN, false);
     private static final FlowEntry EGRESS_VLAN_FLOW_ENTRY_2 = new DefaultFlowEntry(EGRESS_VLAN_FLOW_2);
     private static final FlowRule EGRESS_VLAN_FLOW_3 = buildEgressVlanRule(UP_PORT_2, DEFAULT_VLAN, false);
     private static final FlowEntry EGRESS_VLAN_FLOW_ENTRY_3 = new DefaultFlowEntry(EGRESS_VLAN_FLOW_3);
-    private static final FlowRule EGRESS_VLAN_FLOW_4 = buildEgressVlanRule(MEMBER_1, HOST_VLAN, false);
+    private static final FlowRule EGRESS_VLAN_FLOW_4 = buildEgressVlanRule(MEMBER_1, HOST_VLAN_1, false);
     private static final FlowEntry EGRESS_VLAN_FLOW_ENTRY_4 = new DefaultFlowEntry(EGRESS_VLAN_FLOW_4);
-    private static final FlowRule EGRESS_VLAN_FLOW_5 = buildEgressVlanRule(MEMBER_2, HOST_VLAN, false);
+    private static final FlowRule EGRESS_VLAN_FLOW_5 = buildEgressVlanRule(MEMBER_2, HOST_VLAN_1, false);
     private static final FlowEntry EGRESS_VLAN_FLOW_ENTRY_5 = new DefaultFlowEntry(EGRESS_VLAN_FLOW_5);
 
     // Represents the device state
     public static List<DataPlaneEntity> getDataPlaneEntities(TraceableTest test) {
         List<FlowEntry> flowRules = ImmutableList.of(
-                DOWN_PORT_VLAN_FLOW_ENTRY, UP_PORT_VLAN_FLOW_ENTRY, FWD_CLASS_IPV4_FLOW_ENTRY_1,
-                FWD_CLASS_IPV4_FLOW_ENTRY_2, FWD_CLASS_IPV4_FLOW_ENTRY_3, FWD_CLASS_IPV4_FLOW_ENTRY_4,
-                L2_BRIDGING_FLOW_ENTRY, L2_BROADCAST_FLOW_ENTRY, DEFAULT_IPV4_ROUTING_FLOW_ENTRY,
+                DOWN_PORT_VLAN_FLOW_ENTRY, UP_PORT_VLAN_FLOW_ENTRY, DOWN_PORT_VLAN_TAG_FLOW_ENTRY,
+                FWD_CLASS_IPV4_FLOW_ENTRY_1, FWD_CLASS_IPV4_FLOW_ENTRY_2, FWD_CLASS_IPV4_FLOW_ENTRY_3,
+                FWD_CLASS_IPV4_FLOW_ENTRY_4, FWD_CLASS_IPV4_FLOW_ENTRY_5, L2_BRIDGING_FLOW_ENTRY,
+                L2_BROADCAST_FLOW_ENTRY, L2_BROADCAST_FLOW_ENTRY_2, DEFAULT_IPV4_ROUTING_FLOW_ENTRY,
                 IPV4_ROUTING_FLOW_ENTRY, SUBNET_IPV4_ROUTING_FLOW_ENTRY, MPLS_FLOW_ENTRY,
-                PUNT_IP_ACL_FLOW_ENTRY, ARP_ACL_FLOW_ENTRY, PUNT_LLDP_ACL_FLOW_ENTRY,
-                PUNT_BDDP_ACL_FLOW_ENTRY, NEXT_VLAN_FLOW_ENTRY_1, NEXT_VLAN_FLOW_ENTRY_2,
-                NEXT_VLAN_FLOW_ENTRY_3, NEXT_VLAN_FLOW_ENTRY_4, NEXT_VLAN_FLOW_ENTRY_5,
-                NEXT_HASHED_FLOW_ENTRY_1, NEXT_HASHED_FLOW_ENTRY_2, NEXT_HASHED_FLOW_ENTRY_3,
-                NEXT_HASHED_FLOW_ENTRY_4, NEXT_MCAST_FLOW_ENTRY, EGRESS_VLAN_FLOW_ENTRY_1,
+                PUNT_IP_ACL_FLOW_ENTRY, PUNT_IP_ACL_FLOW_ENTRY_1, ARP_ACL_FLOW_ENTRY,
+                PUNT_LLDP_ACL_FLOW_ENTRY, PUNT_BDDP_ACL_FLOW_ENTRY, NEXT_VLAN_FLOW_ENTRY_1,
+                NEXT_VLAN_FLOW_ENTRY_2, NEXT_VLAN_FLOW_ENTRY_3, NEXT_VLAN_FLOW_ENTRY_4,
+                NEXT_VLAN_FLOW_ENTRY_5, NEXT_VLAN_FLOW_ENTRY_6, NEXT_HASHED_FLOW_ENTRY_1,
+                NEXT_HASHED_FLOW_ENTRY_2, NEXT_HASHED_FLOW_ENTRY_3, NEXT_HASHED_FLOW_ENTRY_4,
+                NEXT_MCAST_FLOW_ENTRY, NEXT_MCAST_FLOW_ENTRY_2, EGRESS_VLAN_FLOW_ENTRY_1,
                 EGRESS_VLAN_FLOW_ENTRY_2, EGRESS_VLAN_FLOW_ENTRY_3, EGRESS_VLAN_FLOW_ENTRY_4,
                 EGRESS_VLAN_FLOW_ENTRY_5);
-        List<Group> groups = ImmutableList.of(BROADCAST_GROUP, BRIDGING_GROUP, ROUTING_GROUP,
-                MPLS_GROUP, ECMP_GROUP);
+        List<Group> groups = ImmutableList.of(
+                BROADCAST_GROUP, BROADCAST_GROUP_2, BRIDGING_GROUP,
+                ROUTING_GROUP, MPLS_GROUP, ECMP_GROUP);
 
         // Builds the state representation
         List<DataPlaneEntity> dataPlaneEntities = Lists.newArrayList();
@@ -200,78 +212,88 @@ final class TraceableDataPlaneObjects {
         List<List<DataPlaneEntity>> chains = Lists.newArrayList();
 
         // Flows and groups by test
-        if (test.equals(PUNT_IP)) {
+        if (test.equals(PUNT_IP_UNTAG)) {
             chains.add(ImmutableList.of(
-                    new DataPlaneEntity(DOWN_PORT_VLAN_FLOW_ENTRY), new DataPlaneEntity(FWD_CLASS_IPV4_FLOW_ENTRY_1),
-                    new DataPlaneEntity(DEFAULT_IPV4_ROUTING_FLOW_ENTRY), new DataPlaneEntity(PUNT_IP_ACL_FLOW_ENTRY))
+                new DataPlaneEntity(DOWN_PORT_VLAN_FLOW_ENTRY), new DataPlaneEntity(FWD_CLASS_IPV4_FLOW_ENTRY_1),
+                new DataPlaneEntity(DEFAULT_IPV4_ROUTING_FLOW_ENTRY), new DataPlaneEntity(PUNT_IP_ACL_FLOW_ENTRY))
+            );
+        } else if (test.equals(PUNT_IP_TAG)) {
+            chains.add(ImmutableList.of(
+                new DataPlaneEntity(DOWN_PORT_VLAN_TAG_FLOW_ENTRY), new DataPlaneEntity(FWD_CLASS_IPV4_FLOW_ENTRY_5),
+                new DataPlaneEntity(DEFAULT_IPV4_ROUTING_FLOW_ENTRY), new DataPlaneEntity(PUNT_IP_ACL_FLOW_ENTRY_1))
             );
         } else if (test.equals(ARP_UNTAG)) {
             // Controller chain
             chains.add(ImmutableList.of(
-                    new DataPlaneEntity(DOWN_PORT_VLAN_FLOW_ENTRY), new DataPlaneEntity(L2_BROADCAST_FLOW_ENTRY),
-                    new DataPlaneEntity(ARP_ACL_FLOW_ENTRY), new DataPlaneEntity(NEXT_VLAN_FLOW_ENTRY_4),
-                    new DataPlaneEntity(NEXT_MCAST_FLOW_ENTRY)));
+                new DataPlaneEntity(DOWN_PORT_VLAN_FLOW_ENTRY), new DataPlaneEntity(L2_BROADCAST_FLOW_ENTRY),
+                new DataPlaneEntity(ARP_ACL_FLOW_ENTRY), new DataPlaneEntity(NEXT_VLAN_FLOW_ENTRY_4),
+                new DataPlaneEntity(NEXT_MCAST_FLOW_ENTRY)));
             // DOWN member chain
             chains.add(ImmutableList.of(
-                    new DataPlaneEntity(DOWN_PORT_VLAN_FLOW_ENTRY), new DataPlaneEntity(L2_BROADCAST_FLOW_ENTRY),
-                    new DataPlaneEntity(ARP_ACL_FLOW_ENTRY), new DataPlaneEntity(NEXT_VLAN_FLOW_ENTRY_4),
-                    new DataPlaneEntity(NEXT_MCAST_FLOW_ENTRY), new DataPlaneEntity(BROADCAST_GROUP)));
+                new DataPlaneEntity(DOWN_PORT_VLAN_FLOW_ENTRY), new DataPlaneEntity(L2_BROADCAST_FLOW_ENTRY),
+                new DataPlaneEntity(ARP_ACL_FLOW_ENTRY), new DataPlaneEntity(NEXT_VLAN_FLOW_ENTRY_4),
+                new DataPlaneEntity(NEXT_MCAST_FLOW_ENTRY), new DataPlaneEntity(BROADCAST_GROUP)));
             // Member 2 chain
             chains.add(ImmutableList.of(
-                    new DataPlaneEntity(DOWN_PORT_VLAN_FLOW_ENTRY), new DataPlaneEntity(L2_BROADCAST_FLOW_ENTRY),
-                    new DataPlaneEntity(ARP_ACL_FLOW_ENTRY), new DataPlaneEntity(NEXT_VLAN_FLOW_ENTRY_4),
-                    new DataPlaneEntity(NEXT_MCAST_FLOW_ENTRY), new DataPlaneEntity(BROADCAST_GROUP),
-                    new DataPlaneEntity(EGRESS_VLAN_FLOW_ENTRY_5)));
+                new DataPlaneEntity(DOWN_PORT_VLAN_FLOW_ENTRY), new DataPlaneEntity(L2_BROADCAST_FLOW_ENTRY),
+                new DataPlaneEntity(ARP_ACL_FLOW_ENTRY), new DataPlaneEntity(NEXT_VLAN_FLOW_ENTRY_4),
+                new DataPlaneEntity(NEXT_MCAST_FLOW_ENTRY), new DataPlaneEntity(BROADCAST_GROUP),
+                new DataPlaneEntity(EGRESS_VLAN_FLOW_ENTRY_5)));
             // Member 1 chain
             chains.add(ImmutableList.of(
-                    new DataPlaneEntity(DOWN_PORT_VLAN_FLOW_ENTRY), new DataPlaneEntity(L2_BROADCAST_FLOW_ENTRY),
-                    new DataPlaneEntity(ARP_ACL_FLOW_ENTRY), new DataPlaneEntity(NEXT_VLAN_FLOW_ENTRY_4),
-                    new DataPlaneEntity(NEXT_MCAST_FLOW_ENTRY), new DataPlaneEntity(BROADCAST_GROUP),
-                    new DataPlaneEntity(EGRESS_VLAN_FLOW_ENTRY_4)));
+                new DataPlaneEntity(DOWN_PORT_VLAN_FLOW_ENTRY), new DataPlaneEntity(L2_BROADCAST_FLOW_ENTRY),
+                new DataPlaneEntity(ARP_ACL_FLOW_ENTRY), new DataPlaneEntity(NEXT_VLAN_FLOW_ENTRY_4),
+                new DataPlaneEntity(NEXT_MCAST_FLOW_ENTRY), new DataPlaneEntity(BROADCAST_GROUP),
+                new DataPlaneEntity(EGRESS_VLAN_FLOW_ENTRY_4)));
         } else if (test.equals(PUNT_LLDP)) {
             chains.add(ImmutableList.of(
-                    new DataPlaneEntity(UP_PORT_VLAN_FLOW_ENTRY), new DataPlaneEntity(PUNT_LLDP_ACL_FLOW_ENTRY)));
+                new DataPlaneEntity(UP_PORT_VLAN_FLOW_ENTRY), new DataPlaneEntity(PUNT_LLDP_ACL_FLOW_ENTRY)));
         } else if (test.equals(L2_BRIDG_UNTAG)) {
             chains.add(ImmutableList.of(
-                    new DataPlaneEntity(DOWN_PORT_VLAN_FLOW_ENTRY), new DataPlaneEntity(L2_BRIDGING_FLOW_ENTRY),
-                    new DataPlaneEntity(NEXT_VLAN_FLOW_ENTRY_1), new DataPlaneEntity(NEXT_HASHED_FLOW_ENTRY_1),
-                    new DataPlaneEntity(BRIDGING_GROUP), new DataPlaneEntity(EGRESS_VLAN_FLOW_ENTRY_4)));
+                new DataPlaneEntity(DOWN_PORT_VLAN_FLOW_ENTRY), new DataPlaneEntity(L2_BRIDGING_FLOW_ENTRY),
+                new DataPlaneEntity(NEXT_VLAN_FLOW_ENTRY_1), new DataPlaneEntity(NEXT_HASHED_FLOW_ENTRY_1),
+                new DataPlaneEntity(BRIDGING_GROUP), new DataPlaneEntity(EGRESS_VLAN_FLOW_ENTRY_4)));
+        } else if (test.equals(L2_BRIDG_MISS)) {
+            chains.add(ImmutableList.of(
+                    new DataPlaneEntity(DOWN_PORT_VLAN_TAG_FLOW_ENTRY), new DataPlaneEntity(L2_BROADCAST_FLOW_ENTRY_2),
+                    new DataPlaneEntity(NEXT_VLAN_FLOW_ENTRY_6), new DataPlaneEntity(NEXT_MCAST_FLOW_ENTRY_2),
+                    new DataPlaneEntity(BROADCAST_GROUP_2)));
         } else if (test.equals(L2_BROAD_UNTAG)) {
             chains.add(ImmutableList.of(
-                    new DataPlaneEntity(DOWN_PORT_VLAN_FLOW_ENTRY), new DataPlaneEntity(L2_BROADCAST_FLOW_ENTRY),
-                    new DataPlaneEntity(NEXT_VLAN_FLOW_ENTRY_4), new DataPlaneEntity(NEXT_MCAST_FLOW_ENTRY),
-                    new DataPlaneEntity(BROADCAST_GROUP)));
+                new DataPlaneEntity(DOWN_PORT_VLAN_FLOW_ENTRY), new DataPlaneEntity(L2_BROADCAST_FLOW_ENTRY),
+                new DataPlaneEntity(NEXT_VLAN_FLOW_ENTRY_4), new DataPlaneEntity(NEXT_MCAST_FLOW_ENTRY),
+                new DataPlaneEntity(BROADCAST_GROUP)));
             chains.add(ImmutableList.of(
-                    new DataPlaneEntity(DOWN_PORT_VLAN_FLOW_ENTRY), new DataPlaneEntity(L2_BROADCAST_FLOW_ENTRY),
-                    new DataPlaneEntity(NEXT_VLAN_FLOW_ENTRY_4), new DataPlaneEntity(NEXT_MCAST_FLOW_ENTRY),
-                    new DataPlaneEntity(BROADCAST_GROUP), new DataPlaneEntity(EGRESS_VLAN_FLOW_ENTRY_5)));
+                new DataPlaneEntity(DOWN_PORT_VLAN_FLOW_ENTRY), new DataPlaneEntity(L2_BROADCAST_FLOW_ENTRY),
+                new DataPlaneEntity(NEXT_VLAN_FLOW_ENTRY_4), new DataPlaneEntity(NEXT_MCAST_FLOW_ENTRY),
+                new DataPlaneEntity(BROADCAST_GROUP), new DataPlaneEntity(EGRESS_VLAN_FLOW_ENTRY_5)));
             chains.add(ImmutableList.of(
-                    new DataPlaneEntity(DOWN_PORT_VLAN_FLOW_ENTRY), new DataPlaneEntity(L2_BROADCAST_FLOW_ENTRY),
-                    new DataPlaneEntity(NEXT_VLAN_FLOW_ENTRY_4), new DataPlaneEntity(NEXT_MCAST_FLOW_ENTRY),
-                    new DataPlaneEntity(BROADCAST_GROUP), new DataPlaneEntity(EGRESS_VLAN_FLOW_ENTRY_4)));
+                new DataPlaneEntity(DOWN_PORT_VLAN_FLOW_ENTRY), new DataPlaneEntity(L2_BROADCAST_FLOW_ENTRY),
+                new DataPlaneEntity(NEXT_VLAN_FLOW_ENTRY_4), new DataPlaneEntity(NEXT_MCAST_FLOW_ENTRY),
+                new DataPlaneEntity(BROADCAST_GROUP), new DataPlaneEntity(EGRESS_VLAN_FLOW_ENTRY_4)));
         } else if (test.equals(L3_UCAST_UNTAG)) {
             chains.add(ImmutableList.of(
-                    new DataPlaneEntity(UP_PORT_VLAN_FLOW_ENTRY), new DataPlaneEntity(FWD_CLASS_IPV4_FLOW_ENTRY_2),
-                    new DataPlaneEntity(IPV4_ROUTING_FLOW_ENTRY), new DataPlaneEntity(NEXT_VLAN_FLOW_ENTRY_2),
-                    new DataPlaneEntity(NEXT_HASHED_FLOW_ENTRY_2), new DataPlaneEntity(ROUTING_GROUP),
-                    new DataPlaneEntity(EGRESS_VLAN_FLOW_ENTRY_1)));
+                new DataPlaneEntity(UP_PORT_VLAN_FLOW_ENTRY), new DataPlaneEntity(FWD_CLASS_IPV4_FLOW_ENTRY_2),
+                new DataPlaneEntity(IPV4_ROUTING_FLOW_ENTRY), new DataPlaneEntity(NEXT_VLAN_FLOW_ENTRY_2),
+                new DataPlaneEntity(NEXT_HASHED_FLOW_ENTRY_2), new DataPlaneEntity(ROUTING_GROUP),
+                new DataPlaneEntity(EGRESS_VLAN_FLOW_ENTRY_1)));
         } else if (test.equals(MPLS_ECMP)) {
             chains.add(ImmutableList.of(
-                    new DataPlaneEntity(UP_PORT_VLAN_FLOW_ENTRY), new DataPlaneEntity(FWD_CLASS_IPV4_FLOW_ENTRY_3),
-                    new DataPlaneEntity(MPLS_FLOW_ENTRY), new DataPlaneEntity(NEXT_VLAN_FLOW_ENTRY_3),
-                    new DataPlaneEntity(NEXT_HASHED_FLOW_ENTRY_3), new DataPlaneEntity(MPLS_GROUP),
-                    new DataPlaneEntity(EGRESS_VLAN_FLOW_ENTRY_3)));
+                new DataPlaneEntity(UP_PORT_VLAN_FLOW_ENTRY), new DataPlaneEntity(FWD_CLASS_IPV4_FLOW_ENTRY_3),
+                new DataPlaneEntity(MPLS_FLOW_ENTRY), new DataPlaneEntity(NEXT_VLAN_FLOW_ENTRY_3),
+                new DataPlaneEntity(NEXT_HASHED_FLOW_ENTRY_3), new DataPlaneEntity(MPLS_GROUP),
+                new DataPlaneEntity(EGRESS_VLAN_FLOW_ENTRY_3)));
         } else if (test.equals(L3_ECMP)) {
             chains.add(ImmutableList.of(
-                    new DataPlaneEntity(DOWN_PORT_VLAN_FLOW_ENTRY), new DataPlaneEntity(FWD_CLASS_IPV4_FLOW_ENTRY_1),
-                    new DataPlaneEntity(SUBNET_IPV4_ROUTING_FLOW_ENTRY), new DataPlaneEntity(NEXT_VLAN_FLOW_ENTRY_5),
-                    new DataPlaneEntity(NEXT_HASHED_FLOW_ENTRY_4), new DataPlaneEntity(ECMP_GROUP),
-                    new DataPlaneEntity(EGRESS_VLAN_FLOW_ENTRY_2)));
+                new DataPlaneEntity(DOWN_PORT_VLAN_FLOW_ENTRY), new DataPlaneEntity(FWD_CLASS_IPV4_FLOW_ENTRY_1),
+                new DataPlaneEntity(SUBNET_IPV4_ROUTING_FLOW_ENTRY), new DataPlaneEntity(NEXT_VLAN_FLOW_ENTRY_5),
+                new DataPlaneEntity(NEXT_HASHED_FLOW_ENTRY_4), new DataPlaneEntity(ECMP_GROUP),
+                new DataPlaneEntity(EGRESS_VLAN_FLOW_ENTRY_2)));
             chains.add(ImmutableList.of(
-                    new DataPlaneEntity(DOWN_PORT_VLAN_FLOW_ENTRY), new DataPlaneEntity(FWD_CLASS_IPV4_FLOW_ENTRY_1),
-                    new DataPlaneEntity(SUBNET_IPV4_ROUTING_FLOW_ENTRY), new DataPlaneEntity(NEXT_VLAN_FLOW_ENTRY_5),
-                    new DataPlaneEntity(NEXT_HASHED_FLOW_ENTRY_4), new DataPlaneEntity(ECMP_GROUP),
-                    new DataPlaneEntity(EGRESS_VLAN_FLOW_ENTRY_3)));
+                new DataPlaneEntity(DOWN_PORT_VLAN_FLOW_ENTRY), new DataPlaneEntity(FWD_CLASS_IPV4_FLOW_ENTRY_1),
+                new DataPlaneEntity(SUBNET_IPV4_ROUTING_FLOW_ENTRY), new DataPlaneEntity(NEXT_VLAN_FLOW_ENTRY_5),
+                new DataPlaneEntity(NEXT_HASHED_FLOW_ENTRY_4), new DataPlaneEntity(ECMP_GROUP),
+                new DataPlaneEntity(EGRESS_VLAN_FLOW_ENTRY_3)));
         }
 
         return chains;

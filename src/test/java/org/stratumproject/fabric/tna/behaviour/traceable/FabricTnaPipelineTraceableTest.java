@@ -31,14 +31,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertThat;
-import static org.stratumproject.fabric.tna.behaviour.traceable.PipelineTraceableTest.TraceableTest.ARP_UNTAG;
-import static org.stratumproject.fabric.tna.behaviour.traceable.PipelineTraceableTest.TraceableTest.L2_BRIDG_UNTAG;
-import static org.stratumproject.fabric.tna.behaviour.traceable.PipelineTraceableTest.TraceableTest.L2_BROAD_UNTAG;
-import static org.stratumproject.fabric.tna.behaviour.traceable.PipelineTraceableTest.TraceableTest.L3_ECMP;
-import static org.stratumproject.fabric.tna.behaviour.traceable.PipelineTraceableTest.TraceableTest.L3_UCAST_UNTAG;
-import static org.stratumproject.fabric.tna.behaviour.traceable.PipelineTraceableTest.TraceableTest.MPLS_ECMP;
-import static org.stratumproject.fabric.tna.behaviour.traceable.PipelineTraceableTest.TraceableTest.PUNT_IP;
-import static org.stratumproject.fabric.tna.behaviour.traceable.PipelineTraceableTest.TraceableTest.PUNT_LLDP;
+import static org.stratumproject.fabric.tna.behaviour.traceable.PipelineTraceableTest.TraceableTest.*;
 import static org.stratumproject.fabric.tna.behaviour.traceable.TraceableDataPlaneObjects.getDataPlaneEntities;
 import static org.stratumproject.fabric.tna.behaviour.traceable.TraceableDataPlaneObjects.getHitChains;
 
@@ -117,12 +110,12 @@ public class FabricTnaPipelineTraceableTest extends PipelineTraceableTest {
     }
 
     /**
-     * Test punt ip for fabric-tna traceable.
+     * Test punt ip untag for fabric-tna traceable.
      */
     @Test
-    public void testPuntIP() {
+    public void testPuntIPUntag() {
         PipelineTraceableInput pipelineInput = new PipelineTraceableInput(getPipelineTraceablePacket(
-                IN_PUNT_IP_PACKET), DOWN_CP, getDataPlaneEntities(PUNT_IP));
+                IN_PUNT_IP_PACKET), DOWN_CP, getDataPlaneEntities(PUNT_IP_UNTAG));
         PipelineTraceable pipelineTraceable = setupTraceable();
         PipelineTraceableOutput pipelineOutput = pipelineTraceable.apply(pipelineInput);
         assertNotNull(pipelineOutput);
@@ -132,7 +125,7 @@ public class FabricTnaPipelineTraceableTest extends PipelineTraceableTest {
 
         PipelineTraceableHitChain hitChain = pipelineOutput.hitChains().get(0);
         assertNotNull(hitChain);
-        List<List<DataPlaneEntity>> chains = getHitChains(PUNT_IP);
+        List<List<DataPlaneEntity>> chains = getHitChains(PUNT_IP_UNTAG);
         assertThat(chains.size(), is(1));
 
         assertNotNull(hitChain.outputPort());
@@ -142,6 +135,36 @@ public class FabricTnaPipelineTraceableTest extends PipelineTraceableTest {
 
         assertEquals(IN_PUNT_IP_PACKET, hitChain.egressPacket().packet());
         assertEquals(PUNT_IP_METADATA, hitChain.egressPacket().metadata());
+        assertFalse(hitChain.isDropped());
+        assertEquals(chains.get(0), hitChain.hitChain());
+    }
+
+    /**
+     * Test punt ip tagged for fabric-tna traceable.
+     */
+    @Test
+    public void testPuntIPTag() {
+        PipelineTraceableInput pipelineInput = new PipelineTraceableInput(getPipelineTraceablePacket(
+                IN_PUNT_IP_PACKET_TAG), DOWN_CP_TAG, getDataPlaneEntities(PUNT_IP_TAG));
+        PipelineTraceable pipelineTraceable = setupTraceable();
+        PipelineTraceableOutput pipelineOutput = pipelineTraceable.apply(pipelineInput);
+        assertNotNull(pipelineOutput);
+
+        assertThat(pipelineOutput.hitChains().size(), is(1));
+        assertThat(pipelineOutput.result(), is(PipelineTraceableOutput.PipelineTraceableResult.SUCCESS));
+
+        PipelineTraceableHitChain hitChain = pipelineOutput.hitChains().get(0);
+        assertNotNull(hitChain);
+        List<List<DataPlaneEntity>> chains = getHitChains(PUNT_IP_TAG);
+        assertThat(chains.size(), is(1));
+
+        assertNotNull(hitChain.outputPort());
+        assertThat(hitChain.outputPort().port(), is(PortNumber.CONTROLLER));
+
+        assertThat(hitChain.hitChain().size(), is(4));
+
+        assertEquals(IN_PUNT_IP_PACKET_TAG, hitChain.egressPacket().packet());
+        assertEquals(PUNT_IP_METADATA_TAG, hitChain.egressPacket().metadata());
         assertFalse(hitChain.isDropped());
         assertEquals(chains.get(0), hitChain.hitChain());
     }
@@ -257,6 +280,34 @@ public class FabricTnaPipelineTraceableTest extends PipelineTraceableTest {
         assertEquals(IN_L2_BRIDG_UNTAG_PACKET, hitChain.egressPacket().packet());
         assertEquals(L2_BRIDG_UNTAG_METADATA, hitChain.egressPacket().metadata());
         assertFalse(hitChain.isDropped());
+        assertEquals(chains.get(0), hitChain.hitChain());
+    }
+
+    /**
+     * Test l2 bridging miss for fabric-tna traceable.
+     */
+    @Test
+    public void testL2BridingMiss() {
+        PipelineTraceableInput pipelineInput = new PipelineTraceableInput(new PipelineTraceablePacket(
+                IN_L2_BRIDG_MISS_PACKET), DOWN_CP_TAG, getDataPlaneEntities(L2_BRIDG_MISS));
+        PipelineTraceable pipelineTraceable = setupTraceable();
+        PipelineTraceableOutput pipelineOutput = pipelineTraceable.apply(pipelineInput);
+        assertNotNull(pipelineOutput);
+
+        assertThat(pipelineOutput.hitChains().size(), is(1));
+        assertThat(pipelineOutput.result(), is(PipelineTraceableOutput.PipelineTraceableResult.DROPPED));
+
+        PipelineTraceableHitChain hitChain = pipelineOutput.hitChains().get(0);
+        assertNotNull(hitChain);
+        List<List<DataPlaneEntity>> chains = getHitChains(L2_BRIDG_MISS);
+        assertThat(chains.size(), is(1));
+
+        assertNotNull(hitChain.outputPort());
+        assertThat(hitChain.outputPort().port(), is(DOWN_PORT_TAG));
+        assertThat(hitChain.hitChain().size(), is(5));
+        assertEquals(IN_L2_BRIDG_MISS_PACKET, hitChain.egressPacket().packet());
+        assertEquals(L2_BRIDG_MISS_METADATA, hitChain.egressPacket().metadata());
+        assertTrue(hitChain.isDropped());
         assertEquals(chains.get(0), hitChain.hitChain());
     }
 
