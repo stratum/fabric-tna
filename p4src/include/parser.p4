@@ -225,34 +225,14 @@ parser FabricIngressParser (packet_in  packet,
 #endif // WITH_SPGW
 }
 
-control FabricIngressMirror(
-    in fabric_ingress_metadata_t fabric_md,
-    in ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr) {
-    Mirror() mirror;
-    apply {
-        if (ig_intr_md_for_dprsr.mirror_type == (bit<3>)MirrorType_t.SIMPLE) {
-            mirror.emit<mirror_metadata_t>(fabric_md.mirror.mirror_session_id,
-                                           fabric_md.mirror);
-        }
-#ifdef WITH_INT
-        else if (ig_intr_md_for_dprsr.mirror_type == (bit<3>)MirrorType_t.INT_DROP_REPORT) {
-            mirror.emit<int_mirror_metadata_t>(fabric_md.mirror.mirror_session_id,
-                                               fabric_md.int_mirror);
-        }
-#endif // WITH_INT
-    }
-}
-
 control FabricIngressDeparser(packet_out packet,
     /* Fabric.p4 */
     inout parsed_headers_t hdr,
     in fabric_ingress_metadata_t fabric_md,
     /* TNA */
     in ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr) {
-    FabricIngressMirror() ingress_mirror;
 
     apply {
-        ingress_mirror.apply(fabric_md, ig_intr_md_for_dprsr);
         packet.emit(fabric_md.bridged);
         packet.emit(hdr.fake_ethernet);
         packet.emit(hdr.packet_in);
@@ -288,25 +268,13 @@ parser FabricEgressParser (packet_in packet,
     Checksum() inner_ipv4_checksum;
 #endif // WITH_SPGW
 
-#if defined(WITH_INT) && defined(WITH_SPGW)
-    bit<1> is_int_and_strip_gtpu = 0;
-#endif // defined(WITH_INT) && defined(WITH_SPGW)
-
-#ifdef WITH_INT
-    int_mirror_metadata_t int_mirror;
-#endif
-
     state start {
         packet.extract(eg_intr_md);
         fabric_md.cpu_port = 0;
         common_egress_metadata_t common_eg_md = packet.lookahead<common_egress_metadata_t>();
         transition select(common_eg_md.bridge_type, common_eg_md.mirror_type) {
             (BridgeType_t.INGRESS_TO_EGRESS, _): parse_bridged_md;
-            (BridgeType_t.INGRESS_MIRROR, MirrorType_t.SIMPLE):  parse_simple_mirror;
-            (BridgeType_t.EGRESS_MIRROR, MirrorType_t.SIMPLE):  parse_simple_mirror;
 #ifdef WITH_INT
-            (BridgeType_t.INGRESS_MIRROR, MirrorType_t.INT_DROP_REPORT):  parse_int_report_mirror;
-            (BridgeType_t.EGRESS_MIRROR,  MirrorType_t.INT_DROP_REPORT):  parse_int_report_mirror;
             (BridgeType_t.EGRESS_MIRROR,  MirrorType_t.INT_LOCAL_REPORT): parse_int_report_mirror;
 #endif // WITH_INT
             default: reject;
@@ -315,26 +283,21 @@ parser FabricEgressParser (packet_in packet,
 
     state parse_bridged_md {
         packet.extract(fabric_md.bridged);
-#if defined(WITH_INT) && defined(WITH_SPGW)
-        is_int_and_strip_gtpu = 0;
-#endif // defined(WITH_INT) && defined(WITH_SPGW)
+#ifdef WITH_INT
+        fabric_md.int_mirror.setValid();
+        fabric_md.int_mirror.strip_gtpu = 0;
+#endif // WITH_INT
         transition check_ethernet;
     }
 
-    state parse_int_report_mirror {
 #ifdef WITH_INT
+    state parse_int_report_mirror {
         packet.extract(fabric_md.int_mirror);
         fabric_md.bridged.bridge_type = fabric_md.int_mirror.bridge_type;
         fabric_md.bridged.vlan_id = DEFAULT_VLAN_ID;
-#ifdef WITH_SPGW
-        is_int_and_strip_gtpu = fabric_md.int_mirror.strip_gtpu;
-#endif // WITH_SPGW
         transition check_ethernet;
-#else
-        // Should never be here.
-        transition reject;
-#endif // WITH_INT
     }
+#endif // WITH_INT
 
     state check_ethernet {
         fake_ethernet_t tmp = packet.lookahead<fake_ethernet_t>();
@@ -349,12 +312,6 @@ parser FabricEgressParser (packet_in packet,
         hdr.fake_ethernet.setValid();
         hdr.fake_ethernet.ether_type = ETHERTYPE_CPU_LOOPBACK_EGRESS;
         packet.advance(ETH_HDR_BYTES * 8);
-        transition parse_ethernet;
-    }
-
-    state parse_simple_mirror {
-        packet.extract(fabric_md.mirror);
-        fabric_md.bridged.bridge_type = fabric_md.mirror.bridge_type;
         transition parse_ethernet;
     }
 
@@ -396,7 +353,7 @@ parser FabricEgressParser (packet_in packet,
     // reporting, in which case we need to remove the MPLS header as not
     // supported by the collector. For all other cases, the MPLS label is
     // always popped in ingress and pushed again in egress (if present in
-    //  bridged metadata).
+    // bridged metadata).
     state strip_mpls {
         fabric_md.mpls_stripped = 1;
         packet.advance((ETH_TYPE_BYTES + MPLS_HDR_BYTES) * 8);
@@ -431,9 +388,9 @@ parser FabricEgressParser (packet_in packet,
 
     state check_ipv4 {
 #if defined(WITH_INT) && defined(WITH_SPGW)
-        transition select(is_int_and_strip_gtpu) {
+        transition select(fabric_md.int_mirror.strip_gtpu) {
+            0: parse_ipv4;
             1: strip_gtpu_and_accept;
-            default: parse_ipv4;
         }
 #else
         transition parse_ipv4;
@@ -531,15 +488,8 @@ control FabricEgressMirror(
     in egress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr) {
     Mirror() mirror;
     apply {
-        if (ig_intr_md_for_dprsr.mirror_type == (bit<3>)MirrorType_t.SIMPLE) {
-            mirror.emit<mirror_metadata_t>(fabric_md.mirror.mirror_session_id,
-                                           fabric_md.mirror);
-        }
 #ifdef WITH_INT
-        else if (ig_intr_md_for_dprsr.mirror_type == (bit<3>)MirrorType_t.INT_DROP_REPORT) {
-            mirror.emit<int_mirror_metadata_t>(fabric_md.mirror.mirror_session_id,
-                                               fabric_md.int_mirror);
-        } else if (ig_intr_md_for_dprsr.mirror_type == (bit<3>)MirrorType_t.INT_LOCAL_REPORT) {
+        if (ig_intr_md_for_dprsr.mirror_type == (bit<3>)MirrorType_t.INT_LOCAL_REPORT) {
             mirror.emit<int_mirror_metadata_t>(fabric_md.mirror.mirror_session_id,
                                                fabric_md.int_mirror);
         }
@@ -659,4 +609,6 @@ control FabricEgressDeparser(packet_out packet,
     }
 }
 
-#endif
+
+
+#endif // __PARSER__
