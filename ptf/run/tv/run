@@ -4,17 +4,14 @@
 
 set -e
 
-# Tester image
-# Contains PTF and tvutils libraries, as well as P4RT, gNMI, and TV Python bindings
-TESTER_DOCKER_IMG=stratumproject/testvectors:ptf-py3
-SDE_VERSION=${SDE_VERSION:-9.2.0}
-
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
 FP4TEST_ROOT="${DIR}"/../..
 FABRIC_TNA="${FP4TEST_ROOT}"/..
 
-DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
-ROOT_DIR=${DIR}/../..
+# Tester image
+# Contains PTF and tvutils libraries, as well as P4RT, gNMI, and TV Python bindings
+TESTER_DOCKER_IMG=stratumproject/testvectors:ptf-py3
+SDE_VERSION=${SDE_VERSION:-9.2.0}
 
 if [[ -z "${FABRIC_TNA}" ]]; then
     echo "ERROR: FABRIC_TNA env not defined"
@@ -24,18 +21,18 @@ if [[ -z "${SDE_VERSION}" ]]; then
     echo "ERROR: SDE_VERSION env not defined"
     exit 1
 fi
+
 fabricProfile=$1
 if [ -z "${fabricProfile}" ]; then
-    echo "fabric profile is not set"
+    echo "fabric-tna profile is not set"
     exit 1
 fi
 
 # Find Tofino compiled artifacts
 sdeVer_=$(echo "${SDE_VERSION}" | tr . _) # Replace dots with underscores
-#P4C_OUT=${FABRIC_TNA}/src/main/resources/p4c-out/${fabricProfile}/montara_sde_${sdeVer_}
-P4C_OUT=${FABRIC_TNA}/src/main/resources/p4c-out/${fabricProfile}/mavericks_sde_${sdeVer_}
-
+P4C_OUT=${FABRIC_TNA}/p4src/build/${fabricProfile}/sde_${sdeVer_}
 echo "*** Using P4 compiler output in ${P4C_OUT}..."
+
 if [ ! -f "${P4C_OUT}"/pipeline_config.pb.bin ]; then
     echo "ERROR: missing pipeline_config.pb.bin in ${P4C_OUT}"
     exit 1
@@ -55,7 +52,9 @@ echo "*** Starting ${testerRunName} with ${TESTER_DOCKER_IMG}..."
 it=$(test -t 0 && echo "-it" || echo "-t")
 # shellcheck disable=SC2068
 docker run --name "${testerRunName}" "${it}" --privileged --rm \
-    -v "${ROOT_DIR}":/fabric-p4test \
+    -v "${FP4TEST_ROOT}":/fabric-p4test \
     -v "${P4C_OUT}":/p4c-out \
+    -e PTF_FILTER="${PTF_FILTER}" \
+    --entrypoint /fabric-p4test/run/tv/start_test.sh \
     "${TESTER_DOCKER_IMG}" \
-    bash /fabric-p4test/run/tv/start_test.sh "${FABRIC_PROFILE}" ${@}
+    ${@}
