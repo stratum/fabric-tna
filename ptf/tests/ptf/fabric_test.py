@@ -1,6 +1,6 @@
-# Copyright 2013-present Barefoot Networks, Inc.
+# Copyright 2013-2018 Barefoot Networks, Inc.
 # Copyright 2018-present Open Networking Foundation
-# // SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
+# SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0 AND Apache-2.0
 
 import socket
 import struct
@@ -185,10 +185,6 @@ PPPOED_CODES = (
     PPPOED_CODE_PADT,
 )
 
-MIRROR_TYPE_INVALID = 0
-MIRROR_TYPE_SIMPLE = 1
-MIRROR_TYPE_INT_LOCAL_REPORT = 2
-MIRROR_TYPE_INT_DROP_REPORT = 3
 
 class GTPU(Packet):
     name = "GTP-U Header"
@@ -336,7 +332,7 @@ class FabricTest(P4RuntimeTest):
 
     def build_packet_out(self, pkt, port, cpu_loopback_mode=CPU_LOOPBACK_MODE_DISABLED):
         packet_out = p4runtime_pb2.PacketOut()
-        packet_out.payload = str(pkt)
+        packet_out.payload = bytes(pkt)
         # egress_port
         port_md = packet_out.metadata.add()
         port_md.metadata_id = 1
@@ -432,7 +428,7 @@ class FabricTest(P4RuntimeTest):
         inner_vlan_id=None,
     ):
         ingress_port_ = stringify(ingress_port, 2)
-        vlan_valid_ = "\x01" if vlan_valid else "\x00"
+        vlan_valid_ = b"\x01" if vlan_valid else b"\x00"
         vlan_id_ = stringify(vlan_id, 2)
         vlan_id_mask_ = stringify(4095 if vlan_valid else 0, 2)
         new_vlan_id_ = stringify(internal_vlan_id, 2)
@@ -441,8 +437,9 @@ class FabricTest(P4RuntimeTest):
         matches = [
             self.Exact("ig_port", ingress_port_),
             self.Exact("vlan_is_valid", vlan_valid_),
-            self.Ternary("vlan_id", vlan_id_, vlan_id_mask_),
         ]
+        if vlan_id_mask_ != b"\x00\x00":
+            matches.append(self.Ternary("vlan_id", vlan_id_, vlan_id_mask_))
         if inner_vlan_id is not None:
             # Match on inner_vlan, only when explicitly requested
             inner_vlan_id_ = stringify(inner_vlan_id, 2)
@@ -496,9 +493,10 @@ class FabricTest(P4RuntimeTest):
         matches = [
             self.Exact("ig_port", ingress_port_),
             self.Ternary("eth_dst", eth_dstAddr_, eth_mask_),
-            self.Ternary("eth_type", ethertype_, ethertype_mask_),
             self.Exact("ip_eth_type", ip_eth_type),
         ]
+        if ethertype_mask_ != b"\x00\x00":
+            matches.append(self.Ternary("eth_type", ethertype_, ethertype_mask_))
         self.send_request_add_entry_to_action(
             "filtering.fwd_classifier",
             matches,
@@ -517,7 +515,7 @@ class FabricTest(P4RuntimeTest):
     ):
         vlan_id_ = stringify(vlan_id, 2)
         mk = [self.Exact("vlan_id", vlan_id_)]
-        if eth_dstAddr is not None:
+        if eth_dstAddr is not None and eth_dstAddr_mask is not None:
             eth_dstAddr_ = mac_to_binary(eth_dstAddr)
             eth_dstAddr_mask_ = mac_to_binary(eth_dstAddr_mask)
             mk.append(self.Ternary("eth_dst", eth_dstAddr_, eth_dstAddr_mask_))
@@ -915,8 +913,8 @@ class BridgingTest(FabricTest):
             pkt2 = pkt_add_vlan(pkt2, vlan_vid=vlan_id)
             exp_pkt = pkt_add_vlan(exp_pkt, vlan_vid=vlan_id)
 
-        self.send_packet(self.port1, str(pkt))
-        self.send_packet(self.port2, str(pkt2))
+        self.send_packet(self.port1, pkt)
+        self.send_packet(self.port2, pkt2)
         self.verify_each_packet_on_each_port(
             [exp_pkt, exp_pkt2], [self.port2, self.port1]
         )
@@ -924,7 +922,6 @@ class BridgingTest(FabricTest):
 
 class BridgingPriorityTest(FabricTest):
     def runBridgingPriorityTest(self):
-        zero_mac_addr = ":".join(["00"] * 6)
         low_priority = 5
         high_priority = 100
 
@@ -941,9 +938,7 @@ class BridgingPriorityTest(FabricTest):
         self.add_next_output(20, self.port2)
 
         # Add broadcast bridging rule
-        self.add_bridging_entry(
-            vlan_id, zero_mac_addr, zero_mac_addr, next_id, low_priority
-        )
+        self.add_bridging_entry(vlan_id, None, None, next_id, low_priority)
         self.add_next_multicast(next_id, mcast_group_id)
         # Add the multicast group, here we use instance id 1 by default
         replicas = [(1, port) for port in all_ports]
@@ -953,14 +948,14 @@ class BridgingPriorityTest(FabricTest):
         # port 2 only
         pkt = testutils.simple_eth_packet(eth_dst=HOST2_MAC)
         exp_pkt = pkt.copy()
-        self.send_packet(self.port1, str(pkt))
+        self.send_packet(self.port1, pkt)
         self.verify_packet(exp_pkt, self.port2)
         self.verify_no_other_packets()
 
         # Create packet with unknown dst_mac. This packet should be broadcasted
         pkt = testutils.simple_eth_packet(eth_dst="ff:ff:ff:ff:ff:ff")
         exp_pkt = pkt.copy()
-        self.send_packet(self.port1, str(pkt))
+        self.send_packet(self.port1, pkt)
         self.verify_packet(exp_pkt, self.port2)
         self.verify_packet(exp_pkt, self.port3)
         self.verify_no_other_packets()
@@ -986,8 +981,8 @@ class DoubleTaggedBridgingTest(FabricTest):
         exp_pkt = pkt.copy()
         exp_pkt2 = pkt2.copy()
 
-        self.send_packet(self.port1, str(pkt))
-        self.send_packet(self.port2, str(pkt2))
+        self.send_packet(self.port1, pkt)
+        self.send_packet(self.port2, pkt2)
         self.verify_each_packet_on_each_port(
             [exp_pkt, exp_pkt2], [self.port2, self.port1]
         )
@@ -1009,16 +1004,15 @@ class DoubleVlanXConnectTest(FabricTest):
         pkt = pkt_add_vlan(pkt, vlan_vid=vlan_id_outer)
         exp_pkt = pkt.copy()
 
-        self.send_packet(self.port1, str(pkt))
+        self.send_packet(self.port1, pkt)
         self.verify_packet(exp_pkt, self.port2)
 
-        self.send_packet(self.port2, str(pkt))
+        self.send_packet(self.port2, pkt)
         self.verify_packet(exp_pkt, self.port1)
 
 
 class ArpBroadcastTest(FabricTest):
     def runArpBroadcastTest(self, tagged_ports, untagged_ports):
-        zero_mac_addr = ":".join(["00"] * 6)
         vlan_id = 10
         next_id = vlan_id
         mcast_group_id = vlan_id
@@ -1030,7 +1024,7 @@ class ArpBroadcastTest(FabricTest):
             self.set_ingress_port_vlan(port, True, vlan_id, vlan_id)
         for port in untagged_ports:
             self.set_ingress_port_vlan(port, False, 0, vlan_id)
-        self.add_bridging_entry(vlan_id, zero_mac_addr, zero_mac_addr, next_id)
+        self.add_bridging_entry(vlan_id, None, None, next_id)
         self.add_forwarding_acl_copy_to_cpu(eth_type=ETH_TYPE_ARP)
         self.add_next_multicast(next_id, mcast_group_id)
         # Add the multicast group, here we use instance id 1 by default
@@ -1041,9 +1035,8 @@ class ArpBroadcastTest(FabricTest):
 
         for inport in all_ports:
             pkt_to_send = vlan_arp_pkt if inport in tagged_ports else arp_pkt
-            self.send_packet(inport, str(pkt_to_send))
-            # Pkt should be received on CPU and on all ports, except the
-            # ingress one.
+            self.send_packet(inport, pkt_to_send)
+            # Pkt should be received on CPU and on all ports, except the ingress one.
             self.verify_packet_in(exp_pkt=pkt_to_send, exp_in_port=inport)
             verify_tagged_ports = set(tagged_ports)
             verify_tagged_ports.discard(inport)
@@ -1177,7 +1170,7 @@ class IPv4UnicastTest(FabricTest):
         if no_send:
             return
 
-        self.send_packet(ig_port, str(pkt))
+        self.send_packet(ig_port, pkt)
 
         if verify_pkt:
             self.verify_packet(exp_pkt, eg_port)
@@ -1235,7 +1228,7 @@ class IPv4MulticastTest(FabricTest):
         )
 
         # Send packets and verify
-        self.send_packet(in_port, str(pkt))
+        self.send_packet(in_port, pkt)
         for out_port in out_ports:
             self.verify_packet(expect_pkt, out_port)
         self.verify_no_other_packets()
@@ -1338,7 +1331,7 @@ class DoubleVlanTerminationTest(FabricTest):
         if in_tagged and not pkt_is_tagged:
             pkt = pkt_add_vlan(pkt, vlan_vid=in_vlan)
 
-        self.send_packet(self.port1, str(pkt))
+        self.send_packet(self.port1, pkt)
         if verify_pkt:
             self.verify_packet(exp_pkt, self.port2)
         self.verify_no_other_packets()
@@ -1460,7 +1453,7 @@ class DoubleVlanTerminationTest(FabricTest):
             if is_next_hop_spine:
                 exp_pkt = pkt_add_mpls(exp_pkt, label=mpls_label, ttl=DEFAULT_MPLS_TTL)
 
-        self.send_packet(self.port1, str(pkt))
+        self.send_packet(self.port1, pkt)
         if verify_pkt:
             self.verify_packet(exp_pkt, self.port2)
         self.verify_no_other_packets()
@@ -1507,7 +1500,7 @@ class MplsSegmentRoutingTest(FabricTest):
         else:
             exp_pkt = pkt_add_mpls(exp_pkt, label, mpls_ttl - 1)
 
-        self.send_packet(self.port1, str(pkt))
+        self.send_packet(self.port1, pkt)
         self.verify_packet(exp_pkt, self.port2)
 
 
@@ -1526,7 +1519,7 @@ class PacketInTest(FabricTest):
                 self.set_ingress_port_vlan(port, True, vlan_id, vlan_id)
             else:
                 self.set_ingress_port_vlan(port, False, 0, vlan_id)
-            self.send_packet(port, str(pkt))
+            self.send_packet(port, pkt)
             self.verify_packet_in(pkt, port)
         self.verify_no_other_packets()
 
@@ -1991,7 +1984,7 @@ class SpgwReadWriteSymmetryTest(SpgwSimpleTest):
         p4info_params = self.get_obj("actions", action_name).params
         name_list = [""] * len(p4info_params)
         for param in p4info_params:
-            name_list[param.id - 1] = param.name.encode("ascii", "ignore")
+            name_list[param.id - 1] = param.name
 
         params = [
             (name_list[param.param_id - 1], param.value) for param in action.params
@@ -2372,17 +2365,18 @@ class IntTest(IPv4UnicastTest):
             mon_label,
         )
         self.setup_report_mirror_flow(
-            300, INT_REPORT_MIRROR_ID_0, self.recirculate_port_0
+            0, INT_REPORT_MIRROR_ID_0, self.recirculate_port_0
         )
         self.setup_report_mirror_flow(
-            301, INT_REPORT_MIRROR_ID_1, self.recirculate_port_1
+            1, INT_REPORT_MIRROR_ID_1, self.recirculate_port_1
         )
         self.setup_report_mirror_flow(
-            302, INT_REPORT_MIRROR_ID_2, self.recirculate_port_2
+            2, INT_REPORT_MIRROR_ID_2, self.recirculate_port_2
         )
         self.setup_report_mirror_flow(
-            303, INT_REPORT_MIRROR_ID_3, self.recirculate_port_3
+            3, INT_REPORT_MIRROR_ID_3, self.recirculate_port_3
         )
+
         # Set up entries for report packet
         self.setup_port(collector_port, DEFAULT_VLAN)
         # Here we use next-id 101 since `runIPv4UnicastTest` will use 100 by
@@ -2548,16 +2542,16 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             mon_label,
         )
         self.setup_report_mirror_flow(
-            300, INT_REPORT_MIRROR_ID_0, self.recirculate_port_0
+            0, INT_REPORT_MIRROR_ID_0, self.recirculate_port_0
         )
         self.setup_report_mirror_flow(
-            301, INT_REPORT_MIRROR_ID_1, self.recirculate_port_1
+            1, INT_REPORT_MIRROR_ID_1, self.recirculate_port_1
         )
         self.setup_report_mirror_flow(
-            302, INT_REPORT_MIRROR_ID_2, self.recirculate_port_2
+            2, INT_REPORT_MIRROR_ID_2, self.recirculate_port_2
         )
         self.setup_report_mirror_flow(
-            303, INT_REPORT_MIRROR_ID_3, self.recirculate_port_3
+            3, INT_REPORT_MIRROR_ID_3, self.recirculate_port_3
         )
 
         # Set up entries for report packet
@@ -2973,7 +2967,7 @@ class PppoeTest(DoubleVlanTerminationTest):
         old_dropped = self.read_byte_count_upstream("dropped", line_id)
         old_control = self.read_pkt_count_upstream("control", line_id)
 
-        self.send_packet(self.port1, str(pppoed_pkt))
+        self.send_packet(self.port1, pppoed_pkt)
         self.verify_packet_in(pppoed_pkt, self.port1)
         self.verify_no_other_packets()
 
