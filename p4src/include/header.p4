@@ -206,6 +206,7 @@ header mirror_metadata_t {
 
 // Ingress pipeline-only metadata
 @flexible
+@pa_auto_init_metadata
 struct fabric_ingress_metadata_t {
     bridged_metadata_t      bridged;
     mirror_metadata_t       mirror;
@@ -226,6 +227,7 @@ struct fabric_ingress_metadata_t {
 
 // Egress pipeline-only metadata
 @flexible
+@pa_auto_init_metadata
 struct fabric_egress_metadata_t {
     bridged_metadata_t    bridged;
     mirror_metadata_t     mirror;
