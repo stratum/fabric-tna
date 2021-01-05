@@ -283,10 +283,6 @@ parser FabricEgressParser (packet_in packet,
 
     state parse_bridged_md {
         packet.extract(fabric_md.bridged);
-#ifdef WITH_INT
-        fabric_md.int_mirror.setValid();
-        fabric_md.int_mirror.strip_gtpu = 0;
-#endif // WITH_INT
         transition check_ethernet;
     }
 
@@ -608,7 +604,5 @@ control FabricEgressDeparser(packet_out packet,
 #endif // WITH_SPGW
     }
 }
-
-
 
 #endif // __PARSER__
