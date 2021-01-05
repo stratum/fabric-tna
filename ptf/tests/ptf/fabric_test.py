@@ -185,6 +185,10 @@ PPPOED_CODES = (
     PPPOED_CODE_PADT,
 )
 
+# Mirror types
+MIRROR_TYPE_SIMPLE = 1
+MIRROR_TYPE_INT_LOCAL_REPORT = 2
+MIRROR_TYPE_INT_DROP_REPORT = 3
 
 class GTPU(Packet):
     name = "GTP-U Header"
@@ -2170,7 +2174,8 @@ class IntTest(IPv4UnicastTest):
 
         self.send_request_add_entry_to_action(
             "report",
-            [self.Exact("int_mirror_valid", stringify(1, 1))],
+            [self.Exact("fabric_md.int_mirror.mirror_type",
+             stringify(MIRROR_TYPE_INT_LOCAL_REPORT, 1))],
             action,
             action_params,
         )
