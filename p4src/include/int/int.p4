@@ -230,6 +230,7 @@ control IntEgress (
         fabric_md.int_mirror.queue_occupancy = (bit<24>)eg_intr_md.enq_qdepth;
         fabric_md.int_mirror.ig_tstamp = fabric_md.bridged.ig_tstamp[31:0];
         fabric_md.int_mirror.eg_tstamp = eg_prsr_md.global_tstamp[31:0];
+        fabric_md.int_mirror.ip_eth_type = fabric_md.bridged.ip_eth_type;
 #ifdef WITH_SPGW
         fabric_md.int_mirror.strip_gtpu = (bit<1>)(hdr.gtpu.isValid());
 #endif // WITH_SPGW
@@ -276,6 +277,8 @@ control IntEgress (
 
     apply {
         if (report.apply().hit) {
+            // Fix ethertype
+            hdr.eth_type.value = fabric_md.int_mirror.ip_eth_type;
             // Is a mirror packet for INT drop/local report.
             report_seq_no_and_hw_id.apply();
             // Remove the INT mirror metadata to prevent egress mirroring again.

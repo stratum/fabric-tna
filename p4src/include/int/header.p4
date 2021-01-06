@@ -58,6 +58,7 @@ header_union local_report_t {
 @pa_no_overlay("egress", "fabric_md.int_mirror.queue_occupancy")
 @pa_no_overlay("egress", "fabric_md.int_mirror.ig_tstamp")
 @pa_no_overlay("egress", "fabric_md.int_mirror.eg_tstamp")
+@pa_no_overlay("egress", "fabric_md.int_mirror.ip_eth_type")
 #ifdef WITH_SPGW
 @pa_no_overlay("egress", "fabric_md.int_mirror.strip_gtpu")
 #endif // WITH_SPGW
@@ -75,6 +76,7 @@ header int_mirror_metadata_t {
     bit<32>         ig_tstamp;
     bit<32>         eg_tstamp;
     bit<8>          drop_reason;
+    bit<16>         ip_eth_type;
 #ifdef WITH_SPGW
     @padding bit<7> _pad2;
     bit<1>          strip_gtpu;
