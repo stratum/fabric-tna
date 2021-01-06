@@ -603,7 +603,7 @@ public class FabricIntProgrammableTest {
         }
 
         PiAction expectedPiAction = PiAction.builder()
-                .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INIT_METADATA)
+                .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INIT_INT_MIRROR_METADATA)
                 .withParameter(new PiActionParam(P4InfoConstants.SWITCH_ID, NODE_SID_IPV4))
                 .build();
         TrafficTreatment expectedTreatment = DefaultTrafficTreatment.builder()

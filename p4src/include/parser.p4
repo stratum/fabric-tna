@@ -6,6 +6,9 @@
 
 #include "header.p4"
 #include "define.p4"
+#ifdef WITH_INT
+#include "int/int_mirror_parser.p4"
+#endif // WITH_INT
 
 parser FabricIngressParser (packet_in  packet,
     /* Fabric.p4 */
@@ -258,102 +261,6 @@ control FabricIngressDeparser(packet_out packet,
     }
 }
 
-#ifdef WITH_INT
-parser IntReportMirrorParser (packet_in packet,
-    /* Fabric.p4 */
-    out parsed_headers_t hdr,
-    out fabric_egress_metadata_t fabric_md,
-    /* TNA */
-    out egress_intrinsic_metadata_t eg_intr_md) {
-
-    state start {
-        packet.extract(fabric_md.int_mirror);
-        fabric_md.bridged.bridge_type = fabric_md.int_mirror.bridge_type;
-        fabric_md.bridged.vlan_id = DEFAULT_VLAN_ID;
-        transition parse_eth_hdr;
-    }
-
-    state parse_eth_hdr {
-        packet.extract(hdr.ethernet);
-        transition select(packet.lookahead<bit<16>>()) {
-#ifdef WITH_DOUBLE_VLAN_TERMINATION
-            ETHERTYPE_QINQ: parse_vlan_tag;
-#endif // WITH_DOUBLE_VLAN_TERMINATION
-            ETHERTYPE_VLAN &&& 0xEFFF: parse_vlan_tag;
-            default: check_eth_type;
-        }
-    }
-
-    state parse_vlan_tag {
-        packet.extract(hdr.vlan_tag);
-        transition select(packet.lookahead<bit<16>>()) {
-#if defined(WITH_XCONNECT) || defined(WITH_DOUBLE_VLAN_TERMINATION)
-            ETHERTYPE_VLAN: parse_inner_vlan_tag;
-#endif // WITH_XCONNECT || WITH_DOUBLE_VLAN_TERMINATION
-            default: check_eth_type;
-        }
-    }
-
-    state check_eth_type {
-        packet.extract(hdr.eth_type);
-#ifdef WITH_SPGW
-        transition select(hdr.eth_type.value, fabric_md.int_mirror.strip_gtpu) {
-            (ETHERTYPE_MPLS, 0): strip_mpls_only;
-            (ETHERTYPE_MPLS, 1): strip_mpls_and_gtpu;
-            (ETHERTYPE_IPV4, 0): accept;
-            (ETHERTYPE_IPV4, 1): strip_ipv4_udp_gtpu;
-            (ETHERTYPE_IPV6, 0): accept;
-            (ETHERTYPE_IPV6, 1): strip_ipv6_udp_gtpu;
-            default: reject;
-        }
-#else
-        transition select(hdr.eth_type.value) {
-            ETHERTYPE_MPLS: strip_mpls_only;
-            ETHERTYPE_IPV4: accept;
-            ETHERTYPE_IPV6: accept;
-            default: reject;
-        }
-#endif // WITH_SPGW
-    }
-
-    // We expect MPLS to be present only for egress-to-egress clones for INT
-    // reporting, in which case we need to remove the MPLS header as not
-    // supported by the collector. For all other cases, the MPLS label is
-    // always popped in ingress and pushed again in egress (if present in
-    // bridged metadata).
-    // After stripping the MPLS header, we still need to fix the ethertype.
-    // We will do this in the beginning of the INT control block.
-    state strip_mpls_only {
-        fabric_md.mpls_stripped = 1;
-        packet.advance(MPLS_HDR_BYTES * 8);
-        transition accept;
-    }
-
-#ifdef WITH_SPGW
-    state strip_mpls_and_gtpu {
-        fabric_md.mpls_stripped = 1;
-        packet.advance(MPLS_HDR_BYTES * 8);
-        transition select(packet.lookahead<bit<IP_VER_BITS>>()) {
-            IP_VERSION_4: strip_ipv4_udp_gtpu;
-            IP_VERSION_6: strip_ipv6_udp_gtpu;
-            default: reject;
-        }
-    }
-
-    state strip_ipv4_udp_gtpu {
-        packet.advance((IPV4_HDR_BYTES + UDP_HDR_BYTES + GTP_HDR_BYTES) * 8);
-        transition accept;
-    }
-
-    state strip_ipv6_udp_gtpu {
-        packet.advance((IPV6_HDR_BYTES + UDP_HDR_BYTES + GTP_HDR_BYTES) * 8);
-        transition accept;
-    }
-#endif // WITH_SPGW
-}
-
-#endif // WITH_INT
-
 parser FabricEgressParser (packet_in packet,
     /* Fabric.p4 */
     out parsed_headers_t hdr,
@@ -375,7 +282,7 @@ parser FabricEgressParser (packet_in packet,
         transition select(common_eg_md.bridge_type, common_eg_md.mirror_type) {
             (BridgeType_t.INGRESS_TO_EGRESS, _): parse_bridged_md;
 #ifdef WITH_INT
-            (BridgeType_t.EGRESS_MIRROR,  MirrorType_t.INT_LOCAL_REPORT): parse_int_report_mirror;
+            (BridgeType_t.EGRESS_MIRROR,  FabricMirrorType_t.INT_LOCAL_REPORT): parse_int_report_mirror;
 #endif // WITH_INT
             default: reject;
         }
@@ -539,8 +446,8 @@ control FabricEgressMirror(
     Mirror() mirror;
     apply {
 #ifdef WITH_INT
-        if (ig_intr_md_for_dprsr.mirror_type == (bit<3>)MirrorType_t.INT_LOCAL_REPORT) {
-            mirror.emit<int_mirror_metadata_t>(fabric_md.mirror.mirror_session_id,
+        if (ig_intr_md_for_dprsr.mirror_type == (bit<3>)FabricMirrorType_t.INT_LOCAL_REPORT) {
+            mirror.emit<int_mirror_metadata_t>(fabric_md.int_mirror.mirror_session_id,
                                                fabric_md.int_mirror);
         }
 #endif // WITH_INT

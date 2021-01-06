@@ -249,7 +249,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 P4InfoConstants.SWITCH_ID, cfg.nodeSidIPv4());
 
         final PiAction collectorAction = PiAction.builder()
-                .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INIT_METADATA)
+                .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INIT_INT_MIRROR_METADATA)
                 .withParameter(switchIdParam)
                 .build();
 

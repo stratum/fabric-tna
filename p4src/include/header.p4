@@ -135,9 +135,9 @@ header gtpu_t {
 // Custom metadata definition
 
 header common_egress_metadata_t {
-    BridgeType_t    bridge_type;
-    @padding bit<5> _pad;
-    MirrorType_t    mirror_type;
+    BridgeType_t          bridge_type;
+    @padding bit<5>       _pad;
+    FabricMirrorType_t    mirror_type;
 }
 
 #ifdef WITH_SPGW
@@ -194,22 +194,11 @@ header bridged_metadata_t {
 #endif // WITH_SPGW
 }
 
-@flexible
-@pa_no_overlay("egress", "fabric_md.mirror.bridge_type")
-@pa_no_overlay("egress", "fabric_md.mirror.mirror_type")
-@pa_no_overlay("egress", "fabric_md.mirror.mirror_session_id")
-header mirror_metadata_t {
-    BridgeType_t    bridge_type;
-    MirrorType_t    mirror_type;
-    MirrorId_t      mirror_session_id;
-}
-
 // Ingress pipeline-only metadata
 @flexible
 @pa_auto_init_metadata
 struct fabric_ingress_metadata_t {
     bridged_metadata_t      bridged;
-    mirror_metadata_t       mirror;
     bit<32>                 ipv4_src;
     bit<32>                 ipv4_dst;
     bool                    ipv4_checksum_err;
@@ -230,7 +219,6 @@ struct fabric_ingress_metadata_t {
 @pa_auto_init_metadata
 struct fabric_egress_metadata_t {
     bridged_metadata_t    bridged;
-    mirror_metadata_t     mirror;
     PortId_t              cpu_port;
 #ifdef WITH_SPGW
     bool                  inner_ipv4_checksum_err;

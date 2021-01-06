@@ -86,7 +86,7 @@ control FlowReportFilter(
         flag = flag | filter_get_and_set2.execute(fabric_md.bridged.flow_hash[15:0]);
         // Generate report only when ALL register actions detect a change.
         if (flag == 1) {
-            eg_dprsr_md.mirror_type = (bit<3>)MirrorType_t.INVALID;
+            eg_dprsr_md.mirror_type = (bit<3>)FabricMirrorType_t.INVALID;
         }
     }
 }
@@ -192,7 +192,7 @@ control IntEgress (
             @defaultonly nop();
         }
         default_action = nop;
-        const size = 2; // Drop report and local report
+        const size = 3; // Flow, Drop, and Queue report.
     }
 
     @hidden
@@ -218,11 +218,11 @@ control IntEgress (
         }
     }
 
-    action init_metadata(bit<32> switch_id) {
+    action init_int_mirror_metadata(bit<32> switch_id) {
         fabric_md.int_mirror.setValid();
         fabric_md.int_mirror.bridge_type = BridgeType_t.EGRESS_MIRROR;
-        fabric_md.int_mirror.mirror_type = MirrorType_t.INT_LOCAL_REPORT;
-        eg_dprsr_md.mirror_type = (bit<3>)MirrorType_t.INT_LOCAL_REPORT;
+        fabric_md.int_mirror.mirror_type = FabricMirrorType_t.INT_LOCAL_REPORT;
+        eg_dprsr_md.mirror_type = (bit<3>)FabricMirrorType_t.INT_LOCAL_REPORT;
         fabric_md.int_mirror.switch_id = switch_id;
         fabric_md.int_mirror.ig_port = (bit<16>)fabric_md.bridged.ig_port;
         fabric_md.int_mirror.eg_port = (bit<16>)eg_intr_md.egress_port;
@@ -245,7 +245,7 @@ control IntEgress (
             fabric_md.bridged.l4_dport : range @name("l4_dport");
         }
         actions = {
-            init_metadata;
+            init_int_mirror_metadata;
             @defaultonly nop();
         }
         const default_action = nop();
@@ -255,7 +255,6 @@ control IntEgress (
     @hidden
     action set_mirror_session_id(MirrorId_t sid) {
         fabric_md.int_mirror.mirror_session_id = sid;
-        fabric_md.mirror.mirror_session_id = sid;
     }
 
     @hidden
@@ -282,8 +281,7 @@ control IntEgress (
             // Is a mirror packet for INT drop/local report.
             report_seq_no_and_hw_id.apply();
             // Remove the INT mirror metadata to prevent egress mirroring again.
-            fabric_md.mirror.mirror_type = MirrorType_t.INVALID;
-            eg_dprsr_md.mirror_type = (bit<3>)MirrorType_t.INVALID;
+            eg_dprsr_md.mirror_type = (bit<3>)FabricMirrorType_t.INVALID;
 #ifdef WITH_SPGW
             if (fabric_md.int_mirror.strip_gtpu == 1) {
                 // We need to remove length of IP, UDP, and GTPU headers

@@ -45,7 +45,7 @@ header_union local_report_t {
 
 // Since we don't parse the packet in the egress parser if
 // we receive a packet from egress mirror, the compiler
-// may mark the mirror metadata and other headers (e.g., IPv4)
+// may mark the mirror metadata and other headers (e.g., Report headers)
 // as "mutually exclusive".
 // Here we set the mirror metadata with "no overlay" to prevent this.
 @pa_no_overlay("egress", "fabric_md.int_mirror.bridge_type")
@@ -63,23 +63,23 @@ header_union local_report_t {
 @pa_no_overlay("egress", "fabric_md.int_mirror.strip_gtpu")
 #endif // WITH_SPGW
 header int_mirror_metadata_t {
-    BridgeType_t    bridge_type;
-    @padding bit<5> _pad0;
-    MirrorType_t    mirror_type;
-    @padding bit<6> _pad1;
-    MirrorId_t      mirror_session_id;
-    bit<32>         switch_id;
-    bit<16>         ig_port;
-    bit<16>         eg_port;
-    bit<8>          queue_id;
-    bit<24>         queue_occupancy;
-    bit<32>         ig_tstamp;
-    bit<32>         eg_tstamp;
-    bit<8>          drop_reason;
-    bit<16>         ip_eth_type;
+    BridgeType_t          bridge_type;
+    @padding bit<5>       _pad0;
+    FabricMirrorType_t    mirror_type;
+    @padding bit<6>       _pad1;
+    MirrorId_t            mirror_session_id;
+    bit<32>               switch_id;
+    bit<16>               ig_port;
+    bit<16>               eg_port;
+    bit<8>                queue_id;
+    bit<24>               queue_occupancy;
+    bit<32>               ig_tstamp;
+    bit<32>               eg_tstamp;
+    bit<8>                drop_reason;
+    bit<16>               ip_eth_type;
 #ifdef WITH_SPGW
-    @padding bit<7> _pad2;
-    bit<1>          strip_gtpu;
+    @padding bit<7>       _pad2;
+    bit<1>                strip_gtpu;
 #endif // WITH_SPGW
 }
 #endif // __INT_HEADER__

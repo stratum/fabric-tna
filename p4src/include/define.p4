@@ -106,6 +106,8 @@ action nop() {
     NoAction();
 }
 
+// The bridge metadata type, which will make the parser to understand
+// the type of the metadata prepand to the packet.
 enum bit<8> BridgeType_t {
     INVALID = 0,
     INGRESS_TO_EGRESS = 1,
@@ -113,7 +115,11 @@ enum bit<8> BridgeType_t {
     EGRESS_MIRROR = 3
 }
 
-enum bit<3> MirrorType_t {
+// The mirror type, makes the parser to use correct way to parse the mirror metadata.
+// Also, lets the deparser know which type of mirroring to perform.
+// The width of mirror type is same as the MirrorType_t(bit<3>) so we can easily to use
+// it in the deparser.
+enum bit<3> FabricMirrorType_t {
     INVALID = 0,
     SIMPLE = 1,
     INT_LOCAL_REPORT = 2,
@@ -134,8 +140,6 @@ enum bit<2> CpuLoopbackMode_t {
     // hdr.packet_out.egress_port)
     INGRESS = 2
 }
-
-const MirrorId_t MIRROR_SESSION_ID_INVALID = 0;
 
 // Recirculation ports for each HW pipe.
 const PortId_t RECIRC_PORT_PIPE_0 = 0x44;

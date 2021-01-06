@@ -2230,7 +2230,7 @@ class IntTest(IPv4UnicastTest):
                 self.Range("l4_sport", sport_low, sport_high),
                 self.Range("l4_dport", dport_low, dport_high),
             ],
-            "init_metadata",
+            "init_int_mirror_metadata",
             [("switch_id", switch_id_)],
             priority=DEFAULT_PRIORITY,
         )

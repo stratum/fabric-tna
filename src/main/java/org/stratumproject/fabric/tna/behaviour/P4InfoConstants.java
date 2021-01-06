@@ -143,8 +143,8 @@ public final class P4InfoConstants {
             PiActionId.of("FabricEgress.int_egress.do_report_encap_mpls");
     public static final PiActionId FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_SET_CONFIG =
             PiActionId.of("FabricEgress.int_egress.flow_report_filter.set_config");
-    public static final PiActionId FABRIC_EGRESS_INT_EGRESS_INIT_METADATA =
-            PiActionId.of("FabricEgress.int_egress.init_metadata");
+    public static final PiActionId FABRIC_EGRESS_INT_EGRESS_INIT_INT_MIRROR_METADATA =
+            PiActionId.of("FabricEgress.int_egress.init_int_mirror_metadata");
     public static final PiActionId FABRIC_EGRESS_PKT_IO_EGRESS_SET_SWITCH_INFO =
             PiActionId.of("FabricEgress.pkt_io_egress.set_switch_info");
     public static final PiActionId FABRIC_INGRESS_ACL_COPY_TO_CPU =
