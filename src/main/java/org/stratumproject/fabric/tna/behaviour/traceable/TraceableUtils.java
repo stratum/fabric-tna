@@ -8,6 +8,7 @@ import org.onosproject.net.pi.model.PiMatchType;
 import org.onosproject.net.pi.runtime.PiLpmFieldMatch;
 import org.onosproject.net.pi.runtime.PiTableEntry;
 import org.onosproject.net.pi.runtime.PiTernaryFieldMatch;
+import org.stratumproject.fabric.tna.behaviour.P4InfoConstants;
 
 import java.util.Objects;
 
@@ -37,11 +38,13 @@ final class TraceableUtils {
         PiLpmFieldMatch bestLpm = (PiLpmFieldMatch) best.matchKey().fieldMatches().stream()
                 .filter(matches -> Objects.equals(matches.type(), PiMatchType.LPM))
                 .findFirst()
-                .orElse(null);
+                .orElse(new PiLpmFieldMatch(P4InfoConstants.HDR_IPV4_DST,
+                        copyFrom(0x00000000), 0));
         PiLpmFieldMatch candidateLpm = (PiLpmFieldMatch) candidate.matchKey().fieldMatches().stream()
                 .filter(matches -> Objects.equals(matches.type(), PiMatchType.LPM))
                 .findFirst()
-                .orElse(null);
+                .orElse(new PiLpmFieldMatch(P4InfoConstants.HDR_IPV4_DST,
+                        copyFrom(0x00000000), 0));
         return bestLpm.prefixLength() > candidateLpm.prefixLength() ? best : candidate;
     }
 
