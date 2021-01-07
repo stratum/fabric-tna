@@ -438,9 +438,10 @@ final class TraceableDataPlaneObjects {
     }
 
     private static FlowRule buildIPv4RoutingRule(IpPrefix ipDst, Integer nextId) {
-        TrafficSelector selector = DefaultTrafficSelector.builder()
-                .matchIPDst(ipDst)
-                .build();
+        TrafficSelector.Builder selectorBuilder = DefaultTrafficSelector.builder();
+        if (ipDst.prefixLength() != 0) {
+            selectorBuilder.matchIPDst(ipDst);
+        }
         PiActionParam nextIdParam = new PiActionParam(P4InfoConstants.NEXT_ID, nextId);
         PiAction setNextIdAction = PiAction.builder()
                 .withParameter(nextIdParam)
@@ -454,7 +455,7 @@ final class TraceableDataPlaneObjects {
                 .forTable(P4InfoConstants.FABRIC_INGRESS_FORWARDING_ROUTING_V4)
                 .withPriority(PRIORITY)
                 .makePermanent()
-                .withSelector(selector)
+                .withSelector(selectorBuilder.build())
                 .withTreatment(setNextIdTreatment)
                 .fromApp(APP_ID)
                 .build();

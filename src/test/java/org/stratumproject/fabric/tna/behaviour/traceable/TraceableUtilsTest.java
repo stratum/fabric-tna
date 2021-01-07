@@ -137,6 +137,15 @@ public class TraceableUtilsTest extends PipelineTraceableTest {
             .withAction(PiAction.builder().withId(PiActionId.of(DROP)).build())
             .withTimeout(100)
             .build();
+    private static final PiMatchKey DEFAULT_MATCH_KEY = PiMatchKey.builder()
+            .build();
+    private static final PiTableEntry DEFAULT_LPM_ENTRY = PiTableEntry.builder()
+            .forTable(P4InfoConstants.FABRIC_INGRESS_FORWARDING_ROUTING_V4)
+            .withCookie(0xac)
+            .withMatchKey(DEFAULT_MATCH_KEY)
+            .withAction(PiAction.builder().withId(PiActionId.of(DROP)).build())
+            .withTimeout(100)
+            .build();
 
 
     /**
@@ -294,6 +303,24 @@ public class TraceableUtilsTest extends PipelineTraceableTest {
         // best prefixLenght is 24 vs 32 and 16
         assertEquals(CANDIDATE_LPM_ENTRY_1, TraceableUtils.selectBestLpmEntry(BEST_LPM_ENTRY, CANDIDATE_LPM_ENTRY_1));
         assertEquals(BEST_LPM_ENTRY, TraceableUtils.selectBestLpmEntry(BEST_LPM_ENTRY, CANDIDATE_LPM_ENTRY_2));
+    }
+
+    /**
+     * Tests select best lpm entry using default.
+     */
+    @Test
+    public void testSelectBestLpmEntryWithDefault() {
+        // best prefixLength 0 vs 16, 24 and 32
+        assertEquals(CANDIDATE_LPM_ENTRY_1, TraceableUtils.selectBestLpmEntry(DEFAULT_LPM_ENTRY,
+                CANDIDATE_LPM_ENTRY_1));
+        assertEquals(CANDIDATE_LPM_ENTRY_1, TraceableUtils.selectBestLpmEntry(CANDIDATE_LPM_ENTRY_1,
+                DEFAULT_LPM_ENTRY));
+        assertEquals(CANDIDATE_LPM_ENTRY_2, TraceableUtils.selectBestLpmEntry(DEFAULT_LPM_ENTRY,
+                CANDIDATE_LPM_ENTRY_2));
+        assertEquals(CANDIDATE_LPM_ENTRY_2, TraceableUtils.selectBestLpmEntry(CANDIDATE_LPM_ENTRY_2,
+                DEFAULT_LPM_ENTRY));
+        assertEquals(BEST_LPM_ENTRY, TraceableUtils.selectBestLpmEntry(DEFAULT_LPM_ENTRY, BEST_LPM_ENTRY));
+        assertEquals(BEST_LPM_ENTRY, TraceableUtils.selectBestLpmEntry(BEST_LPM_ENTRY, DEFAULT_LPM_ENTRY));
     }
 
 }
