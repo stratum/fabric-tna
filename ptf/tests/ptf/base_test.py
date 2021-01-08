@@ -236,6 +236,7 @@ class P4RuntimeTest(BaseTest):
             "actions",
             "counters",
             "direct_counters",
+            "registers",
         ]:
             for obj in getattr(self.p4info, p4_obj_type):
                 pre = obj.preamble
@@ -822,6 +823,30 @@ class P4RuntimeTest(BaseTest):
             counter_data.packet_count = packet_count
         return req, self.write_request(req, store=False)
 
+    def write_register(self, reg_name, index, data):
+        req = self.get_new_write_request()
+        update = req.updates.add()
+        update.type = p4runtime_pb2.Update.MODIFY
+        register_entry = update.entity.register_entry
+        register_entry.register_id = self.get_register_id(reg_name)
+        register_entry.index.index = index
+        register_entry.data.CopyFrom(data)
+
+        return req, self.write_request(req, store=False)
+
+    def read_register(self, reg_name, index=None):
+        req = self.get_new_read_request()
+        entity = req.entities.add()
+        register_entry = entity.register_entry
+        register_entry.register_id = self.get_register_id(reg_name)
+        if index is not None:
+            register_entry.index.index = index
+
+        for entity in self.read_request(req):
+            if entity.HasField("register_entry"):
+                return entity.register_entry
+        return None
+
     def read_table_entry(self, t_name, mk, priority=0):
         req = self.get_new_read_request()
         entity = req.entities.add()
@@ -998,6 +1023,41 @@ class P4RuntimeTest(BaseTest):
                     )
         return None
 
+    def verify_register(self, reg_name, index, expected_data):
+        reg = self.read_register(reg_name, index)
+        if reg.index.index != index:
+            self.fail("Incorrect index\n" + format_exp_rcv(index, reg.index.index))
+        if reg.data != expected_data:
+            self.fail("Incorrect data:\n" + format_exp_rcv(expected_data, reg.data))
+
+        return None
+
+        # TODO: check about tv generation
+        req = self.get_new_read_request()
+        entity = req.entities.add()
+        direct_counter_entry = entity.direct_counter_entry
+        direct_counter_entry.table_entry.CopyFrom(table_entry)
+
+        if self.generate_tv:
+            exp_resp = self.get_new_read_response()
+            entity = exp_resp.entities.add()
+            entity.direct_counter_entry.table_entry.CopyFrom(table_entry)
+            entity.direct_counter_entry.data.byte_count = expected_byte_count
+            entity.direct_counter_entry.data.packet_count = expected_packet_count
+            # add to list
+            exp_resps = []
+            exp_resps.append(exp_resp)
+            tvutils.add_read_expectation(self.tc, req, exp_resps)
+            return None
+
+        for entity in self.read_request(req):
+            if entity.HasField("direct_counter_entry"):
+                direct_counter = entity.direct_counter_entry
+                if direct_counter.data.byte_count != expected_byte_count or \
+                        direct_counter.data.packet_count != expected_packet_count:
+                    self.fail("Incorrect direct counter value:\n" + str(direct_counter))
+        return None
+
     def is_default_action_update(self, update):
         return (
             update.type == p4runtime_pb2.Update.MODIFY
@@ -1045,6 +1105,7 @@ for obj_type, nickname in [
     ("actions", "action"),
     ("counters", "counter"),
     ("direct_counters", "direct_counter"),
+    ("registers", "register"),
 ]:
     name = "_".join(["get", nickname])
     setattr(P4RuntimeTest, name, partialmethod(P4RuntimeTest.get_obj, obj_type))

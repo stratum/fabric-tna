@@ -1670,6 +1670,35 @@ class CounterTest(BridgingTest):
         self.doRunTest()
 
 
+@group("p4rt")
+class RegisterTest(FabricTest):
+    @tvsetup
+    @autocleanup
+    def doRunTest(self):
+        register_name = "pipe.FabricEgress.int_egress.seq_number"
+        index = 1
+        default_data = p4data_pb2.P4Data()
+        default_data.bitstring = stringify(0x0, 1)
+        # Check that the default reset value is written.
+        self.verify_register(register_name, index, default_data)
+
+        # Write a new value and verify be reading it back.
+        data = p4data_pb2.P4Data()
+        data.bitstring = stringify(0xabcd, 2)
+        req, _ = self.write_register(register_name, index, data)
+        self.verify_register(register_name, index, data)
+
+        # Check the regular register reset.
+        time.sleep(3)
+        self.verify_register(register_name, index, default_data)
+
+        # Wildcard read
+        self.read_register(register_name)
+
+    def runTest(self):
+        print("")
+        self.doRunTest()
+
 # FIXME: remove when will start running TVs on hardware
 class FabricIpv4UnicastLoopbackModeTest(IPv4UnicastTest):
     """Emulates TV loopback mode for Ipv4UnicastTest"""
