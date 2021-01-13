@@ -13,7 +13,7 @@ FABRIC_TNA="${FP4TEST_ROOT}"/..
 TESTER_DOCKER_IMG=stratumproject/testvectors:ptf-py3
 SDE_VERSION=${SDE_VERSION:-9.2.0}
 # TODO: instrument CI to test on both a stable version and the latest one.
-STRATUM_BF_DOCKER_IMG=${STRATUM_BF_DOCKER_IMG:-registry.aetherproject.org/tost/stratum-bfrt:20201204-9.2.0}
+STRATUM_BF_DOCKER_IMG=${STRATUM_BF_DOCKER_IMG:-stratumproject/stratum-bfrt:20.12-${SDE_VERSION}}
 STRATUM_BF_DOCKER_FLAG=${STRATUM_BF_DOCKER_FLAG:-}
 SDE_DOCKER_IMG=${SDE_DOCKER_IMG:-opennetworking/bf-sde:9.2.0-tm}
 
