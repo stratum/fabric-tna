@@ -32,6 +32,7 @@ from ptf import config
 from ptf.base_tests import BaseTest
 from ptf.dataplane import match_exp_pkt
 from scapy.layers.l2 import Ether
+
 # PTF-to-TestVector translation utils
 # https://github.com/stratum/testvectors/tree/master/utils/python
 from testvector import tvutils
