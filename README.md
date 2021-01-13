@@ -35,11 +35,15 @@ To use ONOS to control a Tofino switch, you will need to run the
 To compile the P4 program with a given `<profile>` configuration, using a
 locally installed version of the `bf-p4c` compiler:
 
-    make <profile>
+```bash
+make <profile>
+```
 
 If you have access to a containerized version of the Intel Barefoot SDE:
 
-    make <profile> SDE_DOCKER_IMG=my-docker-repo/bf-sde:9.2.0
+```bash
+make <profile> SDE_DOCKER_IMG=my-docker-repo/bf-sde:9.2.0
+```
 
 The available profiles are:
 
@@ -53,12 +57,16 @@ The available profiles are:
 
 To run PTF tests on Stratum using a containerized version of `tofino-model`:
 
-    SDE_DOCKER_IMG=my-docker-repo/bf-sde:9.2.0-tm ./ptf/run/tm/run <profile>
+```bash
+SDE_DOCKER_IMG=my-docker-repo/bf-sde:9.2.0-tm ./ptf/run/tm/run <profile>
+```
 
 To build the ONOS pipeconf `.oar` package which includes the compiled P4
 artifacts for the previously built profile(s):
 
-    make pipeconf
+```bash
+make pipeconf
+```
 
 To learn more about pipeconfs, keep reading.
 
