@@ -4,9 +4,8 @@
 #ifndef __INT_MAIN__
 #define __INT_MAIN__
 
-#include "define.p4"
-#include "header.p4"
-
+#include "../define.p4"
+#include "../header.p4"
 
 control FlowReportFilter(
     inout parsed_headers_t hdr,
@@ -243,7 +242,7 @@ control IntEgress (
             @defaultonly nop();
         }
         const default_action = nop();
-        const size = WATCHLIST_TABLE_SIZE;
+        const size = INT_WATCHLIST_TABLE_SIZE;
     }
 
     @hidden

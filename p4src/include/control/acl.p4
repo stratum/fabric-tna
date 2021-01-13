@@ -23,7 +23,6 @@ control Acl (inout parsed_headers_t hdr,
         acl_counter.count();
     }
 
-    // Send immendiatelly to CPU - skip the rest of ingress.
     action punt_to_cpu() {
         ig_intr_md_for_tm.copy_to_cpu = 1;
         ig_intr_md_for_dprsr.drop_ctl = 1;

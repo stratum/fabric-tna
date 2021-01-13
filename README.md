@@ -7,79 +7,120 @@ SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 
 [![Build Status](https://jenkins.onosproject.org/buildStatus/icon?job=fabric-tna-postmerge)](https://jenkins.onosproject.org/job/fabric-tna-postmerge/)
 
-This repository contains `fabric-tna.p4`, a P4 program designed to work with
-[Trellis](trellis), a set of SDN applications running on top of ONOS
-to provide the control plane for an IP fabric based on MPLS segment-routing.
+`fabric-tna` is a P4 program designed to work with [Trellis](trellis), a set of
+SDN applications running on top of ONOS to provide the control plane for an IP
+fabric based on MPLS segment-routing.
 
 `fabric-tna.p4` is based on the Tofino Native Architecture (TNA), hence it
 can be used to program any switch based on the Intel Barefoot Tofino ASIC.
 
-To use ONOS to control a Tofino-enabled switch, you will need to run the
+`fabric-tna.p4` is not to be confused with [fabric.p4], which is based on the
+v1model architecture and is hosted in the ONOS repository. `fabric-tna.p4`
+follows a similar design to `fabric.p4`, but has evolved significantly to
+provide more advanced capabilities for Inband Network Telemetry (INT) and 45/5G
+mobile user plane (a.k.a. SPGW in 45 or UPF in 5G).
+
+To use ONOS to control a Tofino switch, you will need to run the
 [Stratum][stratum] agent on the switch.
 
 ## Requirements
 
-* Barefoot SDE >= 9.2.0 (with the P4_16 compiler for Tofino)
+* Barefoot SDE = 9.2.0 (with the P4_16 compiler for Tofino)
 * ONOS >= 2.2.7
 * Docker (to run the build scripts without worrying about dependencies)
 * cURL (to interact with the ONOS REST APIs)
 
-## Steps to build Tofino-enabled fabric-tna.p4 pipeconfs
+## Quick steps
+
+To compile the P4 program with a given `<profile>` configuration, using a
+locally installed version of the `bf-p4c` compiler:
+
+```bash
+make <profile>
+```
+
+If you have access to a containerized version of the Intel Barefoot SDE:
+
+```bash
+make <profile> SDE_DOCKER_IMG=my-docker-repo/bf-sde:9.2.0
+```
+
+The available profiles are:
+
+| Profile name            | Description                                        |
+| ------------------------|----------------------------------------------------|
+| `fabric`                | Basic Trellis IP/MPLS forwarding capabilities      |
+| `fabric-bng`            | With BNG user plane support (Not available yet)    |
+| `fabric-spgw`           | With 4G/5G mobile user plane support               |
+| `fabric-int`            | With INT support                                   |
+| `fabric-spgw-int`       | WITH SPGW and INT support                          |
+
+To run PTF tests on Stratum using a containerized version of `tofino-model`:
+
+```bash
+SDE_DOCKER_IMG=my-docker-repo/bf-sde:9.2.0-tm ./ptf/run/tm/run <profile>
+```
+
+To build the ONOS pipeconf `.oar` package which includes the compiled P4
+artifacts for the previously built profile(s):
+
+```bash
+make pipeconf
+```
+
+To learn more about pipeconfs, keep reading.
+
+For more information about running PTF tests, check [ptf/README.md](ptf/README.md).
+
+## Detailed steps to build the fabric-tna pipeconf
 
 ONOS uses "pipeconfs" to deploy and manage a given P4 program on a device.
-Pipeconfs are distrubuted as ONOS applications, hence using the `.oar`
-packaging. The following steps provide instructions on how to generate an oar
-package that includes a compiled version of `fabric-tna.p4` that works on Tofino.
+Pipeconfs include mainly two things:
 
-* `src/main/java`: contains Java code that implements the ONOS drivers to control
-  a switch programmed with `fabric-tna.p4`
+1. the P4 compiled artifacts (e.g., `tofino.bin`, `context.json`, etc.) to
+deploy on devices.
+2. Java classes implementing ONOS driver behaviors to control capabilities of
+the particular P4 program.
+
+Pipeconfs are distributed as ONOS applications, hence using the `.oar`
+packaging. The following steps provide instructions on how to generate an oar
+package that includes one or more profiles.
+
+The code is organized as follows:
 * `p4src`: contains the P4 code
+* `ptf`: contains PTF tests for the P4 code
+* `src`: contains Java implementation and tests for the pipeconf
 
 To learn more about pipeconfs and how ONOS supports P4-programmable devices:
 <https://github.com/opennetworkinglab/ngsdn-tutorial>
 
-### Build Tofino-enabled fabric-tna pipeconf
-
 To build `fabric-tna.p4` using the Barefoot compiler and to create the pipeconf
-`.oar` package:
+`.oar` package in one command:
 
 ```bash
 make build PROFILES=all
 ```
 
-#### Fabric-TNA profiles
-
-The above command will build the `fabric-tna.p4` profiles specified in the
-`PROFILES` argument. Possible values are:
-
-| Profile name            | Description                                        |
-| ------------------------|----------------------------------------------------|
-| `fabric`                | Basic profile                                      |
-| `fabric-bng`            | With BNG user plane support (Not available)        |
-| `fabric-spgw`           | With SPGW user plane support                       |
-| `fabric-int`            | With INT support                                   |
-| `fabric-spgw-int`       | WITH SPGW and INT support                          |
-
-Check the `Makefile` for other profiles.
+This command will build the `fabric-tna.p4` profiles specified in the
+`PROFILES` argument.
 
 To build all profiles: `PROFILES=all`.
 
-To build a subset of the available profiles: `PROFILES="fabric fabric-int"`
+To build a subset of the available profiles separate them with whitespaces:
+`PROFILES="fabric fabric-int"`
 
-The P4 compiler outputs to include in the `.oar` package (such as `tofino.bin`,
-`context.json`, and `p4info.txt`) will be placed under
+The P4 compiler outputs to include in the `.oar` package will be placed under
 `src/main/resources/p4c-out`.
 
 When done, the pipeconf `.oar` package can be found in
 `target/fabric-tna-<VERSION>.oar`
 
-#### Using containerized version of the Barefoot SDE / p4c compiler
+### Using containerized version of the Barefoot SDE / p4c compiler
 
 The previous command expects the `bf-p4c` compiler to be installed locally. As an
 alternative, the build script supports using a Docker-based distribution of the
 Barefoot SDE / p4c compiler. To do so, simply set the `SDE_DOCKER_IMG`
-make argument (or environment variable) to a Docker image that can be downloaded
-via `docker pull`, for example:
+make argument (or environment variable) to a Docker image, for example:
 
 ```bash
 make build SDE_DOCKER_IMG=my-docker-repo/bf-sde:9.2.0-p4c PROFILES=all
@@ -92,14 +133,7 @@ whole Barefoot SDE installed in it or just the p4c package. In both cases, the
 can be easily generated by executing the SDE install instructions inside a
 Dockerfile.
 
-#### Using Barefoot P4 Insight
-
-```bash
-make p4i
-make p4i-stop
-```
-
-## Steps to use the Tofino-enabled fabric-tna pipeconf with ONOS
+## Steps to use the fabric-tna pipeconf with ONOS
 
 ### 1 - Get and run ONOS
 
@@ -117,7 +151,7 @@ For more information on how to get and run ONOS:
 
 ### 2 - Start Stratum on your switch
 
-For instructions on how to install and run Stratum on Tofino-enabled switches:
+For instructions on how to install and run Stratum on a Tofino switch:
 <https://github.com/stratum/stratum/tree/master/stratum/hal/bin/barefoot>
 
 ### 3 - Install pipeconf app in ONOS
@@ -136,8 +170,8 @@ This command is a wrapper to a `curl` command that uses the ONOS REST API to
 upload and activate the `.oar` package previously built.
 
 You should see the ONOS log updating with messages notifying the registration of
-new Tofino-specific pipeconfs in the system, depending on the `fabric-tna.p4`
-profiles compiled before and the Barefoot SDE/p4c version used:
+new pipeconfs in the system, depending on the profiles compiled before, and the
+Barefoot SDE/p4c version used:
 
 ```text
 New pipeconf registered: org.stratumproject.fabric.mavericks_sde_9_2_0 (fingerprint=...)
@@ -145,8 +179,7 @@ New pipeconf registered: org.stratumproject.fabric.montara_sde_9_2_0 (fingerprin
 ...
 ```
 
-**NOTE: it might take up to one minute for the pipeconfs to be registered.
-This is currently a bug and will be fixed soon.**
+**NOTE: it might take up to one minute for the pipeconfs to be registered.**
 
 To check all pipeconfs registered in the system, use the ONOS CLI:
 
@@ -163,7 +196,7 @@ onos> app activate org.onosproject.drivers.barefoot
 ```
 
 This command will register a new driver named `stratum-tofino`. As the name
-suggests, this driver allows ONOS to control Tofino-enabled Stratum switches.
+suggests, this driver allows ONOS to control Tofino switches running Stratum.
 
 For ONOS to be able to discover your switch, you need to push a JSON file,
 usually referred to as the "netcfg" file. We provide an example of such
@@ -225,11 +258,11 @@ provided in `tofino-netcfg.json`, for example:
 
 ## Support
 
-To report issues when compiling `fabric-tna.p4` for Tofino (i.e., compiler errors), please contact Intel/Barefoot support.
+To report issues when compiling `fabric-tna.p4` for Tofino (i.e., P4 compiler
+errors), please contact Intel/Barefoot support.
 
-To get help with ONOS and the fabric-tna pipeconf, please contact
-<brigade-p4@onosproject.org> (this is a public mailing list, please beware of
-not discussing information under Intel/Barefoot NDA)
+To report any other kind of problem, feel free to open a GitHub Issue or reach
+out to the project maintainers on the ONF Community Slack.
 
 [stratum]: https://github.com/stratum/stratum
 [trellis]: https://www.opennetworking.org/trellis
