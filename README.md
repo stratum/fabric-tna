@@ -15,9 +15,10 @@ fabric based on MPLS segment-routing.
 can be used to program any switch based on the Intel Barefoot Tofino ASIC.
 
 `fabric-tna.p4` is not to be confused with [fabric.p4], which is based on the
-v1model architecture and is hosted in ONOS repository. `fabric-tna.p4` is based
-on `fabric.p4`, but has evolved significantly to provide more advanced
-capabilities.
+v1model architecture and is hosted in the ONOS repository. `fabric-tna.p4`
+follows a similar design to `fabric.p4`, but has evolved significantly to
+provide more advanced capabilities for Inband Network Telemetry (INT) and 45/5G
+mobile user plane (a.k.a. SPGW in 45 or UPF in 5G).
 
 To use ONOS to control a Tofino switch, you will need to run the
 [Stratum][stratum] agent on the switch.
@@ -79,8 +80,8 @@ package that includes one or more profiles.
 
 The code is organized as follows:
 * `p4src`: contains the P4 code
-* `p4src`: contains PTF tests for the P4 code
-* `src/main/java`: contains Java implementation and tests for the pipeconf
+* `ptf`: contains PTF tests for the P4 code
+* `src`: contains Java implementation and tests for the pipeconf
 
 To learn more about pipeconfs and how ONOS supports P4-programmable devices:
 <https://github.com/opennetworkinglab/ngsdn-tutorial>
