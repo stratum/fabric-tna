@@ -123,7 +123,7 @@ The instructions to generate TVs are similar to running PTF tests on tofino-mode
     To generate a specific test case for a specific fabric profile,
     for example `test.FabricBridgingTest` for the `fabric-spgw` profile:
 
-    ```
+    ```bash
     ./run/tv/run fabric-spgw TEST=test.FabricBridgingTest
     ```
 
