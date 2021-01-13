@@ -7,13 +7,6 @@
 #define DEFAULT_PDR_CTR_ID 0
 #define DEFAULT_FAR_ID 0
 
-#define NUM_UES 2048
-
-#define MAX_PDR_COUNTERS 2*NUM_UES
-#define NUM_UPLINK_PDRS NUM_UES
-#define NUM_DOWNLINK_PDRS NUM_UES
-#define NUM_FARS 2*NUM_UES
-
 control DecapGtpu(inout parsed_headers_t            hdr,
                   inout fabric_ingress_metadata_t   fabric_md) {
     @hidden
@@ -201,7 +194,7 @@ control SpgwIngress(
                          ipv4_addr_t    tunnel_src_addr,
                          ipv4_addr_t    tunnel_dst_addr,
                          teid_t         teid) {
-        load_tunnel_far(drop, notify_cp, tunnel_src_port, 
+        load_tunnel_far(drop, notify_cp, tunnel_src_port,
                                    tunnel_src_addr, tunnel_dst_addr, teid);
         fabric_md.bridged.spgw.skip_egress_pdr_ctr = true;
     }
