@@ -18,7 +18,7 @@ can be used to program any switch based on the Intel Barefoot Tofino ASIC.
 v1model architecture and is hosted in the ONOS repository. `fabric-tna.p4`
 follows a similar design to `fabric.p4`, but has evolved significantly to
 provide more advanced capabilities for Inband Network Telemetry (INT) and 45/5G
-mobile user plane (a.k.a. SPGW in 45 or UPF in 5G).
+mobile user plane (a.k.a. SPGW in 4G or UPF in 5G).
 
 To use ONOS to control a Tofino switch, you will need to run the
 [Stratum][stratum] agent on the switch.
