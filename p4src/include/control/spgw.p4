@@ -7,13 +7,6 @@
 #define DEFAULT_PDR_CTR_ID 0
 #define DEFAULT_FAR_ID 0
 
-#define NUM_UES 2048
-
-#define MAX_PDR_COUNTERS 2*NUM_UES
-#define NUM_UPLINK_PDRS NUM_UES
-#define NUM_DOWNLINK_PDRS NUM_UES
-#define NUM_FARS 2*NUM_UES
-
 control DecapGtpu(inout parsed_headers_t            hdr,
                   inout fabric_ingress_metadata_t   fabric_md) {
     @hidden

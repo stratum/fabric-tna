@@ -74,10 +74,8 @@ control Filtering (inout parsed_headers_t hdr,
         fwd_classifier_counter.count();
     }
 
-    /*
-     * Counter that collects classes for all traffics.
-     */
 #ifdef WTIH_DEBUG
+    // FIXME: can this be removed? It was added to test indirect counters.
     Counter<bit<64>, bit<3>>(8, CounterType_t.PACKETS_AND_BYTES) fwd_type_counter;
 #endif
 

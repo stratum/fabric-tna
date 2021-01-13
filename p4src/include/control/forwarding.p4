@@ -28,7 +28,7 @@ control Forwarding (inout parsed_headers_t hdr,
 
     // FIXME: using ternary for eth_dst prevents our ability to scale in
     //  bridging heavy environments. Do we really need ternary? Can we come up
-    //  with a multi-table/algorithmic approach?
+    //  with a multi-table approach?
     table bridging {
         key = {
             fabric_md.bridged.vlan_id : exact @name("vlan_id");
