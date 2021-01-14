@@ -538,7 +538,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 .build();
         final TrafficSelector selector = DefaultTrafficSelector.builder()
                 .matchPi(PiCriterion.builder()
-                        .matchExact(P4InfoConstants.HDR_FABRIC_MD_INT_MIRROR_MIRROR_TYPE,
+                        .matchExact(P4InfoConstants.HDR_MIRROR_TYPE,
                                     MIRROR_TYPE_INT_LOCAL_REPORT)
                         .build())
                 .build();
