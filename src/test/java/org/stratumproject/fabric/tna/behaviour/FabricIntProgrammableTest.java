@@ -87,6 +87,7 @@ public class FabricIntProgrammableTest {
     private static final IpAddress COLLECTOR_IP = IpAddress.valueOf("10.128.0.1");
     private static final TpPort COLLECTOR_PORT = TpPort.tpPort(32766);
     private static final short MIRROR_TYPE_INT_REPORT = 1;
+    private static final short INT_REPORT_TYPE_LOCAL = 1;
     private static final HostLocation COLLECTOR_LOCATION = new HostLocation(LEAF_DEVICE_ID, PortNumber.P0, 0);
     private static final Host COLLECTOR_HOST =
             new DefaultHost(null, null, null, null, COLLECTOR_LOCATION, Sets.newHashSet());
@@ -272,10 +273,13 @@ public class FabricIntProgrammableTest {
         final IntDeviceConfig intConfig = buildIntDeviceConfig();
         final FlowRule expectedFlow = buildReportFlow(LEAF_DEVICE_ID, false);
         final FlowRule configRule = buildFilterConfigFlow(LEAF_DEVICE_ID, 0xffffff00);
+        final FlowRule mirrorRule = buildIntMirrorFlow(LEAF_DEVICE_ID);
         reset(flowRuleService);
         flowRuleService.applyFlowRules(eq(expectedFlow));
         expectLastCall().andVoid().once();
         flowRuleService.applyFlowRules(eq(configRule));
+        expectLastCall().andVoid().once();
+        flowRuleService.applyFlowRules(eq(mirrorRule));
         expectLastCall().andVoid().once();
         replay(flowRuleService);
         assertTrue(intProgrammable.setupIntConfig(intConfig));
@@ -296,10 +300,13 @@ public class FabricIntProgrammableTest {
         final IntDeviceConfig intConfig = buildIntDeviceConfig();
         final FlowRule expectedReportFlow = buildReportFlow(SPINE_DEVICE_ID, true);
         final FlowRule expectedFilterConfigFlow = buildFilterConfigFlow(SPINE_DEVICE_ID, 0xffffff00);
+        final FlowRule expectedMirrorRule = buildIntMirrorFlow(SPINE_DEVICE_ID);
         reset(flowRuleService);
         flowRuleService.applyFlowRules(eq(expectedReportFlow));
         expectLastCall().andVoid().once();
         flowRuleService.applyFlowRules(eq(expectedFilterConfigFlow));
+        expectLastCall().andVoid().once();
+        flowRuleService.applyFlowRules(eq(expectedMirrorRule));
         expectLastCall().andVoid().once();
         replay(flowRuleService);
         assertTrue(intProgrammable.setupIntConfig(intConfig));
@@ -347,7 +354,9 @@ public class FabricIntProgrammableTest {
                 buildFlowEntry(buildExpectedCollectorFlow(IPv4.PROTOCOL_ICMP)),
                 // Report table entry
                 buildFlowEntry(buildFilterConfigFlow(LEAF_DEVICE_ID, 0)),
-                buildFlowEntry(buildReportFlow(LEAF_DEVICE_ID, false))
+                buildFlowEntry(buildReportFlow(LEAF_DEVICE_ID, false)),
+                // INT mirror table entry
+                buildFlowEntry(buildIntMirrorFlow(LEAF_DEVICE_ID))
         );
         Set<FlowEntry> randomEntries = buildRandomFlowEntries();
         Set<FlowEntry> entries = Sets.newHashSet(intEntries);
@@ -615,7 +624,7 @@ public class FabricIntProgrammableTest {
                 .withTreatment(expectedTreatment)
                 .fromApp(APP_ID)
                 .withPriority(DEFAULT_PRIORITY)
-                .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_WATCHLIST)
+                .forTable(P4InfoConstants.FABRIC_INGRESS_INT_INGRESS_WATCHLIST)
                 .makePermanent()
                 .build();
     }
@@ -677,5 +686,41 @@ public class FabricIntProgrammableTest {
                 buildFlowEntry(rule1),
                 buildFlowEntry(rule2)
         );
+    }
+
+    private FlowRule buildIntMirrorFlow(DeviceId deviceId) {
+        final SegmentRoutingDeviceConfig cfg = netcfgService.getConfig(
+                deviceId, SegmentRoutingDeviceConfig.class);
+        if (cfg == null) {
+            return null;
+        }
+        final PiActionParam switchIdParam = new PiActionParam(
+                P4InfoConstants.SWITCH_ID, cfg.nodeSidIPv4());
+
+        final PiAction mirrorAction = PiAction.builder()
+                .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INIT_INT_MIRROR_METADATA)
+                .withParameter(switchIdParam)
+                .build();
+
+        final TrafficTreatment mirrorTreatment = DefaultTrafficTreatment.builder()
+                .piTableAction(mirrorAction)
+                .build();
+
+        final TrafficSelector mirrorSelector =
+                DefaultTrafficSelector.builder().matchPi(
+                        PiCriterion.builder().matchExact(
+                                P4InfoConstants.HDR_INT_REPORT_TYPE,
+                                INT_REPORT_TYPE_LOCAL).build())
+                        .build();
+
+        return DefaultFlowRule.builder()
+                .forDevice(deviceId)
+                .withSelector(mirrorSelector)
+                .withTreatment(mirrorTreatment)
+                .withPriority(DEFAULT_PRIORITY)
+                .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_MIRROR)
+                .fromApp(APP_ID)
+                .makePermanent()
+                .build();
     }
 }

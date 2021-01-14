@@ -86,11 +86,13 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
             Criterion.Type.TCP_SRC, Criterion.Type.TCP_DST);
 
     private static final Set<TableId> TABLES_TO_CLEANUP = Sets.newHashSet(
-            P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_WATCHLIST,
+            P4InfoConstants.FABRIC_INGRESS_INT_INGRESS_WATCHLIST,
             P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_REPORT,
+            P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_MIRROR,
             P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_CONFIG
     );
     private static final short MIRROR_TYPE_INT_REPORT = 1;
+    private static final short INT_REPORT_TYPE_LOCAL = 1;
 
     private FlowRuleService flowRuleService;
     private GroupService groupService;
@@ -237,34 +239,71 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         return functionality == IntFunctionality.POSTCARD;
     }
 
-    private FlowRule buildCollectorEntry(IntObjective obj) {
+    private FlowRule buildWatchlistEntry(IntObjective obj) {
         final SegmentRoutingDeviceConfig cfg = cfgService.getConfig(
                 deviceId, SegmentRoutingDeviceConfig.class);
         if (cfg == null) {
             log.warn("Missing SegmentRoutingDeviceConfig config for {}", deviceId);
             return null;
         }
+        final PiActionParam reportTypeParam = new PiActionParam(
+                P4InfoConstants.REPORT_TYPE, INT_REPORT_TYPE_LOCAL);
 
+        final PiAction watchlistAction = PiAction.builder()
+                .withId(P4InfoConstants.FABRIC_INGRESS_INT_INGRESS_MARK_REPORT)
+                .withParameter(reportTypeParam)
+                .build();
+
+        final TrafficTreatment watchlistTreatment = DefaultTrafficTreatment.builder()
+                .piTableAction(watchlistAction)
+                .build();
+
+        final TrafficSelector watchlistSelector =
+                buildCollectorSelector(obj.selector().criteria());
+
+        return DefaultFlowRule.builder()
+                .forDevice(deviceId)
+                .withSelector(watchlistSelector)
+                .withTreatment(watchlistTreatment)
+                .withPriority(DEFAULT_PRIORITY)
+                .forTable(P4InfoConstants.FABRIC_INGRESS_INT_INGRESS_WATCHLIST)
+                .fromApp(appId)
+                .makePermanent()
+                .build();
+    }
+
+    private FlowRule buildIntMirrorEntry() {
+        final SegmentRoutingDeviceConfig cfg = cfgService.getConfig(
+                deviceId, SegmentRoutingDeviceConfig.class);
+        if (cfg == null) {
+            log.warn("Missing SegmentRoutingDeviceConfig config for {}", deviceId);
+            return null;
+        }
         final PiActionParam switchIdParam = new PiActionParam(
                 P4InfoConstants.SWITCH_ID, cfg.nodeSidIPv4());
 
-        final PiAction collectorAction = PiAction.builder()
+        final PiAction mirrorAction = PiAction.builder()
                 .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INIT_INT_MIRROR_METADATA)
                 .withParameter(switchIdParam)
                 .build();
 
-        final TrafficTreatment collectorTreatment = DefaultTrafficTreatment.builder()
-                .piTableAction(collectorAction)
+        final TrafficTreatment mirrorTreatment = DefaultTrafficTreatment.builder()
+                .piTableAction(mirrorAction)
                 .build();
 
-        final TrafficSelector selector = buildCollectorSelector(obj.selector().criteria());
+        final TrafficSelector mirrorSelector =
+                DefaultTrafficSelector.builder().matchPi(
+                        PiCriterion.builder().matchExact(
+                                P4InfoConstants.HDR_INT_REPORT_TYPE,
+                                INT_REPORT_TYPE_LOCAL).build())
+                        .build();
 
         return DefaultFlowRule.builder()
                 .forDevice(deviceId)
-                .withSelector(selector)
-                .withTreatment(collectorTreatment)
+                .withSelector(mirrorSelector)
+                .withTreatment(mirrorTreatment)
                 .withPriority(DEFAULT_PRIORITY)
-                .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_WATCHLIST)
+                .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_MIRROR)
                 .fromApp(appId)
                 .makePermanent()
                 .build();
@@ -344,7 +383,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
             return false;
         }
 
-        final FlowRule flowRule = buildCollectorEntry(obj);
+        final FlowRule flowRule = buildWatchlistEntry(obj);
         if (flowRule != null) {
             if (install) {
                 flowRuleService.applyFlowRules(flowRule);
@@ -373,6 +412,10 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         final FlowRule filterConfigRule = buildFlowReportFilterConfigRule(cfg.minFlowHopLatencyChangeNs());
         flowRuleService.applyFlowRules(filterConfigRule);
         log.info("Report rule added to {} [{}]", this.data().deviceId(), filterConfigRule);
+
+        final FlowRule mirrorRule = buildIntMirrorEntry();
+        flowRuleService.applyFlowRules(mirrorRule);
+        log.info("Mirror rule added to {} [{}]", this.data().deviceId(), mirrorRule);
         return true;
     }
 

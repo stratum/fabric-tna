@@ -161,9 +161,9 @@ const bit<16> REPORT_FIXED_HEADER_BYTES = 12;
 const bit<16> DROP_REPORT_HEADER_BYTES = 12;
 const bit<16> LOCAL_REPORT_HEADER_BYTES = 16;
 #ifdef WITH_SPGW
-const bit<16> REPORT_MIRROR_HEADER_BYTES = 28;
+const bit<16> REPORT_MIRROR_HEADER_BYTES = 29;
 #else
-const bit<16> REPORT_MIRROR_HEADER_BYTES = 27;
+const bit<16> REPORT_MIRROR_HEADER_BYTES = 28;
 #endif // WITH_SPGW
 const bit<16> ETH_FCS_LEN = 4;
 
@@ -174,5 +174,12 @@ const MirrorId_t REPORT_MIRROR_SESS_PIPE_3 = 303;
 
 #define FLOW_REPORT_FILTER_WIDTH 16
 typedef bit<FLOW_REPORT_FILTER_WIDTH> flow_report_filter_index_t;
+
+enum bit<2> IntReportType_t {
+    NO_REPORT = 0,
+    LOCAL = 1,
+    DROP = 2,
+    QUEUE = 3
+}
 
 #endif // __DEFINE__
