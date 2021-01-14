@@ -19,6 +19,7 @@ from collections import OrderedDict
 import google.protobuf.text_format
 import grpc
 from p4.v1 import p4runtime_pb2, p4runtime_pb2_grpc
+
 # PTF-to-TestVector translation utils
 # https://github.com/stratum/testvectors/tree/master/utils/python
 from portmap import pmutils
