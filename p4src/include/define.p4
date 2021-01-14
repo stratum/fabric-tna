@@ -106,9 +106,9 @@ action nop() {
     NoAction();
 }
 
-// The bridge metadata type, which will make the parser to understand
-// the type of the metadata prepand to the packet.
-enum bit<8> BridgeType_t {
+// The bridged metadata type, which will make the parser understand
+// the type of the metadata prepended to the packet.
+enum bit<8> BridgedMdType_t {
     INVALID = 0,
     INGRESS_TO_EGRESS = 1,
     INGRESS_MIRROR = 2,
@@ -117,13 +117,12 @@ enum bit<8> BridgeType_t {
 
 // The mirror type, makes the parser to use correct way to parse the mirror metadata.
 // Also, lets the deparser know which type of mirroring to perform.
-// The width of mirror type is same as the MirrorType_t(bit<3>) so we can easily to use
+// The width of mirror type is same as TNA's MirrorType_t(bit<3>) so we can easily use
 // it in the deparser.
 enum bit<3> FabricMirrorType_t {
     INVALID = 0,
-    SIMPLE = 1,
-    INT_LOCAL_REPORT = 2,
-    INT_DROP_REPORT = 3
+    INT_LOCAL_REPORT = 1,
+    INT_DROP_REPORT = 2
 }
 
 // Modes for CPU loopback testing, where a process can inject packets through
@@ -164,9 +163,9 @@ const bit<16> REPORT_FIXED_HEADER_BYTES = 12;
 const bit<16> DROP_REPORT_HEADER_BYTES = 12;
 const bit<16> LOCAL_REPORT_HEADER_BYTES = 16;
 #ifdef WITH_SPGW
-const bit<16> REPORT_MIRROR_HEADER_BYTES = 24;
+const bit<16> REPORT_MIRROR_HEADER_BYTES = 28;
 #else
-const bit<16> REPORT_MIRROR_HEADER_BYTES = 23;
+const bit<16> REPORT_MIRROR_HEADER_BYTES = 27;
 #endif // WITH_SPGW
 const bit<16> ETH_FCS_LEN = 4;
 

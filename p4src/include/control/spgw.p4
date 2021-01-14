@@ -312,7 +312,7 @@ control SpgwEgress(
         hdr.outer_gtpu.teid = fabric_md.bridged.spgw.gtpu_teid;
 
 #ifdef WITH_INT
-            fabric_md.int_mirror.strip_gtpu = 1;
+            fabric_md.int_mirror_md.strip_gtpu = 1;
 #endif // WITH_INT
     }
 

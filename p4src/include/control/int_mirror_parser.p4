@@ -12,8 +12,8 @@ parser IntReportMirrorParser (packet_in packet,
     out egress_intrinsic_metadata_t eg_intr_md) {
 
     state start {
-        packet.extract(fabric_md.int_mirror);
-        fabric_md.bridged.bridge_type = fabric_md.int_mirror.bridge_type;
+        packet.extract(fabric_md.int_mirror_md);
+        fabric_md.bridged.bridged_md_type = fabric_md.int_mirror_md.bridged_md_type;
         fabric_md.bridged.vlan_id = DEFAULT_VLAN_ID;
         transition parse_eth_hdr;
     }
@@ -42,9 +42,9 @@ parser IntReportMirrorParser (packet_in packet,
     state check_eth_type {
         packet.extract(hdr.eth_type);
 #ifdef WITH_SPGW
-        transition select(hdr.eth_type.value, fabric_md.int_mirror.strip_gtpu) {
-            (ETHERTYPE_MPLS, 0): strip_mpls_only;
-            (ETHERTYPE_MPLS, 1): strip_mpls_and_gtpu;
+        transition select(hdr.eth_type.value, fabric_md.int_mirror_md.strip_gtpu) {
+            (ETHERTYPE_MPLS, _): strip_mpls;
+            (ETHERTYPE_MPLS, _): strip_mpls;
             (ETHERTYPE_IPV4, 0): accept;
             (ETHERTYPE_IPV4, 1): strip_ipv4_udp_gtpu;
             (ETHERTYPE_IPV6, 0): accept;
@@ -53,7 +53,7 @@ parser IntReportMirrorParser (packet_in packet,
         }
 #else
         transition select(hdr.eth_type.value) {
-            ETHERTYPE_MPLS: strip_mpls_only;
+            ETHERTYPE_MPLS: strip_mpls;
             ETHERTYPE_IPV4: accept;
             ETHERTYPE_IPV6: accept;
             default: reject;
@@ -68,23 +68,22 @@ parser IntReportMirrorParser (packet_in packet,
     // bridged metadata).
     // After stripping the MPLS header, we still need to fix the ethertype.
     // We will do this in the beginning of the INT control block.
-    state strip_mpls_only {
+    state strip_mpls {
         fabric_md.mpls_stripped = 1;
         packet.advance(MPLS_HDR_BYTES * 8);
+#ifdef WITH_SPGW
+        transition select(fabric_md.int_mirror_md.strip_gtpu, packet.lookahead<bit<IP_VER_BITS>>()) {
+            (1, IP_VERSION_4): strip_ipv4_udp_gtpu;
+            (1, IP_VERSION_6): strip_ipv6_udp_gtpu;
+            (0, _): accept;
+            default: reject;
+        }
+#else
         transition accept;
+#endif // WITH_SPGW
     }
 
 #ifdef WITH_SPGW
-    state strip_mpls_and_gtpu {
-        fabric_md.mpls_stripped = 1;
-        packet.advance(MPLS_HDR_BYTES * 8);
-        transition select(packet.lookahead<bit<IP_VER_BITS>>()) {
-            IP_VERSION_4: strip_ipv4_udp_gtpu;
-            IP_VERSION_6: strip_ipv6_udp_gtpu;
-            default: reject;
-        }
-    }
-
     state strip_ipv4_udp_gtpu {
         packet.advance((IPV4_HDR_BYTES + UDP_HDR_BYTES + GTP_HDR_BYTES) * 8);
         transition accept;
@@ -97,4 +96,4 @@ parser IntReportMirrorParser (packet_in packet,
 #endif // WITH_SPGW
 }
 
-#endif __INT_MIRROR_PARSER__
+#endif // __INT_MIRROR_PARSER__

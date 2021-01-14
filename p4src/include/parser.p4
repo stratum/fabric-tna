@@ -7,7 +7,7 @@
 #include "header.p4"
 #include "define.p4"
 #ifdef WITH_INT
-#include "int/int_mirror_parser.p4"
+#include "control/int_mirror_parser.p4"
 #endif // WITH_INT
 
 parser FabricIngressParser (packet_in  packet,
@@ -25,7 +25,7 @@ parser FabricIngressParser (packet_in  packet,
         packet.extract(ig_intr_md);
         packet.advance(PORT_METADATA_SIZE);
         fabric_md.bridged.setValid();
-        fabric_md.bridged.bridge_type = BridgeType_t.INGRESS_TO_EGRESS;
+        fabric_md.bridged.bridged_md_type = BridgedMdType_t.INGRESS_TO_EGRESS;
         fabric_md.bridged.ig_port = ig_intr_md.ingress_port;
         fabric_md.bridged.ig_tstamp = ig_intr_md.ingress_mac_tstamp;
         transition check_ethernet;
@@ -279,10 +279,10 @@ parser FabricEgressParser (packet_in packet,
         packet.extract(eg_intr_md);
         fabric_md.cpu_port = 0;
         common_egress_metadata_t common_eg_md = packet.lookahead<common_egress_metadata_t>();
-        transition select(common_eg_md.bridge_type, common_eg_md.mirror_type) {
-            (BridgeType_t.INGRESS_TO_EGRESS, _): parse_bridged_md;
+        transition select(common_eg_md.bridged_md_type, common_eg_md.mirror_type) {
+            (BridgedMdType_t.INGRESS_TO_EGRESS, _): parse_bridged_md;
 #ifdef WITH_INT
-            (BridgeType_t.EGRESS_MIRROR,  FabricMirrorType_t.INT_LOCAL_REPORT): parse_int_report_mirror;
+            (BridgedMdType_t.EGRESS_MIRROR,  FabricMirrorType_t.INT_LOCAL_REPORT): parse_int_report_mirror;
 #endif // WITH_INT
             default: reject;
         }
@@ -447,8 +447,8 @@ control FabricEgressMirror(
     apply {
 #ifdef WITH_INT
         if (ig_intr_md_for_dprsr.mirror_type == (bit<3>)FabricMirrorType_t.INT_LOCAL_REPORT) {
-            mirror.emit<int_mirror_metadata_t>(fabric_md.int_mirror.mirror_session_id,
-                                               fabric_md.int_mirror);
+            mirror.emit<int_mirror_metadata_t>(fabric_md.int_mirror_md.mirror_session_id,
+                                               fabric_md.int_mirror_md);
         }
 #endif // WITH_INT
     }

@@ -31,8 +31,6 @@ public final class P4InfoConstants {
             PiMatchFieldId.of("eth_src");
     public static final PiMatchFieldId HDR_ETH_TYPE =
             PiMatchFieldId.of("eth_type");
-    public static final PiMatchFieldId HDR_FABRIC_MD_INT_MIRROR_MIRROR_TYPE =
-            PiMatchFieldId.of("fabric_md.int_mirror.mirror_type");
     public static final PiMatchFieldId HDR_FAR_ID = PiMatchFieldId.of("far_id");
     public static final PiMatchFieldId HDR_GTPU_IS_VALID =
             PiMatchFieldId.of("gtpu_is_valid");
@@ -58,6 +56,8 @@ public final class P4InfoConstants {
             PiMatchFieldId.of("l4_dport");
     public static final PiMatchFieldId HDR_L4_SPORT =
             PiMatchFieldId.of("l4_sport");
+    public static final PiMatchFieldId HDR_MIRROR_TYPE =
+            PiMatchFieldId.of("mirror_type");
     public static final PiMatchFieldId HDR_MPLS_LABEL =
             PiMatchFieldId.of("mpls_label");
     public static final PiMatchFieldId HDR_NEXT_ID =

@@ -119,16 +119,16 @@ control IntEgress (
         hdr.report_fixed_header.q = 0;
         hdr.report_fixed_header.f = 1;
         hdr.report_fixed_header.rsvd = 0;
-        hdr.report_fixed_header.ig_tstamp = fabric_md.int_mirror.ig_tstamp;
+        hdr.report_fixed_header.ig_tstamp = fabric_md.int_mirror_md.ig_tstamp;
 
         hdr.common_report_header.setValid();
-        hdr.common_report_header.switch_id = fabric_md.int_mirror.switch_id;
-        hdr.common_report_header.ig_port = fabric_md.int_mirror.ig_port;
-        hdr.common_report_header.eg_port = fabric_md.int_mirror.eg_port;
-        hdr.common_report_header.queue_id = fabric_md.int_mirror.queue_id;
+        hdr.common_report_header.switch_id = fabric_md.int_mirror_md.switch_id;
+        hdr.common_report_header.ig_port = fabric_md.int_mirror_md.ig_port;
+        hdr.common_report_header.eg_port = fabric_md.int_mirror_md.eg_port;
+        hdr.common_report_header.queue_id = fabric_md.int_mirror_md.queue_id;
         hdr.local_report_header.setValid();
-        hdr.local_report_header.queue_occupancy = fabric_md.int_mirror.queue_occupancy;
-        hdr.local_report_header.eg_tstamp = fabric_md.int_mirror.eg_tstamp;
+        hdr.local_report_header.queue_occupancy = fabric_md.int_mirror_md.queue_occupancy;
+        hdr.local_report_header.eg_tstamp = fabric_md.int_mirror_md.eg_tstamp;
     }
 
     action do_report_encap(mac_addr_t src_mac, mac_addr_t mon_mac,
@@ -183,7 +183,7 @@ control IntEgress (
 
     table report {
         key = {
-            fabric_md.int_mirror.mirror_type: exact;
+            fabric_md.int_mirror_md.mirror_type: exact @name("mirror_type");
         }
         actions = {
             do_report_encap;
@@ -218,20 +218,20 @@ control IntEgress (
     }
 
     action init_int_mirror_metadata(bit<32> switch_id) {
-        fabric_md.int_mirror.setValid();
-        fabric_md.int_mirror.bridge_type = BridgeType_t.EGRESS_MIRROR;
-        fabric_md.int_mirror.mirror_type = FabricMirrorType_t.INT_LOCAL_REPORT;
+        fabric_md.int_mirror_md.setValid();
+        fabric_md.int_mirror_md.bridged_md_type = BridgedMdType_t.EGRESS_MIRROR;
+        fabric_md.int_mirror_md.mirror_type = FabricMirrorType_t.INT_LOCAL_REPORT;
         eg_dprsr_md.mirror_type = (bit<3>)FabricMirrorType_t.INT_LOCAL_REPORT;
-        fabric_md.int_mirror.switch_id = switch_id;
-        fabric_md.int_mirror.ig_port = (bit<16>)fabric_md.bridged.ig_port;
-        fabric_md.int_mirror.eg_port = (bit<16>)eg_intr_md.egress_port;
-        fabric_md.int_mirror.queue_id = (bit<8>)eg_intr_md.egress_qid;
-        fabric_md.int_mirror.queue_occupancy = (bit<24>)eg_intr_md.enq_qdepth;
-        fabric_md.int_mirror.ig_tstamp = fabric_md.bridged.ig_tstamp[31:0];
-        fabric_md.int_mirror.eg_tstamp = eg_prsr_md.global_tstamp[31:0];
-        fabric_md.int_mirror.ip_eth_type = fabric_md.bridged.ip_eth_type;
+        fabric_md.int_mirror_md.switch_id = switch_id;
+        fabric_md.int_mirror_md.ig_port = (bit<16>)fabric_md.bridged.ig_port;
+        fabric_md.int_mirror_md.eg_port = (bit<16>)eg_intr_md.egress_port;
+        fabric_md.int_mirror_md.queue_id = (bit<8>)eg_intr_md.egress_qid;
+        fabric_md.int_mirror_md.queue_occupancy = (bit<24>)eg_intr_md.enq_qdepth;
+        fabric_md.int_mirror_md.ig_tstamp = fabric_md.bridged.ig_tstamp[31:0];
+        fabric_md.int_mirror_md.eg_tstamp = eg_prsr_md.global_tstamp[31:0];
+        fabric_md.int_mirror_md.ip_eth_type = fabric_md.bridged.ip_eth_type;
 #ifdef WITH_SPGW
-        fabric_md.int_mirror.strip_gtpu = (bit<1>)(hdr.gtpu.isValid());
+        fabric_md.int_mirror_md.strip_gtpu = (bit<1>)(hdr.gtpu.isValid());
 #endif // WITH_SPGW
     }
 
@@ -253,7 +253,7 @@ control IntEgress (
 
     @hidden
     action set_mirror_session_id(MirrorId_t sid) {
-        fabric_md.int_mirror.mirror_session_id = sid;
+        fabric_md.int_mirror_md.mirror_session_id = sid;
     }
 
     @hidden
@@ -275,15 +275,18 @@ control IntEgress (
 
     apply {
         if (report.apply().hit) {
-            // Fix ethertype
-            hdr.eth_type.value = fabric_md.int_mirror.ip_eth_type;
-            // Is a mirror packet for INT drop/local report.
+            // The packet is a mirror packet for INT report.
+            // Fix the ethertype, the reason we need to fix the ether type is because we
+            // may strip the MPLS header from the parser, and the ethertype will still be
+            // MPLS instead of real one.
+            hdr.eth_type.value = fabric_md.int_mirror_md.ip_eth_type;
             report_seq_no_and_hw_id.apply();
             // Remove the INT mirror metadata to prevent egress mirroring again.
             eg_dprsr_md.mirror_type = (bit<3>)FabricMirrorType_t.INVALID;
 #ifdef WITH_SPGW
-            if (fabric_md.int_mirror.strip_gtpu == 1) {
+            if (fabric_md.int_mirror_md.strip_gtpu == 1) {
                 // We need to remove length of IP, UDP, and GTPU headers
+                // since we only monitor the packet inside the GTP tunnel.
                 hdr.report_ipv4.total_len = hdr.report_ipv4.total_len
                     - (IPV4_HDR_BYTES + UDP_HDR_BYTES + GTP_HDR_BYTES);
                 hdr.report_udp.len = hdr.report_udp.len
@@ -293,6 +296,7 @@ control IntEgress (
             if (fabric_md.mpls_stripped == 1) {
                 // We need to remove length of MPLS since we don't include MPLS
                 // header in INT report.
+                // TODO: support IPv6
                 hdr.report_ipv4.total_len = hdr.report_ipv4.total_len
                     - MPLS_HDR_BYTES;
                 hdr.report_udp.len = hdr.report_udp.len
