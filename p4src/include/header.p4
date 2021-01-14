@@ -275,8 +275,8 @@ struct fabric_ingress_metadata_t {
 
 // Egress pipeline-only metadata
 
-// A common parts of the bridged metadata that arrivs the egress parser.
-// The egress parser first look at the bridge metadata type, and check the mirror type
+// A common part of the bridged metadata that arrives at the egress parser. (for lookup only)
+// The egress parser will first look at the bridge metadata type and check the mirror type
 // if it is a mirrored packet.
 header common_egress_metadata_t {
     BridgedMdType_t       bridged_md_type;

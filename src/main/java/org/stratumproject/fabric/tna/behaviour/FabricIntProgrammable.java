@@ -90,7 +90,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
             P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_REPORT,
             P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_CONFIG
     );
-    private static final short MIRROR_TYPE_INT_LOCAL_REPORT = 2;
+    private static final short MIRROR_TYPE_INT_LOCAL_REPORT = 1;
 
     private FlowRuleService flowRuleService;
     private GroupService groupService;
