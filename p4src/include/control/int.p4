@@ -220,8 +220,8 @@ control IntEgress (
     action init_int_mirror_metadata(bit<32> switch_id) {
         fabric_md.int_mirror_md.setValid();
         fabric_md.int_mirror_md.bridged_md_type = BridgedMdType_t.EGRESS_MIRROR;
-        fabric_md.int_mirror_md.mirror_type = FabricMirrorType_t.INT_LOCAL_REPORT;
-        eg_dprsr_md.mirror_type = (bit<3>)FabricMirrorType_t.INT_LOCAL_REPORT;
+        fabric_md.int_mirror_md.mirror_type = FabricMirrorType_t.INT_REPORT;
+        eg_dprsr_md.mirror_type = (bit<3>)FabricMirrorType_t.INT_REPORT;
         fabric_md.int_mirror_md.switch_id = switch_id;
         fabric_md.int_mirror_md.ig_port = (bit<16>)fabric_md.bridged.ig_port;
         fabric_md.int_mirror_md.eg_port = (bit<16>)eg_intr_md.egress_port;

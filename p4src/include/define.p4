@@ -121,8 +121,7 @@ enum bit<8> BridgedMdType_t {
 // it in the deparser.
 enum bit<3> FabricMirrorType_t {
     INVALID = 0,
-    INT_LOCAL_REPORT = 1,
-    INT_DROP_REPORT = 2
+    INT_REPORT = 1
 }
 
 // Modes for CPU loopback testing, where a process can inject packets through

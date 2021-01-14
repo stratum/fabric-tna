@@ -282,7 +282,7 @@ parser FabricEgressParser (packet_in packet,
         transition select(common_eg_md.bridged_md_type, common_eg_md.mirror_type) {
             (BridgedMdType_t.INGRESS_TO_EGRESS, _): parse_bridged_md;
 #ifdef WITH_INT
-            (BridgedMdType_t.EGRESS_MIRROR,  FabricMirrorType_t.INT_LOCAL_REPORT): parse_int_report_mirror;
+            (BridgedMdType_t.EGRESS_MIRROR,  FabricMirrorType_t.INT_REPORT): parse_int_report_mirror;
 #endif // WITH_INT
             default: reject;
         }
@@ -446,7 +446,7 @@ control FabricEgressMirror(
     Mirror() mirror;
     apply {
 #ifdef WITH_INT
-        if (ig_intr_md_for_dprsr.mirror_type == (bit<3>)FabricMirrorType_t.INT_LOCAL_REPORT) {
+        if (ig_intr_md_for_dprsr.mirror_type == (bit<3>)FabricMirrorType_t.INT_REPORT) {
             mirror.emit<int_mirror_metadata_t>(fabric_md.int_mirror_md.mirror_session_id,
                                                fabric_md.int_mirror_md);
         }
