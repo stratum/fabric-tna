@@ -86,6 +86,7 @@ public class FabricIntProgrammableTest {
     private static final int DEFAULT_PRIORITY = 10000;
     private static final IpAddress COLLECTOR_IP = IpAddress.valueOf("10.128.0.1");
     private static final TpPort COLLECTOR_PORT = TpPort.tpPort(32766);
+    private static final short MIRROR_TYPE_INT_REPORT = 1;
     private static final HostLocation COLLECTOR_LOCATION = new HostLocation(LEAF_DEVICE_ID, PortNumber.P0, 0);
     private static final Host COLLECTOR_HOST =
             new DefaultHost(null, null, null, null, COLLECTOR_LOCATION, Sets.newHashSet());
@@ -502,7 +503,8 @@ public class FabricIntProgrammableTest {
                 .build();
         final TrafficSelector selector = DefaultTrafficSelector.builder()
                 .matchPi(PiCriterion.builder()
-                        .matchExact(P4InfoConstants.HDR_INT_MIRROR_VALID, 1)
+                        .matchExact(P4InfoConstants.HDR_MIRROR_TYPE,
+                                    MIRROR_TYPE_INT_REPORT)
                         .build())
                 .build();
         return DefaultFlowRule.builder()
@@ -601,7 +603,7 @@ public class FabricIntProgrammableTest {
         }
 
         PiAction expectedPiAction = PiAction.builder()
-                .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INIT_METADATA)
+                .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INIT_INT_MIRROR_METADATA)
                 .withParameter(new PiActionParam(P4InfoConstants.SWITCH_ID, NODE_SID_IPV4))
                 .build();
         TrafficTreatment expectedTreatment = DefaultTrafficTreatment.builder()

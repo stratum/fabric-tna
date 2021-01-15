@@ -150,7 +150,7 @@ struct spgw_ingress_metadata_t {
 
 
 #ifdef WITH_INT
-// Report Telemetry Headers
+// Report Telemetry Headers v0.5
 header report_fixed_header_t {
     bit<4>  ver;
     bit<4>  nproto;
@@ -163,38 +163,33 @@ header report_fixed_header_t {
     bit<32> ig_tstamp;
 }
 
-// Telemetry drop report header
-header drop_report_header_t {
+header common_report_header_t {
     bit<32> switch_id;
     bit<16> ig_port;
     bit<16> eg_port;
     bit<8>  queue_id;
+}
+
+// Telemetry drop report header
+header drop_report_header_t {
     bit<8>  drop_reason;
     bit<16> pad;
 }
 
 // Switch Local Report Header
 header local_report_header_t {
-    bit<32> switch_id;
-    bit<16> ig_port;
-    bit<16> eg_port;
-    bit<8>  queue_id;
     bit<24> queue_occupancy;
     bit<32> eg_tstamp;
-}
-
-header_union local_report_t {
-    drop_report_header_t drop_report_header;
-    local_report_header_t local_report_header;
 }
 #endif // WITH_INT
 
 // Since we don't parse the packet in the egress parser if
 // we receive a packet from egress mirror, the compiler
-// may mark the mirror metadata and other headers (e.g., IPv4)
+// may mark the mirror metadata and other headers (e.g., Report headers)
 // as "mutually exclusive".
 // Here we set the mirror metadata with "no overlay" to prevent this.
-@pa_no_overlay("egress", "fabric_md.int_mirror_md.bridged_md_type")
+@pa_no_overlay("egress", "fabric_md.int_mirror_md.bmd_type")
+@pa_no_overlay("egress", "fabric_md.int_mirror_md.mirror_type")
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.mirror_session_id")
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.switch_id")
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.ig_port")
@@ -203,12 +198,15 @@ header_union local_report_t {
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.queue_occupancy")
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.ig_tstamp")
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.eg_tstamp")
+@pa_no_overlay("egress", "fabric_md.int_mirror_md.ip_eth_type")
 #ifdef WITH_SPGW
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.strip_gtpu")
 #endif // WITH_SPGW
 header int_mirror_metadata_t {
-    BridgedMdType_t bridged_md_type;
-    bit<6>                _pad0;
+    BridgedMdType_t       bmd_type;
+    @padding bit<5>       _pad0;
+    FabricMirrorType_t    mirror_type;
+    @padding bit<6>       _pad1;
     MirrorId_t            mirror_session_id;
     bit<32>               switch_id;
     bit<16>               ig_port;
@@ -217,8 +215,10 @@ header int_mirror_metadata_t {
     bit<24>               queue_occupancy;
     bit<32>               ig_tstamp;
     bit<32>               eg_tstamp;
+    bit<8>                drop_reason;
+    bit<16>               ip_eth_type;
 #ifdef WITH_SPGW
-    bit<7>                _pad1;
+    @padding bit<7>       _pad2;
     bit<1>                strip_gtpu;
 #endif // WITH_SPGW
 }
@@ -228,26 +228,26 @@ header int_mirror_metadata_t {
 // ingress and egress pipeline.
 @flexible
 header bridged_metadata_t {
-    BridgedMdType_t bridged_md_type;
-    bool            is_multicast;
-    fwd_type_t      fwd_type;
-    PortId_t        ig_port;
-    vlan_id_t       vlan_id;
-    // bit<3>          vlan_pri;
-    // bit<1>          vlan_cfi;
-    mpls_label_t    mpls_label;
-    bit<8>          mpls_ttl;
-    bit<48>         ig_tstamp;
-    bit<16>         ip_eth_type;
-    bit<8>          ip_proto;
-    l4_port_t       l4_sport;
-    l4_port_t       l4_dport;
-    flow_hash_t     flow_hash;
+    BridgedMdType_t         bmd_type;
+    bool                    is_multicast;
+    fwd_type_t              fwd_type;
+    PortId_t                ig_port;
+    vlan_id_t               vlan_id;
+    // bit<3>                  vlan_pri;
+    // bit<1>                  vlan_cfi;
+    mpls_label_t            mpls_label;
+    bit<8>                  mpls_ttl;
+    bit<48>                 ig_tstamp;
+    bit<16>                 ip_eth_type;
+    bit<8>                  ip_proto;
+    l4_port_t               l4_sport;
+    l4_port_t               l4_dport;
+    flow_hash_t             flow_hash;
 #ifdef WITH_DOUBLE_VLAN_TERMINATION
-    bool            push_double_vlan;
-    vlan_id_t       inner_vlan_id;
-    // bit<3>          inner_vlan_pri;
-    // bit<1>          inner_vlan_cfi;
+    bool                    push_double_vlan;
+    vlan_id_t               inner_vlan_id;
+    // bit<3>                  inner_vlan_pri;
+    // bit<1>                  inner_vlan_cfi;
 #endif // WITH_DOUBLE_VLAN_TERMINATION
 #ifdef WITH_SPGW
     l4_port_t               inner_l4_sport;
@@ -258,6 +258,7 @@ header bridged_metadata_t {
 
 // Ingress pipeline-only metadata
 @flexible
+@pa_auto_init_metadata
 struct fabric_ingress_metadata_t {
     bridged_metadata_t      bridged;
     bit<32>                 ipv4_src;
@@ -273,7 +274,16 @@ struct fabric_ingress_metadata_t {
 }
 
 // Egress pipeline-only metadata
+
+// Common between different types of bridged metadata, used for lookup only in the egress parser.
+header common_egress_metadata_t {
+    BridgedMdType_t       bmd_type;
+    @padding bit<5>       _pad;
+    FabricMirrorType_t    mirror_type;
+}
+
 @flexible
+@pa_auto_init_metadata
 struct fabric_egress_metadata_t {
     bridged_metadata_t    bridged;
     PortId_t              cpu_port;
@@ -326,8 +336,9 @@ struct parsed_headers_t {
     ipv4_t report_ipv4;
     udp_t report_udp;
     report_fixed_header_t report_fixed_header;
+    common_report_header_t common_report_header;
     local_report_header_t local_report_header;
 #endif // WITH_INT
 }
 
-#endif
+#endif // __HEADER__

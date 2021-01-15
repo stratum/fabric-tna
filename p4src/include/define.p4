@@ -17,6 +17,7 @@
 #define ETH_TYPE_BYTES 2
 #define ETH_HDR_BYTES 14
 #define IPV4_HDR_BYTES 20
+#define IPV6_HDR_BYTES 40
 #define UDP_HDR_BYTES 8
 #define GTP_HDR_BYTES 8
 #define MPLS_HDR_BYTES 4
@@ -105,13 +106,21 @@ action nop() {
     NoAction();
 }
 
-// Bridge metadata type
+// The bridged metadata type, which will make the parser understand
+// the type of the metadata prepended to the packet.
 enum bit<8> BridgedMdType_t {
     INVALID = 0,
-    // Ingress to egress.
-    I2E = 1,
-    // Egress to egress mirror used for INT reports.
-    INT_MIRROR = 2
+    INGRESS_TO_EGRESS = 1,
+    EGRESS_MIRROR = 2
+}
+
+// The mirror type, makes the parser to use correct way to parse the mirror metadata.
+// Also, lets the deparser know which type of mirroring to perform.
+// The width of mirror type is same as TNA's MirrorType_t(bit<3>) so we can easily use
+// it in the deparser.
+enum bit<3> FabricMirrorType_t {
+    INVALID = 0,
+    INT_REPORT = 1
 }
 
 // Modes for CPU loopback testing, where a process can inject packets through
@@ -128,8 +137,6 @@ enum bit<2> CpuLoopbackMode_t {
     // hdr.packet_out.egress_port)
     INGRESS = 2
 }
-
-const MirrorId_t MIRROR_SESSION_ID_INVALID = 0;
 
 // Recirculation ports for each HW pipe.
 const PortId_t RECIRC_PORT_PIPE_0 = 0x44;
@@ -154,9 +161,9 @@ const bit<16> REPORT_FIXED_HEADER_BYTES = 12;
 const bit<16> DROP_REPORT_HEADER_BYTES = 12;
 const bit<16> LOCAL_REPORT_HEADER_BYTES = 16;
 #ifdef WITH_SPGW
-const bit<16> REPORT_MIRROR_HEADER_BYTES = 24;
+const bit<16> REPORT_MIRROR_HEADER_BYTES = 28;
 #else
-const bit<16> REPORT_MIRROR_HEADER_BYTES = 23;
+const bit<16> REPORT_MIRROR_HEADER_BYTES = 27;
 #endif // WITH_SPGW
 const bit<16> ETH_FCS_LEN = 4;
 

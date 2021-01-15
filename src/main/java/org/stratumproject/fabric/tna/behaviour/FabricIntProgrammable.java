@@ -90,6 +90,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
             P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_REPORT,
             P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_CONFIG
     );
+    private static final short MIRROR_TYPE_INT_REPORT = 1;
 
     private FlowRuleService flowRuleService;
     private GroupService groupService;
@@ -248,7 +249,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 P4InfoConstants.SWITCH_ID, cfg.nodeSidIPv4());
 
         final PiAction collectorAction = PiAction.builder()
-                .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INIT_METADATA)
+                .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INIT_INT_MIRROR_METADATA)
                 .withParameter(switchIdParam)
                 .build();
 
@@ -537,7 +538,8 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 .build();
         final TrafficSelector selector = DefaultTrafficSelector.builder()
                 .matchPi(PiCriterion.builder()
-                        .matchExact(P4InfoConstants.HDR_INT_MIRROR_VALID, 1)
+                        .matchExact(P4InfoConstants.HDR_MIRROR_TYPE,
+                                    MIRROR_TYPE_INT_REPORT)
                         .build())
                 .build();
         return DefaultFlowRule.builder()
