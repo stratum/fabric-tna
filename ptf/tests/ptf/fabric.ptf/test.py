@@ -1200,6 +1200,7 @@ class FabricIntTest(IntTest):
                                 is_device_spine,
                                 send_report_to_spine,
                             )
+                            return
 
 
 @group("int")
