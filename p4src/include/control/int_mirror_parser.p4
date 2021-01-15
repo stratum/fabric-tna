@@ -13,7 +13,7 @@ parser IntReportMirrorParser (packet_in packet,
 
     state start {
         packet.extract(fabric_md.int_mirror_md);
-        fabric_md.bridged.bridged_md_type = fabric_md.int_mirror_md.bridged_md_type;
+        fabric_md.bridged.bmd_type = fabric_md.int_mirror_md.bmd_type;
         fabric_md.bridged.vlan_id = DEFAULT_VLAN_ID;
         transition parse_eth_hdr;
     }
@@ -43,7 +43,6 @@ parser IntReportMirrorParser (packet_in packet,
         packet.extract(hdr.eth_type);
 #ifdef WITH_SPGW
         transition select(hdr.eth_type.value, fabric_md.int_mirror_md.strip_gtpu) {
-            (ETHERTYPE_MPLS, _): strip_mpls;
             (ETHERTYPE_MPLS, _): strip_mpls;
             (ETHERTYPE_IPV4, 0): accept;
             (ETHERTYPE_IPV4, 1): strip_ipv4_udp_gtpu;

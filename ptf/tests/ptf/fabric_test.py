@@ -187,7 +187,6 @@ PPPOED_CODES = (
 
 # Mirror types
 MIRROR_TYPE_INT_REPORT = 1
-MIRROR_TYPE_INT_DROP_REPORT = 2
 
 class GTPU(Packet):
     name = "GTP-U Header"

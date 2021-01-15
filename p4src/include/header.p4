@@ -188,7 +188,7 @@ header local_report_header_t {
 // may mark the mirror metadata and other headers (e.g., Report headers)
 // as "mutually exclusive".
 // Here we set the mirror metadata with "no overlay" to prevent this.
-@pa_no_overlay("egress", "fabric_md.int_mirror_md.bridged_md_type")
+@pa_no_overlay("egress", "fabric_md.int_mirror_md.bmd_type")
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.mirror_type")
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.mirror_session_id")
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.switch_id")
@@ -203,7 +203,7 @@ header local_report_header_t {
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.strip_gtpu")
 #endif // WITH_SPGW
 header int_mirror_metadata_t {
-    BridgedMdType_t       bridged_md_type;
+    BridgedMdType_t       bmd_type;
     @padding bit<5>       _pad0;
     FabricMirrorType_t    mirror_type;
     @padding bit<6>       _pad1;
@@ -228,7 +228,7 @@ header int_mirror_metadata_t {
 // ingress and egress pipeline.
 @flexible
 header bridged_metadata_t {
-    BridgedMdType_t         bridged_md_type;
+    BridgedMdType_t         bmd_type;
     bool                    is_multicast;
     fwd_type_t              fwd_type;
     PortId_t                ig_port;
@@ -276,10 +276,8 @@ struct fabric_ingress_metadata_t {
 // Egress pipeline-only metadata
 
 // Common between different types of bridged metadata, used for lookup only in the egress parser.
-// The egress parser will first look at the bridge metadata type and check the mirror type
-// if it is a mirrored packet.
 header common_egress_metadata_t {
-    BridgedMdType_t       bridged_md_type;
+    BridgedMdType_t       bmd_type;
     @padding bit<5>       _pad;
     FabricMirrorType_t    mirror_type;
 }
