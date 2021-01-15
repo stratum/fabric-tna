@@ -193,6 +193,7 @@ MIRROR_TYPE_INT_REPORT = 1
 # Bridged metadata type
 BRIDGED_MD_TYPE_EGRESS_MIRROR = 3
 
+
 class GTPU(Packet):
     name = "GTP-U Header"
     fields_desc = [
@@ -2177,9 +2178,11 @@ class IntTest(IPv4UnicastTest):
 
         self.send_request_add_entry_to_action(
             "report_encap",
-            [self.Exact("bmd_type", stringify(BRIDGED_MD_TYPE_EGRESS_MIRROR, 1)),
-             self.Exact("mirror_type", stringify(MIRROR_TYPE_INT_REPORT, 1)),
-             self.Exact("int_report_type", stringify(INT_REPORT_TYPE_LOCAL, 1))],
+            [
+                self.Exact("bmd_type", stringify(BRIDGED_MD_TYPE_EGRESS_MIRROR, 1)),
+                self.Exact("mirror_type", stringify(MIRROR_TYPE_INT_REPORT, 1)),
+                self.Exact("int_report_type", stringify(INT_REPORT_TYPE_LOCAL, 1)),
+            ],
             action,
             action_params,
         )
@@ -2207,7 +2210,9 @@ class IntTest(IPv4UnicastTest):
             ],
         )
 
-    def setup_watchlist_flow(self, ipv4_src, ipv4_dst, sport, dport, report_type=INT_REPORT_TYPE_LOCAL):
+    def setup_watchlist_flow(
+        self, ipv4_src, ipv4_dst, sport, dport, report_type=INT_REPORT_TYPE_LOCAL
+    ):
         report_type_ = stringify(report_type, 1)
         ipv4_src_ = ipv4_to_binary(ipv4_src)
         ipv4_dst_ = ipv4_to_binary(ipv4_dst)
@@ -2244,11 +2249,9 @@ class IntTest(IPv4UnicastTest):
         report_type_ = stringify(report_type, 1)
         self.send_request_add_entry_to_action(
             "mirror_packet",
-            [
-                self.Exact("int_report_type", report_type_),
-            ],
+            [self.Exact("int_report_type", report_type_),],
             "init_int_mirror_metadata",
-            [("switch_id", switch_id_)]
+            [("switch_id", switch_id_)],
         )
 
     def build_int_local_report(
