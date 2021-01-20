@@ -80,8 +80,8 @@ public final class P4InfoConstants {
             PiTableId.of("FabricEgress.egress_next.egress_vlan");
     public static final PiTableId FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_CONFIG =
             PiTableId.of("FabricEgress.int_egress.flow_report_filter.config");
-    public static final PiTableId FABRIC_EGRESS_INT_EGRESS_INT_MIRROR =
-            PiTableId.of("FabricEgress.int_egress.int_mirror");
+    public static final PiTableId FABRIC_EGRESS_INT_EGRESS_INT_METADATA =
+            PiTableId.of("FabricEgress.int_egress.int_metadata");
     public static final PiTableId FABRIC_EGRESS_INT_EGRESS_REPORT =
             PiTableId.of("FabricEgress.int_egress.report");
     public static final PiTableId FABRIC_EGRESS_PKT_IO_EGRESS_SWITCH_INFO =
@@ -149,8 +149,8 @@ public final class P4InfoConstants {
             PiActionId.of("FabricEgress.int_egress.do_report_encap_mpls");
     public static final PiActionId FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_SET_CONFIG =
             PiActionId.of("FabricEgress.int_egress.flow_report_filter.set_config");
-    public static final PiActionId FABRIC_EGRESS_INT_EGRESS_INIT_INT_MIRROR_METADATA =
-            PiActionId.of("FabricEgress.int_egress.init_int_mirror_metadata");
+    public static final PiActionId FABRIC_EGRESS_INT_EGRESS_SET_METADATA =
+            PiActionId.of("FabricEgress.int_egress.set_metadata");
     public static final PiActionId FABRIC_EGRESS_PKT_IO_EGRESS_SET_SWITCH_INFO =
             PiActionId.of("FabricEgress.pkt_io_egress.set_switch_info");
     public static final PiActionId FABRIC_INGRESS_ACL_COPY_TO_CPU =
@@ -181,8 +181,8 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.forwarding.set_next_id_routing_v4");
     public static final PiActionId FABRIC_INGRESS_FORWARDING_SET_NEXT_ID_ROUTING_V6 =
             PiActionId.of("FabricIngress.forwarding.set_next_id_routing_v6");
-    public static final PiActionId FABRIC_INGRESS_INT_INGRESS_MARK_REPORT =
-            PiActionId.of("FabricIngress.int_ingress.mark_report");
+    public static final PiActionId FABRIC_INGRESS_INT_INGRESS_MARK_TO_REPORT =
+            PiActionId.of("FabricIngress.int_ingress.mark_to_report");
     public static final PiActionId FABRIC_INGRESS_NEXT_MPLS_ROUTING_HASHED =
             PiActionId.of("FabricIngress.next.mpls_routing_hashed");
     public static final PiActionId FABRIC_INGRESS_NEXT_OUTPUT_HASHED =
@@ -234,8 +234,6 @@ public final class P4InfoConstants {
             PiActionParamId.of("notify_cp");
     public static final PiActionParamId PORT_NUM =
             PiActionParamId.of("port_num");
-    public static final PiActionParamId REPORT_TYPE =
-            PiActionParamId.of("report_type");
     public static final PiActionParamId SMAC = PiActionParamId.of("smac");
     public static final PiActionParamId SRC_IFACE =
             PiActionParamId.of("src_iface");

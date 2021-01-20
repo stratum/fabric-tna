@@ -2224,9 +2224,8 @@ class IntTest(IPv4UnicastTest):
         )
 
     def setup_watchlist_flow(
-        self, ipv4_src, ipv4_dst, sport, dport, report_type=INT_REPORT_TYPE_LOCAL
+        self, ipv4_src, ipv4_dst, sport, dport
     ):
-        report_type_ = stringify(report_type, 1)
         ipv4_src_ = ipv4_to_binary(ipv4_src)
         ipv4_dst_ = ipv4_to_binary(ipv4_dst)
         ipv4_mask = ipv4_to_binary("255.255.255.255")
@@ -2252,8 +2251,8 @@ class IntTest(IPv4UnicastTest):
                 self.Range("l4_sport", sport_low, sport_high),
                 self.Range("l4_dport", dport_low, dport_high),
             ],
-            "mark_report",
-            [("report_type", report_type_)],
+            "mark_to_report",
+            [],
             priority=DEFAULT_PRIORITY,
         )
 
@@ -2261,9 +2260,9 @@ class IntTest(IPv4UnicastTest):
         switch_id_ = stringify(switch_id, 4)
         report_type_ = stringify(report_type, 1)
         self.send_request_add_entry_to_action(
-            "int_mirror",
+            "int_metadata",
             [self.Exact("int_report_type", report_type_),],
-            "init_int_mirror_metadata",
+            "set_metadata",
             [("switch_id", switch_id_)],
         )
 

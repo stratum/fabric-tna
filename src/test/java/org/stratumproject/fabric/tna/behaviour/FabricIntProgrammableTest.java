@@ -273,7 +273,7 @@ public class FabricIntProgrammableTest {
         final IntDeviceConfig intConfig = buildIntDeviceConfig();
         final FlowRule expectedFlow = buildReportFlow(LEAF_DEVICE_ID, false);
         final FlowRule configRule = buildFilterConfigFlow(LEAF_DEVICE_ID, 0xffffff00);
-        final FlowRule mirrorRule = buildIntMirrorFlow(LEAF_DEVICE_ID);
+        final FlowRule mirrorRule = buildIntMetadataFlow(LEAF_DEVICE_ID);
         reset(flowRuleService);
         flowRuleService.applyFlowRules(eq(expectedFlow));
         expectLastCall().andVoid().once();
@@ -300,7 +300,7 @@ public class FabricIntProgrammableTest {
         final IntDeviceConfig intConfig = buildIntDeviceConfig();
         final FlowRule expectedReportFlow = buildReportFlow(SPINE_DEVICE_ID, true);
         final FlowRule expectedFilterConfigFlow = buildFilterConfigFlow(SPINE_DEVICE_ID, 0xffffff00);
-        final FlowRule expectedMirrorRule = buildIntMirrorFlow(SPINE_DEVICE_ID);
+        final FlowRule expectedMirrorRule = buildIntMetadataFlow(SPINE_DEVICE_ID);
         reset(flowRuleService);
         flowRuleService.applyFlowRules(eq(expectedReportFlow));
         expectLastCall().andVoid().once();
@@ -356,7 +356,7 @@ public class FabricIntProgrammableTest {
                 buildFlowEntry(buildFilterConfigFlow(LEAF_DEVICE_ID, 0)),
                 buildFlowEntry(buildReportFlow(LEAF_DEVICE_ID, false)),
                 // INT mirror table entry
-                buildFlowEntry(buildIntMirrorFlow(LEAF_DEVICE_ID))
+                buildFlowEntry(buildIntMetadataFlow(LEAF_DEVICE_ID))
         );
         Set<FlowEntry> randomEntries = buildRandomFlowEntries();
         Set<FlowEntry> entries = Sets.newHashSet(intEntries);
@@ -610,10 +610,8 @@ public class FabricIntProgrammableTest {
                             L4_DST.toInt())
                             .build());
         }
-
         PiAction expectedPiAction = PiAction.builder()
-                .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INIT_INT_MIRROR_METADATA)
-                .withParameter(new PiActionParam(P4InfoConstants.SWITCH_ID, NODE_SID_IPV4))
+                .withId(P4InfoConstants.FABRIC_INGRESS_INT_INGRESS_MARK_TO_REPORT)
                 .build();
         TrafficTreatment expectedTreatment = DefaultTrafficTreatment.builder()
                 .piTableAction(expectedPiAction)
@@ -688,7 +686,7 @@ public class FabricIntProgrammableTest {
         );
     }
 
-    private FlowRule buildIntMirrorFlow(DeviceId deviceId) {
+    private FlowRule buildIntMetadataFlow(DeviceId deviceId) {
         final SegmentRoutingDeviceConfig cfg = netcfgService.getConfig(
                 deviceId, SegmentRoutingDeviceConfig.class);
         if (cfg == null) {
@@ -698,7 +696,7 @@ public class FabricIntProgrammableTest {
                 P4InfoConstants.SWITCH_ID, cfg.nodeSidIPv4());
 
         final PiAction mirrorAction = PiAction.builder()
-                .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INIT_INT_MIRROR_METADATA)
+                .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_SET_METADATA)
                 .withParameter(switchIdParam)
                 .build();
 
@@ -718,7 +716,7 @@ public class FabricIntProgrammableTest {
                 .withSelector(mirrorSelector)
                 .withTreatment(mirrorTreatment)
                 .withPriority(DEFAULT_PRIORITY)
-                .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_MIRROR)
+                .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_METADATA)
                 .fromApp(APP_ID)
                 .makePermanent()
                 .build();

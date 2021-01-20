@@ -95,8 +95,8 @@ control IntIngress (
     inout fabric_ingress_metadata_t fabric_md,
     in    ingress_intrinsic_metadata_t ig_intr_md) {
 
-    action mark_report(IntReportType_t report_type) {
-        fabric_md.bridged.int_bmd.report_type = report_type;
+    action mark_to_report() {
+        fabric_md.bridged.int_bmd.report_type = IntReportType_t.LOCAL;
     }
 
     table watchlist {
@@ -108,7 +108,7 @@ control IntIngress (
             fabric_md.bridged.l4_dport : range @name("l4_dport");
         }
         actions = {
-            mark_report;
+            mark_to_report;
             @defaultonly nop();
         }
         const default_action = nop();
@@ -215,6 +215,9 @@ control IntEgress (
 
     // A table to encap the mirrored packet to an INT report.
     table report {
+        // when we are parsing the regular ingress to egress packet,
+        // the `int_mirror_md` will be undefined, add `bmd_type` match key to ensure we
+        // are handling the right packet type.
         key = {
             fabric_md.bridged.bmd_type: exact @name("bmd_type");
             fabric_md.int_mirror_md.mirror_type: exact @name("mirror_type");
@@ -226,7 +229,7 @@ control IntEgress (
             @defaultonly nop();
         }
         default_action = nop;
-        const size = INT_REPORT_TABLE_SIZE;
+        const size = 3; // Flow, Drop, and Queue report.
     }
 
     @hidden
@@ -252,7 +255,7 @@ control IntEgress (
         }
     }
 
-    action init_int_mirror_metadata(bit<32> switch_id) {
+    action set_metadata(bit<32> switch_id) {
         eg_dprsr_md.mirror_type = (bit<3>)FabricMirrorType_t.INT_REPORT;
         fabric_md.int_mirror_md.setValid();
         fabric_md.int_mirror_md.bmd_type = BridgedMdType_t.EGRESS_MIRROR;
@@ -272,16 +275,16 @@ control IntEgress (
     }
 
     // A table which initialize the INT mirror metadata.
-    table int_mirror {
+    table int_metadata {
         key = {
             fabric_md.bridged.int_bmd.report_type: exact @name("int_report_type");
         }
         actions = {
-            init_int_mirror_metadata;
+            set_metadata;
             @defaultonly nop();
         }
         const default_action = nop();
-        const size = INT_MIRROR_TABLE_SIZE;
+        const size = 3; // Flow, Drop, Queue
     }
 
     @hidden
@@ -339,7 +342,7 @@ control IntEgress (
             exit;
         } else {
             mirror_session_id.apply();
-            if (int_mirror.apply().hit) {
+            if (int_metadata.apply().hit) {
                 flow_report_filter.apply(hdr, fabric_md, eg_intr_md, eg_prsr_md, eg_dprsr_md);
             }
         }

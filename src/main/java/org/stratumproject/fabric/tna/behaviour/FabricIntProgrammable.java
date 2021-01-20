@@ -88,7 +88,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
     private static final Set<TableId> TABLES_TO_CLEANUP = Sets.newHashSet(
             P4InfoConstants.FABRIC_INGRESS_INT_INGRESS_WATCHLIST,
             P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_REPORT,
-            P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_MIRROR,
+            P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_METADATA,
             P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_CONFIG
     );
     private static final short MIRROR_TYPE_INT_REPORT = 1;
@@ -246,12 +246,9 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
             log.warn("Missing SegmentRoutingDeviceConfig config for {}", deviceId);
             return null;
         }
-        final PiActionParam reportTypeParam = new PiActionParam(
-                P4InfoConstants.REPORT_TYPE, INT_REPORT_TYPE_LOCAL);
 
         final PiAction watchlistAction = PiAction.builder()
-                .withId(P4InfoConstants.FABRIC_INGRESS_INT_INGRESS_MARK_REPORT)
-                .withParameter(reportTypeParam)
+                .withId(P4InfoConstants.FABRIC_INGRESS_INT_INGRESS_MARK_TO_REPORT)
                 .build();
 
         final TrafficTreatment watchlistTreatment = DefaultTrafficTreatment.builder()
@@ -272,7 +269,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 .build();
     }
 
-    private FlowRule buildIntMirrorEntry() {
+    private FlowRule buildIntMetadataEntry() {
         final SegmentRoutingDeviceConfig cfg = cfgService.getConfig(
                 deviceId, SegmentRoutingDeviceConfig.class);
         if (cfg == null) {
@@ -283,7 +280,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 P4InfoConstants.SWITCH_ID, cfg.nodeSidIPv4());
 
         final PiAction mirrorAction = PiAction.builder()
-                .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INIT_INT_MIRROR_METADATA)
+                .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_SET_METADATA)
                 .withParameter(switchIdParam)
                 .build();
 
@@ -303,7 +300,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 .withSelector(mirrorSelector)
                 .withTreatment(mirrorTreatment)
                 .withPriority(DEFAULT_PRIORITY)
-                .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_MIRROR)
+                .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_METADATA)
                 .fromApp(appId)
                 .makePermanent()
                 .build();
@@ -413,7 +410,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         flowRuleService.applyFlowRules(filterConfigRule);
         log.info("Report rule added to {} [{}]", this.data().deviceId(), filterConfigRule);
 
-        final FlowRule mirrorRule = buildIntMirrorEntry();
+        final FlowRule mirrorRule = buildIntMetadataEntry();
         flowRuleService.applyFlowRules(mirrorRule);
         log.info("Mirror rule added to {} [{}]", this.data().deviceId(), mirrorRule);
         return true;
