@@ -9,7 +9,7 @@ import time
 import xnt
 from base_test import P4RuntimeTest, ipv4_to_binary, mac_to_binary, stringify, tvcreate
 from p4.v1 import p4runtime_pb2
-from ptf import testutils as testutils
+from ptf import testutils
 from ptf.mask import Mask
 from scapy.contrib.mpls import MPLS
 from scapy.fields import BitField, ByteField, IntField, ShortField
@@ -193,6 +193,18 @@ MIRROR_TYPE_INT_REPORT = 1
 # Bridged metadata type
 BRIDGED_MD_TYPE_EGRESS_MIRROR = 2
 
+# Size for different headers
+if testutils.test_param_get("profile") == "fabric-spgw-int":
+    BMD_BYTES = 51
+elif testutils.test_param_get("profile") == "fabric-spgw":
+    BMD_BYTES = 50
+elif testutils.test_param_get("profile") == "fabric-int":
+    BMD_BYTES = 28
+else:
+    BMD_BYTES = 27 # fabric
+IP_HDR_BYTES = 20
+UDP_HDR_BYTES = 8
+GTP_HDR_BYTES = 8
 
 class GTPU(Packet):
     name = "GTP-U Header"
@@ -1760,8 +1772,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         )
 
         ingress_bytes = len(gtp_pkt) + 4  # FIXME: where does this 4 come from?
-        # FIXME: where does this 51 come from?
-        egress_bytes = len(exp_pkt) + 51
+        egress_bytes = len(exp_pkt) + BMD_BYTES
         if tagged1:
             ingress_bytes += 4  # length of VLAN header
             egress_bytes += 4  # FIXME: why is this necessary?
@@ -1816,8 +1827,9 @@ class SpgwSimpleTest(IPv4UnicastTest):
         )
 
         ingress_bytes = len(pkt) + 4  # FIXME: where does this 4 come from?
-        # FIXME: where does this 15 come from?
-        egress_bytes = len(exp_pkt) + 15
+        # Since the counter will use the packet length before the pipeline encaped with
+        # GTPU headers, we need to remove it from the expected result.
+        egress_bytes = len(exp_pkt) + BMD_BYTES - IP_HDR_BYTES - UDP_HDR_BYTES - GTP_HDR_BYTES
         if tagged1:
             ingress_bytes += 4  # length of VLAN header
             egress_bytes += 4  # FIXME: why is this necessary?
@@ -1960,8 +1972,9 @@ class SpgwSimpleTest(IPv4UnicastTest):
         )
 
         ingress_bytes = 0
-        # FIXME: where does this 15 come from?
-        egress_bytes = len(exp_pkt) + 15
+        # Since the counter will use the packet length before the pipeline encaped with
+        # GTPU headers, we need to remove it from the expected result.
+        egress_bytes = len(exp_pkt) + BMD_BYTES - IP_HDR_BYTES - UDP_HDR_BYTES - GTP_HDR_BYTES
         if tagged1:
             egress_bytes += 4  # FIXME: why is this necessary?
         if not tagged2:
