@@ -3,7 +3,7 @@ Copyright 2020-present Open Networking Foundation
 SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 -->
 
-# Fabric-TNA Pipeconf
+# Fabric-TNA
 
 [![Build Status](https://jenkins.onosproject.org/buildStatus/icon?job=fabric-tna-postmerge)](https://jenkins.onosproject.org/job/fabric-tna-postmerge/)
 
