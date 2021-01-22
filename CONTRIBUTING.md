@@ -28,13 +28,13 @@ This project follows [Google's Engineering Practices](https://google.github.io/e
 
 Some additional points:
 
- - Submit your changes early and often. Add the `WIP` label or prefix your PR title with `[WIP]` to signal that the PR is still work in progress and it's not ready for final review. Input and corrections early in the process prevent huge changes later.
+- Submit your changes early and often. Add the `WIP` label or prefix your PR title with `[WIP]` to signal that the PR is still work in progress and it's not ready for final review. Input and corrections early in the process prevent huge changes later.
 
- - We follow [ONOS's Code Style Guidelines](https://wiki.onosproject.org/display/ONOS/Code+Style+Guidelines) for Java, and we automatically format Python code after each merge. We don't have a style guide for P4 yet. Please take a look at the rest of the P4 code and use common sense when formatting your P4 changes.
+- We follow [ONOS's Code Style Guidelines](https://wiki.onosproject.org/display/ONOS/Code+Style+Guidelines) for Java, and we automatically format Python code after each merge. We don't have a style guide for P4 yet. Please take a look at the rest of the P4 code and use common sense when formatting your P4 changes.
  
- - When merging a PR (only project mantainers can) please use [squash and rebase](https://help.github.com/en/github/collaborating-with-issues-and-pull-requests/about-pull-request-merges#squash-and-merge-your-pull-request-commits). You do **not** have to do this by hand! GitHub will guide you through it, if possible.
+- When merging a PR (only project mantainers can) please use [squash and rebase](https://help.github.com/en/github/collaborating-with-issues-and-pull-requests/about-pull-request-merges#squash-and-merge-your-pull-request-commits). You do **not** have to do this by hand! GitHub will guide you through it, if possible.
 
- - Consider opening a separate issue describing the technical details there and [link it to the PR](https://help.github.com/en/github/managing-your-work-on-github/closing-issues-using-keywords). This keeps code review and design discussions clean.
+- Consider opening a separate issue describing the technical details there and [link it to the PR](https://help.github.com/en/github/managing-your-work-on-github/closing-issues-using-keywords). This keeps code review and design discussions clean.
 
 ### Steps to Follow
 
