@@ -145,6 +145,7 @@ struct spgw_ingress_metadata_t {
     bool               notify_spgwc;
     far_id_t           far_id;
     SpgwInterface      src_iface;
+    qer_id_t           qer_id;
 }
 #endif // WITH_SPGW
 
