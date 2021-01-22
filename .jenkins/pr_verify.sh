@@ -11,6 +11,8 @@
 # TODO (carmelo): consider using a declarative Jenkins pipeline definition so we
 # can parallelize some of the tasks.
 
+foo bar
+
 # exit on errors
 set -exu -o pipefail
 
