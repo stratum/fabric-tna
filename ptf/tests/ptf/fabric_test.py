@@ -9,7 +9,7 @@ import time
 import xnt
 from base_test import P4RuntimeTest, ipv4_to_binary, mac_to_binary, stringify, tvcreate
 from p4.v1 import p4runtime_pb2
-from ptf import testutils as testutils
+from ptf import testutils
 from ptf.mask import Mask
 from scapy.contrib.mpls import MPLS
 from scapy.fields import BitField, ByteField, IntField, ShortField
@@ -169,6 +169,8 @@ bind_layers(INT_L45_LOCAL_REPORT, Ether)
 INT_COLLECTOR_MAC = "00:1e:67:d2:ee:ee"
 INT_COLLECTOR_IPV4 = "192.168.99.254"
 
+INT_REPORT_TYPE_LOCAL = 1
+
 PPPOE_CODE_SESSION_STAGE = 0x00
 
 PPPOED_CODE_PADI = 0x09
@@ -188,6 +190,21 @@ PPPOED_CODES = (
 # Mirror types
 MIRROR_TYPE_INT_REPORT = 1
 
+# Bridged metadata type
+BRIDGED_MD_TYPE_EGRESS_MIRROR = 2
+
+# Size for different headers
+if testutils.test_param_get("profile") == "fabric-spgw-int":
+    BMD_BYTES = 51
+elif testutils.test_param_get("profile") == "fabric-spgw":
+    BMD_BYTES = 50
+elif testutils.test_param_get("profile") == "fabric-int":
+    BMD_BYTES = 28
+else:
+    BMD_BYTES = 27 # fabric
+IP_HDR_BYTES = 20
+UDP_HDR_BYTES = 8
+GTP_HDR_BYTES = 8
 
 class GTPU(Packet):
     name = "GTP-U Header"
@@ -1755,8 +1772,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         )
 
         ingress_bytes = len(gtp_pkt) + 4  # FIXME: where does this 4 come from?
-        # FIXME: where does this 50 come from?
-        egress_bytes = len(exp_pkt) + 50
+        egress_bytes = len(exp_pkt) + BMD_BYTES
         if tagged1:
             ingress_bytes += 4  # length of VLAN header
             egress_bytes += 4  # FIXME: why is this necessary?
@@ -1811,8 +1827,9 @@ class SpgwSimpleTest(IPv4UnicastTest):
         )
 
         ingress_bytes = len(pkt) + 4  # FIXME: where does this 4 come from?
-        # FIXME: where does this 14 come from?
-        egress_bytes = len(exp_pkt) + 14
+        # Since the counter will use the packet length before the pipeline encaped with
+        # GTPU headers, we need to remove it from the expected result.
+        egress_bytes = len(exp_pkt) + BMD_BYTES - IP_HDR_BYTES - UDP_HDR_BYTES - GTP_HDR_BYTES
         if tagged1:
             ingress_bytes += 4  # length of VLAN header
             egress_bytes += 4  # FIXME: why is this necessary?
@@ -1955,8 +1972,9 @@ class SpgwSimpleTest(IPv4UnicastTest):
         )
 
         ingress_bytes = 0
-        # FIXME: where does this 14 come from?
-        egress_bytes = len(exp_pkt) + 14
+        # Since the counter will use the packet length before the pipeline encaped with
+        # GTPU headers, we need to remove it from the expected result.
+        egress_bytes = len(exp_pkt) + BMD_BYTES - IP_HDR_BYTES - UDP_HDR_BYTES - GTP_HDR_BYTES
         if tagged1:
             egress_bytes += 4  # FIXME: why is this necessary?
         if not tagged2:
@@ -2156,7 +2174,7 @@ class IntTest(IPv4UnicastTest):
        packet to verify the output.
     """
 
-    def setup_report_flow(
+    def set_up_report_flow(
         self, port, src_mac, mon_mac, src_ip, mon_ip, mon_port, mon_label=None
     ):
         action = "do_report_encap"
@@ -2173,12 +2191,16 @@ class IntTest(IPv4UnicastTest):
 
         self.send_request_add_entry_to_action(
             "report",
-            [self.Exact("mirror_type", stringify(MIRROR_TYPE_INT_REPORT, 1))],
+            [
+                self.Exact("bmd_type", stringify(BRIDGED_MD_TYPE_EGRESS_MIRROR, 1)),
+                self.Exact("mirror_type", stringify(MIRROR_TYPE_INT_REPORT, 1)),
+                self.Exact("int_report_type", stringify(INT_REPORT_TYPE_LOCAL, 1)),
+            ],
             action,
             action_params,
         )
 
-    def setup_report_mirror_flow(self, pipe_id, mirror_id, port):
+    def set_up_report_mirror_flow(self, pipe_id, mirror_id, port):
         self.add_clone_group(mirror_id, [port])
         # TODO: We plan to set up this table by using the control
         # plane so we don't need to hard code the session id
@@ -2201,8 +2223,9 @@ class IntTest(IPv4UnicastTest):
             ],
         )
 
-    def setup_watchlist_flow(self, ipv4_src, ipv4_dst, sport, dport, switch_id):
-        switch_id_ = stringify(switch_id, 4)
+    def set_up_watchlist_flow(
+        self, ipv4_src, ipv4_dst, sport, dport
+    ):
         ipv4_src_ = ipv4_to_binary(ipv4_src)
         ipv4_dst_ = ipv4_to_binary(ipv4_dst)
         ipv4_mask = ipv4_to_binary("255.255.255.255")
@@ -2228,9 +2251,19 @@ class IntTest(IPv4UnicastTest):
                 self.Range("l4_sport", sport_low, sport_high),
                 self.Range("l4_dport", dport_low, dport_high),
             ],
-            "init_int_mirror_metadata",
-            [("switch_id", switch_id_)],
+            "mark_to_report",
+            [],
             priority=DEFAULT_PRIORITY,
+        )
+
+    def set_up_int_mirror_flow(self, switch_id, report_type=INT_REPORT_TYPE_LOCAL):
+        switch_id_ = stringify(switch_id, 4)
+        report_type_ = stringify(report_type, 1)
+        self.send_request_add_entry_to_action(
+            "int_metadata",
+            [self.Exact("int_report_type", report_type_),],
+            "set_metadata",
+            [("switch_id", switch_id_)],
         )
 
     def build_int_local_report(
@@ -2357,8 +2390,9 @@ class IntTest(IPv4UnicastTest):
 
         # Set collector, report table, and mirror sessions
         mon_label = MPLS_LABEL_1 if is_device_spine else None
-        self.setup_watchlist_flow(ipv4_src, ipv4_dst, sport, dport, switch_id)
-        self.setup_report_flow(
+        self.set_up_watchlist_flow(ipv4_src, ipv4_dst, sport, dport)
+        self.set_up_int_mirror_flow(switch_id)
+        self.set_up_report_flow(
             collector_port,
             SWITCH_MAC,
             SWITCH_MAC,
@@ -2367,16 +2401,16 @@ class IntTest(IPv4UnicastTest):
             INT_REPORT_PORT,
             mon_label,
         )
-        self.setup_report_mirror_flow(
+        self.set_up_report_mirror_flow(
             0, INT_REPORT_MIRROR_ID_0, self.recirculate_port_0
         )
-        self.setup_report_mirror_flow(
+        self.set_up_report_mirror_flow(
             1, INT_REPORT_MIRROR_ID_1, self.recirculate_port_1
         )
-        self.setup_report_mirror_flow(
+        self.set_up_report_mirror_flow(
             2, INT_REPORT_MIRROR_ID_2, self.recirculate_port_2
         )
-        self.setup_report_mirror_flow(
+        self.set_up_report_mirror_flow(
             3, INT_REPORT_MIRROR_ID_3, self.recirculate_port_3
         )
 
@@ -2534,8 +2568,9 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         # Set collector, report table, and mirror sessions
         # Note that we are monitoring the inner packet.
         mon_label = MPLS_LABEL_1 if is_device_spine else None
-        self.setup_watchlist_flow(ipv4_src, ipv4_dst, sport, dport, switch_id)
-        self.setup_report_flow(
+        self.set_up_watchlist_flow(ipv4_src, ipv4_dst, sport, dport)
+        self.set_up_int_mirror_flow(switch_id)
+        self.set_up_report_flow(
             collector_port,
             SWITCH_MAC,
             SWITCH_MAC,
@@ -2544,16 +2579,16 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             INT_REPORT_PORT,
             mon_label,
         )
-        self.setup_report_mirror_flow(
+        self.set_up_report_mirror_flow(
             0, INT_REPORT_MIRROR_ID_0, self.recirculate_port_0
         )
-        self.setup_report_mirror_flow(
+        self.set_up_report_mirror_flow(
             1, INT_REPORT_MIRROR_ID_1, self.recirculate_port_1
         )
-        self.setup_report_mirror_flow(
+        self.set_up_report_mirror_flow(
             2, INT_REPORT_MIRROR_ID_2, self.recirculate_port_2
         )
-        self.setup_report_mirror_flow(
+        self.set_up_report_mirror_flow(
             3, INT_REPORT_MIRROR_ID_3, self.recirculate_port_3
         )
 
@@ -2701,8 +2736,9 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         # Set collector, report table, and mirror sessions
         # Note that we are monitoring the inner packet.
         mon_label = MPLS_LABEL_1 if is_device_spine else None
-        self.setup_watchlist_flow(ipv4_src, ipv4_dst, sport, dport, switch_id)
-        self.setup_report_flow(
+        self.set_up_watchlist_flow(ipv4_src, ipv4_dst, sport, dport)
+        self.set_up_int_mirror_flow(switch_id)
+        self.set_up_report_flow(
             collector_port,
             SWITCH_MAC,
             SWITCH_MAC,
@@ -2711,16 +2747,16 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             INT_REPORT_PORT,
             mon_label,
         )
-        self.setup_report_mirror_flow(
+        self.set_up_report_mirror_flow(
             0, INT_REPORT_MIRROR_ID_0, self.recirculate_port_0
         )
-        self.setup_report_mirror_flow(
+        self.set_up_report_mirror_flow(
             1, INT_REPORT_MIRROR_ID_1, self.recirculate_port_1
         )
-        self.setup_report_mirror_flow(
+        self.set_up_report_mirror_flow(
             2, INT_REPORT_MIRROR_ID_2, self.recirculate_port_2
         )
-        self.setup_report_mirror_flow(
+        self.set_up_report_mirror_flow(
             3, INT_REPORT_MIRROR_ID_3, self.recirculate_port_3
         )
 

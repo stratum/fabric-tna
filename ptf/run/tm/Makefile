@@ -8,6 +8,7 @@ define run_tests
 		--grpc-addr "127.0.0.1:28000" \
 		--p4info /p4c-out/p4info.txt \
 		--tofino-pipeline-config /p4c-out/pipeline_config.pb.bin \
+		--profile $(1) \
 		$(2)
 endef
 
