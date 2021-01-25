@@ -86,6 +86,7 @@ public class FabricIntProgrammableTest {
     private static final int DEFAULT_PRIORITY = 10000;
     private static final IpAddress COLLECTOR_IP = IpAddress.valueOf("10.128.0.1");
     private static final TpPort COLLECTOR_PORT = TpPort.tpPort(32766);
+    private static final short BMD_TYPE_EGRESS_MIRROR = 2;
     private static final short MIRROR_TYPE_INT_REPORT = 1;
     private static final short INT_REPORT_TYPE_LOCAL = 1;
     private static final HostLocation COLLECTOR_LOCATION = new HostLocation(LEAF_DEVICE_ID, PortNumber.P0, 0);
@@ -512,8 +513,12 @@ public class FabricIntProgrammableTest {
                 .build();
         final TrafficSelector selector = DefaultTrafficSelector.builder()
                 .matchPi(PiCriterion.builder()
+                        .matchExact(P4InfoConstants.HDR_BMD_TYPE,
+                                    BMD_TYPE_EGRESS_MIRROR)
                         .matchExact(P4InfoConstants.HDR_MIRROR_TYPE,
                                     MIRROR_TYPE_INT_REPORT)
+                        .matchExact(P4InfoConstants.HDR_INT_REPORT_TYPE,
+                                    INT_REPORT_TYPE_LOCAL)
                         .build())
                 .build();
         return DefaultFlowRule.builder()

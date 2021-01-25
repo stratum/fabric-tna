@@ -91,6 +91,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
             P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_METADATA,
             P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_CONFIG
     );
+    private static final short BMD_TYPE_EGRESS_MIRROR = 2;
     private static final short MIRROR_TYPE_INT_REPORT = 1;
     private static final short INT_REPORT_TYPE_LOCAL = 1;
 
@@ -578,8 +579,12 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 .build();
         final TrafficSelector selector = DefaultTrafficSelector.builder()
                 .matchPi(PiCriterion.builder()
+                        .matchExact(P4InfoConstants.HDR_BMD_TYPE,
+                                    BMD_TYPE_EGRESS_MIRROR)
                         .matchExact(P4InfoConstants.HDR_MIRROR_TYPE,
                                     MIRROR_TYPE_INT_REPORT)
+                        .matchExact(P4InfoConstants.HDR_INT_REPORT_TYPE,
+                                    INT_REPORT_TYPE_LOCAL)
                         .build())
                 .build();
         return DefaultFlowRule.builder()
