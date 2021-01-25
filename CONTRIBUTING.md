@@ -24,7 +24,7 @@ again.
 
 ### General Information
 
-This project follows [Google's Engineering Practices](https://google.github.io/eng-practices/review/developer/), and [unit test rules](stratum/docs/testing.md). Use these documents as a guide when submitting code.
+This project follows [Google's Engineering Practices](https://google.github.io/eng-practices/review/developer/). Use this document as a guide when submitting code and opening PRs.
 
 Some additional points:
 
