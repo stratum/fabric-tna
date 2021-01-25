@@ -47,6 +47,7 @@ import org.onosproject.net.group.GroupBuckets;
 import org.onosproject.net.group.GroupDescription;
 import org.onosproject.net.group.GroupService;
 import org.onosproject.net.host.HostService;
+import org.onosproject.net.pi.model.PiActionId;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
 import org.onosproject.segmentrouting.config.SegmentRoutingDeviceConfig;
@@ -101,6 +102,8 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
     );
     private static final short BMD_TYPE_EGRESS_MIRROR = 2;
     private static final short BMD_TYPE_INGRESS_MIRROR = 3;
+    private static final short BMD_TYPE_DEFLECTED = 4;
+    private static final short MIRROR_TYPE_INVALID = 0;
     private static final short MIRROR_TYPE_INT_REPORT = 1;
     private static final short INT_REPORT_TYPE_LOCAL = 1;
     private static final short INT_REPORT_TYPE_DROP = 2;
@@ -476,7 +479,11 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         return Optional.of(cfg.nodeSidIPv4());
     }
 
-    private FlowRule buildReportEntryWithType(IntDeviceConfig intCfg, short bridgedMdType, short reportType) {
+    private FlowRule buildReportEntryWithType(IntDeviceConfig intCfg,
+                                              short bridgedMdType,
+                                              short mirrorMdType,
+                                              short reportType) {
+
         final SegmentRoutingDeviceConfig srCfg = cfgService.getConfig(
                 deviceId, SegmentRoutingDeviceConfig.class);
         if (srCfg == null) {
@@ -498,6 +505,8 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
             return null;
         }
 
+        final PiActionParam switchIdParam = new PiActionParam(
+                P4InfoConstants.SWITCH_ID, srCfg.nodeSidIPv4());
         final PiActionParam srcMacParam = new PiActionParam(
                 P4InfoConstants.SRC_MAC, MacAddress.ZERO.toBytes());
         final PiActionParam nextHopMacParam = new PiActionParam(
@@ -524,8 +533,9 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 // Error log will be shown in getSidForCollector method.
                 return null;
             }
-
-            if (reportType == INT_REPORT_TYPE_LOCAL) {
+            if (bridgedMdType == BMD_TYPE_DEFLECTED) {
+                reportActionBuilder.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_DEFLECT_DROP_REPORT_ENCAP_MPLS);
+            } else if (reportType == INT_REPORT_TYPE_LOCAL) {
                 reportActionBuilder.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_LOCAL_REPORT_ENCAP_MPLS);
             } else if (reportType == INT_REPORT_TYPE_DROP) {
                 reportActionBuilder.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_DROP_REPORT_ENCAP_MPLS);
@@ -534,15 +544,14 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 log.warn("Invalid report type {}", reportType);
                 return null;
             }
-
             final PiActionParam monLabelParam = new PiActionParam(
                     P4InfoConstants.MON_LABEL,
                     sid.get());
             reportActionBuilder.withParameter(monLabelParam);
-
-
         } else {
-            if (reportType == INT_REPORT_TYPE_LOCAL) {
+            if (bridgedMdType == BMD_TYPE_DEFLECTED) {
+                reportActionBuilder.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_DEFLECT_DROP_REPORT_ENCAP);
+            } else if (reportType == INT_REPORT_TYPE_LOCAL) {
                 reportActionBuilder.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_LOCAL_REPORT_ENCAP);
             } else if (reportType == INT_REPORT_TYPE_DROP) {
                 reportActionBuilder.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_DROP_REPORT_ENCAP);
@@ -552,8 +561,8 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 return null;
             }
         }
-
-        reportActionBuilder.withParameter(srcMacParam)
+        reportActionBuilder.withParameter(switchIdParam)
+                .withParameter(srcMacParam)
                 .withParameter(nextHopMacParam)
                 .withParameter(srcIpParam)
                 .withParameter(monIpParam)
@@ -567,7 +576,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                         .matchExact(P4InfoConstants.HDR_BMD_TYPE,
                                 bridgedMdType)
                         .matchExact(P4InfoConstants.HDR_MIRROR_TYPE,
-                                MIRROR_TYPE_INT_REPORT)
+                                mirrorMdType)
                         .matchExact(P4InfoConstants.HDR_INT_REPORT_TYPE,
                                 reportType)
                         .build())
@@ -585,10 +594,10 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
 
     private List<FlowRule> buildReportEntries(IntDeviceConfig intCfg) {
         return Lists.newArrayList(
-                buildReportEntryWithType(intCfg, BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_LOCAL),
-                buildReportEntryWithType(intCfg, BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_DROP),
-                buildReportEntryWithType(intCfg, BMD_TYPE_INGRESS_MIRROR, INT_REPORT_TYPE_LOCAL),
-                buildReportEntryWithType(intCfg, BMD_TYPE_INGRESS_MIRROR, INT_REPORT_TYPE_DROP)
+                buildReportEntryWithType(intCfg, BMD_TYPE_EGRESS_MIRROR, MIRROR_TYPE_INT_REPORT, INT_REPORT_TYPE_LOCAL),
+                buildReportEntryWithType(intCfg, BMD_TYPE_EGRESS_MIRROR, MIRROR_TYPE_INT_REPORT, INT_REPORT_TYPE_DROP),
+                buildReportEntryWithType(intCfg, BMD_TYPE_INGRESS_MIRROR, MIRROR_TYPE_INT_REPORT, INT_REPORT_TYPE_DROP),
+                buildReportEntryWithType(intCfg, BMD_TYPE_DEFLECTED, MIRROR_TYPE_INVALID, INT_REPORT_TYPE_DROP)
         );
     }
 

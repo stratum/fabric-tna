@@ -9,30 +9,38 @@ all: fabric fabric-bng fabric-spgw fabric-int fabric-spgw-int
 
 fabric: _checkenv
 ifndef TEST
-	$(eval TEST = all ^spgw ^int ^bng ^dth ^xconnect ^p4rt $(PTF_FILTER))
+	$(eval TEST = all ^spgw ^int ^bng ^dth ^xconnect ^p4rt ^int-dod $(PTF_FILTER))
 endif
 	$(call run_tests,fabric,$(TEST))
 
 fabric-bng: _checkenv
 ifndef TEST
-	$(eval TEST = all ^spgw ^int ^xconnect ^p4rt $(PTF_FILTER))
+	$(eval TEST = all ^spgw ^int ^xconnect ^p4rt ^int-dod $(PTF_FILTER))
 endif
 	$(call run_tests,fabric-bng,$(TEST))
 
 fabric-spgw: _checkenv
 ifndef TEST
-	$(eval TEST = all ^int ^bng ^dth ^p4rt $(PTF_FILTER))
+	$(eval TEST = all ^int ^bng ^dth ^p4rt ^int-dod $(PTF_FILTER))
 endif
 	$(call run_tests,fabric-spgw,$(TEST))
 
 fabric-spgw-int: _checkenv
 ifndef TEST
-	$(eval TEST = all ^bng ^dth ^p4rt $(PTF_FILTER))
+	$(eval TEST = all ^bng ^dth ^p4rt ^int-dod $(PTF_FILTER))
 endif
 	$(call run_tests,fabric-spgw-int,$(TEST))
 
 fabric-int: _checkenv
 ifndef TEST
-	$(eval TEST = all ^spgw ^bng ^dth ^p4rt $(PTF_FILTER))
+	$(eval TEST = all ^spgw ^bng ^dth ^p4rt ^int-dod $(PTF_FILTER))
 endif
+	$(call run_tests,fabric-int,$(TEST))
+
+# Special case for deflect-on-drop test
+int-dod: _checkenv
+ifndef TEST
+	$(eval TEST = test.TestDeflectOnDropIntReport $(PTF_FILTER))
+endif
+	$(call run_tests,fabric-spgw-int,$(TEST))
 	$(call run_tests,fabric-int,$(TEST))

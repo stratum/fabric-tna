@@ -205,6 +205,7 @@ INT_REPORT_TYPE_LOCAL = 1
 INT_REPORT_TYPE_DROP = 2
 
 INT_DROP_REASON_UNKNOWN = 0
+INT_DROP_REASON_TRAFFIC_MANAGER = 71
 INT_DROP_REASON_ACL_DENY = 80
 INT_DROP_REASON_ROUTING_V4_MISS = 29
 INT_DROP_REASON_EGRESS_NEXT_MISS = 130
@@ -233,9 +234,11 @@ MIRROR_TYPE_INVALID = 0
 MIRROR_TYPE_INT_REPORT = 1
 
 # Bridged metadata type
+BRIDGED_MD_TYPE_INGRESS_TO_EGRESS = 1
 BRIDGED_MD_TYPE_EGRESS_MIRROR = 2
 BRIDGED_MD_TYPE_INGRESS_MIRROR = 3
 BRIDGED_MD_TYPE_INT_INGRESS_DROP = 4
+BRIDGED_MD_TYPE_DEFLECTED = 5
 
 # Size for different headers
 if testutils.test_param_get("profile") == "fabric-spgw-int":
@@ -911,9 +914,7 @@ class FabricTest(P4RuntimeTest):
             DEFAULT_PRIORITY,
         )
 
-    def add_forwarding_acl_drop(
-        self, ipv4_src=None, ipv4_dst=None, ip_proto=None, l4_sport=None, l4_dport=None,
-    ):
+    def build_acl_match(self, ig_port=None, ipv4_src=None, ipv4_dst=None, ip_proto=None, l4_sport=None, l4_dport=None):
         # Send only if the match keys are not empty
         matches = self.build_acl_matches(
             ipv4_src, ipv4_dst, ip_proto, l4_sport, l4_dport
@@ -924,9 +925,15 @@ class FabricTest(P4RuntimeTest):
             )
 
     def build_acl_matches(
-        self, ipv4_src=None, ipv4_dst=None, ip_proto=None, l4_sport=None, l4_dport=None,
+        self,
+        ipv4_src=None, ipv4_dst=None, ip_proto=None, l4_sport=None, l4_dport=None,
+        ig_port = None,
     ):
         matches = []
+        if ig_port:
+            ig_port_ = stringify(ig_port, 2)
+            ig_port_mask = stringify(0x1ff, 2)
+            matches.append(self.Ternary("ig_port", ig_port_, ig_port_mask))
         if ipv4_src:
             ipv4_src_ = ipv4_to_binary(ipv4_src)
             ipv4_src_mask = stringify(0xFFFFFFFF, 4)
@@ -949,6 +956,19 @@ class FabricTest(P4RuntimeTest):
             matches.append(self.Ternary("l4_dport", l4_dport_, l4_dport_mask))
         return matches
 
+    def add_forwarding_acl_drop(
+        self, ipv4_src=None, ipv4_dst=None, ip_proto=None, l4_sport=None, l4_dport=None,
+    ):
+        matches = self.build_acl_match(ipv4_src=ipv4_src,
+                                       ipv4_dst=ipv4_dst,
+                                       ip_proto=ip_proto,
+                                       l4_sport=l4_sport,
+                                       l4_dport=l4_dport)
+        if matches:
+            self.send_request_add_entry_to_action(
+                "acl.acl", matches, "acl.drop", [], DEFAULT_PRIORITY,
+            )
+
     def add_forwarding_acl_next(
         self,
         next_id,
@@ -966,12 +986,28 @@ class FabricTest(P4RuntimeTest):
             ipv4_src, ipv4_dst, ip_proto, l4_sport, l4_dport
         )
         matches.append(self.Ternary("ig_port_type", ig_port_type, ig_port_type_mask))
-        if matches:
+        self.send_request_add_entry_to_action(
+            "acl.acl",
+            matches,
+            "acl.set_next_id_acl",
+            [("next_id", next_id_)],
+            DEFAULT_PRIORITY)
+
+    def add_forwarding_acl_output(
+        self, ig_port=None, ipv4_src=None, ipv4_dst=None, ip_proto=None, l4_sport=None, l4_dport=None,
+        output_port=None):
+        matches = self.build_acl_match(ig_port=ig_port,
+                                       ipv4_src=ipv4_src,
+                                       ipv4_dst=ipv4_dst,
+                                       ip_proto=ip_proto,
+                                       l4_sport=l4_sport,
+                                       l4_dport=l4_dport)
+        if matches and output_port:
             self.send_request_add_entry_to_action(
                 "acl.acl",
                 matches,
-                "acl.set_next_id_acl",
-                [("next_id", next_id_)],
+                "acl.set_output_port",
+                [("port_num", stringify(output_port, 2))],
                 DEFAULT_PRIORITY,
             )
 
@@ -1502,9 +1538,11 @@ class IPv4UnicastTest(FabricTest):
         else:
             switch_mac = pkt[Ether].dst
 
-        # Setup ports.
-        self.setup_port(ig_port, vlan1, port_type1, tagged1)
-        self.setup_port(eg_port, vlan2, port_type2, tagged2)
+        # Setup ports. Here we will exclude internal ports such as recirculate port
+        if ig_port not in RECIRCULATE_PORTS:
+            self.setup_port(ig_port, vlan1, port_type1, tagged1)
+        if eg_port not in RECIRCULATE_PORTS:
+            self.setup_port(eg_port, vlan2, port_type2, tagged2)
 
         # Forwarding type -> routing v4
         # If from_packet_out, set eth_dst to don't care. All packet-outs should
@@ -2728,6 +2766,8 @@ class IntTest(IPv4UnicastTest):
             action = "do_local_report_encap"
         elif report_type == INT_REPORT_TYPE_DROP:
             action = "do_drop_report_encap"
+        elif bmd_type == BRIDGED_MD_TYPE_DEFLECTED:
+            action = "do_deflect_on_drop_report_encap"
         else:
             self.fail("Invalid report type {}".format(report_type))
 
@@ -2779,15 +2819,6 @@ class IntTest(IPv4UnicastTest):
 
     def set_up_report_mirror_flow(self, pipe_id, mirror_id, port):
         self.add_clone_group(mirror_id, [port])
-        # TODO: We plan to set up this table by using the control
-        # plane so we don't need to hard code the session id
-        # in pipeline.
-        # self.send_request_add_entry_to_action(
-        #     "tb_set_mirror_session_id",
-        #     [self.Exact("pipe_id", stringify(pipe_id, 1))],
-        #     "set_mirror_session_id", [
-        #         ("sid", stringify(mirror_id, 2))
-        #     ])
 
     def set_up_flow_report_filter_config(self, hop_latency_mask, timestamp_mask):
         self.send_request_add_entry_to_action(
@@ -3128,6 +3159,15 @@ class IntTest(IPv4UnicastTest):
         if Dot1Q in int_inner_pkt:
             int_inner_pkt = pkt_remove_vlan(int_inner_pkt)
 
+        install_routing_entry = True
+        if drop_reason == INT_DROP_REASON_ACL_DENY:
+            self.add_forwarding_acl_drop_ingress_port(1)
+        elif drop_reason == INT_DROP_REASON_ROUTING_V4_MISS:
+            install_routing_entry = False
+        elif drop_reason == INT_DROP_REASON_TRAFFIC_MANAGER:
+            # The packet will still be routed, but dropped by traffic manager.
+            int_inner_pkt = pkt_route(int_inner_pkt, HOST2_MAC)
+
         # The expected INT report packet
         exp_int_report_pkt_masked = self.build_int_drop_report(
             SWITCH_MAC,
@@ -3142,12 +3182,6 @@ class IntTest(IPv4UnicastTest):
             is_device_spine,
             send_report_to_spine,
         )
-
-        install_routing_entry = True
-        if drop_reason == INT_DROP_REASON_ACL_DENY:
-            self.add_forwarding_acl_drop_ingress_port(1)
-        elif drop_reason == INT_DROP_REASON_ROUTING_V4_MISS:
-            install_routing_entry = False
 
         # Set collector, report table, and mirror sessions
         self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine)
@@ -3232,7 +3266,6 @@ class IntTest(IPv4UnicastTest):
         self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine)
 
         # IPv4 Routing test
-
         # If the input pkt has a VLAN tag, use that to configure tables.
         if tagged1 and Dot1Q not in pkt:
             pkt = pkt_add_vlan(pkt, vlan_vid=VLAN_ID_1)

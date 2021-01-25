@@ -20,6 +20,9 @@ cd /tmp/workdir
 if [[ -n "${TM_PORT_JSON}" ]]; then
   TM_ARGS="-f ${TM_PORT_JSON}"
 fi
+if [[ -n "${TM_DOD}" ]]; then
+  TM_ARGS="${TM_ARGS} --dod-test-mode"
+fi
 
 # shellcheck disable=SC2086
 tofino-model --p4-target-config "${DIR}"/tm_conf.json $TM_ARGS

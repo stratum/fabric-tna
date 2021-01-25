@@ -10,15 +10,17 @@
 // We support generating reports only for IPv4 packets, i.e., cannot report IPv6 traffic.
 parser IntReportParser (packet_in packet,
     inout egress_headers_t hdr,
-    inout fabric_egress_metadata_t fabric_md) {
+    inout fabric_egress_metadata_t fabric_md,
+    in egress_intrinsic_metadata_t eg_intr_md) {
 
     state start {
         fabric_md.is_int = true;
         common_egress_metadata_t common_eg_md = packet.lookahead<common_egress_metadata_t>();
-        transition select(common_eg_md.bmd_type, common_eg_md.mirror_type) {
-            (BridgedMdType_t.INT_INGRESS_DROP, _): parse_int_report_bridged;
-            (BridgedMdType_t.EGRESS_MIRROR, FabricMirrorType_t.INT_REPORT): parse_int_report_mirror;
-            (BridgedMdType_t.INGRESS_MIRROR, FabricMirrorType_t.INT_REPORT): parse_int_report_mirror;
+        transition select(eg_intr_md.deflection_flag, common_eg_md.bmd_type, common_eg_md.mirror_type) {
+            (1, _, _): parse_int_report_bridged; // TODO: add new state to set drop reason.
+            (0, BridgedMdType_t.INT_INGRESS_DROP, _): parse_int_report_bridged;
+            (0, BridgedMdType_t.EGRESS_MIRROR, FabricMirrorType_t.INT_REPORT): parse_int_report_mirror;
+            (0, BridgedMdType_t.INGRESS_MIRROR, FabricMirrorType_t.INT_REPORT): parse_int_report_mirror;
             default: reject;
         }
     }
@@ -26,8 +28,8 @@ parser IntReportParser (packet_in packet,
     state parse_int_report_mirror {
         packet.extract(fabric_md.int_mirror_md);
         fabric_md.bridged.bmd_type = fabric_md.int_mirror_md.bmd_type;
-        fabric_md.bridged.base.vlan_id = DEFAULT_VLAN_ID;
         fabric_md.bridged.base.mpls_label = 0; // do not push an MPLS label
+        fabric_md.bridged.int_bmd.strip_gtpu = fabric_md.int_mirror_md.strip_gtpu;
 #ifdef WITH_SPGW
         fabric_md.bridged.spgw.skip_spgw = true;
 #endif // WITH_SPGW
@@ -128,7 +130,6 @@ parser IntReportParser (packet_in packet,
         hdr.report_fixed_header.rsvd = 0;
         // hdr.report_fixed_header.hw_id = update later
         // hdr.report_fixed_header.seq_no = update later
-
         transition check_ethernet;
     }
 
@@ -148,6 +149,66 @@ parser IntReportParser (packet_in packet,
         // the INT report in the Ingress pipe as a standard INT report, instead of punting it to CPU.
         hdr.fake_ethernet.ether_type = ETHERTYPE_CPU_LOOPBACK_INGRESS;
         packet.advance(ETH_HDR_BYTES * 8);
+        transition parse_eth_hdr;
+    }
+
+    state parse_deflected_packet {
+        bridged_metadata_t tmp;
+        packet.extract(tmp);
+        fabric_md.bridged.bmd_type = BridgedMdType_t.DEFLECTED;
+        fabric_md.bridged.base.mpls_label = 0; // do not set the MPLS label later in the egress next control block.
+        fabric_md.bridged.base.ig_tstamp = tmp.base.ig_tstamp;
+        fabric_md.bridged.base.ig_port = tmp.base.ig_port;
+        fabric_md.bridged.int_bmd.report_type = IntReportType_t.DROP;
+        fabric_md.bridged.int_bmd.eg_port = tmp.int_bmd.eg_port;
+        fabric_md.bridged.int_bmd.queue_id = tmp.int_bmd.queue_id;
+        fabric_md.bridged.int_bmd.gtpu_presence = tmp.int_bmd.gtpu_presence;
+#ifdef WITH_SPGW
+        fabric_md.bridged.spgw.skip_spgw = true; // skip spgw so we won't encap it later.
+#endif // WITH_SPGW
+
+        fabric_md.int_mirror_md.setValid();
+        fabric_md.int_mirror_md.report_type = IntReportType_t.DROP;
+        fabric_md.int_mirror_md.mirror_type = FabricMirrorType_t.INVALID;
+        fabric_md.int_mirror_md.ip_eth_type = ETHERTYPE_IPV4;
+        fabric_md.int_mirror_md.flow_hash = tmp.base.inner_hash;
+        // Reset the report type to invalid to prevent the pipeline generating a local report
+        hdr.report_ipv4 = {
+            4w4, // version
+            4w5, // ihl
+            INT_DSCP,
+            2w0, // ecn
+            0, // total_length, will calculate later
+            0, // identification,
+            0, // flags,
+            0, // frag_offset
+            DEFAULT_IPV4_TTL,
+            PROTO_UDP,
+            0, // checksum, will calculate later
+            0, // Src IP, will set later
+            0  // Dst IP, will set later
+        };
+        hdr.report_fixed_header = {
+            0, // version
+            NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER,
+            0, // d
+            0, // q
+            0, // f
+            0, // rsvd
+            0, // hw_id, will set later
+            0, // seq_no, will set later
+            0 // ingress timestamp, will set later
+        };
+        hdr.common_report_header = {
+            0, // switch_id, will set later
+            0, // ig_port, will set later
+            fabric_md.bridged.int_bmd.eg_port,
+            fabric_md.bridged.int_bmd.queue_id
+        };
+        hdr.drop_report_header = {
+            IntDropReason_t.DROP_REASON_TRAFFIC_MANAGER,
+            0 // pad
+        };
         transition parse_eth_hdr;
     }
 
@@ -173,9 +234,18 @@ parser IntReportParser (packet_in packet,
         }
     }
 
+#if defined(WITH_XCONNECT) || defined(WITH_DOUBLE_VLAN_TERMINATION)
+    state strip_inner_vlan_tag {
+        // TODO:
+        // fabric_md.int_md.inner_vlan_stripped = true;
+        packet.advance(VLAN_HDR_BYTES * 8);
+        transition check_eth_type;
+    }
+#endif // WITH_XCONNECT || WITH_DOUBLE_VLAN_TERMINATION
+
     state check_eth_type {
         packet.extract(hdr.eth_type);
-        transition select(hdr.eth_type.value, fabric_md.int_mirror_md.gtpu_presence) {
+        transition select(hdr.eth_type.value, fabric_md.bridged.int_bmd.gtpu_presence) {
             (ETHERTYPE_MPLS, _): strip_mpls;
             (ETHERTYPE_IPV4, GtpuPresence.NONE): handle_ipv4;
             (ETHERTYPE_IPV4, GtpuPresence.GTPU_ONLY): strip_ipv4_udp_gtpu;

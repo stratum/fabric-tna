@@ -107,3 +107,16 @@ singleton_ports {
   }
   node: 1
 }
+vendor_config {
+  tofino_config {
+    node_id_to_deflect_on_drop_configs {
+      key: 1
+      value {
+        drop_targets {
+          sdk_port: 68
+          queue: 1
+        }
+      }
+    }
+  }
+}

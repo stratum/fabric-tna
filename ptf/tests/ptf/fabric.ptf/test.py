@@ -1886,10 +1886,18 @@ class FabricIntIngressDropReportTest(IntTest):
         is_device_spine,
         send_report_to_spine,
         drop_reason,
+        ig_port=None,
+        eg_port=None
     ):
         self.set_up_flow_report_filter_config(
             hop_latency_mask=0xF0000000, timestamp_mask=0xFFFFFFFF
         )
+        if drop_reason == INT_DROP_REASON_TRAFFIC_MANAGER:
+            # In real hardware, we don't need to add an additional table entry to the
+            # egress_vlan table.
+            # In PTF test we add this table entry because the egress port will be
+            # set to zero when deflect a packet in the Tofino Model.
+            self.set_egress_vlan(0, DEFAULT_VLAN)
         print(
             "Testing VLAN={}, pkt={}, is_next_hop_spine={}, "
             "is_device_spine={}, send_report_to_spine={}, drop_reason={}...".format(
@@ -1909,13 +1917,17 @@ class FabricIntIngressDropReportTest(IntTest):
         pkt = getattr(testutils, "simple_{}_packet".format(pkt_type))(
             ip_dst=self.get_single_use_ip()
         )
+        if not ig_port:
+            ig_port = self.port1
+        if not eg_port:
+            eg_port = 0
         self.runIngressIntDropTest(
             pkt=pkt,
             tagged1=tagged[0],
             tagged2=tagged[1],
             is_next_hop_spine=is_next_hop_spine,
-            ig_port=self.port1,
-            eg_port=0,  # packet will be dropped by the pipeline
+            ig_port=ig_port,
+            eg_port=eg_port,
             expect_int_report=True,
             is_device_spine=is_device_spine,
             send_report_to_spine=send_report_to_spine,
@@ -2922,3 +2934,41 @@ class FabricOptimizedFieldDetectorTest(FabricTest):
             return
         print("")
         self.doRunTest()
+
+@group("int-dod")
+class TestDeflectOnDropIntReport(FabricIntLocalReportTest, FabricIntIngressDropReportTest):
+
+    def runTest(self):
+        print("\n")
+        # First, run 9 normal INT tests
+        for _ in range(0, 9):
+            FabricIntLocalReportTest.doRunTest(
+                self,
+                "untagged -> untagged",
+                [False, False],
+                "udp",
+                False,
+                False,
+                False,
+            )
+
+        # The 10th packet will be deflected
+        # The tofino model does not deflect the packet to the port we set,
+        # it only sets the deflected_flag to one so the pipeline use it.
+        # In theory, we shouldn't set the output port to recirculate port but
+        # a normal output since the traffic manager should deflect the packet
+        # to the recirculate port.
+        FabricIntIngressDropReportTest.doRunTest(
+            self,
+            vlan_conf="untagged -> untagged",
+            tagged=[False, False],
+            pkt_type="udp",
+            is_next_hop_spine=False,
+            ig_port=self.port1,
+            eg_port=RECIRCULATE_PORTS[0],
+            is_device_spine=False,
+            send_report_to_spine=False,
+            drop_reason=INT_DROP_REASON_TRAFFIC_MANAGER,
+        )
+
+

@@ -265,6 +265,8 @@ struct int_bridged_metadata_t {
 struct int_metadata_t {
     bit<32> hop_latency;
     bit<48> timestamp;
+    bool    is_int;
+    bool    vlan_stripped;
 }
 #endif // WITH_INT
 

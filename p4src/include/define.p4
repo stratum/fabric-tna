@@ -147,6 +147,7 @@ enum bit<8> BridgedMdType_t {
     EGRESS_MIRROR = 2,
     INGRESS_MIRROR = 3,
     INT_INGRESS_DROP = 4
+    DEFLECTED = 5
 }
 
 // The mirror type, makes the parser to use correct way to parse the mirror metadata.
@@ -206,6 +207,7 @@ enum bit<8> IntDropReason_t {
     DROP_REASON_ROUTING_V4_MISS = 29,
     DROP_REASON_ROUTING_V6_MISS = 29,
     DROP_REASON_PORT_VLAN_MAPPING_MISS = 55,
+    DROP_REASON_TRAFFIC_MANAGER = 71,
     DROP_REASON_ACL_DENY = 80,
     DROP_REASON_BRIDGING_MISS = 89,
     // Fabric-TNA-specific drop reasons

@@ -433,6 +433,7 @@ control SpgwEgress(
         hdr.outer_gtpu_ext_psc.qfi = qfi;
 #ifdef WITH_INT
         fabric_md.int_mirror_md.gtpu_presence = GtpuPresence.GTPU_WITH_PSC;
+        fabric_md.bridged.int_bmd.gtpu_presence = GtpuPresence.GTPU_WITH_PSC;
 #endif // WITH_INT
     }
 
