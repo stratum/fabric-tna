@@ -145,53 +145,26 @@ control IntEgress (
     @hidden
     action add_report_fixed_header() {
         hdr.report_fixed_header.setValid();
-        hdr.report_fixed_header.ver = 0;
-        hdr.report_fixed_header.nproto = NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER;
-        hdr.report_fixed_header.d = 0;
-        hdr.report_fixed_header.q = 0;
-        hdr.report_fixed_header.f = 1;
-        hdr.report_fixed_header.rsvd = 0;
-        hdr.report_fixed_header.ig_tstamp = fabric_md.int_mirror_md.ig_tstamp;
-
         hdr.common_report_header.setValid();
-        hdr.common_report_header.switch_id = fabric_md.int_mirror_md.switch_id;
-        hdr.common_report_header.ig_port = fabric_md.int_mirror_md.ig_port;
-        hdr.common_report_header.eg_port = fabric_md.int_mirror_md.eg_port;
-        hdr.common_report_header.queue_id = fabric_md.int_mirror_md.queue_id;
-        hdr.local_report_header.setValid();
-        hdr.local_report_header.queue_occupancy = fabric_md.int_mirror_md.queue_occupancy;
-        hdr.local_report_header.eg_tstamp = fabric_md.int_mirror_md.eg_tstamp;
     }
 
     action do_report_encap(mac_addr_t src_mac, mac_addr_t mon_mac,
                            ipv4_addr_t src_ip, ipv4_addr_t mon_ip,
                            l4_port_t mon_port) {
         hdr.report_ethernet.setValid();
+        hdr.report_eth_type.setValid();
+        hdr.report_ipv4.setValid();
+        hdr.report_udp.setValid();
         hdr.report_ethernet.dst_addr = mon_mac;
         hdr.report_ethernet.src_addr = src_mac;
-        hdr.report_eth_type.setValid();
-        hdr.report_eth_type.value = ETHERTYPE_IPV4;
-
-        hdr.report_ipv4.setValid();
-        hdr.report_ipv4.version = 4w4;
-        hdr.report_ipv4.ihl = 4w5;
-        hdr.report_ipv4.dscp = INT_DSCP;
-        hdr.report_ipv4.ecn = 2w0;
         hdr.report_ipv4.total_len = IPV4_HDR_BYTES + UDP_HDR_BYTES
                                     + REPORT_FIXED_HEADER_BYTES + LOCAL_REPORT_HEADER_BYTES
                                     - REPORT_MIRROR_HEADER_BYTES
                                     - ETH_FCS_LEN
                                     + eg_intr_md.pkt_length;
         hdr.report_ipv4.identification = ip_id_gen.get();
-        hdr.report_ipv4.flags = 0;
-        hdr.report_ipv4.frag_offset = 0;
-        hdr.report_ipv4.ttl = DEFAULT_IPV4_TTL;
-        hdr.report_ipv4.protocol = PROTO_UDP;
         hdr.report_ipv4.src_addr = src_ip;
         hdr.report_ipv4.dst_addr = mon_ip;
-
-        hdr.report_udp.setValid();
-        hdr.report_udp.sport = 0;
         hdr.report_udp.dport = mon_port;
         hdr.report_udp.len = UDP_HDR_BYTES + REPORT_FIXED_HEADER_BYTES
                              + LOCAL_REPORT_HEADER_BYTES
