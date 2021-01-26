@@ -248,9 +248,9 @@ class NextObjectiveTranslator
             if (obj.meta() != null && obj.meta().getCriterion(Criterion.Type.VLAN_VID) != null) {
                 egressVlan(outPort, obj, popVlanInst, resultBuilder);
             } else {
-                log.warn("NextObjective {} is trying to program {} without {} information",
-                        obj, P4InfoConstants.FABRIC_EGRESS_EGRESS_NEXT_EGRESS_VLAN,
-                        obj.meta() == null ? "metadata" : "vlanId");
+                log.warn("NextObjective is trying to program {} without {} information [{}]",
+                        P4InfoConstants.FABRIC_EGRESS_EGRESS_NEXT_EGRESS_VLAN,
+                        obj.meta() == null ? "metadata" : "vlanId", obj);
             }
         }
     }

@@ -103,8 +103,8 @@ class FilteringObjectiveTranslator
         // NOTE: that SR signals when it is a port update event by not setting
         // the INTERFACE_CONFIG_UPDATE metadata. During the INTERFACE_CONFIG_UPDATE
         // there is no need to add/remove rules in the fwd_classifier table.
-        // NOTE: that in scenarios like (T, N) -> T where we remove only the native
-        // VLAN there is not an ADD following the remove.
+        // NOTE: that in scenarios like (Tagged, Native) -> Tagged where we remove only
+        // the native VLAN there is not an ADD following the remove.
 
         // Forwarding classifier rules should be added/removed to translation when:
         // - the operation is ADD
