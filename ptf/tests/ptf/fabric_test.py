@@ -201,10 +201,11 @@ elif testutils.test_param_get("profile") == "fabric-spgw":
 elif testutils.test_param_get("profile") == "fabric-int":
     BMD_BYTES = 28
 else:
-    BMD_BYTES = 27 # fabric
+    BMD_BYTES = 27  # fabric
 IP_HDR_BYTES = 20
 UDP_HDR_BYTES = 8
 GTP_HDR_BYTES = 8
+
 
 class GTPU(Packet):
     name = "GTP-U Header"
@@ -1829,7 +1830,9 @@ class SpgwSimpleTest(IPv4UnicastTest):
         ingress_bytes = len(pkt) + 4  # FIXME: where does this 4 come from?
         # Since the counter will use the packet length before the pipeline encaped with
         # GTPU headers, we need to remove it from the expected result.
-        egress_bytes = len(exp_pkt) + BMD_BYTES - IP_HDR_BYTES - UDP_HDR_BYTES - GTP_HDR_BYTES
+        egress_bytes = (
+            len(exp_pkt) + BMD_BYTES - IP_HDR_BYTES - UDP_HDR_BYTES - GTP_HDR_BYTES
+        )
         if tagged1:
             ingress_bytes += 4  # length of VLAN header
             egress_bytes += 4  # FIXME: why is this necessary?
@@ -1974,7 +1977,9 @@ class SpgwSimpleTest(IPv4UnicastTest):
         ingress_bytes = 0
         # Since the counter will use the packet length before the pipeline encaped with
         # GTPU headers, we need to remove it from the expected result.
-        egress_bytes = len(exp_pkt) + BMD_BYTES - IP_HDR_BYTES - UDP_HDR_BYTES - GTP_HDR_BYTES
+        egress_bytes = (
+            len(exp_pkt) + BMD_BYTES - IP_HDR_BYTES - UDP_HDR_BYTES - GTP_HDR_BYTES
+        )
         if tagged1:
             egress_bytes += 4  # FIXME: why is this necessary?
         if not tagged2:
@@ -2223,9 +2228,7 @@ class IntTest(IPv4UnicastTest):
             ],
         )
 
-    def set_up_watchlist_flow(
-        self, ipv4_src, ipv4_dst, sport, dport
-    ):
+    def set_up_watchlist_flow(self, ipv4_src, ipv4_dst, sport, dport):
         ipv4_src_ = ipv4_to_binary(ipv4_src)
         ipv4_dst_ = ipv4_to_binary(ipv4_dst)
         ipv4_mask = ipv4_to_binary("255.255.255.255")
