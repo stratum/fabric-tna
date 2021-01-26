@@ -336,7 +336,7 @@ def main():
         help="The fabric profile",
         type=str,
         default="fabric",
-        choices=["fabric", "fabric-spgw", "fabric-int", "fabric-spgw-int"]
+        choices=["fabric", "fabric-spgw", "fabric-int", "fabric-spgw-int"],
     )
     args, unknown_args = parser.parse_known_args()
 
