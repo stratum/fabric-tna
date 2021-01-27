@@ -161,9 +161,9 @@ const bit<16> REPORT_FIXED_HEADER_BYTES = 12;
 const bit<16> DROP_REPORT_HEADER_BYTES = 12;
 const bit<16> LOCAL_REPORT_HEADER_BYTES = 16;
 #ifdef WITH_SPGW
-const bit<16> REPORT_MIRROR_HEADER_BYTES = 29;
+const bit<16> REPORT_MIRROR_HEADER_BYTES = 30;
 #else
-const bit<16> REPORT_MIRROR_HEADER_BYTES = 28;
+const bit<16> REPORT_MIRROR_HEADER_BYTES = 29;
 #endif // WITH_SPGW
 const bit<16> ETH_FCS_LEN = 4;
 
@@ -181,5 +181,25 @@ enum bit<2> IntReportType_t {
     DROP = 2,
     QUEUE = 3
 }
+
+// Common drop reasons from p4lang/switch project
+const bit<8> DROP_REASON_UNKNOWN = 0;
+const bit<8> DROP_REASON_OUTER_SRC_MAC_ZERO = 10;
+const bit<8> DROP_REASON_OUTER_SRC_MAC_MULTICAST = 11;
+const bit<8> DROP_REASON_OUTER_DST_MAC_ZERO = 12;
+const bit<8> DROP_REASON_OUTER_ETHERNET_MISS = 13;
+const bit<8> DROP_REASON_SRC_MAC_ZERO = 14;
+const bit<8> DROP_REASON_SRC_MAC_MULTICAST = 15;
+const bit<8> DROP_REASON_DST_MAC_ZERO = 16;
+const bit<8> DROP_REASON_OUTER_IP_VERSION_INVALID = 25;
+const bit<8> DROP_REASON_OUTER_IP_TTL_ZERO = 26;
+const bit<8> DROP_REASON_OUTER_IP_SRC_MULTICAST = 27;
+const bit<8> DROP_REASON_OUTER_IP_SRC_LOOPBACK = 28;
+const bit<8> DROP_REASON_OUTER_IP_MISS = 29;
+
+// Fabric-tna specific drop reason
+const bit<8> DROP_REASON_PORT_VLAN_MAPPING_MISS = 101;
+const bit<8> DROP_REASON_ACL_DENY = 102;
+const bit<8> DROP_REASON_MISSING_NEXT_ID = 103;
 
 #endif // __DEFINE__

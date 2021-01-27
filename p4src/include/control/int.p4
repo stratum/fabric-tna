@@ -116,8 +116,18 @@ control IntIngress (
     }
 
     apply {
+        if (fabric_md.next_id == 0 &&
+            fabric_md.bridged.int_mirror_md.drop_reason == DROP_REASON_UNKNOWN) {
+            fabric_md.bridged.int_mirror_md.drop_reason = DROP_REASON_MISSING_NEXT_ID;
+        }
         if (hdr.ipv4.isValid()) {
-            watchlist.apply();
+            if(watchlist.apply().hit) {
+                if (fabric_md.bridged.int_mirror_md.drop_reason != DROP_REASON_UNKNOWN) {
+                    fabric_md.bridged.int_bmd.report_type = IntReportType_t.DROP;
+                    // TODO: Mirror the dropped packet so we can generate the report later
+
+                }
+            }
         }
     }
 }

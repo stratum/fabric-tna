@@ -38,6 +38,9 @@ control Acl (inout parsed_headers_t hdr,
     action drop() {
         ig_intr_md_for_dprsr.drop_ctl = 1;
         fabric_md.skip_next = true;
+#ifdef WITH_INT
+        fabric_md.bridged.int_mirror_md.drop_reason = DROP_REASON_ACL_DENY;
+#endif // WITH_INT
         acl_counter.count();
     }
 

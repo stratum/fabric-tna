@@ -218,6 +218,7 @@ header int_mirror_metadata_t {
     bit<16>               ip_eth_type;
     @padding bit<6>       _pad2;
     IntReportType_t       report_type;
+    bit<8>                drop_reason;
 #ifdef WITH_SPGW
     @padding bit<7>       _pad3;
     bit<1>                strip_gtpu;
@@ -279,6 +280,9 @@ struct fabric_ingress_metadata_t {
     bool                    inner_ipv4_checksum_err;
     spgw_ingress_metadata_t spgw;
 #endif // WITH_SPGW
+#ifdef WITH_INT
+    int_mirror_metadata_t int_mirror_md;
+#endif // WITH_INT
 }
 
 // Egress pipeline-only metadata

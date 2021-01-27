@@ -22,6 +22,9 @@ control Filtering (inout parsed_headers_t hdr,
         // Do ACL table in case we want to punt to cpu.
         fabric_md.skip_forwarding = true;
         fabric_md.skip_next = true;
+#ifdef WITH_INT
+        fabric_md.bridged.int_mirror_md.drop_reason = DROP_REASON_PORT_VLAN_MAPPING_MISS;
+#endif // WITH_INT
         ingress_port_vlan_counter.count();
     }
 
