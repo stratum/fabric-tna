@@ -13,6 +13,7 @@ define run_tests
 		--tofino-pipeline-config /p4c-out/pipeline_config.pb.bin \
 		--generate-tv \
 		--loopback \
+		--profile $(1) \
 		$(2)
 endef
 
