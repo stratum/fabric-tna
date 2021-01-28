@@ -167,6 +167,8 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.acl.punt_to_cpu");
     public static final PiActionId FABRIC_INGRESS_ACL_SET_NEXT_ID_ACL =
             PiActionId.of("FabricIngress.acl.set_next_id_acl");
+    public static final PiActionId FABRIC_INGRESS_ACL_SET_OUTPUT_PORT =
+            PiActionId.of("FabricIngress.acl.set_output_port");
     public static final PiActionId FABRIC_INGRESS_FILTERING_DENY =
             PiActionId.of("FabricIngress.filtering.deny");
     public static final PiActionId FABRIC_INGRESS_FILTERING_PERMIT =
