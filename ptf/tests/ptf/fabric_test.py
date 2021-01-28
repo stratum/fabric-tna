@@ -201,11 +201,11 @@ BRIDGED_MD_TYPE_INGRESS_MIRROR = 3
 
 # Size for different headers
 if testutils.test_param_get("profile") == "fabric-spgw-int":
-    BMD_BYTES = 51
+    BMD_BYTES = 53
 elif testutils.test_param_get("profile") == "fabric-spgw":
     BMD_BYTES = 50
 elif testutils.test_param_get("profile") == "fabric-int":
-    BMD_BYTES = 28
+    BMD_BYTES = 30
 else:
     BMD_BYTES = 27  # fabric
 IP_HDR_BYTES = 20

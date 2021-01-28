@@ -129,7 +129,9 @@ control IntIngress (
         fabric_md.int_mirror_md.eg_port = (bit<16>)ig_tm_md.ucast_egress_port;
         fabric_md.int_mirror_md.queue_id = (bit<8>)ig_tm_md.qid;
         fabric_md.int_mirror_md.ip_eth_type = fabric_md.bridged.ip_eth_type;
+#ifdef WITH_SPGW
         fabric_md.int_mirror_md.strip_gtpu = (bit<1>)(hdr.gtpu.isValid());
+#endif // WITH_SPGW
     }
 
     action report_drop_with_reason(bit<32> switch_id, bit<8> drop_reason) {
