@@ -2579,11 +2579,16 @@ class IntTest(IPv4UnicastTest):
 
         # Build expected inner pkt using the input one.
         int_inner_pkt = pkt.copy()
-        int_inner_pkt = pkt_route(int_inner_pkt, HOST2_MAC)
-        if not is_next_hop_spine:
-            int_inner_pkt = pkt_decrement_ttl(int_inner_pkt)
-        if tagged2 and Dot1Q not in int_inner_pkt:
-            int_inner_pkt = pkt_add_vlan(int_inner_pkt, vlan_vid=VLAN_ID_2)
+
+        # Here we are using the ingress mirroring, which won't modify the value
+        # of header fields.
+        # int_inner_pkt = pkt_route(int_inner_pkt, HOST2_MAC)
+        # if not is_next_hop_spine:
+        #     int_inner_pkt = pkt_decrement_ttl(int_inner_pkt)
+        # if tagged2 and Dot1Q not in int_inner_pkt:
+        #     int_inner_pkt = pkt_add_vlan(int_inner_pkt, vlan_vid=VLAN_ID_2)
+        if tagged1 and Dot1Q not in int_inner_pkt:
+            int_inner_pkt = pkt_add_vlan(int_inner_pkt, vlan_vid=VLAN_ID_1)
         # Note that we won't add MPLS header to the expected inner
         # packet since the pipeline will strip out the MPLS header
         # from it before in the parser.

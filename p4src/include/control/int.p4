@@ -129,6 +129,7 @@ control IntIngress (
         fabric_md.int_mirror_md.eg_port = (bit<16>)ig_tm_md.ucast_egress_port;
         fabric_md.int_mirror_md.queue_id = (bit<8>)ig_tm_md.qid;
         fabric_md.int_mirror_md.ip_eth_type = fabric_md.bridged.ip_eth_type;
+        fabric_md.int_mirror_md.strip_gtpu = (bit<1>)(hdr.gtpu.isValid());
     }
 
     action report_drop_with_reason(bit<32> switch_id, bit<8> drop_reason) {
@@ -222,21 +223,11 @@ control IntEgress (
         hdr.report_ipv4.frag_offset = 0;
         hdr.report_ipv4.ttl = DEFAULT_IPV4_TTL;
         hdr.report_ipv4.protocol = PROTO_UDP;
-        hdr.report_ipv4.total_len = IPV4_HDR_BYTES + UDP_HDR_BYTES
-                            + REPORT_FIXED_HEADER_BYTES + LOCAL_REPORT_HEADER_BYTES
-                            - REPORT_MIRROR_HEADER_BYTES
-                            - ETH_FCS_LEN
-                            + eg_intr_md.pkt_length;
         hdr.report_ipv4.identification = ip_id_gen.get();
         hdr.report_ipv4.src_addr = src_ip;
         hdr.report_ipv4.dst_addr = mon_ip;
         hdr.report_udp.setValid();
         hdr.report_udp.dport = mon_port;
-        hdr.report_udp.len = UDP_HDR_BYTES + REPORT_FIXED_HEADER_BYTES
-                             + LOCAL_REPORT_HEADER_BYTES
-                             - REPORT_MIRROR_HEADER_BYTES
-                             - ETH_FCS_LEN
-                             + eg_intr_md.pkt_length;
         hdr.report_fixed_header.setValid();
         hdr.report_fixed_header.ver = 0;
         hdr.report_fixed_header.rsvd = 0;
@@ -253,6 +244,16 @@ control IntEgress (
         hdr.report_fixed_header.nproto = NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER;
         hdr.report_fixed_header.f = 1;
         hdr.local_report_header.setValid();
+        hdr.report_ipv4.total_len = IPV4_HDR_BYTES + UDP_HDR_BYTES
+                            + REPORT_FIXED_HEADER_BYTES + LOCAL_REPORT_HEADER_BYTES
+                            - REPORT_MIRROR_HEADER_BYTES
+                            - ETH_FCS_LEN
+                            + eg_intr_md.pkt_length;
+        hdr.report_udp.len = UDP_HDR_BYTES + REPORT_FIXED_HEADER_BYTES
+                             + LOCAL_REPORT_HEADER_BYTES
+                             - REPORT_MIRROR_HEADER_BYTES
+                             - ETH_FCS_LEN
+                             + eg_intr_md.pkt_length;
     }
 
     action do_local_report_encap_mpls(mac_addr_t src_mac, mac_addr_t mon_mac,
@@ -274,6 +275,16 @@ control IntEgress (
         hdr.report_fixed_header.nproto = NPROTO_TELEMETRY_DROP_HEADER;
         hdr.report_fixed_header.d = 1;
         hdr.drop_report_header.setValid();
+        hdr.report_ipv4.total_len = IPV4_HDR_BYTES + UDP_HDR_BYTES
+                            + REPORT_FIXED_HEADER_BYTES + DROP_REPORT_HEADER_BYTES
+                            - REPORT_MIRROR_HEADER_BYTES
+                            - ETH_FCS_LEN
+                            + eg_intr_md.pkt_length;
+        hdr.report_udp.len = UDP_HDR_BYTES + REPORT_FIXED_HEADER_BYTES
+                             + DROP_REPORT_HEADER_BYTES
+                             - REPORT_MIRROR_HEADER_BYTES
+                             - ETH_FCS_LEN
+                             + eg_intr_md.pkt_length;
     }
 
     action do_drop_report_encap_mpls(mac_addr_t src_mac, mac_addr_t mon_mac,

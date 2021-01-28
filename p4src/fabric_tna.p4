@@ -98,6 +98,10 @@ control FabricEgress (
         hdr.report_eth_type.setInvalid();
         hdr.report_ipv4.setInvalid();
         hdr.report_udp.setInvalid();
+        hdr.report_fixed_header.setInvalid();
+        hdr.common_report_header.setInvalid();
+        hdr.local_report_header.setInvalid();
+        hdr.drop_report_header.setInvalid();
 #endif // WITH_INT
         pkt_io_egress.apply(hdr, fabric_md, eg_intr_md);
 #ifdef WITH_INT
