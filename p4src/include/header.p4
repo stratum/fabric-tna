@@ -189,7 +189,6 @@ header local_report_header_t {
 // Here we set the mirror metadata with "no overlay" to prevent this.
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.bmd_type")
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.mirror_type")
-@pa_no_overlay("egress", "fabric_md.int_mirror_md.mirror_session_id")
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.switch_id")
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.ig_port")
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.eg_port")
@@ -205,8 +204,6 @@ header int_mirror_metadata_t {
     BridgedMdType_t       bmd_type;
     @padding bit<5>       _pad0;
     FabricMirrorType_t    mirror_type;
-    @padding bit<6>       _pad1;
-    MirrorId_t            mirror_session_id;
     bit<32>               switch_id;
     bit<16>               ig_port;
     bit<16>               eg_port;
@@ -218,7 +215,6 @@ header int_mirror_metadata_t {
     bit<16>               ip_eth_type;
     @padding bit<6>       _pad2;
     IntReportType_t       report_type;
-    bit<8>                drop_reason;
 #ifdef WITH_SPGW
     @padding bit<7>       _pad3;
     bit<1>                strip_gtpu;
@@ -227,6 +223,7 @@ header int_mirror_metadata_t {
 
 struct int_bridged_metadata_t {
     IntReportType_t report_type;
+    MirrorId_t      mirror_session_id;
 }
 #endif // WITH_INT
 
@@ -350,6 +347,7 @@ struct parsed_headers_t {
     report_fixed_header_t report_fixed_header;
     common_report_header_t common_report_header;
     local_report_header_t local_report_header;
+    drop_report_header_t drop_report_header;
 #endif // WITH_INT
 }
 

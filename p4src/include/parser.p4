@@ -228,6 +228,21 @@ parser FabricIngressParser (packet_in  packet,
 #endif // WITH_SPGW
 }
 
+control FabricIngressMirror(
+    in parsed_headers_t hdr,
+    in fabric_ingress_metadata_t fabric_md,
+    in ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr) {
+    Mirror() mirror;
+    apply {
+#ifdef WITH_INT
+        if (ig_intr_md_for_dprsr.mirror_type == (bit<3>)FabricMirrorType_t.INT_REPORT) {
+            mirror.emit<int_mirror_metadata_t>(fabric_md.bridged.int_bmd.mirror_session_id,
+                                               fabric_md.int_mirror_md);
+        }
+#endif // WITH_INT
+    }
+}
+
 control FabricIngressDeparser(packet_out packet,
     /* Fabric.p4 */
     inout parsed_headers_t hdr,
@@ -235,7 +250,10 @@ control FabricIngressDeparser(packet_out packet,
     /* TNA */
     in ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr) {
 
+    FabricIngressMirror() ingress_mirror;
+
     apply {
+        ingress_mirror.apply(hdr, fabric_md, ig_intr_md_for_dprsr);
         packet.emit(fabric_md.bridged);
         packet.emit(hdr.fake_ethernet);
         packet.emit(hdr.packet_in);
@@ -283,6 +301,7 @@ parser FabricEgressParser (packet_in packet,
             (BridgedMdType_t.INGRESS_TO_EGRESS, _): parse_bridged_md;
 #ifdef WITH_INT
             (BridgedMdType_t.EGRESS_MIRROR, FabricMirrorType_t.INT_REPORT): parse_int_report_mirror;
+            (BridgedMdType_t.INGRESS_MIRROR, FabricMirrorType_t.INT_REPORT): parse_int_report_mirror;
 #endif // WITH_INT
             default: reject;
         }
@@ -442,12 +461,12 @@ parser FabricEgressParser (packet_in packet,
 control FabricEgressMirror(
     in parsed_headers_t hdr,
     in fabric_egress_metadata_t fabric_md,
-    in egress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr) {
+    in egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr) {
     Mirror() mirror;
     apply {
 #ifdef WITH_INT
-        if (ig_intr_md_for_dprsr.mirror_type == (bit<3>)FabricMirrorType_t.INT_REPORT) {
-            mirror.emit<int_mirror_metadata_t>(fabric_md.int_mirror_md.mirror_session_id,
+        if (eg_intr_md_for_dprsr.mirror_type == (bit<3>)FabricMirrorType_t.INT_REPORT) {
+            mirror.emit<int_mirror_metadata_t>(fabric_md.bridged.int_bmd.mirror_session_id,
                                                fabric_md.int_mirror_md);
         }
 #endif // WITH_INT
@@ -536,6 +555,7 @@ control FabricEgressDeparser(packet_out packet,
         packet.emit(hdr.report_fixed_header);
         packet.emit(hdr.common_report_header);
         packet.emit(hdr.local_report_header);
+        packet.emit(hdr.drop_report_header);
 #endif // WITH_INT
         packet.emit(hdr.ethernet);
         packet.emit(hdr.vlan_tag);

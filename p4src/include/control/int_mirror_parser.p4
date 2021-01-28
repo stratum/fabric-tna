@@ -15,33 +15,7 @@ parser IntReportMirrorParser (packet_in packet,
         packet.extract(fabric_md.int_mirror_md);
         fabric_md.bridged.bmd_type = fabric_md.int_mirror_md.bmd_type;
         fabric_md.bridged.vlan_id = DEFAULT_VLAN_ID;
-        hdr.report_eth_type.value = ETHERTYPE_IPV4;
-        hdr.report_ipv4 = {
-            4w4, // version
-            4w5, // ihl
-            INT_DSCP,
-            2w0, // ecn
-            0, // total_length, will calculate later
-            0, // identification,
-            0, // flags,
-            0, // frag_offset
-            DEFAULT_IPV4_TTL,
-            PROTO_UDP,
-            0, // checksum, will calculate later
-            0, // Src IP, will set later
-            0  // Dst IP, will set later
-        };
-        hdr.report_fixed_header = {
-            0, // version
-            NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER,
-            0, // d
-            0, // q
-            1, // f
-            0, // rsvd
-            0, // hw_id, will set later
-            0, // seq_no, will set later
-            fabric_md.int_mirror_md.ig_tstamp
-        };
+        hdr.report_fixed_header.ig_tstamp = fabric_md.int_mirror_md.ig_tstamp;
         hdr.common_report_header = {
             fabric_md.int_mirror_md.switch_id,
             fabric_md.int_mirror_md.ig_port,
@@ -51,6 +25,10 @@ parser IntReportMirrorParser (packet_in packet,
         hdr.local_report_header = {
             fabric_md.int_mirror_md.queue_occupancy,
             fabric_md.int_mirror_md.eg_tstamp
+        };
+        hdr.drop_report_header = {
+            fabric_md.int_mirror_md.drop_reason,
+            0
         };
         transition parse_eth_hdr;
     }

@@ -67,3 +67,14 @@ class INT_L45_LOCAL_REPORT(Packet):
         BitField("queue_occupancy", 0, 24),
         XIntField("egress_tstamp", 0),
     ]
+
+class INT_L45_DROP_REPORT(Packet):
+    name = "INT_L45_DROP_REPORT"
+    fields_desc = [
+        XIntField("switch_id", 0),
+        XShortField("ingress_port_id", 0),
+        XShortField("egress_port_id", 0),
+        BitField("queue_id", 0, 8),
+        XByteField("drop_reason", 0),
+        ShortField("pad", 0),
+    ]

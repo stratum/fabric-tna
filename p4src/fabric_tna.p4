@@ -59,7 +59,7 @@ control FabricIngress (
             next.apply(hdr, fabric_md, ig_intr_md, ig_tm_md);
         }
 #ifdef WITH_INT
-        int_ingress.apply(hdr, fabric_md, ig_intr_md);
+        int_ingress.apply(hdr, fabric_md, ig_intr_md, ig_dprsr_md, ig_tm_md);
 #endif // WITH_INT
     }
 }

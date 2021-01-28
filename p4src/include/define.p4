@@ -111,7 +111,8 @@ action nop() {
 enum bit<8> BridgedMdType_t {
     INVALID = 0,
     INGRESS_TO_EGRESS = 1,
-    EGRESS_MIRROR = 2
+    EGRESS_MIRROR = 2,
+    INGRESS_MIRROR = 3
 }
 
 // The mirror type, makes the parser to use correct way to parse the mirror metadata.
@@ -161,9 +162,9 @@ const bit<16> REPORT_FIXED_HEADER_BYTES = 12;
 const bit<16> DROP_REPORT_HEADER_BYTES = 12;
 const bit<16> LOCAL_REPORT_HEADER_BYTES = 16;
 #ifdef WITH_SPGW
-const bit<16> REPORT_MIRROR_HEADER_BYTES = 30;
+const bit<16> REPORT_MIRROR_HEADER_BYTES = 27;
 #else
-const bit<16> REPORT_MIRROR_HEADER_BYTES = 29;
+const bit<16> REPORT_MIRROR_HEADER_BYTES = 26;
 #endif // WITH_SPGW
 const bit<16> ETH_FCS_LEN = 4;
 
@@ -182,24 +183,11 @@ enum bit<2> IntReportType_t {
     QUEUE = 3
 }
 
-// Common drop reasons from p4lang/switch project
-const bit<8> DROP_REASON_UNKNOWN = 0;
-const bit<8> DROP_REASON_OUTER_SRC_MAC_ZERO = 10;
-const bit<8> DROP_REASON_OUTER_SRC_MAC_MULTICAST = 11;
-const bit<8> DROP_REASON_OUTER_DST_MAC_ZERO = 12;
-const bit<8> DROP_REASON_OUTER_ETHERNET_MISS = 13;
-const bit<8> DROP_REASON_SRC_MAC_ZERO = 14;
-const bit<8> DROP_REASON_SRC_MAC_MULTICAST = 15;
-const bit<8> DROP_REASON_DST_MAC_ZERO = 16;
-const bit<8> DROP_REASON_OUTER_IP_VERSION_INVALID = 25;
-const bit<8> DROP_REASON_OUTER_IP_TTL_ZERO = 26;
-const bit<8> DROP_REASON_OUTER_IP_SRC_MULTICAST = 27;
-const bit<8> DROP_REASON_OUTER_IP_SRC_LOOPBACK = 28;
-const bit<8> DROP_REASON_OUTER_IP_MISS = 29;
-
-// Fabric-tna specific drop reason
+// INT drop reasons.
+const bit<8> DROP_REASON_UNSET = 0;
+const bit<8> DROP_REASON_UNKNOWN = 100;
 const bit<8> DROP_REASON_PORT_VLAN_MAPPING_MISS = 101;
 const bit<8> DROP_REASON_ACL_DENY = 102;
-const bit<8> DROP_REASON_MISSING_NEXT_ID = 103;
+const bit<8> DROP_REASON_NEXT_ID_MISS = 103;
 
 #endif // __DEFINE__
