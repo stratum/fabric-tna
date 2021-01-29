@@ -5,6 +5,7 @@ package org.stratumproject.fabric.tna.behaviour;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.onlab.packet.Ip4Address;
 import org.onlab.packet.IpAddress;
@@ -45,7 +46,9 @@ import org.onosproject.net.pi.runtime.PiActionParam;
 import org.onosproject.segmentrouting.config.SegmentRoutingDeviceConfig;
 import org.stratumproject.fabric.tna.PipeconfLoader;
 
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -402,9 +405,11 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
 
     private boolean setupIntReportInternal(IntDeviceConfig cfg) {
         final List<FlowRule> reportRules = buildReportEntries(cfg);
-        if (reportRules.stream().existOne(Objects::isNull)) {
-            flowRuleService.applyFlowRules(reportRule);
-            log.info("Report rule added to {} [{}]", this.data().deviceId(), reportRule);
+        if (reportRules.stream().noneMatch(Objects::isNull)) {
+            reportRules.forEach(reportRule -> {
+                flowRuleService.applyFlowRules(reportRule);
+                log.info("Report rule added to {} [{}]", this.data().deviceId(), reportRule);
+            });
         } else {
             log.warn("Failed to add report rule to {}", this.data().deviceId());
             return false;
@@ -555,9 +560,9 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
             }
 
             if (reportType == INT_REPORT_TYPE_LOCAL) {
-                reportAction.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_LOCAL_REPORT_ENCAP_MPLS);
+                reportActionBuilder.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_LOCAL_REPORT_ENCAP_MPLS);
             } else if (reportType == INT_REPORT_TYPE_DROP) {
-                reportAction.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_DROP_REPORT_ENCAP_MPLS);
+                reportActionBuilder.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_DROP_REPORT_ENCAP_MPLS);
             } else {
                 // Invalid report type
                 log.warn("Invalid report type %d", reportType);
@@ -572,9 +577,9 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
 
         } else {
             if (reportType == INT_REPORT_TYPE_LOCAL) {
-                reportAction.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_LOCAL_REPORT_ENCAP);
+                reportActionBuilder.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_LOCAL_REPORT_ENCAP);
             } else if (reportType == INT_REPORT_TYPE_DROP) {
-                reportAction.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_DROP_REPORT_ENCAP);
+                reportActionBuilder.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_DROP_REPORT_ENCAP);
             } else {
                 // Invalid report type
                 log.warn("Invalid report type %d", reportType);
@@ -611,11 +616,11 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
     }
 
     private List<FlowRule> buildReportEntries(IntDeviceConfig intCfg) {
-        return ImmutableList.of(
-            buildReportEntryWithType(intCfg, BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_LOCAL),
-            buildReportEntryWithType(intCfg, BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_DROP),
-            buildReportEntryWithType(intCfg, BMD_TYPE_INGRESS_MIRROR, INT_REPORT_TYPE_LOCAL),
-            buildReportEntryWithType(intCfg, BMD_TYPE_INGRESS_MIRROR, INT_REPORT_TYPE_DROP)
+        return Lists.newArrayList(
+                buildReportEntryWithType(intCfg, BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_LOCAL),
+                buildReportEntryWithType(intCfg, BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_DROP),
+                buildReportEntryWithType(intCfg, BMD_TYPE_INGRESS_MIRROR, INT_REPORT_TYPE_LOCAL),
+                buildReportEntryWithType(intCfg, BMD_TYPE_INGRESS_MIRROR, INT_REPORT_TYPE_DROP)
         );
     }
 }

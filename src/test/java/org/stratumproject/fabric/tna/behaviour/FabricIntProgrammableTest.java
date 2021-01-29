@@ -125,7 +125,7 @@ public class FabricIntProgrammableTest {
                 .andReturn(getSrConfig(LEAF_DEVICE_ID, "/sr.json")).anyTimes();
         expect(netcfgService.getConfig(SPINE_DEVICE_ID, SegmentRoutingDeviceConfig.class))
                 .andReturn(getSrConfig(SPINE_DEVICE_ID, "/sr-spine.json")).anyTimes();
-        expect(hostService.getHostsByIp(COLLECTOR_IP)).andReturn(ImmutableSet.of(COLLECTOR_HOST));
+        expect(hostService.getHostsByIp(COLLECTOR_IP)).andReturn(ImmutableSet.of(COLLECTOR_HOST)).anyTimes();
         replay(coreService, netcfgService, hostService);
 
         DriverHandler driverHandler = createNiceMock(DriverHandler.class);
