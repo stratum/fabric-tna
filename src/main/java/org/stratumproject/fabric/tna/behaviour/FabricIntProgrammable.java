@@ -92,8 +92,10 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
             P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_CONFIG
     );
     private static final short BMD_TYPE_EGRESS_MIRROR = 2;
+    private static final short BMD_TYPE_INGRESS_MIRROR = 3;
     private static final short MIRROR_TYPE_INT_REPORT = 1;
     private static final short INT_REPORT_TYPE_LOCAL = 1;
+    private static final short INT_REPORT_TYPE_DROP = 2;
 
     private FlowRuleService flowRuleService;
     private GroupService groupService;
@@ -399,8 +401,8 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
     }
 
     private boolean setupIntReportInternal(IntDeviceConfig cfg) {
-        final FlowRule reportRule = buildReportEntry(cfg);
-        if (reportRule != null) {
+        final List<FlowRule> reportRules = buildReportEntries(cfg);
+        if (reportRules.stream().existOne(Objects::isNull)) {
             flowRuleService.applyFlowRules(reportRule);
             log.info("Report rule added to {} [{}]", this.data().deviceId(), reportRule);
         } else {
@@ -514,7 +516,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         return Optional.of(cfg.nodeSidIPv4());
     }
 
-    private FlowRule buildReportEntry(IntDeviceConfig intCfg) {
+    private FlowRule buildReportEntryWithType(IntDeviceConfig intCfg, short bridgedMdType, short reportType) {
         final SegmentRoutingDeviceConfig srCfg = cfgService.getConfig(
                 deviceId, SegmentRoutingDeviceConfig.class);
         if (srCfg == null) {
@@ -540,8 +542,8 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         final PiActionParam monPortParam = new PiActionParam(
                 P4InfoConstants.MON_PORT,
                 intCfg.collectorPort().toInt());
-        PiAction reportAction;
 
+        PiAction.Builder reportActionBuilder = PiAction.builder();
         if (!srCfg.isEdgeRouter()) {
             // If the device is a spine device, we need to find which
             // switch is the INT collector attached to and find the SID of that device.
@@ -551,40 +553,50 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 // Error log will be shown in getSidForCollector method.
                 return null;
             }
+
+            if (reportType == INT_REPORT_TYPE_LOCAL) {
+                reportAction.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_LOCAL_REPORT_ENCAP_MPLS);
+            } else if (reportType == INT_REPORT_TYPE_DROP) {
+                reportAction.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_DROP_REPORT_ENCAP_MPLS);
+            } else {
+                // Invalid report type
+                log.warn("Invalid report type %d", reportType);
+                return null;
+            }
+
             final PiActionParam monLabelParam = new PiActionParam(
                     P4InfoConstants.MON_LABEL,
                     sid.get());
-            reportAction = PiAction.builder()
-                    .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_LOCAL_REPORT_ENCAP_MPLS)
-                    .withParameter(srcMacParam)
-                    .withParameter(nextHopMacParam)
-                    .withParameter(srcIpParam)
-                    .withParameter(monIpParam)
-                    .withParameter(monPortParam)
-                    .withParameter(monLabelParam)
-                    .build();
-        } else {
-            reportAction = PiAction.builder()
-                    .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_LOCAL_REPORT_ENCAP)
-                    .withParameter(srcMacParam)
-                    .withParameter(nextHopMacParam)
-                    .withParameter(srcIpParam)
-                    .withParameter(monIpParam)
-                    .withParameter(monPortParam)
-                    .build();
-        }
+            reportActionBuilder.withParameter(monLabelParam);
 
+
+        } else {
+            if (reportType == INT_REPORT_TYPE_LOCAL) {
+                reportAction.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_LOCAL_REPORT_ENCAP);
+            } else if (reportType == INT_REPORT_TYPE_DROP) {
+                reportAction.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_DROP_REPORT_ENCAP);
+            } else {
+                // Invalid report type
+                log.warn("Invalid report type %d", reportType);
+                return null;
+            }
+        }
+        reportActionBuilder.withParameter(srcMacParam)
+                    .withParameter(nextHopMacParam)
+                    .withParameter(srcIpParam)
+                    .withParameter(monIpParam)
+                    .withParameter(monPortParam);
         final TrafficTreatment treatment = DefaultTrafficTreatment.builder()
-                .piTableAction(reportAction)
+                .piTableAction(reportActionBuilder.build())
                 .build();
         final TrafficSelector selector = DefaultTrafficSelector.builder()
                 .matchPi(PiCriterion.builder()
                         .matchExact(P4InfoConstants.HDR_BMD_TYPE,
-                                    BMD_TYPE_EGRESS_MIRROR)
+                                    bridgedMdType)
                         .matchExact(P4InfoConstants.HDR_MIRROR_TYPE,
                                     MIRROR_TYPE_INT_REPORT)
                         .matchExact(P4InfoConstants.HDR_INT_REPORT_TYPE,
-                                    INT_REPORT_TYPE_LOCAL)
+                                    reportType)
                         .build())
                 .build();
         return DefaultFlowRule.builder()
@@ -596,5 +608,14 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 .forDevice(this.data().deviceId())
                 .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_REPORT)
                 .build();
+    }
+
+    private List<FlowRule> buildReportEntries(IntDeviceConfig intCfg) {
+        return ImmutableList.of(
+            buildReportEntryWithType(intCfg, BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_LOCAL),
+            buildReportEntryWithType(intCfg, BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_DROP),
+            buildReportEntryWithType(intCfg, BMD_TYPE_INGRESS_MIRROR, INT_REPORT_TYPE_LOCAL),
+            buildReportEntryWithType(intCfg, BMD_TYPE_INGRESS_MIRROR, INT_REPORT_TYPE_DROP)
+        );
     }
 }

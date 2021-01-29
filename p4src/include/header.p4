@@ -198,6 +198,7 @@ header local_report_header_t {
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.eg_tstamp")
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.drop_reason")
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.ip_eth_type")
+@pa_no_overlay("egress", "fabric_md.int_mirror_md.report_type")
 #ifdef WITH_SPGW
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.strip_gtpu")
 #endif // WITH_SPGW
