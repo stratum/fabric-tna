@@ -175,6 +175,8 @@ const MirrorId_t REPORT_MIRROR_SESS_PIPE_3 = 303;
 
 #define FLOW_REPORT_FILTER_WIDTH 16
 typedef bit<FLOW_REPORT_FILTER_WIDTH> flow_report_filter_index_t;
+#define DROP_REPORT_FILTER_WIDTH 16
+typedef bit<DROP_REPORT_FILTER_WIDTH> drop_report_filter_index_t;
 
 enum bit<2> IntReportType_t {
     NO_REPORT = 0,

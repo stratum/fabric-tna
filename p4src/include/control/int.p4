@@ -90,6 +90,63 @@ control FlowReportFilter(
     }
 }
 
+
+control DropReportFilter(
+    inout parsed_headers_t hdr,
+    inout fabric_egress_metadata_t fabric_md,
+    inout egress_intrinsic_metadata_for_deparser_t eg_dprsr_md) {
+
+    Hash<bit<16>>(HashAlgorithm_t.CRC16) digester;
+    bit<16> digest;
+    bit<1> flag;
+
+    // Bloom filter with 2 hash functions storing flow digests. The digest is
+    // the hash of:
+    // - quantized timestamp (to generate periodic reports).
+    // - 5-tuple hash (to detect collisions);
+    // We use such filter to reduce the volume of reports that the collector has
+    // to ingest.
+    @hidden
+    Register<drop_report_filter_index_t, bit<16>>(1 << DROP_REPORT_FILTER_WIDTH, 0) filter1;
+    @hidden
+    Register<drop_report_filter_index_t, bit<16>>(1 << DROP_REPORT_FILTER_WIDTH, 0) filter2;
+
+    // Meaning of the result:
+    // 1 digest did NOT change
+    // 0 change detected
+    @reduction_or_group("filter")
+    RegisterAction<bit<16>, flow_report_filter_index_t, bit<1>>(filter1) filter_get_and_set1 = {
+        void apply(inout bit<16> stored_digest, out bit<1> result) {
+            result = stored_digest == digest ? 1w1 : 1w0;
+            stored_digest = digest;
+        }
+    };
+
+    @reduction_or_group("filter")
+    RegisterAction<bit<16>, flow_report_filter_index_t, bit<1>>(filter2) filter_get_and_set2 = {
+        void apply(inout bit<16> stored_digest, out bit<1> result) {
+            result = stored_digest == digest ? 1w1 : 1w0;
+            stored_digest = digest;
+        }
+    };
+
+    apply {
+        if (fabric_md.int_mirror_md.report_type == IntReportType_t.DROP) {
+            digest = digester.get({ // burp!
+                fabric_md.bridged.flow_hash,
+                fabric_md.int_mirror_md.ig_tstamp[31:30]
+            });
+            flag = filter_get_and_set1.execute(fabric_md.bridged.flow_hash[31:16]);
+            flag = flag | filter_get_and_set2.execute(fabric_md.bridged.flow_hash[15:0]);
+            // Drop the report if we already report it within a period of time.
+            if (flag == 1) {
+                eg_dprsr_md.drop_ctl = 1;
+                exit;
+            }
+        }
+    }
+}
+
 control IntIngress (
     inout parsed_headers_t hdr,
     inout fabric_ingress_metadata_t fabric_md,
@@ -195,6 +252,7 @@ control IntEgress (
     inout egress_intrinsic_metadata_for_deparser_t eg_dprsr_md) {
 
     FlowReportFilter() flow_report_filter;
+    DropReportFilter() drop_report_filter;
 
     @hidden
     Random<bit<16>>() ip_id_gen;
@@ -382,6 +440,7 @@ control IntEgress (
 
     apply {
         if (report.apply().hit) {
+            drop_report_filter.apply(hdr, fabric_md, eg_dprsr_md);
             // The packet is a mirror packet for INT report.
             // Fix the ethertype, the reason we need to fix the ether type is because we
             // may strip the MPLS header from the parser, and the ethertype will still be
