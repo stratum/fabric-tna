@@ -235,8 +235,6 @@ control IntEgress (
         hdr.report_fixed_header.rsvd = 0;
         hdr.report_fixed_header.hw_id = 0;
         hdr.report_fixed_header.seq_no = 0;
-        hdr.report_fixed_header.ig_tstamp = 0;
-        hdr.common_report_header.setValid();
     }
 
     action do_local_report_encap(mac_addr_t src_mac, mac_addr_t mon_mac,
@@ -245,7 +243,9 @@ control IntEgress (
         add_report_fixed_header(src_mac, mon_mac, src_ip, mon_ip, mon_port);
         hdr.report_fixed_header.nproto = NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER;
         hdr.report_fixed_header.f = 1;
-        hdr.local_report_header.setValid();
+        // The INT mirror parser will initialize both local and drop report header and
+        // set them to valid, need to set the drop report header to invalid.
+        hdr.drop_report_header.setInvalid();
         hdr.report_ipv4.total_len = IPV4_HDR_BYTES + UDP_HDR_BYTES
                             + REPORT_FIXED_HEADER_BYTES + LOCAL_REPORT_HEADER_BYTES
                             - REPORT_MIRROR_HEADER_BYTES
@@ -276,7 +276,9 @@ control IntEgress (
         add_report_fixed_header(src_mac, mon_mac, src_ip, mon_ip, mon_port);
         hdr.report_fixed_header.nproto = NPROTO_TELEMETRY_DROP_HEADER;
         hdr.report_fixed_header.d = 1;
-        hdr.drop_report_header.setValid();
+        // The INT mirror parser will initialize both local and drop report header and
+        // set them to valid, need to set the local report header to invalid.
+        hdr.local_report_header.setInvalid();
         hdr.report_ipv4.total_len = IPV4_HDR_BYTES + UDP_HDR_BYTES
                             + REPORT_FIXED_HEADER_BYTES + DROP_REPORT_HEADER_BYTES
                             - REPORT_MIRROR_HEADER_BYTES

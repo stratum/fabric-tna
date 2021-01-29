@@ -555,7 +555,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                     P4InfoConstants.MON_LABEL,
                     sid.get());
             reportAction = PiAction.builder()
-                    .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_REPORT_ENCAP_MPLS)
+                    .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_LOCAL_REPORT_ENCAP_MPLS)
                     .withParameter(srcMacParam)
                     .withParameter(nextHopMacParam)
                     .withParameter(srcIpParam)
@@ -565,7 +565,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                     .build();
         } else {
             reportAction = PiAction.builder()
-                    .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_REPORT_ENCAP)
+                    .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_LOCAL_REPORT_ENCAP)
                     .withParameter(srcMacParam)
                     .withParameter(nextHopMacParam)
                     .withParameter(srcIpParam)

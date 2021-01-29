@@ -28,7 +28,7 @@ parser IntReportMirrorParser (packet_in packet,
         };
         hdr.drop_report_header = {
             fabric_md.int_mirror_md.drop_reason,
-            0
+            0 // pad
         };
         transition parse_eth_hdr;
     }

@@ -25,6 +25,10 @@ public final class P4InfoConstants {
     // Header field IDs
     public static final PiMatchFieldId HDR_BMD_TYPE =
             PiMatchFieldId.of("bmd_type");
+    public static final PiMatchFieldId HDR_COPY_TO_CPU =
+            PiMatchFieldId.of("copy_to_cpu");
+    public static final PiMatchFieldId HDR_DROP_CTL =
+            PiMatchFieldId.of("drop_ctl");
     public static final PiMatchFieldId HDR_EG_PORT =
             PiMatchFieldId.of("eg_port");
     public static final PiMatchFieldId HDR_ETH_DST =
@@ -42,10 +46,8 @@ public final class P4InfoConstants {
             PiMatchFieldId.of("icmp_type");
     public static final PiMatchFieldId HDR_IG_PORT =
             PiMatchFieldId.of("ig_port");
-    public static final PiMatchFieldId HDR_INET_ADDR =
-            PiMatchFieldId.of("inet_addr");
-    public static final PiMatchFieldId HDR_INET_L4_PORT =
-            PiMatchFieldId.of("inet_l4_port");
+    public static final PiMatchFieldId HDR_INT_DROP_REASON =
+            PiMatchFieldId.of("int_drop_reason");
     public static final PiMatchFieldId HDR_INT_REPORT_TYPE =
             PiMatchFieldId.of("int_report_type");
     public static final PiMatchFieldId HDR_IP_ETH_TYPE =
@@ -106,6 +108,8 @@ public final class P4InfoConstants {
             PiTableId.of("FabricIngress.forwarding.routing_v4");
     public static final PiTableId FABRIC_INGRESS_FORWARDING_ROUTING_V6 =
             PiTableId.of("FabricIngress.forwarding.routing_v6");
+    public static final PiTableId FABRIC_INGRESS_INT_INGRESS_DROP_REPORT =
+            PiTableId.of("FabricIngress.int_ingress.drop_report");
     public static final PiTableId FABRIC_INGRESS_INT_INGRESS_WATCHLIST =
             PiTableId.of("FabricIngress.int_ingress.watchlist");
     public static final PiTableId FABRIC_INGRESS_NEXT_HASHED =
@@ -155,10 +159,14 @@ public final class P4InfoConstants {
             PiActionId.of("FabricEgress.egress_next.pop_vlan");
     public static final PiActionId FABRIC_EGRESS_EGRESS_NEXT_PUSH_VLAN =
             PiActionId.of("FabricEgress.egress_next.push_vlan");
-    public static final PiActionId FABRIC_EGRESS_INT_EGRESS_DO_REPORT_ENCAP =
-            PiActionId.of("FabricEgress.int_egress.do_report_encap");
-    public static final PiActionId FABRIC_EGRESS_INT_EGRESS_DO_REPORT_ENCAP_MPLS =
-            PiActionId.of("FabricEgress.int_egress.do_report_encap_mpls");
+    public static final PiActionId FABRIC_EGRESS_INT_EGRESS_DO_DROP_REPORT_ENCAP =
+            PiActionId.of("FabricEgress.int_egress.do_drop_report_encap");
+    public static final PiActionId FABRIC_EGRESS_INT_EGRESS_DO_DROP_REPORT_ENCAP_MPLS =
+            PiActionId.of("FabricEgress.int_egress.do_drop_report_encap_mpls");
+    public static final PiActionId FABRIC_EGRESS_INT_EGRESS_DO_LOCAL_REPORT_ENCAP =
+            PiActionId.of("FabricEgress.int_egress.do_local_report_encap");
+    public static final PiActionId FABRIC_EGRESS_INT_EGRESS_DO_LOCAL_REPORT_ENCAP_MPLS =
+            PiActionId.of("FabricEgress.int_egress.do_local_report_encap_mpls");
     public static final PiActionId FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_SET_CONFIG =
             PiActionId.of("FabricEgress.int_egress.flow_report_filter.set_config");
     public static final PiActionId FABRIC_EGRESS_INT_EGRESS_SET_METADATA =
@@ -197,6 +205,10 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.forwarding.set_next_id_routing_v6");
     public static final PiActionId FABRIC_INGRESS_INT_INGRESS_MARK_TO_REPORT =
             PiActionId.of("FabricIngress.int_ingress.mark_to_report");
+    public static final PiActionId FABRIC_INGRESS_INT_INGRESS_REPORT_DROP =
+            PiActionId.of("FabricIngress.int_ingress.report_drop");
+    public static final PiActionId FABRIC_INGRESS_INT_INGRESS_REPORT_DROP_WITH_REASON =
+            PiActionId.of("FabricIngress.int_ingress.report_drop_with_reason");
     public static final PiActionId FABRIC_INGRESS_NEXT_MPLS_ROUTING_HASHED =
             PiActionId.of("FabricIngress.next.mpls_routing_hashed");
     public static final PiActionId FABRIC_INGRESS_NEXT_OUTPUT_HASHED =
@@ -229,6 +241,8 @@ public final class P4InfoConstants {
     public static final PiActionParamId CTR_ID = PiActionParamId.of("ctr_id");
     public static final PiActionParamId DMAC = PiActionParamId.of("dmac");
     public static final PiActionParamId DROP = PiActionParamId.of("drop");
+    public static final PiActionParamId DROP_REASON =
+            PiActionParamId.of("drop_reason");
     public static final PiActionParamId FAR_ID = PiActionParamId.of("far_id");
     public static final PiActionParamId FWD_TYPE =
             PiActionParamId.of("fwd_type");

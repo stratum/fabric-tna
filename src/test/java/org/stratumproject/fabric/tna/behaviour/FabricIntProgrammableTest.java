@@ -499,9 +499,9 @@ public class FabricIntProgrammableTest {
                     P4InfoConstants.MON_LABEL,
                     NODE_SID_IPV4
             ));
-            reportAction.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_REPORT_ENCAP_MPLS);
+            reportAction.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_LOCAL_REPORT_ENCAP_MPLS);
         } else {
-            reportAction.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_REPORT_ENCAP);
+            reportAction.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_LOCAL_REPORT_ENCAP);
         }
         return reportAction.build();
     }
