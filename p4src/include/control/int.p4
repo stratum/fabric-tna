@@ -126,9 +126,10 @@ control IntIngress (
         fabric_md.int_mirror_md.report_type = IntReportType_t.DROP;
         fabric_md.int_mirror_md.switch_id = switch_id;
         fabric_md.int_mirror_md.ig_port = (bit<16>)ig_intr_md.ingress_port;
-        fabric_md.int_mirror_md.eg_port = (bit<16>)ig_tm_md.ucast_egress_port;
-        fabric_md.int_mirror_md.queue_id = (bit<8>)ig_tm_md.qid;
         fabric_md.int_mirror_md.ip_eth_type = fabric_md.bridged.ip_eth_type;
+        // No need to report egress port or queue id in this case.
+        fabric_md.int_mirror_md.eg_port = 0;
+        fabric_md.int_mirror_md.queue_id = 0;
 #ifdef WITH_SPGW
         fabric_md.int_mirror_md.strip_gtpu = (bit<1>)(hdr.gtpu.isValid());
 #endif // WITH_SPGW
