@@ -2556,11 +2556,11 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
     def runSpgwDownlinkIntTest(
         self,
         pkt,
-        tagged1=False,
-        tagged2=False,
-        is_next_hop_spine=False,
-        is_device_spine=False,
-        send_report_to_spine=False,
+        tagged1,
+        tagged2,
+        is_next_hop_spine,
+        is_device_spine,
+        send_report_to_spine,
     ):
         """
         :param pkt: the input packet
@@ -2572,28 +2572,11 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         :param send_report_to_spine: if the report is to be forwarded
                to a spine (e.g., collector attached to another leaf)
         """
-        ig_port = self.port1
-        eg_port = self.port2
-        collector_port = self.port3
-        switch_id = 1
-        ipv4_src = pkt[IP].src
-        ipv4_dst = pkt[IP].dst
-        if UDP in pkt:
-            sport = pkt[UDP].sport
-            dport = pkt[UDP].dport
-        elif TCP in pkt:
-            sport = pkt[TCP].sport
-            dport = pkt[TCP].dport
-        else:
-            sport = None
-            dport = None
-
         # We should expected to receive an packet with GTPU headers.
         exp_pkt = pkt.copy()
-        int_inner_pkt = pkt.copy()
+        int_inner_pkt = self.build_inner_int_packet(pkt, is_next_hop_spine, tagged2)
         if not is_next_hop_spine:
             exp_pkt = pkt_decrement_ttl(exp_pkt)
-            int_inner_pkt = pkt_decrement_ttl(int_inner_pkt)
         exp_pkt = pkt_add_gtp(
             exp_pkt,
             out_ipv4_src=S1U_SGW_IPV4,
@@ -2601,10 +2584,8 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             teid=DOWNLINK_TEID,
         )
         exp_pkt = pkt_route(exp_pkt, HOST2_MAC)
-        int_inner_pkt = pkt_route(int_inner_pkt, HOST2_MAC)
         if tagged2 and Dot1Q not in exp_pkt:
             exp_pkt = pkt_add_vlan(exp_pkt, vlan_vid=VLAN_ID_2)
-            int_inner_pkt = pkt_add_vlan(int_inner_pkt, vlan_vid=VLAN_ID_2)
         if is_next_hop_spine:
             exp_pkt = pkt_add_mpls(exp_pkt, label=MPLS_LABEL_2, ttl=DEFAULT_MPLS_TTL)
             # Note that we won't add MPLS header to the expected inner
@@ -2612,18 +2593,17 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             # from it in the parser.
 
         # We should also expected an INT report packet
-        int_report_mpls_label = MPLS_LABEL_2 if send_report_to_spine else None
         exp_int_report_pkt_masked = self.build_int_local_report(
             SWITCH_MAC,
             INT_COLLECTOR_MAC,
             SWITCH_IPV4,
             INT_COLLECTOR_IPV4,
-            ig_port,
-            eg_port,
-            switch_id,
+            self.port1,
+            self.port2,
+            1,
             int_inner_pkt,
             is_device_spine,
-            int_report_mpls_label,
+            send_report_to_spine,
         )
 
         # Set up entries for downlink
@@ -2631,31 +2611,13 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             s1u_sgw_addr=S1U_SGW_IPV4,
             s1u_enb_addr=S1U_ENB_IPV4,
             teid=DOWNLINK_TEID,
-            ue_addr=ipv4_dst,
+            ue_addr=pkt[IP].dst,
             ctr_id=DOWNLINK_PDR_CTR_IDX,
         )
 
         # Set collector, report table, and mirror sessions
         # Note that we are monitoring the inner packet.
-        mon_label = MPLS_LABEL_1 if is_device_spine else None
-        self.set_up_watchlist_flow(ipv4_src, ipv4_dst, sport, dport)
-        self.set_up_int_mirror_flow(switch_id)
-        self.set_up_report_flow(
-            collector_port,
-            SWITCH_MAC,
-            SWITCH_MAC,
-            SWITCH_IPV4,
-            INT_COLLECTOR_IPV4,
-            INT_REPORT_PORT,
-            mon_label,
-        )
-        for i in range(0, 4):
-            self.set_up_report_mirror_flow(
-                i, INT_REPORT_MIRROR_IDS[i], self.recirculate_ports[i]
-            )
-
-        # Set up entries for report packet
-        self.set_up_report_table_entries(collector_port, is_device_spine, send_report_to_spine)
+        self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine)
 
         # TODO: Use MPLS test instead of IPv4 test if device is spine.
         self.runIPv4UnicastTest(
@@ -2670,7 +2632,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             with_another_pkt_later=True,
         )
 
-        self.verify_packet(exp_int_report_pkt_masked, collector_port)
+        self.verify_packet(exp_int_report_pkt_masked, self.port3)
         self.verify_no_other_packets()
 
 
