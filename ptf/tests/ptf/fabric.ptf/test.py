@@ -1175,6 +1175,9 @@ class FabricIntTest(IntTest):
             tagged1=tagged[0],
             tagged2=tagged[1],
             is_next_hop_spine=is_next_hop_spine,
+            ig_port=self.port1,
+            eg_port=self.port2,
+            expect_int_report=True,
             is_device_spine=is_device_spine,
             send_report_to_spine=send_report_to_spine,
         )
@@ -1223,7 +1226,11 @@ class FabricFlowReportFilterNoChangeTest(IntTest):
             tagged1=tagged[0],
             tagged2=tagged[1],
             is_next_hop_spine=is_next_hop_spine,
+            ig_port=self.port1,
+            eg_port=self.port2,
             expect_int_report=expect_int_report,
+            is_device_spine=False,
+            send_report_to_spine=False,
         )
 
     def runTest(self):
@@ -1272,9 +1279,14 @@ class FabricFlowReportFilterChangeTest(IntTest):
         pkt[IP].dst = ip_dst
         self.runIntTest(
             pkt=pkt,
+            tagged1=None,
+            tagged2=None,
+            is_next_hop_spine=False,
             ig_port=ig_port,
             eg_port=eg_port,
             expect_int_report=expect_int_report,
+            is_device_spine=False,
+            send_report_to_spine=False,
         )
 
     def runTest(self):
