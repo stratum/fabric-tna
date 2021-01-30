@@ -133,11 +133,11 @@ control DropReportFilter(
     apply {
         if (fabric_md.int_mirror_md.report_type == IntReportType_t.DROP) {
             digest = digester.get({ // burp!
-                fabric_md.bridged.flow_hash,
+                fabric_md.int_mirror_md.flow_hash,
                 fabric_md.int_mirror_md.ig_tstamp[31:30]
             });
-            flag = filter_get_and_set1.execute(fabric_md.bridged.flow_hash[31:16]);
-            flag = flag | filter_get_and_set2.execute(fabric_md.bridged.flow_hash[15:0]);
+            flag = filter_get_and_set1.execute(fabric_md.int_mirror_md.flow_hash[31:16]);
+            flag = flag | filter_get_and_set2.execute(fabric_md.int_mirror_md.flow_hash[15:0]);
             // Drop the report if we already report it within a period of time.
             if (flag == 1) {
                 eg_dprsr_md.drop_ctl = 1;
@@ -186,6 +186,7 @@ control IntIngress (
         fabric_md.int_mirror_md.ip_eth_type = fabric_md.bridged.ip_eth_type;
         fabric_md.int_mirror_md.eg_port = (bit<16>)ig_tm_md.ucast_egress_port;
         fabric_md.int_mirror_md.queue_id = (bit<8>)ig_tm_md.qid;
+        fabric_md.int_mirror_md.flow_hash = fabric_md.bridged.flow_hash;
 #ifdef WITH_SPGW
         fabric_md.int_mirror_md.strip_gtpu = (bit<1>)(hdr.gtpu.isValid());
 #endif // WITH_SPGW
