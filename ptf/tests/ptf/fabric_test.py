@@ -2290,9 +2290,9 @@ class IntTest(IPv4UnicastTest):
             priority=DEFAULT_PRIORITY,
         )
 
-    def set_up_int_mirror_flow(self, switch_id, report_type=INT_REPORT_TYPE_LOCAL):
-        switch_id_ = stringify(switch_id, 4)
-        report_type_ = stringify(report_type, 1)
+    def set_up_int_mirror_flow(self):
+        switch_id_ = stringify(1, 4)
+        report_type_ = stringify(INT_REPORT_TYPE_LOCAL, 1)
         self.send_request_add_entry_to_action(
             "int_metadata",
             [self.Exact("int_report_type", report_type_),],
@@ -2300,7 +2300,7 @@ class IntTest(IPv4UnicastTest):
             [("switch_id", switch_id_)],
         )
 
-    def set_up_drop_report_flow(self, switch_id):
+    def set_up_drop_report_flow(self):
         # The pipeline decide to drop a packet and it is not redirect to the CPU port
         self.send_request_add_entry_to_action(
             "drop_report",
@@ -2310,7 +2310,7 @@ class IntTest(IPv4UnicastTest):
                 self.Ternary("int_report_type", stringify(INT_REPORT_TYPE_LOCAL, 1), stringify(0x03, 1)),
             ],
             "report_drop",
-            [("switch_id", stringify(switch_id, 4))],
+            [("switch_id", stringify(1, 4))],
             priority=DEFAULT_PRIORITY
         )
         # Report if no next id set by any table and the drop reason is unset.
@@ -2323,7 +2323,7 @@ class IntTest(IPv4UnicastTest):
             ],
             "report_drop_with_reason",
             [
-                ("switch_id", stringify(switch_id, 4)),
+                ("switch_id", stringify(1, 4)),
                 ("drop_reason", stringify(INT_DROP_REASON_NEXT_ID_MISS, 1))
             ],
             priority=DEFAULT_PRIORITY
@@ -2375,6 +2375,56 @@ class IntTest(IPv4UnicastTest):
         mask_pkt.set_do_not_care_scapy(INT_L45_LOCAL_REPORT, "queue_occupancy")
         mask_pkt.set_do_not_care_scapy(INT_L45_LOCAL_REPORT, "egress_tstamp")
 
+        return mask_pkt
+
+    def build_int_drop_report(
+        self,
+        src_mac,
+        dst_mac,
+        src_ip,
+        dst_ip,
+        ig_port,
+        eg_port,
+        drop_reason,
+        sw_id,
+        inner_packet,
+        is_device_spine,
+        send_report_to_spine,
+    ):
+        # Note: scapy doesn't support dscp field, use tos.
+        pkt = (
+            Ether(src=src_mac, dst=dst_mac)
+            / IP(src=src_ip, dst=dst_ip, ttl=64, tos=4)
+            / UDP(sport=0, chksum=0)
+            / INT_L45_REPORT_FIXED(nproto=1, d=1, hw_id=0)
+            / INT_L45_DROP_REPORT(
+                switch_id=sw_id, ingress_port_id=ig_port, egress_port_id=eg_port,
+                drop_reason=drop_reason,
+                pad=0
+            )
+            / inner_packet
+        )
+        if send_report_to_spine:
+            mpls_ttl = DEFAULT_MPLS_TTL
+            if is_device_spine:
+                # MPLS label swap
+                mpls_ttl -= 1
+            pkt = pkt_add_mpls(pkt, label=MPLS_LABEL_2, ttl=mpls_ttl)
+        else:
+            pkt_decrement_ttl(pkt)
+
+        mask_pkt = Mask(pkt)
+        # IPv4 identifcation
+        mask_pkt.set_do_not_care_scapy(IP, "id")
+        # The reason we also ignore IP checksum is because the `id` field is
+        # random.
+        mask_pkt.set_do_not_care_scapy(IP, "chksum")
+        mask_pkt.set_do_not_care_scapy(UDP, "chksum")
+        mask_pkt.set_do_not_care_scapy(INT_L45_REPORT_FIXED, "ingress_tstamp")
+        mask_pkt.set_do_not_care_scapy(INT_L45_REPORT_FIXED, "seq_no")
+        mask_pkt.set_do_not_care_scapy(INT_L45_DROP_REPORT, "queue_id")
+        mask_pkt.set_do_not_care_scapy(INT_L45_DROP_REPORT, "queue_occupancy")
+        mask_pkt.set_do_not_care_scapy(INT_L45_DROP_REPORT, "egress_tstamp")
         return mask_pkt
 
     def set_up_report_table_entries(
@@ -2445,9 +2495,8 @@ class IntTest(IPv4UnicastTest):
             sport = None
             dport = None
         self.set_up_watchlist_flow(pkt[IP].src, pkt[IP].dst, sport, dport)
-        self.set_up_int_mirror_flow(1)
+        self.set_up_int_mirror_flow()
         self.set_up_report_flow(
-            self.port3,
             SWITCH_MAC,
             SWITCH_MAC,
             SWITCH_IPV4,
@@ -2459,11 +2508,11 @@ class IntTest(IPv4UnicastTest):
             self.set_up_report_mirror_flow(
                 i, INT_REPORT_MIRROR_IDS[i], RECIRCULATE_PORTS[i]
             )
-
         # Set up entries for report packet
         self.set_up_report_table_entries(
             self.port3, is_device_spine, send_report_to_spine
         )
+        self.set_up_drop_report_flow()
 
     def runIntTest(
         self,
@@ -2532,14 +2581,14 @@ class IntTest(IPv4UnicastTest):
     def runIntDropTest(
         self,
         pkt,
-        tagged1=False,
-        tagged2=False,
-        is_next_hop_spine=False,
-        ig_port=None,
-        eg_port=None,
-        expect_int_report=True,
-        is_device_spine=False,
-        send_report_to_spine=False,
+        tagged1,
+        tagged2,
+        is_next_hop_spine,
+        ig_port,
+        eg_port,
+        expect_int_report,
+        is_device_spine,
+        send_report_to_spine,
     ):
         """
         :param pkt: the input packet
@@ -2555,28 +2604,6 @@ class IntTest(IPv4UnicastTest):
         :param send_report_to_spine: if the report is to be forwarded
                to a spine (e.g., collector attached to another leaf)
         """
-        if IP not in pkt:
-            self.fail("Packet is not IP")
-
-        if ig_port is None:
-            ig_port = self.port1
-        if eg_port is None:
-            eg_port = self.port2
-
-        collector_port = self.port3
-        ipv4_src = pkt[IP].src
-        ipv4_dst = pkt[IP].dst
-        switch_id = 1
-        if UDP in pkt:
-            sport = pkt[UDP].sport
-            dport = pkt[UDP].dport
-        elif TCP in pkt:
-            sport = pkt[TCP].sport
-            dport = pkt[TCP].dport
-        else:
-            sport = None
-            dport = None
-
         # Build expected inner pkt using the input one.
         int_inner_pkt = pkt.copy()
 
@@ -2594,90 +2621,23 @@ class IntTest(IPv4UnicastTest):
         # from it before in the parser.
 
         # The expected INT report packet
-        int_report_mpls_label = MPLS_LABEL_2 if send_report_to_spine else None
         exp_int_report_pkt_masked = self.build_int_drop_report(
             SWITCH_MAC,
             INT_COLLECTOR_MAC,
             SWITCH_IPV4,
             INT_COLLECTOR_IPV4,
             ig_port,
-            0, # won't set
+            0, # Egress port, won't set
             INT_DROP_REASON_ACL_DENY,
-            switch_id,
+            1, # switch id
             int_inner_pkt,
             is_device_spine,
-            int_report_mpls_label,
+            send_report_to_spine,
         )
 
         # Set collector, report table, and mirror sessions
-        mon_label = MPLS_LABEL_1 if is_device_spine else None
-        self.set_up_watchlist_flow(ipv4_src, ipv4_dst, sport, dport)
-        self.set_up_int_mirror_flow(switch_id)
-        self.set_up_report_flow(
-            SWITCH_MAC,
-            SWITCH_MAC,
-            SWITCH_IPV4,
-            INT_COLLECTOR_IPV4,
-            INT_REPORT_PORT,
-            mon_label,
-        )
-        self.set_up_report_mirror_flow(
-            0, INT_REPORT_MIRROR_ID_0, self.recirculate_port_0
-        )
-        self.set_up_report_mirror_flow(
-            1, INT_REPORT_MIRROR_ID_1, self.recirculate_port_1
-        )
-        self.set_up_report_mirror_flow(
-            2, INT_REPORT_MIRROR_ID_2, self.recirculate_port_2
-        )
-        self.set_up_report_mirror_flow(
-            3, INT_REPORT_MIRROR_ID_3, self.recirculate_port_3
-        )
-        self.set_up_drop_report_flow(switch_id)
+        self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine)
 
-        # Set up entries for report packet
-        self.setup_port(collector_port, DEFAULT_VLAN)
-        # Here we use next-id 101 since `runIPv4UnicastTest` will use 100 by
-        # default
-        next_id = 101
-        prefix_len = 32
-        group_id = next_id
-        if is_device_spine:
-            self.add_forwarding_mpls_entry(MPLS_LABEL_1, next_id)
-            if send_report_to_spine:
-                # Spine to spine
-                params = [
-                    collector_port,
-                    SWITCH_MAC,
-                    INT_COLLECTOR_MAC,
-                    MPLS_LABEL_2,
-                ]
-                self.add_next_mpls_routing_group(next_id, group_id, [params])
-            else:
-                # Spine to leaf
-                self.add_next_routing(
-                    next_id, collector_port, SWITCH_MAC, INT_COLLECTOR_MAC
-                )
-        else:
-            self.add_forwarding_routing_v4_entry(
-                INT_COLLECTOR_IPV4, prefix_len, next_id
-            )
-            if send_report_to_spine:
-                # Leaf to spine
-                params = [
-                    collector_port,
-                    SWITCH_MAC,
-                    INT_COLLECTOR_MAC,
-                    MPLS_LABEL_2,
-                ]
-                self.add_next_mpls_routing_group(next_id, group_id, [params])
-            else:
-                # Leaf to host
-                self.add_next_routing(
-                    next_id, collector_port, SWITCH_MAC, INT_COLLECTOR_MAC
-                )
-        self.add_next_vlan(next_id, DEFAULT_VLAN)
-        # End of setting up entries for report packet
         # TODO: Use MPLS test instead of IPv4 test if device is spine.
         self.runIPv4UnicastTest(
             pkt=pkt,
@@ -2685,7 +2645,7 @@ class IntTest(IPv4UnicastTest):
             tagged1=tagged1,
             tagged2=tagged2,
             is_next_hop_spine=is_next_hop_spine,
-            prefix_len=prefix_len,
+            prefix_len=32,
             with_another_pkt_later=True,
             ig_port=ig_port,
             eg_port=eg_port,
@@ -2693,7 +2653,7 @@ class IntTest(IPv4UnicastTest):
         )
 
         if expect_int_report:
-            self.verify_packet(exp_int_report_pkt_masked, collector_port)
+            self.verify_packet(exp_int_report_pkt_masked, self.port3)
         self.verify_no_other_packets()
 
 class SpgwIntTest(SpgwSimpleTest, IntTest):
