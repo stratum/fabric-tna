@@ -2319,7 +2319,7 @@ class IntTest(IPv4UnicastTest):
             [
                 self.Ternary("int_report_type", stringify(INT_REPORT_TYPE_LOCAL, 1), stringify(0x03, 1)),
                 self.Ternary("int_drop_reason", stringify(INT_DROP_REASON_UNSET, 1), stringify(0xFF, 1)),
-                self.Ternary("next_id", stringify(0, 4), stringify(1, 4))
+                self.Ternary("next_id", stringify(0, 4), stringify(0xffffffff, 4))
             ],
             "report_drop_with_reason",
             [
