@@ -222,7 +222,8 @@ class P4RuntimeTest(BaseTest):
         else:
             # Setting up PTF dataplane
             self.dataplane = ptf.dataplane_instance
-            self.dataplane.flush()
+            if self.dataplane:
+                self.dataplane.flush()
             self.channel = grpc.insecure_channel(grpc_addr)
             self.stub = p4runtime_pb2_grpc.P4RuntimeStub(self.channel)
             self.set_up_stream()

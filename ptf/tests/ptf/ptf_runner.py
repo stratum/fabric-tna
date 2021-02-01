@@ -53,13 +53,6 @@ def check_ifaces(ifaces):
     return ifaces <= present_ifaces
 
 
-def build_tofino_pipeline_config(tofino_pipeline_config_path):
-    device_config = b""
-    with open(tofino_pipeline_config_path, "rb") as pipeline_config_f:
-        device_config += pipeline_config_f.read()
-    return device_config
-
-
 def update_config(
     p4info_path, tofino_pipeline_config_path, grpc_addr, device_id, generate_tv=False,
 ):
@@ -73,9 +66,19 @@ def update_config(
     election_id.high = 0
     election_id.low = 1
     config = request.config
+    if not os.path.exists(p4info_path):
+        error("Unable to find P4info file {}".format(p4info_path))
+        return False
     with open(p4info_path, "r") as p4info_f:
         google.protobuf.text_format.Merge(p4info_f.read(), config.p4info)
-    device_config = build_tofino_pipeline_config(tofino_pipeline_config_path)
+
+    if not os.path.exists(tofino_pipeline_config_path):
+        error("Unable to pipeline config file {}".format(tofino_pipeline_config_path))
+        return False
+    device_config = b""
+    with open(tofino_pipeline_config_path, "rb") as pipeline_config_f:
+        device_config += pipeline_config_f.read()
+
     config.p4_device_config = device_config
     request.action = p4runtime_pb2.SetForwardingPipelineConfigRequest.VERIFY_AND_COMMIT
 

@@ -22,6 +22,9 @@ pipeconf_oar_file := $(shell ls -1 ${curr_dir}/target/fabric-tna-*.oar)
 
 p4-build := ./p4src/build.sh
 
+FLIRT_IMAGE := fabric-line-rate-test:0.0.1
+venv_dir := $(curr_dir)/venv
+
 .PHONY: pipeconf
 
 build: clean $(PROFILES) pipeconf
@@ -103,3 +106,21 @@ clean:
 
 deep-clean: clean
 	-docker volume rm ${mvn_cache_docker_volume} > /dev/null 2>&1
+
+venv:
+	@python3 -m venv venv
+
+flirt-image:
+	@docker build -t $(FLIRT_IMAGE) $(curr_dir)/flirt -f $(curr_dir)/flirt/Dockerfile
+
+flirt-deps: venv
+	@echo "Copying dependencies to $(venv_dir)"
+	-docker rm set_up_dev_env
+	@docker run -d --name set_up_dev_env $(FLIRT_IMAGE) sh
+	@docker cp set_up_dev_env:/trex_python .
+	@cp -r trex_python/* $(venv_dir)/lib/python3.8/site-packages/
+	@rm -rf trex_python
+	@docker rm set_up_dev_env
+
+flirt-dev:
+	@make -C flirt dev
