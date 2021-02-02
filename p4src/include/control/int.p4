@@ -315,6 +315,13 @@ control IntEgress (
                              - REPORT_MIRROR_HEADER_BYTES
                              - ETH_FCS_LEN
                              + eg_intr_md.pkt_length;
+        // Fix the ethertype, the reason we need to fix the ether type is because we
+        // may strip the MPLS header from the parser, and the ethertype will still be
+        // MPLS instead of real one.
+        hdr.eth_type.value = fabric_md.int_mirror_md.ip_eth_type;
+        // Remove the INT mirror metadata to prevent egress mirroring again.
+        eg_dprsr_md.mirror_type = (bit<3>)FabricMirrorType_t.INVALID;
+        hdr.report_fixed_header.seq_no = get_seq_number.execute(hw_id);
     }
 
     action do_local_report_encap_mpls(mac_addr_t src_mac, mac_addr_t mon_mac,
@@ -385,25 +392,25 @@ control IntEgress (
     }
 
     @hidden
-    action set_report_seq_no_and_hw_id(bit<6> hw_id) {
+    action set_hw_id(bit<6> hw_id) {
         hdr.report_fixed_header.hw_id = hw_id;
         hdr.report_fixed_header.seq_no = get_seq_number.execute(hw_id);
     }
 
     @hidden
-    table report_seq_no_and_hw_id {
+    table hw_id {
         key = {
             eg_intr_md.egress_port: ternary;
         }
         actions = {
-            set_report_seq_no_and_hw_id;
+            set_hw_id;
         }
         const size = 4;
         const entries = {
-            PIPE_0_PORTS_MATCH: set_report_seq_no_and_hw_id(0);
-            PIPE_1_PORTS_MATCH: set_report_seq_no_and_hw_id(1);
-            PIPE_2_PORTS_MATCH: set_report_seq_no_and_hw_id(2);
-            PIPE_3_PORTS_MATCH: set_report_seq_no_and_hw_id(3);
+            PIPE_0_PORTS_MATCH: set_hw_id(0);
+            PIPE_1_PORTS_MATCH: set_hw_id(1);
+            PIPE_2_PORTS_MATCH: set_hw_id(2);
+            PIPE_3_PORTS_MATCH: set_hw_id(3);
         }
     }
 
@@ -440,16 +447,9 @@ control IntEgress (
     }
 
     apply {
+        hw_id.apply();
         drop_report_filter.apply(hdr, fabric_md, eg_dprsr_md);
         if (report.apply().hit) {
-            // The packet is a mirror packet for INT report.
-            // Fix the ethertype, the reason we need to fix the ether type is because we
-            // may strip the MPLS header from the parser, and the ethertype will still be
-            // MPLS instead of real one.
-            hdr.eth_type.value = fabric_md.int_mirror_md.ip_eth_type;
-            report_seq_no_and_hw_id.apply();
-            // Remove the INT mirror metadata to prevent egress mirroring again.
-            eg_dprsr_md.mirror_type = (bit<3>)FabricMirrorType_t.INVALID;
 #ifdef WITH_SPGW
             if (fabric_md.int_mirror_md.strip_gtpu == 1) {
                 // We need to remove length of IP, UDP, and GTPU headers

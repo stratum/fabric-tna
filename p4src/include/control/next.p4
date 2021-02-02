@@ -11,6 +11,12 @@ control Next (inout parsed_headers_t hdr,
               in    ingress_intrinsic_metadata_t ig_intr_md,
               inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm) {
 
+#ifdef WITH_INT
+    action int_table_miss(bit<8> drop_reason) {
+        fabric_md.int_mirror_md.drop_reason = drop_reason;
+    }
+#endif // WITH_INT
+
     /*
      * General actions.
      */
@@ -108,10 +114,18 @@ control Next (inout parsed_headers_t hdr,
         actions = {
             output_xconnect;
             set_next_id_xconnect;
+#ifdef WITH_INT
+            @defaultonly int_table_miss;
+#else
             @defaultonly nop;
+#endif // WITH_INT
         }
         counters = xconnect_counter;
+#ifdef WITH_INT
+        const default_action = int_table_miss(DROP_REASON_XCONNECT_MISS);
+#else
         const default_action = nop();
+#endif // WITH_INT
         size = XCONNECT_NEXT_TABLE_SIZE;
     }
 #endif // WITH_XCONNECT
@@ -147,9 +161,17 @@ control Next (inout parsed_headers_t hdr,
             output_simple;
             routing_simple;
             mpls_routing_simple;
+#ifdef WITH_INT
+            @defaultonly int_table_miss;
+#else
             @defaultonly nop;
+#endif // WITH_INT
         }
+#ifdef WITH_INT
+        const default_action = int_table_miss(DROP_REASON_SIMPLE_MISS);
+#else
         const default_action = nop();
+#endif // WITH_INT
         counters = simple_counter;
         size = SIMPLE_NEXT_TABLE_SIZE;
     }
@@ -195,11 +217,19 @@ control Next (inout parsed_headers_t hdr,
             output_hashed;
             routing_hashed;
             mpls_routing_hashed;
+#ifdef WITH_INT
+            @defaultonly int_table_miss;
+#else
             @defaultonly nop;
+#endif // WITH_INT
         }
         implementation = hashed_selector;
         counters = hashed_counter;
+#ifdef WITH_INT
+        const default_action = int_table_miss(DROP_REASON_HASHED_MISS);
+#else
         const default_action = nop();
+#endif // WITH_INT
         size = HASHED_NEXT_TABLE_SIZE;
     }
 #endif // WITH_HASHED_NEXT
@@ -222,10 +252,18 @@ control Next (inout parsed_headers_t hdr,
         }
         actions = {
             set_mcast_group_id;
+#ifdef WITH_INT
+            @defaultonly int_table_miss;
+#else
             @defaultonly nop;
+#endif // WITH_INT
         }
         counters = multicast_counter;
+#ifdef WITH_INT
+        const default_action = int_table_miss(DROP_REASON_MULTICAST_MISS);
+#else
         const default_action = nop();
+#endif // WITH_INT
         size = MULTICAST_NEXT_TABLE_SIZE;
     }
 
