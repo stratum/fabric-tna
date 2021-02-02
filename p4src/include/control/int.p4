@@ -440,8 +440,8 @@ control IntEgress (
     }
 
     apply {
+        drop_report_filter.apply(hdr, fabric_md, eg_dprsr_md);
         if (report.apply().hit) {
-            drop_report_filter.apply(hdr, fabric_md, eg_dprsr_md);
             // The packet is a mirror packet for INT report.
             // Fix the ethertype, the reason we need to fix the ether type is because we
             // may strip the MPLS header from the parser, and the ethertype will still be
