@@ -71,21 +71,23 @@ control FlowReportFilter(
     }
 
     apply {
-        hop_latency = eg_prsr_md.global_tstamp[31:0] - fabric_md.bridged.ig_tstamp[31:0];
-        timestamp = fabric_md.bridged.ig_tstamp;
-        config.apply();
-        digest = digester.get({ // burp!
-            fabric_md.bridged.ig_port,
-            eg_intr_md.egress_port,
-            hop_latency,
-            fabric_md.bridged.flow_hash,
-            timestamp
-        });
-        flag = filter_get_and_set1.execute(fabric_md.bridged.flow_hash[31:16]);
-        flag = flag | filter_get_and_set2.execute(fabric_md.bridged.flow_hash[15:0]);
-        // Generate report only when ALL register actions detect a change.
-        if (flag == 1) {
-            eg_dprsr_md.mirror_type = (bit<3>)FabricMirrorType_t.INVALID;
+        if (fabric_md.int_mirror_md.report_type == IntReportType_t.LOCAL) {
+            hop_latency = eg_prsr_md.global_tstamp[31:0] - fabric_md.bridged.ig_tstamp[31:0];
+            timestamp = fabric_md.bridged.ig_tstamp;
+            config.apply();
+            digest = digester.get({ // burp!
+                fabric_md.bridged.ig_port,
+                eg_intr_md.egress_port,
+                hop_latency,
+                fabric_md.bridged.flow_hash,
+                timestamp
+            });
+            flag = filter_get_and_set1.execute(fabric_md.bridged.flow_hash[31:16]);
+            flag = flag | filter_get_and_set2.execute(fabric_md.bridged.flow_hash[15:0]);
+            // Generate report only when ALL register actions detect a change.
+            if (flag == 1) {
+                eg_dprsr_md.mirror_type = (bit<3>)FabricMirrorType_t.INVALID;
+            }
         }
     }
 }
