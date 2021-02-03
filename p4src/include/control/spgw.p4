@@ -154,8 +154,8 @@ control SpgwIngress(
         size = NUM_UPLINK_PDRS;
     }
 
-    action set_priority (bit<5> priority) {
-           ig_tm_md.qid = priority;
+    action set_qid (bit<5> qid) {
+           ig_tm_md.qid = qid;
     }
 
     // This table performs 5 Tuple match to assign the priority
@@ -163,12 +163,12 @@ control SpgwIngress(
        key = {
             hdr.ipv4.src_addr          : ternary     @name("inet_addr")   ;
             hdr.ipv4.dst_addr          : ternary     @name("ue_addr")     ;
-            fabric_md.bridged.l4_sport : ternary     @name("inte_l4_port");
+            fabric_md.bridged.l4_sport : ternary     @name("inet_l4_port");
             fabric_md.bridged.l4_dport : ternary     @name("ue_l4_port")  ;
             hdr.ipv4.protocol          : ternary     @name("ip_proto")    ;
        }
        actions = {
-           set_priority();
+           set_qid();
        }
     }
     //=============================//

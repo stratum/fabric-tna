@@ -47,7 +47,6 @@ typedef bit<32> flow_hash_t;
 // SPGW types
 typedef bit<32> teid_t;
 typedef bit<32> far_id_t;
-typedef bit<32> qer_id_t;
 typedef bit<16> pdr_ctr_id_t;
 enum bit<2> SpgwDirection {
     UNKNOWN             = 0x0,

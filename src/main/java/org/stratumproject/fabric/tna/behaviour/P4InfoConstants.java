@@ -40,6 +40,10 @@ public final class P4InfoConstants {
             PiMatchFieldId.of("icmp_type");
     public static final PiMatchFieldId HDR_IG_PORT =
             PiMatchFieldId.of("ig_port");
+    public static final PiMatchFieldId HDR_INET_ADDR =
+            PiMatchFieldId.of("inet_addr");
+    public static final PiMatchFieldId HDR_INET_L4_PORT =
+            PiMatchFieldId.of("inet_l4_port");
     public static final PiMatchFieldId HDR_IP_ETH_TYPE =
             PiMatchFieldId.of("ip_eth_type");
     public static final PiMatchFieldId HDR_IP_PROTO =
@@ -67,6 +71,8 @@ public final class P4InfoConstants {
             PiMatchFieldId.of("tunnel_ipv4_dst");
     public static final PiMatchFieldId HDR_UE_ADDR =
             PiMatchFieldId.of("ue_addr");
+    public static final PiMatchFieldId HDR_UE_L4_PORT =
+            PiMatchFieldId.of("ue_l4_port");
     public static final PiMatchFieldId HDR_VLAN_ID =
             PiMatchFieldId.of("vlan_id");
     public static final PiMatchFieldId HDR_VLAN_IS_VALID =
@@ -108,6 +114,8 @@ public final class P4InfoConstants {
             PiTableId.of("FabricIngress.spgw.fars");
     public static final PiTableId FABRIC_INGRESS_SPGW_INTERFACES =
             PiTableId.of("FabricIngress.spgw.interfaces");
+    public static final PiTableId FABRIC_INGRESS_SPGW_QOS_CLASSIFIER =
+            PiTableId.of("FabricIngress.spgw.qos_classifier");
     public static final PiTableId FABRIC_INGRESS_SPGW_UPLINK_PDRS =
             PiTableId.of("FabricIngress.spgw.uplink_pdrs");
     // Indirect Counter IDs
@@ -197,6 +205,8 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.spgw.load_pdr");
     public static final PiActionId FABRIC_INGRESS_SPGW_LOAD_TUNNEL_FAR =
             PiActionId.of("FabricIngress.spgw.load_tunnel_far");
+    public static final PiActionId FABRIC_INGRESS_SPGW_SET_QID =
+            PiActionId.of("FabricIngress.spgw.set_qid");
     public static final PiActionId NO_ACTION = PiActionId.of("NoAction");
     public static final PiActionId NOP = PiActionId.of("nop");
     // Action Param IDs
@@ -226,6 +236,7 @@ public final class P4InfoConstants {
             PiActionParamId.of("notify_cp");
     public static final PiActionParamId PORT_NUM =
             PiActionParamId.of("port_num");
+    public static final PiActionParamId QID = PiActionParamId.of("qid");
     public static final PiActionParamId SMAC = PiActionParamId.of("smac");
     public static final PiActionParamId SRC_IFACE =
             PiActionParamId.of("src_iface");
