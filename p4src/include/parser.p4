@@ -28,6 +28,9 @@ parser FabricIngressParser (packet_in  packet,
         fabric_md.bridged.bmd_type = BridgedMdType_t.INGRESS_TO_EGRESS;
         fabric_md.bridged.ig_port = ig_intr_md.ingress_port;
         fabric_md.bridged.ig_tstamp = ig_intr_md.ingress_mac_tstamp;
+#ifdef WITH_INT
+        fabric_md.int_mirror_md.drop_reason = DROP_REASON_UNSET;
+#endif // WITH_INT
         transition check_ethernet;
     }
 
@@ -192,6 +195,9 @@ parser FabricIngressParser (packet_in  packet,
 #ifdef WITH_SPGW
     state parse_gtpu {
         packet.extract(hdr.gtpu);
+#ifdef WITH_INT
+        fabric_md.int_mirror_md.strip_gtpu = 1;
+#endif // WITH_INT
         transition parse_inner_ipv4;
     }
 
