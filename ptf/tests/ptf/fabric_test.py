@@ -2197,7 +2197,15 @@ class IntTest(IPv4UnicastTest):
     """
 
     def set_up_report_flow_with_report_type_and_bmd_type(
-        self, src_mac, mon_mac, src_ip, mon_ip, mon_port, report_type, bmd_type, mon_label=None
+        self,
+        src_mac,
+        mon_mac,
+        src_ip,
+        mon_ip,
+        mon_port,
+        report_type,
+        bmd_type,
+        mon_label=None,
     ):
         action = ""
         if report_type == INT_REPORT_TYPE_LOCAL:
@@ -2233,8 +2241,20 @@ class IntTest(IPv4UnicastTest):
         self, src_mac, mon_mac, src_ip, mon_ip, mon_port, mon_label=None
     ):
         for report_type in [INT_REPORT_TYPE_LOCAL, INT_REPORT_TYPE_DROP]:
-            for bmd_type in [BRIDGED_MD_TYPE_INGRESS_MIRROR, BRIDGED_MD_TYPE_EGRESS_MIRROR]:
-                self.set_up_report_flow_with_report_type_and_bmd_type(src_mac, mon_mac, src_ip, mon_ip, mon_port, report_type, bmd_type, mon_label)
+            for bmd_type in [
+                BRIDGED_MD_TYPE_INGRESS_MIRROR,
+                BRIDGED_MD_TYPE_EGRESS_MIRROR,
+            ]:
+                self.set_up_report_flow_with_report_type_and_bmd_type(
+                    src_mac,
+                    mon_mac,
+                    src_ip,
+                    mon_ip,
+                    mon_port,
+                    report_type,
+                    bmd_type,
+                    mon_label,
+                )
 
     def set_up_report_mirror_flow(self, pipe_id, mirror_id, port):
         self.add_clone_group(mirror_id, [port])
@@ -2309,7 +2329,7 @@ class IntTest(IPv4UnicastTest):
             ],
             "report_drop",
             [("switch_id", stringify(1, 4))],
-            priority=DEFAULT_PRIORITY
+            priority=DEFAULT_PRIORITY,
         )
 
     def build_int_local_report(
@@ -2381,9 +2401,11 @@ class IntTest(IPv4UnicastTest):
             / UDP(sport=0, chksum=0)
             / INT_L45_REPORT_FIXED(nproto=1, d=1, hw_id=0)
             / INT_L45_DROP_REPORT(
-                switch_id=sw_id, ingress_port_id=ig_port, egress_port_id=eg_port,
+                switch_id=sw_id,
+                ingress_port_id=ig_port,
+                egress_port_id=eg_port,
                 drop_reason=drop_reason,
-                pad=0
+                pad=0,
             )
             / inner_packet
         )
@@ -2491,7 +2513,6 @@ class IntTest(IPv4UnicastTest):
             self.set_up_report_mirror_flow(
                 i, INT_REPORT_MIRROR_IDS[i], RECIRCULATE_PORTS[i]
             )
-        # Set up entries for report packet
         self.set_up_report_table_entries(
             self.port3, is_device_spine, send_report_to_spine
         )
@@ -2560,7 +2581,6 @@ class IntTest(IPv4UnicastTest):
             self.verify_packet(exp_int_report_pkt_masked, self.port3)
         self.verify_no_other_packets()
 
-
     def runIntDropTest(
         self,
         pkt,
@@ -2610,9 +2630,9 @@ class IntTest(IPv4UnicastTest):
             SWITCH_IPV4,
             INT_COLLECTOR_IPV4,
             ig_port,
-            0, # Egress port, won't set
+            0,  # Egress port, won't set
             INT_DROP_REASON_ACL_DENY,
-            1, # switch id
+            SWITCH_ID,
             int_inner_pkt,
             is_device_spine,
             send_report_to_spine,
@@ -2638,6 +2658,7 @@ class IntTest(IPv4UnicastTest):
         if expect_int_report:
             self.verify_packet(exp_int_report_pkt_masked, self.port3)
         self.verify_no_other_packets()
+
 
 class SpgwIntTest(SpgwSimpleTest, IntTest):
     """

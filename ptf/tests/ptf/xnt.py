@@ -68,6 +68,7 @@ class INT_L45_LOCAL_REPORT(Packet):
         XIntField("egress_tstamp", 0),
     ]
 
+
 class INT_L45_DROP_REPORT(Packet):
     name = "INT_L45_DROP_REPORT"
     fields_desc = [

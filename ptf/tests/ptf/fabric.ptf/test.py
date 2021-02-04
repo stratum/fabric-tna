@@ -1204,6 +1204,7 @@ class FabricIntLocalReportTest(IntTest):
                                 send_report_to_spine,
                             )
 
+
 @group("int")
 class FabricIntDropReportTest(IntTest):
     @tvsetup
@@ -1269,6 +1270,7 @@ class FabricIntDropReportTest(IntTest):
                                 is_device_spine,
                                 send_report_to_spine,
                             )
+
 
 @group("int")
 class FabricFlowReportFilterNoChangeTest(IntTest):
