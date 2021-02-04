@@ -189,31 +189,20 @@ control IntIngress (
         fabric_md.int_mirror_md.eg_port = (bit<16>)ig_tm_md.ucast_egress_port;
         fabric_md.int_mirror_md.queue_id = (bit<8>)ig_tm_md.qid;
         fabric_md.int_mirror_md.flow_hash = fabric_md.bridged.flow_hash;
-#ifdef WITH_SPGW
-        fabric_md.int_mirror_md.strip_gtpu = (bit<1>)(hdr.gtpu.isValid());
-#endif // WITH_SPGW
-    }
-
-    action report_drop_with_reason(bit<32> switch_id, bit<8> drop_reason) {
-        report_drop(switch_id);
-        fabric_md.int_mirror_md.drop_reason = drop_reason;
     }
 
     table drop_report {
         key = {
-            ig_dprsr_md.drop_ctl: ternary @name("drop_ctl");
-            ig_tm_md.copy_to_cpu: ternary @name("copy_to_cpu");
-            fabric_md.bridged.int_bmd.report_type: ternary @name("int_report_type");
+            fabric_md.bridged.int_bmd.report_type: exact @name("int_report_type");
             fabric_md.int_mirror_md.drop_reason: ternary @name("int_drop_reason");
-            fabric_md.next_id: ternary @name("next_id");
         }
         actions = {
             report_drop;
-            report_drop_with_reason;
+            @defaultonly nop;
         }
-        // (1, 0, LOCAL, _, _) -> report_drop(switch_id)
-        // (_, _, LOCAL, UNSET, 0) -> report_drop_with_reason(switch_id, NEXT_ID_MISS)
-        const size = 2;
+        const size = 1;
+        // (IntReportType_t.LOCAL, 0x80 &&& 0x80) -> report_drop(switch_id)
+        const default_action = nop();
     }
 
     @hidden
