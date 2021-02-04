@@ -218,7 +218,7 @@ control IntIngress (
         actions = {
             set_mirror_session_id;
         }
-        size = 4;
+        const size = 4;
         const entries = {
             PIPE_0_PORTS_MATCH: set_mirror_session_id(REPORT_MIRROR_SESS_PIPE_0);
             PIPE_1_PORTS_MATCH: set_mirror_session_id(REPORT_MIRROR_SESS_PIPE_1);
@@ -283,8 +283,7 @@ control IntEgress (
         hdr.report_fixed_header.setValid();
         hdr.report_fixed_header.ver = 0;
         hdr.report_fixed_header.rsvd = 0;
-        hdr.report_fixed_header.hw_id = 0;
-        hdr.report_fixed_header.seq_no = 0;
+        hdr.report_fixed_header.seq_no = get_seq_number.execute(hdr.report_fixed_header.hw_id);
     }
 
     action do_local_report_encap(mac_addr_t src_mac, mac_addr_t mon_mac,
@@ -312,7 +311,6 @@ control IntEgress (
         hdr.eth_type.value = fabric_md.int_mirror_md.ip_eth_type;
         // Remove the INT mirror metadata to prevent egress mirroring again.
         eg_dprsr_md.mirror_type = (bit<3>)FabricMirrorType_t.INVALID;
-        hdr.report_fixed_header.seq_no = get_seq_number.execute(hw_id);
     }
 
     action do_local_report_encap_mpls(mac_addr_t src_mac, mac_addr_t mon_mac,
@@ -385,7 +383,6 @@ control IntEgress (
     @hidden
     action set_hw_id(bit<6> hw_id) {
         hdr.report_fixed_header.hw_id = hw_id;
-        hdr.report_fixed_header.seq_no = get_seq_number.execute(hw_id);
     }
 
     @hidden
