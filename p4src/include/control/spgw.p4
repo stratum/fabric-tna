@@ -158,7 +158,6 @@ control SpgwIngress(
            ig_tm_md.qid = qid;
     }
 
-    // This table performs 5 Tuple match to assign the priority
     table qos_classifier {
        key = {
             hdr.ipv4.src_addr          : ternary     @name("inet_addr")   ;
