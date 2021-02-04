@@ -46,6 +46,8 @@ public final class P4InfoConstants {
             PiMatchFieldId.of("inet_addr");
     public static final PiMatchFieldId HDR_INET_L4_PORT =
             PiMatchFieldId.of("inet_l4_port");
+    public static final PiMatchFieldId HDR_INT_REPORT_TYPE =
+            PiMatchFieldId.of("int_report_type");
     public static final PiMatchFieldId HDR_IP_ETH_TYPE =
             PiMatchFieldId.of("ip_eth_type");
     public static final PiMatchFieldId HDR_IP_PROTO =
