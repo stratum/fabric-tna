@@ -2316,7 +2316,9 @@ class IntTest(IPv4UnicastTest):
 
         return mask_pkt
 
-    def set_up_report_table_entries(self, collector_port, is_device_spine, send_report_to_spine):
+    def set_up_report_table_entries(
+        self, collector_port, is_device_spine, send_report_to_spine
+    ):
         self.setup_port(collector_port, DEFAULT_VLAN)
         # Here we use next-id 101 since `runIPv4UnicastTest` will use 100 by
         # default
@@ -2398,7 +2400,9 @@ class IntTest(IPv4UnicastTest):
             )
 
         # Set up entries for report packet
-        self.set_up_report_table_entries(self.port3, is_device_spine, send_report_to_spine)
+        self.set_up_report_table_entries(
+            self.port3, is_device_spine, send_report_to_spine
+        )
 
     def runIntTest(
         self,
@@ -2440,7 +2444,7 @@ class IntTest(IPv4UnicastTest):
             SWITCH_ID,
             int_inner_pkt,
             is_device_spine,
-            send_report_to_spine
+            send_report_to_spine,
         )
 
         # Set collector, report table, and mirror sessions
