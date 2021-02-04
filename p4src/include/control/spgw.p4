@@ -154,7 +154,22 @@ control SpgwIngress(
         size = NUM_UPLINK_PDRS;
     }
 
+    action set_qid(bit<5> qid) {
+           ig_tm_md.qid = qid;
+    }
 
+    table qos_classifier {
+       key = {
+            hdr.ipv4.src_addr          : ternary     @name("inet_addr")   ;
+            hdr.ipv4.dst_addr          : ternary     @name("ue_addr")     ;
+            fabric_md.bridged.l4_sport : ternary     @name("inet_l4_port");
+            fabric_md.bridged.l4_dport : ternary     @name("ue_l4_port")  ;
+            hdr.ipv4.protocol          : ternary     @name("ip_proto")    ;
+       }
+       actions = {
+           set_qid();
+       }
+    }
     //=============================//
     //===== FAR Tables ======//
     //=============================//
@@ -228,6 +243,7 @@ control SpgwIngress(
                 uplink_pdrs.apply();
             } else {
                 downlink_pdrs.apply();
+                qos_classifier.apply();
             }
             if (fabric_md.spgw.src_iface != SpgwInterface.FROM_DBUF) {
                 pdr_counter.count(fabric_md.bridged.spgw.pdr_ctr_id);
