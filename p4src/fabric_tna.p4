@@ -40,6 +40,9 @@ control FabricIngress (
 #ifdef WITH_SPGW
     SpgwIngress() spgw;
 #endif // WITH_SPGW
+#ifdef WITH_INT
+    IntIngress() int_ingress;
+#endif // WITH_INT
 
     apply {
         pkt_io_ingress.apply(hdr, fabric_md, ig_intr_md, ig_tm_md, ig_dprsr_md);
@@ -55,6 +58,9 @@ control FabricIngress (
         if (!fabric_md.skip_next) {
             next.apply(hdr, fabric_md, ig_intr_md, ig_tm_md);
         }
+#ifdef WITH_INT
+        int_ingress.apply(hdr, fabric_md, ig_intr_md);
+#endif // WITH_INT
     }
 }
 

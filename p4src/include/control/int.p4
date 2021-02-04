@@ -90,6 +90,38 @@ control FlowReportFilter(
     }
 }
 
+control IntIngress (
+    inout parsed_headers_t hdr,
+    inout fabric_ingress_metadata_t fabric_md,
+    in    ingress_intrinsic_metadata_t ig_intr_md) {
+
+    action mark_to_report() {
+        fabric_md.bridged.int_bmd.report_type = IntReportType_t.LOCAL;
+    }
+
+    table watchlist {
+        key = {
+            hdr.ipv4.src_addr          : ternary @name("ipv4_src");
+            hdr.ipv4.dst_addr          : ternary @name("ipv4_dst");
+            fabric_md.bridged.ip_proto : ternary @name("ip_proto");
+            fabric_md.bridged.l4_sport : range @name("l4_sport");
+            fabric_md.bridged.l4_dport : range @name("l4_dport");
+        }
+        actions = {
+            mark_to_report;
+            @defaultonly nop();
+        }
+        const default_action = nop();
+        const size = INT_WATCHLIST_TABLE_SIZE;
+    }
+
+    apply {
+        if (hdr.ipv4.isValid()) {
+            watchlist.apply();
+        }
+    }
+}
+
 control IntEgress (
     inout parsed_headers_t hdr,
     inout fabric_egress_metadata_t fabric_md,
@@ -113,53 +145,26 @@ control IntEgress (
     @hidden
     action add_report_fixed_header() {
         hdr.report_fixed_header.setValid();
-        hdr.report_fixed_header.ver = 0;
-        hdr.report_fixed_header.nproto = NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER;
-        hdr.report_fixed_header.d = 0;
-        hdr.report_fixed_header.q = 0;
-        hdr.report_fixed_header.f = 1;
-        hdr.report_fixed_header.rsvd = 0;
-        hdr.report_fixed_header.ig_tstamp = fabric_md.int_mirror_md.ig_tstamp;
-
         hdr.common_report_header.setValid();
-        hdr.common_report_header.switch_id = fabric_md.int_mirror_md.switch_id;
-        hdr.common_report_header.ig_port = fabric_md.int_mirror_md.ig_port;
-        hdr.common_report_header.eg_port = fabric_md.int_mirror_md.eg_port;
-        hdr.common_report_header.queue_id = fabric_md.int_mirror_md.queue_id;
-        hdr.local_report_header.setValid();
-        hdr.local_report_header.queue_occupancy = fabric_md.int_mirror_md.queue_occupancy;
-        hdr.local_report_header.eg_tstamp = fabric_md.int_mirror_md.eg_tstamp;
     }
 
     action do_report_encap(mac_addr_t src_mac, mac_addr_t mon_mac,
                            ipv4_addr_t src_ip, ipv4_addr_t mon_ip,
                            l4_port_t mon_port) {
         hdr.report_ethernet.setValid();
+        hdr.report_eth_type.setValid();
+        hdr.report_ipv4.setValid();
+        hdr.report_udp.setValid();
         hdr.report_ethernet.dst_addr = mon_mac;
         hdr.report_ethernet.src_addr = src_mac;
-        hdr.report_eth_type.setValid();
-        hdr.report_eth_type.value = ETHERTYPE_IPV4;
-
-        hdr.report_ipv4.setValid();
-        hdr.report_ipv4.version = 4w4;
-        hdr.report_ipv4.ihl = 4w5;
-        hdr.report_ipv4.dscp = INT_DSCP;
-        hdr.report_ipv4.ecn = 2w0;
         hdr.report_ipv4.total_len = IPV4_HDR_BYTES + UDP_HDR_BYTES
                                     + REPORT_FIXED_HEADER_BYTES + LOCAL_REPORT_HEADER_BYTES
                                     - REPORT_MIRROR_HEADER_BYTES
                                     - ETH_FCS_LEN
                                     + eg_intr_md.pkt_length;
         hdr.report_ipv4.identification = ip_id_gen.get();
-        hdr.report_ipv4.flags = 0;
-        hdr.report_ipv4.frag_offset = 0;
-        hdr.report_ipv4.ttl = DEFAULT_IPV4_TTL;
-        hdr.report_ipv4.protocol = PROTO_UDP;
         hdr.report_ipv4.src_addr = src_ip;
         hdr.report_ipv4.dst_addr = mon_ip;
-
-        hdr.report_udp.setValid();
-        hdr.report_udp.sport = 0;
         hdr.report_udp.dport = mon_port;
         hdr.report_udp.len = UDP_HDR_BYTES + REPORT_FIXED_HEADER_BYTES
                              + LOCAL_REPORT_HEADER_BYTES
@@ -181,9 +186,15 @@ control IntEgress (
         hdr.report_mpls.ttl = DEFAULT_MPLS_TTL;
     }
 
+    // A table to encap the mirrored packet to an INT report.
     table report {
+        // when we are parsing the regular ingress to egress packet,
+        // the `int_mirror_md` will be undefined, add `bmd_type` match key to ensure we
+        // are handling the right packet type.
         key = {
+            fabric_md.bridged.bmd_type: exact @name("bmd_type");
             fabric_md.int_mirror_md.mirror_type: exact @name("mirror_type");
+            fabric_md.int_mirror_md.report_type: exact @name("int_report_type");
         }
         actions = {
             do_report_encap;
@@ -217,11 +228,12 @@ control IntEgress (
         }
     }
 
-    action init_int_mirror_metadata(bit<32> switch_id) {
+    action set_metadata(bit<32> switch_id) {
+        eg_dprsr_md.mirror_type = (bit<3>)FabricMirrorType_t.INT_REPORT;
         fabric_md.int_mirror_md.setValid();
         fabric_md.int_mirror_md.bmd_type = BridgedMdType_t.EGRESS_MIRROR;
         fabric_md.int_mirror_md.mirror_type = FabricMirrorType_t.INT_REPORT;
-        eg_dprsr_md.mirror_type = (bit<3>)FabricMirrorType_t.INT_REPORT;
+        fabric_md.int_mirror_md.report_type = fabric_md.bridged.int_bmd.report_type;
         fabric_md.int_mirror_md.switch_id = switch_id;
         fabric_md.int_mirror_md.ig_port = (bit<16>)fabric_md.bridged.ig_port;
         fabric_md.int_mirror_md.eg_port = (bit<16>)eg_intr_md.egress_port;
@@ -235,20 +247,17 @@ control IntEgress (
 #endif // WITH_SPGW
     }
 
-    table watchlist {
+    // A table which initialize the INT mirror metadata.
+    table int_metadata {
         key = {
-            hdr.ipv4.src_addr          : ternary @name("ipv4_src");
-            hdr.ipv4.dst_addr          : ternary @name("ipv4_dst");
-            fabric_md.bridged.ip_proto : ternary @name("ip_proto");
-            fabric_md.bridged.l4_sport : range @name("l4_sport");
-            fabric_md.bridged.l4_dport : range @name("l4_dport");
+            fabric_md.bridged.int_bmd.report_type: exact @name("int_report_type");
         }
         actions = {
-            init_int_mirror_metadata;
+            set_metadata;
             @defaultonly nop();
         }
         const default_action = nop();
-        const size = INT_WATCHLIST_TABLE_SIZE;
+        const size = 3; // Flow, Drop, Queue
     }
 
     @hidden
@@ -306,10 +315,8 @@ control IntEgress (
             exit;
         } else {
             mirror_session_id.apply();
-            if (hdr.ipv4.isValid()) {
-                if (watchlist.apply().hit) {
-                    flow_report_filter.apply(hdr, fabric_md, eg_intr_md, eg_prsr_md, eg_dprsr_md);
-                }
+            if (int_metadata.apply().hit) {
+                flow_report_filter.apply(hdr, fabric_md, eg_intr_md, eg_prsr_md, eg_dprsr_md);
             }
         }
     }

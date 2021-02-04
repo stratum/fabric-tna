@@ -181,7 +181,6 @@ header local_report_header_t {
     bit<24> queue_occupancy;
     bit<32> eg_tstamp;
 }
-#endif // WITH_INT
 
 // Since we don't parse the packet in the egress parser if
 // we receive a packet from egress mirror, the compiler
@@ -217,12 +216,18 @@ header int_mirror_metadata_t {
     bit<32>               eg_tstamp;
     bit<8>                drop_reason;
     bit<16>               ip_eth_type;
+    @padding bit<6>       _pad2;
+    IntReportType_t       report_type;
 #ifdef WITH_SPGW
-    @padding bit<7>       _pad2;
+    @padding bit<7>       _pad3;
     bit<1>                strip_gtpu;
 #endif // WITH_SPGW
 }
 
+struct int_bridged_metadata_t {
+    IntReportType_t report_type;
+}
+#endif // WITH_INT
 
 // Common metadata which is shared between
 // ingress and egress pipeline.
@@ -254,6 +259,9 @@ header bridged_metadata_t {
     l4_port_t               inner_l4_dport;
     spgw_bridged_metadata_t spgw;
 #endif // WITH_SPGW
+#ifdef WITH_INT
+    int_bridged_metadata_t int_bmd;
+#endif // WITH_INT
 }
 
 // Ingress pipeline-only metadata

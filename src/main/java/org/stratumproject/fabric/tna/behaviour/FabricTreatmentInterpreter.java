@@ -210,10 +210,15 @@ final class FabricTreatmentInterpreter {
         return null;
     }
 
-
     static PiAction mapEgressNextTreatment(
             TrafficTreatment treatment, PiTableId tableId)
             throws PiInterpreterException {
+        L2ModificationInstruction pushVlan = l2Instruction(treatment, VLAN_PUSH);
+        if (pushVlan != null) {
+            return PiAction.builder()
+                    .withId(P4InfoConstants.FABRIC_EGRESS_EGRESS_NEXT_PUSH_VLAN)
+                    .build();
+        }
         l2InstructionOrFail(treatment, VLAN_POP, tableId);
         return PiAction.builder()
                 .withId(P4InfoConstants.FABRIC_EGRESS_EGRESS_NEXT_POP_VLAN)
@@ -229,8 +234,12 @@ final class FabricTreatmentInterpreter {
     }
 
     private static boolean isNoAction(TrafficTreatment treatment) {
+        // Empty treatment OR
+        // No instructions OR
+        // Empty treatment AND writeMetadata
         return treatment.equals(DefaultTrafficTreatment.emptyTreatment()) ||
-                treatment.allInstructions().isEmpty();
+                treatment.allInstructions().isEmpty() ||
+                (treatment.allInstructions().size() == 1 && treatment.writeMetadata() != null);
     }
 
     private static boolean isFilteringPopAction(TrafficTreatment treatment) {

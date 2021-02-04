@@ -165,6 +165,7 @@ def run_test(
     cpu_port,
     ptfdir,
     port_map_path,
+    profile,
     platform=None,
     generate_tv=False,
     loopback=False,
@@ -237,6 +238,7 @@ def run_test(
     test_params += ";loopback='{}'".format(loopback)
     if platform is not None:
         test_params += ";pltfm='{}'".format(platform)
+    test_params += ";profile='{}'".format(profile)
     cmd.append("--test-params={}".format(test_params))
     cmd.extend(extra_args)
     info("Executing PTF command: {}".format(" ".join(cmd)))
@@ -329,6 +331,13 @@ def main():
         action="store_true",
         default=False,
     )
+    parser.add_argument(
+        "--profile",
+        help="The fabric profile",
+        type=str,
+        required=True,
+        choices=["fabric", "fabric-spgw", "fabric-int", "fabric-spgw-int"],
+    )
     args, unknown_args = parser.parse_known_args()
 
     if not check_ptf():
@@ -373,6 +382,7 @@ def main():
             platform=args.platform,
             generate_tv=args.generate_tv,
             loopback=args.loopback,
+            profile=args.profile,
             extra_args=unknown_args,
         )
 

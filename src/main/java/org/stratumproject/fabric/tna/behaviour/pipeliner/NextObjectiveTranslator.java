@@ -237,35 +237,30 @@ class NextObjectiveTranslator
             throws FabricPipelinerException {
         final PortNumber outPort = outputPort(treatment);
         final Instruction popVlanInst = l2Instruction(treatment, VLAN_POP);
-        if (popVlanInst != null && outPort != null) {
+        if (outPort != null) {
             if (strict && treatment.allInstructions().size() > 2) {
                 throw new FabricPipelinerException(
                         "Treatment contains instructions other " +
                                 "than OUTPUT and VLAN_POP, cannot generate " +
                                 "egress rules");
             }
-            egressVlanPop(outPort, obj, resultBuilder);
+            // We cannot program if there are no proper metadata in the objective
+            if (obj.meta() != null && obj.meta().getCriterion(Criterion.Type.VLAN_VID) != null) {
+                egressVlan(outPort, obj, popVlanInst, resultBuilder);
+            } else {
+                log.warn("NextObjective is trying to program {} without {} information [{}]",
+                        P4InfoConstants.FABRIC_EGRESS_EGRESS_NEXT_EGRESS_VLAN,
+                        obj.meta() == null ? "metadata" : "vlanId", obj);
+            }
         }
     }
 
-    private void egressVlanPop(PortNumber outPort, NextObjective obj,
-                               ObjectiveTranslation.Builder resultBuilder)
+    private void egressVlan(PortNumber outPort, NextObjective obj, Instruction popVlanInst,
+                            ObjectiveTranslation.Builder resultBuilder)
             throws FabricPipelinerException {
-
-        if (obj.meta() == null) {
-            throw new FabricPipelinerException(
-                    "Cannot process egress pop VLAN rule, NextObjective has null meta",
-                    ObjectiveError.BADPARAMS);
-        }
 
         final VlanIdCriterion vlanIdCriterion = (VlanIdCriterion) criterion(
                 obj.meta(), Criterion.Type.VLAN_VID);
-        if (vlanIdCriterion == null) {
-            throw new FabricPipelinerException(
-                    "Cannot process egress pop VLAN rule, missing VLAN_VID criterion " +
-                            "in NextObjective meta",
-                    ObjectiveError.BADPARAMS);
-        }
 
         final PiCriterion egressVlanTableMatch = PiCriterion.builder()
                 .matchExact(P4InfoConstants.HDR_EG_PORT, outPort.toLong())
@@ -274,13 +269,16 @@ class NextObjectiveTranslator
                 .matchPi(egressVlanTableMatch)
                 .matchVlanId(vlanIdCriterion.vlanId())
                 .build();
-        final TrafficTreatment treatment = DefaultTrafficTreatment.builder()
-                .popVlan()
-                .build();
+        final TrafficTreatment.Builder treatmentBuilder = DefaultTrafficTreatment.builder();
+        if (popVlanInst == null) {
+            treatmentBuilder.pushVlan();
+        } else {
+            treatmentBuilder.popVlan();
+        }
 
         resultBuilder.addFlowRule(flowRule(
                 obj, P4InfoConstants.FABRIC_EGRESS_EGRESS_NEXT_EGRESS_VLAN,
-                selector, treatment));
+                selector, treatmentBuilder.build()));
     }
 
     private TrafficSelector nextIdSelector(int nextId) {
@@ -484,12 +482,10 @@ class NextObjectiveTranslator
     }
 
     private boolean isGroupModifyOp(NextObjective obj) {
-        // If operation is ADD_TO_EXIST, REMOVE_FROM_EXIST or MODIFY, it means we modify
+        // If operation is ADD_TO_EXIST, REMOVE_FROM_EXIST it means we modify
         // group buckets only, no changes for flow rules.
-        // FIXME Please note that for MODIFY op this could not apply in future if we extend the scope of MODIFY
         return obj.op() == Objective.Operation.ADD_TO_EXISTING ||
-                obj.op() == Objective.Operation.REMOVE_FROM_EXISTING ||
-                obj.op() == Objective.Operation.MODIFY;
+                obj.op() == Objective.Operation.REMOVE_FROM_EXISTING;
     }
 
     private boolean isXconnect(NextObjective obj) {
