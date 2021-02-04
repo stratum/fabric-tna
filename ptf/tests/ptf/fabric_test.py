@@ -173,8 +173,8 @@ INT_REPORT_TYPE_LOCAL = 1
 INT_REPORT_TYPE_DROP = 2
 
 INT_DROP_REASON_UNSET = 0
-INT_DROP_REASON_ACL_DENY = 102
-INT_DROP_REASON_NEXT_ID_MISS = 103
+INT_DROP_REASON_ACL_DENY = 130
+INT_DROP_REASON_NEXT_ID_MISS = 131
 
 PPPOE_CODE_SESSION_STAGE = 0x00
 
@@ -2301,31 +2301,14 @@ class IntTest(IPv4UnicastTest):
         )
 
     def set_up_drop_report_flow(self):
-        # The pipeline decide to drop a packet and it is not redirect to the CPU port
         self.send_request_add_entry_to_action(
             "drop_report",
             [
-                self.Ternary("drop_ctl", stringify(1, 1), stringify(1, 1)),
-                self.Ternary("copy_to_cpu", stringify(0, 1), stringify(1, 1)),
-                self.Ternary("int_report_type", stringify(INT_REPORT_TYPE_LOCAL, 1), stringify(0x03, 1)),
+                self.Exact("int_report_type", stringify(INT_REPORT_TYPE_LOCAL, 1)),
+                self.Ternary("int_drop_reason", stringify(0x80, 1), stringify(0x80, 1)),
             ],
             "report_drop",
             [("switch_id", stringify(1, 4))],
-            priority=DEFAULT_PRIORITY
-        )
-        # Report if no next id set by any table and the drop reason is unset.
-        self.send_request_add_entry_to_action(
-            "drop_report",
-            [
-                self.Ternary("int_report_type", stringify(INT_REPORT_TYPE_LOCAL, 1), stringify(0x03, 1)),
-                self.Ternary("int_drop_reason", stringify(INT_DROP_REASON_UNSET, 1), stringify(0xFF, 1)),
-                self.Ternary("next_id", stringify(0, 4), stringify(0xffffffff, 4))
-            ],
-            "report_drop_with_reason",
-            [
-                ("switch_id", stringify(1, 4)),
-                ("drop_reason", stringify(INT_DROP_REASON_NEXT_ID_MISS, 1))
-            ],
             priority=DEFAULT_PRIORITY
         )
 
