@@ -151,6 +151,8 @@ INT_INS_TO_NAME = {
 }
 
 INT_REPORT_MIRROR_IDS = [300, 301, 302, 303]
+RECIRCULATE_PORTS = [68, 196, 324, 452]
+SWITCH_ID = 1
 INT_REPORT_PORT = 32766
 NPROTO_ETHERNET = 0
 NPROTO_TELEMETRY_DROP_HEADER = 1
@@ -338,7 +340,6 @@ class FabricTest(P4RuntimeTest):
         self.port2 = self.swports(2)
         self.port3 = self.swports(3)
         self.port4 = self.swports(4)
-        self.recirculate_ports = [68, 196, 324, 452]
         self.setup_switch_info()
 
     def tearDown(self):
@@ -2275,10 +2276,10 @@ class IntTest(IPv4UnicastTest):
         dst_ip,
         ig_port,
         eg_port,
-        sw_id=1,
-        inner_packet=None,
-        is_device_spine=False,
-        send_report_to_spine=False,
+        sw_id,
+        inner_packet,
+        is_device_spine,
+        send_report_to_spine,
     ):
         # Note: scapy doesn't support dscp field, use tos.
         pkt = (
@@ -2393,7 +2394,7 @@ class IntTest(IPv4UnicastTest):
         )
         for i in range(0, 4):
             self.set_up_report_mirror_flow(
-                i, INT_REPORT_MIRROR_IDS[i], self.recirculate_ports[i]
+                i, INT_REPORT_MIRROR_IDS[i], RECIRCULATE_PORTS[i]
             )
 
         # Set up entries for report packet
@@ -2436,7 +2437,7 @@ class IntTest(IPv4UnicastTest):
             INT_COLLECTOR_IPV4,
             ig_port,
             eg_port,
-            1,
+            SWITCH_ID,
             int_inner_pkt,
             is_device_spine,
             send_report_to_spine
@@ -2522,7 +2523,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             INT_COLLECTOR_IPV4,
             self.port1,
             self.port2,
-            1,
+            SWITCH_ID,
             int_inner_pkt,
             is_device_spine,
             send_report_to_spine,
@@ -2600,7 +2601,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             INT_COLLECTOR_IPV4,
             self.port1,
             self.port2,
-            1,
+            SWITCH_ID,
             int_inner_pkt,
             is_device_spine,
             send_report_to_spine,
