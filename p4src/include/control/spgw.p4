@@ -154,7 +154,7 @@ control SpgwIngress(
         size = NUM_UPLINK_PDRS;
     }
 
-    action set_qid (bit<5> qid) {
+    action set_qid(bit<5> qid) {
            ig_tm_md.qid = qid;
     }
 
