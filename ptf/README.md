@@ -7,7 +7,7 @@ PTF is a framework for data plane testing:
 
 This directory maintains the test case definitions (written in Python), as well
 as scripts to run them on different targets. Test cases can be found insed the
-directory `tests/ptf/fabric.ptf`. Run scripts can be found in `run/`.
+directory `tests/unit`. Run scripts can be found in `run/`.
 
 Currently, we provide scripts to run PTF tests against two targets:
 * Stratum running on top of tofino-model
@@ -65,7 +65,7 @@ fail to start or affect test results negatively.
 4. If tests fail, check logs in:
 
    * `run/tm/log` for tofino-model and Stratum logs
-   * `tests/ptf/` for PTF-related logs and PCAP traces (`ptf.log` and
+   * `tests/` for PTF-related logs and PCAP traces (`ptf.log` and
      `ptf.pcap`)
 
 ### Testing against custom Stratum builds
@@ -84,7 +84,7 @@ We are currently in the process of migrating the test runner framework from PTF
 to Stratum's [testvectors-runner].
 
 For this reason, some PTF-based test case definitions are instrumented
-to generate protobuf-based [TestVectors] (TVs) (under `tests/ptf/testvectors`).
+to generate protobuf-based [TestVectors] (TVs) (under `tests/testvectors`).
 The long-term goal is to remove all PTF references from the codebase, but
 continue using Python as a convenient way to generate TVs. For now, we use a
 Python library (`tvutils`) to wrap PTF and P4Runtime calls in methods that

@@ -55,6 +55,6 @@ for d in ./p4src/build/*/; do
   rm -rf "logs/${profile}"
   mkdir -p "logs/${profile}"
   mv ptf/run/tm/log "logs/${profile}"
-  mv ptf/tests/ptf/ptf.log "logs/${profile}/"
-  mv ptf/tests/ptf/ptf.pcap "logs/${profile}/"
+  mv ptf/tests/ptf.log "logs/${profile}/"
+  mv ptf/tests/ptf.pcap "logs/${profile}/"
 done

@@ -20,6 +20,8 @@ vlan_confs = {
     "untag->tag": [False, True],
 }
 
+# TODO: split into multiple files, e.g., int.py, fabric.py, spgw.py, etc.
+
 
 class FabricBridgingTest(BridgingTest):
     @tvsetup

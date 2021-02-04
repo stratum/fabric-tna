@@ -203,7 +203,7 @@ def run_test(
         # This is a work around to create those interfaces on testrunner
         # contiainer
         try:
-            cmd = os.getcwd() + "/../../run/tv/setup_interfaces.sh" + interfaces
+            cmd = os.getcwd() + "/../run/tv/setup_interfaces.sh" + interfaces
             p = subprocess.Popen([cmd], shell=True)
             p.wait()
         except Exception as e:

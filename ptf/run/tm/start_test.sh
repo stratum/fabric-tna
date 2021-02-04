@@ -5,8 +5,7 @@
 set -e
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
-FP4TEST_DIR=${DIR}/../../
-PTF_DIR=${FP4TEST_DIR}/tests/ptf
+TESTS_DIR=${DIR}/../../tests
 
 err_report() {
     echo "************************************************"
@@ -16,7 +15,7 @@ err_report() {
 }
 
 trap 'err_report' ERR
-cd "${PTF_DIR}"
+cd "${TESTS_DIR}"
 
 echo "************************************************"
 echo "STARTING PTF TESTS..."

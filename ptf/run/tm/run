@@ -5,8 +5,8 @@
 set -e
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
-FP4TEST_ROOT="${DIR}"/../..
-FABRIC_TNA="${FP4TEST_ROOT}"/..
+PTF_DIR="${DIR}"/../..
+ROOT_DIR="${PTF_DIR}"/..
 
 # Tester image
 # Contains PTF and tvutils libraries, as well as P4RT, gNMI, and TV Python bindings
@@ -16,11 +16,6 @@ SDE_VERSION=${SDE_VERSION:-9.2.0}
 STRATUM_BF_DOCKER_IMG=${STRATUM_BF_DOCKER_IMG:-stratumproject/stratum-bfrt:20.12-${SDE_VERSION}}
 STRATUM_BF_DOCKER_FLAG=${STRATUM_BF_DOCKER_FLAG:-}
 SDE_DOCKER_IMG=${SDE_DOCKER_IMG:-opennetworking/bf-sde:9.2.0-tm}
-
-if [[ -z "${FABRIC_TNA}" ]]; then
-    echo "ERROR: FABRIC_TNA env not defined"
-    exit 1
-fi
 
 if [[ -z "${SDE_DOCKER_IMG}" ]]; then
     echo "ERROR: SDE_DOCKER_IMG env not defined"
@@ -58,7 +53,7 @@ fi
 
 # Find Tofino compiled artifacts
 sdeVer_=$(echo "${SDE_VERSION}" | tr . _) # Replace dots with underscores
-P4C_OUT=${FABRIC_TNA}/p4src/build/${fabricProfile}/sde_${sdeVer_}
+P4C_OUT=${ROOT_DIR}/p4src/build/${fabricProfile}/sde_${sdeVer_}
 echo "*** Using P4 compiler output in ${P4C_OUT}..."
 
 # Fix a name for each container so we can stop them
@@ -117,9 +112,9 @@ it=$(test -t 0 && echo "-it" || echo "-t")
 # shellcheck disable=SC2068
 docker run --name "${testerRunName}" "${it}" --privileged --rm \
     --network "container:${tmRunName}" \
-    -v "${FP4TEST_ROOT}":/fabric-p4test \
+    -v "${PTF_DIR}":/ptf \
     -v "${P4C_OUT}":/p4c-out \
     -e PTF_FILTER="${PTF_FILTER}" \
-    --entrypoint /fabric-p4test/run/tm/start_test.sh \
+    --entrypoint /ptf/run/tm/start_test.sh \
     "${TESTER_DOCKER_IMG}" \
     ${@}
