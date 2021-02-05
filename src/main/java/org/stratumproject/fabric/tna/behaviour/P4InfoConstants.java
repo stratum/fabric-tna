@@ -25,10 +25,6 @@ public final class P4InfoConstants {
     // Header field IDs
     public static final PiMatchFieldId HDR_BMD_TYPE =
             PiMatchFieldId.of("bmd_type");
-    public static final PiMatchFieldId HDR_COPY_TO_CPU =
-            PiMatchFieldId.of("copy_to_cpu");
-    public static final PiMatchFieldId HDR_DROP_CTL =
-            PiMatchFieldId.of("drop_ctl");
     public static final PiMatchFieldId HDR_EG_PORT =
             PiMatchFieldId.of("eg_port");
     public static final PiMatchFieldId HDR_ETH_DST =
@@ -46,6 +42,10 @@ public final class P4InfoConstants {
             PiMatchFieldId.of("icmp_type");
     public static final PiMatchFieldId HDR_IG_PORT =
             PiMatchFieldId.of("ig_port");
+    public static final PiMatchFieldId HDR_INET_ADDR =
+            PiMatchFieldId.of("inet_addr");
+    public static final PiMatchFieldId HDR_INET_L4_PORT =
+            PiMatchFieldId.of("inet_l4_port");
     public static final PiMatchFieldId HDR_INT_DROP_REASON =
             PiMatchFieldId.of("int_drop_reason");
     public static final PiMatchFieldId HDR_INT_REPORT_TYPE =
@@ -169,8 +169,10 @@ public final class P4InfoConstants {
             PiActionId.of("FabricEgress.int_egress.do_local_report_encap_mpls");
     public static final PiActionId FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_SET_CONFIG =
             PiActionId.of("FabricEgress.int_egress.flow_report_filter.set_config");
-    public static final PiActionId FABRIC_EGRESS_INT_EGRESS_SET_METADATA =
-            PiActionId.of("FabricEgress.int_egress.set_metadata");
+    public static final PiActionId FABRIC_EGRESS_INT_EGRESS_REPORT_DROP =
+            PiActionId.of("FabricEgress.int_egress.report_drop");
+    public static final PiActionId FABRIC_EGRESS_INT_EGRESS_REPORT_LOCAL =
+            PiActionId.of("FabricEgress.int_egress.report_local");
     public static final PiActionId FABRIC_EGRESS_PKT_IO_EGRESS_SET_SWITCH_INFO =
             PiActionId.of("FabricEgress.pkt_io_egress.set_switch_info");
     public static final PiActionId FABRIC_INGRESS_ACL_COPY_TO_CPU =
@@ -193,6 +195,8 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.filtering.permit_with_internal_vlan");
     public static final PiActionId FABRIC_INGRESS_FILTERING_SET_FORWARDING_TYPE =
             PiActionId.of("FabricIngress.filtering.set_forwarding_type");
+    public static final PiActionId FABRIC_INGRESS_FORWARDING_INT_TABLE_MISS =
+            PiActionId.of("FabricIngress.forwarding.int_table_miss");
     public static final PiActionId FABRIC_INGRESS_FORWARDING_NOP_ROUTING_V4 =
             PiActionId.of("FabricIngress.forwarding.nop_routing_v4");
     public static final PiActionId FABRIC_INGRESS_FORWARDING_POP_MPLS_AND_NEXT =
@@ -207,8 +211,6 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.int_ingress.mark_to_report");
     public static final PiActionId FABRIC_INGRESS_INT_INGRESS_REPORT_DROP =
             PiActionId.of("FabricIngress.int_ingress.report_drop");
-    public static final PiActionId FABRIC_INGRESS_INT_INGRESS_REPORT_DROP_WITH_REASON =
-            PiActionId.of("FabricIngress.int_ingress.report_drop_with_reason");
     public static final PiActionId FABRIC_INGRESS_NEXT_MPLS_ROUTING_HASHED =
             PiActionId.of("FabricIngress.next.mpls_routing_hashed");
     public static final PiActionId FABRIC_INGRESS_NEXT_OUTPUT_HASHED =

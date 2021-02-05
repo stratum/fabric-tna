@@ -402,9 +402,9 @@ control IntEgress (
         }
     }
 
-    action set_metadata(bit<32> switch_id) {
+    @hidden
+    action set_report_metadata(bit<32> switch_id) {
         eg_dprsr_md.mirror_type = (bit<3>)FabricMirrorType_t.INT_REPORT;
-        fabric_md.int_mirror_md.setValid();
         fabric_md.int_mirror_md.bmd_type = BridgedMdType_t.EGRESS_MIRROR;
         fabric_md.int_mirror_md.mirror_type = FabricMirrorType_t.INT_REPORT;
         fabric_md.int_mirror_md.report_type = fabric_md.bridged.int_bmd.report_type;
@@ -416,22 +416,34 @@ control IntEgress (
         fabric_md.int_mirror_md.ig_tstamp = fabric_md.bridged.ig_tstamp[31:0];
         fabric_md.int_mirror_md.eg_tstamp = eg_prsr_md.global_tstamp[31:0];
         fabric_md.int_mirror_md.ip_eth_type = fabric_md.bridged.ip_eth_type;
-#ifdef WITH_SPGW
-        fabric_md.int_mirror_md.strip_gtpu = (bit<1>)(hdr.gtpu.isValid());
-#endif // WITH_SPGW
+        // fabric_md.int_mirror_md.strip_gtpu will be initialized by the parser
+    }
+
+    action report_local(bit<32> switch_id) {
+        set_report_metadata(switch_id);
+        fabric_md.int_mirror_md.report_type = IntReportType_t.LOCAL;
+    }
+
+    action report_drop(bit<32> switch_id) {
+        set_report_metadata(switch_id);
+        fabric_md.int_mirror_md.report_type = IntReportType_t.DROP;
     }
 
     // A table which initialize the INT mirror metadata.
     table int_metadata {
         key = {
             fabric_md.bridged.int_bmd.report_type: exact @name("int_report_type");
+            fabric_md.int_mirror_md.drop_reason: ternary @name("int_drop_reason");
         }
         actions = {
-            set_metadata;
+            report_local;
+            report_drop;
             @defaultonly nop();
         }
         const default_action = nop();
         const size = 3; // Flow, Drop, Queue
+        // (IntReportType_t.LOCAL, 0x80 &&& 0x80) -> report_drop(switch_id)
+        // (IntReportType_t.LOCAL, 0 &&& 0xFF) -> report_local(switch_id)
     }
 
     apply {
