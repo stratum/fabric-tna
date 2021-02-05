@@ -242,11 +242,6 @@ control Next (inout parsed_headers_t hdr,
 #endif // WITH_HASHED_NEXT
         multicast.apply();
         next_vlan.apply();
-#ifdef WITH_INT
-        if (fabric_md.next_id == 0) {
-            fabric_md.int_mirror_md.drop_reason = DROP_REASON_NEXT_ID_MISS;
-        }
-#endif // WITH_INT
     }
 }
 

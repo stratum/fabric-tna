@@ -109,6 +109,7 @@ control Filtering (inout parsed_headers_t hdr,
         // make the pipeline to handle it
         fabric_md.skip_forwarding = false;
         fabric_md.skip_next = false;
+        fabric_md.int_mirror_md.drop_reason = DROP_REASON_UNSET;
     }
 
     @hidden

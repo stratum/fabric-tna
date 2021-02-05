@@ -194,14 +194,14 @@ control IntIngress (
     table drop_report {
         key = {
             fabric_md.bridged.int_bmd.report_type: exact @name("int_report_type");
-            fabric_md.int_mirror_md.drop_reason: ternary @name("int_drop_reason");
+            fabric_md.int_mirror_md.drop_reason[7:7]: exact @name("int_drop_reason");
         }
         actions = {
             report_drop;
             @defaultonly nop;
         }
         const size = 1;
-        // (IntReportType_t.LOCAL, 0x80 &&& 0x80) -> report_drop(switch_id)
+        // (IntReportType_t.LOCAL, 1) -> report_drop(switch_id)
         const default_action = nop();
     }
 
@@ -433,7 +433,7 @@ control IntEgress (
     table int_metadata {
         key = {
             fabric_md.bridged.int_bmd.report_type: exact @name("int_report_type");
-            fabric_md.int_mirror_md.drop_reason: ternary @name("int_drop_reason");
+            fabric_md.int_mirror_md.drop_reason[7:7]: exact @name("int_drop_reason");
         }
         actions = {
             report_local;
@@ -442,8 +442,8 @@ control IntEgress (
         }
         const default_action = nop();
         const size = 3; // Flow, Drop, Queue
-        // (IntReportType_t.LOCAL, 0x80 &&& 0x80) -> report_drop(switch_id)
-        // (IntReportType_t.LOCAL, 0 &&& 0xFF) -> report_local(switch_id)
+        // (IntReportType_t.LOCAL, 1) -> report_drop(switch_id)
+        // (IntReportType_t.LOCAL, 0) -> report_local(switch_id)
     }
 
     apply {

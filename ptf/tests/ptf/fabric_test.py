@@ -2317,11 +2317,10 @@ class IntTest(IPv4UnicastTest):
             "int_metadata",
             [
                 self.Exact("int_report_type", stringify(INT_REPORT_TYPE_LOCAL, 1)),
-                self.Ternary("int_drop_reason", stringify(0, 1), stringify(0xFF, 1)),
+                self.Exact("int_drop_reason", stringify(0, 1)),
             ],
             "int_egress.report_local",
-            [("switch_id", switch_id_)],
-            DEFAULT_PRIORITY,
+            [("switch_id", switch_id_)]
         )
 
         # (IntReportType_t.LOCAL, 0x80 &&& 0x80) -> report_drop(switch_id)
@@ -2329,11 +2328,10 @@ class IntTest(IPv4UnicastTest):
             "int_metadata",
             [
                 self.Exact("int_report_type", stringify(INT_REPORT_TYPE_LOCAL, 1)),
-                self.Ternary("int_drop_reason", stringify(0x80, 1), stringify(0x80, 1)),
+                self.Exact("int_drop_reason", stringify(1, 1)),
             ],
             "int_egress.report_drop",
-            [("switch_id", switch_id_)],
-            DEFAULT_PRIORITY,
+            [("switch_id", switch_id_)]
         )
 
     def set_up_drop_report_flow(self):
@@ -2341,11 +2339,10 @@ class IntTest(IPv4UnicastTest):
             "drop_report",
             [
                 self.Exact("int_report_type", stringify(INT_REPORT_TYPE_LOCAL, 1)),
-                self.Ternary("int_drop_reason", stringify(0x80, 1), stringify(0x80, 1)),
+                self.Exact("int_drop_reason", stringify(1, 1)),
             ],
             "int_ingress.report_drop",
-            [("switch_id", stringify(1, 4))],
-            priority=DEFAULT_PRIORITY,
+            [("switch_id", stringify(1, 4))]
         )
 
     def build_int_local_report(
