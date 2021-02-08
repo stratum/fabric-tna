@@ -42,7 +42,7 @@ Some additional points:
 
 2. Make your code changes.
 
-3. Pass all tests locally (see [README.md](./README.md). Create new tests for new code. Execute the following command in the root directory to run all currently enabled tests: `TODO: add command`
+3. Pass all tests locally (see [README.md](./README.md)). Create new tests for new code. Execute the following command in the root directory to run all currently enabled tests: `TODO: add command`
 
 4. Create a [Pull Request](https://github.com/stratum/fabric-tna/compare). Consider [allowing maintainers](https://help.github.com/en/github/collaborating-with-issues-and-pull-requests/allowing-changes-to-a-pull-request-branch-created-from-a-fork) to make changes if you want direct assistance from maintainers.
 
