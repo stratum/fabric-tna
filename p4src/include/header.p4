@@ -302,6 +302,49 @@ struct fabric_egress_metadata_t {
 #ifdef WITH_INT
     int_mirror_metadata_t int_mirror_md;
 #endif // WITH_INT
+
+
+
+//#ifdef WITH_CONQUEST
+        bit<8> num_snapshots_to_read;//result of division (delay/T), could be larger than H
+    bit<2> snap_epoch;
+    bit<18> q_delay;
+    
+    bit<8> random_bits;
+    
+    bit<8> cyclic_index;
+        bit<8> hashed_index_row_0;
+        bit<8> hashed_index_row_1;
+    
+            bit<8> snap_0_row_0_index;
+            bit<32> snap_0_row_0_read;
+            bit<8> snap_0_row_1_index;
+            bit<32> snap_0_row_1_read;
+            bit<8> snap_1_row_0_index;
+            bit<32> snap_1_row_0_read;
+            bit<8> snap_1_row_1_index;
+            bit<32> snap_1_row_1_read;
+            bit<8> snap_2_row_0_index;
+            bit<32> snap_2_row_0_read;
+            bit<8> snap_2_row_1_index;
+            bit<32> snap_2_row_1_read;
+            bit<8> snap_3_row_0_index;
+            bit<32> snap_3_row_0_read;
+            bit<8> snap_3_row_1_index;
+            bit<32> snap_3_row_1_read;
+    
+    
+        bit<32> snap_0_read_min_l0;
+        bit<32> snap_1_read_min_l0;
+        bit<32> snap_2_read_min_l0;
+        bit<32> snap_3_read_min_l0;
+  
+    
+            bit<32> snap_0_read_min_l1;
+            bit<32> snap_2_read_min_l1;
+  
+            bit<32> snap_0_read_min_l2;
+//#endif // WITH_CONQUEST
 }
 
 header fake_ethernet_t {
