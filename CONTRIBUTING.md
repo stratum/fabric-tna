@@ -44,7 +44,7 @@ Some additional points:
 
 3. Pass all tests locally (see [README.md](./README.md). Create new tests for new code. Execute the following command in the root directory to run all currently enabled tests: `TODO: add command`
 
-4. Create a [Pull Request](https://github.com/stratum/stratum/compare). Consider [allowing maintainers](https://help.github.com/en/github/collaborating-with-issues-and-pull-requests/allowing-changes-to-a-pull-request-branch-created-from-a-fork) to make changes if you want direct assistance from maintainers.
+4. Create a [Pull Request](https://github.com/stratum/fabric-tna/compare). Consider [allowing maintainers](https://help.github.com/en/github/collaborating-with-issues-and-pull-requests/allowing-changes-to-a-pull-request-branch-created-from-a-fork) to make changes if you want direct assistance from maintainers.
 
 5. Wait for CI checks to pass. Repeat steps 2-4 as necessary. **Passing CI is mandatory.** If the CI check does not run automatically, reach out to the project maintainers to enable CI jobs for your PR.
 
@@ -52,4 +52,4 @@ Some additional points:
 
 ## Community Guidelines
 
-This project follows [Google's Open Source Community Guidelines](https://opensource.google.com/conduct/) and ONF's [Code of Conduct](https://github.com/stratum/stratum/blob/master/CODE_OF_CONDUCT.md).
+This project follows [Google's Open Source Community Guidelines](https://opensource.google.com/conduct/) and ONF's [Code of Conduct](https://www.opennetworking.org/wp-content/themes/onf/img/onf-code-of-conduct.pdf).
