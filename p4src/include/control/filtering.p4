@@ -104,33 +104,6 @@ control Filtering (inout parsed_headers_t hdr,
     //  as for packet-outs when that will be ready.
 
     @hidden
-    action set_recirculate_pkt_vlan(vlan_id_t vlan_id) {
-        fabric_md.bridged.vlan_id = vlan_id;
-        // make the pipeline to handle it
-        fabric_md.skip_forwarding = false;
-        fabric_md.skip_next = false;
-        fabric_md.int_mirror_md.drop_reason = DROP_REASON_UNSET;
-    }
-
-    @hidden
-    table recirc_ingress_port_vlan {
-        key = {
-            ig_intr_md.ingress_port    : exact @name("ig_port");
-            hdr.vlan_tag.isValid()     : exact @name("vlan_is_valid");
-        }
-        actions = {
-            set_recirculate_pkt_vlan;
-        }
-        size = 4;
-        const entries = {
-            (RECIRC_PORT_PIPE_0, false): set_recirculate_pkt_vlan(DEFAULT_VLAN_ID);
-            (RECIRC_PORT_PIPE_1, false): set_recirculate_pkt_vlan(DEFAULT_VLAN_ID);
-            (RECIRC_PORT_PIPE_2, false): set_recirculate_pkt_vlan(DEFAULT_VLAN_ID);
-            (RECIRC_PORT_PIPE_3, false): set_recirculate_pkt_vlan(DEFAULT_VLAN_ID);
-        }
-    }
-
-    @hidden
     action recirc_set_forwarding_type(fwd_type_t fwd_type) {
         fabric_md.bridged.fwd_type = fwd_type;
     }
@@ -162,7 +135,6 @@ control Filtering (inout parsed_headers_t hdr,
         ingress_port_vlan.apply();
         fwd_classifier.apply();
 #ifdef WITH_INT
-        recirc_ingress_port_vlan.apply();
         recirc_fwd_classifier.apply();
 #endif // WITH_INT
 #ifdef WTIH_DEBUG

@@ -15,6 +15,11 @@ parser IntReportMirrorParser (packet_in packet,
         packet.extract(fabric_md.int_mirror_md);
         fabric_md.bridged.bmd_type = fabric_md.int_mirror_md.bmd_type;
         fabric_md.bridged.vlan_id = DEFAULT_VLAN_ID;
+        fabric_md.bridged.mpls_label = 0; // do not set the MPLS label later in the egress next control block.
+#ifdef WITH_SPGW
+        fabric_md.bridged.spgw.skip_spgw = true; // skip spgw so we won't encap it later.
+#endif // WITH_SPGW
+
         hdr.report_fixed_header.ig_tstamp = fabric_md.int_mirror_md.ig_tstamp;
         hdr.common_report_header = {
             fabric_md.int_mirror_md.switch_id,

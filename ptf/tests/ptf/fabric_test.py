@@ -491,6 +491,16 @@ class FabricTest(P4RuntimeTest):
             [],
         )
 
+    def set_keep_egress_vlan_config(self, egress_port, vlan_id):
+        egress_port = stringify(egress_port, 2)
+        vlan_id = stringify(vlan_id, 2)
+        self.send_request_add_entry_to_action(
+            "egress_next.egress_vlan",
+            [self.Exact("vlan_id", vlan_id), self.Exact("eg_port", egress_port)],
+            "egress_next.keep_vlan_config",
+            [],
+        )
+
     def set_forwarding_type(
         self,
         ingress_port,
@@ -2530,6 +2540,11 @@ class IntTest(IPv4UnicastTest):
             self.port3, is_device_spine, send_report_to_spine
         )
         self.set_up_drop_report_flow()
+        for port in RECIRCULATE_PORTS:
+            self.set_ingress_port_vlan(
+                port, False, DEFAULT_VLAN,
+            )
+            self.set_keep_egress_vlan_config(port, DEFAULT_VLAN)
 
     def runIntTest(
         self,
