@@ -344,6 +344,12 @@ control IntEgress (
                              - REPORT_MIRROR_HEADER_BYTES
                              - ETH_FCS_LEN
                              + eg_intr_md.pkt_length;
+        // Fix the ethertype, the reason we need to fix the ether type is because we
+        // may strip the MPLS header from the parser, and the ethertype will still be
+        // MPLS instead of real one.
+        hdr.eth_type.value = fabric_md.int_mirror_md.ip_eth_type;
+        // Remove the INT mirror metadata to prevent egress mirroring again.
+        eg_dprsr_md.mirror_type = (bit<3>)FabricMirrorType_t.INVALID;
     }
 
     action do_drop_report_encap_mpls(mac_addr_t src_mac, mac_addr_t mon_mac,
@@ -416,6 +422,7 @@ control IntEgress (
         fabric_md.int_mirror_md.ig_tstamp = fabric_md.bridged.ig_tstamp[31:0];
         fabric_md.int_mirror_md.eg_tstamp = eg_prsr_md.global_tstamp[31:0];
         fabric_md.int_mirror_md.ip_eth_type = fabric_md.bridged.ip_eth_type;
+        fabric_md.int_mirror_md.flow_hash = fabric_md.bridged.flow_hash;
         // fabric_md.int_mirror_md.strip_gtpu will be initialized by the parser
     }
 
@@ -469,8 +476,6 @@ control IntEgress (
                 hdr.report_udp.len = hdr.report_udp.len
                     - MPLS_HDR_BYTES;
             }
-            // Reports don't need to go through the rest of the egress pipe.
-            exit;
         } else {
             if (int_metadata.apply().hit) {
                 flow_report_filter.apply(hdr, fabric_md, eg_intr_md, eg_prsr_md, eg_dprsr_md);

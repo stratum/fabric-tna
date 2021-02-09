@@ -174,7 +174,7 @@ INT_REPORT_TYPE_DROP = 2
 
 INT_DROP_REASON_UNSET = 0
 INT_DROP_REASON_ACL_DENY = 130
-INT_DROP_REASON_NEXT_ID_MISS = 131
+INT_DROP_REASON_EGRESS_NEXT_MISS = 136
 
 PPPOE_CODE_SESSION_STAGE = 0x00
 
@@ -2609,7 +2609,7 @@ class IntTest(IPv4UnicastTest):
             self.verify_packet(exp_int_report_pkt_masked, self.port3)
         self.verify_no_other_packets()
 
-    def runIntDropTest(
+    def runIngressIntDropTest(
         self,
         pkt,
         tagged1,
@@ -2620,6 +2620,7 @@ class IntTest(IPv4UnicastTest):
         expect_int_report,
         is_device_spine,
         send_report_to_spine,
+        drop_reason,
     ):
         """
         :param pkt: the input packet
@@ -2658,8 +2659,8 @@ class IntTest(IPv4UnicastTest):
             SWITCH_IPV4,
             INT_COLLECTOR_IPV4,
             ig_port,
-            0,  # Egress port, won't set
-            INT_DROP_REASON_ACL_DENY,
+            eg_port,
+            drop_reason,
             SWITCH_ID,
             int_inner_pkt,
             is_device_spine,
@@ -2682,6 +2683,110 @@ class IntTest(IPv4UnicastTest):
             eg_port=eg_port,
             verify_pkt=False,
         )
+
+        if expect_int_report:
+            self.verify_packet(exp_int_report_pkt_masked, self.port3)
+        self.verify_no_other_packets()
+
+    def runEgressIntDropTest(
+        self,
+        pkt,
+        tagged1,
+        tagged2,
+        is_next_hop_spine,
+        ig_port,
+        eg_port,
+        expect_int_report,
+        is_device_spine,
+        send_report_to_spine,
+        drop_reason,
+    ):
+        """
+        :param pkt: the input packet
+        :param tagged1: if the input port should expect VLAN tagged packets
+        :param tagged2: if the output port should expect VLAN tagged packets
+        :param prefix_len: prefix length to use in the routing table
+        :param is_next_hop_spine: whether the packet should be routed
+               to the spines using MPLS SR
+        :param ig_port: the ingress port of the IP uncast packet
+        :param eg_port: the egress port of the IP uncast packet
+        :param expect_int_report: expected to receive the INT report
+        :param is_device_spine: the device is a spine device
+        :param send_report_to_spine: if the report is to be forwarded
+               to a spine (e.g., collector attached to another leaf)
+        """
+        # Build expected inner pkt using the input one.
+        int_inner_pkt = pkt.copy()
+
+        int_inner_pkt = pkt_route(int_inner_pkt, INT_COLLECTOR_MAC)
+        if not is_next_hop_spine:
+            int_inner_pkt = pkt_decrement_ttl(int_inner_pkt)
+
+        # The VLAN tag in INT report will not be changed since there is no table entry
+        # in the egress_vlan table.
+        if tagged1 and Dot1Q not in int_inner_pkt:
+            int_inner_pkt = pkt_add_vlan(int_inner_pkt, vlan_vid=VLAN_ID_1)
+        # Note that we won't add MPLS header to the expected inner
+        # packet since the pipeline will strip out the MPLS header
+        # from it before in the parser.
+
+        # The expected INT report packet
+        exp_int_report_pkt_masked = self.build_int_drop_report(
+            SWITCH_MAC,
+            INT_COLLECTOR_MAC,
+            SWITCH_IPV4,
+            INT_COLLECTOR_IPV4,
+            ig_port,
+            eg_port,
+            drop_reason,
+            SWITCH_ID,
+            int_inner_pkt,
+            is_device_spine,
+            send_report_to_spine,
+        )
+
+        # Set collector, report table, and mirror sessions
+        self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine)
+
+        # IPv4 Routing test
+
+        # If the input pkt has a VLAN tag, use that to configure tables.
+        if tagged1 and Dot1Q not in pkt:
+            pkt = pkt_add_vlan(pkt, vlan_vid=VLAN_ID_1)
+
+        next_id = 100
+        group_id = next_id
+        mpls_label = MPLS_LABEL_2
+        dst_ipv4 = pkt[IP].dst
+        switch_mac = pkt[Ether].dst
+
+        # Setup ports.
+        # Note that the "egress_vlan" table is not configured, so packet will be dropped
+        # by the egress_vlan table.
+        self.set_ingress_port_vlan(
+            ig_port, vlan_valid=tagged1, vlan_id=VLAN_ID_1,
+        )
+
+        # Forwarding type -> routing v4
+        self.set_forwarding_type(
+            ig_port,
+            switch_mac,
+            ethertype=ETH_TYPE_IPV4,
+            fwd_type=FORWARDING_TYPE_UNICAST_IPV4,
+        )
+
+        # Routing entry.
+        self.add_forwarding_routing_v4_entry(dst_ipv4, 32, next_id)
+
+        if not is_next_hop_spine:
+            self.add_next_routing(next_id, eg_port, switch_mac, INT_COLLECTOR_MAC)
+            self.add_next_vlan(next_id, VLAN_ID_2)
+        else:
+            params = [eg_port, switch_mac, INT_COLLECTOR_MAC, mpls_label]
+            self.add_next_mpls_routing_group(next_id, group_id, [params])
+            self.add_next_vlan(next_id, DEFAULT_VLAN)
+
+        self.send_packet(ig_port, pkt)
 
         if expect_int_report:
             self.verify_packet(exp_int_report_pkt_masked, self.port3)
