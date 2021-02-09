@@ -2327,7 +2327,7 @@ class IntTest(IPv4UnicastTest):
             "int_metadata",
             [
                 self.Exact("int_report_type", stringify(INT_REPORT_TYPE_LOCAL, 1)),
-                self.Exact("int_drop_reason", stringify(0, 1)),
+                self.Exact("with_drop_reason", stringify(0, 1)),
             ],
             "int_egress.report_local",
             [("switch_id", switch_id_)]
@@ -2338,7 +2338,7 @@ class IntTest(IPv4UnicastTest):
             "int_metadata",
             [
                 self.Exact("int_report_type", stringify(INT_REPORT_TYPE_LOCAL, 1)),
-                self.Exact("int_drop_reason", stringify(1, 1)),
+                self.Exact("with_drop_reason", stringify(1, 1)),
             ],
             "int_egress.report_drop",
             [("switch_id", switch_id_)]
@@ -2349,7 +2349,7 @@ class IntTest(IPv4UnicastTest):
             "drop_report",
             [
                 self.Exact("int_report_type", stringify(INT_REPORT_TYPE_LOCAL, 1)),
-                self.Exact("int_drop_reason", stringify(1, 1)),
+                self.Exact("with_drop_reason", stringify(1, 1)),
             ],
             "int_ingress.report_drop",
             [("switch_id", stringify(1, 4))]
