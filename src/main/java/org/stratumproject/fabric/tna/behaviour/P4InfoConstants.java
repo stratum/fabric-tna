@@ -46,8 +46,6 @@ public final class P4InfoConstants {
             PiMatchFieldId.of("inet_addr");
     public static final PiMatchFieldId HDR_INET_L4_PORT =
             PiMatchFieldId.of("inet_l4_port");
-    public static final PiMatchFieldId HDR_INT_DROP_REASON =
-            PiMatchFieldId.of("int_drop_reason");
     public static final PiMatchFieldId HDR_INT_REPORT_TYPE =
             PiMatchFieldId.of("int_report_type");
     public static final PiMatchFieldId HDR_IP_ETH_TYPE =
@@ -83,11 +81,13 @@ public final class P4InfoConstants {
             PiMatchFieldId.of("vlan_id");
     public static final PiMatchFieldId HDR_VLAN_IS_VALID =
             PiMatchFieldId.of("vlan_is_valid");
+    public static final PiMatchFieldId HDR_WITH_DROP_REASON =
+            PiMatchFieldId.of("with_drop_reason");
     // Table IDs
     public static final PiTableId FABRIC_EGRESS_EGRESS_NEXT_EGRESS_VLAN =
             PiTableId.of("FabricEgress.egress_next.egress_vlan");
-    public static final PiTableId FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_CONFIG =
-            PiTableId.of("FabricEgress.int_egress.flow_report_filter.config");
+    public static final PiTableId FABRIC_EGRESS_INT_EGRESS_CONFIG =
+            PiTableId.of("FabricEgress.int_egress.config");
     public static final PiTableId FABRIC_EGRESS_INT_EGRESS_INT_METADATA =
             PiTableId.of("FabricEgress.int_egress.int_metadata");
     public static final PiTableId FABRIC_EGRESS_INT_EGRESS_REPORT =
@@ -155,6 +155,8 @@ public final class P4InfoConstants {
     // Action IDs
     public static final PiActionId FABRIC_EGRESS_EGRESS_NEXT_DROP =
             PiActionId.of("FabricEgress.egress_next.drop");
+    public static final PiActionId FABRIC_EGRESS_EGRESS_NEXT_KEEP_VLAN_CONFIG =
+            PiActionId.of("FabricEgress.egress_next.keep_vlan_config");
     public static final PiActionId FABRIC_EGRESS_EGRESS_NEXT_POP_VLAN =
             PiActionId.of("FabricEgress.egress_next.pop_vlan");
     public static final PiActionId FABRIC_EGRESS_EGRESS_NEXT_PUSH_VLAN =
@@ -167,12 +169,12 @@ public final class P4InfoConstants {
             PiActionId.of("FabricEgress.int_egress.do_local_report_encap");
     public static final PiActionId FABRIC_EGRESS_INT_EGRESS_DO_LOCAL_REPORT_ENCAP_MPLS =
             PiActionId.of("FabricEgress.int_egress.do_local_report_encap_mpls");
-    public static final PiActionId FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_SET_CONFIG =
-            PiActionId.of("FabricEgress.int_egress.flow_report_filter.set_config");
     public static final PiActionId FABRIC_EGRESS_INT_EGRESS_REPORT_DROP =
             PiActionId.of("FabricEgress.int_egress.report_drop");
     public static final PiActionId FABRIC_EGRESS_INT_EGRESS_REPORT_LOCAL =
             PiActionId.of("FabricEgress.int_egress.report_local");
+    public static final PiActionId FABRIC_EGRESS_INT_EGRESS_SET_CONFIG =
+            PiActionId.of("FabricEgress.int_egress.set_config");
     public static final PiActionId FABRIC_EGRESS_PKT_IO_EGRESS_SET_SWITCH_INFO =
             PiActionId.of("FabricEgress.pkt_io_egress.set_switch_info");
     public static final PiActionId FABRIC_INGRESS_ACL_COPY_TO_CPU =

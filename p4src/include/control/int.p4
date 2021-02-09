@@ -177,7 +177,7 @@ control IntIngress (
     table drop_report {
         key = {
             fabric_md.bridged.int_bmd.report_type: exact @name("int_report_type");
-            fabric_md.int_mirror_md.drop_reason[7:7]: exact @name("int_drop_reason");
+            fabric_md.int_mirror_md.drop_reason[7:7]: exact @name("with_drop_reason");
         }
         actions = {
             report_drop;
@@ -435,7 +435,7 @@ control IntEgress (
     table int_metadata {
         key = {
             fabric_md.bridged.int_bmd.report_type: exact @name("int_report_type");
-            fabric_md.int_mirror_md.drop_reason[7:7]: exact @name("int_drop_reason");
+            fabric_md.int_mirror_md.drop_reason[7:7]: exact @name("with_drop_reason");
         }
         actions = {
             report_local;

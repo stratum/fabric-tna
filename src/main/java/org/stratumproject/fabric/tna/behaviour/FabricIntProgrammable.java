@@ -275,7 +275,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 .build();
     }
 
-    private FlowRule buildIntMetadataEntry() {
+    private List<FlowRule> buildIntMetadataEntries() {
         final SegmentRoutingDeviceConfig cfg = cfgService.getConfig(
                 deviceId, SegmentRoutingDeviceConfig.class);
         if (cfg == null) {
@@ -285,31 +285,65 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         final PiActionParam switchIdParam = new PiActionParam(
                 P4InfoConstants.SWITCH_ID, cfg.nodeSidIPv4());
 
-        final PiAction mirrorAction = PiAction.builder()
-                .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_SET_METADATA)
+        // Local report
+        final PiAction reportLocalAction = PiAction.builder()
+                .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_REPORT_LOCAL)
                 .withParameter(switchIdParam)
                 .build();
-
-        final TrafficTreatment mirrorTreatment = DefaultTrafficTreatment.builder()
-                .piTableAction(mirrorAction)
+        final TrafficTreatment reportLocalTreatment = DefaultTrafficTreatment.builder()
+                .piTableAction(reportLocalAction)
                 .build();
-
-        final TrafficSelector mirrorSelector =
-                DefaultTrafficSelector.builder().matchPi(
+        final TrafficSelector reportLocalSelector =
+                DefaultTrafficSelector.builder()
+                    .matchPi(
                         PiCriterion.builder().matchExact(
                                 P4InfoConstants.HDR_INT_REPORT_TYPE,
                                 INT_REPORT_TYPE_LOCAL).build())
+                    .matchPi(
+                        PiCriterion.builder().matchExact(
+                                P4InfoConstants.HDR_WITH_DROP_REASON,
+                                0).build())
                         .build();
-
-        return DefaultFlowRule.builder()
+        final FlowRule reportLocalFlow = DefaultFlowRule.builder()
                 .forDevice(deviceId)
-                .withSelector(mirrorSelector)
-                .withTreatment(mirrorTreatment)
+                .withSelector(reportLocalSelector)
+                .withTreatment(reportLocalTreatment)
                 .withPriority(DEFAULT_PRIORITY)
                 .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_METADATA)
                 .fromApp(appId)
                 .makePermanent()
                 .build();
+
+        // Drop report
+        final PiAction reportDropAction = PiAction.builder()
+                .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_REPORT_DROP)
+                .withParameter(switchIdParam)
+                .build();
+        final TrafficTreatment reportDropTreatment = DefaultTrafficTreatment.builder()
+                .piTableAction(reportDropAction)
+                .build();
+        final TrafficSelector reportDropSelector =
+                DefaultTrafficSelector.builder()
+                    .matchPi(
+                        PiCriterion.builder().matchExact(
+                                P4InfoConstants.HDR_INT_REPORT_TYPE,
+                                INT_REPORT_TYPE_LOCAL).build())
+                    .matchPi(
+                        PiCriterion.builder().matchExact(
+                                P4InfoConstants.HDR_WITH_DROP_REASON,
+                                1).build())
+                        .build();
+        final FlowRule reportDropFlow = DefaultFlowRule.builder()
+                .forDevice(deviceId)
+                .withSelector(reportDropSelector)
+                .withTreatment(reportDropTreatment)
+                .withPriority(DEFAULT_PRIORITY)
+                .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_METADATA)
+                .fromApp(appId)
+                .makePermanent()
+                .build();
+
+        return ImmutableList.of(reportLocalFlow, reportDropFlow);
     }
 
     private TrafficSelector buildCollectorSelector(Set<Criterion> criteria) {
@@ -418,9 +452,15 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         flowRuleService.applyFlowRules(filterConfigRule);
         log.info("Report rule added to {} [{}]", this.data().deviceId(), filterConfigRule);
 
-        final FlowRule mirrorRule = buildIntMetadataEntry();
-        flowRuleService.applyFlowRules(mirrorRule);
-        log.info("Mirror rule added to {} [{}]", this.data().deviceId(), mirrorRule);
+        final List<FlowRule> intMetadataRules = buildIntMetadataEntries();
+        intMetadataRules.forEach(rule -> {
+            flowRuleService.applyFlowRules(rule);
+            log.info("INT metadata rule added to {} [{}]", this.data().deviceId(), rule);
+        });
+
+        final FlowRule intDropReportRule = buildIntDropReportRule();
+        flowRuleService.applyFlowRules(intDropReportRule);
+        log.info("INT drop report rule added to {} [{}]", this.data().deviceId(), intDropReportRule);
         return true;
     }
 
@@ -622,5 +662,44 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 buildReportEntryWithType(intCfg, BMD_TYPE_INGRESS_MIRROR, INT_REPORT_TYPE_LOCAL),
                 buildReportEntryWithType(intCfg, BMD_TYPE_INGRESS_MIRROR, INT_REPORT_TYPE_DROP)
         );
+    }
+
+    private FlowRule buildIntDropReportRule() {
+        final SegmentRoutingDeviceConfig cfg = cfgService.getConfig(
+                deviceId, SegmentRoutingDeviceConfig.class);
+        if (cfg == null) {
+            log.warn("Missing SegmentRoutingDeviceConfig config for {}", deviceId);
+            return null;
+        }
+        final PiActionParam switchIdParam = new PiActionParam(
+                P4InfoConstants.SWITCH_ID, cfg.nodeSidIPv4());
+
+        final PiAction reportDropAction = PiAction.builder()
+                .withId(P4InfoConstants.FABRIC_INGRESS_INT_INGRESS_REPORT_DROP)
+                .withParameter(switchIdParam)
+                .build();
+        final TrafficTreatment reportDropTreatment = DefaultTrafficTreatment.builder()
+                .piTableAction(reportDropAction)
+                .build();
+        final TrafficSelector reportDropSelector =
+                DefaultTrafficSelector.builder()
+                    .matchPi(
+                        PiCriterion.builder().matchExact(
+                                P4InfoConstants.HDR_INT_REPORT_TYPE,
+                                INT_REPORT_TYPE_LOCAL).build())
+                    .matchPi(
+                        PiCriterion.builder().matchExact(
+                                P4InfoConstants.HDR_WITH_DROP_REASON,
+                                1).build())
+                        .build();
+        return reportDropFlow = DefaultFlowRule.builder()
+                .forDevice(deviceId)
+                .withSelector(reportDropSelector)
+                .withTreatment(reportDropTreatment)
+                .withPriority(DEFAULT_PRIORITY)
+                .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_METADATA)
+                .fromApp(appId)
+                .makePermanent()
+                .build();
     }
 }
