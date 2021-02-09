@@ -92,7 +92,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
             P4InfoConstants.FABRIC_INGRESS_INT_INGRESS_WATCHLIST,
             P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_REPORT,
             P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_METADATA,
-            P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_CONFIG
+            P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_CONFIG
     );
     private static final short BMD_TYPE_EGRESS_MIRROR = 2;
     private static final short BMD_TYPE_INGRESS_MIRROR = 3;
@@ -298,9 +298,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                     .matchPi(
                         PiCriterion.builder().matchExact(
                                 P4InfoConstants.HDR_INT_REPORT_TYPE,
-                                INT_REPORT_TYPE_LOCAL).build())
-                    .matchPi(
-                        PiCriterion.builder().matchExact(
+                                INT_REPORT_TYPE_LOCAL).matchExact(
                                 P4InfoConstants.HDR_WITH_DROP_REASON,
                                 0).build())
                         .build();
@@ -327,9 +325,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                     .matchPi(
                         PiCriterion.builder().matchExact(
                                 P4InfoConstants.HDR_INT_REPORT_TYPE,
-                                INT_REPORT_TYPE_LOCAL).build())
-                    .matchPi(
-                        PiCriterion.builder().matchExact(
+                                INT_REPORT_TYPE_LOCAL).matchExact(
                                 P4InfoConstants.HDR_WITH_DROP_REASON,
                                 1).build())
                         .build();
@@ -448,7 +444,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
             log.warn("Failed to add report rule to {}", this.data().deviceId());
             return false;
         }
-        final FlowRule filterConfigRule = buildFlowReportFilterConfigRule(cfg.minFlowHopLatencyChangeNs());
+        final FlowRule filterConfigRule = buildFilterConfigRule(cfg.minFlowHopLatencyChangeNs());
         flowRuleService.applyFlowRules(filterConfigRule);
         log.info("Report rule added to {} [{}]", this.data().deviceId(), filterConfigRule);
 
@@ -464,13 +460,13 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         return true;
     }
 
-    private FlowRule buildFlowReportFilterConfigRule(int minFlowHopLatencyChangeNs) {
+    private FlowRule buildFilterConfigRule(int minFlowHopLatencyChangeNs) {
         final long qmask = getSuitableQmaskForLatencyChange(minFlowHopLatencyChangeNs);
         final PiActionParam hopLatencyMask = new PiActionParam(P4InfoConstants.HOP_LATENCY_MASK, qmask);
         final PiActionParam timestampMask = new PiActionParam(P4InfoConstants.TIMESTAMP_MASK, DEFAULT_TIMESTAMP_MASK);
         final PiAction action =
                 PiAction.builder()
-                        .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_SET_CONFIG)
+                        .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_SET_CONFIG)
                         .withParameter(hopLatencyMask)
                         .withParameter(timestampMask)
                         .build();
@@ -483,7 +479,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 .withPriority(DEFAULT_PRIORITY)
                 .withTreatment(treatment)
                 .fromApp(appId)
-                .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_CONFIG)
+                .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_CONFIG)
                 .build();
     }
 
@@ -686,13 +682,11 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                     .matchPi(
                         PiCriterion.builder().matchExact(
                                 P4InfoConstants.HDR_INT_REPORT_TYPE,
-                                INT_REPORT_TYPE_LOCAL).build())
-                    .matchPi(
-                        PiCriterion.builder().matchExact(
+                                INT_REPORT_TYPE_LOCAL).matchExact(
                                 P4InfoConstants.HDR_WITH_DROP_REASON,
                                 1).build())
                         .build();
-        return reportDropFlow = DefaultFlowRule.builder()
+        return DefaultFlowRule.builder()
                 .forDevice(deviceId)
                 .withSelector(reportDropSelector)
                 .withTreatment(reportDropTreatment)
