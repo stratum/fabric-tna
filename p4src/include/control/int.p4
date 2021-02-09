@@ -7,6 +7,11 @@
 #include "../define.p4"
 #include "../header.p4"
 
+// By default report every 2^30 ns (~1 second)
+const bit<48> DEFAULT_TIMESTAMP_MASK = 0xffffc0000000;
+// or for hop latency changes greater than 2^8 ns
+const bit<32> DEFAULT_HOP_LATENCY_MASK = 0xffffff00;
+
 control FlowReportFilter(
     inout parsed_headers_t hdr,
     inout fabric_egress_metadata_t fabric_md,
@@ -14,15 +19,8 @@ control FlowReportFilter(
     in    egress_intrinsic_metadata_from_parser_t eg_prsr_md,
     inout egress_intrinsic_metadata_for_deparser_t eg_dprsr_md) {
 
-    // By default report every 2^30 ns (~1 second)
-    const bit<48> DEFAULT_TIMESTAMP_MASK = 0xffffc0000000;
-    // or for hop latency changes greater than 2^8 ns
-    const bit<32> DEFAULT_HOP_LATENCY_MASK = 0xffffff00;
-
     Hash<bit<16>>(HashAlgorithm_t.CRC16) digester;
     bit<16> digest;
-    bit<32> hop_latency;
-    bit<48> timestamp;
     bit<1> flag;
 
     // Bloom filter with 2 hash functions storing flow digests. The digest is
@@ -58,29 +56,14 @@ control FlowReportFilter(
         }
     };
 
-    action set_config(bit<32> hop_latency_mask, bit<48> timestamp_mask) {
-        hop_latency = hop_latency & hop_latency_mask;
-        timestamp = timestamp & timestamp_mask;
-    }
-
-    table config {
-        actions = {
-            @defaultonly set_config;
-        }
-        default_action = set_config(DEFAULT_HOP_LATENCY_MASK, DEFAULT_TIMESTAMP_MASK);
-    }
-
     apply {
         if (fabric_md.int_mirror_md.report_type == IntReportType_t.LOCAL) {
-            hop_latency = eg_prsr_md.global_tstamp[31:0] - fabric_md.bridged.ig_tstamp[31:0];
-            timestamp = fabric_md.bridged.ig_tstamp;
-            config.apply();
             digest = digester.get({ // burp!
                 fabric_md.bridged.ig_port,
                 eg_intr_md.egress_port,
-                hop_latency,
+                fabric_md.int_md.hop_latency,
                 fabric_md.bridged.flow_hash,
-                timestamp
+                fabric_md.int_md.timestamp
             });
             flag = filter_get_and_set1.execute(fabric_md.bridged.flow_hash[31:16]);
             flag = flag | filter_get_and_set2.execute(fabric_md.bridged.flow_hash[15:0]);
@@ -136,7 +119,7 @@ control DropReportFilter(
         if (fabric_md.int_mirror_md.report_type == IntReportType_t.DROP) {
             digest = digester.get({ // burp!
                 fabric_md.int_mirror_md.flow_hash,
-                fabric_md.int_mirror_md.ig_tstamp[31:30]
+                fabric_md.int_md.timestamp
             });
             flag = filter_get_and_set1.execute(fabric_md.int_mirror_md.flow_hash[31:16]);
             flag = flag | filter_get_and_set2.execute(fabric_md.int_mirror_md.flow_hash[15:0]);
@@ -256,6 +239,18 @@ control IntEgress (
             rv = reg;
         }
     };
+
+    action set_config(bit<32> hop_latency_mask, bit<48> timestamp_mask) {
+        fabric_md.int_md.hop_latency = fabric_md.int_md.hop_latency & hop_latency_mask;
+        fabric_md.int_md.timestamp = fabric_md.int_md.timestamp & timestamp_mask;
+    }
+
+    table config {
+        actions = {
+            @defaultonly set_config;
+        }
+        default_action = set_config(DEFAULT_HOP_LATENCY_MASK, DEFAULT_TIMESTAMP_MASK);
+    }
 
     @hidden
     action add_report_fixed_header(mac_addr_t src_mac, mac_addr_t mon_mac,
@@ -454,6 +449,9 @@ control IntEgress (
     }
 
     apply {
+        fabric_md.int_md.hop_latency = eg_prsr_md.global_tstamp[31:0] - fabric_md.bridged.ig_tstamp[31:0];
+        fabric_md.int_md.timestamp = eg_prsr_md.global_tstamp;
+        config.apply();
         hw_id.apply();
         drop_report_filter.apply(hdr, fabric_md, eg_dprsr_md);
         if (report.apply().hit) {

@@ -2280,9 +2280,9 @@ class IntTest(IPv4UnicastTest):
 
     def set_up_flow_report_filter_config(self, hop_latency_mask, timestamp_mask):
         self.send_request_add_entry_to_action(
-            "FabricEgress.int_egress.flow_report_filter.config",
+            "FabricEgress.int_egress.config",
             [],
-            "FabricEgress.int_egress.flow_report_filter.set_config",
+            "FabricEgress.int_egress.set_config",
             [
                 ("hop_latency_mask", stringify(hop_latency_mask, 4)),
                 ("timestamp_mask", stringify(timestamp_mask, 6)),

@@ -229,6 +229,11 @@ struct int_bridged_metadata_t {
     IntReportType_t report_type;
     MirrorId_t      mirror_session_id;
 }
+
+struct int_metadata_t {
+    bit<32> hop_latency;
+    bit<48> timestamp;
+}
 #endif // WITH_INT
 
 // Common metadata which is shared between
@@ -306,6 +311,7 @@ struct fabric_egress_metadata_t {
     bit<1>                mpls_stripped;
 #ifdef WITH_INT
     int_mirror_metadata_t int_mirror_md;
+    int_metadata_t        int_md;
 #endif // WITH_INT
 }
 
