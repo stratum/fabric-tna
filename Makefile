@@ -103,3 +103,17 @@ clean:
 
 deep-clean: clean
 	-docker volume rm ${mvn_cache_docker_volume} > /dev/null 2>&1
+
+venv: requirements.txt
+	python3 -m venv venv
+	venv/bin/pip3 install -r requirements.txt
+
+_test_image:
+	docker build -t fabric-tna-test - < ptf/Dockerfile
+
+_venv_init:
+	docker run -d --name venv_setup fabric-tna-test sh
+	docker cp venv_setup:/trex/lib /tmp/trex-lib
+	cp -r /tmp/trex-lib/* venv/lib/python3.8/site-packages/
+	rm -rf /tmp/trex-lib
+	docker rm venv_setup
