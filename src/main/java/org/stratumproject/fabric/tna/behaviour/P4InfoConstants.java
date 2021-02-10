@@ -207,6 +207,8 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.next.set_mcast_group_id");
     public static final PiActionId FABRIC_INGRESS_NEXT_SET_VLAN =
             PiActionId.of("FabricIngress.next.set_vlan");
+    public static final PiActionId FABRIC_INGRESS_SPGW_DROP =
+            PiActionId.of("FabricIngress.spgw.drop");
     public static final PiActionId FABRIC_INGRESS_SPGW_IFACE_MISS =
             PiActionId.of("FabricIngress.spgw.iface_miss");
     public static final PiActionId FABRIC_INGRESS_SPGW_LOAD_DBUF_FAR =
@@ -221,6 +223,8 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.spgw.load_tunnel_far");
     public static final PiActionId FABRIC_INGRESS_SPGW_SET_QID =
             PiActionId.of("FabricIngress.spgw.set_qid");
+    public static final PiActionId FABRIC_INGRESS_SPGW_SET_QID_MIDX =
+            PiActionId.of("FabricIngress.spgw.set_qid_midx");
     public static final PiActionId NO_ACTION = PiActionId.of("NoAction");
     public static final PiActionId NOP = PiActionId.of("nop");
     // Action Param IDs
@@ -237,6 +241,8 @@ public final class P4InfoConstants {
     public static final PiActionParamId HOP_LATENCY_MASK =
             PiActionParamId.of("hop_latency_mask");
     public static final PiActionParamId LABEL = PiActionParamId.of("label");
+    public static final PiActionParamId METER_IDX =
+            PiActionParamId.of("meter_idx");
     public static final PiActionParamId MON_IP = PiActionParamId.of("mon_ip");
     public static final PiActionParamId MON_LABEL =
             PiActionParamId.of("mon_label");
@@ -286,4 +292,7 @@ public final class P4InfoConstants {
     public static final int INGRESS_PORT_BITWIDTH = 9;
     public static final PiPacketMetadataId PAD0 = PiPacketMetadataId.of("pad0");
     public static final int PAD0_BITWIDTH = 85;
+    // Meter IDs
+    public static final PiMeterId FABRIC_INGRESS_SPGW_METER =
+            PiMeterId.of("FabricIngress.spgw.meter");
 }
