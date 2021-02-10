@@ -2322,7 +2322,7 @@ class IntTest(IPv4UnicastTest):
 
     def set_up_int_mirror_flow(self):
         switch_id_ = stringify(1, 4)
-        # (IntReportType_t.LOCAL, 0 &&& 0xFF) -> report_local(switch_id)
+        # (IntReportType_t.LOCAL, 0) -> report_local(switch_id)
         self.send_request_add_entry_to_action(
             "int_metadata",
             [
@@ -2333,7 +2333,7 @@ class IntTest(IPv4UnicastTest):
             [("switch_id", switch_id_)]
         )
 
-        # (IntReportType_t.LOCAL, 0x80 &&& 0x80) -> report_drop(switch_id)
+        # (IntReportType_t.LOCAL, 1) -> report_drop(switch_id)
         self.send_request_add_entry_to_action(
             "int_metadata",
             [
@@ -2389,10 +2389,10 @@ class IntTest(IPv4UnicastTest):
             pkt_decrement_ttl(pkt)
 
         mask_pkt = Mask(pkt)
-        # IPv4 identifcation
-        mask_pkt.set_do_not_care_scapy(IP, "id")
+        # IPv4 identification
         # The reason we also ignore IP checksum is because the `id` field is
         # random.
+        mask_pkt.set_do_not_care_scapy(IP, "id")
         mask_pkt.set_do_not_care_scapy(IP, "chksum")
         mask_pkt.set_do_not_care_scapy(UDP, "chksum")
         mask_pkt.set_do_not_care_scapy(INT_L45_REPORT_FIXED, "ingress_tstamp")
@@ -2442,10 +2442,10 @@ class IntTest(IPv4UnicastTest):
             pkt_decrement_ttl(pkt)
 
         mask_pkt = Mask(pkt)
-        # IPv4 identifcation
-        mask_pkt.set_do_not_care_scapy(IP, "id")
+        # IPv4 identification
         # The reason we also ignore IP checksum is because the `id` field is
         # random.
+        mask_pkt.set_do_not_care_scapy(IP, "id")
         mask_pkt.set_do_not_care_scapy(IP, "chksum")
         mask_pkt.set_do_not_care_scapy(UDP, "chksum")
         mask_pkt.set_do_not_care_scapy(INT_L45_REPORT_FIXED, "ingress_tstamp")
@@ -2459,6 +2459,7 @@ class IntTest(IPv4UnicastTest):
         self, collector_port, is_device_spine, send_report_to_spine
     ):
         self.setup_port(collector_port, DEFAULT_VLAN)
+
         # Here we use next-id 101 since `runIPv4UnicastTest` will use 100 by
         # default
         next_id = 101
@@ -2546,6 +2547,10 @@ class IntTest(IPv4UnicastTest):
             )
             self.set_keep_egress_vlan_config(port, DEFAULT_VLAN)
 
+            # Forwarding classifiers for INT reports
+            self.set_forwarding_type(port, SWITCH_MAC, ethertype=ETH_TYPE_IPV4, fwd_type=FORWARDING_TYPE_UNICAST_IPV4)
+            self.set_forwarding_type(port, SWITCH_MAC, ethertype=ETH_TYPE_MPLS_UNICAST, fwd_type=FORWARDING_TYPE_MPLS)
+
     def runIntTest(
         self,
         pkt,
@@ -2626,7 +2631,6 @@ class IntTest(IPv4UnicastTest):
         :param pkt: the input packet
         :param tagged1: if the input port should expect VLAN tagged packets
         :param tagged2: if the output port should expect VLAN tagged packets
-        :param prefix_len: prefix length to use in the routing table
         :param is_next_hop_spine: whether the packet should be routed
                to the spines using MPLS SR
         :param ig_port: the ingress port of the IP uncast packet
@@ -2635,6 +2639,7 @@ class IntTest(IPv4UnicastTest):
         :param is_device_spine: the device is a spine device
         :param send_report_to_spine: if the report is to be forwarded
                to a spine (e.g., collector attached to another leaf)
+        :param drop_reason: the expected drop reason in the INT drop report
         """
         # Build expected inner pkt using the input one.
         int_inner_pkt = pkt.copy()

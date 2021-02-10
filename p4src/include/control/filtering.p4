@@ -97,46 +97,9 @@ control Filtering (inout parsed_headers_t hdr,
         size = FWD_CLASSIFIER_TABLE_SIZE;
     }
 
-#ifdef WITH_INT
-    // FIXME: remove tables but use if on apply block on int report flag
-    //  Since INT reports come in from the recirculation port, we need to bridge
-    //  metadata to carry such int report flag. We could re-use a special eth-type
-    //  as for packet-outs when that will be ready.
-
-    @hidden
-    action recirc_set_forwarding_type(fwd_type_t fwd_type) {
-        fabric_md.bridged.fwd_type = fwd_type;
-    }
-
-    @hidden
-    table recirc_fwd_classifier {
-        key = {
-            ig_intr_md.ingress_port : exact @name("ig_port");
-            hdr.eth_type.value      : exact @name("eth_type");
-        }
-        actions = {
-            recirc_set_forwarding_type;
-        }
-        size = 8;
-        const entries = {
-            (RECIRC_PORT_PIPE_0, ETHERTYPE_IPV4): recirc_set_forwarding_type(FWD_IPV4_UNICAST);
-            (RECIRC_PORT_PIPE_1, ETHERTYPE_IPV4): recirc_set_forwarding_type(FWD_IPV4_UNICAST);
-            (RECIRC_PORT_PIPE_2, ETHERTYPE_IPV4): recirc_set_forwarding_type(FWD_IPV4_UNICAST);
-            (RECIRC_PORT_PIPE_3, ETHERTYPE_IPV4): recirc_set_forwarding_type(FWD_IPV4_UNICAST);
-            (RECIRC_PORT_PIPE_0, ETHERTYPE_MPLS): recirc_set_forwarding_type(FWD_MPLS);
-            (RECIRC_PORT_PIPE_1, ETHERTYPE_MPLS): recirc_set_forwarding_type(FWD_MPLS);
-            (RECIRC_PORT_PIPE_2, ETHERTYPE_MPLS): recirc_set_forwarding_type(FWD_MPLS);
-            (RECIRC_PORT_PIPE_3, ETHERTYPE_MPLS): recirc_set_forwarding_type(FWD_MPLS);
-        }
-    }
-#endif // WITH_INT
-
     apply {
         ingress_port_vlan.apply();
         fwd_classifier.apply();
-#ifdef WITH_INT
-        recirc_fwd_classifier.apply();
-#endif // WITH_INT
 #ifdef WTIH_DEBUG
         fwd_type_counter.count(fabric_md.bridged.fwd_type);
 #endif // WTIH_DEBUG

@@ -2,6 +2,6 @@
   "name" : "Spine-R1",
   "ipv4NodeSid" : 101,
   "ipv4Loopback" : "10.0.1.254",
-  "routerMac" : "00:00:00:00:02:80",
+  "routerMac" : "00:00:00:00:01:80",
   "isEdgeRouter" : false
 }
