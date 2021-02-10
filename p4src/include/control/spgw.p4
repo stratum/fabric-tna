@@ -78,6 +78,7 @@ control SpgwIngress(
         /* Fabric.p4 */
         inout parsed_headers_t                      hdr,
         inout fabric_ingress_metadata_t             fabric_md,
+        inout ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr,
         /* TNA */
         inout ingress_intrinsic_metadata_for_tm_t   ig_tm_md) {
 
@@ -86,6 +87,7 @@ control SpgwIngress(
     //=============================//
 
     Counter<bit<64>, bit<16>>(MAX_PDR_COUNTERS, CounterType_t.PACKETS_AND_BYTES) pdr_counter;
+    Meter<bit<10>>(500, MeterType_t.BYTES) meter;
 
     DecapGtpu() decap_gtpu_from_dbuf;
     DecapGtpu() decap_gtpu;
@@ -154,8 +156,17 @@ control SpgwIngress(
         size = NUM_UPLINK_PDRS;
     }
 
+    action drop() {
+          ig_intr_md_for_dprsr.drop_ctl = 0x1;
+    }
+
     action set_qid(bit<5> qid) {
            ig_tm_md.qid = qid;
+    }
+
+    action set_qid_midx(bit<5> qid, bit<10> meter_idx) {
+           ig_tm_md.qid = qid;
+           fabric_md.spgw.color = meter.execute(meter_idx);
     }
 
     table qos_classifier {
@@ -168,6 +179,7 @@ control SpgwIngress(
        }
        actions = {
            set_qid();
+           set_qid_midx();
        }
     }
     //=============================//
@@ -244,6 +256,9 @@ control SpgwIngress(
             } else {
                 downlink_pdrs.apply();
                 qos_classifier.apply();
+                if (fabric_md.spgw.color == 3) {
+                    drop();
+                }
             }
             if (fabric_md.spgw.src_iface != SpgwInterface.FROM_DBUF) {
                 pdr_counter.count(fabric_md.bridged.spgw.pdr_ctr_id);
