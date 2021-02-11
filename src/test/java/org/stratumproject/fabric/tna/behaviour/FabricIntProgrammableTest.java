@@ -373,7 +373,7 @@ public class FabricIntProgrammableTest {
                     .withTreatment(treatment)
                     .forTable(P4InfoConstants.FABRIC_INGRESS_FILTERING_FWD_CLASSIFIER)
                     .makePermanent()
-                    .withPriority(DEFAULT_PRIORITY)
+                    .withPriority(DEFAULT_PRIORITY + 10)
                     .forDevice(LEAF_DEVICE_ID)
                     .fromApp(APP_ID)
                     .build());
@@ -489,7 +489,7 @@ public class FabricIntProgrammableTest {
                     .withTreatment(treatment)
                     .forTable(P4InfoConstants.FABRIC_INGRESS_FILTERING_FWD_CLASSIFIER)
                     .makePermanent()
-                    .withPriority(DEFAULT_PRIORITY)
+                    .withPriority(DEFAULT_PRIORITY + 10)
                     .forDevice(SPINE_DEVICE_ID)
                     .fromApp(APP_ID)
                     .build());
@@ -1139,7 +1139,7 @@ public class FabricIntProgrammableTest {
                     .withTreatment(treatment)
                     .forTable(P4InfoConstants.FABRIC_INGRESS_FILTERING_FWD_CLASSIFIER)
                     .makePermanent()
-                    .withPriority(DEFAULT_PRIORITY)
+                    .withPriority(DEFAULT_PRIORITY + 10)
                     .forDevice(LEAF_DEVICE_ID)
                     .fromApp(APP_ID)
                     .build());

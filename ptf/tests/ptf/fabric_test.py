@@ -512,6 +512,7 @@ class FabricTest(P4RuntimeTest):
         ingress_port_ = stringify(ingress_port, 2)
         eth_dstAddr_ = mac_to_binary(eth_dstAddr)
         eth_mask_ = mac_to_binary(eth_dstMask)
+        priority = DEFAULT_PRIORITY
         if ethertype == ETH_TYPE_IPV4:
             ethertype_ = stringify(0, 2)
             ethertype_mask_ = stringify(0, 2)
@@ -521,6 +522,7 @@ class FabricTest(P4RuntimeTest):
             ethertype_mask_ = stringify(0xFFFF, 2)
             # FIXME: this will work only for MPLS+IPv4 traffic
             ip_eth_type = stringify(ETH_TYPE_IPV4, 2)
+            priority += 10
         else:
             # TODO: what should we match on? I should never reach this point.
             return
@@ -537,7 +539,7 @@ class FabricTest(P4RuntimeTest):
             matches,
             "filtering.set_forwarding_type",
             [("fwd_type", fwd_type_)],
-            priority=DEFAULT_PRIORITY,
+            priority=priority,
         )
 
     def add_bridging_entry(

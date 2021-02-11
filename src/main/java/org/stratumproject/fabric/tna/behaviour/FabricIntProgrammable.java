@@ -316,12 +316,14 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
             treatment = DefaultTrafficTreatment.builder()
                     .piTableAction(setFwdTypeAction)
                     .build();
+            // Use a higher priority so we can match the correct one for MPLS packet
+            // since the rule for IPv4(see above) matches any eth type and can hit earlier.
             flowRuleService.applyFlowRules(DefaultFlowRule.builder()
                     .withSelector(selector)
                     .withTreatment(treatment)
                     .forTable(P4InfoConstants.FABRIC_INGRESS_FILTERING_FWD_CLASSIFIER)
                     .makePermanent()
-                    .withPriority(DEFAULT_PRIORITY)
+                    .withPriority(DEFAULT_PRIORITY + 10)
                     .forDevice(deviceId)
                     .fromApp(appId)
                     .build());
