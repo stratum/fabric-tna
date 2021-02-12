@@ -1805,7 +1805,7 @@ class FabricOptimizedFieldDetectorTest(FabricTest):
 
     # Returns a byte string encoded value fitting into bitwidth.
     def generateBytestring(self, bitwidth):
-        return stringify(1, (bitwidth + 7) / 8)
+        return stringify(1, (bitwidth + 7) // 8)
 
     # Since the test uses the same match key for tables with multiple actions,
     # each table entry has to be removed before testing the next.
