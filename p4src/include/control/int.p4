@@ -139,8 +139,16 @@ control IntIngress (
     inout ingress_intrinsic_metadata_for_deparser_t ig_dprsr_md,
     inout ingress_intrinsic_metadata_for_tm_t       ig_tm_md) {
 
+#ifdef WITH_DEBUG
+    DirectCounter<bit<64>>(CounterType_t.PACKETS_AND_BYTES) watchlist_counter;
+    DirectCounter<bit<64>>(CounterType_t.PACKETS_AND_BYTES) drop_report_counter;
+#endif // WITH_DEBUG
+
     action mark_to_report() {
         fabric_md.bridged.int_bmd.report_type = IntReportType_t.LOCAL;
+#ifdef WITH_DEBUG
+        watchlist_counter.count();
+#endif // WITH_DEBUG
     }
 
     table watchlist {
@@ -157,6 +165,9 @@ control IntIngress (
         }
         const default_action = nop();
         const size = INT_WATCHLIST_TABLE_SIZE;
+#ifdef WITH_DEBUG
+        counters = watchlist_counter;
+#endif // WITH_DEBUG
     }
 
     action report_drop(bit<32> switch_id) {
@@ -172,6 +183,9 @@ control IntIngress (
         fabric_md.int_mirror_md.eg_port = (bit<16>)ig_tm_md.ucast_egress_port;
         fabric_md.int_mirror_md.queue_id = (bit<8>)ig_tm_md.qid;
         fabric_md.int_mirror_md.flow_hash = fabric_md.bridged.flow_hash;
+#ifdef WITH_DEBUG
+        drop_report_counter.count();
+#endif // WITH_DEBUG
     }
 
     table drop_report {
@@ -186,6 +200,9 @@ control IntIngress (
         const size = 1;
         // (IntReportType_t.LOCAL, 1) -> report_drop(switch_id)
         const default_action = nop();
+#ifdef WITH_DEBUG
+        counters = drop_report_counter;
+#endif // WITH_DEBUG
     }
 
     @hidden
@@ -228,6 +245,11 @@ control IntEgress (
 
     FlowReportFilter() flow_report_filter;
     DropReportFilter() drop_report_filter;
+
+#ifdef WITH_DEBUG
+    DirectCounter<bit<64>>(CounterType_t.PACKETS_AND_BYTES) report_counter;
+    DirectCounter<bit<64>>(CounterType_t.PACKETS_AND_BYTES) int_metadata_counter;
+#endif // WITH_DEBUG
 
     @hidden
     Random<bit<16>>() ip_id_gen;
@@ -304,8 +326,11 @@ control IntEgress (
         // may strip the MPLS header from the parser, and the ethertype will still be
         // MPLS instead of real one.
         hdr.eth_type.value = fabric_md.int_mirror_md.ip_eth_type;
-        // Remove the INT mirror metadata to prevent egress mirroring again.
+        // Remove the mirror type to prevent egress mirroring again.
         eg_dprsr_md.mirror_type = (bit<3>)FabricMirrorType_t.INVALID;
+#ifdef WITH_DEBUG
+        report_counter.count();
+#endif // WITH_DEBUG
     }
 
     action do_local_report_encap_mpls(mac_addr_t src_mac, mac_addr_t mon_mac,
@@ -345,6 +370,9 @@ control IntEgress (
         hdr.eth_type.value = fabric_md.int_mirror_md.ip_eth_type;
         // Remove the INT mirror metadata to prevent egress mirroring again.
         eg_dprsr_md.mirror_type = (bit<3>)FabricMirrorType_t.INVALID;
+#ifdef WITH_DEBUG
+        report_counter.count();
+#endif // WITH_DEBUG
     }
 
     action do_drop_report_encap_mpls(mac_addr_t src_mac, mac_addr_t mon_mac,
@@ -379,6 +407,9 @@ control IntEgress (
         default_action = nop;
         const size = 6; // Flow, Drop, and Queue report
                         // times bridged metadata types(IN/EGRESS_MIRROR)
+#ifdef WITH_DEBUG
+        counters = report_counter;
+#endif // WITH_DEBUG
     }
 
     @hidden
@@ -424,11 +455,17 @@ control IntEgress (
     action report_local(bit<32> switch_id) {
         set_report_metadata(switch_id);
         fabric_md.int_mirror_md.report_type = IntReportType_t.LOCAL;
+#ifdef WITH_DEBUG
+        int_metadata_counter.count();
+#endif // WITH_DEBUG
     }
 
     action report_drop(bit<32> switch_id) {
         set_report_metadata(switch_id);
         fabric_md.int_mirror_md.report_type = IntReportType_t.DROP;
+#ifdef WITH_DEBUG
+        int_metadata_counter.count();
+#endif // WITH_DEBUG
     }
 
     // A table which initialize the INT mirror metadata.
@@ -446,6 +483,9 @@ control IntEgress (
         const size = 3; // Flow, Drop, Queue
         // (IntReportType_t.LOCAL, 1) -> report_drop(switch_id)
         // (IntReportType_t.LOCAL, 0) -> report_local(switch_id)
+#ifdef WITH_DEBUG
+        counters = int_metadata_counter;
+#endif // WITH_DEBUG
     }
 
     apply {
