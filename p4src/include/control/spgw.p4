@@ -167,8 +167,10 @@ control SpgwIngress(
             hdr.ipv4.protocol          : ternary     @name("ip_proto")    ;
        }
        actions = {
-           set_qid();
+           set_qid;
+           @defaultonly nop;
        }
+       const default_action = nop;
     }
     //=============================//
     //===== FAR Tables ======//
