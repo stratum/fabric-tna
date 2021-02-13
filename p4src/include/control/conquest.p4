@@ -25,7 +25,7 @@ control ConQuestEgress(
     ) {
 
 
-    action nop(){
+    action conq_nop(){
     }
     action drop(){
         eg_intr_dprs_md.drop_ctl = 0x1;
@@ -253,10 +253,10 @@ control ConQuestEgress(
                     regexec_snap_0_row_0_read;
                     regexec_snap_0_row_0_inc;
                     regexec_snap_0_row_0_clr;
-                    nop;
+                    conq_nop;
                 }
                 size = 17;
-                default_action = nop();
+                default_action = conq_nop();
                 //round-robin logic
                 const entries = {
                     (0, 0..255) : regexec_snap_0_row_0_clr;
@@ -302,10 +302,10 @@ control ConQuestEgress(
                     regexec_snap_0_row_1_read;
                     regexec_snap_0_row_1_inc;
                     regexec_snap_0_row_1_clr;
-                    nop;
+                    conq_nop;
                 }
                 size = 17;
-                default_action = nop();
+                default_action = conq_nop();
                 //round-robin logic
                 const entries = {
                     (0, 0..255) : regexec_snap_0_row_1_clr;
@@ -351,10 +351,10 @@ control ConQuestEgress(
                     regexec_snap_1_row_0_read;
                     regexec_snap_1_row_0_inc;
                     regexec_snap_1_row_0_clr;
-                    nop;
+                    conq_nop;
                 }
                 size = 17;
-                default_action = nop();
+                default_action = conq_nop();
                 //round-robin logic
                 const entries = {
                     (1, 0..255) : regexec_snap_1_row_0_clr;
@@ -400,10 +400,10 @@ control ConQuestEgress(
                     regexec_snap_1_row_1_read;
                     regexec_snap_1_row_1_inc;
                     regexec_snap_1_row_1_clr;
-                    nop;
+                    conq_nop;
                 }
                 size = 17;
-                default_action = nop();
+                default_action = conq_nop();
                 //round-robin logic
                 const entries = {
                     (1, 0..255) : regexec_snap_1_row_1_clr;
@@ -449,10 +449,10 @@ control ConQuestEgress(
                     regexec_snap_2_row_0_read;
                     regexec_snap_2_row_0_inc;
                     regexec_snap_2_row_0_clr;
-                    nop;
+                    conq_nop;
                 }
                 size = 17;
-                default_action = nop();
+                default_action = conq_nop();
                 //round-robin logic
                 const entries = {
                     (2, 0..255) : regexec_snap_2_row_0_clr;
@@ -498,10 +498,10 @@ control ConQuestEgress(
                     regexec_snap_2_row_1_read;
                     regexec_snap_2_row_1_inc;
                     regexec_snap_2_row_1_clr;
-                    nop;
+                    conq_nop;
                 }
                 size = 17;
-                default_action = nop();
+                default_action = conq_nop();
                 //round-robin logic
                 const entries = {
                     (2, 0..255) : regexec_snap_2_row_1_clr;
@@ -547,10 +547,10 @@ control ConQuestEgress(
                     regexec_snap_3_row_0_read;
                     regexec_snap_3_row_0_inc;
                     regexec_snap_3_row_0_clr;
-                    nop;
+                    conq_nop;
                 }
                 size = 17;
-                default_action = nop();
+                default_action = conq_nop();
                 //round-robin logic
                 const entries = {
                     (3, 0..255) : regexec_snap_3_row_0_clr;
@@ -596,10 +596,10 @@ control ConQuestEgress(
                     regexec_snap_3_row_1_read;
                     regexec_snap_3_row_1_inc;
                     regexec_snap_3_row_1_clr;
-                    nop;
+                    conq_nop;
                 }
                 size = 17;
-                default_action = nop();
+                default_action = conq_nop();
                 //round-robin logic
                 const entries = {
                     (3, 0..255) : regexec_snap_3_row_1_clr;
@@ -637,11 +637,11 @@ control ConQuestEgress(
             hdr.ipv4.ecn : exact;
         }
         actions = {
-            nop;
+            conq_nop;
             drop;
             mark_ECN;
         }
-        default_action = nop();
+        default_action = conq_nop();
         // const entries = {  }
     }
     
