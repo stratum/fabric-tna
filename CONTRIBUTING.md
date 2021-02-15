@@ -32,7 +32,7 @@ Some additional points:
 
 - We follow [ONOS's Code Style Guidelines](https://wiki.onosproject.org/display/ONOS/Code+Style+Guidelines) for Java, and we automatically format Python code after each merge. We don't have a style guide for P4 yet. Please take a look at the rest of the P4 code and use common sense when formatting your P4 changes.
 
-- When merging a PR (only project mantainers can) please use [squash and rebase](https://help.github.com/en/github/collaborating-with-issues-and-pull-requests/about-pull-request-merges#squash-and-merge-your-pull-request-commits). You do **not** have to do this by hand! GitHub will guide you through it, if possible.
+- When merging a PR (only project maintainers can) please use [squash and rebase](https://help.github.com/en/github/collaborating-with-issues-and-pull-requests/about-pull-request-merges#squash-and-merge-your-pull-request-commits). You do **not** have to do this by hand! GitHub will guide you through it, if possible.
 
 - Consider opening a separate issue describing the technical details there and [link it to the PR](https://help.github.com/en/github/managing-your-work-on-github/closing-issues-using-keywords). This keeps code review and design discussions clean.
 
@@ -42,9 +42,9 @@ Some additional points:
 
 2. Make your code changes.
 
-3. Pass all tests locally (see [README.md](./README.md). Create new tests for new code. Execute the following command in the root directory to run all currently enabled tests: `TODO: add command`
+3. Pass all tests locally (see [README.md](./README.md)). Create new tests for new code. Execute the following command in the root directory to run all currently enabled tests: `TODO: add command`
 
-4. Create a [Pull Request](https://github.com/stratum/stratum/compare). Consider [allowing maintainers](https://help.github.com/en/github/collaborating-with-issues-and-pull-requests/allowing-changes-to-a-pull-request-branch-created-from-a-fork) to make changes if you want direct assistance from maintainers.
+4. Create a [Pull Request](https://github.com/stratum/fabric-tna/compare). Consider [allowing maintainers](https://help.github.com/en/github/collaborating-with-issues-and-pull-requests/allowing-changes-to-a-pull-request-branch-created-from-a-fork) to make changes if you want direct assistance from maintainers.
 
 5. Wait for CI checks to pass. Repeat steps 2-4 as necessary. **Passing CI is mandatory.** If the CI check does not run automatically, reach out to the project maintainers to enable CI jobs for your PR.
 
@@ -52,4 +52,4 @@ Some additional points:
 
 ## Community Guidelines
 
-This project follows [Google's Open Source Community Guidelines](https://opensource.google.com/conduct/) and ONF's [Code of Conduct](https://github.com/stratum/stratum/blob/master/CODE_OF_CONDUCT.md).
+This project follows [Google's Open Source Community Guidelines](https://opensource.google.com/conduct/) and ONF's [Code of Conduct](https://www.opennetworking.org/wp-content/themes/onf/img/onf-code-of-conduct.pdf).
