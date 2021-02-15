@@ -47,6 +47,10 @@ fabric-spgw:
 fabric-spgw-int:
 	@${p4-build} fabric-spgw-int "-DWITH_SPGW -DWITH_INT"
 
+fabric-conquest:
+	@${p4-build} fabric-conquest "-DWITH_CONQUEST"
+
+
 constants:
 	docker run -v $(curr_dir):/root -w /root --rm \
 		--entrypoint ./util/gen-p4-constants.py onosproject/fabric-p4test:latest \

@@ -13,6 +13,12 @@ ifndef TEST
 endif
 	$(call run_tests,fabric,$(TEST))
 
+fabric-conquest: _checkenv
+ifndef TEST
+	$(eval TEST = all ^spgw ^int ^bng ^dth ^xconnect ^p4rt $(PTF_FILTER))
+endif
+	$(call run_tests,fabric,$(TEST))
+
 fabric-bng: _checkenv
 ifndef TEST
 	$(eval TEST = all ^spgw ^int ^xconnect ^p4rt $(PTF_FILTER))
