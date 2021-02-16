@@ -1911,8 +1911,8 @@ class FabricOptimizedFieldDetectorTest(FabricTest):
                 )
             # Check for differences between expected and actual state.
             if write_entry != read_entry:
-                write_entry_s = str.split("%s" % write_entry, "\n")
-                read_entry_s = str.split("%s" % read_entry, "\n")
+                write_entry_s = str.split(str(write_entry), "\n")
+                read_entry_s = str.split(str(read_entry), "\n")
                 diff = ""
                 for line in difflib.unified_diff(
                     write_entry_s,
