@@ -1930,12 +1930,13 @@ class FabricOptimizedFieldDetectorTest(FabricTest):
                 print(diff)
                 self.fail("Read does not match previous write!")
 
-    @tvsetup
     @autocleanup
     def doRunTest(self):
         for table in getattr(self.p4info, "tables"):
             self.handleTable(table)
 
     def runTest(self):
+        if self.generate_tv:
+            return
         print("")
         self.doRunTest()
