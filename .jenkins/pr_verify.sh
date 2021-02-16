@@ -41,7 +41,7 @@ if [ -n "$modified" ]; then
 fi
 
 # Run PTF tests for all profiles we just built
-export STRATUM_BF_DOCKER_IMG=stratumproject/stratum-bfrt:20.12-${sdeVer}
+export STRATUM_BF_DOCKER_IMG=stratumproject/stratum-bfrt:${sdeVer}
 export SDE_DOCKER_IMG=${sdeBaseDockerImg}-tm
 for d in ./p4src/build/*/; do
   profile=$(basename "${d}")
