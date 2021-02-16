@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 PROFILES ?= all
 ONOS_HOST ?= localhost
-SDE_DOCKER_IMG ?= opennetworking/bf-sde:9.2.0
+SDE_DOCKER_IMG ?= opennetworking/bf-sde:9.3.1
 
 mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
 curr_dir := $(patsubst %/,%,$(dir $(mkfile_path)))

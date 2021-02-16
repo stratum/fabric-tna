@@ -14,7 +14,7 @@
 # exit on errors
 set -exu -o pipefail
 
-sdeVer="9.2.0"
+sdeVer="9.3.1"
 sdeBaseDockerImg=opennetworking/bf-sde:${sdeVer}
 
 echo "Build all profiles using SDE ${sdeBaseDockerImg}..."

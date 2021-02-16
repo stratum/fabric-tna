@@ -117,6 +117,7 @@ control SpgwIngress(
             @defaultonly iface_miss;
         }
         const default_action = iface_miss();
+        const size = NUM_SPGW_INTERFACES;
     }
 
     //=============================//
@@ -171,6 +172,7 @@ control SpgwIngress(
            @defaultonly nop;
        }
        const default_action = nop;
+       const size = NUM_QOS_CLASSES;
     }
     //=============================//
     //===== FAR Tables ======//
@@ -182,6 +184,8 @@ control SpgwIngress(
         fabric_md.skip_forwarding = drop;
         fabric_md.skip_next = drop;
         ig_tm_md.copy_to_cpu = ((bit<1>)notify_cp) | ig_tm_md.copy_to_cpu;
+        fabric_md.bridged.spgw.needs_gtpu_encap = false;
+        fabric_md.bridged.spgw.skip_egress_pdr_ctr = false;
     }
 
     action load_tunnel_far(bool         drop,
@@ -203,6 +207,7 @@ control SpgwIngress(
         // update metadata for correct routing/hashing
         fabric_md.ipv4_src = tunnel_src_addr;
         fabric_md.ipv4_dst = tunnel_dst_addr;
+        fabric_md.bridged.spgw.skip_egress_pdr_ctr = false;
     }
 
     action load_dbuf_far(bool           drop,
@@ -211,8 +216,19 @@ control SpgwIngress(
                          ipv4_addr_t    tunnel_src_addr,
                          ipv4_addr_t    tunnel_dst_addr,
                          teid_t         teid) {
-        load_tunnel_far(drop, notify_cp, tunnel_src_port,
-                                   tunnel_src_addr, tunnel_dst_addr, teid);
+        // general far attributes
+        fabric_md.skip_forwarding = drop;
+        fabric_md.skip_next = drop;
+        ig_tm_md.copy_to_cpu = ((bit<1>)notify_cp) | ig_tm_md.copy_to_cpu;
+        // GTP tunnel attributes
+        fabric_md.bridged.spgw.needs_gtpu_encap = true;
+        fabric_md.bridged.spgw.gtpu_teid = teid;
+        fabric_md.bridged.spgw.gtpu_tunnel_sport = tunnel_src_port;
+        fabric_md.bridged.spgw.gtpu_tunnel_sip = tunnel_src_addr;
+        fabric_md.bridged.spgw.gtpu_tunnel_dip = tunnel_dst_addr;
+        // update metadata for correct routing/hashing
+        fabric_md.ipv4_src = tunnel_src_addr;
+        fabric_md.ipv4_dst = tunnel_dst_addr;
         fabric_md.bridged.spgw.skip_egress_pdr_ctr = true;
     }
 

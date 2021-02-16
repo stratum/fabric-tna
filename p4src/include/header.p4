@@ -130,6 +130,7 @@ header gtpu_t {
 
 struct spgw_bridged_metadata_t {
     bit<16>         ipv4_len_for_encap;
+    @padding bit<5> _pad0;
     bool            needs_gtpu_encap;
     bool            skip_spgw;
     bool            skip_egress_pdr_ctr;
@@ -151,6 +152,15 @@ struct spgw_ingress_metadata_t {
 
 #ifdef WITH_INT
 // Report Telemetry Headers v0.5
+@pa_no_overlay("egress", "hdr.report_fixed_header.ver")
+@pa_no_overlay("egress", "hdr.report_fixed_header.nproto")
+@pa_no_overlay("egress", "hdr.report_fixed_header.d")
+@pa_no_overlay("egress", "hdr.report_fixed_header.q")
+@pa_no_overlay("egress", "hdr.report_fixed_header.f")
+@pa_no_overlay("egress", "hdr.report_fixed_header.rsvd")
+@pa_no_overlay("egress", "hdr.report_fixed_header.hw_id")
+@pa_no_overlay("egress", "hdr.report_fixed_header.seq_no")
+@pa_no_overlay("egress", "hdr.report_fixed_header.ig_tstamp")
 header report_fixed_header_t {
     bit<4>  ver;
     bit<4>  nproto;
@@ -163,6 +173,10 @@ header report_fixed_header_t {
     bit<32> ig_tstamp;
 }
 
+@pa_no_overlay("egress", "hdr.common_report_header.switch_id")
+@pa_no_overlay("egress", "hdr.common_report_header.ig_port")
+@pa_no_overlay("egress", "hdr.common_report_header.eg_port")
+@pa_no_overlay("egress", "hdr.common_report_header.queue_id")
 header common_report_header_t {
     bit<32> switch_id;
     bit<16> ig_port;
@@ -170,6 +184,8 @@ header common_report_header_t {
     bit<8>  queue_id;
 }
 
+@pa_no_overlay("egress", "hdr.drop_report_header.drop_reason")
+@pa_no_overlay("egress", "hdr.drop_report_header.pad")
 // Telemetry drop report header
 header drop_report_header_t {
     bit<8>  drop_reason;
@@ -177,6 +193,8 @@ header drop_report_header_t {
 }
 
 // Switch Local Report Header
+@pa_no_overlay("egress", "hdr.local_report_header.queue_occupancy")
+@pa_no_overlay("egress", "hdr.local_report_header.eg_tstamp")
 header local_report_header_t {
     bit<24> queue_occupancy;
     bit<32> eg_tstamp;
@@ -225,22 +243,23 @@ header int_mirror_metadata_t {
 }
 
 struct int_bridged_metadata_t {
+    @padding bit<6> _pad0;
     IntReportType_t report_type;
 }
 #endif // WITH_INT
 
 // Common metadata which is shared between
 // ingress and egress pipeline.
-@flexible
 header bridged_metadata_t {
     BridgedMdType_t         bmd_type;
+    mpls_label_t            mpls_label;
+    @padding bit<11>         _pad0;
+    PortId_t                ig_port;
     bool                    is_multicast;
     fwd_type_t              fwd_type;
-    PortId_t                ig_port;
     vlan_id_t               vlan_id;
     // bit<3>                  vlan_pri;
     // bit<1>                  vlan_cfi;
-    mpls_label_t            mpls_label;
     bit<8>                  mpls_ttl;
     bit<48>                 ig_tstamp;
     bit<16>                 ip_eth_type;
@@ -249,6 +268,7 @@ header bridged_metadata_t {
     l4_port_t               l4_dport;
     flow_hash_t             flow_hash;
 #ifdef WITH_DOUBLE_VLAN_TERMINATION
+    @padding bit<7>         _pad1;
     bool                    push_double_vlan;
     vlan_id_t               inner_vlan_id;
     // bit<3>                  inner_vlan_pri;

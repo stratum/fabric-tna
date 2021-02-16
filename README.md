@@ -25,8 +25,8 @@ To use ONOS to control a Tofino switch, you will need to run the
 
 ## Requirements
 
-* Barefoot SDE = 9.2.0 (with the P4_16 compiler for Tofino)
-* ONOS >= 2.2.7
+* Barefoot SDE = 9.3.1 (with the P4_16 compiler for Tofino)
+* ONOS >= 2.5.1
 * Docker (to run the build scripts without worrying about dependencies)
 * cURL (to interact with the ONOS REST APIs)
 
@@ -42,7 +42,7 @@ make <profile>
 If you have access to a containerized version of the Intel Barefoot SDE:
 
 ```bash
-make <profile> SDE_DOCKER_IMG=my-docker-repo/bf-sde:9.2.0
+make <profile> SDE_DOCKER_IMG=my-docker-repo/bf-sde:9.3.1
 ```
 
 The available profiles are:
@@ -58,7 +58,7 @@ The available profiles are:
 To run PTF tests on Stratum using a containerized version of `tofino-model`:
 
 ```bash
-SDE_DOCKER_IMG=my-docker-repo/bf-sde:9.2.0-tm ./ptf/run/tm/run <profile>
+SDE_DOCKER_IMG=my-docker-repo/bf-sde:9.3.1-tm ./ptf/run/tm/run <profile>
 ```
 
 To build the ONOS pipeconf `.oar` package which includes the compiled P4
@@ -123,7 +123,7 @@ Barefoot SDE / p4c compiler. To do so, simply set the `SDE_DOCKER_IMG`
 make argument (or environment variable) to a Docker image, for example:
 
 ```bash
-make build SDE_DOCKER_IMG=my-docker-repo/bf-sde:9.2.0-p4c PROFILES=all
+make build SDE_DOCKER_IMG=my-docker-repo/bf-sde:9.3.1-p4c PROFILES=all
 ```
 
 The build script will use `docker run` to invoke the `bf-p4c` command inside the

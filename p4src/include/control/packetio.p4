@@ -80,6 +80,7 @@ control PacketIoEgress(inout parsed_headers_t hdr,
             @defaultonly nop;
         }
         default_action = nop;
+        const size = 1;
     }
 
     apply {

@@ -68,6 +68,7 @@ control FlowReportFilter(
             @defaultonly set_config;
         }
         default_action = set_config(DEFAULT_HOP_LATENCY_MASK, DEFAULT_TIMESTAMP_MASK);
+        const size = 1;
     }
 
     apply {
