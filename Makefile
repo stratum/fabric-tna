@@ -19,7 +19,7 @@ onos_curl := curl --fail -sSL --user onos:rocks --noproxy localhost
 
 pipeconf_app_name := org.stratumproject.fabric-tna
 pipeconf_oar_file := $(shell ls -1 ${curr_dir}/target/fabric-tna-*.oar)
-
+fabric_spgw_p4info := $(abspath $(shell find ./p4src/build/fabric-spgw-int/ -name p4info.txt))
 p4-build := ./p4src/build.sh
 
 .PHONY: pipeconf
@@ -48,10 +48,10 @@ fabric-spgw-int:
 	@${p4-build} fabric-spgw-int "-DWITH_SPGW -DWITH_INT"
 
 constants:
-	docker run -v $(curr_dir):/root -w /root --rm \
+	docker run -v $(curr_dir):$(curr_dir) -w $(curr_dir) --rm \
 		--entrypoint ./util/gen-p4-constants.py onosproject/fabric-p4test:latest \
-		-o /root/src/main/java/org/stratumproject/fabric/tna/behaviour/P4InfoConstants.java \
-		p4info /root/src/main/resources/p4c-out/fabric-spgw-int/mavericks_sde_9_2_0/p4info.txt
+		-o $(curr_dir)/src/main/java/org/stratumproject/fabric/tna/behaviour/P4InfoConstants.java \
+		p4info ${fabric_spgw_p4info}
 
 _mvn_package:
 	$(info *** Building ONOS app...)
