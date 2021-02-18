@@ -31,7 +31,7 @@ control Forwarding (inout parsed_headers_t hdr,
     //  with a multi-table approach?
     table bridging {
         key = {
-            fabric_md.bridged.vlan_id : exact @name("vlan_id");
+            fabric_md.bridged.base.vlan_id : exact @name("vlan_id");
             hdr.ethernet.dst_addr     : ternary @name("eth_dst");
         }
         actions = {
@@ -50,15 +50,15 @@ control Forwarding (inout parsed_headers_t hdr,
 
     action pop_mpls_and_next(next_id_t next_id) {
         hdr.mpls.setInvalid();
-        hdr.eth_type.value = fabric_md.bridged.ip_eth_type;
-        fabric_md.bridged.mpls_label = 0;
+        hdr.eth_type.value = fabric_md.bridged.base.ip_eth_type;
+        fabric_md.bridged.base.mpls_label = 0;
         set_next_id(next_id);
         mpls_counter.count();
     }
 
     table mpls {
         key = {
-            fabric_md.bridged.mpls_label : exact @name("mpls_label");
+            fabric_md.bridged.base.mpls_label : exact @name("mpls_label");
         }
         actions = {
             pop_mpls_and_next;
@@ -136,9 +136,9 @@ control Forwarding (inout parsed_headers_t hdr,
     }
 
     apply {
-        if (fabric_md.bridged.fwd_type == FWD_BRIDGING) bridging.apply();
-        else if (fabric_md.bridged.fwd_type == FWD_MPLS) mpls.apply();
-        else if (fabric_md.bridged.fwd_type == FWD_IPV4_UNICAST || fabric_md.bridged.fwd_type == FWD_IPV4_MULTICAST) routing_v4.apply();
-        else if (fabric_md.bridged.fwd_type == FWD_IPV6_UNICAST) routing_v6.apply();
+        if (fabric_md.bridged.base.fwd_type == FWD_BRIDGING) bridging.apply();
+        else if (fabric_md.bridged.base.fwd_type == FWD_MPLS) mpls.apply();
+        else if (fabric_md.bridged.base.fwd_type == FWD_IPV4_UNICAST || fabric_md.bridged.base.fwd_type == FWD_IPV4_MULTICAST) routing_v4.apply();
+        else if (fabric_md.bridged.base.fwd_type == FWD_IPV6_UNICAST) routing_v6.apply();
     }
 }

@@ -12,12 +12,12 @@ control DecapGtpu(inout parsed_headers_t            hdr,
     @hidden
     action decap_inner_common() {
         // Correct parser-set metadata to use the inner header values
-        fabric_md.bridged.ip_eth_type = ETHERTYPE_IPV4;
-        fabric_md.bridged.ip_proto    = hdr.inner_ipv4.protocol;
+        fabric_md.bridged.base.ip_eth_type = ETHERTYPE_IPV4;
+        fabric_md.bridged.base.ip_proto    = hdr.inner_ipv4.protocol;
         fabric_md.ipv4_src            = hdr.inner_ipv4.src_addr;
         fabric_md.ipv4_dst            = hdr.inner_ipv4.dst_addr;
-        fabric_md.bridged.l4_sport    = fabric_md.bridged.inner_l4_sport;
-        fabric_md.bridged.l4_dport    = fabric_md.bridged.inner_l4_dport;
+        fabric_md.bridged.base.l4_sport    = fabric_md.bridged.spgw.inner_l4_sport;
+        fabric_md.bridged.base.l4_dport    = fabric_md.bridged.spgw.inner_l4_dport;
         // Move GTPU and inner L3 headers out
         hdr.ipv4 = hdr.inner_ipv4;
         hdr.inner_ipv4.setInvalid();
@@ -163,8 +163,8 @@ control SpgwIngress(
        key = {
             hdr.ipv4.src_addr          : ternary     @name("inet_addr")   ;
             hdr.ipv4.dst_addr          : ternary     @name("ue_addr")     ;
-            fabric_md.bridged.l4_sport : ternary     @name("inet_l4_port");
-            fabric_md.bridged.l4_dport : ternary     @name("ue_l4_port")  ;
+            fabric_md.bridged.base.l4_sport : ternary     @name("inet_l4_port");
+            fabric_md.bridged.base.l4_dport : ternary     @name("ue_l4_port")  ;
             hdr.ipv4.protocol          : ternary     @name("ip_proto")    ;
        }
        actions = {
