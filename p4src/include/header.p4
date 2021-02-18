@@ -152,15 +152,6 @@ struct spgw_ingress_metadata_t {
 
 #ifdef WITH_INT
 // Report Telemetry Headers v0.5
-@pa_no_overlay("egress", "hdr.report_fixed_header.ver")
-@pa_no_overlay("egress", "hdr.report_fixed_header.nproto")
-@pa_no_overlay("egress", "hdr.report_fixed_header.d")
-@pa_no_overlay("egress", "hdr.report_fixed_header.q")
-@pa_no_overlay("egress", "hdr.report_fixed_header.f")
-@pa_no_overlay("egress", "hdr.report_fixed_header.rsvd")
-@pa_no_overlay("egress", "hdr.report_fixed_header.hw_id")
-@pa_no_overlay("egress", "hdr.report_fixed_header.seq_no")
-@pa_no_overlay("egress", "hdr.report_fixed_header.ig_tstamp")
 header report_fixed_header_t {
     bit<4>  ver;
     bit<4>  nproto;
@@ -173,10 +164,6 @@ header report_fixed_header_t {
     bit<32> ig_tstamp;
 }
 
-@pa_no_overlay("egress", "hdr.common_report_header.switch_id")
-@pa_no_overlay("egress", "hdr.common_report_header.ig_port")
-@pa_no_overlay("egress", "hdr.common_report_header.eg_port")
-@pa_no_overlay("egress", "hdr.common_report_header.queue_id")
 header common_report_header_t {
     bit<32> switch_id;
     bit<16> ig_port;
@@ -184,8 +171,6 @@ header common_report_header_t {
     bit<8>  queue_id;
 }
 
-@pa_no_overlay("egress", "hdr.drop_report_header.drop_reason")
-@pa_no_overlay("egress", "hdr.drop_report_header.pad")
 // Telemetry drop report header
 header drop_report_header_t {
     bit<8>  drop_reason;
@@ -193,8 +178,6 @@ header drop_report_header_t {
 }
 
 // Switch Local Report Header
-@pa_no_overlay("egress", "hdr.local_report_header.queue_occupancy")
-@pa_no_overlay("egress", "hdr.local_report_header.eg_tstamp")
 header local_report_header_t {
     bit<24> queue_occupancy;
     bit<32> eg_tstamp;
@@ -310,8 +293,11 @@ header common_egress_metadata_t {
     FabricMirrorType_t    mirror_type;
 }
 
+// Mark "mpls_stripped" to no-overlay since it will share the same PHV with the "rsvd"
+// field in the INT fixed header.
 @flexible
 @pa_auto_init_metadata
+@pa_no_overlay("egress", "fabric_md.mpls_stripped")
 struct fabric_egress_metadata_t {
     bridged_metadata_t    bridged;
     PortId_t              cpu_port;
