@@ -188,7 +188,9 @@ control SpgwIngress(
         fabric_md.bridged.spgw.skip_egress_pdr_ctr = false;
     }
 
-    action load_tunnel_far(bool         drop,
+    // A commom part that being used for load_tunnel_far and load_dbuf_far
+    @hidden
+    action load_common_far(bool         drop,
                            bool         notify_cp,
                            l4_port_t    tunnel_src_port,
                            ipv4_addr_t  tunnel_src_addr,
@@ -207,6 +209,16 @@ control SpgwIngress(
         // update metadata for correct routing/hashing
         fabric_md.ipv4_src = tunnel_src_addr;
         fabric_md.ipv4_dst = tunnel_dst_addr;
+    }
+
+    action load_tunnel_far(bool         drop,
+                           bool         notify_cp,
+                           l4_port_t    tunnel_src_port,
+                           ipv4_addr_t  tunnel_src_addr,
+                           ipv4_addr_t  tunnel_dst_addr,
+                           teid_t       teid) {
+        load_common_far(drop, notify_cp, tunnel_src_port, tunnel_src_addr,
+                        tunnel_dst_addr, teid);
         fabric_md.bridged.spgw.skip_egress_pdr_ctr = false;
     }
 
@@ -216,19 +228,8 @@ control SpgwIngress(
                          ipv4_addr_t    tunnel_src_addr,
                          ipv4_addr_t    tunnel_dst_addr,
                          teid_t         teid) {
-        // general far attributes
-        fabric_md.skip_forwarding = drop;
-        fabric_md.skip_next = drop;
-        ig_tm_md.copy_to_cpu = ((bit<1>)notify_cp) | ig_tm_md.copy_to_cpu;
-        // GTP tunnel attributes
-        fabric_md.bridged.spgw.needs_gtpu_encap = true;
-        fabric_md.bridged.spgw.gtpu_teid = teid;
-        fabric_md.bridged.spgw.gtpu_tunnel_sport = tunnel_src_port;
-        fabric_md.bridged.spgw.gtpu_tunnel_sip = tunnel_src_addr;
-        fabric_md.bridged.spgw.gtpu_tunnel_dip = tunnel_dst_addr;
-        // update metadata for correct routing/hashing
-        fabric_md.ipv4_src = tunnel_src_addr;
-        fabric_md.ipv4_dst = tunnel_dst_addr;
+        load_common_far(drop, notify_cp, tunnel_src_port, tunnel_src_addr,
+                        tunnel_dst_addr, teid);
         fabric_md.bridged.spgw.skip_egress_pdr_ctr = true;
     }
 
