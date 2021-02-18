@@ -237,13 +237,13 @@ struct int_bridged_metadata_t {
 // ingress and egress pipeline.
 @flexible
 struct bridged_metadata_base_t {
-    mpls_label_t            mpls_label;
-    PortId_t                ig_port;
     bool                    is_multicast;
     fwd_type_t              fwd_type;
+    PortId_t                ig_port;
     vlan_id_t               vlan_id;
     // bit<3>                  vlan_pri;
     // bit<1>                  vlan_cfi;
+    mpls_label_t            mpls_label;
     bit<8>                  mpls_ttl;
     bit<48>                 ig_tstamp;
     bit<16>                 ip_eth_type;
