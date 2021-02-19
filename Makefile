@@ -7,8 +7,6 @@ mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
 curr_dir := $(patsubst %/,%,$(dir $(mkfile_path)))
 curr_dir_sha := $(shell echo -n "$(curr_dir)" | shasum | cut -c1-7)
 
-include .env
-
 mvn_image := maven:3.6.1-jdk-11-slim
 mvn_cache_docker_volume := mvn-cache-${curr_dir_sha}
 # By default use docker volume, but allow passing a directory

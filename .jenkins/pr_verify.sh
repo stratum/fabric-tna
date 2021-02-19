@@ -14,6 +14,8 @@
 # exit on errors
 set -exu -o pipefail
 
+source ../.env
+
 echo "Build all profiles using SDE ${SDE_P4C_DOCKER_IMG}..."
 # Pull first to avoid pulling multiple times in parallel by the make jobs
 docker pull ${SDE_P4C_DOCKER_IMG}

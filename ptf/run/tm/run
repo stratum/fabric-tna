@@ -9,7 +9,8 @@ FP4TEST_ROOT="${DIR}"/../..
 FABRIC_TNA="${FP4TEST_ROOT}"/..
 
 # shellcheck disable=SC2046
-export $(grep -v '^#' ${FABRIC_TNA}/.env | xargs)
+source ${FABRIC_TNA}/.env
+#export $(grep -v '^#' ${FABRIC_TNA}/.env | xargs)
 
 STRATUM_DOCKER_FLAG=${STRATUM_DOCKER_FLAG:-}
 

@@ -5,7 +5,6 @@
 set -eu
 
 # shellcheck disable=SC2046
-export $(grep -v '^#' ${FABRIC_TNA}/.env | xargs)
 
 MAVERICKS_CPU_PORT=320
 MONTARA_CPU_PORT=192
@@ -13,11 +12,12 @@ MONTARA_CPU_PORT=192
 # DIR is this file directory.
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 ROOT_DIR="$( cd "${DIR}/../" && pwd )"
-
 P4_SRC_DIR=${ROOT_DIR}/p4src
 
 PROFILE=$1
 OTHER_PP_FLAGS=$2
+
+source ${ROOT_DIR}/.env
 
 # PWD is the directory where this script is called from (should be the root of
 # this repo).
