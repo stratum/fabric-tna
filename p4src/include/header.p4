@@ -114,7 +114,6 @@ header icmp_t {
     bit<64> timestamp;
 }
 
-#ifdef WITH_SPGW
 // GTPU v1
 header gtpu_t {
     bit<3>  version;    /* version */
@@ -128,10 +127,11 @@ header gtpu_t {
     teid_t  teid;       /* tunnel endpoint id */
 }
 
+#ifdef WITH_SPGW
 @flexible
 struct spgw_bridged_metadata_t {
-    l4_port_t               inner_l4_sport;
-    l4_port_t               inner_l4_dport;
+    l4_port_t       inner_l4_sport;
+    l4_port_t       inner_l4_dport;
     bit<16>         ipv4_len_for_encap;
     bool            needs_gtpu_encap;
     bool            skip_spgw;
@@ -281,8 +281,8 @@ struct fabric_ingress_metadata_t {
     bool                    skip_forwarding;
     bool                    skip_next;
     next_id_t               next_id;
-#ifdef WITH_SPGW
     bool                    inner_ipv4_checksum_err;
+#ifdef WITH_SPGW
     spgw_ingress_metadata_t spgw;
 #endif // WITH_SPGW
 }
@@ -337,12 +337,12 @@ struct parsed_headers_t {
     ipv4_t outer_ipv4;
     udp_t outer_udp;
     gtpu_t outer_gtpu;
+#endif // WITH_SPGW
     gtpu_t gtpu;
     ipv4_t inner_ipv4;
     tcp_t inner_tcp;
     udp_t inner_udp;
     icmp_t inner_icmp;
-#endif // WITH_SPGW
     packet_out_header_t packet_out;
     packet_in_header_t packet_in;
     // INT specific headers
