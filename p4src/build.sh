@@ -2,22 +2,21 @@
 # Copyright 2020-present Open Networking Foundation
 # SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 
-set -eu
+set -eu -o pipefail
 
-# shellcheck disable=SC2046
-
-MAVERICKS_CPU_PORT=320
-MONTARA_CPU_PORT=192
+MAVERICKS_CPU_PORT=320 # quad-pipe
+MONTARA_CPU_PORT=192 # dual-pipe
 
 # DIR is this file directory.
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+P4_SRC_DIR=${DIR}
 ROOT_DIR="$( cd "${DIR}/../" && pwd )"
-P4_SRC_DIR=${ROOT_DIR}/p4src
 
 PROFILE=$1
 OTHER_PP_FLAGS=$2
 
-source ${ROOT_DIR}/.env
+# shellcheck source=../.env
+source "${ROOT_DIR}/.env"
 
 # PWD is the directory where this script is called from (should be the root of
 # this repo).
@@ -34,7 +33,7 @@ SDE_VER=$( ${P4C_CMD} --version | cut -d' ' -f2 )
 # shellcheck disable=SC2086
 function base_build() {
   output_dir="${P4C_OUT}/sde_${SDE_VER//./_}"
-  echo "*** Compiling profile '${PROFILE}' for ${pltf}..."
+  echo "*** Compiling profile '${PROFILE}'..."
   echo "*** Output in ${output_dir}"
   p4c_flags="--auto-init-metadata"
   mkdir -p ${output_dir}
@@ -55,7 +54,6 @@ function base_build() {
     -bf_pipeline_config_binary_file=./pipeline_config.pb.bin
 }
 
-# shellcheck disable=SC2086
 function gen_profile() {
   output_dir="${P4C_OUT}/sde_${SDE_VER//./_}"
   pltf="$1_sde_${SDE_VER//./_}"

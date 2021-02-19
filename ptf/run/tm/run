@@ -2,16 +2,16 @@
 # Copyright 2020-present Open Networking Foundation
 # SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 
-set -eu
+set -eu -o pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
 FP4TEST_ROOT="${DIR}"/../..
 FABRIC_TNA="${FP4TEST_ROOT}"/..
 
-# shellcheck disable=SC2046
-source ${FABRIC_TNA}/.env
-#export $(grep -v '^#' ${FABRIC_TNA}/.env | xargs)
+# shellcheck source=../../../.env
+source "${FABRIC_TNA}"/.env
 
+PTF_FILTER=${PTF_FILTER:-}
 STRATUM_DOCKER_FLAG=${STRATUM_DOCKER_FLAG:-}
 
 fabricProfile=$1

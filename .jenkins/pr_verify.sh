@@ -8,7 +8,7 @@
 #
 # This job should be executed for each pull request.
 
-# TODO (carmelo): consider using a declarative Jenkins pipeline definition so we
+# TODO (carmelo): consider using a declarative Jenkins pipeline so we
 # can parallelize some of the tasks.
 
 # exit on errors
@@ -18,7 +18,7 @@ source .env
 
 echo "Build all profiles using SDE ${SDE_P4C_DOCKER_IMG}..."
 # Pull first to avoid pulling multiple times in parallel by the make jobs
-docker pull ${SDE_P4C_DOCKER_IMG}
+docker pull "${SDE_P4C_DOCKER_IMG}"
 # Jenkins uses 8 cores 15G VM
 make -j8 all
 

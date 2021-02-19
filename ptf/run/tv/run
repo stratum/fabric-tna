@@ -2,25 +2,16 @@
 # Copyright 2020-present Open Networking Foundation
 # SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 
-set -e
+set -eu -o pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
 FP4TEST_ROOT="${DIR}"/../..
 FABRIC_TNA="${FP4TEST_ROOT}"/..
 
-# Tester image
-# Contains PTF and tvutils libraries, as well as P4RT, gNMI, and TV Python bindings
-TESTER_DOCKER_IMG=stratumproject/testvectors:ptf-py3
-SDE_VERSION=${SDE_VERSION:-9.3.1}
+# shellcheck source=../../../.env
+source "${FABRIC_TNA}"/.env
 
-if [[ -z "${FABRIC_TNA}" ]]; then
-    echo "ERROR: FABRIC_TNA env not defined"
-    exit 1
-fi
-if [[ -z "${SDE_VERSION}" ]]; then
-    echo "ERROR: SDE_VERSION env not defined"
-    exit 1
-fi
+PTF_FILTER=${PTF_FILTER:-}
 
 fabricProfile=$1
 if [ -z "${fabricProfile}" ]; then
