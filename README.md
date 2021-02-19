@@ -32,17 +32,13 @@ To use ONOS to control a Tofino switch, you will need to run the
 
 ## Quick steps
 
-To compile the P4 program with a given `<profile>` configuration, using a
-locally installed version of the `bf-p4c` compiler:
+Edit the [.env](.env) file to set the `SDE_P4C_DOCKER_IMG` variable to
+the location of a Docker image that includes the `bf-p4c` compiler.
+
+To compile the P4 program with a given `<profile>` configuration:
 
 ```bash
 make <profile>
-```
-
-If you have access to a containerized version of the Intel Barefoot SDE:
-
-```bash
-make <profile> SDE_DOCKER_IMG=my-docker-repo/bf-sde:9.3.1
 ```
 
 The available profiles are:
@@ -174,8 +170,8 @@ new pipeconfs in the system, depending on the profiles compiled before, and the
 Barefoot SDE/p4c version used:
 
 ```text
-New pipeconf registered: org.stratumproject.fabric.mavericks_sde_9_2_0 (fingerprint=...)
-New pipeconf registered: org.stratumproject.fabric.montara_sde_9_2_0 (fingerprint=...)
+New pipeconf registered: org.stratumproject.fabric.mavericks_sde_9_3_1 (fingerprint=...)
+New pipeconf registered: org.stratumproject.fabric.montara_sde_9_3_1 (fingerprint=...)
 ...
 ```
 
@@ -249,7 +245,7 @@ provided in `tofino-netcfg.json`, for example:
       "basic": {
         "managementAddress": "grpc://10.0.0.1:28000?device_id=1",
         "driver": "stratum-tofino",
-        "pipeconf": "org.stratumproject.fabric.montara_sde_9_2_0"
+        "pipeconf": "org.stratumproject.fabric.montara_sde_9_3_1"
       }
     }
   }

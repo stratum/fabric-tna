@@ -36,12 +36,8 @@ fail to start or affect test results negatively.
 
 1. Build `fabric-tna` using instruction in the top-level README.
 
-2. Set the `SDE_DOCKER_IMG` environment variable to the location of a Docker
-   image that includes tofino-model:
-
-   ```bash
-   export SDE_DOCKER_IMG=my-docker-repo/bf-sde:9.3.1-tm
-   ```
+2. Edit the [../.env](../.env) file to set the `SDE_TM_DOCKER_IMG` variable to
+   the location of a Docker image that includes tofino-model:
 
 3. Run PTF tests using the `run/tm/run` script:
 
@@ -75,7 +71,7 @@ Docker image for it, set the following env variable before running the PTF
 tests.
 
 ```bash
-export STRATUM_BF_DOCKER_FLAG="-v /path/to/my/stratum_bfrt:/usr/bin/stratum_bfrt"
+export STRATUM_DOCKER_FLAG="-v /path/to/my/stratum_bfrt:/usr/bin/stratum_bfrt"
 ```
 
 ## Migrating to Stratum Test Vectors

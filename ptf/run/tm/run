@@ -2,40 +2,16 @@
 # Copyright 2020-present Open Networking Foundation
 # SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 
-set -e
+set -eu
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
 FP4TEST_ROOT="${DIR}"/../..
 FABRIC_TNA="${FP4TEST_ROOT}"/..
 
-# Tester image
-# Contains PTF and tvutils libraries, as well as P4RT, gNMI, and TV Python bindings
-TESTER_DOCKER_IMG=stratumproject/testvectors:ptf-py3
-SDE_VERSION=${SDE_VERSION:-9.3.1}
-# TODO: instrument CI to test on both a stable version and the latest one.
-STRATUM_BF_DOCKER_IMG=${STRATUM_BF_DOCKER_IMG:-stratumproject/stratum-bfrt:20.12-${SDE_VERSION}}
-STRATUM_BF_DOCKER_FLAG=${STRATUM_BF_DOCKER_FLAG:-}
-SDE_DOCKER_IMG=${SDE_DOCKER_IMG:-opennetworking/bf-sde:9.3.1-tm}
+# shellcheck disable=SC2046
+export $(grep -v '^#' ${FABRIC_TNA}/.env | xargs)
 
-if [[ -z "${FABRIC_TNA}" ]]; then
-    echo "ERROR: FABRIC_TNA env not defined"
-    exit 1
-fi
-
-if [[ -z "${SDE_DOCKER_IMG}" ]]; then
-    echo "ERROR: SDE_DOCKER_IMG env not defined"
-    exit 1
-fi
-
-if [[ -z "${STRATUM_BF_DOCKER_IMG}" ]]; then
-    echo "ERROR: STRATUM_BF_DOCKER_IMG env not defined"
-    exit 1
-fi
-
-if [[ -z "${SDE_VERSION}" ]]; then
-    echo "ERROR: SDE_VERSION env not defined"
-    exit 1
-fi
+STRATUM_DOCKER_FLAG=${STRATUM_DOCKER_FLAG:-}
 
 fabricProfile=$1
 if [ -z "${fabricProfile}" ]; then
@@ -49,7 +25,7 @@ if [ "${fabricProfile}" = "all" ]; then
 fi
 echo "*** Testing profile '${fabricProfile}'..."
 
-detectedSdeVer=$(docker run --rm "${SDE_DOCKER_IMG}" tofino-model --version | grep -oe '\([0-9]\+\.\)\+[0-9]\+')
+detectedSdeVer=$(docker run --rm "${SDE_TM_DOCKER_IMG}" tofino-model --version | grep -oe '\([0-9]\+\.\)\+[0-9]\+')
 echo "*** Detected BF SDE version ${detectedSdeVer} (tofino-model), required ${SDE_VERSION}..."
 if [ "${detectedSdeVer}" != "${SDE_VERSION}" ]; then
     echo "ERROR: SDE version mismatch"
@@ -91,23 +67,23 @@ mkdir "${DIR}"/log
 
 # Run Tofino Model
 # Replace dots with underscores to match pipeconf name
-echo "*** Starting ${tmRunName} (from ${SDE_DOCKER_IMG})..."
+echo "*** Starting ${tmRunName} (from ${SDE_TM_DOCKER_IMG})..."
 docker run --name ${tmRunName} -d -t --privileged \
     -v "${DIR}":/workdir -w /workdir \
     -v "${P4C_OUT}":/p4c-out \
     --entrypoint ./tm_entrypoint.sh \
-    "${SDE_DOCKER_IMG}"
+    "${SDE_TM_DOCKER_IMG}"
 sleep 5
 
 # Run Stratum container
-echo "*** Starting ${stratumBfRunName} (from ${STRATUM_BF_DOCKER_IMG})..."
+echo "*** Starting ${stratumBfRunName} (from ${STRATUM_DOCKER_IMG})..."
 # shellcheck disable=SC2086
 docker run --name ${stratumBfRunName} -d --privileged \
     --network "container:${tmRunName}" \
     -v "${DIR}":/workdir -w /workdir \
     --entrypoint ./stratum_entrypoint.sh \
-    ${STRATUM_BF_DOCKER_FLAG} \
-    "${STRATUM_BF_DOCKER_IMG}"
+    ${STRATUM_DOCKER_FLAG} \
+    "${STRATUM_DOCKER_IMG}"
 sleep 5
 wait_for ${stratumBfRunName} 28000 600
 
