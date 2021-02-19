@@ -59,14 +59,14 @@ control FlowReportFilter(
     apply {
         if (fabric_md.int_mirror_md.report_type == IntReportType_t.LOCAL) {
             digest = digester.get({ // burp!
-                fabric_md.bridged.ig_port,
+                fabric_md.bridged.base.ig_port,
                 eg_intr_md.egress_port,
                 fabric_md.int_md.hop_latency,
-                fabric_md.bridged.flow_hash,
+                fabric_md.bridged.base.flow_hash,
                 fabric_md.int_md.timestamp
             });
-            flag = filter_get_and_set1.execute(fabric_md.bridged.flow_hash[31:16]);
-            flag = flag | filter_get_and_set2.execute(fabric_md.bridged.flow_hash[15:0]);
+            flag = filter_get_and_set1.execute(fabric_md.bridged.base.flow_hash[31:16]);
+            flag = flag | filter_get_and_set2.execute(fabric_md.bridged.base.flow_hash[15:0]);
             // Generate report only when ALL register actions detect a change.
             if (flag == 1) {
                 eg_dprsr_md.mirror_type = (bit<3>)FabricMirrorType_t.INVALID;
@@ -155,9 +155,9 @@ control IntIngress (
         key = {
             hdr.ipv4.src_addr          : ternary @name("ipv4_src");
             hdr.ipv4.dst_addr          : ternary @name("ipv4_dst");
-            fabric_md.bridged.ip_proto : ternary @name("ip_proto");
-            fabric_md.bridged.l4_sport : range @name("l4_sport");
-            fabric_md.bridged.l4_dport : range @name("l4_dport");
+            fabric_md.bridged.base.ip_proto : ternary @name("ip_proto");
+            fabric_md.bridged.base.l4_sport : range @name("l4_sport");
+            fabric_md.bridged.base.l4_dport : range @name("l4_dport");
         }
         actions = {
             mark_to_report;
@@ -179,10 +179,10 @@ control IntIngress (
         fabric_md.int_mirror_md.report_type = IntReportType_t.DROP;
         fabric_md.int_mirror_md.switch_id = switch_id;
         fabric_md.int_mirror_md.ig_port = (bit<16>)ig_intr_md.ingress_port;
-        fabric_md.int_mirror_md.ip_eth_type = fabric_md.bridged.ip_eth_type;
+        fabric_md.int_mirror_md.ip_eth_type = fabric_md.bridged.base.ip_eth_type;
         fabric_md.int_mirror_md.eg_port = (bit<16>)ig_tm_md.ucast_egress_port;
         fabric_md.int_mirror_md.queue_id = (bit<8>)ig_tm_md.qid;
-        fabric_md.int_mirror_md.flow_hash = fabric_md.bridged.flow_hash;
+        fabric_md.int_mirror_md.flow_hash = fabric_md.bridged.base.flow_hash;
 #ifdef WITH_DEBUG
         drop_report_counter.count();
 #endif // WITH_DEBUG
@@ -272,6 +272,7 @@ control IntEgress (
             @defaultonly set_config;
         }
         default_action = set_config(DEFAULT_HOP_LATENCY_MASK, DEFAULT_TIMESTAMP_MASK);
+        const size = 1;
     }
 
     @hidden
@@ -441,14 +442,14 @@ control IntEgress (
         fabric_md.int_mirror_md.mirror_type = FabricMirrorType_t.INT_REPORT;
         fabric_md.int_mirror_md.report_type = fabric_md.bridged.int_bmd.report_type;
         fabric_md.int_mirror_md.switch_id = switch_id;
-        fabric_md.int_mirror_md.ig_port = (bit<16>)fabric_md.bridged.ig_port;
+        fabric_md.int_mirror_md.ig_port = (bit<16>)fabric_md.bridged.base.ig_port;
         fabric_md.int_mirror_md.eg_port = (bit<16>)eg_intr_md.egress_port;
         fabric_md.int_mirror_md.queue_id = (bit<8>)eg_intr_md.egress_qid;
         fabric_md.int_mirror_md.queue_occupancy = (bit<24>)eg_intr_md.enq_qdepth;
-        fabric_md.int_mirror_md.ig_tstamp = fabric_md.bridged.ig_tstamp[31:0];
+        fabric_md.int_mirror_md.ig_tstamp = fabric_md.bridged.base.ig_tstamp[31:0];
         fabric_md.int_mirror_md.eg_tstamp = eg_prsr_md.global_tstamp[31:0];
-        fabric_md.int_mirror_md.ip_eth_type = fabric_md.bridged.ip_eth_type;
-        fabric_md.int_mirror_md.flow_hash = fabric_md.bridged.flow_hash;
+        fabric_md.int_mirror_md.ip_eth_type = fabric_md.bridged.base.ip_eth_type;
+        fabric_md.int_mirror_md.flow_hash = fabric_md.bridged.base.flow_hash;
         // fabric_md.int_mirror_md.strip_gtpu will be initialized by the parser
     }
 
@@ -489,7 +490,7 @@ control IntEgress (
     }
 
     apply {
-        fabric_md.int_md.hop_latency = eg_prsr_md.global_tstamp[31:0] - fabric_md.bridged.ig_tstamp[31:0];
+        fabric_md.int_md.hop_latency = eg_prsr_md.global_tstamp[31:0] - fabric_md.bridged.base.ig_tstamp[31:0];
         fabric_md.int_md.timestamp = eg_prsr_md.global_tstamp;
         config.apply();
         hw_id.apply();

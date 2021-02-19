@@ -80,6 +80,7 @@ control PacketIoEgress(inout parsed_headers_t hdr,
             @defaultonly nop;
         }
         default_action = nop;
+        const size = 1;
     }
 
     apply {
@@ -87,7 +88,7 @@ control PacketIoEgress(inout parsed_headers_t hdr,
         // Check if this is a clone of a copy_to_cpu packet.
         if (eg_intr_md.egress_port == fabric_md.cpu_port) {
             hdr.packet_in.setValid();
-            hdr.packet_in.ingress_port = fabric_md.bridged.ig_port;
+            hdr.packet_in.ingress_port = fabric_md.bridged.base.ig_port;
             hdr.fake_ethernet.setInvalid();
             // Straight to CPU. No need to process through the rest of the
             // egress pipe.

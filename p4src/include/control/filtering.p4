@@ -34,7 +34,7 @@ control Filtering (inout parsed_headers_t hdr,
     }
 
     action permit_with_internal_vlan(vlan_id_t vlan_id) {
-        fabric_md.bridged.vlan_id = vlan_id;
+        fabric_md.bridged.base.vlan_id = vlan_id;
         permit();
     }
 
@@ -73,7 +73,7 @@ control Filtering (inout parsed_headers_t hdr,
     DirectCounter<bit<64>>(CounterType_t.PACKETS_AND_BYTES) fwd_classifier_counter;
 
     action set_forwarding_type(fwd_type_t fwd_type) {
-        fabric_md.bridged.fwd_type = fwd_type;
+        fabric_md.bridged.base.fwd_type = fwd_type;
         fwd_classifier_counter.count();
     }
 
@@ -87,7 +87,7 @@ control Filtering (inout parsed_headers_t hdr,
             ig_intr_md.ingress_port        : exact @name("ig_port");
             hdr.ethernet.dst_addr          : ternary @name("eth_dst");
             hdr.eth_type.value             : ternary @name("eth_type");
-            fabric_md.bridged.ip_eth_type  : exact @name("ip_eth_type");
+            fabric_md.bridged.base.ip_eth_type  : exact @name("ip_eth_type");
         }
         actions = {
             set_forwarding_type;
@@ -101,7 +101,7 @@ control Filtering (inout parsed_headers_t hdr,
         ingress_port_vlan.apply();
         fwd_classifier.apply();
 #ifdef WTIH_DEBUG
-        fwd_type_counter.count(fabric_md.bridged.fwd_type);
+        fwd_type_counter.count(fabric_md.bridged.base.fwd_type);
 #endif // WTIH_DEBUG
     }
 }
