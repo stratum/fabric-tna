@@ -196,9 +196,9 @@ BRIDGED_MD_TYPE_EGRESS_MIRROR = 2
 if testutils.test_param_get("profile") == "fabric-spgw-int":
     BMD_BYTES = 51
 elif testutils.test_param_get("profile") == "fabric-spgw":
-    BMD_BYTES = 50
+    BMD_BYTES = 49
 elif testutils.test_param_get("profile") == "fabric-int":
-    BMD_BYTES = 28
+    BMD_BYTES = 29
 else:
     BMD_BYTES = 27  # fabric
 IP_HDR_BYTES = 20

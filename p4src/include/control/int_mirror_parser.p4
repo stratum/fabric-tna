@@ -14,7 +14,7 @@ parser IntReportMirrorParser (packet_in packet,
     state start {
         packet.extract(fabric_md.int_mirror_md);
         fabric_md.bridged.bmd_type = fabric_md.int_mirror_md.bmd_type;
-        fabric_md.bridged.vlan_id = DEFAULT_VLAN_ID;
+        fabric_md.bridged.base.vlan_id = DEFAULT_VLAN_ID;
         hdr.report_eth_type.value = ETHERTYPE_IPV4;
         hdr.report_ipv4 = {
             4w4, // version
