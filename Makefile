@@ -8,7 +8,7 @@ DIR_SHA := $(shell echo -n "$(DIR)" | shasum | cut -c1-7)
 # .env cannot be included as-is as some variables are defined with ${A:-B}
 # notation to allow overrides. Resolve overrides in a temp file and include that.
 RESOLVED_ENV := /tmp/fabric-tna.$(DIR_SHA).env
-IGNORE := $(shell eval "echo \"$$(cat $(DIR)/.env)\"" > $(RESOLVED_ENV))
+IGNORE := $(shell eval "source $(DIR)/.env && echo \"$$(cat $(DIR)/.env)\"" > $(RESOLVED_ENV))
 include $(RESOLVED_ENV)
 
 # Replace dots with underscores
@@ -105,6 +105,9 @@ p4i-stop:
 
 reuse-lint:
 	docker run --rm -v $(DIR):/fabric-tna -w /fabric-tna omecproject/reuse-verify:latest reuse lint
+
+env:
+	@cat $(RESOLVED_ENV) | grep -v "#"
 
 clean:
 	-rm -rf src/main/resources/p4c-out
