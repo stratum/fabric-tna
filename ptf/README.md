@@ -39,7 +39,7 @@ fail to start or affect test results negatively.
 2. Set the `SDE_DOCKER_IMG` environment variable to the location of a Docker
    image that includes tofino-model:
 
-   ```bash	
+   ```bash
     export SDE_DOCKER_IMG=my-docker-repo/bf-sde:9.3.1
     ```
 
