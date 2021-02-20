@@ -15,7 +15,7 @@ ROOT_DIR="$( cd "${DIR}/../" && pwd )"
 PROFILE=$1
 OTHER_PP_FLAGS=$2
 
-# shellcheck source=../.env
+# shellcheck source=.env
 source "${ROOT_DIR}/.env"
 
 # PWD is the directory where this script is called from (should be the root of

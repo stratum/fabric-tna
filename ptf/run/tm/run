@@ -8,7 +8,7 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
 FP4TEST_ROOT="${DIR}"/../..
 FABRIC_TNA="${FP4TEST_ROOT}"/..
 
-# shellcheck source=../../../.env
+# shellcheck source=.env
 source "${FABRIC_TNA}"/.env
 
 PTF_FILTER=${PTF_FILTER:-}

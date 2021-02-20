@@ -39,8 +39,8 @@ fail to start or affect test results negatively.
 2. Set the `SDE_DOCKER_IMG` environment variable to the location of a Docker
    image that includes tofino-model:
 
-   ```bash		
-    export SDE_DOCKER_IMG=my-docker-repo/bf-sde:9.3.1		
+   ```bash	
+    export SDE_DOCKER_IMG=my-docker-repo/bf-sde:9.3.1
     ```
 
 3. Run PTF tests using the `run/tm/run` script:
