@@ -8,7 +8,7 @@ DIR_SHA := $(shell echo -n "$(DIR)" | shasum | cut -c1-7)
 # .env cannot be included as-is as some variables are defined with ${A:-B}
 # notation to allow overrides. Resolve overrides in a temp file and include that.
 RESOLVED_ENV := /tmp/fabric-tna.$(DIR_SHA).env
-IGNORE := $(shell eval "source $(DIR)/.env && echo \"$$(cat $(DIR)/.env)\"" > $(RESOLVED_ENV))
+IGNORE := $(shell bash -c 'eval "source $(DIR)/.env && echo \"$$(cat $(DIR)/.env)\""' > $(RESOLVED_ENV))
 include $(RESOLVED_ENV)
 
 # Replace dots with underscores
