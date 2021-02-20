@@ -36,8 +36,12 @@ fail to start or affect test results negatively.
 
 1. Build `fabric-tna` using instruction in the top-level README.
 
-2. Edit the [../.env](../.env) file to set the `SDE_TM_DOCKER_IMG` variable to
-   the location of a Docker image that includes tofino-model:
+2. Set the `SDE_DOCKER_IMG` environment variable to the location of a Docker
+   image that includes tofino-model:
+
+   ```bash		
+    export SDE_DOCKER_IMG=my-docker-repo/bf-sde:9.3.1		
+    ```
 
 3. Run PTF tests using the `run/tm/run` script:
 
