@@ -2169,6 +2169,68 @@ class SpgwReadWriteSymmetryTest(SpgwSimpleTest):
         self.checkDbufFar()
 
 
+class ConquestTest(IPv4UnicastTest):
+    CONQ_REPORT_MIRROR_IDS = [400, 401, 402, 403]
+
+
+    def set_up_report_mirrors(self, pipe_id, mirror_id, port):
+        for mirror_id in CONQ_REPORT_MIRROR_IDS:
+            self.add_clone_group(mirror_id, [self.cpu_port])
+
+
+    def set_up_report_trigger(self):
+
+        table_name = "tb_per_flow_action"
+        action = "trigger_report"
+
+        match_keys = [
+                        self.Range("snap_0",        0,  2**16),
+                        self.Range("q_delay",       0,  2**18),
+                        self.Range("random_bits",   0,  2**8),
+                        self.Exact("ecn",           0,  2**2),
+                    ]
+        action_params = []
+
+        self.send_request_add_entry_to_action(
+                table_name,
+                match_keys,
+                action,
+                action_params)
+
+
+    def runReportTriggerTest(self, pkt, tagged1, tagged2, is_next_hop_spine):
+        set_up_report_trigger()
+        set_up_report_mirrors()
+
+        dst_mac = HOST2_MAC
+
+        exp_pkt = pkt.copy()
+        exp_pkt[Ether].src = pkt[Ether].dst
+        exp_pkt[Ether].dst = dst_mac
+        if not is_next_hop_spine:
+            exp_pkt[IP].ttl = exp_pkt[IP].ttl - 1
+        else:
+            exp_pkt = pkt_add_mpls(exp_pkt, MPLS_LABEL_2, DEFAULT_MPLS_TTL)
+        if tagged2:
+            exp_pkt = pkt_add_vlan(exp_pkt, VLAN_ID_2)
+
+        self.runIPv4UnicastTest(
+            pkt=pkt,
+            dst_ipv4=pkt[IP].dst,
+            next_hop_mac=dst_mac,
+            prefix_len=32,
+            exp_pkt=exp_pkt,
+            tagged1=tagged1,
+            tagged2=tagged2,
+            is_next_hop_spine=is_next_hop_spine,
+        )
+
+        # try to get any packet-in message
+        self.get_packet_in()
+        # TODO: parse the packet-in and verify the conquest report header
+
+
+
 class IntTest(IPv4UnicastTest):
     """
     This test includes two parts:

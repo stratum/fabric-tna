@@ -625,24 +625,96 @@ control ConQuestEgress(
                 eg_md.snap_0_read_min_l2 = 
                 eg_md.snap_0_read_min_l1 + eg_md.snap_2_read_min_l1;
             }
-  
+
+    action trigger_report() {
+        eg_md.send_conq_report = 1;
+    }
   
     
     //== Finally, actions based on flow size in the queue
     table tb_per_flow_action {
         key = {
-            eg_md.snap_0_read_min_l2[26:10]: range; //scale down to 16 bits
-            eg_md.q_delay: range;
-            eg_md.random_bits: range;
-            hdr.ipv4.ecn : exact;
+            eg_md.snap_0_read_min_l2[26:10]: range      @name("snap_0"); //scale down to 16 bits
+            eg_md.q_delay: range                        @name("q_delay");
+            eg_md.random_bits: range                    @name("random_bits");
+            hdr.ipv4.ecn : exact                        @name("ecn");
         }
         actions = {
             conq_nop;
             drop;
             mark_ECN;
+            trigger_report;
         }
         default_action = conq_nop();
         // const entries = {  }
+    }
+
+    action generate_report_common() {
+        eg_intr_dprs_md.mirror_type = (bit<3>)FabricMirrorType_t.CONQ_REPORT;
+        eg_md.conq_mirror_md.setValid();
+        eg_md.conq_mirror_md.protocol = hdr.ipv4.protocol;
+        eg_md.conq_mirror_md.sip = hdr.ipv4.src;
+        eg_md.conq_mirror_md.dip = hdr.ipv4.dst;
+        // clone here
+    }
+
+    action generate_report_from_tcp() {
+        generate_report_common();
+        eg_md.conq_mirror_md.sport = hdr.tcp.sport;
+        eg_md.conq_mirror_md.dport = hdr.tcp.dport;
+    }
+
+    action generate_report_from_udp() {
+        generate_report_common();
+        eg_md.conq_mirror_md.sport = hdr.udp.sport;
+        eg_md.conq_mirror_md.dport = hdr.udp.dport;
+    }
+
+    action generate_report_from_unknown() {
+        generate_report_common();
+        eg_md.conq_mirror_md.sport = 0;
+        eg_md.conq_mirror_md.dport = 0;
+    }
+
+
+    table report_generator() {
+        key = {
+            hdr.tcp.isValid(): exact;
+            hdr.udp.isValid(): exact;
+        }
+        actions = {
+            generate_report_from_inner;
+            generate_report_from_outer;
+            generate_report_from_unknown;
+        }
+        const entries = {
+            (1, 0): generate_report_from_tcp();
+            (0, 1): generate_report_from_udp();
+            (0, 0): generate_report_from_unknown();
+        }
+
+    }
+
+    @hidden
+    action set_mirror_session_id(MirrorId_t sid) {
+        eg_md.conq_mirror_md.mirror_session_id = sid;
+    }
+
+    @hidden
+    table mirror_session_id {
+        key = {
+            eg_intr_md.egress_port: ternary;
+        }
+        actions = {
+            set_mirror_session_id;
+        }
+        size = 4;
+        const entries = {
+            PIPE_0_PORTS_MATCH: set_mirror_session_id(CONQUEST_MIRROR_SESS_PIPE_0);
+            PIPE_1_PORTS_MATCH: set_mirror_session_id(CONQUEST_MIRROR_SESS_PIPE_1);
+            PIPE_2_PORTS_MATCH: set_mirror_session_id(CONQUEST_MIRROR_SESS_PIPE_2);
+            PIPE_3_PORTS_MATCH: set_mirror_session_id(CONQUEST_MIRROR_SESS_PIPE_3);
+        }
     }
     
     apply {
@@ -697,6 +769,10 @@ control ConQuestEgress(
         
         // With flow size in queue, can check for bursty flow and add AQM.
         tb_per_flow_action.apply();
+        if (eg_md.send_conq_report) {
+            report_generator.apply();
+            mirror_session_id.apply();
+        }
     }
 }
 #endif // __CONQUEST__

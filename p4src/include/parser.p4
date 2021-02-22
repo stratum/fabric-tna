@@ -9,6 +9,9 @@
 #ifdef WITH_INT
 #include "control/int_mirror_parser.p4"
 #endif // WITH_INT
+#ifdef WITH_CONQUEST
+#include "control/conquest_mirror_parser.p4"
+#endif // WITH_CONQUEST
 
 parser FabricIngressParser (packet_in  packet,
     /* Fabric.p4 */
@@ -274,6 +277,9 @@ parser FabricEgressParser (packet_in packet,
 #ifdef WITH_INT
     IntReportMirrorParser() int_report_mirror_parser;
 #endif // WITH_INT
+#ifdef WITH_CONQUEST
+    ConqReportMirrorParser() conq_report_mirror_parser;
+#endif
 
     state start {
         packet.extract(eg_intr_md);
@@ -284,6 +290,9 @@ parser FabricEgressParser (packet_in packet,
 #ifdef WITH_INT
             (BridgedMdType_t.EGRESS_MIRROR, FabricMirrorType_t.INT_REPORT): parse_int_report_mirror;
 #endif // WITH_INT
+#ifdef WITH_CONQUEST
+            (BridgedMdType_t.EGRESS_MIRROR, FabricMirrorType_t.CONQ_REPORT): parse_conq_report_mirror;
+#endif // WITH_CONQUEST
             default: reject;
         }
     }
@@ -299,6 +308,13 @@ parser FabricEgressParser (packet_in packet,
         transition accept;
     }
 #endif // WITH_INT
+
+#ifdef WITH_CONQUEST
+    state parse_conq_report_mirror {
+        conq_report_mirror_parser.apply(packet, hdr, fabric_md, eg_intr_md);
+        transition accept;
+    }
+#endif // WITH_CONQUEST
 
     state check_ethernet {
         fake_ethernet_t tmp = packet.lookahead<fake_ethernet_t>();
@@ -451,6 +467,15 @@ control FabricEgressMirror(
                                                fabric_md.int_mirror_md);
         }
 #endif // WITH_INT
+#ifdef WITH_CONQUEST
+#ifdef WITH_INT
+        else
+#endif // WITH_INT
+        if (ig_intr_md_for_dprsr.mirror_type == (bit<3>)FabricMirrorType_t.CONQ_REPORT) {
+            mirror.emit<conq_mirror_metadata_t>(fabric_md.conq_mirror_md.mirror_session_id,
+                                               fabric_md.conq_mirror_md);
+        }
+#endif // WITH_CONQUEST
     }
 }
 
@@ -543,6 +568,9 @@ control FabricEgressDeparser(packet_out packet,
         packet.emit(hdr.inner_vlan_tag);
 #endif // WITH_XCONNECT || WITH_DOUBLE_VLAN_TERMINATION
         packet.emit(hdr.eth_type);
+#ifdef WITH_CONQUEST
+        packet.emit(hdr.conquest_report);
+#endif // WITH_CONQUEST
         packet.emit(hdr.mpls);
 #ifdef WITH_SPGW
         packet.emit(hdr.outer_ipv4);

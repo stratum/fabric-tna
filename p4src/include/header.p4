@@ -224,6 +224,24 @@ header int_mirror_metadata_t {
 #endif // WITH_SPGW
 }
 
+@pa_no_overlay("egress", "fabric_md.conq_mirror_md.bmd_type")
+@pa_no_overlay("egress", "fabric_md.conq_mirror_md.mirror_type")
+@pa_no_overlay("egress", "fabric_md.conq_mirror_md.mirror_session_id")
+header conq_mirror_metadata_t {
+    BridgedMdType_t       bmd_type;
+    @padding bit<5>       _pad0;
+    FabricMirrorType_t    mirror_type;
+    @padding bit<6>       _pad1;
+    MirrorId_t            mirror_session_id;
+    // 5-Tuple
+    bit<32>               flow_sip;
+    bit<32>               flow_dip;
+    bit<16>               flow_sport;
+    bit<16>               flow_dport;
+    bit<8>                flow_proto;
+}
+
+
 struct int_bridged_metadata_t {
     IntReportType_t report_type;
 }
@@ -302,50 +320,64 @@ struct fabric_egress_metadata_t {
 #ifdef WITH_INT
     int_mirror_metadata_t int_mirror_md;
 #endif // WITH_INT
+#ifdef WITH_CONQUEST
+    conq_mirror_metadata_t conq_mirror_md;
+#endif // WITH_CONQUEST
 
 
 
-//#ifdef WITH_CONQUEST
-        bit<8> num_snapshots_to_read;//result of division (delay/T), could be larger than H
+#ifdef WITH_CONQUEST
+    bit<1> send_conq_report;
+    bit<8> num_snapshots_to_read;//result of division (delay/T), could be larger than H
     bit<2> snap_epoch;
     bit<18> q_delay;
     
     bit<8> random_bits;
     
     bit<8> cyclic_index;
-        bit<8> hashed_index_row_0;
-        bit<8> hashed_index_row_1;
+    bit<8> hashed_index_row_0;
+    bit<8> hashed_index_row_1;
     
-            bit<8> snap_0_row_0_index;
-            bit<32> snap_0_row_0_read;
-            bit<8> snap_0_row_1_index;
-            bit<32> snap_0_row_1_read;
-            bit<8> snap_1_row_0_index;
-            bit<32> snap_1_row_0_read;
-            bit<8> snap_1_row_1_index;
-            bit<32> snap_1_row_1_read;
-            bit<8> snap_2_row_0_index;
-            bit<32> snap_2_row_0_read;
-            bit<8> snap_2_row_1_index;
-            bit<32> snap_2_row_1_read;
-            bit<8> snap_3_row_0_index;
-            bit<32> snap_3_row_0_read;
-            bit<8> snap_3_row_1_index;
-            bit<32> snap_3_row_1_read;
+    bit<8> snap_0_row_0_index;
+    bit<32> snap_0_row_0_read;
+    bit<8> snap_0_row_1_index;
+    bit<32> snap_0_row_1_read;
+    bit<8> snap_1_row_0_index;
+    bit<32> snap_1_row_0_read;
+    bit<8> snap_1_row_1_index;
+    bit<32> snap_1_row_1_read;
+    bit<8> snap_2_row_0_index;
+    bit<32> snap_2_row_0_read;
+    bit<8> snap_2_row_1_index;
+    bit<32> snap_2_row_1_read;
+    bit<8> snap_3_row_0_index;
+    bit<32> snap_3_row_0_read;
+    bit<8> snap_3_row_1_index;
+    bit<32> snap_3_row_1_read;
     
     
-        bit<32> snap_0_read_min_l0;
-        bit<32> snap_1_read_min_l0;
-        bit<32> snap_2_read_min_l0;
-        bit<32> snap_3_read_min_l0;
-  
-    
-            bit<32> snap_0_read_min_l1;
-            bit<32> snap_2_read_min_l1;
-  
-            bit<32> snap_0_read_min_l2;
-//#endif // WITH_CONQUEST
+    bit<32> snap_0_read_min_l0;
+    bit<32> snap_1_read_min_l0;
+    bit<32> snap_2_read_min_l0;
+    bit<32> snap_3_read_min_l0;
+
+
+    bit<32> snap_0_read_min_l1;
+    bit<32> snap_2_read_min_l1;
+
+    bit<32> snap_0_read_min_l2;
+#endif // WITH_CONQUEST
 }
+
+#ifdef WITH_CONQUEST
+header conquest_report_t {
+    bit<32> flow_sip;
+    bit<32> flow_dip;
+    bit<16> flow_sport;
+    bit<16> flow_dport;
+    bit<8>  protocol;
+}
+#endif //WITH_CONQUEST
 
 header fake_ethernet_t {
     @padding bit<48> _pad0;
@@ -361,6 +393,9 @@ struct parsed_headers_t {
     vlan_tag_t inner_vlan_tag;
 #endif // WITH_XCONNECT || WITH_DOUBLE_VLAN_TERMINATION
     eth_type_t eth_type;
+#ifdef WITH_CONQUEST
+    conquest_report_t conquest_report;
+#endif // WITH_CONQUEST
     mpls_t mpls;
     ipv4_t ipv4;
     ipv6_t ipv6;
