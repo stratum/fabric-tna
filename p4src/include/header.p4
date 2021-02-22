@@ -128,11 +128,11 @@ header gtpu_t {
     teid_t  teid;       /* tunnel endpoint id */
 }
 
-@flexible
+// TODO: Use @flexible annotation instead of add padding manually
+// See bridged_metadata_base_t
 struct spgw_bridged_metadata_t {
-    l4_port_t               inner_l4_sport;
-    l4_port_t               inner_l4_dport;
     bit<16>         ipv4_len_for_encap;
+    @padding bit<5> _pad0;
     bool            needs_gtpu_encap;
     bool            skip_spgw;
     bool            skip_egress_pdr_ctr;
@@ -228,9 +228,12 @@ header int_mirror_metadata_t {
 #endif // WITH_SPGW
 }
 
-@flexible
+// TODO: Use @flexible annotation instead of add padding manually
+// See bridged_metadata_base_t
 struct int_bridged_metadata_t {
+    @padding bit<6> _pad0;
     IntReportType_t report_type;
+    @padding bit<6> _pad1;
     MirrorId_t      mirror_session_id;
 }
 
@@ -240,17 +243,20 @@ struct int_metadata_t {
 }
 #endif // WITH_INT
 
-// Common metadata which is shared between
-// ingress and egress pipeline.
-@flexible
+// Common metadata which is shared between ingress and egress pipeline.
+// TODO: Currently using @flexible annotation causes the compiler stuck, uncomment
+// it when we got the answer from the Intel forum.
+// See: https://community.intel.com/t5/Intel-Connectivity-Research/Compiler-stuck-when-compiling-P4-code/m-p/1258087
+// @flexible
 struct bridged_metadata_base_t {
+    mpls_label_t            mpls_label;
+    @padding bit<11>         _pad0;
+    PortId_t                ig_port;
     bool                    is_multicast;
     fwd_type_t              fwd_type;
-    PortId_t                ig_port;
     vlan_id_t               vlan_id;
     // bit<3>                  vlan_pri;
     // bit<1>                  vlan_cfi;
-    mpls_label_t            mpls_label;
     bit<8>                  mpls_ttl;
     bit<48>                 ig_tstamp;
     bit<16>                 ip_eth_type;
@@ -259,6 +265,7 @@ struct bridged_metadata_base_t {
     l4_port_t               l4_dport;
     flow_hash_t             flow_hash;
 #ifdef WITH_DOUBLE_VLAN_TERMINATION
+    @padding bit<7>         _pad1;
     bool                    push_double_vlan;
     vlan_id_t               inner_vlan_id;
     // bit<3>                  inner_vlan_pri;
@@ -270,6 +277,8 @@ header bridged_metadata_t {
     BridgedMdType_t         bmd_type;
     bridged_metadata_base_t base;
 #ifdef WITH_SPGW
+    l4_port_t       inner_l4_sport;
+    l4_port_t       inner_l4_dport;
     spgw_bridged_metadata_t spgw;
 #endif // WITH_SPGW
 #ifdef WITH_INT
