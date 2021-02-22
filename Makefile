@@ -50,6 +50,10 @@ fabric-spgw-int:
 fabric-conquest:
 	@${p4-build} fabric-conquest "-DWITH_CONQUEST"
 
+fabric-conquest-all:
+	@${p4-build} fabric-conquest "-DWITH_CONQUEST -DWITH_INT -DWITH_SPGW"
+
+
 
 constants:
 	docker run -v $(curr_dir):/root -w /root --rm \
