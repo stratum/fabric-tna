@@ -50,8 +50,11 @@ fabric-spgw-int:
 fabric-conquest:
 	@${p4-build} fabric-conquest "-DWITH_CONQUEST"
 
+fabric-spgw-conquest:
+	@${p4-build} fabric-conquest "-DWITH_CONQUEST -DWITH_SPGW"
+
 fabric-conquest-all:
-	@${p4-build} fabric-conquest "-DWITH_CONQUEST -DWITH_INT -DWITH_SPGW"
+	@${p4-build} fabric-conquest "-DWITH_CONQUEST -DWITH_SPGW -DWITH_INT"
 
 
 
