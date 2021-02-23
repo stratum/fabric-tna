@@ -11,11 +11,11 @@
 control Forwarding (inout parsed_headers_t hdr,
                     inout fabric_ingress_metadata_t fabric_md) {
 
-#ifdef WITH_INT
     action int_table_miss(bit<8> drop_reason) {
+#ifdef WITH_INT
         fabric_md.int_mirror_md.drop_reason = drop_reason;
-    }
 #endif // WITH_INT
+    }
 
     @hidden
     action set_next_id(next_id_t next_id) {
@@ -42,17 +42,9 @@ control Forwarding (inout parsed_headers_t hdr,
         }
         actions = {
             set_next_id_bridging;
-#ifdef WITH_INT
             @defaultonly int_table_miss;
-#else
-            @defaultonly nop;
-#endif // WITH_INT
         }
-#ifdef WITH_INT
-        const default_action = int_table_miss(DROP_REASON_BRIDGING_MISS);
-#else
-        const default_action = nop();
-#endif // WITH_INT
+        const default_action = int_table_miss(IntDropReason_t.DROP_REASON_BRIDGING_MISS);
         counters = bridging_counter;
         size = BRIDGING_TABLE_SIZE;
     }
@@ -76,17 +68,9 @@ control Forwarding (inout parsed_headers_t hdr,
         }
         actions = {
             pop_mpls_and_next;
-#ifdef WITH_INT
             @defaultonly int_table_miss;
-#else
-            @defaultonly nop;
-#endif // WITH_INT
         }
-#ifdef WITH_INT
-        const default_action = int_table_miss(DROP_REASON_MPLS_MISS);
-#else
-        const default_action = nop();
-#endif // WITH_INT
+        const default_action = int_table_miss(IntDropReason_t.DROP_REASON_MPLS_MISS);
         counters = mpls_counter;
         size = MPLS_TABLE_SIZE;
     }
@@ -119,17 +103,9 @@ control Forwarding (inout parsed_headers_t hdr,
         actions = {
             set_next_id_routing_v4;
             nop_routing_v4;
-#ifdef WITH_INT
             @defaultonly int_table_miss;
-#else
-            @defaultonly nop;
-#endif // WITH_INT
         }
-#ifdef WITH_INT
-        const default_action = int_table_miss(DROP_REASON_ROUTING_V4_MISS);
-#else
-        default_action = nop();
-#endif // WITH_INT
+        const default_action = int_table_miss(IntDropReason_t.DROP_REASON_ROUTING_V4_MISS);
 #ifdef WITH_DEBUG
         counters = routing_v4_counter;
 #endif // WITH_DEBUG
@@ -156,17 +132,9 @@ control Forwarding (inout parsed_headers_t hdr,
         }
         actions = {
             set_next_id_routing_v6;
-#ifdef WITH_INT
             @defaultonly int_table_miss;
-#else
-            @defaultonly nop;
-#endif // WITH_INT
         }
-#ifdef WITH_INT
-        const default_action = int_table_miss(DROP_REASON_ROUTING_V6_MISS);
-#else
-        const default_action = nop();
-#endif // WITH_INT
+        const default_action = int_table_miss(IntDropReason_t.DROP_REASON_ROUTING_V6_MISS);
 #ifdef WITH_DEBUG
         counters = routing_v6_counter;
 #endif // WITH_DEBUG

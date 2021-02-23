@@ -2347,14 +2347,30 @@ class IntTest(IPv4UnicastTest):
         )
 
     def set_up_drop_report_flow(self):
+        # (IntReportType_t.LOCAL, 1, _, _, _) -> report_drop(switch_id)
         self.send_request_add_entry_to_action(
             "drop_report",
             [
                 self.Exact("int_report_type", stringify(INT_REPORT_TYPE_LOCAL, 1)),
-                self.Exact("with_drop_reason", stringify(1, 1)),
+                self.Ternary("drop", stringify(1, 1), stringify(1, 1)),
             ],
             "int_ingress.report_drop",
-            [("switch_id", stringify(1, 4))]
+            [("switch_id", stringify(1, 4))],
+            DEFAULT_PRIORITY
+        )
+        # (IntReportType_t.LOCAL, 0, 0, 0, 0) -> report_drop(switch_id)
+        self.send_request_add_entry_to_action(
+            "drop_report",
+            [
+                self.Exact("int_report_type", stringify(INT_REPORT_TYPE_LOCAL, 1)),
+                self.Ternary("drop", stringify(0, 1), stringify(1, 1)),
+                self.Ternary("egress_port", stringify(0, 2), stringify(0x1ff, 2)),
+                self.Ternary("is_multicast", stringify(0, 1), stringify(1, 1)),
+                self.Ternary("copy_to_cpu", stringify(0, 1), stringify(1, 1)),
+            ],
+            "int_ingress.report_drop",
+            [("switch_id", stringify(1, 4))],
+            DEFAULT_PRIORITY + 10
         )
 
     def build_int_local_report(

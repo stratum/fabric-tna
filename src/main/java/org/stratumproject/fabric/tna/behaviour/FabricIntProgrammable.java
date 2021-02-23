@@ -50,6 +50,7 @@ import org.onosproject.net.pi.runtime.PiActionParam;
 import org.onosproject.segmentrouting.config.SegmentRoutingDeviceConfig;
 import org.stratumproject.fabric.tna.PipeconfLoader;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -430,7 +431,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 deviceId, SegmentRoutingDeviceConfig.class);
         if (cfg == null) {
             log.warn("Missing SegmentRoutingDeviceConfig config for {}", deviceId);
-            return null;
+            return Collections.emptyList();
         }
         final PiActionParam switchIdParam = new PiActionParam(
                 P4InfoConstants.SWITCH_ID, cfg.nodeSidIPv4());
@@ -604,9 +605,12 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
             log.info("INT metadata rule added to {} [{}]", this.data().deviceId(), rule);
         });
 
-        final FlowRule intDropReportRule = buildIntDropReportRule();
-        flowRuleService.applyFlowRules(intDropReportRule);
-        log.info("INT drop report rule added to {} [{}]", this.data().deviceId(), intDropReportRule);
+        final List<FlowRule> intDropReportRules = buildIntDropReportRules();
+        intDropReportRules.forEach(rule -> {
+            flowRuleService.applyFlowRules(rule);
+            log.info("INT drop report rule added to {} [{}]", this.data().deviceId(), rule);
+        });
+
 
         // Reset the forwarding classifier table to make sure rules are update-to-date
         setUpFwdClassifierTable();
@@ -820,12 +824,12 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         );
     }
 
-    private FlowRule buildIntDropReportRule() {
+    private List<FlowRule> buildIntDropReportRules() {
         final SegmentRoutingDeviceConfig cfg = cfgService.getConfig(
                 deviceId, SegmentRoutingDeviceConfig.class);
         if (cfg == null) {
             log.warn("Missing SegmentRoutingDeviceConfig config for {}", deviceId);
-            return null;
+            return Collections.emptyList();
         }
         final PiActionParam switchIdParam = new PiActionParam(
                 P4InfoConstants.SWITCH_ID, cfg.nodeSidIPv4());
@@ -837,16 +841,23 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         final TrafficTreatment reportDropTreatment = DefaultTrafficTreatment.builder()
                 .piTableAction(reportDropAction)
                 .build();
-        final TrafficSelector reportDropSelector =
+        final List<FlowRule> result = Lists.newArrayList();
+
+        // (IntReportType_t.LOCAL, 1, _, _, _) -> report_drop(switch_id)
+        TrafficSelector reportDropSelector =
                 DefaultTrafficSelector.builder()
                         .matchPi(
-                                PiCriterion.builder().matchExact(
-                                        P4InfoConstants.HDR_INT_REPORT_TYPE,
-                                        INT_REPORT_TYPE_LOCAL).matchExact(
-                                        P4InfoConstants.HDR_WITH_DROP_REASON,
-                                        1).build())
+                                PiCriterion.builder()
+                                        .matchExact(
+                                                P4InfoConstants.HDR_INT_REPORT_TYPE,
+                                                INT_REPORT_TYPE_LOCAL)
+                                        .matchTernary(
+                                                P4InfoConstants.HDR_DROP,
+                                                1, 1)
+                                        .build()
+                        )
                         .build();
-        return DefaultFlowRule.builder()
+        result.add(DefaultFlowRule.builder()
                 .forDevice(deviceId)
                 .withSelector(reportDropSelector)
                 .withTreatment(reportDropTreatment)
@@ -854,6 +865,37 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 .forTable(P4InfoConstants.FABRIC_INGRESS_INT_INGRESS_DROP_REPORT)
                 .fromApp(appId)
                 .makePermanent()
-                .build();
+                .build());
+
+        // (IntReportType_t.LOCAL, 0, 0, 0, 0) -> report_drop(switch_id)
+        reportDropSelector =
+                DefaultTrafficSelector.builder()
+                        .matchPi(
+                                PiCriterion.builder()
+                                        .matchExact(
+                                                P4InfoConstants.HDR_INT_REPORT_TYPE,
+                                                INT_REPORT_TYPE_LOCAL)
+                                        .matchTernary(
+                                                P4InfoConstants.HDR_DROP,
+                                                0, 1)
+                                        .matchTernary(P4InfoConstants.HDR_EGRESS_PORT,
+                                                0, 0x1FF)
+                                        .matchTernary(P4InfoConstants.HDR_IS_MULTICAST,
+                                                0, 1)
+                                        .matchTernary(P4InfoConstants.HDR_COPY_TO_CPU,
+                                                0, 1)
+                                        .build()
+                        )
+                        .build();
+        result.add(DefaultFlowRule.builder()
+                .forDevice(deviceId)
+                .withSelector(reportDropSelector)
+                .withTreatment(reportDropTreatment)
+                .withPriority(DEFAULT_PRIORITY + 10)
+                .forTable(P4InfoConstants.FABRIC_INGRESS_INT_INGRESS_DROP_REPORT)
+                .fromApp(appId)
+                .makePermanent()
+                .build());
+        return result;
     }
 }

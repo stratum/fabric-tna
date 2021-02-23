@@ -304,7 +304,8 @@ public class FabricIntProgrammableTest {
                 buildFilterConfigFlow(LEAF_DEVICE_ID),
                 buildIntMetadataLocalRule(LEAF_DEVICE_ID),
                 buildIntMetadataDropRule(LEAF_DEVICE_ID),
-                buildIngressDropReportTableRule(LEAF_DEVICE_ID)
+                buildIngressDropReportTableRules(LEAF_DEVICE_ID).get(0),
+                buildIngressDropReportTableRules(LEAF_DEVICE_ID).get(1)
         );
 
         List<Capture<FlowRule>> captures = Lists.newArrayList();
@@ -421,7 +422,8 @@ public class FabricIntProgrammableTest {
                 buildFilterConfigFlow(SPINE_DEVICE_ID),
                 buildIntMetadataLocalRule(SPINE_DEVICE_ID),
                 buildIntMetadataDropRule(SPINE_DEVICE_ID),
-                buildIngressDropReportTableRule(SPINE_DEVICE_ID)
+                buildIngressDropReportTableRules(SPINE_DEVICE_ID).get(0),
+                buildIngressDropReportTableRules(SPINE_DEVICE_ID).get(1)
         );
 
         List<Capture<FlowRule>> captures = Lists.newArrayList();
@@ -974,7 +976,8 @@ public class FabricIntProgrammableTest {
                 .build();
     }
 
-    private FlowRule buildIngressDropReportTableRule(DeviceId deviceId) {
+    private List<FlowRule> buildIngressDropReportTableRules(DeviceId deviceId) {
+        final List<FlowRule> result = Lists.newArrayList();
         final PiActionParam switchIdParam = new PiActionParam(
                 P4InfoConstants.SWITCH_ID, NODE_SID_IPV4);
 
@@ -985,16 +988,19 @@ public class FabricIntProgrammableTest {
         final TrafficTreatment reportDropTreatment = DefaultTrafficTreatment.builder()
                 .piTableAction(reportDropAction)
                 .build();
-        final TrafficSelector reportDropSelector =
+        TrafficSelector reportDropSelector =
                 DefaultTrafficSelector.builder()
                         .matchPi(
-                                PiCriterion.builder().matchExact(
-                                        P4InfoConstants.HDR_INT_REPORT_TYPE,
-                                        INT_REPORT_TYPE_LOCAL).matchExact(
-                                        P4InfoConstants.HDR_WITH_DROP_REASON,
-                                        1).build())
+                                PiCriterion.builder()
+                                        .matchExact(
+                                                P4InfoConstants.HDR_INT_REPORT_TYPE,
+                                                INT_REPORT_TYPE_LOCAL)
+                                        .matchTernary(
+                                                P4InfoConstants.HDR_DROP,
+                                                1, 1)
+                                        .build())
                         .build();
-        return DefaultFlowRule.builder()
+        result.add(DefaultFlowRule.builder()
                 .forDevice(deviceId)
                 .withSelector(reportDropSelector)
                 .withTreatment(reportDropTreatment)
@@ -1002,7 +1008,35 @@ public class FabricIntProgrammableTest {
                 .forTable(P4InfoConstants.FABRIC_INGRESS_INT_INGRESS_DROP_REPORT)
                 .fromApp(APP_ID)
                 .makePermanent()
-                .build();
+                .build());
+        reportDropSelector =
+                DefaultTrafficSelector.builder()
+                        .matchPi(
+                                PiCriterion.builder()
+                                        .matchExact(
+                                                P4InfoConstants.HDR_INT_REPORT_TYPE,
+                                                INT_REPORT_TYPE_LOCAL)
+                                        .matchTernary(
+                                                P4InfoConstants.HDR_DROP,
+                                                0, 1)
+                                        .matchTernary(P4InfoConstants.HDR_EGRESS_PORT,
+                                                0, 0x1FF)
+                                        .matchTernary(P4InfoConstants.HDR_IS_MULTICAST,
+                                                0, 1)
+                                        .matchTernary(P4InfoConstants.HDR_COPY_TO_CPU,
+                                                0, 1)
+                                        .build())
+                        .build();
+        result.add(DefaultFlowRule.builder()
+                .forDevice(deviceId)
+                .withSelector(reportDropSelector)
+                .withTreatment(reportDropTreatment)
+                .withPriority(DEFAULT_PRIORITY + 10)
+                .forTable(P4InfoConstants.FABRIC_INGRESS_INT_INGRESS_DROP_REPORT)
+                .fromApp(APP_ID)
+                .makePermanent()
+                .build());
+        return result;
     }
 
     private void testDefaultRecirculateRules() {

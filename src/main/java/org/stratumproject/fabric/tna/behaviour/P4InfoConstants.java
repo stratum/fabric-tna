@@ -25,8 +25,13 @@ public final class P4InfoConstants {
     // Header field IDs
     public static final PiMatchFieldId HDR_BMD_TYPE =
             PiMatchFieldId.of("bmd_type");
+    public static final PiMatchFieldId HDR_COPY_TO_CPU =
+            PiMatchFieldId.of("copy_to_cpu");
+    public static final PiMatchFieldId HDR_DROP = PiMatchFieldId.of("drop");
     public static final PiMatchFieldId HDR_EG_PORT =
             PiMatchFieldId.of("eg_port");
+    public static final PiMatchFieldId HDR_EGRESS_PORT =
+            PiMatchFieldId.of("egress_port");
     public static final PiMatchFieldId HDR_ETH_DST =
             PiMatchFieldId.of("eth_dst");
     public static final PiMatchFieldId HDR_ETH_SRC =
@@ -60,6 +65,8 @@ public final class P4InfoConstants {
             PiMatchFieldId.of("ipv4_src");
     public static final PiMatchFieldId HDR_IPV6_DST =
             PiMatchFieldId.of("ipv6_dst");
+    public static final PiMatchFieldId HDR_IS_MULTICAST =
+            PiMatchFieldId.of("is_multicast");
     public static final PiMatchFieldId HDR_L4_DPORT =
             PiMatchFieldId.of("l4_dport");
     public static final PiMatchFieldId HDR_L4_SPORT =

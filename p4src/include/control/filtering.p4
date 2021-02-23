@@ -23,7 +23,7 @@ control Filtering (inout parsed_headers_t hdr,
         fabric_md.skip_forwarding = true;
         fabric_md.skip_next = true;
 #ifdef WITH_INT
-        fabric_md.int_mirror_md.drop_reason = DROP_REASON_PORT_VLAN_MAPPING_MISS;
+        fabric_md.int_mirror_md.drop_reason = IntDropReason_t.DROP_REASON_PORT_VLAN_MAPPING_MISS;
 #endif // WITH_INT
         ingress_port_vlan_counter.count();
     }

@@ -310,15 +310,13 @@ control EgressNextControl (inout parsed_headers_t hdr,
         eg_dprsr_md.drop_ctl = 1;
         egress_vlan_counter.count();
 #ifdef WITH_INT
-        fabric_md.int_mirror_md.drop_reason = DROP_REASON_EGRESS_NEXT_MISS;
+        fabric_md.int_mirror_md.drop_reason = IntDropReason_t.DROP_REASON_EGRESS_NEXT_MISS;
 #endif // WITH_INT
     }
 
     action keep_vlan_config() {
         // Do nothing to keep the VLAN config for the packet.
         // This is use for packets such as inner packet of an INT report.
-        // One reason to have a new action instead of using the "nop" is because we need
-        // to invoke "count" action of the direct counter.
         egress_vlan_counter.count();
     }
 

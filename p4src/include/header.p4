@@ -244,8 +244,8 @@ struct int_metadata_t {
 #endif // WITH_INT
 
 // Common metadata which is shared between ingress and egress pipeline.
-// TODO: Currently using @flexible annotation causes the compiler stuck, uncomment
-// it when we got the answer from the Intel forum.
+// TODO: Currently using @flexible annotation causes some issues with the compiler, uncomment
+// it when we get the answer from the Intel forum.
 // See: https://community.intel.com/t5/Intel-Connectivity-Research/Compiler-stuck-when-compiling-P4-code/m-p/1258087
 // @flexible
 struct bridged_metadata_base_t {

@@ -100,7 +100,7 @@ control DropReportFilter(
     // 1 digest did NOT change
     // 0 change detected
     @reduction_or_group("filter")
-    RegisterAction<bit<16>, flow_report_filter_index_t, bit<1>>(filter1) filter_get_and_set1 = {
+    RegisterAction<bit<16>, drop_report_filter_index_t, bit<1>>(filter1) filter_get_and_set1 = {
         void apply(inout bit<16> stored_digest, out bit<1> result) {
             result = stored_digest == digest ? 1w1 : 1w0;
             stored_digest = digest;
@@ -108,7 +108,7 @@ control DropReportFilter(
     };
 
     @reduction_or_group("filter")
-    RegisterAction<bit<16>, flow_report_filter_index_t, bit<1>>(filter2) filter_get_and_set2 = {
+    RegisterAction<bit<16>, drop_report_filter_index_t, bit<1>>(filter2) filter_get_and_set2 = {
         void apply(inout bit<16> stored_digest, out bit<1> result) {
             result = stored_digest == digest ? 1w1 : 1w0;
             stored_digest = digest;
@@ -191,14 +191,19 @@ control IntIngress (
     table drop_report {
         key = {
             fabric_md.bridged.int_bmd.report_type: exact @name("int_report_type");
-            fabric_md.int_mirror_md.drop_reason[7:7]: exact @name("with_drop_reason");
+            ig_dprsr_md.drop_ctl: ternary @name("drop");
+            ig_tm_md.ucast_egress_port: ternary @name("egress_port");
+            fabric_md.bridged.base.is_multicast: ternary @name("is_multicast");
+            ig_tm_md.copy_to_cpu: ternary @name("copy_to_cpu");
         }
         actions = {
             report_drop;
             @defaultonly nop;
         }
-        const size = 1;
-        // (IntReportType_t.LOCAL, 1) -> report_drop(switch_id)
+        const size = 2;
+        // (drop_ctl == 1 OR (egress_port == 0 AND is_multicast == 0 AND copy_to_cpu == 0))
+        // (IntReportType_t.LOCAL, 1, _, _, _) -> report_drop(switch_id)
+        // (IntReportType_t.LOCAL, 0, 0, 0, 0) -> report_drop(switch_id)
         const default_action = nop();
 #ifdef WITH_DEBUG
         counters = drop_report_counter;
@@ -276,7 +281,7 @@ control IntEgress (
     }
 
     @hidden
-    action add_report_fixed_header(mac_addr_t src_mac, mac_addr_t mon_mac,
+    action add_common_report_header(mac_addr_t src_mac, mac_addr_t mon_mac,
                                    ipv4_addr_t src_ip, ipv4_addr_t mon_ip,
                                    l4_port_t mon_port) {
         hdr.report_ethernet.setValid();
@@ -302,12 +307,21 @@ control IntEgress (
         hdr.report_fixed_header.ver = 0;
         hdr.report_fixed_header.rsvd = 0;
         hdr.report_fixed_header.seq_no = get_seq_number.execute(hdr.report_fixed_header.hw_id);
+        // Fix the ethertype, the reason we need to fix the ether type is because we
+        // may strip the MPLS header from the parser, and the ethertype will still be
+        // MPLS instead of real one.
+        hdr.eth_type.value = fabric_md.int_mirror_md.ip_eth_type;
+        // Remove the INT mirror metadata to prevent egress mirroring again.
+        eg_dprsr_md.mirror_type = (bit<3>)FabricMirrorType_t.INVALID;
+#ifdef WITH_DEBUG
+        report_counter.count();
+#endif // WITH_DEBUG
     }
 
     action do_local_report_encap(mac_addr_t src_mac, mac_addr_t mon_mac,
                                  ipv4_addr_t src_ip, ipv4_addr_t mon_ip,
                                  l4_port_t mon_port) {
-        add_report_fixed_header(src_mac, mon_mac, src_ip, mon_ip, mon_port);
+        add_common_report_header(src_mac, mon_mac, src_ip, mon_ip, mon_port);
         hdr.report_fixed_header.nproto = NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER;
         hdr.report_fixed_header.f = 1;
         // The INT mirror parser will initialize both local and drop report header and
@@ -323,15 +337,6 @@ control IntEgress (
                              - REPORT_MIRROR_HEADER_BYTES
                              - ETH_FCS_LEN
                              + eg_intr_md.pkt_length;
-        // Fix the ethertype, the reason we need to fix the ether type is because we
-        // may strip the MPLS header from the parser, and the ethertype will still be
-        // MPLS instead of real one.
-        hdr.eth_type.value = fabric_md.int_mirror_md.ip_eth_type;
-        // Remove the mirror type to prevent egress mirroring again.
-        eg_dprsr_md.mirror_type = (bit<3>)FabricMirrorType_t.INVALID;
-#ifdef WITH_DEBUG
-        report_counter.count();
-#endif // WITH_DEBUG
     }
 
     action do_local_report_encap_mpls(mac_addr_t src_mac, mac_addr_t mon_mac,
@@ -349,7 +354,7 @@ control IntEgress (
     action do_drop_report_encap(mac_addr_t src_mac, mac_addr_t mon_mac,
                                  ipv4_addr_t src_ip, ipv4_addr_t mon_ip,
                                  l4_port_t mon_port) {
-        add_report_fixed_header(src_mac, mon_mac, src_ip, mon_ip, mon_port);
+        add_common_report_header(src_mac, mon_mac, src_ip, mon_ip, mon_port);
         hdr.report_fixed_header.nproto = NPROTO_TELEMETRY_DROP_HEADER;
         hdr.report_fixed_header.d = 1;
         // The INT mirror parser will initialize both local and drop report header and
@@ -365,15 +370,6 @@ control IntEgress (
                              - REPORT_MIRROR_HEADER_BYTES
                              - ETH_FCS_LEN
                              + eg_intr_md.pkt_length;
-        // Fix the ethertype, the reason we need to fix the ether type is because we
-        // may strip the MPLS header from the parser, and the ethertype will still be
-        // MPLS instead of real one.
-        hdr.eth_type.value = fabric_md.int_mirror_md.ip_eth_type;
-        // Remove the INT mirror metadata to prevent egress mirroring again.
-        eg_dprsr_md.mirror_type = (bit<3>)FabricMirrorType_t.INVALID;
-#ifdef WITH_DEBUG
-        report_counter.count();
-#endif // WITH_DEBUG
     }
 
     action do_drop_report_encap_mpls(mac_addr_t src_mac, mac_addr_t mon_mac,

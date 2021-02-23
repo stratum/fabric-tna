@@ -39,7 +39,7 @@ control Acl (inout parsed_headers_t hdr,
         ig_intr_md_for_dprsr.drop_ctl = 1;
         fabric_md.skip_next = true;
 #ifdef WITH_INT
-        fabric_md.int_mirror_md.drop_reason = DROP_REASON_ACL_DENY;
+        fabric_md.int_mirror_md.drop_reason = IntDropReason_t.DROP_REASON_ACL_DENY;
 #endif // WITH_INT
         acl_counter.count();
     }
