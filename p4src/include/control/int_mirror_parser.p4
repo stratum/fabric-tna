@@ -41,7 +41,7 @@ parser IntReportMirrorParser (packet_in packet,
             NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER,
             0, // d
             0, // q
-            1, // f
+            0, // f
             0, // rsvd
             0, // hw_id, will set later
             0, // seq_no, will set later
