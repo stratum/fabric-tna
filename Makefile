@@ -51,10 +51,10 @@ fabric-conquest:
 	@${p4-build} fabric-conquest "-DWITH_CONQUEST"
 
 fabric-spgw-conquest:
-	@${p4-build} fabric-conquest "-DWITH_CONQUEST -DWITH_SPGW"
+	@${p4-build} fabric-spgw-conquest "-DWITH_CONQUEST -DWITH_SPGW"
 
 fabric-conquest-all:
-	@${p4-build} fabric-conquest "-DWITH_CONQUEST -DWITH_SPGW -DWITH_INT"
+	@${p4-build} fabric-conquest-all "-DWITH_CONQUEST -DWITH_SPGW -DWITH_INT"
 
 
 
