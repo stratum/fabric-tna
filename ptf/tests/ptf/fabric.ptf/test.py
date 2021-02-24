@@ -1798,14 +1798,13 @@ class FabricPacketOutLoopbackModeTest(FabricTest):
             self.doRunTest(pkt)
 
 
-@group("p4rt")
 class FabricOptimizedFieldDetectorTest(FabricTest):
     """Finds action paramters or header fields that were optimized out by the
     compiler"""
 
     # Returns a byte string encoded value fitting into bitwidth.
     def generateBytestring(self, bitwidth):
-        return stringify(1, (bitwidth + 7) / 8)
+        return stringify(1, (bitwidth + 7) // 8)
 
     # Since the test uses the same match key for tables with multiple actions,
     # each table entry has to be removed before testing the next.
@@ -1912,8 +1911,8 @@ class FabricOptimizedFieldDetectorTest(FabricTest):
                 )
             # Check for differences between expected and actual state.
             if write_entry != read_entry:
-                write_entry_s = string.split("%s" % write_entry, "\n")
-                read_entry_s = string.split("%s" % read_entry, "\n")
+                write_entry_s = str.split(str(write_entry), "\n")
+                read_entry_s = str.split(str(read_entry), "\n")
                 diff = ""
                 for line in difflib.unified_diff(
                     write_entry_s,
@@ -1931,12 +1930,13 @@ class FabricOptimizedFieldDetectorTest(FabricTest):
                 print(diff)
                 self.fail("Read does not match previous write!")
 
-    @tvsetup
     @autocleanup
     def doRunTest(self):
         for table in getattr(self.p4info, "tables"):
             self.handleTable(table)
 
     def runTest(self):
+        if self.generate_tv:
+            return
         print("")
         self.doRunTest()

@@ -40,8 +40,8 @@ fail to start or affect test results negatively.
    image that includes tofino-model:
 
    ```bash
-   export SDE_DOCKER_IMG=my-docker-repo/bf-sde:9.2.0-tm
-   ```
+    export SDE_DOCKER_IMG=my-docker-repo/bf-sde:9.3.1
+    ```
 
 3. Run PTF tests using the `run/tm/run` script:
 
@@ -75,7 +75,7 @@ Docker image for it, set the following env variable before running the PTF
 tests.
 
 ```bash
-export STRATUM_BF_DOCKER_FLAG="-v /path/to/my/stratum_bfrt:/usr/bin/stratum_bfrt"
+export STRATUM_DOCKER_FLAG="-v /path/to/my/stratum_bfrt:/usr/bin/stratum_bfrt"
 ```
 
 ## Migrating to Stratum Test Vectors

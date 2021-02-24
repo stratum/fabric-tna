@@ -128,7 +128,10 @@ header gtpu_t {
     teid_t  teid;       /* tunnel endpoint id */
 }
 
+@flexible
 struct spgw_bridged_metadata_t {
+    l4_port_t               inner_l4_sport;
+    l4_port_t               inner_l4_dport;
     bit<16>         ipv4_len_for_encap;
     bool            needs_gtpu_encap;
     bool            skip_spgw;
@@ -224,6 +227,7 @@ header int_mirror_metadata_t {
 #endif // WITH_SPGW
 }
 
+@flexible
 struct int_bridged_metadata_t {
     IntReportType_t report_type;
 }
@@ -232,8 +236,7 @@ struct int_bridged_metadata_t {
 // Common metadata which is shared between
 // ingress and egress pipeline.
 @flexible
-header bridged_metadata_t {
-    BridgedMdType_t         bmd_type;
+struct bridged_metadata_base_t {
     bool                    is_multicast;
     fwd_type_t              fwd_type;
     PortId_t                ig_port;
@@ -254,9 +257,12 @@ header bridged_metadata_t {
     // bit<3>                  inner_vlan_pri;
     // bit<1>                  inner_vlan_cfi;
 #endif // WITH_DOUBLE_VLAN_TERMINATION
+}
+
+header bridged_metadata_t {
+    BridgedMdType_t         bmd_type;
+    bridged_metadata_base_t base;
 #ifdef WITH_SPGW
-    l4_port_t               inner_l4_sport;
-    l4_port_t               inner_l4_dport;
     spgw_bridged_metadata_t spgw;
 #endif // WITH_SPGW
 #ifdef WITH_INT
@@ -290,8 +296,11 @@ header common_egress_metadata_t {
     FabricMirrorType_t    mirror_type;
 }
 
+// Mark "mpls_stripped" to no-overlay since it will share the same PHV with the "rsvd"
+// field in the INT fixed header.
 @flexible
 @pa_auto_init_metadata
+@pa_no_overlay("egress", "fabric_md.mpls_stripped")
 struct fabric_egress_metadata_t {
     bridged_metadata_t    bridged;
     PortId_t              cpu_port;
