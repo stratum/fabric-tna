@@ -172,8 +172,9 @@ INT_COLLECTOR_IPV4 = "192.168.99.254"
 INT_REPORT_TYPE_LOCAL = 1
 INT_REPORT_TYPE_DROP = 2
 
-INT_DROP_REASON_UNSET = 0
+INT_DROP_REASON_UNKNOWN = 0
 INT_DROP_REASON_ACL_DENY = 130
+INT_DROP_REASON_ROUTING_V4_MISS = 134
 INT_DROP_REASON_EGRESS_NEXT_MISS = 136
 
 PPPOE_CODE_SESSION_STAGE = 0x00
@@ -1119,6 +1120,7 @@ class IPv4UnicastTest(FabricTest):
         no_send=False,
         ig_port=None,
         eg_port=None,
+        install_routing_entry=True,
     ):
         """
         Execute an IPv4 unicast routing test.
@@ -1145,6 +1147,7 @@ class IPv4UnicastTest(FabricTest):
                outside this function
         :param no_send: if true insert table entries but do not send
             (or verify) packets
+        :param install_routing_entry: install entry to routing table
         """
         if IP not in pkt or Ether not in pkt:
             self.fail("Cannot do IPv4 test with packet that is not IP")
@@ -1193,7 +1196,8 @@ class IPv4UnicastTest(FabricTest):
             )
 
         # Routing entry.
-        self.add_forwarding_routing_v4_entry(dst_ipv4, prefix_len, next_id)
+        if install_routing_entry:
+            self.add_forwarding_routing_v4_entry(dst_ipv4, prefix_len, next_id)
 
         if not is_next_hop_spine:
             self.add_next_routing(next_id, eg_port, switch_mac, next_hop_mac)
@@ -2329,7 +2333,7 @@ class IntTest(IPv4UnicastTest):
             "int_metadata",
             [
                 self.Exact("int_report_type", stringify(INT_REPORT_TYPE_LOCAL, 1)),
-                self.Exact("with_drop_reason", stringify(0, 1)),
+                self.Exact("drop_ctl", stringify(0, 1)),
             ],
             "int_egress.report_local",
             [("switch_id", switch_id_)]
@@ -2340,37 +2344,38 @@ class IntTest(IPv4UnicastTest):
             "int_metadata",
             [
                 self.Exact("int_report_type", stringify(INT_REPORT_TYPE_LOCAL, 1)),
-                self.Exact("with_drop_reason", stringify(1, 1)),
+                self.Exact("drop_ctl", stringify(1, 1)),
             ],
             "int_egress.report_drop",
             [("switch_id", switch_id_)]
         )
 
     def set_up_drop_report_flow(self):
-        # (IntReportType_t.LOCAL, 1, _, _, _) -> report_drop(switch_id)
+        # (IntReportType_t.LOCAL, 1, _, _, 0) -> report_drop(switch_id)
         self.send_request_add_entry_to_action(
             "drop_report",
             [
                 self.Exact("int_report_type", stringify(INT_REPORT_TYPE_LOCAL, 1)),
-                self.Ternary("drop", stringify(1, 1), stringify(1, 1)),
+                self.Exact("drop_ctl", stringify(1, 1)),
+                self.Exact("copy_to_cpu", stringify(0, 1)),
             ],
             "int_ingress.report_drop",
             [("switch_id", stringify(1, 4))],
-            DEFAULT_PRIORITY
+            DEFAULT_PRIORITY,
         )
         # (IntReportType_t.LOCAL, 0, 0, 0, 0) -> report_drop(switch_id)
         self.send_request_add_entry_to_action(
             "drop_report",
             [
                 self.Exact("int_report_type", stringify(INT_REPORT_TYPE_LOCAL, 1)),
-                self.Ternary("drop", stringify(0, 1), stringify(1, 1)),
-                self.Ternary("egress_port", stringify(0, 2), stringify(0x1ff, 2)),
-                self.Ternary("is_multicast", stringify(0, 1), stringify(1, 1)),
-                self.Ternary("copy_to_cpu", stringify(0, 1), stringify(1, 1)),
+                self.Exact("drop_ctl", stringify(0, 1)),
+                self.Exact("copy_to_cpu", stringify(0, 1)),
+                self.Ternary("egress_port", stringify(0, 2), stringify(0x1FF, 2)),
+                self.Ternary("mcast_group_id", stringify(0, 2), stringify(0xFFFF, 2)),
             ],
             "int_ingress.report_drop",
             [("switch_id", stringify(1, 4))],
-            DEFAULT_PRIORITY + 10
+            DEFAULT_PRIORITY,
         )
 
     def build_int_local_report(
@@ -2643,7 +2648,7 @@ class IntTest(IPv4UnicastTest):
         expect_int_report,
         is_device_spine,
         send_report_to_spine,
-        drop_reason,
+        drop_reason=INT_DROP_REASON_ACL_DENY,
     ):
         """
         :param pkt: the input packet
@@ -2657,7 +2662,6 @@ class IntTest(IPv4UnicastTest):
         :param is_device_spine: the device is a spine device
         :param send_report_to_spine: if the report is to be forwarded
                to a spine (e.g., collector attached to another leaf)
-        :param drop_reason: the expected drop reason in the INT drop report
         """
         # Build expected inner pkt using the input one.
         int_inner_pkt = pkt.copy()
@@ -2690,6 +2694,12 @@ class IntTest(IPv4UnicastTest):
             send_report_to_spine,
         )
 
+        install_routing_entry = True
+        if drop_reason == INT_DROP_REASON_ACL_DENY:
+            self.add_forwarding_acl_drop_ingress_port(1)
+        elif drop_reason == INT_DROP_REASON_ROUTING_V4_MISS:
+            install_routing_entry = False
+
         # Set collector, report table, and mirror sessions
         self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine)
 
@@ -2705,6 +2715,7 @@ class IntTest(IPv4UnicastTest):
             ig_port=ig_port,
             eg_port=eg_port,
             verify_pkt=False,
+            install_routing_entry=install_routing_entry,
         )
 
         if expect_int_report:

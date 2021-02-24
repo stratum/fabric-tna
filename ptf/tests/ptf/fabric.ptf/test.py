@@ -1217,19 +1217,20 @@ class FabricIntIngressDropReportTest(IntTest):
         is_next_hop_spine,
         is_device_spine,
         send_report_to_spine,
+        drop_reason,
     ):
         self.set_up_flow_report_filter_config(
             hop_latency_mask=0xF0000000, timestamp_mask=0xFFFFFFFF
         )
-        self.add_forwarding_acl_drop_ingress_port(1)
         print(
             "Testing VLAN={}, pkt={}, is_next_hop_spine={}, "
-            "is_device_spine={}, send_report_to_spine={}...".format(
+            "is_device_spine={}, send_report_to_spine={}, drop_reason={}...".format(
                 vlan_conf,
                 pkt_type,
                 is_next_hop_spine,
                 is_device_spine,
                 send_report_to_spine,
+                drop_reason,
             )
         )
         # Change the IP destination to ensure we are using differnt
@@ -1246,34 +1247,36 @@ class FabricIntIngressDropReportTest(IntTest):
             tagged2=tagged[1],
             is_next_hop_spine=is_next_hop_spine,
             ig_port=self.port1,
-            eg_port=0, # packet will be dropped by the pipeline
+            eg_port=0,  # packet will be dropped by the pipeline
             expect_int_report=True,
             is_device_spine=is_device_spine,
             send_report_to_spine=send_report_to_spine,
-            drop_reason=INT_DROP_REASON_ACL_DENY,
+            drop_reason=drop_reason,
         )
 
     def runTest(self):
         print("")
-        for is_device_spine in [False, True]:
-            for vlan_conf, tagged in vlan_confs.items():
-                if is_device_spine and (tagged[0] or tagged[1]):
-                    continue
-                for is_next_hop_spine in [False, True]:
-                    if is_next_hop_spine and tagged[1]:
+        for drop_reason in [INT_DROP_REASON_ACL_DENY, INT_DROP_REASON_ROUTING_V4_MISS]:
+            for is_device_spine in [False, True]:
+                for vlan_conf, tagged in vlan_confs.items():
+                    if is_device_spine and (tagged[0] or tagged[1]):
                         continue
-                    for send_report_to_spine in [False, True]:
-                        if send_report_to_spine and tagged[1]:
+                    for is_next_hop_spine in [False, True]:
+                        if is_next_hop_spine and tagged[1]:
                             continue
-                        for pkt_type in ["udp", "tcp", "icmp"]:
-                            self.doRunTest(
-                                vlan_conf,
-                                tagged,
-                                pkt_type,
-                                is_next_hop_spine,
-                                is_device_spine,
-                                send_report_to_spine,
-                            )
+                        for send_report_to_spine in [False, True]:
+                            if send_report_to_spine and tagged[1]:
+                                continue
+                            for pkt_type in ["udp", "tcp", "icmp"]:
+                                self.doRunTest(
+                                    vlan_conf,
+                                    tagged,
+                                    pkt_type,
+                                    is_next_hop_spine,
+                                    is_device_spine,
+                                    send_report_to_spine,
+                                    drop_reason,
+                                )
 
 
 @group("int")
@@ -1474,7 +1477,6 @@ class FabricDropReportFilterTest(IntTest):
         self.set_up_flow_report_filter_config(
             hop_latency_mask=0xF0000000, timestamp_mask=0
         )
-        self.add_forwarding_acl_drop_ingress_port(1)
         print(
             "Testing VLAN={}, pkt={}, is_next_hop_spine={}...".format(
                 vlan_conf, pkt_type, is_next_hop_spine
@@ -1487,7 +1489,7 @@ class FabricDropReportFilterTest(IntTest):
             tagged2=tagged[1],
             is_next_hop_spine=is_next_hop_spine,
             ig_port=self.port1,
-            eg_port=0, # packet will be dropped by the pipeline
+            eg_port=0,  # packet will be dropped by the pipeline
             expect_int_report=expect_int_report,
             is_device_spine=False,
             send_report_to_spine=False,

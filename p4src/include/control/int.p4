@@ -191,18 +191,17 @@ control IntIngress (
     table drop_report {
         key = {
             fabric_md.bridged.int_bmd.report_type: exact @name("int_report_type");
-            ig_dprsr_md.drop_ctl: ternary @name("drop");
+            ig_dprsr_md.drop_ctl: exact @name("drop_ctl");
+            ig_tm_md.copy_to_cpu: exact @name("copy_to_cpu");
             ig_tm_md.ucast_egress_port: ternary @name("egress_port");
-            fabric_md.bridged.base.is_multicast: ternary @name("is_multicast");
-            ig_tm_md.copy_to_cpu: ternary @name("copy_to_cpu");
+            ig_tm_md.mcast_grp_a: ternary @name("mcast_group_id");
         }
         actions = {
             report_drop;
             @defaultonly nop;
         }
         const size = 2;
-        // (drop_ctl == 1 OR (egress_port == 0 AND is_multicast == 0 AND copy_to_cpu == 0))
-        // (IntReportType_t.LOCAL, 1, _, _, _) -> report_drop(switch_id)
+        // (IntReportType_t.LOCAL, 1, _, _, 0) -> report_drop(switch_id)
         // (IntReportType_t.LOCAL, 0, 0, 0, 0) -> report_drop(switch_id)
         const default_action = nop();
 #ifdef WITH_DEBUG
@@ -469,7 +468,7 @@ control IntEgress (
     table int_metadata {
         key = {
             fabric_md.bridged.int_bmd.report_type: exact @name("int_report_type");
-            fabric_md.int_mirror_md.drop_reason[7:7]: exact @name("with_drop_reason");
+            eg_dprsr_md.drop_ctl: exact @name("drop_ctl");
         }
         actions = {
             report_local;

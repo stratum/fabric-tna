@@ -368,17 +368,26 @@ control EgressNextControl (inout parsed_headers_t hdr,
             hdr.mpls.ttl = hdr.mpls.ttl - 1;
             if (hdr.mpls.ttl == 0) {
                 eg_dprsr_md.drop_ctl = 1;
+#ifdef WITH_INT
+                fabric_md.int_mirror_md.drop_reason = IntDropReason_t.DROP_REASON_MPLS_TTL_ZERO;
+#endif // WITH_INT
             }
         } else {
             if (hdr.ipv4.isValid() && fabric_md.bridged.base.fwd_type != FWD_BRIDGING) {
                 hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
                 if (hdr.ipv4.ttl == 0) {
                     eg_dprsr_md.drop_ctl = 1;
+#ifdef WITH_INT
+                    fabric_md.int_mirror_md.drop_reason = IntDropReason_t.DROP_REASON_IPV4_TTL_ZERO;
+#endif // WITH_INT
                 }
             } else if (hdr.ipv6.isValid() && fabric_md.bridged.base.fwd_type != FWD_BRIDGING) {
                 hdr.ipv6.hop_limit = hdr.ipv6.hop_limit - 1;
                 if (hdr.ipv6.hop_limit == 0) {
                     eg_dprsr_md.drop_ctl = 1;
+#ifdef WITH_INT
+                    fabric_md.int_mirror_md.drop_reason = IntDropReason_t.DROP_REASON_IPV6_HOP_LIMIT_ZERO;
+#endif // WITH_INT
                 }
             }
         }

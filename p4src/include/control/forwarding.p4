@@ -11,7 +11,7 @@
 control Forwarding (inout parsed_headers_t hdr,
                     inout fabric_ingress_metadata_t fabric_md) {
 
-    action int_table_miss(bit<8> drop_reason) {
+    action fwd_table_miss(bit<8> drop_reason) {
 #ifdef WITH_INT
         fabric_md.int_mirror_md.drop_reason = drop_reason;
 #endif // WITH_INT
@@ -42,9 +42,9 @@ control Forwarding (inout parsed_headers_t hdr,
         }
         actions = {
             set_next_id_bridging;
-            @defaultonly int_table_miss;
+            @defaultonly fwd_table_miss;
         }
-        const default_action = int_table_miss(IntDropReason_t.DROP_REASON_BRIDGING_MISS);
+        const default_action = fwd_table_miss(IntDropReason_t.DROP_REASON_BRIDGING_MISS);
         counters = bridging_counter;
         size = BRIDGING_TABLE_SIZE;
     }
@@ -68,9 +68,9 @@ control Forwarding (inout parsed_headers_t hdr,
         }
         actions = {
             pop_mpls_and_next;
-            @defaultonly int_table_miss;
+            @defaultonly fwd_table_miss;
         }
-        const default_action = int_table_miss(IntDropReason_t.DROP_REASON_MPLS_MISS);
+        const default_action = fwd_table_miss(IntDropReason_t.DROP_REASON_MPLS_MISS);
         counters = mpls_counter;
         size = MPLS_TABLE_SIZE;
     }
@@ -103,9 +103,9 @@ control Forwarding (inout parsed_headers_t hdr,
         actions = {
             set_next_id_routing_v4;
             nop_routing_v4;
-            @defaultonly int_table_miss;
+            @defaultonly fwd_table_miss;
         }
-        const default_action = int_table_miss(IntDropReason_t.DROP_REASON_ROUTING_V4_MISS);
+        const default_action = fwd_table_miss(IntDropReason_t.DROP_REASON_ROUTING_V4_MISS);
 #ifdef WITH_DEBUG
         counters = routing_v4_counter;
 #endif // WITH_DEBUG
@@ -132,9 +132,9 @@ control Forwarding (inout parsed_headers_t hdr,
         }
         actions = {
             set_next_id_routing_v6;
-            @defaultonly int_table_miss;
+            @defaultonly fwd_table_miss;
         }
-        const default_action = int_table_miss(IntDropReason_t.DROP_REASON_ROUTING_V6_MISS);
+        const default_action = fwd_table_miss(IntDropReason_t.DROP_REASON_ROUTING_V6_MISS);
 #ifdef WITH_DEBUG
         counters = routing_v6_counter;
 #endif // WITH_DEBUG

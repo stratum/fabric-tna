@@ -450,7 +450,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                                 PiCriterion.builder().matchExact(
                                         P4InfoConstants.HDR_INT_REPORT_TYPE,
                                         INT_REPORT_TYPE_LOCAL).matchExact(
-                                        P4InfoConstants.HDR_WITH_DROP_REASON,
+                                        P4InfoConstants.HDR_DROP_CTL,
                                         0).build())
                         .build();
         final FlowRule reportLocalFlow = DefaultFlowRule.builder()
@@ -477,7 +477,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                                 PiCriterion.builder().matchExact(
                                         P4InfoConstants.HDR_INT_REPORT_TYPE,
                                         INT_REPORT_TYPE_LOCAL).matchExact(
-                                        P4InfoConstants.HDR_WITH_DROP_REASON,
+                                        P4InfoConstants.HDR_DROP_CTL,
                                         1).build())
                         .build();
         final FlowRule reportDropFlow = DefaultFlowRule.builder()
@@ -843,7 +843,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 .build();
         final List<FlowRule> result = Lists.newArrayList();
 
-        // (IntReportType_t.LOCAL, 1, _, _, _) -> report_drop(switch_id)
+        // (IntReportType_t.LOCAL, 1, _, _, 0) -> report_drop(switch_id)
         TrafficSelector reportDropSelector =
                 DefaultTrafficSelector.builder()
                         .matchPi(
@@ -851,9 +851,11 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                                         .matchExact(
                                                 P4InfoConstants.HDR_INT_REPORT_TYPE,
                                                 INT_REPORT_TYPE_LOCAL)
-                                        .matchTernary(
-                                                P4InfoConstants.HDR_DROP,
-                                                1, 1)
+                                        .matchExact(
+                                                P4InfoConstants.HDR_DROP_CTL,
+                                                1)
+                                        .matchExact(P4InfoConstants.HDR_COPY_TO_CPU,
+                                                0)
                                         .build()
                         )
                         .build();
@@ -875,15 +877,13 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                                         .matchExact(
                                                 P4InfoConstants.HDR_INT_REPORT_TYPE,
                                                 INT_REPORT_TYPE_LOCAL)
-                                        .matchTernary(
-                                                P4InfoConstants.HDR_DROP,
-                                                0, 1)
+                                        .matchExact(
+                                                P4InfoConstants.HDR_DROP_CTL, 0)
                                         .matchTernary(P4InfoConstants.HDR_EGRESS_PORT,
                                                 0, 0x1FF)
-                                        .matchTernary(P4InfoConstants.HDR_IS_MULTICAST,
+                                        .matchTernary(P4InfoConstants.HDR_MCAST_GROUP_ID,
                                                 0, 1)
-                                        .matchTernary(P4InfoConstants.HDR_COPY_TO_CPU,
-                                                0, 1)
+                                        .matchExact(P4InfoConstants.HDR_COPY_TO_CPU, 0)
                                         .build()
                         )
                         .build();
@@ -891,7 +891,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 .forDevice(deviceId)
                 .withSelector(reportDropSelector)
                 .withTreatment(reportDropTreatment)
-                .withPriority(DEFAULT_PRIORITY + 10)
+                .withPriority(DEFAULT_PRIORITY)
                 .forTable(P4InfoConstants.FABRIC_INGRESS_INT_INGRESS_DROP_REPORT)
                 .fromApp(appId)
                 .makePermanent()

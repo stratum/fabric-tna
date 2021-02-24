@@ -928,7 +928,7 @@ public class FabricIntProgrammableTest {
                                 P4InfoConstants.HDR_INT_REPORT_TYPE,
                                 INT_REPORT_TYPE_LOCAL)
                                 .matchExact(
-                                        P4InfoConstants.HDR_WITH_DROP_REASON,
+                                        P4InfoConstants.HDR_DROP_CTL,
                                         0).build())
                         .build();
 
@@ -961,7 +961,7 @@ public class FabricIntProgrammableTest {
                         PiCriterion.builder().matchExact(
                                 P4InfoConstants.HDR_INT_REPORT_TYPE,
                                 INT_REPORT_TYPE_LOCAL).matchExact(
-                                P4InfoConstants.HDR_WITH_DROP_REASON,
+                                P4InfoConstants.HDR_DROP_CTL,
                                 1).build())
                         .build();
 
@@ -995,9 +995,11 @@ public class FabricIntProgrammableTest {
                                         .matchExact(
                                                 P4InfoConstants.HDR_INT_REPORT_TYPE,
                                                 INT_REPORT_TYPE_LOCAL)
-                                        .matchTernary(
-                                                P4InfoConstants.HDR_DROP,
-                                                1, 1)
+                                        .matchExact(
+                                                P4InfoConstants.HDR_DROP_CTL,
+                                                1)
+                                        .matchExact(P4InfoConstants.HDR_COPY_TO_CPU,
+                                                0)
                                         .build())
                         .build();
         result.add(DefaultFlowRule.builder()
@@ -1016,22 +1018,22 @@ public class FabricIntProgrammableTest {
                                         .matchExact(
                                                 P4InfoConstants.HDR_INT_REPORT_TYPE,
                                                 INT_REPORT_TYPE_LOCAL)
-                                        .matchTernary(
-                                                P4InfoConstants.HDR_DROP,
-                                                0, 1)
+                                        .matchExact(
+                                                P4InfoConstants.HDR_DROP_CTL,
+                                                0)
                                         .matchTernary(P4InfoConstants.HDR_EGRESS_PORT,
                                                 0, 0x1FF)
-                                        .matchTernary(P4InfoConstants.HDR_IS_MULTICAST,
+                                        .matchTernary(P4InfoConstants.HDR_MCAST_GROUP_ID,
                                                 0, 1)
-                                        .matchTernary(P4InfoConstants.HDR_COPY_TO_CPU,
-                                                0, 1)
+                                        .matchExact(P4InfoConstants.HDR_COPY_TO_CPU,
+                                                0)
                                         .build())
                         .build();
         result.add(DefaultFlowRule.builder()
                 .forDevice(deviceId)
                 .withSelector(reportDropSelector)
                 .withTreatment(reportDropTreatment)
-                .withPriority(DEFAULT_PRIORITY + 10)
+                .withPriority(DEFAULT_PRIORITY)
                 .forTable(P4InfoConstants.FABRIC_INGRESS_INT_INGRESS_DROP_REPORT)
                 .fromApp(APP_ID)
                 .makePermanent()

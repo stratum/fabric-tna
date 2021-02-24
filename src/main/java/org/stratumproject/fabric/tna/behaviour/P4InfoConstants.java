@@ -27,7 +27,8 @@ public final class P4InfoConstants {
             PiMatchFieldId.of("bmd_type");
     public static final PiMatchFieldId HDR_COPY_TO_CPU =
             PiMatchFieldId.of("copy_to_cpu");
-    public static final PiMatchFieldId HDR_DROP = PiMatchFieldId.of("drop");
+    public static final PiMatchFieldId HDR_DROP_CTL =
+            PiMatchFieldId.of("drop_ctl");
     public static final PiMatchFieldId HDR_EG_PORT =
             PiMatchFieldId.of("eg_port");
     public static final PiMatchFieldId HDR_EGRESS_PORT =
@@ -65,12 +66,12 @@ public final class P4InfoConstants {
             PiMatchFieldId.of("ipv4_src");
     public static final PiMatchFieldId HDR_IPV6_DST =
             PiMatchFieldId.of("ipv6_dst");
-    public static final PiMatchFieldId HDR_IS_MULTICAST =
-            PiMatchFieldId.of("is_multicast");
     public static final PiMatchFieldId HDR_L4_DPORT =
             PiMatchFieldId.of("l4_dport");
     public static final PiMatchFieldId HDR_L4_SPORT =
             PiMatchFieldId.of("l4_sport");
+    public static final PiMatchFieldId HDR_MCAST_GROUP_ID =
+            PiMatchFieldId.of("mcast_group_id");
     public static final PiMatchFieldId HDR_MIRROR_TYPE =
             PiMatchFieldId.of("mirror_type");
     public static final PiMatchFieldId HDR_MPLS_LABEL =
@@ -88,8 +89,6 @@ public final class P4InfoConstants {
             PiMatchFieldId.of("vlan_id");
     public static final PiMatchFieldId HDR_VLAN_IS_VALID =
             PiMatchFieldId.of("vlan_is_valid");
-    public static final PiMatchFieldId HDR_WITH_DROP_REASON =
-            PiMatchFieldId.of("with_drop_reason");
     // Table IDs
     public static final PiTableId FABRIC_EGRESS_EGRESS_NEXT_EGRESS_VLAN =
             PiTableId.of("FabricEgress.egress_next.egress_vlan");
