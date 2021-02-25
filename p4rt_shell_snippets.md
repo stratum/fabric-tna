@@ -131,7 +131,20 @@ all_te.read(lambda e: print(e))
 
 ### Simple ACL forwarding
 
+To forward packets bidirectionally between port `260` and `268.
+
 ```python
+# Configure ports as VLAN untagged by explicitly popping the default VLAN ID 4096 (0xFFE)
+te = table_entry['FabricEgress.egress_next.egress_vlan'](action='FabricEgress.egress_next.pop_vlan')
+te.match['vlan_id'] = '0xFFE'
+te.match['eg_port'] = '260'
+te.insert()
+te = table_entry['FabricEgress.egress_next.egress_vlan'](action='FabricEgress.egress_next.pop_vlan')
+te.match['vlan_id'] = '0xFFE'
+te.match['eg_port'] = '268'
+te.insert()
+
+# Insert ACL entries for bidirectional forwarding
 te = table_entry['FabricIngress.acl.acl'](action='FabricIngress.acl.set_output_port')
 te.match['ig_port'] = '260'
 te.priority = 10
