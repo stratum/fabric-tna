@@ -131,7 +131,7 @@ all_te.read(lambda e: print(e))
 
 ### Simple ACL forwarding
 
-To forward packets bidirectionally between port `260` and `268.
+To forward packets bidirectionally between port `260` and `268`:
 
 ```python
 # Configure ports as VLAN untagged by explicitly popping the default VLAN ID 4096 (0xFFE)
