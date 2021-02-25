@@ -17,6 +17,7 @@ control Next (inout parsed_headers_t hdr,
     @hidden
     action output(PortId_t port_num) {
         ig_intr_md_for_tm.ucast_egress_port = port_num;
+        fabric_md.egress_port_set = true;
     }
 
     @hidden

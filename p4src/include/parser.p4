@@ -28,6 +28,7 @@ parser FabricIngressParser (packet_in  packet,
         fabric_md.bridged.bmd_type = BridgedMdType_t.INGRESS_TO_EGRESS;
         fabric_md.bridged.base.ig_port = ig_intr_md.ingress_port;
         fabric_md.bridged.base.ig_tstamp = ig_intr_md.ingress_mac_tstamp;
+        fabric_md.egress_port_set = false;
 #ifdef WITH_INT
         fabric_md.int_mirror_md.drop_reason = IntDropReason_t.DROP_REASON_UNKNOWN;
 #endif // WITH_INT

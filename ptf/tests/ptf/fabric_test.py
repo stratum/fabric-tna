@@ -2370,7 +2370,7 @@ class IntTest(IPv4UnicastTest):
                 self.Exact("int_report_type", stringify(INT_REPORT_TYPE_LOCAL, 1)),
                 self.Exact("drop_ctl", stringify(0, 1)),
                 self.Exact("copy_to_cpu", stringify(0, 1)),
-                self.Ternary("next_id", stringify(0, 4), stringify(0xFFFFFFFF, 4)),
+                self.Ternary("egress_port_set", stringify(0, 1), stringify(1, 1)),
                 self.Ternary("mcast_group_id", stringify(0, 2), stringify(0xFFFF, 2)),
             ],
             "int_ingress.report_drop",

@@ -183,6 +183,7 @@ control IntIngress (
         fabric_md.int_mirror_md.eg_port = (bit<16>)ig_tm_md.ucast_egress_port;
         fabric_md.int_mirror_md.queue_id = (bit<8>)ig_tm_md.qid;
         fabric_md.int_mirror_md.flow_hash = fabric_md.bridged.base.flow_hash;
+        ig_dprsr_md.drop_ctl = 1;
 #ifdef WITH_DEBUG
         drop_report_counter.count();
 #endif // WITH_DEBUG
@@ -193,7 +194,7 @@ control IntIngress (
             fabric_md.bridged.int_bmd.report_type: exact @name("int_report_type");
             ig_dprsr_md.drop_ctl: exact @name("drop_ctl");
             ig_tm_md.copy_to_cpu: exact @name("copy_to_cpu");
-            fabric_md.next_id: ternary @name("next_id");
+            fabric_md.egress_port_set: ternary @name("egress_port_set");
             ig_tm_md.mcast_grp_a: ternary @name("mcast_group_id");
         }
         actions = {
@@ -201,7 +202,7 @@ control IntIngress (
             @defaultonly nop;
         }
         const size = 2;
-        // (IntReportType_t.LOCAL, 1, _, _, 0) -> report_drop(switch_id)
+        // (IntReportType_t.LOCAL, 1, 0, _, _) -> report_drop(switch_id)
         // (IntReportType_t.LOCAL, 0, 0, 0, 0) -> report_drop(switch_id)
         const default_action = nop();
 #ifdef WITH_DEBUG

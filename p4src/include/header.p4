@@ -297,6 +297,7 @@ struct fabric_ingress_metadata_t {
     bool                    skip_forwarding;
     bool                    skip_next;
     next_id_t               next_id;
+    bool                    egress_port_set;
 #ifdef WITH_SPGW
     bool                    inner_ipv4_checksum_err;
     spgw_ingress_metadata_t spgw;

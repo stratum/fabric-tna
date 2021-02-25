@@ -31,6 +31,8 @@ public final class P4InfoConstants {
             PiMatchFieldId.of("drop_ctl");
     public static final PiMatchFieldId HDR_EG_PORT =
             PiMatchFieldId.of("eg_port");
+    public static final PiMatchFieldId HDR_EGRESS_PORT_SET =
+            PiMatchFieldId.of("egress_port_set");
     public static final PiMatchFieldId HDR_ETH_DST =
             PiMatchFieldId.of("eth_dst");
     public static final PiMatchFieldId HDR_ETH_SRC =

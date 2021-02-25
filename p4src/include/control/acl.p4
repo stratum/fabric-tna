@@ -46,6 +46,7 @@ control Acl (inout parsed_headers_t hdr,
 
     action set_output_port(PortId_t port_num) {
         ig_intr_md_for_tm.ucast_egress_port = port_num;
+        fabric_md.egress_port_set = true;
         fabric_md.skip_next = true;
         acl_counter.count();
     }
