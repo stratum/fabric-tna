@@ -20,9 +20,9 @@
 #ifdef WITH_INT
 #include "include/control/int.p4"
 #endif
-//#ifdef WITH_CONQUEST
+#ifdef WITH_CONQUEST
 #include "include/control/conquest.p4"
-//#endif
+#endif
 
 
 control FabricIngress (
@@ -86,9 +86,9 @@ control FabricEgress (
 #ifdef WITH_INT
     IntEgress() int_egress;
 #endif // WITH_INT
-//#ifdef WITH_CONQUEST
+#ifdef WITH_CONQUEST
     ConQuestEgress() conquest_egress;
-//#endif // WITH_CONQUEST
+#endif // WITH_CONQUEST
 
     apply {
 #ifdef WITH_INT
@@ -115,9 +115,9 @@ control FabricEgress (
         spgw.apply(hdr, fabric_md);
 #endif // WITH_SPGW
 
-//#ifdef WITH_CONQUEST
+#ifdef WITH_CONQUEST
         conquest_egress.apply(hdr, fabric_md, eg_intr_md, eg_prsr_md, eg_dprsr_md, eg_oport_md);
-//#endif // WITH_CONQUEST
+#endif // WITH_CONQUEST
     }
 }
 

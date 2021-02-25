@@ -627,7 +627,7 @@ control ConQuestEgress(
             }
 
     action trigger_report() {
-        eg_md.send_conq_report = 1;
+        eg_md.send_conq_report = true;
     }
   
     
@@ -649,48 +649,48 @@ control ConQuestEgress(
         // const entries = {  }
     }
 
-    action generate_report_common() {
+    @hidden
+    action generate_report_common(bit<16> sport, bit<16> dport) {
         eg_intr_dprs_md.mirror_type = (bit<3>)FabricMirrorType_t.CONQ_REPORT;
         eg_md.conq_mirror_md.setValid();
-        eg_md.conq_mirror_md.protocol = hdr.ipv4.protocol;
-        eg_md.conq_mirror_md.sip = hdr.ipv4.src;
-        eg_md.conq_mirror_md.dip = hdr.ipv4.dst;
-        // clone here
+        eg_md.conq_mirror_md.flow_sip       = hdr.ipv4.src_addr;
+        eg_md.conq_mirror_md.flow_dip       = hdr.ipv4.dst_addr;
+        eg_md.conq_mirror_md.flow_sport     = sport;
+        eg_md.conq_mirror_md.flow_dport     = dport;
+        eg_md.conq_mirror_md.flow_protocol  = hdr.ipv4.protocol;
+        // clone here?
     }
 
+    @hidden
     action generate_report_from_tcp() {
-        generate_report_common();
-        eg_md.conq_mirror_md.sport = hdr.tcp.sport;
-        eg_md.conq_mirror_md.dport = hdr.tcp.dport;
+        generate_report_common(hdr.tcp.sport, hdr.tcp.dport);
     }
-
+    
+    @hidden
     action generate_report_from_udp() {
-        generate_report_common();
-        eg_md.conq_mirror_md.sport = hdr.udp.sport;
-        eg_md.conq_mirror_md.dport = hdr.udp.dport;
+        generate_report_common(hdr.udp.sport, hdr.udp.dport);
     }
 
-    action generate_report_from_unknown() {
-        generate_report_common();
-        eg_md.conq_mirror_md.sport = 0;
-        eg_md.conq_mirror_md.dport = 0;
+    @hidden
+    action generate_report_from_unknown_l4() {
+        generate_report_common(0, 0);
     }
 
-
-    table report_generator() {
+    @hidden
+    table report_generator {
         key = {
             hdr.tcp.isValid(): exact;
             hdr.udp.isValid(): exact;
         }
         actions = {
-            generate_report_from_inner;
-            generate_report_from_outer;
-            generate_report_from_unknown;
+            generate_report_from_tcp;
+            generate_report_from_udp;
+            generate_report_from_unknown_l4;
         }
         const entries = {
-            (1, 0): generate_report_from_tcp();
-            (0, 1): generate_report_from_udp();
-            (0, 0): generate_report_from_unknown();
+            (true,  false): generate_report_from_tcp();
+            (false, true): generate_report_from_udp();
+            (false, false): generate_report_from_unknown_l4();
         }
 
     }

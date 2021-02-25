@@ -224,6 +224,14 @@ header int_mirror_metadata_t {
 #endif // WITH_SPGW
 }
 
+
+struct int_bridged_metadata_t {
+    IntReportType_t report_type;
+}
+#endif // WITH_INT
+
+
+#ifdef WITH_CONQUEST
 @pa_no_overlay("egress", "fabric_md.conq_mirror_md.bmd_type")
 @pa_no_overlay("egress", "fabric_md.conq_mirror_md.mirror_type")
 @pa_no_overlay("egress", "fabric_md.conq_mirror_md.mirror_session_id")
@@ -238,14 +246,10 @@ header conq_mirror_metadata_t {
     bit<32>               flow_dip;
     bit<16>               flow_sport;
     bit<16>               flow_dport;
-    bit<8>                flow_proto;
+    bit<8>                flow_protocol;
 }
+#endif // WITH_CONQUEST
 
-
-struct int_bridged_metadata_t {
-    IntReportType_t report_type;
-}
-#endif // WITH_INT
 
 // Common metadata which is shared between
 // ingress and egress pipeline.
@@ -321,13 +325,9 @@ struct fabric_egress_metadata_t {
     int_mirror_metadata_t int_mirror_md;
 #endif // WITH_INT
 #ifdef WITH_CONQUEST
+    bool send_conq_report;
     conq_mirror_metadata_t conq_mirror_md;
-#endif // WITH_CONQUEST
 
-
-
-#ifdef WITH_CONQUEST
-    bit<1> send_conq_report;
     bit<8> num_snapshots_to_read;//result of division (delay/T), could be larger than H
     bit<2> snap_epoch;
     bit<18> q_delay;
@@ -375,7 +375,7 @@ header conquest_report_t {
     bit<32> flow_dip;
     bit<16> flow_sport;
     bit<16> flow_dport;
-    bit<8>  protocol;
+    bit<8>  flow_protocol;
 }
 #endif //WITH_CONQUEST
 
