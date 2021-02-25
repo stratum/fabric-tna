@@ -15,7 +15,7 @@ Clone the repository and navigate to it, then start a new shell:
 ```bash
 ./p4runtime-sh-docker \
     --grpc-addr <switch_ip:9339> --device-id 1 --election-id 0,1 \
-    --config fabric-tna/p4src/build/fabric-spgw-int/sde_9_2_0/p4info.txt,fabric-tna/p4src/build/fabric-spgw-int/sde_9_2_0/pipeline_config.pb.bin
+    --config fabric-tna/p4src/build/fabric-spgw-int/sde_9_3_1/p4info.txt,fabric-tna/p4src/build/fabric-spgw-int/sde_9_3_1/pipeline_config.pb.bin
 ```
 
 ## Snippets
