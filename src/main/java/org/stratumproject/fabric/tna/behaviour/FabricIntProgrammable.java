@@ -879,8 +879,8 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                                                 INT_REPORT_TYPE_LOCAL)
                                         .matchExact(
                                                 P4InfoConstants.HDR_DROP_CTL, 0)
-                                        .matchTernary(P4InfoConstants.HDR_EGRESS_PORT,
-                                                0, 0x1FF)
+                                        .matchTernary(P4InfoConstants.HDR_NEXT_ID,
+                                                0, 0xFFFFFFFF)
                                         .matchTernary(P4InfoConstants.HDR_MCAST_GROUP_ID,
                                                 0, 1)
                                         .matchExact(P4InfoConstants.HDR_COPY_TO_CPU, 0)

@@ -31,8 +31,6 @@ public final class P4InfoConstants {
             PiMatchFieldId.of("drop_ctl");
     public static final PiMatchFieldId HDR_EG_PORT =
             PiMatchFieldId.of("eg_port");
-    public static final PiMatchFieldId HDR_EGRESS_PORT =
-            PiMatchFieldId.of("egress_port");
     public static final PiMatchFieldId HDR_ETH_DST =
             PiMatchFieldId.of("eth_dst");
     public static final PiMatchFieldId HDR_ETH_SRC =
@@ -203,8 +201,8 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.filtering.permit_with_internal_vlan");
     public static final PiActionId FABRIC_INGRESS_FILTERING_SET_FORWARDING_TYPE =
             PiActionId.of("FabricIngress.filtering.set_forwarding_type");
-    public static final PiActionId FABRIC_INGRESS_FORWARDING_INT_TABLE_MISS =
-            PiActionId.of("FabricIngress.forwarding.int_table_miss");
+    public static final PiActionId FABRIC_INGRESS_FORWARDING_FWD_TABLE_MISS =
+            PiActionId.of("FabricIngress.forwarding.fwd_table_miss");
     public static final PiActionId FABRIC_INGRESS_FORWARDING_NOP_ROUTING_V4 =
             PiActionId.of("FabricIngress.forwarding.nop_routing_v4");
     public static final PiActionId FABRIC_INGRESS_FORWARDING_POP_MPLS_AND_NEXT =

@@ -193,7 +193,7 @@ control IntIngress (
             fabric_md.bridged.int_bmd.report_type: exact @name("int_report_type");
             ig_dprsr_md.drop_ctl: exact @name("drop_ctl");
             ig_tm_md.copy_to_cpu: exact @name("copy_to_cpu");
-            ig_tm_md.ucast_egress_port: ternary @name("egress_port");
+            fabric_md.next_id: ternary @name("next_id");
             ig_tm_md.mcast_grp_a: ternary @name("mcast_group_id");
         }
         actions = {
