@@ -15,7 +15,7 @@ Clone the repository and navigate to it, then start a new shell:
 ```bash
 ./p4runtime-sh-docker \
     --grpc-addr <switch_ip:9339> --device-id 1 --election-id 0,1 \
-    --config fabric-tna/p4src/build/fabric-spgw-int/sde_9_2_0/p4info.txt,fabric-tna/p4src/build/fabric-spgw-int/sde_9_2_0/pipeline_config.pb.bin
+    --config fabric-tna/p4src/build/fabric-spgw-int/sde_9_3_1/p4info.txt,fabric-tna/p4src/build/fabric-spgw-int/sde_9_3_1/pipeline_config.pb.bin
 ```
 
 ## Snippets
@@ -131,7 +131,20 @@ all_te.read(lambda e: print(e))
 
 ### Simple ACL forwarding
 
+To forward packets bidirectionally between port `260` and `268`:
+
 ```python
+# Configure ports as VLAN untagged by explicitly popping the default VLAN ID 4096 (0xFFE)
+te = table_entry['FabricEgress.egress_next.egress_vlan'](action='FabricEgress.egress_next.pop_vlan')
+te.match['vlan_id'] = '0xFFE'
+te.match['eg_port'] = '260'
+te.insert()
+te = table_entry['FabricEgress.egress_next.egress_vlan'](action='FabricEgress.egress_next.pop_vlan')
+te.match['vlan_id'] = '0xFFE'
+te.match['eg_port'] = '268'
+te.insert()
+
+# Insert ACL entries for bidirectional forwarding
 te = table_entry['FabricIngress.acl.acl'](action='FabricIngress.acl.set_output_port')
 te.match['ig_port'] = '260'
 te.priority = 10
