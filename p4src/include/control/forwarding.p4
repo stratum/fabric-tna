@@ -11,11 +11,11 @@
 control Forwarding (inout parsed_headers_t hdr,
                     inout fabric_ingress_metadata_t fabric_md) {
 
-    action fwd_table_miss(bit<8> drop_reason) {
 #ifdef WITH_INT
+    action set_int_drop_reason(bit<8> drop_reason) {
         fabric_md.int_mirror_md.drop_reason = drop_reason;
-#endif // WITH_INT
     }
+#endif // WITH_INT
 
     @hidden
     action set_next_id(next_id_t next_id) {
@@ -42,9 +42,17 @@ control Forwarding (inout parsed_headers_t hdr,
         }
         actions = {
             set_next_id_bridging;
-            @defaultonly fwd_table_miss;
+#ifdef WITH_INT
+            @defaultonly set_int_drop_reason;
+#else
+            @defaultonly nop;
+#endif // WITH_INT
         }
-        const default_action = fwd_table_miss(IntDropReason_t.DROP_REASON_BRIDGING_MISS);
+#ifdef WITH_INT
+        const default_action = set_int_drop_reason(IntDropReason_t.DROP_REASON_BRIDGING_MISS);
+#else
+        const default_action = nop();
+#endif // WITH_INT
         counters = bridging_counter;
         size = BRIDGING_TABLE_SIZE;
     }
@@ -68,9 +76,17 @@ control Forwarding (inout parsed_headers_t hdr,
         }
         actions = {
             pop_mpls_and_next;
-            @defaultonly fwd_table_miss;
+#ifdef WITH_INT
+            @defaultonly set_int_drop_reason;
+#else
+            @defaultonly nop;
+#endif // WITH_INT
         }
-        const default_action = fwd_table_miss(IntDropReason_t.DROP_REASON_MPLS_MISS);
+#ifdef WITH_INT
+        const default_action = set_int_drop_reason(IntDropReason_t.DROP_REASON_MPLS_MISS);
+#else
+        const default_action = nop();
+#endif // WITH_INT
         counters = mpls_counter;
         size = MPLS_TABLE_SIZE;
     }
@@ -103,9 +119,17 @@ control Forwarding (inout parsed_headers_t hdr,
         actions = {
             set_next_id_routing_v4;
             nop_routing_v4;
-            @defaultonly fwd_table_miss;
+#ifdef WITH_INT
+            @defaultonly set_int_drop_reason;
+#else
+            @defaultonly nop;
+#endif // WITH_INT
         }
-        default_action = fwd_table_miss(IntDropReason_t.DROP_REASON_ROUTING_V4_MISS);
+#ifdef WITH_INT
+        default_action = set_int_drop_reason(IntDropReason_t.DROP_REASON_ROUTING_V4_MISS);
+#else
+        default_action = nop();
+#endif // WITH_INT
 #ifdef WITH_DEBUG
         counters = routing_v4_counter;
 #endif // WITH_DEBUG
@@ -132,9 +156,17 @@ control Forwarding (inout parsed_headers_t hdr,
         }
         actions = {
             set_next_id_routing_v6;
-            @defaultonly fwd_table_miss;
+#ifdef WITH_INT
+            @defaultonly set_int_drop_reason;
+#else
+            @defaultonly nop;
+#endif // WITH_INT
         }
-        default_action = fwd_table_miss(IntDropReason_t.DROP_REASON_ROUTING_V6_MISS);
+#ifdef WITH_INT
+        default_action = set_int_drop_reason(IntDropReason_t.DROP_REASON_ROUTING_V6_MISS);
+#else
+        default_action = nop();
+#endif // WITH_INT
 #ifdef WITH_DEBUG
         counters = routing_v6_counter;
 #endif // WITH_DEBUG
