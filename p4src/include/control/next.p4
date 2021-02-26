@@ -315,7 +315,7 @@ control EgressNextControl (inout parsed_headers_t hdr,
 #endif // WITH_INT
     }
 
-    action keep_vlan_config() {
+    action keep_vlan() {
         // Do nothing to keep the VLAN config for the packet.
         // This is use for packets such as inner packet of an INT report.
         egress_vlan_counter.count();
@@ -329,7 +329,7 @@ control EgressNextControl (inout parsed_headers_t hdr,
         actions = {
             push_vlan;
             pop_vlan;
-            keep_vlan_config;
+            keep_vlan;
             @defaultonly drop;
         }
         const default_action = drop();
