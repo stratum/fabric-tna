@@ -220,7 +220,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                             .build();
 
             final PiAction keepVlanConfigAction = PiAction.builder()
-                    .withId(P4InfoConstants.FABRIC_EGRESS_EGRESS_NEXT_KEEP_VLAN_CONFIG)
+                    .withId(P4InfoConstants.FABRIC_EGRESS_EGRESS_NEXT_KEEP_VLAN)
                     .build();
             final TrafficTreatment egressVlanTreatment =
                     DefaultTrafficTreatment.builder()
@@ -258,15 +258,15 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         final SegmentRoutingDeviceConfig cfg = cfgService.getConfig(
                 deviceId, SegmentRoutingDeviceConfig.class);
         if (cfg == null) {
-            log.debug("Missing segment routing config for the device, will " +
-                    "set up the forwarding classifier table later");
+            log.warn("Missing segment routing config for {}, cannot " +
+                    "set up forwarding classifier table", deviceId);
             return;
         }
 
         MacAddress switchMac = cfg.routerMac();
         if (switchMac == null) {
-            log.debug("Missing router mac from the segment routing config " +
-                    "will configure the forwarding classifier table later");
+            log.warn("Missing router mac from the segment routing config of {} " +
+                    "cannot set up forwarding classifier table", deviceId);
             return;
         }
         sessionToPortMap.forEach((sessionId, port) -> {
@@ -846,18 +846,12 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         // (IntReportType_t.LOCAL, 1, _, _, 0) -> report_drop(switch_id)
         TrafficSelector reportDropSelector =
                 DefaultTrafficSelector.builder()
-                        .matchPi(
-                                PiCriterion.builder()
-                                        .matchExact(
-                                                P4InfoConstants.HDR_INT_REPORT_TYPE,
-                                                INT_REPORT_TYPE_LOCAL)
-                                        .matchExact(
-                                                P4InfoConstants.HDR_DROP_CTL,
-                                                1)
-                                        .matchExact(P4InfoConstants.HDR_COPY_TO_CPU,
-                                                0)
-                                        .build()
-                        )
+                        .matchPi(PiCriterion.builder()
+                                .matchExact(P4InfoConstants.HDR_INT_REPORT_TYPE,
+                                            INT_REPORT_TYPE_LOCAL)
+                                .matchExact(P4InfoConstants.HDR_DROP_CTL, 1)
+                                .matchExact(P4InfoConstants.HDR_COPY_TO_CPU, 0)
+                                .build())
                         .build();
         result.add(DefaultFlowRule.builder()
                 .forDevice(deviceId)
@@ -872,20 +866,14 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         // (IntReportType_t.LOCAL, 0, 0, 0, 0) -> report_drop(switch_id)
         reportDropSelector =
                 DefaultTrafficSelector.builder()
-                        .matchPi(
-                                PiCriterion.builder()
-                                        .matchExact(
-                                                P4InfoConstants.HDR_INT_REPORT_TYPE,
-                                                INT_REPORT_TYPE_LOCAL)
-                                        .matchExact(
-                                                P4InfoConstants.HDR_DROP_CTL, 0)
-                                        .matchTernary(P4InfoConstants.HDR_EGRESS_PORT_SET,
-                                                0, 1)
-                                        .matchTernary(P4InfoConstants.HDR_MCAST_GROUP_ID,
-                                                0, 1)
-                                        .matchExact(P4InfoConstants.HDR_COPY_TO_CPU, 0)
-                                        .build()
-                        )
+                        .matchPi(PiCriterion.builder()
+                                .matchExact(P4InfoConstants.HDR_INT_REPORT_TYPE,
+                                            INT_REPORT_TYPE_LOCAL)
+                                .matchExact(P4InfoConstants.HDR_DROP_CTL, 0)
+                                .matchTernary(P4InfoConstants.HDR_EGRESS_PORT_SET, 0, 1)
+                                .matchTernary(P4InfoConstants.HDR_MCAST_GROUP_ID, 0, 1)
+                                .matchExact(P4InfoConstants.HDR_COPY_TO_CPU, 0)
+                                .build())
                         .build();
         result.add(DefaultFlowRule.builder()
                 .forDevice(deviceId)

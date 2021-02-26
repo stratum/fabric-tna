@@ -498,7 +498,7 @@ class FabricTest(P4RuntimeTest):
         self.send_request_add_entry_to_action(
             "egress_next.egress_vlan",
             [self.Exact("vlan_id", vlan_id), self.Exact("eg_port", egress_port)],
-            "egress_next.keep_vlan_config",
+            "egress_next.keep_vlan",
             [],
         )
 
