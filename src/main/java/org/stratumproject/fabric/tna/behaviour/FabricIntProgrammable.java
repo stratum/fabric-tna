@@ -220,7 +220,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                             .build();
 
             final PiAction keepVlanConfigAction = PiAction.builder()
-                    .withId(P4InfoConstants.FABRIC_EGRESS_EGRESS_NEXT_KEEP_VLAN_CONFIG)
+                    .withId(P4InfoConstants.FABRIC_EGRESS_EGRESS_NEXT_KEEP_VLAN)
                     .build();
             final TrafficTreatment egressVlanTreatment =
                     DefaultTrafficTreatment.builder()
