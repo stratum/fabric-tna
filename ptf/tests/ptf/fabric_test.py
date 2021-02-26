@@ -2336,7 +2336,7 @@ class IntTest(IPv4UnicastTest):
                 self.Exact("drop_ctl", stringify(0, 1)),
             ],
             "int_egress.report_local",
-            [("switch_id", switch_id_)]
+            [("switch_id", switch_id_)],
         )
 
         # (IntReportType_t.LOCAL, 1) -> report_drop(switch_id)
@@ -2347,7 +2347,7 @@ class IntTest(IPv4UnicastTest):
                 self.Exact("drop_ctl", stringify(1, 1)),
             ],
             "int_egress.report_drop",
-            [("switch_id", switch_id_)]
+            [("switch_id", switch_id_)],
         )
 
     def set_up_drop_report_flow(self):
@@ -2571,8 +2571,18 @@ class IntTest(IPv4UnicastTest):
             self.set_keep_egress_vlan_config(port, DEFAULT_VLAN)
 
             # Forwarding classifiers for INT reports
-            self.set_forwarding_type(port, SWITCH_MAC, ethertype=ETH_TYPE_IPV4, fwd_type=FORWARDING_TYPE_UNICAST_IPV4)
-            self.set_forwarding_type(port, SWITCH_MAC, ethertype=ETH_TYPE_MPLS_UNICAST, fwd_type=FORWARDING_TYPE_MPLS)
+            self.set_forwarding_type(
+                port,
+                SWITCH_MAC,
+                ethertype=ETH_TYPE_IPV4,
+                fwd_type=FORWARDING_TYPE_UNICAST_IPV4,
+            )
+            self.set_forwarding_type(
+                port,
+                SWITCH_MAC,
+                ethertype=ETH_TYPE_MPLS_UNICAST,
+                fwd_type=FORWARDING_TYPE_MPLS,
+            )
 
     def runIntTest(
         self,
