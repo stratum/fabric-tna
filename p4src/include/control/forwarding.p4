@@ -105,7 +105,7 @@ control Forwarding (inout parsed_headers_t hdr,
             nop_routing_v4;
             @defaultonly fwd_table_miss;
         }
-        const default_action = fwd_table_miss(IntDropReason_t.DROP_REASON_ROUTING_V4_MISS);
+        default_action = fwd_table_miss(IntDropReason_t.DROP_REASON_ROUTING_V4_MISS);
 #ifdef WITH_DEBUG
         counters = routing_v4_counter;
 #endif // WITH_DEBUG
@@ -134,7 +134,7 @@ control Forwarding (inout parsed_headers_t hdr,
             set_next_id_routing_v6;
             @defaultonly fwd_table_miss;
         }
-        const default_action = fwd_table_miss(IntDropReason_t.DROP_REASON_ROUTING_V6_MISS);
+        default_action = fwd_table_miss(IntDropReason_t.DROP_REASON_ROUTING_V6_MISS);
 #ifdef WITH_DEBUG
         counters = routing_v6_counter;
 #endif // WITH_DEBUG
