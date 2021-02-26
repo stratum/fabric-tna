@@ -2173,34 +2173,33 @@ class ConquestTest(IPv4UnicastTest):
     CONQ_REPORT_MIRROR_IDS = [400, 401, 402, 403]
 
 
-    def set_up_report_mirrors(self, pipe_id, mirror_id, port):
-        for mirror_id in CONQ_REPORT_MIRROR_IDS:
+    def set_up_report_mirrors(self):
+        for mirror_id in self.CONQ_REPORT_MIRROR_IDS:
             self.add_clone_group(mirror_id, [self.cpu_port])
 
 
     def set_up_report_trigger(self):
 
-        table_name = "tb_per_flow_action"
-        action = "trigger_report"
+        for ecn in range(4):
+            # key bitwidths are 17, 18, 8, 2
+            match_keys = [
+                            self.Range("snap_0",        stringify(0, 3),  stringify(0x1ffff, 3)),
+                            self.Range("q_delay",       stringify(0, 3),  stringify(0x3ffff, 3)),
+                            #self.Range("random_bits",   stringify(0, 1),  stringify(0xff, 1)),
+                            self.Exact("ecn",           stringify(ecn, 1)),
+                        ]
 
-        match_keys = [
-                        self.Range("snap_0",        0,  2**16),
-                        self.Range("q_delay",       0,  2**18),
-                        self.Range("random_bits",   0,  2**8),
-                        self.Exact("ecn",           0,  2**2),
-                    ]
-        action_params = []
-
-        self.send_request_add_entry_to_action(
-                table_name,
-                match_keys,
-                action,
-                action_params)
+            self.send_request_add_entry_to_action(
+                    t_name      = "FabricEgress.conquest_egress.tb_per_flow_action",
+                    mk          = match_keys,
+                    a_name      = "FabricEgress.conquest_egress.trigger_report",
+                    params      = [],
+                    priority    = DEFAULT_PRIORITY)
 
 
     def runReportTriggerTest(self, pkt, tagged1, tagged2, is_next_hop_spine):
-        set_up_report_trigger()
-        set_up_report_mirrors()
+        self.set_up_report_trigger()
+        self.set_up_report_mirrors()
 
         dst_mac = HOST2_MAC
 
@@ -2226,7 +2225,10 @@ class ConquestTest(IPv4UnicastTest):
         )
 
         # try to get any packet-in message
-        self.get_packet_in()
+        print("Getting packet in")
+        pkt_in = self.get_packet_in()
+        print(pkt_in)
+        print("got packet in")
         # TODO: parse the packet-in and verify the conquest report header
 
 

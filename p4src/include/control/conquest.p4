@@ -634,9 +634,10 @@ control ConQuestEgress(
     //== Finally, actions based on flow size in the queue
     table tb_per_flow_action {
         key = {
-            eg_md.snap_0_read_min_l2[26:10]: range      @name("snap_0"); //scale down to 16 bits
+            // ranged matches on bit slices currently dont work wit stratum+bfrt
+            eg_md.snap_0_read_min_l2[26:10]: range @name("snap_0"); //scale down to 16 bits
             eg_md.q_delay: range                        @name("q_delay");
-            eg_md.random_bits: range                    @name("random_bits");
+            //eg_md.random_bits: range                    @name("random_bits");
             hdr.ipv4.ecn : exact                        @name("ecn");
         }
         actions = {

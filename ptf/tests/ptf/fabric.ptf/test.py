@@ -844,6 +844,11 @@ class FabricConquestTest(ConquestTest):
                 for is_next_hop_spine in [False, True]:
                     if is_next_hop_spine and tagged[1]:
                         continue
+                    print(
+                        "Testing VLAN={}, pkt={}, is_next_hop_spine={}...".format(
+                            vlan_conf, pkt_type, is_next_hop_spine
+                        )
+                    )
                     pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
                         eth_src=HOST1_MAC,
                         eth_dst=SWITCH_MAC,
@@ -851,9 +856,7 @@ class FabricConquestTest(ConquestTest):
                         ip_dst=UE_IPV4,
                         pktlen=MIN_PKT_LEN,
                     )
-                    self.doRunTest(
-                        pkt, tagged[0], tagged[1], is_next_hop_spine, tc_name=tc_name,
-                    )
+                    self.doRunTest(pkt, tagged[0], tagged[1], is_next_hop_spine)
 
 
 @group("spgw")
