@@ -17,6 +17,7 @@ control Next (inout parsed_headers_t hdr,
     @hidden
     action output(PortId_t port_num) {
         ig_intr_md_for_tm.ucast_egress_port = port_num;
+        fabric_md.egress_port_set = true;
     }
 
     @hidden
@@ -309,6 +310,15 @@ control EgressNextControl (inout parsed_headers_t hdr,
     action drop() {
         eg_dprsr_md.drop_ctl = 1;
         egress_vlan_counter.count();
+#ifdef WITH_INT
+        fabric_md.int_mirror_md.drop_reason = IntDropReason_t.DROP_REASON_EGRESS_NEXT_MISS;
+#endif // WITH_INT
+    }
+
+    action keep_vlan_config() {
+        // Do nothing to keep the VLAN config for the packet.
+        // This is use for packets such as inner packet of an INT report.
+        egress_vlan_counter.count();
     }
 
     table egress_vlan {
@@ -319,6 +329,7 @@ control EgressNextControl (inout parsed_headers_t hdr,
         actions = {
             push_vlan;
             pop_vlan;
+            keep_vlan_config;
             @defaultonly drop;
         }
         const default_action = drop();
@@ -358,17 +369,26 @@ control EgressNextControl (inout parsed_headers_t hdr,
             hdr.mpls.ttl = hdr.mpls.ttl - 1;
             if (hdr.mpls.ttl == 0) {
                 eg_dprsr_md.drop_ctl = 1;
+#ifdef WITH_INT
+                fabric_md.int_mirror_md.drop_reason = IntDropReason_t.DROP_REASON_MPLS_TTL_ZERO;
+#endif // WITH_INT
             }
         } else {
             if (hdr.ipv4.isValid() && fabric_md.bridged.base.fwd_type != FWD_BRIDGING) {
                 hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
                 if (hdr.ipv4.ttl == 0) {
                     eg_dprsr_md.drop_ctl = 1;
+#ifdef WITH_INT
+                    fabric_md.int_mirror_md.drop_reason = IntDropReason_t.DROP_REASON_IP_TTL_ZERO;
+#endif // WITH_INT
                 }
             } else if (hdr.ipv6.isValid() && fabric_md.bridged.base.fwd_type != FWD_BRIDGING) {
                 hdr.ipv6.hop_limit = hdr.ipv6.hop_limit - 1;
                 if (hdr.ipv6.hop_limit == 0) {
                     eg_dprsr_md.drop_ctl = 1;
+#ifdef WITH_INT
+                    fabric_md.int_mirror_md.drop_reason = IntDropReason_t.DROP_REASON_IP_TTL_ZERO;
+#endif // WITH_INT
                 }
             }
         }

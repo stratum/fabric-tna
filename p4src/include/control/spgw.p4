@@ -16,8 +16,8 @@ control DecapGtpu(inout parsed_headers_t            hdr,
         fabric_md.bridged.base.ip_proto    = hdr.inner_ipv4.protocol;
         fabric_md.ipv4_src            = hdr.inner_ipv4.src_addr;
         fabric_md.ipv4_dst            = hdr.inner_ipv4.dst_addr;
-        fabric_md.bridged.base.l4_sport    = fabric_md.bridged.spgw.inner_l4_sport;
-        fabric_md.bridged.base.l4_dport    = fabric_md.bridged.spgw.inner_l4_dport;
+        fabric_md.bridged.base.l4_sport    = fabric_md.bridged.inner_l4_sport;
+        fabric_md.bridged.base.l4_dport    = fabric_md.bridged.inner_l4_dport;
         // Move GTPU and inner L3 headers out
         hdr.ipv4 = hdr.inner_ipv4;
         hdr.inner_ipv4.setInvalid();
