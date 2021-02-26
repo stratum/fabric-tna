@@ -791,18 +791,14 @@ class FabricTest(P4RuntimeTest):
                 )
         self.add_next_hashed_group_action(next_id, grp_id, actions)
 
-    def add_next_mpls_routing(self, next_id, egress_port, smac, dmac, label):
-        egress_port_ = stringify(egress_port, 2)
-        smac_ = mac_to_binary(smac)
-        dmac_ = mac_to_binary(dmac)
+    def add_next_mpls(self, next_id, label):
+        next_id_ = stringify(next_id, 4)
         label_ = stringify(label, 3)
-        self.add_next_hashed_indirect_action(
-            next_id,
-            "next.mpls_routing_hashed",
+        self.send_request_add_entry_to_action(
+            "next.mpls_table",
+            [self.Exact("next_id", next_id_)],
+            "next.set_mpls_label",
             [
-                ("port_num", egress_port_),
-                ("smac", smac_),
-                ("dmac", dmac_),
                 ("label", label_),
             ],
         )
@@ -829,19 +825,22 @@ class FabricTest(P4RuntimeTest):
     def add_next_mpls_routing_group(self, next_id, grp_id, next_hops=None):
         actions = []
         if next_hops is not None:
-            for (egress_port, smac, dmac, label) in next_hops:
+            mpls_labels = list(map(lambda x: x[3], next_hops))
+            if len(set(mpls_labels)) > 1:
+                self.fail("More than one MPLS label passed to add_next_mpls_routing_group")
+            self.add_next_mpls(next_id, mpls_labels[0])
+            
+            for (egress_port, smac, dmac, _) in next_hops:
                 egress_port_ = stringify(egress_port, 2)
                 smac_ = mac_to_binary(smac)
                 dmac_ = mac_to_binary(dmac)
-                label_ = stringify(label, 3)
                 actions.append(
                     [
-                        "next.mpls_routing_hashed",
+                        "next.routing_hashed",
                         [
                             ("port_num", egress_port_),
                             ("smac", smac_),
                             ("dmac", dmac_),
-                            ("label", label_),
                         ],
                     ]
                 )

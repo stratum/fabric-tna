@@ -679,7 +679,8 @@ class FabricIPv4MPLSTest(FabricTest):
         )
         self.add_forwarding_routing_v4_entry(HOST2_IPV4, 24, 400)
         mpls_label = 0xABA
-        self.add_next_mpls_routing(400, self.port2, SWITCH_MAC, HOST2_MAC, mpls_label)
+        self.add_next_mpls(400, mpls_label)
+        self.add_next_routing(400, self.port2, SWITCH_MAC, HOST2_MAC)
         self.set_egress_vlan(self.port2, vlan_id, False)
 
         pkt_1to2 = testutils.simple_tcp_packet(

@@ -31,22 +31,34 @@ control Next (inout parsed_headers_t hdr,
     }
 
     @hidden
-    action set_mpls_label(mpls_label_t label) {
-        fabric_md.bridged.base.mpls_label = label;
-    }
-
-    @hidden
     action routing(PortId_t port_num, mac_addr_t smac, mac_addr_t dmac) {
         rewrite_smac(smac);
         rewrite_dmac(dmac);
         output(port_num);
     }
 
-    @hidden
-    action mpls_routing(PortId_t port_num, mac_addr_t smac, mac_addr_t dmac,
-                        mpls_label_t label) {
-        set_mpls_label(label);
-        routing(port_num, smac, dmac);
+    /*
+     * MPLS table.
+     * Set the MPLS label based on the next ID.
+     */
+    DirectCounter<bit<64>>(CounterType_t.PACKETS_AND_BYTES) mpls_counter;
+
+    action set_mpls_label(mpls_label_t label) {
+        fabric_md.bridged.base.mpls_label = label;
+        mpls_counter.count();
+    }
+
+    table mpls_table {
+        key = {
+            fabric_md.next_id: exact @name("next_id");
+        }
+        actions = {
+            set_mpls_label;
+            @defaultonly nop;
+        }
+        const default_action = nop();
+        counters = mpls_counter;
+        size = MPLS_TABLE_SIZE;
     }
 
     /*
@@ -134,12 +146,6 @@ control Next (inout parsed_headers_t hdr,
         simple_counter.count();
     }
 
-    action mpls_routing_simple(PortId_t port_num, mac_addr_t smac, mac_addr_t dmac,
-                               mpls_label_t label) {
-        mpls_routing(port_num, smac, dmac, label);
-        simple_counter.count();
-    }
-
     table simple {
         key = {
             fabric_md.next_id: exact @name("next_id");
@@ -147,7 +153,6 @@ control Next (inout parsed_headers_t hdr,
         actions = {
             output_simple;
             routing_simple;
-            mpls_routing_simple;
             @defaultonly nop;
         }
         const default_action = nop();
@@ -181,12 +186,6 @@ control Next (inout parsed_headers_t hdr,
         hashed_counter.count();
     }
 
-    action mpls_routing_hashed(PortId_t port_num, mac_addr_t smac, mac_addr_t dmac,
-                               mpls_label_t label) {
-        mpls_routing(port_num, smac, dmac, label);
-        hashed_counter.count();
-    }
-
     table hashed {
         key = {
             fabric_md.next_id           : exact @name("next_id");
@@ -195,7 +194,6 @@ control Next (inout parsed_headers_t hdr,
         actions = {
             output_hashed;
             routing_hashed;
-            mpls_routing_hashed;
             @defaultonly nop;
         }
         implementation = hashed_selector;
@@ -235,6 +233,7 @@ control Next (inout parsed_headers_t hdr,
         // xconnect might set a new next_id.
         xconnect.apply();
 #endif // WITH_XCONNECT
+        mpls_table.apply();
 #ifdef WITH_SIMPLE_NEXT
         simple.apply();
 #endif // WITH_SIMPLE_NEXT
