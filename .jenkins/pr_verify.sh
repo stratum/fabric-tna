@@ -8,20 +8,19 @@
 #
 # This job should be executed for each pull request.
 
-# TODO (carmelo): consider using a declarative Jenkins pipeline definition so we
+# TODO (carmelo): consider using a declarative Jenkins pipeline so we
 # can parallelize some of the tasks.
 
 # exit on errors
 set -exu -o pipefail
 
-sdeVer="9.2.0"
-sdeBaseDockerImg=opennetworking/bf-sde:${sdeVer}
+source .env
 
-echo "Build all profiles using SDE ${sdeBaseDockerImg}..."
+echo "Build all profiles using SDE ${SDE_P4C_DOCKER_IMG}..."
 # Pull first to avoid pulling multiple times in parallel by the make jobs
-docker pull ${sdeBaseDockerImg}-p4c
+docker pull "${SDE_P4C_DOCKER_IMG}"
 # Jenkins uses 8 cores 15G VM
-make -j8 all SDE_DOCKER_IMG=${sdeBaseDockerImg}-p4c
+make -j8 all
 
 echo "Build and verify Java pipeconf"
 make constants pipeconf MVN_FLAGS="-Pci-verify -Pcoverage"
@@ -41,8 +40,6 @@ if [ -n "$modified" ]; then
 fi
 
 # Run PTF tests for all profiles we just built
-export STRATUM_BF_DOCKER_IMG=stratumproject/stratum-bfrt:20.12-${sdeVer}
-export SDE_DOCKER_IMG=${sdeBaseDockerImg}-tm
 for d in ./p4src/build/*/; do
   profile=$(basename "${d}")
 

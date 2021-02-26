@@ -14,7 +14,12 @@ parser IntReportMirrorParser (packet_in packet,
     state start {
         packet.extract(fabric_md.int_mirror_md);
         fabric_md.bridged.bmd_type = fabric_md.int_mirror_md.bmd_type;
-        fabric_md.bridged.vlan_id = DEFAULT_VLAN_ID;
+        fabric_md.bridged.base.vlan_id = DEFAULT_VLAN_ID;
+        fabric_md.bridged.base.mpls_label = 0; // do not set the MPLS label later in the egress next control block.
+#ifdef WITH_SPGW
+        fabric_md.bridged.spgw.skip_spgw = true; // skip spgw so we won't encap it later.
+#endif // WITH_SPGW
+
         hdr.report_eth_type.value = ETHERTYPE_IPV4;
         hdr.report_ipv4 = {
             4w4, // version
@@ -36,7 +41,7 @@ parser IntReportMirrorParser (packet_in packet,
             NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER,
             0, // d
             0, // q
-            1, // f
+            0, // f
             0, // rsvd
             0, // hw_id, will set later
             0, // seq_no, will set later
@@ -51,6 +56,10 @@ parser IntReportMirrorParser (packet_in packet,
         hdr.local_report_header = {
             fabric_md.int_mirror_md.queue_occupancy,
             fabric_md.int_mirror_md.eg_tstamp
+        };
+        hdr.drop_report_header = {
+            fabric_md.int_mirror_md.drop_reason,
+            0 // pad
         };
         transition parse_eth_hdr;
     }

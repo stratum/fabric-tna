@@ -38,11 +38,15 @@ control Acl (inout parsed_headers_t hdr,
     action drop() {
         ig_intr_md_for_dprsr.drop_ctl = 1;
         fabric_md.skip_next = true;
+#ifdef WITH_INT
+        fabric_md.int_mirror_md.drop_reason = IntDropReason_t.DROP_REASON_ACL_DENY;
+#endif // WITH_INT
         acl_counter.count();
     }
 
     action set_output_port(PortId_t port_num) {
         ig_intr_md_for_tm.ucast_egress_port = port_num;
+        fabric_md.egress_port_set = true;
         fabric_md.skip_next = true;
         acl_counter.count();
     }
@@ -53,18 +57,18 @@ control Acl (inout parsed_headers_t hdr,
 
     table acl {
         key = {
-            ig_intr_md.ingress_port    : ternary @name("ig_port");   // 9
-            fabric_md.bridged.ip_proto : ternary @name("ip_proto");  // 8
-            fabric_md.bridged.l4_sport : ternary @name("l4_sport");  // 16
-            fabric_md.bridged.l4_dport : ternary @name("l4_dport");  // 16
-            hdr.ethernet.dst_addr      : ternary @name("eth_dst");   // 48
-            hdr.ethernet.src_addr      : ternary @name("eth_src");   // 48
-            hdr.vlan_tag.vlan_id       : ternary @name("vlan_id");   // 12
-            hdr.eth_type.value         : ternary @name("eth_type");  // 16
-            fabric_md.ipv4_src         : ternary @name("ipv4_src");  // 32
-            fabric_md.ipv4_dst         : ternary @name("ipv4_dst");  // 32
-            hdr.icmp.icmp_type         : ternary @name("icmp_type"); // 8
-            hdr.icmp.icmp_code         : ternary @name("icmp_code"); // 8
+            ig_intr_md.ingress_port         : ternary @name("ig_port");   // 9
+            fabric_md.bridged.base.ip_proto : ternary @name("ip_proto");  // 8
+            fabric_md.bridged.base.l4_sport : ternary @name("l4_sport");  // 16
+            fabric_md.bridged.base.l4_dport : ternary @name("l4_dport");  // 16
+            hdr.ethernet.dst_addr           : ternary @name("eth_dst");   // 48
+            hdr.ethernet.src_addr           : ternary @name("eth_src");   // 48
+            hdr.vlan_tag.vlan_id            : ternary @name("vlan_id");   // 12
+            hdr.eth_type.value              : ternary @name("eth_type");  // 16
+            fabric_md.ipv4_src              : ternary @name("ipv4_src");  // 32
+            fabric_md.ipv4_dst              : ternary @name("ipv4_dst");  // 32
+            hdr.icmp.icmp_type              : ternary @name("icmp_type"); // 8
+            hdr.icmp.icmp_code              : ternary @name("icmp_code"); // 8
         }
 
         actions = {

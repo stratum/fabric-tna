@@ -63,6 +63,7 @@ INT_L45_HEAD = xnt.INT_L45_HEAD
 INT_L45_TAIL = xnt.INT_L45_TAIL
 INT_L45_REPORT_FIXED = xnt.INT_L45_REPORT_FIXED
 INT_L45_LOCAL_REPORT = xnt.INT_L45_LOCAL_REPORT
+INT_L45_DROP_REPORT = xnt.INT_L45_DROP_REPORT
 
 BROADCAST_MAC = ":".join(["ff"] * 6)
 MAC_MASK = ":".join(["ff"] * 6)
@@ -169,6 +170,12 @@ INT_COLLECTOR_MAC = "00:1e:67:d2:ee:ee"
 INT_COLLECTOR_IPV4 = "192.168.99.254"
 
 INT_REPORT_TYPE_LOCAL = 1
+INT_REPORT_TYPE_DROP = 2
+
+INT_DROP_REASON_UNKNOWN = 0
+INT_DROP_REASON_ACL_DENY = 80
+INT_DROP_REASON_ROUTING_V4_MISS = 29
+INT_DROP_REASON_EGRESS_NEXT_MISS = 130
 
 PPPOE_CODE_SESSION_STAGE = 0x00
 
@@ -191,14 +198,15 @@ MIRROR_TYPE_INT_REPORT = 1
 
 # Bridged metadata type
 BRIDGED_MD_TYPE_EGRESS_MIRROR = 2
+BRIDGED_MD_TYPE_INGRESS_MIRROR = 3
 
 # Size for different headers
 if testutils.test_param_get("profile") == "fabric-spgw-int":
-    BMD_BYTES = 51
+    BMD_BYTES = 52
 elif testutils.test_param_get("profile") == "fabric-spgw":
-    BMD_BYTES = 50
+    BMD_BYTES = 49
 elif testutils.test_param_get("profile") == "fabric-int":
-    BMD_BYTES = 28
+    BMD_BYTES = 29
 else:
     BMD_BYTES = 27  # fabric
 IP_HDR_BYTES = 20
@@ -484,6 +492,16 @@ class FabricTest(P4RuntimeTest):
             [],
         )
 
+    def set_keep_egress_vlan_config(self, egress_port, vlan_id):
+        egress_port = stringify(egress_port, 2)
+        vlan_id = stringify(vlan_id, 2)
+        self.send_request_add_entry_to_action(
+            "egress_next.egress_vlan",
+            [self.Exact("vlan_id", vlan_id), self.Exact("eg_port", egress_port)],
+            "egress_next.keep_vlan_config",
+            [],
+        )
+
     def set_forwarding_type(
         self,
         ingress_port,
@@ -495,6 +513,7 @@ class FabricTest(P4RuntimeTest):
         ingress_port_ = stringify(ingress_port, 2)
         eth_dstAddr_ = mac_to_binary(eth_dstAddr)
         eth_mask_ = mac_to_binary(eth_dstMask)
+        priority = DEFAULT_PRIORITY
         if ethertype == ETH_TYPE_IPV4:
             ethertype_ = stringify(0, 2)
             ethertype_mask_ = stringify(0, 2)
@@ -504,6 +523,7 @@ class FabricTest(P4RuntimeTest):
             ethertype_mask_ = stringify(0xFFFF, 2)
             # FIXME: this will work only for MPLS+IPv4 traffic
             ip_eth_type = stringify(ETH_TYPE_IPV4, 2)
+            priority += 10
         else:
             # TODO: what should we match on? I should never reach this point.
             return
@@ -520,7 +540,7 @@ class FabricTest(P4RuntimeTest):
             matches,
             "filtering.set_forwarding_type",
             [("fwd_type", fwd_type_)],
-            priority=DEFAULT_PRIORITY,
+            priority=priority,
         )
 
     def add_bridging_entry(
@@ -599,6 +619,17 @@ class FabricTest(P4RuntimeTest):
             "acl.acl",
             [self.Ternary("eth_type", eth_type_, eth_type_mask)],
             "acl.copy_to_cpu",
+            [],
+            DEFAULT_PRIORITY,
+        )
+
+    def add_forwarding_acl_drop_ingress_port(self, ingress_port):
+        ingress_port_ = stringify(ingress_port, 2)
+        ingress_port_mask_ = stringify(0x1FF, 2)
+        self.send_request_add_entry_to_action(
+            "acl.acl",
+            [self.Ternary("ig_port", ingress_port_, ingress_port_mask_)],
+            "acl.drop",
             [],
             DEFAULT_PRIORITY,
         )
@@ -1089,6 +1120,7 @@ class IPv4UnicastTest(FabricTest):
         no_send=False,
         ig_port=None,
         eg_port=None,
+        install_routing_entry=True,
     ):
         """
         Execute an IPv4 unicast routing test.
@@ -1115,6 +1147,7 @@ class IPv4UnicastTest(FabricTest):
                outside this function
         :param no_send: if true insert table entries but do not send
             (or verify) packets
+        :param install_routing_entry: install entry to routing table
         """
         if IP not in pkt or Ether not in pkt:
             self.fail("Cannot do IPv4 test with packet that is not IP")
@@ -1163,7 +1196,8 @@ class IPv4UnicastTest(FabricTest):
             )
 
         # Routing entry.
-        self.add_forwarding_routing_v4_entry(dst_ipv4, prefix_len, next_id)
+        if install_routing_entry:
+            self.add_forwarding_routing_v4_entry(dst_ipv4, prefix_len, next_id)
 
         if not is_next_hop_spine:
             self.add_next_routing(next_id, eg_port, switch_mac, next_hop_mac)
@@ -2242,10 +2276,25 @@ class IntTest(IPv4UnicastTest):
        packet to verify the output.
     """
 
-    def set_up_report_flow(
-        self, port, src_mac, mon_mac, src_ip, mon_ip, mon_port, mon_label=None
+    def set_up_report_flow_with_report_type_and_bmd_type(
+        self,
+        src_mac,
+        mon_mac,
+        src_ip,
+        mon_ip,
+        mon_port,
+        report_type,
+        bmd_type,
+        mon_label=None,
     ):
-        action = "do_report_encap"
+        action = ""
+        if report_type == INT_REPORT_TYPE_LOCAL:
+            action = "do_local_report_encap"
+        elif report_type == INT_REPORT_TYPE_DROP:
+            action = "do_drop_report_encap"
+        else:
+            self.fail("Invalid report type {}".format(report_type))
+
         action_params = [
             ("src_mac", mac_to_binary(src_mac)),
             ("mon_mac", mac_to_binary(mon_mac)),
@@ -2254,19 +2303,38 @@ class IntTest(IPv4UnicastTest):
             ("mon_port", stringify(mon_port, 2)),
         ]
         if mon_label:
-            action = "do_report_encap_mpls"
+            action = action + "_mpls"
             action_params.append(("mon_label", stringify(mon_label, 3)))
 
         self.send_request_add_entry_to_action(
             "report",
             [
-                self.Exact("bmd_type", stringify(BRIDGED_MD_TYPE_EGRESS_MIRROR, 1)),
+                self.Exact("bmd_type", stringify(bmd_type, 1)),
                 self.Exact("mirror_type", stringify(MIRROR_TYPE_INT_REPORT, 1)),
-                self.Exact("int_report_type", stringify(INT_REPORT_TYPE_LOCAL, 1)),
+                self.Exact("int_report_type", stringify(report_type, 1)),
             ],
             action,
             action_params,
         )
+
+    def set_up_report_flow(
+        self, src_mac, mon_mac, src_ip, mon_ip, mon_port, mon_label=None
+    ):
+        for report_type in [INT_REPORT_TYPE_LOCAL, INT_REPORT_TYPE_DROP]:
+            for bmd_type in [
+                BRIDGED_MD_TYPE_INGRESS_MIRROR,
+                BRIDGED_MD_TYPE_EGRESS_MIRROR,
+            ]:
+                self.set_up_report_flow_with_report_type_and_bmd_type(
+                    src_mac,
+                    mon_mac,
+                    src_ip,
+                    mon_ip,
+                    mon_port,
+                    report_type,
+                    bmd_type,
+                    mon_label,
+                )
 
     def set_up_report_mirror_flow(self, pipe_id, mirror_id, port):
         self.add_clone_group(mirror_id, [port])
@@ -2282,9 +2350,9 @@ class IntTest(IPv4UnicastTest):
 
     def set_up_flow_report_filter_config(self, hop_latency_mask, timestamp_mask):
         self.send_request_add_entry_to_action(
-            "FabricEgress.int_egress.flow_report_filter.config",
+            "FabricEgress.int_egress.config",
             [],
-            "FabricEgress.int_egress.flow_report_filter.set_config",
+            "FabricEgress.int_egress.set_config",
             [
                 ("hop_latency_mask", stringify(hop_latency_mask, 4)),
                 ("timestamp_mask", stringify(timestamp_mask, 6)),
@@ -2322,14 +2390,56 @@ class IntTest(IPv4UnicastTest):
             priority=DEFAULT_PRIORITY,
         )
 
-    def set_up_int_mirror_flow(self, switch_id, report_type=INT_REPORT_TYPE_LOCAL):
-        switch_id_ = stringify(switch_id, 4)
-        report_type_ = stringify(report_type, 1)
+    def set_up_int_mirror_flow(self):
+        switch_id_ = stringify(1, 4)
+        # (IntReportType_t.LOCAL, 0) -> report_local(switch_id)
         self.send_request_add_entry_to_action(
             "int_metadata",
-            [self.Exact("int_report_type", report_type_),],
-            "set_metadata",
+            [
+                self.Exact("int_report_type", stringify(INT_REPORT_TYPE_LOCAL, 1)),
+                self.Exact("drop_ctl", stringify(0, 1)),
+            ],
+            "int_egress.report_local",
             [("switch_id", switch_id_)],
+        )
+
+        # (IntReportType_t.LOCAL, 1) -> report_drop(switch_id)
+        self.send_request_add_entry_to_action(
+            "int_metadata",
+            [
+                self.Exact("int_report_type", stringify(INT_REPORT_TYPE_LOCAL, 1)),
+                self.Exact("drop_ctl", stringify(1, 1)),
+            ],
+            "int_egress.report_drop",
+            [("switch_id", switch_id_)],
+        )
+
+    def set_up_drop_report_flow(self):
+        # (IntReportType_t.LOCAL, 1, _, _, 0) -> report_drop(switch_id)
+        self.send_request_add_entry_to_action(
+            "drop_report",
+            [
+                self.Exact("int_report_type", stringify(INT_REPORT_TYPE_LOCAL, 1)),
+                self.Exact("drop_ctl", stringify(1, 1)),
+                self.Exact("copy_to_cpu", stringify(0, 1)),
+            ],
+            "int_ingress.report_drop",
+            [("switch_id", stringify(1, 4))],
+            DEFAULT_PRIORITY,
+        )
+        # (IntReportType_t.LOCAL, 0, 0, 0, 0) -> report_drop(switch_id)
+        self.send_request_add_entry_to_action(
+            "drop_report",
+            [
+                self.Exact("int_report_type", stringify(INT_REPORT_TYPE_LOCAL, 1)),
+                self.Exact("drop_ctl", stringify(0, 1)),
+                self.Exact("copy_to_cpu", stringify(0, 1)),
+                self.Ternary("egress_port_set", stringify(0, 1), stringify(1, 1)),
+                self.Ternary("mcast_group_id", stringify(0, 2), stringify(0xFFFF, 2)),
+            ],
+            "int_ingress.report_drop",
+            [("switch_id", stringify(1, 4))],
+            DEFAULT_PRIORITY,
         )
 
     def build_int_local_report(
@@ -2366,10 +2476,10 @@ class IntTest(IPv4UnicastTest):
             pkt_decrement_ttl(pkt)
 
         mask_pkt = Mask(pkt)
-        # IPv4 identifcation
-        mask_pkt.set_do_not_care_scapy(IP, "id")
+        # IPv4 identification
         # The reason we also ignore IP checksum is because the `id` field is
         # random.
+        mask_pkt.set_do_not_care_scapy(IP, "id")
         mask_pkt.set_do_not_care_scapy(IP, "chksum")
         mask_pkt.set_do_not_care_scapy(UDP, "chksum")
         mask_pkt.set_do_not_care_scapy(INT_L45_REPORT_FIXED, "ingress_tstamp")
@@ -2380,10 +2490,63 @@ class IntTest(IPv4UnicastTest):
 
         return mask_pkt
 
+    def build_int_drop_report(
+        self,
+        src_mac,
+        dst_mac,
+        src_ip,
+        dst_ip,
+        ig_port,
+        eg_port,
+        drop_reason,
+        sw_id,
+        inner_packet,
+        is_device_spine,
+        send_report_to_spine,
+    ):
+        # Note: scapy doesn't support dscp field, use tos.
+        pkt = (
+            Ether(src=src_mac, dst=dst_mac)
+            / IP(src=src_ip, dst=dst_ip, ttl=64, tos=4)
+            / UDP(sport=0, chksum=0)
+            / INT_L45_REPORT_FIXED(nproto=1, d=1, hw_id=0)
+            / INT_L45_DROP_REPORT(
+                switch_id=sw_id,
+                ingress_port_id=ig_port,
+                egress_port_id=eg_port,
+                drop_reason=drop_reason,
+                pad=0,
+            )
+            / inner_packet
+        )
+        if send_report_to_spine:
+            mpls_ttl = DEFAULT_MPLS_TTL
+            if is_device_spine:
+                # MPLS label swap
+                mpls_ttl -= 1
+            pkt = pkt_add_mpls(pkt, label=MPLS_LABEL_2, ttl=mpls_ttl)
+        else:
+            pkt_decrement_ttl(pkt)
+
+        mask_pkt = Mask(pkt)
+        # IPv4 identification
+        # The reason we also ignore IP checksum is because the `id` field is
+        # random.
+        mask_pkt.set_do_not_care_scapy(IP, "id")
+        mask_pkt.set_do_not_care_scapy(IP, "chksum")
+        mask_pkt.set_do_not_care_scapy(UDP, "chksum")
+        mask_pkt.set_do_not_care_scapy(INT_L45_REPORT_FIXED, "ingress_tstamp")
+        mask_pkt.set_do_not_care_scapy(INT_L45_REPORT_FIXED, "seq_no")
+        mask_pkt.set_do_not_care_scapy(INT_L45_DROP_REPORT, "queue_id")
+        mask_pkt.set_do_not_care_scapy(INT_L45_DROP_REPORT, "queue_occupancy")
+        mask_pkt.set_do_not_care_scapy(INT_L45_DROP_REPORT, "egress_tstamp")
+        return mask_pkt
+
     def set_up_report_table_entries(
         self, collector_port, is_device_spine, send_report_to_spine
     ):
         self.setup_port(collector_port, DEFAULT_VLAN)
+
         # Here we use next-id 101 since `runIPv4UnicastTest` will use 100 by
         # default
         next_id = 101
@@ -2448,9 +2611,8 @@ class IntTest(IPv4UnicastTest):
             sport = None
             dport = None
         self.set_up_watchlist_flow(pkt[IP].src, pkt[IP].dst, sport, dport)
-        self.set_up_int_mirror_flow(1)
+        self.set_up_int_mirror_flow()
         self.set_up_report_flow(
-            self.port3,
             SWITCH_MAC,
             SWITCH_MAC,
             SWITCH_IPV4,
@@ -2462,11 +2624,29 @@ class IntTest(IPv4UnicastTest):
             self.set_up_report_mirror_flow(
                 i, INT_REPORT_MIRROR_IDS[i], RECIRCULATE_PORTS[i]
             )
-
-        # Set up entries for report packet
         self.set_up_report_table_entries(
             self.port3, is_device_spine, send_report_to_spine
         )
+        self.set_up_drop_report_flow()
+        for port in RECIRCULATE_PORTS:
+            self.set_ingress_port_vlan(
+                port, False, DEFAULT_VLAN,
+            )
+            self.set_keep_egress_vlan_config(port, DEFAULT_VLAN)
+
+            # Forwarding classifiers for INT reports
+            self.set_forwarding_type(
+                port,
+                SWITCH_MAC,
+                ethertype=ETH_TYPE_IPV4,
+                fwd_type=FORWARDING_TYPE_UNICAST_IPV4,
+            )
+            self.set_forwarding_type(
+                port,
+                SWITCH_MAC,
+                ethertype=ETH_TYPE_MPLS_UNICAST,
+                fwd_type=FORWARDING_TYPE_MPLS,
+            )
 
     def runIntTest(
         self,
@@ -2526,6 +2706,195 @@ class IntTest(IPv4UnicastTest):
             ig_port=ig_port,
             eg_port=eg_port,
         )
+
+        if expect_int_report:
+            self.verify_packet(exp_int_report_pkt_masked, self.port3)
+        self.verify_no_other_packets()
+
+    def runIngressIntDropTest(
+        self,
+        pkt,
+        tagged1,
+        tagged2,
+        is_next_hop_spine,
+        ig_port,
+        eg_port,
+        expect_int_report,
+        is_device_spine,
+        send_report_to_spine,
+        drop_reason=INT_DROP_REASON_ACL_DENY,
+    ):
+        """
+        :param pkt: the input packet
+        :param tagged1: if the input port should expect VLAN tagged packets
+        :param tagged2: if the output port should expect VLAN tagged packets
+        :param is_next_hop_spine: whether the packet should be routed
+               to the spines using MPLS SR
+        :param ig_port: the ingress port of the IP uncast packet
+        :param eg_port: the egress port of the IP uncast packet
+        :param expect_int_report: expected to receive the INT report
+        :param is_device_spine: the device is a spine device
+        :param send_report_to_spine: if the report is to be forwarded
+               to a spine (e.g., collector attached to another leaf)
+        """
+        # Build expected inner pkt using the input one.
+        int_inner_pkt = pkt.copy()
+
+        # Here we are using the ingress mirroring, which won't modify the value
+        # of header fields.
+        # int_inner_pkt = pkt_route(int_inner_pkt, HOST2_MAC)
+        # if not is_next_hop_spine:
+        #     int_inner_pkt = pkt_decrement_ttl(int_inner_pkt)
+        # if tagged2 and Dot1Q not in int_inner_pkt:
+        #     int_inner_pkt = pkt_add_vlan(int_inner_pkt, vlan_vid=VLAN_ID_2)
+        if tagged1 and Dot1Q not in int_inner_pkt:
+            int_inner_pkt = pkt_add_vlan(int_inner_pkt, vlan_vid=VLAN_ID_1)
+        # Note that we won't add MPLS header to the expected inner
+        # packet since the pipeline will strip out the MPLS header
+        # from it before in the parser.
+
+        # The expected INT report packet
+        exp_int_report_pkt_masked = self.build_int_drop_report(
+            SWITCH_MAC,
+            INT_COLLECTOR_MAC,
+            SWITCH_IPV4,
+            INT_COLLECTOR_IPV4,
+            ig_port,
+            eg_port,
+            drop_reason,
+            SWITCH_ID,
+            int_inner_pkt,
+            is_device_spine,
+            send_report_to_spine,
+        )
+
+        install_routing_entry = True
+        if drop_reason == INT_DROP_REASON_ACL_DENY:
+            self.add_forwarding_acl_drop_ingress_port(1)
+        elif drop_reason == INT_DROP_REASON_ROUTING_V4_MISS:
+            install_routing_entry = False
+
+        # Set collector, report table, and mirror sessions
+        self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine)
+
+        # TODO: Use MPLS test instead of IPv4 test if device is spine.
+        self.runIPv4UnicastTest(
+            pkt=pkt,
+            next_hop_mac=HOST2_MAC,
+            tagged1=tagged1,
+            tagged2=tagged2,
+            is_next_hop_spine=is_next_hop_spine,
+            prefix_len=32,
+            with_another_pkt_later=True,
+            ig_port=ig_port,
+            eg_port=eg_port,
+            verify_pkt=False,
+            install_routing_entry=install_routing_entry,
+        )
+
+        if expect_int_report:
+            self.verify_packet(exp_int_report_pkt_masked, self.port3)
+        self.verify_no_other_packets()
+
+    def runEgressIntDropTest(
+        self,
+        pkt,
+        tagged1,
+        tagged2,
+        is_next_hop_spine,
+        ig_port,
+        eg_port,
+        expect_int_report,
+        is_device_spine,
+        send_report_to_spine,
+        drop_reason,
+    ):
+        """
+        :param pkt: the input packet
+        :param tagged1: if the input port should expect VLAN tagged packets
+        :param tagged2: if the output port should expect VLAN tagged packets
+        :param prefix_len: prefix length to use in the routing table
+        :param is_next_hop_spine: whether the packet should be routed
+               to the spines using MPLS SR
+        :param ig_port: the ingress port of the IP uncast packet
+        :param eg_port: the egress port of the IP uncast packet
+        :param expect_int_report: expected to receive the INT report
+        :param is_device_spine: the device is a spine device
+        :param send_report_to_spine: if the report is to be forwarded
+               to a spine (e.g., collector attached to another leaf)
+        """
+        # Build expected inner pkt using the input one.
+        int_inner_pkt = pkt.copy()
+
+        int_inner_pkt = pkt_route(int_inner_pkt, INT_COLLECTOR_MAC)
+        if not is_next_hop_spine:
+            int_inner_pkt = pkt_decrement_ttl(int_inner_pkt)
+
+        # The VLAN tag in INT report will not be changed since there is no table entry
+        # in the egress_vlan table.
+        if tagged1 and Dot1Q not in int_inner_pkt:
+            int_inner_pkt = pkt_add_vlan(int_inner_pkt, vlan_vid=VLAN_ID_1)
+        # Note that we won't add MPLS header to the expected inner
+        # packet since the pipeline will strip out the MPLS header
+        # from it before in the parser.
+
+        # The expected INT report packet
+        exp_int_report_pkt_masked = self.build_int_drop_report(
+            SWITCH_MAC,
+            INT_COLLECTOR_MAC,
+            SWITCH_IPV4,
+            INT_COLLECTOR_IPV4,
+            ig_port,
+            eg_port,
+            drop_reason,
+            SWITCH_ID,
+            int_inner_pkt,
+            is_device_spine,
+            send_report_to_spine,
+        )
+
+        # Set collector, report table, and mirror sessions
+        self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine)
+
+        # IPv4 Routing test
+
+        # If the input pkt has a VLAN tag, use that to configure tables.
+        if tagged1 and Dot1Q not in pkt:
+            pkt = pkt_add_vlan(pkt, vlan_vid=VLAN_ID_1)
+
+        next_id = 100
+        group_id = next_id
+        mpls_label = MPLS_LABEL_2
+        dst_ipv4 = pkt[IP].dst
+        switch_mac = pkt[Ether].dst
+
+        # Setup ports.
+        # Note that the "egress_vlan" table is not configured, so packet will be dropped
+        # by the egress_vlan table.
+        self.set_ingress_port_vlan(
+            ig_port, vlan_valid=tagged1, vlan_id=VLAN_ID_1,
+        )
+
+        # Forwarding type -> routing v4
+        self.set_forwarding_type(
+            ig_port,
+            switch_mac,
+            ethertype=ETH_TYPE_IPV4,
+            fwd_type=FORWARDING_TYPE_UNICAST_IPV4,
+        )
+
+        # Routing entry.
+        self.add_forwarding_routing_v4_entry(dst_ipv4, 32, next_id)
+
+        if not is_next_hop_spine:
+            self.add_next_routing(next_id, eg_port, switch_mac, INT_COLLECTOR_MAC)
+            self.add_next_vlan(next_id, VLAN_ID_2)
+        else:
+            params = [eg_port, switch_mac, INT_COLLECTOR_MAC, mpls_label]
+            self.add_next_mpls_routing_group(next_id, group_id, [params])
+            self.add_next_vlan(next_id, DEFAULT_VLAN)
+
+        self.send_packet(ig_port, pkt)
 
         if expect_int_report:
             self.verify_packet(exp_int_report_pkt_masked, self.port3)

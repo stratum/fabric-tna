@@ -128,8 +128,11 @@ header gtpu_t {
     teid_t  teid;       /* tunnel endpoint id */
 }
 
+// TODO: Use @flexible annotation instead of add padding manually
+// See bridged_metadata_base_t
 struct spgw_bridged_metadata_t {
     bit<16>         ipv4_len_for_encap;
+    @padding bit<5> _pad0;
     bool            needs_gtpu_encap;
     bool            skip_spgw;
     bool            skip_egress_pdr_ctr;
@@ -189,7 +192,6 @@ header local_report_header_t {
 // Here we set the mirror metadata with "no overlay" to prevent this.
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.bmd_type")
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.mirror_type")
-@pa_no_overlay("egress", "fabric_md.int_mirror_md.mirror_session_id")
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.switch_id")
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.ig_port")
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.eg_port")
@@ -197,7 +199,10 @@ header local_report_header_t {
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.queue_occupancy")
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.ig_tstamp")
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.eg_tstamp")
+@pa_no_overlay("egress", "fabric_md.int_mirror_md.drop_reason")
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.ip_eth_type")
+@pa_no_overlay("egress", "fabric_md.int_mirror_md.report_type")
+@pa_no_overlay("egress", "fabric_md.int_mirror_md.flow_hash")
 #ifdef WITH_SPGW
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.strip_gtpu")
 #endif // WITH_SPGW
@@ -205,8 +210,6 @@ header int_mirror_metadata_t {
     BridgedMdType_t       bmd_type;
     @padding bit<5>       _pad0;
     FabricMirrorType_t    mirror_type;
-    @padding bit<6>       _pad1;
-    MirrorId_t            mirror_session_id;
     bit<32>               switch_id;
     bit<16>               ig_port;
     bit<16>               eg_port;
@@ -218,15 +221,25 @@ header int_mirror_metadata_t {
     bit<16>               ip_eth_type;
     @padding bit<6>       _pad2;
     IntReportType_t       report_type;
+    flow_hash_t           flow_hash;
 #ifdef WITH_SPGW
     @padding bit<7>       _pad3;
     bit<1>                strip_gtpu;
 #endif // WITH_SPGW
 }
 
-
+// TODO: Use @flexible annotation instead of add padding manually
+// See bridged_metadata_base_t
 struct int_bridged_metadata_t {
+    @padding bit<6> _pad0;
     IntReportType_t report_type;
+    @padding bit<6> _pad1;
+    MirrorId_t      mirror_session_id;
+}
+
+struct int_metadata_t {
+    bit<32> hop_latency;
+    bit<48> timestamp;
 }
 #endif // WITH_INT
 
@@ -251,18 +264,20 @@ header conq_mirror_metadata_t {
 #endif // WITH_CONQUEST
 
 
-// Common metadata which is shared between
-// ingress and egress pipeline.
-@flexible
-header bridged_metadata_t {
-    BridgedMdType_t         bmd_type;
+// Common metadata which is shared between ingress and egress pipeline.
+// TODO: Currently using @flexible annotation causes some issues with the compiler, uncomment
+// it when we get the answer from the Intel forum.
+// See: https://community.intel.com/t5/Intel-Connectivity-Research/Compiler-stuck-when-compiling-P4-code/m-p/1258087
+// @flexible
+struct bridged_metadata_base_t {
+    mpls_label_t            mpls_label;
+    @padding bit<11>         _pad0;
+    PortId_t                ig_port;
     bool                    is_multicast;
     fwd_type_t              fwd_type;
-    PortId_t                ig_port;
     vlan_id_t               vlan_id;
     // bit<3>                  vlan_pri;
     // bit<1>                  vlan_cfi;
-    mpls_label_t            mpls_label;
     bit<8>                  mpls_ttl;
     bit<48>                 ig_tstamp;
     bit<16>                 ip_eth_type;
@@ -271,14 +286,20 @@ header bridged_metadata_t {
     l4_port_t               l4_dport;
     flow_hash_t             flow_hash;
 #ifdef WITH_DOUBLE_VLAN_TERMINATION
+    @padding bit<7>         _pad1;
     bool                    push_double_vlan;
     vlan_id_t               inner_vlan_id;
     // bit<3>                  inner_vlan_pri;
     // bit<1>                  inner_vlan_cfi;
 #endif // WITH_DOUBLE_VLAN_TERMINATION
+}
+
+header bridged_metadata_t {
+    BridgedMdType_t         bmd_type;
+    bridged_metadata_base_t base;
 #ifdef WITH_SPGW
-    l4_port_t               inner_l4_sport;
-    l4_port_t               inner_l4_dport;
+    l4_port_t       inner_l4_sport;
+    l4_port_t       inner_l4_dport;
     spgw_bridged_metadata_t spgw;
 #endif // WITH_SPGW
 #ifdef WITH_INT
@@ -297,10 +318,14 @@ struct fabric_ingress_metadata_t {
     bool                    skip_forwarding;
     bool                    skip_next;
     next_id_t               next_id;
+    bool                    egress_port_set;
 #ifdef WITH_SPGW
     bool                    inner_ipv4_checksum_err;
     spgw_ingress_metadata_t spgw;
 #endif // WITH_SPGW
+#ifdef WITH_INT
+    int_mirror_metadata_t int_mirror_md;
+#endif // WITH_INT
 }
 
 // Egress pipeline-only metadata
@@ -312,8 +337,11 @@ header common_egress_metadata_t {
     FabricMirrorType_t    mirror_type;
 }
 
+// Mark "mpls_stripped" to no-overlay since it will share the same PHV with the "rsvd"
+// field in the INT fixed header.
 @flexible
 @pa_auto_init_metadata
+@pa_no_overlay("egress", "fabric_md.mpls_stripped")
 struct fabric_egress_metadata_t {
     bridged_metadata_t    bridged;
     PortId_t              cpu_port;
@@ -323,6 +351,7 @@ struct fabric_egress_metadata_t {
     bit<1>                mpls_stripped;
 #ifdef WITH_INT
     int_mirror_metadata_t int_mirror_md;
+    int_metadata_t        int_md;
 #endif // WITH_INT
 #ifdef WITH_CONQUEST
     bool send_conq_report;
@@ -424,6 +453,7 @@ struct parsed_headers_t {
     report_fixed_header_t report_fixed_header;
     common_report_header_t common_report_header;
     local_report_header_t local_report_header;
+    drop_report_header_t drop_report_header;
 #endif // WITH_INT
 }
 
