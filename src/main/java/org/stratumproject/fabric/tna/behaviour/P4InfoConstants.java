@@ -165,8 +165,8 @@ public final class P4InfoConstants {
     // Action IDs
     public static final PiActionId FABRIC_EGRESS_EGRESS_NEXT_DROP =
             PiActionId.of("FabricEgress.egress_next.drop");
-    public static final PiActionId FABRIC_EGRESS_EGRESS_NEXT_KEEP_VLAN_CONFIG =
-            PiActionId.of("FabricEgress.egress_next.keep_vlan_config");
+    public static final PiActionId FABRIC_EGRESS_EGRESS_NEXT_KEEP_VLAN =
+            PiActionId.of("FabricEgress.egress_next.keep_vlan");
     public static final PiActionId FABRIC_EGRESS_EGRESS_NEXT_POP_VLAN =
             PiActionId.of("FabricEgress.egress_next.pop_vlan");
     public static final PiActionId FABRIC_EGRESS_EGRESS_NEXT_PUSH_VLAN =
@@ -207,12 +207,12 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.filtering.permit_with_internal_vlan");
     public static final PiActionId FABRIC_INGRESS_FILTERING_SET_FORWARDING_TYPE =
             PiActionId.of("FabricIngress.filtering.set_forwarding_type");
-    public static final PiActionId FABRIC_INGRESS_FORWARDING_FWD_TABLE_MISS =
-            PiActionId.of("FabricIngress.forwarding.fwd_table_miss");
     public static final PiActionId FABRIC_INGRESS_FORWARDING_NOP_ROUTING_V4 =
             PiActionId.of("FabricIngress.forwarding.nop_routing_v4");
     public static final PiActionId FABRIC_INGRESS_FORWARDING_POP_MPLS_AND_NEXT =
             PiActionId.of("FabricIngress.forwarding.pop_mpls_and_next");
+    public static final PiActionId FABRIC_INGRESS_FORWARDING_SET_INT_DROP_REASON =
+            PiActionId.of("FabricIngress.forwarding.set_int_drop_reason");
     public static final PiActionId FABRIC_INGRESS_FORWARDING_SET_NEXT_ID_BRIDGING =
             PiActionId.of("FabricIngress.forwarding.set_next_id_bridging");
     public static final PiActionId FABRIC_INGRESS_FORWARDING_SET_NEXT_ID_ROUTING_V4 =
