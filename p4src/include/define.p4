@@ -139,12 +139,6 @@ enum bit<2> CpuLoopbackMode_t {
     INGRESS = 2
 }
 
-// Recirculation ports for each HW pipe.
-const PortId_t RECIRC_PORT_PIPE_0 = 0x44;
-const PortId_t RECIRC_PORT_PIPE_1 = 0xC4;
-const PortId_t RECIRC_PORT_PIPE_2 = 0x144;
-const PortId_t RECIRC_PORT_PIPE_3 = 0x1C4;
-
 #define PIPE_0_PORTS_MATCH 9w0x000 &&& 0x180
 #define PIPE_1_PORTS_MATCH 9w0x080 &&& 0x180
 #define PIPE_2_PORTS_MATCH 9w0x100 &&& 0x180
@@ -198,7 +192,8 @@ enum bit<8> IntDropReason_t {
     DROP_REASON_NEXT_ID_MISS = 128,
     DROP_REASON_MPLS_MISS = 129,
     DROP_REASON_EGRESS_NEXT_MISS = 130,
-    DROP_REASON_MPLS_TTL_ZERO = 131
+    DROP_REASON_MPLS_TTL_ZERO = 131,
+    DROP_REASON_SPGW_UPLINK_RECIRC_DENY = 150
 }
 
 #endif // __DEFINE__
