@@ -1350,6 +1350,7 @@ class FabricIntEgressDropReportTest(IntTest):
                                 send_report_to_spine,
                             )
 
+
 @group("int")
 class FabricFlowReportFilterNoChangeTest(IntTest):
     @tvsetup
@@ -1469,6 +1470,7 @@ class FabricFlowReportFilterChangeTest(IntTest):
                 expect_int_report=expect_int_report,
             )
 
+
 @group("int")
 class FabricDropReportFilterTest(IntTest):
     @tvsetup
@@ -1524,6 +1526,7 @@ class FabricDropReportFilterTest(IntTest):
                     # We should expect not receving any report after the first
                     # report since packet uses 5-tuple as flow ID.
                     expect_int_report = False
+
 
 @group("bng")
 class FabricPppoeUpstreamTest(PppoeTest):
