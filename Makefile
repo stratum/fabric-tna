@@ -56,6 +56,12 @@ fabric-spgw-int:
 fabric-conquest:
 	@$(DIR)/p4src/build.sh fabric-conquest "-DWITH_CONQUEST"
 
+fabric-spgw-conquest:
+	@$(DIR)/p4src/build.sh fabric-spgw-conquest "-DWITH_CONQUEST -DWITH_SPGW"
+
+fabric-conquest-all:
+	@$(DIR)/p4src/build.sh fabric-conquest-all "-DWITH_CONQUEST -DWITH_SPGW -DWITH_INT"
+
 
 constants:
 	docker run -v $(DIR):$(DIR) -w $(DIR) --rm \
