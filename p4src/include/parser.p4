@@ -500,7 +500,7 @@ control FabricEgressMirror(
 #ifdef WITH_INT
         else
 #endif // WITH_INT
-        if (ig_intr_md_for_dprsr.mirror_type == (bit<3>)FabricMirrorType_t.CONQ_REPORT) {
+        if (eg_intr_md_for_dprsr.mirror_type == (bit<3>)FabricMirrorType_t.CONQ_REPORT) {
             mirror.emit<conq_mirror_metadata_t>(fabric_md.conq_mirror_md.mirror_session_id,
                                                fabric_md.conq_mirror_md);
         }

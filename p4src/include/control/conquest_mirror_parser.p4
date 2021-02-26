@@ -15,7 +15,7 @@ parser ConqReportMirrorParser (packet_in packet,
         packet.extract(fabric_md.conq_mirror_md);
         // TODO: do we need these two lines if we're just going immediately to CPU?
         fabric_md.bridged.bmd_type = fabric_md.conq_mirror_md.bmd_type;
-        fabric_md.bridged.vlan_id = DEFAULT_VLAN_ID;
+        fabric_md.bridged.base.vlan_id = DEFAULT_VLAN_ID;
         transition add_conq_ethernet;
     }
     state add_conq_ethernet {

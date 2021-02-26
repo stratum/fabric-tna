@@ -54,7 +54,7 @@ fabric-spgw-int:
 	@$(DIR)/p4src/build.sh fabric-spgw-int "-DWITH_SPGW -DWITH_INT"
 
 fabric-conquest:
-	@${p4-build} fabric-conquest "-DWITH_CONQUEST"
+	@$(DIR)/p4src/build.sh fabric-conquest "-DWITH_CONQUEST"
 
 
 constants:
