@@ -17,6 +17,7 @@ from scapy.layers.inet import IP, TCP, UDP
 from scapy.layers.l2 import Dot1Q, Ether
 from scapy.layers.ppp import PPP, PPPoE
 from scapy.packet import Packet, bind_layers
+from scapy.utils import hexdump
 
 DEFAULT_PRIORITY = 10
 
@@ -240,6 +241,22 @@ class GTPU(Packet):
 # Register our GTPU header with scapy for dissection
 bind_layers(UDP, GTPU, dport=UDP_GTP_PORT)
 bind_layers(GTPU, IP)
+
+
+ETHERTYPE_CONQUEST_REPORT = 0x9001
+
+class ConquestReport(Packet):
+    name = "ConQuest Report"
+    fields_desc = [
+            IntField("src_ip", 0),
+            IntField("dst_ip", 0),
+            ShortField("src_port", 0),
+            ShortField("dst_port", 0),
+            ByteField("protocol", 0)
+    ]
+
+bind_layers(Ether, ConquestReport, type=ETHERTYPE_CONQUEST_REPORT)
+bind_layers(ConquestReport, Ether)
 
 
 def pkt_mac_swap(pkt):
@@ -2258,12 +2275,10 @@ class ConquestTest(IPv4UnicastTest):
             is_next_hop_spine=is_next_hop_spine,
         )
 
-        # try to get any packet-in message
-        print("Getting packet in")
-        pkt_in = self.get_packet_in()
-        print(pkt_in)
-        print("got packet in")
-        # TODO: parse the packet-in and verify the conquest report header
+        pkt_in = Ether(self.get_packet_in().payload)
+        if (ConquestReport not in pkt_in):
+            fail("Received CPU packet is not a ConQuest report")
+        # TODO: verify the CPU packet more thoroughly
 
 
 

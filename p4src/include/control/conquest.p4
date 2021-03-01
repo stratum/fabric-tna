@@ -654,6 +654,8 @@ control ConQuestEgress(
     action generate_report_common(bit<16> sport, bit<16> dport) {
         eg_intr_dprs_md.mirror_type = (bit<3>)FabricMirrorType_t.CONQ_REPORT;
         eg_md.conq_mirror_md.setValid();
+        eg_md.conq_mirror_md.mirror_type = FabricMirrorType_t.CONQ_REPORT;
+        eg_md.conq_mirror_md.bmd_type = BridgedMdType_t.EGRESS_MIRROR;
         eg_md.conq_mirror_md.flow_sip       = hdr.ipv4.src_addr;
         eg_md.conq_mirror_md.flow_dip       = hdr.ipv4.dst_addr;
         eg_md.conq_mirror_md.flow_sport     = sport;
@@ -719,6 +721,11 @@ control ConQuestEgress(
     }
     
     apply {
+        //if (fabric_md.conq_mirror_md.isValid()) {
+        if (eg_md.bridged.bmd_type == BridgedMdType_t.EGRESS_MIRROR) {
+            return;
+        }
+
         // Startup
         prep_epochs();
         prep_reads();

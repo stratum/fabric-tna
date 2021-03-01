@@ -20,7 +20,7 @@ parser ConqReportMirrorParser (packet_in packet,
     }
     state add_conq_ethernet {
         hdr.ethernet.setValid();
-        hdr.ethernet = {48w0, 48w0};
+        hdr.ethernet = {0x11aa22bb33cc, 0x44dd55ee66ff};
         hdr.eth_type.setValid();
         hdr.eth_type.value = ETHERTYPE_CONQUEST_REPORT;
         transition add_conq_report;
