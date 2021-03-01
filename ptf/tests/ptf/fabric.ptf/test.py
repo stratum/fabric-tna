@@ -831,6 +831,34 @@ class FabricDefaultVlanPacketInTest(FabricTest):
         self.verify_no_other_packets()
 
 
+@group("conquest")
+class FabricConquestTest(ConquestTest):
+    @autocleanup
+    def doRunTest(self, pkt, tagged1, tagged2, is_next_hop_spine):
+        self.runReportTriggerTest(pkt, tagged1, tagged2, is_next_hop_spine)
+
+    def runTest(self):
+        print("")
+        for vlan_conf, tagged in vlan_confs.items():
+            for pkt_type in ["tcp", "udp", "icmp"]:
+                for is_next_hop_spine in [False, True]:
+                    if is_next_hop_spine and tagged[1]:
+                        continue
+                    print(
+                        "Testing VLAN={}, pkt={}, is_next_hop_spine={}...".format(
+                            vlan_conf, pkt_type, is_next_hop_spine
+                        )
+                    )
+                    pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
+                        eth_src=HOST1_MAC,
+                        eth_dst=SWITCH_MAC,
+                        ip_src=HOST1_IPV4,
+                        ip_dst=UE_IPV4,
+                        pktlen=MIN_PKT_LEN,
+                    )
+                    self.doRunTest(pkt, tagged[0], tagged[1], is_next_hop_spine)
+
+
 @group("spgw")
 class FabricSpgwDownlinkTest(SpgwSimpleTest):
     @tvsetup
@@ -867,12 +895,10 @@ class FabricSpgwDownlinkTest(SpgwSimpleTest):
                         eth_src=HOST1_MAC,
                         eth_dst=SWITCH_MAC,
                         ip_src=HOST1_IPV4,
-                        ip_dst=UE_IPV4,
+                        ip_dst=HOST2_IPV4,
                         pktlen=MIN_PKT_LEN,
                     )
-                    self.doRunTest(
-                        pkt, tagged[0], tagged[1], is_next_hop_spine, tc_name=tc_name,
-                    )
+                    self.doRunTest(pkt, tagged[0], tagged[1], is_next_hop_spine)
 
 
 @group("spgw")

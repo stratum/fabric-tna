@@ -17,6 +17,7 @@ from scapy.layers.inet import IP, TCP, UDP
 from scapy.layers.l2 import Dot1Q, Ether
 from scapy.layers.ppp import PPP, PPPoE
 from scapy.packet import Packet, bind_layers
+from scapy.utils import hexdump
 
 DEFAULT_PRIORITY = 10
 
@@ -240,6 +241,22 @@ class GTPU(Packet):
 # Register our GTPU header with scapy for dissection
 bind_layers(UDP, GTPU, dport=UDP_GTP_PORT)
 bind_layers(GTPU, IP)
+
+
+ETHERTYPE_CONQUEST_REPORT = 0x9001
+
+class ConquestReport(Packet):
+    name = "ConQuest Report"
+    fields_desc = [
+            IntField("src_ip", 0),
+            IntField("dst_ip", 0),
+            ShortField("src_port", 0),
+            ShortField("dst_port", 0),
+            ByteField("protocol", 0)
+    ]
+
+bind_layers(Ether, ConquestReport, type=ETHERTYPE_CONQUEST_REPORT)
+bind_layers(ConquestReport, Ether)
 
 
 def pkt_mac_swap(pkt):
@@ -2201,6 +2218,68 @@ class SpgwReadWriteSymmetryTest(SpgwSimpleTest):
         self.checkNormalFar()
         self.checkTunnelFar()
         self.checkDbufFar()
+
+
+class ConquestTest(IPv4UnicastTest):
+    CONQ_REPORT_MIRROR_IDS = [400, 401, 402, 403]
+
+
+    def set_up_report_mirrors(self):
+        for mirror_id in self.CONQ_REPORT_MIRROR_IDS:
+            self.add_clone_group(mirror_id, [self.cpu_port])
+
+
+    def set_up_report_trigger(self):
+
+        for ecn in range(4):
+            # key bitwidths are 17, 18, 8, 2
+            match_keys = [
+                            self.Range("snap_0",        stringify(0, 3),  stringify(0x1ffff, 3)),
+                            self.Range("q_delay",       stringify(0, 3),  stringify(0x3ffff, 3)),
+                            self.Range("random_bits",   stringify(0, 1),  stringify(0xff, 1)),
+                            self.Exact("ecn",           stringify(ecn, 1)),
+                        ]
+
+            self.send_request_add_entry_to_action(
+                    t_name      = "FabricEgress.conquest_egress.tb_per_flow_action",
+                    mk          = match_keys,
+                    a_name      = "FabricEgress.conquest_egress.trigger_report",
+                    params      = [],
+                    priority    = DEFAULT_PRIORITY)
+
+
+    def runReportTriggerTest(self, pkt, tagged1, tagged2, is_next_hop_spine):
+        self.set_up_report_trigger()
+        self.set_up_report_mirrors()
+
+        dst_mac = HOST2_MAC
+
+        exp_pkt = pkt.copy()
+        exp_pkt[Ether].src = pkt[Ether].dst
+        exp_pkt[Ether].dst = dst_mac
+        if not is_next_hop_spine:
+            exp_pkt[IP].ttl = exp_pkt[IP].ttl - 1
+        else:
+            exp_pkt = pkt_add_mpls(exp_pkt, MPLS_LABEL_2, DEFAULT_MPLS_TTL)
+        if tagged2:
+            exp_pkt = pkt_add_vlan(exp_pkt, VLAN_ID_2)
+
+        self.runIPv4UnicastTest(
+            pkt=pkt,
+            dst_ipv4=pkt[IP].dst,
+            next_hop_mac=dst_mac,
+            prefix_len=32,
+            exp_pkt=exp_pkt,
+            tagged1=tagged1,
+            tagged2=tagged2,
+            is_next_hop_spine=is_next_hop_spine,
+        )
+
+        pkt_in = Ether(self.get_packet_in().payload)
+        if (ConquestReport not in pkt_in):
+            fail("Received CPU packet is not a ConQuest report")
+        # TODO: verify the CPU packet more thoroughly
+
 
 
 class IntTest(IPv4UnicastTest):

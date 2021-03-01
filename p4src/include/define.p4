@@ -72,6 +72,7 @@ const bit<16> ETHERTYPE_ARP  = 0x0806;
 const bit<16> ETHERTYPE_PPPOED = 0x8863;
 const bit<16> ETHERTYPE_PPPOES = 0x8864;
 const bit<16> ETHERTYPE_PACKET_OUT = 0xBF01;
+const bit<16> ETHERTYPE_CONQUEST_REPORT = 0x9001;
 
 // Fake ether types used to distinguish regular packets from those used for
 // CPU-based loopback testing.
@@ -121,7 +122,8 @@ enum bit<8> BridgedMdType_t {
 // it in the deparser.
 enum bit<3> FabricMirrorType_t {
     INVALID = 0,
-    INT_REPORT = 1
+    INT_REPORT = 1,
+    CONQ_REPORT = 2
 }
 
 // Modes for CPU loopback testing, where a process can inject packets through
@@ -172,6 +174,12 @@ const MirrorId_t REPORT_MIRROR_SESS_PIPE_0 = 300;
 const MirrorId_t REPORT_MIRROR_SESS_PIPE_1 = 301;
 const MirrorId_t REPORT_MIRROR_SESS_PIPE_2 = 302;
 const MirrorId_t REPORT_MIRROR_SESS_PIPE_3 = 303;
+
+
+const MirrorId_t CONQUEST_MIRROR_SESS_PIPE_0 = 400;
+const MirrorId_t CONQUEST_MIRROR_SESS_PIPE_1 = 401;
+const MirrorId_t CONQUEST_MIRROR_SESS_PIPE_2 = 402;
+const MirrorId_t CONQUEST_MIRROR_SESS_PIPE_3 = 403;
 
 #define FLOW_REPORT_FILTER_WIDTH 16
 typedef bit<FLOW_REPORT_FILTER_WIDTH> flow_report_filter_index_t;
