@@ -630,9 +630,6 @@ control ConQuestEgress(
                 eg_md.snap_0_read_min_l1 + eg_md.snap_2_read_min_l1;
             }
 
-    action trigger_report() {
-        eg_md.send_conq_report = true;
-    }
  
 	//dedup reports 
 	action prep_timestamp(){
@@ -652,6 +649,10 @@ control ConQuestEgress(
 		eg_md.dedup_is_new=reg_dedup_flowreports_update.execute(eg_md.hashed_index_row_0);
 	}
 
+    action trigger_report() {
+        eg_md.send_conq_report = true;
+	dedup_report_check();
+    }
     
     //== Finally, actions based on flow size in the queue
     table tb_per_flow_action {
@@ -798,9 +799,6 @@ control ConQuestEgress(
         
         // With flow size in queue, can check for bursty flow and add AQM.
         tb_per_flow_action.apply();
-	if (eg_md.send_conq_report) {
-		dedup_report_check();
-	}
         if (eg_md.send_conq_report && eg_md.dedup_is_new==1) {
             report_generator.apply();
             mirror_session_id.apply();
