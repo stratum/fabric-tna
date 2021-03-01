@@ -356,6 +356,8 @@ struct fabric_egress_metadata_t {
 #ifdef WITH_CONQUEST
     bool send_conq_report;
     conq_mirror_metadata_t conq_mirror_md;
+    bit<32> current_timestamp;
+    bit<1> dedup_is_new;
 
     bit<8> num_snapshots_to_read;//result of division (delay/T), could be larger than H
     bit<2> snap_epoch;
