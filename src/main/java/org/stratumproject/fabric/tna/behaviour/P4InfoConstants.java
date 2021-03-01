@@ -122,6 +122,8 @@ public final class P4InfoConstants {
             PiTableId.of("FabricIngress.next.hashed");
     public static final PiTableId FABRIC_INGRESS_NEXT_MULTICAST =
             PiTableId.of("FabricIngress.next.multicast");
+    public static final PiTableId FABRIC_INGRESS_NEXT_NEXT_MPLS =
+            PiTableId.of("FabricIngress.next.next_mpls");
     public static final PiTableId FABRIC_INGRESS_NEXT_NEXT_VLAN =
             PiTableId.of("FabricIngress.next.next_vlan");
     public static final PiTableId FABRIC_INGRESS_SPGW_DOWNLINK_PDRS =
@@ -156,6 +158,8 @@ public final class P4InfoConstants {
             PiCounterId.of("FabricIngress.next.hashed_counter");
     public static final PiCounterId FABRIC_INGRESS_NEXT_MULTICAST_COUNTER =
             PiCounterId.of("FabricIngress.next.multicast_counter");
+    public static final PiCounterId FABRIC_INGRESS_NEXT_NEXT_MPLS_COUNTER =
+            PiCounterId.of("FabricIngress.next.next_mpls_counter");
     public static final PiCounterId FABRIC_INGRESS_NEXT_NEXT_VLAN_COUNTER =
             PiCounterId.of("FabricIngress.next.next_vlan_counter");
     // Action IDs
@@ -219,14 +223,14 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.int_ingress.mark_to_report");
     public static final PiActionId FABRIC_INGRESS_INT_INGRESS_REPORT_DROP =
             PiActionId.of("FabricIngress.int_ingress.report_drop");
-    public static final PiActionId FABRIC_INGRESS_NEXT_MPLS_ROUTING_HASHED =
-            PiActionId.of("FabricIngress.next.mpls_routing_hashed");
     public static final PiActionId FABRIC_INGRESS_NEXT_OUTPUT_HASHED =
             PiActionId.of("FabricIngress.next.output_hashed");
     public static final PiActionId FABRIC_INGRESS_NEXT_ROUTING_HASHED =
             PiActionId.of("FabricIngress.next.routing_hashed");
     public static final PiActionId FABRIC_INGRESS_NEXT_SET_MCAST_GROUP_ID =
             PiActionId.of("FabricIngress.next.set_mcast_group_id");
+    public static final PiActionId FABRIC_INGRESS_NEXT_SET_MPLS_LABEL =
+            PiActionId.of("FabricIngress.next.set_mpls_label");
     public static final PiActionId FABRIC_INGRESS_NEXT_SET_VLAN =
             PiActionId.of("FabricIngress.next.set_vlan");
     public static final PiActionId FABRIC_INGRESS_SPGW_IFACE_MISS =
