@@ -7,7 +7,7 @@
 
 #define SKETCH_INC ((bit<32>) hdr.ipv4.total_len)
 
-#define DEDUP_TIMEOUT (5*1000*1000*1000)
+#define DEDUP_TIMEOUT_MS (500)
 //dedup for 5 seconds
 
 
@@ -633,16 +633,16 @@ control ConQuestEgress(
  
 	//dedup reports 
 	action prep_timestamp(){
-		eg_md.current_timestamp=(bit<32>) eg_intr_md_from_prsr.global_tstamp;	
+		eg_md.current_timestamp_ms=(bit<32>) eg_intr_md_from_prsr.global_tstamp[47:20];	
 	}
 	Register<bit<32>,_>(16384) reg_dedup_flowreports;
 	RegisterAction<bit<32>, _, bit<1>>(reg_dedup_flowreports) reg_dedup_flowreports_update = {
 		void apply(inout bit<32> val, out bit<1> rv){
 			rv=1;
-			if(eg_md.current_timestamp-val < DEDUP_TIMEOUT){
+			if(eg_md.current_timestamp_ms-val < DEDUP_TIMEOUT_MS){
 				rv=0;
 			}
-			val=eg_md.current_timestamp;
+			val=eg_md.current_timestamp_ms;
 		}
 	};
 	action dedup_report_check(){
