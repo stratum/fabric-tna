@@ -41,14 +41,14 @@ control Next (inout parsed_headers_t hdr,
      * MPLS table.
      * Set the MPLS label based on the next ID.
      */
-    DirectCounter<bit<64>>(CounterType_t.PACKETS_AND_BYTES) mpls_counter;
+    DirectCounter<bit<64>>(CounterType_t.PACKETS_AND_BYTES) next_mpls_counter;
 
     action set_mpls_label(mpls_label_t label) {
         fabric_md.bridged.base.mpls_label = label;
-        mpls_counter.count();
+        next_mpls_counter.count();
     }
 
-    table mpls_table {
+    table next_mpls {
         key = {
             fabric_md.next_id: exact @name("next_id");
         }
@@ -57,8 +57,8 @@ control Next (inout parsed_headers_t hdr,
             @defaultonly nop;
         }
         const default_action = nop();
-        counters = mpls_counter;
-        size = MPLS_TABLE_SIZE;
+        counters = next_mpls_counter;
+        size = NEXT_MPLS_TABLE_SIZE;
     }
 
     /*
@@ -233,7 +233,7 @@ control Next (inout parsed_headers_t hdr,
         // xconnect might set a new next_id.
         xconnect.apply();
 #endif // WITH_XCONNECT
-        mpls_table.apply();
+        next_mpls.apply();
 #ifdef WITH_SIMPLE_NEXT
         simple.apply();
 #endif // WITH_SIMPLE_NEXT

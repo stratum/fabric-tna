@@ -795,7 +795,7 @@ class FabricTest(P4RuntimeTest):
         next_id_ = stringify(next_id, 4)
         label_ = stringify(label, 3)
         self.send_request_add_entry_to_action(
-            "next.mpls_table",
+            "next.next_mpls",
             [self.Exact("next_id", next_id_)],
             "next.set_mpls_label",
             [
