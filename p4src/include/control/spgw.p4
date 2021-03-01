@@ -133,7 +133,8 @@ control SpgwIngress(
         inout fabric_ingress_metadata_t             fabric_md,
         /* TNA */
         in ingress_intrinsic_metadata_t             ig_intr_md,
-        inout ingress_intrinsic_metadata_for_tm_t   ig_tm_md) {
+        inout ingress_intrinsic_metadata_for_tm_t   ig_tm_md,
+        inout ingress_intrinsic_metadata_for_deparser_t ig_dprsr_md) {
 
     //=============================//
     //===== Misc Things ======//
@@ -179,6 +180,13 @@ control SpgwIngress(
     //===== PDR Tables ======//
     //=============================//
 
+    action pdr_drop(bit<8> drop_reason) {
+        ig_dprsr_md.drop_ctl = 1;
+#ifdef WITH_INT
+        fabric_md.int_mirror_md.drop_reason = drop_reason;
+#endif // WITH_INT
+    }
+
     action load_pdr(pdr_ctr_id_t    ctr_id,
                     far_id_t        far_id,
                     bool            needs_gtpu_decap) {
@@ -204,8 +212,10 @@ control SpgwIngress(
         actions = {
             load_pdr;
             load_pdr_qos;
+            @defaultonly pdr_drop;
         }
         size = NUM_DOWNLINK_PDRS;
+        const default_action = pdr_drop(IntDropReason_t.DROP_REASON_DOWNLINK_PDR_MISS);
     }
 
     table uplink_pdrs {
@@ -215,13 +225,27 @@ control SpgwIngress(
         }
         actions = {
             load_pdr;
+            @defaultonly pdr_drop;
         }
         size = NUM_UPLINK_PDRS;
+        const default_action = pdr_drop(IntDropReason_t.DROP_REASON_UPLINK_PDR_MISS);
     }
 
     //=============================//
     //===== FAR Tables ======//
     //=============================//
+
+    action far_drop() {
+        // general far attributes
+        ig_dprsr_md.drop_ctl = 1;
+        fabric_md.skip_forwarding = true;
+        fabric_md.skip_next = true;
+        fabric_md.bridged.spgw.needs_gtpu_encap = false;
+        fabric_md.bridged.spgw.skip_egress_pdr_ctr = false;
+#ifdef WITH_INT
+        fabric_md.int_mirror_md.drop_reason = IntDropReason_t.DROP_REASON_FAR_MISS;
+#endif // WITH_INT
+    }
 
     action load_normal_far(bool drop,
                            bool notify_cp) {
@@ -286,9 +310,10 @@ control SpgwIngress(
             load_normal_far;
             load_tunnel_far;
             load_dbuf_far;
+            @defaultonly far_drop;
         }
         // default is drop and don't notify CP
-        const default_action = load_normal_far(true, false);
+        const default_action = far_drop();
         size = NUM_FARS;
     }
 

@@ -178,6 +178,9 @@ INT_DROP_REASON_UNKNOWN = 0
 INT_DROP_REASON_ACL_DENY = 80
 INT_DROP_REASON_ROUTING_V4_MISS = 29
 INT_DROP_REASON_EGRESS_NEXT_MISS = 130
+INT_DROP_REASON_DOWNLINK_PDR_MISS = 132
+INT_DROP_REASON_UPLINK_PDR_MISS = 133
+INT_DROP_REASON_UPLINK_FAR_MISS = 133
 
 PPPOE_CODE_SESSION_STAGE = 0x00
 
@@ -3137,6 +3140,89 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         self.verify_packet(exp_int_report_pkt_masked, self.port3)
         self.verify_no_other_packets()
 
+
+    def runUplinkIntDropTest(
+        self,
+        pkt,
+        tagged1,
+        tagged2,
+        is_next_hop_spine,
+        ig_port,
+        eg_port,
+        expect_int_report,
+        is_device_spine,
+        send_report_to_spine
+    ):
+        """
+        :param pkt: the input packet
+        :param tagged1: if the input port should expect VLAN tagged packets
+        :param tagged2: if the output port should expect VLAN tagged packets
+        :param is_next_hop_spine: whether the packet should be routed
+               to the spines using MPLS SR
+        :param ig_port: the ingress port of the IP uncast packet
+        :param eg_port: the egress port of the IP uncast packet
+        :param expect_int_report: expected to receive the INT report
+        :param is_device_spine: the device is a spine device
+        :param send_report_to_spine: if the report is to be forwarded
+               to a spine (e.g., collector attached to another leaf)
+        """
+        # Build packet from eNB
+        # Add GTPU header to the original packet
+        gtp_pkt = pkt_add_gtp(
+            pkt, out_ipv4_src=S1U_ENB_IPV4, out_ipv4_dst=S1U_SGW_IPV4, teid=UPLINK_TEID,
+        )
+        # Build expected inner pkt using the input one.
+        int_inner_pkt = pkt.copy()
+
+        # Here we are using the ingress mirroring, which won't modify the value
+        # of header fields.
+        # int_inner_pkt = pkt_route(int_inner_pkt, HOST2_MAC)
+        # if not is_next_hop_spine:
+        #     int_inner_pkt = pkt_decrement_ttl(int_inner_pkt)
+        # if tagged2 and Dot1Q not in int_inner_pkt:
+        #     int_inner_pkt = pkt_add_vlan(int_inner_pkt, vlan_vid=VLAN_ID_2)
+        if tagged1 and Dot1Q not in int_inner_pkt:
+            int_inner_pkt = pkt_add_vlan(int_inner_pkt, vlan_vid=VLAN_ID_1)
+        # Note that we won't add MPLS header to the expected inner
+        # packet since the pipeline will strip out the MPLS header
+        # from it before in the parser.
+
+        # The expected INT report packet
+        exp_int_report_pkt_masked = self.build_int_drop_report(
+            SWITCH_MAC,
+            INT_COLLECTOR_MAC,
+            SWITCH_IPV4,
+            INT_COLLECTOR_IPV4,
+            ig_port,
+            eg_port,
+            INT_DROP_REASON_UPLINK_PDR_MISS,
+            SWITCH_ID,
+            int_inner_pkt,
+            is_device_spine,
+            send_report_to_spine,
+        )
+
+        # Set collector, report table, and mirror sessions
+        self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine)
+
+        # TODO: Use MPLS test instead of IPv4 test if device is spine.
+        self.runIPv4UnicastTest(
+            pkt=gtp_pkt,
+            dst_ipv4=pkt[IP].dst,
+            next_hop_mac=HOST2_MAC,
+            tagged1=tagged1,
+            tagged2=tagged2,
+            is_next_hop_spine=is_next_hop_spine,
+            prefix_len=32,
+            with_another_pkt_later=True,
+            ig_port=ig_port,
+            eg_port=eg_port,
+            verify_pkt=False,
+        )
+
+        if expect_int_report:
+            self.verify_packet(exp_int_report_pkt_masked, self.port3)
+        self.verify_no_other_packets()
 
 class PppoeTest(DoubleVlanTerminationTest):
     def set_line_map(self, s_tag, c_tag, line_id):

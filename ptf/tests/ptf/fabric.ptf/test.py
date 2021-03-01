@@ -1176,6 +1176,70 @@ class FabricSpgwDownlinkIntTest(SpgwIntTest):
                                 send_report_to_spine,
                             )
 
+@group("int")
+@group("spgw")
+class FabricSpgwIntUplinkDropTest(SpgwIntTest):
+    @tvsetup
+    @autocleanup
+    def doRunTest(
+        self,
+        vlan_conf,
+        tagged,
+        pkt_type,
+        is_next_hop_spine,
+        is_device_spine,
+        send_report_to_spine,
+    ):
+        print(
+            "Testing VLAN={}, pkt={}, is_next_hop_spine={}, is_device_spine={}, send_report_to_spine={}...".format(
+                vlan_conf,
+                pkt_type,
+                is_next_hop_spine,
+                is_device_spine,
+                send_report_to_spine,
+            )
+        )
+        # Change the IP destination to ensure we are using differnt
+        # flow for diffrent test cases since the flow report filter
+        # might disable the report.
+        # TODO: Remove this part when we are able to reset the register
+        # via P4Runtime.
+        pkt = getattr(testutils, "simple_{}_packet".format(pkt_type))(
+            ip_dst=self.get_single_use_ip()
+        )
+        self.runUplinkIntDropTest(
+            pkt=pkt,
+            tagged1=tagged[0],
+            tagged2=tagged[1],
+            is_next_hop_spine=is_next_hop_spine,
+            ig_port=self.port1,
+            eg_port=self.port2,
+            expect_int_report=True,
+            is_device_spine=is_device_spine,
+            send_report_to_spine=send_report_to_spine
+        )
+
+    def runTest(self):
+        print("")
+        for is_device_spine in [False, True]:
+            for vlan_conf, tagged in vlan_confs.items():
+                if is_device_spine and (tagged[0] or tagged[1]):
+                    continue
+                for is_next_hop_spine in [False, True]:
+                    if is_next_hop_spine and tagged[1]:
+                        continue
+                    for send_report_to_spine in [False, True]:
+                        if send_report_to_spine and tagged[1]:
+                            continue
+                        for pkt_type in ["udp", "tcp", "icmp"]:
+                            self.doRunTest(
+                                vlan_conf,
+                                tagged,
+                                pkt_type,
+                                is_next_hop_spine,
+                                is_device_spine,
+                                send_report_to_spine,
+                            )
 
 @group("int")
 class FabricIntLocalReportTest(IntTest):
