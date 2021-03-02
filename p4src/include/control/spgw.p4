@@ -87,6 +87,7 @@ control UplinkRecirc(
     action allow() {
         // Recirculation port within same ingress pipe.
         ig_tm_md.ucast_egress_port = ig_intr_md.ingress_port[8:7]++7w68;
+        fabric_md.bridged.base.vlan_id = DEFAULT_VLAN_ID;
         fabric_md.egress_port_set = true;
         fabric_md.skip_forwarding = true;
         fabric_md.skip_next = true;

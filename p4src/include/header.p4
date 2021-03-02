@@ -203,6 +203,7 @@ header local_report_header_t {
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.ip_eth_type")
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.report_type")
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.flow_hash")
+@pa_no_overlay("egress", "fabric_md.int_mirror_md.vlan_stripped")
 #ifdef WITH_SPGW
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.strip_gtpu")
 #endif // WITH_SPGW
@@ -222,8 +223,9 @@ header int_mirror_metadata_t {
     @padding bit<6>       _pad2;
     IntReportType_t       report_type;
     flow_hash_t           flow_hash;
+    bit<1>                vlan_stripped;
 #ifdef WITH_SPGW
-    @padding bit<7>       _pad3;
+    @padding bit<6>       _pad3;
     bit<1>                strip_gtpu;
 #endif // WITH_SPGW
 }

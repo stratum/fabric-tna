@@ -21,6 +21,7 @@
 #define UDP_HDR_BYTES 8
 #define GTP_HDR_BYTES 8
 #define MPLS_HDR_BYTES 4
+#define VLAN_HDR_BYTES 4
 
 #define UDP_PORT_GTPU 2152
 #define GTP_GPDU 0xff
