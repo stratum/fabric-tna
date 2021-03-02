@@ -313,9 +313,10 @@ control SpgwIngress(
                 decap_gtpu_from_dbuf.apply(hdr, fabric_md);
             }
             // PDRs
-            if (hdr.gtpu.isValid()) {
+            if (fabric_md.spgw.src_iface == SpgwInterface.ACCESS) {
                 uplink_pdrs.apply();
-            } else {
+            } else if (fabric_md.spgw.src_iface == SpgwInterface.CORE ||
+                        fabric_md.spgw.src_iface == SpgwInterface.FROM_DBUF) {
                 downlink_pdrs.apply();
                 qos_classifier.apply();
             }

@@ -493,13 +493,13 @@ control IntEgress (
         config.apply();
         hw_id.apply();
 
-        // Filtering for drop reports is done after the mirroring to handle all
-        // drop cases with one filter:
+        // Filtering for drop reports is done after mirroring to handle all drop
+        // cases with one filter:
         // - drop by ingress tables (ingress mirroring)
         // - drop by egress table (egress mirroring)
         // - drop by the traffic manager (deflect on drop, TODO)
         // The penalty we pay for using one filter is that we might congest the
-        // mirroring facilities and recirculation port bandwidth.
+        // mirroring facilities and recirculation port.
         // FIXME: should we worry about this, or can we assume that packet drops
         //  are a rare event? What happens if a 100Gbps flow gets dropped by an
         //  ingress/egress table (e.g., routing table miss, egress vlan table

@@ -102,8 +102,6 @@ DBUF_DRAIN_DST_IPV4 = "142.0.0.1"
 DBUF_FAR_ID = 1023
 DBUF_TEID = 0
 
-CPU_LOOPBACK_FAKE_ETHERNET_LENGTH = 14
-
 PDR_COUNTER_INGRESS = "FabricIngress.spgw.pdr_counter"
 PDR_COUNTER_EGRESS = "FabricEgress.spgw.pdr_counter"
 
@@ -218,7 +216,9 @@ else:
 IP_HDR_BYTES = 20
 UDP_HDR_BYTES = 8
 GTP_HDR_BYTES = 8
-
+ETH_FCS_BYTES = 4
+VLAN_BYTES = 4
+CPU_LOOPBACK_FAKE_ETH_BYTES = 14
 
 class GTPU(Packet):
     name = "GTP-U Header"
@@ -1857,18 +1857,15 @@ class SpgwSimpleTest(IPv4UnicastTest):
             is_next_hop_spine=is_next_hop_spine,
         )
 
-        ingress_bytes = len(gtp_pkt) + 4  # FIXME: where does this 4 come from?
-        egress_bytes = len(exp_pkt) + BMD_BYTES
+        ingress_bytes = len(gtp_pkt) + ETH_FCS_BYTES
         if tagged1:
-            ingress_bytes += 4  # length of VLAN header
-            egress_bytes += 4  # FIXME: why is this necessary?
-        if not tagged2:
-            egress_bytes += 4  # FIXME: why?
-        if is_next_hop_spine:
-            egress_bytes -= 4  # FIXME: ?????
+            ingress_bytes += VLAN_BYTES
         if self.loopback:
-            ingress_bytes += CPU_LOOPBACK_FAKE_ETHERNET_LENGTH
-            egress_bytes += CPU_LOOPBACK_FAKE_ETHERNET_LENGTH
+            ingress_bytes += CPU_LOOPBACK_FAKE_ETH_BYTES
+        # Counters are updated with bytes seen at egress parser. GTP decap
+        # happens at ingress deparser. VLAN/MPLS push/pop happens at egress
+        # deparser, hence not reflected in counter increment.
+        egress_bytes = ingress_bytes + BMD_BYTES - IP_HDR_BYTES - UDP_HDR_BYTES - GTP_HDR_BYTES
 
         # Verify the Ingress and Egress PDR counters
         self.verify_pdr_counters(UPLINK_PDR_CTR_IDX, ingress_bytes, egress_bytes, 1, 1)
@@ -1948,22 +1945,34 @@ class SpgwSimpleTest(IPv4UnicastTest):
             verify_pkt=allow
         )
 
-        # TODO: test counters, both uplink and downlink should increase
-        # ingress_bytes = len(pre_uplink_pkt) + 4  # FIXME: where does this 4 come from?
-        # egress_bytes = len(exp_pkt) + BMD_BYTES
-        # if tagged1:
-        #     ingress_bytes += 4  # length of VLAN header
-        #     egress_bytes += 4  # FIXME: why is this necessary?
-        # if not tagged2:
-        #     egress_bytes += 4  # FIXME: why?
-        # if is_next_hop_spine:
-        #     egress_bytes -= 4  # FIXME: ?????
-        # if self.loopback:
-        #     ingress_bytes += CPU_LOOPBACK_FAKE_ETHERNET_LENGTH
-        #     egress_bytes += CPU_LOOPBACK_FAKE_ETHERNET_LENGTH
-        #
-        # # Verify the Ingress and Egress PDR counters
-        # self.verify_pdr_counters(UPLINK_PDR_CTR_IDX, ingress_bytes, egress_bytes, 1, 1)
+        uplink_ingress_bytes = len(pkt) + ETH_FCS_BYTES
+        uplink_egress_bytes = uplink_ingress_bytes + BMD_BYTES - IP_HDR_BYTES - UDP_HDR_BYTES - GTP_HDR_BYTES
+        downlink_ingress_bytes = uplink_egress_bytes - BMD_BYTES
+        # Egress counters are updated with bytes seen at egress parser. GTP
+        # encap happens at egress deparser, hence not reflected in uplink
+        # counter increment.
+        downlink_egress_bytes = downlink_ingress_bytes + BMD_BYTES
+
+        # Uplink output/downlink input is always untagged (recirculation
+        # port). tagged1 refers only to uplink input.
+        if tagged1:
+            # Pkt stays tagged all the way to egress pipe, popped by egress
+            # deparser, after counter update.
+            uplink_ingress_bytes += VLAN_BYTES
+            uplink_egress_bytes += VLAN_BYTES
+        if self.loopback:
+            uplink_ingress_bytes += CPU_LOOPBACK_FAKE_ETH_BYTES
+            uplink_egress_bytes += CPU_LOOPBACK_FAKE_ETH_BYTES
+            downlink_ingress_bytes += CPU_LOOPBACK_FAKE_ETH_BYTES
+            downlink_egress_bytes += CPU_LOOPBACK_FAKE_ETH_BYTES
+
+        if allow:
+            self.verify_pdr_counters(UPLINK_PDR_CTR_IDX, uplink_ingress_bytes, uplink_egress_bytes, 1, 1)
+            self.verify_pdr_counters(DOWNLINK_PDR_CTR_IDX, downlink_ingress_bytes, downlink_egress_bytes, 1, 1)
+        else:
+            # Only uplink ingress should be incremented.
+            self.verify_pdr_counters(UPLINK_PDR_CTR_IDX, uplink_ingress_bytes, 0, 1, 0)
+            self.verify_pdr_counters(DOWNLINK_PDR_CTR_IDX, 0, 0, 0, 0)
 
     def runDownlinkTest(self, pkt, tagged1, tagged2, is_next_hop_spine):
         exp_pkt = pkt.copy()
@@ -2004,22 +2013,14 @@ class SpgwSimpleTest(IPv4UnicastTest):
             is_next_hop_spine=is_next_hop_spine,
         )
 
-        ingress_bytes = len(pkt) + 4  # FIXME: where does this 4 come from?
-        # Since the counter will use the packet length before the pipeline encaped with
-        # GTPU headers, we need to remove it from the expected result.
-        egress_bytes = (
-            len(exp_pkt) + BMD_BYTES - IP_HDR_BYTES - UDP_HDR_BYTES - GTP_HDR_BYTES
-        )
+        ingress_bytes = len(pkt) + ETH_FCS_BYTES
         if tagged1:
-            ingress_bytes += 4  # length of VLAN header
-            egress_bytes += 4  # FIXME: why is this necessary?
-        if not tagged2:
-            egress_bytes += 4  # FIXME: why?
-        if is_next_hop_spine:
-            egress_bytes -= 4  # FIXME: ?????
+            ingress_bytes += VLAN_BYTES
         if self.loopback:
-            ingress_bytes += CPU_LOOPBACK_FAKE_ETHERNET_LENGTH
-            egress_bytes += CPU_LOOPBACK_FAKE_ETHERNET_LENGTH
+            ingress_bytes += CPU_LOOPBACK_FAKE_ETH_BYTES
+        # Egress sees same bytes as ingress. GTP encap and VLAN/MPLS push/pop
+        # happen at egress deparser, hence after counter update
+        egress_bytes = ingress_bytes + BMD_BYTES
 
         # Verify the Ingress and Egress PDR counters
         self.verify_pdr_counters(
@@ -2079,7 +2080,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         if tagged1:
             ingress_bytes += 4  # length of VLAN header
         if self.loopback:
-            ingress_bytes += CPU_LOOPBACK_FAKE_ETHERNET_LENGTH
+            ingress_bytes += CPU_LOOPBACK_FAKE_ETH_BYTES
 
         # Verify the Ingress PDR packet counter increased, but the egress did
         # not.
@@ -2152,19 +2153,15 @@ class SpgwSimpleTest(IPv4UnicastTest):
         )
 
         ingress_bytes = 0
-        # Since the counter will use the packet length before the pipeline encaped with
-        # GTPU headers, we need to remove it from the expected result.
+        # GTP encap and VLAN/MPLS push/pop happen at egress deparser, but
+        # counters are updated with bytes seen at egress parser.
         egress_bytes = (
-            len(exp_pkt) + BMD_BYTES - IP_HDR_BYTES - UDP_HDR_BYTES - GTP_HDR_BYTES
+            len(pkt_from_dbuf) + ETH_FCS_BYTES + BMD_BYTES - IP_HDR_BYTES - UDP_HDR_BYTES - GTP_HDR_BYTES
         )
         if tagged1:
-            egress_bytes += 4  # FIXME: why is this necessary?
-        if not tagged2:
-            egress_bytes += 4  # FIXME: why?
-        if is_next_hop_spine:
-            egress_bytes -= 4  # FIXME: ?????
+            egress_bytes += VLAN_BYTES
         if self.loopback:
-            egress_bytes += CPU_LOOPBACK_FAKE_ETHERNET_LENGTH
+            egress_bytes += CPU_LOOPBACK_FAKE_ETH_BYTES
 
         # Verify the Ingress PDR packet counter did not increase, but the
         # egress did

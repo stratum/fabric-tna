@@ -935,9 +935,9 @@ class FabricSpgwUplinkRecircTest(SpgwSimpleTest):
         for vlan_conf, tagged in vlan_confs.items():
             for pkt_type in ["tcp", "udp", "icmp"]:
                 for is_next_hop_spine in [False, True]:
-                    if is_next_hop_spine and tagged[1]:
-                        continue
                     for allow in [True, False]:
+                        if is_next_hop_spine and (tagged[1] or not allow):
+                            continue
                         print(
                             "Testing VLAN={}, pkt={}, is_next_hop_spine={}, allow={}...".format(
                                 vlan_conf, pkt_type, is_next_hop_spine, allow
