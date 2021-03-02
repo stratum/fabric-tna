@@ -12,12 +12,12 @@ control DecapGtpu(inout parsed_headers_t            hdr,
     @hidden
     action decap_inner_common() {
         // Correct parser-set metadata to use the inner header values
-        fabric_md.bridged.ip_eth_type = ETHERTYPE_IPV4;
-        fabric_md.bridged.ip_proto    = hdr.inner_ipv4.protocol;
+        fabric_md.bridged.base.ip_eth_type = ETHERTYPE_IPV4;
+        fabric_md.bridged.base.ip_proto    = hdr.inner_ipv4.protocol;
         fabric_md.ipv4_src            = hdr.inner_ipv4.src_addr;
         fabric_md.ipv4_dst            = hdr.inner_ipv4.dst_addr;
-        fabric_md.bridged.l4_sport    = fabric_md.bridged.inner_l4_sport;
-        fabric_md.bridged.l4_dport    = fabric_md.bridged.inner_l4_dport;
+        fabric_md.bridged.base.l4_sport    = fabric_md.bridged.inner_l4_sport;
+        fabric_md.bridged.base.l4_dport    = fabric_md.bridged.inner_l4_dport;
         // Move GTPU and inner L3 headers out
         hdr.ipv4 = hdr.inner_ipv4;
         hdr.inner_ipv4.setInvalid();
@@ -117,6 +117,7 @@ control SpgwIngress(
             @defaultonly iface_miss;
         }
         const default_action = iface_miss();
+        const size = NUM_SPGW_INTERFACES;
     }
 
     //=============================//
@@ -162,13 +163,16 @@ control SpgwIngress(
        key = {
             hdr.ipv4.src_addr          : ternary     @name("inet_addr")   ;
             hdr.ipv4.dst_addr          : ternary     @name("ue_addr")     ;
-            fabric_md.bridged.l4_sport : ternary     @name("inet_l4_port");
-            fabric_md.bridged.l4_dport : ternary     @name("ue_l4_port")  ;
+            fabric_md.bridged.base.l4_sport : ternary     @name("inet_l4_port");
+            fabric_md.bridged.base.l4_dport : ternary     @name("ue_l4_port")  ;
             hdr.ipv4.protocol          : ternary     @name("ip_proto")    ;
        }
        actions = {
-           set_qid();
+           set_qid;
+           @defaultonly nop;
        }
+       const default_action = nop;
+       const size = NUM_QOS_CLASSES;
     }
     //=============================//
     //===== FAR Tables ======//
@@ -180,9 +184,13 @@ control SpgwIngress(
         fabric_md.skip_forwarding = drop;
         fabric_md.skip_next = drop;
         ig_tm_md.copy_to_cpu = ((bit<1>)notify_cp) | ig_tm_md.copy_to_cpu;
+        fabric_md.bridged.spgw.needs_gtpu_encap = false;
+        fabric_md.bridged.spgw.skip_egress_pdr_ctr = false;
     }
 
-    action load_tunnel_far(bool         drop,
+    // A commom part that being used for load_tunnel_far and load_dbuf_far
+    @hidden
+    action load_common_far(bool         drop,
                            bool         notify_cp,
                            l4_port_t    tunnel_src_port,
                            ipv4_addr_t  tunnel_src_addr,
@@ -203,14 +211,25 @@ control SpgwIngress(
         fabric_md.ipv4_dst = tunnel_dst_addr;
     }
 
+    action load_tunnel_far(bool         drop,
+                           bool         notify_cp,
+                           l4_port_t    tunnel_src_port,
+                           ipv4_addr_t  tunnel_src_addr,
+                           ipv4_addr_t  tunnel_dst_addr,
+                           teid_t       teid) {
+        load_common_far(drop, notify_cp, tunnel_src_port, tunnel_src_addr,
+                        tunnel_dst_addr, teid);
+        fabric_md.bridged.spgw.skip_egress_pdr_ctr = false;
+    }
+
     action load_dbuf_far(bool           drop,
                          bool           notify_cp,
                          l4_port_t      tunnel_src_port,
                          ipv4_addr_t    tunnel_src_addr,
                          ipv4_addr_t    tunnel_dst_addr,
                          teid_t         teid) {
-        load_tunnel_far(drop, notify_cp, tunnel_src_port,
-                                   tunnel_src_addr, tunnel_dst_addr, teid);
+        load_common_far(drop, notify_cp, tunnel_src_port, tunnel_src_addr,
+                        tunnel_dst_addr, teid);
         fabric_md.bridged.spgw.skip_egress_pdr_ctr = true;
     }
 

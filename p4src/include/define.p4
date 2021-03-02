@@ -111,7 +111,8 @@ action nop() {
 enum bit<8> BridgedMdType_t {
     INVALID = 0,
     INGRESS_TO_EGRESS = 1,
-    EGRESS_MIRROR = 2
+    EGRESS_MIRROR = 2,
+    INGRESS_MIRROR = 3
 }
 
 // The mirror type, makes the parser to use correct way to parse the mirror metadata.
@@ -161,9 +162,9 @@ const bit<16> REPORT_FIXED_HEADER_BYTES = 12;
 const bit<16> DROP_REPORT_HEADER_BYTES = 12;
 const bit<16> LOCAL_REPORT_HEADER_BYTES = 16;
 #ifdef WITH_SPGW
-const bit<16> REPORT_MIRROR_HEADER_BYTES = 29;
+const bit<16> REPORT_MIRROR_HEADER_BYTES = 31;
 #else
-const bit<16> REPORT_MIRROR_HEADER_BYTES = 28;
+const bit<16> REPORT_MIRROR_HEADER_BYTES = 30;
 #endif // WITH_SPGW
 const bit<16> ETH_FCS_LEN = 4;
 
@@ -174,12 +175,30 @@ const MirrorId_t REPORT_MIRROR_SESS_PIPE_3 = 303;
 
 #define FLOW_REPORT_FILTER_WIDTH 16
 typedef bit<FLOW_REPORT_FILTER_WIDTH> flow_report_filter_index_t;
+#define DROP_REPORT_FILTER_WIDTH 16
+typedef bit<DROP_REPORT_FILTER_WIDTH> drop_report_filter_index_t;
 
 enum bit<2> IntReportType_t {
     NO_REPORT = 0,
     LOCAL = 1,
     DROP = 2,
     QUEUE = 3
+}
+
+enum bit<8> IntDropReason_t {
+    // Common drop reasons
+    DROP_REASON_UNKNOWN = 0,
+    DROP_REASON_IP_TTL_ZERO = 26,
+    DROP_REASON_ROUTING_V4_MISS = 29,
+    DROP_REASON_ROUTING_V6_MISS = 29,
+    DROP_REASON_PORT_VLAN_MAPPING_MISS = 55,
+    DROP_REASON_ACL_DENY = 80,
+    DROP_REASON_BRIDGING_MISS = 89,
+    // Fabric-TNA-specific drop reasons
+    DROP_REASON_NEXT_ID_MISS = 128,
+    DROP_REASON_MPLS_MISS = 129,
+    DROP_REASON_EGRESS_NEXT_MISS = 130,
+    DROP_REASON_MPLS_TTL_ZERO = 131
 }
 
 #endif // __DEFINE__
