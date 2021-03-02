@@ -165,8 +165,6 @@ public final class P4InfoConstants {
     // Action IDs
     public static final PiActionId FABRIC_EGRESS_EGRESS_NEXT_DROP =
             PiActionId.of("FabricEgress.egress_next.drop");
-    public static final PiActionId FABRIC_EGRESS_EGRESS_NEXT_KEEP_VLAN =
-            PiActionId.of("FabricEgress.egress_next.keep_vlan");
     public static final PiActionId FABRIC_EGRESS_EGRESS_NEXT_POP_VLAN =
             PiActionId.of("FabricEgress.egress_next.pop_vlan");
     public static final PiActionId FABRIC_EGRESS_EGRESS_NEXT_PUSH_VLAN =

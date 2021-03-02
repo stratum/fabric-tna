@@ -26,6 +26,7 @@ import org.onosproject.net.flowobjective.Objective;
 import org.onosproject.net.flowobjective.ObjectiveError;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
+import org.stratumproject.fabric.tna.behaviour.Constants;
 import org.stratumproject.fabric.tna.behaviour.FabricCapabilities;
 import org.stratumproject.fabric.tna.behaviour.P4InfoConstants;
 import org.stratumproject.fabric.tna.behaviour.FabricUtils;
@@ -36,6 +37,9 @@ import java.util.List;
 import static java.lang.String.format;
 import static org.onosproject.net.flow.criteria.Criterion.Type.INNER_VLAN_VID;
 import static org.onosproject.net.flow.criteria.Criterion.Type.VLAN_VID;
+import static org.stratumproject.fabric.tna.behaviour.Constants.FWD_IPV4_ROUTING;
+import static org.stratumproject.fabric.tna.behaviour.Constants.FWD_IPV6_ROUTING;
+import static org.stratumproject.fabric.tna.behaviour.Constants.FWD_MPLS;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.criterion;
 
 /**
@@ -44,15 +48,8 @@ import static org.stratumproject.fabric.tna.behaviour.FabricUtils.criterion;
 class FilteringObjectiveTranslator
         extends AbstractObjectiveTranslator<FilteringObjective> {
 
-    // Forwarding types from fabric.p4.
-    static final byte FWD_MPLS = 1;
-    static final byte FWD_IPV4_ROUTING = 2;
-    static final byte FWD_IPV6_ROUTING = 4;
-
     private static final byte[] ONE = new byte[]{1};
     private static final byte[] ZERO = new byte[]{0};
-
-    private static final short ETH_TYPE_EXACT_MASK = (short) 0xFFFF;
 
     private static final PiAction DENY = PiAction.builder()
             .withId(P4InfoConstants.FABRIC_INGRESS_FILTERING_DENY)
@@ -283,7 +280,7 @@ class FilteringObjectiveTranslator
         TrafficTreatment treatment = fwdClassifierTreatment(FWD_MPLS);
         final PiCriterion ethTypeMplsIpv4 = PiCriterion.builder()
                 .matchTernary(P4InfoConstants.HDR_ETH_TYPE,
-                              Ethernet.MPLS_UNICAST, ETH_TYPE_EXACT_MASK)
+                              Ethernet.MPLS_UNICAST, Constants.ETH_TYPE_EXACT_MASK)
                 .matchExact(P4InfoConstants.HDR_IP_ETH_TYPE,
                             Ethernet.TYPE_IPV4)
                 .build();
@@ -295,7 +292,7 @@ class FilteringObjectiveTranslator
 
         final PiCriterion ethTypeMplsIpv6 = PiCriterion.builder()
                 .matchTernary(P4InfoConstants.HDR_ETH_TYPE,
-                              Ethernet.MPLS_UNICAST, ETH_TYPE_EXACT_MASK)
+                              Ethernet.MPLS_UNICAST, Constants.ETH_TYPE_EXACT_MASK)
                 .matchExact(P4InfoConstants.HDR_IP_ETH_TYPE,
                             Ethernet.TYPE_IPV6)
                 .build();

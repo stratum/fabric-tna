@@ -510,14 +510,12 @@ class FabricTest(P4RuntimeTest):
     def set_forwarding_type(
         self,
         ingress_port,
-        eth_dstAddr,
-        eth_dstMask=MAC_MASK,
+        eth_dst=None,
+        eth_dst_mask=MAC_MASK,
         ethertype=ETH_TYPE_IPV4,
         fwd_type=FORWARDING_TYPE_UNICAST_IPV4,
     ):
         ingress_port_ = stringify(ingress_port, 2)
-        eth_dstAddr_ = mac_to_binary(eth_dstAddr)
-        eth_mask_ = mac_to_binary(eth_dstMask)
         priority = DEFAULT_PRIORITY
         if ethertype == ETH_TYPE_IPV4:
             ethertype_ = stringify(0, 2)
@@ -526,18 +524,20 @@ class FabricTest(P4RuntimeTest):
         elif ethertype == ETH_TYPE_MPLS_UNICAST:
             ethertype_ = stringify(ETH_TYPE_MPLS_UNICAST, 2)
             ethertype_mask_ = stringify(0xFFFF, 2)
-            # FIXME: this will work only for MPLS+IPv4 traffic
+            # TODO: install rule for MPLS+IPv6 traffic
             ip_eth_type = stringify(ETH_TYPE_IPV4, 2)
             priority += 10
         else:
-            # TODO: what should we match on? I should never reach this point.
-            return
+            raise Exception("Invalid ethertype")
         fwd_type_ = stringify(fwd_type, 1)
         matches = [
             self.Exact("ig_port", ingress_port_),
-            self.Ternary("eth_dst", eth_dstAddr_, eth_mask_),
             self.Exact("ip_eth_type", ip_eth_type),
         ]
+        if eth_dst is not None:
+            eth_dst_ = mac_to_binary(eth_dst)
+            eth_dst_mask_ = mac_to_binary(eth_dst_mask)
+            matches.append(self.Ternary("eth_dst", eth_dst_, eth_dst_mask_))
         if ethertype_mask_ != b"\x00\x00":
             matches.append(self.Ternary("eth_type", ethertype_, ethertype_mask_))
         self.send_request_add_entry_to_action(
@@ -559,13 +559,11 @@ class FabricTest(P4RuntimeTest):
             self.set_egress_vlan(port, DEFAULT_VLAN, push_vlan=False)
             self.set_forwarding_type(
                 port,
-                SWITCH_MAC,
                 ethertype=ETH_TYPE_IPV4,
                 fwd_type=FORWARDING_TYPE_UNICAST_IPV4,
             )
             self.set_forwarding_type(
                 port,
-                SWITCH_MAC,
                 ethertype=ETH_TYPE_MPLS_UNICAST,
                 fwd_type=FORWARDING_TYPE_MPLS,
             )
