@@ -220,12 +220,12 @@ header int_mirror_metadata_t {
     bit<32>               eg_tstamp;
     bit<8>                drop_reason;
     bit<16>               ip_eth_type;
-    @padding bit<6>       _pad2;
+    bit<1>                vlan_stripped;
+    @padding bit<5>       _pad2;
     IntReportType_t       report_type;
     flow_hash_t           flow_hash;
-    bit<1>                vlan_stripped;
 #ifdef WITH_SPGW
-    @padding bit<6>       _pad3;
+    @padding bit<7>       _pad3;
     bit<1>                strip_gtpu;
 #endif // WITH_SPGW
 }
