@@ -126,10 +126,12 @@ control SpgwIngress(
 
     action load_pdr(pdr_ctr_id_t    ctr_id,
                     far_id_t        far_id,
-                    bool            needs_gtpu_decap) {
+                    bool            needs_gtpu_decap,
+                    qid_t           qid) {
         fabric_md.spgw.far_id = far_id;
         fabric_md.bridged.spgw.pdr_ctr_id = ctr_id;
         fabric_md.spgw.needs_gtpu_decap = needs_gtpu_decap;
+        ig_tm_md.qid = qid;
     }
 
     // These two tables scale well and cover the average case PDR
@@ -155,25 +157,6 @@ control SpgwIngress(
         size = NUM_UPLINK_PDRS;
     }
 
-    action set_qid(bit<5> qid) {
-           ig_tm_md.qid = qid;
-    }
-
-    table qos_classifier {
-       key = {
-            hdr.ipv4.src_addr          : ternary     @name("inet_addr")   ;
-            hdr.ipv4.dst_addr          : ternary     @name("ue_addr")     ;
-            fabric_md.bridged.base.l4_sport : ternary     @name("inet_l4_port");
-            fabric_md.bridged.base.l4_dport : ternary     @name("ue_l4_port")  ;
-            hdr.ipv4.protocol          : ternary     @name("ip_proto")    ;
-       }
-       actions = {
-           set_qid;
-           @defaultonly nop;
-       }
-       const default_action = nop;
-       const size = NUM_QOS_CLASSES;
-    }
     //=============================//
     //===== FAR Tables ======//
     //=============================//
@@ -262,7 +245,6 @@ control SpgwIngress(
                 uplink_pdrs.apply();
             } else {
                 downlink_pdrs.apply();
-                qos_classifier.apply();
             }
             if (fabric_md.spgw.src_iface != SpgwInterface.FROM_DBUF) {
                 pdr_counter.count(fabric_md.bridged.spgw.pdr_ctr_id);
