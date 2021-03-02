@@ -32,6 +32,9 @@ import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 import static org.stratumproject.fabric.tna.behaviour.Constants.ETH_TYPE_EXACT_MASK;
+import static org.stratumproject.fabric.tna.behaviour.Constants.FWD_IPV4_ROUTING;
+import static org.stratumproject.fabric.tna.behaviour.Constants.FWD_IPV6_ROUTING;
+import static org.stratumproject.fabric.tna.behaviour.Constants.FWD_MPLS;
 
 /**
  * Test cases for fabric.p4 pipeline filtering control block.
@@ -71,7 +74,7 @@ public class FabricFilteringPipelinerTest extends FabricPipelinerTest {
                 ROUTER_MAC,
                 null,
                 Ethernet.TYPE_IPV4,
-                Constants.FWD_IPV4_ROUTING));
+                FWD_IPV4_ROUTING));
 
         // forwarding classifier ipv6
         expectedFlowRules.addAll(buildExpectedFwdClassifierRule(
@@ -79,7 +82,7 @@ public class FabricFilteringPipelinerTest extends FabricPipelinerTest {
                 ROUTER_MAC,
                 null,
                 Ethernet.TYPE_IPV6,
-                Constants.FWD_IPV6_ROUTING));
+                FWD_IPV6_ROUTING));
 
         // forwarding classifier mpls
         expectedFlowRules.addAll(buildExpectedFwdClassifierRule(
@@ -87,7 +90,7 @@ public class FabricFilteringPipelinerTest extends FabricPipelinerTest {
                 ROUTER_MAC,
                 null,
                 Ethernet.MPLS_UNICAST,
-                Constants.FWD_MPLS));
+                FWD_MPLS));
 
         ObjectiveTranslation expectedTranslation = buildExpectedTranslation(expectedFlowRules);
 

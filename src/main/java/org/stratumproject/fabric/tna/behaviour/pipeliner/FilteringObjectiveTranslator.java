@@ -37,6 +37,7 @@ import java.util.List;
 import static java.lang.String.format;
 import static org.onosproject.net.flow.criteria.Criterion.Type.INNER_VLAN_VID;
 import static org.onosproject.net.flow.criteria.Criterion.Type.VLAN_VID;
+import static org.stratumproject.fabric.tna.behaviour.Constants.ETH_TYPE_EXACT_MASK;
 import static org.stratumproject.fabric.tna.behaviour.Constants.FWD_IPV4_ROUTING;
 import static org.stratumproject.fabric.tna.behaviour.Constants.FWD_IPV6_ROUTING;
 import static org.stratumproject.fabric.tna.behaviour.Constants.FWD_MPLS;
@@ -280,7 +281,7 @@ class FilteringObjectiveTranslator
         TrafficTreatment treatment = fwdClassifierTreatment(FWD_MPLS);
         final PiCriterion ethTypeMplsIpv4 = PiCriterion.builder()
                 .matchTernary(P4InfoConstants.HDR_ETH_TYPE,
-                              Ethernet.MPLS_UNICAST, Constants.ETH_TYPE_EXACT_MASK)
+                              Ethernet.MPLS_UNICAST, ETH_TYPE_EXACT_MASK)
                 .matchExact(P4InfoConstants.HDR_IP_ETH_TYPE,
                             Ethernet.TYPE_IPV4)
                 .build();
@@ -292,7 +293,7 @@ class FilteringObjectiveTranslator
 
         final PiCriterion ethTypeMplsIpv6 = PiCriterion.builder()
                 .matchTernary(P4InfoConstants.HDR_ETH_TYPE,
-                              Ethernet.MPLS_UNICAST, Constants.ETH_TYPE_EXACT_MASK)
+                              Ethernet.MPLS_UNICAST, ETH_TYPE_EXACT_MASK)
                 .matchExact(P4InfoConstants.HDR_IP_ETH_TYPE,
                             Ethernet.TYPE_IPV6)
                 .build();

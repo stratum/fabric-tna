@@ -244,7 +244,7 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
                     .forDevice(deviceId)
                     .fromApp(appId)
                     .build());
-            // fwd_classifier table match MPLS -> IPv4 routing
+            // fwd_classifier table match MPLS -> MPLS forwarding
             final TrafficSelector fwdClassMplsSelector = DefaultTrafficSelector.builder()
                     .matchInPort(PortNumber.portNumber(port))
                     .matchPi(PiCriterion.builder()
