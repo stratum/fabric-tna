@@ -1884,13 +1884,14 @@ class SpgwSimpleTest(IPv4UnicastTest):
         pkt[Ether].src = S1U_ENB_MAC
         pkt[Ether].dst = SWITCH_MAC
 
-        # Output, still GTP-encapped.
-        # Recirculation means routed wtice, one time for uplink, another for
-        # downlink (TTL decremented by dest leaf if next hop is spine).
-        if is_next_hop_spine:
-            ue_out_pkt[IP].ttl = ue_out_pkt[IP].ttl - 1
-        else:
+        # Output, still GTP-encapped. Recirculation means routed twice, one time
+        # for uplink, another for downlink.
+        if not is_next_hop_spine:
             ue_out_pkt[IP].ttl = ue_out_pkt[IP].ttl - 2
+        else:
+            # TTL decremented only for uplink. For downlink, it will be up to
+            # dest leaf to decrement after popping the MPLS label.
+            ue_out_pkt[IP].ttl = ue_out_pkt[IP].ttl - 1
         exp_pkt = pkt_add_gtp(
             ue_out_pkt,
             out_ipv4_src=S1U_SGW_IPV4,
@@ -2793,11 +2794,11 @@ class IntTest(IPv4UnicastTest):
         # Build expected inner pkt using the input one.
         int_inner_pkt = pkt.copy()
 
-        # Since use ingress mirroring for reporting drops by the ingress pipe,
-        # the inner pkt will be the same as the ingress one before any header
-        # modification (e.g., no MPLS label). However, the egress pipe for INT
-        # reports always removes the VLAN header since reports are transmitted
-        # over the untagged recirculation port.
+        # Since we use ingress mirroring for reporting drops by the ingress
+        # pipe, the inner pkt will be the same as the ingress one before any
+        # header modification (e.g., no MPLS label). However, the egress pipe
+        # for INT reports always removes the VLAN header since reports are
+        # transmitted over the untagged recirculation port.
         if Dot1Q in int_inner_pkt:
             int_inner_pkt = pkt_remove_vlan(int_inner_pkt)
 
