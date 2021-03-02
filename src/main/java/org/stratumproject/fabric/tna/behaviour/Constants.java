@@ -27,7 +27,4 @@ public final class Constants {
     // hide default constructor
     private Constants() {
     }
-
-
-
 }
