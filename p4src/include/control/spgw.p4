@@ -126,11 +126,17 @@ control SpgwIngress(
 
     action load_pdr(pdr_ctr_id_t    ctr_id,
                     far_id_t        far_id,
-                    bool            needs_gtpu_decap,
-                    qid_t           qid) {
+                    bool            needs_gtpu_decap) {
         fabric_md.spgw.far_id = far_id;
         fabric_md.bridged.spgw.pdr_ctr_id = ctr_id;
         fabric_md.spgw.needs_gtpu_decap = needs_gtpu_decap;
+    }
+
+    action load_pdr_qos(pdr_ctr_id_t    ctr_id,
+                    far_id_t            far_id,
+                    bool                needs_gtpu_decap,
+                    qid_t               qid) {
+        load_pdr(ctr_id, far_id, needs_gtpu_decap);
         ig_tm_md.qid = qid;
     }
 
@@ -142,6 +148,7 @@ control SpgwIngress(
         }
         actions = {
             load_pdr;
+            load_pdr_qos;
         }
         size = NUM_DOWNLINK_PDRS;
     }
