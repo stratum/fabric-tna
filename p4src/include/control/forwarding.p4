@@ -174,9 +174,19 @@ control Forwarding (inout parsed_headers_t hdr,
     }
 
     apply {
-        if (fabric_md.bridged.base.fwd_type == FWD_BRIDGING) bridging.apply();
-        else if (fabric_md.bridged.base.fwd_type == FWD_MPLS) mpls.apply();
-        else if (fabric_md.bridged.base.fwd_type == FWD_IPV4_UNICAST || fabric_md.bridged.base.fwd_type == FWD_IPV4_MULTICAST) routing_v4.apply();
-        else if (fabric_md.bridged.base.fwd_type == FWD_IPV6_UNICAST) routing_v6.apply();
+        if (hdr.ethernet.isValid() &&
+                fabric_md.bridged.base.fwd_type == FWD_BRIDGING) {
+            bridging.apply();
+        } else if (hdr.mpls.isValid() &&
+                       fabric_md.bridged.base.fwd_type == FWD_MPLS) {
+            mpls.apply();
+        } else if (hdr.ipv4.isValid() &&
+                       (fabric_md.bridged.base.fwd_type == FWD_IPV4_UNICAST ||
+                            fabric_md.bridged.base.fwd_type == FWD_IPV4_MULTICAST)) {
+            routing_v4.apply();
+        } else if (hdr.ipv6.isValid() &&
+                       fabric_md.bridged.base.fwd_type == FWD_IPV6_UNICAST) {
+            routing_v6.apply();
+        }
     }
 }
