@@ -132,10 +132,10 @@ control SpgwIngress(
         fabric_md.spgw.needs_gtpu_decap = needs_gtpu_decap;
     }
 
-    action load_pdr_qos(pdr_ctr_id_t    ctr_id,
-                    far_id_t            far_id,
-                    bool                needs_gtpu_decap,
-                    qid_t               qid) {
+    action load_pdr_qos(pdr_ctr_id_t        ctr_id,
+                        far_id_t            far_id,
+                        bool                needs_gtpu_decap,
+                        qid_t               qid) {
         load_pdr(ctr_id, far_id, needs_gtpu_decap);
         ig_tm_md.qid = qid;
     }
@@ -253,7 +253,6 @@ control SpgwIngress(
                     uplink_pdrs.apply();
                 } else {
                     downlink_pdrs.apply();
-                    qos_classifier.apply();
                 }
                 if (fabric_md.spgw.src_iface != SpgwInterface.FROM_DBUF) {
                     pdr_counter.count(fabric_md.bridged.spgw.pdr_ctr_id);
