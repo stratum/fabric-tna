@@ -1,0 +1,16 @@
+#!/bin/bash
+# Copyright 2020-present Open Networking Foundation
+# SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
+
+set -eu -o pipefail
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
+source "${DIR}/base.sh"
+echo "Starting P4Runtime Shell"
+docker run --name "p4runtime-shell" -it --privileged --rm \
+    --network "container:${tmRunName}" \
+    -v "${P4C_OUT}":/p4c-out \
+    "${P4RUNTIME_SHELL_DOCKER_IMG}" \
+    --device-id 1 --election-id 0,1 \
+    --grpc-addr 127.0.0.1:28000 \
+    --config /p4c-out/p4info.txt,/p4c-out/pipeline_config.pb.bin
