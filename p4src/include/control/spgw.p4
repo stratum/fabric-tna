@@ -133,9 +133,9 @@ control SpgwIngress(
     }
 
     action load_pdr_qos(pdr_ctr_id_t    ctr_id,
-                    far_id_t            far_id,
-                    bool                needs_gtpu_decap,
-                    qid_t               qid) {
+                        far_id_t            far_id,
+                        bool                needs_gtpu_decap,
+                        qid_t               qid) {
         load_pdr(ctr_id, far_id, needs_gtpu_decap);
         ig_tm_md.qid = qid;
     }
