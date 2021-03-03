@@ -37,9 +37,9 @@ import static org.stratumproject.fabric.tna.behaviour.Constants.FWD_IPV6_ROUTING
 import static org.stratumproject.fabric.tna.behaviour.Constants.FWD_MPLS;
 
 /**
- * Test cases for fabric.p4 pipeline filtering control block.
+ * Test cases for FilteringObjectiveTranslator.
  */
-public class FabricFilteringPipelinerTest extends FabricPipelinerTest {
+public class FilteringObjectiveTranslatorTest extends AbstractObjectiveTranslatorTest {
 
     public static final byte[] ONE = {1};
     public static final byte[] ZERO = {0};

@@ -18,7 +18,8 @@ import static org.easymock.EasyMock.createNiceMock;
 import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.replay;
 
-public class FabricPipelinerTest {
+
+public class AbstractObjectiveTranslatorTest {
     static final ApplicationId APP_ID = TestApplicationId.create("FabricPipelinerTest");
     // TODO: re-enable support for xconnext
     // static final ApplicationId XCONNECT_APP_ID = TestApplicationId.create("FabricPipelinerTest.xconnect");
