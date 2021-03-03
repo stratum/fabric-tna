@@ -199,6 +199,9 @@ final class FabricTreatmentInterpreter {
 
     static PiAction mapAclTreatment(TrafficTreatment treatment, PiTableId tableId)
             throws PiInterpreterException {
+        if (isDrop(treatment)) {
+            return drop(tableId);
+        }
         if (isNoAction(treatment)) {
             return nop(tableId);
         }
@@ -233,6 +236,13 @@ final class FabricTreatmentInterpreter {
         return PiAction.builder().withId(NOP_ACTIONS.get(tableId)).build();
     }
 
+    private static PiAction drop(PiTableId tableId) throws PiInterpreterException {
+        if (!tableId.equals(P4InfoConstants.FABRIC_INGRESS_ACL_ACL)) {
+            throw new PiInterpreterException(format("table '%s' doe not specify a nop action", tableId));
+        }
+        return PiAction.builder().withId(P4InfoConstants.FABRIC_INGRESS_ACL_DROP).build();
+    }
+
     private static boolean isNoAction(TrafficTreatment treatment) {
         // Empty treatment OR
         // No instructions OR
@@ -240,6 +250,10 @@ final class FabricTreatmentInterpreter {
         return treatment.equals(DefaultTrafficTreatment.emptyTreatment()) ||
                 treatment.allInstructions().isEmpty() ||
                 (treatment.allInstructions().size() == 1 && treatment.writeMetadata() != null);
+    }
+
+    private static boolean isDrop(TrafficTreatment treatment) {
+        return treatment.allInstructions().isEmpty() && treatment.clearedDeferred();
     }
 
     private static boolean isFilteringPopAction(TrafficTreatment treatment) {
