@@ -231,6 +231,8 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.spgw.load_normal_far");
     public static final PiActionId FABRIC_INGRESS_SPGW_LOAD_PDR =
             PiActionId.of("FabricIngress.spgw.load_pdr");
+    public static final PiActionId FABRIC_INGRESS_SPGW_LOAD_PDR_QOS =
+            PiActionId.of("FabricIngress.spgw.load_pdr_qos");
     public static final PiActionId FABRIC_INGRESS_SPGW_LOAD_TUNNEL_FAR =
             PiActionId.of("FabricIngress.spgw.load_tunnel_far");
     public static final PiActionId NO_ACTION = PiActionId.of("NoAction");
