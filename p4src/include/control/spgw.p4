@@ -132,11 +132,7 @@ control SpgwIngress(
         fabric_md.spgw.needs_gtpu_decap = needs_gtpu_decap;
     }
 
-<<<<<<< HEAD
     action load_pdr_qos(pdr_ctr_id_t        ctr_id,
-=======
-    action load_pdr_qos(pdr_ctr_id_t    ctr_id,
->>>>>>> baf25b7cb5c95110482cac68d69708fc36599562
                         far_id_t            far_id,
                         bool                needs_gtpu_decap,
                         qid_t               qid) {
