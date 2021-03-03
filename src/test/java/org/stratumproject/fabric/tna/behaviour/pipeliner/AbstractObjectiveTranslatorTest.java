@@ -20,7 +20,7 @@ import static org.easymock.EasyMock.replay;
 
 
 public class AbstractObjectiveTranslatorTest {
-    static final ApplicationId APP_ID = TestApplicationId.create("FabricPipelinerTest");
+    static final ApplicationId APP_ID = TestApplicationId.create("ObjectiveTranslatorTestTest");
     // TODO: re-enable support for xconnext
     // static final ApplicationId XCONNECT_APP_ID = TestApplicationId.create("FabricPipelinerTest.xconnect");
     static final DeviceId DEVICE_ID = DeviceId.deviceId("device:bmv2:11");

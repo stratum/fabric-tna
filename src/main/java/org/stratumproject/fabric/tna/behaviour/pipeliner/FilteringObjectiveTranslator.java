@@ -26,10 +26,9 @@ import org.onosproject.net.flowobjective.Objective;
 import org.onosproject.net.flowobjective.ObjectiveError;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
-import org.stratumproject.fabric.tna.behaviour.Constants;
 import org.stratumproject.fabric.tna.behaviour.FabricCapabilities;
-import org.stratumproject.fabric.tna.behaviour.P4InfoConstants;
 import org.stratumproject.fabric.tna.behaviour.FabricUtils;
+import org.stratumproject.fabric.tna.behaviour.P4InfoConstants;
 
 import java.util.Collection;
 import java.util.List;
