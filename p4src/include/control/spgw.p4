@@ -307,43 +307,44 @@ control SpgwIngress(
     //=============================//
     apply {
 
-        // Interfaces
-        if (interfaces.apply().hit) {
-            if (fabric_md.spgw.src_iface == SpgwInterface.FROM_DBUF) {
-                decap_gtpu_from_dbuf.apply(hdr, fabric_md);
-            }
-            // PDRs
-            if (fabric_md.spgw.src_iface == SpgwInterface.ACCESS) {
-                uplink_pdrs.apply();
-            } else if (fabric_md.spgw.src_iface == SpgwInterface.CORE ||
-                        fabric_md.spgw.src_iface == SpgwInterface.FROM_DBUF) {
-                downlink_pdrs.apply();
-                qos_classifier.apply();
-            }
-            if (fabric_md.spgw.src_iface != SpgwInterface.FROM_DBUF) {
-                pdr_counter.count(fabric_md.bridged.spgw.pdr_ctr_id);
-            }
+        if (hdr.ipv4.isValid()) {
+            if (interfaces.apply().hit) {
+                if (fabric_md.spgw.src_iface == SpgwInterface.FROM_DBUF) {
+                    decap_gtpu_from_dbuf.apply(hdr, fabric_md);
+                }
+                // PDRs
+                if (fabric_md.spgw.src_iface == SpgwInterface.ACCESS) {
+                    uplink_pdrs.apply();
+                } else if (fabric_md.spgw.src_iface == SpgwInterface.CORE ||
+                            fabric_md.spgw.src_iface == SpgwInterface.FROM_DBUF) {
+                    downlink_pdrs.apply();
+                    qos_classifier.apply();
+                }
+                if (fabric_md.spgw.src_iface != SpgwInterface.FROM_DBUF) {
+                    pdr_counter.count(fabric_md.bridged.spgw.pdr_ctr_id);
+                }
 
-            // GTPU Decapsulate
-            if (fabric_md.spgw.needs_gtpu_decap) {
-                decap_gtpu.apply(hdr, fabric_md);
+                // GTPU Decapsulate
+                if (fabric_md.spgw.needs_gtpu_decap) {
+                    decap_gtpu.apply(hdr, fabric_md);
+                }
+
+                // FARs
+                // Load FAR info
+                fars.apply();
+
+                // Recirculate UE-to-UE traffic.
+                if (fabric_md.spgw.src_iface == SpgwInterface.ACCESS && fabric_md.spgw.needs_gtpu_decap) {
+                    uplink_recirc.apply(hdr, fabric_md, ig_intr_md, ig_tm_md);
+                }
+
+                // Nothing to be done immediately for forwarding or encapsulation.
+                // Forwarding is done by other parts of fabric.p4, and
+                // encapsulation is done in the egress
+
+                // Needed for correct GTPU encapsulation in egress
+                fabric_md.bridged.spgw.ipv4_len_for_encap = hdr.ipv4.total_len;
             }
-
-            // FARs
-            // Load FAR info
-            fars.apply();
-
-            // Recirculate UE-to-UE traffic.
-            if (fabric_md.spgw.src_iface == SpgwInterface.ACCESS && fabric_md.spgw.needs_gtpu_decap) {
-                uplink_recirc.apply(hdr, fabric_md, ig_intr_md, ig_tm_md);
-            }
-
-            // Nothing to be done immediately for forwarding or encapsulation.
-            // Forwarding is done by other parts of fabric.p4, and
-            // encapsulation is done in the egress
-
-            // Needed for correct GTPU encapsulation in egress
-            fabric_md.bridged.spgw.ipv4_len_for_encap = hdr.ipv4.total_len;
         }
     }
 }
