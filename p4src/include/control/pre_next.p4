@@ -9,8 +9,8 @@
 control PreNext(inout parsed_headers_t hdr,
                 inout fabric_ingress_metadata_t fabric_md) {
 
-	/*
-     * MPLS table.
+    /*
+     * Next MPLS table.
      * Set the MPLS label based on the next ID.
      */
     DirectCounter<bit<64>>(CounterType_t.PACKETS_AND_BYTES) next_mpls_counter;
