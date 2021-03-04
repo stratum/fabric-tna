@@ -10,12 +10,12 @@ to be directly paste-able into the interactive shell.
 
 ## Starting a shell
 
-Clone the repository and navigate to it, then start a new shell:
+After building the pipeline, use the following command to start Stratum, Tofino Model, and a P4Runtime shell.
+
+See [README.md](README.md) for more information about how to build the pipeline.
 
 ```bash
-./p4runtime-sh-docker \
-    --grpc-addr <switch_ip:9339> --device-id 1 --election-id 0,1 \
-    --config fabric-tna/p4src/build/fabric-spgw-int/sde_9_3_1/p4info.txt,fabric-tna/p4src/build/fabric-spgw-int/sde_9_3_1/pipeline_config.pb.bin
+./ptf/run/tm/p4rt-shell <profile>
 ```
 
 ## Snippets
@@ -159,4 +159,40 @@ te.action['port_num'] = '260'
 te.counter_data
 te.insert()
 te.read(lambda e: print(e))
+```
+
+### Prepare and send/receive packets to/from the device
+
+To create a packet (e.g., UDP):
+
+```python
+from scapy.all import *
+pkt = (
+    Ether(src='00:00:00:00:00:01', dst='00:00:00:00:00:02') /
+    IP(src='192.168.0.1', dst='192.168.0.2') /
+    UDP()
+)
+```
+
+To send packet to a interface:
+
+```python
+sendp(pkt, iface='veth1')
+```
+
+Note that when the Tofino Model container started, it will automatically create 33 veth
+pairs(0-1, 2-3, ...62-63, and 250-251)
+
+Every interfaces with **even** number are attached to the Tofino Model and every interfaces
+with **odd** number are interfaces we can use to send and receive packets.
+
+You can also set up a sniffer to sniff packets from interface(s), for example, to print
+every packets from a interface:
+
+```python
+sn = AsyncSniffer(iface='veth3', prn=lambda p: ls(p))
+sn.start()
+# ...
+# To stop the sniffer and show summary
+sn.stop()
 ```
