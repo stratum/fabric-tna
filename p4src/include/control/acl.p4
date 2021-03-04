@@ -44,6 +44,11 @@ control Acl (inout parsed_headers_t hdr,
         acl_counter.count();
     }
 
+    /*
+     * The next_mpls and next_vlan tables are applied before the acl table. 
+     * So, if this action is applied, even though skip_next is set to true
+     * the packet might get forwarded with unexpected MPLS and VLAG tags.
+     */
     action set_output_port(PortId_t port_num) {
         ig_intr_md_for_tm.ucast_egress_port = port_num;
         fabric_md.egress_port_set = true;
