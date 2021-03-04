@@ -13,10 +13,6 @@ control Acl (inout parsed_headers_t hdr,
              inout ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr,
              inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm) {
 
-    // The following metadata are used as match in the ACL table and they are populated
-    // accordingly to the packet structure. If the packet is GTP encapped and the inner
-    // packet is a valid tcp/ip packet they will be populated using the inner headers.
-    // Otherwise, the only available outer headers will be used.
     ipv4_addr_t ipv4_src    = 0;
     ipv4_addr_t ipv4_dst    = 0;
     bit<8> ip_proto         = 0;
