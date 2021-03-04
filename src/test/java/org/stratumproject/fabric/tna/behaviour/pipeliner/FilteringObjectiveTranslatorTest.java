@@ -24,7 +24,6 @@ import org.onosproject.net.flowobjective.FilteringObjective;
 import org.onosproject.net.flowobjective.ObjectiveError;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
-import org.stratumproject.fabric.tna.behaviour.Constants;
 import org.stratumproject.fabric.tna.behaviour.P4InfoConstants;
 
 import java.util.Collection;
@@ -133,7 +132,7 @@ public class FilteringObjectiveTranslatorTest extends AbstractObjectiveTranslato
                 MacAddress.IPV4_MULTICAST,
                 MacAddress.IPV4_MULTICAST_MASK,
                 Ethernet.TYPE_IPV4,
-                Constants.FWD_IPV4_ROUTING));
+                FWD_IPV4_ROUTING));
 
         ObjectiveTranslation expectedTranslation = buildExpectedTranslation(expectedFlowRules);
 
@@ -175,7 +174,7 @@ public class FilteringObjectiveTranslatorTest extends AbstractObjectiveTranslato
                 MacAddress.IPV6_MULTICAST,
                 MacAddress.IPV6_MULTICAST_MASK,
                 Ethernet.TYPE_IPV6,
-                Constants.FWD_IPV6_ROUTING));
+                FWD_IPV6_ROUTING));
 
         ObjectiveTranslation expectedTranslation = buildExpectedTranslation(flowRules);
 
@@ -277,13 +276,13 @@ public class FilteringObjectiveTranslatorTest extends AbstractObjectiveTranslato
         // Forwarding classifier rules (ipv6, ipv4, mpls)
         expectedFlowRules.addAll(buildExpectedFwdClassifierRule(
                 PORT_1, ROUTER_MAC, null, Ethernet.TYPE_IPV4,
-                Constants.FWD_IPV4_ROUTING));
+                FWD_IPV4_ROUTING));
         expectedFlowRules.addAll(buildExpectedFwdClassifierRule(
                 PORT_1, ROUTER_MAC, null, Ethernet.TYPE_IPV6,
-                Constants.FWD_IPV6_ROUTING));
+                FWD_IPV6_ROUTING));
         expectedFlowRules.addAll(buildExpectedFwdClassifierRule(
                 PORT_1, ROUTER_MAC, null, Ethernet.MPLS_UNICAST,
-                Constants.FWD_MPLS));
+                FWD_MPLS));
         ObjectiveTranslation expectedTranslation = buildExpectedTranslation(expectedFlowRules);
 
         assertEquals(expectedTranslation, actualTranslation);

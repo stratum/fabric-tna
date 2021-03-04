@@ -103,6 +103,10 @@ const vlan_id_t DEFAULT_VLAN_ID = 12w4094;
 const bit<8> DEFAULT_MPLS_TTL = 64;
 const bit<8> DEFAULT_IPV4_TTL = 64;
 
+// The recirculation port uses the same number for all HW pipes. The actual port
+// ID (DP_ID) can be obtained by prefixing the HW pipe ID (2 bits).
+const bit<7> RECIRC_PORT_NUMBER = 7w68;
+
 action nop() {
     NoAction();
 }
