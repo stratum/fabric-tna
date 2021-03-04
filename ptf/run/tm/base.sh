@@ -1,3 +1,4 @@
+#!/bin/bash
 # Copyright 2020-present Open Networking Foundation
 # SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 
@@ -41,7 +42,6 @@ echo "*** Using P4 compiler output in ${P4C_OUT}..."
 randomNum=${RANDOM}
 tmRunName=tofino-model-${randomNum}
 stratumBfRunName=stratum-bf-${randomNum}
-testerRunName=tester-${randomNum}
 
 function stop() {
     set +e
