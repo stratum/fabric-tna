@@ -15,8 +15,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.onlab.junit.TestUtils;
-import org.onlab.packet.EthType;
-import org.onlab.packet.Ethernet;
 import org.onlab.packet.IPv4;
 import org.onlab.packet.IpAddress;
 import org.onlab.packet.IpPrefix;
@@ -48,7 +46,6 @@ import org.onosproject.net.flow.FlowRule;
 import org.onosproject.net.flow.FlowRuleService;
 import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flow.TrafficTreatment;
-import org.onosproject.net.flow.criteria.Criteria;
 import org.onosproject.net.flow.criteria.PiCriterion;
 import org.onosproject.net.group.DefaultGroupDescription;
 import org.onosproject.net.group.DefaultGroupKey;
@@ -124,14 +121,9 @@ public class FabricIntProgrammableTest {
                     .put(301, 0xc4)
                     .put(302, 0x144)
                     .put(303, 0x1c4).build();
-    private static final int DEFAULT_VLAN = 4094;
     private static final MacAddress SWITCH_MAC = MacAddress.valueOf("00:00:00:00:01:80");
-    private static final byte FWD_TYPE_MPLS = 1;
-    private static final byte FWD_TYPE_IPV4_ROUTING = 2;
-    private static final short ETH_TYPE_EXACT_MASK = (short) 0xFFFF;
 
     private FabricIntProgrammable intProgrammable;
-    private FabricCapabilities capabilities;
     private FlowRuleService flowRuleService;
     private GroupService groupService;
     private NetworkConfigService netcfgService;
@@ -141,7 +133,7 @@ public class FabricIntProgrammableTest {
 
     @Before
     public void setup() throws IOException {
-        capabilities = createMock(FabricCapabilities.class);
+        FabricCapabilities capabilities = createMock(FabricCapabilities.class);
         expect(capabilities.hasHashedTable()).andReturn(true).anyTimes();
         expect(capabilities.supportDoubleVlanTerm()).andReturn(false).anyTimes();
         expect(capabilities.hwPipeCount()).andReturn(4).anyTimes();
@@ -178,7 +170,7 @@ public class FabricIntProgrammableTest {
         TestUtils.setField(intProgrammable, "handler", driverHandler);
         TestUtils.setField(intProgrammable, "data", driverData);
 
-        testDefaultRecirculateRules();
+        testInit();
     }
 
     @After
@@ -315,72 +307,6 @@ public class FabricIntProgrammableTest {
             captures.add(flowRuleCapture);
         }
 
-        // Forwarding classifier rules will also be updated again
-        final List<FlowRule> expectedFwdClsIpRules = Lists.newArrayList();
-        final Capture<FlowRule> capturedFwdClsIpRules = newCapture(CaptureType.ALL);
-        final List<FlowRule> expectedFwdClsMplsRules = Lists.newArrayList();
-        final Capture<FlowRule> capturedFwdClsMplsRules = newCapture(CaptureType.ALL);
-        QUAD_PIPE_MIRROR_SESS_TO_RECIRC_PORTS.forEach((sessionId, port) -> {
-            // Fwd classifier match IPv4
-            PiCriterion criterion = PiCriterion.builder()
-                    .matchExact(P4InfoConstants.HDR_IP_ETH_TYPE, Ethernet.TYPE_IPV4)
-                    .build();
-            TrafficSelector fwdClassSel = DefaultTrafficSelector.builder()
-                    .matchInPort(PortNumber.portNumber(port))
-                    .matchEthDstMasked(SWITCH_MAC, MacAddress.EXACT_MASK)
-                    .matchPi(criterion)
-                    .build();
-            PiActionParam fwdTypeParam = new PiActionParam(P4InfoConstants.FWD_TYPE, FWD_TYPE_IPV4_ROUTING);
-            PiAction setFwdTypeAction = PiAction.builder()
-                    .withId(P4InfoConstants.FABRIC_INGRESS_FILTERING_SET_FORWARDING_TYPE)
-                    .withParameter(fwdTypeParam)
-                    .build();
-            TrafficTreatment treatment = DefaultTrafficTreatment.builder()
-                    .piTableAction(setFwdTypeAction)
-                    .build();
-            expectedFwdClsIpRules.add(DefaultFlowRule.builder()
-                    .withSelector(fwdClassSel)
-                    .withTreatment(treatment)
-                    .forTable(P4InfoConstants.FABRIC_INGRESS_FILTERING_FWD_CLASSIFIER)
-                    .makePermanent()
-                    .withPriority(DEFAULT_PRIORITY)
-                    .forDevice(LEAF_DEVICE_ID)
-                    .fromApp(APP_ID)
-                    .build());
-            flowRuleService.applyFlowRules(capture(capturedFwdClsIpRules));
-
-            // Fwd classifier match MPLS + IPv4
-            criterion = PiCriterion.builder()
-                    .matchTernary(P4InfoConstants.HDR_ETH_TYPE,
-                            EthType.EtherType.MPLS_UNICAST.ethType().toShort(),
-                            ETH_TYPE_EXACT_MASK)
-                    .matchExact(P4InfoConstants.HDR_IP_ETH_TYPE, EthType.EtherType.IPV4.ethType().toShort())
-                    .build();
-            fwdClassSel = DefaultTrafficSelector.builder()
-                    .matchInPort(PortNumber.portNumber(port))
-                    .matchEthDstMasked(SWITCH_MAC, MacAddress.EXACT_MASK)
-                    .matchPi(criterion)
-                    .build();
-            fwdTypeParam = new PiActionParam(P4InfoConstants.FWD_TYPE, FWD_TYPE_MPLS);
-            setFwdTypeAction = PiAction.builder()
-                    .withId(P4InfoConstants.FABRIC_INGRESS_FILTERING_SET_FORWARDING_TYPE)
-                    .withParameter(fwdTypeParam)
-                    .build();
-            treatment = DefaultTrafficTreatment.builder()
-                    .piTableAction(setFwdTypeAction)
-                    .build();
-            expectedFwdClsMplsRules.add(DefaultFlowRule.builder()
-                    .withSelector(fwdClassSel)
-                    .withTreatment(treatment)
-                    .forTable(P4InfoConstants.FABRIC_INGRESS_FILTERING_FWD_CLASSIFIER)
-                    .makePermanent()
-                    .withPriority(DEFAULT_PRIORITY + 10)
-                    .forDevice(LEAF_DEVICE_ID)
-                    .fromApp(APP_ID)
-                    .build());
-            flowRuleService.applyFlowRules(capture(capturedFwdClsMplsRules));
-        });
-
         replay(flowRuleService);
         assertTrue(intProgrammable.setupIntConfig(intConfig));
 
@@ -389,14 +315,6 @@ public class FabricIntProgrammableTest {
             FlowRule expectRule = expectRules.get(i);
             FlowRule actualRule = captures.get(i).getValue();
             assertTrue(expectRule.exactMatch(actualRule));
-        }
-        for (int i = 0; i < QUAD_PIPE_MIRROR_SESS_TO_RECIRC_PORTS.size(); i++) {
-            FlowRule expectedFwdClsIpRule = expectedFwdClsIpRules.get(i);
-            FlowRule actualFwdClsIpRule = capturedFwdClsIpRules.getValues().get(i);
-            FlowRule expectedFwdClsMplsRule = expectedFwdClsMplsRules.get(i);
-            FlowRule actualFwdClsMplsRule = capturedFwdClsMplsRules.getValues().get(i);
-            assertTrue(expectedFwdClsIpRule.exactMatch(actualFwdClsIpRule));
-            assertTrue(expectedFwdClsMplsRule.exactMatch(actualFwdClsMplsRule));
         }
         verify(flowRuleService);
     }
@@ -433,70 +351,6 @@ public class FabricIntProgrammableTest {
             captures.add(flowRuleCapture);
         }
 
-        // Forwarding classifier rules will also be updated again
-        final List<FlowRule> expectedFwdClsIpRules = Lists.newArrayList();
-        final Capture<FlowRule> capturedFwdClsIpRules = newCapture(CaptureType.ALL);
-        final List<FlowRule> expectedFwdClsMplsRules = Lists.newArrayList();
-        final Capture<FlowRule> capturedFwdClsMplsRules = newCapture(CaptureType.ALL);
-        QUAD_PIPE_MIRROR_SESS_TO_RECIRC_PORTS.forEach((sessionId, port) -> {
-            // Fwd classifier match IPv4
-            PiCriterion criterion = PiCriterion.builder()
-                    .matchExact(P4InfoConstants.HDR_IP_ETH_TYPE, Ethernet.TYPE_IPV4)
-                    .build();
-            TrafficSelector fwdClassSel = DefaultTrafficSelector.builder()
-                    .matchInPort(PortNumber.portNumber(port))
-                    .matchEthDstMasked(SWITCH_MAC, MacAddress.EXACT_MASK)
-                    .matchPi(criterion).build();
-            PiActionParam fwdTypeParam = new PiActionParam(P4InfoConstants.FWD_TYPE, FWD_TYPE_IPV4_ROUTING);
-            PiAction setFwdTypeAction = PiAction.builder()
-                    .withId(P4InfoConstants.FABRIC_INGRESS_FILTERING_SET_FORWARDING_TYPE)
-                    .withParameter(fwdTypeParam)
-                    .build();
-            TrafficTreatment treatment = DefaultTrafficTreatment.builder()
-                    .piTableAction(setFwdTypeAction)
-                    .build();
-            expectedFwdClsIpRules.add(DefaultFlowRule.builder()
-                    .withSelector(fwdClassSel)
-                    .withTreatment(treatment)
-                    .forTable(P4InfoConstants.FABRIC_INGRESS_FILTERING_FWD_CLASSIFIER)
-                    .makePermanent()
-                    .withPriority(DEFAULT_PRIORITY)
-                    .forDevice(SPINE_DEVICE_ID)
-                    .fromApp(APP_ID)
-                    .build());
-            flowRuleService.applyFlowRules(capture(capturedFwdClsIpRules));
-
-            // Fwd classifier match MPLS + IPv4
-            criterion = PiCriterion.builder()
-                    .matchTernary(P4InfoConstants.HDR_ETH_TYPE,
-                            EthType.EtherType.MPLS_UNICAST.ethType().toShort(),
-                            ETH_TYPE_EXACT_MASK)
-                    .matchExact(P4InfoConstants.HDR_IP_ETH_TYPE,
-                            EthType.EtherType.IPV4.ethType().toShort())
-                    .build();
-            fwdClassSel = DefaultTrafficSelector.builder()
-                    .matchInPort(PortNumber.portNumber(port))
-                    .matchEthDstMasked(SWITCH_MAC, MacAddress.EXACT_MASK)
-                    .matchPi(criterion).build();
-            fwdTypeParam = new PiActionParam(P4InfoConstants.FWD_TYPE, FWD_TYPE_MPLS);
-            setFwdTypeAction = PiAction.builder()
-                    .withId(P4InfoConstants.FABRIC_INGRESS_FILTERING_SET_FORWARDING_TYPE)
-                    .withParameter(fwdTypeParam)
-                    .build();
-            treatment = DefaultTrafficTreatment.builder()
-                    .piTableAction(setFwdTypeAction)
-                    .build();
-            expectedFwdClsMplsRules.add(DefaultFlowRule.builder()
-                    .withSelector(fwdClassSel)
-                    .withTreatment(treatment)
-                    .forTable(P4InfoConstants.FABRIC_INGRESS_FILTERING_FWD_CLASSIFIER)
-                    .makePermanent()
-                    .withPriority(DEFAULT_PRIORITY + 10)
-                    .forDevice(SPINE_DEVICE_ID)
-                    .fromApp(APP_ID)
-                    .build());
-            flowRuleService.applyFlowRules(capture(capturedFwdClsMplsRules));
-        });
         replay(flowRuleService);
         assertTrue(intProgrammable.setupIntConfig(intConfig));
 
@@ -505,14 +359,6 @@ public class FabricIntProgrammableTest {
             FlowRule expectRule = expectRules.get(i);
             FlowRule actualRule = captures.get(i).getValue();
             assertTrue(expectRule.exactMatch(actualRule));
-        }
-        for (int i = 0; i < QUAD_PIPE_MIRROR_SESS_TO_RECIRC_PORTS.size(); i++) {
-            FlowRule expectedFwdClsIpRule = expectedFwdClsIpRules.get(i);
-            FlowRule actualFwdClsIpRule = capturedFwdClsIpRules.getValues().get(i);
-            FlowRule expectedFwdClsMplsRule = expectedFwdClsMplsRules.get(i);
-            FlowRule actualFwdClsMplsRule = capturedFwdClsMplsRules.getValues().get(i);
-            assertTrue(expectedFwdClsIpRule.exactMatch(actualFwdClsIpRule));
-            assertTrue(expectedFwdClsMplsRule.exactMatch(actualFwdClsMplsRule));
         }
         verify(flowRuleService);
     }
@@ -1041,17 +887,9 @@ public class FabricIntProgrammableTest {
         return result;
     }
 
-    private void testDefaultRecirculateRules() {
-        final List<FlowRule> expectedIgPortVlanRules = Lists.newArrayList();
-        final List<FlowRule> expectedEgVlanRules = Lists.newArrayList();
-        final Capture<FlowRule> capturedEgVlanRule = newCapture(CaptureType.ALL);
-        final Capture<FlowRule> capturedIgPortVlanRule = newCapture(CaptureType.ALL);
+    private void testInit() {
         final List<GroupDescription> expectedGroups = Lists.newArrayList();
         final Capture<GroupDescription> capturedGroup = newCapture(CaptureType.ALL);
-        final List<FlowRule> expectedFwdClsIpRules = Lists.newArrayList();
-        final Capture<FlowRule> capturedFwdClsIpRules = newCapture(CaptureType.ALL);
-        final List<FlowRule> expectedFwdClsMplsRules = Lists.newArrayList();
-        final Capture<FlowRule> capturedFwdClsMplsRules = newCapture(CaptureType.ALL);
         QUAD_PIPE_MIRROR_SESS_TO_RECIRC_PORTS.forEach((sessionId, port) -> {
             // Set up mirror sessions
             final List<GroupBucket> buckets = ImmutableList.of(
@@ -1064,145 +902,17 @@ public class FabricIntProgrammableTest {
                     new DefaultGroupKey(KRYO.serialize(sessionId)),
                     sessionId, APP_ID));
             groupService.addGroup(capture(capturedGroup));
-
-            // Set up ingress_port_vlan table
-            final TrafficSelector igPortVlanSelector =
-                    DefaultTrafficSelector.builder()
-                            .add(Criteria.matchInPort(PortNumber.portNumber(port)))
-                            .add(PiCriterion.builder()
-                                    .matchExact(P4InfoConstants.HDR_VLAN_IS_VALID, 0)
-                                    .build())
-                            .build();
-            final PiActionParam vlanIdParam = new PiActionParam(
-                    P4InfoConstants.VLAN_ID, DEFAULT_VLAN);
-            final PiAction permitWithInternalVlanAction = PiAction.builder()
-                    .withId(P4InfoConstants.FABRIC_INGRESS_FILTERING_PERMIT_WITH_INTERNAL_VLAN)
-                    .withParameter(vlanIdParam)
-                    .build();
-            final TrafficTreatment igPortVlanTreatment =
-                    DefaultTrafficTreatment.builder()
-                            .piTableAction(permitWithInternalVlanAction)
-                            .build();
-            expectedIgPortVlanRules.add(DefaultFlowRule.builder()
-                    .withSelector(igPortVlanSelector)
-                    .withTreatment(igPortVlanTreatment)
-                    .forTable(P4InfoConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN)
-                    .makePermanent()
-                    .withPriority(DEFAULT_PRIORITY)
-                    .forDevice(LEAF_DEVICE_ID)
-                    .fromApp(APP_ID)
-                    .build());
-            flowRuleService.applyFlowRules(capture(capturedIgPortVlanRule));
-
-            // Set up egress_vlan table
-            final TrafficSelector egVlanSelector =
-                    DefaultTrafficSelector.builder()
-                            .add(PiCriterion.builder()
-                                    .matchExact(P4InfoConstants.HDR_VLAN_ID, DEFAULT_VLAN)
-                                    .matchExact(P4InfoConstants.HDR_EG_PORT, port)
-                                    .build())
-                            .build();
-
-            final PiAction keepVlanConfigAction = PiAction.builder()
-                    .withId(P4InfoConstants.FABRIC_EGRESS_EGRESS_NEXT_KEEP_VLAN)
-                    .build();
-            final TrafficTreatment egVlanTreatment =
-                    DefaultTrafficTreatment.builder()
-                            .piTableAction(keepVlanConfigAction)
-                            .build();
-            expectedEgVlanRules.add(DefaultFlowRule.builder()
-                    .withSelector(egVlanSelector)
-                    .withTreatment(egVlanTreatment)
-                    .forTable(P4InfoConstants.FABRIC_EGRESS_EGRESS_NEXT_EGRESS_VLAN)
-                    .makePermanent()
-                    .withPriority(DEFAULT_PRIORITY)
-                    .forDevice(LEAF_DEVICE_ID)
-                    .fromApp(APP_ID)
-                    .build());
-
-            flowRuleService.applyFlowRules(capture(capturedEgVlanRule));
         });
-        QUAD_PIPE_MIRROR_SESS_TO_RECIRC_PORTS.forEach((sessionId, port) -> {
-            // Fwd classifier match IPv4
-            PiCriterion criterion = PiCriterion.builder()
-                    .matchExact(P4InfoConstants.HDR_IP_ETH_TYPE, Ethernet.TYPE_IPV4)
-                    .build();
-            TrafficSelector fwdClassSel = DefaultTrafficSelector.builder()
-                    .matchInPort(PortNumber.portNumber(port))
-                    .matchEthDstMasked(SWITCH_MAC, MacAddress.EXACT_MASK)
-                    .matchPi(criterion).build();
-            PiActionParam fwdTypeParam = new PiActionParam(P4InfoConstants.FWD_TYPE, FWD_TYPE_IPV4_ROUTING);
-            PiAction setFwdTypeAction = PiAction.builder()
-                    .withId(P4InfoConstants.FABRIC_INGRESS_FILTERING_SET_FORWARDING_TYPE)
-                    .withParameter(fwdTypeParam)
-                    .build();
-            TrafficTreatment treatment = DefaultTrafficTreatment.builder()
-                    .piTableAction(setFwdTypeAction)
-                    .build();
-            expectedFwdClsIpRules.add(DefaultFlowRule.builder()
-                    .withSelector(fwdClassSel)
-                    .withTreatment(treatment)
-                    .forTable(P4InfoConstants.FABRIC_INGRESS_FILTERING_FWD_CLASSIFIER)
-                    .makePermanent()
-                    .withPriority(DEFAULT_PRIORITY)
-                    .forDevice(LEAF_DEVICE_ID)
-                    .fromApp(APP_ID)
-                    .build());
-            flowRuleService.applyFlowRules(capture(capturedFwdClsIpRules));
-
-            // Fwd classifier match MPLS + IPv4
-            criterion = PiCriterion.builder()
-                    .matchTernary(P4InfoConstants.HDR_ETH_TYPE,
-                            EthType.EtherType.MPLS_UNICAST.ethType().toShort(),
-                            ETH_TYPE_EXACT_MASK)
-                    .matchExact(P4InfoConstants.HDR_IP_ETH_TYPE,
-                            EthType.EtherType.IPV4.ethType().toShort())
-                    .build();
-            fwdClassSel = DefaultTrafficSelector.builder()
-                    .matchInPort(PortNumber.portNumber(port))
-                    .matchEthDstMasked(SWITCH_MAC, MacAddress.EXACT_MASK)
-                    .matchPi(criterion).build();
-            fwdTypeParam = new PiActionParam(P4InfoConstants.FWD_TYPE, FWD_TYPE_MPLS);
-            setFwdTypeAction = PiAction.builder()
-                    .withId(P4InfoConstants.FABRIC_INGRESS_FILTERING_SET_FORWARDING_TYPE)
-                    .withParameter(fwdTypeParam)
-                    .build();
-            treatment = DefaultTrafficTreatment.builder()
-                    .piTableAction(setFwdTypeAction)
-                    .build();
-            expectedFwdClsMplsRules.add(DefaultFlowRule.builder()
-                    .withSelector(fwdClassSel)
-                    .withTreatment(treatment)
-                    .forTable(P4InfoConstants.FABRIC_INGRESS_FILTERING_FWD_CLASSIFIER)
-                    .makePermanent()
-                    .withPriority(DEFAULT_PRIORITY + 10)
-                    .forDevice(LEAF_DEVICE_ID)
-                    .fromApp(APP_ID)
-                    .build());
-            flowRuleService.applyFlowRules(capture(capturedFwdClsMplsRules));
-        });
-        replay(groupService, flowRuleService);
+        replay(groupService);
         assertTrue(intProgrammable.init());
 
         for (int i = 0; i < QUAD_PIPE_MIRROR_SESS_TO_RECIRC_PORTS.size(); i++) {
             GroupDescription expectGroup = expectedGroups.get(i);
             GroupDescription actualGroup = capturedGroup.getValues().get(i);
-            FlowRule expectIgPortVlanRule = expectedIgPortVlanRules.get(i);
-            FlowRule actualIgPortVlanRule = capturedIgPortVlanRule.getValues().get(i);
-            FlowRule expectEgVlanRule = expectedEgVlanRules.get(i);
-            FlowRule actualEgVlanRule = capturedEgVlanRule.getValues().get(i);
-            FlowRule expectedFwdClsIpRule = expectedFwdClsIpRules.get(i);
-            FlowRule actualFwdClsIpRule = capturedFwdClsIpRules.getValues().get(i);
-            FlowRule expectedFwdClsMplsRule = expectedFwdClsMplsRules.get(i);
-            FlowRule actualFwdClsMplsRule = capturedFwdClsMplsRules.getValues().get(i);
             assertEquals(expectGroup, actualGroup);
-            assertTrue(expectIgPortVlanRule.exactMatch(actualIgPortVlanRule));
-            assertTrue(expectEgVlanRule.exactMatch(actualEgVlanRule));
-            assertTrue(expectedFwdClsIpRule.exactMatch(actualFwdClsIpRule));
-            assertTrue(expectedFwdClsMplsRule.exactMatch(actualFwdClsMplsRule));
         }
 
-        verify(groupService, flowRuleService);
-        reset(groupService, flowRuleService);
+        verify(groupService);
+        reset(groupService);
     }
 }
