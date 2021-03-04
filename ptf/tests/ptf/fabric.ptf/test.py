@@ -950,7 +950,9 @@ class FabricSpgwUplinkRecircTest(SpgwSimpleTest):
                             ip_dst=UE2_IPV4,
                             pktlen=MIN_PKT_LEN,
                         )
-                        self.doRunTest(pkt, allow, tagged[0], tagged[1], is_next_hop_spine)
+                        self.doRunTest(
+                            pkt, allow, tagged[0], tagged[1], is_next_hop_spine
+                        )
 
 
 @group("spgw")

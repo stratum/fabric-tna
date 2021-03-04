@@ -2,11 +2,14 @@
 # Copyright 2018-present Open Networking Foundation
 # SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0 AND Apache-2.0
 
-import time
-
 import socket
 import struct
+import time
+
+import xnt
+from base_test import P4RuntimeTest, ipv4_to_binary, mac_to_binary, stringify, tvcreate
 from p4.v1 import p4runtime_pb2
+from ptf import testutils
 from ptf.mask import Mask
 from scapy.contrib.mpls import MPLS
 from scapy.fields import BitField, ByteField, IntField, ShortField
@@ -14,11 +17,6 @@ from scapy.layers.inet import IP, TCP, UDP
 from scapy.layers.l2 import Dot1Q, Ether
 from scapy.layers.ppp import PPP, PPPoE
 from scapy.packet import Packet, bind_layers
-
-import xnt
-from base_test import P4RuntimeTest, ipv4_to_binary, mac_to_binary, stringify, \
-    tvcreate
-from ptf import testutils
 
 DEFAULT_PRIORITY = 10
 
@@ -220,6 +218,7 @@ ETH_FCS_BYTES = 4
 VLAN_BYTES = 4
 CPU_LOOPBACK_FAKE_ETH_BYTES = 14
 
+
 class GTPU(Packet):
     name = "GTP-U Header"
     fields_desc = [
@@ -321,6 +320,7 @@ def pkt_remove_vlan(pkt):
     return (
         Ether(src=pkt[Ether].src, dst=pkt[Ether].dst, type=pkt[Dot1Q:1].type) / payload
     )
+
 
 def pkt_decrement_ttl(pkt):
     if IP in pkt:
@@ -553,19 +553,17 @@ class FabricTest(P4RuntimeTest):
         # as the internal one.
         for port in RECIRCULATE_PORTS:
             self.set_ingress_port_vlan(
-                ingress_port=port, vlan_valid=False, vlan_id=0,
+                ingress_port=port,
+                vlan_valid=False,
+                vlan_id=0,
                 internal_vlan_id=DEFAULT_VLAN,
             )
             self.set_egress_vlan(port, DEFAULT_VLAN, push_vlan=False)
             self.set_forwarding_type(
-                port,
-                ethertype=ETH_TYPE_IPV4,
-                fwd_type=FORWARDING_TYPE_UNICAST_IPV4,
+                port, ethertype=ETH_TYPE_IPV4, fwd_type=FORWARDING_TYPE_UNICAST_IPV4,
             )
             self.set_forwarding_type(
-                port,
-                ethertype=ETH_TYPE_MPLS_UNICAST,
-                fwd_type=FORWARDING_TYPE_MPLS,
+                port, ethertype=ETH_TYPE_MPLS_UNICAST, fwd_type=FORWARDING_TYPE_MPLS,
             )
 
     def add_bridging_entry(
@@ -1688,28 +1686,32 @@ class SpgwSimpleTest(IPv4UnicastTest):
         )
         self.write_request(req)
 
-    def add_uplink_recirc_rule(self, ipv4_dst_and_mask, ipv4_src_and_mask=None,
-                               allow=True, priority=1):
+    def add_uplink_recirc_rule(
+        self, ipv4_dst_and_mask, ipv4_src_and_mask=None, allow=True, priority=1
+    ):
         req = self.get_new_write_request()
         match = [
-            self.Ternary("ipv4_dst",
-                         ipv4_to_binary(ipv4_dst_and_mask[0]),
-                         ipv4_to_binary(ipv4_dst_and_mask[1])),
+            self.Ternary(
+                "ipv4_dst",
+                ipv4_to_binary(ipv4_dst_and_mask[0]),
+                ipv4_to_binary(ipv4_dst_and_mask[1]),
+            ),
         ]
         if ipv4_src_and_mask is not None:
             match.append(
-                self.Ternary("ipv4_src",
-                             ipv4_to_binary(ipv4_src_and_mask[0]),
-                             ipv4_to_binary(ipv4_src_and_mask[1])),
+                self.Ternary(
+                    "ipv4_src",
+                    ipv4_to_binary(ipv4_src_and_mask[0]),
+                    ipv4_to_binary(ipv4_src_and_mask[1]),
+                ),
             )
         self.push_update_add_entry_to_action(
             req,
             "FabricIngress.spgw.uplink_recirc.rules",
             match,
-            "FabricIngress.spgw.uplink_recirc." + (
-                "allow" if allow else "deny"),
+            "FabricIngress.spgw.uplink_recirc." + ("allow" if allow else "deny"),
             [],
-            priority
+            priority,
         )
         self.write_request(req)
 
@@ -1863,12 +1865,16 @@ class SpgwSimpleTest(IPv4UnicastTest):
         # Counters are updated with bytes seen at egress parser. GTP decap
         # happens at ingress deparser. VLAN/MPLS push/pop happens at egress
         # deparser, hence not reflected in counter increment.
-        egress_bytes = ingress_bytes + BMD_BYTES - IP_HDR_BYTES - UDP_HDR_BYTES - GTP_HDR_BYTES
+        egress_bytes = (
+            ingress_bytes + BMD_BYTES - IP_HDR_BYTES - UDP_HDR_BYTES - GTP_HDR_BYTES
+        )
 
         # Verify the Ingress and Egress PDR counters
         self.verify_pdr_counters(UPLINK_PDR_CTR_IDX, ingress_bytes, egress_bytes, 1, 1)
 
-    def runUplinkRecircTest(self, ue_out_pkt, allow, tagged1, tagged2, is_next_hop_spine):
+    def runUplinkRecircTest(
+        self, ue_out_pkt, allow, tagged1, tagged2, is_next_hop_spine
+    ):
         # Input GTP-encapped packet.
         pkt = pkt_add_gtp(
             ue_out_pkt,
@@ -1901,9 +1907,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             exp_pkt = pkt_add_vlan(exp_pkt, VLAN_ID_2)
 
         self.setup_uplink(
-            s1u_sgw_addr=S1U_SGW_IPV4,
-            teid=UPLINK_TEID,
-            ctr_id=UPLINK_PDR_CTR_IDX,
+            s1u_sgw_addr=S1U_SGW_IPV4, teid=UPLINK_TEID, ctr_id=UPLINK_PDR_CTR_IDX,
         )
 
         self.setup_downlink(
@@ -1918,14 +1922,16 @@ class SpgwSimpleTest(IPv4UnicastTest):
 
         # By default deny all UE-to-UE communication.
         self.add_uplink_recirc_rule(
-            ipv4_dst_and_mask=(UE_SUBNET, UE_SUBNET_MASK),
-            allow=False, priority=1)
+            ipv4_dst_and_mask=(UE_SUBNET, UE_SUBNET_MASK), allow=False, priority=1
+        )
         if allow:
             # Allow only for specific UEs.
             self.add_uplink_recirc_rule(
                 ipv4_src_and_mask=(UE1_IPV4, "255.255.255.255"),
                 ipv4_dst_and_mask=(UE2_IPV4, "255.255.255.255"),
-                allow=True, priority=10)
+                allow=True,
+                priority=10,
+            )
 
         # Clear SPGW counters before sending the packet
         self.reset_pdr_counters(UPLINK_PDR_CTR_IDX)
@@ -1940,11 +1946,17 @@ class SpgwSimpleTest(IPv4UnicastTest):
             tagged1=tagged1,
             tagged2=tagged2,
             is_next_hop_spine=is_next_hop_spine,
-            verify_pkt=allow
+            verify_pkt=allow,
         )
 
         uplink_ingress_bytes = len(pkt) + ETH_FCS_BYTES
-        uplink_egress_bytes = uplink_ingress_bytes + BMD_BYTES - IP_HDR_BYTES - UDP_HDR_BYTES - GTP_HDR_BYTES
+        uplink_egress_bytes = (
+            uplink_ingress_bytes
+            + BMD_BYTES
+            - IP_HDR_BYTES
+            - UDP_HDR_BYTES
+            - GTP_HDR_BYTES
+        )
         downlink_ingress_bytes = uplink_egress_bytes - BMD_BYTES
         # Egress counters are updated with bytes seen at egress parser. GTP
         # encap happens at egress deparser, hence not reflected in uplink
@@ -1965,8 +1977,16 @@ class SpgwSimpleTest(IPv4UnicastTest):
             downlink_egress_bytes += CPU_LOOPBACK_FAKE_ETH_BYTES
 
         if allow:
-            self.verify_pdr_counters(UPLINK_PDR_CTR_IDX, uplink_ingress_bytes, uplink_egress_bytes, 1, 1)
-            self.verify_pdr_counters(DOWNLINK_PDR_CTR_IDX, downlink_ingress_bytes, downlink_egress_bytes, 1, 1)
+            self.verify_pdr_counters(
+                UPLINK_PDR_CTR_IDX, uplink_ingress_bytes, uplink_egress_bytes, 1, 1
+            )
+            self.verify_pdr_counters(
+                DOWNLINK_PDR_CTR_IDX,
+                downlink_ingress_bytes,
+                downlink_egress_bytes,
+                1,
+                1,
+            )
         else:
             # Only uplink ingress should be incremented.
             self.verify_pdr_counters(UPLINK_PDR_CTR_IDX, uplink_ingress_bytes, 0, 1, 0)
@@ -2154,7 +2174,12 @@ class SpgwSimpleTest(IPv4UnicastTest):
         # GTP encap and VLAN/MPLS push/pop happen at egress deparser, but
         # counters are updated with bytes seen at egress parser.
         egress_bytes = (
-            len(pkt_from_dbuf) + ETH_FCS_BYTES + BMD_BYTES - IP_HDR_BYTES - UDP_HDR_BYTES - GTP_HDR_BYTES
+            len(pkt_from_dbuf)
+            + ETH_FCS_BYTES
+            + BMD_BYTES
+            - IP_HDR_BYTES
+            - UDP_HDR_BYTES
+            - GTP_HDR_BYTES
         )
         if tagged1:
             egress_bytes += VLAN_BYTES
