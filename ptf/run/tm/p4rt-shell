@@ -5,6 +5,7 @@
 set -eu -o pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
+# shellcheck source=ptf/run/tm/base.sh
 source "${DIR}/base.sh"
 echo "Starting P4Runtime Shell"
 docker run --name "p4runtime-shell" -it --privileged --rm \
