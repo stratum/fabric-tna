@@ -11,6 +11,7 @@
 #include "include/control/packetio.p4"
 #include "include/control/filtering.p4"
 #include "include/control/forwarding.p4"
+#include "include/control/pre_next.p4"
 #include "include/control/acl.p4"
 #include "include/control/next.p4"
 #include "include/control/hasher.p4"
@@ -34,6 +35,7 @@ control FabricIngress (
     PacketIoIngress() pkt_io_ingress;
     Filtering() filtering;
     Forwarding() forwarding;
+    PreNext() pre_next;
     Acl() acl;
     Next() next;
     Hasher() hasher;
@@ -54,6 +56,9 @@ control FabricIngress (
             forwarding.apply(hdr, fabric_md);
         }
         hasher.apply(hdr, fabric_md);
+        if (!fabric_md.skip_next) {
+            pre_next.apply(hdr, fabric_md);
+        }
         acl.apply(hdr, fabric_md, ig_intr_md, ig_dprsr_md, ig_tm_md);
         if (!fabric_md.skip_next) {
             next.apply(hdr, fabric_md, ig_intr_md, ig_tm_md);

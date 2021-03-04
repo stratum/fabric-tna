@@ -122,10 +122,10 @@ public final class P4InfoConstants {
             PiTableId.of("FabricIngress.next.hashed");
     public static final PiTableId FABRIC_INGRESS_NEXT_MULTICAST =
             PiTableId.of("FabricIngress.next.multicast");
-    public static final PiTableId FABRIC_INGRESS_NEXT_NEXT_MPLS =
-            PiTableId.of("FabricIngress.next.next_mpls");
-    public static final PiTableId FABRIC_INGRESS_NEXT_NEXT_VLAN =
-            PiTableId.of("FabricIngress.next.next_vlan");
+    public static final PiTableId FABRIC_INGRESS_PRE_NEXT_NEXT_MPLS =
+            PiTableId.of("FabricIngress.pre_next.next_mpls");
+    public static final PiTableId FABRIC_INGRESS_PRE_NEXT_NEXT_VLAN =
+            PiTableId.of("FabricIngress.pre_next.next_vlan");
     public static final PiTableId FABRIC_INGRESS_SPGW_DOWNLINK_PDRS =
             PiTableId.of("FabricIngress.spgw.downlink_pdrs");
     public static final PiTableId FABRIC_INGRESS_SPGW_FARS =
@@ -158,10 +158,10 @@ public final class P4InfoConstants {
             PiCounterId.of("FabricIngress.next.hashed_counter");
     public static final PiCounterId FABRIC_INGRESS_NEXT_MULTICAST_COUNTER =
             PiCounterId.of("FabricIngress.next.multicast_counter");
-    public static final PiCounterId FABRIC_INGRESS_NEXT_NEXT_MPLS_COUNTER =
-            PiCounterId.of("FabricIngress.next.next_mpls_counter");
-    public static final PiCounterId FABRIC_INGRESS_NEXT_NEXT_VLAN_COUNTER =
-            PiCounterId.of("FabricIngress.next.next_vlan_counter");
+    public static final PiCounterId FABRIC_INGRESS_PRE_NEXT_NEXT_MPLS_COUNTER =
+            PiCounterId.of("FabricIngress.pre_next.next_mpls_counter");
+    public static final PiCounterId FABRIC_INGRESS_PRE_NEXT_NEXT_VLAN_COUNTER =
+            PiCounterId.of("FabricIngress.pre_next.next_vlan_counter");
     // Action IDs
     public static final PiActionId FABRIC_EGRESS_EGRESS_NEXT_DROP =
             PiActionId.of("FabricEgress.egress_next.drop");
@@ -229,10 +229,10 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.next.routing_hashed");
     public static final PiActionId FABRIC_INGRESS_NEXT_SET_MCAST_GROUP_ID =
             PiActionId.of("FabricIngress.next.set_mcast_group_id");
-    public static final PiActionId FABRIC_INGRESS_NEXT_SET_MPLS_LABEL =
-            PiActionId.of("FabricIngress.next.set_mpls_label");
-    public static final PiActionId FABRIC_INGRESS_NEXT_SET_VLAN =
-            PiActionId.of("FabricIngress.next.set_vlan");
+    public static final PiActionId FABRIC_INGRESS_PRE_NEXT_SET_MPLS_LABEL =
+            PiActionId.of("FabricIngress.pre_next.set_mpls_label");
+    public static final PiActionId FABRIC_INGRESS_PRE_NEXT_SET_VLAN =
+            PiActionId.of("FabricIngress.pre_next.set_vlan");
     public static final PiActionId FABRIC_INGRESS_SPGW_IFACE_MISS =
             PiActionId.of("FabricIngress.spgw.iface_miss");
     public static final PiActionId FABRIC_INGRESS_SPGW_LOAD_DBUF_FAR =

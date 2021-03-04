@@ -727,9 +727,9 @@ class FabricTest(P4RuntimeTest):
         next_id_ = stringify(next_id, 4)
         vlan_id_ = stringify(new_vlan_id, 2)
         self.send_request_add_entry_to_action(
-            "next.next_vlan",
+            "pre_next.next_vlan",
             [self.Exact("next_id", next_id_)],
-            "next.set_vlan",
+            "pre_next.set_vlan",
             [("vlan_id", vlan_id_)],
         )
 
@@ -738,9 +738,9 @@ class FabricTest(P4RuntimeTest):
         vlan_id_ = stringify(new_vlan_id, 2)
         inner_vlan_id_ = stringify(new_inner_vlan_id, 2)
         self.send_request_add_entry_to_action(
-            "next.next_vlan",
+            "pre_next.next_vlan",
             [self.Exact("next_id", next_id_)],
-            "next.set_double_vlan",
+            "pre_next.set_double_vlan",
             [("outer_vlan_id", vlan_id_), ("inner_vlan_id", inner_vlan_id_)],
         )
 
@@ -795,9 +795,9 @@ class FabricTest(P4RuntimeTest):
         next_id_ = stringify(next_id, 4)
         label_ = stringify(label, 3)
         self.send_request_add_entry_to_action(
-            "next.next_mpls",
+            "pre_next.next_mpls",
             [self.Exact("next_id", next_id_)],
-            "next.set_mpls_label",
+            "pre_next.set_mpls_label",
             [
                 ("label", label_),
             ],
