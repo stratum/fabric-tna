@@ -32,7 +32,7 @@ ${stratumBin} \
     -log_dir=./ \
     -logtostderr=true \
     -stderrthreshold=0 \
-    -v=0 \
+    -v=1 \
     -persistent_config_dir=/tmp \
     -write_req_log_file=./p4rt-write-reqs.log \
     -enable_onlp=false \

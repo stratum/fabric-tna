@@ -107,3 +107,48 @@ singleton_ports {
   }
   node: 1
 }
+vendor_config {
+  tofino_config {
+    node_id_to_deflect_on_drop_configs {
+      key: 1
+      value {
+        drop_targets {
+          port: 5
+          queue: 1
+        }
+      }
+    }
+    node_id_to_port_shaping_config {
+      key: 1
+      value {
+        per_port_shaping_configs {
+          key: 1
+          value {
+            byte_shaping {
+              max_rate_bps: 1000
+              max_burst_bytes: 100
+            }
+          }
+        }
+        per_port_shaping_configs {
+          key: 2
+          value {
+            byte_shaping {
+              max_rate_bps: 1000
+              max_burst_bytes: 100
+            }
+          }
+        }
+        per_port_shaping_configs {
+          key: 3
+          value {
+            byte_shaping {
+              max_rate_bps: 1000
+              max_burst_bytes: 100
+            }
+          }
+        }
+      }
+    }
+  }
+}

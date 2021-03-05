@@ -48,10 +48,12 @@ control Acl (inout parsed_headers_t hdr,
         ig_intr_md_for_tm.ucast_egress_port = port_num;
         fabric_md.egress_port_set = true;
         fabric_md.skip_next = true;
+        ig_intr_md_for_tm.deflect_on_drop = 1;
         acl_counter.count();
     }
 
     action nop_acl() {
+        // ig_intr_md_for_tm.deflect_on_drop = 1;
         acl_counter.count();
     }
 
@@ -85,7 +87,21 @@ control Acl (inout parsed_headers_t hdr,
         counters = acl_counter;
     }
 
+    table acl2 {
+        key = {}
+
+        actions = {
+            set_output_port;
+            nop_acl;
+        }
+
+        default_action = nop_acl();
+        size = 4;
+        counters = acl_counter;
+    }
+
     apply {
         acl.apply();
+        // acl2.apply();
     }
 }

@@ -15,4 +15,4 @@ dma_setup.sh
 # execution.
 mkdir /tmp/workdir
 cd /tmp/workdir
-tofino-model --p4-target-config "${DIR}"/tm_conf.json
+tofino-model --p4-target-config "${DIR}"/tm_conf.json --dod-test-mode
