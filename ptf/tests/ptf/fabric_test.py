@@ -3174,18 +3174,9 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         # Build expected inner pkt using the input one.
         int_inner_pkt = pkt.copy()
 
-        # Here we are using the ingress mirroring, which won't modify the value
-        # of header fields.
-        # int_inner_pkt = pkt_route(int_inner_pkt, HOST2_MAC)
-        # if not is_next_hop_spine:
-        #     int_inner_pkt = pkt_decrement_ttl(int_inner_pkt)
-        # if tagged2 and Dot1Q not in int_inner_pkt:
-        #     int_inner_pkt = pkt_add_vlan(int_inner_pkt, vlan_vid=VLAN_ID_2)
-        if tagged1 and Dot1Q not in int_inner_pkt:
-            int_inner_pkt = pkt_add_vlan(int_inner_pkt, vlan_vid=VLAN_ID_1)
-        # Note that we won't add MPLS header to the expected inner
-        # packet since the pipeline will strip out the MPLS header
-        # from it before in the parser.
+        # We don't report MPLS or VLAN headers to DeepInsight.
+        if Dot1Q in int_inner_pkt:
+            int_inner_pkt = pkt_remove_vlan(int_inner_pkt)
 
         # The expected INT report packet
         exp_int_report_pkt_masked = self.build_int_drop_report(
@@ -3195,7 +3186,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             INT_COLLECTOR_IPV4,
             ig_port,
             eg_port,
-            INT_DROP_REASON_UPLINK_PDR_MISS,
+            134, # INT_DROP_REASON_UPLINK_PDR_MISS,
             SWITCH_ID,
             int_inner_pkt,
             is_device_spine,
@@ -3204,6 +3195,13 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
 
         # Set collector, report table, and mirror sessions
         self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine)
+
+        #
+        self.add_s1u_iface(S1U_SGW_IPV4)
+        # self.add_uplink_pdr(
+        #     ctr_id=UPLINK_PDR_CTR_IDX, far_id=UPLINK_FAR_ID, teid=UPLINK_TEID, tunnel_dst_addr=S1U_SGW_IPV4,
+        # )
+        # self.add_normal_far(far_id=UPLINK_FAR_ID)
 
         # TODO: Use MPLS test instead of IPv4 test if device is spine.
         self.runIPv4UnicastTest(
