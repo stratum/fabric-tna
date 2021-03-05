@@ -3185,8 +3185,8 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             SWITCH_IPV4,
             INT_COLLECTOR_IPV4,
             ig_port,
-            eg_port,
-            134, # INT_DROP_REASON_UPLINK_PDR_MISS,
+            0, # No egress port set since we drop from ingress pipeline
+            INT_DROP_REASON_UPLINK_PDR_MISS,
             SWITCH_ID,
             int_inner_pkt,
             is_device_spine,
@@ -3196,7 +3196,6 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         # Set collector, report table, and mirror sessions
         self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine)
 
-        #
         self.add_s1u_iface(S1U_SGW_IPV4)
         # self.add_uplink_pdr(
         #     ctr_id=UPLINK_PDR_CTR_IDX, far_id=UPLINK_FAR_ID, teid=UPLINK_TEID, tunnel_dst_addr=S1U_SGW_IPV4,

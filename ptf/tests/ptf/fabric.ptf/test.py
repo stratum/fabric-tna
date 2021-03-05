@@ -1176,6 +1176,8 @@ class FabricSpgwDownlinkIntTest(SpgwIntTest):
                                 send_report_to_spine,
                             )
 
+# This test will assume the packet hits spgw interface and miss the uplink PDR table or
+# the FAR table
 @group("int")
 @group("spgw")
 class FabricSpgwIntUplinkDropTest(SpgwIntTest):
