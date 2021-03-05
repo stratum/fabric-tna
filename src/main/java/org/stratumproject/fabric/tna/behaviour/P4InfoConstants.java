@@ -237,8 +237,6 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.spgw.load_pdr_qos");
     public static final PiActionId FABRIC_INGRESS_SPGW_LOAD_TUNNEL_FAR =
             PiActionId.of("FabricIngress.spgw.load_tunnel_far");
-    public static final PiActionId FABRIC_INGRESS_SPGW_SET_QID =
-            PiActionId.of("FabricIngress.spgw.set_qid");
     public static final PiActionId FABRIC_INGRESS_SPGW_UPLINK_RECIRC_ALLOW =
             PiActionId.of("FabricIngress.spgw.uplink_recirc.allow");
     public static final PiActionId FABRIC_INGRESS_SPGW_UPLINK_RECIRC_DENY =
