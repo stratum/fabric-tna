@@ -867,7 +867,7 @@ class FabricSpgwDownlinkTest(SpgwSimpleTest):
                         eth_src=HOST1_MAC,
                         eth_dst=SWITCH_MAC,
                         ip_src=HOST1_IPV4,
-                        ip_dst=UE_IPV4,
+                        ip_dst=UE1_IPV4,
                         pktlen=MIN_PKT_LEN,
                     )
                     self.doRunTest(
@@ -918,6 +918,44 @@ class FabricSpgwUplinkTest(SpgwSimpleTest):
 
 
 @group("spgw")
+class FabricSpgwUplinkRecircTest(SpgwSimpleTest):
+    @tvsetup
+    @autocleanup
+    def doRunTest(self, pkt, allow, tagged1, tagged2, is_next_hop_spine):
+        self.runUplinkRecircTest(
+            ue_out_pkt=pkt,
+            allow=allow,
+            tagged1=tagged1,
+            tagged2=tagged2,
+            is_next_hop_spine=is_next_hop_spine,
+        )
+
+    def runTest(self):
+        print("")
+        for vlan_conf, tagged in vlan_confs.items():
+            for pkt_type in ["tcp", "udp", "icmp"]:
+                for is_next_hop_spine in [False, True]:
+                    for allow in [True, False]:
+                        if is_next_hop_spine and (tagged[1] or not allow):
+                            continue
+                        print(
+                            "Testing VLAN={}, pkt={}, is_next_hop_spine={}, allow={}...".format(
+                                vlan_conf, pkt_type, is_next_hop_spine, allow
+                            )
+                        )
+                        pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
+                            eth_src=HOST1_MAC,
+                            eth_dst=SWITCH_MAC,
+                            ip_src=UE1_IPV4,
+                            ip_dst=UE2_IPV4,
+                            pktlen=MIN_PKT_LEN,
+                        )
+                        self.doRunTest(
+                            pkt, allow, tagged[0], tagged[1], is_next_hop_spine
+                        )
+
+
+@group("spgw")
 class FabricSpgwDownlinkToDbufTest(SpgwSimpleTest):
     """Tests downlink packets arriving from the PDN being routed to
     the dbuf device for buffering.
@@ -957,7 +995,7 @@ class FabricSpgwDownlinkToDbufTest(SpgwSimpleTest):
                         eth_src=HOST1_MAC,
                         eth_dst=SWITCH_MAC,
                         ip_src=HOST1_IPV4,
-                        ip_dst=UE_IPV4,
+                        ip_dst=UE1_IPV4,
                         pktlen=MIN_PKT_LEN,
                     )
                     self.doRunTest(
@@ -1005,7 +1043,7 @@ class FabricSpgwDownlinkFromDbufTest(SpgwSimpleTest):
                         eth_src=DBUF_MAC,
                         eth_dst=SWITCH_MAC,
                         ip_src=HOST1_IPV4,
-                        ip_dst=UE_IPV4,
+                        ip_dst=UE1_IPV4,
                         pktlen=MIN_PKT_LEN,
                     )
                     self.doRunTest(

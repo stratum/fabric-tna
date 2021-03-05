@@ -126,6 +126,8 @@ public final class P4InfoConstants {
             PiTableId.of("FabricIngress.spgw.interfaces");
     public static final PiTableId FABRIC_INGRESS_SPGW_UPLINK_PDRS =
             PiTableId.of("FabricIngress.spgw.uplink_pdrs");
+    public static final PiTableId FABRIC_INGRESS_SPGW_UPLINK_RECIRC_RULES =
+            PiTableId.of("FabricIngress.spgw.uplink_recirc.rules");
     // Indirect Counter IDs
     public static final PiCounterId FABRIC_EGRESS_SPGW_PDR_COUNTER =
             PiCounterId.of("FabricEgress.spgw.pdr_counter");
@@ -150,11 +152,11 @@ public final class P4InfoConstants {
             PiCounterId.of("FabricIngress.next.multicast_counter");
     public static final PiCounterId FABRIC_INGRESS_NEXT_NEXT_VLAN_COUNTER =
             PiCounterId.of("FabricIngress.next.next_vlan_counter");
+    public static final PiCounterId FABRIC_INGRESS_SPGW_UPLINK_RECIRC_RULES_COUNTER =
+            PiCounterId.of("FabricIngress.spgw.uplink_recirc.rules_counter");
     // Action IDs
     public static final PiActionId FABRIC_EGRESS_EGRESS_NEXT_DROP =
             PiActionId.of("FabricEgress.egress_next.drop");
-    public static final PiActionId FABRIC_EGRESS_EGRESS_NEXT_KEEP_VLAN =
-            PiActionId.of("FabricEgress.egress_next.keep_vlan");
     public static final PiActionId FABRIC_EGRESS_EGRESS_NEXT_POP_VLAN =
             PiActionId.of("FabricEgress.egress_next.pop_vlan");
     public static final PiActionId FABRIC_EGRESS_EGRESS_NEXT_PUSH_VLAN =
@@ -235,6 +237,14 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.spgw.load_pdr_qos");
     public static final PiActionId FABRIC_INGRESS_SPGW_LOAD_TUNNEL_FAR =
             PiActionId.of("FabricIngress.spgw.load_tunnel_far");
+    public static final PiActionId FABRIC_INGRESS_SPGW_SET_QID =
+            PiActionId.of("FabricIngress.spgw.set_qid");
+    public static final PiActionId FABRIC_INGRESS_SPGW_UPLINK_RECIRC_ALLOW =
+            PiActionId.of("FabricIngress.spgw.uplink_recirc.allow");
+    public static final PiActionId FABRIC_INGRESS_SPGW_UPLINK_RECIRC_DENY =
+            PiActionId.of("FabricIngress.spgw.uplink_recirc.deny");
+    public static final PiActionId FABRIC_INGRESS_SPGW_UPLINK_RECIRC_MISS =
+            PiActionId.of("FabricIngress.spgw.uplink_recirc.miss");
     public static final PiActionId NO_ACTION = PiActionId.of("NoAction");
     public static final PiActionId NOP = PiActionId.of("nop");
     // Action Param IDs

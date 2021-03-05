@@ -27,8 +27,8 @@ import org.onosproject.net.flowobjective.ObjectiveError;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
 import org.stratumproject.fabric.tna.behaviour.FabricCapabilities;
-import org.stratumproject.fabric.tna.behaviour.P4InfoConstants;
 import org.stratumproject.fabric.tna.behaviour.FabricUtils;
+import org.stratumproject.fabric.tna.behaviour.P4InfoConstants;
 
 import java.util.Collection;
 import java.util.List;
@@ -36,6 +36,10 @@ import java.util.List;
 import static java.lang.String.format;
 import static org.onosproject.net.flow.criteria.Criterion.Type.INNER_VLAN_VID;
 import static org.onosproject.net.flow.criteria.Criterion.Type.VLAN_VID;
+import static org.stratumproject.fabric.tna.behaviour.Constants.ETH_TYPE_EXACT_MASK;
+import static org.stratumproject.fabric.tna.behaviour.Constants.FWD_IPV4_ROUTING;
+import static org.stratumproject.fabric.tna.behaviour.Constants.FWD_IPV6_ROUTING;
+import static org.stratumproject.fabric.tna.behaviour.Constants.FWD_MPLS;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.criterion;
 
 /**
@@ -44,15 +48,8 @@ import static org.stratumproject.fabric.tna.behaviour.FabricUtils.criterion;
 class FilteringObjectiveTranslator
         extends AbstractObjectiveTranslator<FilteringObjective> {
 
-    // Forwarding types from fabric.p4.
-    static final byte FWD_MPLS = 1;
-    static final byte FWD_IPV4_ROUTING = 2;
-    static final byte FWD_IPV6_ROUTING = 4;
-
     private static final byte[] ONE = new byte[]{1};
     private static final byte[] ZERO = new byte[]{0};
-
-    private static final short ETH_TYPE_EXACT_MASK = (short) 0xFFFF;
 
     private static final PiAction DENY = PiAction.builder()
             .withId(P4InfoConstants.FABRIC_INGRESS_FILTERING_DENY)

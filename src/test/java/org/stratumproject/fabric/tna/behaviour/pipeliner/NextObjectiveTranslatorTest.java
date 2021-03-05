@@ -34,9 +34,9 @@ import java.util.stream.Collectors;
 import static org.junit.Assert.assertEquals;
 
 /**
- * Test cases for fabric.p4 pipeline next control block.
+ * Test cases for NextObjectiveTranslator.
  */
-public class FabricNextPipelinerTest extends FabricPipelinerTest {
+public class NextObjectiveTranslatorTest extends AbstractObjectiveTranslatorTest {
 
     private NextObjectiveTranslator translatorHashed;
     // TODO: add profile with simple next or remove references
