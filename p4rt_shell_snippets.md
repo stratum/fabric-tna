@@ -10,7 +10,7 @@ to be directly paste-able into the interactive shell.
 
 ## Starting a shell
 
-After building the pipeline, use the following command to start Stratum, Tofino Model, and a P4Runtime shell.
+After building the P4 program, use the following command to start Stratum, Tofino Model, and a P4Runtime shell.
 
 See [README.md](README.md) for more information about how to build the pipeline.
 
@@ -161,7 +161,7 @@ te.insert()
 te.read(lambda e: print(e))
 ```
 
-### Prepare and send/receive packets to/from the device
+### Create and send/receive packets
 
 To create a packet (e.g., UDP):
 
@@ -174,20 +174,20 @@ pkt = (
 )
 ```
 
-To send packet to a interface:
+To send a packet to an interface:
 
 ```python
 sendp(pkt, iface='veth1')
 ```
 
-Note that when the Tofino Model container started, it will automatically create 33 veth
-pairs(0-1, 2-3, ...62-63, and 250-251)
+Note that when the Tofino Model container starts, it will automatically create 33 veth
+pairs ( `veth0`-`veth1`, `veth2`-`veth3`, ...`veth62`-`veth63`, and `veth250`-`veth251`)
 
 Every interfaces with **even** number are attached to the Tofino Model and every interfaces
 with **odd** number are interfaces we can use to send and receive packets.
 
-You can also set up a sniffer to sniff packets from interface(s), for example, to print
-every packets from a interface:
+You can also sniff packets from interfaces, for example, to print every packet
+received on interface `veth3`:
 
 ```python
 sn = AsyncSniffer(iface='veth3', prn=lambda p: ls(p))
