@@ -207,6 +207,9 @@ class FabricIPv4UnicastGtpPassthroughTest(IPv4UnicastTest):
         self.runIPv4UnicastTest(pkt, next_hop_mac=HOST2_MAC)
 
 
+
+
+
 class FabricIPv4UnicastGroupTest(FabricTest):
     @tvsetup
     @autocleanup
@@ -2116,6 +2119,70 @@ class FabricIpv4UnicastLoopbackModeTest(IPv4UnicastTest):
                 pktlen=MIN_PKT_LEN,
             )
             self.doRunTest(pkt, HOST2_MAC)
+
+
+class DodTest(FabricTest):
+    """Deflect on drop test"""
+
+    # @tvsetup
+    @autocleanup
+    def doRunTest(self):
+        dod_port = 3
+        vlan_id = 10
+        # self.setup_port(self.port1, vlan_id)
+        # self.setup_port(self.port2, vlan_id)
+        self.set_ingress_port_vlan(self.port1, False, 0, vlan_id)
+        self.set_ingress_port_vlan(self.port2, False, 0, vlan_id)
+
+        self.set_egress_vlan(self.port1, vlan_id, False)
+        self.set_egress_vlan(self.port2, vlan_id, False)
+        self.set_egress_vlan(dod_port, vlan_id, False)
+
+        req, _ = self.send_request_add_entry_to_action(
+            "acl.acl",
+            # [self.Ternary("ig_port", stringify(1, 2), stringify(0x1, 2))],
+            [self.Ternary("eth_type", stringify(ETH_TYPE_IPV4, 2), stringify(0xffff, 2))],
+            "acl.set_output_port",
+            [("port_num", stringify(dod_port, 2))],
+            10
+        )
+
+        # req, _ = self.send_request_add_entry_to_action(
+        #     "acl.acl2",
+        #     [],
+        #     "acl.set_output_port",
+        #     [("port_num", stringify(dod_port, 2))]
+        # )
+
+        # self.add_forwarding_acl_punt_to_cpu(eth_type=ETH_TYPE_IPV4)
+
+        # pkt = testutils.simple_tcp_packet(
+        #     eth_src=HOST1_MAC,
+        #     eth_dst=SWITCH_MAC,
+        #     ip_src=HOST1_IPV4,
+        #     ip_dst=HOST2_IPV4,
+        #     pktlen=MIN_PKT_LEN,
+        # )
+
+        # pkt = getattr(testutils, "simple_tcp_packet")(pktlen=120)
+
+        pkt = (
+            Ether(src=HOST1_MAC, dst=SWITCH_MAC)
+            / IP(src=HOST3_IPV4, dst=HOST4_IPV4)
+            / UDP(sport=UDP_GTP_PORT, dport=UDP_GTP_PORT)
+        )
+
+        for i in range(15):
+            self.send_packet(self.port1, pkt)
+
+        self.send_packet(self.port2, pkt)
+
+        time.sleep(1)
+
+
+    def runTest(self):
+        print("")
+        self.doRunTest()
 
 
 # FIXME: remove when will start running TVs on hardware

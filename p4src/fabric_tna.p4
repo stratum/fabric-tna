@@ -63,6 +63,9 @@ control FabricIngress (
 #ifdef WITH_INT
         int_ingress.apply(hdr, fabric_md, ig_intr_md, ig_dprsr_md, ig_tm_md);
 #endif // WITH_INT
+        ig_tm_md.deflect_on_drop = 1;
+        ig_tm_md.bypass_egress = 0;
+        ig_dprsr_md.drop_ctl = 0;
     }
 }
 
@@ -86,6 +89,9 @@ control FabricEgress (
 #endif // WITH_INT
 
     apply {
+        if (eg_intr_md.deflection_flag == 1) {
+            hdr.ethernet.dst_addr = 0x000000cccccc;
+        }
         pkt_io_egress.apply(hdr, fabric_md, eg_intr_md);
         egress_next.apply(hdr, fabric_md, eg_intr_md, eg_dprsr_md);
 #ifdef WITH_SPGW
