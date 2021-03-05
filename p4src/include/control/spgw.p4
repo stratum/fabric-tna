@@ -180,10 +180,18 @@ control SpgwIngress(
     //===== PDR Tables ======//
     //=============================//
 
-    action pdr_drop(bit<8> drop_reason) {
+    action downlink_pdr_drop() {
         ig_dprsr_md.drop_ctl = 1;
 #ifdef WITH_INT
-        fabric_md.int_mirror_md.drop_reason = drop_reason;
+        fabric_md.int_mirror_md.drop_reason = IntDropReason_t.DROP_REASON_DOWNLINK_PDR_MISS;
+#endif // WITH_INT
+    }
+
+    action uplink_pdr_drop() {
+        ig_dprsr_md.drop_ctl = 1;
+        fabric_md.spgw.needs_gtpu_decap = true;
+#ifdef WITH_INT
+        fabric_md.int_mirror_md.drop_reason = IntDropReason_t.DROP_REASON_UPLINK_PDR_MISS;
 #endif // WITH_INT
     }
 
@@ -212,10 +220,10 @@ control SpgwIngress(
         actions = {
             load_pdr;
             load_pdr_qos;
-            @defaultonly pdr_drop;
+            @defaultonly downlink_pdr_drop;
         }
         size = NUM_DOWNLINK_PDRS;
-        const default_action = pdr_drop(IntDropReason_t.DROP_REASON_DOWNLINK_PDR_MISS);
+        const default_action = downlink_pdr_drop();
     }
 
     table uplink_pdrs {
@@ -225,10 +233,10 @@ control SpgwIngress(
         }
         actions = {
             load_pdr;
-            @defaultonly pdr_drop;
+            @defaultonly uplink_pdr_drop;
         }
         size = NUM_UPLINK_PDRS;
-        const default_action = pdr_drop(IntDropReason_t.DROP_REASON_UPLINK_PDR_MISS);
+        const default_action = uplink_pdr_drop();
     }
 
     //=============================//
