@@ -7,6 +7,7 @@ set -eu -o pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
 FP4TEST_ROOT="${DIR}"/../..
 FABRIC_TNA="${FP4TEST_ROOT}"/..
+TM_PORT_JSON=${TM_PORT_JSON:-""}
 
 # shellcheck source=.env
 source "${FABRIC_TNA}"/.env
@@ -68,9 +69,23 @@ mkdir "${DIR}"/log
 # Run Tofino Model
 # Replace dots with underscores to match pipeconf name
 echo "*** Starting ${tmRunName} (from ${SDE_TM_DOCKER_IMG})..."
+
+OTHER_TM_DOCKER_ARGS=""
+if [[ -n "${TM_PORT_JSON}" ]]; then
+    # Fine the absolute path of the port map file and mount the file to the container
+    # Also, pass the TM_PORT_JSON with the path to the container so the entrypoint
+    # will start the Tofino model with port map file.
+    JSON_PATH="$(cd "$(dirname "${TM_PORT_JSON}")" > /dev/null 2>&1 && pwd)"
+    JSON_PATH="${JSON_PATH}/$(basename "${TM_PORT_JSON}")"
+    OTHER_TM_DOCKER_ARGS="--mount src=${JSON_PATH},dst=${JSON_PATH},type=bind"
+    OTHER_TM_DOCKER_ARGS="${OTHER_TM_DOCKER_ARGS} --env TM_PORT_JSON=${JSON_PATH}"
+fi
+
+# shellcheck disable=SC2086
 docker run --name ${tmRunName} -d -t --privileged \
     -v "${DIR}":/workdir -w /workdir \
     -v "${P4C_OUT}":/p4c-out \
+    $OTHER_TM_DOCKER_ARGS \
     --entrypoint ./tm_entrypoint.sh \
     "${SDE_TM_DOCKER_IMG}"
 sleep 5

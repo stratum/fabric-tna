@@ -183,8 +183,15 @@ sendp(pkt, iface='veth1')
 Note that when the Tofino Model container starts, it will automatically create 33 veth
 pairs ( `veth0`-`veth1`, `veth2`-`veth3`, ...`veth62`-`veth63`, and `veth250`-`veth251`)
 
-Every interfaces with **even** number are attached to the Tofino Model and every interfaces
-with **odd** number are interfaces we can use to send and receive packets.
+The following table is the default mapping from Tofino DP_ID to veth
+
+| DP_ID | veth   |
+|:-----:|:------:|
+| 0     | veth1  |
+| 1     | veth3  |
+| 2     | veth5  |
+| ..... | .....  |
+| 31    | veth63 |
 
 You can also sniff packets from interfaces, for example, to print every packet
 received on interface `veth3`:
@@ -195,4 +202,28 @@ sn.start()
 # ...
 # To stop the sniffer and show summary
 sn.stop()
+```
+
+### Use a custom Tofino model port mapping file
+
+A port mapping file containes mappings from a device port to a veth interface pair.
+The content of port mapping file looks like:
+
+```json
+{
+  "PortToVeth": [
+    { "device_port": 260, "veth1": 4, "veth2": 5 }
+  ]
+}
+```
+
+This file tells the Tofino model to map device port 260 to `veth4` and `veth5`.
+The `veth4` will be attached to the Tofino model, and user can use `veth5` to send and
+receive packets.
+
+To use a custom Tofino model port mapping file, use `TM_PORT_JSON` environment variable to
+pass additional paramter to the Tofino model, for example:
+
+```bash
+TM_PORT_JSON=ports.json ./ptf/run/tm/p4rt-shell fabric
 ```
