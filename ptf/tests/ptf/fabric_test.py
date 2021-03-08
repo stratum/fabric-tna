@@ -207,13 +207,13 @@ BRIDGED_MD_TYPE_INGRESS_MIRROR = 3
 
 # Size for different headers
 if testutils.test_param_get("profile") == "fabric-spgw-int":
-    BMD_BYTES = 52
+    BMD_BYTES = 47
 elif testutils.test_param_get("profile") == "fabric-spgw":
-    BMD_BYTES = 49
+    BMD_BYTES = 44
 elif testutils.test_param_get("profile") == "fabric-int":
-    BMD_BYTES = 29
+    BMD_BYTES = 24
 else:
-    BMD_BYTES = 27  # fabric
+    BMD_BYTES = 21  # fabric
 IP_HDR_BYTES = 20
 UDP_HDR_BYTES = 8
 GTP_HDR_BYTES = 8
@@ -2483,6 +2483,7 @@ class IntTest(IPv4UnicastTest):
         self.send_request_add_entry_to_action(
             "watchlist",
             [
+                self.Exact("ipv4_valid", stringify(1, 1)),
                 self.Ternary("ipv4_src", ipv4_src_, ipv4_mask),
                 self.Ternary("ipv4_dst", ipv4_dst_, ipv4_mask),
                 self.Range("l4_sport", sport_low, sport_high),
