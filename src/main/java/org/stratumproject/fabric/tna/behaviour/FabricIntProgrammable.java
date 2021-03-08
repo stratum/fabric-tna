@@ -343,6 +343,8 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
 
     private TrafficSelector buildCollectorSelector(Set<Criterion> criteria) {
         TrafficSelector.Builder builder = DefaultTrafficSelector.builder();
+        // We always match packets with valid IPv4 header
+        builder.matchPi(PiCriterion.builder().matchExact(P4InfoConstants.HDR_IPV4_VALID, 1).build());
         for (Criterion criterion : criteria) {
             switch (criterion.type()) {
                 case IPV4_SRC:
