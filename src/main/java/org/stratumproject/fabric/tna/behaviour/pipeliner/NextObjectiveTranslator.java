@@ -4,6 +4,7 @@
 package org.stratumproject.fabric.tna.behaviour.pipeliner;
 
 import com.google.common.collect.Lists;
+import org.onlab.packet.MplsLabel;
 import org.onlab.packet.VlanId;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.PortNumber;
@@ -15,6 +16,7 @@ import org.onosproject.net.flow.criteria.Criterion;
 import org.onosproject.net.flow.criteria.PiCriterion;
 import org.onosproject.net.flow.criteria.VlanIdCriterion;
 import org.onosproject.net.flow.instructions.Instruction;
+import org.onosproject.net.flow.instructions.L2ModificationInstruction.ModMplsLabelInstruction;
 import org.onosproject.net.flow.instructions.L2ModificationInstruction.ModVlanIdInstruction;
 import org.onosproject.net.flowobjective.DefaultNextTreatment;
 import org.onosproject.net.flowobjective.NextObjective;
@@ -44,8 +46,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
-import static org.onosproject.net.flow.instructions.L2ModificationInstruction.L2SubType.VLAN_ID;
-import static org.onosproject.net.flow.instructions.L2ModificationInstruction.L2SubType.VLAN_POP;
+import static org.onosproject.net.flow.instructions.L2ModificationInstruction.L2SubType.*;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.*;
 
 /**
@@ -91,10 +92,52 @@ class NextObjectiveTranslator
 
         if (!isGroupModifyOp(obj)) {
             // Generate next VLAN rules.
+            nextMpls(obj, resultBuilder);
             nextVlan(obj, resultBuilder);
         }
 
         return resultBuilder.build();
+    }
+
+    private void nextMpls(NextObjective obj,
+                          ObjectiveTranslation.Builder resultBuilder)
+            throws FabricPipelinerException {
+        // Next objective can contain only one mpls push and one mpls label
+        // instruction. Pipeliner does not support other configurations.
+
+        final List<List<ModMplsLabelInstruction>> mplsInstructions = defaultNextTreatments(
+                obj.nextTreatments(), false).stream()
+                .map(defaultNextTreatment -> l2Instructions(defaultNextTreatment.treatment(), MPLS_LABEL)
+                        .stream().map(v -> (ModMplsLabelInstruction) v)
+                        .collect(Collectors.toList()))
+                .filter(l -> !l.isEmpty())
+                .collect(Collectors.toList());
+
+        if (mplsInstructions.isEmpty()) {
+            // No need to apply next mpls table
+            return;
+        }
+
+        // We expect one mpls label for each treatment and the label has to be the same
+        final Set<MplsLabel> mplsLabels = mplsInstructions.stream()
+                .flatMap(Collection::stream)
+                .map(ModMplsLabelInstruction::label)
+                .collect(Collectors.toSet());
+        if (obj.nextTreatments().size() != mplsInstructions.size() ||
+                mplsLabels.size() != 1) {
+            throw new FabricPipelinerException(
+                    "Inconsistent VLAN_ID instructions, cannot process " +
+                            "next_vlan rule. It is required that all " +
+                            "treatments have the same VLAN_ID instructions.");
+        }
+        final TrafficSelector selector = nextIdSelector(obj.id());
+        final TrafficTreatment.Builder treatmentBuilder = DefaultTrafficTreatment.builder();
+        treatmentBuilder.setMpls(mplsLabels.iterator().next());
+        final TrafficTreatment treatment = treatmentBuilder.build();
+
+        resultBuilder.addFlowRule(flowRule(
+                obj, P4InfoConstants.FABRIC_INGRESS_PRE_NEXT_NEXT_MPLS,
+                selector, treatment));
     }
 
     private void nextVlan(NextObjective obj,
@@ -156,7 +199,7 @@ class NextObjectiveTranslator
         final TrafficTreatment treatment = treatmentBuilder.build();
 
         resultBuilder.addFlowRule(flowRule(
-                obj, P4InfoConstants.FABRIC_INGRESS_NEXT_NEXT_VLAN,
+                obj, P4InfoConstants.FABRIC_INGRESS_PRE_NEXT_NEXT_VLAN,
                 selector, treatment));
     }
 

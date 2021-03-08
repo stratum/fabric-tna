@@ -86,11 +86,20 @@ final class FabricTreatmentInterpreter {
         return null;
     }
 
+    static PiAction mapPreNextTreatment(TrafficTreatment treatment, PiTableId tableId)
+            throws PiInterpreterException {
+        if (tableId == P4InfoConstants.FABRIC_INGRESS_PRE_NEXT_NEXT_MPLS) {
+            return mapNextMplsTreatment(treatment, tableId);
+        } else if (tableId == P4InfoConstants.FABRIC_INGRESS_PRE_NEXT_NEXT_VLAN) {
+            return mapNextVlanTreatment(treatment, tableId);
+        }
+        throw new PiInterpreterException(format(
+                "Treatment mapping not supported for table '%s'", tableId));
+    }
+
     static PiAction mapNextTreatment(TrafficTreatment treatment, PiTableId tableId)
             throws PiInterpreterException {
-        if (tableId == P4InfoConstants.FABRIC_INGRESS_NEXT_NEXT_VLAN) {
-            return mapNextVlanTreatment(treatment, tableId);
-        } else if (tableId == P4InfoConstants.FABRIC_INGRESS_NEXT_HASHED) {
+        if (tableId == P4InfoConstants.FABRIC_INGRESS_NEXT_HASHED) {
             return mapNextHashedOrSimpleTreatment(treatment, tableId, false);
         // TODO: add profile with simple next or remove references
         // } else if (tableId == P4InfoConstants.FABRIC_INGRESS_NEXT_SIMPLE) {
@@ -103,18 +112,34 @@ final class FabricTreatmentInterpreter {
                 "Treatment mapping not supported for table '%s'", tableId));
     }
 
+    private static PiAction mapNextMplsTreatment(TrafficTreatment treatment, PiTableId tableId)
+            throws PiInterpreterException {
+        final Instruction mplsPush = l2Instruction(
+                treatment, MPLS_PUSH);
+        final ModMplsLabelInstruction mplsLabel = (ModMplsLabelInstruction) l2Instruction(
+                treatment, MPLS_LABEL);
+        if (mplsLabel != null) {
+            return PiAction.builder()
+                    .withParameter(new PiActionParam(P4InfoConstants.LABEL, mplsLabel.label().toInt()))
+                    .withId(P4InfoConstants.FABRIC_INGRESS_PRE_NEXT_SET_MPLS_LABEL)
+                    .build();
+        }
+        throw new PiInterpreterException("There are no MPLS instruction");
+    }
+
     private static PiAction mapNextVlanTreatment(TrafficTreatment treatment, PiTableId tableId)
             throws PiInterpreterException {
         final List<ModVlanIdInstruction> modVlanIdInst = l2InstructionsOrFail(treatment, VLAN_ID, tableId)
                 .stream().map(i -> (ModVlanIdInstruction) i).collect(Collectors.toList());
         if (modVlanIdInst.size() == 1) {
-            return PiAction.builder().withId(P4InfoConstants.FABRIC_INGRESS_NEXT_SET_VLAN)
+            return PiAction.builder().withId(P4InfoConstants.FABRIC_INGRESS_PRE_NEXT_SET_VLAN)
                     .withParameter(new PiActionParam(
                             P4InfoConstants.VLAN_ID,
                             modVlanIdInst.get(0).vlanId().toShort()))
                     .build();
         }
         // TODO: re-enable support for double-vlan
+        // FIXME next_vlan has been moved to pre_next
         // if (modVlanIdInst.size() == 2 && capabilities.supportDoubleVlanTerm()) {
         //     return PiAction.builder()
         //             .withId(P4InfoConstants.FABRIC_INGRESS_NEXT_SET_DOUBLE_VLAN)
@@ -132,20 +157,15 @@ final class FabricTreatmentInterpreter {
     private static PiAction mapNextHashedOrSimpleTreatment(
             TrafficTreatment treatment, PiTableId tableId, boolean simple)
             throws PiInterpreterException {
-        // Provide mapping for output_hashed, routing_hashed, and
-        // mpls_routing_hashed. multicast_hashed can only be invoked with
-        // PiAction, hence no mapping. outPort required for all actions. Presence
-        // of other instructions will determine which action to map to.
+        // Provide mapping for output_hashed and routing_hashed; multicast_hashed
+        // can only be invoked with PiAction, hence no mapping. outPort required for
+        // all actions. Presence of other instructions will determine which action to map to.
         final PortNumber outPort = ((OutputInstruction) instructionOrFail(
                 treatment, OUTPUT, tableId)).port();
         final ModEtherInstruction ethDst = (ModEtherInstruction) l2Instruction(
                 treatment, ETH_DST);
         final ModEtherInstruction ethSrc = (ModEtherInstruction) l2Instruction(
                 treatment, ETH_SRC);
-        final Instruction mplsPush = l2Instruction(
-                treatment, MPLS_PUSH);
-        final ModMplsLabelInstruction mplsLabel = (ModMplsLabelInstruction) l2Instruction(
-                treatment, MPLS_LABEL);
 
         final PiAction.Builder actionBuilder = PiAction.builder()
                 .withParameter(new PiActionParam(P4InfoConstants.PORT_NUM, outPort.toLong()));
@@ -155,24 +175,13 @@ final class FabricTreatmentInterpreter {
                     P4InfoConstants.SMAC, ethSrc.mac().toBytes()));
             actionBuilder.withParameter(new PiActionParam(
                     P4InfoConstants.DMAC, ethDst.mac().toBytes()));
-            if (mplsLabel != null) {
-                // mpls_routing_hashed
-                return actionBuilder
-                        .withParameter(new PiActionParam(P4InfoConstants.LABEL, mplsLabel.label().toInt()))
-                        .withId(P4InfoConstants.FABRIC_INGRESS_NEXT_MPLS_ROUTING_HASHED)
-                        // TODO: add profile with simple next or remove references
-                        // .withId(simple ? P4InfoConstants.FABRIC_INGRESS_NEXT_MPLS_ROUTING_SIMPLE
-                        //                 : P4InfoConstants.FABRIC_INGRESS_NEXT_MPLS_ROUTING_HASHED)
-                        .build();
-            } else {
-                // routing_hashed
-                return actionBuilder
-                        .withId(P4InfoConstants.FABRIC_INGRESS_NEXT_ROUTING_HASHED)
-                        // TODO: add profile with simple next or remove references
-                        // .withId(simple ? P4InfoConstants.FABRIC_INGRESS_NEXT_ROUTING_SIMPLE
-                        //                 : P4InfoConstants.FABRIC_INGRESS_NEXT_ROUTING_HASHED)
-                        .build();
-            }
+            // routing_hashed
+            return actionBuilder
+                    .withId(P4InfoConstants.FABRIC_INGRESS_NEXT_ROUTING_HASHED)
+                    // TODO: add profile with simple next or remove references
+                    // .withId(simple ? P4InfoConstants.FABRIC_INGRESS_NEXT_ROUTING_SIMPLE
+                    //                 : P4InfoConstants.FABRIC_INGRESS_NEXT_ROUTING_HASHED)
+                    .build();
         } else {
             // output_hashed
             return actionBuilder
@@ -289,4 +298,5 @@ final class FabricTreatmentInterpreter {
         throw new PiInterpreterException(format(
                 "Invalid treatment for table '%s', %s: %s", tableId, explanation, treatment));
     }
+
 }

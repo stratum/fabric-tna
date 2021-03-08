@@ -41,6 +41,7 @@ import static org.onosproject.net.PortNumber.CONTROLLER;
 import static org.onosproject.net.PortNumber.FLOOD;
 import static org.onosproject.net.flow.instructions.Instruction.Type.OUTPUT;
 import static org.onosproject.net.pi.model.PiPacketOperationType.PACKET_OUT;
+import static org.stratumproject.fabric.tna.behaviour.FabricTreatmentInterpreter.mapPreNextTreatment;
 import static org.stratumproject.fabric.tna.behaviour.FabricTreatmentInterpreter.mapAclTreatment;
 import static org.stratumproject.fabric.tna.behaviour.FabricTreatmentInterpreter.mapEgressNextTreatment;
 import static org.stratumproject.fabric.tna.behaviour.FabricTreatmentInterpreter.mapFilteringTreatment;
@@ -67,10 +68,12 @@ public class FabricInterpreter extends AbstractFabricHandlerBehavior
             P4InfoConstants.FABRIC_INGRESS_FORWARDING_ROUTING_V4,
             P4InfoConstants.FABRIC_INGRESS_FORWARDING_ROUTING_V6,
             P4InfoConstants.FABRIC_INGRESS_FORWARDING_BRIDGING);
+    private static final Set<PiTableId> PRE_NEXT_CTRL_TBLS = ImmutableSet.of(
+            P4InfoConstants.FABRIC_INGRESS_PRE_NEXT_NEXT_MPLS,
+            P4InfoConstants.FABRIC_INGRESS_PRE_NEXT_NEXT_VLAN);
     private static final Set<PiTableId> ACL_CTRL_TBLS = ImmutableSet.of(
             P4InfoConstants.FABRIC_INGRESS_ACL_ACL);
     private static final Set<PiTableId> NEXT_CTRL_TBLS = ImmutableSet.of(
-            P4InfoConstants.FABRIC_INGRESS_NEXT_NEXT_VLAN,
             // TODO: add profile with simple next or remove references
             // P4InfoConstants.FABRIC_INGRESS_NEXT_SIMPLE,
             // TODO: re-enable support for xconnext
@@ -164,6 +167,8 @@ public class FabricInterpreter extends AbstractFabricHandlerBehavior
             return mapFilteringTreatment(treatment, piTableId);
         } else if (FORWARDING_CTRL_TBLS.contains(piTableId)) {
             return mapForwardingTreatment(treatment, piTableId);
+        } else if (PRE_NEXT_CTRL_TBLS.contains(piTableId)) {
+            return mapPreNextTreatment(treatment, piTableId);
         } else if (ACL_CTRL_TBLS.contains(piTableId)) {
             return mapAclTreatment(treatment, piTableId);
         } else if (NEXT_CTRL_TBLS.contains(piTableId)) {
