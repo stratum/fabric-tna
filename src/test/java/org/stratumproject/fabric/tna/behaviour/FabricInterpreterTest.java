@@ -171,45 +171,39 @@ public class FabricInterpreterTest {
     }
 
     /**
-     * Map treatment for hashed table to routing v4 action.
+     * Map treatment to set_vlan_output action.
      */
     @Test
-    public void testNextTreatmentHashedRoutingMpls() throws Exception {
+    public void testNextVlanTreatment() throws Exception {
         TrafficTreatment treatment = DefaultTrafficTreatment.builder()
-                .setEthSrc(SRC_MAC)
-                .setEthDst(DST_MAC)
-                .setOutput(PORT_1)
-                .pushMpls()
-                .setMpls(MPLS_10)
+                .setVlanId(VLAN_100)
                 .build();
         PiAction mappedAction = interpreter.mapTreatment(
-                treatment, P4InfoConstants.FABRIC_INGRESS_NEXT_HASHED);
-        PiActionParam ethSrcParam = new PiActionParam(P4InfoConstants.SMAC, SRC_MAC.toBytes());
-        PiActionParam ethDstParam = new PiActionParam(P4InfoConstants.DMAC, DST_MAC.toBytes());
-        PiActionParam portParam = new PiActionParam(P4InfoConstants.PORT_NUM, PORT_1.toLong());
-        PiActionParam mplsParam = new PiActionParam(P4InfoConstants.LABEL, MPLS_10.toInt());
+                treatment, P4InfoConstants.FABRIC_INGRESS_PRE_NEXT_NEXT_VLAN);
+        PiActionParam vlanParam = new PiActionParam(
+                P4InfoConstants.VLAN_ID, VLAN_100.toShort());
         PiAction expectedAction = PiAction.builder()
-                .withId(P4InfoConstants.FABRIC_INGRESS_NEXT_MPLS_ROUTING_HASHED)
-                .withParameters(ImmutableList.of(ethSrcParam, ethDstParam, portParam, mplsParam))
+                .withId(P4InfoConstants.FABRIC_INGRESS_PRE_NEXT_SET_VLAN)
+                .withParameter(vlanParam)
                 .build();
         assertEquals(expectedAction, mappedAction);
     }
 
     /**
-     * Map treatment to set_vlan_output action.
+     * Map treatment to set_mpls action.
      */
     @Test
-    public void testNextTreatment3() throws Exception {
+    public void testNextMplsTreatment() throws Exception {
         TrafficTreatment treatment = DefaultTrafficTreatment.builder()
-                .setVlanId(VLAN_100)
+                .setMpls(MPLS_10)
                 .build();
         PiAction mappedAction = interpreter.mapTreatment(
-                treatment, P4InfoConstants.FABRIC_INGRESS_NEXT_NEXT_VLAN);
-        PiActionParam vlanParam = new PiActionParam(
-                P4InfoConstants.VLAN_ID, VLAN_100.toShort());
+                treatment, P4InfoConstants.FABRIC_INGRESS_PRE_NEXT_NEXT_MPLS);
+        PiActionParam mplsParam = new PiActionParam(
+                P4InfoConstants.LABEL, MPLS_10.toInt());
         PiAction expectedAction = PiAction.builder()
-                .withId(P4InfoConstants.FABRIC_INGRESS_NEXT_SET_VLAN)
-                .withParameter(vlanParam)
+                .withId(P4InfoConstants.FABRIC_INGRESS_PRE_NEXT_SET_MPLS_LABEL)
+                .withParameter(mplsParam)
                 .build();
         assertEquals(expectedAction, mappedAction);
     }
