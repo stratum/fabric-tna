@@ -180,7 +180,7 @@ INT_DROP_REASON_ROUTING_V4_MISS = 29
 INT_DROP_REASON_EGRESS_NEXT_MISS = 130
 INT_DROP_REASON_DOWNLINK_PDR_MISS = 132
 INT_DROP_REASON_UPLINK_PDR_MISS = 133
-INT_DROP_REASON_UPLINK_FAR_MISS = 133
+INT_DROP_REASON_FAR_MISS = 134
 
 PPPOE_CODE_SESSION_STAGE = 0x00
 
@@ -3152,7 +3152,8 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         eg_port,
         expect_int_report,
         is_device_spine,
-        send_report_to_spine
+        send_report_to_spine,
+        drop_reason
     ):
         """
         :param pkt: the input packet
@@ -3187,21 +3188,25 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             INT_COLLECTOR_IPV4,
             ig_port,
             0, # No egress port set since we drop from ingress pipeline
-            INT_DROP_REASON_UPLINK_PDR_MISS,
+            drop_reason,
             SWITCH_ID,
             int_inner_pkt,
             is_device_spine,
             send_report_to_spine,
         )
 
+
         # Set collector, report table, and mirror sessions
         self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine)
 
         self.add_s1u_iface(S1U_SGW_IPV4)
-        # self.add_uplink_pdr(
-        #     ctr_id=UPLINK_PDR_CTR_IDX, far_id=UPLINK_FAR_ID, teid=UPLINK_TEID, tunnel_dst_addr=S1U_SGW_IPV4,
-        # )
-        # self.add_normal_far(far_id=UPLINK_FAR_ID)
+        if drop_reason == INT_DROP_REASON_UPLINK_PDR_MISS:
+            # Install nothing to pdr nor far table
+            pass
+        elif drop_reason == INT_DROP_REASON_FAR_MISS:
+            self.add_uplink_pdr(
+                ctr_id=UPLINK_PDR_CTR_IDX, far_id=UPLINK_FAR_ID, teid=UPLINK_TEID, tunnel_dst_addr=S1U_SGW_IPV4,
+            )
 
         # TODO: Use MPLS test instead of IPv4 test if device is spine.
         self.runIPv4UnicastTest(
