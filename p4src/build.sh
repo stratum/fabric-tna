@@ -38,7 +38,7 @@ function base_build() {
   p4c_flags="--auto-init-metadata"
   mkdir -p ${output_dir}
   (
-    $P4C_CMD --arch tna -g --create-graphs --verbose 2 \
+    time $P4C_CMD --arch tna -g --create-graphs --verbose 2 \
       -o ${output_dir} -I ${P4_SRC_DIR} \
       ${OTHER_PP_FLAGS} \
       ${p4c_flags} \
