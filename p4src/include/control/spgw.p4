@@ -145,6 +145,7 @@ control SpgwIngress(
     DecapGtpu() decap_gtpu_from_dbuf;
     DecapGtpu() decap_gtpu;
     UplinkRecirc() uplink_recirc;
+    bool is_pdr_hit;
 
 
     //=============================//
@@ -182,6 +183,9 @@ control SpgwIngress(
 
     action downlink_pdr_drop() {
         ig_dprsr_md.drop_ctl = 1;
+        is_pdr_hit = false;
+        fabric_md.skip_forwarding = true;
+        fabric_md.skip_next = true;
 #ifdef WITH_INT
         fabric_md.int_mirror_md.drop_reason = IntDropReason_t.DROP_REASON_DOWNLINK_PDR_MISS;
 #endif // WITH_INT
@@ -189,7 +193,9 @@ control SpgwIngress(
 
     action uplink_pdr_drop() {
         ig_dprsr_md.drop_ctl = 1;
-        fabric_md.spgw.needs_gtpu_decap = true;
+        is_pdr_hit = false;
+        fabric_md.skip_forwarding = true;
+        fabric_md.skip_next = true;
 #ifdef WITH_INT
         fabric_md.int_mirror_md.drop_reason = IntDropReason_t.DROP_REASON_UPLINK_PDR_MISS;
 #endif // WITH_INT
@@ -201,6 +207,7 @@ control SpgwIngress(
         fabric_md.spgw.far_id = far_id;
         fabric_md.bridged.spgw.pdr_ctr_id = ctr_id;
         fabric_md.spgw.needs_gtpu_decap = needs_gtpu_decap;
+        is_pdr_hit = true;
     }
 
     action load_pdr_qos(pdr_ctr_id_t        ctr_id,
@@ -209,6 +216,7 @@ control SpgwIngress(
                         qid_t               qid) {
         load_pdr(ctr_id, far_id, needs_gtpu_decap);
         ig_tm_md.qid = qid;
+        is_pdr_hit = true;
     }
 
     // These two tables scale well and cover the average case PDR
@@ -329,7 +337,6 @@ control SpgwIngress(
     //===== Apply Block ======//
     //=============================//
     apply {
-
         if (hdr.ipv4.isValid()) {
             if (interfaces.apply().hit) {
                 if (fabric_md.spgw.src_iface == SpgwInterface.FROM_DBUF) {
@@ -353,7 +360,9 @@ control SpgwIngress(
 
                 // FARs
                 // Load FAR info
-                fars.apply();
+                if (is_pdr_hit) {
+                    fars.apply();
+                }
 
                 // Recirculate UE-to-UE traffic.
                 if (fabric_md.spgw.src_iface == SpgwInterface.ACCESS && fabric_md.spgw.needs_gtpu_decap) {
