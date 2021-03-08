@@ -3227,6 +3227,86 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             self.verify_packet(exp_int_report_pkt_masked, self.port3)
         self.verify_no_other_packets()
 
+    def runDownlinkIntDropTest(
+        self,
+        pkt,
+        tagged1,
+        tagged2,
+        is_next_hop_spine,
+        ig_port,
+        eg_port,
+        expect_int_report,
+        is_device_spine,
+        send_report_to_spine,
+        drop_reason
+    ):
+        """
+        :param pkt: the input packet
+        :param tagged1: if the input port should expect VLAN tagged packets
+        :param tagged2: if the output port should expect VLAN tagged packets
+        :param is_next_hop_spine: whether the packet should be routed
+               to the spines using MPLS SR
+        :param ig_port: the ingress port of the IP uncast packet
+        :param eg_port: the egress port of the IP uncast packet
+        :param expect_int_report: expected to receive the INT report
+        :param is_device_spine: the device is a spine device
+        :param send_report_to_spine: if the report is to be forwarded
+               to a spine (e.g., collector attached to another leaf)
+        """
+        # Build expected inner pkt using the input one.
+        int_inner_pkt = pkt.copy()
+
+        # We don't report MPLS or VLAN headers to DeepInsight.
+        if Dot1Q in int_inner_pkt:
+            int_inner_pkt = pkt_remove_vlan(int_inner_pkt)
+
+        # The expected INT report packet
+        exp_int_report_pkt_masked = self.build_int_drop_report(
+            SWITCH_MAC,
+            INT_COLLECTOR_MAC,
+            SWITCH_IPV4,
+            INT_COLLECTOR_IPV4,
+            ig_port,
+            0, # No egress port set since we drop from ingress pipeline
+            drop_reason,
+            SWITCH_ID,
+            int_inner_pkt,
+            is_device_spine,
+            send_report_to_spine,
+        )
+
+        # Set collector, report table, and mirror sessions
+        self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine)
+
+        # Add the UE pool interface and the PDR pointing to the DBUF FAR
+        self.add_ue_pool(pkt[IP].dst)
+        if drop_reason == INT_DROP_REASON_DOWNLINK_PDR_MISS:
+            # Install nothing to pdr nor far table
+            pass
+        elif drop_reason == INT_DROP_REASON_FAR_MISS:
+            self.add_downlink_pdr(
+                ctr_id=DOWNLINK_PDR_CTR_IDX, far_id=DOWNLINK_FAR_ID, ue_addr=pkt[IP].dst
+            )
+
+        # TODO: Use MPLS test instead of IPv4 test if device is spine.
+        self.runIPv4UnicastTest(
+            pkt=pkt,
+            dst_ipv4=pkt[IP].dst,
+            next_hop_mac=HOST2_MAC,
+            tagged1=tagged1,
+            tagged2=tagged2,
+            is_next_hop_spine=is_next_hop_spine,
+            prefix_len=32,
+            with_another_pkt_later=True,
+            ig_port=ig_port,
+            eg_port=eg_port,
+            verify_pkt=False,
+        )
+
+        if expect_int_report:
+            self.verify_packet(exp_int_report_pkt_masked, self.port3)
+        self.verify_no_other_packets()
+
 class PppoeTest(DoubleVlanTerminationTest):
     def set_line_map(self, s_tag, c_tag, line_id):
         assert line_id != 0
