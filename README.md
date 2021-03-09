@@ -64,11 +64,24 @@ The available profiles are:
 | `fabric-int`            | With INT support                                   |
 | `fabric-spgw-int`       | WITH SPGW and INT support                          |
 
-To run PTF tests on Stratum using `tofino-model`:
+To run PTF tests on Stratum using Tofino Model:
 
 ```bash
 ./ptf/run/tm/run <profile>
 ```
+
+For more information about running PTF tests, check [ptf/README.md](ptf/README.md).
+
+If you want to test the pipeline manually with an interactive P4Runtime shell:
+
+```bash
+./ptf/run/tm/p4rt-shell <profile>
+```
+
+This command will start Tofino Model with Stratum and a P4Runtime Shell attached to it.
+For more information about using P4Runtime Shell, check [p4lang/p4runtime-shell](https://github.com/p4lang/p4runtime-shell).
+
+Also, check [p4rt_shell_snippets.md](p4rt_shell_snippets.md) for some examples of how to program tables in fabric-tna.
 
 To build the ONOS pipeconf `.oar` package which includes the compiled P4
 artifacts for the previously built profile(s):
@@ -78,8 +91,6 @@ make pipeconf
 ```
 
 To learn more about pipeconfs, keep reading.
-
-For more information about running PTF tests, check [ptf/README.md](ptf/README.md).
 
 ## Detailed steps to build the fabric-tna pipeconf
 

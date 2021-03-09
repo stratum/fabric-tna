@@ -10,12 +10,12 @@ to be directly paste-able into the interactive shell.
 
 ## Starting a shell
 
-Clone the repository and navigate to it, then start a new shell:
+After building the P4 program, use the following command to start Stratum, Tofino Model, and a P4Runtime shell.
+
+See [README.md](README.md) for more information about how to build the pipeline.
 
 ```bash
-./p4runtime-sh-docker \
-    --grpc-addr <switch_ip:9339> --device-id 1 --election-id 0,1 \
-    --config fabric-tna/p4src/build/fabric-spgw-int/sde_9_3_1/p4info.txt,fabric-tna/p4src/build/fabric-spgw-int/sde_9_3_1/pipeline_config.pb.bin
+./ptf/run/tm/p4rt-shell <profile>
 ```
 
 ## Snippets
@@ -159,4 +159,71 @@ te.action['port_num'] = '260'
 te.counter_data
 te.insert()
 te.read(lambda e: print(e))
+```
+
+### Create and send/receive packets
+
+To create a packet (e.g., UDP):
+
+```python
+from scapy.all import *
+pkt = (
+    Ether(src='00:00:00:00:00:01', dst='00:00:00:00:00:02') /
+    IP(src='192.168.0.1', dst='192.168.0.2') /
+    UDP()
+)
+```
+
+To send a packet to an interface:
+
+```python
+sendp(pkt, iface='veth1')
+```
+
+Note that when the Tofino Model container starts, it will automatically create 33 veth
+pairs ( `veth0`-`veth1`, `veth2`-`veth3`, ...`veth62`-`veth63`, and `veth250`-`veth251`)
+
+The following table is the default mapping from Tofino DP_ID to veth
+
+| DP_ID | veth   |
+|:-----:|:------:|
+| 0     | veth1  |
+| 1     | veth3  |
+| 2     | veth5  |
+| ..... | .....  |
+| 31    | veth63 |
+
+You can also sniff packets from interfaces, for example, to print every packet
+received on interface `veth3`:
+
+```python
+sn = AsyncSniffer(iface='veth3', prn=lambda p: ls(p))
+sn.start()
+# ...
+# To stop the sniffer and show summary
+sn.stop()
+```
+
+### Use a custom Tofino model port mapping file
+
+A port mapping file containes mappings from a device port to a veth interface pair.
+The content of port mapping file looks like:
+
+```json
+{
+  "PortToVeth": [
+    { "device_port": 260, "veth1": 4, "veth2": 5 }
+  ]
+}
+```
+
+This file tells the Tofino model to map device port 260 to `veth4` and `veth5`.
+The `veth4` will be attached to the Tofino model, and user can use `veth5` to send and
+receive packets.
+
+To use a custom Tofino model port mapping file, use `TM_PORT_JSON` environment variable to
+pass additional paramter to the Tofino model, for example:
+
+```bash
+TM_PORT_JSON=ports.json ./ptf/run/tm/p4rt-shell fabric
 ```

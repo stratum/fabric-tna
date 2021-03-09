@@ -10,3 +10,7 @@ License: LicenseRef-ONF-Member-Only-1.0
 Files: .vscode/settings.json
 Copyright: 2020-present Open Networking Foundation
 License: LicenseRef-ONF-Member-Only-1.0
+
+Files: ptf/run/tm/32qs-ports.json
+Copyright: 2020-present Open Networking Foundation
+License: LicenseRef-ONF-Member-Only-1.0
