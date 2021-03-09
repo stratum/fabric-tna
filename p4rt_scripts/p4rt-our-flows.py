@@ -173,6 +173,17 @@ def main():
     te.is_default = True
     te.modify()
 
+
+    # Loop and listen to traffic
+    remaining = 60
+    try:
+        while True:
+            msg = sh.client.stream_in_q.get(timeout=remaining)
+            print(msg)
+    finally:
+        sh.teardown()
+
+
     # ========================#
     # Interface Entries
     #  Filter entries are now installed when the netconfig is loaded,
@@ -288,7 +299,7 @@ def main():
 #        for entry in entries:
 #            print(entry)
 #
-    sh.teardown()
+#    sh.teardown()
 
 
 if __name__ == "__main__":
