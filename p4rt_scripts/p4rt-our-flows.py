@@ -159,9 +159,10 @@ def main():
     # Mirror
     CONQ_REPORT_MIRROR_IDS = [400, 401, 402, 403]
     for sid in CONQ_REPORT_MIRROR_IDS:
-        c = clone_session_entry(session_id=sid)
+        c = sh.CloneSessionEntry(session_id=sid)
         c.cos = 0
-        c.replicas = [Replica(32, 0)]
+        c.add(egress_port=320)
+#        c.replicas = [Replica(32, 0)]
         add_entry(c, 'program')
 #        c.insert()
 #        clone_session_entry(session_id=0).read(lambda e: print(e))
