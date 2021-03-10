@@ -7,7 +7,7 @@
 
 #define SKETCH_INC ((bit<32>) hdr.ipv4.total_len)
 
-#define DEDUP_TIMEOUT_MS (2000)
+#define DEDUP_TIMEOUT_MS (500)
 //dedup for 5 seconds
 
 
@@ -643,8 +643,8 @@ control ConQuestEgress(
 				rv=0;
 			}else{
 				rv=1;
+				val=eg_md.current_timestamp_ms;
 			}
-			val=eg_md.current_timestamp_ms;
 		}
 	};
 	action dedup_report_check(){
