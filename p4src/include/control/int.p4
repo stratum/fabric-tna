@@ -151,19 +151,24 @@ control IntIngress (
 #endif // WITH_DEBUG
     }
 
+    action no_report() {
+        fabric_md.bridged.int_bmd.report_type = IntReportType_t.NO_REPORT;
+    }
+
     table watchlist {
         key = {
-            hdr.ipv4.src_addr          : ternary @name("ipv4_src");
-            hdr.ipv4.dst_addr          : ternary @name("ipv4_dst");
-            fabric_md.bridged.base.ip_proto : ternary @name("ip_proto");
-            fabric_md.bridged.base.l4_sport : range @name("l4_sport");
-            fabric_md.bridged.base.l4_dport : range @name("l4_dport");
+            hdr.ipv4.isValid(): exact @name("ipv4_valid");
+            fabric_md.ipv4_src : ternary @name("ipv4_src");
+            fabric_md.ipv4_dst : ternary @name("ipv4_dst");
+            fabric_md.ip_proto : ternary @name("ip_proto");
+            fabric_md.l4_sport : range @name("l4_sport");
+            fabric_md.l4_dport : range @name("l4_dport");
         }
         actions = {
             mark_to_report;
-            @defaultonly nop();
+            @defaultonly no_report();
         }
-        const default_action = nop();
+        const default_action = no_report();
         const size = INT_WATCHLIST_TABLE_SIZE;
 #ifdef WITH_DEBUG
         counters = watchlist_counter;
@@ -233,11 +238,32 @@ control IntIngress (
     }
 
     apply {
-        mirror_session_id.apply();
-        if (hdr.ipv4.isValid()) {
-            watchlist.apply();
-            drop_report.apply();
+#ifdef WITH_SPGW
+        if (hdr.inner_ipv4.isValid()) {
+            fabric_md.ipv4_src = hdr.inner_ipv4.src_addr;
+            fabric_md.ipv4_dst = hdr.inner_ipv4.dst_addr;
+            fabric_md.ip_proto = hdr.inner_ipv4.protocol;
         }
+        if (hdr.inner_tcp.isValid()) {
+            fabric_md.l4_sport = hdr.inner_tcp.sport;
+            fabric_md.l4_dport = hdr.inner_tcp.dport;
+        }
+        if (hdr.inner_udp.isValid()) {
+            fabric_md.l4_sport = hdr.inner_udp.sport;
+            fabric_md.l4_dport = hdr.inner_udp.dport;
+        }
+        if (fabric_md.bridged.spgw.needs_gtpu_encap) {
+            // For downlink, the FAR table will change fabric_md.ipv4_src/dst for routing
+            // and do encasulation.
+            // Here we need to change it back to the original one so we can match the UE flow.
+            fabric_md.ipv4_src = hdr.ipv4.src_addr;
+            fabric_md.ipv4_dst = hdr.ipv4.dst_addr;
+            fabric_md.ip_proto = hdr.ipv4.protocol;
+        }
+#endif // WITH_SPGW
+        mirror_session_id.apply();
+        watchlist.apply();
+        drop_report.apply();
     }
 }
 

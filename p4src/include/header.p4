@@ -262,9 +262,6 @@ struct bridged_metadata_base_t {
     bit<8>                  mpls_ttl;
     bit<48>                 ig_tstamp;
     bit<16>                 ip_eth_type;
-    bit<8>                  ip_proto;
-    l4_port_t               l4_sport;
-    l4_port_t               l4_dport;
     flow_hash_t             flow_hash;
 #ifdef WITH_DOUBLE_VLAN_TERMINATION
     @padding bit<7>         _pad1;
@@ -295,6 +292,9 @@ struct fabric_ingress_metadata_t {
     bridged_metadata_t      bridged;
     bit<32>                 ipv4_src;
     bit<32>                 ipv4_dst;
+    bit<8>                  ip_proto;
+    l4_port_t               l4_sport;
+    l4_port_t               l4_dport;
     bool                    ipv4_checksum_err;
     bool                    skip_forwarding;
     bool                    skip_next;

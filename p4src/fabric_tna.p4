@@ -49,7 +49,7 @@ control FabricIngress (
         filtering.apply(hdr, fabric_md, ig_intr_md);
 #ifdef WITH_SPGW
         if (!fabric_md.skip_forwarding) {
-            spgw.apply(hdr, fabric_md, ig_intr_md, ig_tm_md);
+            spgw.apply(hdr, fabric_md, ig_intr_md, ig_tm_md, ig_dprsr_md);
         }
 #endif // WITH_SPGW
         if (!fabric_md.skip_forwarding) {

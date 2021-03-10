@@ -21,7 +21,7 @@ MVN_CACHE ?= $(MVN_CACHE_DOCKER_VOLUME)
 MVN_FLAGS ?=
 
 ONOS_HOST ?= localhost
-ONOS_URL := http://$(ONOS_HOST):8181/onos
+ONOS_URL ?= http://$(ONOS_HOST):8181/onos
 ONOS_CURL := curl --fail -sSL --user onos:rocks --noproxy localhost
 
 PIPECONF_APP_NAME := org.stratumproject.fabric-tna

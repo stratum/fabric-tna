@@ -662,6 +662,8 @@ public class FabricIntProgrammableTest {
     private FlowRule buildExpectedCollectorFlow(byte protocol) {
         // Flow rule that we expected.
         TrafficSelector.Builder expectedSelector = DefaultTrafficSelector.builder();
+        expectedSelector.matchPi(
+                PiCriterion.builder().matchExact(P4InfoConstants.HDR_IPV4_VALID, 1).build());
         expectedSelector.matchIPSrc(IP_SRC);
         expectedSelector.matchIPDst(IP_DST);
         if (protocol == IPv4.PROTOCOL_TCP || protocol == IPv4.PROTOCOL_UDP) {

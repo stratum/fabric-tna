@@ -13,11 +13,11 @@ control DecapGtpu(inout parsed_headers_t            hdr,
     action decap_inner_common() {
         // Correct parser-set metadata to use the inner header values
         fabric_md.bridged.base.ip_eth_type = ETHERTYPE_IPV4;
-        fabric_md.bridged.base.ip_proto    = hdr.inner_ipv4.protocol;
-        fabric_md.ipv4_src            = hdr.inner_ipv4.src_addr;
-        fabric_md.ipv4_dst            = hdr.inner_ipv4.dst_addr;
-        fabric_md.bridged.base.l4_sport    = fabric_md.bridged.inner_l4_sport;
-        fabric_md.bridged.base.l4_dport    = fabric_md.bridged.inner_l4_dport;
+        fabric_md.ip_proto = hdr.inner_ipv4.protocol;
+        fabric_md.ipv4_src = hdr.inner_ipv4.src_addr;
+        fabric_md.ipv4_dst = hdr.inner_ipv4.dst_addr;
+        fabric_md.l4_sport = fabric_md.bridged.inner_l4_sport;
+        fabric_md.l4_dport = fabric_md.bridged.inner_l4_dport;
         // Move GTPU and inner L3 headers out
         hdr.ipv4 = hdr.inner_ipv4;
         hdr.inner_ipv4.setInvalid();
@@ -133,7 +133,8 @@ control SpgwIngress(
         inout fabric_ingress_metadata_t             fabric_md,
         /* TNA */
         in ingress_intrinsic_metadata_t             ig_intr_md,
-        inout ingress_intrinsic_metadata_for_tm_t   ig_tm_md) {
+        inout ingress_intrinsic_metadata_for_tm_t   ig_tm_md,
+        inout ingress_intrinsic_metadata_for_deparser_t ig_dprsr_md) {
 
     //=============================//
     //===== Misc Things ======//
@@ -144,6 +145,7 @@ control SpgwIngress(
     DecapGtpu() decap_gtpu_from_dbuf;
     DecapGtpu() decap_gtpu;
     UplinkRecirc() uplink_recirc;
+    bool is_pdr_hit;
 
 
     //=============================//
@@ -179,12 +181,33 @@ control SpgwIngress(
     //===== PDR Tables ======//
     //=============================//
 
+    action downlink_pdr_drop() {
+        ig_dprsr_md.drop_ctl = 1;
+        is_pdr_hit = false;
+        fabric_md.skip_forwarding = true;
+        fabric_md.skip_next = true;
+#ifdef WITH_INT
+        fabric_md.int_mirror_md.drop_reason = IntDropReason_t.DROP_REASON_DOWNLINK_PDR_MISS;
+#endif // WITH_INT
+    }
+
+    action uplink_pdr_drop() {
+        ig_dprsr_md.drop_ctl = 1;
+        is_pdr_hit = false;
+        fabric_md.skip_forwarding = true;
+        fabric_md.skip_next = true;
+#ifdef WITH_INT
+        fabric_md.int_mirror_md.drop_reason = IntDropReason_t.DROP_REASON_UPLINK_PDR_MISS;
+#endif // WITH_INT
+    }
+
     action load_pdr(pdr_ctr_id_t    ctr_id,
                     far_id_t        far_id,
                     bool            needs_gtpu_decap) {
         fabric_md.spgw.far_id = far_id;
         fabric_md.bridged.spgw.pdr_ctr_id = ctr_id;
         fabric_md.spgw.needs_gtpu_decap = needs_gtpu_decap;
+        is_pdr_hit = true;
     }
 
     action load_pdr_qos(pdr_ctr_id_t        ctr_id,
@@ -193,6 +216,7 @@ control SpgwIngress(
                         qid_t               qid) {
         load_pdr(ctr_id, far_id, needs_gtpu_decap);
         ig_tm_md.qid = qid;
+        is_pdr_hit = true;
     }
 
     // These two tables scale well and cover the average case PDR
@@ -204,8 +228,10 @@ control SpgwIngress(
         actions = {
             load_pdr;
             load_pdr_qos;
+            @defaultonly downlink_pdr_drop;
         }
         size = NUM_DOWNLINK_PDRS;
+        const default_action = downlink_pdr_drop();
     }
 
     table uplink_pdrs {
@@ -215,13 +241,27 @@ control SpgwIngress(
         }
         actions = {
             load_pdr;
+            @defaultonly uplink_pdr_drop;
         }
         size = NUM_UPLINK_PDRS;
+        const default_action = uplink_pdr_drop();
     }
 
     //=============================//
     //===== FAR Tables ======//
     //=============================//
+
+    action far_drop() {
+        // general far attributes
+        ig_dprsr_md.drop_ctl = 1;
+        fabric_md.skip_forwarding = true;
+        fabric_md.skip_next = true;
+        fabric_md.bridged.spgw.needs_gtpu_encap = false;
+        fabric_md.bridged.spgw.skip_egress_pdr_ctr = false;
+#ifdef WITH_INT
+        fabric_md.int_mirror_md.drop_reason = IntDropReason_t.DROP_REASON_FAR_MISS;
+#endif // WITH_INT
+    }
 
     action load_normal_far(bool drop,
                            bool notify_cp) {
@@ -286,9 +326,10 @@ control SpgwIngress(
             load_normal_far;
             load_tunnel_far;
             load_dbuf_far;
+            @defaultonly far_drop;
         }
         // default is drop and don't notify CP
-        const default_action = load_normal_far(true, false);
+        const default_action = far_drop();
         size = NUM_FARS;
     }
 
@@ -296,7 +337,6 @@ control SpgwIngress(
     //===== Apply Block ======//
     //=============================//
     apply {
-
         if (hdr.ipv4.isValid()) {
             if (interfaces.apply().hit) {
                 if (fabric_md.spgw.src_iface == SpgwInterface.FROM_DBUF) {
@@ -320,7 +360,9 @@ control SpgwIngress(
 
                 // FARs
                 // Load FAR info
-                fars.apply();
+                if (is_pdr_hit) {
+                    fars.apply();
+                }
 
                 // Recirculate UE-to-UE traffic.
                 if (fabric_md.spgw.src_iface == SpgwInterface.ACCESS && fabric_md.spgw.needs_gtpu_decap) {
