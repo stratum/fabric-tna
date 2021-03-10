@@ -756,6 +756,78 @@ class FabricMplsSegmentRoutingTest(MplsSegmentRoutingTest):
                 self.doRunTest(pkt, HOST2_MAC, next_hop_spine, tc_name=tc_name)
 
 
+class FabricIPv4MplsRedirectTest(IPv4UnicastTest):
+    @tvsetup
+    @autocleanup
+    def doRunTest(self, pkt, mac_dest, tagged1, tc_name):
+        if "tcp" in tc_name:
+            ip_proto = IP_PROTO_TCP
+        elif "udp" in tc_name:
+            ip_proto = IP_PROTO_UDP
+        elif "icmp" in tc_name:
+            ip_proto = IP_PROTO_ICMP
+        self.set_egress_vlan(self.port3, DEFAULT_VLAN)
+        self.add_next_routing(401, self.port3, SWITCH_MAC, HOST2_MAC)
+        self.add_forwarding_acl_next(401, ipv4_src=HOST1_IPV4, ipv4_dst=HOST2_IPV4,
+            ip_proto=ip_proto)
+        self.runIPv4UnicastTest(
+            pkt,
+            mac_dest,
+            prefix_len=24,
+            tagged1=tagged1,
+            tagged2=False,
+            is_next_hop_spine=True,
+            redirect_port=self.port3
+        )
+
+    def runTest(self):
+        print("")
+        for tagged1 in [True, False]:
+            for pkt_type in ["tcp", "udp", "icmp"]:
+                tc_name = pkt_type + "_tagged_" + str(tagged1)
+                print("Testing {} packet with tagged={}...".format(pkt_type, tagged1))
+                pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
+                    eth_src=HOST1_MAC,
+                    eth_dst=SWITCH_MAC,
+                    ip_src=HOST1_IPV4,
+                    ip_dst=HOST2_IPV4,
+                    pktlen=MIN_PKT_LEN,
+                )
+                self.doRunTest(pkt, HOST2_MAC, tagged1, tc_name=tc_name)
+
+
+class FabricIPv4MplsDoNotRedirectTest(IPv4UnicastTest):
+    @tvsetup
+    @autocleanup
+    def doRunTest(self, pkt, mac_dest, tagged1, tc_name):
+        self.set_egress_vlan(self.port3, DEFAULT_VLAN)
+        self.add_next_routing(401, self.port3, SWITCH_MAC, HOST2_MAC)
+        self.add_forwarding_acl_next(401, ipv4_src=HOST3_IPV4, ipv4_dst=HOST4_IPV4)
+        self.runIPv4UnicastTest(
+            pkt,
+            mac_dest,
+            prefix_len=24,
+            tagged1=tagged1,
+            tagged2=False,
+            is_next_hop_spine=True
+        )
+
+    def runTest(self):
+        print("")
+        for tagged1 in [True, False]:
+            for pkt_type in ["tcp", "udp", "icmp"]:
+                tc_name = pkt_type + "_tagged_" + str(tagged1)
+                print("Testing {} packet with tagged={}...".format(pkt_type, tagged1))
+                pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
+                    eth_src=HOST1_MAC,
+                    eth_dst=SWITCH_MAC,
+                    ip_src=HOST1_IPV4,
+                    ip_dst=HOST2_IPV4,
+                    pktlen=MIN_PKT_LEN,
+                )
+                self.doRunTest(pkt, HOST2_MAC, tagged1, tc_name=tc_name)
+
+
 @group("packetio")
 class FabricArpPacketOutTest(PacketOutTest):
     @tvsetup

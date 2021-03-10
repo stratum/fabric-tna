@@ -43,6 +43,10 @@ ETH_TYPE_QINQ = 0x88A8
 ETH_TYPE_PPPOE = 0x8864
 ETH_TYPE_MPLS_UNICAST = 0x8847
 
+IP_PROTO_UDP = 0x11
+IP_PROTO_TCP = 0x06
+IP_PROTO_ICMP = 0x01
+
 ETH_TYPE_PACKET_OUT = 0xBF01
 ETH_TYPE_CPU_LOOPBACK_INGRESS = 0xBF02
 ETH_TYPE_CPU_LOOPBACK_EGRESS = 0xBF03
@@ -648,6 +652,41 @@ class FabricTest(P4RuntimeTest):
             DEFAULT_PRIORITY,
         )
 
+    def add_forwarding_acl_next(
+        self, next_id, ipv4_src=None, ipv4_dst=None, ip_proto=None,
+        l4_sport=None, l4_dport=None
+    ):
+        # Send only if the match keys are not empty
+        next_id_ = stringify(next_id, 4)
+        matches = []
+        if ipv4_src:
+            ipv4_src_ = ipv4_to_binary(ipv4_src)
+            ipv4_src_mask = stringify(0xFFFFFFFF, 4)
+            matches.append(self.Ternary("ipv4_src", ipv4_src_, ipv4_src_mask))
+        if ipv4_dst:
+            ipv4_dst_ = ipv4_to_binary(ipv4_dst)
+            ipv4_dst_mask = stringify(0xFFFFFFFF, 4)
+            matches.append(self.Ternary("ipv4_dst", ipv4_dst_, ipv4_dst_mask))
+        if ip_proto:
+            ip_proto_ = stringify(ip_proto, 1)
+            ip_proto_mask = stringify(0xFF, 1)
+            matches.append(self.Ternary("ip_proto", ip_proto_, ip_proto_mask))
+        if l4_sport:
+            l4_sport_ = stringify(l4_sport, 2)
+            l4_sport_mask = stringify(0xFFFF, 2)
+            matches.append(self.Ternary("l4_sport", l4_sport_, l4_sport_mask))
+        if l4_dport:
+            l4_dport_ = stringify(l4_dport, 2)
+            l4_dport_mask = stringify(0xFFFF, 2)
+            matches.append(self.Ternary("l4_dport", l4_dport_, l4_dport_mask))
+        if matches:
+            self.send_request_add_entry_to_action(
+                "acl.acl",
+                matches,
+                "acl.set_next_id_acl",
+                [("next_id", next_id_)],
+                DEFAULT_PRIORITY)
+
     def add_xconnect(self, next_id, port1, port2):
         next_id_ = stringify(next_id, 4)
         port1_ = stringify(port1, 2)
@@ -799,24 +838,6 @@ class FabricTest(P4RuntimeTest):
             [self.Exact("next_id", next_id_)],
             "pre_next.set_mpls_label",
             [
-                ("label", label_),
-            ],
-        )
-
-    def add_next_mpls_routing_simple(self, next_id, egress_port, smac, dmac, label):
-        next_id_ = stringify(next_id, 4)
-        egress_port_ = stringify(egress_port, 2)
-        smac_ = mac_to_binary(smac)
-        dmac_ = mac_to_binary(dmac)
-        label_ = stringify(label, 3)
-        self.send_request_add_entry_to_action(
-            "next.simple",
-            [self.Exact("next_id", next_id_)],
-            "next.mpls_routing_simple",
-            [
-                ("port_num", egress_port_),
-                ("smac", smac_),
-                ("dmac", dmac_),
                 ("label", label_),
             ],
         )
@@ -1119,6 +1140,7 @@ class IPv4UnicastTest(FabricTest):
         no_send=False,
         ig_port=None,
         eg_port=None,
+        redirect_port=None,
         install_routing_entry=True,
     ):
         """
@@ -1225,8 +1247,12 @@ class IPv4UnicastTest(FabricTest):
 
         self.send_packet(ig_port, pkt)
 
+        verify_port = eg_port
+        if redirect_port:
+            verify_port = redirect_port
+
         if verify_pkt:
-            self.verify_packet(exp_pkt, eg_port)
+            self.verify_packet(exp_pkt, verify_port)
 
         if not with_another_pkt_later:
             self.verify_no_other_packets()

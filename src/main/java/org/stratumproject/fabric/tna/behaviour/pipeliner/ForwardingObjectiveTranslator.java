@@ -78,6 +78,8 @@ class ForwardingObjectiveTranslator
                  P4InfoConstants.FABRIC_INGRESS_FORWARDING_SET_NEXT_ID_ROUTING_V6)
             .put(P4InfoConstants.FABRIC_INGRESS_FORWARDING_MPLS,
                  P4InfoConstants.FABRIC_INGRESS_FORWARDING_POP_MPLS_AND_NEXT)
+            .put(P4InfoConstants.FABRIC_INGRESS_ACL_ACL,
+                 P4InfoConstants.FABRIC_INGRESS_ACL_SET_NEXT_ID_ACL)
             .build();
 
     ForwardingObjectiveTranslator(DeviceId deviceId, FabricCapabilities capabilities) {
