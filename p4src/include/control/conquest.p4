@@ -672,6 +672,7 @@ control ConQuestEgress(
             drop;
             mark_ECN;
             trigger_report;
+	    not_trigger_report;
         }
         default_action = not_trigger_report();
         // const entries = {  }
