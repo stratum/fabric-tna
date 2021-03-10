@@ -1176,6 +1176,7 @@ class FabricSpgwDownlinkIntTest(SpgwIntTest):
                                 send_report_to_spine,
                             )
 
+
 # This test will assume the packet hits spgw interface and miss the uplink PDR table or
 # the FAR table
 @group("int")
@@ -1191,7 +1192,7 @@ class FabricSpgwIntUplinkDropTest(SpgwIntTest):
         is_next_hop_spine,
         is_device_spine,
         send_report_to_spine,
-        drop_reason
+        drop_reason,
     ):
         print(
             "Testing VLAN={}, pkt={}, is_next_hop_spine={}, is_device_spine={}, send_report_to_spine={}, drop_reason={}...".format(
@@ -1200,7 +1201,7 @@ class FabricSpgwIntUplinkDropTest(SpgwIntTest):
                 is_next_hop_spine,
                 is_device_spine,
                 send_report_to_spine,
-                drop_reason
+                drop_reason,
             )
         )
         # Change the IP destination to ensure we are using differnt
@@ -1221,7 +1222,7 @@ class FabricSpgwIntUplinkDropTest(SpgwIntTest):
             expect_int_report=True,
             is_device_spine=is_device_spine,
             send_report_to_spine=send_report_to_spine,
-            drop_reason=drop_reason
+            drop_reason=drop_reason,
         )
 
     def runTest(self):
@@ -1245,8 +1246,9 @@ class FabricSpgwIntUplinkDropTest(SpgwIntTest):
                                     is_next_hop_spine,
                                     is_device_spine,
                                     send_report_to_spine,
-                                    drop_reason
+                                    drop_reason,
                                 )
+
 
 # This test will assume the packet hits spgw interface and miss the downlink PDR table or
 # the FAR table
@@ -1263,7 +1265,7 @@ class FabricSpgwIntDownlinkDropTest(SpgwIntTest):
         is_next_hop_spine,
         is_device_spine,
         send_report_to_spine,
-        drop_reason
+        drop_reason,
     ):
         print(
             "Testing VLAN={}, pkt={}, is_next_hop_spine={}, is_device_spine={}, send_report_to_spine={}, drop_reason={}...".format(
@@ -1272,7 +1274,7 @@ class FabricSpgwIntDownlinkDropTest(SpgwIntTest):
                 is_next_hop_spine,
                 is_device_spine,
                 send_report_to_spine,
-                drop_reason
+                drop_reason,
             )
         )
         # Change the IP destination to ensure we are using differnt
@@ -1293,12 +1295,15 @@ class FabricSpgwIntDownlinkDropTest(SpgwIntTest):
             expect_int_report=True,
             is_device_spine=is_device_spine,
             send_report_to_spine=send_report_to_spine,
-            drop_reason=drop_reason
+            drop_reason=drop_reason,
         )
 
     def runTest(self):
         print("")
-        for drop_reason in [INT_DROP_REASON_DOWNLINK_PDR_MISS, INT_DROP_REASON_FAR_MISS]:
+        for drop_reason in [
+            INT_DROP_REASON_DOWNLINK_PDR_MISS,
+            INT_DROP_REASON_FAR_MISS,
+        ]:
             for is_device_spine in [False, True]:
                 for vlan_conf, tagged in vlan_confs.items():
                     if is_device_spine and (tagged[0] or tagged[1]):
@@ -1317,8 +1322,9 @@ class FabricSpgwIntDownlinkDropTest(SpgwIntTest):
                                     is_next_hop_spine,
                                     is_device_spine,
                                     send_report_to_spine,
-                                    drop_reason
+                                    drop_reason,
                                 )
+
 
 @group("int")
 class FabricIntLocalReportTest(IntTest):

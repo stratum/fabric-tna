@@ -3141,7 +3141,6 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         self.verify_packet(exp_int_report_pkt_masked, self.port3)
         self.verify_no_other_packets()
 
-
     def runUplinkIntDropTest(
         self,
         pkt,
@@ -3153,7 +3152,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         expect_int_report,
         is_device_spine,
         send_report_to_spine,
-        drop_reason
+        drop_reason,
     ):
         """
         :param pkt: the input packet
@@ -3187,14 +3186,13 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             SWITCH_IPV4,
             INT_COLLECTOR_IPV4,
             ig_port,
-            0, # No egress port set since we drop from ingress pipeline
+            0,  # No egress port set since we drop from ingress pipeline
             drop_reason,
             SWITCH_ID,
             int_inner_pkt,
             is_device_spine,
             send_report_to_spine,
         )
-
 
         # Set collector, report table, and mirror sessions
         self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine)
@@ -3205,7 +3203,10 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             pass
         elif drop_reason == INT_DROP_REASON_FAR_MISS:
             self.add_uplink_pdr(
-                ctr_id=UPLINK_PDR_CTR_IDX, far_id=UPLINK_FAR_ID, teid=UPLINK_TEID, tunnel_dst_addr=S1U_SGW_IPV4,
+                ctr_id=UPLINK_PDR_CTR_IDX,
+                far_id=UPLINK_FAR_ID,
+                teid=UPLINK_TEID,
+                tunnel_dst_addr=S1U_SGW_IPV4,
             )
 
         # TODO: Use MPLS test instead of IPv4 test if device is spine.
@@ -3238,7 +3239,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         expect_int_report,
         is_device_spine,
         send_report_to_spine,
-        drop_reason
+        drop_reason,
     ):
         """
         :param pkt: the input packet
@@ -3267,7 +3268,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             SWITCH_IPV4,
             INT_COLLECTOR_IPV4,
             ig_port,
-            0, # No egress port set since we drop from ingress pipeline
+            0,  # No egress port set since we drop from ingress pipeline
             drop_reason,
             SWITCH_ID,
             int_inner_pkt,
@@ -3306,6 +3307,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         if expect_int_report:
             self.verify_packet(exp_int_report_pkt_masked, self.port3)
         self.verify_no_other_packets()
+
 
 class PppoeTest(DoubleVlanTerminationTest):
     def set_line_map(self, s_tag, c_tag, line_id):
