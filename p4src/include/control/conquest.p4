@@ -7,7 +7,7 @@
 
 #define SKETCH_INC ((bit<32>) hdr.ipv4.total_len)
 
-#define DEDUP_TIMEOUT_MS (500)
+#define DEDUP_TIMEOUT_MS (2000)
 //dedup for 5 seconds
 
 
@@ -641,6 +641,8 @@ control ConQuestEgress(
 			rv=1;
 			if(eg_md.current_timestamp_ms-val < DEDUP_TIMEOUT_MS){
 				rv=0;
+			}else{
+				rv=1;
 			}
 			val=eg_md.current_timestamp_ms;
 		}
@@ -652,6 +654,9 @@ control ConQuestEgress(
     action trigger_report() {
         eg_md.send_conq_report = true;
 	dedup_report_check();
+    }
+    action not_trigger_report(){
+    	eg_md.send_conq_report = false;
     }
     
     //== Finally, actions based on flow size in the queue
@@ -667,8 +672,9 @@ control ConQuestEgress(
             drop;
             mark_ECN;
             trigger_report;
+	    not_trigger_report;
         }
-        default_action = conq_nop();
+        default_action = not_trigger_report();
         // const entries = {  }
     }
 
@@ -794,7 +800,7 @@ control ConQuestEgress(
   
                 calc_sum_0_l1();
   
-  
+  	prep_timestamp();
         // bit<32> snap_read_sum=eg_md.snap_0_read_min_l2;
         
         // With flow size in queue, can check for bursty flow and add AQM.
