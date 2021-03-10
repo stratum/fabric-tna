@@ -657,9 +657,9 @@ control ConQuestEgress(
     //== Finally, actions based on flow size in the queue
     table tb_per_flow_action {
         key = {
-            eg_md.snap_0_read_min_l2[26:10]: range @name("snap_0"); //scale down to 16 bits
+            eg_md.snap_0_read_min_l2[20:4]: range @name("snap_0"); //scale down to 16 bits
             eg_md.q_delay: range                        @name("q_delay");
-            eg_md.random_bits: range                    @name("random_bits");
+            // eg_md.random_bits: range                    @name("random_bits");
             hdr.ipv4.ecn : exact                        @name("ecn");
         }
         actions = {
@@ -683,7 +683,7 @@ control ConQuestEgress(
         eg_md.conq_mirror_md.flow_sport     = sport;
         eg_md.conq_mirror_md.flow_dport     = dport;
         eg_md.conq_mirror_md.flow_protocol  = hdr.ipv4.protocol;
-        // clone here?
+        eg_md.conq_mirror_md.queue_depth = eg_md.snap_0_read_min_l2;
     }
 
     @hidden
