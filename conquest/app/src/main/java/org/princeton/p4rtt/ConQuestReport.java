@@ -8,34 +8,45 @@ public class ConQuestReport {
     Ip4Address dstIpAddress;
     int rttVal;
 
+    Ip4Address flowSrcIp;
+    Ip4Address flowDstIp;
+    protected short flowSrcPort;
+    protected short flowDstPort;
+    protected byte flowProtocol;
+    protected int queueSize;
+
     /**
-     * Constructs P4 RTT Report data
+     * Constructs ConQuest Report data
      *
-     * @param
      */
     public ConQuestReport() {
-        this.srcIpAddress = Ip4Address.ZERO;
-        this.dstIpAddress = Ip4Address.ZERO;
-        this.rttVal = -1;
+        this.flowSrcIp = Ip4Address.ZERO;
+        this.flowDstIp = Ip4Address.ZERO;
+        this.queueSize = -1;
     }
 
     /**
-     * Constructs P4 RTT Report data with specific values
+     * Constructs ConQuest Report data with specific values
      * @param srcIpAddress Src IP address
      * @param dstIpAddress Dst IP address
-     * @param rttVal Rtt value
      */
-    public ConQuestReport(Ip4Address srcIpAddress, Ip4Address dstIpAddress, int rttVal) {
+    public ConQuestReport(Ip4Address srcIpAddress, Ip4Address dstIpAddress,
+                          short flowSrcPort, short flowDstPort,
+                          byte flowProtocol, int queueSize) {
         this.srcIpAddress = srcIpAddress;
         this.dstIpAddress = dstIpAddress;
-        this.rttVal = rttVal;
+        this.flowSrcPort = flowSrcPort;
+        this.flowDstPort = flowDstPort;
+        this.flowProtocol = flowProtocol;
+        this.queueSize = queueSize;
     }
 
     public String toString() {
-        return String.format("%s->%s@%.2f(ms)", this.srcIpAddress.toString(),this.dstIpAddress.toString(),this.rttVal/1e3);
+        return String.format("%s->%s@%d", this.srcIpAddress.toString(),this.dstIpAddress.toString(),this.queueSize);
     }
 
     public String toVerboseString() {
-        return String.format("%.2fms for flow (%s -> %s)", this.rttVal/1e3, this.srcIpAddress.toString(),this.dstIpAddress.toString());
+        return String.format("%d for flow (%s -> %s)", queueSize,
+                this.srcIpAddress.toString(),this.dstIpAddress.toString());
     }
 }

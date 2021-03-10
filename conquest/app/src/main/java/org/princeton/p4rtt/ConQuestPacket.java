@@ -6,50 +6,41 @@ import java.nio.ByteBuffer;
 
 public class ConQuestPacket extends BasePacket {
 
-    public static final short TYPE_P4RTT = (short) 0x9001;
-
-    protected byte RTT_packet_type;
-    protected byte RTT_matched_success;
-    protected byte RTT_inserted_success;
-    protected int RTT_val;
+    public static final short TYPE_CONQ_REPORT = (short) 0x9001;
+    private static final int HEADER_SIZE = 32 + 32 + 16 + 16 + 8 + 32;
 
 
-    /**
-     * Gets the Rtt Packet type.
-     *
-     * @return the RTT_packet_type as a byte
-     */
-    public byte getRTTPacketType() {
-        return this.RTT_packet_type;
+    protected int flowSrcIp;
+    protected int flowDstIp;
+    protected short flowSrcPort;
+    protected short flowDstPort;
+    protected byte flowProtocol;
+    protected int queueSize;
+
+
+    public int getFlowSrcIp() {
+        return flowSrcIp;
     }
 
-    /**
-     * Gets the Rtt matched success type.
-     *
-     * @return the RTT_matched_success as a byte
-     */
-    public byte getRTTMatchedSuccess() {
-        return this.RTT_matched_success;
+    public int getFlowDstIp() {
+        return flowDstIp;
     }
 
-    /**
-     * Gets the Rtt inserted success.
-     *
-     * @return the RTT_inserted_success as a byte
-     */
-    public byte getRTTInsertedSuccess() {
-        return this.RTT_inserted_success;
+    public short getFlowSrcPort() {
+        return flowSrcPort;
     }
 
-    /**
-     * Gets the Rtt value.
-     *
-     * @return the RTT_val as an int.
-     */
-    public int getRTTVal() {
-        return this.RTT_val;
+    public short getFlowDstPort() {
+        return flowDstPort;
     }
 
+    public byte getFlowProtocol() {
+        return flowProtocol;
+    }
+
+    public int getQueueSize() {
+        return queueSize;
+    }
 
 
     @Override
@@ -61,15 +52,19 @@ public class ConQuestPacket extends BasePacket {
             payloadData = this.payload.serialize();
         }
 
-        int length = 56;
+        int length = HEADER_SIZE + (payloadData == null ? 0 : payloadData.length);
 
-        final byte[] data = new byte[length];
+        final byte[] data = new byte[HEADER_SIZE];
         final ByteBuffer bb = ByteBuffer.wrap(data);
 
-        bb.put(this.RTT_packet_type);
-        bb.put(this.RTT_matched_success);
-        bb.put(this.RTT_inserted_success);
-        bb.putInt(this.RTT_val);
+        bb.putInt(this.flowSrcIp);
+        bb.putInt(this.flowDstIp);
+        bb.putShort(this.flowSrcPort);
+        bb.putShort(this.flowDstPort);
+        bb.put(this.flowProtocol);
+        bb.putInt(this.queueSize);
+
+        bb.put(payloadData);
 
         return data;
 

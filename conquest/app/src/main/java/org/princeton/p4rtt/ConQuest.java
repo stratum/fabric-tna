@@ -17,7 +17,6 @@ package org.princeton.p4rtt;
 
 import static org.onosproject.net.group.DefaultGroupBucket.createCloneGroupBucket;
 import com.google.common.collect.ImmutableList;
-import com.sun.xml.bind.v2.runtime.reflect.opt.Const;
 import org.onlab.packet.Ip4Address;
 import org.onlab.util.ImmutableByteSequence;
 import org.onosproject.cfg.ComponentConfigService;
@@ -54,10 +53,7 @@ import org.onosproject.net.pi.model.PiTableId;
 import org.onosproject.net.group.DefaultGroupDescription;
 import org.onosproject.net.group.DefaultGroupKey;
 import org.onosproject.net.group.GroupBuckets;
-import org.onosproject.net.group.GroupDescription;
-import org.onosproject.net.group.GroupService;
-import org.onosproject.net.pi.model.PiPipeconf;
-import org.onosproject.net.pi.model.PiPipeconf.ExtensionType;
+
 import static org.onosproject.net.pi.model.PiPipeconf.ExtensionType.CPU_PORT_TXT;
 
 // Packet processor related imports.
@@ -159,7 +155,7 @@ public class ConQuest implements ConQuestService {
             Ethernet packet = context.inPacket().parsed();
 
             // If EtherType == 0x9001
-            if (packet.getEtherType() == ConQuestPacket.TYPE_P4RTT) {
+            if (packet.getEtherType() == ConQuestPacket.TYPE_CONQ_REPORT) {
 
                 ByteBuffer pktBuf = context.inPacket().unparsed();
                 String strBuf = getHexString(pktBuf.array());

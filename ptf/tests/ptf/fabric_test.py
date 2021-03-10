@@ -253,6 +253,7 @@ class ConquestReport(Packet):
             ShortField("src_port", 0),
             ShortField("dst_port", 0),
             ByteField("protocol", 0)
+            IntField("queue_size", 0),
     ]
 
 bind_layers(Ether, ConquestReport, type=ETHERTYPE_CONQUEST_REPORT)
@@ -2236,7 +2237,7 @@ class ConquestTest(IPv4UnicastTest):
             match_keys = [
                             self.Range("snap_0",        stringify(0, 3),  stringify(0x1ffff, 3)),
                             self.Range("q_delay",       stringify(0, 3),  stringify(0x3ffff, 3)),
-                            self.Range("random_bits",   stringify(0, 1),  stringify(0xff, 1)),
+                            # self.Range("random_bits",   stringify(0, 1),  stringify(0xff, 1)),
                             self.Exact("ecn",           stringify(ecn, 1)),
                         ]
 
