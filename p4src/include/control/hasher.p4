@@ -17,14 +17,17 @@ control Hasher(
 
     apply {
 #ifdef WITH_SPGW
-        if (hdr.inner_udp.isValid()) {
-            fabric_md.l4_sport = hdr.inner_udp.sport;
-            fabric_md.l4_dport = hdr.inner_udp.dport;
-        } else if (hdr.inner_tcp.isValid()) {
-            fabric_md.l4_sport = hdr.inner_tcp.sport;
-            fabric_md.l4_dport = hdr.inner_tcp.dport;
-        }
         if (hdr.inner_ipv4.isValid()) {
+            if (hdr.inner_udp.isValid()) {
+                fabric_md.l4_sport = hdr.inner_udp.sport;
+                fabric_md.l4_dport = hdr.inner_udp.dport;
+            } else if (hdr.inner_tcp.isValid()) {
+                fabric_md.l4_sport = hdr.inner_tcp.sport;
+                fabric_md.l4_dport = hdr.inner_tcp.dport;
+            } else {
+                fabric_md.l4_sport = 0;
+                fabric_md.l4_dport = 0;
+            }
             fabric_md.bridged.base.flow_hash = inner_ipv4_hasher.get({
                 hdr.inner_ipv4.src_addr,
                 hdr.inner_ipv4.dst_addr,

@@ -46,6 +46,7 @@ control FabricIngress (
 
     apply {
         pkt_io_ingress.apply(hdr, fabric_md, ig_intr_md, ig_tm_md, ig_dprsr_md);
+        hasher.apply(hdr, fabric_md);
         filtering.apply(hdr, fabric_md, ig_intr_md);
 #ifdef WITH_SPGW
         if (!fabric_md.skip_forwarding) {
@@ -55,7 +56,6 @@ control FabricIngress (
         if (!fabric_md.skip_forwarding) {
             forwarding.apply(hdr, fabric_md);
         }
-        hasher.apply(hdr, fabric_md);
         acl.apply(hdr, fabric_md, ig_intr_md, ig_dprsr_md, ig_tm_md);
         if (!fabric_md.skip_next) {
             next.apply(hdr, fabric_md, ig_intr_md, ig_tm_md);
