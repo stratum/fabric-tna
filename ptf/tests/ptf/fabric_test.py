@@ -243,6 +243,7 @@ bind_layers(UDP, GTPU, dport=UDP_GTP_PORT)
 bind_layers(GTPU, IP)
 
 
+CONQUEST_DEDUP_TIMEOUT = 0.5 # seconds
 ETHERTYPE_CONQUEST_REPORT = 0x9001
 
 class ConquestReport(Packet):
@@ -252,8 +253,8 @@ class ConquestReport(Packet):
             IntField("dst_ip", 0),
             ShortField("src_port", 0),
             ShortField("dst_port", 0),
-            ByteField("protocol", 0)
-            IntField("queue_size", 0),
+            ByteField("protocol", 0),
+            IntField("queue_size", 0)
     ]
 
 bind_layers(Ether, ConquestReport, type=ETHERTYPE_CONQUEST_REPORT)
@@ -2233,9 +2234,9 @@ class ConquestTest(IPv4UnicastTest):
     def set_up_report_trigger(self):
 
         for ecn in range(4):
-            # key bitwidths are 17, 18, 8, 2
+            # key bitwidths are 20, 18, 8, 2
             match_keys = [
-                            self.Range("snap_0",        stringify(0, 3),  stringify(0x1ffff, 3)),
+                            self.Range("snap_0",        stringify(0, 3),  stringify(0x0fffff, 3)),
                             self.Range("q_delay",       stringify(0, 3),  stringify(0x3ffff, 3)),
                             # self.Range("random_bits",   stringify(0, 1),  stringify(0xff, 1)),
                             self.Exact("ecn",           stringify(ecn, 1)),
@@ -2250,6 +2251,7 @@ class ConquestTest(IPv4UnicastTest):
 
 
     def runReportTriggerTest(self, pkt, tagged1, tagged2, is_next_hop_spine):
+        test_start_time = time.time()
         self.set_up_report_trigger()
         self.set_up_report_mirrors()
 
@@ -2280,6 +2282,8 @@ class ConquestTest(IPv4UnicastTest):
         if (ConquestReport not in pkt_in):
             fail("Received CPU packet is not a ConQuest report")
         # TODO: verify the CPU packet more thoroughly
+        # wait for dedup protection to end, so the next test doesn't fail
+        time.sleep(max(0, CONQUEST_DEDUP_TIMEOUT - (time.time() - test_start_time)))
 
 
 
