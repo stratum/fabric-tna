@@ -794,7 +794,7 @@ control ConQuestEgress(
   
                 calc_sum_0_l1();
   
-  
+  	prep_timestamp();
         // bit<32> snap_read_sum=eg_md.snap_0_read_min_l2;
         
         // With flow size in queue, can check for bursty flow and add AQM.
