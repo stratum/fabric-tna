@@ -1,0 +1,23 @@
+version: "3"
+# SPDX-FileCopyrightText: 2020-present Open Networking Foundation <info@opennetworking.org>
+# SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
+
+services:
+  mininet:
+    image: opennetworking/ngsdn-tutorial:stratum_bmv2 
+    hostname: mininet
+    container_name: mininet
+    privileged: true
+    tty: true
+    stdin_open: true
+    restart: always
+    volumes:
+      - ./tmp:/tmp
+      - ./util:/util
+      - ./tmp/pcaps:/pcaps
+    ports:
+      - "50001:50001"
+      - "50002:50002"
+      - "50003:50003"
+      - "50004:50004"
+    entrypoint: "/util/mininet-entry.sh"
