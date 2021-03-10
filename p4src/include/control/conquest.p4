@@ -689,7 +689,7 @@ control ConQuestEgress(
         eg_md.conq_mirror_md.flow_sport     = sport;
         eg_md.conq_mirror_md.flow_dport     = dport;
         eg_md.conq_mirror_md.flow_protocol  = hdr.ipv4.protocol;
-        eg_md.conq_mirror_md.queue_depth = eg_md.snap_0_read_min_l2;
+        eg_md.conq_mirror_md.flow_size_in_queue = eg_md.snap_0_read_min_l2;
     }
 
     @hidden

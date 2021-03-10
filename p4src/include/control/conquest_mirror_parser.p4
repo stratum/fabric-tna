@@ -32,7 +32,7 @@ parser ConqReportMirrorParser (packet_in packet,
             fabric_md.conq_mirror_md.flow_sport,
             fabric_md.conq_mirror_md.flow_dport,
             fabric_md.conq_mirror_md.flow_protocol,
-            fabric_md.conq_mirror_md.queue_depth
+            fabric_md.conq_mirror_md.flow_size_in_queue
         };
         transition accept;
     }

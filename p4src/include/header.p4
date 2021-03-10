@@ -260,7 +260,7 @@ header conq_mirror_metadata_t {
     bit<16>               flow_sport;
     bit<16>               flow_dport;
     bit<8>                flow_protocol;
-    bit<32>               queue_depth;
+    bit<32>               flow_size_in_queue;
 }
 #endif // WITH_CONQUEST
 
@@ -408,7 +408,7 @@ header conquest_report_t {
     bit<16> flow_sport;
     bit<16> flow_dport;
     bit<8>  flow_protocol;
-    bit<32> queue_depth;
+    bit<32> flow_size_in_queue;
 }
 #endif //WITH_CONQUEST
 

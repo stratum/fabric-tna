@@ -254,7 +254,7 @@ class ConquestReport(Packet):
             ShortField("src_port", 0),
             ShortField("dst_port", 0),
             ByteField("protocol", 0),
-            IntField("queue_size", 0)
+            IntField("flow_size_in_queue", 0)
     ]
 
 bind_layers(Ether, ConquestReport, type=ETHERTYPE_CONQUEST_REPORT)
