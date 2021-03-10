@@ -146,7 +146,7 @@ def main():
     add_entry(pop, 'program')
 
     # ConQuest
-    ecn_list = [0,1,2,3]
+    ecn_list = [0]
     for ecn in ecn_list:
         con = sh.TableEntry('FabricEgress.conquest_egress.tb_per_flow_action')(action='FabricEgress.conquest_egress.trigger_report')
     #    con.match['snap_0'] = '0..131071'
