@@ -2028,6 +2028,21 @@ registers {
   }
   size: 256
 }
+registers {
+  preamble {
+    id: 369333157
+    name: "FabricEgress.conquest_egress.reg_dedup_flowreports"
+    alias: "reg_dedup_flowreports"
+  }
+  type_spec {
+    bitstring {
+      bit {
+        bitwidth: 32
+      }
+    }
+  }
+  size: 16384
+}
 externs {
   extern_type_id: 144
   extern_type_name: "PortMetadata"

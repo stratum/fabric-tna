@@ -146,15 +146,17 @@ def main():
     add_entry(pop, 'program')
 
     # ConQuest
-    con = sh.TableEntry('FabricEgress.conquest_egress.tb_per_flow_action')(action='FabricEgress.conquest_egress.trigger_report')
-#    con.match['snap_0'] = '0..131071'
-#    con.match['q_delay'] = '0..262143'
-#    con.match['random_bits'] = '0..255'
-    con.match['ecn'] = '1'
-    con.priority = 10
-    add_entry(con, 'program')
-#    con.read(lambda e: print(e))
-#    con.insert()
+    ecn_list = [0,1,2,3]
+    for ecn in ecn_list:
+        con = sh.TableEntry('FabricEgress.conquest_egress.tb_per_flow_action')(action='FabricEgress.conquest_egress.trigger_report')
+    #    con.match['snap_0'] = '0..131071'
+    #    con.match['q_delay'] = '0..262143'
+    #    con.match['random_bits'] = '0..255'
+        con.match['ecn'] = str(ecn)
+        con.priority = 10
+        add_entry(con, 'program')
+    #    con.read(lambda e: print(e))
+    #    con.insert()
     
     # Mirror
     CONQ_REPORT_MIRROR_IDS = [400, 401, 402, 403]
