@@ -151,19 +151,24 @@ control IntIngress (
 #endif // WITH_DEBUG
     }
 
+    action no_report() {
+        fabric_md.bridged.int_bmd.report_type = IntReportType_t.NO_REPORT;
+    }
+
     table watchlist {
         key = {
-            hdr.ipv4.src_addr          : ternary @name("ipv4_src");
-            hdr.ipv4.dst_addr          : ternary @name("ipv4_dst");
-            fabric_md.bridged.base.ip_proto : ternary @name("ip_proto");
-            fabric_md.bridged.base.l4_sport : range @name("l4_sport");
-            fabric_md.bridged.base.l4_dport : range @name("l4_dport");
+            hdr.ipv4.isValid(): exact @name("ipv4_valid");
+            fabric_md.ipv4_src : ternary @name("ipv4_src");
+            fabric_md.ipv4_dst : ternary @name("ipv4_dst");
+            fabric_md.ip_proto : ternary @name("ip_proto");
+            fabric_md.l4_sport : range @name("l4_sport");
+            fabric_md.l4_dport : range @name("l4_dport");
         }
         actions = {
             mark_to_report;
-            @defaultonly nop();
+            @defaultonly no_report();
         }
-        const default_action = nop();
+        const default_action = no_report();
         const size = INT_WATCHLIST_TABLE_SIZE;
 #ifdef WITH_DEBUG
         counters = watchlist_counter;
@@ -233,11 +238,32 @@ control IntIngress (
     }
 
     apply {
-        mirror_session_id.apply();
-        if (hdr.ipv4.isValid()) {
-            watchlist.apply();
-            drop_report.apply();
+#ifdef WITH_SPGW
+        if (hdr.inner_ipv4.isValid()) {
+            fabric_md.ipv4_src = hdr.inner_ipv4.src_addr;
+            fabric_md.ipv4_dst = hdr.inner_ipv4.dst_addr;
+            fabric_md.ip_proto = hdr.inner_ipv4.protocol;
         }
+        if (hdr.inner_tcp.isValid()) {
+            fabric_md.l4_sport = hdr.inner_tcp.sport;
+            fabric_md.l4_dport = hdr.inner_tcp.dport;
+        }
+        if (hdr.inner_udp.isValid()) {
+            fabric_md.l4_sport = hdr.inner_udp.sport;
+            fabric_md.l4_dport = hdr.inner_udp.dport;
+        }
+        if (fabric_md.bridged.spgw.needs_gtpu_encap) {
+            // For downlink, the FAR table will change fabric_md.ipv4_src/dst for routing
+            // and do encasulation.
+            // Here we need to change it back to the original one so we can match the UE flow.
+            fabric_md.ipv4_src = hdr.ipv4.src_addr;
+            fabric_md.ipv4_dst = hdr.ipv4.dst_addr;
+            fabric_md.ip_proto = hdr.ipv4.protocol;
+        }
+#endif // WITH_SPGW
+        mirror_session_id.apply();
+        watchlist.apply();
+        drop_report.apply();
     }
 }
 
@@ -384,7 +410,7 @@ control IntEgress (
         hdr.report_mpls.ttl = DEFAULT_MPLS_TTL;
     }
 
-    // A table to encap the mirrored packet to an INT report.
+    // Transforms mirrored packets into INT report packets.
     table report {
         // when we are parsing the regular ingress to egress packet,
         // the `int_mirror_md` will be undefined, add `bmd_type` match key to ensure we
@@ -446,6 +472,7 @@ control IntEgress (
         fabric_md.int_mirror_md.eg_tstamp = eg_prsr_md.global_tstamp[31:0];
         fabric_md.int_mirror_md.ip_eth_type = fabric_md.bridged.base.ip_eth_type;
         fabric_md.int_mirror_md.flow_hash = fabric_md.bridged.base.flow_hash;
+        // fabric_md.int_mirror_md.vlan_stripped set by egress_vlan table
         // fabric_md.int_mirror_md.strip_gtpu will be initialized by the parser
     }
 
@@ -465,7 +492,7 @@ control IntEgress (
 #endif // WITH_DEBUG
     }
 
-    // A table which initialize the INT mirror metadata.
+    // Initializes the INT mirror metadata.
     table int_metadata {
         key = {
             fabric_md.bridged.int_bmd.report_type: exact @name("int_report_type");
@@ -488,10 +515,25 @@ control IntEgress (
     apply {
         fabric_md.int_md.hop_latency = eg_prsr_md.global_tstamp[31:0] - fabric_md.bridged.base.ig_tstamp[31:0];
         fabric_md.int_md.timestamp = eg_prsr_md.global_tstamp;
+
         config.apply();
         hw_id.apply();
+
+        // Filtering for drop reports is done after mirroring to handle all drop
+        // cases with one filter:
+        // - drop by ingress tables (ingress mirroring)
+        // - drop by egress table (egress mirroring)
+        // - drop by the traffic manager (deflect on drop, TODO)
+        // The penalty we pay for using one filter is that we might congest the
+        // mirroring facilities and recirculation port.
+        // FIXME: should we worry about this, or can we assume that packet drops
+        //  are a rare event? What happens if a 100Gbps flow gets dropped by an
+        //  ingress/egress table (e.g., routing table miss, egress vlan table
+        //  miss, etc.)?
         drop_report_filter.apply(hdr, fabric_md, eg_dprsr_md);
+
         if (report.apply().hit) {
+            // Packet is a mirror, transformed into a report.
 #ifdef WITH_SPGW
             if (fabric_md.int_mirror_md.strip_gtpu == 1) {
                 // We need to remove length of IP, UDP, and GTPU headers
@@ -511,7 +553,17 @@ control IntEgress (
                 hdr.report_udp.len = hdr.report_udp.len
                     - MPLS_HDR_BYTES;
             }
+            // FIXME: Too many if statements, we might want to use a table to
+            //  reduce stage dependencies.
+            if (fabric_md.int_mirror_md.vlan_stripped == 1) {
+                hdr.report_ipv4.total_len = hdr.report_ipv4.total_len
+                    - VLAN_HDR_BYTES;
+                hdr.report_udp.len = hdr.report_udp.len
+                    - VLAN_HDR_BYTES;
+            }
         } else {
+            // Regular packet. Initialize INT mirror metadata but let
+            // filter decide whether to generate a mirror or not.
             if (int_metadata.apply().hit) {
                 flow_report_filter.apply(hdr, fabric_md, eg_intr_md, eg_prsr_md, eg_dprsr_md);
             }

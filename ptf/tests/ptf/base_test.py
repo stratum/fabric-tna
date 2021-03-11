@@ -988,11 +988,12 @@ class P4RuntimeTest(BaseTest):
                     or counter_entry.data.packet_count != expected_packet_count
                 ):
                     self.fail(
-                        "%s value is not same as expected.\
+                        "%s value at index %d is not same as expected.\
                         \nActual packet count: %d, Expected packet count: %d\
                         \nActual byte count: %d, Expected byte count: %d\n"
                         % (
                             c_name,
+                            c_index,
                             counter_entry.data.packet_count,
                             expected_packet_count,
                             counter_entry.data.byte_count,

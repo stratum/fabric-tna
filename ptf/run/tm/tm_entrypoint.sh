@@ -5,6 +5,7 @@
 set -ex
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
+TM_ARGS=""
 
 veth_setup.sh
 dma_setup.sh
@@ -15,4 +16,10 @@ dma_setup.sh
 # execution.
 mkdir /tmp/workdir
 cd /tmp/workdir
-tofino-model --p4-target-config "${DIR}"/tm_conf.json
+
+if [[ -n "${TM_PORT_JSON}" ]]; then
+  TM_ARGS="-f ${TM_PORT_JSON}"
+fi
+
+# shellcheck disable=SC2086
+tofino-model --p4-target-config "${DIR}"/tm_conf.json $TM_ARGS

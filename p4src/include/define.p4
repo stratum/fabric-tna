@@ -21,6 +21,7 @@
 #define UDP_HDR_BYTES 8
 #define GTP_HDR_BYTES 8
 #define MPLS_HDR_BYTES 4
+#define VLAN_HDR_BYTES 4
 
 #define UDP_PORT_GTPU 2152
 #define GTP_GPDU 0xff
@@ -47,6 +48,7 @@ typedef bit<32> flow_hash_t;
 // SPGW types
 typedef bit<32> teid_t;
 typedef bit<32> far_id_t;
+typedef bit<5>  qid_t;
 typedef bit<16> pdr_ctr_id_t;
 enum bit<2> SpgwDirection {
     UNKNOWN             = 0x0,
@@ -103,6 +105,10 @@ const vlan_id_t DEFAULT_VLAN_ID = 12w4094;
 const bit<8> DEFAULT_MPLS_TTL = 64;
 const bit<8> DEFAULT_IPV4_TTL = 64;
 
+// The recirculation port uses the same number for all HW pipes. The actual port
+// ID (DP_ID) can be obtained by prefixing the HW pipe ID (2 bits).
+const bit<7> RECIRC_PORT_NUMBER = 7w68;
+
 action nop() {
     NoAction();
 }
@@ -140,12 +146,6 @@ enum bit<2> CpuLoopbackMode_t {
     // hdr.packet_out.egress_port)
     INGRESS = 2
 }
-
-// Recirculation ports for each HW pipe.
-const PortId_t RECIRC_PORT_PIPE_0 = 0x44;
-const PortId_t RECIRC_PORT_PIPE_1 = 0xC4;
-const PortId_t RECIRC_PORT_PIPE_2 = 0x144;
-const PortId_t RECIRC_PORT_PIPE_3 = 0x1C4;
 
 #define PIPE_0_PORTS_MATCH 9w0x000 &&& 0x180
 #define PIPE_1_PORTS_MATCH 9w0x080 &&& 0x180
@@ -206,7 +206,11 @@ enum bit<8> IntDropReason_t {
     DROP_REASON_NEXT_ID_MISS = 128,
     DROP_REASON_MPLS_MISS = 129,
     DROP_REASON_EGRESS_NEXT_MISS = 130,
-    DROP_REASON_MPLS_TTL_ZERO = 131
+    DROP_REASON_MPLS_TTL_ZERO = 131,
+    DROP_REASON_DOWNLINK_PDR_MISS = 132,
+    DROP_REASON_UPLINK_PDR_MISS = 133,
+    DROP_REASON_FAR_MISS = 134,
+    DROP_REASON_SPGW_UPLINK_RECIRC_DENY = 150
 }
 
 #endif // __DEFINE__
