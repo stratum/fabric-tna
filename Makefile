@@ -53,6 +53,16 @@ fabric-spgw:
 fabric-spgw-int:
 	@$(DIR)/p4src/build.sh fabric-spgw-int "-DWITH_SPGW -DWITH_INT"
 
+fabric-conquest:
+	@$(DIR)/p4src/build.sh fabric-conquest "-DWITH_CONQUEST"
+
+fabric-spgw-conquest:
+	@$(DIR)/p4src/build.sh fabric-spgw-conquest "-DWITH_CONQUEST -DWITH_SPGW"
+
+fabric-conquest-all:
+	@$(DIR)/p4src/build.sh fabric-conquest-all "-DWITH_CONQUEST -DWITH_SPGW -DWITH_INT"
+
+
 constants:
 	docker run -v $(DIR):$(DIR) -w $(DIR) --rm \
 		--entrypoint ./util/gen-p4-constants.py $(TESTER_DOCKER_IMG) \
