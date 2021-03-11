@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.princeton.p4rtt;
+package org.princeton.conquest;
 
 import org.onosproject.core.ApplicationId;
 import org.onosproject.net.DeviceId;

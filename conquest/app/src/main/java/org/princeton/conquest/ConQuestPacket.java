@@ -1,4 +1,4 @@
-package org.princeton.p4rtt;
+package org.princeton.conquest;
 
 import org.onlab.packet.BasePacket;
 
@@ -6,7 +6,6 @@ import java.nio.ByteBuffer;
 
 public class ConQuestPacket extends BasePacket {
 
-    public static final short TYPE_CONQ_REPORT = (short) 0x9001;
     private static final int HEADER_SIZE = 32 + 32 + 16 + 16 + 8 + 32;
 
 
@@ -64,7 +63,9 @@ public class ConQuestPacket extends BasePacket {
         bb.put(this.flowProtocol);
         bb.putInt(this.queueSize);
 
-        bb.put(payloadData);
+        if (payloadData != null) {
+            bb.put(payloadData);
+        }
 
         return data;
 

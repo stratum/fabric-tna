@@ -17,4 +17,4 @@
 /**
  * ONOS application archetype.
  */
-package org.princeton.p4rtt;
+package org.princeton.conquest;
