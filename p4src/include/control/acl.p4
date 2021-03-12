@@ -74,6 +74,7 @@ control Acl (inout parsed_headers_t hdr,
             fabric_md.ipv4_dst              : ternary @name("ipv4_dst");  // 32
             hdr.icmp.icmp_type              : ternary @name("icmp_type"); // 8
             hdr.icmp.icmp_code              : ternary @name("icmp_code"); // 8
+            fabric_md.is_edge               : ternary @name("port_is_edge"); // 1
         }
 
         actions = {

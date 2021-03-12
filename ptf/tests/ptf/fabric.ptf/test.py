@@ -756,7 +756,7 @@ class FabricMplsSegmentRoutingTest(MplsSegmentRoutingTest):
                 self.doRunTest(pkt, HOST2_MAC, next_hop_spine, tc_name=tc_name)
 
 
-class FabricIPv4MplsRedirectTest(IPv4UnicastTest):
+class FabricIPv4MplsRedirectEdgeTest(IPv4UnicastTest):
     @tvsetup
     @autocleanup
     def doRunTest(self, pkt, mac_dest, tagged1, tc_name):
@@ -768,8 +768,8 @@ class FabricIPv4MplsRedirectTest(IPv4UnicastTest):
             ip_proto = IP_PROTO_ICMP
         self.set_egress_vlan(self.port3, DEFAULT_VLAN)
         self.add_next_routing(401, self.port3, SWITCH_MAC, HOST2_MAC)
-        self.add_forwarding_acl_next(401, ipv4_src=HOST1_IPV4, ipv4_dst=HOST2_IPV4,
-            ip_proto=ip_proto)
+        self.add_forwarding_acl_next(401, is_edge=True, ipv4_src=HOST1_IPV4,
+            ipv4_dst=HOST2_IPV4, ip_proto=ip_proto)
         self.runIPv4UnicastTest(
             pkt,
             mac_dest,
@@ -802,7 +802,8 @@ class FabricIPv4MplsDoNotRedirectTest(IPv4UnicastTest):
     def doRunTest(self, pkt, mac_dest, tagged1, tc_name):
         self.set_egress_vlan(self.port3, DEFAULT_VLAN)
         self.add_next_routing(401, self.port3, SWITCH_MAC, HOST2_MAC)
-        self.add_forwarding_acl_next(401, ipv4_src=HOST3_IPV4, ipv4_dst=HOST4_IPV4)
+        self.add_forwarding_acl_next(401, is_edge=True, ipv4_src=HOST3_IPV4,
+            ipv4_dst=HOST4_IPV4)
         self.runIPv4UnicastTest(
             pkt,
             mac_dest,
@@ -826,6 +827,52 @@ class FabricIPv4MplsDoNotRedirectTest(IPv4UnicastTest):
                     pktlen=MIN_PKT_LEN,
                 )
                 self.doRunTest(pkt, HOST2_MAC, tagged1, tc_name=tc_name)
+
+
+class FabricIPv4DoNotRedirectInfraTest(IPv4UnicastTest):
+    @tvsetup
+    @autocleanup
+    def doRunTest(self, pkt_type, mac_dest):
+        if "tcp" == pkt_type:
+            ip_proto = IP_PROTO_TCP
+        elif "udp" == pkt_type:
+            ip_proto = IP_PROTO_UDP
+        elif "icmp" == pkt_type:
+            ip_proto = IP_PROTO_ICMP
+        self.set_ingress_port_vlan(self.port1, False, 0, DEFAULT_VLAN)
+        self.set_forwarding_type(self.port1, SWITCH_MAC)
+        self.add_forwarding_routing_v4_entry(HOST2_IPV4, 24, 400)
+        self.add_next_vlan(400, VLAN_ID_1)
+        self.add_next_routing(400, self.port2, SWITCH_MAC, HOST2_MAC)
+        self.set_egress_vlan(self.port2, VLAN_ID_1, False)
+        self.set_egress_vlan(self.port3, VLAN_ID_1, False)
+
+        pkt_1to2 = getattr(testutils, "simple_%s_packet" % pkt_type)(
+            eth_src=SPINE_MAC,
+            eth_dst=SWITCH_MAC,
+            ip_src=HOST1_IPV4,
+            ip_dst=HOST2_IPV4,
+            ip_ttl=64)
+        exp_pkt_1to2 = getattr(testutils, "simple_%s_packet" % pkt_type)(
+            eth_src=SWITCH_MAC,
+            eth_dst=HOST2_MAC,
+            ip_src=HOST1_IPV4,
+            ip_dst=HOST2_IPV4,
+            ip_ttl=63)
+
+        self.add_next_routing(401, self.port3, SWITCH_MAC, HOST2_MAC)
+        self.add_forwarding_acl_next(401, is_edge=True, ipv4_src=HOST1_IPV4,
+            ipv4_dst=HOST2_IPV4, ip_proto=ip_proto)
+
+        self.send_packet(self.port1, pkt_1to2)
+        self.verify_packets(exp_pkt_1to2, [self.port2])
+        self.verify_no_other_packets()
+
+    def runTest(self):
+        print("")
+        for pkt_type in ["tcp", "udp", "icmp"]:
+            print("Testing {} packet...".format(pkt_type))
+            self.doRunTest(pkt_type, HOST2_MAC)
 
 
 @group("packetio")

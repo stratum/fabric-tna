@@ -17,7 +17,9 @@ import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.net.flow.criteria.Criterion;
 import org.onosproject.net.flow.criteria.EthCriterion;
 import org.onosproject.net.flow.criteria.IPCriterion;
+import org.onosproject.net.flow.criteria.MetadataCriterion;
 import org.onosproject.net.flow.criteria.MplsCriterion;
+import org.onosproject.net.flow.criteria.PiCriterion;
 import org.onosproject.net.flow.criteria.VlanIdCriterion;
 import org.onosproject.net.flowobjective.ForwardingObjective;
 import org.onosproject.net.flowobjective.ObjectiveError;
@@ -41,6 +43,10 @@ import static org.stratumproject.fabric.tna.behaviour.FabricUtils.outputPort;
  */
 class ForwardingObjectiveTranslator
         extends AbstractObjectiveTranslator<ForwardingObjective> {
+
+    // Used with port_is_edge metadata
+    private static final byte[] ONE = new byte[]{1};
+    private static final byte[] ZERO = new byte[]{0};
 
     //FIXME: Max number supported by PI
     static final int CLONE_TO_CPU_ID = 511;
@@ -255,6 +261,17 @@ class ForwardingObjectiveTranslator
                 resultBuilder.addFlowRule(flowRule(
                         obj, P4InfoConstants.FABRIC_INGRESS_ACL_ACL, obj.selector(), piTreatment));
                 return;
+            }
+        }
+        TrafficSelector.Builder selectorBuilder = DefaultTrafficSelector.builder(obj.selector());
+        // Meta are used to signal if we should match on port_is_edge
+        if (obj.meta() != null && obj.meta().getCriterion(Criterion.Type.METADATA) != null) {
+            long isEdge = ((MetadataCriterion) obj.meta().getCriterion(Criterion.Type.METADATA)).metadata();
+            // It is a validity bit - 0 or 1
+            if (isEdge == 0 || isEdge == 1) {
+                selectorBuilder.matchPi(PiCriterion.builder()
+                        .matchTernary(P4InfoConstants.HDR_PORT_IS_EDGE, isEdge == 1 ? ONE : ZERO, ONE)
+                        .build());
             }
         }
         resultBuilder.addFlowRule(flowRule(

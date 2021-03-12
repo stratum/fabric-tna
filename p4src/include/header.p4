@@ -305,6 +305,7 @@ struct fabric_ingress_metadata_t {
 #ifdef WITH_INT
     int_mirror_metadata_t int_mirror_md;
 #endif // WITH_INT
+    bit<1>                  is_edge;
 }
 
 // Egress pipeline-only metadata
