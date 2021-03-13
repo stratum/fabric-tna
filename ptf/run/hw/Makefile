@@ -1,0 +1,18 @@
+# Copyright 2020-present Open Networking Foundation
+# SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
+# 320 cpu port is for mavericks (65Q)
+GRPC_ADDR ?= "127.0.0.1:9339"
+define run_tests
+	python3 -u ptf_runner.py --port-map port_map.hw.json \
+		--ptf-dir fabric.ptf --cpu-port 320 --device-id 1 \
+		--grpc-addr $(GRPC_ADDR) \
+		--p4info /p4c-out/p4info.txt \
+		--tofino-pipeline-config /p4c-out/pipeline_config.pb.bin \
+		--profile $(1) \
+		$(2)
+endef
+
+# Nothing to check
+_checkenv:
+
+include ../../tests/ptf/Makefile.profiles

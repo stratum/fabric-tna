@@ -443,7 +443,7 @@ control IntEgress (
     @hidden
     table hw_id {
         key = {
-            eg_intr_md.egress_port: ternary;
+            fabric_md.bridged.base.ig_port: ternary;
         }
         actions = {
             set_hw_id;

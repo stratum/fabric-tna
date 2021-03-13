@@ -352,10 +352,10 @@ class FabricTest(P4RuntimeTest):
 
     def setUp(self):
         super(FabricTest, self).setUp()
-        self.port1 = self.swports(1)
-        self.port2 = self.swports(2)
-        self.port3 = self.swports(3)
-        self.port4 = self.swports(4)
+        self.port1 = self.swports(0)
+        self.port2 = self.swports(1)
+        self.port3 = self.swports(2)
+        self.port4 = self.swports(3)
         self.setup_switch_info()
 
     def tearDown(self):
@@ -2559,12 +2559,13 @@ class IntTest(IPv4UnicastTest):
         is_device_spine,
         send_report_to_spine,
     ):
+        hw_id = ig_port & 0x180 # We use the top 2 bit of ingress port as the hw_id in the pipeline.
         # Note: scapy doesn't support dscp field, use tos.
         pkt = (
             Ether(src=src_mac, dst=dst_mac)
             / IP(src=src_ip, dst=dst_ip, ttl=64, tos=4)
             / UDP(sport=0, chksum=0)
-            / INT_L45_REPORT_FIXED(nproto=2, f=1, hw_id=0)
+            / INT_L45_REPORT_FIXED(nproto=2, f=1, hw_id=hw_id)
             / INT_L45_LOCAL_REPORT(
                 switch_id=sw_id, ingress_port_id=ig_port, egress_port_id=eg_port,
             )
@@ -2608,12 +2609,13 @@ class IntTest(IPv4UnicastTest):
         is_device_spine,
         send_report_to_spine,
     ):
+        hw_id = ig_port & 0x180 # We use the top 2 bit of ingress port as the hw_id in the pipeline.
         # Note: scapy doesn't support dscp field, use tos.
         pkt = (
             Ether(src=src_mac, dst=dst_mac)
             / IP(src=src_ip, dst=dst_ip, ttl=64, tos=4)
             / UDP(sport=0, chksum=0)
-            / INT_L45_REPORT_FIXED(nproto=1, d=1, hw_id=0)
+            / INT_L45_REPORT_FIXED(nproto=1, d=1, hw_id=hw_id)
             / INT_L45_DROP_REPORT(
                 switch_id=sw_id,
                 ingress_port_id=ig_port,
@@ -2833,7 +2835,7 @@ class IntTest(IPv4UnicastTest):
             SWITCH_IPV4,
             INT_COLLECTOR_IPV4,
             ig_port,
-            eg_port,
+            0, # The egress port will be a default value since it never being set in this case.
             drop_reason,
             SWITCH_ID,
             int_inner_pkt,
@@ -2843,7 +2845,7 @@ class IntTest(IPv4UnicastTest):
 
         install_routing_entry = True
         if drop_reason == INT_DROP_REASON_ACL_DENY:
-            self.add_forwarding_acl_drop_ingress_port(1)
+            self.add_forwarding_acl_drop_ingress_port(self.port1)
         elif drop_reason == INT_DROP_REASON_ROUTING_V4_MISS:
             install_routing_entry = False
 
