@@ -881,7 +881,7 @@ class FabricTest(P4RuntimeTest):
             if len(set(mpls_labels)) > 1:
                 self.fail("More than one MPLS label passed to add_next_mpls_routing_group")
             self.add_next_mpls(next_id, mpls_labels[0])
-            
+
             for (egress_port, smac, dmac, _) in next_hops:
                 egress_port_ = stringify(egress_port, 2)
                 smac_ = mac_to_binary(smac)
