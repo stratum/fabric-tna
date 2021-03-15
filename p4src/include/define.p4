@@ -168,11 +168,6 @@ const bit<16> REPORT_MIRROR_HEADER_BYTES = 30;
 #endif // WITH_SPGW
 const bit<16> ETH_FCS_LEN = 4;
 
-const MirrorId_t REPORT_MIRROR_SESS_PIPE_0 = 300;
-const MirrorId_t REPORT_MIRROR_SESS_PIPE_1 = 301;
-const MirrorId_t REPORT_MIRROR_SESS_PIPE_2 = 302;
-const MirrorId_t REPORT_MIRROR_SESS_PIPE_3 = 303;
-
 #define FLOW_REPORT_FILTER_WIDTH 16
 typedef bit<FLOW_REPORT_FILTER_WIDTH> flow_report_filter_index_t;
 #define DROP_REPORT_FILTER_WIDTH 16

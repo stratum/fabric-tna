@@ -215,28 +215,6 @@ control IntIngress (
 #endif // WITH_DEBUG
     }
 
-    @hidden
-    action set_mirror_session_id(MirrorId_t sid) {
-        fabric_md.bridged.int_bmd.mirror_session_id = sid;
-    }
-
-    @hidden
-    table mirror_session_id {
-        key = {
-            ig_intr_md.ingress_port: ternary;
-        }
-        actions = {
-            set_mirror_session_id;
-        }
-        const size = 4;
-        const entries = {
-            PIPE_0_PORTS_MATCH: set_mirror_session_id(REPORT_MIRROR_SESS_PIPE_0);
-            PIPE_1_PORTS_MATCH: set_mirror_session_id(REPORT_MIRROR_SESS_PIPE_1);
-            PIPE_2_PORTS_MATCH: set_mirror_session_id(REPORT_MIRROR_SESS_PIPE_2);
-            PIPE_3_PORTS_MATCH: set_mirror_session_id(REPORT_MIRROR_SESS_PIPE_3);
-        }
-    }
-
     apply {
 #ifdef WITH_SPGW
         if (hdr.inner_ipv4.isValid()) {
@@ -261,7 +239,7 @@ control IntIngress (
             fabric_md.ip_proto = hdr.ipv4.protocol;
         }
 #endif // WITH_SPGW
-        mirror_session_id.apply();
+        fabric_md.bridged.int_bmd.mirror_session_id = 8w0x80 ++ ig_intr_md.ingress_port[8:7];
         watchlist.apply();
         drop_report.apply();
     }
