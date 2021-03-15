@@ -33,9 +33,9 @@ control FlowReportFilter(
     // when the digest of the packet is different than the one of the previous
     // packet of the same flow.
     @hidden
-    Register<flow_report_filter_index_t, bit<16>>(1 << FLOW_REPORT_FILTER_WIDTH, 0) filter1;
+    Register<bit<16>, flow_report_filter_index_t>(1 << FLOW_REPORT_FILTER_WIDTH, 0) filter1;
     @hidden
-    Register<flow_report_filter_index_t, bit<16>>(1 << FLOW_REPORT_FILTER_WIDTH, 0) filter2;
+    Register<bit<16>, flow_report_filter_index_t>(1 << FLOW_REPORT_FILTER_WIDTH, 0) filter2;
 
     // Meaning of the result:
     // 1 digest did NOT change
@@ -92,9 +92,9 @@ control DropReportFilter(
     // We use such filter to reduce the volume of reports that the collector has
     // to ingest.
     @hidden
-    Register<drop_report_filter_index_t, bit<16>>(1 << DROP_REPORT_FILTER_WIDTH, 0) filter1;
+    Register<bit<16>, drop_report_filter_index_t>(1 << DROP_REPORT_FILTER_WIDTH, 0) filter1;
     @hidden
-    Register<drop_report_filter_index_t, bit<16>>(1 << DROP_REPORT_FILTER_WIDTH, 0) filter2;
+    Register<bit<16>, drop_report_filter_index_t>(1 << DROP_REPORT_FILTER_WIDTH, 0) filter2;
 
     // Meaning of the result:
     // 1 digest did NOT change
