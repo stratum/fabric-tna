@@ -495,7 +495,7 @@ control IntEgress (
         fabric_md.int_md.timestamp = eg_prsr_md.global_tstamp;
 
         config.apply();
-        hdr.report_fixed_header.hw_id = 4w0 +++ fabric_md.bridged.base.ig_port[8:7];
+        hdr.report_fixed_header.hw_id = 4w0 +++ eg_intr_md.egress_port[8:7];
 
         // Filtering for drop reports is done after mirroring to handle all drop
         // cases with one filter:
