@@ -853,7 +853,7 @@ class FabricConquestTest(ConquestTest):
                         eth_src=HOST1_MAC,
                         eth_dst=SWITCH_MAC,
                         ip_src=HOST1_IPV4,
-                        ip_dst=UE_IPV4,
+                        ip_dst=HOST2_IPV4,
                         pktlen=MIN_PKT_LEN,
                     )
                     self.doRunTest(pkt, tagged[0], tagged[1], is_next_hop_spine)
