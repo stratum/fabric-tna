@@ -343,9 +343,9 @@ class P4RuntimeTest(BaseTest):
                 + format_exp_rcv(expected, received)
             )
 
-    def verify_no_other_packets(self, timeout=2):
+    def verify_no_other_packets(self):
         if not self.generate_tv:
-            testutils.verify_no_other_packets(self, timeout=timeout)
+            testutils.verify_no_other_packets(self)
 
     def get_stream_packet(self, type_, timeout=1):
         start = time.time()
