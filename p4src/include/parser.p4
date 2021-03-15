@@ -192,9 +192,11 @@ parser FabricIngressParser (packet_in  packet,
 
     state parse_gtpu {
         packet.extract(hdr.gtpu);
+#ifdef WITH_SPGW
 #ifdef WITH_INT
         fabric_md.int_mirror_md.strip_gtpu = 1;
 #endif // WITH_INT
+#endif // WITH_SPGW
         transition parse_inner_ipv4;
     }
 
