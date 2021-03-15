@@ -44,11 +44,15 @@ control Acl (inout parsed_headers_t hdr,
     action drop() {
         ig_intr_md_for_dprsr.drop_ctl = 1;
         fabric_md.skip_next = true;
+#ifdef WITH_INT
+        fabric_md.int_mirror_md.drop_reason = IntDropReason_t.DROP_REASON_ACL_DENY;
+#endif // WITH_INT
         acl_counter.count();
     }
 
     action set_output_port(PortId_t port_num) {
         ig_intr_md_for_tm.ucast_egress_port = port_num;
+        fabric_md.egress_port_set = true;
         fabric_md.skip_next = true;
         acl_counter.count();
     }

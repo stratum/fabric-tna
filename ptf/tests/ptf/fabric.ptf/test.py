@@ -900,7 +900,7 @@ class FabricSpgwDownlinkTest(SpgwSimpleTest):
                         eth_src=HOST1_MAC,
                         eth_dst=SWITCH_MAC,
                         ip_src=HOST1_IPV4,
-                        ip_dst=UE_IPV4,
+                        ip_dst=UE1_IPV4,
                         pktlen=MIN_PKT_LEN,
                     )
                     self.doRunTest(
@@ -951,6 +951,44 @@ class FabricSpgwUplinkTest(SpgwSimpleTest):
 
 
 @group("spgw")
+class FabricSpgwUplinkRecircTest(SpgwSimpleTest):
+    @tvsetup
+    @autocleanup
+    def doRunTest(self, pkt, allow, tagged1, tagged2, is_next_hop_spine):
+        self.runUplinkRecircTest(
+            ue_out_pkt=pkt,
+            allow=allow,
+            tagged1=tagged1,
+            tagged2=tagged2,
+            is_next_hop_spine=is_next_hop_spine,
+        )
+
+    def runTest(self):
+        print("")
+        for vlan_conf, tagged in vlan_confs.items():
+            for pkt_type in ["tcp", "udp", "icmp"]:
+                for is_next_hop_spine in [False, True]:
+                    for allow in [True, False]:
+                        if is_next_hop_spine and (tagged[1] or not allow):
+                            continue
+                        print(
+                            "Testing VLAN={}, pkt={}, is_next_hop_spine={}, allow={}...".format(
+                                vlan_conf, pkt_type, is_next_hop_spine, allow
+                            )
+                        )
+                        pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
+                            eth_src=HOST1_MAC,
+                            eth_dst=SWITCH_MAC,
+                            ip_src=UE1_IPV4,
+                            ip_dst=UE2_IPV4,
+                            pktlen=MIN_PKT_LEN,
+                        )
+                        self.doRunTest(
+                            pkt, allow, tagged[0], tagged[1], is_next_hop_spine
+                        )
+
+
+@group("spgw")
 class FabricSpgwDownlinkToDbufTest(SpgwSimpleTest):
     """Tests downlink packets arriving from the PDN being routed to
     the dbuf device for buffering.
@@ -990,7 +1028,7 @@ class FabricSpgwDownlinkToDbufTest(SpgwSimpleTest):
                         eth_src=HOST1_MAC,
                         eth_dst=SWITCH_MAC,
                         ip_src=HOST1_IPV4,
-                        ip_dst=UE_IPV4,
+                        ip_dst=UE1_IPV4,
                         pktlen=MIN_PKT_LEN,
                     )
                     self.doRunTest(
@@ -1038,7 +1076,7 @@ class FabricSpgwDownlinkFromDbufTest(SpgwSimpleTest):
                         eth_src=DBUF_MAC,
                         eth_dst=SWITCH_MAC,
                         ip_src=HOST1_IPV4,
-                        ip_dst=UE_IPV4,
+                        ip_dst=UE1_IPV4,
                         pktlen=MIN_PKT_LEN,
                     )
                     self.doRunTest(
@@ -1172,8 +1210,157 @@ class FabricSpgwDownlinkIntTest(SpgwIntTest):
                             )
 
 
+# This test will assume the packet hits spgw interface and miss the uplink PDR table or
+# the FAR table
 @group("int")
-class FabricIntTest(IntTest):
+@group("spgw")
+class FabricSpgwIntUplinkDropTest(SpgwIntTest):
+    @tvsetup
+    @autocleanup
+    def doRunTest(
+        self,
+        vlan_conf,
+        tagged,
+        pkt_type,
+        is_next_hop_spine,
+        is_device_spine,
+        send_report_to_spine,
+        drop_reason,
+    ):
+        print(
+            "Testing VLAN={}, pkt={}, is_next_hop_spine={}, is_device_spine={}, send_report_to_spine={}, drop_reason={}...".format(
+                vlan_conf,
+                pkt_type,
+                is_next_hop_spine,
+                is_device_spine,
+                send_report_to_spine,
+                drop_reason,
+            )
+        )
+        # Change the IP destination to ensure we are using differnt
+        # flow for diffrent test cases since the flow report filter
+        # might disable the report.
+        # TODO: Remove this part when we are able to reset the register
+        # via P4Runtime.
+        pkt = getattr(testutils, "simple_{}_packet".format(pkt_type))(
+            ip_dst=self.get_single_use_ip()
+        )
+        self.runUplinkIntDropTest(
+            pkt=pkt,
+            tagged1=tagged[0],
+            tagged2=tagged[1],
+            is_next_hop_spine=is_next_hop_spine,
+            ig_port=self.port1,
+            eg_port=self.port2,
+            expect_int_report=True,
+            is_device_spine=is_device_spine,
+            send_report_to_spine=send_report_to_spine,
+            drop_reason=drop_reason,
+        )
+
+    def runTest(self):
+        print("")
+        for drop_reason in [INT_DROP_REASON_UPLINK_PDR_MISS, INT_DROP_REASON_FAR_MISS]:
+            for is_device_spine in [False, True]:
+                for vlan_conf, tagged in vlan_confs.items():
+                    if is_device_spine and (tagged[0] or tagged[1]):
+                        continue
+                    for is_next_hop_spine in [False, True]:
+                        if is_next_hop_spine and tagged[1]:
+                            continue
+                        for send_report_to_spine in [False, True]:
+                            if send_report_to_spine and tagged[1]:
+                                continue
+                            for pkt_type in ["udp", "tcp", "icmp"]:
+                                self.doRunTest(
+                                    vlan_conf,
+                                    tagged,
+                                    pkt_type,
+                                    is_next_hop_spine,
+                                    is_device_spine,
+                                    send_report_to_spine,
+                                    drop_reason,
+                                )
+
+
+# This test will assume the packet hits spgw interface and miss the downlink PDR table or
+# the FAR table
+@group("int")
+@group("spgw")
+class FabricSpgwIntDownlinkDropTest(SpgwIntTest):
+    @tvsetup
+    @autocleanup
+    def doRunTest(
+        self,
+        vlan_conf,
+        tagged,
+        pkt_type,
+        is_next_hop_spine,
+        is_device_spine,
+        send_report_to_spine,
+        drop_reason,
+    ):
+        print(
+            "Testing VLAN={}, pkt={}, is_next_hop_spine={}, is_device_spine={}, send_report_to_spine={}, drop_reason={}...".format(
+                vlan_conf,
+                pkt_type,
+                is_next_hop_spine,
+                is_device_spine,
+                send_report_to_spine,
+                drop_reason,
+            )
+        )
+        # Change the IP destination to ensure we are using differnt
+        # flow for diffrent test cases since the flow report filter
+        # might disable the report.
+        # TODO: Remove this part when we are able to reset the register
+        # via P4Runtime.
+        pkt = getattr(testutils, "simple_{}_packet".format(pkt_type))(
+            ip_dst=self.get_single_use_ip()
+        )
+        self.runDownlinkIntDropTest(
+            pkt=pkt,
+            tagged1=tagged[0],
+            tagged2=tagged[1],
+            is_next_hop_spine=is_next_hop_spine,
+            ig_port=self.port1,
+            eg_port=self.port2,
+            expect_int_report=True,
+            is_device_spine=is_device_spine,
+            send_report_to_spine=send_report_to_spine,
+            drop_reason=drop_reason,
+        )
+
+    def runTest(self):
+        print("")
+        for drop_reason in [
+            INT_DROP_REASON_DOWNLINK_PDR_MISS,
+            INT_DROP_REASON_FAR_MISS,
+        ]:
+            for is_device_spine in [False, True]:
+                for vlan_conf, tagged in vlan_confs.items():
+                    if is_device_spine and (tagged[0] or tagged[1]):
+                        continue
+                    for is_next_hop_spine in [False, True]:
+                        if is_next_hop_spine and tagged[1]:
+                            continue
+                        for send_report_to_spine in [False, True]:
+                            if send_report_to_spine and tagged[1]:
+                                continue
+                            for pkt_type in ["udp", "tcp", "icmp"]:
+                                self.doRunTest(
+                                    vlan_conf,
+                                    tagged,
+                                    pkt_type,
+                                    is_next_hop_spine,
+                                    is_device_spine,
+                                    send_report_to_spine,
+                                    drop_reason,
+                                )
+
+
+@group("int")
+class FabricIntLocalReportTest(IntTest):
     @tvsetup
     @autocleanup
     def doRunTest(
@@ -1213,6 +1400,152 @@ class FabricIntTest(IntTest):
             expect_int_report=True,
             is_device_spine=is_device_spine,
             send_report_to_spine=send_report_to_spine,
+        )
+
+    def runTest(self):
+        print("")
+        for is_device_spine in [False, True]:
+            for vlan_conf, tagged in vlan_confs.items():
+                if is_device_spine and (tagged[0] or tagged[1]):
+                    continue
+                for is_next_hop_spine in [False, True]:
+                    if is_next_hop_spine and tagged[1]:
+                        continue
+                    for send_report_to_spine in [False, True]:
+                        if send_report_to_spine and tagged[1]:
+                            continue
+                        for pkt_type in ["udp", "tcp", "icmp"]:
+                            self.doRunTest(
+                                vlan_conf,
+                                tagged,
+                                pkt_type,
+                                is_next_hop_spine,
+                                is_device_spine,
+                                send_report_to_spine,
+                            )
+
+
+@group("int")
+class FabricIntIngressDropReportTest(IntTest):
+    @tvsetup
+    @autocleanup
+    def doRunTest(
+        self,
+        vlan_conf,
+        tagged,
+        pkt_type,
+        is_next_hop_spine,
+        is_device_spine,
+        send_report_to_spine,
+        drop_reason,
+    ):
+        self.set_up_flow_report_filter_config(
+            hop_latency_mask=0xF0000000, timestamp_mask=0xFFFFFFFF
+        )
+        print(
+            "Testing VLAN={}, pkt={}, is_next_hop_spine={}, "
+            "is_device_spine={}, send_report_to_spine={}, drop_reason={}...".format(
+                vlan_conf,
+                pkt_type,
+                is_next_hop_spine,
+                is_device_spine,
+                send_report_to_spine,
+                drop_reason,
+            )
+        )
+        # Change the IP destination to ensure we are using differnt
+        # flow for diffrent test cases since the flow report filter
+        # might disable the report.
+        # TODO: Remove this part when we are able to reset the register
+        # via P4Runtime.
+        pkt = getattr(testutils, "simple_{}_packet".format(pkt_type))(
+            ip_dst=self.get_single_use_ip()
+        )
+        self.runIngressIntDropTest(
+            pkt=pkt,
+            tagged1=tagged[0],
+            tagged2=tagged[1],
+            is_next_hop_spine=is_next_hop_spine,
+            ig_port=self.port1,
+            eg_port=0,  # packet will be dropped by the pipeline
+            expect_int_report=True,
+            is_device_spine=is_device_spine,
+            send_report_to_spine=send_report_to_spine,
+            drop_reason=drop_reason,
+        )
+
+    def runTest(self):
+        print("")
+        # FIXME: Add INT_DROP_REASON_ROUTING_V4_MISS. Currently, there is an unknown bug
+        #        which cause unexpected table(drop_report) miss.
+        for drop_reason in [INT_DROP_REASON_ACL_DENY]:
+            for is_device_spine in [False, True]:
+                for vlan_conf, tagged in vlan_confs.items():
+                    if is_device_spine and (tagged[0] or tagged[1]):
+                        continue
+                    for is_next_hop_spine in [False, True]:
+                        if is_next_hop_spine and tagged[1]:
+                            continue
+                        for send_report_to_spine in [False, True]:
+                            if send_report_to_spine and tagged[1]:
+                                continue
+                            for pkt_type in ["udp", "tcp", "icmp"]:
+                                self.doRunTest(
+                                    vlan_conf,
+                                    tagged,
+                                    pkt_type,
+                                    is_next_hop_spine,
+                                    is_device_spine,
+                                    send_report_to_spine,
+                                    drop_reason,
+                                )
+
+
+@group("int")
+class FabricIntEgressDropReportTest(IntTest):
+    @tvsetup
+    @autocleanup
+    def doRunTest(
+        self,
+        vlan_conf,
+        tagged,
+        pkt_type,
+        is_next_hop_spine,
+        is_device_spine,
+        send_report_to_spine,
+    ):
+        self.set_up_flow_report_filter_config(
+            hop_latency_mask=0xF0000000, timestamp_mask=0xFFFFFFFF
+        )
+        print(
+            "Testing VLAN={}, pkt={}, is_next_hop_spine={}, "
+            "is_device_spine={}, send_report_to_spine={}...".format(
+                vlan_conf,
+                pkt_type,
+                is_next_hop_spine,
+                is_device_spine,
+                send_report_to_spine,
+            )
+        )
+        # Change the IP destination to ensure we are using differnt
+        # flow for diffrent test cases since the flow report filter
+        # might disable the report.
+        # TODO: Remove this part when we are able to reset the register
+        # via P4Runtime.
+        pkt = getattr(testutils, "simple_{}_packet".format(pkt_type))(
+            ip_dst=self.get_single_use_ip()
+        )
+        self.runEgressIntDropTest(
+            pkt=pkt,
+            tagged1=tagged[0],
+            tagged2=tagged[1],
+            is_next_hop_spine=is_next_hop_spine,
+            ig_port=self.port1,
+            eg_port=self.port2,
+            expect_int_report=True,
+            is_device_spine=is_device_spine,
+            send_report_to_spine=send_report_to_spine,
+            drop_reason=INT_DROP_REASON_EGRESS_NEXT_MISS,
         )
 
     def runTest(self):
@@ -1356,6 +1689,63 @@ class FabricFlowReportFilterChangeTest(IntTest):
                 ip_dst=ip_dst,
                 expect_int_report=expect_int_report,
             )
+
+
+@group("int")
+class FabricDropReportFilterTest(IntTest):
+    @tvsetup
+    @autocleanup
+    def doRunTest(
+        self, vlan_conf, tagged, pkt_type, is_next_hop_spine, expect_int_report, ip_dst,
+    ):
+        self.set_up_flow_report_filter_config(
+            hop_latency_mask=0xF0000000, timestamp_mask=0
+        )
+        print(
+            "Testing VLAN={}, pkt={}, is_next_hop_spine={}...".format(
+                vlan_conf, pkt_type, is_next_hop_spine
+            )
+        )
+        pkt = getattr(testutils, "simple_{}_packet".format(pkt_type))(ip_dst=ip_dst)
+        self.runIngressIntDropTest(
+            pkt=pkt,
+            tagged1=tagged[0],
+            tagged2=tagged[1],
+            is_next_hop_spine=is_next_hop_spine,
+            ig_port=self.port1,
+            eg_port=0,  # packet will be dropped by the pipeline
+            expect_int_report=expect_int_report,
+            is_device_spine=False,
+            send_report_to_spine=False,
+            drop_reason=INT_DROP_REASON_ACL_DENY,
+        )
+
+    def runTest(self):
+        print("")
+        for pkt_type in ["udp", "tcp", "icmp"]:
+            expect_int_report = True
+            # Change the IP destination to ensure we are using differnt
+            # flow for diffrent test cases since the flow report filter
+            # might disable the report.
+            # TODO: Remove this part when we are able to reset the register
+            # via P4Runtime.
+            ip_dst = self.get_single_use_ip()
+            for vlan_conf, tagged in vlan_confs.items():
+                for is_next_hop_spine in [False, True]:
+                    if is_next_hop_spine and tagged[1]:
+                        continue
+                    self.doRunTest(
+                        vlan_conf,
+                        tagged,
+                        pkt_type,
+                        is_next_hop_spine,
+                        expect_int_report,
+                        ip_dst,
+                    )
+
+                    # We should expect not receving any report after the first
+                    # report since packet uses 5-tuple as flow ID.
+                    expect_int_report = False
 
 
 @group("bng")

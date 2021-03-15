@@ -4,8 +4,13 @@ package org.stratumproject.fabric.tna.behaviour;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import org.easymock.Capture;
+import org.easymock.CaptureType;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -42,6 +47,11 @@ import org.onosproject.net.flow.FlowRuleService;
 import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.net.flow.criteria.PiCriterion;
+import org.onosproject.net.group.DefaultGroupDescription;
+import org.onosproject.net.group.DefaultGroupKey;
+import org.onosproject.net.group.GroupBucket;
+import org.onosproject.net.group.GroupBuckets;
+import org.onosproject.net.group.GroupDescription;
 import org.onosproject.net.group.GroupService;
 import org.onosproject.net.host.HostService;
 import org.onosproject.net.pi.runtime.PiAction;
@@ -52,21 +62,27 @@ import org.stratumproject.fabric.tna.PipeconfLoader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import static org.easymock.EasyMock.anyObject;
 import static org.easymock.EasyMock.anyString;
-import static org.easymock.EasyMock.createNiceMock;
+import static org.easymock.EasyMock.capture;
+import static org.easymock.EasyMock.createMock;
 import static org.easymock.EasyMock.eq;
 import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.expectLastCall;
+import static org.easymock.EasyMock.newCapture;
 import static org.easymock.EasyMock.replay;
 import static org.easymock.EasyMock.reset;
 import static org.easymock.EasyMock.verify;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.onosproject.net.group.DefaultGroupBucket.createCloneGroupBucket;
+import static org.stratumproject.fabric.tna.behaviour.FabricUtils.KRYO;
 
 /**
  * Tests for fabric INT programmable behaviour.
@@ -87,17 +103,27 @@ public class FabricIntProgrammableTest {
     private static final IpAddress COLLECTOR_IP = IpAddress.valueOf("10.128.0.1");
     private static final TpPort COLLECTOR_PORT = TpPort.tpPort(32766);
     private static final short BMD_TYPE_EGRESS_MIRROR = 2;
+    private static final short BMD_TYPE_INGRESS_MIRROR = 3;
     private static final short MIRROR_TYPE_INT_REPORT = 1;
     private static final short INT_REPORT_TYPE_LOCAL = 1;
+    private static final short INT_REPORT_TYPE_DROP = 2;
     private static final HostLocation COLLECTOR_LOCATION = new HostLocation(LEAF_DEVICE_ID, PortNumber.P0, 0);
     private static final Host COLLECTOR_HOST =
             new DefaultHost(null, null, null, null, COLLECTOR_LOCATION, Sets.newHashSet());
     private static final ImmutableByteSequence DEFAULT_TIMESTAMP_MASK =
             ImmutableByteSequence.copyFrom(
                     HexString.fromHexString("ffffc0000000", ""));
+    private static final ImmutableByteSequence DEFAULT_QMASK = ImmutableByteSequence.copyFrom(
+            HexString.fromHexString("00000000ffffff00", ""));
+    private static final Map<Integer, Integer> QUAD_PIPE_MIRROR_SESS_TO_RECIRC_PORTS =
+            ImmutableMap.<Integer, Integer>builder()
+                    .put(300, 0x44)
+                    .put(301, 0xc4)
+                    .put(302, 0x144)
+                    .put(303, 0x1c4).build();
+    private static final MacAddress SWITCH_MAC = MacAddress.valueOf("00:00:00:00:01:80");
 
     private FabricIntProgrammable intProgrammable;
-    private FabricCapabilities capabilities;
     private FlowRuleService flowRuleService;
     private GroupService groupService;
     private NetworkConfigService netcfgService;
@@ -107,28 +133,28 @@ public class FabricIntProgrammableTest {
 
     @Before
     public void setup() throws IOException {
-        capabilities = createNiceMock(FabricCapabilities.class);
+        FabricCapabilities capabilities = createMock(FabricCapabilities.class);
         expect(capabilities.hasHashedTable()).andReturn(true).anyTimes();
         expect(capabilities.supportDoubleVlanTerm()).andReturn(false).anyTimes();
         expect(capabilities.hwPipeCount()).andReturn(4).anyTimes();
         replay(capabilities);
 
         // Services mock
-        flowRuleService = createNiceMock(FlowRuleService.class);
-        groupService = createNiceMock(GroupService.class);
-        netcfgService = createNiceMock(NetworkConfigService.class);
-        coreService = createNiceMock(CoreService.class);
-        hostService = createNiceMock(HostService.class);
+        flowRuleService = createMock(FlowRuleService.class);
+        groupService = createMock(GroupService.class);
+        netcfgService = createMock(NetworkConfigService.class);
+        coreService = createMock(CoreService.class);
+        hostService = createMock(HostService.class);
         expect(coreService.getAppId(anyString())).andReturn(APP_ID).anyTimes();
 
         expect(netcfgService.getConfig(LEAF_DEVICE_ID, SegmentRoutingDeviceConfig.class))
                 .andReturn(getSrConfig(LEAF_DEVICE_ID, "/sr.json")).anyTimes();
         expect(netcfgService.getConfig(SPINE_DEVICE_ID, SegmentRoutingDeviceConfig.class))
                 .andReturn(getSrConfig(SPINE_DEVICE_ID, "/sr-spine.json")).anyTimes();
-        expect(hostService.getHostsByIp(COLLECTOR_IP)).andReturn(ImmutableSet.of(COLLECTOR_HOST));
+        expect(hostService.getHostsByIp(COLLECTOR_IP)).andReturn(ImmutableSet.of(COLLECTOR_HOST)).anyTimes();
         replay(coreService, netcfgService, hostService);
 
-        DriverHandler driverHandler = createNiceMock(DriverHandler.class);
+        DriverHandler driverHandler = createMock(DriverHandler.class);
         expect(driverHandler.get(FlowRuleService.class)).andReturn(flowRuleService).anyTimes();
         expect(driverHandler.get(GroupService.class)).andReturn(groupService).anyTimes();
         expect(driverHandler.get(NetworkConfigService.class)).andReturn(netcfgService).anyTimes();
@@ -136,7 +162,7 @@ public class FabricIntProgrammableTest {
         expect(driverHandler.get(HostService.class)).andReturn(hostService).anyTimes();
         replay(driverHandler);
 
-        driverData = createNiceMock(DriverData.class);
+        driverData = createMock(DriverData.class);
         expect(driverData.deviceId()).andReturn(LEAF_DEVICE_ID).anyTimes();
         replay(driverData);
 
@@ -144,12 +170,7 @@ public class FabricIntProgrammableTest {
         TestUtils.setField(intProgrammable, "handler", driverHandler);
         TestUtils.setField(intProgrammable, "data", driverData);
 
-        // Verify that clone groups are correct?
-        groupService.addGroup(anyObject());
-        expectLastCall().andVoid().times(4);
-        replay(groupService);
-        assertTrue(intProgrammable.init());
-        verify(groupService);
+        testInit();
     }
 
     @After
@@ -186,35 +207,29 @@ public class FabricIntProgrammableTest {
      */
     @Test
     public void testAddIntObjective() {
-        // TCP
-        IntObjective intObjective = buildIntObjective(IPv4.PROTOCOL_TCP);
-        FlowRule expectedFlow = buildExpectedCollectorFlow(IPv4.PROTOCOL_TCP);
         reset(flowRuleService);
-        flowRuleService.applyFlowRules(eq(expectedFlow));
-        expectLastCall().andVoid().once();
+        List<FlowRule> expectedFlows = ImmutableList.of(
+                buildExpectedCollectorFlow(IPv4.PROTOCOL_TCP),
+                buildExpectedCollectorFlow(IPv4.PROTOCOL_UDP),
+                buildExpectedCollectorFlow(IPv4.PROTOCOL_ICMP)
+        );
+        List<Capture<FlowRule>> captures = Lists.newArrayList();
+        for (int i = 0; i < expectedFlows.size(); i++) {
+            Capture<FlowRule> flowRuleCapture = newCapture();
+            flowRuleService.applyFlowRules(capture(flowRuleCapture));
+            captures.add(flowRuleCapture);
+        }
         replay(flowRuleService);
-        assertTrue(intProgrammable.addIntObjective(intObjective));
+        assertTrue(intProgrammable.addIntObjective(buildIntObjective(IPv4.PROTOCOL_TCP)));
+        assertTrue(intProgrammable.addIntObjective(buildIntObjective(IPv4.PROTOCOL_UDP)));
+        assertTrue(intProgrammable.addIntObjective(buildIntObjective(IPv4.PROTOCOL_ICMP)));
+        for (int i = 0; i < expectedFlows.size(); i++) {
+            FlowRule expectFlow = expectedFlows.get(i);
+            FlowRule actualFlow = captures.get(i).getValue();
+            assertTrue(expectFlow.exactMatch(actualFlow));
+        }
         verify(flowRuleService);
 
-        // UDP
-        intObjective = buildIntObjective(IPv4.PROTOCOL_UDP);
-        expectedFlow = buildExpectedCollectorFlow(IPv4.PROTOCOL_UDP);
-        reset(flowRuleService);
-        flowRuleService.applyFlowRules(eq(expectedFlow));
-        expectLastCall().andVoid().once();
-        replay(flowRuleService);
-        assertTrue(intProgrammable.addIntObjective(intObjective));
-        verify(flowRuleService);
-
-        // Don't match L4 ports
-        intObjective = buildIntObjective(IPv4.PROTOCOL_ICMP);
-        expectedFlow = buildExpectedCollectorFlow(IPv4.PROTOCOL_ICMP);
-        reset(flowRuleService);
-        flowRuleService.applyFlowRules(eq(expectedFlow));
-        expectLastCall().andVoid().once();
-        replay(flowRuleService);
-        assertTrue(intProgrammable.addIntObjective(intObjective));
-        verify(flowRuleService);
     }
 
     /**
@@ -271,19 +286,36 @@ public class FabricIntProgrammableTest {
      */
     @Test
     public void testSetupIntConfig() {
-        final IntDeviceConfig intConfig = buildIntDeviceConfig();
-        final FlowRule expectedFlow = buildReportFlow(LEAF_DEVICE_ID, false);
-        final FlowRule configRule = buildFilterConfigFlow(LEAF_DEVICE_ID, 0xffffff00);
-        final FlowRule mirrorRule = buildIntMetadataFlow(LEAF_DEVICE_ID);
         reset(flowRuleService);
-        flowRuleService.applyFlowRules(eq(expectedFlow));
-        expectLastCall().andVoid().once();
-        flowRuleService.applyFlowRules(eq(configRule));
-        expectLastCall().andVoid().once();
-        flowRuleService.applyFlowRules(eq(mirrorRule));
-        expectLastCall().andVoid().once();
+        final IntDeviceConfig intConfig = buildIntDeviceConfig();
+        ImmutableList<FlowRule> expectRules = ImmutableList.of(
+                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_LOCAL),
+                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_DROP),
+                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_INGRESS_MIRROR, INT_REPORT_TYPE_LOCAL),
+                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_INGRESS_MIRROR, INT_REPORT_TYPE_DROP),
+                buildFilterConfigFlow(LEAF_DEVICE_ID),
+                buildIntMetadataLocalRule(LEAF_DEVICE_ID),
+                buildIntMetadataDropRule(LEAF_DEVICE_ID),
+                buildIngressDropReportTableRules(LEAF_DEVICE_ID).get(0),
+                buildIngressDropReportTableRules(LEAF_DEVICE_ID).get(1)
+        );
+
+        List<Capture<FlowRule>> captures = Lists.newArrayList();
+        for (int i = 0; i < expectRules.size(); i++) {
+            Capture<FlowRule> flowRuleCapture = newCapture();
+            flowRuleService.applyFlowRules(capture(flowRuleCapture));
+            captures.add(flowRuleCapture);
+        }
+
         replay(flowRuleService);
         assertTrue(intProgrammable.setupIntConfig(intConfig));
+
+        // Verifying flow rules
+        for (int i = 0; i < expectRules.size(); i++) {
+            FlowRule expectRule = expectRules.get(i);
+            FlowRule actualRule = captures.get(i).getValue();
+            assertTrue(expectRule.exactMatch(actualRule));
+        }
         verify(flowRuleService);
     }
 
@@ -298,19 +330,36 @@ public class FabricIntProgrammableTest {
         reset(driverData);
         expect(driverData.deviceId()).andReturn(SPINE_DEVICE_ID).anyTimes();
         replay(driverData);
-        final IntDeviceConfig intConfig = buildIntDeviceConfig();
-        final FlowRule expectedReportFlow = buildReportFlow(SPINE_DEVICE_ID, true);
-        final FlowRule expectedFilterConfigFlow = buildFilterConfigFlow(SPINE_DEVICE_ID, 0xffffff00);
-        final FlowRule expectedMirrorRule = buildIntMetadataFlow(SPINE_DEVICE_ID);
         reset(flowRuleService);
-        flowRuleService.applyFlowRules(eq(expectedReportFlow));
-        expectLastCall().andVoid().once();
-        flowRuleService.applyFlowRules(eq(expectedFilterConfigFlow));
-        expectLastCall().andVoid().once();
-        flowRuleService.applyFlowRules(eq(expectedMirrorRule));
-        expectLastCall().andVoid().once();
+        final IntDeviceConfig intConfig = buildIntDeviceConfig();
+        ImmutableList<FlowRule> expectRules = ImmutableList.of(
+                buildReportTableRule(SPINE_DEVICE_ID, true, BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_LOCAL),
+                buildReportTableRule(SPINE_DEVICE_ID, true, BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_DROP),
+                buildReportTableRule(SPINE_DEVICE_ID, true, BMD_TYPE_INGRESS_MIRROR, INT_REPORT_TYPE_LOCAL),
+                buildReportTableRule(SPINE_DEVICE_ID, true, BMD_TYPE_INGRESS_MIRROR, INT_REPORT_TYPE_DROP),
+                buildFilterConfigFlow(SPINE_DEVICE_ID),
+                buildIntMetadataLocalRule(SPINE_DEVICE_ID),
+                buildIntMetadataDropRule(SPINE_DEVICE_ID),
+                buildIngressDropReportTableRules(SPINE_DEVICE_ID).get(0),
+                buildIngressDropReportTableRules(SPINE_DEVICE_ID).get(1)
+        );
+
+        List<Capture<FlowRule>> captures = Lists.newArrayList();
+        for (int i = 0; i < expectRules.size(); i++) {
+            Capture<FlowRule> flowRuleCapture = newCapture();
+            flowRuleService.applyFlowRules(capture(flowRuleCapture));
+            captures.add(flowRuleCapture);
+        }
+
         replay(flowRuleService);
         assertTrue(intProgrammable.setupIntConfig(intConfig));
+
+        // Verifying flow rules
+        for (int i = 0; i < expectRules.size(); i++) {
+            FlowRule expectRule = expectRules.get(i);
+            FlowRule actualRule = captures.get(i).getValue();
+            assertTrue(expectRule.exactMatch(actualRule));
+        }
         verify(flowRuleService);
     }
 
@@ -354,10 +403,18 @@ public class FabricIntProgrammableTest {
                 buildFlowEntry(buildExpectedCollectorFlow(IPv4.PROTOCOL_UDP)),
                 buildFlowEntry(buildExpectedCollectorFlow(IPv4.PROTOCOL_ICMP)),
                 // Report table entry
-                buildFlowEntry(buildFilterConfigFlow(LEAF_DEVICE_ID, 0)),
-                buildFlowEntry(buildReportFlow(LEAF_DEVICE_ID, false)),
+                buildFlowEntry(buildFilterConfigFlow(LEAF_DEVICE_ID)),
+                buildFlowEntry(buildReportTableRule(LEAF_DEVICE_ID, false,
+                        BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_LOCAL)),
+                buildFlowEntry(buildReportTableRule(LEAF_DEVICE_ID, false,
+                        BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_DROP)),
+                buildFlowEntry(buildReportTableRule(LEAF_DEVICE_ID, false,
+                        BMD_TYPE_INGRESS_MIRROR, INT_REPORT_TYPE_LOCAL)),
+                buildFlowEntry(buildReportTableRule(LEAF_DEVICE_ID, false,
+                        BMD_TYPE_INGRESS_MIRROR, INT_REPORT_TYPE_DROP)),
                 // INT mirror table entry
-                buildFlowEntry(buildIntMetadataFlow(LEAF_DEVICE_ID))
+                buildFlowEntry(buildIntMetadataLocalRule(LEAF_DEVICE_ID)),
+                buildFlowEntry(buildIntMetadataDropRule(LEAF_DEVICE_ID))
         );
         Set<FlowEntry> randomEntries = buildRandomFlowEntries();
         Set<FlowEntry> entries = Sets.newHashSet(intEntries);
@@ -404,7 +461,7 @@ public class FabricIntProgrammableTest {
         assertFalse(intProgrammable.setupIntConfig(intConfig));
         assertFalse(intProgrammable.addIntObjective(intObjective));
         assertFalse(intProgrammable.removeIntObjective(intObjective));
-        // We expected no flow rules be installed or removed
+        // We expected no other flow rules be installed or removed
         verify(flowRuleService);
     }
 
@@ -475,11 +532,11 @@ public class FabricIntProgrammableTest {
         verify(flowRuleService);
     }
 
-    private PiAction buildReportAction(boolean setMpls) {
+    private PiAction buildReportAction(boolean setMpls, short reportType) {
         final PiActionParam srcMacParam = new PiActionParam(
                 P4InfoConstants.SRC_MAC, MacAddress.ZERO.toBytes());
         final PiActionParam nextHopMacParam = new PiActionParam(
-                P4InfoConstants.MON_MAC, MacAddress.ZERO.toBytes());
+                P4InfoConstants.MON_MAC, SWITCH_MAC.toBytes());
         final PiActionParam srcIpParam = new PiActionParam(
                 P4InfoConstants.SRC_IP, ROUTER_IP.toOctets());
         final PiActionParam monIpParam = new PiActionParam(
@@ -499,26 +556,32 @@ public class FabricIntProgrammableTest {
                     P4InfoConstants.MON_LABEL,
                     NODE_SID_IPV4
             ));
-            reportAction.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_REPORT_ENCAP_MPLS);
+            if (reportType == INT_REPORT_TYPE_LOCAL) {
+                reportAction.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_LOCAL_REPORT_ENCAP_MPLS);
+            } else {
+                reportAction.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_DROP_REPORT_ENCAP_MPLS);
+            }
         } else {
-            reportAction.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_REPORT_ENCAP);
+            if (reportType == INT_REPORT_TYPE_LOCAL) {
+                reportAction.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_LOCAL_REPORT_ENCAP);
+            } else {
+                reportAction.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_DROP_REPORT_ENCAP);
+            }
         }
         return reportAction.build();
     }
 
-    private FlowRule buildReportFlow(DeviceId deviceId, boolean setMpls) {
-        PiAction reportAction = buildReportAction(setMpls);
+    private FlowRule buildReportTableRule(DeviceId deviceId, boolean setMpls, short bmdType, short reportType) {
+        PiAction reportAction = buildReportAction(setMpls, reportType);
         final TrafficTreatment treatment = DefaultTrafficTreatment.builder()
                 .piTableAction(reportAction)
                 .build();
         final TrafficSelector selector = DefaultTrafficSelector.builder()
                 .matchPi(PiCriterion.builder()
-                        .matchExact(P4InfoConstants.HDR_BMD_TYPE,
-                                    BMD_TYPE_EGRESS_MIRROR)
+                        .matchExact(P4InfoConstants.HDR_BMD_TYPE, bmdType)
                         .matchExact(P4InfoConstants.HDR_MIRROR_TYPE,
-                                    MIRROR_TYPE_INT_REPORT)
-                        .matchExact(P4InfoConstants.HDR_INT_REPORT_TYPE,
-                                    INT_REPORT_TYPE_LOCAL)
+                                MIRROR_TYPE_INT_REPORT)
+                        .matchExact(P4InfoConstants.HDR_INT_REPORT_TYPE, reportType)
                         .build())
                 .build();
         return DefaultFlowRule.builder()
@@ -532,12 +595,12 @@ public class FabricIntProgrammableTest {
                 .build();
     }
 
-    private FlowRule buildFilterConfigFlow(DeviceId deviceId, long qmask) {
-        final PiActionParam hopLatencyMask = new PiActionParam(P4InfoConstants.HOP_LATENCY_MASK, qmask);
+    private FlowRule buildFilterConfigFlow(DeviceId deviceId) {
+        final PiActionParam hopLatencyMask = new PiActionParam(P4InfoConstants.HOP_LATENCY_MASK, DEFAULT_QMASK);
         final PiActionParam timestampMask = new PiActionParam(P4InfoConstants.TIMESTAMP_MASK, DEFAULT_TIMESTAMP_MASK);
         final PiAction quantizeAction =
                 PiAction.builder()
-                        .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_SET_CONFIG)
+                        .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_SET_CONFIG)
                         .withParameter(hopLatencyMask)
                         .withParameter(timestampMask)
                         .build();
@@ -550,7 +613,7 @@ public class FabricIntProgrammableTest {
                 .withPriority(DEFAULT_PRIORITY)
                 .withTreatment(quantizeTreatment)
                 .fromApp(APP_ID)
-                .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_FLOW_REPORT_FILTER_CONFIG)
+                .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_CONFIG)
                 .build();
     }
 
@@ -599,6 +662,8 @@ public class FabricIntProgrammableTest {
     private FlowRule buildExpectedCollectorFlow(byte protocol) {
         // Flow rule that we expected.
         TrafficSelector.Builder expectedSelector = DefaultTrafficSelector.builder();
+        expectedSelector.matchPi(
+                PiCriterion.builder().matchExact(P4InfoConstants.HDR_IPV4_VALID, 1).build());
         expectedSelector.matchIPSrc(IP_SRC);
         expectedSelector.matchIPDst(IP_DST);
         if (protocol == IPv4.PROTOCOL_TCP || protocol == IPv4.PROTOCOL_UDP) {
@@ -653,7 +718,8 @@ public class FabricIntProgrammableTest {
         InputStream jsonStream = getClass().getResourceAsStream(fileName);
         ObjectMapper mapper = new ObjectMapper();
         JsonNode jsonNode = mapper.readTree(jsonStream);
-        srCfg.init(deviceId, SR_CONFIG_KEY, jsonNode, mapper, config -> { });
+        srCfg.init(deviceId, SR_CONFIG_KEY, jsonNode, mapper, config -> {
+        });
         return srCfg;
     }
 
@@ -691,17 +757,12 @@ public class FabricIntProgrammableTest {
         );
     }
 
-    private FlowRule buildIntMetadataFlow(DeviceId deviceId) {
-        final SegmentRoutingDeviceConfig cfg = netcfgService.getConfig(
-                deviceId, SegmentRoutingDeviceConfig.class);
-        if (cfg == null) {
-            return null;
-        }
+    private FlowRule buildIntMetadataLocalRule(DeviceId deviceId) {
         final PiActionParam switchIdParam = new PiActionParam(
-                P4InfoConstants.SWITCH_ID, cfg.nodeSidIPv4());
+                P4InfoConstants.SWITCH_ID, NODE_SID_IPV4);
 
         final PiAction mirrorAction = PiAction.builder()
-                .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_SET_METADATA)
+                .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_REPORT_LOCAL)
                 .withParameter(switchIdParam)
                 .build();
 
@@ -713,7 +774,10 @@ public class FabricIntProgrammableTest {
                 DefaultTrafficSelector.builder().matchPi(
                         PiCriterion.builder().matchExact(
                                 P4InfoConstants.HDR_INT_REPORT_TYPE,
-                                INT_REPORT_TYPE_LOCAL).build())
+                                INT_REPORT_TYPE_LOCAL)
+                                .matchExact(
+                                        P4InfoConstants.HDR_DROP_CTL,
+                                        0).build())
                         .build();
 
         return DefaultFlowRule.builder()
@@ -725,5 +789,132 @@ public class FabricIntProgrammableTest {
                 .fromApp(APP_ID)
                 .makePermanent()
                 .build();
+    }
+
+    private FlowRule buildIntMetadataDropRule(DeviceId deviceId) {
+        final PiActionParam switchIdParam = new PiActionParam(
+                P4InfoConstants.SWITCH_ID, NODE_SID_IPV4);
+
+        final PiAction mirrorAction = PiAction.builder()
+                .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_REPORT_DROP)
+                .withParameter(switchIdParam)
+                .build();
+
+        final TrafficTreatment mirrorTreatment = DefaultTrafficTreatment.builder()
+                .piTableAction(mirrorAction)
+                .build();
+
+        final TrafficSelector mirrorSelector =
+                DefaultTrafficSelector.builder().matchPi(
+                        PiCriterion.builder().matchExact(
+                                P4InfoConstants.HDR_INT_REPORT_TYPE,
+                                INT_REPORT_TYPE_LOCAL).matchExact(
+                                P4InfoConstants.HDR_DROP_CTL,
+                                1).build())
+                        .build();
+
+        return DefaultFlowRule.builder()
+                .forDevice(deviceId)
+                .withSelector(mirrorSelector)
+                .withTreatment(mirrorTreatment)
+                .withPriority(DEFAULT_PRIORITY)
+                .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_METADATA)
+                .fromApp(APP_ID)
+                .makePermanent()
+                .build();
+    }
+
+    private List<FlowRule> buildIngressDropReportTableRules(DeviceId deviceId) {
+        final List<FlowRule> result = Lists.newArrayList();
+        final PiActionParam switchIdParam = new PiActionParam(
+                P4InfoConstants.SWITCH_ID, NODE_SID_IPV4);
+
+        final PiAction reportDropAction = PiAction.builder()
+                .withId(P4InfoConstants.FABRIC_INGRESS_INT_INGRESS_REPORT_DROP)
+                .withParameter(switchIdParam)
+                .build();
+        final TrafficTreatment reportDropTreatment = DefaultTrafficTreatment.builder()
+                .piTableAction(reportDropAction)
+                .build();
+        TrafficSelector reportDropSelector =
+                DefaultTrafficSelector.builder()
+                        .matchPi(
+                                PiCriterion.builder()
+                                        .matchExact(
+                                                P4InfoConstants.HDR_INT_REPORT_TYPE,
+                                                INT_REPORT_TYPE_LOCAL)
+                                        .matchExact(
+                                                P4InfoConstants.HDR_DROP_CTL,
+                                                1)
+                                        .matchExact(P4InfoConstants.HDR_COPY_TO_CPU,
+                                                0)
+                                        .build())
+                        .build();
+        result.add(DefaultFlowRule.builder()
+                .forDevice(deviceId)
+                .withSelector(reportDropSelector)
+                .withTreatment(reportDropTreatment)
+                .withPriority(DEFAULT_PRIORITY)
+                .forTable(P4InfoConstants.FABRIC_INGRESS_INT_INGRESS_DROP_REPORT)
+                .fromApp(APP_ID)
+                .makePermanent()
+                .build());
+        reportDropSelector =
+                DefaultTrafficSelector.builder()
+                        .matchPi(
+                                PiCriterion.builder()
+                                        .matchExact(
+                                                P4InfoConstants.HDR_INT_REPORT_TYPE,
+                                                INT_REPORT_TYPE_LOCAL)
+                                        .matchExact(
+                                                P4InfoConstants.HDR_DROP_CTL,
+                                                0)
+                                        .matchTernary(P4InfoConstants.HDR_EGRESS_PORT_SET,
+                                                0, 1)
+                                        .matchTernary(P4InfoConstants.HDR_MCAST_GROUP_ID,
+                                                0, 1)
+                                        .matchExact(P4InfoConstants.HDR_COPY_TO_CPU,
+                                                0)
+                                        .build())
+                        .build();
+        result.add(DefaultFlowRule.builder()
+                .forDevice(deviceId)
+                .withSelector(reportDropSelector)
+                .withTreatment(reportDropTreatment)
+                .withPriority(DEFAULT_PRIORITY)
+                .forTable(P4InfoConstants.FABRIC_INGRESS_INT_INGRESS_DROP_REPORT)
+                .fromApp(APP_ID)
+                .makePermanent()
+                .build());
+        return result;
+    }
+
+    private void testInit() {
+        final List<GroupDescription> expectedGroups = Lists.newArrayList();
+        final Capture<GroupDescription> capturedGroup = newCapture(CaptureType.ALL);
+        QUAD_PIPE_MIRROR_SESS_TO_RECIRC_PORTS.forEach((sessionId, port) -> {
+            // Set up mirror sessions
+            final List<GroupBucket> buckets = ImmutableList.of(
+                    createCloneGroupBucket(DefaultTrafficTreatment.builder()
+                            .setOutput(PortNumber.portNumber(port))
+                            .build()));
+            expectedGroups.add(new DefaultGroupDescription(
+                    LEAF_DEVICE_ID, GroupDescription.Type.CLONE,
+                    new GroupBuckets(buckets),
+                    new DefaultGroupKey(KRYO.serialize(sessionId)),
+                    sessionId, APP_ID));
+            groupService.addGroup(capture(capturedGroup));
+        });
+        replay(groupService);
+        assertTrue(intProgrammable.init());
+
+        for (int i = 0; i < QUAD_PIPE_MIRROR_SESS_TO_RECIRC_PORTS.size(); i++) {
+            GroupDescription expectGroup = expectedGroups.get(i);
+            GroupDescription actualGroup = capturedGroup.getValues().get(i);
+            assertEquals(expectGroup, actualGroup);
+        }
+
+        verify(groupService);
+        reset(groupService);
     }
 }

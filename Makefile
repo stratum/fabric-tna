@@ -21,7 +21,7 @@ MVN_CACHE ?= $(MVN_CACHE_DOCKER_VOLUME)
 MVN_FLAGS ?=
 
 ONOS_HOST ?= localhost
-ONOS_URL := http://$(ONOS_HOST):8181/onos
+ONOS_URL ?= http://$(ONOS_HOST):8181/onos
 ONOS_CURL := curl --fail -sSL --user onos:rocks --noproxy localhost
 
 PIPECONF_APP_NAME := org.stratumproject.fabric-tna
@@ -95,10 +95,9 @@ netcfg:
 		$(ONOS_URL)/v1/network/configuration -d@./tofino-netcfg.json
 	@echo
 
-#FIXME: p4i no longer starts with SDE 9.3.1
 p4i:
 	$(info *** Started p4i app at http://localhost:3000)
-	docker run -d --rm --name p4i -v$(DIR):$(DIR)/p4src/build -w $(DIR)/p4src/build -p 3000:3000/tcp $(SDE_DOCKER_IMG) p4i
+	docker run -d --rm --name p4i -v$(DIR):$(DIR)/p4src/build -w $(DIR)/p4src/build -p 3000:3000/tcp --init --privileged $(SDE_P4I_DOCKER_IMG) xvfb-run /p4i/p4i
 
 p4i-stop:
 	docker kill p4i

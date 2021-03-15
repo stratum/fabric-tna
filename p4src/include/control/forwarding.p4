@@ -11,6 +11,12 @@
 control Forwarding (inout parsed_headers_t hdr,
                     inout fabric_ingress_metadata_t fabric_md) {
 
+#ifdef WITH_INT
+    action set_int_drop_reason(bit<8> drop_reason) {
+        fabric_md.int_mirror_md.drop_reason = drop_reason;
+    }
+#endif // WITH_INT
+
     @hidden
     action set_next_id(next_id_t next_id) {
         fabric_md.next_id = next_id;
@@ -36,9 +42,17 @@ control Forwarding (inout parsed_headers_t hdr,
         }
         actions = {
             set_next_id_bridging;
+#ifdef WITH_INT
+            @defaultonly set_int_drop_reason;
+#else
             @defaultonly nop;
+#endif // WITH_INT
         }
+#ifdef WITH_INT
+        const default_action = set_int_drop_reason(IntDropReason_t.DROP_REASON_BRIDGING_MISS);
+#else
         const default_action = nop();
+#endif // WITH_INT
         counters = bridging_counter;
         size = BRIDGING_TABLE_SIZE;
     }
@@ -62,9 +76,17 @@ control Forwarding (inout parsed_headers_t hdr,
         }
         actions = {
             pop_mpls_and_next;
+#ifdef WITH_INT
+            @defaultonly set_int_drop_reason;
+#else
             @defaultonly nop;
+#endif // WITH_INT
         }
+#ifdef WITH_INT
+        const default_action = set_int_drop_reason(IntDropReason_t.DROP_REASON_MPLS_MISS);
+#else
         const default_action = nop();
+#endif // WITH_INT
         counters = mpls_counter;
         size = MPLS_TABLE_SIZE;
     }
@@ -72,20 +94,20 @@ control Forwarding (inout parsed_headers_t hdr,
     /*
      * IPv4 Routing Table.
      */
-#ifdef WTIH_DEBUG
+#ifdef WITH_DEBUG
     DirectCounter<bit<64>>(CounterType_t.PACKETS_AND_BYTES) routing_v4_counter;
 #endif // WITH_DEBUG
 
     action set_next_id_routing_v4(next_id_t next_id) {
         set_next_id(next_id);
-#ifdef WTIH_DEBUG
+#ifdef WITH_DEBUG
         routing_v4_counter.count();
 #endif // WITH_DEBUG
     }
 
     action nop_routing_v4() {
         // no-op
-#ifdef WTIH_DEBUG
+#ifdef WITH_DEBUG
         routing_v4_counter.count();
 #endif // WITH_DEBUG
     }
@@ -97,10 +119,18 @@ control Forwarding (inout parsed_headers_t hdr,
         actions = {
             set_next_id_routing_v4;
             nop_routing_v4;
+#ifdef WITH_INT
+            @defaultonly set_int_drop_reason;
+#else
             @defaultonly nop;
+#endif // WITH_INT
         }
+#ifdef WITH_INT
+        default_action = set_int_drop_reason(IntDropReason_t.DROP_REASON_ROUTING_V4_MISS);
+#else
         default_action = nop();
-#ifdef WTIH_DEBUG
+#endif // WITH_INT
+#ifdef WITH_DEBUG
         counters = routing_v4_counter;
 #endif // WITH_DEBUG
         size = ROUTING_V4_TABLE_SIZE;
@@ -109,13 +139,13 @@ control Forwarding (inout parsed_headers_t hdr,
     /*
      * IPv6 Routing Table.
      */
-#ifdef WTIH_DEBUG
+#ifdef WITH_DEBUG
     DirectCounter<bit<64>>(CounterType_t.PACKETS_AND_BYTES) routing_v6_counter;
 #endif // WITH_DEBUG
 
     action set_next_id_routing_v6(next_id_t next_id) {
         set_next_id(next_id);
-#ifdef WTIH_DEBUG
+#ifdef WITH_DEBUG
         routing_v6_counter.count();
 #endif // WITH_DEBUG
     }
@@ -126,19 +156,37 @@ control Forwarding (inout parsed_headers_t hdr,
         }
         actions = {
             set_next_id_routing_v6;
+#ifdef WITH_INT
+            @defaultonly set_int_drop_reason;
+#else
             @defaultonly nop;
+#endif // WITH_INT
         }
-        const default_action = nop();
-#ifdef WTIH_DEBUG
+#ifdef WITH_INT
+        default_action = set_int_drop_reason(IntDropReason_t.DROP_REASON_ROUTING_V6_MISS);
+#else
+        default_action = nop();
+#endif // WITH_INT
+#ifdef WITH_DEBUG
         counters = routing_v6_counter;
 #endif // WITH_DEBUG
         size = ROUTING_V6_TABLE_SIZE;
     }
 
     apply {
-        if (fabric_md.bridged.base.fwd_type == FWD_BRIDGING) bridging.apply();
-        else if (fabric_md.bridged.base.fwd_type == FWD_MPLS) mpls.apply();
-        else if (fabric_md.bridged.base.fwd_type == FWD_IPV4_UNICAST || fabric_md.bridged.base.fwd_type == FWD_IPV4_MULTICAST) routing_v4.apply();
-        else if (fabric_md.bridged.base.fwd_type == FWD_IPV6_UNICAST) routing_v6.apply();
+        if (hdr.ethernet.isValid() &&
+                fabric_md.bridged.base.fwd_type == FWD_BRIDGING) {
+            bridging.apply();
+        } else if (hdr.mpls.isValid() &&
+                       fabric_md.bridged.base.fwd_type == FWD_MPLS) {
+            mpls.apply();
+        } else if (hdr.ipv4.isValid() &&
+                       (fabric_md.bridged.base.fwd_type == FWD_IPV4_UNICAST ||
+                            fabric_md.bridged.base.fwd_type == FWD_IPV4_MULTICAST)) {
+            routing_v4.apply();
+        } else if (hdr.ipv6.isValid() &&
+                       fabric_md.bridged.base.fwd_type == FWD_IPV6_UNICAST) {
+            routing_v6.apply();
+        }
     }
 }

@@ -17,6 +17,7 @@ control Next (inout parsed_headers_t hdr,
     @hidden
     action output(PortId_t port_num) {
         ig_intr_md_for_tm.ucast_egress_port = port_num;
+        fabric_md.egress_port_set = true;
     }
 
     @hidden
@@ -302,6 +303,17 @@ control EgressNextControl (inout parsed_headers_t hdr,
     }
 
     action pop_vlan() {
+#ifdef WITH_INT
+        // Required to compute IPv4/UDP length fields when handling INT mirrors
+        // transmitted over the recirculation port. While the original packet
+        // might go out of a tagged port (hence hit an egress_vlan entry with
+        // push_vlan action), we always treat recirculation ports as untagged as
+        // it makes it easier to re-use them for other purposes such as uplink
+        // recirculation in the SPGW pipeline. As a result, when processing an
+        // INT mirror, we always strip the VLAN header from the report's inner
+        // packet. That's fine since DeepInsight cares only about L3/L4 headers.
+        fabric_md.int_mirror_md.vlan_stripped = (bit<1>) hdr.vlan_tag.isValid();
+#endif // WITH_INT
         hdr.vlan_tag.setInvalid();
         egress_vlan_counter.count();
     }
@@ -309,6 +321,9 @@ control EgressNextControl (inout parsed_headers_t hdr,
     action drop() {
         eg_dprsr_md.drop_ctl = 1;
         egress_vlan_counter.count();
+#ifdef WITH_INT
+        fabric_md.int_mirror_md.drop_reason = IntDropReason_t.DROP_REASON_EGRESS_NEXT_MISS;
+#endif // WITH_INT
     }
 
     table egress_vlan {
@@ -358,17 +373,26 @@ control EgressNextControl (inout parsed_headers_t hdr,
             hdr.mpls.ttl = hdr.mpls.ttl - 1;
             if (hdr.mpls.ttl == 0) {
                 eg_dprsr_md.drop_ctl = 1;
+#ifdef WITH_INT
+                fabric_md.int_mirror_md.drop_reason = IntDropReason_t.DROP_REASON_MPLS_TTL_ZERO;
+#endif // WITH_INT
             }
         } else {
             if (hdr.ipv4.isValid() && fabric_md.bridged.base.fwd_type != FWD_BRIDGING) {
                 hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
                 if (hdr.ipv4.ttl == 0) {
                     eg_dprsr_md.drop_ctl = 1;
+#ifdef WITH_INT
+                    fabric_md.int_mirror_md.drop_reason = IntDropReason_t.DROP_REASON_IP_TTL_ZERO;
+#endif // WITH_INT
                 }
             } else if (hdr.ipv6.isValid() && fabric_md.bridged.base.fwd_type != FWD_BRIDGING) {
                 hdr.ipv6.hop_limit = hdr.ipv6.hop_limit - 1;
                 if (hdr.ipv6.hop_limit == 0) {
                     eg_dprsr_md.drop_ctl = 1;
+#ifdef WITH_INT
+                    fabric_md.int_mirror_md.drop_reason = IntDropReason_t.DROP_REASON_IP_TTL_ZERO;
+#endif // WITH_INT
                 }
             }
         }
