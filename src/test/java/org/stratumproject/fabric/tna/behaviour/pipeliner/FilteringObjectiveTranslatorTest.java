@@ -30,15 +30,18 @@ import java.util.Collection;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
+import static org.stratumproject.fabric.tna.behaviour.Constants.ETH_TYPE_EXACT_MASK;
+import static org.stratumproject.fabric.tna.behaviour.Constants.FWD_IPV4_ROUTING;
+import static org.stratumproject.fabric.tna.behaviour.Constants.FWD_IPV6_ROUTING;
+import static org.stratumproject.fabric.tna.behaviour.Constants.FWD_MPLS;
 
 /**
- * Test cases for fabric.p4 pipeline filtering control block.
+ * Test cases for FilteringObjectiveTranslator.
  */
-public class FabricFilteringPipelinerTest extends FabricPipelinerTest {
+public class FilteringObjectiveTranslatorTest extends AbstractObjectiveTranslatorTest {
 
     public static final byte[] ONE = {1};
     public static final byte[] ZERO = {0};
-    public static final short EXACT_MATCH_ETH_TYPE = (short) 0xFFFF;
     private FilteringObjectiveTranslator translator;
 
     @Before
@@ -70,7 +73,7 @@ public class FabricFilteringPipelinerTest extends FabricPipelinerTest {
                 ROUTER_MAC,
                 null,
                 Ethernet.TYPE_IPV4,
-                FilteringObjectiveTranslator.FWD_IPV4_ROUTING));
+                FWD_IPV4_ROUTING));
 
         // forwarding classifier ipv6
         expectedFlowRules.addAll(buildExpectedFwdClassifierRule(
@@ -78,7 +81,7 @@ public class FabricFilteringPipelinerTest extends FabricPipelinerTest {
                 ROUTER_MAC,
                 null,
                 Ethernet.TYPE_IPV6,
-                FilteringObjectiveTranslator.FWD_IPV6_ROUTING));
+                FWD_IPV6_ROUTING));
 
         // forwarding classifier mpls
         expectedFlowRules.addAll(buildExpectedFwdClassifierRule(
@@ -86,7 +89,7 @@ public class FabricFilteringPipelinerTest extends FabricPipelinerTest {
                 ROUTER_MAC,
                 null,
                 Ethernet.MPLS_UNICAST,
-                FilteringObjectiveTranslator.FWD_MPLS));
+                FWD_MPLS));
 
         ObjectiveTranslation expectedTranslation = buildExpectedTranslation(expectedFlowRules);
 
@@ -129,7 +132,7 @@ public class FabricFilteringPipelinerTest extends FabricPipelinerTest {
                 MacAddress.IPV4_MULTICAST,
                 MacAddress.IPV4_MULTICAST_MASK,
                 Ethernet.TYPE_IPV4,
-                FilteringObjectiveTranslator.FWD_IPV4_ROUTING));
+                FWD_IPV4_ROUTING));
 
         ObjectiveTranslation expectedTranslation = buildExpectedTranslation(expectedFlowRules);
 
@@ -171,7 +174,7 @@ public class FabricFilteringPipelinerTest extends FabricPipelinerTest {
                 MacAddress.IPV6_MULTICAST,
                 MacAddress.IPV6_MULTICAST_MASK,
                 Ethernet.TYPE_IPV6,
-                FilteringObjectiveTranslator.FWD_IPV6_ROUTING));
+                FWD_IPV6_ROUTING));
 
         ObjectiveTranslation expectedTranslation = buildExpectedTranslation(flowRules);
 
@@ -273,13 +276,13 @@ public class FabricFilteringPipelinerTest extends FabricPipelinerTest {
         // Forwarding classifier rules (ipv6, ipv4, mpls)
         expectedFlowRules.addAll(buildExpectedFwdClassifierRule(
                 PORT_1, ROUTER_MAC, null, Ethernet.TYPE_IPV4,
-                FilteringObjectiveTranslator.FWD_IPV4_ROUTING));
+                FWD_IPV4_ROUTING));
         expectedFlowRules.addAll(buildExpectedFwdClassifierRule(
                 PORT_1, ROUTER_MAC, null, Ethernet.TYPE_IPV6,
-                FilteringObjectiveTranslator.FWD_IPV6_ROUTING));
+                FWD_IPV6_ROUTING));
         expectedFlowRules.addAll(buildExpectedFwdClassifierRule(
                 PORT_1, ROUTER_MAC, null, Ethernet.MPLS_UNICAST,
-                FilteringObjectiveTranslator.FWD_MPLS));
+                FWD_MPLS));
         ObjectiveTranslation expectedTranslation = buildExpectedTranslation(expectedFlowRules);
 
         assertEquals(expectedTranslation, actualTranslation);
@@ -491,13 +494,13 @@ public class FabricFilteringPipelinerTest extends FabricPipelinerTest {
         Collection<FlowRule> flowRules = Lists.newArrayList();
         TrafficSelector selectorIpv4 = selectorBuilder
                 .add(PiCriterion.builder()
-                        .matchTernary(P4InfoConstants.HDR_ETH_TYPE, Ethernet.MPLS_UNICAST, EXACT_MATCH_ETH_TYPE)
+                        .matchTernary(P4InfoConstants.HDR_ETH_TYPE, Ethernet.MPLS_UNICAST, ETH_TYPE_EXACT_MASK)
                         .matchExact(P4InfoConstants.HDR_IP_ETH_TYPE, Ethernet.TYPE_IPV4)
                         .build())
                 .build();
         TrafficSelector selectorIpv6 = selectorBuilder
                 .add(PiCriterion.builder()
-                        .matchTernary(P4InfoConstants.HDR_ETH_TYPE, Ethernet.MPLS_UNICAST, EXACT_MATCH_ETH_TYPE)
+                        .matchTernary(P4InfoConstants.HDR_ETH_TYPE, Ethernet.MPLS_UNICAST, ETH_TYPE_EXACT_MASK)
                         .matchExact(P4InfoConstants.HDR_IP_ETH_TYPE, Ethernet.TYPE_IPV6)
                         .build())
                 .build();

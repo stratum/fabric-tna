@@ -69,7 +69,7 @@ control PreNext(inout parsed_headers_t hdr,
     }
 
     apply {
-    	next_mpls.apply();
-    	next_vlan.apply();
+        next_mpls.apply();
+        next_vlan.apply();
     }
 }

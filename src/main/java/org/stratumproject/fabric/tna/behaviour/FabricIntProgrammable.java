@@ -7,8 +7,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import org.onlab.packet.EthType;
-import org.onlab.packet.Ethernet;
 import org.onlab.packet.Ip4Address;
 import org.onlab.packet.IpAddress;
 import org.onlab.packet.MacAddress;
@@ -32,7 +30,6 @@ import org.onosproject.net.flow.FlowRuleService;
 import org.onosproject.net.flow.TableId;
 import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flow.TrafficTreatment;
-import org.onosproject.net.flow.criteria.Criteria;
 import org.onosproject.net.flow.criteria.Criterion;
 import org.onosproject.net.flow.criteria.IPCriterion;
 import org.onosproject.net.flow.criteria.PiCriterion;
@@ -69,7 +66,6 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         implements IntProgrammable {
 
     private static final int DEFAULT_PRIORITY = 10000;
-    private static final int DEFAULT_VLAN = 4094;
 
     // TODO: make configurable at runtime via netcfg
     // By default report every 2^30 ns (~1 second)
@@ -106,9 +102,6 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
     private static final short MIRROR_TYPE_INT_REPORT = 1;
     private static final short INT_REPORT_TYPE_LOCAL = 1;
     private static final short INT_REPORT_TYPE_DROP = 2;
-    private static final byte FWD_TYPE_MPLS = 1;
-    private static final byte FWD_TYPE_IPV4_ROUTING = 2;
-    private static final short ETH_TYPE_EXACT_MASK = (short) 0xFFFF;
 
     private FlowRuleService flowRuleService;
     private GroupService groupService;
@@ -182,153 +175,8 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                     new GroupBuckets(buckets),
                     new DefaultGroupKey(KRYO.serialize(sessionId)),
                     sessionId, appId));
-
-            // Set up ingress_port_vlan table
-            final TrafficSelector ingressPortVlanSelector =
-                    DefaultTrafficSelector.builder()
-                            .add(Criteria.matchInPort(PortNumber.portNumber(port)))
-                            .add(PiCriterion.builder()
-                                    .matchExact(P4InfoConstants.HDR_VLAN_IS_VALID, 0)
-                                    .build())
-                            .build();
-            final PiActionParam vlanIdParam = new PiActionParam(
-                    P4InfoConstants.VLAN_ID, DEFAULT_VLAN);
-            final PiAction permitWithInternalVlanAction = PiAction.builder()
-                    .withId(P4InfoConstants.FABRIC_INGRESS_FILTERING_PERMIT_WITH_INTERNAL_VLAN)
-                    .withParameter(vlanIdParam)
-                    .build();
-            final TrafficTreatment ingressPortVlanTreatment =
-                    DefaultTrafficTreatment.builder()
-                            .piTableAction(permitWithInternalVlanAction)
-                            .build();
-            flowRuleService.applyFlowRules(DefaultFlowRule.builder()
-                    .withSelector(ingressPortVlanSelector)
-                    .withTreatment(ingressPortVlanTreatment)
-                    .forTable(P4InfoConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN)
-                    .makePermanent()
-                    .withPriority(DEFAULT_PRIORITY)
-                    .forDevice(deviceId)
-                    .fromApp(appId)
-                    .build());
-            // Set up egress_vlan table
-            final TrafficSelector egressVlanSelector =
-                    DefaultTrafficSelector.builder()
-                            .add(PiCriterion.builder()
-                                    .matchExact(P4InfoConstants.HDR_VLAN_ID, DEFAULT_VLAN)
-                                    .matchExact(P4InfoConstants.HDR_EG_PORT, port)
-                                    .build())
-                            .build();
-
-            final PiAction keepVlanConfigAction = PiAction.builder()
-                    .withId(P4InfoConstants.FABRIC_EGRESS_EGRESS_NEXT_KEEP_VLAN_CONFIG)
-                    .build();
-            final TrafficTreatment egressVlanTreatment =
-                    DefaultTrafficTreatment.builder()
-                            .piTableAction(keepVlanConfigAction)
-                            .build();
-            flowRuleService.applyFlowRules(DefaultFlowRule.builder()
-                    .withSelector(egressVlanSelector)
-                    .withTreatment(egressVlanTreatment)
-                    .forTable(P4InfoConstants.FABRIC_EGRESS_EGRESS_NEXT_EGRESS_VLAN)
-                    .makePermanent()
-                    .withPriority(DEFAULT_PRIORITY)
-                    .forDevice(deviceId)
-                    .fromApp(appId)
-                    .build());
         });
-        setUpFwdClassifierTable();
         return true;
-    }
-
-    private void setUpFwdClassifierTable() {
-        final Map<Integer, Integer> sessionToPortMap;
-        final int hwPipeCount = capabilities.hwPipeCount();
-        switch (hwPipeCount) {
-            case 4:
-                sessionToPortMap = QUAD_PIPE_MIRROR_SESS_TO_RECIRC_PORTS;
-                break;
-            case 2:
-                sessionToPortMap = DUAL_PIPE_MIRROR_SESS_TO_RECIRC_PORTS;
-                break;
-            default:
-                log.error("{} it not a valid HW pipe count", hwPipeCount);
-                return;
-        }
-        // Set up forwarding classifier table
-        final SegmentRoutingDeviceConfig cfg = cfgService.getConfig(
-                deviceId, SegmentRoutingDeviceConfig.class);
-        if (cfg == null) {
-            log.debug("Missing segment routing config for the device, will " +
-                    "set up the forwarding classifier table later");
-            return;
-        }
-
-        MacAddress switchMac = cfg.routerMac();
-        if (switchMac == null) {
-            log.debug("Missing router mac from the segment routing config " +
-                    "will configure the forwarding classifier table later");
-            return;
-        }
-        sessionToPortMap.forEach((sessionId, port) -> {
-            // Fwd classifier match IPv4
-            PiCriterion criterion = PiCriterion.builder()
-                    .matchExact(P4InfoConstants.HDR_IP_ETH_TYPE, Ethernet.TYPE_IPV4)
-                    .build();
-            TrafficSelector selector = DefaultTrafficSelector.builder()
-                    .matchInPort(PortNumber.portNumber(port))
-                    .matchEthDstMasked(switchMac, MacAddress.EXACT_MASK)
-                    .matchPi(criterion).build();
-            PiActionParam fwdTypeParam =
-                    new PiActionParam(P4InfoConstants.FWD_TYPE, FWD_TYPE_IPV4_ROUTING);
-            PiAction setFwdTypeAction = PiAction.builder()
-                    .withId(P4InfoConstants.FABRIC_INGRESS_FILTERING_SET_FORWARDING_TYPE)
-                    .withParameter(fwdTypeParam)
-                    .build();
-            TrafficTreatment treatment = DefaultTrafficTreatment.builder()
-                    .piTableAction(setFwdTypeAction)
-                    .build();
-            flowRuleService.applyFlowRules(DefaultFlowRule.builder()
-                    .withSelector(selector)
-                    .withTreatment(treatment)
-                    .forTable(P4InfoConstants.FABRIC_INGRESS_FILTERING_FWD_CLASSIFIER)
-                    .makePermanent()
-                    .withPriority(DEFAULT_PRIORITY)
-                    .forDevice(deviceId)
-                    .fromApp(appId)
-                    .build());
-
-            // Fwd classifier match MPLS + IPv4
-            criterion = PiCriterion.builder()
-                    .matchTernary(P4InfoConstants.HDR_ETH_TYPE,
-                            EthType.EtherType.MPLS_UNICAST.ethType().toShort(),
-                            ETH_TYPE_EXACT_MASK)
-                    .matchExact(P4InfoConstants.HDR_IP_ETH_TYPE,
-                            EthType.EtherType.IPV4.ethType().toShort())
-                    .build();
-            selector = DefaultTrafficSelector.builder()
-                    .matchInPort(PortNumber.portNumber(port))
-                    .matchEthDstMasked(switchMac, MacAddress.EXACT_MASK)
-                    .matchPi(criterion).build();
-            fwdTypeParam = new PiActionParam(P4InfoConstants.FWD_TYPE, FWD_TYPE_MPLS);
-            setFwdTypeAction = PiAction.builder()
-                    .withId(P4InfoConstants.FABRIC_INGRESS_FILTERING_SET_FORWARDING_TYPE)
-                    .withParameter(fwdTypeParam)
-                    .build();
-            treatment = DefaultTrafficTreatment.builder()
-                    .piTableAction(setFwdTypeAction)
-                    .build();
-            // Use a higher priority so we can match the correct one for MPLS packet
-            // since the rule for IPv4(see above) matches any eth type and can hit earlier.
-            flowRuleService.applyFlowRules(DefaultFlowRule.builder()
-                    .withSelector(selector)
-                    .withTreatment(treatment)
-                    .forTable(P4InfoConstants.FABRIC_INGRESS_FILTERING_FWD_CLASSIFIER)
-                    .makePermanent()
-                    .withPriority(DEFAULT_PRIORITY + 10)
-                    .forDevice(deviceId)
-                    .fromApp(appId)
-                    .build());
-        });
     }
 
     @Override
@@ -495,6 +343,8 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
 
     private TrafficSelector buildCollectorSelector(Set<Criterion> criteria) {
         TrafficSelector.Builder builder = DefaultTrafficSelector.builder();
+        // We always match packets with valid IPv4 header
+        builder.matchPi(PiCriterion.builder().matchExact(P4InfoConstants.HDR_IPV4_VALID, 1).build());
         for (Criterion criterion : criteria) {
             switch (criterion.type()) {
                 case IPV4_SRC:
@@ -611,9 +461,6 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
             log.info("INT drop report rule added to {} [{}]", this.data().deviceId(), rule);
         });
 
-
-        // Reset the forwarding classifier table to make sure rules are update-to-date
-        setUpFwdClassifierTable();
         return true;
     }
 
@@ -765,7 +612,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 reportActionBuilder.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_DROP_REPORT_ENCAP_MPLS);
             } else {
                 // Invalid report type
-                log.warn("Invalid report type %d", reportType);
+                log.warn("Invalid report type {}", reportType);
                 return null;
             }
 
@@ -782,7 +629,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 reportActionBuilder.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_DROP_REPORT_ENCAP);
             } else {
                 // Invalid report type
-                log.warn("Invalid report type %d", reportType);
+                log.warn("Invalid report type {}", reportType);
                 return null;
             }
         }
@@ -846,18 +693,12 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         // (IntReportType_t.LOCAL, 1, _, _, 0) -> report_drop(switch_id)
         TrafficSelector reportDropSelector =
                 DefaultTrafficSelector.builder()
-                        .matchPi(
-                                PiCriterion.builder()
-                                        .matchExact(
-                                                P4InfoConstants.HDR_INT_REPORT_TYPE,
-                                                INT_REPORT_TYPE_LOCAL)
-                                        .matchExact(
-                                                P4InfoConstants.HDR_DROP_CTL,
-                                                1)
-                                        .matchExact(P4InfoConstants.HDR_COPY_TO_CPU,
-                                                0)
-                                        .build()
-                        )
+                        .matchPi(PiCriterion.builder()
+                                .matchExact(P4InfoConstants.HDR_INT_REPORT_TYPE,
+                                            INT_REPORT_TYPE_LOCAL)
+                                .matchExact(P4InfoConstants.HDR_DROP_CTL, 1)
+                                .matchExact(P4InfoConstants.HDR_COPY_TO_CPU, 0)
+                                .build())
                         .build();
         result.add(DefaultFlowRule.builder()
                 .forDevice(deviceId)
@@ -872,20 +713,14 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         // (IntReportType_t.LOCAL, 0, 0, 0, 0) -> report_drop(switch_id)
         reportDropSelector =
                 DefaultTrafficSelector.builder()
-                        .matchPi(
-                                PiCriterion.builder()
-                                        .matchExact(
-                                                P4InfoConstants.HDR_INT_REPORT_TYPE,
-                                                INT_REPORT_TYPE_LOCAL)
-                                        .matchExact(
-                                                P4InfoConstants.HDR_DROP_CTL, 0)
-                                        .matchTernary(P4InfoConstants.HDR_EGRESS_PORT_SET,
-                                                0, 1)
-                                        .matchTernary(P4InfoConstants.HDR_MCAST_GROUP_ID,
-                                                0, 1)
-                                        .matchExact(P4InfoConstants.HDR_COPY_TO_CPU, 0)
-                                        .build()
-                        )
+                        .matchPi(PiCriterion.builder()
+                                .matchExact(P4InfoConstants.HDR_INT_REPORT_TYPE,
+                                            INT_REPORT_TYPE_LOCAL)
+                                .matchExact(P4InfoConstants.HDR_DROP_CTL, 0)
+                                .matchTernary(P4InfoConstants.HDR_EGRESS_PORT_SET, 0, 1)
+                                .matchTernary(P4InfoConstants.HDR_MCAST_GROUP_ID, 0, 1)
+                                .matchExact(P4InfoConstants.HDR_COPY_TO_CPU, 0)
+                                .build())
                         .build();
         result.add(DefaultFlowRule.builder()
                 .forDevice(deviceId)

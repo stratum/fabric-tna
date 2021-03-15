@@ -203,6 +203,7 @@ header local_report_header_t {
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.ip_eth_type")
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.report_type")
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.flow_hash")
+@pa_no_overlay("egress", "fabric_md.int_mirror_md.vlan_stripped")
 #ifdef WITH_SPGW
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.strip_gtpu")
 #endif // WITH_SPGW
@@ -219,7 +220,8 @@ header int_mirror_metadata_t {
     bit<32>               eg_tstamp;
     bit<8>                drop_reason;
     bit<16>               ip_eth_type;
-    @padding bit<6>       _pad2;
+    bit<1>                vlan_stripped;
+    @padding bit<5>       _pad2;
     IntReportType_t       report_type;
     flow_hash_t           flow_hash;
 #ifdef WITH_SPGW
@@ -260,9 +262,6 @@ struct bridged_metadata_base_t {
     bit<8>                  mpls_ttl;
     bit<48>                 ig_tstamp;
     bit<16>                 ip_eth_type;
-    bit<8>                  ip_proto;
-    l4_port_t               l4_sport;
-    l4_port_t               l4_dport;
     flow_hash_t             flow_hash;
 #ifdef WITH_DOUBLE_VLAN_TERMINATION
     @padding bit<7>         _pad1;
@@ -293,6 +292,9 @@ struct fabric_ingress_metadata_t {
     bridged_metadata_t      bridged;
     bit<32>                 ipv4_src;
     bit<32>                 ipv4_dst;
+    bit<8>                  ip_proto;
+    l4_port_t               l4_sport;
+    l4_port_t               l4_dport;
     bool                    ipv4_checksum_err;
     bool                    skip_forwarding;
     bool                    skip_next;
