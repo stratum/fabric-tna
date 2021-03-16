@@ -275,7 +275,7 @@ class ForwardingObjectiveTranslator
             }
         }
         resultBuilder.addFlowRule(flowRule(
-                obj, P4InfoConstants.FABRIC_INGRESS_ACL_ACL, obj.selector()));
+                obj, P4InfoConstants.FABRIC_INGRESS_ACL_ACL, selectorBuilder.build()));
     }
 
     private FlowRule flowRule(
