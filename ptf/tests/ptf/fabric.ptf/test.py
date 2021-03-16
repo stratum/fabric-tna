@@ -2212,7 +2212,7 @@ class FabricOptimizedFieldDetectorTest(FabricTest):
         resp = self.read_table_entry(table_name, match_keys, priority)
         if resp is None:
             self.fail(
-                'Failed to read an entry that was just written! '
+                "Failed to read an entry that was just written! "
                 'Table was "{}", action was "{}"'.format(table_name, action_name)
             )
         read_entry = p4runtime_pb2.TableEntry()
@@ -2286,7 +2286,7 @@ class FabricOptimizedFieldDetectorTest(FabricTest):
                 # action might not be const, so we allow that.
                 print(
                     'Skipping action "%s" of table "%s" because it has const'
-                    ' entries and the action is not a default action'
+                    " entries and the action is not a default action"
                     % (action_name, table_name)
                 )
                 continue
