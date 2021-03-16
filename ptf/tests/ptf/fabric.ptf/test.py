@@ -2281,6 +2281,15 @@ class FabricOptimizedFieldDetectorTest(FabricTest):
                     % (action_name, table_name)
                 )
                 continue
+            if table.is_const_table and len(match_keys) != 0:
+                # Don't try to modify a table with const entries. The default
+                # action might not be const, so we allow that.
+                print(
+                    'Skipping action "%s" of table "%s" because it has const' \
+                    ' entries and the action is not a default action'
+                    % (action_name, table_name)
+                )
+                continue
             for param in action.params:
                 param_value = self.generateBytestring(param.bitwidth)
                 action_params.append((param.name, param_value))
