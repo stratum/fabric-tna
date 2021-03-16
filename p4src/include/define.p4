@@ -145,11 +145,6 @@ enum bit<2> CpuLoopbackMode_t {
     INGRESS = 2
 }
 
-#define PIPE_0_PORTS_MATCH 9w0x000 &&& 0x180
-#define PIPE_1_PORTS_MATCH 9w0x080 &&& 0x180
-#define PIPE_2_PORTS_MATCH 9w0x100 &&& 0x180
-#define PIPE_3_PORTS_MATCH 9w0x180 &&& 0x180
-
 // INT
 
 /* indicate INT at LSB of DSCP */
@@ -198,6 +193,14 @@ enum bit<8> IntDropReason_t {
     DROP_REASON_UPLINK_PDR_MISS = 133,
     DROP_REASON_FAR_MISS = 134,
     DROP_REASON_SPGW_UPLINK_RECIRC_DENY = 150
+}
+
+const bit<8> INT_MIRROR_SESSION_BASE = 0x80;
+enum bit<10> IntMirrorSessionId_t {
+    PIPE_0 = INT_MIRROR_SESSION_BASE ++ 2w0,
+    PIPE_1 = INT_MIRROR_SESSION_BASE ++ 2w1,
+    PIPE_2 = INT_MIRROR_SESSION_BASE ++ 2w2,
+    PIPE_3 = INT_MIRROR_SESSION_BASE ++ 2w3
 }
 
 #endif // __DEFINE__
