@@ -241,7 +241,7 @@ control IntIngress (
 #endif // WITH_SPGW
         // Here we use 0b10000000xx as the mirror session ID where "xx" is the 2-bit
         // pipeline number(0~3).
-        fabric_md.bridged.int_bmd.mirror_session_id = 8w0x80 ++ ig_intr_md.ingress_port[8:7];
+        fabric_md.bridged.int_bmd.mirror_session_id = INT_MIRROR_SESSION_BASE ++ ig_intr_md.ingress_port[8:7];
         watchlist.apply();
         drop_report.apply();
     }

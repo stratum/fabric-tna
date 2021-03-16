@@ -162,6 +162,7 @@ const bit<16> REPORT_MIRROR_HEADER_BYTES = 31;
 const bit<16> REPORT_MIRROR_HEADER_BYTES = 30;
 #endif // WITH_SPGW
 const bit<16> ETH_FCS_LEN = 4;
+const bit<8> INT_MIRROR_SESSION_BASE = 0x80;
 
 #define FLOW_REPORT_FILTER_WIDTH 16
 typedef bit<FLOW_REPORT_FILTER_WIDTH> flow_report_filter_index_t;
@@ -193,14 +194,6 @@ enum bit<8> IntDropReason_t {
     DROP_REASON_UPLINK_PDR_MISS = 133,
     DROP_REASON_FAR_MISS = 134,
     DROP_REASON_SPGW_UPLINK_RECIRC_DENY = 150
-}
-
-const bit<8> INT_MIRROR_SESSION_BASE = 0x80;
-enum bit<10> IntMirrorSessionId_t {
-    PIPE_0 = INT_MIRROR_SESSION_BASE ++ 2w0,
-    PIPE_1 = INT_MIRROR_SESSION_BASE ++ 2w1,
-    PIPE_2 = INT_MIRROR_SESSION_BASE ++ 2w2,
-    PIPE_3 = INT_MIRROR_SESSION_BASE ++ 2w3
 }
 
 #endif // __DEFINE__
