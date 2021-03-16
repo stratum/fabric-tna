@@ -664,6 +664,7 @@ class FabricIPv4UnicastGroupTestAllPortIpDst(FabricTest):
     def runTest(self):
         self.IPv4UnicastGroupTestAllPortL4DstIp("tcp")
         self.IPv4UnicastGroupTestAllPortL4DstIp("udp")
+        self.IPv4UnicastGroupTestAllPortL4DstIp("icmp")
 
 
 class FabricIPv4MPLSTest(FabricTest):
