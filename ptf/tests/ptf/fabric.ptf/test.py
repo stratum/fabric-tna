@@ -2212,8 +2212,8 @@ class FabricOptimizedFieldDetectorTest(FabricTest):
         resp = self.read_table_entry(table_name, match_keys, priority)
         if resp is None:
             self.fail(
-                "Failed to read an entry that was just written! "
-                "Table was {}, action was {}".format(table_name, action_name)
+                'Failed to read an entry that was just written! '
+                'Table was "{}", action was "{}"'.format(table_name, action_name)
             )
         read_entry = p4runtime_pb2.TableEntry()
         read_entry.CopyFrom(resp)
@@ -2262,7 +2262,7 @@ class FabricOptimizedFieldDetectorTest(FabricTest):
                     priority = 1
                 else:
                     print(
-                        "Skipping table %s because it has a unsupported match field %s of type %s"
+                        'Skipping table "%s" because it has a unsupported match field "%s" of type %s'
                         % (table_name, match.name, match.match_type)
                     )
                     return
@@ -2285,7 +2285,7 @@ class FabricOptimizedFieldDetectorTest(FabricTest):
                 # Don't try to modify a table with const entries. The default
                 # action might not be const, so we allow that.
                 print(
-                    'Skipping action "%s" of table "%s" because it has const' \
+                    'Skipping action "%s" of table "%s" because it has const'
                     ' entries and the action is not a default action'
                     % (action_name, table_name)
                 )
