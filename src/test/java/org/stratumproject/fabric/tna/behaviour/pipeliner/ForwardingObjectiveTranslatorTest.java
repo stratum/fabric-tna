@@ -18,6 +18,7 @@ import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.net.flow.criteria.Criterion;
 import org.onosproject.net.flow.criteria.EthCriterion;
+import org.onosproject.net.flow.criteria.PiCriterion;
 import org.onosproject.net.flowobjective.DefaultForwardingObjective;
 import org.onosproject.net.flowobjective.ForwardingObjective;
 import org.onosproject.net.group.GroupDescription;
@@ -134,6 +135,107 @@ public class ForwardingObjectiveTranslatorTest extends AbstractObjectiveTranslat
                 .withSelector(selector)
                 .withTreatment(DefaultTrafficTreatment.builder()
                                        .piTableAction(piAction).build())
+                .fromApp(APP_ID)
+                .build();
+
+        assertTrue(expectedFlowRule.exactMatch(actualFlowRule));
+    }
+
+    /**
+     * Test versatile flag of forwarding objective with next step
+     */
+    @Test
+    public void testAclNext() {
+        // ACL 8-tuples
+        TrafficSelector selector = DefaultTrafficSelector.builder()
+                .matchEthType(Ethernet.TYPE_IPV4)
+                .matchIPDst(IPV4_UNICAST_ADDR)
+                .build();
+        ForwardingObjective fwd = DefaultForwardingObjective.builder()
+                .withSelector(selector)
+                .withPriority(PRIORITY)
+                .fromApp(APP_ID)
+                .makePermanent()
+                .withFlag(ForwardingObjective.Flag.VERSATILE)
+                .nextStep(NEXT_ID_1)
+                .add();
+
+        ObjectiveTranslation result = translator.translate(fwd);
+
+        List<FlowRule> flowRulesInstalled = (List<FlowRule>) result.flowRules();
+        List<GroupDescription> groupsInstalled = (List<GroupDescription>) result.groups();
+        assertEquals(1, flowRulesInstalled.size());
+        assertTrue(groupsInstalled.isEmpty());
+
+        FlowRule actualFlowRule = flowRulesInstalled.get(0);
+        PiAction piAction = PiAction.builder()
+                .withId(P4InfoConstants.FABRIC_INGRESS_ACL_SET_NEXT_ID_ACL)
+                .withParameter(new PiActionParam(P4InfoConstants.NEXT_ID, NEXT_ID_1))
+                .build();
+        FlowRule expectedFlowRule = DefaultFlowRule.builder()
+                .forDevice(DEVICE_ID)
+                .forTable(P4InfoConstants.FABRIC_INGRESS_ACL_ACL)
+                .withPriority(PRIORITY)
+                .makePermanent()
+                .withSelector(selector)
+                .withTreatment(DefaultTrafficTreatment.builder()
+                        .piTableAction(piAction).build())
+                .fromApp(APP_ID)
+                .build();
+
+        assertTrue(expectedFlowRule.exactMatch(actualFlowRule));
+    }
+
+    /**
+     * Test versatile flag of forwarding objective with next step and isEdge flag
+     */
+    @Test
+    public void testAclNextWithIsEdge() {
+        // ACL 8-tuples
+        TrafficSelector selector = DefaultTrafficSelector.builder()
+                .matchEthType(Ethernet.TYPE_IPV4)
+                .matchIPDst(IPV4_UNICAST_ADDR)
+                .build();
+        TrafficSelector metaSelector = DefaultTrafficSelector.builder()
+                .matchMetadata(1)
+                .build();
+        ForwardingObjective fwd = DefaultForwardingObjective.builder()
+                .withSelector(selector)
+                .withPriority(PRIORITY)
+                .fromApp(APP_ID)
+                .makePermanent()
+                .withFlag(ForwardingObjective.Flag.VERSATILE)
+                .nextStep(NEXT_ID_1)
+                .withMeta(metaSelector)
+                .add();
+
+        ObjectiveTranslation result = translator.translate(fwd);
+
+        List<FlowRule> flowRulesInstalled = (List<FlowRule>) result.flowRules();
+        List<GroupDescription> groupsInstalled = (List<GroupDescription>) result.groups();
+        assertEquals(1, flowRulesInstalled.size());
+        assertTrue(groupsInstalled.isEmpty());
+
+        FlowRule actualFlowRule = flowRulesInstalled.get(0);
+        PiAction piAction = PiAction.builder()
+                .withId(P4InfoConstants.FABRIC_INGRESS_ACL_SET_NEXT_ID_ACL)
+                .withParameter(new PiActionParam(P4InfoConstants.NEXT_ID, NEXT_ID_1))
+                .build();
+        TrafficSelector expectedSelector = DefaultTrafficSelector.builder()
+                .matchEthType(Ethernet.TYPE_IPV4)
+                .matchIPDst(IPV4_UNICAST_ADDR)
+                .matchPi(PiCriterion.builder()
+                        .matchTernary(P4InfoConstants.HDR_PORT_IS_EDGE, ONE, ONE)
+                        .build())
+                .build();
+        FlowRule expectedFlowRule = DefaultFlowRule.builder()
+                .forDevice(DEVICE_ID)
+                .forTable(P4InfoConstants.FABRIC_INGRESS_ACL_ACL)
+                .withPriority(PRIORITY)
+                .makePermanent()
+                .withSelector(expectedSelector)
+                .withTreatment(DefaultTrafficTreatment.builder()
+                        .piTableAction(piAction).build())
                 .fromApp(APP_ID)
                 .build();
 

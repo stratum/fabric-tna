@@ -42,6 +42,7 @@ public class AbstractObjectiveTranslatorTest {
     static final TrafficSelector VLAN_META = DefaultTrafficSelector.builder()
             .matchVlanId(VLAN_100)
             .build();
+    static final byte[] ONE = new byte[]{1};
 
     FabricCapabilities capabilitiesHashed;
     // TODO: add profile with simple next or remove references
