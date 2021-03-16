@@ -676,15 +676,10 @@ control ConQuestEgress(
         }
         default_action = not_trigger_report();
         const entries = {
-            //(0xa..0x7fff, 0x4000..0x3ffff, 0x0): trigger_report(); 
-            //(0xa..0x7fff, 0x4000..0x3ffff, 0x1): trigger_report(); 
-            //(0xa..0x7fff, 0x4000..0x3ffff, 0x2): trigger_report(); 
-            //(0xa..0x7fff, 0x4000..0x3ffff, 0x3): trigger_report(); 
-            (_, _, 0x0): trigger_report();
-            (_, _, 0x1): trigger_report();
-            (_, _, 0x2): trigger_report();
-            (_, _, 0x3): trigger_report();
-
+            (0xa..0x7fff, 0x4000..0x3ffff, 0x0): trigger_report(); 
+            (0xa..0x7fff, 0x4000..0x3ffff, 0x1): trigger_report(); 
+            (0xa..0x7fff, 0x4000..0x3ffff, 0x2): trigger_report(); 
+            (0xa..0x7fff, 0x4000..0x3ffff, 0x3): trigger_report(); 
         }
     }
 
