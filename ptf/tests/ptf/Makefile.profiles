@@ -31,6 +31,13 @@ ifndef TEST
 endif
 	$(call run_tests,fabric-spgw,$(TEST))
 
+fabric-spgw-conquest: _checkenv
+ifndef TEST
+	$(eval TEST = all ^int ^bng ^dth ^p4rt $(PTF_FILTER))
+endif
+	$(call run_tests,fabric-spgw,$(TEST))
+
+
 fabric-spgw-int: _checkenv
 ifndef TEST
 	$(eval TEST = all ^conquest ^bng ^dth ^p4rt $(PTF_FILTER))
