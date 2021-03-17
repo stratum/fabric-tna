@@ -757,6 +757,39 @@ class FabricMplsSegmentRoutingTest(MplsSegmentRoutingTest):
                 self.doRunTest(pkt, HOST2_MAC, next_hop_spine, tc_name=tc_name)
 
 
+class FabricIPv4UnicastGtpAclInnerDropTest(IPv4UnicastTest):
+    @tvsetup
+    @autocleanup
+    def runTest(self):
+        # Assert that GTP packets not meant to be forwarded by fabric-tna.p4 are
+        # blocked using the inner IP+UDP headers by the ACL table.
+        pkt = (
+            Ether(src=HOST1_MAC, dst=SWITCH_MAC)
+            / IP(src=HOST3_IPV4, dst=HOST4_IPV4)
+            / UDP(sport=UDP_GTP_PORT, dport=UDP_GTP_PORT)
+            / GTPU(teid=0xEEFFC0F0)
+            / IP(src=HOST1_IPV4, dst=HOST2_IPV4)
+            / UDP(sport=5061, dport=5060) / ("\xab" * 128)
+        )
+        self.add_forwarding_acl_drop(ipv4_src=HOST1_IPV4, ipv4_dst=HOST2_IPV4,
+            ip_proto=IP_PROTO_UDP, l4_sport=5061, l4_dport=5060)
+        self.runIPv4UnicastTest(pkt, next_hop_mac=HOST2_MAC, verify_pkt=False)
+
+class FabricIPv4UnicastAclOuterDropTest(IPv4UnicastTest):
+    @tvsetup
+    @autocleanup
+    def runTest(self):
+        # Assert that not encapsulated packets not meant to be forwarded by fabric-tna.p4
+        # are blocked using the outer IP+UDP headers by the ACL table.
+        pkt = (
+            Ether(src=HOST1_MAC, dst=SWITCH_MAC)
+            / IP(src=HOST1_IPV4, dst=HOST2_IPV4)
+            / UDP(sport=5061, dport=5060) / ("\xab" * 128)
+        )
+        self.add_forwarding_acl_drop(ipv4_src=HOST1_IPV4, ipv4_dst=HOST2_IPV4,
+            ip_proto=IP_PROTO_UDP, l4_sport=5061, l4_dport=5060)
+        self.runIPv4UnicastTest(pkt, next_hop_mac=HOST2_MAC, verify_pkt=False)
+
 @group("packetio")
 class FabricArpPacketOutTest(PacketOutTest):
     @tvsetup
