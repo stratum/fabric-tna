@@ -114,7 +114,6 @@ header icmp_t {
     bit<64> timestamp;
 }
 
-#ifdef WITH_SPGW
 // GTPU v1
 header gtpu_t {
     bit<3>  version;    /* version */
@@ -128,6 +127,7 @@ header gtpu_t {
     teid_t  teid;       /* tunnel endpoint id */
 }
 
+#ifdef WITH_SPGW
 // TODO: Use @flexible annotation instead of add padding manually
 // See bridged_metadata_base_t
 struct spgw_bridged_metadata_t {
@@ -300,8 +300,8 @@ struct fabric_ingress_metadata_t {
     bool                    skip_next;
     next_id_t               next_id;
     bool                    egress_port_set;
-#ifdef WITH_SPGW
     bool                    inner_ipv4_checksum_err;
+#ifdef WITH_SPGW
     spgw_ingress_metadata_t spgw;
 #endif // WITH_SPGW
 #ifdef WITH_INT
@@ -361,12 +361,12 @@ struct parsed_headers_t {
     ipv4_t outer_ipv4;
     udp_t outer_udp;
     gtpu_t outer_gtpu;
+#endif // WITH_SPGW
     gtpu_t gtpu;
     ipv4_t inner_ipv4;
     tcp_t inner_tcp;
     udp_t inner_udp;
     icmp_t inner_icmp;
-#endif // WITH_SPGW
     packet_out_header_t packet_out;
     packet_in_header_t packet_in;
     // INT specific headers

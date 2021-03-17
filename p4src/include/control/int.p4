@@ -215,28 +215,6 @@ control IntIngress (
 #endif // WITH_DEBUG
     }
 
-    @hidden
-    action set_mirror_session_id(MirrorId_t sid) {
-        fabric_md.bridged.int_bmd.mirror_session_id = sid;
-    }
-
-    @hidden
-    table mirror_session_id {
-        key = {
-            ig_intr_md.ingress_port: ternary;
-        }
-        actions = {
-            set_mirror_session_id;
-        }
-        const size = 4;
-        const entries = {
-            PIPE_0_PORTS_MATCH: set_mirror_session_id(REPORT_MIRROR_SESS_PIPE_0);
-            PIPE_1_PORTS_MATCH: set_mirror_session_id(REPORT_MIRROR_SESS_PIPE_1);
-            PIPE_2_PORTS_MATCH: set_mirror_session_id(REPORT_MIRROR_SESS_PIPE_2);
-            PIPE_3_PORTS_MATCH: set_mirror_session_id(REPORT_MIRROR_SESS_PIPE_3);
-        }
-    }
-
     apply {
 #ifdef WITH_SPGW
         if (hdr.inner_ipv4.isValid()) {
@@ -261,7 +239,9 @@ control IntIngress (
             fabric_md.ip_proto = hdr.ipv4.protocol;
         }
 #endif // WITH_SPGW
-        mirror_session_id.apply();
+        // Here we use 0b10000000xx as the mirror session ID where "xx" is the 2-bit
+        // pipeline number(0~3).
+        fabric_md.bridged.int_bmd.mirror_session_id = INT_MIRROR_SESSION_BASE ++ ig_intr_md.ingress_port[8:7];
         watchlist.apply();
         drop_report.apply();
     }
@@ -436,28 +416,6 @@ control IntEgress (
     }
 
     @hidden
-    action set_hw_id(bit<6> hw_id) {
-        hdr.report_fixed_header.hw_id = hw_id;
-    }
-
-    @hidden
-    table hw_id {
-        key = {
-            eg_intr_md.egress_port: ternary;
-        }
-        actions = {
-            set_hw_id;
-        }
-        const size = 4;
-        const entries = {
-            PIPE_0_PORTS_MATCH: set_hw_id(0);
-            PIPE_1_PORTS_MATCH: set_hw_id(1);
-            PIPE_2_PORTS_MATCH: set_hw_id(2);
-            PIPE_3_PORTS_MATCH: set_hw_id(3);
-        }
-    }
-
-    @hidden
     action set_report_metadata(bit<32> switch_id) {
         eg_dprsr_md.mirror_type = (bit<3>)FabricMirrorType_t.INT_REPORT;
         fabric_md.int_mirror_md.bmd_type = BridgedMdType_t.EGRESS_MIRROR;
@@ -517,7 +475,7 @@ control IntEgress (
         fabric_md.int_md.timestamp = eg_prsr_md.global_tstamp;
 
         config.apply();
-        hw_id.apply();
+        hdr.report_fixed_header.hw_id = 4w0 ++ eg_intr_md.egress_port[8:7];
 
         // Filtering for drop reports is done after mirroring to handle all drop
         // cases with one filter:

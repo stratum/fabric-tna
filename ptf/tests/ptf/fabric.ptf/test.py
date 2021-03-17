@@ -557,6 +557,7 @@ class FabricIPv4UnicastGroupTestAllPortIpSrc(FabricTest):
     def runTest(self):
         self.IPv4UnicastGroupTestAllPortL4SrcIp("tcp")
         self.IPv4UnicastGroupTestAllPortL4SrcIp("udp")
+        self.IPv4UnicastGroupTestAllPortL4SrcIp("icmp")
 
 
 class FabricIPv4UnicastGroupTestAllPortIpDst(FabricTest):
@@ -663,6 +664,7 @@ class FabricIPv4UnicastGroupTestAllPortIpDst(FabricTest):
     def runTest(self):
         self.IPv4UnicastGroupTestAllPortL4DstIp("tcp")
         self.IPv4UnicastGroupTestAllPortL4DstIp("udp")
+        self.IPv4UnicastGroupTestAllPortL4DstIp("icmp")
 
 
 class FabricIPv4MPLSTest(FabricTest):
@@ -874,6 +876,39 @@ class FabricIPv4DoNotRedirectInfraTest(IPv4UnicastTest):
             print("Testing {} packet...".format(pkt_type))
             self.doRunTest(pkt_type, HOST2_MAC)
 
+
+class FabricIPv4UnicastGtpAclInnerDropTest(IPv4UnicastTest):
+    @tvsetup
+    @autocleanup
+    def runTest(self):
+        # Assert that GTP packets not meant to be forwarded by fabric-tna.p4 are
+        # blocked using the inner IP+UDP headers by the ACL table.
+        pkt = (
+            Ether(src=HOST1_MAC, dst=SWITCH_MAC)
+            / IP(src=HOST3_IPV4, dst=HOST4_IPV4)
+            / UDP(sport=UDP_GTP_PORT, dport=UDP_GTP_PORT)
+            / GTPU(teid=0xEEFFC0F0)
+            / IP(src=HOST1_IPV4, dst=HOST2_IPV4)
+            / UDP(sport=5061, dport=5060) / ("\xab" * 128)
+        )
+        self.add_forwarding_acl_drop(ipv4_src=HOST1_IPV4, ipv4_dst=HOST2_IPV4,
+            ip_proto=IP_PROTO_UDP, l4_sport=5061, l4_dport=5060)
+        self.runIPv4UnicastTest(pkt, next_hop_mac=HOST2_MAC, verify_pkt=False)
+
+class FabricIPv4UnicastAclOuterDropTest(IPv4UnicastTest):
+    @tvsetup
+    @autocleanup
+    def runTest(self):
+        # Assert that not encapsulated packets not meant to be forwarded by fabric-tna.p4
+        # are blocked using the outer IP+UDP headers by the ACL table.
+        pkt = (
+            Ether(src=HOST1_MAC, dst=SWITCH_MAC)
+            / IP(src=HOST1_IPV4, dst=HOST2_IPV4)
+            / UDP(sport=5061, dport=5060) / ("\xab" * 128)
+        )
+        self.add_forwarding_acl_drop(ipv4_src=HOST1_IPV4, ipv4_dst=HOST2_IPV4,
+            ip_proto=IP_PROTO_UDP, l4_sport=5061, l4_dport=5060)
+        self.runIPv4UnicastTest(pkt, next_hop_mac=HOST2_MAC, verify_pkt=False)
 
 @group("packetio")
 class FabricArpPacketOutTest(PacketOutTest):
@@ -2333,7 +2368,7 @@ class FabricOptimizedFieldDetectorTest(FabricTest):
         if resp is None:
             self.fail(
                 "Failed to read an entry that was just written! "
-                "Table was {}, action was {}".format(table_name, action_name)
+                'Table was "{}", action was "{}"'.format(table_name, action_name)
             )
         read_entry = p4runtime_pb2.TableEntry()
         read_entry.CopyFrom(resp)
@@ -2382,7 +2417,7 @@ class FabricOptimizedFieldDetectorTest(FabricTest):
                     priority = 1
                 else:
                     print(
-                        "Skipping table %s because it has a unsupported match field %s of type %s"
+                        'Skipping table "%s" because it has a unsupported match field "%s" of type %s'
                         % (table_name, match.name, match.match_type)
                     )
                     return
@@ -2398,6 +2433,15 @@ class FabricOptimizedFieldDetectorTest(FabricTest):
                 # Don't try to modify a const default action
                 print(
                     'Skipping action "%s" of table "%s" because the default action is const'
+                    % (action_name, table_name)
+                )
+                continue
+            if table.is_const_table and len(match_keys) != 0:
+                # Don't try to modify a table with const entries. The default
+                # action might not be const, so we allow that.
+                print(
+                    'Skipping action "%s" of table "%s" because it has const'
+                    " entries and the action is not a default action"
                     % (action_name, table_name)
                 )
                 continue
