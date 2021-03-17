@@ -145,11 +145,6 @@ enum bit<2> CpuLoopbackMode_t {
     INGRESS = 2
 }
 
-#define PIPE_0_PORTS_MATCH 9w0x000 &&& 0x180
-#define PIPE_1_PORTS_MATCH 9w0x080 &&& 0x180
-#define PIPE_2_PORTS_MATCH 9w0x100 &&& 0x180
-#define PIPE_3_PORTS_MATCH 9w0x180 &&& 0x180
-
 // INT
 
 /* indicate INT at LSB of DSCP */
@@ -167,11 +162,7 @@ const bit<16> REPORT_MIRROR_HEADER_BYTES = 31;
 const bit<16> REPORT_MIRROR_HEADER_BYTES = 30;
 #endif // WITH_SPGW
 const bit<16> ETH_FCS_LEN = 4;
-
-const MirrorId_t REPORT_MIRROR_SESS_PIPE_0 = 300;
-const MirrorId_t REPORT_MIRROR_SESS_PIPE_1 = 301;
-const MirrorId_t REPORT_MIRROR_SESS_PIPE_2 = 302;
-const MirrorId_t REPORT_MIRROR_SESS_PIPE_3 = 303;
+const bit<8> INT_MIRROR_SESSION_BASE = 0x80;
 
 #define FLOW_REPORT_FILTER_WIDTH 16
 typedef bit<FLOW_REPORT_FILTER_WIDTH> flow_report_filter_index_t;

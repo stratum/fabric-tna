@@ -117,10 +117,10 @@ public class FabricIntProgrammableTest {
             HexString.fromHexString("00000000ffffff00", ""));
     private static final Map<Integer, Integer> QUAD_PIPE_MIRROR_SESS_TO_RECIRC_PORTS =
             ImmutableMap.<Integer, Integer>builder()
-                    .put(300, 0x44)
-                    .put(301, 0xc4)
-                    .put(302, 0x144)
-                    .put(303, 0x1c4).build();
+                    .put(0x200, 0x44)
+                    .put(0x201, 0xc4)
+                    .put(0x202, 0x144)
+                    .put(0x203, 0x1c4).build();
     private static final MacAddress SWITCH_MAC = MacAddress.valueOf("00:00:00:00:01:80");
 
     private FabricIntProgrammable intProgrammable;
