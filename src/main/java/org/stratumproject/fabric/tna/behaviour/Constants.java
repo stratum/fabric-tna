@@ -12,6 +12,15 @@ import java.util.List;
  */
 public final class Constants {
 
+    // Used with is_infra_port metadata
+    public static final byte[] ONE = new byte[]{1};
+    public static final byte[] ZERO = new byte[]{0};
+    public static final long IS_INFRA_PORT = 3;
+    public static final long METADATA_MASK = 0xffffffffffffffffL;
+    public static final int EDGE = 0;
+    public static final int INFRA = 1;
+    public static final int INTERNAL = 2;
+
     // Forwarding types from P4 program (not exposed in P4Info).
     public static final byte FWD_MPLS = 1;
     public static final byte FWD_IPV4_ROUTING = 2;
@@ -23,6 +32,7 @@ public final class Constants {
     public static final List<Integer> RECIRC_PORTS = List.of(0x44, 0xc4, 0x144, 0x1c4);
 
     public static final int DEFAULT_VLAN = 4094;
+    public static final int DEFAULT_PW_TRANSPORT_VLAN = 4090;
 
     // hide default constructor
     private Constants() {

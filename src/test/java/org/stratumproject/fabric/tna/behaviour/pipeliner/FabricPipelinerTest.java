@@ -38,6 +38,7 @@ import static org.easymock.EasyMock.replay;
 import static org.easymock.EasyMock.reset;
 import static org.easymock.EasyMock.verify;
 import static org.junit.Assert.assertTrue;
+import static org.stratumproject.fabric.tna.behaviour.Constants.INTERNAL;
 
 public class FabricPipelinerTest {
 
@@ -109,8 +110,8 @@ public class FabricPipelinerTest {
             final TrafficTreatment ingressPortVlanTreatment = DefaultTrafficTreatment.builder()
                     .piTableAction(PiAction.builder()
                             .withId(P4InfoConstants.FABRIC_INGRESS_FILTERING_PERMIT_WITH_INTERNAL_VLAN)
-                            .withParameter(new PiActionParam(
-                                    P4InfoConstants.VLAN_ID, DEFAULT_VLAN))
+                            .withParameter(new PiActionParam(P4InfoConstants.VLAN_ID, DEFAULT_VLAN))
+                            .withParameter(new PiActionParam(P4InfoConstants.PORT_TYPE, INTERNAL))
                             .build())
                     .build();
             expectedIgPortVlanRules.add(DefaultFlowRule.builder()

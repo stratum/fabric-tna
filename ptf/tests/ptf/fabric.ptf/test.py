@@ -714,6 +714,7 @@ class FabricIPv4MplsGroupTest(IPv4UnicastTest):
             tagged1=tagged1,
             tagged2=False,
             is_next_hop_spine=True,
+            port_type2="INFRA",
         )
 
     def runTest(self):
@@ -770,7 +771,7 @@ class FabricIPv4MplsRedirectEdgeTest(IPv4UnicastTest):
             ip_proto = IP_PROTO_ICMP
         self.set_egress_vlan(self.port3, DEFAULT_VLAN)
         self.add_next_routing(401, self.port3, SWITCH_MAC, HOST2_MAC)
-        self.add_forwarding_acl_next(401, is_edge=True, ipv4_src=HOST1_IPV4,
+        self.add_forwarding_acl_next(401, port_type="EDGE", ipv4_src=HOST1_IPV4,
             ipv4_dst=HOST2_IPV4, ip_proto=ip_proto)
         self.runIPv4UnicastTest(
             pkt,
@@ -779,7 +780,8 @@ class FabricIPv4MplsRedirectEdgeTest(IPv4UnicastTest):
             tagged1=tagged1,
             tagged2=False,
             is_next_hop_spine=True,
-            redirect_port=self.port3
+            redirect_port=self.port3,
+            port_type2="INFRA",
         )
 
     def runTest(self):
@@ -804,7 +806,7 @@ class FabricIPv4MplsDoNotRedirectTest(IPv4UnicastTest):
     def doRunTest(self, pkt, mac_dest, tagged1, tc_name):
         self.set_egress_vlan(self.port3, DEFAULT_VLAN)
         self.add_next_routing(401, self.port3, SWITCH_MAC, HOST2_MAC)
-        self.add_forwarding_acl_next(401, is_edge=True, ipv4_src=HOST3_IPV4,
+        self.add_forwarding_acl_next(401, port_type="EDGE", ipv4_src=HOST3_IPV4,
             ipv4_dst=HOST4_IPV4)
         self.runIPv4UnicastTest(
             pkt,
@@ -812,7 +814,8 @@ class FabricIPv4MplsDoNotRedirectTest(IPv4UnicastTest):
             prefix_len=24,
             tagged1=tagged1,
             tagged2=False,
-            is_next_hop_spine=True
+            is_next_hop_spine=True,
+            port_type2="INFRA"
         )
 
     def runTest(self):
@@ -841,7 +844,7 @@ class FabricIPv4DoNotRedirectInfraTest(IPv4UnicastTest):
             ip_proto = IP_PROTO_UDP
         elif "icmp" == pkt_type:
             ip_proto = IP_PROTO_ICMP
-        self.set_ingress_port_vlan(self.port1, False, 0, DEFAULT_VLAN)
+        self.set_ingress_port_vlan(self.port1, False, 0, DEFAULT_VLAN, port_type="INFRA")
         self.set_forwarding_type(self.port1, SWITCH_MAC)
         self.add_forwarding_routing_v4_entry(HOST2_IPV4, 24, 400)
         self.add_next_vlan(400, VLAN_ID_1)
@@ -863,7 +866,7 @@ class FabricIPv4DoNotRedirectInfraTest(IPv4UnicastTest):
             ip_ttl=63)
 
         self.add_next_routing(401, self.port3, SWITCH_MAC, HOST2_MAC)
-        self.add_forwarding_acl_next(401, is_edge=True, ipv4_src=HOST1_IPV4,
+        self.add_forwarding_acl_next(401, port_type="EDGE", ipv4_src=HOST1_IPV4,
             ipv4_dst=HOST2_IPV4, ip_proto=ip_proto)
 
         self.send_packet(self.port1, pkt_1to2)

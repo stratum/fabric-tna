@@ -50,11 +50,7 @@ import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static org.slf4j.LoggerFactory.getLogger;
-import static org.stratumproject.fabric.tna.behaviour.Constants.DEFAULT_VLAN;
-import static org.stratumproject.fabric.tna.behaviour.Constants.ETH_TYPE_EXACT_MASK;
-import static org.stratumproject.fabric.tna.behaviour.Constants.FWD_IPV4_ROUTING;
-import static org.stratumproject.fabric.tna.behaviour.Constants.FWD_MPLS;
-import static org.stratumproject.fabric.tna.behaviour.Constants.RECIRC_PORTS;
+import static org.stratumproject.fabric.tna.behaviour.Constants.*;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.KRYO;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.outputPort;
 
@@ -187,8 +183,8 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
             final TrafficTreatment ingressPortVlanTreatment = DefaultTrafficTreatment.builder()
                     .piTableAction(PiAction.builder()
                             .withId(P4InfoConstants.FABRIC_INGRESS_FILTERING_PERMIT_WITH_INTERNAL_VLAN)
-                            .withParameter(new PiActionParam(
-                                    P4InfoConstants.VLAN_ID, DEFAULT_VLAN))
+                            .withParameter(new PiActionParam(P4InfoConstants.VLAN_ID, DEFAULT_VLAN))
+                            .withParameter(new PiActionParam(P4InfoConstants.PORT_TYPE, INTERNAL))
                             .build())
                     .build();
             flowRuleService.applyFlowRules(DefaultFlowRule.builder()

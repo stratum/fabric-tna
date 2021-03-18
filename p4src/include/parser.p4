@@ -31,7 +31,6 @@ parser FabricIngressParser (packet_in  packet,
 #ifdef WITH_INT
         fabric_md.int_mirror_md.drop_reason = IntDropReason_t.DROP_REASON_UNKNOWN;
 #endif // WITH_INT
-        fabric_md.is_edge = 0;
         transition check_ethernet;
     }
 

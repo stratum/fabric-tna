@@ -8,6 +8,7 @@ import org.onosproject.net.PortNumber;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
 import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.net.flow.instructions.Instruction;
+import org.onosproject.net.flow.instructions.Instructions.MetadataInstruction;
 import org.onosproject.net.flow.instructions.Instructions.OutputInstruction;
 import org.onosproject.net.flow.instructions.L2ModificationInstruction;
 import org.onosproject.net.flow.instructions.L2ModificationInstruction.ModEtherInstruction;
@@ -25,6 +26,7 @@ import java.util.stream.Collectors;
 import static java.lang.String.format;
 import static org.onosproject.net.flow.instructions.Instruction.Type.OUTPUT;
 import static org.onosproject.net.flow.instructions.L2ModificationInstruction.L2SubType.*;
+import static org.stratumproject.fabric.tna.behaviour.Constants.*;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.*;
 
 /**
@@ -35,8 +37,6 @@ final class FabricTreatmentInterpreter {
     private final FabricCapabilities capabilities;
     private static final ImmutableMap<PiTableId, PiActionId> NOP_ACTIONS =
             ImmutableMap.<PiTableId, PiActionId>builder()
-                    .put(P4InfoConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN,
-                         P4InfoConstants.FABRIC_INGRESS_FILTERING_PERMIT)
                     .put(P4InfoConstants.FABRIC_INGRESS_FORWARDING_ROUTING_V4,
                          P4InfoConstants.FABRIC_INGRESS_FORWARDING_NOP_ROUTING_V4)
                     .put(P4InfoConstants.FABRIC_INGRESS_ACL_ACL,
@@ -59,18 +59,25 @@ final class FabricTreatmentInterpreter {
             tableException(tableId);
         }
 
+        MetadataInstruction metadataInstruction = treatment.writeMetadata();
+        int isInfra = metadataInstruction != null &&
+                (metadataInstruction.metadata() & metadataInstruction.metadataMask()) == IS_INFRA_PORT ? INFRA : EDGE;
+
         // VLAN_POP action is equivalent to the permit action (VLANs pop is done anyway)
         if (isNoAction(treatment) || isFilteringPopAction(treatment)) {
             // Permit action if table is ingress_port_vlan;
-            return nop(tableId);
+            return PiAction.builder()
+                    .withId(P4InfoConstants.FABRIC_INGRESS_FILTERING_PERMIT)
+                    .withParameter(new PiActionParam(P4InfoConstants.PORT_TYPE, isInfra))
+                    .build();
         }
 
         final ModVlanIdInstruction setVlanInst = (ModVlanIdInstruction) l2InstructionOrFail(
                 treatment, VLAN_ID, tableId);
         return PiAction.builder()
                 .withId(P4InfoConstants.FABRIC_INGRESS_FILTERING_PERMIT_WITH_INTERNAL_VLAN)
-                .withParameter(new PiActionParam(
-                        P4InfoConstants.VLAN_ID, setVlanInst.vlanId().toShort()))
+                .withParameter(new PiActionParam(P4InfoConstants.VLAN_ID, setVlanInst.vlanId().toShort()))
+                .withParameter(new PiActionParam(P4InfoConstants.PORT_TYPE, isInfra))
                 .build();
     }
 

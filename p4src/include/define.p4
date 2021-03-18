@@ -63,6 +63,14 @@ enum bit<8> SpgwInterface {
     FROM_DBUF     = 0x3
 }
 
+// PORT types
+enum bit<2> PortType {
+    EDGE        = 0x0,
+    INFRA       = 0x1,
+    INTERNAL    = 0x2,
+    OTHER       = 0x3
+}
+
 const bit<16> ETHERTYPE_QINQ = 0x88A8;
 const bit<16> ETHERTYPE_QINQ_NON_STD = 0x9100;
 const bit<16> ETHERTYPE_VLAN = 0x8100;
@@ -100,7 +108,6 @@ const fwd_type_t FWD_IPV6_MULTICAST = 5;
 const fwd_type_t FWD_UNKNOWN = 7;
 
 const vlan_id_t DEFAULT_VLAN_ID = 12w4094;
-const vlan_id_t DEFAULT_PW_TRANSPORT_VLAN_ID = 12w4090;
 
 const bit<8> DEFAULT_MPLS_TTL = 64;
 const bit<8> DEFAULT_IPV4_TTL = 64;

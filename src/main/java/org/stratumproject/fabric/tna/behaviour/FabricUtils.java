@@ -57,11 +57,10 @@ public final class FabricUtils {
                             format("%s criterion cannot be null", type));
     }
 
-    public static Instructions.OutputInstruction instruction(TrafficTreatment treatment, Instruction.Type type) {
+    public static Instruction instruction(TrafficTreatment treatment, Instruction.Type type) {
         return treatment.allInstructions()
                 .stream()
                 .filter(inst -> inst.type() == type)
-                .map(inst -> (Instructions.OutputInstruction) inst)
                 .findFirst().orElse(null);
     }
 
@@ -84,7 +83,7 @@ public final class FabricUtils {
     }
 
     public static Instructions.OutputInstruction outputInstruction(TrafficTreatment treatment) {
-        return instruction(treatment, Instruction.Type.OUTPUT);
+        return (Instructions.OutputInstruction) instruction(treatment, Instruction.Type.OUTPUT);
     }
 
     public static PortNumber outputPort(TrafficTreatment treatment) {

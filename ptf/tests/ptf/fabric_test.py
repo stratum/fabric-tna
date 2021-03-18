@@ -226,6 +226,13 @@ ETH_FCS_BYTES = 4
 VLAN_BYTES = 4
 CPU_LOOPBACK_FAKE_ETH_BYTES = 14
 
+# Port types to be use with port_vlan table
+PORT_TYPES = {
+    "EDGE"      : b"\x00",
+    "INFRA"     : b"\x01",
+    "INTERNAL"  : b"\x02",
+    "OTHER"     : b"\x03",
+}
 
 class GTPU(Packet):
     name = "GTP-U Header"
@@ -417,7 +424,7 @@ class FabricTest(P4RuntimeTest):
         self.write_request(req)
 
     def setup_port(
-        self, port_id, vlan_id, tagged=False, double_tagged=False, inner_vlan_id=0,
+        self, port_id, vlan_id, port_type, tagged=False, double_tagged=False, inner_vlan_id=0,
     ):
         if double_tagged:
             self.set_ingress_port_vlan(
@@ -425,15 +432,16 @@ class FabricTest(P4RuntimeTest):
                 vlan_id=vlan_id,
                 vlan_valid=True,
                 inner_vlan_id=inner_vlan_id,
+                port_type=port_type,
             )
         elif tagged:
             self.set_ingress_port_vlan(
-                ingress_port=port_id, vlan_id=vlan_id, vlan_valid=True
+                ingress_port=port_id, vlan_id=vlan_id, vlan_valid=True, port_type=port_type
             )
             self.set_egress_vlan(egress_port=port_id, vlan_id=vlan_id, push_vlan=True)
         else:
             self.set_ingress_port_vlan(
-                ingress_port=port_id, vlan_valid=False, internal_vlan_id=vlan_id,
+                ingress_port=port_id, vlan_valid=False, internal_vlan_id=vlan_id, port_type=port_type
             )
             self.set_egress_vlan(egress_port=port_id, vlan_id=vlan_id, push_vlan=False)
 
@@ -464,14 +472,18 @@ class FabricTest(P4RuntimeTest):
         vlan_id=0,
         internal_vlan_id=0,
         inner_vlan_id=None,
+        port_type="EDGE",
     ):
         ingress_port_ = stringify(ingress_port, 2)
         vlan_valid_ = b"\x01" if vlan_valid else b"\x00"
         vlan_id_ = stringify(vlan_id, 2)
         vlan_id_mask_ = stringify(4095 if vlan_valid else 0, 2)
         new_vlan_id_ = stringify(internal_vlan_id, 2)
+        port_type_ = PORT_TYPES[port_type]
         action_name = "permit" if vlan_valid else "permit_with_internal_vlan"
-        action_params = [] if vlan_valid else [("vlan_id", new_vlan_id_)]
+        action_params = [("port_type", port_type_)]
+        if not vlan_valid:
+            action_params.append(("vlan_id", new_vlan_id_))
         matches = [
             self.Exact("ig_port", ingress_port_),
             self.Exact("vlan_is_valid", vlan_valid_),
@@ -565,6 +577,7 @@ class FabricTest(P4RuntimeTest):
                 vlan_valid=False,
                 vlan_id=0,
                 internal_vlan_id=DEFAULT_VLAN,
+                port_type="INTERNAL"
             )
             self.set_egress_vlan(port, DEFAULT_VLAN, push_vlan=False)
             self.set_forwarding_type(
@@ -715,16 +728,14 @@ class FabricTest(P4RuntimeTest):
             )
 
     def add_forwarding_acl_next(
-        self, next_id, is_edge=None, ipv4_src=None, ipv4_dst=None, ip_proto=None,
+        self, next_id, port_type, ipv4_src=None, ipv4_dst=None, ip_proto=None,
         l4_sport=None, l4_dport=None
     ):
         # Send only if the match keys are not empty
         next_id_ = stringify(next_id, 4)
-        matches = []
-        if is_edge:
-            is_edge_ = b"\x01" if is_edge else b"\x00"
-            is_edge_mask = b"\x01"
-            matches.append(self.Ternary("port_is_edge", is_edge_, is_edge_mask))
+        port_type_ = PORT_TYPES[port_type]
+        port_type_mask = b"\x01"
+        matches = [self.Ternary("port_type",port_type_, port_type_mask)]
         if ipv4_src:
             ipv4_src_ = ipv4_to_binary(ipv4_src)
             ipv4_src_mask = stringify(0xFFFFFFFF, 4)
@@ -1028,8 +1039,8 @@ class BridgingTest(FabricTest):
         vlan_id = 10
         mac_src = pkt[Ether].src
         mac_dst = pkt[Ether].dst
-        self.setup_port(self.port1, vlan_id, tagged1)
-        self.setup_port(self.port2, vlan_id, tagged2)
+        self.setup_port(self.port1, vlan_id, "EDGE", tagged1)
+        self.setup_port(self.port2, vlan_id, "EDGE", tagged2)
         # miss on filtering.fwd_classifier => bridging
         self.add_bridging_entry(vlan_id, mac_src, MAC_MASK, 10)
         self.add_bridging_entry(vlan_id, mac_dst, MAC_MASK, 20)
@@ -1066,7 +1077,7 @@ class BridgingPriorityTest(FabricTest):
         mac_dst = HOST2_MAC
         all_ports = [self.port1, self.port2, self.port3]
         for port in all_ports:
-            self.setup_port(port, vlan_id, False)
+            self.setup_port(port, vlan_id, "EDGE", False)
 
         # Add unicast bridging rule
         self.add_bridging_entry(vlan_id, mac_dst, MAC_MASK, 20, high_priority)
@@ -1102,8 +1113,8 @@ class DoubleTaggedBridgingTest(FabricTest):
         inner_vlan_id = 11
         mac_src = pkt[Ether].src
         mac_dst = pkt[Ether].dst
-        self.setup_port(self.port1, vlan_id, True)
-        self.setup_port(self.port2, vlan_id, True)
+        self.setup_port(self.port1, vlan_id, "EDGE", True)
+        self.setup_port(self.port2, vlan_id, "EDGE", True)
         # miss on filtering.fwd_classifier => bridging
         self.add_bridging_entry(vlan_id, mac_src, MAC_MASK, 10)
         self.add_bridging_entry(vlan_id, mac_dst, MAC_MASK, 20)
@@ -1129,8 +1140,8 @@ class DoubleVlanXConnectTest(FabricTest):
         vlan_id_inner = 200
         next_id = 99
 
-        self.setup_port(self.port1, vlan_id_outer, tagged=True)
-        self.setup_port(self.port2, vlan_id_outer, tagged=True)
+        self.setup_port(self.port1, vlan_id_outer, "EDGE", tagged=True)
+        self.setup_port(self.port2, vlan_id_outer, "EDGE", tagged=True)
         # miss on filtering.fwd_classifier => bridging
         self.add_bridging_entry(vlan_id_outer, None, None, next_id)
         self.add_xconnect(next_id, self.port1, self.port2)
@@ -1208,6 +1219,8 @@ class IPv4UnicastTest(FabricTest):
         eg_port=None,
         redirect_port=None,
         install_routing_entry=True,
+        port_type1="EDGE",
+        port_type2="EDGE",
     ):
         """
         Execute an IPv4 unicast routing test.
@@ -1270,8 +1283,8 @@ class IPv4UnicastTest(FabricTest):
         switch_mac = pkt[Ether].dst
 
         # Setup ports.
-        self.setup_port(ig_port, vlan1, tagged1)
-        self.setup_port(eg_port, vlan2, tagged2)
+        self.setup_port(ig_port, vlan1, port_type1, tagged1)
+        self.setup_port(eg_port, vlan2, port_type2, tagged2)
 
         # Forwarding type -> routing v4
         for eth_type in routed_eth_types:
@@ -1339,9 +1352,9 @@ class IPv4MulticastTest(FabricTest):
         mcast_group_id = 1
 
         # Set port VLAN
-        self.setup_port(in_port, internal_in_vlan, in_vlan is not None)
+        self.setup_port(in_port, internal_in_vlan, "EDGE", in_vlan is not None)
         for out_port in out_ports:
-            self.setup_port(out_port, internal_out_vlan, out_vlan is not None)
+            self.setup_port(out_port, internal_out_vlan, "INFRA", out_vlan is not None)
 
         # Set forwarding type to IPv4 multicast
         self.set_forwarding_type(
@@ -1438,7 +1451,7 @@ class DoubleVlanTerminationTest(FabricTest):
         switch_mac = pkt[Ether].dst
 
         # Setup port 1
-        self.setup_port(self.port1, vlan_id=in_vlan, tagged=in_tagged)
+        self.setup_port(self.port1, vlan_id=in_vlan, port_type="INFRA", tagged=in_tagged)
         # Setup port 2: packets on this port are double tagged packets
         self.setup_port(
             self.port2,
@@ -1565,7 +1578,7 @@ class DoubleVlanTerminationTest(FabricTest):
             inner_vlan_id=inner_vlan_id,
         )
         # Setup port 2
-        self.setup_port(self.port2, vlan_id=next_vlan, tagged=out_tagged)
+        self.setup_port(self.port2, vlan_id=next_vlan, port_type="INFRA", tagged=out_tagged)
 
         # Forwarding type -> routing v4
         for eth_type in routed_eth_types:
@@ -1618,8 +1631,8 @@ class MplsSegmentRoutingTest(FabricTest):
         switch_mac = pkt[Ether].dst
 
         # Setup ports, both untagged
-        self.setup_port(self.port1, DEFAULT_VLAN, False)
-        self.setup_port(self.port2, DEFAULT_VLAN, False)
+        self.setup_port(self.port1, DEFAULT_VLAN, "INFRA", False)
+        self.setup_port(self.port2, DEFAULT_VLAN, "INFRA", False)
         # Forwarding type -> mpls
         self.set_forwarding_type(
             self.port1,
@@ -1923,6 +1936,8 @@ class SpgwSimpleTest(IPv4UnicastTest):
             tagged1=tagged1,
             tagged2=tagged2,
             is_next_hop_spine=is_next_hop_spine,
+            port_type1="INFRA" if is_next_hop_spine else "EDGE",
+            port_type2="INFRA" if is_next_hop_spine else "EDGE",
         )
 
         ingress_bytes = len(gtp_pkt) + ETH_FCS_BYTES
@@ -2015,6 +2030,8 @@ class SpgwSimpleTest(IPv4UnicastTest):
             tagged2=tagged2,
             is_next_hop_spine=is_next_hop_spine,
             verify_pkt=allow,
+            port_type1="INFRA" if is_next_hop_spine else "EDGE",
+            port_type2="INFRA" if is_next_hop_spine else "EDGE",
         )
 
         uplink_ingress_bytes = len(pkt) + ETH_FCS_BYTES
@@ -2097,6 +2114,8 @@ class SpgwSimpleTest(IPv4UnicastTest):
             tagged1=tagged1,
             tagged2=tagged2,
             is_next_hop_spine=is_next_hop_spine,
+            port_type1="INFRA" if is_next_hop_spine else "EDGE",
+            port_type2="INFRA" if is_next_hop_spine else "EDGE",
         )
 
         ingress_bytes = len(pkt) + ETH_FCS_BYTES
@@ -2159,6 +2178,8 @@ class SpgwSimpleTest(IPv4UnicastTest):
             tagged1=tagged1,
             tagged2=tagged2,
             is_next_hop_spine=is_next_hop_spine,
+            port_type1="INFRA" if is_next_hop_spine else "EDGE",
+            port_type2="INFRA" if is_next_hop_spine else "EDGE",
         )
 
         ingress_bytes = len(pkt) + 4  # FIXME: where does this 4 come from?
@@ -2236,6 +2257,8 @@ class SpgwSimpleTest(IPv4UnicastTest):
             tagged1=tagged1,
             tagged2=tagged2,
             is_next_hop_spine=is_next_hop_spine,
+            port_type1="INFRA" if is_next_hop_spine else "EDGE",
+            port_type2="INFRA" if is_next_hop_spine else "EDGE",
         )
 
         ingress_bytes = 0
@@ -2714,7 +2737,7 @@ class IntTest(IPv4UnicastTest):
     def set_up_report_table_entries(
         self, collector_port, is_device_spine, send_report_to_spine
     ):
-        self.setup_port(collector_port, DEFAULT_VLAN)
+        self.setup_port(collector_port, DEFAULT_VLAN, "INFRA")
 
         # Here we use next-id 101 since `runIPv4UnicastTest` will use 100 by
         # default
@@ -2838,6 +2861,11 @@ class IntTest(IPv4UnicastTest):
         self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine)
 
         # TODO: Use MPLS test instead of IPv4 test if device is spine.
+        # TODO: In these tests, there is only one egress port although the
+        # test can generate a report going though the spine and the original
+        # packet going to another edge port. port_type programming is
+        # basically done according to is_next_hop_spine flag which might not
+        # be accurate.
         self.runIPv4UnicastTest(
             pkt=pkt,
             next_hop_mac=HOST2_MAC,
@@ -2848,6 +2876,8 @@ class IntTest(IPv4UnicastTest):
             with_another_pkt_later=True,
             ig_port=ig_port,
             eg_port=eg_port,
+            port_type1="INFRA" if is_next_hop_spine else "EDGE",
+            port_type2="INFRA" if is_next_hop_spine else "EDGE",
         )
 
         if expect_int_report:
@@ -2916,6 +2946,11 @@ class IntTest(IPv4UnicastTest):
         self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine)
 
         # TODO: Use MPLS test instead of IPv4 test if device is spine.
+        # TODO: In these tests, there is only one egress port although the
+        # test can generate a report going though the spine and the original
+        # packet going to another edge port. port_type programming is
+        # basically done according to is_next_hop_spine flag which might not
+        # be accurate.
         self.runIPv4UnicastTest(
             pkt=pkt,
             next_hop_mac=HOST2_MAC,
@@ -2928,6 +2963,8 @@ class IntTest(IPv4UnicastTest):
             eg_port=eg_port,
             verify_pkt=False,
             install_routing_entry=install_routing_entry,
+            port_type1="INFRA" if is_next_hop_spine else "EDGE",
+            port_type2="INFRA" if is_next_hop_spine else "EDGE",
         )
 
         if expect_int_report:
@@ -3001,12 +3038,15 @@ class IntTest(IPv4UnicastTest):
         mpls_label = MPLS_LABEL_2
         dst_ipv4 = pkt[IP].dst
         switch_mac = pkt[Ether].dst
+        port_type ="EDGE"
+        if is_device_spine:
+            port_type ="INFRA"
 
         # Setup ports.
         # Note that the "egress_vlan" table is not configured, so packet will be dropped
         # by the egress_vlan table.
         self.set_ingress_port_vlan(
-            ig_port, vlan_valid=tagged1, vlan_id=VLAN_ID_1,
+            ig_port, vlan_valid=tagged1, vlan_id=VLAN_ID_1, port_type=port_type
         )
 
         # Forwarding type -> routing v4
@@ -3109,6 +3149,11 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine)
 
         # TODO: Use MPLS test instead of IPv4 test if device is spine.
+        # TODO: In these tests, there is only one egress port although the
+        # test can generate a report going though the spine and the original
+        # packet going to another edge port. port_type programming is
+        # basically done according to is_next_hop_spine flag which might not
+        # be accurate.
         self.runIPv4UnicastTest(
             pkt=gtp_pkt,
             dst_ipv4=pkt[IP].dst,
@@ -3119,6 +3164,8 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             is_next_hop_spine=is_next_hop_spine,
             prefix_len=32,
             with_another_pkt_later=True,
+            port_type1="INFRA" if is_next_hop_spine else "EDGE",
+            port_type2="INFRA" if is_next_hop_spine else "EDGE",
         )
 
         self.verify_packet(exp_int_report_pkt_masked, self.port3)
@@ -3191,6 +3238,11 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine)
 
         # TODO: Use MPLS test instead of IPv4 test if device is spine.
+        # TODO: In these tests, there is only one egress port although the
+        # test can generate a report going though the spine and the original
+        # packet going to another edge port. port_type programming is
+        # basically done according to is_next_hop_spine flag which might not
+        # be accurate.
         self.runIPv4UnicastTest(
             pkt=pkt,
             dst_ipv4=S1U_ENB_IPV4,
@@ -3201,6 +3253,8 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             tagged2=tagged2,
             is_next_hop_spine=is_next_hop_spine,
             with_another_pkt_later=True,
+            port_type1="INFRA" if is_next_hop_spine else "EDGE",
+            port_type2="INFRA" if is_next_hop_spine else "EDGE",
         )
 
         self.verify_packet(exp_int_report_pkt_masked, self.port3)
@@ -3275,6 +3329,11 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             )
 
         # TODO: Use MPLS test instead of IPv4 test if device is spine.
+        # TODO: In these tests, there is only one egress port although the
+        # test can generate a report going though the spine and the original
+        # packet going to another edge port. port_type programming is
+        # basically done according to is_next_hop_spine flag which might not
+        # be accurate.
         self.runIPv4UnicastTest(
             pkt=gtp_pkt,
             dst_ipv4=pkt[IP].dst,
@@ -3287,6 +3346,8 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             ig_port=ig_port,
             eg_port=eg_port,
             verify_pkt=False,
+            port_type1="INFRA" if is_next_hop_spine else "EDGE",
+            port_type2="INFRA" if is_next_hop_spine else "EDGE",
         )
 
         if expect_int_report:
@@ -3355,6 +3416,11 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             )
 
         # TODO: Use MPLS test instead of IPv4 test if device is spine.
+        # TODO: In these tests, there is only one egress port although the
+        # test can generate a report going though the spine and the original
+        # packet going to another edge port. port_type programming is
+        # basically done according to is_next_hop_spine flag which might not
+        # be accurate.
         self.runIPv4UnicastTest(
             pkt=pkt,
             dst_ipv4=pkt[IP].dst,
@@ -3367,6 +3433,8 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             ig_port=ig_port,
             eg_port=eg_port,
             verify_pkt=False,
+            port_type1="INFRA" if is_next_hop_spine else "EDGE",
+            port_type2="INFRA" if is_next_hop_spine else "EDGE",
         )
 
         if expect_int_report:

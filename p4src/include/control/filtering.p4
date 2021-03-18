@@ -28,14 +28,15 @@ control Filtering (inout parsed_headers_t hdr,
         ingress_port_vlan_counter.count();
     }
 
-    action permit() {
+    action permit(PortType port_type) {
         // Allow packet as is.
+        fabric_md.port_type = port_type;
         ingress_port_vlan_counter.count();
     }
 
-    action permit_with_internal_vlan(vlan_id_t vlan_id) {
+    action permit_with_internal_vlan(vlan_id_t vlan_id, PortType port_type) {
         fabric_md.bridged.base.vlan_id = vlan_id;
-        permit();
+        permit(port_type);
     }
 
     table ingress_port_vlan {
@@ -98,15 +99,7 @@ control Filtering (inout parsed_headers_t hdr,
     }
 
     apply {
-        // FIXME we are not catching packet that are explicitly blocked
-        // by the control plane. DEFAULT_VLAN_ID and DEFAULT_PW_TRANSPORT_VLAN_ID
-        // are the only vlan ids we can see on the infrastructure links
-        if (ingress_port_vlan.apply().hit) {
-            if (fabric_md.bridged.base.vlan_id != DEFAULT_VLAN_ID &&
-                fabric_md.bridged.base.vlan_id != DEFAULT_PW_TRANSPORT_VLAN_ID) {
-                fabric_md.is_edge = 1;
-            }
-        }
+        ingress_port_vlan.apply();
         fwd_classifier.apply();
 #ifdef WTIH_DEBUG
         fwd_type_counter.count(fabric_md.bridged.base.fwd_type);

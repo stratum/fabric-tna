@@ -35,6 +35,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
+import static org.stratumproject.fabric.tna.behaviour.Constants.*;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.criterionNotNull;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.outputPort;
 
@@ -43,10 +44,6 @@ import static org.stratumproject.fabric.tna.behaviour.FabricUtils.outputPort;
  */
 class ForwardingObjectiveTranslator
         extends AbstractObjectiveTranslator<ForwardingObjective> {
-
-    // Used with port_is_edge metadata
-    private static final byte[] ONE = new byte[]{1};
-    private static final byte[] ZERO = new byte[]{0};
 
     //FIXME: Max number supported by PI
     static final int CLONE_TO_CPU_ID = 511;
@@ -266,11 +263,11 @@ class ForwardingObjectiveTranslator
         TrafficSelector.Builder selectorBuilder = DefaultTrafficSelector.builder(obj.selector());
         // Meta are used to signal if we should match on port_is_edge
         if (obj.meta() != null && obj.meta().getCriterion(Criterion.Type.METADATA) != null) {
-            long isEdge = ((MetadataCriterion) obj.meta().getCriterion(Criterion.Type.METADATA)).metadata();
+            long portType = ((MetadataCriterion) obj.meta().getCriterion(Criterion.Type.METADATA)).metadata();
             // It is a validity bit - 0 or 1
-            if (isEdge == 0 || isEdge == 1) {
+            if (portType == 0 || portType == 1) {
                 selectorBuilder.matchPi(PiCriterion.builder()
-                        .matchTernary(P4InfoConstants.HDR_PORT_IS_EDGE, isEdge == 1 ? ONE : ZERO, ONE)
+                        .matchTernary(P4InfoConstants.HDR_PORT_TYPE, portType == 1 ? INFRA : EDGE, 0xffffffff)
                         .build());
             }
         }
