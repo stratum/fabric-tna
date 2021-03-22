@@ -693,8 +693,7 @@ class FabricTest(P4RuntimeTest):
         )
 
     def add_forwarding_acl_drop(
-        self, ipv4_src=None, ipv4_dst=None, ip_proto=None,
-        l4_sport=None, l4_dport=None,
+        self, ipv4_src=None, ipv4_dst=None, ip_proto=None, l4_sport=None, l4_dport=None,
     ):
         # Send only if the match keys are not empty
         matches = []
@@ -720,11 +719,7 @@ class FabricTest(P4RuntimeTest):
             matches.append(self.Ternary("l4_dport", l4_dport_, l4_dport_mask))
         if matches:
             self.send_request_add_entry_to_action(
-                "acl.acl",
-                matches,
-                "acl.drop",
-                [],
-                DEFAULT_PRIORITY,
+                "acl.acl", matches, "acl.drop", [], DEFAULT_PRIORITY,
             )
 
     def add_forwarding_acl_next(

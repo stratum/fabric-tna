@@ -241,6 +241,7 @@ control SpgwIngress(
         }
         actions = {
             load_pdr;
+            load_pdr_qos;
             @defaultonly uplink_pdr_drop;
         }
         size = NUM_UPLINK_PDRS;
