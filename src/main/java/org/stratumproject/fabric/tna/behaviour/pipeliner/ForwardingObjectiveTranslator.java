@@ -267,7 +267,7 @@ class ForwardingObjectiveTranslator
             // It is a validity bit - 0 or 1
             if (portType == 0 || portType == 1) {
                 selectorBuilder.matchPi(PiCriterion.builder()
-                        .matchTernary(P4InfoConstants.HDR_PORT_TYPE, portType == 1 ? INFRA : EDGE, 0xffffffff)
+                        .matchTernary(P4InfoConstants.HDR_PORT_TYPE, portType == 1 ? INFRA : EDGE, ONE)
                         .build());
             }
         }

@@ -60,7 +60,7 @@ final class FabricTreatmentInterpreter {
         }
 
         MetadataInstruction metadataInstruction = treatment.writeMetadata();
-        int isInfra = metadataInstruction != null &&
+        byte[] isInfra = metadataInstruction != null &&
                 (metadataInstruction.metadata() & metadataInstruction.metadataMask()) == IS_INFRA_PORT ? INFRA : EDGE;
 
         // VLAN_POP action is equivalent to the permit action (VLANs pop is done anyway)

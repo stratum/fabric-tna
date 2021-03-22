@@ -226,7 +226,7 @@ public class ForwardingObjectiveTranslatorTest extends AbstractObjectiveTranslat
                 .matchEthType(Ethernet.TYPE_IPV4)
                 .matchIPDst(IPV4_UNICAST_ADDR)
                 .matchPi(PiCriterion.builder()
-                        .matchTernary(P4InfoConstants.HDR_PORT_TYPE, EDGE, 0xffffffff)
+                        .matchTernary(P4InfoConstants.HDR_PORT_TYPE, EDGE, ONE)
                         .build())
                 .build();
         FlowRule expectedFlowRule = DefaultFlowRule.builder()
@@ -267,7 +267,7 @@ public class ForwardingObjectiveTranslatorTest extends AbstractObjectiveTranslat
                 .matchEthType(Ethernet.TYPE_IPV4)
                 .matchIPDst(IPV4_UNICAST_ADDR)
                 .matchPi(PiCriterion.builder()
-                        .matchTernary(P4InfoConstants.HDR_PORT_TYPE, INFRA, 0xffffffff)
+                        .matchTernary(P4InfoConstants.HDR_PORT_TYPE, INFRA, ONE)
                         .build())
                 .build();
         expectedFlowRule = DefaultFlowRule.builder()

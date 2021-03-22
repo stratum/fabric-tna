@@ -12,14 +12,15 @@ import java.util.List;
  */
 public final class Constants {
 
-    // Used with is_infra_port metadata
     public static final byte[] ONE = new byte[]{1};
     public static final byte[] ZERO = new byte[]{0};
+
+    // Used with is_infra_port metadata
     public static final long IS_INFRA_PORT = 3;
     public static final long METADATA_MASK = 0xffffffffffffffffL;
-    public static final int EDGE = 0;
-    public static final int INFRA = 1;
-    public static final int INTERNAL = 2;
+    public static final byte[] EDGE = new byte[]{0};;
+    public static final byte[] INFRA = new byte[]{1};
+    public static final byte[] INTERNAL = new byte[]{2};
 
     // Forwarding types from P4 program (not exposed in P4Info).
     public static final byte FWD_MPLS = 1;
