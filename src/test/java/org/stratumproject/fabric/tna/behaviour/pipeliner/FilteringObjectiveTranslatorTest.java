@@ -365,8 +365,7 @@ public class FilteringObjectiveTranslatorTest extends AbstractObjectiveTranslato
     }
 
     /**
-     * Test port update scenarios for filtering objective. Creates only one rule for
-     * ingress_port_vlan table.
+     * Test is infra port scenarios for filtering objective.
      */
     @Test
     public void testIsInfraPort() throws FabricPipelinerException {

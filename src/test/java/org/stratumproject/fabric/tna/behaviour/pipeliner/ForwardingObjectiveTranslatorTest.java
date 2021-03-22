@@ -188,7 +188,7 @@ public class ForwardingObjectiveTranslatorTest extends AbstractObjectiveTranslat
     }
 
     /**
-     * Test versatile flag of forwarding objective with next step and isEdge flag.
+     * Test versatile flag of forwarding objective with next step and port type.
      */
     @Test
     public void testAclNextWithIsInfra() {
