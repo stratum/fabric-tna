@@ -29,12 +29,14 @@ control DecapGtpu(inout parsed_headers_t            hdr,
         hdr.udp.setInvalid();
         hdr.tcp = hdr.inner_tcp;
         hdr.inner_tcp.setInvalid();
+        fabric_md.is_decap_pkt = true;
     }
     @hidden
     action decap_inner_udp() {
         decap_inner_common();
         hdr.udp = hdr.inner_udp;
         hdr.inner_udp.setInvalid();
+        fabric_md.is_decap_pkt = true;
     }
     @hidden
     action decap_inner_icmp() {
@@ -42,6 +44,7 @@ control DecapGtpu(inout parsed_headers_t            hdr,
         hdr.udp.setInvalid();
         hdr.icmp = hdr.inner_icmp;
         hdr.inner_icmp.setInvalid();
+        fabric_md.is_decap_pkt = true;
     }
     @hidden
     action decap_inner_unknown() {

@@ -302,6 +302,7 @@ struct fabric_ingress_metadata_t {
     next_id_t               next_id;
     bool                    egress_port_set;
     bool                    inner_ipv4_checksum_err;
+    bool                    is_decap_pkt;
 #ifdef WITH_SPGW
     spgw_ingress_metadata_t spgw;
 #endif // WITH_SPGW
