@@ -191,7 +191,7 @@ public class ForwardingObjectiveTranslatorTest extends AbstractObjectiveTranslat
      * Test versatile flag of forwarding objective with next step and port type.
      */
     @Test
-    public void testAclNextWithIsInfra() {
+    public void testAclNextWithPortType() {
         // ACL 8-tuples
         TrafficSelector selector = DefaultTrafficSelector.builder()
                 .matchEthType(Ethernet.TYPE_IPV4)

@@ -63,7 +63,10 @@ enum bit<8> SpgwInterface {
     FROM_DBUF     = 0x3
 }
 
-// PORT types
+// PORT types. Edge and internal are respectively used
+// to identify edge and infrastructure ports. Instead,
+// internal is used for the recirculation ports that used
+// for example for INT or UE to UE communication.
 enum bit<2> PortType {
     EDGE        = 0x0,
     INFRA       = 0x1,
