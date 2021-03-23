@@ -18,6 +18,8 @@ parser FabricIngressParser (packet_in  packet,
     out ingress_intrinsic_metadata_t   ig_intr_md) {
     Checksum() ipv4_checksum;
     Checksum() inner_ipv4_checksum;
+    Checksum() tcp_checksum;
+    Checksum() udp_checksum;
 
     state start {
         packet.extract(ig_intr_md);
@@ -147,6 +149,14 @@ parser FabricIngressParser (packet_in  packet,
         fabric_md.bridged.base.ip_eth_type = ETHERTYPE_IPV4;
         ipv4_checksum.add(hdr.ipv4);
         fabric_md.ipv4_checksum_err = ipv4_checksum.verify();
+        tcp_checksum.subtract({
+            hdr.ipv4.src_addr,
+            hdr.ipv4.dst_addr
+        });
+        udp_checksum.subtract({
+            hdr.ipv4.src_addr,
+            hdr.ipv4.dst_addr
+        });
         // Need header verification?
         transition select(hdr.ipv4.protocol) {
             PROTO_TCP: parse_tcp;
@@ -172,6 +182,12 @@ parser FabricIngressParser (packet_in  packet,
         packet.extract(hdr.tcp);
         fabric_md.l4_sport = hdr.tcp.sport;
         fabric_md.l4_dport = hdr.tcp.dport;
+        tcp_checksum.subtract_all_and_deposit(fabric_md.bridged.base.tcp_udp_checksum);
+        tcp_checksum.subtract({
+            hdr.tcp.checksum,
+            hdr.tcp.sport,
+            hdr.tcp.dport
+        });
         transition accept;
     }
 
@@ -179,6 +195,12 @@ parser FabricIngressParser (packet_in  packet,
         packet.extract(hdr.udp);
         fabric_md.l4_sport = hdr.udp.sport;
         fabric_md.l4_dport = hdr.udp.dport;
+        udp_checksum.subtract_all_and_deposit(fabric_md.bridged.base.tcp_udp_checksum);
+        udp_checksum.subtract({
+            hdr.udp.checksum,
+            hdr.udp.sport,
+            hdr.udp.dport
+        });
         transition select(hdr.udp.dport) {
             UDP_PORT_GTPU: parse_gtpu;
             default: accept;
@@ -490,6 +512,8 @@ control FabricEgressDeparser(packet_out packet,
     /* TNA */
     in egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr) {
     Checksum() ipv4_checksum;
+    Checksum() tcp_checksum;
+    Checksum() udp_checksum;
     FabricEgressMirror() egress_mirror;
 #ifdef WITH_SPGW
     Checksum() outer_ipv4_checksum;
@@ -514,8 +538,25 @@ control FabricEgressDeparser(packet_out packet,
                 hdr.ipv4.src_addr,
                 hdr.ipv4.dst_addr
             });
+            if (hdr.tcp.isValid()) {
+                hdr.tcp.checksum = tcp_checksum.update({
+                    hdr.ipv4.src_addr,
+                    hdr.ipv4.dst_addr,
+                    hdr.tcp.sport,
+                    hdr.tcp.dport,
+                    fabric_md.bridged.base.tcp_udp_checksum
+                });
+            }
+            if (hdr.udp.isValid()) {
+                hdr.udp.checksum = udp_checksum.update({
+                    hdr.ipv4.src_addr,
+                    hdr.ipv4.dst_addr,
+                    hdr.udp.sport,
+                    hdr.udp.dport,
+                    fabric_md.bridged.base.tcp_udp_checksum
+                });
+            }
         }
-        // TODO: update TCP/UDP checksum
 #ifdef WITH_SPGW
         if (hdr.outer_ipv4.isValid()) {
             hdr.outer_ipv4.hdr_checksum = outer_ipv4_checksum.update({

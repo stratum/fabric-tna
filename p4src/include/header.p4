@@ -263,6 +263,7 @@ struct bridged_metadata_base_t {
     bit<48>                 ig_tstamp;
     bit<16>                 ip_eth_type;
     flow_hash_t             flow_hash;
+    bit<16>                 tcp_udp_checksum;
 #ifdef WITH_DOUBLE_VLAN_TERMINATION
     @padding bit<7>         _pad1;
     bool                    push_double_vlan;
