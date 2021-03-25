@@ -489,7 +489,8 @@ public class FilteringObjectiveTranslatorTest extends AbstractObjectiveTranslato
                     .withParameter(new PiActionParam(P4InfoConstants.VLAN_ID, internalVlan.toShort()))
                     .withParameter(new PiActionParam(P4InfoConstants.PORT_TYPE,
                             (internalVlan.toShort() == DEFAULT_VLAN ||
-                                    internalVlan.toShort() == DEFAULT_PW_TRANSPORT_VLAN) ? INFRA : EDGE))
+                                    internalVlan.toShort() == DEFAULT_PW_TRANSPORT_VLAN) ?
+                                    PORT_TYPE_INFRA : PORT_TYPE_EDGE))
                     .build();
         } else {
             selector.matchVlanId(vlanId);
@@ -500,7 +501,8 @@ public class FilteringObjectiveTranslatorTest extends AbstractObjectiveTranslato
                     .withId(P4InfoConstants.FABRIC_INGRESS_FILTERING_PERMIT)
                     .withParameter(new PiActionParam(P4InfoConstants.PORT_TYPE,
                             (vlanId.toShort() == DEFAULT_VLAN ||
-                                    vlanId.toShort() == DEFAULT_PW_TRANSPORT_VLAN) ? INFRA : EDGE))
+                                    vlanId.toShort() == DEFAULT_PW_TRANSPORT_VLAN) ?
+                                    PORT_TYPE_INFRA : PORT_TYPE_EDGE))
                     .build();
         }
 

@@ -25,6 +25,8 @@ import org.onosproject.net.flow.instructions.L2ModificationInstruction.ModVlanId
 import org.onosproject.net.flowobjective.FilteringObjective;
 import org.onosproject.net.flowobjective.Objective;
 import org.onosproject.net.flowobjective.ObjectiveError;
+import org.onosproject.net.pi.model.PiPipelineInterpreter;
+import org.onosproject.net.pi.model.PiTableId;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
 import org.stratumproject.fabric.tna.behaviour.FabricCapabilities;
@@ -38,7 +40,19 @@ import static java.lang.String.format;
 import static org.onosproject.net.flow.criteria.Criterion.Type.INNER_VLAN_VID;
 import static org.onosproject.net.flow.criteria.Criterion.Type.VLAN_VID;
 import static org.onosproject.net.flow.instructions.L2ModificationInstruction.L2SubType.VLAN_ID;
-import static org.stratumproject.fabric.tna.behaviour.Constants.*;
+import static org.onosproject.net.flow.instructions.L2ModificationInstruction.L2SubType.VLAN_POP;
+import static org.stratumproject.fabric.tna.behaviour.Constants.DEFAULT_PW_TRANSPORT_VLAN;
+import static org.stratumproject.fabric.tna.behaviour.Constants.DEFAULT_VLAN;
+import static org.stratumproject.fabric.tna.behaviour.Constants.ETH_TYPE_EXACT_MASK;
+import static org.stratumproject.fabric.tna.behaviour.Constants.FWD_IPV4_ROUTING;
+import static org.stratumproject.fabric.tna.behaviour.Constants.FWD_IPV6_ROUTING;
+import static org.stratumproject.fabric.tna.behaviour.Constants.FWD_MPLS;
+import static org.stratumproject.fabric.tna.behaviour.Constants.ONE;
+import static org.stratumproject.fabric.tna.behaviour.Constants.PORT_TYPE_EDGE;
+import static org.stratumproject.fabric.tna.behaviour.Constants.PORT_TYPE_INFRA;
+import static org.stratumproject.fabric.tna.behaviour.Constants.ZERO;
+import static org.stratumproject.fabric.tna.behaviour.FabricUtils.isNoAction;
+import static org.stratumproject.fabric.tna.behaviour.FabricUtils.l2InstructionOrFail;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.criterion;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.l2Instruction;
 
@@ -187,30 +201,63 @@ class FilteringObjectiveTranslator
             selector.add(innerVlanCriterion);
         }
 
-        final TrafficTreatment.Builder treatmentBuilder;
+        final TrafficTreatment.Builder treatmentBuilder = DefaultTrafficTreatment.builder();
         if (obj.type().equals(FilteringObjective.Type.DENY)) {
-            treatmentBuilder = DefaultTrafficTreatment.builder()
-                    .piTableAction(DENY);
+            treatmentBuilder.piTableAction(DENY);
         } else {
-            treatmentBuilder = obj.meta() == null
-                    ? DefaultTrafficTreatment.builder() : DefaultTrafficTreatment.builder(obj.meta());
             // FIXME Remove once AETHER-1404 has been implemented
             // Infrastructure ports are tagged due to the PW transport vlan (4090). Otherwise,
             // check if the vlan being pushed is the default internal vlan (4094).
+            byte portType = PORT_TYPE_EDGE;
             if (!innerVlanValid && outerVlanValid &&
-                    outerVlanCriterion.vlanId().equals(VlanId.vlanId((short) DEFAULT_PW_TRANSPORT_VLAN))) {
-                treatmentBuilder.writeMetadata(IS_INFRA_PORT, METADATA_MASK);
+                    outerVlanCriterion.vlanId().toShort() == DEFAULT_PW_TRANSPORT_VLAN) {
+                portType = PORT_TYPE_INFRA;
             } else if (obj.meta() != null) {
                 ModVlanIdInstruction modVlanIdInstruction = (ModVlanIdInstruction) l2Instruction(obj.meta(), VLAN_ID);
                 if (modVlanIdInstruction != null && modVlanIdInstruction.vlanId().toShort() == DEFAULT_VLAN) {
-                    treatmentBuilder.writeMetadata(IS_INFRA_PORT, METADATA_MASK);
+                    portType = PORT_TYPE_INFRA;
                 }
+            }
+            try {
+                treatmentBuilder.piTableAction(mapFilteringTreatment(obj.meta(),
+                        P4InfoConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN, portType));
+            } catch (PiPipelineInterpreter.PiInterpreterException ex) {
+                throw new FabricPipelinerException(format("Unable to map treatment for table '%s': %s",
+                        P4InfoConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN,
+                        ex.getMessage()), ObjectiveError.UNSUPPORTED);
             }
         }
 
         resultBuilder.addFlowRule(flowRule(
                 obj, P4InfoConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN,
                 selector.build(), treatmentBuilder.build()));
+    }
+
+    private PiAction mapFilteringTreatment(TrafficTreatment treatment, PiTableId tableId, byte portType)
+            throws PiPipelineInterpreter.PiInterpreterException {
+        if (treatment == null) {
+            treatment = DefaultTrafficTreatment.emptyTreatment();
+        }
+        // VLAN_POP action is equivalent to the permit action (VLANs pop is done anyway)
+        if (isNoAction(treatment) || isFilteringPopAction(treatment)) {
+            // Permit action if table is ingress_port_vlan;
+            return PiAction.builder()
+                    .withId(P4InfoConstants.FABRIC_INGRESS_FILTERING_PERMIT)
+                    .withParameter(new PiActionParam(P4InfoConstants.PORT_TYPE, portType))
+                    .build();
+        }
+
+        final ModVlanIdInstruction setVlanInst = (ModVlanIdInstruction) l2InstructionOrFail(
+                treatment, VLAN_ID, tableId);
+        return PiAction.builder()
+                .withId(P4InfoConstants.FABRIC_INGRESS_FILTERING_PERMIT_WITH_INTERNAL_VLAN)
+                .withParameter(new PiActionParam(P4InfoConstants.VLAN_ID, setVlanInst.vlanId().toShort()))
+                .withParameter(new PiActionParam(P4InfoConstants.PORT_TYPE, portType))
+                .build();
+    }
+
+    private boolean isFilteringPopAction(TrafficTreatment treatment) {
+        return l2Instruction(treatment, VLAN_POP) != null;
     }
 
     private void fwdClassifierRules(

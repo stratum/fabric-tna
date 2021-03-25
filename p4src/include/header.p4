@@ -307,7 +307,7 @@ struct fabric_ingress_metadata_t {
 #ifdef WITH_INT
     int_mirror_metadata_t int_mirror_md;
 #endif // WITH_INT
-    PortType                port_type;
+    PortType_t              ig_port_type;
 }
 
 // Egress pipeline-only metadata

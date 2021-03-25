@@ -714,7 +714,7 @@ class FabricIPv4MplsGroupTest(IPv4UnicastTest):
             tagged1=tagged1,
             tagged2=False,
             is_next_hop_spine=True,
-            port_type2="INFRA",
+            port_type2=PORT_TYPE_INFRA,
         )
 
     def runTest(self):
@@ -759,7 +759,7 @@ class FabricMplsSegmentRoutingTest(MplsSegmentRoutingTest):
                 self.doRunTest(pkt, HOST2_MAC, next_hop_spine, tc_name=tc_name)
 
 
-class FabricIPv4MplsRedirectEdgeTest(IPv4UnicastTest):
+class FabricIPv4MplsOverrideEdgeTest(IPv4UnicastTest):
     @tvsetup
     @autocleanup
     def doRunTest(self, pkt, mac_dest, tagged1, tc_name):
@@ -771,7 +771,7 @@ class FabricIPv4MplsRedirectEdgeTest(IPv4UnicastTest):
             ip_proto = IP_PROTO_ICMP
         self.set_egress_vlan(self.port3, DEFAULT_VLAN)
         self.add_next_routing(401, self.port3, SWITCH_MAC, HOST2_MAC)
-        self.add_forwarding_acl_next(401, port_type="EDGE", ipv4_src=HOST1_IPV4,
+        self.add_forwarding_acl_next(401, ig_port_type=PORT_TYPE_EDGE, ipv4_src=HOST1_IPV4,
             ipv4_dst=HOST2_IPV4, ip_proto=ip_proto)
         self.runIPv4UnicastTest(
             pkt,
@@ -780,8 +780,8 @@ class FabricIPv4MplsRedirectEdgeTest(IPv4UnicastTest):
             tagged1=tagged1,
             tagged2=False,
             is_next_hop_spine=True,
-            redirect_port=self.port3,
-            port_type2="INFRA",
+            override_eg_port=self.port3,
+            port_type2=PORT_TYPE_INFRA,
         )
 
     def runTest(self):
@@ -800,13 +800,13 @@ class FabricIPv4MplsRedirectEdgeTest(IPv4UnicastTest):
                 self.doRunTest(pkt, HOST2_MAC, tagged1, tc_name=tc_name)
 
 
-class FabricIPv4MplsDoNotRedirectTest(IPv4UnicastTest):
+class FabricIPv4MplsDoNotOverrideTest(IPv4UnicastTest):
     @tvsetup
     @autocleanup
     def doRunTest(self, pkt, mac_dest, tagged1, tc_name):
         self.set_egress_vlan(self.port3, DEFAULT_VLAN)
         self.add_next_routing(401, self.port3, SWITCH_MAC, HOST2_MAC)
-        self.add_forwarding_acl_next(401, port_type="EDGE", ipv4_src=HOST3_IPV4,
+        self.add_forwarding_acl_next(401, ig_port_type=PORT_TYPE_EDGE, ipv4_src=HOST3_IPV4,
             ipv4_dst=HOST4_IPV4)
         self.runIPv4UnicastTest(
             pkt,
@@ -815,7 +815,7 @@ class FabricIPv4MplsDoNotRedirectTest(IPv4UnicastTest):
             tagged1=tagged1,
             tagged2=False,
             is_next_hop_spine=True,
-            port_type2="INFRA"
+            port_type2=PORT_TYPE_INFRA
         )
 
     def runTest(self):
@@ -834,7 +834,7 @@ class FabricIPv4MplsDoNotRedirectTest(IPv4UnicastTest):
                 self.doRunTest(pkt, HOST2_MAC, tagged1, tc_name=tc_name)
 
 
-class FabricIPv4DoNotRedirectInfraTest(IPv4UnicastTest):
+class FabricIPv4DoNotOverrideInfraTest(IPv4UnicastTest):
     @tvsetup
     @autocleanup
     def doRunTest(self, pkt_type, mac_dest):
@@ -844,7 +844,7 @@ class FabricIPv4DoNotRedirectInfraTest(IPv4UnicastTest):
             ip_proto = IP_PROTO_UDP
         elif "icmp" == pkt_type:
             ip_proto = IP_PROTO_ICMP
-        self.set_ingress_port_vlan(self.port1, False, 0, DEFAULT_VLAN, port_type="INFRA")
+        self.set_ingress_port_vlan(self.port1, False, 0, DEFAULT_VLAN, port_type=PORT_TYPE_INFRA)
         self.set_forwarding_type(self.port1, SWITCH_MAC)
         self.add_forwarding_routing_v4_entry(HOST2_IPV4, 24, 400)
         self.add_next_vlan(400, VLAN_ID_1)
@@ -866,7 +866,7 @@ class FabricIPv4DoNotRedirectInfraTest(IPv4UnicastTest):
             ip_ttl=63)
 
         self.add_next_routing(401, self.port3, SWITCH_MAC, HOST2_MAC)
-        self.add_forwarding_acl_next(401, port_type="EDGE", ipv4_src=HOST1_IPV4,
+        self.add_forwarding_acl_next(401, ig_port_type=PORT_TYPE_EDGE, ipv4_src=HOST1_IPV4,
             ipv4_dst=HOST2_IPV4, ip_proto=ip_proto)
 
         self.send_packet(self.port1, pkt_1to2)

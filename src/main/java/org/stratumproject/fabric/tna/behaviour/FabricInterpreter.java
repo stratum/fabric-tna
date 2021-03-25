@@ -44,7 +44,6 @@ import static org.onosproject.net.pi.model.PiPacketOperationType.PACKET_OUT;
 import static org.stratumproject.fabric.tna.behaviour.FabricTreatmentInterpreter.mapPreNextTreatment;
 import static org.stratumproject.fabric.tna.behaviour.FabricTreatmentInterpreter.mapAclTreatment;
 import static org.stratumproject.fabric.tna.behaviour.FabricTreatmentInterpreter.mapEgressNextTreatment;
-import static org.stratumproject.fabric.tna.behaviour.FabricTreatmentInterpreter.mapFilteringTreatment;
 import static org.stratumproject.fabric.tna.behaviour.FabricTreatmentInterpreter.mapForwardingTreatment;
 import static org.stratumproject.fabric.tna.behaviour.FabricTreatmentInterpreter.mapNextTreatment;
 
@@ -60,9 +59,6 @@ public class FabricInterpreter extends AbstractFabricHandlerBehavior
     private static final int ETHER_TYPE_PACKET_OUT = 0xBF01;
 
     // Group tables by control block.
-    private static final Set<PiTableId> FILTERING_CTRL_TBLS = ImmutableSet.of(
-            P4InfoConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN,
-            P4InfoConstants.FABRIC_INGRESS_FILTERING_FWD_CLASSIFIER);
     private static final Set<PiTableId> FORWARDING_CTRL_TBLS = ImmutableSet.of(
             P4InfoConstants.FABRIC_INGRESS_FORWARDING_MPLS,
             P4InfoConstants.FABRIC_INGRESS_FORWARDING_ROUTING_V4,
@@ -163,9 +159,7 @@ public class FabricInterpreter extends AbstractFabricHandlerBehavior
     @Override
     public PiAction mapTreatment(TrafficTreatment treatment, PiTableId piTableId)
             throws PiInterpreterException {
-        if (FILTERING_CTRL_TBLS.contains(piTableId)) {
-            return mapFilteringTreatment(treatment, piTableId);
-        } else if (FORWARDING_CTRL_TBLS.contains(piTableId)) {
+        if (FORWARDING_CTRL_TBLS.contains(piTableId)) {
             return mapForwardingTreatment(treatment, piTableId);
         } else if (PRE_NEXT_CTRL_TBLS.contains(piTableId)) {
             return mapPreNextTreatment(treatment, piTableId);

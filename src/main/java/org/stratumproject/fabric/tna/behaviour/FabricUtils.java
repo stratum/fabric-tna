@@ -5,6 +5,7 @@ package org.stratumproject.fabric.tna.behaviour;
 
 import org.onlab.util.KryoNamespace;
 import org.onosproject.net.PortNumber;
+import org.onosproject.net.flow.DefaultTrafficTreatment;
 import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.net.flow.criteria.Criterion;
@@ -13,6 +14,8 @@ import org.onosproject.net.flow.instructions.Instructions;
 import org.onosproject.net.flow.instructions.L2ModificationInstruction;
 import org.onosproject.net.flowobjective.DefaultNextTreatment;
 import org.onosproject.net.flowobjective.NextTreatment;
+import org.onosproject.net.pi.model.PiPipelineInterpreter;
+import org.onosproject.net.pi.model.PiTableId;
 import org.onosproject.store.serializers.KryoNamespaces;
 import org.stratumproject.fabric.tna.behaviour.pipeliner.FabricPipeliner;
 
@@ -73,6 +76,18 @@ public final class FabricUtils {
                 .findFirst().orElse(null);
     }
 
+    public static Instruction l2InstructionOrFail(
+            TrafficTreatment treatment,
+            L2ModificationInstruction.L2SubType subType, PiTableId tableId)
+            throws PiPipelineInterpreter.PiInterpreterException {
+        final Instruction inst = l2Instruction(treatment, subType);
+        if (inst == null) {
+            throw new PiPipelineInterpreter.PiInterpreterException(format("Invalid treatment for table '%s', %s: %s",
+                    tableId, format("missing %s instruction", subType), treatment));
+        }
+        return inst;
+    }
+
     public static List<L2ModificationInstruction> l2Instructions(
             TrafficTreatment treatment, L2ModificationInstruction.L2SubType subType) {
         return treatment.allInstructions().stream()
@@ -97,5 +112,14 @@ public final class FabricUtils {
             return outputPort(t.treatment());
         }
         return null;
+    }
+
+    public static boolean isNoAction(TrafficTreatment treatment) {
+        // Empty treatment OR
+        // No instructions OR
+        // Empty treatment AND writeMetadata
+        return treatment.equals(DefaultTrafficTreatment.emptyTreatment()) ||
+                (treatment.allInstructions().isEmpty() && !treatment.clearedDeferred()) ||
+                (treatment.allInstructions().size() == 1 && treatment.writeMetadata() != null);
     }
 }

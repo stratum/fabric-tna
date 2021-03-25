@@ -198,7 +198,7 @@ public class ForwardingObjectiveTranslatorTest extends AbstractObjectiveTranslat
                 .matchIPDst(IPV4_UNICAST_ADDR)
                 .build();
         TrafficSelector metaSelector = DefaultTrafficSelector.builder()
-                .matchMetadata(0)
+                .matchMetadata(PORT_TYPE_EDGE)
                 .build();
         ForwardingObjective fwd = DefaultForwardingObjective.builder()
                 .withSelector(selector)
@@ -226,7 +226,7 @@ public class ForwardingObjectiveTranslatorTest extends AbstractObjectiveTranslat
                 .matchEthType(Ethernet.TYPE_IPV4)
                 .matchIPDst(IPV4_UNICAST_ADDR)
                 .matchPi(PiCriterion.builder()
-                        .matchTernary(P4InfoConstants.HDR_PORT_TYPE, EDGE, ONE)
+                        .matchTernary(P4InfoConstants.HDR_IG_PORT_TYPE, PORT_TYPE_EDGE, 0x3)
                         .build())
                 .build();
         FlowRule expectedFlowRule = DefaultFlowRule.builder()
@@ -243,7 +243,7 @@ public class ForwardingObjectiveTranslatorTest extends AbstractObjectiveTranslat
         assertTrue(expectedFlowRule.exactMatch(actualFlowRule));
 
         metaSelector = DefaultTrafficSelector.builder()
-                .matchMetadata(1)
+                .matchMetadata(PORT_TYPE_INFRA)
                 .build();
         fwd = DefaultForwardingObjective.builder()
                 .withSelector(selector)
@@ -267,7 +267,7 @@ public class ForwardingObjectiveTranslatorTest extends AbstractObjectiveTranslat
                 .matchEthType(Ethernet.TYPE_IPV4)
                 .matchIPDst(IPV4_UNICAST_ADDR)
                 .matchPi(PiCriterion.builder()
-                        .matchTernary(P4InfoConstants.HDR_PORT_TYPE, INFRA, ONE)
+                        .matchTernary(P4InfoConstants.HDR_IG_PORT_TYPE, PORT_TYPE_INFRA, 0x3)
                         .build())
                 .build();
         expectedFlowRule = DefaultFlowRule.builder()

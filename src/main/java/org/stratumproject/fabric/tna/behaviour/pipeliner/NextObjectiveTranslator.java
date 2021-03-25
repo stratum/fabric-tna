@@ -126,14 +126,14 @@ class NextObjectiveTranslator
         if (obj.nextTreatments().size() != mplsInstructions.size() ||
                 mplsLabels.size() != 1) {
             throw new FabricPipelinerException(
-                    "Inconsistent VLAN_ID instructions, cannot process " +
-                            "next_vlan rule. It is required that all " +
-                            "treatments have the same VLAN_ID instructions.");
+                    "Inconsistent MPLS_LABEL instructions, cannot process " +
+                            "next_mpls rule. It is required that all " +
+                            "treatments have the same MPLS_LABEL instructions.");
         }
         final TrafficSelector selector = nextIdSelector(obj.id());
-        final TrafficTreatment.Builder treatmentBuilder = DefaultTrafficTreatment.builder();
-        treatmentBuilder.setMpls(mplsLabels.iterator().next());
-        final TrafficTreatment treatment = treatmentBuilder.build();
+        final TrafficTreatment treatment = DefaultTrafficTreatment.builder()
+                .setMpls(mplsLabels.iterator().next())
+                .build();
 
         resultBuilder.addFlowRule(flowRule(
                 obj, P4InfoConstants.FABRIC_INGRESS_PRE_NEXT_NEXT_MPLS,

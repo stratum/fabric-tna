@@ -184,7 +184,7 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
                     .piTableAction(PiAction.builder()
                             .withId(P4InfoConstants.FABRIC_INGRESS_FILTERING_PERMIT_WITH_INTERNAL_VLAN)
                             .withParameter(new PiActionParam(P4InfoConstants.VLAN_ID, DEFAULT_VLAN))
-                            .withParameter(new PiActionParam(P4InfoConstants.PORT_TYPE, INTERNAL))
+                            .withParameter(new PiActionParam(P4InfoConstants.PORT_TYPE, PORT_TYPE_INTERNAL))
                             .build())
                     .build();
             flowRuleService.applyFlowRules(DefaultFlowRule.builder()

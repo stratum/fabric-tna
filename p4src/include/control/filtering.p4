@@ -22,19 +22,20 @@ control Filtering (inout parsed_headers_t hdr,
         // Do ACL table in case we want to punt to cpu.
         fabric_md.skip_forwarding = true;
         fabric_md.skip_next = true;
+        fabric_md.ig_port_type = PortType_t.UNKNOWN;
 #ifdef WITH_INT
         fabric_md.int_mirror_md.drop_reason = IntDropReason_t.DROP_REASON_PORT_VLAN_MAPPING_MISS;
 #endif // WITH_INT
         ingress_port_vlan_counter.count();
     }
 
-    action permit(PortType port_type) {
+    action permit(PortType_t port_type) {
         // Allow packet as is.
-        fabric_md.port_type = port_type;
+        fabric_md.ig_port_type = port_type;
         ingress_port_vlan_counter.count();
     }
 
-    action permit_with_internal_vlan(vlan_id_t vlan_id, PortType port_type) {
+    action permit_with_internal_vlan(vlan_id_t vlan_id, PortType_t port_type) {
         fabric_md.bridged.base.vlan_id = vlan_id;
         permit(port_type);
     }

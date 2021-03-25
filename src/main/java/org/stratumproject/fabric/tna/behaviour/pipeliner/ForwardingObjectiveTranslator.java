@@ -35,7 +35,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
-import static org.stratumproject.fabric.tna.behaviour.Constants.*;
+import static org.stratumproject.fabric.tna.behaviour.Constants.PORT_TYPE_EDGE;
+import static org.stratumproject.fabric.tna.behaviour.Constants.PORT_TYPE_INFRA;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.criterionNotNull;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.outputPort;
 
@@ -261,13 +262,13 @@ class ForwardingObjectiveTranslator
             }
         }
         TrafficSelector.Builder selectorBuilder = DefaultTrafficSelector.builder(obj.selector());
-        // Meta are used to signal if we should match on port_is_edge
+        // Meta are used to signal the port type which can be edge or infra
         if (obj.meta() != null && obj.meta().getCriterion(Criterion.Type.METADATA) != null) {
             long portType = ((MetadataCriterion) obj.meta().getCriterion(Criterion.Type.METADATA)).metadata();
-            // It is a validity bit - 0 or 1
-            if (portType == 0 || portType == 1) {
+            if (portType == PORT_TYPE_EDGE || portType == PORT_TYPE_INFRA) {
                 selectorBuilder.matchPi(PiCriterion.builder()
-                        .matchTernary(P4InfoConstants.HDR_PORT_TYPE, portType == 1 ? INFRA : EDGE, ONE)
+                        .matchTernary(P4InfoConstants.HDR_IG_PORT_TYPE, portType == 1 ?
+                                PORT_TYPE_EDGE : PORT_TYPE_INFRA, 0x3)
                         .build());
             }
         }

@@ -34,7 +34,6 @@ import static org.easymock.EasyMock.createNiceMock;
 import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.replay;
 import static org.junit.Assert.assertEquals;
-import static org.stratumproject.fabric.tna.behaviour.Constants.*;
 
 /**
  * Test for fabric interpreter.
@@ -58,79 +57,6 @@ public class FabricInterpreterTest {
         expect(allCapabilities.supportDoubleVlanTerm()).andReturn(true).anyTimes();
         replay(allCapabilities);
         interpreter = new FabricInterpreter(allCapabilities);
-    }
-
-    /* Filtering control block */
-
-    /**
-     * Map treatment to push_internal_vlan action.
-     */
-    @Test
-    public void testFilteringTreatmentPermitWithInternalVlan() throws Exception {
-        TrafficTreatment treatment = DefaultTrafficTreatment.builder()
-                .pushVlan()
-                .setVlanId(VLAN_100)
-                .build();
-        PiAction mappedAction = interpreter.mapTreatment(treatment,
-                P4InfoConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN);
-        PiActionParam param1 = new PiActionParam(P4InfoConstants.VLAN_ID,
-                ImmutableByteSequence.copyFrom(VLAN_100.toShort()));
-        PiActionParam param2 = new PiActionParam(P4InfoConstants.PORT_TYPE, EDGE);
-        PiAction expectedAction = PiAction.builder()
-                .withId(P4InfoConstants.FABRIC_INGRESS_FILTERING_PERMIT_WITH_INTERNAL_VLAN)
-                .withParameter(param1)
-                .withParameter(param2)
-                .build();
-
-        assertEquals(expectedAction, mappedAction);
-
-        treatment = DefaultTrafficTreatment.builder()
-                .pushVlan()
-                .setVlanId(VlanId.vlanId((short) DEFAULT_VLAN))
-                .writeMetadata(IS_INFRA_PORT, METADATA_MASK)
-                .build();
-        mappedAction = interpreter.mapTreatment(treatment,
-                P4InfoConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN);
-        param1 = new PiActionParam(P4InfoConstants.VLAN_ID,
-                ImmutableByteSequence.copyFrom((short) DEFAULT_VLAN));
-        param2 = new PiActionParam(P4InfoConstants.PORT_TYPE, INFRA);
-        expectedAction = PiAction.builder()
-                .withId(P4InfoConstants.FABRIC_INGRESS_FILTERING_PERMIT_WITH_INTERNAL_VLAN)
-                .withParameter(param1)
-                .withParameter(param2)
-                .build();
-
-        assertEquals(expectedAction, mappedAction);
-    }
-
-    /**
-     * Map treatment to permit action.
-     */
-    @Test
-    public void testFilteringTreatmentPermit() throws Exception {
-        TrafficTreatment treatment = DefaultTrafficTreatment.emptyTreatment();
-        PiAction mappedAction = interpreter.mapTreatment(treatment,
-                P4InfoConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN);
-        PiActionParam param = new PiActionParam(P4InfoConstants.PORT_TYPE, EDGE);
-        PiAction expectedAction = PiAction.builder()
-                .withId(P4InfoConstants.FABRIC_INGRESS_FILTERING_PERMIT)
-                .withParameter(param)
-                .build();
-
-        assertEquals(expectedAction, mappedAction);
-
-        treatment = DefaultTrafficTreatment.builder()
-                .writeMetadata(IS_INFRA_PORT, METADATA_MASK)
-                .build();
-        mappedAction = interpreter.mapTreatment(treatment,
-                P4InfoConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN);
-        param = new PiActionParam(P4InfoConstants.PORT_TYPE, INFRA);
-        expectedAction = PiAction.builder()
-                .withId(P4InfoConstants.FABRIC_INGRESS_FILTERING_PERMIT)
-                .withParameter(param)
-                .build();
-
-        assertEquals(expectedAction, mappedAction);
     }
 
     /* Forwarding control block */

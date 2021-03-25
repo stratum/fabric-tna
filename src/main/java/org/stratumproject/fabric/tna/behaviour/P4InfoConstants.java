@@ -48,6 +48,8 @@ public final class P4InfoConstants {
             PiMatchFieldId.of("icmp_type");
     public static final PiMatchFieldId HDR_IG_PORT =
             PiMatchFieldId.of("ig_port");
+    public static final PiMatchFieldId HDR_IG_PORT_TYPE =
+            PiMatchFieldId.of("ig_port_type");
     public static final PiMatchFieldId HDR_INT_REPORT_TYPE =
             PiMatchFieldId.of("int_report_type");
     public static final PiMatchFieldId HDR_IP_ETH_TYPE =
@@ -76,8 +78,6 @@ public final class P4InfoConstants {
             PiMatchFieldId.of("mpls_label");
     public static final PiMatchFieldId HDR_NEXT_ID =
             PiMatchFieldId.of("next_id");
-    public static final PiMatchFieldId HDR_PORT_TYPE =
-            PiMatchFieldId.of("port_type");
     public static final PiMatchFieldId HDR_TEID = PiMatchFieldId.of("teid");
     public static final PiMatchFieldId HDR_TUNNEL_IPV4_DST =
             PiMatchFieldId.of("tunnel_ipv4_dst");

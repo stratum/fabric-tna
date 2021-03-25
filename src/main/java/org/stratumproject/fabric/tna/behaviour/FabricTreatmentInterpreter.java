@@ -5,10 +5,8 @@ package org.stratumproject.fabric.tna.behaviour;
 
 import com.google.common.collect.ImmutableMap;
 import org.onosproject.net.PortNumber;
-import org.onosproject.net.flow.DefaultTrafficTreatment;
 import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.net.flow.instructions.Instruction;
-import org.onosproject.net.flow.instructions.Instructions.MetadataInstruction;
 import org.onosproject.net.flow.instructions.Instructions.OutputInstruction;
 import org.onosproject.net.flow.instructions.L2ModificationInstruction;
 import org.onosproject.net.flow.instructions.L2ModificationInstruction.ModEtherInstruction;
@@ -25,9 +23,17 @@ import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static org.onosproject.net.flow.instructions.Instruction.Type.OUTPUT;
-import static org.onosproject.net.flow.instructions.L2ModificationInstruction.L2SubType.*;
-import static org.stratumproject.fabric.tna.behaviour.Constants.*;
-import static org.stratumproject.fabric.tna.behaviour.FabricUtils.*;
+import static org.onosproject.net.flow.instructions.L2ModificationInstruction.L2SubType.ETH_DST;
+import static org.onosproject.net.flow.instructions.L2ModificationInstruction.L2SubType.ETH_SRC;
+import static org.onosproject.net.flow.instructions.L2ModificationInstruction.L2SubType.MPLS_LABEL;
+import static org.onosproject.net.flow.instructions.L2ModificationInstruction.L2SubType.VLAN_ID;
+import static org.onosproject.net.flow.instructions.L2ModificationInstruction.L2SubType.VLAN_POP;
+import static org.onosproject.net.flow.instructions.L2ModificationInstruction.L2SubType.VLAN_PUSH;
+import static org.stratumproject.fabric.tna.behaviour.FabricUtils.instruction;
+import static org.stratumproject.fabric.tna.behaviour.FabricUtils.isNoAction;
+import static org.stratumproject.fabric.tna.behaviour.FabricUtils.l2Instruction;
+import static org.stratumproject.fabric.tna.behaviour.FabricUtils.l2InstructionOrFail;
+import static org.stratumproject.fabric.tna.behaviour.FabricUtils.l2Instructions;
 
 /**
  * Treatment translation logic.
@@ -49,38 +55,6 @@ final class FabricTreatmentInterpreter {
     FabricTreatmentInterpreter(FabricCapabilities capabilities) {
         this.capabilities = capabilities;
     }
-
-    static PiAction mapFilteringTreatment(TrafficTreatment treatment, PiTableId tableId)
-            throws PiInterpreterException {
-
-        if (!tableId.equals(P4InfoConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN)) {
-            // Mapping for other tables of the filtering block must be handled
-            // in the pipeliner.
-            tableException(tableId);
-        }
-
-        MetadataInstruction metadataInstruction = treatment.writeMetadata();
-        byte[] isInfra = metadataInstruction != null &&
-                (metadataInstruction.metadata() & metadataInstruction.metadataMask()) == IS_INFRA_PORT ? INFRA : EDGE;
-
-        // VLAN_POP action is equivalent to the permit action (VLANs pop is done anyway)
-        if (isNoAction(treatment) || isFilteringPopAction(treatment)) {
-            // Permit action if table is ingress_port_vlan;
-            return PiAction.builder()
-                    .withId(P4InfoConstants.FABRIC_INGRESS_FILTERING_PERMIT)
-                    .withParameter(new PiActionParam(P4InfoConstants.PORT_TYPE, isInfra))
-                    .build();
-        }
-
-        final ModVlanIdInstruction setVlanInst = (ModVlanIdInstruction) l2InstructionOrFail(
-                treatment, VLAN_ID, tableId);
-        return PiAction.builder()
-                .withId(P4InfoConstants.FABRIC_INGRESS_FILTERING_PERMIT_WITH_INTERNAL_VLAN)
-                .withParameter(new PiActionParam(P4InfoConstants.VLAN_ID, setVlanInst.vlanId().toShort()))
-                .withParameter(new PiActionParam(P4InfoConstants.PORT_TYPE, isInfra))
-                .build();
-    }
-
 
     static PiAction mapForwardingTreatment(TrafficTreatment treatment, PiTableId tableId)
             throws PiInterpreterException {
@@ -121,8 +95,6 @@ final class FabricTreatmentInterpreter {
 
     private static PiAction mapNextMplsTreatment(TrafficTreatment treatment, PiTableId tableId)
             throws PiInterpreterException {
-        final Instruction mplsPush = l2Instruction(
-                treatment, MPLS_PUSH);
         final ModMplsLabelInstruction mplsLabel = (ModMplsLabelInstruction) l2Instruction(
                 treatment, MPLS_LABEL);
         if (mplsLabel != null) {
@@ -131,7 +103,7 @@ final class FabricTreatmentInterpreter {
                     .withId(P4InfoConstants.FABRIC_INGRESS_PRE_NEXT_SET_MPLS_LABEL)
                     .build();
         }
-        throw new PiInterpreterException("There are no MPLS instruction");
+        throw new PiInterpreterException("There is no MPLS instruction");
     }
 
     private static PiAction mapNextVlanTreatment(TrafficTreatment treatment, PiTableId tableId)
@@ -259,32 +231,8 @@ final class FabricTreatmentInterpreter {
         return PiAction.builder().withId(P4InfoConstants.FABRIC_INGRESS_ACL_DROP).build();
     }
 
-    private static boolean isNoAction(TrafficTreatment treatment) {
-        // Empty treatment OR
-        // No instructions OR
-        // Empty treatment AND writeMetadata
-        return treatment.equals(DefaultTrafficTreatment.emptyTreatment()) ||
-                (treatment.allInstructions().isEmpty() && !treatment.clearedDeferred()) ||
-                (treatment.allInstructions().size() == 1 && treatment.writeMetadata() != null);
-    }
-
     private static boolean isDrop(TrafficTreatment treatment) {
         return treatment.allInstructions().isEmpty() && treatment.clearedDeferred();
-    }
-
-    private static boolean isFilteringPopAction(TrafficTreatment treatment) {
-        return l2Instruction(treatment, VLAN_POP) != null;
-    }
-
-    private static Instruction l2InstructionOrFail(
-            TrafficTreatment treatment,
-            L2ModificationInstruction.L2SubType subType, PiTableId tableId)
-            throws PiInterpreterException {
-        final Instruction inst = l2Instruction(treatment, subType);
-        if (inst == null) {
-            treatmentException(tableId, treatment, format("missing %s instruction", subType));
-        }
-        return inst;
     }
 
     private static List<L2ModificationInstruction> l2InstructionsOrFail(
@@ -306,11 +254,6 @@ final class FabricTreatmentInterpreter {
             treatmentException(tableId, treatment, format("missing %s instruction", type));
         }
         return inst;
-    }
-
-    private static void tableException(PiTableId tableId)
-            throws PiInterpreterException {
-        throw new PiInterpreterException(format("Table '%s' not supported", tableId));
     }
 
     private static void treatmentException(
