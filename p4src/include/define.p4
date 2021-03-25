@@ -68,7 +68,7 @@ enum bit<8> SpgwInterface {
 // internal is used for the recirculation ports that used
 // for example for INT or UE to UE communication.
 enum bit<2> PortType_t {
-    UNKNOWN       = 0x0,
+    UNKNOWN     = 0x0,
     EDGE        = 0x1,
     INFRA       = 0x2,
     INTERNAL    = 0x3
