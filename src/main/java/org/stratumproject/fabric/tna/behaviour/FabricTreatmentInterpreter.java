@@ -243,12 +243,14 @@ final class FabricTreatmentInterpreter {
         return PiAction.builder().withId(P4InfoConstants.FABRIC_INGRESS_ACL_DROP).build();
     }
 
+    // NOTE: we use clearDeferred to signal when there are no more ports associated to a given vlan
     private static boolean isFilteringNoAction(TrafficTreatment treatment) {
         return treatment.equals(DefaultTrafficTreatment.emptyTreatment()) ||
                 (treatment.allInstructions().isEmpty()) ||
                 (treatment.allInstructions().size() == 1 && treatment.writeMetadata() != null);
     }
 
+    // NOTE: clearDeferred is used by the routing application to implement ACL drop and route black-holing
     private static boolean isForwardingNoAction(TrafficTreatment treatment) {
         return treatment.equals(DefaultTrafficTreatment.emptyTreatment()) ||
                 (treatment.allInstructions().isEmpty() && !treatment.clearedDeferred()) ||
