@@ -181,7 +181,6 @@ control SpgwIngress(
 
     action downlink_pdr_drop() {
         ig_dprsr_md.drop_ctl = 1;
-        is_pdr_hit = false;
         fabric_md.skip_forwarding = true;
         fabric_md.skip_next = true;
 #ifdef WITH_INT
@@ -191,7 +190,6 @@ control SpgwIngress(
 
     action uplink_pdr_drop() {
         ig_dprsr_md.drop_ctl = 1;
-        is_pdr_hit = false;
         fabric_md.skip_forwarding = true;
         fabric_md.skip_next = true;
 #ifdef WITH_INT
@@ -214,7 +212,6 @@ control SpgwIngress(
                         qid_t               qid) {
         load_pdr(ctr_id, far_id, needs_gtpu_decap);
         ig_tm_md.qid = qid;
-        is_pdr_hit = true;
     }
 
     // These two tables scale well and cover the average case PDR
@@ -338,6 +335,7 @@ control SpgwIngress(
     //===== Apply Block ======//
     //=============================//
     apply {
+        is_pdr_hit = false;
         if (hdr.ipv4.isValid()) {
             if (interfaces.apply().hit) {
                 if (fabric_md.spgw.src_iface == SpgwInterface.FROM_DBUF) {
