@@ -60,7 +60,7 @@ final class FabricTreatmentInterpreter {
         }
 
         // VLAN_POP action is equivalent to the permit action (VLANs pop is done anyway)
-        if (isNoAction(treatment) || isFilteringPopAction(treatment)) {
+        if (isFilteringNoAction(treatment) || isFilteringPopAction(treatment)) {
             // Permit action if table is ingress_port_vlan;
             return nop(tableId);
         }
@@ -77,7 +77,7 @@ final class FabricTreatmentInterpreter {
 
     static PiAction mapForwardingTreatment(TrafficTreatment treatment, PiTableId tableId)
             throws PiInterpreterException {
-        if (isNoAction(treatment)) {
+        if (isForwardingNoAction(treatment)) {
             return nop(tableId);
         }
         treatmentException(
@@ -202,7 +202,7 @@ final class FabricTreatmentInterpreter {
         if (isDrop(treatment)) {
             return drop(tableId);
         }
-        if (isNoAction(treatment)) {
+        if (isForwardingNoAction(treatment)) {
             return nop(tableId);
         }
         treatmentException(
@@ -243,10 +243,15 @@ final class FabricTreatmentInterpreter {
         return PiAction.builder().withId(P4InfoConstants.FABRIC_INGRESS_ACL_DROP).build();
     }
 
-    private static boolean isNoAction(TrafficTreatment treatment) {
-        // Empty treatment OR
-        // No instructions OR
-        // Empty treatment AND writeMetadata
+    // NOTE: we use clearDeferred to signal when there are no more ports associated to a given vlan
+    private static boolean isFilteringNoAction(TrafficTreatment treatment) {
+        return treatment.equals(DefaultTrafficTreatment.emptyTreatment()) ||
+                (treatment.allInstructions().isEmpty()) ||
+                (treatment.allInstructions().size() == 1 && treatment.writeMetadata() != null);
+    }
+
+    // NOTE: clearDeferred is used by the routing application to implement ACL drop and route black-holing
+    private static boolean isForwardingNoAction(TrafficTreatment treatment) {
         return treatment.equals(DefaultTrafficTreatment.emptyTreatment()) ||
                 (treatment.allInstructions().isEmpty() && !treatment.clearedDeferred()) ||
                 (treatment.allInstructions().size() == 1 && treatment.writeMetadata() != null);
