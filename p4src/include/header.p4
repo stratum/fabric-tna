@@ -114,17 +114,65 @@ header icmp_t {
     bit<64> timestamp;
 }
 
-// GTPU v1
+
+// GTPU v1 -- 3GPP TS 29.281 version 15.7.0
+// https://www.etsi.org/deliver/etsi_ts/129200_129299/129281/15.07.00_60/ts_129281v150700p.pdf
+const bit<3>  GTP_V1 = 3w1;
+const bit<16> GTPU_UDP_PORT = 2152;
+const bit<8>  GTPU_GPDU = 0xff;
+const bit<1>  GTP_PROTOCOL_TYPE_GTP = 1w1;
 header gtpu_t {
     bit<3>  version;    /* version */
     bit<1>  pt;         /* protocol type */
     bit<1>  spare;      /* reserved */
-    bit<1>  ex_flag;    /* next extension hdr present? */
-    bit<1>  seq_flag;   /* sequence no. */
-    bit<1>  npdu_flag;  /* n-pdn number present ? */
+    bit<1>  ex_flag;    /* whether there is an extension header optional field */
+    bit<1>  seq_flag;   /* whether there is a Sequence Number optional field */
+    bit<1>  npdu_flag;  /* whether there is a N-PDU number optional field */
     bit<8>  msgtype;    /* message type */
-    bit<16> msglen;     /* message length */
+    bit<16> msglen;     /* length of the payload in octets */
     teid_t  teid;       /* tunnel endpoint id */
+}
+// Follows gtpu_t if any of ex_flag, seq_flag, or npdu_flag is 1.
+header gtpu_options_t {
+    bit<16> seq_num;   /* Sequence number */
+    bit<8>  n_pdu_num; /* N-PDU number */
+    bit<8>  next_ext;  /* Next extension header */
+}
+
+// PDU Session Container (GTPU extension) -- 3GPP TS 38.415 version 15.2.0
+// https://www.etsi.org/deliver/etsi_ts/138400_138499/138415/15.02.00_60/ts_138415v150200p.pdf
+const bit<8> GTPU_NEXT_EXT_PDU_SESS = 0x85;
+const bit<4> GTPU_EXT_PDU_TYPE_DL = 4w0; // Downlink
+const bit<4> GTPU_EXT_PDU_TYPE_UL = 4w1; // Uplink
+const bit<8> GTPU_EXT_PDU_SESS_DL_LEN = 8w8; // 8*4-octets
+const bit<8> GTPU_EXT_PDU_SESS_UL_LEN = 8w4; // 4*4-octets
+// Common. Not extracted, for parsing only.
+header gtpu_ext_pdu_sess_common_t {
+    bit<8> len;       /* Length in 4-octets units */
+    bit<4> pdu_type;  /* Uplink or downlink */
+    bit<4> spare0;    /* Reserved */
+}
+// Uplink.
+header gtpu_ext_pdu_sess_ul_t {
+    bit<8> len;
+    bit<4> pdu_type;
+    bit<4> spare0;
+    bit<2> spare1;
+    bit<6> qfi;       /* QoS Flow Identifier */
+    bit<8> next_ext;
+}
+// Downlink.
+header gtpu_ext_pdu_sess_dl_t {
+    bit<8> len;
+    bit<4> pdu_type;
+    bit<4> spare0;
+    bit<1> spare1;
+    bit<1> rqi;       /* Reflective QoS Indicator */
+    bit<6> qfi;       /* QoS Flow Identifier */
+    bit<3> ppi;       /* Paging Policy Indicator */
+    bit<5> spare2;
+    @padding bit<24> padding; /* len should be multiple of 4-octets units */
+    bit<8> next_ext;
 }
 
 #ifdef WITH_SPGW
@@ -355,6 +403,9 @@ struct ingress_headers_t {
     udp_t udp;
     icmp_t icmp;
     gtpu_t gtpu;
+    gtpu_options_t gtpu_options;
+    gtpu_ext_pdu_sess_dl_t gtpu_ext_pdu_sess_dl;
+    gtpu_ext_pdu_sess_ul_t gtpu_ext_pdu_sess_ul;
     ipv4_t inner_ipv4;
     tcp_t inner_tcp;
     udp_t inner_udp;

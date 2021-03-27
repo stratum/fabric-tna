@@ -111,8 +111,8 @@ parser FabricIngressParser (packet_in  packet,
         packet.extract(hdr.eth_type);
         transition select(hdr.eth_type.value) {
             ETHERTYPE_MPLS: parse_mpls;
-            ETHERTYPE_IPV4: parse_non_mpls_headers;
-            ETHERTYPE_IPV6: parse_non_mpls_headers;
+            ETHERTYPE_IPV4: parse_non_mpls;
+            ETHERTYPE_IPV6: parse_non_mpls;
             default: accept;
         }
     }
@@ -131,7 +131,7 @@ parser FabricIngressParser (packet_in  packet,
         }
     }
 
-    state parse_non_mpls_headers {
+    state parse_non_mpls {
         fabric_md.bridged.base.mpls_label = 0;
         fabric_md.bridged.base.mpls_ttl = DEFAULT_MPLS_TTL + 1;
         transition select(hdr.eth_type.value) {
@@ -177,8 +177,9 @@ parser FabricIngressParser (packet_in  packet,
 
     state parse_udp {
         packet.extract(hdr.udp);
-        transition select(hdr.udp.dport) {
-            UDP_PORT_GTPU: parse_gtpu;
+        bit<3> gtpu_version = packet.lookahead<bit<3>>();
+        transition select(hdr.udp.dport, gtpu_version) {
+            (GTPU_UDP_PORT, GTP_V1): parse_gtpu;
             default: accept;
         }
     }
@@ -199,7 +200,42 @@ parser FabricIngressParser (packet_in  packet,
         // at the ingress parser.
         fabric_md.int_mirror_md.strip_gtpu = 1;
 #endif // WITH_INT
-        transition parse_inner_ipv4;
+        transition select(hdr.gtpu.msgtype, hdr.gtpu.ex_flag,
+                          hdr.gtpu.seq_flag, hdr.gtpu.npdu_flag) {
+            (GTPU_GPDU, 0, 0, 0): parse_inner_ipv4;
+            (GTPU_GPDU, _, _, _): parse_gtpu_options;
+            default: accept;
+        }
+    }
+
+    state parse_gtpu_options {
+        packet.extract(hdr.gtpu_options);
+        gtpu_ext_pdu_sess_common_t ext = packet.lookahead<gtpu_ext_pdu_sess_common_t>();
+        transition select(hdr.gtpu_options.next_ext, ext.len, ext.pdu_type) {
+            (GTPU_NEXT_EXT_PDU_SESS,
+                 GTPU_EXT_PDU_SESS_DL_LEN,
+                 GTPU_EXT_PDU_TYPE_DL): parse_gtpu_ext_pdu_sess_dl;
+             (GTPU_NEXT_EXT_PDU_SESS,
+                  GTPU_EXT_PDU_SESS_UL_LEN,
+                  GTPU_EXT_PDU_TYPE_UL): parse_gtpu_ext_pdu_sess_ul;
+            default: accept;
+        }
+    }
+
+    state parse_gtpu_ext_pdu_sess_dl {
+        packet.extract(hdr.gtpu_ext_pdu_sess_dl);
+        transition select(hdr.gtpu_ext_pdu_sess_dl.next_ext) {
+            0: parse_inner_ipv4;
+            default: accept;
+        }
+    }
+
+    state parse_gtpu_ext_pdu_sess_ul {
+        packet.extract(hdr.gtpu_ext_pdu_sess_ul);
+        transition select(hdr.gtpu_ext_pdu_sess_ul.next_ext) {
+            0: parse_inner_ipv4;
+            default: accept;
+        }
     }
 
     state parse_inner_ipv4 {
@@ -273,6 +309,9 @@ control FabricIngressDeparser(packet_out packet,
         packet.emit(hdr.icmp);
         // in case we parsed a GTPU packet but did not decap it
         packet.emit(hdr.gtpu);
+        packet.emit(hdr.gtpu_options);
+        packet.emit(hdr.gtpu_ext_pdu_sess_dl);
+        packet.emit(hdr.gtpu_ext_pdu_sess_ul);
         packet.emit(hdr.inner_ipv4);
         packet.emit(hdr.inner_tcp);
         packet.emit(hdr.inner_udp);
@@ -390,6 +429,58 @@ parser FabricEgressParser (packet_in packet,
 
     state parse_ipv6 {
         packet.extract(hdr.ipv6);
+        transition select(hdr.ipv6.next_hdr) {
+            PROTO_TCP: parse_tcp;
+            PROTO_UDP: parse_udp;
+            PROTO_ICMPV6: parse_icmp;
+            default: accept;
+        }
+    }
+
+    state parse_tcp {
+        packet.extract(hdr.tcp);
+        transition accept;
+    }
+
+    state parse_udp {
+        packet.extract(hdr.udp);
+        transition select(hdr.udp.dport) {
+#ifdef WITH_SPGW
+            GTPU_UDP_PORT: parse_gtpu;
+#endif // WITH_SPGW
+            default: accept;
+        }
+    }
+
+    state parse_icmp {
+        packet.extract(hdr.icmp);
+        transition accept;
+    }
+
+#ifdef WITH_SPGW
+    state parse_gtpu {
+        packet.extract(hdr.gtpu);
+#ifdef WITH_INT
+        fabric_md.int_mirror_md.strip_gtpu = 1;
+#endif // WITH_INT
+        transition parse_inner_ipv4;
+    }
+
+    state parse_inner_ipv4 {
+        packet.extract(hdr.inner_ipv4);
+        inner_ipv4_checksum.add(hdr.inner_ipv4);
+        fabric_md.inner_ipv4_checksum_err = inner_ipv4_checksum.verify();
+        transition select(hdr.inner_ipv4.protocol) {
+            PROTO_TCP: parse_inner_tcp;
+            PROTO_UDP: parse_inner_udp;
+            PROTO_ICMP: parse_inner_icmp;
+            default: accept;
+        }
+    }
+
+    state parse_inner_tcp {
+        packet.extract(hdr.inner_tcp);
+        transition accept;
        transition accept;
     }
 }

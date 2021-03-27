@@ -161,10 +161,11 @@ control SpgwIngress(
         fabric_md.bridged.spgw.skip_spgw = true;
     }
 
-    // TODO: check also that gtpu.msgtype == GTP_GPDU... somewhere
     table interfaces {
         key = {
-            hdr.ipv4.dst_addr  : lpm    @name("ipv4_dst_addr");  // outermost header
+            // Outermost IPv4 header if uplink
+            hdr.ipv4.dst_addr  : lpm    @name("ipv4_dst_addr");
+            // gtpu extracted only if msgtype == GTPU_GPDU (see parser)
             hdr.gtpu.isValid() : exact  @name("gtpu_is_valid");
         }
         actions = {
@@ -423,18 +424,18 @@ control SpgwEgress(
 
         hdr.outer_udp.setValid();
         hdr.outer_udp.sport = fabric_md.bridged.spgw.gtpu_tunnel_sport;
-        hdr.outer_udp.dport = UDP_PORT_GTPU;
+        hdr.outer_udp.dport = GTPU_UDP_PORT;
         hdr.outer_udp.len = fabric_md.bridged.spgw.ipv4_len_for_encap + outer_udp_len_additive;
         hdr.outer_udp.checksum = 0; // Updated never, due to difficulties in handling different inner headers
 
         hdr.outer_gtpu.setValid();
-        hdr.outer_gtpu.version = GTPU_VERSION;
+        hdr.outer_gtpu.version = GTP_V1;
         hdr.outer_gtpu.pt = GTP_PROTOCOL_TYPE_GTP;
         hdr.outer_gtpu.spare = 0;
         hdr.outer_gtpu.ex_flag = 0;
         hdr.outer_gtpu.seq_flag = 0;
         hdr.outer_gtpu.npdu_flag = 0;
-        hdr.outer_gtpu.msgtype = GTP_GPDU;
+        hdr.outer_gtpu.msgtype = GTPU_GPDU;
         hdr.outer_gtpu.msglen = fabric_md.bridged.spgw.ipv4_len_for_encap;
         hdr.outer_gtpu.teid = fabric_md.bridged.spgw.gtpu_teid;
 
