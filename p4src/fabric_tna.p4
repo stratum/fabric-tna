@@ -16,6 +16,7 @@
 #include "include/control/acl.p4"
 #include "include/control/next.p4"
 #include "include/control/hasher.p4"
+#include "include/control/stats.p4"
 #ifdef WITH_SPGW
 #include "include/control/spgw.p4"
 #endif // WITH_SPGW
@@ -86,6 +87,7 @@ control FabricEgress (
 
     PacketIoEgress() pkt_io_egress;
     EgressNextControl() egress_next;
+    StatsEgress() stats;
 #ifdef WITH_SPGW
     SpgwEgress() spgw;
 #endif // WITH_SPGW
@@ -94,6 +96,7 @@ control FabricEgress (
 #endif // WITH_INT
 
     apply {
+        stats.apply(hdr, fabric_md, eg_intr_md);
         pkt_io_egress.apply(hdr, fabric_md, eg_intr_md);
         egress_next.apply(hdr, fabric_md, eg_intr_md, eg_dprsr_md);
 #ifdef WITH_SPGW
