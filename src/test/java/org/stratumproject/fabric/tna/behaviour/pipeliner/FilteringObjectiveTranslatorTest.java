@@ -30,7 +30,16 @@ import java.util.Collection;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
-import static org.stratumproject.fabric.tna.behaviour.Constants.*;
+import static org.stratumproject.fabric.tna.behaviour.Constants.DEFAULT_PW_TRANSPORT_VLAN;
+import static org.stratumproject.fabric.tna.behaviour.Constants.DEFAULT_VLAN;
+import static org.stratumproject.fabric.tna.behaviour.Constants.ETH_TYPE_EXACT_MASK;
+import static org.stratumproject.fabric.tna.behaviour.Constants.FWD_IPV4_ROUTING;
+import static org.stratumproject.fabric.tna.behaviour.Constants.FWD_IPV6_ROUTING;
+import static org.stratumproject.fabric.tna.behaviour.Constants.FWD_MPLS;
+import static org.stratumproject.fabric.tna.behaviour.Constants.ONE;
+import static org.stratumproject.fabric.tna.behaviour.Constants.PORT_TYPE_EDGE;
+import static org.stratumproject.fabric.tna.behaviour.Constants.PORT_TYPE_INFRA;
+import static org.stratumproject.fabric.tna.behaviour.Constants.ZERO;
 
 /**
  * Test cases for FilteringObjectiveTranslator.
@@ -361,6 +370,53 @@ public class FilteringObjectiveTranslatorTest extends AbstractObjectiveTranslato
                 PORT_1, VlanId.NONE, null, VLAN_200,
                 P4InfoConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN));
         expectedTranslation = buildExpectedTranslation(expectedFlowRules);
+        assertEquals(expectedTranslation, actualTranslation);
+    }
+
+    /**
+     * Test no more ports scenario for filtering objective.
+     */
+    @Test
+    public void testNoMorePorts() throws FabricPipelinerException {
+        // Tagged port scenario
+        FilteringObjective filteringObjective = DefaultFilteringObjective.builder()
+                .withKey(Criteria.matchInPort(PORT_1))
+                .addCondition(Criteria.matchEthDst(ROUTER_MAC))
+                .addCondition(Criteria.matchVlanId(VLAN_100))
+                .withPriority(PRIORITY)
+                .fromApp(APP_ID)
+                .withMeta(DefaultTrafficTreatment.builder().wipeDeferred().build())
+                .permit()
+                .add();
+        ObjectiveTranslation actualTranslation = translator.translate(filteringObjective);
+        Collection<FlowRule> expectedFlowRules = Lists.newArrayList();
+        // Ingress port vlan rule
+        expectedFlowRules.add(buildExpectedVlanInPortRule(
+                PORT_1, VLAN_100, null, VlanId.NONE,
+                P4InfoConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN));
+        // forwarding classifier ipv4
+        expectedFlowRules.addAll(buildExpectedFwdClassifierRule(
+                PORT_1,
+                ROUTER_MAC,
+                null,
+                Ethernet.TYPE_IPV4,
+                FWD_IPV4_ROUTING));
+        // forwarding classifier ipv6
+        expectedFlowRules.addAll(buildExpectedFwdClassifierRule(
+                PORT_1,
+                ROUTER_MAC,
+                null,
+                Ethernet.TYPE_IPV6,
+                FWD_IPV6_ROUTING));
+        // forwarding classifier mpls
+        expectedFlowRules.addAll(buildExpectedFwdClassifierRule(
+                PORT_1,
+                ROUTER_MAC,
+                null,
+                Ethernet.MPLS_UNICAST,
+                FWD_MPLS));
+
+        ObjectiveTranslation expectedTranslation = buildExpectedTranslation(expectedFlowRules);
         assertEquals(expectedTranslation, actualTranslation);
     }
 

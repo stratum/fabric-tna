@@ -51,7 +51,6 @@ import static org.stratumproject.fabric.tna.behaviour.Constants.ONE;
 import static org.stratumproject.fabric.tna.behaviour.Constants.PORT_TYPE_EDGE;
 import static org.stratumproject.fabric.tna.behaviour.Constants.PORT_TYPE_INFRA;
 import static org.stratumproject.fabric.tna.behaviour.Constants.ZERO;
-import static org.stratumproject.fabric.tna.behaviour.FabricUtils.isNoAction;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.l2InstructionOrFail;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.criterion;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.l2Instruction;
@@ -239,7 +238,7 @@ class FilteringObjectiveTranslator
             treatment = DefaultTrafficTreatment.emptyTreatment();
         }
         // VLAN_POP action is equivalent to the permit action (VLANs pop is done anyway)
-        if (isNoAction(treatment) || isFilteringPopAction(treatment)) {
+        if (isFilteringNoAction(treatment) || isFilteringPopAction(treatment)) {
             // Permit action if table is ingress_port_vlan;
             return PiAction.builder()
                     .withId(P4InfoConstants.FABRIC_INGRESS_FILTERING_PERMIT)
@@ -254,6 +253,13 @@ class FilteringObjectiveTranslator
                 .withParameter(new PiActionParam(P4InfoConstants.VLAN_ID, setVlanInst.vlanId().toShort()))
                 .withParameter(new PiActionParam(P4InfoConstants.PORT_TYPE, portType))
                 .build();
+    }
+
+    // NOTE: we use clearDeferred to signal when there are no more ports associated to a given vlan
+    private static boolean isFilteringNoAction(TrafficTreatment treatment) {
+        return treatment.equals(DefaultTrafficTreatment.emptyTreatment()) ||
+                (treatment.allInstructions().isEmpty()) ||
+                (treatment.allInstructions().size() == 1 && treatment.writeMetadata() != null);
     }
 
     private boolean isFilteringPopAction(TrafficTreatment treatment) {

@@ -5,6 +5,7 @@ package org.stratumproject.fabric.tna.behaviour;
 
 import com.google.common.collect.ImmutableMap;
 import org.onosproject.net.PortNumber;
+import org.onosproject.net.flow.DefaultTrafficTreatment;
 import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.net.flow.instructions.Instruction;
 import org.onosproject.net.flow.instructions.Instructions.OutputInstruction;
@@ -30,7 +31,6 @@ import static org.onosproject.net.flow.instructions.L2ModificationInstruction.L2
 import static org.onosproject.net.flow.instructions.L2ModificationInstruction.L2SubType.VLAN_POP;
 import static org.onosproject.net.flow.instructions.L2ModificationInstruction.L2SubType.VLAN_PUSH;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.instruction;
-import static org.stratumproject.fabric.tna.behaviour.FabricUtils.isNoAction;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.l2Instruction;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.l2InstructionOrFail;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.l2Instructions;
@@ -230,6 +230,13 @@ final class FabricTreatmentInterpreter {
             throw new PiInterpreterException(format("table '%s' doe not specify a drop action", tableId));
         }
         return PiAction.builder().withId(P4InfoConstants.FABRIC_INGRESS_ACL_DROP).build();
+    }
+
+    // NOTE: clearDeferred is used by the routing application to implement ACL drop and route black-holing
+    private static boolean isNoAction(TrafficTreatment treatment) {
+        return treatment.equals(DefaultTrafficTreatment.emptyTreatment()) ||
+                (treatment.allInstructions().isEmpty() && !treatment.clearedDeferred()) ||
+                (treatment.allInstructions().size() == 1 && treatment.writeMetadata() != null);
     }
 
     private static boolean isDrop(TrafficTreatment treatment) {

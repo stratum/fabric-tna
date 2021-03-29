@@ -46,8 +46,14 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
-import static org.onosproject.net.flow.instructions.L2ModificationInstruction.L2SubType.*;
-import static org.stratumproject.fabric.tna.behaviour.FabricUtils.*;
+import static org.onosproject.net.flow.instructions.L2ModificationInstruction.L2SubType.MPLS_LABEL;
+import static org.onosproject.net.flow.instructions.L2ModificationInstruction.L2SubType.VLAN_ID;
+import static org.onosproject.net.flow.instructions.L2ModificationInstruction.L2SubType.VLAN_POP;
+import static org.stratumproject.fabric.tna.behaviour.FabricUtils.KRYO;
+import static org.stratumproject.fabric.tna.behaviour.FabricUtils.criterion;
+import static org.stratumproject.fabric.tna.behaviour.FabricUtils.l2Instruction;
+import static org.stratumproject.fabric.tna.behaviour.FabricUtils.l2Instructions;
+import static org.stratumproject.fabric.tna.behaviour.FabricUtils.outputPort;
 
 /**
  * ObjectiveTranslator implementation for NextObjective.

@@ -16,7 +16,7 @@ public final class Constants {
     public static final byte[] ZERO = new byte[]{0};
 
     // Used with port_type metadata
-    public static final long FLOW_OBJ_METADATA_MASK = 0xffffffffffffffffL;
+    public static final long PORT_TYPE_MASK = 0x3;
     public static final byte PORT_TYPE_EDGE = 0x1;
     public static final byte PORT_TYPE_INFRA = 0x2;
     public static final byte PORT_TYPE_INTERNAL = 0x3;

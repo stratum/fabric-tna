@@ -5,7 +5,6 @@ package org.stratumproject.fabric.tna.behaviour;
 
 import org.onlab.util.KryoNamespace;
 import org.onosproject.net.PortNumber;
-import org.onosproject.net.flow.DefaultTrafficTreatment;
 import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.net.flow.criteria.Criterion;
@@ -111,15 +110,6 @@ public final class FabricUtils {
             return outputPort(t.treatment());
         }
         return null;
-    }
-
-    public static boolean isNoAction(TrafficTreatment treatment) {
-        // Empty treatment OR
-        // No instructions OR
-        // Empty treatment AND writeMetadata
-        return treatment.equals(DefaultTrafficTreatment.emptyTreatment()) ||
-                (treatment.allInstructions().isEmpty() && !treatment.clearedDeferred()) ||
-                (treatment.allInstructions().size() == 1 && treatment.writeMetadata() != null);
     }
 
     public static void treatmentException(

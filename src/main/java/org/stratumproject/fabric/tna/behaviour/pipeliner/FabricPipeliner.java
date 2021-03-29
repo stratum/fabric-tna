@@ -50,7 +50,12 @@ import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static org.slf4j.LoggerFactory.getLogger;
-import static org.stratumproject.fabric.tna.behaviour.Constants.*;
+import static org.stratumproject.fabric.tna.behaviour.Constants.DEFAULT_VLAN;
+import static org.stratumproject.fabric.tna.behaviour.Constants.ETH_TYPE_EXACT_MASK;
+import static org.stratumproject.fabric.tna.behaviour.Constants.FWD_IPV4_ROUTING;
+import static org.stratumproject.fabric.tna.behaviour.Constants.FWD_MPLS;
+import static org.stratumproject.fabric.tna.behaviour.Constants.PORT_TYPE_INTERNAL;
+import static org.stratumproject.fabric.tna.behaviour.Constants.RECIRC_PORTS;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.KRYO;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.outputPort;
 

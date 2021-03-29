@@ -37,6 +37,7 @@ import java.util.stream.Collectors;
 import static java.lang.String.format;
 import static org.stratumproject.fabric.tna.behaviour.Constants.PORT_TYPE_EDGE;
 import static org.stratumproject.fabric.tna.behaviour.Constants.PORT_TYPE_INFRA;
+import static org.stratumproject.fabric.tna.behaviour.Constants.PORT_TYPE_MASK;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.criterionNotNull;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.outputPort;
 
@@ -267,12 +268,12 @@ class ForwardingObjectiveTranslator
             long portType = ((MetadataCriterion) obj.meta().getCriterion(Criterion.Type.METADATA)).metadata();
             if (portType == PORT_TYPE_EDGE || portType == PORT_TYPE_INFRA) {
                 selectorBuilder.matchPi(PiCriterion.builder()
-                        .matchTernary(P4InfoConstants.HDR_IG_PORT_TYPE, portType, 0x3)
+                        .matchTernary(P4InfoConstants.HDR_IG_PORT_TYPE, portType, PORT_TYPE_MASK)
                         .build());
             } else {
-                throw new FabricPipelinerException(format("Port type '%s' for table '%s': %s",
-                        P4InfoConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN,
-                        portType), ObjectiveError.UNSUPPORTED);
+                throw new FabricPipelinerException(format("Port type '%s' is not allowed for table '%s'",
+                        portType, P4InfoConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN),
+                        ObjectiveError.UNSUPPORTED);
             }
         }
         resultBuilder.addFlowRule(flowRule(
