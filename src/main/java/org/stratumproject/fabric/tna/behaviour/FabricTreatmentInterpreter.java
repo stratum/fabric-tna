@@ -34,6 +34,7 @@ import static org.stratumproject.fabric.tna.behaviour.FabricUtils.isNoAction;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.l2Instruction;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.l2InstructionOrFail;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.l2Instructions;
+import static org.stratumproject.fabric.tna.behaviour.FabricUtils.treatmentException;
 
 /**
  * Treatment translation logic.
@@ -254,13 +255,6 @@ final class FabricTreatmentInterpreter {
             treatmentException(tableId, treatment, format("missing %s instruction", type));
         }
         return inst;
-    }
-
-    private static void treatmentException(
-            PiTableId tableId, TrafficTreatment treatment, String explanation)
-            throws PiInterpreterException {
-        throw new PiInterpreterException(format(
-                "Invalid treatment for table '%s', %s: %s", tableId, explanation, treatment));
     }
 
 }

@@ -267,9 +267,12 @@ class ForwardingObjectiveTranslator
             long portType = ((MetadataCriterion) obj.meta().getCriterion(Criterion.Type.METADATA)).metadata();
             if (portType == PORT_TYPE_EDGE || portType == PORT_TYPE_INFRA) {
                 selectorBuilder.matchPi(PiCriterion.builder()
-                        .matchTernary(P4InfoConstants.HDR_IG_PORT_TYPE, portType == 1 ?
-                                PORT_TYPE_EDGE : PORT_TYPE_INFRA, 0x3)
+                        .matchTernary(P4InfoConstants.HDR_IG_PORT_TYPE, portType, 0x3)
                         .build());
+            } else {
+                throw new FabricPipelinerException(format("Port type '%s' for table '%s': %s",
+                        P4InfoConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN,
+                        portType), ObjectiveError.UNSUPPORTED);
             }
         }
         resultBuilder.addFlowRule(flowRule(

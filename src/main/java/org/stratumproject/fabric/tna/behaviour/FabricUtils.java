@@ -82,8 +82,7 @@ public final class FabricUtils {
             throws PiPipelineInterpreter.PiInterpreterException {
         final Instruction inst = l2Instruction(treatment, subType);
         if (inst == null) {
-            throw new PiPipelineInterpreter.PiInterpreterException(format("Invalid treatment for table '%s', %s: %s",
-                    tableId, format("missing %s instruction", subType), treatment));
+            treatmentException(tableId, treatment, format("missing %s instruction", subType));
         }
         return inst;
     }
@@ -121,5 +120,12 @@ public final class FabricUtils {
         return treatment.equals(DefaultTrafficTreatment.emptyTreatment()) ||
                 (treatment.allInstructions().isEmpty() && !treatment.clearedDeferred()) ||
                 (treatment.allInstructions().size() == 1 && treatment.writeMetadata() != null);
+    }
+
+    public static void treatmentException(
+            PiTableId tableId, TrafficTreatment treatment, String explanation)
+            throws PiPipelineInterpreter.PiInterpreterException {
+        throw new PiPipelineInterpreter.PiInterpreterException(format(
+                "Invalid treatment for table '%s', %s: %s", tableId, explanation, treatment));
     }
 }

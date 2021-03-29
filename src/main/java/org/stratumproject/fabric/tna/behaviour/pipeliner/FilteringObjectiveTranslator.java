@@ -25,7 +25,6 @@ import org.onosproject.net.flow.instructions.L2ModificationInstruction.ModVlanId
 import org.onosproject.net.flowobjective.FilteringObjective;
 import org.onosproject.net.flowobjective.Objective;
 import org.onosproject.net.flowobjective.ObjectiveError;
-import org.onosproject.net.pi.model.PiPipelineInterpreter;
 import org.onosproject.net.pi.model.PiTableId;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
@@ -41,6 +40,7 @@ import static org.onosproject.net.flow.criteria.Criterion.Type.INNER_VLAN_VID;
 import static org.onosproject.net.flow.criteria.Criterion.Type.VLAN_VID;
 import static org.onosproject.net.flow.instructions.L2ModificationInstruction.L2SubType.VLAN_ID;
 import static org.onosproject.net.flow.instructions.L2ModificationInstruction.L2SubType.VLAN_POP;
+import static org.onosproject.net.pi.model.PiPipelineInterpreter.PiInterpreterException;
 import static org.stratumproject.fabric.tna.behaviour.Constants.DEFAULT_PW_TRANSPORT_VLAN;
 import static org.stratumproject.fabric.tna.behaviour.Constants.DEFAULT_VLAN;
 import static org.stratumproject.fabric.tna.behaviour.Constants.ETH_TYPE_EXACT_MASK;
@@ -221,7 +221,7 @@ class FilteringObjectiveTranslator
             try {
                 treatmentBuilder.piTableAction(mapFilteringTreatment(obj.meta(),
                         P4InfoConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN, portType));
-            } catch (PiPipelineInterpreter.PiInterpreterException ex) {
+            } catch (PiInterpreterException ex) {
                 throw new FabricPipelinerException(format("Unable to map treatment for table '%s': %s",
                         P4InfoConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN,
                         ex.getMessage()), ObjectiveError.UNSUPPORTED);
@@ -234,7 +234,7 @@ class FilteringObjectiveTranslator
     }
 
     private PiAction mapFilteringTreatment(TrafficTreatment treatment, PiTableId tableId, byte portType)
-            throws PiPipelineInterpreter.PiInterpreterException {
+            throws PiInterpreterException {
         if (treatment == null) {
             treatment = DefaultTrafficTreatment.emptyTreatment();
         }

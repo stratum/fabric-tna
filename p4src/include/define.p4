@@ -63,14 +63,16 @@ enum bit<8> SpgwInterface {
     FROM_DBUF     = 0x3
 }
 
-// PORT types. Edge and infra are respectively used
-// to identify edge and infrastructure ports. Instead,
-// internal is used for the recirculation ports that used
-// for example for INT or UE to UE communication.
+// PORT types. Set by the control plane using the actions
+// of the filtering.ingress_port_vlan table.
 enum bit<2> PortType_t {
+    // Default value. Set by deny action.
     UNKNOWN     = 0x0,
+    // Host-facing port on a leaf switch.
     EDGE        = 0x1,
+    // Switch-facing port on a leaf or spine switch.
     INFRA       = 0x2,
+    // ASIC-internal port such as the recirculation one (used for INT or UE-to-UE).
     INTERNAL    = 0x3
 }
 
