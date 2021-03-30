@@ -911,12 +911,12 @@ class FabricTest(P4RuntimeTest):
         )
 
     # next_hops is a list of tuples (egress_port, smac, dmac)
-    def add_next_mpls_routing_group(self, next_id, grp_id, next_hops=None):
+    def add_next_mpls_and_routing_group(self, next_id, grp_id, next_hops=None):
         actions = []
         if next_hops is not None:
             mpls_labels = list(map(lambda x: x[3], next_hops))
             if len(set(mpls_labels)) > 1:
-                self.fail("More than one MPLS label passed to add_next_mpls_routing_group")
+                self.fail("More than one MPLS label passed to add_next_mpls_and_routing_group")
             self.add_next_mpls(next_id, mpls_labels[0])
 
             for (egress_port, smac, dmac, _) in next_hops:
@@ -1298,7 +1298,7 @@ class IPv4UnicastTest(FabricTest):
             self.add_next_vlan(next_id, vlan2)
         else:
             params = [eg_port, switch_mac, next_hop_mac, mpls_label]
-            self.add_next_mpls_routing_group(next_id, group_id, [params])
+            self.add_next_mpls_and_routing_group(next_id, group_id, [params])
             self.add_next_vlan(next_id, DEFAULT_VLAN)
 
         if exp_pkt is None:
@@ -1589,7 +1589,7 @@ class DoubleVlanTerminationTest(FabricTest):
             self.add_next_vlan(next_id, next_vlan)
         else:
             params = [self.port2, switch_mac, next_hop_mac, mpls_label]
-            self.add_next_mpls_routing_group(next_id, group_id, [params])
+            self.add_next_mpls_and_routing_group(next_id, group_id, [params])
             self.add_next_vlan(next_id, DEFAULT_VLAN)
 
         if exp_pkt is None:
@@ -1641,7 +1641,7 @@ class MplsSegmentRoutingTest(FabricTest):
             self.add_next_routing(next_id, self.port2, switch_mac, dst_mac)
         else:
             params = [self.port2, switch_mac, dst_mac, label]
-            self.add_next_mpls_routing_group(next_id, group_id, [params])
+            self.add_next_mpls_and_routing_group(next_id, group_id, [params])
 
         exp_pkt = pkt.copy()
         pkt = pkt_add_mpls(pkt, label, mpls_ttl)
@@ -2738,7 +2738,7 @@ class IntTest(IPv4UnicastTest):
                     INT_COLLECTOR_MAC,
                     MPLS_LABEL_2,
                 ]
-                self.add_next_mpls_routing_group(next_id, group_id, [params])
+                self.add_next_mpls_and_routing_group(next_id, group_id, [params])
             else:
                 # Spine to leaf
                 self.add_next_routing(
@@ -2756,7 +2756,7 @@ class IntTest(IPv4UnicastTest):
                     INT_COLLECTOR_MAC,
                     MPLS_LABEL_2,
                 ]
-                self.add_next_mpls_routing_group(next_id, group_id, [params])
+                self.add_next_mpls_and_routing_group(next_id, group_id, [params])
             else:
                 # Leaf to host
                 self.add_next_routing(
@@ -3043,7 +3043,7 @@ class IntTest(IPv4UnicastTest):
             self.add_next_vlan(next_id, VLAN_ID_2)
         else:
             params = [eg_port, switch_mac, INT_COLLECTOR_MAC, mpls_label]
-            self.add_next_mpls_routing_group(next_id, group_id, [params])
+            self.add_next_mpls_and_routing_group(next_id, group_id, [params])
             self.add_next_vlan(next_id, DEFAULT_VLAN)
 
         self.send_packet(ig_port, pkt)

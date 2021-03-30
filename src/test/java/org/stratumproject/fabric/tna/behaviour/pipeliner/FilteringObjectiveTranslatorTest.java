@@ -69,6 +69,7 @@ public class FilteringObjectiveTranslatorTest extends AbstractObjectiveTranslato
                 VlanId.NONE,
                 VlanId.NONE,
                 VLAN_100,
+                PORT_TYPE_EDGE,
                 P4InfoConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN));
 
         // forwarding classifier ipv4
@@ -128,6 +129,7 @@ public class FilteringObjectiveTranslatorTest extends AbstractObjectiveTranslato
                 VlanId.NONE,
                 VlanId.NONE,
                 VLAN_100,
+                PORT_TYPE_EDGE,
                 P4InfoConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN));
 
         // forwarding classifier
@@ -171,6 +173,7 @@ public class FilteringObjectiveTranslatorTest extends AbstractObjectiveTranslato
                 VlanId.NONE,
                 VlanId.NONE,
                 VLAN_100,
+                PORT_TYPE_EDGE,
                 P4InfoConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN));
 
         flowRules.addAll(buildExpectedFwdClassifierRule(
@@ -200,6 +203,7 @@ public class FilteringObjectiveTranslatorTest extends AbstractObjectiveTranslato
                 VlanId.NONE,
                 VlanId.NONE,
                 VLAN_100,
+                PORT_TYPE_EDGE,
                 P4InfoConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN);
 
         // No rules in forwarding classifier, will do default action: set fwd type to bridging
@@ -275,7 +279,7 @@ public class FilteringObjectiveTranslatorTest extends AbstractObjectiveTranslato
         Collection<FlowRule> expectedFlowRules = Lists.newArrayList();
         // Ingress port vlan rule
         expectedFlowRules.add(buildExpectedVlanInPortRule(
-                PORT_1, VLAN_100, VLAN_200, VlanId.NONE,
+                PORT_1, VLAN_100, VLAN_200, VlanId.NONE, PORT_TYPE_EDGE,
                 P4InfoConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN));
         // Forwarding classifier rules (ipv6, ipv4, mpls)
         expectedFlowRules.addAll(buildExpectedFwdClassifierRule(
@@ -344,7 +348,7 @@ public class FilteringObjectiveTranslatorTest extends AbstractObjectiveTranslato
         Collection<FlowRule> expectedFlowRules = Lists.newArrayList();
         // Ingress port vlan rule
         expectedFlowRules.add(buildExpectedVlanInPortRule(
-                PORT_1, VLAN_100, null, VlanId.NONE,
+                PORT_1, VLAN_100, null, VlanId.NONE, PORT_TYPE_EDGE,
                 P4InfoConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN));
         ObjectiveTranslation expectedTranslation = buildExpectedTranslation(expectedFlowRules);
         assertEquals(expectedTranslation, actualTranslation);
@@ -367,7 +371,7 @@ public class FilteringObjectiveTranslatorTest extends AbstractObjectiveTranslato
         expectedFlowRules = Lists.newArrayList();
         // Ingress port vlan rule
         expectedFlowRules.add(buildExpectedVlanInPortRule(
-                PORT_1, VlanId.NONE, null, VLAN_200,
+                PORT_1, VlanId.NONE, null, VLAN_200, PORT_TYPE_EDGE,
                 P4InfoConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN));
         expectedTranslation = buildExpectedTranslation(expectedFlowRules);
         assertEquals(expectedTranslation, actualTranslation);
@@ -392,7 +396,7 @@ public class FilteringObjectiveTranslatorTest extends AbstractObjectiveTranslato
         Collection<FlowRule> expectedFlowRules = Lists.newArrayList();
         // Ingress port vlan rule
         expectedFlowRules.add(buildExpectedVlanInPortRule(
-                PORT_1, VLAN_100, null, VlanId.NONE,
+                PORT_1, VLAN_100, null, VlanId.NONE, PORT_TYPE_EDGE,
                 P4InfoConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN));
         // forwarding classifier ipv4
         expectedFlowRules.addAll(buildExpectedFwdClassifierRule(
@@ -439,7 +443,7 @@ public class FilteringObjectiveTranslatorTest extends AbstractObjectiveTranslato
         Collection<FlowRule> expectedFlowRules = Lists.newArrayList();
         expectedFlowRules.add(buildExpectedVlanInPortRule(
                 PORT_1, VlanId.vlanId((short) DEFAULT_PW_TRANSPORT_VLAN), null, VlanId.NONE,
-                P4InfoConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN));
+                PORT_TYPE_INFRA, P4InfoConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN));
         expectedFlowRules.addAll(buildExpectedFwdClassifierRule(
                 PORT_1,
                 ROUTER_MAC,
@@ -479,7 +483,7 @@ public class FilteringObjectiveTranslatorTest extends AbstractObjectiveTranslato
         expectedFlowRules = Lists.newArrayList();
         expectedFlowRules.add(buildExpectedVlanInPortRule(
                 PORT_1, null, null, VlanId.vlanId((short) DEFAULT_VLAN),
-                P4InfoConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN));
+                PORT_TYPE_INFRA, P4InfoConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN));
         expectedFlowRules.addAll(buildExpectedFwdClassifierRule(
                 PORT_1,
                 ROUTER_MAC,
@@ -533,6 +537,7 @@ public class FilteringObjectiveTranslatorTest extends AbstractObjectiveTranslato
                                                  VlanId vlanId,
                                                  VlanId innerVlanId,
                                                  VlanId internalVlan,
+                                                 byte portType,
                                                  TableId tableId) {
 
         TrafficSelector.Builder selector = DefaultTrafficSelector.builder()
@@ -543,10 +548,7 @@ public class FilteringObjectiveTranslatorTest extends AbstractObjectiveTranslato
             piAction = PiAction.builder()
                     .withId(P4InfoConstants.FABRIC_INGRESS_FILTERING_PERMIT_WITH_INTERNAL_VLAN)
                     .withParameter(new PiActionParam(P4InfoConstants.VLAN_ID, internalVlan.toShort()))
-                    .withParameter(new PiActionParam(P4InfoConstants.PORT_TYPE,
-                            (internalVlan.toShort() == DEFAULT_VLAN ||
-                                    internalVlan.toShort() == DEFAULT_PW_TRANSPORT_VLAN) ?
-                                    PORT_TYPE_INFRA : PORT_TYPE_EDGE))
+                    .withParameter(new PiActionParam(P4InfoConstants.PORT_TYPE, portType))
                     .build();
         } else {
             selector.matchVlanId(vlanId);
@@ -555,10 +557,7 @@ public class FilteringObjectiveTranslatorTest extends AbstractObjectiveTranslato
             }
             piAction = PiAction.builder()
                     .withId(P4InfoConstants.FABRIC_INGRESS_FILTERING_PERMIT)
-                    .withParameter(new PiActionParam(P4InfoConstants.PORT_TYPE,
-                            (vlanId.toShort() == DEFAULT_VLAN ||
-                                    vlanId.toShort() == DEFAULT_PW_TRANSPORT_VLAN) ?
-                                    PORT_TYPE_INFRA : PORT_TYPE_EDGE))
+                    .withParameter(new PiActionParam(P4InfoConstants.PORT_TYPE, portType))
                     .build();
         }
 
