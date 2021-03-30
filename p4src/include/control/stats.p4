@@ -61,6 +61,9 @@ control StatsEgress(inout parsed_headers_t hdr,
                 l4_dport = hdr.udp.dport;
             }
         }
-        flows.apply();
+        // Update stats only for regular packets, exclude mirrored ones.
+        if (fabric_md.bridged.bmd_type == BridgedMdType_t.INGRESS_TO_EGRESS) {
+            flows.apply();
+        }
     }
 }
