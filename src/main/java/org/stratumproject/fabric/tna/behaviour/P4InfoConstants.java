@@ -90,6 +90,8 @@ public final class P4InfoConstants {
             PiTableId.of("FabricEgress.pkt_io_egress.switch_info");
     public static final PiTableId FABRIC_EGRESS_SPGW_GTPU_ENCAP =
             PiTableId.of("FabricEgress.spgw.gtpu_encap");
+    public static final PiTableId FABRIC_EGRESS_STATS_FLOWS =
+            PiTableId.of("FabricEgress.stats.flows");
     public static final PiTableId FABRIC_INGRESS_ACL_ACL =
             PiTableId.of("FabricIngress.acl.acl");
     public static final PiTableId FABRIC_INGRESS_FILTERING_FWD_CLASSIFIER =
@@ -132,6 +134,8 @@ public final class P4InfoConstants {
     // Direct Counter IDs
     public static final PiCounterId FABRIC_EGRESS_EGRESS_NEXT_EGRESS_VLAN_COUNTER =
             PiCounterId.of("FabricEgress.egress_next.egress_vlan_counter");
+    public static final PiCounterId FABRIC_EGRESS_STATS_FLOW_COUNTER =
+            PiCounterId.of("FabricEgress.stats.flow_counter");
     public static final PiCounterId FABRIC_INGRESS_ACL_ACL_COUNTER =
             PiCounterId.of("FabricIngress.acl.acl_counter");
     public static final PiCounterId FABRIC_INGRESS_FILTERING_FWD_CLASSIFIER_COUNTER =
@@ -175,6 +179,8 @@ public final class P4InfoConstants {
             PiActionId.of("FabricEgress.spgw.gtpu_only");
     public static final PiActionId FABRIC_EGRESS_SPGW_GTPU_WITH_PSC =
             PiActionId.of("FabricEgress.spgw.gtpu_with_psc");
+    public static final PiActionId FABRIC_EGRESS_STATS_COUNT =
+            PiActionId.of("FabricEgress.stats.count");
     public static final PiActionId FABRIC_INGRESS_ACL_COPY_TO_CPU =
             PiActionId.of("FabricIngress.acl.copy_to_cpu");
     public static final PiActionId FABRIC_INGRESS_ACL_DROP =

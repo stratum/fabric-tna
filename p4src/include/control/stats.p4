@@ -37,7 +37,7 @@ control StatsEgress(inout parsed_headers_t hdr,
     }
 
     apply {
-        // Match always on the inner IPv4
+        // Always match on the inner IPv4, if valid.
         if (hdr.gtpu.isValid() && hdr.inner_ipv4.isValid()) {
             ipv4_src = hdr.inner_ipv4.src_addr;
             ipv4_dst = hdr.inner_ipv4.dst_addr;
