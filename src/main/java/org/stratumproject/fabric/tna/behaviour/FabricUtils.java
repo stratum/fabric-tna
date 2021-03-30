@@ -13,6 +13,8 @@ import org.onosproject.net.flow.instructions.Instructions;
 import org.onosproject.net.flow.instructions.L2ModificationInstruction;
 import org.onosproject.net.flowobjective.DefaultNextTreatment;
 import org.onosproject.net.flowobjective.NextTreatment;
+import org.onosproject.net.pi.model.PiPipelineInterpreter;
+import org.onosproject.net.pi.model.PiTableId;
 import org.onosproject.store.serializers.KryoNamespaces;
 import org.stratumproject.fabric.tna.behaviour.pipeliner.FabricPipeliner;
 
@@ -57,11 +59,10 @@ public final class FabricUtils {
                             format("%s criterion cannot be null", type));
     }
 
-    public static Instructions.OutputInstruction instruction(TrafficTreatment treatment, Instruction.Type type) {
+    public static Instruction instruction(TrafficTreatment treatment, Instruction.Type type) {
         return treatment.allInstructions()
                 .stream()
                 .filter(inst -> inst.type() == type)
-                .map(inst -> (Instructions.OutputInstruction) inst)
                 .findFirst().orElse(null);
     }
 
@@ -74,6 +75,17 @@ public final class FabricUtils {
                 .findFirst().orElse(null);
     }
 
+    public static Instruction l2InstructionOrFail(
+            TrafficTreatment treatment,
+            L2ModificationInstruction.L2SubType subType, PiTableId tableId)
+            throws PiPipelineInterpreter.PiInterpreterException {
+        final Instruction inst = l2Instruction(treatment, subType);
+        if (inst == null) {
+            treatmentException(tableId, treatment, format("missing %s instruction", subType));
+        }
+        return inst;
+    }
+
     public static List<L2ModificationInstruction> l2Instructions(
             TrafficTreatment treatment, L2ModificationInstruction.L2SubType subType) {
         return treatment.allInstructions().stream()
@@ -84,7 +96,7 @@ public final class FabricUtils {
     }
 
     public static Instructions.OutputInstruction outputInstruction(TrafficTreatment treatment) {
-        return instruction(treatment, Instruction.Type.OUTPUT);
+        return (Instructions.OutputInstruction) instruction(treatment, Instruction.Type.OUTPUT);
     }
 
     public static PortNumber outputPort(TrafficTreatment treatment) {
@@ -98,5 +110,12 @@ public final class FabricUtils {
             return outputPort(t.treatment());
         }
         return null;
+    }
+
+    public static void treatmentException(
+            PiTableId tableId, TrafficTreatment treatment, String explanation)
+            throws PiPipelineInterpreter.PiInterpreterException {
+        throw new PiPipelineInterpreter.PiInterpreterException(format(
+                "Invalid treatment for table '%s', %s: %s", tableId, explanation, treatment));
     }
 }

@@ -48,6 +48,8 @@ public final class P4InfoConstants {
             PiMatchFieldId.of("icmp_type");
     public static final PiMatchFieldId HDR_IG_PORT =
             PiMatchFieldId.of("ig_port");
+    public static final PiMatchFieldId HDR_IG_PORT_TYPE =
+            PiMatchFieldId.of("ig_port_type");
     public static final PiMatchFieldId HDR_INT_REPORT_TYPE =
             PiMatchFieldId.of("int_report_type");
     public static final PiMatchFieldId HDR_IP_ETH_TYPE =
@@ -118,8 +120,10 @@ public final class P4InfoConstants {
             PiTableId.of("FabricIngress.next.hashed");
     public static final PiTableId FABRIC_INGRESS_NEXT_MULTICAST =
             PiTableId.of("FabricIngress.next.multicast");
-    public static final PiTableId FABRIC_INGRESS_NEXT_NEXT_VLAN =
-            PiTableId.of("FabricIngress.next.next_vlan");
+    public static final PiTableId FABRIC_INGRESS_PRE_NEXT_NEXT_MPLS =
+            PiTableId.of("FabricIngress.pre_next.next_mpls");
+    public static final PiTableId FABRIC_INGRESS_PRE_NEXT_NEXT_VLAN =
+            PiTableId.of("FabricIngress.pre_next.next_vlan");
     public static final PiTableId FABRIC_INGRESS_SPGW_DOWNLINK_PDRS =
             PiTableId.of("FabricIngress.spgw.downlink_pdrs");
     public static final PiTableId FABRIC_INGRESS_SPGW_FARS =
@@ -152,8 +156,10 @@ public final class P4InfoConstants {
             PiCounterId.of("FabricIngress.next.hashed_counter");
     public static final PiCounterId FABRIC_INGRESS_NEXT_MULTICAST_COUNTER =
             PiCounterId.of("FabricIngress.next.multicast_counter");
-    public static final PiCounterId FABRIC_INGRESS_NEXT_NEXT_VLAN_COUNTER =
-            PiCounterId.of("FabricIngress.next.next_vlan_counter");
+    public static final PiCounterId FABRIC_INGRESS_PRE_NEXT_NEXT_MPLS_COUNTER =
+            PiCounterId.of("FabricIngress.pre_next.next_mpls_counter");
+    public static final PiCounterId FABRIC_INGRESS_PRE_NEXT_NEXT_VLAN_COUNTER =
+            PiCounterId.of("FabricIngress.pre_next.next_vlan_counter");
     public static final PiCounterId FABRIC_INGRESS_SPGW_UPLINK_RECIRC_RULES_COUNTER =
             PiCounterId.of("FabricIngress.spgw.uplink_recirc.rules_counter");
     // Action IDs
@@ -217,16 +223,16 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.int_ingress.no_report");
     public static final PiActionId FABRIC_INGRESS_INT_INGRESS_REPORT_DROP =
             PiActionId.of("FabricIngress.int_ingress.report_drop");
-    public static final PiActionId FABRIC_INGRESS_NEXT_MPLS_ROUTING_HASHED =
-            PiActionId.of("FabricIngress.next.mpls_routing_hashed");
     public static final PiActionId FABRIC_INGRESS_NEXT_OUTPUT_HASHED =
             PiActionId.of("FabricIngress.next.output_hashed");
     public static final PiActionId FABRIC_INGRESS_NEXT_ROUTING_HASHED =
             PiActionId.of("FabricIngress.next.routing_hashed");
     public static final PiActionId FABRIC_INGRESS_NEXT_SET_MCAST_GROUP_ID =
             PiActionId.of("FabricIngress.next.set_mcast_group_id");
-    public static final PiActionId FABRIC_INGRESS_NEXT_SET_VLAN =
-            PiActionId.of("FabricIngress.next.set_vlan");
+    public static final PiActionId FABRIC_INGRESS_PRE_NEXT_SET_MPLS_LABEL =
+            PiActionId.of("FabricIngress.pre_next.set_mpls_label");
+    public static final PiActionId FABRIC_INGRESS_PRE_NEXT_SET_VLAN =
+            PiActionId.of("FabricIngress.pre_next.set_vlan");
     public static final PiActionId FABRIC_INGRESS_SPGW_DOWNLINK_PDR_DROP =
             PiActionId.of("FabricIngress.spgw.downlink_pdr_drop");
     public static final PiActionId FABRIC_INGRESS_SPGW_FAR_DROP =
@@ -284,6 +290,8 @@ public final class P4InfoConstants {
             PiActionParamId.of("notify_cp");
     public static final PiActionParamId PORT_NUM =
             PiActionParamId.of("port_num");
+    public static final PiActionParamId PORT_TYPE =
+            PiActionParamId.of("port_type");
     public static final PiActionParamId QID = PiActionParamId.of("qid");
     public static final PiActionParamId SMAC = PiActionParamId.of("smac");
     public static final PiActionParamId SRC_IFACE =

@@ -5,6 +5,7 @@ package org.stratumproject.fabric.tna.behaviour.pipeliner;
 import com.google.common.collect.ImmutableList;
 import org.junit.Before;
 import org.junit.Test;
+import org.onosproject.net.PortNumber;
 import org.onosproject.net.flow.DefaultFlowRule;
 import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
@@ -32,6 +33,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertEquals;
+import static org.stratumproject.fabric.tna.behaviour.FabricUtils.outputPort;
 
 /**
  * Test cases for NextObjectiveTranslator.
@@ -43,6 +45,7 @@ public class NextObjectiveTranslatorTest extends AbstractObjectiveTranslatorTest
     // private NextObjectiveTranslator translatorSimple;
 
     private FlowRule vlanMetaFlowRule;
+    private FlowRule mplsFlowRule;
 
     @Before
     public void setup() {
@@ -59,7 +62,7 @@ public class NextObjectiveTranslatorTest extends AbstractObjectiveTranslatorTest
                 .matchPi(nextIdCriterion)
                 .build();
         PiAction piAction = PiAction.builder()
-                .withId(P4InfoConstants.FABRIC_INGRESS_NEXT_SET_VLAN)
+                .withId(P4InfoConstants.FABRIC_INGRESS_PRE_NEXT_SET_VLAN)
                 .withParameter(new PiActionParam(P4InfoConstants.VLAN_ID, VLAN_100.toShort()))
                 .build();
         TrafficTreatment treatment = DefaultTrafficTreatment.builder()
@@ -68,7 +71,24 @@ public class NextObjectiveTranslatorTest extends AbstractObjectiveTranslatorTest
         vlanMetaFlowRule = DefaultFlowRule.builder()
                 .withSelector(selector)
                 .withTreatment(treatment)
-                .forTable(P4InfoConstants.FABRIC_INGRESS_NEXT_NEXT_VLAN)
+                .forTable(P4InfoConstants.FABRIC_INGRESS_PRE_NEXT_NEXT_VLAN)
+                .makePermanent()
+                // FIXME: currently next objective doesn't support priority, ignore this
+                .withPriority(0)
+                .forDevice(DEVICE_ID)
+                .fromApp(APP_ID)
+                .build();
+        piAction = PiAction.builder()
+                .withId(P4InfoConstants.FABRIC_INGRESS_PRE_NEXT_SET_MPLS_LABEL)
+                .withParameter(new PiActionParam(P4InfoConstants.LABEL, MPLS_10.toInt()))
+                .build();
+        treatment = DefaultTrafficTreatment.builder()
+                .piTableAction(piAction)
+                .build();
+        mplsFlowRule = DefaultFlowRule.builder()
+                .withSelector(selector)
+                .withTreatment(treatment)
+                .forTable(P4InfoConstants.FABRIC_INGRESS_PRE_NEXT_NEXT_MPLS)
                 .makePermanent()
                 // FIXME: currently next objective doesn't support priority, ignore this
                 .withPriority(0)
@@ -309,6 +329,163 @@ public class NextObjectiveTranslatorTest extends AbstractObjectiveTranslatorTest
         assertEquals(expectedTranslation, actualTranslation);
     }
 
+    /**
+     * Test program mpls ecmp output group for Hashed table.
+     */
+    @Test
+    public void testMplsHashedOutput() throws Exception {
+        TrafficTreatment treatment1 = DefaultTrafficTreatment.builder()
+                .setEthSrc(ROUTER_MAC)
+                .setEthDst(SPINE1_MAC)
+                .pushMpls()
+                .copyTtlOut()
+                .setMpls(MPLS_10)
+                .popVlan()
+                .setOutput(PORT_1)
+                .build();
+        TrafficTreatment treatment2 = DefaultTrafficTreatment.builder()
+                .setEthSrc(ROUTER_MAC)
+                .setEthDst(SPINE2_MAC)
+                .pushMpls()
+                .copyTtlOut()
+                .setMpls(MPLS_10)
+                .popVlan()
+                .setOutput(PORT_2)
+                .build();
+
+        NextObjective nextObjective = DefaultNextObjective.builder()
+                .withId(NEXT_ID_1)
+                .withPriority(PRIORITY)
+                .withMeta(VLAN_META)
+                .addTreatment(treatment1)
+                .addTreatment(treatment2)
+                .withType(NextObjective.Type.HASHED)
+                .makePermanent()
+                .fromApp(APP_ID)
+                .add();
+
+        ObjectiveTranslation actualTranslation = translatorHashed.doTranslate(nextObjective);
+
+        // Expected hashed table flow rule.
+        PiCriterion nextIdCriterion = PiCriterion.builder()
+                .matchExact(P4InfoConstants.HDR_NEXT_ID, NEXT_ID_1)
+                .build();
+        TrafficSelector nextIdSelector = DefaultTrafficSelector.builder()
+                .matchPi(nextIdCriterion)
+                .build();
+        PiActionProfileGroupId actionGroupId = PiActionProfileGroupId.of(NEXT_ID_1);
+        TrafficTreatment treatment = DefaultTrafficTreatment.builder()
+                .piTableAction(actionGroupId)
+                .build();
+        FlowRule expectedFlowRule = DefaultFlowRule.builder()
+                .forDevice(DEVICE_ID)
+                .fromApp(APP_ID)
+                .makePermanent()
+                // FIXME: currently next objective doesn't support priority, ignore this
+                .withPriority(0)
+                .forTable(P4InfoConstants.FABRIC_INGRESS_NEXT_HASHED)
+                .withSelector(nextIdSelector)
+                .withTreatment(treatment)
+                .build();
+
+        // First egress rule - port1
+        PortNumber outPort = outputPort(treatment1);
+        PiCriterion egressVlanTableMatch = PiCriterion.builder()
+                .matchExact(P4InfoConstants.HDR_EG_PORT, outPort.toLong())
+                .build();
+        TrafficSelector selectorForEgressVlan = DefaultTrafficSelector.builder()
+                .matchPi(egressVlanTableMatch)
+                .matchVlanId(VLAN_100)
+                .build();
+        PiAction piActionForEgressVlan = PiAction.builder()
+                .withId(P4InfoConstants.FABRIC_EGRESS_EGRESS_NEXT_POP_VLAN)
+                .build();
+        TrafficTreatment treatmentForEgressVlan = DefaultTrafficTreatment.builder()
+                .piTableAction(piActionForEgressVlan)
+                .build();
+        FlowRule expectedEgressVlanPopRule1 = DefaultFlowRule.builder()
+                .withSelector(selectorForEgressVlan)
+                .withTreatment(treatmentForEgressVlan)
+                .forTable(P4InfoConstants.FABRIC_EGRESS_EGRESS_NEXT_EGRESS_VLAN)
+                .makePermanent()
+                .withPriority(nextObjective.priority())
+                .forDevice(DEVICE_ID)
+                .fromApp(APP_ID)
+                .build();
+
+        // Second egress rule - port2
+        outPort = outputPort(treatment2);
+        egressVlanTableMatch = PiCriterion.builder()
+                .matchExact(P4InfoConstants.HDR_EG_PORT, outPort.toLong())
+                .build();
+        selectorForEgressVlan = DefaultTrafficSelector.builder()
+                .matchPi(egressVlanTableMatch)
+                .matchVlanId(VLAN_100)
+                .build();
+        FlowRule expectedEgressVlanPopRule2 = DefaultFlowRule.builder()
+                .withSelector(selectorForEgressVlan)
+                .withTreatment(treatmentForEgressVlan)
+                .forTable(P4InfoConstants.FABRIC_EGRESS_EGRESS_NEXT_EGRESS_VLAN)
+                .makePermanent()
+                .withPriority(nextObjective.priority())
+                .forDevice(DEVICE_ID)
+                .fromApp(APP_ID)
+                .build();
+
+        // Expected group
+        PiAction piAction1 = PiAction.builder()
+                .withId(P4InfoConstants.FABRIC_INGRESS_NEXT_ROUTING_HASHED)
+                .withParameter(new PiActionParam(
+                        P4InfoConstants.SMAC, ROUTER_MAC.toBytes()))
+                .withParameter(new PiActionParam(
+                        P4InfoConstants.DMAC, SPINE1_MAC.toBytes()))
+                .withParameter(new PiActionParam(
+                        P4InfoConstants.PORT_NUM, PORT_1.toLong()))
+                .build();
+        PiAction piAction2 = PiAction.builder()
+                .withId(P4InfoConstants.FABRIC_INGRESS_NEXT_ROUTING_HASHED)
+                .withParameter(new PiActionParam(
+                        P4InfoConstants.SMAC, ROUTER_MAC.toBytes()))
+                .withParameter(new PiActionParam(
+                        P4InfoConstants.DMAC, SPINE2_MAC.toBytes()))
+                .withParameter(new PiActionParam(
+                        P4InfoConstants.PORT_NUM, PORT_2.toLong()))
+                .build();
+        treatment1 = DefaultTrafficTreatment.builder()
+                .piTableAction(piAction1)
+                .build();
+        treatment2 = DefaultTrafficTreatment.builder()
+                .piTableAction(piAction2)
+                .build();
+        List<TrafficTreatment> treatments = ImmutableList.of(treatment1, treatment2);
+        List<GroupBucket> buckets = treatments.stream()
+                .map(DefaultGroupBucket::createSelectGroupBucket)
+                .collect(Collectors.toList());
+        GroupBuckets groupBuckets = new GroupBuckets(buckets);
+        PiGroupKey groupKey = new PiGroupKey(P4InfoConstants.FABRIC_INGRESS_NEXT_HASHED,
+                P4InfoConstants.FABRIC_INGRESS_NEXT_HASHED_PROFILE,
+                NEXT_ID_1);
+        GroupDescription expectedGroup = new DefaultGroupDescription(
+                DEVICE_ID,
+                GroupDescription.Type.SELECT,
+                groupBuckets,
+                groupKey,
+                NEXT_ID_1,
+                APP_ID
+        );
+
+        ObjectiveTranslation expectedTranslation = ObjectiveTranslation.builder()
+                .addFlowRule(expectedFlowRule)
+                .addFlowRule(vlanMetaFlowRule)
+                .addFlowRule(mplsFlowRule)
+                .addGroup(expectedGroup)
+                .addFlowRule(expectedEgressVlanPopRule1)
+                .addFlowRule(expectedEgressVlanPopRule2)
+                .build();
+
+        assertEquals(expectedTranslation, actualTranslation);
+    }
+
     // TODO: add profile with simple next or remove tests
     // /**
     //  * Test program output rule for Simple table. Ignored: unsupported.
@@ -432,6 +609,7 @@ public class NextObjectiveTranslatorTest extends AbstractObjectiveTranslatorTest
     //  * Test simple Route and Push Next Objective (set mac, set double vlan and output port).
     //  * Ignored: unsupported.
     //  */
+    // FIXME next_vlan has been moved to pre_next
     // @Test
     // public void testSimpleRouteAndPushNextObjective() throws FabricPipelinerException {
     //     TrafficTreatment routeAndPushTreatment = DefaultTrafficTreatment.builder()
