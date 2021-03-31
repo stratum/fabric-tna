@@ -263,6 +263,7 @@ struct bridged_metadata_base_t {
     bit<48>                 ig_tstamp;
     bit<16>                 ip_eth_type;
     flow_hash_t             flow_hash;
+    bit<16>                 tcp_udp_checksum;
 #ifdef WITH_DOUBLE_VLAN_TERMINATION
     @padding bit<7>         _pad1;
     bool                    push_double_vlan;
@@ -301,6 +302,7 @@ struct fabric_ingress_metadata_t {
     next_id_t               next_id;
     bool                    egress_port_set;
     bool                    inner_ipv4_checksum_err;
+    bool                    is_decap_pkt;
 #ifdef WITH_SPGW
     spgw_ingress_metadata_t spgw;
 #endif // WITH_SPGW

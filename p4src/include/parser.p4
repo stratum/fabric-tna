@@ -18,6 +18,8 @@ parser FabricIngressParser (packet_in  packet,
     out ingress_intrinsic_metadata_t   ig_intr_md) {
     Checksum() ipv4_checksum;
     Checksum() inner_ipv4_checksum;
+    Checksum() tcp_checksum;
+    Checksum() udp_checksum;
 
     state start {
         packet.extract(ig_intr_md);
@@ -147,6 +149,14 @@ parser FabricIngressParser (packet_in  packet,
         fabric_md.bridged.base.ip_eth_type = ETHERTYPE_IPV4;
         ipv4_checksum.add(hdr.ipv4);
         fabric_md.ipv4_checksum_err = ipv4_checksum.verify();
+        tcp_checksum.subtract({
+            hdr.ipv4.src_addr,
+            hdr.ipv4.dst_addr
+        });
+        udp_checksum.subtract({
+            hdr.ipv4.src_addr,
+            hdr.ipv4.dst_addr
+        });
         // Need header verification?
         transition select(hdr.ipv4.protocol) {
             PROTO_TCP: parse_tcp;
@@ -172,6 +182,10 @@ parser FabricIngressParser (packet_in  packet,
         packet.extract(hdr.tcp);
         fabric_md.l4_sport = hdr.tcp.sport;
         fabric_md.l4_dport = hdr.tcp.dport;
+        tcp_checksum.subtract_all_and_deposit(fabric_md.bridged.base.tcp_udp_checksum);
+        tcp_checksum.subtract({
+            hdr.tcp.checksum
+        });
         transition accept;
     }
 
@@ -179,6 +193,10 @@ parser FabricIngressParser (packet_in  packet,
         packet.extract(hdr.udp);
         fabric_md.l4_sport = hdr.udp.sport;
         fabric_md.l4_dport = hdr.udp.dport;
+        udp_checksum.subtract_all_and_deposit(fabric_md.bridged.base.tcp_udp_checksum);
+        udp_checksum.subtract({
+            hdr.udp.checksum
+        });
         transition select(hdr.udp.dport) {
             UDP_PORT_GTPU: parse_gtpu;
             default: accept;
@@ -252,6 +270,78 @@ control FabricIngressMirror(
     }
 }
 
+control L4Checksum(
+    inout parsed_headers_t hdr,
+    in fabric_ingress_metadata_t fabric_md) {
+    Checksum() tcp_checksum;
+    Checksum() udp_checksum;
+    apply {
+        if (hdr.tcp.isValid()) {
+            if (!fabric_md.is_decap_pkt) {
+                hdr.tcp.checksum = tcp_checksum.update({
+                    hdr.ipv4.src_addr,
+                    hdr.ipv4.dst_addr,
+                    fabric_md.bridged.base.tcp_udp_checksum
+                });
+            }
+        }
+        else if (hdr.udp.isValid()) {
+            if (hdr.inner_tcp.isValid()) {
+                /*
+                hdr.udp.checksum = udp_checksum.update({
+                    hdr.ipv4.src_addr,
+                    hdr.ipv4.dst_addr,
+                    fabric_md.bridged.base.tcp_udp_checksum,
+                    hdr.gtpu,
+                    hdr.inner_ipv4,
+                    hdr.inner_tcp
+                });
+                */
+            } else if (hdr.inner_udp.isValid()) {
+                /*
+                hdr.udp.checksum = udp_checksum.update({
+                    hdr.ipv4.src_addr,
+                    hdr.ipv4.dst_addr,
+                    fabric_md.bridged.base.tcp_udp_checksum,
+                    hdr.gtpu,
+                    hdr.inner_ipv4,
+                    hdr.inner_udp
+                });
+                */
+            } else if (hdr.inner_icmp.isValid()) {
+                /*
+                hdr.udp.checksum = udp_checksum.update({
+                    hdr.ipv4.src_addr,
+                    hdr.ipv4.dst_addr,
+                    fabric_md.bridged.base.tcp_udp_checksum,
+                    hdr.gtpu,
+                    hdr.inner_ipv4,
+                    hdr.inner_icmp
+                });
+                */
+            } else if (hdr.inner_ipv4.isValid()) {
+                /*
+                hdr.udp.checksum = udp_checksum.update({
+                    hdr.ipv4.src_addr,
+                    hdr.ipv4.dst_addr,
+                    fabric_md.bridged.base.tcp_udp_checksum,
+                    hdr.gtpu,
+                    hdr.inner_ipv4
+                });
+                */
+            } else {
+                if (!fabric_md.is_decap_pkt) {
+                    hdr.udp.checksum = udp_checksum.update({
+                        hdr.ipv4.src_addr,
+                        hdr.ipv4.dst_addr,
+                        fabric_md.bridged.base.tcp_udp_checksum
+                    });
+                }
+            }
+        }
+    }
+}
+
 control FabricIngressDeparser(packet_out packet,
     /* Fabric.p4 */
     inout parsed_headers_t hdr,
@@ -260,9 +350,11 @@ control FabricIngressDeparser(packet_out packet,
     in ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr) {
 
     FabricIngressMirror() ingress_mirror;
+    L4Checksum() l4_checksum;
 
     apply {
         ingress_mirror.apply(hdr, fabric_md, ig_intr_md_for_dprsr);
+        l4_checksum.apply(hdr, fabric_md);
         packet.emit(fabric_md.bridged);
         packet.emit(hdr.fake_ethernet);
         packet.emit(hdr.packet_in);
@@ -515,7 +607,6 @@ control FabricEgressDeparser(packet_out packet,
                 hdr.ipv4.dst_addr
             });
         }
-        // TODO: update TCP/UDP checksum
 #ifdef WITH_SPGW
         if (hdr.outer_ipv4.isValid()) {
             hdr.outer_ipv4.hdr_checksum = outer_ipv4_checksum.update({
