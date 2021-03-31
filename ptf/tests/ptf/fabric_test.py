@@ -227,10 +227,11 @@ VLAN_BYTES = 4
 CPU_LOOPBACK_FAKE_ETH_BYTES = 14
 
 # Port types to be use with port_vlan table
-PORT_TYPE_OTHER     = b"\x00"
-PORT_TYPE_EDGE      = b"\x01"
-PORT_TYPE_INFRA     = b"\x02"
-PORT_TYPE_INTERNAL  = b"\x03"
+PORT_TYPE_OTHER = b"\x00"
+PORT_TYPE_EDGE = b"\x01"
+PORT_TYPE_INFRA = b"\x02"
+PORT_TYPE_INTERNAL = b"\x03"
+
 
 class GTPU(Packet):
     name = "GTP-U Header"
@@ -422,7 +423,13 @@ class FabricTest(P4RuntimeTest):
         self.write_request(req)
 
     def setup_port(
-        self, port_id, vlan_id, port_type, tagged=False, double_tagged=False, inner_vlan_id=0,
+        self,
+        port_id,
+        vlan_id,
+        port_type,
+        tagged=False,
+        double_tagged=False,
+        inner_vlan_id=0,
     ):
         if double_tagged:
             self.set_ingress_port_vlan(
@@ -434,12 +441,18 @@ class FabricTest(P4RuntimeTest):
             )
         elif tagged:
             self.set_ingress_port_vlan(
-                ingress_port=port_id, vlan_id=vlan_id, vlan_valid=True, port_type=port_type
+                ingress_port=port_id,
+                vlan_id=vlan_id,
+                vlan_valid=True,
+                port_type=port_type,
             )
             self.set_egress_vlan(egress_port=port_id, vlan_id=vlan_id, push_vlan=True)
         else:
             self.set_ingress_port_vlan(
-                ingress_port=port_id, vlan_valid=False, internal_vlan_id=vlan_id, port_type=port_type
+                ingress_port=port_id,
+                vlan_valid=False,
+                internal_vlan_id=vlan_id,
+                port_type=port_type,
             )
             self.set_egress_vlan(egress_port=port_id, vlan_id=vlan_id, push_vlan=False)
 
@@ -574,7 +587,7 @@ class FabricTest(P4RuntimeTest):
                 vlan_valid=False,
                 vlan_id=0,
                 internal_vlan_id=DEFAULT_VLAN,
-                port_type=PORT_TYPE_INTERNAL
+                port_type=PORT_TYPE_INTERNAL,
             )
             self.set_egress_vlan(port, DEFAULT_VLAN, push_vlan=False)
             self.set_forwarding_type(
@@ -720,13 +733,19 @@ class FabricTest(P4RuntimeTest):
             )
 
     def add_forwarding_acl_next(
-        self, next_id, ig_port_type, ipv4_src=None, ipv4_dst=None, ip_proto=None,
-        l4_sport=None, l4_dport=None
+        self,
+        next_id,
+        ig_port_type,
+        ipv4_src=None,
+        ipv4_dst=None,
+        ip_proto=None,
+        l4_sport=None,
+        l4_dport=None,
     ):
         # Send only if the match keys are not empty
         next_id_ = stringify(next_id, 4)
         ig_port_type_mask = b"\x03"
-        matches = [self.Ternary("ig_port_type",ig_port_type, ig_port_type_mask)]
+        matches = [self.Ternary("ig_port_type", ig_port_type, ig_port_type_mask)]
         if ipv4_src:
             ipv4_src_ = ipv4_to_binary(ipv4_src)
             ipv4_src_mask = stringify(0xFFFFFFFF, 4)
@@ -753,7 +772,8 @@ class FabricTest(P4RuntimeTest):
                 matches,
                 "acl.set_next_id_acl",
                 [("next_id", next_id_)],
-                DEFAULT_PRIORITY)
+                DEFAULT_PRIORITY,
+            )
 
     def add_xconnect(self, next_id, port1, port2):
         next_id_ = stringify(next_id, 4)
@@ -905,9 +925,7 @@ class FabricTest(P4RuntimeTest):
             "pre_next.next_mpls",
             [self.Exact("next_id", next_id_)],
             "pre_next.set_mpls_label",
-            [
-                ("label", label_),
-            ],
+            [("label", label_),],
         )
 
     # next_hops is a list of tuples (egress_port, smac, dmac)
@@ -916,7 +934,9 @@ class FabricTest(P4RuntimeTest):
         if next_hops is not None:
             mpls_labels = list(map(lambda x: x[3], next_hops))
             if len(set(mpls_labels)) > 1:
-                self.fail("More than one MPLS label passed to add_next_mpls_and_routing_group")
+                self.fail(
+                    "More than one MPLS label passed to add_next_mpls_and_routing_group"
+                )
             self.add_next_mpls(next_id, mpls_labels[0])
 
             for (egress_port, smac, dmac, _) in next_hops:
@@ -926,11 +946,7 @@ class FabricTest(P4RuntimeTest):
                 actions.append(
                     [
                         "next.routing_hashed",
-                        [
-                            ("port_num", egress_port_),
-                            ("smac", smac_),
-                            ("dmac", dmac_),
-                        ],
+                        [("port_num", egress_port_), ("smac", smac_), ("dmac", dmac_),],
                     ]
                 )
         self.add_next_hashed_group_action(next_id, grp_id, actions)
@@ -1348,7 +1364,9 @@ class IPv4MulticastTest(FabricTest):
         # Set port VLAN
         self.setup_port(in_port, internal_in_vlan, PORT_TYPE_EDGE, in_vlan is not None)
         for out_port in out_ports:
-            self.setup_port(out_port, internal_out_vlan, PORT_TYPE_INFRA, out_vlan is not None)
+            self.setup_port(
+                out_port, internal_out_vlan, PORT_TYPE_INFRA, out_vlan is not None
+            )
 
         # Set forwarding type to IPv4 multicast
         self.set_forwarding_type(
@@ -1445,7 +1463,9 @@ class DoubleVlanTerminationTest(FabricTest):
         switch_mac = pkt[Ether].dst
 
         # Setup port 1
-        self.setup_port(self.port1, vlan_id=in_vlan, port_type=PORT_TYPE_INFRA, tagged=in_tagged)
+        self.setup_port(
+            self.port1, vlan_id=in_vlan, port_type=PORT_TYPE_INFRA, tagged=in_tagged
+        )
         # Setup port 2: packets on this port are double tagged packets
         self.setup_port(
             self.port2,
@@ -1572,7 +1592,9 @@ class DoubleVlanTerminationTest(FabricTest):
             inner_vlan_id=inner_vlan_id,
         )
         # Setup port 2
-        self.setup_port(self.port2, vlan_id=next_vlan, port_type=PORT_TYPE_INFRA, tagged=out_tagged)
+        self.setup_port(
+            self.port2, vlan_id=next_vlan, port_type=PORT_TYPE_INFRA, tagged=out_tagged
+        )
 
         # Forwarding type -> routing v4
         for eth_type in routed_eth_types:
@@ -3016,9 +3038,9 @@ class IntTest(IPv4UnicastTest):
         mpls_label = MPLS_LABEL_2
         dst_ipv4 = pkt[IP].dst
         switch_mac = pkt[Ether].dst
-        port_type =PORT_TYPE_EDGE
+        port_type = PORT_TYPE_EDGE
         if is_device_spine:
-            port_type =PORT_TYPE_INFRA
+            port_type = PORT_TYPE_INFRA
 
         # Setup ports.
         # Note that the "egress_vlan" table is not configured, so packet will be dropped
