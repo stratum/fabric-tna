@@ -136,43 +136,6 @@ control Forwarding (inout parsed_headers_t hdr,
         size = ROUTING_V4_TABLE_SIZE;
     }
 
-    /*
-     * IPv6 Routing Table.
-     */
-#ifdef WITH_DEBUG
-    DirectCounter<bit<64>>(CounterType_t.PACKETS_AND_BYTES) routing_v6_counter;
-#endif // WITH_DEBUG
-
-    action set_next_id_routing_v6(next_id_t next_id) {
-        set_next_id(next_id);
-#ifdef WITH_DEBUG
-        routing_v6_counter.count();
-#endif // WITH_DEBUG
-    }
-
-    table routing_v6 {
-        key = {
-            hdr.ipv6.dst_addr: lpm @name("ipv6_dst");
-        }
-        actions = {
-            set_next_id_routing_v6;
-#ifdef WITH_INT
-            @defaultonly set_int_drop_reason;
-#else
-            @defaultonly nop;
-#endif // WITH_INT
-        }
-#ifdef WITH_INT
-        default_action = set_int_drop_reason(IntDropReason_t.DROP_REASON_ROUTING_V6_MISS);
-#else
-        default_action = nop();
-#endif // WITH_INT
-#ifdef WITH_DEBUG
-        counters = routing_v6_counter;
-#endif // WITH_DEBUG
-        size = ROUTING_V6_TABLE_SIZE;
-    }
-
     apply {
         if (hdr.ethernet.isValid() &&
                 fabric_md.bridged.base.fwd_type == FWD_BRIDGING) {
@@ -184,9 +147,6 @@ control Forwarding (inout parsed_headers_t hdr,
                        (fabric_md.bridged.base.fwd_type == FWD_IPV4_UNICAST ||
                             fabric_md.bridged.base.fwd_type == FWD_IPV4_MULTICAST)) {
             routing_v4.apply();
-        } else if (hdr.ipv6.isValid() &&
-                       fabric_md.bridged.base.fwd_type == FWD_IPV6_UNICAST) {
-            routing_v6.apply();
         }
     }
 }

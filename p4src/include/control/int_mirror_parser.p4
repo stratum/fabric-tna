@@ -92,15 +92,12 @@ parser IntReportMirrorParser (packet_in packet,
             (ETHERTYPE_MPLS, _): strip_mpls;
             (ETHERTYPE_IPV4, 0): accept;
             (ETHERTYPE_IPV4, 1): strip_ipv4_udp_gtpu;
-            (ETHERTYPE_IPV6, 0): accept;
-            (ETHERTYPE_IPV6, 1): strip_ipv6_udp_gtpu;
             default: reject;
         }
 #else
         transition select(hdr.eth_type.value) {
             ETHERTYPE_MPLS: strip_mpls;
             ETHERTYPE_IPV4: accept;
-            ETHERTYPE_IPV6: accept;
             default: reject;
         }
 #endif // WITH_SPGW
@@ -119,7 +116,6 @@ parser IntReportMirrorParser (packet_in packet,
 #ifdef WITH_SPGW
         transition select(fabric_md.int_mirror_md.strip_gtpu, packet.lookahead<bit<IP_VER_BITS>>()) {
             (1, IP_VERSION_4): strip_ipv4_udp_gtpu;
-            (1, IP_VERSION_6): strip_ipv6_udp_gtpu;
             (0, _): accept;
             default: reject;
         }
@@ -131,11 +127,6 @@ parser IntReportMirrorParser (packet_in packet,
 #ifdef WITH_SPGW
     state strip_ipv4_udp_gtpu {
         packet.advance((IPV4_HDR_BYTES + UDP_HDR_BYTES + GTP_HDR_BYTES) * 8);
-        transition accept;
-    }
-
-    state strip_ipv6_udp_gtpu {
-        packet.advance((IPV6_HDR_BYTES + UDP_HDR_BYTES + GTP_HDR_BYTES) * 8);
         transition accept;
     }
 #endif // WITH_SPGW

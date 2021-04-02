@@ -505,7 +505,6 @@ control IntEgress (
             if (fabric_md.mpls_stripped == 1) {
                 // We need to remove length of MPLS since we don't include MPLS
                 // header in INT report.
-                // TODO: support IPv6
                 hdr.report_ipv4.total_len = hdr.report_ipv4.total_len
                     - MPLS_HDR_BYTES;
                 hdr.report_udp.len = hdr.report_udp.len

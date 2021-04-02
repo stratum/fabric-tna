@@ -12,7 +12,6 @@ control Hasher(
 #ifdef WITH_SPGW
     Hash<flow_hash_t>(HashAlgorithm_t.CRC32) inner_ipv4_hasher;
 #endif // WITH_SPGW
-    Hash<flow_hash_t>(HashAlgorithm_t.CRC32) ipv6_hasher;
     Hash<flow_hash_t>(HashAlgorithm_t.CRC32) non_ip_hasher;
 
     apply {
@@ -40,14 +39,6 @@ control Hasher(
                 hdr.ipv4.src_addr,
                 hdr.ipv4.dst_addr,
                 hdr.ipv4.protocol,
-                fabric_md.l4_sport,
-                fabric_md.l4_dport
-            });
-        } else if (hdr.ipv6.isValid()) {
-            fabric_md.bridged.base.flow_hash = ipv6_hasher.get({
-                hdr.ipv6.src_addr,
-                hdr.ipv6.dst_addr,
-                fabric_md.ip_proto,
                 fabric_md.l4_sport,
                 fabric_md.l4_dport
             });
