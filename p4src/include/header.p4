@@ -73,17 +73,6 @@ header ipv4_t {
     bit<32> dst_addr;
 }
 
-header ipv6_t {
-    bit<4> version;
-    bit<8> traffic_class;
-    bit<20> flow_label;
-    bit<16> payload_len;
-    bit<8> next_hdr;
-    bit<8> hop_limit;
-    bit<128> src_addr;
-    bit<128> dst_addr;
-}
-
 header tcp_t {
     bit<16> sport;
     bit<16> dport;
@@ -353,7 +342,6 @@ struct parsed_headers_t {
     eth_type_t eth_type;
     mpls_t mpls;
     ipv4_t ipv4;
-    ipv6_t ipv6;
     tcp_t tcp;
     udp_t udp;
     icmp_t icmp;

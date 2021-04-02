@@ -110,7 +110,6 @@ parser FabricIngressParser (packet_in  packet,
         transition select(hdr.eth_type.value) {
             ETHERTYPE_MPLS: parse_mpls;
             ETHERTYPE_IPV4: parse_non_mpls_headers;
-            ETHERTYPE_IPV6: parse_non_mpls_headers;
             default: accept;
         }
     }
@@ -120,11 +119,10 @@ parser FabricIngressParser (packet_in  packet,
         fabric_md.bridged.base.mpls_label = hdr.mpls.label;
         fabric_md.bridged.base.mpls_ttl = hdr.mpls.ttl;
         // There is only one MPLS label for this fabric.
-        // Assume header after MPLS header is IPv4/IPv6
-        // Lookup first 4 bits for version
+        // Assume header after MPLS header is IPv4
+        // Lookup first nibble for ipv4 version to make sure.
         transition select(packet.lookahead<bit<IP_VER_BITS>>()) {
             IP_VERSION_4: parse_ipv4;
-            IP_VERSION_6: parse_ipv6;
             default: reject;
         }
     }
@@ -134,7 +132,6 @@ parser FabricIngressParser (packet_in  packet,
         fabric_md.bridged.base.mpls_ttl = DEFAULT_MPLS_TTL + 1;
         transition select(hdr.eth_type.value) {
             ETHERTYPE_IPV4: parse_ipv4;
-            ETHERTYPE_IPV6: parse_ipv6;
             default: accept;
         }
     }
@@ -152,18 +149,6 @@ parser FabricIngressParser (packet_in  packet,
             PROTO_TCP: parse_tcp;
             PROTO_UDP: parse_udp;
             PROTO_ICMP: parse_icmp;
-            default: accept;
-        }
-    }
-
-    state parse_ipv6 {
-        packet.extract(hdr.ipv6);
-        fabric_md.ip_proto = hdr.ipv6.next_hdr;
-        fabric_md.bridged.base.ip_eth_type = ETHERTYPE_IPV6;
-        transition select(hdr.ipv6.next_hdr) {
-            PROTO_TCP: parse_tcp;
-            PROTO_UDP: parse_udp;
-            PROTO_ICMPV6: parse_icmp;
             default: accept;
         }
     }
@@ -273,7 +258,6 @@ control FabricIngressDeparser(packet_out packet,
 #endif // WITH_XCONNECT || WITH_DOUBLE_VLAN_TERMINATION
         packet.emit(hdr.eth_type);
         packet.emit(hdr.ipv4);
-        packet.emit(hdr.ipv6);
         packet.emit(hdr.tcp);
         packet.emit(hdr.udp);
         packet.emit(hdr.icmp);
@@ -374,7 +358,6 @@ parser FabricEgressParser (packet_in packet,
         packet.extract(hdr.eth_type);
         transition select(hdr.eth_type.value) {
             ETHERTYPE_IPV4: parse_ipv4;
-            ETHERTYPE_IPV6: parse_ipv6;
             ETHERTYPE_MPLS: parse_mpls;
             default: accept;
         }
@@ -384,7 +367,6 @@ parser FabricEgressParser (packet_in packet,
         packet.extract(hdr.mpls);
         transition select(packet.lookahead<bit<IP_VER_BITS>>()) {
             IP_VERSION_4: parse_ipv4;
-            IP_VERSION_6: parse_ipv6;
             default: accept;
         }
     }
@@ -396,16 +378,6 @@ parser FabricEgressParser (packet_in packet,
             PROTO_TCP: parse_tcp;
             PROTO_UDP: parse_udp;
             PROTO_ICMP: parse_icmp;
-            default: accept;
-        }
-    }
-
-    state parse_ipv6 {
-        packet.extract(hdr.ipv6);
-        transition select(hdr.ipv6.next_hdr) {
-            PROTO_TCP: parse_tcp;
-            PROTO_UDP: parse_udp;
-            PROTO_ICMPV6: parse_icmp;
             default: accept;
         }
     }
@@ -580,7 +552,6 @@ control FabricEgressDeparser(packet_out packet,
         packet.emit(hdr.outer_gtpu);
 #endif // WITH_SPGW
         packet.emit(hdr.ipv4);
-        packet.emit(hdr.ipv6);
         packet.emit(hdr.tcp);
         packet.emit(hdr.udp);
         packet.emit(hdr.icmp);

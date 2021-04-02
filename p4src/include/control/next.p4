@@ -324,14 +324,6 @@ control EgressNextControl (inout parsed_headers_t hdr,
                     fabric_md.int_mirror_md.drop_reason = IntDropReason_t.DROP_REASON_IP_TTL_ZERO;
 #endif // WITH_INT
                 }
-            } else if (hdr.ipv6.isValid() && fabric_md.bridged.base.fwd_type != FWD_BRIDGING) {
-                hdr.ipv6.hop_limit = hdr.ipv6.hop_limit - 1;
-                if (hdr.ipv6.hop_limit == 0) {
-                    eg_dprsr_md.drop_ctl = 1;
-#ifdef WITH_INT
-                    fabric_md.int_mirror_md.drop_reason = IntDropReason_t.DROP_REASON_IP_TTL_ZERO;
-#endif // WITH_INT
-                }
             }
         }
     }
