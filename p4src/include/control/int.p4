@@ -157,12 +157,12 @@ control IntIngress (
 
     table watchlist {
         key = {
-            hdr.ipv4.isValid(): exact @name("ipv4_valid");
-            fabric_md.ipv4_src : ternary @name("ipv4_src");
-            fabric_md.ipv4_dst : ternary @name("ipv4_dst");
-            fabric_md.ip_proto : ternary @name("ip_proto");
-            fabric_md.l4_sport : range @name("l4_sport");
-            fabric_md.l4_dport : range @name("l4_dport");
+            fabric_md.acl_lkp.is_ipv4  : exact   @name("ipv4_valid");
+            fabric_md.acl_lkp.ipv4_src : ternary @name("ipv4_src");
+            fabric_md.acl_lkp.ipv4_dst : ternary @name("ipv4_dst");
+            fabric_md.acl_lkp.ip_proto : ternary @name("ip_proto");
+            fabric_md.acl_lkp.l4_sport : range   @name("l4_sport");
+            fabric_md.acl_lkp.l4_dport : range   @name("l4_dport");
         }
         actions = {
             mark_to_report;
@@ -216,29 +216,6 @@ control IntIngress (
     }
 
     apply {
-#ifdef WITH_SPGW
-        if (hdr.inner_ipv4.isValid()) {
-            fabric_md.ipv4_src = hdr.inner_ipv4.src_addr;
-            fabric_md.ipv4_dst = hdr.inner_ipv4.dst_addr;
-            fabric_md.ip_proto = hdr.inner_ipv4.protocol;
-        }
-        if (hdr.inner_tcp.isValid()) {
-            fabric_md.l4_sport = hdr.inner_tcp.sport;
-            fabric_md.l4_dport = hdr.inner_tcp.dport;
-        }
-        if (hdr.inner_udp.isValid()) {
-            fabric_md.l4_sport = hdr.inner_udp.sport;
-            fabric_md.l4_dport = hdr.inner_udp.dport;
-        }
-        if (fabric_md.bridged.spgw.needs_gtpu_encap) {
-            // For downlink, the FAR table will change fabric_md.ipv4_src/dst for routing
-            // and do encasulation.
-            // Here we need to change it back to the original one so we can match the UE flow.
-            fabric_md.ipv4_src = hdr.ipv4.src_addr;
-            fabric_md.ipv4_dst = hdr.ipv4.dst_addr;
-            fabric_md.ip_proto = hdr.ipv4.protocol;
-        }
-#endif // WITH_SPGW
         // Here we use 0b10000000xx as the mirror session ID where "xx" is the 2-bit
         // pipeline number(0~3).
         fabric_md.bridged.int_bmd.mirror_session_id = INT_MIRROR_SESSION_BASE ++ ig_intr_md.ingress_port[8:7];
