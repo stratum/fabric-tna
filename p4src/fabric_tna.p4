@@ -32,7 +32,7 @@ control FabricIngress (
     inout ingress_intrinsic_metadata_for_deparser_t  ig_dprsr_md,
     inout ingress_intrinsic_metadata_for_tm_t        ig_tm_md) {
 
-    AclLookupInit() acl_lkp;
+    AclLookupInit() acl_lkp_init;
     PacketIoIngress() pkt_io;
     Filtering() filtering;
     Forwarding() forwarding;
@@ -48,7 +48,7 @@ control FabricIngress (
 #endif // WITH_INT
 
     apply {
-        acl_lkp.apply(hdr, fabric_md.acl_lkp);
+        acl_lkp_init.apply(hdr, fabric_md.acl_lkp);
         pkt_io.apply(hdr, fabric_md, ig_intr_md, ig_tm_md, ig_dprsr_md);
         filtering.apply(hdr, fabric_md, ig_intr_md);
 #ifdef WITH_SPGW
