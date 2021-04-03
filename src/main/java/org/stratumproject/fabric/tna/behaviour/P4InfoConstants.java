@@ -70,6 +70,7 @@ public final class P4InfoConstants {
             PiMatchFieldId.of("mpls_label");
     public static final PiMatchFieldId HDR_NEXT_ID =
             PiMatchFieldId.of("next_id");
+    public static final PiMatchFieldId HDR_PORT = PiMatchFieldId.of("port");
     public static final PiMatchFieldId HDR_TEID = PiMatchFieldId.of("teid");
     public static final PiMatchFieldId HDR_TUNNEL_IPV4_DST =
             PiMatchFieldId.of("tunnel_ipv4_dst");
@@ -126,6 +127,8 @@ public final class P4InfoConstants {
             PiTableId.of("FabricIngress.spgw.uplink_pdrs");
     public static final PiTableId FABRIC_INGRESS_SPGW_UPLINK_RECIRC_RULES =
             PiTableId.of("FabricIngress.spgw.uplink_recirc.rules");
+    public static final PiTableId FABRIC_INGRESS_STATS_FLOWS =
+            PiTableId.of("FabricIngress.stats.flows");
     // Indirect Counter IDs
     public static final PiCounterId FABRIC_EGRESS_SPGW_PDR_COUNTER =
             PiCounterId.of("FabricEgress.spgw.pdr_counter");
@@ -156,6 +159,8 @@ public final class P4InfoConstants {
             PiCounterId.of("FabricIngress.pre_next.next_vlan_counter");
     public static final PiCounterId FABRIC_INGRESS_SPGW_UPLINK_RECIRC_RULES_COUNTER =
             PiCounterId.of("FabricIngress.spgw.uplink_recirc.rules_counter");
+    public static final PiCounterId FABRIC_INGRESS_STATS_FLOW_COUNTER =
+            PiCounterId.of("FabricIngress.stats.flow_counter");
     // Action IDs
     public static final PiActionId FABRIC_EGRESS_EGRESS_NEXT_DROP =
             PiActionId.of("FabricEgress.egress_next.drop");
@@ -255,6 +260,9 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.spgw.uplink_recirc.deny");
     public static final PiActionId FABRIC_INGRESS_SPGW_UPLINK_RECIRC_MISS =
             PiActionId.of("FabricIngress.spgw.uplink_recirc.miss");
+    public static final PiActionId FABRIC_INGRESS_STATS_COUNT =
+            PiActionId.of("FabricIngress.stats.count");
+    public static final PiActionId NO_ACTION = PiActionId.of("NoAction");
     public static final PiActionId NOP = PiActionId.of("nop");
     // Action Param IDs
     public static final PiActionParamId CPU_PORT =

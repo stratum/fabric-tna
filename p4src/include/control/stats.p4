@@ -3,15 +3,8 @@
 
 #include "../header.p4"
 
-control StatsEgress(inout parsed_headers_t hdr,
-                    inout fabric_egress_metadata_t fabric_md,
-                    in egress_intrinsic_metadata_t eg_intr_md) {
-
-    ipv4_addr_t ipv4_src = 0;
-    ipv4_addr_t ipv4_dst = 0;
-    bit<8> ip_proto      = 0;
-    l4_port_t l4_sport   = 0;
-    l4_port_t l4_dport   = 0;
+control Stats (in acl_lookup_t acl_lkp,
+               in PortId_t port) {
 
     DirectCounter<bit<64>>(CounterType_t.PACKETS_AND_BYTES) flow_counter;
 
@@ -21,49 +14,22 @@ control StatsEgress(inout parsed_headers_t hdr,
 
     table flows {
         key = {
-            ipv4_src                    : ternary @name("ipv4_src");
-            ipv4_dst                    : ternary @name("ipv4_dst");
-            ip_proto                    : ternary @name("ip_proto");
-            l4_sport                    : ternary @name("l4_sport");
-            l4_dport                    : ternary @name("l4_dport");
-            eg_intr_md.egress_port      : ternary @name("eg_port");
+            acl_lkp.ipv4_src : ternary @name("ipv4_src");
+            acl_lkp.ipv4_dst : ternary @name("ipv4_dst");
+            acl_lkp.ip_proto : ternary @name("ip_proto");
+            acl_lkp.l4_sport : ternary @name("l4_sport");
+            acl_lkp.l4_dport : ternary @name("l4_dport");
+            port             : ternary @name("port");
         }
         actions = {
             count;
         }
         const default_action = count;
-        const size = 1024;
+        const size = STATS_TABLE_SIZE;
         counters = flow_counter;
     }
 
     apply {
-        // Always match on the inner IPv4, if valid.
-        if (hdr.gtpu.isValid() && hdr.inner_ipv4.isValid()) {
-            ipv4_src = hdr.inner_ipv4.src_addr;
-            ipv4_dst = hdr.inner_ipv4.dst_addr;
-            ip_proto = hdr.inner_ipv4.protocol;
-            if (hdr.inner_tcp.isValid()) {
-                l4_sport = hdr.inner_tcp.sport;
-                l4_dport = hdr.inner_tcp.dport;
-            } else if (hdr.inner_udp.isValid()) {
-                l4_sport = hdr.inner_udp.sport;
-                l4_dport = hdr.inner_udp.dport;
-            }
-        } else if (hdr.ipv4.isValid()) {
-            ipv4_src = hdr.ipv4.src_addr;
-            ipv4_dst = hdr.ipv4.dst_addr;
-            ip_proto = hdr.ipv4.protocol;
-            if (hdr.tcp.isValid()) {
-                l4_sport = hdr.tcp.sport;
-                l4_dport = hdr.tcp.dport;
-            } else if (hdr.udp.isValid()) {
-                l4_sport = hdr.udp.sport;
-                l4_dport = hdr.udp.dport;
-            }
-        }
-        // Update stats only for regular packets, exclude mirrored ones.
-        if (fabric_md.bridged.bmd_type == BridgedMdType_t.INGRESS_TO_EGRESS) {
-            flows.apply();
-        }
+        flows.apply();
     }
 }

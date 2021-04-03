@@ -345,6 +345,7 @@ header common_egress_metadata_t {
 struct fabric_egress_metadata_t {
     bridged_metadata_t    bridged;
     PortId_t              cpu_port;
+    acl_lookup_t          acl_lkp;
 #ifdef WITH_SPGW
     bool                  inner_ipv4_checksum_err;
 #endif // WITH_SPGW
