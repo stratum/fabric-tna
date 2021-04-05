@@ -87,7 +87,7 @@ control FabricEgress (
     inout egress_intrinsic_metadata_for_deparser_t     eg_dprsr_md,
     inout egress_intrinsic_metadata_for_output_port_t  eg_oport_md) {
 
-    AclLookupInit() acl_lkp;
+    AclLookupInit() acl_lkp_init;
     Stats() stats;
     PacketIoEgress() pkt_io_egress;
     EgressNextControl() egress_next;
@@ -99,7 +99,7 @@ control FabricEgress (
 #endif // WITH_INT
 
     apply {
-        acl_lkp.apply(hdr, fabric_md.acl_lkp);
+        acl_lkp_init.apply(hdr, fabric_md.acl_lkp);
         pkt_io_egress.apply(hdr, fabric_md, eg_intr_md);
         if (fabric_md.bridged.bmd_type == BridgedMdType_t.INGRESS_TO_EGRESS) {
             // Do not update stats for INT reports and other mirrored packets.
