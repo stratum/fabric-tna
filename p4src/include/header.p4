@@ -288,7 +288,7 @@ header bridged_metadata_t {
 // IPv4/TCP/UDP headers are valid, this should always carry the inner ones. The
 // assumption is that we terminate GTP tunnels in the fabric, so we are more
 // interested in observing/blocking the inner flows. We might revisit this
-// decision in future.
+// decision in the future.
 struct acl_lookup_t {
     bool      is_ipv4;
     bit<32>   ipv4_src;
@@ -302,7 +302,7 @@ struct acl_lookup_t {
 @flexible
 @pa_auto_init_metadata
 struct fabric_ingress_metadata_t {
-    bridged_metadata_t bridged;
+    bridged_metadata_t      bridged;
     acl_lookup_t            acl_lkp;
     bit<32>                 routing_ipv4_dst; // Outermost
     bool                    skip_forwarding;
