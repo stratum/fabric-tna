@@ -276,8 +276,6 @@ header bridged_metadata_t {
     BridgedMdType_t         bmd_type;
     bridged_metadata_base_t base;
 #ifdef WITH_SPGW
-    l4_port_t       inner_l4_sport;
-    l4_port_t       inner_l4_dport;
     spgw_bridged_metadata_t spgw;
 #endif // WITH_SPGW
 #ifdef WITH_INT
@@ -285,21 +283,34 @@ header bridged_metadata_t {
 #endif // WITH_INT
 }
 
+// Used for ACL lookups, INT watchlist, and stats tables. Initialized with the
+// parsed headers, but never updated by the pipe. When both outer and inner
+// IPv4/TCP/UDP headers are valid, this should always carry the inner ones. The
+// assumption is that we terminate GTP tunnels in the fabric, so we are more
+// interested in observing/blocking the inner flows. We might revisit this
+// decision in the future.
+struct acl_lookup_t {
+    bool      is_ipv4;
+    bit<32>   ipv4_src;
+    bit<32>   ipv4_dst;
+    bit<8>    ip_proto;
+    l4_port_t l4_sport;
+    l4_port_t l4_dport;
+}
+
 // Ingress pipeline-only metadata
 @flexible
 @pa_auto_init_metadata
 struct fabric_ingress_metadata_t {
     bridged_metadata_t      bridged;
-    bit<32>                 ipv4_src;
-    bit<32>                 ipv4_dst;
-    bit<8>                  ip_proto;
-    l4_port_t               l4_sport;
-    l4_port_t               l4_dport;
-    bool                    ipv4_checksum_err;
+    acl_lookup_t            acl_lkp;
+    bit<32>                 routing_ipv4_dst; // Outermost
     bool                    skip_forwarding;
     bool                    skip_next;
     next_id_t               next_id;
     bool                    egress_port_set;
+    // FIXME: checksum errors are set but never read, remove or test it
+    bool                    ipv4_checksum_err;
     bool                    inner_ipv4_checksum_err;
 #ifdef WITH_SPGW
     spgw_ingress_metadata_t spgw;

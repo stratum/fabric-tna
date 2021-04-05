@@ -11,13 +11,8 @@ control DecapGtpu(inout parsed_headers_t            hdr,
                   inout fabric_ingress_metadata_t   fabric_md) {
     @hidden
     action decap_inner_common() {
-        // Correct parser-set metadata to use the inner header values
         fabric_md.bridged.base.ip_eth_type = ETHERTYPE_IPV4;
-        fabric_md.ip_proto = hdr.inner_ipv4.protocol;
-        fabric_md.ipv4_src = hdr.inner_ipv4.src_addr;
-        fabric_md.ipv4_dst = hdr.inner_ipv4.dst_addr;
-        fabric_md.l4_sport = fabric_md.bridged.inner_l4_sport;
-        fabric_md.l4_dport = fabric_md.bridged.inner_l4_dport;
+        fabric_md.routing_ipv4_dst = hdr.inner_ipv4.dst_addr;
         // Move GTPU and inner L3 headers out
         hdr.ipv4 = hdr.inner_ipv4;
         hdr.inner_ipv4.setInvalid();
@@ -109,8 +104,8 @@ control UplinkRecirc(
 
     table rules {
         key = {
-            fabric_md.ipv4_src : ternary @name("ipv4_src");
-            fabric_md.ipv4_dst : ternary @name("ipv4_dst");
+            fabric_md.acl_lkp.ipv4_src : ternary @name("ipv4_src");
+            fabric_md.acl_lkp.ipv4_dst : ternary @name("ipv4_dst");
         }
         actions = {
             allow;
@@ -292,9 +287,7 @@ control SpgwIngress(
         fabric_md.bridged.spgw.gtpu_tunnel_sport = tunnel_src_port;
         fabric_md.bridged.spgw.gtpu_tunnel_sip = tunnel_src_addr;
         fabric_md.bridged.spgw.gtpu_tunnel_dip = tunnel_dst_addr;
-        // update metadata for correct routing/hashing
-        fabric_md.ipv4_src = tunnel_src_addr;
-        fabric_md.ipv4_dst = tunnel_dst_addr;
+        fabric_md.routing_ipv4_dst = tunnel_dst_addr;
     }
 
     action load_tunnel_far(bool         drop,

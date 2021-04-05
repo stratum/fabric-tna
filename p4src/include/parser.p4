@@ -141,9 +141,7 @@ parser FabricIngressParser (packet_in  packet,
 
     state parse_ipv4 {
         packet.extract(hdr.ipv4);
-        fabric_md.ipv4_src = hdr.ipv4.src_addr;
-        fabric_md.ipv4_dst = hdr.ipv4.dst_addr;
-        fabric_md.ip_proto = hdr.ipv4.protocol;
+        fabric_md.routing_ipv4_dst = hdr.ipv4.dst_addr;
         fabric_md.bridged.base.ip_eth_type = ETHERTYPE_IPV4;
         ipv4_checksum.add(hdr.ipv4);
         fabric_md.ipv4_checksum_err = ipv4_checksum.verify();
@@ -158,7 +156,9 @@ parser FabricIngressParser (packet_in  packet,
 
     state parse_ipv6 {
         packet.extract(hdr.ipv6);
-        fabric_md.ip_proto = hdr.ipv6.next_hdr;
+        // FIXME: remove ipv6 support or test it
+        //  https://github.com/stratum/fabric-tna/pull/227
+        // fabric_md.ip_proto = hdr.ipv6.next_hdr;
         fabric_md.bridged.base.ip_eth_type = ETHERTYPE_IPV6;
         transition select(hdr.ipv6.next_hdr) {
             PROTO_TCP: parse_tcp;
@@ -170,15 +170,11 @@ parser FabricIngressParser (packet_in  packet,
 
     state parse_tcp {
         packet.extract(hdr.tcp);
-        fabric_md.l4_sport = hdr.tcp.sport;
-        fabric_md.l4_dport = hdr.tcp.dport;
         transition accept;
     }
 
     state parse_udp {
         packet.extract(hdr.udp);
-        fabric_md.l4_sport = hdr.udp.sport;
-        fabric_md.l4_dport = hdr.udp.dport;
         transition select(hdr.udp.dport) {
             UDP_PORT_GTPU: parse_gtpu;
             default: accept;
@@ -214,19 +210,11 @@ parser FabricIngressParser (packet_in  packet,
 
     state parse_inner_tcp {
         packet.extract(hdr.inner_tcp);
-#ifdef WITH_SPGW
-        fabric_md.bridged.inner_l4_sport = hdr.inner_tcp.sport;
-        fabric_md.bridged.inner_l4_dport = hdr.inner_tcp.dport;
-#endif // WITH_SPGW
         transition accept;
     }
 
     state parse_inner_udp {
         packet.extract(hdr.inner_udp);
-#ifdef WITH_SPGW
-        fabric_md.bridged.inner_l4_sport = hdr.inner_udp.sport;
-        fabric_md.bridged.inner_l4_dport = hdr.inner_udp.dport;
-#endif // WITH_SPGW
         transition accept;
     }
 
