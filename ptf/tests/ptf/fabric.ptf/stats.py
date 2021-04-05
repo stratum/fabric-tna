@@ -1,0 +1,166 @@
+# Copyright 2021-present Open Networking Foundation
+# SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0 AND Apache-2.0
+
+from p4.v1 import p4runtime_pb2
+from scapy.layers.inet import IP, UDP, TCP
+
+from base_test import autocleanup, tvsetup
+from fabric_test import *  # noqa
+
+INGRESS = "Ingress"
+EGRESS = "Egress"
+
+STATS_TABLE = "Fabric%s.stats.flows"
+STATS_ACTION = "Fabric%s.stats.count"
+
+
+class StatsTest(FabricTest):
+    """Mixin class with methods to manipulate stats tables and to verify
+    counters.
+
+    Most methods take a generic dictionary 'ftuple', expected to contain
+    values for the 5-tuple to match: ipv4_src, ipv4_dst, ip_proto, l4_sport, and
+    l4_dport.
+    """
+
+    def build_stats_matches(self, port, **ftuple):
+        matches = self.build_acl_matches(**ftuple)
+        port_ = stringify(port, 2)
+        port_mask = stringify(0xFFFF, 2)
+        matches.append(self.Ternary("port", port_, port_mask))
+        return matches
+
+    def build_stats_table_entry(self, gress, port, **ftuple):
+        table_entry = p4runtime_pb2.TableEntry()
+        table_name = STATS_TABLE % gress
+        table_entry.table_id = self.get_table_id(table_name)
+        table_entry.priority = DEFAULT_PRIORITY
+        matches = self.build_stats_matches(port=port, **ftuple)
+        self.set_match_key(table_entry, table_name, matches)
+        return table_entry
+
+    def reset_stats_counter(self, table_entry):
+        self.write_direct_counter(table_entry, 0, 0)
+
+    def verify_stats_counter(self, gress, port, byte_count, pkt_count,
+                             **ftuple):
+        # ONOS will read stats counters during flow rule reconciliation. Here we
+        # do the same by reading a TableEntry and extracting counter_data
+        # (instead of reading DirectCounterEntry).
+        req = self.get_new_read_request()
+        entity = req.entities.add()
+        entity.table_entry.CopyFrom(self.build_stats_table_entry(
+            gress=gress, port=port, **ftuple))
+        entity.table_entry.counter_data.CopyFrom(p4runtime_pb2.CounterData())
+        entities = self.read_request(req)
+        if self.generate_tv:
+            # TODO
+            return
+        if len(entities) != 1:
+            self.fail("Expected 1 table entry got %d" % len(entities))
+        entity = entities.pop()
+        if not entity.HasField("table_entry"):
+            self.fail("Expected table entry got something else")
+        counter_data = entity.table_entry.counter_data
+        if (counter_data.byte_count != byte_count
+                or counter_data.packet_count != pkt_count):
+            self.fail(
+                "Counter is not same as expected.\
+                \nActual packet count: %d, Expected packet count: %d\
+                \nActual byte count: %d, Expected byte count: %d\n"
+                % (
+                    counter_data.packet_count,
+                    pkt_count,
+                    counter_data.byte_count,
+                    byte_count,
+                )
+            )
+
+    def add_stats_table_entry(self, gress, ports, **ftuple):
+        for port in ports:
+            matches = self.build_stats_matches(port, **ftuple)
+            self.send_request_add_entry_to_action(
+                STATS_TABLE % gress,
+                matches,
+                STATS_ACTION % gress,
+                [],
+                DEFAULT_PRIORITY,
+            )
+
+    def set_up_stats_flows(self, ig_port, eg_port, **ftuple):
+        self.add_stats_table_entry(gress=INGRESS, ports=[ig_port], **ftuple)
+        self.add_stats_table_entry(gress=EGRESS, ports=[eg_port], **ftuple)
+        # FIXME: check P4RT spec, are counters reset upon table insert?
+        self.reset_stats_counter(self.build_stats_table_entry(
+            gress=INGRESS, port=ig_port, **ftuple))
+        self.reset_stats_counter(self.build_stats_table_entry(
+            gress=EGRESS, port=eg_port, **ftuple))
+
+
+class StatsIPv4UnicastTest(StatsTest, IPv4UnicastTest):
+    """Wraps IPv4UnicastTest"""
+
+    def runStatsIPv4UnicastTest(self, **kwargs):
+        pkt = kwargs['pkt']
+        ftuple = {
+            "ipv4_src": pkt[IP].src,
+            "ipv4_dst": pkt[IP].dst,
+            "ip_proto": pkt[IP].proto
+        }
+        if UDP in pkt:
+            ftuple["l4_sport"] = pkt[UDP].sport
+            ftuple["l4_dport"] = pkt[UDP].dport
+        elif TCP in pkt:
+            ftuple["l4_sport"] = pkt[TCP].sport
+            ftuple["l4_dport"] = pkt[TCP].dport
+
+        self.set_up_stats_flows(
+            ig_port=self.port1, eg_port=self.port2, **ftuple)
+        self.runIPv4UnicastTest(**kwargs)
+        self.verify_stats_counter(
+            gress=INGRESS, port=self.port1,
+            byte_count=len(pkt), pkt_count=1, **ftuple)
+        self.verify_stats_counter(
+            gress=EGRESS, port=self.port2,
+            byte_count=len(pkt), pkt_count=1, **ftuple)
+
+
+class FabricStatsIPv4UnicastTest(StatsIPv4UnicastTest):
+    """Tests stats counters for IPv4 unicast routing with different packet types
+    """
+    @tvsetup
+    @autocleanup
+    def doRunTest(self, pkt, mac_dest, tagged1, tagged2, tc_name):
+        self.runStatsIPv4UnicastTest(
+            pkt=pkt, next_hop_mac=mac_dest, tagged1=tagged1,
+            tagged2=tagged2,
+        )
+
+    def runTest(self):
+        print("")
+        for vlan_conf, tagged in vlan_confs.items():
+            for pkt_type in ["tcp", "udp", "icmp"]:
+                tc_name = (
+                        pkt_type
+                        + "_VLAN_"
+                        + vlan_conf
+                )
+                print(
+                    "Testing {} packet with VLAN {}...".format(
+                        pkt_type, vlan_conf
+                    )
+                )
+                pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
+                    eth_src=HOST1_MAC,
+                    eth_dst=SWITCH_MAC,
+                    ip_src=HOST1_IPV4,
+                    ip_dst=HOST2_IPV4,
+                    pktlen=MIN_PKT_LEN,
+                )
+                self.doRunTest(
+                    pkt=pkt,
+                    mac_dest=HOST2_MAC,
+                    tagged1=tagged[0],
+                    tagged2=tagged[1],
+                    tc_name=tc_name
+                )
