@@ -66,10 +66,14 @@ public class HighlightManager implements HighlightService {
     private static final String APP_NAME = "org.stratumproject.fabric.tna.highlight";
     private static final int BYTE_THRESHOLD = 100;
     private static final int PKT_THRESHOLD = 1;
+    private final InternalHighlighter nameHighlighter = new InternalHighlighter(Mode.NAME);
+    private final InternalHighlighter trafficHighlighter = new InternalHighlighter(Mode.TRAFFIC);
+    private final InternalHighlighter allHighlighter = new InternalHighlighter(Mode.ALL);
+    private final UiTopoHighlighterFactory nameFactory = () -> nameHighlighter;
+    private final UiTopoHighlighterFactory trafficFactory = () -> trafficHighlighter;
+    private final UiTopoHighlighterFactory allFactory = () -> allHighlighter;
 
     private ApplicationId appId;
-    private final InternalHighlighter highlighter = new InternalHighlighter();
-    private final UiTopoHighlighterFactory factory = () -> highlighter;
 
     // Distribited set storing current monitoring criteria
     private DistributedSet<HighlightKey> highlightStore;
@@ -95,7 +99,9 @@ public class HighlightManager implements HighlightService {
                 groupedThreads("fabric-tna-highlight-event", "%d", log));
         highlightStore.addListener(highlightListener);
 
-        uiExtensionService.register(factory);
+        uiExtensionService.register(nameFactory);
+        uiExtensionService.register(trafficFactory);
+        uiExtensionService.register(allFactory);
 
         log.info("Started");
     }
@@ -105,10 +111,16 @@ public class HighlightManager implements HighlightService {
         highlightStore.removeListener(highlightListener);
         highLightExecutor.shutdown();
 
-        highlightStore.forEach(highlighter::removeHighlighter);
+        highlightStore.forEach(key -> {
+            nameHighlighter.removeHighlighter(key);
+            trafficHighlighter.removeHighlighter(key);
+            allHighlighter.removeHighlighter(key);
+        });
         highlightStore.clear();
 
-        uiExtensionService.unregister(factory);
+        uiExtensionService.unregister(nameFactory);
+        uiExtensionService.unregister(trafficFactory);
+        uiExtensionService.unregister(allFactory);
 
         log.info("Stopped");
     }
@@ -140,9 +152,24 @@ public class HighlightManager implements HighlightService {
         return Set.copyOf(highlightStore);
     }
 
+    private enum Mode {
+        // Show name of the highlight as label
+        NAME,
+        // Show byte per second and packet per second as label
+        TRAFFIC,
+        // Show both name and bandwidth combined as label
+        ALL
+    }
+
+
     private final class InternalHighlighter implements UiTopoHighlighter {
         private static final String NAME = "fabric-tna-highlighter";
         private final Set<HighlightKey> keys = Sets.newConcurrentHashSet();
+        private Mode mode;
+
+        public InternalHighlighter(Mode mode) {
+            this.mode = mode;
+        }
 
         public void addHighlighter(HighlightKey key) {
             keys.add(key);
@@ -274,9 +301,27 @@ public class HighlightManager implements HighlightService {
 
                 if (effectiveHighlightKey != null) {
                     Mod mod = effectiveHighlightKey.mod();
-                    String label = String.format("%s / %s",
+
+                    String traffic = String.format("%s / %s",
                             humanReadable(effectiveByteDiff * 1000 / effectiveTimeMsDiff, "Bps"),
                             humanReadable(effectivePacketDiff * 1000 / effectiveTimeMsDiff, "pps"));
+
+                    String label;
+                    switch (mode) {
+                        case NAME:
+                            label = effectiveHighlightKey.name();
+                            break;
+                        case TRAFFIC:
+                            label = traffic;
+                            break;
+                        case ALL:
+                            label = String.format("%s - %s", effectiveHighlightKey.name(), traffic);
+                            break;
+                        default:
+                            label = "";
+                            break;
+                    }
+
                     highlights.add(new LinkHighlight(link.linkId(), LinkHighlight.Flavor.PRIMARY_HIGHLIGHT)
                             .addMod(mod)
                             .setLabel(label)
@@ -315,10 +360,14 @@ public class HighlightManager implements HighlightService {
                 log.debug("Processing event {}", event);
                 switch (event.type()) {
                     case ADD:
-                        highlighter.addHighlighter(event.entry());
+                        nameHighlighter.addHighlighter(event.entry());
+                        trafficHighlighter.addHighlighter(event.entry());
+                        allHighlighter.addHighlighter(event.entry());
                         break;
                     case REMOVE:
-                        highlighter.removeHighlighter(event.entry());
+                        nameHighlighter.removeHighlighter(event.entry());
+                        trafficHighlighter.removeHighlighter(event.entry());
+                        allHighlighter.removeHighlighter(event.entry());
                         break;
                     default:
                         break;
