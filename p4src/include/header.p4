@@ -132,10 +132,11 @@ header gtpu_t {
 // See bridged_metadata_base_t
 struct spgw_bridged_metadata_t {
     bit<16>         ipv4_len_for_encap;
-    @padding bit<5> _pad0;
+    @padding bit<4> _pad0;
     bool            needs_gtpu_encap;
     bool            skip_spgw;
     bool            skip_egress_pdr_ctr;
+    bool            notify_spgwc;
     teid_t          gtpu_teid;
     ipv4_addr_t     gtpu_tunnel_sip;
     ipv4_addr_t     gtpu_tunnel_dip;
@@ -145,7 +146,6 @@ struct spgw_bridged_metadata_t {
 
 struct spgw_ingress_metadata_t {
     bool               needs_gtpu_decap;
-    bool               notify_spgwc;
     far_id_t           far_id;
     SpgwInterface      src_iface;
 }

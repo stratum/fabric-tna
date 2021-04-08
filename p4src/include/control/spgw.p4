@@ -264,7 +264,8 @@ control SpgwIngress(
         // general far attributes
         fabric_md.skip_forwarding = drop;
         fabric_md.skip_next = drop;
-        ig_tm_md.copy_to_cpu = ((bit<1>)notify_cp) | ig_tm_md.copy_to_cpu;
+        // TODO: Send notification to 3GPP/SPGW control plane
+        fabric_md.bridged.spgw.notify_spgwc = notify_cp;
         fabric_md.bridged.spgw.needs_gtpu_encap = false;
         fabric_md.bridged.spgw.skip_egress_pdr_ctr = false;
     }
@@ -280,7 +281,8 @@ control SpgwIngress(
         // general far attributes
         fabric_md.skip_forwarding = drop;
         fabric_md.skip_next = drop;
-        ig_tm_md.copy_to_cpu = ((bit<1>)notify_cp) | ig_tm_md.copy_to_cpu;
+        // TODO: Send notification to 3GPP/SPGW control plane
+        fabric_md.bridged.spgw.notify_spgwc = notify_cp;
         // GTP tunnel attributes
         fabric_md.bridged.spgw.needs_gtpu_encap = true;
         fabric_md.bridged.spgw.gtpu_teid = teid;
