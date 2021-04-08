@@ -20,23 +20,6 @@ control Next (inout parsed_headers_t hdr,
         fabric_md.egress_port_set = true;
     }
 
-    @hidden
-    action rewrite_smac(mac_addr_t smac) {
-        hdr.ethernet.src_addr = smac;
-    }
-
-    @hidden
-    action rewrite_dmac(mac_addr_t dmac) {
-        hdr.ethernet.dst_addr = dmac;
-    }
-
-    @hidden
-    action routing(PortId_t port_num, mac_addr_t smac, mac_addr_t dmac) {
-        rewrite_smac(smac);
-        rewrite_dmac(dmac);
-        output(port_num);
-    }
-
 #ifdef WITH_XCONNECT
     /*
      * Cross-connect table.
@@ -50,14 +33,14 @@ control Next (inout parsed_headers_t hdr,
     }
 
     action set_next_id_xconnect(next_id_t next_id) {
-        fabric_md.next_id = next_id;
+        fabric_md.bridged.base.next_id = next_id;
         xconnect_counter.count();
     }
 
     table xconnect {
         key = {
             ig_intr_md.ingress_port: exact @name("ig_port");
-            fabric_md.next_id: exact @name("next_id");
+            fabric_md.bridged.base.next_id: exact @name("next_id");
         }
         actions = {
             output_xconnect;
@@ -82,18 +65,12 @@ control Next (inout parsed_headers_t hdr,
         simple_counter.count();
     }
 
-    action routing_simple(PortId_t port_num, mac_addr_t smac, mac_addr_t dmac) {
-        routing(port_num, smac, dmac);
-        simple_counter.count();
-    }
-
     table simple {
         key = {
-            fabric_md.next_id: exact @name("next_id");
+            fabric_md.bridged.base.next_id: exact @name("next_id");
         }
         actions = {
             output_simple;
-            routing_simple;
             @defaultonly nop;
         }
         const default_action = nop();
@@ -122,19 +99,13 @@ control Next (inout parsed_headers_t hdr,
         hashed_counter.count();
     }
 
-    action routing_hashed(PortId_t port_num, mac_addr_t smac, mac_addr_t dmac) {
-        routing(port_num, smac, dmac);
-        hashed_counter.count();
-    }
-
     table hashed {
         key = {
-            fabric_md.next_id           : exact @name("next_id");
+            fabric_md.bridged.base.next_id           : exact @name("next_id");
             fabric_md.bridged.base.flow_hash : selector;
         }
         actions = {
             output_hashed;
-            routing_hashed;
             @defaultonly nop;
         }
         implementation = hashed_selector;
@@ -158,7 +129,7 @@ control Next (inout parsed_headers_t hdr,
 
     table multicast {
         key = {
-            fabric_md.next_id: exact @name("next_id");
+            fabric_md.bridged.base.next_id: exact @name("next_id");
         }
         actions = {
             set_mcast_group_id;
@@ -267,7 +238,7 @@ control EgressNextControl (inout parsed_headers_t hdr,
     table egress_vlan {
         key = {
             fabric_md.bridged.base.vlan_id : exact @name("vlan_id");
-            eg_intr_md.egress_port    : exact @name("eg_port");
+            eg_intr_md.egress_port         : exact @name("eg_port");
         }
         actions = {
             push_vlan;
@@ -279,7 +250,26 @@ control EgressNextControl (inout parsed_headers_t hdr,
         size = EGRESS_VLAN_TABLE_SIZE;
     }
 
+    action rewrite_mac(mac_addr_t smac, mac_addr_t dmac) {
+        hdr.ethernet.src_addr = smac;
+        hdr.ethernet.dst_addr = dmac;
+    }
+
+    table l2_rewrite {
+        key = {
+            fabric_md.bridged.base.next_id : exact @name("next_id");
+            eg_intr_md.egress_port         : exact @name("eg_port");
+        }
+        actions = {
+            rewrite_mac;
+            @defaultonly nop;
+        }
+        const default_action = nop;
+        size = L2_REWRITE_TABLE_SIZE;
+    }
+
     apply {
+        l2_rewrite.apply();
         if (fabric_md.bridged.base.is_multicast
              && fabric_md.bridged.base.ig_port == eg_intr_md.egress_port) {
             eg_dprsr_md.drop_ctl = 1;

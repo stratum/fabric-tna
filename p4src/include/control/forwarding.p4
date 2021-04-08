@@ -19,7 +19,7 @@ control Forwarding (inout parsed_headers_t hdr,
 
     @hidden
     action set_next_id(next_id_t next_id) {
-        fabric_md.next_id = next_id;
+        fabric_md.bridged.base.next_id = next_id;
     }
 
     /*

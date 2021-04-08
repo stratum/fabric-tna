@@ -263,6 +263,7 @@ struct bridged_metadata_base_t {
     bit<48>                 ig_tstamp;
     bit<16>                 ip_eth_type;
     flow_hash_t             flow_hash;
+    next_id_t               next_id;
 #ifdef WITH_DOUBLE_VLAN_TERMINATION
     @padding bit<7>         _pad1;
     bool                    push_double_vlan;
@@ -307,7 +308,6 @@ struct fabric_ingress_metadata_t {
     bit<32>                 routing_ipv4_dst; // Outermost
     bool                    skip_forwarding;
     bool                    skip_next;
-    next_id_t               next_id;
     bool                    egress_port_set;
     // FIXME: checksum errors are set but never read, remove or test it
     bool                    ipv4_checksum_err;

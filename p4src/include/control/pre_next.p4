@@ -22,7 +22,7 @@ control PreNext(inout parsed_headers_t hdr,
 
     table next_mpls {
         key = {
-            fabric_md.next_id: exact @name("next_id");
+            fabric_md.bridged.base.next_id: exact @name("next_id");
         }
         actions = {
             set_mpls_label;
@@ -54,7 +54,7 @@ control PreNext(inout parsed_headers_t hdr,
 
     table next_vlan {
         key = {
-            fabric_md.next_id: exact @name("next_id");
+            fabric_md.bridged.base.next_id: exact @name("next_id");
         }
         actions = {
             set_vlan;

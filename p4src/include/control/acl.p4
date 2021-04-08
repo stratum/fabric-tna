@@ -57,7 +57,7 @@ control Acl (inout parsed_headers_t hdr,
     DirectCounter<bit<64>>(CounterType_t.PACKETS_AND_BYTES) acl_counter;
 
     action set_next_id_acl(next_id_t next_id) {
-        fabric_md.next_id = next_id;
+        fabric_md.bridged.base.next_id = next_id;
         acl_counter.count();
     }
 

@@ -212,13 +212,13 @@ BRIDGED_MD_TYPE_INGRESS_MIRROR = 3
 
 # Size for different headers
 if testutils.test_param_get("profile") == "fabric-spgw-int":
-    BMD_BYTES = 43
+    BMD_BYTES = 47
 elif testutils.test_param_get("profile") == "fabric-spgw":
-    BMD_BYTES = 40
+    BMD_BYTES = 44
 elif testutils.test_param_get("profile") == "fabric-int":
-    BMD_BYTES = 24
+    BMD_BYTES = 28
 else:
-    BMD_BYTES = 21  # fabric
+    BMD_BYTES = 25  # fabric
 IP_HDR_BYTES = 20
 UDP_HDR_BYTES = 8
 GTP_HDR_BYTES = 8
@@ -527,6 +527,21 @@ class FabricTest(P4RuntimeTest):
             [],
         )
 
+    def add_egress_next_l2_rewrite(self, next_id, egress_port, smac, dmac):
+        next_id_ = stringify(next_id, 4)
+        egress_port_ = stringify(egress_port, 2)
+        smac_ = mac_to_binary(smac)
+        dmac_ = mac_to_binary(dmac)
+        self.send_request_add_entry_to_action(
+            "egress_next.l2_rewrite",
+            [
+                self.Exact("next_id", next_id_),
+                self.Exact("eg_port", egress_port_)
+            ],
+            "egress_next.rewrite_mac",
+            [("smac", smac_), ("dmac", dmac_)],
+        )
+
     def set_keep_egress_vlan_config(self, egress_port, vlan_id):
         egress_port = stringify(egress_port, 2)
         vlan_id = stringify(vlan_id, 2)
@@ -825,30 +840,28 @@ class FabricTest(P4RuntimeTest):
 
     def add_next_routing(self, next_id, egress_port, smac, dmac):
         egress_port_ = stringify(egress_port, 2)
-        smac_ = mac_to_binary(smac)
-        dmac_ = mac_to_binary(dmac)
         self.add_next_hashed_group_action(
             next_id,
             egress_port,
             [
                 [
-                    "next.routing_hashed",
-                    [("port_num", egress_port_), ("smac", smac_), ("dmac", dmac_)],
+                    "next.output_hashed",
+                    [("port_num", egress_port_)],
                 ]
             ],
         )
+        self.add_egress_next_l2_rewrite(next_id, egress_port, smac, dmac)
 
     def add_next_routing_simple(self, next_id, egress_port, smac, dmac):
         next_id_ = stringify(next_id, 4)
         egress_port_ = stringify(egress_port, 2)
-        smac_ = mac_to_binary(smac)
-        dmac_ = mac_to_binary(dmac)
         self.send_request_add_entry_to_action(
             "next.simple",
             [self.Exact("next_id", next_id_)],
-            "next.routing_simple",
-            [("port_num", egress_port_), ("smac", smac_), ("dmac", dmac_)],
+            "next.output_simple",
+            [("port_num", egress_port_)],
         )
+        self.add_egress_next_l2_rewrite(next_id, egress_port, smac, dmac)
 
     def add_next_vlan(self, next_id, new_vlan_id):
         next_id_ = stringify(next_id, 4)
@@ -881,9 +894,9 @@ class FabricTest(P4RuntimeTest):
             "next.hashed", [self.Exact("next_id", next_id_)], mbr_id
         )
 
-    # actions is a tuple (action_name, param_tuples)
+    # actions is a list of tuple (action_name, param_list)
     # params_tuples contains a tuple for each param (param_name, param_value)
-    def add_next_hashed_group_action(self, next_id, grp_id, actions=()):
+    def add_next_hashed_group_action(self, next_id, grp_id, actions=[]):
         next_id_ = stringify(next_id, 4)
         mbr_ids = []
         for action in actions:
@@ -902,20 +915,18 @@ class FabricTest(P4RuntimeTest):
             "next.hashed", [self.Exact("next_id", next_id_)], grp_id
         )
 
-    # next_hops is a list of tuples (egress_port, smac, dmac)
-    def add_next_routing_group(self, next_id, grp_id, next_hops=None):
+    # next_hops is a list of tuple of (egress_port, smac, dmac)
+    def add_next_routing_group(self, next_id, grp_id, next_hops=[]):
         actions = []
-        if next_hops is not None:
-            for (egress_port, smac, dmac) in next_hops:
-                egress_port_ = stringify(egress_port, 2)
-                smac_ = mac_to_binary(smac)
-                dmac_ = mac_to_binary(dmac)
-                actions.append(
-                    [
-                        "next.routing_hashed",
-                        [("port_num", egress_port_), ("smac", smac_), ("dmac", dmac_)],
-                    ]
+        for (egress_port, smac, dmac) in next_hops:
+            self.add_egress_next_l2_rewrite(next_id, egress_port, smac, dmac)
+            egress_port_ = stringify(egress_port, 2)
+            actions.append(
+                (
+                    "next.output_hashed",
+                    [("port_num", egress_port_)],
                 )
+            )
         self.add_next_hashed_group_action(next_id, grp_id, actions)
 
     def add_next_mpls(self, next_id, label):
@@ -928,27 +939,29 @@ class FabricTest(P4RuntimeTest):
             [("label", label_),],
         )
 
-    # next_hops is a list of tuples (egress_port, smac, dmac)
-    def add_next_mpls_and_routing_group(self, next_id, grp_id, next_hops=None):
+    # next_hops is a list of tuples (egress_port, smac, dmac, mpls_label)
+    def add_next_mpls_and_routing_group(self, next_id, grp_id, next_hops=[]):
         actions = []
-        if next_hops is not None:
-            mpls_labels = list(map(lambda x: x[3], next_hops))
-            if len(set(mpls_labels)) > 1:
-                self.fail(
-                    "More than one MPLS label passed to add_next_mpls_and_routing_group"
-                )
-            self.add_next_mpls(next_id, mpls_labels[0])
+        mpls_labels = set(map(lambda x: x[3], next_hops))
+        if len(mpls_labels) == 1:
+            self.add_next_mpls(next_id, mpls_labels.pop())
+        elif len(mpls_labels) == 0:
+            # next_hops is empty, don't install any MPLS rule.
+            pass
+        else:
+            self.fail(
+                "More than one MPLS label passed to add_next_mpls_and_routing_group"
+            )
 
-            for (egress_port, smac, dmac, _) in next_hops:
-                egress_port_ = stringify(egress_port, 2)
-                smac_ = mac_to_binary(smac)
-                dmac_ = mac_to_binary(dmac)
-                actions.append(
-                    [
-                        "next.routing_hashed",
-                        [("port_num", egress_port_), ("smac", smac_), ("dmac", dmac_),],
-                    ]
+        for (egress_port, smac, dmac, _) in next_hops:
+            self.add_egress_next_l2_rewrite(next_id, egress_port, smac, dmac)
+            egress_port_ = stringify(egress_port, 2)
+            actions.append(
+                (
+                    "next.output_hashed",
+                    [("port_num", egress_port_)],
                 )
+            )
         self.add_next_hashed_group_action(next_id, grp_id, actions)
 
     def write_mcast_group(self, group_id, replicas, update_type):
