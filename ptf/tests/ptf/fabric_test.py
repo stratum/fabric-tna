@@ -2,6 +2,7 @@
 # Copyright 2018-present Open Networking Foundation
 # SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0 AND Apache-2.0
 
+import codecs
 import socket
 import struct
 import time
@@ -16,6 +17,7 @@ from scapy.fields import BitField, ByteField, IntField, ShortField
 from scapy.layers.inet import IP, TCP, UDP
 from scapy.layers.l2 import Dot1Q, Ether
 from scapy.layers.ppp import PPP, PPPoE
+from scapy.layers.sctp import SCTP
 from scapy.packet import Packet, bind_layers
 
 DEFAULT_PRIORITY = 10
@@ -46,6 +48,7 @@ ETH_TYPE_MPLS_UNICAST = 0x8847
 IP_PROTO_UDP = 0x11
 IP_PROTO_TCP = 0x06
 IP_PROTO_ICMP = 0x01
+IP_PROTO_SCTP = 0x84
 
 ETH_TYPE_PACKET_OUT = 0xBF01
 ETH_TYPE_CPU_LOOPBACK_INGRESS = 0xBF02
@@ -260,6 +263,85 @@ class GTPU(Packet):
 bind_layers(UDP, GTPU, dport=UDP_GTP_PORT)
 bind_layers(GTPU, IP)
 
+# Implements helper function for SCTP as PTF does not provide one.
+def simple_sctp_packet(pktlen=100,
+                       eth_dst='00:01:02:03:04:05',
+                       eth_src='00:06:07:08:09:0a',
+                       dl_vlan_enable=False,
+                       vlan_vid=0,
+                       vlan_pcp=0,
+                       dl_vlan_cfi=0,
+                       ip_src='192.168.0.1',
+                       ip_dst='192.168.0.2',
+                       ip_tos=0,
+                       ip_ecn=None,
+                       ip_dscp=None,
+                       ip_ttl=64,
+                       ip_id=0x0001,
+                       ip_flag=0,
+                       sctp_sport=1234,
+                       sctp_dport=80,
+                       ip_ihl=None,
+                       ip_options=False,
+                       with_sctp_chksum=True
+                       ):
+    """
+    Return a simple dataplane SCTP packet
+
+    Supports a few parameters:
+    @param len Length of packet in bytes w/o CRC
+    @param eth_dst Destinatino MAC
+    @param eth_src Source MAC
+    @param dl_vlan_enable True if the packet is with vlan, False otherwise
+    @param vlan_vid VLAN ID
+    @param vlan_pcp VLAN priority
+    @param ip_src IP source
+    @param ip_dst IP destination
+    @param ip_tos IP ToS
+    @param ip_ecn IP ToS ECN
+    @param ip_dscp IP ToS DSCP
+    @param ip_ttl IP TTL
+    @param ip_id IP ID
+    @param sctp_dport SCTP destination port
+    @param sctp_sport SCTP source port
+    @param with_sctp_chksum Valid SCTP checksum
+
+    Generates a simple SCTP request.  Users
+    shouldn't assume anything about this packet other than that
+    it is a valid ethernet/IP/SCTP frame.
+    """
+
+    if testutils.MINSIZE > pktlen:
+        pktlen = testutils.MINSIZE
+
+    if with_sctp_chksum:
+        sctp_hdr = SCTP(sport=sctp_sport, dport=sctp_dport)
+    else:
+        sctp_hdr = SCTP(sport=sctp_sport, dport=sctp_dport, chksum=0)
+
+    ip_tos = testutils.ip_make_tos(ip_tos, ip_ecn, ip_dscp)
+
+    # Note Dot1Q.id is really CFI
+    if (dl_vlan_enable):
+        pkt = Ether(dst=eth_dst, src=eth_src)/ \
+              Dot1Q(prio=vlan_pcp, id=dl_vlan_cfi, vlan=vlan_vid)/ \
+              IP(src=ip_src, dst=ip_dst, tos=ip_tos, ttl=ip_ttl, ihl=ip_ihl, id=ip_id)/ \
+              sctp_hdr
+    else:
+        if not ip_options:
+            pkt = Ether(dst=eth_dst, src=eth_src)/ \
+                  IP(src=ip_src, dst=ip_dst, tos=ip_tos, ttl=ip_ttl, ihl=ip_ihl, id=ip_id, flags=ip_flag)/ \
+                  sctp_hdr
+        else:
+            pkt = Ether(dst=eth_dst, src=eth_src)/ \
+                  IP(src=ip_src, dst=ip_dst, tos=ip_tos, ttl=ip_ttl, ihl=ip_ihl, options=ip_options, id=ip_id, flags=ip_flag)/ \
+                  sctp_hdr
+
+    pkt = pkt/codecs.decode("".join(["%02x"%(x%256) for x in range(pktlen - len(pkt))]), "hex")
+
+    return pkt
+
+setattr(testutils, "simple_sctp_packet", simple_sctp_packet)
 
 def pkt_mac_swap(pkt):
     orig_dst = pkt[Ether].dst
