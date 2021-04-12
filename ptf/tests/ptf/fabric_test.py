@@ -341,6 +341,7 @@ def simple_sctp_packet(pktlen=100,
 
     return pkt
 
+# Embed the above function in the testutils package.
 setattr(testutils, "simple_sctp_packet", simple_sctp_packet)
 
 def pkt_mac_swap(pkt):
