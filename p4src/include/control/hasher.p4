@@ -13,7 +13,15 @@ control Hasher(
 
     apply {
         if (fabric_md.acl_lkp.is_ipv4) {
-            fabric_md.bridged.base.flow_hash = ipv4_hasher.get(fabric_md.acl_lkp);
+            gtp_flow_t to_hash;
+            to_hash.ipv4_src = fabric_md.acl_lkp.ipv4_src;
+            to_hash.ipv4_dst = fabric_md.acl_lkp.ipv4_dst;
+            to_hash.ip_proto = fabric_md.acl_lkp.ip_proto;
+            to_hash.l4_sport = fabric_md.acl_lkp.l4_sport;
+            to_hash.l4_dport = fabric_md.acl_lkp.l4_dport;
+            to_hash.teid = fabric_md.bridged.spgw.gtpu_teid;
+            // compute hash from GTP flow
+            fabric_md.bridged.base.flow_hash = ipv4_hasher.get(to_hash);
         }
         // FIXME: remove ipv6 support or test it
         //  https://github.com/stratum/fabric-tna/pull/227
