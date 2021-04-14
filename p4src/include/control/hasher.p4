@@ -4,6 +4,16 @@
 #include "../define.p4"
 #include "../header.p4"
 
+// Used for ECMP hashing.
+struct flow_t {
+    bit<32>   ipv4_src;
+    bit<32>   ipv4_dst;
+    bit<8>    ip_proto;
+    l4_port_t l4_sport;
+    l4_port_t l4_dport;
+    teid_t    gtpu_teid;
+}
+
 control Hasher(
     in parsed_headers_t hdr,
     inout fabric_ingress_metadata_t fabric_md) {
@@ -13,14 +23,30 @@ control Hasher(
 
     apply {
         if (fabric_md.acl_lkp.is_ipv4) {
-            gtp_flow_t to_hash;
-            to_hash.ipv4_src = fabric_md.acl_lkp.ipv4_src;
-            to_hash.ipv4_dst = fabric_md.acl_lkp.ipv4_dst;
-            to_hash.ip_proto = fabric_md.acl_lkp.ip_proto;
-            to_hash.l4_sport = fabric_md.acl_lkp.l4_sport;
-            to_hash.l4_dport = fabric_md.acl_lkp.l4_dport;
-            to_hash.teid = fabric_md.bridged.spgw.gtpu_teid;
-            // compute hash from GTP flow
+            flow_t to_hash;
+            if (hdr.gtpu.isValid()) {
+                // for GTP-encapsulated IPv4 packet use outer IPv4 header for hashing
+                to_hash.gtpu_teid = fabric_md.bridged.spgw.gtpu_teid;
+                to_hash.ipv4_src = hdr.ipv4.src_addr;
+                to_hash.ipv4_dst = hdr.ipv4.dst_addr;
+                to_hash.ip_proto = hdr.ipv4.protocol;
+                // avoid the impact of the PHV overlay
+                to_hash.l4_sport = 0;
+                to_hash.l4_dport = 0;
+                // this should always be true for the GTP-encapsulated packets
+                if (hdr.udp.isValid()) {
+                    to_hash.l4_sport = hdr.udp.sport;
+                    to_hash.l4_dport = hdr.udp.dport;
+                }
+            } else {
+                to_hash.gtpu_teid = 0;
+                to_hash.ipv4_src = fabric_md.acl_lkp.ipv4_src;
+                to_hash.ipv4_dst = fabric_md.acl_lkp.ipv4_dst;
+                to_hash.ip_proto = fabric_md.acl_lkp.ip_proto;
+                to_hash.l4_sport = fabric_md.acl_lkp.l4_sport;
+                to_hash.l4_dport = fabric_md.acl_lkp.l4_dport;
+            }
+            // compute hash for a flow
             fabric_md.bridged.base.flow_hash = ipv4_hasher.get(to_hash);
         }
         // FIXME: remove ipv6 support or test it

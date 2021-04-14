@@ -298,16 +298,6 @@ struct acl_lookup_t {
     l4_port_t l4_dport;
 }
 
-// Used for ECMP hashing.
-struct gtp_flow_t {
-    bit<32>   ipv4_src;
-    bit<32>   ipv4_dst;
-    bit<8>    ip_proto;
-    l4_port_t l4_sport;
-    l4_port_t l4_dport;
-    teid_t    teid;
-}
-
 // Ingress pipeline-only metadata
 @flexible
 @pa_auto_init_metadata

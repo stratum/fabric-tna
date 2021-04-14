@@ -3455,6 +3455,10 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         if expect_int_report:
             self.verify_packet(exp_int_report_pkt_masked, self.port3)
         self.verify_no_other_packets()
+        # block for a while to avoid Bloom filter to drop INT reports
+        # This is needed, because flow_hash is calculated from the GTP flow
+        # and it does not change during this test case.
+        time.sleep(2)
 
     def runDownlinkIntDropTest(
         self,
