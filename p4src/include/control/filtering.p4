@@ -87,8 +87,8 @@ control Filtering (inout parsed_headers_t hdr,
     table fwd_classifier {
         key = {
             ig_intr_md.ingress_port                 : exact @name("ig_port");
-            fabric_md.bridged.base.lkp_md.eth_dst                   : ternary @name("eth_dst");
-            fabric_md.bridged.base.lkp_md.eth_type                      : ternary @name("eth_type");
+            hdr.ethernet.dst_addr                   : ternary @name("eth_dst");
+            hdr.eth_type.value                      : ternary @name("eth_type");
             fabric_md.bridged.base.ip_eth_type      : exact @name("ip_eth_type");
         }
         actions = {
@@ -102,16 +102,9 @@ control Filtering (inout parsed_headers_t hdr,
     apply {
         ingress_port_vlan.apply();
 
-        fabric_md.bridged.base.lkp_md.eth_dst = 0;
-        if (hdr.ethernet.isValid()) {
-            fabric_md.bridged.base.lkp_md.eth_dst = hdr.ethernet.dst_addr;
+        if (hdr.ethernet.isValid() && hdr.eth_type.isValid()) {
+            fwd_classifier.apply();
         }
-        fabric_md.bridged.base.lkp_md.eth_type = 0;
-        if (hdr.eth_type.isValid()) {
-            fabric_md.bridged.base.lkp_md.eth_type = hdr.eth_type.value;
-        }
-
-        fwd_classifier.apply();
 #ifdef WTIH_DEBUG
         fwd_type_counter.count(fabric_md.bridged.base.fwd_type);
 #endif // WTIH_DEBUG

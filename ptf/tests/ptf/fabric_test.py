@@ -215,13 +215,13 @@ BRIDGED_MD_TYPE_INGRESS_MIRROR = 3
 
 # Size for different headers
 if testutils.test_param_get("profile") == "fabric-spgw-int":
-    BMD_BYTES = 61
+    BMD_BYTES = 43
 elif testutils.test_param_get("profile") == "fabric-spgw":
-    BMD_BYTES = 58
+    BMD_BYTES = 40
 elif testutils.test_param_get("profile") == "fabric-int":
-    BMD_BYTES = 42
+    BMD_BYTES = 24
 else:
-    BMD_BYTES = 39  # fabric
+    BMD_BYTES = 21  # fabric
 IP_HDR_BYTES = 20
 UDP_HDR_BYTES = 8
 GTP_HDR_BYTES = 8
@@ -1304,7 +1304,7 @@ class ArpBroadcastTest(FabricTest):
             self.send_packet(inport, pkt_to_send)
             # Pkt should be received on CPU and on all ports, except the ingress one.
             # FIXME: bug? why do we expect packet on the input port when broadcasting?
-            # self.verify_packet_in(exp_pkt=pkt_to_send, exp_in_port=inport)
+            self.verify_packet_in(exp_pkt=pkt_to_send, exp_in_port=inport)
             verify_tagged_ports = set(tagged_ports)
             verify_tagged_ports.discard(inport)
             for tport in verify_tagged_ports:
