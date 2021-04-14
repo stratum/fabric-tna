@@ -2298,7 +2298,7 @@ class FabricIpv4UnicastLoopbackModeTest(IPv4UnicastTest):
 
     def runTest(self):
         print("")
-        for pkt_type in ["tcp", "udp", "icmp", "sctp"]:
+        for pkt_type in PKT_TYPES_UNDER_TEST:
             print("Testing {} packet...".format(pkt_type))
             pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
                 eth_src=HOST1_MAC,
