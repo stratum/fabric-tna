@@ -243,6 +243,18 @@ struct int_metadata_t {
 }
 #endif // WITH_INT
 
+// Used to carry header fields to be used as ternary key fields.
+// It is needed to ensure validity of all headers we use for ternary lookup.
+struct lookup_metadata_t {
+    mac_addr_t              eth_dst;
+    mac_addr_t              eth_src;
+    bit<16>                 eth_type;
+    vlan_id_t               vlan_id;
+    @padding bit<4>         _pad;
+    bit<8>                  icmp_type;
+    bit<8>                  icmp_code;
+}
+
 // Common metadata which is shared between ingress and egress pipeline.
 // TODO: Currently using @flexible annotation causes some issues with the compiler, uncomment
 // it when we get the answer from the Intel forum.

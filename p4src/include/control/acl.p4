@@ -100,19 +100,19 @@ control Acl (inout parsed_headers_t hdr,
 
     table acl {
         key = {
-            ig_intr_md.ingress_port     : ternary @name("ig_port");   // 9
-            hdr.ethernet.dst_addr       : ternary @name("eth_dst");   // 48
-            hdr.ethernet.src_addr       : ternary @name("eth_src");   // 48
-            hdr.vlan_tag.vlan_id        : ternary @name("vlan_id");   // 12
-            hdr.eth_type.value          : ternary @name("eth_type");  // 16
-            fabric_md.acl_lkp.ipv4_src  : ternary @name("ipv4_src");  // 32
-            fabric_md.acl_lkp.ipv4_dst  : ternary @name("ipv4_dst");  // 32
-            fabric_md.acl_lkp.ip_proto  : ternary @name("ip_proto");  // 8
-            hdr.icmp.icmp_type          : ternary @name("icmp_type"); // 8
-            hdr.icmp.icmp_code          : ternary @name("icmp_code"); // 8
-            fabric_md.acl_lkp.l4_sport  : ternary @name("l4_sport");  // 16
-            fabric_md.acl_lkp.l4_dport  : ternary @name("l4_dport");  // 16
-            fabric_md.ig_port_type      : ternary @name("ig_port_type"); // 2
+            ig_intr_md.ingress_port                 : ternary @name("ig_port");   // 9
+            fabric_md.bridged.base.lkp_md.eth_dst   : ternary @name("eth_dst");   // 48
+            fabric_md.bridged.base.lkp_md.eth_src   : ternary @name("eth_src");   // 48
+            fabric_md.bridged.base.lkp_md.vlan_id   : ternary @name("vlan_id");   // 12
+            fabric_md.bridged.base.lkp_md.eth_type  : ternary @name("eth_type");  // 16
+            fabric_md.acl_lkp.ipv4_src              : ternary @name("ipv4_src");  // 32
+            fabric_md.acl_lkp.ipv4_dst              : ternary @name("ipv4_dst");  // 32
+            fabric_md.acl_lkp.ip_proto              : ternary @name("ip_proto");  // 8
+            fabric_md.bridged.base.lkp_md.icmp_type : ternary @name("icmp_type"); // 8
+            fabric_md.bridged.base.lkp_md.icmp_code : ternary @name("icmp_code"); // 8
+            fabric_md.acl_lkp.l4_sport              : ternary @name("l4_sport");  // 16
+            fabric_md.acl_lkp.l4_dport              : ternary @name("l4_dport");  // 16
+            fabric_md.ig_port_type                  : ternary @name("ig_port_type"); // 2
         }
 
         actions = {
@@ -130,6 +130,30 @@ control Acl (inout parsed_headers_t hdr,
     }
 
     apply {
+        fabric_md.bridged.base.lkp_md.eth_dst = 0;
+        fabric_md.bridged.base.lkp_md.eth_src = 0;
+        if (hdr.ethernet.isValid()) {
+            fabric_md.bridged.base.lkp_md.eth_dst = hdr.ethernet.dst_addr;
+            fabric_md.bridged.base.lkp_md.eth_src = hdr.ethernet.src_addr;
+        }
+
+        fabric_md.bridged.base.lkp_md.vlan_id = 0;
+        if (hdr.vlan_tag.isValid()) {
+            fabric_md.bridged.base.lkp_md.vlan_id = hdr.vlan_tag.vlan_id;
+        }
+
+        fabric_md.bridged.base.lkp_md.icmp_type = 0;
+        fabric_md.bridged.base.lkp_md.icmp_code = 0;
+        if (hdr.icmp.isValid()) {
+            fabric_md.bridged.base.lkp_md.icmp_type = hdr.icmp.icmp_type;
+            fabric_md.bridged.base.lkp_md.icmp_code = hdr.icmp.icmp_code;
+        }
+
+        fabric_md.bridged.base.lkp_md.eth_type = 0;
+        if (hdr.eth_type.isValid()) {
+            fabric_md.bridged.base.lkp_md.eth_type = hdr.eth_type.value;
+        }
+
         acl.apply();
     }
 }

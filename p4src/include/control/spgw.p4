@@ -340,7 +340,9 @@ control SpgwIngress(
                 }
                 // PDRs
                 if (fabric_md.spgw.src_iface == SpgwInterface.ACCESS) {
-                    uplink_pdrs.apply();
+                    if (hdr.gtpu.isValid()) {
+                        uplink_pdrs.apply();
+                    }
                 } else if (fabric_md.spgw.src_iface == SpgwInterface.CORE ||
                             fabric_md.spgw.src_iface == SpgwInterface.FROM_DBUF) {
                     downlink_pdrs.apply();
