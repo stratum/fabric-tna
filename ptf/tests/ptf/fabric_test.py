@@ -1303,7 +1303,6 @@ class ArpBroadcastTest(FabricTest):
             pkt_to_send = vlan_arp_pkt if inport in tagged_ports else arp_pkt
             self.send_packet(inport, pkt_to_send)
             # Pkt should be received on CPU and on all ports, except the ingress one.
-            # FIXME: bug? why do we expect packet on the input port when broadcasting?
             self.verify_packet_in(exp_pkt=pkt_to_send, exp_in_port=inport)
             verify_tagged_ports = set(tagged_ports)
             verify_tagged_ports.discard(inport)
