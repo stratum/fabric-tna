@@ -5,7 +5,7 @@
 #include "../header.p4"
 
 // Used for ECMP hashing.
-struct flow_t {
+struct gtp_flow_t {
     bit<32>   ipv4_src;
     bit<32>   ipv4_dst;
     bit<8>    ip_proto;
@@ -18,20 +18,20 @@ control Hasher(
     in parsed_headers_t hdr,
     inout fabric_ingress_metadata_t fabric_md) {
 
-    Hash<flow_hash_t>(HashAlgorithm_t.CRC32) int_hasher;
-    Hash<flow_hash_t>(HashAlgorithm_t.CRC32) ipv4_hasher;
+    Hash<flow_hash_t>(HashAlgorithm_t.CRC32) ip_hasher;
+    Hash<flow_hash_t>(HashAlgorithm_t.CRC32) gtp_flow_hasher;
     Hash<flow_hash_t>(HashAlgorithm_t.CRC32) non_ip_hasher;
 
     apply {
         if (fabric_md.acl_lkp.is_ipv4) {
             // we always need to calculate hash from inner headers for the INT reporter
-            fabric_md.bridged.base.int_hash = int_hasher.get(fabric_md.acl_lkp);
+            fabric_md.bridged.base.int_hash = ip_hasher.get(fabric_md.acl_lkp);
 
             // if not a GTP flow, use hash calculated from inner headers
             fabric_md.flow_hash = fabric_md.bridged.base.int_hash;
 #ifdef WITH_SPGW
             if (hdr.gtpu.isValid()) {
-                flow_t to_hash;
+                gtp_flow_t to_hash;
                 // for GTP-encapsulated IPv4 packet use outer IPv4 header for hashing
                 to_hash.gtpu_teid = hdr.gtpu.teid;
                 to_hash.ipv4_src = hdr.ipv4.src_addr;
@@ -45,7 +45,7 @@ control Hasher(
                     to_hash.l4_sport = hdr.udp.sport;
                     to_hash.l4_dport = hdr.udp.dport;
                 }
-                fabric_md.flow_hash = ipv4_hasher.get(to_hash);
+                fabric_md.flow_hash = gtp_flow_hasher.get(to_hash);
             }
 #endif // WITH_SPGW
         }
