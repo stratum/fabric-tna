@@ -262,7 +262,7 @@ struct bridged_metadata_base_t {
     bit<8>                  mpls_ttl;
     bit<48>                 ig_tstamp;
     bit<16>                 ip_eth_type;
-    flow_hash_t             flow_hash;
+    flow_hash_t             int_hash;
 #ifdef WITH_DOUBLE_VLAN_TERMINATION
     @padding bit<7>         _pad1;
     bool                    push_double_vlan;
@@ -303,6 +303,7 @@ struct acl_lookup_t {
 @pa_auto_init_metadata
 struct fabric_ingress_metadata_t {
     bridged_metadata_t      bridged;
+    flow_hash_t             flow_hash;
     acl_lookup_t            acl_lkp;
     bit<32>                 routing_ipv4_dst; // Outermost
     bool                    skip_forwarding;

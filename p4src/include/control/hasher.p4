@@ -18,15 +18,22 @@ control Hasher(
     in parsed_headers_t hdr,
     inout fabric_ingress_metadata_t fabric_md) {
 
+    Hash<flow_hash_t>(HashAlgorithm_t.CRC32) int_hasher;
     Hash<flow_hash_t>(HashAlgorithm_t.CRC32) ipv4_hasher;
     Hash<flow_hash_t>(HashAlgorithm_t.CRC32) non_ip_hasher;
 
     apply {
         if (fabric_md.acl_lkp.is_ipv4) {
-            flow_t to_hash;
+            // we always need to calculate hash from inner headers for the INT reporter
+            fabric_md.bridged.base.int_hash = int_hasher.get(fabric_md.acl_lkp);
+
+            // if not a GTP flow, use hash calculated from inner headers
+            fabric_md.flow_hash = fabric_md.bridged.base.int_hash;
+#ifdef WITH_SPGW
             if (hdr.gtpu.isValid()) {
+                flow_t to_hash;
                 // for GTP-encapsulated IPv4 packet use outer IPv4 header for hashing
-                to_hash.gtpu_teid = fabric_md.bridged.spgw.gtpu_teid;
+                to_hash.gtpu_teid = hdr.gtpu.teid;
                 to_hash.ipv4_src = hdr.ipv4.src_addr;
                 to_hash.ipv4_dst = hdr.ipv4.dst_addr;
                 to_hash.ip_proto = hdr.ipv4.protocol;
@@ -38,16 +45,9 @@ control Hasher(
                     to_hash.l4_sport = hdr.udp.sport;
                     to_hash.l4_dport = hdr.udp.dport;
                 }
-            } else {
-                to_hash.gtpu_teid = 0;
-                to_hash.ipv4_src = fabric_md.acl_lkp.ipv4_src;
-                to_hash.ipv4_dst = fabric_md.acl_lkp.ipv4_dst;
-                to_hash.ip_proto = fabric_md.acl_lkp.ip_proto;
-                to_hash.l4_sport = fabric_md.acl_lkp.l4_sport;
-                to_hash.l4_dport = fabric_md.acl_lkp.l4_dport;
+                fabric_md.flow_hash = ipv4_hasher.get(to_hash);
             }
-            // compute hash for a flow
-            fabric_md.bridged.base.flow_hash = ipv4_hasher.get(to_hash);
+#endif // WITH_SPGW
         }
         // FIXME: remove ipv6 support or test it
         //  https://github.com/stratum/fabric-tna/pull/227
@@ -62,7 +62,7 @@ control Hasher(
         // }
         else {
             // Not an IP packet
-            fabric_md.bridged.base.flow_hash = non_ip_hasher.get({
+            fabric_md.flow_hash = non_ip_hasher.get({
                 hdr.ethernet.dst_addr,
                 hdr.ethernet.src_addr,
                 hdr.eth_type.value
