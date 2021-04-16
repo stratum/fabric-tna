@@ -370,9 +370,22 @@ def simple_sctp_packet(
     return pkt
 
 
-# Embed the above function in the testutils package.
-setattr(testutils, "simple_sctp_packet", simple_sctp_packet)
+def simple_gtp_tcp_packet(*args, **kwargs):
+    print(simple_gtp_tcp_packet.__qualname__)
+    func = getattr(testutils, "simple_tcp_packet")
+    pkt = func(args, kwargs)
+    pkt = pkt_add_gtp(
+        pkt,
+        out_ipv4_src=HOST1_IPV4,
+        out_ipv4_dst=HOST2_IPV4,
+        teid=0xff, # dummy teid
+    )
+    return pkt
 
+
+# Embed the above functions in the testutils package.
+setattr(testutils, "simple_sctp_packet", simple_sctp_packet)
+setattr(testutils, "simple_gtp_tcp_packet", simple_gtp_tcp_packet)
 
 def pkt_mac_swap(pkt):
     orig_dst = pkt[Ether].dst

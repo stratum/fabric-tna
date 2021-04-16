@@ -21,7 +21,7 @@ vlan_confs = {
 }
 
 PKT_TYPES_UNDER_TEST = ["tcp", "udp", "icmp", "sctp"]
-
+GTP_ENCAPED_PKT_TYPES = ["gtp_tcp"]
 
 class FabricBridgingTest(BridgingTest):
     @tvsetup
@@ -32,7 +32,7 @@ class FabricBridgingTest(BridgingTest):
     def runTest(self):
         print("")
         for vlan_conf, tagged in vlan_confs.items():
-            for pkt_type in PKT_TYPES_UNDER_TEST:
+            for pkt_type in PKT_TYPES_UNDER_TEST + GTP_ENCAPED_PKT_TYPES:
                 pktlen = 120
                 tc_name = pkt_type + "_VLAN_" + vlan_conf + "_" + str(pktlen)
                 print("Testing {} packet with VLAN {}..".format(pkt_type, vlan_conf))
