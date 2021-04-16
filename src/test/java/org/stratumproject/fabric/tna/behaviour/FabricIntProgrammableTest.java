@@ -1014,7 +1014,7 @@ public class FabricIntProgrammableTest {
                 .forDevice(deviceId)
                 .withSelector(watchlistSelector)
                 .withTreatment(watchlistTreatment)
-                .withPriority(DEFAULT_PRIORITY)
+                .withPriority(DEFAULT_PRIORITY + 10)
                 .forTable(P4InfoConstants.FABRIC_INGRESS_INT_INGRESS_WATCHLIST)
                 .fromApp(APP_ID)
                 .makePermanent()
