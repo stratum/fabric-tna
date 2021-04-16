@@ -22,6 +22,7 @@ vlan_confs = {
 
 PKT_TYPES_UNDER_TEST = ["tcp", "udp", "icmp", "sctp"]
 
+
 class FabricBridgingTest(BridgingTest):
     @tvsetup
     @autocleanup
