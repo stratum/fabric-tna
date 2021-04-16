@@ -97,7 +97,7 @@ netcfg:
 
 p4i:
 	$(info *** Started p4i app at http://localhost:3000)
-	docker run -d --rm --name p4i -v$(DIR):$(DIR)/p4src/build -w $(DIR)/p4src/build -p 3000:3000/tcp --init --privileged $(SDE_P4I_DOCKER_IMG) xvfb-run /p4i/p4i
+	docker run -d --rm --name p4i -v$(DIR):$(DIR)/p4src/build -w $(DIR)/p4src/build -p 3000:3000/tcp --init --cap-add CAP_SYS_ADMIN --cap-add CAP_NET_ADMIN $(SDE_P4I_DOCKER_IMG) xvfb-run /p4i/p4i
 
 p4i-stop:
 	docker kill p4i
