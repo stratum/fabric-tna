@@ -7,12 +7,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import org.onlab.packet.IP;
+import com.google.common.collect.Streams;
 import org.onlab.packet.IPv4;
 import org.onlab.packet.Ip4Address;
 import org.onlab.packet.IpAddress;
 import org.onlab.packet.MacAddress;
-import org.onlab.packet.TpPort;
 import org.onlab.util.HexString;
 import org.onlab.util.ImmutableByteSequence;
 import org.onosproject.core.ApplicationId;
@@ -24,13 +23,12 @@ import org.onosproject.net.PortNumber;
 import org.onosproject.net.behaviour.inbandtelemetry.IntDeviceConfig;
 import org.onosproject.net.behaviour.inbandtelemetry.IntObjective;
 import org.onosproject.net.behaviour.inbandtelemetry.IntProgrammable;
-import org.onosproject.net.behaviour.inbandtelemetry.IntReportConfig;
-import org.onosproject.net.config.NetworkConfigEvent;
 import org.onosproject.net.config.NetworkConfigListener;
 import org.onosproject.net.config.NetworkConfigService;
 import org.onosproject.net.flow.DefaultFlowRule;
 import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
+import org.onosproject.net.flow.FlowEntry;
 import org.onosproject.net.flow.FlowRule;
 import org.onosproject.net.flow.FlowRuleService;
 import org.onosproject.net.flow.TableId;
@@ -41,6 +39,7 @@ import org.onosproject.net.flow.criteria.IPCriterion;
 import org.onosproject.net.flow.criteria.PiCriterion;
 import org.onosproject.net.flow.criteria.TcpPortCriterion;
 import org.onosproject.net.flow.criteria.UdpPortCriterion;
+import org.onosproject.net.flow.instructions.PiInstruction;
 import org.onosproject.net.group.DefaultGroupDescription;
 import org.onosproject.net.group.DefaultGroupKey;
 import org.onosproject.net.group.GroupBucket;
@@ -109,18 +108,13 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
     private static final short INT_REPORT_TYPE_LOCAL = 1;
     private static final short INT_REPORT_TYPE_DROP = 2;
 
-    private static final String INT_APP_NAME = "org.onosproject.inbandtelemetry";
-
     private FlowRuleService flowRuleService;
     private GroupService groupService;
     private NetworkConfigService cfgService;
     private HostService hostService;
-    private CoreService coreService;
 
     private DeviceId deviceId;
     private ApplicationId appId;
-
-    private NetworkConfigListener internalNetcfgListener;
 
     /**
      * Creates a new instance of this behavior with the given capabilities.
@@ -145,7 +139,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         groupService = handler().get(GroupService.class);
         cfgService = handler().get(NetworkConfigService.class);
         hostService = handler().get(HostService.class);
-        coreService = handler().get(CoreService.class);
+        final CoreService coreService = handler().get(CoreService.class);
         appId = coreService.getAppId(PipeconfLoader.APP_NAME);
         if (appId == null) {
             log.warn("Application ID is null. Cannot initialize behaviour.");
@@ -187,14 +181,6 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                     new DefaultGroupKey(KRYO.serialize(sessionId)),
                     sessionId, appId));
         });
-
-        ApplicationId intAppId = coreService.getAppId(INT_APP_NAME);
-        IntReportConfig intReportConfig = cfgService.getConfig(intAppId, IntReportConfig.class);
-        if (intReportConfig != null) {
-            setUpCollectorFlows(intReportConfig, true);
-        }
-        internalNetcfgListener = new InternalNetcfgListener();
-        cfgService.addListener(internalNetcfgListener);
         return true;
     }
 
@@ -235,6 +221,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
             return false;
         }
 
+        setUpCollectorFlows(config);
         return setupIntReportInternal(config);
     }
 
@@ -753,10 +740,26 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         return result;
     }
 
-    private void setUpCollectorFlows(IntReportConfig config, boolean install) {
+    private boolean entryWithNoReportCollectorAction(FlowEntry flowEntry) {
+        return flowEntry.treatment().allInstructions().stream()
+                .filter(inst->inst instanceof PiInstruction)
+                .map(inst -> (PiInstruction)inst)
+                .map(PiInstruction::action)
+                .filter(action -> action instanceof PiAction)
+                .map(action -> (PiAction) action)
+                .anyMatch(action -> action.id().equals(
+                        P4InfoConstants.FABRIC_INGRESS_INT_INGRESS_NO_REPORT_COLLECTOR));
+    }
+
+    private void setUpCollectorFlows(IntDeviceConfig config) {
+
+        // Remove old flow
+        Streams.stream(flowRuleService.getFlowEntriesById(appId))
+                .filter(this::entryWithNoReportCollectorAction)
+                .forEach(flowRuleService::removeFlowRules);
 
         final PiAction watchlistAction = PiAction.builder()
-                .withId(P4InfoConstants.FABRIC_INGRESS_INT_INGRESS_NO_REPORT)
+                .withId(P4InfoConstants.FABRIC_INGRESS_INT_INGRESS_NO_REPORT_COLLECTOR)
                 .build();
 
         final TrafficTreatment watchlistTreatment = DefaultTrafficTreatment.builder()
@@ -779,41 +782,6 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 .fromApp(appId)
                 .makePermanent()
                 .build();
-
-        if (install) {
-            flowRuleService.applyFlowRules(watchlistRule);
-        } else {
-            flowRuleService.removeFlowRules(watchlistRule);
-        }
-    }
-
-    class InternalNetcfgListener implements NetworkConfigListener {
-        @Override
-        public void event(NetworkConfigEvent event) {
-            switch (event.type()) {
-                case CONFIG_ADDED:
-                case CONFIG_UPDATED:
-                    event.config()
-                            .map(config -> (IntReportConfig)config)
-                            .ifPresent(config -> {
-                                setUpCollectorFlows(config, true);
-                            });
-                    break;
-                case CONFIG_REMOVED:
-                    event.config()
-                            .map(config -> (IntReportConfig)config)
-                            .ifPresent(config -> {
-                                setUpCollectorFlows(config, false);
-                            });
-                    break;
-                default:
-                    break;
-            }
-        }
-
-        @Override
-        public boolean isRelevant(NetworkConfigEvent event) {
-            return event.configClass() == IntReportConfig.class;
-        }
+        flowRuleService.applyFlowRules(watchlistRule);
     }
 }

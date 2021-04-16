@@ -92,10 +92,8 @@ public class FabricIntProgrammableTest {
     private static final int NODE_SID_IPV4 = 101;
     private static final IpAddress ROUTER_IP = IpAddress.valueOf("10.0.1.254");
     private static final String SR_CONFIG_KEY = "segmentrouting";
-    private static final String INT_APP_NAME = "org.onosproject.inbandtelemetry";
     private static final ApplicationId APP_ID =
             TestApplicationId.create(PipeconfLoader.APP_NAME);
-    private static final ApplicationId INT_APP_ID = new TestApplicationId(INT_APP_NAME);
     private static final DeviceId LEAF_DEVICE_ID = DeviceId.deviceId("device:1");
     private static final DeviceId SPINE_DEVICE_ID = DeviceId.deviceId("device:2");
     private static final IpPrefix IP_SRC = IpPrefix.valueOf("10.0.0.1/24");
@@ -125,7 +123,6 @@ public class FabricIntProgrammableTest {
                     .put(0x202, 0x144)
                     .put(0x203, 0x1c4).build();
     private static final MacAddress SWITCH_MAC = MacAddress.valueOf("00:00:00:00:01:80");
-    private static final String INT_CONFIG_KEY = "report";
 
     private FabricIntProgrammable intProgrammable;
     private FlowRuleService flowRuleService;
@@ -149,17 +146,12 @@ public class FabricIntProgrammableTest {
         netcfgService = createMock(NetworkConfigService.class);
         coreService = createMock(CoreService.class);
         hostService = createMock(HostService.class);
-        expect(coreService.getAppId(eq(PipeconfLoader.APP_NAME))).andReturn(APP_ID).anyTimes();
-        expect(coreService.getAppId(eq(INT_APP_NAME))).andReturn(INT_APP_ID).anyTimes();
+        expect(coreService.getAppId(anyString())).andReturn(APP_ID).anyTimes();
 
         expect(netcfgService.getConfig(LEAF_DEVICE_ID, SegmentRoutingDeviceConfig.class))
                 .andReturn(getSrConfig(LEAF_DEVICE_ID, "/sr.json")).anyTimes();
         expect(netcfgService.getConfig(SPINE_DEVICE_ID, SegmentRoutingDeviceConfig.class))
                 .andReturn(getSrConfig(SPINE_DEVICE_ID, "/sr-spine.json")).anyTimes();
-        expect(netcfgService.getConfig(INT_APP_ID, IntReportConfig.class))
-                .andReturn(getIntReportConfig("/int-report-config.json")).anyTimes();
-        netcfgService.addListener(anyObject());
-        expectLastCall().anyTimes();
         expect(hostService.getHostsByIp(COLLECTOR_IP)).andReturn(ImmutableSet.of(COLLECTOR_HOST)).anyTimes();
         replay(coreService, netcfgService, hostService);
 
@@ -296,8 +288,10 @@ public class FabricIntProgrammableTest {
     @Test
     public void testSetupIntConfig() {
         reset(flowRuleService);
+        expect(flowRuleService.getFlowEntriesById(APP_ID)).andReturn(ImmutableList.of()).once();
         final IntDeviceConfig intConfig = buildIntDeviceConfig();
         ImmutableList<FlowRule> expectRules = ImmutableList.of(
+                buildCollectorWatchlistRule(LEAF_DEVICE_ID),
                 buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_LOCAL),
                 buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_DROP),
                 buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_INGRESS_MIRROR, INT_REPORT_TYPE_LOCAL),
@@ -329,6 +323,54 @@ public class FabricIntProgrammableTest {
     }
 
     /**
+     * Test "setupIntConfig" function of IntProgrammable, but there is an old
+     * flow rule in the store for collector
+     */
+    @Test
+    public void testSetupIntConfigWithOldEntry() {
+        reset(flowRuleService);
+        FlowEntry oldFlowEntry =
+                new DefaultFlowEntry(buildCollectorWatchlistRule(LEAF_DEVICE_ID));
+        expect(flowRuleService.getFlowEntriesById(APP_ID))
+                .andReturn(ImmutableList.of(oldFlowEntry))
+                .once();
+        final IntDeviceConfig intConfig = buildIntDeviceConfig();
+        ImmutableList<FlowRule> expectRules = ImmutableList.of(
+                buildCollectorWatchlistRule(LEAF_DEVICE_ID),
+                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_LOCAL),
+                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_DROP),
+                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_INGRESS_MIRROR, INT_REPORT_TYPE_LOCAL),
+                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_INGRESS_MIRROR, INT_REPORT_TYPE_DROP),
+                buildFilterConfigFlow(LEAF_DEVICE_ID),
+                buildIntMetadataLocalRule(LEAF_DEVICE_ID),
+                buildIntMetadataDropRule(LEAF_DEVICE_ID),
+                buildIngressDropReportTableRules(LEAF_DEVICE_ID).get(0),
+                buildIngressDropReportTableRules(LEAF_DEVICE_ID).get(1)
+        );
+
+        List<Capture<FlowRule>> captures = Lists.newArrayList();
+        Capture<FlowRule> removedFlowRule = newCapture();
+        flowRuleService.removeFlowRules(capture(removedFlowRule));
+        for (int i = 0; i < expectRules.size(); i++) {
+            Capture<FlowRule> flowRuleCapture = newCapture();
+            flowRuleService.applyFlowRules(capture(flowRuleCapture));
+            captures.add(flowRuleCapture);
+        }
+
+        replay(flowRuleService);
+        assertTrue(intProgrammable.setupIntConfig(intConfig));
+
+        // Verifying flow rules
+        assertTrue(removedFlowRule.getValue().exactMatch(buildCollectorWatchlistRule(LEAF_DEVICE_ID)));
+        for (int i = 0; i < expectRules.size(); i++) {
+            FlowRule expectRule = expectRules.get(i);
+            FlowRule actualRule = captures.get(i).getValue();
+            assertTrue(expectRule.exactMatch(actualRule));
+        }
+        verify(flowRuleService);
+    }
+
+    /**
      * Test "setupIntConfig" function of IntProgrammable for spine device.
      * We should expected to get a table entry for report table
      * with do_report_encap_mpls action.
@@ -340,8 +382,10 @@ public class FabricIntProgrammableTest {
         expect(driverData.deviceId()).andReturn(SPINE_DEVICE_ID).anyTimes();
         replay(driverData);
         reset(flowRuleService);
+        expect(flowRuleService.getFlowEntriesById(APP_ID)).andReturn(ImmutableList.of()).once();
         final IntDeviceConfig intConfig = buildIntDeviceConfig();
         ImmutableList<FlowRule> expectRules = ImmutableList.of(
+                buildCollectorWatchlistRule(SPINE_DEVICE_ID),
                 buildReportTableRule(SPINE_DEVICE_ID, true, BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_LOCAL),
                 buildReportTableRule(SPINE_DEVICE_ID, true, BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_DROP),
                 buildReportTableRule(SPINE_DEVICE_ID, true, BMD_TYPE_INGRESS_MIRROR, INT_REPORT_TYPE_LOCAL),
@@ -464,12 +508,16 @@ public class FabricIntProgrammableTest {
         reset(netcfgService);
         expect(netcfgService.getConfig(LEAF_DEVICE_ID, SegmentRoutingDeviceConfig.class))
                 .andReturn(null).anyTimes();
+        expect(flowRuleService.getFlowEntriesById(APP_ID)).andReturn(ImmutableList.of()).once();
+        Capture<FlowRule> capturedRule = newCapture();
+        flowRuleService.applyFlowRules(capture(capturedRule));
         replay(netcfgService, flowRuleService);
         final IntDeviceConfig intConfig = buildIntDeviceConfig();
         final IntObjective intObjective = buildIntObjective(IPv4.PROTOCOL_TCP);
         assertFalse(intProgrammable.setupIntConfig(intConfig));
         assertFalse(intProgrammable.addIntObjective(intObjective));
         assertFalse(intProgrammable.removeIntObjective(intObjective));
+        assertTrue(capturedRule.getValue().exactMatch(buildCollectorWatchlistRule(LEAF_DEVICE_ID)));
         // We expected no other flow rules be installed or removed
         verify(flowRuleService);
     }
@@ -482,9 +530,13 @@ public class FabricIntProgrammableTest {
         reset(driverData, hostService);
         expect(driverData.deviceId()).andReturn(SPINE_DEVICE_ID).anyTimes();
         expect(hostService.getHostsByIp(anyObject())).andReturn(Collections.emptySet()).anyTimes();
+        expect(flowRuleService.getFlowEntriesById(APP_ID)).andReturn(ImmutableList.of()).once();
+        Capture<FlowRule> capturedRule = newCapture();
+        flowRuleService.applyFlowRules(capture(capturedRule));
         replay(driverData, hostService, flowRuleService);
         final IntDeviceConfig intConfig = buildIntDeviceConfig();
         assertFalse(intProgrammable.setupIntConfig(intConfig));
+        assertTrue(capturedRule.getValue().exactMatch(buildCollectorWatchlistRule(SPINE_DEVICE_ID)));
         // We expect no flow rules be installed
         verify(flowRuleService);
     }
@@ -499,9 +551,13 @@ public class FabricIntProgrammableTest {
         expect(driverData.deviceId()).andReturn(SPINE_DEVICE_ID).anyTimes();
         final Host collectorHost = new DefaultHost(null, null, null, null, Sets.newHashSet(), Sets.newHashSet(), true);
         expect(hostService.getHostsByIp(COLLECTOR_IP)).andReturn(ImmutableSet.of(collectorHost)).anyTimes();
+        expect(flowRuleService.getFlowEntriesById(APP_ID)).andReturn(ImmutableList.of()).once();
+        Capture<FlowRule> capturedRule = newCapture();
+        flowRuleService.applyFlowRules(capture(capturedRule));
         replay(driverData, hostService, flowRuleService);
         final IntDeviceConfig intConfig = buildIntDeviceConfig();
         assertFalse(intProgrammable.setupIntConfig(intConfig));
+        assertTrue(capturedRule.getValue().exactMatch(buildCollectorWatchlistRule(SPINE_DEVICE_ID)));
         verify(flowRuleService);
     }
 
@@ -517,9 +573,13 @@ public class FabricIntProgrammableTest {
                 .andReturn(null).anyTimes();
         expect(netcfgService.getConfig(SPINE_DEVICE_ID, SegmentRoutingDeviceConfig.class))
                 .andReturn(getSrConfig(SPINE_DEVICE_ID, "/sr-spine.json")).anyTimes();
+        expect(flowRuleService.getFlowEntriesById(APP_ID)).andReturn(ImmutableList.of()).once();
+        Capture<FlowRule> capturedRule = newCapture();
+        flowRuleService.applyFlowRules(capture(capturedRule));
         replay(driverData, flowRuleService, netcfgService);
         final IntDeviceConfig intConfig = buildIntDeviceConfig();
         assertFalse(intProgrammable.setupIntConfig(intConfig));
+        assertTrue(capturedRule.getValue().exactMatch(buildCollectorWatchlistRule(SPINE_DEVICE_ID)));
         verify(flowRuleService);
     }
 
@@ -535,9 +595,13 @@ public class FabricIntProgrammableTest {
                 .andReturn(getSrConfig(SPINE_DEVICE_ID, "/sr-invalid.json")).anyTimes();
         expect(netcfgService.getConfig(SPINE_DEVICE_ID, SegmentRoutingDeviceConfig.class))
                 .andReturn(getSrConfig(SPINE_DEVICE_ID, "/sr-spine.json")).anyTimes();
+        expect(flowRuleService.getFlowEntriesById(APP_ID)).andReturn(ImmutableList.of()).once();
+        Capture<FlowRule> capturedRule = newCapture();
+        flowRuleService.applyFlowRules(capture(capturedRule));
         replay(driverData, flowRuleService, netcfgService);
         final IntDeviceConfig intConfig = buildIntDeviceConfig();
         assertFalse(intProgrammable.setupIntConfig(intConfig));
+        assertTrue(capturedRule.getValue().exactMatch(buildCollectorWatchlistRule(SPINE_DEVICE_ID)));
         verify(flowRuleService);
     }
 
@@ -732,15 +796,6 @@ public class FabricIntProgrammableTest {
         return srCfg;
     }
 
-    private IntReportConfig getIntReportConfig(String filename) throws IOException {
-        IntReportConfig config = new IntReportConfig();
-        InputStream jsonStream = getClass().getResourceAsStream(filename);
-        ObjectMapper mapper = new ObjectMapper();
-        JsonNode jsonNode = mapper.readTree(jsonStream);
-        config.init(INT_APP_ID, INT_CONFIG_KEY, jsonNode, mapper, c -> {});
-        return config;
-    }
-
     private Set<FlowEntry> buildRandomFlowEntries() {
         FlowRule rule1 = DefaultFlowRule.builder()
                 .withSelector(DefaultTrafficSelector.builder()
@@ -923,11 +978,9 @@ public class FabricIntProgrammableTest {
                     sessionId, APP_ID));
             groupService.addGroup(capture(capturedGroup));
         });
-        Capture<FlowRule> flowRuleCapture = newCapture();
-        flowRuleService.applyFlowRules(capture(flowRuleCapture));
+
 
         replay(groupService);
-        replay(flowRuleService);
         assertTrue(intProgrammable.init());
 
         for (int i = 0; i < QUAD_PIPE_MIRROR_SESS_TO_RECIRC_PORTS.size(); i++) {
@@ -936,8 +989,14 @@ public class FabricIntProgrammableTest {
             assertEquals(expectGroup, actualGroup);
         }
 
+        verify(groupService);
+        reset(groupService);
+    }
+
+    private FlowRule buildCollectorWatchlistRule(DeviceId deviceId) {
+
         final PiAction watchlistAction = PiAction.builder()
-                .withId(P4InfoConstants.FABRIC_INGRESS_INT_INGRESS_NO_REPORT)
+                .withId(P4InfoConstants.FABRIC_INGRESS_INT_INGRESS_NO_REPORT_COLLECTOR)
                 .build();
 
         final TrafficTreatment watchlistTreatment = DefaultTrafficTreatment.builder()
@@ -951,8 +1010,8 @@ public class FabricIntProgrammableTest {
                         .matchUdpDst(COLLECTOR_PORT)
                         .build();
 
-        FlowRule expectedRule = DefaultFlowRule.builder()
-                .forDevice(LEAF_DEVICE_ID)
+        return DefaultFlowRule.builder()
+                .forDevice(deviceId)
                 .withSelector(watchlistSelector)
                 .withTreatment(watchlistTreatment)
                 .withPriority(DEFAULT_PRIORITY)
@@ -960,11 +1019,5 @@ public class FabricIntProgrammableTest {
                 .fromApp(APP_ID)
                 .makePermanent()
                 .build();
-        assertTrue(expectedRule.exactMatch(flowRuleCapture.getValue()));
-
-        verify(groupService);
-        verify(flowRuleService);
-        reset(groupService);
-        reset(flowRuleService);
     }
 }

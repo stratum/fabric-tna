@@ -155,6 +155,10 @@ control IntIngress (
         fabric_md.bridged.int_bmd.report_type = IntReportType_t.NO_REPORT;
     }
 
+    action no_report_collector() {
+        fabric_md.bridged.int_bmd.report_type = IntReportType_t.NO_REPORT;
+    }
+
     table watchlist {
         key = {
             fabric_md.acl_lkp.is_ipv4  : exact   @name("ipv4_valid");
@@ -166,6 +170,7 @@ control IntIngress (
         }
         actions = {
             mark_to_report;
+            no_report_collector;
             @defaultonly no_report();
         }
         const default_action = no_report();
