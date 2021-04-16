@@ -264,27 +264,28 @@ bind_layers(UDP, GTPU, dport=UDP_GTP_PORT)
 bind_layers(GTPU, IP)
 
 # Implements helper function for SCTP as PTF does not provide one.
-def simple_sctp_packet(pktlen=100,
-                       eth_dst='00:01:02:03:04:05',
-                       eth_src='00:06:07:08:09:0a',
-                       dl_vlan_enable=False,
-                       vlan_vid=0,
-                       vlan_pcp=0,
-                       dl_vlan_cfi=0,
-                       ip_src='192.168.0.1',
-                       ip_dst='192.168.0.2',
-                       ip_tos=0,
-                       ip_ecn=None,
-                       ip_dscp=None,
-                       ip_ttl=64,
-                       ip_id=0x0001,
-                       ip_flag=0,
-                       sctp_sport=1234,
-                       sctp_dport=80,
-                       ip_ihl=None,
-                       ip_options=False,
-                       with_sctp_chksum=True
-                       ):
+def simple_sctp_packet(
+    pktlen=100,
+    eth_dst="00:01:02:03:04:05",
+    eth_src="00:06:07:08:09:0a",
+    dl_vlan_enable=False,
+    vlan_vid=0,
+    vlan_pcp=0,
+    dl_vlan_cfi=0,
+    ip_src="192.168.0.1",
+    ip_dst="192.168.0.2",
+    ip_tos=0,
+    ip_ecn=None,
+    ip_dscp=None,
+    ip_ttl=64,
+    ip_id=0x0001,
+    ip_flag=0,
+    sctp_sport=1234,
+    sctp_dport=80,
+    ip_ihl=None,
+    ip_options=False,
+    with_sctp_chksum=True,
+):
     """
     Return a simple dataplane SCTP packet
 
@@ -322,27 +323,54 @@ def simple_sctp_packet(pktlen=100,
     ip_tos = testutils.ip_make_tos(ip_tos, ip_ecn, ip_dscp)
 
     # Note Dot1Q.id is really CFI
-    if (dl_vlan_enable):
-        pkt = Ether(dst=eth_dst, src=eth_src)/ \
-              Dot1Q(prio=vlan_pcp, id=dl_vlan_cfi, vlan=vlan_vid)/ \
-              IP(src=ip_src, dst=ip_dst, tos=ip_tos, ttl=ip_ttl, ihl=ip_ihl, id=ip_id)/ \
-              sctp_hdr
+    if dl_vlan_enable:
+        pkt = (
+            Ether(dst=eth_dst, src=eth_src)
+            / Dot1Q(prio=vlan_pcp, id=dl_vlan_cfi, vlan=vlan_vid)
+            / IP(src=ip_src, dst=ip_dst, tos=ip_tos, ttl=ip_ttl, ihl=ip_ihl, id=ip_id)
+            / sctp_hdr
+        )
     else:
         if not ip_options:
-            pkt = Ether(dst=eth_dst, src=eth_src)/ \
-                  IP(src=ip_src, dst=ip_dst, tos=ip_tos, ttl=ip_ttl, ihl=ip_ihl, id=ip_id, flags=ip_flag)/ \
-                  sctp_hdr
+            pkt = (
+                Ether(dst=eth_dst, src=eth_src)
+                / IP(
+                    src=ip_src,
+                    dst=ip_dst,
+                    tos=ip_tos,
+                    ttl=ip_ttl,
+                    ihl=ip_ihl,
+                    id=ip_id,
+                    flags=ip_flag,
+                )
+                / sctp_hdr
+            )
         else:
-            pkt = Ether(dst=eth_dst, src=eth_src)/ \
-                  IP(src=ip_src, dst=ip_dst, tos=ip_tos, ttl=ip_ttl, ihl=ip_ihl, options=ip_options, id=ip_id, flags=ip_flag)/ \
-                  sctp_hdr
+            pkt = (
+                Ether(dst=eth_dst, src=eth_src)
+                / IP(
+                    src=ip_src,
+                    dst=ip_dst,
+                    tos=ip_tos,
+                    ttl=ip_ttl,
+                    ihl=ip_ihl,
+                    options=ip_options,
+                    id=ip_id,
+                    flags=ip_flag,
+                )
+                / sctp_hdr
+            )
 
-    pkt = pkt/codecs.decode("".join(["%02x"%(x%256) for x in range(pktlen - len(pkt))]), "hex")
+    pkt = pkt / codecs.decode(
+        "".join(["%02x" % (x % 256) for x in range(pktlen - len(pkt))]), "hex"
+    )
 
     return pkt
 
+
 # Embed the above function in the testutils package.
 setattr(testutils, "simple_sctp_packet", simple_sctp_packet)
+
 
 def pkt_mac_swap(pkt):
     orig_dst = pkt[Ether].dst
