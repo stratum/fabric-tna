@@ -38,12 +38,12 @@ control Hasher(
                 to_hash.gtpu_teid = hdr.gtpu.teid;
                 calc_gtp_hash = true;
             } else if (fabric_md.bridged.spgw.needs_gtpu_encap) {
-              to_hash.ipv4_src = fabric_md.bridged.spgw.gtpu_tunnel_sip;
-              to_hash.ipv4_dst = fabric_md.bridged.spgw.gtpu_tunnel_dip;
-              // we assume UDP protocol
-              to_hash.ip_proto = PROTO_UDP;
-              to_hash.gtpu_teid = fabric_md.bridged.spgw.gtpu_teid;
-              calc_gtp_hash = true;
+                to_hash.ipv4_src = fabric_md.bridged.spgw.gtpu_tunnel_sip;
+                to_hash.ipv4_dst = fabric_md.bridged.spgw.gtpu_tunnel_dip;
+                // we assume UDP protocol
+                to_hash.ip_proto = PROTO_UDP;
+                to_hash.gtpu_teid = fabric_md.bridged.spgw.gtpu_teid;
+                calc_gtp_hash = true;
             }
             if (calc_gtp_hash) {
                 fabric_md.flow_hash = gtp_flow_hasher.get(to_hash);
