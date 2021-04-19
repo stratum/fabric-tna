@@ -1127,7 +1127,7 @@ class FabricGTPUnicastECMPbasedOnTEID(FabricTest):
         )
 
     def runTest(self):
-        for pkt_type in ["tcp", "udp", "icmp"]:
+        for pkt_type in PKT_TYPES_UNDER_TEST:
             self.doRunTest(pkt_type)
 
 
@@ -1268,7 +1268,7 @@ class FabricSpgwDownlinkECMPTest(SpgwSimpleTest):
         )
 
     def runTest(self):
-        for pkt_type in ["tcp", "udp", "icmp"]:
+        for pkt_type in PKT_TYPES_UNDER_TEST:
             self.doRunTest(pkt_type)
 
 
