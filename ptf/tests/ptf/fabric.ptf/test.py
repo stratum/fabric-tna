@@ -1024,20 +1024,19 @@ class FabricDefaultVlanPacketInTest(FabricTest):
         self.verify_no_other_packets()
 
 
-@group("spgw")
-class FabricGTPUnicastGroupTestAllPortTEID(FabricTest):
+class FabricGTPUnicastECMPbasedOnTEID(FabricTest):
     """
     This test case verifies if the GTP encapsulated traffic
-    is distributed over next hops by the fabric.
+    is distributed over next hops by hashing on the TEID.
     """
 
     @tvsetup
     @autocleanup
-    def GTPUnicastGroupTestAllPortTEID(self, pkt_type):
+    def doRunTest(self, pkt_type):
         # In this test we check that packets are forwarded to all ports when we
-        # change one of the 5-tuple header values and we have an ECMP-like
+        # change one of the values used for hash calculcation and we have an ECMP-like
         # distribution.
-        # In this case TEID for GTP-encapsulated packets
+        # In this case, we change TEID for GTP-encapsulated packets
         vlan_id = 10
         self.set_ingress_port_vlan(self.port1, False, 0, vlan_id)
         self.set_forwarding_type(
@@ -1122,21 +1121,21 @@ class FabricGTPUnicastGroupTestAllPortTEID(FabricTest):
         # In this assertion we are verifying:
         #  1) all ports of the same group are used almost once
         #  2) consistency of the forwarding decision, i.e. packets with the
-        #     same 5-tuple fields are always forwarded out of the same port
+        #     same hashed fields are always forwarded out of the same port
         self.verify_each_packet_on_each_port(
             [exp_pkt_to2, exp_pkt_to3], [self.port2, self.port3]
         )
 
     def runTest(self):
         for pkt_type in ["tcp", "udp", "icmp"]:
-            self.GTPUnicastGroupTestAllPortTEID(pkt_type)
+            self.doRunTest(pkt_type)
 
 
 @group("spgw")
-class FabricSpgwDownlinkLoadBalancingTest(SpgwSimpleTest):
+class FabricSpgwDownlinkECMPTest(SpgwSimpleTest):
     """
-    This test case verifies if from PDN to UE (downlink) is
-    distrubted over next hops.
+    This test case verifies if traffic from PDN to UEs (downlink) served by the same
+    base station is distributed over next hops using GTP-aware load balancing.
     """
 
     @tvsetup
@@ -1168,7 +1167,6 @@ class FabricSpgwDownlinkLoadBalancingTest(SpgwSimpleTest):
         ue_ipv4_toport = [None, None]
         # teid_toport list is used to learn the teid
         # assigned by SPGW for a downlink packet.
-        # This teid causes the packet to be forwarded for each port.
         teid_toport = [None, None]
         for i in range(50):
             ue_ipv4 = "10.0.0." + str(i)

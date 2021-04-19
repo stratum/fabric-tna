@@ -130,7 +130,7 @@ control Next (inout parsed_headers_t hdr,
     table hashed {
         key = {
             fabric_md.next_id           : exact @name("next_id");
-            fabric_md.flow_hash         : selector;
+            fabric_md.ecmp_hash         : selector;
         }
         actions = {
             output_hashed;
