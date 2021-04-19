@@ -20,12 +20,13 @@ control Hasher(
     Hash<flow_hash_t>(HashAlgorithm_t.CRC32) non_ip_hasher;
 
     apply {
-        gtp_flow_t to_hash;
         flow_hash_t inner_hash;
-        bool calc_gtp_hash = false;
 
         // checks if inner header is IPv4
         if (fabric_md.acl_lkp.is_ipv4) {
+            gtp_flow_t to_hash;
+            bool calc_gtp_hash = false;
+
             // we always need to calculate hash from the inner IPv4 header for the INT reporter.
             inner_hash = ip_hasher.get(fabric_md.acl_lkp);
 
