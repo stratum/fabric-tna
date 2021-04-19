@@ -25,14 +25,8 @@ public final class P4InfoConstants {
     // Header field IDs
     public static final PiMatchFieldId HDR_BMD_TYPE =
             PiMatchFieldId.of("bmd_type");
-    public static final PiMatchFieldId HDR_COPY_TO_CPU =
-            PiMatchFieldId.of("copy_to_cpu");
-    public static final PiMatchFieldId HDR_DROP_CTL =
-            PiMatchFieldId.of("drop_ctl");
     public static final PiMatchFieldId HDR_EG_PORT =
             PiMatchFieldId.of("eg_port");
-    public static final PiMatchFieldId HDR_EGRESS_PORT_SET =
-            PiMatchFieldId.of("egress_port_set");
     public static final PiMatchFieldId HDR_ETH_DST =
             PiMatchFieldId.of("eth_dst");
     public static final PiMatchFieldId HDR_ETH_SRC =
@@ -70,8 +64,6 @@ public final class P4InfoConstants {
             PiMatchFieldId.of("l4_dport");
     public static final PiMatchFieldId HDR_L4_SPORT =
             PiMatchFieldId.of("l4_sport");
-    public static final PiMatchFieldId HDR_MCAST_GROUP_ID =
-            PiMatchFieldId.of("mcast_group_id");
     public static final PiMatchFieldId HDR_MIRROR_TYPE =
             PiMatchFieldId.of("mirror_type");
     public static final PiMatchFieldId HDR_MPLS_LABEL =
@@ -92,8 +84,6 @@ public final class P4InfoConstants {
             PiTableId.of("FabricEgress.egress_next.egress_vlan");
     public static final PiTableId FABRIC_EGRESS_INT_EGRESS_CONFIG =
             PiTableId.of("FabricEgress.int_egress.config");
-    public static final PiTableId FABRIC_EGRESS_INT_EGRESS_INT_METADATA =
-            PiTableId.of("FabricEgress.int_egress.int_metadata");
     public static final PiTableId FABRIC_EGRESS_INT_EGRESS_REPORT =
             PiTableId.of("FabricEgress.int_egress.report");
     public static final PiTableId FABRIC_EGRESS_PKT_IO_EGRESS_SWITCH_INFO =
@@ -112,8 +102,6 @@ public final class P4InfoConstants {
             PiTableId.of("FabricIngress.forwarding.routing_v4");
     public static final PiTableId FABRIC_INGRESS_FORWARDING_ROUTING_V6 =
             PiTableId.of("FabricIngress.forwarding.routing_v6");
-    public static final PiTableId FABRIC_INGRESS_INT_INGRESS_DROP_REPORT =
-            PiTableId.of("FabricIngress.int_ingress.drop_report");
     public static final PiTableId FABRIC_INGRESS_INT_INGRESS_WATCHLIST =
             PiTableId.of("FabricIngress.int_ingress.watchlist");
     public static final PiTableId FABRIC_INGRESS_NEXT_HASHED =
@@ -177,10 +165,6 @@ public final class P4InfoConstants {
             PiActionId.of("FabricEgress.int_egress.do_local_report_encap");
     public static final PiActionId FABRIC_EGRESS_INT_EGRESS_DO_LOCAL_REPORT_ENCAP_MPLS =
             PiActionId.of("FabricEgress.int_egress.do_local_report_encap_mpls");
-    public static final PiActionId FABRIC_EGRESS_INT_EGRESS_REPORT_DROP =
-            PiActionId.of("FabricEgress.int_egress.report_drop");
-    public static final PiActionId FABRIC_EGRESS_INT_EGRESS_REPORT_LOCAL =
-            PiActionId.of("FabricEgress.int_egress.report_local");
     public static final PiActionId FABRIC_EGRESS_INT_EGRESS_SET_CONFIG =
             PiActionId.of("FabricEgress.int_egress.set_config");
     public static final PiActionId FABRIC_EGRESS_PKT_IO_EGRESS_SET_SWITCH_INFO =
@@ -223,8 +207,6 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.int_ingress.no_report");
     public static final PiActionId FABRIC_INGRESS_INT_INGRESS_NO_REPORT_COLLECTOR =
             PiActionId.of("FabricIngress.int_ingress.no_report_collector");
-    public static final PiActionId FABRIC_INGRESS_INT_INGRESS_REPORT_DROP =
-            PiActionId.of("FabricIngress.int_ingress.report_drop");
     public static final PiActionId FABRIC_INGRESS_NEXT_OUTPUT_HASHED =
             PiActionId.of("FabricIngress.next.output_hashed");
     public static final PiActionId FABRIC_INGRESS_NEXT_ROUTING_HASHED =

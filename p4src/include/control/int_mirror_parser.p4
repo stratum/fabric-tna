@@ -48,7 +48,7 @@ parser IntReportMirrorParser (packet_in packet,
             fabric_md.int_mirror_md.ig_tstamp
         };
         hdr.common_report_header = {
-            fabric_md.int_mirror_md.switch_id,
+            0, // Will be set by report table
             fabric_md.int_mirror_md.ig_port,
             fabric_md.int_mirror_md.eg_port,
             fabric_md.int_mirror_md.queue_id

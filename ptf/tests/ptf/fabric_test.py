@@ -2593,6 +2593,7 @@ class IntTest(IPv4UnicastTest):
         mon_port,
         report_type,
         bmd_type,
+        switch_id,
         mon_label=None,
     ):
         action = ""
@@ -2609,6 +2610,7 @@ class IntTest(IPv4UnicastTest):
             ("src_ip", ipv4_to_binary(src_ip)),
             ("mon_ip", ipv4_to_binary(mon_ip)),
             ("mon_port", stringify(mon_port, 2)),
+            ("switch_id", stringify(switch_id, 4))
         ]
         if mon_label:
             action = action + "_mpls"
@@ -2626,7 +2628,7 @@ class IntTest(IPv4UnicastTest):
         )
 
     def set_up_report_flow(
-        self, src_mac, mon_mac, src_ip, mon_ip, mon_port, mon_label=None
+        self, src_mac, mon_mac, src_ip, mon_ip, mon_port, switch_id, mon_label=None
     ):
         for report_type in [INT_REPORT_TYPE_LOCAL, INT_REPORT_TYPE_DROP]:
             for bmd_type in [
@@ -2641,6 +2643,7 @@ class IntTest(IPv4UnicastTest):
                     mon_port,
                     report_type,
                     bmd_type,
+                    switch_id,
                     mon_label,
                 )
 
@@ -2697,58 +2700,6 @@ class IntTest(IPv4UnicastTest):
             "mark_to_report",
             [],
             priority=DEFAULT_PRIORITY,
-        )
-
-    def set_up_int_mirror_flow(self):
-        switch_id_ = stringify(1, 4)
-        # (IntReportType_t.LOCAL, 0) -> report_local(switch_id)
-        self.send_request_add_entry_to_action(
-            "int_metadata",
-            [
-                self.Exact("int_report_type", stringify(INT_REPORT_TYPE_LOCAL, 1)),
-                self.Exact("drop_ctl", stringify(0, 1)),
-            ],
-            "int_egress.report_local",
-            [("switch_id", switch_id_)],
-        )
-
-        # (IntReportType_t.LOCAL, 1) -> report_drop(switch_id)
-        self.send_request_add_entry_to_action(
-            "int_metadata",
-            [
-                self.Exact("int_report_type", stringify(INT_REPORT_TYPE_LOCAL, 1)),
-                self.Exact("drop_ctl", stringify(1, 1)),
-            ],
-            "int_egress.report_drop",
-            [("switch_id", switch_id_)],
-        )
-
-    def set_up_drop_report_flow(self):
-        # (IntReportType_t.LOCAL, 1, _, _, 0) -> report_drop(switch_id)
-        self.send_request_add_entry_to_action(
-            "drop_report",
-            [
-                self.Exact("int_report_type", stringify(INT_REPORT_TYPE_LOCAL, 1)),
-                self.Exact("drop_ctl", stringify(1, 1)),
-                self.Exact("copy_to_cpu", stringify(0, 1)),
-            ],
-            "int_ingress.report_drop",
-            [("switch_id", stringify(1, 4))],
-            DEFAULT_PRIORITY,
-        )
-        # (IntReportType_t.LOCAL, 0, 0, 0, 0) -> report_drop(switch_id)
-        self.send_request_add_entry_to_action(
-            "drop_report",
-            [
-                self.Exact("int_report_type", stringify(INT_REPORT_TYPE_LOCAL, 1)),
-                self.Exact("drop_ctl", stringify(0, 1)),
-                self.Exact("copy_to_cpu", stringify(0, 1)),
-                self.Ternary("egress_port_set", stringify(0, 1), stringify(1, 1)),
-                self.Ternary("mcast_group_id", stringify(0, 2), stringify(0xFFFF, 2)),
-            ],
-            "int_ingress.report_drop",
-            [("switch_id", stringify(1, 4))],
-            DEFAULT_PRIORITY,
         )
 
     def build_int_local_report(
@@ -2908,13 +2859,13 @@ class IntTest(IPv4UnicastTest):
             sport = None
             dport = None
         self.set_up_watchlist_flow(pkt[IP].src, pkt[IP].dst, sport, dport)
-        self.set_up_int_mirror_flow()
         self.set_up_report_flow(
             SWITCH_MAC,
             SWITCH_MAC,
             SWITCH_IPV4,
             INT_COLLECTOR_IPV4,
             INT_REPORT_PORT,
+            SWITCH_ID,
             MPLS_LABEL_1 if is_device_spine else None,
         )
         for i in range(0, 4):
@@ -2924,7 +2875,6 @@ class IntTest(IPv4UnicastTest):
         self.set_up_report_table_entries(
             self.port3, is_device_spine, send_report_to_spine
         )
-        self.set_up_drop_report_flow()
         self.set_up_recirc_ports()
 
     def runIntTest(
