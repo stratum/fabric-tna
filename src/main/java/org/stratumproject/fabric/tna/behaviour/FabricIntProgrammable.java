@@ -23,7 +23,6 @@ import org.onosproject.net.PortNumber;
 import org.onosproject.net.behaviour.inbandtelemetry.IntDeviceConfig;
 import org.onosproject.net.behaviour.inbandtelemetry.IntObjective;
 import org.onosproject.net.behaviour.inbandtelemetry.IntProgrammable;
-import org.onosproject.net.config.NetworkConfigListener;
 import org.onosproject.net.config.NetworkConfigService;
 import org.onosproject.net.flow.DefaultFlowRule;
 import org.onosproject.net.flow.DefaultTrafficSelector;
@@ -773,7 +772,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                         .matchUdpDst(config.collectorPort())
                         .build();
 
-        FlowRule watchlistRule = DefaultFlowRule.builder()
+        final FlowRule watchlistRule = DefaultFlowRule.builder()
                 .forDevice(deviceId)
                 .withSelector(watchlistSelector)
                 .withTreatment(watchlistTreatment)

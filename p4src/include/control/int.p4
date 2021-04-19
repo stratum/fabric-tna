@@ -155,6 +155,8 @@ control IntIngress (
         fabric_md.bridged.int_bmd.report_type = IntReportType_t.NO_REPORT;
     }
 
+    // Required by the control plane to distinguish entries used to exclude the INT
+    // report flow to the collector.
     action no_report_collector() {
         fabric_md.bridged.int_bmd.report_type = IntReportType_t.NO_REPORT;
     }
