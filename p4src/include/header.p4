@@ -237,7 +237,6 @@ struct int_bridged_metadata_t {
     IntReportType_t report_type;
     @padding bit<6> _pad1;
     MirrorId_t      mirror_session_id;
-    flow_hash_t     inner_hash;
 }
 
 struct int_metadata_t {
@@ -252,6 +251,7 @@ struct int_metadata_t {
 // See: https://community.intel.com/t5/Intel-Connectivity-Research/Compiler-stuck-when-compiling-P4-code/m-p/1258087
 // @flexible
 struct bridged_metadata_base_t {
+    flow_hash_t             inner_hash;
     mpls_label_t            mpls_label;
     @padding bit<11>         _pad0;
     PortId_t                ig_port;

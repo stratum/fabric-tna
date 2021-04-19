@@ -20,18 +20,15 @@ control Hasher(
     Hash<flow_hash_t>(HashAlgorithm_t.CRC32) non_ip_hasher;
 
     apply {
-        flow_hash_t inner_hash;
-
-        // checks if inner header is IPv4
         if (fabric_md.acl_lkp.is_ipv4) {
             gtp_flow_t to_hash;
             bool calc_gtp_hash = false;
 
             // we always need to calculate hash from the inner IPv4 header for the INT reporter.
-            inner_hash = ip_hasher.get(fabric_md.acl_lkp);
+            fabric_md.bridged.base.inner_hash = ip_hasher.get(fabric_md.acl_lkp);
 
             // use inner hash by default
-            fabric_md.ecmp_hash = inner_hash;
+            fabric_md.ecmp_hash = fabric_md.bridged.base.inner_hash;
 
             // if an outer GTP header exists, use it to perform GTP-aware ECMP
             if (hdr.gtpu.isValid()) {
@@ -68,17 +65,12 @@ control Hasher(
         //     });
         // }
         else {
-            // Inner header is not an IPv4 packet
-            inner_hash = non_ip_hasher.get({
+            // Not an IP packet
+            fabric_md.bridged.base.inner_hash = non_ip_hasher.get({
                 hdr.ethernet.dst_addr,
                 hdr.ethernet.src_addr,
                 hdr.eth_type.value
             });
         }
-
-#ifdef WITH_INT
-            fabric_md.bridged.int_bmd.inner_hash = inner_hash;
-#endif // WITH_INT
-
     }
 }
