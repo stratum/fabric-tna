@@ -1024,7 +1024,7 @@ class FabricDefaultVlanPacketInTest(FabricTest):
         self.verify_no_other_packets()
 
 
-class FabricGTPUnicastECMPbasedOnTEID(FabricTest):
+class FabricGtpUnicastEcmpBasedOnTeid(FabricTest):
     """
     This test case verifies if the GTP encapsulated traffic
     is distributed over next hops by hashing on the TEID.
