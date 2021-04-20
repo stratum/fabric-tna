@@ -221,6 +221,8 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.int_ingress.mark_to_report");
     public static final PiActionId FABRIC_INGRESS_INT_INGRESS_NO_REPORT =
             PiActionId.of("FabricIngress.int_ingress.no_report");
+    public static final PiActionId FABRIC_INGRESS_INT_INGRESS_NO_REPORT_COLLECTOR =
+            PiActionId.of("FabricIngress.int_ingress.no_report_collector");
     public static final PiActionId FABRIC_INGRESS_INT_INGRESS_REPORT_DROP =
             PiActionId.of("FabricIngress.int_ingress.report_drop");
     public static final PiActionId FABRIC_INGRESS_NEXT_OUTPUT_HASHED =

@@ -7,6 +7,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.google.common.collect.Streams;
+import org.onlab.packet.IPv4;
 import org.onlab.packet.Ip4Address;
 import org.onlab.packet.IpAddress;
 import org.onlab.packet.MacAddress;
@@ -25,6 +27,7 @@ import org.onosproject.net.config.NetworkConfigService;
 import org.onosproject.net.flow.DefaultFlowRule;
 import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
+import org.onosproject.net.flow.FlowEntry;
 import org.onosproject.net.flow.FlowRule;
 import org.onosproject.net.flow.FlowRuleService;
 import org.onosproject.net.flow.TableId;
@@ -35,6 +38,7 @@ import org.onosproject.net.flow.criteria.IPCriterion;
 import org.onosproject.net.flow.criteria.PiCriterion;
 import org.onosproject.net.flow.criteria.TcpPortCriterion;
 import org.onosproject.net.flow.criteria.UdpPortCriterion;
+import org.onosproject.net.flow.instructions.PiInstruction;
 import org.onosproject.net.group.DefaultGroupDescription;
 import org.onosproject.net.group.DefaultGroupKey;
 import org.onosproject.net.group.GroupBucket;
@@ -216,6 +220,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
             return false;
         }
 
+        setUpCollectorFlows(config);
         return setupIntReportInternal(config);
     }
 
@@ -732,5 +737,50 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 .makePermanent()
                 .build());
         return result;
+    }
+
+    private boolean entryWithNoReportCollectorAction(FlowEntry flowEntry) {
+        return flowEntry.treatment().allInstructions().stream()
+                .filter(inst->inst instanceof PiInstruction)
+                .map(inst -> (PiInstruction)inst)
+                .map(PiInstruction::action)
+                .filter(action -> action instanceof PiAction)
+                .map(action -> (PiAction) action)
+                .anyMatch(action -> action.id().equals(
+                        P4InfoConstants.FABRIC_INGRESS_INT_INGRESS_NO_REPORT_COLLECTOR));
+    }
+
+    private void setUpCollectorFlows(IntDeviceConfig config) {
+
+        // Remove old flow
+        Streams.stream(flowRuleService.getFlowEntriesById(appId))
+                .filter(this::entryWithNoReportCollectorAction)
+                .forEach(flowRuleService::removeFlowRules);
+
+        final PiAction watchlistAction = PiAction.builder()
+                .withId(P4InfoConstants.FABRIC_INGRESS_INT_INGRESS_NO_REPORT_COLLECTOR)
+                .build();
+
+        final TrafficTreatment watchlistTreatment = DefaultTrafficTreatment.builder()
+                .piTableAction(watchlistAction)
+                .build();
+
+        final TrafficSelector watchlistSelector =
+                DefaultTrafficSelector.builder()
+                        .matchIPDst(config.collectorIp().toIpPrefix())
+                        .matchIPProtocol(IPv4.PROTOCOL_UDP)
+                        .matchUdpDst(config.collectorPort())
+                        .build();
+
+        final FlowRule watchlistRule = DefaultFlowRule.builder()
+                .forDevice(deviceId)
+                .withSelector(watchlistSelector)
+                .withTreatment(watchlistTreatment)
+                .withPriority(DEFAULT_PRIORITY + 10)
+                .forTable(P4InfoConstants.FABRIC_INGRESS_INT_INGRESS_WATCHLIST)
+                .fromApp(appId)
+                .makePermanent()
+                .build();
+        flowRuleService.applyFlowRules(watchlistRule);
     }
 }
