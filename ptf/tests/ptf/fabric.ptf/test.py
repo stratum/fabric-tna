@@ -1132,7 +1132,7 @@ class FabricGtpUnicastEcmpBasedOnTeid(FabricTest):
 
 
 @group("spgw")
-class FabricSpgwDownlinkECMPTest(SpgwSimpleTest):
+class FabricSpgwDownlinkEcmpTest(SpgwSimpleTest):
     """
     This test case verifies if traffic from PDN to UEs (downlink) served by the same
     base station is distributed over next hops using GTP-aware load balancing.
