@@ -251,6 +251,7 @@ struct int_metadata_t {
 // See: https://community.intel.com/t5/Intel-Connectivity-Research/Compiler-stuck-when-compiling-P4-code/m-p/1258087
 // @flexible
 struct bridged_metadata_base_t {
+    flow_hash_t             inner_hash;
     mpls_label_t            mpls_label;
     @padding bit<11>         _pad0;
     PortId_t                ig_port;
@@ -262,7 +263,6 @@ struct bridged_metadata_base_t {
     bit<8>                  mpls_ttl;
     bit<48>                 ig_tstamp;
     bit<16>                 ip_eth_type;
-    flow_hash_t             flow_hash;
 #ifdef WITH_DOUBLE_VLAN_TERMINATION
     @padding bit<7>         _pad1;
     bool                    push_double_vlan;
@@ -303,6 +303,7 @@ struct acl_lookup_t {
 @pa_auto_init_metadata
 struct fabric_ingress_metadata_t {
     bridged_metadata_t      bridged;
+    flow_hash_t             ecmp_hash;
     acl_lookup_t            acl_lkp;
     bit<32>                 routing_ipv4_dst; // Outermost
     bool                    skip_forwarding;

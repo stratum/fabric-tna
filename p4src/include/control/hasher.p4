@@ -4,16 +4,54 @@
 #include "../define.p4"
 #include "../header.p4"
 
+// Used for ECMP hashing.
+struct gtp_flow_t {
+    bit<32>   ipv4_src;
+    bit<32>   ipv4_dst;
+    teid_t    gtpu_teid;
+}
+
 control Hasher(
     in parsed_headers_t hdr,
     inout fabric_ingress_metadata_t fabric_md) {
 
-    Hash<flow_hash_t>(HashAlgorithm_t.CRC32) ipv4_hasher;
+    Hash<flow_hash_t>(HashAlgorithm_t.CRC32) ip_hasher;
+    Hash<flow_hash_t>(HashAlgorithm_t.CRC32) gtp_flow_hasher;
     Hash<flow_hash_t>(HashAlgorithm_t.CRC32) non_ip_hasher;
 
     apply {
         if (fabric_md.acl_lkp.is_ipv4) {
-            fabric_md.bridged.base.flow_hash = ipv4_hasher.get(fabric_md.acl_lkp);
+            gtp_flow_t to_hash;
+            bool calc_gtp_hash = false;
+
+            // we always need to calculate hash from the inner IPv4 header for the INT reporter.
+            fabric_md.bridged.base.inner_hash = ip_hasher.get(fabric_md.acl_lkp);
+
+            // use inner hash by default
+            fabric_md.ecmp_hash = fabric_md.bridged.base.inner_hash;
+
+            // if an outer GTP header exists, use it to perform GTP-aware ECMP
+            if (hdr.gtpu.isValid()) {
+                to_hash.ipv4_src = hdr.ipv4.src_addr;
+                to_hash.ipv4_dst = hdr.ipv4.dst_addr;
+                to_hash.gtpu_teid = hdr.gtpu.teid;
+                calc_gtp_hash = true;
+            }
+
+#ifdef WITH_SPGW
+            // enable GTP-aware ECMP for downlink packets.
+            if (fabric_md.bridged.spgw.needs_gtpu_encap) {
+                to_hash.ipv4_src = fabric_md.bridged.spgw.gtpu_tunnel_sip;
+                to_hash.ipv4_dst = fabric_md.bridged.spgw.gtpu_tunnel_dip;
+                to_hash.gtpu_teid = fabric_md.bridged.spgw.gtpu_teid;
+                calc_gtp_hash = true;
+            }
+#endif // WITH_SPGW
+
+            if (calc_gtp_hash) {
+                fabric_md.ecmp_hash = gtp_flow_hasher.get(to_hash);
+            }
+
         }
         // FIXME: remove ipv6 support or test it
         //  https://github.com/stratum/fabric-tna/pull/227
@@ -28,7 +66,7 @@ control Hasher(
         // }
         else {
             // Not an IP packet
-            fabric_md.bridged.base.flow_hash = non_ip_hasher.get({
+            fabric_md.bridged.base.inner_hash = non_ip_hasher.get({
                 hdr.ethernet.dst_addr,
                 hdr.ethernet.src_addr,
                 hdr.eth_type.value

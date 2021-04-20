@@ -1024,6 +1024,254 @@ class FabricDefaultVlanPacketInTest(FabricTest):
         self.verify_no_other_packets()
 
 
+class FabricGtpUnicastEcmpBasedOnTeid(FabricTest):
+    """
+    This test case verifies if the GTP encapsulated traffic
+    is distributed over next hops by hashing on the TEID.
+    """
+
+    @tvsetup
+    @autocleanup
+    def doRunTest(self, pkt_type):
+        # In this test we check that packets are forwarded to all ports when we
+        # change one of the values used for hash calculcation and we have an ECMP-like
+        # distribution.
+        # In this case, we change TEID for GTP-encapsulated packets
+        vlan_id = 10
+        self.set_ingress_port_vlan(self.port1, False, 0, vlan_id)
+        self.set_forwarding_type(
+            self.port1,
+            SWITCH_MAC,
+            ethertype=ETH_TYPE_IPV4,
+            fwd_type=FORWARDING_TYPE_UNICAST_IPV4,
+        )
+        self.add_forwarding_routing_v4_entry(S1U_SGW_IPV4, 24, 300)
+        grp_id = 66
+        mbrs = [
+            (self.port2, SWITCH_MAC, HOST2_MAC),
+            (self.port3, SWITCH_MAC, HOST3_MAC),
+        ]
+        self.add_next_routing_group(300, grp_id, mbrs)
+        self.set_egress_vlan(self.port2, vlan_id, False)
+        self.set_egress_vlan(self.port3, vlan_id, False)
+
+        pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
+            eth_src=HOST1_MAC,
+            eth_dst=SWITCH_MAC,
+            ip_src=HOST1_IPV4,
+            ip_dst=HOST2_IPV4,
+            ip_ttl=64,
+        )
+
+        # teid_toport list is used to learn the teid that causes the packet
+        # to be forwarded for each port
+        teid_toport = [None, None]
+        for i in range(50):
+            test_teid = i
+
+            pkt_from1 = pkt_add_gtp(
+                pkt,
+                out_ipv4_src=S1U_ENB_IPV4,
+                out_ipv4_dst=S1U_SGW_IPV4,
+                teid=test_teid,
+            )
+
+            exp_pkt_to2 = pkt_from1.copy()
+            exp_pkt_to2[Ether].src = SWITCH_MAC
+            exp_pkt_to2[Ether].dst = HOST2_MAC
+            exp_pkt_to2[IP].ttl = 63
+
+            exp_pkt_to3 = pkt_from1.copy()
+            exp_pkt_to3[Ether].src = SWITCH_MAC
+            exp_pkt_to3[Ether].dst = HOST3_MAC
+            exp_pkt_to3[IP].ttl = 63
+
+            self.send_packet(self.port1, pkt_from1)
+            out_port_indx = self.verify_any_packet_any_port(
+                [exp_pkt_to2, exp_pkt_to3], [self.port2, self.port3]
+            )
+            teid_toport[out_port_indx] = test_teid
+
+        pkt_toport2 = pkt_add_gtp(
+            pkt,
+            out_ipv4_src=S1U_ENB_IPV4,
+            out_ipv4_dst=S1U_SGW_IPV4,
+            teid=teid_toport[0],
+        )
+
+        pkt_toport3 = pkt_add_gtp(
+            pkt,
+            out_ipv4_src=S1U_ENB_IPV4,
+            out_ipv4_dst=S1U_SGW_IPV4,
+            teid=teid_toport[1],
+        )
+
+        exp_pkt_to2 = pkt_toport2.copy()
+        exp_pkt_to2[Ether].src = SWITCH_MAC
+        exp_pkt_to2[Ether].dst = HOST2_MAC
+        exp_pkt_to2[IP].ttl = 63
+
+        exp_pkt_to3 = pkt_toport3.copy()
+        exp_pkt_to3[Ether].src = SWITCH_MAC
+        exp_pkt_to3[Ether].dst = HOST3_MAC
+        exp_pkt_to3[IP].ttl = 63
+
+        self.send_packet(self.port1, pkt_toport2)
+        self.send_packet(self.port1, pkt_toport3)
+        # In this assertion we are verifying:
+        #  1) all ports of the same group are used almost once
+        #  2) consistency of the forwarding decision, i.e. packets with the
+        #     same hashed fields are always forwarded out of the same port
+        self.verify_each_packet_on_each_port(
+            [exp_pkt_to2, exp_pkt_to3], [self.port2, self.port3]
+        )
+
+    def runTest(self):
+        for pkt_type in PKT_TYPES_UNDER_TEST:
+            self.doRunTest(pkt_type)
+
+
+@group("spgw")
+class FabricSpgwDownlinkEcmpTest(SpgwSimpleTest):
+    """
+    This test case verifies if traffic from PDN to UEs (downlink) served by the same
+    base station is distributed over next hops using GTP-aware load balancing.
+    """
+
+    @tvsetup
+    @autocleanup
+    def doRunTest(self, pkt_type):
+        vlan_id = 10
+        self.set_ingress_port_vlan(self.port1, False, 0, vlan_id)
+        self.set_forwarding_type(
+            self.port1,
+            SWITCH_MAC,
+            ethertype=ETH_TYPE_IPV4,
+            fwd_type=FORWARDING_TYPE_UNICAST_IPV4,
+        )
+        self.add_forwarding_routing_v4_entry(S1U_ENB_IPV4, 24, 300)
+        grp_id = 66
+
+        # used for this test only
+        S1U_ENB_NEXTHOP1_MAC = "00:00:00:00:00:ee"
+        S1U_ENB_NEXTHOP2_MAC = "00:00:00:00:00:ff"
+        mbrs = [
+            (self.port2, SWITCH_MAC, S1U_ENB_NEXTHOP1_MAC),
+            (self.port3, SWITCH_MAC, S1U_ENB_NEXTHOP2_MAC),
+        ]
+        self.add_next_routing_group(300, grp_id, mbrs)
+        self.set_egress_vlan(self.port2, vlan_id, False)
+        self.set_egress_vlan(self.port3, vlan_id, False)
+
+        # ue_ipv4_toport list is used to learn the ue_ipv4 address for a given packet.
+        ue_ipv4_toport = [None, None]
+        # teid_toport list is used to learn the teid
+        # assigned by SPGW for a downlink packet.
+        teid_toport = [None, None]
+        for i in range(50):
+            ue_ipv4 = "10.0.0." + str(i)
+            far_id = i
+            test_teid = i*3
+
+            self.setup_downlink(
+                s1u_sgw_addr=S1U_SGW_IPV4,
+                s1u_enb_addr=S1U_ENB_IPV4,
+                teid=test_teid,
+                ue_addr=ue_ipv4,
+                ctr_id=DOWNLINK_PDR_CTR_IDX,
+                far_id=far_id,
+            )
+
+            pkt_from1 = getattr(testutils, "simple_%s_packet" % pkt_type)(
+                eth_src=HOST1_MAC,
+                eth_dst=SWITCH_MAC,
+                ip_src=UE2_IPV4,
+                ip_dst=ue_ipv4,
+                ip_ttl=64,
+            )
+
+            exp_pkt_to2 = pkt_from1.copy()
+            exp_pkt_to2[IP].ttl = 63
+            exp_pkt_to2 = pkt_add_gtp(
+                exp_pkt_to2,
+                out_ipv4_src=S1U_SGW_IPV4,
+                out_ipv4_dst=S1U_ENB_IPV4,
+                teid=test_teid,
+            )
+            exp_pkt_to2[Ether].src = SWITCH_MAC
+            exp_pkt_to2[Ether].dst = S1U_ENB_NEXTHOP1_MAC
+
+            exp_pkt_to3 = pkt_from1.copy()
+            exp_pkt_to3[IP].ttl = 63
+            exp_pkt_to3 = pkt_add_gtp(
+                exp_pkt_to3,
+                out_ipv4_src=S1U_SGW_IPV4,
+                out_ipv4_dst=S1U_ENB_IPV4,
+                teid=test_teid,
+            )
+            exp_pkt_to3[Ether].src = SWITCH_MAC
+            exp_pkt_to3[Ether].dst = S1U_ENB_NEXTHOP2_MAC
+
+            self.send_packet(self.port1, pkt_from1)
+            out_port_indx = self.verify_any_packet_any_port(
+                [exp_pkt_to2, exp_pkt_to3], [self.port2, self.port3]
+            )
+            ue_ipv4_toport[out_port_indx] = ue_ipv4
+            teid_toport[out_port_indx] = test_teid
+
+        pkt_toport2 = getattr(testutils, "simple_%s_packet" % pkt_type)(
+            eth_src=HOST1_MAC,
+            eth_dst=SWITCH_MAC,
+            ip_src=UE2_IPV4,
+            ip_dst=ue_ipv4_toport[0],
+            ip_ttl=64,
+        )
+
+        pkt_toport3 = getattr(testutils, "simple_%s_packet" % pkt_type)(
+            eth_src=HOST1_MAC,
+            eth_dst=SWITCH_MAC,
+            ip_src=UE2_IPV4,
+            ip_dst=ue_ipv4_toport[1],
+            ip_ttl=64,
+        )
+
+        exp_pkt_to2 = pkt_toport2.copy()
+        exp_pkt_to2[IP].ttl = 63
+        exp_pkt_to2 = pkt_add_gtp(
+            exp_pkt_to2,
+            out_ipv4_src=S1U_SGW_IPV4,
+            out_ipv4_dst=S1U_ENB_IPV4,
+            teid=teid_toport[0],
+        )
+        exp_pkt_to2[Ether].src = SWITCH_MAC
+        exp_pkt_to2[Ether].dst = S1U_ENB_NEXTHOP1_MAC
+
+        exp_pkt_to3 = pkt_toport3.copy()
+        exp_pkt_to3[IP].ttl = 63
+        exp_pkt_to3 = pkt_add_gtp(
+            exp_pkt_to3,
+            out_ipv4_src=S1U_SGW_IPV4,
+            out_ipv4_dst=S1U_ENB_IPV4,
+            teid=teid_toport[1],
+        )
+        exp_pkt_to3[Ether].src = SWITCH_MAC
+        exp_pkt_to3[Ether].dst = S1U_ENB_NEXTHOP2_MAC
+
+        self.send_packet(self.port1, pkt_toport2)
+        self.send_packet(self.port1, pkt_toport3)
+        # In this assertion we are verifying:
+        #  1) all ports of the same group are used almost once
+        #  2) consistency of the forwarding decision, i.e. packets with the
+        #     same 5-tuple fields are always forwarded out of the same port
+        self.verify_each_packet_on_each_port(
+            [exp_pkt_to2, exp_pkt_to3], [self.port2, self.port3]
+        )
+
+    def runTest(self):
+        for pkt_type in PKT_TYPES_UNDER_TEST:
+            self.doRunTest(pkt_type)
+
+
 @group("spgw")
 class FabricSpgwDownlinkTest(SpgwSimpleTest):
     @tvsetup

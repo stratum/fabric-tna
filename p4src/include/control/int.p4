@@ -62,11 +62,11 @@ control FlowReportFilter(
                 fabric_md.bridged.base.ig_port,
                 eg_intr_md.egress_port,
                 fabric_md.int_md.hop_latency,
-                fabric_md.bridged.base.flow_hash,
+                fabric_md.bridged.base.inner_hash,
                 fabric_md.int_md.timestamp
             });
-            flag = filter_get_and_set1.execute(fabric_md.bridged.base.flow_hash[31:16]);
-            flag = flag | filter_get_and_set2.execute(fabric_md.bridged.base.flow_hash[15:0]);
+            flag = filter_get_and_set1.execute(fabric_md.bridged.base.inner_hash[31:16]);
+            flag = flag | filter_get_and_set2.execute(fabric_md.bridged.base.inner_hash[15:0]);
             // Generate report only when ALL register actions detect a change.
             if (flag == 1) {
                 eg_dprsr_md.mirror_type = (bit<3>)FabricMirrorType_t.INVALID;
@@ -194,7 +194,7 @@ control IntIngress (
         fabric_md.int_mirror_md.ip_eth_type = fabric_md.bridged.base.ip_eth_type;
         fabric_md.int_mirror_md.eg_port = (bit<16>)ig_tm_md.ucast_egress_port;
         fabric_md.int_mirror_md.queue_id = (bit<8>)ig_tm_md.qid;
-        fabric_md.int_mirror_md.flow_hash = fabric_md.bridged.base.flow_hash;
+        fabric_md.int_mirror_md.flow_hash = fabric_md.bridged.base.inner_hash;
         ig_dprsr_md.drop_ctl = 1;
 #ifdef WITH_DEBUG
         drop_report_counter.count();
@@ -413,7 +413,7 @@ control IntEgress (
         fabric_md.int_mirror_md.ig_tstamp = fabric_md.bridged.base.ig_tstamp[31:0];
         fabric_md.int_mirror_md.eg_tstamp = eg_prsr_md.global_tstamp[31:0];
         fabric_md.int_mirror_md.ip_eth_type = fabric_md.bridged.base.ip_eth_type;
-        fabric_md.int_mirror_md.flow_hash = fabric_md.bridged.base.flow_hash;
+        fabric_md.int_mirror_md.flow_hash = fabric_md.bridged.base.inner_hash;
         // fabric_md.int_mirror_md.vlan_stripped set by egress_vlan table
         // fabric_md.int_mirror_md.strip_gtpu will be initialized by the parser
     }
