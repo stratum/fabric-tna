@@ -2610,7 +2610,7 @@ class IntTest(IPv4UnicastTest):
             ("src_ip", ipv4_to_binary(src_ip)),
             ("mon_ip", ipv4_to_binary(mon_ip)),
             ("mon_port", stringify(mon_port, 2)),
-            ("switch_id", stringify(switch_id, 4))
+            ("switch_id", stringify(switch_id, 4)),
         ]
         if mon_label:
             action = action + "_mpls"

@@ -1171,7 +1171,7 @@ class FabricSpgwDownlinkEcmpTest(SpgwSimpleTest):
         for i in range(50):
             ue_ipv4 = "10.0.0." + str(i)
             far_id = i
-            test_teid = i*3
+            test_teid = i * 3
 
             self.setup_downlink(
                 s1u_sgw_addr=S1U_SGW_IPV4,
