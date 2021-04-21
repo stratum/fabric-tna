@@ -27,7 +27,7 @@ make -j8 fabric-int
 make -j8 fabric-spgw-int
 
 echo "Build and verify Java pipeconf"
-make constants pipeconf MVN_FLAGS="-Pci-verify -Pcoverage"
+make constants pipeconf-ci MVN_FLAGS="-Pci-verify -Pcoverage"
 
 echo "Upload coverage to codecov"
 bash .jenkins/codecov.sh -Z

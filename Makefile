@@ -74,6 +74,12 @@ pipeconf-test: _mvn_package
 	docker run --rm -v $(DIR):mvn-src -w /mvn-src \
 		-v $(MVN_CACHE):/root/.m2 $(MAVEN_DOCKER_IMAGE) mvn test
 
+pipeconf-ci:
+	$(info *** Building ONOS app...)
+	@mkdir -p target
+	docker run --rm -v $(DIR):/mvn-src -w /mvn-src \
+		-v $(MVN_CACHE):/root/.m2 $(MAVEN_DOCKER_IMAGE) mvn $(MVN_FLAGS) clean package verify
+
 _pipeconf-oar-exists:
 	@test -f $(PIPECONF_OAR_FILE) || (echo "pipeconf .oar not found" && exit 1)
 
