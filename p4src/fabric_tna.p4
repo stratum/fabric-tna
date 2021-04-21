@@ -33,7 +33,7 @@ control FabricIngress (
     inout ingress_intrinsic_metadata_for_deparser_t  ig_dprsr_md,
     inout ingress_intrinsic_metadata_for_tm_t        ig_tm_md) {
 
-    LookupMdInit() lkp_init;
+    LookupMdInit() lkp_md_init;
     PacketIoIngress() pkt_io;
     Filtering() filtering;
     Forwarding() forwarding;
@@ -49,7 +49,7 @@ control FabricIngress (
 #endif // WITH_INT
 
     apply {
-        lkp_init.apply(hdr, fabric_md.acl_lkp, fabric_md.lkp_md);
+        lkp_md_init.apply(hdr, fabric_md.lkp_md);
         pkt_io.apply(hdr, fabric_md, ig_intr_md, ig_tm_md, ig_dprsr_md);
         filtering.apply(hdr, fabric_md, ig_intr_md);
 #ifdef WITH_SPGW

@@ -104,8 +104,8 @@ control UplinkRecirc(
 
     table rules {
         key = {
-            fabric_md.acl_lkp.ipv4_src : ternary @name("ipv4_src");
-            fabric_md.acl_lkp.ipv4_dst : ternary @name("ipv4_dst");
+            fabric_md.lkp_md.ipv4_src : ternary @name("ipv4_src");
+            fabric_md.lkp_md.ipv4_dst : ternary @name("ipv4_dst");
         }
         actions = {
             allow;

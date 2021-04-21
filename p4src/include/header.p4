@@ -281,29 +281,26 @@ header bridged_metadata_t {
 #endif // WITH_INT
 }
 
+// Used to carry header fields to be used as ternary key fields.
+// It is needed to ensure validity of the headers we use for ternary lookup.
 // Used for ACL lookups, INT watchlist, and stats tables. Initialized with the
 // parsed headers, but never updated by the pipe. When both outer and inner
 // IPv4/TCP/UDP headers are valid, this should always carry the inner ones. The
 // assumption is that we terminate GTP tunnels in the fabric, so we are more
 // interested in observing/blocking the inner flows. We might revisit this
 // decision in the future.
-struct acl_lookup_t {
-    bool      is_ipv4;
-    bit<32>   ipv4_src;
-    bit<32>   ipv4_dst;
-    bit<8>    ip_proto;
-    l4_port_t l4_sport;
-    l4_port_t l4_dport;
-}
-
-// Used to carry header fields to be used as ternary key fields.
-// It is needed to ensure validity of all headers we use for ternary lookup.
 struct lookup_metadata_t {
     mac_addr_t              eth_dst;
     mac_addr_t              eth_src;
     bit<16>                 eth_type;
     vlan_id_t               vlan_id;
     @padding bit<4>         _pad;
+    bool                    is_ipv4;
+    bit<32>                 ipv4_src;
+    bit<32>                 ipv4_dst;
+    bit<8>                  ip_proto;
+    l4_port_t               l4_sport;
+    l4_port_t               l4_dport;
     bit<8>                  icmp_type;
     bit<8>                  icmp_code;
 }
@@ -314,7 +311,6 @@ struct lookup_metadata_t {
 struct fabric_ingress_metadata_t {
     bridged_metadata_t      bridged;
     flow_hash_t             ecmp_hash;
-    acl_lookup_t            acl_lkp;
     lookup_metadata_t       lkp_md;
     bit<32>                 routing_ipv4_dst; // Outermost
     bool                    skip_forwarding;
