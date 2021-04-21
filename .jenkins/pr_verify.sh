@@ -30,7 +30,7 @@ echo "Build and verify Java pipeconf"
 make constants pipeconf MVN_FLAGS="-Pci-verify -Pcoverage"
 
 echo "Upload coverage to codecov"
-bash .jenkins/codecov.sh
+bash .jenkins/codecov.sh -Z
 
 # Since the Java build is based on auto-generated P4InfoConstants.java (make
 # constants above), check that checked-in file is up-to-date:
