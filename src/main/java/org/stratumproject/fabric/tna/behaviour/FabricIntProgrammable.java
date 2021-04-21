@@ -51,7 +51,6 @@ import org.onosproject.net.pi.runtime.PiActionParam;
 import org.onosproject.segmentrouting.config.SegmentRoutingDeviceConfig;
 import org.stratumproject.fabric.tna.PipeconfLoader;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -280,7 +279,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
     private TrafficSelector buildCollectorSelector(Set<Criterion> criteria) {
         TrafficSelector.Builder builder = DefaultTrafficSelector.builder();
         // We always match packets with valid IPv4 header
-        builder.matchPi(PiCriterion.builder().matchExact(P4InfoConstants.HDR_IPV4_VALID, 1).build());
+        PiCriterion.Builder piBuilder = PiCriterion.builder().matchExact(P4InfoConstants.HDR_IPV4_VALID, 1);
         for (Criterion criterion : criteria) {
             switch (criterion.type()) {
                 case IPV4_SRC:
@@ -292,7 +291,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 case TCP_SRC:
                     // TODO: Match a range of TCP port
                     builder.matchPi(
-                            PiCriterion.builder().matchRange(
+                            piBuilder.matchRange(
                                     P4InfoConstants.HDR_L4_SPORT,
                                     ((TcpPortCriterion) criterion).tcpPort().toInt(),
                                     ((TcpPortCriterion) criterion).tcpPort().toInt())
@@ -301,7 +300,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 case UDP_SRC:
                     // TODO: Match a range of UDP port
                     builder.matchPi(
-                            PiCriterion.builder().matchTernary(
+                            piBuilder.matchRange(
                                     P4InfoConstants.HDR_L4_SPORT,
                                     ((UdpPortCriterion) criterion).udpPort().toInt(),
                                     ((UdpPortCriterion) criterion).udpPort().toInt())
@@ -310,7 +309,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 case TCP_DST:
                     // TODO: Match a range of TCP port
                     builder.matchPi(
-                            PiCriterion.builder().matchRange(
+                            piBuilder.matchRange(
                                     P4InfoConstants.HDR_L4_DPORT,
                                     ((TcpPortCriterion) criterion).tcpPort().toInt(),
                                     ((TcpPortCriterion) criterion).tcpPort().toInt())
@@ -319,7 +318,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 case UDP_DST:
                     // TODO: Match a range of UDP port
                     builder.matchPi(
-                            PiCriterion.builder().matchRange(
+                            piBuilder.matchRange(
                                     P4InfoConstants.HDR_L4_DPORT,
                                     ((UdpPortCriterion) criterion).udpPort().toInt(),
                                     ((UdpPortCriterion) criterion).udpPort().toInt())
@@ -329,7 +328,8 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                     log.warn("Unsupported criterion type: {}", criterion.type());
             }
         }
-        return builder.build();
+        return builder.matchPi(piBuilder.build())
+                .build();
     }
 
     /**
@@ -602,8 +602,8 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
 
     private boolean entryWithNoReportCollectorAction(FlowEntry flowEntry) {
         return flowEntry.treatment().allInstructions().stream()
-                .filter(inst->inst instanceof PiInstruction)
-                .map(inst -> (PiInstruction)inst)
+                .filter(inst -> inst instanceof PiInstruction)
+                .map(inst -> (PiInstruction) inst)
                 .map(PiInstruction::action)
                 .filter(action -> action instanceof PiAction)
                 .map(action -> (PiAction) action)

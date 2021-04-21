@@ -34,7 +34,6 @@ import org.onosproject.net.behaviour.inbandtelemetry.IntDeviceConfig;
 import org.onosproject.net.behaviour.inbandtelemetry.IntMetadataType;
 import org.onosproject.net.behaviour.inbandtelemetry.IntObjective;
 import org.onosproject.net.behaviour.inbandtelemetry.IntProgrammable;
-import org.onosproject.net.behaviour.inbandtelemetry.IntReportConfig;
 import org.onosproject.net.config.NetworkConfigService;
 import org.onosproject.net.driver.DriverData;
 import org.onosproject.net.driver.DriverHandler;
@@ -320,7 +319,7 @@ public class FabricIntProgrammableTest {
 
     /**
      * Test "setupIntConfig" function of IntProgrammable, but there is an old
-     * flow rule in the store for collector
+     * flow rule in the store for collector.
      */
     @Test
     public void testSetupIntConfigWithOldEntry() {
@@ -724,24 +723,26 @@ public class FabricIntProgrammableTest {
     private FlowRule buildExpectedCollectorFlow(byte protocol) {
         // Flow rule that we expected.
         TrafficSelector.Builder expectedSelector = DefaultTrafficSelector.builder();
-        expectedSelector.matchPi(
-                PiCriterion.builder().matchExact(P4InfoConstants.HDR_IPV4_VALID, 1).build());
+        PiCriterion.Builder expectedPiCriterion = PiCriterion.builder()
+                .matchExact(P4InfoConstants.HDR_IPV4_VALID, 1);
+
         expectedSelector.matchIPSrc(IP_SRC);
         expectedSelector.matchIPDst(IP_DST);
         if (protocol == IPv4.PROTOCOL_TCP || protocol == IPv4.PROTOCOL_UDP) {
             expectedSelector.matchPi(
-                    PiCriterion.builder().matchRange(
+                    expectedPiCriterion.matchRange(
                             P4InfoConstants.HDR_L4_SPORT,
                             L4_SRC.toInt(),
                             L4_SRC.toInt())
                             .build());
             expectedSelector.matchPi(
-                    PiCriterion.builder().matchRange(
+                    expectedPiCriterion.matchRange(
                             P4InfoConstants.HDR_L4_DPORT,
                             L4_DST.toInt(),
                             L4_DST.toInt())
                             .build());
         }
+        expectedSelector.matchPi(expectedPiCriterion.build());
         PiAction expectedPiAction = PiAction.builder()
                 .withId(P4InfoConstants.FABRIC_INGRESS_INT_INGRESS_MARK_TO_REPORT)
                 .build();
