@@ -296,11 +296,7 @@ public class FabricIntProgrammableTest {
                 buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_DROP),
                 buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_INGRESS_MIRROR, INT_REPORT_TYPE_LOCAL),
                 buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_INGRESS_MIRROR, INT_REPORT_TYPE_DROP),
-                buildFilterConfigFlow(LEAF_DEVICE_ID),
-                buildIntMetadataLocalRule(LEAF_DEVICE_ID),
-                buildIntMetadataDropRule(LEAF_DEVICE_ID),
-                buildIngressDropReportTableRules(LEAF_DEVICE_ID).get(0),
-                buildIngressDropReportTableRules(LEAF_DEVICE_ID).get(1)
+                buildFilterConfigFlow(LEAF_DEVICE_ID)
         );
 
         List<Capture<FlowRule>> captures = Lists.newArrayList();
@@ -341,11 +337,7 @@ public class FabricIntProgrammableTest {
                 buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_DROP),
                 buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_INGRESS_MIRROR, INT_REPORT_TYPE_LOCAL),
                 buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_INGRESS_MIRROR, INT_REPORT_TYPE_DROP),
-                buildFilterConfigFlow(LEAF_DEVICE_ID),
-                buildIntMetadataLocalRule(LEAF_DEVICE_ID),
-                buildIntMetadataDropRule(LEAF_DEVICE_ID),
-                buildIngressDropReportTableRules(LEAF_DEVICE_ID).get(0),
-                buildIngressDropReportTableRules(LEAF_DEVICE_ID).get(1)
+                buildFilterConfigFlow(LEAF_DEVICE_ID)
         );
 
         List<Capture<FlowRule>> captures = Lists.newArrayList();
@@ -390,11 +382,7 @@ public class FabricIntProgrammableTest {
                 buildReportTableRule(SPINE_DEVICE_ID, true, BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_DROP),
                 buildReportTableRule(SPINE_DEVICE_ID, true, BMD_TYPE_INGRESS_MIRROR, INT_REPORT_TYPE_LOCAL),
                 buildReportTableRule(SPINE_DEVICE_ID, true, BMD_TYPE_INGRESS_MIRROR, INT_REPORT_TYPE_DROP),
-                buildFilterConfigFlow(SPINE_DEVICE_ID),
-                buildIntMetadataLocalRule(SPINE_DEVICE_ID),
-                buildIntMetadataDropRule(SPINE_DEVICE_ID),
-                buildIngressDropReportTableRules(SPINE_DEVICE_ID).get(0),
-                buildIngressDropReportTableRules(SPINE_DEVICE_ID).get(1)
+                buildFilterConfigFlow(SPINE_DEVICE_ID)
         );
 
         List<Capture<FlowRule>> captures = Lists.newArrayList();
@@ -464,10 +452,7 @@ public class FabricIntProgrammableTest {
                 buildFlowEntry(buildReportTableRule(LEAF_DEVICE_ID, false,
                         BMD_TYPE_INGRESS_MIRROR, INT_REPORT_TYPE_LOCAL)),
                 buildFlowEntry(buildReportTableRule(LEAF_DEVICE_ID, false,
-                        BMD_TYPE_INGRESS_MIRROR, INT_REPORT_TYPE_DROP)),
-                // INT mirror table entry
-                buildFlowEntry(buildIntMetadataLocalRule(LEAF_DEVICE_ID)),
-                buildFlowEntry(buildIntMetadataDropRule(LEAF_DEVICE_ID))
+                        BMD_TYPE_INGRESS_MIRROR, INT_REPORT_TYPE_DROP))
         );
         Set<FlowEntry> randomEntries = buildRandomFlowEntries();
         Set<FlowEntry> entries = Sets.newHashSet(intEntries);
@@ -618,12 +603,16 @@ public class FabricIntProgrammableTest {
         final PiActionParam monPortParam = new PiActionParam(
                 P4InfoConstants.MON_PORT,
                 COLLECTOR_PORT.toInt());
+        final PiActionParam switchIdParam = new PiActionParam(
+                    P4InfoConstants.SWITCH_ID,
+                    NODE_SID_IPV4);
         final PiAction.Builder reportAction = PiAction.builder()
                 .withParameter(srcMacParam)
                 .withParameter(nextHopMacParam)
                 .withParameter(srcIpParam)
                 .withParameter(monIpParam)
-                .withParameter(monPortParam);
+                .withParameter(monPortParam)
+                .withParameter(switchIdParam);
         if (setMpls) {
             reportAction.withParameter(new PiActionParam(
                     P4InfoConstants.MON_LABEL,
@@ -828,138 +817,6 @@ public class FabricIntProgrammableTest {
                 buildFlowEntry(rule1),
                 buildFlowEntry(rule2)
         );
-    }
-
-    private FlowRule buildIntMetadataLocalRule(DeviceId deviceId) {
-        final PiActionParam switchIdParam = new PiActionParam(
-                P4InfoConstants.SWITCH_ID, NODE_SID_IPV4);
-
-        final PiAction mirrorAction = PiAction.builder()
-                .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_REPORT_LOCAL)
-                .withParameter(switchIdParam)
-                .build();
-
-        final TrafficTreatment mirrorTreatment = DefaultTrafficTreatment.builder()
-                .piTableAction(mirrorAction)
-                .build();
-
-        final TrafficSelector mirrorSelector =
-                DefaultTrafficSelector.builder().matchPi(
-                        PiCriterion.builder().matchExact(
-                                P4InfoConstants.HDR_INT_REPORT_TYPE,
-                                INT_REPORT_TYPE_LOCAL)
-                                .matchExact(
-                                        P4InfoConstants.HDR_DROP_CTL,
-                                        0).build())
-                        .build();
-
-        return DefaultFlowRule.builder()
-                .forDevice(deviceId)
-                .withSelector(mirrorSelector)
-                .withTreatment(mirrorTreatment)
-                .withPriority(DEFAULT_PRIORITY)
-                .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_METADATA)
-                .fromApp(APP_ID)
-                .makePermanent()
-                .build();
-    }
-
-    private FlowRule buildIntMetadataDropRule(DeviceId deviceId) {
-        final PiActionParam switchIdParam = new PiActionParam(
-                P4InfoConstants.SWITCH_ID, NODE_SID_IPV4);
-
-        final PiAction mirrorAction = PiAction.builder()
-                .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_REPORT_DROP)
-                .withParameter(switchIdParam)
-                .build();
-
-        final TrafficTreatment mirrorTreatment = DefaultTrafficTreatment.builder()
-                .piTableAction(mirrorAction)
-                .build();
-
-        final TrafficSelector mirrorSelector =
-                DefaultTrafficSelector.builder().matchPi(
-                        PiCriterion.builder().matchExact(
-                                P4InfoConstants.HDR_INT_REPORT_TYPE,
-                                INT_REPORT_TYPE_LOCAL).matchExact(
-                                P4InfoConstants.HDR_DROP_CTL,
-                                1).build())
-                        .build();
-
-        return DefaultFlowRule.builder()
-                .forDevice(deviceId)
-                .withSelector(mirrorSelector)
-                .withTreatment(mirrorTreatment)
-                .withPriority(DEFAULT_PRIORITY)
-                .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_METADATA)
-                .fromApp(APP_ID)
-                .makePermanent()
-                .build();
-    }
-
-    private List<FlowRule> buildIngressDropReportTableRules(DeviceId deviceId) {
-        final List<FlowRule> result = Lists.newArrayList();
-        final PiActionParam switchIdParam = new PiActionParam(
-                P4InfoConstants.SWITCH_ID, NODE_SID_IPV4);
-
-        final PiAction reportDropAction = PiAction.builder()
-                .withId(P4InfoConstants.FABRIC_INGRESS_INT_INGRESS_REPORT_DROP)
-                .withParameter(switchIdParam)
-                .build();
-        final TrafficTreatment reportDropTreatment = DefaultTrafficTreatment.builder()
-                .piTableAction(reportDropAction)
-                .build();
-        TrafficSelector reportDropSelector =
-                DefaultTrafficSelector.builder()
-                        .matchPi(
-                                PiCriterion.builder()
-                                        .matchExact(
-                                                P4InfoConstants.HDR_INT_REPORT_TYPE,
-                                                INT_REPORT_TYPE_LOCAL)
-                                        .matchExact(
-                                                P4InfoConstants.HDR_DROP_CTL,
-                                                1)
-                                        .matchExact(P4InfoConstants.HDR_COPY_TO_CPU,
-                                                0)
-                                        .build())
-                        .build();
-        result.add(DefaultFlowRule.builder()
-                .forDevice(deviceId)
-                .withSelector(reportDropSelector)
-                .withTreatment(reportDropTreatment)
-                .withPriority(DEFAULT_PRIORITY)
-                .forTable(P4InfoConstants.FABRIC_INGRESS_INT_INGRESS_DROP_REPORT)
-                .fromApp(APP_ID)
-                .makePermanent()
-                .build());
-        reportDropSelector =
-                DefaultTrafficSelector.builder()
-                        .matchPi(
-                                PiCriterion.builder()
-                                        .matchExact(
-                                                P4InfoConstants.HDR_INT_REPORT_TYPE,
-                                                INT_REPORT_TYPE_LOCAL)
-                                        .matchExact(
-                                                P4InfoConstants.HDR_DROP_CTL,
-                                                0)
-                                        .matchTernary(P4InfoConstants.HDR_EGRESS_PORT_SET,
-                                                0, 1)
-                                        .matchTernary(P4InfoConstants.HDR_MCAST_GROUP_ID,
-                                                0, 1)
-                                        .matchExact(P4InfoConstants.HDR_COPY_TO_CPU,
-                                                0)
-                                        .build())
-                        .build();
-        result.add(DefaultFlowRule.builder()
-                .forDevice(deviceId)
-                .withSelector(reportDropSelector)
-                .withTreatment(reportDropTreatment)
-                .withPriority(DEFAULT_PRIORITY)
-                .forTable(P4InfoConstants.FABRIC_INGRESS_INT_INGRESS_DROP_REPORT)
-                .fromApp(APP_ID)
-                .makePermanent()
-                .build());
-        return result;
     }
 
     private void testInit() {

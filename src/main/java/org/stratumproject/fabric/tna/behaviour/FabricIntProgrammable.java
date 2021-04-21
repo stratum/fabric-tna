@@ -96,9 +96,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
 
     private static final Set<TableId> TABLES_TO_CLEANUP = Sets.newHashSet(
             P4InfoConstants.FABRIC_INGRESS_INT_INGRESS_WATCHLIST,
-            P4InfoConstants.FABRIC_INGRESS_INT_INGRESS_DROP_REPORT,
             P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_REPORT,
-            P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_METADATA,
             P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_CONFIG
     );
     private static final short BMD_TYPE_EGRESS_MIRROR = 2;
@@ -279,73 +277,6 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 .build();
     }
 
-    private List<FlowRule> buildIntMetadataEntries() {
-        final SegmentRoutingDeviceConfig cfg = cfgService.getConfig(
-                deviceId, SegmentRoutingDeviceConfig.class);
-        if (cfg == null) {
-            log.warn("Missing SegmentRoutingDeviceConfig config for {}", deviceId);
-            return Collections.emptyList();
-        }
-        final PiActionParam switchIdParam = new PiActionParam(
-                P4InfoConstants.SWITCH_ID, cfg.nodeSidIPv4());
-
-        // Local report
-        final PiAction reportLocalAction = PiAction.builder()
-                .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_REPORT_LOCAL)
-                .withParameter(switchIdParam)
-                .build();
-        final TrafficTreatment reportLocalTreatment = DefaultTrafficTreatment.builder()
-                .piTableAction(reportLocalAction)
-                .build();
-        final TrafficSelector reportLocalSelector =
-                DefaultTrafficSelector.builder()
-                        .matchPi(
-                                PiCriterion.builder().matchExact(
-                                        P4InfoConstants.HDR_INT_REPORT_TYPE,
-                                        INT_REPORT_TYPE_LOCAL).matchExact(
-                                        P4InfoConstants.HDR_DROP_CTL,
-                                        0).build())
-                        .build();
-        final FlowRule reportLocalFlow = DefaultFlowRule.builder()
-                .forDevice(deviceId)
-                .withSelector(reportLocalSelector)
-                .withTreatment(reportLocalTreatment)
-                .withPriority(DEFAULT_PRIORITY)
-                .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_METADATA)
-                .fromApp(appId)
-                .makePermanent()
-                .build();
-
-        // Drop report
-        final PiAction reportDropAction = PiAction.builder()
-                .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_REPORT_DROP)
-                .withParameter(switchIdParam)
-                .build();
-        final TrafficTreatment reportDropTreatment = DefaultTrafficTreatment.builder()
-                .piTableAction(reportDropAction)
-                .build();
-        final TrafficSelector reportDropSelector =
-                DefaultTrafficSelector.builder()
-                        .matchPi(
-                                PiCriterion.builder().matchExact(
-                                        P4InfoConstants.HDR_INT_REPORT_TYPE,
-                                        INT_REPORT_TYPE_LOCAL).matchExact(
-                                        P4InfoConstants.HDR_DROP_CTL,
-                                        1).build())
-                        .build();
-        final FlowRule reportDropFlow = DefaultFlowRule.builder()
-                .forDevice(deviceId)
-                .withSelector(reportDropSelector)
-                .withTreatment(reportDropTreatment)
-                .withPriority(DEFAULT_PRIORITY)
-                .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_INT_METADATA)
-                .fromApp(appId)
-                .makePermanent()
-                .build();
-
-        return ImmutableList.of(reportLocalFlow, reportDropFlow);
-    }
-
     private TrafficSelector buildCollectorSelector(Set<Criterion> criteria) {
         TrafficSelector.Builder builder = DefaultTrafficSelector.builder();
         // We always match packets with valid IPv4 header
@@ -453,19 +384,6 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         final FlowRule filterConfigRule = buildFilterConfigRule(cfg.minFlowHopLatencyChangeNs());
         flowRuleService.applyFlowRules(filterConfigRule);
         log.info("Report rule added to {} [{}]", this.data().deviceId(), filterConfigRule);
-
-        final List<FlowRule> intMetadataRules = buildIntMetadataEntries();
-        intMetadataRules.forEach(rule -> {
-            flowRuleService.applyFlowRules(rule);
-            log.info("INT metadata rule added to {} [{}]", this.data().deviceId(), rule);
-        });
-
-        final List<FlowRule> intDropReportRules = buildIntDropReportRules();
-        intDropReportRules.forEach(rule -> {
-            flowRuleService.applyFlowRules(rule);
-            log.info("INT drop report rule added to {} [{}]", this.data().deviceId(), rule);
-        });
-
         return true;
     }
 
@@ -577,6 +495,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
 
         final MacAddress switchMac = srCfg.routerMac();
         final Ip4Address srcIp = srCfg.routerIpv4();
+        final int switchId = srCfg.nodeSidIPv4();
         log.info("For {} overriding sink IPv4 addr ({}) " +
                         "with segmentrouting ipv4Loopback ({}). " +
                         "Also use the switch mac ({}) as dst mac",
@@ -599,6 +518,9 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         final PiActionParam monPortParam = new PiActionParam(
                 P4InfoConstants.MON_PORT,
                 intCfg.collectorPort().toInt());
+        final PiActionParam switchIdParam = new PiActionParam(
+                P4InfoConstants.SWITCH_ID,
+                switchId);
 
         PiAction.Builder reportActionBuilder = PiAction.builder();
         if (!srCfg.isEdgeRouter()) {
@@ -638,11 +560,13 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 return null;
             }
         }
+
         reportActionBuilder.withParameter(srcMacParam)
                 .withParameter(nextHopMacParam)
                 .withParameter(srcIpParam)
                 .withParameter(monIpParam)
-                .withParameter(monPortParam);
+                .withParameter(monPortParam)
+                .withParameter(switchIdParam);
         final TrafficTreatment treatment = DefaultTrafficTreatment.builder()
                 .piTableAction(reportActionBuilder.build())
                 .build();
@@ -674,69 +598,6 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 buildReportEntryWithType(intCfg, BMD_TYPE_INGRESS_MIRROR, INT_REPORT_TYPE_LOCAL),
                 buildReportEntryWithType(intCfg, BMD_TYPE_INGRESS_MIRROR, INT_REPORT_TYPE_DROP)
         );
-    }
-
-    private List<FlowRule> buildIntDropReportRules() {
-        final SegmentRoutingDeviceConfig cfg = cfgService.getConfig(
-                deviceId, SegmentRoutingDeviceConfig.class);
-        if (cfg == null) {
-            log.warn("Missing SegmentRoutingDeviceConfig config for {}", deviceId);
-            return Collections.emptyList();
-        }
-        final PiActionParam switchIdParam = new PiActionParam(
-                P4InfoConstants.SWITCH_ID, cfg.nodeSidIPv4());
-
-        final PiAction reportDropAction = PiAction.builder()
-                .withId(P4InfoConstants.FABRIC_INGRESS_INT_INGRESS_REPORT_DROP)
-                .withParameter(switchIdParam)
-                .build();
-        final TrafficTreatment reportDropTreatment = DefaultTrafficTreatment.builder()
-                .piTableAction(reportDropAction)
-                .build();
-        final List<FlowRule> result = Lists.newArrayList();
-
-        // (IntReportType_t.LOCAL, 1, _, _, 0) -> report_drop(switch_id)
-        TrafficSelector reportDropSelector =
-                DefaultTrafficSelector.builder()
-                        .matchPi(PiCriterion.builder()
-                                .matchExact(P4InfoConstants.HDR_INT_REPORT_TYPE,
-                                            INT_REPORT_TYPE_LOCAL)
-                                .matchExact(P4InfoConstants.HDR_DROP_CTL, 1)
-                                .matchExact(P4InfoConstants.HDR_COPY_TO_CPU, 0)
-                                .build())
-                        .build();
-        result.add(DefaultFlowRule.builder()
-                .forDevice(deviceId)
-                .withSelector(reportDropSelector)
-                .withTreatment(reportDropTreatment)
-                .withPriority(DEFAULT_PRIORITY)
-                .forTable(P4InfoConstants.FABRIC_INGRESS_INT_INGRESS_DROP_REPORT)
-                .fromApp(appId)
-                .makePermanent()
-                .build());
-
-        // (IntReportType_t.LOCAL, 0, 0, 0, 0) -> report_drop(switch_id)
-        reportDropSelector =
-                DefaultTrafficSelector.builder()
-                        .matchPi(PiCriterion.builder()
-                                .matchExact(P4InfoConstants.HDR_INT_REPORT_TYPE,
-                                            INT_REPORT_TYPE_LOCAL)
-                                .matchExact(P4InfoConstants.HDR_DROP_CTL, 0)
-                                .matchTernary(P4InfoConstants.HDR_EGRESS_PORT_SET, 0, 1)
-                                .matchTernary(P4InfoConstants.HDR_MCAST_GROUP_ID, 0, 1)
-                                .matchExact(P4InfoConstants.HDR_COPY_TO_CPU, 0)
-                                .build())
-                        .build();
-        result.add(DefaultFlowRule.builder()
-                .forDevice(deviceId)
-                .withSelector(reportDropSelector)
-                .withTreatment(reportDropTreatment)
-                .withPriority(DEFAULT_PRIORITY)
-                .forTable(P4InfoConstants.FABRIC_INGRESS_INT_INGRESS_DROP_REPORT)
-                .fromApp(appId)
-                .makePermanent()
-                .build());
-        return result;
     }
 
     private boolean entryWithNoReportCollectorAction(FlowEntry flowEntry) {

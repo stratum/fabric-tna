@@ -182,14 +182,14 @@ control IntIngress (
 #endif // WITH_DEBUG
     }
 
-    action report_drop(bit<32> switch_id) {
+    @hidden
+    action report_drop() {
         fabric_md.bridged.int_bmd.report_type = IntReportType_t.DROP;
         ig_dprsr_md.mirror_type = (bit<3>)FabricMirrorType_t.INT_REPORT;
         fabric_md.int_mirror_md.setValid();
         fabric_md.int_mirror_md.bmd_type = BridgedMdType_t.INGRESS_MIRROR;
         fabric_md.int_mirror_md.mirror_type = FabricMirrorType_t.INT_REPORT;
         fabric_md.int_mirror_md.report_type = IntReportType_t.DROP;
-        fabric_md.int_mirror_md.switch_id = switch_id;
         fabric_md.int_mirror_md.ig_port = (bit<16>)ig_intr_md.ingress_port;
         fabric_md.int_mirror_md.ip_eth_type = fabric_md.bridged.base.ip_eth_type;
         fabric_md.int_mirror_md.eg_port = (bit<16>)ig_tm_md.ucast_egress_port;
@@ -201,6 +201,7 @@ control IntIngress (
 #endif // WITH_DEBUG
     }
 
+    @hidden
     table drop_report {
         key = {
             fabric_md.bridged.int_bmd.report_type: exact @name("int_report_type");
@@ -214,8 +215,10 @@ control IntIngress (
             @defaultonly nop;
         }
         const size = 2;
-        // (IntReportType_t.LOCAL, 1, 0, _, _) -> report_drop(switch_id)
-        // (IntReportType_t.LOCAL, 0, 0, 0, 0) -> report_drop(switch_id)
+        const entries = {
+            (IntReportType_t.LOCAL, 1, 0, _, _): report_drop();
+            (IntReportType_t.LOCAL, 0, 0, false, 0): report_drop();
+        }
         const default_action = nop();
 #ifdef WITH_DEBUG
         counters = drop_report_counter;
@@ -273,7 +276,7 @@ control IntEgress (
     @hidden
     action add_common_report_header(mac_addr_t src_mac, mac_addr_t mon_mac,
                                    ipv4_addr_t src_ip, ipv4_addr_t mon_ip,
-                                   l4_port_t mon_port) {
+                                   l4_port_t mon_port, bit<32> switch_id) {
         hdr.report_ethernet.setValid();
         hdr.report_ethernet.dst_addr = mon_mac;
         hdr.report_ethernet.src_addr = src_mac;
@@ -297,6 +300,7 @@ control IntEgress (
         hdr.report_fixed_header.ver = 0;
         hdr.report_fixed_header.rsvd = 0;
         hdr.report_fixed_header.seq_no = get_seq_number.execute(hdr.report_fixed_header.hw_id);
+        hdr.common_report_header.switch_id = switch_id;
         // Fix the ethertype, the reason we need to fix the ether type is because we
         // may strip the MPLS header from the parser, and the ethertype will still be
         // MPLS instead of real one.
@@ -310,8 +314,8 @@ control IntEgress (
 
     action do_local_report_encap(mac_addr_t src_mac, mac_addr_t mon_mac,
                                  ipv4_addr_t src_ip, ipv4_addr_t mon_ip,
-                                 l4_port_t mon_port) {
-        add_common_report_header(src_mac, mon_mac, src_ip, mon_ip, mon_port);
+                                 l4_port_t mon_port, bit<32> switch_id) {
+        add_common_report_header(src_mac, mon_mac, src_ip, mon_ip, mon_port, switch_id);
         hdr.report_fixed_header.nproto = NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER;
         hdr.report_fixed_header.f = 1;
         // The INT mirror parser will initialize both local and drop report header and
@@ -331,8 +335,9 @@ control IntEgress (
 
     action do_local_report_encap_mpls(mac_addr_t src_mac, mac_addr_t mon_mac,
                                       ipv4_addr_t src_ip, ipv4_addr_t mon_ip,
-                                      l4_port_t mon_port, mpls_label_t mon_label) {
-        do_local_report_encap(src_mac, mon_mac, src_ip, mon_ip, mon_port);
+                                      l4_port_t mon_port, mpls_label_t mon_label,
+                                      bit<32> switch_id) {
+        do_local_report_encap(src_mac, mon_mac, src_ip, mon_ip, mon_port, switch_id);
         hdr.report_eth_type.value = ETHERTYPE_MPLS;
         hdr.report_mpls.setValid();
         hdr.report_mpls.label = mon_label;
@@ -342,9 +347,9 @@ control IntEgress (
     }
 
     action do_drop_report_encap(mac_addr_t src_mac, mac_addr_t mon_mac,
-                                 ipv4_addr_t src_ip, ipv4_addr_t mon_ip,
-                                 l4_port_t mon_port) {
-        add_common_report_header(src_mac, mon_mac, src_ip, mon_ip, mon_port);
+                                ipv4_addr_t src_ip, ipv4_addr_t mon_ip,
+                                l4_port_t mon_port, bit<32> switch_id) {
+        add_common_report_header(src_mac, mon_mac, src_ip, mon_ip, mon_port, switch_id);
         hdr.report_fixed_header.nproto = NPROTO_TELEMETRY_DROP_HEADER;
         hdr.report_fixed_header.d = 1;
         // The INT mirror parser will initialize both local and drop report header and
@@ -363,9 +368,10 @@ control IntEgress (
     }
 
     action do_drop_report_encap_mpls(mac_addr_t src_mac, mac_addr_t mon_mac,
-                                 ipv4_addr_t src_ip, ipv4_addr_t mon_ip,
-                                 l4_port_t mon_port, mpls_label_t mon_label) {
-        do_drop_report_encap(src_mac, mon_mac, src_ip, mon_ip, mon_port);
+                                     ipv4_addr_t src_ip, ipv4_addr_t mon_ip,
+                                     l4_port_t mon_port, mpls_label_t mon_label,
+                                     bit<32> switch_id) {
+        do_drop_report_encap(src_mac, mon_mac, src_ip, mon_ip, mon_port, switch_id);
         hdr.report_eth_type.value = ETHERTYPE_MPLS;
         hdr.report_mpls.setValid();
         hdr.report_mpls.label = mon_label;
@@ -400,12 +406,11 @@ control IntEgress (
     }
 
     @hidden
-    action set_report_metadata(bit<32> switch_id) {
+    action set_report_metadata() {
         eg_dprsr_md.mirror_type = (bit<3>)FabricMirrorType_t.INT_REPORT;
         fabric_md.int_mirror_md.bmd_type = BridgedMdType_t.EGRESS_MIRROR;
         fabric_md.int_mirror_md.mirror_type = FabricMirrorType_t.INT_REPORT;
         fabric_md.int_mirror_md.report_type = fabric_md.bridged.int_bmd.report_type;
-        fabric_md.int_mirror_md.switch_id = switch_id;
         fabric_md.int_mirror_md.ig_port = (bit<16>)fabric_md.bridged.base.ig_port;
         fabric_md.int_mirror_md.eg_port = (bit<16>)eg_intr_md.egress_port;
         fabric_md.int_mirror_md.queue_id = (bit<8>)eg_intr_md.egress_qid;
@@ -418,16 +423,18 @@ control IntEgress (
         // fabric_md.int_mirror_md.strip_gtpu will be initialized by the parser
     }
 
-    action report_local(bit<32> switch_id) {
-        set_report_metadata(switch_id);
+    @hidden
+    action report_local() {
+        set_report_metadata();
         fabric_md.int_mirror_md.report_type = IntReportType_t.LOCAL;
 #ifdef WITH_DEBUG
         int_metadata_counter.count();
 #endif // WITH_DEBUG
     }
 
-    action report_drop(bit<32> switch_id) {
-        set_report_metadata(switch_id);
+    @hidden
+    action report_drop() {
+        set_report_metadata();
         fabric_md.int_mirror_md.report_type = IntReportType_t.DROP;
 #ifdef WITH_DEBUG
         int_metadata_counter.count();
@@ -435,6 +442,7 @@ control IntEgress (
     }
 
     // Initializes the INT mirror metadata.
+    @hidden
     table int_metadata {
         key = {
             fabric_md.bridged.int_bmd.report_type: exact @name("int_report_type");
@@ -446,9 +454,12 @@ control IntEgress (
             @defaultonly nop();
         }
         const default_action = nop();
-        const size = 3; // Flow, Drop, Queue
-        // (IntReportType_t.LOCAL, 1) -> report_drop(switch_id)
-        // (IntReportType_t.LOCAL, 0) -> report_local(switch_id)
+        const size = 2;
+        const entries = {
+            (IntReportType_t.LOCAL, 1): report_drop();
+            (IntReportType_t.LOCAL, 0): report_local();
+        }
+
 #ifdef WITH_DEBUG
         counters = int_metadata_counter;
 #endif // WITH_DEBUG

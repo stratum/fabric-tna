@@ -192,7 +192,6 @@ header local_report_header_t {
 // Here we set the mirror metadata with "no overlay" to prevent this.
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.bmd_type")
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.mirror_type")
-@pa_no_overlay("egress", "fabric_md.int_mirror_md.switch_id")
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.ig_port")
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.eg_port")
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.queue_id")
@@ -211,7 +210,6 @@ header int_mirror_metadata_t {
     BridgedMdType_t       bmd_type;
     @padding bit<5>       _pad0;
     FabricMirrorType_t    mirror_type;
-    bit<32>               switch_id;
     bit<16>               ig_port;
     bit<16>               eg_port;
     bit<8>                queue_id;
