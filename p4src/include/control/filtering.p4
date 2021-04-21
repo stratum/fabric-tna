@@ -104,7 +104,6 @@ control Filtering (inout parsed_headers_t hdr,
         // we don't check if Ethernet and eth_type is valid,
         // because it is always extracted in the Parser.
         fwd_classifier.apply();
-
 #ifdef WTIH_DEBUG
         fwd_type_counter.count(fabric_md.bridged.base.fwd_type);
 #endif // WTIH_DEBUG
