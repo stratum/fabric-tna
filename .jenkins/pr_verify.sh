@@ -20,11 +20,7 @@ echo "Build all profiles using SDE ${SDE_P4C_DOCKER_IMG}..."
 # Pull first to avoid pulling multiple times in parallel by the make jobs
 docker pull "${SDE_P4C_DOCKER_IMG}"
 # Jenkins uses 8 cores 15G VM
-# We commented out 'all' target, because we exceeded 45 min limit on Jenkins.
-# TODO: revert once the PTF tests execution time is optimized
-#  make -j8 all
-make -j8 fabric-int
-make -j8 fabric-spgw-int
+make -j8 all
 
 echo "Build and verify Java pipeconf"
 make constants pipeconf MVN_FLAGS="-Pci-verify -Pcoverage"
@@ -42,9 +38,13 @@ if [ -n "$modified" ]; then
   exit 1
 fi
 
+# We limit running PTF tests for only those profiles used in Aether, otherwise
+# we exceed the 45 min limit on Jenkins.
+# FIXME: revert once the PTF tests execution time is optimized (#238)
+for profile in "fabric-int" "fabric-spgw-int"; do
 # Run PTF tests for all profiles we just built
-for d in ./p4src/build/*/; do
-  profile=$(basename "${d}")
+#for d in ./p4src/build/*/; do
+#  profile=$(basename "${d}")
 
   echo "Run PTF tests for profile ${profile}"
   ./ptf/run/tm/run "${profile}"
