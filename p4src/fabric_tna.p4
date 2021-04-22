@@ -49,7 +49,7 @@ control FabricIngress (
 #endif // WITH_INT
 
     apply {
-        lkp_md_init.apply(hdr, fabric_md.lkp_md);
+        lkp_md_init.apply(hdr, fabric_md.lkp);
         pkt_io.apply(hdr, fabric_md, ig_intr_md, ig_tm_md, ig_dprsr_md);
         filtering.apply(hdr, fabric_md, ig_intr_md);
 #ifdef WITH_SPGW

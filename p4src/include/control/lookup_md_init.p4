@@ -22,14 +22,14 @@ control LookupMdInit (in parsed_headers_t hdr,
             lkp_md.vlan_id = hdr.vlan_tag.vlan_id;
         }
 
-        lkp_md.icmp_type = 0;
-        lkp_md.icmp_code = 0;
         lkp_md.is_ipv4 = false;
         lkp_md.ipv4_src = 0;
         lkp_md.ipv4_dst = 0;
         lkp_md.ip_proto = 0;
         lkp_md.l4_sport = 0;
         lkp_md.l4_dport = 0;
+        lkp_md.icmp_type = 0;
+        lkp_md.icmp_code = 0;
         if (hdr.inner_ipv4.isValid()) {
             lkp_md.is_ipv4 = true;
             lkp_md.ipv4_src = hdr.inner_ipv4.src_addr;

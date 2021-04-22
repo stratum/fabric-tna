@@ -87,8 +87,8 @@ control Filtering (inout parsed_headers_t hdr,
     table fwd_classifier {
         key = {
             ig_intr_md.ingress_port                 : exact @name("ig_port");
-            hdr.ethernet.dst_addr                   : ternary @name("eth_dst");
-            hdr.eth_type.value                      : ternary @name("eth_type");
+            fabric_md.lkp.eth_dst                   : ternary @name("eth_dst");
+            fabric_md.lkp.eth_type                  : ternary @name("eth_type");
             fabric_md.bridged.base.ip_eth_type      : exact @name("ip_eth_type");
         }
         actions = {

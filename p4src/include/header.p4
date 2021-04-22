@@ -281,20 +281,17 @@ header bridged_metadata_t {
 #endif // WITH_INT
 }
 
-// Used to carry header fields to be used as ternary key fields.
-// It is needed to ensure validity of the headers we use for ternary lookup.
-// Used for ACL lookups, INT watchlist, and stats tables. Initialized with the
-// parsed headers, but never updated by the pipe. When both outer and inner
-// IPv4/TCP/UDP headers are valid, this should always carry the inner ones. The
-// assumption is that we terminate GTP tunnels in the fabric, so we are more
-// interested in observing/blocking the inner flows. We might revisit this
-// decision in the future.
+// Used for table lookup. Initialized with the parsed headers, or 0 if invalid
+// to avoid unexpected match behavior due to PHV overlay. Never updated by the
+// pipe. When both outer and inner IPv4 headers are valid, this should always
+// carry the inner ones. The assumption is that we terminate GTP tunnels in the
+// fabric, so we are more interested in observing/blocking the inner flows. We
+// might revisit this decision in the future.
 struct lookup_metadata_t {
     mac_addr_t              eth_dst;
     mac_addr_t              eth_src;
     bit<16>                 eth_type;
     vlan_id_t               vlan_id;
-    @padding bit<4>         _pad;
     bool                    is_ipv4;
     bit<32>                 ipv4_src;
     bit<32>                 ipv4_dst;
@@ -311,7 +308,7 @@ struct lookup_metadata_t {
 struct fabric_ingress_metadata_t {
     bridged_metadata_t      bridged;
     flow_hash_t             ecmp_hash;
-    lookup_metadata_t       lkp_md;
+    lookup_metadata_t       lkp;
     bit<32>                 routing_ipv4_dst; // Outermost
     bool                    skip_forwarding;
     bool                    skip_next;
