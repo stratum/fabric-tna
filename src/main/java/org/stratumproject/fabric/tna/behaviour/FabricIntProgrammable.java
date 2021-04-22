@@ -35,6 +35,7 @@ import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.net.flow.criteria.Criterion;
 import org.onosproject.net.flow.criteria.IPCriterion;
+import org.onosproject.net.flow.criteria.IPProtocolCriterion;
 import org.onosproject.net.flow.criteria.PiCriterion;
 import org.onosproject.net.flow.criteria.TcpPortCriterion;
 import org.onosproject.net.flow.criteria.UdpPortCriterion;
@@ -282,6 +283,9 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         PiCriterion.Builder piBuilder = PiCriterion.builder().matchExact(P4InfoConstants.HDR_IPV4_VALID, 1);
         for (Criterion criterion : criteria) {
             switch (criterion.type()) {
+                case IP_PROTO:
+                    builder.matchIPProtocol((byte) ((IPProtocolCriterion) criterion).protocol());
+                    break;
                 case IPV4_SRC:
                     builder.matchIPSrc(((IPCriterion) criterion).ip());
                     break;
@@ -290,39 +294,27 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                     break;
                 case TCP_SRC:
                     // TODO: Match a range of TCP port
-                    builder.matchPi(
-                            piBuilder.matchRange(
-                                    P4InfoConstants.HDR_L4_SPORT,
-                                    ((TcpPortCriterion) criterion).tcpPort().toInt(),
-                                    ((TcpPortCriterion) criterion).tcpPort().toInt())
-                                    .build());
+                    piBuilder.matchRange(P4InfoConstants.HDR_L4_SPORT,
+                            ((TcpPortCriterion) criterion).tcpPort().toInt(),
+                            ((TcpPortCriterion) criterion).tcpPort().toInt());
                     break;
                 case UDP_SRC:
                     // TODO: Match a range of UDP port
-                    builder.matchPi(
-                            piBuilder.matchRange(
-                                    P4InfoConstants.HDR_L4_SPORT,
-                                    ((UdpPortCriterion) criterion).udpPort().toInt(),
-                                    ((UdpPortCriterion) criterion).udpPort().toInt())
-                                    .build());
+                    piBuilder.matchRange(P4InfoConstants.HDR_L4_SPORT,
+                            ((UdpPortCriterion) criterion).udpPort().toInt(),
+                            ((UdpPortCriterion) criterion).udpPort().toInt());
                     break;
                 case TCP_DST:
                     // TODO: Match a range of TCP port
-                    builder.matchPi(
-                            piBuilder.matchRange(
-                                    P4InfoConstants.HDR_L4_DPORT,
-                                    ((TcpPortCriterion) criterion).tcpPort().toInt(),
-                                    ((TcpPortCriterion) criterion).tcpPort().toInt())
-                                    .build());
+                    piBuilder.matchRange(P4InfoConstants.HDR_L4_DPORT,
+                            ((TcpPortCriterion) criterion).tcpPort().toInt(),
+                            ((TcpPortCriterion) criterion).tcpPort().toInt());
                     break;
                 case UDP_DST:
                     // TODO: Match a range of UDP port
-                    builder.matchPi(
-                            piBuilder.matchRange(
-                                    P4InfoConstants.HDR_L4_DPORT,
-                                    ((UdpPortCriterion) criterion).udpPort().toInt(),
-                                    ((UdpPortCriterion) criterion).udpPort().toInt())
-                                    .build());
+                    piBuilder.matchRange(P4InfoConstants.HDR_L4_DPORT,
+                            ((UdpPortCriterion) criterion).udpPort().toInt(),
+                            ((UdpPortCriterion) criterion).udpPort().toInt());
                     break;
                 default:
                     log.warn("Unsupported criterion type: {}", criterion.type());
@@ -626,8 +618,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 .piTableAction(watchlistAction)
                 .build();
 
-        final TrafficSelector watchlistSelector =
-                DefaultTrafficSelector.builder()
+        final TrafficSelector watchlistSelector = DefaultTrafficSelector.builder()
                         .matchIPDst(config.collectorIp().toIpPrefix())
                         .matchIPProtocol(IPv4.PROTOCOL_UDP)
                         .matchUdpDst(config.collectorPort())
@@ -635,7 +626,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
 
         final FlowRule watchlistRule = DefaultFlowRule.builder()
                 .forDevice(deviceId)
-                .withSelector(watchlistSelector)
+                .withSelector(buildCollectorSelector(watchlistSelector.criteria()))
                 .withTreatment(watchlistTreatment)
                 .withPriority(DEFAULT_PRIORITY + 10)
                 .forTable(P4InfoConstants.FABRIC_INGRESS_INT_INGRESS_WATCHLIST)

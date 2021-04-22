@@ -729,18 +729,12 @@ public class FabricIntProgrammableTest {
         expectedSelector.matchIPSrc(IP_SRC);
         expectedSelector.matchIPDst(IP_DST);
         if (protocol == IPv4.PROTOCOL_TCP || protocol == IPv4.PROTOCOL_UDP) {
-            expectedSelector.matchPi(
-                    expectedPiCriterion.matchRange(
-                            P4InfoConstants.HDR_L4_SPORT,
-                            L4_SRC.toInt(),
-                            L4_SRC.toInt())
-                            .build());
-            expectedSelector.matchPi(
-                    expectedPiCriterion.matchRange(
-                            P4InfoConstants.HDR_L4_DPORT,
-                            L4_DST.toInt(),
-                            L4_DST.toInt())
-                            .build());
+            expectedPiCriterion.matchRange(P4InfoConstants.HDR_L4_SPORT,
+                    L4_SRC.toInt(),
+                    L4_SRC.toInt());
+            expectedPiCriterion.matchRange(P4InfoConstants.HDR_L4_DPORT,
+                    L4_DST.toInt(),
+                    L4_DST.toInt());
         }
         expectedSelector.matchPi(expectedPiCriterion.build());
         PiAction expectedPiAction = PiAction.builder()
@@ -861,11 +855,16 @@ public class FabricIntProgrammableTest {
                 .piTableAction(watchlistAction)
                 .build();
 
+        final PiCriterion piCriterion = PiCriterion.builder()
+                .matchExact(P4InfoConstants.HDR_IPV4_VALID, 1)
+                .matchRange(P4InfoConstants.HDR_L4_DPORT, COLLECTOR_PORT.toInt(), COLLECTOR_PORT.toInt())
+                .build();
+
         final TrafficSelector watchlistSelector =
                 DefaultTrafficSelector.builder()
                         .matchIPDst(COLLECTOR_IP.toIpPrefix())
                         .matchIPProtocol(IPv4.PROTOCOL_UDP)
-                        .matchUdpDst(COLLECTOR_PORT)
+                        .matchPi(piCriterion)
                         .build();
 
         return DefaultFlowRule.builder()
