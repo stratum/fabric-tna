@@ -382,12 +382,14 @@ def simple_gtp_packet(
     pktlen=136
 ):
     pktlen = pktlen - IP_HDR_BYTES - UDP_HDR_BYTES - GTP_HDR_BYTES
-    pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(pktlen=pktlen)
+    pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(ip_src=ip_src,
+                                                            ip_dst=ip_dst,
+                                                            pktlen=pktlen)
     gtp_pkt = pkt_add_gtp(
         pkt,
         out_ipv4_src=ip_src,
         out_ipv4_dst=ip_dst,
-        teid=gtp_teid, # dummy teid
+        teid=gtp_teid,
     )
     gtp_pkt[Ether].src = eth_src
     gtp_pkt[Ether].dst = eth_dst

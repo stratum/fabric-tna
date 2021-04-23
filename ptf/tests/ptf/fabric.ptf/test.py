@@ -777,11 +777,10 @@ class FabricIPv4MplsOverrideEdgeTest(IPv4UnicastTest):
             ip_proto = IP_PROTO_ICMP
         elif "sctp" in tc_name:
             ip_proto = IP_PROTO_SCTP
-        elif tc_name in GTP_ENCAPED_PKT_TYPES:
-            ip_proto = IP_PROTO_UDP
 
         self.set_egress_vlan(self.port3, DEFAULT_VLAN)
         self.add_next_routing(401, self.port3, SWITCH_MAC, HOST2_MAC)
+
         self.add_forwarding_acl_next(
             401,
             ig_port_type=PORT_TYPE_EDGE,
