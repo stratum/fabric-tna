@@ -241,17 +241,6 @@ control EgressNextControl (inout parsed_headers_t hdr,
     }
 
     action pop_vlan() {
-#ifdef WITH_INT
-        // Required to compute IPv4/UDP length fields when handling INT mirrors
-        // transmitted over the recirculation port. While the original packet
-        // might go out of a tagged port (hence hit an egress_vlan entry with
-        // push_vlan action), we always treat recirculation ports as untagged as
-        // it makes it easier to re-use them for other purposes such as uplink
-        // recirculation in the SPGW pipeline. As a result, when processing an
-        // INT mirror, we always strip the VLAN header from the report's inner
-        // packet. That's fine since DeepInsight cares only about L3/L4 headers.
-        fabric_md.int_mirror_md.vlan_stripped = (bit<1>) hdr.vlan_tag.isValid();
-#endif // WITH_INT
         hdr.vlan_tag.setInvalid();
         egress_vlan_counter.count();
     }

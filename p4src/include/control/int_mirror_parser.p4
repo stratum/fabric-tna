@@ -76,10 +76,19 @@ parser IntReportMirrorParser (packet_in packet,
     }
 
     state parse_vlan_tag {
-        packet.extract(hdr.vlan_tag);
+        // Required to compute IPv4/UDP length fields when handling INT mirrors
+        // transmitted over the recirculation port. While the original packet
+        // might go out of a tagged port (hence hit an egress_vlan entry with
+        // push_vlan action).
+        // When processing an INT mirror, we always strip the VLAN header from the
+        // report's inner packet.
+        // That's fine since DeepInsight cares only about L3/L4 headers.
+        fabric_md.vlan_stripped = 1;
+        packet.advance(VLAN_HDR_BYTES * 8);
         transition select(packet.lookahead<bit<16>>()) {
+// TODO: support stripping double VLAN tag
 #if defined(WITH_XCONNECT) || defined(WITH_DOUBLE_VLAN_TERMINATION)
-            ETHERTYPE_VLAN: parse_inner_vlan_tag;
+            ETHERTYPE_VLAN: reject;
 #endif // WITH_XCONNECT || WITH_DOUBLE_VLAN_TERMINATION
             default: check_eth_type;
         }
