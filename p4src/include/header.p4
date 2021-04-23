@@ -200,7 +200,6 @@ header local_report_header_t {
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.ip_eth_type")
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.report_type")
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.flow_hash")
-@pa_no_overlay("egress", "fabric_md.int_mirror_md.vlan_stripped")
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.strip_gtpu")
 header int_mirror_metadata_t {
     BridgedMdType_t       bmd_type;
@@ -215,8 +214,7 @@ header int_mirror_metadata_t {
     bit<8>                drop_reason;
     bit<16>               ip_eth_type;
     bit<1>                strip_gtpu;
-    bit<1>                vlan_stripped;
-    @padding bit<4>       _pad2;
+    @padding bit<5>       _pad2;
     IntReportType_t       report_type;
     flow_hash_t           flow_hash;
 }
@@ -331,6 +329,7 @@ struct fabric_egress_metadata_t {
     bool                  inner_ipv4_checksum_err;
 #endif // WITH_SPGW
     bit<1>                mpls_stripped;
+    bit<1>                vlan_stripped;
 #ifdef WITH_INT
     int_mirror_metadata_t int_mirror_md;
     int_metadata_t        int_md;
