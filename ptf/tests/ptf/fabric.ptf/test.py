@@ -201,15 +201,19 @@ class FabricIPv4UnicastGtpPassthroughTest(IPv4UnicastTest):
     def runTest(self):
         # Assert that GTP packets not meant to be processed by spgw.p4 are
         # forwarded using the outer IP+UDP headers.
-        inner_udp = UDP(sport=5061, dport=5060) / ("\xab" * 128)
-        pkt = (
-            Ether(src=HOST1_MAC, dst=SWITCH_MAC)
-            / IP(src=HOST3_IPV4, dst=HOST4_IPV4)
-            / UDP(sport=UDP_GTP_PORT, dport=UDP_GTP_PORT)
-            / GTPU(teid=0xEEFFC0F0)
-            / IP(src=HOST1_IPV4, dst=HOST2_IPV4)
-            / inner_udp
-        )
+        pkt = testutils.simple_udp_packet(
+            eth_src=HOST1_MAC,
+            eth_dst=SWITCH_MAC,
+            ip_src=HOST1_IPV4,
+            ip_dst=HOST2_IPV4,
+            udp_sport=5061,
+            udp_dport=5060,
+            pktlen=128)
+        pkt = pkt_add_gtp(
+            pkt,
+            out_ipv4_src=HOST3_IPV4,
+            out_ipv4_dst=HOST4_IPV4,
+            teid=0xEEFFC0F0)
         self.runIPv4UnicastTest(pkt, next_hop_mac=HOST2_MAC)
 
 
@@ -915,15 +919,19 @@ class FabricIPv4UnicastGtpAclInnerDropTest(IPv4UnicastTest):
     def runTest(self):
         # Assert that GTP packets not meant to be forwarded by fabric-tna.p4 are
         # blocked using the inner IP+UDP headers by the ACL table.
-        pkt = (
-            Ether(src=HOST1_MAC, dst=SWITCH_MAC)
-            / IP(src=HOST3_IPV4, dst=HOST4_IPV4)
-            / UDP(sport=UDP_GTP_PORT, dport=UDP_GTP_PORT)
-            / GTPU(teid=0xEEFFC0F0)
-            / IP(src=HOST1_IPV4, dst=HOST2_IPV4)
-            / UDP(sport=5061, dport=5060)
-            / ("\xab" * 128)
-        )
+        pkt = testutils.simple_udp_packet(
+            eth_src=HOST1_MAC,
+            eth_dst=SWITCH_MAC,
+            ip_src=HOST1_IPV4,
+            ip_dst=HOST2_IPV4,
+            udp_sport=5061,
+            udp_dport=5060,
+            pktlen=128)
+        pkt = pkt_add_gtp(
+            pkt,
+            out_ipv4_src=HOST3_IPV4,
+            out_ipv4_dst=HOST4_IPV4,
+            teid=0xEEFFC0F0)
         self.add_forwarding_acl_drop(
             ipv4_src=HOST1_IPV4,
             ipv4_dst=HOST2_IPV4,

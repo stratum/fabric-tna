@@ -13,6 +13,7 @@ from p4.v1 import p4runtime_pb2
 from ptf import testutils
 from ptf.mask import Mask
 from scapy.contrib.mpls import MPLS
+from scapy.contrib.gtp import GTP_U_Header
 from scapy.fields import BitField, ByteField, IntField, ShortField
 from scapy.layers.inet import IP, TCP, UDP
 from scapy.layers.l2 import Dot1Q, Ether
@@ -238,33 +239,6 @@ PORT_TYPE_INFRA = b"\x02"
 PORT_TYPE_INTERNAL = b"\x03"
 
 
-class GTPU(Packet):
-    name = "GTP-U Header"
-    fields_desc = [
-        BitField("version", 1, 3),
-        BitField("PT", 1, 1),
-        BitField("reserved", 0, 1),
-        BitField("E", 0, 1),
-        BitField("S", 0, 1),
-        BitField("PN", 0, 1),
-        ByteField("gtp_type", 255),
-        ShortField("length", None),
-        IntField("teid", 0),
-    ]
-
-    def post_build(self, pkt, payload):
-        pkt += payload
-        # Set the length field if it is unset
-        if self.length is None:
-            length = len(pkt) - 8
-            pkt = pkt[:2] + struct.pack("!H", length) + pkt[4:]
-        return pkt
-
-
-# Register our GTPU header with scapy for dissection
-bind_layers(UDP, GTPU, dport=UDP_GTP_PORT)
-bind_layers(GTPU, IP)
-
 # Implements helper function for SCTP as PTF does not provide one.
 def simple_sctp_packet(
     pktlen=100,
@@ -477,7 +451,7 @@ def pkt_add_gtp(
         Ether(src=pkt[Ether].src, dst=pkt[Ether].dst)
         / IP(src=out_ipv4_src, dst=out_ipv4_dst, tos=0, id=0x1513, flags=0, frag=0,)
         / UDP(sport=sport, dport=dport, chksum=0)
-        / GTPU(teid=teid)
+        / GTP_U_Header(gtp_type=255, teid=teid)
         / payload
     )
 

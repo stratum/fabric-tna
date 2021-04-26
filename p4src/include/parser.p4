@@ -225,7 +225,7 @@ parser FabricIngressParser (packet_in  packet,
     state parse_gtpu_ext_pdu_sess_dl {
         packet.extract(hdr.gtpu_ext_pdu_sess_dl);
         transition select(hdr.gtpu_ext_pdu_sess_dl.next_ext) {
-            0: parse_inner_ipv4;
+            GTPU_NEXT_EXT_NONE: parse_inner_ipv4;
             default: accept;
         }
     }
@@ -233,7 +233,7 @@ parser FabricIngressParser (packet_in  packet,
     state parse_gtpu_ext_pdu_sess_ul {
         packet.extract(hdr.gtpu_ext_pdu_sess_ul);
         transition select(hdr.gtpu_ext_pdu_sess_ul.next_ext) {
-            0: parse_inner_ipv4;
+            GTPU_NEXT_EXT_NONE: parse_inner_ipv4;
             default: accept;
         }
     }

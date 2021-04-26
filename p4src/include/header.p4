@@ -141,6 +141,7 @@ header gtpu_options_t {
 
 // PDU Session Container (GTPU extension) -- 3GPP TS 38.415 version 15.2.0
 // https://www.etsi.org/deliver/etsi_ts/138400_138499/138415/15.02.00_60/ts_138415v150200p.pdf
+const bit<8> GTPU_NEXT_EXT_NONE = 0x0;
 const bit<8> GTPU_NEXT_EXT_PDU_SESS = 0x85;
 const bit<4> GTPU_EXT_PDU_TYPE_DL = 4w0; // Downlink
 const bit<4> GTPU_EXT_PDU_TYPE_UL = 4w1; // Uplink
