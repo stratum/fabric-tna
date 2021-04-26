@@ -23,7 +23,7 @@ docker pull "${SDE_P4C_DOCKER_IMG}"
 make -j8 all
 
 echo "Build and verify Java pipeconf"
-make constants pipeconf MVN_FLAGS="-Pci-verify -Pcoverage"
+make constants pipeconf-ci MVN_FLAGS="-Pci-verify -Pcoverage"
 
 echo "Upload coverage to codecov"
 bash .jenkins/codecov.sh -Z

@@ -163,12 +163,12 @@ control IntIngress (
 
     table watchlist {
         key = {
-            fabric_md.acl_lkp.is_ipv4  : exact   @name("ipv4_valid");
-            fabric_md.acl_lkp.ipv4_src : ternary @name("ipv4_src");
-            fabric_md.acl_lkp.ipv4_dst : ternary @name("ipv4_dst");
-            fabric_md.acl_lkp.ip_proto : ternary @name("ip_proto");
-            fabric_md.acl_lkp.l4_sport : range   @name("l4_sport");
-            fabric_md.acl_lkp.l4_dport : range   @name("l4_dport");
+            fabric_md.lkp.is_ipv4  : exact   @name("ipv4_valid");
+            fabric_md.lkp.ipv4_src : ternary @name("ipv4_src");
+            fabric_md.lkp.ipv4_dst : ternary @name("ipv4_dst");
+            fabric_md.lkp.ip_proto : ternary @name("ip_proto");
+            fabric_md.lkp.l4_sport : range   @name("l4_sport");
+            fabric_md.lkp.l4_dport : range   @name("l4_dport");
         }
         actions = {
             mark_to_report;
