@@ -94,6 +94,8 @@ parser IntReportMirrorParser (packet_in packet,
             (ETHERTYPE_IPV4, 1): strip_ipv4_udp_gtpu;
             (ETHERTYPE_IPV6, 0): accept;
             (ETHERTYPE_IPV6, 1): strip_ipv6_udp_gtpu;
+            (ETHERTYPE_CPU_LOOPBACK_INGRESS, 0): accept;
+            (ETHERTYPE_CPU_LOOPBACK_INGRESS, 1): strip_ipv6_udp_gtpu;
             default: reject;
         }
 #else
@@ -101,6 +103,7 @@ parser IntReportMirrorParser (packet_in packet,
             ETHERTYPE_MPLS: strip_mpls;
             ETHERTYPE_IPV4: accept;
             ETHERTYPE_IPV6: accept;
+            ETHERTYPE_CPU_LOOPBACK_INGRESS: accept;
             default: reject;
         }
 #endif // WITH_SPGW
