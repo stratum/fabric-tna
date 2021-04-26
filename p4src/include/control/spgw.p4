@@ -104,8 +104,8 @@ control UplinkRecirc(
 
     table rules {
         key = {
-            fabric_md.acl_lkp.ipv4_src : ternary @name("ipv4_src");
-            fabric_md.acl_lkp.ipv4_dst : ternary @name("ipv4_dst");
+            fabric_md.lkp.ipv4_src : ternary @name("ipv4_src");
+            fabric_md.lkp.ipv4_dst : ternary @name("ipv4_dst");
         }
         actions = {
             allow;
@@ -339,7 +339,7 @@ control SpgwIngress(
                     decap_gtpu_from_dbuf.apply(hdr, fabric_md);
                 }
                 // PDRs
-                if (fabric_md.spgw.src_iface == SpgwInterface.ACCESS) {
+                if (fabric_md.spgw.src_iface == SpgwInterface.ACCESS && hdr.gtpu.isValid()) {
                     uplink_pdrs.apply();
                 } else if (fabric_md.spgw.src_iface == SpgwInterface.CORE ||
                             fabric_md.spgw.src_iface == SpgwInterface.FROM_DBUF) {

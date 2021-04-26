@@ -20,12 +20,18 @@ control Hasher(
     Hash<flow_hash_t>(HashAlgorithm_t.CRC32) non_ip_hasher;
 
     apply {
-        if (fabric_md.acl_lkp.is_ipv4) {
-            gtp_flow_t to_hash;
+        if (fabric_md.lkp.is_ipv4) {
+            gtp_flow_t to_hash = {0, 0, 0};
             bool calc_gtp_hash = false;
 
             // we always need to calculate hash from the inner IPv4 header for the INT reporter.
-            fabric_md.bridged.base.inner_hash = ip_hasher.get(fabric_md.acl_lkp);
+            fabric_md.bridged.base.inner_hash = ip_hasher.get({
+                fabric_md.lkp.ipv4_src,
+                fabric_md.lkp.ipv4_dst,
+                fabric_md.lkp.ip_proto,
+                fabric_md.lkp.l4_sport,
+                fabric_md.lkp.l4_dport
+            });
 
             // use inner hash by default
             fabric_md.ecmp_hash = fabric_md.bridged.base.inner_hash;

@@ -12,6 +12,7 @@
 #include "include/control/filtering.p4"
 #include "include/control/forwarding.p4"
 #include "include/control/pre_next.p4"
+#include "include/control/lookup_md_init.p4"
 #include "include/control/acl.p4"
 #include "include/control/next.p4"
 #include "include/control/hasher.p4"
@@ -32,7 +33,7 @@ control FabricIngress (
     inout ingress_intrinsic_metadata_for_deparser_t  ig_dprsr_md,
     inout ingress_intrinsic_metadata_for_tm_t        ig_tm_md) {
 
-    AclLookupInit() acl_lkp_init;
+    LookupMdInit() lkp_md_init;
     PacketIoIngress() pkt_io;
     Filtering() filtering;
     Forwarding() forwarding;
@@ -48,7 +49,7 @@ control FabricIngress (
 #endif // WITH_INT
 
     apply {
-        acl_lkp_init.apply(hdr, fabric_md.acl_lkp);
+        lkp_md_init.apply(hdr, fabric_md.lkp);
         pkt_io.apply(hdr, fabric_md, ig_intr_md, ig_tm_md, ig_dprsr_md);
         filtering.apply(hdr, fabric_md, ig_intr_md);
 #ifdef WITH_SPGW

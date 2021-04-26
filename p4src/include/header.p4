@@ -281,19 +281,25 @@ header bridged_metadata_t {
 #endif // WITH_INT
 }
 
-// Used for ACL lookups, INT watchlist, and stats tables. Initialized with the
-// parsed headers, but never updated by the pipe. When both outer and inner
-// IPv4/TCP/UDP headers are valid, this should always carry the inner ones. The
-// assumption is that we terminate GTP tunnels in the fabric, so we are more
-// interested in observing/blocking the inner flows. We might revisit this
-// decision in the future.
-struct acl_lookup_t {
-    bool      is_ipv4;
-    bit<32>   ipv4_src;
-    bit<32>   ipv4_dst;
-    bit<8>    ip_proto;
-    l4_port_t l4_sport;
-    l4_port_t l4_dport;
+// Used for table lookup. Initialized with the parsed headers, or 0 if invalid
+// to avoid unexpected match behavior due to PHV overlay. Never updated by the
+// pipe. When both outer and inner IPv4 headers are valid, this should always
+// carry the inner ones. The assumption is that we terminate GTP tunnels in the
+// fabric, so we are more interested in observing/blocking the inner flows. We
+// might revisit this decision in the future.
+struct lookup_metadata_t {
+    mac_addr_t              eth_dst;
+    mac_addr_t              eth_src;
+    bit<16>                 eth_type;
+    vlan_id_t               vlan_id;
+    bool                    is_ipv4;
+    bit<32>                 ipv4_src;
+    bit<32>                 ipv4_dst;
+    bit<8>                  ip_proto;
+    l4_port_t               l4_sport;
+    l4_port_t               l4_dport;
+    bit<8>                  icmp_type;
+    bit<8>                  icmp_code;
 }
 
 // Ingress pipeline-only metadata
@@ -302,7 +308,7 @@ struct acl_lookup_t {
 struct fabric_ingress_metadata_t {
     bridged_metadata_t      bridged;
     flow_hash_t             ecmp_hash;
-    acl_lookup_t            acl_lkp;
+    lookup_metadata_t       lkp;
     bit<32>                 routing_ipv4_dst; // Outermost
     bool                    skip_forwarding;
     bool                    skip_next;

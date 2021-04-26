@@ -86,10 +86,10 @@ control Filtering (inout parsed_headers_t hdr,
 
     table fwd_classifier {
         key = {
-            ig_intr_md.ingress_port        : exact @name("ig_port");
-            hdr.ethernet.dst_addr          : ternary @name("eth_dst");
-            hdr.eth_type.value             : ternary @name("eth_type");
-            fabric_md.bridged.base.ip_eth_type  : exact @name("ip_eth_type");
+            ig_intr_md.ingress_port                 : exact @name("ig_port");
+            fabric_md.lkp.eth_dst                   : ternary @name("eth_dst");
+            fabric_md.lkp.eth_type                  : ternary @name("eth_type");
+            fabric_md.bridged.base.ip_eth_type      : exact @name("ip_eth_type");
         }
         actions = {
             set_forwarding_type;
@@ -101,6 +101,8 @@ control Filtering (inout parsed_headers_t hdr,
 
     apply {
         ingress_port_vlan.apply();
+        // we don't check if Ethernet and eth_type is valid,
+        // because it is always extracted in the Parser.
         fwd_classifier.apply();
 #ifdef WTIH_DEBUG
         fwd_type_counter.count(fabric_md.bridged.base.fwd_type);
