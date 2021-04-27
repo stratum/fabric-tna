@@ -2633,96 +2633,68 @@ class FabricCheckIntReportLoopbackMode(IntTest):
 
     @tvsetup
     @autocleanup
-    def doRunTest(self, pkt, next_hop_mac, tagged=True):
+    def doRunTest(self, pkt, next_hop_mac):
+        is_device_spine = False
+        send_report_to_spine = False
+
+        int_inner_pkt = pkt.copy()
+        int_inner_pkt = pkt_route(int_inner_pkt, next_hop_mac)
+        int_inner_pkt = pkt_decrement_ttl(int_inner_pkt)
+
+        # The expected INT report packet
+        exp_int_report_pkt_masked = self.build_int_local_report(
+            SWITCH_MAC,
+            INT_COLLECTOR_MAC,
+            SWITCH_IPV4,
+            INT_COLLECTOR_IPV4,
+            self.port1,
+            self.port2,
+            SWITCH_ID,
+            int_inner_pkt,
+            is_device_spine,
+            send_report_to_spine,
+        )
+
+        # Set collector, report table, and mirror sessions
+        self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine)
+
         self.runIPv4UnicastTest(
             pkt, next_hop_mac=next_hop_mac, prefix_len=24, no_send=True
         )
-        # self.add_forwarding_acl_punt_to_cpu(eth_type=pkt[Ether].type)
-        if tagged:
-            pkt = pkt_add_vlan(pkt, VLAN_ID_1)
+
         exp_pkt_1 = (
                 Ether(type=ETH_TYPE_CPU_LOOPBACK_INGRESS, src=ZERO_MAC, dst=ZERO_MAC) / pkt
         )
-        # Set collector, report table, and mirror sessions
-        self.set_up_int_flows(False, exp_pkt_1, send_report_to_spine=True)
-        for port in [self.port1, self.port2]:
-            if tagged:
-                self.set_ingress_port_vlan(port, True, VLAN_ID_1, VLAN_ID_1)
-            else:
-                self.set_ingress_port_vlan(port, False, 0, VLAN_ID_1)
-            self.send_packet_out(
-                self.build_packet_out(
-                    pkt, port, cpu_loopback_mode=CPU_LOOPBACK_MODE_INGRESS
-                )
+        routed_pkt = pkt_decrement_ttl(pkt_route(pkt, next_hop_mac))
+        exp_pkt_2 = (
+                Ether(type=ETH_TYPE_CPU_LOOPBACK_EGRESS, src=ZERO_MAC, dst=ZERO_MAC)
+                / routed_pkt
+        )
+
+        # 1. step: packet-out straight to out port
+        self.send_packet_out(
+            self.build_packet_out(
+                pkt, self.port1, cpu_loopback_mode=CPU_LOOPBACK_MODE_INGRESS
             )
-            self.verify_packet(exp_pkt_1, port)
-            self.send_packet(port, exp_pkt_1)
+        )
+        self.verify_packet(exp_pkt_1, self.port1)
 
-            # The expected INT report packet
-            int_inner_pkt = pkt.copy()
-            exp_int_report_pkt_masked = self.build_int_local_report(
-                SWITCH_MAC,
-                INT_COLLECTOR_MAC,
-                SWITCH_IPV4,
-                INT_COLLECTOR_IPV4,
-                self.port1,
-                self.port2,
-                SWITCH_ID,
-                int_inner_pkt,
-                False,
-                True,
-            )
+        # 2. step: send packet for normal ingress/egress processing
+        self.send_packet(self.port1, exp_pkt_1)
+        self.verify_packet(exp_pkt_2, self.port2)
+        self.verify_packet(exp_int_report_pkt_masked, self.port3)
 
-            self.verify_packet_in(exp_int_report_pkt_masked, port)
-
+        # 3. step: packet-in
+        self.send_packet(self.port2, exp_pkt_2)
+        self.verify_packet_in(routed_pkt, self.port2)
+        self.verify_packet_in(exp_int_report_pkt_masked, self.port3)
         self.verify_no_other_packets()
-
-
-        # self.add_forwarding_acl_punt_to_cpu(eth_type=pkt[Ether].type)
-        # The expected INT report packet
-        # exp_int_report_pkt_masked = self.build_int_drop_report(
-        #     SWITCH_MAC,
-        #     INT_COLLECTOR_MAC,
-        #     SWITCH_IPV4,
-        #     INT_COLLECTOR_IPV4,
-        #     self.port1,
-        #     self.port2,
-        #     drop_reason,
-        #     SWITCH_ID,
-        #     int_inner_pkt,
-        #     is_device_spine,
-        #     send_report_to_spine,
-        # )
-
-
-
-        # self.runIPv4UnicastTest(
-        #     pkt, next_hop_mac=next_hop_mac, prefix_len=24, no_send=True
-        # )
-        # exp_pkt_1 = (
-        #         Ether(type=ETH_TYPE_CPU_LOOPBACK_INGRESS, src=ZERO_MAC, dst=ZERO_MAC) / pkt
-        # )
-        # routed_pkt = pkt_decrement_ttl(pkt_route(pkt, next_hop_mac))
-        # exp_pkt_2 = (
-        #         Ether(type=ETH_TYPE_CPU_LOOPBACK_EGRESS, src=ZERO_MAC, dst=ZERO_MAC)
-        #         / routed_pkt
-        # )
-        # self.send_packet_out(
-        #     self.build_packet_out(
-        #         pkt, self.port1, cpu_loopback_mode=CPU_LOOPBACK_MODE_INGRESS
-        #     )
-        # )
-        # self.verify_packet(exp_pkt_1, self.port1)
-        # self.send_packet(self.port1, exp_pkt_1)
-        # self.verify_packet(exp_pkt_2, self.port2)
-        # self.verify_packet_in(routed_pkt, self.port1)
-
-
 
 
     def runTest(self):
         print("")
-        for pkt_type in PKT_TYPES_UNDER_TEST:
+        # FIXME: replace with list
+        for pkt_type in ["udp"]:
             print("Testing {} packet...".format(pkt_type))
             pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
                 eth_src=HOST1_MAC,
