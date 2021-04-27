@@ -13,7 +13,7 @@ from p4.v1 import p4runtime_pb2
 from ptf import testutils
 from ptf.mask import Mask
 from scapy.contrib.mpls import MPLS
-from scapy.contrib.gtp import GTP_U_Header
+from scapy.contrib.gtp import GTP_U_Header, GTPPDUSessionContainer
 from scapy.fields import BitField, ByteField, IntField, ShortField
 from scapy.layers.inet import IP, TCP, UDP
 from scapy.layers.l2 import Dot1Q, Ether
@@ -38,6 +38,8 @@ MIN_PKT_LEN = 80
 
 UDP_GTP_PORT = 2152
 DEFAULT_GTP_TUNNEL_SPORT = 1234  # arbitrary, but different from 2152
+GTPU_EXT_PDU_TYPE_DL = 0
+GTPU_EXT_PDU_TYPE_UL = 1
 
 ETH_TYPE_ARP = 0x0806
 ETH_TYPE_IPV4 = 0x0800
@@ -445,15 +447,19 @@ def pkt_add_gtp(
     teid,
     sport=DEFAULT_GTP_TUNNEL_SPORT,
     dport=UDP_GTP_PORT,
+    ext_pdu_type=None,
+    ext_pdu_qfi=None,
 ):
-    payload = pkt[Ether].payload
-    return (
+    gtp_pkt = (
         Ether(src=pkt[Ether].src, dst=pkt[Ether].dst)
         / IP(src=out_ipv4_src, dst=out_ipv4_dst, tos=0, id=0x1513, flags=0, frag=0,)
         / UDP(sport=sport, dport=dport, chksum=0)
         / GTP_U_Header(gtp_type=255, teid=teid)
-        / payload
     )
+    if ext_pdu_type is not None:
+        # Add QoS Flow Identifier (QFI) as an extension header (required for 5G RAN)
+        gtp_pkt = gtp_pkt / GTPPDUSessionContainer(type=ext_pdu_type, QFI=ext_pdu_qfi)
+    return gtp_pkt / pkt[Ether].payload
 
 
 def pkt_remove_vlan(pkt):

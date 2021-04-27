@@ -146,7 +146,7 @@ const bit<8> GTPU_NEXT_EXT_PDU_SESS = 0x85;
 const bit<4> GTPU_EXT_PDU_TYPE_DL = 4w0; // Downlink
 const bit<4> GTPU_EXT_PDU_TYPE_UL = 4w1; // Uplink
 const bit<8> GTPU_EXT_PDU_SESS_DL_LEN = 8w8; // 8*4-octets
-const bit<8> GTPU_EXT_PDU_SESS_UL_LEN = 8w4; // 4*4-octets
+const bit<8> GTPU_EXT_PDU_SESS_UL_LEN = 8w1; // 1*4-octets
 // Common. Not extracted, for parsing only.
 header gtpu_ext_pdu_sess_common_t {
     bit<8> len;       /* Length in 4-octets units */

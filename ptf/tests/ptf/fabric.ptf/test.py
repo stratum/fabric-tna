@@ -196,12 +196,18 @@ class FabricIPv4UnicastDefaultRouteTest(FabricIPv4UnicastTest):
 
 
 class FabricIPv4UnicastGtpPassthroughTest(IPv4UnicastTest):
+    """Asserts that GTP packets not meant to be terminated by spgw.p4 are
+    forwarded using the outer IP+UDP headers.
+    """
+
     @tvsetup
     @autocleanup
+    def doRunTest(self, pkt, tc_name):
+        self.runIPv4UnicastTest(pkt, next_hop_mac=HOST2_MAC)
+
     def runTest(self):
-        # Assert that GTP packets not meant to be processed by spgw.p4 are
-        # forwarded using the outer IP+UDP headers.
-        pkt = testutils.simple_udp_packet(
+        print("")
+        base_pkt = testutils.simple_udp_packet(
             eth_src=HOST1_MAC,
             eth_dst=SWITCH_MAC,
             ip_src=HOST1_IPV4,
@@ -209,12 +215,25 @@ class FabricIPv4UnicastGtpPassthroughTest(IPv4UnicastTest):
             udp_sport=5061,
             udp_dport=5060,
             pktlen=128)
-        pkt = pkt_add_gtp(
-            pkt,
+        gtp_base_params = dict(
             out_ipv4_src=HOST3_IPV4,
             out_ipv4_dst=HOST4_IPV4,
             teid=0xEEFFC0F0)
-        self.runIPv4UnicastTest(pkt, next_hop_mac=HOST2_MAC)
+
+        print("Testing regular GTP-U packet...")
+        tc_name = "4g_ran"
+        pkt = pkt_add_gtp(base_pkt, **gtp_base_params)
+        self.doRunTest(pkt, tc_name=tc_name)
+
+        print("Testing packet from 5G NG-RAN (uplink)...")
+        tc_name = "5g_ran_uplink"
+        pkt = pkt_add_gtp(base_pkt, ext_pdu_type=GTPU_EXT_PDU_TYPE_UL, ext_pdu_qfi=1, **gtp_base_params)
+        self.doRunTest(pkt, tc_name=tc_name)
+
+        print("Testing packet to 5G NG-RAN (downlink)...")
+        tc_name = "5g_ran_downlink"
+        pkt = pkt_add_gtp(base_pkt, ext_pdu_type=GTPU_EXT_PDU_TYPE_DL, ext_pdu_qfi=1, **gtp_base_params)
+        self.doRunTest(pkt, tc_name=tc_name)
 
 
 class FabricIPv4UnicastGroupTest(FabricTest):

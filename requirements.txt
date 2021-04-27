@@ -4,7 +4,7 @@
 # Used only for depedency resolution in IDEs.
 # Versions should be in sync with Docker image used for runtime:
 # https://github.com/stratum/testvectors/blob/master/tools/ptf/Dockerfile
-scapy==2.4.3
+scapy==2.4.5
 git+https://github.com/p4lang/ptf
 ipaddress
 p4runtime==1.3.0
