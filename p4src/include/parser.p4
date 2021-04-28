@@ -12,7 +12,7 @@
 
 parser FabricIngressParser (packet_in  packet,
     /* Fabric.p4 */
-    out parsed_headers_t               hdr,
+    out ingress_headers_t               hdr,
     out fabric_ingress_metadata_t      fabric_md,
     /* TNA */
     out ingress_intrinsic_metadata_t   ig_intr_md) {
@@ -188,11 +188,9 @@ parser FabricIngressParser (packet_in  packet,
 
     state parse_gtpu {
         packet.extract(hdr.gtpu);
-#ifdef WITH_SPGW
 #ifdef WITH_INT
         fabric_md.int_mirror_md.strip_gtpu = 1;
 #endif // WITH_INT
-#endif // WITH_SPGW
         transition parse_inner_ipv4;
     }
 
@@ -226,7 +224,7 @@ parser FabricIngressParser (packet_in  packet,
 }
 
 control FabricIngressMirror(
-    in parsed_headers_t hdr,
+    in ingress_headers_t hdr,
     in fabric_ingress_metadata_t fabric_md,
     in ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr) {
     Mirror() mirror;
@@ -242,7 +240,7 @@ control FabricIngressMirror(
 
 control FabricIngressDeparser(packet_out packet,
     /* Fabric.p4 */
-    inout parsed_headers_t hdr,
+    inout ingress_headers_t hdr,
     in fabric_ingress_metadata_t fabric_md,
     /* TNA */
     in ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr) {
@@ -276,13 +274,10 @@ control FabricIngressDeparser(packet_out packet,
 
 parser FabricEgressParser (packet_in packet,
     /* Fabric.p4 */
-    out parsed_headers_t hdr,
+    out egress_headers_t hdr,
     out fabric_egress_metadata_t fabric_md,
     /* TNA */
     out egress_intrinsic_metadata_t eg_intr_md) {
-#ifdef WITH_SPGW
-    Checksum() inner_ipv4_checksum;
-#endif // WITH_SPGW
 
 #ifdef WITH_INT
     IntReportMirrorParser() int_report_mirror_parser;
@@ -379,85 +374,17 @@ parser FabricEgressParser (packet_in packet,
 
     state parse_ipv4 {
         packet.extract(hdr.ipv4);
-        // Need header verification?
-        transition select(hdr.ipv4.protocol) {
-            PROTO_TCP: parse_tcp;
-            PROTO_UDP: parse_udp;
-            PROTO_ICMP: parse_icmp;
-            default: accept;
-        }
+        transition accept;
     }
 
     state parse_ipv6 {
         packet.extract(hdr.ipv6);
-        transition select(hdr.ipv6.next_hdr) {
-            PROTO_TCP: parse_tcp;
-            PROTO_UDP: parse_udp;
-            PROTO_ICMPV6: parse_icmp;
-            default: accept;
-        }
+       transition accept;
     }
-
-    state parse_tcp {
-        packet.extract(hdr.tcp);
-        transition accept;
-    }
-
-    state parse_udp {
-        packet.extract(hdr.udp);
-        transition select(hdr.udp.dport) {
-#ifdef WITH_SPGW
-            UDP_PORT_GTPU: parse_gtpu;
-#endif // WITH_SPGW
-            default: accept;
-        }
-    }
-
-    state parse_icmp {
-        packet.extract(hdr.icmp);
-        transition accept;
-    }
-
-#ifdef WITH_SPGW
-    state parse_gtpu {
-        packet.extract(hdr.gtpu);
-#ifdef WITH_INT
-        fabric_md.int_mirror_md.strip_gtpu = 1;
-#endif // WITH_INT
-        transition parse_inner_ipv4;
-    }
-
-    state parse_inner_ipv4 {
-        packet.extract(hdr.inner_ipv4);
-        inner_ipv4_checksum.add(hdr.inner_ipv4);
-        fabric_md.inner_ipv4_checksum_err = inner_ipv4_checksum.verify();
-        transition select(hdr.inner_ipv4.protocol) {
-            PROTO_TCP: parse_inner_tcp;
-            PROTO_UDP: parse_inner_udp;
-            PROTO_ICMP: parse_inner_icmp;
-            default: accept;
-        }
-    }
-
-    state parse_inner_tcp {
-        packet.extract(hdr.inner_tcp);
-        transition accept;
-    }
-
-    state parse_inner_udp {
-        packet.extract(hdr.inner_udp);
-        transition accept;
-    }
-
-    state parse_inner_icmp {
-        packet.extract(hdr.inner_icmp);
-        transition accept;
-    }
-#endif // WITH_SPGW
 }
 
 control FabricEgressMirror(
-    in parsed_headers_t hdr,
+    in egress_headers_t hdr,
     in fabric_egress_metadata_t fabric_md,
     in egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr) {
     Mirror() mirror;
@@ -473,7 +400,7 @@ control FabricEgressMirror(
 
 control FabricEgressDeparser(packet_out packet,
     /* Fabric.p4 */
-    inout parsed_headers_t hdr,
+    inout egress_headers_t hdr,
     in fabric_egress_metadata_t fabric_md,
     /* TNA */
     in egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr) {
@@ -503,7 +430,6 @@ control FabricEgressDeparser(packet_out packet,
                 hdr.ipv4.dst_addr
             });
         }
-        // TODO: update TCP/UDP checksum
 #ifdef WITH_SPGW
         if (hdr.outer_ipv4.isValid()) {
             hdr.outer_ipv4.hdr_checksum = outer_ipv4_checksum.update({
@@ -569,18 +495,6 @@ control FabricEgressDeparser(packet_out packet,
 #endif // WITH_SPGW
         packet.emit(hdr.ipv4);
         packet.emit(hdr.ipv6);
-        packet.emit(hdr.tcp);
-        packet.emit(hdr.udp);
-        packet.emit(hdr.icmp);
-#ifdef WITH_SPGW
-        // in case we parsed a GTPU packet but did not decap it
-        // these should never happen at the same time as the outer GTPU tunnel headers
-        packet.emit(hdr.gtpu);
-        packet.emit(hdr.inner_ipv4);
-        packet.emit(hdr.inner_tcp);
-        packet.emit(hdr.inner_udp);
-        packet.emit(hdr.inner_icmp);
-#endif // WITH_SPGW
     }
 }
 

@@ -6,7 +6,7 @@
 
 #include "../header.p4"
 
-control Next (inout parsed_headers_t hdr,
+control Next (inout ingress_headers_t hdr,
               inout fabric_ingress_metadata_t fabric_md,
               in    ingress_intrinsic_metadata_t ig_intr_md,
               inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm) {
@@ -184,7 +184,7 @@ control Next (inout parsed_headers_t hdr,
     }
 }
 
-control EgressNextControl (inout parsed_headers_t hdr,
+control EgressNextControl (inout egress_headers_t hdr,
                            inout fabric_egress_metadata_t fabric_md,
                            in    egress_intrinsic_metadata_t eg_intr_md,
                            inout egress_intrinsic_metadata_for_deparser_t eg_dprsr_md) {

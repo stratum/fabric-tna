@@ -25,7 +25,7 @@
 
 control FabricIngress (
     /* Fabric.p4 */
-    inout parsed_headers_t hdr,
+    inout ingress_headers_t hdr,
     inout fabric_ingress_metadata_t fabric_md,
     /* TNA */
     in    ingress_intrinsic_metadata_t               ig_intr_md,
@@ -76,7 +76,7 @@ control FabricIngress (
 
 control FabricEgress (
     /* Fabric.p4 */
-    inout parsed_headers_t hdr,
+    inout egress_headers_t hdr,
     inout fabric_egress_metadata_t fabric_md,
     /* TNA */
     in    egress_intrinsic_metadata_t                  eg_intr_md,

@@ -4,9 +4,10 @@
 #ifndef __INT_MIRROR_PARSER__
 #define __INT_MIRROR_PARSER__
 
+// Parser of mirrored packets that will become INT reports
 parser IntReportMirrorParser (packet_in packet,
     /* Fabric.p4 */
-    out parsed_headers_t hdr,
+    out ingress_headers_t hdr,
     out fabric_egress_metadata_t fabric_md,
     /* TNA */
     out egress_intrinsic_metadata_t eg_intr_md) {
@@ -15,11 +16,12 @@ parser IntReportMirrorParser (packet_in packet,
         packet.extract(fabric_md.int_mirror_md);
         fabric_md.bridged.bmd_type = fabric_md.int_mirror_md.bmd_type;
         fabric_md.bridged.base.vlan_id = DEFAULT_VLAN_ID;
-        fabric_md.bridged.base.mpls_label = 0; // do not set the MPLS label later in the egress next control block.
+        fabric_md.bridged.base.mpls_label = 0; // do not push an MPLS label
 #ifdef WITH_SPGW
-        fabric_md.bridged.spgw.skip_spgw = true; // skip spgw so we won't encap it later.
+        fabric_md.bridged.spgw.skip_spgw = true; // skip spgw encap
 #endif // WITH_SPGW
-
+        // Initialize report headers here to allocate static fields to the
+        // T-PHV, and to reduce MAU stage depedencies.
         hdr.report_eth_type.value = ETHERTYPE_IPV4;
         hdr.report_ipv4 = {
             4w4, // version

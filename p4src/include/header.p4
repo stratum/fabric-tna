@@ -359,7 +359,9 @@ header fake_ethernet_t {
     bit<16> ether_type;
 }
 
-struct parsed_headers_t {
+struct ingress_headers_t {
+    packet_out_header_t packet_out;
+    packet_in_header_t packet_in;
     fake_ethernet_t fake_ethernet;
     ethernet_t ethernet;
     vlan_tag_t vlan_tag;
@@ -373,20 +375,18 @@ struct parsed_headers_t {
     tcp_t tcp;
     udp_t udp;
     icmp_t icmp;
-#ifdef WITH_SPGW
-    ipv4_t outer_ipv4;
-    udp_t outer_udp;
-    gtpu_t outer_gtpu;
-#endif // WITH_SPGW
     gtpu_t gtpu;
     ipv4_t inner_ipv4;
     tcp_t inner_tcp;
     udp_t inner_udp;
     icmp_t inner_icmp;
-    packet_out_header_t packet_out;
+}
+
+struct egress_headers_t {
     packet_in_header_t packet_in;
-    // INT specific headers
+    fake_ethernet_t fake_ethernet;
 #ifdef WITH_INT
+    // INT report encapsulation.
     ethernet_t report_ethernet;
     eth_type_t report_eth_type;
     mpls_t report_mpls;
@@ -397,6 +397,21 @@ struct parsed_headers_t {
     local_report_header_t local_report_header;
     drop_report_header_t drop_report_header;
 #endif // WITH_INT
+    ethernet_t ethernet;
+    vlan_tag_t vlan_tag;
+#if defined(WITH_XCONNECT) || defined(WITH_DOUBLE_VLAN_TERMINATION)
+    vlan_tag_t inner_vlan_tag;
+#endif // WITH_XCONNECT || WITH_DOUBLE_VLAN_TERMINATION
+    eth_type_t eth_type;
+    mpls_t mpls;
+#ifdef WITH_SPGW
+    // GTP-U encapsulation.
+    ipv4_t outer_ipv4;
+    udp_t outer_udp;
+    gtpu_t outer_gtpu;
+#endif // WITH_SPGW
+    ipv4_t ipv4;
+    ipv6_t ipv6;
 }
 
 #endif // __HEADER__

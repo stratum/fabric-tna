@@ -7,7 +7,7 @@
 #include "../define.p4"
 #include "../header.p4"
 
-control Acl (inout parsed_headers_t hdr,
+control Acl (inout ingress_headers_t hdr,
              inout fabric_ingress_metadata_t fabric_md,
              in ingress_intrinsic_metadata_t ig_intr_md,
              inout ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr,

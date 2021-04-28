@@ -13,7 +13,7 @@ const bit<48> DEFAULT_TIMESTAMP_MASK = 0xffffc0000000;
 const bit<32> DEFAULT_HOP_LATENCY_MASK = 0xffffff00;
 
 control FlowReportFilter(
-    inout parsed_headers_t hdr,
+    inout egress_headers_t hdr,
     inout fabric_egress_metadata_t fabric_md,
     in    egress_intrinsic_metadata_t eg_intr_md,
     in    egress_intrinsic_metadata_from_parser_t eg_prsr_md,
@@ -77,7 +77,7 @@ control FlowReportFilter(
 
 
 control DropReportFilter(
-    inout parsed_headers_t hdr,
+    inout ingress_headers_t hdr,
     inout fabric_egress_metadata_t fabric_md,
     inout egress_intrinsic_metadata_for_deparser_t eg_dprsr_md) {
 
@@ -133,7 +133,7 @@ control DropReportFilter(
 }
 
 control IntIngress (
-    inout parsed_headers_t hdr,
+    inout ingress_headers_t hdr,
     inout fabric_ingress_metadata_t fabric_md,
     in    ingress_intrinsic_metadata_t ig_intr_md,
     inout ingress_intrinsic_metadata_for_deparser_t ig_dprsr_md,
@@ -235,7 +235,7 @@ control IntIngress (
 }
 
 control IntEgress (
-    inout parsed_headers_t hdr,
+    inout ingress_headers_t hdr,
     inout fabric_egress_metadata_t fabric_md,
     in    egress_intrinsic_metadata_t eg_intr_md,
     in    egress_intrinsic_metadata_from_parser_t eg_prsr_md,
