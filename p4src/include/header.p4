@@ -121,6 +121,7 @@ const bit<3>  GTP_V1 = 3w1;
 const bit<16> GTPU_UDP_PORT = 2152;
 const bit<8>  GTPU_GPDU = 0xff;
 const bit<1>  GTP_PROTOCOL_TYPE_GTP = 1w1;
+const bit<8>  GTPU_NEXT_EXT_NONE = 0x0;
 header gtpu_t {
     bit<3>  version;    /* version */
     bit<1>  pt;         /* protocol type */
@@ -139,40 +140,20 @@ header gtpu_options_t {
     bit<8>  next_ext;  /* Next extension header */
 }
 
-// PDU Session Container (GTPU extension) -- 3GPP TS 38.415 version 15.2.0
+// GTPU extension: PDU Session Container (PSC) -- 3GPP TS 38.415 version 15.2.0
 // https://www.etsi.org/deliver/etsi_ts/138400_138499/138415/15.02.00_60/ts_138415v150200p.pdf
-const bit<8> GTPU_NEXT_EXT_NONE = 0x0;
-const bit<8> GTPU_NEXT_EXT_PDU_SESS = 0x85;
-const bit<4> GTPU_EXT_PDU_TYPE_DL = 4w0; // Downlink
-const bit<4> GTPU_EXT_PDU_TYPE_UL = 4w1; // Uplink
-const bit<8> GTPU_EXT_PDU_SESS_DL_LEN = 8w8; // 8*4-octets
-const bit<8> GTPU_EXT_PDU_SESS_UL_LEN = 8w1; // 1*4-octets
-// Common. Not extracted, for parsing only.
-header gtpu_ext_pdu_sess_common_t {
-    bit<8> len;       /* Length in 4-octets units */
-    bit<4> pdu_type;  /* Uplink or downlink */
-    bit<4> spare0;    /* Reserved */
-}
-// Uplink.
-header gtpu_ext_pdu_sess_ul_t {
-    bit<8> len;
-    bit<4> pdu_type;
-    bit<4> spare0;
-    bit<2> spare1;
-    bit<6> qfi;       /* QoS Flow Identifier */
-    bit<8> next_ext;
-}
-// Downlink.
-header gtpu_ext_pdu_sess_dl_t {
-    bit<8> len;
-    bit<4> pdu_type;
-    bit<4> spare0;
-    bit<1> spare1;
-    bit<1> rqi;       /* Reflective QoS Indicator */
-    bit<6> qfi;       /* QoS Flow Identifier */
-    bit<3> ppi;       /* Paging Policy Indicator */
-    bit<5> spare2;
-    @padding bit<24> padding; /* len should be multiple of 4-octets units */
+const bit<8> GTPU_NEXT_EXT_PSC = 0x85;
+const bit<4> GTPU_EXT_PSC_TYPE_DL = 4w0; // Downlink
+const bit<4> GTPU_EXT_PSC_TYPE_UL = 4w1; // Uplink
+const bit<1> GTPU_EXT_PSC_PPP_NOT_PRESENT = 1w0;
+const bit<8> GTPU_EXT_PSC_LEN = 8w1; // 1*4-octets
+header gtpu_ext_psc_t {
+    bit<8> len;      /* Length in 4-octet units (common to all extensions) */
+    bit<4> type;     /* Uplink or downlink */
+    bit<4> spare0;   /* Reserved */
+    bit<1> ppp;      /* Paging Policy Presence (UL only, not supported) */
+    bit<1> rqi;      /* Reflective QoS Indicator (UL only) */
+    bit<6> qfi;      /* QoS Flow Identifier */
     bit<8> next_ext;
 }
 
@@ -405,8 +386,7 @@ struct ingress_headers_t {
     icmp_t icmp;
     gtpu_t gtpu;
     gtpu_options_t gtpu_options;
-    gtpu_ext_pdu_sess_dl_t gtpu_ext_pdu_sess_dl;
-    gtpu_ext_pdu_sess_ul_t gtpu_ext_pdu_sess_ul;
+    gtpu_ext_psc_t gtpu_ext_psc;
     ipv4_t inner_ipv4;
     tcp_t inner_tcp;
     udp_t inner_udp;

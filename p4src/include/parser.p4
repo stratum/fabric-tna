@@ -210,29 +210,17 @@ parser FabricIngressParser (packet_in  packet,
 
     state parse_gtpu_options {
         packet.extract(hdr.gtpu_options);
-        gtpu_ext_pdu_sess_common_t ext = packet.lookahead<gtpu_ext_pdu_sess_common_t>();
-        transition select(hdr.gtpu_options.next_ext, ext.len, ext.pdu_type) {
-            (GTPU_NEXT_EXT_PDU_SESS,
-                 GTPU_EXT_PDU_SESS_DL_LEN,
-                 GTPU_EXT_PDU_TYPE_DL): parse_gtpu_ext_pdu_sess_dl;
-             (GTPU_NEXT_EXT_PDU_SESS,
-                  GTPU_EXT_PDU_SESS_UL_LEN,
-                  GTPU_EXT_PDU_TYPE_UL): parse_gtpu_ext_pdu_sess_ul;
+        bit<8> gtpu_ext_len = packet.lookahead<bit<8>>();
+        transition select(hdr.gtpu_options.next_ext, gtpu_ext_len) {
+            (GTPU_NEXT_EXT_PSC,
+                 GTPU_EXT_PSC_LEN): parse_gtpu_ext_psc;
             default: accept;
         }
     }
 
-    state parse_gtpu_ext_pdu_sess_dl {
-        packet.extract(hdr.gtpu_ext_pdu_sess_dl);
-        transition select(hdr.gtpu_ext_pdu_sess_dl.next_ext) {
-            GTPU_NEXT_EXT_NONE: parse_inner_ipv4;
-            default: accept;
-        }
-    }
-
-    state parse_gtpu_ext_pdu_sess_ul {
-        packet.extract(hdr.gtpu_ext_pdu_sess_ul);
-        transition select(hdr.gtpu_ext_pdu_sess_ul.next_ext) {
+    state parse_gtpu_ext_psc {
+        packet.extract(hdr.gtpu_ext_psc);
+        transition select(hdr.gtpu_ext_psc.next_ext) {
             GTPU_NEXT_EXT_NONE: parse_inner_ipv4;
             default: accept;
         }
@@ -310,8 +298,7 @@ control FabricIngressDeparser(packet_out packet,
         // in case we parsed a GTPU packet but did not decap it
         packet.emit(hdr.gtpu);
         packet.emit(hdr.gtpu_options);
-        packet.emit(hdr.gtpu_ext_pdu_sess_dl);
-        packet.emit(hdr.gtpu_ext_pdu_sess_ul);
+        packet.emit(hdr.gtpu_ext_psc);
         packet.emit(hdr.inner_ipv4);
         packet.emit(hdr.inner_tcp);
         packet.emit(hdr.inner_udp);

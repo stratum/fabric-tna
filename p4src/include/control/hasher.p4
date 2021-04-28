@@ -10,11 +10,15 @@ control Hasher(
 
     Hash<flow_hash_t>(HashAlgorithm_t.CRC32) ip_hasher;
     Hash<flow_hash_t>(HashAlgorithm_t.CRC32) gtp_flow_hasher;
+#ifdef WITH_SPGW
     Hash<flow_hash_t>(HashAlgorithm_t.CRC32) encap_gtp_flow_hasher;
+#endif // WITH_SPGW
     Hash<flow_hash_t>(HashAlgorithm_t.CRC32) non_ip_hasher;
 
     apply {
-        // we always need to calculate hash from the inner IPv4 header for the INT reporter.
+        // Use inner 5-tuple for the INT report filters. This is relevant for
+        // GTP packets (either encapped by this switch or passthrough), as we
+        // want to do dedup and anomaly detection on the inner flow only.
         fabric_md.bridged.base.inner_hash = ip_hasher.get({
             fabric_md.lkp.ipv4_src,
             fabric_md.lkp.ipv4_dst,
@@ -24,7 +28,7 @@ control Hasher(
         });
 
 #ifdef WITH_SPGW
-        // enable GTP-aware ECMP for downlink packets.
+        // GTP-aware ECMP for downlink packets encapped by this switch.
         if (fabric_md.bridged.spgw.needs_gtpu_encap) {
             fabric_md.ecmp_hash = encap_gtp_flow_hasher.get({
                 fabric_md.bridged.spgw.gtpu_tunnel_sip,
@@ -33,7 +37,7 @@ control Hasher(
             });
         } else
 #endif // WITH_SPGW
-        // if an outer GTP header exists, use it to perform GTP-aware ECMP
+        // GTP-aware ECMP for passthrough GTP packets.
         if (hdr.gtpu.isValid()) {
             fabric_md.ecmp_hash = gtp_flow_hasher.get({
                 hdr.ipv4.src_addr,
@@ -41,7 +45,9 @@ control Hasher(
                 hdr.gtpu.teid
             });
         } else if (fabric_md.lkp.is_ipv4) {
-            // use inner hash by default
+            // Regular 5-tuple-based ECMP. If here, the innermost IPv4 header
+            // will be the only IPv4 header valid. Includes GTPU decapped pkts
+            // by the spgw control.
             fabric_md.ecmp_hash = fabric_md.bridged.base.inner_hash;
         }
         // FIXME: remove ipv6 support or test it
@@ -56,9 +62,8 @@ control Hasher(
         //     });
         // }
         else {
-            // Not an IP packet
-            // Set inner hash to zero since we will never process this packet through
-            // the INT pipeline.
+            // Not an IP packet.
+            // We will never process this packet through the INT pipeline.
             fabric_md.bridged.base.inner_hash = 0;
             fabric_md.ecmp_hash = non_ip_hasher.get({
                 hdr.ethernet.dst_addr,
