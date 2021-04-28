@@ -77,7 +77,7 @@ control FlowReportFilter(
 
 
 control DropReportFilter(
-    inout ingress_headers_t hdr,
+    inout egress_headers_t hdr,
     inout fabric_egress_metadata_t fabric_md,
     inout egress_intrinsic_metadata_for_deparser_t eg_dprsr_md) {
 
@@ -195,6 +195,7 @@ control IntIngress (
         fabric_md.int_mirror_md.eg_port = (bit<16>)ig_tm_md.ucast_egress_port;
         fabric_md.int_mirror_md.queue_id = (bit<8>)ig_tm_md.qid;
         fabric_md.int_mirror_md.flow_hash = fabric_md.bridged.base.inner_hash;
+        fabric_md.int_mirror_md.strip_gtpu = fabric_md.bridged.int_bmd.strip_gtpu;
         ig_dprsr_md.drop_ctl = 1;
 #ifdef WITH_DEBUG
         drop_report_counter.count();
@@ -235,7 +236,7 @@ control IntIngress (
 }
 
 control IntEgress (
-    inout ingress_headers_t hdr,
+    inout egress_headers_t hdr,
     inout fabric_egress_metadata_t fabric_md,
     in    egress_intrinsic_metadata_t eg_intr_md,
     in    egress_intrinsic_metadata_from_parser_t eg_prsr_md,
@@ -419,8 +420,8 @@ control IntEgress (
         fabric_md.int_mirror_md.eg_tstamp = eg_prsr_md.global_tstamp[31:0];
         fabric_md.int_mirror_md.ip_eth_type = fabric_md.bridged.base.ip_eth_type;
         fabric_md.int_mirror_md.flow_hash = fabric_md.bridged.base.inner_hash;
+        fabric_md.int_mirror_md.strip_gtpu = fabric_md.bridged.int_bmd.strip_gtpu;
         // fabric_md.int_mirror_md.vlan_stripped set by egress_vlan table
-        // fabric_md.int_mirror_md.strip_gtpu will be initialized by the parser
     }
 
     @hidden

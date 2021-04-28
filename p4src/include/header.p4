@@ -233,7 +233,8 @@ header int_mirror_metadata_t {
 struct int_bridged_metadata_t {
     @padding bit<6> _pad0;
     IntReportType_t report_type;
-    @padding bit<6> _pad1;
+    @padding bit<5> _pad1;
+    bit<1>          strip_gtpu;
     MirrorId_t      mirror_session_id;
 }
 

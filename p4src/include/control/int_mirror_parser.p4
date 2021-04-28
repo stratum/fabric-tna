@@ -7,7 +7,7 @@
 // Parser of mirrored packets that will become INT reports
 parser IntReportMirrorParser (packet_in packet,
     /* Fabric.p4 */
-    out ingress_headers_t hdr,
+    out egress_headers_t hdr,
     out fabric_egress_metadata_t fabric_md,
     /* TNA */
     out egress_intrinsic_metadata_t eg_intr_md) {
