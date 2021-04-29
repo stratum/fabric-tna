@@ -61,6 +61,25 @@ parser IntReportMirrorParser (packet_in packet,
             fabric_md.int_mirror_md.drop_reason,
             0 // pad
         };
+        transition check_ethernet;
+    }
+
+    state check_ethernet {
+        fake_ethernet_t tmp = packet.lookahead<fake_ethernet_t>();
+        transition select(tmp.ether_type) {
+            ETHERTYPE_CPU_LOOPBACK_INGRESS: parse_fake_ethernet;
+            ETHERTYPE_CPU_LOOPBACK_EGRESS: parse_fake_ethernet;
+            default: parse_eth_hdr;
+        }
+    }
+
+    state parse_fake_ethernet {
+        hdr.fake_ethernet.setValid();
+        // We will generate the INT report, which will be re-circulated back to the Ingress pipe.
+        // We need to set it back to ETHERTYPE_CPU_LOOPBACK_INGRESS to enable processing
+        // the INT report in the Ingress pipe as a standard INT report, instead of punting it to CPU.
+        hdr.fake_ethernet.ether_type = ETHERTYPE_CPU_LOOPBACK_INGRESS;
+        packet.advance(ETH_HDR_BYTES * 8);
         transition parse_eth_hdr;
     }
 
@@ -94,8 +113,6 @@ parser IntReportMirrorParser (packet_in packet,
             (ETHERTYPE_IPV4, 1): strip_ipv4_udp_gtpu;
             (ETHERTYPE_IPV6, 0): accept;
             (ETHERTYPE_IPV6, 1): strip_ipv6_udp_gtpu;
-            (ETHERTYPE_CPU_LOOPBACK_INGRESS, 0): accept;
-            (ETHERTYPE_CPU_LOOPBACK_INGRESS, 1): strip_ipv6_udp_gtpu;
             default: reject;
         }
 #else
@@ -103,7 +120,6 @@ parser IntReportMirrorParser (packet_in packet,
             ETHERTYPE_MPLS: strip_mpls;
             ETHERTYPE_IPV4: accept;
             ETHERTYPE_IPV6: accept;
-            ETHERTYPE_CPU_LOOPBACK_INGRESS: accept;
             default: reject;
         }
 #endif // WITH_SPGW

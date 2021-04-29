@@ -40,7 +40,8 @@ parser FabricIngressParser (packet_in  packet,
         fake_ethernet_t tmp = packet.lookahead<fake_ethernet_t>();
         transition select(tmp.ether_type) {
             ETHERTYPE_CPU_LOOPBACK_INGRESS: parse_fake_ethernet;
-            ETHERTYPE_CPU_LOOPBACK_EGRESS: parse_fake_ethernet_and_accept;
+            // we cannot parse & accept, because a packet may be the INT report.
+            ETHERTYPE_CPU_LOOPBACK_EGRESS: parse_fake_ethernet;
             ETHERTYPE_PACKET_OUT: parse_packet_out;
             default: parse_ethernet;
         }
@@ -49,12 +50,6 @@ parser FabricIngressParser (packet_in  packet,
     state parse_fake_ethernet {
         packet.extract(hdr.fake_ethernet);
         transition parse_ethernet;
-    }
-
-    state parse_fake_ethernet_and_accept {
-        packet.extract(hdr.fake_ethernet);
-        // Will punt to CPU as-is. No need to parse further.
-        transition accept;
     }
 
     state parse_packet_out {
@@ -324,9 +319,9 @@ parser FabricEgressParser (packet_in packet,
     }
 
     state set_cpu_loopback_egress {
-        hdr.fake_ethernet.setValid();
+        // We need to extract. Otherwise, we get garbage in the output packet.
+        packet.extract(hdr.fake_ethernet);
         hdr.fake_ethernet.ether_type = ETHERTYPE_CPU_LOOPBACK_EGRESS;
-        packet.advance(ETH_HDR_BYTES * 8);
         transition parse_ethernet;
     }
 
