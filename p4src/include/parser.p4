@@ -319,9 +319,11 @@ parser FabricEgressParser (packet_in packet,
     }
 
     state set_cpu_loopback_egress {
-        // We need to extract. Otherwise, we get garbage in the output packet.
-        packet.extract(hdr.fake_ethernet);
+        hdr.fake_ethernet.setValid();
+        // We need to zero-initialize. Otherwise, we get garbage in the output packet.
+        hdr.fake_ethernet.offset = 0;
         hdr.fake_ethernet.ether_type = ETHERTYPE_CPU_LOOPBACK_EGRESS;
+        packet.advance(ETH_HDR_BYTES * 8);
         transition parse_ethernet;
     }
 
