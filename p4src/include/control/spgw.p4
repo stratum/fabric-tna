@@ -271,7 +271,7 @@ control SpgwIngress(
         fabric_md.skip_forwarding = drop;
         fabric_md.skip_next = drop;
         // Notify_spgwc is unused. We wet it here to avoid the SDE optimizing
-        // the notify_cp parameter and so break R/W symmetry.
+        // out the notify_cp parameter and so breaking R/W symmetry.
         fabric_md.bridged.spgw.notify_spgwc = notify_cp;
         fabric_md.bridged.spgw.needs_gtpu_encap = false;
         fabric_md.bridged.spgw.skip_egress_pdr_ctr = false;

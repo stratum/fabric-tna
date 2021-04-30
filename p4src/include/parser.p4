@@ -192,7 +192,7 @@ parser FabricIngressParser (packet_in  packet,
         packet.extract(hdr.gtpu);
 #ifdef WITH_INT
         // Signal egress to strip the GTP-U header inside INT reports.
-        // Might be set to 0 by spgw.p4 if we do decap.
+        // Might be set to 0 by SpgwIngress if we do decap.
         fabric_md.bridged.int_bmd.strip_gtpu = 1;
         // Do the same for mirrors that will become drop reports.
         fabric_md.int_mirror_md.strip_gtpu = 1;

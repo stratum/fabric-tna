@@ -420,6 +420,7 @@ control IntEgress (
         fabric_md.int_mirror_md.ip_eth_type = fabric_md.bridged.base.ip_eth_type;
         fabric_md.int_mirror_md.flow_hash = fabric_md.bridged.base.inner_hash;
         // fabric_md.int_mirror_md.vlan_stripped set by egress_vlan table
+        // fabric_md.int_mirror_md.strip_gtpu set by the parser
     }
 
     @hidden
