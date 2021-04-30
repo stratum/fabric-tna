@@ -116,7 +116,9 @@ control DropReportFilter(
     };
 
     apply {
-        if (fabric_md.int_mirror_md.report_type == IntReportType_t.DROP) {
+        // This control is applied to all pkts, but we filter only INT mirrors.
+        if (fabric_md.int_mirror_md.isValid() &&
+                fabric_md.int_mirror_md.report_type == IntReportType_t.DROP) {
             digest = digester.get({ // burp!
                 fabric_md.int_mirror_md.flow_hash,
                 fabric_md.int_md.timestamp
