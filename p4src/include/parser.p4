@@ -30,6 +30,8 @@ parser FabricIngressParser (packet_in  packet,
         fabric_md.bridged.base.ip_eth_type = 0;
 #ifdef WITH_INT
         fabric_md.int_mirror_md.drop_reason = IntDropReason_t.DROP_REASON_UNKNOWN;
+        fabric_md.bridged.int_bmd.strip_gtpu = 0;
+        fabric_md.int_mirror_md.strip_gtpu = 0;
 #endif // WITH_INT
         transition check_ethernet;
     }
@@ -189,7 +191,11 @@ parser FabricIngressParser (packet_in  packet,
     state parse_gtpu {
         packet.extract(hdr.gtpu);
 #ifdef WITH_INT
+        // Signal egress to strip the GTP-U header inside INT reports.
+        // Might be set to 0 by spgw.p4 if we do decap.
         fabric_md.bridged.int_bmd.strip_gtpu = 1;
+        // Do the same for mirrors that will become drop reports.
+        fabric_md.int_mirror_md.strip_gtpu = 1;
 #endif // WITH_INT
         transition parse_inner_ipv4;
     }
@@ -299,6 +305,9 @@ parser FabricEgressParser (packet_in packet,
 
     state parse_bridged_md {
         packet.extract(fabric_md.bridged);
+#ifdef WITH_INT
+        fabric_md.int_mirror_md.strip_gtpu = fabric_md.bridged.int_bmd.strip_gtpu;
+#endif // WITH_INT
         transition check_ethernet;
     }
 
