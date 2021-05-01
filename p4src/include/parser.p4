@@ -416,58 +416,6 @@ parser FabricEgressParser (packet_in packet,
 
     state parse_ipv6 {
         packet.extract(hdr.ipv6);
-        transition select(hdr.ipv6.next_hdr) {
-            PROTO_TCP: parse_tcp;
-            PROTO_UDP: parse_udp;
-            PROTO_ICMPV6: parse_icmp;
-            default: accept;
-        }
-    }
-
-    state parse_tcp {
-        packet.extract(hdr.tcp);
-        transition accept;
-    }
-
-    state parse_udp {
-        packet.extract(hdr.udp);
-        transition select(hdr.udp.dport) {
-#ifdef WITH_SPGW
-            GTPU_UDP_PORT: parse_gtpu;
-#endif // WITH_SPGW
-            default: accept;
-        }
-    }
-
-    state parse_icmp {
-        packet.extract(hdr.icmp);
-        transition accept;
-    }
-
-#ifdef WITH_SPGW
-    state parse_gtpu {
-        packet.extract(hdr.gtpu);
-#ifdef WITH_INT
-        fabric_md.int_mirror_md.strip_gtpu = 1;
-#endif // WITH_INT
-        transition parse_inner_ipv4;
-    }
-
-    state parse_inner_ipv4 {
-        packet.extract(hdr.inner_ipv4);
-        inner_ipv4_checksum.add(hdr.inner_ipv4);
-        fabric_md.inner_ipv4_checksum_err = inner_ipv4_checksum.verify();
-        transition select(hdr.inner_ipv4.protocol) {
-            PROTO_TCP: parse_inner_tcp;
-            PROTO_UDP: parse_inner_udp;
-            PROTO_ICMP: parse_inner_icmp;
-            default: accept;
-        }
-    }
-
-    state parse_inner_tcp {
-        packet.extract(hdr.inner_tcp);
-        transition accept;
        transition accept;
     }
 }
