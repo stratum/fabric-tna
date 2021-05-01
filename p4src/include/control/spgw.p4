@@ -19,7 +19,6 @@ control DecapGtpu(inout ingress_headers_t            hdr,
         hdr.gtpu.setInvalid();
 #ifdef WITH_INT
         fabric_md.bridged.int_bmd.strip_gtpu = 0;
-        fabric_md.int_mirror_md.strip_gtpu = 0;
 #endif // WITH_INT
     }
     @hidden
