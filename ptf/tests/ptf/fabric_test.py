@@ -220,7 +220,7 @@ BRIDGED_MD_TYPE_INGRESS_MIRROR = 3
 if testutils.test_param_get("profile") == "fabric-spgw-int":
     BMD_BYTES = 44
 elif testutils.test_param_get("profile") == "fabric-spgw":
-    BMD_BYTES = 40
+    BMD_BYTES = 41
 elif testutils.test_param_get("profile") == "fabric-int":
     BMD_BYTES = 26
 elif testutils.test_param_get("profile") == "fabric":

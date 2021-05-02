@@ -198,6 +198,8 @@ control SpgwIngress(
 #endif // WITH_INT
     }
 
+    // Remove after all ACE deployments will have pfcp-agent qith QoS support
+    @deprecated("Use load_pdr_qos instead")
     action load_pdr(pdr_ctr_id_t    ctr_id,
                     far_id_t        far_id,
                     bool            needs_gtpu_decap) {
@@ -210,9 +212,11 @@ control SpgwIngress(
     action load_pdr_qos(pdr_ctr_id_t        ctr_id,
                         far_id_t            far_id,
                         bool                needs_gtpu_decap,
-                        qid_t               qid) {
+                        qid_t               qid,
+                        qfi_t               qfi) {
         load_pdr(ctr_id, far_id, needs_gtpu_decap);
         ig_tm_md.qid = qid;
+        fabric_md.bridged.spgw.qfi = qfi;
     }
 
     // These two tables scale well and cover the average case PDR
@@ -405,63 +409,48 @@ control SpgwEgress(
         outer_udp_len_additive = UDP_HDR_BYTES + GTP_HDR_BYTES;
     }
 
-    @hidden
-    action _gtpu_encap() {
+    // Do regular GTP-U encap.
+    action gtpu_encap() {
         hdr.outer_ipv4.setValid();
-        hdr.outer_ipv4.version = IP_VERSION_4;
-        hdr.outer_ipv4.ihl = IPV4_MIN_IHL;
-        hdr.outer_ipv4.dscp = 0;
-        hdr.outer_ipv4.ecn = 0;
         hdr.outer_ipv4.total_len = fabric_md.bridged.spgw.ipv4_len_for_encap + outer_ipv4_len_additive;
         hdr.outer_ipv4.identification = 0x1513; /* From NGIC. TODO: Needs to be dynamic */
-        hdr.outer_ipv4.flags = 0;
-        hdr.outer_ipv4.frag_offset = 0;
-        hdr.outer_ipv4.ttl = DEFAULT_IPV4_TTL;
-        hdr.outer_ipv4.protocol = PROTO_UDP;
-        hdr.outer_ipv4.src_addr = fabric_md.bridged.spgw.gtpu_tunnel_sip;
-        hdr.outer_ipv4.dst_addr = fabric_md.bridged.spgw.gtpu_tunnel_dip;
-        hdr.outer_ipv4.hdr_checksum = 0; // Updated later
-
         hdr.outer_udp.setValid();
-        hdr.outer_udp.sport = fabric_md.bridged.spgw.gtpu_tunnel_sport;
-        hdr.outer_udp.dport = GTPU_UDP_PORT;
         hdr.outer_udp.len = fabric_md.bridged.spgw.ipv4_len_for_encap + outer_udp_len_additive;
-        hdr.outer_udp.checksum = 0; // Updated never, due to difficulties in handling different inner headers
-
         hdr.outer_gtpu.setValid();
-        hdr.outer_gtpu.version = GTP_V1;
-        hdr.outer_gtpu.pt = GTP_PROTOCOL_TYPE_GTP;
-        hdr.outer_gtpu.spare = 0;
-        hdr.outer_gtpu.ex_flag = 0;
-        hdr.outer_gtpu.seq_flag = 0;
-        hdr.outer_gtpu.npdu_flag = 0;
-        hdr.outer_gtpu.msgtype = GTPU_GPDU;
-        hdr.outer_gtpu.msglen = fabric_md.bridged.spgw.ipv4_len_for_encap;
-        hdr.outer_gtpu.teid = fabric_md.bridged.spgw.gtpu_teid;
-
 #ifdef WITH_INT
         fabric_md.int_mirror_md.strip_gtpu = 1;
 #endif // WITH_INT
     }
 
-    @hidden
-    table gtpu_encap_if_needed {
+    // Do GTP-U encap with PDU Session Container extension for 5G NG-RAN.
+    action gtpu_encap_with_ext_psc() {
+        gtpu_encap();
+        hdr.outer_gtpu.ex_flag = 1;
+        hdr.outer_gtpu_options.setValid();
+        hdr.outer_gtpu_ext_psc.setValid();
+    }
+
+    // By default, do regular GTP-U encap. Allow the control plane to specify
+    // nondefault configurations for specific base stations (identified by the
+    // GTP-U tunnel IPv4 dest).
+    table gtpu_encap_configs {
         key = {
-            fabric_md.bridged.spgw.needs_gtpu_encap : exact;
+            fabric_md.bridged.spgw.gtpu_tunnel_dip : ternary @name("gtpu_tunnel_dip");
         }
         actions = {
-            _gtpu_encap;
+            gtpu_encap;
+            gtpu_encap_with_ext_psc;
         }
-        const entries = {
-            true : _gtpu_encap();
-        }
-        size = 1;
+        const default_action = gtpu_encap();
+        size = 32;
     }
 
     apply {
         if (!fabric_md.bridged.spgw.skip_spgw) {
             _preload_length_additives();
-            gtpu_encap_if_needed.apply();
+            if (fabric_md.bridged.spgw.needs_gtpu_encap) {
+                gtpu_encap_configs.apply();
+            }
             if (!fabric_md.bridged.spgw.skip_egress_pdr_ctr) {
                 pdr_counter.count(fabric_md.bridged.spgw.pdr_ctr_id);
             }

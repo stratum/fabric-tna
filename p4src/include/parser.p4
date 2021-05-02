@@ -313,10 +313,6 @@ parser FabricEgressParser (packet_in packet,
     /* TNA */
     out egress_intrinsic_metadata_t eg_intr_md) {
 
-#ifdef WITH_INT
-    IntReportMirrorParser() int_report_mirror_parser;
-#endif // WITH_INT
-
     state start {
         packet.extract(eg_intr_md);
         fabric_md.cpu_port = 0;
@@ -333,6 +329,56 @@ parser FabricEgressParser (packet_in packet,
 
     state parse_bridged_md {
         packet.extract(fabric_md.bridged);
+#ifdef WITH_SPGW
+        // Initialize GTP-U encap fields here to save on PHV resourcers.
+        // TODO: include as snippet
+        hdr.outer_ipv4 = {
+            IP_VERSION_4, // version
+            IPV4_MIN_IHL, // ihl
+            0, // dscp
+            0, // ecn
+            0, // total_len, update later
+            0, // identification, update later
+            0, // flags
+            0, // frag_offset
+            DEFAULT_IPV4_TTL, // ttl
+            PROTO_UDP, // protocol
+            0, // checksum, update later
+            fabric_md.bridged.spgw.gtpu_tunnel_sip, // src_addr
+            fabric_md.bridged.spgw.gtpu_tunnel_dip // dst_addr
+        };
+        hdr.outer_udp = {
+            fabric_md.bridged.spgw.gtpu_tunnel_sport, // sport
+            GTPU_UDP_PORT, // dport
+            0, // len, update later
+            0 // checksum, update never
+        };
+        hdr.outer_gtpu = {
+            GTP_V1, // version
+            GTP_PROTOCOL_TYPE_GTP, // pt
+            0, // spare
+            0, // ex_flag
+            0, // seq_flag
+            0, // npdu_flag
+            GTPU_GPDU, // msgtype
+            fabric_md.bridged.spgw.ipv4_len_for_encap, // msglen
+            fabric_md.bridged.spgw.gtpu_teid // teid
+        };
+        hdr.outer_gtpu_options = {
+            0, // seq_num
+            0, // n_pdu_num
+            GTPU_NEXT_EXT_PSC // next_ext
+        };
+        hdr.outer_gtpu_ext_psc = {
+            GTPU_EXT_PSC_LEN, // len
+            GTPU_EXT_PSC_TYPE_DL, // type
+            0, // spare0
+            0, // ppp
+            0, // rqi
+            fabric_md.bridged.spgw.qfi, // qfi
+            GTPU_NEXT_EXT_NONE // next_ext
+        };
+#endif // WITH_SPGW
 #ifdef WITH_INT
         fabric_md.int_mirror_md.strip_gtpu = fabric_md.bridged.int_bmd.strip_gtpu;
 #endif // WITH_INT
@@ -341,7 +387,7 @@ parser FabricEgressParser (packet_in packet,
 
 #ifdef WITH_INT
     state parse_int_report_mirror {
-        int_report_mirror_parser.apply(packet, hdr, fabric_md, eg_intr_md);
+        IntReportMirrorParser.apply(packet, hdr, fabric_md, eg_intr_md);
         transition accept;
     }
 #endif // WITH_INT
@@ -416,9 +462,8 @@ parser FabricEgressParser (packet_in packet,
 
     state parse_ipv6 {
         packet.extract(hdr.ipv6);
-       transition accept;
+        transition accept;
     }
-}
 
 control FabricEgressMirror(
     in egress_headers_t hdr,

@@ -98,6 +98,10 @@ header tcp_t {
     bit<16> urgent_ptr;
 }
 
+// Without @pa_container_size FabricSpgwDownlinkTest fails
+// FIXME: test with future SDE releases and eventually remove pragmas
+@pa_container_size("egress", "hdr.outer_udp.sport", 16)
+@pa_container_size("egress", "hdr.outer_udp.dport", 16)
 header udp_t {
     bit<16> sport;
     bit<16> dport;
@@ -170,6 +174,7 @@ struct spgw_bridged_metadata_t {
     ipv4_addr_t     gtpu_tunnel_dip;
     l4_port_t       gtpu_tunnel_sport;
     pdr_ctr_id_t    pdr_ctr_id;
+    qfi_t           qfi;
 }
 
 struct spgw_ingress_metadata_t {
@@ -420,6 +425,8 @@ struct egress_headers_t {
     ipv4_t outer_ipv4;
     udp_t outer_udp;
     gtpu_t outer_gtpu;
+    gtpu_options_t outer_gtpu_options;
+    gtpu_ext_psc_t outer_gtpu_ext_psc;
 #endif // WITH_SPGW
     ipv4_t ipv4;
     ipv6_t ipv6;
