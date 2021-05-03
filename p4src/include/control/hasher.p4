@@ -5,7 +5,7 @@
 #include "../header.p4"
 
 control Hasher(
-    in parsed_headers_t hdr,
+    in ingress_headers_t hdr,
     inout fabric_ingress_metadata_t fabric_md) {
 
     Hash<flow_hash_t>(HashAlgorithm_t.CRC32) ip_hasher;

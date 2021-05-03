@@ -7,7 +7,7 @@
 #define DEFAULT_PDR_CTR_ID 0
 #define DEFAULT_FAR_ID 0
 
-control DecapGtpu(inout parsed_headers_t            hdr,
+control DecapGtpu(inout ingress_headers_t            hdr,
                   inout fabric_ingress_metadata_t   fabric_md) {
     @hidden
     action decap_inner_common() {
@@ -17,6 +17,9 @@ control DecapGtpu(inout parsed_headers_t            hdr,
         hdr.ipv4 = hdr.inner_ipv4;
         hdr.inner_ipv4.setInvalid();
         hdr.gtpu.setInvalid();
+#ifdef WITH_INT
+        fabric_md.bridged.int_bmd.strip_gtpu = 0;
+#endif // WITH_INT
     }
     @hidden
     action decap_inner_tcp() {
@@ -72,7 +75,7 @@ control DecapGtpu(inout parsed_headers_t            hdr,
 // Allows or denies recirculation of uplink packets for UE-to-UE communication.
 // Should be called after GTP decap.
 control UplinkRecirc(
-         inout parsed_headers_t                      hdr,
+         inout ingress_headers_t                      hdr,
          inout fabric_ingress_metadata_t             fabric_md,
          in ingress_intrinsic_metadata_t             ig_intr_md,
          inout ingress_intrinsic_metadata_for_tm_t   ig_tm_md) {
@@ -124,7 +127,7 @@ control UplinkRecirc(
 
 control SpgwIngress(
         /* Fabric.p4 */
-        inout parsed_headers_t                      hdr,
+        inout ingress_headers_t                      hdr,
         inout fabric_ingress_metadata_t             fabric_md,
         /* TNA */
         in ingress_intrinsic_metadata_t             ig_intr_md,
@@ -259,12 +262,15 @@ control SpgwIngress(
 #endif // WITH_INT
     }
 
+    // FIXME: remove noticy_cp parameter, we use dbuf for DDNs.
+    //   Applies to all far actions below.
     action load_normal_far(bool drop,
                            bool notify_cp) {
         // general far attributes
         fabric_md.skip_forwarding = drop;
         fabric_md.skip_next = drop;
-        // TODO: Send notification to 3GPP/SPGW control plane
+        // Notify_spgwc is unused. We set it here to avoid the SDE optimizing
+        // out the notify_cp parameter and so breaking R/W symmetry.
         fabric_md.bridged.spgw.notify_spgwc = notify_cp;
         fabric_md.bridged.spgw.needs_gtpu_encap = false;
         fabric_md.bridged.spgw.skip_egress_pdr_ctr = false;
@@ -278,11 +284,10 @@ control SpgwIngress(
                            ipv4_addr_t  tunnel_src_addr,
                            ipv4_addr_t  tunnel_dst_addr,
                            teid_t       teid) {
-        // general far attributes
+        // General far attributes
         fabric_md.skip_forwarding = drop;
         fabric_md.skip_next = drop;
-        // TODO: Send notification to 3GPP/SPGW control plane
-        fabric_md.bridged.spgw.notify_spgwc = notify_cp;
+        fabric_md.bridged.spgw.notify_spgwc = notify_cp; // Unused.
         // GTP tunnel attributes
         fabric_md.bridged.spgw.needs_gtpu_encap = true;
         fabric_md.bridged.spgw.gtpu_teid = teid;
@@ -381,7 +386,7 @@ control SpgwIngress(
 //============== Egress ==============//
 //====================================//
 control SpgwEgress(
-        inout parsed_headers_t hdr,
+        inout egress_headers_t hdr,
         inout fabric_egress_metadata_t fabric_md) {
 
     Counter<bit<64>, bit<16>>(MAX_PDR_COUNTERS, CounterType_t.PACKETS_AND_BYTES) pdr_counter;
@@ -436,7 +441,7 @@ control SpgwEgress(
         hdr.outer_gtpu.teid = fabric_md.bridged.spgw.gtpu_teid;
 
 #ifdef WITH_INT
-            fabric_md.int_mirror_md.strip_gtpu = 1;
+        fabric_md.int_mirror_md.strip_gtpu = 1;
 #endif // WITH_INT
     }
 

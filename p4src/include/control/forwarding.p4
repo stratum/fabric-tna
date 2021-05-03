@@ -8,7 +8,7 @@
 #include "../header.p4"
 
 
-control Forwarding (inout parsed_headers_t hdr,
+control Forwarding (inout ingress_headers_t hdr,
                     inout fabric_ingress_metadata_t fabric_md) {
 
 #ifdef WITH_INT

@@ -6,7 +6,7 @@
 
 #include "../header.p4"
 
-control Filtering (inout parsed_headers_t hdr,
+control Filtering (inout ingress_headers_t hdr,
                    inout fabric_ingress_metadata_t fabric_md,
                    in ingress_intrinsic_metadata_t ig_intr_md) {
 
