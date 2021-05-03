@@ -269,7 +269,7 @@ control SpgwIngress(
         // general far attributes
         fabric_md.skip_forwarding = drop;
         fabric_md.skip_next = drop;
-        // Notify_spgwc is unused. We wet it here to avoid the SDE optimizing
+        // Notify_spgwc is unused. We set it here to avoid the SDE optimizing
         // out the notify_cp parameter and so breaking R/W symmetry.
         fabric_md.bridged.spgw.notify_spgwc = notify_cp;
         fabric_md.bridged.spgw.needs_gtpu_encap = false;
