@@ -464,6 +464,7 @@ parser FabricEgressParser (packet_in packet,
         packet.extract(hdr.ipv6);
         transition accept;
     }
+}
 
 control FabricEgressMirror(
     in egress_headers_t hdr,
