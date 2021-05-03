@@ -72,7 +72,9 @@ branch="$VCS_BRANCH_NAME"
 pr="$VCS_PULL_REQUEST"
 slug="$VCS_SLUG"
 tag="$VCS_TAG"
+# shellcheck disable=SC2153
 build_url="$CI_BUILD_URL"
+# shellcheck disable=SC2153
 build="$CI_BUILD_ID"
 job="$CI_JOB_ID"
 

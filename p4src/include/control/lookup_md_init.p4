@@ -7,7 +7,7 @@
 #include "../define.p4"
 #include "../header.p4"
 
-control LookupMdInit (in parsed_headers_t hdr,
+control LookupMdInit (in ingress_headers_t hdr,
                       out lookup_metadata_t lkp_md) {
 
       apply {

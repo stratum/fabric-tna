@@ -6,7 +6,7 @@
 
 #include "../header.p4"
 
-control PreNext(inout parsed_headers_t hdr,
+control PreNext(inout ingress_headers_t hdr,
                 inout fabric_ingress_metadata_t fabric_md) {
 
     /*

@@ -13,7 +13,7 @@ const bit<48> DEFAULT_TIMESTAMP_MASK = 0xffffc0000000;
 const bit<32> DEFAULT_HOP_LATENCY_MASK = 0xffffff00;
 
 control FlowReportFilter(
-    inout parsed_headers_t hdr,
+    inout egress_headers_t hdr,
     inout fabric_egress_metadata_t fabric_md,
     in    egress_intrinsic_metadata_t eg_intr_md,
     in    egress_intrinsic_metadata_from_parser_t eg_prsr_md,
@@ -77,7 +77,7 @@ control FlowReportFilter(
 
 
 control DropReportFilter(
-    inout parsed_headers_t hdr,
+    inout egress_headers_t hdr,
     inout fabric_egress_metadata_t fabric_md,
     inout egress_intrinsic_metadata_for_deparser_t eg_dprsr_md) {
 
@@ -116,7 +116,9 @@ control DropReportFilter(
     };
 
     apply {
-        if (fabric_md.int_mirror_md.report_type == IntReportType_t.DROP) {
+        // This control is applied to all pkts, but we filter only INT mirrors.
+        if (fabric_md.int_mirror_md.isValid() &&
+                fabric_md.int_mirror_md.report_type == IntReportType_t.DROP) {
             digest = digester.get({ // burp!
                 fabric_md.int_mirror_md.flow_hash,
                 fabric_md.int_md.timestamp
@@ -133,7 +135,7 @@ control DropReportFilter(
 }
 
 control IntIngress (
-    inout parsed_headers_t hdr,
+    inout ingress_headers_t hdr,
     inout fabric_ingress_metadata_t fabric_md,
     in    ingress_intrinsic_metadata_t ig_intr_md,
     inout ingress_intrinsic_metadata_for_deparser_t ig_dprsr_md,
@@ -235,7 +237,7 @@ control IntIngress (
 }
 
 control IntEgress (
-    inout parsed_headers_t hdr,
+    inout egress_headers_t hdr,
     inout fabric_egress_metadata_t fabric_md,
     in    egress_intrinsic_metadata_t eg_intr_md,
     in    egress_intrinsic_metadata_from_parser_t eg_prsr_md,
@@ -420,7 +422,7 @@ control IntEgress (
         fabric_md.int_mirror_md.ip_eth_type = fabric_md.bridged.base.ip_eth_type;
         fabric_md.int_mirror_md.flow_hash = fabric_md.bridged.base.inner_hash;
         // fabric_md.int_mirror_md.vlan_stripped set by egress_vlan table
-        // fabric_md.int_mirror_md.strip_gtpu will be initialized by the parser
+        // fabric_md.int_mirror_md.strip_gtpu set by the parser
     }
 
     @hidden
