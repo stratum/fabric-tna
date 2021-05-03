@@ -333,6 +333,7 @@ struct fabric_egress_metadata_t {
 #ifdef WITH_INT
     int_mirror_metadata_t int_mirror_md;
     int_metadata_t        int_md;
+    bit<16>               int_ipv4_len;
 #endif // WITH_INT
 }
 

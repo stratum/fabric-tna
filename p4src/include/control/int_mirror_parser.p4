@@ -4,7 +4,10 @@
 #ifndef __INT_MIRROR_PARSER__
 #define __INT_MIRROR_PARSER__
 
-// Parser of mirrored packets that will become INT reports
+// Parser of mirrored packets that will become INT reports. To simplify handling
+// of reports at the collector, we remove all headers between Ethernet and IPv4
+// (the inner one if processing a GTP-U encapped packet). We support generating
+// reports only for IPv4 packets, i.e., cannot report IPv6 traffic.
 parser IntReportMirrorParser (packet_in packet,
     /* Fabric.p4 */
     out egress_headers_t hdr,
@@ -20,23 +23,38 @@ parser IntReportMirrorParser (packet_in packet,
 #ifdef WITH_SPGW
         fabric_md.bridged.spgw.skip_spgw = true; // skip spgw encap
 #endif // WITH_SPGW
-        // Initialize report headers here to allocate static fields to the
-        // T-PHV, and to reduce MAU stage depedencies.
-        hdr.report_eth_type.value = ETHERTYPE_IPV4;
+        // Initialize report headers here to allocate on T-PHV and save on PHV
+        // resources.
+        hdr.report_mpls = {
+            0, // label, update later
+            0, // tc
+            1, // bos
+            DEFAULT_MPLS_TTL // ttl
+        };
+        // Initializing the full header with hdr = { ... } sets the validity bit
+        // to 1. We might not need MPLS to forward this report. Set valid later
+        // if needed.
+        hdr.report_mpls.setInvalid();
         hdr.report_ipv4 = {
             4w4, // version
             4w5, // ihl
             INT_DSCP,
             2w0, // ecn
-            0, // total_length, will calculate later
-            0, // identification,
+            0, // total_length, update later
+            0, // identification, update later
             0, // flags,
             0, // frag_offset
             DEFAULT_IPV4_TTL,
             PROTO_UDP,
-            0, // checksum, will calculate later
-            0, // Src IP, will set later
-            0  // Dst IP, will set later
+            0, // checksum, update later
+            0, // Src IP, update later
+            0  // Dst IP, update later
+        };
+        hdr.report_udp = {
+            0, // sport
+            0, // dport, update later
+            0, // len, update later
+            0 // checksum, update never
         };
         hdr.report_fixed_header = {
             0, // version
@@ -70,26 +88,19 @@ parser IntReportMirrorParser (packet_in packet,
         packet.extract(hdr.ethernet);
         transition select(packet.lookahead<bit<16>>()) {
 #ifdef WITH_DOUBLE_VLAN_TERMINATION
-            ETHERTYPE_QINQ: parse_vlan_tag;
+            ETHERTYPE_QINQ: strip_vlan;
 #endif // WITH_DOUBLE_VLAN_TERMINATION
-            ETHERTYPE_VLAN &&& 0xEFFF: parse_vlan_tag;
+            ETHERTYPE_VLAN &&& 0xEFFF: strip_vlan;
             default: check_eth_type;
         }
     }
 
-    state parse_vlan_tag {
-        // Required to compute IPv4/UDP length fields when handling INT mirrors
-        // transmitted over the recirculation port. While the original packet
-        // might go out of a tagged port (hence hit an egress_vlan entry with
-        // push_vlan action).
-        // When processing an INT mirror, we always strip the VLAN header from the
-        // report's inner packet.
-        // That's fine since DeepInsight cares only about L3/L4 headers.
+    state strip_vlan {
         fabric_md.vlan_stripped = 1;
         packet.advance(VLAN_HDR_BYTES * 8);
         transition select(packet.lookahead<bit<16>>()) {
-// TODO: support stripping double VLAN tag
 #if defined(WITH_XCONNECT) || defined(WITH_DOUBLE_VLAN_TERMINATION)
+            // TODO: support stripping double VLAN tag
             ETHERTYPE_VLAN: reject;
 #endif // WITH_XCONNECT || WITH_DOUBLE_VLAN_TERMINATION
             default: check_eth_type;
@@ -101,17 +112,19 @@ parser IntReportMirrorParser (packet_in packet,
 #ifdef WITH_SPGW
         transition select(hdr.eth_type.value, fabric_md.int_mirror_md.strip_gtpu) {
             (ETHERTYPE_MPLS, _): strip_mpls;
-            (ETHERTYPE_IPV4, 0): accept;
+            (ETHERTYPE_IPV4, 0): handle_ipv4;
             (ETHERTYPE_IPV4, 1): strip_ipv4_udp_gtpu;
-            (ETHERTYPE_IPV6, 0): accept;
-            (ETHERTYPE_IPV6, 1): strip_ipv6_udp_gtpu;
+            // FIXME: remove ipv6 support or test it
+            //  https://github.com/stratum/fabric-tna/pull/227
+            // (ETHERTYPE_IPV6, 0): parse_ipv6;
+            // (ETHERTYPE_IPV6, 1): strip_ipv6_udp_gtpu;
             default: reject;
         }
 #else
         transition select(hdr.eth_type.value) {
             ETHERTYPE_MPLS: strip_mpls;
-            ETHERTYPE_IPV4: accept;
-            ETHERTYPE_IPV6: accept;
+            ETHERTYPE_IPV4: handle_ipv4;
+            // ETHERTYPE_IPV6: parse_ipv6;
             default: reject;
         }
 #endif // WITH_SPGW
@@ -127,29 +140,43 @@ parser IntReportMirrorParser (packet_in packet,
     state strip_mpls {
         fabric_md.mpls_stripped = 1;
         packet.advance(MPLS_HDR_BYTES * 8);
+        bit<IP_VER_BITS> ip_ver = packet.lookahead<bit<IP_VER_BITS>>();
 #ifdef WITH_SPGW
-        transition select(fabric_md.int_mirror_md.strip_gtpu, packet.lookahead<bit<IP_VER_BITS>>()) {
+        transition select(fabric_md.int_mirror_md.strip_gtpu, ip_ver) {
             (1, IP_VERSION_4): strip_ipv4_udp_gtpu;
-            (1, IP_VERSION_6): strip_ipv6_udp_gtpu;
-            (0, _): accept;
+            // (1, IP_VERSION_6): strip_ipv6_udp_gtpu;
+            (0, IP_VERSION_4): handle_ipv4;
+            // (0, IP_VERSION_6): parse_ipv6;
             default: reject;
         }
 #else
-        transition accept;
+        transition select(ip_ver) {
+            IP_VERSION_4: handle_ipv4;
+            // IP_VERSION_6: parse_ipv6;
+            default: reject;
+        }
 #endif // WITH_SPGW
     }
 
 #ifdef WITH_SPGW
     state strip_ipv4_udp_gtpu {
         packet.advance((IPV4_HDR_BYTES + UDP_HDR_BYTES + GTP_HDR_BYTES) * 8);
-        transition accept;
+        transition handle_ipv4;
     }
 
-    state strip_ipv6_udp_gtpu {
-        packet.advance((IPV6_HDR_BYTES + UDP_HDR_BYTES + GTP_HDR_BYTES) * 8);
+    // state strip_ipv6_udp_gtpu {
+    //     packet.advance((IPV6_HDR_BYTES + UDP_HDR_BYTES + GTP_HDR_BYTES) * 8);
+    //     transition parse_ipv6;
+    // }
+#endif // WITH_SPGW
+
+    state handle_ipv4 {
+        // Extract only the length field, require later to compute the lenght
+        // for the report encap headers.
+        ipv4_t ipv4 = packet.lookahead<ipv4_t>();
+        fabric_md.int_ipv4_len = ipv4.total_len;
         transition accept;
     }
-#endif // WITH_SPGW
 }
 
 #endif // __INT_MIRROR_PARSER__
