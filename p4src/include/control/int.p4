@@ -510,7 +510,7 @@ control IntEgress (
             }
             // FIXME: Too many if statements, we might want to use a table to
             //  reduce stage dependencies.
-            if (fabric_md.int_mirror_md.vlan_stripped == 1) {
+            if (fabric_md.vlan_stripped == 1) {
                 hdr.report_ipv4.total_len = hdr.report_ipv4.total_len
                     - VLAN_HDR_BYTES;
                 hdr.report_udp.len = hdr.report_udp.len
