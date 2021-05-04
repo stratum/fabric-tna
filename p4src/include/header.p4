@@ -318,18 +318,13 @@ header common_egress_metadata_t {
     FabricMirrorType_t    mirror_type;
 }
 
-// Mark "mpls_stripped" to no-overlay since it will share the same PHV with the "rsvd"
-// field in the INT fixed header.
 @pa_auto_init_metadata
-@pa_no_overlay("egress", "fabric_md.mpls_stripped")
 struct fabric_egress_metadata_t {
     bridged_metadata_t    bridged;
     PortId_t              cpu_port;
 #ifdef WITH_SPGW
     bool                  inner_ipv4_checksum_err;
 #endif // WITH_SPGW
-    bit<1>                mpls_stripped;
-    bit<1>                vlan_stripped;
 #ifdef WITH_INT
     int_mirror_metadata_t int_mirror_md;
     int_metadata_t        int_md;

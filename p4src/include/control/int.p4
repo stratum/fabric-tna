@@ -319,9 +319,9 @@ control IntEgress (
                         + ETH_HDR_BYTES + fabric_md.int_ipv4_len;
         hdr.report_fixed_header.nproto = NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER;
         hdr.report_fixed_header.f = 1;
-        // The INT mirror parser will initialize all report headers, we want
-        // only the local one.
+        // The INT mirror parser will initialize all headers, disable unwanted.
         hdr.drop_report_header.setInvalid();
+        hdr.report_mpls.setInvalid();
     }
 
     action do_local_report_encap_mpls(mac_addr_t src_mac, mac_addr_t mon_mac,
@@ -347,9 +347,9 @@ control IntEgress (
                         + ETH_HDR_BYTES + fabric_md.int_ipv4_len;
         hdr.report_fixed_header.nproto = NPROTO_TELEMETRY_DROP_HEADER;
         hdr.report_fixed_header.d = 1;
-        // The INT mirror parser will initialize all report headers, we want
-        // only the drop one.
+
         hdr.local_report_header.setInvalid();
+        hdr.report_mpls.setInvalid();
     }
 
     action do_drop_report_encap_mpls(mac_addr_t src_mac, mac_addr_t mon_mac,
@@ -401,7 +401,6 @@ control IntEgress (
         fabric_md.int_mirror_md.eg_tstamp = eg_prsr_md.global_tstamp[31:0];
         fabric_md.int_mirror_md.ip_eth_type = fabric_md.bridged.base.ip_eth_type;
         fabric_md.int_mirror_md.flow_hash = fabric_md.bridged.base.inner_hash;
-        // fabric_md.int_mirror_md.vlan_stripped set by egress_vlan table
         // fabric_md.int_mirror_md.strip_gtpu set by the parser
     }
 

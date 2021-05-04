@@ -23,18 +23,16 @@ parser IntReportMirrorParser (packet_in packet,
 #ifdef WITH_SPGW
         fabric_md.bridged.spgw.skip_spgw = true; // skip spgw encap
 #endif // WITH_SPGW
-        // Initialize report headers here to allocate on T-PHV and save on PHV
-        // resources.
+        // Initialize report headers here to allocate constant fields on T-PHV
+        // (and save on PHV resources). Note that initializing the full header
+        // with hdr = {...} sets the validity bit to 1. We will disable unwanted
+        // headers in the INT control block.
         hdr.report_mpls = {
             0, // label, update later
             0, // tc
             1, // bos
             DEFAULT_MPLS_TTL // ttl
         };
-        // Initializing the full header with hdr = { ... } sets the validity bit
-        // to 1. We might not need MPLS to forward this report. Set valid later
-        // if needed.
-        hdr.report_mpls.setInvalid();
         hdr.report_ipv4 = {
             4w4, // version
             4w5, // ihl
@@ -63,12 +61,12 @@ parser IntReportMirrorParser (packet_in packet,
             0, // q
             0, // f
             0, // rsvd
-            0, // hw_id, will set later
-            0, // seq_no, will set later
+            0, // hw_id, update later
+            0, // seq_no, update later
             fabric_md.int_mirror_md.ig_tstamp
         };
         hdr.common_report_header = {
-            0, // Will be set by report table
+            0, // switch_id, update later
             fabric_md.int_mirror_md.ig_port,
             fabric_md.int_mirror_md.eg_port,
             fabric_md.int_mirror_md.queue_id
@@ -115,7 +113,6 @@ parser IntReportMirrorParser (packet_in packet,
     }
 
     state strip_vlan {
-        fabric_md.vlan_stripped = 1;
         packet.advance(VLAN_HDR_BYTES * 8);
         transition select(packet.lookahead<bit<16>>()) {
 // TODO: support stripping double VLAN tag
@@ -151,13 +148,10 @@ parser IntReportMirrorParser (packet_in packet,
 
     // We expect MPLS to be present only for egress-to-egress clones for INT
     // reporting, in which case we need to remove the MPLS header as not
-    // supported by the collector. For all other cases, the MPLS label is
-    // always popped in ingress and pushed again in egress (if present in
-    // bridged metadata).
-    // After stripping the MPLS header, we still need to fix the ethertype.
-    // We will do this in the beginning of the INT control block.
+    // supported by the collector. After stripping the MPLS header, we still
+    // need to fix the ethertype. We will do this at the beginning of the INT
+    // control block.
     state strip_mpls {
-        fabric_md.mpls_stripped = 1;
         packet.advance(MPLS_HDR_BYTES * 8);
         bit<IP_VER_BITS> ip_ver = packet.lookahead<bit<IP_VER_BITS>>();
 #ifdef WITH_SPGW
