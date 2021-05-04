@@ -67,13 +67,13 @@ parser IntReportMirrorParser (packet_in packet,
     state check_ethernet {
         fake_ethernet_t tmp = packet.lookahead<fake_ethernet_t>();
         transition select(tmp.ether_type) {
-            ETHERTYPE_CPU_LOOPBACK_INGRESS: parse_fake_ethernet;
-            ETHERTYPE_CPU_LOOPBACK_EGRESS: parse_fake_ethernet;
+            ETHERTYPE_CPU_LOOPBACK_INGRESS: set_cpu_loopback_ingress;
+            ETHERTYPE_CPU_LOOPBACK_EGRESS: set_cpu_loopback_ingress;
             default: parse_eth_hdr;
         }
     }
 
-    state parse_fake_ethernet {
+    state set_cpu_loopback_ingress {
         hdr.fake_ethernet.setValid();
         // We will generate the INT report, which will be re-circulated back to the Ingress pipe.
         // We need to set it back to ETHERTYPE_CPU_LOOPBACK_INGRESS to enable processing

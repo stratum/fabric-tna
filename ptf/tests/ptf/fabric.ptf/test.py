@@ -2629,7 +2629,7 @@ class FabricPacketOutLoopbackModeTest(FabricTest):
             self.doRunTest(pkt)
 
 @group("int")
-class FabricCheckIntReportLoopbackMode(IntTest):
+class FabricIntLocalReportLoopbackModeTest(IntTest):
 
     @tvsetup
     @autocleanup
