@@ -174,7 +174,7 @@ header common_report_header_t {
 // Telemetry drop report header
 header drop_report_header_t {
     bit<8>  drop_reason;
-    bit<16> pad;
+    @padding bit<16> pad;
 }
 
 // Switch Local Report Header

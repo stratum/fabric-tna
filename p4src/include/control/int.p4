@@ -280,24 +280,15 @@ control IntEgress (
                                 ipv4_addr_t src_ip, ipv4_addr_t mon_ip,
                                 l4_port_t mon_port, bit<32> switch_id) {
         // Constant fields are initialized in int_mirror_parser.p4.
-        hdr.report_ethernet.setValid();
         hdr.report_ethernet.dst_addr = mon_mac;
         hdr.report_ethernet.src_addr = src_mac;
-        hdr.report_eth_type.setValid();
-
-        hdr.report_ipv4.setValid();
         hdr.report_ipv4.identification = ip_id_gen.get();
         hdr.report_ipv4.src_addr = src_ip;
         hdr.report_ipv4.dst_addr = mon_ip;
-
-        hdr.report_udp.setValid();
         hdr.report_udp.dport = mon_port;
-
-        hdr.report_fixed_header.setValid();
         hdr.report_fixed_header.seq_no = get_seq_number.execute(hdr.report_fixed_header.hw_id);
         hdr.common_report_header.switch_id = switch_id;
-        // Fix the ethertype since we may have stripped the MPLS header in the
-        // parser. Otherwise, ethertype would still be MPLS.
+        // Fix ethertype if we have stripped the MPLS header in the parser.
         hdr.eth_type.value = fabric_md.int_mirror_md.ip_eth_type;
         // Remove the INT mirror metadata to prevent egress mirroring again.
         eg_dprsr_md.mirror_type = (bit<3>)FabricMirrorType_t.INVALID;
@@ -318,10 +309,10 @@ control IntEgress (
                         + REPORT_FIXED_HEADER_BYTES + LOCAL_REPORT_HEADER_BYTES
                         + ETH_HDR_BYTES + fabric_md.int_ipv4_len;
         hdr.report_fixed_header.nproto = NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER;
+        hdr.report_fixed_header.d = 0;
+        hdr.report_fixed_header.q = 0;
         hdr.report_fixed_header.f = 1;
-        // The INT mirror parser will initialize all headers, disable unwanted.
-        hdr.drop_report_header.setInvalid();
-        hdr.report_mpls.setInvalid();
+        hdr.local_report_header.setValid();
     }
 
     action do_local_report_encap_mpls(mac_addr_t src_mac, mac_addr_t mon_mac,
@@ -347,9 +338,9 @@ control IntEgress (
                         + ETH_HDR_BYTES + fabric_md.int_ipv4_len;
         hdr.report_fixed_header.nproto = NPROTO_TELEMETRY_DROP_HEADER;
         hdr.report_fixed_header.d = 1;
-
-        hdr.local_report_header.setInvalid();
-        hdr.report_mpls.setInvalid();
+        hdr.report_fixed_header.q = 0;
+        hdr.report_fixed_header.f = 0;
+        hdr.drop_report_header.setValid();
     }
 
     action do_drop_report_encap_mpls(mac_addr_t src_mac, mac_addr_t mon_mac,

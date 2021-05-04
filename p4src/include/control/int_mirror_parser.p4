@@ -23,62 +23,70 @@ parser IntReportMirrorParser (packet_in packet,
 #ifdef WITH_SPGW
         fabric_md.bridged.spgw.skip_spgw = true; // skip spgw encap
 #endif // WITH_SPGW
-        // Initialize report headers here to allocate constant fields on T-PHV
-        // (and save on PHV resources). Note that initializing the full header
-        // with hdr = {...} sets the validity bit to 1. We will disable unwanted
-        // headers in the INT control block.
-        hdr.report_mpls = {
-            0, // label, update later
-            0, // tc
-            1, // bos
-            DEFAULT_MPLS_TTL // ttl
-        };
-        hdr.report_ipv4 = {
-            4w4, // version
-            4w5, // ihl
-            INT_DSCP,
-            2w0, // ecn
-            0, // total_length, update later
-            0, // identification, update later
-            0, // flags,
-            0, // frag_offset
-            DEFAULT_IPV4_TTL,
-            PROTO_UDP,
-            0, // checksum, update later
-            0, // Src IP, update later
-            0  // Dst IP, update later
-        };
-        hdr.report_udp = {
-            0, // sport
-            0, // dport, update later
-            0, // len, update later
-            0 // checksum, update never
-        };
-        hdr.report_fixed_header = {
-            0, // version
-            NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER,
-            0, // d
-            0, // q
-            0, // f
-            0, // rsvd
-            0, // hw_id, update later
-            0, // seq_no, update later
-            fabric_md.int_mirror_md.ig_tstamp
-        };
-        hdr.common_report_header = {
-            0, // switch_id, update later
-            fabric_md.int_mirror_md.ig_port,
-            fabric_md.int_mirror_md.eg_port,
-            fabric_md.int_mirror_md.queue_id
-        };
-        hdr.local_report_header = {
-            fabric_md.int_mirror_md.queue_occupancy,
-            fabric_md.int_mirror_md.eg_tstamp
-        };
-        hdr.drop_report_header = {
-            fabric_md.int_mirror_md.drop_reason,
-            0 // pad
-        };
+        // Initialize report headers here to allocate constant fields on the
+        // T-PHV (and save on PHV resources).
+        /** report_ethernet **/
+        hdr.report_ethernet.setValid();
+        // hdr.report_ethernet.dst_addr = update later
+        // hdr.report_ethernet.src_addr = update later
+
+        /** report_eth_type **/
+        hdr.report_eth_type.setValid();
+        // hdr.report_eth_type.value = update later
+
+        /** report_mpls (set valid later) **/
+        // hdr.report_mpls.label = update later
+        hdr.report_mpls.tc = 0;
+        hdr.report_mpls.bos = 0;
+        hdr.report_mpls.ttl = DEFAULT_MPLS_TTL;
+
+        /** report_ipv4 **/
+        hdr.report_ipv4.setValid();
+        hdr.report_ipv4.version = 4w4;
+        hdr.report_ipv4.ihl = 4w5;
+        hdr.report_ipv4.dscp = INT_DSCP;
+        hdr.report_ipv4.ecn = 2w0;
+        // hdr.report_ipv4.total_len = update later
+        // hdr.report_ipv4.identification = update later
+        hdr.report_ipv4.flags = 0;
+        hdr.report_ipv4.frag_offset = 0;
+        hdr.report_ipv4.ttl = DEFAULT_IPV4_TTL;
+        hdr.report_ipv4.protocol = PROTO_UDP;
+        // hdr.report_ipv4.hdr_checksum = update later
+        // hdr.report_ipv4.src_addr = update later
+        // hdr.report_ipv4.dst_addr = update later
+
+        /** report_udp **/
+        hdr.report_udp.setValid();
+        hdr.report_udp.sport = 0;
+        // hdr.report_udp.dport = update later
+        // hdr.report_udp.len = update later
+        // hdr.report_udp.checksum = update never!
+
+        /** report_fixed_header **/
+        hdr.report_fixed_header.setValid();
+        hdr.report_fixed_header.ver = 0;
+        hdr.report_fixed_header.nproto = NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER;
+        // hdr.report_fixed_header.d = update later
+        // hdr.report_fixed_header.q = update later
+        // hdr.report_fixed_header.f = update later
+        hdr.report_fixed_header.rsvd = 0;
+        // hdr.report_fixed_header.hw_id = update later
+        // hdr.report_fixed_header.seq_no = update later
+        hdr.report_fixed_header.ig_tstamp = fabric_md.int_mirror_md.ig_tstamp;
+
+        /** common_report_header **/
+        hdr.common_report_header.setValid();
+        // hdr.common_report_header.switch_id = update later
+        hdr.common_report_header.ig_port = fabric_md.int_mirror_md.ig_port;
+        hdr.common_report_header.eg_port = fabric_md.int_mirror_md.eg_port;
+        hdr.common_report_header.queue_id = fabric_md.int_mirror_md.queue_id;
+
+        /** local/drop_report_header (set valid later) **/
+        hdr.local_report_header.queue_occupancy = fabric_md.int_mirror_md.queue_occupancy;
+        hdr.local_report_header.eg_tstamp = fabric_md.int_mirror_md.eg_tstamp;
+        hdr.drop_report_header.drop_reason = fabric_md.int_mirror_md.drop_reason;
+
         transition check_ethernet;
     }
 
@@ -146,11 +154,8 @@ parser IntReportMirrorParser (packet_in packet,
 #endif // WITH_SPGW
     }
 
-    // We expect MPLS to be present only for egress-to-egress clones for INT
-    // reporting, in which case we need to remove the MPLS header as not
-    // supported by the collector. After stripping the MPLS header, we still
-    // need to fix the ethertype. We will do this at the beginning of the INT
-    // control block.
+    // We expect MPLS to be present only for mirrored packets (ingress-to-egress
+    // or egress-to-egress). We will fix the ethertype in the INT control block.
     state strip_mpls {
         packet.advance(MPLS_HDR_BYTES * 8);
         bit<IP_VER_BITS> ip_ver = packet.lookahead<bit<IP_VER_BITS>>();
@@ -184,8 +189,8 @@ parser IntReportMirrorParser (packet_in packet,
 #endif // WITH_SPGW
 
     state handle_ipv4 {
-        // Extract only the length field, require later to compute the lenght
-        // for the report encap headers.
+        // Extract only the length, required later to compute the lenght of the
+        // report encap headers.
         ipv4_t ipv4 = packet.lookahead<ipv4_t>();
         fabric_md.int_ipv4_len = ipv4.total_len;
         transition accept;
