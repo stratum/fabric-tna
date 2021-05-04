@@ -2628,6 +2628,110 @@ class FabricPacketOutLoopbackModeTest(FabricTest):
             )
             self.doRunTest(pkt)
 
+@group("int")
+class FabricIntLocalReportLoopbackModeTest(IntTest):
+
+    @tvsetup
+    @autocleanup
+    def doRunTest(self,
+                  pkt,
+                  next_hop_mac,
+                  is_device_spine,
+                  send_report_to_spine=False):
+
+        # Set collector, report table, and mirror sessions
+        self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine)
+
+        self.runIPv4UnicastTest(
+            pkt,
+            next_hop_mac=next_hop_mac,
+            prefix_len=24,
+            no_send=True
+        )
+
+        exp_pkt_1 = (
+                Ether(type=ETH_TYPE_CPU_LOOPBACK_INGRESS, src=ZERO_MAC, dst=ZERO_MAC) / pkt
+        )
+        routed_pkt = pkt_decrement_ttl(pkt_route(pkt, next_hop_mac))
+        exp_pkt_2 = (
+                Ether(type=ETH_TYPE_CPU_LOOPBACK_EGRESS, src=ZERO_MAC, dst=ZERO_MAC)
+                / routed_pkt
+        )
+
+        # The expected INT report packet
+        exp_int_report_pkt = self.build_int_local_report(
+            SWITCH_MAC,
+            INT_COLLECTOR_MAC,
+            SWITCH_IPV4,
+            INT_COLLECTOR_IPV4,
+            self.port1,
+            self.port2,
+            SWITCH_ID,
+            routed_pkt,
+            is_device_spine,
+            send_report_to_spine,
+        ).exp_pkt
+
+        exp_int_report_pkt_loopback = (
+            Ether(type=ETH_TYPE_CPU_LOOPBACK_EGRESS, src=ZERO_MAC, dst=ZERO_MAC) / exp_int_report_pkt
+        )
+        exp_int_report_pkt_masked = Mask(exp_int_report_pkt_loopback)
+        exp_int_report_pkt_masked.set_do_not_care_scapy(Ether, "src")
+        exp_int_report_pkt_masked.set_do_not_care_scapy(Ether, "dst")
+        # IPv4 identification
+        # The reason we also ignore IP checksum is because the `id` field is
+        # random.
+        exp_int_report_pkt_masked.set_do_not_care_scapy(IP, "id")
+        exp_int_report_pkt_masked.set_do_not_care_scapy(IP, "chksum")
+        exp_int_report_pkt_masked.set_do_not_care_scapy(UDP, "chksum")
+        exp_int_report_pkt_masked.set_do_not_care_scapy(INT_L45_REPORT_FIXED, "ingress_tstamp")
+        exp_int_report_pkt_masked.set_do_not_care_scapy(INT_L45_REPORT_FIXED, "seq_no")
+        exp_int_report_pkt_masked.set_do_not_care_scapy(INT_L45_LOCAL_REPORT, "queue_id")
+        exp_int_report_pkt_masked.set_do_not_care_scapy(INT_L45_LOCAL_REPORT, "queue_occupancy")
+        exp_int_report_pkt_masked.set_do_not_care_scapy(INT_L45_LOCAL_REPORT, "egress_tstamp")
+
+        # 1. step: packet-out straight to out port
+        self.send_packet_out(
+            self.build_packet_out(
+                pkt, self.port1, cpu_loopback_mode=CPU_LOOPBACK_MODE_INGRESS
+            )
+        )
+        self.verify_packet(exp_pkt_1, self.port1)
+
+        # 2. step: send packet for normal ingress/egress processing
+        self.send_packet(self.port1, exp_pkt_1)
+        self.verify_packet(exp_pkt_2, self.port2)
+        self.verify_packet(exp_int_report_pkt_masked, self.port3)
+
+        # 3. step: packet-in
+        self.send_packet(self.port2, exp_pkt_2)
+        self.verify_packet_in(routed_pkt, self.port2)
+        self.send_packet(self.port3, exp_int_report_pkt_loopback)
+        self.verify_packet_in(exp_int_report_pkt, self.port3)
+        self.verify_no_other_packets()
+
+
+    def runTest(self):
+        print("")
+        for is_device_spine in [False, True]:
+            for pkt_type in PKT_TYPES_UNDER_TEST:
+                print(
+                    "Testing pkt={}, is_device_spine={}...".format(
+                        pkt_type,
+                        is_device_spine
+                    )
+                )
+                pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
+                    eth_src=HOST1_MAC,
+                    eth_dst=SWITCH_MAC,
+                    ip_src=HOST1_IPV4,
+                    ip_dst=HOST2_IPV4,
+                    pktlen=MIN_PKT_LEN,
+                )
+                self.doRunTest(pkt,
+                               HOST2_MAC,
+                               is_device_spine)
+
 
 class FabricOptimizedFieldDetectorTest(FabricTest):
     """Finds action paramters or header fields that were optimized out by the

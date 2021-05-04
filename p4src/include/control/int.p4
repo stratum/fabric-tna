@@ -516,6 +516,15 @@ control IntEgress (
                 hdr.report_udp.len = hdr.report_udp.len
                     - VLAN_HDR_BYTES;
             }
+
+            // For the INT report, Fake Ethernet is going to be moved to the beginning of a packet,
+            // so that we need to subtract it from the packet length.
+            if (hdr.fake_ethernet.isValid()) {
+                hdr.report_ipv4.total_len = hdr.report_ipv4.total_len
+                    - ETH_HDR_BYTES;
+                hdr.report_udp.len = hdr.report_udp.len
+                    - ETH_HDR_BYTES;
+            }
         } else {
             // Regular packet. Initialize INT mirror metadata but let
             // filter decide whether to generate a mirror or not.
