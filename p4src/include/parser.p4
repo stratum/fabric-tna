@@ -55,7 +55,7 @@ parser FabricIngressParser (packet_in  packet,
         packet.extract(hdr.fake_ethernet);
         // Will punt to CPU as-is. No need to parse further.
         transition accept;
-     }
+    }
 
     state parse_packet_out {
         packet.extract(hdr.packet_out);
