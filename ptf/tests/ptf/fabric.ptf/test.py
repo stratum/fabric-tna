@@ -2676,6 +2676,8 @@ class FabricIntLocalReportLoopbackModeTest(IntTest):
             Ether(type=ETH_TYPE_CPU_LOOPBACK_EGRESS, src=ZERO_MAC, dst=ZERO_MAC) / exp_int_report_pkt
         )
         exp_int_report_pkt_masked = Mask(exp_int_report_pkt_loopback)
+        exp_int_report_pkt_masked.set_do_not_care_scapy(Ether, "src")
+        exp_int_report_pkt_masked.set_do_not_care_scapy(Ether, "dst")
         # IPv4 identification
         # The reason we also ignore IP checksum is because the `id` field is
         # random.

@@ -354,7 +354,8 @@ struct fabric_egress_metadata_t {
 }
 
 header fake_ethernet_t {
-    bit<96> offset;
+    @padding bit<48> _pad0;
+    @padding bit<48> _pad1;
     bit<16> ether_type;
 }
 
