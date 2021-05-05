@@ -273,11 +273,18 @@ public class FabricInterpreter extends AbstractFabricHandlerBehavior
                 .findFirst();
 
         if (packetMetadata.isPresent()) {
-            ImmutableByteSequence portByteSequence = packetMetadata.get().value();
-            short s = portByteSequence.asReadOnlyBuffer().getShort();
-            ConnectPoint receivedFrom = new ConnectPoint(deviceId, PortNumber.portNumber(s));
-            ByteBuffer rawData = ByteBuffer.wrap(packetIn.data().asArray());
-            return new DefaultInboundPacket(receivedFrom, ethPkt, rawData);
+            try {
+                ImmutableByteSequence portByteSequence = packetMetadata.get()
+                        .value().fit(P4InfoConstants.INGRESS_PORT_BITWIDTH);
+                short s = portByteSequence.asReadOnlyBuffer().getShort();
+                ConnectPoint receivedFrom = new ConnectPoint(deviceId, PortNumber.portNumber(s));
+                ByteBuffer rawData = ByteBuffer.wrap(packetIn.data().asArray());
+                return new DefaultInboundPacket(receivedFrom, ethPkt, rawData);
+            } catch (ImmutableByteSequence.ByteSequenceTrimException e) {
+                throw new PiInterpreterException(format(
+                        "Malformed metadata '%s' in packet-in received from '%s': %s",
+                        P4InfoConstants.INGRESS_PORT, deviceId, packetIn));
+            }
         } else {
             throw new PiInterpreterException(format(
                     "Missing metadata '%s' in packet-in received from '%s': %s",
