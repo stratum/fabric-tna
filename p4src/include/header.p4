@@ -163,7 +163,6 @@ header gtpu_ext_psc_t {
 #ifdef WITH_SPGW
 @flexible
 struct spgw_bridged_metadata_t {
-    bit<16>         ipv4_len_for_encap;
     bool            needs_gtpu_encap;
     bool            skip_spgw;
     bool            skip_egress_pdr_ctr;

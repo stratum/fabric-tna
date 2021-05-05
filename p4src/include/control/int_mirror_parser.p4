@@ -178,7 +178,7 @@ parser IntReportMirrorParser (packet_in packet,
 
     state strip_ipv4_udp_gtpu_psc {
         packet.advance((IPV4_HDR_BYTES + UDP_HDR_BYTES + GTPU_HDR_BYTES
-                + GTPU_OPTIONS_HDR_BYTES + GTPU_EXT_PSC_BYTES) * 8);
+                + GTPU_OPTIONS_HDR_BYTES + GTPU_EXT_PSC_HDR_BYTES) * 8);
         transition handle_ipv4;
     }
 #endif // WITH_SPGW

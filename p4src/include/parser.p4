@@ -180,6 +180,7 @@ parser FabricIngressParser (packet_in  packet,
         gtpu_t gtpu = packet.lookahead<gtpu_t>();
         transition select(hdr.udp.dport, gtpu.version, gtpu.msgtype) {
             (GTPU_UDP_PORT, GTP_V1, GTPU_GPDU): parse_gtpu;
+            // Treat GTP control traffic as payload.
             default: accept;
         }
     }
@@ -360,11 +361,11 @@ parser FabricEgressParser (packet_in packet,
         hdr.outer_gtpu.version           = GTP_V1;
         hdr.outer_gtpu.pt                = GTP_PROTOCOL_TYPE_GTP;
         hdr.outer_gtpu.spare             = 0;
-        // hdr.outer_gtpu.ex_flag        = update later;
+        // hdr.outer_gtpu.ex_flag        = update later
         hdr.outer_gtpu.seq_flag          = 0;
         hdr.outer_gtpu.npdu_flag         = 0;
         hdr.outer_gtpu.msgtype           = GTPU_GPDU;
-        hdr.outer_gtpu.msglen            = fabric_md.bridged.spgw.ipv4_len_for_encap;
+        // hdr.outer_gtpu.msglen         = update later
         hdr.outer_gtpu.teid              = fabric_md.bridged.spgw.gtpu_teid;
         /** outer_gtpu_options **/
         hdr.outer_gtpu_options.seq_num   = 0;
@@ -575,6 +576,8 @@ control FabricEgressDeparser(packet_out packet,
         packet.emit(hdr.outer_ipv4);
         packet.emit(hdr.outer_udp);
         packet.emit(hdr.outer_gtpu);
+        packet.emit(hdr.outer_gtpu_options);
+        packet.emit(hdr.outer_gtpu_ext_psc);
 #endif // WITH_SPGW
         packet.emit(hdr.ipv4);
         packet.emit(hdr.ipv6);

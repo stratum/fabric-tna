@@ -38,8 +38,8 @@ MIN_PKT_LEN = 80
 
 UDP_GTP_PORT = 2152
 DEFAULT_GTP_TUNNEL_SPORT = 1234  # arbitrary, but different from 2152
-GTPU_EXT_PDU_TYPE_DL = 0
-GTPU_EXT_PDU_TYPE_UL = 1
+GTPU_EXT_PSC_TYPE_DL = 0
+GTPU_EXT_PSC_TYPE_UL = 1
 
 ETH_TYPE_ARP = 0x0806
 ETH_TYPE_IPV4 = 0x0800
@@ -218,9 +218,9 @@ BRIDGED_MD_TYPE_INGRESS_MIRROR = 3
 
 # Size for different headers
 if testutils.test_param_get("profile") == "fabric-spgw-int":
-    BMD_BYTES = 44
+    BMD_BYTES = 42
 elif testutils.test_param_get("profile") == "fabric-spgw":
-    BMD_BYTES = 40
+    BMD_BYTES = 38
 elif testutils.test_param_get("profile") == "fabric-int":
     BMD_BYTES = 26
 elif testutils.test_param_get("profile") == "fabric":
@@ -358,11 +358,11 @@ def simple_gtp_packet(
     ip_ttl=64,
     gtp_teid=0xff, # dummy teid
     pktlen=136,
-    ext_pdu_type=None,
-    ext_pdu_qfi=0
+    ext_psc_type=None,
+    ext_psc_qfi=0
 ):
     pktlen = pktlen - IP_HDR_BYTES - UDP_HDR_BYTES - GTPU_HDR_BYTES
-    if ext_pdu_type is not None:
+    if ext_psc_type is not None:
         pktlen = pktlen - GTPU_OPTIONS_HDR_BYTES - GTPU_EXT_PSC_BYTES
     pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(ip_src=ip_src,
                                                             ip_dst=ip_dst,
@@ -372,8 +372,8 @@ def simple_gtp_packet(
         out_ipv4_src=ip_src,
         out_ipv4_dst=ip_dst,
         teid=gtp_teid,
-        ext_pdu_type=ext_pdu_type,
-        ext_pdu_qfi=ext_pdu_qfi
+        ext_psc_type=ext_psc_type,
+        ext_psc_qfi=ext_psc_qfi
     )
     gtp_pkt[Ether].src = eth_src
     gtp_pkt[Ether].dst = eth_dst
@@ -394,22 +394,22 @@ def simple_gtp_icmp_packet(*args, **kwargs):
 
 
 def simple_gtp_psc_ul_tcp_packet(*args, **kwargs):
-    return simple_gtp_packet("tcp", *args, ext_pdu_type=GTPU_EXT_PDU_TYPE_UL, **kwargs)
+    return simple_gtp_packet("tcp", *args, ext_psc_type=GTPU_EXT_PSC_TYPE_UL, **kwargs)
 
 def simple_gtp_psc_dl_tcp_packet(*args, **kwargs):
-    return simple_gtp_packet("tcp", *args, ext_pdu_type=GTPU_EXT_PDU_TYPE_DL, **kwargs)
+    return simple_gtp_packet("tcp", *args, ext_psc_type=GTPU_EXT_PSC_TYPE_DL, **kwargs)
 
 def simple_gtp_psc_ul_udp_packet(*args, **kwargs):
-    return simple_gtp_packet("udp", *args, ext_pdu_type=GTPU_EXT_PDU_TYPE_UL, **kwargs)
+    return simple_gtp_packet("udp", *args, ext_psc_type=GTPU_EXT_PSC_TYPE_UL, **kwargs)
 
 def simple_gtp_psc_dl_udp_packet(*args, **kwargs):
-    return simple_gtp_packet("udp", *args, ext_pdu_type=GTPU_EXT_PDU_TYPE_DL, **kwargs)
+    return simple_gtp_packet("udp", *args, ext_psc_type=GTPU_EXT_PSC_TYPE_DL, **kwargs)
 
 def simple_gtp_psc_ul_icmp_packet(*args, **kwargs):
-    return simple_gtp_packet("tcp", *args, ext_pdu_type=GTPU_EXT_PDU_TYPE_UL, **kwargs)
+    return simple_gtp_packet("tcp", *args, ext_psc_type=GTPU_EXT_PSC_TYPE_UL, **kwargs)
 
 def simple_gtp_psc_dl_icmp_packet(*args, **kwargs):
-    return simple_gtp_packet("icmp", *args, ext_pdu_type=GTPU_EXT_PDU_TYPE_DL, **kwargs)
+    return simple_gtp_packet("icmp", *args, ext_psc_type=GTPU_EXT_PSC_TYPE_DL, **kwargs)
 
 # Embed the above functions in the testutils package.
 setattr(testutils, "simple_sctp_packet", simple_sctp_packet)
@@ -479,8 +479,8 @@ def pkt_add_gtp(
     teid,
     sport=DEFAULT_GTP_TUNNEL_SPORT,
     dport=UDP_GTP_PORT,
-    ext_pdu_type=None,
-    ext_pdu_qfi=None,
+    ext_psc_type=None,
+    ext_psc_qfi=None,
 ):
     gtp_pkt = (
         Ether(src=pkt[Ether].src, dst=pkt[Ether].dst)
@@ -488,9 +488,9 @@ def pkt_add_gtp(
         / UDP(sport=sport, dport=dport, chksum=0)
         / GTP_U_Header(gtp_type=255, teid=teid)
     )
-    if ext_pdu_type is not None:
+    if ext_psc_type is not None:
         # Add QoS Flow Identifier (QFI) as an extension header (required for 5G RAN)
-        gtp_pkt = gtp_pkt / GTPPDUSessionContainer(type=ext_pdu_type, QFI=ext_pdu_qfi)
+        gtp_pkt = gtp_pkt / GTPPDUSessionContainer(type=ext_psc_type, QFI=ext_psc_qfi)
     return gtp_pkt / pkt[Ether].payload
 
 
@@ -2054,6 +2054,14 @@ class SpgwSimpleTest(IPv4UnicastTest):
             tunnel_dst_addr=s1u_enb_addr,
         )
 
+    def enable_encap_with_psc(self):
+        self.send_request_add_entry_to_action(
+            "FabricEgress.spgw.gtpu_encap",
+            None,
+            "FabricEgress.spgw.gtpu_with_psc",
+            [],
+        )
+
     def reset_pdr_counters(self, ctr_idx):
         """Reset the ingress and egress PDR counter packet and byte counts to
         0 for the given index.
@@ -2080,7 +2088,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             PDR_COUNTER_EGRESS, ctr_idx, "BOTH", exp_egress_bytes, exp_egress_pkts,
         )
 
-    def runUplinkTest(self, ue_out_pkt, tagged1, tagged2, is_next_hop_spine):
+    def runUplinkTest(self, ue_out_pkt, tagged1, tagged2, with_psc, is_next_hop_spine):
         upstream_mac = HOST2_MAC
 
         gtp_pkt = pkt_add_gtp(
@@ -2088,6 +2096,8 @@ class SpgwSimpleTest(IPv4UnicastTest):
             out_ipv4_src=S1U_ENB_IPV4,
             out_ipv4_dst=S1U_SGW_IPV4,
             teid=UPLINK_TEID,
+            ext_psc_type=GTPU_EXT_PSC_TYPE_UL if with_psc else None,
+            ext_psc_qfi=0,
         )
         gtp_pkt[Ether].src = S1U_ENB_MAC
         gtp_pkt[Ether].dst = SWITCH_MAC
@@ -2131,6 +2141,8 @@ class SpgwSimpleTest(IPv4UnicastTest):
         egress_bytes = (
             ingress_bytes + BMD_BYTES - IP_HDR_BYTES - UDP_HDR_BYTES - GTPU_HDR_BYTES
         )
+        if with_psc:
+            egress_bytes = egress_bytes - GTPU_OPTIONS_HDR_BYTES - GTPU_EXT_PSC_BYTES
 
         # Verify the Ingress and Egress PDR counters
         self.verify_pdr_counters(UPLINK_PDR_CTR_IDX, ingress_bytes, egress_bytes, 1, 1)
@@ -2255,7 +2267,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             self.verify_pdr_counters(UPLINK_PDR_CTR_IDX, uplink_ingress_bytes, 0, 1, 0)
             self.verify_pdr_counters(DOWNLINK_PDR_CTR_IDX, 0, 0, 0, 0)
 
-    def runDownlinkTest(self, pkt, tagged1, tagged2, is_next_hop_spine):
+    def runDownlinkTest(self, pkt, tagged1, tagged2, with_psc, is_next_hop_spine):
         exp_pkt = pkt.copy()
         exp_pkt[Ether].src = SWITCH_MAC
         exp_pkt[Ether].dst = S1U_ENB_MAC
@@ -2266,6 +2278,8 @@ class SpgwSimpleTest(IPv4UnicastTest):
             out_ipv4_src=S1U_SGW_IPV4,
             out_ipv4_dst=S1U_ENB_IPV4,
             teid=DOWNLINK_TEID,
+            ext_psc_type=GTPU_EXT_PSC_TYPE_DL if with_psc else None,
+            ext_psc_qfi=0
         )
         if is_next_hop_spine:
             exp_pkt = pkt_add_mpls(exp_pkt, MPLS_LABEL_2, DEFAULT_MPLS_TTL)
@@ -2279,6 +2293,9 @@ class SpgwSimpleTest(IPv4UnicastTest):
             ue_addr=UE1_IPV4,
             ctr_id=DOWNLINK_PDR_CTR_IDX,
         )
+
+        if with_psc:
+            self.enable_encap_with_psc()
 
         # Clear SPGW counters before sending the packet
         self.reset_pdr_counters(DOWNLINK_PDR_CTR_IDX)

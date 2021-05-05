@@ -376,9 +376,6 @@ control SpgwIngress(
                 // Nothing to be done immediately for forwarding or encapsulation.
                 // Forwarding is done by other parts of fabric.p4, and
                 // encapsulation is done in the egress
-
-                // Needed for correct GTPU encapsulation in egress
-                fabric_md.bridged.spgw.ipv4_len_for_encap = hdr.ipv4.total_len;
             }
         }
     }
@@ -415,14 +412,17 @@ control SpgwEgress(
         hdr.outer_ipv4.setValid();
         hdr.outer_udp.setValid();
         hdr.outer_gtpu.setValid();
-        hdr.outer_ipv4.total_len = fabric_md.bridged.spgw.ipv4_len_for_encap + outer_ipv4_len_additive;
-        hdr.outer_udp.len = fabric_md.bridged.spgw.ipv4_len_for_encap + outer_udp_len_additive;
+        hdr.outer_gtpu.msglen = hdr.ipv4.total_len;
     }
 
     // Do regular GTP-U encap.
     action gtpu_only() {
         _encap_common();
         hdr.outer_gtpu.ex_flag = 0;
+        hdr.outer_ipv4.total_len = hdr.ipv4.total_len
+                + IPV4_HDR_BYTES + UDP_HDR_BYTES + GTPU_HDR_BYTES;
+        hdr.outer_udp.len = hdr.ipv4.total_len
+                + UDP_HDR_BYTES + GTPU_HDR_BYTES;
 #ifdef WITH_INT
         fabric_md.int_mirror_md.strip_gtpu = GtpuPresence.GTPU_ONLY;
 #endif // WITH_INT
@@ -434,6 +434,12 @@ control SpgwEgress(
         hdr.outer_gtpu.ex_flag = 1;
         hdr.outer_gtpu_options.setValid();
         hdr.outer_gtpu_ext_psc.setValid();
+        hdr.outer_ipv4.total_len = hdr.ipv4.total_len
+                + IPV4_HDR_BYTES + UDP_HDR_BYTES + GTPU_HDR_BYTES
+                + GTPU_OPTIONS_HDR_BYTES + GTPU_EXT_PSC_HDR_BYTES;
+        hdr.outer_udp.len = hdr.ipv4.total_len
+                + UDP_HDR_BYTES + GTPU_HDR_BYTES
+                + GTPU_OPTIONS_HDR_BYTES + GTPU_EXT_PSC_HDR_BYTES;
 #ifdef WITH_INT
         fabric_md.int_mirror_md.strip_gtpu = GtpuPresence.GTPU_WITH_PSC;
 #endif // WITH_INT

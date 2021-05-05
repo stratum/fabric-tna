@@ -1300,11 +1300,12 @@ class FabricSpgwDownlinkEcmpTest(SpgwSimpleTest):
 class FabricSpgwDownlinkTest(SpgwSimpleTest):
     @tvsetup
     @autocleanup
-    def doRunTest(self, pkt, tagged1, tagged2, is_next_hop_spine, tc_name):
+    def doRunTest(self, pkt, tagged1, tagged2, with_psc, is_next_hop_spine, tc_name):
         self.runDownlinkTest(
             pkt=pkt,
             tagged1=tagged1,
             tagged2=tagged2,
+            with_psc=with_psc,
             is_next_hop_spine=is_next_hop_spine,
         )
 
@@ -1312,32 +1313,33 @@ class FabricSpgwDownlinkTest(SpgwSimpleTest):
         print("")
         for vlan_conf, tagged in vlan_confs.items():
             for pkt_type in PKT_TYPES_UNDER_TEST:
-                for is_next_hop_spine in [False, True]:
-                    if is_next_hop_spine and tagged[1]:
-                        continue
-                    tc_name = (
-                        "VLAN_"
-                        + vlan_conf
-                        + "_"
-                        + pkt_type
-                        + "_is_next_hop_spine_"
-                        + str(is_next_hop_spine)
-                    )
-                    print(
-                        "Testing VLAN={}, pkt={}, is_next_hop_spine={}...".format(
-                            vlan_conf, pkt_type, is_next_hop_spine
+                for with_psc in [False, True]:
+                    for is_next_hop_spine in [False, True]:
+                        if is_next_hop_spine and tagged[1]:
+                            continue
+                        tc_name = (
+                            "VLAN_"
+                            + vlan_conf
+                            + "_"
+                            + pkt_type
+                            + "_is_next_hop_spine_"
+                            + str(is_next_hop_spine)
                         )
-                    )
-                    pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
-                        eth_src=HOST1_MAC,
-                        eth_dst=SWITCH_MAC,
-                        ip_src=HOST1_IPV4,
-                        ip_dst=UE1_IPV4,
-                        pktlen=MIN_PKT_LEN,
-                    )
-                    self.doRunTest(
-                        pkt, tagged[0], tagged[1], is_next_hop_spine, tc_name=tc_name,
-                    )
+                        print(
+                            "Testing VLAN={}, pkt={}, with_psc={}, is_next_hop_spine={}...".format(
+                                vlan_conf, pkt_type, with_psc, is_next_hop_spine
+                            )
+                        )
+                        pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
+                            eth_src=HOST1_MAC,
+                            eth_dst=SWITCH_MAC,
+                            ip_src=HOST1_IPV4,
+                            ip_dst=UE1_IPV4,
+                            pktlen=MIN_PKT_LEN,
+                        )
+                        self.doRunTest(
+                            pkt, tagged[0], tagged[1], with_psc, is_next_hop_spine, tc_name=tc_name,
+                        )
 
 
 @group("spgw")
@@ -1352,34 +1354,40 @@ class FabricSpgwReadWriteSymmetryTest(SpgwReadWriteSymmetryTest):
 class FabricSpgwUplinkTest(SpgwSimpleTest):
     @tvsetup
     @autocleanup
-    def doRunTest(self, pkt, tagged1, tagged2, is_next_hop_spine):
+    def doRunTest(self, pkt, tagged1, tagged2, with_psc, is_next_hop_spine):
         self.runUplinkTest(
             ue_out_pkt=pkt,
             tagged1=tagged1,
             tagged2=tagged2,
-            is_next_hop_spine=is_next_hop_spine,
+            with_psc=with_psc,
+            is_next_hop_spine=is_next_hop_spine
         )
 
     def runTest(self):
         print("")
         for vlan_conf, tagged in vlan_confs.items():
             for pkt_type in PKT_TYPES_UNDER_TEST:
-                for is_next_hop_spine in [False, True]:
-                    if is_next_hop_spine and tagged[1]:
-                        continue
-                    print(
-                        "Testing VLAN={}, pkt={}, is_next_hop_spine={}...".format(
-                            vlan_conf, pkt_type, is_next_hop_spine
+                for with_psc in [False, True]:
+                    for is_next_hop_spine in [False, True]:
+                        if is_next_hop_spine and tagged[1]:
+                            # Egress port cannot be tagged if going to a spine.
+                            continue
+                        if pkt_type == 'sctp':
+                            # It is unlikely we will see sctp over gtp.
+                            continue
+                        print(
+                            "Testing VLAN={}, pkt={}, psc={}, is_next_hop_spine={}...".format(
+                                vlan_conf, pkt_type, with_psc, is_next_hop_spine
+                            )
                         )
-                    )
-                    pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
-                        eth_src=HOST1_MAC,
-                        eth_dst=SWITCH_MAC,
-                        ip_src=HOST1_IPV4,
-                        ip_dst=HOST2_IPV4,
-                        pktlen=MIN_PKT_LEN,
-                    )
-                    self.doRunTest(pkt, tagged[0], tagged[1], is_next_hop_spine)
+                        pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
+                            eth_src=HOST1_MAC,
+                            eth_dst=SWITCH_MAC,
+                            ip_src=HOST1_IPV4,
+                            ip_dst=HOST2_IPV4,
+                            pktlen=MIN_PKT_LEN,
+                        )
+                        self.doRunTest(pkt, tagged[0], tagged[1], with_psc, is_next_hop_spine)
 
 
 @group("spgw")
