@@ -19,7 +19,9 @@
 #define IPV4_HDR_BYTES 20
 #define IPV6_HDR_BYTES 40
 #define UDP_HDR_BYTES 8
-#define GTP_HDR_BYTES 8
+#define GTPU_HDR_BYTES 8
+#define GTPU_OPTIONS_HDR_BYTES 4
+#define GTPU_EXT_PSC_BYTES 4
 #define MPLS_HDR_BYTES 4
 #define VLAN_HDR_BYTES 4
 
@@ -59,10 +61,10 @@ enum bit<8> SpgwInterface {
     FROM_DBUF     = 0x3
 }
 
-enum GtpuPresence_t {
-    NONE,
-    GTPU_ONLY,
-    GTPU_WITH_PSC
+enum bit<2> GtpuPresence {
+    NONE          = 0x0,
+    GTPU_ONLY     = 0x1,
+    GTPU_WITH_PSC = 0x2
 }
 
 // PORT types. Set by the control plane using the actions

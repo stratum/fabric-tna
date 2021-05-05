@@ -337,54 +337,48 @@ parser FabricEgressParser (packet_in packet,
     state parse_bridged_md {
         packet.extract(fabric_md.bridged);
 #ifdef WITH_SPGW
-        // Initialize GTP-U encap fields here to save on PHV resourcers.
-        // TODO: include as snippet
-        hdr.outer_ipv4 = {
-            IP_VERSION_4, // version
-            IPV4_MIN_IHL, // ihl
-            0, // dscp
-            0, // ecn
-            0, // total_len, update later
-            0, // identification, update later
-            0, // flags
-            0, // frag_offset
-            DEFAULT_IPV4_TTL, // ttl
-            PROTO_UDP, // protocol
-            0, // checksum, update later
-            fabric_md.bridged.spgw.gtpu_tunnel_sip, // src_addr
-            fabric_md.bridged.spgw.gtpu_tunnel_dip // dst_addr
-        };
-        hdr.outer_udp = {
-            fabric_md.bridged.spgw.gtpu_tunnel_sport, // sport
-            GTPU_UDP_PORT, // dport
-            0, // len, update later
-            0 // checksum, update never
-        };
-        hdr.outer_gtpu = {
-            GTP_V1, // version
-            GTP_PROTOCOL_TYPE_GTP, // pt
-            0, // spare
-            0, // ex_flag
-            0, // seq_flag
-            0, // npdu_flag
-            GTPU_GPDU, // msgtype
-            fabric_md.bridged.spgw.ipv4_len_for_encap, // msglen
-            fabric_md.bridged.spgw.gtpu_teid // teid
-        };
-        hdr.outer_gtpu_options = {
-            0, // seq_num
-            0, // n_pdu_num
-            GTPU_NEXT_EXT_PSC // next_ext
-        };
-        hdr.outer_gtpu_ext_psc = {
-            GTPU_EXT_PSC_LEN, // len
-            GTPU_EXT_PSC_TYPE_DL, // type
-            0, // spare0
-            0, // ppp
-            0, // rqi
-            0, // qfi TODO: allow setting in ingress
-            GTPU_NEXT_EXT_NONE // next_ext
-        };
+        // Allocate GTP-U encap fields on the T-PHV. Set headers as valid later.
+        /** outer_ipv4 **/
+        hdr.outer_ipv4.version           = 4w4;
+        hdr.outer_ipv4.ihl               = 4w5;
+        hdr.outer_ipv4.dscp              = 0;
+        hdr.outer_ipv4.ecn               = 0;
+        // hdr.outer_ipv4.total_len      = update later
+        hdr.outer_ipv4.identification    = 0x1513; // From NGIC, TODO: Needs to be dynamic
+        hdr.outer_ipv4.flags             = 0;
+        hdr.outer_ipv4.frag_offset       = 0;
+        hdr.outer_ipv4.ttl               = DEFAULT_IPV4_TTL;
+        hdr.outer_ipv4.protocol          = PROTO_UDP;
+        // hdr.outer_ipv4.hdr_checksum   = update later
+        hdr.outer_ipv4.src_addr          = fabric_md.bridged.spgw.gtpu_tunnel_sip;
+        hdr.outer_ipv4.dst_addr          = fabric_md.bridged.spgw.gtpu_tunnel_dip;
+        /** outer_udp **/
+        hdr.outer_udp.sport              = fabric_md.bridged.spgw.gtpu_tunnel_sport;
+        hdr.outer_udp.dport              = GTPU_UDP_PORT;
+        // hdr.outer_udp.len             = update later
+        // hdr.outer_udp.checksum        = update later
+        /** outer_gtpu **/
+        hdr.outer_gtpu.version           = GTP_V1;
+        hdr.outer_gtpu.pt                = GTP_PROTOCOL_TYPE_GTP;
+        hdr.outer_gtpu.spare             = 0;
+        // hdr.outer_gtpu.ex_flag        = update later;
+        hdr.outer_gtpu.seq_flag          = 0;
+        hdr.outer_gtpu.npdu_flag         = 0;
+        hdr.outer_gtpu.msgtype           = GTPU_GPDU;
+        hdr.outer_gtpu.msglen            = fabric_md.bridged.spgw.ipv4_len_for_encap;
+        hdr.outer_gtpu.teid              = fabric_md.bridged.spgw.gtpu_teid;
+        /** outer_gtpu_options **/
+        hdr.outer_gtpu_options.seq_num   = 0;
+        hdr.outer_gtpu_options.n_pdu_num = 0;
+        hdr.outer_gtpu_options.next_ext  = GTPU_NEXT_EXT_PSC;
+        /** outer_gtpu_ext_psc **/
+        hdr.outer_gtpu_ext_psc.len       = GTPU_EXT_PSC_LEN;
+        hdr.outer_gtpu_ext_psc.type      = GTPU_EXT_PSC_TYPE_DL;
+        hdr.outer_gtpu_ext_psc.spare0    = 0;
+        hdr.outer_gtpu_ext_psc.ppp       = 0;
+        hdr.outer_gtpu_ext_psc.rqi       = 0;
+        hdr.outer_gtpu_ext_psc.qfi       = 0; // TODO: allow setting in ingress
+        hdr.outer_gtpu_ext_psc.next_ext  = GTPU_NEXT_EXT_NONE;
 #endif // WITH_SPGW
 #ifdef WITH_INT
         fabric_md.int_mirror_md.strip_gtpu = fabric_md.bridged.int_bmd.strip_gtpu;

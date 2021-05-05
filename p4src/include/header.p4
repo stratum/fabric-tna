@@ -247,15 +247,15 @@ header int_mirror_metadata_t {
     bit<32>               eg_tstamp;
     bit<8>                drop_reason;
     bit<16>               ip_eth_type;
-    GtpuPresence_t        strip_gtpu;
-    @padding bit<5>       _pad2;
+    GtpuPresence          strip_gtpu;
+    @padding bit<4>       _pad2;
     IntReportType_t       report_type;
     flow_hash_t           flow_hash;
 }
 
 @flexible
 struct int_bridged_metadata_t {
-    GtpuPresence_t  strip_gtpu;
+    GtpuPresence    strip_gtpu;
     IntReportType_t report_type;
     MirrorId_t      mirror_session_id;
 }

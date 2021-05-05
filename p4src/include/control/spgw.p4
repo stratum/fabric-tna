@@ -405,23 +405,24 @@ control SpgwEgress(
     */
     @hidden
     action _preload_length_additives() {
-        outer_ipv4_len_additive = IPV4_HDR_BYTES + UDP_HDR_BYTES + GTP_HDR_BYTES;
-        outer_udp_len_additive = UDP_HDR_BYTES + GTP_HDR_BYTES;
+        outer_ipv4_len_additive = IPV4_HDR_BYTES + UDP_HDR_BYTES + GTPU_HDR_BYTES;
+        outer_udp_len_additive = UDP_HDR_BYTES + GTPU_HDR_BYTES;
     }
 
     @hidden
     action _encap_common() {
-        // Fields initialized in the parser. Here we adjust the lenght of the outer headers.
+        // Constant fields initialized in the parser.
+        hdr.outer_ipv4.setValid();
+        hdr.outer_udp.setValid();
+        hdr.outer_gtpu.setValid();
         hdr.outer_ipv4.total_len = fabric_md.bridged.spgw.ipv4_len_for_encap + outer_ipv4_len_additive;
-        hdr.outer_ipv4.identification = 0x1513; /* From NGIC. TODO: Needs to be dynamic */
         hdr.outer_udp.len = fabric_md.bridged.spgw.ipv4_len_for_encap + outer_udp_len_additive;
     }
 
     // Do regular GTP-U encap.
     action gtpu_only() {
         _encap_common();
-        hdr.outer_gtpu_options.setInvalid();
-        hdr.outer_gtpu_ext_psc.setInvalid();
+        hdr.outer_gtpu.ex_flag = 0;
 #ifdef WITH_INT
         fabric_md.int_mirror_md.strip_gtpu = GtpuPresence.GTPU_ONLY;
 #endif // WITH_INT
@@ -431,6 +432,8 @@ control SpgwEgress(
     action gtpu_with_psc() {
         _encap_common();
         hdr.outer_gtpu.ex_flag = 1;
+        hdr.outer_gtpu_options.setValid();
+        hdr.outer_gtpu_ext_psc.setValid();
 #ifdef WITH_INT
         fabric_md.int_mirror_md.strip_gtpu = GtpuPresence.GTPU_WITH_PSC;
 #endif // WITH_INT
