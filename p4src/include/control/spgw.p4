@@ -391,38 +391,23 @@ control SpgwEgress(
 
     Counter<bit<64>, bit<16>>(MAX_PDR_COUNTERS, CounterType_t.PACKETS_AND_BYTES) pdr_counter;
 
-    bit<16> outer_ipv4_len_additive;
-    bit<16> outer_udp_len_additive;
-
-    /*
-    This roundabout action is used to circumvent a bug of unknown origin that was experienced
-    in September 2020 when the header size defines were used directly in the _gtpu_encap action.
-    An addition using one of the constants would yield a wrong result on hardware, despite there being
-    no apparent issues with the addition primitive and its inputs in the compiler output.
-    */
-    @hidden
-    action _preload_length_additives() {
-        outer_ipv4_len_additive = IPV4_HDR_BYTES + UDP_HDR_BYTES + GTPU_HDR_BYTES;
-        outer_udp_len_additive = UDP_HDR_BYTES + GTPU_HDR_BYTES;
-    }
-
     @hidden
     action _encap_common() {
         // Constant fields initialized in the parser.
         hdr.outer_ipv4.setValid();
         hdr.outer_udp.setValid();
         hdr.outer_gtpu.setValid();
-        hdr.outer_gtpu.msglen = hdr.ipv4.total_len;
     }
 
     // Do regular GTP-U encap.
     action gtpu_only() {
         _encap_common();
-        hdr.outer_gtpu.ex_flag = 0;
         hdr.outer_ipv4.total_len = hdr.ipv4.total_len
                 + IPV4_HDR_BYTES + UDP_HDR_BYTES + GTPU_HDR_BYTES;
         hdr.outer_udp.len = hdr.ipv4.total_len
                 + UDP_HDR_BYTES + GTPU_HDR_BYTES;
+        hdr.outer_gtpu.msglen = hdr.ipv4.total_len;
+        hdr.outer_gtpu.ex_flag = 0;
 #ifdef WITH_INT
         fabric_md.int_mirror_md.strip_gtpu = GtpuPresence.GTPU_ONLY;
 #endif // WITH_INT
@@ -431,15 +416,17 @@ control SpgwEgress(
     // Do GTP-U encap with PDU Session Container extension for 5G NG-RAN.
     action gtpu_with_psc() {
         _encap_common();
-        hdr.outer_gtpu.ex_flag = 1;
-        hdr.outer_gtpu_options.setValid();
-        hdr.outer_gtpu_ext_psc.setValid();
         hdr.outer_ipv4.total_len = hdr.ipv4.total_len
                 + IPV4_HDR_BYTES + UDP_HDR_BYTES + GTPU_HDR_BYTES
                 + GTPU_OPTIONS_HDR_BYTES + GTPU_EXT_PSC_HDR_BYTES;
         hdr.outer_udp.len = hdr.ipv4.total_len
                 + UDP_HDR_BYTES + GTPU_HDR_BYTES
                 + GTPU_OPTIONS_HDR_BYTES + GTPU_EXT_PSC_HDR_BYTES;
+        hdr.outer_gtpu.msglen = hdr.ipv4.total_len
+                + GTPU_OPTIONS_HDR_BYTES + GTPU_EXT_PSC_HDR_BYTES;
+        hdr.outer_gtpu.ex_flag = 1;
+        hdr.outer_gtpu_options.setValid();
+        hdr.outer_gtpu_ext_psc.setValid();
 #ifdef WITH_INT
         fabric_md.int_mirror_md.strip_gtpu = GtpuPresence.GTPU_WITH_PSC;
 #endif // WITH_INT
@@ -458,7 +445,6 @@ control SpgwEgress(
 
     apply {
         if (!fabric_md.bridged.spgw.skip_spgw) {
-            _preload_length_additives();
             if (fabric_md.bridged.spgw.needs_gtpu_encap) {
                 gtpu_encap.apply();
             }
