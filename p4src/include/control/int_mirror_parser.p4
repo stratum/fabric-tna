@@ -138,17 +138,12 @@ parser IntReportMirrorParser (packet_in packet,
             (ETHERTYPE_MPLS, _): strip_mpls;
             (ETHERTYPE_IPV4, 0): handle_ipv4;
             (ETHERTYPE_IPV4, 1): strip_ipv4_udp_gtpu;
-            // FIXME: remove ipv6 support or test it
-            //  https://github.com/stratum/fabric-tna/pull/227
-            // (ETHERTYPE_IPV6, 0): parse_ipv6;
-            // (ETHERTYPE_IPV6, 1): strip_ipv6_udp_gtpu;
             default: reject;
         }
 #else
         transition select(hdr.eth_type.value) {
             ETHERTYPE_MPLS: strip_mpls;
             ETHERTYPE_IPV4: handle_ipv4;
-            // ETHERTYPE_IPV6: parse_ipv6;
             default: reject;
         }
 #endif // WITH_SPGW
@@ -162,15 +157,12 @@ parser IntReportMirrorParser (packet_in packet,
 #ifdef WITH_SPGW
         transition select(fabric_md.int_mirror_md.strip_gtpu, ip_ver) {
             (1, IP_VERSION_4): strip_ipv4_udp_gtpu;
-            // (1, IP_VERSION_6): strip_ipv6_udp_gtpu;
             (0, IP_VERSION_4): handle_ipv4;
-            // (0, IP_VERSION_6): parse_ipv6;
             default: reject;
         }
 #else
         transition select(ip_ver) {
             IP_VERSION_4: handle_ipv4;
-            // IP_VERSION_6: parse_ipv6;
             default: reject;
         }
 #endif // WITH_SPGW
@@ -181,11 +173,6 @@ parser IntReportMirrorParser (packet_in packet,
         packet.advance((IPV4_HDR_BYTES + UDP_HDR_BYTES + GTP_HDR_BYTES) * 8);
         transition handle_ipv4;
     }
-
-    // state strip_ipv6_udp_gtpu {
-    //     packet.advance((IPV6_HDR_BYTES + UDP_HDR_BYTES + GTP_HDR_BYTES) * 8);
-    //     transition parse_ipv6;
-    // }
 #endif // WITH_SPGW
 
     state handle_ipv4 {
