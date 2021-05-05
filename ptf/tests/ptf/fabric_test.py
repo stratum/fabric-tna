@@ -2802,6 +2802,7 @@ class IntTest(IPv4UnicastTest):
         mask_pkt.set_do_not_care_scapy(INT_L45_DROP_REPORT, "queue_id")
         mask_pkt.set_do_not_care_scapy(INT_L45_DROP_REPORT, "queue_occupancy")
         mask_pkt.set_do_not_care_scapy(INT_L45_DROP_REPORT, "egress_tstamp")
+        mask_pkt.set_do_not_care_scapy(INT_L45_DROP_REPORT, "pad")
         return mask_pkt
 
     def set_up_report_table_entries(

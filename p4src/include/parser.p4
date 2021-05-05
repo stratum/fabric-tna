@@ -294,8 +294,6 @@ parser FabricEgressParser (packet_in packet,
     state start {
         packet.extract(eg_intr_md);
         fabric_md.cpu_port = 0;
-        fabric_md.vlan_stripped = 0;
-        fabric_md.mpls_stripped = 0;
         common_egress_metadata_t common_eg_md = packet.lookahead<common_egress_metadata_t>();
         transition select(common_eg_md.bmd_type, common_eg_md.mirror_type) {
             (BridgedMdType_t.INGRESS_TO_EGRESS, _): parse_bridged_md;

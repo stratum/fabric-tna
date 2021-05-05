@@ -276,36 +276,19 @@ control IntEgress (
     }
 
     @hidden
-    action add_common_report_header(mac_addr_t src_mac, mac_addr_t mon_mac,
-                                   ipv4_addr_t src_ip, ipv4_addr_t mon_ip,
-                                   l4_port_t mon_port, bit<32> switch_id) {
-        hdr.report_ethernet.setValid();
+    action _report_encap_common(mac_addr_t src_mac, mac_addr_t mon_mac,
+                                ipv4_addr_t src_ip, ipv4_addr_t mon_ip,
+                                l4_port_t mon_port, bit<32> switch_id) {
+        // Constant fields are initialized in int_mirror_parser.p4.
         hdr.report_ethernet.dst_addr = mon_mac;
         hdr.report_ethernet.src_addr = src_mac;
-        hdr.report_eth_type.setValid();
-        hdr.report_eth_type.value = ETHERTYPE_IPV4;
-        hdr.report_ipv4.setValid();
-        hdr.report_ipv4.version = 4w4;
-        hdr.report_ipv4.ihl = 4w5;
-        hdr.report_ipv4.dscp = INT_DSCP;
-        hdr.report_ipv4.ecn = 2w0;
-        hdr.report_ipv4.flags = 0;
-        hdr.report_ipv4.frag_offset = 0;
-        hdr.report_ipv4.ttl = DEFAULT_IPV4_TTL;
-        hdr.report_ipv4.protocol = PROTO_UDP;
         hdr.report_ipv4.identification = ip_id_gen.get();
         hdr.report_ipv4.src_addr = src_ip;
         hdr.report_ipv4.dst_addr = mon_ip;
-        hdr.report_udp.setValid();
         hdr.report_udp.dport = mon_port;
-        hdr.report_fixed_header.setValid();
-        hdr.report_fixed_header.ver = 0;
-        hdr.report_fixed_header.rsvd = 0;
         hdr.report_fixed_header.seq_no = get_seq_number.execute(hdr.report_fixed_header.hw_id);
         hdr.common_report_header.switch_id = switch_id;
-        // Fix the ethertype, the reason we need to fix the ether type is because we
-        // may strip the MPLS header from the parser, and the ethertype will still be
-        // MPLS instead of real one.
+        // Fix ethertype if we have stripped the MPLS header in the parser.
         hdr.eth_type.value = fabric_md.int_mirror_md.ip_eth_type;
         // Remove the INT mirror metadata to prevent egress mirroring again.
         eg_dprsr_md.mirror_type = (bit<3>)FabricMirrorType_t.INVALID;
@@ -317,22 +300,19 @@ control IntEgress (
     action do_local_report_encap(mac_addr_t src_mac, mac_addr_t mon_mac,
                                  ipv4_addr_t src_ip, ipv4_addr_t mon_ip,
                                  l4_port_t mon_port, bit<32> switch_id) {
-        add_common_report_header(src_mac, mon_mac, src_ip, mon_ip, mon_port, switch_id);
-        hdr.report_fixed_header.nproto = NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER;
-        hdr.report_fixed_header.f = 1;
-        // The INT mirror parser will initialize both local and drop report header and
-        // set them to valid, need to set the drop report header to invalid.
-        hdr.drop_report_header.setInvalid();
+        _report_encap_common(src_mac, mon_mac, src_ip, mon_ip, mon_port, switch_id);
+        hdr.report_eth_type.value = ETHERTYPE_IPV4;
         hdr.report_ipv4.total_len = IPV4_HDR_BYTES + UDP_HDR_BYTES
-                            + REPORT_FIXED_HEADER_BYTES + LOCAL_REPORT_HEADER_BYTES
-                            - REPORT_MIRROR_HEADER_BYTES
-                            - ETH_FCS_LEN
-                            + eg_intr_md.pkt_length;
-        hdr.report_udp.len = UDP_HDR_BYTES + REPORT_FIXED_HEADER_BYTES
-                             + LOCAL_REPORT_HEADER_BYTES
-                             - REPORT_MIRROR_HEADER_BYTES
-                             - ETH_FCS_LEN
-                             + eg_intr_md.pkt_length;
+                        + REPORT_FIXED_HEADER_BYTES + LOCAL_REPORT_HEADER_BYTES
+                        + ETH_HDR_BYTES + fabric_md.int_ipv4_len;
+        hdr.report_udp.len = UDP_HDR_BYTES
+                        + REPORT_FIXED_HEADER_BYTES + LOCAL_REPORT_HEADER_BYTES
+                        + ETH_HDR_BYTES + fabric_md.int_ipv4_len;
+        hdr.report_fixed_header.nproto = NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER;
+        hdr.report_fixed_header.d = 0;
+        hdr.report_fixed_header.q = 0;
+        hdr.report_fixed_header.f = 1;
+        hdr.local_report_header.setValid();
     }
 
     action do_local_report_encap_mpls(mac_addr_t src_mac, mac_addr_t mon_mac,
@@ -343,30 +323,24 @@ control IntEgress (
         hdr.report_eth_type.value = ETHERTYPE_MPLS;
         hdr.report_mpls.setValid();
         hdr.report_mpls.label = mon_label;
-        hdr.report_mpls.tc = 0;
-        hdr.report_mpls.bos = 1;
-        hdr.report_mpls.ttl = DEFAULT_MPLS_TTL;
     }
 
     action do_drop_report_encap(mac_addr_t src_mac, mac_addr_t mon_mac,
                                 ipv4_addr_t src_ip, ipv4_addr_t mon_ip,
                                 l4_port_t mon_port, bit<32> switch_id) {
-        add_common_report_header(src_mac, mon_mac, src_ip, mon_ip, mon_port, switch_id);
+        _report_encap_common(src_mac, mon_mac, src_ip, mon_ip, mon_port, switch_id);
+        hdr.report_eth_type.value = ETHERTYPE_IPV4;
+        hdr.report_ipv4.total_len = IPV4_HDR_BYTES + UDP_HDR_BYTES
+                        + REPORT_FIXED_HEADER_BYTES + DROP_REPORT_HEADER_BYTES
+                        + ETH_HDR_BYTES + fabric_md.int_ipv4_len;
+        hdr.report_udp.len = UDP_HDR_BYTES
+                        + REPORT_FIXED_HEADER_BYTES + DROP_REPORT_HEADER_BYTES
+                        + ETH_HDR_BYTES + fabric_md.int_ipv4_len;
         hdr.report_fixed_header.nproto = NPROTO_TELEMETRY_DROP_HEADER;
         hdr.report_fixed_header.d = 1;
-        // The INT mirror parser will initialize both local and drop report header and
-        // set them to valid, need to set the local report header to invalid.
-        hdr.local_report_header.setInvalid();
-        hdr.report_ipv4.total_len = IPV4_HDR_BYTES + UDP_HDR_BYTES
-                            + REPORT_FIXED_HEADER_BYTES + DROP_REPORT_HEADER_BYTES
-                            - REPORT_MIRROR_HEADER_BYTES
-                            - ETH_FCS_LEN
-                            + eg_intr_md.pkt_length;
-        hdr.report_udp.len = UDP_HDR_BYTES + REPORT_FIXED_HEADER_BYTES
-                             + DROP_REPORT_HEADER_BYTES
-                             - REPORT_MIRROR_HEADER_BYTES
-                             - ETH_FCS_LEN
-                             + eg_intr_md.pkt_length;
+        hdr.report_fixed_header.q = 0;
+        hdr.report_fixed_header.f = 0;
+        hdr.drop_report_header.setValid();
     }
 
     action do_drop_report_encap_mpls(mac_addr_t src_mac, mac_addr_t mon_mac,
@@ -377,9 +351,6 @@ control IntEgress (
         hdr.report_eth_type.value = ETHERTYPE_MPLS;
         hdr.report_mpls.setValid();
         hdr.report_mpls.label = mon_label;
-        hdr.report_mpls.tc = 0;
-        hdr.report_mpls.bos = 1;
-        hdr.report_mpls.ttl = DEFAULT_MPLS_TTL;
     }
 
     // Transforms mirrored packets into INT report packets.
@@ -421,7 +392,6 @@ control IntEgress (
         fabric_md.int_mirror_md.eg_tstamp = eg_prsr_md.global_tstamp[31:0];
         fabric_md.int_mirror_md.ip_eth_type = fabric_md.bridged.base.ip_eth_type;
         fabric_md.int_mirror_md.flow_hash = fabric_md.bridged.base.inner_hash;
-        // fabric_md.int_mirror_md.vlan_stripped set by egress_vlan table
         // fabric_md.int_mirror_md.strip_gtpu set by the parser
     }
 
@@ -488,43 +458,7 @@ control IntEgress (
         drop_report_filter.apply(hdr, fabric_md, eg_dprsr_md);
 
         if (report.apply().hit) {
-            // Packet is a mirror, transformed into a report.
-#ifdef WITH_SPGW
-            if (fabric_md.int_mirror_md.strip_gtpu == 1) {
-                // We need to remove length of IP, UDP, and GTPU headers
-                // since we only monitor the packet inside the GTP tunnel.
-                hdr.report_ipv4.total_len = hdr.report_ipv4.total_len
-                    - (IPV4_HDR_BYTES + UDP_HDR_BYTES + GTP_HDR_BYTES);
-                hdr.report_udp.len = hdr.report_udp.len
-                    - (IPV4_HDR_BYTES + UDP_HDR_BYTES + GTP_HDR_BYTES);
-            }
-#endif // WITH_SPGW
-            if (fabric_md.mpls_stripped == 1) {
-                // We need to remove length of MPLS since we don't include MPLS
-                // header in INT report.
-                // TODO: support IPv6
-                hdr.report_ipv4.total_len = hdr.report_ipv4.total_len
-                    - MPLS_HDR_BYTES;
-                hdr.report_udp.len = hdr.report_udp.len
-                    - MPLS_HDR_BYTES;
-            }
-            // FIXME: Too many if statements, we might want to use a table to
-            //  reduce stage dependencies.
-            if (fabric_md.vlan_stripped == 1) {
-                hdr.report_ipv4.total_len = hdr.report_ipv4.total_len
-                    - VLAN_HDR_BYTES;
-                hdr.report_udp.len = hdr.report_udp.len
-                    - VLAN_HDR_BYTES;
-            }
-
-            // For the INT report, Fake Ethernet is going to be moved to the beginning of a packet,
-            // so that we need to subtract it from the packet length.
-            if (hdr.fake_ethernet.isValid()) {
-                hdr.report_ipv4.total_len = hdr.report_ipv4.total_len
-                    - ETH_HDR_BYTES;
-                hdr.report_udp.len = hdr.report_udp.len
-                    - ETH_HDR_BYTES;
-            }
+            // Packet is a mirror, now transformed into a report.
         } else {
             // Regular packet. Initialize INT mirror metadata but let
             // filter decide whether to generate a mirror or not.
