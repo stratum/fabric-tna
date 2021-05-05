@@ -88,6 +88,8 @@ public final class P4InfoConstants {
             PiTableId.of("FabricEgress.int_egress.report");
     public static final PiTableId FABRIC_EGRESS_PKT_IO_EGRESS_SWITCH_INFO =
             PiTableId.of("FabricEgress.pkt_io_egress.switch_info");
+    public static final PiTableId FABRIC_EGRESS_SPGW_GTPU_ENCAP =
+            PiTableId.of("FabricEgress.spgw.gtpu_encap");
     public static final PiTableId FABRIC_INGRESS_ACL_ACL =
             PiTableId.of("FabricIngress.acl.acl");
     public static final PiTableId FABRIC_INGRESS_FILTERING_FWD_CLASSIFIER =
@@ -169,6 +171,10 @@ public final class P4InfoConstants {
             PiActionId.of("FabricEgress.int_egress.set_config");
     public static final PiActionId FABRIC_EGRESS_PKT_IO_EGRESS_SET_SWITCH_INFO =
             PiActionId.of("FabricEgress.pkt_io_egress.set_switch_info");
+    public static final PiActionId FABRIC_EGRESS_SPGW_GTPU_ONLY =
+            PiActionId.of("FabricEgress.spgw.gtpu_only");
+    public static final PiActionId FABRIC_EGRESS_SPGW_GTPU_WITH_PSC =
+            PiActionId.of("FabricEgress.spgw.gtpu_with_psc");
     public static final PiActionId FABRIC_INGRESS_ACL_COPY_TO_CPU =
             PiActionId.of("FabricIngress.acl.copy_to_cpu");
     public static final PiActionId FABRIC_INGRESS_ACL_DROP =
@@ -243,7 +249,6 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.spgw.uplink_recirc.deny");
     public static final PiActionId FABRIC_INGRESS_SPGW_UPLINK_RECIRC_MISS =
             PiActionId.of("FabricIngress.spgw.uplink_recirc.miss");
-    public static final PiActionId NO_ACTION = PiActionId.of("NoAction");
     public static final PiActionId NOP = PiActionId.of("nop");
     // Action Param IDs
     public static final PiActionParamId CPU_PORT =
