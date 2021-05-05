@@ -174,7 +174,6 @@ struct spgw_bridged_metadata_t {
     ipv4_addr_t     gtpu_tunnel_dip;
     l4_port_t       gtpu_tunnel_sport;
     pdr_ctr_id_t    pdr_ctr_id;
-    qfi_t           qfi;
 }
 
 struct spgw_ingress_metadata_t {
@@ -248,7 +247,7 @@ header int_mirror_metadata_t {
     bit<32>               eg_tstamp;
     bit<8>                drop_reason;
     bit<16>               ip_eth_type;
-    bit<1>                strip_gtpu;
+    GtpuPresence_t        strip_gtpu;
     @padding bit<5>       _pad2;
     IntReportType_t       report_type;
     flow_hash_t           flow_hash;
@@ -256,7 +255,7 @@ header int_mirror_metadata_t {
 
 @flexible
 struct int_bridged_metadata_t {
-    bit<1>          strip_gtpu;
+    GtpuPresence_t  strip_gtpu;
     IntReportType_t report_type;
     MirrorId_t      mirror_session_id;
 }

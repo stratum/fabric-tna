@@ -45,7 +45,6 @@ typedef bit<32> teid_t;
 // FIXME: use less than 32 bits for far_id_t, enough to index up to MAX_FARS
 typedef bit<32> far_id_t;
 typedef bit<5>  qid_t;
-typedef bit<6>  qfi_t;
 typedef bit<16> pdr_ctr_id_t;
 enum bit<2> SpgwDirection {
     UNKNOWN             = 0x0,
@@ -58,6 +57,12 @@ enum bit<8> SpgwInterface {
     ACCESS        = 0x1,
     CORE          = 0x2,
     FROM_DBUF     = 0x3
+}
+
+enum GtpuPresence_t {
+    NONE,
+    GTPU_ONLY,
+    GTPU_WITH_PSC
 }
 
 // PORT types. Set by the control plane using the actions
