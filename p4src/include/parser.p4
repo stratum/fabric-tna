@@ -177,9 +177,9 @@ parser FabricIngressParser (packet_in  packet,
 
     state parse_udp {
         packet.extract(hdr.udp);
-        bit<3> gtpu_version = packet.lookahead<bit<3>>();
-        transition select(hdr.udp.dport, gtpu_version) {
-            (GTPU_UDP_PORT, GTP_V1): parse_gtpu;
+        gtpu_t gtpu = packet.lookahead<gtpu_t>();
+        transition select(hdr.udp.dport, gtpu.version, gtpu.msgtype) {
+            (GTPU_UDP_PORT, GTP_V1, GTPU_GPDU): parse_gtpu;
             default: accept;
         }
     }
@@ -191,10 +191,9 @@ parser FabricIngressParser (packet_in  packet,
 
     state parse_gtpu {
         packet.extract(hdr.gtpu);
-        transition select(hdr.gtpu.msgtype, hdr.gtpu.ex_flag,
-                          hdr.gtpu.seq_flag, hdr.gtpu.npdu_flag) {
-            (GTPU_GPDU, 0, 0, 0): set_gtpu_only;
-            (GTPU_GPDU, _, _, _): parse_gtpu_options;
+        transition select(hdr.gtpu.ex_flag, hdr.gtpu.seq_flag, hdr.gtpu.npdu_flag) {
+            (0, 0, 0): set_gtpu_only;
+            (_, _, _): parse_gtpu_options;
             default: accept;
         }
     }
@@ -204,9 +203,9 @@ parser FabricIngressParser (packet_in  packet,
         // Signal egress to strip the GTP-U tunnel headers inside INT reports.
         // Updated by SpgwIngress if we do decap.
         fabric_md.bridged.int_bmd.strip_gtpu = GtpuPresence.GTPU_ONLY;
-        // Do the same for mirrors that will become drop reports. Not modified
-        // by decap action, as the mirrored pkt at egress will be the same seen
-        // at the ingress parser.
+        // Do the same for ingress-to-egress mirrors for drop reporting. Not
+        // modified by decap action, as the mirrored pkt at egress will be the
+        // same seen at the ingress parser.
         fabric_md.int_mirror_md.strip_gtpu = GtpuPresence.GTPU_ONLY;
 #endif // WITH_INT
         transition parse_inner_ipv4;

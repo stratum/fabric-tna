@@ -149,7 +149,6 @@ header gtpu_options_t {
 const bit<8> GTPU_NEXT_EXT_PSC = 0x85;
 const bit<4> GTPU_EXT_PSC_TYPE_DL = 4w0; // Downlink
 const bit<4> GTPU_EXT_PSC_TYPE_UL = 4w1; // Uplink
-const bit<1> GTPU_EXT_PSC_PPP_NOT_PRESENT = 1w0;
 const bit<8> GTPU_EXT_PSC_LEN = 8w1; // 1*4-octets
 header gtpu_ext_psc_t {
     bit<8> len;      /* Length in 4-octet units (common to all extensions) */
