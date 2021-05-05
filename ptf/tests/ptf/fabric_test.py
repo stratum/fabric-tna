@@ -369,10 +369,51 @@ def simple_sctp_packet(
 
     return pkt
 
+# Generic function to generate a GTP-encapsulated pkt
+# Default arg values are in line with PTF
+def simple_gtp_packet(
+    pkt_type,
+    eth_dst="00:01:02:03:04:05",
+    eth_src="00:06:07:08:09:0a",
+    ip_src="192.168.0.1",
+    ip_dst="192.168.0.2",
+    ip_ttl=64,
+    gtp_teid=0xff, # dummy teid
+    pktlen=136
+):
+    pktlen = pktlen - IP_HDR_BYTES - UDP_HDR_BYTES - GTP_HDR_BYTES
+    pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(ip_src=ip_src,
+                                                            ip_dst=ip_dst,
+                                                            pktlen=pktlen)
+    gtp_pkt = pkt_add_gtp(
+        pkt,
+        out_ipv4_src=ip_src,
+        out_ipv4_dst=ip_dst,
+        teid=gtp_teid,
+    )
+    gtp_pkt[Ether].src = eth_src
+    gtp_pkt[Ether].dst = eth_dst
+    gtp_pkt[IP].ttl = ip_ttl
+    return gtp_pkt
 
-# Embed the above function in the testutils package.
+
+def simple_gtp_tcp_packet(*args, **kwargs):
+    return simple_gtp_packet("tcp", *args, **kwargs)
+
+
+def simple_gtp_udp_packet(*args, **kwargs):
+    return simple_gtp_packet("udp", *args, **kwargs)
+
+
+def simple_gtp_icmp_packet(*args, **kwargs):
+    return simple_gtp_packet("icmp", *args, **kwargs)
+
+
+# Embed the above functions in the testutils package.
 setattr(testutils, "simple_sctp_packet", simple_sctp_packet)
-
+setattr(testutils, "simple_gtp_tcp_packet", simple_gtp_tcp_packet)
+setattr(testutils, "simple_gtp_udp_packet", simple_gtp_udp_packet)
+setattr(testutils, "simple_gtp_icmp_packet", simple_gtp_icmp_packet)
 
 def pkt_mac_swap(pkt):
     orig_dst = pkt[Ether].dst
