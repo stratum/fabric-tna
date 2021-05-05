@@ -229,7 +229,9 @@ else:
     raise Exception("Invalid profile, cannot set BMD_BYTES")
 IP_HDR_BYTES = 20
 UDP_HDR_BYTES = 8
-GTP_HDR_BYTES = 8
+GTPU_HDR_BYTES = 8
+GTPU_OPTIONS_HDR_BYTES = 4
+GTPU_EXT_PSC_BYTES = 4
 ETH_FCS_BYTES = 4
 VLAN_BYTES = 4
 CPU_LOOPBACK_FAKE_ETH_BYTES = 14
@@ -355,9 +357,13 @@ def simple_gtp_packet(
     ip_dst="192.168.0.2",
     ip_ttl=64,
     gtp_teid=0xff, # dummy teid
-    pktlen=136
+    pktlen=136,
+    ext_pdu_type=None,
+    ext_pdu_qfi=0
 ):
-    pktlen = pktlen - IP_HDR_BYTES - UDP_HDR_BYTES - GTP_HDR_BYTES
+    pktlen = pktlen - IP_HDR_BYTES - UDP_HDR_BYTES - GTPU_HDR_BYTES
+    if ext_pdu_type is not None:
+        pktlen = pktlen - GTPU_OPTIONS_HDR_BYTES - GTPU_EXT_PSC_BYTES
     pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(ip_src=ip_src,
                                                             ip_dst=ip_dst,
                                                             pktlen=pktlen)
@@ -366,6 +372,8 @@ def simple_gtp_packet(
         out_ipv4_src=ip_src,
         out_ipv4_dst=ip_dst,
         teid=gtp_teid,
+        ext_pdu_type=ext_pdu_type,
+        ext_pdu_qfi=ext_pdu_qfi
     )
     gtp_pkt[Ether].src = eth_src
     gtp_pkt[Ether].dst = eth_dst
@@ -385,11 +393,35 @@ def simple_gtp_icmp_packet(*args, **kwargs):
     return simple_gtp_packet("icmp", *args, **kwargs)
 
 
+def simple_gtp_psc_ul_tcp_packet(*args, **kwargs):
+    return simple_gtp_packet("tcp", *args, ext_pdu_type=GTPU_EXT_PDU_TYPE_UL, **kwargs)
+
+def simple_gtp_psc_dl_tcp_packet(*args, **kwargs):
+    return simple_gtp_packet("tcp", *args, ext_pdu_type=GTPU_EXT_PDU_TYPE_DL, **kwargs)
+
+def simple_gtp_psc_ul_udp_packet(*args, **kwargs):
+    return simple_gtp_packet("udp", *args, ext_pdu_type=GTPU_EXT_PDU_TYPE_UL, **kwargs)
+
+def simple_gtp_psc_dl_udp_packet(*args, **kwargs):
+    return simple_gtp_packet("udp", *args, ext_pdu_type=GTPU_EXT_PDU_TYPE_DL, **kwargs)
+
+def simple_gtp_psc_ul_icmp_packet(*args, **kwargs):
+    return simple_gtp_packet("tcp", *args, ext_pdu_type=GTPU_EXT_PDU_TYPE_UL, **kwargs)
+
+def simple_gtp_psc_dl_icmp_packet(*args, **kwargs):
+    return simple_gtp_packet("icmp", *args, ext_pdu_type=GTPU_EXT_PDU_TYPE_DL, **kwargs)
+
 # Embed the above functions in the testutils package.
 setattr(testutils, "simple_sctp_packet", simple_sctp_packet)
 setattr(testutils, "simple_gtp_tcp_packet", simple_gtp_tcp_packet)
 setattr(testutils, "simple_gtp_udp_packet", simple_gtp_udp_packet)
 setattr(testutils, "simple_gtp_icmp_packet", simple_gtp_icmp_packet)
+setattr(testutils, "simple_gtp_psc_ul_tcp_packet", simple_gtp_psc_ul_tcp_packet)
+setattr(testutils, "simple_gtp_psc_dl_tcp_packet", simple_gtp_psc_dl_tcp_packet)
+setattr(testutils, "simple_gtp_psc_ul_udp_packet", simple_gtp_psc_ul_udp_packet)
+setattr(testutils, "simple_gtp_psc_dl_udp_packet", simple_gtp_psc_dl_udp_packet)
+setattr(testutils, "simple_gtp_psc_ul_icmp_packet", simple_gtp_psc_ul_icmp_packet)
+setattr(testutils, "simple_gtp_psc_dl_icmp_packet", simple_gtp_psc_dl_icmp_packet)
 
 def pkt_mac_swap(pkt):
     orig_dst = pkt[Ether].dst
@@ -2097,7 +2129,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         # happens at ingress deparser. VLAN/MPLS push/pop happens at egress
         # deparser, hence not reflected in counter increment.
         egress_bytes = (
-            ingress_bytes + BMD_BYTES - IP_HDR_BYTES - UDP_HDR_BYTES - GTP_HDR_BYTES
+            ingress_bytes + BMD_BYTES - IP_HDR_BYTES - UDP_HDR_BYTES - GTPU_HDR_BYTES
         )
 
         # Verify the Ingress and Egress PDR counters
@@ -2186,7 +2218,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             + BMD_BYTES
             - IP_HDR_BYTES
             - UDP_HDR_BYTES
-            - GTP_HDR_BYTES
+            - GTPU_HDR_BYTES
         )
         downlink_ingress_bytes = uplink_egress_bytes - BMD_BYTES
         # Egress counters are updated with bytes seen at egress parser. GTP
@@ -2410,7 +2442,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             + BMD_BYTES
             - IP_HDR_BYTES
             - UDP_HDR_BYTES
-            - GTP_HDR_BYTES
+            - GTPU_HDR_BYTES
         )
         if tagged1:
             egress_bytes += VLAN_BYTES

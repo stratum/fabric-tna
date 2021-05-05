@@ -23,8 +23,12 @@ vlan_confs = {
 PKT_TYPES_UNDER_TEST = ["tcp", "udp", "icmp", "sctp"]
 GTP_ENCAPED_PKT_TYPES = ["gtp_tcp",
                          "gtp_udp",
+                         "gtp_psc_ul_udp",
+                         "gtp_psc_dl_udp",
+                         "gtp_psc_ul_tcp",
+                         "gtp_psc_dl_tcp",
                          # FIXME: ICMP over GTP causes ParserError, uncomment below line once fixed
-                         # "gtp_icmp"
+                         # "gtp_icmp", "gtp_psc_dl_icmp", "gtp_psc_ul_icmp"
                          ]
 
 class FabricBridgingTest(BridgingTest):
@@ -207,33 +211,18 @@ class FabricIPv4UnicastGtpPassthroughTest(IPv4UnicastTest):
 
     def runTest(self):
         print("")
-        base_pkt = testutils.simple_udp_packet(
-            eth_src=HOST1_MAC,
-            eth_dst=SWITCH_MAC,
-            ip_src=HOST1_IPV4,
-            ip_dst=HOST2_IPV4,
-            udp_sport=5061,
-            udp_dport=5060,
-            pktlen=128)
-        gtp_base_params = dict(
-            out_ipv4_src=HOST3_IPV4,
-            out_ipv4_dst=HOST4_IPV4,
-            teid=0xEEFFC0F0)
-
-        print("Testing regular GTP-U packet...")
-        tc_name = "4g_ran"
-        pkt = pkt_add_gtp(base_pkt, **gtp_base_params)
-        self.doRunTest(pkt, tc_name=tc_name)
-
-        print("Testing packet from 5G NG-RAN (uplink)...")
-        tc_name = "5g_ran_uplink"
-        pkt = pkt_add_gtp(base_pkt, ext_pdu_type=GTPU_EXT_PDU_TYPE_UL, ext_pdu_qfi=1, **gtp_base_params)
-        self.doRunTest(pkt, tc_name=tc_name)
-
-        print("Testing packet to 5G NG-RAN (downlink)...")
-        tc_name = "5g_ran_downlink"
-        pkt = pkt_add_gtp(base_pkt, ext_pdu_type=GTPU_EXT_PDU_TYPE_DL, ext_pdu_qfi=1, **gtp_base_params)
-        self.doRunTest(pkt, tc_name=tc_name)
+        for pkt_type in GTP_ENCAPED_PKT_TYPES:
+            tc_name = pkt_type
+            print(
+                "Testing {} packet...".format(pkt_type))
+            pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
+                eth_src=HOST1_MAC,
+                eth_dst=SWITCH_MAC,
+                ip_src=HOST1_IPV4,
+                ip_dst=HOST2_IPV4,
+                pktlen=128,
+            )
+            self.doRunTest(pkt, tc_name=tc_name)
 
 
 class FabricIPv4UnicastGroupTest(FabricTest):
