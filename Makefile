@@ -132,14 +132,13 @@ deps: _docker_pull_all src/test/resources/dbuf/dbuf.proto src/test/java/org/omec
 src/test/resources/dbuf/dbuf.proto:
 	git submodule update --init src/test/resources/dbuf
 
-# TODO (carmelo): it would be nice to have mvn invoke protoc
-#  and treat generated sources the mvn way
-app/src/main/java/org/omecproject/dbuf/grpc/Dbuf.java: app/external/dbuf/dbuf.proto
-	docker run --rm -v ${CURRENT_DIR}/app/external/dbuf:/root/dbuf \
-		-v ${CURRENT_DIR}/app/src/main/java:/java_out -w /root/dbuf \
+# It would be nice to have mvn invoke protoc and treat generated sources the mvn way
+src/test/java/org/omecproject/dbuf/grpc/Dbuf.java: src/test/resources/dbuf/dbuf.proto
+	docker run --rm -v ${DIR}/src/test/resources/dbuf:/root/dbuf \
+		-v ${DIR}/src/test/java:/java_out -w /root/dbuf \
 		${PROTOC_IMAGE} -I=/root/dbuf --java_out=/java_out \
 		--plugin=protoc-gen-grpc-java=/usr/bin/protoc-gen-grpc-java --grpc-java_out=/java_out \
-		dbuf.proto
+		api/dbuf.proto
 
 _build_resources: \
-	app/src/main/java/org/omecproject/dbuf/grpc/Dbuf.java
+	src/test/java/org/omecproject/dbuf/grpc/Dbuf.jav
