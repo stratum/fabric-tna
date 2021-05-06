@@ -30,8 +30,8 @@ parser FabricIngressParser (packet_in  packet,
         fabric_md.bridged.base.ip_eth_type = 0;
 #ifdef WITH_INT
         fabric_md.int_mirror_md.drop_reason = IntDropReason_t.DROP_REASON_UNKNOWN;
-        fabric_md.bridged.int_bmd.strip_gtpu = GtpuPresence.NONE;
-        fabric_md.int_mirror_md.strip_gtpu = GtpuPresence.NONE;
+        fabric_md.bridged.int_bmd.gtpu_presence = GtpuPresence.NONE;
+        fabric_md.int_mirror_md.gtpu_presence = GtpuPresence.NONE;
 #endif // WITH_INT
         transition check_ethernet;
     }
@@ -194,8 +194,7 @@ parser FabricIngressParser (packet_in  packet,
         packet.extract(hdr.gtpu);
         transition select(hdr.gtpu.ex_flag, hdr.gtpu.seq_flag, hdr.gtpu.npdu_flag) {
             (0, 0, 0): set_gtpu_only;
-            (_, _, _): parse_gtpu_options;
-            default: accept;
+            default: parse_gtpu_options;
         }
     }
 
@@ -203,11 +202,11 @@ parser FabricIngressParser (packet_in  packet,
 #ifdef WITH_INT
         // Signal egress to strip the GTP-U tunnel headers inside INT reports.
         // Updated by SpgwIngress if we do decap.
-        fabric_md.bridged.int_bmd.strip_gtpu = GtpuPresence.GTPU_ONLY;
+        fabric_md.bridged.int_bmd.gtpu_presence = GtpuPresence.GTPU_ONLY;
         // Do the same for ingress-to-egress mirrors for drop reporting. Not
         // modified by decap action, as the mirrored pkt at egress will be the
         // same seen at the ingress parser.
-        fabric_md.int_mirror_md.strip_gtpu = GtpuPresence.GTPU_ONLY;
+        fabric_md.int_mirror_md.gtpu_presence = GtpuPresence.GTPU_ONLY;
 #endif // WITH_INT
         transition parse_inner_ipv4;
     }
@@ -224,8 +223,8 @@ parser FabricIngressParser (packet_in  packet,
     state parse_gtpu_ext_psc {
         packet.extract(hdr.gtpu_ext_psc);
 #ifdef WITH_INT
-        fabric_md.bridged.int_bmd.strip_gtpu = GtpuPresence.GTPU_WITH_PSC;
-        fabric_md.int_mirror_md.strip_gtpu = GtpuPresence.GTPU_WITH_PSC;
+        fabric_md.bridged.int_bmd.gtpu_presence = GtpuPresence.GTPU_WITH_PSC;
+        fabric_md.int_mirror_md.gtpu_presence = GtpuPresence.GTPU_WITH_PSC;
 #endif // WITH_INT
         transition select(hdr.gtpu_ext_psc.next_ext) {
             GTPU_NEXT_EXT_NONE: parse_inner_ipv4;
@@ -381,7 +380,7 @@ parser FabricEgressParser (packet_in packet,
         hdr.outer_gtpu_ext_psc.next_ext  = GTPU_NEXT_EXT_NONE;
 #endif // WITH_SPGW
 #ifdef WITH_INT
-        fabric_md.int_mirror_md.strip_gtpu = fabric_md.bridged.int_bmd.strip_gtpu;
+        fabric_md.int_mirror_md.gtpu_presence = fabric_md.bridged.int_bmd.gtpu_presence;
 #endif // WITH_INT
         transition check_ethernet;
     }

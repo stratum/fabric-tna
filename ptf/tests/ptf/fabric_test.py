@@ -406,7 +406,7 @@ def simple_gtp_psc_dl_udp_packet(*args, **kwargs):
     return simple_gtp_packet("udp", *args, ext_psc_type=GTPU_EXT_PSC_TYPE_DL, **kwargs)
 
 def simple_gtp_psc_ul_icmp_packet(*args, **kwargs):
-    return simple_gtp_packet("tcp", *args, ext_psc_type=GTPU_EXT_PSC_TYPE_UL, **kwargs)
+    return simple_gtp_packet("icmp", *args, ext_psc_type=GTPU_EXT_PSC_TYPE_UL, **kwargs)
 
 def simple_gtp_psc_dl_icmp_packet(*args, **kwargs):
     return simple_gtp_packet("icmp", *args, ext_psc_type=GTPU_EXT_PSC_TYPE_DL, **kwargs)

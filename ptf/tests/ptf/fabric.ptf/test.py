@@ -23,12 +23,13 @@ vlan_confs = {
 PKT_TYPES_UNDER_TEST = ["tcp", "udp", "icmp", "sctp"]
 GTP_ENCAPED_PKT_TYPES = ["gtp_tcp",
                          "gtp_udp",
+                         "gtp_icmp",
                          "gtp_psc_ul_udp",
                          "gtp_psc_dl_udp",
                          "gtp_psc_ul_tcp",
                          "gtp_psc_dl_tcp",
-                         # FIXME: ICMP over GTP causes ParserError, uncomment below line once fixed
-                         # "gtp_icmp", "gtp_psc_dl_icmp", "gtp_psc_ul_icmp"
+                         "gtp_psc_dl_icmp",
+                         "gtp_psc_ul_icmp"
                          ]
 
 class FabricBridgingTest(BridgingTest):

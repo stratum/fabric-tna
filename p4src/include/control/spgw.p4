@@ -20,7 +20,7 @@ control DecapGtpu(inout ingress_headers_t            hdr,
         hdr.gtpu_options.setInvalid();
         hdr.gtpu_ext_psc.setInvalid();
 #ifdef WITH_INT
-        fabric_md.bridged.int_bmd.strip_gtpu = GtpuPresence.NONE;
+        fabric_md.bridged.int_bmd.gtpu_presence = GtpuPresence.NONE;
 #endif // WITH_INT
     }
     @hidden
@@ -70,7 +70,9 @@ control DecapGtpu(inout ingress_headers_t            hdr,
         size = 3;
     }
     apply {
-        decap_gtpu.apply();
+        if (hdr.inner_ipv4.isValid()) {
+            decap_gtpu.apply();
+        }
     }
 }
 
@@ -409,7 +411,7 @@ control SpgwEgress(
         hdr.outer_gtpu.msglen = hdr.ipv4.total_len;
         hdr.outer_gtpu.ex_flag = 0;
 #ifdef WITH_INT
-        fabric_md.int_mirror_md.strip_gtpu = GtpuPresence.GTPU_ONLY;
+        fabric_md.int_mirror_md.gtpu_presence = GtpuPresence.GTPU_ONLY;
 #endif // WITH_INT
     }
 
@@ -428,7 +430,7 @@ control SpgwEgress(
         hdr.outer_gtpu_options.setValid();
         hdr.outer_gtpu_ext_psc.setValid();
 #ifdef WITH_INT
-        fabric_md.int_mirror_md.strip_gtpu = GtpuPresence.GTPU_WITH_PSC;
+        fabric_md.int_mirror_md.gtpu_presence = GtpuPresence.GTPU_WITH_PSC;
 #endif // WITH_INT
     }
 

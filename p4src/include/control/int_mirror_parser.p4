@@ -134,7 +134,7 @@ parser IntReportMirrorParser (packet_in packet,
     state check_eth_type {
         packet.extract(hdr.eth_type);
 #ifdef WITH_SPGW
-        transition select(hdr.eth_type.value, fabric_md.int_mirror_md.strip_gtpu) {
+        transition select(hdr.eth_type.value, fabric_md.int_mirror_md.gtpu_presence) {
             (ETHERTYPE_MPLS, _): strip_mpls;
             (ETHERTYPE_IPV4, GtpuPresence.NONE): handle_ipv4;
             (ETHERTYPE_IPV4, GtpuPresence.GTPU_ONLY): strip_ipv4_udp_gtpu;
@@ -156,7 +156,7 @@ parser IntReportMirrorParser (packet_in packet,
         packet.advance(MPLS_HDR_BYTES * 8);
         bit<IP_VER_BITS> ip_ver = packet.lookahead<bit<IP_VER_BITS>>();
 #ifdef WITH_SPGW
-        transition select(ip_ver, fabric_md.int_mirror_md.strip_gtpu) {
+        transition select(ip_ver, fabric_md.int_mirror_md.gtpu_presence) {
             (IP_VERSION_4, GtpuPresence.NONE): handle_ipv4;
             (IP_VERSION_4, GtpuPresence.GTPU_ONLY): strip_ipv4_udp_gtpu;
             (IP_VERSION_4, GtpuPresence.GTPU_WITH_PSC): strip_ipv4_udp_gtpu_psc;

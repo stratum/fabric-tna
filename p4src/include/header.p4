@@ -232,7 +232,7 @@ header local_report_header_t {
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.ip_eth_type")
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.report_type")
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.flow_hash")
-@pa_no_overlay("egress", "fabric_md.int_mirror_md.strip_gtpu")
+@pa_no_overlay("egress", "fabric_md.int_mirror_md.gtpu_presence")
 header int_mirror_metadata_t {
     BridgedMdType_t       bmd_type;
     @padding bit<5>       _pad0;
@@ -245,7 +245,7 @@ header int_mirror_metadata_t {
     bit<32>               eg_tstamp;
     bit<8>                drop_reason;
     bit<16>               ip_eth_type;
-    GtpuPresence          strip_gtpu;
+    GtpuPresence          gtpu_presence;
     @padding bit<4>       _pad2;
     IntReportType_t       report_type;
     flow_hash_t           flow_hash;
@@ -253,7 +253,7 @@ header int_mirror_metadata_t {
 
 @flexible
 struct int_bridged_metadata_t {
-    GtpuPresence    strip_gtpu;
+    GtpuPresence    gtpu_presence;
     IntReportType_t report_type;
     MirrorId_t      mirror_session_id;
 }
