@@ -200,32 +200,6 @@ class FabricIPv4UnicastDefaultRouteTest(FabricIPv4UnicastTest):
         self.runTestInternal(DEFAULT_ROUTE_IPV4, [PREFIX_DEFAULT_ROUTE])
 
 
-class FabricIPv4UnicastGtpPassthroughTest(IPv4UnicastTest):
-    """Asserts that GTP packets not meant to be terminated by spgw.p4 are
-    forwarded using the outer IP+UDP headers.
-    """
-
-    @tvsetup
-    @autocleanup
-    def doRunTest(self, pkt, tc_name):
-        self.runIPv4UnicastTest(pkt, next_hop_mac=HOST2_MAC)
-
-    def runTest(self):
-        print("")
-        for pkt_type in GTP_PKT_TYPES:
-            tc_name = pkt_type
-            print(
-                "Testing {} packet...".format(pkt_type))
-            pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
-                eth_src=HOST1_MAC,
-                eth_dst=SWITCH_MAC,
-                ip_src=HOST1_IPV4,
-                ip_dst=HOST2_IPV4,
-                pktlen=128,
-            )
-            self.doRunTest(pkt, tc_name=tc_name)
-
-
 class FabricIPv4UnicastGroupTest(FabricTest):
     @tvsetup
     @autocleanup
