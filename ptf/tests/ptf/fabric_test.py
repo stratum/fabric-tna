@@ -493,6 +493,17 @@ def pkt_add_gtp(
         gtp_pkt = gtp_pkt / GTPPDUSessionContainer(type=ext_psc_type, QFI=ext_psc_qfi)
     return gtp_pkt / pkt[Ether].payload
 
+def pkt_remove_gtp(pkt):
+    if GTPPDUSessionContainer in pkt:
+        payload = pkt[GTPPDUSessionContainer].payload
+    elif GTP_U_Header in pkt:
+        payload = pkt[GTP_U_Header].payload
+    else:
+        raise Exception("Not a GTP packet")
+    return (
+        Ether(src=pkt[Ether].src, dst=pkt[Ether].dst) / payload
+    )
+
 
 def pkt_remove_vlan(pkt):
     assert Dot1Q in pkt
@@ -2787,6 +2798,10 @@ class IntTest(IPv4UnicastTest):
         is_device_spine,
         send_report_to_spine,
     ):
+        if GTP_U_Header in inner_packet:
+            # The switch should always strip GTP-U headers inside INT reports.
+            inner_packet = pkt_remove_gtp(inner_packet)
+
         # Note: scapy doesn't support dscp field, use tos.
         pkt = (
             Ether(src=src_mac, dst=dst_mac)
@@ -2836,6 +2851,9 @@ class IntTest(IPv4UnicastTest):
         is_device_spine,
         send_report_to_spine,
     ):
+        if GTP_U_Header in inner_packet:
+            inner_packet = pkt_remove_gtp(inner_packet)
+
         # Note: scapy doesn't support dscp field, use tos.
         pkt = (
             Ether(src=src_mac, dst=dst_mac)
@@ -2922,6 +2940,11 @@ class IntTest(IPv4UnicastTest):
         self.add_next_vlan(next_id, DEFAULT_VLAN)
 
     def set_up_int_flows(self, is_device_spine, pkt, send_report_to_spine):
+
+        if GTP_U_Header in pkt:
+            # Watchlist always matches on inner headers.
+            pkt = pkt_remove_gtp(pkt)
+
         if UDP in pkt:
             sport = pkt[UDP].sport
             dport = pkt[UDP].dport
@@ -3225,6 +3248,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         pkt,
         tagged1,
         tagged2,
+        with_psc,
         is_next_hop_spine,
         is_device_spine,
         send_report_to_spine,
@@ -3233,16 +3257,14 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         :param pkt: the input packet
         :param tagged1: if the input port should expect VLAN tagged packets
         :param tagged2: if the output port should expect VLAN tagged packets
+        :param with_psc: if the ingress packet should have a PDU Session
+               Container (PSC) GTP extension header
         :param is_next_hop_spine: whether the packet should be routed
                to the spines using MPLS SR
         :param is_device_spine: the device is a spine device
         :param send_report_to_spine: if the report is to be forwarded
                to a spine (e.g., collector attached to another leaf)
         """
-        # Input GTP-encapped packet from eNB.
-        gtp_pkt = pkt_add_gtp(
-            pkt, out_ipv4_src=S1U_ENB_IPV4, out_ipv4_dst=S1U_SGW_IPV4, teid=UPLINK_TEID,
-        )
 
         # Output packet routed to upstream device.
         exp_pkt = pkt.copy()
@@ -3250,14 +3272,20 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         if not is_next_hop_spine:
             pkt_decrement_ttl(exp_pkt)
 
-        # INT report's inner packet, same as exp_pkt but without MPLS or VLAN
-        # headers.
+        # INT report's inner packet, same as exp_pkt but without MPLS, VLAN, or
+        # GTP-U headers.
         int_inner_pkt = exp_pkt.copy()
 
         if tagged2:
             exp_pkt = pkt_add_vlan(exp_pkt, VLAN_ID_2)
         if is_next_hop_spine:
             exp_pkt = pkt_add_mpls(exp_pkt, MPLS_LABEL_2, DEFAULT_MPLS_TTL)
+
+        # Input GTP-encapped packet from eNB.
+        gtp_pkt = pkt_add_gtp(
+            pkt, out_ipv4_src=S1U_ENB_IPV4, out_ipv4_dst=S1U_SGW_IPV4, teid=UPLINK_TEID,
+            ext_psc_type=GTPU_EXT_PSC_TYPE_UL if with_psc else None
+        )
 
         # Output INT report packet.
         exp_int_report_pkt_masked = self.build_int_local_report(
@@ -3307,6 +3335,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         pkt,
         tagged1,
         tagged2,
+        with_psc,
         is_next_hop_spine,
         is_device_spine,
         send_report_to_spine,
@@ -3315,6 +3344,8 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         :param pkt: the input packet
         :param tagged1: if the input port should expect VLAN tagged packets
         :param tagged2: if the output port should expect VLAN tagged packets
+        :param with_psc: if the egress packet should have a PDU Session
+               Container (PSC) GTP extension header
         :param is_next_hop_spine: whether the packet should be routed
                to the spines using MPLS SR
         :param is_device_spine: the device is a spine device
@@ -3336,6 +3367,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             out_ipv4_src=S1U_SGW_IPV4,
             out_ipv4_dst=S1U_ENB_IPV4,
             teid=DOWNLINK_TEID,
+            ext_psc_type=GTPU_EXT_PSC_TYPE_DL if with_psc else None,
         )
         if tagged2 and Dot1Q not in exp_pkt:
             exp_pkt = pkt_add_vlan(exp_pkt, VLAN_ID_2)
@@ -3365,6 +3397,9 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             ctr_id=DOWNLINK_PDR_CTR_IDX,
         )
 
+        if with_psc:
+            self.enable_encap_with_psc()
+
         # Set collector, report table, and mirror sessions
         self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine)
 
@@ -3393,6 +3428,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         pkt,
         tagged1,
         tagged2,
+        with_psc,
         is_next_hop_spine,
         ig_port,
         eg_port,
@@ -3405,26 +3441,29 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         :param pkt: the input packet
         :param tagged1: if the input port should expect VLAN tagged packets
         :param tagged2: if the output port should expect VLAN tagged packets
+        :param with_psc: if the egress packet should have a PDU Session
+               Container (PSC) GTP extension header
         :param is_next_hop_spine: whether the packet should be routed
                to the spines using MPLS SR
-        :param ig_port: the ingress port of the IP uncast packet
-        :param eg_port: the egress port of the IP uncast packet
+        :param ig_port: the ingress port of the IP unicast packet
+        :param eg_port: the egress port of the IP unicast packet
         :param expect_int_report: expected to receive the INT report
         :param is_device_spine: the device is a spine device
         :param send_report_to_spine: if the report is to be forwarded
                to a spine (e.g., collector attached to another leaf)
         """
-        # Build packet from eNB
-        # Add GTPU header to the original packet
-        gtp_pkt = pkt_add_gtp(
-            pkt, out_ipv4_src=S1U_ENB_IPV4, out_ipv4_dst=S1U_SGW_IPV4, teid=UPLINK_TEID,
-        )
-        # Build expected inner pkt using the input one.
+        # Build INT inner pkt using the input one.
         int_inner_pkt = pkt.copy()
 
-        # We don't report MPLS or VLAN headers to DeepInsight.
+        # We don't report MPLS, VLAN or GTP-U headers to DeepInsight.
         if Dot1Q in int_inner_pkt:
             int_inner_pkt = pkt_remove_vlan(int_inner_pkt)
+
+        # Ingress packet from eNB
+        gtp_pkt = pkt_add_gtp(
+            pkt, out_ipv4_src=S1U_ENB_IPV4, out_ipv4_dst=S1U_SGW_IPV4, teid=UPLINK_TEID,
+            ext_psc_type=GTPU_EXT_PSC_TYPE_UL if with_psc else None
+        )
 
         # The expected INT report packet
         exp_int_report_pkt_masked = self.build_int_drop_report(

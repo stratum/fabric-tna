@@ -100,8 +100,10 @@ header tcp_t {
 
 // Without @pa_container_size FabricSpgwDownlinkTest fails
 // FIXME: test with future SDE releases and eventually remove pragmas
+#ifdef WITH_SPGW
 @pa_container_size("egress", "hdr.outer_udp.sport", 16)
 @pa_container_size("egress", "hdr.outer_udp.dport", 16)
+#endif // WITH_SPGW
 header udp_t {
     bit<16> sport;
     bit<16> dport;
@@ -160,7 +162,6 @@ header gtpu_ext_psc_t {
     bit<8> next_ext;
 }
 
-#ifdef WITH_SPGW
 @flexible
 struct spgw_bridged_metadata_t {
     bool            needs_gtpu_encap;
@@ -179,7 +180,6 @@ struct spgw_ingress_metadata_t {
     far_id_t           far_id;
     SpgwInterface      src_iface;
 }
-#endif // WITH_SPGW
 
 
 #ifdef WITH_INT

@@ -133,7 +133,6 @@ parser IntReportMirrorParser (packet_in packet,
 
     state check_eth_type {
         packet.extract(hdr.eth_type);
-#ifdef WITH_SPGW
         transition select(hdr.eth_type.value, fabric_md.int_mirror_md.gtpu_presence) {
             (ETHERTYPE_MPLS, _): strip_mpls;
             (ETHERTYPE_IPV4, GtpuPresence.NONE): handle_ipv4;
@@ -141,13 +140,6 @@ parser IntReportMirrorParser (packet_in packet,
             (ETHERTYPE_IPV4, GtpuPresence.GTPU_WITH_PSC): strip_ipv4_udp_gtpu_psc;
             default: reject;
         }
-#else
-        transition select(hdr.eth_type.value) {
-            ETHERTYPE_MPLS: strip_mpls;
-            ETHERTYPE_IPV4: handle_ipv4;
-            default: reject;
-        }
-#endif // WITH_SPGW
     }
 
     // We expect MPLS to be present only for mirrored packets (ingress-to-egress
@@ -155,22 +147,14 @@ parser IntReportMirrorParser (packet_in packet,
     state strip_mpls {
         packet.advance(MPLS_HDR_BYTES * 8);
         bit<IP_VER_BITS> ip_ver = packet.lookahead<bit<IP_VER_BITS>>();
-#ifdef WITH_SPGW
         transition select(ip_ver, fabric_md.int_mirror_md.gtpu_presence) {
             (IP_VERSION_4, GtpuPresence.NONE): handle_ipv4;
             (IP_VERSION_4, GtpuPresence.GTPU_ONLY): strip_ipv4_udp_gtpu;
             (IP_VERSION_4, GtpuPresence.GTPU_WITH_PSC): strip_ipv4_udp_gtpu_psc;
             default: reject;
         }
-#else
-        transition select(ip_ver) {
-            IP_VERSION_4: handle_ipv4;
-            default: reject;
-        }
-#endif // WITH_SPGW
     }
 
-#ifdef WITH_SPGW
     state strip_ipv4_udp_gtpu {
         packet.advance((IPV4_HDR_BYTES + UDP_HDR_BYTES + GTPU_HDR_BYTES) * 8);
         transition handle_ipv4;
@@ -181,7 +165,6 @@ parser IntReportMirrorParser (packet_in packet,
                 + GTPU_OPTIONS_HDR_BYTES + GTPU_EXT_PSC_HDR_BYTES) * 8);
         transition handle_ipv4;
     }
-#endif // WITH_SPGW
 
     state handle_ipv4 {
         // Extract only the length, required later to compute the lenght of the
