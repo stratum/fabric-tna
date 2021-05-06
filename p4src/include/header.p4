@@ -114,10 +114,9 @@ header udp_t {
 header icmp_t {
     bit<8> icmp_type;
     bit<8> icmp_code;
-    bit<16> checksum;
-    bit<16> identifier;
-    bit<16> sequence_number;
-    bit<64> timestamp;
+    // Not matched/modified. Treat as payload.
+    // bit<16> checksum;
+    // Other optional fields...
 }
 
 
