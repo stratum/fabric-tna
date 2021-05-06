@@ -1,0 +1,5 @@
+# SPDX-FileCopyrightText: 2020 Open Networking Foundation <info@opennetworking.org>
+# SPDX-License-Identifier: LicenseRef-ONF-Member-1.0
+[submodule "src/test/resources/dbuf"]
+	path = src/test/resources/dbuf
+	url = git@github.com:omec-project/dbuf.git

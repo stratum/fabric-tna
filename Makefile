@@ -116,3 +116,30 @@ clean:
 
 deep-clean: clean
 	-docker volume rm $(MVN_CACHE_DOCKER_VOLUME) > /dev/null 2>&1
+
+####
+
+# Check releases and pick one that brings in protobuf and grpc-java versions compatible
+# with what provided in ONOS:
+# https://github.com/TheThingsIndustries/docker-protobuf/releases
+PROTOC_IMAGE=thethingsindustries/protoc:3.1.9@sha256:0c506752cae9d06f6818b60da29ad93a886ce4c7e75a025bdcf8a5408e58e115
+
+_docker_pull_all:
+	docker pull ${PROTOC_IMAGE}
+
+deps: _docker_pull_all src/test/resources/dbuf/dbuf.proto src/test/java/org/omecproject/dbuf/grpc/Dbuf.java
+
+src/test/resources/dbuf/dbuf.proto:
+	git submodule update --init src/test/resources/dbuf
+
+# TODO (carmelo): it would be nice to have mvn invoke protoc
+#  and treat generated sources the mvn way
+app/src/main/java/org/omecproject/dbuf/grpc/Dbuf.java: app/external/dbuf/dbuf.proto
+	docker run --rm -v ${CURRENT_DIR}/app/external/dbuf:/root/dbuf \
+		-v ${CURRENT_DIR}/app/src/main/java:/java_out -w /root/dbuf \
+		${PROTOC_IMAGE} -I=/root/dbuf --java_out=/java_out \
+		--plugin=protoc-gen-grpc-java=/usr/bin/protoc-gen-grpc-java --grpc-java_out=/java_out \
+		dbuf.proto
+
+_build_resources: \
+	app/src/main/java/org/omecproject/dbuf/grpc/Dbuf.java
