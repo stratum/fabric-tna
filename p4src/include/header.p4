@@ -87,15 +87,16 @@ header ipv6_t {
 header tcp_t {
     bit<16> sport;
     bit<16> dport;
-    bit<32> seq_no;
-    bit<32> ack_no;
-    bit<4>  data_offset;
-    bit<3>  res;
-    bit<3>  ecn;
-    bit<6>  ctrl;
-    bit<16> window;
-    bit<16> checksum;
-    bit<16> urgent_ptr;
+    // Not matched/modified. Treat as payload.
+    // bit<32> seq_no;
+    // bit<32> ack_no;
+    // bit<4>  data_offset;
+    // bit<3>  res;
+    // bit<3>  ecn;
+    // bit<6>  ctrl;
+    // bit<16> window;
+    // bit<16> checksum;
+    // bit<16> urgent_ptr;
 }
 
 // Without @pa_container_size FabricSpgwDownlinkTest fails
