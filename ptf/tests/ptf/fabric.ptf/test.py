@@ -1367,14 +1367,10 @@ class FabricSpgwUplinkTest(SpgwSimpleTest):
     def runTest(self):
         print("")
         for vlan_conf, tagged in vlan_confs.items():
-            for pkt_type in BASE_PKT_TYPES:
+            for pkt_type in BASE_PKT_TYPES - {"sctp"}:
                 for with_psc in [False, True]:
                     for is_next_hop_spine in [False, True]:
                         if is_next_hop_spine and tagged[1]:
-                            # Egress port cannot be tagged if going to a spine.
-                            continue
-                        if pkt_type == 'sctp':
-                            # It is unlikely we will see sctp over gtp.
                             continue
                         print(
                             "Testing VLAN={}, pkt={}, psc={}, is_next_hop_spine={}...".format(

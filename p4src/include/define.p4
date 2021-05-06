@@ -67,6 +67,16 @@ enum bit<2> GtpuPresence {
     GTPU_WITH_PSC = 0x2
 }
 
+const bit<16> GTPU_UDP_PORT = 2152;
+const bit<3> GTP_V1 = 3w1;
+const bit<8> GTPU_GPDU = 0xff;
+const bit<1> GTP_PROTOCOL_TYPE_GTP = 1w1;
+const bit<8> GTPU_NEXT_EXT_NONE = 0x0;
+const bit<8> GTPU_NEXT_EXT_PSC = 0x85;
+const bit<4> GTPU_EXT_PSC_TYPE_DL = 4w0; // Downlink
+const bit<4> GTPU_EXT_PSC_TYPE_UL = 4w1; // Uplink
+const bit<8> GTPU_EXT_PSC_LEN = 8w1; // 1*4-octets
+
 // PORT types. Set by the control plane using the actions
 // of the filtering.ingress_port_vlan table.
 enum bit<2> PortType_t {

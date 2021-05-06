@@ -123,11 +123,6 @@ header icmp_t {
 
 // GTPU v1 -- 3GPP TS 29.281 version 15.7.0
 // https://www.etsi.org/deliver/etsi_ts/129200_129299/129281/15.07.00_60/ts_129281v150700p.pdf
-const bit<3>  GTP_V1 = 3w1;
-const bit<16> GTPU_UDP_PORT = 2152;
-const bit<8>  GTPU_GPDU = 0xff;
-const bit<1>  GTP_PROTOCOL_TYPE_GTP = 1w1;
-const bit<8>  GTPU_NEXT_EXT_NONE = 0x0;
 header gtpu_t {
     bit<3>  version;    /* version */
     bit<1>  pt;         /* protocol type */
@@ -148,10 +143,6 @@ header gtpu_options_t {
 
 // GTPU extension: PDU Session Container (PSC) -- 3GPP TS 38.415 version 15.2.0
 // https://www.etsi.org/deliver/etsi_ts/138400_138499/138415/15.02.00_60/ts_138415v150200p.pdf
-const bit<8> GTPU_NEXT_EXT_PSC = 0x85;
-const bit<4> GTPU_EXT_PSC_TYPE_DL = 4w0; // Downlink
-const bit<4> GTPU_EXT_PSC_TYPE_UL = 4w1; // Uplink
-const bit<8> GTPU_EXT_PSC_LEN = 8w1; // 1*4-octets
 header gtpu_ext_psc_t {
     bit<8> len;      /* Length in 4-octet units (common to all extensions) */
     bit<4> type;     /* Uplink or downlink */
