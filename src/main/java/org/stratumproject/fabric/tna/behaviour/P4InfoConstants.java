@@ -281,6 +281,7 @@ public final class P4InfoConstants {
             PiActionParamId.of("port_num");
     public static final PiActionParamId PORT_TYPE =
             PiActionParamId.of("port_type");
+    public static final PiActionParamId QFI = PiActionParamId.of("qfi");
     public static final PiActionParamId QID = PiActionParamId.of("qid");
     public static final PiActionParamId SMAC = PiActionParamId.of("smac");
     public static final PiActionParamId SRC_IFACE =

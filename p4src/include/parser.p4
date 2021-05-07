@@ -376,7 +376,7 @@ parser FabricEgressParser (packet_in packet,
         hdr.outer_gtpu_ext_psc.spare0    = 0;
         hdr.outer_gtpu_ext_psc.ppp       = 0;
         hdr.outer_gtpu_ext_psc.rqi       = 0;
-        hdr.outer_gtpu_ext_psc.qfi       = 0; // TODO: allow setting in ingress
+        // hdr.outer_gtpu_ext_psc.qfi    = update later
         hdr.outer_gtpu_ext_psc.next_ext  = GTPU_NEXT_EXT_NONE;
 #endif // WITH_SPGW
 #ifdef WITH_INT

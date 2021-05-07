@@ -415,8 +415,10 @@ control SpgwEgress(
 #endif // WITH_INT
     }
 
-    // Do GTP-U encap with PDU Session Container extension for 5G NG-RAN.
-    action gtpu_with_psc() {
+    // Do GTP-U encap with PDU Session Container extension for 5G NG-RAN with
+    // configurable QFI.
+    // TODO: allow setting different QFIs in ingress
+    action gtpu_with_psc(bit<6> qfi) {
         _encap_common();
         hdr.outer_ipv4.total_len = hdr.ipv4.total_len
                 + IPV4_HDR_BYTES + UDP_HDR_BYTES + GTPU_HDR_BYTES
@@ -429,6 +431,7 @@ control SpgwEgress(
         hdr.outer_gtpu.ex_flag = 1;
         hdr.outer_gtpu_options.setValid();
         hdr.outer_gtpu_ext_psc.setValid();
+        hdr.outer_gtpu_ext_psc.qfi = qfi;
 #ifdef WITH_INT
         fabric_md.int_mirror_md.gtpu_presence = GtpuPresence.GTPU_WITH_PSC;
 #endif // WITH_INT
