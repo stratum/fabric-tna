@@ -3,3 +3,15 @@
 [submodule "src/test/resources/dbuf"]
 	path = src/test/resources/dbuf
 	url = git@github.com:omec-project/dbuf.git
+[submodule "src/test/resources/googleapis"]
+	path = src/test/resources/googleapis
+	url = git@github.com:googleapis/googleapis.git
+[submodule "src/test/resources/gnmi"]
+	path = src/test/resources/gnmi
+	url = git@github.com:openconfig/gnmi.git
+[submodule "src/test/resources/p4runtime"]
+	path = src/test/resources/p4runtime
+	url = git@github.com:p4lang/p4runtime.git
+[submodule "src/test/resources/testvectors"]
+	path = src/test/resources/testvectors
+	url = git@github.com:stratum/testvectors.git
