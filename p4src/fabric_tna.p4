@@ -35,7 +35,7 @@ control FabricIngress (
     inout ingress_intrinsic_metadata_for_tm_t        ig_tm_md) {
 
     LookupMdInit() lkp_md_init;
-    Stats() stats;
+    StatsIngress() stats;
     PacketIoIngress() pkt_io;
     Filtering() filtering;
     Forwarding() forwarding;
@@ -53,7 +53,8 @@ control FabricIngress (
     apply {
         lkp_md_init.apply(hdr, fabric_md.lkp);
         pkt_io.apply(hdr, fabric_md, ig_intr_md, ig_tm_md, ig_dprsr_md);
-        stats.apply(fabric_md.acl_lkp, ig_intr_md.ingress_port);
+        stats.apply(fabric_md.lkp, ig_intr_md.ingress_port,
+                    fabric_md.bridged.base.stats_flow_id);
         filtering.apply(hdr, fabric_md, ig_intr_md);
 #ifdef WITH_SPGW
         if (!fabric_md.skip_forwarding) {
@@ -87,8 +88,7 @@ control FabricEgress (
     inout egress_intrinsic_metadata_for_deparser_t     eg_dprsr_md,
     inout egress_intrinsic_metadata_for_output_port_t  eg_oport_md) {
 
-    AclLookupInit() acl_lkp_init;
-    Stats() stats;
+    StatsEgress() stats;
     PacketIoEgress() pkt_io_egress;
     EgressNextControl() egress_next;
 #ifdef WITH_SPGW
@@ -99,12 +99,8 @@ control FabricEgress (
 #endif // WITH_INT
 
     apply {
-        acl_lkp_init.apply(hdr, fabric_md.acl_lkp);
         pkt_io_egress.apply(hdr, fabric_md, eg_intr_md);
-        if (fabric_md.bridged.bmd_type == BridgedMdType_t.INGRESS_TO_EGRESS) {
-            // Do not update stats for INT reports and other mirrored packets.
-            stats.apply(fabric_md.acl_lkp, eg_intr_md.egress_port);
-        }
+        stats.apply(fabric_md.bridged.base.stats_flow_id, eg_intr_md.egress_port);
         egress_next.apply(hdr, fabric_md, eg_intr_md, eg_dprsr_md);
 #ifdef WITH_SPGW
         spgw.apply(hdr, fabric_md);

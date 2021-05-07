@@ -3,8 +3,45 @@
 
 #include "../header.p4"
 
-control Stats (in acl_lookup_t acl_lkp,
-               in PortId_t port) {
+// The control plane should never use this flow ID.
+// Used to force initialization of stats_flow_id metadata.
+const bit<STATS_FLOW_ID_WIDTH> UNSET_FLOW_ID = 0;
+
+control StatsIngress (in lookup_metadata_t lkp,
+                      in PortId_t ig_port,
+                      out bit<STATS_FLOW_ID_WIDTH> stats_flow_id) {
+
+    DirectCounter<bit<64>>(CounterType_t.PACKETS_AND_BYTES) flow_counter;
+
+    action count(bit<STATS_FLOW_ID_WIDTH> flow_id) {
+        stats_flow_id = flow_id;
+        flow_counter.count();
+    }
+
+    table flows {
+        key = {
+            lkp.ipv4_src : ternary @name("ipv4_src");
+            lkp.ipv4_dst : ternary @name("ipv4_dst");
+            lkp.ip_proto : ternary @name("ip_proto");
+            lkp.l4_sport : ternary @name("l4_sport");
+            lkp.l4_dport : ternary @name("l4_dport");
+            ig_port      : ternary @name("ig_port");
+        }
+        actions = {
+            count;
+        }
+        const default_action = count(UNSET_FLOW_ID);
+        const size = 1 << STATS_FLOW_ID_WIDTH;
+        counters = flow_counter;
+    }
+
+    apply {
+        flows.apply();
+    }
+}
+
+control StatsEgress  (in bit<STATS_FLOW_ID_WIDTH> stats_flow_id,
+                      in PortId_t eg_port) {
 
     DirectCounter<bit<64>>(CounterType_t.PACKETS_AND_BYTES) flow_counter;
 
@@ -14,22 +51,22 @@ control Stats (in acl_lookup_t acl_lkp,
 
     table flows {
         key = {
-            acl_lkp.ipv4_src : ternary @name("ipv4_src");
-            acl_lkp.ipv4_dst : ternary @name("ipv4_dst");
-            acl_lkp.ip_proto : ternary @name("ip_proto");
-            acl_lkp.l4_sport : ternary @name("l4_sport");
-            acl_lkp.l4_dport : ternary @name("l4_dport");
-            port             : ternary @name("port");
+            stats_flow_id : exact @name("stats_flow_id");
+            eg_port       : exact @name("eg_port");
         }
         actions = {
             count;
         }
         const default_action = count;
-        const size = STATS_TABLE_SIZE;
+        const size = 1 << STATS_FLOW_ID_WIDTH;
         counters = flow_counter;
     }
 
     apply {
-        flows.apply();
+        if (fabric_md.bridged.bmd_type == BridgedMdType_t.INGRESS_TO_EGRESS) {
+            // Do not update stats for INT reports and other mirrored packets.
+            // stats_flow_id will be valid only for bridged packets.
+            flows.apply();
+        }
     }
 }
