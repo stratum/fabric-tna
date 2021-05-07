@@ -21,16 +21,18 @@ vlan_confs = {
 }
 
 BASE_PKT_TYPES = {"tcp", "udp", "icmp", "sctp"}
-GTP_PKT_TYPES = {"gtp_tcp",
-                 "gtp_udp",
-                 "gtp_icmp",
-                 "gtp_psc_ul_udp",
-                 "gtp_psc_dl_udp",
-                 "gtp_psc_ul_tcp",
-                 "gtp_psc_dl_tcp",
-                 "gtp_psc_dl_icmp",
-                 "gtp_psc_ul_icmp",
-                 }
+GTP_PKT_TYPES = {
+    "gtp_tcp",
+    "gtp_udp",
+    "gtp_icmp",
+    "gtp_psc_ul_udp",
+    "gtp_psc_dl_udp",
+    "gtp_psc_ul_tcp",
+    "gtp_psc_dl_tcp",
+    "gtp_psc_dl_icmp",
+    "gtp_psc_ul_icmp",
+}
+
 
 class FabricBridgingTest(BridgingTest):
     @tvsetup
@@ -909,12 +911,11 @@ class FabricIPv4UnicastGtpAclInnerDropTest(IPv4UnicastTest):
             ip_dst=HOST2_IPV4,
             udp_sport=5061,
             udp_dport=5060,
-            pktlen=128)
+            pktlen=128,
+        )
         pkt = pkt_add_gtp(
-            pkt,
-            out_ipv4_src=HOST3_IPV4,
-            out_ipv4_dst=HOST4_IPV4,
-            teid=0xEEFFC0F0)
+            pkt, out_ipv4_src=HOST3_IPV4, out_ipv4_dst=HOST4_IPV4, teid=0xEEFFC0F0
+        )
         self.add_forwarding_acl_drop(
             ipv4_src=HOST1_IPV4,
             ipv4_dst=HOST2_IPV4,
@@ -1313,7 +1314,12 @@ class FabricSpgwDownlinkTest(SpgwSimpleTest):
                             pktlen=MIN_PKT_LEN,
                         )
                         self.doRunTest(
-                            pkt, tagged[0], tagged[1], with_psc, is_next_hop_spine, tc_name=tc_name,
+                            pkt,
+                            tagged[0],
+                            tagged[1],
+                            with_psc,
+                            is_next_hop_spine,
+                            tc_name=tc_name,
                         )
 
 
@@ -1335,7 +1341,7 @@ class FabricSpgwUplinkTest(SpgwSimpleTest):
             tagged1=tagged1,
             tagged2=tagged2,
             with_psc=with_psc,
-            is_next_hop_spine=is_next_hop_spine
+            is_next_hop_spine=is_next_hop_spine,
         )
 
     def runTest(self):
@@ -1358,7 +1364,9 @@ class FabricSpgwUplinkTest(SpgwSimpleTest):
                             ip_dst=HOST2_IPV4,
                             pktlen=MIN_PKT_LEN,
                         )
-                        self.doRunTest(pkt, tagged[0], tagged[1], with_psc, is_next_hop_spine)
+                        self.doRunTest(
+                            pkt, tagged[0], tagged[1], with_psc, is_next_hop_spine
+                        )
 
 
 @group("spgw")
@@ -2646,34 +2654,27 @@ class FabricPacketOutLoopbackModeTest(FabricTest):
             )
             self.doRunTest(pkt)
 
+
 @group("int")
 class FabricIntLocalReportLoopbackModeTest(IntTest):
-
     @tvsetup
     @autocleanup
-    def doRunTest(self,
-                  pkt,
-                  next_hop_mac,
-                  is_device_spine,
-                  send_report_to_spine=False):
+    def doRunTest(self, pkt, next_hop_mac, is_device_spine, send_report_to_spine=False):
 
         # Set collector, report table, and mirror sessions
         self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine)
 
         self.runIPv4UnicastTest(
-            pkt,
-            next_hop_mac=next_hop_mac,
-            prefix_len=24,
-            no_send=True
+            pkt, next_hop_mac=next_hop_mac, prefix_len=24, no_send=True
         )
 
         exp_pkt_1 = (
-                Ether(type=ETH_TYPE_CPU_LOOPBACK_INGRESS, src=ZERO_MAC, dst=ZERO_MAC) / pkt
+            Ether(type=ETH_TYPE_CPU_LOOPBACK_INGRESS, src=ZERO_MAC, dst=ZERO_MAC) / pkt
         )
         routed_pkt = pkt_decrement_ttl(pkt_route(pkt, next_hop_mac))
         exp_pkt_2 = (
-                Ether(type=ETH_TYPE_CPU_LOOPBACK_EGRESS, src=ZERO_MAC, dst=ZERO_MAC)
-                / routed_pkt
+            Ether(type=ETH_TYPE_CPU_LOOPBACK_EGRESS, src=ZERO_MAC, dst=ZERO_MAC)
+            / routed_pkt
         )
 
         # The expected INT report packet
@@ -2691,7 +2692,8 @@ class FabricIntLocalReportLoopbackModeTest(IntTest):
         ).exp_pkt
 
         exp_int_report_pkt_loopback = (
-            Ether(type=ETH_TYPE_CPU_LOOPBACK_EGRESS, src=ZERO_MAC, dst=ZERO_MAC) / exp_int_report_pkt
+            Ether(type=ETH_TYPE_CPU_LOOPBACK_EGRESS, src=ZERO_MAC, dst=ZERO_MAC)
+            / exp_int_report_pkt
         )
         exp_int_report_pkt_masked = Mask(exp_int_report_pkt_loopback)
         exp_int_report_pkt_masked.set_do_not_care_scapy(Ether, "src")
@@ -2702,11 +2704,19 @@ class FabricIntLocalReportLoopbackModeTest(IntTest):
         exp_int_report_pkt_masked.set_do_not_care_scapy(IP, "id")
         exp_int_report_pkt_masked.set_do_not_care_scapy(IP, "chksum")
         exp_int_report_pkt_masked.set_do_not_care_scapy(UDP, "chksum")
-        exp_int_report_pkt_masked.set_do_not_care_scapy(INT_L45_REPORT_FIXED, "ingress_tstamp")
+        exp_int_report_pkt_masked.set_do_not_care_scapy(
+            INT_L45_REPORT_FIXED, "ingress_tstamp"
+        )
         exp_int_report_pkt_masked.set_do_not_care_scapy(INT_L45_REPORT_FIXED, "seq_no")
-        exp_int_report_pkt_masked.set_do_not_care_scapy(INT_L45_LOCAL_REPORT, "queue_id")
-        exp_int_report_pkt_masked.set_do_not_care_scapy(INT_L45_LOCAL_REPORT, "queue_occupancy")
-        exp_int_report_pkt_masked.set_do_not_care_scapy(INT_L45_LOCAL_REPORT, "egress_tstamp")
+        exp_int_report_pkt_masked.set_do_not_care_scapy(
+            INT_L45_LOCAL_REPORT, "queue_id"
+        )
+        exp_int_report_pkt_masked.set_do_not_care_scapy(
+            INT_L45_LOCAL_REPORT, "queue_occupancy"
+        )
+        exp_int_report_pkt_masked.set_do_not_care_scapy(
+            INT_L45_LOCAL_REPORT, "egress_tstamp"
+        )
 
         # 1. step: packet-out straight to out port
         self.send_packet_out(
@@ -2728,15 +2738,13 @@ class FabricIntLocalReportLoopbackModeTest(IntTest):
         self.verify_packet_in(exp_int_report_pkt, self.port3)
         self.verify_no_other_packets()
 
-
     def runTest(self):
         print("")
         for is_device_spine in [False, True]:
             for pkt_type in BASE_PKT_TYPES:
                 print(
                     "Testing pkt={}, is_device_spine={}...".format(
-                        pkt_type,
-                        is_device_spine
+                        pkt_type, is_device_spine
                     )
                 )
                 pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
@@ -2746,9 +2754,7 @@ class FabricIntLocalReportLoopbackModeTest(IntTest):
                     ip_dst=HOST2_IPV4,
                     pktlen=MIN_PKT_LEN,
                 )
-                self.doRunTest(pkt,
-                               HOST2_MAC,
-                               is_device_spine)
+                self.doRunTest(pkt, HOST2_MAC, is_device_spine)
 
 
 class FabricOptimizedFieldDetectorTest(FabricTest):

@@ -12,8 +12,8 @@ from base_test import P4RuntimeTest, ipv4_to_binary, mac_to_binary, stringify, t
 from p4.v1 import p4runtime_pb2
 from ptf import testutils
 from ptf.mask import Mask
-from scapy.contrib.mpls import MPLS
 from scapy.contrib.gtp import GTP_U_Header, GTPPDUSessionContainer
+from scapy.contrib.mpls import MPLS
 from scapy.fields import BitField, ByteField, IntField, ShortField
 from scapy.layers.inet import IP, TCP, UDP
 from scapy.layers.l2 import Dot1Q, Ether
@@ -347,6 +347,7 @@ def simple_sctp_packet(
 
     return pkt
 
+
 # Generic function to generate a GTP-encapsulated pkt
 # Default arg values are in line with PTF
 def simple_gtp_packet(
@@ -356,24 +357,24 @@ def simple_gtp_packet(
     ip_src="192.168.0.1",
     ip_dst="192.168.0.2",
     ip_ttl=64,
-    gtp_teid=0xff, # dummy teid
+    gtp_teid=0xFF,  # dummy teid
     pktlen=136,
     ext_psc_type=None,
-    ext_psc_qfi=0
+    ext_psc_qfi=0,
 ):
     pktlen = pktlen - IP_HDR_BYTES - UDP_HDR_BYTES - GTPU_HDR_BYTES
     if ext_psc_type is not None:
         pktlen = pktlen - GTPU_OPTIONS_HDR_BYTES - GTPU_EXT_PSC_BYTES
-    pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(ip_src=ip_src,
-                                                            ip_dst=ip_dst,
-                                                            pktlen=pktlen)
+    pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
+        ip_src=ip_src, ip_dst=ip_dst, pktlen=pktlen
+    )
     gtp_pkt = pkt_add_gtp(
         pkt,
         out_ipv4_src=ip_src,
         out_ipv4_dst=ip_dst,
         teid=gtp_teid,
         ext_psc_type=ext_psc_type,
-        ext_psc_qfi=ext_psc_qfi
+        ext_psc_qfi=ext_psc_qfi,
     )
     gtp_pkt[Ether].src = eth_src
     gtp_pkt[Ether].dst = eth_dst
@@ -396,20 +397,26 @@ def simple_gtp_icmp_packet(*args, **kwargs):
 def simple_gtp_psc_ul_tcp_packet(*args, **kwargs):
     return simple_gtp_packet("tcp", *args, ext_psc_type=GTPU_EXT_PSC_TYPE_UL, **kwargs)
 
+
 def simple_gtp_psc_dl_tcp_packet(*args, **kwargs):
     return simple_gtp_packet("tcp", *args, ext_psc_type=GTPU_EXT_PSC_TYPE_DL, **kwargs)
+
 
 def simple_gtp_psc_ul_udp_packet(*args, **kwargs):
     return simple_gtp_packet("udp", *args, ext_psc_type=GTPU_EXT_PSC_TYPE_UL, **kwargs)
 
+
 def simple_gtp_psc_dl_udp_packet(*args, **kwargs):
     return simple_gtp_packet("udp", *args, ext_psc_type=GTPU_EXT_PSC_TYPE_DL, **kwargs)
+
 
 def simple_gtp_psc_ul_icmp_packet(*args, **kwargs):
     return simple_gtp_packet("icmp", *args, ext_psc_type=GTPU_EXT_PSC_TYPE_UL, **kwargs)
 
+
 def simple_gtp_psc_dl_icmp_packet(*args, **kwargs):
     return simple_gtp_packet("icmp", *args, ext_psc_type=GTPU_EXT_PSC_TYPE_DL, **kwargs)
+
 
 # Embed the above functions in the testutils package.
 setattr(testutils, "simple_sctp_packet", simple_sctp_packet)
@@ -422,6 +429,7 @@ setattr(testutils, "simple_gtp_psc_ul_udp_packet", simple_gtp_psc_ul_udp_packet)
 setattr(testutils, "simple_gtp_psc_dl_udp_packet", simple_gtp_psc_dl_udp_packet)
 setattr(testutils, "simple_gtp_psc_ul_icmp_packet", simple_gtp_psc_ul_icmp_packet)
 setattr(testutils, "simple_gtp_psc_dl_icmp_packet", simple_gtp_psc_dl_icmp_packet)
+
 
 def pkt_mac_swap(pkt):
     orig_dst = pkt[Ether].dst
@@ -493,6 +501,7 @@ def pkt_add_gtp(
         gtp_pkt = gtp_pkt / GTPPDUSessionContainer(type=ext_psc_type, QFI=ext_psc_qfi)
     return gtp_pkt / pkt[Ether].payload
 
+
 def pkt_remove_gtp(pkt):
     if GTPPDUSessionContainer in pkt:
         payload = pkt[GTPPDUSessionContainer].payload
@@ -500,9 +509,7 @@ def pkt_remove_gtp(pkt):
         payload = pkt[GTP_U_Header].payload
     else:
         raise Exception("Not a GTP packet")
-    return (
-        Ether(src=pkt[Ether].src, dst=pkt[Ether].dst) / payload
-    )
+    return Ether(src=pkt[Ether].src, dst=pkt[Ether].dst) / payload
 
 
 def pkt_remove_vlan(pkt):
@@ -2067,10 +2074,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
 
     def enable_encap_with_psc(self):
         self.send_request_add_entry_to_action(
-            "FabricEgress.spgw.gtpu_encap",
-            None,
-            "FabricEgress.spgw.gtpu_with_psc",
-            [],
+            "FabricEgress.spgw.gtpu_encap", None, "FabricEgress.spgw.gtpu_with_psc", [],
         )
 
     def reset_pdr_counters(self, ctr_idx):
@@ -2290,7 +2294,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             out_ipv4_dst=S1U_ENB_IPV4,
             teid=DOWNLINK_TEID,
             ext_psc_type=GTPU_EXT_PSC_TYPE_DL if with_psc else None,
-            ext_psc_qfi=0
+            ext_psc_qfi=0,
         )
         if is_next_hop_spine:
             exp_pkt = pkt_add_mpls(exp_pkt, MPLS_LABEL_2, DEFAULT_MPLS_TTL)
@@ -3283,8 +3287,11 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
 
         # Input GTP-encapped packet from eNB.
         gtp_pkt = pkt_add_gtp(
-            pkt, out_ipv4_src=S1U_ENB_IPV4, out_ipv4_dst=S1U_SGW_IPV4, teid=UPLINK_TEID,
-            ext_psc_type=GTPU_EXT_PSC_TYPE_UL if with_psc else None
+            pkt,
+            out_ipv4_src=S1U_ENB_IPV4,
+            out_ipv4_dst=S1U_SGW_IPV4,
+            teid=UPLINK_TEID,
+            ext_psc_type=GTPU_EXT_PSC_TYPE_UL if with_psc else None,
         )
 
         # Output INT report packet.
@@ -3461,8 +3468,11 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
 
         # Ingress packet from eNB
         gtp_pkt = pkt_add_gtp(
-            pkt, out_ipv4_src=S1U_ENB_IPV4, out_ipv4_dst=S1U_SGW_IPV4, teid=UPLINK_TEID,
-            ext_psc_type=GTPU_EXT_PSC_TYPE_UL if with_psc else None
+            pkt,
+            out_ipv4_src=S1U_ENB_IPV4,
+            out_ipv4_dst=S1U_SGW_IPV4,
+            teid=UPLINK_TEID,
+            ext_psc_type=GTPU_EXT_PSC_TYPE_UL if with_psc else None,
         )
 
         # The expected INT report packet
