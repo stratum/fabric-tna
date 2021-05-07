@@ -19,14 +19,11 @@
 #define IPV4_HDR_BYTES 20
 #define IPV6_HDR_BYTES 40
 #define UDP_HDR_BYTES 8
-#define GTP_HDR_BYTES 8
+#define GTPU_HDR_BYTES 8
+#define GTPU_OPTIONS_HDR_BYTES 4
+#define GTPU_EXT_PSC_HDR_BYTES 4
 #define MPLS_HDR_BYTES 4
 #define VLAN_HDR_BYTES 4
-
-#define UDP_PORT_GTPU 2152
-#define GTP_GPDU 0xff
-#define GTPU_VERSION 0x01
-#define GTP_PROTOCOL_TYPE_GTP 0x01
 
 #define PKT_INSTANCE_TYPE_NORMAL 0
 #define PKT_INSTANCE_TYPE_INGRESS_CLONE 1
@@ -47,6 +44,7 @@ typedef bit<32> flow_hash_t;
 
 // SPGW types
 typedef bit<32> teid_t;
+// FIXME: use less than 32 bits for far_id_t, enough to index up to MAX_FARS
 typedef bit<32> far_id_t;
 typedef bit<5>  qid_t;
 typedef bit<16> pdr_ctr_id_t;
@@ -62,6 +60,22 @@ enum bit<8> SpgwInterface {
     CORE          = 0x2,
     FROM_DBUF     = 0x3
 }
+
+enum bit<2> GtpuPresence {
+    NONE          = 0x0,
+    GTPU_ONLY     = 0x1,
+    GTPU_WITH_PSC = 0x2
+}
+
+const bit<16> GTPU_UDP_PORT = 2152;
+const bit<3> GTP_V1 = 3w1;
+const bit<8> GTPU_GPDU = 0xff;
+const bit<1> GTP_PROTOCOL_TYPE_GTP = 1w1;
+const bit<8> GTPU_NEXT_EXT_NONE = 0x0;
+const bit<8> GTPU_NEXT_EXT_PSC = 0x85;
+const bit<4> GTPU_EXT_PSC_TYPE_DL = 4w0; // Downlink
+const bit<4> GTPU_EXT_PSC_TYPE_UL = 4w1; // Uplink
+const bit<8> GTPU_EXT_PSC_LEN = 8w1; // 1*4-octets
 
 // PORT types. Set by the control plane using the actions
 // of the filtering.ingress_port_vlan table.

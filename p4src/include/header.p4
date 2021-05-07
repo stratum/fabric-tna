@@ -87,17 +87,24 @@ header ipv6_t {
 header tcp_t {
     bit<16> sport;
     bit<16> dport;
-    bit<32> seq_no;
-    bit<32> ack_no;
-    bit<4>  data_offset;
-    bit<3>  res;
-    bit<3>  ecn;
-    bit<6>  ctrl;
-    bit<16> window;
-    bit<16> checksum;
-    bit<16> urgent_ptr;
+    // Not matched/modified. Treat as payload.
+    // bit<32> seq_no;
+    // bit<32> ack_no;
+    // bit<4>  data_offset;
+    // bit<3>  res;
+    // bit<3>  ecn;
+    // bit<6>  ctrl;
+    // bit<16> window;
+    // bit<16> checksum;
+    // bit<16> urgent_ptr;
 }
 
+// Without @pa_container_size FabricSpgwDownlinkTest fails
+// FIXME: test with future SDE releases and eventually remove pragmas
+#ifdef WITH_SPGW
+@pa_container_size("egress", "hdr.outer_udp.sport", 16)
+@pa_container_size("egress", "hdr.outer_udp.dport", 16)
+#endif // WITH_SPGW
 header udp_t {
     bit<16> sport;
     bit<16> dport;
@@ -108,29 +115,46 @@ header udp_t {
 header icmp_t {
     bit<8> icmp_type;
     bit<8> icmp_code;
-    bit<16> checksum;
-    bit<16> identifier;
-    bit<16> sequence_number;
-    bit<64> timestamp;
+    // Not matched/modified. Treat as payload.
+    // bit<16> checksum;
+    // Other optional fields...
 }
 
-// GTPU v1
+
+// GTPU v1 -- 3GPP TS 29.281 version 15.7.0
+// https://www.etsi.org/deliver/etsi_ts/129200_129299/129281/15.07.00_60/ts_129281v150700p.pdf
 header gtpu_t {
     bit<3>  version;    /* version */
     bit<1>  pt;         /* protocol type */
     bit<1>  spare;      /* reserved */
-    bit<1>  ex_flag;    /* next extension hdr present? */
-    bit<1>  seq_flag;   /* sequence no. */
-    bit<1>  npdu_flag;  /* n-pdn number present ? */
+    bit<1>  ex_flag;    /* whether there is an extension header optional field */
+    bit<1>  seq_flag;   /* whether there is a Sequence Number optional field */
+    bit<1>  npdu_flag;  /* whether there is a N-PDU number optional field */
     bit<8>  msgtype;    /* message type */
-    bit<16> msglen;     /* message length */
+    bit<16> msglen;     /* length of the payload in octets */
     teid_t  teid;       /* tunnel endpoint id */
 }
+// Follows gtpu_t if any of ex_flag, seq_flag, or npdu_flag is 1.
+header gtpu_options_t {
+    bit<16> seq_num;   /* Sequence number */
+    bit<8>  n_pdu_num; /* N-PDU number */
+    bit<8>  next_ext;  /* Next extension header */
+}
 
-#ifdef WITH_SPGW
+// GTPU extension: PDU Session Container (PSC) -- 3GPP TS 38.415 version 15.2.0
+// https://www.etsi.org/deliver/etsi_ts/138400_138499/138415/15.02.00_60/ts_138415v150200p.pdf
+header gtpu_ext_psc_t {
+    bit<8> len;      /* Length in 4-octet units (common to all extensions) */
+    bit<4> type;     /* Uplink or downlink */
+    bit<4> spare0;   /* Reserved */
+    bit<1> ppp;      /* Paging Policy Presence (UL only, not supported) */
+    bit<1> rqi;      /* Reflective QoS Indicator (UL only) */
+    bit<6> qfi;      /* QoS Flow Identifier */
+    bit<8> next_ext;
+}
+
 @flexible
 struct spgw_bridged_metadata_t {
-    bit<16>         ipv4_len_for_encap;
     bool            needs_gtpu_encap;
     bool            skip_spgw;
     bool            skip_egress_pdr_ctr;
@@ -147,7 +171,6 @@ struct spgw_ingress_metadata_t {
     far_id_t           far_id;
     SpgwInterface      src_iface;
 }
-#endif // WITH_SPGW
 
 
 #ifdef WITH_INT
@@ -200,7 +223,7 @@ header local_report_header_t {
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.ip_eth_type")
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.report_type")
 @pa_no_overlay("egress", "fabric_md.int_mirror_md.flow_hash")
-@pa_no_overlay("egress", "fabric_md.int_mirror_md.strip_gtpu")
+@pa_no_overlay("egress", "fabric_md.int_mirror_md.gtpu_presence")
 header int_mirror_metadata_t {
     BridgedMdType_t       bmd_type;
     @padding bit<5>       _pad0;
@@ -213,15 +236,15 @@ header int_mirror_metadata_t {
     bit<32>               eg_tstamp;
     bit<8>                drop_reason;
     bit<16>               ip_eth_type;
-    bit<1>                strip_gtpu;
-    @padding bit<5>       _pad2;
+    GtpuPresence          gtpu_presence;
+    @padding bit<4>       _pad2;
     IntReportType_t       report_type;
     flow_hash_t           flow_hash;
 }
 
 @flexible
 struct int_bridged_metadata_t {
-    bit<1>          strip_gtpu;
+    GtpuPresence    gtpu_presence;
     IntReportType_t report_type;
     MirrorId_t      mirror_session_id;
 }
@@ -355,6 +378,8 @@ struct ingress_headers_t {
     udp_t udp;
     icmp_t icmp;
     gtpu_t gtpu;
+    gtpu_options_t gtpu_options;
+    gtpu_ext_psc_t gtpu_ext_psc;
     ipv4_t inner_ipv4;
     tcp_t inner_tcp;
     udp_t inner_udp;
@@ -388,6 +413,8 @@ struct egress_headers_t {
     ipv4_t outer_ipv4;
     udp_t outer_udp;
     gtpu_t outer_gtpu;
+    gtpu_options_t outer_gtpu_options;
+    gtpu_ext_psc_t outer_gtpu_ext_psc;
 #endif // WITH_SPGW
     ipv4_t ipv4;
     ipv6_t ipv6;

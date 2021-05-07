@@ -17,8 +17,10 @@ control DecapGtpu(inout ingress_headers_t            hdr,
         hdr.ipv4 = hdr.inner_ipv4;
         hdr.inner_ipv4.setInvalid();
         hdr.gtpu.setInvalid();
+        hdr.gtpu_options.setInvalid();
+        hdr.gtpu_ext_psc.setInvalid();
 #ifdef WITH_INT
-        fabric_md.bridged.int_bmd.strip_gtpu = 0;
+        fabric_md.bridged.int_bmd.gtpu_presence = GtpuPresence.NONE;
 #endif // WITH_INT
     }
     @hidden
@@ -68,7 +70,9 @@ control DecapGtpu(inout ingress_headers_t            hdr,
         size = 3;
     }
     apply {
-        decap_gtpu.apply();
+        if (hdr.inner_ipv4.isValid()) {
+            decap_gtpu.apply();
+        }
     }
 }
 
@@ -143,7 +147,7 @@ control SpgwIngress(
     DecapGtpu() decap_gtpu_from_dbuf;
     DecapGtpu() decap_gtpu;
     UplinkRecirc() uplink_recirc;
-    bool is_pdr_hit;
+    bool is_pdr_hit = false;
 
 
     //=============================//
@@ -161,10 +165,11 @@ control SpgwIngress(
         fabric_md.bridged.spgw.skip_spgw = true;
     }
 
-    // TODO: check also that gtpu.msgtype == GTP_GPDU... somewhere
     table interfaces {
         key = {
-            hdr.ipv4.dst_addr  : lpm    @name("ipv4_dst_addr");  // outermost header
+            // Outermost IPv4 header if uplink
+            hdr.ipv4.dst_addr  : lpm    @name("ipv4_dst_addr");
+            // gtpu extracted only if msgtype == GTPU_GPDU (see parser)
             hdr.gtpu.isValid() : exact  @name("gtpu_is_valid");
         }
         actions = {
@@ -181,7 +186,6 @@ control SpgwIngress(
 
     action downlink_pdr_drop() {
         ig_dprsr_md.drop_ctl = 1;
-        is_pdr_hit = false;
         fabric_md.skip_forwarding = true;
         fabric_md.skip_next = true;
 #ifdef WITH_INT
@@ -191,7 +195,6 @@ control SpgwIngress(
 
     action uplink_pdr_drop() {
         ig_dprsr_md.drop_ctl = 1;
-        is_pdr_hit = false;
         fabric_md.skip_forwarding = true;
         fabric_md.skip_next = true;
 #ifdef WITH_INT
@@ -199,6 +202,8 @@ control SpgwIngress(
 #endif // WITH_INT
     }
 
+    // Remove after all ACE deployments will have pfcp-agent qith QoS support
+    @deprecated("Use load_pdr_qos instead")
     action load_pdr(pdr_ctr_id_t    ctr_id,
                     far_id_t        far_id,
                     bool            needs_gtpu_decap) {
@@ -373,9 +378,6 @@ control SpgwIngress(
                 // Nothing to be done immediately for forwarding or encapsulation.
                 // Forwarding is done by other parts of fabric.p4, and
                 // encapsulation is done in the egress
-
-                // Needed for correct GTPU encapsulation in egress
-                fabric_md.bridged.spgw.ipv4_len_for_encap = hdr.ipv4.total_len;
             }
         }
     }
@@ -391,78 +393,63 @@ control SpgwEgress(
 
     Counter<bit<64>, bit<16>>(MAX_PDR_COUNTERS, CounterType_t.PACKETS_AND_BYTES) pdr_counter;
 
-    bit<16> outer_ipv4_len_additive;
-    bit<16> outer_udp_len_additive;
-
-    /*
-    This roundabout action is used to circumvent a bug of unknown origin that was experienced
-    in September 2020 when the header size defines were used directly in the _gtpu_encap action.
-    An addition using one of the constants would yield a wrong result on hardware, despite there being
-    no apparent issues with the addition primitive and its inputs in the compiler output.
-    */
     @hidden
-    action _preload_length_additives() {
-        outer_ipv4_len_additive = IPV4_HDR_BYTES + UDP_HDR_BYTES + GTP_HDR_BYTES;
-        outer_udp_len_additive = UDP_HDR_BYTES + GTP_HDR_BYTES;
+    action _encap_common() {
+        // Constant fields initialized in the parser.
+        hdr.outer_ipv4.setValid();
+        hdr.outer_udp.setValid();
+        hdr.outer_gtpu.setValid();
     }
 
-    @hidden
-    action _gtpu_encap() {
-        hdr.outer_ipv4.setValid();
-        hdr.outer_ipv4.version = IP_VERSION_4;
-        hdr.outer_ipv4.ihl = IPV4_MIN_IHL;
-        hdr.outer_ipv4.dscp = 0;
-        hdr.outer_ipv4.ecn = 0;
-        hdr.outer_ipv4.total_len = fabric_md.bridged.spgw.ipv4_len_for_encap + outer_ipv4_len_additive;
-        hdr.outer_ipv4.identification = 0x1513; /* From NGIC. TODO: Needs to be dynamic */
-        hdr.outer_ipv4.flags = 0;
-        hdr.outer_ipv4.frag_offset = 0;
-        hdr.outer_ipv4.ttl = DEFAULT_IPV4_TTL;
-        hdr.outer_ipv4.protocol = PROTO_UDP;
-        hdr.outer_ipv4.src_addr = fabric_md.bridged.spgw.gtpu_tunnel_sip;
-        hdr.outer_ipv4.dst_addr = fabric_md.bridged.spgw.gtpu_tunnel_dip;
-        hdr.outer_ipv4.hdr_checksum = 0; // Updated later
-
-        hdr.outer_udp.setValid();
-        hdr.outer_udp.sport = fabric_md.bridged.spgw.gtpu_tunnel_sport;
-        hdr.outer_udp.dport = UDP_PORT_GTPU;
-        hdr.outer_udp.len = fabric_md.bridged.spgw.ipv4_len_for_encap + outer_udp_len_additive;
-        hdr.outer_udp.checksum = 0; // Updated never, due to difficulties in handling different inner headers
-
-        hdr.outer_gtpu.setValid();
-        hdr.outer_gtpu.version = GTPU_VERSION;
-        hdr.outer_gtpu.pt = GTP_PROTOCOL_TYPE_GTP;
-        hdr.outer_gtpu.spare = 0;
+    // Do regular GTP-U encap.
+    action gtpu_only() {
+        _encap_common();
+        hdr.outer_ipv4.total_len = hdr.ipv4.total_len
+                + IPV4_HDR_BYTES + UDP_HDR_BYTES + GTPU_HDR_BYTES;
+        hdr.outer_udp.len = hdr.ipv4.total_len
+                + UDP_HDR_BYTES + GTPU_HDR_BYTES;
+        hdr.outer_gtpu.msglen = hdr.ipv4.total_len;
         hdr.outer_gtpu.ex_flag = 0;
-        hdr.outer_gtpu.seq_flag = 0;
-        hdr.outer_gtpu.npdu_flag = 0;
-        hdr.outer_gtpu.msgtype = GTP_GPDU;
-        hdr.outer_gtpu.msglen = fabric_md.bridged.spgw.ipv4_len_for_encap;
-        hdr.outer_gtpu.teid = fabric_md.bridged.spgw.gtpu_teid;
-
 #ifdef WITH_INT
-        fabric_md.int_mirror_md.strip_gtpu = 1;
+        fabric_md.int_mirror_md.gtpu_presence = GtpuPresence.GTPU_ONLY;
 #endif // WITH_INT
     }
 
-    @hidden
-    table gtpu_encap_if_needed {
-        key = {
-            fabric_md.bridged.spgw.needs_gtpu_encap : exact;
-        }
+    // Do GTP-U encap with PDU Session Container extension for 5G NG-RAN.
+    action gtpu_with_psc() {
+        _encap_common();
+        hdr.outer_ipv4.total_len = hdr.ipv4.total_len
+                + IPV4_HDR_BYTES + UDP_HDR_BYTES + GTPU_HDR_BYTES
+                + GTPU_OPTIONS_HDR_BYTES + GTPU_EXT_PSC_HDR_BYTES;
+        hdr.outer_udp.len = hdr.ipv4.total_len
+                + UDP_HDR_BYTES + GTPU_HDR_BYTES
+                + GTPU_OPTIONS_HDR_BYTES + GTPU_EXT_PSC_HDR_BYTES;
+        hdr.outer_gtpu.msglen = hdr.ipv4.total_len
+                + GTPU_OPTIONS_HDR_BYTES + GTPU_EXT_PSC_HDR_BYTES;
+        hdr.outer_gtpu.ex_flag = 1;
+        hdr.outer_gtpu_options.setValid();
+        hdr.outer_gtpu_ext_psc.setValid();
+#ifdef WITH_INT
+        fabric_md.int_mirror_md.gtpu_presence = GtpuPresence.GTPU_WITH_PSC;
+#endif // WITH_INT
+    }
+
+    // By default, do regular GTP-U encap. Allow the control plane to enable
+    // adding PDU Session Container (PSC).
+    table gtpu_encap {
         actions = {
-            _gtpu_encap;
+            gtpu_only;
+            gtpu_with_psc;
         }
-        const entries = {
-            true : _gtpu_encap();
-        }
-        size = 1;
+        default_action = gtpu_only();
+        const size = 1;
     }
 
     apply {
         if (!fabric_md.bridged.spgw.skip_spgw) {
-            _preload_length_additives();
-            gtpu_encap_if_needed.apply();
+            if (fabric_md.bridged.spgw.needs_gtpu_encap) {
+                gtpu_encap.apply();
+            }
             if (!fabric_md.bridged.spgw.skip_egress_pdr_ctr) {
                 pdr_counter.count(fabric_md.bridged.spgw.pdr_ctr_id);
             }

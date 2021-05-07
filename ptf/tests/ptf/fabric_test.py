@@ -13,6 +13,7 @@ from p4.v1 import p4runtime_pb2
 from ptf import testutils
 from ptf.mask import Mask
 from scapy.contrib.mpls import MPLS
+from scapy.contrib.gtp import GTP_U_Header, GTPPDUSessionContainer
 from scapy.fields import BitField, ByteField, IntField, ShortField
 from scapy.layers.inet import IP, TCP, UDP
 from scapy.layers.l2 import Dot1Q, Ether
@@ -37,6 +38,8 @@ MIN_PKT_LEN = 80
 
 UDP_GTP_PORT = 2152
 DEFAULT_GTP_TUNNEL_SPORT = 1234  # arbitrary, but different from 2152
+GTPU_EXT_PSC_TYPE_DL = 0
+GTPU_EXT_PSC_TYPE_UL = 1
 
 ETH_TYPE_ARP = 0x0806
 ETH_TYPE_IPV4 = 0x0800
@@ -215,9 +218,9 @@ BRIDGED_MD_TYPE_INGRESS_MIRROR = 3
 
 # Size for different headers
 if testutils.test_param_get("profile") == "fabric-spgw-int":
-    BMD_BYTES = 44
+    BMD_BYTES = 42
 elif testutils.test_param_get("profile") == "fabric-spgw":
-    BMD_BYTES = 40
+    BMD_BYTES = 38
 elif testutils.test_param_get("profile") == "fabric-int":
     BMD_BYTES = 26
 elif testutils.test_param_get("profile") == "fabric":
@@ -226,7 +229,9 @@ else:
     raise Exception("Invalid profile, cannot set BMD_BYTES")
 IP_HDR_BYTES = 20
 UDP_HDR_BYTES = 8
-GTP_HDR_BYTES = 8
+GTPU_HDR_BYTES = 8
+GTPU_OPTIONS_HDR_BYTES = 4
+GTPU_EXT_PSC_BYTES = 4
 ETH_FCS_BYTES = 4
 VLAN_BYTES = 4
 CPU_LOOPBACK_FAKE_ETH_BYTES = 14
@@ -237,33 +242,6 @@ PORT_TYPE_EDGE = b"\x01"
 PORT_TYPE_INFRA = b"\x02"
 PORT_TYPE_INTERNAL = b"\x03"
 
-
-class GTPU(Packet):
-    name = "GTP-U Header"
-    fields_desc = [
-        BitField("version", 1, 3),
-        BitField("PT", 1, 1),
-        BitField("reserved", 0, 1),
-        BitField("E", 0, 1),
-        BitField("S", 0, 1),
-        BitField("PN", 0, 1),
-        ByteField("gtp_type", 255),
-        ShortField("length", None),
-        IntField("teid", 0),
-    ]
-
-    def post_build(self, pkt, payload):
-        pkt += payload
-        # Set the length field if it is unset
-        if self.length is None:
-            length = len(pkt) - 8
-            pkt = pkt[:2] + struct.pack("!H", length) + pkt[4:]
-        return pkt
-
-
-# Register our GTPU header with scapy for dissection
-bind_layers(UDP, GTPU, dport=UDP_GTP_PORT)
-bind_layers(GTPU, IP)
 
 # Implements helper function for SCTP as PTF does not provide one.
 def simple_sctp_packet(
@@ -379,9 +357,13 @@ def simple_gtp_packet(
     ip_dst="192.168.0.2",
     ip_ttl=64,
     gtp_teid=0xff, # dummy teid
-    pktlen=136
+    pktlen=136,
+    ext_psc_type=None,
+    ext_psc_qfi=0
 ):
-    pktlen = pktlen - IP_HDR_BYTES - UDP_HDR_BYTES - GTP_HDR_BYTES
+    pktlen = pktlen - IP_HDR_BYTES - UDP_HDR_BYTES - GTPU_HDR_BYTES
+    if ext_psc_type is not None:
+        pktlen = pktlen - GTPU_OPTIONS_HDR_BYTES - GTPU_EXT_PSC_BYTES
     pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(ip_src=ip_src,
                                                             ip_dst=ip_dst,
                                                             pktlen=pktlen)
@@ -390,6 +372,8 @@ def simple_gtp_packet(
         out_ipv4_src=ip_src,
         out_ipv4_dst=ip_dst,
         teid=gtp_teid,
+        ext_psc_type=ext_psc_type,
+        ext_psc_qfi=ext_psc_qfi
     )
     gtp_pkt[Ether].src = eth_src
     gtp_pkt[Ether].dst = eth_dst
@@ -409,11 +393,35 @@ def simple_gtp_icmp_packet(*args, **kwargs):
     return simple_gtp_packet("icmp", *args, **kwargs)
 
 
+def simple_gtp_psc_ul_tcp_packet(*args, **kwargs):
+    return simple_gtp_packet("tcp", *args, ext_psc_type=GTPU_EXT_PSC_TYPE_UL, **kwargs)
+
+def simple_gtp_psc_dl_tcp_packet(*args, **kwargs):
+    return simple_gtp_packet("tcp", *args, ext_psc_type=GTPU_EXT_PSC_TYPE_DL, **kwargs)
+
+def simple_gtp_psc_ul_udp_packet(*args, **kwargs):
+    return simple_gtp_packet("udp", *args, ext_psc_type=GTPU_EXT_PSC_TYPE_UL, **kwargs)
+
+def simple_gtp_psc_dl_udp_packet(*args, **kwargs):
+    return simple_gtp_packet("udp", *args, ext_psc_type=GTPU_EXT_PSC_TYPE_DL, **kwargs)
+
+def simple_gtp_psc_ul_icmp_packet(*args, **kwargs):
+    return simple_gtp_packet("icmp", *args, ext_psc_type=GTPU_EXT_PSC_TYPE_UL, **kwargs)
+
+def simple_gtp_psc_dl_icmp_packet(*args, **kwargs):
+    return simple_gtp_packet("icmp", *args, ext_psc_type=GTPU_EXT_PSC_TYPE_DL, **kwargs)
+
 # Embed the above functions in the testutils package.
 setattr(testutils, "simple_sctp_packet", simple_sctp_packet)
 setattr(testutils, "simple_gtp_tcp_packet", simple_gtp_tcp_packet)
 setattr(testutils, "simple_gtp_udp_packet", simple_gtp_udp_packet)
 setattr(testutils, "simple_gtp_icmp_packet", simple_gtp_icmp_packet)
+setattr(testutils, "simple_gtp_psc_ul_tcp_packet", simple_gtp_psc_ul_tcp_packet)
+setattr(testutils, "simple_gtp_psc_dl_tcp_packet", simple_gtp_psc_dl_tcp_packet)
+setattr(testutils, "simple_gtp_psc_ul_udp_packet", simple_gtp_psc_ul_udp_packet)
+setattr(testutils, "simple_gtp_psc_dl_udp_packet", simple_gtp_psc_dl_udp_packet)
+setattr(testutils, "simple_gtp_psc_ul_icmp_packet", simple_gtp_psc_ul_icmp_packet)
+setattr(testutils, "simple_gtp_psc_dl_icmp_packet", simple_gtp_psc_dl_icmp_packet)
 
 def pkt_mac_swap(pkt):
     orig_dst = pkt[Ether].dst
@@ -471,14 +479,29 @@ def pkt_add_gtp(
     teid,
     sport=DEFAULT_GTP_TUNNEL_SPORT,
     dport=UDP_GTP_PORT,
+    ext_psc_type=None,
+    ext_psc_qfi=None,
 ):
-    payload = pkt[Ether].payload
-    return (
+    gtp_pkt = (
         Ether(src=pkt[Ether].src, dst=pkt[Ether].dst)
         / IP(src=out_ipv4_src, dst=out_ipv4_dst, tos=0, id=0x1513, flags=0, frag=0,)
         / UDP(sport=sport, dport=dport, chksum=0)
-        / GTPU(teid=teid)
-        / payload
+        / GTP_U_Header(gtp_type=255, teid=teid)
+    )
+    if ext_psc_type is not None:
+        # Add QoS Flow Identifier (QFI) as an extension header (required for 5G RAN)
+        gtp_pkt = gtp_pkt / GTPPDUSessionContainer(type=ext_psc_type, QFI=ext_psc_qfi)
+    return gtp_pkt / pkt[Ether].payload
+
+def pkt_remove_gtp(pkt):
+    if GTPPDUSessionContainer in pkt:
+        payload = pkt[GTPPDUSessionContainer].payload
+    elif GTP_U_Header in pkt:
+        payload = pkt[GTP_U_Header].payload
+    else:
+        raise Exception("Not a GTP packet")
+    return (
+        Ether(src=pkt[Ether].src, dst=pkt[Ether].dst) / payload
     )
 
 
@@ -2042,6 +2065,14 @@ class SpgwSimpleTest(IPv4UnicastTest):
             tunnel_dst_addr=s1u_enb_addr,
         )
 
+    def enable_encap_with_psc(self):
+        self.send_request_add_entry_to_action(
+            "FabricEgress.spgw.gtpu_encap",
+            None,
+            "FabricEgress.spgw.gtpu_with_psc",
+            [],
+        )
+
     def reset_pdr_counters(self, ctr_idx):
         """Reset the ingress and egress PDR counter packet and byte counts to
         0 for the given index.
@@ -2068,7 +2099,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             PDR_COUNTER_EGRESS, ctr_idx, "BOTH", exp_egress_bytes, exp_egress_pkts,
         )
 
-    def runUplinkTest(self, ue_out_pkt, tagged1, tagged2, is_next_hop_spine):
+    def runUplinkTest(self, ue_out_pkt, tagged1, tagged2, with_psc, is_next_hop_spine):
         upstream_mac = HOST2_MAC
 
         gtp_pkt = pkt_add_gtp(
@@ -2076,6 +2107,8 @@ class SpgwSimpleTest(IPv4UnicastTest):
             out_ipv4_src=S1U_ENB_IPV4,
             out_ipv4_dst=S1U_SGW_IPV4,
             teid=UPLINK_TEID,
+            ext_psc_type=GTPU_EXT_PSC_TYPE_UL if with_psc else None,
+            ext_psc_qfi=0,
         )
         gtp_pkt[Ether].src = S1U_ENB_MAC
         gtp_pkt[Ether].dst = SWITCH_MAC
@@ -2117,8 +2150,10 @@ class SpgwSimpleTest(IPv4UnicastTest):
         # happens at ingress deparser. VLAN/MPLS push/pop happens at egress
         # deparser, hence not reflected in counter increment.
         egress_bytes = (
-            ingress_bytes + BMD_BYTES - IP_HDR_BYTES - UDP_HDR_BYTES - GTP_HDR_BYTES
+            ingress_bytes + BMD_BYTES - IP_HDR_BYTES - UDP_HDR_BYTES - GTPU_HDR_BYTES
         )
+        if with_psc:
+            egress_bytes = egress_bytes - GTPU_OPTIONS_HDR_BYTES - GTPU_EXT_PSC_BYTES
 
         # Verify the Ingress and Egress PDR counters
         self.verify_pdr_counters(UPLINK_PDR_CTR_IDX, ingress_bytes, egress_bytes, 1, 1)
@@ -2206,7 +2241,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             + BMD_BYTES
             - IP_HDR_BYTES
             - UDP_HDR_BYTES
-            - GTP_HDR_BYTES
+            - GTPU_HDR_BYTES
         )
         downlink_ingress_bytes = uplink_egress_bytes - BMD_BYTES
         # Egress counters are updated with bytes seen at egress parser. GTP
@@ -2243,7 +2278,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             self.verify_pdr_counters(UPLINK_PDR_CTR_IDX, uplink_ingress_bytes, 0, 1, 0)
             self.verify_pdr_counters(DOWNLINK_PDR_CTR_IDX, 0, 0, 0, 0)
 
-    def runDownlinkTest(self, pkt, tagged1, tagged2, is_next_hop_spine):
+    def runDownlinkTest(self, pkt, tagged1, tagged2, with_psc, is_next_hop_spine):
         exp_pkt = pkt.copy()
         exp_pkt[Ether].src = SWITCH_MAC
         exp_pkt[Ether].dst = S1U_ENB_MAC
@@ -2254,6 +2289,8 @@ class SpgwSimpleTest(IPv4UnicastTest):
             out_ipv4_src=S1U_SGW_IPV4,
             out_ipv4_dst=S1U_ENB_IPV4,
             teid=DOWNLINK_TEID,
+            ext_psc_type=GTPU_EXT_PSC_TYPE_DL if with_psc else None,
+            ext_psc_qfi=0
         )
         if is_next_hop_spine:
             exp_pkt = pkt_add_mpls(exp_pkt, MPLS_LABEL_2, DEFAULT_MPLS_TTL)
@@ -2267,6 +2304,9 @@ class SpgwSimpleTest(IPv4UnicastTest):
             ue_addr=UE1_IPV4,
             ctr_id=DOWNLINK_PDR_CTR_IDX,
         )
+
+        if with_psc:
+            self.enable_encap_with_psc()
 
         # Clear SPGW counters before sending the packet
         self.reset_pdr_counters(DOWNLINK_PDR_CTR_IDX)
@@ -2430,7 +2470,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             + BMD_BYTES
             - IP_HDR_BYTES
             - UDP_HDR_BYTES
-            - GTP_HDR_BYTES
+            - GTPU_HDR_BYTES
         )
         if tagged1:
             egress_bytes += VLAN_BYTES
@@ -2758,6 +2798,10 @@ class IntTest(IPv4UnicastTest):
         is_device_spine,
         send_report_to_spine,
     ):
+        if GTP_U_Header in inner_packet:
+            # The switch should always strip GTP-U headers inside INT reports.
+            inner_packet = pkt_remove_gtp(inner_packet)
+
         # Note: scapy doesn't support dscp field, use tos.
         pkt = (
             Ether(src=src_mac, dst=dst_mac)
@@ -2807,6 +2851,9 @@ class IntTest(IPv4UnicastTest):
         is_device_spine,
         send_report_to_spine,
     ):
+        if GTP_U_Header in inner_packet:
+            inner_packet = pkt_remove_gtp(inner_packet)
+
         # Note: scapy doesn't support dscp field, use tos.
         pkt = (
             Ether(src=src_mac, dst=dst_mac)
@@ -2893,6 +2940,11 @@ class IntTest(IPv4UnicastTest):
         self.add_next_vlan(next_id, DEFAULT_VLAN)
 
     def set_up_int_flows(self, is_device_spine, pkt, send_report_to_spine):
+
+        if GTP_U_Header in pkt:
+            # Watchlist always matches on inner headers.
+            pkt = pkt_remove_gtp(pkt)
+
         if UDP in pkt:
             sport = pkt[UDP].sport
             dport = pkt[UDP].dport
@@ -3196,6 +3248,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         pkt,
         tagged1,
         tagged2,
+        with_psc,
         is_next_hop_spine,
         is_device_spine,
         send_report_to_spine,
@@ -3204,16 +3257,14 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         :param pkt: the input packet
         :param tagged1: if the input port should expect VLAN tagged packets
         :param tagged2: if the output port should expect VLAN tagged packets
+        :param with_psc: if the ingress packet should have a PDU Session
+               Container (PSC) GTP extension header
         :param is_next_hop_spine: whether the packet should be routed
                to the spines using MPLS SR
         :param is_device_spine: the device is a spine device
         :param send_report_to_spine: if the report is to be forwarded
                to a spine (e.g., collector attached to another leaf)
         """
-        # Input GTP-encapped packet from eNB.
-        gtp_pkt = pkt_add_gtp(
-            pkt, out_ipv4_src=S1U_ENB_IPV4, out_ipv4_dst=S1U_SGW_IPV4, teid=UPLINK_TEID,
-        )
 
         # Output packet routed to upstream device.
         exp_pkt = pkt.copy()
@@ -3221,14 +3272,20 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         if not is_next_hop_spine:
             pkt_decrement_ttl(exp_pkt)
 
-        # INT report's inner packet, same as exp_pkt but without MPLS or VLAN
-        # headers.
+        # INT report's inner packet, same as exp_pkt but without MPLS, VLAN, or
+        # GTP-U headers.
         int_inner_pkt = exp_pkt.copy()
 
         if tagged2:
             exp_pkt = pkt_add_vlan(exp_pkt, VLAN_ID_2)
         if is_next_hop_spine:
             exp_pkt = pkt_add_mpls(exp_pkt, MPLS_LABEL_2, DEFAULT_MPLS_TTL)
+
+        # Input GTP-encapped packet from eNB.
+        gtp_pkt = pkt_add_gtp(
+            pkt, out_ipv4_src=S1U_ENB_IPV4, out_ipv4_dst=S1U_SGW_IPV4, teid=UPLINK_TEID,
+            ext_psc_type=GTPU_EXT_PSC_TYPE_UL if with_psc else None
+        )
 
         # Output INT report packet.
         exp_int_report_pkt_masked = self.build_int_local_report(
@@ -3278,6 +3335,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         pkt,
         tagged1,
         tagged2,
+        with_psc,
         is_next_hop_spine,
         is_device_spine,
         send_report_to_spine,
@@ -3286,6 +3344,8 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         :param pkt: the input packet
         :param tagged1: if the input port should expect VLAN tagged packets
         :param tagged2: if the output port should expect VLAN tagged packets
+        :param with_psc: if the egress packet should have a PDU Session
+               Container (PSC) GTP extension header
         :param is_next_hop_spine: whether the packet should be routed
                to the spines using MPLS SR
         :param is_device_spine: the device is a spine device
@@ -3307,6 +3367,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             out_ipv4_src=S1U_SGW_IPV4,
             out_ipv4_dst=S1U_ENB_IPV4,
             teid=DOWNLINK_TEID,
+            ext_psc_type=GTPU_EXT_PSC_TYPE_DL if with_psc else None,
         )
         if tagged2 and Dot1Q not in exp_pkt:
             exp_pkt = pkt_add_vlan(exp_pkt, VLAN_ID_2)
@@ -3336,6 +3397,9 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             ctr_id=DOWNLINK_PDR_CTR_IDX,
         )
 
+        if with_psc:
+            self.enable_encap_with_psc()
+
         # Set collector, report table, and mirror sessions
         self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine)
 
@@ -3364,6 +3428,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         pkt,
         tagged1,
         tagged2,
+        with_psc,
         is_next_hop_spine,
         ig_port,
         eg_port,
@@ -3376,26 +3441,29 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         :param pkt: the input packet
         :param tagged1: if the input port should expect VLAN tagged packets
         :param tagged2: if the output port should expect VLAN tagged packets
+        :param with_psc: if the egress packet should have a PDU Session
+               Container (PSC) GTP extension header
         :param is_next_hop_spine: whether the packet should be routed
                to the spines using MPLS SR
-        :param ig_port: the ingress port of the IP uncast packet
-        :param eg_port: the egress port of the IP uncast packet
+        :param ig_port: the ingress port of the IP unicast packet
+        :param eg_port: the egress port of the IP unicast packet
         :param expect_int_report: expected to receive the INT report
         :param is_device_spine: the device is a spine device
         :param send_report_to_spine: if the report is to be forwarded
                to a spine (e.g., collector attached to another leaf)
         """
-        # Build packet from eNB
-        # Add GTPU header to the original packet
-        gtp_pkt = pkt_add_gtp(
-            pkt, out_ipv4_src=S1U_ENB_IPV4, out_ipv4_dst=S1U_SGW_IPV4, teid=UPLINK_TEID,
-        )
-        # Build expected inner pkt using the input one.
+        # Build INT inner pkt using the input one.
         int_inner_pkt = pkt.copy()
 
-        # We don't report MPLS or VLAN headers to DeepInsight.
+        # We don't report MPLS, VLAN or GTP-U headers to DeepInsight.
         if Dot1Q in int_inner_pkt:
             int_inner_pkt = pkt_remove_vlan(int_inner_pkt)
+
+        # Ingress packet from eNB
+        gtp_pkt = pkt_add_gtp(
+            pkt, out_ipv4_src=S1U_ENB_IPV4, out_ipv4_dst=S1U_SGW_IPV4, teid=UPLINK_TEID,
+            ext_psc_type=GTPU_EXT_PSC_TYPE_UL if with_psc else None
+        )
 
         # The expected INT report packet
         exp_int_report_pkt_masked = self.build_int_drop_report(

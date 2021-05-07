@@ -18,8 +18,8 @@ control Filtering (inout ingress_headers_t hdr,
     DirectCounter<bit<64>>(CounterType_t.PACKETS_AND_BYTES) ingress_port_vlan_counter;
 
     action deny() {
-        // Packet from unconfigured port. Skip forwarding and next block.
-        // Do ACL table in case we want to punt to cpu.
+        // Packet from unconfigured port. Should skip forwarding and next, but
+        // do ACL in case we want to punt to cpu.
         fabric_md.skip_forwarding = true;
         fabric_md.skip_next = true;
         fabric_md.ig_port_type = PortType_t.UNKNOWN;
@@ -46,6 +46,8 @@ control Filtering (inout ingress_headers_t hdr,
             hdr.vlan_tag.isValid()     : exact @name("vlan_is_valid");
             hdr.vlan_tag.vlan_id       : ternary @name("vlan_id");
 #ifdef WITH_DOUBLE_VLAN_TERMINATION
+            // FIXME: match on inner_vlan validity to avoid issues with PHV
+            //   pseudo-random initialization
             hdr.inner_vlan_tag.vlan_id : ternary @name("inner_vlan_id");
 #endif // WITH_DOUBLE_VLAN_TERMINATION
         }
