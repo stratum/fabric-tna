@@ -29,7 +29,7 @@ parser IntReportParser (packet_in packet,
         packet.extract(fabric_md.int_mirror_md);
         fabric_md.bridged.bmd_type = fabric_md.int_mirror_md.bmd_type;
         fabric_md.bridged.base.mpls_label = 0; // do not push an MPLS label
-        fabric_md.bridged.int_bmd.strip_gtpu = fabric_md.int_mirror_md.strip_gtpu;
+        fabric_md.bridged.int_bmd.gtpu_presence = fabric_md.int_mirror_md.gtpu_presence;
 #ifdef WITH_SPGW
         fabric_md.bridged.spgw.skip_spgw = true;
 #endif // WITH_SPGW
@@ -160,6 +160,7 @@ parser IntReportParser (packet_in packet,
         fabric_md.bridged.base.ig_tstamp = tmp.base.ig_tstamp;
         fabric_md.bridged.base.ig_port = tmp.base.ig_port;
         fabric_md.bridged.int_bmd.report_type = IntReportType_t.DROP;
+        fabric_md.bridged.int_bmd.ig_port = tmp.int_bmd.ig_port;
         fabric_md.bridged.int_bmd.eg_port = tmp.int_bmd.eg_port;
         fabric_md.bridged.int_bmd.queue_id = tmp.int_bmd.queue_id;
         fabric_md.bridged.int_bmd.gtpu_presence = tmp.int_bmd.gtpu_presence;
@@ -172,43 +173,70 @@ parser IntReportParser (packet_in packet,
         fabric_md.int_mirror_md.mirror_type = FabricMirrorType_t.INVALID;
         fabric_md.int_mirror_md.ip_eth_type = ETHERTYPE_IPV4;
         fabric_md.int_mirror_md.flow_hash = tmp.base.inner_hash;
-        // Reset the report type to invalid to prevent the pipeline generating a local report
-        hdr.report_ipv4 = {
-            4w4, // version
-            4w5, // ihl
-            INT_DSCP,
-            2w0, // ecn
-            0, // total_length, will calculate later
-            0, // identification,
-            0, // flags,
-            0, // frag_offset
-            DEFAULT_IPV4_TTL,
-            PROTO_UDP,
-            0, // checksum, will calculate later
-            0, // Src IP, will set later
-            0  // Dst IP, will set later
-        };
-        hdr.report_fixed_header = {
-            0, // version
-            NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER,
-            0, // d
-            0, // q
-            0, // f
-            0, // rsvd
-            0, // hw_id, will set later
-            0, // seq_no, will set later
-            0 // ingress timestamp, will set later
-        };
-        hdr.common_report_header = {
-            0, // switch_id, will set later
-            0, // ig_port, will set later
-            fabric_md.bridged.int_bmd.eg_port,
-            fabric_md.bridged.int_bmd.queue_id
-        };
-        hdr.drop_report_header = {
-            IntDropReason_t.DROP_REASON_TRAFFIC_MANAGER,
-            0 // pad
-        };
+        fabric_md.int_mirror_md.ig_tstamp = tmp.base.ig_tstamp[31:0];
+
+        // Initialize report headers here to allocate constant fields on the
+        // T-PHV (and save on PHV resources).
+        /** report_ethernet **/
+        hdr.report_ethernet.setValid();
+        // hdr.report_ethernet.dst_addr = update later
+        // hdr.report_ethernet.src_addr = update later
+
+        /** report_eth_type **/
+        hdr.report_eth_type.setValid();
+        // hdr.report_eth_type.value = update later
+
+        /** report_mpls (set valid later) **/
+        // hdr.report_mpls.label = update later
+        hdr.report_mpls.tc = 0;
+        hdr.report_mpls.bos = 0;
+        hdr.report_mpls.ttl = DEFAULT_MPLS_TTL;
+
+        /** report_ipv4 **/
+        hdr.report_ipv4.setValid();
+        hdr.report_ipv4.version = 4w4;
+        hdr.report_ipv4.ihl = 4w5;
+        hdr.report_ipv4.dscp = INT_DSCP;
+        hdr.report_ipv4.ecn = 2w0;
+        // hdr.report_ipv4.total_len = update later
+        // hdr.report_ipv4.identification = update later
+        hdr.report_ipv4.flags = 0;
+        hdr.report_ipv4.frag_offset = 0;
+        hdr.report_ipv4.ttl = DEFAULT_IPV4_TTL;
+        hdr.report_ipv4.protocol = PROTO_UDP;
+        // hdr.report_ipv4.hdr_checksum = update later
+        // hdr.report_ipv4.src_addr = update later
+        // hdr.report_ipv4.dst_addr = update later
+
+        /** report_udp **/
+        hdr.report_udp.setValid();
+        hdr.report_udp.sport = 0;
+        // hdr.report_udp.dport = update later
+        // hdr.report_udp.len = update later
+        // hdr.report_udp.checksum = update never!
+
+        /** report_fixed_header **/
+        hdr.report_fixed_header.setValid();
+        hdr.report_fixed_header.ver = 0;
+        hdr.report_fixed_header.nproto = NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER;
+        // hdr.report_fixed_header.d = update later
+        // hdr.report_fixed_header.q = update later
+        // hdr.report_fixed_header.f = update later
+        hdr.report_fixed_header.rsvd = 0;
+        // hdr.report_fixed_header.hw_id = update later
+        // hdr.report_fixed_header.seq_no = update later
+        hdr.report_fixed_header.ig_tstamp = fabric_md.int_mirror_md.ig_tstamp;
+
+        /** common_report_header **/
+        hdr.common_report_header.setValid();
+        // hdr.common_report_header.switch_id = update later
+        hdr.common_report_header.ig_port = tmp.int_bmd.ig_port;
+        hdr.common_report_header.eg_port = tmp.int_bmd.eg_port;
+        hdr.common_report_header.queue_id = tmp.int_bmd.queue_id;
+
+        /** drop_report_header **/
+        hdr.drop_report_header.setValid();
+        hdr.drop_report_header.drop_reason = IntDropReason_t.DROP_REASON_TRAFFIC_MANAGER;
         transition parse_eth_hdr;
     }
 
