@@ -71,6 +71,8 @@ public final class P4InfoConstants {
     public static final PiMatchFieldId HDR_NEXT_ID =
             PiMatchFieldId.of("next_id");
     public static final PiMatchFieldId HDR_PORT = PiMatchFieldId.of("port");
+    public static final PiMatchFieldId HDR_STATS_FLOW_ID =
+            PiMatchFieldId.of("stats_flow_id");
     public static final PiMatchFieldId HDR_TEID = PiMatchFieldId.of("teid");
     public static final PiMatchFieldId HDR_TUNNEL_IPV4_DST =
             PiMatchFieldId.of("tunnel_ipv4_dst");
@@ -273,6 +275,7 @@ public final class P4InfoConstants {
     public static final PiActionParamId DROP_REASON =
             PiActionParamId.of("drop_reason");
     public static final PiActionParamId FAR_ID = PiActionParamId.of("far_id");
+    public static final PiActionParamId FLOW_ID = PiActionParamId.of("flow_id");
     public static final PiActionParamId FWD_TYPE =
             PiActionParamId.of("fwd_type");
     public static final PiActionParamId GROUP_ID =

@@ -40,8 +40,9 @@ control StatsIngress (in lookup_metadata_t lkp,
     }
 }
 
-control StatsEgress  (in bit<STATS_FLOW_ID_WIDTH> stats_flow_id,
-                      in PortId_t eg_port) {
+control StatsEgress (in bit<STATS_FLOW_ID_WIDTH> stats_flow_id,
+                      in PortId_t eg_port,
+                      in BridgedMdType_t bmd_type) {
 
     DirectCounter<bit<64>>(CounterType_t.PACKETS_AND_BYTES) flow_counter;
 
@@ -63,7 +64,7 @@ control StatsEgress  (in bit<STATS_FLOW_ID_WIDTH> stats_flow_id,
     }
 
     apply {
-        if (fabric_md.bridged.bmd_type == BridgedMdType_t.INGRESS_TO_EGRESS) {
+        if (bmd_type == BridgedMdType_t.INGRESS_TO_EGRESS) {
             // Do not update stats for INT reports and other mirrored packets.
             // stats_flow_id will be valid only for bridged packets.
             flows.apply();

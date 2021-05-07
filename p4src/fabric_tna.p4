@@ -100,7 +100,7 @@ control FabricEgress (
 
     apply {
         pkt_io_egress.apply(hdr, fabric_md, eg_intr_md);
-        stats.apply(fabric_md.bridged.base.stats_flow_id, eg_intr_md.egress_port);
+        stats.apply(fabric_md.bridged.base.stats_flow_id, eg_intr_md.egress_port, fabric_md.bridged.bmd_type);
         egress_next.apply(hdr, fabric_md, eg_intr_md, eg_dprsr_md);
 #ifdef WITH_SPGW
         spgw.apply(hdr, fabric_md);
