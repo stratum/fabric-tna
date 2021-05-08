@@ -249,6 +249,7 @@ control IntIngress(
         // pipeline number(0~3).
         fabric_md.bridged.int_bmd.mirror_session_id = INT_MIRROR_SESSION_BASE ++ ig_intr_md.ingress_port[8:7];
         drop_report.apply();
+        fabric_md.bridged.int_bmd.ig_port = (bit<16>)ig_intr_md.ingress_port;
         fabric_md.bridged.int_bmd.eg_port = (bit<16>)ig_tm_md.ucast_egress_port;
         fabric_md.bridged.int_bmd.queue_id = (bit<8>)ig_tm_md.qid;
     }
