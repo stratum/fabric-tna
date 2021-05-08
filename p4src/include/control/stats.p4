@@ -25,7 +25,7 @@ control StatsIngress (in lookup_metadata_t lkp,
             lkp.ip_proto : ternary @name("ip_proto");
             lkp.l4_sport : ternary @name("l4_sport");
             lkp.l4_dport : ternary @name("l4_dport");
-            ig_port      : ternary @name("ig_port");
+            ig_port      : exact @name("ig_port");
         }
         actions = {
             count;

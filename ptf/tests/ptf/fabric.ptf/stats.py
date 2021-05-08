@@ -23,26 +23,31 @@ class StatsTest(FabricTest):
     l4_dport.
     """
 
-    def build_stats_matches(self, port, **ftuple):
-        matches = self.build_acl_matches(**ftuple)
+    def build_stats_matches(self, gress, stats_flow_id, port, **ftuple):
         port_ = stringify(port, 2)
-        port_mask = stringify(0xFFFF, 2)
-        matches.append(self.Ternary("port", port_, port_mask))
+        stats_flow_id_ = stringify(stats_flow_id, 2)
+        if gress == INGRESS:
+            matches = self.build_acl_matches(**ftuple)
+            matches.append(self.Exact("ig_port", port_))
+        else:
+            matches = []
+            matches.append(self.Exact("stats_flow_id", stats_flow_id_))
+            matches.append(self.Exact("eg_port", port_))
         return matches
 
-    def build_stats_table_entry(self, gress, port, **ftuple):
+    def build_stats_table_entry(self, gress, stats_flow_id, port, **ftuple):
         table_entry = p4runtime_pb2.TableEntry()
         table_name = STATS_TABLE % gress
         table_entry.table_id = self.get_table_id(table_name)
-        table_entry.priority = DEFAULT_PRIORITY
-        matches = self.build_stats_matches(port=port, **ftuple)
+        table_entry.priority = DEFAULT_PRIORITY if gress == INGRESS else 0
+        matches = self.build_stats_matches(gress=gress, stats_flow_id=stats_flow_id, port=port, **ftuple)
         self.set_match_key(table_entry, table_name, matches)
         return table_entry
 
     def reset_stats_counter(self, table_entry):
         self.write_direct_counter(table_entry, 0, 0)
 
-    def verify_stats_counter(self, gress, port, byte_count, pkt_count,
+    def verify_stats_counter(self, gress, stats_flow_id, port, byte_count, pkt_count,
                              **ftuple):
         # ONOS will read stats counters during flow rule reconciliation. Here we
         # do the same by reading a TableEntry and extracting counter_data
@@ -50,7 +55,7 @@ class StatsTest(FabricTest):
         req = self.get_new_read_request()
         entity = req.entities.add()
         entity.table_entry.CopyFrom(self.build_stats_table_entry(
-            gress=gress, port=port, **ftuple))
+            gress=gress, stats_flow_id=stats_flow_id, port=port, **ftuple))
         entity.table_entry.counter_data.CopyFrom(p4runtime_pb2.CounterData())
         entities = self.read_request(req)
         if self.generate_tv:
@@ -76,31 +81,31 @@ class StatsTest(FabricTest):
                 )
             )
 
-    def add_stats_table_entry(self, gress, ports, **ftuple):
+    def add_stats_table_entry(self, gress, stats_flow_id, ports, **ftuple):
         for port in ports:
-            matches = self.build_stats_matches(port, **ftuple)
+            matches = self.build_stats_matches(gress=gress, stats_flow_id=stats_flow_id, port=port, **ftuple)
             self.send_request_add_entry_to_action(
                 STATS_TABLE % gress,
                 matches,
                 STATS_ACTION % gress,
                 [],
-                DEFAULT_PRIORITY,
+                DEFAULT_PRIORITY if gress == INGRESS else 0,
             )
 
-    def set_up_stats_flows(self, ig_port, eg_port, **ftuple):
-        self.add_stats_table_entry(gress=INGRESS, ports=[ig_port], **ftuple)
-        self.add_stats_table_entry(gress=EGRESS, ports=[eg_port], **ftuple)
+    def set_up_stats_flows(self, stats_flow_id, ig_port, eg_port, **ftuple):
+        self.add_stats_table_entry(gress=INGRESS, stats_flow_id=stats_flow_id, ports=[ig_port], **ftuple)
+        self.add_stats_table_entry(gress=EGRESS, stats_flow_id=stats_flow_id, ports=[eg_port], **ftuple)
         # FIXME: check P4RT spec, are counters reset upon table insert?
         self.reset_stats_counter(self.build_stats_table_entry(
-            gress=INGRESS, port=ig_port, **ftuple))
+            gress=INGRESS, stats_flow_id=stats_flow_id, port=ig_port, **ftuple))
         self.reset_stats_counter(self.build_stats_table_entry(
-            gress=EGRESS, port=eg_port, **ftuple))
+            gress=EGRESS, stats_flow_id=stats_flow_id, port=eg_port, **ftuple))
 
 
 class StatsIPv4UnicastTest(StatsTest, IPv4UnicastTest):
     """Wraps IPv4UnicastTest"""
 
-    def runStatsIPv4UnicastTest(self, **kwargs):
+    def runStatsIPv4UnicastTest(self, stats_flow_id, **kwargs):
         pkt = kwargs['pkt']
         ftuple = {
             "ipv4_src": pkt[IP].src,
@@ -115,13 +120,14 @@ class StatsIPv4UnicastTest(StatsTest, IPv4UnicastTest):
             ftuple["l4_dport"] = pkt[TCP].dport
 
         self.set_up_stats_flows(
+            stats_flow_id=stats_flow_id,
             ig_port=self.port1, eg_port=self.port2, **ftuple)
         self.runIPv4UnicastTest(**kwargs)
         self.verify_stats_counter(
-            gress=INGRESS, port=self.port1,
+            gress=INGRESS, stats_flow_id=stats_flow_id, port=self.port1,
             byte_count=len(pkt), pkt_count=1, **ftuple)
         self.verify_stats_counter(
-            gress=EGRESS, port=self.port2,
+            gress=EGRESS, stats_flow_id=stats_flow_id, port=self.port2,
             byte_count=len(pkt), pkt_count=1, **ftuple)
 
 
@@ -130,14 +136,16 @@ class FabricStatsIPv4UnicastTest(StatsIPv4UnicastTest):
     """
     @tvsetup
     @autocleanup
-    def doRunTest(self, pkt, mac_dest, tagged1, tagged2, tc_name):
+    def doRunTest(self, pkt, stats_flow_id, mac_dest, tagged1, tagged2, tc_name):
         self.runStatsIPv4UnicastTest(
-            pkt=pkt, next_hop_mac=mac_dest, tagged1=tagged1,
+            pkt=pkt, stats_flow_id= stats_flow_id, next_hop_mac=mac_dest, tagged1=tagged1,
             tagged2=tagged2,
         )
 
     def runTest(self):
         print("")
+        # Arbitrary stat flow id. Zero is a reserved value
+        stats_flow_id = 1
         for vlan_conf, tagged in vlan_confs.items():
             for pkt_type in ["tcp", "udp", "icmp"]:
                 tc_name = (
@@ -159,8 +167,10 @@ class FabricStatsIPv4UnicastTest(StatsIPv4UnicastTest):
                 )
                 self.doRunTest(
                     pkt=pkt,
+                     stats_flow_id =  stats_flow_id,
                     mac_dest=HOST2_MAC,
                     tagged1=tagged[0],
                     tagged2=tagged[1],
                     tc_name=tc_name
                 )
+                stats_flow_id += 1
