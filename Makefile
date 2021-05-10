@@ -30,6 +30,8 @@ PIPECONF_OAR_FILE := $(DIR)/target/fabric-tna-1.0.0-SNAPSHOT.oar
 # Profiles to build by default (all)
 PROFILES ?= fabric fabric-spgw fabric-int fabric-spgw-int
 
+CURRENT_USER := $(shell id -u):$(shell id -g)
+
 build: clean $(PROFILES) pipeconf
 
 all: $(PROFILES)
@@ -127,21 +129,23 @@ PROTOC_IMAGE=thethingsindustries/protoc:3.1.9@sha256:0c506752cae9d06f6818b60da29
 _docker_pull_all:
 	docker pull ${PROTOC_IMAGE}
 
-deps: _docker_pull_all src/test/resources/gnmi src/test/resources/googleapis src/test/resources/p4runtime src/test/resources/testvectors
+deps: _docker_pull_all src/test/resources/github.com/openconfig/gnmi src/test/resources/github.com/googleapis/googleapis \
+	src/test/resources/github.com/p4lang/p4runtime src/test/resources/github.com/stratum/testvectors
 
-src/test/resources/gnmi:
-	git submodule update --init src/test/resources/gnmi
+src/test/resources/github.com/openconfig/gnmi:
+	git submodule update --init src/test/resources/github.com/openconfig/gnmi
+	cd src/test/resources/github.com/openconfig/gnmi/proto && sed -i "s|github.com/openconfig/gnmi/proto/gnmi_ext|gnmi_ext|g" gnmi/gnmi.proto
 
-src/test/resources/googleapis:
-	git submodule update --init src/test/resources/googleapis
+src/test/resources/github.com/googleapis/googleapis:
+	git submodule update --init src/test/resources/github.com/googleapis
 
-src/test/resources/p4runtime:
-	git submodule update --init src/test/resources/p4runtime
+src/test/resources/github.com/p4lang/p4runtime:
+	git submodule update --init src/test/resources/github.com/p4lang/p4runtime
 
-src/test/resources/testvectors:
-	git submodule update --init src/test/resources/testvectors
+src/test/resources/github.com/stratum/testvectors:
+	git submodule update --init src/test/resources/github.com/stratum/testvectors
 
-PROTO_IMPORTS=".:src/test/resources/googleapis:src/test/resources/gnmi/proto:src/test/resources/p4runtime/proto"
+PROTO_IMPORTS=".:src/test/resources/github.com/googleapis/googleapis:src/test/resources/github.com/openconfig/gnmi/proto:src/test/resources/github.com/p4lang/p4runtime/proto"
 
 # It would be nice to have mvn invoke protoc and treat generated sources the mvn way
 test:
@@ -149,4 +153,9 @@ test:
 		-v ${DIR}/src/test/java:/java_out -w /root \
 		${PROTOC_IMAGE} -I=${PROTO_IMPORTS} --java_out=/java_out \
 		--plugin=protoc-gen-grpc-java=/usr/bin/protoc-gen-grpc-java --grpc-java_out=/java_out \
-		src/test/resources/testvectors/proto/testvector/*.proto
+		src/test/resources/github.com/stratum/testvectors/proto/testvector/*.proto
+	make fix-permissions
+
+fix-permissions:
+	test -d ${DIR}/src/test/java/org/stratumproject/fabric/tna/testvectors && \
+	docker run --rm -v ${DIR}/src/test/java/org/stratumproject/fabric/tna/testvectors:/tmp privatebin/chown -R ${CURRENT_USER} /tmp || true
