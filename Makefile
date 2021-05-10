@@ -127,18 +127,26 @@ PROTOC_IMAGE=thethingsindustries/protoc:3.1.9@sha256:0c506752cae9d06f6818b60da29
 _docker_pull_all:
 	docker pull ${PROTOC_IMAGE}
 
-deps: _docker_pull_all src/test/resources/dbuf/dbuf.proto src/test/java/org/omecproject/dbuf/grpc/Dbuf.java
+deps: _docker_pull_all src/test/resources/gnmi src/test/resources/googleapis src/test/resources/p4runtime src/test/resources/testvectors
 
-src/test/resources/dbuf/dbuf.proto:
-	git submodule update --init src/test/resources/dbuf
+src/test/resources/gnmi:
+	git submodule update --init src/test/resources/gnmi
+
+src/test/resources/googleapis:
+	git submodule update --init src/test/resources/googleapis
+
+src/test/resources/p4runtime:
+	git submodule update --init src/test/resources/p4runtime
+
+src/test/resources/testvectors:
+	git submodule update --init src/test/resources/testvectors
+
+PROTO_IMPORTS=".:src/test/resources/googleapis:src/test/resources/gnmi/proto:src/test/resources/p4runtime/proto"
 
 # It would be nice to have mvn invoke protoc and treat generated sources the mvn way
-src/test/java/org/omecproject/dbuf/grpc/Dbuf.java: src/test/resources/dbuf/dbuf.proto
-	docker run --rm -v ${DIR}/src/test/resources/dbuf:/root/dbuf \
-		-v ${DIR}/src/test/java:/java_out -w /root/dbuf \
-		${PROTOC_IMAGE} -I=/root/dbuf --java_out=/java_out \
+test:
+	docker run --rm -v ${DIR}:/root \
+		-v ${DIR}/src/test/java:/java_out -w /root \
+		${PROTOC_IMAGE} -I=${PROTO_IMPORTS} --java_out=/java_out \
 		--plugin=protoc-gen-grpc-java=/usr/bin/protoc-gen-grpc-java --grpc-java_out=/java_out \
-		api/dbuf.proto
-
-_build_resources: \
-	src/test/java/org/omecproject/dbuf/grpc/Dbuf.jav
+		src/test/resources/testvectors/proto/testvector/*.proto
