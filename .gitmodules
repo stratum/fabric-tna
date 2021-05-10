@@ -1,2 +1,14 @@
 # SPDX-FileCopyrightText: 2020 Open Networking Foundation <info@opennetworking.org>
 # SPDX-License-Identifier: LicenseRef-ONF-Member-1.0
+[submodule "src/test/resources/github.com/googleapis/googleapis"]
+	path = src/test/resources/github.com/googleapis/googleapis
+	url = git@github.com:googleapis/googleapis.git
+[submodule "src/test/resources/github.com/openconfig/gnmi"]
+	path = src/test/resources/github.com/openconfig/gnmi
+	url = git@github.com:openconfig/gnmi.git
+[submodule "src/test/resources/github.com/p4lang/p4runtime"]
+	path = src/test/resources/github.com/p4lang/p4runtime
+	url = git@github.com:p4lang/p4runtime.git
+[submodule "src/test/resources/github.com/stratum/testvectors"]
+	path = src/test/resources/github.com/stratum/testvectors
+	url = git@github.com:stratum/testvectors.git
