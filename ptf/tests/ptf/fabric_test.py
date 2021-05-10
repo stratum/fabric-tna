@@ -2072,9 +2072,10 @@ class SpgwSimpleTest(IPv4UnicastTest):
             tunnel_dst_addr=s1u_enb_addr,
         )
 
-    def enable_encap_with_psc(self):
+    def enable_encap_with_psc(self, qfi=0):
         self.send_request_add_entry_to_action(
-            "FabricEgress.spgw.gtpu_encap", None, "FabricEgress.spgw.gtpu_with_psc", [],
+            "FabricEgress.spgw.gtpu_encap", None, "FabricEgress.spgw.gtpu_with_psc",
+            [('qfi', stringify(qfi, 1))],
         )
 
     def reset_pdr_counters(self, ctr_idx):
