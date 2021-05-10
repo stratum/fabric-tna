@@ -225,13 +225,13 @@ BRIDGED_MD_TYPE_INGRESS_MIRROR = 3
 
 # Size for different headers
 if testutils.test_param_get("profile") == "fabric-spgw-int":
-    BMD_BYTES = 42
+    BMD_BYTES = 44
 elif testutils.test_param_get("profile") == "fabric-spgw":
-    BMD_BYTES = 38
+    BMD_BYTES = 39
 elif testutils.test_param_get("profile") == "fabric-int":
-    BMD_BYTES = 26
+    BMD_BYTES = 28
 elif testutils.test_param_get("profile") == "fabric":
-    BMD_BYTES = 22
+    BMD_BYTES = 23
 else:
     raise Exception("Invalid profile, cannot set BMD_BYTES")
 IP_HDR_BYTES = 20
