@@ -35,7 +35,7 @@ function base_build() {
   output_dir="${P4C_OUT}/sde_${SDE_VER//./_}"
   echo "*** Compiling profile '${PROFILE}'..."
   echo "*** Output in ${output_dir}"
-  p4c_flags="--auto-init-metadata"
+  p4c_flags=""
   mkdir -p ${output_dir}
   (
     time $P4C_CMD --arch tna -g --create-graphs --verbose 2 \
