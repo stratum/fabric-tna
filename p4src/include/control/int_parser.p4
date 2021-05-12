@@ -130,6 +130,7 @@ parser IntReportParser (packet_in packet,
         hdr.report_fixed_header.rsvd = 0;
         // hdr.report_fixed_header.hw_id = update later
         // hdr.report_fixed_header.seq_no = update later
+
         transition check_ethernet;
     }
 
@@ -149,94 +150,6 @@ parser IntReportParser (packet_in packet,
         // the INT report in the Ingress pipe as a standard INT report, instead of punting it to CPU.
         hdr.fake_ethernet.ether_type = ETHERTYPE_CPU_LOOPBACK_INGRESS;
         packet.advance(ETH_HDR_BYTES * 8);
-        transition parse_eth_hdr;
-    }
-
-    state parse_deflected_packet {
-        bridged_metadata_t tmp;
-        packet.extract(tmp);
-        fabric_md.bridged.bmd_type = BridgedMdType_t.DEFLECTED;
-        fabric_md.bridged.base.mpls_label = 0; // do not set the MPLS label later in the egress next control block.
-        fabric_md.bridged.base.ig_tstamp = tmp.base.ig_tstamp;
-        fabric_md.bridged.base.ig_port = tmp.base.ig_port;
-        fabric_md.bridged.int_bmd.report_type = IntReportType_t.DROP;
-        fabric_md.bridged.int_bmd.ig_port = tmp.int_bmd.ig_port;
-        fabric_md.bridged.int_bmd.eg_port = tmp.int_bmd.eg_port;
-        fabric_md.bridged.int_bmd.queue_id = tmp.int_bmd.queue_id;
-        fabric_md.bridged.int_bmd.gtpu_presence = tmp.int_bmd.gtpu_presence;
-#ifdef WITH_SPGW
-        fabric_md.bridged.spgw.skip_spgw = true; // skip spgw so we won't encap it later.
-#endif // WITH_SPGW
-
-        fabric_md.int_mirror_md.setValid();
-        fabric_md.int_mirror_md.report_type = IntReportType_t.DROP;
-        fabric_md.int_mirror_md.mirror_type = FabricMirrorType_t.INVALID;
-        fabric_md.int_mirror_md.ip_eth_type = ETHERTYPE_IPV4;
-        fabric_md.int_mirror_md.flow_hash = tmp.base.inner_hash;
-        fabric_md.int_mirror_md.ig_tstamp = tmp.base.ig_tstamp[31:0];
-
-        // Initialize report headers here to allocate constant fields on the
-        // T-PHV (and save on PHV resources).
-        /** report_ethernet **/
-        hdr.report_ethernet.setValid();
-        // hdr.report_ethernet.dst_addr = update later
-        // hdr.report_ethernet.src_addr = update later
-
-        /** report_eth_type **/
-        hdr.report_eth_type.setValid();
-        // hdr.report_eth_type.value = update later
-
-        /** report_mpls (set valid later) **/
-        // hdr.report_mpls.label = update later
-        hdr.report_mpls.tc = 0;
-        hdr.report_mpls.bos = 0;
-        hdr.report_mpls.ttl = DEFAULT_MPLS_TTL;
-
-        /** report_ipv4 **/
-        hdr.report_ipv4.setValid();
-        hdr.report_ipv4.version = 4w4;
-        hdr.report_ipv4.ihl = 4w5;
-        hdr.report_ipv4.dscp = INT_DSCP;
-        hdr.report_ipv4.ecn = 2w0;
-        // hdr.report_ipv4.total_len = update later
-        // hdr.report_ipv4.identification = update later
-        hdr.report_ipv4.flags = 0;
-        hdr.report_ipv4.frag_offset = 0;
-        hdr.report_ipv4.ttl = DEFAULT_IPV4_TTL;
-        hdr.report_ipv4.protocol = PROTO_UDP;
-        // hdr.report_ipv4.hdr_checksum = update later
-        // hdr.report_ipv4.src_addr = update later
-        // hdr.report_ipv4.dst_addr = update later
-
-        /** report_udp **/
-        hdr.report_udp.setValid();
-        hdr.report_udp.sport = 0;
-        // hdr.report_udp.dport = update later
-        // hdr.report_udp.len = update later
-        // hdr.report_udp.checksum = update never!
-
-        /** report_fixed_header **/
-        hdr.report_fixed_header.setValid();
-        hdr.report_fixed_header.ver = 0;
-        hdr.report_fixed_header.nproto = NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER;
-        // hdr.report_fixed_header.d = update later
-        // hdr.report_fixed_header.q = update later
-        // hdr.report_fixed_header.f = update later
-        hdr.report_fixed_header.rsvd = 0;
-        // hdr.report_fixed_header.hw_id = update later
-        // hdr.report_fixed_header.seq_no = update later
-        hdr.report_fixed_header.ig_tstamp = fabric_md.int_mirror_md.ig_tstamp;
-
-        /** common_report_header **/
-        hdr.common_report_header.setValid();
-        // hdr.common_report_header.switch_id = update later
-        hdr.common_report_header.ig_port = tmp.int_bmd.ig_port;
-        hdr.common_report_header.eg_port = tmp.int_bmd.eg_port;
-        hdr.common_report_header.queue_id = tmp.int_bmd.queue_id;
-
-        /** drop_report_header **/
-        hdr.drop_report_header.setValid();
-        hdr.drop_report_header.drop_reason = IntDropReason_t.DROP_REASON_TRAFFIC_MANAGER;
         transition parse_eth_hdr;
     }
 
@@ -273,7 +186,7 @@ parser IntReportParser (packet_in packet,
 
     state check_eth_type {
         packet.extract(hdr.eth_type);
-        transition select(hdr.eth_type.value, fabric_md.bridged.int_bmd.gtpu_presence) {
+        transition select(hdr.eth_type.value, fabric_md.int_mirror_md.gtpu_presence) {
             (ETHERTYPE_MPLS, _): strip_mpls;
             (ETHERTYPE_IPV4, GtpuPresence.NONE): handle_ipv4;
             (ETHERTYPE_IPV4, GtpuPresence.GTPU_ONLY): strip_ipv4_udp_gtpu;

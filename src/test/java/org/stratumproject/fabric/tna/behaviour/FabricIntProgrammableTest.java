@@ -620,7 +620,7 @@ public class FabricIntProgrammableTest {
                     NODE_SID_IPV4
             ));
             if (bmdType == BMD_TYPE_DEFLECTED) {
-                reportAction.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_DEFLECT_DROP_REPORT_ENCAP_MPLS);
+                reportAction.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_DROP_REPORT_ENCAP_MPLS);
             } else if (reportType == INT_REPORT_TYPE_LOCAL) {
                 reportAction.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_LOCAL_REPORT_ENCAP_MPLS);
             } else {
@@ -628,7 +628,7 @@ public class FabricIntProgrammableTest {
             }
         } else {
             if (bmdType == BMD_TYPE_DEFLECTED) {
-                reportAction.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_DEFLECT_DROP_REPORT_ENCAP);
+                reportAction.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_DROP_REPORT_ENCAP);
             } else if (reportType == INT_REPORT_TYPE_LOCAL) {
                 reportAction.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_LOCAL_REPORT_ENCAP);
             } else {

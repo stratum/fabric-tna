@@ -169,10 +169,6 @@ public final class P4InfoConstants {
             PiActionId.of("FabricEgress.egress_next.pop_vlan");
     public static final PiActionId FABRIC_EGRESS_EGRESS_NEXT_PUSH_VLAN =
             PiActionId.of("FabricEgress.egress_next.push_vlan");
-    public static final PiActionId FABRIC_EGRESS_INT_EGRESS_DO_DEFLECT_DROP_REPORT_ENCAP =
-            PiActionId.of("FabricEgress.int_egress.do_deflect_drop_report_encap");
-    public static final PiActionId FABRIC_EGRESS_INT_EGRESS_DO_DEFLECT_DROP_REPORT_ENCAP_MPLS =
-            PiActionId.of("FabricEgress.int_egress.do_deflect_drop_report_encap_mpls");
     public static final PiActionId FABRIC_EGRESS_INT_EGRESS_DO_DROP_REPORT_ENCAP =
             PiActionId.of("FabricEgress.int_egress.do_drop_report_encap");
     public static final PiActionId FABRIC_EGRESS_INT_EGRESS_DO_DROP_REPORT_ENCAP_MPLS =

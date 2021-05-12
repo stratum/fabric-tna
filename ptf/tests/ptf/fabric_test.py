@@ -2767,7 +2767,7 @@ class IntTest(IPv4UnicastTest):
         elif report_type == INT_REPORT_TYPE_DROP:
             action = "do_drop_report_encap"
         elif bmd_type == BRIDGED_MD_TYPE_DEFLECTED:
-            action = "do_deflect_on_drop_report_encap"
+            action = "do_drop_report_encap"
         else:
             self.fail("Invalid report type {}".format(report_type))
 
