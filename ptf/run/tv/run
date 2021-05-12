@@ -19,6 +19,12 @@ if [ -z "${fabricProfile}" ]; then
     exit 1
 fi
 
+# Skip INT deflect on drop test
+if [ "${fabricProfile}" = "int-dod" ]; then
+    echo "Skip generating test vector for int-dod profile"
+    exit 0
+fi
+
 # Find Tofino compiled artifacts
 sdeVer_=$(echo "${SDE_VERSION}" | tr . _) # Replace dots with underscores
 P4C_OUT=${FABRIC_TNA}/p4src/build/${fabricProfile}/sde_${sdeVer_}
