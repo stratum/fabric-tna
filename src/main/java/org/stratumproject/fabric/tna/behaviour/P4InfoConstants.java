@@ -70,7 +70,6 @@ public final class P4InfoConstants {
             PiMatchFieldId.of("mpls_label");
     public static final PiMatchFieldId HDR_NEXT_ID =
             PiMatchFieldId.of("next_id");
-    public static final PiMatchFieldId HDR_PORT = PiMatchFieldId.of("port");
     public static final PiMatchFieldId HDR_STATS_FLOW_ID =
             PiMatchFieldId.of("stats_flow_id");
     public static final PiMatchFieldId HDR_TEID = PiMatchFieldId.of("teid");
@@ -264,7 +263,6 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.spgw.uplink_recirc.miss");
     public static final PiActionId FABRIC_INGRESS_STATS_COUNT =
             PiActionId.of("FabricIngress.stats.count");
-    public static final PiActionId NO_ACTION = PiActionId.of("NoAction");
     public static final PiActionId NOP = PiActionId.of("nop");
     // Action Param IDs
     public static final PiActionParamId CPU_PORT =
@@ -298,7 +296,6 @@ public final class P4InfoConstants {
             PiActionParamId.of("port_num");
     public static final PiActionParamId PORT_TYPE =
             PiActionParamId.of("port_type");
-    public static final PiActionParamId QFI = PiActionParamId.of("qfi");
     public static final PiActionParamId QID = PiActionParamId.of("qid");
     public static final PiActionParamId SMAC = PiActionParamId.of("smac");
     public static final PiActionParamId SRC_IFACE =
