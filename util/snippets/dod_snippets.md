@@ -77,7 +77,7 @@ te.priority = 100
 te.insert()
 
 # Watch any flows
-te = table_entry['FabricIngress.int_pre_ingress.watchlist'](action='mark_to_report')
+te = table_entry['FabricIngress.int_watchlist.watchlist'](action='mark_to_report')
 te.priority = 100
 te.insert()
 
@@ -125,12 +125,12 @@ te.insert()
 # Default forwarding behavior for report packet
 te = table_entry['FabricIngress.acl.acl'](action='set_output_port')
 te.match['ig_port'] = '68'
-te.action['port_num'] = '260'
+te.action['port_num'] = '264'
 te.priority=1000
 te.insert()
 
 te = table_entry['FabricEgress.egress_next.egress_vlan'](action='FabricEgress.egress_next.pop_vlan')
 te.match['vlan_id'] = '4094'
-te.match['eg_port'] = '260'
+te.match['eg_port'] = '264'
 te.insert()
 ```
