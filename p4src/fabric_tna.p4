@@ -73,6 +73,7 @@ control FabricIngress (
             next.apply(hdr, fabric_md, ig_intr_md, ig_tm_md);
         }
 #ifdef WITH_INT
+        fabric_md.int_mirror_md.gtpu_presence = fabric_md.bridged.int_bmd.gtpu_presence;
         int_ingress.apply(hdr, fabric_md, ig_intr_md, ig_dprsr_md, ig_tm_md);
 #endif // WITH_INT
     }
