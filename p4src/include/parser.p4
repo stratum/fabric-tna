@@ -43,7 +43,7 @@ parser FabricIngressParser (packet_in  packet,
         transition select(tmp.ether_type) {
             ETHERTYPE_CPU_LOOPBACK_INGRESS: parse_fake_ethernet;
             ETHERTYPE_CPU_LOOPBACK_EGRESS: parse_fake_ethernet_and_accept;
-            ETHERTYPE_PACKET_OUT: parse_packet_out;
+            ETHERTYPE_PACKET_OUT: check_packet_out;
             default: parse_ethernet;
         }
     }
@@ -59,10 +59,24 @@ parser FabricIngressParser (packet_in  packet,
         transition accept;
     }
 
-    state parse_packet_out {
+    state check_packet_out {
+        packet_out_header_t tmp = packet.lookahead<packet_out_header_t>();
+        transition select(tmp.do_forwarding) {
+            0: parse_packet_out_and_accept;
+            default: strip_packet_out;
+        }
+    }
+
+    state parse_packet_out_and_accept {
+        // Will transmit over requested egress port as-is. No need to parse further.
         packet.extract(hdr.packet_out);
-        // Will send to requested egress port as-is. No need to parse further.
         transition accept;
+    }
+
+    state strip_packet_out {
+        // Remove packet-out header and process as a regular packet.
+        packet.advance(ETH_HDR_BYTES * 8);
+        transition parse_ethernet;
     }
 
     state parse_ethernet {

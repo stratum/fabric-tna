@@ -19,7 +19,8 @@ header packet_in_header_t {
 header packet_out_header_t {
     PortId_t          egress_port;
     CpuLoopbackMode_t cpu_loopback_mode;
-    @padding bit<85>  pad0;
+    bit<1>            do_forwarding;
+    @padding bit<84>  pad0;
     bit<16>           ether_type;
 }
 
