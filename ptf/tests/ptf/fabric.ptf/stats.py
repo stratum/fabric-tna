@@ -114,16 +114,16 @@ class StatsTest(FabricTest):
             gress=EGRESS, stats_flow_id=stats_flow_id, ports=[eg_port], **ftuple
         )
         # FIXME: check P4RT spec, are counters reset upon table insert?
-        # self.reset_stats_counter(
-        #     self.build_stats_table_entry(
-        #         gress=INGRESS, stats_flow_id=stats_flow_id, port=ig_port, **ftuple
-        #     )
-        # )
-        # self.reset_stats_counter(
-        #     self.build_stats_table_entry(
-        #         gress=EGRESS, stats_flow_id=stats_flow_id, port=eg_port, **ftuple
-        #     )
-        # )
+        self.reset_stats_counter(
+            self.build_stats_table_entry(
+                gress=INGRESS, stats_flow_id=stats_flow_id, port=ig_port, **ftuple
+            )
+        )
+        self.reset_stats_counter(
+            self.build_stats_table_entry(
+                gress=EGRESS, stats_flow_id=stats_flow_id, port=eg_port, **ftuple
+            )
+        )
 
 
 class StatsIPv4UnicastTest(StatsTest, IPv4UnicastTest):
