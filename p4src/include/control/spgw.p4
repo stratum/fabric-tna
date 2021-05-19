@@ -404,10 +404,10 @@ control SpgwEgress(
     // Do regular GTP-U encap.
     action gtpu_only() {
         _encap_common();
-        hdr.outer_ipv4.total_len = hdr.ipv4.total_len
-                + IPV4_HDR_BYTES + UDP_HDR_BYTES + GTPU_HDR_BYTES;
-        hdr.outer_udp.len = hdr.ipv4.total_len
-                + UDP_HDR_BYTES + GTPU_HDR_BYTES;
+        hdr.outer_ipv4.total_len = IPV4_HDR_BYTES + UDP_HDR_BYTES + GTPU_HDR_BYTES
+                + hdr.ipv4.total_len;
+        hdr.outer_udp.len = UDP_HDR_BYTES + GTPU_HDR_BYTES
+                + hdr.ipv4.total_len;
         hdr.outer_gtpu.msglen = hdr.ipv4.total_len;
         hdr.outer_gtpu.ex_flag = 0;
 #ifdef WITH_INT
@@ -420,14 +420,14 @@ control SpgwEgress(
     // TODO: allow setting different QFIs in ingress
     action gtpu_with_psc(bit<6> qfi) {
         _encap_common();
-        hdr.outer_ipv4.total_len = hdr.ipv4.total_len
-                + IPV4_HDR_BYTES + UDP_HDR_BYTES + GTPU_HDR_BYTES
-                + GTPU_OPTIONS_HDR_BYTES + GTPU_EXT_PSC_HDR_BYTES;
-        hdr.outer_udp.len = hdr.ipv4.total_len
-                + UDP_HDR_BYTES + GTPU_HDR_BYTES
-                + GTPU_OPTIONS_HDR_BYTES + GTPU_EXT_PSC_HDR_BYTES;
-        hdr.outer_gtpu.msglen = hdr.ipv4.total_len
-                + GTPU_OPTIONS_HDR_BYTES + GTPU_EXT_PSC_HDR_BYTES;
+        hdr.outer_ipv4.total_len = IPV4_HDR_BYTES + UDP_HDR_BYTES + GTPU_HDR_BYTES
+                + GTPU_OPTIONS_HDR_BYTES + GTPU_EXT_PSC_HDR_BYTES
+                + hdr.ipv4.total_len;
+        hdr.outer_udp.len = UDP_HDR_BYTES + GTPU_HDR_BYTES
+                + GTPU_OPTIONS_HDR_BYTES + GTPU_EXT_PSC_HDR_BYTES
+                + hdr.ipv4.total_len;
+        hdr.outer_gtpu.msglen = GTPU_OPTIONS_HDR_BYTES + GTPU_EXT_PSC_HDR_BYTES
+                + hdr.ipv4.total_len;
         hdr.outer_gtpu.ex_flag = 1;
         hdr.outer_gtpu_options.setValid();
         hdr.outer_gtpu_ext_psc.setValid();
