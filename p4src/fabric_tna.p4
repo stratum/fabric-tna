@@ -54,7 +54,9 @@ control FabricIngress (
     apply {
         lkp_md_init.apply(hdr, fabric_md.lkp);
         pkt_io.apply(hdr, fabric_md, ig_intr_md, ig_tm_md, ig_dprsr_md);
+#ifdef WITH_INT
         int_watchlist.apply(hdr, fabric_md, ig_intr_md, ig_dprsr_md, ig_tm_md);
+#endif // WITH_INT
         stats.apply(fabric_md.lkp, ig_intr_md.ingress_port,
                     fabric_md.bridged.base.stats_flow_id);
         filtering.apply(hdr, fabric_md, ig_intr_md);
