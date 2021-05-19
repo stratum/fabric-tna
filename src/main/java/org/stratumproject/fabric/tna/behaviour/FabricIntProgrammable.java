@@ -95,7 +95,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
             Criterion.Type.TCP_SRC, Criterion.Type.TCP_DST);
 
     private static final Set<TableId> TABLES_TO_CLEANUP = Sets.newHashSet(
-            P4InfoConstants.FABRIC_INGRESS_INT_INGRESS_WATCHLIST,
+            P4InfoConstants.FABRIC_INGRESS_INT_WATCHLIST_WATCHLIST,
             P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_REPORT,
             P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_CONFIG
     );
@@ -256,7 +256,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         }
 
         final PiAction watchlistAction = PiAction.builder()
-                .withId(P4InfoConstants.FABRIC_INGRESS_INT_INGRESS_MARK_TO_REPORT)
+                .withId(P4InfoConstants.FABRIC_INGRESS_INT_WATCHLIST_MARK_TO_REPORT)
                 .build();
 
         final TrafficTreatment watchlistTreatment = DefaultTrafficTreatment.builder()
@@ -271,7 +271,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 .withSelector(watchlistSelector)
                 .withTreatment(watchlistTreatment)
                 .withPriority(DEFAULT_PRIORITY)
-                .forTable(P4InfoConstants.FABRIC_INGRESS_INT_INGRESS_WATCHLIST)
+                .forTable(P4InfoConstants.FABRIC_INGRESS_INT_WATCHLIST_WATCHLIST)
                 .fromApp(appId)
                 .makePermanent()
                 .build();
@@ -600,7 +600,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 .filter(action -> action instanceof PiAction)
                 .map(action -> (PiAction) action)
                 .anyMatch(action -> action.id().equals(
-                        P4InfoConstants.FABRIC_INGRESS_INT_INGRESS_NO_REPORT_COLLECTOR));
+                        P4InfoConstants.FABRIC_INGRESS_INT_WATCHLIST_NO_REPORT_COLLECTOR));
     }
 
     private void setUpCollectorFlows(IntDeviceConfig config) {
@@ -611,7 +611,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 .forEach(flowRuleService::removeFlowRules);
 
         final PiAction watchlistAction = PiAction.builder()
-                .withId(P4InfoConstants.FABRIC_INGRESS_INT_INGRESS_NO_REPORT_COLLECTOR)
+                .withId(P4InfoConstants.FABRIC_INGRESS_INT_WATCHLIST_NO_REPORT_COLLECTOR)
                 .build();
 
         final TrafficTreatment watchlistTreatment = DefaultTrafficTreatment.builder()
@@ -629,7 +629,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 .withSelector(buildCollectorSelector(watchlistSelector.criteria()))
                 .withTreatment(watchlistTreatment)
                 .withPriority(DEFAULT_PRIORITY + 10)
-                .forTable(P4InfoConstants.FABRIC_INGRESS_INT_INGRESS_WATCHLIST)
+                .forTable(P4InfoConstants.FABRIC_INGRESS_INT_WATCHLIST_WATCHLIST)
                 .fromApp(appId)
                 .makePermanent()
                 .build();

@@ -108,8 +108,8 @@ public final class P4InfoConstants {
             PiTableId.of("FabricIngress.forwarding.routing_v4");
     public static final PiTableId FABRIC_INGRESS_FORWARDING_ROUTING_V6 =
             PiTableId.of("FabricIngress.forwarding.routing_v6");
-    public static final PiTableId FABRIC_INGRESS_INT_INGRESS_WATCHLIST =
-            PiTableId.of("FabricIngress.int_ingress.watchlist");
+    public static final PiTableId FABRIC_INGRESS_INT_WATCHLIST_WATCHLIST =
+            PiTableId.of("FabricIngress.int_watchlist.watchlist");
     public static final PiTableId FABRIC_INGRESS_NEXT_HASHED =
             PiTableId.of("FabricIngress.next.hashed");
     public static final PiTableId FABRIC_INGRESS_NEXT_MULTICAST =
@@ -219,12 +219,12 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.forwarding.set_next_id_routing_v4");
     public static final PiActionId FABRIC_INGRESS_FORWARDING_SET_NEXT_ID_ROUTING_V6 =
             PiActionId.of("FabricIngress.forwarding.set_next_id_routing_v6");
-    public static final PiActionId FABRIC_INGRESS_INT_INGRESS_MARK_TO_REPORT =
-            PiActionId.of("FabricIngress.int_ingress.mark_to_report");
-    public static final PiActionId FABRIC_INGRESS_INT_INGRESS_NO_REPORT =
-            PiActionId.of("FabricIngress.int_ingress.no_report");
-    public static final PiActionId FABRIC_INGRESS_INT_INGRESS_NO_REPORT_COLLECTOR =
-            PiActionId.of("FabricIngress.int_ingress.no_report_collector");
+    public static final PiActionId FABRIC_INGRESS_INT_WATCHLIST_MARK_TO_REPORT =
+            PiActionId.of("FabricIngress.int_watchlist.mark_to_report");
+    public static final PiActionId FABRIC_INGRESS_INT_WATCHLIST_NO_REPORT =
+            PiActionId.of("FabricIngress.int_watchlist.no_report");
+    public static final PiActionId FABRIC_INGRESS_INT_WATCHLIST_NO_REPORT_COLLECTOR =
+            PiActionId.of("FabricIngress.int_watchlist.no_report_collector");
     public static final PiActionId FABRIC_INGRESS_NEXT_OUTPUT_HASHED =
             PiActionId.of("FabricIngress.next.output_hashed");
     public static final PiActionId FABRIC_INGRESS_NEXT_ROUTING_HASHED =
