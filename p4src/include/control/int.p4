@@ -134,20 +134,19 @@ control DropReportFilter(
     }
 }
 
-control IntIngress (
+control IntWatchlist(
     inout ingress_headers_t hdr,
     inout fabric_ingress_metadata_t fabric_md,
     in    ingress_intrinsic_metadata_t ig_intr_md,
     inout ingress_intrinsic_metadata_for_deparser_t ig_dprsr_md,
-    inout ingress_intrinsic_metadata_for_tm_t       ig_tm_md) {
-
+    inout ingress_intrinsic_metadata_for_tm_t ig_tm_md) {
 #ifdef WITH_DEBUG
     DirectCounter<bit<64>>(CounterType_t.PACKETS_AND_BYTES) watchlist_counter;
-    DirectCounter<bit<64>>(CounterType_t.PACKETS_AND_BYTES) drop_report_counter;
 #endif // WITH_DEBUG
 
     action mark_to_report() {
         fabric_md.bridged.int_bmd.report_type = IntReportType_t.LOCAL;
+        fabric_md.int_mirror_md.gtpu_presence = fabric_md.bridged.base.gtpu_presence;
 #ifdef WITH_DEBUG
         watchlist_counter.count();
 #endif // WITH_DEBUG
@@ -183,6 +182,23 @@ control IntIngress (
         counters = watchlist_counter;
 #endif // WITH_DEBUG
     }
+
+    apply {
+        watchlist.apply();
+    }
+}
+
+control IntIngress(
+    inout ingress_headers_t hdr,
+    inout fabric_ingress_metadata_t fabric_md,
+    in    ingress_intrinsic_metadata_t ig_intr_md,
+    inout ingress_intrinsic_metadata_for_deparser_t ig_dprsr_md,
+    inout ingress_intrinsic_metadata_for_tm_t ig_tm_md) {
+
+#ifdef WITH_DEBUG
+    DirectCounter<bit<64>>(CounterType_t.PACKETS_AND_BYTES) drop_report_counter;
+#endif // WITH_DEBUG
+
 
     @hidden
     action report_drop() {
@@ -231,7 +247,6 @@ control IntIngress (
         // Here we use 0b10000000xx as the mirror session ID where "xx" is the 2-bit
         // pipeline number(0~3).
         fabric_md.bridged.int_bmd.mirror_session_id = INT_MIRROR_SESSION_BASE ++ ig_intr_md.ingress_port[8:7];
-        watchlist.apply();
         drop_report.apply();
     }
 }

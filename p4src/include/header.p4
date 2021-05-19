@@ -244,7 +244,6 @@ header int_mirror_metadata_t {
 
 @flexible
 struct int_bridged_metadata_t {
-    GtpuPresence    gtpu_presence;
     IntReportType_t report_type;
     MirrorId_t      mirror_session_id;
 }
@@ -270,6 +269,7 @@ struct bridged_metadata_base_t {
     bit<48>                  ig_tstamp;
     bit<16>                  ip_eth_type;
     bit<STATS_FLOW_ID_WIDTH> stats_flow_id;
+    GtpuPresence             gtpu_presence;
 #ifdef WITH_DOUBLE_VLAN_TERMINATION
     bool                     push_double_vlan;
     vlan_id_t                inner_vlan_id;

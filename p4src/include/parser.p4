@@ -30,9 +30,9 @@ parser FabricIngressParser (packet_in  packet,
         fabric_md.bridged.base.ip_eth_type = 0;
 #ifdef WITH_INT
         fabric_md.int_mirror_md.drop_reason = IntDropReason_t.DROP_REASON_UNKNOWN;
-        fabric_md.bridged.int_bmd.gtpu_presence = GtpuPresence.NONE;
         fabric_md.int_mirror_md.gtpu_presence = GtpuPresence.NONE;
 #endif // WITH_INT
+        fabric_md.bridged.base.gtpu_presence = GtpuPresence.NONE;
         transition check_ethernet;
     }
 
@@ -199,15 +199,7 @@ parser FabricIngressParser (packet_in  packet,
     }
 
     state set_gtpu_only {
-#ifdef WITH_INT
-        // Signal egress to strip the GTP-U tunnel headers inside INT reports.
-        // Updated by SpgwIngress if we do decap.
-        fabric_md.bridged.int_bmd.gtpu_presence = GtpuPresence.GTPU_ONLY;
-        // Do the same for ingress-to-egress mirrors for drop reporting. Not
-        // modified by decap action, as the mirrored pkt at egress will be the
-        // same seen at the ingress parser.
-        fabric_md.int_mirror_md.gtpu_presence = GtpuPresence.GTPU_ONLY;
-#endif // WITH_INT
+        fabric_md.bridged.base.gtpu_presence = GtpuPresence.GTPU_ONLY;
         transition parse_inner_ipv4;
     }
 
@@ -222,10 +214,7 @@ parser FabricIngressParser (packet_in  packet,
 
     state parse_gtpu_ext_psc {
         packet.extract(hdr.gtpu_ext_psc);
-#ifdef WITH_INT
-        fabric_md.bridged.int_bmd.gtpu_presence = GtpuPresence.GTPU_WITH_PSC;
-        fabric_md.int_mirror_md.gtpu_presence = GtpuPresence.GTPU_WITH_PSC;
-#endif // WITH_INT
+        fabric_md.bridged.base.gtpu_presence = GtpuPresence.GTPU_WITH_PSC;
         transition select(hdr.gtpu_ext_psc.next_ext) {
             GTPU_NEXT_EXT_NONE: parse_inner_ipv4;
             default: accept;
@@ -380,7 +369,7 @@ parser FabricEgressParser (packet_in packet,
         hdr.outer_gtpu_ext_psc.next_ext  = GTPU_NEXT_EXT_NONE;
 #endif // WITH_SPGW
 #ifdef WITH_INT
-        fabric_md.int_mirror_md.gtpu_presence = fabric_md.bridged.int_bmd.gtpu_presence;
+        fabric_md.int_mirror_md.gtpu_presence = fabric_md.bridged.base.gtpu_presence;
 #endif // WITH_INT
         transition check_ethernet;
     }

@@ -20,7 +20,7 @@ control DecapGtpu(inout ingress_headers_t            hdr,
         hdr.gtpu_options.setInvalid();
         hdr.gtpu_ext_psc.setInvalid();
 #ifdef WITH_INT
-        fabric_md.bridged.int_bmd.gtpu_presence = GtpuPresence.NONE;
+        fabric_md.bridged.base.gtpu_presence = GtpuPresence.NONE;
 #endif // WITH_INT
     }
     @hidden
@@ -349,7 +349,8 @@ control SpgwIngress(
                     decap_gtpu_from_dbuf.apply(hdr, fabric_md);
                 }
                 // PDRs
-                if (fabric_md.spgw.src_iface == SpgwInterface.ACCESS && hdr.gtpu.isValid()) {
+                if (fabric_md.spgw.src_iface == SpgwInterface.ACCESS &&
+                        fabric_md.bridged.base.gtpu_presence != GtpuPresence.NONE) {
                     uplink_pdrs.apply();
                 } else if (fabric_md.spgw.src_iface == SpgwInterface.CORE ||
                             fabric_md.spgw.src_iface == SpgwInterface.FROM_DBUF) {

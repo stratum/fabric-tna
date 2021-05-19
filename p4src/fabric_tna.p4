@@ -47,15 +47,14 @@ control FabricIngress (
     SpgwIngress() spgw;
 #endif // WITH_SPGW
 #ifdef WITH_INT
+    IntWatchlist() int_watchlist;
     IntIngress() int_ingress;
 #endif // WITH_INT
 
     apply {
-#ifdef WITH_INT
-    fabric_md.int_mirror_md.gtpu_presence = fabric_md.bridged.int_bmd.gtpu_presence;
-#endif // WITH_INT
         lkp_md_init.apply(hdr, fabric_md.lkp);
         pkt_io.apply(hdr, fabric_md, ig_intr_md, ig_tm_md, ig_dprsr_md);
+        int_watchlist.apply(hdr, fabric_md, ig_intr_md, ig_dprsr_md, ig_tm_md);
         stats.apply(fabric_md.lkp, ig_intr_md.ingress_port,
                     fabric_md.bridged.base.stats_flow_id);
         filtering.apply(hdr, fabric_md, ig_intr_md);
