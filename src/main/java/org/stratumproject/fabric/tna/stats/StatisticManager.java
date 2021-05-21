@@ -24,8 +24,11 @@ import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flow.criteria.Criterion;
 import org.onosproject.net.flow.criteria.PiCriterion;
 import org.onosproject.net.intent.WorkPartitionService;
+import org.onosproject.net.pi.model.PiMatchFieldId;
 import org.onosproject.net.pi.model.PiTableId;
 import org.onosproject.net.pi.runtime.PiAction;
+import org.onosproject.net.pi.runtime.PiActionParam;
+import org.onosproject.net.pi.runtime.PiExactFieldMatch;
 import org.onosproject.net.pi.runtime.PiFieldMatch;
 import org.onosproject.net.pi.runtime.PiTableAction;
 import org.onosproject.net.pi.runtime.PiTernaryFieldMatch;
@@ -57,6 +60,7 @@ import java.util.stream.StreamSupport;
 import static org.onlab.util.Tools.groupedThreads;
 import static org.slf4j.LoggerFactory.getLogger;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_STATS_FLOWS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_STATS_FLOWS;
 
 @Component(immediate = true, service = StatisticService.class)
 public class StatisticManager implements StatisticService {
@@ -135,6 +139,11 @@ public class StatisticManager implements StatisticService {
 
     @Override
     public void addMonitor(TrafficSelector selector, int id) {
+        if (statsStore.stream().anyMatch(key -> key.id() == id)) {
+            log.warn("Monitor with same id {} exist. Skipping", id);
+            return;
+        }
+
         StatisticKey key = StatisticKey.builder()
                 .withSelector(selector)
                 .withId(id)
@@ -201,15 +210,17 @@ public class StatisticManager implements StatisticService {
 
             // Prepare PiCriterion
             PiCriterion ingressPiCriterion = PiCriterion.builder()
-                    .matchTernary(P4InfoConstants.HDR_PORT, portNumber.toLong(), 0x1ffL)
+                    .matchExact(P4InfoConstants.HDR_IG_PORT, portNumber.toLong())
                     .build();
             PiCriterion egressPiCriterion = PiCriterion.builder()
-                    .matchTernary(P4InfoConstants.HDR_PORT, portNumber.toLong(), 0x1ffL)
+                    .matchExact(P4InfoConstants.HDR_STATS_FLOW_ID, key.id())
+                    .matchExact(P4InfoConstants.HDR_EG_PORT, portNumber.toLong())
                     .build();
 
             // Prepare PiTableAction
             PiTableAction ingressPiTableAction = PiAction.builder()
                     .withId(P4InfoConstants.FABRIC_INGRESS_STATS_COUNT)
+                    .withParameter(new PiActionParam(P4InfoConstants.FLOW_ID, key.id()))
                     .build();
             PiTableAction egressPiTableAction = PiAction.builder()
                     .withId(P4InfoConstants.FABRIC_EGRESS_STATS_COUNT)
@@ -218,7 +229,7 @@ public class StatisticManager implements StatisticService {
             // Prepare FlowRule
             FlowRule ingressFlowRule = DefaultFlowRule.builder()
                     .forDevice(deviceId)
-                    .forTable(PiTableId.of(P4InfoConstants.FABRIC_INGRESS_STATS_FLOWS.id()))
+                    .forTable(PiTableId.of(FABRIC_INGRESS_STATS_FLOWS.id()))
                     .fromApp(appId)
                     .withPriority(key.id())
                     .withSelector(DefaultTrafficSelector.builder(key.selector()).matchPi(ingressPiCriterion).build())
@@ -230,7 +241,7 @@ public class StatisticManager implements StatisticService {
                     .forTable(PiTableId.of(FABRIC_EGRESS_STATS_FLOWS.id()))
                     .fromApp(appId)
                     .withPriority(key.id())
-                    .withSelector(DefaultTrafficSelector.builder(key.selector()).matchPi(egressPiCriterion).build())
+                    .withSelector(DefaultTrafficSelector.builder().matchPi(egressPiCriterion).build())
                     .withTreatment(DefaultTrafficTreatment.builder().piTableAction(egressPiTableAction).build())
                     .makePermanent()
                     .build();
@@ -288,16 +299,42 @@ public class StatisticManager implements StatisticService {
                         .withDeviceId(flowEntry.deviceId());
                 StatisticDataValue.Builder dataValueBuilder = StatisticDataValue.builder();
 
-                StatisticDataKey.Type type = flowEntry.table().equals(FABRIC_EGRESS_STATS_FLOWS) ?
-                        StatisticDataKey.Type.EGRESS : StatisticDataKey.Type.INGRESS;
+                StatisticDataKey.Type type;
+                PiMatchFieldId piMatchFieldId;
+                if (flowEntry.table().equals(FABRIC_INGRESS_STATS_FLOWS)) {
+                    type = StatisticDataKey.Type.INGRESS;
+                    piMatchFieldId = P4InfoConstants.HDR_IG_PORT;
+                } else if (flowEntry.table().equals(FABRIC_EGRESS_STATS_FLOWS)) {
+                    type = StatisticDataKey.Type.EGRESS;
+                    piMatchFieldId = P4InfoConstants.HDR_EG_PORT;
+                } else {
+                    log.debug("Ignore flow that does not belong to ingress nor egress stat table");
+                    log.debug("selector={}, table={}", flowSelector, flowEntry.table());
+                    return;
+                }
 
                 for (Criterion criterion : flowSelector.criteria()) {
                     if (criterion.type() == Criterion.Type.PROTOCOL_INDEPENDENT) {
                         // Parse ingress or egress port information from piCriterion
                         PiCriterion piCriterion = (PiCriterion) criterion;
-                        piCriterion.fieldMatch(P4InfoConstants.HDR_PORT).ifPresent(piFieldMatch -> {
-                            dataKeyBuilder.withType(type);
-                            dataKeyBuilder.withPortNumber(getPortNumber(piFieldMatch));
+                        piCriterion.fieldMatches().forEach(piFieldMatch -> {
+                            if (piFieldMatch.fieldId().equals(piMatchFieldId)) {
+                                dataKeyBuilder.withType(type);
+                                dataKeyBuilder.withPortNumber(getPortNumber(piFieldMatch));
+                            } else if (piFieldMatch.fieldId().equals(P4InfoConstants.HDR_STATS_FLOW_ID)) {
+                                // This flow is from egress table
+                                // Extract stat_flow_id
+                                PiExactFieldMatch piExactFieldMatch = (PiExactFieldMatch) piFieldMatch;
+                                int statFlowId = ByteBuffer.wrap(piExactFieldMatch.value().asArray()).getInt();
+                                // Translate stats_flow_id back to original selector
+                                statsStore.stream().filter(key -> key.id() == statFlowId)
+                                        .map(StatisticKey::selector)
+                                        .map(TrafficSelector::criteria)
+                                        .flatMap(Set::stream)
+                                        .forEach(selectorBuilder::add);
+                            } else {
+                                log.warn("Unexpected PiCriterion {} in flowEntry {}", piCriterion, flowEntry);
+                            }
                         });
                     } else {
                         // Retain other type of criterion
@@ -341,8 +378,8 @@ public class StatisticManager implements StatisticService {
         }
 
         private PortNumber getPortNumber(PiFieldMatch piFieldMatch) {
-            PiTernaryFieldMatch piTernaryFieldMatch = (PiTernaryFieldMatch) piFieldMatch;
-            return PortNumber.portNumber(ByteBuffer.wrap(piTernaryFieldMatch.value().asArray()).getLong());
+            PiExactFieldMatch piExactFieldMatch = (PiExactFieldMatch) piFieldMatch;
+            return PortNumber.portNumber(ByteBuffer.wrap(piExactFieldMatch.value().asArray()).getLong());
         }
     }
 
