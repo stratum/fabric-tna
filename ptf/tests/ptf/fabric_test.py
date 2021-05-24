@@ -1447,6 +1447,7 @@ class IPv4UnicastTest(FabricTest):
         :param override_eg_port: to override the default or the provided eg port
         :param port_type1: port type to be used for the programming of the ig port
         :param port_type2: port type to be used for the programming of the eg port
+        :param from_packet_out: ingress packet is a packet-out (enables do_forwarding)
         """
         if IP not in pkt or Ether not in pkt:
             self.fail("Cannot do IPv4 test with packet that is not IP")
@@ -1495,7 +1496,7 @@ class IPv4UnicastTest(FabricTest):
 
         # Forwarding type -> routing v4
         # If from_packet_out, set eth_dst to don't care. All packet-outs should
-        # be routed.
+        # be routed, independently of eth_dst.
         for eth_type in routed_eth_types:
             self.set_forwarding_type(
                 ig_port,
