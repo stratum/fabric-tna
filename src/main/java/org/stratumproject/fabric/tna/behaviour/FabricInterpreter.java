@@ -41,6 +41,8 @@ import static org.onosproject.net.PortNumber.CONTROLLER;
 import static org.onosproject.net.PortNumber.FLOOD;
 import static org.onosproject.net.flow.instructions.Instruction.Type.OUTPUT;
 import static org.onosproject.net.pi.model.PiPacketOperationType.PACKET_OUT;
+import static org.stratumproject.fabric.tna.behaviour.Constants.ONE;
+import static org.stratumproject.fabric.tna.behaviour.Constants.ZERO;
 import static org.stratumproject.fabric.tna.behaviour.FabricTreatmentInterpreter.mapPreNextTreatment;
 import static org.stratumproject.fabric.tna.behaviour.FabricTreatmentInterpreter.mapAclTreatment;
 import static org.stratumproject.fabric.tna.behaviour.FabricTreatmentInterpreter.mapEgressNextTreatment;
@@ -176,9 +178,9 @@ public class FabricInterpreter extends AbstractFabricHandlerBehavior
     }
 
     private PiPacketOperation createPiPacketOperation(
-            DeviceId deviceId, ByteBuffer data, long portNumber)
+            ByteBuffer data, long portNumber, boolean doForwarding)
             throws PiInterpreterException {
-        Collection<PiPacketMetadata> metadata = createPacketMetadata(portNumber);
+        Collection<PiPacketMetadata> metadata = createPacketMetadata(portNumber, doForwarding);
         return PiPacketOperation.builder()
                 .withType(PACKET_OUT)
                 .withData(copyFrom(data))
@@ -186,7 +188,8 @@ public class FabricInterpreter extends AbstractFabricHandlerBehavior
                 .build();
     }
 
-    private Collection<PiPacketMetadata> createPacketMetadata(long portNumber)
+    private Collection<PiPacketMetadata> createPacketMetadata(
+            long portNumber, boolean doForwarding)
             throws PiInterpreterException {
         try {
             ImmutableList.Builder<PiPacketMetadata> builder = ImmutableList.builder();
@@ -199,6 +202,10 @@ public class FabricInterpreter extends AbstractFabricHandlerBehavior
                     .withId(P4InfoConstants.CPU_LOOPBACK_MODE)
                     .withValue(copyFrom(CPU_LOOPBACK_MODE_DISABLED)
                             .fit(P4InfoConstants.CPU_LOOPBACK_MODE_BITWIDTH))
+                    .build());
+            builder.add(PiPacketMetadata.builder()
+                    .withId(P4InfoConstants.DO_FORWARDING)
+                    .withValue(copyFrom(doForwarding ? ONE : ZERO))
                     .build());
             builder.add(PiPacketMetadata.builder()
                     .withId(P4InfoConstants.PAD0)
@@ -220,10 +227,18 @@ public class FabricInterpreter extends AbstractFabricHandlerBehavior
     @Override
     public Collection<PiPacketOperation> mapOutboundPacket(OutboundPacket packet)
             throws PiInterpreterException {
-        DeviceId deviceId = packet.sendThrough();
         TrafficTreatment treatment = packet.treatment();
 
-        // fabric.p4 supports only OUTPUT instructions.
+        ImmutableList.Builder<PiPacketOperation> builder = ImmutableList.builder();
+
+        if (treatment.allInstructions().isEmpty()) {
+            // The lack of instructions signifies that the packet should be
+            // forwarded via the switch tables.
+            return builder.add(createPiPacketOperation(packet.data(), 0, true)).build();
+        }
+
+        // If present, the OUTPUT instruction(s) indicates that the packet
+        // should be sent as-is to given port(s) bypassing all switch tables.
         List<Instructions.OutputInstruction> outInstructions = treatment
                 .allInstructions()
                 .stream()
@@ -236,7 +251,6 @@ public class FabricInterpreter extends AbstractFabricHandlerBehavior
             throw new PiInterpreterException("Treatment not supported: " + treatment);
         }
 
-        ImmutableList.Builder<PiPacketOperation> builder = ImmutableList.builder();
         for (Instructions.OutputInstruction outInst : outInstructions) {
             if (outInst.port().isLogical() && !outInst.port().equals(FLOOD)) {
                 throw new PiInterpreterException(format(
@@ -246,10 +260,10 @@ public class FabricInterpreter extends AbstractFabricHandlerBehavior
                 // operation for each switch port.
                 final DeviceService deviceService = handler().get(DeviceService.class);
                 for (Port port : deviceService.getPorts(packet.sendThrough())) {
-                    builder.add(createPiPacketOperation(deviceId, packet.data(), port.number().toLong()));
+                    builder.add(createPiPacketOperation(packet.data(), port.number().toLong(), false));
                 }
             } else {
-                builder.add(createPiPacketOperation(deviceId, packet.data(), outInst.port().toLong()));
+                builder.add(createPiPacketOperation(packet.data(), outInst.port().toLong(), false));
             }
         }
         return builder.build();

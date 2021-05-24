@@ -220,7 +220,8 @@ class FabricIPv4UnicastFromPacketOutTest(IPv4UnicastTest):
                     eth_src=ZERO_MAC,
                     eth_dst=ZERO_MAC,
                     ip_src=HOST1_IPV4,
-                    ip_dst=HOST2_IPV4
+                    ip_dst=HOST2_IPV4,
+                    pktlen=MIN_PKT_LEN
                 )
                 self.doRunTest(
                     pkt=pkt,
