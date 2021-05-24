@@ -88,8 +88,6 @@ public final class P4InfoConstants {
             PiTableId.of("FabricEgress.int_egress.config");
     public static final PiTableId FABRIC_EGRESS_INT_EGRESS_REPORT =
             PiTableId.of("FabricEgress.int_egress.report");
-    public static final PiTableId FABRIC_EGRESS_PKT_IO_EGRESS_SWITCH_INFO =
-            PiTableId.of("FabricEgress.pkt_io_egress.switch_info");
     public static final PiTableId FABRIC_EGRESS_SPGW_GTPU_ENCAP =
             PiTableId.of("FabricEgress.spgw.gtpu_encap");
     public static final PiTableId FABRIC_EGRESS_STATS_FLOWS =
@@ -179,8 +177,6 @@ public final class P4InfoConstants {
             PiActionId.of("FabricEgress.int_egress.do_local_report_encap_mpls");
     public static final PiActionId FABRIC_EGRESS_INT_EGRESS_SET_CONFIG =
             PiActionId.of("FabricEgress.int_egress.set_config");
-    public static final PiActionId FABRIC_EGRESS_PKT_IO_EGRESS_SET_SWITCH_INFO =
-            PiActionId.of("FabricEgress.pkt_io_egress.set_switch_info");
     public static final PiActionId FABRIC_EGRESS_SPGW_GTPU_ONLY =
             PiActionId.of("FabricEgress.spgw.gtpu_only");
     public static final PiActionId FABRIC_EGRESS_SPGW_GTPU_WITH_PSC =
@@ -265,8 +261,6 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.stats.count");
     public static final PiActionId NOP = PiActionId.of("nop");
     // Action Param IDs
-    public static final PiActionParamId CPU_PORT =
-            PiActionParamId.of("cpu_port");
     public static final PiActionParamId CTR_ID = PiActionParamId.of("ctr_id");
     public static final PiActionParamId DMAC = PiActionParamId.of("dmac");
     public static final PiActionParamId DROP = PiActionParamId.of("drop");

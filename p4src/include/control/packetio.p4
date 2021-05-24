@@ -55,13 +55,13 @@ control PacketIoIngress(inout ingress_headers_t hdr,
                        hdr.fake_ethernet.ether_type == ETHERTYPE_CPU_LOOPBACK_EGRESS) {
             // CPU loopback pkt entering the ingress pipe a second time (after
             // going through egress). Punt to CPU now, skip egress.
-            ig_intr_md_for_tm.copy_to_cpu = 1;
+            ig_intr_md_for_dprsr.mirror_type = (bit<3>)FabricMirrorType_t.PACKET_IN;
+            fabric_md.common_mirror_md.bmd_type = BridgedMdType_t.INGRESS_MIRROR;
+            fabric_md.common_mirror_md.mirror_session_id = PACKET_IN_MIRROR_SESSION_ID;
             ig_intr_md_for_dprsr.drop_ctl = 1;
             ig_intr_md_for_tm.bypass_egress = 1;
             fabric_md.bridged.setInvalid();
             hdr.fake_ethernet.setInvalid();
-            hdr.packet_in.setValid();
-            hdr.packet_in.ingress_port = ig_intr_md.ingress_port;
             exit;
         }
     }
@@ -70,27 +70,9 @@ control PacketIoIngress(inout ingress_headers_t hdr,
 control PacketIoEgress(inout egress_headers_t hdr,
                        inout fabric_egress_metadata_t fabric_md,
                        in egress_intrinsic_metadata_t eg_intr_md) {
-
-    action set_switch_info(PortId_t cpu_port) {
-        fabric_md.cpu_port = cpu_port;
-    }
-
-    table switch_info {
-        actions = {
-            set_switch_info;
-            @defaultonly nop;
-        }
-        default_action = nop;
-        const size = 1;
-    }
-
     apply {
-        switch_info.apply();
-        // Check if this is a clone of a copy_to_cpu packet.
-        if (eg_intr_md.egress_port == fabric_md.cpu_port) {
-            hdr.packet_in.setValid();
+        if (hdr.packet_in.isValid()) {
             hdr.packet_in.ingress_port = fabric_md.bridged.base.ig_port;
-            hdr.fake_ethernet.setInvalid();
             // Straight to CPU. No need to process through the rest of the
             // egress pipe.
             exit;

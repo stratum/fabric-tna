@@ -2,7 +2,13 @@
 // SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 package org.stratumproject.fabric.tna.behaviour.pipeliner;
 
+import java.io.IOException;
+import java.util.List;
+import java.util.Optional;
+
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+
 import org.easymock.Capture;
 import org.easymock.CaptureType;
 import org.junit.Before;
@@ -21,26 +27,31 @@ import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.net.flow.criteria.Criteria;
 import org.onosproject.net.flow.criteria.PiCriterion;
+import org.onosproject.net.group.DefaultGroupDescription;
+import org.onosproject.net.group.DefaultGroupKey;
+import org.onosproject.net.group.GroupBucket;
+import org.onosproject.net.group.GroupBuckets;
+import org.onosproject.net.group.GroupDescription;
+import org.onosproject.net.group.GroupService;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
 import org.stratumproject.fabric.tna.behaviour.FabricCapabilities;
 import org.stratumproject.fabric.tna.behaviour.P4InfoConstants;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.Optional;
-
 import static org.easymock.EasyMock.capture;
 import static org.easymock.EasyMock.createMock;
 import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.expectLastCall;
 import static org.easymock.EasyMock.newCapture;
 import static org.easymock.EasyMock.replay;
 import static org.easymock.EasyMock.reset;
 import static org.easymock.EasyMock.verify;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.onosproject.net.group.DefaultGroupBucket.createCloneGroupBucket;
 import static org.stratumproject.fabric.tna.behaviour.Constants.PORT_TYPE_INTERNAL;
 import static org.stratumproject.fabric.tna.behaviour.Constants.ZERO;
+import static org.stratumproject.fabric.tna.behaviour.FabricUtils.KRYO;
 
 public class FabricPipelinerTest {
 
@@ -52,10 +63,11 @@ public class FabricPipelinerTest {
     private static final byte FWD_MPLS = 1;
     private static final byte FWD_IPV4_ROUTING = 2;
     private static final int DEFAULT_VLAN = 4094;
-    private static final short ETH_TYPE_EXACT_MASK = (short) 0xFFFF;
+    private static final int PKT_IN_MIRROR_SESSION_ID = 0x210;
 
     private FabricPipeliner pipeliner;
     private FlowRuleService flowRuleService;
+    private GroupService groupService;
 
     @Before
     public void setup() throws IOException {
@@ -65,16 +77,17 @@ public class FabricPipelinerTest {
 
         // Services mock
         flowRuleService = createMock(FlowRuleService.class);
+        groupService = createMock(GroupService.class);
 
         pipeliner = new FabricPipeliner(capabilities);
         pipeliner.flowRuleService = flowRuleService;
+        pipeliner.groupService = groupService;
         pipeliner.appId = APP_ID;
         pipeliner.deviceId = DEVICE_ID;
     }
 
     @Test
     public void testInitializePipeline() {
-        final Capture<FlowRule> capturedSwitchInfoRule = newCapture(CaptureType.ALL);
         final Capture<FlowRule> capturedCpuIgVlanRule = newCapture(CaptureType.ALL);
         final Capture<FlowRule> capturedCpuFwdClsRule = newCapture(CaptureType.ALL);
         final List<FlowRule> expectedIgPortVlanRules = Lists.newArrayList();
@@ -85,21 +98,6 @@ public class FabricPipelinerTest {
         final Capture<FlowRule> capturedFwdClsIpRules = newCapture(CaptureType.ALL);
         final List<FlowRule> expectedFwdClsMplsRules = Lists.newArrayList();
         final Capture<FlowRule> capturedFwdClsMplsRules = newCapture(CaptureType.ALL);
-
-        final TrafficTreatment setSwitchInfoTreatment = DefaultTrafficTreatment.builder()
-                .piTableAction(PiAction.builder()
-                        .withId(P4InfoConstants.FABRIC_EGRESS_PKT_IO_EGRESS_SET_SWITCH_INFO)
-                        .withParameter(new PiActionParam(P4InfoConstants.CPU_PORT, CPU_PORT))
-                        .build())
-                .build();
-        final FlowRule expectedSwitchInfoRule = DefaultFlowRule.builder()
-                .forDevice(DEVICE_ID)
-                .withTreatment(setSwitchInfoTreatment)
-                .withPriority(DEFAULT_FLOW_PRIORITY)
-                .fromApp(APP_ID)
-                .makePermanent()
-                .forTable(P4InfoConstants.FABRIC_EGRESS_PKT_IO_EGRESS_SWITCH_INFO)
-                .build();
         // ingress_port_vlan table for cpu port
         final TrafficSelector cpuIgVlanSelector = DefaultTrafficSelector.builder()
                 .add(Criteria.matchInPort(PortNumber.portNumber(CPU_PORT)))
@@ -146,9 +144,21 @@ public class FabricPipelinerTest {
                 .fromApp(APP_ID)
                 .build();
         flowRuleService.applyFlowRules(
-                capture(capturedSwitchInfoRule),
                 capture(capturedCpuIgVlanRule),
                 capture(capturedCpuFwdClsRule));
+        final List<GroupBucket> expectedPacketInCloneGroupBuckets = ImmutableList.of(
+            createCloneGroupBucket(DefaultTrafficTreatment.builder()
+                    .setOutput(PortNumber.portNumber(CPU_PORT))
+                    .build()));
+        final GroupDescription expectedPacketInCloneGroup = new DefaultGroupDescription(
+                DEVICE_ID, GroupDescription.Type.CLONE,
+                new GroupBuckets(expectedPacketInCloneGroupBuckets),
+                new DefaultGroupKey(KRYO.serialize(PKT_IN_MIRROR_SESSION_ID)),
+                PKT_IN_MIRROR_SESSION_ID, APP_ID);
+        final Capture<GroupDescription> capturedCloneGroup = newCapture(CaptureType.FIRST);
+
+        groupService.addGroup(capture(capturedCloneGroup));
+        expectLastCall().once();
 
         RECIRC_PORTS.forEach(port -> {
             // ingress_port_vlan table
@@ -248,11 +258,12 @@ public class FabricPipelinerTest {
         });
 
         replay(flowRuleService);
+        replay(groupService);
         pipeliner.initializePipeline();
 
-        assertTrue(expectedSwitchInfoRule.exactMatch(capturedSwitchInfoRule.getValue()));
         assertTrue(expectedCpuIgVlanRule.exactMatch(capturedCpuIgVlanRule.getValue()));
         assertTrue(expectedCpuFwdClsRule.exactMatch(capturedCpuFwdClsRule.getValue()));
+        assertEquals(expectedPacketInCloneGroup, capturedCloneGroup.getValue());
 
         for (int i = 0; i < RECIRC_PORTS.size(); i++) {
             FlowRule expectIgPortVlanRule = expectedIgPortVlanRules.get(i);

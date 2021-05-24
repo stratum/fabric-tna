@@ -18,7 +18,7 @@ from scapy.layers.inet import IP, TCP, UDP
 from scapy.layers.l2 import Dot1Q, Ether
 from scapy.layers.ppp import PPP, PPPoE
 from scapy.layers.sctp import SCTP
-from scapy.packet import Packet, bind_layers
+from scapy.packet import bind_layers
 
 vlan_confs = {
     "tag->tag": [True, True],
@@ -183,6 +183,7 @@ INT_INS_TO_NAME = {
     INT_EG_PORT_TX: "eg_port_tx",
 }
 
+PACKET_IN_MIRROR_ID = 0x210
 INT_REPORT_MIRROR_IDS = [0x200, 0x201, 0x202, 0x203]
 RECIRCULATE_PORTS = [68, 196, 324, 452]
 SWITCH_ID = 1
@@ -572,10 +573,10 @@ class FabricTest(P4RuntimeTest):
         self.port2 = self.swports(2)
         self.port3 = self.swports(3)
         self.port4 = self.swports(4)
-        self.setup_switch_info()
+        self.add_clone_group(PACKET_IN_MIRROR_ID, [self.cpu_port], store=False)
 
     def tearDown(self):
-        self.reset_switch_info()
+        self.delete_clone_group(PACKET_IN_MIRROR_ID, [self.cpu_port], store=False)
         P4RuntimeTest.tearDown(self)
 
     def build_packet_out(self, pkt, port, cpu_loopback_mode=CPU_LOOPBACK_MODE_DISABLED, do_forwarding=False):
@@ -664,26 +665,6 @@ class FabricTest(P4RuntimeTest):
                 port_type=port_type,
             )
             self.set_egress_vlan(egress_port=port_id, vlan_id=vlan_id, push_vlan=False)
-
-    @tvcreate("setup/setup_switch_info")
-    def setup_switch_info(self):
-        req = self.get_new_write_request()
-        self.push_update_add_entry_to_action(
-            req,
-            "FabricEgress.pkt_io_egress.switch_info",
-            None,
-            "FabricEgress.pkt_io_egress.set_switch_info",
-            [("cpu_port", stringify(self.cpu_port, 2))],
-        )
-        return req, self.write_request(req, store=False)
-
-    @tvcreate("teardown/reset_switch_info")
-    def reset_switch_info(self):
-        req = self.get_new_write_request()
-        self.push_update_add_entry_to_action(
-            req, "FabricEgress.pkt_io_egress.switch_info", None, "nop", []
-        )
-        return req, self.write_request(req)
 
     def set_ingress_port_vlan(
         self,
@@ -1173,10 +1154,10 @@ class FabricTest(P4RuntimeTest):
     def delete_mcast_group(self, group_id):
         return self.write_mcast_group(group_id, [], p4runtime_pb2.Update.DELETE)
 
-    def add_clone_group(self, clone_id, ports):
+    def write_clone_group(self, clone_id, ports, update_type, store=True):
         req = self.get_new_write_request()
         update = req.updates.add()
-        update.type = p4runtime_pb2.Update.INSERT
+        update.type = update_type
         pre_entry = update.entity.packet_replication_engine_entry
         clone_entry = pre_entry.clone_session_entry
         clone_entry.session_id = clone_id
@@ -1186,7 +1167,13 @@ class FabricTest(P4RuntimeTest):
             replica = clone_entry.replicas.add()
             replica.egress_port = port
             replica.instance = 0  # set to 0 because we don't support it yet.
-        return req, self.write_request(req)
+        return req, self.write_request(req, store=store)
+
+    def add_clone_group(self, clone_id, ports, store=True):
+        self.write_clone_group(clone_id, ports, p4runtime_pb2.Update.INSERT, store=store)
+
+    def delete_clone_group(self, clone_id, ports, store=True):
+        self.write_clone_group(clone_id, ports, p4runtime_pb2.Update.DELETE, store=store)
 
     def add_next_hashed_group_member(self, action_name, params):
         mbr_id = self.get_next_mbr_id()
