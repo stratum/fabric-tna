@@ -45,5 +45,4 @@ public class HighlightKeyTest extends TestCase {
         assertEquals(key1, key1);
         assertNotEquals(key1, null);
     }
-
 }

@@ -221,5 +221,4 @@ public class StatisticManagerTest extends TestCase {
         assertEquals(D_VALUE_EG, mgr.statsMap.get(S_KEY).get(D_KEY_EG));
         EasyMock.verify(flowRuleService);
     }
-
 }
