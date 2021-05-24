@@ -33,7 +33,7 @@ public class HighlightAddCommand extends AbstractShellCommand {
 
     @Override
     protected void doExecute() {
-        HighlightService highlightService = get(HighlightService.class);
+        HighlightService highlightService = getService(HighlightService.class);
         highlightService.addHighlight(id, name,  new Mod(modStr));
     }
 }

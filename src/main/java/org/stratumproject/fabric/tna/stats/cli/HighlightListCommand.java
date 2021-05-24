@@ -19,7 +19,7 @@ import java.util.Comparator;
 public class HighlightListCommand extends AbstractShellCommand {
     @Override
     protected void doExecute() {
-        HighlightService highlightService = get(HighlightService.class);
+        HighlightService highlightService = getService(HighlightService.class);
         highlightService.getHighlights().stream()
                 .sorted(Comparator.comparingInt(HighlightKey::id))
                 .forEach(key -> {

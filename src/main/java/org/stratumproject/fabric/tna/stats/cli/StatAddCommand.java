@@ -51,7 +51,7 @@ public class StatAddCommand extends AbstractShellCommand {
     protected void doExecute() {
         TrafficSelector selector = Utils.buildTrafficSelector(srcIp, dstIp, proto, srcPort, dstPort);
 
-        StatisticService statisticService = get(StatisticService.class);
+        StatisticService statisticService = getService(StatisticService.class);
         statisticService.addMonitor(selector, id);
     }
 }

@@ -33,7 +33,7 @@ public class HighlightRemoveCommand extends AbstractShellCommand {
 
     @Override
     protected void doExecute() {
-        HighlightService highlightService = get(HighlightService.class);
+        HighlightService highlightService = getService(HighlightService.class);
         highlightService.removeHighlight(id, name,  new Mod(modStr));
     }
 }

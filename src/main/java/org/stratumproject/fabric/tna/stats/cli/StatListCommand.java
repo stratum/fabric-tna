@@ -19,7 +19,7 @@ import java.util.Comparator;
 public class StatListCommand extends AbstractShellCommand {
     @Override
     protected void doExecute() {
-        StatisticService statisticService = get(StatisticService.class);
+        StatisticService statisticService = getService(StatisticService.class);
         statisticService.getMonitors().stream()
                 .sorted(Comparator.comparingInt(StatisticKey::id))
                 .forEach(key -> {

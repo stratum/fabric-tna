@@ -86,16 +86,18 @@ public class StatisticManager implements StatisticService {
     private static final long PORT_MASK = 0x1ffL;
     private static final long POLL_INTERVAL_MS = 1000;
 
-    private ApplicationId appId;
+    protected ApplicationId appId;
 
     // Distribited set storing current monitoring criteria
-    private DistributedSet<StatisticKey> statsStore;
+    protected DistributedSet<StatisticKey> statsStore;
     private SetEventListener<StatisticKey> statsListener;
     private ExecutorService statsEventExecutor;
 
     // Local map storing counters
-    private Map<StatisticKey, Map<StatisticDataKey, StatisticDataValue>> statsMap = Maps.newConcurrentMap();
+    protected Map<StatisticKey, Map<StatisticDataKey, StatisticDataValue>> statsMap = Maps.newConcurrentMap();
     private ScheduledExecutorService statsCollectorExecutor;
+
+    protected final InternalStatsCollector statsCollector = new InternalStatsCollector();
 
     @Activate
     protected void activate() {
@@ -117,7 +119,7 @@ public class StatisticManager implements StatisticService {
 
         statsCollectorExecutor = Executors.newSingleThreadScheduledExecutor(
                 groupedThreads("fabric-tna-stats-collector", "%d", log));
-        statsCollectorExecutor.scheduleAtFixedRate(new InternalStatsCollector(),
+        statsCollectorExecutor.scheduleAtFixedRate(statsCollector,
                 0, POLL_INTERVAL_MS, TimeUnit.MILLISECONDS);
 
         log.info("Started");
@@ -192,7 +194,7 @@ public class StatisticManager implements StatisticService {
     }
 
     // Prepare flow rules for both ingress and egress
-    private List<FlowRule> buildFlowRules(StatisticKey key) {
+    protected List<FlowRule> buildFlowRules(StatisticKey key) {
         // All possible ports in current topology
         List<Port> ports = StreamSupport.stream(deviceService.getAvailableDevices().spliterator(), true)
                 .map(Device::id)
@@ -284,7 +286,7 @@ public class StatisticManager implements StatisticService {
         }
     }
 
-    private class InternalStatsCollector implements Runnable {
+    protected class InternalStatsCollector implements Runnable {
         @Override
         public void run() {
             flowRuleService.getFlowEntriesById(appId).forEach(flowEntry -> {

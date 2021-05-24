@@ -68,18 +68,18 @@ public class HighlightManager implements HighlightService {
     private static final String APP_NAME = "org.stratumproject.fabric.tna.highlight";
     private static final int BYTE_THRESHOLD = 100;
     private static final int PKT_THRESHOLD = 1;
-    private final InternalHighlighter nameHighlighter = new InternalHighlighter(Mode.NAME);
-    private final InternalHighlighter trafficHighlighter = new InternalHighlighter(Mode.TRAFFIC);
-    private final InternalHighlighter allHighlighter = new InternalHighlighter(Mode.ALL);
+    protected final InternalHighlighter nameHighlighter = new InternalHighlighter(Mode.NAME);
+    protected final InternalHighlighter trafficHighlighter = new InternalHighlighter(Mode.TRAFFIC);
+    protected final InternalHighlighter allHighlighter = new InternalHighlighter(Mode.ALL);
     private final UiTopoHighlighterFactory nameFactory = () -> nameHighlighter;
     private final UiTopoHighlighterFactory trafficFactory = () -> trafficHighlighter;
     private final UiTopoHighlighterFactory allFactory = () -> allHighlighter;
 
-    private ApplicationId appId;
+    protected ApplicationId appId;
 
     // Distribited set storing current monitoring criteria
-    private DistributedSet<HighlightKey> highlightStore;
-    private SetEventListener<HighlightKey> highlightListener;
+    protected DistributedSet<HighlightKey> highlightStore;
+    protected SetEventListener<HighlightKey> highlightListener;
     private ExecutorService highLightExecutor;
 
     @Activate
@@ -154,7 +154,7 @@ public class HighlightManager implements HighlightService {
         return Set.copyOf(highlightStore);
     }
 
-    private enum Mode {
+    protected enum Mode {
         // Show name of the highlight as label
         NAME,
         // Show byte per second and packet per second as label
@@ -163,8 +163,7 @@ public class HighlightManager implements HighlightService {
         ALL
     }
 
-
-    private final class InternalHighlighter implements UiTopoHighlighter {
+    protected final class InternalHighlighter implements UiTopoHighlighter {
         private static final String NAME = "fabric-tna-highlighter";
         private final Set<HighlightKey> keys = Sets.newConcurrentHashSet();
         private Mode mode;
@@ -308,7 +307,7 @@ public class HighlightManager implements HighlightService {
                             humanReadable(effectiveByteDiff * 1000 / effectiveTimeMsDiff, "Bps"),
                             humanReadable(effectivePacketDiff * 1000 / effectiveTimeMsDiff, "pps"));
 
-                    String label;
+                    String label = "";
                     switch (mode) {
                         case NAME:
                             label = effectiveHighlightKey.name();
@@ -320,7 +319,6 @@ public class HighlightManager implements HighlightService {
                             label = String.format("%s - %s", effectiveHighlightKey.name(), traffic);
                             break;
                         default:
-                            label = "";
                             break;
                     }
 
@@ -343,7 +341,7 @@ public class HighlightManager implements HighlightService {
      * @param suffix suffix string, e.g. Bps
      * @return human readable number, e.g. 1 KBps
      */
-    private String humanReadable(long number, String suffix) {
+    protected String humanReadable(long number, String suffix) {
         if (-1000 < number && number < 1000) {
             return number + " " + suffix;
         }
