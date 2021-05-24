@@ -210,6 +210,11 @@ public class FabricInterpreterTest {
                         .fit(P4InfoConstants.CPU_LOOPBACK_MODE_BITWIDTH))
                 .build());
         builder.add(PiPacketMetadata.builder()
+                .withId(P4InfoConstants.DO_FORWARDING)
+                .withValue(ImmutableByteSequence.copyFrom(0)
+                        .fit(P4InfoConstants.DO_FORWARDING_BITWIDTH))
+                .build());
+        builder.add(PiPacketMetadata.builder()
                 .withId(P4InfoConstants.ETHER_TYPE)
                 .withValue(ImmutableByteSequence.copyFrom(0xBF01)
                         .fit(P4InfoConstants.ETHER_TYPE_BITWIDTH))
