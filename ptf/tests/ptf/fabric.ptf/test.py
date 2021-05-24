@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0 AND Apache-2.0
 
 import difflib
-import string
 from unittest import skip
 
 from base_test import autocleanup, tvsetup, tvskip
@@ -12,19 +11,6 @@ from p4.config.v1 import p4info_pb2
 from ptf.testutils import group
 from scapy.layers.inet import IP
 from scapy.layers.ppp import PPPoED
-
-BASE_PKT_TYPES = {"tcp", "udp", "icmp", "sctp"}
-GTP_PKT_TYPES = {
-    "gtp_tcp",
-    "gtp_udp",
-    "gtp_icmp",
-    "gtp_psc_ul_udp",
-    "gtp_psc_dl_udp",
-    "gtp_psc_ul_tcp",
-    "gtp_psc_dl_tcp",
-    "gtp_psc_dl_icmp",
-    "gtp_psc_ul_icmp",
-}
 
 
 class FabricBridgingTest(BridgingTest):

@@ -195,7 +195,7 @@ class FabricStatsIPv4UnicastTest(StatsIPv4UnicastTest):
         # Arbitrary stat flow id. Zero is a reserved value
         stats_flow_id = 1
         for vlan_conf, tagged in vlan_confs.items():
-            for pkt_type in ["tcp", "udp", "icmp"]:
+            for pkt_type in BASE_PKT_TYPES | GTP_PKT_TYPES:
                 tc_name = pkt_type + "_VLAN_" + vlan_conf
                 print("Testing {} packet with VLAN {}...".format(pkt_type, vlan_conf))
                 pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(

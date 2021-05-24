@@ -28,6 +28,19 @@ vlan_confs = {
     "untag->tag": [False, True],
 }
 
+BASE_PKT_TYPES = {"tcp", "udp", "icmp", "sctp"}
+GTP_PKT_TYPES = {
+    "gtp_tcp",
+    "gtp_udp",
+    "gtp_icmp",
+    "gtp_psc_ul_udp",
+    "gtp_psc_dl_udp",
+    "gtp_psc_ul_tcp",
+    "gtp_psc_dl_tcp",
+    "gtp_psc_dl_icmp",
+    "gtp_psc_ul_icmp",
+}
+
 DEFAULT_PRIORITY = 10
 
 FORWARDING_TYPE_BRIDGING = 0
