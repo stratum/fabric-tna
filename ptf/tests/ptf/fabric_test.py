@@ -21,6 +21,12 @@ from scapy.layers.ppp import PPP, PPPoE
 from scapy.layers.sctp import SCTP
 from scapy.packet import Packet, bind_layers
 
+vlan_confs = {
+    "tag->tag": [True, True],
+    "untag->untag": [False, False],
+    "tag->untag": [True, False],
+    "untag->tag": [False, True],
+}
 
 DEFAULT_PRIORITY = 10
 

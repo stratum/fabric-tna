@@ -13,13 +13,6 @@ from ptf.testutils import group
 from scapy.layers.inet import IP
 from scapy.layers.ppp import PPPoED
 
-vlan_confs = {
-    "tag->tag": [True, True],
-    "untag->untag": [False, False],
-    "tag->untag": [True, False],
-    "untag->tag": [False, True],
-}
-
 BASE_PKT_TYPES = {"tcp", "udp", "icmp", "sctp"}
 GTP_PKT_TYPES = {
     "gtp_tcp",
