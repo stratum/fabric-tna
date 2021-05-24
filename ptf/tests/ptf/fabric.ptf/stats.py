@@ -2,7 +2,9 @@
 # SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0 AND Apache-2.0
 
 from p4.v1 import p4runtime_pb2
-from scapy.layers.inet import IP, UDP, TCP
+from scapy.layers.inet import IP, UDP, TCP, ICMP
+from scapy.layers.sctp import SCTP
+from scapy.contrib.gtp import GTP_U_Header
 
 from base_test import autocleanup, tvsetup, stringify
 from fabric_test import *  # noqa
@@ -131,17 +133,29 @@ class StatsIPv4UnicastTest(StatsTest, IPv4UnicastTest):
 
     def runStatsIPv4UnicastTest(self, stats_flow_id, **kwargs):
         pkt = kwargs["pkt"].copy()
+        if GTP_U_Header in pkt:
+            inner_most_pkt = pkt_remove_gtp(pkt)
+        else:
+            inner_most_pkt = pkt
         ftuple = {
-            "ipv4_src": pkt[IP].src,
-            "ipv4_dst": pkt[IP].dst,
-            "ip_proto": pkt[IP].proto,
+            "ipv4_src": inner_most_pkt[IP].src,
+            "ipv4_dst": inner_most_pkt[IP].dst,
+            "ip_proto": inner_most_pkt[IP].proto,
         }
-        if UDP in pkt:
-            ftuple["l4_sport"] = pkt[UDP].sport
-            ftuple["l4_dport"] = pkt[UDP].dport
-        elif TCP in pkt:
-            ftuple["l4_sport"] = pkt[TCP].sport
-            ftuple["l4_dport"] = pkt[TCP].dport
+        if UDP in inner_most_pkt:
+            ftuple["l4_sport"] = inner_most_pkt[UDP].sport
+            ftuple["l4_dport"] = inner_most_pkt[UDP].dport
+        elif TCP in inner_most_pkt:
+            ftuple["l4_sport"] = inner_most_pkt[TCP].sport
+            ftuple["l4_dport"] = inner_most_pkt[TCP].dport
+        elif SCTP in inner_most_pkt:
+            ftuple["l4_sport"] = None
+            ftuple["l4_dport"] = None
+        elif ICMP in inner_most_pkt:
+            ftuple["l4_sport"] = None
+            ftuple["l4_dport"] = None
+        else:
+            self.fail("Unsupported protocol")
 
         self.set_up_stats_flows(
             stats_flow_id=stats_flow_id,
