@@ -19,9 +19,7 @@ control DecapGtpu(inout ingress_headers_t            hdr,
         hdr.gtpu.setInvalid();
         hdr.gtpu_options.setInvalid();
         hdr.gtpu_ext_psc.setInvalid();
-#ifdef WITH_INT
         fabric_md.bridged.base.gtpu_presence = GtpuPresence.NONE;
-#endif // WITH_INT
     }
     @hidden
     action decap_inner_tcp() {
