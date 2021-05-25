@@ -187,7 +187,8 @@ public class FabricInterpreterTest {
     }
 
     @Test
-    public void testMapOutboundPacket() throws PiPipelineInterpreter.PiInterpreterException,
+    public void testMapOutboundPacketWithoutForwarding()
+            throws PiPipelineInterpreter.PiInterpreterException,
             ImmutableByteSequence.ByteSequenceTrimException {
         PortNumber outputPort = PortNumber.portNumber(1);
         TrafficTreatment outputTreatment = DefaultTrafficTreatment.builder()
@@ -212,6 +213,51 @@ public class FabricInterpreterTest {
         builder.add(PiPacketMetadata.builder()
                 .withId(P4InfoConstants.DO_FORWARDING)
                 .withValue(ImmutableByteSequence.copyFrom(0)
+                        .fit(P4InfoConstants.DO_FORWARDING_BITWIDTH))
+                .build());
+        builder.add(PiPacketMetadata.builder()
+                .withId(P4InfoConstants.ETHER_TYPE)
+                .withValue(ImmutableByteSequence.copyFrom(0xBF01)
+                        .fit(P4InfoConstants.ETHER_TYPE_BITWIDTH))
+                .build());
+        builder.add(PiPacketMetadata.builder()
+                .withId(P4InfoConstants.PAD0)
+                .withValue(ImmutableByteSequence.copyFrom(0)
+                        .fit(P4InfoConstants.PAD0_BITWIDTH))
+                .build());
+        PiPacketOperation expectedPktOp = PiPacketOperation.builder()
+                .withType(PiPacketOperationType.PACKET_OUT)
+                .withData(ImmutableByteSequence.copyFrom(data))
+                .withMetadatas(builder.build())
+                .build();
+
+        assertEquals(expectedPktOp, result.iterator().next());
+    }
+
+    @Test
+    public void testMapOutboundPacketWithForwarding()
+            throws PiPipelineInterpreter.PiInterpreterException,
+            ImmutableByteSequence.ByteSequenceTrimException {
+        ByteBuffer data = ByteBuffer.allocate(64);
+        OutboundPacket outPkt = new DefaultOutboundPacket(
+                DEVICE_ID, DefaultTrafficTreatment.emptyTreatment(), data);
+        Collection<PiPacketOperation> result = interpreter.mapOutboundPacket(outPkt);
+        assertEquals(result.size(), 1);
+
+        ImmutableList.Builder<PiPacketMetadata> builder = ImmutableList.builder();
+        builder.add(PiPacketMetadata.builder()
+                .withId(P4InfoConstants.EGRESS_PORT)
+                .withValue(ImmutableByteSequence.copyFrom(0)
+                        .fit(P4InfoConstants.EGRESS_PORT_BITWIDTH))
+                .build());
+        builder.add(PiPacketMetadata.builder()
+                .withId(P4InfoConstants.CPU_LOOPBACK_MODE)
+                .withValue(ImmutableByteSequence.copyFrom(0)
+                        .fit(P4InfoConstants.CPU_LOOPBACK_MODE_BITWIDTH))
+                .build());
+        builder.add(PiPacketMetadata.builder()
+                .withId(P4InfoConstants.DO_FORWARDING)
+                .withValue(ImmutableByteSequence.copyFrom(1)
                         .fit(P4InfoConstants.DO_FORWARDING_BITWIDTH))
                 .build());
         builder.add(PiPacketMetadata.builder()

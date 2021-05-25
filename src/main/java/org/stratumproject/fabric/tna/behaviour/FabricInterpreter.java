@@ -15,6 +15,7 @@ import org.onosproject.net.Port;
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.device.DeviceService;
 import org.onosproject.net.driver.DriverHandler;
+import org.onosproject.net.flow.DefaultTrafficTreatment;
 import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.net.flow.criteria.Criterion;
 import org.onosproject.net.flow.instructions.Instructions;
@@ -231,7 +232,7 @@ public class FabricInterpreter extends AbstractFabricHandlerBehavior
 
         ImmutableList.Builder<PiPacketOperation> builder = ImmutableList.builder();
 
-        if (treatment.allInstructions().isEmpty()) {
+        if (treatment.equals(DefaultTrafficTreatment.emptyTreatment())) {
             // The lack of instructions signifies that the packet should be
             // forwarded via the switch tables.
             return builder.add(createPiPacketOperation(packet.data(), 0, true)).build();
