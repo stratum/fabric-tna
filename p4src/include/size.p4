@@ -20,6 +20,7 @@
 #define MULTICAST_NEXT_TABLE_SIZE 1024
 #define EGRESS_VLAN_TABLE_SIZE 1024
 #define PORT_VLAN_TABLE_SIZE 1024
+#define STATS_FLOW_ID_WIDTH 10
 
 // Constants for the INT control block.
 #define INT_WATCHLIST_TABLE_SIZE 64

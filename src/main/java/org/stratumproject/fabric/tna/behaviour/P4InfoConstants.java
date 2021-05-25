@@ -70,6 +70,8 @@ public final class P4InfoConstants {
             PiMatchFieldId.of("mpls_label");
     public static final PiMatchFieldId HDR_NEXT_ID =
             PiMatchFieldId.of("next_id");
+    public static final PiMatchFieldId HDR_STATS_FLOW_ID =
+            PiMatchFieldId.of("stats_flow_id");
     public static final PiMatchFieldId HDR_TEID = PiMatchFieldId.of("teid");
     public static final PiMatchFieldId HDR_TUNNEL_IPV4_DST =
             PiMatchFieldId.of("tunnel_ipv4_dst");
@@ -90,6 +92,8 @@ public final class P4InfoConstants {
             PiTableId.of("FabricEgress.pkt_io_egress.switch_info");
     public static final PiTableId FABRIC_EGRESS_SPGW_GTPU_ENCAP =
             PiTableId.of("FabricEgress.spgw.gtpu_encap");
+    public static final PiTableId FABRIC_EGRESS_STATS_FLOWS =
+            PiTableId.of("FabricEgress.stats.flows");
     public static final PiTableId FABRIC_INGRESS_ACL_ACL =
             PiTableId.of("FabricIngress.acl.acl");
     public static final PiTableId FABRIC_INGRESS_FILTERING_FWD_CLASSIFIER =
@@ -104,8 +108,8 @@ public final class P4InfoConstants {
             PiTableId.of("FabricIngress.forwarding.routing_v4");
     public static final PiTableId FABRIC_INGRESS_FORWARDING_ROUTING_V6 =
             PiTableId.of("FabricIngress.forwarding.routing_v6");
-    public static final PiTableId FABRIC_INGRESS_INT_INGRESS_WATCHLIST =
-            PiTableId.of("FabricIngress.int_ingress.watchlist");
+    public static final PiTableId FABRIC_INGRESS_INT_WATCHLIST_WATCHLIST =
+            PiTableId.of("FabricIngress.int_watchlist.watchlist");
     public static final PiTableId FABRIC_INGRESS_NEXT_HASHED =
             PiTableId.of("FabricIngress.next.hashed");
     public static final PiTableId FABRIC_INGRESS_NEXT_MULTICAST =
@@ -124,6 +128,8 @@ public final class P4InfoConstants {
             PiTableId.of("FabricIngress.spgw.uplink_pdrs");
     public static final PiTableId FABRIC_INGRESS_SPGW_UPLINK_RECIRC_RULES =
             PiTableId.of("FabricIngress.spgw.uplink_recirc.rules");
+    public static final PiTableId FABRIC_INGRESS_STATS_FLOWS =
+            PiTableId.of("FabricIngress.stats.flows");
     // Indirect Counter IDs
     public static final PiCounterId FABRIC_EGRESS_SPGW_PDR_COUNTER =
             PiCounterId.of("FabricEgress.spgw.pdr_counter");
@@ -132,6 +138,8 @@ public final class P4InfoConstants {
     // Direct Counter IDs
     public static final PiCounterId FABRIC_EGRESS_EGRESS_NEXT_EGRESS_VLAN_COUNTER =
             PiCounterId.of("FabricEgress.egress_next.egress_vlan_counter");
+    public static final PiCounterId FABRIC_EGRESS_STATS_FLOW_COUNTER =
+            PiCounterId.of("FabricEgress.stats.flow_counter");
     public static final PiCounterId FABRIC_INGRESS_ACL_ACL_COUNTER =
             PiCounterId.of("FabricIngress.acl.acl_counter");
     public static final PiCounterId FABRIC_INGRESS_FILTERING_FWD_CLASSIFIER_COUNTER =
@@ -152,6 +160,8 @@ public final class P4InfoConstants {
             PiCounterId.of("FabricIngress.pre_next.next_vlan_counter");
     public static final PiCounterId FABRIC_INGRESS_SPGW_UPLINK_RECIRC_RULES_COUNTER =
             PiCounterId.of("FabricIngress.spgw.uplink_recirc.rules_counter");
+    public static final PiCounterId FABRIC_INGRESS_STATS_FLOW_COUNTER =
+            PiCounterId.of("FabricIngress.stats.flow_counter");
     // Action IDs
     public static final PiActionId FABRIC_EGRESS_EGRESS_NEXT_DROP =
             PiActionId.of("FabricEgress.egress_next.drop");
@@ -175,6 +185,8 @@ public final class P4InfoConstants {
             PiActionId.of("FabricEgress.spgw.gtpu_only");
     public static final PiActionId FABRIC_EGRESS_SPGW_GTPU_WITH_PSC =
             PiActionId.of("FabricEgress.spgw.gtpu_with_psc");
+    public static final PiActionId FABRIC_EGRESS_STATS_COUNT =
+            PiActionId.of("FabricEgress.stats.count");
     public static final PiActionId FABRIC_INGRESS_ACL_COPY_TO_CPU =
             PiActionId.of("FabricIngress.acl.copy_to_cpu");
     public static final PiActionId FABRIC_INGRESS_ACL_DROP =
@@ -207,12 +219,12 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.forwarding.set_next_id_routing_v4");
     public static final PiActionId FABRIC_INGRESS_FORWARDING_SET_NEXT_ID_ROUTING_V6 =
             PiActionId.of("FabricIngress.forwarding.set_next_id_routing_v6");
-    public static final PiActionId FABRIC_INGRESS_INT_INGRESS_MARK_TO_REPORT =
-            PiActionId.of("FabricIngress.int_ingress.mark_to_report");
-    public static final PiActionId FABRIC_INGRESS_INT_INGRESS_NO_REPORT =
-            PiActionId.of("FabricIngress.int_ingress.no_report");
-    public static final PiActionId FABRIC_INGRESS_INT_INGRESS_NO_REPORT_COLLECTOR =
-            PiActionId.of("FabricIngress.int_ingress.no_report_collector");
+    public static final PiActionId FABRIC_INGRESS_INT_WATCHLIST_MARK_TO_REPORT =
+            PiActionId.of("FabricIngress.int_watchlist.mark_to_report");
+    public static final PiActionId FABRIC_INGRESS_INT_WATCHLIST_NO_REPORT =
+            PiActionId.of("FabricIngress.int_watchlist.no_report");
+    public static final PiActionId FABRIC_INGRESS_INT_WATCHLIST_NO_REPORT_COLLECTOR =
+            PiActionId.of("FabricIngress.int_watchlist.no_report_collector");
     public static final PiActionId FABRIC_INGRESS_NEXT_OUTPUT_HASHED =
             PiActionId.of("FabricIngress.next.output_hashed");
     public static final PiActionId FABRIC_INGRESS_NEXT_ROUTING_HASHED =
@@ -249,6 +261,8 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.spgw.uplink_recirc.deny");
     public static final PiActionId FABRIC_INGRESS_SPGW_UPLINK_RECIRC_MISS =
             PiActionId.of("FabricIngress.spgw.uplink_recirc.miss");
+    public static final PiActionId FABRIC_INGRESS_STATS_COUNT =
+            PiActionId.of("FabricIngress.stats.count");
     public static final PiActionId NOP = PiActionId.of("nop");
     // Action Param IDs
     public static final PiActionParamId CPU_PORT =
@@ -259,6 +273,7 @@ public final class P4InfoConstants {
     public static final PiActionParamId DROP_REASON =
             PiActionParamId.of("drop_reason");
     public static final PiActionParamId FAR_ID = PiActionParamId.of("far_id");
+    public static final PiActionParamId FLOW_ID = PiActionParamId.of("flow_id");
     public static final PiActionParamId FWD_TYPE =
             PiActionParamId.of("fwd_type");
     public static final PiActionParamId GROUP_ID =

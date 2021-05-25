@@ -244,7 +244,6 @@ header int_mirror_metadata_t {
 
 @flexible
 struct int_bridged_metadata_t {
-    GtpuPresence    gtpu_presence;
     IntReportType_t report_type;
     MirrorId_t      mirror_session_id;
 }
@@ -258,22 +257,24 @@ struct int_metadata_t {
 // Common metadata which is bridged from ingress to egress.
 @flexible
 struct bridged_metadata_base_t {
-    flow_hash_t             inner_hash;
-    mpls_label_t            mpls_label;
-    PortId_t                ig_port;
-    bool                    is_multicast;
-    fwd_type_t              fwd_type;
-    vlan_id_t               vlan_id;
-    // bit<3>                  vlan_pri;
-    // bit<1>                  vlan_cfi;
-    bit<8>                  mpls_ttl;
-    bit<48>                 ig_tstamp;
-    bit<16>                 ip_eth_type;
+    flow_hash_t              inner_hash;
+    mpls_label_t             mpls_label;
+    PortId_t                 ig_port;
+    bool                     is_multicast;
+    fwd_type_t               fwd_type;
+    vlan_id_t                vlan_id;
+    // bit<3>                vlan_pri;
+    // bit<1>                vlan_cfi;
+    bit<8>                   mpls_ttl;
+    bit<48>                  ig_tstamp;
+    bit<16>                  ip_eth_type;
+    bit<STATS_FLOW_ID_WIDTH> stats_flow_id;
+    GtpuPresence             gtpu_presence;
 #ifdef WITH_DOUBLE_VLAN_TERMINATION
-    bool                    push_double_vlan;
-    vlan_id_t               inner_vlan_id;
-    // bit<3>                  inner_vlan_pri;
-    // bit<1>                  inner_vlan_cfi;
+    bool                     push_double_vlan;
+    vlan_id_t                inner_vlan_id;
+    // bit<3>                inner_vlan_pri;
+    // bit<1>                inner_vlan_cfi;
 #endif // WITH_DOUBLE_VLAN_TERMINATION
 }
 

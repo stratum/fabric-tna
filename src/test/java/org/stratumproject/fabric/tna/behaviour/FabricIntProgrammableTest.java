@@ -738,7 +738,7 @@ public class FabricIntProgrammableTest {
         }
         expectedSelector.matchPi(expectedPiCriterion.build());
         PiAction expectedPiAction = PiAction.builder()
-                .withId(P4InfoConstants.FABRIC_INGRESS_INT_INGRESS_MARK_TO_REPORT)
+                .withId(P4InfoConstants.FABRIC_INGRESS_INT_WATCHLIST_MARK_TO_REPORT)
                 .build();
         TrafficTreatment expectedTreatment = DefaultTrafficTreatment.builder()
                 .piTableAction(expectedPiAction)
@@ -749,7 +749,7 @@ public class FabricIntProgrammableTest {
                 .withTreatment(expectedTreatment)
                 .fromApp(APP_ID)
                 .withPriority(DEFAULT_PRIORITY)
-                .forTable(P4InfoConstants.FABRIC_INGRESS_INT_INGRESS_WATCHLIST)
+                .forTable(P4InfoConstants.FABRIC_INGRESS_INT_WATCHLIST_WATCHLIST)
                 .makePermanent()
                 .build();
     }
@@ -848,7 +848,7 @@ public class FabricIntProgrammableTest {
     private FlowRule buildCollectorWatchlistRule(DeviceId deviceId) {
 
         final PiAction watchlistAction = PiAction.builder()
-                .withId(P4InfoConstants.FABRIC_INGRESS_INT_INGRESS_NO_REPORT_COLLECTOR)
+                .withId(P4InfoConstants.FABRIC_INGRESS_INT_WATCHLIST_NO_REPORT_COLLECTOR)
                 .build();
 
         final TrafficTreatment watchlistTreatment = DefaultTrafficTreatment.builder()
@@ -872,7 +872,7 @@ public class FabricIntProgrammableTest {
                 .withSelector(watchlistSelector)
                 .withTreatment(watchlistTreatment)
                 .withPriority(DEFAULT_PRIORITY + 10)
-                .forTable(P4InfoConstants.FABRIC_INGRESS_INT_INGRESS_WATCHLIST)
+                .forTable(P4InfoConstants.FABRIC_INGRESS_INT_WATCHLIST_WATCHLIST)
                 .fromApp(APP_ID)
                 .makePermanent()
                 .build();
