@@ -89,8 +89,7 @@ public class FabricPipelinerTest {
         final TrafficTreatment setSwitchInfoTreatment = DefaultTrafficTreatment.builder()
                 .piTableAction(PiAction.builder()
                         .withId(P4InfoConstants.FABRIC_EGRESS_PKT_IO_EGRESS_SET_SWITCH_INFO)
-                        .withParameter(new PiActionParam(
-                                P4InfoConstants.CPU_PORT, CPU_PORT))
+                        .withParameter(new PiActionParam(P4InfoConstants.CPU_PORT, CPU_PORT))
                         .build())
                 .build();
         final FlowRule expectedSwitchInfoRule = DefaultFlowRule.builder()
@@ -134,8 +133,7 @@ public class FabricPipelinerTest {
         final TrafficTreatment cpuFwdClsTreatment = DefaultTrafficTreatment.builder()
                 .piTableAction(PiAction.builder()
                         .withId(P4InfoConstants.FABRIC_INGRESS_FILTERING_SET_FORWARDING_TYPE)
-                        .withParameter(new PiActionParam(
-                                P4InfoConstants.FWD_TYPE, FWD_IPV4_ROUTING))
+                        .withParameter(new PiActionParam(P4InfoConstants.FWD_TYPE, FWD_IPV4_ROUTING))
                         .build())
                 .build();
         final FlowRule expectedCpuFwdClsRule = DefaultFlowRule.builder()
@@ -207,8 +205,7 @@ public class FabricPipelinerTest {
             final TrafficTreatment fwdClassIpv4Treatment = DefaultTrafficTreatment.builder()
                     .piTableAction(PiAction.builder()
                             .withId(P4InfoConstants.FABRIC_INGRESS_FILTERING_SET_FORWARDING_TYPE)
-                            .withParameter(new PiActionParam(
-                                    P4InfoConstants.FWD_TYPE, FWD_IPV4_ROUTING))
+                            .withParameter(new PiActionParam(P4InfoConstants.FWD_TYPE, FWD_IPV4_ROUTING))
                             .build())
                     .build();
             expectedFwdClsIpRules.add(DefaultFlowRule.builder()
@@ -231,8 +228,7 @@ public class FabricPipelinerTest {
             final TrafficTreatment fwdClassMplsTreatment = DefaultTrafficTreatment.builder()
                     .piTableAction(PiAction.builder()
                             .withId(P4InfoConstants.FABRIC_INGRESS_FILTERING_SET_FORWARDING_TYPE)
-                            .withParameter(new PiActionParam(
-                                    P4InfoConstants.FWD_TYPE, FWD_MPLS))
+                            .withParameter(new PiActionParam(P4InfoConstants.FWD_TYPE, FWD_MPLS))
                             .build())
                     .build();
             expectedFwdClsMplsRules.add(DefaultFlowRule.builder()

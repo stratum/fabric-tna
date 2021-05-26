@@ -179,7 +179,7 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
                     // Use higher priority for MPLS rule since the one for IPv4
                     // matches all IPv4 traffic independently of the eth_type.
                     fwdClassifierRule(port, Ethernet.MPLS_UNICAST, Ethernet.TYPE_IPV4, FWD_MPLS,
-                            DEFAULT_FLOW_PRIORITY+10));
+                            DEFAULT_FLOW_PRIORITY + 10));
         });
     }
 
