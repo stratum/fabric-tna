@@ -6,6 +6,7 @@ import com.google.common.collect.Sets;
 import org.onlab.util.KryoNamespace;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
+import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.EdgeLink;
 import org.onosproject.net.Host;
@@ -213,89 +214,31 @@ public class HighlightManager implements HighlightService {
 
                 for (HighlightKey key : keys) {
                     Map<StatisticDataKey, StatisticDataValue> map = statisticService.getStats(key.id());
-
-                    // TODO Refactor duplicated code
-                    if (link.one().src().elementId() instanceof DeviceId) {
-                        log.debug("link.one().src()={}", link.one().src());
-                        StatisticDataKey dataKey;
-                        StatisticDataValue dataValue;
-
-                        dataKey = StatisticDataKey.builder()
-                                .withDeviceId(link.one().src().deviceId())
-                                .withPortNumber(link.one().src().port())
-                                .withType(StatisticDataKey.Type.INGRESS)
-                                .build();
-                        dataValue = map.get(dataKey);
-                        // Update only when current value is larger than previous largest value
-                        if (dataValue != null &&
-                                dataValue.byteDiff() >= BYTE_THRESHOLD &&
-                                dataValue.packetDiff() >= PKT_THRESHOLD &&
-                                dataValue.byteDiff() >= effectiveByteDiff) {
-                            effectiveHighlightKey = key;
-                            effectiveByteDiff = dataValue.byteDiff();
-                            effectivePacketDiff = dataValue.packetDiff();
-                            effectiveTimeMsDiff = dataValue.timeMsDiff();
-                            log.debug("Update effective with {}, {}, {}", link, dataKey, dataValue);
-                        }
-
-                        dataKey = StatisticDataKey.builder()
-                                .withDeviceId(link.one().src().deviceId())
-                                .withPortNumber(link.one().src().port())
-                                .withType(StatisticDataKey.Type.EGRESS)
-                                .build();
-                        dataValue = map.get(dataKey);
-                        // Update only when current value is larger than previous largest value
-                        if (dataValue != null &&
-                                dataValue.byteDiff() >= BYTE_THRESHOLD &&
-                                dataValue.packetDiff() >= PKT_THRESHOLD &&
-                                dataValue.byteDiff() >= effectiveByteDiff) {
-                            effectiveHighlightKey = key;
-                            effectiveByteDiff = dataValue.byteDiff();
-                            effectivePacketDiff = dataValue.packetDiff();
-                            effectiveTimeMsDiff = dataValue.timeMsDiff();
-                            log.debug("Update effective with {}, {}, {}", link, dataKey, dataValue);
-                        }
-                    }
-
-                    if (link.one().dst().elementId() instanceof DeviceId) {
-                        log.debug("link.one().dst()={}", link.one().src());
-                        StatisticDataKey dataKey;
-                        StatisticDataValue dataValue;
-
-                        dataKey = StatisticDataKey.builder()
-                                .withDeviceId(link.one().dst().deviceId())
-                                .withPortNumber(link.one().dst().port())
-                                .withType(StatisticDataKey.Type.INGRESS)
-                                .build();
-                        dataValue = map.get(dataKey);
-                        // Update only when current value is larger than previous largest value
-                        if (dataValue != null &&
-                                dataValue.byteDiff() >= BYTE_THRESHOLD &&
-                                dataValue.packetDiff() >= PKT_THRESHOLD &&
-                                dataValue.byteDiff() >= effectiveByteDiff) {
-                            effectiveHighlightKey = key;
-                            effectiveByteDiff = dataValue.byteDiff();
-                            effectivePacketDiff = dataValue.packetDiff();
-                            effectiveTimeMsDiff = dataValue.timeMsDiff();
-                            log.debug("Update effective with {}, {}, {}", link, dataKey, dataValue);
-                        }
-
-                        dataKey = StatisticDataKey.builder()
-                                .withDeviceId(link.one().dst().deviceId())
-                                .withPortNumber(link.one().dst().port())
-                                .withType(StatisticDataKey.Type.EGRESS)
-                                .build();
-                        dataValue = map.get(dataKey);
-                        // Update only when current value is larger than previous largest value
-                        if (dataValue != null &&
-                                dataValue.byteDiff() >= BYTE_THRESHOLD &&
-                                dataValue.packetDiff() >= PKT_THRESHOLD &&
-                                dataValue.byteDiff() >= effectiveByteDiff) {
-                            effectiveHighlightKey = key;
-                            effectiveByteDiff = dataValue.byteDiff();
-                            effectivePacketDiff = dataValue.packetDiff();
-                            effectiveTimeMsDiff = dataValue.timeMsDiff();
-                            log.debug("Update effective with {}, {}, {}", link, dataKey, dataValue);
+                    final ConnectPoint[] points = {link.one().src(), link.one().dst()};
+                    for (ConnectPoint cp : points) {
+                        if (cp.elementId() instanceof DeviceId) {
+                            for (StatisticDataKey.Type gress : StatisticDataKey.Type.values()) {
+                                log.debug("co={}, gress={}", cp, gress);
+                                StatisticDataKey dataKey;
+                                StatisticDataValue dataValue;
+                                dataKey = StatisticDataKey.builder()
+                                        .withDeviceId(cp.deviceId())
+                                        .withPortNumber(cp.port())
+                                        .withType(gress)
+                                        .build();
+                                dataValue = map.get(dataKey);
+                                // Update only when current value is larger than previous largest value
+                                if (dataValue != null &&
+                                        dataValue.byteDiff() >= BYTE_THRESHOLD &&
+                                        dataValue.packetDiff() >= PKT_THRESHOLD &&
+                                        dataValue.byteDiff() >= effectiveByteDiff) {
+                                    effectiveHighlightKey = key;
+                                    effectiveByteDiff = dataValue.byteDiff();
+                                    effectivePacketDiff = dataValue.packetDiff();
+                                    effectiveTimeMsDiff = dataValue.timeMsDiff();
+                                    log.debug("Update effective with {}, {}, {}", link, dataKey, dataValue);
+                                }
+                            }
                         }
                     }
                 }
