@@ -210,6 +210,7 @@ class FabricIPv4UnicastFromPacketOutTest(IPv4UnicastTest):
 
     def runTest(self):
         print("")
+        # Cpu port is always considered untagged.
         for tagged2 in [False, True]:
             for pkt_type in BASE_PKT_TYPES | GTP_PKT_TYPES:
                 tc_name = pkt_type + "_VLAN_" + str(tagged2)
