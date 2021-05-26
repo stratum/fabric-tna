@@ -231,14 +231,6 @@ public class FabricInterpreter extends AbstractFabricHandlerBehavior
             throws PiInterpreterException {
         TrafficTreatment treatment = packet.treatment();
 
-        ImmutableList.Builder<PiPacketOperation> builder = ImmutableList.builder();
-
-        if (treatment.equals(DefaultTrafficTreatment.emptyTreatment())) {
-            // The lack of instructions signifies that the packet should be
-            // forwarded via the switch tables.
-            return builder.add(createPiPacketOperation(packet.data(), 0, true)).build();
-        }
-
         // We support only OUTPUT instructions.
         List<Instructions.OutputInstruction> outInstructions = treatment
                 .allInstructions()
@@ -252,6 +244,7 @@ public class FabricInterpreter extends AbstractFabricHandlerBehavior
             throw new PiInterpreterException("Treatment not supported: " + treatment);
         }
 
+        ImmutableList.Builder<PiPacketOperation> builder = ImmutableList.builder();
         for (Instructions.OutputInstruction outInst : outInstructions) {
             if (outInst.port().equals(TABLE)) {
                 // Logical port. Forward using the switch tables like a regular packet.
