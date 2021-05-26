@@ -218,7 +218,7 @@ public class HighlightManager implements HighlightService {
                     for (ConnectPoint cp : points) {
                         if (cp.elementId() instanceof DeviceId) {
                             for (StatisticDataKey.Type gress : StatisticDataKey.Type.values()) {
-                                log.debug("co={}, gress={}", cp, gress);
+                                log.debug("cp={}, gress={}", cp, gress);
                                 StatisticDataKey dataKey;
                                 StatisticDataValue dataValue;
                                 dataKey = StatisticDataKey.builder()
