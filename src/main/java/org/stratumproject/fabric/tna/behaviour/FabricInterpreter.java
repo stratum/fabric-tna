@@ -40,6 +40,7 @@ import static java.util.stream.Collectors.toList;
 import static org.onlab.util.ImmutableByteSequence.copyFrom;
 import static org.onosproject.net.PortNumber.CONTROLLER;
 import static org.onosproject.net.PortNumber.FLOOD;
+import static org.onosproject.net.PortNumber.TABLE;
 import static org.onosproject.net.flow.instructions.Instruction.Type.OUTPUT;
 import static org.onosproject.net.pi.model.PiPacketOperationType.PACKET_OUT;
 import static org.stratumproject.fabric.tna.behaviour.Constants.ONE;
@@ -238,8 +239,7 @@ public class FabricInterpreter extends AbstractFabricHandlerBehavior
             return builder.add(createPiPacketOperation(packet.data(), 0, true)).build();
         }
 
-        // If present, the OUTPUT instruction(s) indicates that the packet
-        // should be sent as-is to given port(s) bypassing all switch tables.
+        // We support only OUTPUT instructions.
         List<Instructions.OutputInstruction> outInstructions = treatment
                 .allInstructions()
                 .stream()
@@ -253,17 +253,20 @@ public class FabricInterpreter extends AbstractFabricHandlerBehavior
         }
 
         for (Instructions.OutputInstruction outInst : outInstructions) {
-            if (outInst.port().isLogical() && !outInst.port().equals(FLOOD)) {
-                throw new PiInterpreterException(format(
-                        "Output on logical port '%s' not supported", outInst.port()));
+            if (outInst.port().equals(TABLE)) {
+                // Logical port. Forward using the switch tables like a regular packet.
+                builder.add(createPiPacketOperation(packet.data(), 0, true));
             } else if (outInst.port().equals(FLOOD)) {
-                // Since fabric.p4 does not support flooding, we create a packet
-                // operation for each switch port.
+                // Logical port. Create a packet operation for each switch port.
                 final DeviceService deviceService = handler().get(DeviceService.class);
                 for (Port port : deviceService.getPorts(packet.sendThrough())) {
                     builder.add(createPiPacketOperation(packet.data(), port.number().toLong(), false));
                 }
+            } else if (outInst.port().isLogical()) {
+                throw new PiInterpreterException(format(
+                        "Output on logical port '%s' not supported", outInst.port()));
             } else {
+                // Send as-is to given port bypassing all switch tables.
                 builder.add(createPiPacketOperation(packet.data(), outInst.port().toLong(), false));
             }
         }

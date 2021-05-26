@@ -238,9 +238,12 @@ public class FabricInterpreterTest {
     public void testMapOutboundPacketWithForwarding()
             throws PiPipelineInterpreter.PiInterpreterException,
             ImmutableByteSequence.ByteSequenceTrimException {
+        PortNumber outputPort = PortNumber.TABLE;
+        TrafficTreatment outputTreatment = DefaultTrafficTreatment.builder()
+                .setOutput(outputPort)
+                .build();
         ByteBuffer data = ByteBuffer.allocate(64);
-        OutboundPacket outPkt = new DefaultOutboundPacket(
-                DEVICE_ID, DefaultTrafficTreatment.emptyTreatment(), data);
+        OutboundPacket outPkt = new DefaultOutboundPacket(DEVICE_ID, outputTreatment, data);
         Collection<PiPacketOperation> result = interpreter.mapOutboundPacket(outPkt);
         assertEquals(result.size(), 1);
 
