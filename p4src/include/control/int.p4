@@ -177,6 +177,9 @@ control IntWatchlist(
         }
         const default_action = no_report();
         const size = INT_WATCHLIST_TABLE_SIZE;
+#ifdef WITH_DEBUG
+        counters = watchlist_counter;
+#endif // WITH_DEBUG
     }
 
     apply {
@@ -242,6 +245,9 @@ control IntIngress(
             (IntReportType_t.LOCAL, 0, false, false, false, false): report_drop();
         }
         const default_action = nop();
+#ifdef WITH_DEBUG
+        counters = drop_report_counter;
+#endif // WITH_DEBUG
     }
 
     apply {
@@ -375,8 +381,8 @@ control IntEgress (
     // Transforms mirrored packets into INT report packets.
     table report {
         // when we are parsing the regular ingress to egress packet,
-        // the `int_mirror_md` will be undefined, in this table we use `bmd_type` as
-        // one of match key to ensure we are handling the right packet type.
+        // the `int_mirror_md` will be undefined, add `bmd_type` match key to ensure we
+        // are handling the right packet type.
         key = {
             fabric_md.int_mirror_md.bmd_type: exact @name("bmd_type");
             fabric_md.int_mirror_md.mirror_type: exact @name("mirror_type");
