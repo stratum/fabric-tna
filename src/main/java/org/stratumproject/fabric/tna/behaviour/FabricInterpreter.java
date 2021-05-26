@@ -15,7 +15,6 @@ import org.onosproject.net.Port;
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.device.DeviceService;
 import org.onosproject.net.driver.DriverHandler;
-import org.onosproject.net.flow.DefaultTrafficTreatment;
 import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.net.flow.criteria.Criterion;
 import org.onosproject.net.flow.instructions.Instructions;
@@ -45,11 +44,11 @@ import static org.onosproject.net.flow.instructions.Instruction.Type.OUTPUT;
 import static org.onosproject.net.pi.model.PiPacketOperationType.PACKET_OUT;
 import static org.stratumproject.fabric.tna.behaviour.Constants.ONE;
 import static org.stratumproject.fabric.tna.behaviour.Constants.ZERO;
-import static org.stratumproject.fabric.tna.behaviour.FabricTreatmentInterpreter.mapPreNextTreatment;
 import static org.stratumproject.fabric.tna.behaviour.FabricTreatmentInterpreter.mapAclTreatment;
 import static org.stratumproject.fabric.tna.behaviour.FabricTreatmentInterpreter.mapEgressNextTreatment;
 import static org.stratumproject.fabric.tna.behaviour.FabricTreatmentInterpreter.mapForwardingTreatment;
 import static org.stratumproject.fabric.tna.behaviour.FabricTreatmentInterpreter.mapNextTreatment;
+import static org.stratumproject.fabric.tna.behaviour.FabricTreatmentInterpreter.mapPreNextTreatment;
 
 /**
  * Interpreter for fabric-tna pipeline.
