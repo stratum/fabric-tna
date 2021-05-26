@@ -151,8 +151,8 @@ public class HighlightManagerTest extends TestCase {
     }
 
     public void testHumanReadable() {
-        assertEquals("10 bps", mgr.humanReadable(10, "bps"));
-        assertEquals("1.0 Mbps", mgr.humanReadable(1000000, "bps"));
+        assertEquals("10 Bps", mgr.humanReadable(10, "Bps"));
+        assertEquals("1.0 MBps", mgr.humanReadable(1000000, "Bps"));
     }
 
     public void testCreateHighlights() {

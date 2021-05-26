@@ -373,7 +373,6 @@ public class HighlightManager implements HighlightService {
                         break;
                 }
             });
-
         }
     }
 }

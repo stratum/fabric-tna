@@ -10,7 +10,7 @@ import java.util.Set;
 
 public interface StatisticService {
     /**
-     * Add both ingress and egress stats table.
+     * Add a new monitor rule to both ingress and egress stats table.
      *
      * @param selector criteria to be monitored
      * @param id id. Also used as priority of the monitor flow

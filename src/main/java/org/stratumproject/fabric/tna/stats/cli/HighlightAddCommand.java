@@ -17,7 +17,7 @@ import org.stratumproject.fabric.tna.stats.HighlightService;
 
 public class HighlightAddCommand extends AbstractShellCommand {
     @Argument(index = 0, name = "id",
-            description = "id",
+            description = "id. Used to associate with monitor in StatisticService.",
             required = true, multiValued = false)
     int id;
 
@@ -27,7 +27,8 @@ public class HighlightAddCommand extends AbstractShellCommand {
     String name;
 
     @Argument(index = 2, name = "mod",
-            description = "mod (e.g. style=\\\"stroke: #ff0000; stroke-width: 4px; stroke-dasharray: 4 2;\\\"",
+            description = "style of the highlight " +
+                    "(e.g. style=\\\"stroke: #ff0000; stroke-width: 4px; stroke-dasharray: 4 2;\\\"",
             required = true, multiValued = false)
     String modStr;
 

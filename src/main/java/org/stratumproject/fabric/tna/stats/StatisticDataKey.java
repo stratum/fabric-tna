@@ -8,9 +8,23 @@ import org.onosproject.net.PortNumber;
 
 import java.util.Objects;
 
+/**
+ * Data structure to identify a statistics result.
+ */
 public final class StatisticDataKey {
+    /**
+     * Device ID this statistic data is associated with.
+     */
     private DeviceId deviceId;
+
+    /**
+     * Port number this statistic data is associated with.
+     */
     private PortNumber portNumber;
+
+    /**
+     * Type of the statistic data.
+     */
     private Type type;
 
     public enum Type {

@@ -6,12 +6,38 @@ import com.google.common.base.MoreObjects;
 
 import java.util.Objects;
 
+/**
+ * Data structure that contains the actual statistics result.
+ */
 public final class StatisticDataValue {
+    /**
+     * Current byte count.
+     */
     private long byteCount;
+
+    /**
+     * Current packet count.
+     */
     private long packetCount;
+
+    /**
+     * Last seen of the stat table flow.
+     */
     private long timeMs;
+
+    /**
+     * Previous byte count from last stats collection.
+     */
     private long prevByteCount;
+
+    /**
+     * Previous packet count from last stats collection.
+     */
     private long prevPacketCount;
+
+    /**
+     * Previous Last seen of the stat table flow from last stats collection.
+     */
     private long prevTimeMs;
 
     private StatisticDataValue() {

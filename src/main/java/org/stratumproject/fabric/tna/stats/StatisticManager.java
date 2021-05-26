@@ -29,7 +29,6 @@ import org.onosproject.net.pi.model.PiTableId;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
 import org.onosproject.net.pi.runtime.PiExactFieldMatch;
-import org.onosproject.net.pi.runtime.PiFieldMatch;
 import org.onosproject.net.pi.runtime.PiTableAction;
 import org.onosproject.store.serializers.KryoNamespaces;
 import org.onosproject.store.service.DistributedSet;
@@ -83,7 +82,6 @@ public class StatisticManager implements StatisticService {
 
     private static final Logger log = getLogger(StatisticManager.class);
     private static final String APP_NAME = "org.stratumproject.fabric.tna.stats";
-    private static final long PORT_MASK = 0x1ffL;
     private static final long POLL_INTERVAL_MS = 1000;
 
     protected ApplicationId appId;
@@ -301,13 +299,13 @@ public class StatisticManager implements StatisticService {
                 StatisticDataValue.Builder dataValueBuilder = StatisticDataValue.builder();
 
                 StatisticDataKey.Type type;
-                PiMatchFieldId piMatchFieldId;
+                PiMatchFieldId portPiMatchFieldId;
                 if (flowEntry.table().equals(FABRIC_INGRESS_STATS_FLOWS)) {
                     type = StatisticDataKey.Type.INGRESS;
-                    piMatchFieldId = P4InfoConstants.HDR_IG_PORT;
+                    portPiMatchFieldId = P4InfoConstants.HDR_IG_PORT;
                 } else if (flowEntry.table().equals(FABRIC_EGRESS_STATS_FLOWS)) {
                     type = StatisticDataKey.Type.EGRESS;
-                    piMatchFieldId = P4InfoConstants.HDR_EG_PORT;
+                    portPiMatchFieldId = P4InfoConstants.HDR_EG_PORT;
                 } else {
                     log.debug("Ignore flow that does not belong to ingress nor egress stat table");
                     log.debug("selector={}, table={}", flowSelector, flowEntry.table());
@@ -319,9 +317,12 @@ public class StatisticManager implements StatisticService {
                         // Parse ingress or egress port information from piCriterion
                         PiCriterion piCriterion = (PiCriterion) criterion;
                         piCriterion.fieldMatches().forEach(piFieldMatch -> {
-                            if (piFieldMatch.fieldId().equals(piMatchFieldId)) {
+                            if (piFieldMatch.fieldId().equals(portPiMatchFieldId)) {
+                                PiExactFieldMatch piExactFieldMatch = (PiExactFieldMatch) piFieldMatch;
+                                PortNumber portNumber = PortNumber.portNumber(
+                                        ByteBuffer.wrap(piExactFieldMatch.value().asArray()).getLong());
                                 dataKeyBuilder.withType(type);
-                                dataKeyBuilder.withPortNumber(getPortNumber(piFieldMatch));
+                                dataKeyBuilder.withPortNumber(portNumber);
                             } else if (piFieldMatch.fieldId().equals(P4InfoConstants.HDR_STATS_FLOW_ID)) {
                                 // This flow is from egress table
                                 // Extract stat_flow_id
@@ -376,11 +377,6 @@ public class StatisticManager implements StatisticService {
                     return v1;
                 });
             });
-        }
-
-        private PortNumber getPortNumber(PiFieldMatch piFieldMatch) {
-            PiExactFieldMatch piExactFieldMatch = (PiExactFieldMatch) piFieldMatch;
-            return PortNumber.portNumber(ByteBuffer.wrap(piExactFieldMatch.value().asArray()).getLong());
         }
     }
 

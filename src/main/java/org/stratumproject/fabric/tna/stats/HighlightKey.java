@@ -8,9 +8,25 @@ import org.onosproject.ui.topo.Mod;
 
 import java.util.Objects;
 
+/**
+ * Data structure to store all information related to a highlight.
+ */
 public final class HighlightKey {
+    /**
+     * Highlight ID.
+     * Must be the same as monitor ID in StatisticService.
+     */
     private int id;
+
+    /**
+     * Name of the highlight.
+     * Could be arbitrary value.
+     */
     private String name;
+
+    /**
+     * Highlight style.
+     */
     private Mod mod;
 
     private HighlightKey() {

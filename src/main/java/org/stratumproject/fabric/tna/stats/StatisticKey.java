@@ -7,8 +7,20 @@ import org.onosproject.net.flow.TrafficSelector;
 
 import java.util.Objects;
 
+/**
+ * Data structure to store all information related to a statistic monitor.
+ */
 public final class StatisticKey {
+    /**
+     * Identifier of the traffic we want to monitor.
+     */
     private TrafficSelector selector;
+
+    /**
+     * ID of the monitor.
+     * Also used as the priority of the flow as well as the stat_flow_id.
+     * Must be globally unique.
+     */
     private int id;
 
     private StatisticKey() {
