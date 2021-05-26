@@ -378,7 +378,7 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
                         .matchExact(P4InfoConstants.HDR_IP_ETH_TYPE, ipEthType)
                         .build());
         if (ethType != null) {
-            selectorBuilder.matchEthType(Ethernet.MPLS_UNICAST);
+            selectorBuilder.matchEthType(ethType);
         }
         final TrafficTreatment treatment = DefaultTrafficTreatment.builder()
                 .piTableAction(PiAction.builder()
