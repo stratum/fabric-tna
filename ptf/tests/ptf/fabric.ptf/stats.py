@@ -1,13 +1,12 @@
 # Copyright 2021-present Open Networking Foundation
 # SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0 AND Apache-2.0
 
-from p4.v1 import p4runtime_pb2
-from scapy.layers.inet import IP, UDP, TCP, ICMP
-from scapy.layers.sctp import SCTP
-from scapy.contrib.gtp import GTP_U_Header
-
-from base_test import autocleanup, tvsetup, stringify
+from base_test import autocleanup, stringify, tvsetup
 from fabric_test import *  # noqa
+from p4.v1 import p4runtime_pb2
+from scapy.contrib.gtp import GTP_U_Header
+from scapy.layers.inet import ICMP, IP, TCP, UDP
+from scapy.layers.sctp import SCTP
 
 INGRESS = "Ingress"
 EGRESS = "Egress"
