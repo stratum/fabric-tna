@@ -910,19 +910,15 @@ class FabricTest(P4RuntimeTest):
     ):
         # Send only if the match keys are not empty
         matches = self.build_acl_matches(
-            ipv4_src, ipv4_dst, ip_proto, l4_sport, l4_dport)
+            ipv4_src, ipv4_dst, ip_proto, l4_sport, l4_dport
+        )
         if matches:
             self.send_request_add_entry_to_action(
                 "acl.acl", matches, "acl.drop", [], DEFAULT_PRIORITY,
             )
 
     def build_acl_matches(
-            self,
-            ipv4_src=None,
-            ipv4_dst=None,
-            ip_proto=None,
-            l4_sport=None,
-            l4_dport=None,
+        self, ipv4_src=None, ipv4_dst=None, ip_proto=None, l4_sport=None, l4_dport=None,
     ):
         matches = []
         if ipv4_src:
@@ -961,7 +957,8 @@ class FabricTest(P4RuntimeTest):
         next_id_ = stringify(next_id, 4)
         ig_port_type_mask = b"\x03"
         matches = self.build_acl_matches(
-            ipv4_src, ipv4_dst, ip_proto, l4_sport, l4_dport)
+            ipv4_src, ipv4_dst, ip_proto, l4_sport, l4_dport
+        )
         matches.append(self.Ternary("ig_port_type", ig_port_type, ig_port_type_mask))
         if matches:
             self.send_request_add_entry_to_action(
