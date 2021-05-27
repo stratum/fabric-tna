@@ -1,3 +1,5 @@
+// Copyright 2021-present Open Networking Foundation
+// SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 {
   // Use IntelliSense to learn about possible attributes.
   // Hover to view descriptions of existing attributes.
@@ -6,7 +8,7 @@
   "configurations": [
     {
       "type": "java",
-      "name": "Attach to process on localhost",
+      "name": "Attach to JVM debugger on localhost",
       "request": "attach",
       "hostName": "localhost",
       "port": 5005
