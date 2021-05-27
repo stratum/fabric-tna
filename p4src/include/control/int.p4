@@ -146,6 +146,7 @@ control IntWatchlist(
 
     action mark_to_report() {
         fabric_md.bridged.int_bmd.report_type = IntReportType_t.LOCAL;
+        ig_tm_md.deflect_on_drop = 1;
 #ifdef WITH_DEBUG
         watchlist_counter.count();
 #endif // WITH_DEBUG
