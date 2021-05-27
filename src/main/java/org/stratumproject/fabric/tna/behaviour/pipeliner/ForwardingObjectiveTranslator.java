@@ -272,7 +272,7 @@ class ForwardingObjectiveTranslator
                         .build());
             } else {
                 throw new FabricPipelinerException(format("Port type '%s' is not allowed for table '%s'",
-                        portType, P4InfoConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN),
+                        portType, P4InfoConstants.FABRIC_INGRESS_ACL_ACL),
                         ObjectiveError.UNSUPPORTED);
             }
         }

@@ -576,7 +576,7 @@ class FabricTest(P4RuntimeTest):
         self.reset_switch_info()
         P4RuntimeTest.tearDown(self)
 
-    def build_packet_out(self, pkt, port, cpu_loopback_mode=CPU_LOOPBACK_MODE_DISABLED):
+    def build_packet_out(self, pkt, port, cpu_loopback_mode=CPU_LOOPBACK_MODE_DISABLED, do_forwarding=False):
         packet_out = p4runtime_pb2.PacketOut()
         packet_out.payload = bytes(pkt)
         # egress_port
@@ -587,13 +587,17 @@ class FabricTest(P4RuntimeTest):
         cpu_loopback_mode_md = packet_out.metadata.add()
         cpu_loopback_mode_md.metadata_id = 2
         cpu_loopback_mode_md.value = stringify(cpu_loopback_mode, 1)
+        # do_forwarding
+        do_forwarding_md = packet_out.metadata.add()
+        do_forwarding_md.metadata_id = 3
+        do_forwarding_md.value = stringify(1 if do_forwarding else 0, 1)
         # pad0
         pad0_md = packet_out.metadata.add()
-        pad0_md.metadata_id = 3
+        pad0_md.metadata_id = 4
         pad0_md.value = stringify(0, 1)
         # ether type
         ether_type_md = packet_out.metadata.add()
-        ether_type_md.metadata_id = 4
+        ether_type_md.metadata_id = 5
         ether_type_md.value = stringify(ETH_TYPE_PACKET_OUT, 2)
         return packet_out
 
@@ -1422,6 +1426,7 @@ class IPv4UnicastTest(FabricTest):
         override_eg_port=None,
         port_type1=PORT_TYPE_EDGE,
         port_type2=PORT_TYPE_EDGE,
+        from_packet_out=False,
     ):
         """
         Execute an IPv4 unicast routing test.
@@ -1452,6 +1457,7 @@ class IPv4UnicastTest(FabricTest):
         :param override_eg_port: to override the default or the provided eg port
         :param port_type1: port type to be used for the programming of the ig port
         :param port_type2: port type to be used for the programming of the eg port
+        :param from_packet_out: ingress packet is a packet-out (enables do_forwarding)
         """
         if IP not in pkt or Ether not in pkt:
             self.fail("Cannot do IPv4 test with packet that is not IP")
@@ -1461,6 +1467,9 @@ class IPv4UnicastTest(FabricTest):
             ig_port = self.port1
         if eg_port is None:
             eg_port = self.port2
+        if from_packet_out:
+            ig_port = self.cpu_port
+            port_type1 = PORT_TYPE_INTERNAL
 
         # If the input pkt has a VLAN tag, use that to configure tables.
         pkt_is_tagged = False
@@ -1468,6 +1477,8 @@ class IPv4UnicastTest(FabricTest):
             vlan1 = pkt[Dot1Q].vlan
             tagged1 = True
             pkt_is_tagged = True
+            # packet-outs should be untagged
+            assert not from_packet_out
         else:
             vlan1 = VLAN_ID_1
 
@@ -1484,17 +1495,22 @@ class IPv4UnicastTest(FabricTest):
         mpls_label = MPLS_LABEL_2
         if dst_ipv4 is None:
             dst_ipv4 = pkt[IP].dst
-        switch_mac = pkt[Ether].dst
+        if from_packet_out:
+            switch_mac = SWITCH_MAC
+        else:
+            switch_mac = pkt[Ether].dst
 
         # Setup ports.
         self.setup_port(ig_port, vlan1, port_type1, tagged1)
         self.setup_port(eg_port, vlan2, port_type2, tagged2)
 
         # Forwarding type -> routing v4
+        # If from_packet_out, set eth_dst to don't care. All packet-outs should
+        # be routed, independently of eth_dst.
         for eth_type in routed_eth_types:
             self.set_forwarding_type(
                 ig_port,
-                switch_mac,
+                switch_mac if not from_packet_out else None,
                 ethertype=eth_type,
                 fwd_type=FORWARDING_TYPE_UNICAST_IPV4,
             )
@@ -1514,7 +1530,9 @@ class IPv4UnicastTest(FabricTest):
         if exp_pkt is None:
             # Build exp pkt using the input one.
             exp_pkt = pkt.copy() if not exp_pkt_base else exp_pkt_base
-            exp_pkt = pkt_route(exp_pkt, next_hop_mac)
+            # Route
+            exp_pkt[Ether].src = switch_mac
+            exp_pkt[Ether].dst = next_hop_mac
             if not is_next_hop_spine:
                 exp_pkt = pkt_decrement_ttl(exp_pkt)
             if tagged2 and Dot1Q not in exp_pkt:
@@ -1528,7 +1546,11 @@ class IPv4UnicastTest(FabricTest):
         if no_send:
             return
 
-        self.send_packet(ig_port, pkt)
+        if from_packet_out:
+            self.send_packet_out(self.build_packet_out(
+                pkt=pkt, port=0, do_forwarding=True))
+        else:
+            self.send_packet(ig_port, pkt)
 
         verify_port = eg_port
         if override_eg_port:

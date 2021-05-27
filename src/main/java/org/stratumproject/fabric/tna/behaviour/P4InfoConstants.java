@@ -322,6 +322,9 @@ public final class P4InfoConstants {
     public static final PiPacketMetadataId CPU_LOOPBACK_MODE =
             PiPacketMetadataId.of("cpu_loopback_mode");
     public static final int CPU_LOOPBACK_MODE_BITWIDTH = 2;
+    public static final PiPacketMetadataId DO_FORWARDING =
+            PiPacketMetadataId.of("do_forwarding");
+    public static final int DO_FORWARDING_BITWIDTH = 1;
     public static final PiPacketMetadataId EGRESS_PORT =
             PiPacketMetadataId.of("egress_port");
     public static final int EGRESS_PORT_BITWIDTH = 9;
@@ -332,5 +335,5 @@ public final class P4InfoConstants {
             PiPacketMetadataId.of("ingress_port");
     public static final int INGRESS_PORT_BITWIDTH = 9;
     public static final PiPacketMetadataId PAD0 = PiPacketMetadataId.of("pad0");
-    public static final int PAD0_BITWIDTH = 85;
+    public static final int PAD0_BITWIDTH = 84;
 }
