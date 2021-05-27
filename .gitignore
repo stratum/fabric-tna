@@ -20,3 +20,6 @@ dependencies.xml
 bf_drivers.log.*
 .venv
 venv
+.classpath
+.project
+.settings
