@@ -558,6 +558,18 @@ class FabricTest(P4RuntimeTest):
         super(FabricTest, self).__init__()
         self.next_mbr_id = 1
 
+    def setUp(self):
+        super(FabricTest, self).setUp()
+        self.port1 = self.swports(1)
+        self.port2 = self.swports(2)
+        self.port3 = self.swports(3)
+        self.port4 = self.swports(4)
+        self.set_up_packet_in_mirror()
+
+    def tearDown(self):
+        self.reset_packet_in_mirror()
+        P4RuntimeTest.tearDown(self)
+
     def get_next_mbr_id(self):
         mbr_id = self.next_mbr_id
         self.next_mbr_id = self.next_mbr_id + 1
@@ -567,17 +579,13 @@ class FabricTest(P4RuntimeTest):
         FabricTest.next_single_use_ips += 1
         return socket.inet_ntoa(struct.pack("!I", FabricTest.next_single_use_ips))
 
-    def setUp(self):
-        super(FabricTest, self).setUp()
-        self.port1 = self.swports(1)
-        self.port2 = self.swports(2)
-        self.port3 = self.swports(3)
-        self.port4 = self.swports(4)
+    @tvcreate("setup/set_up_packet_in_mirror")
+    def set_up_packet_in_mirror(self):
         self.add_clone_group(PACKET_IN_MIRROR_ID, [self.cpu_port], store=False)
 
-    def tearDown(self):
+    @tvcreate("teardown/reset_packet_in_mirror")
+    def reset_packet_in_mirror(self):
         self.delete_clone_group(PACKET_IN_MIRROR_ID, [self.cpu_port], store=False)
-        P4RuntimeTest.tearDown(self)
 
     def build_packet_out(self, pkt, port, cpu_loopback_mode=CPU_LOOPBACK_MODE_DISABLED, do_forwarding=False):
         packet_out = p4runtime_pb2.PacketOut()

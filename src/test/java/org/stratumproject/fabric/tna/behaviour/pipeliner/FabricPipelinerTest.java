@@ -2,10 +2,6 @@
 // SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 package org.stratumproject.fabric.tna.behaviour.pipeliner;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.Optional;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
@@ -37,6 +33,10 @@ import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
 import org.stratumproject.fabric.tna.behaviour.FabricCapabilities;
 import org.stratumproject.fabric.tna.behaviour.P4InfoConstants;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.Optional;
 
 import static org.easymock.EasyMock.capture;
 import static org.easymock.EasyMock.createMock;
