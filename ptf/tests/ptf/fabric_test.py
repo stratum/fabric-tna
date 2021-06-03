@@ -847,13 +847,14 @@ class FabricTest(P4RuntimeTest):
             [("next_id", next_id_)],
         )
 
-    def add_forwarding_acl_punt_to_cpu(self, eth_type=None, priority=DEFAULT_PRIORITY):
+    def add_forwarding_acl_punt_to_cpu(self, eth_type=None, priority=DEFAULT_PRIORITY, post_ingress=True):
         eth_type_ = stringify(eth_type, 2)
         eth_type_mask_ = stringify(0xFFFF, 2)
+        action = "acl.punt_to_cpu_post_ingress" if post_ingress else "acl.punt_to_cpu"
         return self.send_request_add_entry_to_action(
             "acl.acl",
             [self.Ternary("eth_type", eth_type_, eth_type_mask_)],
-            "acl.punt_to_cpu",
+            action,
             [],
             priority,
         )
@@ -864,13 +865,14 @@ class FabricTest(P4RuntimeTest):
         mk = [self.Ternary("eth_type", eth_type_, eth_type_mask_)]
         return self.read_table_entry("acl.acl", mk, priority)
 
-    def add_forwarding_acl_copy_to_cpu(self, eth_type=None):
+    def add_forwarding_acl_copy_to_cpu(self, eth_type=None, post_ingress=True):
         eth_type_ = stringify(eth_type, 2)
         eth_type_mask = stringify(0xFFFF, 2)
+        action = "acl.copy_to_cpu_post_ingress" if post_ingress else "acl.copy_to_cpu"
         self.send_request_add_entry_to_action(
             "acl.acl",
             [self.Ternary("eth_type", eth_type_, eth_type_mask)],
-            "acl.copy_to_cpu",
+            action,
             [],
             DEFAULT_PRIORITY,
         )

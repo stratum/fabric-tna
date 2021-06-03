@@ -76,7 +76,7 @@ public class ForwardingObjectiveTranslatorTest extends AbstractObjectiveTranslat
 
         FlowRule actualFlowRule = flowRulesInstalled.get(0);
         PiAction piAction = PiAction.builder()
-                .withId(P4InfoConstants.FABRIC_INGRESS_ACL_COPY_TO_CPU)
+                .withId(P4InfoConstants.FABRIC_INGRESS_ACL_COPY_TO_CPU_POST_INGRESS)
                 .build();
         FlowRule expectedFlowRule = DefaultFlowRule.builder()
                 .forDevice(DEVICE_ID)
@@ -126,7 +126,7 @@ public class ForwardingObjectiveTranslatorTest extends AbstractObjectiveTranslat
 
         FlowRule actualFlowRule = flowRulesInstalled.get(0);
         PiAction piAction = PiAction.builder()
-                .withId(P4InfoConstants.FABRIC_INGRESS_ACL_PUNT_TO_CPU)
+                .withId(P4InfoConstants.FABRIC_INGRESS_ACL_PUNT_TO_CPU_POST_INGRESS)
                 .build();
         FlowRule expectedFlowRule = DefaultFlowRule.builder()
                 .forDevice(DEVICE_ID)
