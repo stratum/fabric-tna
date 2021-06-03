@@ -167,22 +167,16 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
     }
 
     protected void initializePipeline() {
-        // Set up CPU port for packet-out. We support only IPv4 routing when do_forwarding=1.
+        // Set up CPU port for packet-in/out. For packet-out, we support only
+        // IPv4 routing when do_forwarding=1.
         final int cpuPort = capabilities.cpuPort().get();
         flowRuleService.applyFlowRules(
+                egressSwitchInfoRule(cpuPort),
                 ingressVlanRule(cpuPort, false, DEFAULT_VLAN, PORT_TYPE_INTERNAL),
                 fwdClassifierRule(cpuPort, null, Ethernet.TYPE_IPV4, FWD_IPV4_ROUTING,
                         DEFAULT_FLOW_PRIORITY));
         // Set up mirror session for packet-in.
-        final List<GroupBucket> buckets = ImmutableList.of(
-            createCloneGroupBucket(DefaultTrafficTreatment.builder()
-                    .setOutput(PortNumber.CONTROLLER)
-                    .build()));
-        groupService.addGroup(new DefaultGroupDescription(
-                deviceId, GroupDescription.Type.CLONE,
-                new GroupBuckets(buckets),
-                new DefaultGroupKey(KRYO.serialize(PKT_IN_MIRROR_SESSION_ID)),
-                PKT_IN_MIRROR_SESSION_ID, appId));
+        groupService.addGroup(packetInCloneGroup());
 
         // Set up recirculation ports as untagged (used for INT reports and
         // UE-to-UE in SPGW pipe).
@@ -343,6 +337,23 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
         }
     }
 
+    public FlowRule egressSwitchInfoRule(int cpuPort) {
+        final TrafficTreatment treatment = DefaultTrafficTreatment.builder()
+                .piTableAction(PiAction.builder()
+                        .withId(P4InfoConstants.FABRIC_EGRESS_PKT_IO_EGRESS_SET_SWITCH_INFO)
+                        .withParameter(new PiActionParam(P4InfoConstants.CPU_PORT, cpuPort))
+                        .build())
+                .build();
+        return DefaultFlowRule.builder()
+                .forDevice(deviceId)
+                .withTreatment(treatment)
+                .withPriority(DEFAULT_FLOW_PRIORITY)
+                .fromApp(appId)
+                .makePermanent()
+                .forTable(P4InfoConstants.FABRIC_EGRESS_PKT_IO_EGRESS_SWITCH_INFO)
+                .build();
+    }
+
     public FlowRule ingressVlanRule(long port, boolean vlanValid, int vlanId, byte portType) {
         final TrafficSelector selector = DefaultTrafficSelector.builder()
                 .add(Criteria.matchInPort(PortNumber.portNumber(port)))
@@ -420,6 +431,18 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
                 .forDevice(deviceId)
                 .fromApp(appId)
                 .build();
+    }
+
+    GroupDescription packetInCloneGroup() {
+        final List<GroupBucket> buckets = ImmutableList.of(
+            createCloneGroupBucket(DefaultTrafficTreatment.builder()
+                    .setOutput(PortNumber.CONTROLLER)
+                    .build()));
+        return new DefaultGroupDescription(
+                deviceId, GroupDescription.Type.CLONE,
+                new GroupBuckets(buckets),
+                new DefaultGroupKey(KRYO.serialize(PKT_IN_MIRROR_SESSION_ID)),
+                PKT_IN_MIRROR_SESSION_ID, appId);
     }
 
     /**

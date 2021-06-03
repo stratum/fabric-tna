@@ -70,9 +70,25 @@ control PacketIoIngress(inout ingress_headers_t hdr,
 control PacketIoEgress(inout egress_headers_t hdr,
                        inout fabric_egress_metadata_t fabric_md,
                        in egress_intrinsic_metadata_t eg_intr_md) {
+
+    action set_switch_info(PortId_t cpu_port) {
+        fabric_md.cpu_port = cpu_port;
+    }
+
+    table switch_info {
+        actions = {
+            set_switch_info;
+            @defaultonly nop;
+        }
+        default_action = nop;
+        const size = 1;
+    }
+
     apply {
-        if (hdr.packet_in.isValid()) {
+        switch_info.apply();
+        if (hdr.packet_in.isValid() || eg_intr_md.egress_port == fabric_md.cpu_port) {
             hdr.packet_in.ingress_port = fabric_md.bridged.base.ig_port;
+            hdr.fake_ethernet.setInvalid();
             // Straight to CPU. No need to process through the rest of the
             // egress pipe.
             exit;

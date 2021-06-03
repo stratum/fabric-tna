@@ -564,9 +564,11 @@ class FabricTest(P4RuntimeTest):
         self.port2 = self.swports(2)
         self.port3 = self.swports(3)
         self.port4 = self.swports(4)
+        self.setup_switch_info()
         self.set_up_packet_in_mirror()
 
     def tearDown(self):
+        self.reset_switch_info()
         self.reset_packet_in_mirror()
         P4RuntimeTest.tearDown(self)
 
@@ -578,6 +580,26 @@ class FabricTest(P4RuntimeTest):
     def get_single_use_ip(self):
         FabricTest.next_single_use_ips += 1
         return socket.inet_ntoa(struct.pack("!I", FabricTest.next_single_use_ips))
+
+    @tvcreate("setup/setup_switch_info")
+    def setup_switch_info(self):
+        req = self.get_new_write_request()
+        self.push_update_add_entry_to_action(
+            req,
+            "FabricEgress.pkt_io_egress.switch_info",
+            None,
+            "FabricEgress.pkt_io_egress.set_switch_info",
+            [("cpu_port", stringify(self.cpu_port, 2))],
+        )
+        return req, self.write_request(req, store=False)
+
+    @tvcreate("teardown/reset_switch_info")
+    def reset_switch_info(self):
+        req = self.get_new_write_request()
+        self.push_update_add_entry_to_action(
+            req, "FabricEgress.pkt_io_egress.switch_info", None, "nop", []
+        )
+        return req, self.write_request(req)
 
     @tvcreate("setup/set_up_packet_in_mirror")
     def set_up_packet_in_mirror(self):
