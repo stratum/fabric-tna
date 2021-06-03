@@ -37,10 +37,15 @@ control Acl (inout ingress_headers_t hdr,
         acl_counter.count();
     }
 
-    action punt_to_cpu_post_ingress() {
+    @hidden
+    action _set_packet_in_mirror_metadata() {
         ig_intr_md_for_dprsr.mirror_type = (bit<3>)FabricMirrorType_t.PACKET_IN;
         fabric_md.common_mirror_md.bmd_type = BridgedMdType_t.INGRESS_MIRROR;
         fabric_md.common_mirror_md.mirror_session_id = PACKET_IN_MIRROR_SESSION_ID;
+    }
+
+    action punt_to_cpu_post_ingress() {
+        _set_packet_in_mirror_metadata();
         ig_intr_md_for_dprsr.drop_ctl = 1;
         fabric_md.skip_next = true;
         fabric_md.punt_to_cpu = true;
@@ -52,9 +57,7 @@ control Acl (inout ingress_headers_t hdr,
     }
 
     action copy_to_cpu_post_ingress() {
-        ig_intr_md_for_dprsr.mirror_type = (bit<3>)FabricMirrorType_t.PACKET_IN;
-        fabric_md.common_mirror_md.bmd_type = BridgedMdType_t.INGRESS_MIRROR;
-        fabric_md.common_mirror_md.mirror_session_id = PACKET_IN_MIRROR_SESSION_ID;
+        _set_packet_in_mirror_metadata();
         fabric_md.copy_to_cpu = true;
         acl_counter.count();
     }

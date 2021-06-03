@@ -27,8 +27,6 @@ parser PacketInMirrorParser(packet_in packet,
     state check_ethernet {
         fake_ethernet_t tmp = packet.lookahead<fake_ethernet_t>();
         transition select(tmp.ether_type) {
-            // TODO: Consider using ETHERTYPE_CPU_LOOPBACK_INGRESS &&& 0xfffe to reduce
-            //       memory usage.
             ETHERTYPE_CPU_LOOPBACK_INGRESS: strip_fake_ethernet;
             ETHERTYPE_CPU_LOOPBACK_EGRESS: strip_fake_ethernet;
             default: accept;

@@ -176,7 +176,7 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
         // Set up mirror session for packet-in.
         final List<GroupBucket> buckets = ImmutableList.of(
             createCloneGroupBucket(DefaultTrafficTreatment.builder()
-                    .setOutput(PortNumber.portNumber(cpuPort))
+                    .setOutput(PortNumber.CONTROLLER)
                     .build()));
         groupService.addGroup(new DefaultGroupDescription(
                 deviceId, GroupDescription.Type.CLONE,
