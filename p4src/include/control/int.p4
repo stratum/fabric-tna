@@ -256,9 +256,6 @@ control IntIngress(
         // pipeline number(0~3).
         fabric_md.bridged.int_bmd.mirror_session_id = INT_MIRROR_SESSION_BASE ++ ig_intr_md.ingress_port[8:7];
         drop_report.apply();
-        fabric_md.bridged.int_bmd.ig_port = (bit<16>)ig_intr_md.ingress_port;
-        fabric_md.bridged.int_bmd.eg_port = (bit<16>)ig_tm_md.ucast_egress_port;
-        fabric_md.bridged.int_bmd.queue_id = (bit<8>)ig_tm_md.qid;
     }
 }
 
@@ -379,6 +376,30 @@ control IntEgress (
         hdr.report_mpls.label = mon_label;
     }
 
+    action do_deflect_on_drop_report_encap(mac_addr_t src_mac, mac_addr_t mon_mac,
+                                ipv4_addr_t src_ip, ipv4_addr_t mon_ip,
+                                l4_port_t mon_port, bit<32> switch_id) {
+        do_drop_report_encap(src_mac, mon_mac, src_ip, mon_ip, mon_port, switch_id);
+        hdr.common_report_header.setValid();
+        hdr.common_report_header.ig_port = (bit<16>)fabric_md.bridged.base.ig_port;
+        hdr.common_report_header.eg_port = (bit<16>)eg_intr_md.egress_port;
+        hdr.common_report_header.queue_id = (bit<8>)eg_intr_md.egress_qid;
+        hdr.drop_report_header.setValid();
+        hdr.drop_report_header.drop_reason = IntDropReason_t.DROP_REASON_TRAFFIC_MANAGER;
+    }
+
+    action do_deflect_on_drop_report_encap_mpls(mac_addr_t src_mac, mac_addr_t mon_mac,
+                                     ipv4_addr_t src_ip, ipv4_addr_t mon_ip,
+                                     l4_port_t mon_port, mpls_label_t mon_label,
+                                     bit<32> switch_id) {
+        do_deflect_on_drop_report_encap(src_mac, mon_mac, src_ip, mon_ip, mon_port, switch_id);
+        hdr.report_eth_type.value = ETHERTYPE_MPLS;
+        hdr.report_mpls.setValid();
+        hdr.report_mpls.label = mon_label;
+    }
+
+
+
     // Transforms mirrored packets into INT report packets.
     table report {
         // when we are parsing the regular ingress to egress packet,
@@ -394,6 +415,8 @@ control IntEgress (
             do_local_report_encap_mpls;
             do_drop_report_encap;
             do_drop_report_encap_mpls;
+            do_deflect_on_drop_report_encap;
+            do_deflect_on_drop_report_encap_mpls;
             @defaultonly nop();
         }
         default_action = nop;

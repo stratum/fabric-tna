@@ -530,7 +530,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 return null;
             }
             if (bridgedMdType == BMD_TYPE_DEFLECTED) {
-                reportActionBuilder.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_DROP_REPORT_ENCAP_MPLS);
+                reportActionBuilder.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_DEFLECT_ON_DROP_REPORT_ENCAP_MPLS);
             } else if (reportType == INT_REPORT_TYPE_LOCAL) {
                 reportActionBuilder.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_LOCAL_REPORT_ENCAP_MPLS);
             } else if (reportType == INT_REPORT_TYPE_DROP) {
@@ -546,7 +546,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
             reportActionBuilder.withParameter(monLabelParam);
         } else {
             if (bridgedMdType == BMD_TYPE_DEFLECTED) {
-                reportActionBuilder.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_DROP_REPORT_ENCAP);
+                reportActionBuilder.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_DEFLECT_ON_DROP_REPORT_ENCAP);
             } else if (reportType == INT_REPORT_TYPE_LOCAL) {
                 reportActionBuilder.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_LOCAL_REPORT_ENCAP);
             } else if (reportType == INT_REPORT_TYPE_DROP) {

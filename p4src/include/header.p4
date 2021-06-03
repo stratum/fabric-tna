@@ -282,6 +282,7 @@ struct bridged_metadata_base_t {
     GtpuPresence             gtpu_presence;
     // bit<3>                vlan_pri;
     // bit<1>                vlan_cfi;
+    GtpuPresence             gtpu_presence;
     bit<8>                   mpls_ttl;
     bit<48>                  ig_tstamp;
     bit<16>                  ip_eth_type;

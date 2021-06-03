@@ -2766,8 +2766,6 @@ class IntTest(IPv4UnicastTest):
             action = "do_local_report_encap"
         elif report_type == INT_REPORT_TYPE_DROP:
             action = "do_drop_report_encap"
-        elif bmd_type == BRIDGED_MD_TYPE_DEFLECTED:
-            action = "do_drop_report_encap"
         else:
             self.fail("Invalid report type {}".format(report_type))
 
@@ -2782,7 +2780,6 @@ class IntTest(IPv4UnicastTest):
         if mon_label:
             action = action + "_mpls"
             action_params.append(("mon_label", stringify(mon_label, 3)))
-
         self.send_request_add_entry_to_action(
             "report",
             [
@@ -2831,7 +2828,7 @@ class IntTest(IPv4UnicastTest):
             ],
         )
 
-    def set_up_watchlist_flow(self, ipv4_src, ipv4_dst, sport, dport):
+    def set_up_watchlist_flow(self, ipv4_src, ipv4_dst, sport=None, dport=None):
         ipv4_src_ = ipv4_to_binary(ipv4_src)
         ipv4_dst_ = ipv4_to_binary(ipv4_dst)
         ipv4_mask = ipv4_to_binary("255.255.255.255")
@@ -3160,6 +3157,7 @@ class IntTest(IPv4UnicastTest):
             int_inner_pkt = pkt_remove_vlan(int_inner_pkt)
 
         install_routing_entry = True
+        int_egress_port_md = eg_port
         if drop_reason == INT_DROP_REASON_ACL_DENY:
             self.add_forwarding_acl_drop_ingress_port(1)
         elif drop_reason == INT_DROP_REASON_ROUTING_V4_MISS:
@@ -3167,6 +3165,9 @@ class IntTest(IPv4UnicastTest):
         elif drop_reason == INT_DROP_REASON_TRAFFIC_MANAGER:
             # The packet will still be routed, but dropped by traffic manager.
             int_inner_pkt = pkt_route(int_inner_pkt, HOST2_MAC)
+            # In Tofino model, the egress port metadata will be set to zero
+            # if it is a deflected packet.
+            int_egress_port_md = 0
 
         # The expected INT report packet
         exp_int_report_pkt_masked = self.build_int_drop_report(

@@ -41,7 +41,7 @@ fi
 # We limit running PTF tests for only those profiles used in Aether, otherwise
 # we exceed the 45 min limit on Jenkins.
 # FIXME: revert once the PTF tests execution time is optimized (#238)
-for profile in "fabric-int" "fabric-spgw-int" "int-dod"; do
+for profile in "fabric-int" "fabric-spgw-int" "spgw-int-dod" "int-dod"; do
 # Run PTF tests for all profiles we just built
 #for d in ./p4src/build/*/; do
 #  profile=$(basename "${d}")
