@@ -580,18 +580,6 @@ def get_test_args(self, spgw_type="None", spine_only=False,
     Fill lists based on high-level parameters
     """
 
-    """
-        Structure: 
-        - [x] fill drop_reason
-        - [x] fill is_device_spine
-        - [x] fill vlan_conf
-        - [x] fill pkt_typx
-        - [x] fill psc
-        - [x] fill is_next_hop_spine
-        - [x] fill send_report_to_spine
-        - [x] fill pkt_len and prefix_len
-    """
-
     """ DROP REASON """
     # ingress int drop --> acl deny
     # egress int drop --> egress next miss
@@ -622,14 +610,16 @@ def get_test_args(self, spgw_type="None", spine_only=False,
 
 
     """ VLAN_CONFS """
-    """ Configure vlan_confs based off traffic_dir 
-    """
+    # Configure vlan_confs based off traffic_dir 
     if spine_only:
         # if spine, no VLAN packets should ever come in or leave
         vlan_conf_list = {
                        "untag->untag": [False, False]
                      }
     else:
+        # if host2host, depends on device_type
+        # could be host->leaf->host in same VLAN
+        # could be host->leaf->host in different VLAN
         if traffic_dir == "host2host":
             vlan_conf_list = {
                             "tag->tag": [True, True],
@@ -658,8 +648,7 @@ def get_test_args(self, spgw_type="None", spine_only=False,
 
 
     """ PKT_TYPE and WITH_PSC """
-    """ Configure arrays for spgw-related tests
-    """
+    # Configure arrays for spgw-related tests
     # spgw only uses base packets and always considers psc
     if spgw_type in SPGW_OPTIONS:
         pkt_type_list = BASE_PKT_TYPES - {"sctp"}
@@ -680,7 +669,6 @@ def get_test_args(self, spgw_type="None", spine_only=False,
 
 
     """ PKT_LEN and PREFIX_LEN """
-    # TODO (Darius): None, or min_pkt_len / prefix_default_route
     if test_multiple_pkt_len:
         pkt_len_list = [MIN_PKT_LEN, 1500]
     else:

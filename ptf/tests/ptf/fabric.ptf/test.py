@@ -1290,7 +1290,7 @@ class FabricSpgwDownlinkEcmpTest(SpgwSimpleTest):
 class FabricSpgwDownlinkTest(SpgwSimpleTest):
     @tvsetup
     @autocleanup
-    def doRunTest(self, pkt, tagged1, tagged2, with_psc, is_next_hop_spine, tc_name, **kwargs):
+    def doRunTest(self, pkt, tagged1, tagged2, with_psc, is_next_hop_spine, **kwargs):
         self.runDownlinkTest(
             pkt=pkt,
             tagged1=tagged1,
@@ -1300,7 +1300,7 @@ class FabricSpgwDownlinkTest(SpgwSimpleTest):
         )
 
     def runTest(self):
-        for test_args in self.get_test_args(spgw_type="DL"):
+        for test_args in get_test_args(spgw_type="DL"):
             print(test_args)
             self.doRunTest(test_args)
 
