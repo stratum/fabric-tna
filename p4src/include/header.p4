@@ -237,8 +237,9 @@ header int_mirror_metadata_t {
     bit<32>               eg_tstamp;
     bit<8>                drop_reason;
     bit<16>               ip_eth_type;
+    @padding bit<6>       _pad2;
     GtpuPresence          gtpu_presence;
-    @padding bit<4>       _pad2;
+    @padding bit<6>       _pad3;
     IntReportType_t       report_type;
     flow_hash_t           flow_hash;
 }
@@ -354,6 +355,7 @@ struct fabric_egress_metadata_t {
     int_mirror_metadata_t int_mirror_md;
     int_metadata_t        int_md;
     bit<16>               int_ipv4_len;
+    bool                  is_int;
 #endif // WITH_INT
 }
 

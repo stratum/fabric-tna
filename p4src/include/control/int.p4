@@ -201,7 +201,13 @@ control IntIngress(
 
     @hidden
     action report_drop() {
+        fabric_md.bridged.bmd_type = BridgedMdType_t.INT_INGRESS_DROP;
         fabric_md.bridged.int_bmd.report_type = IntReportType_t.DROP;
+        fabric_md.bridged.base.vlan_id = DEFAULT_VLAN_ID;
+        fabric_md.bridged.base.mpls_label = 0; // do not push an MPLS label
+#ifdef WITH_SPGW
+        fabric_md.bridged.spgw.skip_spgw = true;
+#endif // WITH_SPGW
         // Redirect to the recirculate port of the pipeline
         ig_tm_md.ucast_egress_port = ig_intr_md.ingress_port[8:7] ++ RECIRC_PORT_NUMBER;
 
@@ -227,12 +233,14 @@ control IntIngress(
             report_drop;
             @defaultonly nop;
         }
-        const size = 2;
+        const size = 3;
         const entries = {
             // Copy to the CPU, but the original packet got dropped.
             // Will not generate a drop report if we are trying to punt the packet to
             // the CPU.
             (IntReportType_t.LOCAL, 1, true, false, _, _): report_drop();
+            // Drop by a table and not copy to the CPU.
+            (IntReportType_t.LOCAL, 1, false, false, _, _): report_drop();
             // Not setting any destination for the packet.
             (IntReportType_t.LOCAL, 0, false, false, false, false): report_drop();
         }
@@ -367,6 +375,28 @@ control IntEgress (
         hdr.report_mpls.label = mon_label;
     }
 
+    // Having another action to set ingress and egress port due to incompatible
+    // alignment issue of the INT parser.
+    // In theory we should be able to initialize those value in the parser.
+    action do_ingress_drop_report_encap(mac_addr_t src_mac, mac_addr_t mon_mac,
+                                        ipv4_addr_t src_ip, ipv4_addr_t mon_ip,
+                                        l4_port_t mon_port, bit<32> switch_id) {
+        do_drop_report_encap(src_mac, mon_mac, src_ip, mon_ip, mon_port, switch_id);
+        hdr.common_report_header.ig_port = 7w0 ++ fabric_md.bridged.base.ig_port;
+        hdr.common_report_header.eg_port = 0;
+        hdr.common_report_header.queue_id = 0;
+    }
+
+    action do_ingress_drop_report_encap_mpls(mac_addr_t src_mac, mac_addr_t mon_mac,
+                                             ipv4_addr_t src_ip, ipv4_addr_t mon_ip,
+                                             l4_port_t mon_port, mpls_label_t mon_label,
+                                             bit<32> switch_id) {
+        do_ingress_drop_report_encap(src_mac, mon_mac, src_ip, mon_ip, mon_port, switch_id);
+        hdr.report_eth_type.value = ETHERTYPE_MPLS;
+        hdr.report_mpls.setValid();
+        hdr.report_mpls.label = mon_label;
+    }
+
     // Transforms mirrored packets into INT report packets.
     table report {
         // when we are parsing the regular ingress to egress packet,
@@ -382,6 +412,8 @@ control IntEgress (
             do_local_report_encap_mpls;
             do_drop_report_encap;
             do_drop_report_encap_mpls;
+            do_ingress_drop_report_encap;
+            do_ingress_drop_report_encap_mpls;
             @defaultonly nop();
         }
         default_action = nop;

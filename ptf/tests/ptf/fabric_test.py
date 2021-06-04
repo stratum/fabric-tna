@@ -229,19 +229,21 @@ PPPOED_CODES = (
 )
 
 # Mirror types
+MIRROR_TYPE_INVALID = 0
 MIRROR_TYPE_INT_REPORT = 1
 
 # Bridged metadata type
 BRIDGED_MD_TYPE_EGRESS_MIRROR = 2
 BRIDGED_MD_TYPE_INGRESS_MIRROR = 3
+BRIDGED_MD_TYPE_INT_INGRESS_DROP = 4
 
 # Size for different headers
 if testutils.test_param_get("profile") == "fabric-spgw-int":
-    BMD_BYTES = 44
+    BMD_BYTES = 45
 elif testutils.test_param_get("profile") == "fabric-spgw":
     BMD_BYTES = 39
 elif testutils.test_param_get("profile") == "fabric-int":
-    BMD_BYTES = 28
+    BMD_BYTES = 29
 elif testutils.test_param_get("profile") == "fabric":
     BMD_BYTES = 23
 else:
@@ -2716,10 +2718,13 @@ class IntTest(IPv4UnicastTest):
         report_type,
         bmd_type,
         switch_id,
-        mon_label=None,
+        mirror_type,
+        mon_label,
     ):
         action = ""
-        if report_type == INT_REPORT_TYPE_LOCAL:
+        if bmd_type == BRIDGED_MD_TYPE_INT_INGRESS_DROP:
+            action = "do_ingress_drop_report_encap"
+        elif report_type == INT_REPORT_TYPE_LOCAL:
             action = "do_local_report_encap"
         elif report_type == INT_REPORT_TYPE_DROP:
             action = "do_drop_report_encap"
@@ -2742,7 +2747,7 @@ class IntTest(IPv4UnicastTest):
             "report",
             [
                 self.Exact("bmd_type", stringify(bmd_type, 1)),
-                self.Exact("mirror_type", stringify(MIRROR_TYPE_INT_REPORT, 1)),
+                self.Exact("mirror_type", stringify(mirror_type, 1)),
                 self.Exact("int_report_type", stringify(report_type, 1)),
             ],
             action,
@@ -2752,12 +2757,8 @@ class IntTest(IPv4UnicastTest):
     def set_up_report_flow(
         self, src_mac, mon_mac, src_ip, mon_ip, mon_port, switch_id, mon_label=None
     ):
-        for report_type in [INT_REPORT_TYPE_LOCAL, INT_REPORT_TYPE_DROP]:
-            for bmd_type in [
-                BRIDGED_MD_TYPE_INGRESS_MIRROR,
-                BRIDGED_MD_TYPE_EGRESS_MIRROR,
-            ]:
-                self.set_up_report_flow_with_report_type_and_bmd_type(
+        def set_up_report_flow_internal(bmd_type, mirror_type, report_type):
+            self.set_up_report_flow_with_report_type_and_bmd_type(
                     src_mac,
                     mon_mac,
                     src_ip,
@@ -2766,8 +2767,15 @@ class IntTest(IPv4UnicastTest):
                     report_type,
                     bmd_type,
                     switch_id,
+                    mirror_type,
                     mon_label,
                 )
+        set_up_report_flow_internal(BRIDGED_MD_TYPE_INT_INGRESS_DROP,
+                                    MIRROR_TYPE_INVALID, INT_REPORT_TYPE_DROP)
+        set_up_report_flow_internal(BRIDGED_MD_TYPE_EGRESS_MIRROR,
+                                    MIRROR_TYPE_INT_REPORT, INT_REPORT_TYPE_DROP)
+        set_up_report_flow_internal(BRIDGED_MD_TYPE_EGRESS_MIRROR,
+                                    MIRROR_TYPE_INT_REPORT, INT_REPORT_TYPE_LOCAL)
 
     def set_up_report_mirror_flow(self, pipe_id, mirror_id, port):
         self.add_clone_group(mirror_id, [port])
@@ -3127,7 +3135,7 @@ class IntTest(IPv4UnicastTest):
             SWITCH_IPV4,
             INT_COLLECTOR_IPV4,
             ig_port,
-            eg_port,
+            0,
             drop_reason,
             SWITCH_ID,
             int_inner_pkt,
