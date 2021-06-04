@@ -566,15 +566,15 @@ def get_test_args(self, spgw_type="None", spine_only=False,
 
     # Declare default lists to be modified by high-level parameters
     # Ordered by level of for-loop
-    drop_reasonL = []
-    is_device_spineL = []
-    vlan_confL = []
-    pkt_typeL = []
-    with_pscL = []
-    is_next_hop_spineL = []
-    send_report_to_spineL = []
-    pkt_lenL = []
-    prefix_lenL = []
+    drop_reason_list = []
+    is_device_spine_list = []
+    vlan_conf_list = []
+    pkt_type_list = []
+    with_psc_list = []
+    is_next_hop_spine_list = []
+    send_report_to_spine_list = []
+    pkt_len_list = []
+    prefix_len_list = []
 
     """
     Fill lists based on high-level parameters
@@ -583,155 +583,158 @@ def get_test_args(self, spgw_type="None", spine_only=False,
     """
         Structure: 
         - [x] fill drop_reason
-        - [ ] fill is_device_spine
-        - fill vlan_conf
-        - fill pkt_type
-        - fill psc
-        - fill is_next_hop_spine
-        - fill send_report_to_spine
+        - [x] fill is_device_spine
+        - [x] fill vlan_conf
+        - [x] fill pkt_typx
+        - [x] fill psc
+        - [x] fill is_next_hop_spine
+        - [x] fill send_report_to_spine
+        - [x] fill pkt_len and prefix_len
     """
 
+    """ DROP REASON """
     # ingress int drop --> acl deny
     # egress int drop --> egress next miss
     # downlink int drop --> downlink pdr + far miss
     # uplink int drop --> uplink pdr + far miss
     if drop_test:
         if int_test_type == "ig_drop":
-            drop_reasonL = [INT_DROP_REASON_ACL_DENY]
+            drop_reason_list = [INT_DROP_REASON_ACL_DENY]
         elif int_test_type == "eg_drop":
-            drop_reasonL = [INT_DROP_REASON_EGRESS_NEXT_MISS]
+            drop_reason_list = [INT_DROP_REASON_EGRESS_NEXT_MISS]
         elif int_test_type == "local":
             if spgw_type == "DL":
-                drop_reasonL = [INT_DROP_REASON_DOWNLINK_PDR_MISS, INT_DROP_REASON_FAR_MISS]
+                drop_reason_list = [INT_DROP_REASON_DOWNLINK_PDR_MISS, INT_DROP_REASON_FAR_MISS]
             elif spgw_type == "UL":
-                drop_reasonL = [INT_DROP_REASON_UPLINK_PDR_MISS, INT_DROP_REASON_FAR_MISS]
+                drop_reason_list = [INT_DROP_REASON_UPLINK_PDR_MISS, INT_DROP_REASON_FAR_MISS]
         else:
-            drop_reasonL = [None]
+            drop_reason_list = [None]
     else:
-        drop_reasonL = [None]
+        drop_reason_list = [None]
 
+
+    """ IS_DEVICE_SPINE """
     # If INT test then toggle is_device_spine
     if int_test_type in INT_OPTIONS:
-        is_device_spineL = [False, True]
+        is_device_spine_list = [False, True]
     else:
-        is_device_spineL = [None]
-
-    """ Configure arrays for spgw-related tests
-    """
-    # spgw only uses base packets and always considers psc
-    if spgw_type in SPGW_OPTIONS:
-        pkt_typeL = BASE_PKT_TYPES - {"sctp"}
-        with_pscL = [False, True]
-    else:
-        pkt_typeL = BASE_PKT_TYPES | GTP_PKT_TYPES
-        with_pscL = [False]
+        is_device_spine_list = [None]
 
 
+    """ VLAN_CONFS """
     """ Configure vlan_confs based off traffic_dir 
     """
     if spine_only:
         # if spine, no VLAN packets should ever come in or leave
-        vlan_confL = {
+        vlan_conf_list = {
                        "untag->untag": [False, False]
                      }
-    # if not spine, consider traffic direction
     else:
         if traffic_dir == "host2host":
-            vlan_confL = {
+            vlan_conf_list = {
                             "tag->tag": [True, True],
                             "untag->untag": [False, False],
                             "tag->untag": [True, False],
                             "untag->tag": [False, True],
                           }
-            # TODO (Darius): account for MPLS
-            is_next_hop_spineL = [False, True]
+            # TODO (Darius): account for host-to-host MPLS
+            is_next_hop_spine_list = [False, True]
         elif traffic_dir == "leaf2spine":
-            vlan_confL = {
+            vlan_conf_list = {
                             "untag->untag": [False, False],
                             "tag->untag": [True, False],
                          }
-            is_next_hop_spineL = [True]
+            is_next_hop_spine_list = [True]
         elif traffic_dir == "spine2leaf":
-            vlan_confL = {
+            vlan_conf_list = {
                             "untag->tag": [False, True],
                             "untag->untag": [False, False],
                          }
-            is_next_hop_spineL = [False]
+            is_next_hop_spine_list = [False]
         else:
             # TODO (Darius): consider how to handle incorrect input to high-level params
-            vlan_confL = vlan_confs.items()
-            is_next_hop_spineL = [False, True]
+            vlan_conf_list = vlan_confs.items()
+            is_next_hop_spine_list = [False, True]
 
 
+    """ PKT_TYPE and WITH_PSC """
+    """ Configure arrays for spgw-related tests
+    """
+    # spgw only uses base packets and always considers psc
+    if spgw_type in SPGW_OPTIONS:
+        pkt_type_list = BASE_PKT_TYPES - {"sctp"}
+        with_psc_list = [False, True]
+    else:
+        pkt_type_list = BASE_PKT_TYPES | GTP_PKT_TYPES
+        with_psc_list = [False]
+
+
+    """ SEND_REPORT_TO_SPINE """
     # TODO (Darius): account for various INT test parameters
     if int_test_type in INT_OPTIONS:
         if fnmatch.fnmatch(traffic_dir, "*2spine"):
             # Add send_report_to_spine for spine to spine case
-            send_report_to_spineL = [True, False]
-
-
-    if test_multiple_pkt_len:
-        pkt_lenL = [MIN_PKT_LEN, 1500]
+            send_report_to_spine_list = [False, True]
     else:
-        pkt_lenL = [MIN_PKT_LEN]
+        send_report_to_spine_list = [None]
+
+
+    """ PKT_LEN and PREFIX_LEN """
+    # TODO (Darius): None, or min_pkt_len / prefix_default_route
+    if test_multiple_pkt_len:
+        pkt_len_list = [MIN_PKT_LEN, 1500]
+    else:
+        pkt_len_list = [None]
 
     if test_multiple_prefix_len:
-        prefix_list = [PREFIX_DEFAULT_ROUTE, PREFIX_SUBNET, PREFIX_HOST]
+        prefix_len_list = [PREFIX_DEFAULT_ROUTE, PREFIX_SUBNET, PREFIX_HOST]
     else:
-        prefix_list = [PREFIX_DEFAULT_ROUTE]
+        prefix_len_list = [None]
 
 
-    # TODO: Include prefix_len and pkt_len in for-loop
+    """
 
-    # List of dictionaries to be filled in loop and returned
-    test_args = [] 
-
-    """ TODO:
-        Here instead, I want to call different functions based off of the high
-        level parameters. So if it's an SPGW, call SPGW. If it's an INT test,
-        call INT. Etc. Mainly these two types have distinctly different for-
-        loops formats, so I'd like to have as few helpers as possible to minimize code complexity.
-
-        My plan now is to implement the first helper function, 
     """
 
     print("")
-    for drop_reason in drop_reasonL:
-        for is_device_spine in is_device_spineL:
-            for vlan_conf, tagged in vlan_confL:
-                for pkt_type in pkt_typeL:
-                    for with_psc in with_pscL:
-                        for is_next_hop_spine in is_next_hop_spineL:
-                            if is_next_hop_spine and tagged[1]:
-                                continue
-                            tc_name = (
-                                "VLAN_"
-                                + vlan_conf
-                                + "_"
-                                + pkt_type
-                                + "_is_next_hop_spine_"
-                                + str(is_next_hop_spine)
-                            )
-                            print(
-                                "Testing VLAN={}, pkt={}, with_psc={}, is_next_hop_spine={}...".format(
-                                    vlan_conf, pkt_type, with_psc, is_next_hop_spine
-                                )
-                            )
-                            pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
-                                eth_src=HOST1_MAC,
-                                eth_dst=SWITCH_MAC,
-                                ip_src=HOST1_IPV4,
-                                ip_dst=UE1_IPV4,
-                                pktlen=MIN_PKT_LEN,
-                            )
-                            yield {
-                                    'pkt':pkt,
-                                    'tagged1':tagged[0],
-                                    'tagged2':tagged[1],
-                                    'with_psc':with_psc,
-                                    'is_next_hop_spine':is_next_hop_spine,
-                                    'tc_name':tc_name
-                            }
+    for drop_reason in drop_reason_list:
+        for is_device_spine in is_device_spine_list:
+            for vlan_conf, tagged in vlan_conf_list:
+                for pkt_type in pkt_type_list:
+                    for with_psc in with_psc_list:
+                        for prefix_len in prefix_len_list:
+                            for pkt_len in pkt_len_list:
+                                for is_next_hop_spine in is_next_hop_spine_list:
+                                    if is_next_hop_spine and tagged[1]:
+                                        continue
+                                    tc_name = (
+                                        "VLAN_"
+                                        + vlan_conf
+                                        + "_"
+                                        + pkt_type
+                                        + "_is_next_hop_spine_"
+                                        + str(is_next_hop_spine)
+                                    )
+                                    print(
+                                        "Testing VLAN={}, pkt={}, with_psc={}, is_next_hop_spine={}...".format(
+                                            vlan_conf, pkt_type, with_psc, is_next_hop_spine
+                                        )
+                                    )
+                                    pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
+                                        eth_src=HOST1_MAC,
+                                        eth_dst=SWITCH_MAC,
+                                        ip_src=HOST1_IPV4,
+                                        ip_dst=UE1_IPV4,
+                                        pktlen=MIN_PKT_LEN,
+                                    )
+                                    yield {
+                                            'pkt':pkt,
+                                            'tagged1':tagged[0],
+                                            'tagged2':tagged[1],
+                                            'with_psc':with_psc,
+                                            'is_next_hop_spine':is_next_hop_spine,
+                                            'tc_name':tc_name
+                                    }
 
 
 class FabricTest(P4RuntimeTest):
