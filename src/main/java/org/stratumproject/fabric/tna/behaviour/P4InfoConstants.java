@@ -173,6 +173,10 @@ public final class P4InfoConstants {
             PiActionId.of("FabricEgress.int_egress.do_drop_report_encap");
     public static final PiActionId FABRIC_EGRESS_INT_EGRESS_DO_DROP_REPORT_ENCAP_MPLS =
             PiActionId.of("FabricEgress.int_egress.do_drop_report_encap_mpls");
+    public static final PiActionId FABRIC_EGRESS_INT_EGRESS_DO_INGRESS_DROP_REPORT_ENCAP =
+            PiActionId.of("FabricEgress.int_egress.do_ingress_drop_report_encap");
+    public static final PiActionId FABRIC_EGRESS_INT_EGRESS_DO_INGRESS_DROP_REPORT_ENCAP_MPLS =
+            PiActionId.of("FabricEgress.int_egress.do_ingress_drop_report_encap_mpls");
     public static final PiActionId FABRIC_EGRESS_INT_EGRESS_DO_LOCAL_REPORT_ENCAP =
             PiActionId.of("FabricEgress.int_egress.do_local_report_encap");
     public static final PiActionId FABRIC_EGRESS_INT_EGRESS_DO_LOCAL_REPORT_ENCAP_MPLS =
