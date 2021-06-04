@@ -145,7 +145,8 @@ enum bit<8> BridgedMdType_t {
     INVALID = 0,
     INGRESS_TO_EGRESS = 1,
     EGRESS_MIRROR = 2,
-    INGRESS_MIRROR = 3
+    INGRESS_MIRROR = 3,
+    INT_INGRESS_DROP = 4
 }
 
 // The mirror type, makes the parser to use correct way to parse the mirror metadata.

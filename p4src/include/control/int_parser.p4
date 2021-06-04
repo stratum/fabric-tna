@@ -4,18 +4,25 @@
 #ifndef __INT_MIRROR_PARSER__
 #define __INT_MIRROR_PARSER__
 
-// Parser of mirrored packets that will become INT reports. To simplify handling
-// of reports at the collector, we remove all headers between Ethernet and IPv4
-// (the inner one if processing a GTP-U encapped packet). We support generating
-// reports only for IPv4 packets, i.e., cannot report IPv6 traffic.
-parser IntReportMirrorParser (packet_in packet,
-    /* Fabric.p4 */
-    out egress_headers_t hdr,
-    out fabric_egress_metadata_t fabric_md,
-    /* TNA */
-    out egress_intrinsic_metadata_t eg_intr_md) {
+// Parser of mirrored or bridged packets that will become INT reports.
+// To simplify handling of reports at the collector, we remove all headers between
+// Ethernet and IPv4 (the inner one if processing a GTP-U encapped packet).
+// We support generating reports only for IPv4 packets, i.e., cannot report IPv6 traffic.
+parser IntReportParser (packet_in packet,
+    inout egress_headers_t hdr,
+    inout fabric_egress_metadata_t fabric_md) {
 
     state start {
+        common_egress_metadata_t common_eg_md = packet.lookahead<common_egress_metadata_t>();
+        transition select(common_eg_md.bmd_type, common_eg_md.mirror_type) {
+            (BridgedMdType_t.INT_INGRESS_DROP, _): parse_int_report_bridged;
+            (BridgedMdType_t.EGRESS_MIRROR, FabricMirrorType_t.INT_REPORT): parse_int_report_mirror;
+            (BridgedMdType_t.INGRESS_MIRROR, FabricMirrorType_t.INT_REPORT): parse_int_report_mirror;
+            default: reject;
+        }
+    }
+
+    state parse_int_report_mirror {
         packet.extract(fabric_md.int_mirror_md);
         fabric_md.bridged.bmd_type = fabric_md.int_mirror_md.bmd_type;
         fabric_md.bridged.base.vlan_id = DEFAULT_VLAN_ID;
@@ -86,6 +93,31 @@ parser IntReportMirrorParser (packet_in packet,
         hdr.local_report_header.queue_occupancy = fabric_md.int_mirror_md.queue_occupancy;
         hdr.local_report_header.eg_tstamp = fabric_md.int_mirror_md.eg_tstamp;
         hdr.drop_report_header.drop_reason = fabric_md.int_mirror_md.drop_reason;
+
+        transition check_ethernet;
+    }
+
+    state parse_int_report_bridged {
+        packet.extract(fabric_md.bridged);
+        fabric_md.int_mirror_md.setValid();
+        fabric_md.int_mirror_md.bmd_type = BridgedMdType_t.INT_INGRESS_DROP;
+        fabric_md.int_mirror_md.ip_eth_type = ETHERTYPE_IPV4;
+        fabric_md.int_mirror_md.report_type = IntReportType_t.DROP;
+        fabric_md.int_mirror_md.mirror_type = FabricMirrorType_t.INVALID;
+        fabric_md.int_mirror_md.gtpu_presence = fabric_md.bridged.base.gtpu_presence;
+        fabric_md.int_mirror_md.flow_hash = fabric_md.bridged.base.inner_hash;
+
+        /** report_fixed_header **/
+        hdr.report_fixed_header.ig_tstamp = (bit<32>)fabric_md.bridged.base.ig_tstamp;
+        /** common_report_header **/
+        // update later in the report table
+        hdr.common_report_header.eg_port = 0;
+        hdr.common_report_header.queue_id = 0;
+        // hdr.common_report_header.ig_port = update later
+        // hdr.common_report_header.switch_id = update later
+        /** drop_report_header **/
+        hdr.drop_report_header.setValid();
+        hdr.drop_report_header.drop_reason = fabric_md.bridged.int_bmd.drop_reason;
 
         transition check_ethernet;
     }
@@ -174,5 +206,7 @@ parser IntReportMirrorParser (packet_in packet,
         transition accept;
     }
 }
+
+
 
 #endif // __INT_MIRROR_PARSER__
