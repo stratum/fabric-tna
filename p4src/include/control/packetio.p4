@@ -59,6 +59,7 @@ control PacketIoIngress(inout ingress_headers_t hdr,
             ig_intr_md_for_dprsr.drop_ctl = 1;
             ig_intr_md_for_tm.bypass_egress = 1;
             fabric_md.bridged.setInvalid();
+            fabric_md.punt_to_cpu = true;
             hdr.fake_ethernet.setInvalid();
             hdr.packet_in.setValid();
             hdr.packet_in.ingress_port = ig_intr_md.ingress_port;
