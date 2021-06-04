@@ -247,6 +247,7 @@ header int_mirror_metadata_t {
 struct int_bridged_metadata_t {
     IntReportType_t report_type;
     MirrorId_t      mirror_session_id;
+    IntDropReason_t drop_reason;
 }
 
 struct int_metadata_t {
@@ -322,15 +323,14 @@ struct fabric_ingress_metadata_t {
     bool                    skip_next;
     next_id_t               next_id;
     bool                    egress_port_set;
+    bool                    copy_to_cpu;
+    bool                    punt_to_cpu;
     // FIXME: checksum errors are set but never read, remove or test it
     bool                    ipv4_checksum_err;
     bool                    inner_ipv4_checksum_err;
 #ifdef WITH_SPGW
     spgw_ingress_metadata_t spgw;
 #endif // WITH_SPGW
-#ifdef WITH_INT
-    int_mirror_metadata_t int_mirror_md;
-#endif // WITH_INT
     PortType_t              ig_port_type;
 }
 
