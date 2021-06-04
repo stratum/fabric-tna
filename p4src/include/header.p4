@@ -266,13 +266,13 @@ struct bridged_metadata_base_t {
     bool                     is_multicast;
     fwd_type_t               fwd_type;
     vlan_id_t                vlan_id;
+    GtpuPresence             gtpu_presence;
     // bit<3>                vlan_pri;
     // bit<1>                vlan_cfi;
     bit<8>                   mpls_ttl;
     bit<48>                  ig_tstamp;
     bit<16>                  ip_eth_type;
     bit<STATS_FLOW_ID_WIDTH> stats_flow_id;
-    GtpuPresence             gtpu_presence;
 #ifdef WITH_DOUBLE_VLAN_TERMINATION
     bool                     push_double_vlan;
     vlan_id_t                inner_vlan_id;
