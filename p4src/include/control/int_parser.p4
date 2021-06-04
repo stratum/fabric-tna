@@ -1,8 +1,8 @@
 // Copyright 2021-present Open Networking Foundation
 // SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 
-#ifndef __INT_MIRROR_PARSER__
-#define __INT_MIRROR_PARSER__
+#ifndef __INT_PARSER__
+#define __INT_PARSER__
 
 // Parser of mirrored or bridged packets that will become INT reports.
 // To simplify handling of reports at the collector, we remove all headers between
@@ -13,6 +13,7 @@ parser IntReportParser (packet_in packet,
     inout fabric_egress_metadata_t fabric_md) {
 
     state start {
+        fabric_md.is_int = true;
         common_egress_metadata_t common_eg_md = packet.lookahead<common_egress_metadata_t>();
         transition select(common_eg_md.bmd_type, common_eg_md.mirror_type) {
             (BridgedMdType_t.INT_INGRESS_DROP, _): parse_int_report_bridged;
@@ -28,8 +29,54 @@ parser IntReportParser (packet_in packet,
         fabric_md.bridged.base.vlan_id = DEFAULT_VLAN_ID;
         fabric_md.bridged.base.mpls_label = 0; // do not push an MPLS label
 #ifdef WITH_SPGW
-        fabric_md.bridged.spgw.skip_spgw = true; // skip spgw encap
+        fabric_md.bridged.spgw.skip_spgw = true;
 #endif // WITH_SPGW
+
+        /** report_fixed_header **/
+        hdr.report_fixed_header.ig_tstamp = fabric_md.int_mirror_md.ig_tstamp;
+
+        /** common_report_header **/
+        hdr.common_report_header.setValid();
+        // hdr.common_report_header.switch_id = update later
+        hdr.common_report_header.ig_port = fabric_md.int_mirror_md.ig_port;
+        hdr.common_report_header.eg_port = fabric_md.int_mirror_md.eg_port;
+        hdr.common_report_header.queue_id = fabric_md.int_mirror_md.queue_id;
+
+        /** local/drop_report_header (set valid later) **/
+        hdr.local_report_header.queue_occupancy = fabric_md.int_mirror_md.queue_occupancy;
+        hdr.local_report_header.eg_tstamp = fabric_md.int_mirror_md.eg_tstamp;
+        hdr.drop_report_header.drop_reason = fabric_md.int_mirror_md.drop_reason;
+
+        transition parse_common_int_headers;
+    }
+
+    state parse_int_report_bridged {
+        packet.extract(fabric_md.bridged);
+        fabric_md.int_mirror_md.setValid();
+        fabric_md.int_mirror_md.bmd_type = BridgedMdType_t.INT_INGRESS_DROP;
+        fabric_md.int_mirror_md.ip_eth_type = ETHERTYPE_IPV4;
+        fabric_md.int_mirror_md.report_type = IntReportType_t.DROP;
+        fabric_md.int_mirror_md.mirror_type = FabricMirrorType_t.INVALID;
+        fabric_md.int_mirror_md.gtpu_presence = fabric_md.bridged.base.gtpu_presence;
+        fabric_md.int_mirror_md.flow_hash = fabric_md.bridged.base.inner_hash;
+
+        /** report_fixed_header **/
+        hdr.report_fixed_header.ig_tstamp = (bit<32>)fabric_md.bridged.base.ig_tstamp;
+        /** common_report_header **/
+        hdr.common_report_header.setValid();
+        // hdr.common_report_header.eg_port = update later
+        // hdr.common_report_header.queue_id = update later
+        // hdr.common_report_header.ig_port = update later
+        // hdr.common_report_header.switch_id = update later
+        /** drop_report_header **/
+        hdr.drop_report_header.setValid();
+        hdr.drop_report_header.drop_reason = fabric_md.bridged.int_bmd.drop_reason;
+
+        transition parse_common_int_headers;
+    }
+
+    state parse_common_int_headers {
+
         // Initialize report headers here to allocate constant fields on the
         // T-PHV (and save on PHV resources).
         /** report_ethernet **/
@@ -80,44 +127,6 @@ parser IntReportParser (packet_in packet,
         hdr.report_fixed_header.rsvd = 0;
         // hdr.report_fixed_header.hw_id = update later
         // hdr.report_fixed_header.seq_no = update later
-        hdr.report_fixed_header.ig_tstamp = fabric_md.int_mirror_md.ig_tstamp;
-
-        /** common_report_header **/
-        hdr.common_report_header.setValid();
-        // hdr.common_report_header.switch_id = update later
-        hdr.common_report_header.ig_port = fabric_md.int_mirror_md.ig_port;
-        hdr.common_report_header.eg_port = fabric_md.int_mirror_md.eg_port;
-        hdr.common_report_header.queue_id = fabric_md.int_mirror_md.queue_id;
-
-        /** local/drop_report_header (set valid later) **/
-        hdr.local_report_header.queue_occupancy = fabric_md.int_mirror_md.queue_occupancy;
-        hdr.local_report_header.eg_tstamp = fabric_md.int_mirror_md.eg_tstamp;
-        hdr.drop_report_header.drop_reason = fabric_md.int_mirror_md.drop_reason;
-
-        transition check_ethernet;
-    }
-
-    state parse_int_report_bridged {
-        packet.extract(fabric_md.bridged);
-        fabric_md.int_mirror_md.setValid();
-        fabric_md.int_mirror_md.bmd_type = BridgedMdType_t.INT_INGRESS_DROP;
-        fabric_md.int_mirror_md.ip_eth_type = ETHERTYPE_IPV4;
-        fabric_md.int_mirror_md.report_type = IntReportType_t.DROP;
-        fabric_md.int_mirror_md.mirror_type = FabricMirrorType_t.INVALID;
-        fabric_md.int_mirror_md.gtpu_presence = fabric_md.bridged.base.gtpu_presence;
-        fabric_md.int_mirror_md.flow_hash = fabric_md.bridged.base.inner_hash;
-
-        /** report_fixed_header **/
-        hdr.report_fixed_header.ig_tstamp = (bit<32>)fabric_md.bridged.base.ig_tstamp;
-        /** common_report_header **/
-        // update later in the report table
-        hdr.common_report_header.eg_port = 0;
-        hdr.common_report_header.queue_id = 0;
-        // hdr.common_report_header.ig_port = update later
-        // hdr.common_report_header.switch_id = update later
-        /** drop_report_header **/
-        hdr.drop_report_header.setValid();
-        hdr.drop_report_header.drop_reason = fabric_md.bridged.int_bmd.drop_reason;
 
         transition check_ethernet;
     }
@@ -206,7 +215,5 @@ parser IntReportParser (packet_in packet,
         transition accept;
     }
 }
-
-
 
 #endif // __INT_MIRROR_PARSER__
