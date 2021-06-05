@@ -375,28 +375,6 @@ control IntEgress (
         hdr.report_mpls.label = mon_label;
     }
 
-    // Having another action to set ingress and egress port due to incompatible
-    // alignment issue of the INT parser.
-    // In theory we should be able to initialize those value in the parser.
-    action do_ingress_drop_report_encap(mac_addr_t src_mac, mac_addr_t mon_mac,
-                                        ipv4_addr_t src_ip, ipv4_addr_t mon_ip,
-                                        l4_port_t mon_port, bit<32> switch_id) {
-        do_drop_report_encap(src_mac, mon_mac, src_ip, mon_ip, mon_port, switch_id);
-        hdr.common_report_header.ig_port = 7w0 ++ fabric_md.bridged.base.ig_port;
-        hdr.common_report_header.eg_port = 0;
-        hdr.common_report_header.queue_id = 0;
-    }
-
-    action do_ingress_drop_report_encap_mpls(mac_addr_t src_mac, mac_addr_t mon_mac,
-                                             ipv4_addr_t src_ip, ipv4_addr_t mon_ip,
-                                             l4_port_t mon_port, mpls_label_t mon_label,
-                                             bit<32> switch_id) {
-        do_ingress_drop_report_encap(src_mac, mon_mac, src_ip, mon_ip, mon_port, switch_id);
-        hdr.report_eth_type.value = ETHERTYPE_MPLS;
-        hdr.report_mpls.setValid();
-        hdr.report_mpls.label = mon_label;
-    }
-
     // Transforms mirrored packets into INT report packets.
     table report {
         // when we are parsing the regular ingress to egress packet,
@@ -412,8 +390,6 @@ control IntEgress (
             do_local_report_encap_mpls;
             do_drop_report_encap;
             do_drop_report_encap_mpls;
-            do_ingress_drop_report_encap;
-            do_ingress_drop_report_encap_mpls;
             @defaultonly nop();
         }
         default_action = nop;
@@ -437,10 +413,10 @@ control IntEgress (
         fabric_md.int_mirror_md.bmd_type = BridgedMdType_t.EGRESS_MIRROR;
         fabric_md.int_mirror_md.mirror_type = FabricMirrorType_t.INT_REPORT;
         fabric_md.int_mirror_md.report_type = fabric_md.bridged.int_bmd.report_type;
-        fabric_md.int_mirror_md.ig_port = (bit<16>)fabric_md.bridged.base.ig_port;
-        fabric_md.int_mirror_md.eg_port = (bit<16>)eg_intr_md.egress_port;
-        fabric_md.int_mirror_md.queue_id = (bit<8>)eg_intr_md.egress_qid;
-        fabric_md.int_mirror_md.queue_occupancy = (bit<24>)eg_intr_md.enq_qdepth;
+        fabric_md.int_mirror_md.ig_port = fabric_md.bridged.base.ig_port;
+        fabric_md.int_mirror_md.eg_port = eg_intr_md.egress_port;
+        fabric_md.int_mirror_md.queue_id = eg_intr_md.egress_qid;
+        fabric_md.int_mirror_md.queue_occupancy = eg_intr_md.enq_qdepth;
         fabric_md.int_mirror_md.ig_tstamp = fabric_md.bridged.base.ig_tstamp[31:0];
         fabric_md.int_mirror_md.eg_tstamp = eg_prsr_md.global_tstamp[31:0];
         fabric_md.int_mirror_md.ip_eth_type = fabric_md.bridged.base.ip_eth_type;

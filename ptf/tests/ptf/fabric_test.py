@@ -2723,7 +2723,7 @@ class IntTest(IPv4UnicastTest):
     ):
         action = ""
         if bmd_type == BRIDGED_MD_TYPE_INT_INGRESS_DROP:
-            action = "do_ingress_drop_report_encap"
+            action = "do_drop_report_encap"
         elif report_type == INT_REPORT_TYPE_LOCAL:
             action = "do_local_report_encap"
         elif report_type == INT_REPORT_TYPE_DROP:
