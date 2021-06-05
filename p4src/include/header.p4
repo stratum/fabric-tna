@@ -188,11 +188,17 @@ header report_fixed_header_t {
     bit<32> ig_tstamp;
 }
 
+@pa_container_size("egress", "hdr.common_report_header.queue_id", 8)
+@pa_container_size("egress", "hdr.common_report_header.ig_port", 16)
+@pa_container_size("egress", "hdr.common_report_header.eg_port", 16)
 header common_report_header_t {
     bit<32> switch_id;
-    bit<16> ig_port;
-    bit<16> eg_port;
-    bit<8>  queue_id;
+    bit<7>  pad1;
+    bit<9>  ig_port;
+    bit<7>  pad2;
+    bit<9>  eg_port;
+    bit<3>  pad3;
+    bit<5>  queue_id;
 }
 
 // Telemetry drop report header
@@ -203,7 +209,8 @@ header drop_report_header_t {
 
 // Switch Local Report Header
 header local_report_header_t {
-    bit<24> queue_occupancy;
+    bit<5>  pad1;
+    bit<19> queue_occupancy;
     bit<32> eg_tstamp;
 }
 
@@ -229,17 +236,21 @@ header int_mirror_metadata_t {
     BridgedMdType_t       bmd_type;
     @padding bit<5>       _pad0;
     FabricMirrorType_t    mirror_type;
-    bit<16>               ig_port;
-    bit<16>               eg_port;
-    bit<8>                queue_id;
-    bit<24>               queue_occupancy;
+    @padding bit<7>       _pad1;
+    bit<9>                ig_port;
+    @padding bit<7>       _pad2;
+    bit<9>                eg_port;
+    @padding bit<3>       _pad3;
+    bit<5>                queue_id;
+    @padding bit<5>       _pad4;
+    bit<19>               queue_occupancy;
     bit<32>               ig_tstamp;
     bit<32>               eg_tstamp;
     bit<8>                drop_reason;
     bit<16>               ip_eth_type;
-    @padding bit<6>       _pad2;
+    @padding bit<6>       _pad5;
     GtpuPresence          gtpu_presence;
-    @padding bit<6>       _pad3;
+    @padding bit<6>       _pad6;
     IntReportType_t       report_type;
     flow_hash_t           flow_hash;
 }

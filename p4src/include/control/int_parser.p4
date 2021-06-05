@@ -64,10 +64,11 @@ parser IntReportParser (packet_in packet,
         hdr.report_fixed_header.ig_tstamp = (bit<32>)fabric_md.bridged.base.ig_tstamp;
         /** common_report_header **/
         hdr.common_report_header.setValid();
-        // hdr.common_report_header.eg_port = update later
-        // hdr.common_report_header.queue_id = update later
-        // hdr.common_report_header.ig_port = update later
         // hdr.common_report_header.switch_id = update later
+        hdr.common_report_header.ig_port = fabric_md.bridged.base.ig_port;
+        hdr.common_report_header.eg_port = 0;
+        hdr.common_report_header.queue_id = 0;
+
         /** drop_report_header **/
         hdr.drop_report_header.setValid();
         hdr.drop_report_header.drop_reason = fabric_md.bridged.int_bmd.drop_reason;
