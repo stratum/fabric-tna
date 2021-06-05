@@ -252,6 +252,7 @@ struct int_bridged_metadata_t {
 struct int_metadata_t {
     bit<32> hop_latency;
     bit<48> timestamp;
+    bit<16> digest;
 }
 #endif // WITH_INT
 

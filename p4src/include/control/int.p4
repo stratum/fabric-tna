@@ -20,7 +20,6 @@ control FlowReportFilter(
     inout egress_intrinsic_metadata_for_deparser_t eg_dprsr_md) {
 
     Hash<bit<16>>(HashAlgorithm_t.CRC16) digester;
-    bit<16> digest;
     bit<1> flag;
 
     // Bloom filter with 2 hash functions storing flow digests. The digest is
@@ -43,22 +42,22 @@ control FlowReportFilter(
     @reduction_or_group("filter")
     RegisterAction<bit<16>, flow_report_filter_index_t, bit<1>>(filter1) filter_get_and_set1 = {
         void apply(inout bit<16> stored_digest, out bit<1> result) {
-            result = stored_digest == digest ? 1w1 : 1w0;
-            stored_digest = digest;
+            result = stored_digest == fabric_md.int_md.digest ? 1w1 : 1w0;
+            stored_digest = fabric_md.int_md.digest;
         }
     };
 
     @reduction_or_group("filter")
     RegisterAction<bit<16>, flow_report_filter_index_t, bit<1>>(filter2) filter_get_and_set2 = {
         void apply(inout bit<16> stored_digest, out bit<1> result) {
-            result = stored_digest == digest ? 1w1 : 1w0;
-            stored_digest = digest;
+            result = stored_digest == fabric_md.int_md.digest ? 1w1 : 1w0;
+            stored_digest = fabric_md.int_md.digest;
         }
     };
 
     apply {
         if (fabric_md.int_mirror_md.report_type == IntReportType_t.LOCAL) {
-            digest = digester.get({ // burp!
+            fabric_md.int_md.digest = digester.get({ // burp!
                 fabric_md.bridged.base.ig_port,
                 eg_intr_md.egress_port,
                 fabric_md.int_md.hop_latency,
@@ -82,7 +81,6 @@ control DropReportFilter(
     inout egress_intrinsic_metadata_for_deparser_t eg_dprsr_md) {
 
     Hash<bit<16>>(HashAlgorithm_t.CRC16) digester;
-    bit<16> digest;
     bit<1> flag;
 
     // Bloom filter with 2 hash functions storing flow digests. The digest is
@@ -102,16 +100,16 @@ control DropReportFilter(
     @reduction_or_group("filter")
     RegisterAction<bit<16>, drop_report_filter_index_t, bit<1>>(filter1) filter_get_and_set1 = {
         void apply(inout bit<16> stored_digest, out bit<1> result) {
-            result = stored_digest == digest ? 1w1 : 1w0;
-            stored_digest = digest;
+            result = stored_digest == fabric_md.int_md.digest ? 1w1 : 1w0;
+            stored_digest = fabric_md.int_md.digest;
         }
     };
 
     @reduction_or_group("filter")
     RegisterAction<bit<16>, drop_report_filter_index_t, bit<1>>(filter2) filter_get_and_set2 = {
         void apply(inout bit<16> stored_digest, out bit<1> result) {
-            result = stored_digest == digest ? 1w1 : 1w0;
-            stored_digest = digest;
+            result = stored_digest == fabric_md.int_md.digest ? 1w1 : 1w0;
+            stored_digest = fabric_md.int_md.digest;
         }
     };
 
@@ -119,7 +117,7 @@ control DropReportFilter(
         // This control is applied to all pkts, but we filter only INT mirrors.
         if (fabric_md.int_mirror_md.isValid() &&
                 fabric_md.int_mirror_md.report_type == IntReportType_t.DROP) {
-            digest = digester.get({ // burp!
+            fabric_md.int_md.digest = digester.get({ // burp!
                 fabric_md.int_mirror_md.flow_hash,
                 fabric_md.int_md.timestamp
             });
