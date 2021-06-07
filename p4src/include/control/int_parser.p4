@@ -29,7 +29,6 @@ parser IntReportParser (packet_in packet,
         packet.extract(fabric_md.int_mirror_md);
         fabric_md.bridged.bmd_type = fabric_md.int_mirror_md.bmd_type;
         fabric_md.bridged.base.mpls_label = 0; // do not push an MPLS label
-        fabric_md.bridged.int_bmd.gtpu_presence = fabric_md.int_mirror_md.gtpu_presence;
 #ifdef WITH_SPGW
         fabric_md.bridged.spgw.skip_spgw = true;
 #endif // WITH_SPGW

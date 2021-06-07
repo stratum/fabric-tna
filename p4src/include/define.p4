@@ -146,7 +146,7 @@ enum bit<8> BridgedMdType_t {
     INGRESS_TO_EGRESS = 1,
     EGRESS_MIRROR = 2,
     INGRESS_MIRROR = 3,
-    INT_INGRESS_DROP = 4
+    INT_INGRESS_DROP = 4,
     DEFLECTED = 5
 }
 

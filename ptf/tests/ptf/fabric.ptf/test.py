@@ -1885,19 +1885,11 @@ class FabricIntIngressDropReportTest(IntTest):
         is_next_hop_spine,
         is_device_spine,
         send_report_to_spine,
-        drop_reason,
-        ig_port=None,
-        eg_port=None
+        drop_reason
     ):
         self.set_up_flow_report_filter_config(
             hop_latency_mask=0xF0000000, timestamp_mask=0xFFFFFFFF
         )
-        if drop_reason == INT_DROP_REASON_TRAFFIC_MANAGER:
-            # In real hardware, we don't need to add an additional table entry to the
-            # egress_vlan table.
-            # In PTF test we add this table entry because the egress port will be
-            # set to zero when deflect a packet in the Tofino Model.
-            self.set_egress_vlan(0, DEFAULT_VLAN)
         print(
             "Testing VLAN={}, pkt={}, is_next_hop_spine={}, "
             "is_device_spine={}, send_report_to_spine={}, drop_reason={}...".format(
@@ -1917,17 +1909,13 @@ class FabricIntIngressDropReportTest(IntTest):
         pkt = getattr(testutils, "simple_{}_packet".format(pkt_type))(
             ip_dst=self.get_single_use_ip()
         )
-        if not ig_port:
-            ig_port = self.port1
-        if not eg_port:
-            eg_port = 0
         self.runIngressIntDropTest(
             pkt=pkt,
             tagged1=tagged[0],
             tagged2=tagged[1],
             is_next_hop_spine=is_next_hop_spine,
-            ig_port=ig_port,
-            eg_port=eg_port,
+            ig_port=self.port1,
+            eg_port=0,
             expect_int_report=True,
             is_device_spine=is_device_spine,
             send_report_to_spine=send_report_to_spine,
@@ -2001,7 +1989,7 @@ class FabricIntEgressDropReportTest(IntTest):
             tagged2=tagged[1],
             is_next_hop_spine=is_next_hop_spine,
             ig_port=self.port1,
-            eg_port=self.port2,
+            eg_port=RECIRCULATE_PORTS[0],
             expect_int_report=True,
             is_device_spine=is_device_spine,
             send_report_to_spine=send_report_to_spine,

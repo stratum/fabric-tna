@@ -381,9 +381,9 @@ control IntEgress (
                                 l4_port_t mon_port, bit<32> switch_id) {
         do_drop_report_encap(src_mac, mon_mac, src_ip, mon_ip, mon_port, switch_id);
         hdr.common_report_header.setValid();
-        hdr.common_report_header.ig_port = (bit<16>)fabric_md.bridged.base.ig_port;
-        hdr.common_report_header.eg_port = (bit<16>)eg_intr_md.egress_port;
-        hdr.common_report_header.queue_id = (bit<8>)eg_intr_md.egress_qid;
+        hdr.common_report_header.ig_port = fabric_md.bridged.base.ig_port;
+        hdr.common_report_header.eg_port = eg_intr_md.egress_port;
+        hdr.common_report_header.queue_id = eg_intr_md.egress_qid;
         hdr.drop_report_header.setValid();
         hdr.drop_report_header.drop_reason = IntDropReason_t.DROP_REASON_TRAFFIC_MANAGER;
     }

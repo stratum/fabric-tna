@@ -3157,7 +3157,6 @@ class IntTest(IPv4UnicastTest):
             int_inner_pkt = pkt_remove_vlan(int_inner_pkt)
 
         install_routing_entry = True
-        int_egress_port_md = eg_port
         if drop_reason == INT_DROP_REASON_ACL_DENY:
             self.add_forwarding_acl_drop_ingress_port(1)
         elif drop_reason == INT_DROP_REASON_ROUTING_V4_MISS:
@@ -3165,9 +3164,6 @@ class IntTest(IPv4UnicastTest):
         elif drop_reason == INT_DROP_REASON_TRAFFIC_MANAGER:
             # The packet will still be routed, but dropped by traffic manager.
             int_inner_pkt = pkt_route(int_inner_pkt, HOST2_MAC)
-            # In Tofino model, the egress port metadata will be set to zero
-            # if it is a deflected packet.
-            int_egress_port_md = 0
 
         # The expected INT report packet
         exp_int_report_pkt_masked = self.build_int_drop_report(
