@@ -15,13 +15,7 @@ parser PacketInMirrorParser(packet_in packet,
     state start {
         packet_in_mirror_metadata_t pkt_in_md;
         packet.extract(pkt_in_md);
-        // FIXME: In theory we should be able to initialize the packet-in header in
-        //        this parser state, however there is a field alignment error if we
-        //        initialize the field here. Now we will initialize the value in the
-        //        packet_io control block.
         fabric_md.bridged.base.ig_port = pkt_in_md.ingress_port;
-        hdr.packet_in.setValid();
-
         fake_ethernet_t tmp = packet.lookahead<fake_ethernet_t>();
         transition select(tmp.ether_type) {
             ETHERTYPE_CPU_LOOPBACK_INGRESS: strip_fake_ethernet;
