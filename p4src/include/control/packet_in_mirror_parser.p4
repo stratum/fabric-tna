@@ -21,10 +21,7 @@ parser PacketInMirrorParser(packet_in packet,
         //        packet_io control block.
         fabric_md.bridged.base.ig_port = pkt_in_md.ingress_port;
         hdr.packet_in.setValid();
-        transition check_ethernet;
-    }
 
-    state check_ethernet {
         fake_ethernet_t tmp = packet.lookahead<fake_ethernet_t>();
         transition select(tmp.ether_type) {
             ETHERTYPE_CPU_LOOPBACK_INGRESS: strip_fake_ethernet;

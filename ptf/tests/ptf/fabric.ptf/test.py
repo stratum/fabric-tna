@@ -2605,8 +2605,8 @@ class FabricPacketInLoopbackModeTest(FabricTest):
 
     @tvsetup
     @autocleanup
-    def doRunTest(self, pkt, tagged):
-        self.add_forwarding_acl_punt_to_cpu(eth_type=pkt[Ether].type)
+    def doRunTest(self, pkt, tagged, pkt_in_post_ingress):
+        self.add_forwarding_acl_punt_to_cpu(eth_type=pkt[Ether].type, post_ingress=pkt_in_post_ingress)
         if tagged:
             pkt = pkt_add_vlan(pkt, VLAN_ID_1)
         exp_pkt_1 = (
@@ -2631,11 +2631,13 @@ class FabricPacketInLoopbackModeTest(FabricTest):
         print("")
         for pkt_type in ["tcp", "udp", "icmp", "arp"]:
             for tagged in [True, False]:
-                print("Testing {} packet, tagged={}...".format(pkt_type, tagged))
-                pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
-                    pktlen=MIN_PKT_LEN
-                )
-                self.doRunTest(pkt, tagged)
+                for pkt_in_post_ingress in [False, True]:
+                    print("Testing {} packet, tagged={}, post_ingress={}..."
+                            .format(pkt_type, tagged, pkt_in_post_ingress))
+                    pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
+                        pktlen=MIN_PKT_LEN
+                    )
+                    self.doRunTest(pkt, tagged, pkt_in_post_ingress)
 
 
 # FIXME: remove when we start running TVs on hardware
