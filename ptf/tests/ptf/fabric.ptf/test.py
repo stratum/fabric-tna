@@ -77,31 +77,45 @@ class FabricDoubleVlanXConnectTest(DoubleVlanXConnectTest):
 class FabricArpBroadcastUntaggedTest(ArpBroadcastTest):
     @tvsetup
     @autocleanup
-    def runTest(self):
-
+    def doRunTest(self, pkt_in_post_ingress):
         self.runArpBroadcastTest(
             tagged_ports=[], untagged_ports=[self.port1, self.port2, self.port3],
+            pkt_in_post_ingress=pkt_in_post_ingress
         )
+
+    def runTest(self):
+        for pkt_in_post_ingress in [False, True]:
+            self.doRunTest(pkt_in_post_ingress)
 
 
 @group("multicast")
 class FabricArpBroadcastTaggedTest(ArpBroadcastTest):
     @tvsetup
     @autocleanup
-    def runTest(self):
+    def doRunTest(self, pkt_in_post_ingress):
         self.runArpBroadcastTest(
             tagged_ports=[self.port1, self.port2, self.port3], untagged_ports=[],
+            pkt_in_post_ingress=pkt_in_post_ingress
         )
+
+    def runTest(self):
+        for pkt_in_post_ingress in [False, True]:
+            self.doRunTest(pkt_in_post_ingress)
 
 
 @group("multicast")
 class FabricArpBroadcastMixedTest(ArpBroadcastTest):
     @tvsetup
     @autocleanup
-    def runTest(self):
+    def doRunTest(self, pkt_in_post_ingress):
         self.runArpBroadcastTest(
-            tagged_ports=[self.port2, self.port3], untagged_ports=[self.port1]
+            tagged_ports=[self.port2, self.port3], untagged_ports=[self.port1],
+            pkt_in_post_ingress=pkt_in_post_ingress
         )
+
+    def runTest(self):
+        for pkt_in_post_ingress in [False, True]:
+            self.doRunTest(pkt_in_post_ingress)
 
 
 @group("multicast")
@@ -1029,14 +1043,18 @@ class FabricTaggedPacketInTest(PacketInTest):
 class FabricDefaultVlanPacketInTest(FabricTest):
     @tvsetup
     @autocleanup
-    def runTest(self):
+    def doRunTest(self, pkt_in_post_ingress):
         pkt = testutils.simple_eth_packet(pktlen=MIN_PKT_LEN)
-        self.add_forwarding_acl_punt_to_cpu(eth_type=pkt[Ether].type)
+        self.add_forwarding_acl_punt_to_cpu(
+            eth_type=pkt[Ether].type, post_ingress=pkt_in_post_ingress)
         for port in [self.port1, self.port2]:
             self.send_packet(port, pkt)
             self.verify_packet_in(pkt, port)
         self.verify_no_other_packets()
 
+    def runTest(self):
+        for pkt_in_post_ingress in [False, True]:
+            self.doRunTest(pkt_in_post_ingress)
 
 class FabricGtpUnicastEcmpBasedOnTeid(FabricTest):
     """
