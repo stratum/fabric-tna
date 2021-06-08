@@ -27,7 +27,6 @@ parser FabricIngressParser (packet_in  packet,
         fabric_md.bridged.base.ig_port = ig_intr_md.ingress_port;
         fabric_md.bridged.base.ig_tstamp = ig_intr_md.ingress_mac_tstamp;
         fabric_md.egress_port_set = false;
-        fabric_md.copy_to_cpu = false;
         fabric_md.punt_to_cpu = false;
         fabric_md.bridged.base.ip_eth_type = 0;
 #ifdef WITH_INT
@@ -329,7 +328,6 @@ parser FabricEgressParser (packet_in packet,
 #ifdef WITH_INT
             (BridgedMdType_t.INT_INGRESS_DROP, _): parse_int_report;
             (BridgedMdType_t.EGRESS_MIRROR, FabricMirrorType_t.INT_REPORT): parse_int_report;
-            (BridgedMdType_t.INGRESS_MIRROR, FabricMirrorType_t.INT_REPORT): parse_int_report;
 #endif // WITH_INT
             default: reject;
         }
@@ -382,7 +380,7 @@ parser FabricEgressParser (packet_in packet,
         hdr.outer_gtpu_ext_psc.next_ext  = GTPU_NEXT_EXT_NONE;
 #endif // WITH_SPGW
 #ifdef WITH_INT
-        fabric_md.int_mirror_md.gtpu_presence = fabric_md.bridged.base.gtpu_presence;
+        fabric_md.int_report_md.gtpu_presence = fabric_md.bridged.base.gtpu_presence;
 #endif // WITH_INT
         transition check_ethernet;
     }
@@ -476,8 +474,8 @@ control FabricEgressMirror(
     apply {
 #ifdef WITH_INT
         if (eg_intr_md_for_dprsr.mirror_type == (bit<3>)FabricMirrorType_t.INT_REPORT) {
-            mirror.emit<int_mirror_metadata_t>(fabric_md.bridged.int_bmd.mirror_session_id,
-                                               fabric_md.int_mirror_md);
+            mirror.emit<int_report_metadata_t>(fabric_md.bridged.int_bmd.mirror_session_id,
+                                               fabric_md.int_report_md);
         }
 #endif // WITH_INT
     }

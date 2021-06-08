@@ -219,20 +219,20 @@ header local_report_header_t {
 // from egress mirror, the compiler may mark the mirror metadata and other
 // headers (e.g., Report headers) as "mutually exclusive". Here we set all
 // fields as "no overlay" to prevent this.
-@pa_no_overlay("egress", "fabric_md.int_mirror_md.bmd_type")
-@pa_no_overlay("egress", "fabric_md.int_mirror_md.mirror_type")
-@pa_no_overlay("egress", "fabric_md.int_mirror_md.ig_port")
-@pa_no_overlay("egress", "fabric_md.int_mirror_md.eg_port")
-@pa_no_overlay("egress", "fabric_md.int_mirror_md.queue_id")
-@pa_no_overlay("egress", "fabric_md.int_mirror_md.queue_occupancy")
-@pa_no_overlay("egress", "fabric_md.int_mirror_md.ig_tstamp")
-@pa_no_overlay("egress", "fabric_md.int_mirror_md.eg_tstamp")
-@pa_no_overlay("egress", "fabric_md.int_mirror_md.drop_reason")
-@pa_no_overlay("egress", "fabric_md.int_mirror_md.ip_eth_type")
-@pa_no_overlay("egress", "fabric_md.int_mirror_md.report_type")
-@pa_no_overlay("egress", "fabric_md.int_mirror_md.flow_hash")
-@pa_no_overlay("egress", "fabric_md.int_mirror_md.gtpu_presence")
-header int_mirror_metadata_t {
+@pa_no_overlay("egress", "fabric_md.int_report_md.bmd_type")
+@pa_no_overlay("egress", "fabric_md.int_report_md.mirror_type")
+@pa_no_overlay("egress", "fabric_md.int_report_md.ig_port")
+@pa_no_overlay("egress", "fabric_md.int_report_md.eg_port")
+@pa_no_overlay("egress", "fabric_md.int_report_md.queue_id")
+@pa_no_overlay("egress", "fabric_md.int_report_md.queue_occupancy")
+@pa_no_overlay("egress", "fabric_md.int_report_md.ig_tstamp")
+@pa_no_overlay("egress", "fabric_md.int_report_md.eg_tstamp")
+@pa_no_overlay("egress", "fabric_md.int_report_md.drop_reason")
+@pa_no_overlay("egress", "fabric_md.int_report_md.ip_eth_type")
+@pa_no_overlay("egress", "fabric_md.int_report_md.report_type")
+@pa_no_overlay("egress", "fabric_md.int_report_md.flow_hash")
+@pa_no_overlay("egress", "fabric_md.int_report_md.gtpu_presence")
+header int_report_metadata_t {
     BridgedMdType_t       bmd_type;
     @padding bit<5>       _pad0;
     FabricMirrorType_t    mirror_type;
@@ -335,7 +335,6 @@ struct fabric_ingress_metadata_t {
     bool                    skip_next;
     next_id_t               next_id;
     bool                    egress_port_set;
-    bool                    copy_to_cpu;
     bool                    punt_to_cpu;
     // FIXME: checksum errors are set but never read, remove or test it
     bool                    ipv4_checksum_err;
@@ -363,7 +362,7 @@ struct fabric_egress_metadata_t {
     bool                  inner_ipv4_checksum_err;
 #endif // WITH_SPGW
 #ifdef WITH_INT
-    int_mirror_metadata_t int_mirror_md;
+    int_report_metadata_t int_report_md;
     int_metadata_t        int_md;
     bit<16>               int_ipv4_len;
     bool                  is_int;

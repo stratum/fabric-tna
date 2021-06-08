@@ -33,7 +33,6 @@ control Acl (inout ingress_headers_t hdr,
 
     action copy_to_cpu() {
         ig_intr_md_for_tm.copy_to_cpu = 1;
-        fabric_md.copy_to_cpu = true;
         acl_counter.count();
     }
 
