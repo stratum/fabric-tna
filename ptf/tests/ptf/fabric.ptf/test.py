@@ -77,39 +77,31 @@ class FabricDoubleVlanXConnectTest(DoubleVlanXConnectTest):
 class FabricArpBroadcastUntaggedTest(ArpBroadcastTest):
     @tvsetup
     @autocleanup
-    def doRunTest(self):
-        self.runArpBroadcastTest(
-            tagged_ports=[], untagged_ports=[self.port1, self.port2, self.port3]
-        )
-
     def runTest(self):
-        self.doRunTest()
+
+        self.runArpBroadcastTest(
+            tagged_ports=[], untagged_ports=[self.port1, self.port2, self.port3],
+        )
 
 
 @group("multicast")
 class FabricArpBroadcastTaggedTest(ArpBroadcastTest):
     @tvsetup
     @autocleanup
-    def doRunTest(self):
-        self.runArpBroadcastTest(
-            tagged_ports=[self.port1, self.port2, self.port3], untagged_ports=[]
-        )
-
     def runTest(self):
-        self.doRunTest()
+        self.runArpBroadcastTest(
+            tagged_ports=[self.port1, self.port2, self.port3], untagged_ports=[],
+        )
 
 
 @group("multicast")
 class FabricArpBroadcastMixedTest(ArpBroadcastTest):
     @tvsetup
     @autocleanup
-    def doRunTest(self):
+    def runTest(self):
         self.runArpBroadcastTest(
             tagged_ports=[self.port2, self.port3], untagged_ports=[self.port1]
         )
-
-    def runTest(self):
-        self.doRunTest()
 
 
 @group("multicast")
@@ -1033,17 +1025,13 @@ class FabricTaggedPacketInTest(PacketInTest):
 class FabricDefaultVlanPacketInTest(FabricTest):
     @tvsetup
     @autocleanup
-    def doRunTest(self):
+    def runTest(self):
         pkt = testutils.simple_eth_packet(pktlen=MIN_PKT_LEN)
-        self.add_forwarding_acl_punt_to_cpu(
-            eth_type=pkt[Ether].type)
+        self.add_forwarding_acl_punt_to_cpu(eth_type=pkt[Ether].type)
         for port in [self.port1, self.port2]:
             self.send_packet(port, pkt)
             self.verify_packet_in(pkt, port)
         self.verify_no_other_packets()
-
-    def runTest(self):
-        self.doRunTest()
 
 
 # To verify that *_to_cpu_post_ingress action includes changes from the ingress pipeline
@@ -2672,8 +2660,7 @@ class FabricPacketInLoopbackModeTest(FabricTest):
         print("")
         for pkt_type in ["tcp", "udp", "icmp", "arp"]:
             for tagged in [True, False]:
-                print("Testing {} packet, tagged={}..."
-                        .format(pkt_type, tagged))
+                print("Testing {} packet, tagged={}...".format(pkt_type, tagged))
                 pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
                     pktlen=MIN_PKT_LEN
                 )
