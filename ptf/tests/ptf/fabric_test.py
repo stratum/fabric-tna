@@ -609,7 +609,13 @@ class FabricTest(P4RuntimeTest):
     def reset_packet_in_mirror(self):
         self.delete_clone_group(PACKET_IN_MIRROR_ID, [self.cpu_port], store=False)
 
-    def build_packet_out(self, pkt, port, cpu_loopback_mode=CPU_LOOPBACK_MODE_DISABLED, do_forwarding=False):
+    def build_packet_out(
+        self,
+        pkt,
+        port,
+        cpu_loopback_mode=CPU_LOOPBACK_MODE_DISABLED,
+        do_forwarding=False,
+    ):
         packet_out = p4runtime_pb2.PacketOut()
         packet_out.payload = bytes(pkt)
         # egress_port
@@ -1569,8 +1575,9 @@ class IPv4UnicastTest(FabricTest):
             return
 
         if from_packet_out:
-            self.send_packet_out(self.build_packet_out(
-                pkt=pkt, port=0, do_forwarding=True))
+            self.send_packet_out(
+                self.build_packet_out(pkt=pkt, port=0, do_forwarding=True)
+            )
         else:
             self.send_packet(ig_port, pkt)
 
