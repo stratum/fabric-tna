@@ -104,6 +104,8 @@ public class FabricIntProgrammableTest {
     private static final TpPort COLLECTOR_PORT = TpPort.tpPort(32766);
     private static final short BMD_TYPE_EGRESS_MIRROR = 2;
     private static final short BMD_TYPE_INGRESS_MIRROR = 3;
+    private static final short BMD_TYPE_INT_INGRESS_DROP = 4;
+    private static final short MIRROR_TYPE_INVALID = 0;
     private static final short MIRROR_TYPE_INT_REPORT = 1;
     private static final short INT_REPORT_TYPE_LOCAL = 1;
     private static final short INT_REPORT_TYPE_DROP = 2;
@@ -291,10 +293,12 @@ public class FabricIntProgrammableTest {
         final IntDeviceConfig intConfig = buildIntDeviceConfig();
         ImmutableList<FlowRule> expectRules = ImmutableList.of(
                 buildCollectorWatchlistRule(LEAF_DEVICE_ID),
-                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_LOCAL),
-                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_DROP),
-                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_INGRESS_MIRROR, INT_REPORT_TYPE_LOCAL),
-                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_INGRESS_MIRROR, INT_REPORT_TYPE_DROP),
+                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_INT_INGRESS_DROP,
+                                     INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID),
+                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR,
+                                     INT_REPORT_TYPE_DROP, MIRROR_TYPE_INT_REPORT),
+                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR,
+                                     INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT),
                 buildFilterConfigFlow(LEAF_DEVICE_ID)
         );
 
@@ -332,10 +336,12 @@ public class FabricIntProgrammableTest {
         final IntDeviceConfig intConfig = buildIntDeviceConfig();
         ImmutableList<FlowRule> expectRules = ImmutableList.of(
                 buildCollectorWatchlistRule(LEAF_DEVICE_ID),
-                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_LOCAL),
-                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_DROP),
-                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_INGRESS_MIRROR, INT_REPORT_TYPE_LOCAL),
-                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_INGRESS_MIRROR, INT_REPORT_TYPE_DROP),
+                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_INT_INGRESS_DROP,
+                                     INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID),
+                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR,
+                                     INT_REPORT_TYPE_DROP, MIRROR_TYPE_INT_REPORT),
+                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR,
+                                     INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT),
                 buildFilterConfigFlow(LEAF_DEVICE_ID)
         );
 
@@ -377,10 +383,12 @@ public class FabricIntProgrammableTest {
         final IntDeviceConfig intConfig = buildIntDeviceConfig();
         ImmutableList<FlowRule> expectRules = ImmutableList.of(
                 buildCollectorWatchlistRule(SPINE_DEVICE_ID),
-                buildReportTableRule(SPINE_DEVICE_ID, true, BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_LOCAL),
-                buildReportTableRule(SPINE_DEVICE_ID, true, BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_DROP),
-                buildReportTableRule(SPINE_DEVICE_ID, true, BMD_TYPE_INGRESS_MIRROR, INT_REPORT_TYPE_LOCAL),
-                buildReportTableRule(SPINE_DEVICE_ID, true, BMD_TYPE_INGRESS_MIRROR, INT_REPORT_TYPE_DROP),
+                buildReportTableRule(SPINE_DEVICE_ID, true, BMD_TYPE_INT_INGRESS_DROP,
+                                     INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID),
+                buildReportTableRule(SPINE_DEVICE_ID, true, BMD_TYPE_EGRESS_MIRROR,
+                                     INT_REPORT_TYPE_DROP, MIRROR_TYPE_INT_REPORT),
+                buildReportTableRule(SPINE_DEVICE_ID, true, BMD_TYPE_EGRESS_MIRROR,
+                                     INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT),
                 buildFilterConfigFlow(SPINE_DEVICE_ID)
         );
 
@@ -444,14 +452,15 @@ public class FabricIntProgrammableTest {
                 buildFlowEntry(buildExpectedCollectorFlow(IPv4.PROTOCOL_ICMP)),
                 // Report table entry
                 buildFlowEntry(buildFilterConfigFlow(LEAF_DEVICE_ID)),
-                buildFlowEntry(buildReportTableRule(LEAF_DEVICE_ID, false,
-                        BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_LOCAL)),
-                buildFlowEntry(buildReportTableRule(LEAF_DEVICE_ID, false,
-                        BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_DROP)),
-                buildFlowEntry(buildReportTableRule(LEAF_DEVICE_ID, false,
-                        BMD_TYPE_INGRESS_MIRROR, INT_REPORT_TYPE_LOCAL)),
-                buildFlowEntry(buildReportTableRule(LEAF_DEVICE_ID, false,
-                        BMD_TYPE_INGRESS_MIRROR, INT_REPORT_TYPE_DROP))
+                buildFlowEntry(
+                    buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_INT_INGRESS_DROP,
+                                         INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID)),
+                buildFlowEntry(
+                    buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR,
+                                         INT_REPORT_TYPE_DROP, MIRROR_TYPE_INT_REPORT)),
+                buildFlowEntry(
+                    buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR,
+                                         INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT))
         );
         Set<FlowEntry> randomEntries = buildRandomFlowEntries();
         Set<FlowEntry> entries = Sets.newHashSet(intEntries);
@@ -632,7 +641,8 @@ public class FabricIntProgrammableTest {
         return reportAction.build();
     }
 
-    private FlowRule buildReportTableRule(DeviceId deviceId, boolean setMpls, short bmdType, short reportType) {
+    private FlowRule buildReportTableRule(
+            DeviceId deviceId, boolean setMpls, short bmdType, short reportType, short mirrorType) {
         PiAction reportAction = buildReportAction(setMpls, reportType);
         final TrafficTreatment treatment = DefaultTrafficTreatment.builder()
                 .piTableAction(reportAction)
@@ -640,8 +650,7 @@ public class FabricIntProgrammableTest {
         final TrafficSelector selector = DefaultTrafficSelector.builder()
                 .matchPi(PiCriterion.builder()
                         .matchExact(P4InfoConstants.HDR_BMD_TYPE, bmdType)
-                        .matchExact(P4InfoConstants.HDR_MIRROR_TYPE,
-                                MIRROR_TYPE_INT_REPORT)
+                        .matchExact(P4InfoConstants.HDR_MIRROR_TYPE, mirrorType)
                         .matchExact(P4InfoConstants.HDR_INT_REPORT_TYPE, reportType)
                         .build())
                 .build();

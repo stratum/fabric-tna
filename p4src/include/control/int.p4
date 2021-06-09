@@ -224,7 +224,6 @@ control IntIngress(
         key = {
             fabric_md.bridged.int_bmd.report_type: exact @name("int_report_type");
             ig_dprsr_md.drop_ctl: exact @name("drop_ctl");
-            ig_tm_md.copy_to_cpu: ternary @name("copy_to_cpu");
             fabric_md.punt_to_cpu: exact @name("punt_to_cpu");
             fabric_md.egress_port_set: ternary @name("egress_port_set");
             ig_tm_md.mcast_grp_a: ternary @name("mcast_group_id");
@@ -237,9 +236,9 @@ control IntIngress(
         const entries = {
             // Explicit drop. Do not report if we are punting to the CPU, since that is
             // implemented as drop+copy_to_cpu.
-            (IntReportType_t.LOCAL, 1, _, false, _, _): report_drop();
+            (IntReportType_t.LOCAL, 1, false, _, _): report_drop();
             // Likely a table miss
-            (IntReportType_t.LOCAL, 0, 0, false, false, 0): report_drop();
+            (IntReportType_t.LOCAL, 0, false, false, 0): report_drop();
         }
         const default_action = nop();
 #ifdef WITH_DEBUG
@@ -484,7 +483,7 @@ control IntEgress (
         drop_report_filter.apply(hdr, fabric_md, eg_dprsr_md);
 
         if (fabric_md.int_report_md.isValid()) {
-            // Packet is a mirror, now transformed into a report.
+            // Packet is mirrored (egress or deflected) or an ingress drop.
             report.apply();
         } else {
             // Regular packet. Initialize INT mirror metadata but let

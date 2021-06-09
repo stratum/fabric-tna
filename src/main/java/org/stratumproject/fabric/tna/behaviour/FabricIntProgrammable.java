@@ -100,7 +100,8 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
             P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_CONFIG
     );
     private static final short BMD_TYPE_EGRESS_MIRROR = 2;
-    private static final short BMD_TYPE_INGRESS_MIRROR = 3;
+    private static final short BMD_TYPE_INT_INGRESS_DROP = 4;
+    private static final short MIRROR_TYPE_INVALID = 0;
     private static final short MIRROR_TYPE_INT_REPORT = 1;
     private static final short INT_REPORT_TYPE_LOCAL = 1;
     private static final short INT_REPORT_TYPE_DROP = 2;
@@ -476,7 +477,8 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         return Optional.of(cfg.nodeSidIPv4());
     }
 
-    private FlowRule buildReportEntryWithType(IntDeviceConfig intCfg, short bridgedMdType, short reportType) {
+    private FlowRule buildReportEntryWithType(
+            IntDeviceConfig intCfg, short bridgedMdType, short reportType, short mirrorType) {
         final SegmentRoutingDeviceConfig srCfg = cfgService.getConfig(
                 deviceId, SegmentRoutingDeviceConfig.class);
         if (srCfg == null) {
@@ -567,7 +569,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                         .matchExact(P4InfoConstants.HDR_BMD_TYPE,
                                 bridgedMdType)
                         .matchExact(P4InfoConstants.HDR_MIRROR_TYPE,
-                                MIRROR_TYPE_INT_REPORT)
+                                mirrorType)
                         .matchExact(P4InfoConstants.HDR_INT_REPORT_TYPE,
                                 reportType)
                         .build())
@@ -585,10 +587,12 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
 
     private List<FlowRule> buildReportEntries(IntDeviceConfig intCfg) {
         return Lists.newArrayList(
-                buildReportEntryWithType(intCfg, BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_LOCAL),
-                buildReportEntryWithType(intCfg, BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_DROP),
-                buildReportEntryWithType(intCfg, BMD_TYPE_INGRESS_MIRROR, INT_REPORT_TYPE_LOCAL),
-                buildReportEntryWithType(intCfg, BMD_TYPE_INGRESS_MIRROR, INT_REPORT_TYPE_DROP)
+                buildReportEntryWithType(intCfg, BMD_TYPE_INT_INGRESS_DROP,
+                                         INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID),
+                buildReportEntryWithType(intCfg, BMD_TYPE_EGRESS_MIRROR,
+                                         INT_REPORT_TYPE_DROP, MIRROR_TYPE_INT_REPORT),
+                buildReportEntryWithType(intCfg, BMD_TYPE_EGRESS_MIRROR,
+                                         INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT)
         );
     }
 
