@@ -188,6 +188,9 @@ header report_fixed_header_t {
     bit<32> ig_tstamp;
 }
 
+// Ingress drop report PTF tests wil fail without using these annotation
+// According to p4i, without these annotation, some fields will be placed in the same
+// container and the parser will place values incorrectly.
 @pa_container_size("egress", "hdr.common_report_header.queue_id", 8)
 @pa_container_size("egress", "hdr.common_report_header.ig_port", 16)
 @pa_container_size("egress", "hdr.common_report_header.eg_port", 16)
