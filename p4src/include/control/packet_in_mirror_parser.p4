@@ -4,7 +4,7 @@
 #ifndef __PACKET_IN_MIRROR_PARSER__
 #define __PACKET_IN_MIRROR_PARSER__
 
-// The parser to parser mirror packets for packet-in.
+// Parses mirrored packets from the ingress pipe to generate controller packet-ins.
 parser PacketInMirrorParser(packet_in packet,
     /* Fabric-TNA */
     out egress_headers_t hdr,

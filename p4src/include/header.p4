@@ -328,6 +328,8 @@ struct lookup_metadata_t {
 }
 
 // Used for holding basic mirror information.
+// When mirroring, the egress parser will see two types of packets: one with
+// bridged.bmd_type and another with mirror.bmd_type.
 struct common_mirror_metadata_t {
     MirrorId_t         mirror_session_id;
     BridgedMdType_t    bmd_type;
@@ -352,7 +354,7 @@ struct fabric_ingress_metadata_t {
     spgw_ingress_metadata_t  spgw;
 #endif // WITH_SPGW
     PortType_t               ig_port_type;
-    common_mirror_metadata_t common_mirror_md;
+    common_mirror_metadata_t mirror;
 }
 
 // Egress pipeline-only metadata

@@ -273,10 +273,10 @@ control FabricIngressMirror(
     apply {
         if (ig_intr_md_for_dprsr.mirror_type == (bit<3>)FabricMirrorType_t.PACKET_IN) {
             mirror.emit<packet_in_mirror_metadata_t>(
-                fabric_md.common_mirror_md.mirror_session_id,
+                fabric_md.mirror.mirror_session_id,
                 // packet_in_mirror_metadata_t
                 {
-                    fabric_md.common_mirror_md.bmd_type,
+                    fabric_md.mirror.bmd_type,
                     0, // padding
                     (FabricMirrorType_t)ig_intr_md_for_dprsr.mirror_type,
                     0, // padding

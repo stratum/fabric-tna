@@ -77,45 +77,39 @@ class FabricDoubleVlanXConnectTest(DoubleVlanXConnectTest):
 class FabricArpBroadcastUntaggedTest(ArpBroadcastTest):
     @tvsetup
     @autocleanup
-    def doRunTest(self, pkt_in_post_ingress):
+    def doRunTest(self):
         self.runArpBroadcastTest(
-            tagged_ports=[], untagged_ports=[self.port1, self.port2, self.port3],
-            pkt_in_post_ingress=pkt_in_post_ingress
+            tagged_ports=[], untagged_ports=[self.port1, self.port2, self.port3]
         )
 
     def runTest(self):
-        for pkt_in_post_ingress in [False, True]:
-            self.doRunTest(pkt_in_post_ingress)
+        self.doRunTest()
 
 
 @group("multicast")
 class FabricArpBroadcastTaggedTest(ArpBroadcastTest):
     @tvsetup
     @autocleanup
-    def doRunTest(self, pkt_in_post_ingress):
+    def doRunTest(self):
         self.runArpBroadcastTest(
-            tagged_ports=[self.port1, self.port2, self.port3], untagged_ports=[],
-            pkt_in_post_ingress=pkt_in_post_ingress
+            tagged_ports=[self.port1, self.port2, self.port3], untagged_ports=[]
         )
 
     def runTest(self):
-        for pkt_in_post_ingress in [False, True]:
-            self.doRunTest(pkt_in_post_ingress)
+        self.doRunTest()
 
 
 @group("multicast")
 class FabricArpBroadcastMixedTest(ArpBroadcastTest):
     @tvsetup
     @autocleanup
-    def doRunTest(self, pkt_in_post_ingress):
+    def doRunTest(self):
         self.runArpBroadcastTest(
-            tagged_ports=[self.port2, self.port3], untagged_ports=[self.port1],
-            pkt_in_post_ingress=pkt_in_post_ingress
+            tagged_ports=[self.port2, self.port3], untagged_ports=[self.port1]
         )
 
     def runTest(self):
-        for pkt_in_post_ingress in [False, True]:
-            self.doRunTest(pkt_in_post_ingress)
+        self.doRunTest()
 
 
 @group("multicast")
@@ -1043,18 +1037,51 @@ class FabricTaggedPacketInTest(PacketInTest):
 class FabricDefaultVlanPacketInTest(FabricTest):
     @tvsetup
     @autocleanup
-    def doRunTest(self, pkt_in_post_ingress):
+    def doRunTest(self):
         pkt = testutils.simple_eth_packet(pktlen=MIN_PKT_LEN)
         self.add_forwarding_acl_punt_to_cpu(
-            eth_type=pkt[Ether].type, post_ingress=pkt_in_post_ingress)
+            eth_type=pkt[Ether].type)
         for port in [self.port1, self.port2]:
             self.send_packet(port, pkt)
             self.verify_packet_in(pkt, port)
         self.verify_no_other_packets()
 
     def runTest(self):
-        for pkt_in_post_ingress in [False, True]:
-            self.doRunTest(pkt_in_post_ingress)
+        self.doRunTest()
+
+
+# To verify that *_to_cpu_post_ingress action includes changes from the ingress pipeline
+# and *_to_cpu action does not.
+@group("packetio")
+class FabricPacketInPostIngressTest(IPv4UnicastTest):
+
+    @tvsetup
+    @autocleanup
+    def doRunTest(self, action, post_ingress):
+        add_acl_rule = getattr(self, f"add_forwarding_acl_{action}_to_cpu")
+        add_acl_rule(eth_type=ETH_TYPE_IPV4, post_ingress=post_ingress)
+        pkt = testutils.simple_udp_packet()
+        self.runIPv4UnicastTest(
+            pkt,
+            next_hop_mac=HOST2_MAC,
+            verify_pkt=(action == "copy")
+        )
+
+        # only "copy_to_cpu_post_ingress" action will include the change from next
+        # control block, "punt_to_cpu_post_ingress" will skip the next control block
+        # so the mac address will not be changed.
+        if post_ingress and action=="copy":
+            pkt = pkt_route(pkt, HOST2_MAC)
+
+        self.verify_packet_in(pkt, self.port1)
+
+
+    def runTest(self):
+        print()
+        for action in ["punt", "copy"]:
+            for post_ingress in [False, True]:
+                print(f"Testing action={action}, post_ingress={post_ingress}...")
+                self.doRunTest(action, post_ingress)
 
 class FabricGtpUnicastEcmpBasedOnTeid(FabricTest):
     """
@@ -2623,8 +2650,8 @@ class FabricPacketInLoopbackModeTest(FabricTest):
 
     @tvsetup
     @autocleanup
-    def doRunTest(self, pkt, tagged, pkt_in_post_ingress):
-        self.add_forwarding_acl_punt_to_cpu(eth_type=pkt[Ether].type, post_ingress=pkt_in_post_ingress)
+    def doRunTest(self, pkt, tagged):
+        self.add_forwarding_acl_punt_to_cpu(eth_type=pkt[Ether].type)
         if tagged:
             pkt = pkt_add_vlan(pkt, VLAN_ID_1)
         exp_pkt_1 = (
@@ -2649,13 +2676,12 @@ class FabricPacketInLoopbackModeTest(FabricTest):
         print("")
         for pkt_type in ["tcp", "udp", "icmp", "arp"]:
             for tagged in [True, False]:
-                for pkt_in_post_ingress in [False, True]:
-                    print("Testing {} packet, tagged={}, post_ingress={}..."
-                            .format(pkt_type, tagged, pkt_in_post_ingress))
-                    pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
-                        pktlen=MIN_PKT_LEN
-                    )
-                    self.doRunTest(pkt, tagged, pkt_in_post_ingress)
+                print("Testing {} packet, tagged={}..."
+                        .format(pkt_type, tagged))
+                pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
+                    pktlen=MIN_PKT_LEN
+                )
+                self.doRunTest(pkt, tagged)
 
 
 # FIXME: remove when we start running TVs on hardware
