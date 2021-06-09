@@ -13,7 +13,7 @@ control Forwarding (inout ingress_headers_t hdr,
 
 #ifdef WITH_INT
     action set_int_drop_reason(bit<8> drop_reason) {
-        fabric_md.int_mirror_md.drop_reason = drop_reason;
+        fabric_md.bridged.int_bmd.drop_reason = (IntDropReason_t)drop_reason;
     }
 #endif // WITH_INT
 

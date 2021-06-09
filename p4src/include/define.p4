@@ -145,7 +145,8 @@ enum bit<8> BridgedMdType_t {
     INVALID = 0,
     INGRESS_TO_EGRESS = 1,
     EGRESS_MIRROR = 2,
-    INGRESS_MIRROR = 3
+    INGRESS_MIRROR = 3,
+    INT_INGRESS_DROP = 4
 }
 
 // The mirror type, makes the parser to use correct way to parse the mirror metadata.
@@ -183,7 +184,6 @@ const bit<4>  NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER = 2;
 const bit<16> REPORT_FIXED_HEADER_BYTES = 12;
 const bit<16> DROP_REPORT_HEADER_BYTES = 12;
 const bit<16> LOCAL_REPORT_HEADER_BYTES = 16;
-const bit<16> REPORT_MIRROR_HEADER_BYTES = 26;
 const bit<16> ETH_FCS_LEN = 4;
 const bit<8> INT_MIRROR_SESSION_BASE = 0x80;
 

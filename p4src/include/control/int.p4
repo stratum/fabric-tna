@@ -57,7 +57,7 @@ control FlowReportFilter(
     };
 
     apply {
-        if (fabric_md.int_mirror_md.report_type == IntReportType_t.LOCAL) {
+        if (fabric_md.int_report_md.report_type == IntReportType_t.LOCAL) {
             digest = digester.get({ // burp!
                 fabric_md.bridged.base.ig_port,
                 eg_intr_md.egress_port,
@@ -117,14 +117,14 @@ control DropReportFilter(
 
     apply {
         // This control is applied to all pkts, but we filter only INT mirrors.
-        if (fabric_md.int_mirror_md.isValid() &&
-                fabric_md.int_mirror_md.report_type == IntReportType_t.DROP) {
+        if (fabric_md.int_report_md.isValid() &&
+                fabric_md.int_report_md.report_type == IntReportType_t.DROP) {
             digest = digester.get({ // burp!
-                fabric_md.int_mirror_md.flow_hash,
+                fabric_md.int_report_md.flow_hash,
                 fabric_md.int_md.timestamp
             });
-            flag = filter_get_and_set1.execute(fabric_md.int_mirror_md.flow_hash[31:16]);
-            flag = flag | filter_get_and_set2.execute(fabric_md.int_mirror_md.flow_hash[15:0]);
+            flag = filter_get_and_set1.execute(fabric_md.int_report_md.flow_hash[31:16]);
+            flag = flag | filter_get_and_set2.execute(fabric_md.int_report_md.flow_hash[15:0]);
             // Drop the report if we already report it within a period of time.
             if (flag == 1) {
                 eg_dprsr_md.drop_ctl = 1;
@@ -146,7 +146,6 @@ control IntWatchlist(
 
     action mark_to_report() {
         fabric_md.bridged.int_bmd.report_type = IntReportType_t.LOCAL;
-        fabric_md.int_mirror_md.gtpu_presence = fabric_md.bridged.base.gtpu_presence;
 #ifdef WITH_DEBUG
         watchlist_counter.count();
 #endif // WITH_DEBUG
@@ -202,18 +201,19 @@ control IntIngress(
 
     @hidden
     action report_drop() {
+        fabric_md.bridged.bmd_type = BridgedMdType_t.INT_INGRESS_DROP;
         fabric_md.bridged.int_bmd.report_type = IntReportType_t.DROP;
-        ig_dprsr_md.mirror_type = (bit<3>)FabricMirrorType_t.INT_REPORT;
-        fabric_md.int_mirror_md.setValid();
-        fabric_md.int_mirror_md.bmd_type = BridgedMdType_t.INGRESS_MIRROR;
-        fabric_md.int_mirror_md.mirror_type = FabricMirrorType_t.INT_REPORT;
-        fabric_md.int_mirror_md.report_type = IntReportType_t.DROP;
-        fabric_md.int_mirror_md.ig_port = (bit<16>)ig_intr_md.ingress_port;
-        fabric_md.int_mirror_md.ip_eth_type = fabric_md.bridged.base.ip_eth_type;
-        fabric_md.int_mirror_md.eg_port = (bit<16>)ig_tm_md.ucast_egress_port;
-        fabric_md.int_mirror_md.queue_id = (bit<8>)ig_tm_md.qid;
-        fabric_md.int_mirror_md.flow_hash = fabric_md.bridged.base.inner_hash;
-        ig_dprsr_md.drop_ctl = 1;
+        fabric_md.bridged.base.vlan_id = DEFAULT_VLAN_ID;
+        fabric_md.bridged.base.mpls_label = 0; // do not push an MPLS label
+#ifdef WITH_SPGW
+        fabric_md.bridged.spgw.skip_spgw = true;
+#endif // WITH_SPGW
+        // Redirect to the recirculation port of the pipeline
+        ig_tm_md.ucast_egress_port = ig_intr_md.ingress_port[8:7] ++ RECIRC_PORT_NUMBER;
+
+        // The drop flag may be set by other tables, need to reset it so the packet can
+        // be forward to the recirculation port.
+        ig_dprsr_md.drop_ctl = 0;
 #ifdef WITH_DEBUG
         drop_report_counter.count();
 #endif // WITH_DEBUG
@@ -224,7 +224,7 @@ control IntIngress(
         key = {
             fabric_md.bridged.int_bmd.report_type: exact @name("int_report_type");
             ig_dprsr_md.drop_ctl: exact @name("drop_ctl");
-            ig_tm_md.copy_to_cpu: exact @name("copy_to_cpu");
+            fabric_md.punt_to_cpu: exact @name("punt_to_cpu");
             fabric_md.egress_port_set: ternary @name("egress_port_set");
             ig_tm_md.mcast_grp_a: ternary @name("mcast_group_id");
         }
@@ -234,8 +234,11 @@ control IntIngress(
         }
         const size = 2;
         const entries = {
-            (IntReportType_t.LOCAL, 1, 0, _, _): report_drop();
-            (IntReportType_t.LOCAL, 0, 0, false, 0): report_drop();
+            // Explicit drop. Do not report if we are punting to the CPU, since that is
+            // implemented as drop+copy_to_cpu.
+            (IntReportType_t.LOCAL, 1, false, _, _): report_drop();
+            // Likely a table miss
+            (IntReportType_t.LOCAL, 0, false, false, 0): report_drop();
         }
         const default_action = nop();
 #ifdef WITH_DEBUG
@@ -304,7 +307,7 @@ control IntEgress (
         hdr.report_fixed_header.seq_no = get_seq_number.execute(hdr.report_fixed_header.hw_id);
         hdr.common_report_header.switch_id = switch_id;
         // Fix ethertype if we have stripped the MPLS header in the parser.
-        hdr.eth_type.value = fabric_md.int_mirror_md.ip_eth_type;
+        hdr.eth_type.value = fabric_md.int_report_md.ip_eth_type;
         // Remove the INT mirror metadata to prevent egress mirroring again.
         eg_dprsr_md.mirror_type = (bit<3>)FabricMirrorType_t.INVALID;
 #ifdef WITH_DEBUG
@@ -371,12 +374,12 @@ control IntEgress (
     // Transforms mirrored packets into INT report packets.
     table report {
         // when we are parsing the regular ingress to egress packet,
-        // the `int_mirror_md` will be undefined, add `bmd_type` match key to ensure we
+        // the `int_report_md` will be undefined, add `bmd_type` match key to ensure we
         // are handling the right packet type.
         key = {
-            fabric_md.bridged.bmd_type: exact @name("bmd_type");
-            fabric_md.int_mirror_md.mirror_type: exact @name("mirror_type");
-            fabric_md.int_mirror_md.report_type: exact @name("int_report_type");
+            fabric_md.int_report_md.bmd_type: exact @name("bmd_type");
+            fabric_md.int_report_md.mirror_type: exact @name("mirror_type");
+            fabric_md.int_report_md.report_type: exact @name("int_report_type");
         }
         actions = {
             do_local_report_encap;
@@ -388,6 +391,13 @@ control IntEgress (
         default_action = nop;
         const size = 6; // Flow, Drop, and Queue report
                         // times bridged metadata types(IN/EGRESS_MIRROR)
+        // entries = {
+        //      (INT_INGRESS_DROP, INVALID, DROP): ingress drop report
+        //      (EGRESS_MIRROR, INT_REPORT, DROP): egress drop report
+        //      (DEFLECTED, INVALID, LOCAL): deflect on drop report
+        //      (EGRESS_MIRROR, INT_REPORT, LOCAL): local report
+        //      (EGRESS_MIRROR, INT_REPORT, QUEUE): queue report
+        // }
 #ifdef WITH_DEBUG
         counters = report_counter;
 #endif // WITH_DEBUG
@@ -396,24 +406,24 @@ control IntEgress (
     @hidden
     action set_report_metadata() {
         eg_dprsr_md.mirror_type = (bit<3>)FabricMirrorType_t.INT_REPORT;
-        fabric_md.int_mirror_md.bmd_type = BridgedMdType_t.EGRESS_MIRROR;
-        fabric_md.int_mirror_md.mirror_type = FabricMirrorType_t.INT_REPORT;
-        fabric_md.int_mirror_md.report_type = fabric_md.bridged.int_bmd.report_type;
-        fabric_md.int_mirror_md.ig_port = (bit<16>)fabric_md.bridged.base.ig_port;
-        fabric_md.int_mirror_md.eg_port = (bit<16>)eg_intr_md.egress_port;
-        fabric_md.int_mirror_md.queue_id = (bit<8>)eg_intr_md.egress_qid;
-        fabric_md.int_mirror_md.queue_occupancy = (bit<24>)eg_intr_md.enq_qdepth;
-        fabric_md.int_mirror_md.ig_tstamp = fabric_md.bridged.base.ig_tstamp[31:0];
-        fabric_md.int_mirror_md.eg_tstamp = eg_prsr_md.global_tstamp[31:0];
-        fabric_md.int_mirror_md.ip_eth_type = fabric_md.bridged.base.ip_eth_type;
-        fabric_md.int_mirror_md.flow_hash = fabric_md.bridged.base.inner_hash;
-        // fabric_md.int_mirror_md.gtpu_presence set by the parser
+        fabric_md.int_report_md.bmd_type = BridgedMdType_t.EGRESS_MIRROR;
+        fabric_md.int_report_md.mirror_type = FabricMirrorType_t.INT_REPORT;
+        fabric_md.int_report_md.report_type = fabric_md.bridged.int_bmd.report_type;
+        fabric_md.int_report_md.ig_port = fabric_md.bridged.base.ig_port;
+        fabric_md.int_report_md.eg_port = eg_intr_md.egress_port;
+        fabric_md.int_report_md.queue_id = eg_intr_md.egress_qid;
+        fabric_md.int_report_md.queue_occupancy = eg_intr_md.enq_qdepth;
+        fabric_md.int_report_md.ig_tstamp = fabric_md.bridged.base.ig_tstamp[31:0];
+        fabric_md.int_report_md.eg_tstamp = eg_prsr_md.global_tstamp[31:0];
+        fabric_md.int_report_md.ip_eth_type = fabric_md.bridged.base.ip_eth_type;
+        fabric_md.int_report_md.flow_hash = fabric_md.bridged.base.inner_hash;
+        // fabric_md.int_report_md.gtpu_presence set by the parser
     }
 
     @hidden
     action report_local() {
         set_report_metadata();
-        fabric_md.int_mirror_md.report_type = IntReportType_t.LOCAL;
+        fabric_md.int_report_md.report_type = IntReportType_t.LOCAL;
 #ifdef WITH_DEBUG
         int_metadata_counter.count();
 #endif // WITH_DEBUG
@@ -422,7 +432,7 @@ control IntEgress (
     @hidden
     action report_drop() {
         set_report_metadata();
-        fabric_md.int_mirror_md.report_type = IntReportType_t.DROP;
+        fabric_md.int_report_md.report_type = IntReportType_t.DROP;
 #ifdef WITH_DEBUG
         int_metadata_counter.count();
 #endif // WITH_DEBUG
@@ -472,8 +482,9 @@ control IntEgress (
         //  miss, etc.)?
         drop_report_filter.apply(hdr, fabric_md, eg_dprsr_md);
 
-        if (report.apply().hit) {
-            // Packet is a mirror, now transformed into a report.
+        if (fabric_md.int_report_md.isValid()) {
+            // Packet is mirrored (egress or deflected) or an ingress drop.
+            report.apply();
         } else {
             // Regular packet. Initialize INT mirror metadata but let
             // filter decide whether to generate a mirror or not.

@@ -27,6 +27,7 @@ control Acl (inout ingress_headers_t hdr,
         ig_intr_md_for_tm.copy_to_cpu = 1;
         ig_intr_md_for_dprsr.drop_ctl = 1;
         fabric_md.skip_next = true;
+        fabric_md.punt_to_cpu = true;
         acl_counter.count();
     }
 
@@ -39,7 +40,7 @@ control Acl (inout ingress_headers_t hdr,
         ig_intr_md_for_dprsr.drop_ctl = 1;
         fabric_md.skip_next = true;
 #ifdef WITH_INT
-        fabric_md.int_mirror_md.drop_reason = IntDropReason_t.DROP_REASON_ACL_DENY;
+        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_ACL_DENY;
 #endif // WITH_INT
         acl_counter.count();
     }
