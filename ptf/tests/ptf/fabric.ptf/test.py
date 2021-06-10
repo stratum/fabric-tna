@@ -1036,10 +1036,10 @@ class FabricDefaultVlanPacketInTest(FabricTest):
 
 @group("packetio")
 class FabricPacketInPostIngressTest(IPv4UnicastTest):
-"""
-Packet-in generated using clone/punt_to_cpu_post_ingress actions should include changes
-from the ingress pipeline, while clone/punt_to_cpu action should not.
-"""
+    """
+    Packet-in generated using clone/punt_to_cpu_post_ingress actions should include changes
+    from the ingress pipeline, while clone/punt_to_cpu action should not.
+    """
 
     @tvsetup
     @autocleanup
