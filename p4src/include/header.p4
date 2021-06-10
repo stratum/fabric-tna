@@ -171,7 +171,7 @@ struct spgw_ingress_metadata_t {
     bool               needs_gtpu_decap;
     far_id_t           far_id;
     SpgwInterface      src_iface;
-    color_t            color;
+    MeterColor_t       color;
 }
 
 

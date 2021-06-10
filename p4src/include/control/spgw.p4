@@ -252,13 +252,13 @@ control SpgwIngress(
 
     action qos_drop() {
         // general far attributes
-	ig_dprsr_md.drop_ctl = 1;
-	fabric_md.skip_forwarding = true;
-	fabric_md.skip_next = true;
-	fabric_md.bridged.spgw.needs_gtpu_encap = false;
-	fabric_md.bridged.spgw.skip_egress_pdr_ctr = false;
+        ig_dprsr_md.drop_ctl = 1;
+        fabric_md.skip_forwarding = true;
+        fabric_md.skip_next = true;
+        fabric_md.bridged.spgw.needs_gtpu_encap = false;
+        fabric_md.bridged.spgw.skip_egress_pdr_ctr = false;
 #ifdef WITH_INT
-	fabric_md.int_mirror_md.drop_reason = IntDropReason_t.DROP_REASON_QOS;
+        fabric_md.int_mirror_md.drop_reason = IntDropReason_t.DROP_REASON_QOS;
 #endif // WITH_INT
     }
 
@@ -268,20 +268,25 @@ control SpgwIngress(
 
     action set_qid_midx(bit<5> qid, bit<10> meter_idx) {
         ig_tm_md.qid = qid;
-        fabric_md.spgw.color = meter.execute(meter_idx);
+        fabric_md.spgw.color = (MeterColor_t) meter.execute(meter_idx);
+    }
+
+    action qos_miss() {
+        fabric_md.spgw.color = MeterColor_t.GREEN;
     }
 
     table qos_classifier {
         key = {
-            hdr.ipv4.src_addr          : ternary     @name("inet_addr")   ;
-            hdr.ipv4.dst_addr          : ternary     @name("ue_addr")     ;
-            fabric_md.bridged.l4_sport : ternary     @name("inet_l4_port");
-            fabric_md.bridged.l4_dport : ternary     @name("ue_l4_port")  ;
-            hdr.ipv4.protocol          : ternary     @name("ip_proto")    ;
+            fabric_md.lkp.ipv4_src  : ternary     @name("inet_addr")   ;
+            fabric_md.lkp.ipv4_dst  : ternary     @name("ue_addr")     ;
+            fabric_md.lkp.l4_sport  : ternary     @name("inet_l4_port");
+            fabric_md.lkp.l4_dport  : ternary     @name("ue_l4_port")  ;
+            fabric_md.lkp.ip_proto  : ternary     @name("ip_proto")    ;
         }
         actions = {
             set_qid();
             set_qid_midx();
+            @defaultonly qos_miss;
         }
     }
     //=============================//
@@ -389,8 +394,8 @@ control SpgwIngress(
                             fabric_md.spgw.src_iface == SpgwInterface.FROM_DBUF) {
                     downlink_pdrs.apply();
                     qos_classifier.apply();
-                    if (fabric_md.spgw.color == 3) {
-                        drop();
+                    if (fabric_md.spgw.color == MeterColor_t.RED) {
+                        qos_drop();
                     }
                 }
                 if (fabric_md.spgw.src_iface != SpgwInterface.FROM_DBUF) {

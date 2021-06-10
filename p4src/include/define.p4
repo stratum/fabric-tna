@@ -48,7 +48,7 @@ typedef bit<32> teid_t;
 typedef bit<32> far_id_t;
 typedef bit<5>  qid_t;
 typedef bit<16> pdr_ctr_id_t;
-typedef bit<8>  color_t;
+
 enum bit<2> SpgwDirection {
     UNKNOWN             = 0x0,
     UPLINK              = 0x1,
@@ -217,7 +217,8 @@ enum bit<8> IntDropReason_t {
     DROP_REASON_DOWNLINK_PDR_MISS = 132,
     DROP_REASON_UPLINK_PDR_MISS = 133,
     DROP_REASON_FAR_MISS = 134,
-    DROP_REASON_SPGW_UPLINK_RECIRC_DENY = 150
+    DROP_REASON_SPGW_UPLINK_RECIRC_DENY = 150,
+    DROP_REASON_QOS = 151
 }
 
 #endif // __DEFINE__

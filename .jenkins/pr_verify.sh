@@ -22,22 +22,6 @@ docker pull "${SDE_P4C_DOCKER_IMG}"
 # Jenkins uses 8 cores 15G VM
 make -j8 all
 
-echo "Build and verify Java pipeconf"
-make constants pipeconf-ci MVN_FLAGS="-Pci-verify -Pcoverage"
-
-echo "Upload coverage to codecov"
-bash .jenkins/codecov.sh -Z
-
-# Since the Java build is based on auto-generated P4InfoConstants.java (make
-# constants above), check that checked-in file is up-to-date:
-modified=$(git status --porcelain)
-if [ -n "$modified" ]; then
-  echo "The following build artifacts do not correspond to the expected ones,"
-  echo "please run the build locally before pushing a new change:"
-  echo "$modified"
-  exit 1
-fi
-
 # We limit running PTF tests for only those profiles used in Aether, otherwise
 # we exceed the 45 min limit on Jenkins.
 # FIXME: revert once the PTF tests execution time is optimized (#238)
