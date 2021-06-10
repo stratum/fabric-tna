@@ -170,6 +170,7 @@ def run_test(
     generate_tv=False,
     loopback=False,
     extra_args=(),
+    line_rate_test=False
 ):
     """
     Runs PTF tests included in provided directory.
@@ -179,23 +180,24 @@ def run_test(
     # "ptf_port" is ignored for now, we assume that ports are provided by
     # increasing values of ptf_port, in the range [0, NUM_IFACES[.
     port_map = OrderedDict()
-    with open(port_map_path, "r") as port_map_f:
-        port_list = json.load(port_map_f)
-        if generate_tv:
-            # interfaces string to be used to create interfaces in test runner
-            # container
-            interfaces = ""
-            # Create new portmap proto object for testvectors
-            tv_portmap = pmutils.get_new_portmap()
-        for entry in port_list:
-            p4_port = entry["p4_port"]
-            iface_name = entry["iface_name"]
-            port_map[p4_port] = iface_name
+    if not line_rate_test:
+        with open(port_map_path, "r") as port_map_f:
+            port_list = json.load(port_map_f)
             if generate_tv:
-                # Append iface_name to interfaces
-                interfaces = interfaces + " " + iface_name
-                # Append new entry to tv proto object
-                pmutils.add_new_entry(tv_portmap, p4_port, iface_name)
+                # interfaces string to be used to create interfaces in test runner
+                # container
+                interfaces = ""
+                # Create new portmap proto object for testvectors
+                tv_portmap = pmutils.get_new_portmap()
+            for entry in port_list:
+                p4_port = entry["p4_port"]
+                iface_name = entry["iface_name"]
+                port_map[p4_port] = iface_name
+                if generate_tv:
+                    # Append iface_name to interfaces
+                    interfaces = interfaces + " " + iface_name
+                    # Append new entry to tv proto object
+                    pmutils.add_new_entry(tv_portmap, p4_port, iface_name)
     if generate_tv:
         # ptf needs the interfaces mentioned in portmap to be running on
         # container
@@ -262,6 +264,24 @@ def check_ptf():
         return True
     except OSError:  # PTF not found
         return False
+
+
+TREX_FILES_DIR = "/tmp/trex_files/"
+trex_daemon_client = None
+
+
+def set_up_trex_server(trex_addr, trex_config):
+    trex_daemon_client = CTRexClient(trex_addr)
+
+    logging.info("Pushing Trex config %s to the server", trex_config)
+    if not trex_daemon_client.push_files(trex_config):
+        logging.error("Unable to push %s to Trex server", trex_config)
+        return 1
+    trex_config_file_on_server = TREX_FILES_DIR + os.path.basename(trex_config)
+    trex_daemon_client.start_stateless(cfg=trex_config_file_on_server)
+
+    # get the client when starting the PTF test
+    # trex_client = STLClient(server=args.server_addr)
 
 
 # noinspection PyTypeChecker
@@ -338,6 +358,26 @@ def main():
         required=True,
         choices=["fabric", "fabric-spgw", "fabric-int", "fabric-spgw-int"],
     )
+
+    parser.add_argument(
+        "--trex-address",
+        help="",
+        type=str,
+        required=False,
+    )
+    parser.add_argument(
+        "--trex-config",
+        help="",
+        type=str,
+        required=False,
+    )
+    parser.add_argument(
+        "--line-rate-test",
+        help="",
+        action="store_true",
+        required=False,
+    )
+
     args, unknown_args = parser.parse_known_args()
 
     if not check_ptf():
@@ -359,6 +399,9 @@ def main():
         sys.exit(1)
 
     success = True
+
+    if args.line_rate_test:
+        success = set_up_trex_server(args.trex_address, args.trex_config)
 
     if not args.skip_config:
         success = update_config(
@@ -384,7 +427,11 @@ def main():
             loopback=args.loopback,
             profile=args.profile,
             extra_args=unknown_args,
+            line_rate_test=args.line_rate_test
         )
+
+    # clean up TRex
+    trex_daemon_client.stop_trex()
 
     if not success:
         sys.exit(3)
