@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 p4src/build
 target
-.vscode
 *.pyc
 src/main/resources/p4c-out
 .idea
@@ -21,3 +20,6 @@ dependencies.xml
 bf_drivers.log.*
 .venv
 venv
+.classpath
+.project
+.settings

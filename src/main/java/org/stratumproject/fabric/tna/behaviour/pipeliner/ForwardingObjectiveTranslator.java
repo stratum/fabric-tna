@@ -17,7 +17,9 @@ import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.net.flow.criteria.Criterion;
 import org.onosproject.net.flow.criteria.EthCriterion;
 import org.onosproject.net.flow.criteria.IPCriterion;
+import org.onosproject.net.flow.criteria.MetadataCriterion;
 import org.onosproject.net.flow.criteria.MplsCriterion;
+import org.onosproject.net.flow.criteria.PiCriterion;
 import org.onosproject.net.flow.criteria.VlanIdCriterion;
 import org.onosproject.net.flowobjective.ForwardingObjective;
 import org.onosproject.net.flowobjective.ObjectiveError;
@@ -33,6 +35,9 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
+import static org.stratumproject.fabric.tna.behaviour.Constants.PORT_TYPE_EDGE;
+import static org.stratumproject.fabric.tna.behaviour.Constants.PORT_TYPE_INFRA;
+import static org.stratumproject.fabric.tna.behaviour.Constants.PORT_TYPE_MASK;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.criterionNotNull;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.outputPort;
 
@@ -78,6 +83,8 @@ class ForwardingObjectiveTranslator
                  P4InfoConstants.FABRIC_INGRESS_FORWARDING_SET_NEXT_ID_ROUTING_V6)
             .put(P4InfoConstants.FABRIC_INGRESS_FORWARDING_MPLS,
                  P4InfoConstants.FABRIC_INGRESS_FORWARDING_POP_MPLS_AND_NEXT)
+            .put(P4InfoConstants.FABRIC_INGRESS_ACL_ACL,
+                 P4InfoConstants.FABRIC_INGRESS_ACL_SET_NEXT_ID_ACL)
             .build();
 
     ForwardingObjectiveTranslator(DeviceId deviceId, FabricCapabilities capabilities) {
@@ -255,8 +262,22 @@ class ForwardingObjectiveTranslator
                 return;
             }
         }
+        TrafficSelector.Builder selectorBuilder = DefaultTrafficSelector.builder(obj.selector());
+        // Meta are used to signal the port type which can be edge or infra
+        if (obj.meta() != null && obj.meta().getCriterion(Criterion.Type.METADATA) != null) {
+            long portType = ((MetadataCriterion) obj.meta().getCriterion(Criterion.Type.METADATA)).metadata();
+            if (portType == PORT_TYPE_EDGE || portType == PORT_TYPE_INFRA) {
+                selectorBuilder.matchPi(PiCriterion.builder()
+                        .matchTernary(P4InfoConstants.HDR_IG_PORT_TYPE, portType, PORT_TYPE_MASK)
+                        .build());
+            } else {
+                throw new FabricPipelinerException(format("Port type '%s' is not allowed for table '%s'",
+                        portType, P4InfoConstants.FABRIC_INGRESS_ACL_ACL),
+                        ObjectiveError.UNSUPPORTED);
+            }
+        }
         resultBuilder.addFlowRule(flowRule(
-                obj, P4InfoConstants.FABRIC_INGRESS_ACL_ACL, obj.selector()));
+                obj, P4InfoConstants.FABRIC_INGRESS_ACL_ACL, selectorBuilder.build()));
     }
 
     private FlowRule flowRule(

@@ -8,27 +8,25 @@
 #
 # This job should be executed for each pull request.
 
-# TODO (carmelo): consider using a declarative Jenkins pipeline definition so we
+# TODO (carmelo): consider using a declarative Jenkins pipeline so we
 # can parallelize some of the tasks.
 
 # exit on errors
 set -exu -o pipefail
 
-sdeVer="9.2.0"
-sdeBaseDockerImg=opennetworking/bf-sde:${sdeVer}
+source .env
 
-echo "Build all profiles using SDE ${sdeBaseDockerImg}..."
+echo "Build all profiles using SDE ${SDE_P4C_DOCKER_IMG}..."
 # Pull first to avoid pulling multiple times in parallel by the make jobs
-docker pull ${sdeBaseDockerImg}-p4c
+docker pull "${SDE_P4C_DOCKER_IMG}"
 # Jenkins uses 8 cores 15G VM
-make -j8 all SDE_DOCKER_IMG=${sdeBaseDockerImg}-p4c
+make -j8 all
 
 echo "Build and verify Java pipeconf"
-make constants pipeconf MVN_FLAGS="-Pci-verify -Pcoverage"
+make constants pipeconf-ci MVN_FLAGS="-Pci-verify -Pcoverage"
 
 echo "Upload coverage to codecov"
-export CODECOV_TOKEN=75f36e70-2caf-46ab-9b76-7a1b9a419ebd
-curl -s https://codecov.io/bash | bash
+bash .jenkins/codecov.sh -Z
 
 # Since the Java build is based on auto-generated P4InfoConstants.java (make
 # constants above), check that checked-in file is up-to-date:
@@ -40,11 +38,13 @@ if [ -n "$modified" ]; then
   exit 1
 fi
 
+# We limit running PTF tests for only those profiles used in Aether, otherwise
+# we exceed the 45 min limit on Jenkins.
+# FIXME: revert once the PTF tests execution time is optimized (#238)
+for profile in "fabric-int" "fabric-spgw-int"; do
 # Run PTF tests for all profiles we just built
-export STRATUM_BF_DOCKER_IMG=stratumproject/stratum-bfrt:20.12-${sdeVer}
-export SDE_DOCKER_IMG=${sdeBaseDockerImg}-tm
-for d in ./p4src/build/*/; do
-  profile=$(basename "${d}")
+#for d in ./p4src/build/*/; do
+#  profile=$(basename "${d}")
 
   echo "Run PTF tests for profile ${profile}"
   ./ptf/run/tm/run "${profile}"

@@ -4,6 +4,7 @@
 package org.stratumproject.fabric.tna.behaviour.pipeliner;
 
 import com.google.common.collect.ImmutableList;
+import org.onlab.packet.Ethernet;
 import org.onlab.util.SharedExecutors;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
@@ -13,11 +14,15 @@ import org.onosproject.net.behaviour.NextGroup;
 import org.onosproject.net.behaviour.Pipeliner;
 import org.onosproject.net.behaviour.PipelinerContext;
 import org.onosproject.net.flow.DefaultFlowRule;
+import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
 import org.onosproject.net.flow.FlowRule;
 import org.onosproject.net.flow.FlowRuleOperations;
 import org.onosproject.net.flow.FlowRuleService;
+import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flow.TrafficTreatment;
+import org.onosproject.net.flow.criteria.Criteria;
+import org.onosproject.net.flow.criteria.PiCriterion;
 import org.onosproject.net.flowobjective.FilteringObjective;
 import org.onosproject.net.flowobjective.FlowObjectiveStore;
 import org.onosproject.net.flowobjective.ForwardingObjective;
@@ -31,10 +36,10 @@ import org.onosproject.net.group.GroupService;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
 import org.slf4j.Logger;
+import org.stratumproject.fabric.tna.PipeconfLoader;
 import org.stratumproject.fabric.tna.behaviour.AbstractFabricHandlerBehavior;
 import org.stratumproject.fabric.tna.behaviour.FabricCapabilities;
 import org.stratumproject.fabric.tna.behaviour.P4InfoConstants;
-import org.stratumproject.fabric.tna.PipeconfLoader;
 
 import java.util.Collection;
 import java.util.List;
@@ -45,6 +50,13 @@ import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static org.slf4j.LoggerFactory.getLogger;
+import static org.stratumproject.fabric.tna.behaviour.Constants.DEFAULT_VLAN;
+import static org.stratumproject.fabric.tna.behaviour.Constants.FWD_IPV4_ROUTING;
+import static org.stratumproject.fabric.tna.behaviour.Constants.FWD_MPLS;
+import static org.stratumproject.fabric.tna.behaviour.Constants.ONE;
+import static org.stratumproject.fabric.tna.behaviour.Constants.PORT_TYPE_INTERNAL;
+import static org.stratumproject.fabric.tna.behaviour.Constants.RECIRC_PORTS;
+import static org.stratumproject.fabric.tna.behaviour.Constants.ZERO;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.KRYO;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.outputPort;
 
@@ -148,23 +160,27 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
     }
 
     protected void initializePipeline() {
-        final PiActionParam param = new PiActionParam(P4InfoConstants.CPU_PORT, capabilities.cpuPort().get());
-        final PiAction action = PiAction.builder()
-                .withId(P4InfoConstants.FABRIC_EGRESS_PKT_IO_EGRESS_SET_SWITCH_INFO)
-                .withParameter(param)
-                .build();
-        final TrafficTreatment treatment = DefaultTrafficTreatment.builder()
-                .piTableAction(action)
-                .build();
-        FlowRule rule = DefaultFlowRule.builder()
-                .forDevice(deviceId)
-                .withTreatment(treatment)
-                .withPriority(DEFAULT_FLOW_PRIORITY)
-                .fromApp(appId)
-                .makePermanent()
-                .forTable(P4InfoConstants.FABRIC_EGRESS_PKT_IO_EGRESS_SWITCH_INFO)
-                .build();
-        flowRuleService.applyFlowRules(rule);
+        // Set up CPU port for packet-in/out. For packet-out, we support only
+        // IPv4 routing when do_forwarding=1.
+        final int cpuPort = capabilities.cpuPort().get();
+        flowRuleService.applyFlowRules(
+                egressSwitchInfoRule(cpuPort),
+                ingressVlanRule(cpuPort, false, DEFAULT_VLAN, PORT_TYPE_INTERNAL),
+                fwdClassifierRule(cpuPort, null, Ethernet.TYPE_IPV4, FWD_IPV4_ROUTING,
+                        DEFAULT_FLOW_PRIORITY));
+        // Set up recirculation ports as untagged (used for INT reports and
+        // UE-to-UE in SPGW pipe).
+        RECIRC_PORTS.forEach(port -> {
+            flowRuleService.applyFlowRules(
+                    ingressVlanRule(port, false, DEFAULT_VLAN, PORT_TYPE_INTERNAL),
+                    egressVlanRule(port, DEFAULT_VLAN, false),
+                    fwdClassifierRule(port, null, Ethernet.TYPE_IPV4, FWD_IPV4_ROUTING,
+                            DEFAULT_FLOW_PRIORITY),
+                    // Use higher priority for MPLS rule since the one for IPv4
+                    // matches all IPv4 traffic independently of the eth_type.
+                    fwdClassifierRule(port, Ethernet.MPLS_UNICAST, Ethernet.TYPE_IPV4, FWD_MPLS,
+                            DEFAULT_FLOW_PRIORITY + 10));
+        });
     }
 
     private void handleResult(Objective obj, ObjectiveTranslation result) {
@@ -309,6 +325,102 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
                 log.warn("Unknown NextTreatment type '{}'", n.type());
                 return "???";
         }
+    }
+
+    public FlowRule egressSwitchInfoRule(int cpuPort) {
+        final TrafficTreatment treatment = DefaultTrafficTreatment.builder()
+                .piTableAction(PiAction.builder()
+                        .withId(P4InfoConstants.FABRIC_EGRESS_PKT_IO_EGRESS_SET_SWITCH_INFO)
+                        .withParameter(new PiActionParam(P4InfoConstants.CPU_PORT, cpuPort))
+                        .build())
+                .build();
+        return DefaultFlowRule.builder()
+                .forDevice(deviceId)
+                .withTreatment(treatment)
+                .withPriority(DEFAULT_FLOW_PRIORITY)
+                .fromApp(appId)
+                .makePermanent()
+                .forTable(P4InfoConstants.FABRIC_EGRESS_PKT_IO_EGRESS_SWITCH_INFO)
+                .build();
+    }
+
+    public FlowRule ingressVlanRule(long port, boolean vlanValid, int vlanId, byte portType) {
+        final TrafficSelector selector = DefaultTrafficSelector.builder()
+                .add(Criteria.matchInPort(PortNumber.portNumber(port)))
+                .add(PiCriterion.builder()
+                        .matchExact(P4InfoConstants.HDR_VLAN_IS_VALID, vlanValid ? ONE : ZERO)
+                        .build())
+                .build();
+        final TrafficTreatment treatment = DefaultTrafficTreatment.builder()
+                .piTableAction(PiAction.builder()
+                        .withId(vlanValid ?
+                                P4InfoConstants.FABRIC_INGRESS_FILTERING_PERMIT
+                                : P4InfoConstants.FABRIC_INGRESS_FILTERING_PERMIT_WITH_INTERNAL_VLAN)
+                        .withParameter(new PiActionParam(P4InfoConstants.VLAN_ID, vlanId))
+                        .withParameter(new PiActionParam(P4InfoConstants.PORT_TYPE, portType))
+                        .build())
+                .build();
+        return DefaultFlowRule.builder()
+                .withSelector(selector)
+                .withTreatment(treatment)
+                .forTable(P4InfoConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN)
+                .makePermanent()
+                .withPriority(DEFAULT_FLOW_PRIORITY)
+                .forDevice(deviceId)
+                .fromApp(appId)
+                .build();
+    }
+
+    public FlowRule fwdClassifierRule(int port, Short ethType, short ipEthType, byte fwdType, int priority) {
+        final TrafficSelector.Builder selectorBuilder = DefaultTrafficSelector.builder()
+                .matchInPort(PortNumber.portNumber(port))
+                .matchPi(PiCriterion.builder()
+                        .matchExact(P4InfoConstants.HDR_IP_ETH_TYPE, ipEthType)
+                        .build());
+        if (ethType != null) {
+            selectorBuilder.matchEthType(ethType);
+        }
+        final TrafficTreatment treatment = DefaultTrafficTreatment.builder()
+                .piTableAction(PiAction.builder()
+                        .withId(P4InfoConstants.FABRIC_INGRESS_FILTERING_SET_FORWARDING_TYPE)
+                        .withParameter(new PiActionParam(
+                                P4InfoConstants.FWD_TYPE, fwdType))
+                        .build())
+                .build();
+        return DefaultFlowRule.builder()
+                .withSelector(selectorBuilder.build())
+                .withTreatment(treatment)
+                .forTable(P4InfoConstants.FABRIC_INGRESS_FILTERING_FWD_CLASSIFIER)
+                .makePermanent()
+                .withPriority(priority)
+                .forDevice(deviceId)
+                .fromApp(appId)
+                .build();
+    }
+
+    public FlowRule egressVlanRule(int port, int vlanId, boolean tagged) {
+        final TrafficSelector selector = DefaultTrafficSelector.builder()
+                .add(PiCriterion.builder()
+                        .matchExact(P4InfoConstants.HDR_VLAN_ID, vlanId)
+                        .matchExact(P4InfoConstants.HDR_EG_PORT, port)
+                        .build())
+                .build();
+        final TrafficTreatment treatment = DefaultTrafficTreatment.builder()
+                .piTableAction(PiAction.builder()
+                        .withId(tagged ?
+                                P4InfoConstants.FABRIC_EGRESS_EGRESS_NEXT_PUSH_VLAN
+                                : P4InfoConstants.FABRIC_EGRESS_EGRESS_NEXT_POP_VLAN)
+                        .build())
+                .build();
+        return DefaultFlowRule.builder()
+                .withSelector(selector)
+                .withTreatment(treatment)
+                .forTable(P4InfoConstants.FABRIC_EGRESS_EGRESS_NEXT_EGRESS_VLAN)
+                .makePermanent()
+                .withPriority(DEFAULT_FLOW_PRIORITY)
+                .forDevice(deviceId)
+                .fromApp(appId)
+                .build();
     }
 
     /**

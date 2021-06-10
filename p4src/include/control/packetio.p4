@@ -3,7 +3,7 @@
 
 #include "../header.p4"
 
-control PacketIoIngress(inout parsed_headers_t hdr,
+control PacketIoIngress(inout ingress_headers_t hdr,
                         inout fabric_ingress_metadata_t fabric_md,
                         in    ingress_intrinsic_metadata_t ig_intr_md,
                         inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm,
@@ -11,6 +11,7 @@ control PacketIoIngress(inout parsed_headers_t hdr,
     @hidden
     action do_packet_out() {
         ig_intr_md_for_tm.ucast_egress_port = hdr.packet_out.egress_port;
+        fabric_md.egress_port_set = true;
         hdr.packet_out.setInvalid();
         // Straight to output port.
         fabric_md.bridged.setInvalid();
@@ -66,7 +67,7 @@ control PacketIoIngress(inout parsed_headers_t hdr,
     }
 }
 
-control PacketIoEgress(inout parsed_headers_t hdr,
+control PacketIoEgress(inout egress_headers_t hdr,
                        inout fabric_egress_metadata_t fabric_md,
                        in egress_intrinsic_metadata_t eg_intr_md) {
 
@@ -80,6 +81,7 @@ control PacketIoEgress(inout parsed_headers_t hdr,
             @defaultonly nop;
         }
         default_action = nop;
+        const size = 1;
     }
 
     apply {
@@ -87,7 +89,7 @@ control PacketIoEgress(inout parsed_headers_t hdr,
         // Check if this is a clone of a copy_to_cpu packet.
         if (eg_intr_md.egress_port == fabric_md.cpu_port) {
             hdr.packet_in.setValid();
-            hdr.packet_in.ingress_port = fabric_md.bridged.ig_port;
+            hdr.packet_in.ingress_port = fabric_md.bridged.base.ig_port;
             hdr.fake_ethernet.setInvalid();
             // Straight to CPU. No need to process through the rest of the
             // egress pipe.

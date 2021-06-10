@@ -59,44 +59,6 @@ public class FabricInterpreterTest {
         interpreter = new FabricInterpreter(allCapabilities);
     }
 
-    /* Filtering control block */
-
-    /**
-     * Map treatment to push_internal_vlan action.
-     */
-    @Test
-    public void testFilteringTreatmentPermitWithInternalVlan() throws Exception {
-        TrafficTreatment treatment = DefaultTrafficTreatment.builder()
-                .pushVlan()
-                .setVlanId(VLAN_100)
-                .build();
-        PiAction mappedAction = interpreter.mapTreatment(treatment,
-                P4InfoConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN);
-        PiActionParam param = new PiActionParam(P4InfoConstants.VLAN_ID,
-                ImmutableByteSequence.copyFrom(VLAN_100.toShort()));
-        PiAction expectedAction = PiAction.builder()
-                .withId(P4InfoConstants.FABRIC_INGRESS_FILTERING_PERMIT_WITH_INTERNAL_VLAN)
-                .withParameter(param)
-                .build();
-
-        assertEquals(expectedAction, mappedAction);
-    }
-
-    /**
-     * Map treatment to permit action.
-     */
-    @Test
-    public void testFilteringTreatmentPermit() throws Exception {
-        TrafficTreatment treatment = DefaultTrafficTreatment.emptyTreatment();
-        PiAction mappedAction = interpreter.mapTreatment(treatment,
-                P4InfoConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN);
-        PiAction expectedAction = PiAction.builder()
-                .withId(P4InfoConstants.FABRIC_INGRESS_FILTERING_PERMIT)
-                .build();
-
-        assertEquals(expectedAction, mappedAction);
-    }
-
     /* Forwarding control block */
 
     /**
@@ -114,7 +76,7 @@ public class FabricInterpreterTest {
     }
 
     /**
-     * Map empty treatment for ACL table.
+     * Map empty treatment to NOP for ACL table.
      */
     @Test
     public void testAclTreatmentEmpty() throws Exception {
@@ -123,6 +85,22 @@ public class FabricInterpreterTest {
                 treatment, P4InfoConstants.FABRIC_INGRESS_ACL_ACL);
         PiAction expectedAction = PiAction.builder()
                 .withId(P4InfoConstants.FABRIC_INGRESS_ACL_NOP_ACL)
+                .build();
+        assertEquals(expectedAction, mappedAction);
+    }
+
+    /**
+     * Map wipeDeferred treatment to DROP for ACL table.
+     */
+    @Test
+    public void testAclTreatmentWipeDeferred() throws Exception {
+        TrafficTreatment treatment = DefaultTrafficTreatment.builder()
+                .wipeDeferred()
+                .build();
+        PiAction mappedAction = interpreter.mapTreatment(
+                treatment, P4InfoConstants.FABRIC_INGRESS_ACL_ACL);
+        PiAction expectedAction = PiAction.builder()
+                .withId(P4InfoConstants.FABRIC_INGRESS_ACL_DROP)
                 .build();
         assertEquals(expectedAction, mappedAction);
     }
@@ -171,51 +149,46 @@ public class FabricInterpreterTest {
     }
 
     /**
-     * Map treatment for hashed table to routing v4 action.
-     */
-    @Test
-    public void testNextTreatmentHashedRoutingMpls() throws Exception {
-        TrafficTreatment treatment = DefaultTrafficTreatment.builder()
-                .setEthSrc(SRC_MAC)
-                .setEthDst(DST_MAC)
-                .setOutput(PORT_1)
-                .pushMpls()
-                .setMpls(MPLS_10)
-                .build();
-        PiAction mappedAction = interpreter.mapTreatment(
-                treatment, P4InfoConstants.FABRIC_INGRESS_NEXT_HASHED);
-        PiActionParam ethSrcParam = new PiActionParam(P4InfoConstants.SMAC, SRC_MAC.toBytes());
-        PiActionParam ethDstParam = new PiActionParam(P4InfoConstants.DMAC, DST_MAC.toBytes());
-        PiActionParam portParam = new PiActionParam(P4InfoConstants.PORT_NUM, PORT_1.toLong());
-        PiActionParam mplsParam = new PiActionParam(P4InfoConstants.LABEL, MPLS_10.toInt());
-        PiAction expectedAction = PiAction.builder()
-                .withId(P4InfoConstants.FABRIC_INGRESS_NEXT_MPLS_ROUTING_HASHED)
-                .withParameters(ImmutableList.of(ethSrcParam, ethDstParam, portParam, mplsParam))
-                .build();
-        assertEquals(expectedAction, mappedAction);
-    }
-
-    /**
      * Map treatment to set_vlan_output action.
      */
     @Test
-    public void testNextTreatment3() throws Exception {
+    public void testNextVlanTreatment() throws Exception {
         TrafficTreatment treatment = DefaultTrafficTreatment.builder()
                 .setVlanId(VLAN_100)
                 .build();
         PiAction mappedAction = interpreter.mapTreatment(
-                treatment, P4InfoConstants.FABRIC_INGRESS_NEXT_NEXT_VLAN);
+                treatment, P4InfoConstants.FABRIC_INGRESS_PRE_NEXT_NEXT_VLAN);
         PiActionParam vlanParam = new PiActionParam(
                 P4InfoConstants.VLAN_ID, VLAN_100.toShort());
         PiAction expectedAction = PiAction.builder()
-                .withId(P4InfoConstants.FABRIC_INGRESS_NEXT_SET_VLAN)
+                .withId(P4InfoConstants.FABRIC_INGRESS_PRE_NEXT_SET_VLAN)
                 .withParameter(vlanParam)
                 .build();
         assertEquals(expectedAction, mappedAction);
     }
 
+    /**
+     * Map treatment to set_mpls action.
+     */
     @Test
-    public void testMapOutboundPacket() throws PiPipelineInterpreter.PiInterpreterException,
+    public void testNextMplsTreatment() throws Exception {
+        TrafficTreatment treatment = DefaultTrafficTreatment.builder()
+                .setMpls(MPLS_10)
+                .build();
+        PiAction mappedAction = interpreter.mapTreatment(
+                treatment, P4InfoConstants.FABRIC_INGRESS_PRE_NEXT_NEXT_MPLS);
+        PiActionParam mplsParam = new PiActionParam(
+                P4InfoConstants.LABEL, MPLS_10.toInt());
+        PiAction expectedAction = PiAction.builder()
+                .withId(P4InfoConstants.FABRIC_INGRESS_PRE_NEXT_SET_MPLS_LABEL)
+                .withParameter(mplsParam)
+                .build();
+        assertEquals(expectedAction, mappedAction);
+    }
+
+    @Test
+    public void testMapOutboundPacketWithoutForwarding()
+            throws PiPipelineInterpreter.PiInterpreterException,
             ImmutableByteSequence.ByteSequenceTrimException {
         PortNumber outputPort = PortNumber.portNumber(1);
         TrafficTreatment outputTreatment = DefaultTrafficTreatment.builder()
@@ -236,6 +209,59 @@ public class FabricInterpreterTest {
                 .withId(P4InfoConstants.CPU_LOOPBACK_MODE)
                 .withValue(ImmutableByteSequence.copyFrom(0)
                         .fit(P4InfoConstants.CPU_LOOPBACK_MODE_BITWIDTH))
+                .build());
+        builder.add(PiPacketMetadata.builder()
+                .withId(P4InfoConstants.DO_FORWARDING)
+                .withValue(ImmutableByteSequence.copyFrom(0)
+                        .fit(P4InfoConstants.DO_FORWARDING_BITWIDTH))
+                .build());
+        builder.add(PiPacketMetadata.builder()
+                .withId(P4InfoConstants.ETHER_TYPE)
+                .withValue(ImmutableByteSequence.copyFrom(0xBF01)
+                        .fit(P4InfoConstants.ETHER_TYPE_BITWIDTH))
+                .build());
+        builder.add(PiPacketMetadata.builder()
+                .withId(P4InfoConstants.PAD0)
+                .withValue(ImmutableByteSequence.copyFrom(0)
+                        .fit(P4InfoConstants.PAD0_BITWIDTH))
+                .build());
+        PiPacketOperation expectedPktOp = PiPacketOperation.builder()
+                .withType(PiPacketOperationType.PACKET_OUT)
+                .withData(ImmutableByteSequence.copyFrom(data))
+                .withMetadatas(builder.build())
+                .build();
+
+        assertEquals(expectedPktOp, result.iterator().next());
+    }
+
+    @Test
+    public void testMapOutboundPacketWithForwarding()
+            throws PiPipelineInterpreter.PiInterpreterException,
+            ImmutableByteSequence.ByteSequenceTrimException {
+        PortNumber outputPort = PortNumber.TABLE;
+        TrafficTreatment outputTreatment = DefaultTrafficTreatment.builder()
+                .setOutput(outputPort)
+                .build();
+        ByteBuffer data = ByteBuffer.allocate(64);
+        OutboundPacket outPkt = new DefaultOutboundPacket(DEVICE_ID, outputTreatment, data);
+        Collection<PiPacketOperation> result = interpreter.mapOutboundPacket(outPkt);
+        assertEquals(result.size(), 1);
+
+        ImmutableList.Builder<PiPacketMetadata> builder = ImmutableList.builder();
+        builder.add(PiPacketMetadata.builder()
+                .withId(P4InfoConstants.EGRESS_PORT)
+                .withValue(ImmutableByteSequence.copyFrom(0)
+                        .fit(P4InfoConstants.EGRESS_PORT_BITWIDTH))
+                .build());
+        builder.add(PiPacketMetadata.builder()
+                .withId(P4InfoConstants.CPU_LOOPBACK_MODE)
+                .withValue(ImmutableByteSequence.copyFrom(0)
+                        .fit(P4InfoConstants.CPU_LOOPBACK_MODE_BITWIDTH))
+                .build());
+        builder.add(PiPacketMetadata.builder()
+                .withId(P4InfoConstants.DO_FORWARDING)
+                .withValue(ImmutableByteSequence.copyFrom(1)
+                        .fit(P4InfoConstants.DO_FORWARDING_BITWIDTH))
                 .build());
         builder.add(PiPacketMetadata.builder()
                 .withId(P4InfoConstants.ETHER_TYPE)
@@ -262,7 +288,8 @@ public class FabricInterpreterTest {
         PortNumber inputPort = PortNumber.portNumber(1);
         PiPacketMetadata pktInMetadata = PiPacketMetadata.builder()
                 .withId(P4InfoConstants.INGRESS_PORT)
-                .withValue(ImmutableByteSequence.copyFrom(inputPort.toLong()).fit(9))
+                .withValue(ImmutableByteSequence.copyFrom(inputPort.toLong())
+                        .fit(P4InfoConstants.INGRESS_PORT_BITWIDTH))
                 .build();
         Ethernet packet = new Ethernet();
         packet.setDestinationMACAddress(SRC_MAC);
@@ -281,6 +308,37 @@ public class FabricInterpreterTest {
         InboundPacket expectedInboundPacket
                 = new DefaultInboundPacket(receiveFrom, packet, ByteBuffer.wrap(packet.serialize()));
 
+        assertEquals(result.receivedFrom(), expectedInboundPacket.receivedFrom());
+        assertEquals(result.parsed(), expectedInboundPacket.parsed());
+        assertEquals(result.cookie(), expectedInboundPacket.cookie());
+
+        assertEquals(result.unparsed(), expectedInboundPacket.unparsed());
+    }
+
+    @Test
+    public void testMapInboundPacketWithShortMetadata() throws ImmutableByteSequence.ByteSequenceTrimException,
+            PiPipelineInterpreter.PiInterpreterException {
+        PortNumber inputPort = PortNumber.portNumber(1);
+        PiPacketMetadata pktInMetadata = PiPacketMetadata.builder()
+                .withId(P4InfoConstants.INGRESS_PORT)
+                .withValue(ImmutableByteSequence.copyFrom(inputPort.toLong()).fit(8))  // deliberately smaller
+                .build();
+        Ethernet packet = new Ethernet();
+        packet.setDestinationMACAddress(SRC_MAC);
+        packet.setSourceMACAddress(DST_MAC);
+        packet.setEtherType((short) 0xBA00);
+        packet.setPayload(new Data());
+
+        PiPacketOperation pktInOp = PiPacketOperation.builder()
+                .withMetadata(pktInMetadata)
+                .withData(ImmutableByteSequence.copyFrom(packet.serialize()))
+                .withType(PiPacketOperationType.PACKET_IN)
+                .build();
+        InboundPacket result = interpreter.mapInboundPacket(pktInOp, DEVICE_ID);
+
+        ConnectPoint receiveFrom = new ConnectPoint(DEVICE_ID, inputPort);
+        InboundPacket expectedInboundPacket
+                = new DefaultInboundPacket(receiveFrom, packet, ByteBuffer.wrap(packet.serialize()));
 
         assertEquals(result.receivedFrom(), expectedInboundPacket.receivedFrom());
         assertEquals(result.parsed(), expectedInboundPacket.parsed());

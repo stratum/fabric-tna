@@ -7,7 +7,7 @@
 #include "../define.p4"
 #include "../header.p4"
 
-control Acl (inout parsed_headers_t hdr,
+control Acl (inout ingress_headers_t hdr,
              inout fabric_ingress_metadata_t fabric_md,
              in ingress_intrinsic_metadata_t ig_intr_md,
              inout ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr,
@@ -38,11 +38,20 @@ control Acl (inout parsed_headers_t hdr,
     action drop() {
         ig_intr_md_for_dprsr.drop_ctl = 1;
         fabric_md.skip_next = true;
+#ifdef WITH_INT
+        fabric_md.int_mirror_md.drop_reason = IntDropReason_t.DROP_REASON_ACL_DENY;
+#endif // WITH_INT
         acl_counter.count();
     }
 
+    /*
+     * The next_mpls and next_vlan tables are applied before the acl table.
+     * So, if this action is applied, even though skip_next is set to true
+     * the packet might get forwarded with unexpected MPLS and VLAG tags.
+     */
     action set_output_port(PortId_t port_num) {
         ig_intr_md_for_tm.ucast_egress_port = port_num;
+        fabric_md.egress_port_set = true;
         fabric_md.skip_next = true;
         acl_counter.count();
     }
@@ -53,18 +62,19 @@ control Acl (inout parsed_headers_t hdr,
 
     table acl {
         key = {
-            ig_intr_md.ingress_port    : ternary @name("ig_port");   // 9
-            fabric_md.bridged.ip_proto : ternary @name("ip_proto");  // 8
-            fabric_md.bridged.l4_sport : ternary @name("l4_sport");  // 16
-            fabric_md.bridged.l4_dport : ternary @name("l4_dport");  // 16
-            hdr.ethernet.dst_addr      : ternary @name("eth_dst");   // 48
-            hdr.ethernet.src_addr      : ternary @name("eth_src");   // 48
-            hdr.vlan_tag.vlan_id       : ternary @name("vlan_id");   // 12
-            hdr.eth_type.value         : ternary @name("eth_type");  // 16
-            fabric_md.ipv4_src         : ternary @name("ipv4_src");  // 32
-            fabric_md.ipv4_dst         : ternary @name("ipv4_dst");  // 32
-            hdr.icmp.icmp_type         : ternary @name("icmp_type"); // 8
-            hdr.icmp.icmp_code         : ternary @name("icmp_code"); // 8
+            ig_intr_md.ingress_port          : ternary @name("ig_port");   // 9
+            fabric_md.lkp.eth_dst            : ternary @name("eth_dst");   // 48
+            fabric_md.lkp.eth_src            : ternary @name("eth_src");   // 48
+            fabric_md.lkp.vlan_id            : ternary @name("vlan_id");   // 12
+            fabric_md.lkp.eth_type           : ternary @name("eth_type");  // 16
+            fabric_md.lkp.ipv4_src           : ternary @name("ipv4_src");  // 32
+            fabric_md.lkp.ipv4_dst           : ternary @name("ipv4_dst");  // 32
+            fabric_md.lkp.ip_proto           : ternary @name("ip_proto");  // 8
+            fabric_md.lkp.icmp_type          : ternary @name("icmp_type"); // 8
+            fabric_md.lkp.icmp_code          : ternary @name("icmp_code"); // 8
+            fabric_md.lkp.l4_sport           : ternary @name("l4_sport");  // 16
+            fabric_md.lkp.l4_dport           : ternary @name("l4_dport");  // 16
+            fabric_md.ig_port_type           : ternary @name("ig_port_type"); // 2
         }
 
         actions = {

@@ -19,13 +19,11 @@
 #define IPV4_HDR_BYTES 20
 #define IPV6_HDR_BYTES 40
 #define UDP_HDR_BYTES 8
-#define GTP_HDR_BYTES 8
+#define GTPU_HDR_BYTES 8
+#define GTPU_OPTIONS_HDR_BYTES 4
+#define GTPU_EXT_PSC_HDR_BYTES 4
 #define MPLS_HDR_BYTES 4
-
-#define UDP_PORT_GTPU 2152
-#define GTP_GPDU 0xff
-#define GTPU_VERSION 0x01
-#define GTP_PROTOCOL_TYPE_GTP 0x01
+#define VLAN_HDR_BYTES 4
 
 #define PKT_INSTANCE_TYPE_NORMAL 0
 #define PKT_INSTANCE_TYPE_INGRESS_CLONE 1
@@ -46,7 +44,9 @@ typedef bit<32> flow_hash_t;
 
 // SPGW types
 typedef bit<32> teid_t;
+// FIXME: use less than 32 bits for far_id_t, enough to index up to MAX_FARS
 typedef bit<32> far_id_t;
+typedef bit<5>  qid_t;
 typedef bit<16> pdr_ctr_id_t;
 typedef bit<8>  color_t;
 enum bit<2> SpgwDirection {
@@ -60,6 +60,35 @@ enum bit<8> SpgwInterface {
     ACCESS        = 0x1,
     CORE          = 0x2,
     FROM_DBUF     = 0x3
+}
+
+enum bit<2> GtpuPresence {
+    NONE          = 0x0,
+    GTPU_ONLY     = 0x1,
+    GTPU_WITH_PSC = 0x2
+}
+
+const bit<16> GTPU_UDP_PORT = 2152;
+const bit<3> GTP_V1 = 3w1;
+const bit<8> GTPU_GPDU = 0xff;
+const bit<1> GTP_PROTOCOL_TYPE_GTP = 1w1;
+const bit<8> GTPU_NEXT_EXT_NONE = 0x0;
+const bit<8> GTPU_NEXT_EXT_PSC = 0x85;
+const bit<4> GTPU_EXT_PSC_TYPE_DL = 4w0; // Downlink
+const bit<4> GTPU_EXT_PSC_TYPE_UL = 4w1; // Uplink
+const bit<8> GTPU_EXT_PSC_LEN = 8w1; // 1*4-octets
+
+// PORT types. Set by the control plane using the actions
+// of the filtering.ingress_port_vlan table.
+enum bit<2> PortType_t {
+    // Default value. Set by deny action.
+    UNKNOWN     = 0x0,
+    // Host-facing port on a leaf switch.
+    EDGE        = 0x1,
+    // Switch-facing port on a leaf or spine switch.
+    INFRA       = 0x2,
+    // ASIC-internal port such as the recirculation one (used for INT or UE-to-UE).
+    INTERNAL    = 0x3
 }
 
 const bit<16> ETHERTYPE_QINQ = 0x88A8;
@@ -103,6 +132,10 @@ const vlan_id_t DEFAULT_VLAN_ID = 12w4094;
 const bit<8> DEFAULT_MPLS_TTL = 64;
 const bit<8> DEFAULT_IPV4_TTL = 64;
 
+// The recirculation port uses the same number for all HW pipes. The actual port
+// ID (DP_ID) can be obtained by prefixing the HW pipe ID (2 bits).
+const bit<7> RECIRC_PORT_NUMBER = 7w68;
+
 action nop() {
     NoAction();
 }
@@ -112,7 +145,8 @@ action nop() {
 enum bit<8> BridgedMdType_t {
     INVALID = 0,
     INGRESS_TO_EGRESS = 1,
-    EGRESS_MIRROR = 2
+    EGRESS_MIRROR = 2,
+    INGRESS_MIRROR = 3
 }
 
 // The mirror type, makes the parser to use correct way to parse the mirror metadata.
@@ -139,17 +173,6 @@ enum bit<2> CpuLoopbackMode_t {
     INGRESS = 2
 }
 
-// Recirculation ports for each HW pipe.
-const PortId_t RECIRC_PORT_PIPE_0 = 0x44;
-const PortId_t RECIRC_PORT_PIPE_1 = 0xC4;
-const PortId_t RECIRC_PORT_PIPE_2 = 0x144;
-const PortId_t RECIRC_PORT_PIPE_3 = 0x1C4;
-
-#define PIPE_0_PORTS_MATCH 9w0x000 &&& 0x180
-#define PIPE_1_PORTS_MATCH 9w0x080 &&& 0x180
-#define PIPE_2_PORTS_MATCH 9w0x100 &&& 0x180
-#define PIPE_3_PORTS_MATCH 9w0x180 &&& 0x180
-
 // INT
 
 /* indicate INT at LSB of DSCP */
@@ -161,26 +184,40 @@ const bit<4>  NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER = 2;
 const bit<16> REPORT_FIXED_HEADER_BYTES = 12;
 const bit<16> DROP_REPORT_HEADER_BYTES = 12;
 const bit<16> LOCAL_REPORT_HEADER_BYTES = 16;
-#ifdef WITH_SPGW
-const bit<16> REPORT_MIRROR_HEADER_BYTES = 29;
-#else
-const bit<16> REPORT_MIRROR_HEADER_BYTES = 28;
-#endif // WITH_SPGW
+const bit<16> REPORT_MIRROR_HEADER_BYTES = 26;
 const bit<16> ETH_FCS_LEN = 4;
-
-const MirrorId_t REPORT_MIRROR_SESS_PIPE_0 = 300;
-const MirrorId_t REPORT_MIRROR_SESS_PIPE_1 = 301;
-const MirrorId_t REPORT_MIRROR_SESS_PIPE_2 = 302;
-const MirrorId_t REPORT_MIRROR_SESS_PIPE_3 = 303;
+const bit<8> INT_MIRROR_SESSION_BASE = 0x80;
 
 #define FLOW_REPORT_FILTER_WIDTH 16
 typedef bit<FLOW_REPORT_FILTER_WIDTH> flow_report_filter_index_t;
+#define DROP_REPORT_FILTER_WIDTH 16
+typedef bit<DROP_REPORT_FILTER_WIDTH> drop_report_filter_index_t;
 
 enum bit<2> IntReportType_t {
     NO_REPORT = 0,
     LOCAL = 1,
     DROP = 2,
     QUEUE = 3
+}
+
+enum bit<8> IntDropReason_t {
+    // Common drop reasons
+    DROP_REASON_UNKNOWN = 0,
+    DROP_REASON_IP_TTL_ZERO = 26,
+    DROP_REASON_ROUTING_V4_MISS = 29,
+    DROP_REASON_ROUTING_V6_MISS = 29,
+    DROP_REASON_PORT_VLAN_MAPPING_MISS = 55,
+    DROP_REASON_ACL_DENY = 80,
+    DROP_REASON_BRIDGING_MISS = 89,
+    // Fabric-TNA-specific drop reasons
+    DROP_REASON_NEXT_ID_MISS = 128,
+    DROP_REASON_MPLS_MISS = 129,
+    DROP_REASON_EGRESS_NEXT_MISS = 130,
+    DROP_REASON_MPLS_TTL_ZERO = 131,
+    DROP_REASON_DOWNLINK_PDR_MISS = 132,
+    DROP_REASON_UPLINK_PDR_MISS = 133,
+    DROP_REASON_FAR_MISS = 134,
+    DROP_REASON_SPGW_UPLINK_RECIRC_DENY = 150
 }
 
 #endif // __DEFINE__

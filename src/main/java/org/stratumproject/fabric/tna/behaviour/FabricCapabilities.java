@@ -85,6 +85,7 @@ public class FabricCapabilities {
 
     public boolean supportDoubleVlanTerm() {
         // TODO: re-enable support for double-vlan
+        // FIXME: next_vlan has been moved to pre_next
         // if (pipeconf.pipelineModel()
         //         .table(P4InfoConstants.FABRIC_INGRESS_NEXT_NEXT_VLAN).isPresent()) {
         //     return pipeconf.pipelineModel().table(P4InfoConstants.FABRIC_INGRESS_NEXT_NEXT_VLAN)
