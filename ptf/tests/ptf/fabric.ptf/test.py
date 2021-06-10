@@ -1034,10 +1034,12 @@ class FabricDefaultVlanPacketInTest(FabricTest):
         self.verify_no_other_packets()
 
 
-# To verify that *_to_cpu_post_ingress action includes changes from the ingress pipeline
-# and *_to_cpu action does not.
 @group("packetio")
 class FabricPacketInPostIngressTest(IPv4UnicastTest):
+"""
+Packet-in generated using clone/punt_to_cpu_post_ingress actions should include changes
+from the ingress pipeline, while clone/punt_to_cpu action should not.
+"""
 
     @tvsetup
     @autocleanup

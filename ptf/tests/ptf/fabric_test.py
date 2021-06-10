@@ -1930,9 +1930,8 @@ class PacketOutTest(FabricTest):
 
 
 class PacketInTest(FabricTest):
-    def runPacketInTest(self, pkt, eth_type, tagged=False, vlan_id=10, pkt_in_post_ingress=True):
-        self.add_forwarding_acl_punt_to_cpu(eth_type=eth_type,
-                                            post_ingress=pkt_in_post_ingress)
+    def runPacketInTest(self, pkt, eth_type, tagged=False, vlan_id=10):
+        self.add_forwarding_acl_punt_to_cpu(eth_type=eth_type)
         for port in [self.port1, self.port2]:
             if tagged:
                 self.set_ingress_port_vlan(port, True, vlan_id, vlan_id)
