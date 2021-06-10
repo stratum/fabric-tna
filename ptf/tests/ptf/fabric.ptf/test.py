@@ -1870,6 +1870,80 @@ class FabricIntLocalReportTest(IntTest):
 
 
 @group("int")
+class FabricEndHostIntLocalReportTest(IntTest):
+
+    HOST1_IP = "10.0.0.1"
+    HOST2_IP = "10.0.0.2"
+
+    HOST1_MAC = "00:00:00:00:00:01"
+    HOST2_MAC = "00:00:00:00:00:02"
+
+    @tvsetup
+    @autocleanup
+    def doRunTest(self, pkt_type):
+        pkt = getattr(testutils, "simple_{}_packet".format(pkt_type))(
+            eth_src=self.HOST1_MAC,
+            eth_dst=self.HOST2_MAC,
+            ip_src=self.get_single_use_ip(),
+            ip_dst=self.get_single_use_ip()
+        )
+
+        int_inner_pkt = pkt.copy()
+        int_inner_pkt = pkt_route(int_inner_pkt, HOST2_MAC)
+        int_inner_pkt[Ether].src = SWITCH_MAC
+        int_inner_pkt[Ether].dst = self.HOST2_MAC
+
+        pkt = Ether(src=self.HOST1_MAC, dst=SWITCH_MAC) / IP(src=self.HOST1_IP, dst=self.HOST2_IP) / UDP() / VXLAN() / pkt
+
+        # The expected INT report packet
+        exp_int_report_pkt_masked = self.build_int_local_report(
+            SWITCH_MAC,
+            INT_COLLECTOR_MAC,
+            SWITCH_IPV4,
+            INT_COLLECTOR_IPV4,
+            self.port1,
+            self.port2,
+            SWITCH_ID,
+            int_inner_pkt,
+            False,
+            False,
+        )
+
+        # Set collector, report table, and mirror sessions
+        self.set_up_int_flows(False, int_inner_pkt, False)
+
+        # Setup ports.
+        self.setup_port(self.port1, VLAN_ID_1, PORT_TYPE_INFRA, False)
+        self.setup_port(self.port2, VLAN_ID_1, PORT_TYPE_INFRA, False)
+
+        # Set routing
+        self.set_forwarding_type(
+            self.port1,
+            pkt[Ether].dst,
+            ethertype=ETH_TYPE_IPV4,
+            fwd_type=FORWARDING_TYPE_UNICAST_IPV4,
+        )
+        self.add_forwarding_routing_v4_entry(pkt[IP].dst, 32, next_id=100)
+        self.add_next_routing(100, self.port2, pkt[Ether].dst, self.HOST2_MAC)
+        self.add_next_vlan(100, VLAN_ID_1)
+
+        self.send_packet(self.port1, pkt)
+
+        exp_pkt = pkt.copy()
+        exp_pkt[Ether].src = SWITCH_MAC
+        exp_pkt[Ether].dst = self.HOST2_MAC
+        exp_pkt = pkt_decrement_ttl(exp_pkt)
+
+        self.verify_packet(exp_pkt, self.port2)
+        self.verify_packet(exp_int_report_pkt_masked, self.port3)
+
+
+    def runTest(self):
+        print("")
+        for pkt_type in ["tcp", "udp"]:
+            self.doRunTest(pkt_type)
+
+@group("int")
 class FabricIntIngressDropReportTest(IntTest):
     @tvsetup
     @autocleanup
