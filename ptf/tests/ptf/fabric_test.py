@@ -1390,7 +1390,7 @@ class DoubleVlanXConnectTest(FabricTest):
 
 
 class ArpBroadcastTest(FabricTest):
-    def runArpBroadcastTest(self, tagged_ports, untagged_ports, pkt_in_post_ingress):
+    def runArpBroadcastTest(self, tagged_ports, untagged_ports):
         vlan_id = 10
         next_id = vlan_id
         mcast_group_id = vlan_id
@@ -1403,8 +1403,7 @@ class ArpBroadcastTest(FabricTest):
         for port in untagged_ports:
             self.set_ingress_port_vlan(port, False, 0, vlan_id)
         self.add_bridging_entry(vlan_id, None, None, next_id)
-        self.add_forwarding_acl_copy_to_cpu(eth_type=ETH_TYPE_ARP,
-                                            post_ingress=pkt_in_post_ingress)
+        self.add_forwarding_acl_copy_to_cpu(eth_type=ETH_TYPE_ARP)
         self.add_next_multicast(next_id, mcast_group_id)
         # Add the multicast group, here we use instance id 1 by default
         replicas = [(1, port) for port in all_ports]
