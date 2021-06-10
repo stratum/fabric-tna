@@ -34,6 +34,11 @@ public final class Constants {
     public static final int DEFAULT_VLAN = 4094;
     public static final int DEFAULT_PW_TRANSPORT_VLAN = 4090;
 
+    // UPF related constants
+    public static final int INTERFACE_ACCESS = 1;
+    public static final int INTERFACE_CORE = 2;
+    public static final int INTERFACE_DBUF = 3;
+
     // hide default constructor
     private Constants() {
     }
