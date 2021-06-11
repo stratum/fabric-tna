@@ -327,25 +327,34 @@ struct lookup_metadata_t {
     bit<8>                  icmp_code;
 }
 
+// Used for holding basic mirror information.
+// When mirroring, the egress parser will see two types of packets: one with
+// bridged.bmd_type and another with mirror.bmd_type.
+struct common_mirror_metadata_t {
+    MirrorId_t         mirror_session_id;
+    BridgedMdType_t    bmd_type;
+}
+
 // Ingress pipeline-only metadata
 @pa_auto_init_metadata
 struct fabric_ingress_metadata_t {
-    bridged_metadata_t      bridged;
-    flow_hash_t             ecmp_hash;
-    lookup_metadata_t       lkp;
-    bit<32>                 routing_ipv4_dst; // Outermost
-    bool                    skip_forwarding;
-    bool                    skip_next;
-    next_id_t               next_id;
-    bool                    egress_port_set;
-    bool                    punt_to_cpu;
+    bridged_metadata_t       bridged;
+    flow_hash_t              ecmp_hash;
+    lookup_metadata_t        lkp;
+    bit<32>                  routing_ipv4_dst; // Outermost
+    bool                     skip_forwarding;
+    bool                     skip_next;
+    next_id_t                next_id;
+    bool                     egress_port_set;
+    bool                     punt_to_cpu;
     // FIXME: checksum errors are set but never read, remove or test it
-    bool                    ipv4_checksum_err;
-    bool                    inner_ipv4_checksum_err;
+    bool                     ipv4_checksum_err;
+    bool                     inner_ipv4_checksum_err;
 #ifdef WITH_SPGW
-    spgw_ingress_metadata_t spgw;
+    spgw_ingress_metadata_t  spgw;
 #endif // WITH_SPGW
-    PortType_t              ig_port_type;
+    PortType_t               ig_port_type;
+    common_mirror_metadata_t mirror;
 }
 
 // Egress pipeline-only metadata
@@ -355,6 +364,14 @@ header common_egress_metadata_t {
     BridgedMdType_t       bmd_type;
     @padding bit<5>       _pad;
     FabricMirrorType_t    mirror_type;
+}
+
+header packet_in_mirror_metadata_t {
+    BridgedMdType_t       bmd_type;
+    @padding bit<5>       _pad0;
+    FabricMirrorType_t    mirror_type;
+    @padding bit<7>       _pad1;
+    PortId_t              ingress_port;
 }
 
 @pa_auto_init_metadata

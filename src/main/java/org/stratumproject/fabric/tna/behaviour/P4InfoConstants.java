@@ -189,12 +189,16 @@ public final class P4InfoConstants {
             PiActionId.of("FabricEgress.stats.count");
     public static final PiActionId FABRIC_INGRESS_ACL_COPY_TO_CPU =
             PiActionId.of("FabricIngress.acl.copy_to_cpu");
+    public static final PiActionId FABRIC_INGRESS_ACL_COPY_TO_CPU_POST_INGRESS =
+            PiActionId.of("FabricIngress.acl.copy_to_cpu_post_ingress");
     public static final PiActionId FABRIC_INGRESS_ACL_DROP =
             PiActionId.of("FabricIngress.acl.drop");
     public static final PiActionId FABRIC_INGRESS_ACL_NOP_ACL =
             PiActionId.of("FabricIngress.acl.nop_acl");
     public static final PiActionId FABRIC_INGRESS_ACL_PUNT_TO_CPU =
             PiActionId.of("FabricIngress.acl.punt_to_cpu");
+    public static final PiActionId FABRIC_INGRESS_ACL_PUNT_TO_CPU_POST_INGRESS =
+            PiActionId.of("FabricIngress.acl.punt_to_cpu_post_ingress");
     public static final PiActionId FABRIC_INGRESS_ACL_SET_NEXT_ID_ACL =
             PiActionId.of("FabricIngress.acl.set_next_id_acl");
     public static final PiActionId FABRIC_INGRESS_ACL_SET_OUTPUT_PORT =
