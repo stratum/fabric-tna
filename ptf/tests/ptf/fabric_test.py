@@ -2786,9 +2786,7 @@ class IntTest(IPv4UnicastTest):
         mon_label,
     ):
         action = ""
-        if bmd_type == BRIDGED_MD_TYPE_INT_INGRESS_DROP:
-            action = "do_drop_report_encap"
-        elif report_type == INT_REPORT_TYPE_LOCAL:
+        if report_type == INT_REPORT_TYPE_LOCAL:
             action = "do_local_report_encap"
         elif report_type == INT_REPORT_TYPE_DROP:
             action = "do_drop_report_encap"
@@ -2839,6 +2837,8 @@ class IntTest(IPv4UnicastTest):
                                     MIRROR_TYPE_INT_REPORT, INT_REPORT_TYPE_DROP)
         set_up_report_flow_internal(BRIDGED_MD_TYPE_EGRESS_MIRROR,
                                     MIRROR_TYPE_INT_REPORT, INT_REPORT_TYPE_LOCAL)
+        set_up_report_flow_internal(BRIDGED_MD_TYPE_DEFLECTED,
+                                    MIRROR_TYPE_INVALID, INT_REPORT_TYPE_DROP)
 
     def set_up_report_mirror_flow(self, pipe_id, mirror_id, port):
         self.add_clone_group(mirror_id, [port])
@@ -3187,9 +3187,6 @@ class IntTest(IPv4UnicastTest):
             self.add_forwarding_acl_drop_ingress_port(1)
         elif drop_reason == INT_DROP_REASON_ROUTING_V4_MISS:
             install_routing_entry = False
-        elif drop_reason == INT_DROP_REASON_TRAFFIC_MANAGER:
-            # The packet will still be routed, but dropped by traffic manager.
-            int_inner_pkt = pkt_route(int_inner_pkt, HOST2_MAC)
 
         # The expected INT report packet
         exp_int_report_pkt_masked = self.build_int_drop_report(

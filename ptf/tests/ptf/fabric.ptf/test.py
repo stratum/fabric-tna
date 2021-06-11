@@ -2957,6 +2957,50 @@ class FabricOptimizedFieldDetectorTest(FabricTest):
 @group("int-dod")
 class TestDeflectOnDropIntReport(FabricIntLocalReportTest, FabricIntIngressDropReportTest):
 
+    @autocleanup
+    def doRunTest(self):
+        pkt = testutils.simple_tcp_packet(ip_dst=self.get_single_use_ip())
+        ig_port = self.port1
+        eg_port = RECIRCULATE_PORTS[0]
+        is_device_spine = False
+        send_report_to_spine = False
+
+        int_inner_pkt = pkt.copy()
+
+        # The packet will still be routed, but dropped by traffic manager.
+        int_inner_pkt = pkt_route(int_inner_pkt, HOST2_MAC)
+
+        exp_int_report_pkt_masked = self.build_int_drop_report(
+            SWITCH_MAC,
+            INT_COLLECTOR_MAC,
+            SWITCH_IPV4,
+            INT_COLLECTOR_IPV4,
+            ig_port,
+            0,
+            INT_DROP_REASON_TRAFFIC_MANAGER,
+            SWITCH_ID,
+            int_inner_pkt,
+            is_device_spine,
+            send_report_to_spine,
+        )
+
+        self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine)
+        self.runIPv4UnicastTest(
+            pkt=pkt,
+            next_hop_mac=HOST2_MAC,
+            tagged1=False,
+            tagged2=False,
+            is_next_hop_spine=False,
+            prefix_len=32,
+            with_another_pkt_later=True,
+            ig_port=ig_port,
+            eg_port=eg_port,
+            verify_pkt=False
+        )
+
+        self.verify_packet(exp_int_report_pkt_masked, self.port3)
+        self.verify_no_other_packets()
+
     def runTest(self):
         print("\n")
         # First, run 9 normal INT tests
@@ -2977,17 +3021,6 @@ class TestDeflectOnDropIntReport(FabricIntLocalReportTest, FabricIntIngressDropR
         # In theory, we shouldn't set the output port to recirculate port but
         # a normal output since the traffic manager should deflect the packet
         # to the recirculate port.
-        FabricIntIngressDropReportTest.doRunTest(
-            self,
-            vlan_conf="untagged -> untagged",
-            tagged=[False, False],
-            pkt_type="udp",
-            is_next_hop_spine=False,
-            ig_port=self.port1,
-            eg_port=RECIRCULATE_PORTS[0],
-            is_device_spine=False,
-            send_report_to_spine=False,
-            drop_reason=INT_DROP_REASON_TRAFFIC_MANAGER,
-        )
+        self.doRunTest()
 
 

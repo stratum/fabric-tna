@@ -194,6 +194,8 @@ header report_fixed_header_t {
 @pa_container_size("egress", "hdr.common_report_header.queue_id", 8)
 @pa_container_size("egress", "hdr.common_report_header.ig_port", 16)
 @pa_container_size("egress", "hdr.common_report_header.eg_port", 16)
+@pa_no_overlay("egress", "hdr.common_report_header.queue_id")
+@pa_no_overlay("egress", "hdr.common_report_header.eg_port")
 header common_report_header_t {
     bit<32> switch_id;
     bit<7>  pad1;
