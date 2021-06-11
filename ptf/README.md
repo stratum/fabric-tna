@@ -40,7 +40,7 @@ fail to start or affect test results negatively.
    image that includes tofino-model:
 
    ```bash
-    export SDE_DOCKER_IMG=my-docker-repo/bf-sde:9.3.2
+    export SDE_DOCKER_IMG=my-docker-repo/bf-sde:9.3.1
     ```
 
 3. Run PTF tests using the `run/tm/run` script:

@@ -87,7 +87,6 @@ control PacketIoEgress(inout egress_headers_t hdr,
 
     apply {
         switch_info.apply();
-        // Check if this is a clone of a copy_to_cpu packet.
         if (eg_intr_md.egress_port == fabric_md.cpu_port) {
             hdr.packet_in.setValid();
             hdr.packet_in.ingress_port = fabric_md.bridged.base.ig_port;

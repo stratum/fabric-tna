@@ -6,6 +6,7 @@
 
 #include "header.p4"
 #include "define.p4"
+#include "control/packet_in_mirror_parser.p4"
 #ifdef WITH_INT
 #include "control/int_parser.p4"
 #endif // WITH_INT
@@ -27,7 +28,6 @@ parser FabricIngressParser (packet_in  packet,
         fabric_md.bridged.base.ig_port = ig_intr_md.ingress_port;
         fabric_md.bridged.base.ig_tstamp = ig_intr_md.ingress_mac_tstamp;
         fabric_md.egress_port_set = false;
-        fabric_md.copy_to_cpu = false;
         fabric_md.punt_to_cpu = false;
         fabric_md.bridged.base.ip_eth_type = 0;
 #ifdef WITH_INT
@@ -271,6 +271,18 @@ control FabricIngressMirror(
     in ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr) {
     Mirror() mirror;
     apply {
+        if (ig_intr_md_for_dprsr.mirror_type == (bit<3>)FabricMirrorType_t.PACKET_IN) {
+            mirror.emit<packet_in_mirror_metadata_t>(
+                fabric_md.mirror.mirror_session_id,
+                // packet_in_mirror_metadata_t
+                {
+                    fabric_md.mirror.bmd_type,
+                    0, // padding
+                    (FabricMirrorType_t)ig_intr_md_for_dprsr.mirror_type,
+                    0, // padding
+                    fabric_md.bridged.base.ig_port
+                });
+        }
     }
 }
 
@@ -321,18 +333,17 @@ parser FabricEgressParser (packet_in packet,
         packet.extract(eg_intr_md);
         fabric_md.cpu_port = 0;
 #ifdef WITH_INT
-        fabric_md.int_md.is_int = false;
-        fabric_md.int_mirror_md.report_type = IntReportType_t.NO_REPORT;
+        fabric_md.is_int = false;
 #endif // WITH_INT
         common_egress_metadata_t common_eg_md = packet.lookahead<common_egress_metadata_t>();
         transition select(eg_intr_md.deflection_flag, common_eg_md.bmd_type, common_eg_md.mirror_type) {
+            (0, BridgedMdType_t.INGRESS_TO_EGRESS, _): parse_bridged_md;
+            (0, BridgedMdType_t.INGRESS_MIRROR, FabricMirrorType_t.PACKET_IN): parse_packet_in_mirror;
 #ifdef WITH_INT
             (1, _, _): parse_int_report;
             (0, BridgedMdType_t.INT_INGRESS_DROP, _): parse_int_report;
             (0, BridgedMdType_t.EGRESS_MIRROR, FabricMirrorType_t.INT_REPORT): parse_int_report;
-            (0, BridgedMdType_t.INGRESS_MIRROR, FabricMirrorType_t.INT_REPORT): parse_int_report;
 #endif // WITH_INT
-            (0, BridgedMdType_t.INGRESS_TO_EGRESS, _): parse_bridged_md;
             default: reject;
         }
     }
@@ -384,9 +395,14 @@ parser FabricEgressParser (packet_in packet,
         hdr.outer_gtpu_ext_psc.next_ext  = GTPU_NEXT_EXT_NONE;
 #endif // WITH_SPGW
 #ifdef WITH_INT
-        fabric_md.int_mirror_md.gtpu_presence = fabric_md.bridged.base.gtpu_presence;
+        fabric_md.int_report_md.gtpu_presence = fabric_md.bridged.base.gtpu_presence;
 #endif // WITH_INT
         transition check_ethernet;
+    }
+
+    state parse_packet_in_mirror {
+        PacketInMirrorParser.apply(packet, hdr, fabric_md, eg_intr_md);
+        transition accept;
     }
 
 #ifdef WITH_INT
@@ -478,8 +494,8 @@ control FabricEgressMirror(
     apply {
 #ifdef WITH_INT
         if (eg_intr_md_for_dprsr.mirror_type == (bit<3>)FabricMirrorType_t.INT_REPORT) {
-            mirror.emit<int_mirror_metadata_t>(fabric_md.bridged.int_bmd.mirror_session_id,
-                                               fabric_md.int_mirror_md);
+            mirror.emit<int_report_metadata_t>(fabric_md.bridged.int_bmd.mirror_session_id,
+                                               fabric_md.int_report_md);
         }
 #endif // WITH_INT
     }

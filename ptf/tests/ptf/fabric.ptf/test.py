@@ -180,6 +180,7 @@ class FabricIPv4UnicastFromPacketOutTest(IPv4UnicastTest):
     """Packet-outs should be routed like regular packets when setting
     packet_out_header_t.do_forwarding=1
     """
+
     @tvsetup
     @autocleanup
     def doRunTest(self, pkt, mac_dest, tagged2, tc_name):
@@ -193,21 +194,16 @@ class FabricIPv4UnicastFromPacketOutTest(IPv4UnicastTest):
         for tagged2 in [False, True]:
             for pkt_type in BASE_PKT_TYPES | GTP_PKT_TYPES:
                 tc_name = pkt_type + "_VLAN_" + str(tagged2)
-                print(
-                    "Testing {} packet, out-tagged={}...".format(pkt_type, tagged2)
-                )
+                print("Testing {} packet, out-tagged={}...".format(pkt_type, tagged2))
                 pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
                     eth_src=ZERO_MAC,
                     eth_dst=ZERO_MAC,
                     ip_src=HOST1_IPV4,
                     ip_dst=HOST2_IPV4,
-                    pktlen=MIN_PKT_LEN
+                    pktlen=MIN_PKT_LEN,
                 )
                 self.doRunTest(
-                    pkt=pkt,
-                    mac_dest=HOST2_MAC,
-                    tagged2=tagged2,
-                    tc_name=tc_name,
+                    pkt=pkt, mac_dest=HOST2_MAC, tagged2=tagged2, tc_name=tc_name,
                 )
 
 
@@ -1037,6 +1033,41 @@ class FabricDefaultVlanPacketInTest(FabricTest):
             self.verify_packet_in(pkt, port)
         self.verify_no_other_packets()
 
+
+@group("packetio")
+class FabricPacketInPostIngressTest(IPv4UnicastTest):
+    """
+    Packet-in generated using clone/punt_to_cpu_post_ingress actions should include changes
+    from the ingress pipeline, while clone/punt_to_cpu action should not.
+    """
+
+    @tvsetup
+    @autocleanup
+    def doRunTest(self, action, post_ingress):
+        add_acl_rule = getattr(self, f"add_forwarding_acl_{action}_to_cpu")
+        add_acl_rule(eth_type=ETH_TYPE_IPV4, post_ingress=post_ingress)
+        pkt = testutils.simple_udp_packet()
+        self.runIPv4UnicastTest(
+            pkt,
+            next_hop_mac=HOST2_MAC,
+            verify_pkt=(action == "copy")
+        )
+
+        # only "copy_to_cpu_post_ingress" action will include the change from next
+        # control block, "punt_to_cpu_post_ingress" will skip the next control block
+        # so the mac address will not be changed.
+        if post_ingress and action=="copy":
+            pkt = pkt_route(pkt, HOST2_MAC)
+
+        self.verify_packet_in(pkt, self.port1)
+
+
+    def runTest(self):
+        print()
+        for action in ["punt", "copy"]:
+            for post_ingress in [False, True]:
+                print(f"Testing action={action}, post_ingress={post_ingress}...")
+                self.doRunTest(action, post_ingress)
 
 class FabricGtpUnicastEcmpBasedOnTeid(FabricTest):
     """
