@@ -2020,7 +2020,7 @@ class FabricIntEgressDropReportTest(IntTest):
             tagged2=tagged[1],
             is_next_hop_spine=is_next_hop_spine,
             ig_port=self.port1,
-            eg_port=RECIRCULATE_PORTS[0],
+            eg_port=self.port2,
             expect_int_report=True,
             is_device_spine=is_device_spine,
             send_report_to_spine=send_report_to_spine,
