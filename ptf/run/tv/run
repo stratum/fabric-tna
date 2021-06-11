@@ -20,8 +20,8 @@ if [ -z "${fabricProfile}" ]; then
 fi
 
 # Skip INT deflect on drop test
-if [ "${fabricProfile}" = "int-dod" ]; then
-    echo "Skip generating test vector for int-dod profile"
+if [[ "${fabricProfile}" =~ .*-dod ]]; then
+    echo "Skip generating test vector for ${fabricProfile} profile"
     exit 0
 fi
 
