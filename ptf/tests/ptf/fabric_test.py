@@ -875,7 +875,9 @@ class FabricTest(P4RuntimeTest):
             [("next_id", next_id_)],
         )
 
-    def add_forwarding_acl_punt_to_cpu(self, eth_type=None, priority=DEFAULT_PRIORITY, post_ingress=False):
+    def add_forwarding_acl_punt_to_cpu(
+        self, eth_type=None, priority=DEFAULT_PRIORITY, post_ingress=False
+    ):
         eth_type_ = stringify(eth_type, 2)
         eth_type_mask_ = stringify(0xFFFF, 2)
         action = "acl.punt_to_cpu_post_ingress" if post_ingress else "acl.punt_to_cpu"
@@ -1208,10 +1210,14 @@ class FabricTest(P4RuntimeTest):
         return req, self.write_request(req, store=store)
 
     def add_clone_group(self, clone_id, ports, store=True):
-        self.write_clone_group(clone_id, ports, p4runtime_pb2.Update.INSERT, store=store)
+        self.write_clone_group(
+            clone_id, ports, p4runtime_pb2.Update.INSERT, store=store
+        )
 
     def delete_clone_group(self, clone_id, ports, store=True):
-        self.write_clone_group(clone_id, ports, p4runtime_pb2.Update.DELETE, store=store)
+        self.write_clone_group(
+            clone_id, ports, p4runtime_pb2.Update.DELETE, store=store
+        )
 
     def add_next_hashed_group_member(self, action_name, params):
         mbr_id = self.get_next_mbr_id()
@@ -2783,23 +2789,27 @@ class IntTest(IPv4UnicastTest):
     ):
         def set_up_report_flow_internal(bmd_type, mirror_type, report_type):
             self.set_up_report_flow_with_report_type_and_bmd_type(
-                    src_mac,
-                    mon_mac,
-                    src_ip,
-                    mon_ip,
-                    mon_port,
-                    report_type,
-                    bmd_type,
-                    switch_id,
-                    mirror_type,
-                    mon_label,
-                )
-        set_up_report_flow_internal(BRIDGED_MD_TYPE_INT_INGRESS_DROP,
-                                    MIRROR_TYPE_INVALID, INT_REPORT_TYPE_DROP)
-        set_up_report_flow_internal(BRIDGED_MD_TYPE_EGRESS_MIRROR,
-                                    MIRROR_TYPE_INT_REPORT, INT_REPORT_TYPE_DROP)
-        set_up_report_flow_internal(BRIDGED_MD_TYPE_EGRESS_MIRROR,
-                                    MIRROR_TYPE_INT_REPORT, INT_REPORT_TYPE_LOCAL)
+                src_mac,
+                mon_mac,
+                src_ip,
+                mon_ip,
+                mon_port,
+                report_type,
+                bmd_type,
+                switch_id,
+                mirror_type,
+                mon_label,
+            )
+
+        set_up_report_flow_internal(
+            BRIDGED_MD_TYPE_INT_INGRESS_DROP, MIRROR_TYPE_INVALID, INT_REPORT_TYPE_DROP
+        )
+        set_up_report_flow_internal(
+            BRIDGED_MD_TYPE_EGRESS_MIRROR, MIRROR_TYPE_INT_REPORT, INT_REPORT_TYPE_DROP
+        )
+        set_up_report_flow_internal(
+            BRIDGED_MD_TYPE_EGRESS_MIRROR, MIRROR_TYPE_INT_REPORT, INT_REPORT_TYPE_LOCAL
+        )
 
     def set_up_report_mirror_flow(self, pipe_id, mirror_id, port):
         self.add_clone_group(mirror_id, [port])

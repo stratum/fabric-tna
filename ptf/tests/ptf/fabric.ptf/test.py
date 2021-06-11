@@ -1048,19 +1048,16 @@ class FabricPacketInPostIngressTest(IPv4UnicastTest):
         add_acl_rule(eth_type=ETH_TYPE_IPV4, post_ingress=post_ingress)
         pkt = testutils.simple_udp_packet()
         self.runIPv4UnicastTest(
-            pkt,
-            next_hop_mac=HOST2_MAC,
-            verify_pkt=(action == "copy")
+            pkt, next_hop_mac=HOST2_MAC, verify_pkt=(action == "copy")
         )
 
         # only "copy_to_cpu_post_ingress" action will include the change from next
         # control block, "punt_to_cpu_post_ingress" will skip the next control block
         # so the mac address will not be changed.
-        if post_ingress and action=="copy":
+        if post_ingress and action == "copy":
             pkt = pkt_route(pkt, HOST2_MAC)
 
         self.verify_packet_in(pkt, self.port1)
-
 
     def runTest(self):
         print()
@@ -1068,6 +1065,7 @@ class FabricPacketInPostIngressTest(IPv4UnicastTest):
             for post_ingress in [False, True]:
                 print(f"Testing action={action}, post_ingress={post_ingress}...")
                 self.doRunTest(action, post_ingress)
+
 
 class FabricGtpUnicastEcmpBasedOnTeid(FabricTest):
     """
