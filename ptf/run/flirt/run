@@ -10,7 +10,8 @@ docker run --name "${testerRunName}" "${it}" --rm \
     -e PTF_FILTER="${PTF_FILTER}" \
     -e TREX_SERVER_ADDR="${TREX_SERVER_ADDR}" \
     -e TREX_CONFIG="${TREX_CONFIG}" \
-    -e SWTICH_ADDR="${SWTICH_ADDR}" \
+    -e LINE_RATE_TEST="${LINE_RATE_TEST}" \
+    -e SWITCH_ADDR="${SWITCH_ADDR}" \
     --entrypoint /fabric-p4test/run/flirt/start_test.sh \
     "${TESTER_DOCKER_IMG}" \
     ${@}

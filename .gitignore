@@ -19,6 +19,7 @@ mvn_settings.xml
 dependencies.xml
 bf_drivers.log.*
 .venv
+.vscode
 venv
 .classpath
 .project

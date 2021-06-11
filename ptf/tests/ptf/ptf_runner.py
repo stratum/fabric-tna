@@ -178,7 +178,7 @@ def run_test(
     """
     # TODO: check schema?
     # "ptf_port" is ignored for now, we assume that ports are provided by
-    # increasing values of ptf_port, in the range [0, NUM_IFACES[.
+    # increasing values of ptf_port, in the range [0, NUM_IFACES].
     port_map = OrderedDict()
     if not line_rate_test:
         with open(port_map_path, "r") as port_map_f:
@@ -374,6 +374,19 @@ def main():
     parser.add_argument(
         "--line-rate-test",
         help="",
+        action="store_true",
+        required=False,
+    )
+    parser.add_argument(
+        "--keep-trex-running",
+        help="Keep TRex running after the test",
+        action="store_true",
+        required=False,
+    )
+
+    parser.add_argument(
+        "--force-restart",
+        help="Force restart the Trex process if one running.",
         action="store_true",
         required=False,
     )

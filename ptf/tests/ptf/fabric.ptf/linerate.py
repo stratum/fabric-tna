@@ -1,8 +1,12 @@
-
-
-
 from ptf import testutils
+# from fabric_test import IntTest
 
+# Connect to the TRex daemon client
+# Define packets to be sent
+# Tell TRex to send traffic
+# Parse results of traffic
+# Verify results via assertion
+# Close client connection
 
 class TRexTest():
 
@@ -14,9 +18,9 @@ class TRexTest():
         # cleanup
 
 class IntSingleFlow(IntTest, TRexTest):
-"""
-IntTest with line rate traffic
-"""
+    """
+    IntTest with line rate traffic
+    """
     def runTest(self):
         # Set collector, report table, and mirror sessions
         self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine)
