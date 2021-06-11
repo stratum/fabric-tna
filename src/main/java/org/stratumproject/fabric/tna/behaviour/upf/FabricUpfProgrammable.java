@@ -586,64 +586,6 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         return false;
     }
 
-//    @Override
-//    public Collection<UpfFlow> getFlows() throws UpfProgrammableException {
-//        Map<Integer, PdrStats> counterStats = new HashMap<>();
-//        readAllCounters().forEach(stats -> counterStats.put(stats.getCellId(), stats));
-//        // A flow is made of a PDR and the FAR that should apply to packets that hit the PDR.
-//        // Multiple PDRs can map to the same FAR, so create a one->many mapping of FAR Identifier to flow builder
-//        Map<UpfRuleIdentifier, List<UpfFlow.Builder>> globalFarToSessionBuilder = new HashMap<>();
-//        List<ForwardingActionRule> fars = new ArrayList<>();
-//        for (FlowRule flowRule : flowRuleService.getFlowEntriesById(appId)) {
-//            if (upfTranslator.isFabricFar(flowRule)) {
-//                // If its a far, save it for later
-//                fars.add(upfTranslator.fabricEntryToFar(flowRule));
-//            } else if (upfTranslator.isFabricPdr(flowRule)) {
-//                // If its a PDR, create a flow builder for it
-//                PacketDetectionRule pdr = upfTranslator.fabricEntryToPdr(flowRule);
-//                globalFarToSessionBuilder.compute(new UpfRuleIdentifier(pdr.sessionId(), pdr.farId()),
-//                        (k, existingVal) -> {
-//                            final var builder = UpfFlow.builder()
-//                                    .setPdr(pdr)
-//                                    .addStats(counterStats.get(pdr.counterId()));
-//                            if (existingVal == null) {
-//                                return Lists.newArrayList(builder);
-//                            } else {
-//                                existingVal.add(builder);
-//                                return existingVal;
-//                            }
-//                        });
-//
-//            }
-//        }
-//        for (ForwardingActionRule far : fars) {
-//            globalFarToSessionBuilder.compute(new UpfRuleIdentifier(far.sessionId(), far.farId()),
-//                    (k, builderList) -> {
-//                        // If no PDRs use this FAR, then create a new flow with no PDR
-//                        if (builderList == null) {
-//                            return List.of(UpfFlow.builder().setFar(far));
-//                        } else {
-//                            // Add the FAR to every flow with a PDR that references it
-//                            for (var builder : builderList) {
-//                                builder.setFar(far);
-//                            }
-//                            return builderList;
-//                        }
-//                    });
-//        }
-//        List<UpfFlow> results = new ArrayList<>();
-//        for (var builderList : globalFarToSessionBuilder.values()) {
-//            for (var builder : builderList) {
-//                try {
-//                    results.add(builder.build());
-//                } catch (IllegalArgumentException e) {
-//                    log.warn("Corrupt UPF flow found in dataplane: {}", e.getMessage());
-//                }
-//            }
-//        }
-//        return results;
-//    }
-
     @Override
     public Collection<PacketDetectionRule> getPdrs() throws UpfProgrammableException {
         if (!setupBehaviour("getPdrs()")) {

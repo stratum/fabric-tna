@@ -135,140 +135,157 @@ public final class TestUpfConstants {
     public static final FlowRule FABRIC_UPLINK_PRIORITY_PDR = DefaultFlowRule.builder()
             .forDevice(DEVICE_ID).fromApp(APP_ID).makePermanent()
             .forTable(FABRIC_INGRESS_SPGW_UPLINK_PDRS)
-            .withSelector(DefaultTrafficSelector.builder().matchPi(PiCriterion.builder()
-                                                                           .matchExact(HDR_TEID, TEID_VALUE.asArray())
-                                                                           .matchExact(HDR_TUNNEL_IPV4_DST, S1U_ADDR.toInt())
-                                                                           .build()).build())
-            .withTreatment(DefaultTrafficTreatment.builder().piTableAction(PiAction.builder()
-                                                                                   .withId(FABRIC_INGRESS_SPGW_LOAD_PDR_QOS)
-                                                                                   .withParameters(Arrays.asList(
-                                                                                           new PiActionParam(CTR_ID, UPLINK_COUNTER_CELL_ID),
-                                                                                           new PiActionParam(FAR_ID, UPLINK_PHYSICAL_FAR_ID),
-                                                                                           new PiActionParam(NEEDS_GTPU_DECAP, 1),
-                                                                                           new PiActionParam(QID, UPLINK_QID)
-                                                                                   ))
-                                                                                   .build()).build())
+            .withSelector(DefaultTrafficSelector.builder()
+                                  .matchPi(PiCriterion.builder()
+                                                   .matchExact(HDR_TEID, TEID_VALUE.asArray())
+                                                   .matchExact(HDR_TUNNEL_IPV4_DST, S1U_ADDR.toInt())
+                                                   .build()).build())
+            .withTreatment(DefaultTrafficTreatment.builder()
+                                   .piTableAction(PiAction.builder()
+                                                          .withId(FABRIC_INGRESS_SPGW_LOAD_PDR_QOS)
+                                                          .withParameters(Arrays.asList(
+                                                                  new PiActionParam(CTR_ID, UPLINK_COUNTER_CELL_ID),
+                                                                  new PiActionParam(FAR_ID, UPLINK_PHYSICAL_FAR_ID),
+                                                                  new PiActionParam(NEEDS_GTPU_DECAP, 1),
+                                                                  new PiActionParam(QID, UPLINK_QID)
+                                                          ))
+                                                          .build()).build())
             .withPriority(DEFAULT_PRIORITY)
             .build();
 
     public static final FlowRule FABRIC_DOWNLINK_PRIORITY_PDR = DefaultFlowRule.builder()
             .forDevice(DEVICE_ID).fromApp(APP_ID).makePermanent()
             .forTable(FABRIC_INGRESS_SPGW_DOWNLINK_PDRS)
-            .withSelector(DefaultTrafficSelector.builder().matchPi(PiCriterion.builder()
-                                                                           .matchExact(HDR_UE_ADDR, UE_ADDR.toInt())
-                                                                           .build()).build())
-            .withTreatment(DefaultTrafficTreatment.builder().piTableAction(PiAction.builder()
-                                                                                   .withId(FABRIC_INGRESS_SPGW_LOAD_PDR_QOS)
-                                                                                   .withParameters(Arrays.asList(
-                                                                                           new PiActionParam(CTR_ID, DOWNLINK_COUNTER_CELL_ID),
-                                                                                           new PiActionParam(FAR_ID, DOWNLINK_PHYSICAL_FAR_ID),
-                                                                                           new PiActionParam(NEEDS_GTPU_DECAP, 0),
-                                                                                           new PiActionParam(QID, DOWNLINK_QID)
-                                                                                   ))
-                                                                                   .build()).build())
+            .withSelector(DefaultTrafficSelector.builder()
+                                  .matchPi(PiCriterion.builder()
+                                                   .matchExact(HDR_UE_ADDR, UE_ADDR.toInt())
+                                                   .build()).build())
+            .withTreatment(DefaultTrafficTreatment.builder()
+                                   .piTableAction(PiAction.builder()
+                                                          .withId(FABRIC_INGRESS_SPGW_LOAD_PDR_QOS)
+                                                          .withParameters(Arrays.asList(
+                                                                  new PiActionParam(CTR_ID, DOWNLINK_COUNTER_CELL_ID),
+                                                                  new PiActionParam(FAR_ID, DOWNLINK_PHYSICAL_FAR_ID),
+                                                                  new PiActionParam(NEEDS_GTPU_DECAP, 0),
+                                                                  new PiActionParam(QID, DOWNLINK_QID)
+                                                          ))
+                                                          .build()).build())
             .withPriority(DEFAULT_PRIORITY)
             .build();
 
     public static final FlowRule FABRIC_UPLINK_PDR = DefaultFlowRule.builder()
             .forDevice(DEVICE_ID).fromApp(APP_ID).makePermanent()
             .forTable(FABRIC_INGRESS_SPGW_UPLINK_PDRS)
-            .withSelector(DefaultTrafficSelector.builder().matchPi(PiCriterion.builder()
-                                                                           .matchExact(HDR_TEID, TEID_VALUE.asArray())
-                                                                           .matchExact(HDR_TUNNEL_IPV4_DST, S1U_ADDR.toInt())
-                                                                           .build()).build())
-            .withTreatment(DefaultTrafficTreatment.builder().piTableAction(PiAction.builder()
-                                                                                   .withId(FABRIC_INGRESS_SPGW_LOAD_PDR)
-                                                                                   .withParameters(Arrays.asList(
-                                                                                           new PiActionParam(CTR_ID, UPLINK_COUNTER_CELL_ID),
-                                                                                           new PiActionParam(FAR_ID, UPLINK_PHYSICAL_FAR_ID),
-                                                                                           new PiActionParam(NEEDS_GTPU_DECAP, 1)
-                                                                                   ))
-                                                                                   .build()).build())
+            .withSelector(DefaultTrafficSelector.builder()
+                                  .matchPi(PiCriterion.builder()
+                                                   .matchExact(HDR_TEID, TEID_VALUE.asArray())
+                                                   .matchExact(HDR_TUNNEL_IPV4_DST, S1U_ADDR.toInt())
+                                                   .build()).build())
+            .withTreatment(DefaultTrafficTreatment.builder()
+                                   .piTableAction(PiAction.builder()
+                                                          .withId(FABRIC_INGRESS_SPGW_LOAD_PDR)
+                                                          .withParameters(Arrays.asList(
+                                                                  new PiActionParam(CTR_ID, UPLINK_COUNTER_CELL_ID),
+                                                                  new PiActionParam(FAR_ID, UPLINK_PHYSICAL_FAR_ID),
+                                                                  new PiActionParam(NEEDS_GTPU_DECAP, 1)
+                                                          ))
+                                                          .build()).build())
             .withPriority(DEFAULT_PRIORITY)
             .build();
 
     public static final FlowRule FABRIC_DOWNLINK_PDR = DefaultFlowRule.builder()
             .forDevice(DEVICE_ID).fromApp(APP_ID).makePermanent()
             .forTable(FABRIC_INGRESS_SPGW_DOWNLINK_PDRS)
-            .withSelector(DefaultTrafficSelector.builder().matchPi(PiCriterion.builder()
-                                                                           .matchExact(HDR_UE_ADDR, UE_ADDR.toInt())
-                                                                           .build()).build())
-            .withTreatment(DefaultTrafficTreatment.builder().piTableAction(PiAction.builder()
-                                                                                   .withId(FABRIC_INGRESS_SPGW_LOAD_PDR)
-                                                                                   .withParameters(Arrays.asList(
-                                                                                           new PiActionParam(CTR_ID, DOWNLINK_COUNTER_CELL_ID),
-                                                                                           new PiActionParam(FAR_ID, DOWNLINK_PHYSICAL_FAR_ID),
-                                                                                           new PiActionParam(NEEDS_GTPU_DECAP, 0)
-                                                                                   ))
-                                                                                   .build()).build())
+            .withSelector(DefaultTrafficSelector.builder()
+                                  .matchPi(PiCriterion.builder()
+                                                   .matchExact(HDR_UE_ADDR, UE_ADDR.toInt())
+                                                   .build()).build())
+            .withTreatment(DefaultTrafficTreatment.builder()
+                                   .piTableAction(PiAction.builder()
+                                                          .withId(FABRIC_INGRESS_SPGW_LOAD_PDR)
+                                                          .withParameters(Arrays.asList(
+                                                                  new PiActionParam(CTR_ID, DOWNLINK_COUNTER_CELL_ID),
+                                                                  new PiActionParam(FAR_ID, DOWNLINK_PHYSICAL_FAR_ID),
+                                                                  new PiActionParam(NEEDS_GTPU_DECAP, 0)
+                                                          ))
+                                                          .build()).build())
             .withPriority(DEFAULT_PRIORITY)
             .build();
 
     public static final FlowRule FABRIC_UPLINK_FAR = DefaultFlowRule.builder()
             .forDevice(DEVICE_ID).fromApp(APP_ID).makePermanent()
             .forTable(FABRIC_INGRESS_SPGW_FARS)
-            .withSelector(DefaultTrafficSelector.builder().matchPi(PiCriterion.builder()
-                                                                           .matchExact(HDR_FAR_ID, UPLINK_PHYSICAL_FAR_ID)
-                                                                           .build()).build())
-            .withTreatment(DefaultTrafficTreatment.builder().piTableAction(PiAction.builder()
-                                                                                   .withId(FABRIC_INGRESS_SPGW_LOAD_NORMAL_FAR)
-                                                                                   .withParameters(Arrays.asList(
-                                                                                           new PiActionParam(DROP, 0),
-                                                                                           new PiActionParam(NOTIFY_CP, 0)
-                                                                                   ))
-                                                                                   .build()).build())
+            .withSelector(DefaultTrafficSelector.builder()
+                                  .matchPi(PiCriterion.builder()
+                                                   .matchExact(HDR_FAR_ID, UPLINK_PHYSICAL_FAR_ID)
+                                                   .build()).build())
+            .withTreatment(DefaultTrafficTreatment.builder()
+                                   .piTableAction(PiAction.builder()
+                                                          .withId(FABRIC_INGRESS_SPGW_LOAD_NORMAL_FAR)
+                                                          .withParameters(Arrays.asList(
+                                                                  new PiActionParam(DROP, 0),
+                                                                  new PiActionParam(NOTIFY_CP, 0)
+                                                          ))
+                                                          .build()).build())
             .withPriority(DEFAULT_PRIORITY)
             .build();
 
     public static final FlowRule FABRIC_DOWNLINK_FAR = DefaultFlowRule.builder()
             .forDevice(DEVICE_ID).fromApp(APP_ID).makePermanent()
             .forTable(FABRIC_INGRESS_SPGW_FARS)
-            .withSelector(DefaultTrafficSelector.builder().matchPi(PiCriterion.builder()
-                                                                           .matchExact(HDR_FAR_ID, DOWNLINK_PHYSICAL_FAR_ID)
-                                                                           .build()).build())
-            .withTreatment(DefaultTrafficTreatment.builder().piTableAction(PiAction.builder()
-                                                                                   .withId(FABRIC_INGRESS_SPGW_LOAD_TUNNEL_FAR)
-                                                                                   .withParameters(Arrays.asList(
-                                                                                           new PiActionParam(DROP, 0),
-                                                                                           new PiActionParam(NOTIFY_CP, 0),
-                                                                                           new PiActionParam(TEID, TEID_VALUE),
-                                                                                           new PiActionParam(TUNNEL_SRC_ADDR, S1U_ADDR.toInt()),
-                                                                                           new PiActionParam(TUNNEL_DST_ADDR, ENB_ADDR.toInt()),
-                                                                                           new PiActionParam(TUNNEL_SRC_PORT, TUNNEL_SPORT)
-                                                                                   ))
-                                                                                   .build()).build())
+            .withSelector(DefaultTrafficSelector.builder()
+                                  .matchPi(PiCriterion.builder()
+                                                   .matchExact(HDR_FAR_ID, DOWNLINK_PHYSICAL_FAR_ID)
+                                                   .build()).build())
+            .withTreatment(DefaultTrafficTreatment.builder()
+                                   .piTableAction(PiAction.builder()
+                                                          .withId(FABRIC_INGRESS_SPGW_LOAD_TUNNEL_FAR)
+                                                          .withParameters(Arrays.asList(
+                                                                  new PiActionParam(DROP, 0),
+                                                                  new PiActionParam(NOTIFY_CP, 0),
+                                                                  new PiActionParam(TEID, TEID_VALUE),
+                                                                  new PiActionParam(TUNNEL_SRC_ADDR, S1U_ADDR.toInt()),
+                                                                  new PiActionParam(TUNNEL_DST_ADDR, ENB_ADDR.toInt()),
+                                                                  new PiActionParam(TUNNEL_SRC_PORT, TUNNEL_SPORT)
+                                                          ))
+                                                          .build()).build())
             .withPriority(DEFAULT_PRIORITY)
             .build();
 
     public static final FlowRule FABRIC_UPLINK_INTERFACE = DefaultFlowRule.builder()
             .forDevice(DEVICE_ID).fromApp(APP_ID).makePermanent()
             .forTable(FABRIC_INGRESS_SPGW_INTERFACES)
-            .withSelector(DefaultTrafficSelector.builder().matchPi(PiCriterion.builder()
-                                                                           .matchLpm(HDR_IPV4_DST_ADDR,
-                                                                                     S1U_ADDR.toInt(),
-                                                                                     32)
-                                                                           .matchExact(HDR_GTPU_IS_VALID, 1)
-                                                                           .build()).build())
-            .withTreatment(DefaultTrafficTreatment.builder().piTableAction(PiAction.builder()
-                                                                                   .withId(FABRIC_INGRESS_SPGW_LOAD_IFACE)
-                                                                                   .withParameter(new PiActionParam(SRC_IFACE, INTERFACE_ACCESS))
-                                                                                   .build()).build())
+            .withSelector(DefaultTrafficSelector.builder()
+                                  .matchPi(PiCriterion.builder()
+                                                   .matchLpm(HDR_IPV4_DST_ADDR,
+                                                             S1U_ADDR.toInt(),
+                                                             32)
+                                                   .matchExact(HDR_GTPU_IS_VALID, 1)
+                                                   .build()).build())
+            .withTreatment(DefaultTrafficTreatment.builder()
+                                   .piTableAction(
+                                           PiAction.builder()
+                                                   .withId(FABRIC_INGRESS_SPGW_LOAD_IFACE)
+                                                   .withParameter(new PiActionParam(SRC_IFACE, INTERFACE_ACCESS))
+                                                   .build()).build())
             .withPriority(DEFAULT_PRIORITY)
             .build();
 
     public static final FlowRule FABRIC_DOWNLINK_INTERFACE = DefaultFlowRule.builder()
             .forDevice(DEVICE_ID).fromApp(APP_ID).makePermanent()
             .forTable(FABRIC_INGRESS_SPGW_INTERFACES)
-            .withSelector(DefaultTrafficSelector.builder().matchPi(PiCriterion.builder()
-                                                                           .matchLpm(HDR_IPV4_DST_ADDR,
-                                                                                     UE_POOL.address().toInt(),
-                                                                                     UE_POOL.prefixLength())
-                                                                           .matchExact(HDR_GTPU_IS_VALID, 0)
-                                                                           .build()).build())
-            .withTreatment(DefaultTrafficTreatment.builder().piTableAction(PiAction.builder()
-                                                                                   .withId(FABRIC_INGRESS_SPGW_LOAD_IFACE)
-                                                                                   .withParameter(new PiActionParam(SRC_IFACE, INTERFACE_CORE))
-                                                                                   .build()).build())
+            .withSelector(DefaultTrafficSelector.builder()
+                                  .matchPi(PiCriterion.builder()
+                                                   .matchLpm(HDR_IPV4_DST_ADDR,
+                                                             UE_POOL.address().toInt(),
+                                                             UE_POOL.prefixLength())
+                                                   .matchExact(HDR_GTPU_IS_VALID, 0)
+                                                   .build()).build())
+            .withTreatment(DefaultTrafficTreatment.builder()
+                                   .piTableAction(PiAction.builder()
+                                                          .withId(FABRIC_INGRESS_SPGW_LOAD_IFACE)
+                                                          .withParameter(new PiActionParam(SRC_IFACE, INTERFACE_CORE))
+                                                          .build()).build())
             .withPriority(DEFAULT_PRIORITY)
             .build();
 

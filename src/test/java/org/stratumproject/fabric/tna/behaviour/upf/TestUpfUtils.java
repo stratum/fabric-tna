@@ -10,11 +10,16 @@ import org.onosproject.net.config.basics.BasicDeviceConfig;
 import java.io.IOException;
 import java.io.InputStream;
 
-public class TestUpfUtils {
+public final class TestUpfUtils {
 
     private static final String BASIC_CONFIG_KEY = "basic";
 
-    public static BasicDeviceConfig getBasicConfig(DeviceId deviceId, String fileName) throws IOException {
+    private TestUpfUtils() {
+        // hide constructor
+    }
+
+    public static BasicDeviceConfig getBasicConfig(DeviceId deviceId, String fileName)
+            throws IOException {
         BasicDeviceConfig basicCfg = new BasicDeviceConfig();
         InputStream jsonStream = TestUpfUtils.class.getResourceAsStream(fileName);
         ObjectMapper mapper = new ObjectMapper();

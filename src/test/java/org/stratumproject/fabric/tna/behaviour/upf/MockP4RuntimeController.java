@@ -3,7 +3,6 @@
 package org.stratumproject.fabric.tna.behaviour.upf;
 
 import io.grpc.ManagedChannel;
-import org.onosproject.core.CoreService;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.device.DeviceAgentListener;
 import org.onosproject.net.pi.model.PiPipeconf;
