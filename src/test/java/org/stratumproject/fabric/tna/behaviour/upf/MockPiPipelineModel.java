@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 package org.stratumproject.fabric.tna.behaviour.upf;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.onosproject.net.pi.model.PiActionId;
 import org.onosproject.net.pi.model.PiActionModel;
@@ -35,7 +36,8 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_ING
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_PDRS;
 
 public class MockPiPipelineModel implements PiPipelineModel {
-    Map<PiTableId, PiTableModel> tableMap = ImmutableMap.of(
+
+    private final Map<PiTableId, PiTableModel> tableMap = ImmutableMap.of(
             FABRIC_INGRESS_SPGW_UPLINK_PDRS,
             new MockTableModel(FABRIC_INGRESS_SPGW_UPLINK_PDRS,
                                TestUpfConstants.PHYSICAL_MAX_PDRS / 2),
@@ -46,6 +48,13 @@ public class MockPiPipelineModel implements PiPipelineModel {
             new MockTableModel(FABRIC_INGRESS_SPGW_FARS,
                                TestUpfConstants.PHYSICAL_MAX_FARS)
 
+    );
+
+    private final List<PiCounterModel> counters = ImmutableList.of(
+            new MockCounterModel(FABRIC_INGRESS_SPGW_PDR_COUNTER,
+                                 TestUpfConstants.PHYSICAL_COUNTER_SIZE),
+            new MockCounterModel(FABRIC_EGRESS_SPGW_PDR_COUNTER,
+                                 TestUpfConstants.PHYSICAL_COUNTER_SIZE)
     );
 
     @Override
@@ -65,12 +74,7 @@ public class MockPiPipelineModel implements PiPipelineModel {
 
     @Override
     public Collection<PiCounterModel> counters() {
-        return List.of(
-                new MockCounterModel(FABRIC_INGRESS_SPGW_PDR_COUNTER,
-                                     TestUpfConstants.PHYSICAL_COUNTER_SIZE),
-                new MockCounterModel(FABRIC_EGRESS_SPGW_PDR_COUNTER,
-                                     TestUpfConstants.PHYSICAL_COUNTER_SIZE)
-        );
+        return counters;
     }
 
     @Override

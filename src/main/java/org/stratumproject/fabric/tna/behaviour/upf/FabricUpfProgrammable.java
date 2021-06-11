@@ -121,6 +121,8 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     }
 
     // TODO: this won't work, how to pass this ueLimit????
+    //  Probably ueLimit shouldn't be part of the behaviour, but should be enforced
+    //  by upper layer (e.g., UP4 app)
     @Override
     public boolean init(long ueLimit) {
         if (setupBehaviour("init()")) {

@@ -3,93 +3,39 @@
 package org.stratumproject.fabric.tna.behaviour.upf;
 
 import io.grpc.ManagedChannel;
+import org.onosproject.core.CoreService;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.device.DeviceAgentListener;
 import org.onosproject.net.pi.model.PiPipeconf;
-import org.onosproject.net.pi.runtime.PiPacketOperation;
 import org.onosproject.net.provider.ProviderId;
 import org.onosproject.p4runtime.api.P4RuntimeClient;
 import org.onosproject.p4runtime.api.P4RuntimeController;
 import org.onosproject.p4runtime.api.P4RuntimeEventListener;
 
-import java.math.BigInteger;
-import java.nio.ByteBuffer;
-import java.util.concurrent.CompletableFuture;
+import static org.easymock.EasyMock.anyLong;
+import static org.easymock.EasyMock.anyObject;
+import static org.easymock.EasyMock.createMock;
+import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.replay;
 
 /**
  * Currently only used to get mock clients that mock counter read requests.
  */
 public class MockP4RuntimeController implements P4RuntimeController {
 
+    private final P4RuntimeClient mockP4rtClient;
+
+    public MockP4RuntimeController() {
+        mockP4rtClient = createMock(P4RuntimeClient.class);
+        expect(mockP4rtClient.read(anyLong(), anyObject(PiPipeconf.class)))
+                .andReturn(new MockReadRequest())
+                .anyTimes();
+        replay(mockP4rtClient);
+    }
+
     @Override
     public P4RuntimeClient get(DeviceId deviceId) {
-        return new P4RuntimeClient() {
-            @Override
-            public void shutdown() {
-
-            }
-
-            @Override
-            public boolean isServerReachable() {
-                return false;
-            }
-
-            @Override
-            public CompletableFuture<Boolean> probeService() {
-                return null;
-            }
-
-            @Override
-            public CompletableFuture<Boolean> setPipelineConfig(long p4DeviceId,
-                                                                PiPipeconf pipeconf, ByteBuffer deviceData) {
-                return null;
-            }
-
-            @Override
-            public CompletableFuture<Boolean> isPipelineConfigSet(long p4DeviceId, PiPipeconf pipeconf) {
-                return null;
-            }
-
-            @Override
-            public CompletableFuture<Boolean> isAnyPipelineConfigSet(long p4DeviceId) {
-                return null;
-            }
-
-            @Override
-            public ReadRequest read(long p4DeviceId, PiPipeconf pipeconf) {
-                return new MockReadRequest();
-            }
-
-            @Override
-            public void setMastership(long p4DeviceId, boolean master, BigInteger electionId) {
-
-            }
-
-            @Override
-            public boolean isSessionOpen(long p4DeviceId) {
-                return false;
-            }
-
-            @Override
-            public void closeSession(long p4DeviceId) {
-
-            }
-
-            @Override
-            public boolean isMaster(long p4DeviceId) {
-                return false;
-            }
-
-            @Override
-            public void packetOut(long p4DeviceId, PiPacketOperation packet, PiPipeconf pipeconf) {
-
-            }
-
-            @Override
-            public WriteRequest write(long p4DeviceId, PiPipeconf pipeconf) {
-                return null;
-            }
-        };
+        return mockP4rtClient;
     }
 
     @Override
@@ -113,12 +59,14 @@ public class MockP4RuntimeController implements P4RuntimeController {
     }
 
     @Override
-    public void addDeviceAgentListener(DeviceId deviceId, ProviderId providerId, DeviceAgentListener listener) {
+    public void addDeviceAgentListener(DeviceId deviceId, ProviderId providerId,
+                                       DeviceAgentListener listener) {
 
     }
 
     @Override
-    public void removeDeviceAgentListener(DeviceId deviceId, ProviderId providerId) {
+    public void removeDeviceAgentListener(DeviceId deviceId,
+                                          ProviderId providerId) {
 
     }
 }

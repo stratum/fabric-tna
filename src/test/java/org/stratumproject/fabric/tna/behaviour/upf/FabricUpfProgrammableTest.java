@@ -81,10 +81,12 @@ public class FabricUpfProgrammableTest {
                 .anyTimes();
         replay(coreService, netcfgService);
 
+        // Mock driverData to get the right device ID
         DriverData driverData = createMock(DriverData.class);
         expect(driverData.deviceId()).andReturn(TestUpfConstants.DEVICE_ID).anyTimes();
         replay(driverData);
 
+        // Mock DriverHandler to get all the required mocked services
         DriverHandler driverHandler = createMock(DriverHandler.class);
         expect(driverHandler.get(FlowRuleService.class)).andReturn(new MockFlowRuleService()).anyTimes();
         expect(driverHandler.get(PacketService.class)).andReturn(packetService).anyTimes();
