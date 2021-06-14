@@ -203,7 +203,7 @@ public class FabricUpfProgrammableTest {
 
     @Test
     public void testReadAllCounters() {
-        Collection<PdrStats> allStats = upfProgrammable.readAllCounters();
+        Collection<PdrStats> allStats = upfProgrammable.readAllCounters(-1);
         assertThat(allStats.size(), equalTo(TestUpfConstants.PHYSICAL_COUNTER_SIZE));
         for (PdrStats stat : allStats) {
             assertThat(stat.getIngressBytes(), equalTo(TestUpfConstants.COUNTER_BYTES));
@@ -211,6 +211,18 @@ public class FabricUpfProgrammableTest {
             assertThat(stat.getIngressPkts(), equalTo(TestUpfConstants.COUNTER_PKTS));
             assertThat(stat.getEgressPkts(), equalTo(TestUpfConstants.COUNTER_PKTS));
         }
+    }
+
+    @Test
+    public void testReadAllCountersLimitedCounters() {
+        Collection<PdrStats> allStats = upfProgrammable.readAllCounters(10);
+        assertThat(allStats.size(), equalTo(10));
+    }
+
+    @Test
+    public void testReadAllCountersPhysicalLimit() {
+        Collection<PdrStats> allStats = upfProgrammable.readAllCounters(1024);
+        assertThat(allStats.size(), equalTo(TestUpfConstants.PHYSICAL_COUNTER_SIZE));
     }
 
     @Test
