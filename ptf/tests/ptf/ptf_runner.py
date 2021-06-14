@@ -270,18 +270,50 @@ TREX_FILES_DIR = "/tmp/trex_files/"
 trex_daemon_client = None
 
 
-def set_up_trex_server(trex_addr, trex_config):
+def set_up_trex_server(trex_addr, trex_config, force_restart):
+    # Init trex client
     trex_daemon_client = CTRexClient(trex_addr)
 
+    # Push TRex config to server
     logging.info("Pushing Trex config %s to the server", trex_config)
     if not trex_daemon_client.push_files(trex_config):
         logging.error("Unable to push %s to Trex server", trex_config)
         return 1
-    trex_config_file_on_server = TREX_FILES_DIR + os.path.basename(trex_config)
-    trex_daemon_client.start_stateless(cfg=trex_config_file_on_server)
 
-    # get the client when starting the PTF test
-    # trex_client = STLClient(server=args.server_addr)
+    # Restart client if specified
+    if force_restart:
+        logging.info("Killing all Trexes... with meteorite... Boom!")
+        trex_daemon_client.kill_all_trexes()
+
+        # Wait until Trex enter the Idle state
+        start_time = time.time()
+        success = False
+        while time.time() - start_time < DEFAULT_KILL_TIMEOUT:
+            if trex_daemon_client.is_idle():
+                success = True
+                break
+            time.sleep(1)
+
+        if not success:
+            logging.error(
+                "Unable to kill Trex process, please login "
+                + "to the server and kill it manually."
+            )
+            return 1
+
+    # Check if daemon client already running
+    if not trex_daemon_client.is_idle():
+        logging.info("The Trex server process is running")
+        logging.warning(
+            "A Trex server process is still running, "
+            + "use --force-restart to kill it if necessary."
+        )
+        return 1
+
+
+    # Start daemon client on server
+    trex_config_file_on_server = TREX_FILES_DIR + os.path.basename(trex_config)
+    trex_daemon_client.start_trex(cfg=trex_config_file_on_server)
 
 
 # noinspection PyTypeChecker
@@ -379,7 +411,7 @@ def main():
     )
     parser.add_argument(
         "--keep-trex-running",
-        help="Keep TRex running after the test",
+        help="Keep TRex client running after the test",
         action="store_true",
         required=False,
     )
@@ -414,7 +446,7 @@ def main():
     success = True
 
     if args.line_rate_test:
-        success = set_up_trex_server(args.trex_address, args.trex_config)
+        success = set_up_trex_server(args.trex_address, args.trex_config, args.force_restart)
 
     if not args.skip_config:
         success = update_config(
