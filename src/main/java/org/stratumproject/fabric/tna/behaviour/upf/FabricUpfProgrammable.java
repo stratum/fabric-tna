@@ -83,7 +83,6 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     private long pdrCounterSize;
 
     private ApplicationId appId;
-    private long ueLimit = NO_UE_LIMIT;
 
     // FIXME: remove, buffer drain should be triggered by Up4Service
     private BufferDrainer bufferDrainer;
@@ -120,24 +119,14 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         return true;
     }
 
-    // TODO: this won't work, how to pass this ueLimit????
-    //  Probably ueLimit shouldn't be part of the behaviour, but should be enforced
-    //  by upper layer (e.g., UP4 app)
     @Override
-    public boolean init(long ueLimit) {
+    public boolean init() {
         if (setupBehaviour("init()")) {
-
             if (!computeHardwareResourceSizes()) {
                 // error message will be printed by computeHardwareResourceSizes()
                 return false;
             }
-
-            String limitStr = ueLimit < 0 ? "unlimited" : Long.toString(ueLimit);
-            log.info("Setting UE limit of UPF on {} to {}", deviceId, limitStr);
-            this.ueLimit = ueLimit;
-
             log.info("UpfProgrammable initialized for appId {} and deviceId {}", appId, deviceId);
-
             return true;
         }
         return false;
@@ -349,14 +338,19 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
 
     @Override
-    public Collection<PdrStats> readAllCounters() {
+    public Collection<PdrStats> readAllCounters(long maxCounterId) {
         if (!setupBehaviour("readAllCounters()")) {
             return null;
         }
 
+        long counterSize = pdrCounterSize();
+        if (maxCounterId != -1) {
+            counterSize = Math.min(maxCounterId, counterSize);
+        }
+
         // Prepare PdrStats object builders, one for each counter ID currently in use
         Map<Integer, PdrStats.Builder> pdrStatBuilders = Maps.newHashMap();
-        for (int cellId = 0; cellId < pdrCounterSize(); cellId++) {
+        for (int cellId = 0; cellId < counterSize; cellId++) {
             pdrStatBuilders.put(cellId, PdrStats.builder().withCellId(cellId));
         }
 
@@ -411,9 +405,6 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
             return -1;
         }
         computeHardwareResourceSizes();
-        if (ueLimit >= 0) {
-            return Math.min(ueLimit * 2, pdrCounterSize);
-        }
         return pdrCounterSize;
     }
 
@@ -423,12 +414,8 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
             return -1;
         }
         computeHardwareResourceSizes();
-        if (ueLimit >= 0) {
-            return Math.min(ueLimit * 2, farTableSize);
-        }
         return farTableSize;
     }
-
 
     @Override
     public long pdrTableSize() {
@@ -436,11 +423,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
             return -1;
         }
         computeHardwareResourceSizes();
-        long physicalSize = Math.min(encappedPdrTableSize, unencappedPdrTableSize) * 2;
-        if (ueLimit >= 0) {
-            return Math.min(ueLimit * 2, physicalSize);
-        }
-        return physicalSize;
+        return Math.min(encappedPdrTableSize, unencappedPdrTableSize) * 2;
     }
 
     @Override

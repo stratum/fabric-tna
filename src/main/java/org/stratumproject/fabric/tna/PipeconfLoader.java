@@ -5,6 +5,7 @@ package org.stratumproject.fabric.tna;
 
 import org.onosproject.core.CoreService;
 import org.onosproject.net.behaviour.Pipeliner;
+import org.onosproject.net.behaviour.upf.UpfProgrammable;
 import org.onosproject.net.behaviour.inbandtelemetry.IntProgrammable;
 import org.onosproject.net.pi.model.DefaultPiPipeconf;
 import org.onosproject.net.pi.model.PiPipeconf;
@@ -26,6 +27,7 @@ import org.slf4j.Logger;
 import org.stratumproject.fabric.tna.behaviour.FabricIntProgrammable;
 import org.stratumproject.fabric.tna.behaviour.FabricInterpreter;
 import org.stratumproject.fabric.tna.behaviour.pipeliner.FabricPipeliner;
+import org.stratumproject.fabric.tna.behaviour.upf.FabricUpfProgrammable;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -68,6 +70,7 @@ public class PipeconfLoader {
     private static final String PIPELINE_CONFIG = "pipeline_config.pb.bin";
 
     private static final String INT_PROFILE_SUFFIX = "-int";
+    private static final String UPF_PROFILE_SUFFIX = "-spgw";
     private static final String FULL_PROFILE_SUFFIX = "-full";
 
     @Activate
@@ -131,6 +134,13 @@ public class PipeconfLoader {
                 profile.endsWith(FULL_PROFILE_SUFFIX)) {
             builder.addBehaviour(IntProgrammable.class, FabricIntProgrammable.class);
         }
+
+        // Add UpfProgrammable behaviour for UPF-enabled profiles.
+        if (profile.contains(UPF_PROFILE_SUFFIX) ||
+                profile.endsWith(FULL_PROFILE_SUFFIX)) {
+            builder.addBehaviour(UpfProgrammable.class, FabricUpfProgrammable.class);
+        }
+
 
         return builder.build();
     }

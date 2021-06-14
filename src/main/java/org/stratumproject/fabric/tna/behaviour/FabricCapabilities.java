@@ -84,6 +84,11 @@ public class FabricCapabilities {
         }
     }
 
+    /**
+     * Returns true if the pipeconf supports UPF capabilities, false otherwise.
+     *
+     * @return boolean
+     */
     public boolean supportUpf() {
         return pipeconf.pipelineModel()
                 .table(FABRIC_INGRESS_SPGW_DOWNLINK_PDRS)
