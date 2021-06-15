@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 package org.stratumproject.fabric.tna.behaviour.upf;
 
+import com.google.common.collect.ImmutableList;
 import org.junit.Before;
 import org.junit.Test;
 import org.onlab.junit.TestUtils;
@@ -24,15 +25,19 @@ import org.onosproject.net.flow.DefaultTrafficTreatment;
 import org.onosproject.net.flow.FlowRuleService;
 import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.net.packet.PacketService;
+import org.onosproject.net.pi.model.PiCounterModel;
+import org.onosproject.net.pi.model.PiTableModel;
 import org.onosproject.net.pi.service.PiPipeconfService;
 import org.onosproject.net.pi.service.PiTranslationService;
 import org.onosproject.p4runtime.api.P4RuntimeController;
 import org.stratumproject.fabric.tna.PipeconfLoader;
 import org.stratumproject.fabric.tna.behaviour.FabricCapabilities;
+import org.onosproject.net.intent.MockFlowRuleService;
 
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.Collection;
+import java.util.List;
 import java.util.concurrent.ConcurrentMap;
 
 import static junit.framework.TestCase.assertNotNull;
@@ -43,6 +48,11 @@ import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.replay;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.onosproject.pipelines.fabric.FabricConstants.FABRIC_EGRESS_SPGW_PDR_COUNTER;
+import static org.onosproject.pipelines.fabric.FabricConstants.FABRIC_INGRESS_SPGW_DOWNLINK_PDRS;
+import static org.onosproject.pipelines.fabric.FabricConstants.FABRIC_INGRESS_SPGW_FARS;
+import static org.onosproject.pipelines.fabric.FabricConstants.FABRIC_INGRESS_SPGW_PDR_COUNTER;
+import static org.onosproject.pipelines.fabric.FabricConstants.FABRIC_INGRESS_SPGW_UPLINK_PDRS;
 
 public class FabricUpfProgrammableTest {
 
@@ -62,6 +72,21 @@ public class FabricUpfProgrammableTest {
     private static final TrafficTreatment TABLE_OUTPUT_TREATMENT = DefaultTrafficTreatment.builder()
             .setOutput(PortNumber.TABLE)
             .build();
+
+    private static final List<PiTableModel> TABLE_MODELS = ImmutableList.of(
+            new MockTableModel(FABRIC_INGRESS_SPGW_UPLINK_PDRS,
+                               TestUpfConstants.PHYSICAL_MAX_PDRS / 2),
+            new MockTableModel(FABRIC_INGRESS_SPGW_DOWNLINK_PDRS,
+                               TestUpfConstants.PHYSICAL_MAX_PDRS / 2),
+            new MockTableModel(FABRIC_INGRESS_SPGW_FARS,
+                               TestUpfConstants.PHYSICAL_MAX_FARS)
+    );
+    private static final List<PiCounterModel> COUNTER_MODELS = ImmutableList.of(
+            new MockCounterModel(FABRIC_INGRESS_SPGW_PDR_COUNTER,
+                                 TestUpfConstants.PHYSICAL_COUNTER_SIZE),
+            new MockCounterModel(FABRIC_EGRESS_SPGW_PDR_COUNTER,
+                                 TestUpfConstants.PHYSICAL_COUNTER_SIZE)
+    );
 
     @Before
     public void setUp() throws Exception {
@@ -95,8 +120,15 @@ public class FabricUpfProgrammableTest {
         expect(driverHandler.get(CoreService.class)).andReturn(coreService).anyTimes();
         expect(driverHandler.get(DeviceService.class)).andReturn(deviceService).anyTimes();
         expect(driverHandler.get(PiTranslationService.class)).andReturn(piTranslationService).anyTimes();
-        expect(driverHandler.get(PiPipeconfService.class)).andReturn(new MockPiPipeconfService()).anyTimes();
-        expect(driverHandler.get(P4RuntimeController.class)).andReturn(new MockP4RuntimeController()).anyTimes();
+        expect(driverHandler.get(PiPipeconfService.class))
+                .andReturn(new MockPiPipeconfService(TABLE_MODELS, COUNTER_MODELS))
+                .anyTimes();
+        expect(driverHandler.get(P4RuntimeController.class))
+                .andReturn(new MockP4RuntimeController(TestUpfConstants.DEVICE_ID,
+                                                       TestUpfConstants.COUNTER_PKTS,
+                                                       TestUpfConstants.COUNTER_BYTES,
+                                                       TestUpfConstants.PHYSICAL_COUNTER_SIZE))
+                .anyTimes();
         expect(driverHandler.data()).andReturn(driverData).anyTimes();
         replay(driverHandler);
 

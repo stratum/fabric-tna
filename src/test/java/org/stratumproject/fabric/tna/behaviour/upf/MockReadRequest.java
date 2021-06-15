@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 package org.stratumproject.fabric.tna.behaviour.upf;
 
+import org.onosproject.net.DeviceId;
 import org.onosproject.net.pi.model.PiActionProfileId;
 import org.onosproject.net.pi.model.PiCounterId;
 import org.onosproject.net.pi.model.PiMeterId;
@@ -25,19 +26,28 @@ import static com.google.common.base.Preconditions.checkNotNull;
  */
 public class MockReadRequest implements P4RuntimeReadClient.ReadRequest {
     List<PiHandle> handles;
+    DeviceId deviceId;
+    long packets;
+    long bytes;
+    int counterSize;
 
-    public MockReadRequest() {
+    public MockReadRequest(DeviceId deviceId, long packets, long bytes, int counterSize) {
         this.handles = new ArrayList<>();
+        this.deviceId = deviceId;
+        this.packets = packets;
+        this.bytes = bytes;
+        this.counterSize = counterSize;
     }
 
     @Override
     public CompletableFuture<P4RuntimeReadClient.ReadResponse> submit() {
-        return CompletableFuture.completedFuture(new MockReadResponse(this.handles));
+        return CompletableFuture.completedFuture(
+                new MockReadResponse(this.handles, this.packets, this.bytes));
     }
 
     @Override
     public P4RuntimeReadClient.ReadResponse submitSync() {
-        return new MockReadResponse(this.handles);
+        return new MockReadResponse(this.handles, this.packets, this.bytes);
     }
 
 
@@ -112,12 +122,12 @@ public class MockReadRequest implements P4RuntimeReadClient.ReadRequest {
     @Override
     public P4RuntimeReadClient.ReadRequest counterCells(Iterable<PiCounterId> counterIds) {
         counterIds.forEach(counterId -> {
-            LongStream.range(0, TestUpfConstants.PHYSICAL_COUNTER_SIZE)
+            LongStream.range(0, this.counterSize)
                     .forEach(index -> {
                         PiCounterCellId cellId =
                                 PiCounterCellId.ofIndirect(counterId, index);
                         PiCounterCellHandle handle =
-                                PiCounterCellHandle.of(TestUpfConstants.DEVICE_ID, cellId);
+                                PiCounterCellHandle.of(this.deviceId, cellId);
                         this.handle(handle);
                     });
         });

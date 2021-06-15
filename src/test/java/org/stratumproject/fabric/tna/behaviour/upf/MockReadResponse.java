@@ -23,9 +23,13 @@ import static com.google.common.base.Preconditions.checkNotNull;
  */
 public class MockReadResponse implements P4RuntimeReadClient.ReadResponse {
     List<PiEntity> entities;
+    long packets;
+    long bytes;
 
-    public MockReadResponse(Iterable<? extends PiHandle> handles) {
+    public MockReadResponse(Iterable<? extends PiHandle> handles, long packets, long bytes) {
         this.entities = new ArrayList<>();
+        this.packets = packets;
+        this.bytes = bytes;
         checkNotNull(handles);
         handles.forEach(this::handle);
     }
@@ -39,7 +43,7 @@ public class MockReadResponse implements P4RuntimeReadClient.ReadResponse {
         if (handle.entityType().equals(PiEntityType.COUNTER_CELL)) {
             PiCounterCellHandle counterHandle = (PiCounterCellHandle) handle;
             PiCounterCellData data =
-                    new PiCounterCellData(TestUpfConstants.COUNTER_PKTS, TestUpfConstants.COUNTER_BYTES);
+                    new PiCounterCellData(this.packets, this.bytes);
             PiEntity entity = new PiCounterCell(counterHandle.cellId(), data);
             this.entities.add(entity);
         }

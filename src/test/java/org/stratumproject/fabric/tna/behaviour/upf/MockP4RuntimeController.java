@@ -24,10 +24,18 @@ public class MockP4RuntimeController implements P4RuntimeController {
 
     private final P4RuntimeClient mockP4rtClient;
 
-    public MockP4RuntimeController() {
+    /**
+     * Used to mock counter read requests.
+     *
+     * @param deviceId The ID of the device
+     * @param packets Packets counter value
+     * @param bytes Bytes counter value
+     * @param counterSize The size of the counter array
+     */
+    public MockP4RuntimeController(DeviceId deviceId, long packets, long bytes, int counterSize) {
         mockP4rtClient = createMock(P4RuntimeClient.class);
         expect(mockP4rtClient.read(anyLong(), anyObject(PiPipeconf.class)))
-                .andReturn(new MockReadRequest())
+                .andReturn(new MockReadRequest(deviceId, packets, bytes, counterSize))
                 .anyTimes();
         replay(mockP4rtClient);
     }

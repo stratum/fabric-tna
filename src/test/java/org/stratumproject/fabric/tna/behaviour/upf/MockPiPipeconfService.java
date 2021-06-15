@@ -3,11 +3,14 @@
 package org.stratumproject.fabric.tna.behaviour.upf;
 
 import org.onosproject.net.DeviceId;
+import org.onosproject.net.pi.model.PiCounterModel;
 import org.onosproject.net.pi.model.PiPipeconf;
 import org.onosproject.net.pi.model.PiPipeconfId;
+import org.onosproject.net.pi.model.PiTableModel;
 import org.onosproject.net.pi.service.PiPipeconfListener;
 import org.onosproject.net.pi.service.PiPipeconfService;
 
+import java.util.Collection;
 import java.util.Optional;
 
 import static org.easymock.EasyMock.createMock;
@@ -18,10 +21,11 @@ public class MockPiPipeconfService implements PiPipeconfService {
 
     private final PiPipeconf mockPiPipeconf;
 
-    public MockPiPipeconfService() {
+    public MockPiPipeconfService(Collection<PiTableModel> tables,
+                                 Collection<PiCounterModel> counters) {
         mockPiPipeconf = createMock(PiPipeconf.class);
         expect(mockPiPipeconf.pipelineModel())
-                .andReturn(new MockPiPipelineModel())
+                .andReturn(new MockPiPipelineModel(tables, counters))
                 .anyTimes();
         replay(mockPiPipeconf);
     }
