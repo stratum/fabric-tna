@@ -1,7 +1,40 @@
 #!/usr/bin/env bash
+# Copyright 2020-present Open Networking Foundation
+# SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 
+set -eu -o pipefail
+
+# get directory name and set FP4TEST_ROOT
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
+FP4TEST_ROOT="${DIR}"/../..
+FABRIC_TNA="${FP4TEST_ROOT}"/..
+
+# shellcheck source=.env
+source "${FABRIC_TNA}"/.env
+
+fabricProfile=$1
+if [ -z "${fabricProfile}" ]; then
+    echo "fabric-tna profile is not set"
+    exit 1
+fi
+
+# TODO: is 'all' profiles supported on bare-metal Tofino?
+if [ "${fabricProfile}" = "all" ]; then
+    echo "Testing 'all' profiles is not supported on Tofino"
+    exit 1
+fi
+echo "*** Testing profile '${fabricProfile}'..."
+
+# TODO: Pretty sure need different way of defining P4 compiler output dir
+# P4C_OUT=${FABRIC_TNA}/p4src/build/${fabricProfile}/sde_${sdeVer_}
+# echo "*** Using P4 compiler output in ${P4C_OUT}..."
 
 TREX_CONFIG=${TREX_CONFIG:-trex-config-4ports.yaml}
+testerRunName=tester-${RANDOM}
+
+echo "*** Starting ${testerRunName}..."
+# Do not attach stdin if running in an environment without it (e.g., Jenkins)
+it=$(test -t 0 && echo "-it" || echo "-t")
 
 
 docker run --name "${testerRunName}" "${it}" --rm \

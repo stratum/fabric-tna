@@ -169,18 +169,21 @@ def run_test(
     platform=None,
     generate_tv=False,
     loopback=False,
-    extra_args=(),
-    line_rate_test=False
+    trex_address=None,
+    extra_args=()
 ):
     """
     Runs PTF tests included in provided directory.
     Device must be running and configfured with appropriate P4 program.
     """
+    # TODO: figure out what I'm supposed to do here if it is a trex test
+
     # TODO: check schema?
     # "ptf_port" is ignored for now, we assume that ports are provided by
     # increasing values of ptf_port, in the range [0, NUM_IFACES].
     port_map = OrderedDict()
-    if not line_rate_test:
+    # If not a line-rate test, skip opening and parsing the JSON port map
+    if trex_address is None:
         with open(port_map_path, "r") as port_map_f:
             port_list = json.load(port_map_f)
             if generate_tv:
@@ -270,9 +273,9 @@ TREX_FILES_DIR = "/tmp/trex_files/"
 trex_daemon_client = None
 
 
-def set_up_trex_server(trex_addr, trex_config, force_restart):
+def set_up_trex_server(trex_address, trex_config, force_restart):
     # Init trex client
-    trex_daemon_client = CTRexClient(trex_addr)
+    trex_daemon_client = CTRexClient(trex_address)
 
     # Push TRex config to server
     logging.info("Pushing Trex config %s to the server", trex_config)
@@ -403,12 +406,12 @@ def main():
         type=str,
         required=False,
     )
-    parser.add_argument(
-        "--line-rate-test",
-        help="",
-        action="store_true",
-        required=False,
-    )
+    # parser.add_argument(
+    #     "--line-rate-test",
+    #     help="",
+    #     action="store_true",
+    #     required=False,
+    # )
     parser.add_argument(
         "--keep-trex-running",
         help="Keep TRex client running after the test",
@@ -445,7 +448,7 @@ def main():
 
     success = True
 
-    if args.line_rate_test:
+    if args.trex_address is not None:
         success = set_up_trex_server(args.trex_address, args.trex_config, args.force_restart)
 
     if not args.skip_config:
@@ -471,8 +474,8 @@ def main():
             generate_tv=args.generate_tv,
             loopback=args.loopback,
             profile=args.profile,
+            trex_address=args.trex_address,
             extra_args=unknown_args,
-            line_rate_test=args.line_rate_test
         )
 
     # clean up TRex
