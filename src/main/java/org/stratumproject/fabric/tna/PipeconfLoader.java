@@ -71,7 +71,7 @@ public class PipeconfLoader {
 
     private static final String INT_PROFILE_SUFFIX = "-int";
     private static final String UPF_PROFILE_SUFFIX = "-spgw";
-    private static final String FULL_PROFILE_SUFFIX = "-full";
+    private static final String FULL_PROFILE_SUFFIX = "-spgw-int";
 
     @Activate
     public void activate() {
@@ -136,7 +136,7 @@ public class PipeconfLoader {
         }
 
         // Add UpfProgrammable behaviour for UPF-enabled profiles.
-        if (profile.contains(UPF_PROFILE_SUFFIX) ||
+        if (profile.endsWith(UPF_PROFILE_SUFFIX) ||
                 profile.endsWith(FULL_PROFILE_SUFFIX)) {
             builder.addBehaviour(UpfProgrammable.class, FabricUpfProgrammable.class);
         }
