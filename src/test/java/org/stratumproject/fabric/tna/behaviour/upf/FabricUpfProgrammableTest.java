@@ -32,7 +32,6 @@ import org.onosproject.net.pi.service.PiTranslationService;
 import org.onosproject.p4runtime.api.P4RuntimeController;
 import org.stratumproject.fabric.tna.PipeconfLoader;
 import org.stratumproject.fabric.tna.behaviour.FabricCapabilities;
-import org.onosproject.net.intent.MockFlowRuleService;
 
 import java.net.URI;
 import java.nio.ByteBuffer;

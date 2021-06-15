@@ -23,6 +23,8 @@ import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.onosproject.pipelines.fabric.behaviour.upf.UpfRuleIdentifier;
+import org.onosproject.pipelines.fabric.behaviour.upf.UpfStore;
 
 import java.util.HashSet;
 import java.util.Map;
@@ -36,7 +38,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  */
 // FIXME: this store is generic and not tied to a single device, should we have a store based on deviceId?
 @Component(immediate = true, service = DistributedFabricUpfStore.class)
-public final class DistributedFabricUpfStore implements FabricUpfStore {
+public final class DistributedFabricUpfStore implements UpfStore {
 
     private final Logger log = LoggerFactory.getLogger(getClass());
 

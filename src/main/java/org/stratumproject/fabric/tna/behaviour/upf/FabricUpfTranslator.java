@@ -24,6 +24,8 @@ import org.onosproject.net.pi.model.PiTableId;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
 import org.onosproject.net.pi.runtime.PiTableAction;
+import org.onosproject.pipelines.fabric.behaviour.upf.UpfRuleIdentifier;
+import org.onosproject.pipelines.fabric.behaviour.upf.UpfStore;
 
 import java.util.Arrays;
 
@@ -71,9 +73,9 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TUNNEL_SRC
  */
 public class FabricUpfTranslator {
 
-    private final FabricUpfStore upfStore;
+    private final UpfStore upfStore;
 
-    public FabricUpfTranslator(FabricUpfStore upfStore) {
+    public FabricUpfTranslator(UpfStore upfStore) {
         this.upfStore = upfStore;
     }
 
