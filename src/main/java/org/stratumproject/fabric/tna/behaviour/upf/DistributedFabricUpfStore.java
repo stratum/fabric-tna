@@ -43,9 +43,9 @@ public final class DistributedFabricUpfStore implements UpfStore {
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     protected StorageService storageService;
 
-    protected static final String FAR_ID_MAP_NAME = "fabric-upf-far-id";
-    protected static final String BUFFER_FAR_ID_SET_NAME = "fabric-upf-buffer-far-id";
-    protected static final String FAR_ID_UE_MAP_NAME = "fabric-upf-far-id-ue";
+    protected static final String FAR_ID_MAP_NAME = "fabric-upf-far-id-tna";
+    protected static final String BUFFER_FAR_ID_SET_NAME = "fabric-upf-buffer-far-id-tna";
+    protected static final String FAR_ID_UE_MAP_NAME = "fabric-upf-far-id-ue-tna";
     protected static final KryoNamespace.Builder SERIALIZER = KryoNamespace.newBuilder()
             .register(KryoNamespaces.API)
             .register(UpfRuleIdentifier.class);
