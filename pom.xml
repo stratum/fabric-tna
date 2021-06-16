@@ -62,13 +62,6 @@ SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 
         <dependency>
             <groupId>org.onosproject</groupId>
-            <artifactId>onos-pipelines-fabric-api</artifactId>
-            <version>${onos.version}</version>
-            <scope>provided</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.onosproject</groupId>
             <artifactId>onos-core-serializers</artifactId>
             <version>${onos.version}</version>
             <scope>provided</scope>

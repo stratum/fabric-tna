@@ -38,8 +38,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.stratumproject.fabric.tna.PipeconfLoader;
 import org.stratumproject.fabric.tna.behaviour.FabricCapabilities;
-import org.onosproject.pipelines.fabric.behaviour.upf.UpfRuleIdentifier;
-import org.onosproject.pipelines.fabric.behaviour.upf.UpfStore;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;

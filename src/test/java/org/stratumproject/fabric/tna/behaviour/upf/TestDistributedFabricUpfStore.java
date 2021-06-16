@@ -3,7 +3,6 @@
 package org.stratumproject.fabric.tna.behaviour.upf;
 
 import org.onlab.packet.Ip4Address;
-import org.onosproject.pipelines.fabric.behaviour.upf.UpfRuleIdentifier;
 import org.onosproject.store.service.Serializer;
 import org.onosproject.store.service.TestConsistentMap;
 import org.onosproject.store.service.TestDistributedSet;

@@ -23,8 +23,6 @@ import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.onosproject.pipelines.fabric.behaviour.upf.UpfRuleIdentifier;
-import org.onosproject.pipelines.fabric.behaviour.upf.UpfStore;
 
 import java.util.HashSet;
 import java.util.Map;

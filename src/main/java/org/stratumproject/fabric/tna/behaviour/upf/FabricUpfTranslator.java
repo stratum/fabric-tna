@@ -24,14 +24,12 @@ import org.onosproject.net.pi.model.PiTableId;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
 import org.onosproject.net.pi.runtime.PiTableAction;
-import org.onosproject.pipelines.fabric.behaviour.upf.UpfRuleIdentifier;
-import org.onosproject.pipelines.fabric.behaviour.upf.UpfStore;
 
 import java.util.Arrays;
 
-import static org.stratumproject.fabric.tna.behaviour.Constants.INTERFACE_ACCESS;
-import static org.stratumproject.fabric.tna.behaviour.Constants.INTERFACE_CORE;
-import static org.stratumproject.fabric.tna.behaviour.Constants.INTERFACE_DBUF;
+import static org.stratumproject.fabric.tna.behaviour.Constants.UPF_INTERFACE_ACCESS;
+import static org.stratumproject.fabric.tna.behaviour.Constants.UPF_INTERFACE_CORE;
+import static org.stratumproject.fabric.tna.behaviour.Constants.UPF_INTERFACE_DBUF;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.CTR_ID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.DROP;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_GTPU_ENCAP;
@@ -233,11 +231,11 @@ public class FabricUpfTranslator {
                 .setPrefix(FabricUpfTranslatorUtil.getFieldPrefix(match, HDR_IPV4_DST_ADDR));
 
         int interfaceType = FabricUpfTranslatorUtil.getParamInt(action, SRC_IFACE);
-        if (interfaceType == INTERFACE_ACCESS) {
+        if (interfaceType == UPF_INTERFACE_ACCESS) {
             ifaceBuilder.setAccess();
-        } else if (interfaceType == INTERFACE_CORE) {
+        } else if (interfaceType == UPF_INTERFACE_CORE) {
             ifaceBuilder.setCore();
-        } else if (interfaceType == INTERFACE_DBUF) {
+        } else if (interfaceType == UPF_INTERFACE_DBUF) {
             ifaceBuilder.setDbufReceiver();
         }
         return ifaceBuilder.build();
@@ -376,13 +374,13 @@ public class FabricUpfTranslator {
         int interfaceTypeInt;
         int gtpuValidity;
         if (upfInterface.isDbufReceiver()) {
-            interfaceTypeInt = INTERFACE_DBUF;
+            interfaceTypeInt = UPF_INTERFACE_DBUF;
             gtpuValidity = 1;
         } else if (upfInterface.isAccess()) {
-            interfaceTypeInt = INTERFACE_ACCESS;
+            interfaceTypeInt = UPF_INTERFACE_ACCESS;
             gtpuValidity = 1;
         } else {
-            interfaceTypeInt = INTERFACE_CORE;
+            interfaceTypeInt = UPF_INTERFACE_CORE;
             gtpuValidity = 0;
         }
 

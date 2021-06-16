@@ -21,8 +21,8 @@ import org.onosproject.net.pi.runtime.PiActionParam;
 
 import java.util.Arrays;
 
-import static org.stratumproject.fabric.tna.behaviour.Constants.INTERFACE_ACCESS;
-import static org.stratumproject.fabric.tna.behaviour.Constants.INTERFACE_CORE;
+import static org.stratumproject.fabric.tna.behaviour.Constants.UPF_INTERFACE_ACCESS;
+import static org.stratumproject.fabric.tna.behaviour.Constants.UPF_INTERFACE_CORE;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.CTR_ID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.DROP;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_PDRS;
@@ -262,12 +262,13 @@ public final class TestUpfConstants {
                                                              32)
                                                    .matchExact(HDR_GTPU_IS_VALID, 1)
                                                    .build()).build())
-            .withTreatment(DefaultTrafficTreatment.builder()
-                                   .piTableAction(
-                                           PiAction.builder()
-                                                   .withId(FABRIC_INGRESS_SPGW_LOAD_IFACE)
-                                                   .withParameter(new PiActionParam(SRC_IFACE, INTERFACE_ACCESS))
-                                                   .build()).build())
+            .withTreatment(
+                    DefaultTrafficTreatment.builder()
+                            .piTableAction(
+                                    PiAction.builder()
+                                            .withId(FABRIC_INGRESS_SPGW_LOAD_IFACE)
+                                            .withParameter(new PiActionParam(SRC_IFACE, UPF_INTERFACE_ACCESS))
+                                            .build()).build())
             .withPriority(DEFAULT_PRIORITY)
             .build();
 
@@ -281,11 +282,12 @@ public final class TestUpfConstants {
                                                              UE_POOL.prefixLength())
                                                    .matchExact(HDR_GTPU_IS_VALID, 0)
                                                    .build()).build())
-            .withTreatment(DefaultTrafficTreatment.builder()
-                                   .piTableAction(PiAction.builder()
-                                                          .withId(FABRIC_INGRESS_SPGW_LOAD_IFACE)
-                                                          .withParameter(new PiActionParam(SRC_IFACE, INTERFACE_CORE))
-                                                          .build()).build())
+            .withTreatment(
+                    DefaultTrafficTreatment.builder()
+                            .piTableAction(PiAction.builder()
+                                                   .withId(FABRIC_INGRESS_SPGW_LOAD_IFACE)
+                                                   .withParameter(new PiActionParam(SRC_IFACE, UPF_INTERFACE_CORE))
+                                                   .build()).build())
             .withPriority(DEFAULT_PRIORITY)
             .build();
 
