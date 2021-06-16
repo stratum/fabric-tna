@@ -12,7 +12,7 @@ import java.util.Set;
 /**
  * Stores state required for translation of UPF entities to pipeline-specific ones.
  */
-public interface UpfStore {
+public interface FabricUpfStore {
     /**
      * Clear all state associated with translation.
      */

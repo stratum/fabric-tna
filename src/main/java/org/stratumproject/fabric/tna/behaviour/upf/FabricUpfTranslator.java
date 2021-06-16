@@ -71,10 +71,10 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TUNNEL_SRC
  */
 public class FabricUpfTranslator {
 
-    private final UpfStore upfStore;
+    private final FabricUpfStore fabricUpfStore;
 
-    public FabricUpfTranslator(UpfStore upfStore) {
-        this.upfStore = upfStore;
+    public FabricUpfTranslator(FabricUpfStore fabricUpfStore) {
+        this.fabricUpfStore = fabricUpfStore;
     }
 
     /**
@@ -128,7 +128,7 @@ public class FabricUpfTranslator {
 
         // Grab keys and parameters that are present for all PDRs
         int globalFarId = FabricUpfTranslatorUtil.getParamInt(action, FAR_ID);
-        UpfRuleIdentifier farId = upfStore.localFarIdOf(globalFarId);
+        UpfRuleIdentifier farId = fabricUpfStore.localFarIdOf(globalFarId);
 
         PiActionId actionId = action.id();
         if (actionId.equals(FABRIC_INGRESS_SPGW_LOAD_PDR)) {
@@ -136,7 +136,7 @@ public class FabricUpfTranslator {
             pdrBuilder.withSchedulingPriority(schedulingPriority);
         } else if (actionId.equals(FABRIC_INGRESS_SPGW_LOAD_PDR_QOS)) {
             int queueId = FabricUpfTranslatorUtil.getParamInt(action, QID);
-            String schedulingPriority = upfStore.schedulingPriorityOf(queueId);
+            String schedulingPriority = fabricUpfStore.schedulingPriorityOf(queueId);
             if (schedulingPriority == null) {
                   throw new UpfProgrammableException("Undefined Scheduling Priority");
             }
@@ -178,7 +178,7 @@ public class FabricUpfTranslator {
         PiAction action = (PiAction) matchActionPair.getRight();
 
         int globalFarId = FabricUpfTranslatorUtil.getFieldInt(match, HDR_FAR_ID);
-        UpfRuleIdentifier farId = upfStore.localFarIdOf(globalFarId);
+        UpfRuleIdentifier farId = fabricUpfStore.localFarIdOf(globalFarId);
 
         boolean dropFlag = FabricUpfTranslatorUtil.getParamInt(action, DROP) > 0;
         boolean notifyFlag = FabricUpfTranslatorUtil.getParamInt(action, NOTIFY_CP) > 0;
@@ -287,7 +287,7 @@ public class FabricUpfTranslator {
                     .build();
         }
         PiCriterion match = PiCriterion.builder()
-                .matchExact(HDR_FAR_ID, upfStore.globalFarIdOf(far.sessionId(), far.farId()))
+                .matchExact(HDR_FAR_ID, fabricUpfStore.globalFarIdOf(far.sessionId(), far.farId()))
                 .build();
         return DefaultFlowRule.builder()
                 .forDevice(deviceId).fromApp(appId).makePermanent()
@@ -333,11 +333,11 @@ public class FabricUpfTranslator {
         PiAction.Builder builder = PiAction.builder()
                     .withParameters(Arrays.asList(
                          new PiActionParam(CTR_ID, pdr.counterId()),
-                         new PiActionParam(FAR_ID, upfStore.globalFarIdOf(pdr.sessionId(), pdr.farId())),
+                         new PiActionParam(FAR_ID, fabricUpfStore.globalFarIdOf(pdr.sessionId(), pdr.farId())),
                          new PiActionParam(NEEDS_GTPU_DECAP, pdr.matchesEncapped() ? 1 : 0)
                                 ));
         if (pdr.hasSchedulingPriority()) {
-            String queueId = upfStore.queueIdOf(pdr.schedulingPriority());
+            String queueId = fabricUpfStore.queueIdOf(pdr.schedulingPriority());
             if (queueId == null) {
                 throw new UpfProgrammableException("Udefined Scheduling Priority");
             }

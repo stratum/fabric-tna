@@ -36,7 +36,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  */
 // FIXME: this store is generic and not tied to a single device, should we have a store based on deviceId?
 @Component(immediate = true, service = DistributedFabricUpfStore.class)
-public final class DistributedFabricUpfStore implements UpfStore {
+public final class DistributedFabricUpfStore implements FabricUpfStore {
 
     private final Logger log = LoggerFactory.getLogger(getClass());
 

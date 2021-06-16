@@ -74,7 +74,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
     protected FlowRuleService flowRuleService;
     protected PacketService packetService;
-    protected UpfStore upfStore;
+    protected FabricUpfStore fabricUpfStore;
     protected FabricUpfTranslator upfTranslator;
 
     private long farTableSize;
@@ -100,8 +100,8 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         }
         flowRuleService = handler().get(FlowRuleService.class);
         packetService = handler().get(PacketService.class);
-        upfStore = handler().get(DistributedFabricUpfStore.class);
-        upfTranslator = new FabricUpfTranslator(upfStore);
+        fabricUpfStore = handler().get(DistributedFabricUpfStore.class);
+        upfTranslator = new FabricUpfTranslator(fabricUpfStore);
         final CoreService coreService = handler().get(CoreService.class);
         appId = coreService.getAppId(PipeconfLoader.APP_NAME);
         if (appId == null) {
@@ -291,7 +291,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         }
         log.info("Clearing all UPF-related table entries.");
         flowRuleService.removeFlowRulesById(appId);
-        upfStore.reset();
+        fabricUpfStore.reset();
     }
 
     @Override
@@ -488,7 +488,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
         // If the flow rule was applied and the PDR is downlink, add the PDR to the farID->PDR mapping
         if (pdr.matchesUnencapped()) {
-            upfStore.learnFarIdToUeAddrs(pdr);
+            fabricUpfStore.learnFarIdToUeAddrs(pdr);
         }
     }
 
@@ -502,17 +502,17 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         if (far.buffers()) {
             // If the far has the buffer flag, modify its tunnel so it directs to dbuf
             far = convertToDbufFar(far);
-            upfStore.learBufferingFarId(ruleId);
+            fabricUpfStore.learBufferingFarId(ruleId);
         }
         FlowRule fabricFar = upfTranslator.farToFabricEntry(far, deviceId, appId, DEFAULT_PRIORITY);
         log.info("Installing {}", far.toString());
         flowRuleService.applyFlowRules(fabricFar);
         log.debug("FAR added with flowID {}", fabricFar.id().value());
-        if (!far.buffers() && upfStore.isFarIdBuffering(ruleId)) {
+        if (!far.buffers() && fabricUpfStore.isFarIdBuffering(ruleId)) {
             // If this FAR does not buffer but used to, then drain the buffer for every UE address
             // that hits this FAR.
-            upfStore.forgetBufferingFarId(ruleId);
-            for (var ueAddr : upfStore.ueAddrsOfFarId(ruleId)) {
+            fabricUpfStore.forgetBufferingFarId(ruleId);
+            for (var ueAddr : fabricUpfStore.ueAddrsOfFarId(ruleId)) {
                 if (bufferDrainer == null) {
                     log.warn("Unable to drain downlink buffer for UE {}, bufferDrainer is null", ueAddr);
                 } else {
@@ -637,7 +637,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         // This is an inefficient hotfix FIXME: remove UE addrs from the mapping in sublinear time
         if (pdr.matchesUnencapped()) {
             // Should we remove just from the map entry with key == far ID?
-            upfStore.forgetUeAddr(pdr.ueAddress());
+            fabricUpfStore.forgetUeAddr(pdr.ueAddress());
         }
     }
 
@@ -646,7 +646,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         log.info("Removing {}", far.toString());
 
         PiCriterion match = PiCriterion.builder()
-                .matchExact(HDR_FAR_ID, upfStore.globalFarIdOf(far.sessionId(), far.farId()))
+                .matchExact(HDR_FAR_ID, fabricUpfStore.globalFarIdOf(far.sessionId(), far.farId()))
                 .build();
 
         removeEntry(match, FABRIC_INGRESS_SPGW_FARS, false);
