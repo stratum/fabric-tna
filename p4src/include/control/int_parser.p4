@@ -193,6 +193,7 @@ parser IntReportParser (packet_in packet,
             (IP_VERSION_4, EncapPresence.NONE): handle_ipv4;
             (IP_VERSION_4, EncapPresence.GTPU_ONLY): strip_ipv4_udp_gtpu;
             (IP_VERSION_4, EncapPresence.GTPU_WITH_PSC): strip_ipv4_udp_gtpu_psc;
+            (IP_VERSION_4, EncapPresence.VXLAN): strip_ipv4_udp_vxlan;
             default: reject;
         }
     }
@@ -210,7 +211,9 @@ parser IntReportParser (packet_in packet,
 
     state strip_ipv4_udp_vxlan {
         packet.advance((IPV4_HDR_BYTES + UDP_HDR_BYTES + VXLAN_HDR_BYTES) * 8);
-        // we don't need to parse Ethernet
+        // Skip Ethernet bytes.
+        // The Ethernet header will be emitted as payload,
+        // but we need to advance and jump to handle_ipv4 state to get the total length.
         packet.advance(ETH_HDR_BYTES * 8);
         transition handle_ipv4;
     }

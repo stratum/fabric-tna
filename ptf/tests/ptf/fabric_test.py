@@ -18,6 +18,7 @@ from scapy.layers.inet import IP, TCP, UDP
 from scapy.layers.l2 import Dot1Q, Ether
 from scapy.layers.ppp import PPP, PPPoE
 from scapy.layers.sctp import SCTP
+from scapy.layers.vxlan import VXLAN
 from scapy.packet import Packet, bind_layers
 
 vlan_confs = {
@@ -38,6 +39,10 @@ GTP_PKT_TYPES = {
     "gtp_psc_dl_tcp",
     "gtp_psc_dl_icmp",
     "gtp_psc_ul_icmp",
+}
+VXLAN_PKT_TYPES = {
+    "vxlan_tcp",
+    "vxlan_udp",
 }
 
 DEFAULT_PRIORITY = 10
@@ -251,6 +256,7 @@ else:
 IP_HDR_BYTES = 20
 UDP_HDR_BYTES = 8
 GTPU_HDR_BYTES = 8
+VXLAN_HDR_BYTES = 8
 GTPU_OPTIONS_HDR_BYTES = 4
 GTPU_EXT_PSC_BYTES = 4
 ETH_FCS_BYTES = 4
@@ -369,6 +375,23 @@ def simple_sctp_packet(
     return pkt
 
 
+# Generic function to generate a VXLAN-encapsulated pkt
+# Default arg values are in line with PTF
+def simple_vxlan_packet(
+    pkt_type,
+    eth_dst="00:01:02:03:04:05",
+    eth_src="00:06:07:08:09:0a",
+    ip_src="192.168.0.1",
+    ip_dst="192.168.0.2",
+    pktlen=136
+):
+    pktlen = pktlen - IP_HDR_BYTES - UDP_HDR_BYTES - VXLAN_HDR_BYTES
+    pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
+        ip_src=ip_src, ip_dst=ip_dst, pktlen=pktlen
+    )
+    pkt = Ether(src=eth_src, dst=eth_dst) / IP(src=ip_src, dst=ip_dst) / UDP() / VXLAN() / pkt
+    return pkt
+
 # Generic function to generate a GTP-encapsulated pkt
 # Default arg values are in line with PTF
 def simple_gtp_packet(
@@ -401,6 +424,14 @@ def simple_gtp_packet(
     gtp_pkt[Ether].dst = eth_dst
     gtp_pkt[IP].ttl = ip_ttl
     return gtp_pkt
+
+
+def simple_vxlan_tcp_packet(*args, **kwargs):
+    return simple_vxlan_packet("tcp", *args, **kwargs)
+
+
+def simple_vxlan_udp_packet(*args, **kwargs):
+    return simple_vxlan_packet("udp", *args, **kwargs)
 
 
 def simple_gtp_tcp_packet(*args, **kwargs):
@@ -450,6 +481,8 @@ setattr(testutils, "simple_gtp_psc_ul_udp_packet", simple_gtp_psc_ul_udp_packet)
 setattr(testutils, "simple_gtp_psc_dl_udp_packet", simple_gtp_psc_dl_udp_packet)
 setattr(testutils, "simple_gtp_psc_ul_icmp_packet", simple_gtp_psc_ul_icmp_packet)
 setattr(testutils, "simple_gtp_psc_dl_icmp_packet", simple_gtp_psc_dl_icmp_packet)
+setattr(testutils, "simple_vxlan_tcp_packet", simple_vxlan_tcp_packet)
+setattr(testutils, "simple_vxlan_udp_packet", simple_vxlan_udp_packet)
 
 
 def pkt_mac_swap(pkt):
@@ -531,6 +564,14 @@ def pkt_remove_gtp(pkt):
     else:
         raise Exception("Not a GTP packet")
     return Ether(src=pkt[Ether].src, dst=pkt[Ether].dst) / payload
+
+
+def pkt_remove_vxlan(pkt):
+    assert VXLAN in pkt
+    inner_pkt = pkt[VXLAN].payload
+    inner_pkt[Ether].src = pkt[Ether].src
+    inner_pkt[Ether].dst = pkt[Ether].dst
+    return inner_pkt
 
 
 def pkt_remove_vlan(pkt):
@@ -2850,9 +2891,12 @@ class IntTest(IPv4UnicastTest):
         is_device_spine,
         send_report_to_spine,
     ):
+        # The switch should always strip GTP-U or VXLAN headers inside INT reports.
         if GTP_U_Header in inner_packet:
-            # The switch should always strip GTP-U headers inside INT reports.
             inner_packet = pkt_remove_gtp(inner_packet)
+        elif VXLAN in inner_packet:
+            inner_packet = pkt_remove_vxlan(inner_packet)
+
 
         # Note: scapy doesn't support dscp field, use tos.
         pkt = (
@@ -2905,6 +2949,8 @@ class IntTest(IPv4UnicastTest):
     ):
         if GTP_U_Header in inner_packet:
             inner_packet = pkt_remove_gtp(inner_packet)
+        elif VXLAN in inner_packet:
+            inner_packet = pkt_remove_vxlan(inner_packet)
 
         # Note: scapy doesn't support dscp field, use tos.
         pkt = (
@@ -2993,9 +3039,11 @@ class IntTest(IPv4UnicastTest):
 
     def set_up_int_flows(self, is_device_spine, pkt, send_report_to_spine):
 
+        # Watchlist always matches on inner headers.
         if GTP_U_Header in pkt:
-            # Watchlist always matches on inner headers.
             pkt = pkt_remove_gtp(pkt)
+        elif VXLAN in pkt:
+            pkt = pkt_remove_vxlan(pkt)
 
         if UDP in pkt:
             sport = pkt[UDP].sport
