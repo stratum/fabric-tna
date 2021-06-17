@@ -66,6 +66,8 @@ parser IntReportParser (packet_in packet,
         transition int_drop_common;
     }
 
+    // This state parse packets which deflected by the traffic manager.
+    // See ptf/run/tm/chassis_config.pb.txt for deflect-on-drop port config.
     state parse_int_deflected_drop {
         packet.extract(fabric_md.bridged);
         fabric_md.int_report_md.bmd_type = BridgedMdType_t.DEFLECTED;
