@@ -2974,7 +2974,7 @@ class TestDeflectOnDropIntReport(FabricIntLocalReportTest, FabricIntIngressDropR
             SWITCH_IPV4,
             INT_COLLECTOR_IPV4,
             ig_port,
-            0,
+            eg_port,
             INT_DROP_REASON_TRAFFIC_MANAGER,
             SWITCH_ID,
             int_inner_pkt,

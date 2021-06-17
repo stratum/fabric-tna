@@ -251,6 +251,12 @@ control IntIngress(
         // Here we use 0b10000000xx as the mirror session ID where "xx" is the 2-bit
         // pipeline number(0~3).
         fabric_md.bridged.int_bmd.mirror_session_id = INT_MIRROR_SESSION_BASE ++ ig_intr_md.ingress_port[8:7];
+        // When the traffic manager deflect a packet, the egress port and queue id
+        // of egress intrinsic metadata will be the port and queue for deflection.
+        // We need to bridge the egress port and queue id from ingress to the egress
+        // parser to initialize the INT drop report.
+        fabric_md.bridged.int_bmd.egress_port = ig_tm_md.ucast_egress_port;
+        fabric_md.bridged.int_bmd.qid = ig_tm_md.qid;
         drop_report.apply();
     }
 }
@@ -372,30 +378,6 @@ control IntEgress (
         hdr.report_mpls.label = mon_label;
     }
 
-    action do_deflect_on_drop_report_encap(mac_addr_t src_mac, mac_addr_t mon_mac,
-                                ipv4_addr_t src_ip, ipv4_addr_t mon_ip,
-                                l4_port_t mon_port, bit<32> switch_id) {
-        do_drop_report_encap(src_mac, mon_mac, src_ip, mon_ip, mon_port, switch_id);
-        hdr.common_report_header.setValid();
-        hdr.common_report_header.ig_port = fabric_md.bridged.base.ig_port;
-        hdr.common_report_header.eg_port = eg_intr_md.egress_port;
-        hdr.common_report_header.queue_id = eg_intr_md.egress_qid;
-        hdr.drop_report_header.setValid();
-        hdr.drop_report_header.drop_reason = IntDropReason_t.DROP_REASON_TRAFFIC_MANAGER;
-    }
-
-    action do_deflect_on_drop_report_encap_mpls(mac_addr_t src_mac, mac_addr_t mon_mac,
-                                     ipv4_addr_t src_ip, ipv4_addr_t mon_ip,
-                                     l4_port_t mon_port, mpls_label_t mon_label,
-                                     bit<32> switch_id) {
-        do_deflect_on_drop_report_encap(src_mac, mon_mac, src_ip, mon_ip, mon_port, switch_id);
-        hdr.report_eth_type.value = ETHERTYPE_MPLS;
-        hdr.report_mpls.setValid();
-        hdr.report_mpls.label = mon_label;
-    }
-
-
-
     // Transforms mirrored packets into INT report packets.
     table report {
         // when we are parsing the regular ingress to egress packet,
@@ -411,8 +393,6 @@ control IntEgress (
             do_local_report_encap_mpls;
             do_drop_report_encap;
             do_drop_report_encap_mpls;
-            do_deflect_on_drop_report_encap;
-            do_deflect_on_drop_report_encap_mpls;
             @defaultonly nop();
         }
         default_action = nop;

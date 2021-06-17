@@ -103,7 +103,6 @@ public class FabricIntProgrammableTest {
     private static final IpAddress COLLECTOR_IP = IpAddress.valueOf("10.128.0.1");
     private static final TpPort COLLECTOR_PORT = TpPort.tpPort(32766);
     private static final short BMD_TYPE_EGRESS_MIRROR = 2;
-    private static final short BMD_TYPE_INGRESS_MIRROR = 3;
     private static final short BMD_TYPE_DEFLECTED = 5;
     private static final short BMD_TYPE_INT_INGRESS_DROP = 4;
     private static final short MIRROR_TYPE_INVALID = 0;
@@ -300,6 +299,8 @@ public class FabricIntProgrammableTest {
                                      INT_REPORT_TYPE_DROP, MIRROR_TYPE_INT_REPORT),
                 buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR,
                                      INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT),
+                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_DEFLECTED,
+                                     INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID),
                 buildFilterConfigFlow(LEAF_DEVICE_ID)
         );
 
@@ -343,6 +344,8 @@ public class FabricIntProgrammableTest {
                                      INT_REPORT_TYPE_DROP, MIRROR_TYPE_INT_REPORT),
                 buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR,
                                      INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT),
+                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_DEFLECTED,
+                                     INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID),
                 buildFilterConfigFlow(LEAF_DEVICE_ID)
         );
 
@@ -390,6 +393,8 @@ public class FabricIntProgrammableTest {
                                      INT_REPORT_TYPE_DROP, MIRROR_TYPE_INT_REPORT),
                 buildReportTableRule(SPINE_DEVICE_ID, true, BMD_TYPE_EGRESS_MIRROR,
                                      INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT),
+                buildReportTableRule(SPINE_DEVICE_ID, true, BMD_TYPE_DEFLECTED,
+                                     INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID),
                 buildFilterConfigFlow(SPINE_DEVICE_ID)
         );
 
@@ -461,7 +466,10 @@ public class FabricIntProgrammableTest {
                                          INT_REPORT_TYPE_DROP, MIRROR_TYPE_INT_REPORT)),
                 buildFlowEntry(
                     buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR,
-                                         INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT))
+                                         INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT)),
+                buildFlowEntry(
+                    buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_DEFLECTED,
+                                         INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID))
         );
         Set<FlowEntry> randomEntries = buildRandomFlowEntries();
         Set<FlowEntry> entries = Sets.newHashSet(intEntries);
@@ -627,17 +635,13 @@ public class FabricIntProgrammableTest {
                     P4InfoConstants.MON_LABEL,
                     NODE_SID_IPV4
             ));
-            if (bmdType == BMD_TYPE_DEFLECTED) {
-                reportAction.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_DEFLECT_ON_DROP_REPORT_ENCAP_MPLS);
-            } else if (reportType == INT_REPORT_TYPE_LOCAL) {
+            if (reportType == INT_REPORT_TYPE_LOCAL) {
                 reportAction.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_LOCAL_REPORT_ENCAP_MPLS);
             } else {
                 reportAction.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_DROP_REPORT_ENCAP_MPLS);
             }
         } else {
-            if (bmdType == BMD_TYPE_DEFLECTED) {
-                reportAction.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_DEFLECT_ON_DROP_REPORT_ENCAP);
-            } else if (reportType == INT_REPORT_TYPE_LOCAL) {
+            if (reportType == INT_REPORT_TYPE_LOCAL) {
                 reportAction.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_LOCAL_REPORT_ENCAP);
             } else {
                 reportAction.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_DROP_REPORT_ENCAP);

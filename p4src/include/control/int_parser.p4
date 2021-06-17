@@ -78,8 +78,8 @@ parser IntReportParser (packet_in packet,
         hdr.report_fixed_header.ig_tstamp = (bit<32>)fabric_md.bridged.base.ig_tstamp;
         /** common_report_header **/
         hdr.common_report_header.ig_port = fabric_md.bridged.base.ig_port;
-        hdr.common_report_header.eg_port = 0; // TODO: set egress port and queue
-        hdr.common_report_header.queue_id = 0;
+        hdr.common_report_header.eg_port = fabric_md.bridged.int_bmd.egress_port;
+        hdr.common_report_header.queue_id = fabric_md.bridged.int_bmd.qid;
         transition int_drop_common;
     }
 
