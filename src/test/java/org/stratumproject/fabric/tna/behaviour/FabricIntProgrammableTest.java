@@ -608,8 +608,6 @@ public class FabricIntProgrammableTest {
     }
 
     private PiAction buildReportAction(boolean setMpls, short reportType, short bmdType) {
-        final PiActionParam switchIdParam = new PiActionParam(
-                P4InfoConstants.SWITCH_ID, NODE_SID_IPV4);
         final PiActionParam srcMacParam = new PiActionParam(
                 P4InfoConstants.SRC_MAC, MacAddress.ZERO.toBytes());
         final PiActionParam nextHopMacParam = new PiActionParam(
@@ -622,8 +620,10 @@ public class FabricIntProgrammableTest {
         final PiActionParam monPortParam = new PiActionParam(
                 P4InfoConstants.MON_PORT,
                 COLLECTOR_PORT.toInt());
+        final PiActionParam switchIdParam = new PiActionParam(
+                P4InfoConstants.SWITCH_ID,
+                NODE_SID_IPV4);
         final PiAction.Builder reportAction = PiAction.builder()
-                .withParameter(switchIdParam)
                 .withParameter(srcMacParam)
                 .withParameter(nextHopMacParam)
                 .withParameter(srcIpParam)
@@ -675,10 +675,8 @@ public class FabricIntProgrammableTest {
     }
 
     private FlowRule buildFilterConfigFlow(DeviceId deviceId) {
-        final PiActionParam hopLatencyMask =
-            new PiActionParam(P4InfoConstants.HOP_LATENCY_MASK, DEFAULT_QMASK);
-        final PiActionParam timestampMask =
-            new PiActionParam(P4InfoConstants.TIMESTAMP_MASK, DEFAULT_TIMESTAMP_MASK);
+        final PiActionParam hopLatencyMask = new PiActionParam(P4InfoConstants.HOP_LATENCY_MASK, DEFAULT_QMASK);
+        final PiActionParam timestampMask = new PiActionParam(P4InfoConstants.TIMESTAMP_MASK, DEFAULT_TIMESTAMP_MASK);
         final PiAction quantizeAction =
                 PiAction.builder()
                         .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_SET_CONFIG)

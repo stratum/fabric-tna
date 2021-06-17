@@ -256,7 +256,7 @@ control IntIngress(
         // We need to bridge the egress port and queue id from ingress to the egress
         // parser to initialize the INT drop report.
         fabric_md.bridged.int_bmd.egress_port = ig_tm_md.ucast_egress_port;
-        fabric_md.bridged.int_bmd.qid = ig_tm_md.qid;
+        fabric_md.bridged.int_bmd.queue_id = ig_tm_md.qid;
         drop_report.apply();
     }
 }

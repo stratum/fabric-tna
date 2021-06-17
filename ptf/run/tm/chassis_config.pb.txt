@@ -123,14 +123,17 @@ vendor_config {
           queue: 1
         }
         drop_targets {
+          # Recirculation port for pipe 1
           sdk_port: 196
           queue: 1
         }
         drop_targets {
+          # Recirculation port for pipe 2
           sdk_port: 324
           queue: 1
         }
         drop_targets {
+          # Recirculation port for pipe 3
           sdk_port: 452
           queue: 1
         }

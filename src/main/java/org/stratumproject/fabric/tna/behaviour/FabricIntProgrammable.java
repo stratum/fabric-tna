@@ -490,6 +490,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
 
         final MacAddress switchMac = srCfg.routerMac();
         final Ip4Address srcIp = srCfg.routerIpv4();
+        final int switchId = srCfg.nodeSidIPv4();
         log.info("For {} overriding sink IPv4 addr ({}) " +
                         "with segmentrouting ipv4Loopback ({}). " +
                         "Also use the switch mac ({}) as dst mac",
@@ -500,8 +501,6 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
             return null;
         }
 
-        final PiActionParam switchIdParam = new PiActionParam(
-                P4InfoConstants.SWITCH_ID, srCfg.nodeSidIPv4());
         final PiActionParam srcMacParam = new PiActionParam(
                 P4InfoConstants.SRC_MAC, MacAddress.ZERO.toBytes());
         final PiActionParam nextHopMacParam = new PiActionParam(
@@ -514,6 +513,9 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         final PiActionParam monPortParam = new PiActionParam(
                 P4InfoConstants.MON_PORT,
                 intCfg.collectorPort().toInt());
+        final PiActionParam switchIdParam = new PiActionParam(
+                P4InfoConstants.SWITCH_ID,
+                switchId);
 
         PiAction.Builder reportActionBuilder = PiAction.builder();
         if (!srCfg.isEdgeRouter()) {
@@ -525,6 +527,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 // Error log will be shown in getSidForCollector method.
                 return null;
             }
+
             if (reportType == INT_REPORT_TYPE_LOCAL) {
                 reportActionBuilder.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_LOCAL_REPORT_ENCAP_MPLS);
             } else if (reportType == INT_REPORT_TYPE_DROP) {
@@ -534,6 +537,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 log.warn("Invalid report type {}", reportType);
                 return null;
             }
+
             final PiActionParam monLabelParam = new PiActionParam(
                     P4InfoConstants.MON_LABEL,
                     sid.get());
@@ -549,8 +553,8 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 return null;
             }
         }
-        reportActionBuilder.withParameter(switchIdParam)
-                .withParameter(srcMacParam)
+
+        reportActionBuilder.withParameter(srcMacParam)
                 .withParameter(nextHopMacParam)
                 .withParameter(srcIpParam)
                 .withParameter(monIpParam)

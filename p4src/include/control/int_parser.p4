@@ -81,7 +81,7 @@ parser IntReportParser (packet_in packet,
         /** common_report_header **/
         hdr.common_report_header.ig_port = fabric_md.bridged.base.ig_port;
         hdr.common_report_header.eg_port = fabric_md.bridged.int_bmd.egress_port;
-        hdr.common_report_header.queue_id = fabric_md.bridged.int_bmd.qid;
+        hdr.common_report_header.queue_id = fabric_md.bridged.int_bmd.queue_id;
         transition int_drop_common;
     }
 
@@ -195,15 +195,6 @@ parser IntReportParser (packet_in packet,
             default: check_eth_type;
         }
     }
-
-#if defined(WITH_XCONNECT) || defined(WITH_DOUBLE_VLAN_TERMINATION)
-    state strip_inner_vlan_tag {
-        // TODO:
-        // fabric_md.int_md.inner_vlan_stripped = true;
-        packet.advance(VLAN_HDR_BYTES * 8);
-        transition check_eth_type;
-    }
-#endif // WITH_XCONNECT || WITH_DOUBLE_VLAN_TERMINATION
 
     state check_eth_type {
         packet.extract(hdr.eth_type);

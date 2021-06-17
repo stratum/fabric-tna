@@ -265,7 +265,7 @@ struct int_bridged_metadata_t {
     IntReportType_t report_type;
     MirrorId_t      mirror_session_id;
     IntDropReason_t drop_reason;
-    QueueId_t       qid;
+    QueueId_t       queue_id;
     PortId_t        egress_port;
 }
 

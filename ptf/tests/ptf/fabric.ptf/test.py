@@ -1914,7 +1914,7 @@ class FabricIntIngressDropReportTest(IntTest):
         is_next_hop_spine,
         is_device_spine,
         send_report_to_spine,
-        drop_reason
+        drop_reason,
     ):
         self.set_up_flow_report_filter_config(
             hop_latency_mask=0xF0000000, timestamp_mask=0xFFFFFFFF
@@ -1944,7 +1944,7 @@ class FabricIntIngressDropReportTest(IntTest):
             tagged2=tagged[1],
             is_next_hop_spine=is_next_hop_spine,
             ig_port=self.port1,
-            eg_port=0,
+            eg_port=0,  # packet will be dropped by the pipeline
             expect_int_report=True,
             is_device_spine=is_device_spine,
             send_report_to_spine=send_report_to_spine,
@@ -2953,12 +2953,19 @@ class FabricOptimizedFieldDetectorTest(FabricTest):
         self.doRunTest()
 
 @group("int-dod")
-class TestDeflectOnDropIntReport(FabricIntLocalReportTest, FabricIntIngressDropReportTest):
+class TestDeflectOnDropIntReport(FabricIntLocalReportTest, FabricIntIngressDropReportTest, FabricBridgingTest):
 
     @autocleanup
-    def doRunTest(self):
-        pkt = testutils.simple_tcp_packet(ip_dst=self.get_single_use_ip())
+    def doRunTest(self, pkt_type):
+        print(f"Testing, pkt_type={pkt_type}...")
+        pkt = getattr(testutils, f"simple_{pkt_type}_packet")(ip_dst=self.get_single_use_ip())
         ig_port = self.port1
+        # Since the tofino model only sets the deflected_flag to 1 and forward the packet
+        # normally to the egress port we set in the ingress pipe, we need to set the
+        # egress port to recirculate port in the ingress pipe.
+        # On the hardware switch, we won't set the egress port to recirculate port
+        # since the traffic manager will deflect the packet to the port we set in the
+        # chassis config.
         eg_port = RECIRCULATE_PORTS[0]
         is_device_spine = False
         send_report_to_spine = False
@@ -3001,24 +3008,18 @@ class TestDeflectOnDropIntReport(FabricIntLocalReportTest, FabricIntIngressDropR
 
     def runTest(self):
         print("\n")
-        # First, run 9 normal INT tests
-        for _ in range(0, 9):
-            FabricIntLocalReportTest.doRunTest(
-                self,
-                "untagged -> untagged",
-                [False, False],
-                "udp",
-                False,
-                False,
-                False,
-            )
+        # In Tofino Model with dod test mode, every 10th packet will be deflected.
+        for pkt_type in BASE_PKT_TYPES | GTP_PKT_TYPES:
+            for _ in range(0, 9):
+                FabricIntLocalReportTest.doRunTest(
+                    self,
+                    "untagged -> untagged",
+                    [False, False],
+                    pkt_type,
+                    False,
+                    False,
+                    False,
+                )
 
-        # The 10th packet will be deflected
-        # The tofino model does not deflect the packet to the port we set,
-        # it only sets the deflected_flag to one so the pipeline use it.
-        # In theory, we shouldn't set the output port to recirculate port but
-        # a normal output since the traffic manager should deflect the packet
-        # to the recirculate port.
-        self.doRunTest()
-
-
+            # The 10th packet will be deflected
+            self.doRunTest(pkt_type)

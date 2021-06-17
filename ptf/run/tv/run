@@ -21,7 +21,7 @@ fi
 
 # Skip INT deflect on drop test
 if [[ "${fabricProfile}" =~ .*-dod ]]; then
-    echo "Skip generating test vector for ${fabricProfile} profile"
+    echo "Skip generating testvectors for ${fabricProfile} profile"
     exit 0
 fi
 
