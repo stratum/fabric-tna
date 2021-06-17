@@ -6,6 +6,7 @@
 
 #include "header.p4"
 #include "define.p4"
+#include "control/packet_in_mirror_parser.p4"
 #ifdef WITH_INT
 #include "control/int_parser.p4"
 #endif // WITH_INT
@@ -286,6 +287,18 @@ control FabricIngressMirror(
     in ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr) {
     Mirror() mirror;
     apply {
+        if (ig_intr_md_for_dprsr.mirror_type == (bit<3>)FabricMirrorType_t.PACKET_IN) {
+            mirror.emit<packet_in_mirror_metadata_t>(
+                fabric_md.mirror.mirror_session_id,
+                // packet_in_mirror_metadata_t
+                {
+                    fabric_md.mirror.bmd_type,
+                    0, // padding
+                    (FabricMirrorType_t)ig_intr_md_for_dprsr.mirror_type,
+                    0, // padding
+                    fabric_md.bridged.base.ig_port
+                });
+        }
     }
 }
 
@@ -344,6 +357,7 @@ parser FabricEgressParser (packet_in packet,
         common_egress_metadata_t common_eg_md = packet.lookahead<common_egress_metadata_t>();
         transition select(common_eg_md.bmd_type, common_eg_md.mirror_type) {
             (BridgedMdType_t.INGRESS_TO_EGRESS, _): parse_bridged_md;
+            (BridgedMdType_t.INGRESS_MIRROR, FabricMirrorType_t.PACKET_IN): parse_packet_in_mirror;
 #ifdef WITH_INT
             (BridgedMdType_t.INT_INGRESS_DROP, _): parse_int_report;
             (BridgedMdType_t.EGRESS_MIRROR, FabricMirrorType_t.INT_REPORT): parse_int_report;
@@ -402,6 +416,11 @@ parser FabricEgressParser (packet_in packet,
         fabric_md.int_report_md.encap_presence = fabric_md.bridged.base.encap_presence;
 #endif // WITH_INT
         transition check_ethernet;
+    }
+
+    state parse_packet_in_mirror {
+        PacketInMirrorParser.apply(packet, hdr, fabric_md, eg_intr_md);
+        transition accept;
     }
 
 #ifdef WITH_INT

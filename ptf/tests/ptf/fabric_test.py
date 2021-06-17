@@ -19,7 +19,7 @@ from scapy.layers.l2 import Dot1Q, Ether
 from scapy.layers.ppp import PPP, PPPoE
 from scapy.layers.sctp import SCTP
 from scapy.layers.vxlan import VXLAN
-from scapy.packet import Packet, bind_layers
+from scapy.packet import bind_layers
 
 vlan_confs = {
     "tag->tag": [True, True],
@@ -188,6 +188,7 @@ INT_INS_TO_NAME = {
     INT_EG_PORT_TX: "eg_port_tx",
 }
 
+PACKET_IN_MIRROR_ID = 0x210
 INT_REPORT_MIRROR_IDS = [0x200, 0x201, 0x202, 0x203]
 RECIRCULATE_PORTS = [68, 196, 324, 452]
 SWITCH_ID = 1
@@ -598,6 +599,20 @@ class FabricTest(P4RuntimeTest):
         super(FabricTest, self).__init__()
         self.next_mbr_id = 1
 
+    def setUp(self):
+        super(FabricTest, self).setUp()
+        self.port1 = self.swports(1)
+        self.port2 = self.swports(2)
+        self.port3 = self.swports(3)
+        self.port4 = self.swports(4)
+        self.setup_switch_info()
+        self.set_up_packet_in_mirror()
+
+    def tearDown(self):
+        self.reset_switch_info()
+        self.reset_packet_in_mirror()
+        P4RuntimeTest.tearDown(self)
+
     def get_next_mbr_id(self):
         mbr_id = self.next_mbr_id
         self.next_mbr_id = self.next_mbr_id + 1
@@ -607,17 +622,33 @@ class FabricTest(P4RuntimeTest):
         FabricTest.next_single_use_ips += 1
         return socket.inet_ntoa(struct.pack("!I", FabricTest.next_single_use_ips))
 
-    def setUp(self):
-        super(FabricTest, self).setUp()
-        self.port1 = self.swports(1)
-        self.port2 = self.swports(2)
-        self.port3 = self.swports(3)
-        self.port4 = self.swports(4)
-        self.setup_switch_info()
+    @tvcreate("setup/setup_switch_info")
+    def setup_switch_info(self):
+        req = self.get_new_write_request()
+        self.push_update_add_entry_to_action(
+            req,
+            "FabricEgress.pkt_io_egress.switch_info",
+            None,
+            "FabricEgress.pkt_io_egress.set_switch_info",
+            [("cpu_port", stringify(self.cpu_port, 2))],
+        )
+        return req, self.write_request(req, store=False)
 
-    def tearDown(self):
-        self.reset_switch_info()
-        P4RuntimeTest.tearDown(self)
+    @tvcreate("teardown/reset_switch_info")
+    def reset_switch_info(self):
+        req = self.get_new_write_request()
+        self.push_update_add_entry_to_action(
+            req, "FabricEgress.pkt_io_egress.switch_info", None, "nop", []
+        )
+        return req, self.write_request(req)
+
+    @tvcreate("setup/set_up_packet_in_mirror")
+    def set_up_packet_in_mirror(self):
+        self.add_clone_group(PACKET_IN_MIRROR_ID, [self.cpu_port], store=False)
+
+    @tvcreate("teardown/reset_packet_in_mirror")
+    def reset_packet_in_mirror(self):
+        self.delete_clone_group(PACKET_IN_MIRROR_ID, [self.cpu_port], store=False)
 
     def build_packet_out(
         self,
@@ -711,26 +742,6 @@ class FabricTest(P4RuntimeTest):
                 port_type=port_type,
             )
             self.set_egress_vlan(egress_port=port_id, vlan_id=vlan_id, push_vlan=False)
-
-    @tvcreate("setup/setup_switch_info")
-    def setup_switch_info(self):
-        req = self.get_new_write_request()
-        self.push_update_add_entry_to_action(
-            req,
-            "FabricEgress.pkt_io_egress.switch_info",
-            None,
-            "FabricEgress.pkt_io_egress.set_switch_info",
-            [("cpu_port", stringify(self.cpu_port, 2))],
-        )
-        return req, self.write_request(req, store=False)
-
-    @tvcreate("teardown/reset_switch_info")
-    def reset_switch_info(self):
-        req = self.get_new_write_request()
-        self.push_update_add_entry_to_action(
-            req, "FabricEgress.pkt_io_egress.switch_info", None, "nop", []
-        )
-        return req, self.write_request(req)
 
     def set_ingress_port_vlan(
         self,
@@ -905,13 +916,16 @@ class FabricTest(P4RuntimeTest):
             [("next_id", next_id_)],
         )
 
-    def add_forwarding_acl_punt_to_cpu(self, eth_type=None, priority=DEFAULT_PRIORITY):
+    def add_forwarding_acl_punt_to_cpu(
+        self, eth_type=None, priority=DEFAULT_PRIORITY, post_ingress=False
+    ):
         eth_type_ = stringify(eth_type, 2)
         eth_type_mask_ = stringify(0xFFFF, 2)
+        action = "acl.punt_to_cpu_post_ingress" if post_ingress else "acl.punt_to_cpu"
         return self.send_request_add_entry_to_action(
             "acl.acl",
             [self.Ternary("eth_type", eth_type_, eth_type_mask_)],
-            "acl.punt_to_cpu",
+            action,
             [],
             priority,
         )
@@ -922,13 +936,14 @@ class FabricTest(P4RuntimeTest):
         mk = [self.Ternary("eth_type", eth_type_, eth_type_mask_)]
         return self.read_table_entry("acl.acl", mk, priority)
 
-    def add_forwarding_acl_copy_to_cpu(self, eth_type=None):
+    def add_forwarding_acl_copy_to_cpu(self, eth_type=None, post_ingress=False):
         eth_type_ = stringify(eth_type, 2)
         eth_type_mask = stringify(0xFFFF, 2)
+        action = "acl.copy_to_cpu_post_ingress" if post_ingress else "acl.copy_to_cpu"
         self.send_request_add_entry_to_action(
             "acl.acl",
             [self.Ternary("eth_type", eth_type_, eth_type_mask)],
-            "acl.copy_to_cpu",
+            action,
             [],
             DEFAULT_PRIORITY,
         )
@@ -1220,10 +1235,10 @@ class FabricTest(P4RuntimeTest):
     def delete_mcast_group(self, group_id):
         return self.write_mcast_group(group_id, [], p4runtime_pb2.Update.DELETE)
 
-    def add_clone_group(self, clone_id, ports):
+    def write_clone_group(self, clone_id, ports, update_type, store=True):
         req = self.get_new_write_request()
         update = req.updates.add()
-        update.type = p4runtime_pb2.Update.INSERT
+        update.type = update_type
         pre_entry = update.entity.packet_replication_engine_entry
         clone_entry = pre_entry.clone_session_entry
         clone_entry.session_id = clone_id
@@ -1233,7 +1248,17 @@ class FabricTest(P4RuntimeTest):
             replica = clone_entry.replicas.add()
             replica.egress_port = port
             replica.instance = 0  # set to 0 because we don't support it yet.
-        return req, self.write_request(req)
+        return req, self.write_request(req, store=store)
+
+    def add_clone_group(self, clone_id, ports, store=True):
+        self.write_clone_group(
+            clone_id, ports, p4runtime_pb2.Update.INSERT, store=store
+        )
+
+    def delete_clone_group(self, clone_id, ports, store=True):
+        self.write_clone_group(
+            clone_id, ports, p4runtime_pb2.Update.DELETE, store=store
+        )
 
     def add_next_hashed_group_member(self, action_name, params):
         mbr_id = self.get_next_mbr_id()
@@ -2805,23 +2830,27 @@ class IntTest(IPv4UnicastTest):
     ):
         def set_up_report_flow_internal(bmd_type, mirror_type, report_type):
             self.set_up_report_flow_with_report_type_and_bmd_type(
-                    src_mac,
-                    mon_mac,
-                    src_ip,
-                    mon_ip,
-                    mon_port,
-                    report_type,
-                    bmd_type,
-                    switch_id,
-                    mirror_type,
-                    mon_label,
-                )
-        set_up_report_flow_internal(BRIDGED_MD_TYPE_INT_INGRESS_DROP,
-                                    MIRROR_TYPE_INVALID, INT_REPORT_TYPE_DROP)
-        set_up_report_flow_internal(BRIDGED_MD_TYPE_EGRESS_MIRROR,
-                                    MIRROR_TYPE_INT_REPORT, INT_REPORT_TYPE_DROP)
-        set_up_report_flow_internal(BRIDGED_MD_TYPE_EGRESS_MIRROR,
-                                    MIRROR_TYPE_INT_REPORT, INT_REPORT_TYPE_LOCAL)
+                src_mac,
+                mon_mac,
+                src_ip,
+                mon_ip,
+                mon_port,
+                report_type,
+                bmd_type,
+                switch_id,
+                mirror_type,
+                mon_label,
+            )
+
+        set_up_report_flow_internal(
+            BRIDGED_MD_TYPE_INT_INGRESS_DROP, MIRROR_TYPE_INVALID, INT_REPORT_TYPE_DROP
+        )
+        set_up_report_flow_internal(
+            BRIDGED_MD_TYPE_EGRESS_MIRROR, MIRROR_TYPE_INT_REPORT, INT_REPORT_TYPE_DROP
+        )
+        set_up_report_flow_internal(
+            BRIDGED_MD_TYPE_EGRESS_MIRROR, MIRROR_TYPE_INT_REPORT, INT_REPORT_TYPE_LOCAL
+        )
 
     def set_up_report_mirror_flow(self, pipe_id, mirror_id, port):
         self.add_clone_group(mirror_id, [port])

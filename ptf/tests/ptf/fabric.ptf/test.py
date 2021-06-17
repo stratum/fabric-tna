@@ -1034,6 +1034,39 @@ class FabricDefaultVlanPacketInTest(FabricTest):
         self.verify_no_other_packets()
 
 
+@group("packetio")
+class FabricPacketInPostIngressTest(IPv4UnicastTest):
+    """
+    Packet-in generated using clone/punt_to_cpu_post_ingress actions should include changes
+    from the ingress pipeline, while clone/punt_to_cpu action should not.
+    """
+
+    @tvsetup
+    @autocleanup
+    def doRunTest(self, action, post_ingress):
+        add_acl_rule = getattr(self, f"add_forwarding_acl_{action}_to_cpu")
+        add_acl_rule(eth_type=ETH_TYPE_IPV4, post_ingress=post_ingress)
+        pkt = testutils.simple_udp_packet()
+        self.runIPv4UnicastTest(
+            pkt, next_hop_mac=HOST2_MAC, verify_pkt=(action == "copy")
+        )
+
+        # only "copy_to_cpu_post_ingress" action will include the change from next
+        # control block, "punt_to_cpu_post_ingress" will skip the next control block
+        # so the mac address will not be changed.
+        if post_ingress and action == "copy":
+            pkt = pkt_route(pkt, HOST2_MAC)
+
+        self.verify_packet_in(pkt, self.port1)
+
+    def runTest(self):
+        print()
+        for action in ["punt", "copy"]:
+            for post_ingress in [False, True]:
+                print(f"Testing action={action}, post_ingress={post_ingress}...")
+                self.doRunTest(action, post_ingress)
+
+
 class FabricGtpUnicastEcmpBasedOnTeid(FabricTest):
     """
     This test case verifies if the GTP encapsulated traffic

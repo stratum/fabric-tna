@@ -31,6 +31,10 @@ import org.onosproject.net.flowobjective.NextObjective;
 import org.onosproject.net.flowobjective.NextTreatment;
 import org.onosproject.net.flowobjective.Objective;
 import org.onosproject.net.flowobjective.ObjectiveError;
+import org.onosproject.net.group.DefaultGroupDescription;
+import org.onosproject.net.group.DefaultGroupKey;
+import org.onosproject.net.group.GroupBucket;
+import org.onosproject.net.group.GroupBuckets;
 import org.onosproject.net.group.GroupDescription;
 import org.onosproject.net.group.GroupService;
 import org.onosproject.net.pi.runtime.PiAction;
@@ -57,8 +61,11 @@ import static org.stratumproject.fabric.tna.behaviour.Constants.ONE;
 import static org.stratumproject.fabric.tna.behaviour.Constants.PORT_TYPE_INTERNAL;
 import static org.stratumproject.fabric.tna.behaviour.Constants.RECIRC_PORTS;
 import static org.stratumproject.fabric.tna.behaviour.Constants.ZERO;
+import static org.stratumproject.fabric.tna.behaviour.Constants.PKT_IN_MIRROR_SESSION_ID;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.KRYO;
+
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.outputPort;
+import static org.onosproject.net.group.DefaultGroupBucket.createCloneGroupBucket;
 
 /**
  * Pipeliner implementation for fabric-tna pipeline which uses ObjectiveTranslator
@@ -168,6 +175,9 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
                 ingressVlanRule(cpuPort, false, DEFAULT_VLAN, PORT_TYPE_INTERNAL),
                 fwdClassifierRule(cpuPort, null, Ethernet.TYPE_IPV4, FWD_IPV4_ROUTING,
                         DEFAULT_FLOW_PRIORITY));
+        // Set up mirror session for packet-in.
+        groupService.addGroup(packetInCloneGroup());
+
         // Set up recirculation ports as untagged (used for INT reports and
         // UE-to-UE in SPGW pipe).
         RECIRC_PORTS.forEach(port -> {
@@ -421,6 +431,18 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
                 .forDevice(deviceId)
                 .fromApp(appId)
                 .build();
+    }
+
+    GroupDescription packetInCloneGroup() {
+        final List<GroupBucket> buckets = ImmutableList.of(
+            createCloneGroupBucket(DefaultTrafficTreatment.builder()
+                    .setOutput(PortNumber.CONTROLLER)
+                    .build()));
+        return new DefaultGroupDescription(
+                deviceId, GroupDescription.Type.CLONE,
+                new GroupBuckets(buckets),
+                new DefaultGroupKey(KRYO.serialize(PKT_IN_MIRROR_SESSION_ID)),
+                PKT_IN_MIRROR_SESSION_ID, appId);
     }
 
     /**

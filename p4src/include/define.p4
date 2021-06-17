@@ -163,8 +163,11 @@ enum bit<8> BridgedMdType_t {
 // it in the deparser.
 enum bit<3> FabricMirrorType_t {
     INVALID = 0,
-    INT_REPORT = 1
+    INT_REPORT = 1,
+    PACKET_IN = 2
 }
+
+const MirrorId_t PACKET_IN_MIRROR_SESSION_ID = 0x210;
 
 // Modes for CPU loopback testing, where a process can inject packets through
 // the CPU port (P4RT packet-out) and expect the same to be delivered back to
