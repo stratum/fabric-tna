@@ -1891,7 +1891,7 @@ class FabricIntLocalReportTest(IntTest):
                     for send_report_to_spine in [False, True]:
                         if send_report_to_spine and tagged[1]:
                             continue
-                        for pkt_type in BASE_PKT_TYPES | GTP_PKT_TYPES:
+                        for pkt_type in BASE_PKT_TYPES | GTP_PKT_TYPES | VXLAN_PKT_TYPES:
                             self.doRunTest(
                                 vlan_conf,
                                 tagged,
@@ -1966,7 +1966,7 @@ class FabricIntIngressDropReportTest(IntTest):
                         for send_report_to_spine in [False, True]:
                             if send_report_to_spine and tagged[1]:
                                 continue
-                            for pkt_type in BASE_PKT_TYPES | GTP_PKT_TYPES:
+                            for pkt_type in BASE_PKT_TYPES | GTP_PKT_TYPES | VXLAN_PKT_TYPES:
                                 self.doRunTest(
                                     vlan_conf,
                                     tagged,
@@ -2037,7 +2037,7 @@ class FabricIntEgressDropReportTest(IntTest):
                     for send_report_to_spine in [False, True]:
                         if send_report_to_spine and tagged[1]:
                             continue
-                        for pkt_type in BASE_PKT_TYPES | GTP_PKT_TYPES:
+                        for pkt_type in BASE_PKT_TYPES | GTP_PKT_TYPES | VXLAN_PKT_TYPES:
                             self.doRunTest(
                                 vlan_conf,
                                 tagged,
@@ -2078,7 +2078,7 @@ class FabricFlowReportFilterNoChangeTest(IntTest):
 
     def runTest(self):
         print("")
-        for pkt_type in BASE_PKT_TYPES | GTP_PKT_TYPES:
+        for pkt_type in BASE_PKT_TYPES | GTP_PKT_TYPES | VXLAN_PKT_TYPES:
             expect_int_report = True
             # Change the IP destination to ensure we are using differnt
             # flow for diffrent test cases since the flow report filter
@@ -2199,7 +2199,7 @@ class FabricDropReportFilterTest(IntTest):
 
     def runTest(self):
         print("")
-        for pkt_type in BASE_PKT_TYPES | GTP_PKT_TYPES:
+        for pkt_type in BASE_PKT_TYPES | GTP_PKT_TYPES | VXLAN_PKT_TYPES:
             expect_int_report = True
             # Change the IP destination to ensure we are using differnt
             # flow for diffrent test cases since the flow report filter

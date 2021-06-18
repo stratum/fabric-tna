@@ -33,7 +33,7 @@ parser FabricIngressParser (packet_in  packet,
 #ifdef WITH_INT
         fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UNKNOWN;
 #endif // WITH_INT
-        fabric_md.bridged.base.gtpu_presence = GtpuPresence.NONE;
+        fabric_md.bridged.base.encap_presence = EncapPresence.NONE;
         transition check_ethernet;
     }
 
@@ -195,6 +195,7 @@ parser FabricIngressParser (packet_in  packet,
         gtpu_t gtpu = packet.lookahead<gtpu_t>();
         transition select(hdr.udp.dport, gtpu.version, gtpu.msgtype) {
             (GTPU_UDP_PORT, GTP_V1, GTPU_GPDU): parse_gtpu;
+            (VXLAN_UDP_PORT, _, _): parse_vxlan;
             // Treat GTP control traffic as payload.
             default: accept;
         }
@@ -214,7 +215,7 @@ parser FabricIngressParser (packet_in  packet,
     }
 
     state set_gtpu_only {
-        fabric_md.bridged.base.gtpu_presence = GtpuPresence.GTPU_ONLY;
+        fabric_md.bridged.base.encap_presence = EncapPresence.GTPU_ONLY;
         transition parse_inner_ipv4;
     }
 
@@ -229,9 +230,24 @@ parser FabricIngressParser (packet_in  packet,
 
     state parse_gtpu_ext_psc {
         packet.extract(hdr.gtpu_ext_psc);
-        fabric_md.bridged.base.gtpu_presence = GtpuPresence.GTPU_WITH_PSC;
+        fabric_md.bridged.base.encap_presence = EncapPresence.GTPU_WITH_PSC;
         transition select(hdr.gtpu_ext_psc.next_ext) {
             GTPU_NEXT_EXT_NONE: parse_inner_ipv4;
+            default: accept;
+        }
+    }
+
+    state parse_vxlan {
+        packet.extract(hdr.vxlan);
+        fabric_md.bridged.base.encap_presence = EncapPresence.VXLAN;
+        transition parse_inner_ethernet;
+    }
+
+    state parse_inner_ethernet {
+        packet.extract(hdr.inner_ethernet);
+        packet.extract(hdr.inner_eth_type);
+        transition select(hdr.inner_eth_type.value) {
+            ETHERTYPE_IPV4: parse_inner_ipv4;
             default: accept;
         }
     }
@@ -315,6 +331,9 @@ control FabricIngressDeparser(packet_out packet,
         packet.emit(hdr.gtpu);
         packet.emit(hdr.gtpu_options);
         packet.emit(hdr.gtpu_ext_psc);
+        packet.emit(hdr.vxlan);
+        packet.emit(hdr.inner_ethernet);
+        packet.emit(hdr.inner_eth_type);
         packet.emit(hdr.inner_ipv4);
         packet.emit(hdr.inner_tcp);
         packet.emit(hdr.inner_udp);
@@ -394,7 +413,7 @@ parser FabricEgressParser (packet_in packet,
         hdr.outer_gtpu_ext_psc.next_ext  = GTPU_NEXT_EXT_NONE;
 #endif // WITH_SPGW
 #ifdef WITH_INT
-        fabric_md.int_report_md.gtpu_presence = fabric_md.bridged.base.gtpu_presence;
+        fabric_md.int_report_md.encap_presence = fabric_md.bridged.base.encap_presence;
 #endif // WITH_INT
         transition check_ethernet;
     }
