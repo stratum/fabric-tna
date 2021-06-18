@@ -1577,12 +1577,10 @@ class IPv4UnicastTest(FabricTest):
             switch_mac = pkt[Ether].dst
 
         # Setup ports.
-        # The reason to ignore recirculate ports is because we may use the recirculate
-        # port as a output port when testing the deflect-on-drop INT report and we will
-        # set up the recirculate port already.
-        # See TestDeflectOnDropIntReport test for more detail.
-        if ig_port not in RECIRCULATE_PORTS:
-            self.setup_port(ig_port, vlan1, port_type1, tagged1)
+        self.setup_port(ig_port, vlan1, port_type1, tagged1)
+        # This is to prevent sending duplicate table entries for tests like
+        # FabricIntDeflectedDropTest, where we already set up the recirculation port as
+        # part of `set_up_int_flows()`.
         if eg_port not in RECIRCULATE_PORTS:
             self.setup_port(eg_port, vlan2, port_type2, tagged2)
 

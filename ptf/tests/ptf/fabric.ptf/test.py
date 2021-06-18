@@ -2953,12 +2953,14 @@ class FabricOptimizedFieldDetectorTest(FabricTest):
         self.doRunTest()
 
 @group("int-dod")
-class TestDeflectOnDropIntReport(FabricIntLocalReportTest, FabricIntIngressDropReportTest):
+class TestDeflectOnDropIntReport(IntTest):
 
     @autocleanup
-    def doRunTest(self, pkt_type):
-        print(f"Testing, pkt_type={pkt_type}...")
+    def doRunTest(self, pkt_type, tagged1=False, is_device_spine=False, send_report_to_spine=False):
+        print(f"Testing, pkt_type={pkt_type}, tagged1={tagged1}, " +
+              f"is_device_spine={is_device_spine}, send_report_to_spine={send_report_to_spine}...")
         pkt = getattr(testutils, f"simple_{pkt_type}_packet")(ip_dst=self.get_single_use_ip())
+        int_inner_pkt = pkt.copy()
         ig_port = self.port1
         # Since the tofino model only sets the deflected_flag to 1 and forward the packet
         # normally to the egress port we set in the ingress pipe, we need to set the
@@ -2967,10 +2969,9 @@ class TestDeflectOnDropIntReport(FabricIntLocalReportTest, FabricIntIngressDropR
         # since the traffic manager will deflect the packet to the port we set in the
         # chassis config.
         eg_port = RECIRCULATE_PORTS[0]
-        is_device_spine = False
-        send_report_to_spine = False
 
-        int_inner_pkt = pkt.copy()
+        if tagged1:
+            pkt = pkt_add_vlan(pkt, VLAN_ID_1)
 
         # The packet will still be routed, but dropped by traffic manager.
         int_inner_pkt = pkt_route(int_inner_pkt, HOST2_MAC)
@@ -2993,7 +2994,7 @@ class TestDeflectOnDropIntReport(FabricIntLocalReportTest, FabricIntIngressDropR
         self.runIPv4UnicastTest(
             pkt=pkt,
             next_hop_mac=HOST2_MAC,
-            tagged1=False,
+            tagged1=tagged1,
             tagged2=False,
             is_next_hop_spine=False,
             prefix_len=32,
@@ -3009,7 +3010,17 @@ class TestDeflectOnDropIntReport(FabricIntLocalReportTest, FabricIntIngressDropR
     def runTest(self):
         print("\n")
         # In Tofino Model with dod test mode, every 10th packet will be deflected.
-        for pkt_type in BASE_PKT_TYPES | GTP_PKT_TYPES:
+        for pkt_type in BASE_PKT_TYPES | GTP_PKT_TYPES | VXLAN_PKT_TYPES:
+            # TODO: The CI will hit the timeout limit when running the test with
+            #       combinations of arguments below.
+            #       Uncomment them after we solve the timeout issue.
+            # for tagged1 in [False, True]:
+            # # tagged2 will always be False since we are sending packet to the recirculate port.
+            #     for is_device_spine in [False, True]:
+            #         if is_device_spine and tagged1:
+            #             continue
+            #         for send_report_to_spine in [False, True]:
+            # To run 9 normal tests for the 10th one will be deflected.
             for _ in range(0, 9):
                 FabricIntLocalReportTest.doRunTest(
                     self,

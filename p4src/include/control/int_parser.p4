@@ -63,7 +63,7 @@ parser IntReportParser (packet_in packet,
         hdr.common_report_header.ig_port = fabric_md.bridged.base.ig_port;
         hdr.common_report_header.eg_port = 0;
         hdr.common_report_header.queue_id = 0;
-        transition int_drop_common;
+        transition set_common_int_drop_headers;
     }
 
     // This state parse packets which deflected by the traffic manager.
@@ -82,10 +82,10 @@ parser IntReportParser (packet_in packet,
         hdr.common_report_header.ig_port = fabric_md.bridged.base.ig_port;
         hdr.common_report_header.eg_port = fabric_md.bridged.int_bmd.egress_port;
         hdr.common_report_header.queue_id = fabric_md.bridged.int_bmd.queue_id;
-        transition int_drop_common;
+        transition set_common_int_drop_headers;
     }
 
-    state int_drop_common {
+    state set_common_int_drop_headers {
         fabric_md.int_report_md.setValid();
         fabric_md.int_report_md.ip_eth_type = ETHERTYPE_IPV4;
         fabric_md.int_report_md.report_type = IntReportType_t.DROP;
