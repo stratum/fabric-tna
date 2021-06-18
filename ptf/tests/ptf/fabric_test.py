@@ -546,7 +546,7 @@ def pkt_decrement_ttl(pkt):
         pkt[IP].ttl -= 1
     return pkt
 
-def get_test_args(spgw_type="None", traffic_dir="None", int_test_type="None", 
+def get_test_args(traffic_dir, spgw_type=None, int_test_type=None, 
                   test_multiple_pkt_len=False, test_multiple_prefix_len=False,
                   drop_test=False):
 
@@ -586,6 +586,9 @@ def get_test_args(spgw_type="None", traffic_dir="None", int_test_type="None",
     """
     # Parse traffic direction input into source, device and destination
     devices = re.split('-', traffic_dir)
+    if len(devices) != 3:
+        raise Exception("Invalid traffic direction {}.".format(traffic_dir))
+
     source = devices[0]
     device = devices[1]
     dest = devices[2]
@@ -616,13 +619,10 @@ def get_test_args(spgw_type="None", traffic_dir="None", int_test_type="None",
                             "tag->tag": [True, True]
                          }
     else:
-        vlan_conf_list = vlan_confs.items()
+        raise Exception("Invalid source {} and dest {}.".format(source, dest))
 
 
-    if device == 'spine' or dest == 'spine':
-        is_next_hop_spine_list = [False, True]
-    else:
-        is_next_hop_spine_list = [None]
+    is_next_hop_spine = (dest == 'spine')
 
 
     """ DROP REASON 
@@ -635,24 +635,19 @@ def get_test_args(spgw_type="None", traffic_dir="None", int_test_type="None",
         if int_test_type == "ig_drop":
             drop_reason_list = [INT_DROP_REASON_ACL_DENY]
         elif int_test_type == "eg_drop":
-            drop_reason_list = [INT_DROP_REASON_EGRESS_NEXT_MISS]
-        elif int_test_type == "local":
             if spgw_type == "DL":
                 drop_reason_list = [INT_DROP_REASON_DOWNLINK_PDR_MISS, INT_DROP_REASON_FAR_MISS]
             elif spgw_type == "UL":
                 drop_reason_list = [INT_DROP_REASON_UPLINK_PDR_MISS, INT_DROP_REASON_FAR_MISS]
+            else:
+                drop_reason_list = [INT_DROP_REASON_EGRESS_NEXT_MISS]
         else:
             drop_reason_list = [None]
     else:
         drop_reason_list = [None]
 
 
-    """ IS_DEVICE_SPINE """
-    # If INT test then toggle is_device_spine
-    if int_test_type in INT_OPTIONS:
-        is_device_spine_list = [False, True]
-    else:
-        is_device_spine_list = [None]
+    is_device_spine = (device == 'spine')
 
 
     """ PKT_TYPE and WITH_PSC """

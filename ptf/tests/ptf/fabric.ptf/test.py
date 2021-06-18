@@ -1300,9 +1300,10 @@ class FabricSpgwDownlinkTest(SpgwSimpleTest):
         )
 
     def runTest(self):
-        for test_args in get_test_args(spgw_type="DL"):
+        for traffic_dir in ["host-leaf-host", "spine-leaf-host"]:
+            for test_args in get_test_args(traffic_dir=traffic_dir, spgw_type="DL"):
             print(test_args)
-            self.doRunTest(test_args)
+            self.doRunTest(**test_args)
 
         # print("")
         # for vlan_conf, tagged in vlan_confs.items():
