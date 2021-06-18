@@ -211,10 +211,10 @@ parser IntReportParser (packet_in packet,
 
     state strip_ipv4_udp_vxlan {
         packet.advance((IPV4_HDR_BYTES + UDP_HDR_BYTES + VXLAN_HDR_BYTES) * 8);
-        // Skip Ethernet bytes.
-        // The Ethernet header will be emitted as payload,
-        // but we need to advance and jump to handle_ipv4 state to get the total length.
-        packet.advance(ETH_HDR_BYTES * 8);
+        // Skip the Ethernet header.
+        // It will be removed from a packet and the outer Ethernet will be used
+        // as the inner Ethernet header.
+        packet.advance((ETH_HDR_BYTES) * 8);
         transition handle_ipv4;
     }
 
