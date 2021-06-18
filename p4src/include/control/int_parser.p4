@@ -46,7 +46,7 @@ parser IntReportParser (packet_in packet,
         hdr.local_report_header.eg_tstamp = fabric_md.int_report_md.eg_tstamp;
         hdr.drop_report_header.drop_reason = fabric_md.int_report_md.drop_reason;
 
-        transition parse_common_int_headers;
+        transition set_common_int_headers;
     }
 
     state parse_int_ingress_drop {
@@ -93,10 +93,10 @@ parser IntReportParser (packet_in packet,
 
         /** drop_report_header **/
         hdr.drop_report_header.setValid();
-        transition parse_common_int_headers;
+        transition set_common_int_headers;
     }
 
-    state parse_common_int_headers {
+    state set_common_int_headers {
         // Initialize report headers here to allocate constant fields on the
         // T-PHV (and save on PHV resources).
         /** report_ethernet **/
