@@ -58,7 +58,7 @@ parser IntReportParser (packet_in packet,
         /** drop_report_header **/
         hdr.drop_report_header.drop_reason = fabric_md.bridged.int_bmd.drop_reason;
         /** report_fixed_header **/
-        hdr.report_fixed_header.ig_tstamp = (bit<32>)fabric_md.bridged.base.ig_tstamp;
+        hdr.report_fixed_header.ig_tstamp = fabric_md.bridged.base.ig_tstamp[31:0];
         /** common_report_header **/
         hdr.common_report_header.ig_port = fabric_md.bridged.base.ig_port;
         hdr.common_report_header.eg_port = 0;
@@ -77,7 +77,7 @@ parser IntReportParser (packet_in packet,
         /** drop_report_header **/
         hdr.drop_report_header.drop_reason = IntDropReason_t.DROP_REASON_TRAFFIC_MANAGER;
         /** report_fixed_header **/
-        hdr.report_fixed_header.ig_tstamp = (bit<32>)fabric_md.bridged.base.ig_tstamp;
+        hdr.report_fixed_header.ig_tstamp = fabric_md.bridged.base.ig_tstamp[31:0];
         /** common_report_header **/
         hdr.common_report_header.ig_port = fabric_md.bridged.base.ig_port;
         hdr.common_report_header.eg_port = fabric_md.bridged.int_bmd.egress_port;
