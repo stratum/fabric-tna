@@ -19,7 +19,7 @@ control DecapGtpu(inout ingress_headers_t            hdr,
         hdr.gtpu.setInvalid();
         hdr.gtpu_options.setInvalid();
         hdr.gtpu_ext_psc.setInvalid();
-        fabric_md.bridged.base.gtpu_presence = GtpuPresence.NONE;
+        fabric_md.bridged.base.encap_presence = EncapPresence.NONE;
     }
     @hidden
     action decap_inner_tcp() {
@@ -348,7 +348,7 @@ control SpgwIngress(
                 }
                 // PDRs
                 if (fabric_md.spgw.src_iface == SpgwInterface.ACCESS &&
-                        fabric_md.bridged.base.gtpu_presence != GtpuPresence.NONE) {
+                        fabric_md.bridged.base.encap_presence != EncapPresence.NONE) {
                     uplink_pdrs.apply();
                 } else if (fabric_md.spgw.src_iface == SpgwInterface.CORE ||
                             fabric_md.spgw.src_iface == SpgwInterface.FROM_DBUF) {
@@ -410,7 +410,7 @@ control SpgwEgress(
         hdr.outer_gtpu.msglen = hdr.ipv4.total_len;
         hdr.outer_gtpu.ex_flag = 0;
 #ifdef WITH_INT
-        fabric_md.int_report_md.gtpu_presence = GtpuPresence.GTPU_ONLY;
+        fabric_md.int_report_md.encap_presence = EncapPresence.GTPU_ONLY;
 #endif // WITH_INT
     }
 
@@ -432,7 +432,7 @@ control SpgwEgress(
         hdr.outer_gtpu_ext_psc.setValid();
         hdr.outer_gtpu_ext_psc.qfi = qfi;
 #ifdef WITH_INT
-        fabric_md.int_report_md.gtpu_presence = GtpuPresence.GTPU_WITH_PSC;
+        fabric_md.int_report_md.encap_presence = EncapPresence.GTPU_WITH_PSC;
 #endif // WITH_INT
     }
 

@@ -24,6 +24,7 @@
 #define GTPU_EXT_PSC_HDR_BYTES 4
 #define MPLS_HDR_BYTES 4
 #define VLAN_HDR_BYTES 4
+#define VXLAN_HDR_BYTES 8
 
 #define PKT_INSTANCE_TYPE_NORMAL 0
 #define PKT_INSTANCE_TYPE_INGRESS_CLONE 1
@@ -61,10 +62,15 @@ enum bit<8> SpgwInterface {
     FROM_DBUF     = 0x3
 }
 
-enum bit<2> GtpuPresence {
+// According to our design choice, we report only the inner headers to the INT collector.
+// The EncapPresence keeps track of the encapsulation protocol in use.
+// The EncapPresence is further needed by the egress INT parser to strip out the outer encapsulation headers
+// and put only inner headers in an INT report.
+enum bit<2> EncapPresence {
     NONE          = 0x0,
     GTPU_ONLY     = 0x1,
-    GTPU_WITH_PSC = 0x2
+    GTPU_WITH_PSC = 0x2,
+    VXLAN         = 0x3
 }
 
 const bit<16> GTPU_UDP_PORT = 2152;
@@ -130,6 +136,8 @@ const vlan_id_t DEFAULT_VLAN_ID = 12w4094;
 
 const bit<8> DEFAULT_MPLS_TTL = 64;
 const bit<8> DEFAULT_IPV4_TTL = 64;
+
+const bit<16> VXLAN_UDP_PORT = 4789;
 
 // The recirculation port uses the same number for all HW pipes. The actual port
 // ID (DP_ID) can be obtained by prefixing the HW pipe ID (2 bits).

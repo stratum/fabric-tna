@@ -121,6 +121,12 @@ header icmp_t {
     // Other optional fields...
 }
 
+header vxlan_t {
+    bit<8>  flags;
+    bit<24> reserved;
+    bit<24> vni;
+    bit<8>  reserved_2;
+}
 
 // GTPU v1 -- 3GPP TS 29.281 version 15.7.0
 // https://www.etsi.org/deliver/etsi_ts/129200_129299/129281/15.07.00_60/ts_129281v150700p.pdf
@@ -236,7 +242,7 @@ header local_report_header_t {
 @pa_no_overlay("egress", "fabric_md.int_report_md.ip_eth_type")
 @pa_no_overlay("egress", "fabric_md.int_report_md.report_type")
 @pa_no_overlay("egress", "fabric_md.int_report_md.flow_hash")
-@pa_no_overlay("egress", "fabric_md.int_report_md.gtpu_presence")
+@pa_no_overlay("egress", "fabric_md.int_report_md.encap_presence")
 header int_report_metadata_t {
     BridgedMdType_t       bmd_type;
     @padding bit<5>       _pad0;
@@ -254,7 +260,7 @@ header int_report_metadata_t {
     bit<8>                drop_reason;
     bit<16>               ip_eth_type;
     @padding bit<6>       _pad5;
-    GtpuPresence          gtpu_presence;
+    EncapPresence         encap_presence;
     @padding bit<6>       _pad6;
     IntReportType_t       report_type;
     flow_hash_t           flow_hash;
@@ -286,7 +292,7 @@ struct bridged_metadata_base_t {
     bool                     is_multicast;
     fwd_type_t               fwd_type;
     vlan_id_t                vlan_id;
-    GtpuPresence             gtpu_presence;
+    EncapPresence            encap_presence;
     // bit<3>                vlan_pri;
     // bit<1>                vlan_cfi;
     bit<8>                   mpls_ttl;
@@ -420,6 +426,9 @@ struct ingress_headers_t {
     gtpu_t gtpu;
     gtpu_options_t gtpu_options;
     gtpu_ext_psc_t gtpu_ext_psc;
+    vxlan_t vxlan;
+    ethernet_t inner_ethernet;
+    eth_type_t inner_eth_type;
     ipv4_t inner_ipv4;
     tcp_t inner_tcp;
     udp_t inner_udp;

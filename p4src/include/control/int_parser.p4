@@ -52,7 +52,7 @@ parser IntReportParser (packet_in packet,
     state parse_int_ingress_drop {
         packet.extract(fabric_md.bridged);
         fabric_md.int_report_md.bmd_type = BridgedMdType_t.INT_INGRESS_DROP;
-        fabric_md.int_report_md.gtpu_presence = fabric_md.bridged.base.gtpu_presence;
+        fabric_md.int_report_md.encap_presence = fabric_md.bridged.base.encap_presence;
         fabric_md.int_report_md.flow_hash = fabric_md.bridged.base.inner_hash;
 
         /** drop_report_header **/
@@ -198,11 +198,12 @@ parser IntReportParser (packet_in packet,
 
     state check_eth_type {
         packet.extract(hdr.eth_type);
-        transition select(hdr.eth_type.value, fabric_md.int_report_md.gtpu_presence) {
+        transition select(hdr.eth_type.value, fabric_md.int_report_md.encap_presence) {
             (ETHERTYPE_MPLS, _): strip_mpls;
-            (ETHERTYPE_IPV4, GtpuPresence.NONE): handle_ipv4;
-            (ETHERTYPE_IPV4, GtpuPresence.GTPU_ONLY): strip_ipv4_udp_gtpu;
-            (ETHERTYPE_IPV4, GtpuPresence.GTPU_WITH_PSC): strip_ipv4_udp_gtpu_psc;
+            (ETHERTYPE_IPV4, EncapPresence.NONE): handle_ipv4;
+            (ETHERTYPE_IPV4, EncapPresence.GTPU_ONLY): strip_ipv4_udp_gtpu;
+            (ETHERTYPE_IPV4, EncapPresence.GTPU_WITH_PSC): strip_ipv4_udp_gtpu_psc;
+            (ETHERTYPE_IPV4, EncapPresence.VXLAN): strip_ipv4_udp_vxlan;
             default: reject;
         }
     }
@@ -212,10 +213,11 @@ parser IntReportParser (packet_in packet,
     state strip_mpls {
         packet.advance(MPLS_HDR_BYTES * 8);
         bit<IP_VER_BITS> ip_ver = packet.lookahead<bit<IP_VER_BITS>>();
-        transition select(ip_ver, fabric_md.int_report_md.gtpu_presence) {
-            (IP_VERSION_4, GtpuPresence.NONE): handle_ipv4;
-            (IP_VERSION_4, GtpuPresence.GTPU_ONLY): strip_ipv4_udp_gtpu;
-            (IP_VERSION_4, GtpuPresence.GTPU_WITH_PSC): strip_ipv4_udp_gtpu_psc;
+        transition select(ip_ver, fabric_md.int_report_md.encap_presence) {
+            (IP_VERSION_4, EncapPresence.NONE): handle_ipv4;
+            (IP_VERSION_4, EncapPresence.GTPU_ONLY): strip_ipv4_udp_gtpu;
+            (IP_VERSION_4, EncapPresence.GTPU_WITH_PSC): strip_ipv4_udp_gtpu_psc;
+            (IP_VERSION_4, EncapPresence.VXLAN): strip_ipv4_udp_vxlan;
             default: reject;
         }
     }
@@ -228,6 +230,15 @@ parser IntReportParser (packet_in packet,
     state strip_ipv4_udp_gtpu_psc {
         packet.advance((IPV4_HDR_BYTES + UDP_HDR_BYTES + GTPU_HDR_BYTES
                 + GTPU_OPTIONS_HDR_BYTES + GTPU_EXT_PSC_HDR_BYTES) * 8);
+        transition handle_ipv4;
+    }
+
+    state strip_ipv4_udp_vxlan {
+        packet.advance((IPV4_HDR_BYTES + UDP_HDR_BYTES + VXLAN_HDR_BYTES) * 8);
+        // Skip the Ethernet header.
+        // It will be removed from a packet and the outer Ethernet will be used
+        // as the inner Ethernet header.
+        packet.advance((ETH_HDR_BYTES) * 8);
         transition handle_ipv4;
     }
 
