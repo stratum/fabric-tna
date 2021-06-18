@@ -41,16 +41,20 @@ fi
 # We limit running PTF tests for only those profiles used in Aether, otherwise
 # we exceed the 45 min limit on Jenkins.
 # FIXME: revert once the PTF tests execution time is optimized (#238)
-for profile in "fabric-int" "fabric-spgw-int" "spgw-int-dod" "int-dod"; do
+for profile in "fabric-int" "fabric-spgw-int"; do
 # Run PTF tests for all profiles we just built
 #for d in ./p4src/build/*/; do
 #  profile=$(basename "${d}")
 
   echo "Run PTF tests for profile ${profile}"
   ./ptf/run/tm/run "${profile}"
+  # Special case to test INT drop report with deflected packet.
+  TM_DOD=1 ./ptf/run/tm/run "${profile}" TEST=test.TestDeflectOnDropIntReport
 
   echo "Verify TV generation for profile ${profile}"
   ./ptf/run/tv/run "${profile}"
+  # Special case to test INT drop report with deflected packet.
+  TM_DOD=1 ./ptf/run/tv/run "${profile}" TEST=test.TestDeflectOnDropIntReport
 
   rm -rf "logs/${profile}"
   mkdir -p "logs/${profile}"

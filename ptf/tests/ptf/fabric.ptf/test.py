@@ -2953,7 +2953,7 @@ class FabricOptimizedFieldDetectorTest(FabricTest):
         self.doRunTest()
 
 @group("int-dod")
-class TestDeflectOnDropIntReport(FabricIntLocalReportTest, FabricIntIngressDropReportTest, FabricBridgingTest):
+class TestDeflectOnDropIntReport(FabricIntLocalReportTest, FabricIntIngressDropReportTest):
 
     @autocleanup
     def doRunTest(self, pkt_type):

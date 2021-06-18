@@ -38,17 +38,6 @@ fi
 # Find Tofino compiled artifacts
 sdeVer_=$(echo "${SDE_VERSION}" | tr . _) # Replace dots with underscores
 P4C_OUT=${FABRIC_TNA}/p4src/build/${fabricProfile}/sde_${sdeVer_}
-
-# Special case for INT deflect on drop test
-if [ "${fabricProfile}" = "spgw-int-dod" ]; then
-    P4C_OUT=${FABRIC_TNA}/p4src/build/fabric-spgw-int/sde_${sdeVer_}
-    TM_DOD=1
-fi
-if [ "${fabricProfile}" = "int-dod" ]; then
-    P4C_OUT=${FABRIC_TNA}/p4src/build/fabric-int/sde_${sdeVer_}
-    TM_DOD=1
-fi
-
 echo "*** Using P4 compiler output in ${P4C_OUT}..."
 
 # Fix a name for each container so we can stop them
