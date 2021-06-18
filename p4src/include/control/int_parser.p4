@@ -71,7 +71,7 @@ parser IntReportParser (packet_in packet,
     state parse_int_deflected_drop {
         packet.extract(fabric_md.bridged);
         fabric_md.int_report_md.bmd_type = BridgedMdType_t.DEFLECTED;
-        fabric_md.int_report_md.gtpu_presence = fabric_md.bridged.base.gtpu_presence;
+        fabric_md.int_report_md.encap_presence = fabric_md.bridged.base.encap_presence;
         fabric_md.int_report_md.flow_hash = fabric_md.bridged.base.inner_hash;
 
         /** drop_report_header **/
