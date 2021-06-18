@@ -35,6 +35,11 @@ public final class Constants {
     public static final int DEFAULT_PW_TRANSPORT_VLAN = 4090;
     public static final int PKT_IN_MIRROR_SESSION_ID = 0x210;
 
+    // UPF related constants
+    public static final int UPF_INTERFACE_ACCESS = 1;
+    public static final int UPF_INTERFACE_CORE = 2;
+    public static final int UPF_INTERFACE_DBUF = 3;
+
     // hide default constructor
     private Constants() {
     }
