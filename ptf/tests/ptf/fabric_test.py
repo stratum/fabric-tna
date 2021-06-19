@@ -386,14 +386,21 @@ def simple_vxlan_packet(
     eth_src="00:06:07:08:09:0a",
     ip_src="192.168.0.1",
     ip_dst="192.168.0.2",
-    pktlen=136
+    pktlen=136,
 ):
     pktlen = pktlen - IP_HDR_BYTES - UDP_HDR_BYTES - VXLAN_HDR_BYTES
     pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
         ip_src=ip_src, ip_dst=ip_dst, pktlen=pktlen
     )
-    pkt = Ether(src=eth_src, dst=eth_dst) / IP(src=ip_src, dst=ip_dst) / UDP() / VXLAN() / pkt
+    pkt = (
+        Ether(src=eth_src, dst=eth_dst)
+        / IP(src=ip_src, dst=ip_dst)
+        / UDP()
+        / VXLAN()
+        / pkt
+    )
     return pkt
+
 
 # Generic function to generate a GTP-encapsulated pkt
 # Default arg values are in line with PTF
@@ -2946,7 +2953,6 @@ class IntTest(IPv4UnicastTest):
             inner_packet = pkt_remove_gtp(inner_packet)
         elif VXLAN in inner_packet:
             inner_packet = pkt_remove_vxlan(inner_packet)
-
 
         # Note: scapy doesn't support dscp field, use tos.
         pkt = (

@@ -1892,7 +1892,9 @@ class FabricIntLocalReportTest(IntTest):
                     for send_report_to_spine in [False, True]:
                         if send_report_to_spine and tagged[1]:
                             continue
-                        for pkt_type in BASE_PKT_TYPES | GTP_PKT_TYPES | VXLAN_PKT_TYPES:
+                        for pkt_type in (
+                            BASE_PKT_TYPES | GTP_PKT_TYPES | VXLAN_PKT_TYPES
+                        ):
                             self.doRunTest(
                                 vlan_conf,
                                 tagged,
@@ -1967,7 +1969,9 @@ class FabricIntIngressDropReportTest(IntTest):
                         for send_report_to_spine in [False, True]:
                             if send_report_to_spine and tagged[1]:
                                 continue
-                            for pkt_type in BASE_PKT_TYPES | GTP_PKT_TYPES | VXLAN_PKT_TYPES:
+                            for pkt_type in (
+                                BASE_PKT_TYPES | GTP_PKT_TYPES | VXLAN_PKT_TYPES
+                            ):
                                 self.doRunTest(
                                     vlan_conf,
                                     tagged,
@@ -2038,7 +2042,9 @@ class FabricIntEgressDropReportTest(IntTest):
                     for send_report_to_spine in [False, True]:
                         if send_report_to_spine and tagged[1]:
                             continue
-                        for pkt_type in BASE_PKT_TYPES | GTP_PKT_TYPES | VXLAN_PKT_TYPES:
+                        for pkt_type in (
+                            BASE_PKT_TYPES | GTP_PKT_TYPES | VXLAN_PKT_TYPES
+                        ):
                             self.doRunTest(
                                 vlan_conf,
                                 tagged,
@@ -2953,14 +2959,20 @@ class FabricOptimizedFieldDetectorTest(FabricTest):
         print("")
         self.doRunTest()
 
+
 @group("int-dod")
 class FabricIntDeflectDropReportTest(IntTest):
-
     @autocleanup
-    def doRunTest(self, pkt_type, tagged1=False, is_device_spine=False, send_report_to_spine=False):
-        print(f"Testing, pkt_type={pkt_type}, tagged1={tagged1}, " +
-              f"is_device_spine={is_device_spine}, send_report_to_spine={send_report_to_spine}...")
-        pkt = getattr(testutils, f"simple_{pkt_type}_packet")(ip_dst=self.get_single_use_ip())
+    def doRunTest(
+        self, pkt_type, tagged1=False, is_device_spine=False, send_report_to_spine=False
+    ):
+        print(
+            f"Testing, pkt_type={pkt_type}, tagged1={tagged1}, "
+            + f"is_device_spine={is_device_spine}, send_report_to_spine={send_report_to_spine}..."
+        )
+        pkt = getattr(testutils, f"simple_{pkt_type}_packet")(
+            ip_dst=self.get_single_use_ip()
+        )
         int_inner_pkt = pkt.copy()
         ig_port = self.port1
         # Since the tofino model only sets the deflected_flag to 1 and forward the packet
@@ -3002,7 +3014,7 @@ class FabricIntDeflectDropReportTest(IntTest):
             with_another_pkt_later=True,
             ig_port=ig_port,
             eg_port=eg_port,
-            verify_pkt=False
+            verify_pkt=False,
         )
 
         self.verify_packet(exp_int_report_pkt_masked, self.port3)
@@ -3035,4 +3047,6 @@ class FabricIntDeflectDropReportTest(IntTest):
                         # First we need to send 9 packets with deflect-on-drop flag set.
                         self.send_dummy_packets()
                         # The 10th packet will be deflected
-                        self.doRunTest(pkt_type, tagged1, is_device_spine, send_report_to_spine)
+                        self.doRunTest(
+                            pkt_type, tagged1, is_device_spine, send_report_to_spine
+                        )
