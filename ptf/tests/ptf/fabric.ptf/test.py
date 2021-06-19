@@ -2954,7 +2954,7 @@ class FabricOptimizedFieldDetectorTest(FabricTest):
         self.doRunTest()
 
 @group("int-dod")
-class TestDeflectOnDropIntReport(IntTest):
+class FabricIntDeflectDropReportTest(IntTest):
 
     @autocleanup
     def doRunTest(self, pkt_type, tagged1=False, is_device_spine=False, send_report_to_spine=False):
