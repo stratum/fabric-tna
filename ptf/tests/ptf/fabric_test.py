@@ -211,6 +211,7 @@ INT_REPORT_TYPE_LOCAL = 1
 INT_REPORT_TYPE_DROP = 2
 
 INT_DROP_REASON_UNKNOWN = 0
+INT_DROP_REASON_TRAFFIC_MANAGER = 71
 INT_DROP_REASON_ACL_DENY = 80
 INT_DROP_REASON_ROUTING_V4_MISS = 29
 INT_DROP_REASON_EGRESS_NEXT_MISS = 130
@@ -242,14 +243,15 @@ MIRROR_TYPE_INT_REPORT = 1
 BRIDGED_MD_TYPE_EGRESS_MIRROR = 2
 BRIDGED_MD_TYPE_INGRESS_MIRROR = 3
 BRIDGED_MD_TYPE_INT_INGRESS_DROP = 4
+BRIDGED_MD_TYPE_DEFLECTED = 5
 
 # Size for different headers
 if testutils.test_param_get("profile") == "fabric-spgw-int":
-    BMD_BYTES = 44
+    BMD_BYTES = 47
 elif testutils.test_param_get("profile") == "fabric-spgw":
     BMD_BYTES = 39
 elif testutils.test_param_get("profile") == "fabric-int":
-    BMD_BYTES = 28
+    BMD_BYTES = 31
 elif testutils.test_param_get("profile") == "fabric":
     BMD_BYTES = 23
 else:
@@ -930,6 +932,18 @@ class FabricTest(P4RuntimeTest):
             priority,
         )
 
+    def add_forwarding_acl_set_output_port(
+        self, output_port, priority=DEFAULT_PRIORITY, **matches
+    ):
+        matches = self.build_acl_matches(**matches)
+        return self.send_request_add_entry_to_action(
+            "acl.acl",
+            matches,
+            "acl.set_output_port",
+            [("port_num", stringify(output_port, 2))],
+            priority,
+        )
+
     def read_forwarding_acl_punt_to_cpu(self, eth_type=None, priority=DEFAULT_PRIORITY):
         eth_type_ = stringify(eth_type, 2)
         eth_type_mask_ = stringify(0xFFFF, 2)
@@ -1576,7 +1590,11 @@ class IPv4UnicastTest(FabricTest):
 
         # Setup ports.
         self.setup_port(ig_port, vlan1, port_type1, tagged1)
-        self.setup_port(eg_port, vlan2, port_type2, tagged2)
+        # This is to prevent sending duplicate table entries for tests like
+        # FabricIntDeflectedDropTest, where we already set up the recirculation port as
+        # part of `set_up_int_flows()`.
+        if eg_port not in RECIRCULATE_PORTS:
+            self.setup_port(eg_port, vlan2, port_type2, tagged2)
 
         # Forwarding type -> routing v4
         # If from_packet_out, set eth_dst to don't care. All packet-outs should
@@ -2850,6 +2868,9 @@ class IntTest(IPv4UnicastTest):
         )
         set_up_report_flow_internal(
             BRIDGED_MD_TYPE_EGRESS_MIRROR, MIRROR_TYPE_INT_REPORT, INT_REPORT_TYPE_LOCAL
+        )
+        set_up_report_flow_internal(
+            BRIDGED_MD_TYPE_DEFLECTED, MIRROR_TYPE_INVALID, INT_REPORT_TYPE_DROP
         )
 
     def set_up_report_mirror_flow(self, pipe_id, mirror_id, port):

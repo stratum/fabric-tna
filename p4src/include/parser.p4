@@ -355,12 +355,13 @@ parser FabricEgressParser (packet_in packet,
         fabric_md.is_int = false;
 #endif // WITH_INT
         common_egress_metadata_t common_eg_md = packet.lookahead<common_egress_metadata_t>();
-        transition select(common_eg_md.bmd_type, common_eg_md.mirror_type) {
-            (BridgedMdType_t.INGRESS_TO_EGRESS, _): parse_bridged_md;
-            (BridgedMdType_t.INGRESS_MIRROR, FabricMirrorType_t.PACKET_IN): parse_packet_in_mirror;
+        transition select(eg_intr_md.deflection_flag, common_eg_md.bmd_type, common_eg_md.mirror_type) {
+            (0, BridgedMdType_t.INGRESS_TO_EGRESS, _): parse_bridged_md;
+            (0, BridgedMdType_t.INGRESS_MIRROR, FabricMirrorType_t.PACKET_IN): parse_packet_in_mirror;
 #ifdef WITH_INT
-            (BridgedMdType_t.INT_INGRESS_DROP, _): parse_int_report;
-            (BridgedMdType_t.EGRESS_MIRROR, FabricMirrorType_t.INT_REPORT): parse_int_report;
+            (1, _, _): parse_int_report;
+            (0, BridgedMdType_t.INT_INGRESS_DROP, _): parse_int_report;
+            (0, BridgedMdType_t.EGRESS_MIRROR, FabricMirrorType_t.INT_REPORT): parse_int_report;
 #endif // WITH_INT
             default: reject;
         }
@@ -425,7 +426,7 @@ parser FabricEgressParser (packet_in packet,
 
 #ifdef WITH_INT
     state parse_int_report {
-        IntReportParser.apply(packet, hdr, fabric_md);
+        IntReportParser.apply(packet, hdr, fabric_md, eg_intr_md);
         transition accept;
     }
 #endif // WITH_INT

@@ -8,6 +8,7 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
 FP4TEST_ROOT="${DIR}"/../..
 FABRIC_TNA="${FP4TEST_ROOT}"/..
 TM_PORT_JSON=${TM_PORT_JSON:-""}
+TM_DOD=${TM_DOD:=""}
 
 # shellcheck source=.env
 source "${FABRIC_TNA}"/.env
@@ -79,6 +80,10 @@ if [[ -n "${TM_PORT_JSON}" ]]; then
     JSON_PATH="${JSON_PATH}/$(basename "${TM_PORT_JSON}")"
     OTHER_TM_DOCKER_ARGS="--mount src=${JSON_PATH},dst=${JSON_PATH},type=bind"
     OTHER_TM_DOCKER_ARGS="${OTHER_TM_DOCKER_ARGS} --env TM_PORT_JSON=${JSON_PATH}"
+fi
+if [[ -n "${TM_DOD}" ]]; then
+    # Enable deflect on drop test
+    OTHER_TM_DOCKER_ARGS="${OTHER_TM_DOCKER_ARGS} --env TM_DOD=${TM_DOD}"
 fi
 
 # shellcheck disable=SC2086

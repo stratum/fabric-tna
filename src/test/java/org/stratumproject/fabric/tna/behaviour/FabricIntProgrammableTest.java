@@ -103,7 +103,7 @@ public class FabricIntProgrammableTest {
     private static final IpAddress COLLECTOR_IP = IpAddress.valueOf("10.128.0.1");
     private static final TpPort COLLECTOR_PORT = TpPort.tpPort(32766);
     private static final short BMD_TYPE_EGRESS_MIRROR = 2;
-    private static final short BMD_TYPE_INGRESS_MIRROR = 3;
+    private static final short BMD_TYPE_DEFLECTED = 5;
     private static final short BMD_TYPE_INT_INGRESS_DROP = 4;
     private static final short MIRROR_TYPE_INVALID = 0;
     private static final short MIRROR_TYPE_INT_REPORT = 1;
@@ -299,6 +299,8 @@ public class FabricIntProgrammableTest {
                                      INT_REPORT_TYPE_DROP, MIRROR_TYPE_INT_REPORT),
                 buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR,
                                      INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT),
+                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_DEFLECTED,
+                                     INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID),
                 buildFilterConfigFlow(LEAF_DEVICE_ID)
         );
 
@@ -342,6 +344,8 @@ public class FabricIntProgrammableTest {
                                      INT_REPORT_TYPE_DROP, MIRROR_TYPE_INT_REPORT),
                 buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR,
                                      INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT),
+                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_DEFLECTED,
+                                     INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID),
                 buildFilterConfigFlow(LEAF_DEVICE_ID)
         );
 
@@ -389,6 +393,8 @@ public class FabricIntProgrammableTest {
                                      INT_REPORT_TYPE_DROP, MIRROR_TYPE_INT_REPORT),
                 buildReportTableRule(SPINE_DEVICE_ID, true, BMD_TYPE_EGRESS_MIRROR,
                                      INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT),
+                buildReportTableRule(SPINE_DEVICE_ID, true, BMD_TYPE_DEFLECTED,
+                                     INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID),
                 buildFilterConfigFlow(SPINE_DEVICE_ID)
         );
 
@@ -460,7 +466,10 @@ public class FabricIntProgrammableTest {
                                          INT_REPORT_TYPE_DROP, MIRROR_TYPE_INT_REPORT)),
                 buildFlowEntry(
                     buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR,
-                                         INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT))
+                                         INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT)),
+                buildFlowEntry(
+                    buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_DEFLECTED,
+                                         INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID))
         );
         Set<FlowEntry> randomEntries = buildRandomFlowEntries();
         Set<FlowEntry> entries = Sets.newHashSet(intEntries);
@@ -598,7 +607,7 @@ public class FabricIntProgrammableTest {
         verify(flowRuleService);
     }
 
-    private PiAction buildReportAction(boolean setMpls, short reportType) {
+    private PiAction buildReportAction(boolean setMpls, short reportType, short bmdType) {
         final PiActionParam srcMacParam = new PiActionParam(
                 P4InfoConstants.SRC_MAC, MacAddress.ZERO.toBytes());
         final PiActionParam nextHopMacParam = new PiActionParam(
@@ -612,8 +621,8 @@ public class FabricIntProgrammableTest {
                 P4InfoConstants.MON_PORT,
                 COLLECTOR_PORT.toInt());
         final PiActionParam switchIdParam = new PiActionParam(
-                    P4InfoConstants.SWITCH_ID,
-                    NODE_SID_IPV4);
+                P4InfoConstants.SWITCH_ID,
+                NODE_SID_IPV4);
         final PiAction.Builder reportAction = PiAction.builder()
                 .withParameter(srcMacParam)
                 .withParameter(nextHopMacParam)
@@ -643,7 +652,7 @@ public class FabricIntProgrammableTest {
 
     private FlowRule buildReportTableRule(
             DeviceId deviceId, boolean setMpls, short bmdType, short reportType, short mirrorType) {
-        PiAction reportAction = buildReportAction(setMpls, reportType);
+        PiAction reportAction = buildReportAction(setMpls, reportType, bmdType);
         final TrafficTreatment treatment = DefaultTrafficTreatment.builder()
                 .piTableAction(reportAction)
                 .build();

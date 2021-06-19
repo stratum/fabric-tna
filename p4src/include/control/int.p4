@@ -146,6 +146,7 @@ control IntWatchlist(
 
     action mark_to_report() {
         fabric_md.bridged.int_bmd.report_type = IntReportType_t.LOCAL;
+        ig_tm_md.deflect_on_drop = 1;
 #ifdef WITH_DEBUG
         watchlist_counter.count();
 #endif // WITH_DEBUG
@@ -250,6 +251,12 @@ control IntIngress(
         // Here we use 0b10000000xx as the mirror session ID where "xx" is the 2-bit
         // pipeline number(0~3).
         fabric_md.bridged.int_bmd.mirror_session_id = INT_MIRROR_SESSION_BASE ++ ig_intr_md.ingress_port[8:7];
+        // When the traffic manager deflects a packet, the egress port and queue id
+        // of egress intrinsic metadata will be the port and queue used for deflection.
+        // We need to bridge the egress port and queue id from ingress to the egress
+        // parser to initialize the INT drop report.
+        fabric_md.bridged.int_bmd.egress_port = ig_tm_md.ucast_egress_port;
+        fabric_md.bridged.int_bmd.queue_id = ig_tm_md.qid;
         drop_report.apply();
     }
 }

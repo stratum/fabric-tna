@@ -10,14 +10,16 @@
 // We support generating reports only for IPv4 packets, i.e., cannot report IPv6 traffic.
 parser IntReportParser (packet_in packet,
     inout egress_headers_t hdr,
-    inout fabric_egress_metadata_t fabric_md) {
+    inout fabric_egress_metadata_t fabric_md,
+    in egress_intrinsic_metadata_t eg_intr_md) {
 
     state start {
         fabric_md.is_int = true;
         common_egress_metadata_t common_eg_md = packet.lookahead<common_egress_metadata_t>();
-        transition select(common_eg_md.bmd_type, common_eg_md.mirror_type) {
-            (BridgedMdType_t.INT_INGRESS_DROP, _): parse_int_ingress_drop;
-            (BridgedMdType_t.EGRESS_MIRROR, FabricMirrorType_t.INT_REPORT): parse_int_report_mirror;
+        transition select(eg_intr_md.deflection_flag, common_eg_md.bmd_type, common_eg_md.mirror_type) {
+            (1, _, _): parse_int_deflected_drop;
+            (0, BridgedMdType_t.INT_INGRESS_DROP, _): parse_int_ingress_drop;
+            (0, BridgedMdType_t.EGRESS_MIRROR, FabricMirrorType_t.INT_REPORT): parse_int_report_mirror;
             default: reject;
         }
     }
@@ -44,35 +46,57 @@ parser IntReportParser (packet_in packet,
         hdr.local_report_header.eg_tstamp = fabric_md.int_report_md.eg_tstamp;
         hdr.drop_report_header.drop_reason = fabric_md.int_report_md.drop_reason;
 
-        transition parse_common_int_headers;
+        transition set_common_int_headers;
     }
 
     state parse_int_ingress_drop {
         packet.extract(fabric_md.bridged);
-        fabric_md.int_report_md.setValid();
         fabric_md.int_report_md.bmd_type = BridgedMdType_t.INT_INGRESS_DROP;
-        fabric_md.int_report_md.ip_eth_type = ETHERTYPE_IPV4;
-        fabric_md.int_report_md.report_type = IntReportType_t.DROP;
-        fabric_md.int_report_md.mirror_type = FabricMirrorType_t.INVALID;
         fabric_md.int_report_md.encap_presence = fabric_md.bridged.base.encap_presence;
         fabric_md.int_report_md.flow_hash = fabric_md.bridged.base.inner_hash;
 
+        /** drop_report_header **/
+        hdr.drop_report_header.drop_reason = fabric_md.bridged.int_bmd.drop_reason;
         /** report_fixed_header **/
-        hdr.report_fixed_header.ig_tstamp = (bit<32>)fabric_md.bridged.base.ig_tstamp;
+        hdr.report_fixed_header.ig_tstamp = fabric_md.bridged.base.ig_tstamp[31:0];
         /** common_report_header **/
         hdr.common_report_header.ig_port = fabric_md.bridged.base.ig_port;
         hdr.common_report_header.eg_port = 0;
         hdr.common_report_header.queue_id = 0;
+        transition set_common_int_drop_headers;
+    }
+
+    // This state parse packets which deflected by the traffic manager.
+    // See ptf/run/tm/chassis_config.pb.txt for deflect-on-drop port config.
+    state parse_int_deflected_drop {
+        packet.extract(fabric_md.bridged);
+        fabric_md.int_report_md.bmd_type = BridgedMdType_t.DEFLECTED;
+        fabric_md.int_report_md.encap_presence = fabric_md.bridged.base.encap_presence;
+        fabric_md.int_report_md.flow_hash = fabric_md.bridged.base.inner_hash;
+
+        /** drop_report_header **/
+        hdr.drop_report_header.drop_reason = IntDropReason_t.DROP_REASON_TRAFFIC_MANAGER;
+        /** report_fixed_header **/
+        hdr.report_fixed_header.ig_tstamp = fabric_md.bridged.base.ig_tstamp[31:0];
+        /** common_report_header **/
+        hdr.common_report_header.ig_port = fabric_md.bridged.base.ig_port;
+        hdr.common_report_header.eg_port = fabric_md.bridged.int_bmd.egress_port;
+        hdr.common_report_header.queue_id = fabric_md.bridged.int_bmd.queue_id;
+        transition set_common_int_drop_headers;
+    }
+
+    state set_common_int_drop_headers {
+        fabric_md.int_report_md.setValid();
+        fabric_md.int_report_md.ip_eth_type = ETHERTYPE_IPV4;
+        fabric_md.int_report_md.report_type = IntReportType_t.DROP;
+        fabric_md.int_report_md.mirror_type = FabricMirrorType_t.INVALID;
 
         /** drop_report_header **/
         hdr.drop_report_header.setValid();
-        hdr.drop_report_header.drop_reason = fabric_md.bridged.int_bmd.drop_reason;
-
-        transition parse_common_int_headers;
+        transition set_common_int_headers;
     }
 
-    state parse_common_int_headers {
-
+    state set_common_int_headers {
         // Initialize report headers here to allocate constant fields on the
         // T-PHV (and save on PHV resources).
         /** report_ethernet **/

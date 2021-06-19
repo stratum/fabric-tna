@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0 AND Apache-2.0
 
 import difflib
+import time
 from unittest import skip
 
 from base_test import autocleanup, tvsetup, tvskip
@@ -2951,3 +2952,87 @@ class FabricOptimizedFieldDetectorTest(FabricTest):
             return
         print("")
         self.doRunTest()
+
+@group("int-dod")
+class FabricIntDeflectDropReportTest(IntTest):
+
+    @autocleanup
+    def doRunTest(self, pkt_type, tagged1=False, is_device_spine=False, send_report_to_spine=False):
+        print(f"Testing, pkt_type={pkt_type}, tagged1={tagged1}, " +
+              f"is_device_spine={is_device_spine}, send_report_to_spine={send_report_to_spine}...")
+        pkt = getattr(testutils, f"simple_{pkt_type}_packet")(ip_dst=self.get_single_use_ip())
+        int_inner_pkt = pkt.copy()
+        ig_port = self.port1
+        # Since the tofino model only sets the deflected_flag to 1 and forward the packet
+        # normally to the egress port we set in the ingress pipe, we need to set the
+        # egress port to recirculate port in the ingress pipe.
+        # On the hardware switch, we won't set the egress port to recirculate port
+        # since the traffic manager will deflect the packet to the port we set in the
+        # chassis config.
+        eg_port = RECIRCULATE_PORTS[0]
+
+        if tagged1:
+            pkt = pkt_add_vlan(pkt, VLAN_ID_1)
+
+        # The packet will still be routed, but dropped by traffic manager.
+        int_inner_pkt = pkt_route(int_inner_pkt, HOST2_MAC)
+
+        exp_int_report_pkt_masked = self.build_int_drop_report(
+            SWITCH_MAC,
+            INT_COLLECTOR_MAC,
+            SWITCH_IPV4,
+            INT_COLLECTOR_IPV4,
+            ig_port,
+            eg_port,
+            INT_DROP_REASON_TRAFFIC_MANAGER,
+            SWITCH_ID,
+            int_inner_pkt,
+            is_device_spine,
+            send_report_to_spine,
+        )
+
+        self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine)
+        self.runIPv4UnicastTest(
+            pkt=pkt,
+            next_hop_mac=HOST2_MAC,
+            tagged1=tagged1,
+            tagged2=False,
+            is_next_hop_spine=False,
+            prefix_len=32,
+            with_another_pkt_later=True,
+            ig_port=ig_port,
+            eg_port=eg_port,
+            verify_pkt=False
+        )
+
+        self.verify_packet(exp_int_report_pkt_masked, self.port3)
+        self.verify_no_other_packets()
+
+    @autocleanup
+    def send_dummy_packets(self):
+        pkt = testutils.simple_tcp_packet()
+        self.setup_port(self.port1, VLAN_ID_1, PORT_TYPE_EDGE)
+        self.set_up_watchlist_flow(pkt[IP].src, pkt[IP].dst, None, None)
+        self.add_forwarding_acl_set_output_port(self.port2, ipv4_dst=pkt[IP].dst)
+        for _ in range(0, 9):
+            # Add delay between each packet to make sure packets will be processed by
+            # the Tofino Model correctly.
+            time.sleep(0.05)
+            self.send_packet(self.port1, pkt)
+        self.verify_no_other_packets()
+
+    def runTest(self):
+        print("\n")
+        for pkt_type in BASE_PKT_TYPES | GTP_PKT_TYPES | VXLAN_PKT_TYPES:
+            # tagged2 will always be False since we are sending packet to the recirculate port.
+            for tagged1 in [False, True]:
+                for is_device_spine in [False, True]:
+                    if is_device_spine and tagged1:
+                        continue
+                    for send_report_to_spine in [False, True]:
+                        # When using Tofino Model with dod test mode, every 10th packet with
+                        # deflect-on-drop flag set will be deflected.
+                        # First we need to send 9 packets with deflect-on-drop flag set.
+                        self.send_dummy_packets()
+                        # The 10th packet will be deflected
+                        self.doRunTest(pkt_type, tagged1, is_device_spine, send_report_to_spine)

@@ -200,6 +200,8 @@ header report_fixed_header_t {
 @pa_container_size("egress", "hdr.common_report_header.queue_id", 8)
 @pa_container_size("egress", "hdr.common_report_header.ig_port", 16)
 @pa_container_size("egress", "hdr.common_report_header.eg_port", 16)
+@pa_no_overlay("egress", "hdr.common_report_header.queue_id")
+@pa_no_overlay("egress", "hdr.common_report_header.eg_port")
 header common_report_header_t {
     bit<32> switch_id;
     bit<7>  pad1;
@@ -269,11 +271,15 @@ struct int_bridged_metadata_t {
     IntReportType_t report_type;
     MirrorId_t      mirror_session_id;
     IntDropReason_t drop_reason;
+    QueueId_t       queue_id;
+    PortId_t        egress_port;
 }
 
 struct int_metadata_t {
     bit<32> hop_latency;
     bit<48> timestamp;
+    bool    is_int;
+    bool    vlan_stripped;
 }
 #endif // WITH_INT
 
