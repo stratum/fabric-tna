@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0 AND Apache-2.0
 
 import difflib
+import time
 from unittest import skip
 
 from base_test import autocleanup, tvsetup, tvskip
@@ -3007,30 +3008,31 @@ class TestDeflectOnDropIntReport(IntTest):
         self.verify_packet(exp_int_report_pkt_masked, self.port3)
         self.verify_no_other_packets()
 
+    @autocleanup
+    def send_dummy_packets(self):
+        pkt = testutils.simple_tcp_packet()
+        self.setup_port(self.port1, VLAN_ID_1, PORT_TYPE_EDGE)
+        self.set_up_watchlist_flow(pkt[IP].src, pkt[IP].dst, None, None)
+        self.add_forwarding_acl_set_output_port(self.port2, ipv4_dst=pkt[IP].dst)
+        for _ in range(0, 9):
+            # Add delay between each packet to make sure packets will be processed by
+            # the Tofino Model correctly.
+            time.sleep(0.05)
+            self.send_packet(self.port1, pkt)
+        self.verify_no_other_packets()
+
     def runTest(self):
         print("\n")
-        # In Tofino Model with dod test mode, every 10th packet will be deflected.
         for pkt_type in BASE_PKT_TYPES | GTP_PKT_TYPES | VXLAN_PKT_TYPES:
-            # TODO: The CI will hit the timeout limit when running the test with
-            #       combinations of arguments below.
-            #       Uncomment them after we solve the timeout issue.
-            # for tagged1 in [False, True]:
-            # # tagged2 will always be False since we are sending packet to the recirculate port.
-            #     for is_device_spine in [False, True]:
-            #         if is_device_spine and tagged1:
-            #             continue
-            #         for send_report_to_spine in [False, True]:
-            # To run 9 normal tests for the 10th one will be deflected.
-            for _ in range(0, 9):
-                FabricIntLocalReportTest.doRunTest(
-                    self,
-                    "untagged -> untagged",
-                    [False, False],
-                    pkt_type,
-                    False,
-                    False,
-                    False,
-                )
-
-            # The 10th packet will be deflected
-            self.doRunTest(pkt_type)
+            # tagged2 will always be False since we are sending packet to the recirculate port.
+            for tagged1 in [False, True]:
+                for is_device_spine in [False, True]:
+                    if is_device_spine and tagged1:
+                        continue
+                    for send_report_to_spine in [False, True]:
+                        # When using Tofino Model with dod test mode, every 10th packet with
+                        # deflect-on-drop flag set will be deflected.
+                        # First we need to send 9 packets with deflect-on-drop flag set.
+                        self.send_dummy_packets()
+                        # The 10th packet will be deflected
+                        self.doRunTest(pkt_type, tagged1, is_device_spine, send_report_to_spine)
