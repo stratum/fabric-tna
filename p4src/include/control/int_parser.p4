@@ -88,7 +88,7 @@ parser IntReportParser (packet_in packet,
     state set_common_int_drop_headers {
         fabric_md.int_report_md.setValid();
         fabric_md.int_report_md.ip_eth_type = ETHERTYPE_IPV4;
-        fabric_md.int_report_md.report_type = IntReportType_t.DROP;
+        fabric_md.int_report_md.report_type = INT_REPORT_TYPE_DROP;
         fabric_md.int_report_md.mirror_type = FabricMirrorType_t.INVALID;
 
         /** drop_report_header **/

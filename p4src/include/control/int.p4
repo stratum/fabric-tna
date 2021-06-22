@@ -11,6 +11,9 @@
 const bit<48> DEFAULT_TIMESTAMP_MASK = 0xffffc0000000;
 // or for hop latency changes greater than 2^8 ns
 const bit<32> DEFAULT_HOP_LATENCY_MASK = 0xffffff00;
+// The default queue occupancy/depth value to trigger queue report.
+const bit<19> DEFAULT_QUEUE_DEPTH_THRESHOLD = 0xff;
+const bit<8> QUEUE_REPORT_DEFAULT_QUOTA = 0x10;
 
 control FlowReportFilter(
     inout egress_headers_t hdr,
@@ -57,7 +60,7 @@ control FlowReportFilter(
     };
 
     apply {
-        if (fabric_md.int_report_md.report_type == IntReportType_t.LOCAL) {
+        if (fabric_md.int_report_md.report_type == INT_REPORT_TYPE_LOCAL) {
             digest = digester.get({ // burp!
                 fabric_md.bridged.base.ig_port,
                 eg_intr_md.egress_port,
@@ -118,7 +121,7 @@ control DropReportFilter(
     apply {
         // This control is applied to all pkts, but we filter only INT mirrors.
         if (fabric_md.int_report_md.isValid() &&
-                fabric_md.int_report_md.report_type == IntReportType_t.DROP) {
+                fabric_md.int_report_md.report_type == INT_REPORT_TYPE_DROP) {
             digest = digester.get({ // burp!
                 fabric_md.int_report_md.flow_hash,
                 fabric_md.int_md.timestamp
@@ -145,7 +148,7 @@ control IntWatchlist(
 #endif // WITH_DEBUG
 
     action mark_to_report() {
-        fabric_md.bridged.int_bmd.report_type = IntReportType_t.LOCAL;
+        fabric_md.bridged.int_bmd.report_type = (bit<3>)INT_REPORT_TYPE_LOCAL;
         ig_tm_md.deflect_on_drop = 1;
 #ifdef WITH_DEBUG
         watchlist_counter.count();
@@ -153,13 +156,13 @@ control IntWatchlist(
     }
 
     action no_report() {
-        fabric_md.bridged.int_bmd.report_type = IntReportType_t.NO_REPORT;
+        fabric_md.bridged.int_bmd.report_type = (bit<3>)INT_REPORT_TYPE_NO_REPORT;
     }
 
     // Required by the control plane to distinguish entries used to exclude the INT
     // report flow to the collector.
     action no_report_collector() {
-        fabric_md.bridged.int_bmd.report_type = IntReportType_t.NO_REPORT;
+        fabric_md.bridged.int_bmd.report_type = (bit<3>)INT_REPORT_TYPE_NO_REPORT;
     }
 
     table watchlist {
@@ -203,7 +206,7 @@ control IntIngress(
     @hidden
     action report_drop() {
         fabric_md.bridged.bmd_type = BridgedMdType_t.INT_INGRESS_DROP;
-        fabric_md.bridged.int_bmd.report_type = IntReportType_t.DROP;
+        fabric_md.bridged.int_bmd.report_type = INT_REPORT_TYPE_DROP;
         fabric_md.bridged.base.vlan_id = DEFAULT_VLAN_ID;
         fabric_md.bridged.base.mpls_label = 0; // do not push an MPLS label
 #ifdef WITH_SPGW
@@ -237,9 +240,9 @@ control IntIngress(
         const entries = {
             // Explicit drop. Do not report if we are punting to the CPU, since that is
             // implemented as drop+copy_to_cpu.
-            (IntReportType_t.LOCAL, 1, false, _, _): report_drop();
+            (INT_REPORT_TYPE_LOCAL, 1, false, _, _): report_drop();
             // Likely a table miss
-            (IntReportType_t.LOCAL, 0, false, false, 0): report_drop();
+            (INT_REPORT_TYPE_LOCAL, 0, false, false, 0): report_drop();
         }
         const default_action = nop();
 #ifdef WITH_DEBUG
@@ -258,6 +261,32 @@ control IntIngress(
         fabric_md.bridged.int_bmd.egress_port = ig_tm_md.ucast_egress_port;
         fabric_md.bridged.int_bmd.queue_id = ig_tm_md.qid;
         drop_report.apply();
+    }
+}
+
+control QueueReport(
+    in    egress_intrinsic_metadata_t eg_intr_md,
+    inout fabric_egress_metadata_t fabric_md) {
+
+    @hidden
+    Register<bit<32>, queue_report_filter_index_t>(1 << QUEUE_REPORT_FILTER_WIDTH, 0) latency_thresholds;
+
+    @hidden
+    Register<bit<8>, queue_report_filter_index_t>(1 << QUEUE_REPORT_FILTER_WIDTH, 0) quota;
+
+    RegisterAction<bit<32>, queue_report_filter_index_t, bool>(latency_thresholds) check_latency = {
+        void apply(inout bit<32> latency_threshold, out bool result) {
+            if (fabric_md.int_md.hop_latency >= latency_threshold) {
+                result = true;
+            } else {
+                result = false;
+            }
+        }
+    };
+
+    apply {
+        queue_report_filter_index_t filter_index = eg_intr_md.egress_port ++ eg_intr_md.egress_qid;
+        fabric_md.int_md.queue_report = check_latency.execute(filter_index);
     }
 }
 
@@ -287,16 +316,17 @@ control IntEgress (
         }
     };
 
-    action set_config(bit<32> hop_latency_mask, bit<48> timestamp_mask) {
+    action set_config(bit<32> hop_latency_mask, bit<48> timestamp_mask, bit<19> queue_depth_threshold) {
         fabric_md.int_md.hop_latency = fabric_md.int_md.hop_latency & hop_latency_mask;
         fabric_md.int_md.timestamp = fabric_md.int_md.timestamp & timestamp_mask;
+        fabric_md.int_md.queue_depth_threshold = queue_depth_threshold;
     }
 
     table config {
         actions = {
             @defaultonly set_config;
         }
-        default_action = set_config(DEFAULT_HOP_LATENCY_MASK, DEFAULT_TIMESTAMP_MASK);
+        default_action = set_config(DEFAULT_HOP_LATENCY_MASK, DEFAULT_TIMESTAMP_MASK, DEFAULT_QUEUE_DEPTH_THRESHOLD);
         const size = 1;
     }
 
@@ -312,6 +342,8 @@ control IntEgress (
         hdr.report_ipv4.dst_addr = mon_ip;
         hdr.report_udp.dport = mon_port;
         hdr.report_fixed_header.seq_no = get_seq_number.execute(hdr.report_fixed_header.hw_id);
+        hdr.report_fixed_header.dqf = fabric_md.int_report_md.report_type;
+        hdr.report_fixed_header.rsvd = 0;
         hdr.common_report_header.switch_id = switch_id;
         // Fix ethertype if we have stripped the MPLS header in the parser.
         hdr.eth_type.value = fabric_md.int_report_md.ip_eth_type;
@@ -334,9 +366,6 @@ control IntEgress (
                         + REPORT_FIXED_HEADER_BYTES + LOCAL_REPORT_HEADER_BYTES
                         + ETH_HDR_BYTES + fabric_md.int_ipv4_len;
         hdr.report_fixed_header.nproto = NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER;
-        hdr.report_fixed_header.d = 0;
-        hdr.report_fixed_header.q = 0;
-        hdr.report_fixed_header.f = 1;
         hdr.local_report_header.setValid();
     }
 
@@ -362,9 +391,6 @@ control IntEgress (
                         + REPORT_FIXED_HEADER_BYTES + DROP_REPORT_HEADER_BYTES
                         + ETH_HDR_BYTES + fabric_md.int_ipv4_len;
         hdr.report_fixed_header.nproto = NPROTO_TELEMETRY_DROP_HEADER;
-        hdr.report_fixed_header.d = 1;
-        hdr.report_fixed_header.q = 0;
-        hdr.report_fixed_header.f = 0;
         hdr.drop_report_header.setValid();
     }
 
@@ -404,6 +430,7 @@ control IntEgress (
         //      (DEFLECTED, INVALID, LOCAL): deflect on drop report
         //      (EGRESS_MIRROR, INT_REPORT, LOCAL): local report
         //      (EGRESS_MIRROR, INT_REPORT, QUEUE): queue report
+        //      (EGRESS_MIRROR, INT_REPORT, QUEUE|LOCAL): queue report
         // }
 #ifdef WITH_DEBUG
         counters = report_counter;
@@ -411,7 +438,7 @@ control IntEgress (
     }
 
     @hidden
-    action set_report_metadata() {
+    action init_int_metadata(bit<3> report_type) {
         eg_dprsr_md.mirror_type = (bit<3>)FabricMirrorType_t.INT_REPORT;
         fabric_md.int_report_md.bmd_type = BridgedMdType_t.EGRESS_MIRROR;
         fabric_md.int_report_md.mirror_type = FabricMirrorType_t.INT_REPORT;
@@ -425,21 +452,8 @@ control IntEgress (
         fabric_md.int_report_md.ip_eth_type = fabric_md.bridged.base.ip_eth_type;
         fabric_md.int_report_md.flow_hash = fabric_md.bridged.base.inner_hash;
         // fabric_md.int_report_md.encap_presence set by the parser
-    }
 
-    @hidden
-    action report_local() {
-        set_report_metadata();
-        fabric_md.int_report_md.report_type = IntReportType_t.LOCAL;
-#ifdef WITH_DEBUG
-        int_metadata_counter.count();
-#endif // WITH_DEBUG
-    }
-
-    @hidden
-    action report_drop() {
-        set_report_metadata();
-        fabric_md.int_report_md.report_type = IntReportType_t.DROP;
+        fabric_md.int_report_md.report_type = report_type;
 #ifdef WITH_DEBUG
         int_metadata_counter.count();
 #endif // WITH_DEBUG
@@ -451,17 +465,21 @@ control IntEgress (
         key = {
             fabric_md.bridged.int_bmd.report_type: exact @name("int_report_type");
             eg_dprsr_md.drop_ctl: exact @name("drop_ctl");
+            fabric_md.int_md.queue_report: exact @name("queue_report");
         }
         actions = {
-            report_local;
-            report_drop;
+            init_int_metadata;
             @defaultonly nop();
         }
         const default_action = nop();
-        const size = 2;
+        const size = 6;
         const entries = {
-            (IntReportType_t.LOCAL, 1): report_drop();
-            (IntReportType_t.LOCAL, 0): report_local();
+            (INT_REPORT_TYPE_LOCAL, 0, false): init_int_metadata(INT_REPORT_TYPE_LOCAL);
+            (INT_REPORT_TYPE_LOCAL, 1, false): init_int_metadata(INT_REPORT_TYPE_DROP);
+            (INT_REPORT_TYPE_LOCAL, 0, true): init_int_metadata(INT_REPORT_TYPE_LOCAL|INT_REPORT_TYPE_QUEUE);
+            (INT_REPORT_TYPE_LOCAL, 1, true): init_int_metadata(INT_REPORT_TYPE_QUEUE);
+            (INT_REPORT_TYPE_NO_REPORT, 0, true): init_int_metadata(INT_REPORT_TYPE_QUEUE);
+            (INT_REPORT_TYPE_NO_REPORT, 1, true): init_int_metadata(INT_REPORT_TYPE_QUEUE);
         }
 
 #ifdef WITH_DEBUG
@@ -488,6 +506,8 @@ control IntEgress (
         //  ingress/egress table (e.g., routing table miss, egress vlan table
         //  miss, etc.)?
         drop_report_filter.apply(hdr, fabric_md, eg_dprsr_md);
+
+        QueueReport.apply(eg_intr_md, fabric_md);
 
         if (fabric_md.int_report_md.isValid()) {
             // Packet is mirrored (egress or deflected) or an ingress drop.

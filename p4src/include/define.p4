@@ -203,13 +203,16 @@ const bit<8> INT_MIRROR_SESSION_BASE = 0x80;
 typedef bit<FLOW_REPORT_FILTER_WIDTH> flow_report_filter_index_t;
 #define DROP_REPORT_FILTER_WIDTH 16
 typedef bit<DROP_REPORT_FILTER_WIDTH> drop_report_filter_index_t;
+#define QUEUE_REPORT_FILTER_WIDTH 14
+typedef bit<QUEUE_REPORT_FILTER_WIDTH> queue_report_filter_index_t;
 
-enum bit<2> IntReportType_t {
-    NO_REPORT = 0,
-    LOCAL = 1,
-    DROP = 2,
-    QUEUE = 3
-}
+typedef bit<3> IntReportType_t;
+const IntReportType_t INT_REPORT_TYPE_NO_REPORT = 0;
+// follow the order of dqf bits in the INT fixed header
+const IntReportType_t INT_REPORT_TYPE_DROP = 4;
+const IntReportType_t INT_REPORT_TYPE_QUEUE = 2;
+const IntReportType_t INT_REPORT_TYPE_LOCAL = 1;
+
 
 enum bit<8> IntDropReason_t {
     // Common drop reasons
