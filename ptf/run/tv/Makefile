@@ -22,4 +22,4 @@ endef
 #Nothing to check
 _checkenv:
 
-include ../../tests/ptf/Makefile.profiles
+include ../../tests/common/Makefile.profiles
