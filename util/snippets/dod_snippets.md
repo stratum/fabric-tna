@@ -13,9 +13,9 @@ and you should be able to receive packets from port 256 (31/0) on the switch by 
 
 There are two ways to receive deflect on drop report:
 
- - Disable port 256 (this is the easiest way to make the Tofino traffic manager to deflect
+- Disable port 256 (this is the easiest way to make the Tofino traffic manager to deflect
    the packet).
- - Generate a huge amount of traffic to congest the port queue
+- Generate a huge amount of traffic to congest the port queue
 
 When packet got deflected, you should be able to receive an INT drop report with drop reason 71
 from port 264 (32/0).
