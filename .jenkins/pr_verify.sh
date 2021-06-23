@@ -59,6 +59,6 @@ for profile in "fabric-int" "fabric-spgw-int"; do
   rm -rf "logs/${profile}"
   mkdir -p "logs/${profile}"
   mv ptf/run/tm/log "logs/${profile}"
-  mv ptf/tests/ptf/ptf.log "logs/${profile}/"
-  mv ptf/tests/ptf/ptf.pcap "logs/${profile}/"
+  mv ptf/tests/common/ptf.log "logs/${profile}/"
+  mv ptf/tests/common/ptf.pcap "logs/${profile}/"
 done
