@@ -5,8 +5,8 @@
 set -eu -o pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
-FP4TEST_ROOT="${DIR}"/../..
-FABRIC_TNA="${FP4TEST_ROOT}"/..
+FABRIC_TNA_ROOT="${DIR}"/../..
+FABRIC_TNA="${FABRIC_TNA_ROOT}"/..
 TM_PORT_JSON=${TM_PORT_JSON:-""}
 TM_DOD=${TM_DOD:=""}
 
