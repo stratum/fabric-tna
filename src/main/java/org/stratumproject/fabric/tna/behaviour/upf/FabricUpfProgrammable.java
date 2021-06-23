@@ -83,38 +83,32 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     private ApplicationId appId;
 
     @Override
-    protected boolean setupBehaviour(String opName) {
-        if (!super.setupBehaviour(opName)) {
-            return false;
-        }
-        flowRuleService = handler().get(FlowRuleService.class);
-        packetService = handler().get(PacketService.class);
-        fabricUpfStore = handler().get(DistributedFabricUpfStore.class);
-        upfTranslator = new FabricUpfTranslator(fabricUpfStore);
-        final CoreService coreService = handler().get(CoreService.class);
-        appId = coreService.getAppId(PipeconfLoader.APP_NAME);
-        if (appId == null) {
-            log.warn("Application ID is null. Cannot initialize behaviour.");
-            return false;
-        }
-
-        var capabilities = new FabricCapabilities(pipeconf);
-        if (!capabilities.supportUpf()) {
-            log.warn("Pipeconf {} on {} does not support UPF capabilities, " +
-                             "cannot perform {}",
-                     pipeconf.id(), deviceId, opName);
-            return false;
-        }
-        return true;
-    }
-
-    @Override
     public boolean init() {
-        if (setupBehaviour("init()")) {
+        if (super.setupBehaviour("init()")) {
             if (!computeHardwareResourceSizes()) {
                 // error message will be printed by computeHardwareResourceSizes()
                 return false;
             }
+
+            flowRuleService = handler().get(FlowRuleService.class);
+            packetService = handler().get(PacketService.class);
+            fabricUpfStore = handler().get(DistributedFabricUpfStore.class);
+            upfTranslator = new FabricUpfTranslator(fabricUpfStore);
+            final CoreService coreService = handler().get(CoreService.class);
+            appId = coreService.getAppId(PipeconfLoader.APP_NAME);
+            if (appId == null) {
+                log.warn("Application ID is null. Cannot initialize behaviour.");
+                return false;
+            }
+
+            var capabilities = new FabricCapabilities(pipeconf);
+            if (!capabilities.supportUpf()) {
+                log.warn("Pipeconf {} on {} does not support UPF capabilities, " +
+                                "cannot perform {}",
+                        pipeconf.id(), deviceId, "init()");
+                return false;
+            }
+
             log.info("UpfProgrammable initialized for appId {} and deviceId {}", appId, deviceId);
             return true;
         }
@@ -176,9 +170,6 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
     @Override
     public void enablePscEncap(int defaultQfi) {
-        if (!setupBehaviour("enablePscEncap()")) {
-            return;
-        }
         if (pipeconf.pipelineModel().table(FABRIC_EGRESS_SPGW_GTPU_ENCAP).isEmpty()) {
             log.error("Missing {} table in {}, cannot enable PSC encap",
                       FABRIC_EGRESS_SPGW_GTPU_ENCAP, deviceId);
@@ -190,9 +181,6 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
     @Override
     public void disablePscEncap() {
-        if (!setupBehaviour("disablePscEncap()")) {
-            return;
-        }
         if (pipeconf.pipelineModel().table(FABRIC_EGRESS_SPGW_GTPU_ENCAP).isEmpty()) {
             log.debug("Missing {} table in {}, assuming PSC encap is disabled by default",
                       FABRIC_EGRESS_SPGW_GTPU_ENCAP, deviceId);
@@ -204,9 +192,6 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
     @Override
     public void sendPacketOut(ByteBuffer data) {
-        if (!setupBehaviour("sendPacketOut()")) {
-            return;
-        }
         final OutboundPacket pkt = new DefaultOutboundPacket(
                 deviceId,
                 // Use TABLE logical port to have pkt routed via pipeline tables.
@@ -219,9 +204,6 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
     @Override
     public void cleanUp() {
-        if (!setupBehaviour("cleanUp()")) {
-            return;
-        }
         log.info("Clearing all UPF-related table entries.");
         flowRuleService.removeFlowRulesById(appId);
         fabricUpfStore.reset();
@@ -229,9 +211,6 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
     @Override
     public void clearInterfaces() {
-        if (!setupBehaviour("clearInterfaces()")) {
-            return;
-        }
         log.info("Clearing all UPF interfaces.");
         for (FlowRule entry : flowRuleService.getFlowEntriesById(appId)) {
             if (upfTranslator.isFabricInterface(entry)) {
@@ -251,9 +230,6 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
     @Override
     public void clearFlows() {
-        if (!setupBehaviour("clearFlows()")) {
-            return;
-        }
         log.info("Clearing all UE sessions.");
         int pdrsCleared = 0;
         int farsCleared = 0;
@@ -272,10 +248,6 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
     @Override
     public Collection<PdrStats> readAllCounters(long maxCounterId) {
-        if (!setupBehaviour("readAllCounters()")) {
-            return null;
-        }
-
         long counterSize = pdrCounterSize();
         if (maxCounterId != -1) {
             counterSize = Math.min(maxCounterId, counterSize);
@@ -334,36 +306,21 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
     @Override
     public long pdrCounterSize() {
-        if (!setupBehaviour("pdrCounterSize()")) {
-            return -1;
-        }
-        computeHardwareResourceSizes();
         return pdrCounterSize;
     }
 
     @Override
     public long farTableSize() {
-        if (!setupBehaviour("farTableSize()")) {
-            return -1;
-        }
-        computeHardwareResourceSizes();
         return farTableSize;
     }
 
     @Override
     public long pdrTableSize() {
-        if (!setupBehaviour("pdrTableSize()")) {
-            return -1;
-        }
-        computeHardwareResourceSizes();
         return Math.min(encappedPdrTableSize, unencappedPdrTableSize) * 2;
     }
 
     @Override
     public PdrStats readCounter(int cellId) throws UpfProgrammableException {
-        if (!setupBehaviour("readCounter()")) {
-            return null;
-        }
         if (cellId >= pdrCounterSize() || cellId < 0) {
             throw new UpfProgrammableException("Requested PDR counter cell index is out of bounds.",
                     UpfProgrammableException.Type.COUNTER_INDEX_OUT_OF_RANGE);
@@ -407,9 +364,6 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
     @Override
     public void addPdr(PacketDetectionRule pdr) throws UpfProgrammableException {
-        if (!setupBehaviour("addPdr()")) {
-            return;
-        }
         if (pdr.counterId() >= pdrCounterSize() || pdr.counterId() < 0) {
             throw new UpfProgrammableException("Counter cell index referenced by PDR is out of bounds.",
                     UpfProgrammableException.Type.COUNTER_INDEX_OUT_OF_RANGE);
@@ -423,9 +377,6 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
     @Override
     public void addFar(ForwardingActionRule far) throws UpfProgrammableException {
-        if (!setupBehaviour("addFar()")) {
-            return;
-        }
         FlowRule fabricFar = upfTranslator.farToFabricEntry(far, deviceId, appId, DEFAULT_PRIORITY);
         log.info("Installing {}", far.toString());
         flowRuleService.applyFlowRules(fabricFar);
@@ -434,9 +385,6 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
     @Override
     public void addInterface(UpfInterface upfInterface) throws UpfProgrammableException {
-        if (!setupBehaviour("addInterface()")) {
-            return;
-        }
         FlowRule flowRule = upfTranslator.interfaceToFabricEntry(upfInterface, deviceId, appId, DEFAULT_PRIORITY);
         log.info("Installing {}", upfInterface);
         flowRuleService.applyFlowRules(flowRule);
@@ -450,9 +398,6 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
     private boolean removeEntry(PiCriterion match, PiTableId tableId, boolean failSilent)
             throws UpfProgrammableException {
-        if (!setupBehaviour("removeEntry()")) {
-            return false;
-        }
         FlowRule entry = DefaultFlowRule.builder()
                 .forDevice(deviceId).fromApp(appId).makePermanent()
                 .forTable(tableId)
@@ -481,9 +426,6 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
     @Override
     public Collection<PacketDetectionRule> getPdrs() throws UpfProgrammableException {
-        if (!setupBehaviour("getPdrs()")) {
-            return null;
-        }
         ArrayList<PacketDetectionRule> pdrs = new ArrayList<>();
         for (FlowRule flowRule : flowRuleService.getFlowEntriesById(appId)) {
             if (upfTranslator.isFabricPdr(flowRule)) {
@@ -495,9 +437,6 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
     @Override
     public Collection<ForwardingActionRule> getFars() throws UpfProgrammableException {
-        if (!setupBehaviour("getFars()")) {
-            return null;
-        }
         ArrayList<ForwardingActionRule> fars = new ArrayList<>();
         for (FlowRule flowRule : flowRuleService.getFlowEntriesById(appId)) {
             if (upfTranslator.isFabricFar(flowRule)) {
@@ -509,9 +448,6 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
     @Override
     public Collection<UpfInterface> getInterfaces() throws UpfProgrammableException {
-        if (!setupBehaviour("getInterfaces()")) {
-            return null;
-        }
         ArrayList<UpfInterface> ifaces = new ArrayList<>();
         for (FlowRule flowRule : flowRuleService.getFlowEntriesById(appId)) {
             if (upfTranslator.isFabricInterface(flowRule)) {
@@ -523,9 +459,6 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
     @Override
     public void removePdr(PacketDetectionRule pdr) throws UpfProgrammableException {
-        if (!setupBehaviour("removePdr()")) {
-            return;
-        }
         final PiCriterion match;
         final PiTableId tableId;
         if (pdr.matchesEncapped()) {
@@ -557,9 +490,6 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
     @Override
     public void removeInterface(UpfInterface upfInterface) throws UpfProgrammableException {
-        if (!setupBehaviour("removeInterface()")) {
-            return;
-        }
         Ip4Prefix ifacePrefix = upfInterface.getPrefix();
         if (upfInterface.isCore()) {
             applyUplinkRecirculation(ifacePrefix, true);

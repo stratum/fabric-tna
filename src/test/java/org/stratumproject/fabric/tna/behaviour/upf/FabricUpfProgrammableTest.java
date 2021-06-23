@@ -136,6 +136,9 @@ public class FabricUpfProgrammableTest {
         TestUtils.setField(upfProgrammable, "data", driverData);
         ConcurrentMap<DeviceId, URI> channelUris = TestUtils.getField(upfProgrammable, "CHANNEL_URIS");
         channelUris.put(TestUpfConstants.DEVICE_ID, new URI("grpc://localhost:1234?device_id=1"));
+
+        // Any caller should first call init()
+        upfProgrammable.init();
     }
 
     @Test
