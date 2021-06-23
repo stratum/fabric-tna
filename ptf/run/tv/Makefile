@@ -7,7 +7,7 @@ CPUPORT ?= 320
 
 define run_tests
 	python3 -u ptf_runner.py --port-map $(PORTMAP) \
-		--ptf-dir unary --cpu-port $(CPUPORT) --device-id 1 \
+		--ptf-dir ../../tests/unary --cpu-port $(CPUPORT) --device-id 1 \
 		--grpc-addr $(GRPCADDR) \
 		--p4info /p4c-out/p4info.txt \
 		--tofino-pipeline-config /p4c-out/pipeline_config.pb.bin \
