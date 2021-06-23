@@ -5,8 +5,8 @@
 set -e
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-FP4TEST_DIR=${DIR}/../../
-PTF_DIR=${FP4TEST_DIR}/tests/ptf
+FP4TEST_DIR=${DIR}/../..
+PTF_DIR=${FP4TEST_DIR}/tests/common
 
 err_report() {
     if [ "${TRAVIS}" = "true" ]; then
