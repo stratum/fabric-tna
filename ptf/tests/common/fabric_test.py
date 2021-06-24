@@ -618,6 +618,8 @@ class FabricTest(P4RuntimeTest):
         self.port4 = self.swports(4)
         self.setup_switch_info()
         self.set_up_packet_in_mirror()
+        if "int" in testutils.test_param_get("profile"):
+            self.set_up_int_config()
 
     def tearDown(self):
         self.reset_switch_info()
@@ -656,6 +658,15 @@ class FabricTest(P4RuntimeTest):
     @tvcreate("setup/set_up_packet_in_mirror")
     def set_up_packet_in_mirror(self):
         self.add_clone_group(PACKET_IN_MIRROR_ID, [self.cpu_port], store=False)
+
+    @tvcreate("setup/set_up_int_config")
+    def set_up_int_config(self):
+        # Set the latency threshold to max value to ensure we will never trigger
+        # the queue alert.
+        for port in [self.port1, self.port2, self.port3, self.port4]:
+            register_index = port << 5
+            self.write_register("FabricEgress.int_egress.latency_thresholds",
+                                register_index, stringify(0xffffffff, 4))
 
     @tvcreate("teardown/reset_packet_in_mirror")
     def reset_packet_in_mirror(self):
@@ -3149,7 +3160,8 @@ class IntTest(IPv4UnicastTest):
         for port in [self.port1, self.port2, self.port3, self.port4]:
             # We use egress_port ++ qid as index of the register
             register_index = port << 5 | qid
-            self.write_register("FabricEgress.int_egress.latency_thresholds", register_index, stringify(threshold, 4))
+            self.write_register("FabricEgress.int_egress.latency_thresholds",
+                                register_index, stringify(threshold, 4))
 
     def runIntTest(
         self,
