@@ -3145,15 +3145,45 @@ class IntTest(IPv4UnicastTest):
         self.set_up_recirc_ports()
 
     def set_up_latency_threshold_for_q_report(self, threshold):
-        self.send_request_add_entry_to_action(
-            "FabricEgress.int_egress.queue_report",
-            [
-                self.Range("hop_latency_lower", stringify(threshold, 2), stringify(0xffff, 2))
-            ],
-            "set_queue_report_flag",
-            [],
-            DEFAULT_PRIORITY
-        )
+        queue_id = 0
+        if threshold <= 0xffff:
+            # from threshold to 0xffff
+            self.send_request_add_entry_to_action(
+                "FabricEgress.int_egress.queue_report",
+                [
+                    self.Exact("egress_qid", stringify(queue_id, 1)),
+                    self.Range("hop_latency_upper", stringify(0, 2), stringify(0, 2)),
+                    self.Range("hop_latency_lower", stringify(threshold, 2), stringify(0xffff, 2))
+                ],
+                "set_queue_report_flag",
+                [],
+                DEFAULT_PRIORITY
+            )
+            # from 0x10000 to 32-bit max
+            self.send_request_add_entry_to_action(
+                "FabricEgress.int_egress.queue_report",
+                [
+                    self.Exact("egress_qid", stringify(queue_id, 1)),
+                    self.Range("hop_latency_upper", stringify(1, 2), stringify(0xffff, 2)),
+                    self.Range("hop_latency_lower", stringify(0, 2), stringify(0xffff, 2))
+                ],
+                "set_queue_report_flag",
+                [],
+                DEFAULT_PRIORITY
+            )
+        else:
+            # from threshold to 32-bit max
+            self.send_request_add_entry_to_action(
+                "FabricEgress.int_egress.queue_report",
+                [
+                    self.Exact("egress_qid", stringify(queue_id, 1)),
+                    self.Range("hop_latency_upper", stringify(threshold >> 16, 2), stringify(0xffff, 2)),
+                    self.Range("hop_latency_lower", stringify(0, 2), stringify(0xffff, 2))
+                ],
+                "set_queue_report_flag",
+                [],
+                DEFAULT_PRIORITY
+            )
 
     def runIntTest(
         self,

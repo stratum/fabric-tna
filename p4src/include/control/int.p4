@@ -11,8 +11,6 @@
 const bit<48> DEFAULT_TIMESTAMP_MASK = 0xffffc0000000;
 // or for hop latency changes greater than 2^8 ns
 const bit<32> DEFAULT_HOP_LATENCY_MASK = 0xffffff00;
-// The default latency threshold to trigger reporting queue congestion
-const bit<32> DEFAULT_LATENCY_THRESHOLD = 1000;
 
 control FlowReportFilter(
     inout egress_headers_t hdr,
@@ -298,7 +296,8 @@ control IntEgress (
 
     table queue_report {
         key = {
-            // TODO: Do we also need to check the upper 16-bit?
+            eg_intr_md.egress_qid: exact @name("egress_qid");
+            fabric_md.int_md.hop_latency[31:16]: range @name("hop_latency_upper");
             fabric_md.int_md.hop_latency[15:0]: range @name("hop_latency_lower");
         }
         actions = {
@@ -306,11 +305,15 @@ control IntEgress (
             @defaultonly nop;
         }
         default_action = nop();
-        const size = 1;
+        const size = 16;
         // Set the report flag when the latency value is more than the threshold.
-        // entries = {
-        //     (latency_threshold~0xffff): set_queue_report_flag
-        // }
+        // If the latency threshold is less or equal to 0xffff, we will install two entries
+        // per queue, one from threshold to 0xffff, another from 0x10000 to 32-bit max.
+        // (qid, 0       , threshold~0xffff        ): set_queue_report_flag
+        // (qid, 1~0xffff, 0~0xffff                ): set_queue_report_flag
+        // If the latency threshold is more than 0xffff, we will install only one entry
+        // per queue, which only check the upper 16-bit
+        // (qid, (threshold >> 16)~0xffff, 0~0xffff): set_queue_report_flag
     }
 
     action set_config(bit<32> hop_latency_mask, bit<48> timestamp_mask) {
