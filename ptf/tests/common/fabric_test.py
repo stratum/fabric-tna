@@ -249,11 +249,11 @@ BRIDGED_MD_TYPE_DEFLECTED = 5
 
 # Size for different headers
 if testutils.test_param_get("profile") == "fabric-spgw-int":
-    BMD_BYTES = 47
+    BMD_BYTES = 48
 elif testutils.test_param_get("profile") == "fabric-spgw":
     BMD_BYTES = 39
 elif testutils.test_param_get("profile") == "fabric-int":
-    BMD_BYTES = 31
+    BMD_BYTES = 32
 elif testutils.test_param_get("profile") == "fabric":
     BMD_BYTES = 23
 else:
@@ -618,8 +618,6 @@ class FabricTest(P4RuntimeTest):
         self.port4 = self.swports(4)
         self.setup_switch_info()
         self.set_up_packet_in_mirror()
-        if "int" in testutils.test_param_get("profile"):
-            self.set_up_int_config()
 
     def tearDown(self):
         self.reset_switch_info()
@@ -658,15 +656,6 @@ class FabricTest(P4RuntimeTest):
     @tvcreate("setup/set_up_packet_in_mirror")
     def set_up_packet_in_mirror(self):
         self.add_clone_group(PACKET_IN_MIRROR_ID, [self.cpu_port], store=False)
-
-    @tvcreate("setup/set_up_int_config")
-    def set_up_int_config(self):
-        # Set the latency threshold to max value to ensure we will never trigger
-        # the queue alert.
-        for port in [self.port1, self.port2, self.port3, self.port4]:
-            register_index = port << 5
-            self.write_register("FabricEgress.int_egress.latency_thresholds",
-                                register_index, stringify(0xffffffff, 4))
 
     @tvcreate("teardown/reset_packet_in_mirror")
     def reset_packet_in_mirror(self):
@@ -3156,12 +3145,15 @@ class IntTest(IPv4UnicastTest):
         self.set_up_recirc_ports()
 
     def set_up_latency_threshold_for_q_report(self, threshold):
-        qid = 0
-        for port in [self.port1, self.port2, self.port3, self.port4]:
-            # We use egress_port ++ qid as index of the register
-            register_index = port << 5 | qid
-            self.write_register("FabricEgress.int_egress.latency_thresholds",
-                                register_index, stringify(threshold, 4))
+        self.send_request_add_entry_to_action(
+            "FabricEgress.int_egress.queue_report",
+            [
+                self.Range("hop_latency_lower", stringify(threshold, 2), stringify(0xffff, 2))
+            ],
+            "set_queue_report_flag",
+            [],
+            DEFAULT_PRIORITY
+        )
 
     def runIntTest(
         self,

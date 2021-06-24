@@ -292,17 +292,26 @@ control IntEgress (
         }
     };
 
-    @hidden
-    Register<bit<32>, queue_report_filter_index_t>(1 << QUEUE_REPORT_FILTER_WIDTH, DEFAULT_LATENCY_THRESHOLD) latency_thresholds;
-    RegisterAction<bit<32>, queue_report_filter_index_t, bool>(latency_thresholds) check_latency = {
-        void apply(inout bit<32> latency_threshold, out bool result) {
-            if (fabric_md.int_md.hop_latency >= latency_threshold) {
-                result = true;
-            } else {
-                result = false;
-            }
+    action set_queue_report_flag() {
+        fabric_md.int_md.queue_report = true;
+    }
+
+    table queue_report {
+        key = {
+            // TODO: Do we also need to check the upper 16-bit?
+            fabric_md.int_md.hop_latency[15:0]: range @name("hop_latency_lower");
         }
-    };
+        actions = {
+            set_queue_report_flag;
+            @defaultonly nop;
+        }
+        default_action = nop();
+        const size = 1;
+        // Set the report flag when the latency value is more than the threshold.
+        // entries = {
+        //     (latency_threshold~0xffff): set_queue_report_flag
+        // }
+    }
 
     action set_config(bit<32> hop_latency_mask, bit<48> timestamp_mask) {
         fabric_md.int_md.hop_latency = fabric_md.int_md.hop_latency & hop_latency_mask;
@@ -480,6 +489,12 @@ control IntEgress (
         fabric_md.int_md.hop_latency = eg_prsr_md.global_tstamp[31:0] - fabric_md.bridged.base.ig_tstamp[31:0];
         fabric_md.int_md.timestamp = eg_prsr_md.global_tstamp;
 
+        // Check the queue alert before the config table since we need to check the
+        // latency which is not quantized.
+        if (!fabric_md.is_int) {
+            queue_report.apply();
+        }
+
         config.apply();
         hdr.report_fixed_header.hw_id = 4w0 ++ eg_intr_md.egress_port[8:7];
 
@@ -495,14 +510,6 @@ control IntEgress (
         //  ingress/egress table (e.g., routing table miss, egress vlan table
         //  miss, etc.)?
         drop_report_filter.apply(hdr, fabric_md, eg_dprsr_md);
-
-        // To skip queue alert if it is an INT report packet.
-        // The packet can be:
-        //  - mirrored(to be encapsulated by report table) or
-        //  - recirculated(already encapsulated by the report table and recircualted)
-        if (!fabric_md.is_int) {
-            fabric_md.int_md.queue_report = check_latency.execute(eg_intr_md.egress_port ++ eg_intr_md.egress_qid);
-        }
 
         if (fabric_md.int_report_md.isValid()) {
             // Packet is mirrored (egress or deflected) or an ingress drop.
