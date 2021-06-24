@@ -4,11 +4,11 @@
 # -*- utf-8 -*-
 """
 Generates a snippet of Stratum's chassis_config file with the vendor_config for Tofino that realizes
-a given slicing/QoS model for SD-Fabric.
+the SD-Fabric slicing/QoS model.
 
 Usage:
 
-./gen-stratum-qos-config.py
+./gen-stratum-qos-config.py qos-model.yml
 """
 
 from math import ceil, floor
@@ -213,8 +213,8 @@ def pool_config(pool, size, enable_color_drop, limit_yellow, limit_red):
     }}""")
 
 # Below from here is for testing only.
-# TODO (carmelo): pass all parameters at runtime, e.g., using argparse or yaml/json that describes
-#   high-level slicing/qos model, port rates, etc.
+# TODO (carmelo): pass all parameters at runtime, e.g., using yaml file with
+#  high-level parameters
 
 # TODO (carmelo): set port shaping rate (if different than channel speed)
 
