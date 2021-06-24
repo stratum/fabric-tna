@@ -351,9 +351,6 @@ parser FabricEgressParser (packet_in packet,
     state start {
         packet.extract(eg_intr_md);
         fabric_md.cpu_port = 0;
-#ifdef WITH_INT
-        fabric_md.is_int = false;
-#endif // WITH_INT
         common_egress_metadata_t common_eg_md = packet.lookahead<common_egress_metadata_t>();
         transition select(eg_intr_md.deflection_flag, common_eg_md.bmd_type, common_eg_md.mirror_type) {
             (0, BridgedMdType_t.INGRESS_TO_EGRESS, _): parse_bridged_md;
@@ -415,6 +412,7 @@ parser FabricEgressParser (packet_in packet,
 #endif // WITH_SPGW
 #ifdef WITH_INT
         fabric_md.int_report_md.encap_presence = fabric_md.bridged.base.encap_presence;
+        fabric_md.is_int = fabric_md.bridged.int_bmd.is_int;
 #endif // WITH_INT
         transition check_ethernet;
     }

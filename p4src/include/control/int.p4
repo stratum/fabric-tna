@@ -11,9 +11,8 @@
 const bit<48> DEFAULT_TIMESTAMP_MASK = 0xffffc0000000;
 // or for hop latency changes greater than 2^8 ns
 const bit<32> DEFAULT_HOP_LATENCY_MASK = 0xffffff00;
-// The default queue occupancy/depth value to trigger queue report.
-const bit<19> DEFAULT_QUEUE_DEPTH_THRESHOLD = 0xff;
-const bit<8> QUEUE_REPORT_DEFAULT_QUOTA = 0x10;
+// The default latency threshold to trigger reporting queue congestion
+const bit<32> DEFAULT_LATENCY_THRESHOLD = 1000;
 
 control FlowReportFilter(
     inout egress_headers_t hdr,
@@ -148,7 +147,7 @@ control IntWatchlist(
 #endif // WITH_DEBUG
 
     action mark_to_report() {
-        fabric_md.bridged.int_bmd.report_type = (bit<3>)INT_REPORT_TYPE_LOCAL;
+        fabric_md.bridged.int_bmd.report_type = INT_REPORT_TYPE_LOCAL;
         ig_tm_md.deflect_on_drop = 1;
 #ifdef WITH_DEBUG
         watchlist_counter.count();
@@ -156,13 +155,15 @@ control IntWatchlist(
     }
 
     action no_report() {
-        fabric_md.bridged.int_bmd.report_type = (bit<3>)INT_REPORT_TYPE_NO_REPORT;
+        fabric_md.bridged.int_bmd.report_type = INT_REPORT_TYPE_NO_REPORT;
     }
 
     // Required by the control plane to distinguish entries used to exclude the INT
     // report flow to the collector.
     action no_report_collector() {
-        fabric_md.bridged.int_bmd.report_type = (bit<3>)INT_REPORT_TYPE_NO_REPORT;
+        fabric_md.bridged.int_bmd.report_type = INT_REPORT_TYPE_NO_REPORT;
+        // To let the egress pipeline know this is an INT report packet.
+        fabric_md.bridged.int_bmd.is_int = true;
     }
 
     table watchlist {
@@ -187,6 +188,7 @@ control IntWatchlist(
     }
 
     apply {
+        fabric_md.bridged.int_bmd.is_int = false;
         watchlist.apply();
     }
 }
@@ -264,32 +266,6 @@ control IntIngress(
     }
 }
 
-control QueueReport(
-    in    egress_intrinsic_metadata_t eg_intr_md,
-    inout fabric_egress_metadata_t fabric_md) {
-
-    @hidden
-    Register<bit<32>, queue_report_filter_index_t>(1 << QUEUE_REPORT_FILTER_WIDTH, 0) latency_thresholds;
-
-    @hidden
-    Register<bit<8>, queue_report_filter_index_t>(1 << QUEUE_REPORT_FILTER_WIDTH, 0) quota;
-
-    RegisterAction<bit<32>, queue_report_filter_index_t, bool>(latency_thresholds) check_latency = {
-        void apply(inout bit<32> latency_threshold, out bool result) {
-            if (fabric_md.int_md.hop_latency >= latency_threshold) {
-                result = true;
-            } else {
-                result = false;
-            }
-        }
-    };
-
-    apply {
-        queue_report_filter_index_t filter_index = eg_intr_md.egress_port ++ eg_intr_md.egress_qid;
-        fabric_md.int_md.queue_report = check_latency.execute(filter_index);
-    }
-}
-
 control IntEgress (
     inout egress_headers_t hdr,
     inout fabric_egress_metadata_t fabric_md,
@@ -316,17 +292,28 @@ control IntEgress (
         }
     };
 
-    action set_config(bit<32> hop_latency_mask, bit<48> timestamp_mask, bit<19> queue_depth_threshold) {
+    @hidden
+    Register<bit<32>, queue_report_filter_index_t>(1 << QUEUE_REPORT_FILTER_WIDTH, DEFAULT_LATENCY_THRESHOLD) latency_thresholds;
+    RegisterAction<bit<32>, queue_report_filter_index_t, bool>(latency_thresholds) check_latency = {
+        void apply(inout bit<32> latency_threshold, out bool result) {
+            if (fabric_md.int_md.hop_latency >= latency_threshold) {
+                result = true;
+            } else {
+                result = false;
+            }
+        }
+    };
+
+    action set_config(bit<32> hop_latency_mask, bit<48> timestamp_mask) {
         fabric_md.int_md.hop_latency = fabric_md.int_md.hop_latency & hop_latency_mask;
         fabric_md.int_md.timestamp = fabric_md.int_md.timestamp & timestamp_mask;
-        fabric_md.int_md.queue_depth_threshold = queue_depth_threshold;
     }
 
     table config {
         actions = {
             @defaultonly set_config;
         }
-        default_action = set_config(DEFAULT_HOP_LATENCY_MASK, DEFAULT_TIMESTAMP_MASK, DEFAULT_QUEUE_DEPTH_THRESHOLD);
+        default_action = set_config(DEFAULT_HOP_LATENCY_MASK, DEFAULT_TIMESTAMP_MASK);
         const size = 1;
     }
 
@@ -478,6 +465,8 @@ control IntEgress (
             (INT_REPORT_TYPE_LOCAL, 1, false): init_int_metadata(INT_REPORT_TYPE_DROP);
             (INT_REPORT_TYPE_LOCAL, 0, true): init_int_metadata(INT_REPORT_TYPE_LOCAL|INT_REPORT_TYPE_QUEUE);
             (INT_REPORT_TYPE_LOCAL, 1, true): init_int_metadata(INT_REPORT_TYPE_QUEUE);
+
+            // Packets which does not tracked by the watchlist table
             (INT_REPORT_TYPE_NO_REPORT, 0, true): init_int_metadata(INT_REPORT_TYPE_QUEUE);
             (INT_REPORT_TYPE_NO_REPORT, 1, true): init_int_metadata(INT_REPORT_TYPE_QUEUE);
         }
@@ -507,7 +496,13 @@ control IntEgress (
         //  miss, etc.)?
         drop_report_filter.apply(hdr, fabric_md, eg_dprsr_md);
 
-        QueueReport.apply(eg_intr_md, fabric_md);
+        // To skip queue alert if it is an INT report packet.
+        // The packet can be:
+        //  - mirrored(to be encapsulated by report table) or
+        //  - recirculated(already encapsulated by the report table and recircualted)
+        if (!fabric_md.is_int) {
+            fabric_md.int_md.queue_report = check_latency.execute(eg_intr_md.egress_port ++ eg_intr_md.egress_qid);
+        }
 
         if (fabric_md.int_report_md.isValid()) {
             // Packet is mirrored (egress or deflected) or an ingress drop.

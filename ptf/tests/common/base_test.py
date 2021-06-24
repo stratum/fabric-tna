@@ -239,6 +239,7 @@ class P4RuntimeTest(BaseTest):
             "actions",
             "counters",
             "direct_counters",
+            "registers",
         ]:
             for obj in getattr(self.p4info, p4_obj_type):
                 pre = obj.preamble
@@ -865,6 +866,16 @@ class P4RuntimeTest(BaseTest):
                 return entity.action_profile_group
         return None
 
+    def write_register(self, register_name, index, data):
+        req = self.get_new_write_request()
+        update = req.updates.add()
+        update.type = p4runtime_pb2.Update.MODIFY
+        register = update.entity.register_entry
+        register.register_id = self.get_register_id(register_name)
+        register.index.index = index
+        register.data.bitstring = data
+        return req, self.write_request(req)
+
     def verify_action_profile_group(
         self, ap_name, grp_id, expected_action_profile_group
     ):
@@ -1049,6 +1060,7 @@ for obj_type, nickname in [
     ("actions", "action"),
     ("counters", "counter"),
     ("direct_counters", "direct_counter"),
+    ("registers", "register"),
 ]:
     name = "_".join(["get", nickname])
     setattr(P4RuntimeTest, name, partialmethod(P4RuntimeTest.get_obj, obj_type))

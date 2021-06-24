@@ -2822,7 +2822,8 @@ class IntTest(IPv4UnicastTest):
         mon_label,
     ):
         action = ""
-        if report_type == INT_REPORT_TYPE_LOCAL:
+        # local report or queue report or both
+        if (report_type & (INT_REPORT_TYPE_LOCAL | INT_REPORT_TYPE_QUEUE)) != 0:
             action = "do_local_report_encap"
         elif report_type == INT_REPORT_TYPE_DROP:
             action = "do_drop_report_encap"
@@ -2881,6 +2882,12 @@ class IntTest(IPv4UnicastTest):
         set_up_report_flow_internal(
             BRIDGED_MD_TYPE_DEFLECTED, MIRROR_TYPE_INVALID, INT_REPORT_TYPE_DROP
         )
+        set_up_report_flow_internal(
+            BRIDGED_MD_TYPE_EGRESS_MIRROR, MIRROR_TYPE_INT_REPORT, INT_REPORT_TYPE_QUEUE
+        )
+        set_up_report_flow_internal(
+            BRIDGED_MD_TYPE_EGRESS_MIRROR, MIRROR_TYPE_INT_REPORT, INT_REPORT_TYPE_QUEUE|INT_REPORT_TYPE_LOCAL
+        )
 
     def set_up_report_mirror_flow(self, pipe_id, mirror_id, port):
         self.add_clone_group(mirror_id, [port])
@@ -2905,7 +2912,7 @@ class IntTest(IPv4UnicastTest):
             ],
         )
 
-    def set_up_watchlist_flow(self, ipv4_src, ipv4_dst, sport, dport):
+    def set_up_watchlist_flow(self, ipv4_src, ipv4_dst, sport, dport, collector_action=False):
         ipv4_src_ = ipv4_to_binary(ipv4_src)
         ipv4_dst_ = ipv4_to_binary(ipv4_dst)
         ipv4_mask = ipv4_to_binary("255.255.255.255")
@@ -2923,6 +2930,10 @@ class IntTest(IPv4UnicastTest):
             dport_low = stringify(dport, 2)
             dport_high = stringify(dport, 2)
 
+        if collector_action:
+            action = "no_report_collector"
+        else:
+            action = "mark_to_report"
         self.send_request_add_entry_to_action(
             "watchlist",
             [
@@ -2932,7 +2943,7 @@ class IntTest(IPv4UnicastTest):
                 self.Range("l4_sport", sport_low, sport_high),
                 self.Range("l4_dport", dport_low, dport_high),
             ],
-            "mark_to_report",
+            action,
             [],
             priority=DEFAULT_PRIORITY,
         )
@@ -2949,6 +2960,8 @@ class IntTest(IPv4UnicastTest):
         inner_packet,
         is_device_spine,
         send_report_to_spine,
+        f_flag=1,
+        q_flag=0,
     ):
         # The switch should always strip GTP-U or VXLAN headers inside INT reports.
         if GTP_U_Header in inner_packet:
@@ -2961,7 +2974,7 @@ class IntTest(IPv4UnicastTest):
             Ether(src=src_mac, dst=dst_mac)
             / IP(src=src_ip, dst=dst_ip, ttl=64, tos=4)
             / UDP(sport=0, chksum=0)
-            / INT_L45_REPORT_FIXED(nproto=2, f=1, hw_id=0)
+            / INT_L45_REPORT_FIXED(nproto=2, f=f_flag, q=q_flag, hw_id=0)
             / INT_L45_LOCAL_REPORT(
                 switch_id=sw_id, ingress_port_id=ig_port, egress_port_id=eg_port,
             )
@@ -3095,8 +3108,7 @@ class IntTest(IPv4UnicastTest):
                 )
         self.add_next_vlan(next_id, DEFAULT_VLAN)
 
-    def set_up_int_flows(self, is_device_spine, pkt, send_report_to_spine):
-
+    def set_up_int_flows(self, is_device_spine, pkt, send_report_to_spine, watch_flow=True):
         # Watchlist always matches on inner headers.
         if GTP_U_Header in pkt:
             pkt = pkt_remove_gtp(pkt)
@@ -3112,7 +3124,8 @@ class IntTest(IPv4UnicastTest):
         else:
             sport = None
             dport = None
-        self.set_up_watchlist_flow(pkt[IP].src, pkt[IP].dst, sport, dport)
+        if watch_flow:
+            self.set_up_watchlist_flow(pkt[IP].src, pkt[IP].dst, sport, dport)
         self.set_up_report_flow(
             SWITCH_MAC,
             SWITCH_MAC,
@@ -3130,6 +3143,13 @@ class IntTest(IPv4UnicastTest):
             self.port3, is_device_spine, send_report_to_spine
         )
         self.set_up_recirc_ports()
+
+    def set_up_latency_threshold_for_q_report(self, threshold):
+        qid = 0
+        for port in [self.port1, self.port2, self.port3, self.port4]:
+            # We use egress_port ++ qid as index of the register
+            register_index = port << 5 | qid
+            self.write_register("FabricEgress.int_egress.latency_thresholds", register_index, stringify(threshold, 4))
 
     def runIntTest(
         self,
@@ -3389,6 +3409,82 @@ class IntTest(IPv4UnicastTest):
             self.verify_packet(exp_int_report_pkt_masked, self.port3)
         self.verify_no_other_packets()
 
+    def runIntQueueTest(
+        self,
+        pkt,
+        tagged1,
+        tagged2,
+        is_next_hop_spine,
+        ig_port,
+        eg_port,
+        expect_int_report,
+        is_device_spine,
+        send_report_to_spine,
+    ):
+        """
+        :param pkt: the input packet
+        :param tagged1: if the input port should expect VLAN tagged packets
+        :param tagged2: if the output port should expect VLAN tagged packets
+        :param prefix_len: prefix length to use in the routing table
+        :param is_next_hop_spine: whether the packet should be routed
+               to the spines using MPLS SR
+        :param ig_port: the ingress port of the IP uncast packet
+        :param eg_port: the egress port of the IP uncast packet
+        :param expect_int_report: expected to receive the INT report
+        :param is_device_spine: the device is a spine device
+        :param send_report_to_spine: if the report is to be forwarded
+               to a spine (e.g., collector attached to another leaf)
+        """
+        # INT report's inner packet. Should be the same as the expected output
+        # packet of IPv4UnicastTest, but without MPLS or VLAN headers.
+        int_inner_pkt = pkt.copy()
+        int_inner_pkt = pkt_route(int_inner_pkt, HOST2_MAC)
+        if not is_next_hop_spine:
+            int_inner_pkt = pkt_decrement_ttl(int_inner_pkt)
+
+        # The expected INT report packet
+        exp_int_report_pkt_masked = self.build_int_local_report(
+            SWITCH_MAC,
+            INT_COLLECTOR_MAC,
+            SWITCH_IPV4,
+            INT_COLLECTOR_IPV4,
+            ig_port,
+            eg_port,
+            SWITCH_ID,
+            int_inner_pkt,
+            is_device_spine,
+            send_report_to_spine,
+            f_flag=0,
+            q_flag=1
+        )
+
+        # Set collector, report table, and mirror sessions
+        self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine, watch_flow=False)
+        # Every packet will always trigger the queue alert
+        self.set_up_latency_threshold_for_q_report(0)
+        # To avoid the INT report packet being reported
+        self.set_up_watchlist_flow(SWITCH_IPV4, INT_COLLECTOR_IPV4, None, None, True)
+
+        # TODO: Use MPLS test instead of IPv4 test if device is spine.
+        # TODO: In these tests, there is only one egress port although the
+        # test can generate a report going though the spine and the original
+        # packet going to another edge port. port_type programming is
+        # always done by using the default value which is PORT_TYPE_EDGE
+        self.runIPv4UnicastTest(
+            pkt=pkt,
+            next_hop_mac=HOST2_MAC,
+            tagged1=tagged1,
+            tagged2=tagged2,
+            is_next_hop_spine=is_next_hop_spine,
+            prefix_len=32,
+            with_another_pkt_later=True,
+            ig_port=ig_port,
+            eg_port=eg_port,
+        )
+
+        if expect_int_report:
+            self.verify_packet(exp_int_report_pkt_masked, self.port3)
+        self.verify_no_other_packets()
 
 class SpgwIntTest(SpgwSimpleTest, IntTest):
     """

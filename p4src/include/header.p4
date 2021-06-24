@@ -271,15 +271,14 @@ struct int_bridged_metadata_t {
     IntDropReason_t drop_reason;
     QueueId_t       queue_id;
     PortId_t        egress_port;
+    bool            is_int;
 }
 
 struct int_metadata_t {
     bit<32> hop_latency;
     bit<48> timestamp;
-    bool    is_int;
     bool    vlan_stripped;
     bool    queue_report;
-    bit<19> queue_depth_threshold;
 }
 #endif // WITH_INT
 
