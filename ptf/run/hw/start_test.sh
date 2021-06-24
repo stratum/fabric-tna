@@ -30,10 +30,10 @@ python3 -u ptf_runner.py --port-map port_map.veth.json \
 		--p4info /p4c-out/p4info.txt \
 		--tofino-pipeline-config /p4c-out/pipeline_config.pb.bin \
         --trex-address "10.128.13.27" \
-        --trex-config ${HW_DIR}/trex-config/4-ports-with-l2.yaml \
+        --trex-config "${HW_DIR}"/trex-config/4-ports-with-l2.yaml \
         --skip-test True \
-		--profile ${1} \
-		${2}
+		--profile "${1}" \
+		"${2}"
 
 echo "************************************************"
 echo "ALL PTF TESTS PASSED :)"
