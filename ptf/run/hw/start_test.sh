@@ -7,7 +7,6 @@ set -e
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
 FABRIC_TNA_DIR=${DIR}/../..
 PTF_DIR=${FABRIC_TNA_DIR}/tests/common
-HW_DIR=${FABRIC_TNA_DIR}/run/hw
 
 err_report() {
     echo "************************************************"
