@@ -3179,8 +3179,8 @@ class IntTest(IPv4UnicastTest):
             set_up_queue_report_table_ingernal([threshold_upper, threshold_upper], [0, threshold_lower], "reset_quota")
 
     def set_queue_report_quota(self, port, qid, quota):
-        # We are using prot ++ qid as register index.
-        index = port << 5 | qid
+        # We are using prot[5:0] ++ qid as register index.
+        index = (port & 0x3f) << 5 | qid
         self.write_register("FabricEgress.int_egress.queue_report_quota", index, stringify(quota, 1))
 
     def runIntTest(

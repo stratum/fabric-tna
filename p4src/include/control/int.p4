@@ -529,7 +529,11 @@ control IntEgress (
     apply {
         fabric_md.int_md.hop_latency = eg_prsr_md.global_tstamp[31:0] - fabric_md.bridged.base.ig_tstamp[31:0];
         fabric_md.int_md.timestamp = eg_prsr_md.global_tstamp;
-        queue_report_filter_index = eg_intr_md.egress_port ++ eg_intr_md.egress_qid;
+        // Here we are using the lower 6-bit of port number with qid as the index of
+        // queue report filter.
+        // The reason we only use 6-bit is because there are only 64 ports per pipe,
+        // and the register between pipelines are indenpendent.
+        queue_report_filter_index = eg_intr_md.egress_port[5:0] ++ eg_intr_md.egress_qid;
 
         // Check the queue alert before the config table since we need to check the
         // latency which is not quantized.

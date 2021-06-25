@@ -24,6 +24,8 @@
 
 // Constants for the INT control block.
 #define INT_WATCHLIST_TABLE_SIZE 64
+// Size for the quueue report table. 4 enntries per queue with 16 queues per port.
+#define INT_QUEUE_REPORT_TABLE 16 * 4
 
 // Constants for the SPGW control block.
 #define NUM_UES 10240

@@ -203,7 +203,7 @@ const bit<8> INT_MIRROR_SESSION_BASE = 0x80;
 typedef bit<FLOW_REPORT_FILTER_WIDTH> flow_report_filter_index_t;
 #define DROP_REPORT_FILTER_WIDTH 16
 typedef bit<DROP_REPORT_FILTER_WIDTH> drop_report_filter_index_t;
-#define QUEUE_REPORT_FILTER_WIDTH 14
+#define QUEUE_REPORT_FILTER_WIDTH 11
 typedef bit<QUEUE_REPORT_FILTER_WIDTH> queue_report_filter_index_t;
 
 typedef bit<3> IntReportType_t;
