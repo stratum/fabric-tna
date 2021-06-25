@@ -46,7 +46,7 @@ typedef bit<4>  slice_id_t;
 typedef bit<4>  tc_t; // Traffic Class (for QoS)
 
 const slice_id_t SLICE_ID_UNKNOWN = 0;
-const tc_t COS_UNKNOWN = 0;
+const tc_t TC_UNKNOWN = 0;
 
 
 // SPGW types

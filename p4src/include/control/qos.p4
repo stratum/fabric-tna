@@ -11,15 +11,16 @@ const qid_t BEST_EFFORT_QUEUE = 0;
 
 control QoS (in ingress_headers_t hdr,
              in fabric_ingress_metadata_t fabric_md,
-             inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm) {
+             inout ingress_intrinsic_metadata_for_tm_t ig_tm_md) {
 
-    DirectCounter<bit<64>>(CounterType_t.PACKETS_AND_BYTES) queues_counter;
+    DirectCounter<bit<64>>(CounterType_t.PACKETS_AND_BYTES) tc_counter;
 
     action set_queue(qid_t qid) {
-        ig_intr_md_for_tm.qid = qid;
+        ig_tm_md.qid = qid;
+        tc_counter.count();
     }
 
-    table queues {
+    table traffic_classes {
         key = {
             fabric_md.bridged.base.slice_id: exact @name("slice_id");
             fabric_md.bridged.base.tc:       exact @name("tc");
@@ -27,12 +28,12 @@ control QoS (in ingress_headers_t hdr,
         actions = {
             set_queue;
         }
-        counters = queues_counter;
+        counters = tc_counter;
         const default_action = set_queue(BEST_EFFORT_QUEUE);
         size = QUEUES_TABLE_SIZE;
     }
 
     apply {
-        queues.apply();
+        traffic_classes.apply();
     }
 }
