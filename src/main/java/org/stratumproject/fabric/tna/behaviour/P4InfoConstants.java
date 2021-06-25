@@ -185,6 +185,8 @@ public final class P4InfoConstants {
             PiActionId.of("FabricEgress.int_egress.do_local_report_encap");
     public static final PiActionId FABRIC_EGRESS_INT_EGRESS_DO_LOCAL_REPORT_ENCAP_MPLS =
             PiActionId.of("FabricEgress.int_egress.do_local_report_encap_mpls");
+    public static final PiActionId FABRIC_EGRESS_INT_EGRESS_RESET_QUOTA =
+            PiActionId.of("FabricEgress.int_egress.reset_quota");
     public static final PiActionId FABRIC_EGRESS_INT_EGRESS_SET_CONFIG =
             PiActionId.of("FabricEgress.int_egress.set_config");
     public static final PiActionId FABRIC_EGRESS_INT_EGRESS_SET_QUEUE_REPORT_FLAG =
