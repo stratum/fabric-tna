@@ -512,10 +512,9 @@ control IntEgress (
         const size = 6;
         const entries = {
             (INT_REPORT_TYPE_LOCAL, 0, false): init_int_metadata(INT_REPORT_TYPE_LOCAL);
-            (INT_REPORT_TYPE_LOCAL, 1, false): init_int_metadata(INT_REPORT_TYPE_DROP);
             (INT_REPORT_TYPE_LOCAL, 0, true): init_int_metadata(INT_REPORT_TYPE_LOCAL|INT_REPORT_TYPE_QUEUE);
-            (INT_REPORT_TYPE_LOCAL, 1, true): init_int_metadata(INT_REPORT_TYPE_QUEUE);
-
+            (INT_REPORT_TYPE_LOCAL, 1, false): init_int_metadata(INT_REPORT_TYPE_DROP);
+            (INT_REPORT_TYPE_LOCAL, 1, true): init_int_metadata(INT_REPORT_TYPE_DROP);
             // Packets which does not tracked by the watchlist table
             (INT_REPORT_TYPE_NO_REPORT, 0, true): init_int_metadata(INT_REPORT_TYPE_QUEUE);
             (INT_REPORT_TYPE_NO_REPORT, 1, true): init_int_metadata(INT_REPORT_TYPE_QUEUE);
