@@ -24,16 +24,7 @@ echo "STARTING PTF TESTS..."
 echo "************************************************"
 
 # shellcheck disable=SC2068
-python3 -u ptf_runner.py --port-map port_map.veth.json \
-		--ptf-dir linerate --cpu-port 320 --device-id 1 \
-		--grpc-addr "10.128.13.29:9559" \
-		--p4info /p4c-out/p4info.txt \
-		--tofino-pipeline-config /p4c-out/pipeline_config.pb.bin \
-        --trex-address "10.128.13.27" \
-        --trex-config "${HW_DIR}"/trex-config/4-ports-with-l2.yaml \
-        --skip-test True \
-		--profile "${1}" \
-		"${2}"
+make -f "${DIR}"/Makefile ${@}
 
 echo "************************************************"
 echo "ALL PTF TESTS PASSED :)"
