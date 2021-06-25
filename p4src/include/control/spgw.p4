@@ -152,10 +152,11 @@ control SpgwIngress(
     //===== Interface Tables ======//
     //=============================//
 
-    action load_iface(SpgwInterface src_iface) {
+    action load_iface(SpgwInterface src_iface, slice_id_t slice_id) {
         // Interface type can be access, core, from_dbuf (see InterfaceType enum)
-        fabric_md.spgw.src_iface    = src_iface;
+        fabric_md.spgw.src_iface = src_iface;
         fabric_md.bridged.spgw.skip_spgw = false;
+        fabric_md.bridged.base.slice_id = slice_id;
     }
 
     action iface_miss() {
@@ -211,12 +212,12 @@ control SpgwIngress(
         is_pdr_hit = true;
     }
 
-    action load_pdr_qos(pdr_ctr_id_t        ctr_id,
-                        far_id_t            far_id,
-                        bool                needs_gtpu_decap,
-                        qid_t               qid) {
+    action load_pdr_qos(pdr_ctr_id_t ctr_id,
+                        far_id_t     far_id,
+                        bool         needs_gtpu_decap,
+                        tc_t         tc) {
         load_pdr(ctr_id, far_id, needs_gtpu_decap);
-        ig_tm_md.qid = qid;
+        fabric_md.bridged.base.tc = tc;
         is_pdr_hit = true;
     }
 

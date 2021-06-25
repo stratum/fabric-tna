@@ -42,6 +42,12 @@ typedef bit<12> vlan_id_t;
 typedef bit<32> ipv4_addr_t;
 typedef bit<16> l4_port_t;
 typedef bit<32> flow_hash_t;
+typedef bit<4>  slice_id_t;
+typedef bit<4>  tc_t; // Traffic Class (for QoS)
+
+const slice_id_t SLICE_ID_UNKNOWN = 0;
+const tc_t COS_UNKNOWN = 0;
+
 
 // SPGW types
 typedef bit<32> teid_t;
