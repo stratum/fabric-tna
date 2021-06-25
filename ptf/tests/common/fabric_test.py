@@ -3146,44 +3146,42 @@ class IntTest(IPv4UnicastTest):
 
     def set_up_latency_threshold_for_q_report(self, threshold):
         queue_id = 0
+        def set_up_queue_report_table_ingernal(upper, lower, action):
+            self.send_request_add_entry_to_action(
+                "FabricEgress.int_egress.queue_report",
+                [
+                    self.Exact("egress_qid", stringify(queue_id, 1)),
+                    self.Range("hop_latency_upper", *[stringify(v, 2) for v in upper]),
+                    self.Range("hop_latency_lower", *[stringify(v, 2) for v in lower])
+                ],
+                action,
+                [],
+                DEFAULT_PRIORITY
+            )
+
         if threshold <= 0xffff:
             # from threshold to 0xffff
-            self.send_request_add_entry_to_action(
-                "FabricEgress.int_egress.queue_report",
-                [
-                    self.Exact("egress_qid", stringify(queue_id, 1)),
-                    self.Range("hop_latency_upper", stringify(0, 2), stringify(0, 2)),
-                    self.Range("hop_latency_lower", stringify(threshold, 2), stringify(0xffff, 2))
-                ],
-                "set_queue_report_flag",
-                [],
-                DEFAULT_PRIORITY
-            )
+            set_up_queue_report_table_ingernal([0, 0], [threshold, 0xffff], "set_queue_report_flag")
             # from 0x10000 to 32-bit max
-            self.send_request_add_entry_to_action(
-                "FabricEgress.int_egress.queue_report",
-                [
-                    self.Exact("egress_qid", stringify(queue_id, 1)),
-                    self.Range("hop_latency_upper", stringify(1, 2), stringify(0xffff, 2)),
-                    self.Range("hop_latency_lower", stringify(0, 2), stringify(0xffff, 2))
-                ],
-                "set_queue_report_flag",
-                [],
-                DEFAULT_PRIORITY
-            )
+            set_up_queue_report_table_ingernal([1, 0xffff], [0, 0xffff], "set_queue_report_flag")
+            # reset quota if latency is below threshold
+            set_up_queue_report_table_ingernal([0, 0], [0, threshold], "reset_quota")
         else:
-            # from threshold to 32-bit max
-            self.send_request_add_entry_to_action(
-                "FabricEgress.int_egress.queue_report",
-                [
-                    self.Exact("egress_qid", stringify(queue_id, 1)),
-                    self.Range("hop_latency_upper", stringify(threshold >> 16, 2), stringify(0xffff, 2)),
-                    self.Range("hop_latency_lower", stringify(0, 2), stringify(0xffff, 2))
-                ],
-                "set_queue_report_flag",
-                [],
-                DEFAULT_PRIORITY
-            )
+            threshold_upper = (threshold >> 16)
+            threshold_lower = (threshold & 0xffff)
+            # from lower 16-bit of threshold to 0xffff
+            set_up_queue_report_table_ingernal([threshold_upper, threshold_upper], [threshold_lower, 0xffff], "set_queue_report_flag")
+            if threshold_upper != 0xffff:
+                # from upper 16-bit of threshold + 1 to 32-bit max
+                set_up_queue_report_table_ingernal([threshold_upper+1, 0xffff], [0, 0xffff], "set_queue_report_flag")
+            # reset quota if latency is below threshold
+            set_up_queue_report_table_ingernal([0, threshold_upper-1], [0, 0xffff], "reset_quota")
+            set_up_queue_report_table_ingernal([threshold_upper, threshold_upper], [0, threshold_lower], "reset_quota")
+
+    def set_queue_report_quota(self, port, qid, quota):
+        # We are using prot ++ qid as register index.
+        index = port << 5 | qid
+        self.write_register("FabricEgress.int_egress.queue_report_quota", index, stringify(quota, 1))
 
     def runIntTest(
         self,
@@ -3454,6 +3452,9 @@ class IntTest(IPv4UnicastTest):
         expect_int_report,
         is_device_spine,
         send_report_to_spine,
+        watch_flow=False,
+        reset_quota=True,
+        threshold=0
     ):
         """
         :param pkt: the input packet
@@ -3468,6 +3469,11 @@ class IntTest(IPv4UnicastTest):
         :param is_device_spine: the device is a spine device
         :param send_report_to_spine: if the report is to be forwarded
                to a spine (e.g., collector attached to another leaf)
+        :param watch_flow: install table entry to the watch list table, this will make
+                           the pipeline to generate an INT report with both flow and
+                           queue flag.
+        :reset_quota: resets the queue report quota everytime when we run the test
+        "threshold: the latency threshold to trigger the queue report
         """
         # INT report's inner packet. Should be the same as the expected output
         # packet of IPv4UnicastTest, but without MPLS or VLAN headers.
@@ -3488,14 +3494,17 @@ class IntTest(IPv4UnicastTest):
             int_inner_pkt,
             is_device_spine,
             send_report_to_spine,
-            f_flag=0,
+            f_flag=1 if watch_flow else 0,
             q_flag=1
         )
 
         # Set collector, report table, and mirror sessions
-        self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine, watch_flow=False)
+        self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine, watch_flow=watch_flow)
         # Every packet will always trigger the queue alert
-        self.set_up_latency_threshold_for_q_report(0)
+        self.set_up_latency_threshold_for_q_report(threshold)
+        if reset_quota:
+            # To ensure we have enough quota to send a queue report.
+            self.set_queue_report_quota(port=eg_port, qid=0, quota=1)
         # To avoid the INT report packet being reported
         self.set_up_watchlist_flow(SWITCH_IPV4, INT_COLLECTOR_IPV4, None, None, True)
 

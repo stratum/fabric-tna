@@ -2244,16 +2244,12 @@ class FabricIntQueueReportTest(IntTest):
         is_next_hop_spine,
         is_device_spine,
         send_report_to_spine,
+        watch_flow,
     ):
         print(
-            "Testing VLAN={}, pkt={}, is_next_hop_spine={}, "
-            "is_device_spine={}, send_report_to_spine={}...".format(
-                vlan_conf,
-                pkt_type,
-                is_next_hop_spine,
-                is_device_spine,
-                send_report_to_spine,
-            )
+            f"Testing VLAN={vlan_conf}, pkt={pkt_type}, is_next_hop_spine={is_next_hop_spine}, "
+            f"is_device_spine={is_device_spine}, send_report_to_spine={send_report_to_spine}, "
+            f"watch_flow={watch_flow}..."
         )
         # Change the IP destination to ensure we are using differnt
         # flow for diffrent test cases since the flow report filter
@@ -2273,6 +2269,7 @@ class FabricIntQueueReportTest(IntTest):
             expect_int_report=True,
             is_device_spine=is_device_spine,
             send_report_to_spine=send_report_to_spine,
+            watch_flow=watch_flow
         )
 
     def runTest(self):
@@ -2290,14 +2287,78 @@ class FabricIntQueueReportTest(IntTest):
                         for pkt_type in (
                             BASE_PKT_TYPES | GTP_PKT_TYPES | VXLAN_PKT_TYPES
                         ):
-                            self.doRunTest(
-                                vlan_conf,
-                                tagged,
-                                pkt_type,
-                                is_next_hop_spine,
-                                is_device_spine,
-                                send_report_to_spine,
-                            )
+                            for watch_flow in [False, True]:
+                                self.doRunTest(
+                                    vlan_conf,
+                                    tagged,
+                                    pkt_type,
+                                    is_next_hop_spine,
+                                    is_device_spine,
+                                    send_report_to_spine,
+                                    watch_flow,
+                                )
+
+
+@group("int")
+class FabricIntQueueReportQuotaTest(IntTest):
+    @tvsetup
+    @autocleanup
+    def doRunTest(
+        self,
+        expect_int_report,
+        quota_left,
+        threshold
+    ):
+        print(
+            f"Testing expect_int_report={expect_int_report}, quota_left={quota_left}, threshold={threshold}..."
+        )
+        pkt = testutils.simple_udp_packet(ip_dst=self.get_single_use_ip())
+        self.runIntQueueTest(
+            pkt=pkt,
+            tagged1=False,
+            tagged2=False,
+            is_next_hop_spine=False,
+            ig_port=self.port1,
+            eg_port=self.port2,
+            expect_int_report=expect_int_report,
+            is_device_spine=False,
+            send_report_to_spine=False,
+            watch_flow=False,
+            reset_quota=False,
+            threshold=threshold,
+        )
+        register_index = self.port2 << 5 | 0 # port ++ qid
+        register = self.read_register("FabricEgress.int_egress.queue_report_quota", register_index)
+        quota_in_register = int.from_bytes(register.data.bitstring, "big")
+        self.assertEqual(quota_left, quota_in_register)
+
+    def runTest(self):
+        print("")
+        """
+
+    Next sets the threshold to a high value and send another packet to trigger the pipeline
+    to reset the quota to the default value.
+    Finally, sets the threshold to a low value and send a packet, we should expect
+    an INT queue report from the switch and the quota value being reset to a default value.
+    """
+        # Initialize the queue report quota for output port and queue to just 1
+        # After that, configure the threshold to a small value and send a packet to the
+        # device to trigger queue report. We should expect to recevice an INT queue
+        # report and the quota will become zero.
+        self.set_queue_report_quota(port=self.port2, qid=0, quota=1)
+        self.doRunTest(expect_int_report=True, quota_left=0, threshold=0)
+        # Send another packet, since the quota is now zero, the pipeline should not
+        # send any INT queue report.
+        self.doRunTest(expect_int_report=False, quota_left=0, threshold=0)
+        # Configure the threshold to a huge value and send another packet, we should
+        # expect the quota being reset to a default value which we hard coded in the pipeline.
+        # And there will be no INT queue report from the device since the latency is
+        # below the threshold.
+        self.doRunTest(expect_int_report=False, quota_left=16, threshold=0xffffffff)
+        # Finally, configure the threshold to a small value and send another packet
+        # we should expect to receive an INT queue report since now the quota is not
+        # zero, and we can also verify the quota decreased.
+        self.doRunTest(expect_int_report=True, quota_left=15, threshold=0)
 
 
 @group("bng")

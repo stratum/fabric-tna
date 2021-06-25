@@ -876,6 +876,18 @@ class P4RuntimeTest(BaseTest):
         register.data.bitstring = data
         return req, self.write_request(req)
 
+    def read_register(self, register_name, index):
+        req = self.get_new_read_request()
+        entity = req.entities.add()
+        register = entity.register_entry
+        register.register_id = self.get_register_id(register_name)
+        register.index.index = index
+
+        for entity in self.read_request(req):
+            if entity.HasField("register_entry"):
+                return entity.register_entry
+        return None
+
     def verify_action_profile_group(
         self, ap_name, grp_id, expected_action_profile_group
     ):

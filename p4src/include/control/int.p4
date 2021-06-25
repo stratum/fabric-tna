@@ -11,6 +11,7 @@
 const bit<48> DEFAULT_TIMESTAMP_MASK = 0xffffc0000000;
 // or for hop latency changes greater than 2^8 ns
 const bit<32> DEFAULT_HOP_LATENCY_MASK = 0xffffff00;
+const bit<8> DEFAULT_QUEUE_REPORT_QUOTA = 0x10; // TODO: to be discussed
 
 control FlowReportFilter(
     inout egress_headers_t hdr,
@@ -273,6 +274,7 @@ control IntEgress (
 
     FlowReportFilter() flow_report_filter;
     DropReportFilter() drop_report_filter;
+    queue_report_filter_index_t queue_report_filter_index;
 
 #ifdef WITH_DEBUG
     DirectCounter<bit<64>>(CounterType_t.PACKETS_AND_BYTES) report_counter;
@@ -290,8 +292,31 @@ control IntEgress (
         }
     };
 
+    Register<bit<8>, queue_report_filter_index_t>(1 << QUEUE_REPORT_FILTER_WIDTH, DEFAULT_QUEUE_REPORT_QUOTA) queue_report_quota;
+    RegisterAction<bit<8>, queue_report_filter_index_t, bool>(queue_report_quota) check_quota_and_report = {
+        void apply(inout bit<8> quota, out bool report) {
+            if (quota > 0) {
+                quota = quota - 1;
+                report = true;
+            } else {
+                report = false;
+            }
+        }
+    };
+
+    RegisterAction<bit<8>, queue_report_filter_index_t, bool>(queue_report_quota) reset_report_quota = {
+        void apply(inout bit<8> quota, out bool report) {
+            quota = DEFAULT_QUEUE_REPORT_QUOTA;
+            report = false;
+        }
+    };
+
     action set_queue_report_flag() {
-        fabric_md.int_md.queue_report = true;
+        fabric_md.int_md.queue_report = check_quota_and_report.execute(queue_report_filter_index);
+    }
+
+    action reset_quota() {
+        fabric_md.int_md.queue_report = reset_report_quota.execute(queue_report_filter_index);
     }
 
     table queue_report {
@@ -302,18 +327,31 @@ control IntEgress (
         }
         actions = {
             set_queue_report_flag;
+            reset_quota;
             @defaultonly nop;
         }
         default_action = nop();
-        const size = 16;
+        const size = 32; // At most 4 entries per queue, 8 queues
         // Set the report flag when the latency value is more than the threshold.
-        // If the latency threshold is less or equal to 0xffff, we will install two entries
+        // If the latency threshold is less or equal to 0xffff, we will install 3 entries
         // per queue, one from threshold to 0xffff, another from 0x10000 to 32-bit max.
-        // (qid, 0       , threshold~0xffff        ): set_queue_report_flag
-        // (qid, 1~0xffff, 0~0xffff                ): set_queue_report_flag
-        // If the latency threshold is more than 0xffff, we will install only one entry
+        // (qid, 0, threshold~0xffff): set_queue_report_flag
+        // (qid, 1~0xffff, 0~0xffff): set_queue_report_flag
+        // (qid, 0, 0~threshold): reset_quota
+        // For example, the threshold is 0x0000eeee, we need to report it when latency
+        // is between 0x0000eeee~0x0000ffff and 0x00010000~0xffffffff
+        // and we need to reset the quota if latency is between 0x00000000~0x0000eeee
+
+        // If the latency threshold is more than 0xffff, we will install 4 entries
         // per queue, which only check the upper 16-bit
-        // (qid, (threshold >> 16)~0xffff, 0~0xffff): set_queue_report_flag
+        // (qid, (threshold >> 16), (threshold&0xffff)~0xffff): set_queue_report_flag
+        // (qid, (threshold >> 16)+1~0xffff, 0~0xffff): set_queue_report_flag
+        // (qid, (threshold >> 16), 0~(threshold&0xffff)): reset_quota
+        // (qid, 0~(threshold >> 16)-1, 0~0xffff): reset_quota
+        // For example, the threshold is 0x0010eeee, we need to report it when latency
+        // is between 0x0010eeee~0x0010ffff, 0x00110000~0xffffffff
+        // and need to reset the quota if latency is between
+        // 0x00000000~0x0001ffff and 0x00100000~0x0010eeee.
     }
 
     action set_config(bit<32> hop_latency_mask, bit<48> timestamp_mask) {
@@ -491,6 +529,7 @@ control IntEgress (
     apply {
         fabric_md.int_md.hop_latency = eg_prsr_md.global_tstamp[31:0] - fabric_md.bridged.base.ig_tstamp[31:0];
         fabric_md.int_md.timestamp = eg_prsr_md.global_tstamp;
+        queue_report_filter_index = eg_intr_md.egress_port ++ eg_intr_md.egress_qid;
 
         // Check the queue alert before the config table since we need to check the
         // latency which is not quantized.
