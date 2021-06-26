@@ -10,9 +10,6 @@ FABRIC_TNA="${FABRIC_TNA_ROOT}"/..
 
 PTF_FILTER=${PTF_FILTER:-}
 
-# shellcheck source=ptf/run/tm/base.sh
-# source "${DIR}/base.sh"
-
 # shellcheck source=.env
 source "${FABRIC_TNA}"/.env
 

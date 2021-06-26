@@ -262,7 +262,7 @@ def run_test(
             p = subprocess.Popen([cmd], shell=True)
             p.wait()
         except Exception as e:
-            print(e)
+            info(e)
             error("Error when creating interfaces")
             return False
         # Write the portmap proto object to testvectors/portmap.pb.txt
@@ -430,12 +430,11 @@ def main():
         sys.exit(1)
     tofino_pipeline_config = args.tofino_pipeline_config
     if not os.path.exists(args.port_map):
-        print("Port map path '{}' does not exist".format(args.port_map))
+        info("Port map path '{}' does not exist".format(args.port_map))
         sys.exit(1)
 
     success = True
 
-    # Won't connect if stratum is not running on switch
     if not args.skip_config:
         success = update_config(
             p4info_path=args.p4info,
@@ -447,17 +446,17 @@ def main():
     if not success:
         sys.exit(2)
 
-    # if line rate test, set up and tear down client
+    # if line rate test, set up and tear down TRex
     if args.trex_address != None:
         trex_daemon_client = CTRexClient(args.trex_address)
-        print('Starting trex daemon client...')
+        info('Starting trex daemon client...')
         success = set_up_trex_server(trex_daemon_client, args.trex_address,
                                      args.trex_config, args.force_restart)
         if success != 0:
             sys.exit(3)
 
         if not args.skip_test:
-            print('Running linerate tests...')
+            info('Running linerate tests...')
             success = run_test(
                 p4info_path=args.p4info,
                 device_id=args.device_id,
@@ -475,7 +474,7 @@ def main():
             if not success:
                 sys.exit(4)
         
-        print('Stopping trex daemon client...')
+        info('Stopping trex daemon client...')
         trex_daemon_client.stop_trex()
     else:
         info("Running unary test...")
