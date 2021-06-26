@@ -205,6 +205,7 @@ typedef bit<FLOW_REPORT_FILTER_WIDTH> flow_report_filter_index_t;
 typedef bit<DROP_REPORT_FILTER_WIDTH> drop_report_filter_index_t;
 #define QUEUE_REPORT_FILTER_WIDTH 11
 typedef bit<QUEUE_REPORT_FILTER_WIDTH> queue_report_filter_index_t;
+typedef bit<16> queue_report_quota_t;
 
 typedef bit<3> IntReportType_t;
 const IntReportType_t INT_REPORT_TYPE_NO_REPORT = 0;

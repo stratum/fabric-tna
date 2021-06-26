@@ -3144,7 +3144,7 @@ class IntTest(IPv4UnicastTest):
         )
         self.set_up_recirc_ports()
 
-    def set_up_latency_threshold_for_q_report(self, threshold):
+    def set_up_latency_threshold_for_q_report(self, threshold_trigger, threshold_reset):
         queue_id = 0
         def set_up_queue_report_table_ingernal(upper, lower, action):
             self.send_request_add_entry_to_action(
@@ -3159,21 +3159,26 @@ class IntTest(IPv4UnicastTest):
                 DEFAULT_PRIORITY
             )
 
-        if threshold <= 0xffff:
+        if threshold_trigger <= 0xffff:
             # from threshold to 0xffff
-            set_up_queue_report_table_ingernal([0, 0], [threshold, 0xffff], "set_queue_report_flag")
+            set_up_queue_report_table_ingernal([0, 0], [threshold_trigger, 0xffff], "set_queue_report_flag")
             # from 0x10000 to 32-bit max
             set_up_queue_report_table_ingernal([1, 0xffff], [0, 0xffff], "set_queue_report_flag")
-            # reset quota if latency is below threshold
-            set_up_queue_report_table_ingernal([0, 0], [0, threshold], "reset_quota")
         else:
-            threshold_upper = (threshold >> 16)
-            threshold_lower = (threshold & 0xffff)
+            threshold_upper = (threshold_trigger >> 16)
+            threshold_lower = (threshold_trigger & 0xffff)
             # from lower 16-bit of threshold to 0xffff
             set_up_queue_report_table_ingernal([threshold_upper, threshold_upper], [threshold_lower, 0xffff], "set_queue_report_flag")
             if threshold_upper != 0xffff:
                 # from upper 16-bit of threshold + 1 to 32-bit max
                 set_up_queue_report_table_ingernal([threshold_upper+1, 0xffff], [0, 0xffff], "set_queue_report_flag")
+
+        if threshold_reset <= 0xffff:
+            # reset quota if latency is below threshold
+            set_up_queue_report_table_ingernal([0, 0], [0, threshold_reset], "reset_quota")
+        else:
+            threshold_upper = (threshold_reset >> 16)
+            threshold_lower = (threshold_reset & 0xffff)
             # reset quota if latency is below threshold
             set_up_queue_report_table_ingernal([0, threshold_upper-1], [0, 0xffff], "reset_quota")
             set_up_queue_report_table_ingernal([threshold_upper, threshold_upper], [0, threshold_lower], "reset_quota")
@@ -3181,7 +3186,7 @@ class IntTest(IPv4UnicastTest):
     def set_queue_report_quota(self, port, qid, quota):
         # We are using prot[5:0] ++ qid as register index.
         index = (port & 0x3f) << 5 | qid
-        self.write_register("FabricEgress.int_egress.queue_report_quota", index, stringify(quota, 1))
+        self.write_register("FabricEgress.int_egress.queue_report_quota", index, stringify(quota, 2))
 
     def runIntTest(
         self,
@@ -3454,7 +3459,8 @@ class IntTest(IPv4UnicastTest):
         send_report_to_spine,
         watch_flow=False,
         reset_quota=True,
-        threshold=0
+        threshold_trigger=0,
+        threshold_reset=0,
     ):
         """
         :param pkt: the input packet
@@ -3473,7 +3479,8 @@ class IntTest(IPv4UnicastTest):
                            the pipeline to generate an INT report with both flow and
                            queue flag.
         :reset_quota: resets the queue report quota everytime when we run the test
-        "threshold: the latency threshold to trigger the queue report
+        "threshold_trigger: the latency threshold to trigger the queue report
+        "threshold_reset: the latency threshold to rest the queue report quota
         """
         # INT report's inner packet. Should be the same as the expected output
         # packet of IPv4UnicastTest, but without MPLS or VLAN headers.
@@ -3501,7 +3508,7 @@ class IntTest(IPv4UnicastTest):
         # Set collector, report table, and mirror sessions
         self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine, watch_flow=watch_flow)
         # Every packet will always trigger the queue alert
-        self.set_up_latency_threshold_for_q_report(threshold)
+        self.set_up_latency_threshold_for_q_report(threshold_trigger, threshold_reset)
         if reset_quota:
             # To ensure we have enough quota to send a queue report.
             self.set_queue_report_quota(port=eg_port, qid=0, quota=1)

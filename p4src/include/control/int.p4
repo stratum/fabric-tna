@@ -11,7 +11,7 @@
 const bit<48> DEFAULT_TIMESTAMP_MASK = 0xffffc0000000;
 // or for hop latency changes greater than 2^8 ns
 const bit<32> DEFAULT_HOP_LATENCY_MASK = 0xffffff00;
-const bit<8> DEFAULT_QUEUE_REPORT_QUOTA = 0x10; // TODO: to be discussed
+const queue_report_quota_t DEFAULT_QUEUE_REPORT_QUOTA = 1024;
 
 control FlowReportFilter(
     inout egress_headers_t hdr,
@@ -292,9 +292,9 @@ control IntEgress (
         }
     };
 
-    Register<bit<8>, queue_report_filter_index_t>(1 << QUEUE_REPORT_FILTER_WIDTH, DEFAULT_QUEUE_REPORT_QUOTA) queue_report_quota;
-    RegisterAction<bit<8>, queue_report_filter_index_t, bool>(queue_report_quota) check_quota_and_report = {
-        void apply(inout bit<8> quota, out bool report) {
+    Register<queue_report_quota_t, queue_report_filter_index_t>(1 << QUEUE_REPORT_FILTER_WIDTH, DEFAULT_QUEUE_REPORT_QUOTA) queue_report_quota;
+    RegisterAction<queue_report_quota_t, queue_report_filter_index_t, bool>(queue_report_quota) check_quota_and_report = {
+        void apply(inout queue_report_quota_t quota, out bool report) {
             if (quota > 0) {
                 quota = quota - 1;
                 report = true;
@@ -304,8 +304,8 @@ control IntEgress (
         }
     };
 
-    RegisterAction<bit<8>, queue_report_filter_index_t, bool>(queue_report_quota) reset_report_quota = {
-        void apply(inout bit<8> quota, out bool report) {
+    RegisterAction<queue_report_quota_t, queue_report_filter_index_t, bool>(queue_report_quota) reset_report_quota = {
+        void apply(inout queue_report_quota_t quota, out bool report) {
             quota = DEFAULT_QUEUE_REPORT_QUOTA;
             report = false;
         }

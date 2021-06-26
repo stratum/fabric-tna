@@ -2307,10 +2307,12 @@ class FabricIntQueueReportQuotaTest(IntTest):
         self,
         expect_int_report,
         quota_left,
-        threshold
+        threshold_trigger,
+        threshold_reset,
     ):
         print(
-            f"Testing expect_int_report={expect_int_report}, quota_left={quota_left}, threshold={threshold}..."
+            f"Testing expect_int_report={expect_int_report}, quota_left={quota_left}, "
+            f"threshold_trigger={threshold_trigger}, threshold_reset={threshold_reset}..."
         )
         pkt = testutils.simple_udp_packet(ip_dst=self.get_single_use_ip())
         self.runIntQueueTest(
@@ -2325,7 +2327,8 @@ class FabricIntQueueReportQuotaTest(IntTest):
             send_report_to_spine=False,
             watch_flow=False,
             reset_quota=False,
-            threshold=threshold,
+            threshold_trigger=threshold_trigger,
+            threshold_reset=threshold_reset,
         )
         register_index = self.port2 << 5 | 0 # port ++ qid
         register = self.read_register("FabricEgress.int_egress.queue_report_quota", register_index)
@@ -2346,19 +2349,25 @@ class FabricIntQueueReportQuotaTest(IntTest):
         # device to trigger queue report. We should expect to recevice an INT queue
         # report and the quota will become zero.
         self.set_queue_report_quota(port=self.port2, qid=0, quota=1)
-        self.doRunTest(expect_int_report=True, quota_left=0, threshold=0)
+        self.doRunTest(expect_int_report=True, quota_left=0, threshold_trigger=10, threshold_reset=0)
         # Send another packet, since the quota is now zero, the pipeline should not
         # send any INT queue report.
-        self.doRunTest(expect_int_report=False, quota_left=0, threshold=0)
-        # Configure the threshold to a huge value and send another packet, we should
-        # expect the quota being reset to a default value which we hard coded in the pipeline.
+        self.doRunTest(expect_int_report=False, quota_left=0, threshold_trigger=10, threshold_reset=0)
+        # Make threshold for triggering higher than the latency, but the threshold for
+        # resetting still low, we will still expect that the pipeline won't change the
+        # quota and won't generate an INT report.
+        self.doRunTest(expect_int_report=False, quota_left=0, threshold_trigger=0xffffffff, threshold_reset=0)
+        # Configure the threshold for resetting to a huge value and send another packet,
+        # we should expect the quota being reset to a default value which we hard coded
+        # in the pipeline.
         # And there will be no INT queue report from the device since the latency is
-        # below the threshold.
-        self.doRunTest(expect_int_report=False, quota_left=16, threshold=0xffffffff)
-        # Finally, configure the threshold to a small value and send another packet
-        # we should expect to receive an INT queue report since now the quota is not
+        # below the threshold for triggering.
+        self.doRunTest(expect_int_report=False, quota_left=1024, threshold_trigger=0xffffffff, threshold_reset=0xffffffff)
+        # Finally, configure the threshold for triggering to a small value and send
+        # another packet.
+        # We should expect to receive an INT queue report since now the quota is not
         # zero, and we can also verify the quota decreased.
-        self.doRunTest(expect_int_report=True, quota_left=15, threshold=0)
+        self.doRunTest(expect_int_report=True, quota_left=1023, threshold_trigger=10, threshold_reset=0)
 
 
 @group("bng")
