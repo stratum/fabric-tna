@@ -92,6 +92,12 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         if (!super.setupBehaviour(opName)) {
             return false;
         }
+
+        if (!computeHardwareResourceSizes()) {
+            // error message will be printed by computeHardwareResourceSizes()
+            return false;
+        }
+
         flowRuleService = handler().get(FlowRuleService.class);
         packetService = handler().get(PacketService.class);
         fabricUpfStore = handler().get(DistributedFabricUpfStore.class);
@@ -116,10 +122,6 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     @Override
     public boolean init() {
         if (setupBehaviour("init()")) {
-            if (!computeHardwareResourceSizes()) {
-                // error message will be printed by computeHardwareResourceSizes()
-                return false;
-            }
             log.info("UpfProgrammable initialized for appId {} and deviceId {}", appId, deviceId);
             return true;
         }
