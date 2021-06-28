@@ -10,7 +10,6 @@ define run_tests
         --tofino-pipeline-config /p4c-out/pipeline_config.pb.bin \
         --trex-address "10.128.13.27" \
         --trex-config /fabric-tna/run/hw/trex-config/4-ports-with-l2.yaml \
-        --skip-test True \
         --force-restart True \
         --profile $(1) \
         $(2)
