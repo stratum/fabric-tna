@@ -3175,10 +3175,12 @@ class IntTest(IPv4UnicastTest):
 
         if threshold_reset <= 0xffff:
             # reset quota if latency is below threshold
+            threshold_reset = threshold_reset - 1 if threshold_reset > 0 else 0
             set_up_queue_report_table_ingernal([0, 0], [0, threshold_reset], "reset_quota")
         else:
             threshold_upper = (threshold_reset >> 16)
             threshold_lower = (threshold_reset & 0xffff)
+            threshold_lower = threshold_lower - 1 if threshold_lower > 0 else 0
             # reset quota if latency is below threshold
             set_up_queue_report_table_ingernal([0, threshold_upper-1], [0, 0xffff], "reset_quota")
             set_up_queue_report_table_ingernal([threshold_upper, threshold_upper], [0, threshold_lower], "reset_quota")
