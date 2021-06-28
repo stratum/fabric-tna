@@ -173,10 +173,10 @@ def set_up_trex_server(trex_daemon_client, trex_address, trex_config, force_rest
         info("Pushing Trex config %s to the server", trex_config)
         if not trex_daemon_client.push_files(trex_config):
             error("Unable to push %s to Trex server", trex_config)
-            return 1
+            return False
 
         if force_restart:
-            info("Killing all Trexes... with meteorite... Boom!")
+            info("Killing all TRexes... with meteorite... Boom!")
             trex_daemon_client.kill_all_trexes()
 
             # Wait until Trex enter the Idle state
@@ -193,7 +193,7 @@ def set_up_trex_server(trex_daemon_client, trex_address, trex_config, force_rest
                     "Unable to kill Trex process, please login "
                     + "to the server and kill it manually."
                 )
-                return 1
+                return False
 
         if not trex_daemon_client.is_idle():
             info("The Trex server process is running")
@@ -201,7 +201,7 @@ def set_up_trex_server(trex_daemon_client, trex_address, trex_config, force_rest
                 "A Trex server process is still running, "
                 + "use --force-restart to kill it if necessary."
             )
-            return 1
+            return False
 
         trex_config_file_on_server = TREX_FILES_DIR + os.path.basename(trex_config)
         trex_daemon_client.start_stateless(cfg=trex_config_file_on_server)
@@ -210,9 +210,9 @@ def set_up_trex_server(trex_daemon_client, trex_address, trex_config, force_rest
             "Unable to connect to server %s.\n" + "Did you start the Trex daemon?",
             trex_address,
         )
-        return 1
+        return False
 
-    return 0
+    return True
 
 def run_test(
     p4info_path,
@@ -451,10 +451,11 @@ def main():
     # if line rate test, set up and tear down TRex
     if args.trex_address != None:
         trex_daemon_client = CTRexClient(args.trex_address)
-        info('Starting trex daemon client...')
+        info('Starting TRex daemon client...')
         success = set_up_trex_server(trex_daemon_client, args.trex_address,
                                      args.trex_config, args.force_restart)
-        if success != 0:
+        if not success:
+            error('Failed to set up TRex daemon client!')
             sys.exit(3)
 
         if not args.skip_test:
@@ -474,6 +475,7 @@ def main():
                 extra_args=unknown_args,
             )
             if not success:
+                error('Failed to run linerate tests!')
                 sys.exit(4)
         
         info('Stopping trex daemon client...')
@@ -495,6 +497,7 @@ def main():
                 extra_args=unknown_args,
             )
             if not success:
+                error('Failed running unary tests!')
                 sys.exit(5)
 
 if __name__ == "__main__":
