@@ -35,7 +35,7 @@ echo "*** Starting ${testerRunName}..."
 
 it=$(test -t 0 && echo "-it" || echo "-t")
 # shellcheck disable=SC2068
-docker run --name "${testerRunName}" "${it}" --privileged --rm \
+docker run --name "${testerRunName}" "${it}" --rm \
     --network host \
     -v "${FABRIC_TNA_ROOT}":/fabric-tna \
     -v "${P4C_OUT}":/p4c-out \

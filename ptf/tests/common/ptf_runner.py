@@ -34,20 +34,22 @@ from trex_stf_lib.trex_client import (
 )
 
 TREX_FILES_DIR = "/tmp/trex_files/"
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("PTF runner")
+DEFAULT_KILL_TIMEOUT = 10
+LOG_FORMAT = "%(asctime)s %(levelname)s %(message)s"
+logging.basicConfig(format=LOG_FORMAT, level=logging.INFO)
+logging.getLogger().setLevel(logging.INFO)
 
 
 def error(msg, *args, **kwargs):
-    logger.error(msg, *args, **kwargs)
+    logging.error(msg, *args, **kwargs)
 
 
 def warn(msg, *args, **kwargs):
-    logger.warn(msg, *args, **kwargs)
+    logging.warning(msg, *args, **kwargs)
 
 
 def info(msg, *args, **kwargs):
-    logger.info(msg, *args, **kwargs)
+    logging.info(msg, *args, **kwargs)
 
 
 def check_ifaces(ifaces):
