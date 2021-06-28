@@ -47,6 +47,7 @@ import org.onosproject.net.group.GroupBuckets;
 import org.onosproject.net.group.GroupDescription;
 import org.onosproject.net.group.GroupService;
 import org.onosproject.net.host.HostService;
+import org.onosproject.net.pi.model.PiActionId;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
 import org.onosproject.segmentrouting.config.SegmentRoutingDeviceConfig;
@@ -76,6 +77,9 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
     private static final ImmutableByteSequence DEFAULT_TIMESTAMP_MASK =
             ImmutableByteSequence.copyFrom(
                     HexString.fromHexString("ffffc0000000", ""));
+    // Default latency threshold for queue report and queue size.
+    private static final long DEFAULT_QUEUE_REPORT_LATENCY_THRESHOLD = 1000; // ns
+    private static final byte DEFAULT_QUEUE_SIZE = 16;
 
     private static final Map<Integer, Integer> QUAD_PIPE_MIRROR_SESS_TO_RECIRC_PORTS =
             ImmutableMap.<Integer, Integer>builder()
@@ -97,7 +101,8 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
     private static final Set<TableId> TABLES_TO_CLEANUP = Sets.newHashSet(
             P4InfoConstants.FABRIC_INGRESS_INT_WATCHLIST_WATCHLIST,
             P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_REPORT,
-            P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_CONFIG
+            P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_CONFIG,
+            P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_QUEUE_REPORT
     );
     private static final short BMD_TYPE_EGRESS_MIRROR = 2;
     private static final short BMD_TYPE_INT_INGRESS_DROP = 4;
@@ -180,6 +185,12 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                     new DefaultGroupKey(KRYO.serialize(sessionId)),
                     sessionId, appId));
         });
+        for (byte queueId = 0; queueId < DEFAULT_QUEUE_SIZE; queueId++) {
+            setUpQueueReportThreshold(
+                    queueId,
+                    DEFAULT_QUEUE_REPORT_LATENCY_THRESHOLD,
+                    DEFAULT_QUEUE_REPORT_LATENCY_THRESHOLD);
+        }
         return true;
     }
 
@@ -639,5 +650,92 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 .makePermanent()
                 .build();
         flowRuleService.applyFlowRules(watchlistRule);
+    }
+
+    private void setUpQueueReportThreshold(byte queueId, long thresholdToTrigger,
+            long thresholdToReset) {
+        long thresholdUpper = thresholdToTrigger >> 16;
+        long thresholdLower = thresholdToTrigger & 0xffff;
+
+        // Values that higher than the threshold, sets the queue report flag.
+        if (thresholdToTrigger <= 0xffff) {
+            setUpQueueReportThresholdInternal(
+                    queueId,
+                    new long[] {0, 0},
+                    new long[] {thresholdToTrigger, 0xffff},
+                    P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_SET_QUEUE_REPORT_FLAG);
+            setUpQueueReportThresholdInternal(
+                    queueId,
+                    new long[] {1, 0xffff},
+                    new long[] {0, 0xffff},
+                    P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_SET_QUEUE_REPORT_FLAG);
+        } else {
+            setUpQueueReportThresholdInternal(
+                    queueId,
+                    new long[] {thresholdUpper, thresholdUpper},
+                    new long[] {thresholdLower, 0xffff},
+                    P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_SET_QUEUE_REPORT_FLAG);
+            if (thresholdUpper < 0xffff) {
+                setUpQueueReportThresholdInternal(
+                        queueId,
+                        new long[] {thresholdUpper + 1, 0xffff},
+                        new long[] {0, 0xffff},
+                        P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_SET_QUEUE_REPORT_FLAG);
+            }
+        }
+
+        // Values that lower than the threshold, resets the queue report quota.
+        thresholdUpper = thresholdToReset >> 16;
+        thresholdLower = thresholdToReset & 0xffff;
+        if (thresholdToReset <= 0xffff) {
+            if (thresholdToReset > 0) {
+                thresholdToReset -= 1;
+            }
+            setUpQueueReportThresholdInternal(
+                    queueId,
+                    new long[] {0, 0},
+                    new long[] {0, thresholdToReset},
+                    P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_RESET_QUOTA);
+        } else {
+            setUpQueueReportThresholdInternal(
+                    queueId,
+                    new long[] {0, thresholdUpper - 1},
+                    new long[] {0, 0xffff},
+                    P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_RESET_QUOTA);
+
+            if (thresholdLower > 0) {
+                thresholdLower -= 1;
+            }
+            setUpQueueReportThresholdInternal(
+                    queueId,
+                    new long[] {thresholdUpper, thresholdUpper},
+                    new long[] {0, thresholdLower},
+                    P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_RESET_QUOTA);
+        }
+    }
+
+    private void setUpQueueReportThresholdInternal(byte queueId, long[] upperRange,
+            long[] lowerRange, PiActionId actionId) {
+        final PiCriterion matchCriterion = PiCriterion.builder()
+                .matchExact(P4InfoConstants.HDR_EGRESS_QID, queueId)
+                .matchRange(P4InfoConstants.HDR_HOP_LATENCY_UPPER, (short) upperRange[0], (short) upperRange[1])
+                .matchRange(P4InfoConstants.HDR_HOP_LATENCY_LOWER, (short) lowerRange[0], (short) lowerRange[1])
+                .build();
+        final TrafficSelector selector = DefaultTrafficSelector.builder()
+                .matchPi(matchCriterion)
+                .build();
+        final TrafficTreatment treatment = DefaultTrafficTreatment.builder()
+                .piTableAction(PiAction.builder().withId(actionId).build())
+                .build();
+        final FlowRule queueReportFlow = DefaultFlowRule.builder()
+            .forDevice(deviceId)
+            .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_QUEUE_REPORT)
+            .withSelector(selector)
+            .withTreatment(treatment)
+            .makePermanent()
+            .fromApp(appId)
+            .withPriority(DEFAULT_PRIORITY)
+            .build();
+        flowRuleService.applyFlowRules(queueReportFlow);
     }
 }

@@ -54,6 +54,7 @@ import org.onosproject.net.group.GroupBuckets;
 import org.onosproject.net.group.GroupDescription;
 import org.onosproject.net.group.GroupService;
 import org.onosproject.net.host.HostService;
+import org.onosproject.net.pi.model.PiActionId;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
 import org.onosproject.segmentrouting.config.SegmentRoutingDeviceConfig;
@@ -124,6 +125,8 @@ public class FabricIntProgrammableTest {
                     .put(0x202, 0x144)
                     .put(0x203, 0x1c4).build();
     private static final MacAddress SWITCH_MAC = MacAddress.valueOf("00:00:00:00:01:80");
+    private static final long DEFAULT_QUEUE_REPORT_LATENCY_THRESHOLD = 1000; // ns
+    private static final byte DEFAULT_QUEUE_SIZE = 16;
 
     private FabricIntProgrammable intProgrammable;
     private FlowRuleService flowRuleService;
@@ -834,7 +837,9 @@ public class FabricIntProgrammableTest {
 
     private void testInit() {
         final List<GroupDescription> expectedGroups = Lists.newArrayList();
+        final List<FlowRule> expectedFlows = Lists.newArrayList();
         final Capture<GroupDescription> capturedGroup = newCapture(CaptureType.ALL);
+        final Capture<FlowRule> capturedFlow = newCapture(CaptureType.ALL);
         QUAD_PIPE_MIRROR_SESS_TO_RECIRC_PORTS.forEach((sessionId, port) -> {
             // Set up mirror sessions
             final List<GroupBucket> buckets = ImmutableList.of(
@@ -849,8 +854,31 @@ public class FabricIntProgrammableTest {
             groupService.addGroup(capture(capturedGroup));
         });
 
+        for (byte queueId = 0; queueId < DEFAULT_QUEUE_SIZE; queueId++) {
+            FlowRule queueReportFlow = buildQueueReportFlow(queueId,
+                    new long[]{0, 0},
+                    new long[]{DEFAULT_QUEUE_REPORT_LATENCY_THRESHOLD, 0xffff},
+                    P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_SET_QUEUE_REPORT_FLAG);
+            expectedFlows.add(queueReportFlow);
+            flowRuleService.applyFlowRules(capture(capturedFlow));
 
-        replay(groupService);
+            queueReportFlow = buildQueueReportFlow(queueId,
+                    new long[]{1, 0xffff},
+                    new long[]{0, 0xffff},
+                    P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_SET_QUEUE_REPORT_FLAG);
+            expectedFlows.add(queueReportFlow);
+            flowRuleService.applyFlowRules(capture(capturedFlow));
+
+            queueReportFlow = buildQueueReportFlow(queueId,
+                    new long[]{0, 0},
+                    new long[]{0, DEFAULT_QUEUE_REPORT_LATENCY_THRESHOLD - 1},
+                    P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_RESET_QUOTA);
+            expectedFlows.add(queueReportFlow);
+            flowRuleService.applyFlowRules(capture(capturedFlow));
+        }
+
+
+        replay(groupService, flowRuleService);
         assertTrue(intProgrammable.init());
 
         for (int i = 0; i < QUAD_PIPE_MIRROR_SESS_TO_RECIRC_PORTS.size(); i++) {
@@ -859,8 +887,17 @@ public class FabricIntProgrammableTest {
             assertEquals(expectGroup, actualGroup);
         }
 
-        verify(groupService);
-        reset(groupService);
+        for (int i = 0; i < DEFAULT_QUEUE_SIZE; i++) {
+            for (int fi = 0; fi < 3; fi++) {
+                int index = i * 3 + fi;
+                FlowRule expectedFlow = expectedFlows.get(index);
+                FlowRule actualFlow = capturedFlow.getValues().get(index);
+                assertTrue(expectedFlow.exactMatch(actualFlow));
+            }
+        }
+
+        verify(groupService, flowRuleService);
+        reset(groupService, flowRuleService);
     }
 
     private FlowRule buildCollectorWatchlistRule(DeviceId deviceId) {
@@ -894,5 +931,29 @@ public class FabricIntProgrammableTest {
                 .fromApp(APP_ID)
                 .makePermanent()
                 .build();
+    }
+
+    private FlowRule buildQueueReportFlow(byte queueId, long[] upperRange,
+            long[] lowerRange, PiActionId actionId) {
+        final PiCriterion matchCriterion = PiCriterion.builder()
+                .matchExact(P4InfoConstants.HDR_EGRESS_QID, queueId)
+                .matchRange(P4InfoConstants.HDR_HOP_LATENCY_UPPER, (short) upperRange[0], (short) upperRange[1])
+                .matchRange(P4InfoConstants.HDR_HOP_LATENCY_LOWER, (short) lowerRange[0], (short) lowerRange[1])
+                .build();
+        final TrafficSelector selector = DefaultTrafficSelector.builder()
+                .matchPi(matchCriterion)
+                .build();
+        final TrafficTreatment treatment = DefaultTrafficTreatment.builder()
+                .piTableAction(PiAction.builder().withId(actionId).build())
+                .build();
+        return DefaultFlowRule.builder()
+            .forDevice(LEAF_DEVICE_ID)
+            .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_QUEUE_REPORT)
+            .withSelector(selector)
+            .withTreatment(treatment)
+            .makePermanent()
+            .fromApp(APP_ID)
+            .withPriority(DEFAULT_PRIORITY)
+            .build();
     }
 }
