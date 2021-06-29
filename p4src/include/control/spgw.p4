@@ -398,6 +398,9 @@ control SpgwEgress(
         hdr.outer_ipv4.setValid();
         hdr.outer_udp.setValid();
         hdr.outer_gtpu.setValid();
+        // TODO: we need to reset this flag in the pipeline since the parser may
+        //       initialize it incorrectly.
+        hdr.outer_gtpu.seq_flag = 0;
     }
 
     // Do regular GTP-U encap.
