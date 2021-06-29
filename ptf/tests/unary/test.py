@@ -2331,9 +2331,7 @@ class FabricIntQueueReportQuotaTest(IntTest):
             threshold_reset=threshold_reset,
         )
         register_index = self.port2 << 5 | 0 # port ++ qid
-        register = self.read_register("FabricEgress.int_egress.queue_report_quota", register_index)
-        quota_in_register = int.from_bytes(register.data.bitstring, "big")
-        self.assertEqual(quota_left, quota_in_register)
+        self.verify_register("FabricEgress.int_egress.queue_report_quota", register_index, stringify(quota_left, 2))
 
     def runTest(self):
         print("")

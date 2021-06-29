@@ -1025,6 +1025,34 @@ class P4RuntimeTest(BaseTest):
                     )
         return None
 
+    def verify_register(
+        self, register_name, register_index, expected_value,
+    ):
+        req = self.get_new_read_request()
+        entity = req.entities.add()
+        register_entry = entity.register_entry
+        register_entry.register_id = self.get_register_id(register_name)
+        register_entry.index.index = register_index
+
+
+        if self.generate_tv:
+            exp_resp = self.get_new_read_response()
+            entity = exp_resp.entities.add()
+            entity.register_entry.CopyFrom(register_entry)
+            entity.register_entry.data.bitstring = expected_value
+
+            # add to list
+            exp_resps = []
+            exp_resps.append(exp_resp)
+            tvutils.add_read_expectation(self.tc, req, exp_resps)
+            return None
+
+        for entity in self.read_request(req):
+            if entity.HasField("register_entry"):
+                assert entity.register_entry.data.bitstring == expected_value
+
+        return None
+
     def is_default_action_update(self, update):
         return (
             update.type == p4runtime_pb2.Update.MODIFY
