@@ -167,6 +167,7 @@ def update_config(
         stream_out_q.put(None)
         stream_recv_thread.join()
 
+
 def set_up_trex_server(trex_daemon_client, trex_address, trex_config, force_restart):
 
     try:
@@ -213,6 +214,7 @@ def set_up_trex_server(trex_daemon_client, trex_address, trex_config, force_rest
         return False
 
     return True
+
 
 def run_test(
     p4info_path,
@@ -451,15 +453,16 @@ def main():
     # if line rate test, set up and tear down TRex
     if args.trex_address != None:
         trex_daemon_client = CTRexClient(args.trex_address)
-        info('Starting TRex daemon client...')
-        success = set_up_trex_server(trex_daemon_client, args.trex_address,
-                                     args.trex_config, args.force_restart)
+        info("Starting TRex daemon client...")
+        success = set_up_trex_server(
+            trex_daemon_client, args.trex_address, args.trex_config, args.force_restart
+        )
         if not success:
-            error('Failed to set up TRex daemon client!')
+            error("Failed to set up TRex daemon client!")
             sys.exit(3)
 
         if not args.skip_test:
-            info('Running linerate tests...')
+            info("Running linerate tests...")
             success = run_test(
                 p4info_path=args.p4info,
                 device_id=args.device_id,
@@ -475,10 +478,10 @@ def main():
                 extra_args=unknown_args,
             )
             if not success:
-                error('Failed to run linerate tests!')
+                error("Failed to run linerate tests!")
                 sys.exit(4)
-        
-        info('Stopping trex daemon client...')
+
+        info("Stopping trex daemon client...")
         trex_daemon_client.stop_trex()
     else:
         info("Running unary test...")
@@ -497,8 +500,9 @@ def main():
                 extra_args=unknown_args,
             )
             if not success:
-                error('Failed running unary tests!')
+                error("Failed running unary tests!")
                 sys.exit(5)
+
 
 if __name__ == "__main__":
     main()
