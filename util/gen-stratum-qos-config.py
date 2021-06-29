@@ -20,15 +20,24 @@ MS = 10 ** -3
 NEW_LINE = "\n"
 
 DEFAULT_MTU_BYTES = 1500
-MAX_CELLS = 280000  # 22MB
 CELL_BYTES = 80
-# Minimum guaranteed bandwidth for the Best-Effort CoS.
+
+# Egress application pool numbers.
+CT_APP_POOL = 0  # Control
+RT_APP_POOL = 1  # Real-time
+EL_APP_POOL = 2  # Elastic
+BE_APP_POOL = 3  # Best-Effort
+
+# Minimum guaranteed bandwidth for Best-Effort.
 BE_MIN_RATE_BPS = 10 * MBPS
-# Maximum bandwidth for the System CoS.
+# Maximum bandwidth for System.
 SYS_MAX_RATE_BPS = 10 * MBPS
-# Control CoS golden rule: never exceed the given link utilization to avoid excessive delay for low
-# priority queues.
-CTRL_MAX_UTIL = 0.10
+# Maximum allowed link utilization for the Control queue.
+CT_MAX_UTIL = 0.10
+
+# Default buffer absorption factor used for all queues (percentage of unused pool cells above
+# base_use_limit).
+DEFAULT_BAF_PERC = 30
 
 
 def format_bps(bps):
@@ -39,89 +48,167 @@ def format_bps(bps):
     """
     n = 0
     power_labels = {0: '', 1: 'K', 2: 'M', 3: 'G', 4: 'T'}
-    while bps > 1000:
+    while bps >= 1000:
         bps /= 1000
         n += 1
-    return f"{round(size, 1)}{power_labels[n]}bps"
+    return f"{round(bps, 1)}{power_labels[n]}bps"
 
 
-def queue_mapping(descr, queue_id, prio, weight, min_cells, app_pool,
-                  max_rate=0, max_rate_is_pps="false", max_burst=0):
+# Global control variable, will be populated at runtime.
+# Stores the sum of base_use_limit (bul) reservations for all pools.
+used_pool_buls = [0, 0, 0, 0]
+
+
+def queue_mapping(descr, queue_id, prio, weight, app_pool,
+                  base_use_limit, baf, pool_size, max_rate_bps=0, max_burst_bytes=0,
+                  port_rate_bps=0):
     """
-    Prints a queue mapping.
+    Returns a queue mapping blob.
+    :param descr: a description of the queue
+    :param queue_id: queue ID (0-31)
+    :param prio: scheduling priority (0-7)
+    :param weight: scheduling weight (0-1023)
+    :param app_pool: application pool number
+    :param base_use_limit: number of pool cells
+    :param baf: buffer absorption factor
+    :param pool_size: the total number of cells in the pool
+    :param max_rate_bps: maximum shaping rate in bps (0 means no limits, i.e., the queue can be
+    serviced at the port rate)
+    :param max_burst_bytes: maximum shaping burst size in bytes
+    :param port_rate_bps: the port rate (link bandwidth or shaping rate)
+    :return:
     """
-    # TODO (carmelo): figure out a meaningful setting for base_use_limit, baf, and hysteresis.
+    if max_rate_bps > 0:
+        burst_ms = max_burst_bytes * 8 * 1000 / port_rate_bps
+        max_rate = f"""max_rate_bytes {{
+                rate_bps: {int(max_rate_bps)}
+                burst_bytes: {int(max_burst_bytes)} # {burst_ms}ms
+            }}"""
+    else:
+        max_rate = "# max_rate_bytes unset"
+
+    queue_max_bytes = (base_use_limit + pool_size * baf / 100) * CELL_BYTES
+    queue_max_mtus = floor(queue_max_bytes / DEFAULT_MTU_BYTES)
+
+    global used_pool_buls
+    used_pool_buls[app_pool] += base_use_limit
+
     return f"""        queue_mapping {{
             # {descr}
             queue_id: {queue_id}
             priority: PRIO_{prio}
             weight: {weight}
-            minimum_guaranteed_cells: {min_cells}
             pool: EGRESS_APP_POOL_{app_pool}
-            base_use_limit: 200
-            baf: BAF_80_PERCENT
-            hysteresis: 50
-            min_rate_is_enabled: {"true" if max_rate else "false"}
-            max_rate_is_in_pps: {max_rate_is_pps}
-            max_rate: {max_rate}
-            max_burst: {int(max_burst)}
-            min_rate_is_enabled: false
+            # Tail drop at {queue_max_mtus} MTUs or earlier
+            minimum_guaranteed_cells: 0
+            base_use_limit: {base_use_limit}
+            baf: BAF_{baf}_PERCENT
+            hysteresis: 0
+            {max_rate}
         }}"""
 
 
-def queue_config(descr, sdk_port, port_rate_bps, port_queue_count, ct_count, ct_meter_rate_pps,
-                 ct_meter_burst_pkts, ct_mtu_bytes, rt_max_rates_bps, rt_max_burst_s,
-                 el_min_rates_bps):
+def queue_config(descr, sdk_port, port_rate_bps, port_queue_count, ct_count, ct_slot_rate_pps,
+                 ct_slot_burst_pkts, ct_mtu_bytes, rt_max_rates_bps, rt_max_burst_s,
+                 el_min_rates_bps, port_rates_bps, pool_sizes):
     """
-    Print the queue_config blob for the given port and slices' allocations.
+    Returns the queue_config blob for the given port and slices' allocations.
     :param descr: a description of the port
     :param sdk_port: SDK port number (i.e., DP_ID)
     :param port_rate_bps: link capacity or port shaping rate if set
     :param port_queue_count: how many queues can be allocated to this port
     :param ct_count: number of Control slots, each slice an use one or more slots
-    :param ct_meter_rate_pps: metering rate for each Control slot (in pps)
-    :param ct_meter_burst_pkts: metering burst size for each Control slot (in pkts)
+    :param ct_slot_rate_pps: metering rate for each Control slot (in pps)
+    :param ct_slot_burst_pkts: metering burst size for each Control slot (in pkts)
     :param ct_mtu_bytes: maximum transmission unit allowed for Control traffic
     :param rt_max_rates_bps: list of max shaping rates for Real-Time slices, one for each slice
-    :param rt_max_burst_s: maximum amount of time that a Real-Time slice is allowed to burst
+    :param rt_max_burst_s: maximum amount of time that a Real-Time queue is allowed to burst
     :param el_min_rates_bps: list of min guaranteed rates for Elastic slices, one for each slice
+    :param port_rates_bps: the list of rates (link bandwidth or port shaping) for all ports
+    configured in this switch
+    :param pool_sizes: the list of pool sizes (in cells)
     :return: prints the queue_config blob
     """
     queue_mappings = []
+    port_count = len(port_rates_bps)
 
     # -- CONTROL
     # All Control slices share the same queue. Ingress meters (configured via P4Runtime) are used to
-    # prevent abuse by misbehaving senders. The available bandwidth dedicated to Control traffic is
-    # partitioned in slot. Each slot has a maximum rate and burst (in packets). Each slice can use
-    # one or more slots.
-    ct_queue_min_cells = ceil((ct_count * ct_meter_burst_pkts * ct_mtu_bytes) / CELL_BYTES)
-    ct_queue_max_rate_pps = ct_meter_rate_pps * ct_count
-    ct_queue_max_burst_pkts = ct_meter_burst_pkts * ct_count
-    ct_util = (ct_count * ct_meter_rate_pps * ct_mtu_bytes * 8) / port_rate_bps
-    assert ct_util < CTRL_MAX_UTIL, \
-        f"Port utilization for the Control CoS exceeds the maximum threshold: " \
+    # prevent abuse by misbehaving senders. Packets over the meter threshold are dropped, or
+    # redirected to the Best-Effort queue. As a consequence, the maximum number of packets that can
+    # be in the Control queue at any given time is bounded.
+    #
+    # The available bandwidth dedicated to Control traffic is partitioned in "slots". Each slot has
+    # a maximum rate and burst (in packets). Each slice can use one or more slots. Meters should
+    # enforce rate limits depending on the number of slots associated with a slice.
+
+    # Set maximum shaping rate to handle the worst case, where all slices send a burst of packets at
+    # the same time. Check that the rate doesn't exceed the maximum utilization threshold to avoid
+    # excessive delay for lower priority queues.
+    ct_max_rate_pps = ct_slot_rate_pps * ct_count
+    ct_max_burst_pkts = ct_slot_burst_pkts * ct_count
+    ct_max_rate_bps = ct_max_rate_pps * ct_mtu_bytes * 8
+    ct_max_burst_bytes = ct_max_burst_pkts * ct_mtu_bytes
+    ct_util = ct_max_rate_bps / port_rate_bps
+    assert ct_util < CT_MAX_UTIL, \
+        f"Port utilization for the Control queue exceeds the maximum threshold: " \
         f"requested={ct_util}, " \
-        f"available={CTRL_MAX_UTIL}"
+        f"available={CT_MAX_UTIL}"
+
+    # Divide the poll equally between all ports (since we have only one Control queue per port).
+    ct_base_use_limit = floor(pool_sizes[CT_APP_POOL] / port_count)
+
+    # Weight doesn't matter, this is the only queue in the WRR/priority group
+    ct_wrr_weight = 1
 
     queue_mappings.append(queue_mapping(
-        descr=f"Control ({ct_count} slots @ "
-              f"{ct_meter_rate_pps}pps, {ct_meter_burst_pkts}pkts burst)",
+        descr=f"Control ({ct_count} slots, "
+              f"{ct_slot_rate_pps}pps, {ct_slot_burst_pkts}MTUs burst, {ct_util} util)",
         queue_id=0,
-        prio=7,
-        weight=1,
-        min_cells=ct_queue_min_cells,
-        app_pool=0,
-        max_rate_is_pps="true",
-        max_rate=ct_queue_max_rate_pps,
-        max_burst=ct_queue_max_burst_pkts
+        app_pool=CT_APP_POOL,
+        prio=7,  # highest
+        weight=ct_wrr_weight,
+        base_use_limit=ct_base_use_limit,
+        baf=DEFAULT_BAF_PERC,
+        pool_size=pool_sizes[BE_APP_POOL],
+        max_rate_bps=ct_max_rate_bps,
+        max_burst_bytes=ct_max_burst_bytes,
+        port_rate_bps=port_rate_bps,
     ))
 
     # -- REAL-TIME
-    # Each slice requesting Real-Time CoS gets a dedicated queue, dimensioned to handle the given
-    # max rate and burst duration. System is treated as a Real-Time queue.
+    # Each slice requesting Real-Time service gets a dedicated queue, shaped to the given max rate
+    # and burst. System is treated as a Real-Time queue.
+    rt_max_rates_bps = rt_max_rates_bps.copy()
     rt_max_rates_bps.append(SYS_MAX_RATE_BPS)
+
+    # To simplify configuration, we allow expressing the maximum queue shaping burst as a duration,
+    # but we set the corresponding value in bytes (based on the port rate).
+    # IMPORTANT: rt_max_burst_s should not be intended as the maximum amount of time that a
+    # Real-Time sender is allowed to burst, instead this it the maximum time a queue can burst and
+    # it's used to limit delay for lower priority queues.
     rt_max_burst_bytes = port_rate_bps * rt_max_burst_s / 8
-    rt_queue_min_cells = ceil(rt_max_burst_bytes / CELL_BYTES)
+
+    # The actual time a sender can burst will be limited by the ingress vs. egress bandwidth and the
+    # queue cell reservation, i.e., the maximum queue size (base_use_limit+BAF). To compute queue
+    # cell reservations, we distribute the buffer pool between queues (for all ports) proportionally
+    # to the queue max shaping rate. This is a consequence of the "bandwidth-delay product", a rule
+    # of thumb for sizing buffers, where the bandwidth in our case is the queue max shaping rate. We
+    # do this to improve the performance of TCP-like congestion control protocols. While we cannot
+    # claim optimal sizing to achieve maximum throughput (we would need to know the average RTT and
+    # number of flows), setting higher base_use_limit for queues with higher speeds helps achieving
+    # that goal.
+    rt_queue_count = len(rt_max_rates_bps)
+    rt_pool_size = pool_sizes[RT_APP_POOL]
+    rt_base_use_limits = [floor(rt_pool_size * x / sum(rt_max_rates_bps * port_count))
+                          for x in rt_max_rates_bps]
+
+    # Minimize worst case latency by enforcing fair queueing, i.e., same weight for all slices. We
+    # assume the ideal case where all slices send medium size packets (half the MTU). With larger
+    # packets, the scheduler accounts for credit deficit.
+    rt_wrr_weight = floor(DEFAULT_MTU_BYTES / 2)
+
+    # We do not allow oversubscription. Check that we have enough bandwidth to allocate all slices.
     rt_link_util = sum(rt_max_rates_bps) / port_rate_bps
     rt_avail_bw_bps = (1 - ct_util) * port_rate_bps
     assert sum(rt_max_rates_bps) < rt_avail_bw_bps, \
@@ -130,73 +217,100 @@ def queue_config(descr, sdk_port, port_rate_bps, port_queue_count, ct_count, ct_
         f"available={format_bps(ct_util * port_rate_bps)}"
 
     next_queue_id = 1
-    for i in range(len(rt_max_rates_bps)):
-        if i == len(rt_max_rates_bps) - 1:
+    for i in range(rt_queue_count):
+        if i == rt_queue_count - 1:
             # Last one is System
             name = f"System"
         else:
             name = f"Real-Time {i + 1}"
         queue_mappings.append(queue_mapping(
-            descr=f"{name} ({format_bps(rt_max_rates_bps[i])}, "
-                  f"{rt_max_burst_s}s burst)",
+            descr=f"{name} ({format_bps(rt_max_rates_bps[i])})",
             queue_id=next_queue_id,
+            app_pool=RT_APP_POOL,
             prio=6,
-            weight=1,
-            min_cells=rt_queue_min_cells,
-            app_pool=0,
-            max_rate_is_pps="false",
-            max_rate=ceil(rt_max_rates_bps[i] / 8),  # bytes per second
-            max_burst=rt_max_burst_bytes
+            weight=rt_wrr_weight,
+            base_use_limit=rt_base_use_limits[i],
+            baf=DEFAULT_BAF_PERC,
+            pool_size=pool_sizes[RT_APP_POOL],
+            max_rate_bps=rt_max_rates_bps[i],
+            max_burst_bytes=rt_max_burst_bytes,
+            port_rate_bps=port_rate_bps
         ))
         next_queue_id += 1
 
     # -- ELASTIC
-    # Each slice requesting Elastic CoS gets a dedicated queue, dimensioned to guarantee the given
-    # minimum rate during congestion. Best-Effort is treated as an Elastic queues.
+    # Each slice requesting Elastic service gets a dedicated queue, dimensioned to guarantee the
+    # given minimum rate during congestion, but allowed to grow when higher priority queues are
+    # unused. Best-Effort is treated as an Elastic queues, but uses a different pool.
+    el_min_rates_bps = el_min_rates_bps.copy()
     el_min_rates_bps.append(BE_MIN_RATE_BPS)
-    el_weights = [ceil(1024 * x / sum(el_min_rates_bps)) for x in el_min_rates_bps]
+
+    # Compute WRR scheduling weights to distribute the available bandwidth.
+    el_wrr_weights = [ceil(1023 * x / sum(el_min_rates_bps)) for x in el_min_rates_bps]
+
+    # As before, set base_use_limit proportionally to the queue maximum rate. In this case, the
+    # queue maximum rate is not enforced through shaping (hence it is not the same for all ports),
+    # but it is proportional to the link bandwidth (port rate).
+    el_pool_size = pool_sizes[EL_APP_POOL]
+    port_factor = port_rate_bps / sum(port_rates_bps)
+    el_rate_factors = [x / sum(el_min_rates_bps[:-1]) for x in el_min_rates_bps[:-1]]
+    el_base_use_limits = [floor(el_pool_size * port_factor * x) for x in el_rate_factors]
+
+    # Do the same for the Best-Effort pool, we have only one BE queue per port.
+    be_pool_size = pool_sizes[BE_APP_POOL]
+    be_base_use_limit = floor(be_pool_size * port_rate_bps / sum(port_rates_bps))
+
+    # Check oversubscription.
     el_avail_bw_bps = (1 - rt_link_util - ct_util) * port_rate_bps
     assert sum(el_min_rates_bps) <= el_avail_bw_bps, \
         f"Not enough bandwidth to allocate Elastic slices: " \
         f"requested={format_bps(sum(el_min_rates_bps))}, " \
         f"available={format_bps(el_avail_bw_bps)}"
 
-    for i in range(len(el_min_rates_bps)):
-        if i == len(el_min_rates_bps) - 1:
+    el_queue_count = len(el_min_rates_bps)
+    for i in range(el_queue_count):
+        if i == el_queue_count - 1:
             # Last one is Best-Effort
             name = "Best-Effort"
-            app_pool = 1
+            app_pool = BE_APP_POOL
+            pool_size = pool_sizes[BE_APP_POOL]
+            base_use_limit = be_base_use_limit
         else:
             name = f"Elastic {i + 1}"
-            app_pool = 2
+            app_pool = EL_APP_POOL
+            pool_size = pool_sizes[EL_APP_POOL]
+            base_use_limit = el_base_use_limits[i]
         queue_mappings.append(queue_mapping(
             descr=f"{name} ({format_bps(el_min_rates_bps[i])})",
             queue_id=next_queue_id,
-            prio=0,
-            # TODO (carmelo): make sure we can enforce byte-mode for WRR scheduling
-            weight=el_weights[i],
-            min_cells=100,
             app_pool=app_pool,
-            max_rate=0,
+            prio=0,
+            weight=el_wrr_weights[i],
+            base_use_limit=base_use_limit,
+            baf=DEFAULT_BAF_PERC,
+            pool_size=pool_size,
+            port_rate_bps=port_rate_bps,
         ))
         next_queue_id += 1
 
-    used_queues = 1 + len(rt_max_rates_bps) + len(el_min_rates_bps)
+    # Check that we have enough queues.
+    used_queues = 1 + rt_queue_count + el_queue_count
     assert used_queues <= port_queue_count, \
         "Not enough queues: " \
         f"requested={used_queues}, " \
         f"available={port_queue_count}"
 
     print(f"""    queue_configs {{
-        # {descr} ({used_queues} queues)
+        # {descr} ({format_bps(port_rate_bps)}, {used_queues} queues)
         sdk_port: {sdk_port}\n{NEW_LINE.join(queue_mappings)}
     }}""")
 
 
-def pool_config(pool, size, enable_color_drop, limit_yellow, limit_red):
+def pool_config(descr, pool, size, enable_color_drop, limit_yellow=0, limit_red=0):
     """
     Prints a pool_configs blob with the given parameters.
-    :param pool: pool number (0-4)
+    :param descr: a description of the pool
+    :param pool: pool number (0-3)
     :param size: number of cells allocated to this pool
     :param enable_color_drop: whether to enable color-ware dropping
     :param limit_yellow: number of used cells after which yellow packets will be dropped
@@ -204,6 +318,7 @@ def pool_config(pool, size, enable_color_drop, limit_yellow, limit_red):
     :return:
     """
     print(f"""    pool_configs {{
+        # {descr}
         pool: EGRESS_APP_POOL_{pool}
         pool_size: {size}
         enable_color_drop: {enable_color_drop}
@@ -212,66 +327,95 @@ def pool_config(pool, size, enable_color_drop, limit_yellow, limit_red):
         color_drop_limit_red: {limit_red}
     }}""")
 
+
 # Below from here is for testing only.
 # TODO (carmelo): pass all parameters at runtime, e.g., using yaml file with
 #  high-level parameters
 
 # TODO (carmelo): set port shaping rate (if different than channel speed)
 
+max_cells = 280000
 
-pool_allocations = [0.10, 0.85, 0.05]
-assert sum(pool_allocations) == 1, \
+# We leave a portion of the buffer unassigned for queues that don't have a pool (yet). Example of
+# such queues are those for the recirculation port, cpu port, etc.
+pool_allocations = [
+    1,   # Control (ultra low buffering)
+    9,   # Real-Time (low/medium buffering)
+    80,  # Elastic
+    9,   # Best-effort
+    1,   # Unassigned
+]
+assert sum(pool_allocations) == 100, \
     f"Invalid total pool allocation: " \
     f"expected=1, actual={sum(pool_allocations)}"
 
-for pool in range(len(pool_allocations)):
-    size = floor(pool_allocations[pool] * MAX_CELLS)
-    pool_config(
-        pool=pool,
-        size=size,
-        enable_color_drop="true",
-        limit_yellow=floor(0.90 * size),
-        limit_red=floor(0.80 * size),
+pool_sizes = [floor(x / 100 * max_cells) for x in pool_allocations]
+
+pool_config(
+    descr=f"Control ({pool_allocations[CT_APP_POOL]}%)",
+    pool=CT_APP_POOL,
+    size=pool_sizes[CT_APP_POOL],
+    enable_color_drop="false",
+)
+
+pool_config(
+    descr=f"Real-Time ({pool_allocations[RT_APP_POOL]}%)",
+    pool=RT_APP_POOL,
+    size=pool_sizes[RT_APP_POOL],
+    enable_color_drop="true",
+    limit_yellow=floor(0.90 * pool_sizes[RT_APP_POOL]),
+    limit_red=floor(0.80 * pool_sizes[RT_APP_POOL]),
+)
+
+pool_config(
+    descr=f"Elastic ({pool_allocations[EL_APP_POOL]}%)",
+    pool=EL_APP_POOL,
+    size=pool_sizes[EL_APP_POOL],
+    enable_color_drop="true",
+    limit_yellow=floor(0.90 * pool_sizes[EL_APP_POOL]),
+    limit_red=floor(0.80 * pool_sizes[EL_APP_POOL]),
+)
+
+pool_config(
+    descr=f"Best-Effort ({pool_allocations[BE_APP_POOL]}%)",
+    pool=BE_APP_POOL,
+    size=pool_sizes[BE_APP_POOL],
+    enable_color_drop="true",
+    limit_yellow=floor(0.90 * pool_sizes[BE_APP_POOL]),
+    limit_red=floor(0.80 * pool_sizes[BE_APP_POOL]),
+)
+
+slice_template = dict(
+    ct_count=50,
+    ct_slot_rate_pps=100,
+    ct_slot_burst_pkts=10,
+    ct_mtu_bytes=DEFAULT_MTU_BYTES,
+    rt_max_rates_bps=[30 * MBPS, 30 * MBPS, 20 * MBPS],
+    rt_max_burst_s=5 * MS,
+    el_min_rates_bps=[100 * MBPS, 200 * MBPS, 300 * MBPS],
+    pool_sizes=pool_sizes
+)
+
+ports = [
+    dict(descr="Base station",
+         sdk_port=268,
+         port_rate_bps=1 * GBPS,
+         port_queue_count=16),
+    dict(descr="Server",
+         sdk_port=269,
+         port_rate_bps=40 * GBPS,
+         port_queue_count=32),
+]
+
+for port in ports:
+    queue_config(
+        **port,
+        port_rates_bps=[x['port_rate_bps'] for x in ports],
+        **slice_template,
     )
 
-queue_config(
-    descr="Base station",
-    sdk_port=268,
-    port_rate_bps=1 * GBPS,
-    port_queue_count=16,
-    ct_count=50,
-    ct_meter_rate_pps=100,
-    ct_meter_burst_pkts=10,
-    ct_mtu_bytes=DEFAULT_MTU_BYTES,
-    rt_max_rates_bps=[30 * MBPS, 30 * MBPS, 20 * MBPS],
-    rt_max_burst_s=5 * MS,
-    el_min_rates_bps=[100 * MBPS, 200 * MBPS, 300 * MBPS]
-)
-
-queue_config(
-    descr="Server/spine",
-    sdk_port=269,
-    port_rate_bps=40 * GBPS,
-    port_queue_count=32,
-    ct_count=50,
-    ct_meter_rate_pps=100,
-    ct_meter_burst_pkts=10,
-    ct_mtu_bytes=DEFAULT_MTU_BYTES,
-    rt_max_rates_bps=[30 * MBPS, 30 * MBPS, 20 * MBPS],
-    rt_max_burst_s=5 * MS,
-    el_min_rates_bps=[100 * MBPS, 200 * MBPS, 300 * MBPS]
-)
-
-queue_config(
-    descr="Upstream router",
-    sdk_port=270,
-    port_rate_bps=10 * GBPS,
-    port_queue_count=32,
-    ct_count=50,
-    ct_meter_rate_pps=100,
-    ct_meter_burst_pkts=10,
-    ct_mtu_bytes=DEFAULT_MTU_BYTES,
-    rt_max_rates_bps=[30 * MBPS, 30 * MBPS, 20 * MBPS],
-    rt_max_burst_s=5 * MS,
-    el_min_rates_bps=[100 * MBPS, 200 * MBPS, 300 * MBPS]
-)
+# Check that we have allocated all pools using base_use_limits.
+# Account for small rounding errors (since we use floor).
+unused_pool_buls = [pool_sizes[i] - used_pool_buls[i] for i in range(len(used_pool_buls))]
+assert sum(unused_pool_buls) < 10, \
+    f"Too many unallocated cells, something is wrong with base_use_limit: {unused_pool_buls}"
