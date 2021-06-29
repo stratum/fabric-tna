@@ -3,20 +3,26 @@
 # SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 # -*- utf-8 -*-
 """
-Generates a snippet of Stratum's chassis_config file with the vendor_config for Tofino that realizes
-the SD-Fabric slicing/QoS model.
+Generates a snippet of Stratum's chassis_config file with a vendor_config blob for Tofino that
+realizes the SD-Fabric slicing/QoS model.
 
 Usage:
 
-./gen-stratum-qos-config.py qos-model.yml
-"""
+    ./gen-stratum-qos-config.py sample-qos-config.yml
 
+Requirements:
+
+    pip3 install pyyaml
+
+"""
+import argparse
+import yaml
 from math import ceil, floor
 
-GBPS = 10 ** 9
-MBPS = 10 ** 6
-MB = 10 ** 6
-MS = 10 ** -3
+GBPS = 10 ** 9  # gigabits per second
+MBPS = 10 ** 6  # megabits per second
+MB = 10 ** 6  # megabytes
+MS = 10 ** -3  # milliseconds
 NEW_LINE = "\n"
 
 DEFAULT_MTU_BYTES = 1500
@@ -28,9 +34,22 @@ RT_APP_POOL = 1  # Real-time
 EL_APP_POOL = 2  # Elastic
 BE_APP_POOL = 3  # Best-Effort
 
-# Minimum guaranteed bandwidth for Best-Effort.
+# Default queue IDs.
+BE_QUEUE_ID = 0  # Best-effort
+SYS_QUEUE_ID = 1  # System
+CT_QUEUE_ID = 2  # Control
+
+# Real-time and Elastic queues are allocated starting from this ID.
+FIRST_QUEUE_ID = 3
+
+# Queue priorities.
+EL_PRIORITY = 0  # Elastic and Best-Effort (lowest)
+RT_PRIORITY = 6  # Real-Time and System
+CT_PRIORITY = 7  # Control (highest)
+
+# Minimum guaranteed bandwidth for Best-Effort queue.
 BE_MIN_RATE_BPS = 10 * MBPS
-# Maximum bandwidth for System.
+# Maximum bandwidth for the System queue.
 SYS_MAX_RATE_BPS = 10 * MBPS
 # Maximum allowed link utilization for the Control queue.
 CT_MAX_UTIL = 0.10
@@ -81,8 +100,8 @@ def queue_mapping(descr, queue_id, prio, weight, app_pool,
     if max_rate_bps > 0:
         burst_ms = max_burst_bytes * 8 * 1000 / port_rate_bps
         max_rate = f"""max_rate_bytes {{
-                rate_bps: {int(max_rate_bps)}
-                burst_bytes: {int(max_burst_bytes)} # {burst_ms}ms
+              rate_bps: {int(max_rate_bps)}
+              burst_bytes: {int(max_burst_bytes)} # {burst_ms}ms
             }}"""
     else:
         max_rate = "# max_rate_bytes unset"
@@ -93,7 +112,7 @@ def queue_mapping(descr, queue_id, prio, weight, app_pool,
     global used_pool_buls
     used_pool_buls[app_pool] += base_use_limit
 
-    return f"""        queue_mapping {{
+    return f"""          queue_mapping {{
             # {descr}
             queue_id: {queue_id}
             priority: PRIO_{prio}
@@ -105,10 +124,10 @@ def queue_mapping(descr, queue_id, prio, weight, app_pool,
             baf: BAF_{baf}_PERCENT
             hysteresis: 0
             {max_rate}
-        }}"""
+          }}"""
 
 
-def queue_config(descr, sdk_port, port_rate_bps, port_queue_count, ct_count, ct_slot_rate_pps,
+def queue_config(descr, sdk_port, port_rate_bps, port_queue_count, ct_slot_count, ct_slot_rate_pps,
                  ct_slot_burst_pkts, ct_mtu_bytes, rt_max_rates_bps, rt_max_burst_s,
                  el_min_rates_bps, port_rates_bps, pool_sizes):
     """
@@ -117,7 +136,7 @@ def queue_config(descr, sdk_port, port_rate_bps, port_queue_count, ct_count, ct_
     :param sdk_port: SDK port number (i.e., DP_ID)
     :param port_rate_bps: link capacity or port shaping rate if set
     :param port_queue_count: how many queues can be allocated to this port
-    :param ct_count: number of Control slots, each slice an use one or more slots
+    :param ct_slot_count: number of Control slots, each slice an use one or more slots
     :param ct_slot_rate_pps: metering rate for each Control slot (in pps)
     :param ct_slot_burst_pkts: metering burst size for each Control slot (in pkts)
     :param ct_mtu_bytes: maximum transmission unit allowed for Control traffic
@@ -129,7 +148,10 @@ def queue_config(descr, sdk_port, port_rate_bps, port_queue_count, ct_count, ct_
     :param pool_sizes: the list of pool sizes (in cells)
     :return: prints the queue_config blob
     """
-    queue_mappings = []
+
+    # Preallocate list as we will not populate it in order.
+    queue_mappings = [None] * (3 + len(rt_max_rates_bps) + len(el_min_rates_bps))
+
     port_count = len(port_rates_bps)
 
     # -- CONTROL
@@ -145,8 +167,8 @@ def queue_config(descr, sdk_port, port_rate_bps, port_queue_count, ct_count, ct_
     # Set maximum shaping rate to handle the worst case, where all slices send a burst of packets at
     # the same time. Check that the rate doesn't exceed the maximum utilization threshold to avoid
     # excessive delay for lower priority queues.
-    ct_max_rate_pps = ct_slot_rate_pps * ct_count
-    ct_max_burst_pkts = ct_slot_burst_pkts * ct_count
+    ct_max_rate_pps = ct_slot_rate_pps * ct_slot_count
+    ct_max_burst_pkts = ct_slot_burst_pkts * ct_slot_count
     ct_max_rate_bps = ct_max_rate_pps * ct_mtu_bytes * 8
     ct_max_burst_bytes = ct_max_burst_pkts * ct_mtu_bytes
     ct_util = ct_max_rate_bps / port_rate_bps
@@ -161,12 +183,12 @@ def queue_config(descr, sdk_port, port_rate_bps, port_queue_count, ct_count, ct_
     # Weight doesn't matter, this is the only queue in the WRR/priority group
     ct_wrr_weight = 1
 
-    queue_mappings.append(queue_mapping(
-        descr=f"Control ({ct_count} slots, "
+    queue_mappings[CT_QUEUE_ID] = queue_mapping(
+        descr=f"Control ({ct_slot_count} slots, "
               f"{ct_slot_rate_pps}pps, {ct_slot_burst_pkts}MTUs burst, {ct_util} util)",
-        queue_id=0,
+        queue_id=CT_QUEUE_ID,
         app_pool=CT_APP_POOL,
-        prio=7,  # highest
+        prio=CT_PRIORITY,
         weight=ct_wrr_weight,
         base_use_limit=ct_base_use_limit,
         baf=DEFAULT_BAF_PERC,
@@ -174,7 +196,7 @@ def queue_config(descr, sdk_port, port_rate_bps, port_queue_count, ct_count, ct_
         max_rate_bps=ct_max_rate_bps,
         max_burst_bytes=ct_max_burst_bytes,
         port_rate_bps=port_rate_bps,
-    ))
+    )
 
     # -- REAL-TIME
     # Each slice requesting Real-Time service gets a dedicated queue, shaped to the given max rate
@@ -216,18 +238,21 @@ def queue_config(descr, sdk_port, port_rate_bps, port_queue_count, ct_count, ct_
         f"requested={format_bps(sum(rt_max_rates_bps))}, " \
         f"available={format_bps(ct_util * port_rate_bps)}"
 
-    next_queue_id = 1
+    next_queue_id = FIRST_QUEUE_ID
     for i in range(rt_queue_count):
         if i == rt_queue_count - 1:
             # Last one is System
             name = f"System"
+            queue_id = SYS_QUEUE_ID
         else:
             name = f"Real-Time {i + 1}"
-        queue_mappings.append(queue_mapping(
+            queue_id = next_queue_id
+            next_queue_id += 1
+        queue_mappings[queue_id] = queue_mapping(
             descr=f"{name} ({format_bps(rt_max_rates_bps[i])})",
-            queue_id=next_queue_id,
+            queue_id=queue_id,
             app_pool=RT_APP_POOL,
-            prio=6,
+            prio=RT_PRIORITY,
             weight=rt_wrr_weight,
             base_use_limit=rt_base_use_limits[i],
             baf=DEFAULT_BAF_PERC,
@@ -235,8 +260,7 @@ def queue_config(descr, sdk_port, port_rate_bps, port_queue_count, ct_count, ct_
             max_rate_bps=rt_max_rates_bps[i],
             max_burst_bytes=rt_max_burst_bytes,
             port_rate_bps=port_rate_bps
-        ))
-        next_queue_id += 1
+        )
 
     # -- ELASTIC
     # Each slice requesting Elastic service gets a dedicated queue, dimensioned to guarantee the
@@ -275,23 +299,25 @@ def queue_config(descr, sdk_port, port_rate_bps, port_queue_count, ct_count, ct_
             app_pool = BE_APP_POOL
             pool_size = pool_sizes[BE_APP_POOL]
             base_use_limit = be_base_use_limit
+            queue_id = BE_QUEUE_ID
         else:
             name = f"Elastic {i + 1}"
             app_pool = EL_APP_POOL
             pool_size = pool_sizes[EL_APP_POOL]
             base_use_limit = el_base_use_limits[i]
-        queue_mappings.append(queue_mapping(
+            queue_id = next_queue_id
+            next_queue_id += 1
+        queue_mappings[queue_id] = queue_mapping(
             descr=f"{name} ({format_bps(el_min_rates_bps[i])})",
-            queue_id=next_queue_id,
+            queue_id=queue_id,
             app_pool=app_pool,
-            prio=0,
+            prio=EL_PRIORITY,
             weight=el_wrr_weights[i],
             base_use_limit=base_use_limit,
             baf=DEFAULT_BAF_PERC,
             pool_size=pool_size,
             port_rate_bps=port_rate_bps,
-        ))
-        next_queue_id += 1
+        )
 
     # Check that we have enough queues.
     used_queues = 1 + rt_queue_count + el_queue_count
@@ -300,15 +326,15 @@ def queue_config(descr, sdk_port, port_rate_bps, port_queue_count, ct_count, ct_
         f"requested={used_queues}, " \
         f"available={port_queue_count}"
 
-    print(f"""    queue_configs {{
-        # {descr} ({format_bps(port_rate_bps)}, {used_queues} queues)
-        sdk_port: {sdk_port}\n{NEW_LINE.join(queue_mappings)}
-    }}""")
+    return f"""        queue_configs {{
+          # {descr} ({format_bps(port_rate_bps)}, {used_queues} queues)
+          sdk_port: {sdk_port}\n{NEW_LINE.join(queue_mappings)}
+        }}"""
 
 
 def pool_config(descr, pool, size, enable_color_drop, limit_yellow=0, limit_red=0):
     """
-    Prints a pool_configs blob with the given parameters.
+    Returns a pool_config blob with the given parameters.
     :param descr: a description of the pool
     :param pool: pool number (0-3)
     :param size: number of cells allocated to this pool
@@ -317,105 +343,145 @@ def pool_config(descr, pool, size, enable_color_drop, limit_yellow=0, limit_red=
     :param limit_red: number of cells after which red packets will be dropped
     :return:
     """
-    print(f"""    pool_configs {{
-        # {descr}
-        pool: EGRESS_APP_POOL_{pool}
-        pool_size: {size}
-        enable_color_drop: {enable_color_drop}
-        color_drop_limit_green: {size}
-        color_drop_limit_yellow: {limit_yellow}
-        color_drop_limit_red: {limit_red}
-    }}""")
+    return f"""        pool_configs {{
+          # {descr}
+          pool: EGRESS_APP_POOL_{pool}
+          pool_size: {size}
+          enable_color_drop: {enable_color_drop}
+          color_drop_limit_green: {size}
+          color_drop_limit_yellow: {limit_yellow}
+          color_drop_limit_red: {limit_red}
+        }}"""
 
 
-# Below from here is for testing only.
-# TODO (carmelo): pass all parameters at runtime, e.g., using yaml file with
-#  high-level parameters
+def vendor_config(yaml_config):
+    """
+    Returns a vendor_config blob
+    :param yaml_config: yaml QoS config
+    """
+    max_cells = yaml_config['max_cells']
 
-# TODO (carmelo): set port shaping rate (if different than channel speed)
+    pool_allocations = [
+        yaml_config['pool_allocations']['control'],
+        yaml_config['pool_allocations']['realtime'],
+        yaml_config['pool_allocations']['elastic'],
+        yaml_config['pool_allocations']['besteffort'],
+        yaml_config['pool_allocations']['unassigned'],
+    ]
+    assert sum(pool_allocations) == 100, \
+        f"Invalid total pool allocation percentage: " \
+        f"expected=100, actual={sum(pool_allocations)}"
 
-max_cells = 280000
+    pool_sizes = [floor(x / 100 * max_cells) for x in pool_allocations]
 
-# We leave a portion of the buffer unassigned for queues that don't have a pool (yet). Example of
-# such queues are those for the recirculation port, cpu port, etc.
-pool_allocations = [
-    1,   # Control (ultra low buffering)
-    9,   # Real-Time (low/medium buffering)
-    80,  # Elastic
-    9,   # Best-effort
-    1,   # Unassigned
-]
-assert sum(pool_allocations) == 100, \
-    f"Invalid total pool allocation: " \
-    f"expected=1, actual={sum(pool_allocations)}"
-
-pool_sizes = [floor(x / 100 * max_cells) for x in pool_allocations]
-
-pool_config(
-    descr=f"Control ({pool_allocations[CT_APP_POOL]}%)",
-    pool=CT_APP_POOL,
-    size=pool_sizes[CT_APP_POOL],
-    enable_color_drop="false",
-)
-
-pool_config(
-    descr=f"Real-Time ({pool_allocations[RT_APP_POOL]}%)",
-    pool=RT_APP_POOL,
-    size=pool_sizes[RT_APP_POOL],
-    enable_color_drop="true",
-    limit_yellow=floor(0.90 * pool_sizes[RT_APP_POOL]),
-    limit_red=floor(0.80 * pool_sizes[RT_APP_POOL]),
-)
-
-pool_config(
-    descr=f"Elastic ({pool_allocations[EL_APP_POOL]}%)",
-    pool=EL_APP_POOL,
-    size=pool_sizes[EL_APP_POOL],
-    enable_color_drop="true",
-    limit_yellow=floor(0.90 * pool_sizes[EL_APP_POOL]),
-    limit_red=floor(0.80 * pool_sizes[EL_APP_POOL]),
-)
-
-pool_config(
-    descr=f"Best-Effort ({pool_allocations[BE_APP_POOL]}%)",
-    pool=BE_APP_POOL,
-    size=pool_sizes[BE_APP_POOL],
-    enable_color_drop="true",
-    limit_yellow=floor(0.90 * pool_sizes[BE_APP_POOL]),
-    limit_red=floor(0.80 * pool_sizes[BE_APP_POOL]),
-)
-
-slice_template = dict(
-    ct_count=50,
-    ct_slot_rate_pps=100,
-    ct_slot_burst_pkts=10,
-    ct_mtu_bytes=DEFAULT_MTU_BYTES,
-    rt_max_rates_bps=[30 * MBPS, 30 * MBPS, 20 * MBPS],
-    rt_max_burst_s=5 * MS,
-    el_min_rates_bps=[100 * MBPS, 200 * MBPS, 300 * MBPS],
-    pool_sizes=pool_sizes
-)
-
-ports = [
-    dict(descr="Base station",
-         sdk_port=268,
-         port_rate_bps=1 * GBPS,
-         port_queue_count=16),
-    dict(descr="Server",
-         sdk_port=269,
-         port_rate_bps=40 * GBPS,
-         port_queue_count=32),
-]
-
-for port in ports:
-    queue_config(
-        **port,
-        port_rates_bps=[x['port_rate_bps'] for x in ports],
-        **slice_template,
+    slicing_template = dict(
+        ct_slot_count=yaml_config['control_slot_count'],
+        ct_slot_rate_pps=yaml_config['control_slot_rate_pps'],
+        ct_slot_burst_pkts=yaml_config['control_slot_burst_pkts'],
+        ct_mtu_bytes=yaml_config['control_mtu_bytes'],
+        rt_max_rates_bps=yaml_config['realtime_max_rates_bps'],
+        rt_max_burst_s=yaml_config['realtime_max_burst_s'],
+        el_min_rates_bps=yaml_config['elastic_min_rates_bps'],
+        pool_sizes=pool_sizes
     )
 
-# Check that we have allocated all pools using base_use_limits.
-# Account for small rounding errors (since we use floor).
-unused_pool_buls = [pool_sizes[i] - used_pool_buls[i] for i in range(len(used_pool_buls))]
-assert sum(unused_pool_buls) < 10, \
-    f"Too many unallocated cells, something is wrong with base_use_limit: {unused_pool_buls}"
+    ports = []
+    for yaml_port in yaml_config['ports']:
+        for sdk_port in yaml_port['sdk_ports']:
+            ports.append(dict(
+                descr=yaml_port['descr'],
+                sdk_port=sdk_port,
+                port_rate_bps=yaml_port['rate_bps'],
+                port_queue_count=yaml_port['queue_count']
+            ))
+
+    blobs = []
+
+    blobs.append(pool_config(
+        descr=f"Control ({pool_allocations[CT_APP_POOL]}%)",
+        pool=CT_APP_POOL,
+        size=pool_sizes[CT_APP_POOL],
+        enable_color_drop="false",
+    ))
+
+    blobs.append(pool_config(
+        descr=f"Real-Time ({pool_allocations[RT_APP_POOL]}%)",
+        pool=RT_APP_POOL,
+        size=pool_sizes[RT_APP_POOL],
+        enable_color_drop="true",
+        limit_yellow=floor(0.90 * pool_sizes[RT_APP_POOL]),
+        limit_red=floor(0.80 * pool_sizes[RT_APP_POOL]),
+    ))
+
+    blobs.append(pool_config(
+        descr=f"Elastic ({pool_allocations[EL_APP_POOL]}%)",
+        pool=EL_APP_POOL,
+        size=pool_sizes[EL_APP_POOL],
+        enable_color_drop="true",
+        limit_yellow=floor(0.90 * pool_sizes[EL_APP_POOL]),
+        limit_red=floor(0.80 * pool_sizes[EL_APP_POOL]),
+    ))
+
+    blobs.append(pool_config(
+        descr=f"Best-Effort ({pool_allocations[BE_APP_POOL]}%)",
+        pool=BE_APP_POOL,
+        size=pool_sizes[BE_APP_POOL],
+        enable_color_drop="true",
+        limit_yellow=floor(0.90 * pool_sizes[BE_APP_POOL]),
+        limit_red=floor(0.80 * pool_sizes[BE_APP_POOL]),
+    ))
+
+    for port in ports:
+        blobs.append(queue_config(
+            **port,
+            port_rates_bps=[x['port_rate_bps'] for x in ports],
+            **slicing_template,
+        ))
+
+    # Check that we have allocated all pool cells using base_use_limits.
+    unused_pool_buls = [pool_sizes[i] - used_pool_buls[i] for i in range(len(used_pool_buls))]
+    assert min(unused_pool_buls) >= 0, \
+        f"Too many allocated cells, something is wrong with base_use_limit: {unused_pool_buls}"
+    # Account for small rounding errors (since we use floor).
+    assert sum(unused_pool_buls) < max_cells * 0.0001, \
+        f"Too many unallocated cells, something is wrong with base_use_limit: {unused_pool_buls}"
+
+    return f"""vendor_config {{
+  tofino_config {{
+    node_id_to_qos_config {{
+      key: 1
+      value {{\n{NEW_LINE.join(blobs)}
+      }}
+    }}
+  }}
+}}
+"""
+
+
+def main():
+    parser = argparse.ArgumentParser(prog="gen-stratum-qos-config.py")
+    parser.add_argument("config", help="Path to yaml QoS config file")
+    parser.add_argument("-o", "--output", help="output path", default="-")
+    args = parser.parse_args()
+
+    yaml_path = args.config
+    output_path = args.output
+    yaml_config = None
+    with open(yaml_path, 'r') as stream:
+        try:
+            yaml_config = yaml.safe_load(stream)
+        except yaml.YAMLError as ex:
+            print(ex)
+            exit(1)
+
+    text = vendor_config(yaml_config)
+    if output_path == "-":
+        # std output
+        print(text)
+    else:
+        with open(output_path, "w") as output_file:
+            output_file.write(text)
+
+
+if __name__ == "__main__":
+    main()
