@@ -1049,7 +1049,8 @@ class P4RuntimeTest(BaseTest):
 
         for entity in self.read_request(req):
             if entity.HasField("register_entry"):
-                assert entity.register_entry.data.bitstring == expected_value
+                assert (int.from_bytes(entity.register_entry.data.bitstring, "big") ==
+                        int.from_bytes(expected_value, "big"))
 
         return None
 
