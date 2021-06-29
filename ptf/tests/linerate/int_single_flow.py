@@ -39,13 +39,13 @@ class IntSingleFlow(TRexTest, IntTest):
         if not success:
             sys.exit(1)
 
-        # Define generic TCP/IP packet
+        # Define generic TCP/IP packet, 1500 byte payload
         p = Ether() / IP(src=SOURCE_IP, dst=DEST_IP) / TCP() / ("*" * 1500)
 
-        # Define streams
+        # Define stream
         stream = STLStream(packet=STLPktBuilder(pkt=p, vm=[]), mode=STLTXCont())
 
-        # Add streams
+        # Add stream to client
         self.trex_client.add_streams(stream, ports=SENDER_PORTS)
 
         # Set up capture
@@ -57,24 +57,24 @@ class IntSingleFlow(TRexTest, IntTest):
             bpf_filter="udp and dst port 32766",
         )
 
-        # Start client
+        # Start stateless traffic
         self.trex_client.start(ports=SENDER_PORTS, mult=TMP_MULT, duration=TMP_DURATION)
-
-        # Wait on traffic
         self.trex_client.wait_on_traffic(ports=SENDER_PORTS)
 
-        # Tear down
+        # Close client once it has finished running
         success = self.tearDown()
         if not success:
             sys.exit(2)
 
-        # Stop capture
+        # Stop capturing traffic and save it
         output = "/tmp/int-single-flow-{}-{}.pcap".format(
             args.pkt_type, datetime.now().strftime("%Y%m%d-%H%M%S")
         )
         self.trex_client.stop_capture(capture["id"], output)
         analysis_report_pcap(output)
         list_port_status(self.trex_client.get_stats()
+
+        # TODO: parse data and verify results
 
     def runTest(self):
         # for test_args in get_test_args(traffic_dir="host-leaf-host", int_test_type="local"):
