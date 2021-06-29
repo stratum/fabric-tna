@@ -56,7 +56,7 @@ CT_MAX_UTIL = 0.10
 
 # Default buffer absorption factor used for all queues (percentage of unused pool cells above
 # base_use_limit).
-DEFAULT_BAF_PERC = 30
+DEFAULT_BAF_PERC = 33
 
 
 def format_bps(bps):
@@ -117,9 +117,9 @@ def queue_mapping(descr, queue_id, prio, weight, app_pool,
             queue_id: {queue_id}
             priority: PRIO_{prio}
             weight: {weight}
+            minimum_guaranteed_cells: 0
             pool: EGRESS_APP_POOL_{app_pool}
             # Tail drop at {queue_max_mtus} MTUs or earlier
-            minimum_guaranteed_cells: 0
             base_use_limit: {base_use_limit}
             baf: BAF_{baf}_PERCENT
             hysteresis: 0

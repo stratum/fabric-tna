@@ -57,14 +57,14 @@ ports:
     is_shaping_enabled: false
     queue_count: 8
     sdk_ports:
-      - 268
-      - 269
-      - 270
-      - 271
+      - 36
+      - 37
+      - 38
+      - 39
   - descr: Servers
     sdk_ports:
-      - 272
-      - 273
+      - 260
+      - 268
     rate_bps: 40000000000 # 40 Gbps
     is_shaping_enabled: false
     queue_count: 32
