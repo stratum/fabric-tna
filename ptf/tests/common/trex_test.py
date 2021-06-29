@@ -1,12 +1,6 @@
-from lib.base_test import BaseTest
-from argparse import ArgumentParser
+import importlib
+from base_test import *
 from trex.stl.api import STLClient, STLError
-from scapy.contrib.gtp import GTP_U_Header, GTPPDUSessionContainer
-from scapy.contrib.mpls import MPLS
-from scapy.layers.inet import IP, TCP, UDP
-from scapy.layers.sctp import SCTP
-from scapy.layers.vxlan import VXLAN
-from scapy.packet import bind_layer
 
 class TRexTest(BaseTest):
     def __init__(self):
@@ -19,10 +13,10 @@ class TRexTest(BaseTest):
 
         # attempt to connect to trex server
         try:
-            trex_client.connect()
-            trex_client.acquire()
-            trex_client.reset()  # Resets configs from all ports
-            trex_client.clear_stats()  # Clear status from all ports
+            self.trex_client.connect()
+            self.trex_client.acquire()
+            self.trex_client.reset()  # Resets configs from all ports
+            self.trex_client.clear_stats()  # Clear status from all ports
         except STLError as e:
             print('Failed connecting to TRex server: {0}'.format(e))
             return False

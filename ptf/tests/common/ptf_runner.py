@@ -238,23 +238,24 @@ def run_test(
     # "ptf_port" is ignored for now, we assume that ports are provided by
     # increasing values of ptf_port, in the range [0, NUM_IFACES[.
     port_map = OrderedDict()
-    with open(port_map_path, "r") as port_map_f:
-        port_list = json.load(port_map_f)
-        if generate_tv:
-            # interfaces string to be used to create interfaces in test runner
-            # container
-            interfaces = ""
-            # Create new portmap proto object for testvectors
-            tv_portmap = pmutils.get_new_portmap()
-        for entry in port_list:
-            p4_port = entry["p4_port"]
-            iface_name = entry["iface_name"]
-            port_map[p4_port] = iface_name
+    if trex_server_addr is None:
+        with open(port_map_path, "r") as port_map_f:
+            port_list = json.load(port_map_f)
             if generate_tv:
-                # Append iface_name to interfaces
-                interfaces = interfaces + " " + iface_name
-                # Append new entry to tv proto object
-                pmutils.add_new_entry(tv_portmap, p4_port, iface_name)
+                # interfaces string to be used to create interfaces in test runner
+                # container
+                interfaces = ""
+                # Create new portmap proto object for testvectors
+                tv_portmap = pmutils.get_new_portmap()
+            for entry in port_list:
+                p4_port = entry["p4_port"]
+                iface_name = entry["iface_name"]
+                port_map[p4_port] = iface_name
+                if generate_tv:
+                    # Append iface_name to interfaces
+                    interfaces = interfaces + " " + iface_name
+                    # Append new entry to tv proto object
+                    pmutils.add_new_entry(tv_portmap, p4_port, iface_name)
     if generate_tv:
         # ptf needs the interfaces mentioned in portmap to be running on
         # container
@@ -298,7 +299,7 @@ def run_test(
     if platform is not None:
         test_params += ";pltfm='{}'".format(platform)
     if trex_server_addr is not None:
-        test_params += ";trex_server_addr='{}".format(trex_server_addr)
+        test_params += ";trex_server_addr='{}'".format(trex_server_addr)
     test_params += ";profile='{}'".format(profile)
     cmd.append("--test-params={}".format(test_params))
     cmd.extend(extra_args)
@@ -311,6 +312,7 @@ def run_test(
     except Exception:
         error("Error when running PTF tests")
         return False
+
     return p.returncode == 0
 
 
@@ -360,7 +362,7 @@ def main():
         "--ptf-dir", help="Directory containing PTF tests", type=str, required=True,
     )
     parser.add_argument(
-        "--port-map", help="Path to JSON port mapping", type=str, required=True
+        "--port-map", help="Path to JSON port mapping", type=str, required=False
     )
     parser.add_argument(
         "--platform",
@@ -433,9 +435,10 @@ def main():
         )
         sys.exit(1)
     tofino_pipeline_config = args.tofino_pipeline_config
-    if not os.path.exists(args.port_map):
-        info("Port map path '{}' does not exist".format(args.port_map))
-        sys.exit(1)
+    if args.trex_address is None:
+        if os.path.exists(args.port_map):
+            info("Port map path '{}' does not exist".format(args.port_map))
+            sys.exit(1)
 
     success = True
 
@@ -451,7 +454,7 @@ def main():
         sys.exit(2)
 
     # if line rate test, set up and tear down TRex
-    if args.trex_address != None:
+    if args.trex_address is not None:
         trex_daemon_client = CTRexClient(args.trex_address)
         info("Starting TRex daemon client...")
         success = set_up_trex_server(
@@ -469,7 +472,7 @@ def main():
                 grpc_addr=args.grpc_addr,
                 cpu_port=args.cpu_port,
                 ptfdir=args.ptf_dir,
-                port_map_path=args.port_map,
+                port_map_path=None,
                 platform=args.platform,
                 generate_tv=args.generate_tv,
                 loopback=args.loopback,

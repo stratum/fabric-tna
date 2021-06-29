@@ -1,14 +1,8 @@
-from trex_test import *
-from base_test import autocleanup, tvsetup, tvskip
+from trex_test import TRexTest
+from base_test import *
 from fabric_test import *
 from ptf.testutils import group
-from scapy.contrib.gtp import GTP_U_Header, GTPPDUSessionContainer
-from scapy.contrib.mpls import MPLS
-from scapy.layers.inet import IP, TCP, UDP
-from scapy.layers.sctp import SCTP
-from scapy.layers.vxlan import VXLAN
-from scapy.packet import bind_layer
-import logging
+from scapy.layers.inet import IP, TCP
 import sys
 
 TMP_MULT="1pps"
@@ -72,7 +66,7 @@ class IntSingleFlow(TRexTest, IntTest):
         )
         self.trex_client.stop_capture(capture["id"], output)
         analysis_report_pcap(output)
-        list_port_status(self.trex_client.get_stats()
+        list_port_status(self.trex_client.get_stats())
 
         # TODO: parse data and verify results
 
@@ -81,4 +75,4 @@ class IntSingleFlow(TRexTest, IntTest):
             # doRunTest(test_args)
 
         # TODO: pkt, is_device_spine, send_report_to_spine
-        doRunTest(...)
+        self.doRunTest()
