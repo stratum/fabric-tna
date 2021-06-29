@@ -1,3 +1,6 @@
+# Copyright 2020-present Open Networking Foundation
+# SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
+
 from trex_test import TRexTest
 from base_test import *
 from fabric_test import *
