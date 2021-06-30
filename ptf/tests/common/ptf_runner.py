@@ -51,6 +51,23 @@ def warn(msg, *args, **kwargs):
 def info(msg, *args, **kwargs):
     logging.info(msg, *args, **kwargs)
 
+def stop_trex_daemon(trex_daemon_client):
+    info("Stopping trex daemon client...")
+    trex_daemon_client.stop_trex()
+    trex_daemon_client.kill_all_trexes()
+    # Wait until Trex enter the Idle state
+    start_time = time.time()
+    success = False
+    while time.time() - start_time < DEFAULT_KILL_TIMEOUT:
+        if trex_daemon_client.is_idle():
+            success = True
+            break
+        time.sleep(1)
+    if not success:
+        error(
+            "Unable to kill Trex process, please login "
+            + "to the server and kill it manually."
+        )
 
 def check_ifaces(ifaces):
     """
@@ -177,24 +194,7 @@ def set_up_trex_server(trex_daemon_client, trex_address, trex_config, force_rest
             return False
 
         if force_restart:
-            info("Killing all TRexes... with meteorite... Boom!")
-            trex_daemon_client.kill_all_trexes()
-
-            # Wait until Trex enter the Idle state
-            start_time = time.time()
-            success = False
-            while time.time() - start_time < DEFAULT_KILL_TIMEOUT:
-                if trex_daemon_client.is_idle():
-                    success = True
-                    break
-                time.sleep(1)
-
-            if not success:
-                error(
-                    "Unable to kill Trex process, please login "
-                    + "to the server and kill it manually."
-                )
-                return False
+            stop_trex_daemon(trex_daemon_client=trex_daemon_client)
 
         if not trex_daemon_client.is_idle():
             info("The Trex server process is running")
@@ -238,24 +238,23 @@ def run_test(
     # "ptf_port" is ignored for now, we assume that ports are provided by
     # increasing values of ptf_port, in the range [0, NUM_IFACES[.
     port_map = OrderedDict()
-    if trex_server_addr is None:
-        with open(port_map_path, "r") as port_map_f:
-            port_list = json.load(port_map_f)
+    with open(port_map_path, "r") as port_map_f:
+        port_list = json.load(port_map_f)
+        if generate_tv:
+            # interfaces string to be used to create interfaces in test runner
+            # container
+            interfaces = ""
+            # Create new portmap proto object for testvectors
+            tv_portmap = pmutils.get_new_portmap()
+        for entry in port_list:
+            p4_port = entry["p4_port"]
+            iface_name = entry["iface_name"]
+            port_map[p4_port] = iface_name
             if generate_tv:
-                # interfaces string to be used to create interfaces in test runner
-                # container
-                interfaces = ""
-                # Create new portmap proto object for testvectors
-                tv_portmap = pmutils.get_new_portmap()
-            for entry in port_list:
-                p4_port = entry["p4_port"]
-                iface_name = entry["iface_name"]
-                port_map[p4_port] = iface_name
-                if generate_tv:
-                    # Append iface_name to interfaces
-                    interfaces = interfaces + " " + iface_name
-                    # Append new entry to tv proto object
-                    pmutils.add_new_entry(tv_portmap, p4_port, iface_name)
+                # Append iface_name to interfaces
+                interfaces = interfaces + " " + iface_name
+                # Append new entry to tv proto object
+                pmutils.add_new_entry(tv_portmap, p4_port, iface_name)
     if generate_tv:
         # ptf needs the interfaces mentioned in portmap to be running on
         # container
@@ -273,9 +272,10 @@ def run_test(
         # Write the portmap proto object to testvectors/portmap.pb.txt
         pmutils.write_to_file(tv_portmap, os.getcwd())
 
-    if not generate_tv and not check_ifaces(port_map.values()):
-        error("Some interfaces are missing")
-        return False
+    if trex_server_addr is None:
+        if not generate_tv and not check_ifaces(port_map.values()):
+            error("Some interfaces are missing")
+            return False
 
     ifaces = []
     # FIXME
@@ -362,7 +362,7 @@ def main():
         "--ptf-dir", help="Directory containing PTF tests", type=str, required=True,
     )
     parser.add_argument(
-        "--port-map", help="Path to JSON port mapping", type=str, required=False
+        "--port-map", help="Path to JSON port mapping", type=str, required=True,
     )
     parser.add_argument(
         "--platform",
@@ -435,10 +435,9 @@ def main():
         )
         sys.exit(1)
     tofino_pipeline_config = args.tofino_pipeline_config
-    if args.trex_address is None:
-        if os.path.exists(args.port_map):
-            info("Port map path '{}' does not exist".format(args.port_map))
-            sys.exit(1)
+    if not os.path.exists(args.port_map):
+        info("Port map path '{}' does not exist".format(args.port_map))
+        sys.exit(1)
 
     success = True
 
@@ -472,7 +471,7 @@ def main():
                 grpc_addr=args.grpc_addr,
                 cpu_port=args.cpu_port,
                 ptfdir=args.ptf_dir,
-                port_map_path=None,
+                port_map_path=args.port_map,
                 platform=args.platform,
                 generate_tv=args.generate_tv,
                 loopback=args.loopback,
@@ -482,10 +481,12 @@ def main():
             )
             if not success:
                 error("Failed to run linerate tests!")
+                stop_trex_daemon(trex_daemon_client=trex_daemon_client)
                 sys.exit(4)
 
         info("Stopping trex daemon client...")
-        trex_daemon_client.stop_trex()
+        stop_trex_daemon(trex_daemon_client=trex_daemon_client)
+        
     else:
         info("Running unary test...")
         if not args.skip_test:

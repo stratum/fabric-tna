@@ -6,6 +6,7 @@ from base_test import *
 from fabric_test import *
 from ptf.testutils import group
 from scapy.layers.inet import IP, TCP
+from trex_stl_lib.api import STLPktBuilder, STLStream, STLTXCont
 import sys
 
 TMP_MULT="1pps"
@@ -32,7 +33,7 @@ class IntSingleFlow(TRexTest, IntTest):
         )
 
         # Connect TRex stateless client
-        success = self.trex_client.setUp()
+        success = self.setUp()
         if not success:
             sys.exit(1)
 
