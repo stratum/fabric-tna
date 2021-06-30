@@ -3,8 +3,9 @@
 # 320 cpu port is for mavericks (65Q)
 
 define run_tests
-    python3 -u ptf_runner.py --port-map port_map.veth.json \
+    python3 -u ptf_runner.py \
         --ptf-dir ../../tests/linerate --cpu-port 320 --device-id 1 \
+        --port-map port_map.hw.json \
         --grpc-addr "10.128.13.29:9559" \
         --p4info /p4c-out/p4info.txt \
         --tofino-pipeline-config /p4c-out/pipeline_config.pb.bin \

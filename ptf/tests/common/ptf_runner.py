@@ -272,10 +272,9 @@ def run_test(
         # Write the portmap proto object to testvectors/portmap.pb.txt
         pmutils.write_to_file(tv_portmap, os.getcwd())
 
-    if trex_server_addr is None:
-        if not generate_tv and not check_ifaces(port_map.values()):
-            error("Some interfaces are missing")
-            return False
+    if not generate_tv and not trex_server_addr and not check_ifaces(port_map.values()):
+        error("Some interfaces are missing")
+        return False
 
     ifaces = []
     # FIXME
@@ -484,7 +483,6 @@ def main():
                 stop_trex_daemon(trex_daemon_client=trex_daemon_client)
                 sys.exit(4)
 
-        info("Stopping trex daemon client...")
         stop_trex_daemon(trex_daemon_client=trex_daemon_client)
         
     else:
