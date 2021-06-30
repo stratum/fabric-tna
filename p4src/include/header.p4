@@ -299,8 +299,6 @@ struct bridged_metadata_base_t {
     bit<48>                  ig_tstamp;
     bit<16>                  ip_eth_type;
     bit<STATS_FLOW_ID_WIDTH> stats_flow_id;
-    slice_id_t               slice_id;
-    tc_t                     tc;
 #ifdef WITH_DOUBLE_VLAN_TERMINATION
     bool                     push_double_vlan;
     vlan_id_t                inner_vlan_id;
@@ -361,6 +359,8 @@ struct fabric_ingress_metadata_t {
     next_id_t                next_id;
     bool                     egress_port_set;
     bool                     punt_to_cpu;
+    slice_id_t               slice_id;
+    tc_t                     tc;
     // FIXME: checksum errors are set but never read, remove or test it
     bool                     ipv4_checksum_err;
     bool                     inner_ipv4_checksum_err;

@@ -22,8 +22,8 @@ control QoS (in ingress_headers_t hdr,
 
     table traffic_classes {
         key = {
-            fabric_md.bridged.base.slice_id: exact @name("slice_id");
-            fabric_md.bridged.base.tc:       exact @name("tc");
+            fabric_md.slice_id: exact @name("slice_id");
+            fabric_md.tc:       exact @name("tc");
         }
         actions = {
             set_queue;
