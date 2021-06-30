@@ -272,7 +272,7 @@ def run_test(
         # Write the portmap proto object to testvectors/portmap.pb.txt
         pmutils.write_to_file(tv_portmap, os.getcwd())
 
-    if (not generate_tv or not trex_server_addr) and not check_ifaces(port_map.values()):
+    if not generate_tv and not trex_server_addr and not check_ifaces(port_map.values()):
         error("Some interfaces are missing")
         return False
 
@@ -471,7 +471,7 @@ def main():
                 grpc_addr=args.grpc_addr,
                 cpu_port=args.cpu_port,
                 ptfdir=args.ptf_dir,
-                port_map_path=None,
+                port_map_path=args.port_map,
                 platform=args.platform,
                 generate_tv=args.generate_tv,
                 loopback=args.loopback,
