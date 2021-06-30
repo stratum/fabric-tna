@@ -398,8 +398,19 @@ control SpgwEgress(
         hdr.outer_ipv4.setValid();
         hdr.outer_udp.setValid();
         hdr.outer_gtpu.setValid();
-        // TODO: we need to reset this flag in the pipeline since the parser may
-        //       initialize it incorrectly.
+        // We need to reset this flag in the pipeline since the parser may
+        // initialize it incorrectly.
+        // The reason why the parser initialize this incorrectly is that
+        // 1) in the ingress deparser, we deparse the bridge header and the packet, the
+        //    bridge header can include some garbage value in padding fields.
+        // 2) in egress parser, when parsing a field from the bridge header to an
+        //    egress metadata (e.g., fabric_md.is_int = fabric_md.bridged.int_bmd.is_int)
+        //    the parser will parse at least one byte and palce the value(with OR operation)
+        //    to the PHV of that metadata.
+        // 3) Since the seq_flag(and some other flags) is sharing the same PHV with that
+        //    metadata, the parser will also apply some unknown/garbage value to other
+        //    fields in the same PHV.
+        // See note from July 1 SD-Fabric syncup note for more detail.
         hdr.outer_gtpu.seq_flag = 0;
     }
 
