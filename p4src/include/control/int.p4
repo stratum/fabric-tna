@@ -331,27 +331,7 @@ control IntEgress (
             @defaultonly nop;
         }
         default_action = nop();
-        const size = 32; // At most 4 entries per queue, 8 queues
-        // Set the report flag when the latency value is more than the threshold.
-        // If the latency threshold is less or equal to 0xffff, we will install 3 entries
-        // per queue, one from threshold to 0xffff, another from 0x10000 to 32-bit max.
-        // (qid, 0, threshold~0xffff): set_queue_report_flag
-        // (qid, 1~0xffff, 0~0xffff): set_queue_report_flag
-        // (qid, 0, 0~threshold): reset_quota
-        // For example, the threshold is 0x0000eeee, we need to report it when latency
-        // is between 0x0000eeee~0x0000ffff and 0x00010000~0xffffffff
-        // and we need to reset the quota if latency is between 0x00000000~0x0000eeee
-
-        // If the latency threshold is more than 0xffff, we will install 4 entries
-        // per queue, which only check the upper 16-bit
-        // (qid, (threshold >> 16), (threshold&0xffff)~0xffff): set_queue_report_flag
-        // (qid, (threshold >> 16)+1~0xffff, 0~0xffff): set_queue_report_flag
-        // (qid, (threshold >> 16), 0~(threshold&0xffff)): reset_quota
-        // (qid, 0~(threshold >> 16)-1, 0~0xffff): reset_quota
-        // For example, the threshold is 0x0010eeee, we need to report it when latency
-        // is between 0x0010eeee~0x0010ffff, 0x00110000~0xffffffff
-        // and need to reset the quota if latency is between
-        // 0x00000000~0x0001ffff and 0x00100000~0x0010eeee.
+        const size = INT_QUEUE_REPORT_TABLE_SIZE;
     }
 
     action set_config(bit<32> hop_latency_mask, bit<48> timestamp_mask) {
@@ -380,6 +360,8 @@ control IntEgress (
         hdr.report_udp.dport = mon_port;
         hdr.report_fixed_header.seq_no = get_seq_number.execute(hdr.report_fixed_header.hw_id);
         hdr.report_fixed_header.dqf = fabric_md.int_report_md.report_type;
+        // Need to manually set the rsvd field to zero since it can be set to a non-zero
+        // value in the parser.
         hdr.report_fixed_header.rsvd = 0;
         hdr.common_report_header.switch_id = switch_id;
         // Fix ethertype if we have stripped the MPLS header in the parser.
