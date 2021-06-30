@@ -135,7 +135,7 @@ public class FabricUpfTranslator {
         pdrBuilder.withCounterId(FabricUpfTranslatorUtil.getParamInt(action, CTR_ID))
                 .withLocalFarId(farId.getSessionLocalId())
                 .withSessionId(farId.getPfcpSessionId())
-                // TODO: remove once nce we replace priorities with QFI
+                // TODO: remove once we replace priorities with QFI
                 .withSchedulingPriority(0);
 
         if (FabricUpfTranslatorUtil.fieldIsPresent(match, HDR_TEID)) {
