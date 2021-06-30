@@ -238,24 +238,23 @@ def run_test(
     # "ptf_port" is ignored for now, we assume that ports are provided by
     # increasing values of ptf_port, in the range [0, NUM_IFACES[.
     port_map = OrderedDict()
-    if trex_server_addr is None:
-        with open(port_map_path, "r") as port_map_f:
-            port_list = json.load(port_map_f)
+    with open(port_map_path, "r") as port_map_f:
+        port_list = json.load(port_map_f)
+        if generate_tv:
+            # interfaces string to be used to create interfaces in test runner
+            # container
+            interfaces = ""
+            # Create new portmap proto object for testvectors
+            tv_portmap = pmutils.get_new_portmap()
+        for entry in port_list:
+            p4_port = entry["p4_port"]
+            iface_name = entry["iface_name"]
+            port_map[p4_port] = iface_name
             if generate_tv:
-                # interfaces string to be used to create interfaces in test runner
-                # container
-                interfaces = ""
-                # Create new portmap proto object for testvectors
-                tv_portmap = pmutils.get_new_portmap()
-            for entry in port_list:
-                p4_port = entry["p4_port"]
-                iface_name = entry["iface_name"]
-                port_map[p4_port] = iface_name
-                if generate_tv:
-                    # Append iface_name to interfaces
-                    interfaces = interfaces + " " + iface_name
-                    # Append new entry to tv proto object
-                    pmutils.add_new_entry(tv_portmap, p4_port, iface_name)
+                # Append iface_name to interfaces
+                interfaces = interfaces + " " + iface_name
+                # Append new entry to tv proto object
+                pmutils.add_new_entry(tv_portmap, p4_port, iface_name)
     if generate_tv:
         # ptf needs the interfaces mentioned in portmap to be running on
         # container
@@ -273,7 +272,7 @@ def run_test(
         # Write the portmap proto object to testvectors/portmap.pb.txt
         pmutils.write_to_file(tv_portmap, os.getcwd())
 
-    if not generate_tv and not check_ifaces(port_map.values()):
+    if (not generate_tv or not trex_server_addr) and not check_ifaces(port_map.values()):
         error("Some interfaces are missing")
         return False
 
