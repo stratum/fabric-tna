@@ -32,11 +32,6 @@ class IntSingleFlow(TRexTest, IntTest):
             no_send=True,
         )
 
-        # Connect TRex stateless client
-        success = self.setUp()
-        if not success:
-            sys.exit(1)
-
         # Define generic TCP/IP packet, 1500 byte payload
         p = Ether() / IP(src=SOURCE_IP, dst=DEST_IP) / TCP() / ("*" * 1500)
 
@@ -58,11 +53,6 @@ class IntSingleFlow(TRexTest, IntTest):
         # Start stateless traffic
         self.trex_client.start(ports=SENDER_PORTS, mult=TMP_MULT, duration=TMP_DURATION)
         self.trex_client.wait_on_traffic(ports=SENDER_PORTS)
-
-        # Close client once it has finished running
-        success = self.tearDown()
-        if not success:
-            sys.exit(2)
 
         # Stop capturing traffic and save it
         output = "/tmp/int-single-flow-{}-{}.pcap".format(
