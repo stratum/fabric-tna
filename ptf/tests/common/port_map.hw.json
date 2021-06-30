@@ -1,6 +1,12 @@
 [
     {
         "ptf_port": 0,
+        "p4_port": 0,
+        "iface_name": "lo",
+        "_comment": "dummy"
+    },
+    {
+        "ptf_port": 1,
         "p4_port": 296,
         "iface_name": "lo"
     },

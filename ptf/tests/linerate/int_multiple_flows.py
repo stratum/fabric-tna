@@ -29,8 +29,8 @@ class IntMultipleFlows(TRexTest, IntTest):
             is_next_hop_spine=False,
             prefix_len=32,
             with_another_pkt_later=True,
-            ig_port=self.port0,
-            eg_port=self.port1,
+            ig_port=self.port1,
+            eg_port=self.port2,
             no_send=True,
         )
 

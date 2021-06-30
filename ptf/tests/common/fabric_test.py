@@ -612,11 +612,10 @@ class FabricTest(P4RuntimeTest):
 
     def setUp(self):
         super(FabricTest, self).setUp()
-        self.port0 = self.swports(0)
         self.port1 = self.swports(1)
         self.port2 = self.swports(2)
         self.port3 = self.swports(3)
-        self.port4 = self.swports(3) # FIXME: we should use port 0~3 instead of 1~4
+        self.port4 = self.swports(4)
         self.setup_switch_info()
         self.set_up_packet_in_mirror()
 
