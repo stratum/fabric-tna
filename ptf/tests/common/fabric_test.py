@@ -272,6 +272,8 @@ PORT_TYPE_EDGE = b"\x01"
 PORT_TYPE_INFRA = b"\x02"
 PORT_TYPE_INTERNAL = b"\x03"
 
+DEFAULT_SLICE_ID = 0
+DEFAULT_TC = 0
 
 # Implements helper function for SCTP as PTF does not provide one.
 def simple_sctp_packet(
@@ -2032,7 +2034,8 @@ class SpgwSimpleTest(IPv4UnicastTest):
                 self.Exact("gtpu_is_valid", stringify(int(gtpu_valid), 1)),
             ],
             "FabricIngress.spgw.load_iface",
-            [("src_iface", stringify(iface_enum, 1))],
+            [("src_iface", stringify(iface_enum, 1)),
+             ("slice_id", stringify(DEFAULT_SLICE_ID, 1))],
         )
         self.write_request(req)
 
@@ -2095,6 +2098,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
                 ("ctr_id", stringify(ctr_id, 2)),
                 ("far_id", stringify(far_id, 4)),
                 ("needs_gtpu_decap", stringify(1, 1)),
+                ("tc", stringify(DEFAULT_TC, 1)),
             ],
         )
         self.write_request(req)
@@ -2140,6 +2144,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
                 ("ctr_id", stringify(ctr_id, 2)),
                 ("far_id", stringify(far_id, 4)),
                 ("needs_gtpu_decap", stringify(0, 1)),
+                ("tc", stringify(DEFAULT_TC, 1)),
             ],
         )
         self.write_request(req)
