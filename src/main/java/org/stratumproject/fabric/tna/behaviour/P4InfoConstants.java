@@ -70,8 +70,11 @@ public final class P4InfoConstants {
             PiMatchFieldId.of("mpls_label");
     public static final PiMatchFieldId HDR_NEXT_ID =
             PiMatchFieldId.of("next_id");
+    public static final PiMatchFieldId HDR_SLICE_ID =
+            PiMatchFieldId.of("slice_id");
     public static final PiMatchFieldId HDR_STATS_FLOW_ID =
             PiMatchFieldId.of("stats_flow_id");
+    public static final PiMatchFieldId HDR_TC = PiMatchFieldId.of("tc");
     public static final PiMatchFieldId HDR_TEID = PiMatchFieldId.of("teid");
     public static final PiMatchFieldId HDR_TUNNEL_IPV4_DST =
             PiMatchFieldId.of("tunnel_ipv4_dst");
@@ -118,6 +121,8 @@ public final class P4InfoConstants {
             PiTableId.of("FabricIngress.pre_next.next_mpls");
     public static final PiTableId FABRIC_INGRESS_PRE_NEXT_NEXT_VLAN =
             PiTableId.of("FabricIngress.pre_next.next_vlan");
+    public static final PiTableId FABRIC_INGRESS_QOS_TRAFFIC_CLASSES =
+            PiTableId.of("FabricIngress.qos.traffic_classes");
     public static final PiTableId FABRIC_INGRESS_SPGW_DOWNLINK_PDRS =
             PiTableId.of("FabricIngress.spgw.downlink_pdrs");
     public static final PiTableId FABRIC_INGRESS_SPGW_FARS =
@@ -158,6 +163,8 @@ public final class P4InfoConstants {
             PiCounterId.of("FabricIngress.pre_next.next_mpls_counter");
     public static final PiCounterId FABRIC_INGRESS_PRE_NEXT_NEXT_VLAN_COUNTER =
             PiCounterId.of("FabricIngress.pre_next.next_vlan_counter");
+    public static final PiCounterId FABRIC_INGRESS_QOS_TC_COUNTER =
+            PiCounterId.of("FabricIngress.qos.tc_counter");
     public static final PiCounterId FABRIC_INGRESS_SPGW_UPLINK_RECIRC_RULES_COUNTER =
             PiCounterId.of("FabricIngress.spgw.uplink_recirc.rules_counter");
     public static final PiCounterId FABRIC_INGRESS_STATS_FLOW_COUNTER =
@@ -239,6 +246,8 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.pre_next.set_mpls_label");
     public static final PiActionId FABRIC_INGRESS_PRE_NEXT_SET_VLAN =
             PiActionId.of("FabricIngress.pre_next.set_vlan");
+    public static final PiActionId FABRIC_INGRESS_QOS_SET_QUEUE =
+            PiActionId.of("FabricIngress.qos.set_queue");
     public static final PiActionId FABRIC_INGRESS_SPGW_DOWNLINK_PDR_DROP =
             PiActionId.of("FabricIngress.spgw.downlink_pdr_drop");
     public static final PiActionId FABRIC_INGRESS_SPGW_FAR_DROP =
@@ -253,8 +262,6 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.spgw.load_normal_far");
     public static final PiActionId FABRIC_INGRESS_SPGW_LOAD_PDR =
             PiActionId.of("FabricIngress.spgw.load_pdr");
-    public static final PiActionId FABRIC_INGRESS_SPGW_LOAD_PDR_QOS =
-            PiActionId.of("FabricIngress.spgw.load_pdr_qos");
     public static final PiActionId FABRIC_INGRESS_SPGW_LOAD_TUNNEL_FAR =
             PiActionId.of("FabricIngress.spgw.load_tunnel_far");
     public static final PiActionId FABRIC_INGRESS_SPGW_UPLINK_PDR_DROP =
@@ -302,6 +309,8 @@ public final class P4InfoConstants {
             PiActionParamId.of("port_type");
     public static final PiActionParamId QFI = PiActionParamId.of("qfi");
     public static final PiActionParamId QID = PiActionParamId.of("qid");
+    public static final PiActionParamId SLICE_ID =
+            PiActionParamId.of("slice_id");
     public static final PiActionParamId SMAC = PiActionParamId.of("smac");
     public static final PiActionParamId SRC_IFACE =
             PiActionParamId.of("src_iface");
@@ -309,6 +318,7 @@ public final class P4InfoConstants {
     public static final PiActionParamId SRC_MAC = PiActionParamId.of("src_mac");
     public static final PiActionParamId SWITCH_ID =
             PiActionParamId.of("switch_id");
+    public static final PiActionParamId TC = PiActionParamId.of("tc");
     public static final PiActionParamId TEID = PiActionParamId.of("teid");
     public static final PiActionParamId TIMESTAMP_MASK =
             PiActionParamId.of("timestamp_mask");

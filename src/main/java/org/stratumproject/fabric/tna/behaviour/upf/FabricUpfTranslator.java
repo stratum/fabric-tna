@@ -3,16 +3,16 @@
 package org.stratumproject.fabric.tna.behaviour.upf;
 
 import org.apache.commons.lang3.tuple.Pair;
-import org.onosproject.net.behaviour.upf.ForwardingActionRule;
-import org.onosproject.net.behaviour.upf.GtpTunnel;
-import org.onosproject.net.behaviour.upf.PacketDetectionRule;
-import org.onosproject.net.behaviour.upf.UpfInterface;
-import org.onosproject.net.behaviour.upf.UpfProgrammableException;
 import org.onlab.packet.Ip4Address;
 import org.onlab.packet.Ip4Prefix;
 import org.onlab.util.ImmutableByteSequence;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.net.DeviceId;
+import org.onosproject.net.behaviour.upf.ForwardingActionRule;
+import org.onosproject.net.behaviour.upf.GtpTunnel;
+import org.onosproject.net.behaviour.upf.PacketDetectionRule;
+import org.onosproject.net.behaviour.upf.UpfInterface;
+import org.onosproject.net.behaviour.upf.UpfProgrammableException;
 import org.onosproject.net.flow.DefaultFlowRule;
 import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
@@ -42,7 +42,6 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_ING
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_LOAD_IFACE;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_LOAD_NORMAL_FAR;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_LOAD_PDR;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_LOAD_PDR_QOS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_LOAD_TUNNEL_FAR;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_PDRS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_RECIRC_ALLOW;
@@ -58,8 +57,9 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_UE_ADD
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.NEEDS_GTPU_DECAP;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.NOTIFY_CP;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.QFI;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.QID;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.SLICE_ID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.SRC_IFACE;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TC;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TEID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TUNNEL_DST_ADDR;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TUNNEL_SRC_ADDR;
@@ -72,6 +72,8 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TUNNEL_SRC
 public class FabricUpfTranslator {
 
     private final FabricUpfStore fabricUpfStore;
+    private static final int DEFAULT_SLICE_ID = 0;
+    private static final int DEFAULT_TC = 0;
 
     public FabricUpfTranslator(FabricUpfStore fabricUpfStore) {
         this.fabricUpfStore = fabricUpfStore;
@@ -130,23 +132,11 @@ public class FabricUpfTranslator {
         int globalFarId = FabricUpfTranslatorUtil.getParamInt(action, FAR_ID);
         UpfRuleIdentifier farId = fabricUpfStore.localFarIdOf(globalFarId);
 
-        PiActionId actionId = action.id();
-        if (actionId.equals(FABRIC_INGRESS_SPGW_LOAD_PDR)) {
-            int schedulingPriority = 0;
-            pdrBuilder.withSchedulingPriority(schedulingPriority);
-        } else if (actionId.equals(FABRIC_INGRESS_SPGW_LOAD_PDR_QOS)) {
-            int queueId = FabricUpfTranslatorUtil.getParamInt(action, QID);
-            String schedulingPriority = fabricUpfStore.schedulingPriorityOf(queueId);
-            if (schedulingPriority == null) {
-                  throw new UpfProgrammableException("Undefined Scheduling Priority");
-            }
-            pdrBuilder.withSchedulingPriority(Integer.parseInt(schedulingPriority));
-        } else {
-            throw new UpfProgrammableException("Unknown action ID");
-        }
         pdrBuilder.withCounterId(FabricUpfTranslatorUtil.getParamInt(action, CTR_ID))
-                  .withLocalFarId(farId.getSessionLocalId())
-                  .withSessionId(farId.getPfcpSessionId());
+                .withLocalFarId(farId.getSessionLocalId())
+                .withSessionId(farId.getPfcpSessionId())
+                // TODO: remove once nce we replace priorities with QFI
+                .withSchedulingPriority(0);
 
         if (FabricUpfTranslatorUtil.fieldIsPresent(match, HDR_TEID)) {
             // F-TEID is only present for GTP-matching PDRs
@@ -330,26 +320,21 @@ public class FabricUpfTranslator {
             throw new UpfProgrammableException("Flexible PDRs not yet supported! Cannot translate " + pdr.toString());
         }
 
-        PiAction.Builder builder = PiAction.builder()
-                    .withParameters(Arrays.asList(
-                         new PiActionParam(CTR_ID, pdr.counterId()),
-                         new PiActionParam(FAR_ID, fabricUpfStore.globalFarIdOf(pdr.sessionId(), pdr.farId())),
-                         new PiActionParam(NEEDS_GTPU_DECAP, pdr.matchesEncapped() ? 1 : 0)
-                                ));
         if (pdr.hasSchedulingPriority()) {
-            String queueId = fabricUpfStore.queueIdOf(pdr.schedulingPriority());
-            if (queueId == null) {
-                throw new UpfProgrammableException("Udefined Scheduling Priority");
-            }
-            action = builder
-                    .withId(FABRIC_INGRESS_SPGW_LOAD_PDR_QOS)
-                    .withParameter(new PiActionParam(QID, Integer.parseInt(queueId)))
-                    .build();
-        } else {
-            action = builder
-                    .withId(FABRIC_INGRESS_SPGW_LOAD_PDR)
-                    .build();
+            // TODO: add support for mapping QFI to TC once we replace priorities with QFI
+            throw new UpfProgrammableException("PDR with scheduling priority not supported");
         }
+
+        action = PiAction.builder()
+                .withParameters(Arrays.asList(
+                        new PiActionParam(CTR_ID, pdr.counterId()),
+                        new PiActionParam(FAR_ID, fabricUpfStore.globalFarIdOf(pdr.sessionId(), pdr.farId())),
+                        new PiActionParam(NEEDS_GTPU_DECAP, pdr.matchesEncapped() ? 1 : 0),
+                        new PiActionParam(TC, DEFAULT_TC)
+                ))
+                .withId(FABRIC_INGRESS_SPGW_LOAD_PDR)
+                .build();
+
         return DefaultFlowRule.builder()
                 .forDevice(deviceId).fromApp(appId).makePermanent()
                 .forTable(tableId)
@@ -393,6 +378,7 @@ public class FabricUpfTranslator {
         PiAction action = PiAction.builder()
                 .withId(FABRIC_INGRESS_SPGW_LOAD_IFACE)
                 .withParameter(new PiActionParam(SRC_IFACE, interfaceTypeInt))
+                .withParameter(new PiActionParam(SLICE_ID, DEFAULT_SLICE_ID))
                 .build();
         return DefaultFlowRule.builder()
                 .forDevice(deviceId).fromApp(appId).makePermanent()
@@ -466,5 +452,4 @@ public class FabricUpfTranslator {
                 .withPriority(0)
                 .build();
     }
-
 }

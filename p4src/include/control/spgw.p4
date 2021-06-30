@@ -201,22 +201,13 @@ control SpgwIngress(
 #endif // WITH_INT
     }
 
-    // Remove after all ACE deployments will have pfcp-agent qith QoS support
-    @deprecated("Use load_pdr_qos instead")
-    action load_pdr(pdr_ctr_id_t    ctr_id,
-                    far_id_t        far_id,
-                    bool            needs_gtpu_decap) {
+    action load_pdr(pdr_ctr_id_t ctr_id,
+                    far_id_t     far_id,
+                    bool         needs_gtpu_decap,
+                    tc_t         tc) {
         fabric_md.spgw.far_id = far_id;
         fabric_md.bridged.spgw.pdr_ctr_id = ctr_id;
         fabric_md.spgw.needs_gtpu_decap = needs_gtpu_decap;
-        is_pdr_hit = true;
-    }
-
-    action load_pdr_qos(pdr_ctr_id_t ctr_id,
-                        far_id_t     far_id,
-                        bool         needs_gtpu_decap,
-                        tc_t         tc) {
-        load_pdr(ctr_id, far_id, needs_gtpu_decap);
         fabric_md.bridged.base.tc = tc;
         is_pdr_hit = true;
     }
@@ -229,7 +220,6 @@ control SpgwIngress(
         }
         actions = {
             load_pdr;
-            load_pdr_qos;
             @defaultonly downlink_pdr_drop;
         }
         size = NUM_DOWNLINK_PDRS;
@@ -243,7 +233,6 @@ control SpgwIngress(
         }
         actions = {
             load_pdr;
-            load_pdr_qos;
             @defaultonly uplink_pdr_drop;
         }
         size = NUM_UPLINK_PDRS;
