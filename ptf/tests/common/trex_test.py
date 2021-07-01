@@ -14,7 +14,6 @@ class TRexTest(P4RuntimeTest):
         super(TRexTest, self).setUp()
         # initialize the stateless client
         trex_server_addr = ptf.testutils.test_param_get('trex_server_addr')
-        print(f'Connecting STLClient to TRex server...{trex_server_addr}')
         self.trex_client = STLClient(server=trex_server_addr)
 
         # attempt to connect to trex server

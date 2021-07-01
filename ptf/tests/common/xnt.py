@@ -179,12 +179,12 @@ def analysis_report_pcap(pcap_file: str, total_flows_from_trace: int = 0) -> Non
             break
         pkt_processed += 1
 
-        # packet enter time in nano seconds
-        packet_enter_time = report_pkt.time * 10**9
-
         if INT_L45_REPORT_FIXED not in report_pkt:
             skipped += 1
             continue
+
+        # packet enter time in nano seconds (32-bit)
+        packet_enter_time = report_pkt[INT_L45_REPORT_FIXED].ingress_tstamp
 
         int_fix_report = report_pkt[INT_L45_REPORT_FIXED]
         if INT_L45_LOCAL_REPORT in report_pkt:
@@ -243,15 +243,19 @@ def analysis_report_pcap(pcap_file: str, total_flows_from_trace: int = 0) -> Non
 
         if five_tuple in five_tuple_to_prev_report_time:
             prev_report_time = five_tuple_to_prev_report_time[five_tuple]
-            irg = (packet_enter_time - prev_report_time) / 1000000000
-            if irg > 0:
+            irg = (packet_enter_time - prev_report_time)
+            # timestamp overflow
+            if irg < 0:
+                irg += 0xffffffff
+            irg /= 10**9
+            if irg != 0:
                 valid_report_irgs.append(irg)
+            else:
+                invalid_report_irgs.append(irg)
             flow_with_multiple_reports.add(five_tuple)
 
             if 0 < irg and irg < 0.9:
                 bad_report_irgs.append(irg)
-            if irg <= 0:
-                invalid_report_irgs.append(irg)
 
         five_tuple_to_prev_report_time[five_tuple] = packet_enter_time
 
