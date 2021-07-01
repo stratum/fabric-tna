@@ -12,10 +12,10 @@ from xnt import analysis_report_pcap
 TMP_MULT="10gbps"
 TMP_DURATION=5
 
-SENDER_PORTS = [0]
-INT_COLLECTOR_PORTS = [3]
+SENDER_PORTS = [0] # First port
+INT_COLLECTOR_PORTS = [2] # Third port
 
-class IntMultipleFlows(TRexTest, IntTest):
+class IntQueueReportTest(TRexTest, IntTest):
 
     def doRunTest(self, pkt, is_device_spine, send_report_to_spine):
 
@@ -40,6 +40,10 @@ class IntMultipleFlows(TRexTest, IntTest):
         # Add stream to client
         self.trex_client.add_streams(stream, ports=SENDER_PORTS)
 
+        # Put RX ports to promiscuous mode, otherwise it will drop all packets if the
+        # destination mac is not the port mac address.
+        self.trex_client.set_port_attr([1, 2], promiscuous=True)
+
         # Set up capture
         pkt_capture_limit = TMP_DURATION * 3
         self.trex_client.set_service_mode(ports=INT_COLLECTOR_PORTS, enabled=True)
@@ -55,7 +59,8 @@ class IntMultipleFlows(TRexTest, IntTest):
 
 
         # Stop capturing traffic and save it
-        output = "/tmp/int-single-flow-{}-{}.pcap".format(
+        # TODO: change the filename
+        output = "/tmp/int-multiple-flow-{}-{}.pcap".format(
             "dummy", datetime.now().strftime("%Y%m%d-%H%M%S")
         )
         self.trex_client.stop_capture(capture["id"], output)
