@@ -13,7 +13,7 @@ from scapy.fields import BitField, ShortField, XByteField, XIntField, XShortFiel
 from scapy.layers.inet import IP, TCP, UDP
 from scapy.layers.l2 import Ether
 from scapy.packet import Packet, bind_layers
-from scapy.utils import RawPcapReader, inet_aton
+from scapy.utils import PcapReader, inet_aton
 from scipy import stats
 
 class INT_META_HDR(Packet):
@@ -149,7 +149,7 @@ def get_readable_int_report_str(pkt: Packet) -> str:
 
 
 def analysis_report_pcap(pcap_file: str, total_flows_from_trace: int = 0) -> None:
-    pcap_reader = RawPcapReader(pcap_file)
+    pcap_reader = PcapReader(pcap_file)
     skipped = 0
     dropped = 0  # based on seq number
     prev_seq_no = {}  # HW ID -> seq number
@@ -172,17 +172,15 @@ def analysis_report_pcap(pcap_file: str, total_flows_from_trace: int = 0) -> Non
     pkt_processed = 0
     while True:
         try:
-            packet_info = pcap_reader.next()
+            report_pkt = pcap_reader.read_packet()
         except EOFError:
             break
         except StopIteration:
             break
         pkt_processed += 1
 
-        # packet_info = (raw-bytes, packet-metadata)
-        report_pkt = Ether(packet_info[0])
         # packet enter time in nano seconds
-        packet_enter_time = packet_info[1].sec * 1000000000 + packet_info[1].usec * 1000
+        packet_enter_time = report_pkt.time * 10**9
 
         if INT_L45_REPORT_FIXED not in report_pkt:
             skipped += 1
@@ -192,7 +190,6 @@ def analysis_report_pcap(pcap_file: str, total_flows_from_trace: int = 0) -> Non
         if INT_L45_LOCAL_REPORT in report_pkt:
             local_reports += 1
             int_report = report_pkt[INT_L45_LOCAL_REPORT]
-            packet_enter_time = int_report.egress_tstamp
             five_tuple_to_prev_report_time = five_tuple_to_prev_local_report_time
             flow_with_multiple_reports = flow_with_multiple_local_reports
             valid_report_irgs = valid_local_report_irgs
