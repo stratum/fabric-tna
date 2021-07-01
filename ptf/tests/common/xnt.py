@@ -3,7 +3,6 @@
 
 # eXtensible Network Telemetry
 
-import logging
 import os
 from os.path import abspath, exists, splitext
 
@@ -173,27 +172,24 @@ def analysis_report_pcap(pcap_file: str, total_flows_from_trace: int = 0) -> Non
     pkt_processed = 0
     while True:
         try:
-            packet_info = pcap_reader.next()
+            report_pkt = pcap_reader.read_packet()
         except EOFError:
             break
         except StopIteration:
             break
         pkt_processed += 1
 
-        # packet_info = (raw-bytes, packet-metadata)
-        report_pkt = Ether(packet_info[0])
-        # packet enter time in nano seconds
-        packet_enter_time = packet_info[1].sec * 1000000000 + packet_info[1].usec * 1000
-
         if INT_L45_REPORT_FIXED not in report_pkt:
             skipped += 1
             continue
+
+        # packet enter time in nano seconds
+        packet_enter_time = report_pkt[INT_L45_REPORT_FIXED].ingress_tstamp
 
         int_fix_report = report_pkt[INT_L45_REPORT_FIXED]
         if INT_L45_LOCAL_REPORT in report_pkt:
             local_reports += 1
             int_report = report_pkt[INT_L45_LOCAL_REPORT]
-            packet_enter_time = int_report.egress_tstamp
             five_tuple_to_prev_report_time = five_tuple_to_prev_local_report_time
             flow_with_multiple_reports = flow_with_multiple_local_reports
             valid_report_irgs = valid_local_report_irgs
@@ -247,15 +243,19 @@ def analysis_report_pcap(pcap_file: str, total_flows_from_trace: int = 0) -> Non
 
         if five_tuple in five_tuple_to_prev_report_time:
             prev_report_time = five_tuple_to_prev_report_time[five_tuple]
-            irg = (packet_enter_time - prev_report_time) / 1000000000
-            if irg > 0:
+            irg = (packet_enter_time - prev_report_time)
+            # timestamp overflow
+            if irg < 0:
+                irg += 0xffffffff
+            irg /= 10**9
+            if irg != 0:
                 valid_report_irgs.append(irg)
+            else:
+                invalid_report_irgs.append(irg)
             flow_with_multiple_reports.add(five_tuple)
 
             if 0 < irg and irg < 0.9:
                 bad_report_irgs.append(irg)
-            if irg <= 0:
-                invalid_report_irgs.append(irg)
 
         five_tuple_to_prev_report_time[five_tuple] = packet_enter_time
 
