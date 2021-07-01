@@ -17,6 +17,7 @@
 #include "include/control/next.p4"
 #include "include/control/hasher.p4"
 #include "include/control/stats.p4"
+#include "include/control/qos.p4"
 #ifdef WITH_SPGW
 #include "include/control/spgw.p4"
 #endif // WITH_SPGW
@@ -43,6 +44,7 @@ control FabricIngress (
     Acl() acl;
     Next() next;
     Hasher() hasher;
+    QoS() qos;
 #ifdef WITH_SPGW
     SpgwIngress() spgw;
 #endif // WITH_SPGW
@@ -79,6 +81,7 @@ control FabricIngress (
 #ifdef WITH_INT
         int_ingress.apply(hdr, fabric_md, ig_intr_md, ig_dprsr_md, ig_tm_md);
 #endif // WITH_INT
+        qos.apply(hdr, fabric_md, ig_tm_md);
     }
 }
 
