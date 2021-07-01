@@ -74,4 +74,3 @@ class IntSingleFlow(TRexTest, IntTest):
     def runTest(self):
         pkt = testutils.simple_tcp_packet()
         self.doRunTest(TRAFFIC_MULT, pkt, [False,False], False, False)
-   
