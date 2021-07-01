@@ -2034,8 +2034,10 @@ class SpgwSimpleTest(IPv4UnicastTest):
                 self.Exact("gtpu_is_valid", stringify(int(gtpu_valid), 1)),
             ],
             "FabricIngress.spgw.load_iface",
-            [("src_iface", stringify(iface_enum, 1)),
-             ("slice_id", stringify(DEFAULT_SLICE_ID, 1))],
+            [
+                ("src_iface", stringify(iface_enum, 1)),
+                ("slice_id", stringify(DEFAULT_SLICE_ID, 1)),
+            ],
         )
         self.write_request(req)
 
