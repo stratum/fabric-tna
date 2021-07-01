@@ -11,17 +11,17 @@
         "iface_name": "lo"
     },
     {
-        "ptf_port": 1,
+        "ptf_port": 2,
         "p4_port": 288,
         "iface_name": "lo"
     },
     {
-        "ptf_port": 2,
+        "ptf_port": 3,
         "p4_port": 272,
         "iface_name": "lo"
     },
     {
-        "ptf_port": 3,
+        "ptf_port": 4,
         "p4_port": 280,
         "iface_name": "lo"
     }
