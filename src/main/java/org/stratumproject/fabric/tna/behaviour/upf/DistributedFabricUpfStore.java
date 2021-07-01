@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 package org.stratumproject.fabric.tna.behaviour.upf;
 
-import com.google.common.collect.BiMap;
-import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.Maps;
 import org.onlab.util.ImmutableByteSequence;
 import org.onlab.util.KryoNamespace;
@@ -40,18 +38,6 @@ public final class DistributedFabricUpfStore implements FabricUpfStore {
     protected static final KryoNamespace.Builder SERIALIZER = KryoNamespace.newBuilder()
             .register(KryoNamespaces.API)
             .register(UpfRuleIdentifier.class);
-
-    // Mapping between scheduling priority ranges with Tofino priority queues
-    // i.e., default queues are 8 in Tofino
-    private static final BiMap<Integer, Integer> SCHEDULING_PRIORITY_MAP
-            = new ImmutableBiMap.Builder<Integer, Integer>()
-            // Highest scheduling priority for 3GPP is 1 and highest Tofino queue priority is 7
-            .put(1, 5)
-            .put(6, 4)
-            .put(7, 3)
-            .put(8, 2)
-            .put(9, 1)
-            .build();
 
     // Distributed local FAR ID to global FAR ID mapping
     protected ConsistentMap<UpfRuleIdentifier, Integer> farIdMap;
@@ -116,16 +102,6 @@ public final class DistributedFabricUpfStore implements FabricUpfStore {
         UpfRuleIdentifier farId = new UpfRuleIdentifier(pfcpSessionId, sessionLocalFarId);
         return globalFarIdOf(farId);
 
-    }
-
-    @Override
-    public String queueIdOf(int schedulingPriority) {
-        return (SCHEDULING_PRIORITY_MAP.get(schedulingPriority)).toString();
-    }
-
-    @Override
-    public String schedulingPriorityOf(int queueId) {
-        return (SCHEDULING_PRIORITY_MAP.inverse().get(queueId)).toString();
     }
 
     @Override

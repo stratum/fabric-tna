@@ -358,6 +358,8 @@ struct fabric_ingress_metadata_t {
     next_id_t                next_id;
     bool                     egress_port_set;
     bool                     punt_to_cpu;
+    slice_id_t               slice_id;
+    tc_t                     tc;
     // FIXME: checksum errors are set but never read, remove or test it
     bool                     ipv4_checksum_err;
     bool                     inner_ipv4_checksum_err;

@@ -30,6 +30,8 @@ parser FabricIngressParser (packet_in  packet,
         fabric_md.egress_port_set = false;
         fabric_md.punt_to_cpu = false;
         fabric_md.bridged.base.ip_eth_type = 0;
+        fabric_md.slice_id = SLICE_ID_UNKNOWN;
+        fabric_md.tc = TC_UNKNOWN;
 #ifdef WITH_INT
         fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UNKNOWN;
 #endif // WITH_INT
