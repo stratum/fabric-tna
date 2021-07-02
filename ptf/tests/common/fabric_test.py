@@ -2977,9 +2977,9 @@ class IntTest(IPv4UnicastTest):
 
     def set_up_latency_threshold_for_q_report(self, threshold_trigger, threshold_reset):
         queue_id = 0
-        def set_up_queue_report_table_ingernal(upper, lower, action):
+        def set_up_queue_report_table_internal(upper, lower, action):
             self.send_request_add_entry_to_action(
-                "FabricEgress.int_egress.queue_report",
+                "FabricEgress.int_egress.queue_latency_thresholds",
                 [
                     self.Exact("egress_qid", stringify(queue_id, 1)),
                     self.Range("hop_latency_upper", *[stringify(v, 2) for v in upper]),
@@ -2992,34 +2992,39 @@ class IntTest(IPv4UnicastTest):
 
         if threshold_trigger <= 0xffff:
             # from threshold to 0xffff
-            set_up_queue_report_table_ingernal([0, 0], [threshold_trigger, 0xffff], "set_queue_report_flag")
+            set_up_queue_report_table_internal([0, 0], [threshold_trigger, 0xffff], "check_quota")
             # from 0x10000 to 32-bit max
-            set_up_queue_report_table_ingernal([1, 0xffff], [0, 0xffff], "set_queue_report_flag")
+            set_up_queue_report_table_internal([1, 0xffff], [0, 0xffff], "check_quota")
         else:
             threshold_upper = (threshold_trigger >> 16)
             threshold_lower = (threshold_trigger & 0xffff)
             # from lower 16-bit of threshold to 0xffff
-            set_up_queue_report_table_ingernal([threshold_upper, threshold_upper], [threshold_lower, 0xffff], "set_queue_report_flag")
+            set_up_queue_report_table_internal([threshold_upper, threshold_upper], [threshold_lower, 0xffff], "check_quota")
             if threshold_upper != 0xffff:
                 # from upper 16-bit of threshold + 1 to 32-bit max
-                set_up_queue_report_table_ingernal([threshold_upper+1, 0xffff], [0, 0xffff], "set_queue_report_flag")
+                set_up_queue_report_table_internal([threshold_upper+1, 0xffff], [0, 0xffff], "check_quota")
 
         if threshold_reset <= 0xffff:
             # reset quota if latency is below threshold
             threshold_reset = threshold_reset - 1 if threshold_reset > 0 else 0
-            set_up_queue_report_table_ingernal([0, 0], [0, threshold_reset], "reset_quota")
+            set_up_queue_report_table_internal([0, 0], [0, threshold_reset], "reset_quota")
         else:
             threshold_upper = (threshold_reset >> 16)
             threshold_lower = (threshold_reset & 0xffff)
             threshold_lower = threshold_lower - 1 if threshold_lower > 0 else 0
             # reset quota if latency is below threshold
-            set_up_queue_report_table_ingernal([0, threshold_upper-1], [0, 0xffff], "reset_quota")
-            set_up_queue_report_table_ingernal([threshold_upper, threshold_upper], [0, threshold_lower], "reset_quota")
+            set_up_queue_report_table_internal([0, threshold_upper-1], [0, 0xffff], "reset_quota")
+            set_up_queue_report_table_internal([threshold_upper, threshold_upper], [0, threshold_lower], "reset_quota")
 
     def set_queue_report_quota(self, port, qid, quota):
-        # We are using prot[5:0] ++ qid as register index.
-        index = (port & 0x3f) << 5 | qid
+        # We are using port[6:0] ++ qid as register index.
+        index = (port & 0x7f) << 5 | qid
         self.write_register("FabricEgress.int_egress.queue_report_quota", index, stringify(quota, 2))
+
+    def verify_quota(self, port, qid, quota):
+        # We are using port[6:0] ++ qid as register index.
+        index = (port & 0x7f) << 5 | qid
+        self.verify_register("FabricEgress.int_egress.queue_report_quota", index, stringify(quota, 2))
 
     def runIntTest(
         self,

@@ -125,8 +125,8 @@ public class FabricIntProgrammableTest {
                     .put(0x202, 0x144)
                     .put(0x203, 0x1c4).build();
     private static final MacAddress SWITCH_MAC = MacAddress.valueOf("00:00:00:00:01:80");
-    private static final long DEFAULT_QUEUE_REPORT_LATENCY_THRESHOLD = 1000; // ns
-    private static final byte DEFAULT_QUEUE_SIZE = 16;
+    private static final long DEFAULT_QUEUE_REPORT_LATENCY_THRESHOLD = 2000; // ns
+    private static final byte MAX_QUEUES = 32;
 
     private FabricIntProgrammable intProgrammable;
     private FlowRuleService flowRuleService;
@@ -854,18 +854,18 @@ public class FabricIntProgrammableTest {
             groupService.addGroup(capture(capturedGroup));
         });
 
-        for (byte queueId = 0; queueId < DEFAULT_QUEUE_SIZE; queueId++) {
+        for (byte queueId = 0; queueId < MAX_QUEUES; queueId++) {
             FlowRule queueReportFlow = buildQueueReportFlow(queueId,
                     new long[]{0, 0},
                     new long[]{DEFAULT_QUEUE_REPORT_LATENCY_THRESHOLD, 0xffff},
-                    P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_SET_QUEUE_REPORT_FLAG);
+                    P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_CHECK_QUOTA);
             expectedFlows.add(queueReportFlow);
             flowRuleService.applyFlowRules(capture(capturedFlow));
 
             queueReportFlow = buildQueueReportFlow(queueId,
                     new long[]{1, 0xffff},
                     new long[]{0, 0xffff},
-                    P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_SET_QUEUE_REPORT_FLAG);
+                    P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_CHECK_QUOTA);
             expectedFlows.add(queueReportFlow);
             flowRuleService.applyFlowRules(capture(capturedFlow));
 
@@ -887,7 +887,7 @@ public class FabricIntProgrammableTest {
             assertEquals(expectGroup, actualGroup);
         }
 
-        for (int i = 0; i < DEFAULT_QUEUE_SIZE; i++) {
+        for (int i = 0; i < MAX_QUEUES; i++) {
             for (int fi = 0; fi < 3; fi++) {
                 int index = i * 3 + fi;
                 FlowRule expectedFlow = expectedFlows.get(index);
@@ -948,7 +948,7 @@ public class FabricIntProgrammableTest {
                 .build();
         return DefaultFlowRule.builder()
             .forDevice(LEAF_DEVICE_ID)
-            .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_QUEUE_REPORT)
+            .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_QUEUE_LATENCY_THRESHOLDS)
             .withSelector(selector)
             .withTreatment(treatment)
             .makePermanent()

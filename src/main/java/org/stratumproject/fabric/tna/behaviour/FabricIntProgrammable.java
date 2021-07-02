@@ -78,8 +78,8 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
             ImmutableByteSequence.copyFrom(
                     HexString.fromHexString("ffffc0000000", ""));
     // Default latency threshold for queue report and queue size.
-    private static final long DEFAULT_QUEUE_REPORT_LATENCY_THRESHOLD = 1000; // ns
-    private static final byte DEFAULT_QUEUE_SIZE = 16;
+    private static final long DEFAULT_QUEUE_REPORT_LATENCY_THRESHOLD = 2000; // ns
+    private static final byte MAX_QUEUES = 32;
 
     private static final Map<Integer, Integer> QUAD_PIPE_MIRROR_SESS_TO_RECIRC_PORTS =
             ImmutableMap.<Integer, Integer>builder()
@@ -102,7 +102,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
             P4InfoConstants.FABRIC_INGRESS_INT_WATCHLIST_WATCHLIST,
             P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_REPORT,
             P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_CONFIG,
-            P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_QUEUE_REPORT
+            P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_QUEUE_LATENCY_THRESHOLDS
     );
     private static final short BMD_TYPE_EGRESS_MIRROR = 2;
     private static final short BMD_TYPE_INT_INGRESS_DROP = 4;
@@ -185,7 +185,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                     new DefaultGroupKey(KRYO.serialize(sessionId)),
                     sessionId, appId));
         });
-        for (byte queueId = 0; queueId < DEFAULT_QUEUE_SIZE; queueId++) {
+        for (byte queueId = 0; queueId < MAX_QUEUES; queueId++) {
             setUpQueueReportThreshold(
                     queueId,
                     DEFAULT_QUEUE_REPORT_LATENCY_THRESHOLD,
@@ -657,30 +657,30 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         long thresholdUpper = thresholdToTrigger >> 16;
         long thresholdLower = thresholdToTrigger & 0xffff;
 
-        // Values that higher than the threshold, sets the queue report flag.
+        // Latency values higher than this threshold, should trigger a quota check and report generation
         if (thresholdToTrigger <= 0xffff) {
             setUpQueueReportThresholdInternal(
                     queueId,
                     new long[] {0, 0},
                     new long[] {thresholdToTrigger, 0xffff},
-                    P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_SET_QUEUE_REPORT_FLAG);
+                    P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_CHECK_QUOTA);
             setUpQueueReportThresholdInternal(
                     queueId,
                     new long[] {1, 0xffff},
                     new long[] {0, 0xffff},
-                    P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_SET_QUEUE_REPORT_FLAG);
+                    P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_CHECK_QUOTA);
         } else {
             setUpQueueReportThresholdInternal(
                     queueId,
                     new long[] {thresholdUpper, thresholdUpper},
                     new long[] {thresholdLower, 0xffff},
-                    P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_SET_QUEUE_REPORT_FLAG);
+                    P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_CHECK_QUOTA);
             if (thresholdUpper < 0xffff) {
                 setUpQueueReportThresholdInternal(
                         queueId,
                         new long[] {thresholdUpper + 1, 0xffff},
                         new long[] {0, 0xffff},
-                        P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_SET_QUEUE_REPORT_FLAG);
+                        P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_CHECK_QUOTA);
             }
         }
 
@@ -729,7 +729,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 .build();
         final FlowRule queueReportFlow = DefaultFlowRule.builder()
             .forDevice(deviceId)
-            .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_QUEUE_REPORT)
+            .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_QUEUE_LATENCY_THRESHOLDS)
             .withSelector(selector)
             .withTreatment(treatment)
             .makePermanent()

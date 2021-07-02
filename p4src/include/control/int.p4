@@ -312,7 +312,7 @@ control IntEgress (
         }
     };
 
-    action set_queue_report_flag() {
+    action check_quota() {
         fabric_md.int_md.queue_report = check_quota_and_report.execute(queue_report_filter_index);
     }
 
@@ -320,14 +320,17 @@ control IntEgress (
         fabric_md.int_md.queue_report = reset_report_quota.execute(queue_report_filter_index);
     }
 
-    table queue_report {
+    table queue_latency_thresholds {
         key = {
+            // In SD-Fabric, we use the same traffic class<>queue ID mapping for all ports.
+            // Hence, there's no need to match on the egress port, we can use the same
+            // per-queue thresholds for all ports.
             eg_intr_md.egress_qid: exact @name("egress_qid");
             fabric_md.int_md.hop_latency[31:16]: range @name("hop_latency_upper");
             fabric_md.int_md.hop_latency[15:0]: range @name("hop_latency_lower");
         }
         actions = {
-            set_queue_report_flag;
+            check_quota;
             reset_quota;
             @defaultonly nop;
         }
@@ -508,16 +511,14 @@ control IntEgress (
     apply {
         fabric_md.int_md.hop_latency = eg_prsr_md.global_tstamp[31:0] - fabric_md.bridged.base.ig_tstamp[31:0];
         fabric_md.int_md.timestamp = eg_prsr_md.global_tstamp;
-        // Here we are using the lower 6-bit of port number with qid as the index of
-        // queue report filter.
-        // The reason we only use 6-bit is because there are only 64 ports per pipe,
-        // and the register between pipelines are indenpendent.
-        queue_report_filter_index = eg_intr_md.egress_port[5:0] ++ eg_intr_md.egress_qid;
+        // Here we use the lower 7-bit of port number with qid as the register index
+        // Only 7-bit because registers are independent between pipes.
+        queue_report_filter_index = eg_intr_md.egress_port[6:0] ++ eg_intr_md.egress_qid;
 
         // Check the queue alert before the config table since we need to check the
         // latency which is not quantized.
         if (!fabric_md.is_int_recirc && !fabric_md.bridged.int_bmd.is_int_report) {
-            queue_report.apply();
+            queue_latency_thresholds.apply();
         }
 
         config.apply();

@@ -95,8 +95,8 @@ public final class P4InfoConstants {
             PiTableId.of("FabricEgress.egress_next.egress_vlan");
     public static final PiTableId FABRIC_EGRESS_INT_EGRESS_CONFIG =
             PiTableId.of("FabricEgress.int_egress.config");
-    public static final PiTableId FABRIC_EGRESS_INT_EGRESS_QUEUE_REPORT =
-            PiTableId.of("FabricEgress.int_egress.queue_report");
+    public static final PiTableId FABRIC_EGRESS_INT_EGRESS_QUEUE_LATENCY_THRESHOLDS =
+            PiTableId.of("FabricEgress.int_egress.queue_latency_thresholds");
     public static final PiTableId FABRIC_EGRESS_INT_EGRESS_REPORT =
             PiTableId.of("FabricEgress.int_egress.report");
     public static final PiTableId FABRIC_EGRESS_PKT_IO_EGRESS_SWITCH_INFO =
@@ -184,6 +184,8 @@ public final class P4InfoConstants {
             PiActionId.of("FabricEgress.egress_next.pop_vlan");
     public static final PiActionId FABRIC_EGRESS_EGRESS_NEXT_PUSH_VLAN =
             PiActionId.of("FabricEgress.egress_next.push_vlan");
+    public static final PiActionId FABRIC_EGRESS_INT_EGRESS_CHECK_QUOTA =
+            PiActionId.of("FabricEgress.int_egress.check_quota");
     public static final PiActionId FABRIC_EGRESS_INT_EGRESS_DO_DROP_REPORT_ENCAP =
             PiActionId.of("FabricEgress.int_egress.do_drop_report_encap");
     public static final PiActionId FABRIC_EGRESS_INT_EGRESS_DO_DROP_REPORT_ENCAP_MPLS =
@@ -196,8 +198,6 @@ public final class P4InfoConstants {
             PiActionId.of("FabricEgress.int_egress.reset_quota");
     public static final PiActionId FABRIC_EGRESS_INT_EGRESS_SET_CONFIG =
             PiActionId.of("FabricEgress.int_egress.set_config");
-    public static final PiActionId FABRIC_EGRESS_INT_EGRESS_SET_QUEUE_REPORT_FLAG =
-            PiActionId.of("FabricEgress.int_egress.set_queue_report_flag");
     public static final PiActionId FABRIC_EGRESS_PKT_IO_EGRESS_SET_SWITCH_INFO =
             PiActionId.of("FabricEgress.pkt_io_egress.set_switch_info");
     public static final PiActionId FABRIC_EGRESS_SPGW_GTPU_ONLY =
