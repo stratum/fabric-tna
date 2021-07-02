@@ -182,6 +182,7 @@ struct spgw_ingress_metadata_t {
 
 #ifdef WITH_INT
 // Report Telemetry Headers v0.5
+@pa_no_overlay("egress", "hdr.report_fixed_header.rsvd")
 header report_fixed_header_t {
     bit<4>  ver;
     bit<4>  nproto;
@@ -265,13 +266,14 @@ header int_report_metadata_t {
 }
 
 @flexible
+@pa_no_overlay("egress", "fabric_md.bridged.int_bmd_is_int_report")
 struct int_bridged_metadata_t {
     bit<3>          report_type;
     MirrorId_t      mirror_session_id;
     IntDropReason_t drop_reason;
     QueueId_t       queue_id;
     PortId_t        egress_port;
-    bool            is_int;
+    bool            is_int_report; // Tells the egress pipeline that this is an INT report packet.
 }
 
 struct int_metadata_t {
@@ -398,7 +400,8 @@ struct fabric_egress_metadata_t {
     int_report_metadata_t int_report_md;
     int_metadata_t        int_md;
     bit<16>               int_ipv4_len;
-    bool                  is_int;
+    bool                  is_int_recirc; // Tells the pipeline that this packet will be
+                                         // recirculated later as an INT report.
 #endif // WITH_INT
 }
 

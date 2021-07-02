@@ -148,6 +148,7 @@ control IntWatchlist(
     action mark_to_report() {
         fabric_md.bridged.int_bmd.report_type = INT_REPORT_TYPE_LOCAL;
         ig_tm_md.deflect_on_drop = 1;
+        fabric_md.bridged.int_bmd.is_int_report = false;
 #ifdef WITH_DEBUG
         watchlist_counter.count();
 #endif // WITH_DEBUG
@@ -155,6 +156,7 @@ control IntWatchlist(
 
     action no_report() {
         fabric_md.bridged.int_bmd.report_type = INT_REPORT_TYPE_NO_REPORT;
+        fabric_md.bridged.int_bmd.is_int_report = false;
     }
 
     // Required by the control plane to distinguish entries used to exclude the INT
@@ -162,7 +164,7 @@ control IntWatchlist(
     action no_report_collector() {
         fabric_md.bridged.int_bmd.report_type = INT_REPORT_TYPE_NO_REPORT;
         // To let the egress pipeline know this is an INT report packet.
-        fabric_md.bridged.int_bmd.is_int = true;
+        fabric_md.bridged.int_bmd.is_int_report = true;
     }
 
     table watchlist {
@@ -187,7 +189,6 @@ control IntWatchlist(
     }
 
     apply {
-        fabric_md.bridged.int_bmd.is_int = false;
         watchlist.apply();
     }
 }
@@ -360,9 +361,6 @@ control IntEgress (
         hdr.report_udp.dport = mon_port;
         hdr.report_fixed_header.seq_no = get_seq_number.execute(hdr.report_fixed_header.hw_id);
         hdr.report_fixed_header.dqf = fabric_md.int_report_md.report_type;
-        // Need to manually set the rsvd field to zero since it can be set to a non-zero
-        // value in the parser.
-        hdr.report_fixed_header.rsvd = 0;
         hdr.common_report_header.switch_id = switch_id;
         // Fix ethertype if we have stripped the MPLS header in the parser.
         hdr.eth_type.value = fabric_md.int_report_md.ip_eth_type;
@@ -518,7 +516,7 @@ control IntEgress (
 
         // Check the queue alert before the config table since we need to check the
         // latency which is not quantized.
-        if (!fabric_md.is_int) {
+        if (!fabric_md.is_int_recirc && !fabric_md.bridged.int_bmd.is_int_report) {
             queue_report.apply();
         }
 
