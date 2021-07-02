@@ -2,27 +2,27 @@
     {
         "ptf_port": 0,
         "p4_port": 0,
-        "iface_name": "lo",
-        "_comment": "dummy"
+        "iface_name": "ptfdummy",
+        "comment": "Dummy port"
     },
     {
         "ptf_port": 1,
         "p4_port": 296,
-        "iface_name": "lo"
+        "iface_name": "xl710c5p1"
     },
     {
         "ptf_port": 2,
         "p4_port": 288,
-        "iface_name": "lo"
+        "iface_name": "xl710c5p2"
     },
     {
         "ptf_port": 3,
         "p4_port": 272,
-        "iface_name": "lo"
+        "iface_name": "xl710c6p1"
     },
     {
         "ptf_port": 4,
         "p4_port": 280,
-        "iface_name": "lo"
+        "iface_name": "xl710c6p2"
     }
 ]

@@ -56,6 +56,34 @@ def check_ifaces(ifaces):
     return ifaces <= present_ifaces
 
 
+def set_up_interfaces(ifaces):
+    for iface in ifaces:
+        try:
+            subprocess.check_call(["ip", "link", "set", iface, "up"])
+            subprocess.check_call(["ip", "link", "set", iface, "promisc", "on"])
+            subprocess.check_call(["sysctl", f"net.ipv6.conf.{iface}.disable_ipv6=1"])
+        except Exception as e:
+            info(f"Got an error when setting up {iface}: {e}")
+            return False
+    return True
+
+
+def create_dummy_interface():
+    try:
+        subprocess.check_output(["ip", "link", "show", "ptfdummy"])
+        return True # device already exists, skip
+    except:
+        # interface does not exists
+        pass
+    output = ""
+    try:
+        output = subprocess.check_output(["ip", "link", "add", "ptfdummy", "type", "veth"])
+    except Exception as e:
+        info(f"Got error when creating dummy interface \"ptfdummy\": {output}")
+        return False
+    return True
+
+
 def build_tofino_pipeline_config(tofino_pipeline_config_path):
     device_config = b""
     with open(tofino_pipeline_config_path, "rb") as pipeline_config_f:
@@ -247,6 +275,12 @@ def run_test(
             return False
         # Write the portmap proto object to testvectors/portmap.pb.txt
         pmutils.write_to_file(tv_portmap, os.getcwd())
+
+    if not create_dummy_interface():
+        return False
+
+    if not set_up_interfaces(port_map.values()):
+        return False
 
     if not generate_tv and not trex_server_addr and not check_ifaces(port_map.values()):
         error("Some interfaces are missing")
@@ -460,7 +494,7 @@ def main():
                 sys.exit(4)
 
         trex_daemon_client.stop_trex()
-        
+
     else:
         info("Running unary test...")
         if not args.skip_test:

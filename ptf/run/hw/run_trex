@@ -45,6 +45,8 @@ docker run --name "${testerRunName}" "${it}" --rm \
     -v "${P4C_OUT}":/p4c-out \
     -v /etc/localtime:/etc/localtime \
     -e PTF_FILTER="${PTF_FILTER}" \
+    -e SWITCH_ADDR="${SWITCH_ADDR}:9339" \
+    -e TREX="1" \
     --entrypoint /fabric-tna/run/hw/start_test.sh \
     "${TESTER_DOCKER_IMG}" \
     ${@}

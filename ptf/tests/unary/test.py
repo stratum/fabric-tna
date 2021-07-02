@@ -1939,7 +1939,7 @@ class FabricIntIngressDropReportTest(IntTest):
             tagged2=tagged[1],
             is_next_hop_spine=is_next_hop_spine,
             ig_port=self.port1,
-            eg_port=0,  # packet will be dropped by the pipeline
+            eg_port=self.port2,
             expect_int_report=True,
             is_device_spine=is_device_spine,
             send_report_to_spine=send_report_to_spine,
@@ -2287,6 +2287,10 @@ class FabricIntQueueReportTest(IntTest):
 
 
 @group("int")
+# Skip HW PTF test
+# We cannot varify value from the register which not belong to pipe 0 since the current
+# P4Runtime and Stratum only allows us to read register from pipe 0.
+@group("not_available_for_hw")
 class FabricIntQueueReportQuotaTest(IntTest):
     @tvsetup
     @autocleanup
@@ -2932,7 +2936,7 @@ class FabricIntLocalReportLoopbackModeTest(IntTest):
                     eth_src=HOST1_MAC,
                     eth_dst=SWITCH_MAC,
                     ip_src=HOST1_IPV4,
-                    ip_dst=HOST2_IPV4,
+                    ip_dst=self.get_single_use_ip(), # To prevent the flow filter drops the report.
                     pktlen=MIN_PKT_LEN,
                 )
                 self.doRunTest(pkt, HOST2_MAC, is_device_spine)
@@ -3132,6 +3136,7 @@ class FabricIntDeflectDropReportTest(IntTest):
             int_inner_pkt,
             is_device_spine,
             send_report_to_spine,
+            0, # hw_id
         )
 
         self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine)
