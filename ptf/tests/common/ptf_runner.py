@@ -54,7 +54,6 @@ def info(msg, *args, **kwargs):
 def stop_trex_daemon(trex_daemon_client):
     info("Stopping trex daemon client...")
     trex_daemon_client.stop_trex()
-    trex_daemon_client.kill_all_trexes()
     # Wait until Trex enter the Idle state
     start_time = time.time()
     success = False
@@ -195,6 +194,7 @@ def set_up_trex_server(trex_daemon_client, trex_address, trex_config, force_rest
 
         if force_restart:
             stop_trex_daemon(trex_daemon_client=trex_daemon_client)
+            trex_daemon_client.kill_all_trexes()
 
         if not trex_daemon_client.is_idle():
             info("The Trex server process is running")
