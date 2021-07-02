@@ -25,13 +25,7 @@ from p4.v1 import p4runtime_pb2, p4runtime_pb2_grpc
 from portmap import pmutils
 from target import targetutils
 from testvector import tvutils
-from trex_stf_lib.trex_client import (
-    CTRexClient,
-    ProtocolError,
-    TRexError,
-    TRexInUseError,
-    TRexRequestDenied,
-)
+from trex_stf_lib.trex_client import CTRexClient
 
 TREX_FILES_DIR = "/tmp/trex_files/"
 DEFAULT_KILL_TIMEOUT = 10
@@ -50,23 +44,6 @@ def warn(msg, *args, **kwargs):
 
 def info(msg, *args, **kwargs):
     logging.info(msg, *args, **kwargs)
-
-def stop_trex_daemon(trex_daemon_client):
-    info("Stopping trex daemon client...")
-    trex_daemon_client.stop_trex()
-    # Wait until Trex enter the Idle state
-    start_time = time.time()
-    success = False
-    while time.time() - start_time < DEFAULT_KILL_TIMEOUT:
-        if trex_daemon_client.is_idle():
-            success = True
-            break
-        time.sleep(1)
-    if not success:
-        error(
-            "Unable to kill Trex process, please login "
-            + "to the server and kill it manually."
-        )
 
 def check_ifaces(ifaces):
     """
@@ -193,7 +170,6 @@ def set_up_trex_server(trex_daemon_client, trex_address, trex_config, force_rest
             return False
 
         if force_restart:
-            stop_trex_daemon(trex_daemon_client=trex_daemon_client)
             trex_daemon_client.kill_all_trexes()
 
         if not trex_daemon_client.is_idle():
@@ -480,11 +456,11 @@ def main():
             )
             if not success:
                 error("Failed to run linerate tests!")
-                stop_trex_daemon(trex_daemon_client=trex_daemon_client)
+                trex_daemon_client.stop_trex()
                 sys.exit(4)
 
-        stop_trex_daemon(trex_daemon_client=trex_daemon_client)
-        
+        trex_daemon_client.stop_trex()
+
     else:
         info("Running unary test...")
         if not args.skip_test:
