@@ -2243,7 +2243,9 @@ class FabricIntQueueReportTest(IntTest):
             f"is_device_spine={is_device_spine}, send_report_to_spine={send_report_to_spine}, "
             f"watch_flow={watch_flow}..."
         )
-        pkt = getattr(testutils, "simple_{}_packet".format(pkt_type))()
+        pkt = getattr(testutils, "simple_{}_packet".format(pkt_type))(
+            ip_dst=self.get_single_use_ip()
+        )
         self.runIntQueueTest(
             pkt=pkt,
             tagged1=tagged[0],
