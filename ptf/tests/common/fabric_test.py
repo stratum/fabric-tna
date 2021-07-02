@@ -220,6 +220,7 @@ INT_DROP_REASON_EGRESS_NEXT_MISS = 130
 INT_DROP_REASON_DOWNLINK_PDR_MISS = 132
 INT_DROP_REASON_UPLINK_PDR_MISS = 133
 INT_DROP_REASON_FAR_MISS = 134
+INT_DEFAULT_QUEUE_REPORT_QUOTA = 1024
 
 PPPOE_CODE_SESSION_STAGE = 0x00
 
@@ -3347,11 +3348,14 @@ class IntTest(IPv4UnicastTest):
         self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine, watch_flow=watch_flow)
         # Every packet will always trigger the queue alert
         self.set_up_latency_threshold_for_q_report(threshold_trigger, threshold_reset)
+        # Sets the quota for the output port/queue of INT report to zero to make sure
+        # we won't keep getting reports for this type of packet.
+        self.set_queue_report_quota(port=self.port3, qid=0, quota=0)
+        for recirc_port in RECIRCULATE_PORTS:
+            self.set_queue_report_quota(port=recirc_port, qid=0, quota=0)
         if reset_quota:
             # To ensure we have enough quota to send a queue report.
             self.set_queue_report_quota(port=eg_port, qid=0, quota=1)
-        # To avoid the INT report packet being reported
-        self.set_up_watchlist_flow(SWITCH_IPV4, INT_COLLECTOR_IPV4, None, None, True)
 
         # TODO: Use MPLS test instead of IPv4 test if device is spine.
         # TODO: In these tests, there is only one egress port although the

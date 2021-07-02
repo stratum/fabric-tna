@@ -148,7 +148,6 @@ control IntWatchlist(
     action mark_to_report() {
         fabric_md.bridged.int_bmd.report_type = INT_REPORT_TYPE_LOCAL;
         ig_tm_md.deflect_on_drop = 1;
-        fabric_md.bridged.int_bmd.is_int_report = false;
 #ifdef WITH_DEBUG
         watchlist_counter.count();
 #endif // WITH_DEBUG
@@ -156,15 +155,12 @@ control IntWatchlist(
 
     action no_report() {
         fabric_md.bridged.int_bmd.report_type = INT_REPORT_TYPE_NO_REPORT;
-        fabric_md.bridged.int_bmd.is_int_report = false;
     }
 
     // Required by the control plane to distinguish entries used to exclude the INT
     // report flow to the collector.
     action no_report_collector() {
         fabric_md.bridged.int_bmd.report_type = INT_REPORT_TYPE_NO_REPORT;
-        // To let the egress pipeline know this is an INT report packet.
-        fabric_md.bridged.int_bmd.is_int_report = true;
     }
 
     table watchlist {
@@ -517,9 +513,7 @@ control IntEgress (
 
         // Check the queue alert before the config table since we need to check the
         // latency which is not quantized.
-        if (!fabric_md.is_int_recirc && !fabric_md.bridged.int_bmd.is_int_report) {
-            queue_latency_thresholds.apply();
-        }
+        queue_latency_thresholds.apply();
 
         config.apply();
         hdr.report_fixed_header.hw_id = 4w0 ++ eg_intr_md.egress_port[8:7];
