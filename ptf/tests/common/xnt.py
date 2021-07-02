@@ -259,27 +259,27 @@ def analysis_report_pcap(pcap_file: str, total_flows_from_trace: int = 0) -> Non
 
         five_tuple_to_prev_report_time[five_tuple] = packet_enter_time
 
-    print("Pkt processed: {}".format(pkt_processed))
+    logging.info("Pkt processed: {}".format(pkt_processed))
     # Local report
-    print("Local reports: {}".format(local_reports))
-    print("Total 5-tuples: {}".format(len(five_tuple_to_prev_local_report_time)))
-    print(
+    logging.info("Local reports: {}".format(local_reports))
+    logging.info("Total 5-tuples: {}".format(len(five_tuple_to_prev_local_report_time)))
+    logging.info(
         "Flows with multiple report: {}".format(len(flow_with_multiple_local_reports))
     )
-    print("Total INT IRGs: {}".format(len(valid_local_report_irgs)))
-    print("Total bad INT IRGs(<0.9s): {}".format(len(bad_local_report_irgs)))
-    print("Total invalid INT IRGs(<=0s): {}".format(len(invalid_local_report_irgs)))
+    logging.info("Total INT IRGs: {}".format(len(valid_local_report_irgs)))
+    logging.info("Total bad INT IRGs(<0.9s): {}".format(len(bad_local_report_irgs)))
+    logging.info("Total invalid INT IRGs(<=0s): {}".format(len(invalid_local_report_irgs)))
     if total_flows_from_trace != 0:
-        print(
+        logging.info(
             "Accuracy score: {}".format(
                 len(five_tuple_to_prev_local_report_time) * 100 / total_flows_from_trace
             )
         )
 
     if len(valid_local_report_irgs) <= 0:
-        print("No valid local report IRGs")
+        logging.info("No valid local report IRGs")
     else:
-        print(
+        logging.info(
             "Efficiency score: {}".format(
                 (len(valid_local_report_irgs) - len(bad_local_report_irgs))
                 * 100
@@ -291,22 +291,22 @@ def analysis_report_pcap(pcap_file: str, total_flows_from_trace: int = 0) -> Non
         plot_histogram_and_cdf(report_plot_file, valid_local_report_irgs)
 
     # Drop report
-    print("----------------------")
-    print("Drop reports: {}".format(drop_reports))
-    print("Total 5-tuples: {}".format(len(five_tuple_to_prev_drop_report_time)))
-    print(
+    logging.info("----------------------")
+    logging.info("Drop reports: {}".format(drop_reports))
+    logging.info("Total 5-tuples: {}".format(len(five_tuple_to_prev_drop_report_time)))
+    logging.info(
         "Flows with multiple report: {}".format(len(flow_with_multiple_drop_reports))
     )
-    print("Total INT IRGs: {}".format(len(valid_drop_report_irgs)))
-    print("Total bad INT IRGs(<0.9s): {}".format(len(bad_drop_report_irgs)))
-    print("Total invalid INT IRGs(<=0s): {}".format(len(invalid_drop_report_irgs)))
-    print("Total report dropped: {}".format(dropped))
-    print("Skipped packets: {}".format(skipped))
+    logging.info("Total INT IRGs: {}".format(len(valid_drop_report_irgs)))
+    logging.info("Total bad INT IRGs(<0.9s): {}".format(len(bad_drop_report_irgs)))
+    logging.info("Total invalid INT IRGs(<=0s): {}".format(len(invalid_drop_report_irgs)))
+    logging.info("Total report dropped: {}".format(dropped))
+    logging.info("Skipped packets: {}".format(skipped))
 
     if len(valid_drop_report_irgs) <= 0:
-        print("No valid drop report IRGs")
+        logging.info("No valid drop report IRGs")
     else:
-        print(
+        logging.info(
             "Efficiency score: {}".format(
                 (len(valid_drop_report_irgs) - len(bad_drop_report_irgs))
                 * 100
@@ -360,5 +360,5 @@ def plot_histogram_and_cdf(report_plot_file, valid_report_irgs):
         ax.text(x, y, "({:.2f}%: {:.2f})".format(percentiles[i], x))
 
     plt.savefig(report_plot_file)
-    print("Histogram and CDF graph can be found here: {}".format(report_plot_file))
+    logging.info("Histogram and CDF graph can be found here: {}".format(report_plot_file))
     return report_plot_file

@@ -51,6 +51,22 @@ def warn(msg, *args, **kwargs):
 def info(msg, *args, **kwargs):
     logging.info(msg, *args, **kwargs)
 
+def stop_trex_daemon(trex_daemon_client):
+    info("Stopping trex daemon client...")
+    trex_daemon_client.stop_trex()
+    # Wait until Trex enter the Idle state
+    start_time = time.time()
+    success = False
+    while time.time() - start_time < DEFAULT_KILL_TIMEOUT:
+        if trex_daemon_client.is_idle():
+            success = True
+            break
+        time.sleep(1)
+    if not success:
+        error(
+            "Unable to kill Trex process, please login "
+            + "to the server and kill it manually."
+        )
 
 def check_ifaces(ifaces):
     """
@@ -177,24 +193,8 @@ def set_up_trex_server(trex_daemon_client, trex_address, trex_config, force_rest
             return False
 
         if force_restart:
-            info("Killing all TRexes... with meteorite... Boom!")
+            stop_trex_daemon(trex_daemon_client=trex_daemon_client)
             trex_daemon_client.kill_all_trexes()
-
-            # Wait until Trex enter the Idle state
-            start_time = time.time()
-            success = False
-            while time.time() - start_time < DEFAULT_KILL_TIMEOUT:
-                if trex_daemon_client.is_idle():
-                    success = True
-                    break
-                time.sleep(1)
-
-            if not success:
-                error(
-                    "Unable to kill Trex process, please login "
-                    + "to the server and kill it manually."
-                )
-                return False
 
         if not trex_daemon_client.is_idle():
             info("The Trex server process is running")
@@ -361,7 +361,7 @@ def main():
         "--ptf-dir", help="Directory containing PTF tests", type=str, required=True,
     )
     parser.add_argument(
-        "--port-map", help="Path to JSON port mapping", type=str, required=False
+        "--port-map", help="Path to JSON port mapping", type=str, required=True,
     )
     parser.add_argument(
         "--platform",
@@ -434,10 +434,9 @@ def main():
         )
         sys.exit(1)
     tofino_pipeline_config = args.tofino_pipeline_config
-    if args.trex_address is None:
-        if os.path.exists(args.port_map):
-            info("Port map path '{}' does not exist".format(args.port_map))
-            sys.exit(1)
+    if not os.path.exists(args.port_map):
+        info("Port map path '{}' does not exist".format(args.port_map))
+        sys.exit(1)
 
     success = True
 
@@ -481,10 +480,11 @@ def main():
             )
             if not success:
                 error("Failed to run linerate tests!")
+                stop_trex_daemon(trex_daemon_client=trex_daemon_client)
                 sys.exit(4)
 
-        info("Stopping trex daemon client...")
-        trex_daemon_client.stop_trex()
+        stop_trex_daemon(trex_daemon_client=trex_daemon_client)
+        
     else:
         info("Running unary test...")
         if not args.skip_test:

@@ -40,6 +40,7 @@ docker run --name "${testerRunName}" "${it}" --rm \
     --network host \
     -v "${FABRIC_TNA_ROOT}/tmp":/tmp \
     -v "${PTF_ROOT}":/fabric-tna \
+    -v "${FABRIC_TNA_ROOT}/tmp":/tmp \
     -v "${P4C_OUT}":/p4c-out \
     -e PTF_FILTER="${PTF_FILTER}" \
     --entrypoint /fabric-tna/run/hw/start_test.sh \
