@@ -876,6 +876,9 @@ class P4RuntimeTest(BaseTest):
         register.data.bitstring = data
         return req, self.write_request(req)
 
+    # Reads the register value with a given register name and an index.
+    # Note that due to the limitation of P4Runtime protocol, we can only read
+    # the register value from the first pipeline(pipe 0).
     def read_register(self, register_name, index):
         req = self.get_new_read_request()
         entity = req.entities.add()

@@ -14,7 +14,7 @@ parser IntReportParser (packet_in packet,
     in egress_intrinsic_metadata_t eg_intr_md) {
 
     state start {
-        fabric_md.is_int = true;
+        fabric_md.is_int_recirc = true;
         common_egress_metadata_t common_eg_md = packet.lookahead<common_egress_metadata_t>();
         transition select(eg_intr_md.deflection_flag, common_eg_md.bmd_type, common_eg_md.mirror_type) {
             (1, _, _): parse_int_deflected_drop;

@@ -8,6 +8,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Range;
 import com.google.common.collect.Sets;
 import org.easymock.Capture;
 import org.easymock.CaptureType;
@@ -125,8 +126,8 @@ public class FabricIntProgrammableTest {
                     .put(0x202, 0x144)
                     .put(0x203, 0x1c4).build();
     private static final MacAddress SWITCH_MAC = MacAddress.valueOf("00:00:00:00:01:80");
-    private static final long DEFAULT_QUEUE_REPORT_LATENCY_THRESHOLD = 1000; // ns
-    private static final byte DEFAULT_QUEUE_SIZE = 16;
+    private static final long DEFAULT_QUEUE_REPORT_LATENCY_THRESHOLD = 2000; // ns
+    private static final byte MAX_QUEUES = 32;
 
     private FabricIntProgrammable intProgrammable;
     private FlowRuleService flowRuleService;
@@ -610,6 +611,65 @@ public class FabricIntProgrammableTest {
         verify(flowRuleService);
     }
 
+    /**
+     * Test both getMatchRangesForTrigger and getMatchRangesForReset to ensure we get
+     * the correct range values for the queue_latency_thresholds table.
+     */
+    @Test
+    public void testGetMatchRanges() {
+        // Test when threshold is less than 0xffff
+        List<List<Range<Integer>>> ranges = intProgrammable.getMatchRangesForTrigger(100);
+        // Range for trigger is [100, 0xffff]
+        assertFalse(numberInRange(0, ranges));
+        assertFalse(numberInRange(99, ranges));
+        assertTrue(numberInRange(100, ranges));
+        assertTrue(numberInRange(200, ranges));
+        assertTrue(numberInRange(0x0000ffff, ranges));
+        assertTrue(numberInRange(0x0001ffff, ranges));
+        assertTrue(numberInRange(0xffffffffL, ranges));
+
+        // Range for reset is [0, 100)
+        ranges = intProgrammable.getMatchRangesForReset(100);
+        assertTrue(numberInRange(0, ranges));
+        assertTrue(numberInRange(99, ranges));
+        assertFalse(numberInRange(100, ranges));
+        assertFalse(numberInRange(200, ranges));
+        assertFalse(numberInRange(0x0000ffff, ranges));
+        assertFalse(numberInRange(0x0001ffff, ranges));
+        assertFalse(numberInRange(0xffffffffL, ranges));
+
+        // Test when threshold is bigger than 0xffff
+        // Range for trigger is [0x0100ff00, 0xffffffff]
+        ranges = intProgrammable.getMatchRangesForTrigger(0x0100ff00);
+        assertFalse(numberInRange(0, ranges));
+        assertFalse(numberInRange(0x0001ffff, ranges));
+        assertFalse(numberInRange(0x0100feff, ranges));
+        assertTrue(numberInRange(0x0100ff00, ranges));
+        assertTrue(numberInRange(0x0ff00000, ranges));
+        assertTrue(numberInRange(0xffffffffL, ranges));
+        // Range for reset is [0, 0x0100ff00)
+        ranges = intProgrammable.getMatchRangesForReset(0x0100ff00);
+        assertTrue(numberInRange(0, ranges));
+        assertTrue(numberInRange(0x0001ffff, ranges));
+        assertTrue(numberInRange(0x0100feff, ranges));
+        assertFalse(numberInRange(0x0100ff00, ranges));
+        assertFalse(numberInRange(0x0ff00000, ranges));
+        assertFalse(numberInRange(0xffffffffL, ranges));
+    }
+
+    private boolean numberInRange(long number, List<List<Range<Integer>>> ranges) {
+        int upper = (int) (number >> 16);
+        int lower = (int) (number & 0xffff);
+        for (List<Range<Integer>> range: ranges) {
+            Range<Integer> upperRange = range.get(0);
+            Range<Integer> lowerRange = range.get(1);
+            if (upperRange.contains(upper) && lowerRange.contains(lower)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private PiAction buildReportAction(boolean setMpls, short reportType, short bmdType) {
         final PiActionParam srcMacParam = new PiActionParam(
                 P4InfoConstants.SRC_MAC, MacAddress.ZERO.toBytes());
@@ -854,18 +914,18 @@ public class FabricIntProgrammableTest {
             groupService.addGroup(capture(capturedGroup));
         });
 
-        for (byte queueId = 0; queueId < DEFAULT_QUEUE_SIZE; queueId++) {
+        for (byte queueId = 0; queueId < MAX_QUEUES; queueId++) {
             FlowRule queueReportFlow = buildQueueReportFlow(queueId,
                     new long[]{0, 0},
                     new long[]{DEFAULT_QUEUE_REPORT_LATENCY_THRESHOLD, 0xffff},
-                    P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_SET_QUEUE_REPORT_FLAG);
+                    P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_CHECK_QUOTA);
             expectedFlows.add(queueReportFlow);
             flowRuleService.applyFlowRules(capture(capturedFlow));
 
             queueReportFlow = buildQueueReportFlow(queueId,
                     new long[]{1, 0xffff},
                     new long[]{0, 0xffff},
-                    P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_SET_QUEUE_REPORT_FLAG);
+                    P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_CHECK_QUOTA);
             expectedFlows.add(queueReportFlow);
             flowRuleService.applyFlowRules(capture(capturedFlow));
 
@@ -887,7 +947,7 @@ public class FabricIntProgrammableTest {
             assertEquals(expectGroup, actualGroup);
         }
 
-        for (int i = 0; i < DEFAULT_QUEUE_SIZE; i++) {
+        for (int i = 0; i < MAX_QUEUES; i++) {
             for (int fi = 0; fi < 3; fi++) {
                 int index = i * 3 + fi;
                 FlowRule expectedFlow = expectedFlows.get(index);
@@ -948,7 +1008,7 @@ public class FabricIntProgrammableTest {
                 .build();
         return DefaultFlowRule.builder()
             .forDevice(LEAF_DEVICE_ID)
-            .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_QUEUE_REPORT)
+            .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_QUEUE_LATENCY_THRESHOLDS)
             .withSelector(selector)
             .withTreatment(treatment)
             .makePermanent()

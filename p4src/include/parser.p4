@@ -414,7 +414,6 @@ parser FabricEgressParser (packet_in packet,
 #endif // WITH_SPGW
 #ifdef WITH_INT
         fabric_md.int_report_md.encap_presence = fabric_md.bridged.base.encap_presence;
-        fabric_md.is_int = fabric_md.bridged.int_bmd.is_int;
 #endif // WITH_INT
         transition check_ethernet;
     }
