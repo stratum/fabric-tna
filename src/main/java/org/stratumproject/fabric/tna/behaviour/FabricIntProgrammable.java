@@ -3,9 +3,11 @@
 
 package org.stratumproject.fabric.tna.behaviour;
 
+import com.google.common.collect.BoundType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Range;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Streams;
 import org.onlab.packet.IPv4;
@@ -652,74 +654,67 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         flowRuleService.applyFlowRules(watchlistRule);
     }
 
-    private void setUpQueueReportThreshold(byte queueId, long thresholdToTrigger,
-            long thresholdToReset) {
-        long thresholdUpper = thresholdToTrigger >> 16;
-        long thresholdLower = thresholdToTrigger & 0xffff;
-
-        // Latency values higher than this threshold, should trigger a quota check and report generation
-        if (thresholdToTrigger <= 0xffff) {
-            setUpQueueReportThresholdInternal(
-                    queueId,
-                    new long[] {0, 0},
-                    new long[] {thresholdToTrigger, 0xffff},
-                    P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_CHECK_QUOTA);
-            setUpQueueReportThresholdInternal(
-                    queueId,
-                    new long[] {1, 0xffff},
-                    new long[] {0, 0xffff},
-                    P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_CHECK_QUOTA);
+    protected List<List<Range<Integer>>> getMatchRangesForTrigger(long threshold) {
+        List<List<Range<Integer>>> result = Lists.newArrayList();
+        if (threshold <= 0xffff) {
+            // From threshold value to 0x0000ffff
+            result.add(ImmutableList.of(Range.closed(0, 0), Range.closed((int) threshold, 0xffff)));
+            // From 0x00010000 to 0xffffffff
+            result.add(ImmutableList.of(Range.openClosed(0, 0xffff), Range.closed(0, 0xffff)));
         } else {
-            setUpQueueReportThresholdInternal(
-                    queueId,
-                    new long[] {thresholdUpper, thresholdUpper},
-                    new long[] {thresholdLower, 0xffff},
-                    P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_CHECK_QUOTA);
+            int thresholdUpper = (int) (threshold >> 16);
+            int thresholdLower = (int) (threshold & 0xffff);
+            // From threshold to 0xTTTTffff, "TTTT" is the upper 16-bit of the threshold.
+            result.add(ImmutableList.of(
+                Range.closed(thresholdUpper, thresholdUpper), Range.closed(thresholdLower, 0xffff)));
             if (thresholdUpper < 0xffff) {
-                setUpQueueReportThresholdInternal(
-                        queueId,
-                        new long[] {thresholdUpper + 1, 0xffff},
-                        new long[] {0, 0xffff},
-                        P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_CHECK_QUOTA);
+                // From 0xTTTTffff to 0xffffffff, "TTTT" is the upper 16-bit of the threshold.
+                result.add(ImmutableList.of(Range.openClosed(thresholdUpper, 0xffff), Range.closed(0, 0xffff)));
             }
         }
-
-        // Values that lower than the threshold, resets the queue report quota.
-        thresholdUpper = thresholdToReset >> 16;
-        thresholdLower = thresholdToReset & 0xffff;
-        if (thresholdToReset <= 0xffff) {
-            if (thresholdToReset > 0) {
-                thresholdToReset -= 1;
-            }
-            setUpQueueReportThresholdInternal(
-                    queueId,
-                    new long[] {0, 0},
-                    new long[] {0, thresholdToReset},
-                    P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_RESET_QUOTA);
-        } else {
-            setUpQueueReportThresholdInternal(
-                    queueId,
-                    new long[] {0, thresholdUpper - 1},
-                    new long[] {0, 0xffff},
-                    P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_RESET_QUOTA);
-
-            if (thresholdLower > 0) {
-                thresholdLower -= 1;
-            }
-            setUpQueueReportThresholdInternal(
-                    queueId,
-                    new long[] {thresholdUpper, thresholdUpper},
-                    new long[] {0, thresholdLower},
-                    P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_RESET_QUOTA);
-        }
+        return result;
     }
 
-    private void setUpQueueReportThresholdInternal(byte queueId, long[] upperRange,
-            long[] lowerRange, PiActionId actionId) {
+    protected List<List<Range<Integer>>> getMatchRangesForReset(long threshold) {
+        List<List<Range<Integer>>> result = Lists.newArrayList();
+        if (threshold <= 0xffff) {
+            // From 0 to threshold
+            result.add(ImmutableList.of(Range.closed(0, 0), Range.closedOpen(0, (int) threshold)));
+        } else {
+            int thresholdUpper = (int) (threshold >> 16);
+            int thresholdLower = (int) (threshold & 0xffff);
+            // From 0 to 0xTTTT0000, "TTTT" is the upper 16-bit of the threshold.
+            result.add(ImmutableList.of(Range.closedOpen(0, thresholdUpper), Range.closed(0, 0xffff)));
+            // From 0xTTTT0000 to threshold, "TTTT" is the upper 16-bit of the threshold.
+            result.add(ImmutableList.of(
+                Range.closed(thresholdUpper, thresholdUpper), Range.closedOpen(0, thresholdLower)));
+        }
+        return result;
+    }
+
+    private Short[] rangeToShortArray(Range<Integer> range) {
+        Short[] result = new Short[] {
+            range.lowerEndpoint().shortValue(),
+            range.upperEndpoint().shortValue()
+        };
+        // Shift one if it the endpoint bound type is open.
+        if (range.lowerBoundType() == BoundType.OPEN) {
+            result[0]++;
+        }
+        if (range.upperBoundType() == BoundType.OPEN) {
+            result[1]--;
+        }
+        return result;
+    }
+
+    private void setUpQueueReportThresholdInternal(byte queueId, Range<Integer> upperRange,
+            Range<Integer> lowerRange, PiActionId actionId) {
+        Short[] thresholdUpper = rangeToShortArray(upperRange);
+        Short[] thresholdLower = rangeToShortArray(lowerRange);
         final PiCriterion matchCriterion = PiCriterion.builder()
                 .matchExact(P4InfoConstants.HDR_EGRESS_QID, queueId)
-                .matchRange(P4InfoConstants.HDR_HOP_LATENCY_UPPER, (short) upperRange[0], (short) upperRange[1])
-                .matchRange(P4InfoConstants.HDR_HOP_LATENCY_LOWER, (short) lowerRange[0], (short) lowerRange[1])
+                .matchRange(P4InfoConstants.HDR_HOP_LATENCY_UPPER, thresholdUpper[0], thresholdUpper[1])
+                .matchRange(P4InfoConstants.HDR_HOP_LATENCY_LOWER, thresholdLower[0], thresholdLower[1])
                 .build();
         final TrafficSelector selector = DefaultTrafficSelector.builder()
                 .matchPi(matchCriterion)
@@ -737,5 +732,19 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
             .withPriority(DEFAULT_PRIORITY)
             .build();
         flowRuleService.applyFlowRules(queueReportFlow);
+    }
+
+    private void setUpQueueReportThreshold(byte queueId, long thresholdToTrigger,
+        long thresholdToReset) {
+        // Latency values higher than this threshold, should trigger a quota check and report generation.
+        for (List<Range<Integer>> ranges : getMatchRangesForTrigger(thresholdToTrigger)) {
+            setUpQueueReportThresholdInternal(queueId, ranges.get(0), ranges.get(1),
+                    P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_CHECK_QUOTA);
+        }
+        // Latency values lower than the threshold, resets the queue report quota.
+        for (List<Range<Integer>> ranges : getMatchRangesForReset(thresholdToTrigger)) {
+            setUpQueueReportThresholdInternal(queueId, ranges.get(0), ranges.get(1),
+                    P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_RESET_QUOTA);
+        }
     }
 }

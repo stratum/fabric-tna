@@ -8,6 +8,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Range;
 import com.google.common.collect.Sets;
 import org.easymock.Capture;
 import org.easymock.CaptureType;
@@ -608,6 +609,65 @@ public class FabricIntProgrammableTest {
         assertFalse(intProgrammable.setupIntConfig(intConfig));
         assertTrue(capturedRule.getValue().exactMatch(buildCollectorWatchlistRule(SPINE_DEVICE_ID)));
         verify(flowRuleService);
+    }
+
+    /**
+     * Test both getMatchRangesForTrigger and getMatchRangesForReset to ensure we get
+     * the correct range values for the queue_latency_thresholds table.
+     */
+    @Test
+    public void testGetMatchRanges() {
+        // Test when threshold is less than 0xffff
+        List<List<Range<Integer>>> ranges = intProgrammable.getMatchRangesForTrigger(100);
+        // Range for trigger is [100, 0xffff]
+        assertFalse(numberInRange(0, ranges));
+        assertFalse(numberInRange(99, ranges));
+        assertTrue(numberInRange(100, ranges));
+        assertTrue(numberInRange(200, ranges));
+        assertTrue(numberInRange(0x0000ffff, ranges));
+        assertTrue(numberInRange(0x0001ffff, ranges));
+        assertTrue(numberInRange(0xffffffffL, ranges));
+
+        // Range for reset is [0, 100)
+        ranges = intProgrammable.getMatchRangesForReset(100);
+        assertTrue(numberInRange(0, ranges));
+        assertTrue(numberInRange(99, ranges));
+        assertFalse(numberInRange(100, ranges));
+        assertFalse(numberInRange(200, ranges));
+        assertFalse(numberInRange(0x0000ffff, ranges));
+        assertFalse(numberInRange(0x0001ffff, ranges));
+        assertFalse(numberInRange(0xffffffffL, ranges));
+
+        // Test when threshold is bigger than 0xffff
+        // Range for trigger is [0x0100ff00, 0xffffffff]
+        ranges = intProgrammable.getMatchRangesForTrigger(0x0100ff00);
+        assertFalse(numberInRange(0, ranges));
+        assertFalse(numberInRange(0x0001ffff, ranges));
+        assertFalse(numberInRange(0x0100feff, ranges));
+        assertTrue(numberInRange(0x0100ff00, ranges));
+        assertTrue(numberInRange(0x0ff00000, ranges));
+        assertTrue(numberInRange(0xffffffffL, ranges));
+        // Range for reset is [0, 0x0100ff00)
+        ranges = intProgrammable.getMatchRangesForReset(0x0100ff00);
+        assertTrue(numberInRange(0, ranges));
+        assertTrue(numberInRange(0x0001ffff, ranges));
+        assertTrue(numberInRange(0x0100feff, ranges));
+        assertFalse(numberInRange(0x0100ff00, ranges));
+        assertFalse(numberInRange(0x0ff00000, ranges));
+        assertFalse(numberInRange(0xffffffffL, ranges));
+    }
+
+    private boolean numberInRange(long number, List<List<Range<Integer>>> ranges) {
+        int upper = (int) (number >> 16);
+        int lower = (int) (number & 0xffff);
+        for (List<Range<Integer>> range: ranges) {
+            Range<Integer> upperRange = range.get(0);
+            Range<Integer> lowerRange = range.get(1);
+            if (upperRange.contains(upper) && lowerRange.contains(lower)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private PiAction buildReportAction(boolean setMpls, short reportType, short bmdType) {
