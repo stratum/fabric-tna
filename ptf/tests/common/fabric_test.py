@@ -250,11 +250,11 @@ BRIDGED_MD_TYPE_DEFLECTED = 5
 
 # Size for different headers
 if testutils.test_param_get("profile") == "fabric-spgw-int":
-    BMD_BYTES = 48
+    BMD_BYTES = 47
 elif testutils.test_param_get("profile") == "fabric-spgw":
     BMD_BYTES = 39
 elif testutils.test_param_get("profile") == "fabric-int":
-    BMD_BYTES = 32
+    BMD_BYTES = 31
 elif testutils.test_param_get("profile") == "fabric":
     BMD_BYTES = 23
 else:
