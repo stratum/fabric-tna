@@ -27,6 +27,8 @@ public final class P4InfoConstants {
             PiMatchFieldId.of("bmd_type");
     public static final PiMatchFieldId HDR_EG_PORT =
             PiMatchFieldId.of("eg_port");
+    public static final PiMatchFieldId HDR_EGRESS_QID =
+            PiMatchFieldId.of("egress_qid");
     public static final PiMatchFieldId HDR_ETH_DST =
             PiMatchFieldId.of("eth_dst");
     public static final PiMatchFieldId HDR_ETH_SRC =
@@ -36,6 +38,10 @@ public final class P4InfoConstants {
     public static final PiMatchFieldId HDR_FAR_ID = PiMatchFieldId.of("far_id");
     public static final PiMatchFieldId HDR_GTPU_IS_VALID =
             PiMatchFieldId.of("gtpu_is_valid");
+    public static final PiMatchFieldId HDR_HOP_LATENCY_LOWER =
+            PiMatchFieldId.of("hop_latency_lower");
+    public static final PiMatchFieldId HDR_HOP_LATENCY_UPPER =
+            PiMatchFieldId.of("hop_latency_upper");
     public static final PiMatchFieldId HDR_ICMP_CODE =
             PiMatchFieldId.of("icmp_code");
     public static final PiMatchFieldId HDR_ICMP_TYPE =
@@ -89,6 +95,8 @@ public final class P4InfoConstants {
             PiTableId.of("FabricEgress.egress_next.egress_vlan");
     public static final PiTableId FABRIC_EGRESS_INT_EGRESS_CONFIG =
             PiTableId.of("FabricEgress.int_egress.config");
+    public static final PiTableId FABRIC_EGRESS_INT_EGRESS_QUEUE_LATENCY_THRESHOLDS =
+            PiTableId.of("FabricEgress.int_egress.queue_latency_thresholds");
     public static final PiTableId FABRIC_EGRESS_INT_EGRESS_REPORT =
             PiTableId.of("FabricEgress.int_egress.report");
     public static final PiTableId FABRIC_EGRESS_PKT_IO_EGRESS_SWITCH_INFO =
@@ -176,6 +184,8 @@ public final class P4InfoConstants {
             PiActionId.of("FabricEgress.egress_next.pop_vlan");
     public static final PiActionId FABRIC_EGRESS_EGRESS_NEXT_PUSH_VLAN =
             PiActionId.of("FabricEgress.egress_next.push_vlan");
+    public static final PiActionId FABRIC_EGRESS_INT_EGRESS_CHECK_QUOTA =
+            PiActionId.of("FabricEgress.int_egress.check_quota");
     public static final PiActionId FABRIC_EGRESS_INT_EGRESS_DO_DROP_REPORT_ENCAP =
             PiActionId.of("FabricEgress.int_egress.do_drop_report_encap");
     public static final PiActionId FABRIC_EGRESS_INT_EGRESS_DO_DROP_REPORT_ENCAP_MPLS =
@@ -184,6 +194,8 @@ public final class P4InfoConstants {
             PiActionId.of("FabricEgress.int_egress.do_local_report_encap");
     public static final PiActionId FABRIC_EGRESS_INT_EGRESS_DO_LOCAL_REPORT_ENCAP_MPLS =
             PiActionId.of("FabricEgress.int_egress.do_local_report_encap_mpls");
+    public static final PiActionId FABRIC_EGRESS_INT_EGRESS_RESET_QUOTA =
+            PiActionId.of("FabricEgress.int_egress.reset_quota");
     public static final PiActionId FABRIC_EGRESS_INT_EGRESS_SET_CONFIG =
             PiActionId.of("FabricEgress.int_egress.set_config");
     public static final PiActionId FABRIC_EGRESS_PKT_IO_EGRESS_SET_SWITCH_INFO =

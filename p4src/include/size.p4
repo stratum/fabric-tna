@@ -24,6 +24,8 @@
 
 // Constants for the INT control block.
 #define INT_WATCHLIST_TABLE_SIZE 64
+// 4 entries per queue (for double range match on latency chunks) with up to 32 queues per port
+#define INT_QUEUE_REPORT_TABLE_SIZE 32 * 4
 
 // Constants for the SPGW control block.
 #define NUM_UES 10240

@@ -182,12 +182,11 @@ struct spgw_ingress_metadata_t {
 
 #ifdef WITH_INT
 // Report Telemetry Headers v0.5
+@pa_no_overlay("egress", "hdr.report_fixed_header.rsvd")
 header report_fixed_header_t {
     bit<4>  ver;
     bit<4>  nproto;
-    bit<1>  d;
-    bit<1>  q;
-    bit<1>  f;
+    bit<3>  dqf; // drop, queue, and flow flag.
     bit<15> rsvd;
     bit<6>  hw_id;
     bit<32> seq_no;
@@ -261,14 +260,14 @@ header int_report_metadata_t {
     bit<16>               ip_eth_type;
     @padding bit<6>       _pad5;
     EncapPresence         encap_presence;
-    @padding bit<6>       _pad6;
-    IntReportType_t       report_type;
+    bit<3>                report_type;
+    @padding bit<5>       _pad6;
     flow_hash_t           flow_hash;
 }
 
 @flexible
 struct int_bridged_metadata_t {
-    IntReportType_t report_type;
+    bit<3>          report_type;
     MirrorId_t      mirror_session_id;
     IntDropReason_t drop_reason;
     QueueId_t       queue_id;
@@ -278,8 +277,8 @@ struct int_bridged_metadata_t {
 struct int_metadata_t {
     bit<32> hop_latency;
     bit<48> timestamp;
-    bool    is_int;
     bool    vlan_stripped;
+    bool    queue_report;
 }
 #endif // WITH_INT
 
@@ -399,7 +398,8 @@ struct fabric_egress_metadata_t {
     int_report_metadata_t int_report_md;
     int_metadata_t        int_md;
     bit<16>               int_ipv4_len;
-    bool                  is_int;
+    bool                  is_int_recirc; // Tells the pipeline that this packet will be
+                                         // recirculated later as an INT report.
 #endif // WITH_INT
 }
 

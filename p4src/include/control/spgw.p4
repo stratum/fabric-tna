@@ -398,7 +398,6 @@ control SpgwEgress(
         hdr.outer_udp.len = UDP_HDR_BYTES + GTPU_HDR_BYTES
                 + hdr.ipv4.total_len;
         hdr.outer_gtpu.msglen = hdr.ipv4.total_len;
-        hdr.outer_gtpu.ex_flag = 0;
 #ifdef WITH_INT
         fabric_md.int_report_md.encap_presence = EncapPresence.GTPU_ONLY;
 #endif // WITH_INT
