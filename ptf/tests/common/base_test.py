@@ -1037,7 +1037,6 @@ class P4RuntimeTest(BaseTest):
         register_entry.register_id = self.get_register_id(register_name)
         register_entry.index.index = register_index
 
-
         if self.generate_tv:
             exp_resp = self.get_new_read_response()
             entity = exp_resp.entities.add()
@@ -1052,8 +1051,9 @@ class P4RuntimeTest(BaseTest):
 
         for entity in self.read_request(req):
             if entity.HasField("register_entry"):
-                assert (int.from_bytes(entity.register_entry.data.bitstring, "big") ==
-                        int.from_bytes(expected_value, "big"))
+                assert int.from_bytes(
+                    entity.register_entry.data.bitstring, "big"
+                ) == int.from_bytes(expected_value, "big")
 
         return None
 
