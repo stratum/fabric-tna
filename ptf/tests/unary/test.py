@@ -2256,7 +2256,7 @@ class FabricIntQueueReportTest(IntTest):
             expect_int_report=True,
             is_device_spine=is_device_spine,
             send_report_to_spine=send_report_to_spine,
-            watch_flow=watch_flow
+            watch_flow=watch_flow,
         )
 
     def runTest(self):
@@ -2291,11 +2291,7 @@ class FabricIntQueueReportQuotaTest(IntTest):
     @tvsetup
     @autocleanup
     def doRunTest(
-        self,
-        expect_int_report,
-        quota_left,
-        threshold_trigger,
-        threshold_reset,
+        self, expect_int_report, quota_left, threshold_trigger, threshold_reset,
     ):
         print(
             f"Testing expect_int_report={expect_int_report}, quota_left={quota_left}, "
@@ -2326,22 +2322,45 @@ class FabricIntQueueReportQuotaTest(IntTest):
         # device to trigger queue report. We should expect to recevice an INT queue
         # report and the quota should become zero.
         self.set_queue_report_quota(port=self.port2, qid=0, quota=1)
-        self.doRunTest(expect_int_report=True, quota_left=0, threshold_trigger=10, threshold_reset=0)
+        self.doRunTest(
+            expect_int_report=True,
+            quota_left=0,
+            threshold_trigger=10,
+            threshold_reset=0,
+        )
         # Send another packet, since the quota is now zero, the pipeline should not
         # send any INT queue report.
-        self.doRunTest(expect_int_report=False, quota_left=0, threshold_trigger=10, threshold_reset=0)
+        self.doRunTest(
+            expect_int_report=False,
+            quota_left=0,
+            threshold_trigger=10,
+            threshold_reset=0,
+        )
         # Make the trigger threshold higher than the latency, but the reset threshold lower.
         # The switch should not reset the quota nor generate a report.
-        self.doRunTest(expect_int_report=False, quota_left=0, threshold_trigger=0xffffffff, threshold_reset=0)
+        self.doRunTest(
+            expect_int_report=False,
+            quota_left=0,
+            threshold_trigger=0xFFFFFFFF,
+            threshold_reset=0,
+        )
         # Set the reset threshold very high to make sure the packet latency will cause the quota to
         # reset (to a default value hardcoded in the P4 program). There should be no report from the
         # switch since the quota reset action shouldn't generate any.
-        self.doRunTest(expect_int_report=False, quota_left=INT_DEFAULT_QUEUE_REPORT_QUOTA,
-                       threshold_trigger=0xffffffff, threshold_reset=0xffffffff)
+        self.doRunTest(
+            expect_int_report=False,
+            quota_left=INT_DEFAULT_QUEUE_REPORT_QUOTA,
+            threshold_trigger=0xFFFFFFFF,
+            threshold_reset=0xFFFFFFFF,
+        )
         # Finally, configure the trigger threshold to a low value. We should receive a report since the
         # quota has been reset.
-        self.doRunTest(expect_int_report=True, quota_left=INT_DEFAULT_QUEUE_REPORT_QUOTA - 1,
-                       threshold_trigger=10, threshold_reset=0)
+        self.doRunTest(
+            expect_int_report=True,
+            quota_left=INT_DEFAULT_QUEUE_REPORT_QUOTA - 1,
+            threshold_trigger=10,
+            threshold_reset=0,
+        )
 
 
 @group("bng")
