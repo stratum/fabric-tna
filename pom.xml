@@ -142,7 +142,7 @@ SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
                 <extensions>true</extensions>
                 <configuration>
                     <instructions>
-                        <Karaf-Commands>org.stratumproject.fabric.tna.stats.cli</Karaf-Commands>
+                        <Karaf-Commands>org.stratumproject.fabric.tna.stats.cli,org.stratumproject.fabric.tna.behaviour.cli</Karaf-Commands>
                     </instructions>
                 </configuration>
             </plugin>

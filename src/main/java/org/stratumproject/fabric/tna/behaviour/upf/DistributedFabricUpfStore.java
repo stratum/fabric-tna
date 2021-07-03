@@ -2,16 +2,11 @@
 // SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 package org.stratumproject.fabric.tna.behaviour.upf;
 
-import com.google.common.collect.BiMap;
-import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.Maps;
-import org.onosproject.net.behaviour.upf.PacketDetectionRule;
-import org.onlab.packet.Ip4Address;
 import org.onlab.util.ImmutableByteSequence;
 import org.onlab.util.KryoNamespace;
 import org.onosproject.store.serializers.KryoNamespaces;
 import org.onosproject.store.service.ConsistentMap;
-import org.onosproject.store.service.DistributedSet;
 import org.onosproject.store.service.MapEvent;
 import org.onosproject.store.service.MapEventListener;
 import org.onosproject.store.service.Serializer;
@@ -24,12 +19,8 @@ import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
-
-import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * Distributed implementation of FabricUpfStore.
@@ -44,23 +35,9 @@ public final class DistributedFabricUpfStore implements FabricUpfStore {
     protected StorageService storageService;
 
     protected static final String FAR_ID_MAP_NAME = "fabric-upf-far-id-tna";
-    protected static final String BUFFER_FAR_ID_SET_NAME = "fabric-upf-buffer-far-id-tna";
-    protected static final String FAR_ID_UE_MAP_NAME = "fabric-upf-far-id-ue-tna";
     protected static final KryoNamespace.Builder SERIALIZER = KryoNamespace.newBuilder()
             .register(KryoNamespaces.API)
             .register(UpfRuleIdentifier.class);
-
-    // Mapping between scheduling priority ranges with Tofino priority queues
-    // i.e., default queues are 8 in Tofino
-    private static final BiMap<Integer, Integer> SCHEDULING_PRIORITY_MAP
-            = new ImmutableBiMap.Builder<Integer, Integer>()
-            // Highest scheduling priority for 3GPP is 1 and highest Tofino queue priority is 7
-            .put(1, 5)
-            .put(6, 4)
-            .put(7, 3)
-            .put(8, 2)
-            .put(9, 1)
-            .build();
 
     // Distributed local FAR ID to global FAR ID mapping
     protected ConsistentMap<UpfRuleIdentifier, Integer> farIdMap;
@@ -69,25 +46,12 @@ public final class DistributedFabricUpfStore implements FabricUpfStore {
     protected Map<Integer, UpfRuleIdentifier> reverseFarIdMap;
     private int nextGlobalFarId = 1;
 
-    protected DistributedSet<UpfRuleIdentifier> bufferFarIds;
-    protected ConsistentMap<UpfRuleIdentifier, Set<Ip4Address>> farIdToUeAddrs;
-
     @Activate
     protected void activate() {
         // Allow unit test to inject farIdMap here.
         if (storageService != null) {
             this.farIdMap = storageService.<UpfRuleIdentifier, Integer>consistentMapBuilder()
                     .withName(FAR_ID_MAP_NAME)
-                    .withRelaxedReadConsistency()
-                    .withSerializer(Serializer.using(SERIALIZER.build()))
-                    .build();
-            this.bufferFarIds = storageService.<UpfRuleIdentifier>setBuilder()
-                    .withName(BUFFER_FAR_ID_SET_NAME)
-                    .withRelaxedReadConsistency()
-                    .withSerializer(Serializer.using(SERIALIZER.build()))
-                    .build().asDistributedSet();
-            this.farIdToUeAddrs = storageService.<UpfRuleIdentifier, Set<Ip4Address>>consistentMapBuilder()
-                    .withName(FAR_ID_UE_MAP_NAME)
                     .withRelaxedReadConsistency()
                     .withSerializer(Serializer.using(SERIALIZER.build()))
                     .build();
@@ -115,8 +79,6 @@ public final class DistributedFabricUpfStore implements FabricUpfStore {
     public void reset() {
         farIdMap.clear();
         reverseFarIdMap.clear();
-        bufferFarIds.clear();
-        farIdToUeAddrs.clear();
         nextGlobalFarId = 0;
     }
 
@@ -143,71 +105,8 @@ public final class DistributedFabricUpfStore implements FabricUpfStore {
     }
 
     @Override
-    public String queueIdOf(int schedulingPriority) {
-        return (SCHEDULING_PRIORITY_MAP.get(schedulingPriority)).toString();
-    }
-
-    @Override
-    public String schedulingPriorityOf(int queueId) {
-        return (SCHEDULING_PRIORITY_MAP.inverse().get(queueId)).toString();
-    }
-
-    @Override
     public UpfRuleIdentifier localFarIdOf(int globalFarId) {
         return reverseFarIdMap.get(globalFarId);
-    }
-
-    public void learnFarIdToUeAddrs(PacketDetectionRule pdr) {
-        UpfRuleIdentifier ruleId = UpfRuleIdentifier.of(pdr.sessionId(), pdr.farId());
-        farIdToUeAddrs.compute(ruleId, (k, set) -> {
-            if (set == null) {
-                set = new HashSet<>();
-            }
-            set.add(pdr.ueAddress());
-            return set;
-        });
-    }
-
-    @Override
-    public boolean isFarIdBuffering(UpfRuleIdentifier farId) {
-        checkNotNull(farId);
-        return bufferFarIds.contains(farId);
-    }
-
-    @Override
-    public void learBufferingFarId(UpfRuleIdentifier farId) {
-        checkNotNull(farId);
-        bufferFarIds.add(farId);
-    }
-
-    @Override
-    public void forgetBufferingFarId(UpfRuleIdentifier farId) {
-        checkNotNull(farId);
-        bufferFarIds.remove(farId);
-    }
-
-    @Override
-    public void forgetUeAddr(Ip4Address ueAddr) {
-        farIdToUeAddrs.keySet().forEach(
-                farId -> farIdToUeAddrs.computeIfPresent(farId, (farIdz, ueAddrs) -> {
-                    ueAddrs.remove(ueAddr);
-                    return ueAddrs;
-                }));
-    }
-
-    @Override
-    public Set<Ip4Address> ueAddrsOfFarId(UpfRuleIdentifier farId) {
-        return farIdToUeAddrs.getOrDefault(farId, Set.of()).value();
-    }
-
-    @Override
-    public Set<UpfRuleIdentifier> getBufferFarIds() {
-        return Set.copyOf(bufferFarIds);
-    }
-
-    @Override
-    public Map<UpfRuleIdentifier, Set<Ip4Address>> getFarIdToUeAddrs() {
-        return Map.copyOf(farIdToUeAddrs.asJavaMap());
     }
 
     // NOTE: FarIdMapListener is run on the same thread intentionally in order to ensure that

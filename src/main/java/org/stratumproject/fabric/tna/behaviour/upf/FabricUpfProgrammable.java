@@ -4,19 +4,17 @@ package org.stratumproject.fabric.tna.behaviour.upf;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
+import org.onlab.packet.Ip4Prefix;
+import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
 import org.onosproject.drivers.p4runtime.AbstractP4RuntimeHandlerBehaviour;
+import org.onosproject.net.PortNumber;
 import org.onosproject.net.behaviour.upf.ForwardingActionRule;
-import org.onosproject.net.behaviour.upf.GtpTunnel;
 import org.onosproject.net.behaviour.upf.PacketDetectionRule;
 import org.onosproject.net.behaviour.upf.PdrStats;
 import org.onosproject.net.behaviour.upf.UpfInterface;
 import org.onosproject.net.behaviour.upf.UpfProgrammable;
 import org.onosproject.net.behaviour.upf.UpfProgrammableException;
-import org.onlab.packet.Ip4Address;
-import org.onlab.packet.Ip4Prefix;
-import org.onosproject.core.ApplicationId;
-import org.onosproject.net.PortNumber;
 import org.onosproject.net.flow.DefaultFlowRule;
 import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
@@ -84,20 +82,22 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
     private ApplicationId appId;
 
-    // FIXME: remove, buffer drain should be triggered by Up4Service
-    private BufferDrainer bufferDrainer;
-
-    // FIXME: dbuf tunnel should be managed by Up4Service
-    //  Up4Service should be responsible of setting up such tunnel, then transforming FARs for this
-    //  device accordingly. When the tunnel endpoint change, it should be up to Up4Service to update
-    //  the FAR on the device.
-    private GtpTunnel dbufTunnel;
-
     @Override
     protected boolean setupBehaviour(String opName) {
+        // Already initialized.
+        if (appId != null) {
+            return true;
+        }
+
         if (!super.setupBehaviour(opName)) {
             return false;
         }
+
+        if (!computeHardwareResourceSizes()) {
+            // error message will be printed by computeHardwareResourceSizes()
+            return false;
+        }
+
         flowRuleService = handler().get(FlowRuleService.class);
         packetService = handler().get(PacketService.class);
         fabricUpfStore = handler().get(DistributedFabricUpfStore.class);
@@ -122,10 +122,6 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     @Override
     public boolean init() {
         if (setupBehaviour("init()")) {
-            if (!computeHardwareResourceSizes()) {
-                // error message will be printed by computeHardwareResourceSizes()
-                return false;
-            }
             log.info("UpfProgrammable initialized for appId {} and deviceId {}", appId, deviceId);
             return true;
         }
@@ -186,29 +182,13 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     }
 
     @Override
-    public void setBufferDrainer(BufferDrainer drainer) {
-        if (!setupBehaviour("setBufferDrainer()")) {
-            return;
-        }
-        this.bufferDrainer = drainer;
-    }
-
-    @Override
-    public void unsetBufferDrainer() {
-        if (!setupBehaviour("unsetBufferDrainer()")) {
-            return;
-        }
-        this.bufferDrainer = null;
-    }
-
-    @Override
     public void enablePscEncap(int defaultQfi) {
         if (!setupBehaviour("enablePscEncap()")) {
             return;
         }
         if (pipeconf.pipelineModel().table(FABRIC_EGRESS_SPGW_GTPU_ENCAP).isEmpty()) {
             log.error("Missing {} table in {}, cannot enable PSC encap",
-                    FABRIC_EGRESS_SPGW_GTPU_ENCAP, deviceId);
+                      FABRIC_EGRESS_SPGW_GTPU_ENCAP, deviceId);
             return;
         }
         flowRuleService.applyFlowRules(upfTranslator.buildGtpuWithPscEncapRule(
@@ -222,7 +202,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         }
         if (pipeconf.pipelineModel().table(FABRIC_EGRESS_SPGW_GTPU_ENCAP).isEmpty()) {
             log.debug("Missing {} table in {}, assuming PSC encap is disabled by default",
-                    FABRIC_EGRESS_SPGW_GTPU_ENCAP, deviceId);
+                      FABRIC_EGRESS_SPGW_GTPU_ENCAP, deviceId);
             return;
         }
         flowRuleService.applyFlowRules(upfTranslator.buildGtpuOnlyEncapRule(
@@ -242,46 +222,6 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                         .build(),
                 data);
         packetService.emit(pkt);
-    }
-
-    @Override
-    public void setDbufTunnel(Ip4Address switchAddr, Ip4Address dbufAddr) {
-        if (!setupBehaviour("setDbufTunnel()")) {
-            return;
-        }
-        this.dbufTunnel = GtpTunnel.builder()
-                .setSrc(switchAddr)
-                .setDst(dbufAddr)
-                .setSrcPort((short) 2152)
-                .setTeid(0)
-                .build();
-    }
-
-    @Override
-    public void unsetDbufTunnel() {
-        if (!setupBehaviour("unsetDbufTunnel()")) {
-            return;
-        }
-        this.dbufTunnel = null;
-    }
-
-    /**
-     * Convert the given buffering FAR to a FAR that tunnels the packet to dbuf.
-     *
-     * @param far the FAR to convert
-     * @return the converted FAR
-     */
-    private ForwardingActionRule convertToDbufFar(ForwardingActionRule far) {
-        if (!far.buffers()) {
-            throw new IllegalArgumentException("Converting a non-buffering FAR to a dbuf FAR! This shouldn't happen.");
-        }
-        return ForwardingActionRule.builder()
-                .setFarId(far.farId())
-                .withSessionId(far.sessionId())
-                .setNotifyFlag(far.notifies())
-                .setBufferFlag(true)
-                .setTunnel(dbufTunnel)
-                .build();
     }
 
     @Override
@@ -404,7 +344,6 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         if (!setupBehaviour("pdrCounterSize()")) {
             return -1;
         }
-        computeHardwareResourceSizes();
         return pdrCounterSize;
     }
 
@@ -413,7 +352,6 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         if (!setupBehaviour("farTableSize()")) {
             return -1;
         }
-        computeHardwareResourceSizes();
         return farTableSize;
     }
 
@@ -422,7 +360,6 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         if (!setupBehaviour("pdrTableSize()")) {
             return -1;
         }
-        computeHardwareResourceSizes();
         return Math.min(encappedPdrTableSize, unencappedPdrTableSize) * 2;
     }
 
@@ -485,11 +422,6 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         log.info("Installing {}", pdr.toString());
         flowRuleService.applyFlowRules(fabricPdr);
         log.debug("PDR added with flowID {}", fabricPdr.id().value());
-
-        // If the flow rule was applied and the PDR is downlink, add the PDR to the farID->PDR mapping
-        if (pdr.matchesUnencapped()) {
-            fabricUpfStore.learnFarIdToUeAddrs(pdr);
-        }
     }
 
 
@@ -498,28 +430,10 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         if (!setupBehaviour("addFar()")) {
             return;
         }
-        UpfRuleIdentifier ruleId = UpfRuleIdentifier.of(far.sessionId(), far.farId());
-        if (far.buffers()) {
-            // If the far has the buffer flag, modify its tunnel so it directs to dbuf
-            far = convertToDbufFar(far);
-            fabricUpfStore.learBufferingFarId(ruleId);
-        }
         FlowRule fabricFar = upfTranslator.farToFabricEntry(far, deviceId, appId, DEFAULT_PRIORITY);
         log.info("Installing {}", far.toString());
         flowRuleService.applyFlowRules(fabricFar);
         log.debug("FAR added with flowID {}", fabricFar.id().value());
-        if (!far.buffers() && fabricUpfStore.isFarIdBuffering(ruleId)) {
-            // If this FAR does not buffer but used to, then drain the buffer for every UE address
-            // that hits this FAR.
-            fabricUpfStore.forgetBufferingFarId(ruleId);
-            for (var ueAddr : fabricUpfStore.ueAddrsOfFarId(ruleId)) {
-                if (bufferDrainer == null) {
-                    log.warn("Unable to drain downlink buffer for UE {}, bufferDrainer is null", ueAddr);
-                } else {
-                    bufferDrainer.drain(ueAddr);
-                }
-            }
-        }
     }
 
     @Override
@@ -540,9 +454,6 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
     private boolean removeEntry(PiCriterion match, PiTableId tableId, boolean failSilent)
             throws UpfProgrammableException {
-        if (!setupBehaviour("removeEntry()")) {
-            return false;
-        }
         FlowRule entry = DefaultFlowRule.builder()
                 .forDevice(deviceId).fromApp(appId).makePermanent()
                 .forTable(tableId)
@@ -632,17 +543,13 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         }
         log.info("Removing {}", pdr.toString());
         removeEntry(match, tableId, false);
-
-        // Remove the PDR from the farID->PDR mapping
-        // This is an inefficient hotfix FIXME: remove UE addrs from the mapping in sublinear time
-        if (pdr.matchesUnencapped()) {
-            // Should we remove just from the map entry with key == far ID?
-            fabricUpfStore.forgetUeAddr(pdr.ueAddress());
-        }
     }
 
     @Override
     public void removeFar(ForwardingActionRule far) throws UpfProgrammableException {
+        if (!setupBehaviour("removeFar()")) {
+            return;
+        }
         log.info("Removing {}", far.toString());
 
         PiCriterion match = PiCriterion.builder()

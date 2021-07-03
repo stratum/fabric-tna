@@ -207,8 +207,10 @@ bind_layers(INT_L45_LOCAL_REPORT, Ether)
 INT_COLLECTOR_MAC = "00:1e:67:d2:ee:ee"
 INT_COLLECTOR_IPV4 = "192.168.99.254"
 
+INT_REPORT_TYPE_NO_REPORT = 0
+INT_REPORT_TYPE_DROP = 4
+INT_REPORT_TYPE_QUEUE = 2
 INT_REPORT_TYPE_LOCAL = 1
-INT_REPORT_TYPE_DROP = 2
 
 INT_DROP_REASON_UNKNOWN = 0
 INT_DROP_REASON_TRAFFIC_MANAGER = 71
@@ -218,6 +220,7 @@ INT_DROP_REASON_EGRESS_NEXT_MISS = 130
 INT_DROP_REASON_DOWNLINK_PDR_MISS = 132
 INT_DROP_REASON_UPLINK_PDR_MISS = 133
 INT_DROP_REASON_FAR_MISS = 134
+INT_DEFAULT_QUEUE_REPORT_QUOTA = 1024
 
 PPPOE_CODE_SESSION_STAGE = 0x00
 
@@ -272,6 +275,8 @@ PORT_TYPE_EDGE = b"\x01"
 PORT_TYPE_INFRA = b"\x02"
 PORT_TYPE_INTERNAL = b"\x03"
 
+DEFAULT_SLICE_ID = 0
+DEFAULT_TC = 0
 
 # Implements helper function for SCTP as PTF does not provide one.
 def simple_sctp_packet(
@@ -2034,7 +2039,10 @@ class SpgwSimpleTest(IPv4UnicastTest):
                 self.Exact("gtpu_is_valid", stringify(int(gtpu_valid), 1)),
             ],
             "FabricIngress.spgw.load_iface",
-            [("src_iface", stringify(iface_enum, 1))],
+            [
+                ("src_iface", stringify(iface_enum, 1)),
+                ("slice_id", stringify(DEFAULT_SLICE_ID, 1)),
+            ],
         )
         self.write_request(req)
 
@@ -2097,6 +2105,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
                 ("ctr_id", stringify(ctr_id, 2)),
                 ("far_id", stringify(far_id, 4)),
                 ("needs_gtpu_decap", stringify(1, 1)),
+                ("tc", stringify(DEFAULT_TC, 1)),
             ],
         )
         self.write_request(req)
@@ -2142,6 +2151,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
                 ("ctr_id", stringify(ctr_id, 2)),
                 ("far_id", stringify(far_id, 4)),
                 ("needs_gtpu_decap", stringify(0, 1)),
+                ("tc", stringify(DEFAULT_TC, 1)),
             ],
         )
         self.write_request(req)
@@ -2625,180 +2635,6 @@ class SpgwSimpleTest(IPv4UnicastTest):
         )
 
 
-class SpgwReadWriteSymmetryTest(SpgwSimpleTest):
-    """Verifies all SPGW tables adhere to p4runtime read-write symmetry.
-    This is a temporary unit test, only meant to exist until a better test
-    is written that programmatically verifies read-write symmetry test on
-    all tables and actions found in the p4info.
-    """
-
-    def getActionFromReadEntry(self, table_entry):
-        action = table_entry.action.action
-        action_name = self.get_obj_name_from_id(action.action_id)
-
-        p4info_params = self.get_obj("actions", action_name).params
-        name_list = [""] * len(p4info_params)
-        for param in p4info_params:
-            name_list[param.id - 1] = param.name
-
-        params = [
-            (name_list[param.param_id - 1], param.value) for param in action.params
-        ]
-        return (action_name, params)
-
-    def writeAndReadEntry(self, table_name, match_keys, action_name, action_params):
-        req = self.get_new_write_request()
-        self.push_update_add_entry_to_action(
-            req, table_name, match_keys, action_name, action_params
-        )
-        self.write_request(req)
-        # 'read' here is past tense
-        read_entry = self.read_table_entry(table_name, match_keys)
-        if read_entry is None:
-            self.fail(
-                "Failed to read an entry that was just written! "
-                + "Table was %s, action was %s" % (table_name, action_name)
-            )
-
-        read_action_name, read_action_params = self.getActionFromReadEntry(read_entry)
-        if not read_action_name.endswith(action_name):
-            self.fail(
-                "Read action name does end with written action name"
-                + "\n>> Read action name: %s" % read_action_name
-                + "\n>> Written action name: %s" % action_name
-            )
-
-        if set(read_action_params) != set(action_params):
-            self.fail(
-                "Read action params do not equal written action params"
-                + "\n>> Read params: %s" % str(read_action_params)
-                + "\n>> Written params: %s" % str(action_params)
-            )
-
-    def checkInterfaceTable(
-        self, iface_addr="1.1.1.1", prefix_len=32, gtpu_valid=1, iface_enum=1
-    ):
-        match_keys = [
-            self.Lpm("ipv4_dst_addr", ipv4_to_binary(iface_addr), prefix_len),
-            self.Exact("gtpu_is_valid", stringify(int(gtpu_valid), 1)),
-        ]
-        action_params = [("src_iface", stringify(iface_enum, 1))]
-        self.writeAndReadEntry(
-            "FabricIngress.spgw.interfaces",
-            match_keys,
-            "FabricIngress.spgw.load_iface",
-            action_params,
-        )
-
-    def checkUplinkPdrTable(
-        self, teid=1, tunnel_dst_addr="1.1.1.1", ctr_id=1, far_id=1, decap_flag=1,
-    ):
-        match_keys = [
-            self.Exact("teid", stringify(teid, 4)),
-            self.Exact("tunnel_ipv4_dst", ipv4_to_binary(tunnel_dst_addr)),
-        ]
-        action_params = [
-            ("ctr_id", stringify(ctr_id, 2)),
-            ("far_id", stringify(far_id, 4)),
-            ("needs_gtpu_decap", stringify(decap_flag, 1)),
-        ]
-        self.writeAndReadEntry(
-            "FabricIngress.spgw.uplink_pdrs",
-            match_keys,
-            "FabricIngress.spgw.load_pdr",
-            action_params,
-        )
-
-    def checkDownlinkPdrTable(
-        self, ue_addr="1.1.1.1", ctr_id=1, far_id=1, decap_flag=1
-    ):
-        match_keys = [self.Exact("ue_addr", ipv4_to_binary(ue_addr))]
-        action_params = [
-            ("ctr_id", stringify(ctr_id, 2)),
-            ("far_id", stringify(far_id, 4)),
-            ("needs_gtpu_decap", stringify(decap_flag, 1)),
-        ]
-        self.writeAndReadEntry(
-            "FabricIngress.spgw.downlink_pdrs",
-            match_keys,
-            "FabricIngress.spgw.load_pdr",
-            action_params,
-        )
-
-    def checkNormalFar(self, far_id=509, drop_flag=1, notify_flag=1):
-        match_keys = [self.Exact("far_id", stringify(far_id, 4))]
-        action_params = [
-            ("drop", stringify(drop_flag, 1)),
-            ("notify_cp", stringify(notify_flag, 1)),
-        ]
-        self.writeAndReadEntry(
-            "FabricIngress.spgw.fars",
-            match_keys,
-            "FabricIngress.spgw.load_normal_far",
-            action_params,
-        )
-
-    def checkTunnelFar(
-        self,
-        far_id=510,
-        drop_flag=1,
-        notify_flag=1,
-        teid=56789,
-        tunnel_src_port=1234,
-        tunnel_src_addr="1.1.1.1",
-        tunnel_dst_addr="2.2.2.2",
-    ):
-        match_keys = [self.Exact("far_id", stringify(far_id, 4))]
-        action_params = [
-            ("drop", stringify(drop_flag, 1)),
-            ("notify_cp", stringify(notify_flag, 1)),
-            ("teid", stringify(teid, 4)),
-            ("tunnel_src_port", stringify(tunnel_src_port, 2)),
-            ("tunnel_src_addr", ipv4_to_binary(tunnel_src_addr)),
-            ("tunnel_dst_addr", ipv4_to_binary(tunnel_dst_addr)),
-        ]
-        self.writeAndReadEntry(
-            "FabricIngress.spgw.fars",
-            match_keys,
-            "FabricIngress.spgw.load_tunnel_far",
-            action_params,
-        )
-
-    def checkDbufFar(
-        self,
-        far_id=511,
-        drop_flag=1,
-        notify_flag=1,
-        teid=56789,
-        tunnel_src_port=1234,
-        tunnel_src_addr="1.1.1.1",
-        tunnel_dst_addr="2.2.2.2",
-    ):
-        match_keys = [self.Exact("far_id", stringify(far_id, 4))]
-        action_params = [
-            ("drop", stringify(drop_flag, 1)),
-            ("notify_cp", stringify(notify_flag, 1)),
-            ("teid", stringify(teid, 4)),
-            ("tunnel_src_port", stringify(tunnel_src_port, 2)),
-            ("tunnel_src_addr", ipv4_to_binary(tunnel_src_addr)),
-            ("tunnel_dst_addr", ipv4_to_binary(tunnel_dst_addr)),
-        ]
-        self.writeAndReadEntry(
-            "FabricIngress.spgw.fars",
-            match_keys,
-            "FabricIngress.spgw.load_dbuf_far",
-            action_params,
-        )
-
-    def runReadWriteSymmetryTest(self):
-        self.checkInterfaceTable()
-        self.checkUplinkPdrTable()
-        self.checkDownlinkPdrTable()
-        self.checkNormalFar()
-        self.checkTunnelFar()
-        self.checkDbufFar()
-
-
 class IntTest(IPv4UnicastTest):
     """
     This test includes two parts:
@@ -2822,7 +2658,8 @@ class IntTest(IPv4UnicastTest):
         mon_label,
     ):
         action = ""
-        if report_type == INT_REPORT_TYPE_LOCAL:
+        # local report or queue report or both
+        if (report_type & (INT_REPORT_TYPE_LOCAL | INT_REPORT_TYPE_QUEUE)) != 0:
             action = "do_local_report_encap"
         elif report_type == INT_REPORT_TYPE_DROP:
             action = "do_drop_report_encap"
@@ -2881,6 +2718,14 @@ class IntTest(IPv4UnicastTest):
         set_up_report_flow_internal(
             BRIDGED_MD_TYPE_DEFLECTED, MIRROR_TYPE_INVALID, INT_REPORT_TYPE_DROP
         )
+        set_up_report_flow_internal(
+            BRIDGED_MD_TYPE_EGRESS_MIRROR, MIRROR_TYPE_INT_REPORT, INT_REPORT_TYPE_QUEUE
+        )
+        set_up_report_flow_internal(
+            BRIDGED_MD_TYPE_EGRESS_MIRROR,
+            MIRROR_TYPE_INT_REPORT,
+            INT_REPORT_TYPE_QUEUE | INT_REPORT_TYPE_LOCAL,
+        )
 
     def set_up_report_mirror_flow(self, pipe_id, mirror_id, port):
         self.add_clone_group(mirror_id, [port])
@@ -2905,7 +2750,9 @@ class IntTest(IPv4UnicastTest):
             ],
         )
 
-    def set_up_watchlist_flow(self, ipv4_src, ipv4_dst, sport, dport):
+    def set_up_watchlist_flow(
+        self, ipv4_src, ipv4_dst, sport, dport, collector_action=False
+    ):
         ipv4_src_ = ipv4_to_binary(ipv4_src)
         ipv4_dst_ = ipv4_to_binary(ipv4_dst)
         ipv4_mask = ipv4_to_binary("255.255.255.255")
@@ -2923,6 +2770,10 @@ class IntTest(IPv4UnicastTest):
             dport_low = stringify(dport, 2)
             dport_high = stringify(dport, 2)
 
+        if collector_action:
+            action = "no_report_collector"
+        else:
+            action = "mark_to_report"
         self.send_request_add_entry_to_action(
             "watchlist",
             [
@@ -2932,7 +2783,7 @@ class IntTest(IPv4UnicastTest):
                 self.Range("l4_sport", sport_low, sport_high),
                 self.Range("l4_dport", dport_low, dport_high),
             ],
-            "mark_to_report",
+            action,
             [],
             priority=DEFAULT_PRIORITY,
         )
@@ -2949,6 +2800,8 @@ class IntTest(IPv4UnicastTest):
         inner_packet,
         is_device_spine,
         send_report_to_spine,
+        f_flag=1,
+        q_flag=0,
     ):
         # The switch should always strip GTP-U or VXLAN headers inside INT reports.
         if GTP_U_Header in inner_packet:
@@ -2961,7 +2814,7 @@ class IntTest(IPv4UnicastTest):
             Ether(src=src_mac, dst=dst_mac)
             / IP(src=src_ip, dst=dst_ip, ttl=64, tos=4)
             / UDP(sport=0, chksum=0)
-            / INT_L45_REPORT_FIXED(nproto=2, f=1, hw_id=0)
+            / INT_L45_REPORT_FIXED(nproto=2, f=f_flag, q=q_flag, hw_id=0)
             / INT_L45_LOCAL_REPORT(
                 switch_id=sw_id, ingress_port_id=ig_port, egress_port_id=eg_port,
             )
@@ -3095,8 +2948,9 @@ class IntTest(IPv4UnicastTest):
                 )
         self.add_next_vlan(next_id, DEFAULT_VLAN)
 
-    def set_up_int_flows(self, is_device_spine, pkt, send_report_to_spine):
-
+    def set_up_int_flows(
+        self, is_device_spine, pkt, send_report_to_spine, watch_flow=True
+    ):
         # Watchlist always matches on inner headers.
         if GTP_U_Header in pkt:
             pkt = pkt_remove_gtp(pkt)
@@ -3112,7 +2966,8 @@ class IntTest(IPv4UnicastTest):
         else:
             sport = None
             dport = None
-        self.set_up_watchlist_flow(pkt[IP].src, pkt[IP].dst, sport, dport)
+        if watch_flow:
+            self.set_up_watchlist_flow(pkt[IP].src, pkt[IP].dst, sport, dport)
         self.set_up_report_flow(
             SWITCH_MAC,
             SWITCH_MAC,
@@ -3130,6 +2985,76 @@ class IntTest(IPv4UnicastTest):
             self.port3, is_device_spine, send_report_to_spine
         )
         self.set_up_recirc_ports()
+
+    def set_up_latency_threshold_for_q_report(self, threshold_trigger, threshold_reset):
+        queue_id = 0
+
+        def set_up_queue_report_table_internal(upper, lower, action):
+            self.send_request_add_entry_to_action(
+                "FabricEgress.int_egress.queue_latency_thresholds",
+                [
+                    self.Exact("egress_qid", stringify(queue_id, 1)),
+                    self.Range("hop_latency_upper", *[stringify(v, 2) for v in upper]),
+                    self.Range("hop_latency_lower", *[stringify(v, 2) for v in lower]),
+                ],
+                action,
+                [],
+                DEFAULT_PRIORITY,
+            )
+
+        if threshold_trigger <= 0xFFFF:
+            # from threshold to 0xffff
+            set_up_queue_report_table_internal(
+                [0, 0], [threshold_trigger, 0xFFFF], "check_quota"
+            )
+            # from 0x10000 to 32-bit max
+            set_up_queue_report_table_internal([1, 0xFFFF], [0, 0xFFFF], "check_quota")
+        else:
+            threshold_upper = threshold_trigger >> 16
+            threshold_lower = threshold_trigger & 0xFFFF
+            # from lower 16-bit of threshold to 0xffff
+            set_up_queue_report_table_internal(
+                [threshold_upper, threshold_upper],
+                [threshold_lower, 0xFFFF],
+                "check_quota",
+            )
+            if threshold_upper != 0xFFFF:
+                # from upper 16-bit of threshold + 1 to 32-bit max
+                set_up_queue_report_table_internal(
+                    [threshold_upper + 1, 0xFFFF], [0, 0xFFFF], "check_quota"
+                )
+
+        if threshold_reset <= 0xFFFF:
+            # reset quota if latency is below threshold
+            threshold_reset = threshold_reset - 1 if threshold_reset > 0 else 0
+            set_up_queue_report_table_internal(
+                [0, 0], [0, threshold_reset], "reset_quota"
+            )
+        else:
+            threshold_upper = threshold_reset >> 16
+            threshold_lower = threshold_reset & 0xFFFF
+            threshold_lower = threshold_lower - 1 if threshold_lower > 0 else 0
+            # reset quota if latency is below threshold
+            set_up_queue_report_table_internal(
+                [0, threshold_upper - 1], [0, 0xFFFF], "reset_quota"
+            )
+            set_up_queue_report_table_internal(
+                [threshold_upper, threshold_upper], [0, threshold_lower], "reset_quota"
+            )
+
+    def set_queue_report_quota(self, port, qid, quota):
+        # We are using port[6:0] ++ qid as register index.
+        index = (port & 0x7F) << 5 | qid
+        self.write_register(
+            "FabricEgress.int_egress.queue_report_quota", index, stringify(quota, 2)
+        )
+
+    def verify_quota(self, port, qid, quota):
+        # We are using port[6:0] ++ qid as register index.
+        index = (port & 0x7F) << 5 | qid
+        self.verify_register(
+            "FabricEgress.int_egress.queue_report_quota", index, stringify(quota, 2)
+        )
 
     def runIntTest(
         self,
@@ -3384,6 +3309,101 @@ class IntTest(IPv4UnicastTest):
             self.add_next_vlan(next_id, DEFAULT_VLAN)
 
         self.send_packet(ig_port, pkt)
+
+        if expect_int_report:
+            self.verify_packet(exp_int_report_pkt_masked, self.port3)
+        self.verify_no_other_packets()
+
+    def runIntQueueTest(
+        self,
+        pkt,
+        tagged1,
+        tagged2,
+        is_next_hop_spine,
+        ig_port,
+        eg_port,
+        expect_int_report,
+        is_device_spine,
+        send_report_to_spine,
+        watch_flow=False,
+        reset_quota=True,
+        threshold_trigger=0,
+        threshold_reset=0,
+    ):
+        """
+        :param pkt: the input packet
+        :param tagged1: if the input port should expect VLAN tagged packets
+        :param tagged2: if the output port should expect VLAN tagged packets
+        :param prefix_len: prefix length to use in the routing table
+        :param is_next_hop_spine: whether the packet should be routed
+               to the spines using MPLS SR
+        :param ig_port: the ingress port of the IP uncast packet
+        :param eg_port: the egress port of the IP uncast packet
+        :param expect_int_report: expected to receive the INT report
+        :param is_device_spine: the device is a spine device
+        :param send_report_to_spine: if the report is to be forwarded
+               to a spine (e.g., collector attached to another leaf)
+        :param watch_flow: install table entry to the watch list table, this will make
+                           the pipeline to generate an INT report with both flow and
+                           queue flag.
+        :reset_quota: resets the queue report quota everytime when we run the test
+        "threshold_trigger: the latency threshold to trigger the queue report
+        "threshold_reset: the latency threshold to rest the queue report quota
+        """
+        # INT report's inner packet. Should be the same as the expected output
+        # packet of IPv4UnicastTest, but without MPLS or VLAN headers.
+        int_inner_pkt = pkt.copy()
+        int_inner_pkt = pkt_route(int_inner_pkt, HOST2_MAC)
+        if not is_next_hop_spine:
+            int_inner_pkt = pkt_decrement_ttl(int_inner_pkt)
+
+        # The expected INT report packet
+        exp_int_report_pkt_masked = self.build_int_local_report(
+            SWITCH_MAC,
+            INT_COLLECTOR_MAC,
+            SWITCH_IPV4,
+            INT_COLLECTOR_IPV4,
+            ig_port,
+            eg_port,
+            SWITCH_ID,
+            int_inner_pkt,
+            is_device_spine,
+            send_report_to_spine,
+            f_flag=1 if watch_flow else 0,
+            q_flag=1,
+        )
+
+        # Set collector, report table, and mirror sessions
+        self.set_up_int_flows(
+            is_device_spine, pkt, send_report_to_spine, watch_flow=watch_flow
+        )
+        # Every packet will always trigger the queue alert
+        self.set_up_latency_threshold_for_q_report(threshold_trigger, threshold_reset)
+        # Sets the quota for the output port/queue of INT report to zero to make sure
+        # we won't keep getting reports for this type of packet.
+        self.set_queue_report_quota(port=self.port3, qid=0, quota=0)
+        for recirc_port in RECIRCULATE_PORTS:
+            self.set_queue_report_quota(port=recirc_port, qid=0, quota=0)
+        if reset_quota:
+            # To ensure we have enough quota to send a queue report.
+            self.set_queue_report_quota(port=eg_port, qid=0, quota=1)
+
+        # TODO: Use MPLS test instead of IPv4 test if device is spine.
+        # TODO: In these tests, there is only one egress port although the
+        # test can generate a report going though the spine and the original
+        # packet going to another edge port. port_type programming is
+        # always done by using the default value which is PORT_TYPE_EDGE
+        self.runIPv4UnicastTest(
+            pkt=pkt,
+            next_hop_mac=HOST2_MAC,
+            tagged1=tagged1,
+            tagged2=tagged2,
+            is_next_hop_spine=is_next_hop_spine,
+            prefix_len=32,
+            with_another_pkt_later=True,
+            ig_port=ig_port,
+            eg_port=eg_port,
+        )
 
         if expect_int_report:
             self.verify_packet(exp_int_report_pkt_masked, self.port3)
