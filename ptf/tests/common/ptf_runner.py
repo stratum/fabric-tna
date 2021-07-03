@@ -287,7 +287,6 @@ def run_test(
     except Exception:
         error("Error when running PTF tests")
         return False
-
     return p.returncode == 0
 
 
@@ -337,7 +336,7 @@ def main():
         "--ptf-dir", help="Directory containing PTF tests", type=str, required=True,
     )
     parser.add_argument(
-        "--port-map", help="Path to JSON port mapping", type=str, required=True,
+        "--port-map", help="Path to JSON port mapping", type=str, required=True
     )
     parser.add_argument(
         "--platform",
@@ -460,7 +459,6 @@ def main():
                 sys.exit(4)
 
         trex_daemon_client.stop_trex()
-
     else:
         info("Running unary test...")
         if not args.skip_test:

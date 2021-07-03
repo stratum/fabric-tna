@@ -266,14 +266,12 @@ header int_report_metadata_t {
 }
 
 @flexible
-@pa_no_overlay("egress", "fabric_md.bridged.int_bmd_is_int_report")
 struct int_bridged_metadata_t {
     bit<3>          report_type;
     MirrorId_t      mirror_session_id;
     IntDropReason_t drop_reason;
     QueueId_t       queue_id;
     PortId_t        egress_port;
-    bool            is_int_report; // Tells the egress pipeline that this is an INT report packet.
 }
 
 struct int_metadata_t {

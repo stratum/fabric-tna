@@ -38,7 +38,6 @@ it=$(test -t 0 && echo "-it" || echo "-t")
 # shellcheck disable=SC2068
 docker run --name "${testerRunName}" "${it}" --rm \
     --network host \
-    -v "${FABRIC_TNA_ROOT}/tmp":/tmp \
     -v "${PTF_ROOT}":/fabric-tna \
     -v "${FABRIC_TNA_ROOT}/tmp":/tmp \
     -v "${P4C_OUT}":/p4c-out \

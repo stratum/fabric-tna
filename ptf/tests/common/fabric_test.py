@@ -250,11 +250,11 @@ BRIDGED_MD_TYPE_DEFLECTED = 5
 
 # Size for different headers
 if testutils.test_param_get("profile") == "fabric-spgw-int":
-    BMD_BYTES = 48
+    BMD_BYTES = 47
 elif testutils.test_param_get("profile") == "fabric-spgw":
     BMD_BYTES = 39
 elif testutils.test_param_get("profile") == "fabric-int":
-    BMD_BYTES = 32
+    BMD_BYTES = 31
 elif testutils.test_param_get("profile") == "fabric":
     BMD_BYTES = 23
 else:
@@ -2986,6 +2986,7 @@ class IntTest(IPv4UnicastTest):
 
     def set_up_latency_threshold_for_q_report(self, threshold_trigger, threshold_reset):
         queue_id = 0
+
         def set_up_queue_report_table_internal(upper, lower, action):
             self.send_request_add_entry_to_action(
                 "FabricEgress.int_egress.queue_latency_thresholds",
@@ -3405,6 +3406,7 @@ class IntTest(IPv4UnicastTest):
         if expect_int_report:
             self.verify_packet(exp_int_report_pkt_masked, self.port3)
         self.verify_no_other_packets()
+
 
 class SpgwIntTest(SpgwSimpleTest, IntTest):
     """
