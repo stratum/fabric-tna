@@ -12,11 +12,9 @@ class TRexTest(P4RuntimeTest):
 
     def setUp(self):
         super(TRexTest, self).setUp()
-        # initialize the stateless client
         trex_server_addr = ptf.testutils.test_param_get('trex_server_addr')
         self.trex_client = STLClient(server=trex_server_addr)
 
-        # attempt to connect to trex server
         self.trex_client.connect()
         self.trex_client.acquire()
         self.trex_client.reset()  # Resets configs from all ports
