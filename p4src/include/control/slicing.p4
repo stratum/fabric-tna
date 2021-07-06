@@ -6,9 +6,6 @@
 
 #include "../header.p4"
 
-// Check Stratum's chassis_config for other queue IDs.
-const qid_t BEST_EFFORT_QUEUE = 0;
-
 // ACL-like classification, maps lookup metadata to slice_id and tc. For UE
 // traffic, values can be overriden by the SPGW PDR tables.
 control IngressSliceTcClassifier (inout fabric_ingress_metadata_t fabric_md) {
