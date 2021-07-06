@@ -608,25 +608,19 @@ def get_test_args(traffic_dir, spgw_type=None, int_test_type=None,
                   test_multiple_pkt_len=False, test_multiple_prefix_len=False,
                   drop_test=False):
 
-    """ By default, only include configurations which are specified
+    """ By default, only include configurations which are specified in function parameters
     """
 
-    # Declare constants and initialize lists before conditional modifications
     SPGW_OPTIONS = ["DL", "UL"]
     INT_OPTIONS = ["local", "ig_drop", "eg_drop"]
-
-    # Traffic direction option constants
     SOURCE_OPTIONS = ["host", "leaf", "spine"]
     DEVICE_OPTIONS = ["leaf", "spine"]
     DEST_OPTIONS = ["host", "leaf", "spine"]
 
-    # Declare default lists to be modified by high-level parameters
     drop_reason_list = []
-    is_device_spine_list = []
     vlan_conf_list = []
     pkt_type_list = []
     with_psc_list = []
-    is_next_hop_spine_list = []
     send_report_to_spine_list = []
     pkt_len_list = []
     prefix_len_list = []
@@ -641,25 +635,29 @@ def get_test_args(traffic_dir, spgw_type=None, int_test_type=None,
     source = devices[0]
     device = devices[1]
     dest = devices[2]
+    if source not in SOURCE_OPTIONS:
+        raise Exception("Invalid source specification: {}".format(source))
+    if device not in DEVICE_OPTIONS:
+        raise Exception("Invalid device specification: {}".format(device))
+    if dest not in DEST_OPTIONS:
+        raise Exception("Invalid dest specification: {}".format(dest))
 
-    # if source and dest not host, no both
+    """ VLAN CONFIGURATIONS
+    """
     if source != 'host' and dest != 'host':
         vlan_conf_list = {
                             "untag->untag": [False, False]
                          }
-    # if source host and dest not host, then yes/no and no
     elif source == 'host' and dest != 'host':
         vlan_conf_list = {
                             "tag->untag": [True, False],
                             "untag->untag": [False, False]
                          }
-    # if source not host and dest hot, then no and yes/no
     elif source != 'host' and dest == 'host':
         vlan_conf_list = {
                             "untag->tag": [False, True],
                             "untag->untag": [False, False]
                          }
-    # if source and dest host, then both yes/no
     elif source == 'host' and dest == 'host':
         vlan_conf_list = {
                             "untag->untag": [False, False],
@@ -668,19 +666,15 @@ def get_test_args(traffic_dir, spgw_type=None, int_test_type=None,
                             "tag->tag": [True, True]
                          }
     else:
-        raise Exception("Invalid source {} and dest {}.".format(source, dest))
+        raise Exception("Invalid source ({}) and/or dest ({}) format".format(source, dest))
 
-
-    """ IS_NEXT_HOP_SPINE
+    """ IS_DEVICE_SPINE and IS_NEXT_HOP_SPINE
     """
+    is_device_spine = (device == 'spine')
     is_next_hop_spine = (dest == 'spine')
 
     """ DROP REASON 
     """
-    # ingress int drop --> acl deny
-    # egress int drop --> egress next miss
-    # downlink int drop --> downlink pdr + far miss
-    # uplink int drop --> uplink pdr + far miss
     if drop_test:
         if int_test_type == "ig_drop":
             drop_reason_list = [INT_DROP_REASON_ACL_DENY]
@@ -696,8 +690,6 @@ def get_test_args(traffic_dir, spgw_type=None, int_test_type=None,
     else:
         drop_reason_list = [None]
 
-    is_device_spine = (device == 'spine')
-
     """ PKT_TYPE and WITH_PSC
     """
     # Configure arrays for spgw-related tests
@@ -711,9 +703,7 @@ def get_test_args(traffic_dir, spgw_type=None, int_test_type=None,
 
     """ SEND_REPORT_TO_SPINE
     """
-    # Check if INT is specified and a spine is specified in traffic_dir
-    # TODO: what about if source is a spine?
-    if int_test_type in INT_OPTIONS and is_next_hop_spine_list[0] != None:
+    if int_test_type in INT_OPTIONS and (traffic_dir == "host-leaf-spine" or traffic_dir == "spine-leaf-host"):
         send_report_to_spine_list = [False, True]
     else:
         send_report_to_spine_list = [None]
@@ -730,7 +720,6 @@ def get_test_args(traffic_dir, spgw_type=None, int_test_type=None,
     else:
         prefix_len_list = [None]
 
-
     """ Generate test arguments
     """
     for drop_reason in drop_reason_list:
@@ -739,9 +728,7 @@ def get_test_args(traffic_dir, spgw_type=None, int_test_type=None,
                 for with_psc in with_psc_list:
                     for prefix_len in prefix_len_list:
                         for pkt_len in pkt_len_list:
-                            for is_next_hop_spine in is_next_hop_spine_list:
-                                if is_next_hop_spine and tagged[1]:
-                                    continue
+                            for send_report_to_spine in send_report_to_spine_list:
                                 tc_name = (
                                     "VLAN_"
                                     + vlan_conf
@@ -768,7 +755,12 @@ def get_test_args(traffic_dir, spgw_type=None, int_test_type=None,
                                         'tagged2':tagged[1],
                                         'with_psc':with_psc,
                                         'is_next_hop_spine':is_next_hop_spine,
-                                        'tc_name':tc_name
+                                        'tc_name':tc_name,
+                                        'drop_reason':drop_reason,
+                                        'prefix_len':prefix_len,
+                                        'pkt_len':pkt_len,
+                                        'send_report_to_spine':send_report_to_spine,
+                                        'is_device_spine':is_device_spine,
                                 }
 
 
