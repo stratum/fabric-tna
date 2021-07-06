@@ -25,13 +25,7 @@ from p4.v1 import p4runtime_pb2, p4runtime_pb2_grpc
 from portmap import pmutils
 from target import targetutils
 from testvector import tvutils
-from trex_stf_lib.trex_client import (
-    CTRexClient,
-    ProtocolError,
-    TRexError,
-    TRexInUseError,
-    TRexRequestDenied,
-)
+from trex_stf_lib.trex_client import CTRexClient
 
 TREX_FILES_DIR = "/tmp/trex_files/"
 DEFAULT_KILL_TIMEOUT = 10
@@ -176,7 +170,6 @@ def set_up_trex_server(trex_daemon_client, trex_address, trex_config, force_rest
             return False
 
         if force_restart:
-            trex_daemon_client.stop_trex()
             trex_daemon_client.kill_all_trexes()
 
         if not trex_daemon_client.is_idle():

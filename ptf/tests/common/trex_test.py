@@ -1,10 +1,8 @@
 # Copyright 2020-present Open Networking Foundation
 # SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 
-import importlib
-import unittest
 from base_test import *
-from trex.stl.api import STLClient, STLError
+from trex.stl.api import STLClient
 
 
 class TRexTest(P4RuntimeTest):
@@ -14,7 +12,6 @@ class TRexTest(P4RuntimeTest):
         super(TRexTest, self).setUp()
         trex_server_addr = ptf.testutils.test_param_get('trex_server_addr')
         self.trex_client = STLClient(server=trex_server_addr)
-
         self.trex_client.connect()
         self.trex_client.acquire()
         self.trex_client.reset()  # Resets configs from all ports
