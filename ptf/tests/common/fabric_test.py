@@ -734,7 +734,7 @@ def get_test_args(traffic_dir, spgw_type=None, int_test_type=None,
     """ Generate test arguments
     """
     for drop_reason in drop_reason_list:
-        for vlan_conf, tagged in vlan_conf_list:
+        for vlan_conf, tagged in vlan_conf_list.items():
             for pkt_type in pkt_type_list:
                 for with_psc in with_psc_list:
                     for prefix_len in prefix_len_list:
