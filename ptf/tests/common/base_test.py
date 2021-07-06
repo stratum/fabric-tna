@@ -239,6 +239,7 @@ class P4RuntimeTest(BaseTest):
             "actions",
             "counters",
             "direct_counters",
+            "registers",
         ]:
             for obj in getattr(self.p4info, p4_obj_type):
                 pre = obj.preamble
@@ -865,6 +866,31 @@ class P4RuntimeTest(BaseTest):
                 return entity.action_profile_group
         return None
 
+    def write_register(self, register_name, index, data):
+        req = self.get_new_write_request()
+        update = req.updates.add()
+        update.type = p4runtime_pb2.Update.MODIFY
+        register = update.entity.register_entry
+        register.register_id = self.get_register_id(register_name)
+        register.index.index = index
+        register.data.bitstring = data
+        return req, self.write_request(req)
+
+    # Reads the register value with a given register name and an index.
+    # Note that due to the limitation of P4Runtime protocol, we can only read
+    # the register value from the first pipeline(pipe 0).
+    def read_register(self, register_name, index):
+        req = self.get_new_read_request()
+        entity = req.entities.add()
+        register = entity.register_entry
+        register.register_id = self.get_register_id(register_name)
+        register.index.index = index
+
+        for entity in self.read_request(req):
+            if entity.HasField("register_entry"):
+                return entity.register_entry
+        return None
+
     def verify_action_profile_group(
         self, ap_name, grp_id, expected_action_profile_group
     ):
@@ -1002,6 +1028,35 @@ class P4RuntimeTest(BaseTest):
                     )
         return None
 
+    def verify_register(
+        self, register_name, register_index, expected_value,
+    ):
+        req = self.get_new_read_request()
+        entity = req.entities.add()
+        register_entry = entity.register_entry
+        register_entry.register_id = self.get_register_id(register_name)
+        register_entry.index.index = register_index
+
+        if self.generate_tv:
+            exp_resp = self.get_new_read_response()
+            entity = exp_resp.entities.add()
+            entity.register_entry.CopyFrom(register_entry)
+            entity.register_entry.data.bitstring = expected_value
+
+            # add to list
+            exp_resps = []
+            exp_resps.append(exp_resp)
+            tvutils.add_read_expectation(self.tc, req, exp_resps)
+            return None
+
+        for entity in self.read_request(req):
+            if entity.HasField("register_entry"):
+                assert int.from_bytes(
+                    entity.register_entry.data.bitstring, "big"
+                ) == int.from_bytes(expected_value, "big")
+
+        return None
+
     def is_default_action_update(self, update):
         return (
             update.type == p4runtime_pb2.Update.MODIFY
@@ -1049,6 +1104,7 @@ for obj_type, nickname in [
     ("actions", "action"),
     ("counters", "counter"),
     ("direct_counters", "direct_counter"),
+    ("registers", "register"),
 ]:
     name = "_".join(["get", nickname])
     setattr(P4RuntimeTest, name, partialmethod(P4RuntimeTest.get_obj, obj_type))

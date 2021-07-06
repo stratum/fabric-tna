@@ -292,7 +292,7 @@ control EgressNextControl (inout egress_headers_t hdr,
             // Port-based VLAN tagging; if there is no match drop the packet!
 
 #ifdef WITH_INT
-        if(!fabric_md.is_int) {
+        if(!fabric_md.is_int_recirc) {
 #endif // WITH_INT
             egress_vlan.apply();
 #ifdef WITH_INT

@@ -152,10 +152,11 @@ control SpgwIngress(
     //===== Interface Tables ======//
     //=============================//
 
-    action load_iface(SpgwInterface src_iface) {
+    action load_iface(SpgwInterface src_iface, slice_id_t slice_id) {
         // Interface type can be access, core, from_dbuf (see InterfaceType enum)
-        fabric_md.spgw.src_iface    = src_iface;
+        fabric_md.spgw.src_iface = src_iface;
         fabric_md.bridged.spgw.skip_spgw = false;
+        fabric_md.slice_id = slice_id;
     }
 
     action iface_miss() {
@@ -200,23 +201,14 @@ control SpgwIngress(
 #endif // WITH_INT
     }
 
-    // Remove after all ACE deployments will have pfcp-agent qith QoS support
-    @deprecated("Use load_pdr_qos instead")
-    action load_pdr(pdr_ctr_id_t    ctr_id,
-                    far_id_t        far_id,
-                    bool            needs_gtpu_decap) {
+    action load_pdr(pdr_ctr_id_t ctr_id,
+                    far_id_t     far_id,
+                    bool         needs_gtpu_decap,
+                    tc_t         tc) {
         fabric_md.spgw.far_id = far_id;
         fabric_md.bridged.spgw.pdr_ctr_id = ctr_id;
         fabric_md.spgw.needs_gtpu_decap = needs_gtpu_decap;
-        is_pdr_hit = true;
-    }
-
-    action load_pdr_qos(pdr_ctr_id_t        ctr_id,
-                        far_id_t            far_id,
-                        bool                needs_gtpu_decap,
-                        qid_t               qid) {
-        load_pdr(ctr_id, far_id, needs_gtpu_decap);
-        ig_tm_md.qid = qid;
+        fabric_md.tc = tc;
         is_pdr_hit = true;
     }
 
@@ -228,7 +220,6 @@ control SpgwIngress(
         }
         actions = {
             load_pdr;
-            load_pdr_qos;
             @defaultonly downlink_pdr_drop;
         }
         size = NUM_DOWNLINK_PDRS;
@@ -242,7 +233,6 @@ control SpgwIngress(
         }
         actions = {
             load_pdr;
-            load_pdr_qos;
             @defaultonly uplink_pdr_drop;
         }
         size = NUM_UPLINK_PDRS;
@@ -408,7 +398,6 @@ control SpgwEgress(
         hdr.outer_udp.len = UDP_HDR_BYTES + GTPU_HDR_BYTES
                 + hdr.ipv4.total_len;
         hdr.outer_gtpu.msglen = hdr.ipv4.total_len;
-        hdr.outer_gtpu.ex_flag = 0;
 #ifdef WITH_INT
         fabric_md.int_report_md.encap_presence = EncapPresence.GTPU_ONLY;
 #endif // WITH_INT
