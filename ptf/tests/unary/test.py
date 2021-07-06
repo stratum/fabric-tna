@@ -1332,44 +1332,8 @@ class FabricSpgwDownlinkTest(SpgwSimpleTest):
     def runTest(self):
         for traffic_dir in ["host-leaf-host", "spine-leaf-host"]:
             for test_args in get_test_args(traffic_dir=traffic_dir, spgw_type="DL"):
-            print(test_args)
-            self.doRunTest(**test_args)
-
-        # print("")
-        # for vlan_conf, tagged in vlan_confs.items():
-        #     for pkt_type in BASE_PKT_TYPES:
-        #         for with_psc in [False, True]:
-        #             for is_next_hop_spine in [False, True]:
-        #                 if is_next_hop_spine and tagged[1]:
-        #                     continue
-        #                 tc_name = (
-        #                     "VLAN_"
-        #                     + vlan_conf
-        #                     + "_"
-        #                     + pkt_type
-        #                     + "_is_next_hop_spine_"
-        #                     + str(is_next_hop_spine)
-        #                 )
-        #                 print(
-        #                     "Testing VLAN={}, pkt={}, with_psc={}, is_next_hop_spine={}...".format(
-        #                         vlan_conf, pkt_type, with_psc, is_next_hop_spine
-        #                     )
-        #                 )
-        #                 pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
-        #                     eth_src=HOST1_MAC,
-        #                     eth_dst=SWITCH_MAC,
-        #                     ip_src=HOST1_IPV4,
-        #                     ip_dst=UE1_IPV4,
-        #                     pktlen=MIN_PKT_LEN,
-        #                 )
-        #                 self.doRunTest(
-        #                     pkt,
-        #                     tagged[0],
-        #                     tagged[1],
-        #                     with_psc,
-        #                     is_next_hop_spine,
-        #                     tc_name=tc_name,
-        #                 )
+                print(test_args)
+                self.doRunTest(**test_args)
 
 
 @group("spgw")
