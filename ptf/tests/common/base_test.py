@@ -238,6 +238,7 @@ class P4RuntimeTest(BaseTest):
             "action_profiles",
             "actions",
             "counters",
+            "meters",
             "direct_counters",
         ]:
             for obj in getattr(self.p4info, p4_obj_type):
@@ -825,6 +826,28 @@ class P4RuntimeTest(BaseTest):
             counter_data.packet_count = packet_count
         return req, self.write_request(req, store=False)
 
+
+    def write_indirect_meter(
+            self, m_name, m_index, cir, cburst, pir, pburst
+    ):
+        req = self.get_new_write_request()
+        update = req.updates.add()
+        update.type = p4runtime_pb2.Update.MODIFY
+        meter_entry = update.entity.meter_entry
+
+        m_id = self.get_meter_id(m_name)
+        meter_entry.meter_id = m_id
+        index = meter_entry.index
+        index.index = m_index
+
+        config = meter_entry.config
+        config.cir = cir
+        config.cburst = cburst
+        config.pir = pir
+        config.pburst = pburst
+
+        return req, self.write_request(req)
+
     def read_table_entry(self, t_name, mk, priority=0):
         req = self.get_new_read_request()
         entity = req.entities.add()
@@ -1009,6 +1032,12 @@ class P4RuntimeTest(BaseTest):
             and update.entity.table_entry.is_default_action
         )
 
+    def is_meter_update(self, update):
+        return (
+                update.type == p4runtime_pb2.Update.MODIFY
+                and update.entity.WhichOneof("entity") == "meter_entry"
+        )
+
     # iterates over all requests in reverse order; if they are INSERT updates,
     # replay them as DELETE updates; this is a convenient way to clean-up a lot
     # of switch state
@@ -1019,6 +1048,7 @@ class P4RuntimeTest(BaseTest):
                 if (
                     update.type == p4runtime_pb2.Update.INSERT
                     or self.is_default_action_update(update)
+                    or self.is_meter_update(update)
                 ):
                     updates.append(update)
         new_req = self.get_new_write_request()
@@ -1026,6 +1056,9 @@ class P4RuntimeTest(BaseTest):
             if self.is_default_action_update(update):
                 # Reset table default entry to original one
                 update.entity.table_entry.ClearField("action")
+            if self.is_meter_update(update):
+                # Reset meter entry to the default one (all packets GREEN)
+                update.entity.meter_entry.ClearField("config")
             else:
                 update.type = p4runtime_pb2.Update.DELETE
             new_req.updates.add().CopyFrom(update)
@@ -1048,6 +1081,7 @@ for obj_type, nickname in [
     ("action_profiles", "ap"),
     ("actions", "action"),
     ("counters", "counter"),
+    ("meters", "meter"),
     ("direct_counters", "direct_counter"),
 ]:
     name = "_".join(["get", nickname])
