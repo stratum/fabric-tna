@@ -12,7 +12,7 @@ nodes {
   index: 1
 }
 singleton_ports {
-  id: 0
+  id: 1
   name: "veth1"
   slot: 1
   port: 1
@@ -24,7 +24,7 @@ singleton_ports {
   node: 1
 }
 singleton_ports {
-  id: 1
+  id: 2
   name: "veth3"
   slot: 1
   port: 2
@@ -36,7 +36,7 @@ singleton_ports {
   node: 1
 }
 singleton_ports {
-  id: 2
+  id: 3
   name: "veth5"
   slot: 1
   port: 3
@@ -48,7 +48,7 @@ singleton_ports {
   node: 1
 }
 singleton_ports {
-  id: 3
+  id: 4
   name: "veth7"
   slot: 1
   port: 4
@@ -60,7 +60,7 @@ singleton_ports {
   node: 1
 }
 singleton_ports {
-  id: 4
+  id: 5
   name: "veth9"
   slot: 1
   port: 5
@@ -72,7 +72,7 @@ singleton_ports {
   node: 1
 }
 singleton_ports {
-  id: 5
+  id: 6
   name: "veth11"
   slot: 1
   port: 6
@@ -84,7 +84,7 @@ singleton_ports {
   node: 1
 }
 singleton_ports {
-  id: 6
+  id: 7
   name: "veth13"
   slot: 1
   port: 7
@@ -96,7 +96,7 @@ singleton_ports {
   node: 1
 }
 singleton_ports {
-  id: 7
+  id: 8
   name: "veth15"
   slot: 1
   port: 8

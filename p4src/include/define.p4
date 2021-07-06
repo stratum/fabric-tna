@@ -42,6 +42,12 @@ typedef bit<12> vlan_id_t;
 typedef bit<32> ipv4_addr_t;
 typedef bit<16> l4_port_t;
 typedef bit<32> flow_hash_t;
+typedef bit<4>  slice_id_t;
+typedef bit<4>  tc_t; // Traffic Class (for QoS)
+
+const slice_id_t SLICE_ID_UNKNOWN = 0;
+const tc_t TC_UNKNOWN = 0;
+
 
 // SPGW types
 typedef bit<32> teid_t;
@@ -203,13 +209,17 @@ const bit<8> INT_MIRROR_SESSION_BASE = 0x80;
 typedef bit<FLOW_REPORT_FILTER_WIDTH> flow_report_filter_index_t;
 #define DROP_REPORT_FILTER_WIDTH 16
 typedef bit<DROP_REPORT_FILTER_WIDTH> drop_report_filter_index_t;
+#define QUEUE_REPORT_FILTER_WIDTH 12 // 7-bit of port number plus 5-bit queue id.
+typedef bit<QUEUE_REPORT_FILTER_WIDTH> queue_report_filter_index_t;
+typedef bit<16> queue_report_quota_t;
 
-enum bit<2> IntReportType_t {
-    NO_REPORT = 0,
-    LOCAL = 1,
-    DROP = 2,
-    QUEUE = 3
-}
+typedef bit<3> IntReportType_t;
+const IntReportType_t INT_REPORT_TYPE_NO_REPORT = 0;
+// follow the order of dqf bits in the INT fixed header
+const IntReportType_t INT_REPORT_TYPE_DROP = 4;
+const IntReportType_t INT_REPORT_TYPE_QUEUE = 2;
+const IntReportType_t INT_REPORT_TYPE_LOCAL = 1;
+
 
 enum bit<8> IntDropReason_t {
     // Common drop reasons

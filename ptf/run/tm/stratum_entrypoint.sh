@@ -25,7 +25,7 @@ fi
 ${stratumBin} \
     -bf_sde_install=/usr \
     -bf_switchd_background=true \
-    -bf_switchd_cfg=/usr/share/stratum/tofino_skip_p4.conf \
+    -bf_switchd_cfg=/usr/share/stratum/tofino_skip_p4_no_bsp.conf \
     -chassis_config_file="${DIR}"/chassis_config.pb.txt \
     -external_stratum_urls=0.0.0.0:28000 \
     -forwarding_pipeline_configs_file=/dev/null \
