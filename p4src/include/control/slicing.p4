@@ -62,9 +62,9 @@ control IngressQos (inout fabric_ingress_metadata_t fabric_md,
     // For policing.
     action meter_drop() {
         ig_dprsr_md.drop_ctl = 1;
-        #ifdef WITH_INT
+#ifdef WITH_INT
         fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_INGRESS_QOS_METER;
-        #endif // WITH_INT
+#endif // WITH_INT
         queues_stats.count();
     }
 
@@ -80,6 +80,8 @@ control IngressQos (inout fabric_ingress_metadata_t fabric_md,
         }
         const default_action = set_queue(BEST_EFFORT_QUEUE);
         counters = queues_stats;
+        // Two times the number of tcs for all slices, because we might need to
+        // match on different colors for the same slice and tc.
         size = 1 << (SLICE_TC_WIDTH + 1);
     }
 
