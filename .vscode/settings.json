@@ -1,7 +1,7 @@
 {
   "python.pythonPath": "${workspaceFolder}/venv/bin/python",
   "python.analysis.extraPaths": [
-    "${workspaceFolder}/ptf/tests/ptf"
+    "${workspaceFolder}/ptf/tests/common"
   ],
   "java.configuration.updateBuildConfiguration": "automatic"
 }

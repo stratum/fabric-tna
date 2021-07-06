@@ -6,8 +6,9 @@
 
 #include "header.p4"
 #include "define.p4"
+#include "control/packet_in_mirror_parser.p4"
 #ifdef WITH_INT
-#include "control/int_mirror_parser.p4"
+#include "control/int_parser.p4"
 #endif // WITH_INT
 
 parser FabricIngressParser (packet_in  packet,
@@ -27,12 +28,14 @@ parser FabricIngressParser (packet_in  packet,
         fabric_md.bridged.base.ig_port = ig_intr_md.ingress_port;
         fabric_md.bridged.base.ig_tstamp = ig_intr_md.ingress_mac_tstamp;
         fabric_md.egress_port_set = false;
+        fabric_md.punt_to_cpu = false;
         fabric_md.bridged.base.ip_eth_type = 0;
+        fabric_md.slice_id = SLICE_ID_UNKNOWN;
+        fabric_md.tc = TC_UNKNOWN;
 #ifdef WITH_INT
-        fabric_md.int_mirror_md.drop_reason = IntDropReason_t.DROP_REASON_UNKNOWN;
-        fabric_md.int_mirror_md.gtpu_presence = GtpuPresence.NONE;
+        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UNKNOWN;
 #endif // WITH_INT
-        fabric_md.bridged.base.gtpu_presence = GtpuPresence.NONE;
+        fabric_md.bridged.base.encap_presence = EncapPresence.NONE;
         transition check_ethernet;
     }
 
@@ -194,6 +197,7 @@ parser FabricIngressParser (packet_in  packet,
         gtpu_t gtpu = packet.lookahead<gtpu_t>();
         transition select(hdr.udp.dport, gtpu.version, gtpu.msgtype) {
             (GTPU_UDP_PORT, GTP_V1, GTPU_GPDU): parse_gtpu;
+            (VXLAN_UDP_PORT, _, _): parse_vxlan;
             // Treat GTP control traffic as payload.
             default: accept;
         }
@@ -213,7 +217,7 @@ parser FabricIngressParser (packet_in  packet,
     }
 
     state set_gtpu_only {
-        fabric_md.bridged.base.gtpu_presence = GtpuPresence.GTPU_ONLY;
+        fabric_md.bridged.base.encap_presence = EncapPresence.GTPU_ONLY;
         transition parse_inner_ipv4;
     }
 
@@ -228,9 +232,24 @@ parser FabricIngressParser (packet_in  packet,
 
     state parse_gtpu_ext_psc {
         packet.extract(hdr.gtpu_ext_psc);
-        fabric_md.bridged.base.gtpu_presence = GtpuPresence.GTPU_WITH_PSC;
+        fabric_md.bridged.base.encap_presence = EncapPresence.GTPU_WITH_PSC;
         transition select(hdr.gtpu_ext_psc.next_ext) {
             GTPU_NEXT_EXT_NONE: parse_inner_ipv4;
+            default: accept;
+        }
+    }
+
+    state parse_vxlan {
+        packet.extract(hdr.vxlan);
+        fabric_md.bridged.base.encap_presence = EncapPresence.VXLAN;
+        transition parse_inner_ethernet;
+    }
+
+    state parse_inner_ethernet {
+        packet.extract(hdr.inner_ethernet);
+        packet.extract(hdr.inner_eth_type);
+        transition select(hdr.inner_eth_type.value) {
+            ETHERTYPE_IPV4: parse_inner_ipv4;
             default: accept;
         }
     }
@@ -270,12 +289,18 @@ control FabricIngressMirror(
     in ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr) {
     Mirror() mirror;
     apply {
-#ifdef WITH_INT
-        if (ig_intr_md_for_dprsr.mirror_type == (bit<3>)FabricMirrorType_t.INT_REPORT) {
-            mirror.emit<int_mirror_metadata_t>(fabric_md.bridged.int_bmd.mirror_session_id,
-                                               fabric_md.int_mirror_md);
+        if (ig_intr_md_for_dprsr.mirror_type == (bit<3>)FabricMirrorType_t.PACKET_IN) {
+            mirror.emit<packet_in_mirror_metadata_t>(
+                fabric_md.mirror.mirror_session_id,
+                // packet_in_mirror_metadata_t
+                {
+                    fabric_md.mirror.bmd_type,
+                    0, // padding
+                    (FabricMirrorType_t)ig_intr_md_for_dprsr.mirror_type,
+                    0, // padding
+                    fabric_md.bridged.base.ig_port
+                });
         }
-#endif // WITH_INT
     }
 }
 
@@ -308,6 +333,9 @@ control FabricIngressDeparser(packet_out packet,
         packet.emit(hdr.gtpu);
         packet.emit(hdr.gtpu_options);
         packet.emit(hdr.gtpu_ext_psc);
+        packet.emit(hdr.vxlan);
+        packet.emit(hdr.inner_ethernet);
+        packet.emit(hdr.inner_eth_type);
         packet.emit(hdr.inner_ipv4);
         packet.emit(hdr.inner_tcp);
         packet.emit(hdr.inner_udp);
@@ -326,11 +354,13 @@ parser FabricEgressParser (packet_in packet,
         packet.extract(eg_intr_md);
         fabric_md.cpu_port = 0;
         common_egress_metadata_t common_eg_md = packet.lookahead<common_egress_metadata_t>();
-        transition select(common_eg_md.bmd_type, common_eg_md.mirror_type) {
-            (BridgedMdType_t.INGRESS_TO_EGRESS, _): parse_bridged_md;
+        transition select(eg_intr_md.deflection_flag, common_eg_md.bmd_type, common_eg_md.mirror_type) {
+            (0, BridgedMdType_t.INGRESS_TO_EGRESS, _): parse_bridged_md;
+            (0, BridgedMdType_t.INGRESS_MIRROR, FabricMirrorType_t.PACKET_IN): parse_packet_in_mirror;
 #ifdef WITH_INT
-            (BridgedMdType_t.EGRESS_MIRROR, FabricMirrorType_t.INT_REPORT): parse_int_report_mirror;
-            (BridgedMdType_t.INGRESS_MIRROR, FabricMirrorType_t.INT_REPORT): parse_int_report_mirror;
+            (1, _, _): parse_int_report;
+            (0, BridgedMdType_t.INT_INGRESS_DROP, _): parse_int_report;
+            (0, BridgedMdType_t.EGRESS_MIRROR, FabricMirrorType_t.INT_REPORT): parse_int_report;
 #endif // WITH_INT
             default: reject;
         }
@@ -383,14 +413,19 @@ parser FabricEgressParser (packet_in packet,
         hdr.outer_gtpu_ext_psc.next_ext  = GTPU_NEXT_EXT_NONE;
 #endif // WITH_SPGW
 #ifdef WITH_INT
-        fabric_md.int_mirror_md.gtpu_presence = fabric_md.bridged.base.gtpu_presence;
+        fabric_md.int_report_md.encap_presence = fabric_md.bridged.base.encap_presence;
 #endif // WITH_INT
         transition check_ethernet;
     }
 
+    state parse_packet_in_mirror {
+        PacketInMirrorParser.apply(packet, hdr, fabric_md, eg_intr_md);
+        transition accept;
+    }
+
 #ifdef WITH_INT
-    state parse_int_report_mirror {
-        IntReportMirrorParser.apply(packet, hdr, fabric_md, eg_intr_md);
+    state parse_int_report {
+        IntReportParser.apply(packet, hdr, fabric_md, eg_intr_md);
         transition accept;
     }
 #endif // WITH_INT
@@ -477,8 +512,8 @@ control FabricEgressMirror(
     apply {
 #ifdef WITH_INT
         if (eg_intr_md_for_dprsr.mirror_type == (bit<3>)FabricMirrorType_t.INT_REPORT) {
-            mirror.emit<int_mirror_metadata_t>(fabric_md.bridged.int_bmd.mirror_session_id,
-                                               fabric_md.int_mirror_md);
+            mirror.emit<int_report_metadata_t>(fabric_md.bridged.int_bmd.mirror_session_id,
+                                               fabric_md.int_report_md);
         }
 #endif // WITH_INT
     }

@@ -3,7 +3,7 @@
 #ifndef __TABLE_SIZE__
 #define __TABLE_SIZE__
 
-// Default sizes when building for BMv2.
+#define PORT_VLAN_TABLE_SIZE 1024
 #define FWD_CLASSIFIER_TABLE_SIZE 1024
 #define BRIDGING_TABLE_SIZE 1024
 #define MPLS_TABLE_SIZE 1024
@@ -18,12 +18,14 @@
 #define HASHED_SELECTOR_MAX_GROUP_SIZE 32w16
 #define HASHED_ACT_PROFILE_SIZE 32w1024
 #define MULTICAST_NEXT_TABLE_SIZE 1024
+#define QUEUES_TABLE_SIZE 256
 #define EGRESS_VLAN_TABLE_SIZE 1024
-#define PORT_VLAN_TABLE_SIZE 1024
 #define STATS_FLOW_ID_WIDTH 10
 
 // Constants for the INT control block.
 #define INT_WATCHLIST_TABLE_SIZE 64
+// 4 entries per queue (for double range match on latency chunks) with up to 32 queues per port
+#define INT_QUEUE_REPORT_TABLE_SIZE 32 * 4
 
 // Constants for the SPGW control block.
 #define NUM_UES 10240

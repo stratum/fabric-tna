@@ -48,13 +48,17 @@ for profile in "fabric-int" "fabric-spgw-int"; do
 
   echo "Run PTF tests for profile ${profile}"
   ./ptf/run/tm/run "${profile}"
+  # Special case to test INT drop report with deflected packet.
+  TM_DOD=1 ./ptf/run/tm/run "${profile}" TEST=int-dod
 
   echo "Verify TV generation for profile ${profile}"
   ./ptf/run/tv/run "${profile}"
+  # Special case to test INT drop report with deflected packet.
+  TM_DOD=1 ./ptf/run/tv/run "${profile}" TEST=int-dod
 
   rm -rf "logs/${profile}"
   mkdir -p "logs/${profile}"
   mv ptf/run/tm/log "logs/${profile}"
-  mv ptf/tests/ptf/ptf.log "logs/${profile}/"
-  mv ptf/tests/ptf/ptf.pcap "logs/${profile}/"
+  mv ptf/tests/common/ptf.log "logs/${profile}/"
+  mv ptf/tests/common/ptf.pcap "logs/${profile}/"
 done

@@ -3,9 +3,11 @@
 
 package org.stratumproject.fabric.tna.behaviour;
 
+import com.google.common.collect.BoundType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Range;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Streams;
 import org.onlab.packet.IPv4;
@@ -47,6 +49,7 @@ import org.onosproject.net.group.GroupBuckets;
 import org.onosproject.net.group.GroupDescription;
 import org.onosproject.net.group.GroupService;
 import org.onosproject.net.host.HostService;
+import org.onosproject.net.pi.model.PiActionId;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
 import org.onosproject.segmentrouting.config.SegmentRoutingDeviceConfig;
@@ -76,6 +79,9 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
     private static final ImmutableByteSequence DEFAULT_TIMESTAMP_MASK =
             ImmutableByteSequence.copyFrom(
                     HexString.fromHexString("ffffc0000000", ""));
+    // Default latency threshold for queue report and queue size.
+    private static final long DEFAULT_QUEUE_REPORT_LATENCY_THRESHOLD = 2000; // ns
+    private static final byte MAX_QUEUES = 32;
 
     private static final Map<Integer, Integer> QUAD_PIPE_MIRROR_SESS_TO_RECIRC_PORTS =
             ImmutableMap.<Integer, Integer>builder()
@@ -97,10 +103,13 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
     private static final Set<TableId> TABLES_TO_CLEANUP = Sets.newHashSet(
             P4InfoConstants.FABRIC_INGRESS_INT_WATCHLIST_WATCHLIST,
             P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_REPORT,
-            P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_CONFIG
+            P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_CONFIG,
+            P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_QUEUE_LATENCY_THRESHOLDS
     );
     private static final short BMD_TYPE_EGRESS_MIRROR = 2;
-    private static final short BMD_TYPE_INGRESS_MIRROR = 3;
+    private static final short BMD_TYPE_INT_INGRESS_DROP = 4;
+    private static final short BMD_TYPE_DEFLECTED = 5;
+    private static final short MIRROR_TYPE_INVALID = 0;
     private static final short MIRROR_TYPE_INT_REPORT = 1;
     private static final short INT_REPORT_TYPE_LOCAL = 1;
     private static final short INT_REPORT_TYPE_DROP = 2;
@@ -178,6 +187,12 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                     new DefaultGroupKey(KRYO.serialize(sessionId)),
                     sessionId, appId));
         });
+        for (byte queueId = 0; queueId < MAX_QUEUES; queueId++) {
+            setUpQueueReportThreshold(
+                    queueId,
+                    DEFAULT_QUEUE_REPORT_LATENCY_THRESHOLD,
+                    DEFAULT_QUEUE_REPORT_LATENCY_THRESHOLD);
+        }
         return true;
     }
 
@@ -476,7 +491,8 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         return Optional.of(cfg.nodeSidIPv4());
     }
 
-    private FlowRule buildReportEntryWithType(IntDeviceConfig intCfg, short bridgedMdType, short reportType) {
+    private FlowRule buildReportEntryWithType(
+            IntDeviceConfig intCfg, short bridgedMdType, short reportType, short mirrorType) {
         final SegmentRoutingDeviceConfig srCfg = cfgService.getConfig(
                 deviceId, SegmentRoutingDeviceConfig.class);
         if (srCfg == null) {
@@ -539,8 +555,6 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                     P4InfoConstants.MON_LABEL,
                     sid.get());
             reportActionBuilder.withParameter(monLabelParam);
-
-
         } else {
             if (reportType == INT_REPORT_TYPE_LOCAL) {
                 reportActionBuilder.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_LOCAL_REPORT_ENCAP);
@@ -567,7 +581,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                         .matchExact(P4InfoConstants.HDR_BMD_TYPE,
                                 bridgedMdType)
                         .matchExact(P4InfoConstants.HDR_MIRROR_TYPE,
-                                MIRROR_TYPE_INT_REPORT)
+                                mirrorType)
                         .matchExact(P4InfoConstants.HDR_INT_REPORT_TYPE,
                                 reportType)
                         .build())
@@ -585,10 +599,14 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
 
     private List<FlowRule> buildReportEntries(IntDeviceConfig intCfg) {
         return Lists.newArrayList(
-                buildReportEntryWithType(intCfg, BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_LOCAL),
-                buildReportEntryWithType(intCfg, BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_DROP),
-                buildReportEntryWithType(intCfg, BMD_TYPE_INGRESS_MIRROR, INT_REPORT_TYPE_LOCAL),
-                buildReportEntryWithType(intCfg, BMD_TYPE_INGRESS_MIRROR, INT_REPORT_TYPE_DROP)
+                buildReportEntryWithType(intCfg, BMD_TYPE_INT_INGRESS_DROP,
+                                         INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID),
+                buildReportEntryWithType(intCfg, BMD_TYPE_EGRESS_MIRROR,
+                                         INT_REPORT_TYPE_DROP, MIRROR_TYPE_INT_REPORT),
+                buildReportEntryWithType(intCfg, BMD_TYPE_EGRESS_MIRROR,
+                                         INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT),
+                buildReportEntryWithType(intCfg, BMD_TYPE_DEFLECTED,
+                                         INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID)
         );
     }
 
@@ -634,5 +652,99 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 .makePermanent()
                 .build();
         flowRuleService.applyFlowRules(watchlistRule);
+    }
+
+    protected List<List<Range<Integer>>> getMatchRangesForTrigger(long threshold) {
+        List<List<Range<Integer>>> result = Lists.newArrayList();
+        if (threshold <= 0xffff) {
+            // From threshold value to 0x0000ffff
+            result.add(ImmutableList.of(Range.closed(0, 0), Range.closed((int) threshold, 0xffff)));
+            // From 0x00010000 to 0xffffffff
+            result.add(ImmutableList.of(Range.openClosed(0, 0xffff), Range.closed(0, 0xffff)));
+        } else {
+            int thresholdUpper = (int) (threshold >> 16);
+            int thresholdLower = (int) (threshold & 0xffff);
+            // From threshold to 0xTTTTffff, "TTTT" is the upper 16-bit of the threshold.
+            result.add(ImmutableList.of(
+                Range.closed(thresholdUpper, thresholdUpper), Range.closed(thresholdLower, 0xffff)));
+            if (thresholdUpper < 0xffff) {
+                // From 0xTTTTffff to 0xffffffff, "TTTT" is the upper 16-bit of the threshold.
+                result.add(ImmutableList.of(Range.openClosed(thresholdUpper, 0xffff), Range.closed(0, 0xffff)));
+            }
+        }
+        return result;
+    }
+
+    protected List<List<Range<Integer>>> getMatchRangesForReset(long threshold) {
+        List<List<Range<Integer>>> result = Lists.newArrayList();
+        if (threshold <= 0xffff) {
+            // From 0 to threshold
+            result.add(ImmutableList.of(Range.closed(0, 0), Range.closedOpen(0, (int) threshold)));
+        } else {
+            int thresholdUpper = (int) (threshold >> 16);
+            int thresholdLower = (int) (threshold & 0xffff);
+            // From 0 to 0xTTTT0000, "TTTT" is the upper 16-bit of the threshold.
+            result.add(ImmutableList.of(Range.closedOpen(0, thresholdUpper), Range.closed(0, 0xffff)));
+            // From 0xTTTT0000 to threshold, "TTTT" is the upper 16-bit of the threshold.
+            result.add(ImmutableList.of(
+                Range.closed(thresholdUpper, thresholdUpper), Range.closedOpen(0, thresholdLower)));
+        }
+        return result;
+    }
+
+    private Short[] rangeToShortArray(Range<Integer> range) {
+        Short[] result = new Short[] {
+            range.lowerEndpoint().shortValue(),
+            range.upperEndpoint().shortValue()
+        };
+        // Shift one if it the endpoint bound type is open.
+        if (range.lowerBoundType() == BoundType.OPEN) {
+            result[0]++;
+        }
+        if (range.upperBoundType() == BoundType.OPEN) {
+            result[1]--;
+        }
+        return result;
+    }
+
+    private void setUpQueueReportThresholdInternal(byte queueId, Range<Integer> upperRange,
+            Range<Integer> lowerRange, PiActionId actionId) {
+        Short[] thresholdUpper = rangeToShortArray(upperRange);
+        Short[] thresholdLower = rangeToShortArray(lowerRange);
+        final PiCriterion matchCriterion = PiCriterion.builder()
+                .matchExact(P4InfoConstants.HDR_EGRESS_QID, queueId)
+                .matchRange(P4InfoConstants.HDR_HOP_LATENCY_UPPER, thresholdUpper[0], thresholdUpper[1])
+                .matchRange(P4InfoConstants.HDR_HOP_LATENCY_LOWER, thresholdLower[0], thresholdLower[1])
+                .build();
+        final TrafficSelector selector = DefaultTrafficSelector.builder()
+                .matchPi(matchCriterion)
+                .build();
+        final TrafficTreatment treatment = DefaultTrafficTreatment.builder()
+                .piTableAction(PiAction.builder().withId(actionId).build())
+                .build();
+        final FlowRule queueReportFlow = DefaultFlowRule.builder()
+            .forDevice(deviceId)
+            .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_QUEUE_LATENCY_THRESHOLDS)
+            .withSelector(selector)
+            .withTreatment(treatment)
+            .makePermanent()
+            .fromApp(appId)
+            .withPriority(DEFAULT_PRIORITY)
+            .build();
+        flowRuleService.applyFlowRules(queueReportFlow);
+    }
+
+    private void setUpQueueReportThreshold(byte queueId, long thresholdToTrigger,
+        long thresholdToReset) {
+        // Latency values higher than this threshold, should trigger a quota check and report generation.
+        for (List<Range<Integer>> ranges : getMatchRangesForTrigger(thresholdToTrigger)) {
+            setUpQueueReportThresholdInternal(queueId, ranges.get(0), ranges.get(1),
+                    P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_CHECK_QUOTA);
+        }
+        // Latency values lower than the threshold, resets the queue report quota.
+        for (List<Range<Integer>> ranges : getMatchRangesForReset(thresholdToTrigger)) {
+            setUpQueueReportThresholdInternal(queueId, ranges.get(0), ranges.get(1),
+                    P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_RESET_QUOTA);
+        }
     }
 }

@@ -121,6 +121,12 @@ header icmp_t {
     // Other optional fields...
 }
 
+header vxlan_t {
+    bit<8>  flags;
+    bit<24> reserved;
+    bit<24> vni;
+    bit<8>  reserved_2;
+}
 
 // GTPU v1 -- 3GPP TS 29.281 version 15.7.0
 // https://www.etsi.org/deliver/etsi_ts/129200_129299/129281/15.07.00_60/ts_129281v150700p.pdf
@@ -176,23 +182,33 @@ struct spgw_ingress_metadata_t {
 
 #ifdef WITH_INT
 // Report Telemetry Headers v0.5
+@pa_no_overlay("egress", "hdr.report_fixed_header.rsvd")
 header report_fixed_header_t {
     bit<4>  ver;
     bit<4>  nproto;
-    bit<1>  d;
-    bit<1>  q;
-    bit<1>  f;
+    bit<3>  dqf; // drop, queue, and flow flag.
     bit<15> rsvd;
     bit<6>  hw_id;
     bit<32> seq_no;
     bit<32> ig_tstamp;
 }
 
+// Ingress drop report PTF tests wil fail without using these annotation
+// According to p4i, without these annotation, some fields will be placed in the same
+// container and the parser will place values incorrectly.
+@pa_container_size("egress", "hdr.common_report_header.queue_id", 8)
+@pa_container_size("egress", "hdr.common_report_header.ig_port", 16)
+@pa_container_size("egress", "hdr.common_report_header.eg_port", 16)
+@pa_no_overlay("egress", "hdr.common_report_header.queue_id")
+@pa_no_overlay("egress", "hdr.common_report_header.eg_port")
 header common_report_header_t {
     bit<32> switch_id;
-    bit<16> ig_port;
-    bit<16> eg_port;
-    bit<8>  queue_id;
+    bit<7>  pad1;
+    bit<9>  ig_port;
+    bit<7>  pad2;
+    bit<9>  eg_port;
+    bit<3>  pad3;
+    bit<5>  queue_id;
 }
 
 // Telemetry drop report header
@@ -203,7 +219,8 @@ header drop_report_header_t {
 
 // Switch Local Report Header
 header local_report_header_t {
-    bit<24> queue_occupancy;
+    bit<5>  pad1;
+    bit<19> queue_occupancy;
     bit<32> eg_tstamp;
 }
 
@@ -212,46 +229,56 @@ header local_report_header_t {
 // from egress mirror, the compiler may mark the mirror metadata and other
 // headers (e.g., Report headers) as "mutually exclusive". Here we set all
 // fields as "no overlay" to prevent this.
-@pa_no_overlay("egress", "fabric_md.int_mirror_md.bmd_type")
-@pa_no_overlay("egress", "fabric_md.int_mirror_md.mirror_type")
-@pa_no_overlay("egress", "fabric_md.int_mirror_md.ig_port")
-@pa_no_overlay("egress", "fabric_md.int_mirror_md.eg_port")
-@pa_no_overlay("egress", "fabric_md.int_mirror_md.queue_id")
-@pa_no_overlay("egress", "fabric_md.int_mirror_md.queue_occupancy")
-@pa_no_overlay("egress", "fabric_md.int_mirror_md.ig_tstamp")
-@pa_no_overlay("egress", "fabric_md.int_mirror_md.eg_tstamp")
-@pa_no_overlay("egress", "fabric_md.int_mirror_md.drop_reason")
-@pa_no_overlay("egress", "fabric_md.int_mirror_md.ip_eth_type")
-@pa_no_overlay("egress", "fabric_md.int_mirror_md.report_type")
-@pa_no_overlay("egress", "fabric_md.int_mirror_md.flow_hash")
-@pa_no_overlay("egress", "fabric_md.int_mirror_md.gtpu_presence")
-header int_mirror_metadata_t {
+@pa_no_overlay("egress", "fabric_md.int_report_md.bmd_type")
+@pa_no_overlay("egress", "fabric_md.int_report_md.mirror_type")
+@pa_no_overlay("egress", "fabric_md.int_report_md.ig_port")
+@pa_no_overlay("egress", "fabric_md.int_report_md.eg_port")
+@pa_no_overlay("egress", "fabric_md.int_report_md.queue_id")
+@pa_no_overlay("egress", "fabric_md.int_report_md.queue_occupancy")
+@pa_no_overlay("egress", "fabric_md.int_report_md.ig_tstamp")
+@pa_no_overlay("egress", "fabric_md.int_report_md.eg_tstamp")
+@pa_no_overlay("egress", "fabric_md.int_report_md.drop_reason")
+@pa_no_overlay("egress", "fabric_md.int_report_md.ip_eth_type")
+@pa_no_overlay("egress", "fabric_md.int_report_md.report_type")
+@pa_no_overlay("egress", "fabric_md.int_report_md.flow_hash")
+@pa_no_overlay("egress", "fabric_md.int_report_md.encap_presence")
+header int_report_metadata_t {
     BridgedMdType_t       bmd_type;
     @padding bit<5>       _pad0;
     FabricMirrorType_t    mirror_type;
-    bit<16>               ig_port;
-    bit<16>               eg_port;
-    bit<8>                queue_id;
-    bit<24>               queue_occupancy;
+    @padding bit<7>       _pad1;
+    bit<9>                ig_port;
+    @padding bit<7>       _pad2;
+    bit<9>                eg_port;
+    @padding bit<3>       _pad3;
+    bit<5>                queue_id;
+    @padding bit<5>       _pad4;
+    bit<19>               queue_occupancy;
     bit<32>               ig_tstamp;
     bit<32>               eg_tstamp;
     bit<8>                drop_reason;
     bit<16>               ip_eth_type;
-    GtpuPresence          gtpu_presence;
-    @padding bit<4>       _pad2;
-    IntReportType_t       report_type;
+    @padding bit<6>       _pad5;
+    EncapPresence         encap_presence;
+    bit<3>                report_type;
+    @padding bit<5>       _pad6;
     flow_hash_t           flow_hash;
 }
 
 @flexible
 struct int_bridged_metadata_t {
-    IntReportType_t report_type;
+    bit<3>          report_type;
     MirrorId_t      mirror_session_id;
+    IntDropReason_t drop_reason;
+    QueueId_t       queue_id;
+    PortId_t        egress_port;
 }
 
 struct int_metadata_t {
     bit<32> hop_latency;
     bit<48> timestamp;
+    bool    vlan_stripped;
+    bool    queue_report;
 }
 #endif // WITH_INT
 
@@ -264,13 +291,13 @@ struct bridged_metadata_base_t {
     bool                     is_multicast;
     fwd_type_t               fwd_type;
     vlan_id_t                vlan_id;
+    EncapPresence            encap_presence;
     // bit<3>                vlan_pri;
     // bit<1>                vlan_cfi;
     bit<8>                   mpls_ttl;
     bit<48>                  ig_tstamp;
     bit<16>                  ip_eth_type;
     bit<STATS_FLOW_ID_WIDTH> stats_flow_id;
-    GtpuPresence             gtpu_presence;
 #ifdef WITH_DOUBLE_VLAN_TERMINATION
     bool                     push_double_vlan;
     vlan_id_t                inner_vlan_id;
@@ -311,27 +338,36 @@ struct lookup_metadata_t {
     bit<8>                  icmp_code;
 }
 
+// Used for holding basic mirror information.
+// When mirroring, the egress parser will see two types of packets: one with
+// bridged.bmd_type and another with mirror.bmd_type.
+struct common_mirror_metadata_t {
+    MirrorId_t         mirror_session_id;
+    BridgedMdType_t    bmd_type;
+}
+
 // Ingress pipeline-only metadata
 @pa_auto_init_metadata
 struct fabric_ingress_metadata_t {
-    bridged_metadata_t      bridged;
-    flow_hash_t             ecmp_hash;
-    lookup_metadata_t       lkp;
-    bit<32>                 routing_ipv4_dst; // Outermost
-    bool                    skip_forwarding;
-    bool                    skip_next;
-    next_id_t               next_id;
-    bool                    egress_port_set;
+    bridged_metadata_t       bridged;
+    flow_hash_t              ecmp_hash;
+    lookup_metadata_t        lkp;
+    bit<32>                  routing_ipv4_dst; // Outermost
+    bool                     skip_forwarding;
+    bool                     skip_next;
+    next_id_t                next_id;
+    bool                     egress_port_set;
+    bool                     punt_to_cpu;
+    slice_id_t               slice_id;
+    tc_t                     tc;
     // FIXME: checksum errors are set but never read, remove or test it
-    bool                    ipv4_checksum_err;
-    bool                    inner_ipv4_checksum_err;
+    bool                     ipv4_checksum_err;
+    bool                     inner_ipv4_checksum_err;
 #ifdef WITH_SPGW
-    spgw_ingress_metadata_t spgw;
+    spgw_ingress_metadata_t  spgw;
 #endif // WITH_SPGW
-#ifdef WITH_INT
-    int_mirror_metadata_t int_mirror_md;
-#endif // WITH_INT
-    PortType_t              ig_port_type;
+    PortType_t               ig_port_type;
+    common_mirror_metadata_t mirror;
 }
 
 // Egress pipeline-only metadata
@@ -343,6 +379,14 @@ header common_egress_metadata_t {
     FabricMirrorType_t    mirror_type;
 }
 
+header packet_in_mirror_metadata_t {
+    BridgedMdType_t       bmd_type;
+    @padding bit<5>       _pad0;
+    FabricMirrorType_t    mirror_type;
+    @padding bit<7>       _pad1;
+    PortId_t              ingress_port;
+}
+
 @pa_auto_init_metadata
 struct fabric_egress_metadata_t {
     bridged_metadata_t    bridged;
@@ -351,9 +395,11 @@ struct fabric_egress_metadata_t {
     bool                  inner_ipv4_checksum_err;
 #endif // WITH_SPGW
 #ifdef WITH_INT
-    int_mirror_metadata_t int_mirror_md;
+    int_report_metadata_t int_report_md;
     int_metadata_t        int_md;
     bit<16>               int_ipv4_len;
+    bool                  is_int_recirc; // Tells the pipeline that this packet will be
+                                         // recirculated later as an INT report.
 #endif // WITH_INT
 }
 
@@ -382,6 +428,9 @@ struct ingress_headers_t {
     gtpu_t gtpu;
     gtpu_options_t gtpu_options;
     gtpu_ext_psc_t gtpu_ext_psc;
+    vxlan_t vxlan;
+    ethernet_t inner_ethernet;
+    eth_type_t inner_eth_type;
     ipv4_t inner_ipv4;
     tcp_t inner_tcp;
     udp_t inner_udp;

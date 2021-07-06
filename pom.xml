@@ -11,7 +11,7 @@ SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
     <parent>
         <groupId>org.onosproject</groupId>
         <artifactId>onos-dependencies</artifactId>
-        <version>2.5.2-b1</version>
+        <version>2.5.2-SNAPSHOT</version>
     </parent>
 
     <groupId>org.stratumproject</groupId>
@@ -40,6 +40,13 @@ SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
         </dependency>
 
         <dependency>
+            <groupId>org.onosproject</groupId>
+            <artifactId>onos-drivers-p4runtime</artifactId>
+            <version>${onos.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
             <groupId>${trellis.api.groupId}</groupId>
             <artifactId>${trellis.api.artifactId}</artifactId>
             <version>${trellis.api.version}</version>
@@ -49,13 +56,6 @@ SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
         <dependency>
             <groupId>org.onosproject</groupId>
             <artifactId>onlab-osgi</artifactId>
-            <version>${onos.version}</version>
-            <scope>provided</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.onosproject</groupId>
-            <artifactId>onos-pipelines-fabric-api</artifactId>
             <version>${onos.version}</version>
             <scope>provided</scope>
         </dependency>
@@ -142,7 +142,7 @@ SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
                 <extensions>true</extensions>
                 <configuration>
                     <instructions>
-                        <Karaf-Commands>org.stratumproject.fabric.tna.stats.cli</Karaf-Commands>
+                        <Karaf-Commands>org.stratumproject.fabric.tna.stats.cli,org.stratumproject.fabric.tna.behaviour.cli</Karaf-Commands>
                     </instructions>
                 </configuration>
             </plugin>
@@ -181,6 +181,17 @@ SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
             </snapshots>
         </repository>
     </repositories>
+    <pluginRepositories>
+        <pluginRepository>
+            <id>snapshots</id>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+            <snapshots>
+                <enabled>true</enabled>
+                <updatePolicy>always</updatePolicy>
+                <checksumPolicy>fail</checksumPolicy>
+            </snapshots>
+        </pluginRepository>
+    </pluginRepositories>
 
     <distributionManagement>
         <snapshotRepository>

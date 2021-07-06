@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 package org.stratumproject.fabric.tna.behaviour.pipeliner;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+
 import org.easymock.Capture;
 import org.easymock.CaptureType;
 import org.junit.Before;
@@ -21,6 +23,12 @@ import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.net.flow.criteria.Criteria;
 import org.onosproject.net.flow.criteria.PiCriterion;
+import org.onosproject.net.group.DefaultGroupDescription;
+import org.onosproject.net.group.DefaultGroupKey;
+import org.onosproject.net.group.GroupBucket;
+import org.onosproject.net.group.GroupBuckets;
+import org.onosproject.net.group.GroupDescription;
+import org.onosproject.net.group.GroupService;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
 import org.stratumproject.fabric.tna.behaviour.FabricCapabilities;
@@ -33,14 +41,17 @@ import java.util.Optional;
 import static org.easymock.EasyMock.capture;
 import static org.easymock.EasyMock.createMock;
 import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.expectLastCall;
 import static org.easymock.EasyMock.newCapture;
 import static org.easymock.EasyMock.replay;
 import static org.easymock.EasyMock.reset;
 import static org.easymock.EasyMock.verify;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.onosproject.net.group.DefaultGroupBucket.createCloneGroupBucket;
 import static org.stratumproject.fabric.tna.behaviour.Constants.PORT_TYPE_INTERNAL;
 import static org.stratumproject.fabric.tna.behaviour.Constants.ZERO;
+import static org.stratumproject.fabric.tna.behaviour.FabricUtils.KRYO;
 
 public class FabricPipelinerTest {
 
@@ -52,10 +63,11 @@ public class FabricPipelinerTest {
     private static final byte FWD_MPLS = 1;
     private static final byte FWD_IPV4_ROUTING = 2;
     private static final int DEFAULT_VLAN = 4094;
-    private static final short ETH_TYPE_EXACT_MASK = (short) 0xFFFF;
+    private static final int PKT_IN_MIRROR_SESSION_ID = 0x210;
 
     private FabricPipeliner pipeliner;
     private FlowRuleService flowRuleService;
+    private GroupService groupService;
 
     @Before
     public void setup() throws IOException {
@@ -65,34 +77,23 @@ public class FabricPipelinerTest {
 
         // Services mock
         flowRuleService = createMock(FlowRuleService.class);
+        groupService = createMock(GroupService.class);
 
         pipeliner = new FabricPipeliner(capabilities);
         pipeliner.flowRuleService = flowRuleService;
+        pipeliner.groupService = groupService;
         pipeliner.appId = APP_ID;
         pipeliner.deviceId = DEVICE_ID;
     }
 
-    @Test
-    public void testInitializePipeline() {
-        final Capture<FlowRule> capturedSwitchInfoRule = newCapture(CaptureType.ALL);
-        final Capture<FlowRule> capturedCpuIgVlanRule = newCapture(CaptureType.ALL);
-        final Capture<FlowRule> capturedCpuFwdClsRule = newCapture(CaptureType.ALL);
-        final List<FlowRule> expectedIgPortVlanRules = Lists.newArrayList();
-        final Capture<FlowRule> capturedIgPortVlanRule = newCapture(CaptureType.ALL);
-        final List<FlowRule> expectedEgVlanRules = Lists.newArrayList();
-        final Capture<FlowRule> capturedEgVlanRule = newCapture(CaptureType.ALL);
-        final List<FlowRule> expectedFwdClsIpRules = Lists.newArrayList();
-        final Capture<FlowRule> capturedFwdClsIpRules = newCapture(CaptureType.ALL);
-        final List<FlowRule> expectedFwdClsMplsRules = Lists.newArrayList();
-        final Capture<FlowRule> capturedFwdClsMplsRules = newCapture(CaptureType.ALL);
-
+    private FlowRule switchInfoRule() {
         final TrafficTreatment setSwitchInfoTreatment = DefaultTrafficTreatment.builder()
                 .piTableAction(PiAction.builder()
                         .withId(P4InfoConstants.FABRIC_EGRESS_PKT_IO_EGRESS_SET_SWITCH_INFO)
                         .withParameter(new PiActionParam(P4InfoConstants.CPU_PORT, CPU_PORT))
                         .build())
                 .build();
-        final FlowRule expectedSwitchInfoRule = DefaultFlowRule.builder()
+        return DefaultFlowRule.builder()
                 .forDevice(DEVICE_ID)
                 .withTreatment(setSwitchInfoTreatment)
                 .withPriority(DEFAULT_FLOW_PRIORITY)
@@ -100,146 +101,130 @@ public class FabricPipelinerTest {
                 .makePermanent()
                 .forTable(P4InfoConstants.FABRIC_EGRESS_PKT_IO_EGRESS_SWITCH_INFO)
                 .build();
-        // ingress_port_vlan table for cpu port
+    }
+
+    private FlowRule buildIngressVlanRule(int port) {
         final TrafficSelector cpuIgVlanSelector = DefaultTrafficSelector.builder()
-                .add(Criteria.matchInPort(PortNumber.portNumber(CPU_PORT)))
-                .add(PiCriterion.builder()
-                        .matchExact(P4InfoConstants.HDR_VLAN_IS_VALID, ZERO)
-                        .build())
-                .build();
-        final TrafficTreatment cpuIgVlanTreatment = DefaultTrafficTreatment.builder()
+        .add(Criteria.matchInPort(PortNumber.portNumber(port)))
+        .add(PiCriterion.builder()
+                .matchExact(P4InfoConstants.HDR_VLAN_IS_VALID, ZERO)
+                .build())
+        .build();
+        final TrafficTreatment igVlanTreatment = DefaultTrafficTreatment.builder()
                 .piTableAction(PiAction.builder()
                         .withId(P4InfoConstants.FABRIC_INGRESS_FILTERING_PERMIT_WITH_INTERNAL_VLAN)
                         .withParameter(new PiActionParam(P4InfoConstants.VLAN_ID, DEFAULT_VLAN))
                         .withParameter(new PiActionParam(P4InfoConstants.PORT_TYPE, PORT_TYPE_INTERNAL))
                         .build())
                 .build();
-        final FlowRule expectedCpuIgVlanRule = DefaultFlowRule.builder()
+        return DefaultFlowRule.builder()
                 .withSelector(cpuIgVlanSelector)
-                .withTreatment(cpuIgVlanTreatment)
+                .withTreatment(igVlanTreatment)
                 .forTable(P4InfoConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN)
                 .makePermanent()
                 .withPriority(DEFAULT_FLOW_PRIORITY)
                 .forDevice(DEVICE_ID)
                 .fromApp(APP_ID)
                 .build();
+    }
 
-        final TrafficSelector cpuFwdClsSelector = DefaultTrafficSelector.builder()
-                .matchInPort(PortNumber.portNumber(CPU_PORT))
-                .matchPi(PiCriterion.builder()
-                        .matchExact(P4InfoConstants.HDR_IP_ETH_TYPE, Ethernet.TYPE_IPV4)
-                        .build())
-                .build();
-        final TrafficTreatment cpuFwdClsTreatment = DefaultTrafficTreatment.builder()
+    private FlowRule buildEgressVlanRule(int port) {
+        final TrafficSelector egressVlanSelector = DefaultTrafficSelector.builder()
+        .add(PiCriterion.builder()
+                .matchExact(P4InfoConstants.HDR_VLAN_ID, DEFAULT_VLAN)
+                .matchExact(P4InfoConstants.HDR_EG_PORT, port)
+                .build())
+        .build();
+        final TrafficTreatment egressVlanTreatment = DefaultTrafficTreatment.builder()
                 .piTableAction(PiAction.builder()
-                        .withId(P4InfoConstants.FABRIC_INGRESS_FILTERING_SET_FORWARDING_TYPE)
-                        .withParameter(new PiActionParam(P4InfoConstants.FWD_TYPE, FWD_IPV4_ROUTING))
+                        .withId(P4InfoConstants.FABRIC_EGRESS_EGRESS_NEXT_POP_VLAN)
                         .build())
                 .build();
-        final FlowRule expectedCpuFwdClsRule = DefaultFlowRule.builder()
-                .withSelector(cpuFwdClsSelector)
-                .withTreatment(cpuFwdClsTreatment)
-                .forTable(P4InfoConstants.FABRIC_INGRESS_FILTERING_FWD_CLASSIFIER)
+        return DefaultFlowRule.builder()
+                .withSelector(egressVlanSelector)
+                .withTreatment(egressVlanTreatment)
+                .forTable(P4InfoConstants.FABRIC_EGRESS_EGRESS_NEXT_EGRESS_VLAN)
                 .makePermanent()
                 .withPriority(DEFAULT_FLOW_PRIORITY)
                 .forDevice(DEVICE_ID)
                 .fromApp(APP_ID)
                 .build();
+    }
+
+    private FlowRule buildFwdClsRule(int port, Short etherType, short ipEtherType, byte fwdType, int priority) {
+        final TrafficSelector.Builder fwdClsSelector = DefaultTrafficSelector.builder()
+                .matchInPort(PortNumber.portNumber(port))
+                .matchPi(PiCriterion.builder()
+                        .matchExact(P4InfoConstants.HDR_IP_ETH_TYPE, ipEtherType)
+                        .build());
+        if (etherType != null) {
+            fwdClsSelector.matchEthType(etherType);
+        }
+        final TrafficTreatment cpuFwdClsTreatment = DefaultTrafficTreatment.builder()
+                .piTableAction(PiAction.builder()
+                        .withId(P4InfoConstants.FABRIC_INGRESS_FILTERING_SET_FORWARDING_TYPE)
+                        .withParameter(new PiActionParam(P4InfoConstants.FWD_TYPE, fwdType))
+                        .build())
+                .build();
+        return DefaultFlowRule.builder()
+                .withSelector(fwdClsSelector.build())
+                .withTreatment(cpuFwdClsTreatment)
+                .forTable(P4InfoConstants.FABRIC_INGRESS_FILTERING_FWD_CLASSIFIER)
+                .makePermanent()
+                .withPriority(priority)
+                .forDevice(DEVICE_ID)
+                .fromApp(APP_ID)
+                .build();
+    }
+
+    private GroupDescription buildPacketInCloneGroup() {
+        final List<GroupBucket> expectedPacketInCloneGroupBuckets = ImmutableList.of(
+                createCloneGroupBucket(DefaultTrafficTreatment.builder()
+                        .setOutput(PortNumber.CONTROLLER)
+                        .build()));
+            return new DefaultGroupDescription(
+                    DEVICE_ID, GroupDescription.Type.CLONE,
+                    new GroupBuckets(expectedPacketInCloneGroupBuckets),
+                    new DefaultGroupKey(KRYO.serialize(PKT_IN_MIRROR_SESSION_ID)),
+                    PKT_IN_MIRROR_SESSION_ID, APP_ID);
+    }
+
+    @Test
+    public void testInitializePipeline() {
+        final Capture<FlowRule> capturedSwitchInfoRule = newCapture(CaptureType.ALL);
+        final Capture<FlowRule> capturedCpuIgVlanRule = newCapture(CaptureType.ALL);
+        final Capture<FlowRule> capturedCpuFwdClsRule = newCapture(CaptureType.ALL);
+        final Capture<FlowRule> capturedIgPortVlanRule = newCapture(CaptureType.ALL);
+        final Capture<FlowRule> capturedEgVlanRule = newCapture(CaptureType.ALL);
+        final Capture<FlowRule> capturedFwdClsIpRules = newCapture(CaptureType.ALL);
+        final Capture<FlowRule> capturedFwdClsMplsRules = newCapture(CaptureType.ALL);
+        final Capture<GroupDescription> capturedCloneGroup = newCapture(CaptureType.FIRST);
+
+        final List<FlowRule> expectedIgPortVlanRules = Lists.newArrayList();
+        final List<FlowRule> expectedEgVlanRules = Lists.newArrayList();
+        final List<FlowRule> expectedFwdClsIpRules = Lists.newArrayList();
+        final List<FlowRule> expectedFwdClsMplsRules = Lists.newArrayList();
+        final FlowRule expectedSwitchInfoRule = switchInfoRule();
+        final FlowRule expectedCpuIgVlanRule = buildIngressVlanRule(CPU_PORT);
+        final FlowRule expectedCpuFwdClsRule =
+                buildFwdClsRule(CPU_PORT, null, Ethernet.TYPE_IPV4, FWD_IPV4_ROUTING, DEFAULT_FLOW_PRIORITY);
+        final GroupDescription expectedPacketInCloneGroup = buildPacketInCloneGroup();
+
         flowRuleService.applyFlowRules(
                 capture(capturedSwitchInfoRule),
                 capture(capturedCpuIgVlanRule),
                 capture(capturedCpuFwdClsRule));
 
+        groupService.addGroup(capture(capturedCloneGroup));
+        expectLastCall().once();
+
         RECIRC_PORTS.forEach(port -> {
-            // ingress_port_vlan table
-            final TrafficSelector ingressPortVlanSelector = DefaultTrafficSelector.builder()
-                    .add(Criteria.matchInPort(PortNumber.portNumber(port)))
-                    .add(PiCriterion.builder()
-                            .matchExact(P4InfoConstants.HDR_VLAN_IS_VALID, ZERO)
-                            .build())
-                    .build();
-            final TrafficTreatment ingressPortVlanTreatment = DefaultTrafficTreatment.builder()
-                    .piTableAction(PiAction.builder()
-                            .withId(P4InfoConstants.FABRIC_INGRESS_FILTERING_PERMIT_WITH_INTERNAL_VLAN)
-                            .withParameter(new PiActionParam(P4InfoConstants.VLAN_ID, DEFAULT_VLAN))
-                            .withParameter(new PiActionParam(P4InfoConstants.PORT_TYPE, PORT_TYPE_INTERNAL))
-                            .build())
-                    .build();
-            expectedIgPortVlanRules.add(DefaultFlowRule.builder()
-                    .withSelector(ingressPortVlanSelector)
-                    .withTreatment(ingressPortVlanTreatment)
-                    .forTable(P4InfoConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN)
-                    .makePermanent()
-                    .withPriority(DEFAULT_FLOW_PRIORITY)
-                    .forDevice(DEVICE_ID)
-                    .fromApp(APP_ID)
-                    .build());
-            // egress_vlan table
-            final TrafficSelector egressVlanSelector = DefaultTrafficSelector.builder()
-                    .add(PiCriterion.builder()
-                            .matchExact(P4InfoConstants.HDR_VLAN_ID, DEFAULT_VLAN)
-                            .matchExact(P4InfoConstants.HDR_EG_PORT, port)
-                            .build())
-                    .build();
-            final TrafficTreatment egressVlanTreatment = DefaultTrafficTreatment.builder()
-                    .piTableAction(PiAction.builder()
-                            .withId(P4InfoConstants.FABRIC_EGRESS_EGRESS_NEXT_POP_VLAN)
-                            .build())
-                    .build();
-            expectedEgVlanRules.add(DefaultFlowRule.builder()
-                    .withSelector(egressVlanSelector)
-                    .withTreatment(egressVlanTreatment)
-                    .forTable(P4InfoConstants.FABRIC_EGRESS_EGRESS_NEXT_EGRESS_VLAN)
-                    .makePermanent()
-                    .withPriority(DEFAULT_FLOW_PRIORITY)
-                    .forDevice(DEVICE_ID)
-                    .fromApp(APP_ID)
-                    .build());
-            // fwd_classifier table match IPv4
-            final TrafficSelector fwdClassIpv4Selector = DefaultTrafficSelector.builder()
-                    .matchInPort(PortNumber.portNumber(port))
-                    .matchPi(PiCriterion.builder()
-                            .matchExact(P4InfoConstants.HDR_IP_ETH_TYPE, Ethernet.TYPE_IPV4)
-                            .build())
-                    .build();
-            final TrafficTreatment fwdClassIpv4Treatment = DefaultTrafficTreatment.builder()
-                    .piTableAction(PiAction.builder()
-                            .withId(P4InfoConstants.FABRIC_INGRESS_FILTERING_SET_FORWARDING_TYPE)
-                            .withParameter(new PiActionParam(P4InfoConstants.FWD_TYPE, FWD_IPV4_ROUTING))
-                            .build())
-                    .build();
-            expectedFwdClsIpRules.add(DefaultFlowRule.builder()
-                    .withSelector(fwdClassIpv4Selector)
-                    .withTreatment(fwdClassIpv4Treatment)
-                    .forTable(P4InfoConstants.FABRIC_INGRESS_FILTERING_FWD_CLASSIFIER)
-                    .makePermanent()
-                    .withPriority(DEFAULT_FLOW_PRIORITY)
-                    .forDevice(DEVICE_ID)
-                    .fromApp(APP_ID)
-                    .build());
-            // fwd_classifier table match MPLS
-            final TrafficSelector fwdClassMplsSelector = DefaultTrafficSelector.builder()
-                    .matchInPort(PortNumber.portNumber(port))
-                    .matchEthType(Ethernet.MPLS_UNICAST)
-                    .matchPi(PiCriterion.builder()
-                            .matchExact(P4InfoConstants.HDR_IP_ETH_TYPE, Ethernet.TYPE_IPV4)
-                            .build())
-                    .build();
-            final TrafficTreatment fwdClassMplsTreatment = DefaultTrafficTreatment.builder()
-                    .piTableAction(PiAction.builder()
-                            .withId(P4InfoConstants.FABRIC_INGRESS_FILTERING_SET_FORWARDING_TYPE)
-                            .withParameter(new PiActionParam(P4InfoConstants.FWD_TYPE, FWD_MPLS))
-                            .build())
-                    .build();
-            expectedFwdClsMplsRules.add(DefaultFlowRule.builder()
-                    .withSelector(fwdClassMplsSelector)
-                    .withTreatment(fwdClassMplsTreatment)
-                    .forTable(P4InfoConstants.FABRIC_INGRESS_FILTERING_FWD_CLASSIFIER)
-                    .makePermanent()
-                    .withPriority(DEFAULT_FLOW_PRIORITY + 10)
-                    .forDevice(DEVICE_ID)
-                    .fromApp(APP_ID)
-                    .build());
+            expectedIgPortVlanRules.add(buildIngressVlanRule(port));
+            expectedEgVlanRules.add(buildEgressVlanRule(port));
+            expectedFwdClsIpRules.add(
+                buildFwdClsRule(port, null, Ethernet.TYPE_IPV4, FWD_IPV4_ROUTING, DEFAULT_FLOW_PRIORITY));
+            expectedFwdClsMplsRules.add(
+                buildFwdClsRule(port, Ethernet.MPLS_UNICAST, Ethernet.TYPE_IPV4, FWD_MPLS, DEFAULT_FLOW_PRIORITY + 10));
             flowRuleService.applyFlowRules(
                     capture(capturedIgPortVlanRule),
                     capture(capturedEgVlanRule),
@@ -248,11 +233,13 @@ public class FabricPipelinerTest {
         });
 
         replay(flowRuleService);
+        replay(groupService);
         pipeliner.initializePipeline();
 
         assertTrue(expectedSwitchInfoRule.exactMatch(capturedSwitchInfoRule.getValue()));
         assertTrue(expectedCpuIgVlanRule.exactMatch(capturedCpuIgVlanRule.getValue()));
         assertTrue(expectedCpuFwdClsRule.exactMatch(capturedCpuFwdClsRule.getValue()));
+        assertEquals(expectedPacketInCloneGroup, capturedCloneGroup.getValue());
 
         for (int i = 0; i < RECIRC_PORTS.size(); i++) {
             FlowRule expectIgPortVlanRule = expectedIgPortVlanRules.get(i);

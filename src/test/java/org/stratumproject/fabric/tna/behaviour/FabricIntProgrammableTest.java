@@ -8,6 +8,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Range;
 import com.google.common.collect.Sets;
 import org.easymock.Capture;
 import org.easymock.CaptureType;
@@ -54,6 +55,7 @@ import org.onosproject.net.group.GroupBuckets;
 import org.onosproject.net.group.GroupDescription;
 import org.onosproject.net.group.GroupService;
 import org.onosproject.net.host.HostService;
+import org.onosproject.net.pi.model.PiActionId;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
 import org.onosproject.segmentrouting.config.SegmentRoutingDeviceConfig;
@@ -103,7 +105,9 @@ public class FabricIntProgrammableTest {
     private static final IpAddress COLLECTOR_IP = IpAddress.valueOf("10.128.0.1");
     private static final TpPort COLLECTOR_PORT = TpPort.tpPort(32766);
     private static final short BMD_TYPE_EGRESS_MIRROR = 2;
-    private static final short BMD_TYPE_INGRESS_MIRROR = 3;
+    private static final short BMD_TYPE_DEFLECTED = 5;
+    private static final short BMD_TYPE_INT_INGRESS_DROP = 4;
+    private static final short MIRROR_TYPE_INVALID = 0;
     private static final short MIRROR_TYPE_INT_REPORT = 1;
     private static final short INT_REPORT_TYPE_LOCAL = 1;
     private static final short INT_REPORT_TYPE_DROP = 2;
@@ -122,6 +126,8 @@ public class FabricIntProgrammableTest {
                     .put(0x202, 0x144)
                     .put(0x203, 0x1c4).build();
     private static final MacAddress SWITCH_MAC = MacAddress.valueOf("00:00:00:00:01:80");
+    private static final long DEFAULT_QUEUE_REPORT_LATENCY_THRESHOLD = 2000; // ns
+    private static final byte MAX_QUEUES = 32;
 
     private FabricIntProgrammable intProgrammable;
     private FlowRuleService flowRuleService;
@@ -291,10 +297,14 @@ public class FabricIntProgrammableTest {
         final IntDeviceConfig intConfig = buildIntDeviceConfig();
         ImmutableList<FlowRule> expectRules = ImmutableList.of(
                 buildCollectorWatchlistRule(LEAF_DEVICE_ID),
-                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_LOCAL),
-                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_DROP),
-                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_INGRESS_MIRROR, INT_REPORT_TYPE_LOCAL),
-                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_INGRESS_MIRROR, INT_REPORT_TYPE_DROP),
+                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_INT_INGRESS_DROP,
+                                     INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID),
+                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR,
+                                     INT_REPORT_TYPE_DROP, MIRROR_TYPE_INT_REPORT),
+                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR,
+                                     INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT),
+                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_DEFLECTED,
+                                     INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID),
                 buildFilterConfigFlow(LEAF_DEVICE_ID)
         );
 
@@ -332,10 +342,14 @@ public class FabricIntProgrammableTest {
         final IntDeviceConfig intConfig = buildIntDeviceConfig();
         ImmutableList<FlowRule> expectRules = ImmutableList.of(
                 buildCollectorWatchlistRule(LEAF_DEVICE_ID),
-                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_LOCAL),
-                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_DROP),
-                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_INGRESS_MIRROR, INT_REPORT_TYPE_LOCAL),
-                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_INGRESS_MIRROR, INT_REPORT_TYPE_DROP),
+                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_INT_INGRESS_DROP,
+                                     INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID),
+                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR,
+                                     INT_REPORT_TYPE_DROP, MIRROR_TYPE_INT_REPORT),
+                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR,
+                                     INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT),
+                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_DEFLECTED,
+                                     INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID),
                 buildFilterConfigFlow(LEAF_DEVICE_ID)
         );
 
@@ -377,10 +391,14 @@ public class FabricIntProgrammableTest {
         final IntDeviceConfig intConfig = buildIntDeviceConfig();
         ImmutableList<FlowRule> expectRules = ImmutableList.of(
                 buildCollectorWatchlistRule(SPINE_DEVICE_ID),
-                buildReportTableRule(SPINE_DEVICE_ID, true, BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_LOCAL),
-                buildReportTableRule(SPINE_DEVICE_ID, true, BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_DROP),
-                buildReportTableRule(SPINE_DEVICE_ID, true, BMD_TYPE_INGRESS_MIRROR, INT_REPORT_TYPE_LOCAL),
-                buildReportTableRule(SPINE_DEVICE_ID, true, BMD_TYPE_INGRESS_MIRROR, INT_REPORT_TYPE_DROP),
+                buildReportTableRule(SPINE_DEVICE_ID, true, BMD_TYPE_INT_INGRESS_DROP,
+                                     INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID),
+                buildReportTableRule(SPINE_DEVICE_ID, true, BMD_TYPE_EGRESS_MIRROR,
+                                     INT_REPORT_TYPE_DROP, MIRROR_TYPE_INT_REPORT),
+                buildReportTableRule(SPINE_DEVICE_ID, true, BMD_TYPE_EGRESS_MIRROR,
+                                     INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT),
+                buildReportTableRule(SPINE_DEVICE_ID, true, BMD_TYPE_DEFLECTED,
+                                     INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID),
                 buildFilterConfigFlow(SPINE_DEVICE_ID)
         );
 
@@ -444,14 +462,18 @@ public class FabricIntProgrammableTest {
                 buildFlowEntry(buildExpectedCollectorFlow(IPv4.PROTOCOL_ICMP)),
                 // Report table entry
                 buildFlowEntry(buildFilterConfigFlow(LEAF_DEVICE_ID)),
-                buildFlowEntry(buildReportTableRule(LEAF_DEVICE_ID, false,
-                        BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_LOCAL)),
-                buildFlowEntry(buildReportTableRule(LEAF_DEVICE_ID, false,
-                        BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_DROP)),
-                buildFlowEntry(buildReportTableRule(LEAF_DEVICE_ID, false,
-                        BMD_TYPE_INGRESS_MIRROR, INT_REPORT_TYPE_LOCAL)),
-                buildFlowEntry(buildReportTableRule(LEAF_DEVICE_ID, false,
-                        BMD_TYPE_INGRESS_MIRROR, INT_REPORT_TYPE_DROP))
+                buildFlowEntry(
+                    buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_INT_INGRESS_DROP,
+                                         INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID)),
+                buildFlowEntry(
+                    buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR,
+                                         INT_REPORT_TYPE_DROP, MIRROR_TYPE_INT_REPORT)),
+                buildFlowEntry(
+                    buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR,
+                                         INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT)),
+                buildFlowEntry(
+                    buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_DEFLECTED,
+                                         INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID))
         );
         Set<FlowEntry> randomEntries = buildRandomFlowEntries();
         Set<FlowEntry> entries = Sets.newHashSet(intEntries);
@@ -589,7 +611,66 @@ public class FabricIntProgrammableTest {
         verify(flowRuleService);
     }
 
-    private PiAction buildReportAction(boolean setMpls, short reportType) {
+    /**
+     * Test both getMatchRangesForTrigger and getMatchRangesForReset to ensure we get
+     * the correct range values for the queue_latency_thresholds table.
+     */
+    @Test
+    public void testGetMatchRanges() {
+        // Test when threshold is less than 0xffff
+        List<List<Range<Integer>>> ranges = intProgrammable.getMatchRangesForTrigger(100);
+        // Range for trigger is [100, 0xffff]
+        assertFalse(numberInRange(0, ranges));
+        assertFalse(numberInRange(99, ranges));
+        assertTrue(numberInRange(100, ranges));
+        assertTrue(numberInRange(200, ranges));
+        assertTrue(numberInRange(0x0000ffff, ranges));
+        assertTrue(numberInRange(0x0001ffff, ranges));
+        assertTrue(numberInRange(0xffffffffL, ranges));
+
+        // Range for reset is [0, 100)
+        ranges = intProgrammable.getMatchRangesForReset(100);
+        assertTrue(numberInRange(0, ranges));
+        assertTrue(numberInRange(99, ranges));
+        assertFalse(numberInRange(100, ranges));
+        assertFalse(numberInRange(200, ranges));
+        assertFalse(numberInRange(0x0000ffff, ranges));
+        assertFalse(numberInRange(0x0001ffff, ranges));
+        assertFalse(numberInRange(0xffffffffL, ranges));
+
+        // Test when threshold is bigger than 0xffff
+        // Range for trigger is [0x0100ff00, 0xffffffff]
+        ranges = intProgrammable.getMatchRangesForTrigger(0x0100ff00);
+        assertFalse(numberInRange(0, ranges));
+        assertFalse(numberInRange(0x0001ffff, ranges));
+        assertFalse(numberInRange(0x0100feff, ranges));
+        assertTrue(numberInRange(0x0100ff00, ranges));
+        assertTrue(numberInRange(0x0ff00000, ranges));
+        assertTrue(numberInRange(0xffffffffL, ranges));
+        // Range for reset is [0, 0x0100ff00)
+        ranges = intProgrammable.getMatchRangesForReset(0x0100ff00);
+        assertTrue(numberInRange(0, ranges));
+        assertTrue(numberInRange(0x0001ffff, ranges));
+        assertTrue(numberInRange(0x0100feff, ranges));
+        assertFalse(numberInRange(0x0100ff00, ranges));
+        assertFalse(numberInRange(0x0ff00000, ranges));
+        assertFalse(numberInRange(0xffffffffL, ranges));
+    }
+
+    private boolean numberInRange(long number, List<List<Range<Integer>>> ranges) {
+        int upper = (int) (number >> 16);
+        int lower = (int) (number & 0xffff);
+        for (List<Range<Integer>> range: ranges) {
+            Range<Integer> upperRange = range.get(0);
+            Range<Integer> lowerRange = range.get(1);
+            if (upperRange.contains(upper) && lowerRange.contains(lower)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private PiAction buildReportAction(boolean setMpls, short reportType, short bmdType) {
         final PiActionParam srcMacParam = new PiActionParam(
                 P4InfoConstants.SRC_MAC, MacAddress.ZERO.toBytes());
         final PiActionParam nextHopMacParam = new PiActionParam(
@@ -603,8 +684,8 @@ public class FabricIntProgrammableTest {
                 P4InfoConstants.MON_PORT,
                 COLLECTOR_PORT.toInt());
         final PiActionParam switchIdParam = new PiActionParam(
-                    P4InfoConstants.SWITCH_ID,
-                    NODE_SID_IPV4);
+                P4InfoConstants.SWITCH_ID,
+                NODE_SID_IPV4);
         final PiAction.Builder reportAction = PiAction.builder()
                 .withParameter(srcMacParam)
                 .withParameter(nextHopMacParam)
@@ -632,16 +713,16 @@ public class FabricIntProgrammableTest {
         return reportAction.build();
     }
 
-    private FlowRule buildReportTableRule(DeviceId deviceId, boolean setMpls, short bmdType, short reportType) {
-        PiAction reportAction = buildReportAction(setMpls, reportType);
+    private FlowRule buildReportTableRule(
+            DeviceId deviceId, boolean setMpls, short bmdType, short reportType, short mirrorType) {
+        PiAction reportAction = buildReportAction(setMpls, reportType, bmdType);
         final TrafficTreatment treatment = DefaultTrafficTreatment.builder()
                 .piTableAction(reportAction)
                 .build();
         final TrafficSelector selector = DefaultTrafficSelector.builder()
                 .matchPi(PiCriterion.builder()
                         .matchExact(P4InfoConstants.HDR_BMD_TYPE, bmdType)
-                        .matchExact(P4InfoConstants.HDR_MIRROR_TYPE,
-                                MIRROR_TYPE_INT_REPORT)
+                        .matchExact(P4InfoConstants.HDR_MIRROR_TYPE, mirrorType)
                         .matchExact(P4InfoConstants.HDR_INT_REPORT_TYPE, reportType)
                         .build())
                 .build();
@@ -816,7 +897,9 @@ public class FabricIntProgrammableTest {
 
     private void testInit() {
         final List<GroupDescription> expectedGroups = Lists.newArrayList();
+        final List<FlowRule> expectedFlows = Lists.newArrayList();
         final Capture<GroupDescription> capturedGroup = newCapture(CaptureType.ALL);
+        final Capture<FlowRule> capturedFlow = newCapture(CaptureType.ALL);
         QUAD_PIPE_MIRROR_SESS_TO_RECIRC_PORTS.forEach((sessionId, port) -> {
             // Set up mirror sessions
             final List<GroupBucket> buckets = ImmutableList.of(
@@ -831,8 +914,31 @@ public class FabricIntProgrammableTest {
             groupService.addGroup(capture(capturedGroup));
         });
 
+        for (byte queueId = 0; queueId < MAX_QUEUES; queueId++) {
+            FlowRule queueReportFlow = buildQueueReportFlow(queueId,
+                    new long[]{0, 0},
+                    new long[]{DEFAULT_QUEUE_REPORT_LATENCY_THRESHOLD, 0xffff},
+                    P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_CHECK_QUOTA);
+            expectedFlows.add(queueReportFlow);
+            flowRuleService.applyFlowRules(capture(capturedFlow));
 
-        replay(groupService);
+            queueReportFlow = buildQueueReportFlow(queueId,
+                    new long[]{1, 0xffff},
+                    new long[]{0, 0xffff},
+                    P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_CHECK_QUOTA);
+            expectedFlows.add(queueReportFlow);
+            flowRuleService.applyFlowRules(capture(capturedFlow));
+
+            queueReportFlow = buildQueueReportFlow(queueId,
+                    new long[]{0, 0},
+                    new long[]{0, DEFAULT_QUEUE_REPORT_LATENCY_THRESHOLD - 1},
+                    P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_RESET_QUOTA);
+            expectedFlows.add(queueReportFlow);
+            flowRuleService.applyFlowRules(capture(capturedFlow));
+        }
+
+
+        replay(groupService, flowRuleService);
         assertTrue(intProgrammable.init());
 
         for (int i = 0; i < QUAD_PIPE_MIRROR_SESS_TO_RECIRC_PORTS.size(); i++) {
@@ -841,8 +947,17 @@ public class FabricIntProgrammableTest {
             assertEquals(expectGroup, actualGroup);
         }
 
-        verify(groupService);
-        reset(groupService);
+        for (int i = 0; i < MAX_QUEUES; i++) {
+            for (int fi = 0; fi < 3; fi++) {
+                int index = i * 3 + fi;
+                FlowRule expectedFlow = expectedFlows.get(index);
+                FlowRule actualFlow = capturedFlow.getValues().get(index);
+                assertTrue(expectedFlow.exactMatch(actualFlow));
+            }
+        }
+
+        verify(groupService, flowRuleService);
+        reset(groupService, flowRuleService);
     }
 
     private FlowRule buildCollectorWatchlistRule(DeviceId deviceId) {
@@ -876,5 +991,29 @@ public class FabricIntProgrammableTest {
                 .fromApp(APP_ID)
                 .makePermanent()
                 .build();
+    }
+
+    private FlowRule buildQueueReportFlow(byte queueId, long[] upperRange,
+            long[] lowerRange, PiActionId actionId) {
+        final PiCriterion matchCriterion = PiCriterion.builder()
+                .matchExact(P4InfoConstants.HDR_EGRESS_QID, queueId)
+                .matchRange(P4InfoConstants.HDR_HOP_LATENCY_UPPER, (short) upperRange[0], (short) upperRange[1])
+                .matchRange(P4InfoConstants.HDR_HOP_LATENCY_LOWER, (short) lowerRange[0], (short) lowerRange[1])
+                .build();
+        final TrafficSelector selector = DefaultTrafficSelector.builder()
+                .matchPi(matchCriterion)
+                .build();
+        final TrafficTreatment treatment = DefaultTrafficTreatment.builder()
+                .piTableAction(PiAction.builder().withId(actionId).build())
+                .build();
+        return DefaultFlowRule.builder()
+            .forDevice(LEAF_DEVICE_ID)
+            .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_QUEUE_LATENCY_THRESHOLDS)
+            .withSelector(selector)
+            .withTreatment(treatment)
+            .makePermanent()
+            .fromApp(APP_ID)
+            .withPriority(DEFAULT_PRIORITY)
+            .build();
     }
 }

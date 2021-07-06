@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0 AND Apache-2.0
 
 import difflib
+import time
 from unittest import skip
 
 from base_test import autocleanup, tvsetup, tvskip
@@ -180,6 +181,7 @@ class FabricIPv4UnicastFromPacketOutTest(IPv4UnicastTest):
     """Packet-outs should be routed like regular packets when setting
     packet_out_header_t.do_forwarding=1
     """
+
     @tvsetup
     @autocleanup
     def doRunTest(self, pkt, mac_dest, tagged2, tc_name):
@@ -193,21 +195,16 @@ class FabricIPv4UnicastFromPacketOutTest(IPv4UnicastTest):
         for tagged2 in [False, True]:
             for pkt_type in BASE_PKT_TYPES | GTP_PKT_TYPES:
                 tc_name = pkt_type + "_VLAN_" + str(tagged2)
-                print(
-                    "Testing {} packet, out-tagged={}...".format(pkt_type, tagged2)
-                )
+                print("Testing {} packet, out-tagged={}...".format(pkt_type, tagged2))
                 pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
                     eth_src=ZERO_MAC,
                     eth_dst=ZERO_MAC,
                     ip_src=HOST1_IPV4,
                     ip_dst=HOST2_IPV4,
-                    pktlen=MIN_PKT_LEN
+                    pktlen=MIN_PKT_LEN,
                 )
                 self.doRunTest(
-                    pkt=pkt,
-                    mac_dest=HOST2_MAC,
-                    tagged2=tagged2,
-                    tc_name=tc_name,
+                    pkt=pkt, mac_dest=HOST2_MAC, tagged2=tagged2, tc_name=tc_name,
                 )
 
 
@@ -1038,6 +1035,39 @@ class FabricDefaultVlanPacketInTest(FabricTest):
         self.verify_no_other_packets()
 
 
+@group("packetio")
+class FabricPacketInPostIngressTest(IPv4UnicastTest):
+    """
+    Packet-in generated using clone/punt_to_cpu_post_ingress actions should include changes
+    from the ingress pipeline, while clone/punt_to_cpu action should not.
+    """
+
+    @tvsetup
+    @autocleanup
+    def doRunTest(self, action, post_ingress):
+        add_acl_rule = getattr(self, f"add_forwarding_acl_{action}_to_cpu")
+        add_acl_rule(eth_type=ETH_TYPE_IPV4, post_ingress=post_ingress)
+        pkt = testutils.simple_udp_packet()
+        self.runIPv4UnicastTest(
+            pkt, next_hop_mac=HOST2_MAC, verify_pkt=(action == "copy")
+        )
+
+        # only "copy_to_cpu_post_ingress" action will include the change from next
+        # control block, "punt_to_cpu_post_ingress" will skip the next control block
+        # so the mac address will not be changed.
+        if post_ingress and action == "copy":
+            pkt = pkt_route(pkt, HOST2_MAC)
+
+        self.verify_packet_in(pkt, self.port1)
+
+    def runTest(self):
+        print()
+        for action in ["punt", "copy"]:
+            for post_ingress in [False, True]:
+                print(f"Testing action={action}, post_ingress={post_ingress}...")
+                self.doRunTest(action, post_ingress)
+
+
 class FabricGtpUnicastEcmpBasedOnTeid(FabricTest):
     """
     This test case verifies if the GTP encapsulated traffic
@@ -1340,14 +1370,6 @@ class FabricSpgwDownlinkTest(SpgwSimpleTest):
         #                     is_next_hop_spine,
         #                     tc_name=tc_name,
         #                 )
-
-
-@group("spgw")
-class FabricSpgwReadWriteSymmetryTest(SpgwReadWriteSymmetryTest):
-    @tvskip
-    @autocleanup
-    def runTest(self):
-        self.runReadWriteSymmetryTest()
 
 
 @group("spgw")
@@ -1867,7 +1889,9 @@ class FabricIntLocalReportTest(IntTest):
                     for send_report_to_spine in [False, True]:
                         if send_report_to_spine and tagged[1]:
                             continue
-                        for pkt_type in BASE_PKT_TYPES | GTP_PKT_TYPES:
+                        for pkt_type in (
+                            BASE_PKT_TYPES | GTP_PKT_TYPES | VXLAN_PKT_TYPES
+                        ):
                             self.doRunTest(
                                 vlan_conf,
                                 tagged,
@@ -1942,7 +1966,9 @@ class FabricIntIngressDropReportTest(IntTest):
                         for send_report_to_spine in [False, True]:
                             if send_report_to_spine and tagged[1]:
                                 continue
-                            for pkt_type in BASE_PKT_TYPES | GTP_PKT_TYPES:
+                            for pkt_type in (
+                                BASE_PKT_TYPES | GTP_PKT_TYPES | VXLAN_PKT_TYPES
+                            ):
                                 self.doRunTest(
                                     vlan_conf,
                                     tagged,
@@ -2013,7 +2039,9 @@ class FabricIntEgressDropReportTest(IntTest):
                     for send_report_to_spine in [False, True]:
                         if send_report_to_spine and tagged[1]:
                             continue
-                        for pkt_type in BASE_PKT_TYPES | GTP_PKT_TYPES:
+                        for pkt_type in (
+                            BASE_PKT_TYPES | GTP_PKT_TYPES | VXLAN_PKT_TYPES
+                        ):
                             self.doRunTest(
                                 vlan_conf,
                                 tagged,
@@ -2054,7 +2082,7 @@ class FabricFlowReportFilterNoChangeTest(IntTest):
 
     def runTest(self):
         print("")
-        for pkt_type in BASE_PKT_TYPES | GTP_PKT_TYPES:
+        for pkt_type in BASE_PKT_TYPES | GTP_PKT_TYPES | VXLAN_PKT_TYPES:
             expect_int_report = True
             # Change the IP destination to ensure we are using differnt
             # flow for diffrent test cases since the flow report filter
@@ -2175,7 +2203,7 @@ class FabricDropReportFilterTest(IntTest):
 
     def runTest(self):
         print("")
-        for pkt_type in BASE_PKT_TYPES | GTP_PKT_TYPES:
+        for pkt_type in BASE_PKT_TYPES | GTP_PKT_TYPES | VXLAN_PKT_TYPES:
             expect_int_report = True
             # Change the IP destination to ensure we are using differnt
             # flow for diffrent test cases since the flow report filter
@@ -2199,6 +2227,145 @@ class FabricDropReportFilterTest(IntTest):
                     # We should expect not receving any report after the first
                     # report since packet uses 5-tuple as flow ID.
                     expect_int_report = False
+
+
+@group("int")
+class FabricIntQueueReportTest(IntTest):
+    @tvsetup
+    @autocleanup
+    def doRunTest(
+        self,
+        vlan_conf,
+        tagged,
+        pkt_type,
+        is_next_hop_spine,
+        is_device_spine,
+        send_report_to_spine,
+        watch_flow,
+    ):
+        print(
+            f"Testing VLAN={vlan_conf}, pkt={pkt_type}, is_next_hop_spine={is_next_hop_spine}, "
+            f"is_device_spine={is_device_spine}, send_report_to_spine={send_report_to_spine}, "
+            f"watch_flow={watch_flow}..."
+        )
+        pkt = getattr(testutils, "simple_{}_packet".format(pkt_type))(
+            ip_dst=self.get_single_use_ip()
+        )
+        self.runIntQueueTest(
+            pkt=pkt,
+            tagged1=tagged[0],
+            tagged2=tagged[1],
+            is_next_hop_spine=is_next_hop_spine,
+            ig_port=self.port1,
+            eg_port=self.port2,
+            expect_int_report=True,
+            is_device_spine=is_device_spine,
+            send_report_to_spine=send_report_to_spine,
+            watch_flow=watch_flow,
+        )
+
+    def runTest(self):
+        print("")
+        for is_device_spine in [False, True]:
+            for vlan_conf, tagged in vlan_confs.items():
+                if is_device_spine and (tagged[0] or tagged[1]):
+                    continue
+                for is_next_hop_spine in [False, True]:
+                    if is_next_hop_spine and tagged[1]:
+                        continue
+                    for send_report_to_spine in [False, True]:
+                        if send_report_to_spine and tagged[1]:
+                            continue
+                        for pkt_type in (
+                            BASE_PKT_TYPES | GTP_PKT_TYPES | VXLAN_PKT_TYPES
+                        ):
+                            for watch_flow in [False, True]:
+                                self.doRunTest(
+                                    vlan_conf,
+                                    tagged,
+                                    pkt_type,
+                                    is_next_hop_spine,
+                                    is_device_spine,
+                                    send_report_to_spine,
+                                    watch_flow,
+                                )
+
+
+@group("int")
+class FabricIntQueueReportQuotaTest(IntTest):
+    @tvsetup
+    @autocleanup
+    def doRunTest(
+        self, expect_int_report, quota_left, threshold_trigger, threshold_reset,
+    ):
+        print(
+            f"Testing expect_int_report={expect_int_report}, quota_left={quota_left}, "
+            f"threshold_trigger={threshold_trigger}, threshold_reset={threshold_reset}..."
+        )
+        pkt = testutils.simple_udp_packet()
+        self.runIntQueueTest(
+            pkt=pkt,
+            tagged1=False,
+            tagged2=False,
+            is_next_hop_spine=False,
+            ig_port=self.port1,
+            eg_port=self.port2,
+            expect_int_report=expect_int_report,
+            is_device_spine=False,
+            send_report_to_spine=False,
+            watch_flow=False,
+            reset_quota=False,
+            threshold_trigger=threshold_trigger,
+            threshold_reset=threshold_reset,
+        )
+        self.verify_quota(port=self.port2, qid=0, quota=quota_left)
+
+    def runTest(self):
+        print("")
+        # Initialize the queue report quota for output port and queue to just 1
+        # After that, configure the threshold to a small value and send a packet to the
+        # device to trigger queue report. We should expect to recevice an INT queue
+        # report and the quota should become zero.
+        self.set_queue_report_quota(port=self.port2, qid=0, quota=1)
+        self.doRunTest(
+            expect_int_report=True,
+            quota_left=0,
+            threshold_trigger=10,
+            threshold_reset=0,
+        )
+        # Send another packet, since the quota is now zero, the pipeline should not
+        # send any INT queue report.
+        self.doRunTest(
+            expect_int_report=False,
+            quota_left=0,
+            threshold_trigger=10,
+            threshold_reset=0,
+        )
+        # Make the trigger threshold higher than the latency, but the reset threshold lower.
+        # The switch should not reset the quota nor generate a report.
+        self.doRunTest(
+            expect_int_report=False,
+            quota_left=0,
+            threshold_trigger=0xFFFFFFFF,
+            threshold_reset=0,
+        )
+        # Set the reset threshold very high to make sure the packet latency will cause the quota to
+        # reset (to a default value hardcoded in the P4 program). There should be no report from the
+        # switch since the quota reset action shouldn't generate any.
+        self.doRunTest(
+            expect_int_report=False,
+            quota_left=INT_DEFAULT_QUEUE_REPORT_QUOTA,
+            threshold_trigger=0xFFFFFFFF,
+            threshold_reset=0xFFFFFFFF,
+        )
+        # Finally, configure the trigger threshold to a low value. We should receive a report since the
+        # quota has been reset.
+        self.doRunTest(
+            expect_int_report=True,
+            quota_left=INT_DEFAULT_QUEUE_REPORT_QUOTA - 1,
+            threshold_trigger=10,
+            threshold_reset=0,
+        )
 
 
 @group("bng")
@@ -2927,3 +3094,95 @@ class FabricOptimizedFieldDetectorTest(FabricTest):
             return
         print("")
         self.doRunTest()
+
+
+@group("int-dod")
+class FabricIntDeflectDropReportTest(IntTest):
+    @autocleanup
+    def doRunTest(
+        self, pkt_type, tagged1=False, is_device_spine=False, send_report_to_spine=False
+    ):
+        print(
+            f"Testing, pkt_type={pkt_type}, tagged1={tagged1}, "
+            + f"is_device_spine={is_device_spine}, send_report_to_spine={send_report_to_spine}..."
+        )
+        pkt = getattr(testutils, f"simple_{pkt_type}_packet")(
+            ip_dst=self.get_single_use_ip()
+        )
+        int_inner_pkt = pkt.copy()
+        ig_port = self.port1
+        # Since the tofino model only sets the deflected_flag to 1 and forward the packet
+        # normally to the egress port we set in the ingress pipe, we need to set the
+        # egress port to recirculate port in the ingress pipe.
+        # On the hardware switch, we won't set the egress port to recirculate port
+        # since the traffic manager will deflect the packet to the port we set in the
+        # chassis config.
+        eg_port = RECIRCULATE_PORTS[0]
+
+        if tagged1:
+            pkt = pkt_add_vlan(pkt, VLAN_ID_1)
+
+        # The packet will still be routed, but dropped by traffic manager.
+        int_inner_pkt = pkt_route(int_inner_pkt, HOST2_MAC)
+
+        exp_int_report_pkt_masked = self.build_int_drop_report(
+            SWITCH_MAC,
+            INT_COLLECTOR_MAC,
+            SWITCH_IPV4,
+            INT_COLLECTOR_IPV4,
+            ig_port,
+            eg_port,
+            INT_DROP_REASON_TRAFFIC_MANAGER,
+            SWITCH_ID,
+            int_inner_pkt,
+            is_device_spine,
+            send_report_to_spine,
+        )
+
+        self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine)
+        self.runIPv4UnicastTest(
+            pkt=pkt,
+            next_hop_mac=HOST2_MAC,
+            tagged1=tagged1,
+            tagged2=False,
+            is_next_hop_spine=False,
+            prefix_len=32,
+            with_another_pkt_later=True,
+            ig_port=ig_port,
+            eg_port=eg_port,
+            verify_pkt=False,
+        )
+
+        self.verify_packet(exp_int_report_pkt_masked, self.port3)
+        self.verify_no_other_packets()
+
+    @autocleanup
+    def send_dummy_packets(self):
+        pkt = testutils.simple_tcp_packet()
+        self.setup_port(self.port1, VLAN_ID_1, PORT_TYPE_EDGE)
+        self.set_up_watchlist_flow(pkt[IP].src, pkt[IP].dst, None, None)
+        self.add_forwarding_acl_set_output_port(self.port2, ipv4_dst=pkt[IP].dst)
+        for _ in range(0, 9):
+            # Add delay between each packet to make sure packets will be processed by
+            # the Tofino Model correctly.
+            time.sleep(0.05)
+            self.send_packet(self.port1, pkt)
+        self.verify_no_other_packets()
+
+    def runTest(self):
+        print("\n")
+        for pkt_type in BASE_PKT_TYPES | GTP_PKT_TYPES | VXLAN_PKT_TYPES:
+            # tagged2 will always be False since we are sending packet to the recirculate port.
+            for tagged1 in [False, True]:
+                for is_device_spine in [False, True]:
+                    if is_device_spine and tagged1:
+                        continue
+                    for send_report_to_spine in [False, True]:
+                        # When using Tofino Model with dod test mode, every 10th packet with
+                        # deflect-on-drop flag set will be deflected.
+                        # First we need to send 9 packets with deflect-on-drop flag set.
+                        self.send_dummy_packets()
+                        # The 10th packet will be deflected
+                        self.doRunTest(
+                            pkt_type, tagged1, is_device_spine, send_report_to_spine
+                        )

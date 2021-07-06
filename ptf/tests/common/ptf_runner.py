@@ -25,21 +25,31 @@ from p4.v1 import p4runtime_pb2, p4runtime_pb2_grpc
 from portmap import pmutils
 from target import targetutils
 from testvector import tvutils
+from trex_stf_lib.trex_client import (
+    CTRexClient,
+    ProtocolError,
+    TRexError,
+    TRexInUseError,
+    TRexRequestDenied,
+)
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("PTF runner")
+TREX_FILES_DIR = "/tmp/trex_files/"
+DEFAULT_KILL_TIMEOUT = 10
+LOG_FORMAT = "%(asctime)s %(levelname)s %(message)s"
+logging.basicConfig(format=LOG_FORMAT, level=logging.INFO)
+logging.getLogger().setLevel(logging.INFO)
 
 
 def error(msg, *args, **kwargs):
-    logger.error(msg, *args, **kwargs)
+    logging.error(msg, *args, **kwargs)
 
 
 def warn(msg, *args, **kwargs):
-    logger.warn(msg, *args, **kwargs)
+    logging.warning(msg, *args, **kwargs)
 
 
 def info(msg, *args, **kwargs):
-    logger.info(msg, *args, **kwargs)
+    logging.info(msg, *args, **kwargs)
 
 
 def check_ifaces(ifaces):
@@ -158,6 +168,54 @@ def update_config(
         stream_recv_thread.join()
 
 
+def set_up_trex_server(trex_daemon_client, trex_address, trex_config, force_restart):
+
+    try:
+        info("Pushing Trex config %s to the server", trex_config)
+        if not trex_daemon_client.push_files(trex_config):
+            error("Unable to push %s to Trex server", trex_config)
+            return False
+
+        if force_restart:
+            info("Killing all TRexes... with meteorite... Boom!")
+            trex_daemon_client.kill_all_trexes()
+
+            # Wait until Trex enter the Idle state
+            start_time = time.time()
+            success = False
+            while time.time() - start_time < DEFAULT_KILL_TIMEOUT:
+                if trex_daemon_client.is_idle():
+                    success = True
+                    break
+                time.sleep(1)
+
+            if not success:
+                error(
+                    "Unable to kill Trex process, please login "
+                    + "to the server and kill it manually."
+                )
+                return False
+
+        if not trex_daemon_client.is_idle():
+            info("The Trex server process is running")
+            warn(
+                "A Trex server process is still running, "
+                + "use --force-restart to kill it if necessary."
+            )
+            return False
+
+        trex_config_file_on_server = TREX_FILES_DIR + os.path.basename(trex_config)
+        trex_daemon_client.start_stateless(cfg=trex_config_file_on_server)
+    except ConnectionRefusedError:
+        error(
+            "Unable to connect to server %s.\n" + "Did you start the Trex daemon?",
+            trex_address,
+        )
+        return False
+
+    return True
+
+
 def run_test(
     p4info_path,
     grpc_addr,
@@ -169,6 +227,7 @@ def run_test(
     platform=None,
     generate_tv=False,
     loopback=False,
+    trex_server_addr=None,
     extra_args=(),
 ):
     """
@@ -207,7 +266,7 @@ def run_test(
             p = subprocess.Popen([cmd], shell=True)
             p.wait()
         except Exception as e:
-            print(e)
+            info(e)
             error("Error when creating interfaces")
             return False
         # Write the portmap proto object to testvectors/portmap.pb.txt
@@ -238,6 +297,8 @@ def run_test(
     test_params += ";loopback='{}'".format(loopback)
     if platform is not None:
         test_params += ";pltfm='{}'".format(platform)
+    if trex_server_addr is not None:
+        test_params += ";trex_server_addr='{}".format(trex_server_addr)
     test_params += ";profile='{}'".format(profile)
     cmd.append("--test-params={}".format(test_params))
     cmd.extend(extra_args)
@@ -338,6 +399,24 @@ def main():
         required=True,
         choices=["fabric", "fabric-spgw", "fabric-int", "fabric-spgw-int"],
     )
+    parser.add_argument(
+        "--trex-address",
+        help="Address of the remote trex daemon server",
+        type=str,
+        required=False,
+    )
+    parser.add_argument(
+        "--trex-config",
+        help="Location of the TRex config file to be pushed to the remote server",
+        type=str,
+        required=False,
+    )
+    parser.add_argument(
+        "--force-restart",
+        help="Restart the TRex daemon core process before running tests if there is one running",
+        action="store_true",
+        required=False,
+    )
     args, unknown_args = parser.parse_known_args()
 
     if not check_ptf():
@@ -355,7 +434,7 @@ def main():
         sys.exit(1)
     tofino_pipeline_config = args.tofino_pipeline_config
     if not os.path.exists(args.port_map):
-        print("Port map path '{}' does not exist".format(args.port_map))
+        info("Port map path '{}' does not exist".format(args.port_map))
         sys.exit(1)
 
     success = True
@@ -371,23 +450,58 @@ def main():
     if not success:
         sys.exit(2)
 
-    if not args.skip_test:
-        success = run_test(
-            p4info_path=args.p4info,
-            device_id=args.device_id,
-            grpc_addr=args.grpc_addr,
-            cpu_port=args.cpu_port,
-            ptfdir=args.ptf_dir,
-            port_map_path=args.port_map,
-            platform=args.platform,
-            generate_tv=args.generate_tv,
-            loopback=args.loopback,
-            profile=args.profile,
-            extra_args=unknown_args,
+    # if line rate test, set up and tear down TRex
+    if args.trex_address != None:
+        trex_daemon_client = CTRexClient(args.trex_address)
+        info("Starting TRex daemon client...")
+        success = set_up_trex_server(
+            trex_daemon_client, args.trex_address, args.trex_config, args.force_restart
         )
+        if not success:
+            error("Failed to set up TRex daemon client!")
+            sys.exit(3)
 
-    if not success:
-        sys.exit(3)
+        if not args.skip_test:
+            info("Running linerate tests...")
+            success = run_test(
+                p4info_path=args.p4info,
+                device_id=args.device_id,
+                grpc_addr=args.grpc_addr,
+                cpu_port=args.cpu_port,
+                ptfdir=args.ptf_dir,
+                port_map_path=args.port_map,
+                platform=args.platform,
+                generate_tv=args.generate_tv,
+                loopback=args.loopback,
+                profile=args.profile,
+                trex_server_addr=args.trex_address,
+                extra_args=unknown_args,
+            )
+            if not success:
+                error("Failed to run linerate tests!")
+                sys.exit(4)
+
+        info("Stopping trex daemon client...")
+        trex_daemon_client.stop_trex()
+    else:
+        info("Running unary test...")
+        if not args.skip_test:
+            success = run_test(
+                p4info_path=args.p4info,
+                device_id=args.device_id,
+                grpc_addr=args.grpc_addr,
+                cpu_port=args.cpu_port,
+                ptfdir=args.ptf_dir,
+                port_map_path=args.port_map,
+                platform=args.platform,
+                generate_tv=args.generate_tv,
+                loopback=args.loopback,
+                profile=args.profile,
+                extra_args=unknown_args,
+            )
+            if not success:
+                error("Failed running unary tests!")
+                sys.exit(5)
 
 
 if __name__ == "__main__":

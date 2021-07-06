@@ -24,6 +24,7 @@
 #define GTPU_EXT_PSC_HDR_BYTES 4
 #define MPLS_HDR_BYTES 4
 #define VLAN_HDR_BYTES 4
+#define VXLAN_HDR_BYTES 8
 
 #define PKT_INSTANCE_TYPE_NORMAL 0
 #define PKT_INSTANCE_TYPE_INGRESS_CLONE 1
@@ -41,6 +42,12 @@ typedef bit<12> vlan_id_t;
 typedef bit<32> ipv4_addr_t;
 typedef bit<16> l4_port_t;
 typedef bit<32> flow_hash_t;
+typedef bit<4>  slice_id_t;
+typedef bit<4>  tc_t; // Traffic Class (for QoS)
+
+const slice_id_t SLICE_ID_UNKNOWN = 0;
+const tc_t TC_UNKNOWN = 0;
+
 
 // SPGW types
 typedef bit<32> teid_t;
@@ -61,10 +68,15 @@ enum bit<8> SpgwInterface {
     FROM_DBUF     = 0x3
 }
 
-enum bit<2> GtpuPresence {
+// According to our design choice, we report only the inner headers to the INT collector.
+// The EncapPresence keeps track of the encapsulation protocol in use.
+// The EncapPresence is further needed by the egress INT parser to strip out the outer encapsulation headers
+// and put only inner headers in an INT report.
+enum bit<2> EncapPresence {
     NONE          = 0x0,
     GTPU_ONLY     = 0x1,
-    GTPU_WITH_PSC = 0x2
+    GTPU_WITH_PSC = 0x2,
+    VXLAN         = 0x3
 }
 
 const bit<16> GTPU_UDP_PORT = 2152;
@@ -131,6 +143,8 @@ const vlan_id_t DEFAULT_VLAN_ID = 12w4094;
 const bit<8> DEFAULT_MPLS_TTL = 64;
 const bit<8> DEFAULT_IPV4_TTL = 64;
 
+const bit<16> VXLAN_UDP_PORT = 4789;
+
 // The recirculation port uses the same number for all HW pipes. The actual port
 // ID (DP_ID) can be obtained by prefixing the HW pipe ID (2 bits).
 const bit<7> RECIRC_PORT_NUMBER = 7w68;
@@ -145,7 +159,9 @@ enum bit<8> BridgedMdType_t {
     INVALID = 0,
     INGRESS_TO_EGRESS = 1,
     EGRESS_MIRROR = 2,
-    INGRESS_MIRROR = 3
+    INGRESS_MIRROR = 3,
+    INT_INGRESS_DROP = 4,
+    DEFLECTED = 5
 }
 
 // The mirror type, makes the parser to use correct way to parse the mirror metadata.
@@ -154,8 +170,11 @@ enum bit<8> BridgedMdType_t {
 // it in the deparser.
 enum bit<3> FabricMirrorType_t {
     INVALID = 0,
-    INT_REPORT = 1
+    INT_REPORT = 1,
+    PACKET_IN = 2
 }
+
+const MirrorId_t PACKET_IN_MIRROR_SESSION_ID = 0x210;
 
 // Modes for CPU loopback testing, where a process can inject packets through
 // the CPU port (P4RT packet-out) and expect the same to be delivered back to
@@ -183,7 +202,6 @@ const bit<4>  NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER = 2;
 const bit<16> REPORT_FIXED_HEADER_BYTES = 12;
 const bit<16> DROP_REPORT_HEADER_BYTES = 12;
 const bit<16> LOCAL_REPORT_HEADER_BYTES = 16;
-const bit<16> REPORT_MIRROR_HEADER_BYTES = 26;
 const bit<16> ETH_FCS_LEN = 4;
 const bit<8> INT_MIRROR_SESSION_BASE = 0x80;
 
@@ -191,13 +209,17 @@ const bit<8> INT_MIRROR_SESSION_BASE = 0x80;
 typedef bit<FLOW_REPORT_FILTER_WIDTH> flow_report_filter_index_t;
 #define DROP_REPORT_FILTER_WIDTH 16
 typedef bit<DROP_REPORT_FILTER_WIDTH> drop_report_filter_index_t;
+#define QUEUE_REPORT_FILTER_WIDTH 12 // 7-bit of port number plus 5-bit queue id.
+typedef bit<QUEUE_REPORT_FILTER_WIDTH> queue_report_filter_index_t;
+typedef bit<16> queue_report_quota_t;
 
-enum bit<2> IntReportType_t {
-    NO_REPORT = 0,
-    LOCAL = 1,
-    DROP = 2,
-    QUEUE = 3
-}
+typedef bit<3> IntReportType_t;
+const IntReportType_t INT_REPORT_TYPE_NO_REPORT = 0;
+// follow the order of dqf bits in the INT fixed header
+const IntReportType_t INT_REPORT_TYPE_DROP = 4;
+const IntReportType_t INT_REPORT_TYPE_QUEUE = 2;
+const IntReportType_t INT_REPORT_TYPE_LOCAL = 1;
+
 
 enum bit<8> IntDropReason_t {
     // Common drop reasons
@@ -206,6 +228,7 @@ enum bit<8> IntDropReason_t {
     DROP_REASON_ROUTING_V4_MISS = 29,
     DROP_REASON_ROUTING_V6_MISS = 29,
     DROP_REASON_PORT_VLAN_MAPPING_MISS = 55,
+    DROP_REASON_TRAFFIC_MANAGER = 71,
     DROP_REASON_ACL_DENY = 80,
     DROP_REASON_BRIDGING_MISS = 89,
     // Fabric-TNA-specific drop reasons

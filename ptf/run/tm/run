@@ -15,9 +15,9 @@ it=$(test -t 0 && echo "-it" || echo "-t")
 # shellcheck disable=SC2068
 docker run --name "${testerRunName}" "${it}" --privileged --rm \
     --network "container:${tmRunName}" \
-    -v "${FP4TEST_ROOT}":/fabric-p4test \
+    -v "${FABRIC_TNA_ROOT}":/fabric-tna \
     -v "${P4C_OUT}":/p4c-out \
     -e PTF_FILTER="${PTF_FILTER}" \
-    --entrypoint /fabric-p4test/run/tm/start_test.sh \
+    --entrypoint /fabric-tna/run/tm/start_test.sh \
     "${TESTER_DOCKER_IMG}" \
     ${@}

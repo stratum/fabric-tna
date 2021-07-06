@@ -5,8 +5,8 @@
 set -eu -o pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
-FP4TEST_ROOT="${DIR}"/../..
-FABRIC_TNA="${FP4TEST_ROOT}"/..
+FABRIC_TNA_ROOT="${DIR}"/../..
+FABRIC_TNA="${FABRIC_TNA_ROOT}"/..
 
 # shellcheck source=.env
 source "${FABRIC_TNA}"/.env
@@ -43,9 +43,9 @@ echo "*** Starting ${testerRunName} with ${TESTER_DOCKER_IMG}..."
 it=$(test -t 0 && echo "-it" || echo "-t")
 # shellcheck disable=SC2068
 docker run --name "${testerRunName}" "${it}" --privileged --rm \
-    -v "${FP4TEST_ROOT}":/fabric-p4test \
+    -v "${FABRIC_TNA_ROOT}":/fabric-tna \
     -v "${P4C_OUT}":/p4c-out \
     -e PTF_FILTER="${PTF_FILTER}" \
-    --entrypoint /fabric-p4test/run/tv/start_test.sh \
+    --entrypoint /fabric-tna/run/tv/start_test.sh \
     "${TESTER_DOCKER_IMG}" \
     ${@}

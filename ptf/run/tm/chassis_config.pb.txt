@@ -12,7 +12,7 @@ nodes {
   index: 1
 }
 singleton_ports {
-  id: 0
+  id: 1
   name: "veth1"
   slot: 1
   port: 1
@@ -24,7 +24,7 @@ singleton_ports {
   node: 1
 }
 singleton_ports {
-  id: 1
+  id: 2
   name: "veth3"
   slot: 1
   port: 2
@@ -36,7 +36,7 @@ singleton_ports {
   node: 1
 }
 singleton_ports {
-  id: 2
+  id: 3
   name: "veth5"
   slot: 1
   port: 3
@@ -48,7 +48,7 @@ singleton_ports {
   node: 1
 }
 singleton_ports {
-  id: 3
+  id: 4
   name: "veth7"
   slot: 1
   port: 4
@@ -60,7 +60,7 @@ singleton_ports {
   node: 1
 }
 singleton_ports {
-  id: 4
+  id: 5
   name: "veth9"
   slot: 1
   port: 5
@@ -72,7 +72,7 @@ singleton_ports {
   node: 1
 }
 singleton_ports {
-  id: 5
+  id: 6
   name: "veth11"
   slot: 1
   port: 6
@@ -84,7 +84,7 @@ singleton_ports {
   node: 1
 }
 singleton_ports {
-  id: 6
+  id: 7
   name: "veth13"
   slot: 1
   port: 7
@@ -96,7 +96,7 @@ singleton_ports {
   node: 1
 }
 singleton_ports {
-  id: 7
+  id: 8
   name: "veth15"
   slot: 1
   port: 8
@@ -106,4 +106,38 @@ singleton_ports {
     admin_state: ADMIN_STATE_ENABLED
   }
   node: 1
+}
+vendor_config {
+  tofino_config {
+    node_id_to_deflect_on_drop_configs {
+      key: 1
+      value {
+        drop_targets {
+          # Recirculation port for pipe 0
+          # Now we only use deflect-on-drop feature to generate INT reports if the
+          # traffic manager drops the packet. The dropped packet will be deflected to
+          # the recirculate port and encapped with INT headers, see int_parser.p4 for
+          # more detail.
+          # Same apply to other drop targets for different pipe.
+          sdk_port: 68
+          queue: 1
+        }
+        drop_targets {
+          # Recirculation port for pipe 1
+          sdk_port: 196
+          queue: 1
+        }
+        drop_targets {
+          # Recirculation port for pipe 2
+          sdk_port: 324
+          queue: 1
+        }
+        drop_targets {
+          # Recirculation port for pipe 3
+          sdk_port: 452
+          queue: 1
+        }
+      }
+    }
+  }
 }
