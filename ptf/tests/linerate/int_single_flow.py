@@ -9,9 +9,9 @@ from datetime import datetime
 from xnt import analysis_report_pcap
 from trex_utils import list_port_status
 
-TRAFFIC_MULT="1pps"
-TEST_DURATION=10
-CAPTURE_LIMIT = 1050
+TRAFFIC_MULT = "40gbpsl1"
+TEST_DURATION = 10
+CAPTURE_LIMIT = 20
 
 SENDER_PORTS = [1]
 INT_COLLECTOR_PORTS = [2]
@@ -67,5 +67,6 @@ class IntSingleFlow(TRexTest, IntTest):
         # TODO: parse data and verify results
 
     def runTest(self):
+        # TODO: iterate all possible parameters of test
         pkt = testutils.simple_udp_packet()
         self.doRunTest(TRAFFIC_MULT, pkt, [False,False], False, False, False)
