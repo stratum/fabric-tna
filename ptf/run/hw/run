@@ -37,6 +37,7 @@ echo "*** Starting ${testerRunName}..."
 
 it=$(test -t 0 && echo "-it" || echo "-t")
 # shellcheck disable=SC2068
+# mount localtime in container so test pcap time is matches local machine time
 docker run --name "${testerRunName}" "${it}" --rm \
     --network host \
     -v "${PTF_ROOT}":/fabric-tna \
