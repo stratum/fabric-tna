@@ -14,8 +14,8 @@ class TRexTest(P4RuntimeTest):
         self.trex_client = STLClient(server=trex_server_addr)
         self.trex_client.connect()
         self.trex_client.acquire()
-        self.trex_client.reset()
-        self.trex_client.clear_stats()
+        self.trex_client.reset()  # Resets configs from all ports
+        self.trex_client.clear_stats()  # Clear status from all ports
 
     def tearDown(self):
         print('Tearing down STLClient...')

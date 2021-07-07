@@ -1791,6 +1791,7 @@ class DoubleVlanTerminationTest(FabricTest):
         self.setup_port(
             self.port2,
             vlan_id=next_vlan_id,
+            port_type=PORT_TYPE_EDGE,
             double_tagged=True,
             inner_vlan_id=next_inner_vlan_id,
         )
@@ -1909,6 +1910,7 @@ class DoubleVlanTerminationTest(FabricTest):
         self.setup_port(
             self.port1,
             vlan_id=vlan_id,
+            port_type=PORT_TYPE_EDGE,
             double_tagged=True,
             inner_vlan_id=inner_vlan_id,
         )
