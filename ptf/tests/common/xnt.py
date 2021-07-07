@@ -148,7 +148,7 @@ def get_readable_int_report_str(pkt: Packet) -> str:
     )
 
 
-def analysis_report_pcap(pcap_file: str, total_flows_from_trace: int = 0) -> None:
+def analyze_report_pcap(pcap_file: str, total_flows_from_trace: int = 0) -> None:
     pcap_reader = PcapReader(pcap_file)
     skipped = 0
     dropped = 0  # based on seq number

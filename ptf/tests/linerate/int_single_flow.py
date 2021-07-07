@@ -6,7 +6,7 @@ from base_test import *
 from fabric_test import *
 from trex_stl_lib.api import STLPktBuilder, STLStream, STLTXCont
 from datetime import datetime
-from xnt import analysis_report_pcap
+from xnt import analyze_report_pcap
 from trex_utils import list_port_status
 
 TRAFFIC_MULT = "40gbpsl1"
@@ -61,7 +61,7 @@ class IntSingleFlow(TRexTest, IntTest):
             datetime.now().strftime("%Y%m%d-%H%M%S")
         )
         self.trex_client.stop_capture(capture["id"], output)
-        analysis_report_pcap(output)
+        analyze_report_pcap(output)
         list_port_status(self.trex_client.get_stats())
 
         # TODO: parse data and verify results
