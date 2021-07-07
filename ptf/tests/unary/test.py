@@ -1333,7 +1333,6 @@ class FabricSpgwDownlinkTest(SpgwSimpleTest):
         print("")
         for traffic_dir in ["host-leaf-host", "spine-leaf-host"]:
             for test_args in get_test_args(traffic_dir=traffic_dir, spgw_type="DL"):
-                print(test_args)
                 self.doRunTest(**test_args)
 
 
@@ -1354,7 +1353,6 @@ class FabricSpgwUplinkTest(SpgwSimpleTest):
         print("")
         for traffic_dir in ["host-leaf-host", "host-leaf-spine"]:
             for test_args in get_test_args(traffic_dir=traffic_dir, spgw_type="UL"):
-                print(test_args)
                 self.doRunTest(**test_args)
 
 
@@ -1376,7 +1374,6 @@ class FabricSpgwUplinkRecircTest(SpgwSimpleTest):
         for traffic_dir in ["host-leaf-host", "host-leaf-spine"]:
             for test_args in get_test_args(traffic_dir=traffic_dir, spgw_type="UL", 
                                                                 include_allow=True):
-                print(test_args)
                 self.doRunTest(**test_args)
 
 
