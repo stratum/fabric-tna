@@ -10,7 +10,7 @@ FABRIC_TNA_ROOT="${PTF_ROOT}"/..
 
 PTF_FILTER=${PTF_FILTER:-}
 
-mkdir -p "${FABRIC_TNA_ROOT}/tmp"
+mkdir -p "${FABRIC_TNA_ROOT}/ptf/run/hw/log"
 
 # shellcheck source=.env
 source "${FABRIC_TNA_ROOT}"/.env
@@ -40,7 +40,7 @@ it=$(test -t 0 && echo "-it" || echo "-t")
 docker run --name "${testerRunName}" "${it}" --rm \
     --network host \
     -v "${PTF_ROOT}":/fabric-tna \
-    -v "${FABRIC_TNA_ROOT}/tmp":/tmp \
+    -v "${FABRIC_TNA_ROOT}/ptf/run/hw/log":/tmp \
     -v "${P4C_OUT}":/p4c-out \
     -e PTF_FILTER="${PTF_FILTER}" \
     --entrypoint /fabric-tna/run/hw/start_test.sh \
