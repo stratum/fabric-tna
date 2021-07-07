@@ -1331,8 +1331,10 @@ class FabricSpgwDownlinkTest(SpgwSimpleTest):
 
     def runTest(self):
         print("")
+        pkt_addrs = {'eth_src':HOST1_MAC, 'eth_dst':SWITCH_MAC,
+                     'ip_src':HOST1_IPV4, 'ip_dst':UE1_IPV4}
         for traffic_dir in ["host-leaf-host", "spine-leaf-host"]:
-            for test_args in get_test_args(traffic_dir=traffic_dir, spgw_type="DL"):
+            for test_args in get_test_args(traffic_dir=traffic_dir, pkt_addrs=pkt_addrs, spgw_type="DL"):
                 self.doRunTest(**test_args)
 
 
@@ -1351,8 +1353,10 @@ class FabricSpgwUplinkTest(SpgwSimpleTest):
 
     def runTest(self):
         print("")
+        pkt_addrs = {'eth_src':HOST1_MAC, 'eth_dst':SWITCH_MAC,
+                     'ip_src':HOST1_IPV4, 'ip_dst':HOST2_IPV4}
         for traffic_dir in ["host-leaf-host", "host-leaf-spine"]:
-            for test_args in get_test_args(traffic_dir=traffic_dir, spgw_type="UL"):
+            for test_args in get_test_args(traffic_dir=traffic_dir, pkt_addrs=pkt_addrs, spgw_type="UL"):
                 self.doRunTest(**test_args)
 
 
@@ -1371,9 +1375,11 @@ class FabricSpgwUplinkRecircTest(SpgwSimpleTest):
 
     def runTest(self):
         print("")
+        pkt_addrs = {'eth_src':HOST1_MAC, 'eth_dst':SWITCH_MAC,
+                     'ip_src':UE1_IPV4, 'ip_dst':UE2_IPV4}
         for traffic_dir in ["host-leaf-host", "host-leaf-spine"]:
-            for test_args in get_test_args(traffic_dir=traffic_dir, spgw_type="UL", 
-                                                                include_allow=True):
+            for test_args in get_test_args(traffic_dir=traffic_dir, pkt_addrs=pkt_addrs, 
+                                           spgw_type="UL", include_allow=True):
                 self.doRunTest(**test_args)
 
 

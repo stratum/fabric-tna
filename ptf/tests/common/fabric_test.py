@@ -604,7 +604,7 @@ def pkt_decrement_ttl(pkt):
         pkt[IP].ttl -= 1
     return pkt
 
-def get_test_args(traffic_dir, spgw_type=None, int_test_type=None, 
+def get_test_args(traffic_dir, pkt_addrs, spgw_type=None, int_test_type=None, 
                   test_multiple_pkt_len=False, test_multiple_prefix_len=False,
                   drop_test=False, include_allow=False):
 
@@ -625,6 +625,12 @@ def get_test_args(traffic_dir, spgw_type=None, int_test_type=None,
     pkt_len_list = []
     prefix_len_list = []
     allow_list = []
+
+    """ SET PACKET """
+    ETH_SRC=pkt_addrs.get('eth_src')
+    ETH_DST=pkt_addrs.get('eth_dst')
+    IP_SRC=pkt_addrs.get('ip_src')
+    IP_DST=pkt_addrs.get('ip_dst')
 
     """ TRAFFIC DIRECTION
     """
@@ -714,7 +720,7 @@ def get_test_args(traffic_dir, spgw_type=None, int_test_type=None,
     if test_multiple_pkt_len:
         pkt_len_list = [MIN_PKT_LEN, 1500]
     else:
-        pkt_len_list = [None]
+        pkt_len_list = [MIN_PKT_LEN]
 
     if test_multiple_prefix_len:
         prefix_len_list = [PREFIX_DEFAULT_ROUTE, PREFIX_SUBNET, PREFIX_HOST]
@@ -755,13 +761,12 @@ def get_test_args(traffic_dir, spgw_type=None, int_test_type=None,
                                                 prefix_len, pkt_len, send_report_to_spine, allow
                                         )
                                     )
-                                    # XXX: should we change these fields change based on the test?
                                     pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
-                                        eth_src=HOST1_MAC,
-                                        eth_dst=SWITCH_MAC,
-                                        ip_src=HOST1_IPV4,
-                                        ip_dst=UE1_IPV4,
-                                        pktlen=MIN_PKT_LEN,
+                                        eth_src=ETH_SRC,
+                                        eth_dst=ETH_DST,
+                                        ip_src=IP_SRC,
+                                        ip_dst=IP_DST,
+                                        pktlen=pkt_len,
                                     )
                                     yield {
                                             'pkt':pkt,
