@@ -42,6 +42,7 @@ docker run --name "${testerRunName}" "${it}" --rm \
     -v "${PTF_ROOT}":/fabric-tna \
     -v "${FABRIC_TNA_ROOT}/ptf/run/hw/log":/tmp \
     -v "${P4C_OUT}":/p4c-out \
+    -v /etc/localtime:/etc/localtime \
     -e PTF_FILTER="${PTF_FILTER}" \
     --entrypoint /fabric-tna/run/hw/start_test.sh \
     "${TESTER_DOCKER_IMG}" \
