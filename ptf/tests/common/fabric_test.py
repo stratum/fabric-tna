@@ -710,7 +710,7 @@ def get_test_args(traffic_dir, pkt_addrs, spgw_type=None, int_test_type=None,
 
     """ SEND_REPORT_TO_SPINE
     """
-    if int_test_type in INT_OPTIONS and (traffic_dir == "host-leaf-spine" or traffic_dir == "spine-leaf-host"):
+    if int_test_type in INT_OPTIONS:
         send_report_to_spine_list = [False, True]
     else:
         send_report_to_spine_list = [None]
