@@ -25,13 +25,7 @@ from p4.v1 import p4runtime_pb2, p4runtime_pb2_grpc
 from portmap import pmutils
 from target import targetutils
 from testvector import tvutils
-from trex_stf_lib.trex_client import (
-    CTRexClient,
-    ProtocolError,
-    TRexError,
-    TRexInUseError,
-    TRexRequestDenied,
-)
+from trex_stf_lib.trex_client import CTRexClient
 
 TREX_FILES_DIR = "/tmp/trex_files/"
 DEFAULT_KILL_TIMEOUT = 10
@@ -50,7 +44,6 @@ def warn(msg, *args, **kwargs):
 
 def info(msg, *args, **kwargs):
     logging.info(msg, *args, **kwargs)
-
 
 def check_ifaces(ifaces):
     """
@@ -177,24 +170,7 @@ def set_up_trex_server(trex_daemon_client, trex_address, trex_config, force_rest
             return False
 
         if force_restart:
-            info("Killing all TRexes... with meteorite... Boom!")
             trex_daemon_client.kill_all_trexes()
-
-            # Wait until Trex enter the Idle state
-            start_time = time.time()
-            success = False
-            while time.time() - start_time < DEFAULT_KILL_TIMEOUT:
-                if trex_daemon_client.is_idle():
-                    success = True
-                    break
-                time.sleep(1)
-
-            if not success:
-                error(
-                    "Unable to kill Trex process, please login "
-                    + "to the server and kill it manually."
-                )
-                return False
 
         if not trex_daemon_client.is_idle():
             info("The Trex server process is running")
@@ -272,7 +248,7 @@ def run_test(
         # Write the portmap proto object to testvectors/portmap.pb.txt
         pmutils.write_to_file(tv_portmap, os.getcwd())
 
-    if not generate_tv and not check_ifaces(port_map.values()):
+    if not generate_tv and not trex_server_addr and not check_ifaces(port_map.values()):
         error("Some interfaces are missing")
         return False
 
@@ -298,7 +274,7 @@ def run_test(
     if platform is not None:
         test_params += ";pltfm='{}'".format(platform)
     if trex_server_addr is not None:
-        test_params += ";trex_server_addr='{}".format(trex_server_addr)
+        test_params += ";trex_server_addr='{}'".format(trex_server_addr)
     test_params += ";profile='{}'".format(profile)
     cmd.append("--test-params={}".format(test_params))
     cmd.extend(extra_args)
@@ -311,6 +287,7 @@ def run_test(
     except Exception:
         error("Error when running PTF tests")
         return False
+
     return p.returncode == 0
 
 
@@ -360,7 +337,7 @@ def main():
         "--ptf-dir", help="Directory containing PTF tests", type=str, required=True,
     )
     parser.add_argument(
-        "--port-map", help="Path to JSON port mapping", type=str, required=True
+        "--port-map", help="Path to JSON port mapping", type=str, required=True,
     )
     parser.add_argument(
         "--platform",
@@ -451,7 +428,7 @@ def main():
         sys.exit(2)
 
     # if line rate test, set up and tear down TRex
-    if args.trex_address != None:
+    if args.trex_address is not None:
         trex_daemon_client = CTRexClient(args.trex_address)
         info("Starting TRex daemon client...")
         success = set_up_trex_server(
@@ -479,10 +456,11 @@ def main():
             )
             if not success:
                 error("Failed to run linerate tests!")
+                trex_daemon_client.stop_trex()
                 sys.exit(4)
 
-        info("Stopping trex daemon client...")
         trex_daemon_client.stop_trex()
+        
     else:
         info("Running unary test...")
         if not args.skip_test:

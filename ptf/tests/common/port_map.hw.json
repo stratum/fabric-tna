@@ -1,22 +1,28 @@
 [
     {
         "ptf_port": 0,
-        "p4_port": 148,
-        "iface_name": "ens2f0"
+        "p4_port": 0,
+        "iface_name": "lo",
+        "_comment": "dummy"
     },
     {
         "ptf_port": 1,
-        "p4_port": 149,
-        "iface_name": "ens2f1"
+        "p4_port": 296,
+        "iface_name": "lo"
     },
     {
         "ptf_port": 2,
-        "p4_port": 134,
-        "iface_name": "ens2f2"
+        "p4_port": 288,
+        "iface_name": "lo"
     },
     {
         "ptf_port": 3,
-        "p4_port": 135,
-        "iface_name": "ens2f3"
+        "p4_port": 272,
+        "iface_name": "lo"
+    },
+    {
+        "ptf_port": 4,
+        "p4_port": 280,
+        "iface_name": "lo"
     }
 ]
