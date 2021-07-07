@@ -1334,7 +1334,8 @@ class FabricSpgwDownlinkTest(SpgwSimpleTest):
         pkt_addrs = {'eth_src':HOST1_MAC, 'eth_dst':SWITCH_MAC,
                      'ip_src':HOST1_IPV4, 'ip_dst':UE1_IPV4}
         for traffic_dir in ["host-leaf-host", "spine-leaf-host"]:
-            for test_args in get_test_args(traffic_dir=traffic_dir, pkt_addrs=pkt_addrs, spgw_type="DL"):
+            for test_args in get_test_args(traffic_dir=traffic_dir, pkt_addrs=pkt_addrs,
+                                           spgw_type="DL"):
                 self.doRunTest(**test_args)
 
 
@@ -1356,7 +1357,8 @@ class FabricSpgwUplinkTest(SpgwSimpleTest):
         pkt_addrs = {'eth_src':HOST1_MAC, 'eth_dst':SWITCH_MAC,
                      'ip_src':HOST1_IPV4, 'ip_dst':HOST2_IPV4}
         for traffic_dir in ["host-leaf-host", "host-leaf-spine"]:
-            for test_args in get_test_args(traffic_dir=traffic_dir, pkt_addrs=pkt_addrs, spgw_type="UL"):
+            for test_args in get_test_args(traffic_dir=traffic_dir, pkt_addrs=pkt_addrs,
+                                           spgw_type="UL"):
                 self.doRunTest(**test_args)
 
 
@@ -1401,34 +1403,12 @@ class FabricSpgwDownlinkToDbufTest(SpgwSimpleTest):
 
     def runTest(self):
         print("")
-        for vlan_conf, tagged in vlan_confs.items():
-            for pkt_type in BASE_PKT_TYPES:
-                for is_next_hop_spine in [False, True]:
-                    if is_next_hop_spine and tagged[1]:
-                        continue
-                    tc_name = (
-                        "VLAN_"
-                        + vlan_conf
-                        + "_"
-                        + pkt_type
-                        + "_mpls_"
-                        + str(is_next_hop_spine)
-                    )
-                    print(
-                        "Testing VLAN={}, pkt={}, mpls={}...".format(
-                            vlan_conf, pkt_type, is_next_hop_spine
-                        )
-                    )
-                    pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
-                        eth_src=HOST1_MAC,
-                        eth_dst=SWITCH_MAC,
-                        ip_src=HOST1_IPV4,
-                        ip_dst=UE1_IPV4,
-                        pktlen=MIN_PKT_LEN,
-                    )
-                    self.doRunTest(
-                        pkt, tagged[0], tagged[1], is_next_hop_spine, tc_name=tc_name,
-                    )
+        pkt_addrs = {'eth_src':HOST1_MAC, 'eth_dst':SWITCH_MAC,
+                     'ip_src':HOST1_IPV4, 'ip_dst':UE1_IPV4}
+        for traffic_dir in ["host-leaf-host", "spine-leaf-host"]:
+            for test_args in get_test_args(traffic_dir=traffic_dir, pkt_addrs=pkt_addrs, 
+                                           spgw_type="DL"):
+                self.doRunTest(**test_args)
 
 
 @group("spgw")
@@ -1449,34 +1429,12 @@ class FabricSpgwDownlinkFromDbufTest(SpgwSimpleTest):
 
     def runTest(self):
         print("")
-        for vlan_conf, tagged in vlan_confs.items():
-            for pkt_type in BASE_PKT_TYPES:
-                for is_next_hop_spine in [False, True]:
-                    if is_next_hop_spine and tagged[1]:
-                        continue
-                    tc_name = (
-                        "VLAN_"
-                        + vlan_conf
-                        + "_"
-                        + pkt_type
-                        + "_mpls_"
-                        + str(is_next_hop_spine)
-                    )
-                    print(
-                        "Testing VLAN={}, pkt={}, mpls={}...".format(
-                            vlan_conf, pkt_type, is_next_hop_spine
-                        )
-                    )
-                    pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
-                        eth_src=DBUF_MAC,
-                        eth_dst=SWITCH_MAC,
-                        ip_src=HOST1_IPV4,
-                        ip_dst=UE1_IPV4,
-                        pktlen=MIN_PKT_LEN,
-                    )
-                    self.doRunTest(
-                        pkt, tagged[0], tagged[1], is_next_hop_spine, tc_name=tc_name,
-                    )
+        pkt_addrs = {'eth_src':DBUF_MAC, 'eth_dst':SWITCH_MAC,
+                     'ip_src':HOST1_IPV4, 'ip_dst':UE1_IPV4}
+        for traffic_dir in ["host-leaf-host", "spine-leaf-host"]:
+            for test_args in get_test_args(traffic_dir=traffic_dir, pkt_addrs=pkt_addrs, 
+                                           spgw_type="DL"):
+                self.doRunTest(**test_args)
 
 
 @group("int")
