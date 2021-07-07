@@ -88,8 +88,6 @@ class IPv4UnicastWithPolicingTest(SlicingTest, IPv4UnicastTest):
         else:
             self.add_queue_entry(slice_id=slice_id, tc=tc, qid=1)
         self.runIPv4UnicastTest(pkt, verify_pkt=(not policing), **kwargs)
-        if policing:
-            self.verify_no_other_packets()
 
     def runTest(self):
         print("")
