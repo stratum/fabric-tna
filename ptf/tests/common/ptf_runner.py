@@ -45,6 +45,7 @@ def warn(msg, *args, **kwargs):
 def info(msg, *args, **kwargs):
     logging.info(msg, *args, **kwargs)
 
+
 def check_ifaces(ifaces):
     """
     Checks that required interfaces exist.
@@ -460,7 +461,7 @@ def main():
                 sys.exit(4)
 
         trex_daemon_client.stop_trex()
-        
+
     else:
         info("Running unary test...")
         if not args.skip_test:
