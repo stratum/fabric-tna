@@ -606,7 +606,7 @@ def pkt_decrement_ttl(pkt):
 
 def get_test_args(traffic_dir, spgw_type=None, int_test_type=None, 
                   test_multiple_pkt_len=False, test_multiple_prefix_len=False,
-                  drop_test=False):
+                  drop_test=False, include_allow=False):
 
     """ By default, only include configurations which are specified in function parameters
     """
@@ -624,6 +624,7 @@ def get_test_args(traffic_dir, spgw_type=None, int_test_type=None,
     send_report_to_spine_list = []
     pkt_len_list = []
     prefix_len_list = []
+    allow_list = []
 
     """ TRAFFIC DIRECTION
     """
@@ -720,6 +721,16 @@ def get_test_args(traffic_dir, spgw_type=None, int_test_type=None,
     else:
         prefix_len_list = [None]
 
+    """ ALLOW
+    """
+    if include_allow:
+        if is_next_hop_spine:
+            allow_list = [True]
+        else:
+            allow_list = [True, False]
+    else:
+        allow_list = [None]
+
     """ Generate test arguments
     """
     for drop_reason in drop_reason_list:
@@ -729,39 +740,43 @@ def get_test_args(traffic_dir, spgw_type=None, int_test_type=None,
                     for prefix_len in prefix_len_list:
                         for pkt_len in pkt_len_list:
                             for send_report_to_spine in send_report_to_spine_list:
-                                tc_name = (
-                                    "VLAN_"
-                                    + vlan_conf
-                                    + "_"
-                                    + pkt_type
-                                    + "_is_next_hop_spine_"
-                                    + str(is_next_hop_spine)
-                                )
-                                print(
-                                    "Testing VLAN={}, pkt={}, with_psc={}, is_next_hop_spine={}...".format(
-                                        vlan_conf, pkt_type, with_psc, is_next_hop_spine
+                                for allow in allow_list:
+                                    tc_name = (
+                                        "VLAN_"
+                                        + vlan_conf
+                                        + "_"
+                                        + pkt_type
+                                        + "_is_next_hop_spine_"
+                                        + str(is_next_hop_spine)
                                     )
-                                )
-                                pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
-                                    eth_src=HOST1_MAC,
-                                    eth_dst=SWITCH_MAC,
-                                    ip_src=HOST1_IPV4,
-                                    ip_dst=UE1_IPV4,
-                                    pktlen=MIN_PKT_LEN,
-                                )
-                                yield {
-                                        'pkt':pkt,
-                                        'tagged1':tagged[0],
-                                        'tagged2':tagged[1],
-                                        'with_psc':with_psc,
-                                        'is_next_hop_spine':is_next_hop_spine,
-                                        'tc_name':tc_name,
-                                        'drop_reason':drop_reason,
-                                        'prefix_len':prefix_len,
-                                        'pkt_len':pkt_len,
-                                        'send_report_to_spine':send_report_to_spine,
-                                        'is_device_spine':is_device_spine,
-                                }
+                                    print(
+                                        "Testing VLAN={}, pkt={}, with_psc={}, is_next_hop_spine={}, prefix_len={}, pkt_len={}, send_report_to_spine={}, allow={}..."
+                                        .format(vlan_conf, pkt_type, with_psc, is_next_hop_spine, 
+                                                prefix_len, pkt_len, send_report_to_spine, allow
+                                        )
+                                    )
+                                    # XXX: should we change these fields change based on the test?
+                                    pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
+                                        eth_src=HOST1_MAC,
+                                        eth_dst=SWITCH_MAC,
+                                        ip_src=HOST1_IPV4,
+                                        ip_dst=UE1_IPV4,
+                                        pktlen=MIN_PKT_LEN,
+                                    )
+                                    yield {
+                                            'pkt':pkt,
+                                            'tagged1':tagged[0],
+                                            'tagged2':tagged[1],
+                                            'with_psc':with_psc,
+                                            'is_next_hop_spine':is_next_hop_spine,
+                                            'tc_name':tc_name,
+                                            'drop_reason':drop_reason,
+                                            'prefix_len':prefix_len,
+                                            'pkt_len':pkt_len,
+                                            'send_report_to_spine':send_report_to_spine,
+                                            'is_device_spine':is_device_spine,
+                                            'allow':allow,
+                                    }
 
 
 class FabricTest(P4RuntimeTest):

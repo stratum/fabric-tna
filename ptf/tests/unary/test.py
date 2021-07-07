@@ -1362,7 +1362,7 @@ class FabricSpgwUplinkTest(SpgwSimpleTest):
 class FabricSpgwUplinkRecircTest(SpgwSimpleTest):
     @tvsetup
     @autocleanup
-    def doRunTest(self, pkt, allow, tagged1, tagged2, is_next_hop_spine):
+    def doRunTest(self, pkt, allow, tagged1, tagged2, is_next_hop_spine, **kwargs):
         self.runUplinkRecircTest(
             ue_out_pkt=pkt,
             allow=allow,
@@ -1373,27 +1373,11 @@ class FabricSpgwUplinkRecircTest(SpgwSimpleTest):
 
     def runTest(self):
         print("")
-        for vlan_conf, tagged in vlan_confs.items():
-            for pkt_type in BASE_PKT_TYPES:
-                for is_next_hop_spine in [False, True]:
-                    for allow in [True, False]:
-                        if is_next_hop_spine and (tagged[1] or not allow):
-                            continue
-                        print(
-                            "Testing VLAN={}, pkt={}, is_next_hop_spine={}, allow={}...".format(
-                                vlan_conf, pkt_type, is_next_hop_spine, allow
-                            )
-                        )
-                        pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
-                            eth_src=HOST1_MAC,
-                            eth_dst=SWITCH_MAC,
-                            ip_src=UE1_IPV4,
-                            ip_dst=UE2_IPV4,
-                            pktlen=MIN_PKT_LEN,
-                        )
-                        self.doRunTest(
-                            pkt, allow, tagged[0], tagged[1], is_next_hop_spine
-                        )
+        for traffic_dir in ["host-leaf-host", "host-leaf-spine"]:
+            for test_args in get_test_args(traffic_dir=traffic_dir, spgw_type="UL", 
+                                                                include_allow=True):
+                print(test_args)
+                self.doRunTest(**test_args)
 
 
 @group("spgw")
