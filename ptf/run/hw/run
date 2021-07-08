@@ -6,6 +6,10 @@ set -eu -o pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
 PTF_ROOT="${DIR}"/../..
+
+echo "*** Building PTF docker image in ${PTF_ROOT}/..."
+docker build -f "${PTF_ROOT}"/Dockerfile -t fabric-tna:ptf .
+
 FABRIC_TNA_ROOT="${PTF_ROOT}"/..
 
 PTF_FILTER=${PTF_FILTER:-}
