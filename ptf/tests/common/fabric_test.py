@@ -626,12 +626,6 @@ def get_test_args(traffic_dir, pkt_addrs, spgw_type=None, int_test_type=None,
     prefix_len_list = []
     allow_list = []
 
-    """ SET PACKET """
-    ETH_SRC=pkt_addrs.get('eth_src')
-    ETH_DST=pkt_addrs.get('eth_dst')
-    IP_SRC=pkt_addrs.get('ip_src')
-    IP_DST=pkt_addrs.get('ip_dst')
-
     """ TRAFFIC DIRECTION
     """
     # traffic_dir input structure: "source-device-destination"
@@ -748,11 +742,8 @@ def get_test_args(traffic_dir, pkt_addrs, spgw_type=None, int_test_type=None,
                             for send_report_to_spine in send_report_to_spine_list:
                                 for allow in allow_list:
                                     pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
-                                        eth_src=ETH_SRC,
-                                        eth_dst=ETH_DST,
-                                        ip_src=IP_SRC,
-                                        ip_dst=IP_DST,
                                         pktlen=pkt_len,
+                                        **pkt_addrs
                                     )
                                     params = {
                                         'vlan_conf':vlan_conf,
