@@ -747,20 +747,6 @@ def get_test_args(traffic_dir, pkt_addrs, spgw_type=None, int_test_type=None,
                         for pkt_len in pkt_len_list:
                             for send_report_to_spine in send_report_to_spine_list:
                                 for allow in allow_list:
-                                    tc_name = (
-                                        "VLAN_"
-                                        + vlan_conf
-                                        + "_"
-                                        + pkt_type
-                                        + "_is_next_hop_spine_"
-                                        + str(is_next_hop_spine)
-                                    )
-                                    print(
-                                        "Testing VLAN={}, pkt={}, with_psc={}, is_next_hop_spine={}, prefix_len={}, pkt_len={}, send_report_to_spine={}, allow={}..."
-                                        .format(vlan_conf, pkt_type, with_psc, is_next_hop_spine, 
-                                                prefix_len, pkt_len, send_report_to_spine, allow
-                                        )
-                                    )
                                     pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
                                         eth_src=ETH_SRC,
                                         eth_dst=ETH_DST,
@@ -768,21 +754,26 @@ def get_test_args(traffic_dir, pkt_addrs, spgw_type=None, int_test_type=None,
                                         ip_dst=IP_DST,
                                         pktlen=pkt_len,
                                     )
-                                    yield {
-                                            'pkt':pkt,
-                                            'tagged1':tagged[0],
-                                            'tagged2':tagged[1],
-                                            'with_psc':with_psc,
-                                            'is_next_hop_spine':is_next_hop_spine,
-                                            'tc_name':tc_name,
-                                            'drop_reason':drop_reason,
-                                            'prefix_len':prefix_len,
-                                            'pkt_len':pkt_len,
-                                            'send_report_to_spine':send_report_to_spine,
-                                            'is_device_spine':is_device_spine,
-                                            'allow':allow,
+                                    params = {
+                                        'vlan_conf':vlan_conf,
+                                        'pkt':pkt,
+                                        'tagged1':tagged[0],
+                                        'tagged2':tagged[1],
+                                        'with_psc':with_psc,
+                                        'is_next_hop_spine':is_next_hop_spine,
+                                        'drop_reason':drop_reason,
+                                        'prefix_len':prefix_len,
+                                        'pkt_len':pkt_len,
+                                        'send_report_to_spine':send_report_to_spine,
+                                        'is_device_spine':is_device_spine,
+                                        'allow':allow
                                     }
 
+                                    tc_name = "_".join(["{}_{}".format(k,v) for k, v in params.items()])
+                                    print("Testing " + ", ".join(["{}={}".format(k,v) for k,v in params.items()]))
+                                    params['tc_name'] = tc_name
+
+                                    yield params
 
 class FabricTest(P4RuntimeTest):
 
