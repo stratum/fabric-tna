@@ -1393,7 +1393,7 @@ class FabricSpgwDownlinkToDbufTest(SpgwSimpleTest):
 
     @tvsetup
     @autocleanup
-    def doRunTest(self, pkt, tagged1, tagged2, is_next_hop_spine, tc_name):
+    def doRunTest(self, pkt, tagged1, tagged2, is_next_hop_spine, **kwargs):
         self.runDownlinkToDbufTest(
             pkt=pkt,
             tagged1=tagged1,
@@ -1419,7 +1419,7 @@ class FabricSpgwDownlinkFromDbufTest(SpgwSimpleTest):
 
     @tvsetup
     @autocleanup
-    def doRunTest(self, pkt, tagged1, tagged2, is_next_hop_spine, tc_name):
+    def doRunTest(self, pkt, tagged1, tagged2, is_next_hop_spine, **kwargs):
         self.runDownlinkFromDbufTest(
             pkt=pkt,
             tagged1=tagged1,
