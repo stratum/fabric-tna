@@ -38,6 +38,8 @@ if [ -n "$modified" ]; then
   exit 1
 fi
 
+docker build -f ptf/Dockerfile -t fabric-tna:ptf .
+
 # We limit running PTF tests for only those profiles used in Aether, otherwise
 # we exceed the 45 min limit on Jenkins.
 # FIXME: revert once the PTF tests execution time is optimized (#238)

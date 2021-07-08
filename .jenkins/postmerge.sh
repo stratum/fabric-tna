@@ -16,3 +16,6 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 # Make sure master is not broken by executing the same verify steps for pull
 # requests.
 bash "${DIR}"/pr_verify.sh
+
+docker tag fabric-tna:ptf registry.opennetworking.org/docker.io/stratumproject/fabric-tna:ptf
+docker push registry.opennetworking.org/docker.io/stratumproject/fabric-tna:ptf
