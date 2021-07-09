@@ -7,14 +7,16 @@ from base_test import *
 from fabric_test import *
 from trex_stl_lib.api import STLPktBuilder, STLStream, STLTXCont, STLVM
 from datetime import datetime
+from collections import deque
 
-TRAFFIC_MULT="100%"
-TEST_DURATION=10
+TRAFFIC_MULT="1100pps"
+TEST_DURATION=5
 DEFAULT_QID = 0
 DEFAULT_QUOTA = 50
-CAPTURE_LIMIT = 1024
-THRESHOLD_TRIGGER = 101
-THRESHOLD_RESET = 100
+INT_REPORT_CAPTURE_LIMIT = 100
+RX_LIMIT = 5000 # limit for capturing the traffic from the switch.
+THRESHOLD_TRIGGER = 1000
+THRESHOLD_RESET = 1
 
 SENDER_PORTS = [0]
 INT_COLLECTOR_PORTS = [2]
@@ -22,11 +24,11 @@ RECEIVER_PORTS = [3]
 
 class IntQueueReportTest(TRexTest, IntTest):
     """
-    This test will generate two streams, both streams will be sent to the same output port.
-    Both streams will use 100% of bandwidth to send the traffic, and we expected
-    this will cause some congestions to the output queue.
-    Since there will be some congestions, we also expected to receive INT queue report
-    from the switch.
+    This test will generate one stream with multiple packets with a sequence of source IP
+    addresses. (10.0.0.0~10.255.255.255)
+    On the Stratum side we need to configure port shaper to limit the rate of packets to
+    1000pps. In the test we will use a higher rate to send packets to the switch.
+    We expect to see some congestions and receive INT queue report from the switch.
     """
 
     @autocleanup
@@ -51,31 +53,39 @@ class IntQueueReportTest(TRexTest, IntTest):
 
         # Define stream and stateless VM to change the IP source for each packet.
         vm = STLVM()
-        vm.var(name="ip_id", min_value=0, max_value=0xFFFF, size=2, op="inc")
-        vm.write(fv_name="ip_id", pkt_offset="IP.id")
-        stream = STLStream(packet=STLPktBuilder(pkt=pkt, vm=vm), mode=STLTXCont())
+        vm.var(name="ip_src", min_value="10.0.0.1", max_value="10.255.255.255", size=4, op="inc", step=1)
+        vm.write(fv_name="ip_src", pkt_offset="IP.src")
+        streams = [
+            STLStream(packet=STLPktBuilder(pkt=pkt, vm=vm), mode=STLTXCont())
+        ]
 
-        self.trex_client.add_streams(stream, ports=SENDER_PORTS)
+        self.trex_client.add_streams(streams, ports=SENDER_PORTS)
 
         # Put RX ports to promiscuous mode, otherwise it will drop all packets if the
         # destination mac is not the port mac address.
         self.trex_client.set_port_attr(INT_COLLECTOR_PORTS + RECEIVER_PORTS, promiscuous=True)
 
         # Put port to service mode so we can capture packet from it.
-        self.trex_client.set_service_mode(ports=INT_COLLECTOR_PORTS, enabled=True)
-        capture = self.trex_client.start_capture(
+        self.trex_client.set_service_mode(ports=INT_COLLECTOR_PORTS + RECEIVER_PORTS, enabled=True)
+        int_capture = self.trex_client.start_capture(
             rx_ports=INT_COLLECTOR_PORTS,
-            limit=CAPTURE_LIMIT,
+            limit=INT_REPORT_CAPTURE_LIMIT,
             bpf_filter="udp and dst port 32766",
+        )
+        rx_capture = self.trex_client.start_capture(
+            rx_ports=RECEIVER_PORTS,
+            limit=RX_LIMIT,
+            bpf_filter="udp",
         )
 
         self.trex_client.start(ports=SENDER_PORTS, mult=TRAFFIC_MULT, duration=TEST_DURATION)
         self.trex_client.wait_on_traffic(ports=SENDER_PORTS)
 
-        pcap_path = "/tmp/int-queue-report-{}.pcap".format(
-            datetime.now().strftime("%Y%m%d-%H%M%S")
-        )
-        self.trex_client.stop_capture(capture["id"], pcap_path)
+        pcap_path = f"/tmp/int-queue-report-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+        rx_pcap_path = pcap_path + "-rx.pcap"
+        pcap_path += ".pcap"
+        self.trex_client.stop_capture(int_capture["id"], pcap_path)
+        self.trex_client.stop_capture(rx_capture["id"], rx_pcap_path)
 
         # Verify the following:
         # - Every packet must be an INT report
@@ -84,12 +94,12 @@ class IntQueueReportTest(TRexTest, IntTest):
         # - Latency in every queue report will higher than the threshold we set
         # - The total number of report will be less or equal to the report quota
         # - Egress port and queue must be the one we set
-        # - The packets from the report is sequential (by checking the ID field from the IP header)
+        # - The packets from the report is sequential by checking the source IP
         pcap_reader =  PcapReader(pcap_path)
         report_pkt = None
         number_of_reports = 0
         hw_id_to_seq = {}
-        ip_id = None
+        ips = deque()
         while True:
             try:
                 report_pkt = pcap_reader.recv()
@@ -102,11 +112,15 @@ class IntQueueReportTest(TRexTest, IntTest):
                 self.fail("Packet is not an INT report")
             if INT_L45_LOCAL_REPORT not in report_pkt:
                 self.fail("Packet is not an INT local report")
-            number_of_reports += 1
 
             int_fixed_header = report_pkt[INT_L45_REPORT_FIXED]
             int_local_report_header = report_pkt[INT_L45_LOCAL_REPORT]
             inner_ip_header = int_local_report_header[IP]
+
+            if INT_L45_LOCAL_REPORT in inner_ip_header:
+                continue
+
+            number_of_reports += 1
             hw_id = int_fixed_header.hw_id
             seq_no = int_fixed_header.seq_no
             ingress_time = int_fixed_header.ingress_tstamp
@@ -138,11 +152,10 @@ class IntQueueReportTest(TRexTest, IntTest):
                 latency < THRESHOLD_TRIGGER,
                 f"Latency should be higher than trigger {THRESHOLD_TRIGGER}, got {latency}"
             )
+            ips.append(inner_ip_header.src)
 
-            new_id = inner_ip_header.id
-            if ip_id is not None:
-                self.failIf(new_id != ip_id + 1, f"Expect to get IP ID {ip_id + 1}, but got {new_id}")
-            ip_id = new_id
+
+        pcap_reader.close()
 
         self.failIf(
             number_of_reports > DEFAULT_QUOTA,
@@ -150,6 +163,37 @@ class IntQueueReportTest(TRexTest, IntTest):
         )
 
         print(f"Total number of INT reports received: {number_of_reports}")
+        self.failIf(number_of_reports == 0, "No INT reports received")
+
+        # This section we will verify if the switch is reporting all congested packets.
+        # We will try to find a subset of packets from the RX capture.
+        # The reason we need to compare from the RX capture is because we can't guarantee
+        # that the packet from TRex is in order, so we cannot just check if IP addresses
+        # are sequential.
+        pcap_reader =  PcapReader(rx_pcap_path)
+        checking_ip_src = False
+        while True:
+            try:
+                pkt = pcap_reader.recv()
+            except (EOFError, KeyboardInterrupt):
+                break
+            except Exception:
+                raise
+            if IP not in pkt:
+                continue
+            ip_src = pkt[IP].src
+            if checking_ip_src:
+                if ip_src != ips[0]:
+                    self.fail(f"Expect IP src {ip_src}, got {ips[0]}")
+                else:
+                    ips.popleft()
+            else:
+                if ip_src == ips[0]:
+                    checking_ip_src = True
+                    ips.popleft()
+            if len(ips) == 0:
+                break
+        pcap_reader.close()
 
 
     def runTest(self):

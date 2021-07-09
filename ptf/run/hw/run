@@ -7,6 +7,7 @@ set -eu -o pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
 PTF_ROOT="${DIR}"/../..
 FABRIC_TNA_ROOT="${PTF_ROOT}"/..
+
 PTF_FILTER=${PTF_FILTER:-}
 
 mkdir -p "${FABRIC_TNA_ROOT}/ptf/run/hw/log"
