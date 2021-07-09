@@ -1056,7 +1056,7 @@ class P4RuntimeTest(BaseTest):
             if self.is_default_action_update(update):
                 # Reset table default entry to original one
                 update.entity.table_entry.ClearField("action")
-            if self.is_meter_update(update):
+            elif self.is_meter_update(update):
                 # Reset meter entry to the default one (all packets GREEN)
                 update.entity.meter_entry.ClearField("config")
             else:
