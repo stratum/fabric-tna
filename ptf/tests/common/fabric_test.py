@@ -604,7 +604,7 @@ def pkt_decrement_ttl(pkt):
         pkt[IP].ttl -= 1
     return pkt
 
-def get_test_args(traffic_dir, pkt_addrs=None, spgw_type=None, int_test_type=None, 
+def get_test_args(self, traffic_dir, pkt_addrs=None, spgw_type=None, int_test_type=None, 
                   test_multiple_pkt_len=False, test_multiple_prefix_len=False,
                   drop_test=False, include_allow=False):
 
@@ -748,7 +748,7 @@ def get_test_args(traffic_dir, pkt_addrs=None, spgw_type=None, int_test_type=Non
                                         # TODO: Remove this part when we are able to reset the register
                                         # via P4Runtime.
                                         pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
-                                            ip_dst=FabricTest.get_single_use_ip()
+                                            ip_dst=self.get_single_use_ip()
                                         )
                                     else:
                                         pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
