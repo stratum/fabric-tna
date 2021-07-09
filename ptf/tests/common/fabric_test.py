@@ -2986,9 +2986,7 @@ class IntTest(IPv4UnicastTest):
         )
         self.set_up_recirc_ports()
 
-    def set_up_latency_threshold_for_q_report(self, threshold_trigger, threshold_reset):
-        queue_id = 0
-
+    def set_up_latency_threshold_for_q_report(self, threshold_trigger, threshold_reset, queue_id=0):
         def set_up_queue_report_table_internal(upper, lower, action):
             self.send_request_add_entry_to_action(
                 "FabricEgress.int_egress.queue_latency_thresholds",

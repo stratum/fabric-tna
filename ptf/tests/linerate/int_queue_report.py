@@ -6,21 +6,20 @@ from trex_test import TRexTest
 from base_test import *
 from fabric_test import *
 from trex_stl_lib.api import STLPktBuilder, STLStream, STLTXCont, STLVM
-from datetime import datetime
 from collections import deque
 
 TRAFFIC_MULT="1100pps"
-TEST_DURATION=5
+TEST_DURATION=3
 DEFAULT_QID = 0
 DEFAULT_QUOTA = 50
 INT_REPORT_CAPTURE_LIMIT = 100
-RX_LIMIT = 5000 # limit for capturing the traffic from the switch.
+RX_LIMIT = 4000 # limit for capturing the traffic from the switch.
 THRESHOLD_TRIGGER = 1000
 THRESHOLD_RESET = 1
 
-SENDER_PORTS = [0]
-INT_COLLECTOR_PORTS = [2]
-RECEIVER_PORTS = [3]
+SENDER_PORT = [0]
+INT_COLLECTOR_PORT = [2]
+RECEIVER_PORT = [3]
 
 class IntQueueReportTest(TRexTest, IntTest):
     """
@@ -32,15 +31,16 @@ class IntQueueReportTest(TRexTest, IntTest):
     """
 
     @autocleanup
-    def doRunTest(self, tagged, is_device_spine, send_report_to_spine, is_next_hop_spine):
+    def doRunTest(self, tagged1, tagged2, is_device_spine, send_report_to_spine, is_next_hop_spine):
+        print(f"Testing tagged1={tagged1}, tagged2={tagged2}, is_device_spine={is_device_spine}, send_report_to_spine={send_report_to_spine}, is_next_hop_spine={is_next_hop_spine}")
         pkt = testutils.simple_udp_packet()
         self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine, watch_flow=False)
         self.set_up_latency_threshold_for_q_report(threshold_trigger=THRESHOLD_TRIGGER, threshold_reset=THRESHOLD_RESET)
         self.runIPv4UnicastTest(
             pkt=pkt,
             next_hop_mac=HOST2_MAC,
-            tagged1=tagged[0],
-            tagged2=tagged[1],
+            tagged1=tagged1,
+            tagged2=tagged2,
             is_next_hop_spine=is_next_hop_spine,
             prefix_len=32,
             # Will send/receive traffic from TRex, this is for setting up flows for
@@ -55,35 +55,32 @@ class IntQueueReportTest(TRexTest, IntTest):
         vm = STLVM()
         vm.var(name="ip_src", min_value="10.0.0.1", max_value="10.255.255.255", size=4, op="inc", step=1)
         vm.write(fv_name="ip_src", pkt_offset="IP.src")
-        streams = [
-            STLStream(packet=STLPktBuilder(pkt=pkt, vm=vm), mode=STLTXCont())
-        ]
-
-        self.trex_client.add_streams(streams, ports=SENDER_PORTS)
+        stream = STLStream(packet=STLPktBuilder(pkt=pkt, vm=vm), mode=STLTXCont())
+        self.trex_client.add_streams(stream, ports=SENDER_PORT)
 
         # Put RX ports to promiscuous mode, otherwise it will drop all packets if the
         # destination mac is not the port mac address.
-        self.trex_client.set_port_attr(INT_COLLECTOR_PORTS + RECEIVER_PORTS, promiscuous=True)
+        self.trex_client.clear_stats()
+        self.trex_client.set_port_attr(INT_COLLECTOR_PORT + RECEIVER_PORT, promiscuous=True)
 
         # Put port to service mode so we can capture packet from it.
-        self.trex_client.set_service_mode(ports=INT_COLLECTOR_PORTS + RECEIVER_PORTS, enabled=True)
+        self.trex_client.set_service_mode(ports=INT_COLLECTOR_PORT + RECEIVER_PORT, enabled=True)
         int_capture = self.trex_client.start_capture(
-            rx_ports=INT_COLLECTOR_PORTS,
+            rx_ports=INT_COLLECTOR_PORT,
             limit=INT_REPORT_CAPTURE_LIMIT,
             bpf_filter="udp and dst port 32766",
         )
         rx_capture = self.trex_client.start_capture(
-            rx_ports=RECEIVER_PORTS,
+            rx_ports=RECEIVER_PORT,
             limit=RX_LIMIT,
-            bpf_filter="udp",
+            bpf_filter="ip src net 10.0.0.0/8",
         )
 
-        self.trex_client.start(ports=SENDER_PORTS, mult=TRAFFIC_MULT, duration=TEST_DURATION)
-        self.trex_client.wait_on_traffic(ports=SENDER_PORTS)
+        self.trex_client.start(ports=SENDER_PORT, mult=TRAFFIC_MULT, duration=TEST_DURATION)
+        self.trex_client.wait_on_traffic(ports=SENDER_PORT)
 
-        pcap_path = f"/tmp/int-queue-report-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
-        rx_pcap_path = pcap_path + "-rx.pcap"
-        pcap_path += ".pcap"
+        pcap_path = "/tmp/int-queue-report.pcap"
+        rx_pcap_path = "/tmp/int-queue-report-rx.pcap"
         self.trex_client.stop_capture(int_capture["id"], pcap_path)
         self.trex_client.stop_capture(rx_capture["id"], rx_pcap_path)
 
@@ -193,8 +190,19 @@ class IntQueueReportTest(TRexTest, IntTest):
                     ips.popleft()
             if len(ips) == 0:
                 break
+
+        self.failIf(len(ips) != 0, f"Receive {len(ips)} unexpected report(s)")
         pcap_reader.close()
 
 
     def runTest(self):
-        self.doRunTest([False, False], False, False, False)
+        print("")
+        for is_device_spine in [False, True]:
+            for tagged1 in [False, True]:
+                for tagged2 in [False, True]:
+                    if is_device_spine and (tagged1 or tagged2):
+                        continue
+                    for is_next_hop_spine in [False, True]:
+                        if is_next_hop_spine and tagged2:
+                            continue
+                        self.doRunTest(tagged1, tagged2, is_device_spine, False, is_next_hop_spine)
