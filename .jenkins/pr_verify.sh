@@ -19,6 +19,8 @@ source .env
 echo "Build all profiles using SDE ${SDE_P4C_DOCKER_IMG}..."
 # Pull first to avoid pulling multiple times in parallel by the make jobs
 docker pull "${SDE_P4C_DOCKER_IMG}"
+docker build -f ptf/Dockerfile -t fabric-tna:ptf .
+
 # Jenkins uses 8 cores 15G VM
 make -j8 all
 
@@ -37,8 +39,6 @@ if [ -n "$modified" ]; then
   echo "$modified"
   exit 1
 fi
-
-docker build -f ptf/Dockerfile -t fabric-tna:ptf .
 
 # We limit running PTF tests for only those profiles used in Aether, otherwise
 # we exceed the 45 min limit on Jenkins.
