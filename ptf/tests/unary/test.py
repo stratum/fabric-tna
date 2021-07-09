@@ -1444,32 +1444,14 @@ class FabricSpgwUplinkIntTest(SpgwIntTest):
     @autocleanup
     def doRunTest(
         self,
-        vlan_conf,
+        pkt,
         tagged,
-        pkt_type,
         with_psc,
         is_next_hop_spine,
         is_device_spine,
         send_report_to_spine,
+        **kwargs
     ):
-        print(
-            "Testing VLAN={}, pkt={}, psc={}, is_next_hop_spine={}, is_device_spine={}, send_report_to_spine={}...".format(
-                vlan_conf,
-                pkt_type,
-                with_psc,
-                is_next_hop_spine,
-                is_device_spine,
-                send_report_to_spine,
-            )
-        )
-        # Change the IP destination to ensure we are using differnt
-        # flow for diffrent test cases since the flow report filter
-        # might disable the report.
-        # TODO: Remove this part when we are able to reset the register
-        # via P4Runtime.
-        pkt = getattr(testutils, "simple_{}_packet".format(pkt_type))(
-            ip_dst=self.get_single_use_ip()
-        )
         self.runSpgwUplinkIntTest(
             pkt=pkt,
             tagged1=tagged[0],
@@ -1482,27 +1464,10 @@ class FabricSpgwUplinkIntTest(SpgwIntTest):
 
     def runTest(self):
         print("")
-        for is_device_spine in [False, True]:
-            for vlan_conf, tagged in vlan_confs.items():
-                if is_device_spine and (tagged[0] or tagged[1]):
-                    continue
-                for is_next_hop_spine in [False, True]:
-                    if is_next_hop_spine and tagged[1]:
-                        continue
-                    for send_report_to_spine in [False, True]:
-                        if send_report_to_spine and tagged[1]:
-                            continue
-                        for with_psc in [False, True]:
-                            for pkt_type in BASE_PKT_TYPES - {"sctp"}:
-                                self.doRunTest(
-                                    vlan_conf,
-                                    tagged,
-                                    pkt_type,
-                                    with_psc,
-                                    is_next_hop_spine,
-                                    is_device_spine,
-                                    send_report_to_spine,
-                                )
+        for traffic_dir in ["host-leaf-host", "host-leaf-spine", "leaf-spine-leaf"]:
+            for test_args in get_test_args(traffic_dir=traffic_dir, spgw_type="UL",
+                                           int_test_type="local"):
+                self.doRunTest(**test_args)
 
 
 @group("int")
