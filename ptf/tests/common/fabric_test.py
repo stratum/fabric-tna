@@ -604,7 +604,7 @@ def pkt_decrement_ttl(pkt):
         pkt[IP].ttl -= 1
     return pkt
 
-def get_test_args(self, traffic_dir, pkt_addrs=None, spgw_type=None, int_test_type=None, 
+def get_test_args(traffic_dir, pkt_addrs=None, spgw_type=None, int_test_type=None, 
                   test_multiple_pkt_len=False, test_multiple_prefix_len=False,
                   drop_test=False, include_allow=False):
 
@@ -741,23 +741,14 @@ def get_test_args(self, traffic_dir, pkt_addrs=None, spgw_type=None, int_test_ty
                         for pkt_len in pkt_len_list:
                             for send_report_to_spine in send_report_to_spine_list:
                                 for allow in allow_list:
-                                    if int_test_type in INT_OPTIONS:
-                                        # Change the IP destination to ensure we are using differnt
-                                        # flow for diffrent test cases since the flow report filter
-                                        # might disable the report.
-                                        # TODO: Remove this part when we are able to reset the register
-                                        # via P4Runtime.
-                                        pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
-                                            ip_dst=self.get_single_use_ip()
-                                        )
-                                    else:
-                                        pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
-                                            pktlen=pkt_len,
-                                            **pkt_addrs
-                                        )
+                                    pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
+                                        pktlen=pkt_len,
+                                        **pkt_addrs
+                                    )
                                     params = {
                                         'vlan_conf':vlan_conf,
                                         'pkt':pkt,
+                                        'pkt_type':pkt_type,
                                         'tagged1':tagged[0],
                                         'tagged2':tagged[1],
                                         'with_psc':with_psc,
