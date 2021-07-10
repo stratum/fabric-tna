@@ -8,34 +8,34 @@ from fabric_test import *
 from trex_stl_lib.api import STLPktBuilder, STLStream, STLTXCont, STLVM
 from collections import deque
 
-TRAFFIC_MULT="1100pps"
+TRAFFIC_MULT="1000pps"
 TEST_DURATION=3
-DEFAULT_QID = 0
+DEFAULT_QID = 1
+SLICE_ID = 1
+TC = 1
 DEFAULT_QUOTA = 50
 INT_REPORT_CAPTURE_LIMIT = 100
 RX_LIMIT = 4000 # limit for capturing the traffic from the switch.
-THRESHOLD_TRIGGER = 1000
+THRESHOLD_TRIGGER = 100
 THRESHOLD_RESET = 1
 
-SENDER_PORT = [0]
-INT_COLLECTOR_PORT = [2]
-RECEIVER_PORT = [3]
+SENDER_PORT = 0
+INT_COLLECTOR_PORT = 2
+RECEIVER_PORT = 3
 
-class IntQueueReportTest(TRexTest, IntTest):
-    """
-    This test will generate one stream with multiple packets with a sequence of source IP
-    addresses. (10.0.0.0~10.255.255.255)
-    On the Stratum side we need to configure port shaper to limit the rate of packets to
-    1000pps. In the test we will use a higher rate to send packets to the switch.
-    We expect to see some congestions and receive INT queue report from the switch.
-    """
-
+class IntQueueReportTest(TRexTest, IntTest, SlicingTest):
     @autocleanup
     def doRunTest(self, tagged1, tagged2, is_device_spine, send_report_to_spine, is_next_hop_spine):
         print(f"Testing tagged1={tagged1}, tagged2={tagged2}, is_device_spine={is_device_spine}, send_report_to_spine={send_report_to_spine}, is_next_hop_spine={is_next_hop_spine}")
+        # TODO: move these to auto cleanup annonation?
+        self.trex_client.reset()
+        self.trex_client.clear_stats()
+
         pkt = testutils.simple_udp_packet()
+        if tagged1:
+            pkt = pkt_add_vlan(pkt, vlan_vid=VLAN_ID_1)
         self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine, watch_flow=False)
-        self.set_up_latency_threshold_for_q_report(threshold_trigger=THRESHOLD_TRIGGER, threshold_reset=THRESHOLD_RESET)
+        self.set_up_latency_threshold_for_q_report(threshold_trigger=THRESHOLD_TRIGGER, threshold_reset=THRESHOLD_RESET, queue_id=DEFAULT_QID)
         self.runIPv4UnicastTest(
             pkt=pkt,
             next_hop_mac=HOST2_MAC,
@@ -51,38 +51,49 @@ class IntQueueReportTest(TRexTest, IntTest):
         )
         self.set_queue_report_quota(self.port4, qid=DEFAULT_QID, quota=DEFAULT_QUOTA)
 
+        # To avoid reporting INT report packet, we use queue ID 1 for the traffic.
+        self.add_slice_tc_classifier_entry(
+            slice_id=SLICE_ID,
+            tc=TC,
+            ipv4_dst=pkt[IP].dst,
+        )
+        self.add_queue_entry(slice_id=SLICE_ID, tc=TC, qid=DEFAULT_QID)
+
         # Define stream and stateless VM to change the IP source for each packet.
         vm = STLVM()
         vm.var(name="ip_src", min_value="10.0.0.1", max_value="10.255.255.255", size=4, op="inc", step=1)
         vm.write(fv_name="ip_src", pkt_offset="IP.src")
         stream = STLStream(packet=STLPktBuilder(pkt=pkt, vm=vm), mode=STLTXCont())
-        self.trex_client.add_streams(stream, ports=SENDER_PORT)
+        self.trex_client.add_streams(stream, ports=[SENDER_PORT])
 
         # Put RX ports to promiscuous mode, otherwise it will drop all packets if the
         # destination mac is not the port mac address.
-        self.trex_client.clear_stats()
-        self.trex_client.set_port_attr(INT_COLLECTOR_PORT + RECEIVER_PORT, promiscuous=True)
+        self.trex_client.set_port_attr([INT_COLLECTOR_PORT, RECEIVER_PORT], promiscuous=True)
 
         # Put port to service mode so we can capture packet from it.
-        self.trex_client.set_service_mode(ports=INT_COLLECTOR_PORT + RECEIVER_PORT, enabled=True)
+        self.trex_client.set_service_mode(ports=[INT_COLLECTOR_PORT, RECEIVER_PORT], enabled=True)
         int_capture = self.trex_client.start_capture(
-            rx_ports=INT_COLLECTOR_PORT,
-            limit=INT_REPORT_CAPTURE_LIMIT,
-            bpf_filter="udp and dst port 32766",
+            rx_ports=[INT_COLLECTOR_PORT],
+            limit=INT_REPORT_CAPTURE_LIMIT
         )
         rx_capture = self.trex_client.start_capture(
-            rx_ports=RECEIVER_PORT,
-            limit=RX_LIMIT,
-            bpf_filter="ip src net 10.0.0.0/8",
+            rx_ports=[RECEIVER_PORT],
+            limit=RX_LIMIT
         )
 
-        self.trex_client.start(ports=SENDER_PORT, mult=TRAFFIC_MULT, duration=TEST_DURATION)
-        self.trex_client.wait_on_traffic(ports=SENDER_PORT)
+        self.trex_client.start(ports=[SENDER_PORT], mult=TRAFFIC_MULT, duration=TEST_DURATION)
+        self.trex_client.wait_on_traffic(ports=[SENDER_PORT])
 
         pcap_path = "/tmp/int-queue-report.pcap"
         rx_pcap_path = "/tmp/int-queue-report-rx.pcap"
         self.trex_client.stop_capture(int_capture["id"], pcap_path)
         self.trex_client.stop_capture(rx_capture["id"], rx_pcap_path)
+
+        # Check if we receive every packets we sent.
+        port_stats = self.trex_client.get_stats()
+        sent_packets = port_stats[SENDER_PORT]["opackets"]
+        recv_packets = port_stats[RECEIVER_PORT]["ipackets"]
+        self.failIf(sent_packets != recv_packets, "Didn't receive all packets")
 
         # Verify the following:
         # - Every packet must be an INT report
@@ -158,8 +169,6 @@ class IntQueueReportTest(TRexTest, IntTest):
             number_of_reports > DEFAULT_QUOTA,
             f"The number of report is more than the quota, expecte {DEFAULT_QUOTA}, got {number_of_reports}"
         )
-
-        print(f"Total number of INT reports received: {number_of_reports}")
         self.failIf(number_of_reports == 0, "No INT reports received")
 
         # This section we will verify if the switch is reporting all congested packets.
@@ -190,10 +199,8 @@ class IntQueueReportTest(TRexTest, IntTest):
                     ips.popleft()
             if len(ips) == 0:
                 break
-
-        self.failIf(len(ips) != 0, f"Receive {len(ips)} unexpected report(s)")
         pcap_reader.close()
-
+        self.failIf(len(ips) != 0, f"Receive {len(ips)} unexpected report(s)")
 
     def runTest(self):
         print("")
@@ -205,4 +212,5 @@ class IntQueueReportTest(TRexTest, IntTest):
                     for is_next_hop_spine in [False, True]:
                         if is_next_hop_spine and tagged2:
                             continue
-                        self.doRunTest(tagged1, tagged2, is_device_spine, False, is_next_hop_spine)
+                        for send_report_to_spine in [False, True]:
+                            self.doRunTest(tagged1, tagged2, is_device_spine, send_report_to_spine, is_next_hop_spine)
