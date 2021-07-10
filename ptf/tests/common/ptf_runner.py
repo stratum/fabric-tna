@@ -85,6 +85,21 @@ def create_dummy_interface():
     return True
 
 
+def remove_dummy_interface():
+    try:
+        subprocess.check_output(["ip", "link", "show", "ptfdummy"])
+        output = ""
+        try:
+            output = subprocess.check_output(["ip", "link", "delete", "ptfdummy"])
+        except:
+            info(f"Got error when deleting dummy interface \"ptfdummy\": {output}")
+            return False
+        return True
+    except:
+        # interface does not exists
+        return True
+
+
 def build_tofino_pipeline_config(tofino_pipeline_config_path):
     device_config = b""
     with open(tofino_pipeline_config_path, "rb") as pipeline_config_f:
@@ -241,7 +256,7 @@ def run_test(
     """
     # TODO: check schema?
     # "ptf_port" is ignored for now, we assume that ports are provided by
-    # increasing values of ptf_port, in the range [0, NUM_IFACES[.
+    # increasing values of ptf_port, in the range [0, NUM_IFACES].
     port_map = OrderedDict()
     with open(port_map_path, "r") as port_map_f:
         port_list = json.load(port_map_f)
@@ -322,6 +337,9 @@ def run_test(
     except Exception:
         error("Error when running PTF tests")
         return False
+    finally:
+        # Always clean up the dummy interface.
+        remove_dummy_interface()
 
     return p.returncode == 0
 

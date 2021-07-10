@@ -8,12 +8,6 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
 PTF_ROOT=${DIR}/../..
 TEST_DIR=${PTF_ROOT}/tests/common
 
-if [ -n "$TREX" ]; then
-    MAKEFILE="${DIR}/Makefile.trex"
-else
-    MAKEFILE="${DIR}/Makefile.ptf"
-fi
-
 err_report() {
     echo "************************************************"
     echo "SOME PTF TESTS FAILED :("
@@ -29,7 +23,7 @@ echo "STARTING PTF TESTS..."
 echo "************************************************"
 
 # shellcheck disable=SC2068
-make -f "${MAKEFILE}" ${@}
+make -f "${DIR}/Makefile" ${@}
 
 echo "************************************************"
 echo "ALL PTF TESTS PASSED :)"

@@ -4,13 +4,15 @@
 
 define run_tests
 	python3 -u ptf_runner.py \
-        --port-map ../../run/hw/port_map.hw.json \
-		--ptf-dir ../../tests/unary --cpu-port 320 --device-id 1 \
-		--grpc-addr $(SWITCH_ADDR) \
+		--port-map $(PORT_MAP) \
+		--ptf-dir $(PTF_DIR) \
+		--cpu-port 320 --device-id 1 \
+		--grpc-addr $(SWITCH_ADDR):9339 \
 		--p4info /p4c-out/p4info.txt \
 		--tofino-pipeline-config /p4c-out/pipeline_config.pb.bin \
+		$(TREX_PARAMS) \
 		--profile $(1) \
-		$(2) ^not_available_for_hw
+		$(2)
 endef
 
 # Nothing to check
