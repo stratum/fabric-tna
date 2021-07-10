@@ -1,13 +1,14 @@
 # Copyright 2020-present Open Networking Foundation
 # SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 
-from trex_test import TRexTest
+from datetime import datetime
+
 from base_test import *
 from fabric_test import *
 from trex_stl_lib.api import STLPktBuilder, STLStream, STLTXCont
-from datetime import datetime
-from xnt import analyze_report_pcap
+from trex_test import TRexTest
 from trex_utils import list_port_status
+from xnt import analyze_report_pcap
 
 TRAFFIC_MULT = "40gbpsl1"
 TEST_DURATION = 10
@@ -17,10 +18,18 @@ SENDER_PORTS = [1]
 INT_COLLECTOR_PORTS = [2]
 RECEIVER_PORTS = [3]
 
-class IntSingleFlow(TRexTest, IntTest):
 
+class IntSingleFlow(TRexTest, IntTest):
     @autocleanup
-    def doRunTest(self, mult, pkt, tagged, is_device_spine, send_report_to_spine, is_next_hop_spine):
+    def doRunTest(
+        self,
+        mult,
+        pkt,
+        tagged,
+        is_device_spine,
+        send_report_to_spine,
+        is_next_hop_spine,
+    ):
 
         # Install routing flows onto hardware switch
         self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine)
@@ -43,7 +52,9 @@ class IntSingleFlow(TRexTest, IntTest):
 
         # Put RX ports to promiscuous mode, otherwise it will drop all packets if the
         # destination mac is not the port mac address.
-        self.trex_client.set_port_attr(INT_COLLECTOR_PORTS + RECEIVER_PORTS, promiscuous=True)
+        self.trex_client.set_port_attr(
+            INT_COLLECTOR_PORTS + RECEIVER_PORTS, promiscuous=True
+        )
 
         # Capture INT packets
         self.trex_client.set_service_mode(ports=INT_COLLECTOR_PORTS, enabled=True)
@@ -69,4 +80,4 @@ class IntSingleFlow(TRexTest, IntTest):
     def runTest(self):
         # TODO: iterate all possible parameters of test
         pkt = testutils.simple_udp_packet()
-        self.doRunTest(TRAFFIC_MULT, pkt, [False,False], False, False, False)
+        self.doRunTest(TRAFFIC_MULT, pkt, [False, False], False, False, False)

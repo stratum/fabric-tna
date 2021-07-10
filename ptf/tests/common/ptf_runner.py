@@ -45,6 +45,7 @@ def warn(msg, *args, **kwargs):
 def info(msg, *args, **kwargs):
     logging.info(msg, *args, **kwargs)
 
+
 def check_ifaces(ifaces):
     """
     Checks that required interfaces exist.

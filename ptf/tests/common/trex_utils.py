@@ -3,6 +3,7 @@
 import argparse
 import logging
 
+
 def to_readable(src: int, unit: str = "bps") -> str:
     """
     Convert number to human readable string.
