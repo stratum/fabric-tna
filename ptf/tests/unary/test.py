@@ -1445,7 +1445,8 @@ class FabricSpgwUplinkIntTest(SpgwIntTest):
     def doRunTest(
         self,
         pkt_type,
-        tagged,
+        tagged1,
+        tagged2,
         with_psc,
         is_next_hop_spine,
         is_device_spine,
@@ -1462,8 +1463,8 @@ class FabricSpgwUplinkIntTest(SpgwIntTest):
         )
         self.runSpgwUplinkIntTest(
             pkt=pkt,
-            tagged1=tagged[0],
-            tagged2=tagged[1],
+            tagged1=tagged1,
+            tagged2=tagged2,
             with_psc=with_psc,
             is_next_hop_spine=is_next_hop_spine,
             is_device_spine=is_device_spine,

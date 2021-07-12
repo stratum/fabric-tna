@@ -741,13 +741,8 @@ def get_test_args(traffic_dir, pkt_addrs=None, spgw_type=None, int_test_type=Non
                         for pkt_len in pkt_len_list:
                             for send_report_to_spine in send_report_to_spine_list:
                                 for allow in allow_list:
-                                    pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
-                                        pktlen=pkt_len,
-                                        **pkt_addrs
-                                    )
                                     params = {
                                         'vlan_conf':vlan_conf,
-                                        'pkt':pkt,
                                         'pkt_type':pkt_type,
                                         'tagged1':tagged[0],
                                         'tagged2':tagged[1],
@@ -761,9 +756,18 @@ def get_test_args(traffic_dir, pkt_addrs=None, spgw_type=None, int_test_type=Non
                                         'allow':allow
                                     }
 
-                                    tc_name = "_".join(["{}_{}".format(k,v) for k, v in params.items()])
                                     print("Testing " + ", ".join(["{}={}".format(k,v) for k,v in params.items()]))
+                                    tc_name = "_".join(["{}_{}".format(k,v) for k, v in params.items()])
                                     params['tc_name'] = tc_name
+
+                                    if int_test_type not in INT_OPTIONS:
+                                        pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
+                                            pktlen=pkt_len,
+                                            **pkt_addrs
+                                        )
+                                    else:
+                                        pkt = None
+                                    params['pkt'] = pkt
 
                                     yield params
 
