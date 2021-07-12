@@ -1366,10 +1366,10 @@ class FabricSpgwUplinkTest(SpgwSimpleTest):
 class FabricSpgwUplinkRecircTest(SpgwSimpleTest):
     @tvsetup
     @autocleanup
-    def doRunTest(self, pkt, allow, tagged1, tagged2, is_next_hop_spine, **kwargs):
+    def doRunTest(self, pkt, allow_ue_recirculation, tagged1, tagged2, is_next_hop_spine, **kwargs):
         self.runUplinkRecircTest(
             ue_out_pkt=pkt,
-            allow=allow,
+            allow=allow_ue_recirculation,
             tagged1=tagged1,
             tagged2=tagged2,
             is_next_hop_spine=is_next_hop_spine,
@@ -1381,7 +1381,7 @@ class FabricSpgwUplinkRecircTest(SpgwSimpleTest):
                      'ip_src':UE1_IPV4, 'ip_dst':UE2_IPV4}
         for traffic_dir in ["host-leaf-host", "host-leaf-spine"]:
             for test_args in get_test_args(traffic_dir=traffic_dir, pkt_addrs=pkt_addrs, 
-                                           spgw_type="UL", include_allow=True):
+                                           spgw_type="UL", ue_recirculation_test=True):
                 self.doRunTest(**test_args)
 
 
@@ -1538,6 +1538,7 @@ class FabricSpgwIntUplinkDropTest(SpgwIntTest):
         is_device_spine,
         send_report_to_spine,
         drop_reason,
+        **kwargs
     ):
         # Change the IP destination to ensure we are using differnt
         # flow for diffrent test cases since the flow report filter
@@ -1585,6 +1586,7 @@ class FabricSpgwIntDownlinkDropTest(SpgwIntTest):
         is_device_spine,
         send_report_to_spine,
         drop_reason,
+        **kwargs
     ):
         # Change the IP destination to ensure we are using differnt
         # flow for diffrent test cases since the flow report filter

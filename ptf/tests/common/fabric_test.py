@@ -280,6 +280,13 @@ PORT_TYPE_INTERNAL = b"\x03"
 DEFAULT_SLICE_ID = 0
 DEFAULT_TC = 0
 
+# High-level parameter specification options for get_test_args function
+SPGW_OPTIONS = ["DL", "UL"]
+INT_OPTIONS = ["local", "ig_drop", "eg_drop"]
+SOURCE_OPTIONS = ["host", "leaf", "spine"]
+DEVICE_OPTIONS = ["leaf", "spine"]
+DEST_OPTIONS = ["host", "leaf", "spine"]
+
 # Implements helper function for SCTP as PTF does not provide one.
 def simple_sctp_packet(
     pktlen=100,
@@ -604,18 +611,21 @@ def pkt_decrement_ttl(pkt):
         pkt[IP].ttl -= 1
     return pkt
 
-def get_test_args(traffic_dir, pkt_addrs=None, spgw_type=None, int_test_type=None, 
+def get_test_args(traffic_dir, pkt_addrs={}, spgw_type=None, int_test_type=None, 
                   test_multiple_pkt_len=False, test_multiple_prefix_len=False,
-                  drop_test=False, include_allow=False):
+                  drop_test=False, ue_recirculation_test=False):
 
-    """ By default, only include configurations which are specified in function parameters
+    """ 
+    Generates parameters for doRunTest calls in test cases
+    :param traffic_dir: traffic direction, e.g. "host-leaf-spine"
+    :param pkt_addrs: packet header addresses, e.g. {eth_src, eth_dst, ip_src, ip_dst}
+    :param spgw_type: SPGW direction, e.g. "DL" for downlink, "UL" for uplink
+    :param int_test_type: INT test drop reason, e.g. "eg_drop" for egress drop type
+    :param test_multiple_pkt_len: generate multiple packet lengths
+    :param test_multiple_prefix_len: generate multiple prefix lengths
+    :param drop_test: generate drop reasons
+    :param ue_recirculation_test: allow UE recirculation (for recirculation tests)
     """
-
-    SPGW_OPTIONS = ["DL", "UL"]
-    INT_OPTIONS = ["local", "ig_drop", "eg_drop"]
-    SOURCE_OPTIONS = ["host", "leaf", "spine"]
-    DEVICE_OPTIONS = ["leaf", "spine"]
-    DEST_OPTIONS = ["host", "leaf", "spine"]
 
     drop_reason_list = []
     vlan_conf_list = []
@@ -624,7 +634,7 @@ def get_test_args(traffic_dir, pkt_addrs=None, spgw_type=None, int_test_type=Non
     send_report_to_spine_list = []
     pkt_len_list = []
     prefix_len_list = []
-    allow_list = []
+    allow_ue_recirculation_list = []
 
     """ TRAFFIC DIRECTION
     """
@@ -667,7 +677,7 @@ def get_test_args(traffic_dir, pkt_addrs=None, spgw_type=None, int_test_type=Non
                             "tag->tag": [True, True]
                          }
     else:
-        raise Exception("Invalid source ({}) and/or dest ({}) format".format(source, dest))
+        raise Exception("Invalid source ({}) and/or dest ({})".format(source, dest))
 
     """ IS_DEVICE_SPINE and IS_NEXT_HOP_SPINE
     """
@@ -721,15 +731,15 @@ def get_test_args(traffic_dir, pkt_addrs=None, spgw_type=None, int_test_type=Non
     else:
         prefix_len_list = [None]
 
-    """ ALLOW
+    """ ALLOW_UE_RECIRCULATION
     """
-    if include_allow:
+    if ue_recirculation_test:
         if is_next_hop_spine:
-            allow_list = [True]
+            allow_ue_recirculation_list = [True]
         else:
-            allow_list = [True, False]
+            allow_ue_recirculation_list = [True, False]
     else:
-        allow_list = [None]
+        allow_ue_recirculation_list = [None]
 
     """ Generate test arguments
     """
@@ -740,7 +750,7 @@ def get_test_args(traffic_dir, pkt_addrs=None, spgw_type=None, int_test_type=Non
                     for prefix_len in prefix_len_list:
                         for pkt_len in pkt_len_list:
                             for send_report_to_spine in send_report_to_spine_list:
-                                for allow in allow_list:
+                                for allow_ue_recirculation in allow_ue_recirculation_list:
                                     params = {
                                         'vlan_conf':vlan_conf,
                                         'pkt_type':pkt_type,
@@ -753,7 +763,7 @@ def get_test_args(traffic_dir, pkt_addrs=None, spgw_type=None, int_test_type=Non
                                         'pkt_len':pkt_len,
                                         'send_report_to_spine':send_report_to_spine,
                                         'is_device_spine':is_device_spine,
-                                        'allow':allow
+                                        'allow_ue_recirculation':allow_ue_recirculation
                                     }
 
                                     print("Testing " + ", ".join(["{}={}".format(k,v) for k,v in params.items()]))
