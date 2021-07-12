@@ -78,7 +78,7 @@ def create_dummy_interface():
         pass
     output = ""
     try:
-        output = subprocess.check_output(["ip", "link", "add", "ptfdummy", "type", "veth"])
+        output = subprocess.check_output(["ip", "link", "add", "ptfdummy", "type", "dummy"])
     except Exception as e:
         info(f"Got error when creating dummy interface \"ptfdummy\": {output}")
         return False
