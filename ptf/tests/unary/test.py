@@ -1566,7 +1566,7 @@ class FabricSpgwIntUplinkDropTest(SpgwIntTest):
         print("")
         for traffic_dir in ["host-leaf-host", "host-leaf-spine", "leaf-spine-leaf"]:
             for test_args in get_test_args(traffic_dir=traffic_dir, spgw_type="UL",
-                                           int_test_type="eg_drop", drop_test=True):
+                                           int_test_type="eg_drop"):
                 self.doRunTest(**test_args)
 
 
@@ -1613,7 +1613,7 @@ class FabricSpgwIntDownlinkDropTest(SpgwIntTest):
         print("")
         for traffic_dir in ["host-leaf-host", "spine-leaf-host", "leaf-spine-leaf"]:
             for test_args in get_test_args(traffic_dir=traffic_dir, spgw_type="DL",
-                                           int_test_type="eg_drop", drop_test=True):
+                                           int_test_type="eg_drop"):
                 self.doRunTest(**test_args)
 
 

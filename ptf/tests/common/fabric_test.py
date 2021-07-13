@@ -613,7 +613,7 @@ def pkt_decrement_ttl(pkt):
 
 def get_test_args(traffic_dir, pkt_addrs={}, spgw_type=None, int_test_type=None, 
                   test_multiple_pkt_len=False, test_multiple_prefix_len=False,
-                  drop_test=False, ue_recirculation_test=False):
+                  ue_recirculation_test=False):
 
     """ 
     Generates parameters for doRunTest calls in test cases
@@ -623,7 +623,6 @@ def get_test_args(traffic_dir, pkt_addrs={}, spgw_type=None, int_test_type=None,
     :param int_test_type: INT test drop reason, e.g. "eg_drop" for egress drop type
     :param test_multiple_pkt_len: generate multiple packet lengths
     :param test_multiple_prefix_len: generate multiple prefix lengths
-    :param drop_test: generate drop reasons
     :param ue_recirculation_test: allow UE recirculation (for recirculation tests)
     """
 
@@ -636,8 +635,6 @@ def get_test_args(traffic_dir, pkt_addrs={}, spgw_type=None, int_test_type=None,
     prefix_len_list = []
     allow_ue_recirculation_list = []
 
-    """ TRAFFIC DIRECTION
-    """
     # traffic_dir input structure: "source-device-destination"
     devices = re.split('-', traffic_dir)
     if len(devices) != 3:
@@ -653,8 +650,6 @@ def get_test_args(traffic_dir, pkt_addrs={}, spgw_type=None, int_test_type=None,
     if dest not in DEST_OPTIONS:
         raise Exception("Invalid dest specification: {}".format(dest))
 
-    """ VLAN CONFIGURATIONS
-    """
     if source != 'host' and dest != 'host':
         vlan_conf_list = {
                             "untag->untag": [False, False]
@@ -679,30 +674,21 @@ def get_test_args(traffic_dir, pkt_addrs={}, spgw_type=None, int_test_type=None,
     else:
         raise Exception("Invalid source ({}) and/or dest ({})".format(source, dest))
 
-    """ IS_DEVICE_SPINE and IS_NEXT_HOP_SPINE
-    """
     is_device_spine = (device == 'spine')
     is_next_hop_spine = (dest == 'spine')
 
-    """ DROP REASON 
-    """
-    if drop_test:
-        if int_test_type == "ig_drop":
-            drop_reason_list = [INT_DROP_REASON_ACL_DENY]
-        elif int_test_type == "eg_drop":
-            if spgw_type == "DL":
-                drop_reason_list = [INT_DROP_REASON_DOWNLINK_PDR_MISS, INT_DROP_REASON_FAR_MISS]
-            elif spgw_type == "UL":
-                drop_reason_list = [INT_DROP_REASON_UPLINK_PDR_MISS, INT_DROP_REASON_FAR_MISS]
-            else:
-                drop_reason_list = [INT_DROP_REASON_EGRESS_NEXT_MISS]
+    if int_test_type == "ig_drop":
+        drop_reason_list = [INT_DROP_REASON_ACL_DENY]
+    elif int_test_type == "eg_drop":
+        if spgw_type == "DL":
+            drop_reason_list = [INT_DROP_REASON_DOWNLINK_PDR_MISS, INT_DROP_REASON_FAR_MISS]
+        elif spgw_type == "UL":
+            drop_reason_list = [INT_DROP_REASON_UPLINK_PDR_MISS, INT_DROP_REASON_FAR_MISS]
         else:
-            drop_reason_list = [None]
+            drop_reason_list = [INT_DROP_REASON_EGRESS_NEXT_MISS]
     else:
         drop_reason_list = [None]
 
-    """ PKT_TYPE and WITH_PSC
-    """
     # Configure arrays for spgw-related tests
     # spgw only uses base packets and always considers psc
     if spgw_type in SPGW_OPTIONS:
@@ -712,15 +698,11 @@ def get_test_args(traffic_dir, pkt_addrs={}, spgw_type=None, int_test_type=None,
         pkt_type_list = BASE_PKT_TYPES | GTP_PKT_TYPES
         with_psc_list = [False]
 
-    """ SEND_REPORT_TO_SPINE
-    """
     if int_test_type in INT_OPTIONS:
         send_report_to_spine_list = [False, True]
     else:
         send_report_to_spine_list = [None]
 
-    """ PKT_LEN and PREFIX_LEN
-    """
     if test_multiple_pkt_len:
         pkt_len_list = [MIN_PKT_LEN, 1500]
     else:
@@ -731,8 +713,6 @@ def get_test_args(traffic_dir, pkt_addrs={}, spgw_type=None, int_test_type=None,
     else:
         prefix_len_list = [None]
 
-    """ ALLOW_UE_RECIRCULATION
-    """
     if ue_recirculation_test:
         if is_next_hop_spine:
             allow_ue_recirculation_list = [True]
@@ -741,8 +721,6 @@ def get_test_args(traffic_dir, pkt_addrs={}, spgw_type=None, int_test_type=None,
     else:
         allow_ue_recirculation_list = [None]
 
-    """ Generate test arguments
-    """
     for drop_reason in drop_reason_list:
         for vlan_conf, tagged in vlan_conf_list.items():
             for pkt_type in pkt_type_list:
