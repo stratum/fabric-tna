@@ -16,6 +16,7 @@ from scapy.packet import Packet, bind_layers
 from scapy.utils import PcapReader, inet_aton
 from scipy import stats
 
+
 class INT_META_HDR(Packet):
     name = "INT_META"
     fields_desc = [
@@ -88,6 +89,7 @@ class INT_L45_DROP_REPORT(Packet):
         XByteField("drop_reason", 0),
         ShortField("pad", 0),
     ]
+
 
 bind_layers(UDP, INT_L45_REPORT_FIXED, dport=32766)
 bind_layers(INT_L45_REPORT_FIXED, INT_L45_DROP_REPORT, nproto=1)
@@ -238,16 +240,16 @@ def analyze_report_pcap(pcap_file: str, total_flows_from_trace: int = 0) -> None
             inet_aton(internal_ip.dst),
             int.to_bytes(internal_ip.proto, 1, "big"),
             int.to_bytes(internal_l4.sport, 2, "big"),
-            int.to_bytes(internal_l4.dport, 2, "big")
+            int.to_bytes(internal_l4.dport, 2, "big"),
         )
 
         if five_tuple in five_tuple_to_prev_report_time:
             prev_report_time = five_tuple_to_prev_report_time[five_tuple]
-            irg = (packet_enter_time - prev_report_time)
+            irg = packet_enter_time - prev_report_time
             # timestamp overflow
             if irg < 0:
-                irg += 0xffffffff
-            irg /= 10**9
+                irg += 0xFFFFFFFF
+            irg /= 10 ** 9
             if irg != 0:
                 valid_report_irgs.append(irg)
             else:
@@ -268,7 +270,9 @@ def analyze_report_pcap(pcap_file: str, total_flows_from_trace: int = 0) -> None
     )
     logging.info("Total INT IRGs: {}".format(len(valid_local_report_irgs)))
     logging.info("Total bad INT IRGs(<0.9s): {}".format(len(bad_local_report_irgs)))
-    logging.info("Total invalid INT IRGs(<=0s): {}".format(len(invalid_local_report_irgs)))
+    logging.info(
+        "Total invalid INT IRGs(<=0s): {}".format(len(invalid_local_report_irgs))
+    )
     if total_flows_from_trace != 0:
         logging.info(
             "Accuracy score: {}".format(
@@ -299,7 +303,9 @@ def analyze_report_pcap(pcap_file: str, total_flows_from_trace: int = 0) -> None
     )
     logging.info("Total INT IRGs: {}".format(len(valid_drop_report_irgs)))
     logging.info("Total bad INT IRGs(<0.9s): {}".format(len(bad_drop_report_irgs)))
-    logging.info("Total invalid INT IRGs(<=0s): {}".format(len(invalid_drop_report_irgs)))
+    logging.info(
+        "Total invalid INT IRGs(<=0s): {}".format(len(invalid_drop_report_irgs))
+    )
     logging.info("Total report dropped: {}".format(dropped))
     logging.info("Skipped packets: {}".format(skipped))
 
@@ -360,5 +366,7 @@ def plot_histogram_and_cdf(report_plot_file, valid_report_irgs):
         ax.text(x, y, "({:.2f}%: {:.2f})".format(percentiles[i], x))
 
     plt.savefig(report_plot_file)
-    logging.info("Histogram and CDF graph can be found here: {}".format(report_plot_file))
+    logging.info(
+        "Histogram and CDF graph can be found here: {}".format(report_plot_file)
+    )
     return report_plot_file

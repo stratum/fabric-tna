@@ -10,7 +10,7 @@ class TRexTest(P4RuntimeTest):
 
     def setUp(self):
         super(TRexTest, self).setUp()
-        trex_server_addr = ptf.testutils.test_param_get('trex_server_addr')
+        trex_server_addr = ptf.testutils.test_param_get("trex_server_addr")
         self.trex_client = STLClient(server=trex_server_addr)
         self.trex_client.connect()
         self.trex_client.acquire()
@@ -18,7 +18,7 @@ class TRexTest(P4RuntimeTest):
         self.trex_client.clear_stats()  # Clear status from all ports
 
     def tearDown(self):
-        print('Tearing down STLClient...')
+        print("Tearing down STLClient...")
         self.trex_client.stop()
         self.trex_client.release()
         self.trex_client.disconnect()
