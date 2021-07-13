@@ -308,6 +308,8 @@ struct bridged_metadata_base_t {
 
 header bridged_metadata_t {
     BridgedMdType_t         bmd_type;
+    @padding bit<5>          _pad0;
+    FabricMirrorType_t      mirror_type;
     bridged_metadata_base_t base;
 #ifdef WITH_SPGW
     spgw_bridged_metadata_t spgw;

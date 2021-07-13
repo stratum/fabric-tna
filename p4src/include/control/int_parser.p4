@@ -27,6 +27,7 @@ parser IntReportParser (packet_in packet,
     state parse_int_report_mirror {
         packet.extract(fabric_md.int_report_md);
         fabric_md.bridged.bmd_type = fabric_md.int_report_md.bmd_type;
+        fabric_md.bridged.mirror_type = fabric_md.int_report_md.mirror_type;
         fabric_md.bridged.base.vlan_id = DEFAULT_VLAN_ID;
         fabric_md.bridged.base.mpls_label = 0; // do not push an MPLS label
 #ifdef WITH_SPGW
