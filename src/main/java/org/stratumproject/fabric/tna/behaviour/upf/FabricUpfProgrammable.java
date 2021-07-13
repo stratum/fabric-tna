@@ -129,6 +129,12 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         return false;
     }
 
+    @Override
+    public boolean fromThisUpf(FlowRule flowRule) {
+        return flowRule.deviceId().equals(this.deviceId) &&
+                flowRule.appId() == appId.id();
+    }
+
     /**
      * Grab the capacities for the PDR and FAR tables from the pipeconf. Runs only once, on initialization.
      *
@@ -231,6 +237,9 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
             return;
         }
         log.info("Clearing all UPF-related table entries.");
+        // Getting flow entries by device ID and filtering by Application ID
+        // is more efficient than getting by Application ID and filtering for a
+        // device ID.
         List<FlowEntry> flowEntriesToRemove = StreamSupport.stream(
                 flowRuleService.getFlowEntries(deviceId).spliterator(), false)
                 .filter(flowEntry -> flowEntry.appId() == appId.id()).collect(Collectors.toList());
