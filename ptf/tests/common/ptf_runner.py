@@ -254,9 +254,7 @@ def run_test(
     Runs PTF tests included in provided directory.
     Device must be running and configfured with appropriate P4 program.
     """
-    # TODO: check schema?
-    # "ptf_port" is ignored for now, we assume that ports are provided by
-    # increasing values of ptf_port, in the range [0, NUM_IFACES].
+    # TODO: check schema of the port map?
     port_map = OrderedDict()
     with open(port_map_path, "r") as port_map_f:
         port_list = json.load(port_map_f)
