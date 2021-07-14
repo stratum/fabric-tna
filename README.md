@@ -261,7 +261,7 @@ provided in `tofino-netcfg.json`, for example:
 ## Running PTF tests with hardware device
 
 To run PTF with a hardware switch, it requires a server with 4 network
-interfaces(e.g., QSFP) which attached to the switch.
+interfaces (e.g., QSFP) which attached to the switch.
 
 Before starting the test, check the `ptf/run/hw/port_map.hw.json` file to make sure each
 port is configured correctly.
@@ -289,7 +289,7 @@ To run PTF tests with hardware:
 Line rate tests for fabric-tna also requires a server with 4 network interfaces
 attached to the switch.
 
-Before running the testm make sure TRex config file (`ptf/run/hw/trex-config/4-ports-with-l2.yaml`)
+Before running the test make sure TRex config file (`ptf/run/hw/trex-config/4-ports-with-l2.yaml`)
 includes correct interface configuration.
 
 For example, we have 4 QSFP(40Gbps) interface connect to the switch:
