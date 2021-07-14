@@ -5,7 +5,6 @@
 set -eu -o pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
-
 # shellcheck source=ptf/run/tm/base.sh
 source "${DIR}/base.sh"
 testerRunName=tester-${randomNum}

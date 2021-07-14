@@ -17,4 +17,5 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 # requests.
 bash "${DIR}"/pr_verify.sh
 
-docker push stratumproject/testvectors:ptf
+source .env
+docker push "${TESTER_DOCKER_IMG}"
