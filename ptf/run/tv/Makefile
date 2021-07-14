@@ -1,7 +1,7 @@
 # Copyright 2020-present Open Networking Foundation
 # SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 
-PORTMAP ?= port_map.veth.json
+PORTMAP ?= /fabric-tna/run/tm/port_map.veth.json
 GRPCADDR ?= 127.0.0.1:28000
 CPUPORT ?= 320
 
