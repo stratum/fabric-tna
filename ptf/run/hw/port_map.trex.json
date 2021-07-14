@@ -1,10 +1,5 @@
 [
     {
-        "p4_port": 0,
-        "iface_name": "ptfdummy",
-        "_comment": "Dummy port"
-    },
-    {
         "p4_port": 296,
         "iface_name": "ptfdummy",
         "_comment": "Use a dummy interface since we don't attach to any interface."
