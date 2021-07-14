@@ -102,7 +102,6 @@ class IntQueueReportTest(TRexTest, IntTest, SlicingTest):
         # - Latency in every queue report will higher than the threshold we set
         # - The total number of report will be less or equal to the report quota
         # - Egress port and queue must be the one we set
-        # - The packets from the report is sequential by checking the source IP
         pcap_reader =  PcapReader(pcap_path)
         report_pkt = None
         number_of_reports = 0
