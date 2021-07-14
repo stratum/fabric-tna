@@ -3,6 +3,7 @@
 
 package org.stratumproject.fabric.tna.behaviour;
 
+import org.onlab.util.ImmutableByteSequence;
 import org.onlab.util.KryoNamespace;
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.flow.TrafficSelector;
@@ -110,6 +111,17 @@ public final class FabricUtils {
             return outputPort(t.treatment());
         }
         return null;
+    }
+
+    public static boolean doCareRangeMatch(ImmutableByteSequence lowerBound, ImmutableByteSequence upperBound) {
+        if (lowerBound.size() != upperBound.size()) {
+            throw new IllegalArgumentException(
+                    "Lower bound and upper bound of a range match must have same size");
+        }
+        int nBytes = lowerBound.size();
+        ImmutableByteSequence minValue = ImmutableByteSequence.ofZeros(nBytes);
+        ImmutableByteSequence maxValue = ImmutableByteSequence.ofOnes(upperBound.size());
+        return !lowerBound.equals(minValue) || !upperBound.equals(maxValue);
     }
 
     public static void treatmentException(

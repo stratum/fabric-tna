@@ -65,6 +65,7 @@ import java.util.stream.StreamSupport;
 
 import static org.onosproject.net.group.DefaultGroupBucket.createCloneGroupBucket;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.KRYO;
+import static org.stratumproject.fabric.tna.behaviour.FabricUtils.doCareRangeMatch;
 
 /**
  * Implementation of INT programmable behavior for fabric.p4.
@@ -711,13 +712,20 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
             Range<Integer> lowerRange, PiActionId actionId) {
         Short[] thresholdUpper = rangeToShortArray(upperRange);
         Short[] thresholdLower = rangeToShortArray(lowerRange);
-        final PiCriterion matchCriterion = PiCriterion.builder()
-                .matchExact(P4InfoConstants.HDR_EGRESS_QID, queueId)
-                .matchRange(P4InfoConstants.HDR_HOP_LATENCY_UPPER, thresholdUpper[0], thresholdUpper[1])
-                .matchRange(P4InfoConstants.HDR_HOP_LATENCY_LOWER, thresholdLower[0], thresholdLower[1])
-                .build();
+        final PiCriterion.Builder matchCriterionBuilder = PiCriterion.builder()
+                .matchExact(P4InfoConstants.HDR_EGRESS_QID, queueId);
+        if (doCareRangeMatch(ImmutableByteSequence.copyFrom(thresholdUpper[0]),
+                ImmutableByteSequence.copyFrom(thresholdUpper[1]))) {
+                matchCriterionBuilder.matchRange(P4InfoConstants.HDR_HOP_LATENCY_UPPER, thresholdUpper[0],
+                        thresholdUpper[1]);
+        }
+        if (doCareRangeMatch(ImmutableByteSequence.copyFrom(thresholdLower[0]),
+                ImmutableByteSequence.copyFrom(thresholdLower[1]))) {
+                matchCriterionBuilder.matchRange(P4InfoConstants.HDR_HOP_LATENCY_LOWER, thresholdLower[0],
+                        thresholdLower[1]);
+        }
         final TrafficSelector selector = DefaultTrafficSelector.builder()
-                .matchPi(matchCriterion)
+                .matchPi(matchCriterionBuilder.build())
                 .build();
         final TrafficTreatment treatment = DefaultTrafficTreatment.builder()
                 .piTableAction(PiAction.builder().withId(actionId).build())
