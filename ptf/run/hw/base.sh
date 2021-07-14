@@ -47,7 +47,7 @@ docker run --name "${testerRunName}" "${it}" --rm \
     -v "${P4C_OUT}":/p4c-out \
     -v /etc/localtime:/etc/localtime \
     -e PTF_FILTER="${PTF_FILTER}" \
-    -e SWITCH_ADDR="${SWITCH_ADDR}" \
+    -e SWITCH_GRPC_ADDR="${SWITCH_GRPC_ADDR}" \
     -e TREX_PARAMS="${TREX_PARAMS}" \
     -e PORT_MAP="${PORT_MAP}" \
     -e PTF_DIR="${PTF_DIR}" \
