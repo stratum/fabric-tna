@@ -2936,7 +2936,7 @@ class FabricIntLocalReportLoopbackModeTest(IntTest):
                     eth_src=HOST1_MAC,
                     eth_dst=SWITCH_MAC,
                     ip_src=HOST1_IPV4,
-                    ip_dst=self.get_single_use_ip(), # To prevent the flow filter drops the report.
+                    ip_dst=self.get_single_use_ip(), # To prevent the flow filter from dropping the report.
                     pktlen=MIN_PKT_LEN,
                 )
                 self.doRunTest(pkt, HOST2_MAC, is_device_spine)
