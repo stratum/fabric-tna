@@ -258,65 +258,6 @@ provided in `tofino-netcfg.json`, for example:
 }
 ```
 
-## Running PTF tests with hardware device
-
-To run PTF with a hardware switch, it requires a server with 4 network
-interfaces (e.g., QSFP) which attached to the switch.
-
-Before starting the test, check the `ptf/run/hw/port_map.hw.json` file to make sure each
-port is configured correctly.
-
-For example, the interface `xl710c5p1` connect to switch port `296`, the config will be:
-
-```json
-    {
-        "p4_port": 296,
-        "iface_name": "xl710c5p1"
-    }
-```
-
-Before running the test, make sure all interfaces list in the port map file can be found
-by `ip link` command.
-
-To run PTF tests with hardware:
-
-```bash
-./ptf/run/hw/run <profile>
-```
-
-## Running line rate tests with hardware device
-
-Line rate tests for fabric-tna also requires a server with 4 network interfaces
-attached to the switch.
-
-Before running the test make sure TRex config file (`ptf/run/hw/trex-config/4-ports-with-l2.yaml`)
-includes correct interface configuration.
-
-For example, we have 4 QSFP(40Gbps) interface connect to the switch:
-
-```yaml
-  port_limit: 4
-  interfaces: ['5e:00.0', '5e:00.1', '3b:00.1', '3b:00.0']
-  port_bandwidth_gb: 40
-```
-
-Rest of part of are the configuration for memory and CPU, see this [document](https://trex-tgn.cisco.com/trex/doc/trex_manual.html#_memory_section_configuration)
-for more information.
-
-For the PTF port mapping config(`ptf/run/hw/port_map.trex.json`), since we don't send or
-receive packet with PTF framework, we will use dummy interface in the port mapping
-config and only provide P4 port numbers.
-
-The actual port mapping between server and switch
-
-To run the line rate test:
-
-```bash
-./ptf/run/hw/linerate <profile> TEST=<test name>
-```
-
-The `test name` will be the test file name without `.py`.
-
 ## Support
 
 To report issues when compiling `fabric-tna.p4` for Tofino (i.e., P4 compiler

@@ -77,11 +77,10 @@ def create_dummy_interface():
     except:
         # interface does not exists
         pass
-    output = ""
     try:
-        output = subprocess.check_output(["ip", "link", "add", DUMMY_IFACE_NAME, "type", "dummy"])
+        subprocess.check_output(["ip", "link", "add", DUMMY_IFACE_NAME, "type", "dummy"])
     except Exception as e:
-        info(f"Got error when creating dummy interface \"{DUMMY_IFACE_NAME}\": {output}")
+        info(f"Got error when creating dummy interface \"{DUMMY_IFACE_NAME}\"")
         return False
     return True
 
@@ -89,11 +88,10 @@ def create_dummy_interface():
 def remove_dummy_interface():
     try:
         subprocess.check_output(["ip", "link", "show", DUMMY_IFACE_NAME])
-        output = ""
         try:
-            output = subprocess.check_output(["ip", "link", "delete", DUMMY_IFACE_NAME])
+            subprocess.check_output(["ip", "link", "delete", DUMMY_IFACE_NAME])
         except:
-            info(f"Got error when deleting dummy interface \"{DUMMY_IFACE_NAME}\": {output}")
+            info(f"Got error when deleting dummy interface \"{DUMMY_IFACE_NAME}\"")
             return False
         return True
     except:
