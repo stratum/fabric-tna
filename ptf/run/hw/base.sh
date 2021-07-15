@@ -38,7 +38,7 @@ echo "*** Starting ${testerRunName}..."
 
 it=$(test -t 0 && echo "-it" || echo "-t")
 # shellcheck disable=SC2068
-# mount localtime to container so test pcap time in name matches machine's local time
+# mount localtime to container so test pcap time matches machine's local time
 docker run --name "${testerRunName}" "${it}" --rm \
     --network host \
     --privileged \

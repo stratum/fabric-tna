@@ -8,17 +8,7 @@ export PORT_MAP="/fabric-tna/run/hw/port_map.hw.json"
 export PTF_DIR="/fabric-tna/tests/unary"
 
 # Append ^not_available_for_hw to the PTF_FILTER
-for arg in "$@"; do
-  shift
-  if [[ $arg == "PTF_FILTER"* ]]; then
-    IFS='=' read -ra arg <<< "$arg"
-    PTF_FILTER="${arg[1]}"
-    continue
-  fi
-  # shellcheck disable=SC2128
-  set -- "$@" "$arg"
-done
-export PTF_FILTER="${PTF_FILTER} ^not_available_for_hw"
+export PTF_FILTER="${PTF_FILTER:-} ^no-hw"
 # shellcheck source=ptf/run/hw/base.sh
 # shellcheck disable=SC2068
 exec bash "${DIR}/base.sh" ${@}
