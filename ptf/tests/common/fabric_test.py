@@ -3172,18 +3172,13 @@ class IntTest(IPv4UnicastTest):
             SWITCH_IPV4,
             INT_COLLECTOR_IPV4,
             ig_port,
-            0, # egress port
+            0, # egress port will be unset
             drop_reason,
             SWITCH_ID,
             int_inner_pkt,
             is_device_spine,
             send_report_to_spine,
-            ig_port >> 7, # hw_id, the reason we use ingress port to get the hardware ID
-                          # is that we decide which recirculate port based on the
-                          # ingress port.
-                          # After passing the traffic manager, the egress pipeline will
-                          # use the pipe number from the recirculate port as the
-                          # hardware ID.
+            ig_port >> 7, # hw_id
         )
 
         install_routing_entry = True
