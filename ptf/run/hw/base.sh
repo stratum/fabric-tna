@@ -35,7 +35,6 @@ echo "*** Using P4 compiler output in ${P4C_OUT}..."
 testerRunName=tester-${RANDOM}
 echo "*** Starting ${testerRunName}..."
 # Do not attach stdin if running in an environment without it (e.g., Jenkins)
-
 it=$(test -t 0 && echo "-it" || echo "-t")
 # shellcheck disable=SC2068
 # mount localtime to container so test pcap time in name matches machine's local time
@@ -47,7 +46,7 @@ docker run --name "${testerRunName}" "${it}" --rm \
     -v "${P4C_OUT}":/p4c-out \
     -v /etc/localtime:/etc/localtime \
     -e PTF_FILTER="${PTF_FILTER}" \
-    -e SWITCH_GRPC_ADDR="${SWITCH_GRPC_ADDR}" \
+    -e SWITCH_ADDR="${SWITCH_ADDR}" \
     -e TREX_PARAMS="${TREX_PARAMS}" \
     -e PORT_MAP="${PORT_MAP}" \
     -e PTF_DIR="${PTF_DIR}" \

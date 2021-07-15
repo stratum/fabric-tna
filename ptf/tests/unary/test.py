@@ -2290,7 +2290,7 @@ class FabricIntQueueReportTest(IntTest):
 # Skip HW PTF test
 # We cannot varify value from the register which not belong to pipe 0 since the current
 # P4Runtime and Stratum only allows us to read register from pipe 0.
-@group("not_available_for_hw")
+@group("no-hw")
 class FabricIntQueueReportQuotaTest(IntTest):
     @tvsetup
     @autocleanup
