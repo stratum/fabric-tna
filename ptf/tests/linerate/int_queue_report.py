@@ -15,9 +15,9 @@ SLICE_ID = 1
 TC = 1
 DEFAULT_QUOTA = 50
 INT_REPORT_CAPTURE_LIMIT = 100
-RX_LIMIT = 4000 # limit for capturing the traffic from the switch.
-THRESHOLD_TRIGGER = 100
-THRESHOLD_RESET = 1
+RX_LIMIT = 4000 # max number of packets captured from the switch.
+THRESHOLD_TRIGGER = 100 # ns
+THRESHOLD_RESET = 1 # ns
 
 SENDER_PORT = 0
 INT_COLLECTOR_PORT = 2
@@ -147,7 +147,7 @@ class IntQueueReportTest(TRexTest, IntTest, SlicingTest):
             else:
                 self.failIf(
                     hw_id_to_seq[hw_id] != (seq_no - 1),
-                    f"Sequential number is wrong, should be {hw_id_to_seq[hw_id]+1}, but got {seq_no}."
+                    f"Sequence number is wrong, should be {hw_id_to_seq[hw_id]+1}, but got {seq_no}."
                 )
                 hw_id_to_seq[hw_id] = seq_no
 
@@ -165,7 +165,7 @@ class IntQueueReportTest(TRexTest, IntTest, SlicingTest):
         pcap_reader.close()
 
         self.failIf(
-            number_of_reports > DEFAULT_QUOTA,
+            number_of_reports != DEFAULT_QUOTA,
             f"The number of report is more than the quota, expecte {DEFAULT_QUOTA}, got {number_of_reports}"
         )
         self.failIf(number_of_reports == 0, "No INT reports received")
