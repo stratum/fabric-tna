@@ -2751,24 +2751,26 @@ class IntTest(IPv4UnicastTest):
         )
 
     def set_up_watchlist_flow(
-        self, ipv4_src, ipv4_dst, sport, dport, collector_action=False
+        self, ipv4_src=None, ipv4_dst=None, sport=None, dport=None, collector_action=False
     ):
-        ipv4_src_ = ipv4_to_binary(ipv4_src)
-        ipv4_dst_ = ipv4_to_binary(ipv4_dst)
+        matches = [self.Exact("ipv4_valid", stringify(1, 1))]
         ipv4_mask = ipv4_to_binary("255.255.255.255")
-        # Use full range of TCP/UDP ports by default.
-        sport_low = stringify(0, 2)
-        sport_high = stringify(0xFFFF, 2)
-        dport_low = stringify(0, 2)
-        dport_high = stringify(0xFFFF, 2)
+        if ipv4_src:
+            ipv4_src_ = ipv4_to_binary(ipv4_src)
+            matches.append(self.Ternary("ipv4_src", ipv4_src_, ipv4_mask))
+        if ipv4_dst:
+            ipv4_dst_ = ipv4_to_binary(ipv4_dst)
+            matches.append(self.Ternary("ipv4_dst", ipv4_dst_, ipv4_mask))
 
         if sport:
             sport_low = stringify(sport, 2)
             sport_high = stringify(sport, 2)
+            matches.append(self.Range("l4_sport", sport_low, sport_high))
 
         if dport:
             dport_low = stringify(dport, 2)
             dport_high = stringify(dport, 2)
+            matches.append(self.Range("l4_dport", dport_low, dport_high))
 
         if collector_action:
             action = "no_report_collector"
@@ -2776,13 +2778,7 @@ class IntTest(IPv4UnicastTest):
             action = "mark_to_report"
         self.send_request_add_entry_to_action(
             "watchlist",
-            [
-                self.Exact("ipv4_valid", stringify(1, 1)),
-                self.Ternary("ipv4_src", ipv4_src_, ipv4_mask),
-                self.Ternary("ipv4_dst", ipv4_dst_, ipv4_mask),
-                self.Range("l4_sport", sport_low, sport_high),
-                self.Range("l4_dport", dport_low, dport_high),
-            ],
+            matches,
             action,
             [],
             priority=DEFAULT_PRIORITY,
