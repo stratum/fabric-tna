@@ -113,15 +113,33 @@ public final class FabricUtils {
         return null;
     }
 
-    public static boolean doCareRangeMatch(ImmutableByteSequence lowerBound, ImmutableByteSequence upperBound) {
+    public static boolean doCareRangeMatch(ImmutableByteSequence lowerBound, ImmutableByteSequence upperBound,
+                                           int bitWidth) {
         if (lowerBound.size() != upperBound.size()) {
             throw new IllegalArgumentException(
                     "Lower bound and upper bound of a range match must have same size");
         }
-        int nBytes = lowerBound.size();
+        ImmutableByteSequence lowerBoundFitted;
+        ImmutableByteSequence upperBoundFitted;
+        try {
+            lowerBoundFitted = ImmutableByteSequence.copyAndFit(lowerBound.asReadOnlyBuffer(), bitWidth);
+            upperBoundFitted = ImmutableByteSequence.copyAndFit(upperBound.asReadOnlyBuffer(), bitWidth);
+        } catch (ImmutableByteSequence.ByteSequenceTrimException e) {
+            throw new IllegalArgumentException(
+                    "Lower bound and upper bound of a range match must have proper size");
+        }
+        // the size here is already adjusted see internalCopyAndFit in ONOS
+        int nBytes = lowerBoundFitted.size();
         ImmutableByteSequence minValue = ImmutableByteSequence.ofZeros(nBytes);
-        ImmutableByteSequence maxValue = ImmutableByteSequence.ofOnes(upperBound.size());
-        return !lowerBound.equals(minValue) || !upperBound.equals(maxValue);
+        // partial bits and calculate the mask to turn off the partial bits
+        int zeroBits = (nBytes * 8) - bitWidth;
+        byte mask = (byte) (0xff >> zeroBits);
+        // max bound according to the param bitwidth
+        byte[] maxValueArray = ImmutableByteSequence.ofOnes(nBytes).asArray();
+        // exclude the uneven bits
+        maxValueArray[0] = (byte) (maxValueArray[0] & mask);
+        return !lowerBoundFitted.equals(minValue) ||
+                !upperBoundFitted.equals(ImmutableByteSequence.copyFrom(maxValueArray));
     }
 
     public static void treatmentException(
