@@ -156,7 +156,7 @@ control SpgwIngress(
         // Interface type can be access, core, from_dbuf (see InterfaceType enum)
         fabric_md.spgw.src_iface = src_iface;
         fabric_md.bridged.spgw.skip_spgw = false;
-        fabric_md.slice_id = slice_id;
+        fabric_md.bridged.base.slice_id = slice_id;
     }
 
     action iface_miss() {
@@ -208,7 +208,7 @@ control SpgwIngress(
         fabric_md.spgw.far_id = far_id;
         fabric_md.bridged.spgw.pdr_ctr_id = ctr_id;
         fabric_md.spgw.needs_gtpu_decap = needs_gtpu_decap;
-        fabric_md.tc = tc;
+        fabric_md.bridged.base.tc = tc;
         is_pdr_hit = true;
     }
 

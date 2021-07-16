@@ -7,27 +7,47 @@
 #include "../header.p4"
 
 // ACL-like classification, maps lookup metadata to slice_id and tc. For UE
-// traffic, values can be overriden by the SPGW PDR tables.
-control IngressSliceTcClassifier (inout fabric_ingress_metadata_t fabric_md) {
+// traffic, values can be overriden later by the SPGW PDR tables.
+// To apply the same slicing and QoS treatment end-to-end, we use the ipv4.dscp
+// field to piggyback slice_id and tc (see EgressDscpRewriter). This is
+// especially important for UE traffic, where classification based on PDRs can
+// only happen at the ingress leaf switch (implementing the UPF function).
+// As such, for traffic coming from selected ports, we allow trusting the
+// slice_id and tc values carried in the dscp.
+control IngressSliceTcClassifier (in    ingress_headers_t hdr,
+                                  in    ingress_intrinsic_metadata_t ig_intr_md,
+                                  inout fabric_ingress_metadata_t fabric_md) {
 
     DirectCounter<bit<32>>(CounterType_t.PACKETS) classifier_stats;
 
     action set_slice_id_tc(slice_id_t slice_id, tc_t tc) {
-        fabric_md.slice_id = slice_id;
-        fabric_md.tc = tc;
+        fabric_md.bridged.base.slice_id = slice_id;
+        fabric_md.bridged.base.tc = tc;
+        classifier_stats.count();
+    }
+
+    // Should be used only for infrastructure ports (leaf-leaf, or leaf-spine),
+    // or ports facing servers that implement early classification based on the
+    // SDFAB DSCP encoding.
+    action trust_dscp() {
+        // SDFAB DSCP encoding: slice_id++tc
+        fabric_md.bridged.base.slice_id = hdr.ipv4.dscp[SLICE_ID_WIDTH-1:0];
+        fabric_md.bridged.base.tc = hdr.ipv4.dscp[SLICE_ID_WIDTH+TC_WIDTH-1:SLICE_ID_WIDTH];
         classifier_stats.count();
     }
 
     table classifier {
         key = {
-            fabric_md.lkp.ipv4_src : ternary @name("ipv4_src");
-            fabric_md.lkp.ipv4_dst : ternary @name("ipv4_dst");
-            fabric_md.lkp.ip_proto : ternary @name("ip_proto");
-            fabric_md.lkp.l4_sport : ternary @name("l4_sport");
-            fabric_md.lkp.l4_dport : ternary @name("l4_dport");
+            ig_intr_md.ingress_port : ternary @name("ig_port");
+            fabric_md.lkp.ipv4_src  : ternary @name("ipv4_src");
+            fabric_md.lkp.ipv4_dst  : ternary @name("ipv4_dst");
+            fabric_md.lkp.ip_proto  : ternary @name("ip_proto");
+            fabric_md.lkp.l4_sport  : ternary @name("l4_sport");
+            fabric_md.lkp.l4_dport  : ternary @name("l4_dport");
         }
         actions = {
             set_slice_id_tc;
+            trust_dscp;
         }
         const default_action = set_slice_id_tc(DEFAULT_SLICE_ID, DEFAULT_TC);
         counters = classifier_stats;
@@ -67,9 +87,9 @@ control IngressQos (inout fabric_ingress_metadata_t fabric_md,
 
     table queues {
         key = {
-            fabric_md.slice_id:      exact   @name("slice_id");
-            fabric_md.tc:            exact   @name("tc");
-            ig_tm_md.packet_color:   ternary @name("color");
+            fabric_md.bridged.base.slice_id: exact   @name("slice_id");
+            fabric_md.bridged.base.tc:       exact   @name("tc");
+            ig_tm_md.packet_color:           ternary @name("color");
         }
         actions = {
             set_queue;
@@ -84,7 +104,52 @@ control IngressQos (inout fabric_ingress_metadata_t fabric_md,
 
     apply {
         // Meter index will be 0 for all packets with default slice_id and tc.
-        ig_tm_md.packet_color = (bit<2>) slice_tc_meter.execute(fabric_md.slice_id++fabric_md.tc);
+        ig_tm_md.packet_color = (bit<2>) slice_tc_meter.execute(
+            fabric_md.bridged.base.slice_id++fabric_md.bridged.base.tc);
         queues.apply();
+    }
+}
+
+// Rewrites the ipv4.dscp field using the bridged slice_id and tc metadata.
+control EgressDscpRewriter (in    fabric_egress_metadata_t fabric_md,
+                            in    egress_intrinsic_metadata_t eg_intr_md,
+                            inout egress_headers_t hdr) {
+
+    bit<6> tmp_dscp = 0;
+
+    action rewrite() {
+        tmp_dscp[SLICE_ID_WIDTH-1:0] = fabric_md.bridged.base.slice_id;
+        tmp_dscp[SLICE_ID_WIDTH+TC_WIDTH-1:SLICE_ID_WIDTH] = fabric_md.bridged.base.tc;
+    }
+
+    // Sets the DSCP field to zero. Should be used for edge ports facing devices
+    // that do not support the SDFAB DSCP encoding.
+    action clear() {
+        // Do nothing, tmp_dscp is already initialized to zero.
+    }
+
+    table rewriter {
+        key = {
+            eg_intr_md.egress_port : exact @name("eg_port");
+        }
+        actions = {
+            @defaultonly rewrite;
+            clear;
+        }
+        const default_action = rewrite;
+        size = DSCP_REWRITER_TABLE_SIZE;
+    }
+
+    apply {
+        if (rewriter.apply().hit) {
+#ifdef WITH_SPGW
+            if (hdr.outer_ipv4.isValid()) {
+                hdr.outer_ipv4.dscp = tmp_dscp;
+            } else
+#endif // WITH_SPGW
+            if (hdr.ipv4.isValid()) {
+                hdr.ipv4.dscp = tmp_dscp;
+            }
+        }
     }
 }

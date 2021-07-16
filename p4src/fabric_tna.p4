@@ -62,7 +62,7 @@ control FabricIngress (
 #endif // WITH_INT
         stats.apply(fabric_md.lkp, ig_intr_md.ingress_port,
                     fabric_md.bridged.base.stats_flow_id);
-        slice_tc_classifier.apply(fabric_md);
+        slice_tc_classifier.apply(hdr, ig_intr_md, fabric_md);
         filtering.apply(hdr, fabric_md, ig_intr_md);
 #ifdef WITH_SPGW
         if (!fabric_md.skip_forwarding) {
@@ -101,6 +101,7 @@ control FabricEgress (
     StatsEgress() stats;
     PacketIoEgress() pkt_io_egress;
     EgressNextControl() egress_next;
+    EgressDscpRewriter() dscp_rewriter;
 #ifdef WITH_SPGW
     SpgwEgress() spgw;
 #endif // WITH_SPGW
@@ -112,6 +113,7 @@ control FabricEgress (
         pkt_io_egress.apply(hdr, fabric_md, eg_intr_md);
         stats.apply(fabric_md.bridged.base.stats_flow_id, eg_intr_md.egress_port, fabric_md.bridged.bmd_type);
         egress_next.apply(hdr, fabric_md, eg_intr_md, eg_dprsr_md);
+        dscp_rewriter.apply(fabric_md, eg_intr_md, hdr);
 #ifdef WITH_SPGW
         spgw.apply(hdr, fabric_md);
 #endif // WITH_SPGW

@@ -194,10 +194,6 @@ enum bit<2> CpuLoopbackMode_t {
 }
 
 // INT
-
-/* indicate INT at LSB of DSCP */
-const bit<6> INT_DSCP = 0x1;
-
 const bit<4>  NPROTO_ETHERNET = 0;
 const bit<4>  NPROTO_TELEMETRY_DROP_HEADER = 1;
 const bit<4>  NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER = 2;

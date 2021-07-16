@@ -92,6 +92,8 @@ public final class P4InfoConstants {
     public static final PiMatchFieldId HDR_VLAN_IS_VALID =
             PiMatchFieldId.of("vlan_is_valid");
     // Table IDs
+    public static final PiTableId FABRIC_EGRESS_DSCP_REWRITER_REWRITER =
+            PiTableId.of("FabricEgress.dscp_rewriter.rewriter");
     public static final PiTableId FABRIC_EGRESS_EGRESS_NEXT_EGRESS_VLAN =
             PiTableId.of("FabricEgress.egress_next.egress_vlan");
     public static final PiTableId FABRIC_EGRESS_INT_EGRESS_CONFIG =
@@ -183,6 +185,10 @@ public final class P4InfoConstants {
     public static final PiCounterId FABRIC_INGRESS_STATS_FLOW_COUNTER =
             PiCounterId.of("FabricIngress.stats.flow_counter");
     // Action IDs
+    public static final PiActionId FABRIC_EGRESS_DSCP_REWRITER_CLEAR =
+            PiActionId.of("FabricEgress.dscp_rewriter.clear");
+    public static final PiActionId FABRIC_EGRESS_DSCP_REWRITER_REWRITE =
+            PiActionId.of("FabricEgress.dscp_rewriter.rewrite");
     public static final PiActionId FABRIC_EGRESS_EGRESS_NEXT_DROP =
             PiActionId.of("FabricEgress.egress_next.drop");
     public static final PiActionId FABRIC_EGRESS_EGRESS_NEXT_POP_VLAN =
@@ -269,6 +275,8 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.qos.set_queue");
     public static final PiActionId FABRIC_INGRESS_SLICE_TC_CLASSIFIER_SET_SLICE_ID_TC =
             PiActionId.of("FabricIngress.slice_tc_classifier.set_slice_id_tc");
+    public static final PiActionId FABRIC_INGRESS_SLICE_TC_CLASSIFIER_TRUST_DSCP =
+            PiActionId.of("FabricIngress.slice_tc_classifier.trust_dscp");
     public static final PiActionId FABRIC_INGRESS_SPGW_DOWNLINK_PDR_DROP =
             PiActionId.of("FabricIngress.spgw.downlink_pdr_drop");
     public static final PiActionId FABRIC_INGRESS_SPGW_FAR_DROP =
