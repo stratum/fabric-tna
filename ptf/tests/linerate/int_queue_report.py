@@ -1,6 +1,7 @@
 # Copyright 2020-present Open Networking Foundation
 # SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 
+import os
 from scapy.utils import PcapReader
 from trex_test import TRexTest
 from base_test import *
@@ -36,18 +37,15 @@ class IntQueueReportTest(TRexTest, IntTest, SlicingTest):
             pkt = pkt_add_vlan(pkt, vlan_vid=VLAN_ID_1)
         self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine, watch_flow=False)
         self.set_up_latency_threshold_for_q_report(threshold_trigger=THRESHOLD_TRIGGER, threshold_reset=THRESHOLD_RESET, queue_id=DEFAULT_QID)
-        self.runIPv4UnicastTest(
-            pkt=pkt,
+        self.set_up_ipv4_unicast_rules(
             next_hop_mac=HOST2_MAC,
+            ig_port=self.port1,
+            eg_port=self.port4,
+            dst_ipv4=pkt[IP].dst,
             tagged1=tagged1,
             tagged2=tagged2,
             is_next_hop_spine=is_next_hop_spine,
             prefix_len=32,
-            # Will send/receive traffic from TRex, this is for setting up flows for
-            # ports and output ports.
-            ig_port=self.port1,
-            eg_port=self.port4,
-            no_send=True,
         )
         self.set_queue_report_quota(self.port4, qid=DEFAULT_QID, quota=DEFAULT_QUOTA)
 
@@ -84,8 +82,11 @@ class IntQueueReportTest(TRexTest, IntTest, SlicingTest):
         self.trex_client.start(ports=[SENDER_PORT], mult=TRAFFIC_MULT, duration=TEST_DURATION)
         self.trex_client.wait_on_traffic(ports=[SENDER_PORT])
 
-        pcap_path = "/tmp/int-queue-report.pcap"
-        rx_pcap_path = "/tmp/int-queue-report-rx.pcap"
+        pcap_dir = f"/tmp/{self.__class__.__name__}"
+        if not os.path.exists(pcap_dir):
+            os.makedirs(pcap_dir)
+        pcap_path = f"{pcap_dir}/int-reports.pcap"
+        rx_pcap_path = f"{pcap_dir}/traffic.pcap"
         self.trex_client.stop_capture(int_capture["id"], pcap_path)
         self.trex_client.stop_capture(rx_capture["id"], rx_pcap_path)
 
@@ -106,7 +107,7 @@ class IntQueueReportTest(TRexTest, IntTest, SlicingTest):
         report_pkt = None
         number_of_reports = 0
         hw_id_to_seq = {}
-        ips = deque()
+        reported_ip_srcs = deque()
         while True:
             try:
                 report_pkt = pcap_reader.recv()
@@ -159,7 +160,7 @@ class IntQueueReportTest(TRexTest, IntTest, SlicingTest):
                 latency < THRESHOLD_TRIGGER,
                 f"Latency should be higher than trigger {THRESHOLD_TRIGGER}, got {latency}"
             )
-            ips.append(inner_ip_header.src)
+            reported_ip_srcs.append(inner_ip_header.src)
 
 
         pcap_reader.close()
@@ -188,18 +189,18 @@ class IntQueueReportTest(TRexTest, IntTest, SlicingTest):
                 continue
             ip_src = pkt[IP].src
             if checking_ip_src:
-                if ip_src != ips[0]:
-                    self.fail(f"Expect IP src {ip_src}, got {ips[0]}")
+                if ip_src != reported_ip_srcs[0]:
+                    self.fail(f"Expect IP src {ip_src}, got {reported_ip_srcs[0]}")
                 else:
-                    ips.popleft()
+                    reported_ip_srcs.popleft()
             else:
-                if ip_src == ips[0]:
+                if ip_src == reported_ip_srcs[0]:
                     checking_ip_src = True
-                    ips.popleft()
-            if len(ips) == 0:
+                    reported_ip_srcs.popleft()
+            if len(reported_ip_srcs) == 0:
                 break
         pcap_reader.close()
-        self.failIf(len(ips) != 0, f"Receive {len(ips)} unexpected report(s)")
+        self.failIf(len(reported_ip_srcs) != 0, f"Receive {len(reported_ip_srcs)} unexpected report(s)")
 
     def runTest(self):
         print("")

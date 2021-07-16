@@ -1507,6 +1507,60 @@ class ArpBroadcastTest(FabricTest):
 
 
 class IPv4UnicastTest(FabricTest):
+
+    def set_up_ipv4_unicast_rules(self,
+        next_hop_mac,
+        ig_port,
+        eg_port,
+        dst_ipv4,
+        tagged1=False,
+        tagged2=False,
+        prefix_len=24,
+        next_id=100,
+        is_next_hop_spine=False,
+        routed_eth_types=(ETH_TYPE_IPV4,),
+        install_routing_entry=True,
+        port_type1=PORT_TYPE_EDGE,
+        port_type2=PORT_TYPE_EDGE,
+        from_packet_out=False,
+        switch_mac=SWITCH_MAC,
+        vlan1=VLAN_ID_1,
+        vlan2=VLAN_ID_2,
+        mpls_label=MPLS_LABEL_2):
+
+        group_id = next_id
+
+        # Setup ports.
+        self.setup_port(ig_port, vlan1, port_type1, tagged1)
+        # This is to prevent sending duplicate table entries for tests like
+        # FabricIntDeflectedDropTest, where we already set up the recirculation port as
+        # part of `set_up_int_flows()`.
+        if eg_port not in RECIRCULATE_PORTS:
+            self.setup_port(eg_port, vlan2, port_type2, tagged2)
+
+        # Forwarding type -> routing v4
+        # If from_packet_out, set eth_dst to don't care. All packet-outs should
+        # be routed, independently of eth_dst.
+        for eth_type in routed_eth_types:
+            self.set_forwarding_type(
+                ig_port,
+                switch_mac if not from_packet_out else None,
+                ethertype=eth_type,
+                fwd_type=FORWARDING_TYPE_UNICAST_IPV4,
+            )
+
+        # Routing entry.
+        if install_routing_entry:
+            self.add_forwarding_routing_v4_entry(dst_ipv4, prefix_len, next_id)
+
+        if not is_next_hop_spine:
+            self.add_next_routing(next_id, eg_port, switch_mac, next_hop_mac)
+            self.add_next_vlan(next_id, vlan2)
+        else:
+            params = [eg_port, switch_mac, next_hop_mac, mpls_label]
+            self.add_next_mpls_and_routing_group(next_id, group_id, [params])
+            self.add_next_vlan(next_id, DEFAULT_VLAN)
+
     def runIPv4UnicastTest(
         self,
         pkt,
@@ -1595,7 +1649,6 @@ class IPv4UnicastTest(FabricTest):
             vlan2 = VLAN_ID_2 if next_vlan is None else next_vlan
 
         next_id = 100 if next_id is None else next_id
-        group_id = next_id
         mpls_label = MPLS_LABEL_2
         if dst_ipv4 is None:
             dst_ipv4 = pkt[IP].dst
@@ -1604,36 +1657,26 @@ class IPv4UnicastTest(FabricTest):
         else:
             switch_mac = pkt[Ether].dst
 
-        # Setup ports.
-        self.setup_port(ig_port, vlan1, port_type1, tagged1)
-        # This is to prevent sending duplicate table entries for tests like
-        # FabricIntDeflectedDropTest, where we already set up the recirculation port as
-        # part of `set_up_int_flows()`.
-        if eg_port not in RECIRCULATE_PORTS:
-            self.setup_port(eg_port, vlan2, port_type2, tagged2)
-
-        # Forwarding type -> routing v4
-        # If from_packet_out, set eth_dst to don't care. All packet-outs should
-        # be routed, independently of eth_dst.
-        for eth_type in routed_eth_types:
-            self.set_forwarding_type(
-                ig_port,
-                switch_mac if not from_packet_out else None,
-                ethertype=eth_type,
-                fwd_type=FORWARDING_TYPE_UNICAST_IPV4,
-            )
-
-        # Routing entry.
-        if install_routing_entry:
-            self.add_forwarding_routing_v4_entry(dst_ipv4, prefix_len, next_id)
-
-        if not is_next_hop_spine:
-            self.add_next_routing(next_id, eg_port, switch_mac, next_hop_mac)
-            self.add_next_vlan(next_id, vlan2)
-        else:
-            params = [eg_port, switch_mac, next_hop_mac, mpls_label]
-            self.add_next_mpls_and_routing_group(next_id, group_id, [params])
-            self.add_next_vlan(next_id, DEFAULT_VLAN)
+        self.set_up_ipv4_unicast_rules(
+            next_hop_mac,
+            ig_port,
+            eg_port,
+            dst_ipv4,
+            tagged1,
+            tagged2,
+            prefix_len,
+            next_id,
+            is_next_hop_spine,
+            routed_eth_types,
+            install_routing_entry,
+            port_type1,
+            port_type2,
+            from_packet_out,
+            switch_mac,
+            vlan1,
+            vlan2,
+            mpls_label,
+        )
 
         if exp_pkt is None:
             # Build exp pkt using the input one.
