@@ -64,8 +64,8 @@ def set_up_interfaces(ifaces):
             subprocess.check_call(["ip", "link", "set", iface, "up"])
             subprocess.check_call(["ip", "link", "set", iface, "promisc", "on"])
             subprocess.check_call(["sysctl", f"net.ipv6.conf.{iface}.disable_ipv6=1"])
-        except Exception as e:
-            info(f"Got an error when setting up {iface}: {e}")
+        except subprocess.CalledProcessError as e:
+            info(f"Got an error when setting up {iface}: {e.output}")
             return False
     return True
 
@@ -79,8 +79,8 @@ def create_dummy_interface():
         pass
     try:
         subprocess.check_output(["ip", "link", "add", DUMMY_IFACE_NAME, "type", "dummy"])
-    except Exception as e:
-        info(f"Got error when creating dummy interface \"{DUMMY_IFACE_NAME}\"")
+    except subprocess.CalledProcessError as e:
+        info(f"Got error when creating dummy interface \"{DUMMY_IFACE_NAME}\": {e.output}")
         return False
     return True
 
@@ -90,8 +90,8 @@ def remove_dummy_interface():
         subprocess.check_output(["ip", "link", "show", DUMMY_IFACE_NAME])
         try:
             subprocess.check_output(["ip", "link", "delete", DUMMY_IFACE_NAME])
-        except:
-            info(f"Got error when deleting dummy interface \"{DUMMY_IFACE_NAME}\"")
+        except subprocess.CalledProcessError as e:
+            info(f"Got error when deleting dummy interface \"{DUMMY_IFACE_NAME}\" {e.output}")
             return False
         return True
     except:
