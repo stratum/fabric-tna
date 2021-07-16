@@ -2762,6 +2762,9 @@ class IntTest(IPv4UnicastTest):
         dport_low = stringify(0, 2)
         dport_high = stringify(0xFFFF, 2)
 
+        lower_bound = stringify(0, 2)
+        upper_bound = stringify(0xFFFF, 2)
+
         if sport:
             sport_low = stringify(sport, 2)
             sport_high = stringify(sport, 2)
@@ -2774,15 +2777,21 @@ class IntTest(IPv4UnicastTest):
             action = "no_report_collector"
         else:
             action = "mark_to_report"
+
+        matches = [
+            self.Exact("ipv4_valid", stringify(1, 1)),
+            self.Ternary("ipv4_src", ipv4_src_, ipv4_mask),
+            self.Ternary("ipv4_dst", ipv4_dst_, ipv4_mask),
+        ]
+
+        if sport_low != lower_bound or sport_high != upper_bound:
+            matches.append(self.Range("l4_sport", sport_low, sport_high))
+        if dport_low != lower_bound or dport_high != upper_bound:
+            matches.append(self.Range("l4_dport", dport_low, dport_high))
+
         self.send_request_add_entry_to_action(
             "watchlist",
-            [
-                self.Exact("ipv4_valid", stringify(1, 1)),
-                self.Ternary("ipv4_src", ipv4_src_, ipv4_mask),
-                self.Ternary("ipv4_dst", ipv4_dst_, ipv4_mask),
-                self.Range("l4_sport", sport_low, sport_high),
-                self.Range("l4_dport", dport_low, dport_high),
-            ],
+            matches,
             action,
             [],
             priority=DEFAULT_PRIORITY,
@@ -2991,13 +3000,15 @@ class IntTest(IPv4UnicastTest):
         queue_id = 0
 
         def set_up_queue_report_table_internal(upper, lower, action):
+            # Omit dont'care matches
+            matches = [self.Exact("egress_qid", stringify(queue_id, 1))]
+            if upper[0] != 0 or upper[1] != 0xffff:
+                matches.append(self.Range("hop_latency_upper", *[stringify(v, 2) for v in upper]))
+            if lower[0] != 0 or lower[1] != 0xffff:
+                matches.append(self.Range("hop_latency_lower", *[stringify(v, 2) for v in lower]))
             self.send_request_add_entry_to_action(
                 "FabricEgress.int_egress.queue_latency_thresholds",
-                [
-                    self.Exact("egress_qid", stringify(queue_id, 1)),
-                    self.Range("hop_latency_upper", *[stringify(v, 2) for v in upper]),
-                    self.Range("hop_latency_lower", *[stringify(v, 2) for v in lower]),
-                ],
+                matches,
                 action,
                 [],
                 DEFAULT_PRIORITY,
