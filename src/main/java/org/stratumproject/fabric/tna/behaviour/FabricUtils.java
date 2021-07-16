@@ -113,33 +113,8 @@ public final class FabricUtils {
         return null;
     }
 
-    public static boolean doCareRangeMatch(ImmutableByteSequence lowerBound, ImmutableByteSequence upperBound,
-                                           int bitWidth) {
-        if (lowerBound.size() != upperBound.size()) {
-            throw new IllegalArgumentException(
-                    "Lower bound and upper bound of a range match must have same size");
-        }
-        ImmutableByteSequence lowerBoundFitted;
-        ImmutableByteSequence upperBoundFitted;
-        try {
-            lowerBoundFitted = ImmutableByteSequence.copyAndFit(lowerBound.asReadOnlyBuffer(), bitWidth);
-            upperBoundFitted = ImmutableByteSequence.copyAndFit(upperBound.asReadOnlyBuffer(), bitWidth);
-        } catch (ImmutableByteSequence.ByteSequenceTrimException e) {
-            throw new IllegalArgumentException(
-                    "Lower bound and upper bound of a range match must have proper size");
-        }
-        // the size here is already adjusted see internalCopyAndFit in ONOS
-        int nBytes = lowerBoundFitted.size();
-        ImmutableByteSequence minValue = ImmutableByteSequence.ofZeros(nBytes);
-        // partial bits and calculate the mask to turn off the partial bits
-        int zeroBits = (nBytes * 8) - bitWidth;
-        byte mask = (byte) (0xff >> zeroBits);
-        // max bound according to the param bitwidth
-        byte[] maxValueArray = ImmutableByteSequence.ofOnes(nBytes).asArray();
-        // exclude the uneven bits
-        maxValueArray[0] = (byte) (maxValueArray[0] & mask);
-        return !lowerBoundFitted.equals(minValue) ||
-                !upperBoundFitted.equals(ImmutableByteSequence.copyFrom(maxValueArray));
+    public static boolean doCareRangeMatch(long lowerBound, long upperBound, int bitWidth) {
+        return lowerBound != 0 || upperBound != (((long) Math.pow(2, bitWidth)) - 1);
     }
 
     public static void treatmentException(

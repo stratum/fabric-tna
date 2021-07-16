@@ -1010,15 +1010,13 @@ public class FabricIntProgrammableTest {
             long[] lowerRange, PiActionId actionId) {
         final PiCriterion.Builder matchCriterionBuilder = PiCriterion.builder()
                 .matchExact(P4InfoConstants.HDR_EGRESS_QID, queueId);
-        if (doCareRangeMatch(ImmutableByteSequence.copyFrom((short) upperRange[0]),
-                ImmutableByteSequence.copyFrom((short) upperRange[1]), 16)) {
-            matchCriterionBuilder.matchRange(P4InfoConstants.HDR_HOP_LATENCY_UPPER, (short) upperRange[0],
-                    (short) upperRange[1]);
+        if (doCareRangeMatch(upperRange[0], upperRange[1], 16)) {
+            matchCriterionBuilder.matchRange(P4InfoConstants.HDR_HOP_LATENCY_UPPER, (int) upperRange[0],
+                    (int) upperRange[1]);
         }
-        if (doCareRangeMatch(ImmutableByteSequence.copyFrom((short) lowerRange[0]),
-                ImmutableByteSequence.copyFrom((short) lowerRange[1]), 16)) {
-            matchCriterionBuilder.matchRange(P4InfoConstants.HDR_HOP_LATENCY_LOWER, (short) lowerRange[0],
-                    (short) lowerRange[1]);
+        if (doCareRangeMatch(lowerRange[0], lowerRange[1], 16)) {
+            matchCriterionBuilder.matchRange(P4InfoConstants.HDR_HOP_LATENCY_LOWER, (int) lowerRange[0],
+                    (int) lowerRange[1]);
         }
         final TrafficSelector selector = DefaultTrafficSelector.builder()
                 .matchPi(matchCriterionBuilder.build())

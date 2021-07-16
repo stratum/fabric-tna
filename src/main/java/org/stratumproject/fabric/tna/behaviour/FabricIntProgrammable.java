@@ -698,10 +698,10 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         return result;
     }
 
-    private Short[] rangeToShortArray(Range<Integer> range) {
-        Short[] result = new Short[] {
-            range.lowerEndpoint().shortValue(),
-            range.upperEndpoint().shortValue()
+    private Integer[] rangeToIntArray(Range<Integer> range) {
+        Integer[] result = new Integer[] {
+            range.lowerEndpoint(),
+            range.upperEndpoint()
         };
         // Shift one if it the endpoint bound type is open.
         if (range.lowerBoundType() == BoundType.OPEN) {
@@ -728,21 +728,19 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
 
     private void setUpQueueReportThresholdInternal(byte queueId, Range<Integer> upperRange,
             Range<Integer> lowerRange, PiActionId actionId) {
-        Short[] thresholdUpper = rangeToShortArray(upperRange);
-        Short[] thresholdLower = rangeToShortArray(lowerRange);
+        Integer[] thresholdUpper = rangeToIntArray(upperRange);
+        Integer[] thresholdLower = rangeToIntArray(lowerRange);
         final PiCriterion.Builder matchCriterionBuilder = PiCriterion.builder()
                 .matchExact(P4InfoConstants.HDR_EGRESS_QID, queueId);
         int bitWidth = getFieldSize(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_QUEUE_LATENCY_THRESHOLDS,
                 P4InfoConstants.HDR_HOP_LATENCY_UPPER);
-        if (doCareRangeMatch(ImmutableByteSequence.copyFrom(thresholdUpper[0]),
-                ImmutableByteSequence.copyFrom(thresholdUpper[1]), bitWidth)) {
+        if (doCareRangeMatch(thresholdUpper[0], thresholdUpper[1], bitWidth)) {
                 matchCriterionBuilder.matchRange(P4InfoConstants.HDR_HOP_LATENCY_UPPER, thresholdUpper[0],
                         thresholdUpper[1]);
         }
         bitWidth = getFieldSize(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_QUEUE_LATENCY_THRESHOLDS,
                 P4InfoConstants.HDR_HOP_LATENCY_LOWER);
-        if (doCareRangeMatch(ImmutableByteSequence.copyFrom(thresholdLower[0]),
-                ImmutableByteSequence.copyFrom(thresholdLower[1]), bitWidth)) {
+        if (doCareRangeMatch(thresholdLower[0], thresholdLower[1], bitWidth)) {
                 matchCriterionBuilder.matchRange(P4InfoConstants.HDR_HOP_LATENCY_LOWER, thresholdLower[0],
                         thresholdLower[1]);
         }
