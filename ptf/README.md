@@ -150,7 +150,7 @@ by `ip link` command.
 To run PTF tests with hardware:
 
 ```bash
-./ptf/run/hw/run <profile>
+./ptf/run/hw/unary <profile>
 ```
 
 ## Running line rate tests with hardware device
@@ -179,7 +179,7 @@ config and only provide P4 port numbers.
 To run the line rate test:
 
 ```bash
-./ptf/run/hw/linerate <profile> TEST=<test name>
+./ptf/run/hw/linerate <profile>
 ```
 
 [testvectors-runner]: https://github.com/stratum/testvectors-runner
