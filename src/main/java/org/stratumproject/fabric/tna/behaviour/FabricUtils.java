@@ -3,7 +3,6 @@
 
 package org.stratumproject.fabric.tna.behaviour;
 
-import org.onlab.util.ImmutableByteSequence;
 import org.onlab.util.KryoNamespace;
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.flow.TrafficSelector;
