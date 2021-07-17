@@ -110,7 +110,8 @@ control IngressQos (inout fabric_ingress_metadata_t fabric_md,
     }
 }
 
-// Rewrites the ipv4.dscp field using the bridged slice_id and tc metadata.
+// Allows per-egress port rewriting the ipv4.dscp field using the bridged
+// slice_id and tc metadata.
 control EgressDscpRewriter (in    fabric_egress_metadata_t fabric_md,
                             in    egress_intrinsic_metadata_t eg_intr_md,
                             inout egress_headers_t hdr) {
@@ -118,8 +119,7 @@ control EgressDscpRewriter (in    fabric_egress_metadata_t fabric_md,
     bit<6> tmp_dscp = 0;
 
     action rewrite() {
-        tmp_dscp[SLICE_ID_WIDTH-1:0] = fabric_md.bridged.base.slice_id;
-        tmp_dscp[SLICE_ID_WIDTH+TC_WIDTH-1:SLICE_ID_WIDTH] = fabric_md.bridged.base.tc;
+        tmp_dscp = fabric_md.bridged.base.slice_id++fabric_md.bridged.base.tc;
     }
 
     // Sets the DSCP field to zero. Should be used for edge ports facing devices
