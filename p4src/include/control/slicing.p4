@@ -21,8 +21,8 @@ control IngressSliceTcClassifier (in    ingress_headers_t hdr,
     DirectCounter<bit<32>>(CounterType_t.PACKETS) classifier_stats;
 
     action set_slice_id_tc(slice_id_t slice_id, tc_t tc) {
-        fabric_md.bridged.base.slice_id = slice_id;
-        fabric_md.bridged.base.tc = tc;
+        fabric_md.slice_id = slice_id;
+        fabric_md.tc = tc;
         classifier_stats.count();
     }
 
@@ -31,8 +31,8 @@ control IngressSliceTcClassifier (in    ingress_headers_t hdr,
     // SDFAB DSCP encoding.
     action trust_dscp() {
         // SDFAB DSCP encoding: slice_id++tc
-        fabric_md.bridged.base.slice_id = hdr.ipv4.dscp[SLICE_ID_WIDTH-1:0];
-        fabric_md.bridged.base.tc = hdr.ipv4.dscp[SLICE_ID_WIDTH+TC_WIDTH-1:SLICE_ID_WIDTH];
+        fabric_md.slice_id = hdr.ipv4.dscp[SLICE_ID_WIDTH+TC_WIDTH-1:TC_WIDTH];
+        fabric_md.tc = hdr.ipv4.dscp[TC_WIDTH-1:0];
         classifier_stats.count();
     }
 
@@ -87,9 +87,9 @@ control IngressQos (inout fabric_ingress_metadata_t fabric_md,
 
     table queues {
         key = {
-            fabric_md.bridged.base.slice_id: exact   @name("slice_id");
-            fabric_md.bridged.base.tc:       exact   @name("tc");
-            ig_tm_md.packet_color:           ternary @name("color");
+            fabric_md.slice_id:    exact   @name("slice_id");
+            fabric_md.tc:          exact   @name("tc");
+            ig_tm_md.packet_color: ternary @name("color");
         }
         actions = {
             set_queue;
@@ -102,10 +102,12 @@ control IngressQos (inout fabric_ingress_metadata_t fabric_md,
         size = 1 << (SLICE_TC_WIDTH + 1);
     }
 
+    bit<SLICE_TC_WIDTH> slice_tc = fabric_md.slice_id++fabric_md.tc;
+
     apply {
-        // Meter index will be 0 for all packets with default slice_id and tc.
-        ig_tm_md.packet_color = (bit<2>) slice_tc_meter.execute(
-            fabric_md.bridged.base.slice_id++fabric_md.bridged.base.tc);
+        // Meter index should be 0 for all packets with default slice_id and tc.
+        ig_tm_md.packet_color = (bit<2>) slice_tc_meter.execute(slice_tc);
+        fabric_md.bridged.base.dscp = slice_tc;
         queues.apply();
     }
 }
@@ -116,16 +118,16 @@ control EgressDscpRewriter (in    fabric_egress_metadata_t fabric_md,
                             in    egress_intrinsic_metadata_t eg_intr_md,
                             inout egress_headers_t hdr) {
 
-    bit<6> tmp_dscp = 0;
+    bit<6> tmp_dscp = fabric_md.bridged.base.dscp;
 
     action rewrite() {
-        tmp_dscp = fabric_md.bridged.base.slice_id++fabric_md.bridged.base.tc;
+        // Do nothing, tmp_dscp is already initialized.
     }
 
     // Sets the DSCP field to zero. Should be used for edge ports facing devices
     // that do not support the SDFAB DSCP encoding.
     action clear() {
-        // Do nothing, tmp_dscp is already initialized to zero.
+        tmp_dscp = 0;
     }
 
     table rewriter {
@@ -133,10 +135,11 @@ control EgressDscpRewriter (in    fabric_egress_metadata_t fabric_md,
             eg_intr_md.egress_port : exact @name("eg_port");
         }
         actions = {
-            @defaultonly rewrite;
+            rewrite;
             clear;
+            @defaultonly nop;
         }
-        const default_action = rewrite;
+        const default_action = nop;
         size = DSCP_REWRITER_TABLE_SIZE;
     }
 
