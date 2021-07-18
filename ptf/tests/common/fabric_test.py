@@ -606,8 +606,8 @@ def pkt_decrement_ttl(pkt):
 
 def pkt_set_dscp(pkt, slice_id=None, tc=None, dscp=None):
     assert IP in pkt, "Packet must be IPv4 to set DSCP"
-    # Concat slice_id and tc
     if dscp is None:
+        # Concat slice_id and tc
         dscp = (slice_id << TC_WIDTH) + tc
     assert dscp < 2**7, "DSCP does not fit in 6 bits"
     new_pkt = pkt.copy()

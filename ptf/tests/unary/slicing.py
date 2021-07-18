@@ -19,7 +19,8 @@ class SlicingTest(FabricTest):
     """Mixin class with methods to manipulate QoS entities
     """
 
-    def add_slice_tc_classifier_entry(self, slice_id=None, tc=None, trust_dscp=False,
+    def add_slice_tc_classifier_entry(self, slice_id=None, tc=None,
+                                      trust_dscp=False,
                                       **ftuple):
         if trust_dscp:
             action = "FabricIngress.slice_tc_classifier.trust_dscp"
@@ -54,7 +55,8 @@ class SlicingTest(FabricTest):
             self.Exact("tc", stringify(tc, 1))
         ]
         if color is not None:
-            matches.append(self.Ternary("color", stringify(color, 1), stringify(0x3, 1)))
+            matches.append(
+                self.Ternary("color", stringify(color, 1), stringify(0x3, 1)))
         if qid is not None:
             action = "FabricIngress.qos.set_queue"
             action_params = [("qid", stringify(qid, 1))]
@@ -81,47 +83,72 @@ class SlicingTest(FabricTest):
         self.add_queue_entry(slice_id, tc, None, color=color)
 
 
-class IPv4UnicastWithDscpClassificationAndRewrite(SlicingTest, IPv4UnicastTest):
-    """Tests DSCP-based classification and rewrite. """
+class IPv4UnicastWithDscpClassificationAndRewriteTest(SlicingTest, IPv4UnicastTest):
+    """Tests DSCP-based classification and rewrite.
+    """
 
     @tvsetup
     @autocleanup
-    def doRunTest(self, pkt, tc_name, **kwargs):
-        slice_id = 0
-        tc = 3
+    def doRunTest(self, pkt, trust_dscp, rewrite, tc_name, **kwargs):
+        eg_port = self.port2
 
-        pkt = pkt_set_dscp(pkt=pkt, slice_id=slice_id, tc=tc)
+        # dscp = 0b000001
+        default_slice_id = 0
+        default_tc = 1
 
-        self.add_slice_tc_classifier_entry(
-            trust_dscp=True,
-            ipv4_src=pkt[IP].src
-        )
+        # dscp = 0b101100
+        pkt = pkt_set_dscp(pkt=pkt, slice_id=11, tc=0)
 
-        # By default, we always rewrite the DSCP in the egress pipe.
-        # runIPv4UnicastTest() uses the input pkt to craft the expected one. By
-        # expecting the same DSCP as the input packet we are implicitly
-        # verifying that slice_id and tc can be extracted correctly.
-        # The "clear" action for the DSCP rewriter table is tested in
-        # IPv4UnicastWithPolicingTest.
-        self.runIPv4UnicastTest(pkt, **kwargs)
+        if trust_dscp:
+            self.add_slice_tc_classifier_entry(
+                trust_dscp=True,
+                ipv4_src=pkt[IP].src
+            )
+        else:
+            # Classify using slice_id and tc different than what found in dscp
+            self.add_slice_tc_classifier_entry(
+                slice_id=default_slice_id,
+                tc=default_tc,
+                ipv4_src=pkt[IP].src
+            )
+
+        exp_pkt_base = pkt.copy()
+        if rewrite == "rewrite":
+            self.add_dscp_rewriter_entry(eg_port=eg_port)
+            if not trust_dscp:
+                exp_pkt_base = pkt_set_dscp(pkt=exp_pkt_base,
+                                            slice_id=default_slice_id,
+                                            tc=default_tc)
+        elif rewrite == "clear":
+            self.add_dscp_rewriter_entry(self.port2, clear=True)
+            exp_pkt_base = pkt_set_dscp(pkt=exp_pkt_base, dscp=0)
+        elif rewrite != "nop":
+            # nop means dscp unchanged
+            raise Exception(f"Invalid rewrite action '{rewrite}'")
+
+        self.runIPv4UnicastTest(pkt, eg_port=eg_port, exp_pkt_base=exp_pkt_base, **kwargs)
 
     def runTest(self):
         print("")
         for pkt_type in BASE_PKT_TYPES | GTP_PKT_TYPES | VXLAN_PKT_TYPES:
-                tc_name = f"{pkt_type}"
-                print("Testing {} packet...".format(pkt_type))
-                pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
-                    eth_src=HOST1_MAC,
-                    eth_dst=SWITCH_MAC,
-                    ip_src=HOST1_IPV4,
-                    ip_dst=HOST2_IPV4,
-                    pktlen=MIN_PKT_LEN,
-                )
-                self.doRunTest(
-                    pkt=pkt,
-                    next_hop_mac=HOST2_MAC,
-                    tc_name=tc_name,
-                )
+            for trust_dscp in [True, False]:
+                for rewrite in ["rewrite", "clear", "nop"]:
+                    tc_name = f"{pkt_type}_{'trustdscp_' if trust_dscp else ''}_{rewrite}"
+                    print(f"pkt_type={pkt_type}, trust_dscp={trust_dscp}, rewrite={rewrite}...")
+                    pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
+                        eth_src=HOST1_MAC,
+                        eth_dst=SWITCH_MAC,
+                        ip_src=HOST1_IPV4,
+                        ip_dst=HOST2_IPV4,
+                        pktlen=MIN_PKT_LEN,
+                    )
+                    self.doRunTest(
+                        pkt=pkt,
+                        next_hop_mac=HOST2_MAC,
+                        trust_dscp=trust_dscp,
+                        rewrite=rewrite,
+                        tc_name=tc_name,
+                    )
 
 
 class IPv4UnicastWithPolicingTest(SlicingTest, IPv4UnicastTest):
@@ -148,7 +175,6 @@ class IPv4UnicastWithPolicingTest(SlicingTest, IPv4UnicastTest):
             self.enable_policing(slice_id=slice_id, tc=tc, color=COLOR_RED)
         else:
             self.add_queue_entry(slice_id=slice_id, tc=tc, qid=1)
-        self.add_dscp_rewriter_entry(eg_port=eg_port, clear=True)
 
         self.runIPv4UnicastTest(
             pkt=pkt,
