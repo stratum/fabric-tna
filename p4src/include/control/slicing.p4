@@ -8,7 +8,7 @@
 
 // ACL-like classification, maps lookup metadata to slice_id and tc. For UE
 // traffic, values can be overriden later by the SPGW PDR tables.
-// To apply the same slicing and QoS treatment end-to-end, we use the ipv4.dscp
+// To apply the same slicing and QoS treatment end-to-end, we use the IPv4 DSCP
 // field to piggyback slice_id and tc (see EgressDscpRewriter). This is
 // especially important for UE traffic, where classification based on PDRs can
 // only happen at the ingress leaf switch (implementing the UPF function).
@@ -28,9 +28,8 @@ control IngressSliceTcClassifier (in    ingress_headers_t hdr,
 
     // Should be used only for infrastructure ports (leaf-leaf, or leaf-spine),
     // or ports facing servers that implement early classification based on the
-    // SDFAB DSCP encoding.
+    // SDFAB DSCP encoding (slice_id++tc).
     action trust_dscp() {
-        // SDFAB DSCP encoding: slice_id++tc
         fabric_md.slice_id = hdr.ipv4.dscp[SLICE_ID_WIDTH+TC_WIDTH-1:TC_WIDTH];
         fabric_md.tc = hdr.ipv4.dscp[TC_WIDTH-1:0];
         classifier_stats.count();
@@ -59,7 +58,8 @@ control IngressSliceTcClassifier (in    ingress_headers_t hdr,
     }
 }
 
-// Provides metering and mapping to queues based on slice_id and tc.
+// Provides metering and mapping to queues based on slice_id and tc. Should be
+// applied after any other block writing slice_id and tc.
 control IngressQos (inout fabric_ingress_metadata_t fabric_md,
                     inout ingress_intrinsic_metadata_for_deparser_t ig_dprsr_md,
                     inout ingress_intrinsic_metadata_for_tm_t ig_tm_md) {
@@ -112,8 +112,8 @@ control IngressQos (inout fabric_ingress_metadata_t fabric_md,
     }
 }
 
-// Allows per-egress port rewriting the ipv4.dscp field using the bridged
-// slice_id and tc metadata.
+// Allows per-egress port rewriting of the outermost IPv4 DSCP field to
+// piggyback slice_id and tc across the fabric.
 control EgressDscpRewriter (in    fabric_egress_metadata_t fabric_md,
                             in    egress_intrinsic_metadata_t eg_intr_md,
                             inout egress_headers_t hdr) {

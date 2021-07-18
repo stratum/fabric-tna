@@ -2040,7 +2040,8 @@ class SpgwSimpleTest(IPv4UnicastTest):
         counter = self.read_indirect_counter(c_name, idx, typ="BOTH")
         return (counter.data.packet_count, counter.data.byte_count)
 
-    def _add_spgw_iface(self, iface_addr, prefix_len, iface_enum, gtpu_valid):
+    def _add_spgw_iface(self, iface_addr, prefix_len, iface_enum, gtpu_valid,
+                        slice_id=DEFAULT_SLICE_ID):
         req = self.get_new_write_request()
 
         iface_addr_ = ipv4_to_binary(iface_addr)
@@ -2055,17 +2056,18 @@ class SpgwSimpleTest(IPv4UnicastTest):
             "FabricIngress.spgw.load_iface",
             [
                 ("src_iface", stringify(iface_enum, 1)),
-                ("slice_id", stringify(DEFAULT_SLICE_ID, 1)),
+                ("slice_id", stringify(slice_id, 1)),
             ],
         )
         self.write_request(req)
 
-    def add_ue_pool(self, pool_addr, prefix_len=32):
+    def add_ue_pool(self, pool_addr, prefix_len=32, slice_id=DEFAULT_SLICE_ID):
         self._add_spgw_iface(
             iface_addr=pool_addr,
             prefix_len=prefix_len,
             iface_enum=SPGW_IFACE_CORE,
             gtpu_valid=False,
+            slice_id=slice_id,
         )
 
     def add_s1u_iface(self, s1u_addr, prefix_len=32):
@@ -2153,7 +2155,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         )
         self.write_request(req)
 
-    def add_downlink_pdr(self, ctr_id, far_id, ue_addr):
+    def add_downlink_pdr(self, ctr_id, far_id, ue_addr, tc=DEFAULT_TC):
         req = self.get_new_write_request()
 
         self.push_update_add_entry_to_action(
@@ -2165,7 +2167,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
                 ("ctr_id", stringify(ctr_id, 2)),
                 ("far_id", stringify(far_id, 4)),
                 ("needs_gtpu_decap", stringify(0, 1)),
-                ("tc", stringify(DEFAULT_TC, 1)),
+                ("tc", stringify(tc, 1)),
             ],
         )
         self.write_request(req)
@@ -2220,9 +2222,10 @@ class SpgwSimpleTest(IPv4UnicastTest):
 
     def setup_downlink(
         self, s1u_sgw_addr, s1u_enb_addr, teid, ue_addr, ctr_id, far_id=DOWNLINK_FAR_ID,
+            slice_id=DEFAULT_SLICE_ID, tc=DEFAULT_TC
     ):
-        self.add_ue_pool(ue_addr)
-        self.add_downlink_pdr(ctr_id=ctr_id, far_id=far_id, ue_addr=ue_addr)
+        self.add_ue_pool(pool_addr=ue_addr, slice_id=slice_id)
+        self.add_downlink_pdr(ctr_id=ctr_id, far_id=far_id, ue_addr=ue_addr, tc=tc)
         self.add_tunnel_far(
             far_id=far_id,
             teid=teid,
@@ -2443,7 +2446,9 @@ class SpgwSimpleTest(IPv4UnicastTest):
             self.verify_pdr_counters(UPLINK_PDR_CTR_IDX, uplink_ingress_bytes, 0, 1, 0)
             self.verify_pdr_counters(DOWNLINK_PDR_CTR_IDX, 0, 0, 0, 0)
 
-    def runDownlinkTest(self, pkt, tagged1, tagged2, with_psc, is_next_hop_spine):
+    def runDownlinkTest(self, pkt, tagged1, tagged2, with_psc, is_next_hop_spine,
+                        slice_id=DEFAULT_SLICE_ID, tc=DEFAULT_TC, dscp_rewrite=False,
+                        verify_counters=True, eg_port=None):
         exp_pkt = pkt.copy()
         exp_pkt[Ether].src = SWITCH_MAC
         exp_pkt[Ether].dst = S1U_ENB_MAC
@@ -2461,6 +2466,9 @@ class SpgwSimpleTest(IPv4UnicastTest):
             exp_pkt = pkt_add_mpls(exp_pkt, MPLS_LABEL_2, DEFAULT_MPLS_TTL)
         if tagged2:
             exp_pkt = pkt_add_vlan(exp_pkt, VLAN_ID_2)
+        if dscp_rewrite:
+            # Modify outer IPV4
+            exp_pkt = pkt_set_dscp(exp_pkt, slice_id=slice_id, tc=tc)
 
         self.setup_downlink(
             s1u_sgw_addr=S1U_SGW_IPV4,
@@ -2468,13 +2476,16 @@ class SpgwSimpleTest(IPv4UnicastTest):
             teid=DOWNLINK_TEID,
             ue_addr=UE1_IPV4,
             ctr_id=DOWNLINK_PDR_CTR_IDX,
+            slice_id=slice_id,
+            tc=tc
         )
 
         if with_psc:
             self.enable_encap_with_psc()
 
-        # Clear SPGW counters before sending the packet
-        self.reset_pdr_counters(DOWNLINK_PDR_CTR_IDX)
+        if verify_counters:
+            # Clear SPGW counters before sending the packet
+            self.reset_pdr_counters(DOWNLINK_PDR_CTR_IDX)
 
         self.runIPv4UnicastTest(
             pkt=pkt,
@@ -2485,7 +2496,11 @@ class SpgwSimpleTest(IPv4UnicastTest):
             tagged1=tagged1,
             tagged2=tagged2,
             is_next_hop_spine=is_next_hop_spine,
+            eg_port=eg_port
         )
+
+        if not verify_counters:
+            return
 
         ingress_bytes = len(pkt) + ETH_FCS_BYTES
         if tagged1:

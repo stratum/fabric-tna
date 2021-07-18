@@ -113,13 +113,13 @@ control FabricEgress (
         pkt_io_egress.apply(hdr, fabric_md, eg_intr_md);
         stats.apply(fabric_md.bridged.base.stats_flow_id, eg_intr_md.egress_port, fabric_md.bridged.bmd_type);
         egress_next.apply(hdr, fabric_md, eg_intr_md, eg_dprsr_md);
-        dscp_rewriter.apply(fabric_md, eg_intr_md, hdr);
 #ifdef WITH_SPGW
         spgw.apply(hdr, fabric_md);
 #endif // WITH_SPGW
 #ifdef WITH_INT
         int_egress.apply(hdr, fabric_md, eg_intr_md, eg_prsr_md, eg_dprsr_md);
 #endif
+        dscp_rewriter.apply(fabric_md, eg_intr_md, hdr);
     }
 }
 
