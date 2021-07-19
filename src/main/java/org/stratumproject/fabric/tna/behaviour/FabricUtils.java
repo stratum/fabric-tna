@@ -112,6 +112,10 @@ public final class FabricUtils {
         return null;
     }
 
+    public static boolean doCareRangeMatch(long lowerBound, long upperBound, int bitWidth) {
+        return lowerBound != 0 || upperBound != (((long) Math.pow(2, bitWidth)) - 1);
+    }
+
     public static void treatmentException(
             PiTableId tableId, TrafficTreatment treatment, String explanation)
             throws PiPipelineInterpreter.PiInterpreterException {

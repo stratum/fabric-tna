@@ -17,7 +17,7 @@
 #include "include/control/next.p4"
 #include "include/control/hasher.p4"
 #include "include/control/stats.p4"
-#include "include/control/qos.p4"
+#include "include/control/slicing.p4"
 #ifdef WITH_SPGW
 #include "include/control/spgw.p4"
 #endif // WITH_SPGW
@@ -44,7 +44,8 @@ control FabricIngress (
     Acl() acl;
     Next() next;
     Hasher() hasher;
-    QoS() qos;
+    IngressSliceTcClassifier() slice_tc_classifier;
+    IngressQos() qos;
 #ifdef WITH_SPGW
     SpgwIngress() spgw;
 #endif // WITH_SPGW
@@ -61,6 +62,7 @@ control FabricIngress (
 #endif // WITH_INT
         stats.apply(fabric_md.lkp, ig_intr_md.ingress_port,
                     fabric_md.bridged.base.stats_flow_id);
+        slice_tc_classifier.apply(fabric_md);
         filtering.apply(hdr, fabric_md, ig_intr_md);
 #ifdef WITH_SPGW
         if (!fabric_md.skip_forwarding) {
@@ -78,10 +80,11 @@ control FabricIngress (
         if (!fabric_md.skip_next) {
             next.apply(hdr, fabric_md, ig_intr_md, ig_tm_md);
         }
+        qos.apply(fabric_md, ig_dprsr_md, ig_tm_md);
 #ifdef WITH_INT
+        // Should always apply last to guarantee generation of drop reports.
         int_ingress.apply(hdr, fabric_md, ig_intr_md, ig_dprsr_md, ig_tm_md);
 #endif // WITH_INT
-        qos.apply(hdr, fabric_md, ig_tm_md);
     }
 }
 

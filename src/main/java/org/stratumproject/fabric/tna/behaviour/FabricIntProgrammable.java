@@ -50,6 +50,10 @@ import org.onosproject.net.group.GroupDescription;
 import org.onosproject.net.group.GroupService;
 import org.onosproject.net.host.HostService;
 import org.onosproject.net.pi.model.PiActionId;
+import org.onosproject.net.pi.model.PiMatchFieldId;
+import org.onosproject.net.pi.model.PiMatchFieldModel;
+import org.onosproject.net.pi.model.PiTableId;
+import org.onosproject.net.pi.model.PiTableModel;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
 import org.onosproject.segmentrouting.config.SegmentRoutingDeviceConfig;
@@ -63,8 +67,10 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+import static java.lang.String.format;
 import static org.onosproject.net.group.DefaultGroupBucket.createCloneGroupBucket;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.KRYO;
+import static org.stratumproject.fabric.tna.behaviour.FabricUtils.doCareRangeMatch;
 
 /**
  * Implementation of INT programmable behavior for fabric.p4.
@@ -692,10 +698,10 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         return result;
     }
 
-    private Short[] rangeToShortArray(Range<Integer> range) {
-        Short[] result = new Short[] {
-            range.lowerEndpoint().shortValue(),
-            range.upperEndpoint().shortValue()
+    private Integer[] rangeToIntArray(Range<Integer> range) {
+        Integer[] result = new Integer[] {
+            range.lowerEndpoint(),
+            range.upperEndpoint()
         };
         // Shift one if it the endpoint bound type is open.
         if (range.lowerBoundType() == BoundType.OPEN) {
@@ -707,17 +713,39 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         return result;
     }
 
+    protected int getFieldSize(PiTableId piTableId, PiMatchFieldId piMatchFieldId) {
+        PiTableModel piTableModel = pipeconf.pipelineModel().table(piTableId).orElse(null);
+        if (piTableModel == null) {
+            throw new IllegalArgumentException(format("Pipeline does not have %s table", piTableId));
+        }
+        PiMatchFieldModel piMatchFieldModel = piTableModel.matchField(piMatchFieldId)
+                .orElse(null);
+        if (piMatchFieldModel == null) {
+            throw new IllegalArgumentException(format("Pipeline does not have %s field match", piMatchFieldId));
+        }
+        return piMatchFieldModel.bitWidth();
+    }
+
     private void setUpQueueReportThresholdInternal(byte queueId, Range<Integer> upperRange,
             Range<Integer> lowerRange, PiActionId actionId) {
-        Short[] thresholdUpper = rangeToShortArray(upperRange);
-        Short[] thresholdLower = rangeToShortArray(lowerRange);
-        final PiCriterion matchCriterion = PiCriterion.builder()
-                .matchExact(P4InfoConstants.HDR_EGRESS_QID, queueId)
-                .matchRange(P4InfoConstants.HDR_HOP_LATENCY_UPPER, thresholdUpper[0], thresholdUpper[1])
-                .matchRange(P4InfoConstants.HDR_HOP_LATENCY_LOWER, thresholdLower[0], thresholdLower[1])
-                .build();
+        Integer[] thresholdUpper = rangeToIntArray(upperRange);
+        Integer[] thresholdLower = rangeToIntArray(lowerRange);
+        final PiCriterion.Builder matchCriterionBuilder = PiCriterion.builder()
+                .matchExact(P4InfoConstants.HDR_EGRESS_QID, queueId);
+        int bitWidth = getFieldSize(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_QUEUE_LATENCY_THRESHOLDS,
+                P4InfoConstants.HDR_HOP_LATENCY_UPPER);
+        if (doCareRangeMatch(thresholdUpper[0], thresholdUpper[1], bitWidth)) {
+                matchCriterionBuilder.matchRange(P4InfoConstants.HDR_HOP_LATENCY_UPPER, thresholdUpper[0],
+                        thresholdUpper[1]);
+        }
+        bitWidth = getFieldSize(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_QUEUE_LATENCY_THRESHOLDS,
+                P4InfoConstants.HDR_HOP_LATENCY_LOWER);
+        if (doCareRangeMatch(thresholdLower[0], thresholdLower[1], bitWidth)) {
+                matchCriterionBuilder.matchRange(P4InfoConstants.HDR_HOP_LATENCY_LOWER, thresholdLower[0],
+                        thresholdLower[1]);
+        }
         final TrafficSelector selector = DefaultTrafficSelector.builder()
-                .matchPi(matchCriterion)
+                .matchPi(matchCriterionBuilder.build())
                 .build();
         final TrafficTreatment treatment = DefaultTrafficTreatment.builder()
                 .piTableAction(PiAction.builder().withId(actionId).build())
