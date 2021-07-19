@@ -164,8 +164,7 @@ class FabricSpgwDownlinkWithDscpRewriteTest(SpgwSimpleTest, SlicingTest):
         upf_tc = 2
         eg_port = self.port2
 
-        # slice_id and tc should be rewritten by the SPGW tables. Similarly, we
-        # should never trust the ingress pkt's DSCP.
+        # slice_id and tc should be rewritten by the SPGW tables.
         self.add_slice_tc_classifier_entry(
             slice_id=default_slice_id,
             tc=default_tc,
@@ -231,6 +230,72 @@ class FabricSpgwDownlinkWithDscpRewriteTest(SpgwSimpleTest, SlicingTest):
                                 is_next_hop_spine,
                                 is_next_hop_dscp_aware,
                                 tc_name=tc_name,
+                            )
+
+
+@group("spgw")
+class FabricSpgwUplinkWithDscpRewriteTest(SpgwSimpleTest, SlicingTest):
+    @tvsetup
+    @autocleanup
+    def doRunTest(self, pkt, tagged1, tagged2, with_psc, is_next_hop_spine, is_next_hop_dscp_aware):
+        # Use non-zero values to test dscp_rewriter clear action
+        default_slice_id = 1
+        default_tc = 1
+
+        upf_slice_id = 11
+        upf_tc = 2
+        eg_port = self.port2
+
+        # slice_id and tc should be rewritten by the SPGW tables.
+        self.add_slice_tc_classifier_entry(
+            slice_id=default_slice_id,
+            tc=default_tc,
+            ipv4_src=pkt[IP].src
+        )
+
+        if is_next_hop_dscp_aware:
+            self.add_dscp_rewriter_entry(eg_port)
+        else:
+            self.add_dscp_rewriter_entry(eg_port, clear=True)
+
+        self.runUplinkTest(
+            ue_out_pkt=pkt,
+            tagged1=tagged1,
+            tagged2=tagged2,
+            with_psc=with_psc,
+            is_next_hop_spine=is_next_hop_spine,
+            slice_id=upf_slice_id,
+            tc=upf_tc,
+            dscp_rewrite=is_next_hop_dscp_aware,
+            eg_port=eg_port,
+            verify_counters=False
+        )
+
+    def runTest(self):
+        print("")
+        for vlan_conf, tagged in vlan_confs.items():
+            for pkt_type in BASE_PKT_TYPES - {"sctp"}:
+                for with_psc in [False, True]:
+                    for is_next_hop_spine in [False, True]:
+                        for is_next_hop_dscp_aware in [True, False]:
+                            if is_next_hop_spine and tagged[1]:
+                                continue
+                            if is_next_hop_spine and not is_next_hop_dscp_aware:
+                                continue
+                            print(
+                                "Testing VLAN={}, pkt={}, psc={}, is_next_hop_spine={}, is_next_hop_dscp_aware={}...".format(
+                                    vlan_conf, pkt_type, with_psc, is_next_hop_spine, is_next_hop_dscp_aware
+                                )
+                            )
+                            pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
+                                eth_src=HOST1_MAC,
+                                eth_dst=SWITCH_MAC,
+                                ip_src=HOST1_IPV4,
+                                ip_dst=HOST2_IPV4,
+                                pktlen=MIN_PKT_LEN,
+                            )
+                            self.doRunTest(
+                                pkt, tagged[0], tagged[1], with_psc, is_next_hop_spine, is_next_hop_dscp_aware
                             )
 
 
