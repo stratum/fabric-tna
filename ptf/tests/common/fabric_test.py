@@ -281,7 +281,7 @@ DEFAULT_SLICE_ID = 0
 DEFAULT_TC = 0
 
 # High-level parameter specification options for get_test_args function
-SPGW_OPTIONS = ["DL", "UL"]
+SPGW_OPTIONS = ["DL", "UL", "DL_PSC", "UL_PSC"]
 INT_OPTIONS = ["local", "ig_drop", "eg_drop"]
 SOURCE_OPTIONS = ["host", "leaf", "spine"]
 DEVICE_OPTIONS = ["leaf", "spine"]
@@ -635,14 +635,23 @@ def get_test_args(traffic_dir, pkt_addrs={}, spgw_type=None, int_test_type=None,
     prefix_len_list = []
     allow_ue_recirculation_list = []
 
+    # spgw input structure: "[DL/UL]_[optional: psc]"
+    spgw_specs = re.split('_', spgw_type)
+    spgw_dir = spgw_specs[0]
+    try:
+        psc_exist = spgw_specs[1]
+        include_psc = True
+    except IndexError:
+        include_psc = False
+
     # traffic_dir input structure: "source-device-destination"
     devices = re.split('-', traffic_dir)
     if len(devices) != 3:
         raise Exception("Invalid traffic direction {}.".format(traffic_dir))
-
     source = devices[0]
     device = devices[1]
     dest = devices[2]
+
     if source not in SOURCE_OPTIONS:
         raise Exception("Invalid source specification: {}".format(source))
     if device not in DEVICE_OPTIONS:
@@ -680,9 +689,9 @@ def get_test_args(traffic_dir, pkt_addrs={}, spgw_type=None, int_test_type=None,
     if int_test_type == "ig_drop":
         drop_reason_list = [INT_DROP_REASON_ACL_DENY]
     elif int_test_type == "eg_drop":
-        if spgw_type == "DL":
+        if spgw_dir == "DL":
             drop_reason_list = [INT_DROP_REASON_DOWNLINK_PDR_MISS, INT_DROP_REASON_FAR_MISS]
-        elif spgw_type == "UL":
+        elif spgw_dir == "UL":
             drop_reason_list = [INT_DROP_REASON_UPLINK_PDR_MISS, INT_DROP_REASON_FAR_MISS]
         else:
             drop_reason_list = [INT_DROP_REASON_EGRESS_NEXT_MISS]
@@ -693,7 +702,10 @@ def get_test_args(traffic_dir, pkt_addrs={}, spgw_type=None, int_test_type=None,
     # spgw only uses base packets and always considers psc
     if spgw_type in SPGW_OPTIONS:
         pkt_type_list = BASE_PKT_TYPES - {"sctp"}
-        with_psc_list = [False, True]
+        if include_psc:
+            with_psc_list = [False, True]
+        else:
+            with_psc_list = [False]
     else:
         pkt_type_list = BASE_PKT_TYPES | GTP_PKT_TYPES
         with_psc_list = [False]
