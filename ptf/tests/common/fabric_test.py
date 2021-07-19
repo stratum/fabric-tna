@@ -615,10 +615,10 @@ class FabricTest(P4RuntimeTest):
 
     def setUp(self):
         super(FabricTest, self).setUp()
-        self.port1 = self.swports(1)
-        self.port2 = self.swports(2)
-        self.port3 = self.swports(3)
-        self.port4 = self.swports(4)
+        self.port1 = self.swports(0)
+        self.port2 = self.swports(1)
+        self.port3 = self.swports(2)
+        self.port4 = self.swports(3)
         self.setup_switch_info()
         self.set_up_packet_in_mirror()
 
@@ -2823,7 +2823,7 @@ class IntTest(IPv4UnicastTest):
             Ether(src=src_mac, dst=dst_mac)
             / IP(src=src_ip, dst=dst_ip, ttl=64, tos=4)
             / UDP(sport=0, chksum=0)
-            / INT_L45_REPORT_FIXED(nproto=2, f=f_flag, q=q_flag, hw_id=0)
+            / INT_L45_REPORT_FIXED(nproto=2, f=f_flag, q=q_flag, hw_id=(eg_port >> 7))
             / INT_L45_LOCAL_REPORT(
                 switch_id=sw_id, ingress_port_id=ig_port, egress_port_id=eg_port,
             )
@@ -2866,6 +2866,7 @@ class IntTest(IPv4UnicastTest):
         inner_packet,
         is_device_spine,
         send_report_to_spine,
+        hw_id,
     ):
         if GTP_U_Header in inner_packet:
             inner_packet = pkt_remove_gtp(inner_packet)
@@ -2877,7 +2878,7 @@ class IntTest(IPv4UnicastTest):
             Ether(src=src_mac, dst=dst_mac)
             / IP(src=src_ip, dst=dst_ip, ttl=64, tos=4)
             / UDP(sport=0, chksum=0)
-            / INT_L45_REPORT_FIXED(nproto=1, d=1, hw_id=0)
+            / INT_L45_REPORT_FIXED(nproto=1, d=1, hw_id=hw_id)
             / INT_L45_DROP_REPORT(
                 switch_id=sw_id,
                 ingress_port_id=ig_port,
@@ -3182,17 +3183,18 @@ class IntTest(IPv4UnicastTest):
             SWITCH_IPV4,
             INT_COLLECTOR_IPV4,
             ig_port,
-            0,
+            0, # egress port will be unset
             drop_reason,
             SWITCH_ID,
             int_inner_pkt,
             is_device_spine,
             send_report_to_spine,
+            ig_port >> 7, # hw_id
         )
 
         install_routing_entry = True
         if drop_reason == INT_DROP_REASON_ACL_DENY:
-            self.add_forwarding_acl_drop_ingress_port(1)
+            self.add_forwarding_acl_drop_ingress_port(ig_port)
         elif drop_reason == INT_DROP_REASON_ROUTING_V4_MISS:
             install_routing_entry = False
 
@@ -3273,6 +3275,7 @@ class IntTest(IPv4UnicastTest):
             int_inner_pkt,
             is_device_spine,
             send_report_to_spine,
+            eg_port >> 7, # hw_id
         )
 
         # Set collector, report table, and mirror sessions
@@ -3673,6 +3676,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             int_inner_pkt,
             is_device_spine,
             send_report_to_spine,
+            eg_port >> 7, # hw_id
         )
 
         # Set collector, report table, and mirror sessions
@@ -3759,6 +3763,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             int_inner_pkt,
             is_device_spine,
             send_report_to_spine,
+            eg_port >> 7, # hw_id
         )
 
         # Set collector, report table, and mirror sessions
