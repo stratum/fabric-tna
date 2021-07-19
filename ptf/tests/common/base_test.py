@@ -509,7 +509,7 @@ class P4RuntimeTest(BaseTest):
         def add_to(self, mf_id, mk):
             # P4Runtime mandates that the match field should be omitted for
             # "don't care" ternary matches (i.e. when mask is zero)
-            if all(c == b"\x00" for c in self.mask):
+            if all(c == 0 for c in self.mask):
                 return
             mf = mk.add()
             mf.field_id = mf_id
@@ -531,9 +531,8 @@ class P4RuntimeTest(BaseTest):
             # P4Runtime mandates that the match field should be omitted for
             # "don't care" range matches (i.e. when all possible values are
             # included in the range)
-            # TODO(antonin): negative values?
-            low_is_zero = all(c == b"\x00" for c in self.low)
-            high_is_max = all(c == b"\xff" for c in self.high)
+            low_is_zero = all(c == 0 for c in self.low)
+            high_is_max = all(c == 0xff for c in self.high)
             if low_is_zero and high_is_max:
                 return
             mf = mk.add()
