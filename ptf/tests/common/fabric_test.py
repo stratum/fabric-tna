@@ -254,7 +254,7 @@ if testutils.test_param_get("profile") == "fabric-spgw-int":
 elif testutils.test_param_get("profile") == "fabric-spgw":
     BMD_BYTES = 41
 elif testutils.test_param_get("profile") == "fabric-int":
-    BMD_BYTES = 33
+    BMD_BYTES = 32
 elif testutils.test_param_get("profile") == "fabric":
     BMD_BYTES = 25
 else:
