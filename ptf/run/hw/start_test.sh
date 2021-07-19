@@ -5,8 +5,8 @@
 set -e
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
-FABRIC_TNA_DIR=${DIR}/../..
-PTF_DIR=${FABRIC_TNA_DIR}/tests/common
+PTF_ROOT=${DIR}/../..
+TEST_DIR=${PTF_ROOT}/tests/common
 
 err_report() {
     echo "************************************************"
@@ -16,14 +16,14 @@ err_report() {
 }
 
 trap 'err_report' ERR
-cd "${PTF_DIR}"
+cd "${TEST_DIR}"
 
 echo "************************************************"
 echo "STARTING PTF TESTS..."
 echo "************************************************"
 
 # shellcheck disable=SC2068
-make -f "${DIR}"/Makefile ${@}
+make -f "${DIR}/Makefile" ${@}
 
 echo "************************************************"
 echo "ALL PTF TESTS PASSED :)"
