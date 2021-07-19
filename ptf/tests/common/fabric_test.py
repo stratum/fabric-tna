@@ -206,6 +206,7 @@ bind_layers(INT_L45_LOCAL_REPORT, Ether)
 
 INT_COLLECTOR_MAC = "00:1e:67:d2:ee:ee"
 INT_COLLECTOR_IPV4 = "192.168.99.254"
+INT_TOS = 0
 
 INT_REPORT_TYPE_NO_REPORT = 0
 INT_REPORT_TYPE_DROP = 4
@@ -2859,10 +2860,9 @@ class IntTest(IPv4UnicastTest):
         elif VXLAN in inner_packet:
             inner_packet = pkt_remove_vxlan(inner_packet)
 
-        # Note: scapy doesn't support dscp field, use tos.
         pkt = (
             Ether(src=src_mac, dst=dst_mac)
-            / IP(src=src_ip, dst=dst_ip, ttl=64, tos=4)
+            / IP(src=src_ip, dst=dst_ip, ttl=64, tos=INT_TOS)
             / UDP(sport=0, chksum=0)
             / INT_L45_REPORT_FIXED(nproto=2, f=f_flag, q=q_flag, hw_id=0)
             / INT_L45_LOCAL_REPORT(
@@ -2916,7 +2916,7 @@ class IntTest(IPv4UnicastTest):
         # Note: scapy doesn't support dscp field, use tos.
         pkt = (
             Ether(src=src_mac, dst=dst_mac)
-            / IP(src=src_ip, dst=dst_ip, ttl=64, tos=4)
+            / IP(src=src_ip, dst=dst_ip, ttl=64, tos=INT_TOS)
             / UDP(sport=0, chksum=0)
             / INT_L45_REPORT_FIXED(nproto=1, d=1, hw_id=0)
             / INT_L45_DROP_REPORT(
