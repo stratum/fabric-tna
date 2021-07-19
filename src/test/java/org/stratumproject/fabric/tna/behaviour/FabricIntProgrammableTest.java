@@ -77,6 +77,7 @@ import static org.easymock.EasyMock.eq;
 import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.expectLastCall;
 import static org.easymock.EasyMock.newCapture;
+import static org.easymock.EasyMock.partialMockBuilder;
 import static org.easymock.EasyMock.replay;
 import static org.easymock.EasyMock.reset;
 import static org.easymock.EasyMock.verify;
@@ -84,7 +85,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.onosproject.net.group.DefaultGroupBucket.createCloneGroupBucket;
+import static org.slf4j.LoggerFactory.getLogger;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.KRYO;
+import static org.stratumproject.fabric.tna.behaviour.FabricUtils.doCareRangeMatch;
 
 /**
  * Tests for fabric INT programmable behaviour.
@@ -172,9 +175,19 @@ public class FabricIntProgrammableTest {
         expect(driverData.deviceId()).andReturn(LEAF_DEVICE_ID).anyTimes();
         replay(driverData);
 
-        intProgrammable = new FabricIntProgrammable(capabilities);
+
+
+        intProgrammable = partialMockBuilder(FabricIntProgrammable.class)
+                .addMockedMethod("getFieldSize").createMock();
+        expect(intProgrammable.getFieldSize(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_QUEUE_LATENCY_THRESHOLDS,
+                P4InfoConstants.HDR_HOP_LATENCY_UPPER)).andReturn(16).anyTimes();
+        expect(intProgrammable.getFieldSize(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_QUEUE_LATENCY_THRESHOLDS,
+                P4InfoConstants.HDR_HOP_LATENCY_LOWER)).andReturn(16).anyTimes();
+        replay(intProgrammable);
+        TestUtils.setField(intProgrammable, "capabilities", capabilities);
         TestUtils.setField(intProgrammable, "handler", driverHandler);
         TestUtils.setField(intProgrammable, "data", driverData);
+        TestUtils.setField(intProgrammable, "log", getLogger(""));
 
         testInit();
     }
@@ -995,13 +1008,18 @@ public class FabricIntProgrammableTest {
 
     private FlowRule buildQueueReportFlow(byte queueId, long[] upperRange,
             long[] lowerRange, PiActionId actionId) {
-        final PiCriterion matchCriterion = PiCriterion.builder()
-                .matchExact(P4InfoConstants.HDR_EGRESS_QID, queueId)
-                .matchRange(P4InfoConstants.HDR_HOP_LATENCY_UPPER, (short) upperRange[0], (short) upperRange[1])
-                .matchRange(P4InfoConstants.HDR_HOP_LATENCY_LOWER, (short) lowerRange[0], (short) lowerRange[1])
-                .build();
+        final PiCriterion.Builder matchCriterionBuilder = PiCriterion.builder()
+                .matchExact(P4InfoConstants.HDR_EGRESS_QID, queueId);
+        if (doCareRangeMatch(upperRange[0], upperRange[1], 16)) {
+            matchCriterionBuilder.matchRange(P4InfoConstants.HDR_HOP_LATENCY_UPPER, (int) upperRange[0],
+                    (int) upperRange[1]);
+        }
+        if (doCareRangeMatch(lowerRange[0], lowerRange[1], 16)) {
+            matchCriterionBuilder.matchRange(P4InfoConstants.HDR_HOP_LATENCY_LOWER, (int) lowerRange[0],
+                    (int) lowerRange[1]);
+        }
         final TrafficSelector selector = DefaultTrafficSelector.builder()
-                .matchPi(matchCriterion)
+                .matchPi(matchCriterionBuilder.build())
                 .build();
         final TrafficTreatment treatment = DefaultTrafficTreatment.builder()
                 .piTableAction(PiAction.builder().withId(actionId).build())

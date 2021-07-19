@@ -615,10 +615,10 @@ class FabricTest(P4RuntimeTest):
 
     def setUp(self):
         super(FabricTest, self).setUp()
-        self.port1 = self.swports(1)
-        self.port2 = self.swports(2)
-        self.port3 = self.swports(3)
-        self.port4 = self.swports(4)
+        self.port1 = self.swports(0)
+        self.port2 = self.swports(1)
+        self.port3 = self.swports(2)
+        self.port4 = self.swports(3)
         self.setup_switch_info()
         self.set_up_packet_in_mirror()
 
@@ -1791,6 +1791,7 @@ class DoubleVlanTerminationTest(FabricTest):
         self.setup_port(
             self.port2,
             vlan_id=next_vlan_id,
+            port_type=PORT_TYPE_EDGE,
             double_tagged=True,
             inner_vlan_id=next_inner_vlan_id,
         )
@@ -1909,6 +1910,7 @@ class DoubleVlanTerminationTest(FabricTest):
         self.setup_port(
             self.port1,
             vlan_id=vlan_id,
+            port_type=PORT_TYPE_EDGE,
             double_tagged=True,
             inner_vlan_id=inner_vlan_id,
         )
@@ -2760,6 +2762,9 @@ class IntTest(IPv4UnicastTest):
         dport_low = stringify(0, 2)
         dport_high = stringify(0xFFFF, 2)
 
+        lower_bound = stringify(0, 2)
+        upper_bound = stringify(0xFFFF, 2)
+
         if sport:
             sport_low = stringify(sport, 2)
             sport_high = stringify(sport, 2)
@@ -2772,15 +2777,21 @@ class IntTest(IPv4UnicastTest):
             action = "no_report_collector"
         else:
             action = "mark_to_report"
+
+        matches = [
+            self.Exact("ipv4_valid", stringify(1, 1)),
+            self.Ternary("ipv4_src", ipv4_src_, ipv4_mask),
+            self.Ternary("ipv4_dst", ipv4_dst_, ipv4_mask),
+        ]
+
+        if sport_low != lower_bound or sport_high != upper_bound:
+            matches.append(self.Range("l4_sport", sport_low, sport_high))
+        if dport_low != lower_bound or dport_high != upper_bound:
+            matches.append(self.Range("l4_dport", dport_low, dport_high))
+
         self.send_request_add_entry_to_action(
             "watchlist",
-            [
-                self.Exact("ipv4_valid", stringify(1, 1)),
-                self.Ternary("ipv4_src", ipv4_src_, ipv4_mask),
-                self.Ternary("ipv4_dst", ipv4_dst_, ipv4_mask),
-                self.Range("l4_sport", sport_low, sport_high),
-                self.Range("l4_dport", dport_low, dport_high),
-            ],
+            matches,
             action,
             [],
             priority=DEFAULT_PRIORITY,
@@ -2812,7 +2823,7 @@ class IntTest(IPv4UnicastTest):
             Ether(src=src_mac, dst=dst_mac)
             / IP(src=src_ip, dst=dst_ip, ttl=64, tos=4)
             / UDP(sport=0, chksum=0)
-            / INT_L45_REPORT_FIXED(nproto=2, f=f_flag, q=q_flag, hw_id=0)
+            / INT_L45_REPORT_FIXED(nproto=2, f=f_flag, q=q_flag, hw_id=(eg_port >> 7))
             / INT_L45_LOCAL_REPORT(
                 switch_id=sw_id, ingress_port_id=ig_port, egress_port_id=eg_port,
             )
@@ -2855,6 +2866,7 @@ class IntTest(IPv4UnicastTest):
         inner_packet,
         is_device_spine,
         send_report_to_spine,
+        hw_id,
     ):
         if GTP_U_Header in inner_packet:
             inner_packet = pkt_remove_gtp(inner_packet)
@@ -2866,7 +2878,7 @@ class IntTest(IPv4UnicastTest):
             Ether(src=src_mac, dst=dst_mac)
             / IP(src=src_ip, dst=dst_ip, ttl=64, tos=4)
             / UDP(sport=0, chksum=0)
-            / INT_L45_REPORT_FIXED(nproto=1, d=1, hw_id=0)
+            / INT_L45_REPORT_FIXED(nproto=1, d=1, hw_id=hw_id)
             / INT_L45_DROP_REPORT(
                 switch_id=sw_id,
                 ingress_port_id=ig_port,
@@ -2988,13 +3000,15 @@ class IntTest(IPv4UnicastTest):
         queue_id = 0
 
         def set_up_queue_report_table_internal(upper, lower, action):
+            # Omit dont'care matches
+            matches = [self.Exact("egress_qid", stringify(queue_id, 1))]
+            if upper[0] != 0 or upper[1] != 0xffff:
+                matches.append(self.Range("hop_latency_upper", *[stringify(v, 2) for v in upper]))
+            if lower[0] != 0 or lower[1] != 0xffff:
+                matches.append(self.Range("hop_latency_lower", *[stringify(v, 2) for v in lower]))
             self.send_request_add_entry_to_action(
                 "FabricEgress.int_egress.queue_latency_thresholds",
-                [
-                    self.Exact("egress_qid", stringify(queue_id, 1)),
-                    self.Range("hop_latency_upper", *[stringify(v, 2) for v in upper]),
-                    self.Range("hop_latency_lower", *[stringify(v, 2) for v in lower]),
-                ],
+                matches,
                 action,
                 [],
                 DEFAULT_PRIORITY,
@@ -3169,17 +3183,18 @@ class IntTest(IPv4UnicastTest):
             SWITCH_IPV4,
             INT_COLLECTOR_IPV4,
             ig_port,
-            0,
+            0, # egress port will be unset
             drop_reason,
             SWITCH_ID,
             int_inner_pkt,
             is_device_spine,
             send_report_to_spine,
+            ig_port >> 7, # hw_id
         )
 
         install_routing_entry = True
         if drop_reason == INT_DROP_REASON_ACL_DENY:
-            self.add_forwarding_acl_drop_ingress_port(1)
+            self.add_forwarding_acl_drop_ingress_port(ig_port)
         elif drop_reason == INT_DROP_REASON_ROUTING_V4_MISS:
             install_routing_entry = False
 
@@ -3260,6 +3275,7 @@ class IntTest(IPv4UnicastTest):
             int_inner_pkt,
             is_device_spine,
             send_report_to_spine,
+            eg_port >> 7, # hw_id
         )
 
         # Set collector, report table, and mirror sessions
@@ -3660,6 +3676,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             int_inner_pkt,
             is_device_spine,
             send_report_to_spine,
+            eg_port >> 7, # hw_id
         )
 
         # Set collector, report table, and mirror sessions
@@ -3746,6 +3763,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             int_inner_pkt,
             is_device_spine,
             send_report_to_spine,
+            eg_port >> 7, # hw_id
         )
 
         # Set collector, report table, and mirror sessions

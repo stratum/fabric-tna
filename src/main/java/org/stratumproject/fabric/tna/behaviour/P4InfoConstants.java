@@ -25,6 +25,7 @@ public final class P4InfoConstants {
     // Header field IDs
     public static final PiMatchFieldId HDR_BMD_TYPE =
             PiMatchFieldId.of("bmd_type");
+    public static final PiMatchFieldId HDR_COLOR = PiMatchFieldId.of("color");
     public static final PiMatchFieldId HDR_EG_PORT =
             PiMatchFieldId.of("eg_port");
     public static final PiMatchFieldId HDR_EGRESS_QID =
@@ -129,8 +130,10 @@ public final class P4InfoConstants {
             PiTableId.of("FabricIngress.pre_next.next_mpls");
     public static final PiTableId FABRIC_INGRESS_PRE_NEXT_NEXT_VLAN =
             PiTableId.of("FabricIngress.pre_next.next_vlan");
-    public static final PiTableId FABRIC_INGRESS_QOS_TRAFFIC_CLASSES =
-            PiTableId.of("FabricIngress.qos.traffic_classes");
+    public static final PiTableId FABRIC_INGRESS_QOS_QUEUES =
+            PiTableId.of("FabricIngress.qos.queues");
+    public static final PiTableId FABRIC_INGRESS_SLICE_TC_CLASSIFIER_CLASSIFIER =
+            PiTableId.of("FabricIngress.slice_tc_classifier.classifier");
     public static final PiTableId FABRIC_INGRESS_SPGW_DOWNLINK_PDRS =
             PiTableId.of("FabricIngress.spgw.downlink_pdrs");
     public static final PiTableId FABRIC_INGRESS_SPGW_FARS =
@@ -171,8 +174,10 @@ public final class P4InfoConstants {
             PiCounterId.of("FabricIngress.pre_next.next_mpls_counter");
     public static final PiCounterId FABRIC_INGRESS_PRE_NEXT_NEXT_VLAN_COUNTER =
             PiCounterId.of("FabricIngress.pre_next.next_vlan_counter");
-    public static final PiCounterId FABRIC_INGRESS_QOS_TC_COUNTER =
-            PiCounterId.of("FabricIngress.qos.tc_counter");
+    public static final PiCounterId FABRIC_INGRESS_QOS_QUEUES_STATS =
+            PiCounterId.of("FabricIngress.qos.queues_stats");
+    public static final PiCounterId FABRIC_INGRESS_SLICE_TC_CLASSIFIER_CLASSIFIER_STATS =
+            PiCounterId.of("FabricIngress.slice_tc_classifier.classifier_stats");
     public static final PiCounterId FABRIC_INGRESS_SPGW_UPLINK_RECIRC_RULES_COUNTER =
             PiCounterId.of("FabricIngress.spgw.uplink_recirc.rules_counter");
     public static final PiCounterId FABRIC_INGRESS_STATS_FLOW_COUNTER =
@@ -258,8 +263,12 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.pre_next.set_mpls_label");
     public static final PiActionId FABRIC_INGRESS_PRE_NEXT_SET_VLAN =
             PiActionId.of("FabricIngress.pre_next.set_vlan");
+    public static final PiActionId FABRIC_INGRESS_QOS_METER_DROP =
+            PiActionId.of("FabricIngress.qos.meter_drop");
     public static final PiActionId FABRIC_INGRESS_QOS_SET_QUEUE =
             PiActionId.of("FabricIngress.qos.set_queue");
+    public static final PiActionId FABRIC_INGRESS_SLICE_TC_CLASSIFIER_SET_SLICE_ID_TC =
+            PiActionId.of("FabricIngress.slice_tc_classifier.set_slice_id_tc");
     public static final PiActionId FABRIC_INGRESS_SPGW_DOWNLINK_PDR_DROP =
             PiActionId.of("FabricIngress.spgw.downlink_pdr_drop");
     public static final PiActionId FABRIC_INGRESS_SPGW_FAR_DROP =
@@ -362,4 +371,7 @@ public final class P4InfoConstants {
     public static final int INGRESS_PORT_BITWIDTH = 9;
     public static final PiPacketMetadataId PAD0 = PiPacketMetadataId.of("pad0");
     public static final int PAD0_BITWIDTH = 84;
+    // Meter IDs
+    public static final PiMeterId FABRIC_INGRESS_QOS_SLICE_TC_METER =
+            PiMeterId.of("FabricIngress.qos.slice_tc_meter");
 }
