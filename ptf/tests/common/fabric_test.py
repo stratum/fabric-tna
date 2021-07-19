@@ -2790,11 +2790,7 @@ class IntTest(IPv4UnicastTest):
             matches.append(self.Range("l4_dport", dport_low, dport_high))
 
         self.send_request_add_entry_to_action(
-            "watchlist",
-            matches,
-            action,
-            [],
-            priority=DEFAULT_PRIORITY,
+            "watchlist", matches, action, [], priority=DEFAULT_PRIORITY,
         )
 
     def build_int_local_report(
@@ -3002,10 +2998,14 @@ class IntTest(IPv4UnicastTest):
         def set_up_queue_report_table_internal(upper, lower, action):
             # Omit dont'care matches
             matches = [self.Exact("egress_qid", stringify(queue_id, 1))]
-            if upper[0] != 0 or upper[1] != 0xffff:
-                matches.append(self.Range("hop_latency_upper", *[stringify(v, 2) for v in upper]))
-            if lower[0] != 0 or lower[1] != 0xffff:
-                matches.append(self.Range("hop_latency_lower", *[stringify(v, 2) for v in lower]))
+            if upper[0] != 0 or upper[1] != 0xFFFF:
+                matches.append(
+                    self.Range("hop_latency_upper", *[stringify(v, 2) for v in upper])
+                )
+            if lower[0] != 0 or lower[1] != 0xFFFF:
+                matches.append(
+                    self.Range("hop_latency_lower", *[stringify(v, 2) for v in lower])
+                )
             self.send_request_add_entry_to_action(
                 "FabricEgress.int_egress.queue_latency_thresholds",
                 matches,
@@ -3183,13 +3183,13 @@ class IntTest(IPv4UnicastTest):
             SWITCH_IPV4,
             INT_COLLECTOR_IPV4,
             ig_port,
-            0, # egress port will be unset
+            0,  # egress port will be unset
             drop_reason,
             SWITCH_ID,
             int_inner_pkt,
             is_device_spine,
             send_report_to_spine,
-            ig_port >> 7, # hw_id
+            ig_port >> 7,  # hw_id
         )
 
         install_routing_entry = True
@@ -3275,7 +3275,7 @@ class IntTest(IPv4UnicastTest):
             int_inner_pkt,
             is_device_spine,
             send_report_to_spine,
-            eg_port >> 7, # hw_id
+            eg_port >> 7,  # hw_id
         )
 
         # Set collector, report table, and mirror sessions
@@ -3676,7 +3676,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             int_inner_pkt,
             is_device_spine,
             send_report_to_spine,
-            eg_port >> 7, # hw_id
+            eg_port >> 7,  # hw_id
         )
 
         # Set collector, report table, and mirror sessions
@@ -3763,7 +3763,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             int_inner_pkt,
             is_device_spine,
             send_report_to_spine,
-            eg_port >> 7, # hw_id
+            eg_port >> 7,  # hw_id
         )
 
         # Set collector, report table, and mirror sessions

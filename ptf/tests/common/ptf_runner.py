@@ -73,14 +73,18 @@ def set_up_interfaces(ifaces):
 def create_dummy_interface():
     try:
         subprocess.check_output(["ip", "link", "show", DUMMY_IFACE_NAME])
-        return True # device already exists, skip
+        return True  # device already exists, skip
     except:
         # interface does not exists
         pass
     try:
-        subprocess.check_output(["ip", "link", "add", DUMMY_IFACE_NAME, "type", "dummy"])
+        subprocess.check_output(
+            ["ip", "link", "add", DUMMY_IFACE_NAME, "type", "dummy"]
+        )
     except subprocess.CalledProcessError as e:
-        info(f"Got error when creating dummy interface \"{DUMMY_IFACE_NAME}\": {e.output}")
+        info(
+            f'Got error when creating dummy interface "{DUMMY_IFACE_NAME}": {e.output}'
+        )
         return False
     return True
 
@@ -91,7 +95,9 @@ def remove_dummy_interface():
         try:
             subprocess.check_output(["ip", "link", "delete", DUMMY_IFACE_NAME])
         except subprocess.CalledProcessError as e:
-            info(f"Got error when deleting dummy interface \"{DUMMY_IFACE_NAME}\" {e.output}")
+            info(
+                f'Got error when deleting dummy interface "{DUMMY_IFACE_NAME}" {e.output}'
+            )
             return False
         return True
     except:
@@ -274,7 +280,7 @@ def run_test(
                 interfaces = interfaces + " " + iface_name
                 # Append new entry to tv proto object
                 pmutils.add_new_entry(tv_portmap, p4_port, iface_name)
-            needs_dummy_interface = (iface_name == DUMMY_IFACE_NAME)
+            needs_dummy_interface = iface_name == DUMMY_IFACE_NAME
     if generate_tv:
         # ptf needs the interfaces mentioned in portmap to be running on
         # container
