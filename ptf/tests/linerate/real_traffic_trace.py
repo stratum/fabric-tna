@@ -13,8 +13,8 @@ TRAFFIC_MULT = 1 # 1x speed
 TEST_DURATION = 10
 CAPTURE_LIMIT = 1000
 TOTAL_FLOWS = 0
-REMOTE_PCAP_DIR = "/srv/packet-traces/CAIDA_traces_passive-2016_equinix-chicago/equinix-chicago/20160121-130000-clean/"
-REMOTE_PCAP_FILE = "130000-http.pcap"
+REMOTE_PCAP_DIR = "/srv/packet-traces/CAIDA_traces_passive-2016_equinix-chicago/equinix-chicago/20160121-130000/"
+REMOTE_PCAP_FILE = "equinix-chicago.dirA.20160121-130000.UTC.anon.no-fragment.pcap"
 
 SENDER_PORT = 0
 RECEIVER_PORT = 2
@@ -28,8 +28,11 @@ class RealTrafficTrace(TRexTest, IntTest):
         self.trex_client.reset()  # Resets configs from all ports
         self.trex_client.clear_stats()  # Clear status from all ports
 
+        # TODO: replace with set_up_ipv4_unicast_rules after Yi merge
         pkt = testutils.simple_udp_packet()
+        pkt[Ether].dst = "00:90:fb:71:64:8a"
         self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine)
+        self.set_up_watchlist_flow(pkt[IP].src, pkt[IP].dst, pkt[UDP].src, pkt[UDP].dst)
         self.runIPv4UnicastTest(
             pkt=pkt,
             next_hop_mac=HOST2_MAC,
@@ -84,7 +87,7 @@ class RealTrafficTrace(TRexTest, IntTest):
 
 
         """ 
-        Verify the following:
+        TODO: Verify the following:
         - IRG: Received one INT report per second per flow
         - Efficiency + accuracy scores: above/below certain threshold
         """
