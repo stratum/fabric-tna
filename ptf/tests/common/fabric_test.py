@@ -756,7 +756,7 @@ def get_test_args(traffic_dir, pkt_addrs={}, spgw_type=None, int_test_type=None,
                                         'allow_ue_recirculation':allow_ue_recirculation
                                     }
 
-                                    print("Testing " + ", ".join(["{}={}".format(k,v) for k,v in params.items()]))
+                                    print("Testing " + ", ".join(["{}={}".format(k,v) for k,v in params.items() if v is not None]))
                                     tc_name = "_".join(["{}_{}".format(k,v) for k, v in params.items()])
                                     params['tc_name'] = tc_name
 
