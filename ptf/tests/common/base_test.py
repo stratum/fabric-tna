@@ -827,10 +827,7 @@ class P4RuntimeTest(BaseTest):
             counter_data.packet_count = packet_count
         return req, self.write_request(req, store=False)
 
-
-    def write_indirect_meter(
-            self, m_name, m_index, cir, cburst, pir, pburst
-    ):
+    def write_indirect_meter(self, m_name, m_index, cir, cburst, pir, pburst):
         req = self.get_new_write_request()
         update = req.updates.add()
         update.type = p4runtime_pb2.Update.MODIFY
@@ -1074,9 +1071,12 @@ class P4RuntimeTest(BaseTest):
 
         for entity in self.read_request(req):
             if entity.HasField("register_entry"):
-                assert int.from_bytes(
-                    entity.register_entry.data.bitstring, "big"
-                ) == int.from_bytes(expected_value, "big")
+                actual = int.from_bytes(entity.register_entry.data.bitstring, "big")
+                expected = int.from_bytes(expected_value, "big")
+                self.failIf(
+                    expected != actual,
+                    f"Expected register value: {expected}, actual: {actual}",
+                )
 
         return None
 
@@ -1089,8 +1089,8 @@ class P4RuntimeTest(BaseTest):
 
     def is_meter_update(self, update):
         return (
-                update.type == p4runtime_pb2.Update.MODIFY
-                and update.entity.WhichOneof("entity") == "meter_entry"
+            update.type == p4runtime_pb2.Update.MODIFY
+            and update.entity.WhichOneof("entity") == "meter_entry"
         )
 
     # iterates over all requests in reverse order; if they are INSERT updates,
