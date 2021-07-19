@@ -1,0 +1,18 @@
+[
+    {
+        "p4_port": 296,
+        "iface_name": "xl710c5p1"
+    },
+    {
+        "p4_port": 288,
+        "iface_name": "xl710c5p2"
+    },
+    {
+        "p4_port": 272,
+        "iface_name": "xl710c6p1"
+    },
+    {
+        "p4_port": 280,
+        "iface_name": "xl710c6p2"
+    }
+]
