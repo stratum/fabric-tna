@@ -125,8 +125,10 @@ class IntQueueReportTest(TRexTest, IntTest, SlicingTest):
             int_local_report_header = report_pkt[INT_L45_LOCAL_REPORT]
             inner_ip_header = int_local_report_header[IP]
 
-            if INT_L45_LOCAL_REPORT in inner_ip_header:
-                continue
+            self.failIf(int_fixed_header.d != 0, "Received an unexpected drop report")
+            self.failIf(int_fixed_header.f != 0, "Received an unexpected flow report")
+            self.failIf(int_fixed_header.q != 1, "Not a queue report")
+            self.failIf(INT_L45_LOCAL_REPORT in inner_ip_header, "Unexpected report-in-report packet.")
 
             number_of_reports += 1
             hw_id = int_fixed_header.hw_id
@@ -137,9 +139,6 @@ class IntQueueReportTest(TRexTest, IntTest, SlicingTest):
             egress_port = int_local_report_header.egress_port_id
             egress_queue = int_local_report_header.queue_id
 
-            self.failIf(int_fixed_header.d != 0, "Received an unexpected drop report")
-            self.failIf(int_fixed_header.f != 0, "Received an unexpected flow report")
-            self.failIf(int_fixed_header.q != 1, "Not a queue report")
             self.failIf(egress_port != self.port4, f"Unexpected egress port {egress_port}")
             self.failIf(egress_queue != DEFAULT_QID, f"Unexpected queue id {egress_queue}")
 
@@ -167,11 +166,11 @@ class IntQueueReportTest(TRexTest, IntTest, SlicingTest):
 
         self.failIf(
             number_of_reports != DEFAULT_QUOTA,
-            f"The number of report is more than the quota, expecte {DEFAULT_QUOTA}, got {number_of_reports}"
+            f"The number of reports is more than the quota, expected {DEFAULT_QUOTA}, got {number_of_reports}"
         )
         self.failIf(number_of_reports == 0, "No INT reports received")
 
-        # This section we will verify if the switch is reporting all congested packets.
+        # In this section we will verify if the switch is reporting all congested packets.
         # We will try to find a subset of packets from the RX capture.
         # The reason we need to compare from the RX capture is because we can't guarantee
         # that the packet from TRex is in order, so we cannot just check if IP addresses
