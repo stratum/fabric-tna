@@ -474,7 +474,7 @@ class P4RuntimeTest(BaseTest):
             self.name = mf_name
 
         def check_value_size(self, value, bitwidth):
-            v_int = value.to_int(math.ceil(bitwidth/8))
+            v_int = int.from_bytes(value, 'big')
             if v_int > ((1 << bitwidth) - 1):
                 raise Exception(f"Value {v_int} is too large for match field bitwidth {bitwidth}")
 
