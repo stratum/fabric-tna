@@ -3389,7 +3389,7 @@ class IntTest(IPv4UnicastTest):
 
         # Set collector, report table, and mirror sessions
         self.set_up_int_flows(
-            is_device_spine, pkt, send_report_to_spine, watch_flow=watch_flow
+            is_device_spine, pkt, send_report_to_spine
         )
         # Every packet will always trigger the queue alert
         self.set_up_latency_threshold_for_q_report(threshold_trigger, threshold_reset)
