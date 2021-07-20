@@ -1333,7 +1333,7 @@ class FabricSpgwDownlinkTest(SpgwSimpleTest):
         print("")
         pkt_addrs = {'eth_src':HOST1_MAC, 'eth_dst':SWITCH_MAC,
                      'ip_src':HOST1_IPV4, 'ip_dst':UE1_IPV4}
-        for traffic_dir in ["host-leaf-host", "spine-leaf-host", "leaf-spine-spine"]:
+        for traffic_dir in ["host-leaf-host", "spine-leaf-host", "host-leaf-spine"]:
             for test_args in get_test_args(traffic_dir=traffic_dir, pkt_addrs=pkt_addrs,
                                            spgw_type="DL_PSC"):
                 self.doRunTest(**test_args)
@@ -1356,7 +1356,7 @@ class FabricSpgwUplinkTest(SpgwSimpleTest):
         print("")
         pkt_addrs = {'eth_src':HOST1_MAC, 'eth_dst':SWITCH_MAC,
                      'ip_src':HOST1_IPV4, 'ip_dst':HOST2_IPV4}
-        for traffic_dir in ["host-leaf-host", "host-leaf-spine"]:
+        for traffic_dir in ["host-leaf-host", "host-leaf-spine", "spine-leaf-host"]:
             for test_args in get_test_args(traffic_dir=traffic_dir, pkt_addrs=pkt_addrs,
                                            spgw_type="UL_PSC"):
                 self.doRunTest(**test_args)
@@ -1379,7 +1379,7 @@ class FabricSpgwUplinkRecircTest(SpgwSimpleTest):
         print("")
         pkt_addrs = {'eth_src':HOST1_MAC, 'eth_dst':SWITCH_MAC,
                      'ip_src':UE1_IPV4, 'ip_dst':UE2_IPV4}
-        for traffic_dir in ["host-leaf-host", "host-leaf-spine"]:
+        for traffic_dir in ["host-leaf-host", "host-leaf-spine", "spine-leaf-host"]:
             for test_args in get_test_args(traffic_dir=traffic_dir, pkt_addrs=pkt_addrs, 
                                            spgw_type="UL", ue_recirculation_test=True):
                 self.doRunTest(**test_args)
@@ -1405,7 +1405,7 @@ class FabricSpgwDownlinkToDbufTest(SpgwSimpleTest):
         print("")
         pkt_addrs = {'eth_src':HOST1_MAC, 'eth_dst':SWITCH_MAC,
                      'ip_src':HOST1_IPV4, 'ip_dst':UE1_IPV4}
-        for traffic_dir in ["host-leaf-host", "spine-leaf-host", "leaf-spine-spine"]:
+        for traffic_dir in ["host-leaf-host", "spine-leaf-host", "host-leaf-spine"]:
             for test_args in get_test_args(traffic_dir=traffic_dir, pkt_addrs=pkt_addrs, 
                                            spgw_type="DL"):
                 self.doRunTest(**test_args)
@@ -1431,7 +1431,7 @@ class FabricSpgwDownlinkFromDbufTest(SpgwSimpleTest):
         print("")
         pkt_addrs = {'eth_src':DBUF_MAC, 'eth_dst':SWITCH_MAC,
                      'ip_src':HOST1_IPV4, 'ip_dst':UE1_IPV4}
-        for traffic_dir in ["host-leaf-host", "spine-leaf-host", "leaf-spine-spine"]:
+        for traffic_dir in ["host-leaf-host", "spine-leaf-host", "host-leaf-spine"]:
             for test_args in get_test_args(traffic_dir=traffic_dir, pkt_addrs=pkt_addrs, 
                                            spgw_type="DL"):
                 self.doRunTest(**test_args)
@@ -1473,7 +1473,7 @@ class FabricSpgwUplinkIntTest(SpgwIntTest):
 
     def runTest(self):
         print("")
-        for traffic_dir in ["host-leaf-host", "host-leaf-spine", "leaf-spine-leaf", "leaf-spine-spine"]:
+        for traffic_dir in ["host-leaf-host", "host-leaf-spine", "spine-leaf-host", "leaf-spine-leaf", "leaf-spine-spine"]:
             for test_args in get_test_args(traffic_dir=traffic_dir, spgw_type="UL_PSC",
                                            int_test_type="local"):
                 self.doRunTest(**test_args)
@@ -1515,7 +1515,7 @@ class FabricSpgwDownlinkIntTest(SpgwIntTest):
 
     def runTest(self):
         print("")
-        for traffic_dir in ["host-leaf-host", "spine-leaf-host", "leaf-spine-leaf"]:
+        for traffic_dir in ["host-leaf-host", "host-leaf-spine", "spine-leaf-host", "leaf-spine-leaf", "leaf-spine-spine"]:
             for test_args in get_test_args(traffic_dir=traffic_dir, spgw_type="DL_PSC",
                                            int_test_type="local"):
                 self.doRunTest(**test_args)
@@ -1564,7 +1564,7 @@ class FabricSpgwIntUplinkDropTest(SpgwIntTest):
 
     def runTest(self):
         print("")
-        for traffic_dir in ["host-leaf-host", "host-leaf-spine", "leaf-spine-leaf", "leaf-spine-spine"]:
+        for traffic_dir in ["host-leaf-host", "host-leaf-spine", "spine-leaf-host", "leaf-spine-leaf", "leaf-spine-spine"]:
             for test_args in get_test_args(traffic_dir=traffic_dir, spgw_type="UL_PSC",
                                            int_test_type="eg_drop"):
                 self.doRunTest(**test_args)
@@ -1611,7 +1611,7 @@ class FabricSpgwIntDownlinkDropTest(SpgwIntTest):
 
     def runTest(self):
         print("")
-        for traffic_dir in ["host-leaf-host", "spine-leaf-host", "leaf-spine-leaf"]:
+        for traffic_dir in ["host-leaf-host", "host-leaf-spine", "leaf-spine-leaf", "leaf-spine-spine"]:
             for test_args in get_test_args(traffic_dir=traffic_dir, spgw_type="DL",
                                            int_test_type="eg_drop"):
                 self.doRunTest(**test_args)
