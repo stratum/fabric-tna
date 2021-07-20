@@ -1012,29 +1012,33 @@ class FabricTest(P4RuntimeTest):
             )
 
     def build_acl_matches(
-        self, ipv4_src=None, ipv4_dst=None, ip_proto=None, l4_sport=None, l4_dport=None,
+        self, ipv4_src=None, ipv4_dst=None, ip_proto=None, l4_sport=None, l4_dport=None, ig_port=None
     ):
         matches = []
-        if ipv4_src:
+        if ipv4_src is not None:
             ipv4_src_ = ipv4_to_binary(ipv4_src)
             ipv4_src_mask = stringify(0xFFFFFFFF, 4)
             matches.append(self.Ternary("ipv4_src", ipv4_src_, ipv4_src_mask))
-        if ipv4_dst:
+        if ipv4_dst is not None:
             ipv4_dst_ = ipv4_to_binary(ipv4_dst)
             ipv4_dst_mask = stringify(0xFFFFFFFF, 4)
             matches.append(self.Ternary("ipv4_dst", ipv4_dst_, ipv4_dst_mask))
-        if ip_proto:
+        if ip_proto is not None:
             ip_proto_ = stringify(ip_proto, 1)
             ip_proto_mask = stringify(0xFF, 1)
             matches.append(self.Ternary("ip_proto", ip_proto_, ip_proto_mask))
-        if l4_sport:
+        if l4_sport is not None:
             l4_sport_ = stringify(l4_sport, 2)
             l4_sport_mask = stringify(0xFFFF, 2)
             matches.append(self.Ternary("l4_sport", l4_sport_, l4_sport_mask))
-        if l4_dport:
+        if l4_dport is not None:
             l4_dport_ = stringify(l4_dport, 2)
             l4_dport_mask = stringify(0xFFFF, 2)
             matches.append(self.Ternary("l4_dport", l4_dport_, l4_dport_mask))
+        if ig_port is not None:
+            ig_port_ = stringify(ig_port, 2)
+            ig_port_mask = stringify(0x01FF, 2)
+            matches.append(self.Ternary("ig_port", ig_port_, ig_port_mask))
         return matches
 
     def add_forwarding_acl_next(
