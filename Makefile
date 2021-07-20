@@ -4,7 +4,6 @@
 # Absolute directory of this Makefile
 DIR := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 DIR_SHA := $(shell echo -n "$(DIR)" | shasum | cut -c1-7)
-UID := $(shell id -u)
 
 # .env cannot be included as-is as some variables are defined with ${A:-B}
 # notation to allow overrides. Resolve overrides in a temp file and include that.
@@ -56,7 +55,6 @@ fabric-spgw-int:
 
 constants:
 	docker run -v $(DIR):$(DIR) -w $(DIR) --rm \
-		--user $(UID) \
 		--entrypoint ./util/gen-p4-constants.py $(TESTER_DOCKER_IMG) \
 		-o $(DIR)/src/main/java/org/stratumproject/fabric/tna/behaviour/P4InfoConstants.java \
 		p4info $(DIR)/p4src/build/fabric-spgw-int/sde_$(SDE_VER_)/p4info.txt
@@ -69,7 +67,6 @@ _mvn_package:
 	$(info *** Building ONOS app...)
 	@mkdir -p target
 	docker run --rm -v $(DIR):/mvn-src -w /mvn-src \
-		--user $(UID) \
 		-v $(MVN_CACHE):/root/.m2 $(MAVEN_DOCKER_IMAGE) mvn $(MVN_FLAGS) clean package
 
 pipeconf: _mvn_package
@@ -85,7 +82,6 @@ pipeconf-ci:
 	$(info *** Building ONOS app...)
 	@mkdir -p target
 	docker run --rm -v $(DIR):/mvn-src -w /mvn-src \
-	  --user $(UID) \
 		-v $(MVN_CACHE):/root/.m2 $(MAVEN_DOCKER_IMAGE) mvn $(MVN_FLAGS) clean package verify
 
 _pipeconf-oar-exists:
