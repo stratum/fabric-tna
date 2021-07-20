@@ -2,7 +2,12 @@
 # SPDX-License-Identifier: Apache-2.0
 import argparse
 import logging
+import collections
 
+# Multiplier for data rates
+K = 1000
+M = K * 1000
+G = M * 1000
 
 def to_readable(src: int, unit: str = "bps") -> str:
     """
@@ -94,6 +99,77 @@ def list_port_status(port_status: dict) -> None:
         readable_stats = get_readable_port_stats(port_status[port])
         logging.info("States from port {}: \n{}".format(port, readable_stats))
 
+LatencyStats = collections.namedtuple("LatencyStats", [
+    "jitter",
+    "average",
+    "total_max",
+    "total_min",
+    "last_max",
+    "histogram",
+    "total_tx",
+    "total_rx",
+    "dropped",
+    "out_of_order",
+    "duplicate",
+    "seq_too_high",
+    "seq_too_low",
+])
+
+def get_latency_stats(pg_id: int, stats) -> LatencyStats:
+    flow_stats = stats["flow_stats"].get(pg_id)
+    lat_stats = stats['latency'].get(pg_id)
+    lat = lat_stats['latency']
+
+    ret = LatencyStats(
+        jitter = lat['jitter'],
+        average = lat['average'],
+        total_max = lat['total_max'],
+        total_min = lat['total_min'],
+        last_max = lat['last_max'],
+        histogram = lat['histogram'],
+        total_tx = flow_stats['tx_pkts']['total'],
+        total_rx = flow_stats['rx_pkts']['total'],
+        dropped = lat_stats['err_cntrs']['dropped'],
+        out_of_order = lat_stats['err_cntrs']['out_of_order'],
+        duplicate = lat_stats['err_cntrs']['dup'],
+        seq_too_high = lat_stats['err_cntrs']['seq_too_high'],
+        seq_too_low = lat_stats['err_cntrs']['seq_too_low'],
+    )
+    return ret
+
+def pretty_print_latency_stats(pg_id: int, stats: LatencyStats) -> str:
+    histogram = ""
+    l = list(stats.histogram.keys()) # need to listify in order to be able to sort them.
+    l.sort()
+    for sample in l:
+        range_start = sample
+        if range_start == 0:
+            range_end = 10
+        else:
+            range_end  = range_start + pow(10, (len(str(range_start))-1))
+        val = stats.histogram[sample]
+        histogram = histogram + "\n        Packets with latency between {0} us and {1} us: {2}".format(range_start, range_end, val)
+
+    return """
+Latency info for pg_id {}
+    Dropped packets: {}
+    Out-of-order packets: {}
+    Maximum latency: {} us
+    Minimum latency: {} us
+    Maximum latency in last sampling period: {} us
+    Average latency: {} us
+    Jitter: {} us
+    Latency distribution histogram: {}
+    """.format(pg_id,
+        stats.dropped,
+        stats.out_of_order,
+        stats.total_max,
+        stats.total_min,
+        stats.last_max,
+        stats.average,
+        stats.jitter,
+        histogram
+    )
 
 class ParseExtendArgAction(argparse.Action):
     def __init__(self, option_strings, dest, nargs=None, **kwargs):
