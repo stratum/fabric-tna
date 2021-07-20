@@ -16,6 +16,7 @@ from scapy.layers.all import IP, TCP, UDP, Ether
 from trex_stl_lib.api import *
 
 import qos_utils
+import gnmi_utils
 
 TRAFFIC_DURATION_SECONDS = 10
 
@@ -29,8 +30,10 @@ ALL_PORTS = [0, 1, 2]
 
 class MinFlowrateWithSoftwareLatencyMeasurement(TRexTest, FabricTest):
     def push_chassis_config(self) -> None:
-        # TODO
-        pass
+        chassis_config = b""
+        with open("../linerate/chassis_config_for_qos_strict_priority.pb.txt", mode='rb') as file:
+            chassis_config = file.read()
+        gnmi_utils.push_chassis_config(chassis_config)
 
     def setup_flow_state(self) -> None:
         self.setup_port(self.port1, DEFAULT_VLAN, PORT_TYPE_EDGE)
