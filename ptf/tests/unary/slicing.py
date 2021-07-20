@@ -1,10 +1,9 @@
 # Copyright 2021-present Open Networking Foundation
 # SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0 AND Apache-2.0
 
-from scapy.layers.inet import IP
-
 from base_test import autocleanup, tvsetup
 from fabric_test import *  # noqa
+from scapy.layers.inet import IP
 
 
 class IPv4UnicastWithPolicingTest(SlicingTest, IPv4UnicastTest):
@@ -17,9 +16,7 @@ class IPv4UnicastWithPolicingTest(SlicingTest, IPv4UnicastTest):
         slice_id = 1
         tc = 1
         self.add_slice_tc_classifier_entry(
-            slice_id=slice_id,
-            tc=tc,
-            ipv4_src=pkt[IP].src
+            slice_id=slice_id, tc=tc, ipv4_src=pkt[IP].src
         )
         # 1 byte burst, any packet should be RED
         self.configure_slice_tc_meter(
@@ -45,8 +42,5 @@ class IPv4UnicastWithPolicingTest(SlicingTest, IPv4UnicastTest):
                     pktlen=MIN_PKT_LEN,
                 )
                 self.doRunTest(
-                    pkt=pkt,
-                    policing=policing,
-                    next_hop_mac=HOST2_MAC,
-                    tc_name=tc_name,
+                    pkt=pkt, policing=policing, next_hop_mac=HOST2_MAC, tc_name=tc_name,
                 )

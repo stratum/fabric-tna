@@ -24,4 +24,4 @@ venv
 .project
 .settings
 tmp
-ptf/run/hw/log/*
+ptf/run/hw/log

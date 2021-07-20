@@ -5,13 +5,13 @@
 set -eu -o pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
-FABRIC_TNA_ROOT="${DIR}"/../..
-FABRIC_TNA="${FABRIC_TNA_ROOT}"/..
-
-# shellcheck source=.env
-source "${FABRIC_TNA}"/.env
+PTF_ROOT="${DIR}"/../..
+FABRIC_TNA_ROOT="${PTF_ROOT}"/..
 
 PTF_FILTER=${PTF_FILTER:-}
+
+# shellcheck source=.env
+source "${FABRIC_TNA_ROOT}"/.env
 
 fabricProfile=$1
 if [ -z "${fabricProfile}" ]; then
@@ -21,7 +21,7 @@ fi
 
 # Find Tofino compiled artifacts
 sdeVer_=$(echo "${SDE_VERSION}" | tr . _) # Replace dots with underscores
-P4C_OUT=${FABRIC_TNA}/p4src/build/${fabricProfile}/sde_${sdeVer_}
+P4C_OUT=${FABRIC_TNA_ROOT}/p4src/build/${fabricProfile}/sde_${sdeVer_}
 echo "*** Using P4 compiler output in ${P4C_OUT}..."
 
 if [ ! -f "${P4C_OUT}"/pipeline_config.pb.bin ]; then
@@ -43,7 +43,7 @@ echo "*** Starting ${testerRunName} with ${TESTER_DOCKER_IMG}..."
 it=$(test -t 0 && echo "-it" || echo "-t")
 # shellcheck disable=SC2068
 docker run --name "${testerRunName}" "${it}" --privileged --rm \
-    -v "${FABRIC_TNA_ROOT}":/fabric-tna \
+    -v "${PTF_ROOT}":/fabric-tna \
     -v "${P4C_OUT}":/p4c-out \
     -e PTF_FILTER="${PTF_FILTER}" \
     --entrypoint /fabric-tna/run/tv/start_test.sh \

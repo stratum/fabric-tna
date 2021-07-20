@@ -48,6 +48,7 @@ import static org.slf4j.LoggerFactory.getLogger;
 public class PipeconfLoader {
 
     public static final String APP_NAME = "org.stratumproject.fabric-tna";
+    public static final String APP_NAME_UPF = "org.stratumproject.fabric-tna.upf";
 
     private static Logger log = getLogger(PipeconfLoader.class);
 
@@ -76,6 +77,7 @@ public class PipeconfLoader {
     @Activate
     public void activate() {
         coreService.registerApplication(APP_NAME);
+        coreService.registerApplication(APP_NAME_UPF);
         // Registers all pipeconf at component activation.
         pipeconfs = buildAllPipeconfs();
         pipeconfs.forEach(pipeconfService::register);
