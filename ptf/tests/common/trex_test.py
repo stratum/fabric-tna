@@ -16,6 +16,9 @@ class TRexTest(P4RuntimeTest):
         self.trex_client.acquire()
         self.trex_client.reset()  # Resets configs from all ports
         self.trex_client.clear_stats()  # Clear status from all ports
+        # Put all ports to promiscuous mode, otherwise they will drop all
+        # incoming packets if the destination mac is not the port mac address.
+        self.trex_client.set_port_attr(self.trex_client.get_all_ports(), promiscuous=True)
 
     def tearDown(self):
         print("Tearing down STLClient...")
