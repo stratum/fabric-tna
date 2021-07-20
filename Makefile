@@ -60,11 +60,15 @@ constants:
 		-o $(DIR)/src/main/java/org/stratumproject/fabric/tna/behaviour/P4InfoConstants.java \
 		p4info $(DIR)/p4src/build/fabric-spgw-int/sde_$(SDE_VER_)/p4info.txt
 
-_mvn_package:
+_m2_vol:
+	docker volume create --opt o=uid=$(UID) --opt device=tmpfs --opt type=tmpfs $(MVN_CACHE)
+
+_mvn_package: _m2_vol
 	$(info *** Building ONOS app...)
 	@mkdir -p target
 	docker run --rm -v $(DIR):/mvn-src -w /mvn-src --user $(UID) \
-		-v $(MVN_CACHE):/root/.m2 $(MAVEN_DOCKER_IMAGE) mvn $(MVN_FLAGS) clean package
+	  -e MAVEN_OPTS="-Dmaven.repo.local=/.m2" \
+		-v $(MVN_CACHE):/.m2:rw $(MAVEN_DOCKER_IMAGE) mvn $(MVN_FLAGS) clean package
 
 pipeconf: _mvn_package
 	$(info *** ONOS pipeconf .oar package created succesfully)
@@ -73,13 +77,15 @@ pipeconf: _mvn_package
 pipeconf-test: _mvn_package
 	$(info *** Testing ONOS pipeconf)
 	docker run --rm -v $(DIR):mvn-src -w /mvn-src --user $(UID) \
-		-v $(MVN_CACHE):/root/.m2 $(MAVEN_DOCKER_IMAGE) mvn test
+		-e MAVEN_OPTS="-Dmaven.repo.local=/.m2" \
+		-v $(MVN_CACHE):/.m2:rw $(MAVEN_DOCKER_IMAGE) mvn test
 
 pipeconf-ci:
 	$(info *** Building ONOS app...)
 	@mkdir -p target
 	docker run --rm -v $(DIR):/mvn-src -w /mvn-src --user $(UID) \
-		-v $(MVN_CACHE):/root/.m2 $(MAVEN_DOCKER_IMAGE) mvn $(MVN_FLAGS) clean package verify
+		-e MAVEN_OPTS="-Dmaven.repo.local=/.m2" \
+		-v $(MVN_CACHE):/.m2:rw $(MAVEN_DOCKER_IMAGE) mvn $(MVN_FLAGS) clean package verify
 
 _pipeconf-oar-exists:
 	@test -f $(PIPECONF_OAR_FILE) || (echo "pipeconf .oar not found" && exit 1)
