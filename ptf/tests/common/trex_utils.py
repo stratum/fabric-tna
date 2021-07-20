@@ -150,26 +150,17 @@ def pretty_print_latency_stats(pg_id: int, stats: LatencyStats) -> str:
         val = stats.histogram[sample]
         histogram = histogram + "\n        Packets with latency between {0} us and {1} us: {2}".format(range_start, range_end, val)
 
-    return """
-Latency info for pg_id {}
-    Dropped packets: {}
-    Out-of-order packets: {}
-    Maximum latency: {} us
-    Minimum latency: {} us
-    Maximum latency in last sampling period: {} us
-    Average latency: {} us
-    Jitter: {} us
-    Latency distribution histogram: {}
-    """.format(pg_id,
-        stats.dropped,
-        stats.out_of_order,
-        stats.total_max,
-        stats.total_min,
-        stats.last_max,
-        stats.average,
-        stats.jitter,
-        histogram
-    )
+    return f"""
+    Latency info for pg_id {pg_id}
+    Dropped packets: {stats.dropped}
+    Out-of-order packets: {stats.out_of_order}
+    Maximum latency: {stats.total_max} us
+    Minimum latency: {stats.total_min} us
+    Maximum latency in last sampling period: {stats.last_max} us
+    Average latency: {stats.average} us
+    Jitter: {stats.jitter} us
+    Latency distribution histogram: {histogram}
+    """
 
 class ParseExtendArgAction(argparse.Action):
     def __init__(self, option_strings, dest, nargs=None, **kwargs):
