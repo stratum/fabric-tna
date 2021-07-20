@@ -2973,7 +2973,7 @@ class IntTest(IPv4UnicastTest):
             else:
                 sport = None
                 dport = None
-                self.set_up_watchlist_flow(pkt[IP].src, pkt[IP].dst, sport, dport)
+            self.set_up_watchlist_flow(pkt[IP].src, pkt[IP].dst, sport, dport)
         self.set_up_report_flow(
             SWITCH_MAC,
             SWITCH_MAC,
