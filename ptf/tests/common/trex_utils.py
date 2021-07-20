@@ -137,7 +137,7 @@ def get_latency_stats(pg_id: int, stats) -> LatencyStats:
     )
     return ret
 
-def pretty_print_latency_stats(pg_id: int, stats: LatencyStats) -> str:
+def get_readable_latency_stats(pg_id: int, stats: LatencyStats) -> str:
     histogram = ""
     l = list(stats.histogram.keys()) # need to listify in order to be able to sort them.
     l.sort()

@@ -15,23 +15,19 @@ from trex_utils import *
 from scapy.layers.all import IP, TCP, UDP, Ether
 from trex_stl_lib.api import *
 
-
-SOURCE_MAC = "00:00:00:00:00:01"
-DEST_MAC = "00:00:00:00:00:02"
+import qos_utils
 
 TRAFFIC_DURATION_SECONDS = 10
 
 L2_PACKET_SIZE = 64
 EXPECTED_FLOW_RATE_WITH_STATS_BPS = 1 * G
 
-L4_DPORT_CONTROL = 1002
-
 TX_PORT = [0]
 ALL_SENDER_PORTS = [0]
 RX_PORT = [1]
 ALL_PORTS = [0, 1, 2]
 
-class PortShapingSTL(TRexTest, FabricTest):
+class MinFlowrateWithSoftwareLatencyMeasurement(TRexTest, FabricTest):
     def push_chassis_config(self) -> None:
         # TODO
         pass
@@ -44,8 +40,7 @@ class PortShapingSTL(TRexTest, FabricTest):
 
     # Create a highest priority control stream.
     def create_control_stream(self, pg_id) -> STLStream:
-        pkt = Ether(dst=DEST_MAC) / IP() / UDP(dport=L4_DPORT_CONTROL) / ("*" * (L2_PACKET_SIZE - 42))
-        assert(len(pkt) == L2_PACKET_SIZE), "Packet size {} does not match target size {}".format(len(pkt), L2_PACKET_SIZE)
+        pkt = qos_utils.get_control_traffic_packet(L2_PACKET_SIZE)
         return STLStream(
             packet=STLPktBuilder(pkt=pkt),
             mode=STLTXCont(bps_L1=EXPECTED_FLOW_RATE_WITH_STATS_BPS),
@@ -75,7 +70,7 @@ class PortShapingSTL(TRexTest, FabricTest):
         # Get latency stats
         stats = self.trex_client.get_stats()
         lat_stats = get_latency_stats(pg_id, stats)
-        print(pretty_print_latency_stats(pg_id, lat_stats))
+        print(get_readable_latency_stats(pg_id, lat_stats))
         tx_bps_L1 = stats[TX_PORT[0]].get("tx_bps_L1", 0)
         rx_bps_L1 = stats[RX_PORT[0]].get("rx_bps_L1", 0)
 
