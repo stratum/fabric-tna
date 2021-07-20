@@ -1,7 +1,6 @@
 # SPDX-FileCopyrightText: Copyright 2020-present Open Networking Foundation.
 # SPDX-License-Identifier: Apache-2.0
-
-description: "Chassis Config for Menlo PDP 32QS"
+description: "Chassis Config with QoS settings for Menlo PDP 32QS"
 chassis {
   platform: PLT_GENERIC_BAREFOOT_TOFINO
   name: "Edgecore Wedge100BF-32qs"
@@ -16,7 +15,6 @@ singleton_ports {
   name: "27/0"
   slot: 1
   port: 27
-  channel: 1
   speed_bps: 40000000000
   config_params {
     admin_state: ADMIN_STATE_ENABLED
@@ -28,7 +26,6 @@ singleton_ports {
   name: "28/0"
   slot: 1
   port: 28
-  channel: 1
   speed_bps: 40000000000
   config_params {
     admin_state: ADMIN_STATE_ENABLED
@@ -40,7 +37,6 @@ singleton_ports {
   name: "29/0"
   slot: 1
   port: 29
-  channel: 1
   speed_bps: 40000000000
   config_params {
     admin_state: ADMIN_STATE_ENABLED
@@ -52,7 +48,6 @@ singleton_ports {
   name: "30/0"
   slot: 1
   port: 30
-  channel: 1
   speed_bps: 40000000000
   config_params {
     admin_state: ADMIN_STATE_ENABLED
@@ -64,7 +59,6 @@ singleton_ports {
   name: "31/0"
   slot: 1
   port: 31
-  channel: 1
   speed_bps: 40000000000
   config_params {
     admin_state: ADMIN_STATE_ENABLED
@@ -73,10 +67,9 @@ singleton_ports {
 }
 singleton_ports {
   id: 32
-  name: "32/1"
+  name: "32/0"
   slot: 1
   port: 32
-  channel: 1
   speed_bps: 40000000000
   config_params {
     admin_state: ADMIN_STATE_ENABLED
