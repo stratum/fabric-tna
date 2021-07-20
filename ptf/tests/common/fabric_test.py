@@ -251,13 +251,13 @@ BRIDGED_MD_TYPE_DEFLECTED = 5
 
 # Size for different headers
 if testutils.test_param_get("profile") == "fabric-spgw-int":
-    BMD_BYTES = 49
+    BMD_BYTES = 48
 elif testutils.test_param_get("profile") == "fabric-spgw":
-    BMD_BYTES = 41
+    BMD_BYTES = 40
 elif testutils.test_param_get("profile") == "fabric-int":
     BMD_BYTES = 32
 elif testutils.test_param_get("profile") == "fabric":
-    BMD_BYTES = 25
+    BMD_BYTES = 24
 else:
     raise Exception("Invalid profile, cannot set BMD_BYTES")
 IP_HDR_BYTES = 20
