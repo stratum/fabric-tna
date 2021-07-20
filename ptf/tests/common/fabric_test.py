@@ -2783,7 +2783,6 @@ class IntTest(IPv4UnicastTest):
             matches.append(self.Ternary("ipv4_src", ipv4_src_, ipv4_mask))
         if ipv4_dst:
             matches.append(self.Ternary("ipv4_dst", ipv4_dst_, ipv4_mask))
-
         if sport_low != lower_bound or sport_high != upper_bound:
             matches.append(self.Range("l4_sport", sport_low, sport_high))
         if dport_low != lower_bound or dport_high != upper_bound:
@@ -2955,7 +2954,7 @@ class IntTest(IPv4UnicastTest):
         self.add_next_vlan(next_id, DEFAULT_VLAN)
 
     def set_up_int_flows(
-        self, is_device_spine, pkt, send_report_to_spine
+        self, is_device_spine, pkt, send_report_to_spine, watch_flow=True
     ):
         if pkt:
             # Watchlist always matches on inner headers.
@@ -2973,7 +2972,9 @@ class IntTest(IPv4UnicastTest):
             else:
                 sport = None
                 dport = None
-            self.set_up_watchlist_flow(pkt[IP].src, pkt[IP].dst, sport, dport)
+            
+            if watch_flow:
+                self.set_up_watchlist_flow(pkt[IP].src, pkt[IP].dst, sport, dport)
         self.set_up_report_flow(
             SWITCH_MAC,
             SWITCH_MAC,
@@ -3389,7 +3390,7 @@ class IntTest(IPv4UnicastTest):
 
         # Set collector, report table, and mirror sessions
         self.set_up_int_flows(
-            is_device_spine, pkt, send_report_to_spine
+            is_device_spine, pkt, send_report_to_spine, watch_flow=watch_flow
         )
         # Every packet will always trigger the queue alert
         self.set_up_latency_threshold_for_q_report(threshold_trigger, threshold_reset)
