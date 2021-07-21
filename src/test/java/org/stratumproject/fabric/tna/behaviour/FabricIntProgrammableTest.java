@@ -31,10 +31,6 @@ import org.onosproject.net.DeviceId;
 import org.onosproject.net.Host;
 import org.onosproject.net.HostLocation;
 import org.onosproject.net.PortNumber;
-import org.onosproject.net.behaviour.inbandtelemetry.IntDeviceConfig;
-import org.onosproject.net.behaviour.inbandtelemetry.IntMetadataType;
-import org.onosproject.net.behaviour.inbandtelemetry.IntObjective;
-import org.onosproject.net.behaviour.inbandtelemetry.IntProgrammable;
 import org.onosproject.net.config.NetworkConfigService;
 import org.onosproject.net.driver.DriverData;
 import org.onosproject.net.driver.DriverHandler;
@@ -47,6 +43,7 @@ import org.onosproject.net.flow.FlowRule;
 import org.onosproject.net.flow.FlowRuleService;
 import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flow.TrafficTreatment;
+import org.onosproject.net.flow.criteria.Criterion;
 import org.onosproject.net.flow.criteria.PiCriterion;
 import org.onosproject.net.group.DefaultGroupDescription;
 import org.onosproject.net.group.DefaultGroupKey;
@@ -60,6 +57,7 @@ import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
 import org.onosproject.segmentrouting.config.SegmentRoutingDeviceConfig;
 import org.stratumproject.fabric.tna.PipeconfLoader;
+import org.stratumproject.fabric.tna.inbandtelemetry.IntReportConfig;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -73,7 +71,6 @@ import static org.easymock.EasyMock.anyObject;
 import static org.easymock.EasyMock.anyString;
 import static org.easymock.EasyMock.capture;
 import static org.easymock.EasyMock.createMock;
-import static org.easymock.EasyMock.eq;
 import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.expectLastCall;
 import static org.easymock.EasyMock.newCapture;
@@ -84,6 +81,7 @@ import static org.easymock.EasyMock.verify;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.onosproject.net.group.DefaultGroupBucket.createCloneGroupBucket;
 import static org.slf4j.LoggerFactory.getLogger;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.KRYO;
@@ -100,10 +98,8 @@ public class FabricIntProgrammableTest {
             TestApplicationId.create(PipeconfLoader.APP_NAME);
     private static final DeviceId LEAF_DEVICE_ID = DeviceId.deviceId("device:1");
     private static final DeviceId SPINE_DEVICE_ID = DeviceId.deviceId("device:2");
-    private static final IpPrefix IP_SRC = IpPrefix.valueOf("10.0.0.1/24");
-    private static final IpPrefix IP_DST = IpPrefix.valueOf("10.0.0.2/24");
-    private static final TpPort L4_SRC = TpPort.tpPort(30000);
-    private static final TpPort L4_DST = TpPort.tpPort(32767);
+    private static final IpPrefix SUBNET_1 = IpPrefix.valueOf("10.0.0.0/24");
+    private static final IpPrefix SUBNET_2 = IpPrefix.valueOf("192.168.0.0/24");
     private static final int DEFAULT_PRIORITY = 10000;
     private static final IpAddress COLLECTOR_IP = IpAddress.valueOf("10.128.0.1");
     private static final TpPort COLLECTOR_PORT = TpPort.tpPort(32766);
@@ -131,6 +127,7 @@ public class FabricIntProgrammableTest {
     private static final MacAddress SWITCH_MAC = MacAddress.valueOf("00:00:00:00:01:80");
     private static final long DEFAULT_QUEUE_REPORT_LATENCY_THRESHOLD = 2000; // ns
     private static final byte MAX_QUEUES = 32;
+    private static final String INT_REPORT_CONFIG_KEY = "report";
 
     private FabricIntProgrammable intProgrammable;
     private FlowRuleService flowRuleService;
@@ -175,8 +172,6 @@ public class FabricIntProgrammableTest {
         expect(driverData.deviceId()).andReturn(LEAF_DEVICE_ID).anyTimes();
         replay(driverData);
 
-
-
         intProgrammable = partialMockBuilder(FabricIntProgrammable.class)
                 .addMockedMethod("getFieldSize").createMock();
         expect(intProgrammable.getFieldSize(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_QUEUE_LATENCY_THRESHOLDS,
@@ -198,116 +193,14 @@ public class FabricIntProgrammableTest {
     }
 
     /**
-     * Test "setSourcePort" function of IntProgrammable.
-     * Note that we don't implement this functionality in this pipeconf
-     * since we only support postcard mode.
-     * We should expect the function returns true without installing
-     * any table or group entries.
+     * Test "setUpIntConfig" function of IntProgrammable and the config does not contain
+     * subnets to be watched.
      */
     @Test
-    public void testSetSourcePort() {
-        assertTrue(intProgrammable.setSourcePort(PortNumber.ANY));
-    }
-
-    /**
-     * Test "setSinkPort" function of IntProgrammable.
-     * Note that we don't implement this functionality in this pipeconf
-     * since we only support postcard mode.
-     * We should expect the function returns true without installing
-     * any table or group entries.
-     */
-    @Test
-    public void testSetSinkPort() {
-        assertTrue(intProgrammable.setSinkPort(PortNumber.ANY));
-    }
-
-    /**
-     * Test "addIntObjective" function of IntProgrammable.
-     */
-    @Test
-    public void testAddIntObjective() {
+    public void testSetupIntConfigWithNoWatchedSubnet() {
         reset(flowRuleService);
-        List<FlowRule> expectedFlows = ImmutableList.of(
-                buildExpectedCollectorFlow(IPv4.PROTOCOL_TCP),
-                buildExpectedCollectorFlow(IPv4.PROTOCOL_UDP),
-                buildExpectedCollectorFlow(IPv4.PROTOCOL_ICMP)
-        );
-        List<Capture<FlowRule>> captures = Lists.newArrayList();
-        for (int i = 0; i < expectedFlows.size(); i++) {
-            Capture<FlowRule> flowRuleCapture = newCapture();
-            flowRuleService.applyFlowRules(capture(flowRuleCapture));
-            captures.add(flowRuleCapture);
-        }
-        replay(flowRuleService);
-        assertTrue(intProgrammable.addIntObjective(buildIntObjective(IPv4.PROTOCOL_TCP)));
-        assertTrue(intProgrammable.addIntObjective(buildIntObjective(IPv4.PROTOCOL_UDP)));
-        assertTrue(intProgrammable.addIntObjective(buildIntObjective(IPv4.PROTOCOL_ICMP)));
-        for (int i = 0; i < expectedFlows.size(); i++) {
-            FlowRule expectFlow = expectedFlows.get(i);
-            FlowRule actualFlow = captures.get(i).getValue();
-            assertTrue(expectFlow.exactMatch(actualFlow));
-        }
-        verify(flowRuleService);
-
-    }
-
-    /**
-     * Test "addIntObjective" function of IntProgrammable with an
-     * invalid match criteria.
-     */
-    @Test
-    public void testAddUnsupportedIntObjective() {
-        reset(flowRuleService);
-        IntObjective intObjective = buildInvalidIntObjective();
-        replay(flowRuleService);
-        assertFalse(intProgrammable.addIntObjective(intObjective));
-        verify(flowRuleService);
-    }
-
-    /**
-     * Test "removeIntObjective" function of IntProgrammable.
-     */
-    @Test
-    public void testRemoveIntObjective() {
-        // TCP
-        IntObjective intObjective = buildIntObjective(IPv4.PROTOCOL_TCP);
-        FlowRule expectedFlow = buildExpectedCollectorFlow(IPv4.PROTOCOL_TCP);
-        reset(flowRuleService);
-        flowRuleService.removeFlowRules(eq(expectedFlow));
-        expectLastCall().andVoid().once();
-        replay(flowRuleService);
-        assertTrue(intProgrammable.removeIntObjective(intObjective));
-        verify(flowRuleService);
-
-        // UDP
-        intObjective = buildIntObjective(IPv4.PROTOCOL_UDP);
-        expectedFlow = buildExpectedCollectorFlow(IPv4.PROTOCOL_UDP);
-        reset(flowRuleService);
-        flowRuleService.removeFlowRules(eq(expectedFlow));
-        expectLastCall().andVoid().once();
-        replay(flowRuleService);
-        assertTrue(intProgrammable.removeIntObjective(intObjective));
-        verify(flowRuleService);
-
-        // Don't match L4 ports
-        intObjective = buildIntObjective(IPv4.PROTOCOL_ICMP);
-        expectedFlow = buildExpectedCollectorFlow(IPv4.PROTOCOL_ICMP);
-        reset(flowRuleService);
-        flowRuleService.removeFlowRules(eq(expectedFlow));
-        expectLastCall().andVoid().once();
-        replay(flowRuleService);
-        assertTrue(intProgrammable.removeIntObjective(intObjective));
-        verify(flowRuleService);
-    }
-
-    /**
-     * Test "setupIntConfig" function of IntProgrammable.
-     */
-    @Test
-    public void testSetupIntConfig() {
-        reset(flowRuleService);
-        expect(flowRuleService.getFlowEntriesById(APP_ID)).andReturn(ImmutableList.of()).once();
-        final IntDeviceConfig intConfig = buildIntDeviceConfig();
+        expect(flowRuleService.getFlowEntriesById(APP_ID)).andReturn(ImmutableList.of()).times(2);
+        final IntReportConfig intConfig = getIntReportConfig("/int-report.json");
         ImmutableList<FlowRule> expectRules = ImmutableList.of(
                 buildCollectorWatchlistRule(LEAF_DEVICE_ID),
                 buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_INT_INGRESS_DROP,
@@ -329,7 +222,7 @@ public class FabricIntProgrammableTest {
         }
 
         replay(flowRuleService);
-        assertTrue(intProgrammable.setupIntConfig(intConfig));
+        assertTrue(intProgrammable.setUpIntConfig(intConfig));
 
         // Verifying flow rules
         for (int i = 0; i < expectRules.size(); i++) {
@@ -341,7 +234,67 @@ public class FabricIntProgrammableTest {
     }
 
     /**
-     * Test "setupIntConfig" function of IntProgrammable, but there is an old
+     * Test "setUpIntConfig" function of IntProgrammable and the config contains
+     * subnets to be watched.
+     */
+    @Test
+    public void testSetupIntConfigWithWatchedSubnet() {
+        reset(flowRuleService);
+        List<FlowEntry> existsEntries = ImmutableList.of(
+            buildFlowEntry(buildWatchlistRule(SUBNET_1, Criterion.Type.IPV4_SRC)),
+            buildFlowEntry(buildWatchlistRule(SUBNET_1, Criterion.Type.IPV4_DST))
+        );
+        expect(flowRuleService.getFlowEntriesById(APP_ID)).andReturn(existsEntries).times(2);
+        final IntReportConfig intConfig = getIntReportConfig("/int-report-with-subnets.json");
+        ImmutableList<FlowRule> expectRules = ImmutableList.of(
+                buildCollectorWatchlistRule(LEAF_DEVICE_ID),
+                buildWatchlistRule(null, Criterion.Type.IPV4_SRC), // match any subnet
+                buildWatchlistRule(SUBNET_1, Criterion.Type.IPV4_SRC),
+                buildWatchlistRule(SUBNET_1, Criterion.Type.IPV4_DST),
+                buildWatchlistRule(SUBNET_2, Criterion.Type.IPV4_SRC),
+                buildWatchlistRule(SUBNET_2, Criterion.Type.IPV4_DST),
+                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_INT_INGRESS_DROP,
+                                     INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID),
+                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR,
+                                     INT_REPORT_TYPE_DROP, MIRROR_TYPE_INT_REPORT),
+                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR,
+                                     INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT),
+                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_DEFLECTED,
+                                     INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID),
+                buildFilterConfigFlow(LEAF_DEVICE_ID)
+        );
+
+        List<Capture<FlowRule>> captures = Lists.newArrayList();
+        for (int i = 0; i < expectRules.size(); i++) {
+            Capture<FlowRule> flowRuleCapture = newCapture();
+            flowRuleService.applyFlowRules(capture(flowRuleCapture));
+            captures.add(flowRuleCapture);
+        }
+
+        // Expected to remove old watchlist entries
+        Capture<FlowRule> removedRules = newCapture(CaptureType.ALL);
+        for (int i = 0; i < existsEntries.size(); i++) {
+            flowRuleService.removeFlowRules(capture(removedRules));
+        }
+
+        replay(flowRuleService);
+        assertTrue(intProgrammable.setUpIntConfig(intConfig));
+
+        // Verifying flow rules
+        for (int i = 0; i < expectRules.size(); i++) {
+            FlowRule expectRule = expectRules.get(i);
+            FlowRule actualRule = captures.get(i).getValue();
+            assertTrue(expectRule.exactMatch(actualRule));
+        }
+        FlowRule removedRule = removedRules.getValues().get(0);
+        assertTrue(removedRule.exactMatch(buildFlowEntry(buildWatchlistRule(SUBNET_1, Criterion.Type.IPV4_SRC))));
+        removedRule = removedRules.getValues().get(1);
+        assertTrue(removedRule.exactMatch(buildFlowEntry(buildWatchlistRule(SUBNET_1, Criterion.Type.IPV4_DST))));
+        verify(flowRuleService);
+    }
+
+    /**
+     * Test "setUpIntConfig" function of IntProgrammable, but there is an old
      * flow rule in the store for collector.
      */
     @Test
@@ -351,8 +304,8 @@ public class FabricIntProgrammableTest {
                 new DefaultFlowEntry(buildCollectorWatchlistRule(LEAF_DEVICE_ID));
         expect(flowRuleService.getFlowEntriesById(APP_ID))
                 .andReturn(ImmutableList.of(oldFlowEntry))
-                .once();
-        final IntDeviceConfig intConfig = buildIntDeviceConfig();
+                .times(2);
+        final IntReportConfig intConfig = getIntReportConfig("/int-report.json");
         ImmutableList<FlowRule> expectRules = ImmutableList.of(
                 buildCollectorWatchlistRule(LEAF_DEVICE_ID),
                 buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_INT_INGRESS_DROP,
@@ -376,7 +329,7 @@ public class FabricIntProgrammableTest {
         }
 
         replay(flowRuleService);
-        assertTrue(intProgrammable.setupIntConfig(intConfig));
+        assertTrue(intProgrammable.setUpIntConfig(intConfig));
 
         // Verifying flow rules
         assertTrue(removedFlowRule.getValue().exactMatch(buildCollectorWatchlistRule(LEAF_DEVICE_ID)));
@@ -389,7 +342,7 @@ public class FabricIntProgrammableTest {
     }
 
     /**
-     * Test "setupIntConfig" function of IntProgrammable for spine device.
+     * Test "setUpIntConfig" function of IntProgrammable for spine device.
      * We should expected to get a table entry for report table
      * with do_report_encap_mpls action.
      */
@@ -400,8 +353,8 @@ public class FabricIntProgrammableTest {
         expect(driverData.deviceId()).andReturn(SPINE_DEVICE_ID).anyTimes();
         replay(driverData);
         reset(flowRuleService);
-        expect(flowRuleService.getFlowEntriesById(APP_ID)).andReturn(ImmutableList.of()).once();
-        final IntDeviceConfig intConfig = buildIntDeviceConfig();
+        expect(flowRuleService.getFlowEntriesById(APP_ID)).andReturn(ImmutableList.of()).times(2);
+        final IntReportConfig intConfig = getIntReportConfig("/int-report.json");
         ImmutableList<FlowRule> expectRules = ImmutableList.of(
                 buildCollectorWatchlistRule(SPINE_DEVICE_ID),
                 buildReportTableRule(SPINE_DEVICE_ID, true, BMD_TYPE_INT_INGRESS_DROP,
@@ -423,7 +376,7 @@ public class FabricIntProgrammableTest {
         }
 
         replay(flowRuleService);
-        assertTrue(intProgrammable.setupIntConfig(intConfig));
+        assertTrue(intProgrammable.setUpIntConfig(intConfig));
 
         // Verifying flow rules
         for (int i = 0; i < expectRules.size(); i++) {
@@ -432,14 +385,6 @@ public class FabricIntProgrammableTest {
             assertTrue(expectRule.exactMatch(actualRule));
         }
         verify(flowRuleService);
-    }
-
-    @Test
-    public void testSupportsFunctionality() {
-        assertFalse(intProgrammable.supportsFunctionality(IntProgrammable.IntFunctionality.SOURCE));
-        assertFalse(intProgrammable.supportsFunctionality(IntProgrammable.IntFunctionality.TRANSIT));
-        assertFalse(intProgrammable.supportsFunctionality(IntProgrammable.IntFunctionality.SINK));
-        assertTrue(intProgrammable.supportsFunctionality(IntProgrammable.IntFunctionality.POSTCARD));
     }
 
     @Test
@@ -470,9 +415,7 @@ public class FabricIntProgrammableTest {
     public void testCleanup() {
         Set<FlowEntry> intEntries = ImmutableSet.of(
                 // Watchlist table entry
-                buildFlowEntry(buildExpectedCollectorFlow(IPv4.PROTOCOL_TCP)),
-                buildFlowEntry(buildExpectedCollectorFlow(IPv4.PROTOCOL_UDP)),
-                buildFlowEntry(buildExpectedCollectorFlow(IPv4.PROTOCOL_ICMP)),
+                buildFlowEntry(buildCollectorWatchlistRule(LEAF_DEVICE_ID)),
                 // Report table entry
                 buildFlowEntry(buildFilterConfigFlow(LEAF_DEVICE_ID)),
                 buildFlowEntry(
@@ -513,9 +456,7 @@ public class FabricIntProgrammableTest {
         expect(coreService.getAppId(anyString())).andReturn(null).anyTimes();
         replay(coreService, flowRuleService);
         assertFalse(intProgrammable.init());
-        assertFalse(intProgrammable.setupIntConfig(null));
-        assertFalse(intProgrammable.addIntObjective(null));
-        assertFalse(intProgrammable.removeIntObjective(null));
+        assertFalse(intProgrammable.setUpIntConfig(null));
         intProgrammable.cleanup();
 
         // Here we expected no flow entries installed
@@ -527,15 +468,12 @@ public class FabricIntProgrammableTest {
         reset(netcfgService);
         expect(netcfgService.getConfig(LEAF_DEVICE_ID, SegmentRoutingDeviceConfig.class))
                 .andReturn(null).anyTimes();
-        expect(flowRuleService.getFlowEntriesById(APP_ID)).andReturn(ImmutableList.of()).once();
+        expect(flowRuleService.getFlowEntriesById(APP_ID)).andReturn(ImmutableList.of()).times(2);
         Capture<FlowRule> capturedRule = newCapture();
         flowRuleService.applyFlowRules(capture(capturedRule));
         replay(netcfgService, flowRuleService);
-        final IntDeviceConfig intConfig = buildIntDeviceConfig();
-        final IntObjective intObjective = buildIntObjective(IPv4.PROTOCOL_TCP);
-        assertFalse(intProgrammable.setupIntConfig(intConfig));
-        assertFalse(intProgrammable.addIntObjective(intObjective));
-        assertFalse(intProgrammable.removeIntObjective(intObjective));
+        final IntReportConfig intConfig = getIntReportConfig("/int-report.json");
+        assertFalse(intProgrammable.setUpIntConfig(intConfig));
         assertTrue(capturedRule.getValue().exactMatch(buildCollectorWatchlistRule(LEAF_DEVICE_ID)));
         // We expected no other flow rules be installed or removed
         verify(flowRuleService);
@@ -549,12 +487,12 @@ public class FabricIntProgrammableTest {
         reset(driverData, hostService);
         expect(driverData.deviceId()).andReturn(SPINE_DEVICE_ID).anyTimes();
         expect(hostService.getHostsByIp(anyObject())).andReturn(Collections.emptySet()).anyTimes();
-        expect(flowRuleService.getFlowEntriesById(APP_ID)).andReturn(ImmutableList.of()).once();
+        expect(flowRuleService.getFlowEntriesById(APP_ID)).andReturn(ImmutableList.of()).times(2);
         Capture<FlowRule> capturedRule = newCapture();
         flowRuleService.applyFlowRules(capture(capturedRule));
         replay(driverData, hostService, flowRuleService);
-        final IntDeviceConfig intConfig = buildIntDeviceConfig();
-        assertFalse(intProgrammable.setupIntConfig(intConfig));
+        final IntReportConfig intConfig = getIntReportConfig("/int-report.json");
+        assertFalse(intProgrammable.setUpIntConfig(intConfig));
         assertTrue(capturedRule.getValue().exactMatch(buildCollectorWatchlistRule(SPINE_DEVICE_ID)));
         // We expect no flow rules be installed
         verify(flowRuleService);
@@ -570,12 +508,12 @@ public class FabricIntProgrammableTest {
         expect(driverData.deviceId()).andReturn(SPINE_DEVICE_ID).anyTimes();
         final Host collectorHost = new DefaultHost(null, null, null, null, Sets.newHashSet(), Sets.newHashSet(), true);
         expect(hostService.getHostsByIp(COLLECTOR_IP)).andReturn(ImmutableSet.of(collectorHost)).anyTimes();
-        expect(flowRuleService.getFlowEntriesById(APP_ID)).andReturn(ImmutableList.of()).once();
+        expect(flowRuleService.getFlowEntriesById(APP_ID)).andReturn(ImmutableList.of()).times(2);
         Capture<FlowRule> capturedRule = newCapture();
         flowRuleService.applyFlowRules(capture(capturedRule));
         replay(driverData, hostService, flowRuleService);
-        final IntDeviceConfig intConfig = buildIntDeviceConfig();
-        assertFalse(intProgrammable.setupIntConfig(intConfig));
+        final IntReportConfig intConfig = getIntReportConfig("/int-report.json");
+        assertFalse(intProgrammable.setUpIntConfig(intConfig));
         assertTrue(capturedRule.getValue().exactMatch(buildCollectorWatchlistRule(SPINE_DEVICE_ID)));
         verify(flowRuleService);
     }
@@ -592,12 +530,12 @@ public class FabricIntProgrammableTest {
                 .andReturn(null).anyTimes();
         expect(netcfgService.getConfig(SPINE_DEVICE_ID, SegmentRoutingDeviceConfig.class))
                 .andReturn(getSrConfig(SPINE_DEVICE_ID, "/sr-spine.json")).anyTimes();
-        expect(flowRuleService.getFlowEntriesById(APP_ID)).andReturn(ImmutableList.of()).once();
+        expect(flowRuleService.getFlowEntriesById(APP_ID)).andReturn(ImmutableList.of()).times(2);
         Capture<FlowRule> capturedRule = newCapture();
         flowRuleService.applyFlowRules(capture(capturedRule));
         replay(driverData, flowRuleService, netcfgService);
-        final IntDeviceConfig intConfig = buildIntDeviceConfig();
-        assertFalse(intProgrammable.setupIntConfig(intConfig));
+        final IntReportConfig intConfig = getIntReportConfig("/int-report.json");
+        assertFalse(intProgrammable.setUpIntConfig(intConfig));
         assertTrue(capturedRule.getValue().exactMatch(buildCollectorWatchlistRule(SPINE_DEVICE_ID)));
         verify(flowRuleService);
     }
@@ -614,12 +552,12 @@ public class FabricIntProgrammableTest {
                 .andReturn(getSrConfig(SPINE_DEVICE_ID, "/sr-invalid.json")).anyTimes();
         expect(netcfgService.getConfig(SPINE_DEVICE_ID, SegmentRoutingDeviceConfig.class))
                 .andReturn(getSrConfig(SPINE_DEVICE_ID, "/sr-spine.json")).anyTimes();
-        expect(flowRuleService.getFlowEntriesById(APP_ID)).andReturn(ImmutableList.of()).once();
+        expect(flowRuleService.getFlowEntriesById(APP_ID)).andReturn(ImmutableList.of()).times(2);
         Capture<FlowRule> capturedRule = newCapture();
         flowRuleService.applyFlowRules(capture(capturedRule));
         replay(driverData, flowRuleService, netcfgService);
-        final IntDeviceConfig intConfig = buildIntDeviceConfig();
-        assertFalse(intProgrammable.setupIntConfig(intConfig));
+        final IntReportConfig intConfig = getIntReportConfig("/int-report.json");
+        assertFalse(intProgrammable.setUpIntConfig(intConfig));
         assertTrue(capturedRule.getValue().exactMatch(buildCollectorWatchlistRule(SPINE_DEVICE_ID)));
         verify(flowRuleService);
     }
@@ -772,63 +710,15 @@ public class FabricIntProgrammableTest {
                 .build();
     }
 
-    private IntObjective buildIntObjective(byte protocol) {
-        TrafficSelector.Builder sBuilder = DefaultTrafficSelector.builder()
-                .matchIPSrc(IP_SRC)
-                .matchIPDst(IP_DST);
-
-        switch (protocol) {
-            case IPv4.PROTOCOL_UDP:
-                sBuilder.matchUdpSrc(L4_SRC).matchUdpDst(L4_DST);
-                break;
-            case IPv4.PROTOCOL_TCP:
-                sBuilder.matchTcpSrc(L4_SRC).matchTcpDst(L4_DST);
-                break;
-            default:
-                // do nothing
-                break;
-        }
-
-        // The metadata type doesn't affect the result, however we still need to pass
-        // a non-empty set to the objective since the builder won't allow an empty
-        // set of INT metadata types.
-        Set<IntMetadataType> metadataTypes = ImmutableSet.of(IntMetadataType.SWITCH_ID);
-        return new IntObjective.Builder()
-                .withSelector(sBuilder.build())
-                .withMetadataTypes(metadataTypes)
-                .build();
-    }
-
-    private IntObjective buildInvalidIntObjective() {
-        TrafficSelector selector = DefaultTrafficSelector.builder()
-                .matchEthType((short) 10)
-                .build();
-
-        // The metadata type doesn't affect the result, however we still need to pass
-        // a non-empty set to the objective since the builder won't allow an empty
-        // set of INT metadata types.
-        Set<IntMetadataType> metadataTypes = ImmutableSet.of(IntMetadataType.SWITCH_ID);
-        return new IntObjective.Builder()
-                .withSelector(selector)
-                .withMetadataTypes(metadataTypes)
-                .build();
-    }
-
-    private FlowRule buildExpectedCollectorFlow(byte protocol) {
+    private FlowRule buildWatchlistRule(IpPrefix ipPrefix, Criterion.Type criterionType) {
         // Flow rule that we expected.
         TrafficSelector.Builder expectedSelector = DefaultTrafficSelector.builder();
         PiCriterion.Builder expectedPiCriterion = PiCriterion.builder()
                 .matchExact(P4InfoConstants.HDR_IPV4_VALID, 1);
-
-        expectedSelector.matchIPSrc(IP_SRC);
-        expectedSelector.matchIPDst(IP_DST);
-        if (protocol == IPv4.PROTOCOL_TCP || protocol == IPv4.PROTOCOL_UDP) {
-            expectedPiCriterion.matchRange(P4InfoConstants.HDR_L4_SPORT,
-                    L4_SRC.toInt(),
-                    L4_SRC.toInt());
-            expectedPiCriterion.matchRange(P4InfoConstants.HDR_L4_DPORT,
-                    L4_DST.toInt(),
-                    L4_DST.toInt());
+        if (ipPrefix != null && criterionType == Criterion.Type.IPV4_DST) {
+            expectedSelector.matchIPDst(ipPrefix);
+        } else if (ipPrefix != null && criterionType == Criterion.Type.IPV4_SRC) {
+            expectedSelector.matchIPSrc(ipPrefix);
         }
         expectedSelector.matchPi(expectedPiCriterion.build());
         PiAction expectedPiAction = PiAction.builder()
@@ -845,18 +735,6 @@ public class FabricIntProgrammableTest {
                 .withPriority(DEFAULT_PRIORITY)
                 .forTable(P4InfoConstants.FABRIC_INGRESS_INT_WATCHLIST_WATCHLIST)
                 .makePermanent()
-                .build();
-    }
-
-    private IntDeviceConfig buildIntDeviceConfig() {
-        return IntDeviceConfig.builder()
-                .enabled(true)
-                .withCollectorIp(COLLECTOR_IP)
-                .withCollectorPort(COLLECTOR_PORT)
-                .withSinkIp(IpAddress.valueOf("10.192.19.180"))
-                .withSinkMac(MacAddress.NONE)
-                .withCollectorNextHopMac(MacAddress.BROADCAST)
-                .withMinFlowHopLatencyChangeNs(300)
                 .build();
     }
 
@@ -1033,5 +911,19 @@ public class FabricIntProgrammableTest {
             .fromApp(APP_ID)
             .withPriority(DEFAULT_PRIORITY)
             .build();
+    }
+
+    private IntReportConfig getIntReportConfig(String filename) {
+        IntReportConfig config = new IntReportConfig();
+        InputStream jsonStream = getClass().getResourceAsStream(filename);
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode jsonNode;
+        try {
+            jsonNode = mapper.readTree(jsonStream);
+            config.init(APP_ID, INT_REPORT_CONFIG_KEY, jsonNode, mapper, c -> { });
+        } catch (Exception e) {
+            fail("Got error when reading file " + filename + " : " + e.getMessage());
+        }
+        return config;
     }
 }

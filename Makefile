@@ -71,7 +71,7 @@ pipeconf: _mvn_package
 
 pipeconf-test: _mvn_package
 	$(info *** Testing ONOS pipeconf)
-	docker run --rm -v $(DIR):mvn-src -w /mvn-src \
+	docker run --rm -v $(DIR):/mvn-src -w /mvn-src \
 		-v $(MVN_CACHE):/root/.m2 $(MAVEN_DOCKER_IMAGE) mvn test
 
 pipeconf-ci:
