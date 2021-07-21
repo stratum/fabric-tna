@@ -27,7 +27,9 @@ mkdir -p "${P4C_OUT}"
 # Where the compiler output should be placed to be included in the pipeconf.
 DEST_DIR=${ROOT_DIR}/src/main/resources/p4c-out/${PROFILE}
 
-P4C_CMD="docker run --rm -v ${P4C_OUT}:${P4C_OUT} -v ${P4_SRC_DIR}:${P4_SRC_DIR} -v ${DIR}:${DIR} -w ${DIR} ${SDE_P4C_DOCKER_IMG} bf-p4c"
+P4C_CMD="docker run --rm -v ${P4C_OUT}:${P4C_OUT} \
+  -v ${P4_SRC_DIR}:${P4_SRC_DIR} -v ${DIR}:${DIR} -w ${DIR} --user ${UID} \
+  ${SDE_P4C_DOCKER_IMG} bf-p4c"
 SDE_VER=$( ${P4C_CMD} --version | cut -d' ' -f2 )
 
 # shellcheck disable=SC2086
@@ -48,7 +50,7 @@ function base_build() {
   )
 
   # Generate the pipeline config binary
-  docker run --rm -v "${output_dir}:${output_dir}" -w "${output_dir}" \
+  docker run --rm -v "${output_dir}:${output_dir}" -w "${output_dir}" --user ${UID} \
     ${PIPELINE_CONFIG_BUILDER_IMG} \
     -p4c_conf_file=./fabric_tna.conf \
     -bf_pipeline_config_binary_file=./pipeline_config.pb.bin

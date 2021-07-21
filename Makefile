@@ -4,6 +4,7 @@
 # Absolute directory of this Makefile
 DIR := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 DIR_SHA := $(shell echo -n "$(DIR)" | shasum | cut -c1-7)
+UID := $(shell id -u)
 
 # .env cannot be included as-is as some variables are defined with ${A:-B}
 # notation to allow overrides. Resolve overrides in a temp file and include that.
@@ -54,16 +55,21 @@ fabric-spgw-int:
 	@$(DIR)/p4src/build.sh fabric-spgw-int "-DWITH_SPGW -DWITH_INT"
 
 constants:
-	docker run -v $(DIR):$(DIR) -w $(DIR) --rm \
+	docker run -v $(DIR):$(DIR) -w $(DIR) --rm --user $(UID) \
 		--entrypoint ./util/gen-p4-constants.py $(TESTER_DOCKER_IMG) \
 		-o $(DIR)/src/main/java/org/stratumproject/fabric/tna/behaviour/P4InfoConstants.java \
 		p4info $(DIR)/p4src/build/fabric-spgw-int/sde_$(SDE_VER_)/p4info.txt
 
-_mvn_package:
+_m2_vol:
+	docker volume create --opt o=uid=$(UID) --opt device=tmpfs --opt type=tmpfs $(MVN_CACHE)
+
+_mvn_package: _m2_vol
 	$(info *** Building ONOS app...)
 	@mkdir -p target
-	docker run --rm -v $(DIR):/mvn-src -w /mvn-src \
-		-v $(MVN_CACHE):/root/.m2 $(MAVEN_DOCKER_IMAGE) mvn $(MVN_FLAGS) clean package
+	docker run --rm -v $(DIR):/mvn-src -w /mvn-src --user $(UID) \
+		-e MAVEN_OPTS=-Dmaven.repo.local=/.m2 \
+		-e MAVEN_CONFIG=/.m2 \
+		-v $(MVN_CACHE):/.m2 $(MAVEN_DOCKER_IMAGE) mvn $(MVN_FLAGS) clean package
 
 pipeconf: _mvn_package
 	$(info *** ONOS pipeconf .oar package created succesfully)
@@ -71,14 +77,18 @@ pipeconf: _mvn_package
 
 pipeconf-test: _mvn_package
 	$(info *** Testing ONOS pipeconf)
-	docker run --rm -v $(DIR):/mvn-src -w /mvn-src \
-		-v $(MVN_CACHE):/root/.m2 $(MAVEN_DOCKER_IMAGE) mvn test
+	docker run --rm -v $(DIR):/mvn-src -w /mvn-src --user $(UID) \
+		-e MAVEN_OPTS=-Dmaven.repo.local=/.m2 \
+		-e MAVEN_CONFIG=/.m2 \
+		-v $(MVN_CACHE):/.m2 $(MAVEN_DOCKER_IMAGE) mvn test
 
-pipeconf-ci:
+pipeconf-ci: _mvn_package
 	$(info *** Building ONOS app...)
 	@mkdir -p target
-	docker run --rm -v $(DIR):/mvn-src -w /mvn-src \
-		-v $(MVN_CACHE):/root/.m2 $(MAVEN_DOCKER_IMAGE) mvn $(MVN_FLAGS) clean package verify
+	docker run --rm -v $(DIR):/mvn-src -w /mvn-src --user $(UID) \
+		-e MAVEN_OPTS=-Dmaven.repo.local=/.m2 \
+		-e MAVEN_CONFIG=/.m2 \
+		-v $(MVN_CACHE):/.m2 $(MAVEN_DOCKER_IMAGE) mvn $(MVN_FLAGS) clean package verify
 
 _pipeconf-oar-exists:
 	@test -f $(PIPECONF_OAR_FILE) || (echo "pipeconf .oar not found" && exit 1)
