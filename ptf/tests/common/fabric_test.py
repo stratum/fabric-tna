@@ -2751,7 +2751,7 @@ class IntTest(IPv4UnicastTest):
         )
 
     def set_up_watchlist_flow(
-        self, ipv4_src, ipv4_dst, sport, dport, collector_action=False
+        self, ipv4_src=None, ipv4_dst=None, sport=None, dport=None, collector_action=False
     ):
         ipv4_src_ = ipv4_to_binary(ipv4_src)
         ipv4_dst_ = ipv4_to_binary(ipv4_dst)

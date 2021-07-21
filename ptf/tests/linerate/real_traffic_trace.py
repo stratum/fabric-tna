@@ -32,7 +32,7 @@ class RealTrafficTrace(TRexTest, IntTest):
         pkt = testutils.simple_udp_packet()
         pkt[Ether].dst = "00:90:fb:71:64:8a"
         self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine)
-        self.set_up_watchlist_flow(pkt[IP].src, pkt[IP].dst, pkt[UDP].src, pkt[UDP].dst)
+        self.set_up_watchlist_flow()
         self.runIPv4UnicastTest(
             pkt=pkt,
             next_hop_mac=HOST2_MAC,
