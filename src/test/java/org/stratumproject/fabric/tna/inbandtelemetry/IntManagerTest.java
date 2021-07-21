@@ -4,6 +4,7 @@
 package org.stratumproject.fabric.tna.inbandtelemetry;
 
 import java.io.InputStream;
+import java.util.concurrent.CompletableFuture;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -17,7 +18,6 @@ import org.easymock.TestSubject;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.onlab.junit.TestTools;
 import org.onosproject.TestApplicationId;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
@@ -68,11 +68,10 @@ public class IntManagerTest extends EasyMockSupport {
     private Device mockDevice;
     @Mock
     private IntProgrammable intProgrammable;
-
-    private ApplicationId appId;
-
     @TestSubject
     private IntManager intManager = new IntManager();
+
+    private ApplicationId appId;
     private Capture<DeviceListener> deviceListener;
     private Capture<NetworkConfigListener> netcfgListener;
 
@@ -89,10 +88,14 @@ public class IntManagerTest extends EasyMockSupport {
         deviceListener = newCapture();
         deviceService.addListener(capture(deviceListener));
         expect(deviceService.getAvailableDevices()).andReturn(ImmutableList.of(mockDevice)).anyTimes();
+        expect(deviceService.isAvailable(anyObject())).andReturn(true).anyTimes();
         expect(mastershipService.isLocalMaster(anyObject())).andReturn(true).anyTimes();
         replay(coreService, netcfgRegistry, deviceService, mastershipService, mockDevice);
     }
 
+    /**
+     * Test activating the INT manager with no configuration.
+     */
     @Test
     public void testActivateWithoutConfig() {
         expect(netcfgService.getConfig(appId, IntReportConfig.class)).andReturn(null).anyTimes();
@@ -102,6 +105,9 @@ public class IntManagerTest extends EasyMockSupport {
         verifyAll();
     }
 
+    /**
+     * Test deactivating the INT manager with no configuration.
+     */
     @Test
     public void testDeactivateWithoutConfig() {
         testActivateWithoutConfig();
@@ -113,12 +119,16 @@ public class IntManagerTest extends EasyMockSupport {
         netcfgRegistry.unregisterConfigFactory(anyObject());
         expectLastCall().once();
         expect(deviceService.getAvailableDevices()).andReturn(ImmutableList.of(mockDevice)).anyTimes();
+        expect(deviceService.isAvailable(anyObject())).andReturn(true).anyTimes();
         expect(intProgrammable.cleanup()).andReturn(true).anyTimes();
         replay(netcfgService, deviceService, netcfgRegistry, intProgrammable);
         intManager.deactivate();
         verifyAll();
     }
 
+    /**
+     * Test activating the INT manager with an INT configuration.
+     */
     @Test
     public void testActivateWithConfig() {
         expect(netcfgService.getConfig(appId, IntReportConfig.class)).andReturn(INT_CONFIG_1).anyTimes();
@@ -129,6 +139,9 @@ public class IntManagerTest extends EasyMockSupport {
         verifyAll();
     }
 
+    /**
+     * Test deactivating the INT manager with an INT configuration.
+     */
     @Test
     public void testDeactivateWithConfig() {
         testActivateWithConfig();
@@ -140,44 +153,66 @@ public class IntManagerTest extends EasyMockSupport {
         netcfgRegistry.unregisterConfigFactory(anyObject());
         expectLastCall().once();
         expect(deviceService.getAvailableDevices()).andReturn(ImmutableList.of(mockDevice)).anyTimes();
+        expect(deviceService.isAvailable(anyObject())).andReturn(true).anyTimes();
         expect(intProgrammable.cleanup()).andReturn(true).anyTimes();
         replay(netcfgService, deviceService, netcfgRegistry, intProgrammable);
         intManager.deactivate();
         verifyAll();
     }
 
+    /**
+     * Test updating the INT configuration with the config listener.
+     */
     @Test
     public void testUpdateConfig() {
         testActivateWithoutConfig();
         NetworkConfigListener listener = netcfgListener.getValue();
+        CompletableFuture<Void> completableFuture = new CompletableFuture<>();
         reset(intProgrammable);
-        expect(intProgrammable.setUpIntConfig(INT_CONFIG_2)).andReturn(true).once();
+        expect(intProgrammable.setUpIntConfig(INT_CONFIG_2))
+                .andAnswer(() -> {
+                    completableFuture.complete(null);
+                    return true;
+                }).once();
         replay(intProgrammable);
         NetworkConfigEvent event = new NetworkConfigEvent(NetworkConfigEvent.Type.CONFIG_UPDATED,
                 APP_ID, INT_CONFIG_2, INT_CONFIG_1, IntReportConfig.class);
         listener.event(event);
-        TestTools.delay(100);
+        completableFuture.join();
         verifyAll();
     }
 
+    /**
+     * Test sending new device event to trigger device config update.
+     */
     @Test
     public void testAddDevice() {
         testActivateWithConfig();
         DeviceListener listener = deviceListener.getValue();
+        CompletableFuture<Void> completableFuture = new CompletableFuture<>();
         Device newDevice = createMock(Device.class);
         IntProgrammable newIntProgrammable = createMock(IntProgrammable.class);
         expect(newDevice.id()).andReturn(DEVICE_ID_2).anyTimes();
         expect(newDevice.is(IntProgrammable.class)).andReturn(true).anyTimes();
         expect(newDevice.as(IntProgrammable.class)).andReturn(newIntProgrammable).anyTimes();
         expect(newIntProgrammable.init()).andReturn(true).once();
-        expect(newIntProgrammable.setUpIntConfig(INT_CONFIG_1)).andReturn(true).once();
+        expect(newIntProgrammable.setUpIntConfig(INT_CONFIG_1))
+                .andAnswer(() -> {
+                    completableFuture.complete(null);
+                    return true;
+                }).once();
         replay(newDevice, newIntProgrammable);
         DeviceEvent deviceEvent = new DeviceEvent(DeviceEvent.Type.DEVICE_ADDED, newDevice);
         listener.event(deviceEvent);
-        TestTools.delay(100);
+        completableFuture.join();
         verifyAll();
     }
 
+    /**
+     * Gets INT report config from a given JSON file.
+     * @param filename the config file path
+     * @return the INT report config
+     */
     public static IntReportConfig getIntReportConfig(String filename) {
         IntReportConfig config = new IntReportConfig();
         InputStream jsonStream = IntManagerTest.class.getResourceAsStream(filename);

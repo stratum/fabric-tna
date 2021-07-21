@@ -5,6 +5,10 @@ package org.stratumproject.fabric.tna.inbandtelemetry;
 
 import org.onosproject.net.driver.HandlerBehaviour;
 
+/**
+ * Abstraction of a device implementing In-band Network Telemetry (INT)
+ * capabilities.
+ */
 public interface IntProgrammable extends HandlerBehaviour {
     /**
      * Initializes the pipeline, by installing required flow rules not relevant
@@ -13,14 +17,14 @@ public interface IntProgrammable extends HandlerBehaviour {
      *
      * @return true if successful, false otherwise
      */
-    boolean init();
+    public boolean init();
 
     /**
      * Clean up any INT-related configuration from the device.
      *
      * @return true if successful, false otherwise
      */
-    boolean cleanup();
+    public boolean cleanup();
 
     /**
      * Set up report-related configuration.

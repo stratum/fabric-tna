@@ -89,10 +89,6 @@ public class IntManager {
         log.info("Stopped");
     }
 
-    private boolean checkDevice(Device device) {
-        return device.is(IntProgrammable.class) && mastershipService.isLocalMaster(device.id());
-    }
-
     private void initDevice(Device device) {
         if (checkDevice(device) && !device.as(IntProgrammable.class).init()) {
             log.warn("Failed to initialize {}", device.id());
@@ -109,6 +105,12 @@ public class IntManager {
         if (checkDevice(device) && !device.as(IntProgrammable.class).setUpIntConfig(config)) {
             log.warn("Failed to set up INT report config for device {}", device.id());
         }
+    }
+
+    private boolean checkDevice(Device device) {
+        return device.is(IntProgrammable.class) &&
+                mastershipService.isLocalMaster(device.id()) &&
+                deviceService.isAvailable(device.id());
     }
 
     private class IntReportConfigListener implements NetworkConfigListener {
@@ -142,12 +144,11 @@ public class IntManager {
             eventExecutor.execute(() -> {
                 switch (event.type()) {
                     case DEVICE_ADDED:
-                    case DEVICE_UPDATED:
                     case DEVICE_AVAILABILITY_CHANGED:
-                        IntReportConfig config = netcfgService.getConfig(appId, IntReportConfig.class);
                         Device device = event.subject();
+                        initDevice(device);
+                        IntReportConfig config = netcfgService.getConfig(appId, IntReportConfig.class);
                         if (config != null) {
-                            initDevice(device);
                             setUpIntConfig(config, device);
                         }
                         break;
