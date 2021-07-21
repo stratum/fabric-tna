@@ -707,7 +707,7 @@ def get_test_args(traffic_dir, pkt_addrs={}, spgw_type=None, int_test_type=None,
         else:
             with_psc_list = [False]
     else:
-        pkt_type_list = BASE_PKT_TYPES | GTP_PKT_TYPES
+        pkt_type_list = BASE_PKT_TYPES | GTP_PKT_TYPES | VXLAN_PKT_TYPES
         with_psc_list = [False]
 
     if int_test_type in INT_OPTIONS:
