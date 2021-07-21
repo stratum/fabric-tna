@@ -636,12 +636,16 @@ def get_test_args(traffic_dir, pkt_addrs={}, spgw_type=None, int_test_type=None,
     allow_ue_recirculation_list = []
 
     # spgw input structure: "[DL/UL]_[optional: psc]"
-    spgw_specs = re.split('_', spgw_type)
-    spgw_dir = spgw_specs[0]
-    try:
-        psc_exist = spgw_specs[1]
-        include_psc = True
-    except IndexError:
+    if spgw_type:
+        spgw_specs = re.split('_', spgw_type)
+        spgw_dir = spgw_specs[0]
+        # if spgw_type includes psc
+        try:
+            psc_exist = spgw_specs[1]
+            include_psc = True
+        except IndexError:
+            include_psc = False
+    else:
         include_psc = False
 
     # traffic_dir input structure: "source-device-destination"
