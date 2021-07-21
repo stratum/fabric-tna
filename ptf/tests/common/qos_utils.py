@@ -27,3 +27,15 @@ def get_control_traffic_packet(l2_size=64):
     pkt = Ether(dst=DEST_MAC) / IP() / UDP(dport=L4_DPORT_CONTROL_TRAFFIC) / ("*" * (l2_size - 42))
     assert(len(pkt) == l2_size), "Packet size {} does not match target size {}".format(len(pkt), l2_size)
     return pkt
+
+# Returns a packet that belongs to the system CoS group.
+def get_system_traffic_packet(l2_size=64):
+    pkt = Ether(dst=DEST_MAC) / IP() / UDP(dport=L4_DPORT_SYSTEM_TRAFFIC) / ("*" * (l2_size - 42))
+    assert(len(pkt) == l2_size), "Packet size {} does not match target size {}".format(len(pkt), l2_size)
+    return pkt
+
+# Returns a packet that belongs to the best-effort CoS group.
+def get_best_effort_traffic_packet(l2_size=1400):
+    pkt = Ether(dst=DEST_MAC) / IP() / UDP(dport=L4_DPORT_BEST_EFFORT_TRAFFIC) / ("*" * (l2_size - 42))
+    assert(len(pkt) == l2_size), "Packet size {} does not match target size {}".format(len(pkt), l2_size)
+    return pkt

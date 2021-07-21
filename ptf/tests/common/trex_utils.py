@@ -6,8 +6,8 @@ import collections
 
 # Multiplier for data rates
 K = 1000
-M = K * 1000
-G = M * 1000
+M = 1000 * K
+G = 1000 * M
 
 def to_readable(src: int, unit: str = "bps") -> str:
     """
@@ -148,7 +148,7 @@ def get_readable_latency_stats(pg_id: int, stats: LatencyStats) -> str:
         else:
             range_end  = range_start + pow(10, (len(str(range_start))-1))
         val = stats.histogram[sample]
-        histogram = histogram + "\n        Packets with latency between {0} us and {1} us: {2}".format(range_start, range_end, val)
+        histogram = histogram + "\n        Packets with latency between {0:>4} us and {1:>4} us: {2:>10}".format(range_start, range_end, val)
 
     return f"""
     Latency info for pg_id {pg_id}
