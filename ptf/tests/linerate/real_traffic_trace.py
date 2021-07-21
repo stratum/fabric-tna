@@ -12,7 +12,7 @@ from xnt import analyze_report_pcap
 TRAFFIC_MULT = 1 # 1x speed
 TEST_DURATION = 10
 CAPTURE_LIMIT = 1000
-TOTAL_FLOWS = 0
+TOTAL_FLOWS = 1
 REMOTE_PCAP_DIR = "/srv/packet-traces/CAIDA_traces_passive-2016_equinix-chicago/equinix-chicago/20160121-130000/"
 REMOTE_PCAP_FILE = "equinix-chicago.dirA.20160121-130000.UTC.anon.no-fragment.pcap"
 
@@ -46,13 +46,6 @@ class RealTrafficTrace(TRexTest, IntTest):
             no_send=True,
         )
 
-        # Put RX ports to promiscuous mode, otherwise it will drop all packets if the
-        # destination mac is not the port mac address.
-        # TODO: change based on port decision
-        self.trex_client.set_port_attr(
-            [INT_COLLECTOR_PORT, RECEIVER_PORT], promiscuous=True
-        )
-
         # Capture INT packets
         self.trex_client.set_service_mode(ports=[INT_COLLECTOR_PORT], enabled=True)
         capture = self.trex_client.start_capture(
@@ -65,7 +58,6 @@ class RealTrafficTrace(TRexTest, IntTest):
         self.trex_client.push_remote(
             pcap_file,
             ports=[SENDER_PORT],
-            ipg_usec=100,
             speedup=mult,
             duration=TEST_DURATION,
             src_mac_pcap=True,
