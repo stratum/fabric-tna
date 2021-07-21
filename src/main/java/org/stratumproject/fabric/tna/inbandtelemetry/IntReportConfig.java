@@ -101,44 +101,4 @@ public class IntReportConfig extends Config<ApplicationId> {
             return Collections.emptyList();
         }
     }
-
-    /**
-     * Sets the collector IP to the config.
-     *
-     * @param collectorIp the collector IP
-     * @return the config
-     */
-    public IntReportConfig setCollectorIp(IpAddress collectorIp) {
-        return (IntReportConfig) setOrClear(COLLECTOR_IP, collectorIp.toString());
-    }
-
-    /**
-     * Sets the collector port to the config.
-     *
-     * @param port the collector port
-     * @return the config
-     */
-    public IntReportConfig setCollectorPort(TpPort port) {
-        return (IntReportConfig) setOrClear(COLLECTOR_PORT, port.toInt());
-    }
-
-    /**
-     * Sets the minimal interval of hop latency change for a flow to the config.
-     *
-     * @param ns the value of hop latency change
-     * @return the config
-     */
-    public IntReportConfig setMinFlowHopLatencyChangeNs(int ns) {
-        return (IntReportConfig) setOrClear(MIN_FLOW_HOP_LATENCY_CHANGE_NS, ns);
-    }
-
-    /**
-     * Sets subnets to be watched.
-     *
-     * @param subnets subnets to be watched.
-     * @return the config
-     */
-    public IntReportConfig setWatchSubnets(List<IpPrefix> subnets) {
-        return (IntReportConfig) setOrClear(WATCH_SUBNETS, subnets);
-    }
 }
