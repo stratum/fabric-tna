@@ -1,10 +1,10 @@
 # Copyright 2021-present Open Networking Foundation
 # SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0 AND Apache-2.0
 from ptf.testutils import group
-from scapy.layers.inet import IP
 
 from base_test import autocleanup, tvsetup
 from fabric_test import *  # noqa
+from scapy.layers.inet import IP
 
 COLOR_GREEN = 0
 COLOR_YELLOW = 1
@@ -46,17 +46,18 @@ class SlicingTest(FabricTest):
             cir=cir,
             cburst=cburst,
             pir=pir,
-            pburst=pburst
+            pburst=pburst,
         )
 
     def add_queue_entry(self, slice_id, tc, qid=None, color=None):
         matches = [
             self.Exact("slice_id", stringify(slice_id, 1)),
-            self.Exact("tc", stringify(tc, 1))
+            self.Exact("tc", stringify(tc, 1)),
         ]
         if color is not None:
             matches.append(
-                self.Ternary("color", stringify(color, 1), stringify(0x3, 1)))
+                self.Ternary("color", stringify(color, 1), stringify(0x3, 1))
+            )
         if qid is not None:
             action = "FabricIngress.qos.set_queue"
             action_params = [("qid", stringify(qid, 1))]
@@ -311,9 +312,7 @@ class FabricIPv4UnicastWithPolicingTest(SlicingTest, IPv4UnicastTest):
         ig_port = self.port1
         eg_port = self.port2
         self.add_slice_tc_classifier_entry(
-            slice_id=slice_id,
-            tc=tc,
-            ipv4_src=pkt[IP].src
+            slice_id=slice_id, tc=tc, ipv4_src=pkt[IP].src
         )
         # 1 byte burst, any packet should be RED
         self.configure_slice_tc_meter(
@@ -345,8 +344,5 @@ class FabricIPv4UnicastWithPolicingTest(SlicingTest, IPv4UnicastTest):
                     pktlen=MIN_PKT_LEN,
                 )
                 self.doRunTest(
-                    pkt=pkt,
-                    policing=policing,
-                    next_hop_mac=HOST2_MAC,
-                    tc_name=tc_name,
+                    pkt=pkt, policing=policing, next_hop_mac=HOST2_MAC, tc_name=tc_name,
                 )

@@ -628,10 +628,10 @@ class FabricTest(P4RuntimeTest):
 
     def setUp(self):
         super(FabricTest, self).setUp()
-        self.port1 = self.swports(1)
-        self.port2 = self.swports(2)
-        self.port3 = self.swports(3)
-        self.port4 = self.swports(4)
+        self.port1 = self.swports(0)
+        self.port2 = self.swports(1)
+        self.port3 = self.swports(2)
+        self.port4 = self.swports(3)
         self.setup_switch_info()
         self.set_up_packet_in_mirror()
 
@@ -1025,7 +1025,7 @@ class FabricTest(P4RuntimeTest):
             )
 
     def build_acl_matches(
-        self, ipv4_src=None, ipv4_dst=None, ip_proto=None, l4_sport=None, l4_dport=None, ig_port=None,
+        self, ipv4_src=None, ipv4_dst=None, ip_proto=None, l4_sport=None, l4_dport=None, ig_port=None
     ):
         matches = []
         if ipv4_src is not None:
@@ -1049,7 +1049,9 @@ class FabricTest(P4RuntimeTest):
             l4_dport_mask = stringify(0xFFFF, 2)
             matches.append(self.Ternary("l4_dport", l4_dport_, l4_dport_mask))
         if ig_port is not None:
-            matches.append(self.Ternary("ig_port", stringify(ig_port, 2), stringify(0xFFFF, 2)))
+            ig_port_ = stringify(ig_port, 2)
+            ig_port_mask = stringify(0x01FF, 2)
+            matches.append(self.Ternary("ig_port", ig_port_, ig_port_mask))
         return matches
 
     def add_forwarding_acl_next(
@@ -2832,11 +2834,7 @@ class IntTest(IPv4UnicastTest):
             matches.append(self.Range("l4_dport", dport_low, dport_high))
 
         self.send_request_add_entry_to_action(
-            "watchlist",
-            matches,
-            action,
-            [],
-            priority=DEFAULT_PRIORITY,
+            "watchlist", matches, action, [], priority=DEFAULT_PRIORITY,
         )
 
     def build_int_local_report(
@@ -2864,7 +2862,7 @@ class IntTest(IPv4UnicastTest):
             Ether(src=src_mac, dst=dst_mac)
             / IP(src=src_ip, dst=dst_ip, ttl=64, tos=INT_TOS)
             / UDP(sport=0, chksum=0)
-            / INT_L45_REPORT_FIXED(nproto=2, f=f_flag, q=q_flag, hw_id=0)
+            / INT_L45_REPORT_FIXED(nproto=2, f=f_flag, q=q_flag, hw_id=(eg_port >> 7))
             / INT_L45_LOCAL_REPORT(
                 switch_id=sw_id, ingress_port_id=ig_port, egress_port_id=eg_port,
             )
@@ -2907,6 +2905,7 @@ class IntTest(IPv4UnicastTest):
         inner_packet,
         is_device_spine,
         send_report_to_spine,
+        hw_id,
     ):
         if GTP_U_Header in inner_packet:
             inner_packet = pkt_remove_gtp(inner_packet)
@@ -2918,7 +2917,7 @@ class IntTest(IPv4UnicastTest):
             Ether(src=src_mac, dst=dst_mac)
             / IP(src=src_ip, dst=dst_ip, ttl=64, tos=INT_TOS)
             / UDP(sport=0, chksum=0)
-            / INT_L45_REPORT_FIXED(nproto=1, d=1, hw_id=0)
+            / INT_L45_REPORT_FIXED(nproto=1, d=1, hw_id=hw_id)
             / INT_L45_DROP_REPORT(
                 switch_id=sw_id,
                 ingress_port_id=ig_port,
@@ -3042,10 +3041,14 @@ class IntTest(IPv4UnicastTest):
         def set_up_queue_report_table_internal(upper, lower, action):
             # Omit dont'care matches
             matches = [self.Exact("egress_qid", stringify(queue_id, 1))]
-            if upper[0] != 0 or upper[1] != 0xffff:
-                matches.append(self.Range("hop_latency_upper", *[stringify(v, 2) for v in upper]))
-            if lower[0] != 0 or lower[1] != 0xffff:
-                matches.append(self.Range("hop_latency_lower", *[stringify(v, 2) for v in lower]))
+            if upper[0] != 0 or upper[1] != 0xFFFF:
+                matches.append(
+                    self.Range("hop_latency_upper", *[stringify(v, 2) for v in upper])
+                )
+            if lower[0] != 0 or lower[1] != 0xFFFF:
+                matches.append(
+                    self.Range("hop_latency_lower", *[stringify(v, 2) for v in lower])
+                )
             self.send_request_add_entry_to_action(
                 "FabricEgress.int_egress.queue_latency_thresholds",
                 matches,
@@ -3223,17 +3226,18 @@ class IntTest(IPv4UnicastTest):
             SWITCH_IPV4,
             INT_COLLECTOR_IPV4,
             ig_port,
-            0,
+            0,  # egress port will be unset
             drop_reason,
             SWITCH_ID,
             int_inner_pkt,
             is_device_spine,
             send_report_to_spine,
+            ig_port >> 7,  # hw_id
         )
 
         install_routing_entry = True
         if drop_reason == INT_DROP_REASON_ACL_DENY:
-            self.add_forwarding_acl_drop_ingress_port(1)
+            self.add_forwarding_acl_drop_ingress_port(ig_port)
         elif drop_reason == INT_DROP_REASON_ROUTING_V4_MISS:
             install_routing_entry = False
 
@@ -3314,6 +3318,7 @@ class IntTest(IPv4UnicastTest):
             int_inner_pkt,
             is_device_spine,
             send_report_to_spine,
+            eg_port >> 7,  # hw_id
         )
 
         # Set collector, report table, and mirror sessions
@@ -3714,6 +3719,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             int_inner_pkt,
             is_device_spine,
             send_report_to_spine,
+            eg_port >> 7,  # hw_id
         )
 
         # Set collector, report table, and mirror sessions
@@ -3800,6 +3806,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             int_inner_pkt,
             is_device_spine,
             send_report_to_spine,
+            eg_port >> 7,  # hw_id
         )
 
         # Set collector, report table, and mirror sessions
