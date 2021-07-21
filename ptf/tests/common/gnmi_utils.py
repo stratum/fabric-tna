@@ -1,6 +1,7 @@
 # Copyright 2021-present Open Networking Foundation
 # SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 
+import time
 from base_test import *
 from gnmi import gnmi_pb2
 from gnmi import gnmi_pb2_grpc
@@ -82,3 +83,8 @@ def do_set(req):
 def push_chassis_config(config: bytes):
     req = build_gnmi_set_req("/", config, True)
     do_set(req)
+    # TODO(max): most tests assume all ports are up and ready, but this might
+    # not be the case as port setup can take a few seconds. For now we remedy
+    # this by waiting a bit, but in the future we should check the port state
+    # via gNMI.
+    time.sleep(2)
