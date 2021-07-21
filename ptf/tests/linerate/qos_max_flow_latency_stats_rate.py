@@ -14,7 +14,6 @@ from trex_test import TRexTest
 from trex_utils import *
 from scapy.layers.all import IP, TCP, UDP, Ether
 from trex_stl_lib.api import *
-
 import qos_utils
 import gnmi_utils
 

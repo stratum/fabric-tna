@@ -22,7 +22,7 @@ L4_DPORT_BEST_EFFORT_TRAFFIC = 1000
 L4_DPORT_SYSTEM_TRAFFIC = 1001
 L4_DPORT_CONTROL_TRAFFIC = 1002
 
-# Returns a packet that
+# Returns a packet that belongs to the control CoS group.
 def get_control_traffic_packet(l2_size=64):
     pkt = Ether(dst=DEST_MAC) / IP() / UDP(dport=L4_DPORT_CONTROL_TRAFFIC) / ("*" * (l2_size - 42))
     assert(len(pkt) == l2_size), "Packet size {} does not match target size {}".format(len(pkt), l2_size)
