@@ -2753,8 +2753,6 @@ class IntTest(IPv4UnicastTest):
     def set_up_watchlist_flow(
         self, ipv4_src=None, ipv4_dst=None, sport=None, dport=None, collector_action=False
     ):
-        ipv4_src_ = ipv4_to_binary(ipv4_src)
-        ipv4_dst_ = ipv4_to_binary(ipv4_dst)
         ipv4_mask = ipv4_to_binary("255.255.255.255")
         # Use full range of TCP/UDP ports by default.
         sport_low = stringify(0, 2)
@@ -2780,8 +2778,10 @@ class IntTest(IPv4UnicastTest):
 
         matches = [self.Exact("ipv4_valid", stringify(1, 1))]
         if ipv4_src:
+            ipv4_src_ = ipv4_to_binary(ipv4_src)
             matches.append(self.Ternary("ipv4_src", ipv4_src_, ipv4_mask))
         if ipv4_dst:
+            ipv4_dst_ = ipv4_to_binary(ipv4_dst)
             matches.append(self.Ternary("ipv4_dst", ipv4_dst_, ipv4_mask))
         if sport_low != lower_bound or sport_high != upper_bound:
             matches.append(self.Range("l4_sport", sport_low, sport_high))
