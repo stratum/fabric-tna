@@ -73,7 +73,9 @@ public class IntManager {
         deviceService.addListener(deviceListener);
         Streams.stream(deviceService.getAvailableDevices()).forEach(this::initDevice);
         IntReportConfig config = netcfgService.getConfig(appId, IntReportConfig.class);
-        Streams.stream(deviceService.getAvailableDevices()).forEach(device -> setUpIntConfig(config, device));
+        if (config != null) {
+            Streams.stream(deviceService.getAvailableDevices()).forEach(device -> setUpIntConfig(config, device));
+        }
         log.info("Started");
     }
 
@@ -87,25 +89,24 @@ public class IntManager {
         log.info("Stopped");
     }
 
-    private boolean isIntProgrammable(Device device) {
-        return device != null && device.is(IntProgrammable.class);
+    private boolean checkDevice(Device device) {
+        return device.is(IntProgrammable.class) && mastershipService.isLocalMaster(device.id());
     }
 
     private void initDevice(Device device) {
-        if (device != null && isIntProgrammable(device) && mastershipService.isLocalMaster(device.id())) {
-            device.as(IntProgrammable.class).init();
+        if (checkDevice(device) && !device.as(IntProgrammable.class).init()) {
+            log.warn("Failed to initialize {}", device.id());
         }
     }
 
     private void cleanupDevice(Device device) {
-        if (device != null && isIntProgrammable(device) && mastershipService.isLocalMaster(device.id())) {
-            device.as(IntProgrammable.class).cleanup();
+        if (checkDevice(device) && !device.as(IntProgrammable.class).cleanup()) {
+            log.warn("Failed to cleanup {}", device.id());
         }
     }
 
     private void setUpIntConfig(IntReportConfig config, Device device) {
-        if (isIntProgrammable(device) && mastershipService.isLocalMaster(device.id())
-                && !device.as(IntProgrammable.class).setUpIntConfig(config)) {
+        if (checkDevice(device) && !device.as(IntProgrammable.class).setUpIntConfig(config)) {
             log.warn("Failed to set up INT report config for device {}", device.id());
         }
     }
@@ -144,8 +145,8 @@ public class IntManager {
                     case DEVICE_UPDATED:
                     case DEVICE_AVAILABILITY_CHANGED:
                         IntReportConfig config = netcfgService.getConfig(appId, IntReportConfig.class);
+                        Device device = event.subject();
                         if (config != null) {
-                            Device device = event.subject();
                             initDevice(device);
                             setUpIntConfig(config, device);
                         }

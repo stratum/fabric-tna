@@ -219,10 +219,10 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
     }
 
     @Override
-    public void cleanup() {
+    public boolean cleanup() {
 
         if (!setupBehaviour()) {
-            return;
+            return false;
         }
 
         StreamSupport.stream(flowRuleService.getFlowEntries(
@@ -230,6 +230,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 .filter(f -> TABLES_TO_CLEANUP.contains(f.table()))
                 .forEach(flowRuleService::removeFlowRules);
 
+        return true;
         // FIXME: saw issue with clone groups disappearing when inserting.deleting watchlist rules
         // for (final Integer reportSessionId : REPORT_MIRROR_SESSION_ID_LIST) {
         //     final var groupKey = new DefaultGroupKey(

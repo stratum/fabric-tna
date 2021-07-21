@@ -81,11 +81,11 @@ import static org.easymock.EasyMock.verify;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 import static org.onosproject.net.group.DefaultGroupBucket.createCloneGroupBucket;
 import static org.slf4j.LoggerFactory.getLogger;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.KRYO;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.doCareRangeMatch;
+import static org.stratumproject.fabric.tna.inbandtelemetry.IntManagerTest.getIntReportConfig;
 
 /**
  * Tests for fabric INT programmable behaviour.
@@ -127,7 +127,6 @@ public class FabricIntProgrammableTest {
     private static final MacAddress SWITCH_MAC = MacAddress.valueOf("00:00:00:00:01:80");
     private static final long DEFAULT_QUEUE_REPORT_LATENCY_THRESHOLD = 2000; // ns
     private static final byte MAX_QUEUES = 32;
-    private static final String INT_REPORT_CONFIG_KEY = "report";
 
     private FabricIntProgrammable intProgrammable;
     private FlowRuleService flowRuleService;
@@ -911,19 +910,5 @@ public class FabricIntProgrammableTest {
             .fromApp(APP_ID)
             .withPriority(DEFAULT_PRIORITY)
             .build();
-    }
-
-    private IntReportConfig getIntReportConfig(String filename) {
-        IntReportConfig config = new IntReportConfig();
-        InputStream jsonStream = getClass().getResourceAsStream(filename);
-        ObjectMapper mapper = new ObjectMapper();
-        JsonNode jsonNode;
-        try {
-            jsonNode = mapper.readTree(jsonStream);
-            config.init(APP_ID, INT_REPORT_CONFIG_KEY, jsonNode, mapper, c -> { });
-        } catch (Exception e) {
-            fail("Got error when reading file " + filename + " : " + e.getMessage());
-        }
-        return config;
     }
 }

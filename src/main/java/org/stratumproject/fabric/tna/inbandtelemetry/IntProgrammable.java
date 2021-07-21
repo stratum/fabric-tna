@@ -17,8 +17,10 @@ public interface IntProgrammable extends HandlerBehaviour {
 
     /**
      * Clean up any INT-related configuration from the device.
+     *
+     * @return true if successful, false otherwise
      */
-    void cleanup();
+    boolean cleanup();
 
     /**
      * Set up report-related configuration.
