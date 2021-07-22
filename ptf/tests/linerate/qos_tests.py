@@ -108,7 +108,7 @@ class MinFlowrateWithSoftwareLatencyMeasurement(QosTest):
         stats = self.trex_client.get_stats()
         lat_stats = get_latency_stats(self.control_pg_id, stats)
         flow_stats = get_flow_stats(self.control_pg_id, stats)
-        print(get_readable_latency_stats(self.control_pg_id, lat_stats))
+        print(get_readable_latency_stats(lat_stats))
         tx_bps_L1 = stats[BACKGROUND_SENDER_PORT[0]].get("tx_bps_L1", 0)
         rx_bps_L1 = stats[RECEIVER_PORT[0]].get("rx_bps_L1", 0)
         # Get statistics for TX and RX ports
@@ -146,7 +146,7 @@ class StrictPriorityControlTrafficIsPrioritized(QosTest):
         stats = self.trex_client.get_stats()
         lat_stats = get_latency_stats(self.control_pg_id, stats)
         flow_stats = get_flow_stats(self.control_pg_id, stats)
-        print(get_readable_latency_stats(self.control_pg_id, lat_stats))
+        print(get_readable_latency_stats(lat_stats))
         # Get statistics for TX and RX ports
         for port in ALL_PORTS:
             readable_stats = get_readable_port_stats(stats[port])
@@ -183,7 +183,7 @@ class StrictPriorityCounterCheck(QosTest):
         stats = self.trex_client.get_stats()
         lat_stats = get_latency_stats(self.control_pg_id, stats)
         flow_stats = get_flow_stats(self.control_pg_id, stats)
-        print(get_readable_latency_stats(self.control_pg_id, lat_stats))
+        print(get_readable_latency_stats(lat_stats))
         # Get statistics for TX and RX ports
         for port in ALL_PORTS:
             readable_stats = get_readable_port_stats(stats[port])

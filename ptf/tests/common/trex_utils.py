@@ -141,7 +141,7 @@ def get_latency_stats(pg_id: int, stats) -> LatencyStats:
     )
     return ret
 
-def get_readable_latency_stats(pg_id: int, stats: LatencyStats) -> str:
+def get_readable_latency_stats(stats: LatencyStats) -> str:
     histogram = ""
     l = list(stats.histogram.keys()) # need to listify in order to be able to sort them.
     l.sort()
@@ -155,7 +155,7 @@ def get_readable_latency_stats(pg_id: int, stats: LatencyStats) -> str:
         histogram = histogram + "\n        Packets with latency between {0:>4} us and {1:>4} us: {2:>10}".format(range_start, range_end, val)
 
     return f"""
-    Latency info for pg_id {pg_id}
+    Latency info for pg_id {stats.pg_id}
     Dropped packets: {stats.dropped}
     Out-of-order packets: {stats.out_of_order}
     Sequence too high packets: {stats.seq_too_high}
