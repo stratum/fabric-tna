@@ -45,9 +45,9 @@ class QosTest(TRexTest, SlicingTest):
         gnmi_utils.push_chassis_config(chassis_config)
 
     def setup_basic_forwarding(self) -> None:
-        self.setup_port(self.port1, DEFAULT_VLAN, PORT_TYPE_INFRA)
-        self.setup_port(self.port2, DEFAULT_VLAN, PORT_TYPE_INFRA)
-        self.setup_port(self.port3, DEFAULT_VLAN, PORT_TYPE_INFRA)
+        self.setup_port(self.port1, DEFAULT_VLAN, PORT_TYPE_EDGE)
+        self.setup_port(self.port2, DEFAULT_VLAN, PORT_TYPE_EDGE)
+        self.setup_port(self.port3, DEFAULT_VLAN, PORT_TYPE_EDGE)
         self.add_forwarding_acl_set_output_port(self.port2, ig_port=self.port1)
         self.add_forwarding_acl_set_output_port(self.port2, ig_port=self.port3)
 
@@ -115,13 +115,10 @@ class MinFlowrateWithSoftwareLatencyMeasurement(QosTest):
             readable_stats = get_readable_port_stats(stats[port])
             print("Statistics for port {}: {}".format(port, readable_stats))
         # Check that expected traffic rate can be achieved.
-        assert(lat_stats.total_rx > 0), "No control traffic has been received"
-        assert(
-            EXPECTED_FLOW_RATE_WITH_STATS_BPS * 0.99 <= tx_bps_L1
-        ), "The achieved Tx rate {} is lower than the expected Tx rate of {}".format(to_readable(tx_bps_L1), to_readable(EXPECTED_FLOW_RATE_WITH_STATS_BPS))
-        assert(
-            EXPECTED_FLOW_RATE_WITH_STATS_BPS * 0.95 <= rx_bps_L1 <= EXPECTED_FLOW_RATE_WITH_STATS_BPS * 1.05
-        ), "The measured RX rate {} is not close to the TX rate {}".format(to_readable(rx_bps_L1), to_readable(EXPECTED_FLOW_RATE_WITH_STATS_BPS))
+        self.assertGreater(lat_stats.total_rx, 0, "No control traffic has been received")
+        self.assertGreaterEqual(tx_bps_L1, EXPECTED_FLOW_RATE_WITH_STATS_BPS * 0.99, "The achieved Tx rate {} is lower than the expected Tx rate of {}".format(to_readable(tx_bps_L1), to_readable(EXPECTED_FLOW_RATE_WITH_STATS_BPS)))
+        self.assertGreaterEqual(rx_bps_L1, EXPECTED_FLOW_RATE_WITH_STATS_BPS * 0.95, "The measured RX rate {} is lower than the expected TX rate {}".format(to_readable(rx_bps_L1), to_readable(EXPECTED_FLOW_RATE_WITH_STATS_BPS)))
+        self.assertLessEqual(rx_bps_L1, EXPECTED_FLOW_RATE_WITH_STATS_BPS * 1.05, "The measured RX rate {} is higher than the expected TX rate {}".format(to_readable(rx_bps_L1), to_readable(EXPECTED_FLOW_RATE_WITH_STATS_BPS)))
 
 
 class StrictPriorityControlTrafficIsPrioritized(QosTest):
@@ -153,11 +150,12 @@ class StrictPriorityControlTrafficIsPrioritized(QosTest):
             readable_stats = get_readable_port_stats(stats[port])
             print("Statistics for port {}: {}".format(port, readable_stats))
         # Check that SLAs are met.
-        assert(lat_stats.total_rx > 0), "No control traffic has been received"
-        assert(lat_stats.dropped == 0), f"Control traffic has been dropped: {lat_stats.dropped}"
-        assert(lat_stats.seq_too_high == 0 and lat_stats.seq_too_low == 0), f"Control traffic has been dropped or reordered: {lat_stats.seq_too_high}, {lat_stats.seq_too_low}"
-        assert(lat_stats.total_max <= MAXIMUM_EXPECTED_LATENCY_CONTROL_TRAFFIC_US), f"Maximum latency in control traffic is too high: {lat_stats.total_max}"
-        assert(lat_stats.average <= AVERAGE_EXPECTED_LATENCY_CONTROL_TRAFFIC_US), f"Average latency in control traffic is too high: {lat_stats.average}"
+        self.assertGreater(lat_stats.total_rx, 0, "No control traffic has been received")
+        self.assertEqual(lat_stats.dropped, 0, f"Control traffic has been dropped: {lat_stats.dropped}")
+        self.assertEqual(lat_stats.seq_too_high, 0, f"Control traffic has been dropped or reordered: {lat_stats.seq_too_high}")
+        self.assertEqual(lat_stats.seq_too_low, 0, f"Control traffic has been dropped or reordered: {lat_stats.seq_too_low}")
+        self.assertLessEqual(lat_stats.total_max, MAXIMUM_EXPECTED_LATENCY_CONTROL_TRAFFIC_US, f"Maximum latency in control traffic is too high: {lat_stats.total_max}")
+        self.assertLessEqual(lat_stats.average, AVERAGE_EXPECTED_LATENCY_CONTROL_TRAFFIC_US, f"Average latency in control traffic is too high: {lat_stats.average}")
 
 
 class StrictPriorityCounterCheck(QosTest):
@@ -188,8 +186,8 @@ class StrictPriorityCounterCheck(QosTest):
             readable_stats = get_readable_port_stats(stats[port])
             print("Statistics for port {}: {}".format(port, readable_stats))
         # Check that SLAs are NOT met.
-        assert(lat_stats.total_rx > 0), "No control traffic has been received"
-        assert(lat_stats.dropped > 0), f"Control traffic has not been dropped: {lat_stats.dropped}"
-        assert(lat_stats.seq_too_high > 0 or lat_stats.seq_too_low > 0), f"Control traffic has not been dropped or reordered: {lat_stats.seq_too_high}, {lat_stats.seq_too_low}"
-        assert(lat_stats.total_max >= MAXIMUM_EXPECTED_LATENCY_CONTROL_TRAFFIC_US), f"Maximum latency in control traffic is not over the expected limit: {lat_stats.total_max}"
-        assert(lat_stats.average >= AVERAGE_EXPECTED_LATENCY_CONTROL_TRAFFIC_US), f"Average latency in control traffic not over the expected limit: {lat_stats.average}"
+        self.assertGreater(lat_stats.total_rx, 0, "No control traffic has been received")
+        self.assertGreater(lat_stats.dropped, 0, f"Control traffic has not been dropped: {lat_stats.dropped}")
+        self.assertGreater(lat_stats.seq_too_high + lat_stats.seq_too_low, 0, f"Control traffic has not been dropped or reordered: sequence to high {lat_stats.seq_too_high}, sequence to low {lat_stats.seq_too_low}")
+        self.assertGreaterEqual(lat_stats.total_max, MAXIMUM_EXPECTED_LATENCY_CONTROL_TRAFFIC_US, f"Maximum latency in control traffic is not over the expected limit: {lat_stats.total_max}")
+        self.assertGreaterEqual(lat_stats.average, AVERAGE_EXPECTED_LATENCY_CONTROL_TRAFFIC_US, f"Average latency in control traffic not over the expected limit: {lat_stats.average}")

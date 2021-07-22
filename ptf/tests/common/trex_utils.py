@@ -154,6 +154,8 @@ def get_readable_latency_stats(pg_id: int, stats: LatencyStats) -> str:
     Latency info for pg_id {pg_id}
     Dropped packets: {stats.dropped}
     Out-of-order packets: {stats.out_of_order}
+    Sequence too high packets: {stats.seq_too_high}
+    Sequence too low packets: {stats.seq_too_low}
     Maximum latency: {stats.total_max} us
     Minimum latency: {stats.total_min} us
     Maximum latency in last sampling period: {stats.last_max} us
