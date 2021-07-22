@@ -12,13 +12,13 @@ from xnt import analyze_report_pcap
 TRAFFIC_MULT = 1 # 1x speed
 TEST_DURATION = 10
 CAPTURE_LIMIT = 1000
-TOTAL_FLOWS = 1
+TOTAL_FLOWS = 921458
 REMOTE_PCAP_DIR = "/srv/packet-traces/CAIDA_traces_passive-2016_equinix-chicago/equinix-chicago/20160121-130000/"
 REMOTE_PCAP_FILE = "equinix-chicago.dirA.20160121-130000.UTC.anon.no-fragment.pcap"
 
 SENDER_PORT = 0
-RECEIVER_PORT = 2
-INT_COLLECTOR_PORT = 3
+RECEIVER_PORT = 1
+INT_COLLECTOR_PORT = 2
 
 
 class RealTrafficTrace(TRexTest, IntTest):
@@ -59,9 +59,7 @@ class RealTrafficTrace(TRexTest, IntTest):
             pcap_file,
             ports=[SENDER_PORT],
             speedup=mult,
-            duration=TEST_DURATION,
-            src_mac_pcap=True,
-            dst_mac_pcap=False
+            duration=TEST_DURATION
         )
         self.trex_client.wait_on_traffic(ports=[SENDER_PORT])
 
