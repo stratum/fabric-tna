@@ -107,6 +107,7 @@ class MinFlowrateWithSoftwareLatencyMeasurement(QosTest):
         # Get latency stats
         stats = self.trex_client.get_stats()
         lat_stats = get_latency_stats(self.control_pg_id, stats)
+        flow_stats = get_flow_stats(self.control_pg_id, stats)
         print(get_readable_latency_stats(self.control_pg_id, lat_stats))
         tx_bps_L1 = stats[BACKGROUND_SENDER_PORT[0]].get("tx_bps_L1", 0)
         rx_bps_L1 = stats[RECEIVER_PORT[0]].get("rx_bps_L1", 0)
@@ -115,7 +116,7 @@ class MinFlowrateWithSoftwareLatencyMeasurement(QosTest):
             readable_stats = get_readable_port_stats(stats[port])
             print("Statistics for port {}: {}".format(port, readable_stats))
         # Check that expected traffic rate can be achieved.
-        self.assertGreater(lat_stats.total_rx, 0, "No control traffic has been received")
+        self.assertGreater(flow_stats.total_rx, 0, "No control traffic has been received")
         self.assertGreaterEqual(tx_bps_L1, EXPECTED_FLOW_RATE_WITH_STATS_BPS * 0.99, "The achieved Tx rate {} is lower than the expected Tx rate of {}".format(to_readable(tx_bps_L1), to_readable(EXPECTED_FLOW_RATE_WITH_STATS_BPS)))
         self.assertGreaterEqual(rx_bps_L1, EXPECTED_FLOW_RATE_WITH_STATS_BPS * 0.95, "The measured RX rate {} is lower than the expected TX rate {}".format(to_readable(rx_bps_L1), to_readable(EXPECTED_FLOW_RATE_WITH_STATS_BPS)))
         self.assertLessEqual(rx_bps_L1, EXPECTED_FLOW_RATE_WITH_STATS_BPS * 1.05, "The measured RX rate {} is higher than the expected TX rate {}".format(to_readable(rx_bps_L1), to_readable(EXPECTED_FLOW_RATE_WITH_STATS_BPS)))
@@ -144,13 +145,14 @@ class StrictPriorityControlTrafficIsPrioritized(QosTest):
         # Get latency stats
         stats = self.trex_client.get_stats()
         lat_stats = get_latency_stats(self.control_pg_id, stats)
+        flow_stats = get_flow_stats(self.control_pg_id, stats)
         print(get_readable_latency_stats(self.control_pg_id, lat_stats))
         # Get statistics for TX and RX ports
         for port in ALL_PORTS:
             readable_stats = get_readable_port_stats(stats[port])
             print("Statistics for port {}: {}".format(port, readable_stats))
         # Check that SLAs are met.
-        self.assertGreater(lat_stats.total_rx, 0, "No control traffic has been received")
+        self.assertGreater(flow_stats.total_rx, 0, "No control traffic has been received")
         self.assertEqual(lat_stats.dropped, 0, f"Control traffic has been dropped: {lat_stats.dropped}")
         self.assertEqual(lat_stats.seq_too_high, 0, f"Control traffic has been dropped or reordered: {lat_stats.seq_too_high}")
         self.assertEqual(lat_stats.seq_too_low, 0, f"Control traffic has been dropped or reordered: {lat_stats.seq_too_low}")
@@ -180,13 +182,14 @@ class StrictPriorityCounterCheck(QosTest):
         # Get latency stats
         stats = self.trex_client.get_stats()
         lat_stats = get_latency_stats(self.control_pg_id, stats)
+        flow_stats = get_flow_stats(self.control_pg_id, stats)
         print(get_readable_latency_stats(self.control_pg_id, lat_stats))
         # Get statistics for TX and RX ports
         for port in ALL_PORTS:
             readable_stats = get_readable_port_stats(stats[port])
             print("Statistics for port {}: {}".format(port, readable_stats))
         # Check that SLAs are NOT met.
-        self.assertGreater(lat_stats.total_rx, 0, "No control traffic has been received")
+        self.assertGreater(flow_stats.total_rx, 0, "No control traffic has been received")
         self.assertGreater(lat_stats.dropped, 0, f"Control traffic has not been dropped: {lat_stats.dropped}")
         self.assertGreater(lat_stats.seq_too_high + lat_stats.seq_too_low, 0, f"Control traffic has not been dropped or reordered: sequence to high {lat_stats.seq_too_high}, sequence to low {lat_stats.seq_too_low}")
         self.assertGreaterEqual(lat_stats.total_max, MAXIMUM_EXPECTED_LATENCY_CONTROL_TRAFFIC_US, f"Maximum latency in control traffic is not over the expected limit: {lat_stats.total_max}")

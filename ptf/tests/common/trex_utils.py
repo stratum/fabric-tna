@@ -100,14 +100,13 @@ def list_port_status(port_status: dict) -> None:
         logging.info("States from port {}: \n{}".format(port, readable_stats))
 
 LatencyStats = collections.namedtuple("LatencyStats", [
+    "pg_id",
     "jitter",
     "average",
     "total_max",
     "total_min",
     "last_max",
     "histogram",
-    "total_tx",
-    "total_rx",
     "dropped",
     "out_of_order",
     "duplicate",
@@ -115,20 +114,25 @@ LatencyStats = collections.namedtuple("LatencyStats", [
     "seq_too_low",
 ])
 
+FlowStats = collections.namedtuple("FlowStats", [
+    "pg_id",
+    "total_tx",
+    "total_rx",
+    "tx_bytes",
+    "rx_bytes",
+])
+
 def get_latency_stats(pg_id: int, stats) -> LatencyStats:
-    flow_stats = stats["flow_stats"].get(pg_id)
     lat_stats = stats['latency'].get(pg_id)
     lat = lat_stats['latency']
-
     ret = LatencyStats(
+        pg_id = pg_id,
         jitter = lat['jitter'],
         average = lat['average'],
         total_max = lat['total_max'],
         total_min = lat['total_min'],
         last_max = lat['last_max'],
         histogram = lat['histogram'],
-        total_tx = flow_stats['tx_pkts']['total'],
-        total_rx = flow_stats['rx_pkts']['total'],
         dropped = lat_stats['err_cntrs']['dropped'],
         out_of_order = lat_stats['err_cntrs']['out_of_order'],
         duplicate = lat_stats['err_cntrs']['dup'],
@@ -163,6 +167,17 @@ def get_readable_latency_stats(pg_id: int, stats: LatencyStats) -> str:
     Jitter: {stats.jitter} us
     Latency distribution histogram: {histogram}
     """
+
+def get_flow_stats(pg_id: int, stats) -> FlowStats:
+    flow_stats = stats["flow_stats"].get(pg_id)
+    ret = FlowStats(
+        pg_id = pg_id,
+        total_tx = flow_stats['tx_pkts']['total'],
+        total_rx = flow_stats['rx_pkts']['total'],
+        tx_bytes = flow_stats['tx_bytes']['total'],
+        rx_bytes = flow_stats['rx_bytes']['total'],
+    )
+    return ret
 
 class ParseExtendArgAction(argparse.Action):
     def __init__(self, option_strings, dest, nargs=None, **kwargs):
