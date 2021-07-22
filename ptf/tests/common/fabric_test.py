@@ -287,6 +287,10 @@ SOURCE_OPTIONS = ["host", "leaf", "spine"]
 DEVICE_OPTIONS = ["leaf", "spine"]
 DEST_OPTIONS = ["host", "leaf", "spine"]
 
+COLOR_GREEN = 0
+COLOR_YELLOW = 1
+COLOR_RED = 3
+
 # Implements helper function for SCTP as PTF does not provide one.
 def simple_sctp_packet(
     pktlen=100,
@@ -1184,29 +1188,33 @@ class FabricTest(P4RuntimeTest):
             )
 
     def build_acl_matches(
-        self, ipv4_src=None, ipv4_dst=None, ip_proto=None, l4_sport=None, l4_dport=None,
+        self, ipv4_src=None, ipv4_dst=None, ip_proto=None, l4_sport=None, l4_dport=None, ig_port=None
     ):
         matches = []
-        if ipv4_src:
+        if ipv4_src is not None:
             ipv4_src_ = ipv4_to_binary(ipv4_src)
             ipv4_src_mask = stringify(0xFFFFFFFF, 4)
             matches.append(self.Ternary("ipv4_src", ipv4_src_, ipv4_src_mask))
-        if ipv4_dst:
+        if ipv4_dst is not None:
             ipv4_dst_ = ipv4_to_binary(ipv4_dst)
             ipv4_dst_mask = stringify(0xFFFFFFFF, 4)
             matches.append(self.Ternary("ipv4_dst", ipv4_dst_, ipv4_dst_mask))
-        if ip_proto:
+        if ip_proto is not None:
             ip_proto_ = stringify(ip_proto, 1)
             ip_proto_mask = stringify(0xFF, 1)
             matches.append(self.Ternary("ip_proto", ip_proto_, ip_proto_mask))
-        if l4_sport:
+        if l4_sport is not None:
             l4_sport_ = stringify(l4_sport, 2)
             l4_sport_mask = stringify(0xFFFF, 2)
             matches.append(self.Ternary("l4_sport", l4_sport_, l4_sport_mask))
-        if l4_dport:
+        if l4_dport is not None:
             l4_dport_ = stringify(l4_dport, 2)
             l4_dport_mask = stringify(0xFFFF, 2)
             matches.append(self.Ternary("l4_dport", l4_dport_, l4_dport_mask))
+        if ig_port is not None:
+            ig_port_ = stringify(ig_port, 2)
+            ig_port_mask = stringify(0x01FF, 2)
+            matches.append(self.Ternary("ig_port", ig_port_, ig_port_mask))
         return matches
 
     def add_forwarding_acl_next(
@@ -2962,11 +2970,7 @@ class IntTest(IPv4UnicastTest):
             matches.append(self.Range("l4_dport", dport_low, dport_high))
 
         self.send_request_add_entry_to_action(
-            "watchlist",
-            matches,
-            action,
-            [],
-            priority=DEFAULT_PRIORITY,
+            "watchlist", matches, action, [], priority=DEFAULT_PRIORITY,
         )
 
     def build_int_local_report(
@@ -3174,10 +3178,14 @@ class IntTest(IPv4UnicastTest):
         def set_up_queue_report_table_internal(upper, lower, action):
             # Omit dont'care matches
             matches = [self.Exact("egress_qid", stringify(queue_id, 1))]
-            if upper[0] != 0 or upper[1] != 0xffff:
-                matches.append(self.Range("hop_latency_upper", *[stringify(v, 2) for v in upper]))
-            if lower[0] != 0 or lower[1] != 0xffff:
-                matches.append(self.Range("hop_latency_lower", *[stringify(v, 2) for v in lower]))
+            if upper[0] != 0 or upper[1] != 0xFFFF:
+                matches.append(
+                    self.Range("hop_latency_upper", *[stringify(v, 2) for v in upper])
+                )
+            if lower[0] != 0 or lower[1] != 0xFFFF:
+                matches.append(
+                    self.Range("hop_latency_lower", *[stringify(v, 2) for v in lower])
+                )
             self.send_request_add_entry_to_action(
                 "FabricEgress.int_egress.queue_latency_thresholds",
                 matches,
@@ -3355,13 +3363,13 @@ class IntTest(IPv4UnicastTest):
             SWITCH_IPV4,
             INT_COLLECTOR_IPV4,
             ig_port,
-            0, # egress port will be unset
+            0,  # egress port will be unset
             drop_reason,
             SWITCH_ID,
             int_inner_pkt,
             is_device_spine,
             send_report_to_spine,
-            ig_port >> 7, # hw_id
+            ig_port >> 7,  # hw_id
         )
 
         install_routing_entry = True
@@ -3447,7 +3455,7 @@ class IntTest(IPv4UnicastTest):
             int_inner_pkt,
             is_device_spine,
             send_report_to_spine,
-            eg_port >> 7, # hw_id
+            eg_port >> 7,  # hw_id
         )
 
         # Set collector, report table, and mirror sessions
@@ -3848,7 +3856,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             int_inner_pkt,
             is_device_spine,
             send_report_to_spine,
-            eg_port >> 7, # hw_id
+            eg_port >> 7,  # hw_id
         )
 
         # Set collector, report table, and mirror sessions
@@ -3935,7 +3943,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             int_inner_pkt,
             is_device_spine,
             send_report_to_spine,
-            eg_port >> 7, # hw_id
+            eg_port >> 7,  # hw_id
         )
 
         # Set collector, report table, and mirror sessions
@@ -4245,3 +4253,56 @@ class PppoeTest(DoubleVlanTerminationTest):
             self.assertGreaterEqual(new_tx_count, old_tx_count + len(pkt))
         else:
             self.assertEqual(new_tx_count, old_tx_count)
+
+
+class SlicingTest(FabricTest):
+    """Mixin class with methods to manipulate QoS entities
+    """
+
+    def slice_tc_index(self, slice_id, tc):
+        return (slice_id << 4) + tc
+
+    def add_slice_tc_classifier_entry(self, slice_id, tc, **ftuple):
+        return self.send_request_add_entry_to_action(
+            "FabricIngress.slice_tc_classifier.classifier",
+            self.build_acl_matches(**ftuple),
+            "FabricIngress.slice_tc_classifier.set_slice_id_tc",
+            [("slice_id", stringify(slice_id, 1)), ("tc", stringify(tc, 1))],
+            DEFAULT_PRIORITY,
+        )
+
+    def configure_slice_tc_meter(self, slice_id, tc, cir, cburst, pir, pburst):
+        return self.write_indirect_meter(
+            m_name="FabricIngress.qos.slice_tc_meter",
+            m_index=self.slice_tc_index(slice_id, tc),
+            cir=cir,
+            cburst=cburst,
+            pir=pir,
+            pburst=pburst,
+        )
+
+    def add_queue_entry(self, slice_id, tc, qid=None, color=None):
+        matches = [
+            self.Exact("slice_id", stringify(slice_id, 1)),
+            self.Exact("tc", stringify(tc, 1)),
+        ]
+        if color is not None:
+            matches.append(
+                self.Ternary("color", stringify(color, 1), stringify(0x3, 1))
+            )
+        if qid is not None:
+            action = "FabricIngress.qos.set_queue"
+            action_params = [("qid", stringify(qid, 1))]
+        else:
+            action = "FabricIngress.qos.meter_drop"
+            action_params = []
+        return self.send_request_add_entry_to_action(
+            "FabricIngress.qos.queues",
+            matches,
+            action,
+            action_params,
+            DEFAULT_PRIORITY,
+        )
+
+    def enable_policing(self, slice_id, tc, color=COLOR_RED):
+        return self.add_queue_entry(slice_id, tc, None, color=color)
