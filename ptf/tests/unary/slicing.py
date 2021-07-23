@@ -5,7 +5,6 @@ from base_test import autocleanup, tvsetup
 from fabric_test import *  # noqa
 from scapy.layers.inet import IP
 
-
 class IPv4UnicastWithPolicingTest(SlicingTest, IPv4UnicastTest):
     """Tests QoS policer. This is mostly a dummmy test class to verify basic programming of
     QoS-related entities. Most of the QoS tests should use linerate traffic generation. """
