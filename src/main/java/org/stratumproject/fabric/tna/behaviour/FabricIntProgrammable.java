@@ -587,6 +587,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 .withId(P4InfoConstants.FABRIC_INGRESS_INT_WATCHLIST_NO_REPORT_COLLECTOR).build();
         // Remove old flow
         Streams.stream(flowRuleService.getFlowEntriesById(appId))
+                .filter(entry -> entry.deviceId().equals(deviceId))
                 .filter(entry -> entryWithActionId(entry, watchlistAction.id()))
                 .forEach(flowRuleService::removeFlowRules);
 
@@ -732,6 +733,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         // Remove old rules.
         final PiActionId reportActionId = P4InfoConstants.FABRIC_INGRESS_INT_WATCHLIST_MARK_TO_REPORT;
         Streams.stream(flowRuleService.getFlowEntriesById(appId))
+                .filter(entry -> entry.deviceId().equals(deviceId))
                 .filter(entry -> entryWithActionId(entry, reportActionId))
                 .forEach(flowRuleService::removeFlowRules);
         for (IpPrefix subnet : watchSubnets) {
