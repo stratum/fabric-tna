@@ -3,11 +3,11 @@
 
 package org.stratumproject.fabric.tna.inbandtelemetry;
 
-import java.io.InputStream;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 
 import org.easymock.Capture;
@@ -31,6 +31,7 @@ import org.onosproject.net.config.NetworkConfigService;
 import org.onosproject.net.device.DeviceEvent;
 import org.onosproject.net.device.DeviceListener;
 import org.onosproject.net.device.DeviceService;
+import org.onosproject.segmentrouting.config.SegmentRoutingDeviceConfig;
 
 import static org.easymock.EasyMock.anyObject;
 import static org.easymock.EasyMock.capture;
@@ -39,7 +40,10 @@ import static org.easymock.EasyMock.expectLastCall;
 import static org.easymock.EasyMock.newCapture;
 import static org.easymock.EasyMock.replay;
 import static org.easymock.EasyMock.reset;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.stratumproject.fabric.tna.utils.TestUtils.getIntReportConfig;
+import static org.stratumproject.fabric.tna.utils.TestUtils.getSrConfig;
 
 /**
  * Unit test for the IntManager class.
@@ -50,9 +54,9 @@ public class IntManagerTest extends EasyMockSupport {
     private static final ApplicationId APP_ID = new TestApplicationId(APP_NAME);
     private static final DeviceId DEVICE_ID_1 = DeviceId.deviceId("device:leaf1");
     private static final DeviceId DEVICE_ID_2 = DeviceId.deviceId("device:leaf2");
-    private static final String INT_REPORT_CONFIG_KEY = "report";
-    private static final IntReportConfig INT_CONFIG_1 = getIntReportConfig("/int-report.json");
-    private static final IntReportConfig INT_CONFIG_2 = getIntReportConfig("/int-report-with-subnets.json");
+    private static final IntReportConfig INT_CONFIG_1 = getIntReportConfig(APP_ID, "/int-report.json");
+    private static final IntReportConfig INT_CONFIG_2 = getIntReportConfig(APP_ID, "/int-report-with-subnets.json");
+    private static final SegmentRoutingDeviceConfig SR_CONFIG_1 = getSrConfig(DEVICE_ID_1, "/sr.json");
 
     @Mock
     private CoreService coreService;
@@ -71,20 +75,22 @@ public class IntManagerTest extends EasyMockSupport {
     @TestSubject
     private IntManager intManager = new IntManager();
 
-    private ApplicationId appId;
     private Capture<DeviceListener> deviceListener;
-    private Capture<NetworkConfigListener> netcfgListener;
+    private Capture<NetworkConfigListener> intConfigListener;
+    private Capture<NetworkConfigListener> srConfigListener;
 
     @Before
     public void setUp() {
         expect(mockDevice.id()).andReturn(DEVICE_ID_1).anyTimes();
         expect(mockDevice.is(IntProgrammable.class)).andReturn(true).anyTimes();
         expect(mockDevice.as(IntProgrammable.class)).andReturn(intProgrammable).anyTimes();
-        expect(coreService.registerApplication(APP_NAME)).andReturn(appId).once();
+        expect(coreService.registerApplication(APP_NAME)).andReturn(APP_ID).once();
         netcfgRegistry.registerConfigFactory(anyObject());
         expectLastCall().once();
-        netcfgListener = newCapture();
-        netcfgService.addListener(capture(netcfgListener));
+        intConfigListener = newCapture();
+        netcfgService.addListener(capture(intConfigListener));
+        srConfigListener = newCapture();
+        netcfgService.addListener(capture(srConfigListener));
         deviceListener = newCapture();
         deviceService.addListener(capture(deviceListener));
         expect(deviceService.getAvailableDevices()).andReturn(ImmutableList.of(mockDevice)).anyTimes();
@@ -98,7 +104,7 @@ public class IntManagerTest extends EasyMockSupport {
      */
     @Test
     public void testActivateWithoutConfig() {
-        expect(netcfgService.getConfig(appId, IntReportConfig.class)).andReturn(null).anyTimes();
+        expect(netcfgService.getConfig(APP_ID, IntReportConfig.class)).andReturn(null).anyTimes();
         expect(intProgrammable.init()).andReturn(true).once();
         replay(intProgrammable, netcfgService);
         intManager.activate();
@@ -112,7 +118,8 @@ public class IntManagerTest extends EasyMockSupport {
     public void testDeactivateWithoutConfig() {
         testActivateWithoutConfig();
         reset(netcfgService, deviceService, netcfgRegistry, intProgrammable);
-        netcfgService.removeListener(netcfgListener.getValue());
+        netcfgService.removeListener(intConfigListener.getValue());
+        netcfgService.removeListener(srConfigListener.getValue());
         expectLastCall().once();
         deviceService.removeListener(deviceListener.getValue());
         expectLastCall().once();
@@ -131,7 +138,7 @@ public class IntManagerTest extends EasyMockSupport {
      */
     @Test
     public void testActivateWithConfig() {
-        expect(netcfgService.getConfig(appId, IntReportConfig.class)).andReturn(INT_CONFIG_1).anyTimes();
+        expect(netcfgService.getConfig(APP_ID, IntReportConfig.class)).andReturn(INT_CONFIG_1).anyTimes();
         expect(intProgrammable.init()).andReturn(true).once();
         expect(intProgrammable.setUpIntConfig(INT_CONFIG_1)).andReturn(true).once();
         replay(intProgrammable, netcfgService);
@@ -146,7 +153,8 @@ public class IntManagerTest extends EasyMockSupport {
     public void testDeactivateWithConfig() {
         testActivateWithConfig();
         reset(netcfgService, deviceService, netcfgRegistry, intProgrammable);
-        netcfgService.removeListener(netcfgListener.getValue());
+        netcfgService.removeListener(intConfigListener.getValue());
+        netcfgService.removeListener(srConfigListener.getValue());
         expectLastCall().once();
         deviceService.removeListener(deviceListener.getValue());
         expectLastCall().once();
@@ -164,9 +172,9 @@ public class IntManagerTest extends EasyMockSupport {
      * Test updating the INT configuration with the config listener.
      */
     @Test
-    public void testUpdateConfig() {
+    public void testUpdateIntConfig() {
         testActivateWithoutConfig();
-        NetworkConfigListener listener = netcfgListener.getValue();
+        NetworkConfigListener listener = intConfigListener.getValue();
         CompletableFuture<Void> completableFuture = new CompletableFuture<>();
         reset(intProgrammable);
         expect(intProgrammable.setUpIntConfig(INT_CONFIG_2))
@@ -177,8 +185,44 @@ public class IntManagerTest extends EasyMockSupport {
         replay(intProgrammable);
         NetworkConfigEvent event = new NetworkConfigEvent(NetworkConfigEvent.Type.CONFIG_UPDATED,
                 APP_ID, INT_CONFIG_2, INT_CONFIG_1, IntReportConfig.class);
+        assertTrue(listener.isRelevant(event));
         listener.event(event);
-        completableFuture.join();
+        try {
+            completableFuture.get(1, TimeUnit.SECONDS);
+        } catch (InterruptedException | ExecutionException | TimeoutException e) {
+            fail("Didn't get expected call within 1 second.");
+        }
+        verifyAll();
+    }
+
+    /**
+     * Test updating the segment routing device configuration with the config listener.
+     */
+    @Test
+    public void testUpdateSrConfig() {
+        testActivateWithoutConfig();
+        NetworkConfigListener listener = srConfigListener.getValue();
+        CompletableFuture<Void> completableFuture = new CompletableFuture<>();
+        reset(intProgrammable, netcfgService, deviceService, mastershipService);
+        expect(netcfgService.getConfig(APP_ID, IntReportConfig.class)).andReturn(INT_CONFIG_1).anyTimes();
+        expect(intProgrammable.setUpIntConfig(INT_CONFIG_1))
+                .andAnswer(() -> {
+                    completableFuture.complete(null);
+                    return true;
+                }).once();
+        expect(deviceService.getDevice(DEVICE_ID_1)).andReturn(mockDevice).anyTimes();
+        expect(deviceService.isAvailable(DEVICE_ID_1)).andReturn(true).anyTimes();
+        expect(mastershipService.isLocalMaster(DEVICE_ID_1)).andReturn(true).anyTimes();
+        replay(intProgrammable, netcfgService, deviceService, mastershipService);
+        NetworkConfigEvent event = new NetworkConfigEvent(NetworkConfigEvent.Type.CONFIG_ADDED,
+                APP_ID, SR_CONFIG_1, null, SegmentRoutingDeviceConfig.class);
+        assertTrue(listener.isRelevant(event));
+        listener.event(event);
+        try {
+            completableFuture.get(1, TimeUnit.SECONDS);
+        } catch (InterruptedException | ExecutionException | TimeoutException e) {
+            fail("Didn't get expected call within 1 second.");
+        }
         verifyAll();
     }
 
@@ -204,26 +248,39 @@ public class IntManagerTest extends EasyMockSupport {
         replay(newDevice, newIntProgrammable);
         DeviceEvent deviceEvent = new DeviceEvent(DeviceEvent.Type.DEVICE_ADDED, newDevice);
         listener.event(deviceEvent);
-        completableFuture.join();
+        try {
+            completableFuture.get(1, TimeUnit.SECONDS);
+        } catch (InterruptedException | ExecutionException | TimeoutException e) {
+            fail("Didn't get expected call within 1 second.");
+        }
         verifyAll();
     }
 
     /**
-     * Gets INT report config from a given JSON file.
-     * @param filename the config file path
-     * @return the INT report config
+     * Test activating the INT manager with an INT configuration. but the device is not
+     * managed by this ONOS node.
      */
-    public static IntReportConfig getIntReportConfig(String filename) {
-        IntReportConfig config = new IntReportConfig();
-        InputStream jsonStream = IntManagerTest.class.getResourceAsStream(filename);
-        ObjectMapper mapper = new ObjectMapper();
-        JsonNode jsonNode;
-        try {
-            jsonNode = mapper.readTree(jsonStream);
-            config.init(APP_ID, INT_REPORT_CONFIG_KEY, jsonNode, mapper, c -> { });
-        } catch (Exception e) {
-            fail("Got error when reading file " + filename + " : " + e.getMessage());
-        }
-        return config;
+    @Test
+    public void testActivateWithConfigButDeviceIsNotLocal() {
+        reset(mastershipService);
+        expect(mastershipService.isLocalMaster(anyObject())).andReturn(false).anyTimes();
+        expect(netcfgService.getConfig(APP_ID, IntReportConfig.class)).andReturn(INT_CONFIG_1).anyTimes();
+        replay(intProgrammable, netcfgService, mastershipService);
+        intManager.activate();
+        verifyAll();
+    }
+
+    /**
+     * Test activating the INT manager with an INT configuration. but the device is not
+     * INT programmable.
+     */
+    @Test
+    public void testWithNonIntProgDevice() {
+        reset(mockDevice);
+        expect(mockDevice.is(IntProgrammable.class)).andReturn(false).anyTimes();
+        expect(netcfgService.getConfig(APP_ID, IntReportConfig.class)).andReturn(INT_CONFIG_1).anyTimes();
+        replay(intProgrammable, netcfgService, mockDevice);
+        intManager.activate();
+        verifyAll();
     }
 }

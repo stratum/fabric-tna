@@ -26,6 +26,7 @@ import org.onosproject.net.config.basics.SubjectFactories;
 import org.onosproject.net.device.DeviceEvent;
 import org.onosproject.net.device.DeviceListener;
 import org.onosproject.net.device.DeviceService;
+import org.onosproject.segmentrouting.config.SegmentRoutingDeviceConfig;
 
 import static java.util.concurrent.Executors.newSingleThreadScheduledExecutor;
 import static org.slf4j.LoggerFactory.getLogger;
@@ -54,7 +55,8 @@ public class IntManager {
     private ApplicationId appId;
     private ExecutorService eventExecutor;
     private final NetworkConfigListener intReportConfigListener = new IntReportConfigListener();
-    private final DeviceListener deviceListener = new InternalDeviceListener();
+    private final NetworkConfigListener srConfigListener = new SrConfigListener();
+    private final DeviceListener deviceListener = new IntDeviceListener();
 
     private final ConfigFactory<ApplicationId, IntReportConfig> intAppConfigFactory = new ConfigFactory<>(
             SubjectFactories.APP_SUBJECT_FACTORY, IntReportConfig.class, "report") {
@@ -70,6 +72,7 @@ public class IntManager {
         eventExecutor = newSingleThreadScheduledExecutor(groupedThreads("onos/int", "events-%d", log));
         netcfgRegistry.registerConfigFactory(intAppConfigFactory);
         netcfgService.addListener(intReportConfigListener);
+        netcfgService.addListener(srConfigListener);
         deviceService.addListener(deviceListener);
         Streams.stream(deviceService.getAvailableDevices()).forEach(this::initDevice);
         IntReportConfig config = netcfgService.getConfig(appId, IntReportConfig.class);
@@ -82,6 +85,7 @@ public class IntManager {
     @Deactivate
     public void deactivate() {
         netcfgService.removeListener(intReportConfigListener);
+        netcfgService.removeListener(srConfigListener);
         deviceService.removeListener(deviceListener);
         eventExecutor.shutdown();
         netcfgRegistry.unregisterConfigFactory(intAppConfigFactory);
@@ -138,7 +142,7 @@ public class IntManager {
         }
     }
 
-    private class InternalDeviceListener implements DeviceListener {
+    private class IntDeviceListener implements DeviceListener {
         @Override
         public void event(DeviceEvent event) {
             eventExecutor.execute(() -> {
@@ -156,6 +160,35 @@ public class IntManager {
                         break;
                 }
             });
+        }
+    }
+
+    private class SrConfigListener implements NetworkConfigListener {
+        @Override
+        public void event(NetworkConfigEvent event) {
+            eventExecutor.execute(() -> {
+                switch (event.type()) {
+                    case CONFIG_ADDED:
+                    case CONFIG_UPDATED:
+                        event.config()
+                            .map(SegmentRoutingDeviceConfig.class::cast)
+                            .ifPresent(config -> {
+                                IntReportConfig intConfig = netcfgService.getConfig(appId, IntReportConfig.class);
+                                if (intConfig != null) {
+                                    Device device = deviceService.getDevice(config.subject());
+                                    setUpIntConfig(intConfig, device);
+                                }
+                            });
+                        break;
+                    default:
+                        break;
+                }
+            });
+        }
+
+        @Override
+        public boolean isRelevant(NetworkConfigEvent event) {
+            return event.configClass() == SegmentRoutingDeviceConfig.class;
         }
     }
 }

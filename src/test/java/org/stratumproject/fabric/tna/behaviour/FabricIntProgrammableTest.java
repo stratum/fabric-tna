@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 package org.stratumproject.fabric.tna.behaviour;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -59,8 +57,6 @@ import org.onosproject.segmentrouting.config.SegmentRoutingDeviceConfig;
 import org.stratumproject.fabric.tna.PipeconfLoader;
 import org.stratumproject.fabric.tna.inbandtelemetry.IntReportConfig;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -85,7 +81,8 @@ import static org.onosproject.net.group.DefaultGroupBucket.createCloneGroupBucke
 import static org.slf4j.LoggerFactory.getLogger;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.KRYO;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.doCareRangeMatch;
-import static org.stratumproject.fabric.tna.inbandtelemetry.IntManagerTest.getIntReportConfig;
+import static org.stratumproject.fabric.tna.utils.TestUtils.getIntReportConfig;
+import static org.stratumproject.fabric.tna.utils.TestUtils.getSrConfig;
 
 /**
  * Tests for fabric INT programmable behaviour.
@@ -93,7 +90,7 @@ import static org.stratumproject.fabric.tna.inbandtelemetry.IntManagerTest.getIn
 public class FabricIntProgrammableTest {
     private static final int NODE_SID_IPV4 = 101;
     private static final IpAddress ROUTER_IP = IpAddress.valueOf("10.0.1.254");
-    private static final String SR_CONFIG_KEY = "segmentrouting";
+
     private static final ApplicationId APP_ID =
             TestApplicationId.create(PipeconfLoader.APP_NAME);
     private static final DeviceId LEAF_DEVICE_ID = DeviceId.deviceId("device:1");
@@ -137,7 +134,7 @@ public class FabricIntProgrammableTest {
     private DriverData driverData;
 
     @Before
-    public void setup() throws IOException {
+    public void setup() {
         FabricCapabilities capabilities = createMock(FabricCapabilities.class);
         expect(capabilities.hasHashedTable()).andReturn(true).anyTimes();
         expect(capabilities.supportDoubleVlanTerm()).andReturn(false).anyTimes();
@@ -199,7 +196,7 @@ public class FabricIntProgrammableTest {
     public void testSetupIntConfigWithNoWatchedSubnet() {
         reset(flowRuleService);
         expect(flowRuleService.getFlowEntriesById(APP_ID)).andReturn(ImmutableList.of()).times(2);
-        final IntReportConfig intConfig = getIntReportConfig("/int-report.json");
+        final IntReportConfig intConfig = getIntReportConfig(APP_ID, "/int-report.json");
         ImmutableList<FlowRule> expectRules = ImmutableList.of(
                 buildCollectorWatchlistRule(LEAF_DEVICE_ID),
                 buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_INT_INGRESS_DROP,
@@ -244,7 +241,7 @@ public class FabricIntProgrammableTest {
             buildFlowEntry(buildWatchlistRule(SUBNET_1, Criterion.Type.IPV4_DST))
         );
         expect(flowRuleService.getFlowEntriesById(APP_ID)).andReturn(existsEntries).times(2);
-        final IntReportConfig intConfig = getIntReportConfig("/int-report-with-subnets.json");
+        final IntReportConfig intConfig = getIntReportConfig(APP_ID, "/int-report-with-subnets.json");
         ImmutableList<FlowRule> expectRules = ImmutableList.of(
                 buildCollectorWatchlistRule(LEAF_DEVICE_ID),
                 buildWatchlistRule(null, Criterion.Type.IPV4_SRC), // match any subnet
@@ -304,7 +301,7 @@ public class FabricIntProgrammableTest {
         expect(flowRuleService.getFlowEntriesById(APP_ID))
                 .andReturn(ImmutableList.of(oldFlowEntry))
                 .times(2);
-        final IntReportConfig intConfig = getIntReportConfig("/int-report.json");
+        final IntReportConfig intConfig = getIntReportConfig(APP_ID, "/int-report.json");
         ImmutableList<FlowRule> expectRules = ImmutableList.of(
                 buildCollectorWatchlistRule(LEAF_DEVICE_ID),
                 buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_INT_INGRESS_DROP,
@@ -353,7 +350,7 @@ public class FabricIntProgrammableTest {
         replay(driverData);
         reset(flowRuleService);
         expect(flowRuleService.getFlowEntriesById(APP_ID)).andReturn(ImmutableList.of()).times(2);
-        final IntReportConfig intConfig = getIntReportConfig("/int-report.json");
+        final IntReportConfig intConfig = getIntReportConfig(APP_ID, "/int-report.json");
         ImmutableList<FlowRule> expectRules = ImmutableList.of(
                 buildCollectorWatchlistRule(SPINE_DEVICE_ID),
                 buildReportTableRule(SPINE_DEVICE_ID, true, BMD_TYPE_INT_INGRESS_DROP,
@@ -462,8 +459,11 @@ public class FabricIntProgrammableTest {
         verify(flowRuleService);
     }
 
+    /**
+     * Test with no segment routing config.
+     */
     @Test
-    public void testInvalidConfig() {
+    public void testWithoutValidSrConfig() {
         reset(netcfgService);
         expect(netcfgService.getConfig(LEAF_DEVICE_ID, SegmentRoutingDeviceConfig.class))
                 .andReturn(null).anyTimes();
@@ -471,7 +471,7 @@ public class FabricIntProgrammableTest {
         Capture<FlowRule> capturedRule = newCapture();
         flowRuleService.applyFlowRules(capture(capturedRule));
         replay(netcfgService, flowRuleService);
-        final IntReportConfig intConfig = getIntReportConfig("/int-report.json");
+        final IntReportConfig intConfig = getIntReportConfig(APP_ID, "/int-report.json");
         assertFalse(intProgrammable.setUpIntConfig(intConfig));
         assertTrue(capturedRule.getValue().exactMatch(buildCollectorWatchlistRule(LEAF_DEVICE_ID)));
         // We expected no other flow rules be installed or removed
@@ -490,7 +490,7 @@ public class FabricIntProgrammableTest {
         Capture<FlowRule> capturedRule = newCapture();
         flowRuleService.applyFlowRules(capture(capturedRule));
         replay(driverData, hostService, flowRuleService);
-        final IntReportConfig intConfig = getIntReportConfig("/int-report.json");
+        final IntReportConfig intConfig = getIntReportConfig(APP_ID, "/int-report.json");
         assertFalse(intProgrammable.setUpIntConfig(intConfig));
         assertTrue(capturedRule.getValue().exactMatch(buildCollectorWatchlistRule(SPINE_DEVICE_ID)));
         // We expect no flow rules be installed
@@ -511,7 +511,7 @@ public class FabricIntProgrammableTest {
         Capture<FlowRule> capturedRule = newCapture();
         flowRuleService.applyFlowRules(capture(capturedRule));
         replay(driverData, hostService, flowRuleService);
-        final IntReportConfig intConfig = getIntReportConfig("/int-report.json");
+        final IntReportConfig intConfig = getIntReportConfig(APP_ID, "/int-report.json");
         assertFalse(intProgrammable.setUpIntConfig(intConfig));
         assertTrue(capturedRule.getValue().exactMatch(buildCollectorWatchlistRule(SPINE_DEVICE_ID)));
         verify(flowRuleService);
@@ -522,7 +522,7 @@ public class FabricIntProgrammableTest {
      * the segment routing config of the leaf.
      */
     @Test
-    public void testSetUpSpineButNoLeafConfig() throws IOException {
+    public void testSetUpSpineButNoLeafConfig() {
         reset(driverData, netcfgService);
         expect(driverData.deviceId()).andReturn(SPINE_DEVICE_ID).anyTimes();
         expect(netcfgService.getConfig(LEAF_DEVICE_ID, SegmentRoutingDeviceConfig.class))
@@ -533,7 +533,7 @@ public class FabricIntProgrammableTest {
         Capture<FlowRule> capturedRule = newCapture();
         flowRuleService.applyFlowRules(capture(capturedRule));
         replay(driverData, flowRuleService, netcfgService);
-        final IntReportConfig intConfig = getIntReportConfig("/int-report.json");
+        final IntReportConfig intConfig = getIntReportConfig(APP_ID, "/int-report.json");
         assertFalse(intProgrammable.setUpIntConfig(intConfig));
         assertTrue(capturedRule.getValue().exactMatch(buildCollectorWatchlistRule(SPINE_DEVICE_ID)));
         verify(flowRuleService);
@@ -544,7 +544,7 @@ public class FabricIntProgrammableTest {
      * of leaf is invalid.
      */
     @Test
-    public void testSetUpSpineButInvalidLeafConfig() throws IOException {
+    public void testSetUpSpineButInvalidLeafConfig() {
         reset(driverData, netcfgService);
         expect(driverData.deviceId()).andReturn(SPINE_DEVICE_ID).anyTimes();
         expect(netcfgService.getConfig(LEAF_DEVICE_ID, SegmentRoutingDeviceConfig.class))
@@ -555,7 +555,7 @@ public class FabricIntProgrammableTest {
         Capture<FlowRule> capturedRule = newCapture();
         flowRuleService.applyFlowRules(capture(capturedRule));
         replay(driverData, flowRuleService, netcfgService);
-        final IntReportConfig intConfig = getIntReportConfig("/int-report.json");
+        final IntReportConfig intConfig = getIntReportConfig(APP_ID, "/int-report.json");
         assertFalse(intProgrammable.setUpIntConfig(intConfig));
         assertTrue(capturedRule.getValue().exactMatch(buildCollectorWatchlistRule(SPINE_DEVICE_ID)));
         verify(flowRuleService);
@@ -739,16 +739,6 @@ public class FabricIntProgrammableTest {
 
     private FlowEntry buildFlowEntry(FlowRule flowRule) {
         return new DefaultFlowEntry(flowRule, FlowEntry.FlowEntryState.ADDED, 1, TimeUnit.SECONDS, 0, 0);
-    }
-
-    private SegmentRoutingDeviceConfig getSrConfig(DeviceId deviceId, String fileName) throws IOException {
-        SegmentRoutingDeviceConfig srCfg = new SegmentRoutingDeviceConfig();
-        InputStream jsonStream = getClass().getResourceAsStream(fileName);
-        ObjectMapper mapper = new ObjectMapper();
-        JsonNode jsonNode = mapper.readTree(jsonStream);
-        srCfg.init(deviceId, SR_CONFIG_KEY, jsonNode, mapper, config -> {
-        });
-        return srCfg;
     }
 
     private Set<FlowEntry> buildRandomFlowEntries() {
