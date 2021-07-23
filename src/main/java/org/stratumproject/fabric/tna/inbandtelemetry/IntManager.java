@@ -17,6 +17,7 @@ import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
 import org.onosproject.mastership.MastershipService;
 import org.onosproject.net.Device;
+import org.onosproject.net.Host;
 import org.onosproject.net.config.ConfigFactory;
 import org.onosproject.net.config.NetworkConfigEvent;
 import org.onosproject.net.config.NetworkConfigListener;
@@ -26,6 +27,9 @@ import org.onosproject.net.config.basics.SubjectFactories;
 import org.onosproject.net.device.DeviceEvent;
 import org.onosproject.net.device.DeviceListener;
 import org.onosproject.net.device.DeviceService;
+import org.onosproject.net.host.HostEvent;
+import org.onosproject.net.host.HostListener;
+import org.onosproject.net.host.HostService;
 import org.onosproject.segmentrouting.config.SegmentRoutingDeviceConfig;
 
 import static java.util.concurrent.Executors.newSingleThreadScheduledExecutor;
@@ -52,11 +56,15 @@ public class IntManager {
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     protected MastershipService mastershipService;
 
+    @Reference(cardinality = ReferenceCardinality.MANDATORY)
+    protected HostService hostService;
+
     private ApplicationId appId;
     private ExecutorService eventExecutor;
     private final NetworkConfigListener intReportConfigListener = new IntReportConfigListener();
     private final NetworkConfigListener srConfigListener = new SrConfigListener();
     private final DeviceListener deviceListener = new IntDeviceListener();
+    private final HostListener hostListener = new CollectorHostListener();
 
     private final ConfigFactory<ApplicationId, IntReportConfig> intAppConfigFactory = new ConfigFactory<>(
             SubjectFactories.APP_SUBJECT_FACTORY, IntReportConfig.class, "report") {
@@ -74,6 +82,7 @@ public class IntManager {
         netcfgService.addListener(intReportConfigListener);
         netcfgService.addListener(srConfigListener);
         deviceService.addListener(deviceListener);
+        hostService.addListener(hostListener);
         Streams.stream(deviceService.getAvailableDevices()).forEach(this::initDevice);
         IntReportConfig config = netcfgService.getConfig(appId, IntReportConfig.class);
         if (config != null) {
@@ -87,6 +96,7 @@ public class IntManager {
         netcfgService.removeListener(intReportConfigListener);
         netcfgService.removeListener(srConfigListener);
         deviceService.removeListener(deviceListener);
+        hostService.removeListener(hostListener);
         eventExecutor.shutdown();
         netcfgRegistry.unregisterConfigFactory(intAppConfigFactory);
         Streams.stream(deviceService.getAvailableDevices()).forEach(this::cleanupDevice);
@@ -111,6 +121,11 @@ public class IntManager {
         }
     }
 
+    private void setUpIntConfig(IntReportConfig config) {
+        Streams.stream(deviceService.getAvailableDevices())
+            .forEach(device -> setUpIntConfig(config, device));
+    }
+
     private boolean checkDevice(Device device) {
         return device.is(IntProgrammable.class) &&
                 mastershipService.isLocalMaster(device.id()) &&
@@ -124,10 +139,9 @@ public class IntManager {
                 switch (event.type()) {
                     case CONFIG_ADDED:
                     case CONFIG_UPDATED:
-                        event.config().map(IntReportConfig.class::cast).ifPresent(config -> {
-                            Streams.stream(deviceService.getAvailableDevices())
-                                    .forEach(device -> setUpIntConfig(config, device));
-                        });
+                        event.config()
+                            .map(IntReportConfig.class::cast)
+                            .ifPresent(IntManager.this::setUpIntConfig);
                         break;
                     // TODO: Support removing INT config.
                     default:
@@ -163,6 +177,10 @@ public class IntManager {
         }
     }
 
+    /**
+     * To check if the segment routing device config is added or updated since it
+     * can be loaded after the INT manager is activated or INT config is loaded.
+     */
     private class SrConfigListener implements NetworkConfigListener {
         @Override
         public void event(NetworkConfigEvent event) {
@@ -189,6 +207,32 @@ public class IntManager {
         @Override
         public boolean isRelevant(NetworkConfigEvent event) {
             return event.configClass() == SegmentRoutingDeviceConfig.class;
+        }
+    }
+
+    /**
+     * To install INT rules when collector host is added.
+     */
+    private class CollectorHostListener implements HostListener {
+        @Override
+        public void event(HostEvent event) {
+            IntReportConfig config = netcfgService.getConfig(appId, IntReportConfig.class);
+            if (config == null) {
+                return;
+            }
+            eventExecutor.execute(() -> {
+                switch (event.type()) {
+                    case HOST_ADDED:
+                    case HOST_UPDATED:
+                        Host host = event.subject();
+                        if (host.ipAddresses().contains(config.collectorIp())) {
+                            setUpIntConfig(config);
+                        }
+                        break;
+                    default:
+                        break;
+                }
+            });
         }
     }
 }

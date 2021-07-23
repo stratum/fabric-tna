@@ -9,6 +9,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
 import org.easymock.Capture;
 import org.easymock.EasyMockRunner;
@@ -18,12 +19,20 @@ import org.easymock.TestSubject;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.onlab.packet.IpAddress;
+import org.onlab.packet.VlanId;
+import org.onlab.packet.MacAddress;
 import org.onosproject.TestApplicationId;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
 import org.onosproject.mastership.MastershipService;
+import org.onosproject.net.DefaultHost;
 import org.onosproject.net.Device;
 import org.onosproject.net.DeviceId;
+import org.onosproject.net.Host;
+import org.onosproject.net.HostId;
+import org.onosproject.net.HostLocation;
+import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.config.NetworkConfigEvent;
 import org.onosproject.net.config.NetworkConfigListener;
 import org.onosproject.net.config.NetworkConfigRegistry;
@@ -31,6 +40,10 @@ import org.onosproject.net.config.NetworkConfigService;
 import org.onosproject.net.device.DeviceEvent;
 import org.onosproject.net.device.DeviceListener;
 import org.onosproject.net.device.DeviceService;
+import org.onosproject.net.host.HostEvent;
+import org.onosproject.net.host.HostListener;
+import org.onosproject.net.host.HostService;
+import org.onosproject.net.provider.ProviderId;
 import org.onosproject.segmentrouting.config.SegmentRoutingDeviceConfig;
 
 import static org.easymock.EasyMock.anyObject;
@@ -57,7 +70,7 @@ public class IntManagerTest extends EasyMockSupport {
     private static final IntReportConfig INT_CONFIG_1 = getIntReportConfig(APP_ID, "/int-report.json");
     private static final IntReportConfig INT_CONFIG_2 = getIntReportConfig(APP_ID, "/int-report-with-subnets.json");
     private static final SegmentRoutingDeviceConfig SR_CONFIG_1 = getSrConfig(DEVICE_ID_1, "/sr.json");
-
+    private static final IpAddress COLLECTOR_IP = IpAddress.valueOf("10.128.0.1");
     @Mock
     private CoreService coreService;
     @Mock(fieldName = "netcfgService")
@@ -69,6 +82,8 @@ public class IntManagerTest extends EasyMockSupport {
     @Mock
     private MastershipService mastershipService;
     @Mock
+    private HostService hostService;
+    @Mock
     private Device mockDevice;
     @Mock
     private IntProgrammable intProgrammable;
@@ -78,6 +93,7 @@ public class IntManagerTest extends EasyMockSupport {
     private Capture<DeviceListener> deviceListener;
     private Capture<NetworkConfigListener> intConfigListener;
     private Capture<NetworkConfigListener> srConfigListener;
+    private Capture<HostListener> hostListener;
 
     @Before
     public void setUp() {
@@ -93,10 +109,12 @@ public class IntManagerTest extends EasyMockSupport {
         netcfgService.addListener(capture(srConfigListener));
         deviceListener = newCapture();
         deviceService.addListener(capture(deviceListener));
+        hostListener = newCapture();
+        hostService.addListener(capture(hostListener));
         expect(deviceService.getAvailableDevices()).andReturn(ImmutableList.of(mockDevice)).anyTimes();
         expect(deviceService.isAvailable(anyObject())).andReturn(true).anyTimes();
         expect(mastershipService.isLocalMaster(anyObject())).andReturn(true).anyTimes();
-        replay(coreService, netcfgRegistry, deviceService, mastershipService, mockDevice);
+        replay(coreService, netcfgRegistry, deviceService, mastershipService, mockDevice, hostService);
     }
 
     /**
@@ -117,18 +135,7 @@ public class IntManagerTest extends EasyMockSupport {
     @Test
     public void testDeactivateWithoutConfig() {
         testActivateWithoutConfig();
-        reset(netcfgService, deviceService, netcfgRegistry, intProgrammable);
-        netcfgService.removeListener(intConfigListener.getValue());
-        netcfgService.removeListener(srConfigListener.getValue());
-        expectLastCall().once();
-        deviceService.removeListener(deviceListener.getValue());
-        expectLastCall().once();
-        netcfgRegistry.unregisterConfigFactory(anyObject());
-        expectLastCall().once();
-        expect(deviceService.getAvailableDevices()).andReturn(ImmutableList.of(mockDevice)).anyTimes();
-        expect(deviceService.isAvailable(anyObject())).andReturn(true).anyTimes();
-        expect(intProgrammable.cleanup()).andReturn(true).anyTimes();
-        replay(netcfgService, deviceService, netcfgRegistry, intProgrammable);
+        expectedDeactivateProcess();
         intManager.deactivate();
         verifyAll();
     }
@@ -152,18 +159,7 @@ public class IntManagerTest extends EasyMockSupport {
     @Test
     public void testDeactivateWithConfig() {
         testActivateWithConfig();
-        reset(netcfgService, deviceService, netcfgRegistry, intProgrammable);
-        netcfgService.removeListener(intConfigListener.getValue());
-        netcfgService.removeListener(srConfigListener.getValue());
-        expectLastCall().once();
-        deviceService.removeListener(deviceListener.getValue());
-        expectLastCall().once();
-        netcfgRegistry.unregisterConfigFactory(anyObject());
-        expectLastCall().once();
-        expect(deviceService.getAvailableDevices()).andReturn(ImmutableList.of(mockDevice)).anyTimes();
-        expect(deviceService.isAvailable(anyObject())).andReturn(true).anyTimes();
-        expect(intProgrammable.cleanup()).andReturn(true).anyTimes();
-        replay(netcfgService, deviceService, netcfgRegistry, intProgrammable);
+        expectedDeactivateProcess();
         intManager.deactivate();
         verifyAll();
     }
@@ -282,5 +278,59 @@ public class IntManagerTest extends EasyMockSupport {
         replay(intProgrammable, netcfgService, mockDevice);
         intManager.activate();
         verifyAll();
+    }
+
+    /**
+     * Test when receving an host event with IP address of the collector.
+     */
+    @Test
+    public void testWithHostEvent() {
+        testActivateWithConfig();
+        Host host = new DefaultHost(
+            new ProviderId("of", "foo"),
+            HostId.hostId("00:00:00:00:00:01/None"),
+            MacAddress.valueOf("00:00:00:00:00:01"),
+            VlanId.NONE,
+            new HostLocation(ConnectPoint.fromString("device:leaf1/1"), 0),
+            ImmutableSet.of(COLLECTOR_IP)
+        );
+        HostListener listener = hostListener.getValue();
+        CompletableFuture<Void> completableFuture = new CompletableFuture<>();
+        reset(intProgrammable, netcfgService, deviceService, mastershipService);
+        expect(netcfgService.getConfig(APP_ID, IntReportConfig.class)).andReturn(INT_CONFIG_1).anyTimes();
+        expect(intProgrammable.setUpIntConfig(INT_CONFIG_1))
+                .andAnswer(() -> {
+                    completableFuture.complete(null);
+                    return true;
+                }).once();
+        expect(deviceService.getAvailableDevices()).andReturn(ImmutableList.of(mockDevice)).anyTimes();
+        expect(deviceService.isAvailable(DEVICE_ID_1)).andReturn(true).anyTimes();
+        expect(mastershipService.isLocalMaster(DEVICE_ID_1)).andReturn(true).anyTimes();
+        replay(intProgrammable, netcfgService, deviceService, mastershipService);
+        HostEvent hostEvent = new HostEvent(HostEvent.Type.HOST_ADDED, host);
+        listener.event(hostEvent);
+        try {
+            completableFuture.get(1, TimeUnit.SECONDS);
+        } catch (InterruptedException | ExecutionException | TimeoutException e) {
+            fail("Didn't get expected call within 1 second.");
+        }
+        verifyAll();
+    }
+
+    private void expectedDeactivateProcess() {
+        reset(netcfgService, deviceService, netcfgRegistry, intProgrammable, hostService);
+        netcfgService.removeListener(intConfigListener.getValue());
+        netcfgService.removeListener(srConfigListener.getValue());
+        expectLastCall().once();
+        deviceService.removeListener(deviceListener.getValue());
+        expectLastCall().once();
+        hostService.removeListener(hostListener.getValue());
+        expectLastCall().once();
+        netcfgRegistry.unregisterConfigFactory(anyObject());
+        expectLastCall().once();
+        expect(deviceService.getAvailableDevices()).andReturn(ImmutableList.of(mockDevice)).anyTimes();
+        expect(deviceService.isAvailable(anyObject())).andReturn(true).anyTimes();
+        expect(intProgrammable.cleanup()).andReturn(true).anyTimes();
+        replay(netcfgService, deviceService, netcfgRegistry, intProgrammable, hostService);
     }
 }

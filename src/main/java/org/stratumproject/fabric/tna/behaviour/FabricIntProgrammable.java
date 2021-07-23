@@ -240,21 +240,12 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
     }
 
     private FlowRule buildWatchlistEntry(TrafficSelector trafficSelector) {
-        final SegmentRoutingDeviceConfig cfg =
-                cfgService.getConfig(deviceId, SegmentRoutingDeviceConfig.class);
-        if (cfg == null) {
-            log.warn("Missing SegmentRoutingDeviceConfig config for {}", deviceId);
-            return null;
-        }
-
         final PiAction watchlistAction = PiAction.builder()
                 .withId(P4InfoConstants.FABRIC_INGRESS_INT_WATCHLIST_MARK_TO_REPORT)
                 .build();
-
         final TrafficTreatment watchlistTreatment = DefaultTrafficTreatment.builder()
                 .piTableAction(watchlistAction)
                 .build();
-
         return DefaultFlowRule.builder()
                 .forDevice(deviceId)
                 .withSelector(trafficSelector)
