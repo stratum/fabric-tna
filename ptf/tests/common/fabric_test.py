@@ -1120,6 +1120,10 @@ class FabricTest(P4RuntimeTest):
             priority,
         )
 
+    def read_forwarding_acl_punt_to_cpu(self, priority=DEFAULT_PRIORITY, **matches):
+        matches = self.build_acl_matches(**matches)
+        return self.read_table_entry("acl.acl", matches, priority)
+
     def add_forwarding_acl_set_output_port(
         self, output_port, priority=DEFAULT_PRIORITY, **matches
     ):
