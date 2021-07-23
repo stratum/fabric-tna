@@ -10,6 +10,7 @@ define run_tests
 		--grpc-addr $(SWITCH_ADDR) \
 		--p4info /p4c-out/p4info.txt \
 		--tofino-pipeline-config /p4c-out/pipeline_config.pb.bin \
+		--force-restart \
 		$(TREX_PARAMS) \
 		--profile $(1) \
 		$(2)

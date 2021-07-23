@@ -615,11 +615,11 @@ def pkt_decrement_ttl(pkt):
         pkt[IP].ttl -= 1
     return pkt
 
-def get_test_args(traffic_dir, pkt_addrs={}, spgw_type=None, int_test_type=None, 
+def get_test_args(traffic_dir, pkt_addrs={}, spgw_type=None, int_test_type=None,
                   test_multiple_pkt_len=False, test_multiple_prefix_len=False,
                   ue_recirculation_test=False):
 
-    """ 
+    """
     Generates parameters for doRunTest calls in test cases
     :param traffic_dir: traffic direction, e.g. "host-leaf-spine"
     :param pkt_addrs: packet header addresses, e.g. {eth_src, eth_dst, ip_src, ip_dst}
@@ -3156,7 +3156,7 @@ class IntTest(IPv4UnicastTest):
             else:
                 sport = None
                 dport = None
-            
+
             if watch_flow:
                 self.set_up_watchlist_flow(pkt[IP].src, pkt[IP].dst, sport, dport)
         self.set_up_report_flow(
