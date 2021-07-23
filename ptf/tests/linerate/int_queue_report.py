@@ -189,7 +189,7 @@ class IntQueueReportTest(TRexTest, IntTest, SlicingTest):
             ip_src = pkt[IP].src
             if checking_ip_src:
                 if ip_src != reported_ip_srcs[0]:
-                    self.fail(f"Expect IP src {ip_src}, got {reported_ip_srcs[0]}")
+                    self.fail(f"Expected IP src {ip_src}, got {reported_ip_srcs[0]}")
                 else:
                     reported_ip_srcs.popleft()
             else:
@@ -199,7 +199,7 @@ class IntQueueReportTest(TRexTest, IntTest, SlicingTest):
             if len(reported_ip_srcs) == 0:
                 break
         pcap_reader.close()
-        self.failIf(len(reported_ip_srcs) != 0, f"Receive {len(reported_ip_srcs)} unexpected report(s)")
+        self.failIf(len(reported_ip_srcs) != 0, f"Received {len(reported_ip_srcs)} unexpected report(s)")
 
     def runTest(self):
         print("")
