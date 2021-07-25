@@ -77,12 +77,12 @@ pipeconf: _mvn_package
 
 pipeconf-test: _mvn_package
 	$(info *** Testing ONOS pipeconf)
-	docker run --rm -v $(DIR):mvn-src -w /mvn-src --user $(UID) \
+	docker run --rm -v $(DIR):/mvn-src -w /mvn-src --user $(UID) \
 		-e MAVEN_OPTS=-Dmaven.repo.local=/.m2 \
 		-e MAVEN_CONFIG=/.m2 \
 		-v $(MVN_CACHE):/.m2 $(MAVEN_DOCKER_IMAGE) mvn test
 
-pipeconf-ci: _mvn_package
+pipeconf-ci: _m2_vol
 	$(info *** Building ONOS app...)
 	@mkdir -p target
 	docker run --rm -v $(DIR):/mvn-src -w /mvn-src --user $(UID) \
