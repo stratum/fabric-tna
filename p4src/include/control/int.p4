@@ -58,7 +58,8 @@ control FlowReportFilter(
     };
 
     apply {
-        if (fabric_md.int_report_md.report_type == INT_REPORT_TYPE_LOCAL) {
+        if (fabric_md.int_report_md.report_type == INT_REPORT_TYPE_LOCAL
+            && fabric_md.bridged.bmd_type == BridgedMdType_t.INGRESS_TO_EGRESS) {
             digest = digester.get({ // burp!
                 fabric_md.bridged.base.ig_port,
                 eg_intr_md.egress_port,
@@ -203,13 +204,19 @@ control IntIngress(
 
     @hidden
     action report_drop() {
-        fabric_md.bridged.bmd_type = BridgedMdType_t.INT_INGRESS_DROP;
-        fabric_md.bridged.int_bmd.report_type = INT_REPORT_TYPE_DROP;
-        fabric_md.bridged.base.vlan_id = DEFAULT_VLAN_ID;
-        fabric_md.bridged.base.mpls_label = 0; // do not push an MPLS label
-#ifdef WITH_SPGW
-        fabric_md.bridged.spgw.skip_spgw = true;
-#endif // WITH_SPGW
+        fabric_md.int_report_md.setValid();
+        fabric_md.int_report_md.bmd_type = BridgedMdType_t.INT_INGRESS_DROP;
+        fabric_md.int_report_md.mirror_type = FabricMirrorType_t.INVALID;
+        fabric_md.int_report_md.ig_port = ig_intr_md.ingress_port;
+        fabric_md.int_report_md.eg_port = 0;
+        fabric_md.int_report_md.queue_id = 0;
+        fabric_md.int_report_md.encap_presence = fabric_md.bridged.base.encap_presence;
+        fabric_md.int_report_md.flow_hash = fabric_md.bridged.base.inner_hash;
+        // fabric_md.int_report_md.drop_reason = set by the pipeline
+        fabric_md.int_report_md.ig_tstamp = (bit<32>)ig_intr_md.ingress_mac_tstamp;
+        fabric_md.int_report_md.ip_eth_type = fabric_md.bridged.base.ip_eth_type;
+        fabric_md.int_report_md.report_type = INT_REPORT_TYPE_DROP;
+
         // Redirect to the recirculation port of the pipeline
         ig_tm_md.ucast_egress_port = ig_intr_md.ingress_port[8:7] ++ RECIRC_PORT_NUMBER;
 
@@ -444,8 +451,6 @@ control IntEgress (
      * false | NO_REPORT | true  | true  | init_int_metadata(INT_REPORT_TYPE_QUEUE)
      * After mirrored, deflected, or it is a ingress drop:
      * true  | DROP        | false | false | do_drop_report_encap(_mpls)
-     * true  | DROP        | false | false | do_drop_report_encap(_mpls)
-     * true  | DROP        | false | false | do_drop_report_encap(_mpls)
      * true  | LOCAL       | false | false | do_local_report_encap(_mpls)
      * true  | QUEUE       | false | false | do_local_report_encap(_mpls)
      * true  | QUEUE|LOCAL | false | false | do_local_report_encap(_mpls)
@@ -466,7 +471,7 @@ control IntEgress (
             @defaultonly nop();
         }
         const default_action = nop();
-        const size = 12;
+        const size = 10;
     }
 
     apply {

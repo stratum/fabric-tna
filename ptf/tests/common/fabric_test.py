@@ -2644,18 +2644,35 @@ class IntTest(IPv4UnicastTest):
        packet to verify the output.
     """
 
-    def set_up_report_flow_with_report_type_and_bmd_type(
+    def set_up_int_report_flow_for_bridged_pkt(
         self,
+        report_type,
+        drop_ctl,
+        queue_report_flag,
+        report_type_param
+    ):
+        self.send_request_add_entry_to_action(
+            "int_report",
+            [
+                self.Exact("int_report_md_valid", stringify(0, 1)),
+                self.Exact("int_report_type", stringify(report_type, 1)),
+                self.Exact("drop_ctl", stringify(drop_ctl, 1)),
+                self.Exact("queue_report", stringify(queue_report_flag, 1)),
+            ],
+            "init_int_metadata",
+            [("report_type", stringify(report_type_param, 1))],
+        )
+
+    def set_up_int_report_flow_for_report_pkt(
+        self,
+        report_type,
         src_mac,
         mon_mac,
         src_ip,
         mon_ip,
         mon_port,
-        report_type,
-        bmd_type,
         switch_id,
-        mirror_type,
-        mon_label,
+        mon_label=None,
     ):
         action = ""
         # local report or queue report or both
@@ -2679,11 +2696,12 @@ class IntTest(IPv4UnicastTest):
             action_params.append(("mon_label", stringify(mon_label, 3)))
 
         self.send_request_add_entry_to_action(
-            "report",
+            "int_report",
             [
-                self.Exact("bmd_type", stringify(bmd_type, 1)),
-                self.Exact("mirror_type", stringify(mirror_type, 1)),
+                self.Exact("int_report_md_valid", stringify(1, 1)),
                 self.Exact("int_report_type", stringify(report_type, 1)),
+                self.Exact("drop_ctl", stringify(0, 1)),
+                self.Exact("queue_report", stringify(0, 1)),
             ],
             action,
             action_params,
@@ -2692,39 +2710,65 @@ class IntTest(IPv4UnicastTest):
     def set_up_report_flow(
         self, src_mac, mon_mac, src_ip, mon_ip, mon_port, switch_id, mon_label=None
     ):
-        def set_up_report_flow_internal(bmd_type, mirror_type, report_type):
-            self.set_up_report_flow_with_report_type_and_bmd_type(
+        def set_up_int_report_flow_for_report_pkt_internal(report_type):
+            self.set_up_int_report_flow_for_report_pkt(
+                report_type,
                 src_mac,
                 mon_mac,
                 src_ip,
                 mon_ip,
                 mon_port,
-                report_type,
-                bmd_type,
                 switch_id,
-                mirror_type,
                 mon_label,
             )
-
-        set_up_report_flow_internal(
-            BRIDGED_MD_TYPE_INT_INGRESS_DROP, MIRROR_TYPE_INVALID, INT_REPORT_TYPE_DROP
+        set_up_int_report_flow_for_report_pkt_internal(
+            INT_REPORT_TYPE_LOCAL
         )
-        set_up_report_flow_internal(
-            BRIDGED_MD_TYPE_EGRESS_MIRROR, MIRROR_TYPE_INT_REPORT, INT_REPORT_TYPE_DROP
+        set_up_int_report_flow_for_report_pkt_internal(
+            INT_REPORT_TYPE_DROP
         )
-        set_up_report_flow_internal(
-            BRIDGED_MD_TYPE_EGRESS_MIRROR, MIRROR_TYPE_INT_REPORT, INT_REPORT_TYPE_LOCAL
+        set_up_int_report_flow_for_report_pkt_internal(
+            INT_REPORT_TYPE_QUEUE
         )
-        set_up_report_flow_internal(
-            BRIDGED_MD_TYPE_DEFLECTED, MIRROR_TYPE_INVALID, INT_REPORT_TYPE_DROP
-        )
-        set_up_report_flow_internal(
-            BRIDGED_MD_TYPE_EGRESS_MIRROR, MIRROR_TYPE_INT_REPORT, INT_REPORT_TYPE_QUEUE
-        )
-        set_up_report_flow_internal(
-            BRIDGED_MD_TYPE_EGRESS_MIRROR,
-            MIRROR_TYPE_INT_REPORT,
+        set_up_int_report_flow_for_report_pkt_internal(
             INT_REPORT_TYPE_QUEUE | INT_REPORT_TYPE_LOCAL,
+        )
+
+        self.set_up_int_report_flow_for_bridged_pkt(
+            INT_REPORT_TYPE_LOCAL,
+            0,
+            0,
+            INT_REPORT_TYPE_LOCAL
+        )
+        self.set_up_int_report_flow_for_bridged_pkt(
+            INT_REPORT_TYPE_LOCAL,
+            0,
+            1,
+            INT_REPORT_TYPE_QUEUE | INT_REPORT_TYPE_LOCAL
+        )
+        self.set_up_int_report_flow_for_bridged_pkt(
+            INT_REPORT_TYPE_LOCAL,
+            1,
+            0,
+            INT_REPORT_TYPE_DROP
+        )
+        self.set_up_int_report_flow_for_bridged_pkt(
+            INT_REPORT_TYPE_LOCAL,
+            1,
+            1,
+            INT_REPORT_TYPE_DROP
+        )
+        self.set_up_int_report_flow_for_bridged_pkt(
+            INT_REPORT_TYPE_NO_REPORT,
+            0,
+            1,
+            INT_REPORT_TYPE_QUEUE
+        )
+        self.set_up_int_report_flow_for_bridged_pkt(
+            INT_REPORT_TYPE_NO_REPORT,
+            1,
+            1,
+            INT_REPORT_TYPE_QUEUE
         )
 
     def set_up_report_mirror_flow(self, pipe_id, mirror_id, port):
@@ -2751,24 +2795,40 @@ class IntTest(IPv4UnicastTest):
         )
 
     def set_up_watchlist_flow(
-        self, ipv4_src, ipv4_dst, sport, dport, collector_action=False
+        self, ipv4_src=None, ipv4_dst=None, sport=None, dport=None, collector_action=False
     ):
-        ipv4_src_ = ipv4_to_binary(ipv4_src)
-        ipv4_dst_ = ipv4_to_binary(ipv4_dst)
+        params = [
+            self.Exact("ipv4_valid", stringify(1, 1))
+        ]
         ipv4_mask = ipv4_to_binary("255.255.255.255")
-        # Use full range of TCP/UDP ports by default.
-        sport_low = stringify(0, 2)
-        sport_high = stringify(0xFFFF, 2)
-        dport_low = stringify(0, 2)
-        dport_high = stringify(0xFFFF, 2)
 
-        if sport:
+        if ipv4_src is not None:
+            ipv4_src_ = ipv4_to_binary(ipv4_src)
+            params.append(
+                self.Ternary("ipv4_src", ipv4_src_, ipv4_mask)
+            )
+
+        if ipv4_dst is not None:
+            ipv4_dst_ = ipv4_to_binary(ipv4_dst)
+            params.append(
+                self.Ternary("ipv4_dst", ipv4_dst_, ipv4_mask)
+            )
+
+        # Use full range of TCP/UDP ports by default.
+
+        if sport is not None:
             sport_low = stringify(sport, 2)
             sport_high = stringify(sport, 2)
+            params.append(
+                self.Range("l4_sport", sport_low, sport_high)
+            )
 
-        if dport:
+        if dport is not None:
             dport_low = stringify(dport, 2)
             dport_high = stringify(dport, 2)
+            params.append(
+                self.Range("l4_dport", dport_low, dport_high)
+            )
 
         if collector_action:
             action = "no_report_collector"
@@ -2776,13 +2836,7 @@ class IntTest(IPv4UnicastTest):
             action = "mark_to_report"
         self.send_request_add_entry_to_action(
             "watchlist",
-            [
-                self.Exact("ipv4_valid", stringify(1, 1)),
-                self.Ternary("ipv4_src", ipv4_src_, ipv4_mask),
-                self.Ternary("ipv4_dst", ipv4_dst_, ipv4_mask),
-                self.Range("l4_sport", sport_low, sport_high),
-                self.Range("l4_dport", dport_low, dport_high),
-            ],
+            params,
             action,
             [],
             priority=DEFAULT_PRIORITY,

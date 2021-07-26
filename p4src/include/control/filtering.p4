@@ -24,7 +24,7 @@ control Filtering (inout ingress_headers_t hdr,
         fabric_md.skip_next = true;
         fabric_md.ig_port_type = PortType_t.UNKNOWN;
 #ifdef WITH_INT
-        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_PORT_VLAN_MAPPING_MISS;
+        fabric_md.int_report_md.drop_reason = IntDropReason_t.DROP_REASON_PORT_VLAN_MAPPING_MISS;
 #endif // WITH_INT
         ingress_port_vlan_counter.count();
     }

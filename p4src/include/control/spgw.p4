@@ -96,7 +96,7 @@ control UplinkRecirc(
 
     action deny() {
 #ifdef WITH_INT
-        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_SPGW_UPLINK_RECIRC_DENY;
+        fabric_md.int_report_md.drop_reason = IntDropReason_t.DROP_REASON_SPGW_UPLINK_RECIRC_DENY;
 #endif // WITH_INT
         fabric_md.skip_forwarding = true;
         fabric_md.skip_next = true;
@@ -188,7 +188,7 @@ control SpgwIngress(
         fabric_md.skip_forwarding = true;
         fabric_md.skip_next = true;
 #ifdef WITH_INT
-        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_DOWNLINK_PDR_MISS;
+        fabric_md.int_report_md.drop_reason = IntDropReason_t.DROP_REASON_DOWNLINK_PDR_MISS;
 #endif // WITH_INT
     }
 
@@ -197,7 +197,7 @@ control SpgwIngress(
         fabric_md.skip_forwarding = true;
         fabric_md.skip_next = true;
 #ifdef WITH_INT
-        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UPLINK_PDR_MISS;
+        fabric_md.int_report_md.drop_reason = IntDropReason_t.DROP_REASON_UPLINK_PDR_MISS;
 #endif // WITH_INT
     }
 
@@ -251,7 +251,7 @@ control SpgwIngress(
         fabric_md.bridged.spgw.needs_gtpu_encap = false;
         fabric_md.bridged.spgw.skip_egress_pdr_ctr = false;
 #ifdef WITH_INT
-        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_FAR_MISS;
+        fabric_md.int_report_md.drop_reason = IntDropReason_t.DROP_REASON_FAR_MISS;
 #endif // WITH_INT
     }
 
