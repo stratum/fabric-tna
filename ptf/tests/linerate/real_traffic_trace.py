@@ -5,16 +5,16 @@ from datetime import datetime
 
 from base_test import *
 from fabric_test import *
-from trex_stl_lib.api import STLPktBuilder, STLStream, STLTXCont
 from trex_test import TRexTest
+from trex_utils import list_port_status
 from xnt import analyze_report_pcap
 
-TRAFFIC_MULT = 1 # 1x speed
-TEST_DURATION = 10
-CAPTURE_LIMIT = 1000
-TOTAL_FLOWS = 921458
+TRAFFIC_SPEEDUP = 0.01
+TEST_DURATION = 5
+CAPTURE_LIMIT = 10000
 REMOTE_PCAP_DIR = "/srv/packet-traces/CAIDA_traces_passive-2016_equinix-chicago/equinix-chicago/20160121-130000/"
 REMOTE_PCAP_FILE = "equinix-chicago.dirA.20160121-130000.UTC.anon.no-fragment.pcap"
+TOTAL_FLOWS = 921458 # specified in REMOTE_PCAP_DIR/130000.txt
 
 SENDER_PORT = 0
 RECEIVER_PORT = 1
@@ -23,10 +23,17 @@ INT_COLLECTOR_PORT = 2
 
 class RealTrafficTrace(TRexTest, IntTest):
     @autocleanup
-    def doRunTest(self, mult, tagged1, tagged2, is_device_spine, send_report_to_spine, is_next_hop_spine):
+    def doRunTest(
+        self,
+        mult,
+        tagged1,
+        tagged2,
+        is_device_spine,
+        send_report_to_spine,
+        is_next_hop_spine,
+    ):
+
         print(f"Testing tagged1={tagged1}, tagged2={tagged2}, is_device_spine={is_device_spine}, send_report_to_spine={send_report_to_spine}, is_next_hop_spine={is_next_hop_spine}")
-        self.trex_client.reset()  # Resets configs from all ports
-        self.trex_client.clear_stats()  # Clear status from all ports
 
         # TODO: replace with set_up_ipv4_unicast_rules after Yi merge
         pkt = testutils.simple_udp_packet()
@@ -73,8 +80,12 @@ class RealTrafficTrace(TRexTest, IntTest):
         port_stats = self.trex_client.get_stats()
         sent_packets = port_stats[SENDER_PORT]["opackets"]
         recv_packets = port_stats[RECEIVER_PORT]["ipackets"]
+        int_packets = port_stats[INT_COLLECTOR_PORT]["ipackets"]
+
+        print(f"Sent {sent_packets}, recv {recv_packets}, INT {int_packets}")
         self.failIf(sent_packets != recv_packets, f"Didn't receive all packets; sent {sent_packets}, received {recv_packets}")
 
+        list_port_status(port_stats) 
 
         """ 
         TODO: Verify the following:
@@ -84,4 +95,4 @@ class RealTrafficTrace(TRexTest, IntTest):
 
     def runTest(self):
         # TODO: iterate all possible parameters of test with get_test_args
-        self.doRunTest(TRAFFIC_MULT, False, False, False, False, False)
+        self.doRunTest(TRAFFIC_SPEEDUP, False, False, False, False, False)
