@@ -118,7 +118,8 @@ parser IntReportParser (packet_in packet,
         hdr.report_ipv4.setValid();
         hdr.report_ipv4.version = 4w4;
         hdr.report_ipv4.ihl = 4w5;
-        hdr.report_ipv4.dscp = INT_DSCP;
+        // TODO BEFORE MERGE: confirm with DI team whether this can be zero
+        hdr.report_ipv4.dscp = 0;
         hdr.report_ipv4.ecn = 2w0;
         // hdr.report_ipv4.total_len = update later
         // hdr.report_ipv4.identification = update later
