@@ -9,7 +9,8 @@ from trex_test import TRexTest
 from trex_utils import list_port_status
 from xnt import analyze_report_pcap
 
-TRAFFIC_SPEEDUP = 0.01
+# TODO: debug running test at normal speed without packet loss
+TRAFFIC_SPEEDUP = 0.01 # using slow speed for now to avoid packet drop issues
 TEST_DURATION = 5
 CAPTURE_LIMIT = 10000
 REMOTE_PCAP_DIR = "/srv/packet-traces/CAIDA_traces_passive-2016_equinix-chicago/equinix-chicago/20160121-130000/"
