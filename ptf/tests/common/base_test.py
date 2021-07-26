@@ -14,6 +14,7 @@ import struct
 import sys
 import threading
 import time
+import math
 from collections import Counter
 from functools import partial, partialmethod, wraps
 from io import StringIO
@@ -413,6 +414,17 @@ class P4RuntimeTest(BaseTest):
             "Match field '%s' not found in table '%s'" % (mf_name, table_name)
         )
 
+    def get_mf_bitwidth(self, table_name, mf_name):
+        t = self.get_obj("tables", table_name)
+        if t is None:
+            return None
+        for mf in t.match_fields:
+            if mf.name == mf_name:
+                return mf.bitwidth
+        raise Exception(
+            "Match field '%s' not found in table '%s'" % (mf_name, table_name)
+        )
+
     def send_packet(self, port, pkt):
         if self.generate_tv:
             tvutils.add_traffic_stimulus(self.tc, port, pkt)
@@ -461,12 +473,18 @@ class P4RuntimeTest(BaseTest):
         def __init__(self, mf_name):
             self.name = mf_name
 
+        def check_value_size(self, value, bitwidth):
+            v_int = int.from_bytes(value, 'big')
+            if v_int > ((1 << bitwidth) - 1):
+                raise Exception(f"Value {v_int} is too large for match field bitwidth {bitwidth}")
+
     class Exact(MF):
         def __init__(self, mf_name, v):
             super(P4RuntimeTest.Exact, self).__init__(mf_name)
             self.v = v
 
-        def add_to(self, mf_id, mk):
+        def add_to(self, mf_id, mk, bitwidth):
+            self.check_value_size(self.v, bitwidth)
             mf = mk.add()
             mf.field_id = mf_id
             mf.exact.value = self.v
@@ -477,11 +495,14 @@ class P4RuntimeTest(BaseTest):
             self.v = v
             self.pLen = pLen
 
-        def add_to(self, mf_id, mk):
+        def add_to(self, mf_id, mk, bitwidth):
             # P4Runtime mandates that the match field should be omitted for
             # "don't care" LPM matches (i.e. when prefix length is zero)
             if self.pLen == 0:
                 return
+            self.check_value_size(self.v, bitwidth)
+            if self.pLen > bitwidth:
+                raise Exception(f"Prefix length {self.pLen} too long for bitwidth {bitwidth}")
             mf = mk.add()
             mf.field_id = mf_id
             mf.lpm.prefix_len = self.pLen
@@ -506,11 +527,12 @@ class P4RuntimeTest(BaseTest):
             self.v = v
             self.mask = mask
 
-        def add_to(self, mf_id, mk):
+        def add_to(self, mf_id, mk, bitwidth):
             # P4Runtime mandates that the match field should be omitted for
             # "don't care" ternary matches (i.e. when mask is zero)
-            if all(c == b"\x00" for c in self.mask):
+            if all(c == 0 for c in self.mask):
                 return
+            self.check_value_size(self.v, bitwidth)
             mf = mk.add()
             mf.field_id = mf_id
             assert len(self.mask) == len(self.v)
@@ -527,13 +549,15 @@ class P4RuntimeTest(BaseTest):
             self.low = low
             self.high = high
 
-        def add_to(self, mf_id, mk):
+        def add_to(self, mf_id, mk, bitwidth):
             # P4Runtime mandates that the match field should be omitted for
             # "don't care" range matches (i.e. when all possible values are
             # included in the range)
-            # TODO(antonin): negative values?
-            low_is_zero = all(c == b"\x00" for c in self.low)
-            high_is_max = all(c == b"\xff" for c in self.high)
+            self.check_value_size(self.low, bitwidth)
+            self.check_value_size(self.high, bitwidth)
+            low_is_zero = all(c == 0 for c in self.low)
+            upper_bound = (1 << bitwidth) - 1
+            high_is_max = self.high == upper_bound.to_bytes(math.ceil(bitwidth/8), "big")
             if low_is_zero and high_is_max:
                 return
             mf = mk.add()
@@ -547,7 +571,8 @@ class P4RuntimeTest(BaseTest):
     def set_match_key(self, table_entry, t_name, mk):
         for mf in mk:
             mf_id = self.get_mf_id(t_name, mf.name)
-            mf.add_to(mf_id, table_entry.match)
+            mf_bitwidth = self.get_mf_bitwidth(t_name, mf.name)
+            mf.add_to(mf_id, table_entry.match, mf_bitwidth)
 
     def set_action(self, action, a_name, params):
         action.action_id = self.get_action_id(a_name)
@@ -827,10 +852,7 @@ class P4RuntimeTest(BaseTest):
             counter_data.packet_count = packet_count
         return req, self.write_request(req, store=False)
 
-
-    def write_indirect_meter(
-            self, m_name, m_index, cir, cburst, pir, pburst
-    ):
+    def write_indirect_meter(self, m_name, m_index, cir, cburst, pir, pburst):
         req = self.get_new_write_request()
         update = req.updates.add()
         update.type = p4runtime_pb2.Update.MODIFY
@@ -1074,9 +1096,12 @@ class P4RuntimeTest(BaseTest):
 
         for entity in self.read_request(req):
             if entity.HasField("register_entry"):
-                assert int.from_bytes(
-                    entity.register_entry.data.bitstring, "big"
-                ) == int.from_bytes(expected_value, "big")
+                actual = int.from_bytes(entity.register_entry.data.bitstring, "big")
+                expected = int.from_bytes(expected_value, "big")
+                self.failIf(
+                    expected != actual,
+                    f"Expected register value: {expected}, actual: {actual}",
+                )
 
         return None
 
@@ -1089,8 +1114,8 @@ class P4RuntimeTest(BaseTest):
 
     def is_meter_update(self, update):
         return (
-                update.type == p4runtime_pb2.Update.MODIFY
-                and update.entity.WhichOneof("entity") == "meter_entry"
+            update.type == p4runtime_pb2.Update.MODIFY
+            and update.entity.WhichOneof("entity") == "meter_entry"
         )
 
     # iterates over all requests in reverse order; if they are INSERT updates,

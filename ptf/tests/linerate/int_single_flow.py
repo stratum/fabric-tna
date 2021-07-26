@@ -14,9 +14,9 @@ TRAFFIC_MULT = "40gbpsl1"
 TEST_DURATION = 10
 CAPTURE_LIMIT = 20
 
-SENDER_PORTS = [1]
+SENDER_PORTS = [0]
+RECEIVER_PORTS = [1]
 INT_COLLECTOR_PORTS = [2]
-RECEIVER_PORTS = [3]
 
 
 class IntSingleFlow(TRexTest, IntTest):
@@ -49,12 +49,6 @@ class IntSingleFlow(TRexTest, IntTest):
         # Define traffic to be sent
         stream = STLStream(packet=STLPktBuilder(pkt=pkt, vm=[]), mode=STLTXCont())
         self.trex_client.add_streams(stream, ports=SENDER_PORTS)
-
-        # Put RX ports to promiscuous mode, otherwise it will drop all packets if the
-        # destination mac is not the port mac address.
-        self.trex_client.set_port_attr(
-            INT_COLLECTOR_PORTS + RECEIVER_PORTS, promiscuous=True
-        )
 
         # Capture INT packets
         self.trex_client.set_service_mode(ports=INT_COLLECTOR_PORTS, enabled=True)

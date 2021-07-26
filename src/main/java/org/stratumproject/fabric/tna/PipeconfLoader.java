@@ -6,7 +6,6 @@ package org.stratumproject.fabric.tna;
 import org.onosproject.core.CoreService;
 import org.onosproject.net.behaviour.Pipeliner;
 import org.onosproject.net.behaviour.upf.UpfProgrammable;
-import org.onosproject.net.behaviour.inbandtelemetry.IntProgrammable;
 import org.onosproject.net.pi.model.DefaultPiPipeconf;
 import org.onosproject.net.pi.model.PiPipeconf;
 import org.onosproject.net.pi.model.PiPipeconf.ExtensionType;
@@ -28,6 +27,7 @@ import org.stratumproject.fabric.tna.behaviour.FabricIntProgrammable;
 import org.stratumproject.fabric.tna.behaviour.FabricInterpreter;
 import org.stratumproject.fabric.tna.behaviour.pipeliner.FabricPipeliner;
 import org.stratumproject.fabric.tna.behaviour.upf.FabricUpfProgrammable;
+import org.stratumproject.fabric.tna.inbandtelemetry.IntProgrammable;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -48,6 +48,7 @@ import static org.slf4j.LoggerFactory.getLogger;
 public class PipeconfLoader {
 
     public static final String APP_NAME = "org.stratumproject.fabric-tna";
+    public static final String APP_NAME_UPF = "org.stratumproject.fabric-tna.upf";
 
     private static Logger log = getLogger(PipeconfLoader.class);
 
@@ -76,6 +77,7 @@ public class PipeconfLoader {
     @Activate
     public void activate() {
         coreService.registerApplication(APP_NAME);
+        coreService.registerApplication(APP_NAME_UPF);
         // Registers all pipeconf at component activation.
         pipeconfs = buildAllPipeconfs();
         pipeconfs.forEach(pipeconfService::register);
