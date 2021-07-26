@@ -2979,40 +2979,27 @@ class IntTest(IPv4UnicastTest):
         )
 
     def set_up_watchlist_flow(
-        self, ipv4_src=None, ipv4_dst=None, sport=None, dport=None, collector_action=False
+        self, ipv4_src, ipv4_dst, sport, dport, collector_action=False
     ):
-        params = [
-            self.Exact("ipv4_valid", stringify(1, 1))
-        ]
+        ipv4_src_ = ipv4_to_binary(ipv4_src)
+        ipv4_dst_ = ipv4_to_binary(ipv4_dst)
         ipv4_mask = ipv4_to_binary("255.255.255.255")
-
-        if ipv4_src is not None:
-            ipv4_src_ = ipv4_to_binary(ipv4_src)
-            params.append(
-                self.Ternary("ipv4_src", ipv4_src_, ipv4_mask)
-            )
-
-        if ipv4_dst is not None:
-            ipv4_dst_ = ipv4_to_binary(ipv4_dst)
-            params.append(
-                self.Ternary("ipv4_dst", ipv4_dst_, ipv4_mask)
-            )
-
         # Use full range of TCP/UDP ports by default.
+        sport_low = stringify(0, 2)
+        sport_high = stringify(0xFFFF, 2)
+        dport_low = stringify(0, 2)
+        dport_high = stringify(0xFFFF, 2)
 
-        if sport is not None:
+        lower_bound = stringify(0, 2)
+        upper_bound = stringify(0xFFFF, 2)
+
+        if sport:
             sport_low = stringify(sport, 2)
             sport_high = stringify(sport, 2)
-            params.append(
-                self.Range("l4_sport", sport_low, sport_high)
-            )
 
-        if dport is not None:
+        if dport:
             dport_low = stringify(dport, 2)
             dport_high = stringify(dport, 2)
-            params.append(
-                self.Range("l4_dport", dport_low, dport_high)
-            )
 
         if collector_action:
             action = "no_report_collector"
