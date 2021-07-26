@@ -29,6 +29,7 @@ parser IntReportParser (packet_in packet,
         fabric_md.bridged.bmd_type = fabric_md.int_report_md.bmd_type;
         fabric_md.bridged.base.vlan_id = DEFAULT_VLAN_ID;
         fabric_md.bridged.base.mpls_label = 0; // do not push an MPLS label
+        fabric_md.bridged.int_bmd.report_type = fabric_md.int_report_md.report_type;
 #ifdef WITH_SPGW
         fabric_md.bridged.spgw.skip_spgw = true;
 #endif // WITH_SPGW
@@ -50,19 +51,23 @@ parser IntReportParser (packet_in packet,
     }
 
     state parse_int_ingress_drop {
-        packet.extract(fabric_md.bridged);
-        fabric_md.int_report_md.bmd_type = BridgedMdType_t.INT_INGRESS_DROP;
-        fabric_md.int_report_md.encap_presence = fabric_md.bridged.base.encap_presence;
-        fabric_md.int_report_md.flow_hash = fabric_md.bridged.base.inner_hash;
+        packet.extract(fabric_md.int_report_md);
 
         /** drop_report_header **/
-        hdr.drop_report_header.drop_reason = fabric_md.bridged.int_bmd.drop_reason;
+        hdr.drop_report_header.drop_reason = fabric_md.int_report_md.drop_reason;
         /** report_fixed_header **/
-        hdr.report_fixed_header.ig_tstamp = fabric_md.bridged.base.ig_tstamp[31:0];
+        hdr.report_fixed_header.ig_tstamp = fabric_md.int_report_md.ig_tstamp;
         /** common_report_header **/
-        hdr.common_report_header.ig_port = fabric_md.bridged.base.ig_port;
+        hdr.common_report_header.ig_port = fabric_md.int_report_md.ig_port;
         hdr.common_report_header.eg_port = 0;
         hdr.common_report_header.queue_id = 0;
+
+        fabric_md.bridged.base.vlan_id = DEFAULT_VLAN_ID;
+        fabric_md.bridged.base.mpls_label = 0; // do not push an MPLS label
+        fabric_md.bridged.int_bmd.report_type = fabric_md.int_report_md.report_type;
+#ifdef WITH_SPGW
+        fabric_md.bridged.spgw.skip_spgw = true;
+#endif // WITH_SPGW
         transition set_common_int_drop_headers;
     }
 

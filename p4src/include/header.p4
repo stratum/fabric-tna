@@ -368,6 +368,9 @@ struct fabric_ingress_metadata_t {
 #endif // WITH_SPGW
     PortType_t               ig_port_type;
     common_mirror_metadata_t mirror;
+#ifdef WITH_INT
+    int_report_metadata_t    int_report_md;
+#endif // WITH_INT
 }
 
 // Egress pipeline-only metadata

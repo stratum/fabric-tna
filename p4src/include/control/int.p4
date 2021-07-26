@@ -58,7 +58,8 @@ control FlowReportFilter(
     };
 
     apply {
-        if (fabric_md.int_report_md.report_type == INT_REPORT_TYPE_LOCAL) {
+        if (fabric_md.int_report_md.report_type == INT_REPORT_TYPE_LOCAL
+            && fabric_md.bridged.bmd_type == BridgedMdType_t.INGRESS_TO_EGRESS) {
             digest = digester.get({ // burp!
                 fabric_md.bridged.base.ig_port,
                 eg_intr_md.egress_port,
@@ -203,13 +204,19 @@ control IntIngress(
 
     @hidden
     action report_drop() {
-        fabric_md.bridged.bmd_type = BridgedMdType_t.INT_INGRESS_DROP;
-        fabric_md.bridged.int_bmd.report_type = INT_REPORT_TYPE_DROP;
-        fabric_md.bridged.base.vlan_id = DEFAULT_VLAN_ID;
-        fabric_md.bridged.base.mpls_label = 0; // do not push an MPLS label
-#ifdef WITH_SPGW
-        fabric_md.bridged.spgw.skip_spgw = true;
-#endif // WITH_SPGW
+        fabric_md.int_report_md.setValid();
+        fabric_md.int_report_md.bmd_type = BridgedMdType_t.INT_INGRESS_DROP;
+        fabric_md.int_report_md.mirror_type = FabricMirrorType_t.INVALID;
+        fabric_md.int_report_md.ig_port = ig_intr_md.ingress_port;
+        fabric_md.int_report_md.eg_port = 0;
+        fabric_md.int_report_md.queue_id = 0;
+        fabric_md.int_report_md.encap_presence = fabric_md.bridged.base.encap_presence;
+        fabric_md.int_report_md.flow_hash = fabric_md.bridged.base.inner_hash;
+        // fabric_md.int_report_md.drop_reason = set by the pipeline
+        fabric_md.int_report_md.ig_tstamp = (bit<32>)ig_intr_md.ingress_mac_tstamp;
+        fabric_md.int_report_md.ip_eth_type = fabric_md.bridged.base.ip_eth_type;
+        fabric_md.int_report_md.report_type = INT_REPORT_TYPE_DROP;
+
         // Redirect to the recirculation port of the pipeline
         ig_tm_md.ucast_egress_port = ig_intr_md.ingress_port[8:7] ++ RECIRC_PORT_NUMBER;
 
@@ -272,11 +279,6 @@ control IntEgress (
     FlowReportFilter() flow_report_filter;
     DropReportFilter() drop_report_filter;
     queue_report_filter_index_t queue_report_filter_index;
-
-#ifdef WITH_DEBUG
-    DirectCounter<bit<64>>(CounterType_t.PACKETS_AND_BYTES) report_counter;
-    DirectCounter<bit<64>>(CounterType_t.PACKETS_AND_BYTES) int_metadata_counter;
-#endif // WITH_DEBUG
 
     @hidden
     Random<bit<16>>() ip_id_gen;
@@ -365,9 +367,6 @@ control IntEgress (
         hdr.eth_type.value = fabric_md.int_report_md.ip_eth_type;
         // Remove the INT mirror metadata to prevent egress mirroring again.
         eg_dprsr_md.mirror_type = (bit<3>)FabricMirrorType_t.INVALID;
-#ifdef WITH_DEBUG
-        report_counter.count();
-#endif // WITH_DEBUG
     }
 
     action do_local_report_encap(mac_addr_t src_mac, mac_addr_t mon_mac,
@@ -420,40 +419,6 @@ control IntEgress (
         hdr.report_mpls.label = mon_label;
     }
 
-    // Transforms mirrored packets into INT report packets.
-    table report {
-        // when we are parsing the regular ingress to egress packet,
-        // the `int_report_md` will be undefined, add `bmd_type` match key to ensure we
-        // are handling the right packet type.
-        key = {
-            fabric_md.int_report_md.bmd_type: exact @name("bmd_type");
-            fabric_md.int_report_md.mirror_type: exact @name("mirror_type");
-            fabric_md.int_report_md.report_type: exact @name("int_report_type");
-        }
-        actions = {
-            do_local_report_encap;
-            do_local_report_encap_mpls;
-            do_drop_report_encap;
-            do_drop_report_encap_mpls;
-            @defaultonly nop();
-        }
-        default_action = nop;
-        const size = 6; // Flow, Drop, and Queue report
-                        // times bridged metadata types(IN/EGRESS_MIRROR)
-        // entries = {
-        //      (INT_INGRESS_DROP, INVALID, DROP): ingress drop report
-        //      (EGRESS_MIRROR, INT_REPORT, DROP): egress drop report
-        //      (DEFLECTED, INVALID, LOCAL): deflect on drop report
-        //      (EGRESS_MIRROR, INT_REPORT, LOCAL): local report
-        //      (EGRESS_MIRROR, INT_REPORT, QUEUE): queue report
-        //      (EGRESS_MIRROR, INT_REPORT, QUEUE|LOCAL): queue report
-        // }
-#ifdef WITH_DEBUG
-        counters = report_counter;
-#endif // WITH_DEBUG
-    }
-
-    @hidden
     action init_int_metadata(bit<3> report_type) {
         eg_dprsr_md.mirror_type = (bit<3>)FabricMirrorType_t.INT_REPORT;
         fabric_md.int_report_md.bmd_type = BridgedMdType_t.EGRESS_MIRROR;
@@ -468,40 +433,45 @@ control IntEgress (
         fabric_md.int_report_md.ip_eth_type = fabric_md.bridged.base.ip_eth_type;
         fabric_md.int_report_md.flow_hash = fabric_md.bridged.base.inner_hash;
         // fabric_md.int_report_md.encap_presence set by the parser
-
         fabric_md.int_report_md.report_type = report_type;
-#ifdef WITH_DEBUG
-        int_metadata_counter.count();
-#endif // WITH_DEBUG
     }
 
-    // Initializes the INT mirror metadata.
-    @hidden
-    table int_metadata {
+    /*
+     * The following table is used to initizalize the INT mirror metadata or encap
+     * packet with INT report headers.
+     *
+     * int_report_md_valid | int_report_type | drop_ctl  | queue_report | actopm
+     * --------------------------------------------------------------
+     * Before mirrored or not ingress drop:
+     * false | LOCAL     | false | false | init_int_metadata(INT_REPORT_TYPE_LOCAL)
+     * false | LOCAL     | false | true  | init_int_metadata(INT_REPORT_TYPE_LOCAL|INT_REPORT_TYPE_QUEUE)
+     * false | LOCAL     | true  | false | init_int_metadata(INT_REPORT_TYPE_DROP)
+     * false | LOCAL     | true  | true  | init_int_metadata(INT_REPORT_TYPE_DROP)
+     * false | NO_REPORT | false | true  | init_int_metadata(INT_REPORT_TYPE_QUEUE)
+     * false | NO_REPORT | true  | true  | init_int_metadata(INT_REPORT_TYPE_QUEUE)
+     * After mirrored, deflected, or it is a ingress drop:
+     * true  | DROP        | false | false | do_drop_report_encap(_mpls)
+     * true  | LOCAL       | false | false | do_local_report_encap(_mpls)
+     * true  | QUEUE       | false | false | do_local_report_encap(_mpls)
+     * true  | QUEUE|LOCAL | false | false | do_local_report_encap(_mpls)
+     */
+    table int_report {
         key = {
+            fabric_md.int_report_md.isValid(): exact @name("int_report_md_valid");
             fabric_md.bridged.int_bmd.report_type: exact @name("int_report_type");
             eg_dprsr_md.drop_ctl: exact @name("drop_ctl");
             fabric_md.int_md.queue_report: exact @name("queue_report");
         }
         actions = {
             init_int_metadata;
+            do_drop_report_encap;
+            do_drop_report_encap_mpls;
+            do_local_report_encap;
+            do_local_report_encap_mpls;
             @defaultonly nop();
         }
         const default_action = nop();
-        const size = 6;
-        const entries = {
-            (INT_REPORT_TYPE_LOCAL, 0, false): init_int_metadata(INT_REPORT_TYPE_LOCAL);
-            (INT_REPORT_TYPE_LOCAL, 0, true): init_int_metadata(INT_REPORT_TYPE_LOCAL|INT_REPORT_TYPE_QUEUE);
-            (INT_REPORT_TYPE_LOCAL, 1, false): init_int_metadata(INT_REPORT_TYPE_DROP);
-            (INT_REPORT_TYPE_LOCAL, 1, true): init_int_metadata(INT_REPORT_TYPE_DROP);
-            // Packets which does not tracked by the watchlist table
-            (INT_REPORT_TYPE_NO_REPORT, 0, true): init_int_metadata(INT_REPORT_TYPE_QUEUE);
-            (INT_REPORT_TYPE_NO_REPORT, 1, true): init_int_metadata(INT_REPORT_TYPE_QUEUE);
-        }
-
-#ifdef WITH_DEBUG
-        counters = int_metadata_counter;
-#endif // WITH_DEBUG
+        const size = 10;
     }
 
     apply {
@@ -531,16 +501,8 @@ control IntEgress (
         //  miss, etc.)?
         drop_report_filter.apply(hdr, fabric_md, eg_dprsr_md);
 
-        if (fabric_md.int_report_md.isValid()) {
-            // Packet is mirrored (egress or deflected) or an ingress drop.
-            report.apply();
-        } else {
-            // Regular packet. Initialize INT mirror metadata but let
-            // filter decide whether to generate a mirror or not.
-            if (int_metadata.apply().hit) {
-                flow_report_filter.apply(hdr, fabric_md, eg_intr_md, eg_prsr_md, eg_dprsr_md);
-            }
-        }
+        int_report.apply();
+        flow_report_filter.apply(hdr, fabric_md, eg_intr_md, eg_prsr_md, eg_dprsr_md);
     }
 }
 #endif

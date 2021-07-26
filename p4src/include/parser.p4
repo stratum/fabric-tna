@@ -31,7 +31,7 @@ parser FabricIngressParser (packet_in  packet,
         fabric_md.punt_to_cpu = false;
         fabric_md.bridged.base.ip_eth_type = 0;
 #ifdef WITH_INT
-        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UNKNOWN;
+        fabric_md.int_report_md.drop_reason = IntDropReason_t.DROP_REASON_UNKNOWN;
 #endif // WITH_INT
         fabric_md.bridged.base.encap_presence = EncapPresence.NONE;
         transition check_ethernet;
@@ -314,6 +314,7 @@ control FabricIngressDeparser(packet_out packet,
     apply {
         ingress_mirror.apply(hdr, fabric_md, ig_intr_md_for_dprsr);
         packet.emit(fabric_md.bridged);
+        packet.emit(fabric_md.int_report_md);
         packet.emit(hdr.fake_ethernet);
         packet.emit(hdr.packet_in);
         packet.emit(hdr.ethernet);

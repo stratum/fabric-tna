@@ -615,11 +615,11 @@ def pkt_decrement_ttl(pkt):
         pkt[IP].ttl -= 1
     return pkt
 
-def get_test_args(traffic_dir, pkt_addrs={}, spgw_type=None, int_test_type=None, 
+def get_test_args(traffic_dir, pkt_addrs={}, spgw_type=None, int_test_type=None,
                   test_multiple_pkt_len=False, test_multiple_prefix_len=False,
                   ue_recirculation_test=False):
 
-    """ 
+    """
     Generates parameters for doRunTest calls in test cases
     :param traffic_dir: traffic direction, e.g. "host-leaf-spine"
     :param pkt_addrs: packet header addresses, e.g. {eth_src, eth_dst, ip_src, ip_dst}
@@ -2828,18 +2828,35 @@ class IntTest(IPv4UnicastTest):
        packet to verify the output.
     """
 
-    def set_up_report_flow_with_report_type_and_bmd_type(
+    def set_up_int_report_flow_for_bridged_pkt(
         self,
+        report_type,
+        drop_ctl,
+        queue_report_flag,
+        report_type_param
+    ):
+        self.send_request_add_entry_to_action(
+            "int_report",
+            [
+                self.Exact("int_report_md_valid", stringify(0, 1)),
+                self.Exact("int_report_type", stringify(report_type, 1)),
+                self.Exact("drop_ctl", stringify(drop_ctl, 1)),
+                self.Exact("queue_report", stringify(queue_report_flag, 1)),
+            ],
+            "init_int_metadata",
+            [("report_type", stringify(report_type_param, 1))],
+        )
+
+    def set_up_int_report_flow_for_report_pkt(
+        self,
+        report_type,
         src_mac,
         mon_mac,
         src_ip,
         mon_ip,
         mon_port,
-        report_type,
-        bmd_type,
         switch_id,
-        mirror_type,
-        mon_label,
+        mon_label=None,
     ):
         action = ""
         # local report or queue report or both
@@ -2863,11 +2880,12 @@ class IntTest(IPv4UnicastTest):
             action_params.append(("mon_label", stringify(mon_label, 3)))
 
         self.send_request_add_entry_to_action(
-            "report",
+            "int_report",
             [
-                self.Exact("bmd_type", stringify(bmd_type, 1)),
-                self.Exact("mirror_type", stringify(mirror_type, 1)),
+                self.Exact("int_report_md_valid", stringify(1, 1)),
                 self.Exact("int_report_type", stringify(report_type, 1)),
+                self.Exact("drop_ctl", stringify(0, 1)),
+                self.Exact("queue_report", stringify(0, 1)),
             ],
             action,
             action_params,
@@ -2876,39 +2894,65 @@ class IntTest(IPv4UnicastTest):
     def set_up_report_flow(
         self, src_mac, mon_mac, src_ip, mon_ip, mon_port, switch_id, mon_label=None
     ):
-        def set_up_report_flow_internal(bmd_type, mirror_type, report_type):
-            self.set_up_report_flow_with_report_type_and_bmd_type(
+        def set_up_int_report_flow_for_report_pkt_internal(report_type):
+            self.set_up_int_report_flow_for_report_pkt(
+                report_type,
                 src_mac,
                 mon_mac,
                 src_ip,
                 mon_ip,
                 mon_port,
-                report_type,
-                bmd_type,
                 switch_id,
-                mirror_type,
                 mon_label,
             )
-
-        set_up_report_flow_internal(
-            BRIDGED_MD_TYPE_INT_INGRESS_DROP, MIRROR_TYPE_INVALID, INT_REPORT_TYPE_DROP
+        set_up_int_report_flow_for_report_pkt_internal(
+            INT_REPORT_TYPE_LOCAL
         )
-        set_up_report_flow_internal(
-            BRIDGED_MD_TYPE_EGRESS_MIRROR, MIRROR_TYPE_INT_REPORT, INT_REPORT_TYPE_DROP
+        set_up_int_report_flow_for_report_pkt_internal(
+            INT_REPORT_TYPE_DROP
         )
-        set_up_report_flow_internal(
-            BRIDGED_MD_TYPE_EGRESS_MIRROR, MIRROR_TYPE_INT_REPORT, INT_REPORT_TYPE_LOCAL
+        set_up_int_report_flow_for_report_pkt_internal(
+            INT_REPORT_TYPE_QUEUE
         )
-        set_up_report_flow_internal(
-            BRIDGED_MD_TYPE_DEFLECTED, MIRROR_TYPE_INVALID, INT_REPORT_TYPE_DROP
-        )
-        set_up_report_flow_internal(
-            BRIDGED_MD_TYPE_EGRESS_MIRROR, MIRROR_TYPE_INT_REPORT, INT_REPORT_TYPE_QUEUE
-        )
-        set_up_report_flow_internal(
-            BRIDGED_MD_TYPE_EGRESS_MIRROR,
-            MIRROR_TYPE_INT_REPORT,
+        set_up_int_report_flow_for_report_pkt_internal(
             INT_REPORT_TYPE_QUEUE | INT_REPORT_TYPE_LOCAL,
+        )
+
+        self.set_up_int_report_flow_for_bridged_pkt(
+            INT_REPORT_TYPE_LOCAL,
+            0,
+            0,
+            INT_REPORT_TYPE_LOCAL
+        )
+        self.set_up_int_report_flow_for_bridged_pkt(
+            INT_REPORT_TYPE_LOCAL,
+            0,
+            1,
+            INT_REPORT_TYPE_QUEUE | INT_REPORT_TYPE_LOCAL
+        )
+        self.set_up_int_report_flow_for_bridged_pkt(
+            INT_REPORT_TYPE_LOCAL,
+            1,
+            0,
+            INT_REPORT_TYPE_DROP
+        )
+        self.set_up_int_report_flow_for_bridged_pkt(
+            INT_REPORT_TYPE_LOCAL,
+            1,
+            1,
+            INT_REPORT_TYPE_DROP
+        )
+        self.set_up_int_report_flow_for_bridged_pkt(
+            INT_REPORT_TYPE_NO_REPORT,
+            0,
+            1,
+            INT_REPORT_TYPE_QUEUE
+        )
+        self.set_up_int_report_flow_for_bridged_pkt(
+            INT_REPORT_TYPE_NO_REPORT,
+            1,
+            1,
+            INT_REPORT_TYPE_QUEUE
         )
 
     def set_up_report_mirror_flow(self, pipe_id, mirror_id, port):
