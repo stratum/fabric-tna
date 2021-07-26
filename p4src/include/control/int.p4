@@ -361,6 +361,12 @@ control IntEgress (
         hdr.report_fixed_header.seq_no = get_seq_number.execute(hdr.report_fixed_header.hw_id);
         hdr.report_fixed_header.dqf = fabric_md.int_report_md.report_type;
         hdr.common_report_header.switch_id = switch_id;
+        // This is required to correct a (buggy?) @flexible allocation of
+        // bridged metadata that causes non-zero values to be extracted by the
+        // egress parser onto the below padding fields.
+        hdr.common_report_header.pad1 = 0;
+        hdr.common_report_header.pad2 = 0;
+        hdr.common_report_header.pad3 = 0;
         // Fix ethertype if we have stripped the MPLS header in the parser.
         hdr.eth_type.value = fabric_md.int_report_md.ip_eth_type;
         // Remove the INT mirror metadata to prevent egress mirroring again.
