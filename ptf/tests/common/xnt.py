@@ -150,7 +150,7 @@ def get_readable_int_report_str(pkt: Packet) -> str:
     )
 
 
-def analyze_report_pcap(pcap_file: str, total_flows_from_trace: int = 0) -> None:
+def analyze_report_pcap(pcap_file: str, total_flows_from_trace: int = 0) -> dict:
     pcap_reader = PcapReader(pcap_file)
     skipped = 0
     dropped = 0  # based on seq number
@@ -261,6 +261,24 @@ def analyze_report_pcap(pcap_file: str, total_flows_from_trace: int = 0) -> None
 
         five_tuple_to_prev_report_time[five_tuple] = packet_enter_time
 
+    results = {
+        'pkt_processed': pkt_processed,
+        'local_reports': local_reports,
+        'five_tuple_to_prev_local_report_time': len(five_tuple_to_prev_local_report_time),
+        'flow_with_multiple_local_reports': len(flow_with_multiple_local_reports),
+        'valid_local_report_irgs': len(valid_local_report_irgs),
+        'bad_local_report_irgs': len(bad_local_report_irgs),
+        'invalid_local_report_irgs': len(invalid_local_report_irgs),
+        'drop_reports': drop_reports,
+        'five_tuple_to_prev_drop_report_time': len(five_tuple_to_prev_drop_report_time),
+        'flow_with_multiple_drop_reports': len(flow_with_multiple_drop_reports),
+        'valid_drop_report_irgs': len(valid_drop_report_irgs),
+        'bad_drop_report_irgs': len(bad_drop_report_irgs),
+        'invalid_drop_report_irgs': len(invalid_drop_report_irgs),
+        'dropped': dropped,
+        'skipped': skipped
+    }
+
     print("Pkt processed: {}".format(pkt_processed))
     # Local report
     print("Local reports: {}".format(local_reports))
@@ -274,22 +292,21 @@ def analyze_report_pcap(pcap_file: str, total_flows_from_trace: int = 0) -> None
         "Total invalid INT IRGs(<=0s): {}".format(len(invalid_local_report_irgs))
     )
     if total_flows_from_trace != 0:
+        accuracy_score = len(five_tuple_to_prev_local_report_time) * 100 / total_flows_from_trace
         print(
-            "Accuracy score: {}".format(
-                len(five_tuple_to_prev_local_report_time) * 100 / total_flows_from_trace
-            )
+            "Accuracy score: {}".format(accuracy_score)
         )
+        results['accuracy_score'] = accuracy_score
 
     if len(valid_local_report_irgs) <= 0:
         print("No valid local report IRGs")
     else:
+        efficiency_score = (len(valid_local_report_irgs) - len(bad_local_report_irgs)) * 100 / len(valid_local_report_irgs)
         print(
-            "Efficiency score: {}".format(
-                (len(valid_local_report_irgs) - len(bad_local_report_irgs))
-                * 100
-                / len(valid_local_report_irgs)
-            )
+            "Efficiency score: {}".format(efficiency_score)
         )
+        results['efficiency_score'] = efficiency_score
+
         # Plot Histogram and CDF
         report_plot_file = abspath(splitext(pcap_file)[0] + "-local" + ".png")
         plot_histogram_and_cdf(report_plot_file, valid_local_report_irgs)
@@ -321,6 +338,8 @@ def analyze_report_pcap(pcap_file: str, total_flows_from_trace: int = 0) -> None
         )
         report_plot_file = abspath(splitext(pcap_file)[0] + "-drop" + ".png")
         plot_histogram_and_cdf(report_plot_file, valid_drop_report_irgs)
+    
+    return results
 
 
 def plot_histogram_and_cdf(report_plot_file, valid_report_irgs):

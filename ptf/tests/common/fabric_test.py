@@ -3047,10 +3047,10 @@ class IntTest(IPv4UnicastTest):
             action = "mark_to_report"
 
         matches = [self.Exact("ipv4_valid", stringify(1, 1))]
-        if ipv4_src:
+        if ipv4_src is not None:
             ipv4_src_ = ipv4_to_binary(ipv4_src)
             matches.append(self.Ternary("ipv4_src", ipv4_src_, ipv4_mask))
-        if ipv4_dst:
+        if ipv4_dst is not None:
             ipv4_dst_ = ipv4_to_binary(ipv4_dst)
             matches.append(self.Ternary("ipv4_dst", ipv4_dst_, ipv4_mask))
         if sport_low != lower_bound or sport_high != upper_bound:
