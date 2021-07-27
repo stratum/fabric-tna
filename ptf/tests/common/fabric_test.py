@@ -208,6 +208,7 @@ bind_layers(INT_L45_LOCAL_REPORT, Ether)
 
 INT_COLLECTOR_MAC = "00:1e:67:d2:ee:ee"
 INT_COLLECTOR_IPV4 = "192.168.99.254"
+INT_TOS = 0
 
 INT_REPORT_TYPE_NO_REPORT = 0
 INT_REPORT_TYPE_DROP = 4
@@ -252,13 +253,13 @@ BRIDGED_MD_TYPE_DEFLECTED = 5
 
 # Size for different headers
 if testutils.test_param_get("profile") == "fabric-spgw-int":
-    BMD_BYTES = 47
+    BMD_BYTES = 48
 elif testutils.test_param_get("profile") == "fabric-spgw":
-    BMD_BYTES = 39
+    BMD_BYTES = 40
 elif testutils.test_param_get("profile") == "fabric-int":
-    BMD_BYTES = 31
+    BMD_BYTES = 32
 elif testutils.test_param_get("profile") == "fabric":
-    BMD_BYTES = 23
+    BMD_BYTES = 24
 else:
     raise Exception("Invalid profile, cannot set BMD_BYTES")
 IP_HDR_BYTES = 20
@@ -279,6 +280,7 @@ PORT_TYPE_INTERNAL = b"\x03"
 
 DEFAULT_SLICE_ID = 0
 DEFAULT_TC = 0
+TC_WIDTH = 2  # bits
 
 # High-level parameter specification options for get_test_args function
 SPGW_OPTIONS = ["DL", "UL", "DL_PSC", "UL_PSC"]
@@ -615,11 +617,11 @@ def pkt_decrement_ttl(pkt):
         pkt[IP].ttl -= 1
     return pkt
 
-def get_test_args(traffic_dir, pkt_addrs={}, spgw_type=None, int_test_type=None, 
+def get_test_args(traffic_dir, pkt_addrs={}, spgw_type=None, int_test_type=None,
                   test_multiple_pkt_len=False, test_multiple_prefix_len=False,
                   ue_recirculation_test=False):
 
-    """ 
+    """
     Generates parameters for doRunTest calls in test cases
     :param traffic_dir: traffic direction, e.g. "host-leaf-spine"
     :param pkt_addrs: packet header addresses, e.g. {eth_src, eth_dst, ip_src, ip_dst}
@@ -778,6 +780,20 @@ def get_test_args(traffic_dir, pkt_addrs={}, spgw_type=None, int_test_type=None,
                                     params['pkt'] = pkt
 
                                     yield params
+
+def slice_tc_meter_index(slice_id, tc):
+    return (slice_id << TC_WIDTH) + tc
+
+def pkt_set_dscp(pkt, slice_id=None, tc=None, dscp=None):
+    assert IP in pkt, "Packet must be IPv4 to set DSCP"
+    if dscp is None:
+        # Concat slice_id and tc
+        dscp = (slice_id << TC_WIDTH) + tc
+    assert dscp < 2**7, "DSCP does not fit in 6 bits"
+    new_pkt = pkt.copy()
+    new_pkt[IP].tos = testutils.ip_make_tos(tos=0, ecn=None, dscp=dscp)
+    return new_pkt
+
 
 class FabricTest(P4RuntimeTest):
 
@@ -1687,6 +1703,60 @@ class ArpBroadcastTest(FabricTest):
 
 
 class IPv4UnicastTest(FabricTest):
+
+    def set_up_ipv4_unicast_rules(self,
+        next_hop_mac,
+        ig_port,
+        eg_port,
+        dst_ipv4,
+        tagged1=False,
+        tagged2=False,
+        prefix_len=24,
+        next_id=100,
+        is_next_hop_spine=False,
+        routed_eth_types=(ETH_TYPE_IPV4,),
+        install_routing_entry=True,
+        port_type1=PORT_TYPE_EDGE,
+        port_type2=PORT_TYPE_EDGE,
+        from_packet_out=False,
+        switch_mac=SWITCH_MAC,
+        vlan1=VLAN_ID_1,
+        vlan2=VLAN_ID_2,
+        mpls_label=MPLS_LABEL_2):
+
+        group_id = next_id
+
+        # Setup ports.
+        self.setup_port(ig_port, vlan1, port_type1, tagged1)
+        # This is to prevent sending duplicate table entries for tests like
+        # FabricIntDeflectedDropTest, where we already set up the recirculation port as
+        # part of `set_up_int_flows()`.
+        if eg_port not in RECIRCULATE_PORTS:
+            self.setup_port(eg_port, vlan2, port_type2, tagged2)
+
+        # Forwarding type -> routing v4
+        # If from_packet_out, set eth_dst to don't care. All packet-outs should
+        # be routed, independently of eth_dst.
+        for eth_type in routed_eth_types:
+            self.set_forwarding_type(
+                ig_port,
+                switch_mac if not from_packet_out else None,
+                ethertype=eth_type,
+                fwd_type=FORWARDING_TYPE_UNICAST_IPV4,
+            )
+
+        # Routing entry.
+        if install_routing_entry:
+            self.add_forwarding_routing_v4_entry(dst_ipv4, prefix_len, next_id)
+
+        if not is_next_hop_spine:
+            self.add_next_routing(next_id, eg_port, switch_mac, next_hop_mac)
+            self.add_next_vlan(next_id, vlan2)
+        else:
+            params = [eg_port, switch_mac, next_hop_mac, mpls_label]
+            self.add_next_mpls_and_routing_group(next_id, group_id, [params])
+            self.add_next_vlan(next_id, DEFAULT_VLAN)
+
     def runIPv4UnicastTest(
         self,
         pkt,
@@ -1775,7 +1845,6 @@ class IPv4UnicastTest(FabricTest):
             vlan2 = VLAN_ID_2 if next_vlan is None else next_vlan
 
         next_id = 100 if next_id is None else next_id
-        group_id = next_id
         mpls_label = MPLS_LABEL_2
         if dst_ipv4 is None:
             dst_ipv4 = pkt[IP].dst
@@ -1784,36 +1853,26 @@ class IPv4UnicastTest(FabricTest):
         else:
             switch_mac = pkt[Ether].dst
 
-        # Setup ports.
-        self.setup_port(ig_port, vlan1, port_type1, tagged1)
-        # This is to prevent sending duplicate table entries for tests like
-        # FabricIntDeflectedDropTest, where we already set up the recirculation port as
-        # part of `set_up_int_flows()`.
-        if eg_port not in RECIRCULATE_PORTS:
-            self.setup_port(eg_port, vlan2, port_type2, tagged2)
-
-        # Forwarding type -> routing v4
-        # If from_packet_out, set eth_dst to don't care. All packet-outs should
-        # be routed, independently of eth_dst.
-        for eth_type in routed_eth_types:
-            self.set_forwarding_type(
-                ig_port,
-                switch_mac if not from_packet_out else None,
-                ethertype=eth_type,
-                fwd_type=FORWARDING_TYPE_UNICAST_IPV4,
-            )
-
-        # Routing entry.
-        if install_routing_entry:
-            self.add_forwarding_routing_v4_entry(dst_ipv4, prefix_len, next_id)
-
-        if not is_next_hop_spine:
-            self.add_next_routing(next_id, eg_port, switch_mac, next_hop_mac)
-            self.add_next_vlan(next_id, vlan2)
-        else:
-            params = [eg_port, switch_mac, next_hop_mac, mpls_label]
-            self.add_next_mpls_and_routing_group(next_id, group_id, [params])
-            self.add_next_vlan(next_id, DEFAULT_VLAN)
+        self.set_up_ipv4_unicast_rules(
+            next_hop_mac,
+            ig_port,
+            eg_port,
+            dst_ipv4,
+            tagged1,
+            tagged2,
+            prefix_len,
+            next_id,
+            is_next_hop_spine,
+            routed_eth_types,
+            install_routing_entry,
+            port_type1,
+            port_type2,
+            from_packet_out,
+            switch_mac,
+            vlan1,
+            vlan2,
+            mpls_label,
+        )
 
         if exp_pkt is None:
             # Build exp pkt using the input one.
@@ -2210,7 +2269,8 @@ class SpgwSimpleTest(IPv4UnicastTest):
         counter = self.read_indirect_counter(c_name, idx, typ="BOTH")
         return (counter.data.packet_count, counter.data.byte_count)
 
-    def _add_spgw_iface(self, iface_addr, prefix_len, iface_enum, gtpu_valid):
+    def _add_spgw_iface(self, iface_addr, prefix_len, iface_enum, gtpu_valid,
+                        slice_id=DEFAULT_SLICE_ID):
         req = self.get_new_write_request()
 
         iface_addr_ = ipv4_to_binary(iface_addr)
@@ -2225,25 +2285,27 @@ class SpgwSimpleTest(IPv4UnicastTest):
             "FabricIngress.spgw.load_iface",
             [
                 ("src_iface", stringify(iface_enum, 1)),
-                ("slice_id", stringify(DEFAULT_SLICE_ID, 1)),
+                ("slice_id", stringify(slice_id, 1)),
             ],
         )
         self.write_request(req)
 
-    def add_ue_pool(self, pool_addr, prefix_len=32):
+    def add_ue_pool(self, pool_addr, prefix_len=32, slice_id=DEFAULT_SLICE_ID):
         self._add_spgw_iface(
             iface_addr=pool_addr,
             prefix_len=prefix_len,
             iface_enum=SPGW_IFACE_CORE,
             gtpu_valid=False,
+            slice_id=slice_id,
         )
 
-    def add_s1u_iface(self, s1u_addr, prefix_len=32):
+    def add_s1u_iface(self, s1u_addr, prefix_len=32, slice_id=DEFAULT_SLICE_ID):
         self._add_spgw_iface(
             iface_addr=s1u_addr,
             prefix_len=prefix_len,
             iface_enum=SPGW_IFACE_ACCESS,
             gtpu_valid=True,
+            slice_id=slice_id
         )
 
     def add_dbuf_device(
@@ -2275,7 +2337,8 @@ class SpgwSimpleTest(IPv4UnicastTest):
             ],
         )
 
-    def add_uplink_pdr(self, ctr_id, far_id, teid, tunnel_dst_addr):
+    def add_uplink_pdr(self, ctr_id, far_id, teid, tunnel_dst_addr,
+                       tc=DEFAULT_TC):
         req = self.get_new_write_request()
         self.push_update_add_entry_to_action(
             req,
@@ -2289,7 +2352,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
                 ("ctr_id", stringify(ctr_id, 2)),
                 ("far_id", stringify(far_id, 4)),
                 ("needs_gtpu_decap", stringify(1, 1)),
-                ("tc", stringify(DEFAULT_TC, 1)),
+                ("tc", stringify(tc, 1)),
             ],
         )
         self.write_request(req)
@@ -2323,7 +2386,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         )
         self.write_request(req)
 
-    def add_downlink_pdr(self, ctr_id, far_id, ue_addr):
+    def add_downlink_pdr(self, ctr_id, far_id, ue_addr, tc=DEFAULT_TC):
         req = self.get_new_write_request()
 
         self.push_update_add_entry_to_action(
@@ -2335,7 +2398,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
                 ("ctr_id", stringify(ctr_id, 2)),
                 ("far_id", stringify(far_id, 4)),
                 ("needs_gtpu_decap", stringify(0, 1)),
-                ("tc", stringify(DEFAULT_TC, 1)),
+                ("tc", stringify(tc, 1)),
             ],
         )
         self.write_request(req)
@@ -2381,18 +2444,20 @@ class SpgwSimpleTest(IPv4UnicastTest):
             ],
         )
 
-    def setup_uplink(self, s1u_sgw_addr, teid, ctr_id, far_id=UPLINK_FAR_ID):
-        self.add_s1u_iface(s1u_sgw_addr)
+    def setup_uplink(self, s1u_sgw_addr, teid, ctr_id, far_id=UPLINK_FAR_ID,
+                     slice_id=DEFAULT_SLICE_ID, tc=DEFAULT_TC):
+        self.add_s1u_iface(s1u_addr=s1u_sgw_addr, slice_id=slice_id)
         self.add_uplink_pdr(
-            ctr_id=ctr_id, far_id=far_id, teid=teid, tunnel_dst_addr=s1u_sgw_addr,
+            ctr_id=ctr_id, far_id=far_id, teid=teid, tunnel_dst_addr=s1u_sgw_addr, tc=tc
         )
         self.add_normal_far(far_id=far_id)
 
     def setup_downlink(
         self, s1u_sgw_addr, s1u_enb_addr, teid, ue_addr, ctr_id, far_id=DOWNLINK_FAR_ID,
+            slice_id=DEFAULT_SLICE_ID, tc=DEFAULT_TC
     ):
-        self.add_ue_pool(ue_addr)
-        self.add_downlink_pdr(ctr_id=ctr_id, far_id=far_id, ue_addr=ue_addr)
+        self.add_ue_pool(pool_addr=ue_addr, slice_id=slice_id)
+        self.add_downlink_pdr(ctr_id=ctr_id, far_id=far_id, ue_addr=ue_addr, tc=tc)
         self.add_tunnel_far(
             far_id=far_id,
             teid=teid,
@@ -2434,7 +2499,9 @@ class SpgwSimpleTest(IPv4UnicastTest):
             PDR_COUNTER_EGRESS, ctr_idx, "BOTH", exp_egress_bytes, exp_egress_pkts,
         )
 
-    def runUplinkTest(self, ue_out_pkt, tagged1, tagged2, with_psc, is_next_hop_spine):
+    def runUplinkTest(self, ue_out_pkt, tagged1, tagged2, with_psc, is_next_hop_spine,
+                      slice_id=DEFAULT_SLICE_ID, tc=DEFAULT_TC,
+                      dscp_rewrite=False, verify_counters=True, eg_port=None):
         upstream_mac = HOST2_MAC
 
         gtp_pkt = pkt_add_gtp(
@@ -2457,13 +2524,16 @@ class SpgwSimpleTest(IPv4UnicastTest):
             exp_pkt = pkt_add_mpls(exp_pkt, MPLS_LABEL_2, DEFAULT_MPLS_TTL)
         if tagged2:
             exp_pkt = pkt_add_vlan(exp_pkt, VLAN_ID_2)
+        if dscp_rewrite:
+            exp_pkt = pkt_set_dscp(exp_pkt, slice_id=slice_id, tc=tc)
 
         self.setup_uplink(
-            s1u_sgw_addr=S1U_SGW_IPV4, teid=UPLINK_TEID, ctr_id=UPLINK_PDR_CTR_IDX,
+            s1u_sgw_addr=S1U_SGW_IPV4, teid=UPLINK_TEID, ctr_id=UPLINK_PDR_CTR_IDX, slice_id=slice_id, tc=tc
         )
 
-        # Clear SPGW counters before sending the packet
-        self.reset_pdr_counters(UPLINK_PDR_CTR_IDX)
+        if verify_counters:
+            # Clear SPGW counters before sending the packet
+            self.reset_pdr_counters(UPLINK_PDR_CTR_IDX)
 
         self.runIPv4UnicastTest(
             pkt=gtp_pkt,
@@ -2474,7 +2544,11 @@ class SpgwSimpleTest(IPv4UnicastTest):
             tagged1=tagged1,
             tagged2=tagged2,
             is_next_hop_spine=is_next_hop_spine,
+            eg_port=eg_port
         )
+
+        if not verify_counters:
+            return
 
         ingress_bytes = len(gtp_pkt) + ETH_FCS_BYTES
         if tagged1:
@@ -2613,7 +2687,9 @@ class SpgwSimpleTest(IPv4UnicastTest):
             self.verify_pdr_counters(UPLINK_PDR_CTR_IDX, uplink_ingress_bytes, 0, 1, 0)
             self.verify_pdr_counters(DOWNLINK_PDR_CTR_IDX, 0, 0, 0, 0)
 
-    def runDownlinkTest(self, pkt, tagged1, tagged2, with_psc, is_next_hop_spine):
+    def runDownlinkTest(self, pkt, tagged1, tagged2, with_psc, is_next_hop_spine,
+                        slice_id=DEFAULT_SLICE_ID, tc=DEFAULT_TC, dscp_rewrite=False,
+                        verify_counters=True, eg_port=None):
         exp_pkt = pkt.copy()
         exp_pkt[Ether].src = SWITCH_MAC
         exp_pkt[Ether].dst = S1U_ENB_MAC
@@ -2631,6 +2707,9 @@ class SpgwSimpleTest(IPv4UnicastTest):
             exp_pkt = pkt_add_mpls(exp_pkt, MPLS_LABEL_2, DEFAULT_MPLS_TTL)
         if tagged2:
             exp_pkt = pkt_add_vlan(exp_pkt, VLAN_ID_2)
+        if dscp_rewrite:
+            # Modify outer IPV4
+            exp_pkt = pkt_set_dscp(exp_pkt, slice_id=slice_id, tc=tc)
 
         self.setup_downlink(
             s1u_sgw_addr=S1U_SGW_IPV4,
@@ -2638,13 +2717,16 @@ class SpgwSimpleTest(IPv4UnicastTest):
             teid=DOWNLINK_TEID,
             ue_addr=UE1_IPV4,
             ctr_id=DOWNLINK_PDR_CTR_IDX,
+            slice_id=slice_id,
+            tc=tc
         )
 
         if with_psc:
             self.enable_encap_with_psc()
 
-        # Clear SPGW counters before sending the packet
-        self.reset_pdr_counters(DOWNLINK_PDR_CTR_IDX)
+        if verify_counters:
+            # Clear SPGW counters before sending the packet
+            self.reset_pdr_counters(DOWNLINK_PDR_CTR_IDX)
 
         self.runIPv4UnicastTest(
             pkt=pkt,
@@ -2655,7 +2737,11 @@ class SpgwSimpleTest(IPv4UnicastTest):
             tagged1=tagged1,
             tagged2=tagged2,
             is_next_hop_spine=is_next_hop_spine,
+            eg_port=eg_port
         )
+
+        if not verify_counters:
+            return
 
         ingress_bytes = len(pkt) + ETH_FCS_BYTES
         if tagged1:
@@ -2997,10 +3083,9 @@ class IntTest(IPv4UnicastTest):
         elif VXLAN in inner_packet:
             inner_packet = pkt_remove_vxlan(inner_packet)
 
-        # Note: scapy doesn't support dscp field, use tos.
         pkt = (
             Ether(src=src_mac, dst=dst_mac)
-            / IP(src=src_ip, dst=dst_ip, ttl=64, tos=4)
+            / IP(src=src_ip, dst=dst_ip, ttl=64, tos=INT_TOS)
             / UDP(sport=0, chksum=0)
             / INT_L45_REPORT_FIXED(nproto=2, f=f_flag, q=q_flag, hw_id=(eg_port >> 7))
             / INT_L45_LOCAL_REPORT(
@@ -3055,7 +3140,7 @@ class IntTest(IPv4UnicastTest):
         # Note: scapy doesn't support dscp field, use tos.
         pkt = (
             Ether(src=src_mac, dst=dst_mac)
-            / IP(src=src_ip, dst=dst_ip, ttl=64, tos=4)
+            / IP(src=src_ip, dst=dst_ip, ttl=64, tos=INT_TOS)
             / UDP(sport=0, chksum=0)
             / INT_L45_REPORT_FIXED(nproto=1, d=1, hw_id=hw_id)
             / INT_L45_DROP_REPORT(
@@ -3177,9 +3262,7 @@ class IntTest(IPv4UnicastTest):
         )
         self.set_up_recirc_ports()
 
-    def set_up_latency_threshold_for_q_report(self, threshold_trigger, threshold_reset):
-        queue_id = 0
-
+    def set_up_latency_threshold_for_q_report(self, threshold_trigger, threshold_reset, queue_id=0):
         def set_up_queue_report_table_internal(upper, lower, action):
             # Omit dont'care matches
             matches = [self.Exact("egress_qid", stringify(queue_id, 1))]
@@ -4259,27 +4342,34 @@ class PppoeTest(DoubleVlanTerminationTest):
         else:
             self.assertEqual(new_tx_count, old_tx_count)
 
-
 class SlicingTest(FabricTest):
     """Mixin class with methods to manipulate QoS entities
     """
 
-    def slice_tc_index(self, slice_id, tc):
-        return (slice_id << 4) + tc
-
-    def add_slice_tc_classifier_entry(self, slice_id, tc, **ftuple):
-        return self.send_request_add_entry_to_action(
+    def add_slice_tc_classifier_entry(self, slice_id=None, tc=None,
+                                      trust_dscp=False,
+                                      **ftuple):
+        if trust_dscp:
+            action = "FabricIngress.slice_tc_classifier.trust_dscp"
+            params = []
+        else:
+            action = "FabricIngress.slice_tc_classifier.set_slice_id_tc"
+            params = [
+                ("slice_id", stringify(slice_id, 1)),
+                ("tc", stringify(tc, 1))
+            ]
+        self.send_request_add_entry_to_action(
             "FabricIngress.slice_tc_classifier.classifier",
             self.build_acl_matches(**ftuple),
-            "FabricIngress.slice_tc_classifier.set_slice_id_tc",
-            [("slice_id", stringify(slice_id, 1)), ("tc", stringify(tc, 1))],
+            action,
+            params,
             DEFAULT_PRIORITY,
         )
 
     def configure_slice_tc_meter(self, slice_id, tc, cir, cburst, pir, pburst):
-        return self.write_indirect_meter(
+        self.write_indirect_meter(
             m_name="FabricIngress.qos.slice_tc_meter",
-            m_index=self.slice_tc_index(slice_id, tc),
+            m_index=slice_tc_meter_index(slice_id, tc),
             cir=cir,
             cburst=cburst,
             pir=pir,
@@ -4301,7 +4391,7 @@ class SlicingTest(FabricTest):
         else:
             action = "FabricIngress.qos.meter_drop"
             action_params = []
-        return self.send_request_add_entry_to_action(
+        self.send_request_add_entry_to_action(
             "FabricIngress.qos.queues",
             matches,
             action,
@@ -4309,5 +4399,14 @@ class SlicingTest(FabricTest):
             DEFAULT_PRIORITY,
         )
 
+    def add_dscp_rewriter_entry(self, eg_port, clear=False):
+        self.send_request_add_entry_to_action(
+            "FabricEgress.dscp_rewriter.rewriter",
+            [self.Exact("eg_port", stringify(eg_port, 2))],
+            "FabricEgress.dscp_rewriter." + "clear" if clear else "rewrite",
+            [],
+        )
+
     def enable_policing(self, slice_id, tc, color=COLOR_RED):
-        return self.add_queue_entry(slice_id, tc, None, color=color)
+        self.add_queue_entry(slice_id, tc, None, color=color)
+

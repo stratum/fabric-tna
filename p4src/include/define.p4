@@ -44,7 +44,8 @@ typedef bit<32> ipv4_addr_t;
 typedef bit<16> l4_port_t;
 typedef bit<32> flow_hash_t;
 typedef bit<SLICE_ID_WIDTH> slice_id_t;
-typedef bit<TC_WIDTH> tc_t; // Traffic Class (for QoS)
+typedef bit<TC_WIDTH> tc_t; // Traffic Class (for QoS) whitin a slice
+typedef bit<SLICE_TC_WIDTH> slice_tc_t; // Slice and TC identifier
 typedef bit<5> qid_t;
 
 const slice_id_t DEFAULT_SLICE_ID = 0;
@@ -194,10 +195,6 @@ enum bit<2> CpuLoopbackMode_t {
 }
 
 // INT
-
-/* indicate INT at LSB of DSCP */
-const bit<6> INT_DSCP = 0x1;
-
 const bit<4>  NPROTO_ETHERNET = 0;
 const bit<4>  NPROTO_TELEMETRY_DROP_HEADER = 1;
 const bit<4>  NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER = 2;
