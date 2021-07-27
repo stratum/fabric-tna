@@ -131,6 +131,42 @@ FlowStats = collections.namedtuple(
 )
 
 
+PortStats = collections.namedtuple("PortStats", [
+    "tx_packets",
+    "rx_packets",
+    "tx_bytes",
+    "rx_bytes",
+    "tx_errors",
+    "rx_errors",
+    "tx_bps",
+    "tx_pps",
+    "tx_bps_L1",
+    "tx_util",
+    "rx_bps",
+    "rx_pps",
+    "rx_bps_L1",
+    "rx_util",
+])
+
+def get_port_stats(port: int, stats) -> PortStats:
+    port_stats = stats.get(port)
+    return PortStats(
+        tx_packets = port_stats.get("opackets", 0),
+        rx_packets = port_stats.get("ipackets", 0),
+        tx_bytes = port_stats.get("obytes", 0),
+        rx_bytes = port_stats.get("ibytes", 0),
+        tx_errors = port_stats.get("oerrors", 0),
+        rx_errors = port_stats.get("ierrors", 0),
+        tx_bps = port_stats.get("tx_bps", 0),
+        tx_pps = port_stats.get("tx_pps", 0),
+        tx_bps_L1 = port_stats.get("tx_bps_L1", 0),
+        tx_util = port_stats.get("tx_util", 0),
+        rx_bps = port_stats.get("rx_bps", 0),
+        rx_pps = port_stats.get("rx_pps", 0),
+        rx_bps_L1 = port_stats.get("rx_bps_L1", 0),
+        rx_util = port_stats.get("rx_util", 0),
+    )
+
 def get_latency_stats(pg_id: int, stats) -> LatencyStats:
     lat_stats = stats["latency"].get(pg_id)
     lat = lat_stats["latency"]

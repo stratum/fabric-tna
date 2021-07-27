@@ -1,6 +1,10 @@
 # SPDX-FileCopyrightText: Copyright 2020-present Open Networking Foundation.
 # SPDX-License-Identifier: Apache-2.0
 
+# This file contains line rate tests checking that our QoS targets are
+# satisfied. For more information, see this doc:
+# https://docs.google.com/document/d/1jq6NH-fffe8ImMo4EC_yMwH1djlrhWaQu2lpLFJKljA
+
 import json
 import logging
 import os
@@ -70,11 +74,13 @@ class QosTest(TRexTest, SlicingTest):
         return STLStream(packet=STLPktBuilder(pkt=pkt), mode=STLTXCont(percentage=100))
 
     # Create a highest priority control stream.
-    def create_control_stream(self, pg_id) -> STLStream:
+    def create_control_stream(
+        self, pg_id, l1_bps=CONTROL_QUEUE_MAX_RATE_BPS
+    ) -> STLStream:
         pkt = qos_utils.get_control_traffic_packet(128)
         return STLStream(
             packet=STLPktBuilder(pkt=pkt),
-            mode=STLTXCont(bps_L1=CONTROL_QUEUE_MAX_RATE_BPS),
+            mode=STLTXCont(bps_L1=l1_bps),
             isg=50000,  # wait 50 ms till start to let queues fill up
             flow_stats=STLFlowLatencyStats(pg_id=pg_id),
         )
@@ -214,7 +220,7 @@ class StrictPriorityControlTrafficIsPrioritized(QosTest):
         )
 
 
-class StrictPriorityCounterCheck(QosTest):
+class ControlTrafficIsNotPrioritizedWithoutRules(QosTest):
     @autocleanup
     def runTest(self) -> None:
         self.push_chassis_config()
@@ -257,6 +263,59 @@ class StrictPriorityCounterCheck(QosTest):
             lat_stats.seq_too_high + lat_stats.seq_too_low,
             0,
             f"Control traffic has not been dropped or reordered: sequence to high {lat_stats.seq_too_high}, sequence to low {lat_stats.seq_too_low}",
+        )
+        self.assertGreaterEqual(
+            lat_stats.total_max,
+            MAXIMUM_EXPECTED_LATENCY_CONTROL_TRAFFIC_US,
+            f"Maximum latency in control traffic is not over the expected limit: {lat_stats.total_max}",
+        )
+        self.assertGreaterEqual(
+            lat_stats.average,
+            AVERAGE_EXPECTED_LATENCY_CONTROL_TRAFFIC_US,
+            f"Average latency in control traffic not over the expected limit: {lat_stats.average}",
+        )
+
+
+class ControlTrafficIsShaped(QosTest):
+    @autocleanup
+    def runTest(self) -> None:
+        self.push_chassis_config()
+        self.setup_basic_forwarding()
+        self.setup_queue_classification()
+        # Create the control stream with above maximum allocated rate
+        control_stream = self.create_control_stream(
+            self.control_pg_id, CONTROL_QUEUE_MAX_RATE_BPS * 1.1
+        )
+        self.trex_client.add_streams(control_stream, ports=PRIORITY_SENDER_PORT)
+        # Start sending traffic
+        logging.info("Starting traffic, duration: %d sec", TRAFFIC_DURATION_SECONDS)
+        self.trex_client.start(
+            PRIORITY_SENDER_PORT, mult="1", duration=TRAFFIC_DURATION_SECONDS
+        )
+        logging.info("Waiting until all traffic is sent")
+        self.trex_client.wait_on_traffic(ports=PRIORITY_SENDER_PORT, rx_delay_ms=100)
+        # Get latency stats
+        stats = self.trex_client.get_stats()
+        lat_stats = get_latency_stats(self.control_pg_id, stats)
+        flow_stats = get_flow_stats(self.control_pg_id, stats)
+        rx_port_stats = get_port_stats(RECEIVER_PORT[0], stats)
+        # Get statistics for TX and RX ports
+        for port in ALL_PORTS:
+            readable_stats = get_readable_port_stats(stats[port])
+            print("Statistics for port {}: {}".format(port, readable_stats))
+        # Check that rate limits are enforced.
+        self.assertGreater(
+            flow_stats.total_rx, 0, "No control traffic has been received"
+        )
+        self.assertGreater(
+            lat_stats.dropped,
+            0,
+            f"Control traffic has not been dropped: {lat_stats.dropped}",
+        )
+        self.assertLessEqual(
+            rx_port_stats.rx_bps_L1,
+            CONTROL_QUEUE_MAX_RATE_BPS * 1.01, # allow small marging of error
+            f"Control traffic has not been rate limtied: {rx_port_stats.rx_bps_L1}",
         )
         self.assertGreaterEqual(
             lat_stats.total_max,
