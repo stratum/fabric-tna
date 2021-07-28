@@ -217,8 +217,8 @@ header drop_report_header_t {
     @padding bit<16> pad;
 }
 
-// Switch Local Report Header
-header local_report_header_t {
+// Switch Flow Report Header
+header flow_report_header_t {
     bit<5>  pad1;
     bit<19> queue_occupancy;
     bit<32> eg_tstamp;
@@ -450,7 +450,7 @@ struct egress_headers_t {
     udp_t report_udp;
     report_fixed_header_t report_fixed_header;
     common_report_header_t common_report_header;
-    local_report_header_t local_report_header;
+    flow_report_header_t flow_report_header;
     drop_report_header_t drop_report_header;
 #endif // WITH_INT
     ethernet_t ethernet;

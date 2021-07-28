@@ -105,7 +105,7 @@ public class FabricIntProgrammableTest {
     private static final short BMD_TYPE_INT_INGRESS_DROP = 4;
     private static final short MIRROR_TYPE_INVALID = 0;
     private static final short MIRROR_TYPE_INT_REPORT = 1;
-    private static final short INT_REPORT_TYPE_LOCAL = 1;
+    private static final short INT_REPORT_TYPE_FLOW = 1;
     private static final short INT_REPORT_TYPE_DROP = 2;
     private static final HostLocation COLLECTOR_LOCATION = new HostLocation(LEAF_DEVICE_ID, PortNumber.P0, 0);
     private static final Host COLLECTOR_HOST =
@@ -204,7 +204,7 @@ public class FabricIntProgrammableTest {
                 buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR,
                                      INT_REPORT_TYPE_DROP, MIRROR_TYPE_INT_REPORT),
                 buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR,
-                                     INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT),
+                                     INT_REPORT_TYPE_FLOW, MIRROR_TYPE_INT_REPORT),
                 buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_DEFLECTED,
                                      INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID),
                 buildFilterConfigFlow(LEAF_DEVICE_ID)
@@ -254,7 +254,7 @@ public class FabricIntProgrammableTest {
                 buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR,
                                      INT_REPORT_TYPE_DROP, MIRROR_TYPE_INT_REPORT),
                 buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR,
-                                     INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT),
+                                     INT_REPORT_TYPE_FLOW, MIRROR_TYPE_INT_REPORT),
                 buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_DEFLECTED,
                                      INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID),
                 buildFilterConfigFlow(LEAF_DEVICE_ID)
@@ -309,7 +309,7 @@ public class FabricIntProgrammableTest {
                 buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR,
                                      INT_REPORT_TYPE_DROP, MIRROR_TYPE_INT_REPORT),
                 buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR,
-                                     INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT),
+                                     INT_REPORT_TYPE_FLOW, MIRROR_TYPE_INT_REPORT),
                 buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_DEFLECTED,
                                      INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID),
                 buildFilterConfigFlow(LEAF_DEVICE_ID)
@@ -358,7 +358,7 @@ public class FabricIntProgrammableTest {
                 buildReportTableRule(SPINE_DEVICE_ID, true, BMD_TYPE_EGRESS_MIRROR,
                                      INT_REPORT_TYPE_DROP, MIRROR_TYPE_INT_REPORT),
                 buildReportTableRule(SPINE_DEVICE_ID, true, BMD_TYPE_EGRESS_MIRROR,
-                                     INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT),
+                                     INT_REPORT_TYPE_FLOW, MIRROR_TYPE_INT_REPORT),
                 buildReportTableRule(SPINE_DEVICE_ID, true, BMD_TYPE_DEFLECTED,
                                      INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID),
                 buildFilterConfigFlow(SPINE_DEVICE_ID)
@@ -422,7 +422,7 @@ public class FabricIntProgrammableTest {
                                          INT_REPORT_TYPE_DROP, MIRROR_TYPE_INT_REPORT)),
                 buildFlowEntry(
                     buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR,
-                                         INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT)),
+                                         INT_REPORT_TYPE_FLOW, MIRROR_TYPE_INT_REPORT)),
                 buildFlowEntry(
                     buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_DEFLECTED,
                                          INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID))
@@ -648,14 +648,14 @@ public class FabricIntProgrammableTest {
                     P4InfoConstants.MON_LABEL,
                     NODE_SID_IPV4
             ));
-            if (reportType == INT_REPORT_TYPE_LOCAL) {
-                reportAction.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_LOCAL_REPORT_ENCAP_MPLS);
+            if (reportType == INT_REPORT_TYPE_FLOW) {
+                reportAction.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_FLOW_REPORT_ENCAP_MPLS);
             } else {
                 reportAction.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_DROP_REPORT_ENCAP_MPLS);
             }
         } else {
-            if (reportType == INT_REPORT_TYPE_LOCAL) {
-                reportAction.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_LOCAL_REPORT_ENCAP);
+            if (reportType == INT_REPORT_TYPE_FLOW) {
+                reportAction.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_FLOW_REPORT_ENCAP);
             } else {
                 reportAction.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_DROP_REPORT_ENCAP);
             }

@@ -67,8 +67,8 @@ class INT_L45_REPORT_FIXED(Packet):
     ]
 
 
-class INT_L45_LOCAL_REPORT(Packet):
-    name = "INT_L45_LOCAL_REPORT"
+class INT_L45_FLOW_REPORT(Packet):
+    name = "INT_L45_FLOW_REPORT"
     fields_desc = [
         XIntField("switch_id", 0),
         XShortField("ingress_port_id", 0),
@@ -93,9 +93,9 @@ class INT_L45_DROP_REPORT(Packet):
 
 bind_layers(UDP, INT_L45_REPORT_FIXED, dport=32766)
 bind_layers(INT_L45_REPORT_FIXED, INT_L45_DROP_REPORT, nproto=1)
-bind_layers(INT_L45_REPORT_FIXED, INT_L45_LOCAL_REPORT, nproto=2)
+bind_layers(INT_L45_REPORT_FIXED, INT_L45_FLOW_REPORT, nproto=2)
 bind_layers(INT_L45_DROP_REPORT, Ether)
-bind_layers(INT_L45_LOCAL_REPORT, Ether)
+bind_layers(INT_L45_FLOW_REPORT, Ether)
 
 
 def get_readable_int_report_str(pkt: Packet) -> str:
@@ -115,16 +115,16 @@ def get_readable_int_report_str(pkt: Packet) -> str:
     ig_tstamp = fixed_report.ingress_tstamp
     readable_int_info = "Type: {}, HW ID: {}, Seq: {}, Ingress time: {}"
 
-    if INT_L45_LOCAL_REPORT not in pkt:
+    if INT_L45_FLOW_REPORT not in pkt:
         return readable_int_info.format(report_type, hw_id, seq_no, ig_tstamp)
 
-    local_report = pkt[INT_L45_LOCAL_REPORT]
-    sw_id = local_report.switch_id
-    ig_port = local_report.ingress_port_id
-    eg_port = local_report.egress_port_id
-    q_id = local_report.queue_id
-    q_oc = local_report.queue_occupancy
-    eg_tstamp = local_report.egress_tstamp
+    flow_report = pkt[INT_L45_FLOW_REPORT]
+    sw_id = flow_report.switch_id
+    ig_port = flow_report.ingress_port_id
+    eg_port = flow_report.egress_port_id
+    q_id = flow_report.queue_id
+    q_oc = flow_report.queue_occupancy
+    eg_tstamp = flow_report.egress_tstamp
     latency = eg_tstamp - ig_tstamp
 
     if latency < 0:
@@ -156,13 +156,13 @@ def analyze_report_pcap(pcap_file: str, total_flows_from_trace: int = 0) -> dict
     dropped = 0  # based on seq number
     prev_seq_no = {}  # HW ID -> seq number
 
-    # Local report
-    local_reports = 0
-    five_tuple_to_prev_local_report_time = {}  # 5-tuple -> latest report time
-    flow_with_multiple_local_reports = set()
-    valid_local_report_irgs = []
-    bad_local_report_irgs = []
-    invalid_local_report_irgs = []
+    # Flow report
+    flow_reports = 0
+    five_tuple_to_prev_flow_report_time = {}  # 5-tuple -> latest report time
+    flow_with_multiple_flow_reports = set()
+    valid_flow_report_irgs = []
+    bad_flow_report_irgs = []
+    invalid_flow_report_irgs = []
 
     # Drop report
     drop_reports = 0
@@ -189,14 +189,14 @@ def analyze_report_pcap(pcap_file: str, total_flows_from_trace: int = 0) -> dict
         packet_enter_time = report_pkt[INT_L45_REPORT_FIXED].ingress_tstamp
 
         int_fix_report = report_pkt[INT_L45_REPORT_FIXED]
-        if INT_L45_LOCAL_REPORT in report_pkt:
-            local_reports += 1
-            int_report = report_pkt[INT_L45_LOCAL_REPORT]
-            five_tuple_to_prev_report_time = five_tuple_to_prev_local_report_time
-            flow_with_multiple_reports = flow_with_multiple_local_reports
-            valid_report_irgs = valid_local_report_irgs
-            bad_report_irgs = bad_local_report_irgs
-            invalid_report_irgs = invalid_local_report_irgs
+        if INT_L45_FLOW_REPORT in report_pkt:
+            flow_reports += 1
+            int_report = report_pkt[INT_L45_FLOW_REPORT]
+            five_tuple_to_prev_report_time = five_tuple_to_prev_flow_report_time
+            flow_with_multiple_reports = flow_with_multiple_flow_reports
+            valid_report_irgs = valid_flow_report_irgs
+            bad_report_irgs = bad_flow_report_irgs
+            invalid_report_irgs = invalid_flow_report_irgs
         elif INT_L45_DROP_REPORT in report_pkt:
             drop_reports += 1
             int_report = report_pkt[INT_L45_DROP_REPORT]
@@ -263,12 +263,12 @@ def analyze_report_pcap(pcap_file: str, total_flows_from_trace: int = 0) -> dict
 
     results = {
         'pkt_processed': pkt_processed,
-        'local_reports': local_reports,
-        'five_tuple_to_prev_local_report_time': len(five_tuple_to_prev_local_report_time),
-        'flow_with_multiple_local_reports': len(flow_with_multiple_local_reports),
-        'valid_local_report_irgs': len(valid_local_report_irgs),
-        'bad_local_report_irgs': len(bad_local_report_irgs),
-        'invalid_local_report_irgs': len(invalid_local_report_irgs),
+        'flow_reports': flow_reports,
+        'five_tuple_to_prev_flow_report_time': len(five_tuple_to_prev_flow_report_time),
+        'flow_with_multiple_flow_reports': len(flow_with_multiple_flow_reports),
+        'valid_flow_report_irgs': len(valid_flow_report_irgs),
+        'bad_flow_report_irgs': len(bad_flow_report_irgs),
+        'invalid_flow_report_irgs': len(invalid_flow_report_irgs),
         'drop_reports': drop_reports,
         'five_tuple_to_prev_drop_report_time': len(five_tuple_to_prev_drop_report_time),
         'flow_with_multiple_drop_reports': len(flow_with_multiple_drop_reports),
@@ -280,28 +280,28 @@ def analyze_report_pcap(pcap_file: str, total_flows_from_trace: int = 0) -> dict
     }
 
     print("Pkt processed: {}".format(pkt_processed))
-    # Local report
-    print("Local reports: {}".format(local_reports))
-    print("Total 5-tuples: {}".format(len(five_tuple_to_prev_local_report_time)))
+    # Flow report
+    print("Flow reports: {}".format(flow_reports))
+    print("Total 5-tuples: {}".format(len(five_tuple_to_prev_flow_report_time)))
     print(
-        "Flows with multiple report: {}".format(len(flow_with_multiple_local_reports))
+        "Flows with multiple report: {}".format(len(flow_with_multiple_flow_reports))
     )
-    print("Total INT IRGs: {}".format(len(valid_local_report_irgs)))
-    print("Total bad INT IRGs(<0.9s): {}".format(len(bad_local_report_irgs)))
+    print("Total INT IRGs: {}".format(len(valid_flow_report_irgs)))
+    print("Total bad INT IRGs(<0.9s): {}".format(len(bad_flow_report_irgs)))
     print(
-        "Total invalid INT IRGs(<=0s): {}".format(len(invalid_local_report_irgs))
+        "Total invalid INT IRGs(<=0s): {}".format(len(invalid_flow_report_irgs))
     )
     if total_flows_from_trace != 0:
-        accuracy_score = len(five_tuple_to_prev_local_report_time) * 100 / total_flows_from_trace
+        accuracy_score = len(five_tuple_to_prev_flow_report_time) * 100 / total_flows_from_trace
         print(
             "Accuracy score: {}".format(accuracy_score)
         )
         results['accuracy_score'] = accuracy_score
 
-    if len(valid_local_report_irgs) <= 0:
-        print("No valid local report IRGs")
+    if len(valid_flow_report_irgs) <= 0:
+        print("No valid flow report IRGs")
     else:
-        efficiency_score = (len(valid_local_report_irgs) - len(bad_local_report_irgs)) * 100 / len(valid_local_report_irgs)
+        efficiency_score = (len(valid_flow_report_irgs) - len(bad_flow_report_irgs)) * 100 / len(valid_flow_report_irgs)
         print(
             "Efficiency score: {}".format(efficiency_score)
         )
@@ -309,7 +309,7 @@ def analyze_report_pcap(pcap_file: str, total_flows_from_trace: int = 0) -> dict
 
         # Plot Histogram and CDF
         report_plot_file = abspath(splitext(pcap_file)[0] + "-local" + ".png")
-        plot_histogram_and_cdf(report_plot_file, valid_local_report_irgs)
+        plot_histogram_and_cdf(report_plot_file, valid_flow_report_irgs)
 
     # Drop report
     print("----------------------")

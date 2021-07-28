@@ -197,10 +197,10 @@ enum bit<2> CpuLoopbackMode_t {
 // INT
 const bit<4>  NPROTO_ETHERNET = 0;
 const bit<4>  NPROTO_TELEMETRY_DROP_HEADER = 1;
-const bit<4>  NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER = 2;
+const bit<4>  NPROTO_TELEMETRY_SWITCH_FLOW_HEADER = 2;
 const bit<16> REPORT_FIXED_HEADER_BYTES = 12;
 const bit<16> DROP_REPORT_HEADER_BYTES = 12;
-const bit<16> LOCAL_REPORT_HEADER_BYTES = 16;
+const bit<16> FLOW_REPORT_HEADER_BYTES = 16;
 const bit<16> ETH_FCS_LEN = 4;
 const bit<8> INT_MIRROR_SESSION_BASE = 0x80;
 
@@ -217,7 +217,7 @@ const IntReportType_t INT_REPORT_TYPE_NO_REPORT = 0;
 // follow the order of dqf bits in the INT fixed header
 const IntReportType_t INT_REPORT_TYPE_DROP = 4;
 const IntReportType_t INT_REPORT_TYPE_QUEUE = 2;
-const IntReportType_t INT_REPORT_TYPE_LOCAL = 1;
+const IntReportType_t INT_REPORT_TYPE_FLOW = 1;
 
 
 enum bit<8> IntDropReason_t {

@@ -597,7 +597,7 @@ control FabricEgressDeparser(packet_out packet,
         packet.emit(hdr.report_udp);
         packet.emit(hdr.report_fixed_header);
         packet.emit(hdr.common_report_header);
-        packet.emit(hdr.local_report_header);
+        packet.emit(hdr.flow_report_header);
         packet.emit(hdr.drop_report_header);
 #endif // WITH_INT
         packet.emit(hdr.ethernet);

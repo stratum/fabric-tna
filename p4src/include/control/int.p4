@@ -58,7 +58,7 @@ control FlowReportFilter(
     };
 
     apply {
-        if (fabric_md.int_report_md.report_type == INT_REPORT_TYPE_LOCAL) {
+        if (fabric_md.int_report_md.report_type == INT_REPORT_TYPE_FLOW) {
             digest = digester.get({ // burp!
                 fabric_md.bridged.base.ig_port,
                 eg_intr_md.egress_port,
@@ -146,7 +146,7 @@ control IntWatchlist(
 #endif // WITH_DEBUG
 
     action mark_to_report() {
-        fabric_md.bridged.int_bmd.report_type = INT_REPORT_TYPE_LOCAL;
+        fabric_md.bridged.int_bmd.report_type = INT_REPORT_TYPE_FLOW;
         ig_tm_md.deflect_on_drop = 1;
 #ifdef WITH_DEBUG
         watchlist_counter.count();
@@ -238,9 +238,9 @@ control IntIngress(
         const entries = {
             // Explicit drop. Do not report if we are punting to the CPU, since that is
             // implemented as drop+copy_to_cpu.
-            (INT_REPORT_TYPE_LOCAL, 1, false, _, _): report_drop();
+            (INT_REPORT_TYPE_FLOW, 1, false, _, _): report_drop();
             // Likely a table miss
-            (INT_REPORT_TYPE_LOCAL, 0, false, false, 0): report_drop();
+            (INT_REPORT_TYPE_FLOW, 0, false, false, 0): report_drop();
         }
         const default_action = nop();
 #ifdef WITH_DEBUG
@@ -376,26 +376,26 @@ control IntEgress (
 #endif // WITH_DEBUG
     }
 
-    action do_local_report_encap(mac_addr_t src_mac, mac_addr_t mon_mac,
+    action do_flow_report_encap(mac_addr_t src_mac, mac_addr_t mon_mac,
                                  ipv4_addr_t src_ip, ipv4_addr_t mon_ip,
                                  l4_port_t mon_port, bit<32> switch_id) {
         _report_encap_common(src_mac, mon_mac, src_ip, mon_ip, mon_port, switch_id);
         hdr.report_eth_type.value = ETHERTYPE_IPV4;
         hdr.report_ipv4.total_len = IPV4_HDR_BYTES + UDP_HDR_BYTES
-                        + REPORT_FIXED_HEADER_BYTES + LOCAL_REPORT_HEADER_BYTES
+                        + REPORT_FIXED_HEADER_BYTES + FLOW_REPORT_HEADER_BYTES
                         + ETH_HDR_BYTES + fabric_md.int_ipv4_len;
         hdr.report_udp.len = UDP_HDR_BYTES
-                        + REPORT_FIXED_HEADER_BYTES + LOCAL_REPORT_HEADER_BYTES
+                        + REPORT_FIXED_HEADER_BYTES + FLOW_REPORT_HEADER_BYTES
                         + ETH_HDR_BYTES + fabric_md.int_ipv4_len;
-        hdr.report_fixed_header.nproto = NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER;
-        hdr.local_report_header.setValid();
+        hdr.report_fixed_header.nproto = NPROTO_TELEMETRY_SWITCH_FLOW_HEADER;
+        hdr.flow_report_header.setValid();
     }
 
-    action do_local_report_encap_mpls(mac_addr_t src_mac, mac_addr_t mon_mac,
+    action do_flow_report_encap_mpls(mac_addr_t src_mac, mac_addr_t mon_mac,
                                       ipv4_addr_t src_ip, ipv4_addr_t mon_ip,
                                       l4_port_t mon_port, mpls_label_t mon_label,
                                       bit<32> switch_id) {
-        do_local_report_encap(src_mac, mon_mac, src_ip, mon_ip, mon_port, switch_id);
+        do_flow_report_encap(src_mac, mon_mac, src_ip, mon_ip, mon_port, switch_id);
         hdr.report_eth_type.value = ETHERTYPE_MPLS;
         hdr.report_mpls.setValid();
         hdr.report_mpls.label = mon_label;
@@ -437,8 +437,8 @@ control IntEgress (
             fabric_md.int_report_md.report_type: exact @name("int_report_type");
         }
         actions = {
-            do_local_report_encap;
-            do_local_report_encap_mpls;
+            do_flow_report_encap;
+            do_flow_report_encap_mpls;
             do_drop_report_encap;
             do_drop_report_encap_mpls;
             @defaultonly nop();
@@ -449,10 +449,10 @@ control IntEgress (
         // entries = {
         //      (INT_INGRESS_DROP, INVALID, DROP): ingress drop report
         //      (EGRESS_MIRROR, INT_REPORT, DROP): egress drop report
-        //      (DEFLECTED, INVALID, LOCAL): deflect on drop report
-        //      (EGRESS_MIRROR, INT_REPORT, LOCAL): local report
+        //      (DEFLECTED, INVALID, FLOW): deflect on drop report
+        //      (EGRESS_MIRROR, INT_REPORT, FLOW): flow report
         //      (EGRESS_MIRROR, INT_REPORT, QUEUE): queue report
-        //      (EGRESS_MIRROR, INT_REPORT, QUEUE|LOCAL): queue report
+        //      (EGRESS_MIRROR, INT_REPORT, QUEUE|FLOW): queue report
         // }
 #ifdef WITH_DEBUG
         counters = report_counter;
@@ -496,10 +496,10 @@ control IntEgress (
         const default_action = nop();
         const size = 6;
         const entries = {
-            (INT_REPORT_TYPE_LOCAL, 0, false): init_int_metadata(INT_REPORT_TYPE_LOCAL);
-            (INT_REPORT_TYPE_LOCAL, 0, true): init_int_metadata(INT_REPORT_TYPE_LOCAL|INT_REPORT_TYPE_QUEUE);
-            (INT_REPORT_TYPE_LOCAL, 1, false): init_int_metadata(INT_REPORT_TYPE_DROP);
-            (INT_REPORT_TYPE_LOCAL, 1, true): init_int_metadata(INT_REPORT_TYPE_DROP);
+            (INT_REPORT_TYPE_FLOW, 0, false): init_int_metadata(INT_REPORT_TYPE_FLOW);
+            (INT_REPORT_TYPE_FLOW, 0, true): init_int_metadata(INT_REPORT_TYPE_FLOW|INT_REPORT_TYPE_QUEUE);
+            (INT_REPORT_TYPE_FLOW, 1, false): init_int_metadata(INT_REPORT_TYPE_DROP);
+            (INT_REPORT_TYPE_FLOW, 1, true): init_int_metadata(INT_REPORT_TYPE_DROP);
             // Packets which does not tracked by the watchlist table
             (INT_REPORT_TYPE_NO_REPORT, 0, true): init_int_metadata(INT_REPORT_TYPE_QUEUE);
             (INT_REPORT_TYPE_NO_REPORT, 1, true): init_int_metadata(INT_REPORT_TYPE_QUEUE);

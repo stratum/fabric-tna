@@ -121,7 +121,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
     private static final short BMD_TYPE_DEFLECTED = 5;
     private static final short MIRROR_TYPE_INVALID = 0;
     private static final short MIRROR_TYPE_INT_REPORT = 1;
-    private static final short INT_REPORT_TYPE_LOCAL = 1;
+    private static final short INT_REPORT_TYPE_FLOW = 1;
     private static final short INT_REPORT_TYPE_DROP = 2;
 
     private FlowRuleService flowRuleService;
@@ -494,8 +494,8 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 return null;
             }
 
-            if (reportType == INT_REPORT_TYPE_LOCAL) {
-                reportActionBuilder.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_LOCAL_REPORT_ENCAP_MPLS);
+            if (reportType == INT_REPORT_TYPE_FLOW) {
+                reportActionBuilder.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_FLOW_REPORT_ENCAP_MPLS);
             } else if (reportType == INT_REPORT_TYPE_DROP) {
                 reportActionBuilder.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_DROP_REPORT_ENCAP_MPLS);
             } else {
@@ -509,8 +509,8 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                     sid.get());
             reportActionBuilder.withParameter(monLabelParam);
         } else {
-            if (reportType == INT_REPORT_TYPE_LOCAL) {
-                reportActionBuilder.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_LOCAL_REPORT_ENCAP);
+            if (reportType == INT_REPORT_TYPE_FLOW) {
+                reportActionBuilder.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_FLOW_REPORT_ENCAP);
             } else if (reportType == INT_REPORT_TYPE_DROP) {
                 reportActionBuilder.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_DROP_REPORT_ENCAP);
             } else {
@@ -557,7 +557,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 buildReportEntryWithType(intCfg, BMD_TYPE_EGRESS_MIRROR,
                                          INT_REPORT_TYPE_DROP, MIRROR_TYPE_INT_REPORT),
                 buildReportEntryWithType(intCfg, BMD_TYPE_EGRESS_MIRROR,
-                                         INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT),
+                                         INT_REPORT_TYPE_FLOW, MIRROR_TYPE_INT_REPORT),
                 buildReportEntryWithType(intCfg, BMD_TYPE_DEFLECTED,
                                          INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID)
         );
