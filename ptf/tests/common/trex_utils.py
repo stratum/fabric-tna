@@ -1,13 +1,14 @@
 # SPDX-FileCopyrightText: Copyright 2020-present Open Networking Foundation.
 # SPDX-License-Identifier: Apache-2.0
 import argparse
-import logging
 import collections
+import logging
 
 # Multiplier for data rates
 K = 1000
 M = 1000 * K
 G = 1000 * M
+
 
 def to_readable(src: int, unit: str = "bps") -> str:
     """
@@ -99,60 +100,75 @@ def list_port_status(port_status: dict) -> None:
         readable_stats = get_readable_port_stats(port_status[port])
         logging.info("States from port {}: \n{}".format(port, readable_stats))
 
-LatencyStats = collections.namedtuple("LatencyStats", [
-    "pg_id",
-    "jitter",
-    "average",
-    "total_max",
-    "total_min",
-    "last_max",
-    "histogram",
-    "dropped",
-    "out_of_order",
-    "duplicate",
-    "seq_too_high",
-    "seq_too_low",
-])
 
-FlowStats = collections.namedtuple("FlowStats", [
-    "pg_id",
-    "total_tx",
-    "total_rx",
-    "tx_bytes",
-    "rx_bytes",
-])
+LatencyStats = collections.namedtuple(
+    "LatencyStats",
+    [
+        "pg_id",
+        "jitter",
+        "average",
+        "total_max",
+        "total_min",
+        "last_max",
+        "histogram",
+        "dropped",
+        "out_of_order",
+        "duplicate",
+        "seq_too_high",
+        "seq_too_low",
+    ],
+)
+
+FlowStats = collections.namedtuple(
+    "FlowStats",
+    [
+        "pg_id",
+        "total_tx",
+        "total_rx",
+        "tx_bytes",
+        "rx_bytes",
+    ],
+)
+
 
 def get_latency_stats(pg_id: int, stats) -> LatencyStats:
-    lat_stats = stats['latency'].get(pg_id)
-    lat = lat_stats['latency']
+    lat_stats = stats["latency"].get(pg_id)
+    lat = lat_stats["latency"]
     ret = LatencyStats(
-        pg_id = pg_id,
-        jitter = lat['jitter'],
-        average = lat['average'],
-        total_max = lat['total_max'],
-        total_min = lat['total_min'],
-        last_max = lat['last_max'],
-        histogram = lat['histogram'],
-        dropped = lat_stats['err_cntrs']['dropped'],
-        out_of_order = lat_stats['err_cntrs']['out_of_order'],
-        duplicate = lat_stats['err_cntrs']['dup'],
-        seq_too_high = lat_stats['err_cntrs']['seq_too_high'],
-        seq_too_low = lat_stats['err_cntrs']['seq_too_low'],
+        pg_id=pg_id,
+        jitter=lat["jitter"],
+        average=lat["average"],
+        total_max=lat["total_max"],
+        total_min=lat["total_min"],
+        last_max=lat["last_max"],
+        histogram=lat["histogram"],
+        dropped=lat_stats["err_cntrs"]["dropped"],
+        out_of_order=lat_stats["err_cntrs"]["out_of_order"],
+        duplicate=lat_stats["err_cntrs"]["dup"],
+        seq_too_high=lat_stats["err_cntrs"]["seq_too_high"],
+        seq_too_low=lat_stats["err_cntrs"]["seq_too_low"],
     )
     return ret
 
+
 def get_readable_latency_stats(stats: LatencyStats) -> str:
     histogram = ""
-    l = list(stats.histogram.keys()) # need to listify in order to be able to sort them.
+    # need to listify in order to be able to sort them.
+    l = list(stats.histogram.keys())
     l.sort()
     for sample in l:
         range_start = sample
         if range_start == 0:
             range_end = 10
         else:
-            range_end  = range_start + pow(10, (len(str(range_start))-1))
+            range_end = range_start + pow(10, (len(str(range_start)) - 1))
         val = stats.histogram[sample]
-        histogram = histogram + "\n        Packets with latency between {0:>4} us and {1:>4} us: {2:>10}".format(range_start, range_end, val)
+        histogram = (
+            histogram
+            + "\n        Packets with latency between {0:>4} us and {1:>4} us: {2:>10}".format(
+                range_start, range_end, val
+            )
+        )
 
     return f"""
     Latency info for pg_id {stats.pg_id}
@@ -168,16 +184,18 @@ def get_readable_latency_stats(stats: LatencyStats) -> str:
     Latency distribution histogram: {histogram}
     """
 
+
 def get_flow_stats(pg_id: int, stats) -> FlowStats:
     flow_stats = stats["flow_stats"].get(pg_id)
     ret = FlowStats(
-        pg_id = pg_id,
-        total_tx = flow_stats['tx_pkts']['total'],
-        total_rx = flow_stats['rx_pkts']['total'],
-        tx_bytes = flow_stats['tx_bytes']['total'],
-        rx_bytes = flow_stats['rx_bytes']['total'],
+        pg_id=pg_id,
+        total_tx=flow_stats["tx_pkts"]["total"],
+        total_rx=flow_stats["rx_pkts"]["total"],
+        tx_bytes=flow_stats["tx_bytes"]["total"],
+        rx_bytes=flow_stats["rx_bytes"]["total"],
     )
     return ret
+
 
 class ParseExtendArgAction(argparse.Action):
     def __init__(self, option_strings, dest, nargs=None, **kwargs):
