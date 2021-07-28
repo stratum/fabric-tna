@@ -124,6 +124,9 @@ reuse-lint:
 env:
 	@cat $(RESOLVED_ENV) | grep -v "#"
 
+format:
+	.github/format.sh
+
 clean:
 	-rm -rf src/main/resources/p4c-out
 	-rm -rf p4src/build

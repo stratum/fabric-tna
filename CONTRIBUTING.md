@@ -40,7 +40,7 @@ Some additional points:
 
 1. Fork fabric-tna into your personal or organization account via the fork button on GitHub.
 
-2. Make your code changes.
+2. Make your code changes. Run `make format` to keep the code style consistent.
 
 3. Pass all tests locally (see [README.md](./README.md)). Create new tests for new code. Execute the following command in the root directory to run all currently enabled tests: `TODO: add command`
 
