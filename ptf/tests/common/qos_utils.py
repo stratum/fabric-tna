@@ -14,21 +14,40 @@ from scapy.layers.all import IP, TCP, UDP, Ether
 SOURCE_MAC = "00:00:00:00:00:01"
 DEST_MAC = "00:00:00:00:00:02"
 
-# Semantic queue IDs
+# Semantic queue IDs. Must match the queue_mappings in chassis config!
 QUEUE_ID_BEST_EFFORT = 0
 QUEUE_ID_SYSTEM = 1
 QUEUE_ID_CONTROL = 2
+QUEUE_ID_REALTIME_1 = 3
+QUEUE_ID_REALTIME_2 = 4
+QUEUE_ID_REALTIME_3 = 5
 
 # Canonical L4 ports for different test traffic classes.
 L4_DPORT_BEST_EFFORT_TRAFFIC = 1000
-L4_DPORT_SYSTEM_TRAFFIC = 1001
-L4_DPORT_CONTROL_TRAFFIC = 1002
+L4_DPORT_ELASTIC_TRAFFIC = 2000
+L4_DPORT_SYSTEM_TRAFFIC = 3000
+L4_DPORT_REALTIME_TRAFFIC_1 = 4000
+L4_DPORT_REALTIME_TRAFFIC_2 = 4001
+L4_DPORT_REALTIME_TRAFFIC_3 = 4002
+L4_DPORT_CONTROL_TRAFFIC = 5000
 
 # Returns a packet that belongs to the control CoS group.
 def get_control_traffic_packet(l2_size=64):
     pkt = testutils.simple_udp_packet(
         eth_dst=DEST_MAC, udp_dport=L4_DPORT_CONTROL_TRAFFIC, pktlen=l2_size
     )
+    assert len(pkt) == l2_size, "Packet size {} does not match target size {}".format(
+        len(pkt), l2_size
+    )
+    return pkt
+
+
+# Returns a packet that belongs to the realtime CoS group.
+def get_realtime_traffic_packet(l2_size=64, dport=L4_DPORT_REALTIME_TRAFFIC_1):
+    assert (
+        L4_DPORT_REALTIME_TRAFFIC_1 <= dport <= L4_DPORT_REALTIME_TRAFFIC_3
+    ), "Invalid dport"
+    pkt = testutils.simple_udp_packet(eth_dst=DEST_MAC, udp_dport=dport, pktlen=l2_size)
     assert len(pkt) == l2_size, "Packet size {} does not match target size {}".format(
         len(pkt), l2_size
     )
