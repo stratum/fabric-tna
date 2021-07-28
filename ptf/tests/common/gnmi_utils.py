@@ -2,27 +2,29 @@
 # SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 
 import time
+
 from base_test import *
-from gnmi import gnmi_pb2
-from gnmi import gnmi_pb2_grpc
+from gnmi import gnmi_pb2, gnmi_pb2_grpc
 
 # This file contains utility functions that make it easy to perform gNMI
 # requests against the switch under test.
 
 _grpc_addr = testutils.test_param_get("grpcaddr")
 
+
 def _parse_key_val(key_val_str):
     # [key1=val1,key2=val2,.....]
     key_val_str = key_val_str[1:-1]  # remove "[]"
-    return [kv.split('=') for kv in key_val_str.split(',')]
+    return [kv.split("=") for kv in key_val_str.split(",")]
+
 
 # parse path_str string and add elements to path (gNMI Path class)
 def _build_path(path_str, path):
-    if path_str == '/':
+    if path_str == "/":
         # the root path should be an empty path
         return
 
-    path_elem_info_list = re.findall(r'/([^/\[]+)(\[([^=]+=[^\]]+)\])?', path_str)
+    path_elem_info_list = re.findall(r"/([^/\[]+)(\[([^=]+=[^\]]+)\])?", path_str)
 
     for path_elem_info in path_elem_info_list:
         # [('interfaces', ''), ('interface', '[name=1/1/1]'), ...]
@@ -34,21 +36,24 @@ def _build_path(path_str, path):
                 # [('name', '1/1/1'), ...]
                 pe.key[kv[0]] = kv[1]
 
+
 # Public API starts here.
+
 
 def build_gnmi_get_req(path: str):
     req = gnmi_pb2.GetRequest()
     req.encoding = gnmi_pb2.PROTO
     p = req.path.add()
     _build_path(path, p)
-    if path == '/':
+    if path == "/":
         # Special case
         req.type = gnmi_pb2.GetRequest.CONFIG
     return req
 
+
 def build_gnmi_set_req(path: str, value, replace=False):
     req = gnmi_pb2.SetRequest()
-    if (replace):
+    if replace:
         update = req.replace.add()
     else:
         update = req.update.add()
@@ -68,17 +73,20 @@ def build_gnmi_set_req(path: str, value, replace=False):
 
     return req
 
+
 def do_get(req):
     channel = grpc.insecure_channel(_grpc_addr)
     stub = gnmi_pb2_grpc.gNMIStub(channel)
     resp = stub.Get(req)
     return resp
 
+
 def do_set(req):
     channel = grpc.insecure_channel(_grpc_addr)
     stub = gnmi_pb2_grpc.gNMIStub(channel)
     resp = stub.Set(req)
     return resp
+
 
 def push_chassis_config(config: bytes):
     req = build_gnmi_set_req("/", config, True)
