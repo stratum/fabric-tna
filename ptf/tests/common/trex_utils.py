@@ -4,6 +4,8 @@ import argparse
 import collections
 import logging
 
+import numpy as np
+
 # Multiplier for data rates
 K = 1000
 M = 1000 * K
@@ -116,6 +118,10 @@ LatencyStats = collections.namedtuple(
         "duplicate",
         "seq_too_high",
         "seq_too_low",
+        "percentile_50",
+        "percentile_75",
+        "percentile_90",
+        "percentile_99",
     ],
 )
 
@@ -170,6 +176,22 @@ def get_port_stats(port: int, stats) -> PortStats:
 def get_latency_stats(pg_id: int, stats) -> LatencyStats:
     lat_stats = stats["latency"].get(pg_id)
     lat = lat_stats["latency"]
+    # Estimate latency percentiles from the histogram.
+    l = list(lat["histogram"].keys())
+    l.sort()
+    all_latencies = []
+    for sample in l:
+        range_start = sample
+        if range_start == 0:
+            range_end = 10
+        else:
+            range_end = range_start + pow(10, (len(str(range_start)) - 1))
+        val = lat["histogram"][sample]
+        # Assume whole the bucket experienced the range_end latency.
+        all_latencies += [range_end] * val
+    q = [50, 75, 90, 99]
+    percentiles = np.percentile(all_latencies, q)
+
     ret = LatencyStats(
         pg_id=pg_id,
         jitter=lat["jitter"],
@@ -183,6 +205,10 @@ def get_latency_stats(pg_id: int, stats) -> LatencyStats:
         duplicate=lat_stats["err_cntrs"]["dup"],
         seq_too_high=lat_stats["err_cntrs"]["seq_too_high"],
         seq_too_low=lat_stats["err_cntrs"]["seq_too_low"],
+        percentile_50=percentiles[0],
+        percentile_75=percentiles[1],
+        percentile_90=percentiles[2],
+        percentile_99=percentiles[3],
     )
     return ret
 
@@ -216,6 +242,10 @@ def get_readable_latency_stats(stats: LatencyStats) -> str:
     Minimum latency: {stats.total_min} us
     Maximum latency in last sampling period: {stats.last_max} us
     Average latency: {stats.average} us
+    50th percentile latency: {stats.percentile_50} us
+    75th percentile latency: {stats.percentile_75} us
+    90th percentile latency: {stats.percentile_90} us
+    99th percentile latency: {stats.percentile_99} us
     Jitter: {stats.jitter} us
     Latency distribution histogram: {histogram}
     """
