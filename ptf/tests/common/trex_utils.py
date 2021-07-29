@@ -100,7 +100,7 @@ def list_port_status(port_status: dict) -> None:
     """
     for port in [0, 1, 2, 3]:
         readable_stats = get_readable_port_stats(port_status[port])
-        logging.info("States from port {}: \n{}".format(port, readable_stats))
+        print("States from port {}: \n{}".format(port, readable_stats))
 
 
 LatencyStats = collections.namedtuple(

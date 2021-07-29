@@ -3021,10 +3021,8 @@ class IntTest(IPv4UnicastTest):
         )
 
     def set_up_watchlist_flow(
-        self, ipv4_src, ipv4_dst, sport, dport, collector_action=False
+        self, ipv4_src=None, ipv4_dst=None, sport=None, dport=None, collector_action=False
     ):
-        ipv4_src_ = ipv4_to_binary(ipv4_src)
-        ipv4_dst_ = ipv4_to_binary(ipv4_dst)
         ipv4_mask = ipv4_to_binary("255.255.255.255")
         # Use full range of TCP/UDP ports by default.
         sport_low = stringify(0, 2)
@@ -3048,12 +3046,13 @@ class IntTest(IPv4UnicastTest):
         else:
             action = "mark_to_report"
 
-        matches = [
-            self.Exact("ipv4_valid", stringify(1, 1)),
-            self.Ternary("ipv4_src", ipv4_src_, ipv4_mask),
-            self.Ternary("ipv4_dst", ipv4_dst_, ipv4_mask),
-        ]
-
+        matches = [self.Exact("ipv4_valid", stringify(1, 1))]
+        if ipv4_src is not None:
+            ipv4_src_ = ipv4_to_binary(ipv4_src)
+            matches.append(self.Ternary("ipv4_src", ipv4_src_, ipv4_mask))
+        if ipv4_dst is not None:
+            ipv4_dst_ = ipv4_to_binary(ipv4_dst)
+            matches.append(self.Ternary("ipv4_dst", ipv4_dst_, ipv4_mask))
         if sport_low != lower_bound or sport_high != upper_bound:
             matches.append(self.Range("l4_sport", sport_low, sport_high))
         if dport_low != lower_bound or dport_high != upper_bound:
@@ -3226,23 +3225,25 @@ class IntTest(IPv4UnicastTest):
     def set_up_int_flows(
         self, is_device_spine, pkt, send_report_to_spine, watch_flow=True
     ):
-        # Watchlist always matches on inner headers.
-        if GTP_U_Header in pkt:
-            pkt = pkt_remove_gtp(pkt)
-        elif VXLAN in pkt:
-            pkt = pkt_remove_vxlan(pkt)
+        if pkt:
+            # Watchlist always matches on inner headers.
+            if GTP_U_Header in pkt:
+                pkt = pkt_remove_gtp(pkt)
+            elif VXLAN in pkt:
+                pkt = pkt_remove_vxlan(pkt)
 
-        if UDP in pkt:
-            sport = pkt[UDP].sport
-            dport = pkt[UDP].dport
-        elif TCP in pkt:
-            sport = pkt[TCP].sport
-            dport = pkt[TCP].dport
-        else:
-            sport = None
-            dport = None
-        if watch_flow:
-            self.set_up_watchlist_flow(pkt[IP].src, pkt[IP].dst, sport, dport)
+            if UDP in pkt:
+                sport = pkt[UDP].sport
+                dport = pkt[UDP].dport
+            elif TCP in pkt:
+                sport = pkt[TCP].sport
+                dport = pkt[TCP].dport
+            else:
+                sport = None
+                dport = None
+            
+            if watch_flow:
+                self.set_up_watchlist_flow(pkt[IP].src, pkt[IP].dst, sport, dport)
         self.set_up_report_flow(
             SWITCH_MAC,
             SWITCH_MAC,
