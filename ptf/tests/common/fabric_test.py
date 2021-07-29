@@ -1461,7 +1461,7 @@ class FabricTest(P4RuntimeTest):
     def delete_mcast_group(self, group_id):
         return self.write_mcast_group(group_id, [], p4runtime_pb2.Update.DELETE)
 
-    def write_clone_group(self, clone_id, ports, update_type, store=True):
+    def write_clone_group(self, clone_id, ports, truncate_size, update_type, store=True):
         req = self.get_new_write_request()
         update = req.updates.add()
         update.type = update_type
@@ -1469,21 +1469,21 @@ class FabricTest(P4RuntimeTest):
         clone_entry = pre_entry.clone_session_entry
         clone_entry.session_id = clone_id
         clone_entry.class_of_service = 0
-        clone_entry.packet_length_bytes = 0
+        clone_entry.packet_length_bytes = truncate_size
         for port in ports:
             replica = clone_entry.replicas.add()
             replica.egress_port = port
             replica.instance = 0  # set to 0 because we don't support it yet.
         return req, self.write_request(req, store=store)
 
-    def add_clone_group(self, clone_id, ports, store=True):
+    def add_clone_group(self, clone_id, ports, truncate_size=0, store=True):
         self.write_clone_group(
-            clone_id, ports, p4runtime_pb2.Update.INSERT, store=store
+            clone_id, ports, truncate_size, p4runtime_pb2.Update.INSERT, store=store
         )
 
     def delete_clone_group(self, clone_id, ports, store=True):
         self.write_clone_group(
-            clone_id, ports, p4runtime_pb2.Update.DELETE, store=store
+            clone_id, ports, 0, p4runtime_pb2.Update.DELETE, store=store
         )
 
     def add_next_hashed_group_member(self, action_name, params):
@@ -2998,7 +2998,7 @@ class IntTest(IPv4UnicastTest):
         )
 
     def set_up_report_mirror_flow(self, pipe_id, mirror_id, port):
-        self.add_clone_group(mirror_id, [port])
+        self.add_clone_group(mirror_id, [port], INT_MIRROR_TRUNCATE_SIZE)
         # TODO: We plan to set up this table by using the control
         # plane so we don't need to hard code the session id
         # in pipeline.
@@ -3062,6 +3062,12 @@ class IntTest(IPv4UnicastTest):
         self.send_request_add_entry_to_action(
             "watchlist", matches, action, [], priority=DEFAULT_PRIORITY,
         )
+
+    def truncate_packet(self, pkt, size):
+        pkt = bytes(pkt)
+        if len(pkt) > size:
+            pkt = pkt[:size]
+        return pkt
 
     def build_int_local_report(
         self,
