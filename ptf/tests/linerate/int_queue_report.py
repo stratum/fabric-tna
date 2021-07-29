@@ -118,26 +118,26 @@ class IntQueueReportTest(TRexTest, IntTest, SlicingTest):
 
             if INT_L45_REPORT_FIXED not in report_pkt:
                 self.fail("Packet is not an INT report")
-            if INT_L45_FLOW_REPORT not in report_pkt:
-                self.fail("Packet is not an INT flow report")
+            if INT_L45_LOCAL_REPORT not in report_pkt:
+                self.fail("Packet is not an INT local report")
 
             int_fixed_header = report_pkt[INT_L45_REPORT_FIXED]
-            int_flow_report_header = report_pkt[INT_L45_FLOW_REPORT]
-            inner_ip_header = int_flow_report_header[IP]
+            int_local_report_header = report_pkt[INT_L45_LOCAL_REPORT]
+            inner_ip_header = int_local_report_header[IP]
 
             self.failIf(int_fixed_header.d != 0, "Received an unexpected drop report")
             self.failIf(int_fixed_header.f != 0, "Received an unexpected flow report")
             self.failIf(int_fixed_header.q != 1, "Not a queue report")
-            self.failIf(INT_L45_FLOW_REPORT in inner_ip_header, "Unexpected report-in-report packet.")
+            self.failIf(INT_L45_LOCAL_REPORT in inner_ip_header, "Unexpected report-in-report packet.")
 
             number_of_reports += 1
             hw_id = int_fixed_header.hw_id
             seq_no = int_fixed_header.seq_no
             ingress_time = int_fixed_header.ingress_tstamp
-            egress_time = int_flow_report_header.egress_tstamp
+            egress_time = int_local_report_header.egress_tstamp
             latency = egress_time - ingress_time
-            egress_port = int_flow_report_header.egress_port_id
-            egress_queue = int_flow_report_header.queue_id
+            egress_port = int_local_report_header.egress_port_id
+            egress_queue = int_local_report_header.queue_id
 
             self.failIf(egress_port != self.port4, f"Unexpected egress port {egress_port}")
             self.failIf(egress_queue != DEFAULT_QID, f"Unexpected queue id {egress_queue}")

@@ -1475,7 +1475,7 @@ class FabricSpgwUplinkIntTest(SpgwIntTest):
         print("")
         for traffic_dir in ["host-leaf-host", "host-leaf-spine", "spine-leaf-host", "leaf-spine-leaf", "leaf-spine-spine"]:
             for test_args in get_test_args(traffic_dir=traffic_dir, spgw_type="UL_PSC",
-                                           int_test_type="flow"):
+                                           int_test_type="local"):
                 self.doRunTest(**test_args)
 
 
@@ -1517,7 +1517,7 @@ class FabricSpgwDownlinkIntTest(SpgwIntTest):
         print("")
         for traffic_dir in ["host-leaf-host", "host-leaf-spine", "spine-leaf-host", "leaf-spine-leaf", "leaf-spine-spine"]:
             for test_args in get_test_args(traffic_dir=traffic_dir, spgw_type="DL_PSC",
-                                           int_test_type="flow"):
+                                           int_test_type="local"):
                 self.doRunTest(**test_args)
 
 
@@ -1618,7 +1618,7 @@ class FabricSpgwIntDownlinkDropTest(SpgwIntTest):
 
 
 @group("int")
-class FabricIntFlowReportTest(IntTest):
+class FabricIntLocalReportTest(IntTest):
     @tvsetup
     @autocleanup
     def doRunTest(
@@ -1654,7 +1654,7 @@ class FabricIntFlowReportTest(IntTest):
     def runTest(self):
         print("")
         for traffic_dir in ["host-leaf-host", "host-leaf-spine", "leaf-spine-leaf", "leaf-spine-spine"]:
-            for test_args in get_test_args(traffic_dir=traffic_dir, int_test_type="flow"):
+            for test_args in get_test_args(traffic_dir=traffic_dir, int_test_type="local"):
                 self.doRunTest(**test_args)
 
 
@@ -1747,7 +1747,7 @@ class FabricIntEgressDropReportTest(IntTest):
     def runTest(self):
         print("")
         for traffic_dir in ["host-leaf-host", "host-leaf-spine", "leaf-spine-leaf", "leaf-spine-spine"]:
-            for test_args in get_test_args(traffic_dir=traffic_dir, int_test_type="flow"):
+            for test_args in get_test_args(traffic_dir=traffic_dir, int_test_type="local"):
                 self.doRunTest(**test_args)
 
 
@@ -2545,7 +2545,7 @@ class FabricPacketOutLoopbackModeTest(FabricTest):
 
 
 @group("int")
-class FabricIntFlowReportLoopbackModeTest(IntTest):
+class FabricIntLocalReportLoopbackModeTest(IntTest):
     @tvsetup
     @autocleanup
     def doRunTest(self, pkt, next_hop_mac, is_device_spine, send_report_to_spine=False):
@@ -2567,7 +2567,7 @@ class FabricIntFlowReportLoopbackModeTest(IntTest):
         )
 
         # The expected INT report packet
-        exp_int_report_pkt = self.build_int_flow_report(
+        exp_int_report_pkt = self.build_int_local_report(
             SWITCH_MAC,
             INT_COLLECTOR_MAC,
             SWITCH_IPV4,
@@ -2598,13 +2598,13 @@ class FabricIntFlowReportLoopbackModeTest(IntTest):
         )
         exp_int_report_pkt_masked.set_do_not_care_scapy(INT_L45_REPORT_FIXED, "seq_no")
         exp_int_report_pkt_masked.set_do_not_care_scapy(
-            INT_L45_FLOW_REPORT, "queue_id"
+            INT_L45_LOCAL_REPORT, "queue_id"
         )
         exp_int_report_pkt_masked.set_do_not_care_scapy(
-            INT_L45_FLOW_REPORT, "queue_occupancy"
+            INT_L45_LOCAL_REPORT, "queue_occupancy"
         )
         exp_int_report_pkt_masked.set_do_not_care_scapy(
-            INT_L45_FLOW_REPORT, "egress_tstamp"
+            INT_L45_LOCAL_REPORT, "egress_tstamp"
         )
 
         # 1. step: packet-out straight to out port

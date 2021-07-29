@@ -98,7 +98,7 @@ INT_META_HDR = xnt.INT_META_HDR
 INT_L45_HEAD = xnt.INT_L45_HEAD
 INT_L45_TAIL = xnt.INT_L45_TAIL
 INT_L45_REPORT_FIXED = xnt.INT_L45_REPORT_FIXED
-INT_L45_FLOW_REPORT = xnt.INT_L45_FLOW_REPORT
+INT_L45_LOCAL_REPORT = xnt.INT_L45_LOCAL_REPORT
 INT_L45_DROP_REPORT = xnt.INT_L45_DROP_REPORT
 
 BROADCAST_MAC = ":".join(["ff"] * 6)
@@ -197,14 +197,14 @@ SWITCH_ID = 1
 INT_REPORT_PORT = 32766
 NPROTO_ETHERNET = 0
 NPROTO_TELEMETRY_DROP_HEADER = 1
-NPROTO_TELEMETRY_SWITCH_FLOW_HEADER = 2
+NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER = 2
 bind_layers(UDP, INT_L45_REPORT_FIXED, dport=INT_REPORT_PORT)
 bind_layers(
     INT_L45_REPORT_FIXED,
-    INT_L45_FLOW_REPORT,
-    nproto=NPROTO_TELEMETRY_SWITCH_FLOW_HEADER,
+    INT_L45_LOCAL_REPORT,
+    nproto=NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER,
 )
-bind_layers(INT_L45_FLOW_REPORT, Ether)
+bind_layers(INT_L45_LOCAL_REPORT, Ether)
 
 INT_COLLECTOR_MAC = "00:1e:67:d2:ee:ee"
 INT_COLLECTOR_IPV4 = "192.168.99.254"
@@ -213,7 +213,7 @@ INT_TOS = 0
 INT_REPORT_TYPE_NO_REPORT = 0
 INT_REPORT_TYPE_DROP = 4
 INT_REPORT_TYPE_QUEUE = 2
-INT_REPORT_TYPE_FLOW = 1
+INT_REPORT_TYPE_LOCAL = 1
 
 INT_DROP_REASON_UNKNOWN = 0
 INT_DROP_REASON_TRAFFIC_MANAGER = 71
@@ -284,7 +284,7 @@ TC_WIDTH = 2  # bits
 
 # High-level parameter specification options for get_test_args function
 SPGW_OPTIONS = ["DL", "UL", "DL_PSC", "UL_PSC"]
-INT_OPTIONS = ["flow", "ig_drop", "eg_drop"]
+INT_OPTIONS = ["local", "ig_drop", "eg_drop"]
 SOURCE_OPTIONS = ["host", "leaf", "spine"]
 DEVICE_OPTIONS = ["leaf", "spine"]
 DEST_OPTIONS = ["host", "leaf", "spine"]
@@ -2928,9 +2928,9 @@ class IntTest(IPv4UnicastTest):
         mon_label,
     ):
         action = ""
-        # flow report or queue report or both
-        if (report_type & (INT_REPORT_TYPE_FLOW | INT_REPORT_TYPE_QUEUE)) != 0:
-            action = "do_flow_report_encap"
+        # local report or queue report or both
+        if (report_type & (INT_REPORT_TYPE_LOCAL | INT_REPORT_TYPE_QUEUE)) != 0:
+            action = "do_local_report_encap"
         elif report_type == INT_REPORT_TYPE_DROP:
             action = "do_drop_report_encap"
         else:
@@ -2983,7 +2983,7 @@ class IntTest(IPv4UnicastTest):
             BRIDGED_MD_TYPE_EGRESS_MIRROR, MIRROR_TYPE_INT_REPORT, INT_REPORT_TYPE_DROP
         )
         set_up_report_flow_internal(
-            BRIDGED_MD_TYPE_EGRESS_MIRROR, MIRROR_TYPE_INT_REPORT, INT_REPORT_TYPE_FLOW
+            BRIDGED_MD_TYPE_EGRESS_MIRROR, MIRROR_TYPE_INT_REPORT, INT_REPORT_TYPE_LOCAL
         )
         set_up_report_flow_internal(
             BRIDGED_MD_TYPE_DEFLECTED, MIRROR_TYPE_INVALID, INT_REPORT_TYPE_DROP
@@ -2994,7 +2994,7 @@ class IntTest(IPv4UnicastTest):
         set_up_report_flow_internal(
             BRIDGED_MD_TYPE_EGRESS_MIRROR,
             MIRROR_TYPE_INT_REPORT,
-            INT_REPORT_TYPE_QUEUE | INT_REPORT_TYPE_FLOW,
+            INT_REPORT_TYPE_QUEUE | INT_REPORT_TYPE_LOCAL,
         )
 
     def set_up_report_mirror_flow(self, pipe_id, mirror_id, port):
@@ -3062,7 +3062,7 @@ class IntTest(IPv4UnicastTest):
             "watchlist", matches, action, [], priority=DEFAULT_PRIORITY,
         )
 
-    def build_int_flow_report(
+    def build_int_local_report(
         self,
         src_mac,
         dst_mac,
@@ -3088,7 +3088,7 @@ class IntTest(IPv4UnicastTest):
             / IP(src=src_ip, dst=dst_ip, ttl=64, tos=INT_TOS)
             / UDP(sport=0, chksum=0)
             / INT_L45_REPORT_FIXED(nproto=2, f=f_flag, q=q_flag, hw_id=(eg_port >> 7))
-            / INT_L45_FLOW_REPORT(
+            / INT_L45_LOCAL_REPORT(
                 switch_id=sw_id, ingress_port_id=ig_port, egress_port_id=eg_port,
             )
             / inner_packet
@@ -3111,9 +3111,9 @@ class IntTest(IPv4UnicastTest):
         mask_pkt.set_do_not_care_scapy(UDP, "chksum")
         mask_pkt.set_do_not_care_scapy(INT_L45_REPORT_FIXED, "ingress_tstamp")
         mask_pkt.set_do_not_care_scapy(INT_L45_REPORT_FIXED, "seq_no")
-        mask_pkt.set_do_not_care_scapy(INT_L45_FLOW_REPORT, "queue_id")
-        mask_pkt.set_do_not_care_scapy(INT_L45_FLOW_REPORT, "queue_occupancy")
-        mask_pkt.set_do_not_care_scapy(INT_L45_FLOW_REPORT, "egress_tstamp")
+        mask_pkt.set_do_not_care_scapy(INT_L45_LOCAL_REPORT, "queue_id")
+        mask_pkt.set_do_not_care_scapy(INT_L45_LOCAL_REPORT, "queue_occupancy")
+        mask_pkt.set_do_not_care_scapy(INT_L45_LOCAL_REPORT, "egress_tstamp")
 
         return mask_pkt
 
@@ -3370,7 +3370,7 @@ class IntTest(IPv4UnicastTest):
             int_inner_pkt = pkt_decrement_ttl(int_inner_pkt)
 
         # The expected INT report packet
-        exp_int_report_pkt_masked = self.build_int_flow_report(
+        exp_int_report_pkt_masked = self.build_int_local_report(
             SWITCH_MAC,
             INT_COLLECTOR_MAC,
             SWITCH_IPV4,
@@ -3640,7 +3640,7 @@ class IntTest(IPv4UnicastTest):
             int_inner_pkt = pkt_decrement_ttl(int_inner_pkt)
 
         # The expected INT report packet
-        exp_int_report_pkt_masked = self.build_int_flow_report(
+        exp_int_report_pkt_masked = self.build_int_local_report(
             SWITCH_MAC,
             INT_COLLECTOR_MAC,
             SWITCH_IPV4,
@@ -3751,7 +3751,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         )
 
         # Output INT report packet.
-        exp_int_report_pkt_masked = self.build_int_flow_report(
+        exp_int_report_pkt_masked = self.build_int_local_report(
             SWITCH_MAC,
             INT_COLLECTOR_MAC,
             SWITCH_IPV4,
@@ -3838,7 +3838,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             exp_pkt = pkt_add_mpls(exp_pkt, MPLS_LABEL_2, DEFAULT_MPLS_TTL)
 
         # Expected INT report.
-        exp_int_report_pkt_masked = self.build_int_flow_report(
+        exp_int_report_pkt_masked = self.build_int_local_report(
             SWITCH_MAC,
             INT_COLLECTOR_MAC,
             SWITCH_IPV4,

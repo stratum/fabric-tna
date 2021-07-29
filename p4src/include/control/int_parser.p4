@@ -41,9 +41,9 @@ parser IntReportParser (packet_in packet,
         hdr.common_report_header.eg_port = fabric_md.int_report_md.eg_port;
         hdr.common_report_header.queue_id = fabric_md.int_report_md.queue_id;
 
-        /** flow/drop_report_header (set valid later) **/
-        hdr.flow_report_header.queue_occupancy = fabric_md.int_report_md.queue_occupancy;
-        hdr.flow_report_header.eg_tstamp = fabric_md.int_report_md.eg_tstamp;
+        /** local/drop_report_header (set valid later) **/
+        hdr.local_report_header.queue_occupancy = fabric_md.int_report_md.queue_occupancy;
+        hdr.local_report_header.eg_tstamp = fabric_md.int_report_md.eg_tstamp;
         hdr.drop_report_header.drop_reason = fabric_md.int_report_md.drop_reason;
 
         transition set_common_int_headers;
@@ -141,7 +141,7 @@ parser IntReportParser (packet_in packet,
         /** report_fixed_header **/
         hdr.report_fixed_header.setValid();
         hdr.report_fixed_header.ver = 0;
-        hdr.report_fixed_header.nproto = NPROTO_TELEMETRY_SWITCH_FLOW_HEADER;
+        hdr.report_fixed_header.nproto = NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER;
         // hdr.report_fixed_header.d = update later
         // hdr.report_fixed_header.q = update later
         // hdr.report_fixed_header.f = update later
