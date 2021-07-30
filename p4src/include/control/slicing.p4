@@ -126,7 +126,7 @@ control IngressQos (inout fabric_ingress_metadata_t fabric_md,
             set_queue;
             meter_drop;
         }
-        const default_action = set_queue(BEST_EFFORT_QUEUE);
+        const default_action = set_queue(QUEUE_ID_BEST_EFFORT);
         counters = queues_stats;
         // Two times the number of tcs for all slices, because we might need to
         // match on different colors for the same slice and tc.

@@ -35,11 +35,11 @@ RT_APP_POOL = 1  # Real-time
 EL_APP_POOL = 2  # Elastic
 BE_APP_POOL = 3  # Best-Effort
 
-# Static queue IDs. Other IDs will be allocated based on slices. Be careful when
-# changing values, these are hard-coded in many other places.
-BE_QUEUE_ID = 0  # Best-effort
-SYS_QUEUE_ID = 1  # System
-CT_QUEUE_ID = 2  # Control
+# Constant queue IDs. Other IDs will be allocated based on slices. Be careful
+# when changing values, these are hard-coded in many other places.
+QUEUE_ID_BEST_EFFORT = 0
+QUEUE_ID_SYSTEM = 1
+QUEUE_ID_CONTROL = 2
 
 # Real-time and Elastic queues are allocated starting from this ID.
 FIRST_QUEUE_ID = 3
@@ -208,10 +208,10 @@ def queue_config(
     # Weight doesn't matter, this is the only queue in the WRR/priority group
     ct_wrr_weight = 1
 
-    queue_mappings[CT_QUEUE_ID] = queue_mapping(
+    queue_mappings[QUEUE_ID_CONTROL] = queue_mapping(
         descr=f"Control ({ct_slot_count} slots, "
         f"{ct_slot_rate_pps}pps, {ct_slot_burst_pkts}MTUs burst, {ct_util} util)",
-        queue_id=CT_QUEUE_ID,
+        queue_id=QUEUE_ID_CONTROL,
         app_pool=CT_APP_POOL,
         prio=CT_PRIORITY,
         weight=ct_wrr_weight,
@@ -271,7 +271,7 @@ def queue_config(
         if i == rt_queue_count - 1:
             # Last one is System
             name = f"System"
-            queue_id = SYS_QUEUE_ID
+            queue_id = QUEUE_ID_SYSTEM
         else:
             name = f"Real-Time {i + 1}"
             queue_id = next_queue_id
@@ -330,7 +330,7 @@ def queue_config(
             app_pool = BE_APP_POOL
             pool_size = pool_sizes[BE_APP_POOL]
             base_use_limit = be_base_use_limit
-            queue_id = BE_QUEUE_ID
+            queue_id = QUEUE_ID_BEST_EFFORT
         else:
             name = f"Elastic {i + 1}"
             app_pool = EL_APP_POOL
