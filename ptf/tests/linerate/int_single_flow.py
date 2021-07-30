@@ -50,12 +50,6 @@ class IntSingleFlow(TRexTest, IntTest):
         stream = STLStream(packet=STLPktBuilder(pkt=pkt, vm=[]), mode=STLTXCont())
         self.trex_client.add_streams(stream, ports=SENDER_PORTS)
 
-        # Put RX ports to promiscuous mode, otherwise it will drop all packets if the
-        # destination mac is not the port mac address.
-        self.trex_client.set_port_attr(
-            INT_COLLECTOR_PORTS + RECEIVER_PORTS, promiscuous=True
-        )
-
         # Capture INT packets
         self.trex_client.set_service_mode(ports=INT_COLLECTOR_PORTS, enabled=True)
         capture = self.trex_client.start_capture(

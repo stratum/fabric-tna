@@ -6,6 +6,8 @@ import codecs
 import socket
 import struct
 import time
+import fnmatch
+import re
 
 import xnt
 from base_test import P4RuntimeTest, ipv4_to_binary, mac_to_binary, stringify, tvcreate
@@ -207,6 +209,7 @@ bind_layers(INT_L45_LOCAL_REPORT, Ether)
 
 INT_COLLECTOR_MAC = "00:1e:67:d2:ee:ee"
 INT_COLLECTOR_IPV4 = "192.168.99.254"
+INT_TOS = 0
 
 INT_REPORT_TYPE_NO_REPORT = 0
 INT_REPORT_TYPE_DROP = 4
@@ -267,6 +270,18 @@ PORT_TYPE_INTERNAL = b"\x03"
 
 DEFAULT_SLICE_ID = 0
 DEFAULT_TC = 0
+TC_WIDTH = 2  # bits
+
+# High-level parameter specification options for get_test_args function
+SPGW_OPTIONS = ["DL", "UL", "DL_PSC", "UL_PSC"]
+INT_OPTIONS = ["local", "ig_drop", "eg_drop"]
+SOURCE_OPTIONS = ["host", "leaf", "spine"]
+DEVICE_OPTIONS = ["leaf", "spine"]
+DEST_OPTIONS = ["host", "leaf", "spine"]
+
+COLOR_GREEN = 0
+COLOR_YELLOW = 1
+COLOR_RED = 3
 
 # Implements helper function for SCTP as PTF does not provide one.
 def simple_sctp_packet(
@@ -591,6 +606,183 @@ def pkt_decrement_ttl(pkt):
     if IP in pkt:
         pkt[IP].ttl -= 1
     return pkt
+
+def get_test_args(traffic_dir, pkt_addrs={}, spgw_type=None, int_test_type=None,
+                  test_multiple_pkt_len=False, test_multiple_prefix_len=False,
+                  ue_recirculation_test=False):
+
+    """
+    Generates parameters for doRunTest calls in test cases
+    :param traffic_dir: traffic direction, e.g. "host-leaf-spine"
+    :param pkt_addrs: packet header addresses, e.g. {eth_src, eth_dst, ip_src, ip_dst}
+    :param spgw_type: SPGW direction, e.g. "DL" for downlink, "UL" for uplink
+    :param int_test_type: INT test drop reason, e.g. "eg_drop" for egress drop type
+    :param test_multiple_pkt_len: generate multiple packet lengths
+    :param test_multiple_prefix_len: generate multiple prefix lengths
+    :param ue_recirculation_test: allow UE recirculation (for recirculation tests)
+    """
+
+    drop_reason_list = []
+    vlan_conf_list = []
+    pkt_type_list = []
+    with_psc_list = []
+    send_report_to_spine_list = []
+    pkt_len_list = []
+    prefix_len_list = []
+    allow_ue_recirculation_list = []
+
+    # spgw input structure: "[DL/UL]_[optional: psc]"
+    if spgw_type:
+        spgw_specs = re.split('_', spgw_type)
+        spgw_dir = spgw_specs[0]
+        # if spgw_type includes psc
+        try:
+            psc_exist = spgw_specs[1]
+            include_psc = True
+        except IndexError:
+            include_psc = False
+    else:
+        include_psc = False
+
+    # traffic_dir input structure: "source-device-destination"
+    devices = re.split('-', traffic_dir)
+    if len(devices) != 3:
+        raise Exception("Invalid traffic direction {}.".format(traffic_dir))
+    source = devices[0]
+    device = devices[1]
+    dest = devices[2]
+
+    if source not in SOURCE_OPTIONS:
+        raise Exception("Invalid source specification: {}".format(source))
+    if device not in DEVICE_OPTIONS:
+        raise Exception("Invalid device specification: {}".format(device))
+    if dest not in DEST_OPTIONS:
+        raise Exception("Invalid dest specification: {}".format(dest))
+
+    if source != 'host' and dest != 'host':
+        vlan_conf_list = {
+                            "untag->untag": [False, False]
+                         }
+    elif source == 'host' and dest != 'host':
+        vlan_conf_list = {
+                            "tag->untag": [True, False],
+                            "untag->untag": [False, False]
+                         }
+    elif source != 'host' and dest == 'host':
+        vlan_conf_list = {
+                            "untag->tag": [False, True],
+                            "untag->untag": [False, False]
+                         }
+    elif source == 'host' and dest == 'host':
+        vlan_conf_list = {
+                            "untag->untag": [False, False],
+                            "untag->tag": [False, True],
+                            "tag->untag": [True, False],
+                            "tag->tag": [True, True]
+                         }
+    else:
+        raise Exception("Invalid source ({}) and/or dest ({})".format(source, dest))
+
+    is_device_spine = (device == 'spine')
+    is_next_hop_spine = (dest == 'spine')
+
+    if int_test_type == "ig_drop":
+        drop_reason_list = [INT_DROP_REASON_ACL_DENY]
+    elif int_test_type == "eg_drop":
+        if spgw_dir == "DL":
+            drop_reason_list = [INT_DROP_REASON_DOWNLINK_PDR_MISS, INT_DROP_REASON_FAR_MISS]
+        elif spgw_dir == "UL":
+            drop_reason_list = [INT_DROP_REASON_UPLINK_PDR_MISS, INT_DROP_REASON_FAR_MISS]
+        else:
+            drop_reason_list = [INT_DROP_REASON_EGRESS_NEXT_MISS]
+    else:
+        drop_reason_list = [None]
+
+    # Configure arrays for spgw-related tests
+    # spgw only uses base packets and always considers psc
+    if spgw_type in SPGW_OPTIONS:
+        pkt_type_list = BASE_PKT_TYPES - {"sctp"}
+        if include_psc:
+            with_psc_list = [False, True]
+        else:
+            with_psc_list = [False]
+    else:
+        pkt_type_list = BASE_PKT_TYPES | GTP_PKT_TYPES | VXLAN_PKT_TYPES
+        with_psc_list = [False]
+
+    if int_test_type in INT_OPTIONS:
+        send_report_to_spine_list = [False, True]
+    else:
+        send_report_to_spine_list = [None]
+
+    if test_multiple_pkt_len:
+        pkt_len_list = [MIN_PKT_LEN, 1500]
+    else:
+        pkt_len_list = [MIN_PKT_LEN]
+
+    if test_multiple_prefix_len:
+        prefix_len_list = [PREFIX_DEFAULT_ROUTE, PREFIX_SUBNET, PREFIX_HOST]
+    else:
+        prefix_len_list = [None]
+
+    if ue_recirculation_test:
+        if is_next_hop_spine:
+            allow_ue_recirculation_list = [True]
+        else:
+            allow_ue_recirculation_list = [True, False]
+    else:
+        allow_ue_recirculation_list = [None]
+
+    for drop_reason in drop_reason_list:
+        for vlan_conf, tagged in vlan_conf_list.items():
+            for pkt_type in pkt_type_list:
+                for with_psc in with_psc_list:
+                    for prefix_len in prefix_len_list:
+                        for pkt_len in pkt_len_list:
+                            for send_report_to_spine in send_report_to_spine_list:
+                                for allow_ue_recirculation in allow_ue_recirculation_list:
+                                    params = {
+                                        'vlan_conf':vlan_conf,
+                                        'pkt_type':pkt_type,
+                                        'tagged1':tagged[0],
+                                        'tagged2':tagged[1],
+                                        'with_psc':with_psc,
+                                        'is_next_hop_spine':is_next_hop_spine,
+                                        'drop_reason':drop_reason,
+                                        'prefix_len':prefix_len,
+                                        'pkt_len':pkt_len,
+                                        'send_report_to_spine':send_report_to_spine,
+                                        'is_device_spine':is_device_spine,
+                                        'allow_ue_recirculation':allow_ue_recirculation
+                                    }
+
+                                    print("Testing " + ", ".join(["{}={}".format(k,v) for k,v in params.items() if (v is not None and k not in ['tagged1','tagged2'])]))
+                                    tc_name = "_".join(["{}_{}".format(k,v) for k, v in params.items()])
+                                    params['tc_name'] = tc_name
+
+                                    if int_test_type not in INT_OPTIONS:
+                                        pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
+                                            pktlen=pkt_len,
+                                            **pkt_addrs
+                                        )
+                                    else:
+                                        pkt = None
+                                    params['pkt'] = pkt
+
+                                    yield params
+
+def slice_tc_meter_index(slice_id, tc):
+    return (slice_id << TC_WIDTH) + tc
+
+def pkt_set_dscp(pkt, slice_id=None, tc=None, dscp=None):
+    assert IP in pkt, "Packet must be IPv4 to set DSCP"
+    if dscp is None:
+        # Concat slice_id and tc
+        dscp = (slice_id << TC_WIDTH) + tc
+    assert dscp < 2**7, "DSCP does not fit in 6 bits"
+    new_pkt = pkt.copy()
+    new_pkt[IP].tos = testutils.ip_make_tos(tos=0, ecn=None, dscp=dscp)
+    return new_pkt
 
 
 class FabricTest(P4RuntimeTest):
@@ -934,6 +1126,10 @@ class FabricTest(P4RuntimeTest):
             priority,
         )
 
+    def read_forwarding_acl_punt_to_cpu(self, priority=DEFAULT_PRIORITY, **matches):
+        matches = self.build_acl_matches(**matches)
+        return self.read_table_entry("acl.acl", matches, priority)
+
     def add_forwarding_acl_set_output_port(
         self, output_port, priority=DEFAULT_PRIORITY, **matches
     ):
@@ -1002,29 +1198,33 @@ class FabricTest(P4RuntimeTest):
             )
 
     def build_acl_matches(
-        self, ipv4_src=None, ipv4_dst=None, ip_proto=None, l4_sport=None, l4_dport=None,
+        self, ipv4_src=None, ipv4_dst=None, ip_proto=None, l4_sport=None, l4_dport=None, ig_port=None
     ):
         matches = []
-        if ipv4_src:
+        if ipv4_src is not None:
             ipv4_src_ = ipv4_to_binary(ipv4_src)
             ipv4_src_mask = stringify(0xFFFFFFFF, 4)
             matches.append(self.Ternary("ipv4_src", ipv4_src_, ipv4_src_mask))
-        if ipv4_dst:
+        if ipv4_dst is not None:
             ipv4_dst_ = ipv4_to_binary(ipv4_dst)
             ipv4_dst_mask = stringify(0xFFFFFFFF, 4)
             matches.append(self.Ternary("ipv4_dst", ipv4_dst_, ipv4_dst_mask))
-        if ip_proto:
+        if ip_proto is not None:
             ip_proto_ = stringify(ip_proto, 1)
             ip_proto_mask = stringify(0xFF, 1)
             matches.append(self.Ternary("ip_proto", ip_proto_, ip_proto_mask))
-        if l4_sport:
+        if l4_sport is not None:
             l4_sport_ = stringify(l4_sport, 2)
             l4_sport_mask = stringify(0xFFFF, 2)
             matches.append(self.Ternary("l4_sport", l4_sport_, l4_sport_mask))
-        if l4_dport:
+        if l4_dport is not None:
             l4_dport_ = stringify(l4_dport, 2)
             l4_dport_mask = stringify(0xFFFF, 2)
             matches.append(self.Ternary("l4_dport", l4_dport_, l4_dport_mask))
+        if ig_port is not None:
+            ig_port_ = stringify(ig_port, 2)
+            ig_port_mask = stringify(0x01FF, 2)
+            matches.append(self.Ternary("ig_port", ig_port_, ig_port_mask))
         return matches
 
     def add_forwarding_acl_next(
@@ -1493,6 +1693,60 @@ class ArpBroadcastTest(FabricTest):
 
 
 class IPv4UnicastTest(FabricTest):
+
+    def set_up_ipv4_unicast_rules(self,
+        next_hop_mac,
+        ig_port,
+        eg_port,
+        dst_ipv4,
+        tagged1=False,
+        tagged2=False,
+        prefix_len=24,
+        next_id=100,
+        is_next_hop_spine=False,
+        routed_eth_types=(ETH_TYPE_IPV4,),
+        install_routing_entry=True,
+        port_type1=PORT_TYPE_EDGE,
+        port_type2=PORT_TYPE_EDGE,
+        from_packet_out=False,
+        switch_mac=SWITCH_MAC,
+        vlan1=VLAN_ID_1,
+        vlan2=VLAN_ID_2,
+        mpls_label=MPLS_LABEL_2):
+
+        group_id = next_id
+
+        # Setup ports.
+        self.setup_port(ig_port, vlan1, port_type1, tagged1)
+        # This is to prevent sending duplicate table entries for tests like
+        # FabricIntDeflectedDropTest, where we already set up the recirculation port as
+        # part of `set_up_int_flows()`.
+        if eg_port not in RECIRCULATE_PORTS:
+            self.setup_port(eg_port, vlan2, port_type2, tagged2)
+
+        # Forwarding type -> routing v4
+        # If from_packet_out, set eth_dst to don't care. All packet-outs should
+        # be routed, independently of eth_dst.
+        for eth_type in routed_eth_types:
+            self.set_forwarding_type(
+                ig_port,
+                switch_mac if not from_packet_out else None,
+                ethertype=eth_type,
+                fwd_type=FORWARDING_TYPE_UNICAST_IPV4,
+            )
+
+        # Routing entry.
+        if install_routing_entry:
+            self.add_forwarding_routing_v4_entry(dst_ipv4, prefix_len, next_id)
+
+        if not is_next_hop_spine:
+            self.add_next_routing(next_id, eg_port, switch_mac, next_hop_mac)
+            self.add_next_vlan(next_id, vlan2)
+        else:
+            params = [eg_port, switch_mac, next_hop_mac, mpls_label]
+            self.add_next_mpls_and_routing_group(next_id, group_id, [params])
+            self.add_next_vlan(next_id, DEFAULT_VLAN)
+
     def runIPv4UnicastTest(
         self,
         pkt,
@@ -1581,7 +1835,6 @@ class IPv4UnicastTest(FabricTest):
             vlan2 = VLAN_ID_2 if next_vlan is None else next_vlan
 
         next_id = 100 if next_id is None else next_id
-        group_id = next_id
         mpls_label = MPLS_LABEL_2
         if dst_ipv4 is None:
             dst_ipv4 = pkt[IP].dst
@@ -1590,36 +1843,26 @@ class IPv4UnicastTest(FabricTest):
         else:
             switch_mac = pkt[Ether].dst
 
-        # Setup ports.
-        self.setup_port(ig_port, vlan1, port_type1, tagged1)
-        # This is to prevent sending duplicate table entries for tests like
-        # FabricIntDeflectedDropTest, where we already set up the recirculation port as
-        # part of `set_up_int_flows()`.
-        if eg_port not in RECIRCULATE_PORTS:
-            self.setup_port(eg_port, vlan2, port_type2, tagged2)
-
-        # Forwarding type -> routing v4
-        # If from_packet_out, set eth_dst to don't care. All packet-outs should
-        # be routed, independently of eth_dst.
-        for eth_type in routed_eth_types:
-            self.set_forwarding_type(
-                ig_port,
-                switch_mac if not from_packet_out else None,
-                ethertype=eth_type,
-                fwd_type=FORWARDING_TYPE_UNICAST_IPV4,
-            )
-
-        # Routing entry.
-        if install_routing_entry:
-            self.add_forwarding_routing_v4_entry(dst_ipv4, prefix_len, next_id)
-
-        if not is_next_hop_spine:
-            self.add_next_routing(next_id, eg_port, switch_mac, next_hop_mac)
-            self.add_next_vlan(next_id, vlan2)
-        else:
-            params = [eg_port, switch_mac, next_hop_mac, mpls_label]
-            self.add_next_mpls_and_routing_group(next_id, group_id, [params])
-            self.add_next_vlan(next_id, DEFAULT_VLAN)
+        self.set_up_ipv4_unicast_rules(
+            next_hop_mac,
+            ig_port,
+            eg_port,
+            dst_ipv4,
+            tagged1,
+            tagged2,
+            prefix_len,
+            next_id,
+            is_next_hop_spine,
+            routed_eth_types,
+            install_routing_entry,
+            port_type1,
+            port_type2,
+            from_packet_out,
+            switch_mac,
+            vlan1,
+            vlan2,
+            mpls_label,
+        )
 
         if exp_pkt is None:
             # Build exp pkt using the input one.
@@ -2016,7 +2259,8 @@ class SpgwSimpleTest(IPv4UnicastTest):
         counter = self.read_indirect_counter(c_name, idx, typ="BOTH")
         return (counter.data.packet_count, counter.data.byte_count)
 
-    def _add_spgw_iface(self, iface_addr, prefix_len, iface_enum, gtpu_valid):
+    def _add_spgw_iface(self, iface_addr, prefix_len, iface_enum, gtpu_valid,
+                        slice_id=DEFAULT_SLICE_ID):
         req = self.get_new_write_request()
 
         iface_addr_ = ipv4_to_binary(iface_addr)
@@ -2031,25 +2275,27 @@ class SpgwSimpleTest(IPv4UnicastTest):
             "FabricIngress.spgw.load_iface",
             [
                 ("src_iface", stringify(iface_enum, 1)),
-                ("slice_id", stringify(DEFAULT_SLICE_ID, 1)),
+                ("slice_id", stringify(slice_id, 1)),
             ],
         )
         self.write_request(req)
 
-    def add_ue_pool(self, pool_addr, prefix_len=32):
+    def add_ue_pool(self, pool_addr, prefix_len=32, slice_id=DEFAULT_SLICE_ID):
         self._add_spgw_iface(
             iface_addr=pool_addr,
             prefix_len=prefix_len,
             iface_enum=SPGW_IFACE_CORE,
             gtpu_valid=False,
+            slice_id=slice_id,
         )
 
-    def add_s1u_iface(self, s1u_addr, prefix_len=32):
+    def add_s1u_iface(self, s1u_addr, prefix_len=32, slice_id=DEFAULT_SLICE_ID):
         self._add_spgw_iface(
             iface_addr=s1u_addr,
             prefix_len=prefix_len,
             iface_enum=SPGW_IFACE_ACCESS,
             gtpu_valid=True,
+            slice_id=slice_id
         )
 
     def add_dbuf_device(
@@ -2081,7 +2327,8 @@ class SpgwSimpleTest(IPv4UnicastTest):
             ],
         )
 
-    def add_uplink_pdr(self, ctr_id, far_id, teid, tunnel_dst_addr):
+    def add_uplink_pdr(self, ctr_id, far_id, teid, tunnel_dst_addr,
+                       tc=DEFAULT_TC):
         req = self.get_new_write_request()
         self.push_update_add_entry_to_action(
             req,
@@ -2095,7 +2342,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
                 ("ctr_id", stringify(ctr_id, 2)),
                 ("far_id", stringify(far_id, 4)),
                 ("needs_gtpu_decap", stringify(1, 1)),
-                ("tc", stringify(DEFAULT_TC, 1)),
+                ("tc", stringify(tc, 1)),
             ],
         )
         self.write_request(req)
@@ -2129,7 +2376,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         )
         self.write_request(req)
 
-    def add_downlink_pdr(self, ctr_id, far_id, ue_addr):
+    def add_downlink_pdr(self, ctr_id, far_id, ue_addr, tc=DEFAULT_TC):
         req = self.get_new_write_request()
 
         self.push_update_add_entry_to_action(
@@ -2141,7 +2388,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
                 ("ctr_id", stringify(ctr_id, 2)),
                 ("far_id", stringify(far_id, 4)),
                 ("needs_gtpu_decap", stringify(0, 1)),
-                ("tc", stringify(DEFAULT_TC, 1)),
+                ("tc", stringify(tc, 1)),
             ],
         )
         self.write_request(req)
@@ -2187,18 +2434,20 @@ class SpgwSimpleTest(IPv4UnicastTest):
             ],
         )
 
-    def setup_uplink(self, s1u_sgw_addr, teid, ctr_id, far_id=UPLINK_FAR_ID):
-        self.add_s1u_iface(s1u_sgw_addr)
+    def setup_uplink(self, s1u_sgw_addr, teid, ctr_id, far_id=UPLINK_FAR_ID,
+                     slice_id=DEFAULT_SLICE_ID, tc=DEFAULT_TC):
+        self.add_s1u_iface(s1u_addr=s1u_sgw_addr, slice_id=slice_id)
         self.add_uplink_pdr(
-            ctr_id=ctr_id, far_id=far_id, teid=teid, tunnel_dst_addr=s1u_sgw_addr,
+            ctr_id=ctr_id, far_id=far_id, teid=teid, tunnel_dst_addr=s1u_sgw_addr, tc=tc
         )
         self.add_normal_far(far_id=far_id)
 
     def setup_downlink(
         self, s1u_sgw_addr, s1u_enb_addr, teid, ue_addr, ctr_id, far_id=DOWNLINK_FAR_ID,
+            slice_id=DEFAULT_SLICE_ID, tc=DEFAULT_TC
     ):
-        self.add_ue_pool(ue_addr)
-        self.add_downlink_pdr(ctr_id=ctr_id, far_id=far_id, ue_addr=ue_addr)
+        self.add_ue_pool(pool_addr=ue_addr, slice_id=slice_id)
+        self.add_downlink_pdr(ctr_id=ctr_id, far_id=far_id, ue_addr=ue_addr, tc=tc)
         self.add_tunnel_far(
             far_id=far_id,
             teid=teid,
@@ -2240,7 +2489,9 @@ class SpgwSimpleTest(IPv4UnicastTest):
             PDR_COUNTER_EGRESS, ctr_idx, "BOTH", exp_egress_bytes, exp_egress_pkts,
         )
 
-    def runUplinkTest(self, ue_out_pkt, tagged1, tagged2, with_psc, is_next_hop_spine):
+    def runUplinkTest(self, ue_out_pkt, tagged1, tagged2, with_psc, is_next_hop_spine,
+                      slice_id=DEFAULT_SLICE_ID, tc=DEFAULT_TC,
+                      dscp_rewrite=False, verify_counters=True, eg_port=None):
         upstream_mac = HOST2_MAC
 
         gtp_pkt = pkt_add_gtp(
@@ -2263,13 +2514,16 @@ class SpgwSimpleTest(IPv4UnicastTest):
             exp_pkt = pkt_add_mpls(exp_pkt, MPLS_LABEL_2, DEFAULT_MPLS_TTL)
         if tagged2:
             exp_pkt = pkt_add_vlan(exp_pkt, VLAN_ID_2)
+        if dscp_rewrite:
+            exp_pkt = pkt_set_dscp(exp_pkt, slice_id=slice_id, tc=tc)
 
         self.setup_uplink(
-            s1u_sgw_addr=S1U_SGW_IPV4, teid=UPLINK_TEID, ctr_id=UPLINK_PDR_CTR_IDX,
+            s1u_sgw_addr=S1U_SGW_IPV4, teid=UPLINK_TEID, ctr_id=UPLINK_PDR_CTR_IDX, slice_id=slice_id, tc=tc
         )
 
-        # Clear SPGW counters before sending the packet
-        self.reset_pdr_counters(UPLINK_PDR_CTR_IDX)
+        if verify_counters:
+            # Clear SPGW counters before sending the packet
+            self.reset_pdr_counters(UPLINK_PDR_CTR_IDX)
 
         self.runIPv4UnicastTest(
             pkt=gtp_pkt,
@@ -2280,7 +2534,11 @@ class SpgwSimpleTest(IPv4UnicastTest):
             tagged1=tagged1,
             tagged2=tagged2,
             is_next_hop_spine=is_next_hop_spine,
+            eg_port=eg_port
         )
+
+        if not verify_counters:
+            return
 
         ingress_bytes = len(gtp_pkt) + ETH_FCS_BYTES
         if tagged1:
@@ -2419,7 +2677,9 @@ class SpgwSimpleTest(IPv4UnicastTest):
             self.verify_pdr_counters(UPLINK_PDR_CTR_IDX, uplink_ingress_bytes, 0, 1, 0)
             self.verify_pdr_counters(DOWNLINK_PDR_CTR_IDX, 0, 0, 0, 0)
 
-    def runDownlinkTest(self, pkt, tagged1, tagged2, with_psc, is_next_hop_spine):
+    def runDownlinkTest(self, pkt, tagged1, tagged2, with_psc, is_next_hop_spine,
+                        slice_id=DEFAULT_SLICE_ID, tc=DEFAULT_TC, dscp_rewrite=False,
+                        verify_counters=True, eg_port=None):
         exp_pkt = pkt.copy()
         exp_pkt[Ether].src = SWITCH_MAC
         exp_pkt[Ether].dst = S1U_ENB_MAC
@@ -2437,6 +2697,9 @@ class SpgwSimpleTest(IPv4UnicastTest):
             exp_pkt = pkt_add_mpls(exp_pkt, MPLS_LABEL_2, DEFAULT_MPLS_TTL)
         if tagged2:
             exp_pkt = pkt_add_vlan(exp_pkt, VLAN_ID_2)
+        if dscp_rewrite:
+            # Modify outer IPV4
+            exp_pkt = pkt_set_dscp(exp_pkt, slice_id=slice_id, tc=tc)
 
         self.setup_downlink(
             s1u_sgw_addr=S1U_SGW_IPV4,
@@ -2444,13 +2707,16 @@ class SpgwSimpleTest(IPv4UnicastTest):
             teid=DOWNLINK_TEID,
             ue_addr=UE1_IPV4,
             ctr_id=DOWNLINK_PDR_CTR_IDX,
+            slice_id=slice_id,
+            tc=tc
         )
 
         if with_psc:
             self.enable_encap_with_psc()
 
-        # Clear SPGW counters before sending the packet
-        self.reset_pdr_counters(DOWNLINK_PDR_CTR_IDX)
+        if verify_counters:
+            # Clear SPGW counters before sending the packet
+            self.reset_pdr_counters(DOWNLINK_PDR_CTR_IDX)
 
         self.runIPv4UnicastTest(
             pkt=pkt,
@@ -2461,7 +2727,11 @@ class SpgwSimpleTest(IPv4UnicastTest):
             tagged1=tagged1,
             tagged2=tagged2,
             is_next_hop_spine=is_next_hop_spine,
+            eg_port=eg_port
         )
+
+        if not verify_counters:
+            return
 
         ingress_bytes = len(pkt) + ETH_FCS_BYTES
         if tagged1:
@@ -2741,10 +3011,8 @@ class IntTest(IPv4UnicastTest):
         )
 
     def set_up_watchlist_flow(
-        self, ipv4_src, ipv4_dst, sport, dport, collector_action=False
+        self, ipv4_src=None, ipv4_dst=None, sport=None, dport=None, collector_action=False
     ):
-        ipv4_src_ = ipv4_to_binary(ipv4_src)
-        ipv4_dst_ = ipv4_to_binary(ipv4_dst)
         ipv4_mask = ipv4_to_binary("255.255.255.255")
         # Use full range of TCP/UDP ports by default.
         sport_low = stringify(0, 2)
@@ -2768,12 +3036,13 @@ class IntTest(IPv4UnicastTest):
         else:
             action = "mark_to_report"
 
-        matches = [
-            self.Exact("ipv4_valid", stringify(1, 1)),
-            self.Ternary("ipv4_src", ipv4_src_, ipv4_mask),
-            self.Ternary("ipv4_dst", ipv4_dst_, ipv4_mask),
-        ]
-
+        matches = [self.Exact("ipv4_valid", stringify(1, 1))]
+        if ipv4_src is not None:
+            ipv4_src_ = ipv4_to_binary(ipv4_src)
+            matches.append(self.Ternary("ipv4_src", ipv4_src_, ipv4_mask))
+        if ipv4_dst is not None:
+            ipv4_dst_ = ipv4_to_binary(ipv4_dst)
+            matches.append(self.Ternary("ipv4_dst", ipv4_dst_, ipv4_mask))
         if sport_low != lower_bound or sport_high != upper_bound:
             matches.append(self.Range("l4_sport", sport_low, sport_high))
         if dport_low != lower_bound or dport_high != upper_bound:
@@ -2804,10 +3073,9 @@ class IntTest(IPv4UnicastTest):
         elif VXLAN in inner_packet:
             inner_packet = pkt_remove_vxlan(inner_packet)
 
-        # Note: scapy doesn't support dscp field, use tos.
         pkt = (
             Ether(src=src_mac, dst=dst_mac)
-            / IP(src=src_ip, dst=dst_ip, ttl=64, tos=4)
+            / IP(src=src_ip, dst=dst_ip, ttl=64, tos=INT_TOS)
             / UDP(sport=0, chksum=0)
             / INT_L45_REPORT_FIXED(nproto=2, f=f_flag, q=q_flag, hw_id=(eg_port >> 7))
             / INT_L45_LOCAL_REPORT(
@@ -2862,7 +3130,7 @@ class IntTest(IPv4UnicastTest):
         # Note: scapy doesn't support dscp field, use tos.
         pkt = (
             Ether(src=src_mac, dst=dst_mac)
-            / IP(src=src_ip, dst=dst_ip, ttl=64, tos=4)
+            / IP(src=src_ip, dst=dst_ip, ttl=64, tos=INT_TOS)
             / UDP(sport=0, chksum=0)
             / INT_L45_REPORT_FIXED(nproto=1, d=1, hw_id=hw_id)
             / INT_L45_DROP_REPORT(
@@ -2947,23 +3215,25 @@ class IntTest(IPv4UnicastTest):
     def set_up_int_flows(
         self, is_device_spine, pkt, send_report_to_spine, watch_flow=True
     ):
-        # Watchlist always matches on inner headers.
-        if GTP_U_Header in pkt:
-            pkt = pkt_remove_gtp(pkt)
-        elif VXLAN in pkt:
-            pkt = pkt_remove_vxlan(pkt)
+        if pkt:
+            # Watchlist always matches on inner headers.
+            if GTP_U_Header in pkt:
+                pkt = pkt_remove_gtp(pkt)
+            elif VXLAN in pkt:
+                pkt = pkt_remove_vxlan(pkt)
 
-        if UDP in pkt:
-            sport = pkt[UDP].sport
-            dport = pkt[UDP].dport
-        elif TCP in pkt:
-            sport = pkt[TCP].sport
-            dport = pkt[TCP].dport
-        else:
-            sport = None
-            dport = None
-        if watch_flow:
-            self.set_up_watchlist_flow(pkt[IP].src, pkt[IP].dst, sport, dport)
+            if UDP in pkt:
+                sport = pkt[UDP].sport
+                dport = pkt[UDP].dport
+            elif TCP in pkt:
+                sport = pkt[TCP].sport
+                dport = pkt[TCP].dport
+            else:
+                sport = None
+                dport = None
+
+            if watch_flow:
+                self.set_up_watchlist_flow(pkt[IP].src, pkt[IP].dst, sport, dport)
         self.set_up_report_flow(
             SWITCH_MAC,
             SWITCH_MAC,
@@ -2982,9 +3252,7 @@ class IntTest(IPv4UnicastTest):
         )
         self.set_up_recirc_ports()
 
-    def set_up_latency_threshold_for_q_report(self, threshold_trigger, threshold_reset):
-        queue_id = 0
-
+    def set_up_latency_threshold_for_q_report(self, threshold_trigger, threshold_reset, queue_id=0):
         def set_up_queue_report_table_internal(upper, lower, action):
             # Omit dont'care matches
             matches = [self.Exact("egress_qid", stringify(queue_id, 1))]
@@ -4063,3 +4331,72 @@ class PppoeTest(DoubleVlanTerminationTest):
             self.assertGreaterEqual(new_tx_count, old_tx_count + len(pkt))
         else:
             self.assertEqual(new_tx_count, old_tx_count)
+
+class SlicingTest(FabricTest):
+    """Mixin class with methods to manipulate QoS entities
+    """
+
+    def add_slice_tc_classifier_entry(self, slice_id=None, tc=None,
+                                      trust_dscp=False,
+                                      **ftuple):
+        if trust_dscp:
+            action = "FabricIngress.slice_tc_classifier.trust_dscp"
+            params = []
+        else:
+            action = "FabricIngress.slice_tc_classifier.set_slice_id_tc"
+            params = [
+                ("slice_id", stringify(slice_id, 1)),
+                ("tc", stringify(tc, 1))
+            ]
+        self.send_request_add_entry_to_action(
+            "FabricIngress.slice_tc_classifier.classifier",
+            self.build_acl_matches(**ftuple),
+            action,
+            params,
+            DEFAULT_PRIORITY,
+        )
+
+    def configure_slice_tc_meter(self, slice_id, tc, cir, cburst, pir, pburst):
+        self.write_indirect_meter(
+            m_name="FabricIngress.qos.slice_tc_meter",
+            m_index=slice_tc_meter_index(slice_id, tc),
+            cir=cir,
+            cburst=cburst,
+            pir=pir,
+            pburst=pburst,
+        )
+
+    def add_queue_entry(self, slice_id, tc, qid=None, color=None):
+        matches = [
+            self.Exact("slice_id", stringify(slice_id, 1)),
+            self.Exact("tc", stringify(tc, 1)),
+        ]
+        if color is not None:
+            matches.append(
+                self.Ternary("color", stringify(color, 1), stringify(0x3, 1))
+            )
+        if qid is not None:
+            action = "FabricIngress.qos.set_queue"
+            action_params = [("qid", stringify(qid, 1))]
+        else:
+            action = "FabricIngress.qos.meter_drop"
+            action_params = []
+        self.send_request_add_entry_to_action(
+            "FabricIngress.qos.queues",
+            matches,
+            action,
+            action_params,
+            DEFAULT_PRIORITY,
+        )
+
+    def add_dscp_rewriter_entry(self, eg_port, clear=False):
+        self.send_request_add_entry_to_action(
+            "FabricEgress.dscp_rewriter.rewriter",
+            [self.Exact("eg_port", stringify(eg_port, 2))],
+            "FabricEgress.dscp_rewriter." + "clear" if clear else "rewrite",
+            [],
+        )
+
+    def enable_policing(self, slice_id, tc, color=COLOR_RED):
+        self.add_queue_entry(slice_id, tc, None, color=color)
+

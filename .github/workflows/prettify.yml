@@ -21,12 +21,8 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: 3.8.5
-      - name: Install dependencies
-        run: python3 -m pip install black==19.10b0 isort==5.6.4
-      - name: Reformat code with Black
-        run: black --config .github/linters/.python-black .
-      - name: Refotmat code with isort
-        run: isort --sp .github/linters/.isort.cfg .
+      - name: Run code style and formatting tools
+        run: make format
       - name: Check if the code is modified
         run: git update-index --refresh || echo "create_pr=1" >> $GITHUB_ENV
       - name: Create pull request
