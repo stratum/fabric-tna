@@ -896,6 +896,7 @@ class FabricTest(P4RuntimeTest):
         port,
         cpu_loopback_mode=CPU_LOOPBACK_MODE_DISABLED,
         do_forwarding=False,
+        queue_id=0,
     ):
         packet_out = p4runtime_pb2.PacketOut()
         packet_out.payload = bytes(pkt)
@@ -911,13 +912,17 @@ class FabricTest(P4RuntimeTest):
         do_forwarding_md = packet_out.metadata.add()
         do_forwarding_md.metadata_id = 3
         do_forwarding_md.value = stringify(1 if do_forwarding else 0, 1)
+        # queue_id
+        do_forwarding_md = packet_out.metadata.add()
+        do_forwarding_md.metadata_id = 4
+        do_forwarding_md.value = stringify(queue_id, 1)
         # pad0
         pad0_md = packet_out.metadata.add()
-        pad0_md.metadata_id = 4
+        pad0_md.metadata_id = 5
         pad0_md.value = stringify(0, 1)
         # ether type
         ether_type_md = packet_out.metadata.add()
-        ether_type_md.metadata_id = 5
+        ether_type_md.metadata_id = 6
         ether_type_md.value = stringify(ETH_TYPE_PACKET_OUT, 2)
         return packet_out
 

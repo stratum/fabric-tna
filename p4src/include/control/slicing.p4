@@ -96,7 +96,7 @@ control IngressQos (inout fabric_ingress_metadata_t fabric_md,
 
     DirectCounter<bit<32>>(CounterType_t.PACKETS) queues_stats;
 
-    action set_queue(qid_t qid) {
+    action set_queue(QueueId_t qid) {
         ig_tm_md.qid = qid;
         queues_stats.count();
     }

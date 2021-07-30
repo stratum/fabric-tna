@@ -35,7 +35,8 @@ RT_APP_POOL = 1  # Real-time
 EL_APP_POOL = 2  # Elastic
 BE_APP_POOL = 3  # Best-Effort
 
-# Default queue IDs.
+# Static queue IDs. Other IDs will be allocated based on slices. Be careful when
+# changing values, these are hard-coded in many other places.
 BE_QUEUE_ID = 0  # Best-effort
 SYS_QUEUE_ID = 1  # System
 CT_QUEUE_ID = 2  # Control

@@ -43,6 +43,7 @@ import static org.onosproject.net.PortNumber.TABLE;
 import static org.onosproject.net.flow.instructions.Instruction.Type.OUTPUT;
 import static org.onosproject.net.pi.model.PiPacketOperationType.PACKET_OUT;
 import static org.stratumproject.fabric.tna.behaviour.Constants.ONE;
+import static org.stratumproject.fabric.tna.behaviour.Constants.QUEUE_ID_SYSTEM;
 import static org.stratumproject.fabric.tna.behaviour.Constants.ZERO;
 import static org.stratumproject.fabric.tna.behaviour.FabricTreatmentInterpreter.mapAclTreatment;
 import static org.stratumproject.fabric.tna.behaviour.FabricTreatmentInterpreter.mapEgressNextTreatment;
@@ -207,6 +208,10 @@ public class FabricInterpreter extends AbstractFabricHandlerBehavior
             builder.add(PiPacketMetadata.builder()
                     .withId(P4InfoConstants.DO_FORWARDING)
                     .withValue(copyFrom(doForwarding ? ONE : ZERO))
+                    .build());
+            builder.add(PiPacketMetadata.builder()
+                    .withId(P4InfoConstants.QUEUE_ID)
+                    .withValue(copyFrom(QUEUE_ID_SYSTEM))
                     .build());
             builder.add(PiPacketMetadata.builder()
                     .withId(P4InfoConstants.PAD0)
