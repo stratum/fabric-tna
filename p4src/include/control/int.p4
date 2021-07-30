@@ -503,26 +503,26 @@ control IntEgress (
     }
 
 
-    action fix_ip_udp_len(bit<16> adjust) {
-        hdr.ipv4.total_len = eg_intr_md.pkt_length + adjust;
-        hdr.udp.len = eg_intr_md.pkt_length + adjust;
+    action adjust_ip_udp_len(bit<16> adjust_ip, bit<16> adjust_udp) {
+        hdr.ipv4.total_len = eg_intr_md.pkt_length + adjust_ip;
+        hdr.udp.len = eg_intr_md.pkt_length + adjust_udp;
     }
 
-    table fix_int_report_hdr_length {
+    table adjust_int_report_hdr_length {
         key = {
             hdr.ipv4.isValid(): exact @name("ipv4_valid");
             hdr.udp.isValid(): exact @name("udp_valid");
-            hdr.ipv4.dst_addr : exact @name("ipv4_dst");
-            hdr.ipv4.protocol : exact @name("ip_proto");
-            hdr.udp.dport : exact   @name("l4_dport");
+            hdr.ipv4.dst_addr: exact @name("ipv4_dst");
+            hdr.udp.dport: exact @name("udp_dport");
+            hdr.fake_ethernet.isValid(): exact @name("is_loopback");
         }
 
         actions = {
             @defaultonly nop();
-            fix_ip_udp_len;
+            adjust_ip_udp_len;
         }
         const default_action = nop();
-        const size = 1;
+        const size = 2;
     }
 
     apply {
@@ -563,7 +563,7 @@ control IntEgress (
             }
         }
 
-        fix_int_report_hdr_length.apply();
+        adjust_int_report_hdr_length.apply();
     }
 }
 #endif

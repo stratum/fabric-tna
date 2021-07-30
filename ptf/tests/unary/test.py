@@ -1380,7 +1380,7 @@ class FabricSpgwUplinkRecircTest(SpgwSimpleTest):
         pkt_addrs = {'eth_src':HOST1_MAC, 'eth_dst':SWITCH_MAC,
                      'ip_src':UE1_IPV4, 'ip_dst':UE2_IPV4}
         for traffic_dir in ["host-leaf-host", "host-leaf-spine", "spine-leaf-host"]:
-            for test_args in get_test_args(traffic_dir=traffic_dir, pkt_addrs=pkt_addrs, 
+            for test_args in get_test_args(traffic_dir=traffic_dir, pkt_addrs=pkt_addrs,
                                            spgw_type="UL", ue_recirculation_test=True):
                 self.doRunTest(**test_args)
 
@@ -1406,7 +1406,7 @@ class FabricSpgwDownlinkToDbufTest(SpgwSimpleTest):
         pkt_addrs = {'eth_src':HOST1_MAC, 'eth_dst':SWITCH_MAC,
                      'ip_src':HOST1_IPV4, 'ip_dst':UE1_IPV4}
         for traffic_dir in ["host-leaf-host", "spine-leaf-host", "host-leaf-spine"]:
-            for test_args in get_test_args(traffic_dir=traffic_dir, pkt_addrs=pkt_addrs, 
+            for test_args in get_test_args(traffic_dir=traffic_dir, pkt_addrs=pkt_addrs,
                                            spgw_type="DL"):
                 self.doRunTest(**test_args)
 
@@ -1432,7 +1432,7 @@ class FabricSpgwDownlinkFromDbufTest(SpgwSimpleTest):
         pkt_addrs = {'eth_src':DBUF_MAC, 'eth_dst':SWITCH_MAC,
                      'ip_src':HOST1_IPV4, 'ip_dst':UE1_IPV4}
         for traffic_dir in ["host-leaf-host", "spine-leaf-host", "host-leaf-spine"]:
-            for test_args in get_test_args(traffic_dir=traffic_dir, pkt_addrs=pkt_addrs, 
+            for test_args in get_test_args(traffic_dir=traffic_dir, pkt_addrs=pkt_addrs,
                                            spgw_type="DL"):
                 self.doRunTest(**test_args)
 
@@ -1586,6 +1586,7 @@ class FabricSpgwIntDownlinkDropTest(SpgwIntTest):
         is_device_spine,
         send_report_to_spine,
         drop_reason,
+        with_psc,
         **kwargs
     ):
         # Change the IP destination to ensure we are using differnt
@@ -1607,6 +1608,7 @@ class FabricSpgwIntDownlinkDropTest(SpgwIntTest):
             is_device_spine=is_device_spine,
             send_report_to_spine=send_report_to_spine,
             drop_reason=drop_reason,
+            with_psc=with_psc,
         )
 
     def runTest(self):
@@ -2593,6 +2595,10 @@ class FabricIntLocalReportLoopbackModeTest(IntTest):
         exp_int_report_pkt_masked.set_do_not_care_scapy(IP, "id")
         exp_int_report_pkt_masked.set_do_not_care_scapy(IP, "chksum")
         exp_int_report_pkt_masked.set_do_not_care_scapy(UDP, "chksum")
+        # Ignore IP and UDP len for now?
+
+        exp_int_report_pkt_masked.set_do_not_care_scapy(IP, "len")
+        exp_int_report_pkt_masked.set_do_not_care_scapy(UDP, "len")
         exp_int_report_pkt_masked.set_do_not_care_scapy(
             INT_L45_REPORT_FIXED, "ingress_tstamp"
         )
