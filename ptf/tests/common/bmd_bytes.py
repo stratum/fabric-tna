@@ -7,10 +7,10 @@ profile_name = testutils.test_param_get("profile")
 if profile_name == "fabric-spgw":
     BMD_BYTES = 39
 elif profile_name == "fabric-int":
-    BMD_BYTES = 31
+    BMD_BYTES = 32
 elif profile_name == "fabric":
     BMD_BYTES = 23
 elif profile_name == "fabric-spgw-int":
-    BMD_BYTES = 47
+    BMD_BYTES = 48
 else:
     raise Exception(f"Invalid profile {profile_name}, cannot set BMD_BYTES")
