@@ -381,12 +381,8 @@ control IntEgress (
                                  l4_port_t mon_port, bit<32> switch_id) {
         _report_encap_common(src_mac, mon_mac, src_ip, mon_ip, mon_port, switch_id);
         hdr.report_eth_type.value = ETHERTYPE_IPV4;
-        hdr.report_ipv4.total_len = IPV4_HDR_BYTES + UDP_HDR_BYTES
-                        + REPORT_FIXED_HEADER_BYTES + LOCAL_REPORT_HEADER_BYTES
-                        + ETH_HDR_BYTES + fabric_md.int_ipv4_len;
-        hdr.report_udp.len = UDP_HDR_BYTES
-                        + REPORT_FIXED_HEADER_BYTES + LOCAL_REPORT_HEADER_BYTES
-                        + ETH_HDR_BYTES + fabric_md.int_ipv4_len;
+        hdr.report_ipv4.total_len = 0; // will fix later after recirculation.
+        hdr.report_udp.len = 0; // will fix later after recirculation.
         hdr.report_fixed_header.nproto = NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER;
         hdr.local_report_header.setValid();
     }
@@ -406,12 +402,8 @@ control IntEgress (
                                 l4_port_t mon_port, bit<32> switch_id) {
         _report_encap_common(src_mac, mon_mac, src_ip, mon_ip, mon_port, switch_id);
         hdr.report_eth_type.value = ETHERTYPE_IPV4;
-        hdr.report_ipv4.total_len = IPV4_HDR_BYTES + UDP_HDR_BYTES
-                        + REPORT_FIXED_HEADER_BYTES + DROP_REPORT_HEADER_BYTES
-                        + ETH_HDR_BYTES + fabric_md.int_ipv4_len;
-        hdr.report_udp.len = UDP_HDR_BYTES
-                        + REPORT_FIXED_HEADER_BYTES + DROP_REPORT_HEADER_BYTES
-                        + ETH_HDR_BYTES + fabric_md.int_ipv4_len;
+        hdr.report_ipv4.total_len = 0; // will fix later after recirculation.
+        hdr.report_udp.len = 0; // will fix later after recirculation.
         hdr.report_fixed_header.nproto = NPROTO_TELEMETRY_DROP_HEADER;
         hdr.drop_report_header.setValid();
     }
@@ -510,6 +502,29 @@ control IntEgress (
 #endif // WITH_DEBUG
     }
 
+
+    action fix_ip_udp_len(bit<16> adjust) {
+        hdr.ipv4.total_len = eg_intr_md.pkt_length + adjust;
+        hdr.udp.len = eg_intr_md.pkt_length + adjust;
+    }
+
+    table fix_int_report_hdr_length {
+        key = {
+            hdr.ipv4.isValid(): exact @name("ipv4_valid");
+            hdr.udp.isValid(): exact @name("udp_valid");
+            hdr.ipv4.dst_addr : exact @name("ipv4_dst");
+            hdr.ipv4.protocol : exact @name("ip_proto");
+            hdr.udp.dport : exact   @name("l4_dport");
+        }
+
+        actions = {
+            @defaultonly nop();
+            fix_ip_udp_len;
+        }
+        const default_action = nop();
+        const size = 1;
+    }
+
     apply {
         fabric_md.int_md.hop_latency = eg_prsr_md.global_tstamp[31:0] - fabric_md.bridged.base.ig_tstamp[31:0];
         fabric_md.int_md.timestamp = eg_prsr_md.global_tstamp;
@@ -547,6 +562,8 @@ control IntEgress (
                 flow_report_filter.apply(hdr, fabric_md, eg_intr_md, eg_prsr_md, eg_dprsr_md);
             }
         }
+
+        fix_int_report_hdr_length.apply();
     }
 }
 #endif

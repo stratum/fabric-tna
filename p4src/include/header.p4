@@ -470,6 +470,7 @@ struct egress_headers_t {
 #endif // WITH_SPGW
     ipv4_t ipv4;
     ipv6_t ipv6;
+    udp_t udp;
 }
 
 #endif // __HEADER__

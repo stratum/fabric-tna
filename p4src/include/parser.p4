@@ -493,11 +493,19 @@ parser FabricEgressParser (packet_in packet,
 
     state parse_ipv4 {
         packet.extract(hdr.ipv4);
-        transition accept;
+        transition select(hdr.ipv4.protocol) {
+            PROTO_UDP: parse_udp;
+            default: accept;
+        }
     }
 
     state parse_ipv6 {
         packet.extract(hdr.ipv6);
+        transition accept;
+    }
+
+    state parse_udp {
+        packet.extract(hdr.udp);
         transition accept;
     }
 }
@@ -616,6 +624,7 @@ control FabricEgressDeparser(packet_out packet,
 #endif // WITH_SPGW
         packet.emit(hdr.ipv4);
         packet.emit(hdr.ipv6);
+        packet.emit(hdr.udp);
     }
 }
 
