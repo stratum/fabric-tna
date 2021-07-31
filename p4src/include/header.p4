@@ -272,6 +272,7 @@ struct int_bridged_metadata_t {
     IntDropReason_t drop_reason;
     QueueId_t       queue_id;
     PortId_t        egress_port;
+    bool            is_wip;
 }
 
 struct int_metadata_t {
@@ -402,6 +403,7 @@ struct fabric_egress_metadata_t {
     bool                  is_int_recirc; // Tells the pipeline that this packet will be
                                          // recirculated later as an INT report.
 #endif // WITH_INT
+    bit<16>               pkt_length;
 }
 
 header fake_ethernet_t {

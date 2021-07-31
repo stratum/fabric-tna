@@ -348,12 +348,11 @@ control IntEgress (
     }
 
     @hidden
-    action _report_encap_common(mac_addr_t src_mac, mac_addr_t mon_mac,
-                                ipv4_addr_t src_ip, ipv4_addr_t mon_ip,
+    action _report_encap_common(ipv4_addr_t src_ip, ipv4_addr_t mon_ip,
                                 l4_port_t mon_port, bit<32> switch_id) {
         // Constant fields are initialized in int_mirror_parser.p4.
-        hdr.report_ethernet.dst_addr = mon_mac;
-        hdr.report_ethernet.src_addr = src_mac;
+        hdr.report_ethernet.dst_addr = 0;
+        hdr.report_ethernet.src_addr = 0;
         hdr.report_ipv4.identification = ip_id_gen.get();
         hdr.report_ipv4.src_addr = src_ip;
         hdr.report_ipv4.dst_addr = mon_ip;
@@ -376,44 +375,40 @@ control IntEgress (
 #endif // WITH_DEBUG
     }
 
-    action do_local_report_encap(mac_addr_t src_mac, mac_addr_t mon_mac,
-                                 ipv4_addr_t src_ip, ipv4_addr_t mon_ip,
+    action do_local_report_encap(ipv4_addr_t src_ip, ipv4_addr_t mon_ip,
                                  l4_port_t mon_port, bit<32> switch_id) {
-        _report_encap_common(src_mac, mon_mac, src_ip, mon_ip, mon_port, switch_id);
-        hdr.report_eth_type.value = ETHERTYPE_IPV4;
+        _report_encap_common(src_ip, mon_ip, mon_port, switch_id);
+        hdr.report_eth_type.value = ETHERTYPE_INT_WIP_IPV4;
         hdr.report_ipv4.total_len = 0; // will fix later after recirculation.
         hdr.report_udp.len = 0; // will fix later after recirculation.
         hdr.report_fixed_header.nproto = NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER;
         hdr.local_report_header.setValid();
     }
 
-    action do_local_report_encap_mpls(mac_addr_t src_mac, mac_addr_t mon_mac,
-                                      ipv4_addr_t src_ip, ipv4_addr_t mon_ip,
+    action do_local_report_encap_mpls(ipv4_addr_t src_ip, ipv4_addr_t mon_ip,
                                       l4_port_t mon_port, mpls_label_t mon_label,
                                       bit<32> switch_id) {
-        do_local_report_encap(src_mac, mon_mac, src_ip, mon_ip, mon_port, switch_id);
-        hdr.report_eth_type.value = ETHERTYPE_MPLS;
+        do_local_report_encap(src_ip, mon_ip, mon_port, switch_id);
+        hdr.report_eth_type.value = ETHERTYPE_INT_WIP_MPLS;
         hdr.report_mpls.setValid();
         hdr.report_mpls.label = mon_label;
     }
 
-    action do_drop_report_encap(mac_addr_t src_mac, mac_addr_t mon_mac,
-                                ipv4_addr_t src_ip, ipv4_addr_t mon_ip,
+    action do_drop_report_encap(ipv4_addr_t src_ip, ipv4_addr_t mon_ip,
                                 l4_port_t mon_port, bit<32> switch_id) {
-        _report_encap_common(src_mac, mon_mac, src_ip, mon_ip, mon_port, switch_id);
-        hdr.report_eth_type.value = ETHERTYPE_IPV4;
+        _report_encap_common(src_ip, mon_ip, mon_port, switch_id);
+        hdr.report_eth_type.value = ETHERTYPE_INT_WIP_IPV4;
         hdr.report_ipv4.total_len = 0; // will fix later after recirculation.
         hdr.report_udp.len = 0; // will fix later after recirculation.
         hdr.report_fixed_header.nproto = NPROTO_TELEMETRY_DROP_HEADER;
         hdr.drop_report_header.setValid();
     }
 
-    action do_drop_report_encap_mpls(mac_addr_t src_mac, mac_addr_t mon_mac,
-                                     ipv4_addr_t src_ip, ipv4_addr_t mon_ip,
+    action do_drop_report_encap_mpls(ipv4_addr_t src_ip, ipv4_addr_t mon_ip,
                                      l4_port_t mon_port, mpls_label_t mon_label,
                                      bit<32> switch_id) {
-        do_drop_report_encap(src_mac, mon_mac, src_ip, mon_ip, mon_port, switch_id);
-        hdr.report_eth_type.value = ETHERTYPE_MPLS;
+        do_drop_report_encap(src_ip, mon_ip, mon_port, switch_id);
+        hdr.report_eth_type.value = ETHERTYPE_INT_WIP_MPLS;
         hdr.report_mpls.setValid();
         hdr.report_mpls.label = mon_label;
     }
@@ -504,17 +499,13 @@ control IntEgress (
 
 
     action adjust_ip_udp_len(bit<16> adjust_ip, bit<16> adjust_udp) {
-        hdr.ipv4.total_len = eg_intr_md.pkt_length + adjust_ip;
-        hdr.udp.len = eg_intr_md.pkt_length + adjust_udp;
+        hdr.ipv4.total_len = fabric_md.pkt_length + adjust_ip;
+        hdr.udp.len = fabric_md.pkt_length + adjust_udp;
     }
 
     table adjust_int_report_hdr_length {
         key = {
-            hdr.ipv4.isValid(): exact @name("ipv4_valid");
-            hdr.udp.isValid(): exact @name("udp_valid");
-            hdr.ipv4.dst_addr: exact @name("ipv4_dst");
-            hdr.udp.dport: exact @name("udp_dport");
-            hdr.fake_ethernet.isValid(): exact @name("is_loopback");
+            fabric_md.bridged.int_bmd.is_wip: exact @name("is_int_wip");
         }
 
         actions = {
@@ -522,7 +513,7 @@ control IntEgress (
             adjust_ip_udp_len;
         }
         const default_action = nop();
-        const size = 2;
+        const size = 1;
     }
 
     apply {

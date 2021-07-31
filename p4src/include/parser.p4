@@ -32,6 +32,7 @@ parser FabricIngressParser (packet_in  packet,
         fabric_md.bridged.base.ip_eth_type = 0;
 #ifdef WITH_INT
         fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UNKNOWN;
+        fabric_md.bridged.int_bmd.is_wip = false;
 #endif // WITH_INT
         fabric_md.bridged.base.encap_presence = EncapPresence.NONE;
         transition check_ethernet;
@@ -45,13 +46,20 @@ parser FabricIngressParser (packet_in  packet,
             ETHERTYPE_CPU_LOOPBACK_INGRESS: parse_fake_ethernet;
             ETHERTYPE_CPU_LOOPBACK_EGRESS: parse_fake_ethernet_and_accept;
             ETHERTYPE_PACKET_OUT: check_packet_out;
+            ETHERTYPE_INT_WIP_IPV4: parse_int_wip_ipv4;
+            ETHERTYPE_INT_WIP_MPLS: parse_int_wip_mpls;
             default: parse_ethernet;
         }
     }
 
     state parse_fake_ethernet {
         packet.extract(hdr.fake_ethernet);
-        transition parse_ethernet;
+        fake_ethernet_t tmp = packet.lookahead<fake_ethernet_t>();
+        transition select(tmp.ether_type) {
+            ETHERTYPE_INT_WIP_IPV4: parse_int_wip_ipv4;
+            ETHERTYPE_INT_WIP_MPLS: parse_int_wip_mpls;
+            default: parse_ethernet;
+        }
     }
 
     state parse_fake_ethernet_and_accept {
@@ -66,6 +74,26 @@ parser FabricIngressParser (packet_in  packet,
             0: parse_packet_out_and_accept;
             default: strip_packet_out;
         }
+    }
+
+    state parse_int_wip_ipv4 {
+        hdr.ethernet.setValid();
+        hdr.eth_type.setValid();
+        hdr.eth_type.value = ETHERTYPE_IPV4;
+        fabric_md.bridged.int_bmd.is_wip = true;
+        fabric_md.bridged.base.mpls_label = 0;
+        fabric_md.bridged.base.mpls_ttl = DEFAULT_MPLS_TTL + 1;
+        packet.advance(ETH_HDR_BYTES * 8);
+        transition parse_ipv4;
+    }
+
+    state parse_int_wip_mpls {
+        hdr.ethernet.setValid();
+        hdr.eth_type.setValid();
+        hdr.eth_type.value = ETHERTYPE_MPLS;
+        fabric_md.bridged.int_bmd.is_wip = true;
+        packet.advance(ETH_HDR_BYTES * 8);
+        transition parse_mpls;
     }
 
     state parse_packet_out_and_accept {
@@ -351,6 +379,7 @@ parser FabricEgressParser (packet_in packet,
     state start {
         packet.extract(eg_intr_md);
         fabric_md.cpu_port = 0;
+        fabric_md.pkt_length = eg_intr_md.pkt_length;
         common_egress_metadata_t common_eg_md = packet.lookahead<common_egress_metadata_t>();
         transition select(eg_intr_md.deflection_flag, common_eg_md.bmd_type, common_eg_md.mirror_type) {
             (0, BridgedMdType_t.INGRESS_TO_EGRESS, _): parse_bridged_md;

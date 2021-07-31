@@ -2595,10 +2595,6 @@ class FabricIntLocalReportLoopbackModeTest(IntTest):
         exp_int_report_pkt_masked.set_do_not_care_scapy(IP, "id")
         exp_int_report_pkt_masked.set_do_not_care_scapy(IP, "chksum")
         exp_int_report_pkt_masked.set_do_not_care_scapy(UDP, "chksum")
-        # Ignore IP and UDP len for now?
-
-        exp_int_report_pkt_masked.set_do_not_care_scapy(IP, "len")
-        exp_int_report_pkt_masked.set_do_not_care_scapy(UDP, "len")
         exp_int_report_pkt_masked.set_do_not_care_scapy(
             INT_L45_REPORT_FIXED, "ingress_tstamp"
         )
