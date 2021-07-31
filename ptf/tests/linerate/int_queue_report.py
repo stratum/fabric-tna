@@ -2,32 +2,38 @@
 # SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 
 import os
-from scapy.utils import PcapReader
-from trex_test import TRexTest
-from base_test import *
-from fabric_test import *
-from trex_stl_lib.api import STLPktBuilder, STLStream, STLTXCont, STLVM
 from collections import deque
 
-TRAFFIC_MULT="1000pps"
-TEST_DURATION=3
+from base_test import *
+from fabric_test import *
+from scapy.utils import PcapReader
+from trex_stl_lib.api import STLVM, STLPktBuilder, STLStream, STLTXCont
+from trex_test import TRexTest
+
+TRAFFIC_MULT = "1000pps"
+TEST_DURATION = 3
 DEFAULT_QID = 1
 SLICE_ID = 1
 TC = 1
 DEFAULT_QUOTA = 50
 INT_REPORT_CAPTURE_LIMIT = 100
-RX_LIMIT = 4000 # max number of packets captured from the switch.
-THRESHOLD_TRIGGER = 100 # ns
-THRESHOLD_RESET = 1 # ns
+RX_LIMIT = 4000  # max number of packets captured from the switch.
+THRESHOLD_TRIGGER = 100  # ns
+THRESHOLD_RESET = 1  # ns
 
 SENDER_PORT = 0
 INT_COLLECTOR_PORT = 2
 RECEIVER_PORT = 3
 
+
 class IntQueueReportTest(TRexTest, IntTest, SlicingTest):
     @autocleanup
-    def doRunTest(self, tagged1, tagged2, is_device_spine, send_report_to_spine, is_next_hop_spine):
-        print(f"Testing tagged1={tagged1}, tagged2={tagged2}, is_device_spine={is_device_spine}, send_report_to_spine={send_report_to_spine}, is_next_hop_spine={is_next_hop_spine}")
+    def doRunTest(
+        self, tagged1, tagged2, is_device_spine, send_report_to_spine, is_next_hop_spine
+    ):
+        print(
+            f"Testing tagged1={tagged1}, tagged2={tagged2}, is_device_spine={is_device_spine}, send_report_to_spine={send_report_to_spine}, is_next_hop_spine={is_next_hop_spine}"
+        )
         # TODO: move these to auto cleanup annonation?
         self.trex_client.reset()
         self.trex_client.clear_stats()
@@ -35,8 +41,14 @@ class IntQueueReportTest(TRexTest, IntTest, SlicingTest):
         pkt = testutils.simple_udp_packet()
         if tagged1:
             pkt = pkt_add_vlan(pkt, vlan_vid=VLAN_ID_1)
-        self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine, watch_flow=False)
-        self.set_up_latency_threshold_for_q_report(threshold_trigger=THRESHOLD_TRIGGER, threshold_reset=THRESHOLD_RESET, queue_id=DEFAULT_QID)
+        self.set_up_int_flows(
+            is_device_spine, pkt, send_report_to_spine, watch_flow=False
+        )
+        self.set_up_latency_threshold_for_q_report(
+            threshold_trigger=THRESHOLD_TRIGGER,
+            threshold_reset=THRESHOLD_RESET,
+            queue_id=DEFAULT_QID,
+        )
         self.set_up_ipv4_unicast_rules(
             next_hop_mac=HOST2_MAC,
             ig_port=self.port1,
@@ -51,35 +63,44 @@ class IntQueueReportTest(TRexTest, IntTest, SlicingTest):
 
         # To avoid reporting INT report packet, we use queue ID 1 for the traffic.
         self.add_slice_tc_classifier_entry(
-            slice_id=SLICE_ID,
-            tc=TC,
-            ipv4_dst=pkt[IP].dst,
+            slice_id=SLICE_ID, tc=TC, ipv4_dst=pkt[IP].dst,
         )
         self.add_queue_entry(slice_id=SLICE_ID, tc=TC, qid=DEFAULT_QID)
 
         # Define stream and stateless VM to change the IP source for each packet.
         vm = STLVM()
-        vm.var(name="ip_src", min_value="10.0.0.1", max_value="10.255.255.255", size=4, op="inc", step=1)
+        vm.var(
+            name="ip_src",
+            min_value="10.0.0.1",
+            max_value="10.255.255.255",
+            size=4,
+            op="inc",
+            step=1,
+        )
         vm.write(fv_name="ip_src", pkt_offset="IP.src")
         stream = STLStream(packet=STLPktBuilder(pkt=pkt, vm=vm), mode=STLTXCont())
         self.trex_client.add_streams(stream, ports=[SENDER_PORT])
 
         # Put RX ports to promiscuous mode, otherwise it will drop all packets if the
         # destination mac is not the port mac address.
-        self.trex_client.set_port_attr([INT_COLLECTOR_PORT, RECEIVER_PORT], promiscuous=True)
+        self.trex_client.set_port_attr(
+            [INT_COLLECTOR_PORT, RECEIVER_PORT], promiscuous=True
+        )
 
         # Put port to service mode so we can capture packet from it.
-        self.trex_client.set_service_mode(ports=[INT_COLLECTOR_PORT, RECEIVER_PORT], enabled=True)
+        self.trex_client.set_service_mode(
+            ports=[INT_COLLECTOR_PORT, RECEIVER_PORT], enabled=True
+        )
         int_capture = self.trex_client.start_capture(
-            rx_ports=[INT_COLLECTOR_PORT],
-            limit=INT_REPORT_CAPTURE_LIMIT
+            rx_ports=[INT_COLLECTOR_PORT], limit=INT_REPORT_CAPTURE_LIMIT
         )
         rx_capture = self.trex_client.start_capture(
-            rx_ports=[RECEIVER_PORT],
-            limit=RX_LIMIT
+            rx_ports=[RECEIVER_PORT], limit=RX_LIMIT
         )
 
-        self.trex_client.start(ports=[SENDER_PORT], mult=TRAFFIC_MULT, duration=TEST_DURATION)
+        self.trex_client.start(
+            ports=[SENDER_PORT], mult=TRAFFIC_MULT, duration=TEST_DURATION
+        )
         self.trex_client.wait_on_traffic(ports=[SENDER_PORT])
 
         pcap_dir = f"/tmp/{self.__class__.__name__}"
@@ -103,7 +124,7 @@ class IntQueueReportTest(TRexTest, IntTest, SlicingTest):
         # - Latency in every queue report will higher than the threshold we set
         # - The total number of report will be less or equal to the report quota
         # - Egress port and queue must be the one we set
-        pcap_reader =  PcapReader(pcap_path)
+        pcap_reader = PcapReader(pcap_path)
         report_pkt = None
         number_of_reports = 0
         hw_id_to_seq = {}
@@ -128,7 +149,10 @@ class IntQueueReportTest(TRexTest, IntTest, SlicingTest):
             self.failIf(int_fixed_header.d != 0, "Received an unexpected drop report")
             self.failIf(int_fixed_header.f != 0, "Received an unexpected flow report")
             self.failIf(int_fixed_header.q != 1, "Not a queue report")
-            self.failIf(INT_L45_LOCAL_REPORT in inner_ip_header, "Unexpected report-in-report packet.")
+            self.failIf(
+                INT_L45_LOCAL_REPORT in inner_ip_header,
+                "Unexpected report-in-report packet.",
+            )
 
             number_of_reports += 1
             hw_id = int_fixed_header.hw_id
@@ -139,34 +163,37 @@ class IntQueueReportTest(TRexTest, IntTest, SlicingTest):
             egress_port = int_local_report_header.egress_port_id
             egress_queue = int_local_report_header.queue_id
 
-            self.failIf(egress_port != self.port4, f"Unexpected egress port {egress_port}")
-            self.failIf(egress_queue != DEFAULT_QID, f"Unexpected queue id {egress_queue}")
+            self.failIf(
+                egress_port != self.port4, f"Unexpected egress port {egress_port}"
+            )
+            self.failIf(
+                egress_queue != DEFAULT_QID, f"Unexpected queue id {egress_queue}"
+            )
 
             if hw_id not in hw_id_to_seq:
                 hw_id_to_seq[hw_id] = seq_no
             else:
                 self.failIf(
                     hw_id_to_seq[hw_id] != (seq_no - 1),
-                    f"Sequence number is wrong, should be {hw_id_to_seq[hw_id]+1}, but got {seq_no}."
+                    f"Sequence number is wrong, should be {hw_id_to_seq[hw_id]+1}, but got {seq_no}.",
                 )
                 hw_id_to_seq[hw_id] = seq_no
 
             # 32-bit timestamp overflow case
             if latency < 0:
-                latency += 0xffffffff
+                latency += 0xFFFFFFFF
 
             self.failIf(
                 latency < THRESHOLD_TRIGGER,
-                f"Latency should be higher than trigger {THRESHOLD_TRIGGER}, got {latency}"
+                f"Latency should be higher than trigger {THRESHOLD_TRIGGER}, got {latency}",
             )
             reported_ip_srcs.append(inner_ip_header.src)
-
 
         pcap_reader.close()
 
         self.failIf(
             number_of_reports != DEFAULT_QUOTA,
-            f"The number of reports is more than the quota, expected {DEFAULT_QUOTA}, got {number_of_reports}"
+            f"The number of reports is more than the quota, expected {DEFAULT_QUOTA}, got {number_of_reports}",
         )
         self.failIf(number_of_reports == 0, "No INT reports received")
 
@@ -175,7 +202,7 @@ class IntQueueReportTest(TRexTest, IntTest, SlicingTest):
         # The reason we need to compare from the RX capture is because we can't guarantee
         # that the packet from TRex is in order, so we cannot just check if IP addresses
         # are sequential.
-        pcap_reader =  PcapReader(rx_pcap_path)
+        pcap_reader = PcapReader(rx_pcap_path)
         checking_ip_src = False
         while True:
             try:
@@ -199,7 +226,10 @@ class IntQueueReportTest(TRexTest, IntTest, SlicingTest):
             if len(reported_ip_srcs) == 0:
                 break
         pcap_reader.close()
-        self.failIf(len(reported_ip_srcs) != 0, f"Received {len(reported_ip_srcs)} unexpected report(s)")
+        self.failIf(
+            len(reported_ip_srcs) != 0,
+            f"Received {len(reported_ip_srcs)} unexpected report(s)",
+        )
 
     def runTest(self):
         print("")
@@ -212,4 +242,10 @@ class IntQueueReportTest(TRexTest, IntTest, SlicingTest):
                         if is_next_hop_spine and tagged2:
                             continue
                         for send_report_to_spine in [False, True]:
-                            self.doRunTest(tagged1, tagged2, is_device_spine, send_report_to_spine, is_next_hop_spine)
+                            self.doRunTest(
+                                tagged1,
+                                tagged2,
+                                is_device_spine,
+                                send_report_to_spine,
+                                is_next_hop_spine,
+                            )
