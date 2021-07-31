@@ -124,6 +124,11 @@ public class FabricIntProgrammableTest {
     private static final MacAddress SWITCH_MAC = MacAddress.valueOf("00:00:00:00:01:80");
     private static final long DEFAULT_QUEUE_REPORT_LATENCY_THRESHOLD = 2000; // ns
     private static final byte MAX_QUEUES = 32;
+    private static final int INT_MIRROR_TRUNCATE_MAX_LEN = 128;
+    private static final short ETH_FCS_BYTES = 4;
+    private static final short ETH_HDR_BYTES = 14;
+    private static final short MPLS_HDR_BYTES = 4;
+    private static final short IP_HDR_BYTES = 20;
 
     private FabricIntProgrammable intProgrammable;
     private FlowRuleService flowRuleService;
@@ -207,6 +212,7 @@ public class FabricIntProgrammableTest {
                                      INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT),
                 buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_DEFLECTED,
                                      INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID),
+                buildHeaderLenAdjustRule(LEAF_DEVICE_ID, false),
                 buildFilterConfigFlow(LEAF_DEVICE_ID)
         );
 
@@ -257,6 +263,7 @@ public class FabricIntProgrammableTest {
                                      INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT),
                 buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_DEFLECTED,
                                      INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID),
+                buildHeaderLenAdjustRule(LEAF_DEVICE_ID, false),
                 buildFilterConfigFlow(LEAF_DEVICE_ID)
         );
 
@@ -312,6 +319,7 @@ public class FabricIntProgrammableTest {
                                      INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT),
                 buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_DEFLECTED,
                                      INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID),
+                buildHeaderLenAdjustRule(LEAF_DEVICE_ID, false),
                 buildFilterConfigFlow(LEAF_DEVICE_ID)
         );
 
@@ -361,6 +369,7 @@ public class FabricIntProgrammableTest {
                                      INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT),
                 buildReportTableRule(SPINE_DEVICE_ID, true, BMD_TYPE_DEFLECTED,
                                      INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID),
+                buildHeaderLenAdjustRule(SPINE_DEVICE_ID, true),
                 buildFilterConfigFlow(SPINE_DEVICE_ID)
         );
 
@@ -425,7 +434,9 @@ public class FabricIntProgrammableTest {
                                          INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT)),
                 buildFlowEntry(
                     buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_DEFLECTED,
-                                         INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID))
+                                         INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID)),
+                buildFlowEntry(
+                    buildHeaderLenAdjustRule(LEAF_DEVICE_ID, false))
         );
         Set<FlowEntry> randomEntries = buildRandomFlowEntries();
         Set<FlowEntry> entries = Sets.newHashSet(intEntries);
@@ -621,10 +632,6 @@ public class FabricIntProgrammableTest {
     }
 
     private PiAction buildReportAction(boolean setMpls, short reportType, short bmdType) {
-        final PiActionParam srcMacParam = new PiActionParam(
-                P4InfoConstants.SRC_MAC, MacAddress.ZERO.toBytes());
-        final PiActionParam nextHopMacParam = new PiActionParam(
-                P4InfoConstants.MON_MAC, SWITCH_MAC.toBytes());
         final PiActionParam srcIpParam = new PiActionParam(
                 P4InfoConstants.SRC_IP, ROUTER_IP.toOctets());
         final PiActionParam monIpParam = new PiActionParam(
@@ -637,8 +644,6 @@ public class FabricIntProgrammableTest {
                 P4InfoConstants.SWITCH_ID,
                 NODE_SID_IPV4);
         final PiAction.Builder reportAction = PiAction.builder()
-                .withParameter(srcMacParam)
-                .withParameter(nextHopMacParam)
                 .withParameter(srcIpParam)
                 .withParameter(monIpParam)
                 .withParameter(monPortParam)
@@ -684,6 +689,47 @@ public class FabricIntProgrammableTest {
                 .makePermanent()
                 .forDevice(deviceId)
                 .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_REPORT)
+                .build();
+    }
+
+    private FlowRule buildHeaderLenAdjustRule(DeviceId deviceId, boolean isSpine) {
+        // Use integer to store the value since we need to convert a signed value to
+        // an unsigned value(e.g., -1 -> 0xffff) which we cannot use short to store it.
+        int adjustIp = ETH_FCS_BYTES + ETH_HDR_BYTES;
+        if (isSpine) {
+            adjustIp += MPLS_HDR_BYTES;
+        }
+        int adjustUdp = adjustIp + IP_HDR_BYTES;
+
+        // Convert to 2-byte negative number.
+        adjustIp = (adjustIp ^ 0xffff) + 1;
+        adjustUdp = (adjustUdp ^ 0xffff) + 1;
+        final PiActionParam adjustIpParam = new PiActionParam(
+            P4InfoConstants.ADJUST_IP, ImmutableByteSequence.copyFrom(adjustIp));
+        final PiActionParam adjustUdpParam = new PiActionParam(
+            P4InfoConstants.ADJUST_UDP, ImmutableByteSequence.copyFrom(adjustUdp));
+        final TrafficTreatment treatment = DefaultTrafficTreatment.builder()
+            .piTableAction(
+                PiAction.builder()
+                    .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_ADJUST_IP_UDP_LEN)
+                    .withParameter(adjustIpParam)
+                    .withParameter(adjustUdpParam)
+                    .build()
+            )
+            .build();
+        final TrafficSelector selector = DefaultTrafficSelector.builder()
+                .matchPi(PiCriterion.builder()
+                        .matchExact(P4InfoConstants.HDR_IS_INT_WIP, 1)
+                        .build())
+                .build();
+        return DefaultFlowRule.builder()
+                .withSelector(selector)
+                .withTreatment(treatment)
+                .fromApp(APP_ID)
+                .withPriority(DEFAULT_PRIORITY)
+                .makePermanent()
+                .forDevice(deviceId)
+                .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_ADJUST_INT_REPORT_HDR_LENGTH)
                 .build();
     }
 
@@ -785,6 +831,7 @@ public class FabricIntProgrammableTest {
             final List<GroupBucket> buckets = ImmutableList.of(
                     createCloneGroupBucket(DefaultTrafficTreatment.builder()
                             .setOutput(PortNumber.portNumber(port))
+                            .truncate(INT_MIRROR_TRUNCATE_MAX_LEN)
                             .build()));
             expectedGroups.add(new DefaultGroupDescription(
                     LEAF_DEVICE_ID, GroupDescription.Type.CLONE,
