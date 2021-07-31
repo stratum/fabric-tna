@@ -15,7 +15,6 @@ import org.onlab.packet.IPv4;
 import org.onlab.packet.Ip4Address;
 import org.onlab.packet.IpAddress;
 import org.onlab.packet.IpPrefix;
-import org.onlab.packet.MacAddress;
 import org.onlab.util.HexString;
 import org.onlab.util.ImmutableByteSequence;
 import org.onosproject.core.ApplicationId;
