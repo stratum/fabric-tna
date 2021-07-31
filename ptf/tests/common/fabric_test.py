@@ -4156,7 +4156,6 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         is_device_spine,
         send_report_to_spine,
         drop_reason,
-        with_psc,
     ):
         """
         :param pkt: the input packet
