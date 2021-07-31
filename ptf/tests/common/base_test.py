@@ -6,6 +6,7 @@
 #
 #
 
+import math
 import os
 import queue
 import random
@@ -14,7 +15,6 @@ import struct
 import sys
 import threading
 import time
-import math
 from collections import Counter
 from functools import partial, partialmethod, wraps
 from io import StringIO
@@ -474,9 +474,11 @@ class P4RuntimeTest(BaseTest):
             self.name = mf_name
 
         def check_value_size(self, value, bitwidth):
-            v_int = int.from_bytes(value, 'big')
+            v_int = int.from_bytes(value, "big")
             if v_int > ((1 << bitwidth) - 1):
-                raise Exception(f"Value {v_int} is too large for match field bitwidth {bitwidth}")
+                raise Exception(
+                    f"Value {v_int} is too large for match field bitwidth {bitwidth}"
+                )
 
     class Exact(MF):
         def __init__(self, mf_name, v):
@@ -502,7 +504,9 @@ class P4RuntimeTest(BaseTest):
                 return
             self.check_value_size(self.v, bitwidth)
             if self.pLen > bitwidth:
-                raise Exception(f"Prefix length {self.pLen} too long for bitwidth {bitwidth}")
+                raise Exception(
+                    f"Prefix length {self.pLen} too long for bitwidth {bitwidth}"
+                )
             mf = mk.add()
             mf.field_id = mf_id
             mf.lpm.prefix_len = self.pLen
@@ -557,7 +561,9 @@ class P4RuntimeTest(BaseTest):
             self.check_value_size(self.high, bitwidth)
             low_is_zero = all(c == 0 for c in self.low)
             upper_bound = (1 << bitwidth) - 1
-            high_is_max = self.high == upper_bound.to_bytes(math.ceil(bitwidth/8), "big")
+            high_is_max = self.high == upper_bound.to_bytes(
+                math.ceil(bitwidth / 8), "big"
+            )
             if low_is_zero and high_is_max:
                 return
             mf = mk.add()

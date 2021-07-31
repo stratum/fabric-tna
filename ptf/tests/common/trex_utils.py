@@ -4,6 +4,8 @@ import argparse
 import collections
 import logging
 
+import numpy as np
+
 # Multiplier for data rates
 K = 1000
 M = 1000 * K
@@ -98,7 +100,7 @@ def list_port_status(port_status: dict) -> None:
     """
     for port in [0, 1, 2, 3]:
         readable_stats = get_readable_port_stats(port_status[port])
-        logging.info("States from port {}: \n{}".format(port, readable_stats))
+        print("States from port {}: \n{}".format(port, readable_stats))
 
 
 LatencyStats = collections.namedtuple(
@@ -116,60 +118,78 @@ LatencyStats = collections.namedtuple(
         "duplicate",
         "seq_too_high",
         "seq_too_low",
+        "percentile_50",
+        "percentile_75",
+        "percentile_90",
+        "percentile_99",
     ],
 )
 
 FlowStats = collections.namedtuple(
-    "FlowStats",
+    "FlowStats", ["pg_id", "total_tx", "total_rx", "tx_bytes", "rx_bytes",],
+)
+
+
+PortStats = collections.namedtuple(
+    "PortStats",
     [
-        "pg_id",
-        "total_tx",
-        "total_rx",
+        "tx_packets",
+        "rx_packets",
         "tx_bytes",
         "rx_bytes",
+        "tx_errors",
+        "rx_errors",
+        "tx_bps",
+        "tx_pps",
+        "tx_bps_L1",
+        "tx_util",
+        "rx_bps",
+        "rx_pps",
+        "rx_bps_L1",
+        "rx_util",
     ],
 )
 
 
-PortStats = collections.namedtuple("PortStats", [
-    "tx_packets",
-    "rx_packets",
-    "tx_bytes",
-    "rx_bytes",
-    "tx_errors",
-    "rx_errors",
-    "tx_bps",
-    "tx_pps",
-    "tx_bps_L1",
-    "tx_util",
-    "rx_bps",
-    "rx_pps",
-    "rx_bps_L1",
-    "rx_util",
-])
-
 def get_port_stats(port: int, stats) -> PortStats:
     port_stats = stats.get(port)
     return PortStats(
-        tx_packets = port_stats.get("opackets", 0),
-        rx_packets = port_stats.get("ipackets", 0),
-        tx_bytes = port_stats.get("obytes", 0),
-        rx_bytes = port_stats.get("ibytes", 0),
-        tx_errors = port_stats.get("oerrors", 0),
-        rx_errors = port_stats.get("ierrors", 0),
-        tx_bps = port_stats.get("tx_bps", 0),
-        tx_pps = port_stats.get("tx_pps", 0),
-        tx_bps_L1 = port_stats.get("tx_bps_L1", 0),
-        tx_util = port_stats.get("tx_util", 0),
-        rx_bps = port_stats.get("rx_bps", 0),
-        rx_pps = port_stats.get("rx_pps", 0),
-        rx_bps_L1 = port_stats.get("rx_bps_L1", 0),
-        rx_util = port_stats.get("rx_util", 0),
+        tx_packets=port_stats.get("opackets", 0),
+        rx_packets=port_stats.get("ipackets", 0),
+        tx_bytes=port_stats.get("obytes", 0),
+        rx_bytes=port_stats.get("ibytes", 0),
+        tx_errors=port_stats.get("oerrors", 0),
+        rx_errors=port_stats.get("ierrors", 0),
+        tx_bps=port_stats.get("tx_bps", 0),
+        tx_pps=port_stats.get("tx_pps", 0),
+        tx_bps_L1=port_stats.get("tx_bps_L1", 0),
+        tx_util=port_stats.get("tx_util", 0),
+        rx_bps=port_stats.get("rx_bps", 0),
+        rx_pps=port_stats.get("rx_pps", 0),
+        rx_bps_L1=port_stats.get("rx_bps_L1", 0),
+        rx_util=port_stats.get("rx_util", 0),
     )
+
 
 def get_latency_stats(pg_id: int, stats) -> LatencyStats:
     lat_stats = stats["latency"].get(pg_id)
     lat = lat_stats["latency"]
+    # Estimate latency percentiles from the histogram.
+    l = list(lat["histogram"].keys())
+    l.sort()
+    all_latencies = []
+    for sample in l:
+        range_start = sample
+        if range_start == 0:
+            range_end = 10
+        else:
+            range_end = range_start + pow(10, (len(str(range_start)) - 1))
+        val = lat["histogram"][sample]
+        # Assume whole the bucket experienced the range_end latency.
+        all_latencies += [range_end] * val
+    q = [50, 75, 90, 99]
+    percentiles = np.percentile(all_latencies, q)
+
     ret = LatencyStats(
         pg_id=pg_id,
         jitter=lat["jitter"],
@@ -183,6 +203,10 @@ def get_latency_stats(pg_id: int, stats) -> LatencyStats:
         duplicate=lat_stats["err_cntrs"]["dup"],
         seq_too_high=lat_stats["err_cntrs"]["seq_too_high"],
         seq_too_low=lat_stats["err_cntrs"]["seq_too_low"],
+        percentile_50=percentiles[0],
+        percentile_75=percentiles[1],
+        percentile_90=percentiles[2],
+        percentile_99=percentiles[3],
     )
     return ret
 
@@ -201,7 +225,7 @@ def get_readable_latency_stats(stats: LatencyStats) -> str:
         val = stats.histogram[sample]
         histogram = (
             histogram
-            + "\n        Packets with latency between {0:>4} us and {1:>4} us: {2:>10}".format(
+            + "\n        Packets with latency between {0:>5} us and {1:>5} us: {2:>10}".format(
                 range_start, range_end, val
             )
         )
@@ -216,6 +240,10 @@ def get_readable_latency_stats(stats: LatencyStats) -> str:
     Minimum latency: {stats.total_min} us
     Maximum latency in last sampling period: {stats.last_max} us
     Average latency: {stats.average} us
+    50th percentile latency: {stats.percentile_50} us
+    75th percentile latency: {stats.percentile_75} us
+    90th percentile latency: {stats.percentile_90} us
+    99th percentile latency: {stats.percentile_99} us
     Jitter: {stats.jitter} us
     Latency distribution histogram: {histogram}
     """

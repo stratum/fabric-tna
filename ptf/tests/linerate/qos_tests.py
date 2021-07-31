@@ -21,14 +21,22 @@ from trex_stl_lib.api import STLFlowLatencyStats, STLPktBuilder, STLStream, STLT
 from trex_test import TRexTest
 from trex_utils import *
 
+# General test parameter.
 EXPECTED_FLOW_RATE_WITH_STATS_BPS = 1 * G
-CONTROL_QUEUE_MAX_RATE_BPS = 60 * M
-SYSTEM_QUEUE_MAX_RATE_BPS = 10 * M
-
 TRAFFIC_DURATION_SECONDS = 10
 
+# Maximum queue rates as per ChassisConfig.
+CONTROL_QUEUE_MAX_RATE_BPS = 60 * M
+REALTIME_1_QUEUE_MAX_RATE_BPS = 45 * M
+REALTIME_2_QUEUE_MAX_RATE_BPS = 30 * M
+REALTIME_3_QUEUE_MAX_RATE_BPS = 25 * M
+SYSTEM_QUEUE_MAX_RATE_BPS = 10 * M
+
+# Latency expectations in microseconds.
 MAXIMUM_EXPECTED_LATENCY_CONTROL_TRAFFIC_US = 1000
 AVERAGE_EXPECTED_LATENCY_CONTROL_TRAFFIC_US = 500
+MAXIMUM_EXPECTED_LATENCY_REALTIME_TRAFFIC_US = 1500
+AVERAGE_EXPECTED_LATENCY_REALTIME_TRAFFIC_US = 500
 
 BACKGROUND_SENDER_PORT = [0]
 PRIORITY_SENDER_PORT = [2]
@@ -67,6 +75,18 @@ class QosTest(TRexTest, SlicingTest):
             slice_id=2, tc=0, l4_dport=qos_utils.L4_DPORT_SYSTEM_TRAFFIC
         )
         self.add_queue_entry(2, 0, qos_utils.QUEUE_ID_SYSTEM)
+        self.add_slice_tc_classifier_entry(
+            slice_id=10, tc=0, l4_dport=qos_utils.L4_DPORT_REALTIME_TRAFFIC_1
+        )
+        self.add_slice_tc_classifier_entry(
+            slice_id=11, tc=0, l4_dport=qos_utils.L4_DPORT_REALTIME_TRAFFIC_2
+        )
+        self.add_slice_tc_classifier_entry(
+            slice_id=12, tc=0, l4_dport=qos_utils.L4_DPORT_REALTIME_TRAFFIC_3
+        )
+        self.add_queue_entry(10, 0, qos_utils.QUEUE_ID_REALTIME_1)
+        self.add_queue_entry(11, 0, qos_utils.QUEUE_ID_REALTIME_2)
+        self.add_queue_entry(12, 0, qos_utils.QUEUE_ID_REALTIME_3)
 
     # Create a background traffic stream.
     def create_background_stream(self) -> STLStream:
@@ -78,6 +98,21 @@ class QosTest(TRexTest, SlicingTest):
         self, pg_id, l1_bps=CONTROL_QUEUE_MAX_RATE_BPS
     ) -> STLStream:
         pkt = qos_utils.get_control_traffic_packet(128)
+        return STLStream(
+            packet=STLPktBuilder(pkt=pkt),
+            mode=STLTXCont(bps_L1=l1_bps),
+            isg=50000,  # wait 50 ms till start to let queues fill up
+            flow_stats=STLFlowLatencyStats(pg_id=pg_id),
+        )
+
+    # Create a highest priority control stream.
+    def create_realtime_stream(
+        self,
+        pg_id,
+        l1_bps=REALTIME_1_QUEUE_MAX_RATE_BPS,
+        dport=qos_utils.L4_DPORT_REALTIME_TRAFFIC_1,
+    ) -> STLStream:
+        pkt = qos_utils.get_realtime_traffic_packet(128, dport=dport)
         return STLStream(
             packet=STLPktBuilder(pkt=pkt),
             mode=STLTXCont(bps_L1=l1_bps),
@@ -314,7 +349,7 @@ class ControlTrafficIsShaped(QosTest):
         )
         self.assertLessEqual(
             rx_port_stats.rx_bps_L1,
-            CONTROL_QUEUE_MAX_RATE_BPS * 1.01, # allow small marging of error
+            CONTROL_QUEUE_MAX_RATE_BPS * 1.01,  # allow small marging of error
             f"Control traffic has not been rate limtied: {rx_port_stats.rx_bps_L1}",
         )
         self.assertGreaterEqual(
@@ -327,3 +362,121 @@ class ControlTrafficIsShaped(QosTest):
             AVERAGE_EXPECTED_LATENCY_CONTROL_TRAFFIC_US,
             f"Average latency in control traffic not over the expected limit: {lat_stats.average}",
         )
+
+
+class RealtimeTrafficIsRrScheduled(QosTest):
+    """
+    In this test we check that well behaved realtime traffic is not negatively
+    impacted by other realtime flows that are not. For this we start 3 streams
+    and assign them to separate queues. Stream 1 and 2 will send more than their
+    alloted rate, while stream 3 is within limits. We expect that stream 3 will
+    experience the lowest latency and no packet drops, while the other streams should.
+    """
+
+    @autocleanup
+    def runTest(self) -> None:
+        self.realtime_pg_id_1 = 1
+        self.realtime_pg_id_2 = 2
+        self.realtime_pg_id_3 = 3
+        self.push_chassis_config()
+        self.setup_basic_forwarding()
+        self.setup_queue_classification()
+        # Create multiple realtime streams. Stream 1 and 2 send more than the
+        # alloted rate, while stream 3 is well behaved.
+        rt_streams = [
+            self.create_realtime_stream(
+                self.realtime_pg_id_1,
+                l1_bps=REALTIME_1_QUEUE_MAX_RATE_BPS * 1.1,
+                dport=qos_utils.L4_DPORT_REALTIME_TRAFFIC_1,
+            ),
+            self.create_realtime_stream(
+                self.realtime_pg_id_2,
+                l1_bps=REALTIME_2_QUEUE_MAX_RATE_BPS * 1.1,
+                dport=qos_utils.L4_DPORT_REALTIME_TRAFFIC_2,
+            ),
+            self.create_realtime_stream(
+                self.realtime_pg_id_3,
+                l1_bps=REALTIME_3_QUEUE_MAX_RATE_BPS * 1.0,
+                dport=qos_utils.L4_DPORT_REALTIME_TRAFFIC_3,
+            ),
+        ]
+        self.trex_client.add_streams(rt_streams, ports=PRIORITY_SENDER_PORT)
+        # Start sending traffic
+        logging.info("Starting traffic, duration: %d sec", TRAFFIC_DURATION_SECONDS)
+        self.trex_client.start(
+            PRIORITY_SENDER_PORT, mult="1", duration=TRAFFIC_DURATION_SECONDS
+        )
+        logging.info("Waiting until all traffic is sent")
+        self.trex_client.wait_on_traffic(ports=PRIORITY_SENDER_PORT, rx_delay_ms=100)
+        # Get latency stats
+        stats = self.trex_client.get_stats()
+        # Check RT stream 1
+        lat_stats_1 = get_latency_stats(self.realtime_pg_id_1, stats)
+        flow_stats_1 = get_flow_stats(self.realtime_pg_id_1, stats)
+        print(get_readable_latency_stats(lat_stats_1))
+        self.assertGreater(
+            flow_stats_1.total_rx, 0, "No realtime traffic has been received"
+        )
+        self.assertGreater(
+            lat_stats_1.dropped,
+            0,
+            f"Non-compliant realtime traffic has not been dropped: {lat_stats_1.dropped}",
+        )
+        self.assertGreaterEqual(
+            lat_stats_1.total_max,
+            MAXIMUM_EXPECTED_LATENCY_REALTIME_TRAFFIC_US,
+            f"Maximum latency in realtime traffic is not over the expected limit: {lat_stats_1.total_max}",
+        )
+        self.assertGreaterEqual(
+            lat_stats_1.average,
+            AVERAGE_EXPECTED_LATENCY_REALTIME_TRAFFIC_US,
+            f"Average latency in realtime traffic is not over the expected limit: {lat_stats_1.average}",
+        )
+        # Check RT stream 2
+        lat_stats_2 = get_latency_stats(self.realtime_pg_id_2, stats)
+        flow_stats_2 = get_flow_stats(self.realtime_pg_id_2, stats)
+        print(get_readable_latency_stats(lat_stats_2))
+        self.assertGreater(
+            flow_stats_2.total_rx, 0, "No realtime traffic has been received"
+        )
+        self.assertGreater(
+            lat_stats_2.dropped,
+            0,
+            f"Non-compliant realtime traffic has not been dropped: {lat_stats_2.dropped}",
+        )
+        self.assertGreaterEqual(
+            lat_stats_2.total_max,
+            MAXIMUM_EXPECTED_LATENCY_REALTIME_TRAFFIC_US,
+            f"Maximum latency in control traffic is not over the expected limit: {lat_stats_2.total_max}",
+        )
+        self.assertGreaterEqual(
+            lat_stats_2.average,
+            AVERAGE_EXPECTED_LATENCY_REALTIME_TRAFFIC_US,
+            f"Average latency in realtime traffic is not over the expected limit: {lat_stats_2.average}",
+        )
+        # Check RT stream 3
+        lat_stats_3 = get_latency_stats(self.realtime_pg_id_3, stats)
+        flow_stats_3 = get_flow_stats(self.realtime_pg_id_3, stats)
+        print(get_readable_latency_stats(lat_stats_3))
+        self.assertGreater(
+            flow_stats_3.total_rx, 0, "No realtime traffic has been received"
+        )
+        self.assertEqual(
+            lat_stats_3.dropped,
+            0,
+            f"Realtime traffic has been dropped: {lat_stats_3.dropped}",
+        )
+        self.assertLessEqual(
+            lat_stats_3.total_max,
+            MAXIMUM_EXPECTED_LATENCY_REALTIME_TRAFFIC_US,
+            f"Maximum latency in well behaved realtime traffic is too high: {lat_stats_3.total_max}",
+        )
+        self.assertLessEqual(
+            lat_stats_3.average,
+            AVERAGE_EXPECTED_LATENCY_REALTIME_TRAFFIC_US,
+            f"Average latency in well behaved realtime traffic is too high: {lat_stats_3.average}",
+        )
+        # Get statistics for TX and RX ports
+        for port in ALL_PORTS:
+            readable_stats = get_readable_port_stats(stats[port])
+            print("Statistics for port {}: {}".format(port, readable_stats))
