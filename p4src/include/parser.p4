@@ -46,8 +46,10 @@ parser FabricIngressParser (packet_in  packet,
             ETHERTYPE_CPU_LOOPBACK_INGRESS: parse_fake_ethernet;
             ETHERTYPE_CPU_LOOPBACK_EGRESS: parse_fake_ethernet_and_accept;
             ETHERTYPE_PACKET_OUT: check_packet_out;
+#ifdef WITH_INT
             ETHERTYPE_INT_WIP_IPV4: parse_int_wip_ipv4;
             ETHERTYPE_INT_WIP_MPLS: parse_int_wip_mpls;
+#endif // WITH_INT
             default: parse_ethernet;
         }
     }
@@ -56,8 +58,10 @@ parser FabricIngressParser (packet_in  packet,
         packet.extract(hdr.fake_ethernet);
         fake_ethernet_t tmp = packet.lookahead<fake_ethernet_t>();
         transition select(tmp.ether_type) {
+#ifdef WITH_INT
             ETHERTYPE_INT_WIP_IPV4: parse_int_wip_ipv4;
             ETHERTYPE_INT_WIP_MPLS: parse_int_wip_mpls;
+#endif // WITH_INT
             default: parse_ethernet;
         }
     }
@@ -76,6 +80,7 @@ parser FabricIngressParser (packet_in  packet,
         }
     }
 
+#ifdef WITH_INT
     state parse_int_wip_ipv4 {
         hdr.ethernet.setValid();
         hdr.eth_type.setValid();
@@ -95,6 +100,7 @@ parser FabricIngressParser (packet_in  packet,
         packet.advance(ETH_HDR_BYTES * 8);
         transition parse_mpls;
     }
+#endif // WITH_INT
 
     state parse_packet_out_and_accept {
         // Will transmit over requested egress port as-is. No need to parse further.
