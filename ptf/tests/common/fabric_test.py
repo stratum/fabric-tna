@@ -225,7 +225,7 @@ INT_DROP_REASON_UPLINK_PDR_MISS = 133
 INT_DROP_REASON_FAR_MISS = 134
 INT_DEFAULT_QUEUE_REPORT_QUOTA = 1024
 INT_MIRROR_TRUNCATE_SIZE = 128
-INT_MIRROR_BYTES = 27 # TODO: autogenerate it
+INT_MIRROR_BYTES = 27  # TODO: autogenerate it
 
 PPPOE_CODE_SESSION_STAGE = 0x00
 
@@ -629,7 +629,9 @@ def pkt_remove_mpls(pkt):
     assert MPLS in pkt
     payload = pkt[MPLS].payload
     if IP in payload:
-        return Ether(src=pkt[Ether].src, dst=pkt[Ether].dst, type=ETH_TYPE_IPV4) / payload
+        return (
+            Ether(src=pkt[Ether].src, dst=pkt[Ether].dst, type=ETH_TYPE_IPV4) / payload
+        )
 
 
 def pkt_decrement_ttl(pkt):
@@ -1512,7 +1514,9 @@ class FabricTest(P4RuntimeTest):
     def delete_mcast_group(self, group_id):
         return self.write_mcast_group(group_id, [], p4runtime_pb2.Update.DELETE)
 
-    def write_clone_group(self, clone_id, ports, truncate_size, update_type, store=True):
+    def write_clone_group(
+        self, clone_id, ports, truncate_size, update_type, store=True
+    ):
         req = self.get_new_write_request()
         update = req.updates.add()
         update.type = update_type
@@ -1819,7 +1823,8 @@ class IPv4UnicastTest(FabricTest):
         tagged2=False,
         vlan2=DEFAULT_VLAN,
         mpls_label=MPLS_LABEL_2,
-        routed=True):
+        routed=True,
+    ):
         # Build exp pkt using the input one.
         exp_pkt = pkt.copy() if not exp_pkt_base else exp_pkt_base
         # Route
@@ -3070,26 +3075,22 @@ class IntTest(IPv4UnicastTest):
 
     def set_up_ip_udp_header_adjust_flow(self, mon_label):
         # TODO: figure out why we don't need to include BMD_BYTES
-        adjust_ip = -ETH_FCS_BYTES - ETH_HDR_BYTES # - BMD_BYTES
+        adjust_ip = -ETH_FCS_BYTES - ETH_HDR_BYTES  # - BMD_BYTES
         if mon_label:
             adjust_ip -= MPLS_HDR_BYTES
         adjust_udp = adjust_ip - IP_HDR_BYTES
 
         self.send_request_add_entry_to_action(
             "adjust_int_report_hdr_length",
-            [
-                self.Exact("is_int_wip", stringify(1, 1)),
-            ],
+            [self.Exact("is_int_wip", stringify(1, 1)),],
             "adjust_ip_udp_len",
             [
                 ("adjust_ip", stringify(adjust_ip, 2, signed=True)),
-                ("adjust_udp", stringify(adjust_udp, 2, signed=True))
+                ("adjust_udp", stringify(adjust_udp, 2, signed=True)),
             ],
         )
 
-    def set_up_report_flow(
-        self, src_ip, mon_ip, mon_port, switch_id, mon_label=None
-    ):
+    def set_up_report_flow(self, src_ip, mon_ip, mon_port, switch_id, mon_label=None):
         def set_up_report_flow_internal(bmd_type, mirror_type, report_type):
             self.set_up_report_flow_with_report_type_and_bmd_type(
                 src_ip,
@@ -3216,7 +3217,11 @@ class IntTest(IPv4UnicastTest):
         q_flag=0,
     ):
         # Mirrored packet will be truncated first
-        inner_packet = Ether(bytes(int_pre_mirrored_packet)[:INT_MIRROR_TRUNCATE_SIZE-INT_MIRROR_BYTES])
+        inner_packet = Ether(
+            bytes(int_pre_mirrored_packet)[
+                : INT_MIRROR_TRUNCATE_SIZE - INT_MIRROR_BYTES
+            ]
+        )
         # The switch should always strip VLAN, MPLS, GTP-U and VXLAN headers inside INT reports.
         if GTP_U_Header in inner_packet:
             inner_packet = pkt_remove_gtp(inner_packet)
@@ -3275,10 +3280,14 @@ class IntTest(IPv4UnicastTest):
         is_device_spine,
         send_report_to_spine,
         hw_id,
-        truncate=True
+        truncate=True,
     ):
         if truncate:
-            inner_packet = Ether(bytes(int_pre_mirrored_packet)[:INT_MIRROR_TRUNCATE_SIZE-INT_MIRROR_BYTES])
+            inner_packet = Ether(
+                bytes(int_pre_mirrored_packet)[
+                    : INT_MIRROR_TRUNCATE_SIZE - INT_MIRROR_BYTES
+                ]
+            )
         else:
             inner_packet = int_pre_mirrored_packet
         # The switch should always strip VLAN, MPLS, GTP-U and VXLAN headers inside INT reports.
@@ -3613,7 +3622,7 @@ class IntTest(IPv4UnicastTest):
             is_device_spine,
             send_report_to_spine,
             ig_port >> 7,  # hw_id,
-            truncate=False
+            truncate=False,
         )
 
         install_routing_entry = True
@@ -3684,7 +3693,7 @@ class IntTest(IPv4UnicastTest):
             next_hop_mac=HOST2_MAC,
             switch_mac=pkt[Ether].dst,
             is_next_hop_spine=is_next_hop_spine,
-            tagged2=tagged1, # VLAN tag will be remained since we missed the egress_vlan table
+            tagged2=tagged1,  # VLAN tag will be remained since we missed the egress_vlan table
         )
 
         # The expected INT report packet
@@ -3701,7 +3710,7 @@ class IntTest(IPv4UnicastTest):
             is_device_spine,
             send_report_to_spine,
             eg_port >> 7,  # hw_id
-            truncate=True
+            truncate=True,
         )
 
         # Set collector, report table, and mirror sessions
@@ -4094,7 +4103,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             is_device_spine,
             send_report_to_spine,
             eg_port >> 7,  # hw_id,
-            truncate=False # Never truncated since this is a ingress drop.
+            truncate=False,  # Never truncated since this is a ingress drop.
         )
 
         # Set collector, report table, and mirror sessions
@@ -4180,7 +4189,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             is_device_spine,
             send_report_to_spine,
             eg_port >> 7,  # hw_id,
-            truncate=False # Never truncated since this is a ingress drop.
+            truncate=False,  # Never truncated since this is a ingress drop.
         )
 
         # Set collector, report table, and mirror sessions
