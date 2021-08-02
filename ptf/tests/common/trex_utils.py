@@ -122,6 +122,9 @@ LatencyStats = collections.namedtuple(
         "percentile_75",
         "percentile_90",
         "percentile_99",
+        "percentile_99_9",
+        "percentile_99_99",
+        "percentile_99_999",
     ],
 )
 
@@ -187,7 +190,7 @@ def get_latency_stats(pg_id: int, stats) -> LatencyStats:
         val = lat["histogram"][sample]
         # Assume whole the bucket experienced the range_end latency.
         all_latencies += [range_end] * val
-    q = [50, 75, 90, 99]
+    q = [50, 75, 90, 99, 99.9, 99.99, 99.999]
     percentiles = np.percentile(all_latencies, q)
 
     ret = LatencyStats(
@@ -207,6 +210,9 @@ def get_latency_stats(pg_id: int, stats) -> LatencyStats:
         percentile_75=percentiles[1],
         percentile_90=percentiles[2],
         percentile_99=percentiles[3],
+        percentile_99_9=percentiles[4],
+        percentile_99_99=percentiles[5],
+        percentile_99_999=percentiles[6],
     )
     return ret
 
@@ -244,6 +250,9 @@ def get_readable_latency_stats(stats: LatencyStats) -> str:
     75th percentile latency: {stats.percentile_75} us
     90th percentile latency: {stats.percentile_90} us
     99th percentile latency: {stats.percentile_99} us
+    99.9th percentile latency: {stats.percentile_99_9} us
+    99.99th percentile latency: {stats.percentile_99_99} us
+    99.999th percentile latency: {stats.percentile_99_999} us
     Jitter: {stats.jitter} us
     Latency distribution histogram: {histogram}
     """
