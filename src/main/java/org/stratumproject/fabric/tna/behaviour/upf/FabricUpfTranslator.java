@@ -131,6 +131,9 @@ public class FabricUpfTranslator {
         // Grab keys and parameters that are present for all PDRs
         int globalFarId = FabricUpfTranslatorUtil.getParamInt(action, FAR_ID);
         UpfRuleIdentifier farId = fabricUpfStore.localFarIdOf(globalFarId);
+        if (farId == null) {
+            throw new UpfProgrammableException(String.format("Unable to find local far id of %s", globalFarId));
+        }
 
         pdrBuilder.withCounterId(FabricUpfTranslatorUtil.getParamInt(action, CTR_ID))
                 .withLocalFarId(farId.getSessionLocalId())
@@ -169,6 +172,9 @@ public class FabricUpfTranslator {
 
         int globalFarId = FabricUpfTranslatorUtil.getFieldInt(match, HDR_FAR_ID);
         UpfRuleIdentifier farId = fabricUpfStore.localFarIdOf(globalFarId);
+        if (farId == null) {
+            throw new UpfProgrammableException(String.format("Unable to find local far id of %s", globalFarId));
+        }
 
         boolean dropFlag = FabricUpfTranslatorUtil.getParamInt(action, DROP) > 0;
         boolean notifyFlag = FabricUpfTranslatorUtil.getParamInt(action, NOTIFY_CP) > 0;

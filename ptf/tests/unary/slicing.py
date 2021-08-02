@@ -1,13 +1,14 @@
 # Copyright 2021-present Open Networking Foundation
 # SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0 AND Apache-2.0
-from ptf.testutils import group
-
 from base_test import autocleanup, tvsetup
 from fabric_test import *  # noqa
+from ptf.testutils import group
 from scapy.layers.inet import IP
 
 
-class FabricIPv4UnicastWithDscpClassificationAndRewriteTest(SlicingTest, IPv4UnicastTest):
+class FabricIPv4UnicastWithDscpClassificationAndRewriteTest(
+    SlicingTest, IPv4UnicastTest
+):
     """Tests DSCP-based classification and rewrite.
     """
 
@@ -24,25 +25,20 @@ class FabricIPv4UnicastWithDscpClassificationAndRewriteTest(SlicingTest, IPv4Uni
         pkt = pkt_set_dscp(pkt=pkt, slice_id=11, tc=0)
 
         if trust_dscp:
-            self.add_slice_tc_classifier_entry(
-                trust_dscp=True,
-                ipv4_src=pkt[IP].src
-            )
+            self.add_slice_tc_classifier_entry(trust_dscp=True, ipv4_src=pkt[IP].src)
         else:
             # Classify using slice_id and tc different than what found in dscp
             self.add_slice_tc_classifier_entry(
-                slice_id=default_slice_id,
-                tc=default_tc,
-                ipv4_src=pkt[IP].src
+                slice_id=default_slice_id, tc=default_tc, ipv4_src=pkt[IP].src
             )
 
         exp_pkt_base = pkt.copy()
         if rewrite == "rewrite":
             self.add_dscp_rewriter_entry(eg_port=eg_port)
             if not trust_dscp:
-                exp_pkt_base = pkt_set_dscp(pkt=exp_pkt_base,
-                                            slice_id=default_slice_id,
-                                            tc=default_tc)
+                exp_pkt_base = pkt_set_dscp(
+                    pkt=exp_pkt_base, slice_id=default_slice_id, tc=default_tc
+                )
         elif rewrite == "clear":
             self.add_dscp_rewriter_entry(self.port2, clear=True)
             exp_pkt_base = pkt_set_dscp(pkt=exp_pkt_base, dscp=0)
@@ -50,15 +46,21 @@ class FabricIPv4UnicastWithDscpClassificationAndRewriteTest(SlicingTest, IPv4Uni
             # nop means dscp unchanged
             raise Exception(f"Invalid rewrite action '{rewrite}'")
 
-        self.runIPv4UnicastTest(pkt, eg_port=eg_port, exp_pkt_base=exp_pkt_base, **kwargs)
+        self.runIPv4UnicastTest(
+            pkt, eg_port=eg_port, exp_pkt_base=exp_pkt_base, **kwargs
+        )
 
     def runTest(self):
         print("")
         for pkt_type in BASE_PKT_TYPES | GTP_PKT_TYPES | VXLAN_PKT_TYPES:
             for trust_dscp in [True, False]:
                 for rewrite in ["rewrite", "clear", "nop"]:
-                    tc_name = f"{pkt_type}_{'trustdscp_' if trust_dscp else ''}_{rewrite}"
-                    print(f"pkt_type={pkt_type}, trust_dscp={trust_dscp}, rewrite={rewrite}...")
+                    tc_name = (
+                        f"{pkt_type}_{'trustdscp_' if trust_dscp else ''}_{rewrite}"
+                    )
+                    print(
+                        f"pkt_type={pkt_type}, trust_dscp={trust_dscp}, rewrite={rewrite}..."
+                    )
                     pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
                         eth_src=HOST1_MAC,
                         eth_dst=SWITCH_MAC,
@@ -79,7 +81,16 @@ class FabricIPv4UnicastWithDscpClassificationAndRewriteTest(SlicingTest, IPv4Uni
 class FabricSpgwDownlinkWithDscpRewriteTest(SpgwSimpleTest, SlicingTest):
     @tvsetup
     @autocleanup
-    def doRunTest(self, pkt, tagged1, tagged2, with_psc, is_next_hop_spine, is_next_hop_dscp_aware, tc_name):
+    def doRunTest(
+        self,
+        pkt,
+        tagged1,
+        tagged2,
+        with_psc,
+        is_next_hop_spine,
+        is_next_hop_dscp_aware,
+        tc_name,
+    ):
         # Use non-zero values to test dscp_rewriter clear action
         default_slice_id = 1
         default_tc = 1
@@ -90,9 +101,7 @@ class FabricSpgwDownlinkWithDscpRewriteTest(SpgwSimpleTest, SlicingTest):
 
         # slice_id and tc should be rewritten by the SPGW tables.
         self.add_slice_tc_classifier_entry(
-            slice_id=default_slice_id,
-            tc=default_tc,
-            ipv4_src=pkt[IP].src
+            slice_id=default_slice_id, tc=default_tc, ipv4_src=pkt[IP].src
         )
 
         if is_next_hop_dscp_aware:
@@ -110,7 +119,7 @@ class FabricSpgwDownlinkWithDscpRewriteTest(SpgwSimpleTest, SlicingTest):
             tc=upf_tc,
             dscp_rewrite=is_next_hop_dscp_aware,
             eg_port=eg_port,
-            verify_counters=False
+            verify_counters=False,
         )
 
     def runTest(self):
@@ -136,7 +145,11 @@ class FabricSpgwDownlinkWithDscpRewriteTest(SpgwSimpleTest, SlicingTest):
                             )
                             print(
                                 "Testing VLAN={}, pkt={}, with_psc={}, is_next_hop_spine={}, is_next_hop_dscp_aware={}...".format(
-                                    vlan_conf, pkt_type, with_psc, is_next_hop_spine, is_next_hop_dscp_aware
+                                    vlan_conf,
+                                    pkt_type,
+                                    with_psc,
+                                    is_next_hop_spine,
+                                    is_next_hop_dscp_aware,
                                 )
                             )
                             pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
@@ -161,7 +174,9 @@ class FabricSpgwDownlinkWithDscpRewriteTest(SpgwSimpleTest, SlicingTest):
 class FabricSpgwUplinkWithDscpRewriteTest(SpgwSimpleTest, SlicingTest):
     @tvsetup
     @autocleanup
-    def doRunTest(self, pkt, tagged1, tagged2, with_psc, is_next_hop_spine, is_next_hop_dscp_aware):
+    def doRunTest(
+        self, pkt, tagged1, tagged2, with_psc, is_next_hop_spine, is_next_hop_dscp_aware
+    ):
         # Use non-zero values to test dscp_rewriter clear action
         default_slice_id = 1
         default_tc = 1
@@ -172,9 +187,7 @@ class FabricSpgwUplinkWithDscpRewriteTest(SpgwSimpleTest, SlicingTest):
 
         # slice_id and tc should be rewritten by the SPGW tables.
         self.add_slice_tc_classifier_entry(
-            slice_id=default_slice_id,
-            tc=default_tc,
-            ipv4_src=pkt[IP].src
+            slice_id=default_slice_id, tc=default_tc, ipv4_src=pkt[IP].src
         )
 
         if is_next_hop_dscp_aware:
@@ -192,7 +205,7 @@ class FabricSpgwUplinkWithDscpRewriteTest(SpgwSimpleTest, SlicingTest):
             tc=upf_tc,
             dscp_rewrite=is_next_hop_dscp_aware,
             eg_port=eg_port,
-            verify_counters=False
+            verify_counters=False,
         )
 
     def runTest(self):
@@ -208,7 +221,11 @@ class FabricSpgwUplinkWithDscpRewriteTest(SpgwSimpleTest, SlicingTest):
                                 continue
                             print(
                                 "Testing VLAN={}, pkt={}, psc={}, is_next_hop_spine={}, is_next_hop_dscp_aware={}...".format(
-                                    vlan_conf, pkt_type, with_psc, is_next_hop_spine, is_next_hop_dscp_aware
+                                    vlan_conf,
+                                    pkt_type,
+                                    with_psc,
+                                    is_next_hop_spine,
+                                    is_next_hop_dscp_aware,
                                 )
                             )
                             pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
@@ -219,7 +236,12 @@ class FabricSpgwUplinkWithDscpRewriteTest(SpgwSimpleTest, SlicingTest):
                                 pktlen=MIN_PKT_LEN,
                             )
                             self.doRunTest(
-                                pkt, tagged[0], tagged[1], with_psc, is_next_hop_spine, is_next_hop_dscp_aware
+                                pkt,
+                                tagged[0],
+                                tagged[1],
+                                with_psc,
+                                is_next_hop_spine,
+                                is_next_hop_dscp_aware,
                             )
 
 
@@ -251,7 +273,8 @@ class FabricIPv4UnicastWithPolicingTest(SlicingTest, IPv4UnicastTest):
             ig_port=ig_port,
             eg_port=eg_port,
             verify_pkt=(not policing),
-            **kwargs)
+            **kwargs
+        )
 
     def runTest(self):
         print("")

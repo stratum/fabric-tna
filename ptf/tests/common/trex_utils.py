@@ -122,56 +122,57 @@ LatencyStats = collections.namedtuple(
         "percentile_75",
         "percentile_90",
         "percentile_99",
+        "percentile_99_9",
+        "percentile_99_99",
+        "percentile_99_999",
     ],
 )
 
 FlowStats = collections.namedtuple(
-    "FlowStats",
+    "FlowStats", ["pg_id", "total_tx", "total_rx", "tx_bytes", "rx_bytes",],
+)
+
+
+PortStats = collections.namedtuple(
+    "PortStats",
     [
-        "pg_id",
-        "total_tx",
-        "total_rx",
+        "tx_packets",
+        "rx_packets",
         "tx_bytes",
         "rx_bytes",
+        "tx_errors",
+        "rx_errors",
+        "tx_bps",
+        "tx_pps",
+        "tx_bps_L1",
+        "tx_util",
+        "rx_bps",
+        "rx_pps",
+        "rx_bps_L1",
+        "rx_util",
     ],
 )
 
 
-PortStats = collections.namedtuple("PortStats", [
-    "tx_packets",
-    "rx_packets",
-    "tx_bytes",
-    "rx_bytes",
-    "tx_errors",
-    "rx_errors",
-    "tx_bps",
-    "tx_pps",
-    "tx_bps_L1",
-    "tx_util",
-    "rx_bps",
-    "rx_pps",
-    "rx_bps_L1",
-    "rx_util",
-])
-
 def get_port_stats(port: int, stats) -> PortStats:
     port_stats = stats.get(port)
     return PortStats(
-        tx_packets = port_stats.get("opackets", 0),
-        rx_packets = port_stats.get("ipackets", 0),
-        tx_bytes = port_stats.get("obytes", 0),
-        rx_bytes = port_stats.get("ibytes", 0),
-        tx_errors = port_stats.get("oerrors", 0),
-        rx_errors = port_stats.get("ierrors", 0),
-        tx_bps = port_stats.get("tx_bps", 0),
-        tx_pps = port_stats.get("tx_pps", 0),
-        tx_bps_L1 = port_stats.get("tx_bps_L1", 0),
-        tx_util = port_stats.get("tx_util", 0),
-        rx_bps = port_stats.get("rx_bps", 0),
-        rx_pps = port_stats.get("rx_pps", 0),
-        rx_bps_L1 = port_stats.get("rx_bps_L1", 0),
-        rx_util = port_stats.get("rx_util", 0),
+        tx_packets=port_stats.get("opackets", 0),
+        rx_packets=port_stats.get("ipackets", 0),
+        tx_bytes=port_stats.get("obytes", 0),
+        rx_bytes=port_stats.get("ibytes", 0),
+        tx_errors=port_stats.get("oerrors", 0),
+        rx_errors=port_stats.get("ierrors", 0),
+        tx_bps=port_stats.get("tx_bps", 0),
+        tx_pps=port_stats.get("tx_pps", 0),
+        tx_bps_L1=port_stats.get("tx_bps_L1", 0),
+        tx_util=port_stats.get("tx_util", 0),
+        rx_bps=port_stats.get("rx_bps", 0),
+        rx_pps=port_stats.get("rx_pps", 0),
+        rx_bps_L1=port_stats.get("rx_bps_L1", 0),
+        rx_util=port_stats.get("rx_util", 0),
     )
+
 
 def get_latency_stats(pg_id: int, stats) -> LatencyStats:
     lat_stats = stats["latency"].get(pg_id)
@@ -189,7 +190,7 @@ def get_latency_stats(pg_id: int, stats) -> LatencyStats:
         val = lat["histogram"][sample]
         # Assume whole the bucket experienced the range_end latency.
         all_latencies += [range_end] * val
-    q = [50, 75, 90, 99]
+    q = [50, 75, 90, 99, 99.9, 99.99, 99.999]
     percentiles = np.percentile(all_latencies, q)
 
     ret = LatencyStats(
@@ -209,6 +210,9 @@ def get_latency_stats(pg_id: int, stats) -> LatencyStats:
         percentile_75=percentiles[1],
         percentile_90=percentiles[2],
         percentile_99=percentiles[3],
+        percentile_99_9=percentiles[4],
+        percentile_99_99=percentiles[5],
+        percentile_99_999=percentiles[6],
     )
     return ret
 
@@ -227,7 +231,7 @@ def get_readable_latency_stats(stats: LatencyStats) -> str:
         val = stats.histogram[sample]
         histogram = (
             histogram
-            + "\n        Packets with latency between {0:>4} us and {1:>4} us: {2:>10}".format(
+            + "\n        Packets with latency between {0:>5} us and {1:>5} us: {2:>10}".format(
                 range_start, range_end, val
             )
         )
@@ -246,6 +250,9 @@ def get_readable_latency_stats(stats: LatencyStats) -> str:
     75th percentile latency: {stats.percentile_75} us
     90th percentile latency: {stats.percentile_90} us
     99th percentile latency: {stats.percentile_99} us
+    99.9th percentile latency: {stats.percentile_99_9} us
+    99.99th percentile latency: {stats.percentile_99_99} us
+    99.999th percentile latency: {stats.percentile_99_999} us
     Jitter: {stats.jitter} us
     Latency distribution histogram: {histogram}
     """
