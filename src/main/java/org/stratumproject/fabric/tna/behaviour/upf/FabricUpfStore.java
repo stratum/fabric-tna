@@ -3,6 +3,7 @@
 package org.stratumproject.fabric.tna.behaviour.upf;
 
 import org.onlab.util.ImmutableByteSequence;
+import org.onosproject.net.behaviour.upf.PacketDetectionRule;
 
 import java.util.Map;
 
@@ -57,6 +58,22 @@ public interface FabricUpfStore {
      * @return A globally unique integer identifier
      */
     int removeGlobalFarId(ImmutableByteSequence pfcpSessionId, int sessionLocalFarId);
+
+    /**
+     * Gets the QFI associated to the given PDR match.
+     *
+     * @param pdr the given PDR match
+     * @return the associated QFI if present, null otherwise
+     */
+    Integer pdrMatchToQfi(PacketDetectionRule pdr);
+
+    /**
+     * Add mapping between PDR match and QFI.
+     *
+     * @param pdr the PDR match
+     * @param qfi the associated QFI
+     */
+    void addPdrMatchToQfi(PacketDetectionRule pdr, int qfi);
 
     /**
      * Get the corresponding PFCP session ID and session-local FAR ID from a globally unique FAR ID,

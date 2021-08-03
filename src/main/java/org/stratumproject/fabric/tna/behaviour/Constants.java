@@ -40,6 +40,33 @@ public final class Constants {
     public static final int UPF_INTERFACE_CORE = 2;
     public static final int UPF_INTERFACE_DBUF = 3;
 
+    // Static Queue IDs (should match those in gen-stratum-qos-config.py)
+    public static final int QUEUE_ID_BEST_EFFORT = 0;
+    public static final int QUEUE_ID_SYSTEM = 1;
+    public static final int QUEUE_ID_CONTROL = 2;
+    public static final int QUEUE_ID_FIRST_REAL_TIME = 3; // This will always be 3
+    public static final int QUEUE_ID_FIRST_ELASTIC = 6; // TODO: this can variate...
+    // FIXME: should it be configured at runtime (i.e., via netcfg?)
+
+    // Traffic Classes (0 to 4)
+    public static final int TC_BEST_EFFORT = 0;
+    public static final int TC_SYSTEM = 1;
+    public static final int TC_CONTROL = 2;
+    public static final int TC_REAL_TIME = 3;
+    public static final int TC_ELASTIC = 4;
+
+    // Default Slice and Traffic Class IDs
+    public static final int DEFAULT_SLICE_ID = 0;
+    public static final int DEFAULT_TC = 0;
+
+    // Tofino Meter Colors
+    // see: https://github.com/barefootnetworks/Open-Tofino/blob/master/share/p4c/p4include/tofino.p4
+    public static final int COLOR_GREEN = 0;
+    public static final int COLOR_YELLOW = 1;
+    public static final int COLOR_RED = 3;
+
+    public static final int PRIORITY_LOW = 10;
+
     // hide default constructor
     private Constants() {
     }

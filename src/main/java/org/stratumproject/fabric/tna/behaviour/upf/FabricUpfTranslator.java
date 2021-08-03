@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 package org.stratumproject.fabric.tna.behaviour.upf;
 
+import com.google.common.collect.ImmutableMap;
 import org.apache.commons.lang3.tuple.Pair;
 import org.onlab.packet.Ip4Address;
 import org.onlab.packet.Ip4Prefix;
@@ -26,7 +27,15 @@ import org.onosproject.net.pi.runtime.PiActionParam;
 import org.onosproject.net.pi.runtime.PiTableAction;
 
 import java.util.Arrays;
+import java.util.Map;
 
+import static org.stratumproject.fabric.tna.behaviour.Constants.DEFAULT_SLICE_ID;
+import static org.stratumproject.fabric.tna.behaviour.Constants.DEFAULT_TC;
+import static org.stratumproject.fabric.tna.behaviour.Constants.TC_BEST_EFFORT;
+import static org.stratumproject.fabric.tna.behaviour.Constants.TC_CONTROL;
+import static org.stratumproject.fabric.tna.behaviour.Constants.TC_ELASTIC;
+import static org.stratumproject.fabric.tna.behaviour.Constants.TC_REAL_TIME;
+import static org.stratumproject.fabric.tna.behaviour.Constants.TC_SYSTEM;
 import static org.stratumproject.fabric.tna.behaviour.Constants.UPF_INTERFACE_ACCESS;
 import static org.stratumproject.fabric.tna.behaviour.Constants.UPF_INTERFACE_CORE;
 import static org.stratumproject.fabric.tna.behaviour.Constants.UPF_INTERFACE_DBUF;
@@ -72,8 +81,15 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TUNNEL_SRC
 public class FabricUpfTranslator {
 
     private final FabricUpfStore fabricUpfStore;
-    private static final int DEFAULT_SLICE_ID = 0;
-    private static final int DEFAULT_TC = 0;
+
+    // TODO: what's the mapping???
+    //  For now QFI==TC
+    static final Map<Integer, Integer> QFI_TO_TC = ImmutableMap.of(
+            0, TC_BEST_EFFORT,
+            1, TC_SYSTEM,
+            2, TC_CONTROL,
+            3, TC_REAL_TIME,
+            4, TC_ELASTIC);
 
     public FabricUpfTranslator(FabricUpfStore fabricUpfStore) {
         this.fabricUpfStore = fabricUpfStore;
@@ -137,9 +153,7 @@ public class FabricUpfTranslator {
 
         pdrBuilder.withCounterId(FabricUpfTranslatorUtil.getParamInt(action, CTR_ID))
                 .withLocalFarId(farId.getSessionLocalId())
-                .withSessionId(farId.getPfcpSessionId())
-                // TODO: remove once we replace priorities with QFI
-                .withSchedulingPriority(0);
+                .withSessionId(farId.getPfcpSessionId());
 
         if (FabricUpfTranslatorUtil.fieldIsPresent(match, HDR_TEID)) {
             // F-TEID is only present for GTP-matching PDRs
@@ -152,6 +166,12 @@ public class FabricUpfTranslator {
             pdrBuilder.withUeAddr(FabricUpfTranslatorUtil.getFieldAddress(match, HDR_UE_ADDR));
         } else {
             throw new UpfProgrammableException("Read malformed PDR from dataplane!:" + entry);
+        }
+
+        // Find the original QFI if present
+        Integer qfi = fabricUpfStore.pdrMatchToQfi(pdrBuilder.build().withoutActionParams());
+        if (qfi != null) {
+            pdrBuilder.withQfi(qfi.byteValue());
         }
         return pdrBuilder.build();
     }
@@ -307,9 +327,28 @@ public class FabricUpfTranslator {
      */
     public FlowRule pdrToFabricEntry(PacketDetectionRule pdr, DeviceId deviceId, ApplicationId appId, int priority)
             throws UpfProgrammableException {
-        PiCriterion match;
-        PiTableId tableId;
-        PiAction action;
+        // TODO: add QFI match and push to the pipeline
+        if (pdr.matchQfi()) {
+            throw new UpfProgrammableException("Match QFI not yet supported! Cannot translate " + pdr);
+        } else if (pdr.pushQfi()) {
+            throw new UpfProgrammableException("Push QFI not yet supported! Cannot translate " + pdr);
+        }
+        final PiCriterion match;
+        final PiTableId tableId;
+
+        int trafficClass = DEFAULT_TC;
+        if (pdr.hasQfi()) {
+            trafficClass = QFI_TO_TC.getOrDefault((int) pdr.qfi(), DEFAULT_TC);
+            // Store the original QFI value
+            fabricUpfStore.addPdrMatchToQfi(pdr.withoutActionParams(), pdr.qfi());
+        }
+
+        final PiAction.Builder actionBuilder = PiAction.builder()
+                .withParameters(Arrays.asList(
+                        new PiActionParam(CTR_ID, pdr.counterId()),
+                        new PiActionParam(FAR_ID, fabricUpfStore.globalFarIdOf(pdr.sessionId(), pdr.farId())),
+                        new PiActionParam(NEEDS_GTPU_DECAP, pdr.matchesEncapped() ? 1 : 0)))
+                .withId(FABRIC_INGRESS_SPGW_LOAD_PDR);
 
         if (pdr.matchesEncapped()) {
             match = PiCriterion.builder()
@@ -323,29 +362,15 @@ public class FabricUpfTranslator {
                     .build();
             tableId = FABRIC_INGRESS_SPGW_DOWNLINK_PDRS;
         } else {
-            throw new UpfProgrammableException("Flexible PDRs not yet supported! Cannot translate " + pdr.toString());
+            throw new UpfProgrammableException("Flexible PDRs not yet supported! Cannot translate " + pdr);
         }
 
-        if (pdr.hasSchedulingPriority()) {
-            // TODO: add support for mapping QFI to TC once we replace priorities with QFI
-            throw new UpfProgrammableException("PDR with scheduling priority not supported");
-        }
-
-        action = PiAction.builder()
-                .withParameters(Arrays.asList(
-                        new PiActionParam(CTR_ID, pdr.counterId()),
-                        new PiActionParam(FAR_ID, fabricUpfStore.globalFarIdOf(pdr.sessionId(), pdr.farId())),
-                        new PiActionParam(NEEDS_GTPU_DECAP, pdr.matchesEncapped() ? 1 : 0),
-                        new PiActionParam(TC, DEFAULT_TC)
-                ))
-                .withId(FABRIC_INGRESS_SPGW_LOAD_PDR)
-                .build();
-
+        actionBuilder.withParameter(new PiActionParam(TC, trafficClass));
         return DefaultFlowRule.builder()
                 .forDevice(deviceId).fromApp(appId).makePermanent()
                 .forTable(tableId)
                 .withSelector(DefaultTrafficSelector.builder().matchPi(match).build())
-                .withTreatment(DefaultTrafficTreatment.builder().piTableAction(action).build())
+                .withTreatment(DefaultTrafficTreatment.builder().piTableAction(actionBuilder.build()).build())
                 .withPriority(priority)
                 .build();
     }
