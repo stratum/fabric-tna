@@ -7,126 +7,6 @@
 #define DEFAULT_PDR_CTR_ID 0
 #define DEFAULT_FAR_ID 0
 
-control DecapGtpu(inout ingress_headers_t            hdr,
-                  inout fabric_ingress_metadata_t   fabric_md) {
-    @hidden
-    action decap_inner_common() {
-        fabric_md.bridged.base.ip_eth_type = ETHERTYPE_IPV4;
-        fabric_md.routing_ipv4_dst = hdr.inner_ipv4.dst_addr;
-        // Move GTPU and inner L3 headers out
-        hdr.ipv4 = hdr.inner_ipv4;
-        hdr.inner_ipv4.setInvalid();
-        hdr.gtpu.setInvalid();
-        hdr.gtpu_options.setInvalid();
-        hdr.gtpu_ext_psc.setInvalid();
-        fabric_md.bridged.base.encap_presence = EncapPresence.NONE;
-    }
-    @hidden
-    action decap_inner_tcp() {
-        decap_inner_common();
-        hdr.udp.setInvalid();
-        hdr.tcp = hdr.inner_tcp;
-        hdr.inner_tcp.setInvalid();
-    }
-    @hidden
-    action decap_inner_udp() {
-        decap_inner_common();
-        hdr.udp = hdr.inner_udp;
-        hdr.inner_udp.setInvalid();
-    }
-    @hidden
-    action decap_inner_icmp() {
-        decap_inner_common();
-        hdr.udp.setInvalid();
-        hdr.icmp = hdr.inner_icmp;
-        hdr.inner_icmp.setInvalid();
-    }
-    @hidden
-    action decap_inner_unknown() {
-        decap_inner_common();
-        hdr.udp.setInvalid();
-    }
-    @hidden
-    table decap_gtpu {
-        key = {
-            hdr.inner_tcp.isValid()  : exact;
-            hdr.inner_udp.isValid()  : exact;
-            hdr.inner_icmp.isValid() : exact;
-        }
-        actions = {
-            decap_inner_tcp;
-            decap_inner_udp;
-            decap_inner_icmp;
-            decap_inner_unknown;
-        }
-        const default_action = decap_inner_unknown;
-        const entries = {
-            (true,  false, false) : decap_inner_tcp();
-            (false, true,  false) : decap_inner_udp();
-            (false, false, true)  : decap_inner_icmp();
-        }
-        size = 3;
-    }
-    apply {
-        if (hdr.inner_ipv4.isValid()) {
-            decap_gtpu.apply();
-        }
-    }
-}
-
-// Allows or denies recirculation of uplink packets for UE-to-UE communication.
-// Should be called after GTP decap.
-control UplinkRecirc(
-         inout ingress_headers_t                      hdr,
-         inout fabric_ingress_metadata_t             fabric_md,
-         in ingress_intrinsic_metadata_t             ig_intr_md,
-         inout ingress_intrinsic_metadata_for_tm_t   ig_tm_md) {
-
-    DirectCounter<bit<16>>(CounterType_t.PACKETS) rules_counter;
-
-    action allow() {
-        // Recirculation port within same ingress pipe.
-        ig_tm_md.ucast_egress_port = ig_intr_md.ingress_port[8:7]++RECIRC_PORT_NUMBER;
-        fabric_md.bridged.base.vlan_id = DEFAULT_VLAN_ID;
-        fabric_md.egress_port_set = true;
-        fabric_md.skip_forwarding = true;
-        fabric_md.skip_next = true;
-        rules_counter.count();
-    }
-
-    action deny() {
-#ifdef WITH_INT
-        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_SPGW_UPLINK_RECIRC_DENY;
-#endif // WITH_INT
-        fabric_md.skip_forwarding = true;
-        fabric_md.skip_next = true;
-        rules_counter.count();
-    }
-
-    action miss() {
-        rules_counter.count();
-    }
-
-    table rules {
-        key = {
-            fabric_md.lkp.ipv4_src : ternary @name("ipv4_src");
-            fabric_md.lkp.ipv4_dst : ternary @name("ipv4_dst");
-        }
-        actions = {
-            allow;
-            deny;
-            @defaultonly miss;
-        }
-        const default_action = miss;
-        size = MAX_UPLINK_RECIRC_RULES;
-        counters = rules_counter;
-    }
-
-    apply {
-        rules.apply();
-    }
-}
-
 control SpgwIngress(
         /* Fabric.p4 */
         inout ingress_headers_t                      hdr,
@@ -142,25 +22,45 @@ control SpgwIngress(
 
     Counter<bit<64>, bit<16>>(MAX_PDR_COUNTERS, CounterType_t.PACKETS_AND_BYTES) pdr_counter;
 
-    DecapGtpu() decap_gtpu_from_dbuf;
-    DecapGtpu() decap_gtpu;
-    UplinkRecirc() uplink_recirc;
     bool is_pdr_hit = false;
+    far_id_t           md_far_id = 0;
+    bit<32> ue_addr;
+
+    action gtpu_decap() {
+        fabric_md.bridged.base.ip_eth_type = ETHERTYPE_IPV4;
+        fabric_md.routing_ipv4_dst = hdr.inner_ipv4.dst_addr;
+        // Move GTPU and inner L3 headers out
+        hdr.ipv4.setInvalid();
+        hdr.udp.setInvalid();
+        hdr.gtpu.setInvalid();
+        hdr.gtpu_options.setInvalid();
+        hdr.gtpu_ext_psc.setInvalid();
+        fabric_md.bridged.base.encap_presence = EncapPresence.NONE;
+    }
 
 
     //=============================//
     //===== Interface Tables ======//
     //=============================//
 
-    action load_iface(SpgwInterface src_iface, slice_id_t slice_id) {
-        // Interface type can be access, core, from_dbuf (see InterfaceType enum)
-        fabric_md.spgw.src_iface = src_iface;
+    action iface_access(slice_id_t slice_id) {
         fabric_md.bridged.spgw.skip_spgw = false;
-        fabric_md.slice_id = slice_id;
+        fabric_md.spgw_hit = true;
+        fabric_md.spgw_slice_id = slice_id;
+    }
+
+    action iface_core(slice_id_t slice_id) {
+        fabric_md.bridged.spgw.skip_spgw = false;
+        fabric_md.spgw_hit = true;
+        fabric_md.spgw_slice_id = slice_id;
+    }
+
+    action iface_dbuf(slice_id_t slice_id) {
+        iface_core(slice_id);
+        gtpu_decap();
     }
 
     action iface_miss() {
-        fabric_md.spgw.src_iface = SpgwInterface.UNKNOWN;
         fabric_md.bridged.spgw.skip_spgw = true;
     }
 
@@ -172,7 +72,9 @@ control SpgwIngress(
             hdr.gtpu.isValid() : exact  @name("gtpu_is_valid");
         }
         actions = {
-            load_iface;
+            iface_access;
+            iface_core;
+            iface_dbuf;
             @defaultonly iface_miss;
         }
         const default_action = iface_miss();
@@ -203,20 +105,25 @@ control SpgwIngress(
 
     action load_pdr(pdr_ctr_id_t ctr_id,
                     far_id_t     far_id,
-                    bool         needs_gtpu_decap,
                     tc_t         tc) {
-        fabric_md.spgw.far_id = far_id;
+        md_far_id = far_id;
         fabric_md.bridged.spgw.pdr_ctr_id = ctr_id;
-        fabric_md.spgw.needs_gtpu_decap = needs_gtpu_decap;
-        fabric_md.tc = tc;
+        fabric_md.spgw_tc = tc;
         is_pdr_hit = true;
+    }
+
+    action load_pdr_decap(pdr_ctr_id_t ctr_id,
+                    far_id_t     far_id,
+                    tc_t         tc) {
+        load_pdr(ctr_id, far_id, tc);
+        gtpu_decap();
     }
 
     // These two tables scale well and cover the average case PDR
     table downlink_pdrs {
         key = {
             // only available ipv4 header
-            hdr.ipv4.dst_addr : exact @name("ue_addr");
+            fabric_md.routing_ipv4_dst : exact @name("ue_addr");
         }
         actions = {
             load_pdr;
@@ -232,7 +139,7 @@ control SpgwIngress(
             hdr.gtpu.teid               : exact @name("teid");
         }
         actions = {
-            load_pdr;
+            load_pdr_decap;
             @defaultonly uplink_pdr_drop;
         }
         size = NUM_UPLINK_PDRS;
@@ -314,7 +221,7 @@ control SpgwIngress(
 
     table fars {
         key = {
-            fabric_md.spgw.far_id : exact @name("far_id");
+            md_far_id : exact @name("far_id");
         }
         actions = {
             load_normal_far;
@@ -327,47 +234,81 @@ control SpgwIngress(
         size = NUM_FARS;
     }
 
+    DirectCounter<bit<16>>(CounterType_t.PACKETS) recirc_stats;
+
+    action recirc_allow() {
+        // Recirculation port within same ingress pipe.
+        ig_tm_md.ucast_egress_port = ig_intr_md.ingress_port[8:7]++RECIRC_PORT_NUMBER;
+        fabric_md.bridged.base.vlan_id = DEFAULT_VLAN_ID;
+        fabric_md.egress_port_set = true;
+        fabric_md.skip_forwarding = true;
+        fabric_md.skip_next = true;
+        recirc_stats.count();
+    }
+
+    action recirc_deny() {
+#ifdef WITH_INT
+        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_SPGW_UPLINK_RECIRC_DENY;
+#endif // WITH_INT
+        fabric_md.skip_forwarding = true;
+        fabric_md.skip_next = true;
+        recirc_stats.count();
+    }
+
+    action recirc_miss() {
+        recirc_stats.count();
+    }
+
+    // Allows or denies recirculation of uplink packets for UE-to-UE communication.
+    // Should be called after GTP decap.
+    table uplink_recirc_rules {
+        key = {
+            fabric_md.lkp.ipv4_src : ternary @name("ipv4_src");
+            fabric_md.lkp.ipv4_dst : ternary @name("ipv4_dst");
+        }
+        actions = {
+            recirc_allow;
+            recirc_deny;
+            @defaultonly recirc_miss;
+        }
+        const default_action = recirc_miss;
+        size = MAX_UPLINK_RECIRC_RULES;
+        counters = recirc_stats;
+    }
+
     //=============================//
     //===== Apply Block ======//
     //=============================//
     apply {
         if (hdr.ipv4.isValid()) {
-            if (interfaces.apply().hit) {
-                if (fabric_md.spgw.src_iface == SpgwInterface.FROM_DBUF) {
-                    decap_gtpu_from_dbuf.apply(hdr, fabric_md);
+            if (hdr.inner_ipv4.isValid()) {
+
+            }
+            switch(interfaces.apply().action_run) {
+                iface_access: {
+                    if (fabric_md.bridged.base.encap_presence != EncapPresence.NONE) {
+                        if (uplink_pdrs.apply().hit) {
+                            uplink_recirc_rules.apply();
+                        }
+                    }
                 }
-                // PDRs
-                if (fabric_md.spgw.src_iface == SpgwInterface.ACCESS &&
-                        fabric_md.bridged.base.encap_presence != EncapPresence.NONE) {
-                    uplink_pdrs.apply();
-                } else if (fabric_md.spgw.src_iface == SpgwInterface.CORE ||
-                            fabric_md.spgw.src_iface == SpgwInterface.FROM_DBUF) {
+                iface_core: {
                     downlink_pdrs.apply();
                 }
-                if (fabric_md.spgw.src_iface != SpgwInterface.FROM_DBUF) {
-                    pdr_counter.count(fabric_md.bridged.spgw.pdr_ctr_id);
+                iface_dbuf: {
+                    downlink_pdrs.apply();
                 }
-
-                // GTPU Decapsulate
-                if (fabric_md.spgw.needs_gtpu_decap) {
-                    decap_gtpu.apply(hdr, fabric_md);
-                }
-
-                // FARs
-                // Load FAR info
-                if (is_pdr_hit) {
-                    fars.apply();
-                }
-
-                // Recirculate UE-to-UE traffic.
-                if (fabric_md.spgw.src_iface == SpgwInterface.ACCESS && fabric_md.spgw.needs_gtpu_decap) {
-                    uplink_recirc.apply(hdr, fabric_md, ig_intr_md, ig_tm_md);
-                }
-
                 // Nothing to be done immediately for forwarding or encapsulation.
                 // Forwarding is done by other parts of fabric.p4, and
                 // encapsulation is done in the egress
             }
+                 // FARs
+                // Load FAR info
+                if (is_pdr_hit) {
+                    // Do not update if from dbuf
+                    pdr_counter.count(fabric_md.bridged.spgw.pdr_ctr_id);
+                    fars.apply();
+                }
         }
     }
 }

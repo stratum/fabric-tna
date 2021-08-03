@@ -102,10 +102,15 @@ control IngressQos (inout fabric_ingress_metadata_t fabric_md,
         size = 1 << (SLICE_TC_WIDTH + 1);
     }
 
-    slice_tc_t slice_tc = fabric_md.slice_id++fabric_md.tc;
+    slice_tc_t slice_tc;
 
     apply {
         // Meter index should be 0 for all packets with default slice_id and tc.
+        if (fabric_md.spgw_hit) {
+            fabric_md.slice_id = fabric_md.spgw_slice_id;
+            fabric_md.tc = fabric_md.spgw_tc;
+        }
+        slice_tc = fabric_md.slice_id++fabric_md.tc;
         ig_tm_md.packet_color = (bit<2>) slice_tc_meter.execute(slice_tc);
         fabric_md.bridged.base.dscp = slice_tc;
         queues.apply();

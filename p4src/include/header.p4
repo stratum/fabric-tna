@@ -173,13 +173,6 @@ struct spgw_bridged_metadata_t {
     pdr_ctr_id_t    pdr_ctr_id;
 }
 
-struct spgw_ingress_metadata_t {
-    bool               needs_gtpu_decap;
-    far_id_t           far_id;
-    SpgwInterface      src_iface;
-}
-
-
 #ifdef WITH_INT
 // Report Telemetry Headers v0.5
 @pa_no_overlay("egress", "hdr.report_fixed_header.rsvd")
@@ -364,9 +357,9 @@ struct fabric_ingress_metadata_t {
     bool                     inner_ipv4_checksum_err;
     slice_id_t               slice_id;
     tc_t                     tc;
-#ifdef WITH_SPGW
-    spgw_ingress_metadata_t  spgw;
-#endif // WITH_SPGW
+    bool                     spgw_hit;
+    slice_id_t               spgw_slice_id;
+    tc_t                     spgw_tc;
     PortType_t               ig_port_type;
     common_mirror_metadata_t mirror;
 }
