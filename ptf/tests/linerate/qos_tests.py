@@ -22,6 +22,7 @@ from trex_test import TRexTest
 from trex_utils import *
 
 # General test parameter.
+LINK_RATE_BPS = 1 * G
 EXPECTED_FLOW_RATE_WITH_STATS_BPS = 1 * G
 TRAFFIC_DURATION_SECONDS = 10
 
@@ -31,6 +32,11 @@ REALTIME_1_QUEUE_MAX_RATE_BPS = 45 * M
 REALTIME_2_QUEUE_MAX_RATE_BPS = 30 * M
 REALTIME_3_QUEUE_MAX_RATE_BPS = 25 * M
 SYSTEM_QUEUE_MAX_RATE_BPS = 10 * M
+
+# WRR weights for Elastic queues as per ChassisConfig.
+ELASTIC_1_WRR_WEIGHT = 330
+ELASTIC_2_WRR_WEIGHT = 660
+BEST_EFFORT_WRR_WEIGHT = 33
 
 # Latency expectations in microseconds.
 MAXIMUM_EXPECTED_LATENCY_CONTROL_TRAFFIC_US = 1000
@@ -87,6 +93,14 @@ class QosTest(TRexTest, SlicingTest):
         self.add_queue_entry(10, 0, qos_utils.QUEUE_ID_REALTIME_1)
         self.add_queue_entry(11, 0, qos_utils.QUEUE_ID_REALTIME_2)
         self.add_queue_entry(12, 0, qos_utils.QUEUE_ID_REALTIME_3)
+        self.add_slice_tc_classifier_entry(
+            slice_id=13, tc=0, l4_dport=qos_utils.L4_DPORT_ELASTIC_TRAFFIC_1
+        )
+        self.add_slice_tc_classifier_entry(
+            slice_id=14, tc=0, l4_dport=qos_utils.L4_DPORT_ELASTIC_TRAFFIC_2
+        )
+        self.add_queue_entry(13, 0, qos_utils.QUEUE_ID_ELASTIC_1)
+        self.add_queue_entry(14, 0, qos_utils.QUEUE_ID_ELASTIC_2)
 
     # Create a background traffic stream.
     def create_background_stream(self) -> STLStream:
@@ -113,6 +127,30 @@ class QosTest(TRexTest, SlicingTest):
         dport=qos_utils.L4_DPORT_REALTIME_TRAFFIC_1,
     ) -> STLStream:
         pkt = qos_utils.get_realtime_traffic_packet(128, dport=dport)
+        return STLStream(
+            packet=STLPktBuilder(pkt=pkt),
+            mode=STLTXCont(bps_L1=l1_bps),
+            isg=50000,  # wait 50 ms till start to let queues fill up
+            flow_stats=STLFlowLatencyStats(pg_id=pg_id),
+        )
+
+    # Create a lower priority elastic stream.
+    def create_elastic_stream(
+        self, pg_id, l1_bps=LINK_RATE_BPS, dport=qos_utils.L4_DPORT_ELASTIC_TRAFFIC_1,
+    ) -> STLStream:
+        pkt = qos_utils.get_elastic_traffic_packet(750, dport=dport)
+        return STLStream(
+            packet=STLPktBuilder(pkt=pkt),
+            mode=STLTXCont(bps_L1=l1_bps),
+            isg=50000,  # wait 50 ms till start to let queues fill up
+            flow_stats=STLFlowLatencyStats(pg_id=pg_id),
+        )
+
+    # Create a lower priority elastic stream.
+    def create_best_effort_stream(
+        self, pg_id, l1_bps=LINK_RATE_BPS, dport=qos_utils.L4_DPORT_BEST_EFFORT_TRAFFIC,
+    ) -> STLStream:
+        pkt = qos_utils.get_best_effort_traffic_packet(750, dport=dport)
         return STLStream(
             packet=STLPktBuilder(pkt=pkt),
             mode=STLTXCont(bps_L1=l1_bps),
@@ -168,7 +206,7 @@ class MinFlowrateWithSoftwareLatencyMeasurement(QosTest):
             print("Statistics for port {}: {}".format(port, readable_stats))
         # Check that expected traffic rate can be achieved.
         self.assertGreater(
-            flow_stats.total_rx, 0, "No control traffic has been received"
+            flow_stats.rx_pkts, 0, "No control traffic has been received"
         )
         self.assertGreaterEqual(
             tx_bps_L1,
@@ -226,7 +264,7 @@ class StrictPriorityControlTrafficIsPrioritized(QosTest):
             print("Statistics for port {}: {}".format(port, readable_stats))
         # Check that SLAs are met.
         self.assertGreater(
-            flow_stats.total_rx, 0, "No control traffic has been received"
+            flow_stats.rx_pkts, 0, "No control traffic has been received"
         )
         self.assertEqual(
             lat_stats.dropped,
@@ -287,7 +325,7 @@ class ControlTrafficIsNotPrioritizedWithoutRules(QosTest):
             print("Statistics for port {}: {}".format(port, readable_stats))
         # Check that SLAs are NOT met.
         self.assertGreater(
-            flow_stats.total_rx, 0, "No control traffic has been received"
+            flow_stats.rx_pkts, 0, "No control traffic has been received"
         )
         self.assertGreater(
             lat_stats.dropped,
@@ -340,7 +378,7 @@ class ControlTrafficIsShaped(QosTest):
             print("Statistics for port {}: {}".format(port, readable_stats))
         # Check that rate limits are enforced.
         self.assertGreater(
-            flow_stats.total_rx, 0, "No control traffic has been received"
+            flow_stats.rx_pkts, 0, "No control traffic has been received"
         )
         self.assertGreater(
             lat_stats.dropped,
@@ -415,7 +453,7 @@ class RealtimeTrafficIsRrScheduled(QosTest):
         flow_stats_1 = get_flow_stats(self.realtime_pg_id_1, stats)
         print(get_readable_latency_stats(lat_stats_1))
         self.assertGreater(
-            flow_stats_1.total_rx, 0, "No realtime traffic has been received"
+            flow_stats_1.rx_pkts, 0, "No realtime traffic has been received"
         )
         self.assertGreater(
             lat_stats_1.dropped,
@@ -437,7 +475,7 @@ class RealtimeTrafficIsRrScheduled(QosTest):
         flow_stats_2 = get_flow_stats(self.realtime_pg_id_2, stats)
         print(get_readable_latency_stats(lat_stats_2))
         self.assertGreater(
-            flow_stats_2.total_rx, 0, "No realtime traffic has been received"
+            flow_stats_2.rx_pkts, 0, "No realtime traffic has been received"
         )
         self.assertGreater(
             lat_stats_2.dropped,
@@ -459,7 +497,7 @@ class RealtimeTrafficIsRrScheduled(QosTest):
         flow_stats_3 = get_flow_stats(self.realtime_pg_id_3, stats)
         print(get_readable_latency_stats(lat_stats_3))
         self.assertGreater(
-            flow_stats_3.total_rx, 0, "No realtime traffic has been received"
+            flow_stats_3.rx_pkts, 0, "No realtime traffic has been received"
         )
         self.assertEqual(
             lat_stats_3.dropped,
@@ -477,6 +515,106 @@ class RealtimeTrafficIsRrScheduled(QosTest):
             f"Average latency in well behaved realtime traffic is too high: {lat_stats_3.average}",
         )
         # Get statistics for TX and RX ports
+        for port in ALL_PORTS:
+            readable_stats = get_readable_port_stats(stats[port])
+            print("Statistics for port {}: {}".format(port, readable_stats))
+
+
+class ElasticTrafficIsWrrScheduled(QosTest):
+    """
+    In this test we check that traffic using elastic queues (including
+    best-effort) is scheduled in a WRR fashion. For this, we start three streams
+    each one trying to saturate the output link by sending at the same high
+    rate. We expect that the amount of bytes received for each stream is
+    proportional to WRR weights.
+    """
+
+    @autocleanup
+    def runTest(self) -> None:
+        elastic_pg_id_1 = 1
+        elastic_pg_id_2 = 2
+        best_effort_pg_id_3 = 3
+
+        self.push_chassis_config()
+        self.setup_basic_forwarding()
+        self.setup_queue_classification()
+
+        streams = [
+            self.create_elastic_stream(
+                elastic_pg_id_1,
+                l1_bps=LINK_RATE_BPS,
+                dport=qos_utils.L4_DPORT_ELASTIC_TRAFFIC_1,
+            ),
+            self.create_elastic_stream(
+                elastic_pg_id_2,
+                l1_bps=LINK_RATE_BPS,
+                dport=qos_utils.L4_DPORT_ELASTIC_TRAFFIC_2,
+            ),
+            self.create_best_effort_stream(
+                best_effort_pg_id_3,
+                l1_bps=LINK_RATE_BPS,
+                dport=qos_utils.L4_DPORT_BEST_EFFORT_TRAFFIC,
+            ),
+        ]
+        self.trex_client.add_streams(streams, ports=PRIORITY_SENDER_PORT)
+        logging.info("Starting traffic, duration: %d sec", TRAFFIC_DURATION_SECONDS)
+        self.trex_client.start(
+            PRIORITY_SENDER_PORT, mult="1", duration=TRAFFIC_DURATION_SECONDS
+        )
+        logging.info("Waiting until all traffic is sent")
+        self.trex_client.wait_on_traffic(ports=PRIORITY_SENDER_PORT, rx_delay_ms=100)
+
+        stats = self.trex_client.get_stats()
+        flow_stats_1 = get_flow_stats(elastic_pg_id_1, stats)
+        print(get_readable_flow_stats(flow_stats_1))
+        flow_stats_2 = get_flow_stats(elastic_pg_id_2, stats)
+        print(get_readable_flow_stats(flow_stats_2))
+        flow_stats_3 = get_flow_stats(best_effort_pg_id_3, stats)
+        print(get_readable_flow_stats(flow_stats_3))
+
+        self.assertGreater(
+            flow_stats_1.rx_pkts, 0, "No traffic has been received for source 1"
+        )
+        self.assertGreater(
+            flow_stats_2.rx_pkts, 0, "No traffic has been received for source 2"
+        )
+        self.assertGreater(
+            flow_stats_3.rx_pkts, 0, "No traffic has been received for source 3",
+        )
+
+        rx_bytes_total = (
+            flow_stats_1.rx_bytes + flow_stats_2.rx_bytes + flow_stats_3.rx_bytes
+        )
+        rx_share_1 = flow_stats_1.rx_bytes / rx_bytes_total
+        rx_share_2 = flow_stats_2.rx_bytes / rx_bytes_total
+        rx_share_3 = flow_stats_3.rx_bytes / rx_bytes_total
+
+        weight_total = (
+            ELASTIC_1_WRR_WEIGHT + ELASTIC_2_WRR_WEIGHT + BEST_EFFORT_WRR_WEIGHT
+        )
+        sched_share_1 = ELASTIC_1_WRR_WEIGHT / weight_total
+        sched_share_2 = ELASTIC_2_WRR_WEIGHT / weight_total
+        sched_share_3 = BEST_EFFORT_WRR_WEIGHT / weight_total
+
+        self.assertAlmostEqual(
+            rx_share_1,
+            sched_share_1,
+            delta=0.005,
+            msg=f"Elastic source 1 was not scheduled as expected",
+        )
+        self.assertAlmostEqual(
+            rx_share_2,
+            sched_share_2,
+            delta=0.005,
+            msg=f"Elastic source 2 was not scheduled as expected",
+        )
+        self.assertAlmostEqual(
+            rx_share_3,
+            sched_share_3,
+            delta=0.005,
+            msg=f"Best-effort source 3 was not scheduled as expected",
+        )
+
         for port in ALL_PORTS:
             readable_stats = get_readable_port_stats(stats[port])
             print("Statistics for port {}: {}".format(port, readable_stats))

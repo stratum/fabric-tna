@@ -129,7 +129,18 @@ LatencyStats = collections.namedtuple(
 )
 
 FlowStats = collections.namedtuple(
-    "FlowStats", ["pg_id", "total_tx", "total_rx", "tx_bytes", "rx_bytes",],
+    "FlowStats",
+    [
+        "pg_id",
+        "tx_pkts",
+        "rx_pkts",
+        "tx_bytes",
+        "rx_bytes",
+        "tx_pkts_share",
+        "rx_pkts_share",
+        "tx_bytes_share",
+        "rx_bytes_share",
+    ],
 )
 
 
@@ -258,14 +269,36 @@ def get_readable_latency_stats(stats: LatencyStats) -> str:
     """
 
 
+def get_readable_flow_stats(stats: FlowStats) -> str:
+    return f"""Flow info for pg_id {stats.pg_id}
+    TX packets: {stats.tx_pkts} ({stats.tx_pkts_share:.1%})
+    RX packets: {stats.rx_pkts} ({stats.rx_pkts_share:.1%})
+    TX bytes: {stats.tx_bytes} ({stats.tx_bytes_share:.1%})
+    RX bytes: {stats.rx_bytes} ({stats.rx_bytes_share:.1%})"""
+
+
 def get_flow_stats(pg_id: int, stats) -> FlowStats:
+    # Obtain sum from all pg_ids to compute shares
+    sums = {}
+    for metric in ["tx_pkts", "rx_pkts", "tx_bytes", "rx_bytes"]:
+        sums[metric] = sum(
+            [
+                int(stats["flow_stats"][pg_id][metric]["total"])
+                for pg_id in stats["flow_stats"]
+                if pg_id != "global"
+            ]
+        )
     flow_stats = stats["flow_stats"].get(pg_id)
     ret = FlowStats(
         pg_id=pg_id,
-        total_tx=flow_stats["tx_pkts"]["total"],
-        total_rx=flow_stats["rx_pkts"]["total"],
+        tx_pkts=flow_stats["tx_pkts"]["total"],
+        rx_pkts=flow_stats["rx_pkts"]["total"],
         tx_bytes=flow_stats["tx_bytes"]["total"],
         rx_bytes=flow_stats["rx_bytes"]["total"],
+        tx_pkts_share=flow_stats["tx_pkts"]["total"] / sums["tx_pkts"],
+        rx_pkts_share=flow_stats["rx_pkts"]["total"] / sums["rx_pkts"],
+        tx_bytes_share=flow_stats["tx_bytes"]["total"] / sums["tx_bytes"],
+        rx_bytes_share=flow_stats["rx_bytes"]["total"] / sums["rx_bytes"],
     )
     return ret
 
