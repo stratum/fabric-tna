@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 package org.stratumproject.fabric.tna.behaviour.upf;
 
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.BiMap;
+import com.google.common.collect.ImmutableBiMap;
 import org.apache.commons.lang3.tuple.Pair;
 import org.onlab.packet.Ip4Address;
 import org.onlab.packet.Ip4Prefix;
@@ -27,11 +28,9 @@ import org.onosproject.net.pi.runtime.PiActionParam;
 import org.onosproject.net.pi.runtime.PiTableAction;
 
 import java.util.Arrays;
-import java.util.Map;
 
 import static org.stratumproject.fabric.tna.behaviour.Constants.DEFAULT_SLICE_ID;
 import static org.stratumproject.fabric.tna.behaviour.Constants.DEFAULT_TC;
-import static org.stratumproject.fabric.tna.behaviour.Constants.TC_BEST_EFFORT;
 import static org.stratumproject.fabric.tna.behaviour.Constants.TC_CONTROL;
 import static org.stratumproject.fabric.tna.behaviour.Constants.TC_ELASTIC;
 import static org.stratumproject.fabric.tna.behaviour.Constants.TC_REAL_TIME;
@@ -83,9 +82,9 @@ public class FabricUpfTranslator {
     private final FabricUpfStore fabricUpfStore;
 
     // TODO: what's the mapping???
-    //  For now QFI==TC
-    static final Map<Integer, Integer> QFI_TO_TC = ImmutableMap.of(
-            0, TC_BEST_EFFORT,
+    //  Make sure to have a 1 to 1 mapping between QFI and TC.
+    static final BiMap<Integer, Integer> QFI_TO_TC = ImmutableBiMap.of(
+            //0, TC_BEST_EFFORT, --> this is DEFAULT_TC
             1, TC_SYSTEM,
             2, TC_CONTROL,
             3, TC_REAL_TIME,
@@ -168,8 +167,8 @@ public class FabricUpfTranslator {
             throw new UpfProgrammableException("Read malformed PDR from dataplane!:" + entry);
         }
 
-        // Find the original QFI if present
-        Integer qfi = fabricUpfStore.pdrMatchToQfi(pdrBuilder.build().withoutActionParams());
+        Integer qfi = QFI_TO_TC.inverse().getOrDefault(
+                FabricUpfTranslatorUtil.getParamInt(action, TC), null);
         if (qfi != null) {
             pdrBuilder.withQfi(qfi.byteValue());
         }
@@ -336,20 +335,14 @@ public class FabricUpfTranslator {
         final PiCriterion match;
         final PiTableId tableId;
 
-        int trafficClass = DEFAULT_TC;
-        if (pdr.hasQfi()) {
-            trafficClass = QFI_TO_TC.getOrDefault((int) pdr.qfi(), DEFAULT_TC);
-            // Store the original QFI value
-            fabricUpfStore.addPdrMatchToQfi(pdr.withoutActionParams(), pdr.qfi());
-        }
-
         final PiAction.Builder actionBuilder = PiAction.builder()
                 .withParameters(Arrays.asList(
                         new PiActionParam(CTR_ID, pdr.counterId()),
                         new PiActionParam(FAR_ID, fabricUpfStore.globalFarIdOf(pdr.sessionId(), pdr.farId())),
                         new PiActionParam(NEEDS_GTPU_DECAP, pdr.matchesEncapped() ? 1 : 0)))
                 .withId(FABRIC_INGRESS_SPGW_LOAD_PDR);
-
+        actionBuilder.withParameter(new PiActionParam(TC, pdr.hasQfi() ?
+                QFI_TO_TC.getOrDefault((int) pdr.qfi(), DEFAULT_TC) : DEFAULT_TC));
         if (pdr.matchesEncapped()) {
             match = PiCriterion.builder()
                     .matchExact(HDR_TEID, pdr.teid().asArray())
@@ -365,7 +358,6 @@ public class FabricUpfTranslator {
             throw new UpfProgrammableException("Flexible PDRs not yet supported! Cannot translate " + pdr);
         }
 
-        actionBuilder.withParameter(new PiActionParam(TC, trafficClass));
         return DefaultFlowRule.builder()
                 .forDevice(deviceId).fromApp(appId).makePermanent()
                 .forTable(tableId)
