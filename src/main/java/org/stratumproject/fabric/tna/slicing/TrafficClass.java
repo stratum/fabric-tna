@@ -15,8 +15,7 @@ public enum TrafficClass {
     CONTROL(TC_CONTROL),
     REAL_TIME(TC_REAL_TIME),
     ELASTIC(TC_ELASTIC),
-    SYSTEM(-1),
-    UNKNOWN(-2);
+    UNKNOWN(-1);
 
     public final int tc;
 
