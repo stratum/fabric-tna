@@ -24,21 +24,21 @@ public interface SlicingAdminService {
     boolean removeSlice(SliceId sliceId);
 
     /**
-     * Allocates given queue to a traffic class in given slice.
+     * Reserves a queue for the queue pool of given traffic class.
      *
      * @param tc traffic class
      * @param queueId queue identifier
-     * @return true if the queue is successfully allocated to given slice and TC
+     * @return true if the queue is successfully reserved to the queue pool of given TC
      */
-    boolean addQueue(TrafficClass tc, QueueId queueId);
+    boolean reserveQueue(TrafficClass tc, QueueId queueId);
 
     /**
-     * Deallocates given queue from a traffic class in given slice.
+     * Releases a queue from the queue pool of given traffic class.
      *
      * @param tc traffic class
      * @param queueId queue identifier
-     * @return true if the queue is successfully deallocated from given slice and TC
+     * @return true if the queue is successfully released from the queue pool of given TC
      */
-    boolean removeQueue(TrafficClass tc, QueueId queueId);
+    boolean releaseQueue(TrafficClass tc, QueueId queueId);
 
 }

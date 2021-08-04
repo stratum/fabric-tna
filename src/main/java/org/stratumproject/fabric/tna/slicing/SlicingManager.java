@@ -80,11 +80,6 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
         return null;
     }
 
-    @Override
-    public boolean addQueue(TrafficClass tc, QueueId queueId) {
-        return false;
-    }
-
     // Implements SlicingAdminService
 
     @Override
@@ -98,7 +93,12 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
     }
 
     @Override
-    public boolean removeQueue(TrafficClass tc, QueueId queueId) {
+    public boolean reserveQueue(TrafficClass tc, QueueId queueId) {
+        return false;
+    }
+
+    @Override
+    public boolean releaseQueue(TrafficClass tc, QueueId queueId) {
         return false;
     }
 
