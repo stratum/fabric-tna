@@ -351,8 +351,6 @@ control IntEgress (
     action _report_encap_common(ipv4_addr_t src_ip, ipv4_addr_t mon_ip,
                                 l4_port_t mon_port, bit<32> switch_id) {
         // Constant fields are initialized in int_mirror_parser.p4.
-        hdr.report_ethernet.dst_addr = 0;
-        hdr.report_ethernet.src_addr = 0;
         hdr.report_ipv4.identification = ip_id_gen.get();
         hdr.report_ipv4.src_addr = src_ip;
         hdr.report_ipv4.dst_addr = mon_ip;
@@ -379,8 +377,6 @@ control IntEgress (
                                  l4_port_t mon_port, bit<32> switch_id) {
         _report_encap_common(src_ip, mon_ip, mon_port, switch_id);
         hdr.report_eth_type.value = ETHERTYPE_INT_WIP_IPV4;
-        hdr.report_ipv4.total_len = 0; // will fix later after recirculation.
-        hdr.report_udp.len = 0; // will fix later after recirculation.
         hdr.report_fixed_header.nproto = NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER;
         hdr.local_report_header.setValid();
     }
@@ -398,8 +394,6 @@ control IntEgress (
                                 l4_port_t mon_port, bit<32> switch_id) {
         _report_encap_common(src_ip, mon_ip, mon_port, switch_id);
         hdr.report_eth_type.value = ETHERTYPE_INT_WIP_IPV4;
-        hdr.report_ipv4.total_len = 0; // will fix later after recirculation.
-        hdr.report_udp.len = 0; // will fix later after recirculation.
         hdr.report_fixed_header.nproto = NPROTO_TELEMETRY_DROP_HEADER;
         hdr.drop_report_header.setValid();
     }
