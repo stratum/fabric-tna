@@ -82,7 +82,7 @@ vendor_config {
       key: 1
       value {
         per_port_shaping_configs {
-          key: 28
+          key: 28 # sdk id 288
           value {
             byte_shaping {
               rate_bps: 1000000000 # 1 Gbps
@@ -132,6 +132,129 @@ vendor_config {
           color_drop_limit_red: 19168
         }
         queue_configs {
+          # Base station (1.0Gbps, 8 queues)
+          sdk_port: 288
+          queue_mapping {
+            # Best-Effort (10.0Mbps)
+            queue_id: 0
+            priority: PRIO_0
+            weight: 33
+            minimum_guaranteed_cells: 0
+            pool: EGRESS_APP_POOL_3
+            # Tail drop at 437 MTUs or earlier
+            base_use_limit: 295
+            baf: BAF_33_PERCENT
+            hysteresis: 0
+            # max_rate_bytes unset
+          }
+          queue_mapping {
+            # System (10.0Mbps)
+            queue_id: 1
+            priority: PRIO_6
+            weight: 750
+            minimum_guaranteed_cells: 0
+            pool: EGRESS_APP_POOL_1
+            # Tail drop at 460 MTUs or earlier
+            base_use_limit: 726
+            baf: BAF_33_PERCENT
+            hysteresis: 0
+            max_rate_bytes {
+              rate_bps: 10000000
+              burst_bytes: 625000 # 5.0ms
+            }
+          }
+          queue_mapping {
+            # Control (50 slots, 100pps, 10MTUs burst, 0.06 util)
+            queue_id: 2
+            priority: PRIO_7
+            weight: 1
+            minimum_guaranteed_cells: 0
+            pool: EGRESS_APP_POOL_0
+            # Tail drop at 469 MTUs or earlier
+            base_use_limit: 887
+            baf: BAF_33_PERCENT
+            hysteresis: 0
+            max_rate_bytes {
+              rate_bps: 60000000
+              burst_bytes: 750000 # 6.0ms
+            }
+          }
+          queue_mapping {
+            # Real-Time 1 (45.0Mbps)
+            queue_id: 3
+            priority: PRIO_6
+            weight: 750
+            minimum_guaranteed_cells: 0
+            pool: EGRESS_APP_POOL_1
+            # Tail drop at 595 MTUs or earlier
+            base_use_limit: 3267
+            baf: BAF_33_PERCENT
+            hysteresis: 0
+            max_rate_bytes {
+              rate_bps: 45000000
+              burst_bytes: 625000 # 5.0ms
+            }
+          }
+          queue_mapping {
+            # Real-Time 2 (30.0Mbps)
+            queue_id: 4
+            priority: PRIO_6
+            weight: 750
+            minimum_guaranteed_cells: 0
+            pool: EGRESS_APP_POOL_1
+            # Tail drop at 537 MTUs or earlier
+            base_use_limit: 2178
+            baf: BAF_33_PERCENT
+            hysteresis: 0
+            max_rate_bytes {
+              rate_bps: 30000000
+              burst_bytes: 625000 # 5.0ms
+            }
+          }
+          queue_mapping {
+            # Real-Time 3 (25.0Mbps)
+            queue_id: 5
+            priority: PRIO_6
+            weight: 750
+            minimum_guaranteed_cells: 0
+            pool: EGRESS_APP_POOL_1
+            # Tail drop at 518 MTUs or earlier
+            base_use_limit: 1815
+            baf: BAF_33_PERCENT
+            hysteresis: 0
+            max_rate_bytes {
+              rate_bps: 25000000
+              burst_bytes: 625000 # 5.0ms
+            }
+          }
+          queue_mapping {
+            # Elastic 1 (100.0Mbps)
+            queue_id: 6
+            priority: PRIO_0
+            weight: 330
+            minimum_guaranteed_cells: 0
+            pool: EGRESS_APP_POOL_2
+            # Tail drop at 3795 MTUs or earlier
+            base_use_limit: 876
+            baf: BAF_33_PERCENT
+            hysteresis: 0
+            # max_rate_bytes unset
+          }
+          queue_mapping {
+            # Elastic 2 (200.0Mbps)
+            queue_id: 7
+            priority: PRIO_0
+            weight: 660
+            minimum_guaranteed_cells: 0
+            pool: EGRESS_APP_POOL_2
+            # Tail drop at 3842 MTUs or earlier
+            base_use_limit: 1753
+            baf: BAF_33_PERCENT
+            hysteresis: 0
+            # max_rate_bytes unset
+          }
+        }
+        queue_configs {
           # Servers (40.0Gbps, 8 queues)
           sdk_port: 296
           queue_mapping {
@@ -141,8 +264,8 @@ vendor_config {
             weight: 33
             minimum_guaranteed_cells: 0
             pool: EGRESS_APP_POOL_3
-            # Tail drop at 741 MTUs or earlier
-            base_use_limit: 5990
+            # Tail drop at 1052 MTUs or earlier
+            base_use_limit: 11832
             baf: BAF_33_PERCENT
             hysteresis: 0
             # max_rate_bytes unset
@@ -154,8 +277,8 @@ vendor_config {
             weight: 750
             minimum_guaranteed_cells: 0
             pool: EGRESS_APP_POOL_1
-            # Tail drop at 450 MTUs or earlier
-            base_use_limit: 544
+            # Tail drop at 460 MTUs or earlier
+            base_use_limit: 726
             baf: BAF_33_PERCENT
             hysteresis: 0
             max_rate_bytes {
@@ -170,8 +293,8 @@ vendor_config {
             weight: 1
             minimum_guaranteed_cells: 0
             pool: EGRESS_APP_POOL_0
-            # Tail drop at 457 MTUs or earlier
-            base_use_limit: 665
+            # Tail drop at 469 MTUs or earlier
+            base_use_limit: 887
             baf: BAF_33_PERCENT
             hysteresis: 0
             max_rate_bytes {
@@ -186,8 +309,8 @@ vendor_config {
             weight: 750
             minimum_guaranteed_cells: 0
             pool: EGRESS_APP_POOL_1
-            # Tail drop at 552 MTUs or earlier
-            base_use_limit: 2450
+            # Tail drop at 595 MTUs or earlier
+            base_use_limit: 3267
             baf: BAF_33_PERCENT
             hysteresis: 0
             max_rate_bytes {
@@ -202,8 +325,8 @@ vendor_config {
             weight: 750
             minimum_guaranteed_cells: 0
             pool: EGRESS_APP_POOL_1
-            # Tail drop at 508 MTUs or earlier
-            base_use_limit: 1633
+            # Tail drop at 537 MTUs or earlier
+            base_use_limit: 2178
             baf: BAF_33_PERCENT
             hysteresis: 0
             max_rate_bytes {
@@ -218,8 +341,8 @@ vendor_config {
             weight: 750
             minimum_guaranteed_cells: 0
             pool: EGRESS_APP_POOL_1
-            # Tail drop at 494 MTUs or earlier
-            base_use_limit: 1361
+            # Tail drop at 518 MTUs or earlier
+            base_use_limit: 1815
             baf: BAF_33_PERCENT
             hysteresis: 0
             max_rate_bytes {
@@ -234,8 +357,8 @@ vendor_config {
             weight: 330
             minimum_guaranteed_cells: 0
             pool: EGRESS_APP_POOL_2
-            # Tail drop at 4695 MTUs or earlier
-            base_use_limit: 17749
+            # Tail drop at 5618 MTUs or earlier
+            base_use_limit: 35060
             baf: BAF_33_PERCENT
             hysteresis: 0
             # max_rate_bytes unset
@@ -247,131 +370,8 @@ vendor_config {
             weight: 660
             minimum_guaranteed_cells: 0
             pool: EGRESS_APP_POOL_2
-            # Tail drop at 5641 MTUs or earlier
-            base_use_limit: 35498
-            baf: BAF_33_PERCENT
-            hysteresis: 0
-            # max_rate_bytes unset
-          }
-        }
-        queue_configs {
-          # Servers (40.0Gbps, 8 queues)
-          sdk_port: 288
-          queue_mapping {
-            # Best-Effort (10.0Mbps)
-            queue_id: 0
-            priority: PRIO_0
-            weight: 33
-            minimum_guaranteed_cells: 0
-            pool: EGRESS_APP_POOL_3
-            # Tail drop at 741 MTUs or earlier
-            base_use_limit: 5990
-            baf: BAF_33_PERCENT
-            hysteresis: 0
-            # max_rate_bytes unset
-          }
-          queue_mapping {
-            # System (10.0Mbps)
-            queue_id: 1
-            priority: PRIO_6
-            weight: 750
-            minimum_guaranteed_cells: 0
-            pool: EGRESS_APP_POOL_1
-            # Tail drop at 450 MTUs or earlier
-            base_use_limit: 544
-            baf: BAF_33_PERCENT
-            hysteresis: 0
-            max_rate_bytes {
-              rate_bps: 10000000
-              burst_bytes: 25000000 # 5.0ms
-            }
-          }
-          queue_mapping {
-            # Control (50 slots, 100pps, 10MTUs burst, 0.0015 util)
-            queue_id: 2
-            priority: PRIO_7
-            weight: 1
-            minimum_guaranteed_cells: 0
-            pool: EGRESS_APP_POOL_0
-            # Tail drop at 457 MTUs or earlier
-            base_use_limit: 665
-            baf: BAF_33_PERCENT
-            hysteresis: 0
-            max_rate_bytes {
-              rate_bps: 60000000
-              burst_bytes: 750000 # 0.15ms
-            }
-          }
-          queue_mapping {
-            # Real-Time 1 (45.0Mbps)
-            queue_id: 3
-            priority: PRIO_6
-            weight: 750
-            minimum_guaranteed_cells: 0
-            pool: EGRESS_APP_POOL_1
-            # Tail drop at 552 MTUs or earlier
-            base_use_limit: 2450
-            baf: BAF_33_PERCENT
-            hysteresis: 0
-            max_rate_bytes {
-              rate_bps: 45000000
-              burst_bytes: 25000000 # 5.0ms
-            }
-          }
-          queue_mapping {
-            # Real-Time 2 (30.0Mbps)
-            queue_id: 4
-            priority: PRIO_6
-            weight: 750
-            minimum_guaranteed_cells: 0
-            pool: EGRESS_APP_POOL_1
-            # Tail drop at 508 MTUs or earlier
-            base_use_limit: 1633
-            baf: BAF_33_PERCENT
-            hysteresis: 0
-            max_rate_bytes {
-              rate_bps: 30000000
-              burst_bytes: 25000000 # 5.0ms
-            }
-          }
-          queue_mapping {
-            # Real-Time 3 (25.0Mbps)
-            queue_id: 5
-            priority: PRIO_6
-            weight: 750
-            minimum_guaranteed_cells: 0
-            pool: EGRESS_APP_POOL_1
-            # Tail drop at 494 MTUs or earlier
-            base_use_limit: 1361
-            baf: BAF_33_PERCENT
-            hysteresis: 0
-            max_rate_bytes {
-              rate_bps: 25000000
-              burst_bytes: 25000000 # 5.0ms
-            }
-          }
-          queue_mapping {
-            # Elastic 1 (100.0Mbps)
-            queue_id: 6
-            priority: PRIO_0
-            weight: 330
-            minimum_guaranteed_cells: 0
-            pool: EGRESS_APP_POOL_2
-            # Tail drop at 4695 MTUs or earlier
-            base_use_limit: 17749
-            baf: BAF_33_PERCENT
-            hysteresis: 0
-            # max_rate_bytes unset
-          }
-          queue_mapping {
-            # Elastic 2 (200.0Mbps)
-            queue_id: 7
-            priority: PRIO_0
-            weight: 660
-            minimum_guaranteed_cells: 0
-            pool: EGRESS_APP_POOL_2
-            # Tail drop at 5641 MTUs or earlier
-            base_use_limit: 35498
+            # Tail drop at 7488 MTUs or earlier
+            base_use_limit: 70120
             baf: BAF_33_PERCENT
             hysteresis: 0
             # max_rate_bytes unset
@@ -387,8 +387,8 @@ vendor_config {
             weight: 33
             minimum_guaranteed_cells: 0
             pool: EGRESS_APP_POOL_3
-            # Tail drop at 741 MTUs or earlier
-            base_use_limit: 5990
+            # Tail drop at 1052 MTUs or earlier
+            base_use_limit: 11832
             baf: BAF_33_PERCENT
             hysteresis: 0
             # max_rate_bytes unset
@@ -400,8 +400,8 @@ vendor_config {
             weight: 750
             minimum_guaranteed_cells: 0
             pool: EGRESS_APP_POOL_1
-            # Tail drop at 450 MTUs or earlier
-            base_use_limit: 544
+            # Tail drop at 460 MTUs or earlier
+            base_use_limit: 726
             baf: BAF_33_PERCENT
             hysteresis: 0
             max_rate_bytes {
@@ -416,8 +416,8 @@ vendor_config {
             weight: 1
             minimum_guaranteed_cells: 0
             pool: EGRESS_APP_POOL_0
-            # Tail drop at 457 MTUs or earlier
-            base_use_limit: 665
+            # Tail drop at 469 MTUs or earlier
+            base_use_limit: 887
             baf: BAF_33_PERCENT
             hysteresis: 0
             max_rate_bytes {
@@ -432,8 +432,8 @@ vendor_config {
             weight: 750
             minimum_guaranteed_cells: 0
             pool: EGRESS_APP_POOL_1
-            # Tail drop at 552 MTUs or earlier
-            base_use_limit: 2450
+            # Tail drop at 595 MTUs or earlier
+            base_use_limit: 3267
             baf: BAF_33_PERCENT
             hysteresis: 0
             max_rate_bytes {
@@ -448,8 +448,8 @@ vendor_config {
             weight: 750
             minimum_guaranteed_cells: 0
             pool: EGRESS_APP_POOL_1
-            # Tail drop at 508 MTUs or earlier
-            base_use_limit: 1633
+            # Tail drop at 537 MTUs or earlier
+            base_use_limit: 2178
             baf: BAF_33_PERCENT
             hysteresis: 0
             max_rate_bytes {
@@ -464,8 +464,8 @@ vendor_config {
             weight: 750
             minimum_guaranteed_cells: 0
             pool: EGRESS_APP_POOL_1
-            # Tail drop at 494 MTUs or earlier
-            base_use_limit: 1361
+            # Tail drop at 518 MTUs or earlier
+            base_use_limit: 1815
             baf: BAF_33_PERCENT
             hysteresis: 0
             max_rate_bytes {
@@ -480,8 +480,8 @@ vendor_config {
             weight: 330
             minimum_guaranteed_cells: 0
             pool: EGRESS_APP_POOL_2
-            # Tail drop at 4695 MTUs or earlier
-            base_use_limit: 17749
+            # Tail drop at 5618 MTUs or earlier
+            base_use_limit: 35060
             baf: BAF_33_PERCENT
             hysteresis: 0
             # max_rate_bytes unset
@@ -493,131 +493,8 @@ vendor_config {
             weight: 660
             minimum_guaranteed_cells: 0
             pool: EGRESS_APP_POOL_2
-            # Tail drop at 5641 MTUs or earlier
-            base_use_limit: 35498
-            baf: BAF_33_PERCENT
-            hysteresis: 0
-            # max_rate_bytes unset
-          }
-        }
-        queue_configs {
-          # Servers (40.0Gbps, 8 queues)
-          sdk_port: 280
-          queue_mapping {
-            # Best-Effort (10.0Mbps)
-            queue_id: 0
-            priority: PRIO_0
-            weight: 33
-            minimum_guaranteed_cells: 0
-            pool: EGRESS_APP_POOL_3
-            # Tail drop at 741 MTUs or earlier
-            base_use_limit: 5990
-            baf: BAF_33_PERCENT
-            hysteresis: 0
-            # max_rate_bytes unset
-          }
-          queue_mapping {
-            # System (10.0Mbps)
-            queue_id: 1
-            priority: PRIO_6
-            weight: 750
-            minimum_guaranteed_cells: 0
-            pool: EGRESS_APP_POOL_1
-            # Tail drop at 450 MTUs or earlier
-            base_use_limit: 544
-            baf: BAF_33_PERCENT
-            hysteresis: 0
-            max_rate_bytes {
-              rate_bps: 10000000
-              burst_bytes: 25000000 # 5.0ms
-            }
-          }
-          queue_mapping {
-            # Control (50 slots, 100pps, 10MTUs burst, 0.0015 util)
-            queue_id: 2
-            priority: PRIO_7
-            weight: 1
-            minimum_guaranteed_cells: 0
-            pool: EGRESS_APP_POOL_0
-            # Tail drop at 457 MTUs or earlier
-            base_use_limit: 665
-            baf: BAF_33_PERCENT
-            hysteresis: 0
-            max_rate_bytes {
-              rate_bps: 60000000
-              burst_bytes: 750000 # 0.15ms
-            }
-          }
-          queue_mapping {
-            # Real-Time 1 (45.0Mbps)
-            queue_id: 3
-            priority: PRIO_6
-            weight: 750
-            minimum_guaranteed_cells: 0
-            pool: EGRESS_APP_POOL_1
-            # Tail drop at 552 MTUs or earlier
-            base_use_limit: 2450
-            baf: BAF_33_PERCENT
-            hysteresis: 0
-            max_rate_bytes {
-              rate_bps: 45000000
-              burst_bytes: 25000000 # 5.0ms
-            }
-          }
-          queue_mapping {
-            # Real-Time 2 (30.0Mbps)
-            queue_id: 4
-            priority: PRIO_6
-            weight: 750
-            minimum_guaranteed_cells: 0
-            pool: EGRESS_APP_POOL_1
-            # Tail drop at 508 MTUs or earlier
-            base_use_limit: 1633
-            baf: BAF_33_PERCENT
-            hysteresis: 0
-            max_rate_bytes {
-              rate_bps: 30000000
-              burst_bytes: 25000000 # 5.0ms
-            }
-          }
-          queue_mapping {
-            # Real-Time 3 (25.0Mbps)
-            queue_id: 5
-            priority: PRIO_6
-            weight: 750
-            minimum_guaranteed_cells: 0
-            pool: EGRESS_APP_POOL_1
-            # Tail drop at 494 MTUs or earlier
-            base_use_limit: 1361
-            baf: BAF_33_PERCENT
-            hysteresis: 0
-            max_rate_bytes {
-              rate_bps: 25000000
-              burst_bytes: 25000000 # 5.0ms
-            }
-          }
-          queue_mapping {
-            # Elastic 1 (100.0Mbps)
-            queue_id: 6
-            priority: PRIO_0
-            weight: 330
-            minimum_guaranteed_cells: 0
-            pool: EGRESS_APP_POOL_2
-            # Tail drop at 4695 MTUs or earlier
-            base_use_limit: 17749
-            baf: BAF_33_PERCENT
-            hysteresis: 0
-            # max_rate_bytes unset
-          }
-          queue_mapping {
-            # Elastic 2 (200.0Mbps)
-            queue_id: 7
-            priority: PRIO_0
-            weight: 660
-            minimum_guaranteed_cells: 0
-            pool: EGRESS_APP_POOL_2
-            # Tail drop at 5641 MTUs or earlier
-            base_use_limit: 35498
+            # Tail drop at 7488 MTUs or earlier
+            base_use_limit: 70120
             baf: BAF_33_PERCENT
             hysteresis: 0
             # max_rate_bytes unset

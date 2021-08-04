@@ -5,18 +5,10 @@
 # satisfied. For more information, see this doc:
 # https://docs.google.com/document/d/1jq6NH-fffe8ImMo4EC_yMwH1djlrhWaQu2lpLFJKljA
 
-import json
-import logging
-import os
-import pprint
-from argparse import ArgumentParser
-from datetime import datetime
-
 import gnmi_utils
 import qos_utils
 from base_test import *
 from fabric_test import *
-from scapy.layers.all import IP, TCP, UDP, Ether
 from trex_stl_lib.api import STLFlowLatencyStats, STLPktBuilder, STLStream, STLTXCont
 from trex_test import TRexTest
 from trex_utils import *
@@ -136,23 +128,48 @@ class QosTest(TRexTest, SlicingTest):
 
     # Create a lower priority elastic stream.
     def create_elastic_stream(
-        self, pg_id, l1_bps=LINK_RATE_BPS, dport=qos_utils.L4_DPORT_ELASTIC_TRAFFIC_1,
+        self,
+        pg_id,
+        l1_bps=LINK_RATE_BPS,
+        dport=qos_utils.L4_DPORT_ELASTIC_TRAFFIC_1,
+        l2_size=750,
+        l2_size_range=None,
     ) -> STLStream:
-        pkt = qos_utils.get_elastic_traffic_packet(750, dport=dport)
+        vm = None
+        if l2_size_range is not None:
+            # Stream has random packet size
+            vm = get_random_pkt_trim_vm(
+                max_l2_size=max(l2_size_range), min_l2_size=min(l2_size_range),
+            )
+            l2_size = max(l2_size_range)
+        pkt = qos_utils.get_elastic_traffic_packet(l2_size=l2_size, dport=dport)
         return STLStream(
-            packet=STLPktBuilder(pkt=pkt),
+            packet=STLPktBuilder(pkt=pkt, vm=vm),
             mode=STLTXCont(bps_L1=l1_bps),
             isg=50000,  # wait 50 ms till start to let queues fill up
             flow_stats=STLFlowLatencyStats(pg_id=pg_id),
+            random_seed=pg_id,
         )
 
-    # Create a lower priority elastic stream.
+    # Create a lower priority best-effort stream.
     def create_best_effort_stream(
-        self, pg_id, l1_bps=LINK_RATE_BPS, dport=qos_utils.L4_DPORT_BEST_EFFORT_TRAFFIC,
+        self,
+        pg_id,
+        l1_bps=LINK_RATE_BPS,
+        dport=qos_utils.L4_DPORT_BEST_EFFORT_TRAFFIC,
+        l2_size=750,
+        l2_size_range=None,
     ) -> STLStream:
-        pkt = qos_utils.get_best_effort_traffic_packet(750, dport=dport)
+        vm = None
+        if l2_size_range is not None:
+            # Stream has random packet size
+            vm = get_random_pkt_trim_vm(
+                max_l2_size=max(l2_size_range), min_l2_size=min(l2_size_range),
+            )
+            l2_size = max(l2_size_range)
+        pkt = qos_utils.get_best_effort_traffic_packet(l2_size=l2_size, dport=dport)
         return STLStream(
-            packet=STLPktBuilder(pkt=pkt),
+            packet=STLPktBuilder(pkt=pkt, vm=vm),
             mode=STLTXCont(bps_L1=l1_bps),
             isg=50000,  # wait 50 ms till start to let queues fill up
             flow_stats=STLFlowLatencyStats(pg_id=pg_id),
@@ -522,11 +539,82 @@ class RealtimeTrafficIsRrScheduled(QosTest):
 
 class ElasticTrafficIsWrrScheduled(QosTest):
     """
-    In this test we check that traffic using elastic queues (including
-    best-effort) is scheduled in a WRR fashion. For this, we start three streams
-    each one trying to saturate the output link by sending at the same high
-    rate. We expect that the amount of bytes received for each stream is
-    proportional to WRR weights.
+    In this test we check that traffic using elastic queues is scheduled in a
+    WRR fashion. For this, we start two streams each one trying to saturate
+    the output link by sending at the same high rate. We expect that the amount
+    of bytes received for each stream is proportional to WRR weights.
+    """
+
+    @autocleanup
+    def runTest(self) -> None:
+        elastic_pg_id_1 = 1
+        elastic_pg_id_2 = 2
+
+        self.push_chassis_config()
+        self.setup_basic_forwarding()
+        self.setup_queue_classification()
+
+        streams = [
+            self.create_elastic_stream(
+                elastic_pg_id_1,
+                l1_bps=LINK_RATE_BPS,
+                dport=qos_utils.L4_DPORT_ELASTIC_TRAFFIC_1,
+                l2_size_range=[80, 1400],
+            ),
+            self.create_elastic_stream(
+                elastic_pg_id_2,
+                l1_bps=LINK_RATE_BPS,
+                dport=qos_utils.L4_DPORT_ELASTIC_TRAFFIC_2,
+                l2_size_range=[80, 1400],
+            ),
+        ]
+        self.trex_client.add_streams(streams, ports=PRIORITY_SENDER_PORT)
+        logging.info("Starting traffic, duration: %d sec", TRAFFIC_DURATION_SECONDS)
+        self.trex_client.start(
+            PRIORITY_SENDER_PORT, mult="1", duration=TRAFFIC_DURATION_SECONDS
+        )
+        logging.info("Waiting until all traffic is sent")
+        self.trex_client.wait_on_traffic(ports=PRIORITY_SENDER_PORT, rx_delay_ms=100)
+
+        stats = self.trex_client.get_stats()
+        flow_stats_1 = get_flow_stats(elastic_pg_id_1, stats)
+        print(get_readable_flow_stats(flow_stats_1))
+        flow_stats_2 = get_flow_stats(elastic_pg_id_2, stats)
+        print(get_readable_flow_stats(flow_stats_2))
+
+        self.assertGreater(
+            flow_stats_1.rx_pkts, 0, "No traffic has been received for source 1"
+        )
+        self.assertGreater(
+            flow_stats_2.rx_pkts, 0, "No traffic has been received for source 2"
+        )
+
+        weight_total = ELASTIC_1_WRR_WEIGHT + ELASTIC_2_WRR_WEIGHT
+
+        self.assertAlmostEqual(
+            flow_stats_1.rx_bytes_share,
+            ELASTIC_1_WRR_WEIGHT / weight_total,
+            delta=0.005,
+            msg=f"Elastic source 1 was not scheduled as expected",
+        )
+        self.assertAlmostEqual(
+            flow_stats_2.rx_bytes_share,
+            ELASTIC_2_WRR_WEIGHT / weight_total,
+            delta=0.005,
+            msg=f"Elastic source 2 was not scheduled as expected",
+        )
+
+        for port in ALL_PORTS:
+            readable_stats = get_readable_port_stats(stats[port])
+            print("Statistics for port {}: {}".format(port, readable_stats))
+
+
+# FIXME: currently not working as actual rx byte shares do not meet expectations
+class BestEffortTrafficIsWrrScheduled(QosTest):
+    """
+    Same as ElasticTrafficIsWrrScheduled but adds a best-effort stream. The
+    best-effort queue should be treated as an elastic queue, hence receive
+    service proportional to its weight.
     """
 
     @autocleanup
@@ -544,16 +632,19 @@ class ElasticTrafficIsWrrScheduled(QosTest):
                 elastic_pg_id_1,
                 l1_bps=LINK_RATE_BPS,
                 dport=qos_utils.L4_DPORT_ELASTIC_TRAFFIC_1,
+                l2_size_range=[80, 1400],
             ),
             self.create_elastic_stream(
                 elastic_pg_id_2,
                 l1_bps=LINK_RATE_BPS,
                 dport=qos_utils.L4_DPORT_ELASTIC_TRAFFIC_2,
+                l2_size_range=[80, 1400],
             ),
             self.create_best_effort_stream(
                 best_effort_pg_id_3,
                 l1_bps=LINK_RATE_BPS,
                 dport=qos_utils.L4_DPORT_BEST_EFFORT_TRAFFIC,
+                l2_size_range=[80, 1400],
             ),
         ]
         self.trex_client.add_streams(streams, ports=PRIORITY_SENDER_PORT)
@@ -582,35 +673,25 @@ class ElasticTrafficIsWrrScheduled(QosTest):
             flow_stats_3.rx_pkts, 0, "No traffic has been received for source 3",
         )
 
-        rx_bytes_total = (
-            flow_stats_1.rx_bytes + flow_stats_2.rx_bytes + flow_stats_3.rx_bytes
-        )
-        rx_share_1 = flow_stats_1.rx_bytes / rx_bytes_total
-        rx_share_2 = flow_stats_2.rx_bytes / rx_bytes_total
-        rx_share_3 = flow_stats_3.rx_bytes / rx_bytes_total
-
         weight_total = (
             ELASTIC_1_WRR_WEIGHT + ELASTIC_2_WRR_WEIGHT + BEST_EFFORT_WRR_WEIGHT
         )
-        sched_share_1 = ELASTIC_1_WRR_WEIGHT / weight_total
-        sched_share_2 = ELASTIC_2_WRR_WEIGHT / weight_total
-        sched_share_3 = BEST_EFFORT_WRR_WEIGHT / weight_total
 
         self.assertAlmostEqual(
-            rx_share_1,
-            sched_share_1,
+            flow_stats_1.rx_bytes_share,
+            ELASTIC_1_WRR_WEIGHT / weight_total,
             delta=0.005,
             msg=f"Elastic source 1 was not scheduled as expected",
         )
         self.assertAlmostEqual(
-            rx_share_2,
-            sched_share_2,
+            flow_stats_2.rx_bytes_share,
+            ELASTIC_2_WRR_WEIGHT / weight_total,
             delta=0.005,
             msg=f"Elastic source 2 was not scheduled as expected",
         )
         self.assertAlmostEqual(
-            rx_share_3,
-            sched_share_3,
+            flow_stats_3.rx_bytes_share,
+            BEST_EFFORT_WRR_WEIGHT / weight_total,
             delta=0.005,
             msg=f"Best-effort source 3 was not scheduled as expected",
         )

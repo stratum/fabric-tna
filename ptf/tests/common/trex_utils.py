@@ -7,6 +7,15 @@ import logging
 import numpy as np
 
 # Multiplier for data rates
+from fabric_test import IP_HDR_BYTES, UDP_HDR_BYTES
+from trex.stl.trex_stl_packet_builder_scapy import (
+    STLScVmRaw,
+    STLVmFixIpv4,
+    STLVmFlowVar,
+    STLVmTrimPktSize,
+    STLVmWrFlowVar,
+)
+
 K = 1000
 M = 1000 * K
 G = 1000 * M
@@ -301,6 +310,32 @@ def get_flow_stats(pg_id: int, stats) -> FlowStats:
         rx_bytes_share=flow_stats["rx_bytes"]["total"] / sums["rx_bytes"],
     )
     return ret
+
+
+# Returns a field engine to randomize packet size by trimming them
+def get_random_pkt_trim_vm(max_l2_size, min_l2_size):
+    l3_len_fix = -IP_HDR_BYTES
+    l4_len_fix = -(IP_HDR_BYTES + UDP_HDR_BYTES)
+    return STLScVmRaw(
+        [
+            # Create random variable
+            STLVmFlowVar(
+                name="fv_rand",
+                min_value=min_l2_size,
+                max_value=max_l2_size,
+                size=2,
+                op="random",
+            ),
+            # Trim pkt using random variable
+            STLVmTrimPktSize("fv_rand"),
+            # Fix IP len
+            STLVmWrFlowVar(fv_name="fv_rand", pkt_offset="IP.len", add_val=l3_len_fix),
+            # Fix IP checksum
+            STLVmFixIpv4(offset="IP"),
+            # Fix UDP len
+            STLVmWrFlowVar(fv_name="fv_rand", pkt_offset="UDP.len", add_val=l4_len_fix),
+        ]
+    )
 
 
 class ParseExtendArgAction(argparse.Action):

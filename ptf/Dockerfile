@@ -91,7 +91,6 @@ ENV PIP_DEPS \
     git+https://github.com/p4lang/ptf@$PTF_VER \
     protobuf==$PROTOBUF_VER \
     grpcio==$GRPC_VER \
-    scapy==$SCAPY_VER \
     p4runtime-shell==$P4RUNTIME_SHELL_VER
 
 RUN apt update && apt install -y $RUNTIME_DEPS
