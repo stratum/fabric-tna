@@ -497,12 +497,13 @@ control IntEgress (
 #endif // WITH_DEBUG
     }
 
-
+    @hidden
     action adjust_ip_udp_len(bit<16> adjust_ip, bit<16> adjust_udp) {
         hdr.ipv4.total_len = fabric_md.pkt_length + adjust_ip;
         hdr.udp.len = fabric_md.pkt_length + adjust_udp;
     }
 
+    @hidden
     table adjust_int_report_hdr_length {
         key = {
             fabric_md.bridged.int_bmd.is_wip: exact @name("is_int_wip");
@@ -513,7 +514,11 @@ control IntEgress (
             adjust_ip_udp_len;
         }
         const default_action = nop();
-        const size = 1;
+        const size = 2;
+        const entries = {
+            INT_IS_WIP: adjust_ip_udp_len(INT_WIP_ADJUST_IP_BYTES, INT_WIP_ADJUST_UDP_BYTES);
+            INT_IS_WIP_WITH_MPLS: adjust_ip_udp_len(INT_WIP_ADJUST_IP_MPLS_BYTES, INT_WIP_ADJUST_UDP_MPLS_BYTES);
+        }
     }
 
     apply {

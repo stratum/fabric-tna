@@ -124,10 +124,6 @@ public class FabricIntProgrammableTest {
     private static final long DEFAULT_QUEUE_REPORT_LATENCY_THRESHOLD = 2000; // ns
     private static final byte MAX_QUEUES = 32;
     private static final int INT_MIRROR_TRUNCATE_MAX_LEN = 128;
-    private static final int ADJUST_IP = 0xFFEE;
-    private static final int ADJUST_UDP = 0xFFDA;
-    private static final int ADJUST_IP_MPLS = 0xFFEA;
-    private static final int ADJUST_UDP_MPLS = 0xFFD6;
 
     private FabricIntProgrammable intProgrammable;
     private FlowRuleService flowRuleService;
@@ -211,7 +207,6 @@ public class FabricIntProgrammableTest {
                                      INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT),
                 buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_DEFLECTED,
                                      INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID),
-                buildHeaderLenAdjustRule(LEAF_DEVICE_ID, ADJUST_IP, ADJUST_UDP),
                 buildFilterConfigFlow(LEAF_DEVICE_ID)
         );
 
@@ -262,7 +257,6 @@ public class FabricIntProgrammableTest {
                                      INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT),
                 buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_DEFLECTED,
                                      INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID),
-                buildHeaderLenAdjustRule(LEAF_DEVICE_ID, ADJUST_IP, ADJUST_UDP),
                 buildFilterConfigFlow(LEAF_DEVICE_ID)
         );
 
@@ -318,7 +312,6 @@ public class FabricIntProgrammableTest {
                                      INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT),
                 buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_DEFLECTED,
                                      INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID),
-                buildHeaderLenAdjustRule(LEAF_DEVICE_ID, ADJUST_IP, ADJUST_UDP),
                 buildFilterConfigFlow(LEAF_DEVICE_ID)
         );
 
@@ -368,7 +361,6 @@ public class FabricIntProgrammableTest {
                                      INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT),
                 buildReportTableRule(SPINE_DEVICE_ID, true, BMD_TYPE_DEFLECTED,
                                      INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID),
-                buildHeaderLenAdjustRule(SPINE_DEVICE_ID, ADJUST_IP_MPLS, ADJUST_UDP_MPLS),
                 buildFilterConfigFlow(SPINE_DEVICE_ID)
         );
 
@@ -433,9 +425,7 @@ public class FabricIntProgrammableTest {
                                          INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT)),
                 buildFlowEntry(
                     buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_DEFLECTED,
-                                         INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID)),
-                buildFlowEntry(
-                    buildHeaderLenAdjustRule(LEAF_DEVICE_ID, ADJUST_IP, ADJUST_UDP))
+                                         INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID))
         );
         Set<FlowEntry> randomEntries = buildRandomFlowEntries();
         Set<FlowEntry> entries = Sets.newHashSet(intEntries);
@@ -688,36 +678,6 @@ public class FabricIntProgrammableTest {
                 .makePermanent()
                 .forDevice(deviceId)
                 .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_REPORT)
-                .build();
-    }
-
-    private FlowRule buildHeaderLenAdjustRule(DeviceId deviceId, int adjustIp, int adjustUdp) {
-        final PiActionParam adjustIpParam = new PiActionParam(
-            P4InfoConstants.ADJUST_IP, ImmutableByteSequence.copyFrom(adjustIp));
-        final PiActionParam adjustUdpParam = new PiActionParam(
-            P4InfoConstants.ADJUST_UDP, ImmutableByteSequence.copyFrom(adjustUdp));
-        final TrafficTreatment treatment = DefaultTrafficTreatment.builder()
-            .piTableAction(
-                PiAction.builder()
-                    .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_ADJUST_IP_UDP_LEN)
-                    .withParameter(adjustIpParam)
-                    .withParameter(adjustUdpParam)
-                    .build()
-            )
-            .build();
-        final TrafficSelector selector = DefaultTrafficSelector.builder()
-                .matchPi(PiCriterion.builder()
-                        .matchExact(P4InfoConstants.HDR_IS_INT_WIP, 1)
-                        .build())
-                .build();
-        return DefaultFlowRule.builder()
-                .withSelector(selector)
-                .withTreatment(treatment)
-                .fromApp(APP_ID)
-                .withPriority(DEFAULT_PRIORITY)
-                .makePermanent()
-                .forDevice(deviceId)
-                .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_ADJUST_INT_REPORT_HDR_LENGTH)
                 .build();
     }
 

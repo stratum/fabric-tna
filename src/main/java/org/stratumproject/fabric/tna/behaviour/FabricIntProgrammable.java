@@ -113,8 +113,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
             P4InfoConstants.FABRIC_INGRESS_INT_WATCHLIST_WATCHLIST,
             P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_REPORT,
             P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_CONFIG,
-            P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_QUEUE_LATENCY_THRESHOLDS,
-            P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_ADJUST_INT_REPORT_HDR_LENGTH
+            P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_QUEUE_LATENCY_THRESHOLDS
     );
     private static final short BMD_TYPE_EGRESS_MIRROR = 2;
     private static final short BMD_TYPE_INT_INGRESS_DROP = 4;
@@ -124,10 +123,6 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
     private static final short INT_REPORT_TYPE_LOCAL = 1;
     private static final short INT_REPORT_TYPE_DROP = 2;
     private static final int INT_MIRROR_TRUNCATE_MAX_LEN = 128;
-    private static final short ETH_FCS_BYTES = 4;
-    private static final short ETH_HDR_BYTES = 14;
-    private static final short MPLS_HDR_BYTES = 4;
-    private static final short IP_HDR_BYTES = 20;
 
     private FlowRuleService flowRuleService;
     private GroupService groupService;
@@ -541,48 +536,6 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 .build();
     }
 
-    private FlowRule buildHeaderLenAdjustEntry(SegmentRoutingDeviceConfig srCfg) {
-        // Use integer to store the value since we need to convert a signed value to
-        // an unsigned value(e.g., -1 -> 0xffff) which we cannot use short to store it.
-        int adjustIp = ETH_FCS_BYTES + ETH_HDR_BYTES;
-        if (!srCfg.isEdgeRouter()) {
-            adjustIp += MPLS_HDR_BYTES;
-        }
-        int adjustUdp = adjustIp + IP_HDR_BYTES;
-
-        // Convert to 2-byte negative number.
-        adjustIp = (adjustIp ^ 0xffff) + 1;
-        adjustUdp = (adjustUdp ^ 0xffff) + 1;
-
-        final PiActionParam adjustIpParam = new PiActionParam(
-            P4InfoConstants.ADJUST_IP, ImmutableByteSequence.copyFrom(adjustIp));
-        final PiActionParam adjustUdpParam = new PiActionParam(
-            P4InfoConstants.ADJUST_UDP, ImmutableByteSequence.copyFrom(adjustUdp));
-        final TrafficTreatment treatment = DefaultTrafficTreatment.builder()
-            .piTableAction(
-                PiAction.builder()
-                    .withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_ADJUST_IP_UDP_LEN)
-                    .withParameter(adjustIpParam)
-                    .withParameter(adjustUdpParam)
-                    .build()
-            )
-            .build();
-        final TrafficSelector selector = DefaultTrafficSelector.builder()
-                .matchPi(PiCriterion.builder()
-                        .matchExact(P4InfoConstants.HDR_IS_INT_WIP, 1)
-                        .build())
-                .build();
-        return DefaultFlowRule.builder()
-                .withSelector(selector)
-                .withTreatment(treatment)
-                .fromApp(appId)
-                .withPriority(DEFAULT_PRIORITY)
-                .makePermanent()
-                .forDevice(this.data().deviceId())
-                .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_ADJUST_INT_REPORT_HDR_LENGTH)
-                .build();
-    }
-
     private List<FlowRule> buildReportEntries(IntReportConfig intCfg) {
         final SegmentRoutingDeviceConfig srCfg = cfgService.getConfig(
                 deviceId, SegmentRoutingDeviceConfig.class);
@@ -599,8 +552,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 buildReportEntryWithType(srCfg, intCfg, BMD_TYPE_EGRESS_MIRROR,
                                          INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT),
                 buildReportEntryWithType(srCfg, intCfg, BMD_TYPE_DEFLECTED,
-                                         INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID),
-                buildHeaderLenAdjustEntry(srCfg)
+                                         INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID)
         );
     }
 

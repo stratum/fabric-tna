@@ -67,8 +67,6 @@ public final class P4InfoConstants {
             PiMatchFieldId.of("ipv4_valid");
     public static final PiMatchFieldId HDR_IPV6_DST =
             PiMatchFieldId.of("ipv6_dst");
-    public static final PiMatchFieldId HDR_IS_INT_WIP =
-            PiMatchFieldId.of("is_int_wip");
     public static final PiMatchFieldId HDR_L4_DPORT =
             PiMatchFieldId.of("l4_dport");
     public static final PiMatchFieldId HDR_L4_SPORT =
@@ -98,8 +96,6 @@ public final class P4InfoConstants {
             PiTableId.of("FabricEgress.dscp_rewriter.rewriter");
     public static final PiTableId FABRIC_EGRESS_EGRESS_NEXT_EGRESS_VLAN =
             PiTableId.of("FabricEgress.egress_next.egress_vlan");
-    public static final PiTableId FABRIC_EGRESS_INT_EGRESS_ADJUST_INT_REPORT_HDR_LENGTH =
-            PiTableId.of("FabricEgress.int_egress.adjust_int_report_hdr_length");
     public static final PiTableId FABRIC_EGRESS_INT_EGRESS_CONFIG =
             PiTableId.of("FabricEgress.int_egress.config");
     public static final PiTableId FABRIC_EGRESS_INT_EGRESS_QUEUE_LATENCY_THRESHOLDS =
@@ -199,8 +195,6 @@ public final class P4InfoConstants {
             PiActionId.of("FabricEgress.egress_next.pop_vlan");
     public static final PiActionId FABRIC_EGRESS_EGRESS_NEXT_PUSH_VLAN =
             PiActionId.of("FabricEgress.egress_next.push_vlan");
-    public static final PiActionId FABRIC_EGRESS_INT_EGRESS_ADJUST_IP_UDP_LEN =
-            PiActionId.of("FabricEgress.int_egress.adjust_ip_udp_len");
     public static final PiActionId FABRIC_EGRESS_INT_EGRESS_CHECK_QUOTA =
             PiActionId.of("FabricEgress.int_egress.check_quota");
     public static final PiActionId FABRIC_EGRESS_INT_EGRESS_DO_DROP_REPORT_ENCAP =
@@ -311,10 +305,6 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.stats.count");
     public static final PiActionId NOP = PiActionId.of("nop");
     // Action Param IDs
-    public static final PiActionParamId ADJUST_IP =
-            PiActionParamId.of("adjust_ip");
-    public static final PiActionParamId ADJUST_UDP =
-            PiActionParamId.of("adjust_udp");
     public static final PiActionParamId CPU_PORT =
             PiActionParamId.of("cpu_port");
     public static final PiActionParamId CTR_ID = PiActionParamId.of("ctr_id");

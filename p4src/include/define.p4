@@ -204,7 +204,7 @@ const bit<16> REPORT_FIXED_HEADER_BYTES = 12;
 const bit<16> DROP_REPORT_HEADER_BYTES = 12;
 const bit<16> LOCAL_REPORT_HEADER_BYTES = 16;
 const bit<16> ETH_FCS_LEN = 4;
-const bit<8> INT_MIRROR_SESSION_BASE = 0x80;
+const bit<8>  INT_MIRROR_SESSION_BASE = 0x80;
 
 #define FLOW_REPORT_FILTER_WIDTH 16
 typedef bit<FLOW_REPORT_FILTER_WIDTH> flow_report_filter_index_t;
@@ -221,6 +221,14 @@ const IntReportType_t INT_REPORT_TYPE_DROP = 4;
 const IntReportType_t INT_REPORT_TYPE_QUEUE = 2;
 const IntReportType_t INT_REPORT_TYPE_LOCAL = 1;
 
+typedef bit<2> IntIsWip_t;
+const IntIsWip_t INT_IS_NOT_WIP = 0;
+const IntIsWip_t INT_IS_WIP = 1;
+const IntIsWip_t INT_IS_WIP_WITH_MPLS = 2;
+const bit<16> INT_WIP_ADJUST_IP_BYTES = 0xFFEE;
+const bit<16> INT_WIP_ADJUST_UDP_BYTES = 0xFFDA;
+const bit<16> INT_WIP_ADJUST_IP_MPLS_BYTES = 0xFFEA;
+const bit<16> INT_WIP_ADJUST_UDP_MPLS_BYTES = 0xFFD6;
 
 enum bit<8> IntDropReason_t {
     // Common drop reasons
