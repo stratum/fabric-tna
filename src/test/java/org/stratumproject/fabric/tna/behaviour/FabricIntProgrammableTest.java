@@ -121,14 +121,13 @@ public class FabricIntProgrammableTest {
                     .put(0x201, 0xc4)
                     .put(0x202, 0x144)
                     .put(0x203, 0x1c4).build();
-    private static final MacAddress SWITCH_MAC = MacAddress.valueOf("00:00:00:00:01:80");
     private static final long DEFAULT_QUEUE_REPORT_LATENCY_THRESHOLD = 2000; // ns
     private static final byte MAX_QUEUES = 32;
     private static final int INT_MIRROR_TRUNCATE_MAX_LEN = 128;
-    private static final short ETH_FCS_BYTES = 4;
-    private static final short ETH_HDR_BYTES = 14;
-    private static final short MPLS_HDR_BYTES = 4;
-    private static final short IP_HDR_BYTES = 20;
+    private static final int ADJUST_IP = 0xFFEE;
+    private static final int ADJUST_UDP = 0xFFDA;
+    private static final int ADJUST_IP_MPLS = 0xFFEA;
+    private static final int ADJUST_UDP_MPLS = 0xFFD6;
 
     private FabricIntProgrammable intProgrammable;
     private FlowRuleService flowRuleService;
@@ -212,7 +211,7 @@ public class FabricIntProgrammableTest {
                                      INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT),
                 buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_DEFLECTED,
                                      INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID),
-                buildHeaderLenAdjustRule(LEAF_DEVICE_ID, false),
+                buildHeaderLenAdjustRule(LEAF_DEVICE_ID, ADJUST_IP, ADJUST_UDP),
                 buildFilterConfigFlow(LEAF_DEVICE_ID)
         );
 
@@ -263,7 +262,7 @@ public class FabricIntProgrammableTest {
                                      INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT),
                 buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_DEFLECTED,
                                      INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID),
-                buildHeaderLenAdjustRule(LEAF_DEVICE_ID, false),
+                buildHeaderLenAdjustRule(LEAF_DEVICE_ID, ADJUST_IP, ADJUST_UDP),
                 buildFilterConfigFlow(LEAF_DEVICE_ID)
         );
 
@@ -319,7 +318,7 @@ public class FabricIntProgrammableTest {
                                      INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT),
                 buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_DEFLECTED,
                                      INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID),
-                buildHeaderLenAdjustRule(LEAF_DEVICE_ID, false),
+                buildHeaderLenAdjustRule(LEAF_DEVICE_ID, ADJUST_IP, ADJUST_UDP),
                 buildFilterConfigFlow(LEAF_DEVICE_ID)
         );
 
@@ -369,7 +368,7 @@ public class FabricIntProgrammableTest {
                                      INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT),
                 buildReportTableRule(SPINE_DEVICE_ID, true, BMD_TYPE_DEFLECTED,
                                      INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID),
-                buildHeaderLenAdjustRule(SPINE_DEVICE_ID, true),
+                buildHeaderLenAdjustRule(SPINE_DEVICE_ID, ADJUST_IP_MPLS, ADJUST_UDP_MPLS),
                 buildFilterConfigFlow(SPINE_DEVICE_ID)
         );
 
@@ -436,7 +435,7 @@ public class FabricIntProgrammableTest {
                     buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_DEFLECTED,
                                          INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID)),
                 buildFlowEntry(
-                    buildHeaderLenAdjustRule(LEAF_DEVICE_ID, false))
+                    buildHeaderLenAdjustRule(LEAF_DEVICE_ID, ADJUST_IP, ADJUST_UDP))
         );
         Set<FlowEntry> randomEntries = buildRandomFlowEntries();
         Set<FlowEntry> entries = Sets.newHashSet(intEntries);
@@ -692,18 +691,7 @@ public class FabricIntProgrammableTest {
                 .build();
     }
 
-    private FlowRule buildHeaderLenAdjustRule(DeviceId deviceId, boolean isSpine) {
-        // Use integer to store the value since we need to convert a signed value to
-        // an unsigned value(e.g., -1 -> 0xffff) which we cannot use short to store it.
-        int adjustIp = ETH_FCS_BYTES + ETH_HDR_BYTES;
-        if (isSpine) {
-            adjustIp += MPLS_HDR_BYTES;
-        }
-        int adjustUdp = adjustIp + IP_HDR_BYTES;
-
-        // Convert to 2-byte negative number.
-        adjustIp = (adjustIp ^ 0xffff) + 1;
-        adjustUdp = (adjustUdp ^ 0xffff) + 1;
+    private FlowRule buildHeaderLenAdjustRule(DeviceId deviceId, int adjustIp, int adjustUdp) {
         final PiActionParam adjustIpParam = new PiActionParam(
             P4InfoConstants.ADJUST_IP, ImmutableByteSequence.copyFrom(adjustIp));
         final PiActionParam adjustUdpParam = new PiActionParam(
