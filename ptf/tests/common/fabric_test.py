@@ -3073,23 +3073,6 @@ class IntTest(IPv4UnicastTest):
             action_params,
         )
 
-    def set_up_ip_udp_header_adjust_flow(self, mon_label):
-        # TODO: figure out why we don't need to include BMD_BYTES
-        adjust_ip = -ETH_FCS_BYTES - ETH_HDR_BYTES  # - BMD_BYTES
-        if mon_label:
-            adjust_ip -= MPLS_HDR_BYTES
-        adjust_udp = adjust_ip - IP_HDR_BYTES
-
-        self.send_request_add_entry_to_action(
-            "adjust_int_report_hdr_length",
-            [self.Exact("is_int_wip", stringify(1, 1)),],
-            "adjust_ip_udp_len",
-            [
-                ("adjust_ip", stringify(adjust_ip, 2, signed=True)),
-                ("adjust_udp", stringify(adjust_udp, 2, signed=True)),
-            ],
-        )
-
     def set_up_report_flow(self, src_ip, mon_ip, mon_port, switch_id, mon_label=None):
         def set_up_report_flow_internal(bmd_type, mirror_type, report_type):
             self.set_up_report_flow_with_report_type_and_bmd_type(
@@ -3123,7 +3106,6 @@ class IntTest(IPv4UnicastTest):
             MIRROR_TYPE_INT_REPORT,
             INT_REPORT_TYPE_QUEUE | INT_REPORT_TYPE_LOCAL,
         )
-        self.set_up_ip_udp_header_adjust_flow(mon_label)
 
     def set_up_report_mirror_flow(self, pipe_id, mirror_id, port):
         self.add_clone_group(mirror_id, [port], INT_MIRROR_TRUNCATE_SIZE)
