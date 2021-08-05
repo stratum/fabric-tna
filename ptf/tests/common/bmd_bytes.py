@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0 AND Apache-2.0
 
 from ptf import testutils
+
 # Size for different headers
 profile_name = testutils.test_param_get("profile")
 if profile_name == "fabric":
