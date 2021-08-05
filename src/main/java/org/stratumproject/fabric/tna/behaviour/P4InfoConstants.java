@@ -66,9 +66,6 @@ public final class P4InfoConstants {
     public static final PiMatchFieldId HDR_IG_PORT_TYPE =
             PiMatchFieldId.of("ig_port_type");
     public static final int HDR_IG_PORT_TYPE_BITWIDTH = 2;
-    public static final PiMatchFieldId HDR_INNER_IPV4_VALID =
-            PiMatchFieldId.of("inner_ipv4_valid");
-    public static final int HDR_INNER_IPV4_VALID_BITWIDTH = 1;
     public static final PiMatchFieldId HDR_INT_REPORT_TYPE =
             PiMatchFieldId.of("int_report_type");
     public static final int HDR_INT_REPORT_TYPE_BITWIDTH = 3;
@@ -374,8 +371,6 @@ public final class P4InfoConstants {
     public static final PiActionParamId MON_PORT =
             PiActionParamId.of("mon_port");
     public static final PiActionParamId NEXT_ID = PiActionParamId.of("next_id");
-    public static final PiActionParamId NOTIFY_CP =
-            PiActionParamId.of("notify_cp");
     public static final PiActionParamId PORT_NUM =
             PiActionParamId.of("port_num");
     public static final PiActionParamId PORT_TYPE =
