@@ -168,7 +168,7 @@ class MinFlowrateWithSoftwareLatencyMeasurement(QosTest):
             print("Statistics for port {}: {}".format(port, readable_stats))
         # Check that expected traffic rate can be achieved.
         self.assertGreater(
-            flow_stats.total_rx, 0, "No control traffic has been received"
+            flow_stats.rx_packets, 0, "No control traffic has been received"
         )
         self.assertGreaterEqual(
             tx_bps_L1,
@@ -226,7 +226,7 @@ class StrictPriorityControlTrafficIsPrioritized(QosTest):
             print("Statistics for port {}: {}".format(port, readable_stats))
         # Check that SLAs are met.
         self.assertGreater(
-            flow_stats.total_rx, 0, "No control traffic has been received"
+            flow_stats.rx_packets, 0, "No control traffic has been received"
         )
         self.assertEqual(
             lat_stats.dropped,
@@ -287,7 +287,7 @@ class ControlTrafficIsNotPrioritizedWithoutRules(QosTest):
             print("Statistics for port {}: {}".format(port, readable_stats))
         # Check that SLAs are NOT met.
         self.assertGreater(
-            flow_stats.total_rx, 0, "No control traffic has been received"
+            flow_stats.rx_packets, 0, "No control traffic has been received"
         )
         self.assertGreater(
             lat_stats.dropped,
@@ -340,7 +340,7 @@ class ControlTrafficIsShaped(QosTest):
             print("Statistics for port {}: {}".format(port, readable_stats))
         # Check that rate limits are enforced.
         self.assertGreater(
-            flow_stats.total_rx, 0, "No control traffic has been received"
+            flow_stats.rx_packets, 0, "No control traffic has been received"
         )
         self.assertGreater(
             lat_stats.dropped,
@@ -415,7 +415,7 @@ class RealtimeTrafficIsRrScheduled(QosTest):
         flow_stats_1 = get_flow_stats(self.realtime_pg_id_1, stats)
         print(get_readable_latency_stats(lat_stats_1))
         self.assertGreater(
-            flow_stats_1.total_rx, 0, "No realtime traffic has been received"
+            flow_stats_1.rx_packets, 0, "No realtime traffic has been received"
         )
         self.assertGreater(
             lat_stats_1.dropped,
@@ -437,7 +437,7 @@ class RealtimeTrafficIsRrScheduled(QosTest):
         flow_stats_2 = get_flow_stats(self.realtime_pg_id_2, stats)
         print(get_readable_latency_stats(lat_stats_2))
         self.assertGreater(
-            flow_stats_2.total_rx, 0, "No realtime traffic has been received"
+            flow_stats_2.rx_packets, 0, "No realtime traffic has been received"
         )
         self.assertGreater(
             lat_stats_2.dropped,
@@ -459,7 +459,7 @@ class RealtimeTrafficIsRrScheduled(QosTest):
         flow_stats_3 = get_flow_stats(self.realtime_pg_id_3, stats)
         print(get_readable_latency_stats(lat_stats_3))
         self.assertGreater(
-            flow_stats_3.total_rx, 0, "No realtime traffic has been received"
+            flow_stats_3.rx_packets, 0, "No realtime traffic has been received"
         )
         self.assertEqual(
             lat_stats_3.dropped,

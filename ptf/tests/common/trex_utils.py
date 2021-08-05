@@ -122,11 +122,14 @@ LatencyStats = collections.namedtuple(
         "percentile_75",
         "percentile_90",
         "percentile_99",
+        "percentile_99_9",
+        "percentile_99_99",
+        "percentile_99_999",
     ],
 )
 
 FlowStats = collections.namedtuple(
-    "FlowStats", ["pg_id", "total_tx", "total_rx", "tx_bytes", "rx_bytes",],
+    "FlowStats", ["pg_id", "tx_packets", "rx_packets", "tx_bytes", "rx_bytes",],
 )
 
 
@@ -187,7 +190,7 @@ def get_latency_stats(pg_id: int, stats) -> LatencyStats:
         val = lat["histogram"][sample]
         # Assume whole the bucket experienced the range_end latency.
         all_latencies += [range_end] * val
-    q = [50, 75, 90, 99]
+    q = [50, 75, 90, 99, 99.9, 99.99, 99.999]
     percentiles = np.percentile(all_latencies, q)
 
     ret = LatencyStats(
@@ -207,6 +210,9 @@ def get_latency_stats(pg_id: int, stats) -> LatencyStats:
         percentile_75=percentiles[1],
         percentile_90=percentiles[2],
         percentile_99=percentiles[3],
+        percentile_99_9=percentiles[4],
+        percentile_99_99=percentiles[5],
+        percentile_99_999=percentiles[6],
     )
     return ret
 
@@ -244,6 +250,9 @@ def get_readable_latency_stats(stats: LatencyStats) -> str:
     75th percentile latency: {stats.percentile_75} us
     90th percentile latency: {stats.percentile_90} us
     99th percentile latency: {stats.percentile_99} us
+    99.9th percentile latency: {stats.percentile_99_9} us
+    99.99th percentile latency: {stats.percentile_99_99} us
+    99.999th percentile latency: {stats.percentile_99_999} us
     Jitter: {stats.jitter} us
     Latency distribution histogram: {histogram}
     """
@@ -253,12 +262,20 @@ def get_flow_stats(pg_id: int, stats) -> FlowStats:
     flow_stats = stats["flow_stats"].get(pg_id)
     ret = FlowStats(
         pg_id=pg_id,
-        total_tx=flow_stats["tx_pkts"]["total"],
-        total_rx=flow_stats["rx_pkts"]["total"],
+        tx_packets=flow_stats["tx_pkts"]["total"],
+        rx_packets=flow_stats["rx_pkts"]["total"],
         tx_bytes=flow_stats["tx_bytes"]["total"],
         rx_bytes=flow_stats["rx_bytes"]["total"],
     )
     return ret
+
+
+def get_readable_flow_stats(stats: FlowStats) -> str:
+    return f"""Flow info for pg_id {stats.pg_id}
+    TX packets: {stats.tx_pkts}
+    RX packets: {stats.rx_pkts}
+    TX bytes: {stats.tx_bytes}
+    RX bytes: {stats.rx_bytes}"""
 
 
 class ParseExtendArgAction(argparse.Action):

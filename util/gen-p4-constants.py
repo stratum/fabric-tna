@@ -48,6 +48,9 @@ JAVA_DOC_FMT = """/**
 PI_HF_FIELD_ID = "PiMatchFieldId"
 PI_HF_FIELD_ID_CST = 'PiMatchFieldId.of("%s")'
 
+PI_HF_FIELD_BITWIDTH = "int"
+PI_HF_FIELD_BITWIDTH_CST = "%s"
+
 PI_TBL_ID = "PiTableId"
 PI_TBL_ID_CST = 'PiTableId.of("%s")'
 
@@ -79,6 +82,7 @@ BITWIDTH_VAR_SUFFIX = "_BITWIDTH"
 class ConstantClassGenerator(object):
     headers = set()
     header_fields = set()
+    match_field_bitwidth = dict()
     tables = set()
     counters = set()
     direct_counters = set()
@@ -105,6 +109,7 @@ class ConstantClassGenerator(object):
         for tbl in p4info.tables:
             for mf in tbl.match_fields:
                 self.header_fields.add(mf.name)
+                self.match_field_bitwidth[mf.name] = mf.bitwidth
 
             self.tables.add(tbl.preamble.name)
 
@@ -143,9 +148,6 @@ class ConstantClassGenerator(object):
 
     def const_line(self, name, type, constructor, value=None):
         var_name = self.convert_camel_to_all_caps(name)
-        if type == PI_HF_FIELD_ID:
-            var_name = var_name.replace("$VALID$", "VALID")
-            var_name = HF_VAR_PREFIX + var_name
         val = constructor % (name if value is None else value,)
 
         line = CONST_FMT % (type, var_name, val)
@@ -166,7 +168,19 @@ class ConstantClassGenerator(object):
         if len(self.header_fields) != 0:
             lines.append("    // Header field IDs")
         for hf in self.header_fields:
-            lines.append(self.const_line(hf, PI_HF_FIELD_ID, PI_HF_FIELD_ID_CST))
+            lines.append(
+                self.const_line(
+                    HF_VAR_PREFIX + hf, PI_HF_FIELD_ID, PI_HF_FIELD_ID_CST, value=hf
+                )
+            )
+            lines.append(
+                self.const_line(
+                    HF_VAR_PREFIX + hf + BITWIDTH_VAR_SUFFIX,
+                    PI_HF_FIELD_BITWIDTH,
+                    PI_HF_FIELD_BITWIDTH_CST,
+                    value=self.match_field_bitwidth[hf],
+                )
+            )
 
         if len(self.tables) != 0:
             lines.append("    // Table IDs")
