@@ -23,10 +23,10 @@ control SpgwIngress(
     Counter<bit<64>, bit<16>>(MAX_PDR_COUNTERS, CounterType_t.PACKETS_AND_BYTES) pdr_counter;
 
     bool is_pdr_hit = false;
-    far_id_t           md_far_id = 0;
-    bit<32> ue_addr;
+    far_id_t md_far_id = 0;
 
-    action gtpu_decap() {
+    @hidden
+    action _gtpu_decap() {
         fabric_md.bridged.base.ip_eth_type = ETHERTYPE_IPV4;
         fabric_md.routing_ipv4_dst = hdr.inner_ipv4.dst_addr;
         // Move GTPU and inner L3 headers out
@@ -56,20 +56,25 @@ control SpgwIngress(
     }
 
     action iface_dbuf(slice_id_t slice_id) {
-        iface_core(slice_id);
-        gtpu_decap();
+        fabric_md.bridged.spgw.skip_spgw = false;
+        fabric_md.spgw_hit = true;
+        fabric_md.spgw_slice_id = slice_id;
+        _gtpu_decap();
     }
 
     action iface_miss() {
         fabric_md.bridged.spgw.skip_spgw = true;
+        fabric_md.spgw_hit = false;
     }
 
     table interfaces {
         key = {
+            hdr.ipv4.isValid() : exact @name("ipv4_valid");
             // Outermost IPv4 header if uplink
             hdr.ipv4.dst_addr  : lpm    @name("ipv4_dst_addr");
             // gtpu extracted only if msgtype == GTPU_GPDU (see parser)
             hdr.gtpu.isValid() : exact  @name("gtpu_is_valid");
+            hdr.inner_ipv4.isValid() : exact @name("inner_ipv4_valid");
         }
         actions = {
             iface_access;
@@ -103,26 +108,21 @@ control SpgwIngress(
 #endif // WITH_INT
     }
 
-    action load_pdr(pdr_ctr_id_t ctr_id,
-                    far_id_t     far_id,
-                    tc_t         tc) {
+    action load_pdr(pdr_ctr_id_t ctr_id, far_id_t far_id, tc_t tc) {
         md_far_id = far_id;
         fabric_md.bridged.spgw.pdr_ctr_id = ctr_id;
         fabric_md.spgw_tc = tc;
         is_pdr_hit = true;
     }
 
-    action load_pdr_decap(pdr_ctr_id_t ctr_id,
-                    far_id_t     far_id,
-                    tc_t         tc) {
+    action load_pdr_decap(pdr_ctr_id_t ctr_id, far_id_t far_id, tc_t tc) {
         load_pdr(ctr_id, far_id, tc);
-        gtpu_decap();
+        _gtpu_decap();
     }
 
     // These two tables scale well and cover the average case PDR
     table downlink_pdrs {
         key = {
-            // only available ipv4 header
             fabric_md.routing_ipv4_dst : exact @name("ue_addr");
         }
         actions = {
@@ -280,16 +280,10 @@ control SpgwIngress(
     //===== Apply Block ======//
     //=============================//
     apply {
-        if (hdr.ipv4.isValid()) {
-            if (hdr.inner_ipv4.isValid()) {
-
-            }
             switch(interfaces.apply().action_run) {
                 iface_access: {
-                    if (fabric_md.bridged.base.encap_presence != EncapPresence.NONE) {
-                        if (uplink_pdrs.apply().hit) {
-                            uplink_recirc_rules.apply();
-                        }
+                    if (uplink_pdrs.apply().hit) {
+                        uplink_recirc_rules.apply();
                     }
                 }
                 iface_core: {
@@ -302,14 +296,13 @@ control SpgwIngress(
                 // Forwarding is done by other parts of fabric.p4, and
                 // encapsulation is done in the egress
             }
-                 // FARs
-                // Load FAR info
-                if (is_pdr_hit) {
-                    // Do not update if from dbuf
-                    pdr_counter.count(fabric_md.bridged.spgw.pdr_ctr_id);
-                    fars.apply();
-                }
-        }
+             // FARs
+            // Load FAR info
+            if (is_pdr_hit) {
+                // TODO: Do not update if from dbuf
+                pdr_counter.count(fabric_md.bridged.spgw.pdr_ctr_id);
+                fars.apply();
+            }
     }
 }
 
