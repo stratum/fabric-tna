@@ -22,6 +22,7 @@ from scapy.layers.ppp import PPP, PPPoE
 from scapy.layers.sctp import SCTP
 from scapy.layers.vxlan import VXLAN
 from scapy.packet import bind_layers
+from bmd_bytes import BMD_BYTES
 
 vlan_confs = {
     "tag->tag": [True, True],
@@ -251,17 +252,6 @@ BRIDGED_MD_TYPE_INGRESS_MIRROR = 3
 BRIDGED_MD_TYPE_INT_INGRESS_DROP = 4
 BRIDGED_MD_TYPE_DEFLECTED = 5
 
-# Size for different headers
-if testutils.test_param_get("profile") == "fabric-spgw-int":
-    BMD_BYTES = 48
-elif testutils.test_param_get("profile") == "fabric-spgw":
-    BMD_BYTES = 40
-elif testutils.test_param_get("profile") == "fabric-int":
-    BMD_BYTES = 32
-elif testutils.test_param_get("profile") == "fabric":
-    BMD_BYTES = 24
-else:
-    raise Exception("Invalid profile, cannot set BMD_BYTES")
 IP_HDR_BYTES = 20
 UDP_HDR_BYTES = 8
 GTPU_HDR_BYTES = 8
