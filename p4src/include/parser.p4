@@ -32,7 +32,7 @@ parser FabricIngressParser (packet_in  packet,
         fabric_md.bridged.base.ip_eth_type = 0;
 #ifdef WITH_INT
         fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UNKNOWN;
-        fabric_md.bridged.int_bmd.is_wip = INT_IS_NOT_WIP;
+        fabric_md.bridged.int_bmd.wip_type = INT_IS_NOT_WIP;
 #endif // WITH_INT
         fabric_md.bridged.base.encap_presence = EncapPresence.NONE;
         transition check_ethernet;
@@ -85,7 +85,7 @@ parser FabricIngressParser (packet_in  packet,
         hdr.ethernet.setValid();
         hdr.eth_type.setValid();
         hdr.eth_type.value = ETHERTYPE_IPV4;
-        fabric_md.bridged.int_bmd.is_wip = INT_IS_WIP;
+        fabric_md.bridged.int_bmd.wip_type = INT_IS_WIP;
         fabric_md.bridged.base.mpls_label = 0;
         fabric_md.bridged.base.mpls_ttl = DEFAULT_MPLS_TTL + 1;
         packet.advance(ETH_HDR_BYTES * 8);
@@ -96,7 +96,7 @@ parser FabricIngressParser (packet_in  packet,
         hdr.ethernet.setValid();
         hdr.eth_type.setValid();
         hdr.eth_type.value = ETHERTYPE_MPLS;
-        fabric_md.bridged.int_bmd.is_wip = INT_IS_WIP_WITH_MPLS;
+        fabric_md.bridged.int_bmd.wip_type = INT_IS_WIP_WITH_MPLS;
         packet.advance(ETH_HDR_BYTES * 8);
         transition parse_mpls;
     }

@@ -272,7 +272,7 @@ struct int_bridged_metadata_t {
     IntDropReason_t drop_reason;
     QueueId_t       queue_id;
     PortId_t        egress_port;
-    IntIsWip_t      is_wip;
+    IntWipType_t    wip_type;
 }
 
 struct int_metadata_t {

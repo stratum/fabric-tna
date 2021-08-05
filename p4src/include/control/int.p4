@@ -500,7 +500,7 @@ control IntEgress (
     @hidden
     table adjust_int_report_hdr_length {
         key = {
-            fabric_md.bridged.int_bmd.is_wip: exact @name("is_int_wip");
+            fabric_md.bridged.int_bmd.wip_type: exact @name("is_int_wip");
         }
 
         actions = {
