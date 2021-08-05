@@ -221,7 +221,7 @@ const IntReportType_t INT_REPORT_TYPE_DROP = 4;
 const IntReportType_t INT_REPORT_TYPE_QUEUE = 2;
 const IntReportType_t INT_REPORT_TYPE_LOCAL = 1;
 
-// 2-but should be enough, however, the padding part for the int_wip bridge metadata
+// 2-bit should be enough, however, the padding part for the bridge metadata
 // may contain garbage values which will overlay with other fields.
 typedef bit<8> IntWipType_t;
 const IntWipType_t INT_IS_NOT_WIP = 0;
