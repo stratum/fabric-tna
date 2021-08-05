@@ -58,18 +58,6 @@ typedef bit<32> teid_t;
 // FIXME: use less than 32 bits for far_id_t, enough to index up to MAX_FARS
 typedef bit<32> far_id_t;
 typedef bit<16> pdr_ctr_id_t;
-enum bit<2> SpgwDirection {
-    UNKNOWN             = 0x0,
-    UPLINK              = 0x1,
-    DOWNLINK            = 0x2,
-    OTHER               = 0x3
-}
-enum bit<8> SpgwInterface {
-    UNKNOWN       = 0x0,
-    ACCESS        = 0x1,
-    CORE          = 0x2,
-    FROM_DBUF     = 0x3
-}
 
 // According to our design choice, we report only the inner headers to the INT collector.
 // The EncapPresence keeps track of the encapsulation protocol in use.
