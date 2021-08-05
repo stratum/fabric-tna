@@ -22,7 +22,7 @@ import org.onosproject.net.pi.runtime.PiActionParam;
 
 import java.util.Arrays;
 
-import static org.stratumproject.fabric.tna.behaviour.Constants.DEFAULT_TC;
+import static org.stratumproject.fabric.tna.behaviour.Constants.TC_BEST_EFFORT;
 import static org.stratumproject.fabric.tna.behaviour.Constants.UPF_INTERFACE_ACCESS;
 import static org.stratumproject.fabric.tna.behaviour.Constants.UPF_INTERFACE_CORE;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.CTR_ID;
@@ -77,9 +77,7 @@ public final class TestUpfConstants {
             .asInt();
 
     public static final int UPLINK_QFI = 1;
-    public static final int UPLINK_TC = 1;
-    public static final int DOWNLINK_QFI = 4;
-    public static final int DOWNLINK_TC = 4;
+    public static final int DOWNLINK_QFI = 3;
 
     public static final ImmutableByteSequence TEID_VALUE = ImmutableByteSequence.copyFrom(0xff);
     public static final ImmutableByteSequence TEID_VALUE_QOS = ImmutableByteSequence.copyFrom(0xfe);
@@ -158,7 +156,7 @@ public final class TestUpfConstants {
                                                                   new PiActionParam(CTR_ID, UPLINK_COUNTER_CELL_ID),
                                                                   new PiActionParam(FAR_ID, UPLINK_PHYSICAL_FAR_ID),
                                                                   new PiActionParam(NEEDS_GTPU_DECAP, 1),
-                                                                  new PiActionParam(TC, DEFAULT_TC)
+                                                                  new PiActionParam(TC, TC_BEST_EFFORT)
                                                           ))
                                                           .build()).build())
             .withPriority(DEFAULT_PRIORITY)
@@ -181,7 +179,7 @@ public final class TestUpfConstants {
                                                            new PiActionParam(FAR_ID, UPLINK_PHYSICAL_FAR_ID),
                                                            new PiActionParam(NEEDS_GTPU_DECAP, 1),
                                                            new PiActionParam(
-                                                               TC, QFI_TO_TC.getOrDefault(UPLINK_QFI, DEFAULT_TC))
+                                                               TC, QFI_TO_TC.getOrDefault(UPLINK_QFI, TC_BEST_EFFORT))
                                                    ))
                                                    .build()).build())
             .withPriority(DEFAULT_PRIORITY)
@@ -201,7 +199,7 @@ public final class TestUpfConstants {
                                                                   new PiActionParam(CTR_ID, DOWNLINK_COUNTER_CELL_ID),
                                                                   new PiActionParam(FAR_ID, DOWNLINK_PHYSICAL_FAR_ID),
                                                                   new PiActionParam(NEEDS_GTPU_DECAP, 0),
-                                                                  new PiActionParam(TC, DEFAULT_TC)
+                                                                  new PiActionParam(TC, TC_BEST_EFFORT)
                                                           ))
                                                           .build()).build())
             .withPriority(DEFAULT_PRIORITY)
@@ -223,7 +221,7 @@ public final class TestUpfConstants {
                                                            new PiActionParam(FAR_ID, DOWNLINK_PHYSICAL_FAR_ID),
                                                            new PiActionParam(NEEDS_GTPU_DECAP, 0),
                                                            new PiActionParam(
-                                                               TC, QFI_TO_TC.getOrDefault(DOWNLINK_QFI, DEFAULT_TC))
+                                                               TC, QFI_TO_TC.getOrDefault(DOWNLINK_QFI, TC_BEST_EFFORT))
                                                    ))
                                                    .build()).build())
             .withPriority(DEFAULT_PRIORITY)

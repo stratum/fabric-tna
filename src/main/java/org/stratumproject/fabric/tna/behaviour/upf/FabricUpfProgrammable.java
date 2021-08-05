@@ -51,17 +51,14 @@ import java.util.stream.StreamSupport;
 
 import static org.onosproject.net.pi.model.PiCounterType.INDIRECT;
 import static org.stratumproject.fabric.tna.behaviour.Constants.DEFAULT_SLICE_ID;
-import static org.stratumproject.fabric.tna.behaviour.Constants.PRIORITY_LOW;
 import static org.stratumproject.fabric.tna.behaviour.Constants.QUEUE_ID_BEST_EFFORT;
 import static org.stratumproject.fabric.tna.behaviour.Constants.QUEUE_ID_CONTROL;
 import static org.stratumproject.fabric.tna.behaviour.Constants.QUEUE_ID_FIRST_ELASTIC;
 import static org.stratumproject.fabric.tna.behaviour.Constants.QUEUE_ID_FIRST_REAL_TIME;
-import static org.stratumproject.fabric.tna.behaviour.Constants.QUEUE_ID_SYSTEM;
 import static org.stratumproject.fabric.tna.behaviour.Constants.TC_BEST_EFFORT;
 import static org.stratumproject.fabric.tna.behaviour.Constants.TC_CONTROL;
 import static org.stratumproject.fabric.tna.behaviour.Constants.TC_ELASTIC;
 import static org.stratumproject.fabric.tna.behaviour.Constants.TC_REAL_TIME;
-import static org.stratumproject.fabric.tna.behaviour.Constants.TC_SYSTEM;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_GTPU_ENCAP;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_PDR_COUNTER;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_QOS_QUEUES;
@@ -90,6 +87,8 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     private final Logger log = LoggerFactory.getLogger(getClass());
     private static final int DEFAULT_PRIORITY = 128;
     private static final long DEFAULT_P4_DEVICE_ID = 1;
+
+    private static final int PRIORITY_LOW = 10;
 
     protected FlowRuleService flowRuleService;
     protected PacketService packetService;
@@ -159,7 +158,6 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
         // Control, System and BE. All slices share the same queue
         flowRules.add(configureQueuesSetQueue(DEFAULT_SLICE_ID, TC_CONTROL, QUEUE_ID_CONTROL));
-        flowRules.add(configureQueuesSetQueue(DEFAULT_SLICE_ID, TC_SYSTEM, QUEUE_ID_SYSTEM));
         flowRules.add(configureQueuesSetQueue(DEFAULT_SLICE_ID, TC_BEST_EFFORT, QUEUE_ID_BEST_EFFORT));
         // Real Time. Use the first RT queue for the default slice
         flowRules.add(configureQueuesSetQueue(DEFAULT_SLICE_ID, TC_REAL_TIME, QUEUE_ID_FIRST_REAL_TIME));

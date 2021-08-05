@@ -30,11 +30,10 @@ import org.onosproject.net.pi.runtime.PiTableAction;
 import java.util.Arrays;
 
 import static org.stratumproject.fabric.tna.behaviour.Constants.DEFAULT_SLICE_ID;
-import static org.stratumproject.fabric.tna.behaviour.Constants.DEFAULT_TC;
+import static org.stratumproject.fabric.tna.behaviour.Constants.TC_BEST_EFFORT;
 import static org.stratumproject.fabric.tna.behaviour.Constants.TC_CONTROL;
 import static org.stratumproject.fabric.tna.behaviour.Constants.TC_ELASTIC;
 import static org.stratumproject.fabric.tna.behaviour.Constants.TC_REAL_TIME;
-import static org.stratumproject.fabric.tna.behaviour.Constants.TC_SYSTEM;
 import static org.stratumproject.fabric.tna.behaviour.Constants.UPF_INTERFACE_ACCESS;
 import static org.stratumproject.fabric.tna.behaviour.Constants.UPF_INTERFACE_CORE;
 import static org.stratumproject.fabric.tna.behaviour.Constants.UPF_INTERFACE_DBUF;
@@ -81,14 +80,13 @@ public class FabricUpfTranslator {
 
     private final FabricUpfStore fabricUpfStore;
 
-    // TODO: what's the mapping???
+    // TODO: agree on a mapping with the PFCP agent
     //  Make sure to have a 1 to 1 mapping between QFI and TC.
     static final BiMap<Integer, Integer> QFI_TO_TC = ImmutableBiMap.of(
             //0, TC_BEST_EFFORT, --> this is DEFAULT_TC
-            1, TC_SYSTEM,
-            2, TC_CONTROL,
-            3, TC_REAL_TIME,
-            4, TC_ELASTIC);
+            1, TC_CONTROL,
+            2, TC_REAL_TIME,
+            3, TC_ELASTIC);
 
     public FabricUpfTranslator(FabricUpfStore fabricUpfStore) {
         this.fabricUpfStore = fabricUpfStore;
@@ -342,7 +340,7 @@ public class FabricUpfTranslator {
                         new PiActionParam(NEEDS_GTPU_DECAP, pdr.matchesEncapped() ? 1 : 0)))
                 .withId(FABRIC_INGRESS_SPGW_LOAD_PDR);
         actionBuilder.withParameter(new PiActionParam(TC, pdr.hasQfi() ?
-                QFI_TO_TC.getOrDefault((int) pdr.qfi(), DEFAULT_TC) : DEFAULT_TC));
+                QFI_TO_TC.getOrDefault((int) pdr.qfi(), TC_BEST_EFFORT) : TC_BEST_EFFORT));
         if (pdr.matchesEncapped()) {
             match = PiCriterion.builder()
                     .matchExact(HDR_TEID, pdr.teid().asArray())
