@@ -272,8 +272,8 @@ def get_flow_stats(pg_id: int, stats) -> FlowStats:
 
 def get_readable_flow_stats(stats: FlowStats) -> str:
     return f"""Flow info for pg_id {stats.pg_id}
-    TX packets: {stats.tx_pkts}
-    RX packets: {stats.rx_pkts}
+    TX packets: {stats.tx_packets}
+    RX packets: {stats.rx_packets}
     TX bytes: {stats.tx_bytes}
     RX bytes: {stats.rx_bytes}"""
 
