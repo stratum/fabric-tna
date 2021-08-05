@@ -165,7 +165,6 @@ struct spgw_bridged_metadata_t {
     bool            needs_gtpu_encap;
     bool            skip_spgw;
     bool            skip_egress_pdr_ctr;
-    bool            notify_spgwc;
     teid_t          gtpu_teid;
     ipv4_addr_t     gtpu_tunnel_sip;
     ipv4_addr_t     gtpu_tunnel_dip;
@@ -357,7 +356,7 @@ struct fabric_ingress_metadata_t {
     bool                     inner_ipv4_checksum_err;
     slice_id_t               slice_id;
     tc_t                     tc;
-    bool                     spgw_hit;
+    bool                     is_spgw_hit;
     slice_id_t               spgw_slice_id;
     tc_t                     spgw_tc;
     PortType_t               ig_port_type;

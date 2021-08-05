@@ -23,10 +23,10 @@ control SpgwIngress(
     Counter<bit<64>, bit<16>>(MAX_PDR_COUNTERS, CounterType_t.PACKETS_AND_BYTES) pdr_counter;
 
     bool is_pdr_hit = false;
-    far_id_t           md_far_id = 0;
-    bit<32> ue_addr;
+    far_id_t md_far_id = 0;
 
-    action gtpu_decap() {
+    @hidden
+    action _gtpu_decap() {
         fabric_md.bridged.base.ip_eth_type = ETHERTYPE_IPV4;
         fabric_md.routing_ipv4_dst = hdr.inner_ipv4.dst_addr;
         // Move GTPU and inner L3 headers out
@@ -43,21 +43,24 @@ control SpgwIngress(
     //===== Interface Tables ======//
     //=============================//
 
-    action iface_access(slice_id_t slice_id) {
+    @hidden
+    action _iface_common(slice_id_t slice_id) {
         fabric_md.bridged.spgw.skip_spgw = false;
-        fabric_md.spgw_hit = true;
+        fabric_md.is_spgw_hit = true;
         fabric_md.spgw_slice_id = slice_id;
+    }
+
+    action iface_access(slice_id_t slice_id) {
+        _iface_common(slice_id);
     }
 
     action iface_core(slice_id_t slice_id) {
-        fabric_md.bridged.spgw.skip_spgw = false;
-        fabric_md.spgw_hit = true;
-        fabric_md.spgw_slice_id = slice_id;
+        _iface_common(slice_id);
     }
 
     action iface_dbuf(slice_id_t slice_id) {
-        iface_core(slice_id);
-        gtpu_decap();
+        _iface_common(slice_id);
+        _gtpu_decap();
     }
 
     action iface_miss() {
@@ -66,7 +69,7 @@ control SpgwIngress(
 
     table interfaces {
         key = {
-            // Outermost IPv4 header if uplink
+            // Outermost IPv4 header
             hdr.ipv4.dst_addr  : lpm    @name("ipv4_dst_addr");
             // gtpu extracted only if msgtype == GTPU_GPDU (see parser)
             hdr.gtpu.isValid() : exact  @name("gtpu_is_valid");
@@ -103,26 +106,21 @@ control SpgwIngress(
 #endif // WITH_INT
     }
 
-    action load_pdr(pdr_ctr_id_t ctr_id,
-                    far_id_t     far_id,
-                    tc_t         tc) {
+    action load_pdr(pdr_ctr_id_t ctr_id, far_id_t far_id, tc_t tc) {
         md_far_id = far_id;
         fabric_md.bridged.spgw.pdr_ctr_id = ctr_id;
         fabric_md.spgw_tc = tc;
         is_pdr_hit = true;
     }
 
-    action load_pdr_decap(pdr_ctr_id_t ctr_id,
-                    far_id_t     far_id,
-                    tc_t         tc) {
+    action load_pdr_decap(pdr_ctr_id_t ctr_id, far_id_t far_id, tc_t tc) {
         load_pdr(ctr_id, far_id, tc);
-        gtpu_decap();
+        _gtpu_decap();
     }
 
     // These two tables scale well and cover the average case PDR
     table downlink_pdrs {
         key = {
-            // only available ipv4 header
             fabric_md.routing_ipv4_dst : exact @name("ue_addr");
         }
         actions = {
@@ -135,8 +133,8 @@ control SpgwIngress(
 
     table uplink_pdrs {
         key = {
-            hdr.ipv4.dst_addr           : exact @name("tunnel_ipv4_dst");
-            hdr.gtpu.teid               : exact @name("teid");
+            hdr.ipv4.dst_addr : exact @name("tunnel_ipv4_dst");
+            hdr.gtpu.teid     : exact @name("teid");
         }
         actions = {
             load_pdr_decap;
@@ -151,7 +149,6 @@ control SpgwIngress(
     //=============================//
 
     action far_drop() {
-        // general far attributes
         ig_dprsr_md.drop_ctl = 1;
         fabric_md.skip_forwarding = true;
         fabric_md.skip_next = true;
@@ -162,32 +159,23 @@ control SpgwIngress(
 #endif // WITH_INT
     }
 
-    // FIXME: remove noticy_cp parameter, we use dbuf for DDNs.
-    //   Applies to all far actions below.
-    action load_normal_far(bool drop,
-                           bool notify_cp) {
-        // general far attributes
+    action load_normal_far(bool drop) {
         fabric_md.skip_forwarding = drop;
         fabric_md.skip_next = drop;
-        // Notify_spgwc is unused. We set it here to avoid the SDE optimizing
-        // out the notify_cp parameter and so breaking R/W symmetry.
-        fabric_md.bridged.spgw.notify_spgwc = notify_cp;
         fabric_md.bridged.spgw.needs_gtpu_encap = false;
         fabric_md.bridged.spgw.skip_egress_pdr_ctr = false;
+        // FIXME: set INT drop reason if drop
     }
 
     // A commom part that being used for load_tunnel_far and load_dbuf_far
     @hidden
     action load_common_far(bool         drop,
-                           bool         notify_cp,
                            l4_port_t    tunnel_src_port,
                            ipv4_addr_t  tunnel_src_addr,
                            ipv4_addr_t  tunnel_dst_addr,
                            teid_t       teid) {
-        // General far attributes
         fabric_md.skip_forwarding = drop;
         fabric_md.skip_next = drop;
-        fabric_md.bridged.spgw.notify_spgwc = notify_cp; // Unused.
         // GTP tunnel attributes
         fabric_md.bridged.spgw.needs_gtpu_encap = true;
         fabric_md.bridged.spgw.gtpu_teid = teid;
@@ -198,23 +186,21 @@ control SpgwIngress(
     }
 
     action load_tunnel_far(bool         drop,
-                           bool         notify_cp,
                            l4_port_t    tunnel_src_port,
                            ipv4_addr_t  tunnel_src_addr,
                            ipv4_addr_t  tunnel_dst_addr,
                            teid_t       teid) {
-        load_common_far(drop, notify_cp, tunnel_src_port, tunnel_src_addr,
+        load_common_far(drop, tunnel_src_port, tunnel_src_addr,
                         tunnel_dst_addr, teid);
         fabric_md.bridged.spgw.skip_egress_pdr_ctr = false;
     }
 
     action load_dbuf_far(bool           drop,
-                         bool           notify_cp,
                          l4_port_t      tunnel_src_port,
                          ipv4_addr_t    tunnel_src_addr,
                          ipv4_addr_t    tunnel_dst_addr,
                          teid_t         teid) {
-        load_common_far(drop, notify_cp, tunnel_src_port, tunnel_src_addr,
+        load_common_far(drop, tunnel_src_port, tunnel_src_addr,
                         tunnel_dst_addr, teid);
         fabric_md.bridged.spgw.skip_egress_pdr_ctr = true;
     }
@@ -229,7 +215,6 @@ control SpgwIngress(
             load_dbuf_far;
             @defaultonly far_drop;
         }
-        // default is drop and don't notify CP
         const default_action = far_drop();
         size = NUM_FARS;
     }
@@ -237,7 +222,7 @@ control SpgwIngress(
     DirectCounter<bit<16>>(CounterType_t.PACKETS) recirc_stats;
 
     action recirc_allow() {
-        // Recirculation port within same ingress pipe.
+        // Pick a recirculation port within same ingress pipe to distribute load.
         ig_tm_md.ucast_egress_port = ig_intr_md.ingress_port[8:7]++RECIRC_PORT_NUMBER;
         fabric_md.bridged.base.vlan_id = DEFAULT_VLAN_ID;
         fabric_md.egress_port_set = true;
@@ -281,9 +266,6 @@ control SpgwIngress(
     //=============================//
     apply {
         if (hdr.ipv4.isValid()) {
-            if (hdr.inner_ipv4.isValid()) {
-
-            }
             switch(interfaces.apply().action_run) {
                 iface_access: {
                     if (fabric_md.bridged.base.encap_presence != EncapPresence.NONE) {
@@ -292,23 +274,25 @@ control SpgwIngress(
                         }
                     }
                 }
-                iface_core: {
-                    downlink_pdrs.apply();
-                }
-                iface_dbuf: {
-                    downlink_pdrs.apply();
-                }
-                // Nothing to be done immediately for forwarding or encapsulation.
-                // Forwarding is done by other parts of fabric.p4, and
-                // encapsulation is done in the egress
+                iface_core: { downlink_pdrs.apply(); }
+                iface_dbuf: { downlink_pdrs.apply(); }
             }
-                 // FARs
-                // Load FAR info
-                if (is_pdr_hit) {
-                    // Do not update if from dbuf
-                    pdr_counter.count(fabric_md.bridged.spgw.pdr_ctr_id);
-                    fars.apply();
-                }
+            if (is_pdr_hit) {
+                // NOTE We should not update this counter for packets coming
+                // **from** dbuf (iface_dbuf), since we already updated it when
+                // first sending the same packets **to** dbuf (iface_core).
+                // However, putting a condition on the iface type introduces a
+                // stage depenency. We trade resource utilization with
+                // accounting inaccuracy. Assuming that relatively few packets
+                // can be stored at dbuf, and assuming this will deployed mostly
+                // in enterprise settings where we are not billing users, the
+                // effects of such inaccuracy should be negligible.
+                pdr_counter.count(fabric_md.bridged.spgw.pdr_ctr_id);
+                fars.apply();
+            }
+            // Nothing to be done immediately for forwarding or encapsulation.
+            // Forwarding is done by other parts of fabric.p4, and
+            // encapsulation is done in the egress
         }
     }
 }

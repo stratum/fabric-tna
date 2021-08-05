@@ -81,7 +81,7 @@ control IngressQos (inout fabric_ingress_metadata_t fabric_md,
     // Use SPGW classification if the packet was terminated by this switch.
     @hidden
     table set_slice_tc {
-        key = { fabric_md.spgw_hit: exact; }
+        key = { fabric_md.is_spgw_hit: exact; }
         actions = { use_spgw; use_default; }
         const size = 2;
         const entries = {
