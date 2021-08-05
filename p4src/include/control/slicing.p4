@@ -64,18 +64,17 @@ control IngressQos (inout fabric_ingress_metadata_t fabric_md,
                     inout ingress_intrinsic_metadata_for_deparser_t ig_dprsr_md,
                     inout ingress_intrinsic_metadata_for_tm_t ig_tm_md) {
 
-    // Just an alias to reduce verbosity... From now on we use the concatenated
-    // slice_id++tc to aid the compiler in optimizing resource allocation.
-    slice_tc_t slice_tc = fabric_md.bridged.base.slice_tc;
+    // From now on we use the concatenated slice_id++tc to aid the compiler in
+    // optimizing resource allocation.
 
     @hidden
     action use_spgw() {
-        slice_tc = fabric_md.spgw_slice_id++fabric_md.spgw_tc;
+        fabric_md.bridged.base.slice_tc = fabric_md.spgw_slice_id++fabric_md.spgw_tc;
     }
 
     @hidden
     action use_default() {
-        slice_tc = fabric_md.slice_id++fabric_md.tc;
+        fabric_md.bridged.base.slice_tc = fabric_md.slice_id++fabric_md.tc;
     }
 
     // Use SPGW classification if the packet was terminated by this switch.
@@ -113,9 +112,9 @@ control IngressQos (inout fabric_ingress_metadata_t fabric_md,
 
     table queues {
         key = {
-            slice_tc[SLICE_ID_WIDTH+TC_WIDTH-1:TC_WIDTH]: exact   @name("slice_id");
-            slice_tc[TC_WIDTH-1:0]:                       exact   @name("tc");
-            ig_tm_md.packet_color:                        ternary @name("color");
+            fabric_md.bridged.base.slice_tc[SLICE_ID_WIDTH+TC_WIDTH-1:TC_WIDTH]: exact   @name("slice_id");
+            fabric_md.bridged.base.slice_tc[TC_WIDTH-1:0]:                       exact   @name("tc");
+            ig_tm_md.packet_color:                                               ternary @name("color");
         }
         actions = {
             set_queue;
@@ -131,7 +130,7 @@ control IngressQos (inout fabric_ingress_metadata_t fabric_md,
     apply {
         // Meter index should be 0 for all packets with default slice_id and tc.
         set_slice_tc.apply();
-        ig_tm_md.packet_color = (bit<2>) slice_tc_meter.execute(slice_tc);
+        ig_tm_md.packet_color = (bit<2>) slice_tc_meter.execute(fabric_md.bridged.base.slice_tc);
         queues.apply();
     }
 }
