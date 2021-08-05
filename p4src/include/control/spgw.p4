@@ -16,9 +16,9 @@ control SpgwIngress(
         inout ingress_intrinsic_metadata_for_tm_t   ig_tm_md,
         inout ingress_intrinsic_metadata_for_deparser_t ig_dprsr_md) {
 
-    //=============================//
+    //========================//
     //===== Misc Things ======//
-    //=============================//
+    //========================//
 
     Counter<bit<64>, bit<16>>(MAX_PDR_COUNTERS, CounterType_t.PACKETS_AND_BYTES) pdr_counter;
 
@@ -84,9 +84,9 @@ control SpgwIngress(
         const size = NUM_SPGW_INTERFACES;
     }
 
-    //=============================//
+    //=======================//
     //===== PDR Tables ======//
-    //=============================//
+    //=======================//
 
     action downlink_pdr_drop() {
         ig_dprsr_md.drop_ctl = 1;
@@ -144,9 +144,9 @@ control SpgwIngress(
         const default_action = uplink_pdr_drop();
     }
 
-    //=============================//
+    //=======================//
     //===== FAR Tables ======//
-    //=============================//
+    //=======================//
 
     action far_drop() {
         ig_dprsr_md.drop_ctl = 1;
@@ -219,6 +219,11 @@ control SpgwIngress(
         size = NUM_FARS;
     }
 
+
+    //=================================//
+    //===== Uplink Recirculation ======//
+    //=================================//
+
     DirectCounter<bit<16>>(CounterType_t.PACKETS) recirc_stats;
 
     action recirc_allow() {
@@ -261,9 +266,9 @@ control SpgwIngress(
         counters = recirc_stats;
     }
 
-    //=============================//
+    //========================//
     //===== Apply Block ======//
-    //=============================//
+    //========================//
     apply {
         if (hdr.ipv4.isValid()) {
             switch(interfaces.apply().action_run) {
@@ -284,14 +289,14 @@ control SpgwIngress(
                 // However, putting a condition on the iface type introduces a
                 // stage depenency. We trade resource utilization with
                 // accounting inaccuracy. Assuming that relatively few packets
-                // can be stored at dbuf, and assuming this will deployed mostly
-                // in enterprise settings where we are not billing users, the
-                // effects of such inaccuracy should be negligible.
+                // can be stored at dbuf, and assuming this will be deployed
+                // mostly in enterprise settings where we are not billing users,
+                // the effects of such inaccuracy should be negligible.
                 pdr_counter.count(fabric_md.bridged.spgw.pdr_ctr_id);
                 fars.apply();
             }
             // Nothing to be done immediately for forwarding or encapsulation.
-            // Forwarding is done by other parts of fabric.p4, and
+            // Forwarding is done by other parts of the ingress, and
             // encapsulation is done in the egress
         }
     }
