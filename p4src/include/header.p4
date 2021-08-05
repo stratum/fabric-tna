@@ -291,7 +291,7 @@ struct bridged_metadata_base_t {
     bit<48>                  ig_tstamp;
     bit<16>                  ip_eth_type;
     bit<STATS_FLOW_ID_WIDTH> stats_flow_id;
-    bit<6>                   dscp;
+    slice_tc_t               slice_tc;
 #ifdef WITH_DOUBLE_VLAN_TERMINATION
     bool                     push_double_vlan;
     vlan_id_t                inner_vlan_id;
