@@ -168,14 +168,19 @@ class ConstantClassGenerator(object):
         if len(self.header_fields) != 0:
             lines.append("    // Header field IDs")
         for hf in self.header_fields:
-            lines.append(self.const_line(HF_VAR_PREFIX + hf, PI_HF_FIELD_ID, PI_HF_FIELD_ID_CST, value=hf))
-            lines.append(self.const_line(
-                HF_VAR_PREFIX + hf + BITWIDTH_VAR_SUFFIX,
-                PI_HF_FIELD_BITWIDTH,
-                PI_HF_FIELD_BITWIDTH_CST,
-                value=self.match_field_bitwidth[hf]
+            lines.append(
+                self.const_line(
+                    HF_VAR_PREFIX + hf, PI_HF_FIELD_ID, PI_HF_FIELD_ID_CST, value=hf
+                )
             )
-        )
+            lines.append(
+                self.const_line(
+                    HF_VAR_PREFIX + hf + BITWIDTH_VAR_SUFFIX,
+                    PI_HF_FIELD_BITWIDTH,
+                    PI_HF_FIELD_BITWIDTH_CST,
+                    value=self.match_field_bitwidth[hf],
+                )
+            )
 
         if len(self.tables) != 0:
             lines.append("    // Table IDs")
