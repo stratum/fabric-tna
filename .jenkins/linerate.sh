@@ -6,7 +6,7 @@
 # the ONOS ci-management repo:
 # https://gerrit.onosproject.org/plugins/gitiles/ci-management/+/refs/heads/master/jjb/templates/fabric-tna-jobs.yaml
 #
-# This job should be executed nightly at 23:00 - 0:00
+# This job should be executed nightly at 23:00 - 0:00 PST
 
 # exit on errors
 set -exu -o pipefail
