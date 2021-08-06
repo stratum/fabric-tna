@@ -305,6 +305,9 @@ public class FabricUpfTranslator {
      */
     public FlowRule pdrToFabricEntry(PacketDetectionRule pdr, DeviceId deviceId, ApplicationId appId, int priority)
             throws UpfProgrammableException {
+        if (pdr.hasQfi()) {
+            throw new UpfProgrammableException("QFI unsupported! Cannot translate " + pdr);
+        }
         PiCriterion match;
         PiTableId tableId;
         PiAction action;
