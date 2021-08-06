@@ -9,6 +9,7 @@ from fabric_test import *
 from scapy.utils import PcapReader
 from trex_stl_lib.api import STLVM, STLPktBuilder, STLStream, STLTXCont
 from trex_test import TRexTest
+from ptf.testutils import group
 
 TRAFFIC_MULT = "1000pps"
 TEST_DURATION = 3
@@ -26,6 +27,7 @@ INT_COLLECTOR_PORT = 2
 RECEIVER_PORT = 3
 
 
+@group("int")
 class IntQueueReportTest(TRexTest, IntTest, SlicingTest):
     @autocleanup
     def doRunTest(
