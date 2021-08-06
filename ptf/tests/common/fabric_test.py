@@ -11,6 +11,7 @@ import time
 
 import xnt
 from base_test import P4RuntimeTest, ipv4_to_binary, mac_to_binary, stringify, tvcreate
+from bmd_bytes import BMD_BYTES
 from p4.v1 import p4runtime_pb2
 from ptf import testutils
 from ptf.mask import Mask
@@ -251,17 +252,6 @@ BRIDGED_MD_TYPE_INGRESS_MIRROR = 3
 BRIDGED_MD_TYPE_INT_INGRESS_DROP = 4
 BRIDGED_MD_TYPE_DEFLECTED = 5
 
-# Size for different headers
-if testutils.test_param_get("profile") == "fabric-spgw-int":
-    BMD_BYTES = 48
-elif testutils.test_param_get("profile") == "fabric-spgw":
-    BMD_BYTES = 40
-elif testutils.test_param_get("profile") == "fabric-int":
-    BMD_BYTES = 32
-elif testutils.test_param_get("profile") == "fabric":
-    BMD_BYTES = 24
-else:
-    raise Exception("Invalid profile, cannot set BMD_BYTES")
 IP_HDR_BYTES = 20
 UDP_HDR_BYTES = 8
 GTPU_HDR_BYTES = 8

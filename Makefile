@@ -59,6 +59,10 @@ constants:
 		--entrypoint ./util/gen-p4-constants.py $(TESTER_DOCKER_IMG) \
 		-o $(DIR)/src/main/java/org/stratumproject/fabric/tna/behaviour/P4InfoConstants.java \
 		p4info $(DIR)/p4src/build/fabric-spgw-int/sde_$(SDE_VER_)/p4info.txt
+	docker run -v $(DIR):$(DIR) -w $(DIR) --rm \
+		--user $(UID) \
+		$(SDE_P4C_DOCKER_IMG) \
+		get-hdr-size.py --py-out "$(DIR)/ptf/tests/common/bmd_bytes.py" "$(DIR)/p4src/build"
 
 _m2_vol:
 	docker volume create --opt o=uid=$(UID) --opt device=tmpfs --opt type=tmpfs $(MVN_CACHE)
