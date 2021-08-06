@@ -805,7 +805,7 @@ def get_test_args(
                                     yield params
 
 
-def slice_tc_meter_index(slice_id, tc):
+def slice_tc_concat(slice_id, tc):
     return (slice_id << TC_WIDTH) + tc
 
 
@@ -4438,7 +4438,7 @@ class SlicingTest(FabricTest):
     def configure_slice_tc_meter(self, slice_id, tc, cir, cburst, pir, pburst):
         self.write_indirect_meter(
             m_name="FabricIngress.qos.slice_tc_meter",
-            m_index=slice_tc_meter_index(slice_id, tc),
+            m_index=slice_tc_concat(slice_id, tc),
             cir=cir,
             cburst=cburst,
             pir=pir,
@@ -4446,8 +4446,9 @@ class SlicingTest(FabricTest):
         )
 
     def add_queue_entry(self, slice_id, tc, qid=None, color=None):
+        slice_tc = slice_tc_concat(slice_id, tc)
         matches = [
-            self.Exact("slice_id", stringify(slice_id, 1)),
+            self.Exact("slice_tc", stringify(slice_tc, 1)),
             self.Exact("tc", stringify(tc, 1)),
         ]
         if color is not None:

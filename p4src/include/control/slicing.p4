@@ -67,20 +67,13 @@ control IngressQos (inout fabric_ingress_metadata_t fabric_md,
     // From now on we use the concatenated slice_id++tc to aid the compiler in
     // optimizing resource allocation.
 
-    slice_id_t slice_id = 0;
-    tc_t tc = 0;
-
     @hidden
     action use_spgw() {
-        slice_id = fabric_md.spgw_slice_id;
-        tc = fabric_md.spgw_tc;
         fabric_md.bridged.base.slice_tc = fabric_md.spgw_slice_id++fabric_md.spgw_tc;
     }
 
     @hidden
     action use_default() {
-        slice_id = fabric_md.slice_id;
-        tc = fabric_md.tc;
         fabric_md.bridged.base.slice_tc = fabric_md.slice_id++fabric_md.tc;
     }
 
@@ -119,9 +112,8 @@ control IngressQos (inout fabric_ingress_metadata_t fabric_md,
 
     table queues {
         key = {
-            slice_id:              exact   @name("slice_id");
-            tc:                    exact   @name("tc");
-            ig_tm_md.packet_color: ternary @name("color");
+            fabric_md.bridged.base.slice_tc: exact   @name("slice_tc");
+            ig_tm_md.packet_color:           ternary @name("color");
         }
         actions = {
             set_queue;
