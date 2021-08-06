@@ -19,7 +19,7 @@ docker pull "${SDE_P4C_DOCKER_IMG}"
 docker build -f ptf/Dockerfile -t "${TESTER_DOCKER_IMG}" .
 
 # Jenkins uses 8 cores 15G VM
-sudo make -j8 all
+make -j8 all
 
 # We limit running linerate tests for only those profiles used in Aether, since
 # these are the only profiels we have written tests for so far
