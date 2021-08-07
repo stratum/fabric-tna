@@ -5,18 +5,12 @@
 # satisfied. For more information, see this doc:
 # https://docs.google.com/document/d/1jq6NH-fffe8ImMo4EC_yMwH1djlrhWaQu2lpLFJKljA
 
-import json
 import logging
-import os
-import pprint
-from argparse import ArgumentParser
-from datetime import datetime
 
 import gnmi_utils
 import qos_utils
 from base_test import *
 from fabric_test import *
-from scapy.layers.all import IP, TCP, UDP, Ether
 from trex_stl_lib.api import STLFlowLatencyStats, STLPktBuilder, STLStream, STLTXCont
 from trex_test import TRexTest
 from trex_utils import *
