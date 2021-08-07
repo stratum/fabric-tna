@@ -539,6 +539,7 @@ parser FabricEgressParser (packet_in packet,
         transition accept;
     }
 
+    // Required only to adjust the length field of work-in-progress INT reports.
     state parse_udp {
         packet.extract(hdr.udp);
         transition accept;

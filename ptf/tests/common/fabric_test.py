@@ -225,7 +225,7 @@ INT_DROP_REASON_DOWNLINK_PDR_MISS = 132
 INT_DROP_REASON_UPLINK_PDR_MISS = 133
 INT_DROP_REASON_FAR_MISS = 134
 INT_DEFAULT_QUEUE_REPORT_QUOTA = 1024
-INT_MIRROR_TRUNCATE_SIZE = 128
+INT_MIRROR_TRUNCATE_MAX_LEN = 128
 INT_MIRROR_BYTES = 27  # TODO: autogenerate it
 
 PPPOE_CODE_SESSION_STAGE = 0x00
@@ -1502,7 +1502,7 @@ class FabricTest(P4RuntimeTest):
         return self.write_mcast_group(group_id, [], p4runtime_pb2.Update.DELETE)
 
     def write_clone_group(
-        self, clone_id, ports, truncate_size, update_type, store=True
+        self, clone_id, ports, truncate_max_len, update_type, store=True
     ):
         req = self.get_new_write_request()
         update = req.updates.add()
@@ -1511,16 +1511,16 @@ class FabricTest(P4RuntimeTest):
         clone_entry = pre_entry.clone_session_entry
         clone_entry.session_id = clone_id
         clone_entry.class_of_service = 0
-        clone_entry.packet_length_bytes = truncate_size
+        clone_entry.packet_length_bytes = truncate_max_len
         for port in ports:
             replica = clone_entry.replicas.add()
             replica.egress_port = port
             replica.instance = 0  # set to 0 because we don't support it yet.
         return req, self.write_request(req, store=store)
 
-    def add_clone_group(self, clone_id, ports, truncate_size=0, store=True):
+    def add_clone_group(self, clone_id, ports, truncate_max_len=0, store=True):
         self.write_clone_group(
-            clone_id, ports, truncate_size, p4runtime_pb2.Update.INSERT, store=store
+            clone_id, ports, truncate_max_len, p4runtime_pb2.Update.INSERT, store=store
         )
 
     def delete_clone_group(self, clone_id, ports, store=True):
@@ -3095,7 +3095,7 @@ class IntTest(IPv4UnicastTest):
         )
 
     def set_up_report_mirror_flow(self, pipe_id, mirror_id, port):
-        self.add_clone_group(mirror_id, [port], INT_MIRROR_TRUNCATE_SIZE)
+        self.add_clone_group(mirror_id, [port], INT_MIRROR_TRUNCATE_MAX_LEN)
         # TODO: We plan to set up this table by using the control
         # plane so we don't need to hard code the session id
         # in pipeline.
@@ -3188,7 +3188,7 @@ class IntTest(IPv4UnicastTest):
         # Mirrored packet will be truncated first
         inner_packet = Ether(
             bytes(int_pre_mirrored_packet)[
-                : INT_MIRROR_TRUNCATE_SIZE - INT_MIRROR_BYTES
+                : INT_MIRROR_TRUNCATE_MAX_LEN - INT_MIRROR_BYTES
             ]
         )
         # The switch should always strip VLAN, MPLS, GTP-U and VXLAN headers inside INT reports.
@@ -3254,7 +3254,7 @@ class IntTest(IPv4UnicastTest):
         if truncate:
             inner_packet = Ether(
                 bytes(int_pre_mirrored_packet)[
-                    : INT_MIRROR_TRUNCATE_SIZE - INT_MIRROR_BYTES
+                    : INT_MIRROR_TRUNCATE_MAX_LEN - INT_MIRROR_BYTES
                 ]
             )
         else:

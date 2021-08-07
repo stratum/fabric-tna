@@ -40,8 +40,8 @@ from testvector import tvutils
 
 
 # Convert integer (with length) to binary byte string
-def stringify(n, length, signed=False):
-    return n.to_bytes(length, byteorder="big", signed=signed)
+def stringify(n, length):
+    return n.to_bytes(length, byteorder="big")
 
 
 def ipv4_to_binary(addr):
