@@ -129,7 +129,7 @@ LatencyStats = collections.namedtuple(
 )
 
 FlowStats = collections.namedtuple(
-    "FlowStats", ["pg_id", "total_tx", "total_rx", "tx_bytes", "rx_bytes",],
+    "FlowStats", ["pg_id", "tx_packets", "rx_packets", "tx_bytes", "rx_bytes",],
 )
 
 
@@ -262,12 +262,20 @@ def get_flow_stats(pg_id: int, stats) -> FlowStats:
     flow_stats = stats["flow_stats"].get(pg_id)
     ret = FlowStats(
         pg_id=pg_id,
-        total_tx=flow_stats["tx_pkts"]["total"],
-        total_rx=flow_stats["rx_pkts"]["total"],
+        tx_packets=flow_stats["tx_pkts"]["total"],
+        rx_packets=flow_stats["rx_pkts"]["total"],
         tx_bytes=flow_stats["tx_bytes"]["total"],
         rx_bytes=flow_stats["rx_bytes"]["total"],
     )
     return ret
+
+
+def get_readable_flow_stats(stats: FlowStats) -> str:
+    return f"""Flow info for pg_id {stats.pg_id}
+    TX packets: {stats.tx_packets}
+    RX packets: {stats.rx_packets}
+    TX bytes: {stats.tx_bytes}
+    RX bytes: {stats.rx_bytes}"""
 
 
 class ParseExtendArgAction(argparse.Action):
