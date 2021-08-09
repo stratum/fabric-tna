@@ -134,9 +134,7 @@ public class FabricUpfTranslator {
 
         pdrBuilder.withCounterId(FabricUpfTranslatorUtil.getParamInt(action, CTR_ID))
                 .withLocalFarId(farId.getSessionLocalId())
-                .withSessionId(farId.getPfcpSessionId())
-                // TODO: remove once we replace priorities with QFI
-                .withSchedulingPriority(0);
+                .withSessionId(farId.getPfcpSessionId());
 
         if (FabricUpfTranslatorUtil.fieldIsPresent(match, HDR_TEID)) {
             // F-TEID is only present for GTP-matching PDRs
@@ -307,6 +305,9 @@ public class FabricUpfTranslator {
      */
     public FlowRule pdrToFabricEntry(PacketDetectionRule pdr, DeviceId deviceId, ApplicationId appId, int priority)
             throws UpfProgrammableException {
+        if (pdr.hasQfi()) {
+            throw new UpfProgrammableException("QFI unsupported! Cannot translate " + pdr);
+        }
         PiCriterion match;
         PiTableId tableId;
         PiActionId actionId;
@@ -326,11 +327,6 @@ public class FabricUpfTranslator {
             actionId = FABRIC_INGRESS_SPGW_LOAD_PDR;
         } else {
             throw new UpfProgrammableException("Flexible PDRs not yet supported! Cannot translate " + pdr.toString());
-        }
-
-        if (pdr.hasSchedulingPriority()) {
-            // TODO: add support for mapping QFI to TC once we replace priorities with QFI
-            throw new UpfProgrammableException("PDR with scheduling priority not supported");
         }
 
         PiAction action = PiAction.builder()

@@ -73,10 +73,6 @@ public final class TestUpfConstants {
             .hash()
             .asInt();
 
-    public static final int UPLINK_PRIORITY = 9;
-    public static final int DOWNLINK_PRIORITY = 1;
-    public static final int DEFAULT_SCHEDULING_PRIORITY = 0;
-
     public static final ImmutableByteSequence TEID_VALUE = ImmutableByteSequence.copyFrom(0xff);
     public static final Ip4Address UE_ADDR = Ip4Address.valueOf("17.0.0.1");
     public static final Ip4Address S1U_ADDR = Ip4Address.valueOf("192.168.0.1");
@@ -97,7 +93,6 @@ public final class TestUpfConstants {
             .withLocalFarId(UPLINK_FAR_ID)
             .withSessionId(SESSION_ID)
             .withCounterId(UPLINK_COUNTER_CELL_ID)
-            .withSchedulingPriority(DEFAULT_SCHEDULING_PRIORITY)
             .build();
 
     public static final PacketDetectionRule DOWNLINK_PDR = PacketDetectionRule.builder()
@@ -105,7 +100,6 @@ public final class TestUpfConstants {
             .withLocalFarId(DOWNLINK_FAR_ID)
             .withSessionId(SESSION_ID)
             .withCounterId(DOWNLINK_COUNTER_CELL_ID)
-            .withSchedulingPriority(DEFAULT_SCHEDULING_PRIORITY)
             .build();
 
     public static final PacketDetectionRule UPLINK_PRIORITY_PDR = PacketDetectionRule.builder()
@@ -114,7 +108,6 @@ public final class TestUpfConstants {
             .withLocalFarId(UPLINK_FAR_ID)
             .withSessionId(SESSION_ID)
             .withCounterId(UPLINK_COUNTER_CELL_ID)
-            .withSchedulingPriority(UPLINK_PRIORITY)
             .build();
 
     public static final PacketDetectionRule DOWNLINK_PRIORITY_PDR = PacketDetectionRule.builder()
@@ -122,7 +115,6 @@ public final class TestUpfConstants {
             .withLocalFarId(DOWNLINK_FAR_ID)
             .withSessionId(SESSION_ID)
             .withCounterId(DOWNLINK_COUNTER_CELL_ID)
-            .withSchedulingPriority(DOWNLINK_PRIORITY)
             .build();
 
     public static final ForwardingActionRule UPLINK_FAR = ForwardingActionRule.builder()
