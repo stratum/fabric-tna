@@ -5,18 +5,12 @@
 # satisfied. For more information, see this doc:
 # https://docs.google.com/document/d/1jq6NH-fffe8ImMo4EC_yMwH1djlrhWaQu2lpLFJKljA
 
-import json
 import logging
-import os
-import pprint
-from argparse import ArgumentParser
-from datetime import datetime
 
 import gnmi_utils
 import qos_utils
 from base_test import *
 from fabric_test import *
-from scapy.layers.all import IP, TCP, UDP, Ether
 from trex_stl_lib.api import STLFlowLatencyStats, STLPktBuilder, STLStream, STLTXCont
 from trex_test import TRexTest
 from trex_utils import *
@@ -32,12 +26,15 @@ REALTIME_2_QUEUE_MAX_RATE_BPS = 30 * M
 REALTIME_3_QUEUE_MAX_RATE_BPS = 25 * M
 SYSTEM_QUEUE_MAX_RATE_BPS = 10 * M
 
-# Latency expectations in microseconds.
-MAXIMUM_EXPECTED_LATENCY_CONTROL_TRAFFIC_US = 1000
-AVERAGE_EXPECTED_LATENCY_CONTROL_TRAFFIC_US = 500
-MAXIMUM_EXPECTED_LATENCY_REALTIME_TRAFFIC_US = 1500
-AVERAGE_EXPECTED_LATENCY_REALTIME_TRAFFIC_US = 500
+# Latency expectations for various traffic types in microseconds.
+EXPECTED_MAXIMUM_LATENCY_CONTROL_TRAFFIC_US = 1000
+EXPECTED_AVERAGE_LATENCY_CONTROL_TRAFFIC_US = 500
+EXPECTED_99_9_PERCENTILE_LATENCY_CONTROL_TRAFFIC_US = 100
+EXPECTED_MAXIMUM_LATENCY_REALTIME_TRAFFIC_US = 1500
+EXPECTED_AVERAGE_LATENCY_REALTIME_TRAFFIC_US = 500
+EXPECTED_99_9_PERCENTILE_LATENCY_REALTIME_TRAFFIC_US = 100
 
+# Port setup.
 BACKGROUND_SENDER_PORT = [0]
 PRIORITY_SENDER_PORT = [2]
 ALL_SENDER_PORTS = [0, 2]
@@ -245,13 +242,13 @@ class StrictPriorityControlTrafficIsPrioritized(QosTest):
         )
         self.assertLessEqual(
             lat_stats.total_max,
-            MAXIMUM_EXPECTED_LATENCY_CONTROL_TRAFFIC_US,
+            EXPECTED_MAXIMUM_LATENCY_CONTROL_TRAFFIC_US,
             f"Maximum latency in control traffic is too high: {lat_stats.total_max}",
         )
         self.assertLessEqual(
-            lat_stats.average,
-            AVERAGE_EXPECTED_LATENCY_CONTROL_TRAFFIC_US,
-            f"Average latency in control traffic is too high: {lat_stats.average}",
+            lat_stats.percentile_99_9,
+            EXPECTED_99_9_PERCENTILE_LATENCY_CONTROL_TRAFFIC_US,
+            f"99.9th percentile latency in control traffic is too high: {lat_stats.percentile_99_9}",
         )
 
 
@@ -301,13 +298,13 @@ class ControlTrafficIsNotPrioritizedWithoutRules(QosTest):
         )
         self.assertGreaterEqual(
             lat_stats.total_max,
-            MAXIMUM_EXPECTED_LATENCY_CONTROL_TRAFFIC_US,
+            EXPECTED_MAXIMUM_LATENCY_CONTROL_TRAFFIC_US,
             f"Maximum latency in control traffic is not over the expected limit: {lat_stats.total_max}",
         )
         self.assertGreaterEqual(
-            lat_stats.average,
-            AVERAGE_EXPECTED_LATENCY_CONTROL_TRAFFIC_US,
-            f"Average latency in control traffic not over the expected limit: {lat_stats.average}",
+            lat_stats.percentile_99_9,
+            EXPECTED_99_9_PERCENTILE_LATENCY_CONTROL_TRAFFIC_US,
+            f"99.9th percentile latency in control traffic not over the expected limit: {lat_stats.percentile_99_9}",
         )
 
 
@@ -354,13 +351,13 @@ class ControlTrafficIsShaped(QosTest):
         )
         self.assertGreaterEqual(
             lat_stats.total_max,
-            MAXIMUM_EXPECTED_LATENCY_CONTROL_TRAFFIC_US,
+            EXPECTED_MAXIMUM_LATENCY_CONTROL_TRAFFIC_US,
             f"Maximum latency in control traffic is not over the expected limit: {lat_stats.total_max}",
         )
         self.assertGreaterEqual(
-            lat_stats.average,
-            AVERAGE_EXPECTED_LATENCY_CONTROL_TRAFFIC_US,
-            f"Average latency in control traffic not over the expected limit: {lat_stats.average}",
+            lat_stats.percentile_99_9,
+            EXPECTED_99_9_PERCENTILE_LATENCY_CONTROL_TRAFFIC_US,
+            f"99.9th percentile latency in control traffic not over the expected limit: {lat_stats.percentile_99_9}",
         )
 
 
@@ -424,13 +421,13 @@ class RealtimeTrafficIsRrScheduled(QosTest):
         )
         self.assertGreaterEqual(
             lat_stats_1.total_max,
-            MAXIMUM_EXPECTED_LATENCY_REALTIME_TRAFFIC_US,
+            EXPECTED_MAXIMUM_LATENCY_REALTIME_TRAFFIC_US,
             f"Maximum latency in realtime traffic is not over the expected limit: {lat_stats_1.total_max}",
         )
         self.assertGreaterEqual(
-            lat_stats_1.average,
-            AVERAGE_EXPECTED_LATENCY_REALTIME_TRAFFIC_US,
-            f"Average latency in realtime traffic is not over the expected limit: {lat_stats_1.average}",
+            lat_stats_1.percentile_99_9,
+            EXPECTED_99_9_PERCENTILE_LATENCY_REALTIME_TRAFFIC_US,
+            f"99.9th percentile latency in realtime traffic is is not over the expected limit: {lat_stats_1.percentile_99_9}",
         )
         # Check RT stream 2
         lat_stats_2 = get_latency_stats(self.realtime_pg_id_2, stats)
@@ -446,13 +443,13 @@ class RealtimeTrafficIsRrScheduled(QosTest):
         )
         self.assertGreaterEqual(
             lat_stats_2.total_max,
-            MAXIMUM_EXPECTED_LATENCY_REALTIME_TRAFFIC_US,
+            EXPECTED_MAXIMUM_LATENCY_REALTIME_TRAFFIC_US,
             f"Maximum latency in control traffic is not over the expected limit: {lat_stats_2.total_max}",
         )
         self.assertGreaterEqual(
-            lat_stats_2.average,
-            AVERAGE_EXPECTED_LATENCY_REALTIME_TRAFFIC_US,
-            f"Average latency in realtime traffic is not over the expected limit: {lat_stats_2.average}",
+            lat_stats_2.percentile_99_9,
+            EXPECTED_99_9_PERCENTILE_LATENCY_REALTIME_TRAFFIC_US,
+            f"99.9th percentile latency in realtime traffic is is not over the expected limit: {lat_stats_2.percentile_99_9}",
         )
         # Check RT stream 3
         lat_stats_3 = get_latency_stats(self.realtime_pg_id_3, stats)
@@ -468,13 +465,13 @@ class RealtimeTrafficIsRrScheduled(QosTest):
         )
         self.assertLessEqual(
             lat_stats_3.total_max,
-            MAXIMUM_EXPECTED_LATENCY_REALTIME_TRAFFIC_US,
+            EXPECTED_MAXIMUM_LATENCY_REALTIME_TRAFFIC_US,
             f"Maximum latency in well behaved realtime traffic is too high: {lat_stats_3.total_max}",
         )
         self.assertLessEqual(
-            lat_stats_3.average,
-            AVERAGE_EXPECTED_LATENCY_REALTIME_TRAFFIC_US,
-            f"Average latency in well behaved realtime traffic is too high: {lat_stats_3.average}",
+            lat_stats_3.percentile_99_9,
+            EXPECTED_99_9_PERCENTILE_LATENCY_REALTIME_TRAFFIC_US,
+            f"99th percentile latency in well behaved realtime traffic is too high: {lat_stats_3.percentile_99_9}",
         )
         # Get statistics for TX and RX ports
         for port in ALL_PORTS:

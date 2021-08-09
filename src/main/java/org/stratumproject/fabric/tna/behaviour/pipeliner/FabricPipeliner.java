@@ -182,6 +182,14 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
     }
 
     @Override
+    public void purgeAll(ApplicationId appId) {
+        flowRuleService.purgeFlowRules(deviceId, appId);
+        groupService.purgeGroupEntries(deviceId, appId);
+        //FIXME: purge flowObjectiveStore as well when addressing SDFAB-250.
+        // Currently we don't have enough information in the store to purge by app and device ID
+    }
+
+    @Override
     public List<String> getNextMappings(NextGroup nextGroup) {
         final FabricNextGroup fabricNextGroup = KRYO.deserialize(nextGroup.data());
         return fabricNextGroup.nextMappings().stream()
