@@ -94,5 +94,10 @@ control PacketIoEgress(inout egress_headers_t hdr,
             // egress pipe.
             exit;
         }
+        // Fix the egress packet length if it is a CPU loopback packet.
+        if (hdr.fake_ethernet.isValid() &&
+            hdr.fake_ethernet.ether_type == ETHERTYPE_CPU_LOOPBACK_EGRESS) {
+                fabric_md.pkt_length = eg_intr_md.pkt_length - ETH_HDR_BYTES;
+        }
     }
 }
