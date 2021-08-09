@@ -15,7 +15,6 @@ import org.onlab.packet.IPv4;
 import org.onlab.packet.Ip4Address;
 import org.onlab.packet.IpAddress;
 import org.onlab.packet.IpPrefix;
-import org.onlab.packet.MacAddress;
 import org.onlab.util.HexString;
 import org.onlab.util.ImmutableByteSequence;
 import org.onosproject.core.ApplicationId;
@@ -123,6 +122,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
     private static final short MIRROR_TYPE_INT_REPORT = 1;
     private static final short INT_REPORT_TYPE_LOCAL = 1;
     private static final short INT_REPORT_TYPE_DROP = 2;
+    private static final int INT_MIRROR_TRUNCATE_MAX_LEN = 128;
 
     private FlowRuleService flowRuleService;
     private GroupService groupService;
@@ -189,6 +189,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
             // Set up mirror sessions
             final List<GroupBucket> buckets = ImmutableList.of(
                     createCloneGroupBucket(DefaultTrafficTreatment.builder()
+                            .truncate(INT_MIRROR_TRUNCATE_MAX_LEN)
                             .setOutput(PortNumber.portNumber(port))
                             .build()));
             groupService.addGroup(new DefaultGroupDescription(
@@ -337,7 +338,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
 
     private boolean setUpIntReportInternal(IntReportConfig cfg) {
         final List<FlowRule> reportRules = buildReportEntries(cfg);
-        if (reportRules.stream().noneMatch(Objects::isNull)) {
+        if (!reportRules.isEmpty() && reportRules.stream().noneMatch(Objects::isNull)) {
             reportRules.forEach(reportRule -> {
                 flowRuleService.applyFlowRules(reportRule);
                 log.info("Report rule added to {} [{}]", deviceId, reportRule);
@@ -448,29 +449,16 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         return Optional.of(cfg.nodeSidIPv4());
     }
 
-    private FlowRule buildReportEntryWithType(
+    private FlowRule buildReportEntryWithType(SegmentRoutingDeviceConfig srCfg,
             IntReportConfig intCfg, short bridgedMdType, short reportType, short mirrorType) {
-        final SegmentRoutingDeviceConfig srCfg = cfgService.getConfig(
-                deviceId, SegmentRoutingDeviceConfig.class);
-        if (srCfg == null) {
-            log.error("Missing SegmentRoutingDeviceConfig config for {}, " +
-                    "cannot derive source IP for INT reports", deviceId);
-            return null;
-        }
-
-        final MacAddress switchMac = srCfg.routerMac();
         final Ip4Address srcIp = srCfg.routerIpv4();
         final int switchId = srCfg.nodeSidIPv4();
 
-        if (switchMac == null || srcIp == null) {
-            log.warn("Invalid switch mac or src IP, skip configuring the report table");
+        if (srcIp == null) {
+            log.warn("Invalid switch IP, skip configuring the report table");
             return null;
         }
 
-        final PiActionParam srcMacParam = new PiActionParam(
-                P4InfoConstants.SRC_MAC, MacAddress.ZERO.toBytes());
-        final PiActionParam nextHopMacParam = new PiActionParam(
-                P4InfoConstants.MON_MAC, switchMac.toBytes());
         final PiActionParam srcIpParam = new PiActionParam(
                 P4InfoConstants.SRC_IP, srcIp.toOctets());
         final PiActionParam monIpParam = new PiActionParam(
@@ -520,9 +508,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
             }
         }
 
-        reportActionBuilder.withParameter(srcMacParam)
-                .withParameter(nextHopMacParam)
-                .withParameter(srcIpParam)
+        reportActionBuilder.withParameter(srcIpParam)
                 .withParameter(monIpParam)
                 .withParameter(monPortParam)
                 .withParameter(switchIdParam);
@@ -551,14 +537,21 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
     }
 
     private List<FlowRule> buildReportEntries(IntReportConfig intCfg) {
+        final SegmentRoutingDeviceConfig srCfg = cfgService.getConfig(
+                deviceId, SegmentRoutingDeviceConfig.class);
+        if (srCfg == null) {
+            log.error("Missing SegmentRoutingDeviceConfig config for {}, " +
+                    "cannot derive source IP for INT reports", deviceId);
+            return Collections.emptyList();
+        }
         return Lists.newArrayList(
-                buildReportEntryWithType(intCfg, BMD_TYPE_INT_INGRESS_DROP,
+                buildReportEntryWithType(srCfg, intCfg, BMD_TYPE_INT_INGRESS_DROP,
                                          INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID),
-                buildReportEntryWithType(intCfg, BMD_TYPE_EGRESS_MIRROR,
+                buildReportEntryWithType(srCfg, intCfg, BMD_TYPE_EGRESS_MIRROR,
                                          INT_REPORT_TYPE_DROP, MIRROR_TYPE_INT_REPORT),
-                buildReportEntryWithType(intCfg, BMD_TYPE_EGRESS_MIRROR,
+                buildReportEntryWithType(srCfg, intCfg, BMD_TYPE_EGRESS_MIRROR,
                                          INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT),
-                buildReportEntryWithType(intCfg, BMD_TYPE_DEFLECTED,
+                buildReportEntryWithType(srCfg, intCfg, BMD_TYPE_DEFLECTED,
                                          INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID)
         );
     }
