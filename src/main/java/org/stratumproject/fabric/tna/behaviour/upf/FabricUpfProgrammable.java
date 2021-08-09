@@ -144,30 +144,27 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         if (setupBehaviour("init()")) {
             log.info("UpfProgrammable initialized for appId {} and deviceId {}", appId, deviceId);
             // Add static Queue Configuration
-            flowRuleService.applyFlowRules(queuesMapping().toArray(new FlowRule[0]));
+            flowRuleService.applyFlowRules(queuesFlowRules().toArray(new FlowRule[0]));
             return true;
         }
         return false;
     }
 
-    private Collection<FlowRule> queuesMapping() {
-        // For now, configure TC only for the DEFAULT_SLICE_ID
+    private Collection<FlowRule> queuesFlowRules() {
+        // For now we assume only one slice, hence we configure TCs only for the DEFAULT_SLICE_ID.
         // Meters are not configured, therefore there is no need to match on packet color.
         // In the future we can drop RED traffic, or send it to different Q (i.e., red control traffic).
         Collection<FlowRule> flowRules = Lists.newArrayList();
 
-        // Control, System and BE. All slices share the same queue
-        flowRules.add(configureQueuesSetQueue(DEFAULT_SLICE_ID, TC_CONTROL, QUEUE_ID_CONTROL));
-        flowRules.add(configureQueuesSetQueue(DEFAULT_SLICE_ID, TC_BEST_EFFORT, QUEUE_ID_BEST_EFFORT));
-        // Real Time. Use the first RT queue for the default slice
-        flowRules.add(configureQueuesSetQueue(DEFAULT_SLICE_ID, TC_REAL_TIME, QUEUE_ID_FIRST_REAL_TIME));
-        // Elastic. Use the first Elastic queue for the default slice
-        flowRules.add(configureQueuesSetQueue(DEFAULT_SLICE_ID, TC_ELASTIC, QUEUE_ID_FIRST_ELASTIC));
+        flowRules.add(setQueueFlowRule(DEFAULT_SLICE_ID, TC_CONTROL, QUEUE_ID_CONTROL));
+        flowRules.add(setQueueFlowRule(DEFAULT_SLICE_ID, TC_REAL_TIME, QUEUE_ID_FIRST_REAL_TIME));
+        flowRules.add(setQueueFlowRule(DEFAULT_SLICE_ID, TC_ELASTIC, QUEUE_ID_FIRST_ELASTIC));
+        flowRules.add(setQueueFlowRule(DEFAULT_SLICE_ID, TC_BEST_EFFORT, QUEUE_ID_BEST_EFFORT));
 
         return flowRules;
     }
 
-    private FlowRule configureQueuesSetQueue(int sliceId, int tcId, int queueId) {
+    private FlowRule setQueueFlowRule(int sliceId, int tcId, int queueId) {
         TrafficSelector trafficSelector = DefaultTrafficSelector.builder()
                 .matchPi(PiCriterion.builder().matchExact(HDR_SLICE_ID, sliceId).build())
                 .matchPi(PiCriterion.builder().matchExact(HDR_TC, tcId).build())
@@ -300,7 +297,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         List<FlowRule> flowEntriesToRemove = StreamSupport.stream(
                 flowRuleService.getFlowEntries(deviceId).spliterator(), false)
                 .filter(flowEntry -> flowEntry.appId() == appId.id()).collect(Collectors.toList());
-        flowEntriesToRemove.addAll(queuesMapping());
+        flowEntriesToRemove.addAll(queuesFlowRules());
         flowRuleService.removeFlowRules(flowEntriesToRemove.toArray(new FlowRule[0]));
         fabricUpfStore.reset();
     }

@@ -48,7 +48,7 @@ public final class Constants {
     // FIXME: ELASTIC_ID can change and it should be configurable at runtime (i.e., via netcfg?)
     public static final int QUEUE_ID_FIRST_ELASTIC = 6; // TODO: this can change
 
-    // Traffic Classes (0 to 4)
+    // Traffic Classes
     public static final int TC_BEST_EFFORT = 0; // Also the default TC
     public static final int TC_CONTROL = 1;
     public static final int TC_REAL_TIME = 2;
