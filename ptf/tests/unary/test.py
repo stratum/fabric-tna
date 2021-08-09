@@ -2921,7 +2921,7 @@ class FabricIntDeflectDropReportTest(IntTest):
             is_device_spine,
             send_report_to_spine,
             0,  # hw_id,
-            truncate=False # packet will not be truncated
+            truncate=False,  # packet will not be truncated
         )
 
         self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine)
