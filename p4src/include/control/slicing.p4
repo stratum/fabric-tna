@@ -112,6 +112,13 @@ control IngressQos (inout fabric_ingress_metadata_t fabric_md,
 
     table queues {
         key = {
+            // FIXME: match on slice_id and tc instead of concatenated slice_tc
+            //  Using bit-slicing to define two match fields causes a Stratum
+            //  runtime bug with the context JSON produced with SDE 9.3.0:
+            //  "Could not find field fabric_md.bridged.base_slice_tc in match
+            //  spec." Try removing workaround with future SDE releases.
+            // fabric_md.bridged.base.slice_tc[SLICE_ID_WIDTH+TC_WIDTH-1:TC_WIDTH]: exact @name("slice_id");
+            // fabric_md.bridged.base.slice_tc[TC_WIDTH-1:0]: exact @name("tc");
             fabric_md.bridged.base.slice_tc: exact   @name("slice_tc");
             ig_tm_md.packet_color:           ternary @name("color");
         }

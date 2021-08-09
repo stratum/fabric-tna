@@ -4439,7 +4439,6 @@ class SlicingTest(FabricTest):
         slice_tc = slice_tc_concat(slice_id, tc)
         matches = [
             self.Exact("slice_tc", stringify(slice_tc, 1)),
-            self.Exact("tc", stringify(tc, 1)),
         ]
         if color is not None:
             matches.append(
