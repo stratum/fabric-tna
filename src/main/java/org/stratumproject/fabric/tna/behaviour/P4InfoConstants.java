@@ -105,14 +105,12 @@ public final class P4InfoConstants {
     public static final PiMatchFieldId HDR_NEXT_ID =
             PiMatchFieldId.of("next_id");
     public static final int HDR_NEXT_ID_BITWIDTH = 32;
-    public static final PiMatchFieldId HDR_SLICE_ID =
-            PiMatchFieldId.of("slice_id");
-    public static final int HDR_SLICE_ID_BITWIDTH = 4;
+    public static final PiMatchFieldId HDR_SLICE_TC =
+            PiMatchFieldId.of("slice_tc");
+    public static final int HDR_SLICE_TC_BITWIDTH = 6;
     public static final PiMatchFieldId HDR_STATS_FLOW_ID =
             PiMatchFieldId.of("stats_flow_id");
     public static final int HDR_STATS_FLOW_ID_BITWIDTH = 10;
-    public static final PiMatchFieldId HDR_TC = PiMatchFieldId.of("tc");
-    public static final int HDR_TC_BITWIDTH = 2;
     public static final PiMatchFieldId HDR_TEID = PiMatchFieldId.of("teid");
     public static final int HDR_TEID_BITWIDTH = 32;
     public static final PiMatchFieldId HDR_TUNNEL_IPV4_DST =
