@@ -121,9 +121,9 @@ public class FabricIntProgrammableTest {
                     .put(0x201, 0xc4)
                     .put(0x202, 0x144)
                     .put(0x203, 0x1c4).build();
-    private static final MacAddress SWITCH_MAC = MacAddress.valueOf("00:00:00:00:01:80");
     private static final long DEFAULT_QUEUE_REPORT_LATENCY_THRESHOLD = 2000; // ns
     private static final byte MAX_QUEUES = 32;
+    private static final int INT_MIRROR_TRUNCATE_MAX_LEN = 128;
 
     private FabricIntProgrammable intProgrammable;
     private FlowRuleService flowRuleService;
@@ -621,10 +621,6 @@ public class FabricIntProgrammableTest {
     }
 
     private PiAction buildReportAction(boolean setMpls, short reportType, short bmdType) {
-        final PiActionParam srcMacParam = new PiActionParam(
-                P4InfoConstants.SRC_MAC, MacAddress.ZERO.toBytes());
-        final PiActionParam nextHopMacParam = new PiActionParam(
-                P4InfoConstants.MON_MAC, SWITCH_MAC.toBytes());
         final PiActionParam srcIpParam = new PiActionParam(
                 P4InfoConstants.SRC_IP, ROUTER_IP.toOctets());
         final PiActionParam monIpParam = new PiActionParam(
@@ -637,8 +633,6 @@ public class FabricIntProgrammableTest {
                 P4InfoConstants.SWITCH_ID,
                 NODE_SID_IPV4);
         final PiAction.Builder reportAction = PiAction.builder()
-                .withParameter(srcMacParam)
-                .withParameter(nextHopMacParam)
                 .withParameter(srcIpParam)
                 .withParameter(monIpParam)
                 .withParameter(monPortParam)
@@ -785,6 +779,7 @@ public class FabricIntProgrammableTest {
             final List<GroupBucket> buckets = ImmutableList.of(
                     createCloneGroupBucket(DefaultTrafficTreatment.builder()
                             .setOutput(PortNumber.portNumber(port))
+                            .truncate(INT_MIRROR_TRUNCATE_MAX_LEN)
                             .build()));
             expectedGroups.add(new DefaultGroupDescription(
                     LEAF_DEVICE_ID, GroupDescription.Type.CLONE,

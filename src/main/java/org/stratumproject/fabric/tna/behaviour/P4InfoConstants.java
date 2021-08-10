@@ -365,7 +365,6 @@ public final class P4InfoConstants {
     public static final PiActionParamId MON_IP = PiActionParamId.of("mon_ip");
     public static final PiActionParamId MON_LABEL =
             PiActionParamId.of("mon_label");
-    public static final PiActionParamId MON_MAC = PiActionParamId.of("mon_mac");
     public static final PiActionParamId MON_PORT =
             PiActionParamId.of("mon_port");
     public static final PiActionParamId NEXT_ID = PiActionParamId.of("next_id");
@@ -379,7 +378,6 @@ public final class P4InfoConstants {
             PiActionParamId.of("slice_id");
     public static final PiActionParamId SMAC = PiActionParamId.of("smac");
     public static final PiActionParamId SRC_IP = PiActionParamId.of("src_ip");
-    public static final PiActionParamId SRC_MAC = PiActionParamId.of("src_mac");
     public static final PiActionParamId SWITCH_ID =
             PiActionParamId.of("switch_id");
     public static final PiActionParamId TC = PiActionParamId.of("tc");

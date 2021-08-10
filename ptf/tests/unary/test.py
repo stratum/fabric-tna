@@ -2904,6 +2904,8 @@ class FabricIntDeflectDropReportTest(IntTest):
             pkt = pkt_add_vlan(pkt, VLAN_ID_1)
 
         # The packet will still be routed, but dropped by traffic manager.
+        # Note that the pipeline won't change IP TTL since the packet will not be
+        # procedded by the egress next block.
         int_inner_pkt = pkt_route(int_inner_pkt, HOST2_MAC)
 
         exp_int_report_pkt_masked = self.build_int_drop_report(
@@ -2918,7 +2920,8 @@ class FabricIntDeflectDropReportTest(IntTest):
             int_inner_pkt,
             is_device_spine,
             send_report_to_spine,
-            0,  # hw_id
+            0,  # hw_id,
+            truncate=False,  # packet will not be truncated
         )
 
         self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine)
