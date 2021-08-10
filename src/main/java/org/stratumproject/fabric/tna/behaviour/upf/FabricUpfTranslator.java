@@ -29,6 +29,7 @@ import org.onosproject.net.pi.runtime.PiTableAction;
 
 import java.util.Arrays;
 
+import static java.lang.String.format;
 import static org.stratumproject.fabric.tna.behaviour.Constants.DEFAULT_SLICE_ID;
 import static org.stratumproject.fabric.tna.behaviour.Constants.TC_BEST_EFFORT;
 import static org.stratumproject.fabric.tna.behaviour.Constants.TC_CONTROL;
@@ -82,11 +83,11 @@ public class FabricUpfTranslator {
 
     // TODO: agree on a mapping with the PFCP agent
     //  Make sure to have a 1 to 1 mapping between QFI and TC.
-    static final BiMap<Integer, Integer> QFI_TO_TC = ImmutableBiMap.of(
+    static final BiMap<Byte, Integer> QFI_TO_TC = ImmutableBiMap.of(
             //0, TC_BEST_EFFORT, --> this is DEFAULT_TC
-            1, TC_CONTROL,
-            2, TC_REAL_TIME,
-            3, TC_ELASTIC);
+            (byte) 1, TC_CONTROL,
+            (byte) 2, TC_REAL_TIME,
+            (byte) 3, TC_ELASTIC);
 
     public FabricUpfTranslator(FabricUpfStore fabricUpfStore) {
         this.fabricUpfStore = fabricUpfStore;
@@ -145,7 +146,7 @@ public class FabricUpfTranslator {
         int globalFarId = FabricUpfTranslatorUtil.getParamInt(action, FAR_ID);
         UpfRuleIdentifier farId = fabricUpfStore.localFarIdOf(globalFarId);
         if (farId == null) {
-            throw new UpfProgrammableException(String.format("Unable to find local far id of %s", globalFarId));
+            throw new UpfProgrammableException(format("Unable to find local far id of %s", globalFarId));
         }
 
         pdrBuilder.withCounterId(FabricUpfTranslatorUtil.getParamInt(action, CTR_ID))
@@ -165,11 +166,20 @@ public class FabricUpfTranslator {
             throw new UpfProgrammableException("Read malformed PDR from dataplane!:" + entry);
         }
 
-        Integer qfi = QFI_TO_TC.inverse().getOrDefault(
-                FabricUpfTranslatorUtil.getParamInt(action, TC), null);
+
+        int tc = FabricUpfTranslatorUtil.getParamInt(action, TC);
+        Byte qfi = QFI_TO_TC.inverse().getOrDefault(tc, null);
         if (qfi != null) {
-            pdrBuilder.withQfi(qfi.byteValue());
+            // FIXME: this breaks R/W symmetry as we always return a PDR wth a
+            //  QFI even if we wrote one without. See comment in pdrToFabricEntry().
+            pdrBuilder.withQfi(qfi);
+        } else {
+            throw new UpfProgrammableException(format(
+                    "TC value '%d' unsupported, unable to map to QFI -- " +
+                            "how did we manage to write this entry? BUG? [%s]",
+                    tc, entry));
         }
+
         return pdrBuilder.build();
     }
 
@@ -190,7 +200,7 @@ public class FabricUpfTranslator {
         int globalFarId = FabricUpfTranslatorUtil.getFieldInt(match, HDR_FAR_ID);
         UpfRuleIdentifier farId = fabricUpfStore.localFarIdOf(globalFarId);
         if (farId == null) {
-            throw new UpfProgrammableException(String.format("Unable to find local far id of %s", globalFarId));
+            throw new UpfProgrammableException(format("Unable to find local far id of %s", globalFarId));
         }
 
         boolean dropFlag = FabricUpfTranslatorUtil.getParamInt(action, DROP) > 0;
@@ -339,8 +349,23 @@ public class FabricUpfTranslator {
                         new PiActionParam(FAR_ID, fabricUpfStore.globalFarIdOf(pdr.sessionId(), pdr.farId())),
                         new PiActionParam(NEEDS_GTPU_DECAP, pdr.matchesEncapped() ? 1 : 0)))
                 .withId(FABRIC_INGRESS_SPGW_LOAD_PDR);
-        actionBuilder.withParameter(new PiActionParam(TC, pdr.hasQfi() ?
-                QFI_TO_TC.getOrDefault((int) pdr.qfi(), TC_BEST_EFFORT) : TC_BEST_EFFORT));
+
+        final int tc;
+        if (pdr.hasQfi()) {
+            if(!QFI_TO_TC.containsKey(pdr.qfi())) {
+                throw new UpfProgrammableException(format(
+                        "QFI value '%d' not supported, unable to map to TC", pdr.qfi()));
+            }
+            tc = QFI_TO_TC.get(pdr.qfi());
+        } else {
+            // FIXME: this breaks R/W symmetry, as we cannot distinguish between
+            //   QFI=0 and QFI unset, indeed both cases map to the same
+            //   Best-Effort TC. We should use different actions for PDRs
+            //   without QFI to maintain R/W symmetry with PFCP agent.
+            tc = TC_BEST_EFFORT;
+        }
+        actionBuilder.withParameter(new PiActionParam(TC, tc));
+
         if (pdr.matchesEncapped()) {
             match = PiCriterion.builder()
                     .matchExact(HDR_TEID, pdr.teid().asArray())
