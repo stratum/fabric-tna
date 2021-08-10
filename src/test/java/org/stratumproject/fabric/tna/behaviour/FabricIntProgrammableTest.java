@@ -389,6 +389,47 @@ public class FabricIntProgrammableTest {
         verify(flowRuleService);
     }
 
+    /**
+     * Test "setUpIntConfig" function of IntProgrammable with a config that contains
+     * queue report threshold config.
+     */
+    @Test
+    public void testSetupIntConfigWithQueueReportThreshold() {
+        reset(flowRuleService);
+        expect(flowRuleService.getFlowEntriesById(APP_ID)).andReturn(ImmutableList.of()).times(2);
+        final IntReportConfig intConfig = getIntReportConfig(APP_ID, "/int-report-queue-report-threshold.json");
+        List<FlowRule> expectRules = Lists.newArrayList();
+        expectRules.add(buildCollectorWatchlistRule(LEAF_DEVICE_ID));
+        expectRules.addAll(queueReportFlows(LEAF_DEVICE_ID, 1888, 388)); // Value from the json file.
+        expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false,
+            BMD_TYPE_INT_INGRESS_DROP, INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID));
+        expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false,
+            BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_DROP, MIRROR_TYPE_INT_REPORT));
+        expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false,
+            BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT));
+        expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false,
+            BMD_TYPE_DEFLECTED, INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID));
+        expectRules.add(buildFilterConfigFlow(LEAF_DEVICE_ID));
+
+        List<Capture<FlowRule>> captures = Lists.newArrayList();
+        for (int i = 0; i < expectRules.size(); i++) {
+            Capture<FlowRule> flowRuleCapture = newCapture();
+            flowRuleService.applyFlowRules(capture(flowRuleCapture));
+            captures.add(flowRuleCapture);
+        }
+
+        replay(flowRuleService);
+        assertTrue(intProgrammable.setUpIntConfig(intConfig));
+
+        // Verifying flow rules
+        for (int i = 0; i < expectRules.size(); i++) {
+            FlowRule expectRule = expectRules.get(i);
+            FlowRule actualRule = captures.get(i).getValue();
+            assertTrue(expectRule.exactMatch(actualRule));
+        }
+        verify(flowRuleService);
+    }
+
     @Test
     public void testUtilityMethods() {
         assertEquals(0xffffffffL, intProgrammable.getSuitableQmaskForLatencyChange(0));
