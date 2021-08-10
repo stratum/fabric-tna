@@ -34,6 +34,7 @@ import static org.easymock.EasyMock.createNiceMock;
 import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.replay;
 import static org.junit.Assert.assertEquals;
+import static org.stratumproject.fabric.tna.behaviour.Constants.QUEUE_ID_SYSTEM;
 
 /**
  * Test for fabric interpreter.
@@ -201,9 +202,29 @@ public class FabricInterpreterTest {
 
         ImmutableList.Builder<PiPacketMetadata> builder = ImmutableList.builder();
         builder.add(PiPacketMetadata.builder()
+                .withId(P4InfoConstants.PAD0)
+                .withValue(ImmutableByteSequence.copyFrom(0)
+                        .fit(P4InfoConstants.PAD0_BITWIDTH))
+                .build());
+        builder.add(PiPacketMetadata.builder()
                 .withId(P4InfoConstants.EGRESS_PORT)
                 .withValue(ImmutableByteSequence.copyFrom(outputPort.toLong())
                         .fit(P4InfoConstants.EGRESS_PORT_BITWIDTH))
+                .build());
+        builder.add(PiPacketMetadata.builder()
+                .withId(P4InfoConstants.PAD1)
+                .withValue(ImmutableByteSequence.copyFrom(0)
+                        .fit(P4InfoConstants.PAD1_BITWIDTH))
+                .build());
+        builder.add(PiPacketMetadata.builder()
+                .withId(P4InfoConstants.QUEUE_ID)
+                .withValue(ImmutableByteSequence.copyFrom(QUEUE_ID_SYSTEM)
+                        .fit(P4InfoConstants.QUEUE_ID_BITWIDTH))
+                .build());
+        builder.add(PiPacketMetadata.builder()
+                .withId(P4InfoConstants.PAD2)
+                .withValue(ImmutableByteSequence.copyFrom(0)
+                        .fit(P4InfoConstants.PAD2_BITWIDTH))
                 .build());
         builder.add(PiPacketMetadata.builder()
                 .withId(P4InfoConstants.CPU_LOOPBACK_MODE)
@@ -216,14 +237,19 @@ public class FabricInterpreterTest {
                         .fit(P4InfoConstants.DO_FORWARDING_BITWIDTH))
                 .build());
         builder.add(PiPacketMetadata.builder()
+                .withId(P4InfoConstants.PAD3)
+                .withValue(ImmutableByteSequence.copyFrom(0)
+                        .fit(P4InfoConstants.PAD3_BITWIDTH))
+                .build());
+        builder.add(PiPacketMetadata.builder()
+                .withId(P4InfoConstants.PAD4)
+                .withValue(ImmutableByteSequence.copyFrom(0)
+                        .fit(P4InfoConstants.PAD4_BITWIDTH))
+                .build());
+        builder.add(PiPacketMetadata.builder()
                 .withId(P4InfoConstants.ETHER_TYPE)
                 .withValue(ImmutableByteSequence.copyFrom(0xBF01)
                         .fit(P4InfoConstants.ETHER_TYPE_BITWIDTH))
-                .build());
-        builder.add(PiPacketMetadata.builder()
-                .withId(P4InfoConstants.PAD0)
-                .withValue(ImmutableByteSequence.copyFrom(0)
-                        .fit(P4InfoConstants.PAD0_BITWIDTH))
                 .build());
         PiPacketOperation expectedPktOp = PiPacketOperation.builder()
                 .withType(PiPacketOperationType.PACKET_OUT)
@@ -249,9 +275,29 @@ public class FabricInterpreterTest {
 
         ImmutableList.Builder<PiPacketMetadata> builder = ImmutableList.builder();
         builder.add(PiPacketMetadata.builder()
+                .withId(P4InfoConstants.PAD0)
+                .withValue(ImmutableByteSequence.copyFrom(0)
+                        .fit(P4InfoConstants.PAD0_BITWIDTH))
+                .build());
+        builder.add(PiPacketMetadata.builder()
                 .withId(P4InfoConstants.EGRESS_PORT)
                 .withValue(ImmutableByteSequence.copyFrom(0)
                         .fit(P4InfoConstants.EGRESS_PORT_BITWIDTH))
+                .build());
+        builder.add(PiPacketMetadata.builder()
+                .withId(P4InfoConstants.PAD1)
+                .withValue(ImmutableByteSequence.copyFrom(0)
+                        .fit(P4InfoConstants.PAD1_BITWIDTH))
+                .build());
+        builder.add(PiPacketMetadata.builder()
+                .withId(P4InfoConstants.QUEUE_ID)
+                .withValue(ImmutableByteSequence.copyFrom(QUEUE_ID_SYSTEM)
+                        .fit(P4InfoConstants.QUEUE_ID_BITWIDTH))
+                .build());
+        builder.add(PiPacketMetadata.builder()
+                .withId(P4InfoConstants.PAD2)
+                .withValue(ImmutableByteSequence.copyFrom(0)
+                        .fit(P4InfoConstants.PAD2_BITWIDTH))
                 .build());
         builder.add(PiPacketMetadata.builder()
                 .withId(P4InfoConstants.CPU_LOOPBACK_MODE)
@@ -264,14 +310,19 @@ public class FabricInterpreterTest {
                         .fit(P4InfoConstants.DO_FORWARDING_BITWIDTH))
                 .build());
         builder.add(PiPacketMetadata.builder()
+                .withId(P4InfoConstants.PAD3)
+                .withValue(ImmutableByteSequence.copyFrom(0)
+                        .fit(P4InfoConstants.PAD3_BITWIDTH))
+                .build());
+        builder.add(PiPacketMetadata.builder()
+                .withId(P4InfoConstants.PAD4)
+                .withValue(ImmutableByteSequence.copyFrom(0)
+                        .fit(P4InfoConstants.PAD4_BITWIDTH))
+                .build());
+        builder.add(PiPacketMetadata.builder()
                 .withId(P4InfoConstants.ETHER_TYPE)
                 .withValue(ImmutableByteSequence.copyFrom(0xBF01)
                         .fit(P4InfoConstants.ETHER_TYPE_BITWIDTH))
-                .build());
-        builder.add(PiPacketMetadata.builder()
-                .withId(P4InfoConstants.PAD0)
-                .withValue(ImmutableByteSequence.copyFrom(0)
-                        .fit(P4InfoConstants.PAD0_BITWIDTH))
                 .build());
         PiPacketOperation expectedPktOp = PiPacketOperation.builder()
                 .withType(PiPacketOperationType.PACKET_OUT)

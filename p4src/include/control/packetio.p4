@@ -11,6 +11,7 @@ control PacketIoIngress(inout ingress_headers_t hdr,
     @hidden
     action do_packet_out() {
         ig_intr_md_for_tm.ucast_egress_port = hdr.packet_out.egress_port;
+        ig_intr_md_for_tm.qid = hdr.packet_out.queue_id;
         fabric_md.egress_port_set = true;
         hdr.packet_out.setInvalid();
         // Straight to output port.

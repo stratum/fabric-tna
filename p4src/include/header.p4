@@ -17,10 +17,15 @@ header packet_in_header_t {
 // Ethernet frame in the ingress parser.
 @controller_header("packet_out")
 header packet_out_header_t {
+    @padding bit<7>   pad0;
     PortId_t          egress_port;
+    @padding bit<3>   pad1;
+    QueueId_t         queue_id;
+    @padding bit<5>   pad2;
     CpuLoopbackMode_t cpu_loopback_mode;
     bit<1>            do_forwarding;
-    @padding bit<84>  pad0;
+    @padding bit<16>  pad3;
+    @padding bit<48>  pad4;
     bit<16>           ether_type;
 }
 

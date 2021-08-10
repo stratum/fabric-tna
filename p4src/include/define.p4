@@ -47,12 +47,12 @@ typedef bit<32> flow_hash_t;
 typedef bit<SLICE_ID_WIDTH> slice_id_t;
 typedef bit<TC_WIDTH> tc_t; // Traffic Class (for QoS) whitin a slice
 typedef bit<SLICE_TC_WIDTH> slice_tc_t; // Slice and TC identifier
-typedef bit<5> qid_t;
 
 const slice_id_t DEFAULT_SLICE_ID = 0;
 const tc_t DEFAULT_TC = 0;
 // Check Stratum's chassis_config for other queue IDs.
-const qid_t BEST_EFFORT_QUEUE = 0;
+// Should be the same specified in gen-stratum-qos-config.py.
+const QueueId_t QUEUE_ID_BEST_EFFORT = 0;
 
 // SPGW types
 typedef bit<32> teid_t;

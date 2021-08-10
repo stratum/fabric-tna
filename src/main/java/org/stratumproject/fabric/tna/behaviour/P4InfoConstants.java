@@ -411,7 +411,18 @@ public final class P4InfoConstants {
             PiPacketMetadataId.of("ingress_port");
     public static final int INGRESS_PORT_BITWIDTH = 9;
     public static final PiPacketMetadataId PAD0 = PiPacketMetadataId.of("pad0");
-    public static final int PAD0_BITWIDTH = 84;
+    public static final int PAD0_BITWIDTH = 7;
+    public static final PiPacketMetadataId PAD1 = PiPacketMetadataId.of("pad1");
+    public static final int PAD1_BITWIDTH = 3;
+    public static final PiPacketMetadataId PAD2 = PiPacketMetadataId.of("pad2");
+    public static final int PAD2_BITWIDTH = 5;
+    public static final PiPacketMetadataId PAD3 = PiPacketMetadataId.of("pad3");
+    public static final int PAD3_BITWIDTH = 16;
+    public static final PiPacketMetadataId PAD4 = PiPacketMetadataId.of("pad4");
+    public static final int PAD4_BITWIDTH = 48;
+    public static final PiPacketMetadataId QUEUE_ID =
+            PiPacketMetadataId.of("queue_id");
+    public static final int QUEUE_ID_BITWIDTH = 5;
     // Meter IDs
     public static final PiMeterId FABRIC_INGRESS_QOS_SLICE_TC_METER =
             PiMeterId.of("FabricIngress.qos.slice_tc_meter");

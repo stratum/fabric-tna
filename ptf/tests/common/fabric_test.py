@@ -11,6 +11,7 @@ import time
 
 import xnt
 from base_test import P4RuntimeTest, ipv4_to_binary, mac_to_binary, stringify, tvcreate
+from qos_utils import QUEUE_ID_SYSTEM
 from bmd_bytes import BMD_BYTES
 from p4.v1 import p4runtime_pb2
 from ptf import testutils
@@ -896,28 +897,49 @@ class FabricTest(P4RuntimeTest):
         port,
         cpu_loopback_mode=CPU_LOOPBACK_MODE_DISABLED,
         do_forwarding=False,
+        queue_id=QUEUE_ID_SYSTEM,
     ):
         packet_out = p4runtime_pb2.PacketOut()
         packet_out.payload = bytes(pkt)
+        # pad0
+        pad_md = packet_out.metadata.add()
+        pad_md.metadata_id = 1
+        pad_md.value = stringify(0, 1)
         # egress_port
         port_md = packet_out.metadata.add()
-        port_md.metadata_id = 1
+        port_md.metadata_id = 2
         port_md.value = stringify(port, 2)
+        # pad1
+        pad_md = packet_out.metadata.add()
+        pad_md.metadata_id = 3
+        pad_md.value = stringify(0, 1)
+        # queue_id
+        queue_md = packet_out.metadata.add()
+        queue_md.metadata_id = 4
+        queue_md.value = stringify(queue_id, 1)
+        # pad2
+        pad_md = packet_out.metadata.add()
+        pad_md.metadata_id = 5
+        pad_md.value = stringify(0, 1)
         # cpu_loopback_mode
         cpu_loopback_mode_md = packet_out.metadata.add()
-        cpu_loopback_mode_md.metadata_id = 2
+        cpu_loopback_mode_md.metadata_id = 6
         cpu_loopback_mode_md.value = stringify(cpu_loopback_mode, 1)
         # do_forwarding
         do_forwarding_md = packet_out.metadata.add()
-        do_forwarding_md.metadata_id = 3
+        do_forwarding_md.metadata_id = 7
         do_forwarding_md.value = stringify(1 if do_forwarding else 0, 1)
-        # pad0
-        pad0_md = packet_out.metadata.add()
-        pad0_md.metadata_id = 4
-        pad0_md.value = stringify(0, 1)
+        # pad3
+        pad_md = packet_out.metadata.add()
+        pad_md.metadata_id = 8
+        pad_md.value = stringify(0, 2)
+        # pad4
+        pad_md = packet_out.metadata.add()
+        pad_md.metadata_id = 9
+        pad_md.value = stringify(0, 6)
         # ether type
         ether_type_md = packet_out.metadata.add()
-        ether_type_md.metadata_id = 5
+        ether_type_md.metadata_id = 10
         ether_type_md.value = stringify(ETH_TYPE_PACKET_OUT, 2)
         return packet_out
 
