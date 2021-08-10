@@ -2351,9 +2351,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
                 self.Exact("gtpu_is_valid", stringify(int(gtpu_valid), 1)),
             ],
             "FabricIngress.spgw." + iface_type,
-            [
-                ("slice_id", stringify(slice_id, 1)),
-            ],
+            [("slice_id", stringify(slice_id, 1)),],
         )
         self.write_request(req)
 
@@ -2986,10 +2984,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         #  updated it when first sending the same packets **to** dbuf. However,
         #  to improve Tofino resource utilization, we decided to allow for
         #  accounting inaccuracy. See comment in spgw.p4 for more context.
-        ingress_bytes = (
-            len(pkt_from_dbuf)
-            + ETH_FCS_BYTES
-        )
+        ingress_bytes = len(pkt_from_dbuf) + ETH_FCS_BYTES
         # GTP encap and VLAN/MPLS push/pop happen at egress deparser, but
         # counters are updated with bytes seen at egress parser.
         egress_bytes = (
