@@ -3,6 +3,7 @@
 package org.stratumproject.fabric.tna.behaviour.upf;
 
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.onlab.packet.Ip4Prefix;
 import org.onosproject.core.ApplicationId;
@@ -18,9 +19,9 @@ import org.onosproject.net.behaviour.upf.UpfProgrammableException;
 import org.onosproject.net.flow.DefaultFlowRule;
 import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
-import org.onosproject.net.flow.FlowEntry;
 import org.onosproject.net.flow.FlowRule;
 import org.onosproject.net.flow.FlowRuleService;
+import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flow.criteria.PiCriterion;
 import org.onosproject.net.packet.DefaultOutboundPacket;
 import org.onosproject.net.packet.OutboundPacket;
@@ -29,6 +30,8 @@ import org.onosproject.net.pi.model.PiCounterId;
 import org.onosproject.net.pi.model.PiCounterModel;
 import org.onosproject.net.pi.model.PiTableId;
 import org.onosproject.net.pi.model.PiTableModel;
+import org.onosproject.net.pi.runtime.PiAction;
+import org.onosproject.net.pi.runtime.PiActionParam;
 import org.onosproject.net.pi.runtime.PiCounterCell;
 import org.onosproject.net.pi.runtime.PiCounterCellHandle;
 import org.onosproject.net.pi.runtime.PiCounterCellId;
@@ -47,8 +50,19 @@ import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 import static org.onosproject.net.pi.model.PiCounterType.INDIRECT;
+import static org.stratumproject.fabric.tna.behaviour.Constants.DEFAULT_SLICE_ID;
+import static org.stratumproject.fabric.tna.behaviour.Constants.QUEUE_ID_BEST_EFFORT;
+import static org.stratumproject.fabric.tna.behaviour.Constants.QUEUE_ID_CONTROL;
+import static org.stratumproject.fabric.tna.behaviour.Constants.QUEUE_ID_FIRST_ELASTIC;
+import static org.stratumproject.fabric.tna.behaviour.Constants.QUEUE_ID_FIRST_REAL_TIME;
+import static org.stratumproject.fabric.tna.behaviour.Constants.TC_BEST_EFFORT;
+import static org.stratumproject.fabric.tna.behaviour.Constants.TC_CONTROL;
+import static org.stratumproject.fabric.tna.behaviour.Constants.TC_ELASTIC;
+import static org.stratumproject.fabric.tna.behaviour.Constants.TC_REAL_TIME;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_GTPU_ENCAP;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_PDR_COUNTER;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_QOS_QUEUES;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_QOS_SET_QUEUE;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_PDRS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_FARS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_INTERFACES;
@@ -57,9 +71,12 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_ING
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_FAR_ID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_GTPU_IS_VALID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_IPV4_DST_ADDR;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_SLICE_ID;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_TC;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_TEID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_TUNNEL_IPV4_DST;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_UE_ADDR;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.QID;
 
 /**
  * Implementation of a UPF programmable device behavior.
@@ -70,6 +87,8 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     private final Logger log = LoggerFactory.getLogger(getClass());
     private static final int DEFAULT_PRIORITY = 128;
     private static final long DEFAULT_P4_DEVICE_ID = 1;
+
+    private static final int PRIORITY_LOW = 10;
 
     protected FlowRuleService flowRuleService;
     protected PacketService packetService;
@@ -124,9 +143,44 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     public boolean init() {
         if (setupBehaviour("init()")) {
             log.info("UpfProgrammable initialized for appId {} and deviceId {}", appId, deviceId);
+            // Add static Queue Configuration
+            flowRuleService.applyFlowRules(queuesFlowRules().toArray(new FlowRule[0]));
             return true;
         }
         return false;
+    }
+
+    private Collection<FlowRule> queuesFlowRules() {
+        // For now we assume only one slice, hence we configure TCs only for the DEFAULT_SLICE_ID.
+        // Meters are not configured, therefore there is no need to match on packet color.
+        // In the future we can drop RED traffic, or send it to different Q (i.e., red control traffic).
+        Collection<FlowRule> flowRules = Lists.newArrayList();
+
+        flowRules.add(setQueueFlowRule(DEFAULT_SLICE_ID, TC_CONTROL, QUEUE_ID_CONTROL));
+        flowRules.add(setQueueFlowRule(DEFAULT_SLICE_ID, TC_REAL_TIME, QUEUE_ID_FIRST_REAL_TIME));
+        flowRules.add(setQueueFlowRule(DEFAULT_SLICE_ID, TC_ELASTIC, QUEUE_ID_FIRST_ELASTIC));
+        flowRules.add(setQueueFlowRule(DEFAULT_SLICE_ID, TC_BEST_EFFORT, QUEUE_ID_BEST_EFFORT));
+
+        return flowRules;
+    }
+
+    private FlowRule setQueueFlowRule(int sliceId, int tcId, int queueId) {
+        TrafficSelector trafficSelector = DefaultTrafficSelector.builder()
+                .matchPi(PiCriterion.builder().matchExact(HDR_SLICE_ID, sliceId).build())
+                .matchPi(PiCriterion.builder().matchExact(HDR_TC, tcId).build())
+                .build();
+        PiAction action = PiAction.builder()
+                .withId(FABRIC_INGRESS_QOS_SET_QUEUE)
+                .withParameter(new PiActionParam(QID, queueId))
+                .build();
+
+        return DefaultFlowRule.builder()
+                .forDevice(deviceId).fromApp(appId).makePermanent()
+                .forTable(FABRIC_INGRESS_QOS_QUEUES)
+                .withSelector(trafficSelector)
+                .withTreatment(DefaultTrafficTreatment.builder().piTableAction(action).build())
+                .withPriority(PRIORITY_LOW)
+                .build();
     }
 
     @Override
@@ -240,9 +294,10 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         // Getting flow entries by device ID and filtering by Application ID
         // is more efficient than getting by Application ID and filtering for a
         // device ID.
-        List<FlowEntry> flowEntriesToRemove = StreamSupport.stream(
+        List<FlowRule> flowEntriesToRemove = StreamSupport.stream(
                 flowRuleService.getFlowEntries(deviceId).spliterator(), false)
                 .filter(flowEntry -> flowEntry.appId() == appId.id()).collect(Collectors.toList());
+        flowEntriesToRemove.addAll(queuesFlowRules());
         flowRuleService.removeFlowRules(flowEntriesToRemove.toArray(new FlowRule[0]));
         fabricUpfStore.reset();
     }
