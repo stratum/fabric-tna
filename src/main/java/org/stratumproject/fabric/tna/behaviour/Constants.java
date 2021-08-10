@@ -35,11 +35,6 @@ public final class Constants {
     public static final int DEFAULT_PW_TRANSPORT_VLAN = 4090;
     public static final int PKT_IN_MIRROR_SESSION_ID = 0x210;
 
-    // UPF related constants
-    public static final int UPF_INTERFACE_ACCESS = 1;
-    public static final int UPF_INTERFACE_CORE = 2;
-    public static final int UPF_INTERFACE_DBUF = 3;
-
     // Static Queue IDs (should match those in gen-stratum-qos-config.py)
     public static final int QUEUE_ID_BEST_EFFORT = 0;
     public static final int QUEUE_ID_SYSTEM = 1;
@@ -61,6 +56,12 @@ public final class Constants {
     public static final int COLOR_GREEN = 0;
     public static final int COLOR_YELLOW = 1;
     public static final int COLOR_RED = 3;
+
+    // Bitwidths (not present in P4InfoConstants)
+    public static final int SLICE_ID_BITWIDTH = 4;
+    public static final int TC_BITWIDTH = 2;
+    public static final int MAX_SLICE_ID = (1 << SLICE_ID_BITWIDTH) - 1;
+    public static final int MAX_TC = (1 << TC_BITWIDTH) - 1;
 
     // hide default constructor
     private Constants() {

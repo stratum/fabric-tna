@@ -35,9 +35,6 @@ import static org.stratumproject.fabric.tna.behaviour.Constants.TC_BEST_EFFORT;
 import static org.stratumproject.fabric.tna.behaviour.Constants.TC_CONTROL;
 import static org.stratumproject.fabric.tna.behaviour.Constants.TC_ELASTIC;
 import static org.stratumproject.fabric.tna.behaviour.Constants.TC_REAL_TIME;
-import static org.stratumproject.fabric.tna.behaviour.Constants.UPF_INTERFACE_ACCESS;
-import static org.stratumproject.fabric.tna.behaviour.Constants.UPF_INTERFACE_CORE;
-import static org.stratumproject.fabric.tna.behaviour.Constants.UPF_INTERFACE_DBUF;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.CTR_ID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.DROP;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_GTPU_ENCAP;
@@ -45,15 +42,18 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGR
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_GTPU_WITH_PSC;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_PDRS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_FARS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_IFACE_ACCESS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_IFACE_CORE;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_IFACE_DBUF;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_INTERFACES;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_LOAD_DBUF_FAR;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_LOAD_IFACE;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_LOAD_NORMAL_FAR;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_LOAD_PDR;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_LOAD_PDR_DECAP;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_LOAD_TUNNEL_FAR;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_RECIRC_ALLOW;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_RECIRC_DENY;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_PDRS;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_RECIRC_ALLOW;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_RECIRC_DENY;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_RECIRC_RULES;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FAR_ID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_FAR_ID;
@@ -62,11 +62,8 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_IPV4_D
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_TEID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_TUNNEL_IPV4_DST;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_UE_ADDR;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.NEEDS_GTPU_DECAP;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.NOTIFY_CP;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.QFI;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.SLICE_ID;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.SRC_IFACE;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TC;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TEID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TUNNEL_DST_ADDR;
@@ -210,18 +207,14 @@ public class FabricUpfTranslator {
             throw new UpfProgrammableException(format("Unable to find local far id of %s", globalFarId));
         }
 
-        boolean dropFlag = FabricUpfTranslatorUtil.getParamInt(action, DROP) > 0;
-        boolean notifyFlag = FabricUpfTranslatorUtil.getParamInt(action, NOTIFY_CP) > 0;
-
         // Match keys
         farBuilder.withSessionId(farId.getPfcpSessionId())
                 .setFarId(farId.getSessionLocalId());
 
         // Parameters common to all types of FARs
-        farBuilder.setDropFlag(dropFlag)
-                .setNotifyFlag(notifyFlag);
-
         PiActionId actionId = action.id();
+        farBuilder.setDropFlag(FabricUpfTranslatorUtil.getParamInt(action, DROP) > 0)
+                .setNotifyFlag(actionId.equals(FABRIC_INGRESS_SPGW_LOAD_DBUF_FAR));
 
         if (actionId.equals(FABRIC_INGRESS_SPGW_LOAD_TUNNEL_FAR)
                 || actionId.equals(FABRIC_INGRESS_SPGW_LOAD_DBUF_FAR)) {
@@ -260,14 +253,16 @@ public class FabricUpfTranslator {
         var ifaceBuilder = UpfInterface.builder()
                 .setPrefix(FabricUpfTranslatorUtil.getFieldPrefix(match, HDR_IPV4_DST_ADDR));
 
-        int interfaceType = FabricUpfTranslatorUtil.getParamInt(action, SRC_IFACE);
-        if (interfaceType == UPF_INTERFACE_ACCESS) {
+        if (action.id() == FABRIC_INGRESS_SPGW_IFACE_ACCESS) {
             ifaceBuilder.setAccess();
-        } else if (interfaceType == UPF_INTERFACE_CORE) {
+        } else if (action.id() == FABRIC_INGRESS_SPGW_IFACE_CORE) {
             ifaceBuilder.setCore();
-        } else if (interfaceType == UPF_INTERFACE_DBUF) {
+        } else if (action.id() == FABRIC_INGRESS_SPGW_IFACE_DBUF) {
             ifaceBuilder.setDbufReceiver();
+        } else {
+            throw new UpfProgrammableException("Invalid action ID");
         }
+
         return ifaceBuilder.build();
     }
 
@@ -288,10 +283,7 @@ public class FabricUpfTranslator {
         if (!far.encaps()) {
             action = PiAction.builder()
                     .withId(FABRIC_INGRESS_SPGW_LOAD_NORMAL_FAR)
-                    .withParameters(Arrays.asList(
-                            new PiActionParam(DROP, far.drops() ? 1 : 0),
-                            new PiActionParam(NOTIFY_CP, far.notifies() ? 1 : 0)
-                    ))
+                    .withParameter(new PiActionParam(DROP, far.drops() ? 1 : 0))
                     .build();
 
         } else {
@@ -302,13 +294,21 @@ public class FabricUpfTranslator {
                                 "intermediate encapsulating/buffering FAR to physical FAR!");
             }
             // TODO: copy tunnel destination port from logical switch write requests, instead of hardcoding 2152
-            PiActionId actionId = far.buffers() ? FABRIC_INGRESS_SPGW_LOAD_DBUF_FAR :
-                    FABRIC_INGRESS_SPGW_LOAD_TUNNEL_FAR;
+            PiActionId actionId;
+            if (far.buffers()) {
+                if (!far.notifies()) {
+                    throw new UpfProgrammableException(
+                            "The buffer flag is set but not the notify one is not, " +
+                                    "we do not support buffering without notifying the CP");
+                }
+                actionId = FABRIC_INGRESS_SPGW_LOAD_DBUF_FAR;
+            } else {
+                actionId = FABRIC_INGRESS_SPGW_LOAD_TUNNEL_FAR;
+            }
             action = PiAction.builder()
                     .withId(actionId)
                     .withParameters(Arrays.asList(
                             new PiActionParam(DROP, far.drops() ? 1 : 0),
-                            new PiActionParam(NOTIFY_CP, far.notifies() ? 1 : 0),
                             new PiActionParam(TEID, far.teid()),
                             new PiActionParam(TUNNEL_SRC_ADDR, far.tunnelSrc().toInt()),
                             new PiActionParam(TUNNEL_DST_ADDR, far.tunnelDst().toInt()),
@@ -353,9 +353,7 @@ public class FabricUpfTranslator {
         final PiAction.Builder actionBuilder = PiAction.builder()
                 .withParameters(Arrays.asList(
                         new PiActionParam(CTR_ID, pdr.counterId()),
-                        new PiActionParam(FAR_ID, fabricUpfStore.globalFarIdOf(pdr.sessionId(), pdr.farId())),
-                        new PiActionParam(NEEDS_GTPU_DECAP, pdr.matchesEncapped() ? 1 : 0)))
-                .withId(FABRIC_INGRESS_SPGW_LOAD_PDR);
+                        new PiActionParam(FAR_ID, fabricUpfStore.globalFarIdOf(pdr.sessionId(), pdr.farId()))));
 
         final int tc;
         if (pdr.hasQfi()) {
@@ -376,11 +374,13 @@ public class FabricUpfTranslator {
                     .matchExact(HDR_TUNNEL_IPV4_DST, pdr.tunnelDest().toInt())
                     .build();
             tableId = FABRIC_INGRESS_SPGW_UPLINK_PDRS;
+            actionBuilder.withId(FABRIC_INGRESS_SPGW_LOAD_PDR_DECAP);
         } else if (pdr.matchesUnencapped()) {
             match = PiCriterion.builder()
                     .matchExact(HDR_UE_ADDR, pdr.ueAddress().toInt())
                     .build();
             tableId = FABRIC_INGRESS_SPGW_DOWNLINK_PDRS;
+            actionBuilder.withId(FABRIC_INGRESS_SPGW_LOAD_PDR);
         } else {
             throw new UpfProgrammableException("Flexible PDRs not yet supported! Cannot translate " + pdr);
         }
@@ -408,15 +408,18 @@ public class FabricUpfTranslator {
                                            ApplicationId appId, int priority) throws UpfProgrammableException {
         int interfaceTypeInt;
         int gtpuValidity;
+        PiActionId actionId;
         if (upfInterface.isDbufReceiver()) {
-            interfaceTypeInt = UPF_INTERFACE_DBUF;
+            actionId = FABRIC_INGRESS_SPGW_IFACE_DBUF;
             gtpuValidity = 1;
         } else if (upfInterface.isAccess()) {
-            interfaceTypeInt = UPF_INTERFACE_ACCESS;
+            actionId = FABRIC_INGRESS_SPGW_IFACE_ACCESS;
             gtpuValidity = 1;
-        } else {
-            interfaceTypeInt = UPF_INTERFACE_CORE;
+        } else if (upfInterface.isCore()) {
+            actionId = FABRIC_INGRESS_SPGW_IFACE_CORE;
             gtpuValidity = 0;
+        } else {
+            throw new UpfProgrammableException("Unknown interface type");
         }
 
         PiCriterion match = PiCriterion.builder()
@@ -426,8 +429,7 @@ public class FabricUpfTranslator {
                 .matchExact(HDR_GTPU_IS_VALID, gtpuValidity)
                 .build();
         PiAction action = PiAction.builder()
-                .withId(FABRIC_INGRESS_SPGW_LOAD_IFACE)
-                .withParameter(new PiActionParam(SRC_IFACE, interfaceTypeInt))
+                .withId(actionId)
                 .withParameter(new PiActionParam(SLICE_ID, DEFAULT_SLICE_ID))
                 .build();
         return DefaultFlowRule.builder()
@@ -464,8 +466,8 @@ public class FabricUpfTranslator {
             selectorBuilder.matchIPDst(dst);
         }
         PiAction action = PiAction.builder()
-                .withId(allow ? FABRIC_INGRESS_SPGW_UPLINK_RECIRC_ALLOW
-                        : FABRIC_INGRESS_SPGW_UPLINK_RECIRC_DENY)
+                .withId(allow ? FABRIC_INGRESS_SPGW_RECIRC_ALLOW
+                        : FABRIC_INGRESS_SPGW_RECIRC_DENY)
                 .build();
         return DefaultFlowRule.builder()
                 .forDevice(deviceId).fromApp(appId).makePermanent()

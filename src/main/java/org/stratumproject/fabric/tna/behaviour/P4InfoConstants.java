@@ -105,14 +105,12 @@ public final class P4InfoConstants {
     public static final PiMatchFieldId HDR_NEXT_ID =
             PiMatchFieldId.of("next_id");
     public static final int HDR_NEXT_ID_BITWIDTH = 32;
-    public static final PiMatchFieldId HDR_SLICE_ID =
-            PiMatchFieldId.of("slice_id");
-    public static final int HDR_SLICE_ID_BITWIDTH = 4;
+    public static final PiMatchFieldId HDR_SLICE_TC =
+            PiMatchFieldId.of("slice_tc");
+    public static final int HDR_SLICE_TC_BITWIDTH = 6;
     public static final PiMatchFieldId HDR_STATS_FLOW_ID =
             PiMatchFieldId.of("stats_flow_id");
     public static final int HDR_STATS_FLOW_ID_BITWIDTH = 10;
-    public static final PiMatchFieldId HDR_TC = PiMatchFieldId.of("tc");
-    public static final int HDR_TC_BITWIDTH = 2;
     public static final PiMatchFieldId HDR_TEID = PiMatchFieldId.of("teid");
     public static final int HDR_TEID_BITWIDTH = 32;
     public static final PiMatchFieldId HDR_TUNNEL_IPV4_DST =
@@ -181,7 +179,7 @@ public final class P4InfoConstants {
     public static final PiTableId FABRIC_INGRESS_SPGW_UPLINK_PDRS =
             PiTableId.of("FabricIngress.spgw.uplink_pdrs");
     public static final PiTableId FABRIC_INGRESS_SPGW_UPLINK_RECIRC_RULES =
-            PiTableId.of("FabricIngress.spgw.uplink_recirc.rules");
+            PiTableId.of("FabricIngress.spgw.uplink_recirc_rules");
     public static final PiTableId FABRIC_INGRESS_STATS_FLOWS =
             PiTableId.of("FabricIngress.stats.flows");
     // Indirect Counter IDs
@@ -216,8 +214,8 @@ public final class P4InfoConstants {
             PiCounterId.of("FabricIngress.qos.queues_stats");
     public static final PiCounterId FABRIC_INGRESS_SLICE_TC_CLASSIFIER_CLASSIFIER_STATS =
             PiCounterId.of("FabricIngress.slice_tc_classifier.classifier_stats");
-    public static final PiCounterId FABRIC_INGRESS_SPGW_UPLINK_RECIRC_RULES_COUNTER =
-            PiCounterId.of("FabricIngress.spgw.uplink_recirc.rules_counter");
+    public static final PiCounterId FABRIC_INGRESS_SPGW_RECIRC_STATS =
+            PiCounterId.of("FabricIngress.spgw.recirc_stats");
     public static final PiCounterId FABRIC_INGRESS_STATS_FLOW_COUNTER =
             PiCounterId.of("FabricIngress.stats.flow_counter");
     // Action IDs
@@ -317,28 +315,35 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.spgw.downlink_pdr_drop");
     public static final PiActionId FABRIC_INGRESS_SPGW_FAR_DROP =
             PiActionId.of("FabricIngress.spgw.far_drop");
+    public static final PiActionId FABRIC_INGRESS_SPGW_IFACE_ACCESS =
+            PiActionId.of("FabricIngress.spgw.iface_access");
+    public static final PiActionId FABRIC_INGRESS_SPGW_IFACE_CORE =
+            PiActionId.of("FabricIngress.spgw.iface_core");
+    public static final PiActionId FABRIC_INGRESS_SPGW_IFACE_DBUF =
+            PiActionId.of("FabricIngress.spgw.iface_dbuf");
     public static final PiActionId FABRIC_INGRESS_SPGW_IFACE_MISS =
             PiActionId.of("FabricIngress.spgw.iface_miss");
     public static final PiActionId FABRIC_INGRESS_SPGW_LOAD_DBUF_FAR =
             PiActionId.of("FabricIngress.spgw.load_dbuf_far");
-    public static final PiActionId FABRIC_INGRESS_SPGW_LOAD_IFACE =
-            PiActionId.of("FabricIngress.spgw.load_iface");
     public static final PiActionId FABRIC_INGRESS_SPGW_LOAD_NORMAL_FAR =
             PiActionId.of("FabricIngress.spgw.load_normal_far");
     public static final PiActionId FABRIC_INGRESS_SPGW_LOAD_PDR =
             PiActionId.of("FabricIngress.spgw.load_pdr");
+    public static final PiActionId FABRIC_INGRESS_SPGW_LOAD_PDR_DECAP =
+            PiActionId.of("FabricIngress.spgw.load_pdr_decap");
     public static final PiActionId FABRIC_INGRESS_SPGW_LOAD_TUNNEL_FAR =
             PiActionId.of("FabricIngress.spgw.load_tunnel_far");
+    public static final PiActionId FABRIC_INGRESS_SPGW_RECIRC_ALLOW =
+            PiActionId.of("FabricIngress.spgw.recirc_allow");
+    public static final PiActionId FABRIC_INGRESS_SPGW_RECIRC_DENY =
+            PiActionId.of("FabricIngress.spgw.recirc_deny");
+    public static final PiActionId FABRIC_INGRESS_SPGW_RECIRC_MISS =
+            PiActionId.of("FabricIngress.spgw.recirc_miss");
     public static final PiActionId FABRIC_INGRESS_SPGW_UPLINK_PDR_DROP =
             PiActionId.of("FabricIngress.spgw.uplink_pdr_drop");
-    public static final PiActionId FABRIC_INGRESS_SPGW_UPLINK_RECIRC_ALLOW =
-            PiActionId.of("FabricIngress.spgw.uplink_recirc.allow");
-    public static final PiActionId FABRIC_INGRESS_SPGW_UPLINK_RECIRC_DENY =
-            PiActionId.of("FabricIngress.spgw.uplink_recirc.deny");
-    public static final PiActionId FABRIC_INGRESS_SPGW_UPLINK_RECIRC_MISS =
-            PiActionId.of("FabricIngress.spgw.uplink_recirc.miss");
     public static final PiActionId FABRIC_INGRESS_STATS_COUNT =
             PiActionId.of("FabricIngress.stats.count");
+    public static final PiActionId NO_ACTION = PiActionId.of("NoAction");
     public static final PiActionId NOP = PiActionId.of("nop");
     // Action Param IDs
     public static final PiActionParamId CPU_PORT =
@@ -362,11 +367,7 @@ public final class P4InfoConstants {
             PiActionParamId.of("mon_label");
     public static final PiActionParamId MON_PORT =
             PiActionParamId.of("mon_port");
-    public static final PiActionParamId NEEDS_GTPU_DECAP =
-            PiActionParamId.of("needs_gtpu_decap");
     public static final PiActionParamId NEXT_ID = PiActionParamId.of("next_id");
-    public static final PiActionParamId NOTIFY_CP =
-            PiActionParamId.of("notify_cp");
     public static final PiActionParamId PORT_NUM =
             PiActionParamId.of("port_num");
     public static final PiActionParamId PORT_TYPE =
@@ -376,8 +377,6 @@ public final class P4InfoConstants {
     public static final PiActionParamId SLICE_ID =
             PiActionParamId.of("slice_id");
     public static final PiActionParamId SMAC = PiActionParamId.of("smac");
-    public static final PiActionParamId SRC_IFACE =
-            PiActionParamId.of("src_iface");
     public static final PiActionParamId SRC_IP = PiActionParamId.of("src_ip");
     public static final PiActionParamId SWITCH_ID =
             PiActionParamId.of("switch_id");
