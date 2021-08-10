@@ -121,7 +121,8 @@ public class FabricIntProgrammableTest {
                     .put(0x201, 0xc4)
                     .put(0x202, 0x144)
                     .put(0x203, 0x1c4).build();
-    private static final long DEFAULT_QUEUE_REPORT_LATENCY_THRESHOLD = 2000; // ns
+    private static final long DEFAULT_QUEUE_REPORT_TRIGGER_LATENCY_THRESHOLD = 2000; // ns
+    private static final long DEFAULT_QUEUE_REPORT_RESET_LATENCY_THRESHOLD = 500; // ns
     private static final byte MAX_QUEUES = 32;
     private static final int INT_MIRROR_TRUNCATE_MAX_LEN = 128;
 
@@ -197,18 +198,19 @@ public class FabricIntProgrammableTest {
         reset(flowRuleService);
         expect(flowRuleService.getFlowEntriesById(APP_ID)).andReturn(ImmutableList.of()).times(2);
         final IntReportConfig intConfig = getIntReportConfig(APP_ID, "/int-report.json");
-        ImmutableList<FlowRule> expectRules = ImmutableList.of(
-                buildCollectorWatchlistRule(LEAF_DEVICE_ID),
-                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_INT_INGRESS_DROP,
-                                     INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID),
-                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR,
-                                     INT_REPORT_TYPE_DROP, MIRROR_TYPE_INT_REPORT),
-                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR,
-                                     INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT),
-                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_DEFLECTED,
-                                     INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID),
-                buildFilterConfigFlow(LEAF_DEVICE_ID)
-        );
+        List<FlowRule> expectRules = Lists.newArrayList();
+        expectRules.add(buildCollectorWatchlistRule(LEAF_DEVICE_ID));
+        expectRules.addAll(queueReportFlows(DEFAULT_QUEUE_REPORT_TRIGGER_LATENCY_THRESHOLD,
+            DEFAULT_QUEUE_REPORT_RESET_LATENCY_THRESHOLD));
+        expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false,
+            BMD_TYPE_INT_INGRESS_DROP, INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID));
+        expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false,
+            BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_DROP, MIRROR_TYPE_INT_REPORT));
+        expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false,
+            BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT));
+        expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false,
+            BMD_TYPE_DEFLECTED, INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID));
+        expectRules.add(buildFilterConfigFlow(LEAF_DEVICE_ID));
 
         List<Capture<FlowRule>> captures = Lists.newArrayList();
         for (int i = 0; i < expectRules.size(); i++) {
@@ -242,23 +244,24 @@ public class FabricIntProgrammableTest {
         );
         expect(flowRuleService.getFlowEntriesById(APP_ID)).andReturn(existsEntries).times(2);
         final IntReportConfig intConfig = getIntReportConfig(APP_ID, "/int-report-with-subnets.json");
-        ImmutableList<FlowRule> expectRules = ImmutableList.of(
-                buildCollectorWatchlistRule(LEAF_DEVICE_ID),
-                buildWatchlistRule(null, Criterion.Type.IPV4_SRC), // match any subnet
-                buildWatchlistRule(SUBNET_1, Criterion.Type.IPV4_SRC),
-                buildWatchlistRule(SUBNET_1, Criterion.Type.IPV4_DST),
-                buildWatchlistRule(SUBNET_2, Criterion.Type.IPV4_SRC),
-                buildWatchlistRule(SUBNET_2, Criterion.Type.IPV4_DST),
-                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_INT_INGRESS_DROP,
-                                     INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID),
-                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR,
-                                     INT_REPORT_TYPE_DROP, MIRROR_TYPE_INT_REPORT),
-                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR,
-                                     INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT),
-                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_DEFLECTED,
-                                     INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID),
-                buildFilterConfigFlow(LEAF_DEVICE_ID)
-        );
+        List<FlowRule> expectRules = Lists.newArrayList();
+        expectRules.add(buildCollectorWatchlistRule(LEAF_DEVICE_ID));
+        expectRules.add(buildWatchlistRule(null, Criterion.Type.IPV4_SRC));
+        expectRules.add(buildWatchlistRule(SUBNET_1, Criterion.Type.IPV4_SRC));
+        expectRules.add(buildWatchlistRule(SUBNET_1, Criterion.Type.IPV4_DST));
+        expectRules.add(buildWatchlistRule(SUBNET_2, Criterion.Type.IPV4_SRC));
+        expectRules.add(buildWatchlistRule(SUBNET_2, Criterion.Type.IPV4_DST));
+        expectRules.addAll(queueReportFlows(DEFAULT_QUEUE_REPORT_TRIGGER_LATENCY_THRESHOLD,
+            DEFAULT_QUEUE_REPORT_RESET_LATENCY_THRESHOLD));
+        expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_INT_INGRESS_DROP,
+                                INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID));
+        expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR,
+                                INT_REPORT_TYPE_DROP, MIRROR_TYPE_INT_REPORT));
+        expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR,
+                                INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT));
+        expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_DEFLECTED,
+                                INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID));
+        expectRules.add(buildFilterConfigFlow(LEAF_DEVICE_ID));
 
         List<Capture<FlowRule>> captures = Lists.newArrayList();
         for (int i = 0; i < expectRules.size(); i++) {
@@ -302,18 +305,19 @@ public class FabricIntProgrammableTest {
                 .andReturn(ImmutableList.of(oldFlowEntry))
                 .times(2);
         final IntReportConfig intConfig = getIntReportConfig(APP_ID, "/int-report.json");
-        ImmutableList<FlowRule> expectRules = ImmutableList.of(
-                buildCollectorWatchlistRule(LEAF_DEVICE_ID),
-                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_INT_INGRESS_DROP,
-                                     INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID),
-                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR,
-                                     INT_REPORT_TYPE_DROP, MIRROR_TYPE_INT_REPORT),
-                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR,
-                                     INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT),
-                buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_DEFLECTED,
-                                     INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID),
-                buildFilterConfigFlow(LEAF_DEVICE_ID)
-        );
+        List<FlowRule> expectRules = Lists.newArrayList();
+        expectRules.add(buildCollectorWatchlistRule(LEAF_DEVICE_ID));
+        expectRules.addAll(queueReportFlows(DEFAULT_QUEUE_REPORT_TRIGGER_LATENCY_THRESHOLD,
+            DEFAULT_QUEUE_REPORT_RESET_LATENCY_THRESHOLD));
+        expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_INT_INGRESS_DROP,
+                                INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID));
+        expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR,
+                                INT_REPORT_TYPE_DROP, MIRROR_TYPE_INT_REPORT));
+        expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR,
+                                INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT));
+        expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_DEFLECTED,
+                                INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID));
+        expectRules.add(buildFilterConfigFlow(LEAF_DEVICE_ID));
 
         List<Capture<FlowRule>> captures = Lists.newArrayList();
         Capture<FlowRule> removedFlowRule = newCapture();
@@ -351,18 +355,20 @@ public class FabricIntProgrammableTest {
         reset(flowRuleService);
         expect(flowRuleService.getFlowEntriesById(APP_ID)).andReturn(ImmutableList.of()).times(2);
         final IntReportConfig intConfig = getIntReportConfig(APP_ID, "/int-report.json");
-        ImmutableList<FlowRule> expectRules = ImmutableList.of(
-                buildCollectorWatchlistRule(SPINE_DEVICE_ID),
-                buildReportTableRule(SPINE_DEVICE_ID, true, BMD_TYPE_INT_INGRESS_DROP,
-                                     INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID),
-                buildReportTableRule(SPINE_DEVICE_ID, true, BMD_TYPE_EGRESS_MIRROR,
-                                     INT_REPORT_TYPE_DROP, MIRROR_TYPE_INT_REPORT),
-                buildReportTableRule(SPINE_DEVICE_ID, true, BMD_TYPE_EGRESS_MIRROR,
-                                     INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT),
-                buildReportTableRule(SPINE_DEVICE_ID, true, BMD_TYPE_DEFLECTED,
-                                     INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID),
-                buildFilterConfigFlow(SPINE_DEVICE_ID)
-        );
+        List<FlowRule> expectRules = Lists.newArrayList();
+        expectRules.add(buildCollectorWatchlistRule(SPINE_DEVICE_ID));
+        expectRules.addAll(queueReportFlows(DEFAULT_QUEUE_REPORT_TRIGGER_LATENCY_THRESHOLD,
+            DEFAULT_QUEUE_REPORT_RESET_LATENCY_THRESHOLD));
+        expectRules.add(buildReportTableRule(SPINE_DEVICE_ID, true, BMD_TYPE_INT_INGRESS_DROP,
+                                     INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID));
+        expectRules.add(buildReportTableRule(SPINE_DEVICE_ID, true, BMD_TYPE_EGRESS_MIRROR,
+                                     INT_REPORT_TYPE_DROP, MIRROR_TYPE_INT_REPORT));
+        expectRules.add(buildReportTableRule(SPINE_DEVICE_ID, true, BMD_TYPE_EGRESS_MIRROR,
+                                     INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT));
+        expectRules.add(buildReportTableRule(SPINE_DEVICE_ID, true, BMD_TYPE_DEFLECTED,
+                                     INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID));
+        expectRules.add(buildFilterConfigFlow(SPINE_DEVICE_ID));
+
 
         List<Capture<FlowRule>> captures = Lists.newArrayList();
         for (int i = 0; i < expectRules.size(); i++) {
@@ -464,17 +470,29 @@ public class FabricIntProgrammableTest {
      */
     @Test
     public void testWithoutValidSrConfig() {
+        List<FlowRule> expectRules = Lists.newArrayList();
+        expectRules.add(buildCollectorWatchlistRule(LEAF_DEVICE_ID));
+        expectRules.addAll(queueReportFlows(DEFAULT_QUEUE_REPORT_TRIGGER_LATENCY_THRESHOLD,
+            DEFAULT_QUEUE_REPORT_RESET_LATENCY_THRESHOLD));
+
         reset(netcfgService);
         expect(netcfgService.getConfig(LEAF_DEVICE_ID, SegmentRoutingDeviceConfig.class))
                 .andReturn(null).anyTimes();
         expect(flowRuleService.getFlowEntriesById(APP_ID)).andReturn(ImmutableList.of()).times(2);
-        Capture<FlowRule> capturedRule = newCapture();
-        flowRuleService.applyFlowRules(capture(capturedRule));
+        Capture<FlowRule> captures = newCapture(CaptureType.ALL);
+        flowRuleService.applyFlowRules(capture(captures));
+        expectLastCall().times(expectRules.size());
         replay(netcfgService, flowRuleService);
         final IntReportConfig intConfig = getIntReportConfig(APP_ID, "/int-report.json");
         assertFalse(intProgrammable.setUpIntConfig(intConfig));
-        assertTrue(capturedRule.getValue().exactMatch(buildCollectorWatchlistRule(LEAF_DEVICE_ID)));
-        // We expected no other flow rules be installed or removed
+
+        // Verifying flow rules
+        for (int i = 0; i < expectRules.size(); i++) {
+            FlowRule expectRule = expectRules.get(i);
+            FlowRule actualRule = captures.getValues().get(i);
+            assertTrue(expectRule.exactMatch(actualRule));
+        }
+        // We expected no other flow rules be installed
         verify(flowRuleService);
     }
 
@@ -483,17 +501,28 @@ public class FabricIntProgrammableTest {
      */
     @Test
     public void testSetUpSpineButCollectorHostNotFound() {
+        List<FlowRule> expectRules = Lists.newArrayList();
+        expectRules.add(buildCollectorWatchlistRule(LEAF_DEVICE_ID));
+        expectRules.addAll(queueReportFlows(DEFAULT_QUEUE_REPORT_TRIGGER_LATENCY_THRESHOLD,
+            DEFAULT_QUEUE_REPORT_RESET_LATENCY_THRESHOLD));
         reset(driverData, hostService);
         expect(driverData.deviceId()).andReturn(SPINE_DEVICE_ID).anyTimes();
         expect(hostService.getHostsByIp(anyObject())).andReturn(Collections.emptySet()).anyTimes();
         expect(flowRuleService.getFlowEntriesById(APP_ID)).andReturn(ImmutableList.of()).times(2);
-        Capture<FlowRule> capturedRule = newCapture();
-        flowRuleService.applyFlowRules(capture(capturedRule));
+        Capture<FlowRule> captures = newCapture(CaptureType.ALL);
+        flowRuleService.applyFlowRules(capture(captures));
+        expectLastCall().times(expectRules.size());
         replay(driverData, hostService, flowRuleService);
         final IntReportConfig intConfig = getIntReportConfig(APP_ID, "/int-report.json");
         assertFalse(intProgrammable.setUpIntConfig(intConfig));
-        assertTrue(capturedRule.getValue().exactMatch(buildCollectorWatchlistRule(SPINE_DEVICE_ID)));
-        // We expect no flow rules be installed
+
+        // Verifying flow rules
+        for (int i = 0; i < expectRules.size(); i++) {
+            FlowRule expectRule = expectRules.get(i);
+            FlowRule actualRule = captures.getValues().get(i);
+            assertTrue(expectRule.exactMatch(actualRule));
+        }
+        // We expect no other flow rules be installed
         verify(flowRuleService);
     }
 
@@ -503,17 +532,28 @@ public class FabricIntProgrammableTest {
      */
     @Test
     public void testSetUpSpineButNoCollectorHostLocation() {
+        List<FlowRule> expectRules = Lists.newArrayList();
+        expectRules.add(buildCollectorWatchlistRule(SPINE_DEVICE_ID));
+        expectRules.addAll(queueReportFlows(DEFAULT_QUEUE_REPORT_TRIGGER_LATENCY_THRESHOLD,
+            DEFAULT_QUEUE_REPORT_RESET_LATENCY_THRESHOLD));
         reset(driverData, hostService);
         expect(driverData.deviceId()).andReturn(SPINE_DEVICE_ID).anyTimes();
         final Host collectorHost = new DefaultHost(null, null, null, null, Sets.newHashSet(), Sets.newHashSet(), true);
         expect(hostService.getHostsByIp(COLLECTOR_IP)).andReturn(ImmutableSet.of(collectorHost)).anyTimes();
         expect(flowRuleService.getFlowEntriesById(APP_ID)).andReturn(ImmutableList.of()).times(2);
-        Capture<FlowRule> capturedRule = newCapture();
-        flowRuleService.applyFlowRules(capture(capturedRule));
+        Capture<FlowRule> captures = newCapture(CaptureType.ALL);
+        flowRuleService.applyFlowRules(capture(captures));
+        expectLastCall().times(expectRules.size());
         replay(driverData, hostService, flowRuleService);
         final IntReportConfig intConfig = getIntReportConfig(APP_ID, "/int-report.json");
         assertFalse(intProgrammable.setUpIntConfig(intConfig));
-        assertTrue(capturedRule.getValue().exactMatch(buildCollectorWatchlistRule(SPINE_DEVICE_ID)));
+
+        // Verifying flow rules
+        for (int i = 0; i < expectRules.size(); i++) {
+            FlowRule expectRule = expectRules.get(i);
+            FlowRule actualRule = captures.getValues().get(i);
+            assertTrue(expectRule.exactMatch(actualRule));
+        }
         verify(flowRuleService);
     }
 
@@ -523,6 +563,10 @@ public class FabricIntProgrammableTest {
      */
     @Test
     public void testSetUpSpineButNoLeafConfig() {
+        List<FlowRule> expectRules = Lists.newArrayList();
+        expectRules.add(buildCollectorWatchlistRule(SPINE_DEVICE_ID));
+        expectRules.addAll(queueReportFlows(DEFAULT_QUEUE_REPORT_TRIGGER_LATENCY_THRESHOLD,
+            DEFAULT_QUEUE_REPORT_RESET_LATENCY_THRESHOLD));
         reset(driverData, netcfgService);
         expect(driverData.deviceId()).andReturn(SPINE_DEVICE_ID).anyTimes();
         expect(netcfgService.getConfig(LEAF_DEVICE_ID, SegmentRoutingDeviceConfig.class))
@@ -530,12 +574,19 @@ public class FabricIntProgrammableTest {
         expect(netcfgService.getConfig(SPINE_DEVICE_ID, SegmentRoutingDeviceConfig.class))
                 .andReturn(getSrConfig(SPINE_DEVICE_ID, "/sr-spine.json")).anyTimes();
         expect(flowRuleService.getFlowEntriesById(APP_ID)).andReturn(ImmutableList.of()).times(2);
-        Capture<FlowRule> capturedRule = newCapture();
-        flowRuleService.applyFlowRules(capture(capturedRule));
+        Capture<FlowRule> captures = newCapture(CaptureType.ALL);
+        flowRuleService.applyFlowRules(capture(captures));
+        expectLastCall().times(expectRules.size());
         replay(driverData, flowRuleService, netcfgService);
         final IntReportConfig intConfig = getIntReportConfig(APP_ID, "/int-report.json");
         assertFalse(intProgrammable.setUpIntConfig(intConfig));
-        assertTrue(capturedRule.getValue().exactMatch(buildCollectorWatchlistRule(SPINE_DEVICE_ID)));
+
+        // Verifying flow rules
+        for (int i = 0; i < expectRules.size(); i++) {
+            FlowRule expectRule = expectRules.get(i);
+            FlowRule actualRule = captures.getValues().get(i);
+            assertTrue(expectRule.exactMatch(actualRule));
+        }
         verify(flowRuleService);
     }
 
@@ -545,6 +596,10 @@ public class FabricIntProgrammableTest {
      */
     @Test
     public void testSetUpSpineButInvalidLeafConfig() {
+        List<FlowRule> expectRules = Lists.newArrayList();
+        expectRules.add(buildCollectorWatchlistRule(SPINE_DEVICE_ID));
+        expectRules.addAll(queueReportFlows(DEFAULT_QUEUE_REPORT_TRIGGER_LATENCY_THRESHOLD,
+            DEFAULT_QUEUE_REPORT_RESET_LATENCY_THRESHOLD));
         reset(driverData, netcfgService);
         expect(driverData.deviceId()).andReturn(SPINE_DEVICE_ID).anyTimes();
         expect(netcfgService.getConfig(LEAF_DEVICE_ID, SegmentRoutingDeviceConfig.class))
@@ -552,12 +607,19 @@ public class FabricIntProgrammableTest {
         expect(netcfgService.getConfig(SPINE_DEVICE_ID, SegmentRoutingDeviceConfig.class))
                 .andReturn(getSrConfig(SPINE_DEVICE_ID, "/sr-spine.json")).anyTimes();
         expect(flowRuleService.getFlowEntriesById(APP_ID)).andReturn(ImmutableList.of()).times(2);
-        Capture<FlowRule> capturedRule = newCapture();
-        flowRuleService.applyFlowRules(capture(capturedRule));
+        Capture<FlowRule> captures = newCapture(CaptureType.ALL);
+        flowRuleService.applyFlowRules(capture(captures));
+        expectLastCall().times(expectRules.size());
         replay(driverData, flowRuleService, netcfgService);
         final IntReportConfig intConfig = getIntReportConfig(APP_ID, "/int-report.json");
         assertFalse(intProgrammable.setUpIntConfig(intConfig));
-        assertTrue(capturedRule.getValue().exactMatch(buildCollectorWatchlistRule(SPINE_DEVICE_ID)));
+
+        // Verifying flow rules
+        for (int i = 0; i < expectRules.size(); i++) {
+            FlowRule expectRule = expectRules.get(i);
+            FlowRule actualRule = captures.getValues().get(i);
+            assertTrue(expectRule.exactMatch(actualRule));
+        }
         verify(flowRuleService);
     }
 
@@ -789,30 +851,6 @@ public class FabricIntProgrammableTest {
             groupService.addGroup(capture(capturedGroup));
         });
 
-        for (byte queueId = 0; queueId < MAX_QUEUES; queueId++) {
-            FlowRule queueReportFlow = buildQueueReportFlow(queueId,
-                    new long[]{0, 0},
-                    new long[]{DEFAULT_QUEUE_REPORT_LATENCY_THRESHOLD, 0xffff},
-                    P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_CHECK_QUOTA);
-            expectedFlows.add(queueReportFlow);
-            flowRuleService.applyFlowRules(capture(capturedFlow));
-
-            queueReportFlow = buildQueueReportFlow(queueId,
-                    new long[]{1, 0xffff},
-                    new long[]{0, 0xffff},
-                    P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_CHECK_QUOTA);
-            expectedFlows.add(queueReportFlow);
-            flowRuleService.applyFlowRules(capture(capturedFlow));
-
-            queueReportFlow = buildQueueReportFlow(queueId,
-                    new long[]{0, 0},
-                    new long[]{0, DEFAULT_QUEUE_REPORT_LATENCY_THRESHOLD - 1},
-                    P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_RESET_QUOTA);
-            expectedFlows.add(queueReportFlow);
-            flowRuleService.applyFlowRules(capture(capturedFlow));
-        }
-
-
         replay(groupService, flowRuleService);
         assertTrue(intProgrammable.init());
 
@@ -895,5 +933,30 @@ public class FabricIntProgrammableTest {
             .fromApp(APP_ID)
             .withPriority(DEFAULT_PRIORITY)
             .build();
+    }
+
+    private List<FlowRule> queueReportFlows(long triggerThreshold, long resetThreshold) {
+        final List<FlowRule> rules = Lists.newArrayList();
+        for (byte queueId = 0; queueId < MAX_QUEUES; queueId++) {
+            FlowRule queueReportFlow = buildQueueReportFlow(queueId,
+                    new long[]{0, 0},
+                    new long[]{triggerThreshold, 0xffff},
+                    P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_CHECK_QUOTA);
+                    rules.add(queueReportFlow);
+
+            queueReportFlow = buildQueueReportFlow(queueId,
+                    new long[]{1, 0xffff},
+                    new long[]{0, 0xffff},
+                    P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_CHECK_QUOTA);
+                    rules.add(queueReportFlow);
+
+            queueReportFlow = buildQueueReportFlow(queueId,
+                    new long[]{0, 0},
+                    new long[]{0, resetThreshold - 1},
+                    P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_RESET_QUOTA);
+                    rules.add(queueReportFlow);
+        }
+
+        return rules;
     }
 }

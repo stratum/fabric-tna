@@ -1,0 +1,7 @@
+{
+    "collectorIp": "10.128.0.1",
+    "collectorPort": 32766,
+    "minFlowHopLatencyChangeNs": 300,
+    "watchSubnets": [],
+    "queueReportLatencyThreshold": 300
+}

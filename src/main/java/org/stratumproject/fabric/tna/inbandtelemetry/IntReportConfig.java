@@ -25,7 +25,9 @@ import org.onosproject.ui.JsonUtils;
  *         "collectorIp": "192.168.0.1",
  *         "collectorPort": 5500,
  *         "minFlowHopLatencyChangeNs": 300,
- *         "watchSubnets": [ "192.168.0.0/24", "10.140.0.0/16" ]
+ *         "watchSubnets": [ "192.168.0.0/24", "10.140.0.0/16" ],
+ *         "queueReportTriggerLatencyThreshold": 2000,
+ *         "queueReportResetLatencyThreshold": 500,
  *       }
  *     }
  *   }
@@ -36,6 +38,10 @@ public class IntReportConfig extends Config<ApplicationId> {
     private static final String COLLECTOR_PORT = "collectorPort";
     private static final String MIN_FLOW_HOP_LATENCY_CHANGE_NS = "minFlowHopLatencyChangeNs";
     private static final String WATCH_SUBNETS = "watchSubnets";
+    private static final String QUEUE_REPORT_TRIGGER_LATENCY_THRESHOLD = "queueReportTriggerLatencyThreshold";
+    private static final String QUEUE_REPORT_RESET_LATENCY_THRESHOLD = "queueReportResetLatencyThreshold";
+    private static final long DEFAULT_QUEUE_REPORT_TRIGGER_LATENCY_THRESHOLD = 2000; // ns
+    private static final long DEFAULT_QUEUE_REPORT_RESET_LATENCY_THRESHOLD = 500; // ns
 
     /**
      * IP address of the collector. This is the destination IP address that will be
@@ -99,6 +105,32 @@ public class IntReportConfig extends Config<ApplicationId> {
             return subnets;
         } else {
             return Collections.emptyList();
+        }
+    }
+
+    /**
+     * Gets the latency threshold to trigger the device to send a queue report.
+     *
+     * @return latency threshold in nanoseconds
+     */
+    public long queueReportTriggerLatencyThreshold() {
+        if (object.hasNonNull(QUEUE_REPORT_TRIGGER_LATENCY_THRESHOLD)) {
+            return JsonUtils.number(object, QUEUE_REPORT_TRIGGER_LATENCY_THRESHOLD);
+        } else {
+            return DEFAULT_QUEUE_REPORT_TRIGGER_LATENCY_THRESHOLD;
+        }
+    }
+
+    /**
+     * Gets the latency threshold for resetting the queue report quota.
+     *
+     * @return latency threshold in nanoseconds
+     */
+    public long queueReportResetLatencyThreshold() {
+        if (object.hasNonNull(QUEUE_REPORT_RESET_LATENCY_THRESHOLD)) {
+            return JsonUtils.number(object, QUEUE_REPORT_RESET_LATENCY_THRESHOLD);
+        } else {
+            return DEFAULT_QUEUE_REPORT_RESET_LATENCY_THRESHOLD;
         }
     }
 }
