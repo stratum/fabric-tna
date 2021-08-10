@@ -90,7 +90,8 @@ ENV PIP_DEPS \
     git+https://github.com/p4lang/ptf@$PTF_VER \
     protobuf==$PROTOBUF_VER \
     grpcio==$GRPC_VER \
-    p4runtime-shell==$P4RUNTIME_SHELL_VER
+    p4runtime-shell==$P4RUNTIME_SHELL_VER \
+    xmlrunner
 
 RUN apt update && apt install -y $RUNTIME_DEPS
 RUN pip3 install --no-cache-dir --root /python_output $PIP_DEPS
