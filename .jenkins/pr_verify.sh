@@ -41,6 +41,11 @@ if [ -n "$modified" ]; then
   exit 1
 fi
 
+# The Jenkins node does not have hugepages, so we need to create a new one and mount it.
+sudo sh -c "echo 128 > /proc/sys/vm/nr_hugepages"
+sudo mkdir -p /dev/hugepages
+sudo mount -t hugetlbfs nodev /dev/hugepages
+
 # We limit running PTF tests for only those profiles used in Aether, otherwise
 # we exceed the 45 min limit on Jenkins.
 # FIXME: revert once the PTF tests execution time is optimized (#238)
