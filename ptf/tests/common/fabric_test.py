@@ -11,11 +11,11 @@ import time
 
 import xnt
 from base_test import P4RuntimeTest, ipv4_to_binary, mac_to_binary, stringify, tvcreate
-from qos_utils import QUEUE_ID_SYSTEM
 from bmd_bytes import BMD_BYTES
 from p4.v1 import p4runtime_pb2
 from ptf import testutils
 from ptf.mask import Mask
+from qos_utils import QUEUE_ID_SYSTEM
 from scapy.contrib.gtp import GTP_U_Header, GTPPDUSessionContainer
 from scapy.contrib.mpls import MPLS
 from scapy.layers.inet import IP, TCP, UDP
