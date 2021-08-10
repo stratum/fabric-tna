@@ -1798,7 +1798,7 @@ class IPv4UnicastTest(FabricTest):
         else:
             params = [eg_port, switch_mac, next_hop_mac, mpls_label]
             self.add_next_mpls_and_routing_group(next_id, group_id, [params])
-            self.add_next_vlan(next_id, DEFAULT_VLAN)
+            self.add_next_vlan(next_id, vlan2)
 
     def build_exp_ipv4_unicast_packet(
         self,

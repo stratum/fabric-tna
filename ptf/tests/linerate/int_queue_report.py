@@ -60,6 +60,7 @@ class IntQueueReportTest(TRexTest, IntTest, SlicingTest):
             tagged2=tagged2,
             is_next_hop_spine=is_next_hop_spine,
             prefix_len=32,
+            switch_mac=pkt[Ether].dst,
         )
         self.set_queue_report_quota(self.port4, qid=DEFAULT_QID, quota=DEFAULT_QUOTA)
 
