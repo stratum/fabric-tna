@@ -84,7 +84,12 @@ public class FabricUpfTranslator {
     // TODO: agree on a mapping with the PFCP agent
     //  Make sure to have a 1 to 1 mapping between QFI and TC.
     static final BiMap<Byte, Integer> QFI_TO_TC = ImmutableBiMap.of(
-            //0, TC_BEST_EFFORT, --> this is DEFAULT_TC
+            // FIXME: allow explicit QFI mapping to Best-Effort. Currently,
+            //  the only way the mobile core can set Best-Effort is by not
+            //  specifying a QFI in PDRs. We do this to maintain backward
+            //  compatibility with PFCP Agent, but eventually all PDRs will have
+            //  a QFI.
+            // (byte) 0, TC_BEST_EFFORT, --> Used for PDRs without QFI
             (byte) 1, TC_CONTROL,
             (byte) 2, TC_REAL_TIME,
             (byte) 3, TC_ELASTIC);
@@ -168,17 +173,19 @@ public class FabricUpfTranslator {
 
 
         int tc = FabricUpfTranslatorUtil.getParamInt(action, TC);
-        Byte qfi = QFI_TO_TC.inverse().getOrDefault(tc, null);
-        if (qfi != null) {
-            // FIXME: this breaks R/W symmetry as we always return a PDR wth a
-            //  QFI even if we wrote one without. See comment in pdrToFabricEntry().
-            pdrBuilder.withQfi(qfi);
-        } else {
-            throw new UpfProgrammableException(format(
-                    "TC value '%d' unsupported, unable to map to QFI -- " +
-                            "how did we manage to write this entry? BUG? [%s]",
-                    tc, entry));
+        // FIXME: allow explicit QFI mapping to Best-Effort
+        if (tc != TC_BEST_EFFORT) {
+            Byte qfi = QFI_TO_TC.inverse().getOrDefault(tc, null);
+            if (qfi != null) {
+                pdrBuilder.withQfi(qfi);
+            } else {
+                throw new UpfProgrammableException(format(
+                        "TC value '%d' unsupported, unable to map to QFI -- " +
+                                "how did we manage to write this entry? BUG? [%s]",
+                        tc, entry));
+            }
         }
+
 
         return pdrBuilder.build();
     }
@@ -352,16 +359,13 @@ public class FabricUpfTranslator {
 
         final int tc;
         if (pdr.hasQfi()) {
-            if(!QFI_TO_TC.containsKey(pdr.qfi())) {
+            if (!QFI_TO_TC.containsKey(pdr.qfi())) {
                 throw new UpfProgrammableException(format(
                         "QFI value '%d' not supported, unable to map to TC", pdr.qfi()));
             }
             tc = QFI_TO_TC.get(pdr.qfi());
         } else {
-            // FIXME: this breaks R/W symmetry, as we cannot distinguish between
-            //   QFI=0 and QFI unset, indeed both cases map to the same
-            //   Best-Effort TC. We should use different actions for PDRs
-            //   without QFI to maintain R/W symmetry with PFCP agent.
+            // FIXME: allow explicit QFI mapping to Best-Effort
             tc = TC_BEST_EFFORT;
         }
         actionBuilder.withParameter(new PiActionParam(TC, tc));

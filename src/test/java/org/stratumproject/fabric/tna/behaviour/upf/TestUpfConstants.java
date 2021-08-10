@@ -76,8 +76,8 @@ public final class TestUpfConstants {
             .hash()
             .asInt();
 
-    public static final int UPLINK_QFI = 1;
-    public static final int DOWNLINK_QFI = 3;
+    public static final byte UPLINK_QFI = 0x1;
+    public static final byte DOWNLINK_QFI = 0x3;
 
     public static final ImmutableByteSequence TEID_VALUE = ImmutableByteSequence.copyFrom(0xff);
     public static final ImmutableByteSequence TEID_VALUE_QOS = ImmutableByteSequence.copyFrom(0xfe);
@@ -116,7 +116,7 @@ public final class TestUpfConstants {
             .withLocalFarId(UPLINK_FAR_ID)
             .withSessionId(SESSION_ID)
             .withCounterId(UPLINK_COUNTER_CELL_ID)
-            .withQfi((byte) UPLINK_QFI)
+            .withQfi(UPLINK_QFI)
             .build();
 
     public static final PacketDetectionRule DOWNLINK_QOS_PDR = PacketDetectionRule.builder()
@@ -124,7 +124,7 @@ public final class TestUpfConstants {
             .withLocalFarId(DOWNLINK_FAR_ID)
             .withSessionId(SESSION_ID)
             .withCounterId(DOWNLINK_COUNTER_CELL_ID)
-            .withQfi((byte) DOWNLINK_QFI)
+            .withQfi(DOWNLINK_QFI)
             .build();
 
     public static final ForwardingActionRule UPLINK_FAR = ForwardingActionRule.builder()
@@ -179,7 +179,7 @@ public final class TestUpfConstants {
                                                            new PiActionParam(FAR_ID, UPLINK_PHYSICAL_FAR_ID),
                                                            new PiActionParam(NEEDS_GTPU_DECAP, 1),
                                                            new PiActionParam(
-                                                               TC, QFI_TO_TC.getOrDefault(UPLINK_QFI, TC_BEST_EFFORT))
+                                                               TC, QFI_TO_TC.get(UPLINK_QFI))
                                                    ))
                                                    .build()).build())
             .withPriority(DEFAULT_PRIORITY)
@@ -220,8 +220,7 @@ public final class TestUpfConstants {
                                                            new PiActionParam(CTR_ID, DOWNLINK_COUNTER_CELL_ID),
                                                            new PiActionParam(FAR_ID, DOWNLINK_PHYSICAL_FAR_ID),
                                                            new PiActionParam(NEEDS_GTPU_DECAP, 0),
-                                                           new PiActionParam(
-                                                               TC, QFI_TO_TC.getOrDefault(DOWNLINK_QFI, TC_BEST_EFFORT))
+                                                           new PiActionParam(TC, QFI_TO_TC.get(DOWNLINK_QFI))
                                                    ))
                                                    .build()).build())
             .withPriority(DEFAULT_PRIORITY)
