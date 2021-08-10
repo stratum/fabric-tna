@@ -165,20 +165,12 @@ struct spgw_bridged_metadata_t {
     bool            needs_gtpu_encap;
     bool            skip_spgw;
     bool            skip_egress_pdr_ctr;
-    bool            notify_spgwc;
     teid_t          gtpu_teid;
     ipv4_addr_t     gtpu_tunnel_sip;
     ipv4_addr_t     gtpu_tunnel_dip;
     l4_port_t       gtpu_tunnel_sport;
     pdr_ctr_id_t    pdr_ctr_id;
 }
-
-struct spgw_ingress_metadata_t {
-    bool               needs_gtpu_decap;
-    far_id_t           far_id;
-    SpgwInterface      src_iface;
-}
-
 
 #ifdef WITH_INT
 // Report Telemetry Headers v0.5
@@ -299,7 +291,7 @@ struct bridged_metadata_base_t {
     bit<48>                  ig_tstamp;
     bit<16>                  ip_eth_type;
     bit<STATS_FLOW_ID_WIDTH> stats_flow_id;
-    bit<6>                   dscp;
+    slice_tc_t               slice_tc;
 #ifdef WITH_DOUBLE_VLAN_TERMINATION
     bool                     push_double_vlan;
     vlan_id_t                inner_vlan_id;
@@ -365,9 +357,9 @@ struct fabric_ingress_metadata_t {
     bool                     inner_ipv4_checksum_err;
     slice_id_t               slice_id;
     tc_t                     tc;
-#ifdef WITH_SPGW
-    spgw_ingress_metadata_t  spgw;
-#endif // WITH_SPGW
+    bool                     is_spgw_hit;
+    slice_id_t               spgw_slice_id;
+    tc_t                     spgw_tc;
     PortType_t               ig_port_type;
     common_mirror_metadata_t mirror;
 }
