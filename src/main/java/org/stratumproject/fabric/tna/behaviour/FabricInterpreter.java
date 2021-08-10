@@ -196,9 +196,29 @@ public class FabricInterpreter extends AbstractFabricHandlerBehavior
         try {
             ImmutableList.Builder<PiPacketMetadata> builder = ImmutableList.builder();
             builder.add(PiPacketMetadata.builder()
+                    .withId(P4InfoConstants.PAD0)
+                    .withValue(copyFrom(0)
+                            .fit(P4InfoConstants.PAD0_BITWIDTH))
+                    .build());
+            builder.add(PiPacketMetadata.builder()
                     .withId(P4InfoConstants.EGRESS_PORT)
                     .withValue(copyFrom(portNumber)
                             .fit(P4InfoConstants.EGRESS_PORT_BITWIDTH))
+                    .build());
+            builder.add(PiPacketMetadata.builder()
+                    .withId(P4InfoConstants.PAD1)
+                    .withValue(copyFrom(0)
+                            .fit(P4InfoConstants.PAD1_BITWIDTH))
+                    .build());
+            builder.add(PiPacketMetadata.builder()
+                    .withId(P4InfoConstants.QUEUE_ID)
+                    .withValue(copyFrom(QUEUE_ID_SYSTEM)
+                            .fit(P4InfoConstants.QUEUE_ID_BITWIDTH))
+                    .build());
+            builder.add(PiPacketMetadata.builder()
+                    .withId(P4InfoConstants.PAD2)
+                    .withValue(copyFrom(0)
+                            .fit(P4InfoConstants.PAD2_BITWIDTH))
                     .build());
             builder.add(PiPacketMetadata.builder()
                     .withId(P4InfoConstants.CPU_LOOPBACK_MODE)
@@ -210,13 +230,14 @@ public class FabricInterpreter extends AbstractFabricHandlerBehavior
                     .withValue(copyFrom(doForwarding ? ONE : ZERO))
                     .build());
             builder.add(PiPacketMetadata.builder()
-                    .withId(P4InfoConstants.QUEUE_ID)
-                    .withValue(copyFrom(QUEUE_ID_SYSTEM))
+                    .withId(P4InfoConstants.PAD3)
+                    .withValue(copyFrom(0)
+                            .fit(P4InfoConstants.PAD3_BITWIDTH))
                     .build());
             builder.add(PiPacketMetadata.builder()
-                    .withId(P4InfoConstants.PAD0)
+                    .withId(P4InfoConstants.PAD4)
                     .withValue(copyFrom(0)
-                            .fit(P4InfoConstants.PAD0_BITWIDTH))
+                            .fit(P4InfoConstants.PAD4_BITWIDTH))
                     .build());
             builder.add(PiPacketMetadata.builder()
                     .withId(P4InfoConstants.ETHER_TYPE)
