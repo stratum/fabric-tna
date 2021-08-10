@@ -1,6 +1,6 @@
 // Copyright 2021-present Open Networking Foundation
 // SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
-package org.stratumproject.fabric.tna.slicing;
+package org.stratumproject.fabric.tna.slicing.api;
 
 /**
  * Admin service for network slicing and QoS.

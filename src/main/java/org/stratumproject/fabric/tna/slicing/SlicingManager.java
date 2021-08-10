@@ -4,6 +4,11 @@ package org.stratumproject.fabric.tna.slicing;
 
 import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.store.service.ConsistentMap;
+import org.stratumproject.fabric.tna.slicing.api.QueueId;
+import org.stratumproject.fabric.tna.slicing.api.SliceId;
+import org.stratumproject.fabric.tna.slicing.api.SlicingAdminService;
+import org.stratumproject.fabric.tna.slicing.api.SlicingService;
+import org.stratumproject.fabric.tna.slicing.api.TrafficClass;
 
 import java.util.Map;
 import java.util.Set;
