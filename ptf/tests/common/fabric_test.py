@@ -11,6 +11,7 @@ import time
 
 import xnt
 from base_test import P4RuntimeTest, ipv4_to_binary, mac_to_binary, stringify, tvcreate
+from qos_utils import QUEUE_ID_SYSTEM
 from bmd_bytes import BMD_BYTES
 from p4.v1 import p4runtime_pb2
 from ptf import testutils
@@ -896,7 +897,7 @@ class FabricTest(P4RuntimeTest):
         port,
         cpu_loopback_mode=CPU_LOOPBACK_MODE_DISABLED,
         do_forwarding=False,
-        queue_id=qos_utils.QUEUE_ID_SYSTEM,
+        queue_id=QUEUE_ID_SYSTEM,
     ):
         packet_out = p4runtime_pb2.PacketOut()
         packet_out.payload = bytes(pkt)
