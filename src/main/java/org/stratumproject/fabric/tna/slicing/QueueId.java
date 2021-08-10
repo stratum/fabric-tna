@@ -10,7 +10,7 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_EGRESS
 /**
  * Queue Identifier.
  */
-public class QueueId extends Identifier<Integer> {
+public final class QueueId extends Identifier<Integer> {
     public static final Integer MAX = 1 << HDR_EGRESS_QID_BITWIDTH - 1;
 
     private QueueId(int id) {
@@ -25,7 +25,7 @@ public class QueueId extends Identifier<Integer> {
      * @throws IllegalArgumentException if given id is invalid
      */
     public static QueueId of(int id) {
-        checkArgument(id > 0 && id <= MAX, "Invalid id %d. Valid range is from %d to %d", id, 0, MAX);
+        checkArgument(id >= 0 && id <= MAX, "Invalid id %d. Valid range is from %d to %d", id, 0, MAX);
         return new QueueId(id);
     }
 }

@@ -4,7 +4,6 @@ package org.stratumproject.fabric.tna.slicing;
 
 import org.onosproject.net.flow.TrafficTreatment;
 
-import java.util.List;
 import java.util.Set;
 
 /**

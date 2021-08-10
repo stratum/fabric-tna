@@ -5,7 +5,6 @@ package org.stratumproject.fabric.tna.slicing;
 import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.store.service.ConsistentMap;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -34,7 +33,8 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
      *     REAL_TIME -> [5, 6, 7]
      *     UNKNOWN -> [8]
      * removeQueue(ELASTIC, 1)
-     *     check if queue in use. need to use distributedLock with addTc, removeTc to make sure no one is using the queue while we are trying to remove
+     *     check if queue in use. need to use distributedLock with addTc, removeTc to make sure
+     *     no one is using the queue while we are trying to remove
      *     synchronize is not good enough since other ONOS instance will access too (in multi UP4 setup)
      *     ELASTIC -> [2, 3, 4]
      *     REAL_TIME -> [5, 6, 7]
