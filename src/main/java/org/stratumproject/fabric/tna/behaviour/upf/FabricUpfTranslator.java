@@ -353,7 +353,7 @@ public class FabricUpfTranslator {
         final PiAction.Builder actionBuilder = PiAction.builder()
                 .withParameters(Arrays.asList(
                         new PiActionParam(CTR_ID, pdr.counterId()),
-                        new PiActionParam(FAR_ID, fabricUpfStore.globalFarIdOf(pdr.sessionId(), pdr.farId())));
+                        new PiActionParam(FAR_ID, fabricUpfStore.globalFarIdOf(pdr.sessionId(), pdr.farId()))));
 
         final int tc;
         if (pdr.hasQfi()) {
