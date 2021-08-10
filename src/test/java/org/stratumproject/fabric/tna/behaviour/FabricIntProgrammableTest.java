@@ -200,7 +200,7 @@ public class FabricIntProgrammableTest {
         final IntReportConfig intConfig = getIntReportConfig(APP_ID, "/int-report.json");
         List<FlowRule> expectRules = Lists.newArrayList();
         expectRules.add(buildCollectorWatchlistRule(LEAF_DEVICE_ID));
-        expectRules.addAll(queueReportFlows(DEFAULT_QUEUE_REPORT_TRIGGER_LATENCY_THRESHOLD,
+        expectRules.addAll(queueReportFlows(LEAF_DEVICE_ID, DEFAULT_QUEUE_REPORT_TRIGGER_LATENCY_THRESHOLD,
             DEFAULT_QUEUE_REPORT_RESET_LATENCY_THRESHOLD));
         expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false,
             BMD_TYPE_INT_INGRESS_DROP, INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID));
@@ -251,7 +251,7 @@ public class FabricIntProgrammableTest {
         expectRules.add(buildWatchlistRule(SUBNET_1, Criterion.Type.IPV4_DST));
         expectRules.add(buildWatchlistRule(SUBNET_2, Criterion.Type.IPV4_SRC));
         expectRules.add(buildWatchlistRule(SUBNET_2, Criterion.Type.IPV4_DST));
-        expectRules.addAll(queueReportFlows(DEFAULT_QUEUE_REPORT_TRIGGER_LATENCY_THRESHOLD,
+        expectRules.addAll(queueReportFlows(LEAF_DEVICE_ID, DEFAULT_QUEUE_REPORT_TRIGGER_LATENCY_THRESHOLD,
             DEFAULT_QUEUE_REPORT_RESET_LATENCY_THRESHOLD));
         expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_INT_INGRESS_DROP,
                                 INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID));
@@ -307,7 +307,7 @@ public class FabricIntProgrammableTest {
         final IntReportConfig intConfig = getIntReportConfig(APP_ID, "/int-report.json");
         List<FlowRule> expectRules = Lists.newArrayList();
         expectRules.add(buildCollectorWatchlistRule(LEAF_DEVICE_ID));
-        expectRules.addAll(queueReportFlows(DEFAULT_QUEUE_REPORT_TRIGGER_LATENCY_THRESHOLD,
+        expectRules.addAll(queueReportFlows(LEAF_DEVICE_ID, DEFAULT_QUEUE_REPORT_TRIGGER_LATENCY_THRESHOLD,
             DEFAULT_QUEUE_REPORT_RESET_LATENCY_THRESHOLD));
         expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_INT_INGRESS_DROP,
                                 INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID));
@@ -357,7 +357,7 @@ public class FabricIntProgrammableTest {
         final IntReportConfig intConfig = getIntReportConfig(APP_ID, "/int-report.json");
         List<FlowRule> expectRules = Lists.newArrayList();
         expectRules.add(buildCollectorWatchlistRule(SPINE_DEVICE_ID));
-        expectRules.addAll(queueReportFlows(DEFAULT_QUEUE_REPORT_TRIGGER_LATENCY_THRESHOLD,
+        expectRules.addAll(queueReportFlows(SPINE_DEVICE_ID, DEFAULT_QUEUE_REPORT_TRIGGER_LATENCY_THRESHOLD,
             DEFAULT_QUEUE_REPORT_RESET_LATENCY_THRESHOLD));
         expectRules.add(buildReportTableRule(SPINE_DEVICE_ID, true, BMD_TYPE_INT_INGRESS_DROP,
                                      INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID));
@@ -472,7 +472,7 @@ public class FabricIntProgrammableTest {
     public void testWithoutValidSrConfig() {
         List<FlowRule> expectRules = Lists.newArrayList();
         expectRules.add(buildCollectorWatchlistRule(LEAF_DEVICE_ID));
-        expectRules.addAll(queueReportFlows(DEFAULT_QUEUE_REPORT_TRIGGER_LATENCY_THRESHOLD,
+        expectRules.addAll(queueReportFlows(LEAF_DEVICE_ID, DEFAULT_QUEUE_REPORT_TRIGGER_LATENCY_THRESHOLD,
             DEFAULT_QUEUE_REPORT_RESET_LATENCY_THRESHOLD));
 
         reset(netcfgService);
@@ -502,8 +502,8 @@ public class FabricIntProgrammableTest {
     @Test
     public void testSetUpSpineButCollectorHostNotFound() {
         List<FlowRule> expectRules = Lists.newArrayList();
-        expectRules.add(buildCollectorWatchlistRule(LEAF_DEVICE_ID));
-        expectRules.addAll(queueReportFlows(DEFAULT_QUEUE_REPORT_TRIGGER_LATENCY_THRESHOLD,
+        expectRules.add(buildCollectorWatchlistRule(SPINE_DEVICE_ID));
+        expectRules.addAll(queueReportFlows(SPINE_DEVICE_ID, DEFAULT_QUEUE_REPORT_TRIGGER_LATENCY_THRESHOLD,
             DEFAULT_QUEUE_REPORT_RESET_LATENCY_THRESHOLD));
         reset(driverData, hostService);
         expect(driverData.deviceId()).andReturn(SPINE_DEVICE_ID).anyTimes();
@@ -534,7 +534,7 @@ public class FabricIntProgrammableTest {
     public void testSetUpSpineButNoCollectorHostLocation() {
         List<FlowRule> expectRules = Lists.newArrayList();
         expectRules.add(buildCollectorWatchlistRule(SPINE_DEVICE_ID));
-        expectRules.addAll(queueReportFlows(DEFAULT_QUEUE_REPORT_TRIGGER_LATENCY_THRESHOLD,
+        expectRules.addAll(queueReportFlows(SPINE_DEVICE_ID, DEFAULT_QUEUE_REPORT_TRIGGER_LATENCY_THRESHOLD,
             DEFAULT_QUEUE_REPORT_RESET_LATENCY_THRESHOLD));
         reset(driverData, hostService);
         expect(driverData.deviceId()).andReturn(SPINE_DEVICE_ID).anyTimes();
@@ -565,7 +565,7 @@ public class FabricIntProgrammableTest {
     public void testSetUpSpineButNoLeafConfig() {
         List<FlowRule> expectRules = Lists.newArrayList();
         expectRules.add(buildCollectorWatchlistRule(SPINE_DEVICE_ID));
-        expectRules.addAll(queueReportFlows(DEFAULT_QUEUE_REPORT_TRIGGER_LATENCY_THRESHOLD,
+        expectRules.addAll(queueReportFlows(SPINE_DEVICE_ID, DEFAULT_QUEUE_REPORT_TRIGGER_LATENCY_THRESHOLD,
             DEFAULT_QUEUE_REPORT_RESET_LATENCY_THRESHOLD));
         reset(driverData, netcfgService);
         expect(driverData.deviceId()).andReturn(SPINE_DEVICE_ID).anyTimes();
@@ -598,7 +598,7 @@ public class FabricIntProgrammableTest {
     public void testSetUpSpineButInvalidLeafConfig() {
         List<FlowRule> expectRules = Lists.newArrayList();
         expectRules.add(buildCollectorWatchlistRule(SPINE_DEVICE_ID));
-        expectRules.addAll(queueReportFlows(DEFAULT_QUEUE_REPORT_TRIGGER_LATENCY_THRESHOLD,
+        expectRules.addAll(queueReportFlows(SPINE_DEVICE_ID, DEFAULT_QUEUE_REPORT_TRIGGER_LATENCY_THRESHOLD,
             DEFAULT_QUEUE_REPORT_RESET_LATENCY_THRESHOLD));
         reset(driverData, netcfgService);
         expect(driverData.deviceId()).andReturn(SPINE_DEVICE_ID).anyTimes();
@@ -860,15 +860,6 @@ public class FabricIntProgrammableTest {
             assertEquals(expectGroup, actualGroup);
         }
 
-        for (int i = 0; i < MAX_QUEUES; i++) {
-            for (int fi = 0; fi < 3; fi++) {
-                int index = i * 3 + fi;
-                FlowRule expectedFlow = expectedFlows.get(index);
-                FlowRule actualFlow = capturedFlow.getValues().get(index);
-                assertTrue(expectedFlow.exactMatch(actualFlow));
-            }
-        }
-
         verify(groupService, flowRuleService);
         reset(groupService, flowRuleService);
     }
@@ -906,7 +897,7 @@ public class FabricIntProgrammableTest {
                 .build();
     }
 
-    private FlowRule buildQueueReportFlow(byte queueId, long[] upperRange,
+    private FlowRule buildQueueReportFlow(DeviceId deviceId, byte queueId, long[] upperRange,
             long[] lowerRange, PiActionId actionId) {
         final PiCriterion.Builder matchCriterionBuilder = PiCriterion.builder()
                 .matchExact(P4InfoConstants.HDR_EGRESS_QID, queueId);
@@ -925,7 +916,7 @@ public class FabricIntProgrammableTest {
                 .piTableAction(PiAction.builder().withId(actionId).build())
                 .build();
         return DefaultFlowRule.builder()
-            .forDevice(LEAF_DEVICE_ID)
+            .forDevice(deviceId)
             .forTable(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_QUEUE_LATENCY_THRESHOLDS)
             .withSelector(selector)
             .withTreatment(treatment)
@@ -935,22 +926,22 @@ public class FabricIntProgrammableTest {
             .build();
     }
 
-    private List<FlowRule> queueReportFlows(long triggerThreshold, long resetThreshold) {
+    private List<FlowRule> queueReportFlows(DeviceId deviceId, long triggerThreshold, long resetThreshold) {
         final List<FlowRule> rules = Lists.newArrayList();
         for (byte queueId = 0; queueId < MAX_QUEUES; queueId++) {
-            FlowRule queueReportFlow = buildQueueReportFlow(queueId,
+            FlowRule queueReportFlow = buildQueueReportFlow(deviceId, queueId,
                     new long[]{0, 0},
                     new long[]{triggerThreshold, 0xffff},
                     P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_CHECK_QUOTA);
                     rules.add(queueReportFlow);
 
-            queueReportFlow = buildQueueReportFlow(queueId,
+            queueReportFlow = buildQueueReportFlow(deviceId, queueId,
                     new long[]{1, 0xffff},
                     new long[]{0, 0xffff},
                     P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_CHECK_QUOTA);
                     rules.add(queueReportFlow);
 
-            queueReportFlow = buildQueueReportFlow(queueId,
+            queueReportFlow = buildQueueReportFlow(deviceId, queueId,
                     new long[]{0, 0},
                     new long[]{0, resetThreshold - 1},
                     P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_RESET_QUOTA);
