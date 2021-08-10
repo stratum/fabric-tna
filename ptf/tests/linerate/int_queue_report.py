@@ -51,6 +51,13 @@ class IntQueueReportTest(TRexTest, IntTest, SlicingTest):
             threshold_reset=THRESHOLD_RESET,
             queue_id=DEFAULT_QID,
         )
+        if is_next_hop_spine:
+            # If MPLS test, port2 is assumed to be a spine port, with
+            # default vlan untagged.
+            vlan2 = DEFAULT_VLAN
+            assert not tagged2
+        else:
+            vlan2 = VLAN_ID_2
         self.set_up_ipv4_unicast_rules(
             next_hop_mac=HOST2_MAC,
             ig_port=self.port1,
@@ -61,6 +68,7 @@ class IntQueueReportTest(TRexTest, IntTest, SlicingTest):
             is_next_hop_spine=is_next_hop_spine,
             prefix_len=32,
             switch_mac=pkt[Ether].dst,
+            vlan2=vlan2,
         )
         self.set_queue_report_quota(self.port4, qid=DEFAULT_QID, quota=DEFAULT_QUOTA)
 
