@@ -90,6 +90,7 @@ fi
 docker run --name ${tmRunName} -d -t --privileged \
     -v "${DIR}":/workdir -w /workdir \
     -v "${P4C_OUT}":/p4c-out \
+    -v /dev/hugepages:/dev/hugepages \
     $OTHER_TM_DOCKER_ARGS \
     --entrypoint ./tm_entrypoint.sh \
     "${SDE_TM_DOCKER_IMG}"
@@ -101,6 +102,7 @@ echo "*** Starting ${stratumBfRunName} (from ${STRATUM_DOCKER_IMG})..."
 docker run --name ${stratumBfRunName} -d --privileged \
     --network "container:${tmRunName}" \
     -v "${DIR}":/workdir -w /workdir \
+    -v /dev/hugepages:/dev/hugepages \
     --entrypoint ./stratum_entrypoint.sh \
     ${STRATUM_DOCKER_FLAG} \
     "${STRATUM_DOCKER_IMG}"
