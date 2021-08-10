@@ -57,6 +57,12 @@ public final class Constants {
     public static final int COLOR_YELLOW = 1;
     public static final int COLOR_RED = 3;
 
+    // Bitwidths (not present in P4InfoConstants)
+    public static final int SLICE_ID_BITWIDTH = 4;
+    public static final int TC_BITWIDTH = 2;
+    public static final int MAX_SLICE_ID = (1 << SLICE_ID_BITWIDTH) - 1;
+    public static final int MAX_TC = (1 << TC_BITWIDTH) - 1;
+
     // hide default constructor
     private Constants() {
     }

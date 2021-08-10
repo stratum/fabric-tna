@@ -42,9 +42,8 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_IPV4_D
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_TEID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_TUNNEL_IPV4_DST;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_UE_ADDR;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.NEEDS_GTPU_DECAP;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TC;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.SLICE_ID;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TC;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TEID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TUNNEL_DST_ADDR;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TUNNEL_SRC_ADDR;
@@ -173,11 +172,10 @@ public final class TestUpfConstants {
             .withTreatment(DefaultTrafficTreatment.builder()
                                    .piTableAction(
                                            PiAction.builder()
-                                                   .withId(FABRIC_INGRESS_SPGW_LOAD_PDR)
+                                                   .withId(FABRIC_INGRESS_SPGW_LOAD_PDR_DECAP)
                                                    .withParameters(Arrays.asList(
                                                            new PiActionParam(CTR_ID, UPLINK_COUNTER_CELL_ID),
                                                            new PiActionParam(FAR_ID, UPLINK_PHYSICAL_FAR_ID),
-                                                           new PiActionParam(NEEDS_GTPU_DECAP, 1),
                                                            new PiActionParam(
                                                                TC, QFI_TO_TC.get(UPLINK_QFI))
                                                    ))
@@ -218,7 +216,6 @@ public final class TestUpfConstants {
                                                    .withParameters(Arrays.asList(
                                                            new PiActionParam(CTR_ID, DOWNLINK_COUNTER_CELL_ID),
                                                            new PiActionParam(FAR_ID, DOWNLINK_PHYSICAL_FAR_ID),
-                                                           new PiActionParam(NEEDS_GTPU_DECAP, 0),
                                                            new PiActionParam(TC, QFI_TO_TC.get(DOWNLINK_QFI))
                                                    ))
                                                    .build()).build())

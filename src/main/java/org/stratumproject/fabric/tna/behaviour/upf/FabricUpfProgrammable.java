@@ -59,6 +59,7 @@ import static org.stratumproject.fabric.tna.behaviour.Constants.TC_BEST_EFFORT;
 import static org.stratumproject.fabric.tna.behaviour.Constants.TC_CONTROL;
 import static org.stratumproject.fabric.tna.behaviour.Constants.TC_ELASTIC;
 import static org.stratumproject.fabric.tna.behaviour.Constants.TC_REAL_TIME;
+import static org.stratumproject.fabric.tna.behaviour.FabricUtils.sliceTcConcat;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_GTPU_ENCAP;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_PDR_COUNTER;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_QOS_QUEUES;
@@ -71,8 +72,7 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_ING
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_FAR_ID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_GTPU_IS_VALID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_IPV4_DST_ADDR;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_SLICE_ID;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_TC;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_SLICE_TC;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_TEID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_TUNNEL_IPV4_DST;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_UE_ADDR;
@@ -164,10 +164,9 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         return flowRules;
     }
 
-    private FlowRule setQueueFlowRule(int sliceId, int tcId, int queueId) {
+    private FlowRule setQueueFlowRule(int sliceId, int tc, int queueId) {
         TrafficSelector trafficSelector = DefaultTrafficSelector.builder()
-                .matchPi(PiCriterion.builder().matchExact(HDR_SLICE_ID, sliceId).build())
-                .matchPi(PiCriterion.builder().matchExact(HDR_TC, tcId).build())
+                .matchPi(PiCriterion.builder().matchExact(HDR_SLICE_TC, sliceTcConcat(sliceId, tc)).build())
                 .build();
         PiAction action = PiAction.builder()
                 .withId(FABRIC_INGRESS_QOS_SET_QUEUE)
