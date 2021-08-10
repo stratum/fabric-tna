@@ -2981,7 +2981,15 @@ class SpgwSimpleTest(IPv4UnicastTest):
             is_next_hop_spine=is_next_hop_spine,
         )
 
-        ingress_bytes = 0
+        # NOTE: ingress_bytes should be 0. as the switch should not update the
+        #  ingress counter for packets coming **from** dbuf, since we already
+        #  updated it when first sending the same packets **to** dbuf. However,
+        #  to improve Tofino resource utilization, we decided to allow for
+        #  accounting inaccuracy. See comment in spgw.p4 for more context.
+        ingress_bytes = (
+            len(pkt_from_dbuf)
+            + ETH_FCS_BYTES
+        )
         # GTP encap and VLAN/MPLS push/pop happen at egress deparser, but
         # counters are updated with bytes seen at egress parser.
         egress_bytes = (
@@ -2993,6 +3001,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             - GTPU_HDR_BYTES
         )
         if tagged1:
+            ingress_bytes += VLAN_BYTES
             egress_bytes += VLAN_BYTES
         if self.loopback:
             egress_bytes += CPU_LOOPBACK_FAKE_ETH_BYTES
@@ -3000,7 +3009,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         # Verify the Ingress PDR packet counter did not increase, but the
         # egress did
         self.verify_pdr_counters(
-            DOWNLINK_PDR_CTR_IDX, ingress_bytes, egress_bytes, 0, 1
+            DOWNLINK_PDR_CTR_IDX, ingress_bytes, egress_bytes, 1, 1
         )
 
 
