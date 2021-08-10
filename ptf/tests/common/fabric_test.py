@@ -141,9 +141,9 @@ DBUF_TEID = 0
 PDR_COUNTER_INGRESS = "FabricIngress.spgw.pdr_counter"
 PDR_COUNTER_EGRESS = "FabricEgress.spgw.pdr_counter"
 
-SPGW_IFACE_ACCESS = 1
-SPGW_IFACE_CORE = 2
-SPGW_IFACE_FROM_DBUF = 3
+SPGW_IFACE_ACCESS = "iface_access"
+SPGW_IFACE_CORE = "iface_core"
+SPGW_IFACE_FROM_DBUF = "iface_dbuf"
 
 VLAN_ID_1 = 100
 VLAN_ID_2 = 200
@@ -814,7 +814,7 @@ def get_test_args(
                                     yield params
 
 
-def slice_tc_meter_index(slice_id, tc):
+def slice_tc_concat(slice_id, tc):
     return (slice_id << TC_WIDTH) + tc
 
 
@@ -2337,7 +2337,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         return (counter.data.packet_count, counter.data.byte_count)
 
     def _add_spgw_iface(
-        self, iface_addr, prefix_len, iface_enum, gtpu_valid, slice_id=DEFAULT_SLICE_ID
+        self, iface_addr, prefix_len, iface_type, gtpu_valid, slice_id=DEFAULT_SLICE_ID
     ):
         req = self.get_new_write_request()
 
@@ -2350,9 +2350,8 @@ class SpgwSimpleTest(IPv4UnicastTest):
                 self.Lpm("ipv4_dst_addr", iface_addr_, prefix_len),
                 self.Exact("gtpu_is_valid", stringify(int(gtpu_valid), 1)),
             ],
-            "FabricIngress.spgw.load_iface",
+            "FabricIngress.spgw." + iface_type,
             [
-                ("src_iface", stringify(iface_enum, 1)),
                 ("slice_id", stringify(slice_id, 1)),
             ],
         )
@@ -2362,7 +2361,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         self._add_spgw_iface(
             iface_addr=pool_addr,
             prefix_len=prefix_len,
-            iface_enum=SPGW_IFACE_CORE,
+            iface_type=SPGW_IFACE_CORE,
             gtpu_valid=False,
             slice_id=slice_id,
         )
@@ -2371,7 +2370,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         self._add_spgw_iface(
             iface_addr=s1u_addr,
             prefix_len=prefix_len,
-            iface_enum=SPGW_IFACE_ACCESS,
+            iface_type=SPGW_IFACE_ACCESS,
             gtpu_valid=True,
             slice_id=slice_id,
         )
@@ -2387,7 +2386,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         self._add_spgw_iface(
             iface_addr=drain_dst_addr,
             prefix_len=32,
-            iface_enum=SPGW_IFACE_FROM_DBUF,
+            iface_type=SPGW_IFACE_FROM_DBUF,
             gtpu_valid=True,
         )
 
@@ -2397,7 +2396,6 @@ class SpgwSimpleTest(IPv4UnicastTest):
             "FabricIngress.spgw.load_dbuf_far",
             [
                 ("drop", stringify(0, 1)),
-                ("notify_cp", stringify(0, 1)),
                 ("teid", stringify(dbuf_teid, 4)),
                 ("tunnel_src_port", stringify(UDP_GTP_PORT, 2)),
                 ("tunnel_src_addr", ipv4_to_binary(drain_dst_addr)),
@@ -2414,11 +2412,10 @@ class SpgwSimpleTest(IPv4UnicastTest):
                 self.Exact("teid", stringify(teid, 4)),
                 self.Exact("tunnel_ipv4_dst", ipv4_to_binary(tunnel_dst_addr)),
             ],
-            "FabricIngress.spgw.load_pdr",
+            "FabricIngress.spgw.load_pdr_decap",
             [
                 ("ctr_id", stringify(ctr_id, 2)),
                 ("far_id", stringify(far_id, 4)),
-                ("needs_gtpu_decap", stringify(1, 1)),
                 ("tc", stringify(tc, 1)),
             ],
         )
@@ -2445,9 +2442,9 @@ class SpgwSimpleTest(IPv4UnicastTest):
             )
         self.push_update_add_entry_to_action(
             req,
-            "FabricIngress.spgw.uplink_recirc.rules",
+            "FabricIngress.spgw.uplink_recirc_rules",
             match,
-            "FabricIngress.spgw.uplink_recirc." + ("allow" if allow else "deny"),
+            "FabricIngress.spgw.recirc_" + ("allow" if allow else "deny"),
             [],
             priority,
         )
@@ -2464,7 +2461,6 @@ class SpgwSimpleTest(IPv4UnicastTest):
             [
                 ("ctr_id", stringify(ctr_id, 2)),
                 ("far_id", stringify(far_id, 4)),
-                ("needs_gtpu_decap", stringify(0, 1)),
                 ("tc", stringify(tc, 1)),
             ],
         )
@@ -2481,11 +2477,11 @@ class SpgwSimpleTest(IPv4UnicastTest):
         )
         self.write_request(req)
 
-    def add_normal_far(self, far_id, drop=False, notify_cp=False):
+    def add_normal_far(self, far_id, drop=False):
         return self._add_far(
             far_id,
             "FabricIngress.spgw.load_normal_far",
-            [("drop", stringify(drop, 1)), ("notify_cp", stringify(notify_cp, 1))],
+            [("drop", stringify(drop, 1))],
         )
 
     def add_tunnel_far(
@@ -2496,14 +2492,12 @@ class SpgwSimpleTest(IPv4UnicastTest):
         tunnel_dst_addr,
         tunnel_src_port=DEFAULT_GTP_TUNNEL_SPORT,
         drop=False,
-        notify_cp=False,
     ):
         return self._add_far(
             far_id,
             "FabricIngress.spgw.load_tunnel_far",
             [
                 ("drop", stringify(drop, 1)),
-                ("notify_cp", stringify(notify_cp, 1)),
                 ("teid", stringify(teid, 4)),
                 ("tunnel_src_port", stringify(tunnel_src_port, 2)),
                 ("tunnel_src_addr", ipv4_to_binary(tunnel_src_addr)),
@@ -2987,7 +2981,15 @@ class SpgwSimpleTest(IPv4UnicastTest):
             is_next_hop_spine=is_next_hop_spine,
         )
 
-        ingress_bytes = 0
+        # NOTE: ingress_bytes should be 0. as the switch should not update the
+        #  ingress counter for packets coming **from** dbuf, since we already
+        #  updated it when first sending the same packets **to** dbuf. However,
+        #  to improve Tofino resource utilization, we decided to allow for
+        #  accounting inaccuracy. See comment in spgw.p4 for more context.
+        ingress_bytes = (
+            len(pkt_from_dbuf)
+            + ETH_FCS_BYTES
+        )
         # GTP encap and VLAN/MPLS push/pop happen at egress deparser, but
         # counters are updated with bytes seen at egress parser.
         egress_bytes = (
@@ -2999,6 +3001,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             - GTPU_HDR_BYTES
         )
         if tagged1:
+            ingress_bytes += VLAN_BYTES
             egress_bytes += VLAN_BYTES
         if self.loopback:
             egress_bytes += CPU_LOOPBACK_FAKE_ETH_BYTES
@@ -3006,7 +3009,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         # Verify the Ingress PDR packet counter did not increase, but the
         # egress did
         self.verify_pdr_counters(
-            DOWNLINK_PDR_CTR_IDX, ingress_bytes, egress_bytes, 0, 1
+            DOWNLINK_PDR_CTR_IDX, ingress_bytes, egress_bytes, 1, 1
         )
 
 
@@ -4493,7 +4496,7 @@ class SlicingTest(FabricTest):
     def configure_slice_tc_meter(self, slice_id, tc, cir, cburst, pir, pburst):
         self.write_indirect_meter(
             m_name="FabricIngress.qos.slice_tc_meter",
-            m_index=slice_tc_meter_index(slice_id, tc),
+            m_index=slice_tc_concat(slice_id, tc),
             cir=cir,
             cburst=cburst,
             pir=pir,
@@ -4501,9 +4504,9 @@ class SlicingTest(FabricTest):
         )
 
     def add_queue_entry(self, slice_id, tc, qid=None, color=None):
+        slice_tc = slice_tc_concat(slice_id, tc)
         matches = [
-            self.Exact("slice_id", stringify(slice_id, 1)),
-            self.Exact("tc", stringify(tc, 1)),
+            self.Exact("slice_tc", stringify(slice_tc, 1)),
         ]
         if color is not None:
             matches.append(
