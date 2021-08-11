@@ -31,11 +31,40 @@ public class FabricUpfTranslatorTest {
     }
 
     @Test
+    public void fabricEntryToUplinkQosPdrTest() {
+        PacketDetectionRule expectedPdr = TestUpfConstants.UPLINK_QOS_PDR;
+        PacketDetectionRule translatedPdr;
+        try {
+            translatedPdr = upfTranslator.fabricEntryToPdr(TestUpfConstants.FABRIC_UPLINK_QOS_PDR);
+        } catch (UpfProgrammableException e) {
+            assertThat("Fabric uplink PDR should translate to abstract PDR without error.", false);
+            return;
+        }
+        assertThat("Translated PDR should be uplink.", translatedPdr.matchesEncapped());
+        assertThat(translatedPdr, equalTo(expectedPdr));
+    }
+
+    @Test
     public void fabricEntryToDownlinkPdrTest() {
         PacketDetectionRule expectedPdr = TestUpfConstants.DOWNLINK_PDR;
         PacketDetectionRule translatedPdr;
         try {
             translatedPdr = upfTranslator.fabricEntryToPdr(TestUpfConstants.FABRIC_DOWNLINK_PDR);
+        } catch (UpfProgrammableException e) {
+            assertThat("Fabric downlink PDR should translate to abstract PDR without error.", false);
+            return;
+        }
+
+        assertThat("Translated PDR should be downlink.", translatedPdr.matchesUnencapped());
+        assertThat(translatedPdr, equalTo(expectedPdr));
+    }
+
+    @Test
+    public void fabricEntryToDownlinkQosPdrTest() {
+        PacketDetectionRule expectedPdr = TestUpfConstants.DOWNLINK_QOS_PDR;
+        PacketDetectionRule translatedPdr;
+        try {
+            translatedPdr = upfTranslator.fabricEntryToPdr(TestUpfConstants.FABRIC_DOWNLINK_QOS_PDR);
         } catch (UpfProgrammableException e) {
             assertThat("Fabric downlink PDR should translate to abstract PDR without error.", false);
             return;
@@ -154,6 +183,25 @@ public class FabricUpfTranslatorTest {
             return;
         }
         assertThat(translatedRule, equalTo(expectedRule));
+        assertThat(translatedRule.treatment(), equalTo(expectedRule.treatment()));
+    }
+
+    @Test
+    public void downlinkPdrQosToFabricEntryTest() {
+        FlowRule translatedRule;
+        FlowRule expectedRule = TestUpfConstants.FABRIC_DOWNLINK_QOS_PDR;
+        try {
+            translatedRule = upfTranslator.pdrToFabricEntry(TestUpfConstants.DOWNLINK_QOS_PDR,
+                                                            TestUpfConstants.DEVICE_ID,
+                                                            TestUpfConstants.APP_ID,
+                                                            TestUpfConstants.DEFAULT_PRIORITY);
+        } catch (UpfProgrammableException e) {
+            assertThat("Abstract downlink PDR should correctly translate to Fabric PDR without error",
+                       false);
+            return;
+        }
+        assertThat(translatedRule, equalTo(expectedRule));
+        assertThat(translatedRule.treatment(), equalTo(expectedRule.treatment()));
     }
 
     @Test
@@ -188,6 +236,25 @@ public class FabricUpfTranslatorTest {
             return;
         }
         assertThat(translatedRule, equalTo(expectedRule));
+        assertThat(translatedRule.treatment(), equalTo(expectedRule.treatment()));
+    }
+
+    @Test
+    public void uplinkPdrQosToFabricEntryTest() {
+        FlowRule translatedRule;
+        FlowRule expectedRule = TestUpfConstants.FABRIC_UPLINK_QOS_PDR;
+        try {
+            translatedRule = upfTranslator.pdrToFabricEntry(TestUpfConstants.UPLINK_QOS_PDR,
+                                                            TestUpfConstants.DEVICE_ID,
+                                                            TestUpfConstants.APP_ID,
+                                                            TestUpfConstants.DEFAULT_PRIORITY);
+        } catch (UpfProgrammableException e) {
+            assertThat("Abstract uplink PDR should correctly translate to Fabric PDR without error",
+                       false);
+            return;
+        }
+        assertThat(translatedRule, equalTo(expectedRule));
+        assertThat(translatedRule.treatment(), equalTo(expectedRule.treatment()));
     }
 
     @Test

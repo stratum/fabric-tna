@@ -5,6 +5,8 @@
 # satisfied. For more information, see this doc:
 # https://docs.google.com/document/d/1jq6NH-fffe8ImMo4EC_yMwH1djlrhWaQu2lpLFJKljA
 
+import logging
+
 import gnmi_utils
 import qos_utils
 from base_test import *
@@ -30,12 +32,15 @@ ELASTIC_1_WRR_WEIGHT = 330
 ELASTIC_2_WRR_WEIGHT = 660
 BEST_EFFORT_WRR_WEIGHT = 33
 
-# Latency expectations in microseconds.
-MAXIMUM_EXPECTED_LATENCY_CONTROL_TRAFFIC_US = 1000
-AVERAGE_EXPECTED_LATENCY_CONTROL_TRAFFIC_US = 500
-MAXIMUM_EXPECTED_LATENCY_REALTIME_TRAFFIC_US = 1500
-AVERAGE_EXPECTED_LATENCY_REALTIME_TRAFFIC_US = 500
+# Latency expectations for various traffic types in microseconds.
+EXPECTED_MAXIMUM_LATENCY_CONTROL_TRAFFIC_US = 1000
+EXPECTED_AVERAGE_LATENCY_CONTROL_TRAFFIC_US = 500
+EXPECTED_99_9_PERCENTILE_LATENCY_CONTROL_TRAFFIC_US = 100
+EXPECTED_MAXIMUM_LATENCY_REALTIME_TRAFFIC_US = 1500
+EXPECTED_AVERAGE_LATENCY_REALTIME_TRAFFIC_US = 500
+EXPECTED_99_9_PERCENTILE_LATENCY_REALTIME_TRAFFIC_US = 100
 
+# Port setup.
 BACKGROUND_SENDER_PORT = [0]
 PRIORITY_SENDER_PORT = [2]
 ALL_SENDER_PORTS = [0, 2]
@@ -223,7 +228,7 @@ class MinFlowrateWithSoftwareLatencyMeasurement(QosTest):
             print("Statistics for port {}: {}".format(port, readable_stats))
         # Check that expected traffic rate can be achieved.
         self.assertGreater(
-            flow_stats.rx_pkts, 0, "No control traffic has been received"
+            flow_stats.rx_packets, 0, "No control traffic has been received"
         )
         self.assertGreaterEqual(
             tx_bps_L1,
@@ -281,7 +286,7 @@ class StrictPriorityControlTrafficIsPrioritized(QosTest):
             print("Statistics for port {}: {}".format(port, readable_stats))
         # Check that SLAs are met.
         self.assertGreater(
-            flow_stats.rx_pkts, 0, "No control traffic has been received"
+            flow_stats.rx_packets, 0, "No control traffic has been received"
         )
         self.assertEqual(
             lat_stats.dropped,
@@ -300,13 +305,13 @@ class StrictPriorityControlTrafficIsPrioritized(QosTest):
         )
         self.assertLessEqual(
             lat_stats.total_max,
-            MAXIMUM_EXPECTED_LATENCY_CONTROL_TRAFFIC_US,
+            EXPECTED_MAXIMUM_LATENCY_CONTROL_TRAFFIC_US,
             f"Maximum latency in control traffic is too high: {lat_stats.total_max}",
         )
         self.assertLessEqual(
-            lat_stats.average,
-            AVERAGE_EXPECTED_LATENCY_CONTROL_TRAFFIC_US,
-            f"Average latency in control traffic is too high: {lat_stats.average}",
+            lat_stats.percentile_99_9,
+            EXPECTED_99_9_PERCENTILE_LATENCY_CONTROL_TRAFFIC_US,
+            f"99.9th percentile latency in control traffic is too high: {lat_stats.percentile_99_9}",
         )
 
 
@@ -342,7 +347,7 @@ class ControlTrafficIsNotPrioritizedWithoutRules(QosTest):
             print("Statistics for port {}: {}".format(port, readable_stats))
         # Check that SLAs are NOT met.
         self.assertGreater(
-            flow_stats.rx_pkts, 0, "No control traffic has been received"
+            flow_stats.rx_packets, 0, "No control traffic has been received"
         )
         self.assertGreater(
             lat_stats.dropped,
@@ -356,13 +361,13 @@ class ControlTrafficIsNotPrioritizedWithoutRules(QosTest):
         )
         self.assertGreaterEqual(
             lat_stats.total_max,
-            MAXIMUM_EXPECTED_LATENCY_CONTROL_TRAFFIC_US,
+            EXPECTED_MAXIMUM_LATENCY_CONTROL_TRAFFIC_US,
             f"Maximum latency in control traffic is not over the expected limit: {lat_stats.total_max}",
         )
         self.assertGreaterEqual(
-            lat_stats.average,
-            AVERAGE_EXPECTED_LATENCY_CONTROL_TRAFFIC_US,
-            f"Average latency in control traffic not over the expected limit: {lat_stats.average}",
+            lat_stats.percentile_99_9,
+            EXPECTED_99_9_PERCENTILE_LATENCY_CONTROL_TRAFFIC_US,
+            f"99.9th percentile latency in control traffic not over the expected limit: {lat_stats.percentile_99_9}",
         )
 
 
@@ -395,7 +400,7 @@ class ControlTrafficIsShaped(QosTest):
             print("Statistics for port {}: {}".format(port, readable_stats))
         # Check that rate limits are enforced.
         self.assertGreater(
-            flow_stats.rx_pkts, 0, "No control traffic has been received"
+            flow_stats.rx_packets, 0, "No control traffic has been received"
         )
         self.assertGreater(
             lat_stats.dropped,
@@ -409,13 +414,13 @@ class ControlTrafficIsShaped(QosTest):
         )
         self.assertGreaterEqual(
             lat_stats.total_max,
-            MAXIMUM_EXPECTED_LATENCY_CONTROL_TRAFFIC_US,
+            EXPECTED_MAXIMUM_LATENCY_CONTROL_TRAFFIC_US,
             f"Maximum latency in control traffic is not over the expected limit: {lat_stats.total_max}",
         )
         self.assertGreaterEqual(
-            lat_stats.average,
-            AVERAGE_EXPECTED_LATENCY_CONTROL_TRAFFIC_US,
-            f"Average latency in control traffic not over the expected limit: {lat_stats.average}",
+            lat_stats.percentile_99_9,
+            EXPECTED_99_9_PERCENTILE_LATENCY_CONTROL_TRAFFIC_US,
+            f"99.9th percentile latency in control traffic not over the expected limit: {lat_stats.percentile_99_9}",
         )
 
 
@@ -470,7 +475,7 @@ class RealtimeTrafficIsRrScheduled(QosTest):
         flow_stats_1 = get_flow_stats(self.realtime_pg_id_1, stats)
         print(get_readable_latency_stats(lat_stats_1))
         self.assertGreater(
-            flow_stats_1.rx_pkts, 0, "No realtime traffic has been received"
+            flow_stats_1.rx_packets, 0, "No realtime traffic has been received"
         )
         self.assertGreater(
             lat_stats_1.dropped,
@@ -479,20 +484,20 @@ class RealtimeTrafficIsRrScheduled(QosTest):
         )
         self.assertGreaterEqual(
             lat_stats_1.total_max,
-            MAXIMUM_EXPECTED_LATENCY_REALTIME_TRAFFIC_US,
+            EXPECTED_MAXIMUM_LATENCY_REALTIME_TRAFFIC_US,
             f"Maximum latency in realtime traffic is not over the expected limit: {lat_stats_1.total_max}",
         )
         self.assertGreaterEqual(
-            lat_stats_1.average,
-            AVERAGE_EXPECTED_LATENCY_REALTIME_TRAFFIC_US,
-            f"Average latency in realtime traffic is not over the expected limit: {lat_stats_1.average}",
+            lat_stats_1.percentile_99_9,
+            EXPECTED_99_9_PERCENTILE_LATENCY_REALTIME_TRAFFIC_US,
+            f"99.9th percentile latency in realtime traffic is is not over the expected limit: {lat_stats_1.percentile_99_9}",
         )
         # Check RT stream 2
         lat_stats_2 = get_latency_stats(self.realtime_pg_id_2, stats)
         flow_stats_2 = get_flow_stats(self.realtime_pg_id_2, stats)
         print(get_readable_latency_stats(lat_stats_2))
         self.assertGreater(
-            flow_stats_2.rx_pkts, 0, "No realtime traffic has been received"
+            flow_stats_2.rx_packets, 0, "No realtime traffic has been received"
         )
         self.assertGreater(
             lat_stats_2.dropped,
@@ -501,20 +506,20 @@ class RealtimeTrafficIsRrScheduled(QosTest):
         )
         self.assertGreaterEqual(
             lat_stats_2.total_max,
-            MAXIMUM_EXPECTED_LATENCY_REALTIME_TRAFFIC_US,
+            EXPECTED_MAXIMUM_LATENCY_REALTIME_TRAFFIC_US,
             f"Maximum latency in control traffic is not over the expected limit: {lat_stats_2.total_max}",
         )
         self.assertGreaterEqual(
-            lat_stats_2.average,
-            AVERAGE_EXPECTED_LATENCY_REALTIME_TRAFFIC_US,
-            f"Average latency in realtime traffic is not over the expected limit: {lat_stats_2.average}",
+            lat_stats_2.percentile_99_9,
+            EXPECTED_99_9_PERCENTILE_LATENCY_REALTIME_TRAFFIC_US,
+            f"99.9th percentile latency in realtime traffic is is not over the expected limit: {lat_stats_2.percentile_99_9}",
         )
         # Check RT stream 3
         lat_stats_3 = get_latency_stats(self.realtime_pg_id_3, stats)
         flow_stats_3 = get_flow_stats(self.realtime_pg_id_3, stats)
         print(get_readable_latency_stats(lat_stats_3))
         self.assertGreater(
-            flow_stats_3.rx_pkts, 0, "No realtime traffic has been received"
+            flow_stats_3.rx_packets, 0, "No realtime traffic has been received"
         )
         self.assertEqual(
             lat_stats_3.dropped,
@@ -523,13 +528,13 @@ class RealtimeTrafficIsRrScheduled(QosTest):
         )
         self.assertLessEqual(
             lat_stats_3.total_max,
-            MAXIMUM_EXPECTED_LATENCY_REALTIME_TRAFFIC_US,
+            EXPECTED_MAXIMUM_LATENCY_REALTIME_TRAFFIC_US,
             f"Maximum latency in well behaved realtime traffic is too high: {lat_stats_3.total_max}",
         )
         self.assertLessEqual(
-            lat_stats_3.average,
-            AVERAGE_EXPECTED_LATENCY_REALTIME_TRAFFIC_US,
-            f"Average latency in well behaved realtime traffic is too high: {lat_stats_3.average}",
+            lat_stats_3.percentile_99_9,
+            EXPECTED_99_9_PERCENTILE_LATENCY_REALTIME_TRAFFIC_US,
+            f"99th percentile latency in well behaved realtime traffic is too high: {lat_stats_3.percentile_99_9}",
         )
         # Get statistics for TX and RX ports
         for port in ALL_PORTS:

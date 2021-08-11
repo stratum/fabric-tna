@@ -17,10 +17,15 @@ header packet_in_header_t {
 // Ethernet frame in the ingress parser.
 @controller_header("packet_out")
 header packet_out_header_t {
+    @padding bit<7>   pad0;
     PortId_t          egress_port;
+    @padding bit<3>   pad1;
+    QueueId_t         queue_id;
+    @padding bit<5>   pad2;
     CpuLoopbackMode_t cpu_loopback_mode;
     bit<1>            do_forwarding;
-    @padding bit<84>  pad0;
+    @padding bit<16>  pad3;
+    @padding bit<48>  pad4;
     bit<16>           ether_type;
 }
 
@@ -165,20 +170,12 @@ struct spgw_bridged_metadata_t {
     bool            needs_gtpu_encap;
     bool            skip_spgw;
     bool            skip_egress_pdr_ctr;
-    bool            notify_spgwc;
     teid_t          gtpu_teid;
     ipv4_addr_t     gtpu_tunnel_sip;
     ipv4_addr_t     gtpu_tunnel_dip;
     l4_port_t       gtpu_tunnel_sport;
     pdr_ctr_id_t    pdr_ctr_id;
 }
-
-struct spgw_ingress_metadata_t {
-    bool               needs_gtpu_decap;
-    far_id_t           far_id;
-    SpgwInterface      src_iface;
-}
-
 
 #ifdef WITH_INT
 // Report Telemetry Headers v0.5
@@ -272,6 +269,7 @@ struct int_bridged_metadata_t {
     IntDropReason_t drop_reason;
     QueueId_t       queue_id;
     PortId_t        egress_port;
+    IntWipType_t    wip_type;
 }
 
 struct int_metadata_t {
@@ -298,7 +296,7 @@ struct bridged_metadata_base_t {
     bit<48>                  ig_tstamp;
     bit<16>                  ip_eth_type;
     bit<STATS_FLOW_ID_WIDTH> stats_flow_id;
-    bit<6>                   dscp;
+    slice_tc_t               slice_tc;
 #ifdef WITH_DOUBLE_VLAN_TERMINATION
     bool                     push_double_vlan;
     vlan_id_t                inner_vlan_id;
@@ -364,9 +362,9 @@ struct fabric_ingress_metadata_t {
     bool                     inner_ipv4_checksum_err;
     slice_id_t               slice_id;
     tc_t                     tc;
-#ifdef WITH_SPGW
-    spgw_ingress_metadata_t  spgw;
-#endif // WITH_SPGW
+    bool                     is_spgw_hit;
+    slice_id_t               spgw_slice_id;
+    tc_t                     spgw_tc;
     PortType_t               ig_port_type;
     common_mirror_metadata_t mirror;
 }
@@ -402,6 +400,7 @@ struct fabric_egress_metadata_t {
     bool                  is_int_recirc; // Tells the pipeline that this packet will be
                                          // recirculated later as an INT report.
 #endif // WITH_INT
+    bit<16>               pkt_length;
 }
 
 header fake_ethernet_t {
@@ -470,6 +469,7 @@ struct egress_headers_t {
 #endif // WITH_SPGW
     ipv4_t ipv4;
     ipv6_t ipv6;
+    udp_t udp;
 }
 
 #endif // __HEADER__

@@ -25,72 +25,106 @@ public final class P4InfoConstants {
     // Header field IDs
     public static final PiMatchFieldId HDR_BMD_TYPE =
             PiMatchFieldId.of("bmd_type");
+    public static final int HDR_BMD_TYPE_BITWIDTH = 8;
     public static final PiMatchFieldId HDR_COLOR = PiMatchFieldId.of("color");
+    public static final int HDR_COLOR_BITWIDTH = 2;
     public static final PiMatchFieldId HDR_EG_PORT =
             PiMatchFieldId.of("eg_port");
+    public static final int HDR_EG_PORT_BITWIDTH = 9;
     public static final PiMatchFieldId HDR_EGRESS_QID =
             PiMatchFieldId.of("egress_qid");
+    public static final int HDR_EGRESS_QID_BITWIDTH = 5;
     public static final PiMatchFieldId HDR_ETH_DST =
             PiMatchFieldId.of("eth_dst");
+    public static final int HDR_ETH_DST_BITWIDTH = 48;
     public static final PiMatchFieldId HDR_ETH_SRC =
             PiMatchFieldId.of("eth_src");
+    public static final int HDR_ETH_SRC_BITWIDTH = 48;
     public static final PiMatchFieldId HDR_ETH_TYPE =
             PiMatchFieldId.of("eth_type");
+    public static final int HDR_ETH_TYPE_BITWIDTH = 16;
     public static final PiMatchFieldId HDR_FAR_ID = PiMatchFieldId.of("far_id");
+    public static final int HDR_FAR_ID_BITWIDTH = 32;
     public static final PiMatchFieldId HDR_GTPU_IS_VALID =
             PiMatchFieldId.of("gtpu_is_valid");
+    public static final int HDR_GTPU_IS_VALID_BITWIDTH = 1;
     public static final PiMatchFieldId HDR_HOP_LATENCY_LOWER =
             PiMatchFieldId.of("hop_latency_lower");
+    public static final int HDR_HOP_LATENCY_LOWER_BITWIDTH = 16;
     public static final PiMatchFieldId HDR_HOP_LATENCY_UPPER =
             PiMatchFieldId.of("hop_latency_upper");
+    public static final int HDR_HOP_LATENCY_UPPER_BITWIDTH = 16;
     public static final PiMatchFieldId HDR_ICMP_CODE =
             PiMatchFieldId.of("icmp_code");
+    public static final int HDR_ICMP_CODE_BITWIDTH = 8;
     public static final PiMatchFieldId HDR_ICMP_TYPE =
             PiMatchFieldId.of("icmp_type");
+    public static final int HDR_ICMP_TYPE_BITWIDTH = 8;
     public static final PiMatchFieldId HDR_IG_PORT =
             PiMatchFieldId.of("ig_port");
+    public static final int HDR_IG_PORT_BITWIDTH = 9;
     public static final PiMatchFieldId HDR_IG_PORT_TYPE =
             PiMatchFieldId.of("ig_port_type");
+    public static final int HDR_IG_PORT_TYPE_BITWIDTH = 2;
     public static final PiMatchFieldId HDR_INT_REPORT_TYPE =
             PiMatchFieldId.of("int_report_type");
+    public static final int HDR_INT_REPORT_TYPE_BITWIDTH = 3;
     public static final PiMatchFieldId HDR_IP_ETH_TYPE =
             PiMatchFieldId.of("ip_eth_type");
+    public static final int HDR_IP_ETH_TYPE_BITWIDTH = 16;
     public static final PiMatchFieldId HDR_IP_PROTO =
             PiMatchFieldId.of("ip_proto");
+    public static final int HDR_IP_PROTO_BITWIDTH = 8;
     public static final PiMatchFieldId HDR_IPV4_DST =
             PiMatchFieldId.of("ipv4_dst");
+    public static final int HDR_IPV4_DST_BITWIDTH = 32;
     public static final PiMatchFieldId HDR_IPV4_DST_ADDR =
             PiMatchFieldId.of("ipv4_dst_addr");
+    public static final int HDR_IPV4_DST_ADDR_BITWIDTH = 32;
     public static final PiMatchFieldId HDR_IPV4_SRC =
             PiMatchFieldId.of("ipv4_src");
+    public static final int HDR_IPV4_SRC_BITWIDTH = 32;
     public static final PiMatchFieldId HDR_IPV4_VALID =
             PiMatchFieldId.of("ipv4_valid");
+    public static final int HDR_IPV4_VALID_BITWIDTH = 1;
     public static final PiMatchFieldId HDR_IPV6_DST =
             PiMatchFieldId.of("ipv6_dst");
+    public static final int HDR_IPV6_DST_BITWIDTH = 128;
     public static final PiMatchFieldId HDR_L4_DPORT =
             PiMatchFieldId.of("l4_dport");
+    public static final int HDR_L4_DPORT_BITWIDTH = 16;
     public static final PiMatchFieldId HDR_L4_SPORT =
             PiMatchFieldId.of("l4_sport");
+    public static final int HDR_L4_SPORT_BITWIDTH = 16;
     public static final PiMatchFieldId HDR_MIRROR_TYPE =
             PiMatchFieldId.of("mirror_type");
+    public static final int HDR_MIRROR_TYPE_BITWIDTH = 3;
     public static final PiMatchFieldId HDR_MPLS_LABEL =
             PiMatchFieldId.of("mpls_label");
+    public static final int HDR_MPLS_LABEL_BITWIDTH = 20;
     public static final PiMatchFieldId HDR_NEXT_ID =
             PiMatchFieldId.of("next_id");
-    public static final PiMatchFieldId HDR_SLICE_ID =
-            PiMatchFieldId.of("slice_id");
+    public static final int HDR_NEXT_ID_BITWIDTH = 32;
+    public static final PiMatchFieldId HDR_SLICE_TC =
+            PiMatchFieldId.of("slice_tc");
+    public static final int HDR_SLICE_TC_BITWIDTH = 6;
     public static final PiMatchFieldId HDR_STATS_FLOW_ID =
             PiMatchFieldId.of("stats_flow_id");
-    public static final PiMatchFieldId HDR_TC = PiMatchFieldId.of("tc");
+    public static final int HDR_STATS_FLOW_ID_BITWIDTH = 10;
     public static final PiMatchFieldId HDR_TEID = PiMatchFieldId.of("teid");
+    public static final int HDR_TEID_BITWIDTH = 32;
     public static final PiMatchFieldId HDR_TUNNEL_IPV4_DST =
             PiMatchFieldId.of("tunnel_ipv4_dst");
+    public static final int HDR_TUNNEL_IPV4_DST_BITWIDTH = 32;
     public static final PiMatchFieldId HDR_UE_ADDR =
             PiMatchFieldId.of("ue_addr");
+    public static final int HDR_UE_ADDR_BITWIDTH = 32;
     public static final PiMatchFieldId HDR_VLAN_ID =
             PiMatchFieldId.of("vlan_id");
+    public static final int HDR_VLAN_ID_BITWIDTH = 12;
     public static final PiMatchFieldId HDR_VLAN_IS_VALID =
             PiMatchFieldId.of("vlan_is_valid");
+    public static final int HDR_VLAN_IS_VALID_BITWIDTH = 1;
     // Table IDs
     public static final PiTableId FABRIC_EGRESS_DSCP_REWRITER_REWRITER =
             PiTableId.of("FabricEgress.dscp_rewriter.rewriter");
@@ -145,7 +179,7 @@ public final class P4InfoConstants {
     public static final PiTableId FABRIC_INGRESS_SPGW_UPLINK_PDRS =
             PiTableId.of("FabricIngress.spgw.uplink_pdrs");
     public static final PiTableId FABRIC_INGRESS_SPGW_UPLINK_RECIRC_RULES =
-            PiTableId.of("FabricIngress.spgw.uplink_recirc.rules");
+            PiTableId.of("FabricIngress.spgw.uplink_recirc_rules");
     public static final PiTableId FABRIC_INGRESS_STATS_FLOWS =
             PiTableId.of("FabricIngress.stats.flows");
     // Indirect Counter IDs
@@ -180,8 +214,8 @@ public final class P4InfoConstants {
             PiCounterId.of("FabricIngress.qos.queues_stats");
     public static final PiCounterId FABRIC_INGRESS_SLICE_TC_CLASSIFIER_CLASSIFIER_STATS =
             PiCounterId.of("FabricIngress.slice_tc_classifier.classifier_stats");
-    public static final PiCounterId FABRIC_INGRESS_SPGW_UPLINK_RECIRC_RULES_COUNTER =
-            PiCounterId.of("FabricIngress.spgw.uplink_recirc.rules_counter");
+    public static final PiCounterId FABRIC_INGRESS_SPGW_RECIRC_STATS =
+            PiCounterId.of("FabricIngress.spgw.recirc_stats");
     public static final PiCounterId FABRIC_INGRESS_STATS_FLOW_COUNTER =
             PiCounterId.of("FabricIngress.stats.flow_counter");
     // Action IDs
@@ -281,28 +315,35 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.spgw.downlink_pdr_drop");
     public static final PiActionId FABRIC_INGRESS_SPGW_FAR_DROP =
             PiActionId.of("FabricIngress.spgw.far_drop");
+    public static final PiActionId FABRIC_INGRESS_SPGW_IFACE_ACCESS =
+            PiActionId.of("FabricIngress.spgw.iface_access");
+    public static final PiActionId FABRIC_INGRESS_SPGW_IFACE_CORE =
+            PiActionId.of("FabricIngress.spgw.iface_core");
+    public static final PiActionId FABRIC_INGRESS_SPGW_IFACE_DBUF =
+            PiActionId.of("FabricIngress.spgw.iface_dbuf");
     public static final PiActionId FABRIC_INGRESS_SPGW_IFACE_MISS =
             PiActionId.of("FabricIngress.spgw.iface_miss");
     public static final PiActionId FABRIC_INGRESS_SPGW_LOAD_DBUF_FAR =
             PiActionId.of("FabricIngress.spgw.load_dbuf_far");
-    public static final PiActionId FABRIC_INGRESS_SPGW_LOAD_IFACE =
-            PiActionId.of("FabricIngress.spgw.load_iface");
     public static final PiActionId FABRIC_INGRESS_SPGW_LOAD_NORMAL_FAR =
             PiActionId.of("FabricIngress.spgw.load_normal_far");
     public static final PiActionId FABRIC_INGRESS_SPGW_LOAD_PDR =
             PiActionId.of("FabricIngress.spgw.load_pdr");
+    public static final PiActionId FABRIC_INGRESS_SPGW_LOAD_PDR_DECAP =
+            PiActionId.of("FabricIngress.spgw.load_pdr_decap");
     public static final PiActionId FABRIC_INGRESS_SPGW_LOAD_TUNNEL_FAR =
             PiActionId.of("FabricIngress.spgw.load_tunnel_far");
+    public static final PiActionId FABRIC_INGRESS_SPGW_RECIRC_ALLOW =
+            PiActionId.of("FabricIngress.spgw.recirc_allow");
+    public static final PiActionId FABRIC_INGRESS_SPGW_RECIRC_DENY =
+            PiActionId.of("FabricIngress.spgw.recirc_deny");
+    public static final PiActionId FABRIC_INGRESS_SPGW_RECIRC_MISS =
+            PiActionId.of("FabricIngress.spgw.recirc_miss");
     public static final PiActionId FABRIC_INGRESS_SPGW_UPLINK_PDR_DROP =
             PiActionId.of("FabricIngress.spgw.uplink_pdr_drop");
-    public static final PiActionId FABRIC_INGRESS_SPGW_UPLINK_RECIRC_ALLOW =
-            PiActionId.of("FabricIngress.spgw.uplink_recirc.allow");
-    public static final PiActionId FABRIC_INGRESS_SPGW_UPLINK_RECIRC_DENY =
-            PiActionId.of("FabricIngress.spgw.uplink_recirc.deny");
-    public static final PiActionId FABRIC_INGRESS_SPGW_UPLINK_RECIRC_MISS =
-            PiActionId.of("FabricIngress.spgw.uplink_recirc.miss");
     public static final PiActionId FABRIC_INGRESS_STATS_COUNT =
             PiActionId.of("FabricIngress.stats.count");
+    public static final PiActionId NO_ACTION = PiActionId.of("NoAction");
     public static final PiActionId NOP = PiActionId.of("nop");
     // Action Param IDs
     public static final PiActionParamId CPU_PORT =
@@ -324,14 +365,9 @@ public final class P4InfoConstants {
     public static final PiActionParamId MON_IP = PiActionParamId.of("mon_ip");
     public static final PiActionParamId MON_LABEL =
             PiActionParamId.of("mon_label");
-    public static final PiActionParamId MON_MAC = PiActionParamId.of("mon_mac");
     public static final PiActionParamId MON_PORT =
             PiActionParamId.of("mon_port");
-    public static final PiActionParamId NEEDS_GTPU_DECAP =
-            PiActionParamId.of("needs_gtpu_decap");
     public static final PiActionParamId NEXT_ID = PiActionParamId.of("next_id");
-    public static final PiActionParamId NOTIFY_CP =
-            PiActionParamId.of("notify_cp");
     public static final PiActionParamId PORT_NUM =
             PiActionParamId.of("port_num");
     public static final PiActionParamId PORT_TYPE =
@@ -341,10 +377,7 @@ public final class P4InfoConstants {
     public static final PiActionParamId SLICE_ID =
             PiActionParamId.of("slice_id");
     public static final PiActionParamId SMAC = PiActionParamId.of("smac");
-    public static final PiActionParamId SRC_IFACE =
-            PiActionParamId.of("src_iface");
     public static final PiActionParamId SRC_IP = PiActionParamId.of("src_ip");
-    public static final PiActionParamId SRC_MAC = PiActionParamId.of("src_mac");
     public static final PiActionParamId SWITCH_ID =
             PiActionParamId.of("switch_id");
     public static final PiActionParamId TC = PiActionParamId.of("tc");
@@ -378,7 +411,18 @@ public final class P4InfoConstants {
             PiPacketMetadataId.of("ingress_port");
     public static final int INGRESS_PORT_BITWIDTH = 9;
     public static final PiPacketMetadataId PAD0 = PiPacketMetadataId.of("pad0");
-    public static final int PAD0_BITWIDTH = 84;
+    public static final int PAD0_BITWIDTH = 7;
+    public static final PiPacketMetadataId PAD1 = PiPacketMetadataId.of("pad1");
+    public static final int PAD1_BITWIDTH = 3;
+    public static final PiPacketMetadataId PAD2 = PiPacketMetadataId.of("pad2");
+    public static final int PAD2_BITWIDTH = 5;
+    public static final PiPacketMetadataId PAD3 = PiPacketMetadataId.of("pad3");
+    public static final int PAD3_BITWIDTH = 16;
+    public static final PiPacketMetadataId PAD4 = PiPacketMetadataId.of("pad4");
+    public static final int PAD4_BITWIDTH = 48;
+    public static final PiPacketMetadataId QUEUE_ID =
+            PiPacketMetadataId.of("queue_id");
+    public static final int QUEUE_ID_BITWIDTH = 5;
     // Meter IDs
     public static final PiMeterId FABRIC_INGRESS_QOS_SLICE_TC_METER =
             PiMeterId.of("FabricIngress.qos.slice_tc_meter");

@@ -180,7 +180,7 @@ control Forwarding (inout ingress_headers_t hdr,
         } else if (hdr.mpls.isValid() &&
                        fabric_md.bridged.base.fwd_type == FWD_MPLS) {
             mpls.apply();
-        } else if (hdr.ipv4.isValid() &&
+        } else if (fabric_md.lkp.is_ipv4 &&
                        (fabric_md.bridged.base.fwd_type == FWD_IPV4_UNICAST ||
                             fabric_md.bridged.base.fwd_type == FWD_IPV4_MULTICAST)) {
             routing_v4.apply();

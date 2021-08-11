@@ -22,8 +22,12 @@ import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static java.lang.String.format;
+import static org.stratumproject.fabric.tna.behaviour.Constants.MAX_SLICE_ID;
+import static org.stratumproject.fabric.tna.behaviour.Constants.MAX_TC;
+import static org.stratumproject.fabric.tna.behaviour.Constants.TC_BITWIDTH;
 
 /**
  * Utility class with methods common to fabric-tna pipeconf operations.
@@ -121,5 +125,11 @@ public final class FabricUtils {
             throws PiPipelineInterpreter.PiInterpreterException {
         throw new PiPipelineInterpreter.PiInterpreterException(format(
                 "Invalid treatment for table '%s', %s: %s", tableId, explanation, treatment));
+    }
+
+    public static int sliceTcConcat(int sliceId, int tc) {
+        checkArgument(sliceId >= 0 && sliceId <= MAX_SLICE_ID, "Invalid sliceId");
+        checkArgument(tc >= 0 && tc <= MAX_TC, "Invalid tc");
+        return (sliceId << TC_BITWIDTH) + tc;
     }
 }

@@ -51,7 +51,6 @@ RUN python -m grpc_tools.protoc -I=/tmp/github.com/p4lang/p4runtime/proto:/tmp/g
 
 RUN echo "Building testvector proto"
 RUN git clone https://github.com/stratum/testvectors /tmp/github.com/stratum/testvectors
-# COPY . /tmp/github.com/stratum/testvectors
 WORKDIR /tmp/github.com/stratum/testvectors/proto
 RUN python -m grpc_tools.protoc -I=.:/tmp/github.com/openconfig/gnmi/proto:/tmp/github.com/p4lang/p4runtime/proto:/tmp/github.com/googleapis/googleapis --python_out=/output testvector/tv.proto
 RUN python -m grpc_tools.protoc -I=. --python_out=/output target/target.proto

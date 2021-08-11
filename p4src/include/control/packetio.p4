@@ -11,6 +11,7 @@ control PacketIoIngress(inout ingress_headers_t hdr,
     @hidden
     action do_packet_out() {
         ig_intr_md_for_tm.ucast_egress_port = hdr.packet_out.egress_port;
+        ig_intr_md_for_tm.qid = hdr.packet_out.queue_id;
         fabric_md.egress_port_set = true;
         hdr.packet_out.setInvalid();
         // Straight to output port.
@@ -93,6 +94,11 @@ control PacketIoEgress(inout egress_headers_t hdr,
             // Straight to CPU. No need to process through the rest of the
             // egress pipe.
             exit;
+        }
+        // Fix the egress packet length if it is a CPU loopback packet.
+        if (hdr.fake_ethernet.isValid() &&
+            hdr.fake_ethernet.ether_type == ETHERTYPE_CPU_LOOPBACK_EGRESS) {
+                fabric_md.pkt_length = eg_intr_md.pkt_length - ETH_HDR_BYTES;
         }
     }
 }
