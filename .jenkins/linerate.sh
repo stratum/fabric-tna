@@ -22,18 +22,17 @@ docker build -f ptf/Dockerfile -t "${TESTER_DOCKER_IMG}" .
 make -j8 all
 
 # We limit running linerate tests for only those profiles used in Aether, since
-# these are the only profiels we have written tests for so far
-for profile in "fabric-int"; do
+# these are the only profiles we have written tests for so far
+
 # Run PTF tests for all profiles we just built
 #for d in ./p4src/build/*/; do
 #  profile=$(basename "${d}")
 
-  echo "Run linerate tests for profile ${profile}"
-  ./ptf/run/hw/linerate "${profile}"
+echo "Run linerate tests for profile fabric-int"
+./ptf/run/hw/linerate "fabric-int"
 
-  rm -rf "logs/${profile}"
-  mkdir -p "logs/${profile}"
-  mv ptf/run/hw/log "logs/${profile}"
-  mv ptf/tests/common/ptf.log "logs/${profile}/"
-  mv ptf/tests/common/ptf.pcap "logs/${profile}/"
-done
+rm -rf "logs/fabric-int"
+mkdir -p "logs/fabric-int"
+mv ptf/run/hw/log "logs/fabric-int"
+mv ptf/tests/common/ptf.log "logs/fabric-int/"
+mv ptf/tests/common/ptf.pcap "logs/fabric-int/"

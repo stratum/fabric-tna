@@ -91,7 +91,7 @@ ENV PIP_DEPS \
     protobuf==$PROTOBUF_VER \
     grpcio==$GRPC_VER \
     p4runtime-shell==$P4RUNTIME_SHELL_VER \
-    xmlrunner
+    unittest-xml-reporting==3.0.4
 
 RUN apt update && apt install -y $RUNTIME_DEPS
 RUN pip3 install --no-cache-dir --root /python_output $PIP_DEPS
