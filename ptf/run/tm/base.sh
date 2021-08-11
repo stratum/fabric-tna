@@ -70,7 +70,7 @@ mkdir "${DIR}"/log
 
 function run_command_in_docker_host() {
     # To run a command in the host that runs the Docker daemon.
-    docker run -it --rm --privileged --pid=host alpine:3 \
+    docker run --rm --privileged --pid=host alpine:3 \
         nsenter -t 1 -m -u -n -i bash -c "${1}"
 }
 
