@@ -228,6 +228,10 @@ class P4RuntimeTest(BaseTest):
             self.stub = p4runtime_pb2_grpc.P4RuntimeStub(self.channel)
             self.set_up_stream()
 
+        # Vars for batching
+        self.batching = False
+        self.batch_reqs = []
+
     # In order to make writing tests easier, we accept any suffix that uniquely
     # identifies the object among p4info objects of the same type.
     def import_p4info_names(self):
@@ -620,11 +624,38 @@ class P4RuntimeTest(BaseTest):
             if store:
                 self.reqs.append(req)
             return None
+        elif self.batching:
+            if store:
+                self.reqs.append(req)
+            self.batch_reqs.append(req)
+            return None
         else:
             rep = self._write(req)
             if store:
                 self.reqs.append(req)
             return rep
+
+    def start_batching(self):
+        if self.generate_tv:
+            return
+        if self.batching:
+            raise P4RuntimeException("Batching already started")
+        self.batching = True
+        self.batch_reqs = []
+
+    def end_batching(self):
+        if self.generate_tv:
+            return
+        if not self.batching:
+            raise P4RuntimeException("Batching not started")
+        new_req = self.get_new_write_request()
+        for req in self.batch_reqs:
+            for update in req.updates:
+                new_req.updates.add().CopyFrom(update)
+        rep = self._write(new_req)
+        self.batching = False
+        self.batch_reqs = []
+        return rep
 
     def get_new_write_request(self):
         req = p4runtime_pb2.WriteRequest()

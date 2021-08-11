@@ -24,6 +24,7 @@ class FabricIPv4UnicastWithDscpClassificationAndRewriteTest(
         # dscp = 0b101100
         pkt = pkt_set_dscp(pkt=pkt, slice_id=11, tc=0)
 
+        self.start_batching()
         if trust_dscp:
             self.add_slice_tc_classifier_entry(trust_dscp=True, ipv4_src=pkt[IP].src)
         else:
@@ -45,6 +46,7 @@ class FabricIPv4UnicastWithDscpClassificationAndRewriteTest(
         elif rewrite != "nop":
             # nop means dscp unchanged
             raise Exception(f"Invalid rewrite action '{rewrite}'")
+        self.end_batching()
 
         self.runIPv4UnicastTest(
             pkt, eg_port=eg_port, exp_pkt_base=exp_pkt_base, **kwargs
@@ -99,6 +101,7 @@ class FabricSpgwDownlinkWithDscpRewriteTest(SpgwSimpleTest, SlicingTest):
         upf_tc = 2
         eg_port = self.port2
 
+        self.start_batching()
         # slice_id and tc should be rewritten by the SPGW tables.
         self.add_slice_tc_classifier_entry(
             slice_id=default_slice_id, tc=default_tc, ipv4_src=pkt[IP].src
@@ -108,6 +111,7 @@ class FabricSpgwDownlinkWithDscpRewriteTest(SpgwSimpleTest, SlicingTest):
             self.add_dscp_rewriter_entry(eg_port)
         else:
             self.add_dscp_rewriter_entry(eg_port, clear=True)
+        self.end_batching()
 
         self.runDownlinkTest(
             pkt=pkt,
@@ -185,6 +189,7 @@ class FabricSpgwUplinkWithDscpRewriteTest(SpgwSimpleTest, SlicingTest):
         upf_tc = 2
         eg_port = self.port2
 
+        self.start_batching()
         # slice_id and tc should be rewritten by the SPGW tables.
         self.add_slice_tc_classifier_entry(
             slice_id=default_slice_id, tc=default_tc, ipv4_src=pkt[IP].src
@@ -194,6 +199,7 @@ class FabricSpgwUplinkWithDscpRewriteTest(SpgwSimpleTest, SlicingTest):
             self.add_dscp_rewriter_entry(eg_port)
         else:
             self.add_dscp_rewriter_entry(eg_port, clear=True)
+        self.end_batching()
 
         self.runUplinkTest(
             ue_out_pkt=pkt,
@@ -256,6 +262,7 @@ class FabricIPv4UnicastWithPolicingTest(SlicingTest, IPv4UnicastTest):
         tc = 1
         ig_port = self.port1
         eg_port = self.port2
+        self.start_batching()
         self.add_slice_tc_classifier_entry(
             slice_id=slice_id, tc=tc, ipv4_src=pkt[IP].src
         )
@@ -267,6 +274,7 @@ class FabricIPv4UnicastWithPolicingTest(SlicingTest, IPv4UnicastTest):
             self.enable_policing(slice_id=slice_id, tc=tc, color=COLOR_RED)
         else:
             self.add_queue_entry(slice_id=slice_id, tc=tc, qid=1)
+        self.end_batching()
 
         self.runIPv4UnicastTest(
             pkt=pkt,

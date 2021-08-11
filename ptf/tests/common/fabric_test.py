@@ -1605,6 +1605,7 @@ class FabricTest(P4RuntimeTest):
 
 class BridgingTest(FabricTest):
     def runBridgingTest(self, tagged1, tagged2, pkt):
+        self.start_batching()
         vlan_id = 10
         mac_src = pkt[Ether].src
         mac_dst = pkt[Ether].dst
@@ -1627,7 +1628,7 @@ class BridgingTest(FabricTest):
         if tagged2:
             pkt2 = pkt_add_vlan(pkt2, vlan_vid=vlan_id)
             exp_pkt = pkt_add_vlan(exp_pkt, vlan_vid=vlan_id)
-
+        self.end_batching()
         self.send_packet(self.port1, pkt)
         self.send_packet(self.port2, pkt2)
         self.verify_each_packet_on_each_port(
@@ -1637,6 +1638,7 @@ class BridgingTest(FabricTest):
 
 class BridgingPriorityTest(FabricTest):
     def runBridgingPriorityTest(self):
+        self.start_batching()
         low_priority = 5
         high_priority = 100
 
@@ -1658,6 +1660,7 @@ class BridgingPriorityTest(FabricTest):
         # Add the multicast group, here we use instance id 1 by default
         replicas = [(1, port) for port in all_ports]
         self.add_mcast_group(mcast_group_id, replicas)
+        self.end_batching()
 
         # Create packet with unicast dst_mac. This packet should be send to
         # port 2 only
@@ -1678,6 +1681,7 @@ class BridgingPriorityTest(FabricTest):
 
 class DoubleTaggedBridgingTest(FabricTest):
     def runDoubleTaggedBridgingTest(self, pkt):
+        self.start_batching()
         vlan_id = 10
         inner_vlan_id = 11
         mac_src = pkt[Ether].src
@@ -1689,6 +1693,7 @@ class DoubleTaggedBridgingTest(FabricTest):
         self.add_bridging_entry(vlan_id, mac_dst, MAC_MASK, 20)
         self.add_next_output(10, self.port1)
         self.add_next_output(20, self.port2)
+        self.end_batching()
 
         pkt = pkt_add_vlan(pkt, vlan_vid=vlan_id)
         pkt = pkt_add_inner_vlan(pkt, vlan_vid=inner_vlan_id)
@@ -1705,6 +1710,7 @@ class DoubleTaggedBridgingTest(FabricTest):
 
 class DoubleVlanXConnectTest(FabricTest):
     def runXConnectTest(self, pkt):
+        self.start_batching()
         vlan_id_outer = 100
         vlan_id_inner = 200
         next_id = 99
@@ -1714,6 +1720,7 @@ class DoubleVlanXConnectTest(FabricTest):
         # miss on filtering.fwd_classifier => bridging
         self.add_bridging_entry(vlan_id_outer, None, None, next_id)
         self.add_xconnect(next_id, self.port1, self.port2)
+        self.end_batching()
 
         pkt = pkt_add_vlan(pkt, vlan_vid=vlan_id_inner)
         pkt = pkt_add_vlan(pkt, vlan_vid=vlan_id_outer)
@@ -1728,6 +1735,7 @@ class DoubleVlanXConnectTest(FabricTest):
 
 class ArpBroadcastTest(FabricTest):
     def runArpBroadcastTest(self, tagged_ports, untagged_ports):
+        self.start_batching()
         vlan_id = 10
         next_id = vlan_id
         mcast_group_id = vlan_id
@@ -1749,6 +1757,7 @@ class ArpBroadcastTest(FabricTest):
             self.set_egress_vlan(port, vlan_id, True)
         for port in untagged_ports:
             self.set_egress_vlan(port, vlan_id, False)
+        self.end_batching()
 
         for inport in all_ports:
             pkt_to_send = vlan_arp_pkt if inport in tagged_ports else arp_pkt
@@ -1903,6 +1912,7 @@ class IPv4UnicastTest(FabricTest):
         :param port_type2: port type to be used for the programming of the eg port
         :param from_packet_out: ingress packet is a packet-out (enables do_forwarding)
         """
+        self.start_batching()
         if IP not in pkt or Ether not in pkt:
             self.fail("Cannot do IPv4 test with packet that is not IP")
         if is_next_hop_spine and tagged2:
@@ -1963,6 +1973,7 @@ class IPv4UnicastTest(FabricTest):
             vlan2,
             mpls_label,
         )
+        self.end_batching()
 
         if exp_pkt is None:
             exp_pkt = self.build_exp_ipv4_unicast_packet(
@@ -2002,6 +2013,7 @@ class IPv4UnicastTest(FabricTest):
 
 class IPv4MulticastTest(FabricTest):
     def runIPv4MulticastTest(self, pkt, in_port, out_ports, in_vlan, out_vlan):
+        self.start_batching()
         if Dot1Q in pkt:
             print("runIPv4MulticastTest() expects untagged packets")
             return
@@ -2040,6 +2052,7 @@ class IPv4MulticastTest(FabricTest):
         # Add multicast group
         replicas = [(1, port) for port in out_ports]
         self.add_mcast_group(mcast_group_id, replicas)
+        self.end_batching()
 
         # Prepare packets
         expect_pkt = pkt_decrement_ttl(pkt.copy())
@@ -2097,7 +2110,7 @@ class DoubleVlanTerminationTest(FabricTest):
         :param verify_pkt: whether packets are expected to be forwarded or
                            dropped
         """
-
+        self.start_batching()
         if IP not in pkt or Ether not in pkt:
             self.fail("Cannot do IPv4 test with packet that is not IP")
 
@@ -2143,6 +2156,7 @@ class DoubleVlanTerminationTest(FabricTest):
 
         # Push double vlan
         self.add_next_double_vlan(next_id, next_vlan_id, next_inner_vlan_id)
+        self.end_batching()
 
         if exp_pkt is None:
             # Build exp pkt using the input one.
@@ -2238,6 +2252,7 @@ class DoubleVlanTerminationTest(FabricTest):
             dst_ipv4 = pkt[IP].dst
         switch_mac = pkt[Ether].dst
 
+        self.start_batching()
         # Setup port 1: packets on this port are double tagged packets
         self.setup_port(
             self.port1,
@@ -2268,6 +2283,7 @@ class DoubleVlanTerminationTest(FabricTest):
             params = [self.port2, switch_mac, next_hop_mac, mpls_label]
             self.add_next_mpls_and_routing_group(next_id, group_id, [params])
             self.add_next_vlan(next_id, DEFAULT_VLAN)
+        self.end_batching()
 
         if exp_pkt is None:
             # Build exp pkt using the input one.
@@ -2300,7 +2316,7 @@ class MplsSegmentRoutingTest(FabricTest):
         group_id = MPLS_LABEL_1
         mpls_ttl = DEFAULT_MPLS_TTL
         switch_mac = pkt[Ether].dst
-
+        self.start_batching()
         # Setup ports, both untagged
         self.setup_port(self.port1, DEFAULT_VLAN, PORT_TYPE_INFRA, False)
         self.setup_port(self.port2, DEFAULT_VLAN, PORT_TYPE_INFRA, False)
@@ -2319,6 +2335,7 @@ class MplsSegmentRoutingTest(FabricTest):
         else:
             params = [self.port2, switch_mac, dst_mac, label]
             self.add_next_mpls_and_routing_group(next_id, group_id, [params])
+        self.end_batching()
 
         exp_pkt = pkt.copy()
         pkt = pkt_add_mpls(pkt, label, mpls_ttl)
@@ -2342,12 +2359,16 @@ class PacketOutTest(FabricTest):
 
 class PacketInTest(FabricTest):
     def runPacketInTest(self, pkt, eth_type, tagged=False, vlan_id=10):
+        self.start_batching()
         self.add_forwarding_acl_punt_to_cpu(eth_type=eth_type)
         for port in [self.port1, self.port2]:
             if tagged:
                 self.set_ingress_port_vlan(port, True, vlan_id, vlan_id)
             else:
                 self.set_ingress_port_vlan(port, False, 0, vlan_id)
+        self.end_batching()
+
+        for port in [self.port1, self.port2]:
             self.send_packet(port, pkt)
             self.verify_packet_in(pkt, port)
         self.verify_no_other_packets()
@@ -2632,6 +2653,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         if dscp_rewrite:
             exp_pkt = pkt_set_dscp(exp_pkt, slice_id=slice_id, tc=tc)
 
+        self.start_batching()
         self.setup_uplink(
             s1u_sgw_addr=S1U_SGW_IPV4,
             teid=UPLINK_TEID,
@@ -2643,6 +2665,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         if verify_counters:
             # Clear SPGW counters before sending the packet
             self.reset_pdr_counters(UPLINK_PDR_CTR_IDX)
+        self.end_batching()
 
         self.runIPv4UnicastTest(
             pkt=gtp_pkt,
@@ -2710,6 +2733,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         if tagged2:
             exp_pkt = pkt_add_vlan(exp_pkt, VLAN_ID_2)
 
+        self.start_batching()
         self.setup_uplink(
             s1u_sgw_addr=S1U_SGW_IPV4, teid=UPLINK_TEID, ctr_id=UPLINK_PDR_CTR_IDX,
         )
@@ -2740,6 +2764,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         # Clear SPGW counters before sending the packet
         self.reset_pdr_counters(UPLINK_PDR_CTR_IDX)
         self.reset_pdr_counters(DOWNLINK_PDR_CTR_IDX)
+        self.end_batching()
 
         self.runIPv4UnicastTest(
             pkt=pkt,
@@ -2830,6 +2855,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             # Modify outer IPV4
             exp_pkt = pkt_set_dscp(exp_pkt, slice_id=slice_id, tc=tc)
 
+        self.start_batching()
         self.setup_downlink(
             s1u_sgw_addr=S1U_SGW_IPV4,
             s1u_enb_addr=S1U_ENB_IPV4,
@@ -2846,6 +2872,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         if verify_counters:
             # Clear SPGW counters before sending the packet
             self.reset_pdr_counters(DOWNLINK_PDR_CTR_IDX)
+        self.end_batching()
 
         self.runIPv4UnicastTest(
             pkt=pkt,
@@ -2895,6 +2922,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         if tagged2:
             exp_pkt = pkt_add_vlan(exp_pkt, VLAN_ID_2)
 
+        self.start_batching()
         # Add the UE pool interface and the PDR pointing to the DBUF FAR
         self.add_ue_pool(UE1_IPV4)
         self.add_downlink_pdr(
@@ -2912,6 +2940,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
 
         # Clear SPGW counters before sending the packet
         self.reset_pdr_counters(DOWNLINK_PDR_CTR_IDX)
+        self.end_batching()
 
         self.runIPv4UnicastTest(
             pkt=pkt,
@@ -2969,6 +2998,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         if tagged2:
             exp_pkt = pkt_add_vlan(exp_pkt, VLAN_ID_2)
 
+        self.start_batching()
         # Normal downlink rules
         self.setup_downlink(
             s1u_sgw_addr=S1U_SGW_IPV4,
@@ -2989,6 +3019,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
 
         # Clear SPGW counters before sending the packet
         self.reset_pdr_counters(DOWNLINK_PDR_CTR_IDX)
+        self.end_batching()
 
         self.runIPv4UnicastTest(
             pkt=pkt_from_dbuf,
@@ -3536,8 +3567,10 @@ class IntTest(IPv4UnicastTest):
             send_report_to_spine,
         )
 
+        self.start_batching()
         # Set collector, report table, and mirror sessions
         self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine)
+        self.end_batching()
 
         # TODO: Use MPLS test instead of IPv4 test if device is spine.
         # TODO: In these tests, there is only one egress port although the
@@ -3614,6 +3647,7 @@ class IntTest(IPv4UnicastTest):
             truncate=False,
         )
 
+        self.start_batching()
         install_routing_entry = True
         if drop_reason == INT_DROP_REASON_ACL_DENY:
             self.add_forwarding_acl_drop_ingress_port(ig_port)
@@ -3622,6 +3656,7 @@ class IntTest(IPv4UnicastTest):
 
         # Set collector, report table, and mirror sessions
         self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine)
+        self.end_batching()
 
         # TODO: Use MPLS test instead of IPv4 test if device is spine.
         # TODO: In these tests, there is only one egress port although the
@@ -3702,6 +3737,7 @@ class IntTest(IPv4UnicastTest):
             truncate=True,
         )
 
+        self.start_batching()
         # Set collector, report table, and mirror sessions
         self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine)
 
@@ -3745,6 +3781,7 @@ class IntTest(IPv4UnicastTest):
             params = [eg_port, switch_mac, HOST2_MAC, mpls_label]
             self.add_next_mpls_and_routing_group(next_id, group_id, [params])
             self.add_next_vlan(next_id, DEFAULT_VLAN)
+        self.end_batching()
 
         self.send_packet(ig_port, pkt)
 
@@ -3812,6 +3849,7 @@ class IntTest(IPv4UnicastTest):
             q_flag=1,
         )
 
+        self.start_batching()
         # Set collector, report table, and mirror sessions
         self.set_up_int_flows(
             is_device_spine, pkt, send_report_to_spine, watch_flow=watch_flow
@@ -3826,6 +3864,7 @@ class IntTest(IPv4UnicastTest):
         if reset_quota:
             # To ensure we have enough quota to send a queue report.
             self.set_queue_report_quota(port=eg_port, qid=0, quota=1)
+        self.end_batching()
 
         # TODO: Use MPLS test instead of IPv4 test if device is spine.
         # TODO: In these tests, there is only one egress port although the
@@ -3917,6 +3956,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             send_report_to_spine,
         )
 
+        self.start_batching()
         # Set up entries for uplink
         self.setup_uplink(
             s1u_sgw_addr=S1U_SGW_IPV4, teid=UPLINK_TEID, ctr_id=UPLINK_PDR_CTR_IDX,
@@ -3925,6 +3965,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         # Set collector, report table, and mirror sessions
         # Note that we are monitoring the inner packet.
         self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine)
+        self.end_batching()
 
         # TODO: Use MPLS test instead of IPv4 test if device is spine.
         # TODO: In these tests, there is only one egress port although the
@@ -4000,6 +4041,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             send_report_to_spine,
         )
 
+        self.start_batching()
         # Set up entries for downlink.
         self.setup_downlink(
             s1u_sgw_addr=S1U_SGW_IPV4,
@@ -4014,6 +4056,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
 
         # Set collector, report table, and mirror sessions
         self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine)
+        self.end_batching()
 
         # TODO: Use MPLS test instead of IPv4 test if device is spine.
         # TODO: In these tests, there is only one egress port although the
@@ -4095,6 +4138,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             truncate=False,  # Never truncated since this is a ingress drop.
         )
 
+        self.start_batching()
         # Set collector, report table, and mirror sessions
         self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine)
 
@@ -4109,6 +4153,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
                 teid=UPLINK_TEID,
                 tunnel_dst_addr=S1U_SGW_IPV4,
             )
+        self.end_batching()
 
         # TODO: Use MPLS test instead of IPv4 test if device is spine.
         # TODO: In these tests, there is only one egress port although the
@@ -4180,6 +4225,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             truncate=False,  # Never truncated since this is a ingress drop.
         )
 
+        self.start_batching()
         # Set collector, report table, and mirror sessions
         self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine)
 
@@ -4192,6 +4238,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             self.add_downlink_pdr(
                 ctr_id=DOWNLINK_PDR_CTR_IDX, far_id=DOWNLINK_FAR_ID, ue_addr=pkt[IP].dst
             )
+        self.end_batching()
 
         # TODO: Use MPLS test instead of IPv4 test if device is spine.
         # TODO: In these tests, there is only one egress port although the
@@ -4318,6 +4365,7 @@ class PppoeTest(DoubleVlanTerminationTest):
         pppoe_session_id = 0xBEAC
         core_router_mac = HOST1_MAC
 
+        self.start_batching()
         self.setup_bng()
         self.setup_line_v4(
             s_tag=s_tag,
@@ -4328,6 +4376,7 @@ class PppoeTest(DoubleVlanTerminationTest):
             pppoe_session_id=pppoe_session_id,
             enabled=line_enabled,
         )
+        self.end_batching()
 
         # Input is the given packet with double VLAN tags and PPPoE headers.
         pppoe_pkt = pkt_add_pppoe(
@@ -4388,6 +4437,7 @@ class PppoeTest(DoubleVlanTerminationTest):
         s_tag = vlan_id_outer = 888
         c_tag = vlan_id_inner = 777
 
+        self.start_batching()
         self.setup_bng()
         # If a line mapping is not provided, we expect packets to be processed
         # with line ID 0 (e.g. counters updated at index 0).
@@ -4395,6 +4445,7 @@ class PppoeTest(DoubleVlanTerminationTest):
         if line_mapped:
             line_id = 99
             self.set_line_map(s_tag=s_tag, c_tag=c_tag, line_id=line_id)
+        self.end_batching()
 
         pppoed_pkt = pkt_add_vlan(pppoed_pkt, vlan_vid=vlan_id_outer)
         pppoed_pkt = pkt_add_inner_vlan(pppoed_pkt, vlan_vid=vlan_id_inner)
@@ -4423,7 +4474,9 @@ class PppoeTest(DoubleVlanTerminationTest):
         vlan_id_outer = 888
         vlan_id_inner = 777
 
+        self.start_batching()
         self.setup_bng()
+        self.end_batching()
 
         # Assuming pkts are double-tagged at the control plane.
         pppoed_pkt = pkt_add_vlan(pppoed_pkt, vlan_vid=vlan_id_inner)
@@ -4440,6 +4493,7 @@ class PppoeTest(DoubleVlanTerminationTest):
         pppoe_session_id = 0xBEAC
         olt_mac = HOST1_MAC
 
+        self.start_batching()
         self.setup_bng()
         self.setup_line_v4(
             s_tag=s_tag,
@@ -4450,6 +4504,7 @@ class PppoeTest(DoubleVlanTerminationTest):
             pppoe_session_id=pppoe_session_id,
             enabled=line_enabled,
         )
+        self.end_batching()
 
         # Build expected packet from the input one, we expect it to be routed
         # and encapsulated in double VLAN tags and PPPoE.
