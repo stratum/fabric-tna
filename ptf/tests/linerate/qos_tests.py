@@ -588,10 +588,10 @@ class ElasticTrafficIsWrrScheduled(QosTest):
         print(get_readable_flow_stats(flow_stats_2))
 
         self.assertGreater(
-            flow_stats_1.rx_pkts, 0, "No traffic has been received for source 1"
+            flow_stats_1.rx_packets, 0, "No traffic has been received for source 1"
         )
         self.assertGreater(
-            flow_stats_2.rx_pkts, 0, "No traffic has been received for source 2"
+            flow_stats_2.rx_packets, 0, "No traffic has been received for source 2"
         )
 
         weight_total = ELASTIC_1_WRR_WEIGHT + ELASTIC_2_WRR_WEIGHT
@@ -669,13 +669,13 @@ class BestEffortTrafficIsWrrScheduled(QosTest):
         print(get_readable_flow_stats(flow_stats_3))
 
         self.assertGreater(
-            flow_stats_1.rx_pkts, 0, "No traffic has been received for source 1"
+            flow_stats_1.rx_packets, 0, "No traffic has been received for source 1"
         )
         self.assertGreater(
-            flow_stats_2.rx_pkts, 0, "No traffic has been received for source 2"
+            flow_stats_2.rx_packets, 0, "No traffic has been received for source 2"
         )
         self.assertGreater(
-            flow_stats_3.rx_pkts, 0, "No traffic has been received for source 3",
+            flow_stats_3.rx_packets, 0, "No traffic has been received for source 3",
         )
 
         weight_total = (
