@@ -121,8 +121,8 @@ public class FabricIntProgrammableTest {
                     .put(0x201, 0xc4)
                     .put(0x202, 0x144)
                     .put(0x203, 0x1c4).build();
-    private static final long DEFAULT_QUEUE_REPORT_TRIGGER_LATENCY_THRESHOLD = 2000; // ns
-    private static final long DEFAULT_QUEUE_REPORT_RESET_LATENCY_THRESHOLD = 500; // ns
+    private static final long DEFAULT_QUEUE_REPORT_TRIGGER_LATENCY_THRESHOLD = 0xffffffff;
+    private static final long DEFAULT_QUEUE_REPORT_RESET_LATENCY_THRESHOLD = 0;
     private static final byte MAX_QUEUES = 32;
     private static final int INT_MIRROR_TRUNCATE_MAX_LEN = 128;
 
@@ -409,7 +409,9 @@ public class FabricIntProgrammableTest {
                 expectRules.addAll(queueReportFlows(LEAF_DEVICE_ID, 500, 300, queueId));
             } else {
                 // The rest of the queues use the default queue latency threshold.
-                expectRules.addAll(queueReportFlows(LEAF_DEVICE_ID, 2000, 500, queueId));
+                expectRules.addAll(queueReportFlows(LEAF_DEVICE_ID,
+                    DEFAULT_QUEUE_REPORT_TRIGGER_LATENCY_THRESHOLD,
+                    DEFAULT_QUEUE_REPORT_RESET_LATENCY_THRESHOLD, queueId));
             }
         }
         expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false,
@@ -885,9 +887,7 @@ public class FabricIntProgrammableTest {
 
     private void testInit() {
         final List<GroupDescription> expectedGroups = Lists.newArrayList();
-        final List<FlowRule> expectedFlows = Lists.newArrayList();
         final Capture<GroupDescription> capturedGroup = newCapture(CaptureType.ALL);
-        final Capture<FlowRule> capturedFlow = newCapture(CaptureType.ALL);
         QUAD_PIPE_MIRROR_SESS_TO_RECIRC_PORTS.forEach((sessionId, port) -> {
             // Set up mirror sessions
             final List<GroupBucket> buckets = ImmutableList.of(

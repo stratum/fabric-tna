@@ -44,8 +44,8 @@ public class IntReportConfig extends Config<ApplicationId> {
     private static final String QUEUE_REPORT_LATENCY_THRESHOLDS = "queueReportLatencyThresholds";
     private static final String TRUGGER = "trigger";
     private static final String RESET = "reset";
-    private static final long DEFAULT_QUEUE_REPORT_TRIGGER_LATENCY_THRESHOLD = 2000; // ns
-    private static final long DEFAULT_QUEUE_REPORT_RESET_LATENCY_THRESHOLD = 500; // ns
+    private static final long DEFAULT_QUEUE_REPORT_TRIGGER_LATENCY_THRESHOLD = 0xffffffff; // do not report.
+    private static final long DEFAULT_QUEUE_REPORT_RESET_LATENCY_THRESHOLD = 0; // do not reset.
 
     /**
      * IP address of the collector. This is the destination IP address that will be
