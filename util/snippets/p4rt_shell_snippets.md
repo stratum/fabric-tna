@@ -120,6 +120,27 @@ te_all = table_entry["FabricIngress.next.hashed"]
 te_all.read(lambda e: print(e))
 ```
 
+### Meters
+
+```python
+# Set meter with index 1
+me = meter_entry["FabricIngress.qos.slice_tc_meter"]
+me.index = 1
+me.cir = 1000000
+me.cburst = 10000
+me.pir = 1500000
+me.pburst = 15000
+me.modify()
+me.read(lambda e: print(e))
+
+# Reset meter to default config
+me = meter_entry["FabricIngress.qos.slice_tc_meter"]
+me.index = 1
+me.clear_config()
+me.modify()
+me.read(lambda e: print(e))
+```
+
 ### Read all entries from all tables
 
 ```python
