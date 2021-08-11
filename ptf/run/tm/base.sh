@@ -9,6 +9,7 @@ FABRIC_TNA_ROOT="${DIR}"/../..
 FABRIC_TNA="${FABRIC_TNA_ROOT}"/..
 TM_PORT_JSON=${TM_PORT_JSON:-""}
 TM_DOD=${TM_DOD:=""}
+JENKINS_URL=${JENKINS_URL:=""}
 
 # shellcheck source=.env
 source "${FABRIC_TNA}"/.env
@@ -66,6 +67,20 @@ function wait_for() {
 
 rm -rf "${DIR}"/log
 mkdir "${DIR}"/log
+
+function run_command_in_docker_host() {
+    # To run a command in the host that runs the Docker daemon.
+    docker run -it --rm --privileged --pid=host alpine:3 \
+        nsenter -t 1 -m -u -n -i bash -c "${1}"
+}
+
+# Initialize huge page if we are running on CI or macOS.
+if [[ "${JENKINS_URL}" != "" ]] || [[ "${OSTYPE}" == "darwin"* ]]; then
+    echo "*** Enabling huge page..."
+    run_command_in_docker_host "echo 128 > /proc/sys/vm/nr_hugepages"
+    run_command_in_docker_host "mkdir -p /dev/hugepages"
+    run_command_in_docker_host "mount | grep hugetlbfs || mount -t hugetlbfs nodev /dev/hugepages"
+fi
 
 # Run Tofino Model
 # Replace dots with underscores to match pipeconf name
