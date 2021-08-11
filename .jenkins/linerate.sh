@@ -23,7 +23,7 @@ make -j8 all
 
 # We limit running linerate tests for only those profiles used in Aether, since
 # these are the only profiels we have written tests for so far
-for profile in "fabric-int" "fabric-spgw-int"; do
+for profile in "fabric-int"; do
 # Run PTF tests for all profiles we just built
 #for d in ./p4src/build/*/; do
 #  profile=$(basename "${d}")
