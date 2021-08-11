@@ -211,8 +211,8 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         for (byte queueId = 0; queueId < MAX_QUEUES; queueId++) {
             setUpQueueReportThreshold(
                     queueId,
-                    config.queueReportTriggerLatencyThreshold(),
-                    config.queueReportResetLatencyThreshold());
+                    config.queueReportTriggerLatencyThreshold(queueId),
+                    config.queueReportResetLatencyThreshold(queueId));
         }
         return setUpIntReportInternal(config);
     }

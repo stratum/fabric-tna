@@ -400,7 +400,18 @@ public class FabricIntProgrammableTest {
         final IntReportConfig intConfig = getIntReportConfig(APP_ID, "/int-report-queue-report-threshold.json");
         List<FlowRule> expectRules = Lists.newArrayList();
         expectRules.add(buildCollectorWatchlistRule(LEAF_DEVICE_ID));
-        expectRules.addAll(queueReportFlows(LEAF_DEVICE_ID, 1888, 388)); // Value from the json file.
+        for (byte queueId = 0; queueId < MAX_QUEUES; queueId++) {
+            // In the json config, the queue 0 and queue 7 uses a different queue latency
+            // threshold config.
+            if (queueId == 0) {
+                expectRules.addAll(queueReportFlows(LEAF_DEVICE_ID, 1888, 388, queueId));
+            } else if (queueId == 7) {
+                expectRules.addAll(queueReportFlows(LEAF_DEVICE_ID, 500, 300, queueId));
+            } else {
+                // The rest of the queues use the default queue latency threshold.
+                expectRules.addAll(queueReportFlows(LEAF_DEVICE_ID, 2000, 500, queueId));
+            }
+        }
         expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false,
             BMD_TYPE_INT_INGRESS_DROP, INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID));
         expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false,
@@ -970,25 +981,31 @@ public class FabricIntProgrammableTest {
     private List<FlowRule> queueReportFlows(DeviceId deviceId, long triggerThreshold, long resetThreshold) {
         final List<FlowRule> rules = Lists.newArrayList();
         for (byte queueId = 0; queueId < MAX_QUEUES; queueId++) {
-            FlowRule queueReportFlow = buildQueueReportFlow(deviceId, queueId,
-                    new long[]{0, 0},
-                    new long[]{triggerThreshold, 0xffff},
-                    P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_CHECK_QUOTA);
-                    rules.add(queueReportFlow);
-
-            queueReportFlow = buildQueueReportFlow(deviceId, queueId,
-                    new long[]{1, 0xffff},
-                    new long[]{0, 0xffff},
-                    P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_CHECK_QUOTA);
-                    rules.add(queueReportFlow);
-
-            queueReportFlow = buildQueueReportFlow(deviceId, queueId,
-                    new long[]{0, 0},
-                    new long[]{0, resetThreshold - 1},
-                    P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_RESET_QUOTA);
-                    rules.add(queueReportFlow);
+            rules.addAll(queueReportFlows(deviceId, triggerThreshold, resetThreshold, queueId));
         }
+        return rules;
+    }
 
+    private List<FlowRule> queueReportFlows(DeviceId deviceId, long triggerThreshold,
+            long resetThreshold, byte queueId) {
+        final List<FlowRule> rules = Lists.newArrayList();
+        FlowRule queueReportFlow = buildQueueReportFlow(deviceId, queueId,
+                new long[]{0, 0},
+                new long[]{triggerThreshold, 0xffff},
+                P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_CHECK_QUOTA);
+        rules.add(queueReportFlow);
+
+        queueReportFlow = buildQueueReportFlow(deviceId, queueId,
+                new long[]{1, 0xffff},
+                new long[]{0, 0xffff},
+                P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_CHECK_QUOTA);
+        rules.add(queueReportFlow);
+
+        queueReportFlow = buildQueueReportFlow(deviceId, queueId,
+                new long[]{0, 0},
+                new long[]{0, resetThreshold - 1},
+                P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_RESET_QUOTA);
+        rules.add(queueReportFlow);
         return rules;
     }
 }

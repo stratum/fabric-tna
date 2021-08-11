@@ -3,6 +3,8 @@
     "collectorPort": 32766,
     "minFlowHopLatencyChangeNs": 300,
     "watchSubnets": [],
-    "queueReportTriggerLatencyThreshold": 1888,
-    "queueReportResetLatencyThreshold": 388
+    "queueReportLatencyThresholds": {
+        "0": {"trigger": 1888, "reset": 388},
+        "7": {"trigger": 500, "reset": 300}
+    }
 }
