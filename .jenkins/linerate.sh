@@ -25,14 +25,13 @@ make -j8 all
 # these are the only profiles we have written tests for so far
 
 # Run PTF tests for all profiles we just built
-#for d in ./p4src/build/*/; do
-#  profile=$(basename "${d}")
 
-echo "Run linerate tests for profile fabric-int"
-./ptf/run/hw/linerate "fabric-int"
+# PROFILE env variable set by Jenkins
+echo "Run linerate tests for profile ${PROFILE}"
+./ptf/run/hw/linerate "${PROFILE}"
 
-rm -rf "logs/fabric-int"
-mkdir -p "logs/fabric-int"
-mv ptf/run/hw/log "logs/fabric-int"
-mv ptf/tests/common/ptf.log "logs/fabric-int/"
-mv ptf/tests/common/ptf.pcap "logs/fabric-int/"
+rm -rf "logs/${PROFILE}"
+mkdir -p "logs/${PROFILE}"
+mv ptf/run/hw/log "logs/${PROFILE}"
+mv ptf/tests/common/ptf.log "logs/${PROFILE}/"
+mv ptf/tests/common/ptf.pcap "logs/${PROFILE}/"
