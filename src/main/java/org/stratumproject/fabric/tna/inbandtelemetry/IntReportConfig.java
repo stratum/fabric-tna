@@ -28,8 +28,8 @@ import org.onosproject.ui.JsonUtils;
  *         "minFlowHopLatencyChangeNs": 300,
  *         "watchSubnets": [ "192.168.0.0/24", "10.140.0.0/16" ],
  *         "queueReportLatencyThresholds": {
- *             "0": {"trigger": 2000, "reset": 1500},
- *             "7": {"trigger": 500, "reset": 300}
+ *             "0": {"triggerNs": 2000, "resetNs": 1500},
+ *             "7": {"triggerNs": 500}
  *         }
  *       }
  *     }
@@ -118,7 +118,7 @@ public class IntReportConfig extends Config<ApplicationId> {
      * @param queueId the queue id
      * @return latency threshold in nanoseconds
      */
-    public long queueReportTriggerLatencyThreshold(byte queueId) {
+    public long queueReportTriggerLatencyThresholdNs(byte queueId) {
         String queueIdStr = String.valueOf(queueId);
         if (object.hasNonNull(QUEUE_REPORT_LATENCY_THRESHOLDS)) {
             ObjectNode thresholds = JsonUtils.node(object, QUEUE_REPORT_LATENCY_THRESHOLDS);
@@ -139,11 +139,13 @@ public class IntReportConfig extends Config<ApplicationId> {
 
     /**
      * Gets the latency threshold for a queue that resets the queue report quota.
+     * If "resetNs" is not present for spefic queue, but the "triggerNs" is, then the value
+     * will be "triggerNs / 2".
      *
      * @param queueId the queue id
      * @return latency threshold in nanoseconds
      */
-    public long queueReportResetLatencyThreshold(int queueId) {
+    public long queueReportResetLatencyThresholdNs(byte queueId) {
         String queueIdStr = String.valueOf(queueId);
         if (object.hasNonNull(QUEUE_REPORT_LATENCY_THRESHOLDS)) {
             ObjectNode thresholds = JsonUtils.node(object, QUEUE_REPORT_LATENCY_THRESHOLDS);
@@ -152,7 +154,7 @@ public class IntReportConfig extends Config<ApplicationId> {
                 if (threshold.hasNonNull(RESET_NS)) {
                     return (long) JsonUtils.number(threshold, RESET_NS);
                 } else {
-                    return DEFAULT_QUEUE_REPORT_RESET_LATENCY_THRESHOLD;
+                    return queueReportTriggerLatencyThresholdNs(queueId) / 2;
                 }
             } else {
                 return DEFAULT_QUEUE_REPORT_RESET_LATENCY_THRESHOLD;

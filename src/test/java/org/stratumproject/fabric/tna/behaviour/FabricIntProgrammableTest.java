@@ -406,7 +406,9 @@ public class FabricIntProgrammableTest {
             if (queueId == 0) {
                 expectRules.addAll(queueReportFlows(LEAF_DEVICE_ID, 1888, 388, queueId));
             } else if (queueId == 7) {
-                expectRules.addAll(queueReportFlows(LEAF_DEVICE_ID, 500, 300, queueId));
+                // Queue 7 contains the "triggerNs" config only, the value of "resetNs"
+                // will be half of "triggerNs".
+                expectRules.addAll(queueReportFlows(LEAF_DEVICE_ID, 500, 250, queueId));
             } else {
                 // The rest of the queues use the default queue latency threshold.
                 expectRules.addAll(queueReportFlows(LEAF_DEVICE_ID,

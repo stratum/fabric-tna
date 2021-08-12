@@ -4,7 +4,7 @@
     "minFlowHopLatencyChangeNs": 300,
     "watchSubnets": [],
     "queueReportLatencyThresholds": {
-        "0": {"trigger": 1888, "reset": 388},
-        "7": {"trigger": 500, "reset": 300}
+        "0": {"triggerNs": 1888, "resetNs": 388},
+        "7": {"triggerNs": 500}
     }
 }
