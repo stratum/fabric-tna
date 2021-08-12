@@ -74,12 +74,25 @@ function run_command_in_docker_host() {
         nsenter -t 1 -m -u -n -i bash -c "${1}"
 }
 
-# Initialize huge page if we are running on CI or macOS.
-if [[ "${JENKINS_URL}" != "" ]] || [[ "${OSTYPE}" == "darwin"* ]]; then
-    echo "*** Enabling huge page..."
-    run_command_in_docker_host "echo 128 > /proc/sys/vm/nr_hugepages"
-    run_command_in_docker_host "mkdir -p /dev/hugepages"
-    run_command_in_docker_host "mount | grep hugetlbfs || mount -t hugetlbfs nodev /dev/hugepages"
+# Check number of hugepages available (and set up if not configured)
+nr_hugepages=$(run_command_in_docker_host "cat /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages")
+free_hugepages=$(run_command_in_docker_host "cat /sys/kernel/mm/hugepages/hugepages-2048kB/free_hugepages")
+# The number of pages needed is dynamically computed by bf_switchd.
+# stratum_bf uses around 70 pages in testing, but 128 is a safe bound.
+if [[ $nr_hugepages -lt 128 ]] || [[ $free_hugepages -lt 128 ]]; then
+    if [[ $nr_hugepages -eq 0 ]]; then
+        echo "Setting up hugepages..."
+        if ! run_command_in_docker_host "echo 128 > /proc/sys/vm/nr_hugepages"; then
+            echo "Failed to set up hugepages."
+            exit 255
+        fi
+    else
+        echo "ERROR: There are $free_hugepages free hugepages, and 128 are required."
+        echo "       The system has $nr_hugepages hugepages allocated in total."
+        echo "       This could mean there is another Stratum instance running already,"
+        echo "       or some other application is using hugepages, too."
+        exit 255
+    fi
 fi
 
 # Run Tofino Model
@@ -105,7 +118,6 @@ fi
 docker run --name ${tmRunName} -d -t --privileged \
     -v "${DIR}":/workdir -w /workdir \
     -v "${P4C_OUT}":/p4c-out \
-    -v /dev/hugepages:/dev/hugepages \
     $OTHER_TM_DOCKER_ARGS \
     --entrypoint ./tm_entrypoint.sh \
     "${SDE_TM_DOCKER_IMG}"
@@ -117,7 +129,6 @@ echo "*** Starting ${stratumBfRunName} (from ${STRATUM_DOCKER_IMG})..."
 docker run --name ${stratumBfRunName} -d --privileged \
     --network "container:${tmRunName}" \
     -v "${DIR}":/workdir -w /workdir \
-    -v /dev/hugepages:/dev/hugepages \
     --entrypoint ./stratum_entrypoint.sh \
     ${STRATUM_DOCKER_FLAG} \
     "${STRATUM_DOCKER_IMG}"

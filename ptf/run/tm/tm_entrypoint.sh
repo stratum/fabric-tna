@@ -8,6 +8,8 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
 TM_ARGS=""
 
 veth_setup.sh
+mkdir /mnt/huge
+mount -t hugetlbfs nodev /mnt/huge
 
 # Change workdir to a non-shared volume to improve container disk I/O
 # performance, as tofino-model writes a lot of logs for each packet.

@@ -6,6 +6,9 @@ set -ex
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
 
+mkdir /mnt/huge
+mount -t hugetlbfs nodev /mnt/huge
+
 # Change workdir to a non-shared volume to improve container disk I/O
 # performance, as bf_drivers writes many logs during tests execution.
 # Log files will be copied out of this container once stopped (see run.)
