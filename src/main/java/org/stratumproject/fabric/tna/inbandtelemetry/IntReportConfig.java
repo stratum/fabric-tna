@@ -42,8 +42,8 @@ public class IntReportConfig extends Config<ApplicationId> {
     private static final String MIN_FLOW_HOP_LATENCY_CHANGE_NS = "minFlowHopLatencyChangeNs";
     private static final String WATCH_SUBNETS = "watchSubnets";
     private static final String QUEUE_REPORT_LATENCY_THRESHOLDS = "queueReportLatencyThresholds";
-    private static final String TRUGGER = "trigger";
-    private static final String RESET = "reset";
+    private static final String TRIGGER_NS = "triggerNs";
+    private static final String RESET_NS = "resetNs";
     private static final long DEFAULT_QUEUE_REPORT_TRIGGER_LATENCY_THRESHOLD = 0xffffffff; // do not report.
     private static final long DEFAULT_QUEUE_REPORT_RESET_LATENCY_THRESHOLD = 0; // do not reset.
 
@@ -124,8 +124,8 @@ public class IntReportConfig extends Config<ApplicationId> {
             ObjectNode thresholds = JsonUtils.node(object, QUEUE_REPORT_LATENCY_THRESHOLDS);
             if (thresholds.hasNonNull(queueIdStr)) {
                 ObjectNode threshold = JsonUtils.node(thresholds, queueIdStr);
-                if (threshold.hasNonNull(TRUGGER)) {
-                    return (long) JsonUtils.number(threshold, TRUGGER);
+                if (threshold.hasNonNull(TRIGGER_NS)) {
+                    return (long) JsonUtils.number(threshold, TRIGGER_NS);
                 } else {
                     return DEFAULT_QUEUE_REPORT_TRIGGER_LATENCY_THRESHOLD;
                 }
@@ -149,8 +149,8 @@ public class IntReportConfig extends Config<ApplicationId> {
             ObjectNode thresholds = JsonUtils.node(object, QUEUE_REPORT_LATENCY_THRESHOLDS);
             if (thresholds.hasNonNull(queueIdStr)) {
                 ObjectNode threshold = JsonUtils.node(thresholds, queueIdStr);
-                if (threshold.hasNonNull(RESET)) {
-                    return (long) JsonUtils.number(threshold, RESET);
+                if (threshold.hasNonNull(RESET_NS)) {
+                    return (long) JsonUtils.number(threshold, RESET_NS);
                 } else {
                     return DEFAULT_QUEUE_REPORT_RESET_LATENCY_THRESHOLD;
                 }
