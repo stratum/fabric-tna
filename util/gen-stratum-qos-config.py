@@ -141,7 +141,8 @@ def queue_mapping(
 
 def queue_config(
     descr,
-    sdk_port,
+    port_id,
+    is_sdk_port,
     port_rate_bps,
     port_queue_count,
     ct_slot_count,
@@ -157,7 +158,9 @@ def queue_config(
     """
     Returns the queue_config blob for the given port and slices' allocations.
     :param descr: a description of the port
-    :param sdk_port: SDK port number (i.e., DP_ID)
+    :param port_id: port ID
+    :param is_sdk_port: true if port_id is an SDK port number (i.e., Tofino DP_ID),
+        false if it's a SingletonPort ID from Stratum's chassis_config
     :param port_rate_bps: link capacity or port shaping rate if set
     :param port_queue_count: how many queues can be allocated to this port
     :param ct_slot_count: number of Control slots, each slice an use one or more slots
@@ -358,9 +361,11 @@ def queue_config(
         f"available={port_queue_count}"
     )
 
+    port_field = "sdk_port" if is_sdk_port else "port"
+
     return f"""        queue_configs {{
           # {descr} ({format_bps(port_rate_bps)}, {used_queues} queues)
-          sdk_port: {sdk_port}\n{NEW_LINE.join(queue_mappings)}
+          {port_field}: {port_id}\n{NEW_LINE.join(queue_mappings)}
         }}"""
 
 
@@ -418,17 +423,23 @@ def vendor_config(yaml_config):
         pool_sizes=pool_sizes,
     )
 
-    ports = []
-    for yaml_port in yaml_config["ports"]:
-        for sdk_port in yaml_port["sdk_ports"]:
-            ports.append(
-                dict(
-                    descr=yaml_port["descr"],
-                    sdk_port=sdk_port,
-                    port_rate_bps=yaml_port["rate_bps"],
-                    port_queue_count=yaml_port["queue_count"],
-                )
-            )
+    port_templates = []
+    for port_template in yaml_config["port_templates"]:
+        temp = dict(
+            descr=port_template["descr"],
+            port_rate_bps=port_template["rate_bps"],
+            port_queue_count=port_template["queue_count"],
+        )
+        if "port_ids" in port_template:
+            for port_id in port_template["port_ids"]:
+                temp["port_id"] = port_id
+                temp["is_sdk_port"] = False
+                port_templates.append(temp)
+        if "sdk_port_ids" in port_template:
+            for sdk_port_id in port_template["sdk_port_ids"]:
+                temp["port_id"] = sdk_port_id
+                temp["is_sdk_port"] = True
+                port_templates.append(temp)
 
     blobs = []
 
@@ -474,11 +485,11 @@ def vendor_config(yaml_config):
         )
     )
 
-    for port in ports:
+    for port in port_templates:
         blobs.append(
             queue_config(
                 **port,
-                port_rates_bps=[x["port_rate_bps"] for x in ports],
+                port_rates_bps=[x["port_rate_bps"] for x in port_templates],
                 **slicing_template,
             )
         )
