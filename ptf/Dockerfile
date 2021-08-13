@@ -11,6 +11,7 @@ ARG P4RUNTIME_SHELL_VER=0.0.1
 ARG TREX_VER=3b19ddcf67e33934f268b09d3364cd87275d48db
 ARG TREX_EXT_LIBS=/external_libs
 ARG TREX_LIBS=/trex_python
+ARG UNITTEST_XML_REPORTING_VER=3.0.4
 
 FROM python:3.8 as proto-deps
 
@@ -91,7 +92,7 @@ ENV PIP_DEPS \
     protobuf==$PROTOBUF_VER \
     grpcio==$GRPC_VER \
     p4runtime-shell==$P4RUNTIME_SHELL_VER \
-    unittest-xml-reporting==3.0.4
+    unittest-xml-reporting==$UNITTEST_XML_REPORTING_VER
 
 RUN apt update && apt install -y $RUNTIME_DEPS
 RUN pip3 install --no-cache-dir --root /python_output $PIP_DEPS

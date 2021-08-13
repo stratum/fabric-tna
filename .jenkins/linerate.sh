@@ -18,13 +18,7 @@ echo "Build all profiles using SDE ${SDE_P4C_DOCKER_IMG}..."
 docker pull "${SDE_P4C_DOCKER_IMG}"
 docker build -f ptf/Dockerfile -t "${TESTER_DOCKER_IMG}" .
 
-# Jenkins uses 8 cores 15G VM
-make -j8 all
-
-# We limit running linerate tests for only those profiles used in Aether, since
-# these are the only profiles we have written tests for so far
-
-# Run PTF tests for all profiles we just built
+make "${PROFILE}"
 
 # PROFILE env variable set by Jenkins
 echo "Run linerate tests for profile ${PROFILE}"
