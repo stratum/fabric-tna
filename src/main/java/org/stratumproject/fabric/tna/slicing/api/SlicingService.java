@@ -12,6 +12,22 @@ import java.util.Set;
 public interface SlicingService {
 
     /**
+     * Adds a slice with given ID.
+     *
+     * @param sliceId slice identifier
+     * @return true if the slice is added successfully, false otherwise.
+     */
+    boolean addSlice(SliceId sliceId);
+
+    /**
+     * Removes a slice with given ID.
+     *
+     * @param sliceId slice identifier
+     * @return true if the slice is removed successfully, false otherwise.
+     */
+    boolean removeSlice(SliceId sliceId);
+
+    /**
      * Gets all slice IDs.
      *
      * @return set of slice IDs
@@ -73,5 +89,20 @@ public interface SlicingService {
      */
     Set<TrafficTreatment> getFlows(SliceId sliceId, TrafficClass tc);
 
-    // TODO Consider bulk addition/removal in the future
+    /**
+     * Reserves a queue for the queue pool of given traffic class.
+     *
+     * @param queueId queue identifier
+     * @param tc traffic class
+     * @return true if the queue is successfully reserved to the queue pool of given TC
+     */
+    boolean reserveQueue(QueueId queueId, TrafficClass tc);
+
+    /**
+     * Releases a queue from the queue pool.
+     *
+     * @param queueId queue identifier
+     * @return true if the queue is successfully released from the queue pool of given TC
+     */
+    boolean releaseQueue(QueueId queueId);
 }

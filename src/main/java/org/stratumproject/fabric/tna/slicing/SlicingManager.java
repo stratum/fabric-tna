@@ -2,110 +2,333 @@
 // SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 package org.stratumproject.fabric.tna.slicing;
 
+import com.google.common.hash.Hashing;
+import org.apache.commons.lang.NotImplementedException;
+import org.onlab.util.KryoNamespace;
+import org.onosproject.core.ApplicationId;
+import org.onosproject.core.CoreService;
 import org.onosproject.net.flow.TrafficTreatment;
+import org.onosproject.net.intent.WorkPartitionService;
+import org.onosproject.store.serializers.KryoNamespaces;
 import org.onosproject.store.service.ConsistentMap;
+import org.onosproject.store.service.MapEvent;
+import org.onosproject.store.service.MapEventListener;
+import org.onosproject.store.service.Serializer;
+import org.onosproject.store.service.StorageService;
+import org.osgi.service.component.annotations.Activate;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Deactivate;
+import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.annotations.ReferenceCardinality;
+import org.slf4j.Logger;
 import org.stratumproject.fabric.tna.slicing.api.QueueId;
 import org.stratumproject.fabric.tna.slicing.api.SliceId;
-import org.stratumproject.fabric.tna.slicing.api.SlicingAdminService;
 import org.stratumproject.fabric.tna.slicing.api.SlicingService;
 import org.stratumproject.fabric.tna.slicing.api.TrafficClass;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+import static org.onlab.util.Tools.groupedThreads;
+import static org.slf4j.LoggerFactory.getLogger;
 
 /**
  * Implementation of SlicingService.
  */
-public class SlicingManager implements SlicingService, SlicingAdminService {
+@Component(immediate = true, service = SlicingService.class)
+public class SlicingManager implements SlicingService {
+    @Reference(cardinality = ReferenceCardinality.MANDATORY)
+    protected CoreService coreService;
 
-    ConsistentMap<SliceId, Map<TrafficClass, QueueId>> slices;
-    /*
-     * SliceId -> (null) for available slices
-     * SliceId -> {BEST_EFFORT -> m1, q1} for newly created slice
-     * SliceId -> {BEST_EFFORT -> m1, q1, ELASTIC -> m2, q2} when adding elastic tc
-     * Do not allow removing BEST_EFFORT TC
-    */
+    @Reference(cardinality = ReferenceCardinality.MANDATORY)
+    protected StorageService storageService;
 
-    ConsistentMap<TrafficClass, Set<QueueId>> queues;
-    /*
-     * Available queue id for given TC.
-     * Static for now. Dynamic later.
-     *     ELASTIC -> [1, 2, 3]
-     *     REAL_TIME -> [5, 6, 7]
-     *     UNKNOWN -> [4, 8] (unallocated)
-     * addQueue(ELASTIC, 4)
-     *     ELASTIC -> [1, 2, 3, 4]
-     *     REAL_TIME -> [5, 6, 7]
-     *     UNKNOWN -> [8]
-     * removeQueue(ELASTIC, 1)
-     *     check if queue in use. need to use distributedLock with addTc, removeTc to make sure
-     *     no one is using the queue while we are trying to remove
-     *     synchronize is not good enough since other ONOS instance will access too (in multi UP4 setup)
-     *     ELASTIC -> [2, 3, 4]
-     *     REAL_TIME -> [5, 6, 7]
-     *     UNKNOWN -> [2, 8]
-    */
+    @Reference(cardinality = ReferenceCardinality.MANDATORY)
+    protected WorkPartitionService workPartitionService;
 
-    // Implements SlicingService
+    private static final Logger log = getLogger(SlicingManager.class);
+    private static final String APP_NAME = "org.stratumproject.fabric.tna.slicing"; // TODO revisit naming
 
-    @Override
-    public Set<SliceId> getSlices() {
-        return null;
+    protected ApplicationId appId;
+
+    // TODO update javadoc
+    protected ConsistentMap<SliceStoreKey, QueueId> sliceStore;
+    private MapEventListener<SliceStoreKey, QueueId> sliceListener;
+    private ExecutorService sliceExecutor;
+
+    protected ConsistentMap<QueueId, QueueStoreValue> queueStore;
+    private MapEventListener<QueueId, QueueStoreValue> queueListener;
+    private ExecutorService queueExecutor;
+
+    @Activate
+    protected void activate() {
+        appId = coreService.registerApplication(APP_NAME);
+
+        KryoNamespace.Builder serializer = KryoNamespace.newBuilder()
+                .register(KryoNamespaces.API)
+                .register(SliceId.class)
+                .register(TrafficClass.class)
+                .register(QueueId.class)
+                .register(SliceStoreKey.class);
+
+        sliceStore = storageService.<SliceStoreKey, QueueId>consistentMapBuilder()
+                .withName("fabric-tna-slice")
+                .withRelaxedReadConsistency()
+                .withSerializer(Serializer.using(serializer.build()))
+                .build();
+        sliceListener = new InternalSliceListener();
+        sliceExecutor =  Executors.newSingleThreadExecutor(groupedThreads("fabric-tna-slice-event", "%d", log));
+
+        queueStore = storageService.<QueueId, QueueStoreValue>consistentMapBuilder()
+                .withName("fabric-tna-queue")
+                .withRelaxedReadConsistency()
+                .withSerializer(Serializer.using(serializer.build()))
+                .build();
+        queueListener = new InternalQueueListener();
+        queueExecutor =  Executors.newSingleThreadExecutor(groupedThreads("fabric-tna-queue-event", "%d", log));
+
+        log.info("Started");
     }
 
-    @Override
-    public boolean addTrafficClass(SliceId sliceId, TrafficClass tc) {
-        // TODO Admission control
-        return false;
-    }
+    @Deactivate
+    protected void deactivate() {
+        sliceStore.removeListener(sliceListener);
+        sliceStore.destroy();
+        sliceExecutor.shutdown();
 
-    @Override
-    public boolean removeTrafficClass(SliceId sliceId, TrafficClass tc) {
-        return false;
-    }
+        queueStore.removeListener(queueListener);
+        queueStore.destroy();
+        queueExecutor.shutdown();
 
-    @Override
-    public Set<TrafficClass> getTrafficClasses(SliceId sliceId) {
-        return null;
+        log.info("Stopped");
     }
-
-    @Override
-    public boolean addFlow(TrafficTreatment treatment, SliceId sliceId, TrafficClass tc) {
-        // TODO Admission control
-        return false;
-    }
-
-    @Override
-    public boolean removeFlow(TrafficTreatment treatment, SliceId sliceId, TrafficClass tc) {
-        return false;
-    }
-
-    @Override
-    public Set<TrafficTreatment> getFlows(SliceId sliceId, TrafficClass tc) {
-        return null;
-    }
-
-    // Implements SlicingAdminService
 
     @Override
     public boolean addSlice(SliceId sliceId) {
-        return false;
+        return addTrafficClass(sliceId, TrafficClass.BEST_EFFORT);
     }
 
     @Override
     public boolean removeSlice(SliceId sliceId) {
-        return false;
+        AtomicBoolean result = new AtomicBoolean(true);
+
+        getTrafficClasses(sliceId).forEach(tc -> {
+            if (!removeTrafficClass(sliceId, tc)) {
+                result.set(false);
+            }
+        });
+
+        return result.get();
     }
 
     @Override
-    public boolean reserveQueue(TrafficClass tc, QueueId queueId) {
-        return false;
+    public Set<SliceId> getSlices() {
+        return sliceStore.keySet().stream()
+                .map(SliceStoreKey::sliceId)
+                .collect(Collectors.toSet());
     }
 
     @Override
-    public boolean releaseQueue(TrafficClass tc, QueueId queueId) {
-        return false;
+    public boolean addTrafficClass(SliceId sliceId, TrafficClass tc) {
+        AtomicBoolean result = new AtomicBoolean(false);
+
+        SliceStoreKey key = new SliceStoreKey(sliceId, tc);
+        sliceStore.compute(key, (k, v) -> {
+            if (v != null) {
+               log.warn("TC {} is already allocated for slice {}", tc, sliceId);
+               return v;
+            }
+
+            QueueId queueId = allocateQueue(tc);
+            if (queueId == null) {
+                log.warn("Unable to find available queue for {}", tc);
+                return null;
+            }
+
+            log.debug("Allocate queue {} for slice {} tc {}", queueId, sliceId, tc);
+            result.set(true);
+            return queueId;
+        });
+
+        return result.get();
+    }
+
+    @Override
+    public boolean removeTrafficClass(SliceId sliceId, TrafficClass tc) {
+        AtomicBoolean result = new AtomicBoolean(false);
+
+        SliceStoreKey key = new SliceStoreKey(sliceId, tc);
+        sliceStore.compute(key, (k, v) -> {
+            if (v == null) {
+                log.warn("TC {} has not been allocated to slice {}", tc, sliceId);
+                return v;
+            }
+
+            deallocateQueue(v);
+            log.debug("Deallocate queue {} for slice {} tc {}", v, sliceId, tc);
+            result.set(true);
+            return null;
+        });
+
+        return result.get();
+    }
+
+    @Override
+    public Set<TrafficClass> getTrafficClasses(SliceId sliceId) {
+        return sliceStore.keySet().stream()
+                .filter(k -> k.sliceId().equals(sliceId))
+                .map(SliceStoreKey::trafficClass)
+                .collect(Collectors.toSet());
+    }
+
+    @Override
+    public boolean addFlow(TrafficTreatment treatment, SliceId sliceId, TrafficClass tc) {
+        throw new NotImplementedException("addFlow is not implemented in Slicing Manager");
+    }
+
+    @Override
+    public boolean removeFlow(TrafficTreatment treatment, SliceId sliceId, TrafficClass tc) {
+        throw new NotImplementedException("removeFlow is not implemented in Slicing Manager");
+    }
+
+    @Override
+    public Set<TrafficTreatment> getFlows(SliceId sliceId, TrafficClass tc) {
+        throw new NotImplementedException("getFlows is not implemented in Slicing Manager");
+    }
+
+    @Override
+    public boolean reserveQueue(QueueId queueId, TrafficClass tc) {
+        AtomicBoolean result = new AtomicBoolean(false);
+
+        queueStore.compute(queueId, (k, v) -> {
+            if (v != null) {
+                log.warn("Queue {} has already been allocated to TC {}", k, v);
+                return v;
+            }
+            log.debug("Queue {} successfully reserved for TC {}", k, tc);
+            result.set(true);
+            return new QueueStoreValue(tc, true);
+        });
+
+        return result.get();
+    }
+
+    @Override
+    public boolean releaseQueue(QueueId queueId) {
+        AtomicBoolean result = new AtomicBoolean(false);
+
+        queueStore.compute(queueId, (k, v) -> {
+            if (v == null) {
+               log.warn("Queue {} is not reserved", queueId);
+               return v;
+            }
+            if (!v.available()) {
+               log.warn("Queue {} in use", queueId);
+               return v;
+            }
+            log.debug("Queue {} is released from TC {}", queueId, v.trafficClass());
+            result.set(true);
+            return null;
+        });
+
+        return result.get();
+    }
+
+    private QueueId allocateQueue(TrafficClass tc) {
+        if (tc == TrafficClass.BEST_EFFORT) {
+            return QueueId.BEST_EFFORT;
+        } else {
+            Optional<QueueId> queueId = queueStore.stream()
+                    .filter(e -> e.getValue().value().trafficClass() == tc)
+                    .filter(e -> e.getValue().value().available())
+                    .findFirst()
+                    .map(Map.Entry::getKey);
+
+            if (queueId.isPresent()) {
+                queueStore.compute(queueId.get(), (k, v) -> {
+                    v.setAvailable(false);
+                    return v;
+                });
+                log.debug("Allocated queue {} to TC {}", queueId.get(), tc);
+                return queueId.get();
+            } else {
+                log.warn("No queue available for TC {}", tc);
+                return null;
+            }
+        }
+    }
+
+    private boolean deallocateQueue(QueueId queueId) {
+        AtomicBoolean result = new AtomicBoolean(false);
+
+        queueStore.compute(queueId, (k, v) -> {
+           if (v == null) {
+               log.warn("Queue {} not reserved yet", queueId);
+               return v;
+           }
+           v.setAvailable(true);
+           result.set(true);
+           return v;
+        });
+
+        return result.get();
     }
 
     // TODO Expose REST API
+
+    private class InternalSliceListener implements MapEventListener<SliceStoreKey, QueueId> {
+        public void event(MapEvent<SliceStoreKey, QueueId> event) {
+            if (workPartitionService.isMine(event.key(), toStringHasher())) {
+                sliceExecutor.submit(() -> {
+                    log.debug("Processing slice event {}", event);
+                    switch (event.type()) {
+                        case INSERT:
+                            // TODO
+                            break;
+                        case UPDATE:
+                            // TODO
+                            break;
+                        case REMOVE:
+                            // TODO
+                            break;
+                        default:
+                            break;
+                    }
+                });
+            }
+        }
+    }
+
+    private class InternalQueueListener implements MapEventListener<QueueId, QueueStoreValue> {
+        public void event(MapEvent<QueueId, QueueStoreValue> event) {
+            if (workPartitionService.isMine(event.key(), toStringHasher())) {
+                sliceExecutor.submit(() -> {
+                    log.debug("Processing queue event {}", event);
+                    switch (event.type()) {
+                        case INSERT:
+                            // TODO
+                            break;
+                        case UPDATE:
+                            // TODO
+                            break;
+                        case REMOVE:
+                            // TODO
+                            break;
+                        default:
+                            break;
+                    }
+                });
+            }
+        }
+    }
+
+    private static <K> Function<K, Long> toStringHasher() {
+        return k -> Hashing.sha256().hashUnencodedChars(k.toString()).asLong();
+    }
 }

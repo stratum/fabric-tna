@@ -14,8 +14,7 @@ public enum TrafficClass {
     BEST_EFFORT(TC_BEST_EFFORT),
     CONTROL(TC_CONTROL),
     REAL_TIME(TC_REAL_TIME),
-    ELASTIC(TC_ELASTIC),
-    UNKNOWN(-1);
+    ELASTIC(TC_ELASTIC);
 
     public final int tc;
 

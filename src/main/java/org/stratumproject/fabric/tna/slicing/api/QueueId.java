@@ -12,6 +12,7 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_EGRESS
  */
 public final class QueueId extends Identifier<Integer> {
     public static final Integer MAX = 1 << HDR_EGRESS_QID_BITWIDTH - 1;
+    public static final QueueId BEST_EFFORT = QueueId.of(0); // TODO update javadoc
 
     private QueueId(int id) {
         super(id);
