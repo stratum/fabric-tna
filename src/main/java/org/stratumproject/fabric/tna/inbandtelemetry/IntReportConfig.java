@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.List;
 
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.Lists;
 
 import org.onlab.packet.IpAddress;
@@ -25,7 +26,11 @@ import org.onosproject.ui.JsonUtils;
  *         "collectorIp": "192.168.0.1",
  *         "collectorPort": 5500,
  *         "minFlowHopLatencyChangeNs": 300,
- *         "watchSubnets": [ "192.168.0.0/24", "10.140.0.0/16" ]
+ *         "watchSubnets": [ "192.168.0.0/24", "10.140.0.0/16" ],
+ *         "queueReportLatencyThresholds": {
+ *             "0": {"triggerNs": 2000, "resetNs": 1500},
+ *             "7": {"triggerNs": 500}
+ *         }
  *       }
  *     }
  *   }
@@ -36,6 +41,11 @@ public class IntReportConfig extends Config<ApplicationId> {
     private static final String COLLECTOR_PORT = "collectorPort";
     private static final String MIN_FLOW_HOP_LATENCY_CHANGE_NS = "minFlowHopLatencyChangeNs";
     private static final String WATCH_SUBNETS = "watchSubnets";
+    private static final String QUEUE_REPORT_LATENCY_THRESHOLDS = "queueReportLatencyThresholds";
+    private static final String TRIGGER_NS = "triggerNs";
+    private static final String RESET_NS = "resetNs";
+    private static final long DEFAULT_QUEUE_REPORT_TRIGGER_LATENCY_THRESHOLD = 0xffffffff; // do not report.
+    private static final long DEFAULT_QUEUE_REPORT_RESET_LATENCY_THRESHOLD = 0; // do not reset.
 
     /**
      * IP address of the collector. This is the destination IP address that will be
@@ -99,6 +109,58 @@ public class IntReportConfig extends Config<ApplicationId> {
             return subnets;
         } else {
             return Collections.emptyList();
+        }
+    }
+
+    /**
+     * Gets the latency threshold for a queue that triggers the device to send a queue report.
+     *
+     * @param queueId the queue id
+     * @return latency threshold in nanoseconds
+     */
+    public long queueReportTriggerLatencyThresholdNs(byte queueId) {
+        String queueIdStr = String.valueOf(queueId);
+        if (object.hasNonNull(QUEUE_REPORT_LATENCY_THRESHOLDS)) {
+            ObjectNode thresholds = JsonUtils.node(object, QUEUE_REPORT_LATENCY_THRESHOLDS);
+            if (thresholds.hasNonNull(queueIdStr)) {
+                ObjectNode threshold = JsonUtils.node(thresholds, queueIdStr);
+                if (threshold.hasNonNull(TRIGGER_NS)) {
+                    return (long) JsonUtils.number(threshold, TRIGGER_NS);
+                } else {
+                    return DEFAULT_QUEUE_REPORT_TRIGGER_LATENCY_THRESHOLD;
+                }
+            } else {
+                return DEFAULT_QUEUE_REPORT_TRIGGER_LATENCY_THRESHOLD;
+            }
+        } else {
+            return DEFAULT_QUEUE_REPORT_TRIGGER_LATENCY_THRESHOLD;
+        }
+    }
+
+    /**
+     * Gets the latency threshold for a queue that resets the queue report quota.
+     * If "resetNs" is not present for spefic queue, but the "triggerNs" is, then the value
+     * will be "triggerNs / 2".
+     *
+     * @param queueId the queue id
+     * @return latency threshold in nanoseconds
+     */
+    public long queueReportResetLatencyThresholdNs(byte queueId) {
+        String queueIdStr = String.valueOf(queueId);
+        if (object.hasNonNull(QUEUE_REPORT_LATENCY_THRESHOLDS)) {
+            ObjectNode thresholds = JsonUtils.node(object, QUEUE_REPORT_LATENCY_THRESHOLDS);
+            if (thresholds.hasNonNull(queueIdStr)) {
+                ObjectNode threshold = JsonUtils.node(thresholds, queueIdStr);
+                if (threshold.hasNonNull(RESET_NS)) {
+                    return (long) JsonUtils.number(threshold, RESET_NS);
+                } else {
+                    return queueReportTriggerLatencyThresholdNs(queueId) / 2;
+                }
+            } else {
+                return DEFAULT_QUEUE_REPORT_RESET_LATENCY_THRESHOLD;
+            }
+        } else {
+            return DEFAULT_QUEUE_REPORT_RESET_LATENCY_THRESHOLD;
         }
     }
 }
