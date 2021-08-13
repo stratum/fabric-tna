@@ -142,7 +142,7 @@ def queue_mapping(
 def queue_config(
     descr,
     port_id,
-    sdk_port_id,
+    is_sdk_port,
     port_rate_bps,
     port_queue_count,
     ct_slot_count,
@@ -158,8 +158,9 @@ def queue_config(
     """
     Returns the queue_config blob for the given port and slices' allocations.
     :param descr: a description of the port
-    :param port_id: SingletonPort ID from Stratum's chassis_config
-    :param sdk_port_id: SDK port number (i.e., Tofino DP_ID)
+    :param port_id: port ID
+    :param is_sdk_port: true if port_id is an SDK port number (i.e., Tofino DP_ID),
+        false if it's a SingletonPort ID from Stratum's chassis_config
     :param port_rate_bps: link capacity or port shaping rate if set
     :param port_queue_count: how many queues can be allocated to this port
     :param ct_slot_count: number of Control slots, each slice an use one or more slots
@@ -361,12 +362,11 @@ def queue_config(
         f"available={port_queue_count}"
     )
 
-    port_field = "port" if port_id is not None else "sdk_port"
-    port_value = port_id if port_id is not None else sdk_port_id
+    port_field = "sdk_port" if is_sdk_port else "port"
 
     return f"""        queue_configs {{
           # {descr} ({format_bps(port_rate_bps)}, {used_queues} queues)
-          {port_field}: {port_value}\n{NEW_LINE.join(queue_mappings)}
+          {port_field}: {port_id}\n{NEW_LINE.join(queue_mappings)}
         }}"""
 
 
@@ -455,8 +455,8 @@ def vendor_config(yaml_config):
         )
         if "port_ids" in port_template:
             for port_id in port_template["port_ids"]:
-                temp['port_id'] = port_id
-                temp['sdk_port_id'] = None
+                temp["port_id"] = port_id
+                temp["is_sdk_port"] = False
                 port_templates.append(temp)
                 # Shaping can only be applied to front-panel ports,
                 # it doesn't make sense to shape internal ports.
@@ -468,8 +468,8 @@ def vendor_config(yaml_config):
                         burst_bytes=port_template['shaping_burst_bytes']))
         if "sdk_port_ids" in port_template:
             for sdk_port_id in port_template["sdk_port_ids"]:
-                temp['port_id'] = None
-                temp['sdk_port_id'] = sdk_port_id
+                temp["port_id"] = sdk_port_id
+                temp["is_sdk_port"] = True
                 port_templates.append(temp)
 
     queue_blobs = []
