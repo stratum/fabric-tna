@@ -6,7 +6,6 @@ set -ex
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
 
-echo 128 > /proc/sys/vm/nr_hugepages
 mkdir /mnt/huge
 mount -t hugetlbfs nodev /mnt/huge
 
