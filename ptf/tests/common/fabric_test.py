@@ -4627,17 +4627,17 @@ class StatsTest(FabricTest):
         actual_byte_count, actual_pkt_count = self.get_stats_counter(
             gress, stats_flow_id, port,  **ftuple)
         if (
-                counter_data.byte_count != actual_byte_count
-                or counter_data.packet_count != actual_pkt_count
+                actual_byte_count != byte_count
+                or actual_pkt_count != pkt_count
         ):
             self.fail(
                 "Counter is not same as expected.\
                 \nActual packet count: %d, Expected packet count: %d\
                 \nActual byte count: %d, Expected byte count: %d\n"
                 % (
-                    counter_data.packet_count,
+                    actual_pkt_count,
                     pkt_count,
-                    counter_data.byte_count,
+                    actual_byte_count,
                     byte_count,
                 )
             )
