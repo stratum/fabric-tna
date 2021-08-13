@@ -7,8 +7,20 @@ import org.apache.commons.lang.NotImplementedException;
 import org.onlab.util.KryoNamespace;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
+import org.onosproject.net.DeviceId;
+import org.onosproject.net.device.DeviceService;
+import org.onosproject.net.flow.DefaultFlowRule;
+import org.onosproject.net.flow.DefaultTrafficSelector;
+import org.onosproject.net.flow.DefaultTrafficTreatment;
+import org.onosproject.net.flow.FlowRule;
+import org.onosproject.net.flow.FlowRuleService;
 import org.onosproject.net.flow.TrafficTreatment;
+import org.onosproject.net.flow.criteria.PiCriterion;
 import org.onosproject.net.intent.WorkPartitionService;
+import org.onosproject.net.pi.model.PiTableId;
+import org.onosproject.net.pi.runtime.PiAction;
+import org.onosproject.net.pi.runtime.PiActionParam;
+import org.onosproject.net.pi.runtime.PiTableAction;
 import org.onosproject.store.serializers.KryoNamespaces;
 import org.onosproject.store.service.ConsistentMap;
 import org.onosproject.store.service.MapEvent;
@@ -21,6 +33,7 @@ import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.slf4j.Logger;
+import org.stratumproject.fabric.tna.behaviour.P4InfoConstants;
 import org.stratumproject.fabric.tna.slicing.api.QueueId;
 import org.stratumproject.fabric.tna.slicing.api.SliceId;
 import org.stratumproject.fabric.tna.slicing.api.SlicingService;
@@ -37,6 +50,7 @@ import java.util.stream.Collectors;
 
 import static org.onlab.util.Tools.groupedThreads;
 import static org.slf4j.LoggerFactory.getLogger;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_STATS_FLOWS;
 
 /**
  * Implementation of SlicingService.
@@ -52,12 +66,18 @@ public class SlicingManager implements SlicingService {
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     protected WorkPartitionService workPartitionService;
 
+    @Reference(cardinality = ReferenceCardinality.MANDATORY)
+    protected FlowRuleService flowRuleService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY)
+    protected DeviceService deviceService;
+
     private static final Logger log = getLogger(SlicingManager.class);
     private static final String APP_NAME = "org.stratumproject.fabric.tna.slicing"; // TODO revisit naming
+    private static final int QOS_FLOW_PRIORITY = 10;
 
     protected ApplicationId appId;
 
-    // TODO update javadoc
     protected ConsistentMap<SliceStoreKey, QueueId> sliceStore;
     private MapEventListener<SliceStoreKey, QueueId> sliceListener;
     private ExecutorService sliceExecutor;
@@ -167,7 +187,7 @@ public class SlicingManager implements SlicingService {
         sliceStore.compute(key, (k, v) -> {
             if (v == null) {
                 log.warn("TC {} has not been allocated to slice {}", tc, sliceId);
-                return v;
+                return null;
             }
 
             deallocateQueue(v);
@@ -226,7 +246,7 @@ public class SlicingManager implements SlicingService {
         queueStore.compute(queueId, (k, v) -> {
             if (v == null) {
                log.warn("Queue {} is not reserved", queueId);
-               return v;
+               return null;
             }
             if (!v.available()) {
                log.warn("Queue {} in use", queueId);
@@ -280,22 +300,59 @@ public class SlicingManager implements SlicingService {
         return result.get();
     }
 
+    private void addQueueTable(DeviceId deviceId, SliceId sliceId, TrafficClass tc, QueueId queueId) {
+        flowRuleService.applyFlowRules(buildFlowRule(deviceId, sliceId, tc, queueId));
+        log.debug("Add queue table flow on {} for slice {} tc {} queueId {}", deviceId, sliceId, tc, queueId);
+    }
+
+    private void removeQueueTable(DeviceId deviceId, SliceId sliceId, TrafficClass tc, QueueId queueId) {
+        flowRuleService.removeFlowRules(buildFlowRule(deviceId, sliceId, tc, queueId));
+        log.debug("Remove queue table flow on {} for slice {} tc {} queueId {}", deviceId, sliceId, tc, queueId);
+    }
+
+    private FlowRule buildFlowRule(DeviceId deviceId, SliceId sliceId, TrafficClass tc, QueueId queueId) {
+        PiCriterion piCriterion = PiCriterion.builder()
+                .matchExact(P4InfoConstants.HDR_SLICE_ID, sliceId.id())
+                .matchExact(P4InfoConstants.HDR_TC, tc.ordinal())
+                .build();
+        PiTableAction piTableAction = PiAction.builder()
+                .withId(P4InfoConstants.FABRIC_INGRESS_QOS_SET_QUEUE)
+                .withParameter(new PiActionParam(P4InfoConstants.QID, queueId.id()))
+                .build();
+        FlowRule flowRule = DefaultFlowRule.builder()
+                .forDevice(deviceId)
+                .forTable(PiTableId.of(FABRIC_INGRESS_STATS_FLOWS.id()))
+                .fromApp(appId)
+                .withPriority(QOS_FLOW_PRIORITY)
+                .withSelector(DefaultTrafficSelector.builder().matchPi(piCriterion).build())
+                .withTreatment(DefaultTrafficTreatment.builder().piTableAction(piTableAction).build())
+                .makePermanent()
+                .build();
+        log.debug("{}", flowRule);
+        return flowRule;
+    }
+
     // TODO Expose REST API
 
     private class InternalSliceListener implements MapEventListener<SliceStoreKey, QueueId> {
         public void event(MapEvent<SliceStoreKey, QueueId> event) {
-            if (workPartitionService.isMine(event.key(), toStringHasher())) {
+            // Distributed work based on QueueId. Consistent with InternalQueueListener
+            if (workPartitionService.isMine(event.newValue().value(), toStringHasher())) {
                 sliceExecutor.submit(() -> {
                     log.debug("Processing slice event {}", event);
                     switch (event.type()) {
                         case INSERT:
-                            // TODO
-                            break;
                         case UPDATE:
-                            // TODO
+                            deviceService.getAvailableDevices().forEach(device -> {
+                                addQueueTable(device.id(),
+                                        event.key().sliceId(), event.key().trafficClass(), event.newValue().value());
+                            });
                             break;
                         case REMOVE:
-                            // TODO
+                            deviceService.getAvailableDevices().forEach(device -> {
+                                removeQueueTable(device.id(),
+                                        event.key().sliceId(), event.key().trafficClass(), event.newValue().value());
+                            });
                             break;
                         default:
                             break;
@@ -307,18 +364,17 @@ public class SlicingManager implements SlicingService {
 
     private class InternalQueueListener implements MapEventListener<QueueId, QueueStoreValue> {
         public void event(MapEvent<QueueId, QueueStoreValue> event) {
+            // Distributed work based on QueueId. Consistent with InternalSliceListener
             if (workPartitionService.isMine(event.key(), toStringHasher())) {
                 sliceExecutor.submit(() -> {
                     log.debug("Processing queue event {}", event);
                     switch (event.type()) {
                         case INSERT:
-                            // TODO
-                            break;
                         case UPDATE:
-                            // TODO
+                            // TODO program queues. Today we assume queues are statically provisioned
                             break;
                         case REMOVE:
-                            // TODO
+                            // TODO remove queues.  Today we assume queues are statically unprovisioned
                             break;
                         default:
                             break;
@@ -327,6 +383,8 @@ public class SlicingManager implements SlicingService {
             }
         }
     }
+
+    // TODO Implement device listener. When device up, program queue table
 
     private static <K> Function<K, Long> toStringHasher() {
         return k -> Hashing.sha256().hashUnencodedChars(k.toString()).asLong();
