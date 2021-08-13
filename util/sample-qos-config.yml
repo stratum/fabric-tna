@@ -50,21 +50,28 @@ elastic_min_rates_bps:
 # - is_shaping_enabled: true if rate is enforced using shaping, false if it is the channel speed.
 #     TODO: implement shaping configuration
 # - queue_count: number of queues assigned to the port
-# - sdk_ports: list of SDK port numbers (DP_ID) with this configuration
-ports:
+# - port_ids: list of Stratum port IDs with this template (SingletonPort ID from chassis_config)
+# - sdk_port_ids: list of SDK port numbers (Tofino DP_ID) with this template (used for internal ports, e.g., recirculation)
+port_templates:
   - descr: Base station
     rate_bps: 1000000000 # 1 Gbps
     is_shaping_enabled: false
-    queue_count: 8
-    sdk_ports:
-      - 36
-      - 37
-      - 38
-      - 39
+    queue_count: 16
+    port_ids:
+      - 100
   - descr: Servers
-    sdk_ports:
-      - 260
-      - 268
+    port_ids:
+      - 200
+      - 300
     rate_bps: 40000000000 # 40 Gbps
     is_shaping_enabled: false
-    queue_count: 32
+    queue_count: 16
+  - descr: Recirculation
+    sdk_port_ids:
+      - 68
+      - 196
+      - 324
+      - 452
+    rate_bps: 100000000000 # 100 Gbps
+    is_shaping_enabled: false
+    queue_count: 16
