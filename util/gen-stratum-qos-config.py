@@ -3,8 +3,8 @@
 # SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 # -*- utf-8 -*-
 """
-Generates a snippet of Stratum's chassis_config file with a vendor_config blob for Tofino that
-realizes the SD-Fabric slicing/QoS model.
+Generates vendor_config snippets for Stratum's chassis_config that realizes the SD-Fabric
+slicing/QoS model. The output of this script is meant to be appended to an exiting chassis config.
 
 Usage:
 

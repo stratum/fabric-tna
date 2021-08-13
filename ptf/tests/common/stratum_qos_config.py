@@ -3,8 +3,8 @@
 # SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 # -*- utf-8 -*-
 """
-Library for generating snippets of Stratum's chassis_config file with a vendor_config blob for Tofino that
-realizes the SD-Fabric slicing/QoS model.
+Library for generating vendor_config snippets for Stratum's chassis_config that realizes the
+SD-Fabric slicing/QoS model.
 
 Takes as input a YAML file with high-level parameters. See utils/sample-qos-config.yml for an example.
 
