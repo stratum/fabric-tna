@@ -48,26 +48,25 @@ elastic_min_rates_bps:
 # - descr: description of the port purpose
 # - rate_bps: port speed in bps
 # - is_shaping_enabled: true if rate is enforced using shaping, false if it is the channel speed.
-# - shaping_burst_bytes: burst size in bytes, meaningful only if port is shaped.
+#     TODO: implement shaping configuration
 # - queue_count: number of queues assigned to the port
 # - port_ids: list of Stratum port IDs with this template (SingletonPort ID from chassis_config)
 # - sdk_port_ids: list of SDK port numbers (Tofino DP_ID) with this template (used for internal ports, e.g., recirculation)
 port_templates:
-  - descr: "Base station"
+  - descr: Base station
     rate_bps: 1000000000 # 1 Gbps
-    is_shaping_enabled: true
-    shaping_burst_bytes: 18000 # 2x jumbo frames
+    is_shaping_enabled: false
     queue_count: 16
     port_ids:
       - 100
-  - descr: "Servers"
+  - descr: Servers
     port_ids:
       - 200
       - 300
     rate_bps: 40000000000 # 40 Gbps
     is_shaping_enabled: false
     queue_count: 16
-  - descr: "Recirculation"
+  - descr: Recirculation
     sdk_port_ids:
       - 68
       - 196
