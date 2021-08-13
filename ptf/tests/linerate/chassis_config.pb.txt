@@ -1,0 +1,80 @@
+# SPDX-FileCopyrightText: Copyright 2020-present Open Networking Foundation.
+# SPDX-License-Identifier: Apache-2.0
+description: "Chassis Config with QoS settings for Menlo PDP 32QS"
+chassis {
+  platform: PLT_GENERIC_BAREFOOT_TOFINO
+  name: "Edgecore Wedge100BF-32qs"
+}
+nodes {
+  id: 1
+  slot: 1
+  index: 1
+}
+singleton_ports {
+  id: 27
+  name: "27/0"
+  slot: 1
+  port: 27
+  speed_bps: 40000000000
+  config_params {
+    admin_state: ADMIN_STATE_ENABLED
+  }
+  node: 1
+}
+singleton_ports {
+  id: 28
+  name: "28/0"
+  slot: 1
+  port: 28
+  speed_bps: 40000000000
+  config_params {
+    admin_state: ADMIN_STATE_ENABLED
+  }
+  node: 1
+}
+singleton_ports {
+  id: 29
+  name: "29/0"
+  slot: 1
+  port: 29
+  speed_bps: 40000000000
+  config_params {
+    admin_state: ADMIN_STATE_ENABLED
+  }
+  node: 1
+}
+singleton_ports {
+  id: 30
+  name: "30/0"
+  slot: 1
+  port: 30
+  speed_bps: 40000000000
+  config_params {
+    admin_state: ADMIN_STATE_ENABLED
+  }
+  node: 1
+}
+singleton_ports {
+  id: 31
+  name: "31/0"
+  slot: 1
+  port: 31
+  speed_bps: 40000000000
+  config_params {
+    admin_state: ADMIN_STATE_ENABLED
+  }
+  node: 1
+}
+singleton_ports {
+  id: 32
+  name: "32/0"
+  slot: 1
+  port: 32
+  speed_bps: 40000000000
+  config_params {
+    admin_state: ADMIN_STATE_ENABLED
+  }
+  node: 1
+}
+# vendor_config is auto-generated for each test case
+

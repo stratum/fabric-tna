@@ -1,0 +1,48 @@
+#!/usr/bin/env python3
+# Copyright 2021-present Open Networking Foundation
+# SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
+
+# QoS configuration used for linerate tests.
+
+# See util/sample-qos-config.yml for a description of each field.
+
+max_cells: 266240
+
+pool_allocations:
+  control: 1
+  realtime: 9
+  elastic: 80
+  besteffort: 9
+  unassigned: 1
+
+control_slot_count: 50
+control_slot_rate_pps: 100
+control_slot_burst_pkts: 10
+control_mtu_bytes: 1500
+
+realtime_max_rates_bps:
+  - 45000000 # 45 Mbps
+  - 30000000 # 30 Mbps
+  - 25000000 # 25 Mbps
+
+realtime_max_burst_s: 0.005 # 5 ms
+
+elastic_min_rates_bps:
+  - 100000000 # 100 Mbps
+  - 200000000 # 200 Mbps
+
+port_templates:
+  - descr: "Base station"
+    rate_bps: 1000000000 # 1 Gbps
+    is_shaping_enabled: true
+    shaping_burst_bytes: 18000 # 2x jumbo frames
+    queue_count: 16
+    port_ids:
+      - 28
+  - descr: "Servers"
+    port_ids:
+      - 27
+      - 29
+    rate_bps: 40000000000 # 40 Gbps
+    is_shaping_enabled: false
+    queue_count: 16

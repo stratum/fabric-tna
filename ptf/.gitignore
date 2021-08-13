@@ -4,3 +4,4 @@ ptf.log
 ptf.pcap
 ptf/run/tm/log
 testvectors/
+/tests/linerate/chassis_config.pb.txt.tmp
