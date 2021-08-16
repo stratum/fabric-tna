@@ -5,13 +5,12 @@
 set -eu -o pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
-FABRIC_TNA_ROOT="${DIR}"/../..
-FABRIC_TNA="${FABRIC_TNA_ROOT}"/..
+FABRIC_TNA_ROOT="${DIR}"/../../..
 TM_PORT_JSON=${TM_PORT_JSON:-""}
 TM_DOD=${TM_DOD:=""}
 
 # shellcheck source=.env
-source "${FABRIC_TNA}"/.env
+source "${FABRIC_TNA_ROOT}"/.env
 
 PTF_FILTER=${PTF_FILTER:-}
 STRATUM_DOCKER_FLAG=${STRATUM_DOCKER_FLAG:-}
@@ -37,7 +36,7 @@ fi
 
 # Find Tofino compiled artifacts
 sdeVer_=$(echo "${SDE_VERSION}" | tr . _) # Replace dots with underscores
-P4C_OUT=${FABRIC_TNA}/p4src/build/${fabricProfile}/sde_${sdeVer_}
+P4C_OUT=p4src/build/${fabricProfile}/sde_${sdeVer_}
 echo "*** Using P4 compiler output in ${P4C_OUT}..."
 
 # Fix a name for each container so we can stop them
@@ -95,12 +94,11 @@ if [[ $nr_hugepages -lt 128 ]] || [[ $free_hugepages -lt 128 ]]; then
 fi
 
 # Run Tofino Model
-# Replace dots with underscores to match pipeconf name
 echo "*** Starting ${tmRunName} (from ${SDE_TM_DOCKER_IMG})..."
 
 OTHER_TM_DOCKER_ARGS=""
 if [[ -n "${TM_PORT_JSON}" ]]; then
-    # Fine the absolute path of the port map file and mount the file to the container
+    # Find the absolute path of the port map file and mount the file to the container
     # Also, pass the TM_PORT_JSON with the path to the container so the entrypoint
     # will start the Tofino model with port map file.
     JSON_PATH="$(cd "$(dirname "${TM_PORT_JSON}")" > /dev/null 2>&1 && pwd)"
@@ -116,7 +114,7 @@ fi
 # shellcheck disable=SC2086
 docker run --name ${tmRunName} -d -t --privileged \
     -v "${DIR}":/workdir -w /workdir \
-    -v "${P4C_OUT}":/p4c-out \
+    -v "${FABRIC_TNA_ROOT}/${P4C_OUT}":/p4c-out \
     $OTHER_TM_DOCKER_ARGS \
     --entrypoint ./tm_entrypoint.sh \
     "${SDE_TM_DOCKER_IMG}"
