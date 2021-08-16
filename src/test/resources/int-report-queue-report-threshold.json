@@ -1,0 +1,10 @@
+{
+    "collectorIp": "10.128.0.1",
+    "collectorPort": 32766,
+    "minFlowHopLatencyChangeNs": 300,
+    "watchSubnets": [],
+    "queueReportLatencyThresholds": {
+        "0": {"triggerNs": 1888, "resetNs": 388},
+        "7": {"triggerNs": 500}
+    }
+}

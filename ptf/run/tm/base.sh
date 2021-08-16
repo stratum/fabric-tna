@@ -67,6 +67,33 @@ function wait_for() {
 rm -rf "${DIR}"/log
 mkdir "${DIR}"/log
 
+function run_command_in_docker_host() {
+    # To run a command in the host that runs the Docker daemon.
+    docker run --rm --privileged --pid=host alpine:3 \
+        nsenter -t 1 -m -u -n -i bash -c "${1}"
+}
+
+# Check number of hugepages available (and set up if not configured)
+nr_hugepages=$(run_command_in_docker_host "cat /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages")
+free_hugepages=$(run_command_in_docker_host "cat /sys/kernel/mm/hugepages/hugepages-2048kB/free_hugepages")
+# The number of pages needed is dynamically computed by bf_switchd.
+# stratum_bf uses around 70 pages in testing, but 128 is a safe bound.
+if [[ $nr_hugepages -lt 128 ]] || [[ $free_hugepages -lt 128 ]]; then
+    if [[ $nr_hugepages -eq 0 ]]; then
+        echo "Setting up hugepages..."
+        if ! run_command_in_docker_host "echo 128 > /proc/sys/vm/nr_hugepages"; then
+            echo "Failed to set up hugepages."
+            exit 255
+        fi
+    else
+        echo "ERROR: There are $free_hugepages free hugepages, and 128 are required."
+        echo "       The system has $nr_hugepages hugepages allocated in total."
+        echo "       This could mean there is another Stratum instance running already,"
+        echo "       or some other application is using hugepages, too."
+        exit 255
+    fi
+fi
+
 # Run Tofino Model
 # Replace dots with underscores to match pipeconf name
 echo "*** Starting ${tmRunName} (from ${SDE_TM_DOCKER_IMG})..."

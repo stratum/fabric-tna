@@ -88,7 +88,6 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
             ImmutableByteSequence.copyFrom(
                     HexString.fromHexString("ffffc0000000", ""));
     // Default latency threshold for queue report and queue size.
-    private static final long DEFAULT_QUEUE_REPORT_LATENCY_THRESHOLD = 2000; // ns
     private static final byte MAX_QUEUES = 32;
 
     private static final Map<Integer, Integer> QUAD_PIPE_MIRROR_SESS_TO_RECIRC_PORTS =
@@ -198,12 +197,6 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                     new DefaultGroupKey(KRYO.serialize(sessionId)),
                     sessionId, appId));
         });
-        for (byte queueId = 0; queueId < MAX_QUEUES; queueId++) {
-            setUpQueueReportThreshold(
-                    queueId,
-                    DEFAULT_QUEUE_REPORT_LATENCY_THRESHOLD,
-                    DEFAULT_QUEUE_REPORT_LATENCY_THRESHOLD);
-        }
         return true;
     }
 
@@ -213,9 +206,14 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         if (!setupBehaviour()) {
             return false;
         }
-
         setUpCollectorFlows(config);
         setUpIntWatchlistRules(config.watchSubnets());
+        for (byte queueId = 0; queueId < MAX_QUEUES; queueId++) {
+            setUpQueueReportThreshold(
+                    queueId,
+                    config.queueReportTriggerLatencyThresholdNs(queueId),
+                    config.queueReportResetLatencyThresholdNs(queueId));
+        }
         return setUpIntReportInternal(config);
     }
 

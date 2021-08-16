@@ -141,7 +141,8 @@ def queue_mapping(
 
 def queue_config(
     descr,
-    sdk_port,
+    port_id,
+    is_sdk_port,
     port_rate_bps,
     port_queue_count,
     ct_slot_count,
@@ -157,7 +158,9 @@ def queue_config(
     """
     Returns the queue_config blob for the given port and slices' allocations.
     :param descr: a description of the port
-    :param sdk_port: SDK port number (i.e., DP_ID)
+    :param port_id: port ID
+    :param is_sdk_port: true if port_id is an SDK port number (i.e., Tofino DP_ID),
+        false if it's a SingletonPort ID from Stratum's chassis_config
     :param port_rate_bps: link capacity or port shaping rate if set
     :param port_queue_count: how many queues can be allocated to this port
     :param ct_slot_count: number of Control slots, each slice an use one or more slots
@@ -298,7 +301,8 @@ def queue_config(
     el_min_rates_bps.append(BE_MIN_RATE_BPS)
 
     # Compute WRR scheduling weights to distribute the available bandwidth.
-    el_wrr_weights = [ceil(1023 * x / sum(el_min_rates_bps)) for x in el_min_rates_bps]
+    el_norm_weights = [x / sum(el_min_rates_bps) for x in el_min_rates_bps]
+    el_wrr_weights = [ceil(1023 * x) for x in el_norm_weights]
 
     # As before, set base_use_limit proportionally to the queue maximum rate. In this case, the
     # queue maximum rate is not enforced through shaping (hence it is not the same for all ports),
@@ -339,7 +343,7 @@ def queue_config(
             queue_id = next_queue_id
             next_queue_id += 1
         queue_mappings[queue_id] = queue_mapping(
-            descr=f"{name} ({format_bps(el_min_rates_bps[i])})",
+            descr=f"{name} ({el_norm_weights[i]:.1%}, gmin {format_bps(el_norm_weights[i] * el_avail_bw_bps)})",
             queue_id=queue_id,
             app_pool=app_pool,
             prio=EL_PRIORITY,
@@ -358,9 +362,11 @@ def queue_config(
         f"available={port_queue_count}"
     )
 
+    port_field = "sdk_port" if is_sdk_port else "port"
+
     return f"""        queue_configs {{
           # {descr} ({format_bps(port_rate_bps)}, {used_queues} queues)
-          sdk_port: {sdk_port}\n{NEW_LINE.join(queue_mappings)}
+          {port_field}: {port_id}\n{NEW_LINE.join(queue_mappings)}
         }}"""
 
 
@@ -383,6 +389,26 @@ def pool_config(descr, pool, size, enable_color_drop, limit_yellow=0, limit_red=
           color_drop_limit_green: {size}
           color_drop_limit_yellow: {limit_yellow}
           color_drop_limit_red: {limit_red}
+        }}"""
+
+
+def port_shaping_config(descr, port_id, rate_bps, burst_bytes):
+    """
+    Returns a per_port_shaping_configs blob with the given parameters.
+    :param descr: port description
+    :param rate_bps: SingletonPort ID form Stratum's chassis_config
+    :param rate_bps: shaping rate in bps
+    :param burst_bytes: burst_size in bytes
+    :return:
+    """
+    return f"""        per_port_shaping_configs {{
+          key: {port_id} # {descr}
+          value {{
+            byte_shaping {{
+              rate_bps: {rate_bps} # {format_bps(rate_bps)}
+              burst_bytes: {burst_bytes}
+            }}
+          }}
         }}"""
 
 
@@ -418,21 +444,37 @@ def vendor_config(yaml_config):
         pool_sizes=pool_sizes,
     )
 
-    ports = []
-    for yaml_port in yaml_config["ports"]:
-        for sdk_port in yaml_port["sdk_ports"]:
-            ports.append(
-                dict(
-                    descr=yaml_port["descr"],
-                    sdk_port=sdk_port,
-                    port_rate_bps=yaml_port["rate_bps"],
-                    port_queue_count=yaml_port["queue_count"],
-                )
-            )
+    shaping_blobs = []
 
-    blobs = []
+    port_templates = []
+    for port_template in yaml_config["port_templates"]:
+        temp = dict(
+            descr=port_template["descr"],
+            port_rate_bps=port_template["rate_bps"],
+            port_queue_count=port_template["queue_count"],
+        )
+        if "port_ids" in port_template:
+            for port_id in port_template["port_ids"]:
+                temp["port_id"] = port_id
+                temp["is_sdk_port"] = False
+                port_templates.append(temp)
+                # Shaping can only be applied to front-panel ports,
+                # it doesn't make sense to shape internal ports.
+                if port_template['is_shaping_enabled']:
+                    shaping_blobs.append(port_shaping_config(
+                        descr=port_template["descr"],
+                        port_id=port_id,
+                        rate_bps=port_template['rate_bps'],
+                        burst_bytes=port_template['shaping_burst_bytes']))
+        if "sdk_port_ids" in port_template:
+            for sdk_port_id in port_template["sdk_port_ids"]:
+                temp["port_id"] = sdk_port_id
+                temp["is_sdk_port"] = True
+                port_templates.append(temp)
 
-    blobs.append(
+    queue_blobs = []
+
+    queue_blobs.append(
         pool_config(
             descr=f"Control ({pool_allocations[CT_APP_POOL]}%)",
             pool=CT_APP_POOL,
@@ -441,7 +483,7 @@ def vendor_config(yaml_config):
         )
     )
 
-    blobs.append(
+    queue_blobs.append(
         pool_config(
             descr=f"Real-Time ({pool_allocations[RT_APP_POOL]}%)",
             pool=RT_APP_POOL,
@@ -452,7 +494,7 @@ def vendor_config(yaml_config):
         )
     )
 
-    blobs.append(
+    queue_blobs.append(
         pool_config(
             descr=f"Elastic ({pool_allocations[EL_APP_POOL]}%)",
             pool=EL_APP_POOL,
@@ -463,7 +505,7 @@ def vendor_config(yaml_config):
         )
     )
 
-    blobs.append(
+    queue_blobs.append(
         pool_config(
             descr=f"Best-Effort ({pool_allocations[BE_APP_POOL]}%)",
             pool=BE_APP_POOL,
@@ -474,11 +516,11 @@ def vendor_config(yaml_config):
         )
     )
 
-    for port in ports:
-        blobs.append(
+    for port in port_templates:
+        queue_blobs.append(
             queue_config(
                 **port,
-                port_rates_bps=[x["port_rate_bps"] for x in ports],
+                port_rates_bps=[x["port_rate_bps"] for x in port_templates],
                 **slicing_template,
             )
         )
@@ -497,9 +539,14 @@ def vendor_config(yaml_config):
 
     return f"""vendor_config {{
   tofino_config {{
+    node_id_to_port_shaping_config {{
+      key: 1 
+      value {{\n{NEW_LINE.join(shaping_blobs)}
+      }}
+    }}
     node_id_to_qos_config {{
       key: 1
-      value {{\n{NEW_LINE.join(blobs)}
+      value {{\n{NEW_LINE.join(queue_blobs)}
       }}
     }}
   }}

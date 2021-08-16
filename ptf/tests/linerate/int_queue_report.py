@@ -9,6 +9,7 @@ from fabric_test import *
 from scapy.utils import PcapReader
 from trex_stl_lib.api import STLVM, STLPktBuilder, STLStream, STLTXCont
 from trex_test import TRexTest
+from ptf.testutils import group
 
 TRAFFIC_MULT = "1000pps"
 TEST_DURATION = 3
@@ -26,6 +27,7 @@ INT_COLLECTOR_PORT = 2
 RECEIVER_PORT = 3
 
 
+@group("int")
 class IntQueueReportTest(TRexTest, IntTest, SlicingTest):
     @autocleanup
     def doRunTest(
@@ -49,6 +51,13 @@ class IntQueueReportTest(TRexTest, IntTest, SlicingTest):
             threshold_reset=THRESHOLD_RESET,
             queue_id=DEFAULT_QID,
         )
+        if is_next_hop_spine:
+            # If MPLS test, port2 is assumed to be a spine port, with
+            # default vlan untagged.
+            vlan2 = DEFAULT_VLAN
+            assert not tagged2
+        else:
+            vlan2 = VLAN_ID_2
         self.set_up_ipv4_unicast_rules(
             next_hop_mac=HOST2_MAC,
             ig_port=self.port1,
@@ -58,6 +67,8 @@ class IntQueueReportTest(TRexTest, IntTest, SlicingTest):
             tagged2=tagged2,
             is_next_hop_spine=is_next_hop_spine,
             prefix_len=32,
+            switch_mac=pkt[Ether].dst,
+            vlan2=vlan2,
         )
         self.set_queue_report_quota(self.port4, qid=DEFAULT_QID, quota=DEFAULT_QUOTA)
 

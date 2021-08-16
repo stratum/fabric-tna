@@ -8,6 +8,7 @@ from fabric_test import *
 from trex_test import TRexTest
 from trex_utils import list_port_status
 from xnt import analyze_report_pcap
+from ptf.testutils import group
 
 TRAFFIC_SPEEDUP = 1.0
 TEST_DURATION = 60
@@ -38,6 +39,7 @@ its performance when encountering bloom filter collisions.
 """
 
 
+@group("int")
 class IntFlowFilterWithTrafficTrace(TRexTest, IntTest):
     @autocleanup
     def runTest(self):
