@@ -13,7 +13,7 @@ import org.stratumproject.fabric.tna.slicing.api.SlicingService;
  * Remove network slice.
  */
 @Service
-@Command(scope = "slicing", name = "slice-remove", description = "Remove network slice")
+@Command(scope = "fabric-tna", name = "slice-remove", description = "Remove network slice")
 public class SliceRemoveCommand extends AbstractShellCommand {
     @Argument(index = 0, name = "sliceId",
             description = "sliceId. Used to identify a slice.",

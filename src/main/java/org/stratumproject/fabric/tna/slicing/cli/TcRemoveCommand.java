@@ -14,7 +14,7 @@ import org.stratumproject.fabric.tna.slicing.api.TrafficClass;
  * Remove traffic class.
  */
 @Service
-@Command(scope = "slicing", name = "tc-remove", description = "Remove traffic class")
+@Command(scope = "fabric-tna", name = "tc-remove", description = "Remove traffic class")
 public class TcRemoveCommand extends AbstractShellCommand {
     @Argument(index = 0, name = "sliceId",
             description = "sliceId. Used to identify a slice.",

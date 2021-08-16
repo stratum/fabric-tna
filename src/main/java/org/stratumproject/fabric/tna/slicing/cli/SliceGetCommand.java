@@ -11,7 +11,7 @@ import org.stratumproject.fabric.tna.slicing.api.SlicingService;
  * Get network slices.
  */
 @Service
-@Command(scope = "slicing", name = "slices", description = "Get network slices")
+@Command(scope = "fabric-tna", name = "slices", description = "Get network slices")
 public class SliceGetCommand extends AbstractShellCommand {
 
     @Override

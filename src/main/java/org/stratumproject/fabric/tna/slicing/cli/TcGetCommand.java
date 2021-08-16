@@ -13,7 +13,7 @@ import org.stratumproject.fabric.tna.slicing.api.SlicingService;
  * Get traffic class.
  */
 @Service
-@Command(scope = "slicing", name = "tc-remove", description = "Get traffic class")
+@Command(scope = "fabric-tna", name = "tc-remove", description = "Get traffic class")
 public class TcGetCommand extends AbstractShellCommand {
     @Argument(index = 0, name = "sliceId",
             description = "sliceId. Used to identify a slice.",

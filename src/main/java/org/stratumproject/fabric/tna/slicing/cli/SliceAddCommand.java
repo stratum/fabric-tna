@@ -13,7 +13,7 @@ import org.stratumproject.fabric.tna.slicing.api.SlicingService;
  * Add network slice.
  */
 @Service
-@Command(scope = "slicing", name = "slice-add", description = "Add network slice")
+@Command(scope = "fabric-tna", name = "slice-add", description = "Add network slice")
 public class SliceAddCommand extends AbstractShellCommand {
     @Argument(index = 0, name = "sliceId",
             description = "sliceId. Used to identify a slice.",
