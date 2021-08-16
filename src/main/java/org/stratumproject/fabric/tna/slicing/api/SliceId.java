@@ -5,13 +5,13 @@ package org.stratumproject.fabric.tna.slicing.api;
 import org.onlab.util.Identifier;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_SLICE_ID_BITWIDTH;
+import static org.stratumproject.fabric.tna.behaviour.Constants.MAX_SLICE_ID;
 
 /**
  * Slice Identifier.
  */
 public final class SliceId extends Identifier<Integer> {
-    public static final Integer MAX = 1 << HDR_SLICE_ID_BITWIDTH - 1;
+    public static final Integer MAX = MAX_SLICE_ID;
 
     private SliceId(int id) {
         super(id);
