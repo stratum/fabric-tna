@@ -16,8 +16,8 @@ it=$(test -t 0 && echo "-it" || echo "-t")
 docker run --name "${testerRunName}" "${it}" --privileged --rm \
     --network "container:${tmRunName}" \
     -v "${FABRIC_TNA_ROOT}":/fabric-tna \
-    -v "${P4C_OUT}":/p4c-out \
-    -e PTF_FILTER="${PTF_FILTER}" \
-    --entrypoint /fabric-tna/run/tm/start_test.sh \
+    -e "P4C_OUT=${P4C_OUT}" \
+    -e "PTF_FILTER=${PTF_FILTER}" \
+    --entrypoint /fabric-tna/ptf/run/tm/start_test.sh \
     "${TESTER_DOCKER_IMG}" \
     ${@}
