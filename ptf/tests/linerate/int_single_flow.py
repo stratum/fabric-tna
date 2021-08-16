@@ -9,6 +9,7 @@ from trex_stl_lib.api import STLPktBuilder, STLStream, STLTXCont
 from trex_test import TRexTest
 from trex_utils import list_port_status
 from xnt import analyze_report_pcap
+from ptf.testutils import group
 
 TRAFFIC_MULT = "40gbpsl1"
 TEST_DURATION = 10
@@ -19,6 +20,7 @@ RECEIVER_PORTS = [1]
 INT_COLLECTOR_PORTS = [2]
 
 
+@group("int")
 class IntSingleFlow(TRexTest, IntTest):
     @autocleanup
     def doRunTest(
