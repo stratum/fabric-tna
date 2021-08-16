@@ -8,8 +8,8 @@ define run_tests
         --ptf-dir $(PTF_DIR) \
         --cpu-port 320 --device-id 1 \
         --grpc-addr $(SWITCH_ADDR) \
-        --p4info /p4c-out/p4info.txt \
-        --tofino-pipeline-config /p4c-out/pipeline_config.pb.bin \
+        --p4info /fabric-tna/${P4C_OUT}/p4info.txt \
+        --tofino-pipeline-config /fabric-tna/${P4C_OUT}/pipeline_config.pb.bin \
         $(TREX_PARAMS) \
         --profile $(1) \
         --xunit \
