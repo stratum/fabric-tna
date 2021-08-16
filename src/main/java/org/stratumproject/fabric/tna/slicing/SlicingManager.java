@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 package org.stratumproject.fabric.tna.slicing;
 
+import com.google.common.collect.Lists;
 import com.google.common.hash.Hashing;
 import org.apache.commons.lang.NotImplementedException;
 import org.onlab.util.KryoNamespace;
@@ -20,7 +21,6 @@ import org.onosproject.net.intent.WorkPartitionService;
 import org.onosproject.net.pi.model.PiTableId;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
-import org.onosproject.net.pi.runtime.PiTableAction;
 import org.onosproject.store.serializers.KryoNamespaces;
 import org.onosproject.store.service.ConsistentMap;
 import org.onosproject.store.service.MapEvent;
@@ -34,11 +34,13 @@ import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.slf4j.Logger;
 import org.stratumproject.fabric.tna.behaviour.P4InfoConstants;
+import org.stratumproject.fabric.tna.slicing.api.Color;
 import org.stratumproject.fabric.tna.slicing.api.QueueId;
 import org.stratumproject.fabric.tna.slicing.api.SliceId;
 import org.stratumproject.fabric.tna.slicing.api.SlicingService;
 import org.stratumproject.fabric.tna.slicing.api.TrafficClass;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -51,6 +53,8 @@ import java.util.stream.Collectors;
 import static org.onlab.util.Tools.groupedThreads;
 import static org.slf4j.LoggerFactory.getLogger;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_STATS_FLOWS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_COLOR;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_COLOR_BITWIDTH;
 
 /**
  * Implementation of SlicingService.
@@ -263,6 +267,8 @@ public class SlicingManager implements SlicingService {
     private QueueId allocateQueue(TrafficClass tc) {
         if (tc == TrafficClass.BEST_EFFORT) {
             return QueueId.BEST_EFFORT;
+        } else if (tc == TrafficClass.CONTROL) {
+            return QueueId.CONTROL;
         } else {
             Optional<QueueId> queueId = queueStore.stream()
                     .filter(e -> e.getValue().value().trafficClass() == tc)
@@ -301,33 +307,48 @@ public class SlicingManager implements SlicingService {
     }
 
     private void addQueueTable(DeviceId deviceId, SliceId sliceId, TrafficClass tc, QueueId queueId) {
-        flowRuleService.applyFlowRules(buildFlowRule(deviceId, sliceId, tc, queueId));
+        flowRuleService.applyFlowRules((FlowRule[]) buildFlowRules(deviceId, sliceId, tc, queueId).toArray());
         log.debug("Add queue table flow on {} for slice {} tc {} queueId {}", deviceId, sliceId, tc, queueId);
     }
 
     private void removeQueueTable(DeviceId deviceId, SliceId sliceId, TrafficClass tc, QueueId queueId) {
-        flowRuleService.removeFlowRules(buildFlowRule(deviceId, sliceId, tc, queueId));
+        flowRuleService.removeFlowRules((FlowRule[]) buildFlowRules(deviceId, sliceId, tc, queueId).toArray());
         log.debug("Remove queue table flow on {} for slice {} tc {} queueId {}", deviceId, sliceId, tc, queueId);
     }
 
-    private FlowRule buildFlowRule(DeviceId deviceId, SliceId sliceId, TrafficClass tc, QueueId queueId) {
-        PiCriterion piCriterion = PiCriterion.builder()
+    private List<FlowRule> buildFlowRules(DeviceId deviceId, SliceId sliceId, TrafficClass tc, QueueId queueId) {
+        List<FlowRule> flowRules = Lists.newArrayList();
+        if (tc == TrafficClass.CONTROL) {
+            flowRules.add(buildFlowRule(deviceId, sliceId, tc, queueId, Color.GREEN));
+            flowRules.add(buildFlowRule(deviceId, sliceId, tc, queueId, Color.RED));
+        } else {
+            flowRules.add(buildFlowRule(deviceId, sliceId, tc, queueId, null));
+        }
+        return flowRules;
+    }
+
+    private FlowRule buildFlowRule(DeviceId deviceId, SliceId sliceId, TrafficClass tc, QueueId queueId, Color color) {
+        PiCriterion.Builder piCriterionBuilder = PiCriterion.builder()
                 .matchExact(P4InfoConstants.HDR_SLICE_ID, sliceId.id())
-                .matchExact(P4InfoConstants.HDR_TC, tc.ordinal())
-                .build();
-        PiTableAction piTableAction = PiAction.builder()
+                .matchExact(P4InfoConstants.HDR_TC, tc.ordinal());
+        if (color != null) {
+            piCriterionBuilder.matchTernary(HDR_COLOR, color.ordinal(), 1 << HDR_COLOR_BITWIDTH - 1);
+        }
+
+        PiAction.Builder piTableActionBuilder = PiAction.builder()
                 .withId(P4InfoConstants.FABRIC_INGRESS_QOS_SET_QUEUE)
-                .withParameter(new PiActionParam(P4InfoConstants.QID, queueId.id()))
-                .build();
+                .withParameter(new PiActionParam(P4InfoConstants.QID, queueId.id()));
+
         FlowRule flowRule = DefaultFlowRule.builder()
                 .forDevice(deviceId)
                 .forTable(PiTableId.of(FABRIC_INGRESS_STATS_FLOWS.id()))
                 .fromApp(appId)
                 .withPriority(QOS_FLOW_PRIORITY)
-                .withSelector(DefaultTrafficSelector.builder().matchPi(piCriterion).build())
-                .withTreatment(DefaultTrafficTreatment.builder().piTableAction(piTableAction).build())
+                .withSelector(DefaultTrafficSelector.builder().matchPi(piCriterionBuilder.build()).build())
+                .withTreatment(DefaultTrafficTreatment.builder().piTableAction(piTableActionBuilder.build()).build())
                 .makePermanent()
                 .build();
+
         log.debug("{}", flowRule);
         return flowRule;
     }
