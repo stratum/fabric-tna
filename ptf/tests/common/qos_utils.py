@@ -25,7 +25,8 @@ QUEUE_ID_ELASTIC_1 = 6
 QUEUE_ID_ELASTIC_2 = 7
 
 # Canonical L4 ports for different test traffic classes.
-L4_DPORT_BEST_EFFORT_TRAFFIC = 1000
+L4_DPORT_BEST_EFFORT_TRAFFIC_1 = 1000
+L4_DPORT_BEST_EFFORT_TRAFFIC_2 = 1001
 L4_DPORT_ELASTIC_TRAFFIC = 2000
 L4_DPORT_SYSTEM_TRAFFIC = 3000
 L4_DPORT_REALTIME_TRAFFIC_1 = 4000
@@ -82,7 +83,7 @@ def get_system_traffic_packet(l2_size=64):
 
 
 # Returns a packet that belongs to the best-effort CoS group.
-def get_best_effort_traffic_packet(l2_size=1400, dport=L4_DPORT_BEST_EFFORT_TRAFFIC):
+def get_best_effort_traffic_packet(l2_size=1400, dport=L4_DPORT_BEST_EFFORT_TRAFFIC_1):
     pkt = testutils.simple_udp_packet(eth_dst=DEST_MAC, udp_dport=dport, pktlen=l2_size)
     assert len(pkt) == l2_size, "Packet size {} does not match target size {}".format(
         len(pkt), l2_size

@@ -20,7 +20,7 @@ from trex_test import TRexTest
 from trex_utils import *
 
 # General test parameter.
-LINK_RATE_BPS = 1 * G
+LINK_RATE_BPS = 40 * G
 EXPECTED_FLOW_RATE_WITH_STATS_BPS = 1 * G
 TRAFFIC_DURATION_SECONDS = 10
 
@@ -58,7 +58,7 @@ class QosTest(TRexTest, SlicingTest, StatsTest):
         self.control_pg_id = 7
         self.system_pg_id = 2
 
-    def push_chassis_config(self, yaml_file="qos-config-1g.yml") -> None:
+    def push_chassis_config(self, yaml_file="qos-config.yml") -> None:
         with open("../linerate/chassis_config.pb.txt", mode="rb") as file:
             chassis_config = file.read()
         # Auto-generate and append vendor_config
@@ -708,79 +708,6 @@ class RealtimeTrafficIsRrScheduled(QosTest):
 
 class ElasticTrafficIsWrrScheduled(QosTest):
     """
-    In this test we check that traffic using elastic queues is scheduled in a
-    WRR fashion. For this, we start two streams each one trying to saturate
-    the output link by sending at the same high rate. We expect that the amount
-    of bytes received for each stream is proportional to WRR weights.
-    """
-
-    @autocleanup
-    def runTest(self) -> None:
-        elastic_pg_id_1 = 1
-        elastic_pg_id_2 = 2
-
-        self.push_chassis_config()
-        self.setup_basic_forwarding()
-        self.setup_queue_classification()
-
-        streams = [
-            self.create_elastic_stream(
-                elastic_pg_id_1,
-                l1_bps=LINK_RATE_BPS,
-                dport=qos_utils.L4_DPORT_ELASTIC_TRAFFIC_1,
-                l2_size_range=[80, 1400],
-            ),
-            self.create_elastic_stream(
-                elastic_pg_id_2,
-                l1_bps=LINK_RATE_BPS,
-                dport=qos_utils.L4_DPORT_ELASTIC_TRAFFIC_2,
-                l2_size_range=[80, 1400],
-            ),
-        ]
-        self.trex_client.add_streams(streams, ports=PRIORITY_SENDER_PORT)
-        logging.info("Starting traffic, duration: %d sec", TRAFFIC_DURATION_SECONDS)
-        self.trex_client.start(
-            PRIORITY_SENDER_PORT, mult="1", duration=TRAFFIC_DURATION_SECONDS
-        )
-        logging.info("Waiting until all traffic is sent")
-        self.trex_client.wait_on_traffic(ports=PRIORITY_SENDER_PORT, rx_delay_ms=100)
-
-        stats = self.trex_client.get_stats()
-        flow_stats_1 = get_flow_stats(elastic_pg_id_1, stats)
-        print(get_readable_flow_stats(flow_stats_1))
-        flow_stats_2 = get_flow_stats(elastic_pg_id_2, stats)
-        print(get_readable_flow_stats(flow_stats_2))
-
-        self.assertGreater(
-            flow_stats_1.rx_packets, 0, "No traffic has been received for source 1"
-        )
-        self.assertGreater(
-            flow_stats_2.rx_packets, 0, "No traffic has been received for source 2"
-        )
-
-        weight_total = ELASTIC_1_WRR_WEIGHT + ELASTIC_2_WRR_WEIGHT
-
-        self.assertAlmostEqual(
-            flow_stats_1.rx_bytes_share,
-            ELASTIC_1_WRR_WEIGHT / weight_total,
-            delta=0.005,
-            msg=f"Elastic source 1 was not scheduled as expected",
-        )
-        self.assertAlmostEqual(
-            flow_stats_2.rx_bytes_share,
-            ELASTIC_2_WRR_WEIGHT / weight_total,
-            delta=0.005,
-            msg=f"Elastic source 2 was not scheduled as expected",
-        )
-
-        for port in ALL_PORTS:
-            readable_stats = get_readable_port_stats(stats[port])
-            print("Statistics for port {}: {}".format(port, readable_stats))
-
-
-# FIXME: currently not working as actual rx byte shares do not meet expectations
-class BestEffortTrafficIsWrrScheduled(QosTest):
-    """
     Same as ElasticTrafficIsWrrScheduled but adds a best-effort stream. The
     best-effort queue should be treated as an elastic queue, hence receive
     service proportional to its weight.
@@ -791,62 +718,80 @@ class BestEffortTrafficIsWrrScheduled(QosTest):
         elastic_pg_id_1 = 1
         elastic_pg_id_2 = 2
         best_effort_pg_id_3 = 3
+        best_effort_pg_id_4 = 4
 
         self.push_chassis_config()
         # return
         self.setup_basic_forwarding()
         self.setup_queue_classification()
 
-        streams = [
+        streams1 = [
             self.create_elastic_stream(
-                elastic_pg_id_1,
-                l1_bps=LINK_RATE_BPS,
+                1,
+                l1_bps=20 * G,
                 dport=qos_utils.L4_DPORT_ELASTIC_TRAFFIC_1,
-                l2_size=1400,
-            ),
-            self.create_elastic_stream(
-                elastic_pg_id_2,
-                l1_bps=LINK_RATE_BPS,
-                dport=qos_utils.L4_DPORT_ELASTIC_TRAFFIC_2,
                 l2_size=1400,
             ),
             self.create_best_effort_stream(
                 best_effort_pg_id_3,
-                l1_bps=LINK_RATE_BPS,
-                dport=qos_utils.L4_DPORT_BEST_EFFORT_TRAFFIC,
+                l1_bps=10 * G,
+                dport=qos_utils.L4_DPORT_BEST_EFFORT_TRAFFIC_1,
                 l2_size=1400,
             ),
         ]
 
-        ig_port = self.port3
+        streams2 = [
+            self.create_elastic_stream(
+                elastic_pg_id_2,
+                l1_bps=20 * G,
+                dport=qos_utils.L4_DPORT_ELASTIC_TRAFFIC_2,
+                l2_size=1400,
+            ),
+            self.create_best_effort_stream(
+                best_effort_pg_id_4,
+                l1_bps=10 * G,
+                dport=qos_utils.L4_DPORT_BEST_EFFORT_TRAFFIC_2,
+                l2_size=1400,
+            ),
+        ]
+
+        ig_port_1 = self.port3
+        ig_port_2 = self.port1
         eg_port = self.port2
 
         self.set_up_stats_flows(
             stats_flow_id=elastic_pg_id_1,
-            ig_port=ig_port,
+            ig_port=ig_port_1,
             eg_port=eg_port,
             l4_dport=qos_utils.L4_DPORT_ELASTIC_TRAFFIC_1,
         )
         self.set_up_stats_flows(
             stats_flow_id=elastic_pg_id_2,
-            ig_port=ig_port,
+            ig_port=ig_port_2,
             eg_port=eg_port,
             l4_dport=qos_utils.L4_DPORT_ELASTIC_TRAFFIC_2,
         )
         self.set_up_stats_flows(
             stats_flow_id=best_effort_pg_id_3,
-            ig_port=ig_port,
+            ig_port=ig_port_1,
             eg_port=eg_port,
-            l4_dport=qos_utils.L4_DPORT_BEST_EFFORT_TRAFFIC,
+            l4_dport=qos_utils.L4_DPORT_BEST_EFFORT_TRAFFIC_1,
+        )
+        self.set_up_stats_flows(
+            stats_flow_id=best_effort_pg_id_4,
+            ig_port=ig_port_2,
+            eg_port=eg_port,
+            l4_dport=qos_utils.L4_DPORT_BEST_EFFORT_TRAFFIC_2,
         )
 
-        self.trex_client.add_streams(streams, ports=PRIORITY_SENDER_PORT)
+        self.trex_client.add_streams(streams1, ports=PRIORITY_SENDER_PORT)
+        self.trex_client.add_streams(streams2, ports=BACKGROUND_SENDER_PORT)
         logging.info("Starting traffic, duration: %d sec", TRAFFIC_DURATION_SECONDS)
         self.trex_client.start(
-            PRIORITY_SENDER_PORT, mult="1", duration=TRAFFIC_DURATION_SECONDS
+            ALL_SENDER_PORTS, mult="1", duration=TRAFFIC_DURATION_SECONDS
         )
         logging.info("Waiting until all traffic is sent")
-        self.trex_client.wait_on_traffic(ports=PRIORITY_SENDER_PORT, rx_delay_ms=100)
+        self.trex_client.wait_on_traffic(ports=ALL_SENDER_PORTS, rx_delay_ms=100)
 
         stats = self.trex_client.get_stats()
         # flow_stats_1 = get_flow_stats(elastic_pg_id_1, stats)
@@ -859,18 +804,23 @@ class BestEffortTrafficIsWrrScheduled(QosTest):
         ig_bytes_1, ig_packets_1 = self.get_stats_counter(
             gress=STATS_INGRESS,
             stats_flow_id=elastic_pg_id_1,
-            port=ig_port,
+            port=ig_port_1,
             l4_dport=qos_utils.L4_DPORT_ELASTIC_TRAFFIC_1)
         ig_bytes_2, ig_packets_2 = self.get_stats_counter(
             gress=STATS_INGRESS,
             stats_flow_id=elastic_pg_id_2,
-            port=ig_port,
+            port=ig_port_2,
             l4_dport=qos_utils.L4_DPORT_ELASTIC_TRAFFIC_2)
         ig_bytes_3, ig_packets_3 = self.get_stats_counter(
             gress=STATS_INGRESS,
             stats_flow_id=best_effort_pg_id_3,
-            port=ig_port,
-            l4_dport=qos_utils.L4_DPORT_BEST_EFFORT_TRAFFIC)
+            port=ig_port_1,
+            l4_dport=qos_utils.L4_DPORT_BEST_EFFORT_TRAFFIC_1)
+        ig_bytes_4, ig_packets_4 = self.get_stats_counter(
+            gress=STATS_INGRESS,
+            stats_flow_id=best_effort_pg_id_4,
+            port=ig_port_2,
+            l4_dport=qos_utils.L4_DPORT_BEST_EFFORT_TRAFFIC_2)
 
         eg_bytes_1, eg_packets_1 = self.get_stats_counter(
             gress=STATS_EGRESS,
@@ -886,9 +836,14 @@ class BestEffortTrafficIsWrrScheduled(QosTest):
             gress=STATS_EGRESS,
             stats_flow_id=best_effort_pg_id_3,
             port=eg_port,
-            l4_dport=qos_utils.L4_DPORT_REALTIME_TRAFFIC_3)
+            l4_dport=qos_utils.L4_DPORT_BEST_EFFORT_TRAFFIC_1)
+        eg_bytes_4, eg_packets_4 = self.get_stats_counter(
+            gress=STATS_EGRESS,
+            stats_flow_id=best_effort_pg_id_4,
+            port=eg_port,
+            l4_dport=qos_utils.L4_DPORT_BEST_EFFORT_TRAFFIC_2)
 
-        print(f"ig_packets_1={ig_packets_1}\nig_packets_2={ig_packets_2}\nig_packets_3={ig_packets_3}")
+        print(f"ig_packets_1={ig_packets_1}\nig_packets_2={ig_packets_2}\nig_packets_3={ig_packets_3}\nig_packets_4={ig_packets_4}")
 
         self.assertGreater(
             ig_packets_1, 0, "No traffic has been received for source 1"
@@ -899,17 +854,20 @@ class BestEffortTrafficIsWrrScheduled(QosTest):
         self.assertGreater(
             ig_packets_3, 0, "No traffic has been received for source 3",
         )
+        self.assertGreater(
+            ig_packets_4, 0, "No traffic has been received for source 4",
+        )
 
         self.assertAlmostEqual(
             ig_packets_1,
             ig_packets_2,
-            delta=10,
+            delta=ig_packets_1 * 0.01,
             msg=f"All source should send the same amount of packets",
         )
         self.assertAlmostEqual(
-            ig_packets_1,
             ig_packets_3,
-            delta=10,
+            ig_packets_4,
+            delta=ig_packets_1 * 0.01,
             msg=f"All source should send the same amount of packets",
         )
 
@@ -917,16 +875,10 @@ class BestEffortTrafficIsWrrScheduled(QosTest):
             ELASTIC_1_WRR_WEIGHT + ELASTIC_2_WRR_WEIGHT + BEST_EFFORT_WRR_WEIGHT
         )
 
-        bytes_total = eg_bytes_1 + eg_bytes_2 + eg_bytes_3
+        bytes_total = eg_bytes_1 + eg_bytes_2 + eg_bytes_3 + eg_bytes_4
         bytes_share_1 = eg_bytes_1 / bytes_total
         bytes_share_2 = eg_bytes_2 / bytes_total
-        bytes_share_3 = eg_bytes_3 / bytes_total
-
-        real_bytes_total = bytes_total - ((eg_packets_1 + eg_packets_2 + eg_packets_3) * BMD_BYTES)
-
-        gbps = (real_bytes_total * 8 * 10**-9) / TRAFFIC_DURATION_SECONDS
-
-        print(f"gbps={gbps}")
+        bytes_share_3 = (eg_bytes_3 + eg_bytes_4) / bytes_total
 
         print(f"bytes_share_1={bytes_share_1}\nbytes_share_2={bytes_share_2}\nbytes_share_3={bytes_share_3}")
 
