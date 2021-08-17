@@ -4,8 +4,7 @@
 
 set -eu -o pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
-PTF_ROOT="${DIR}"/../..
-FABRIC_TNA_ROOT="${PTF_ROOT}"/..
+FABRIC_TNA_ROOT="${DIR}"/../../..
 PTF_FILTER=${PTF_FILTER:-}
 TREX_PARAMS=${TREX_PARAMS:-}
 PORT_MAP=${PORT_MAP:-}
@@ -29,7 +28,7 @@ fi
 echo "*** Testing profile '${fabricProfile}'..."
 
 sdeVer_=$(echo "${SDE_VERSION}" | tr . _) # Replace dots with underscores
-P4C_OUT=${FABRIC_TNA_ROOT}/p4src/build/${fabricProfile}/sde_${sdeVer_}
+P4C_OUT=p4src/build/${fabricProfile}/sde_${sdeVer_}
 echo "*** Using P4 compiler output in ${P4C_OUT}..."
 
 testerRunName=tester-${RANDOM}
@@ -41,15 +40,15 @@ it=$(test -t 0 && echo "-it" || echo "-t")
 docker run --name "${testerRunName}" "${it}" --rm \
     --network host \
     --privileged \
-    -v "${PTF_ROOT}":/fabric-tna \
-    -v "${FABRIC_TNA_ROOT}/ptf/run/hw/log":/tmp \
-    -v "${P4C_OUT}":/p4c-out \
+    -v "${FABRIC_TNA_ROOT}":/fabric-tna \
+    -v "${DIR}/log":/tmp \
     -v /etc/localtime:/etc/localtime \
+    -e P4C_OUT="${P4C_OUT}" \
     -e PTF_FILTER="${PTF_FILTER}" \
     -e SWITCH_ADDR="${SWITCH_ADDR}" \
     -e TREX_PARAMS="${TREX_PARAMS}" \
     -e PORT_MAP="${PORT_MAP}" \
     -e PTF_DIR="${PTF_DIR}" \
-    --entrypoint /fabric-tna/run/hw/start_test.sh \
+    --entrypoint /fabric-tna/ptf/run/hw/start_test.sh \
     "${TESTER_DOCKER_IMG}" \
     ${@}
