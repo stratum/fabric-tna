@@ -286,6 +286,12 @@ COLOR_GREEN = 0
 COLOR_YELLOW = 1
 COLOR_RED = 3
 
+STATS_INGRESS = "Ingress"
+STATS_EGRESS = "Egress"
+
+STATS_TABLE = "Fabric%s.stats.flows"
+STATS_ACTION = "Fabric%s.stats.count"
+
 # Implements helper function for SCTP as PTF does not provide one.
 def simple_sctp_packet(
     pktlen=100,
@@ -4553,3 +4559,123 @@ class SlicingTest(FabricTest):
 
     def enable_policing(self, slice_id, tc, color=COLOR_RED):
         self.add_queue_entry(slice_id, tc, None, color=color)
+
+
+class StatsTest(FabricTest):
+    """Mixin class with methods to manipulate stats tables and to verify
+    counters.
+
+    Most methods take a generic dictionary 'ftuple', expected to contain
+    values for the 5-tuple to match: ipv4_src, ipv4_dst, ip_proto, l4_sport, and
+    l4_dport.
+    """
+
+    def build_stats_matches(self, gress, stats_flow_id, port, **ftuple):
+        port_ = stringify(port, 2)
+        stats_flow_id_ = stringify(stats_flow_id, 2)
+        if gress == STATS_INGRESS:
+            matches = self.build_acl_matches(**ftuple)
+            matches.append(self.Exact("ig_port", port_))
+        else:
+            matches = []
+            matches.append(self.Exact("stats_flow_id", stats_flow_id_))
+            matches.append(self.Exact("eg_port", port_))
+        return matches
+
+    def build_stats_table_entry(self, gress, stats_flow_id, port, **ftuple):
+        table_entry = p4runtime_pb2.TableEntry()
+        table_name = STATS_TABLE % gress
+        table_entry.table_id = self.get_table_id(table_name)
+        table_entry.priority = DEFAULT_PRIORITY if gress == STATS_INGRESS else 0
+        matches = self.build_stats_matches(
+            gress=gress, stats_flow_id=stats_flow_id, port=port, **ftuple
+        )
+        self.set_match_key(table_entry, table_name, matches)
+        return table_entry
+
+    def reset_stats_counter(self, table_entry):
+        self.write_direct_counter(table_entry, 0, 0)
+
+    def get_stats_counter(self, gress, stats_flow_id, port, **ftuple):
+        # ONOS will read stats counters during flow rule reconciliation. Here we
+        # do the same by reading a TableEntry and extracting counter_data
+        # (instead of reading DirectCounterEntry).
+        req = self.get_new_read_request()
+        entity = req.entities.add()
+        entity.table_entry.CopyFrom(
+            self.build_stats_table_entry(
+                gress=gress, stats_flow_id=stats_flow_id, port=port, **ftuple
+            )
+        )
+        entity.table_entry.counter_data.CopyFrom(p4runtime_pb2.CounterData())
+        entities = self.read_request(req)
+        if self.generate_tv:
+            # TODO
+            return
+        if len(entities) != 1:
+            self.fail("Expected 1 table entry got %d" % len(entities))
+        entity = entities.pop()
+        if not entity.HasField("table_entry"):
+            self.fail("Expected table entry got something else")
+        counter_data = entity.table_entry.counter_data
+        return counter_data.byte_count, counter_data.packet_count
+
+    def verify_stats_counter(
+            self, gress, stats_flow_id, port, byte_count, pkt_count, **ftuple
+    ):
+        actual_byte_count, actual_pkt_count = self.get_stats_counter(
+            gress, stats_flow_id, port,  **ftuple)
+        if (
+                actual_byte_count != byte_count
+                or actual_pkt_count != pkt_count
+        ):
+            self.fail(
+                "Counter is not same as expected.\
+                \nActual packet count: %d, Expected packet count: %d\
+                \nActual byte count: %d, Expected byte count: %d\n"
+                % (
+                    actual_pkt_count,
+                    pkt_count,
+                    actual_byte_count,
+                    byte_count,
+                )
+            )
+
+    def add_stats_table_entry(self, gress, stats_flow_id, ports, **ftuple):
+        for port in ports:
+            matches = self.build_stats_matches(
+                gress=gress, stats_flow_id=stats_flow_id, port=port, **ftuple
+            )
+            if gress == STATS_INGRESS:
+                action_param = [("flow_id", stringify(stats_flow_id, 2))]
+            else:
+                action_param = []
+            self.send_request_add_entry_to_action(
+                STATS_TABLE % gress,
+                matches,
+                STATS_ACTION % gress,
+                action_param,
+                DEFAULT_PRIORITY if gress == STATS_INGRESS else 0,
+            )
+
+    def set_up_stats_flows(self, stats_flow_id, ig_port, eg_port, **ftuple):
+        self.add_stats_table_entry(
+            gress=STATS_INGRESS, stats_flow_id=stats_flow_id, ports=[ig_port],
+            **ftuple
+        )
+        self.add_stats_table_entry(
+            gress=STATS_EGRESS, stats_flow_id=stats_flow_id, ports=[eg_port], **ftuple
+        )
+        # FIXME: check P4RT spec, are counters reset upon table insert?
+        self.reset_stats_counter(
+            self.build_stats_table_entry(
+                gress=STATS_INGRESS, stats_flow_id=stats_flow_id, port=ig_port,
+                **ftuple
+            )
+        )
+        self.reset_stats_counter(
+            self.build_stats_table_entry(
+                gress=STATS_EGRESS, stats_flow_id=stats_flow_id, port=eg_port,
+                **ftuple
+            )
+        )

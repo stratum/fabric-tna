@@ -7,6 +7,8 @@
 
 import logging
 
+from ptf.testutils import group
+
 import gnmi_utils
 import qos_utils
 import yaml
@@ -18,6 +20,7 @@ from trex_test import TRexTest
 from trex_utils import *
 
 # General test parameter.
+LINK_RATE_BPS = 1 * G
 EXPECTED_FLOW_RATE_WITH_STATS_BPS = 1 * G
 TRAFFIC_DURATION_SECONDS = 10
 
@@ -122,6 +125,22 @@ class QosTest(TRexTest, SlicingTest):
             flow_stats=STLFlowLatencyStats(pg_id=pg_id),
         )
 
+    # Create a lower priority best-effort stream.
+    def create_best_effort_stream(
+            self,
+            pg_id,
+            dport=None,
+            l2_size=None,
+            l1_bps=None,
+            l2_bps=None,
+    ) -> STLStream:
+        pkt = qos_utils.get_best_effort_traffic_packet(l2_size=l2_size, dport=dport)
+        return STLStream(
+            packet=STLPktBuilder(pkt=pkt),
+            mode=STLTXCont(bps_L1=l1_bps, bps_L2=l2_bps),
+            flow_stats=STLFlowLatencyStats(pg_id=pg_id),
+        )
+
     # Create a second highest priority system stream.
     def create_system_stream(self, pg_id) -> STLStream:
         pkt = qos_utils.get_system_traffic_packet()
@@ -131,6 +150,171 @@ class QosTest(TRexTest, SlicingTest):
             isg=50000,  # wait 50 ms till start to let queues fill up
             flow_stats=STLFlowLatencyStats(pg_id=pg_id),
         )
+
+
+@group("trex-sw-mode")
+class CountersSanityTest(QosTest, StatsTest):
+    """
+    Compares Trex per-flow counters with switch P4 counters.
+    """
+
+    @autocleanup
+    def runTest(self) -> None:
+        self.push_chassis_config()
+        self.setup_basic_forwarding()
+        # Do not setup queue_classification or any other rule that might enforce QoS.
+        # All traffic should be treated as best-effort and use the same queue.
+
+        stream_bps = LINK_RATE_BPS
+
+        pg_id_1 = 1
+        pg_id_2 = 2
+        pg_id_3 = 3
+
+        dport_1 = 100
+        dport_2 = 200
+        dport_3 = 300
+
+        # Create multiple realtime streams, each one sending at the link rate.
+        rt_streams = [
+            self.create_best_effort_stream(
+                pg_id=pg_id_1,
+                l2_bps=stream_bps,
+                dport=dport_1,
+                l2_size=1400
+            ),
+            self.create_best_effort_stream(
+                pg_id=pg_id_2,
+                l2_bps=stream_bps,
+                dport=dport_2,
+                l2_size=1400
+            ),
+            self.create_best_effort_stream(
+                pg_id=pg_id_3,
+                l2_bps=stream_bps,
+                dport=dport_3,
+                l2_size=1400
+            ),
+        ]
+
+        switch_ig_port = self.port3
+        switch_eg_port = self.port2
+
+        self.set_up_stats_flows(
+            stats_flow_id=pg_id_1,
+            ig_port=switch_ig_port,
+            eg_port=switch_eg_port,
+            l4_dport=dport_1,
+        )
+        self.set_up_stats_flows(
+            stats_flow_id=pg_id_2,
+            ig_port=switch_ig_port,
+            eg_port=switch_eg_port,
+            l4_dport=dport_2,
+        )
+        self.set_up_stats_flows(
+            stats_flow_id=pg_id_3,
+            ig_port=switch_ig_port,
+            eg_port=switch_eg_port,
+            l4_dport=dport_3,
+        )
+
+        self.trex_client.add_streams(rt_streams, ports=PRIORITY_SENDER_PORT)
+        logging.info("Starting traffic, duration: %d sec", TRAFFIC_DURATION_SECONDS)
+        self.trex_client.start(
+            PRIORITY_SENDER_PORT, mult="1", duration=TRAFFIC_DURATION_SECONDS
+        )
+        logging.info("Waiting until all traffic is sent")
+        self.trex_client.wait_on_traffic(ports=PRIORITY_SENDER_PORT, rx_delay_ms=100)
+
+        # Get and print TREX stats
+        trex_stats = self.trex_client.get_stats()
+
+        flow_stats_1 = get_flow_stats(pg_id_1, trex_stats)
+        print(get_readable_flow_stats(flow_stats_1))
+        flow_stats_2 = get_flow_stats(pg_id_2, trex_stats)
+        print(get_readable_flow_stats(flow_stats_2))
+        flow_stats_3 = get_flow_stats(pg_id_3, trex_stats)
+        print(get_readable_flow_stats(flow_stats_3))
+
+        for port in ALL_PORTS:
+            readable_stats = get_readable_port_stats(trex_stats[port])
+            print("Statistics for port {}: {}".format(port, readable_stats))
+
+        # Get switch stats
+        ig_bytes_1, ig_packets_1 = self.get_stats_counter(
+            gress=STATS_INGRESS,
+            stats_flow_id=pg_id_1,
+            port=switch_ig_port,
+            l4_dport=dport_1)
+        ig_bytes_2, ig_packets_2 = self.get_stats_counter(
+            gress=STATS_INGRESS,
+            stats_flow_id=pg_id_2,
+            port=switch_ig_port,
+            l4_dport=dport_2)
+        ig_bytes_3, ig_packets_3 = self.get_stats_counter(
+            gress=STATS_INGRESS,
+            stats_flow_id=pg_id_3,
+            port=switch_ig_port,
+            l4_dport=dport_3)
+
+        eg_bytes_1, eg_packets_1 = self.get_stats_counter(
+            gress=STATS_EGRESS,
+            stats_flow_id=pg_id_1,
+            port=switch_eg_port,
+            l4_dport=dport_1)
+        eg_bytes_2, eg_packets_2 = self.get_stats_counter(
+            gress=STATS_EGRESS,
+            stats_flow_id=pg_id_2,
+            port=switch_eg_port,
+            l4_dport=dport_2)
+        eg_bytes_3, eg_packets_3 = self.get_stats_counter(
+            gress=STATS_EGRESS,
+            stats_flow_id=pg_id_3,
+            port=switch_eg_port,
+            l4_dport=dport_3)
+
+        # Trex TX counters should be the same as switch ingress counter
+        self.assertEqual(flow_stats_1.tx_packets, ig_packets_1)
+        self.assertEqual(flow_stats_2.tx_packets, ig_packets_2)
+        self.assertEqual(flow_stats_3.tx_packets, ig_packets_3)
+        self.assertEqual(flow_stats_1.tx_bytes, ig_bytes_1)
+        self.assertEqual(flow_stats_2.tx_bytes, ig_bytes_2)
+        self.assertEqual(flow_stats_3.tx_bytes, ig_bytes_3)
+
+        self.assertEqual(flow_stats_1.rx_packets, eg_packets_1)
+        self.assertEqual(flow_stats_2.rx_packets, eg_packets_2)
+        self.assertEqual(flow_stats_3.rx_packets, eg_packets_3)
+
+        # # no drops
+        # self.assertEqual(ig_packets_1, eg_packets_1)
+        # self.assertEqual(ig_packets_2, eg_packets_2)
+        # self.assertEqual(ig_packets_3, eg_packets_3)
+
+        # Switch egress bytes count will include bridged metadata
+        output_bytes_1 = eg_bytes_1 - eg_packets_1 * BMD_BYTES
+        output_bytes_2 = eg_bytes_2 - eg_packets_2 * BMD_BYTES
+        output_bytes_3 = eg_bytes_3 - eg_packets_3 * BMD_BYTES
+
+        self.assertEqual(flow_stats_1.rx_bytes, output_bytes_1)
+        self.assertEqual(flow_stats_2.rx_bytes, output_bytes_2)
+        self.assertEqual(flow_stats_3.rx_bytes, output_bytes_3)
+
+        bps_1 = output_bytes_1 * 8 / TRAFFIC_DURATION_SECONDS
+        print(f"bps_1={bps_1}")
+        bps_2 = output_bytes_2 * 8 / TRAFFIC_DURATION_SECONDS
+        print(f"bps_1={bps_2}")
+        bps_3 = output_bytes_3 * 8 / TRAFFIC_DURATION_SECONDS
+        print(f"bps_1={bps_3}")
+
+        self.assertAlmostEqual(bps_1, LINK_RATE_BPS / 3, delta=stream_bps * 0.01)
+        self.assertAlmostEqual(bps_2,  LINK_RATE_BPS / 3, delta=stream_bps * 0.01)
+        self.assertAlmostEqual(bps_3,  LINK_RATE_BPS / 3, delta=stream_bps * 0.01)
+
+        # For some reason the bps reported by Trex are always lower
+        # bps_sum = bps_1 + bps_2 + bps_3
+        # trex_rx_bps_L1 = trex_stats[RECEIVER_PORT[0]].get("rx_bps_L1", 0)
+        # self.assertAlmostEqual(trex_rx_bps_L1, bps_sum, delta=trex_rx_bps_L1 * 0.01)
 
 
 class MinFlowrateWithSoftwareLatencyMeasurement(QosTest):
