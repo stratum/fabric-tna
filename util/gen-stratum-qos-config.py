@@ -8,7 +8,7 @@ slicing/QoS model. The output of this script is meant to be appended to an exiti
 
 Usage:
 
-    ./gen-stratum-qos-config.py sample-qos-config.yml
+    ./gen-stratum-qos-config.py sample-qos-config.yaml
 
 Requirements:
 
