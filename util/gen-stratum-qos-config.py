@@ -8,7 +8,7 @@ slicing/QoS model. The output of this script is meant to be appended to an exiti
 
 Usage:
 
-    ./gen-stratum-qos-config.py sample-qos-config.yml
+    ./gen-stratum-qos-config.py sample-qos-config.yaml
 
 Requirements:
 
@@ -456,12 +456,15 @@ def vendor_config(yaml_config):
                 port_templates.append(temp)
                 # Shaping can only be applied to front-panel ports,
                 # it doesn't make sense to shape internal ports.
-                if port_template['is_shaping_enabled']:
-                    shaping_blobs.append(port_shaping_config(
-                        descr=port_template["descr"],
-                        port_id=port_id,
-                        rate_bps=port_template['rate_bps'],
-                        burst_bytes=port_template['shaping_burst_bytes']))
+                if port_template["is_shaping_enabled"]:
+                    shaping_blobs.append(
+                        port_shaping_config(
+                            descr=port_template["descr"],
+                            port_id=port_id,
+                            rate_bps=port_template["rate_bps"],
+                            burst_bytes=port_template["shaping_burst_bytes"],
+                        )
+                    )
         if "sdk_port_ids" in port_template:
             for sdk_port_id in port_template["sdk_port_ids"]:
                 temp["port_id"] = sdk_port_id

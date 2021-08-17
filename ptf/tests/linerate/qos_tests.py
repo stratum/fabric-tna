@@ -58,7 +58,7 @@ class QosTest(TRexTest, SlicingTest, StatsTest):
         self.control_pg_id = 7
         self.system_pg_id = 2
 
-    def push_chassis_config(self, yaml_file="qos-config.yml") -> None:
+    def push_chassis_config(self, yaml_file="qos-config.yaml") -> None:
         with open("../linerate/chassis_config.pb.txt", mode="rb") as file:
             chassis_config = file.read()
         # Auto-generate and append vendor_config
