@@ -489,9 +489,7 @@ def main():
 
     # if line rate test, set up and tear down TRex
     if args.trex_address is not None:
-        # TODO BEFORE MERGE: move initialization to TrexTest.setUp()
-        #  Re-inizialitize only if trex_args change between tests
-        # trex_daemon_client = CTRexClient(args.trex_address)
+        # FIXME: remove before merge
         trex_args = "--software --no-hw-flow-stat"
         trex_daemon_client = CTRexClient(args.trex_address, trex_args=trex_args)
         info("Starting TRex daemon client...")

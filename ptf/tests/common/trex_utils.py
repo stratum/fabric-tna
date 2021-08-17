@@ -152,6 +152,9 @@ FlowStats = collections.namedtuple(
     ],
 )
 
+SwitchStats = collections.namedtuple(
+    "SwitchStats", ["pg_id", "ig_packets", "eg_packets", "ig_bytes", "eg_bytes",],
+)
 
 PortStats = collections.namedtuple(
     "PortStats",
@@ -279,7 +282,7 @@ def get_readable_latency_stats(stats: LatencyStats) -> str:
 
 
 def get_readable_flow_stats(stats: FlowStats) -> str:
-    return f"""Flow info for pg_id {stats.pg_id}
+    return f"""Trex flow info for pg_id {stats.pg_id}
     TX packets: {stats.tx_packets} ({stats.tx_packets_share:.1%})
     RX packets: {stats.rx_packets} ({stats.rx_packets_share:.1%})
     TX bytes: {stats.tx_bytes} ({stats.tx_bytes_share:.1%})

@@ -4618,7 +4618,6 @@ class StatsTest(FabricTest):
         if not entity.HasField("table_entry"):
             self.fail("Expected table entry got something else")
         counter_data = entity.table_entry.counter_data
-        print(f"gress={gress}, id={stats_flow_id}, pkts={counter_data.packet_count}, bytes={counter_data.byte_count}")
         return counter_data.byte_count, counter_data.packet_count
 
     def verify_stats_counter(

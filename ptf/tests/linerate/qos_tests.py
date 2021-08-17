@@ -7,10 +7,14 @@
 
 import logging
 
+from ptf.testutils import group
+
 import gnmi_utils
 import qos_utils
+import yaml
 from base_test import *
 from fabric_test import *
+from stratum_qos_config import vendor_config
 from trex_stl_lib.api import STLFlowLatencyStats, STLPktBuilder, STLStream, STLTXCont
 from trex_test import TRexTest
 from trex_utils import *
@@ -54,14 +58,15 @@ class QosTest(TRexTest, SlicingTest, StatsTest):
         self.control_pg_id = 7
         self.system_pg_id = 2
 
-    def push_chassis_config(self, with_qos=True) -> None:
-        chassis_config = b""
-        if with_qos:
-            path = "../linerate/chassis_config_for_qos_strict_priority.pb.txt"
-        else:
-            path = "../linerate/chassis_config.pb.txt"
-        with open(path, mode="rb") as file:
+    def push_chassis_config(self, yaml_file="qos-config-1g.yml") -> None:
+        with open("../linerate/chassis_config.pb.txt", mode="rb") as file:
             chassis_config = file.read()
+        # Auto-generate and append vendor_config
+        with open(f"../linerate/{yaml_file}", "r") as file:
+            chassis_config += bytes("\n" + vendor_config(yaml.safe_load(file)), encoding="utf8")
+        # Write to disk for debugging
+        with open("../linerate/chassis_config.pb.txt.tmp", mode="wb") as file:
+            file.write(chassis_config)
         gnmi_utils.push_chassis_config(chassis_config)
 
     def setup_basic_forwarding(self) -> None:
@@ -158,55 +163,19 @@ class QosTest(TRexTest, SlicingTest, StatsTest):
             random_seed=pg_id,
         )
 
-    # Create a lower priority elastic stream.
-    def create_custom_stream(
+    # Create a lower priority best-effort stream.
+    def create_best_effort_stream(
             self,
             pg_id,
             dport=None,
             l2_size=None,
-            l2_size_range=None,
             l1_bps=None,
             l2_bps=None,
-            isg=0,
     ) -> STLStream:
-        vm = None
-        if l2_size_range is not None:
-            # Stream has random packet size
-            vm = get_random_pkt_trim_vm(
-                max_l2_size=max(l2_size_range), min_l2_size=min(l2_size_range),
-            )
-            l2_size = max(l2_size_range)
-        mode = None
         pkt = qos_utils.get_best_effort_traffic_packet(l2_size=l2_size, dport=dport)
         return STLStream(
-            packet=STLPktBuilder(pkt=pkt, vm=vm),
+            packet=STLPktBuilder(pkt=pkt),
             mode=STLTXCont(bps_L1=l1_bps, bps_L2=l2_bps),
-            isg=isg,
-            flow_stats=STLFlowLatencyStats(pg_id=pg_id),
-            random_seed=pg_id,
-        )
-
-    # Create a lower priority best-effort stream.
-    def create_best_effort_stream(
-        self,
-        pg_id,
-        l1_bps=LINK_RATE_BPS,
-        dport=qos_utils.L4_DPORT_BEST_EFFORT_TRAFFIC,
-        l2_size=750,
-        l2_size_range=None,
-    ) -> STLStream:
-        vm = None
-        if l2_size_range is not None:
-            # Stream has random packet size
-            vm = get_random_pkt_trim_vm(
-                max_l2_size=max(l2_size_range), min_l2_size=min(l2_size_range),
-            )
-            l2_size = max(l2_size_range)
-        pkt = qos_utils.get_best_effort_traffic_packet(l2_size=l2_size, dport=dport)
-        return STLStream(
-            packet=STLPktBuilder(pkt=pkt, vm=vm),
-            mode=STLTXCont(bps_L1=l1_bps),
-            isg=50000,  # wait 50 ms till start to let queues fill up
             flow_stats=STLFlowLatencyStats(pg_id=pg_id),
         )
 
@@ -221,10 +190,21 @@ class QosTest(TRexTest, SlicingTest, StatsTest):
         )
 
 
-class CountersSanityTest(QosTest):
+@group("trex-sw-mode")
+class CountersSanityTest(QosTest, StatsTest):
+    """
+    Compares Trex per-flow counters with switch P4 counters.
+    """
 
     @autocleanup
     def runTest(self) -> None:
+        self.push_chassis_config()
+        self.setup_basic_forwarding()
+        # Do not setup queue_classification or any other rule that might enforce QoS.
+        # All traffic should be treated as best-effort and use the same queue.
+
+        stream_bps = LINK_RATE_BPS
+
         pg_id_1 = 1
         pg_id_2 = 2
         pg_id_3 = 3
@@ -233,31 +213,23 @@ class CountersSanityTest(QosTest):
         dport_2 = 200
         dport_3 = 300
 
-        self.push_chassis_config(with_qos=False)
-        self.setup_basic_forwarding()
-        # Do not setup queue_classification or any other rule
-        # that might enforce QoS.
-
-        streambps = 1 * G
-
-        # Create multiple realtime streams. Stream 1 and 2 send more than the
-        # alloted rate, while stream 3 is well behaved.
+        # Create multiple realtime streams, each one sending at the link rate.
         rt_streams = [
-            self.create_custom_stream(
+            self.create_best_effort_stream(
                 pg_id=pg_id_1,
-                l2_bps=streambps,
+                l2_bps=stream_bps,
                 dport=dport_1,
                 l2_size=1400
             ),
-            self.create_custom_stream(
+            self.create_best_effort_stream(
                 pg_id=pg_id_2,
-                l2_bps=streambps,
+                l2_bps=stream_bps,
                 dport=dport_2,
                 l2_size=1400
             ),
-            self.create_custom_stream(
+            self.create_best_effort_stream(
                 pg_id=pg_id_3,
-                l2_bps=streambps,
+                l2_bps=stream_bps,
                 dport=dport_3,
                 l2_size=1400
             ),
@@ -286,21 +258,28 @@ class CountersSanityTest(QosTest):
         )
 
         self.trex_client.add_streams(rt_streams, ports=PRIORITY_SENDER_PORT)
-        # Start sending traffic
         logging.info("Starting traffic, duration: %d sec", TRAFFIC_DURATION_SECONDS)
         self.trex_client.start(
             PRIORITY_SENDER_PORT, mult="1", duration=TRAFFIC_DURATION_SECONDS
         )
         logging.info("Waiting until all traffic is sent")
         self.trex_client.wait_on_traffic(ports=PRIORITY_SENDER_PORT, rx_delay_ms=100)
-        # Get latency stats
+
+        # Get and print TREX stats
         trex_stats = self.trex_client.get_stats()
-        # Check RT stream 1
+
+        flow_stats_1 = get_flow_stats(pg_id_1, trex_stats)
+        print(get_readable_flow_stats(flow_stats_1))
+        flow_stats_2 = get_flow_stats(pg_id_2, trex_stats)
+        print(get_readable_flow_stats(flow_stats_2))
+        flow_stats_3 = get_flow_stats(pg_id_3, trex_stats)
+        print(get_readable_flow_stats(flow_stats_3))
 
         for port in ALL_PORTS:
             readable_stats = get_readable_port_stats(trex_stats[port])
             print("Statistics for port {}: {}".format(port, readable_stats))
 
+        # Get switch stats
         ig_bytes_1, ig_packets_1 = self.get_stats_counter(
             gress=STATS_INGRESS,
             stats_flow_id=pg_id_1,
@@ -333,15 +312,7 @@ class CountersSanityTest(QosTest):
             port=switch_eg_port,
             l4_dport=dport_3)
 
-        flow_stats_1 = get_flow_stats(pg_id_1, trex_stats)
-        print(get_readable_flow_stats(flow_stats_1))
-
-        flow_stats_2 = get_flow_stats(pg_id_2, trex_stats)
-        print(get_readable_flow_stats(flow_stats_2))
-
-        flow_stats_3 = get_flow_stats(pg_id_3, trex_stats)
-        print(get_readable_flow_stats(flow_stats_3))
-
+        # Trex TX counters should be the same as switch ingress counter
         self.assertEqual(flow_stats_1.tx_packets, ig_packets_1)
         self.assertEqual(flow_stats_2.tx_packets, ig_packets_2)
         self.assertEqual(flow_stats_3.tx_packets, ig_packets_3)
@@ -353,22 +324,15 @@ class CountersSanityTest(QosTest):
         self.assertEqual(flow_stats_2.rx_packets, eg_packets_2)
         self.assertEqual(flow_stats_3.rx_packets, eg_packets_3)
 
-        # no drops
-        self.assertEqual(ig_packets_1, eg_packets_1)
-        self.assertEqual(ig_packets_2, eg_packets_2)
-        self.assertEqual(ig_packets_3, eg_packets_3)
+        # # no drops
+        # self.assertEqual(ig_packets_1, eg_packets_1)
+        # self.assertEqual(ig_packets_2, eg_packets_2)
+        # self.assertEqual(ig_packets_3, eg_packets_3)
 
         # Switch egress bytes count will include bridged metadata
-        excess_bytes_1 = eg_packets_1 * BMD_BYTES
-        print(f"excess_bytes_1={excess_bytes_1}")
-        excess_bytes_2 = eg_packets_2 * BMD_BYTES
-        print(f"excess_bytes_2={excess_bytes_2}")
-        excess_bytes_3 = eg_packets_3 * BMD_BYTES
-        print(f"excess_bytes_3={excess_bytes_3}")
-
-        output_bytes_1 = eg_bytes_1 - excess_bytes_1
-        output_bytes_2 = eg_bytes_2 - excess_bytes_2
-        output_bytes_3 = eg_bytes_3 - excess_bytes_3
+        output_bytes_1 = eg_bytes_1 - eg_packets_1 * BMD_BYTES
+        output_bytes_2 = eg_bytes_2 - eg_packets_2 * BMD_BYTES
+        output_bytes_3 = eg_bytes_3 - eg_packets_3 * BMD_BYTES
 
         self.assertEqual(flow_stats_1.rx_bytes, output_bytes_1)
         self.assertEqual(flow_stats_2.rx_bytes, output_bytes_2)
@@ -381,11 +345,14 @@ class CountersSanityTest(QosTest):
         bps_3 = output_bytes_3 * 8 / TRAFFIC_DURATION_SECONDS
         print(f"bps_1={bps_3}")
 
-        rx_bps_L1 = trex_stats[RECEIVER_PORT[0]].get("rx_bps_L1", 0)
+        self.assertAlmostEqual(bps_1, LINK_RATE_BPS / 3, delta=stream_bps * 0.01)
+        self.assertAlmostEqual(bps_2,  LINK_RATE_BPS / 3, delta=stream_bps * 0.01)
+        self.assertAlmostEqual(bps_3,  LINK_RATE_BPS / 3, delta=stream_bps * 0.01)
 
-        self.assertAlmostEqual(bps_1, streambps, delta=streambps * 0.01)
-        self.assertAlmostEqual(bps_2, streambps, delta=streambps * 0.01)
-        self.assertAlmostEqual(bps_3, streambps, delta=streambps * 0.01)
+        # For some reason the bps reported by Trex are always lower
+        # bps_sum = bps_1 + bps_2 + bps_3
+        # trex_rx_bps_L1 = trex_stats[RECEIVER_PORT[0]].get("rx_bps_L1", 0)
+        # self.assertAlmostEqual(trex_rx_bps_L1, bps_sum, delta=trex_rx_bps_L1 * 0.01)
 
 
 class MinFlowrateWithSoftwareLatencyMeasurement(QosTest):

@@ -3,8 +3,8 @@
 # SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 # -*- utf-8 -*-
 """
-Generates a snippet of Stratum's chassis_config file with a vendor_config blob for Tofino that
-realizes the SD-Fabric slicing/QoS model.
+Generates vendor_config snippets for Stratum's chassis_config that realizes the SD-Fabric
+slicing/QoS model. The output of this script is meant to be appended to an exiting chassis config.
 
 Usage:
 
@@ -75,11 +75,6 @@ def format_bps(bps):
     return f"{round(bps, 1)}{power_labels[n]}bps"
 
 
-# Global control variable, will be populated at runtime.
-# Stores the sum of base_use_limit (bul) reservations for all pools.
-used_pool_buls = [0, 0, 0, 0]
-
-
 def queue_mapping(
     descr,
     queue_id,
@@ -121,9 +116,6 @@ def queue_mapping(
     queue_max_bytes = (base_use_limit + pool_size * baf / 100) * CELL_BYTES
     queue_max_mtus = floor(queue_max_bytes / DEFAULT_MTU_BYTES)
 
-    global used_pool_buls
-    used_pool_buls[app_pool] += base_use_limit
-
     return f"""          queue_mapping {{
             # {descr}
             queue_id: {queue_id}
@@ -154,6 +146,7 @@ def queue_config(
     el_min_rates_bps,
     port_rates_bps,
     pool_sizes,
+    used_pool_buls,
 ):
     """
     Returns the queue_config blob for the given port and slices' allocations.
@@ -225,6 +218,7 @@ def queue_config(
         max_burst_bytes=ct_max_burst_bytes,
         port_rate_bps=port_rate_bps,
     )
+    used_pool_buls[CT_APP_POOL] += ct_base_use_limit
 
     # -- REAL-TIME
     # Each slice requesting Real-Time service gets a dedicated queue, shaped to the given max rate
@@ -292,6 +286,7 @@ def queue_config(
             max_burst_bytes=rt_max_burst_bytes,
             port_rate_bps=port_rate_bps,
         )
+        used_pool_buls[RT_APP_POOL] += rt_base_use_limits[i]
 
     # -- ELASTIC
     # Each slice requesting Elastic service gets a dedicated queue, dimensioned to guarantee the
@@ -353,6 +348,7 @@ def queue_config(
             pool_size=pool_size,
             port_rate_bps=port_rate_bps,
         )
+        used_pool_buls[app_pool] += base_use_limit
 
     # Check that we have enough queues.
     used_queues = 1 + rt_queue_count + el_queue_count
@@ -516,11 +512,15 @@ def vendor_config(yaml_config):
         )
     )
 
+    # Control variable: stores the sum of base_use_limit (bul) reservations for all pools.
+    used_pool_buls = [0, 0, 0, 0]
+
     for port in port_templates:
         queue_blobs.append(
             queue_config(
                 **port,
                 port_rates_bps=[x["port_rate_bps"] for x in port_templates],
+                used_pool_buls=used_pool_buls,
                 **slicing_template,
             )
         )
