@@ -3,7 +3,10 @@
 package org.stratumproject.fabric.tna.slicing.api;
 
 import org.onosproject.net.flow.TrafficTreatment;
+import org.stratumproject.fabric.tna.slicing.QueueStoreValue;
+import org.stratumproject.fabric.tna.slicing.SliceStoreKey;
 
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -61,6 +64,13 @@ public interface SlicingService {
     Set<TrafficClass> getTrafficClasses(SliceId sliceId);
 
     /**
+     * Gets all entries in the slice store.
+     *
+     * @return map of slice store
+     */
+    Map<SliceStoreKey, QueueId> getSliceStore();
+
+    /**
      * Associates flow identified by given treatment with given slice ID and traffic class.
      *
      * @param treatment flow identifier
@@ -105,4 +115,11 @@ public interface SlicingService {
      * @return true if the queue is successfully released from the queue pool of given TC
      */
     boolean releaseQueue(QueueId queueId);
+
+    /**
+     * Gets all entries in the queue store.
+     *
+     * @return map of queue store
+     */
+    Map<QueueId, QueueStoreValue> getQueueStore();
 }

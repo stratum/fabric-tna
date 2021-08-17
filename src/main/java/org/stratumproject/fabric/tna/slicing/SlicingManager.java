@@ -218,6 +218,11 @@ public class SlicingManager implements SlicingService {
     }
 
     @Override
+    public Map<SliceStoreKey, QueueId> getSliceStore() {
+        return Map.copyOf(sliceStore.asJavaMap());
+    }
+
+    @Override
     public boolean addFlow(TrafficTreatment treatment, SliceId sliceId, TrafficClass tc) {
         throw new NotImplementedException("addFlow is not implemented in Slicing Manager");
     }
@@ -268,6 +273,11 @@ public class SlicingManager implements SlicingService {
         });
 
         return result.get();
+    }
+
+    @Override
+    public Map<QueueId, QueueStoreValue> getQueueStore() {
+        return Map.copyOf(queueStore.asJavaMap());
     }
 
     private QueueId allocateQueue(TrafficClass tc) {
