@@ -253,11 +253,11 @@ public class FabricUpfTranslator {
         var ifaceBuilder = UpfInterface.builder()
                 .setPrefix(FabricUpfTranslatorUtil.getFieldPrefix(match, HDR_IPV4_DST_ADDR));
 
-        if (action.id() == FABRIC_INGRESS_SPGW_IFACE_ACCESS) {
+        if (action.id().equals(FABRIC_INGRESS_SPGW_IFACE_ACCESS)) {
             ifaceBuilder.setAccess();
-        } else if (action.id() == FABRIC_INGRESS_SPGW_IFACE_CORE) {
+        } else if (action.id().equals(FABRIC_INGRESS_SPGW_IFACE_CORE)) {
             ifaceBuilder.setCore();
-        } else if (action.id() == FABRIC_INGRESS_SPGW_IFACE_DBUF) {
+        } else if (action.id().equals(FABRIC_INGRESS_SPGW_IFACE_DBUF)) {
             ifaceBuilder.setDbufReceiver();
         } else {
             throw new UpfProgrammableException("Invalid action ID");
