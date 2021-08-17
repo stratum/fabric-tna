@@ -142,40 +142,29 @@ class QosTest(TRexTest, SlicingTest, StatsTest):
     def create_elastic_stream(
         self,
         pg_id,
-        l1_bps=None,
-        l2_bps=None,
+        l1_bps=LINK_RATE_BPS,
         dport=qos_utils.L4_DPORT_ELASTIC_TRAFFIC_1,
         l2_size=750,
-        l2_size_range=None,
     ) -> STLStream:
-        vm = None
-        if l2_size_range is not None:
-            # Stream has random packet size
-            vm = get_random_pkt_trim_vm(
-                max_l2_size=max(l2_size_range), min_l2_size=min(l2_size_range),
-            )
-            l2_size = max(l2_size_range)
         pkt = qos_utils.get_elastic_traffic_packet(l2_size=l2_size, dport=dport)
         return STLStream(
-            packet=STLPktBuilder(pkt=pkt, vm=vm),
-            mode=STLTXCont(bps_L1=l1_bps, bps_L2=l2_bps),
+            packet=STLPktBuilder(pkt=pkt),
+            mode=STLTXCont(bps_L1=l1_bps),
             flow_stats=STLFlowLatencyStats(pg_id=pg_id),
-            random_seed=pg_id,
         )
 
     # Create a lower priority best-effort stream.
     def create_best_effort_stream(
             self,
             pg_id,
-            dport=None,
-            l2_size=None,
-            l1_bps=None,
-            l2_bps=None,
+            dport=qos_utils.L4_DPORT_BEST_EFFORT_TRAFFIC_1,
+            l1_bps=LINK_RATE_BPS,
+            l2_size=750,
     ) -> STLStream:
         pkt = qos_utils.get_best_effort_traffic_packet(l2_size=l2_size, dport=dport)
         return STLStream(
             packet=STLPktBuilder(pkt=pkt),
-            mode=STLTXCont(bps_L1=l1_bps, bps_L2=l2_bps),
+            mode=STLTXCont(bps_L1=l1_bps),
             flow_stats=STLFlowLatencyStats(pg_id=pg_id),
         )
 

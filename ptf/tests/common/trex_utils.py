@@ -315,32 +315,6 @@ def get_flow_stats(pg_id: int, stats) -> FlowStats:
     return ret
 
 
-# Returns a field engine to randomize packet size by trimming them
-def get_random_pkt_trim_vm(max_l2_size, min_l2_size):
-    l3_len_fix = -IP_HDR_BYTES
-    l4_len_fix = -(IP_HDR_BYTES + UDP_HDR_BYTES)
-    return STLScVmRaw(
-        [
-            # Create random variable
-            STLVmFlowVar(
-                name="fv_rand",
-                min_value=min_l2_size,
-                max_value=max_l2_size,
-                size=2,
-                op="random",
-            ),
-            # Trim pkt using random variable
-            STLVmTrimPktSize("fv_rand"),
-            # Fix IP len
-            STLVmWrFlowVar(fv_name="fv_rand", pkt_offset="IP.len", add_val=l3_len_fix),
-            # Fix IP checksum
-            STLVmFixIpv4(offset="IP"),
-            # Fix UDP len
-            STLVmWrFlowVar(fv_name="fv_rand", pkt_offset="UDP.len", add_val=l4_len_fix),
-        ]
-    )
-
-
 class ParseExtendArgAction(argparse.Action):
     def __init__(self, option_strings, dest, nargs=None, **kwargs):
         if nargs:
