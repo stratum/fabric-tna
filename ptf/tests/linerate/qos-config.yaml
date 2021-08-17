@@ -33,8 +33,8 @@ elastic_min_rates_bps:
 
 port_templates:
   - descr: "Base station"
-    rate_bps: 40000000000 # 40 Gbps
-    is_shaping_enabled: false
+    rate_bps: 1000000000 # 1 Gbps
+    is_shaping_enabled: true
     shaping_burst_bytes: 18000 # 2x jumbo frames
     queue_count: 16
     port_ids:

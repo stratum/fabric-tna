@@ -20,9 +20,9 @@ from trex_test import TRexTest
 from trex_utils import *
 
 # General test parameter.
-LINK_RATE_BPS = 40 * G
+LINK_RATE_BPS = 1 * G
 EXPECTED_FLOW_RATE_WITH_STATS_BPS = 1 * G
-TRAFFIC_DURATION_SECONDS = 10
+TRAFFIC_DURATION_SECONDS = 5
 
 # Maximum queue rates as per ChassisConfig.
 CONTROL_QUEUE_MAX_RATE_BPS = 60 * M
@@ -142,7 +142,8 @@ class QosTest(TRexTest, SlicingTest, StatsTest):
     def create_elastic_stream(
         self,
         pg_id,
-        l1_bps=LINK_RATE_BPS,
+        l1_bps=None,
+        l2_bps=None,
         dport=qos_utils.L4_DPORT_ELASTIC_TRAFFIC_1,
         l2_size=750,
         l2_size_range=None,
@@ -157,8 +158,7 @@ class QosTest(TRexTest, SlicingTest, StatsTest):
         pkt = qos_utils.get_elastic_traffic_packet(l2_size=l2_size, dport=dport)
         return STLStream(
             packet=STLPktBuilder(pkt=pkt, vm=vm),
-            mode=STLTXCont(bps_L1=l1_bps),
-            isg=50000,  # wait 50 ms till start to let queues fill up
+            mode=STLTXCont(bps_L1=l1_bps, bps_L2=l2_bps),
             flow_stats=STLFlowLatencyStats(pg_id=pg_id),
             random_seed=pg_id,
         )
@@ -708,16 +708,25 @@ class ElasticTrafficIsWrrScheduled(QosTest):
         self.setup_basic_forwarding()
         self.setup_queue_classification()
 
+        weight_total = (
+            ELASTIC_1_WRR_WEIGHT + ELASTIC_2_WRR_WEIGHT + BEST_EFFORT_WRR_WEIGHT
+        )
+        weight_1 = ELASTIC_1_WRR_WEIGHT / weight_total
+        weight_2 = ELASTIC_2_WRR_WEIGHT / weight_total
+        weight_3 = BEST_EFFORT_WRR_WEIGHT / weight_total
+
+        in_bps = LINK_RATE_BPS * 1.1
+
         streams1 = [
             self.create_elastic_stream(
                 1,
-                l1_bps=20 * G,
+                l1_bps=weight_1 * in_bps,
                 dport=qos_utils.L4_DPORT_ELASTIC_TRAFFIC_1,
                 l2_size=1400,
             ),
             self.create_best_effort_stream(
                 best_effort_pg_id_3,
-                l1_bps=10 * G,
+                l1_bps=weight_3/2 * in_bps,
                 dport=qos_utils.L4_DPORT_BEST_EFFORT_TRAFFIC_1,
                 l2_size=1400,
             ),
@@ -726,13 +735,13 @@ class ElasticTrafficIsWrrScheduled(QosTest):
         streams2 = [
             self.create_elastic_stream(
                 elastic_pg_id_2,
-                l1_bps=20 * G,
+                l1_bps=weight_2 * in_bps,
                 dport=qos_utils.L4_DPORT_ELASTIC_TRAFFIC_2,
                 l2_size=1400,
             ),
             self.create_best_effort_stream(
                 best_effort_pg_id_4,
-                l1_bps=10 * G,
+                l1_bps=weight_3/2 * in_bps,
                 dport=qos_utils.L4_DPORT_BEST_EFFORT_TRAFFIC_2,
                 l2_size=1400,
             ),
@@ -828,62 +837,41 @@ class ElasticTrafficIsWrrScheduled(QosTest):
 
         print(f"ig_packets_1={ig_packets_1}\nig_packets_2={ig_packets_2}\nig_packets_3={ig_packets_3}\nig_packets_4={ig_packets_4}")
 
-        self.assertGreater(
-            ig_packets_1, 0, "No traffic has been received for source 1"
-        )
-        self.assertGreater(
-            ig_packets_2, 0, "No traffic has been received for source 2"
-        )
-        self.assertGreater(
-            ig_packets_3, 0, "No traffic has been received for source 3",
-        )
-        self.assertGreater(
-            ig_packets_4, 0, "No traffic has been received for source 4",
-        )
+        ig_bps_1 = ig_bytes_1 * 8 / TRAFFIC_DURATION_SECONDS
+        ig_bps_2 = ig_bytes_2 * 8 / TRAFFIC_DURATION_SECONDS
+        ig_bps_3 = (ig_bytes_3 + ig_bytes_4) * 8 / TRAFFIC_DURATION_SECONDS
 
-        self.assertAlmostEqual(
-            ig_packets_1,
-            ig_packets_2,
-            delta=ig_packets_1 * 0.01,
-            msg=f"All source should send the same amount of packets",
-        )
-        self.assertAlmostEqual(
-            ig_packets_3,
-            ig_packets_4,
-            delta=ig_packets_1 * 0.01,
-            msg=f"All source should send the same amount of packets",
-        )
+        # We should generate enough traffic to fill up all queues
+        self.assertGreater(ig_bps_1, LINK_RATE_BPS * weight_1)
+        self.assertGreater(ig_bps_2, LINK_RATE_BPS * weight_2)
+        self.assertGreater(ig_bps_3, LINK_RATE_BPS * weight_3)
 
-        weight_total = (
-            ELASTIC_1_WRR_WEIGHT + ELASTIC_2_WRR_WEIGHT + BEST_EFFORT_WRR_WEIGHT
-        )
+        eg_bytes_total = eg_bytes_1 + eg_bytes_2 + eg_bytes_3 + eg_bytes_4
+        eg_bytes_share_1 = eg_bytes_1 / eg_bytes_total
+        eg_bytes_share_2 = eg_bytes_2 / eg_bytes_total
+        eg_bytes_share_3 = (eg_bytes_3 + eg_bytes_4) / eg_bytes_total
 
-        bytes_total = eg_bytes_1 + eg_bytes_2 + eg_bytes_3 + eg_bytes_4
-        bytes_share_1 = eg_bytes_1 / bytes_total
-        bytes_share_2 = eg_bytes_2 / bytes_total
-        bytes_share_3 = (eg_bytes_3 + eg_bytes_4) / bytes_total
-
-        print(f"bytes_share_1={bytes_share_1}\nbytes_share_2={bytes_share_2}\nbytes_share_3={bytes_share_3}")
+        print(f"bytes_share_1={eg_bytes_share_1}\nbytes_share_2={eg_bytes_share_2}\nbytes_share_3={eg_bytes_share_3}")
 
         for port in ALL_PORTS:
             readable_stats = get_readable_port_stats(stats[port])
             print("Statistics for port {}: {}".format(port, readable_stats))
 
         self.assertAlmostEqual(
-            bytes_share_1,
+            eg_bytes_share_1,
             ELASTIC_1_WRR_WEIGHT / weight_total,
-            delta=0.005,
+            delta=0.008,
             msg=f"Elastic source 1 was not scheduled as expected",
         )
         self.assertAlmostEqual(
-            bytes_share_2,
+            eg_bytes_share_2,
             ELASTIC_2_WRR_WEIGHT / weight_total,
-            delta=0.005,
+            delta=0.008,
             msg=f"Elastic source 2 was not scheduled as expected",
         )
         self.assertAlmostEqual(
-            bytes_share_3,
+            eg_bytes_share_3,
             BEST_EFFORT_WRR_WEIGHT / weight_total,
-            delta=0.005,
+            delta=0.008,
             msg=f"Best-effort source 3 was not scheduled as expected",
         )
