@@ -109,6 +109,7 @@ public class SlicingManager implements SlicingService {
                 .withSerializer(Serializer.using(serializer.build()))
                 .build();
         sliceListener = new InternalSliceListener();
+        sliceStore.addListener(sliceListener);
         sliceExecutor =  Executors.newSingleThreadExecutor(groupedThreads("fabric-tna-slice-event", "%d", log));
 
         queueStore = storageService.<QueueId, QueueStoreValue>consistentMapBuilder()
@@ -117,6 +118,7 @@ public class SlicingManager implements SlicingService {
                 .withSerializer(Serializer.using(serializer.build()))
                 .build();
         queueListener = new InternalQueueListener();
+        queueStore.addListener(queueListener);
         queueExecutor =  Executors.newSingleThreadExecutor(groupedThreads("fabric-tna-queue-event", "%d", log));
 
         // Shared queues are pre-provisioned and always available
