@@ -5,10 +5,10 @@ from datetime import datetime
 
 from base_test import *
 from fabric_test import *
+from ptf.testutils import group
 from trex_test import TRexTest
 from trex_utils import list_port_status
 from xnt import analyze_report_pcap
-from ptf.testutils import group
 
 TRAFFIC_SPEEDUP = 1.0
 TEST_DURATION = 60
