@@ -17,8 +17,8 @@ public class QueueStoreGetCommand extends AbstractShellCommand {
     @Override
     protected void doExecute() {
         SlicingService slicingService = getService(SlicingService.class);
-        slicingService.getQueueStore().forEach((k, v) -> {
-            print("%s -> %s", k, v);
+        slicingService.getQueueStore().entrySet().stream().sorted().forEach(e -> {
+            print("%s -> %s", e.getKey(), e.getValue());
         });
     }
 }

@@ -17,8 +17,8 @@ public class SliceStoreGetCommand extends AbstractShellCommand {
     @Override
     protected void doExecute() {
         SlicingService slicingService = getService(SlicingService.class);
-        slicingService.getSliceStore().forEach((k, v) -> {
-            print("%s -> %s", k, v);
+        slicingService.getSliceStore().entrySet().stream().sorted().forEach(e -> {
+            print("%s -> %s", e.getKey(), e.getValue());
         });
     }
 }
