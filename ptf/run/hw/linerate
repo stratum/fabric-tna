@@ -6,10 +6,12 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
 FABRIC_TNA_ROOT="${DIR}"/../../..
 # shellcheck source=.env
 source "${FABRIC_TNA_ROOT}"/.env
-export TREX_PARAMS="--trex-address ${TREX_ADDR} \
+export TREX_PARAMS="${TREX_PARAMS:-} --trex-address ${TREX_ADDR} \
                     --trex-config /fabric-tna/ptf/run/hw/trex-config/4-ports-with-l2.yaml"
 export PORT_MAP="/fabric-tna/ptf/run/hw/port_map.trex.json"
 export PTF_DIR="/fabric-tna/ptf/tests/linerate"
+export PTF_FILTER="${PTF_FILTER:-} ^trex-sw-mode"
+
 # shellcheck source=ptf/run/hw/base.sh
 # shellcheck disable=SC2068
 exec bash "${DIR}/base.sh" ${@}
