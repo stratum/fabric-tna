@@ -7,6 +7,7 @@ import org.onlab.util.Identifier;
 import static com.google.common.base.Preconditions.checkArgument;
 import static org.stratumproject.fabric.tna.behaviour.Constants.QUEUE_ID_BEST_EFFORT;
 import static org.stratumproject.fabric.tna.behaviour.Constants.QUEUE_ID_CONTROL;
+import static org.stratumproject.fabric.tna.behaviour.Constants.QUEUE_ID_SYSTEM;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_EGRESS_QID_BITWIDTH;
 
 /**
@@ -15,7 +16,7 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_EGRESS
 public final class QueueId extends Identifier<Integer> {
     public static final Integer MAX = 1 << HDR_EGRESS_QID_BITWIDTH - 1;
     public static final QueueId BEST_EFFORT = QueueId.of(QUEUE_ID_BEST_EFFORT);
-    public static final QueueId SYSTEM = QueueId.of(QUEUE_ID_CONTROL);
+    public static final QueueId SYSTEM = QueueId.of(QUEUE_ID_SYSTEM);
     public static final QueueId CONTROL = QueueId.of(QUEUE_ID_CONTROL);
 
     private QueueId(int id) {

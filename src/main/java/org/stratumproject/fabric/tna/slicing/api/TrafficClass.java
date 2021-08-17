@@ -14,7 +14,8 @@ public enum TrafficClass {
     BEST_EFFORT(TC_BEST_EFFORT),
     CONTROL(TC_CONTROL),
     REAL_TIME(TC_REAL_TIME),
-    ELASTIC(TC_ELASTIC);
+    ELASTIC(TC_ELASTIC),
+    SYSTEM(-1); // For reserving SYSTEM queue only. Not used for table programming
 
     public final int tc;
 

@@ -118,6 +118,11 @@ public class SlicingManager implements SlicingService {
         queueListener = new InternalQueueListener();
         queueExecutor =  Executors.newSingleThreadExecutor(groupedThreads("fabric-tna-queue-event", "%d", log));
 
+        // Shared queues are pre-provisioned and always available
+        queueStore.put(QueueId.BEST_EFFORT, new QueueStoreValue(TrafficClass.BEST_EFFORT, true));
+        queueStore.put(QueueId.SYSTEM, new QueueStoreValue(TrafficClass.SYSTEM, true));
+        queueStore.put(QueueId.CONTROL, new QueueStoreValue(TrafficClass.CONTROL, true));
+
         log.info("Started");
     }
 
@@ -176,7 +181,7 @@ public class SlicingManager implements SlicingService {
                 return null;
             }
 
-            log.debug("Allocate queue {} for slice {} tc {}", queueId, sliceId, tc);
+            log.info("Allocate queue {} for slice {} tc {}", queueId, sliceId, tc);
             result.set(true);
             return queueId;
         });
@@ -196,7 +201,7 @@ public class SlicingManager implements SlicingService {
             }
 
             deallocateQueue(v);
-            log.debug("Deallocate queue {} for slice {} tc {}", v, sliceId, tc);
+            log.info("Deallocate queue {} for slice {} tc {}", v, sliceId, tc);
             result.set(true);
             return null;
         });
@@ -236,7 +241,7 @@ public class SlicingManager implements SlicingService {
                 log.warn("Queue {} has already been allocated to TC {}", k, v);
                 return v;
             }
-            log.debug("Queue {} successfully reserved for TC {}", k, tc);
+            log.info("Queue {} successfully reserved for TC {}", k, tc);
             result.set(true);
             return new QueueStoreValue(tc, true);
         });
@@ -257,7 +262,7 @@ public class SlicingManager implements SlicingService {
                log.warn("Queue {} in use", queueId);
                return v;
             }
-            log.debug("Queue {} is released from TC {}", queueId, v.trafficClass());
+            log.info("Queue {} is released from TC {}", queueId, v.trafficClass());
             result.set(true);
             return null;
         });
@@ -266,29 +271,29 @@ public class SlicingManager implements SlicingService {
     }
 
     private QueueId allocateQueue(TrafficClass tc) {
-        if (tc == TrafficClass.BEST_EFFORT) {
-            return QueueId.BEST_EFFORT;
-        } else if (tc == TrafficClass.CONTROL) {
-            return QueueId.CONTROL;
-        } else {
-            Optional<QueueId> queueId = queueStore.stream()
-                    .filter(e -> e.getValue().value().trafficClass() == tc)
-                    .filter(e -> e.getValue().value().available())
-                    .findFirst()
-                    .map(Map.Entry::getKey);
+        Optional<QueueId> queueId = queueStore.stream()
+                .filter(e -> e.getValue().value().trafficClass() == tc)
+                .filter(e -> e.getValue().value().available())
+                .findFirst()
+                .map(Map.Entry::getKey);
 
-            if (queueId.isPresent()) {
+        if (queueId.isPresent()) {
+            // Don't mark shared queues as they are always available.
+            if (tc != TrafficClass.BEST_EFFORT &&
+                    tc != TrafficClass.SYSTEM &&
+                    tc != TrafficClass.CONTROL) {
                 queueStore.compute(queueId.get(), (k, v) -> {
                     v.setAvailable(false);
                     return v;
                 });
-                log.debug("Allocated queue {} to TC {}", queueId.get(), tc);
-                return queueId.get();
-            } else {
-                log.warn("No queue available for TC {}", tc);
-                return null;
             }
+            log.info("Allocated queue {} to TC {}", queueId.get(), tc);
+            return queueId.get();
+        } else {
+            log.warn("No queue available for TC {}", tc);
+            return null;
         }
+
     }
 
     private boolean deallocateQueue(QueueId queueId) {
@@ -309,12 +314,12 @@ public class SlicingManager implements SlicingService {
 
     private void addQueueTable(DeviceId deviceId, SliceId sliceId, TrafficClass tc, QueueId queueId) {
         flowRuleService.applyFlowRules((FlowRule[]) buildFlowRules(deviceId, sliceId, tc, queueId).toArray());
-        log.debug("Add queue table flow on {} for slice {} tc {} queueId {}", deviceId, sliceId, tc, queueId);
+        log.info("Add queue table flow on {} for slice {} tc {} queueId {}", deviceId, sliceId, tc, queueId);
     }
 
     private void removeQueueTable(DeviceId deviceId, SliceId sliceId, TrafficClass tc, QueueId queueId) {
         flowRuleService.removeFlowRules((FlowRule[]) buildFlowRules(deviceId, sliceId, tc, queueId).toArray());
-        log.debug("Remove queue table flow on {} for slice {} tc {} queueId {}", deviceId, sliceId, tc, queueId);
+        log.info("Remove queue table flow on {} for slice {} tc {} queueId {}", deviceId, sliceId, tc, queueId);
     }
 
     private List<FlowRule> buildFlowRules(DeviceId deviceId, SliceId sliceId, TrafficClass tc, QueueId queueId) {
@@ -360,7 +365,7 @@ public class SlicingManager implements SlicingService {
             // Distributed work based on QueueId. Consistent with InternalQueueListener
             if (workPartitionService.isMine(event.newValue().value(), toStringHasher())) {
                 sliceExecutor.submit(() -> {
-                    log.debug("Processing slice event {}", event);
+                    log.info("Processing slice event {}", event);
                     switch (event.type()) {
                         case INSERT:
                         case UPDATE:
@@ -388,7 +393,7 @@ public class SlicingManager implements SlicingService {
             // Distributed work based on QueueId. Consistent with InternalSliceListener
             if (workPartitionService.isMine(event.key(), toStringHasher())) {
                 sliceExecutor.submit(() -> {
-                    log.debug("Processing queue event {}", event);
+                    log.info("Processing queue event {}", event);
                     switch (event.type()) {
                         case INSERT:
                         case UPDATE:
