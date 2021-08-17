@@ -23,6 +23,11 @@ public class SliceAddCommand extends AbstractShellCommand {
     @Override
     protected void doExecute() {
         SlicingService slicingService = getService(SlicingService.class);
-        slicingService.addSlice(SliceId.of(sliceId));
+        boolean result = slicingService.addSlice(SliceId.of(sliceId));
+        if (result) {
+            print("Slice %s added", sliceId);
+        } else {
+            print("Failed to add slice %s", sliceId);
+        }
     }
 }

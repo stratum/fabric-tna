@@ -6,28 +6,28 @@ import org.apache.karaf.shell.api.action.Argument;
 import org.apache.karaf.shell.api.action.Command;
 import org.apache.karaf.shell.api.action.lifecycle.Service;
 import org.onosproject.cli.AbstractShellCommand;
-import org.stratumproject.fabric.tna.slicing.api.SliceId;
+import org.stratumproject.fabric.tna.slicing.api.QueueId;
 import org.stratumproject.fabric.tna.slicing.api.SlicingService;
 
 /**
- * Remove network slice.
+ * Reserve queue for TC.
  */
 @Service
-@Command(scope = "fabric-tna", name = "slice-remove", description = "Remove network slice")
-public class SliceRemoveCommand extends AbstractShellCommand {
-    @Argument(index = 0, name = "sliceId",
-            description = "sliceId. Used to identify a slice.",
+@Command(scope = "fabric-tna", name = "queue-release", description = "Release queue from TC")
+public class QueueReleaseCommand extends AbstractShellCommand {
+    @Argument(index = 0, name = "queueId",
+            description = "queueId. Used to identify a slice.",
             required = true, multiValued = false)
-    int sliceId;
+    int queueId;
 
     @Override
     protected void doExecute() {
         SlicingService slicingService = getService(SlicingService.class);
-        boolean result =  slicingService.removeSlice(SliceId.of(sliceId));
+        boolean result = slicingService.releaseQueue(QueueId.of(queueId));
         if (result) {
-            print("Slice %s removed", sliceId);
+            print("Queue %s released", queueId);
         } else {
-            print("Failed to remove slice %s", sliceId);
+            print("Failed to release queue %s", queueId);
         }
     }
 }

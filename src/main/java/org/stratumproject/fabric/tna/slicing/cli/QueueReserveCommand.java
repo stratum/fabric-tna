@@ -6,20 +6,20 @@ import org.apache.karaf.shell.api.action.Argument;
 import org.apache.karaf.shell.api.action.Command;
 import org.apache.karaf.shell.api.action.lifecycle.Service;
 import org.onosproject.cli.AbstractShellCommand;
-import org.stratumproject.fabric.tna.slicing.api.SliceId;
+import org.stratumproject.fabric.tna.slicing.api.QueueId;
 import org.stratumproject.fabric.tna.slicing.api.SlicingService;
 import org.stratumproject.fabric.tna.slicing.api.TrafficClass;
 
 /**
- * Add traffic class.
+ * Reserve queue for TC.
  */
 @Service
-@Command(scope = "fabric-tna", name = "tc-add", description = "Add traffic class")
-public class TcAddCommand extends AbstractShellCommand {
-    @Argument(index = 0, name = "sliceId",
-            description = "sliceId. Used to identify a slice.",
+@Command(scope = "fabric-tna", name = "queue-reserve", description = "Reserve queue for TC")
+public class QueueReserveCommand extends AbstractShellCommand {
+    @Argument(index = 0, name = "queueId",
+            description = "queueId. Used to identify a slice.",
             required = true, multiValued = false)
-    int sliceId;
+    int queueId;
 
     @Argument(index = 1, name = "tc",
             description = "Traffic class. Used to classify the traffic.",
@@ -29,11 +29,11 @@ public class TcAddCommand extends AbstractShellCommand {
     @Override
     protected void doExecute() {
         SlicingService slicingService = getService(SlicingService.class);
-        boolean result = slicingService.addTrafficClass(SliceId.of(sliceId), TrafficClass.valueOf(tc));
+        boolean result = slicingService.reserveQueue(QueueId.of(queueId), TrafficClass.valueOf(tc));
         if (result) {
-            print("TC %s added to slice %s", tc, sliceId);
+            print("Queue %s reserved for TC %s", queueId, tc);
         } else {
-            print("Failed to add TC %s to slice %s", tc, sliceId);
+            print("Failed to reserve queue %s for TC %s", queueId, tc);
         }
     }
 }
