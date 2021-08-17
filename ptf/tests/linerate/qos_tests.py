@@ -161,9 +161,9 @@ class FlowCountersSanityTest(QosTest, StatsTest):
     comparing them with the Trex per-flow stats. Trex per-flow stats require
     disabling NIC HW acceleration, which might limit the ability to analyze
     traffic at high rates. To avoid having to worry about the impact of Trex
-    SW-based processing on QoS tests, we prefer to keep NW acceleration enabled
+    SW-based processing on QoS tests, we prefer to keep HW acceleration enabled
     for all other tests. This test serves as a guarantee that the switch P4
-    counters can be reliably used reliably in place of Trex per-flow stats.
+    counters can be reliably used in place of Trex per-flow stats.
     """
 
     @autocleanup
