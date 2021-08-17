@@ -30,7 +30,7 @@ public final class QueueId extends Identifier<Integer> {
      * @throws IllegalArgumentException if given id is invalid
      */
     public static QueueId of(int id) {
-        checkArgument(id >= 0 && id <= MAX, "Invalid id %d. Valid range is from %d to %d", id, 0, MAX);
+        checkArgument(id >= 0 && id <= MAX, "Invalid id %s. Valid range is from %s to %s", id, 0, MAX);
         return new QueueId(id);
     }
 }
