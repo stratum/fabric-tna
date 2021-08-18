@@ -202,8 +202,8 @@ class FlowCountersSanityTest(QosTest, StatsTest):
             ),
         ]
 
-        switch_ig_port = self.port3
-        switch_eg_port = self.port2
+        switch_ig_port = self.port3  # Trex port 2
+        switch_eg_port = self.port2  # Trex port 1
 
         self.set_up_stats_flows(
             stats_flow_id=pg_id_1,
@@ -232,73 +232,49 @@ class FlowCountersSanityTest(QosTest, StatsTest):
 
         # Get and print TREX stats
         trex_stats = self.trex_client.get_stats()
-
-        flow_stats_1 = get_flow_stats(pg_id_1, trex_stats)
-        print(get_readable_flow_stats(flow_stats_1))
-        flow_stats_2 = get_flow_stats(pg_id_2, trex_stats)
-        print(get_readable_flow_stats(flow_stats_2))
-        flow_stats_3 = get_flow_stats(pg_id_3, trex_stats)
-        print(get_readable_flow_stats(flow_stats_3))
+        trex_flow_stats_1 = get_flow_stats(pg_id_1, trex_stats)
+        print(get_readable_flow_stats(trex_flow_stats_1))
+        trex_flow_stats_2 = get_flow_stats(pg_id_2, trex_stats)
+        print(get_readable_flow_stats(trex_flow_stats_2))
+        trex_flow_stats_3 = get_flow_stats(pg_id_3, trex_stats)
+        print(get_readable_flow_stats(trex_flow_stats_3))
 
         for port in ALL_PORTS:
             readable_stats = get_readable_port_stats(trex_stats[port])
             print("Statistics for port {}: {}".format(port, readable_stats))
 
         # Get switch stats
-        ig_bytes_1, ig_packets_1 = self.get_stats_counter(
-            gress=STATS_INGRESS,
+        switch_flow_stats_1 = self.get_switch_stats(
             stats_flow_id=pg_id_1,
-            port=switch_ig_port,
+            ig_port=switch_ig_port,
+            eg_port=switch_eg_port,
             l4_dport=dport_1)
-        ig_bytes_2, ig_packets_2 = self.get_stats_counter(
-            gress=STATS_INGRESS,
+        switch_flow_stats_2 = self.get_switch_stats(
             stats_flow_id=pg_id_2,
-            port=switch_ig_port,
+            ig_port=switch_ig_port,
+            eg_port=switch_eg_port,
             l4_dport=dport_2)
-        ig_bytes_3, ig_packets_3 = self.get_stats_counter(
-            gress=STATS_INGRESS,
+        switch_flow_stats_3 = self.get_switch_stats(
             stats_flow_id=pg_id_3,
-            port=switch_ig_port,
+            ig_port=switch_ig_port,
+            eg_port=switch_eg_port,
             l4_dport=dport_3)
 
-        eg_bytes_1, eg_packets_1 = self.get_stats_counter(
-            gress=STATS_EGRESS,
-            stats_flow_id=pg_id_1,
-            port=switch_eg_port,
-            l4_dport=dport_1)
-        eg_bytes_2, eg_packets_2 = self.get_stats_counter(
-            gress=STATS_EGRESS,
-            stats_flow_id=pg_id_2,
-            port=switch_eg_port,
-            l4_dport=dport_2)
-        eg_bytes_3, eg_packets_3 = self.get_stats_counter(
-            gress=STATS_EGRESS,
-            stats_flow_id=pg_id_3,
-            port=switch_eg_port,
-            l4_dport=dport_3)
+        # Compare Trex stats with switch stats. What is transmitted (tx) by Trex should be
+        # received (rx) by the switch, and vice versa.
+        self.assertEqual(trex_flow_stats_1.tx_packets, switch_flow_stats_1.rx_packets)
+        self.assertEqual(trex_flow_stats_2.tx_packets, switch_flow_stats_2.rx_packets)
+        self.assertEqual(trex_flow_stats_3.tx_packets, switch_flow_stats_3.rx_packets)
+        self.assertEqual(trex_flow_stats_1.tx_bytes, switch_flow_stats_1.rx_bytes)
+        self.assertEqual(trex_flow_stats_2.tx_bytes, switch_flow_stats_2.rx_bytes)
+        self.assertEqual(trex_flow_stats_3.tx_bytes, switch_flow_stats_3.rx_bytes)
 
-        # Compare Trex TX stats with the switch ingress counters
-        self.assertEqual(flow_stats_1.tx_packets, ig_packets_1)
-        self.assertEqual(flow_stats_2.tx_packets, ig_packets_2)
-        self.assertEqual(flow_stats_3.tx_packets, ig_packets_3)
-        self.assertEqual(flow_stats_1.tx_bytes, ig_bytes_1)
-        self.assertEqual(flow_stats_2.tx_bytes, ig_bytes_2)
-        self.assertEqual(flow_stats_3.tx_bytes, ig_bytes_3)
-
-        # Compare Trex RX stats with the switch egress counters
-        self.assertEqual(flow_stats_1.rx_packets, eg_packets_1)
-        self.assertEqual(flow_stats_2.rx_packets, eg_packets_2)
-        self.assertEqual(flow_stats_3.rx_packets, eg_packets_3)
-
-        # Switch egress bytes count will include bridged metadata, we need to subtract
-        # that before comparing with the Trex counters.
-        output_bytes_1 = eg_bytes_1 - eg_packets_1 * BMD_BYTES
-        output_bytes_2 = eg_bytes_2 - eg_packets_2 * BMD_BYTES
-        output_bytes_3 = eg_bytes_3 - eg_packets_3 * BMD_BYTES
-
-        self.assertEqual(flow_stats_1.rx_bytes, output_bytes_1)
-        self.assertEqual(flow_stats_2.rx_bytes, output_bytes_2)
-        self.assertEqual(flow_stats_3.rx_bytes, output_bytes_3)
+        self.assertEqual(trex_flow_stats_1.rx_packets, switch_flow_stats_1.tx_packets)
+        self.assertEqual(trex_flow_stats_2.rx_packets, switch_flow_stats_2.tx_packets)
+        self.assertEqual(trex_flow_stats_3.rx_packets, switch_flow_stats_3.tx_packets)
+        self.assertEqual(trex_flow_stats_1.rx_bytes, switch_flow_stats_1.tx_bytes)
+        self.assertEqual(trex_flow_stats_2.rx_bytes, switch_flow_stats_2.tx_bytes)
+        self.assertEqual(trex_flow_stats_3.rx_bytes, switch_flow_stats_3.tx_bytes)
 
 
 class MinFlowrateWithSoftwareLatencyMeasurement(QosTest):
