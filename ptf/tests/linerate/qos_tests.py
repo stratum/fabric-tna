@@ -52,7 +52,7 @@ RECEIVER_PORT = [1]
 ALL_PORTS = [0, 1, 2]
 
 
-class QosTest(TRexTest, SlicingTest):
+class QosTest(TRexTest, SlicingTest, StatsTest):
     def __init__(self):
         super().__init__()
         self.control_pg_id = 7
@@ -113,6 +113,22 @@ class QosTest(TRexTest, SlicingTest):
         )
         self.add_queue_entry(13, 0, qos_utils.QUEUE_ID_ELASTIC_1)
         self.add_queue_entry(14, 0, qos_utils.QUEUE_ID_ELASTIC_2)
+
+    def get_switch_flow_stats(self, stats_flow_id, ig_port, eg_port, **ftuple) -> FlowStats:
+        ig_bytes, ig_packets = self.get_stats_counter(
+            gress=STATS_INGRESS, stats_flow_id=stats_flow_id, port=ig_port, **ftuple)
+        eg_bytes, eg_packets = self.get_stats_counter(
+            gress=STATS_EGRESS, stats_flow_id=stats_flow_id, port=eg_port, **ftuple)
+        # Switch egress bytes count will include bridged metadata, we need to subtract
+        # that to obtain the actual bytes transmitted by the switch.
+        tx_bytes = eg_bytes - eg_packets * BMD_BYTES
+        return FlowStats(
+            pg_id=stats_flow_id,
+            tx_packets=eg_packets,
+            rx_packets=ig_packets,
+            tx_bytes=tx_bytes,
+            rx_bytes=ig_bytes,
+        )
 
     # Create a background traffic stream.
     def create_background_stream(self) -> STLStream:
@@ -284,17 +300,17 @@ class FlowCountersSanityTest(QosTest):
             print("Statistics for port {}: {}".format(port, readable_stats))
 
         # Get switch stats
-        switch_flow_stats_1 = self.get_switch_stats(
+        switch_flow_stats_1 = self.get_switch_flow_stats(
             stats_flow_id=pg_id_1,
             ig_port=switch_ig_port,
             eg_port=switch_eg_port,
             l4_dport=dport_1)
-        switch_flow_stats_2 = self.get_switch_stats(
+        switch_flow_stats_2 = self.get_switch_flow_stats(
             stats_flow_id=pg_id_2,
             ig_port=switch_ig_port,
             eg_port=switch_eg_port,
             l4_dport=dport_2)
-        switch_flow_stats_3 = self.get_switch_stats(
+        switch_flow_stats_3 = self.get_switch_flow_stats(
             stats_flow_id=pg_id_3,
             ig_port=switch_ig_port,
             eg_port=switch_eg_port,
