@@ -53,7 +53,7 @@ import java.util.stream.Collectors;
 import static org.onlab.util.Tools.groupedThreads;
 import static org.slf4j.LoggerFactory.getLogger;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.sliceTcConcat;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_STATS_FLOWS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_QOS_QUEUES;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_COLOR;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_COLOR_BITWIDTH;
 
@@ -358,7 +358,7 @@ public class SlicingManager implements SlicingService {
 
         FlowRule flowRule = DefaultFlowRule.builder()
                 .forDevice(deviceId)
-                .forTable(PiTableId.of(FABRIC_INGRESS_STATS_FLOWS.id()))
+                .forTable(PiTableId.of(FABRIC_INGRESS_QOS_QUEUES.id()))
                 .fromApp(appId)
                 .withPriority(QOS_FLOW_PRIORITY)
                 .withSelector(DefaultTrafficSelector.builder().matchPi(piCriterionBuilder.build()).build())
