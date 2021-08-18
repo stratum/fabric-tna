@@ -4,8 +4,12 @@
 from base_test import *
 from trex.stl.api import STLClient
 
+from bmd_bytes import BMD_BYTES
+from fabric_test import StatsTest, STATS_INGRESS, STATS_EGRESS
+from trex_utils import FlowStats
 
-class TRexTest(P4RuntimeTest):
+
+class TRexTest(P4RuntimeTest, StatsTest):
     trex_client: STLClient
 
     def setUp(self):
@@ -28,3 +32,19 @@ class TRexTest(P4RuntimeTest):
         self.trex_client.release()
         self.trex_client.disconnect()
         super(TRexTest, self).tearDown()
+
+    def get_switch_flow_stats(self, stats_flow_id, ig_port, eg_port, **ftuple) -> FlowStats:
+        ig_bytes, ig_packets = self.get_stats_counter(
+            gress=STATS_INGRESS, stats_flow_id=stats_flow_id, port=ig_port, **ftuple)
+        eg_bytes, eg_packets = self.get_stats_counter(
+            gress=STATS_EGRESS, stats_flow_id=stats_flow_id, port=eg_port, **ftuple)
+        # Switch egress bytes count will include bridged metadata, we need to subtract
+        # that to obtain the actual bytes transmitted by the switch.
+        tx_bytes = eg_bytes - eg_packets * BMD_BYTES
+        return FlowStats(
+            pg_id=stats_flow_id,
+            tx_packets=eg_packets,
+            rx_packets=ig_packets,
+            tx_bytes=tx_bytes,
+            rx_bytes=ig_bytes,
+        )
