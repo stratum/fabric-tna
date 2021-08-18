@@ -7,15 +7,6 @@ import logging
 import numpy as np
 
 # Multiplier for data rates
-from fabric_test import IP_HDR_BYTES, UDP_HDR_BYTES
-from trex.stl.trex_stl_packet_builder_scapy import (
-    STLScVmRaw,
-    STLVmFixIpv4,
-    STLVmFlowVar,
-    STLVmTrimPktSize,
-    STLVmWrFlowVar,
-)
-
 K = 1000
 M = 1000 * K
 G = 1000 * M
@@ -138,23 +129,9 @@ LatencyStats = collections.namedtuple(
 )
 
 FlowStats = collections.namedtuple(
-    "FlowStats",
-    [
-        "pg_id",
-        "tx_packets",
-        "rx_packets",
-        "tx_bytes",
-        "rx_bytes",
-        "tx_packets_share",
-        "rx_packets_share",
-        "tx_bytes_share",
-        "rx_bytes_share",
-    ],
+    "FlowStats", ["pg_id", "tx_packets", "rx_packets", "tx_bytes", "rx_bytes",],
 )
 
-SwitchStats = collections.namedtuple(
-    "SwitchStats", ["pg_id", "ig_packets", "eg_packets", "ig_bytes", "eg_bytes",],
-)
 
 PortStats = collections.namedtuple(
     "PortStats",
@@ -281,25 +258,7 @@ def get_readable_latency_stats(stats: LatencyStats) -> str:
     """
 
 
-def get_readable_flow_stats(stats: FlowStats) -> str:
-    return f"""Trex flow info for pg_id {stats.pg_id}
-    TX packets: {stats.tx_packets} ({stats.tx_packets_share:.1%})
-    RX packets: {stats.rx_packets} ({stats.rx_packets_share:.1%})
-    TX bytes: {stats.tx_bytes} ({stats.tx_bytes_share:.1%})
-    RX bytes: {stats.rx_bytes} ({stats.rx_bytes_share:.1%})"""
-
-
 def get_flow_stats(pg_id: int, stats) -> FlowStats:
-    # Obtain sum from all pg_ids to compute shares
-    sums = {}
-    for metric in ["tx_pkts", "rx_pkts", "tx_bytes", "rx_bytes"]:
-        sums[metric] = sum(
-            [
-                int(stats["flow_stats"][pg_id][metric]["total"])
-                for pg_id in stats["flow_stats"]
-                if pg_id != "global"
-            ]
-        )
     flow_stats = stats["flow_stats"].get(pg_id)
     ret = FlowStats(
         pg_id=pg_id,
@@ -307,12 +266,16 @@ def get_flow_stats(pg_id: int, stats) -> FlowStats:
         rx_packets=flow_stats["rx_pkts"]["total"],
         tx_bytes=flow_stats["tx_bytes"]["total"],
         rx_bytes=flow_stats["rx_bytes"]["total"],
-        tx_packets_share=flow_stats["tx_pkts"]["total"] / sums["tx_pkts"],
-        rx_packets_share=flow_stats["rx_pkts"]["total"] / sums["rx_pkts"],
-        tx_bytes_share=flow_stats["tx_bytes"]["total"] / sums["tx_bytes"],
-        rx_bytes_share=flow_stats["rx_bytes"]["total"] / sums["rx_bytes"],
     )
     return ret
+
+
+def get_readable_flow_stats(stats: FlowStats) -> str:
+    return f"""Flow info for pg_id {stats.pg_id}
+    TX packets: {stats.tx_packets}
+    RX packets: {stats.rx_packets}
+    TX bytes: {stats.tx_bytes}
+    RX bytes: {stats.rx_bytes}"""
 
 
 class ParseExtendArgAction(argparse.Action):

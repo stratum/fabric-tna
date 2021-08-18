@@ -22,7 +22,7 @@ from trex_utils import *
 # General test parameter.
 LINK_RATE_BPS = 1 * G
 EXPECTED_FLOW_RATE_WITH_STATS_BPS = 1 * G
-TRAFFIC_DURATION_SECONDS = 5
+TRAFFIC_DURATION_SECONDS = 10
 
 # Maximum queue rates as per ChassisConfig.
 CONTROL_QUEUE_MAX_RATE_BPS = 60 * M
@@ -680,11 +680,14 @@ class RealtimeTrafficIsRrScheduled(QosTest):
 
 class ElasticTrafficIsWrrScheduled(QosTest):
     """
-    Same as ElasticTrafficIsWrrScheduled but adds a best-effort stream. The
-    best-effort queue should be treated as an elastic queue, hence receive
-    service proportional to its weight.
-    """
+     In this test we check that traffic using elastic queues (including
+     best-effort) is scheduled in a WRR fashion. For this, we start three
+     streams each one sending more than the allotted rate, thus congesting the
+     output link. We expect that the amount of bytes received for each stream is
+     proportional to the WRR weights.
+     """
 
+    # TODO: run test for 1G (with shaping) and 40G links
     @autocleanup
     def runTest(self) -> None:
         elastic_pg_id_1 = 1
