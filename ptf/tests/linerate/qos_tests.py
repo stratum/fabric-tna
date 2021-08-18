@@ -156,7 +156,7 @@ class QosTest(TRexTest, SlicingTest):
 # Not executed by default, requires running Trex in SW mode:
 #   TREX_PARAMS="--trex-sw-mode" ./ptf/run/hw/linerate fabric TEST=qos_tests.FlowCountersSanityTest
 @group("trex-sw-mode")
-class FlowCountersSanityTest(QosTest, StatsTest):
+class FlowCountersSanityTest(QosTest):
     """
     This test ensures that switch-maintained P4 counters work as expected by
     comparing them with the Trex per-flow stats. Trex per-flow stats require
