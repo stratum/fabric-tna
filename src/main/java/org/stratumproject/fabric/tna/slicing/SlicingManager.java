@@ -306,7 +306,6 @@ public class SlicingManager implements SlicingService {
             log.warn("No queue available for TC {}", tc);
             return null;
         }
-
     }
 
     private boolean deallocateQueue(QueueId queueId) {
@@ -367,7 +366,7 @@ public class SlicingManager implements SlicingService {
                 .makePermanent()
                 .build();
 
-        log.debug("{}", flowRule);
+        log.info("{}", flowRule);
         return flowRule;
     }
 
@@ -405,7 +404,7 @@ public class SlicingManager implements SlicingService {
         public void event(MapEvent<QueueId, QueueStoreValue> event) {
             // Distributed work based on QueueId. Consistent with InternalSliceListener
             if (workPartitionService.isMine(event.key(), toStringHasher())) {
-                sliceExecutor.submit(() -> {
+                queueExecutor.submit(() -> {
                     log.info("Processing queue event {}", event);
                     switch (event.type()) {
                         case INSERT:
