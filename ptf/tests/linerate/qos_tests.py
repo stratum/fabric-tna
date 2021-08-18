@@ -762,99 +762,70 @@ class ElasticTrafficIsWrrScheduled(QosTest):
             readable_stats = get_readable_port_stats(stats[port])
             print("Statistics for port {}: {}".format(port, readable_stats))
 
-        ig_bytes_1, ig_packets_1 = self.get_stats_counter(
-            gress=STATS_INGRESS,
+        switch_flow_stats_1 = self.get_switch_flow_stats(
             stats_flow_id=elastic_pg_id_1,
-            port=ig_port_a,
+            ig_port=ig_port_a,
+            eg_port=eg_port,
             l4_dport=qos_utils.L4_DPORT_ELASTIC_TRAFFIC_1,
         )
-        ig_bytes_2, ig_packets_2 = self.get_stats_counter(
-            gress=STATS_INGRESS,
+        switch_flow_stats_2 = self.get_switch_flow_stats(
             stats_flow_id=elastic_pg_id_2,
-            port=ig_port_b,
+            ig_port=ig_port_b,
+            eg_port=eg_port,
             l4_dport=qos_utils.L4_DPORT_ELASTIC_TRAFFIC_2,
         )
-        ig_bytes_3a, ig_packets_3a = self.get_stats_counter(
-            gress=STATS_INGRESS,
+        switch_flow_stats_3a = self.get_switch_flow_stats(
             stats_flow_id=best_effort_pg_id_3a,
-            port=ig_port_a,
+            ig_port=ig_port_a,
+            eg_port=eg_port,
             l4_dport=qos_utils.L4_DPORT_BEST_EFFORT_TRAFFIC_1,
         )
-        ig_bytes_3b, ig_packets_3b = self.get_stats_counter(
-            gress=STATS_INGRESS,
+        switch_flow_stats_3b = self.get_switch_flow_stats(
             stats_flow_id=best_effort_pg_id_3b,
-            port=ig_port_b,
+            ig_port=ig_port_b,
+            eg_port=eg_port,
             l4_dport=qos_utils.L4_DPORT_BEST_EFFORT_TRAFFIC_2,
         )
 
-        eg_bytes_1, eg_packets_1 = self.get_stats_counter(
-            gress=STATS_EGRESS,
-            stats_flow_id=elastic_pg_id_1,
-            port=eg_port,
-            l4_dport=qos_utils.L4_DPORT_REALTIME_TRAFFIC_1,
-        )
-        eg_bytes_2, eg_packets_2 = self.get_stats_counter(
-            gress=STATS_EGRESS,
-            stats_flow_id=elastic_pg_id_2,
-            port=eg_port,
-            l4_dport=qos_utils.L4_DPORT_REALTIME_TRAFFIC_2,
-        )
-        eg_bytes_3a, eg_packets_3a = self.get_stats_counter(
-            gress=STATS_EGRESS,
-            stats_flow_id=best_effort_pg_id_3a,
-            port=eg_port,
-            l4_dport=qos_utils.L4_DPORT_BEST_EFFORT_TRAFFIC_1,
-        )
-        eg_bytes_3b, eg_packets_3b = self.get_stats_counter(
-            gress=STATS_EGRESS,
-            stats_flow_id=best_effort_pg_id_3b,
-            port=eg_port,
-            l4_dport=qos_utils.L4_DPORT_BEST_EFFORT_TRAFFIC_2,
-        )
-
-        ig_bps_1 = ig_bytes_1 * 8 / TRAFFIC_DURATION_SECONDS
-        ig_bps_2 = ig_bytes_2 * 8 / TRAFFIC_DURATION_SECONDS
-        ig_bps_3 = (ig_bytes_3a + ig_bytes_3b) * 8 / TRAFFIC_DURATION_SECONDS
+        rx_bps_1 = switch_flow_stats_1.rx_bytes * 8 / TRAFFIC_DURATION_SECONDS
+        rx_bps_2 = switch_flow_stats_2.rx_bytes * 8 / TRAFFIC_DURATION_SECONDS
+        rx_bps_3 = (switch_flow_stats_3a.rx_bytes + switch_flow_stats_3b.rx_bytes) * 8 / TRAFFIC_DURATION_SECONDS
 
         self.assertGreater(
-            ig_bps_1,
+            rx_bps_1,
             LINK_RATE_BPS * weight_1,
             "Ingress bps for elastic source 1 was not enough to congest the queue",
         )
         self.assertGreater(
-            ig_bps_2,
+            rx_bps_2,
             LINK_RATE_BPS * weight_2,
             "Ingress bps for elastic source 2 was not enough to congest the queue",
         )
         self.assertGreater(
-            ig_bps_3,
+            rx_bps_3,
             LINK_RATE_BPS * weight_3,
             "Ingress bps for best-effort source 3 was not enough to congest the queue",
         )
 
-        # FIXME: switch stats include BMD_BYTES, should we consider that (subtract) when
-        #   computing byte shares? The WRR scheduler considers the whole packet, including
-        #   bmd, when deciding if an how many packets to service. However, bmd is removed
-        #   by the egress pipe before sending the packet to the end-host.
-        eg_bytes_total = eg_bytes_1 + eg_bytes_2 + eg_bytes_3a + eg_bytes_3b
-        eg_bytes_share_1 = eg_bytes_1 / eg_bytes_total
-        eg_bytes_share_2 = eg_bytes_2 / eg_bytes_total
-        eg_bytes_share_3 = (eg_bytes_3a + eg_bytes_3b) / eg_bytes_total
+        tx_bytes_total = switch_flow_stats_1.tx_bytes + switch_flow_stats_2.tx_bytes + switch_flow_stats_3a.tx_bytes + switch_flow_stats_3b.tx_bytes
+        tx_bytes_share_1 = switch_flow_stats_1.tx_bytes / tx_bytes_total
+        tx_bytes_share_2 = switch_flow_stats_2.tx_bytes / tx_bytes_total
+        tx_bytes_share_3 = (switch_flow_stats_3a.tx_bytes + switch_flow_stats_3b.tx_bytes) / tx_bytes_total
 
         self.assertAlmostEqual(
-            eg_bytes_share_1,
+            tx_bytes_share_1,
             weight_1,
             delta=0.008,
             msg="Elastic source 1 was not scheduled as expected",
         )
         self.assertAlmostEqual(
-            eg_bytes_share_2,
+            tx_bytes_share_2,
             weight_2,
             delta=0.008,
             msg="Elastic source 2 was not scheduled as expected",
         )
         self.assertAlmostEqual(
-            eg_bytes_share_3,
+            tx_bytes_share_3,
             weight_3,
             delta=0.008,
             msg="Best-effort source 3 was not scheduled as expected",
