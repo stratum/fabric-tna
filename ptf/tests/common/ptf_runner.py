@@ -231,7 +231,9 @@ def set_up_trex_server(trex_daemon_client, trex_address, trex_config, force_rest
             return False
 
         trex_config_file_on_server = TREX_FILES_DIR + os.path.basename(trex_config)
-        trex_daemon_client.start_stateless(cfg=trex_config_file_on_server)
+        # trex_daemon_client.start_stateless(cfg=trex_config_file_on_server)
+        trex_daemon_client.start_stateless(cfg=trex_config_file_on_server, astf=True)
+        # trex_daemon_client.start_trex(f="/dev/null", d=30, cfg=trex_config_file_on_server, astf=True)
     except ConnectionRefusedError:
         error(
             "Unable to connect to server %s.\n" + "Did you start the Trex daemon?",
@@ -489,7 +491,9 @@ def main():
 
     # if line rate test, set up and tear down TRex
     if args.trex_address is not None:
-        trex_daemon_client = CTRexClient(args.trex_address)
+        # not needed, maybe
+        trex_args = None #"--astf"
+        trex_daemon_client = CTRexClient(args.trex_address, trex_args=trex_args)
         info("Starting TRex daemon client...")
         success = set_up_trex_server(
             trex_daemon_client, args.trex_address, args.trex_config, args.force_restart

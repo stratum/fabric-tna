@@ -14,7 +14,19 @@ from base_test import *
 from fabric_test import *
 from stratum_qos_config import vendor_config
 from trex_stl_lib.api import STLFlowLatencyStats, STLPktBuilder, STLStream, STLTXCont
-from trex_test import TRexTest
+from trex.astf.api import (
+    ASTFIPGenDist,
+    ASTFIPGen,
+    ASTFProfile,
+    ASTFIPGenGlobal,
+    ASTFTCPClientTemplate,
+    ASTFTCPServerTemplate,
+    ASTFProgram,
+    ASTFTemplate,
+    ASTFAssociation,
+    ASTFAssociationRule,
+)
+from trex_test import TRexTest, TRexStatefulTest
 from trex_utils import *
 
 # General test parameter.
@@ -44,7 +56,7 @@ RECEIVER_PORT = [1]
 ALL_PORTS = [0, 1, 2]
 
 
-class QosTest(TRexTest, SlicingTest):
+class QosBaseTest(SlicingTest):
     def __init__(self):
         super().__init__()
         self.control_pg_id = 7
@@ -90,6 +102,11 @@ class QosTest(TRexTest, SlicingTest):
         self.add_queue_entry(10, 0, qos_utils.QUEUE_ID_REALTIME_1)
         self.add_queue_entry(11, 0, qos_utils.QUEUE_ID_REALTIME_2)
         self.add_queue_entry(12, 0, qos_utils.QUEUE_ID_REALTIME_3)
+
+
+class QosTest(TRexTest, QosBaseTest):
+    def __init__(self):
+        super().__init__()
 
     # Create a background traffic stream.
     def create_background_stream(self) -> STLStream:
@@ -483,3 +500,79 @@ class RealtimeTrafficIsRrScheduled(QosTest):
         for port in ALL_PORTS:
             readable_stats = get_readable_port_stats(stats[port])
             print("Statistics for port {}: {}".format(port, readable_stats))
+
+
+import pprint
+
+
+class StatefulTest(QosBaseTest, TRexStatefulTest):
+    def create_profile(self) -> ASTFProfile:
+        # client commands
+        payload = b"foo"
+        prog_c = ASTFProgram()
+        prog_c.send(payload)
+        prog_c.recv(len(payload))
+        prog_c.delay(1000)  # wait for usecs
+        prog_c.send(payload)
+
+        prog_s = ASTFProgram()
+        prog_s.recv(len(payload))
+        prog_s.send(payload)
+        prog_s.recv(len(payload))
+
+        # ip generator
+        ip_gen_c = ASTFIPGenDist(
+            ip_range=["16.0.0.0", "16.0.0.255"], distribution="seq"
+        )
+        ip_gen_s = ASTFIPGenDist(
+            ip_range=["48.0.0.0", "48.0.255.255"], distribution="seq"
+        )
+        ip_gen = ASTFIPGen(
+            glob=ASTFIPGenGlobal(ip_offset="1.0.0.0"),
+            dist_client=ip_gen_c,
+            dist_server=ip_gen_s,
+        )
+
+        # template
+        dst_port = qos_utils.L4_DPORT_CONTROL_TRAFFIC
+        temp_c = ASTFTCPClientTemplate(
+            program=prog_c, port=dst_port, ip_gen=ip_gen, cps=1000, cont=True
+        )
+        assoc = ASTFAssociationRule(port=qos_utils.L4_DPORT_CONTROL_TRAFFIC)
+        temp_s = ASTFTCPServerTemplate(program=prog_s, assoc=assoc)
+        template = ASTFTemplate(
+            client_template=temp_c, server_template=temp_s, tg_name="control_traffic"
+        )
+
+        return ASTFProfile(default_ip_gen=ip_gen, templates=template)
+
+    @autocleanup
+    def runTest(self) -> None:
+        self.push_chassis_config()
+        # Setup bidirectional forwarding between port 1 and port 2 only.
+        # self.setup_basic_forwarding()
+        self.setup_port(self.port1, DEFAULT_VLAN, PORT_TYPE_EDGE)
+        self.setup_port(self.port2, DEFAULT_VLAN, PORT_TYPE_EDGE)
+        self.add_forwarding_acl_set_output_port(self.port2, ig_port=self.port1)
+        self.add_forwarding_acl_set_output_port(self.port1, ig_port=self.port2)
+        self.setup_queue_classification()
+        # TODO: Create the control stream with above maximum allocated rate
+        self.trex_client.load_profile(self.create_profile())
+        self.trex_client.start(
+            mult=1, duration=TRAFFIC_DURATION_SECONDS, latency_pps=1000, client_mask=3
+        )
+        self.trex_client.wait_on_traffic()
+        stats = self.trex_client.get_stats()
+        pprint.pp(stats)
+
+        names = self.trex_client.get_tg_names()
+        pprint.pp(names)
+        tg_stats = self.trex_client.get_traffic_tg_stats(names)
+        pprint.pp(tg_stats)
+        l_stats = self.trex_client.get_latency_stats()
+        pprint.pp(l_stats)
+
+        if self.trex_client.get_warnings():
+            print("\n\n*** test had warnings ****\n\n")
+            for w in self.trex_client.get_warnings():
+                print(w)

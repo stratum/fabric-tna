@@ -3,6 +3,7 @@
 
 from base_test import *
 from trex.stl.api import STLClient
+from trex.astf.trex_astf_client import ASTFClient
 
 
 class TRexTest(P4RuntimeTest):
@@ -28,3 +29,28 @@ class TRexTest(P4RuntimeTest):
         self.trex_client.release()
         self.trex_client.disconnect()
         super(TRexTest, self).tearDown()
+
+
+class TRexStatefulTest(P4RuntimeTest):
+    trex_client: ASTFClient
+
+    def setUp(self):
+        super(TRexStatefulTest, self).setUp()
+        trex_server_addr = ptf.testutils.test_param_get("trex_server_addr")
+        self.trex_client = ASTFClient(server=trex_server_addr)
+        self.trex_client.connect()
+        self.trex_client.acquire()
+        self.trex_client.reset()  # Resets configs from all ports
+        self.trex_client.clear_stats()  # Clear status from all ports
+        # Put all ports to promiscuous mode, otherwise they will drop all
+        # incoming packets if the destination mac is not the port mac address.
+        self.trex_client.set_port_attr(
+            self.trex_client.get_all_ports(), promiscuous=True
+        )
+
+    def tearDown(self):
+        print("Tearing down ASTFClient...")
+        self.trex_client.stop()
+        self.trex_client.release()
+        self.trex_client.disconnect()
+        super(TRexStatefulTest, self).tearDown()
