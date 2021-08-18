@@ -52,7 +52,7 @@ RECEIVER_PORT = [1]
 ALL_PORTS = [0, 1, 2]
 
 
-class QosTest(TRexTest, SlicingTest, StatsTest):
+class QosTest(TRexTest, SlicingTest):
     def __init__(self):
         super().__init__()
         self.control_pg_id = 7
