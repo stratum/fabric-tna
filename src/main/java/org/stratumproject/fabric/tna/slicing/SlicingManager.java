@@ -325,12 +325,12 @@ public class SlicingManager implements SlicingService {
     }
 
     private void addQueueTable(DeviceId deviceId, SliceId sliceId, TrafficClass tc, QueueId queueId) {
-        flowRuleService.applyFlowRules((FlowRule[]) buildFlowRules(deviceId, sliceId, tc, queueId).toArray());
+        buildFlowRules(deviceId, sliceId, tc, queueId).forEach(f -> flowRuleService.applyFlowRules(f));
         log.info("Add queue table flow on {} for slice {} tc {} queueId {}", deviceId, sliceId, tc, queueId);
     }
 
     private void removeQueueTable(DeviceId deviceId, SliceId sliceId, TrafficClass tc, QueueId queueId) {
-        flowRuleService.removeFlowRules((FlowRule[]) buildFlowRules(deviceId, sliceId, tc, queueId).toArray());
+        buildFlowRules(deviceId, sliceId, tc, queueId).forEach(f -> flowRuleService.removeFlowRules(f));
         log.info("Remove queue table flow on {} for slice {} tc {} queueId {}", deviceId, sliceId, tc, queueId);
     }
 
@@ -375,50 +375,54 @@ public class SlicingManager implements SlicingService {
     private class InternalSliceListener implements MapEventListener<SliceStoreKey, QueueId> {
         public void event(MapEvent<SliceStoreKey, QueueId> event) {
             // Distributed work based on QueueId. Consistent with InternalQueueListener
-            if (workPartitionService.isMine(event.newValue().value(), toStringHasher())) {
-                sliceExecutor.submit(() -> {
-                    log.info("Processing slice event {}", event);
-                    switch (event.type()) {
-                        case INSERT:
-                        case UPDATE:
-                            deviceService.getAvailableDevices().forEach(device -> {
+            log.info("Processing slice event {}", event);
+            sliceExecutor.submit(() -> {
+                switch (event.type()) {
+                    case INSERT:
+                    case UPDATE:
+                        if (workPartitionService.isMine(event.newValue().value(), toStringHasher())) {
+                            deviceService.getAvailableDevices().forEach(device ->
                                 addQueueTable(device.id(),
-                                        event.key().sliceId(), event.key().trafficClass(), event.newValue().value());
-                            });
-                            break;
-                        case REMOVE:
-                            deviceService.getAvailableDevices().forEach(device -> {
+                                        event.key().sliceId(), event.key().trafficClass(), event.newValue().value())
+                            );
+                        }
+                        break;
+                    case REMOVE:
+                        if (workPartitionService.isMine(event.oldValue().value(), toStringHasher())) {
+                            deviceService.getAvailableDevices().forEach(device ->
                                 removeQueueTable(device.id(),
-                                        event.key().sliceId(), event.key().trafficClass(), event.newValue().value());
-                            });
-                            break;
-                        default:
-                            break;
-                    }
-                });
-            }
+                                        event.key().sliceId(), event.key().trafficClass(), event.oldValue().value())
+                            );
+                        }
+                        break;
+                    default:
+                        break;
+                }
+            });
         }
     }
 
     private class InternalQueueListener implements MapEventListener<QueueId, QueueStoreValue> {
         public void event(MapEvent<QueueId, QueueStoreValue> event) {
-            // Distributed work based on QueueId. Consistent with InternalSliceListener
-            if (workPartitionService.isMine(event.key(), toStringHasher())) {
-                queueExecutor.submit(() -> {
-                    log.info("Processing queue event {}", event);
-                    switch (event.type()) {
-                        case INSERT:
-                        case UPDATE:
-                            // TODO program queues. Today we assume queues are statically provisioned
-                            break;
-                        case REMOVE:
-                            // TODO remove queues.  Today we assume queues are statically unprovisioned
-                            break;
-                        default:
-                            break;
-                    }
-                });
-            }
+            // Distributed work based on QueueId. Consistent with InternalQueueListener
+            log.info("Processing queue event {}", event);
+            sliceExecutor.submit(() -> {
+                switch (event.type()) {
+                    case INSERT:
+                    case UPDATE:
+                        if (workPartitionService.isMine(event.newValue().value(), toStringHasher())) {
+                            // TODO programmatically config queues
+                        }
+                        break;
+                    case REMOVE:
+                        if (workPartitionService.isMine(event.oldValue().value(), toStringHasher())) {
+                            // TODO programmatically config queues
+                        }
+                        break;
+                    default:
+                        break;
+                }
+            });
         }
     }
 
