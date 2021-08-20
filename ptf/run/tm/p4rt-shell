@@ -10,7 +10,7 @@ source "${DIR}/base.sh"
 echo "*** Starting P4Runtime Shell"
 docker run --name "p4runtime-shell" -it --privileged --rm \
     --network "container:${tmRunName}" \
-    -v "${P4C_OUT}":/p4c-out \
+    -v "${FABRIC_TNA_ROOT}/${P4C_OUT}":/p4c-out \
     "${TESTER_DOCKER_IMG}" \
     python3 -m p4runtime_sh \
     --device-id 1 --election-id 0,1 \

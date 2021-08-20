@@ -9,8 +9,10 @@ import logging
 
 import gnmi_utils
 import qos_utils
+import yaml
 from base_test import *
 from fabric_test import *
+from stratum_qos_config import vendor_config
 from trex_stl_lib.api import STLFlowLatencyStats, STLPktBuilder, STLStream, STLTXCont
 from trex_test import TRexTest
 from trex_utils import *
@@ -48,12 +50,16 @@ class QosTest(TRexTest, SlicingTest):
         self.control_pg_id = 7
         self.system_pg_id = 2
 
-    def push_chassis_config(self) -> None:
-        chassis_config = b""
-        with open(
-            "../linerate/chassis_config_for_qos_strict_priority.pb.txt", mode="rb"
-        ) as file:
+    def push_chassis_config(self, yaml_file="qos-config-1g.yaml") -> None:
+        this_dir = os.path.dirname(os.path.realpath(__file__))
+        with open(f"{this_dir}/chassis_config.pb.txt", mode="rb") as file:
             chassis_config = file.read()
+        # Auto-generate and append vendor_config
+        with open(f"{this_dir}/{yaml_file}", "r") as file:
+            chassis_config += bytes("\n" + vendor_config(yaml.safe_load(file)), encoding="utf8")
+        # Write to disk for debugging
+        with open(f"{this_dir}/chassis_config.pb.txt.tmp", mode="wb") as file:
+            file.write(chassis_config)
         gnmi_utils.push_chassis_config(chassis_config)
 
     def setup_basic_forwarding(self) -> None:

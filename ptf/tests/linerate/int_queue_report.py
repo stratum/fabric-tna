@@ -6,10 +6,10 @@ from collections import deque
 
 from base_test import *
 from fabric_test import *
+from ptf.testutils import group
 from scapy.utils import PcapReader
 from trex_stl_lib.api import STLVM, STLPktBuilder, STLStream, STLTXCont
 from trex_test import TRexTest
-from ptf.testutils import group
 
 TRAFFIC_MULT = "1000pps"
 TEST_DURATION = 3
