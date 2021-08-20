@@ -220,7 +220,6 @@ def set_up_trex_server(trex_daemon_client, trex_address, trex_config, force_rest
             return False
 
         if force_restart:
-            info("TEMP: killing all trexes")
             trex_daemon_client.kill_all_trexes()
 
         if not trex_daemon_client.is_idle():
