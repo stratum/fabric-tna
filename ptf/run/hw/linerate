@@ -8,7 +8,7 @@ FABRIC_TNA_ROOT="${PTF_ROOT}"/..
 # shellcheck source=.env
 source "${FABRIC_TNA_ROOT}"/.env
 export TREX_PARAMS="--trex-address ${TREX_ADDR} \
-                    --trex-config /fabric-tna/run/hw/trex-config/4-ports-with-l2.yaml \
+                    --trex-config /fabric-tna/ptf/run/hw/trex-config/4-ports-with-l2.yaml \
                     --force-restart"
 export PORT_MAP="/fabric-tna/run/hw/port_map.trex.json"
 export PTF_DIR="/fabric-tna/tests/linerate"
