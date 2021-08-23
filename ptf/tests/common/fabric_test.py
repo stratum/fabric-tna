@@ -4609,9 +4609,6 @@ class StatsTest(FabricTest):
         )
         entity.table_entry.counter_data.CopyFrom(p4runtime_pb2.CounterData())
         entities = self.read_request(req)
-        if self.generate_tv:
-            # TODO
-            return
         if len(entities) != 1:
             self.fail("Expected 1 table entry got %d" % len(entities))
         entity = entities.pop()
@@ -4623,6 +4620,9 @@ class StatsTest(FabricTest):
     def verify_stats_counter(
             self, gress, stats_flow_id, port, byte_count, pkt_count, **ftuple
     ):
+        if self.generate_tv:
+            # TODO
+            return
         actual_byte_count, actual_pkt_count = self.get_stats_counter(
             gress, stats_flow_id, port,  **ftuple)
         if (
