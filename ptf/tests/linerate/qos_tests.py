@@ -94,20 +94,30 @@ class QosTest(TRexTest, SlicingTest, StatsTest):
         self.add_queue_entry(11, 0, qos_utils.QUEUE_ID_REALTIME_2)
         self.add_queue_entry(12, 0, qos_utils.QUEUE_ID_REALTIME_3)
 
-    def get_switch_flow_stats(self, stats_flow_id, ig_port, eg_port, **ftuple) -> FlowStats:
+    def get_flow_stats_from_switch(self, stats_flow_id, ig_port, eg_port, **ftuple) -> FlowStats:
+        """
+        Returns FlowStats populated using switch-maintained counters.
+        Requires setting up counters beforehand with StatsTest.set_up_stats_flows().
+        :param stats_flow_id: a unique identifier for this flow, could be the same as pg_id
+        :param ig_port: the expected swotch ingress port
+        :param eg_port: the expected switch egress port
+        :param ftuple: ACL-like five tuple keyworded parameters (ipv4_src, ipv4_dst, ip_proto, l4_sport, l4_dport)
+        :return: FlowStats
+        """
         ig_bytes, ig_packets = self.get_stats_counter(
             gress=STATS_INGRESS, stats_flow_id=stats_flow_id, port=ig_port, **ftuple)
         eg_bytes, eg_packets = self.get_stats_counter(
             gress=STATS_EGRESS, stats_flow_id=stats_flow_id, port=eg_port, **ftuple)
         # Switch egress bytes count will include bridged metadata, we need to subtract
         # that to obtain the actual bytes transmitted by the switch.
-        tx_bytes = eg_bytes - eg_packets * BMD_BYTES
+        eg_bytes = eg_bytes - eg_packets * BMD_BYTES
+        # What is transmitted (tx) by Trex is received (rx) by the switch, and vice versa.
         return FlowStats(
             pg_id=stats_flow_id,
-            tx_packets=eg_packets,
-            rx_packets=ig_packets,
-            tx_bytes=tx_bytes,
-            rx_bytes=ig_bytes,
+            tx_packets=ig_packets,
+            rx_packets=eg_packets,
+            tx_bytes=ig_bytes,
+            rx_bytes=eg_bytes,
         )
 
     # Create a background traffic stream.
@@ -174,8 +184,8 @@ class QosTest(TRexTest, SlicingTest, StatsTest):
 @group("trex-sw-mode")
 class FlowCountersSanityTest(QosTest):
     """
-    This test ensures that switch-maintained P4 counters work as expected by
-    comparing them with the Trex per-flow stats. Trex per-flow stats require
+    This test ensures that switch-maintained P4 counters can be used to produce
+    the same flow stats obtained when using Trex. Trex per-flow stats require
     disabling NIC HW acceleration, which might limit the ability to analyze
     traffic at high rates. To avoid having to worry about the impact of Trex
     SW-based processing on QoS tests, we prefer to keep HW acceleration enabled
@@ -259,38 +269,37 @@ class FlowCountersSanityTest(QosTest):
             readable_stats = get_readable_port_stats(trex_stats[port])
             print("Statistics for port {}: {}".format(port, readable_stats))
 
-        # Get switch stats
-        switch_flow_stats_1 = self.get_switch_flow_stats(
+        # Get stats from switch switch
+        switch_flow_stats_1 = self.get_flow_stats_from_switch(
             stats_flow_id=pg_id_1,
             ig_port=switch_ig_port,
             eg_port=switch_eg_port,
             l4_dport=dport_1)
-        switch_flow_stats_2 = self.get_switch_flow_stats(
+        switch_flow_stats_2 = self.get_flow_stats_from_switch(
             stats_flow_id=pg_id_2,
             ig_port=switch_ig_port,
             eg_port=switch_eg_port,
             l4_dport=dport_2)
-        switch_flow_stats_3 = self.get_switch_flow_stats(
+        switch_flow_stats_3 = self.get_flow_stats_from_switch(
             stats_flow_id=pg_id_3,
             ig_port=switch_ig_port,
             eg_port=switch_eg_port,
             l4_dport=dport_3)
 
-        # Compare Trex stats with switch stats. What is transmitted (tx) by Trex should be
-        # received (rx) by the switch, and vice versa.
-        self.assertEqual(trex_flow_stats_1.tx_packets, switch_flow_stats_1.rx_packets)
-        self.assertEqual(trex_flow_stats_2.tx_packets, switch_flow_stats_2.rx_packets)
-        self.assertEqual(trex_flow_stats_3.tx_packets, switch_flow_stats_3.rx_packets)
-        self.assertEqual(trex_flow_stats_1.tx_bytes, switch_flow_stats_1.rx_bytes)
-        self.assertEqual(trex_flow_stats_2.tx_bytes, switch_flow_stats_2.rx_bytes)
-        self.assertEqual(trex_flow_stats_3.tx_bytes, switch_flow_stats_3.rx_bytes)
+        # Compare Trex stats with switch stats
+        self.assertEqual(trex_flow_stats_1.tx_packets, switch_flow_stats_1.tx_packets)
+        self.assertEqual(trex_flow_stats_2.tx_packets, switch_flow_stats_2.tx_packets)
+        self.assertEqual(trex_flow_stats_3.tx_packets, switch_flow_stats_3.tx_packets)
+        self.assertEqual(trex_flow_stats_1.tx_bytes, switch_flow_stats_1.tx_bytes)
+        self.assertEqual(trex_flow_stats_2.tx_bytes, switch_flow_stats_2.tx_bytes)
+        self.assertEqual(trex_flow_stats_3.tx_bytes, switch_flow_stats_3.tx_bytes)
 
-        self.assertEqual(trex_flow_stats_1.rx_packets, switch_flow_stats_1.tx_packets)
-        self.assertEqual(trex_flow_stats_2.rx_packets, switch_flow_stats_2.tx_packets)
-        self.assertEqual(trex_flow_stats_3.rx_packets, switch_flow_stats_3.tx_packets)
-        self.assertEqual(trex_flow_stats_1.rx_bytes, switch_flow_stats_1.tx_bytes)
-        self.assertEqual(trex_flow_stats_2.rx_bytes, switch_flow_stats_2.tx_bytes)
-        self.assertEqual(trex_flow_stats_3.rx_bytes, switch_flow_stats_3.tx_bytes)
+        self.assertEqual(trex_flow_stats_1.rx_packets, switch_flow_stats_1.rx_packets)
+        self.assertEqual(trex_flow_stats_2.rx_packets, switch_flow_stats_2.rx_packets)
+        self.assertEqual(trex_flow_stats_3.rx_packets, switch_flow_stats_3.rx_packets)
+        self.assertEqual(trex_flow_stats_1.rx_bytes, switch_flow_stats_1.rx_bytes)
+        self.assertEqual(trex_flow_stats_2.rx_bytes, switch_flow_stats_2.rx_bytes)
+        self.assertEqual(trex_flow_stats_3.rx_bytes, switch_flow_stats_3.rx_bytes)
 
 
 class MinFlowrateWithSoftwareLatencyMeasurement(QosTest):
