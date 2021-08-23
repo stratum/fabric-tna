@@ -74,7 +74,7 @@ class IntFlowFilterWithTrafficTrace(TRexTest, IntTest):
         )
         self.trex_client.wait_on_traffic(ports=[SENDER_PORT])
 
-        output = "/tmp/real-traffic-trace-{}.pcap".format(
+        output = "/tmp/int-traffic-trace-{}.pcap".format(
             datetime.now().strftime("%Y%m%d-%H%M%S")
         )
         self.trex_client.stop_capture(capture["id"], output)

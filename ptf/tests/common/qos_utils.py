@@ -83,7 +83,7 @@ def get_system_traffic_packet(l2_size=64):
 
 
 # Returns a packet that belongs to the best-effort CoS group.
-def get_best_effort_traffic_packet(l2_size=1400, dport=L4_DPORT_BEST_EFFORT_TRAFFIC_1):
+def get_best_effort_traffic_packet(l2_size=1400, dport=L4_DPORT_BEST_EFFORT_TRAFFIC):
     pkt = testutils.simple_udp_packet(eth_dst=DEST_MAC, udp_dport=dport, pktlen=l2_size)
     assert len(pkt) == l2_size, "Packet size {} does not match target size {}".format(
         len(pkt), l2_size
