@@ -182,31 +182,25 @@ class QosTest(TRexTest, SlicingTest, StatsTest):
         l2_size=750,
     ) -> STLStream:
         pkt = qos_utils.get_elastic_traffic_packet(l2_size=l2_size, dport=dport)
-        stats = None
-        if pg_id is not None:
-            stats = STLFlowLatencyStats(pg_id=pg_id)
         return STLStream(
             packet=STLPktBuilder(pkt=pkt),
             mode=STLTXCont(bps_L1=l1_bps),
-            flow_stats=stats,
+            flow_stats=STLFlowLatencyStats(pg_id=pg_id),
         )
 
     # Create a lower priority best-effort stream.
     def create_best_effort_stream(
-        self,
-        pg_id=None,
-        dport=qos_utils.L4_DPORT_BEST_EFFORT_TRAFFIC_1,
-        l1_bps=LINK_RATE_BPS,
-        l2_size=750,
+            self,
+            pg_id=None,
+            dport=None,
+            l2_size=None,
+            l1_bps=None,
     ) -> STLStream:
         pkt = qos_utils.get_best_effort_traffic_packet(l2_size=l2_size, dport=dport)
-        stats = None
-        if pg_id is not None:
-            stats = STLFlowLatencyStats(pg_id=pg_id)
         return STLStream(
             packet=STLPktBuilder(pkt=pkt),
             mode=STLTXCont(bps_L1=l1_bps),
-            flow_stats=stats,
+            flow_stats=STLFlowLatencyStats(pg_id=pg_id),
         )
 
     # Create a second highest priority system stream.
@@ -310,7 +304,7 @@ class FlowCountersSanityTest(QosTest):
             readable_stats = get_readable_port_stats(trex_stats[port])
             print("Statistics for port {}: {}".format(port, readable_stats))
 
-        # Get stats from switch switch
+        # Get stats from switch
         switch_flow_stats_1 = self.get_flow_stats_from_switch(
             stats_flow_id=pg_id_1,
             ig_port=switch_ig_port,
@@ -707,7 +701,7 @@ class ElasticTrafficIsWrrScheduled(QosTest):
         print("\nTesting 1G bottleneck...")
         self.doRunTest(link_bps=1*G)
 
-        # FIXME: flow stats report egress link utilization of more than 100% and incorrect RX shares.
+        # FIXME: flow stats report egress link utilization greater than 100% and incorrect RX shares.
         #   Could be an issue with the switch counters, or something's wrong with the scheduler
         #   trying to send more than 40Gbps.
         # print("\nTesting 40G bottleneck...")
@@ -734,7 +728,7 @@ class ElasticTrafficIsWrrScheduled(QosTest):
             raise Exception(f"Invalid link_bps: {link_bps}")
 
         # Use one port per stream to make sure we have enough bandwidth to congest all
-        # queues event with a 40Gbps link.
+        # queues event with a 40Gbps bottleneck.
         switch_in_ports = [self.port1, self.port3, self.port4]
         trex_tx_ports = [0, 2, 3]
 
@@ -758,18 +752,19 @@ class ElasticTrafficIsWrrScheduled(QosTest):
         assert tx_stream_bps <= 40 * G, "Not enough input bandwidth to create congestion on all queues"
 
         stream_1 = self.create_elastic_stream(
+                pg_id=elastic_flow_id_1,
                 l1_bps=tx_stream_bps,
                 dport=qos_utils.L4_DPORT_ELASTIC_TRAFFIC_1,
                 l2_size=1400,
             )
-
         stream_2 = self.create_elastic_stream(
+                pg_id=elastic_flow_id_2,
                 l1_bps=tx_stream_bps,
                 dport=qos_utils.L4_DPORT_ELASTIC_TRAFFIC_2,
                 l2_size=1400,
             )
-
         stream_3 = self.create_best_effort_stream(
+                pg_id=best_effort_flow_id_3,
                 l1_bps=tx_stream_bps,
                 dport=qos_utils.L4_DPORT_BEST_EFFORT_TRAFFIC_1,
                 l2_size=1400,
