@@ -710,8 +710,8 @@ class ElasticTrafficIsWrrScheduled(QosTest):
         # FIXME: flow stats report egress link utilization greater than 100% and incorrect RX shares.
         #   Could be an issue with the switch counters, or something's wrong with the scheduler
         #   trying to send more than 40Gbps.
-        print("\nTesting 40G bottleneck...")
-        self.doRunTest(link_bps=40 * G)
+        # print("\nTesting 40G bottleneck...")
+        # self.doRunTest(link_bps=40 * G)
 
     @autocleanup
     def doRunTest(self, link_bps) -> None:
