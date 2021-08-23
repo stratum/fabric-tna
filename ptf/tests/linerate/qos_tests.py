@@ -263,7 +263,7 @@ class FlowCountersSanityTest(QosTest):
     @autocleanup
     def runTest(self) -> None:
         self.push_chassis_config()
-        self.setup_basic_forwarding()
+        self.setup_basic_forwarding_to_1g()
 
         # Create multiple streams, each one sending at the link rate..
         stream_bps = LINK_RATE_BPS
@@ -722,12 +722,12 @@ class RealtimeTrafficIsRrScheduled(QosTest):
 
 class ElasticTrafficIsWrrScheduled(QosTest):
     """
-     In this test we check that traffic using elastic queues (including
-     best-effort) is scheduled in a WRR fashion. For this, we start three
-     streams each one sending more than the allotted rate, thus congesting the
-     output link. We expect that the amount of bytes received for each stream is
-     proportional to the WRR weights.
-     """
+    In this test we check that traffic using elastic queues (including
+    best-effort) is scheduled in a WRR fashion. For this, we start three
+    streams each one sending more than the allotted rate, thus congesting the
+    output link. We expect that the amount of bytes received for each stream is
+    proportional to the WRR weights.
+    """
 
     def runTest(self) -> None:
         print("\nTesting 1G bottleneck...")
