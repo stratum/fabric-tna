@@ -287,15 +287,15 @@ def format_bps(bps):
     while bps >= 1000:
         bps /= 1000
         n += 1
-    return f"{round(bps, 1)}{power_labels[n]}bps"
+    return f"{round(bps, 1)} {power_labels[n]}bps"
 
 
-def get_flow_rate_shares(duration: int, *stats_list: FlowStats) -> FlowRateShares:
+def get_flow_rate_shares(seconds: int, *stats_list: FlowStats) -> FlowRateShares:
     rx_bps = {}
     tx_bps = {}
     for stats in stats_list:
-        rx_bps[stats.pg_id] = stats.rx_bytes / duration
-        tx_bps[stats.pg_id] = stats.tx_bytes / duration
+        rx_bps[stats.pg_id] = stats.rx_bytes * 8 / seconds
+        tx_bps[stats.pg_id] = stats.tx_bytes * 8 / seconds
     rx_bps_total = sum(rx_bps.values())
     tx_bps_total = sum(tx_bps.values())
     rx_shares = {k: v / rx_bps_total for k, v in rx_bps.items()}
@@ -312,22 +312,18 @@ def get_flow_rate_shares(duration: int, *stats_list: FlowStats) -> FlowRateShare
 
 def get_readable_flow_rate_shares(stats: FlowRateShares) -> str:
     rx_str = "\n".join([
-        f"        {pg_id}: {format_bps(val)} ({stats.rx_shares[pg_id]:.1%})"
+        f"        pg_id {pg_id}: {format_bps(val)} ({stats.rx_shares[pg_id]:.1%})"
         for pg_id, val in
         stats.rx_bps.items()
-    ] + [
-        f"        total: {format_bps(stats.rx_bps_total)} (100%)"
     ])
     tx_str = "\n".join([
-        f"        {pg_id}: {format_bps(val)} ({stats.tx_shares[pg_id]:.1%})"
+        f"        pg_id {pg_id}: {format_bps(val)} ({stats.tx_shares[pg_id]:.1%})"
         for pg_id, val in
         stats.tx_bps.items()
-    ] + [
-        f"        total: {format_bps(stats.tx_bps_total)} (100%)"
     ])
-    return f"""Flow comparison
-    RX stats:\n{rx_str}
-    TX stats:\n{tx_str}"""
+    return f"""Flow rate shares:
+    TX total: {format_bps(stats.tx_bps_total)}\n{tx_str}
+    RX total: {format_bps(stats.rx_bps_total)}\n{rx_str}"""
 
 
 class ParseExtendArgAction(argparse.Action):
