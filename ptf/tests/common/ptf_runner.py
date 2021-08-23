@@ -226,7 +226,7 @@ def set_up_trex_server(trex_daemon_client, trex_address, trex_config, force_rest
             info("The Trex server process is running")
             warn(
                 "A Trex server process is still running, "
-                + "use --force-restart to kill it if necessary."
+                + "use --trex-force-restart to kill it if necessary."
             )
             return False
 
@@ -449,8 +449,14 @@ def main():
         required=False,
     )
     parser.add_argument(
-        "--force-restart",
+        "--trex-force-restart",
         help="Restart the TRex daemon core process before running tests if there is one running",
+        action="store_true",
+        required=False,
+    )
+    parser.add_argument(
+        "--trex-sw-mode",
+        help="Disables NIC HW acceleration, required to compute Trex per-flow stats",
         action="store_true",
         required=False,
     )
@@ -489,10 +495,14 @@ def main():
 
     # if line rate test, set up and tear down TRex
     if args.trex_address is not None:
-        trex_daemon_client = CTRexClient(args.trex_address)
+        if args.trex_sw_mode:
+            trex_args = "--software --no-hw-flow-stat"
+        else:
+            trex_args = None
+        trex_daemon_client = CTRexClient(args.trex_address, trex_args=trex_args)
         info("Starting TRex daemon client...")
         success = set_up_trex_server(
-            trex_daemon_client, args.trex_address, args.trex_config, args.force_restart
+            trex_daemon_client, args.trex_address, args.trex_config, args.trex_force_restart
         )
         if not success:
             error("Failed to set up TRex daemon client!")
