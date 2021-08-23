@@ -49,7 +49,7 @@ BACKGROUND_SENDER_PORT = [0]
 PRIORITY_SENDER_PORT = [2]
 ALL_SENDER_PORTS = [0, 2]
 RECEIVER_PORT = [1]
-ALL_PORTS = [0, 1, 2]
+ALL_PORTS = [0, 1, 2, 3]
 
 
 class QosTest(TRexTest, SlicingTest, StatsTest):
@@ -70,19 +70,20 @@ class QosTest(TRexTest, SlicingTest, StatsTest):
             file.write(chassis_config)
         gnmi_utils.push_chassis_config(chassis_config)
 
-    def _setup_basic_forwarding(self, in_ports=None, out_port=None) -> None:
-        for port in in_ports + [out_port]:
+    def _setup_basic_forwarding(self, out_port) -> None:
+        in_ports = [self.port1, self.port2, self.port3, self.port4]
+        for port in set(in_ports + [out_port]):
             self.setup_port(port, DEFAULT_VLAN, PORT_TYPE_EDGE)
         for in_port in in_ports:
             self.add_forwarding_acl_set_output_port(out_port, ig_port=in_port)
 
-    def setup_basic_forwarding_to_1g(self, in_ports=None, out_port=None) -> None:
+    def setup_basic_forwarding_to_1g(self) -> None:
         # Forwards all traffic to 1G shaped port per chassis config
-        self._setup_basic_forwarding(in_ports=[self.port1, self.port3], out_port=self.port2)
+        self._setup_basic_forwarding(out_port=self.port2)
 
-    def setup_basic_forwarding_to_40g(self, in_ports=None, out_port=None) -> None:
+    def setup_basic_forwarding_to_40g(self) -> None:
         # Forwards all traffic to 40G port per chassis config
-        self._setup_basic_forwarding(in_ports=[self.port2, self.port3], out_port=self.port1)
+        self._setup_basic_forwarding(out_port=self.port1)
 
     def setup_queue_classification(self) -> None:
         self.add_slice_tc_classifier_entry(
@@ -240,19 +241,19 @@ class FlowCountersSanityTest(QosTest):
         streams = [
             self.create_best_effort_stream(
                 pg_id=pg_id_1,
-                l2_bps=stream_bps,
+                l1_bps=stream_bps,
                 dport=dport_1,
                 l2_size=1400
             ),
             self.create_best_effort_stream(
                 pg_id=pg_id_2,
-                l2_bps=stream_bps,
+                l1_bps=stream_bps,
                 dport=dport_2,
                 l2_size=1400
             ),
             self.create_best_effort_stream(
                 pg_id=pg_id_3,
-                l2_bps=stream_bps,
+                l1_bps=stream_bps,
                 dport=dport_3,
                 l2_size=1400
             ),
@@ -701,11 +702,10 @@ class ElasticTrafficIsWrrScheduled(QosTest):
         self.doRunTest(link_bps=40 * G)
 
     @autocleanup
-    def doRunTest(self, link_bps=1 * G) -> None:
+    def doRunTest(self, link_bps) -> None:
         elastic_flow_id_1 = 1
         elastic_flow_id_2 = 2
-        best_effort_flow_id_3a = 3
-        best_effort_flow_id_3b = 4
+        best_effort_flow_id_3 = 3
 
         self.push_chassis_config()
         self.setup_queue_classification()
@@ -713,17 +713,15 @@ class ElasticTrafficIsWrrScheduled(QosTest):
         # NOTE: this might be common to other test cases wanting to test different
         # bottlenecks. Consider moving to base class QosTest.
         if link_bps == 1 * G:
-            switch_in_ports = [self.port1, self.port3]
             switch_out_port = self.port2
-            trex_tx_ports = [0, 2]
             self.setup_basic_forwarding_to_1g()
         elif link_bps == 40 * G:
-            switch_in_ports = [self.port2, self.port3]
             switch_out_port = self.port1
-            trex_tx_ports = [1, 2]
             self.setup_basic_forwarding_to_40g()
         else:
             raise Exception(f"Invalid link_bps: {link_bps}")
+        switch_in_ports = [self.port1, self.port3, self.port4]
+        trex_tx_ports = [0, 2, 3]
 
         # To guarantee that the perceived WRR scheduling does not depend on the input
         # rate, all streams should send at the same rate. Also, make sure to create
@@ -742,66 +740,58 @@ class ElasticTrafficIsWrrScheduled(QosTest):
         weight_3 = BEST_EFFORT_WRR_WEIGHT / weight_total
 
         weight_max = max(weight_1, weight_2, weight_3)
-        stream_bps = link_bps * weight_max * 1.1
-        max_stream_bps = 2/3 * 40 * G
-        assert stream_bps < max_stream_bps, "Not enough input bandwidth to create congestion on all queues"
+        exp_rx_stream_bps = link_bps * weight_max
+        tx_stream_bps = exp_rx_stream_bps * 1.1
 
-        streams_a = [
-            self.create_elastic_stream(
-                l1_bps=stream_bps,
+        print(f"Starting 3 streams at {format_bps(tx_stream_bps)} each...")
+
+        assert tx_stream_bps <= 40 * G, "Not enough input bandwidth to create congestion on all queues"
+
+        stream_1 = self.create_elastic_stream(
+                l1_bps=tx_stream_bps,
                 dport=qos_utils.L4_DPORT_ELASTIC_TRAFFIC_1,
                 l2_size=1400,
-            ),
-            self.create_best_effort_stream(
-                l1_bps=stream_bps / 2,
-                dport=qos_utils.L4_DPORT_BEST_EFFORT_TRAFFIC_1,
-                l2_size=1400,
-            ),
-        ]
-        self.trex_client.add_streams(streams_a, ports=trex_tx_ports[0])
+            )
 
-        streams_b = [
-            self.create_elastic_stream(
-                l1_bps=stream_bps,
+        stream_2 = self.create_elastic_stream(
+                l1_bps=tx_stream_bps,
                 dport=qos_utils.L4_DPORT_ELASTIC_TRAFFIC_2,
                 l2_size=1400,
-            ),
-            self.create_best_effort_stream(
-                l1_bps=stream_bps / 2,
-                dport=qos_utils.L4_DPORT_BEST_EFFORT_TRAFFIC_2,
+            )
+
+        stream_3 = self.create_best_effort_stream(
+                l1_bps=tx_stream_bps,
+                dport=qos_utils.L4_DPORT_BEST_EFFORT_TRAFFIC_1,
                 l2_size=1400,
-            ),
-        ]
-        self.trex_client.add_streams(streams_b, ports=trex_tx_ports[1])
+            )
+
+        self.trex_client.add_streams(stream_1, ports=trex_tx_ports[0])
+        self.trex_client.add_streams(stream_2, ports=trex_tx_ports[1])
+        self.trex_client.add_streams(stream_3, ports=trex_tx_ports[2])
 
         # We rely on switch counters to evaluate the scheduling accuracy.
-        ig_port_a = switch_in_ports[0]
-        ig_port_b = switch_in_ports[1]
+        ig_port_1 = switch_in_ports[0]
+        ig_port_2 = switch_in_ports[1]
+        ig_port_3 = switch_in_ports[2]
         eg_port = switch_out_port
 
         self.set_up_stats_flows(
             stats_flow_id=elastic_flow_id_1,
-            ig_port=ig_port_a,
+            ig_port=ig_port_1,
             eg_port=eg_port,
             l4_dport=qos_utils.L4_DPORT_ELASTIC_TRAFFIC_1,
         )
         self.set_up_stats_flows(
             stats_flow_id=elastic_flow_id_2,
-            ig_port=ig_port_b,
+            ig_port=ig_port_2,
             eg_port=eg_port,
             l4_dport=qos_utils.L4_DPORT_ELASTIC_TRAFFIC_2,
         )
         self.set_up_stats_flows(
-            stats_flow_id=best_effort_flow_id_3a,
-            ig_port=ig_port_a,
+            stats_flow_id=best_effort_flow_id_3,
+            ig_port=ig_port_3,
             eg_port=eg_port,
             l4_dport=qos_utils.L4_DPORT_BEST_EFFORT_TRAFFIC_1,
-        )
-        self.set_up_stats_flows(
-            stats_flow_id=best_effort_flow_id_3b,
-            ig_port=ig_port_b,
-            eg_port=eg_port,
-            l4_dport=qos_utils.L4_DPORT_BEST_EFFORT_TRAFFIC_2,
         )
 
         logging.info("Starting traffic, duration: %d sec", TRAFFIC_DURATION_SECONDS)
@@ -818,70 +808,78 @@ class ElasticTrafficIsWrrScheduled(QosTest):
 
         switch_flow_stats_1 = self.get_switch_flow_stats(
             stats_flow_id=elastic_flow_id_1,
-            ig_port=ig_port_a,
+            ig_port=ig_port_1,
             eg_port=eg_port,
             l4_dport=qos_utils.L4_DPORT_ELASTIC_TRAFFIC_1,
         )
         switch_flow_stats_2 = self.get_switch_flow_stats(
             stats_flow_id=elastic_flow_id_2,
-            ig_port=ig_port_b,
+            ig_port=ig_port_2,
             eg_port=eg_port,
             l4_dport=qos_utils.L4_DPORT_ELASTIC_TRAFFIC_2,
         )
-        switch_flow_stats_3a = self.get_switch_flow_stats(
-            stats_flow_id=best_effort_flow_id_3a,
-            ig_port=ig_port_a,
+        switch_flow_stats_3 = self.get_switch_flow_stats(
+            stats_flow_id=best_effort_flow_id_3,
+            ig_port=ig_port_3,
             eg_port=eg_port,
             l4_dport=qos_utils.L4_DPORT_BEST_EFFORT_TRAFFIC_1,
         )
-        switch_flow_stats_3b = self.get_switch_flow_stats(
-            stats_flow_id=best_effort_flow_id_3b,
-            ig_port=ig_port_b,
-            eg_port=eg_port,
-            l4_dport=qos_utils.L4_DPORT_BEST_EFFORT_TRAFFIC_2,
-        )
 
-        # Make sure Trex was able to generate enough traffic to congest all queues.
-        rx_bps_1 = switch_flow_stats_1.rx_bytes * 8 / TRAFFIC_DURATION_SECONDS
-        rx_bps_2 = switch_flow_stats_2.rx_bytes * 8 / TRAFFIC_DURATION_SECONDS
-        rx_bps_3 = (switch_flow_stats_3a.rx_bytes + switch_flow_stats_3b.rx_bytes) * 8 / TRAFFIC_DURATION_SECONDS
+        flow_rate_shares = get_flow_rate_shares(
+            TRAFFIC_DURATION_SECONDS,
+            switch_flow_stats_1,
+            switch_flow_stats_2,
+            switch_flow_stats_3,
+        )
+        print(get_readable_flow_rate_shares(flow_rate_shares))
 
         self.assertGreater(
-            rx_bps_1,
-            stream_bps,
+            flow_rate_shares.rx_bps[elastic_flow_id_1],
+            exp_rx_stream_bps,
             "Ingress bps for elastic source 1 was not enough to congest the queue",
         )
         self.assertGreater(
-            rx_bps_2,
-            stream_bps,
+            flow_rate_shares.rx_bps[elastic_flow_id_2],
+            exp_rx_stream_bps,
             "Ingress bps for elastic source 2 was not enough to congest the queue",
         )
         self.assertGreater(
-            rx_bps_3,
-            stream_bps,
+            flow_rate_shares.rx_bps[best_effort_flow_id_3],
+            exp_rx_stream_bps,
             "Ingress bps for best-effort source 3 was not enough to congest the queue",
         )
-
-        # Compare egress byte shares with the expected scheduling share.
-        tx_bytes_total = switch_flow_stats_1.tx_bytes + switch_flow_stats_2.tx_bytes + switch_flow_stats_3a.tx_bytes + switch_flow_stats_3b.tx_bytes
-        tx_bytes_share_1 = switch_flow_stats_1.tx_bytes / tx_bytes_total
-        tx_bytes_share_2 = switch_flow_stats_2.tx_bytes / tx_bytes_total
-        tx_bytes_share_3 = (switch_flow_stats_3a.tx_bytes + switch_flow_stats_3b.tx_bytes) / tx_bytes_total
-
         self.assertAlmostEqual(
-            tx_bytes_share_1,
+            flow_rate_shares.rx_shares[elastic_flow_id_1],
+            flow_rate_shares.rx_shares[elastic_flow_id_2],
+            delta=0.001,
+            msg="All streams should send at the same rate"
+        )
+        self.assertAlmostEqual(
+            flow_rate_shares.rx_shares[elastic_flow_id_1],
+            flow_rate_shares.rx_shares[best_effort_flow_id_3],
+            delta=0.001,
+            msg="All streams should send at the same rate"
+        )
+        self.assertAlmostEqual(
+            flow_rate_shares.tx_bps_total,
+            link_bps,
+            delta=link_bps*0.01,
+            msg=f"Egress link utilization should be almost 100%",
+        )
+        self.assertAlmostEqual(
+            flow_rate_shares.tx_shares[elastic_flow_id_1],
             weight_1,
             delta=0.008,
             msg="Elastic source 1 was not scheduled as expected",
         )
         self.assertAlmostEqual(
-            tx_bytes_share_2,
+            flow_rate_shares.tx_shares[elastic_flow_id_2],
             weight_2,
             delta=0.008,
             msg="Elastic source 2 was not scheduled as expected",
         )
         self.assertAlmostEqual(
-            tx_bytes_share_3,
+            flow_rate_shares.tx_shares[best_effort_flow_id_3],
             weight_3,
             delta=0.008,
             msg="Best-effort source 3 was not scheduled as expected",
