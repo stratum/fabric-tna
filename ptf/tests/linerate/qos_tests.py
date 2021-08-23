@@ -705,7 +705,7 @@ class ElasticTrafficIsWrrScheduled(QosTest):
 
     def runTest(self) -> None:
         print("\nTesting 1G bottleneck...")
-        self.doRunTest(link_bps=1*G)
+        self.doRunTest(link_bps=1 * G)
 
         # FIXME: flow stats report egress link utilization greater than 100% and incorrect RX shares.
         #   Could be an issue with the switch counters, or something's wrong with the scheduler
@@ -745,7 +745,7 @@ class ElasticTrafficIsWrrScheduled(QosTest):
         # each stream to send at a rate higher than the expected scheduling rate of the
         # queue with the highest weight.
         weight_total = (
-                ELASTIC_1_WRR_WEIGHT + ELASTIC_2_WRR_WEIGHT + BEST_EFFORT_WRR_WEIGHT
+            ELASTIC_1_WRR_WEIGHT + ELASTIC_2_WRR_WEIGHT + BEST_EFFORT_WRR_WEIGHT
         )
         weight_1 = ELASTIC_1_WRR_WEIGHT / weight_total
         weight_2 = ELASTIC_2_WRR_WEIGHT / weight_total
@@ -755,23 +755,25 @@ class ElasticTrafficIsWrrScheduled(QosTest):
         min_tx_stream_bps = link_bps * weight_max
         tx_stream_bps = min_tx_stream_bps * 1.1
 
-        assert tx_stream_bps <= 40 * G, "Not enough input bandwidth to create congestion on all queues"
+        assert (
+            tx_stream_bps <= 40 * G
+        ), "Not enough input bandwidth to create congestion on all queues"
 
         stream_1 = self.create_elastic_stream(
-                l1_bps=tx_stream_bps,
-                dport=qos_utils.L4_DPORT_ELASTIC_TRAFFIC_1,
-                l2_size=1400,
-            )
+            l1_bps=tx_stream_bps,
+            dport=qos_utils.L4_DPORT_ELASTIC_TRAFFIC_1,
+            l2_size=1400,
+        )
         stream_2 = self.create_elastic_stream(
-                l1_bps=tx_stream_bps,
-                dport=qos_utils.L4_DPORT_ELASTIC_TRAFFIC_2,
-                l2_size=1400,
-            )
+            l1_bps=tx_stream_bps,
+            dport=qos_utils.L4_DPORT_ELASTIC_TRAFFIC_2,
+            l2_size=1400,
+        )
         stream_3 = self.create_best_effort_stream(
-                l1_bps=tx_stream_bps,
-                dport=qos_utils.L4_DPORT_BEST_EFFORT_TRAFFIC_1,
-                l2_size=1400,
-            )
+            l1_bps=tx_stream_bps,
+            dport=qos_utils.L4_DPORT_BEST_EFFORT_TRAFFIC_1,
+            l2_size=1400,
+        )
 
         self.trex_client.add_streams(stream_1, ports=trex_tx_ports[0])
         self.trex_client.add_streams(stream_2, ports=trex_tx_ports[1])
@@ -837,10 +839,7 @@ class ElasticTrafficIsWrrScheduled(QosTest):
         print(get_readable_flow_stats(flow_stats_3))
 
         flow_rate_shares = get_flow_rate_shares(
-            TRAFFIC_DURATION_SECONDS,
-            flow_stats_1,
-            flow_stats_2,
-            flow_stats_3,
+            TRAFFIC_DURATION_SECONDS, flow_stats_1, flow_stats_2, flow_stats_3,
         )
         print(get_readable_flow_rate_shares(flow_rate_shares))
 
@@ -863,13 +862,13 @@ class ElasticTrafficIsWrrScheduled(QosTest):
             flow_rate_shares.tx_shares[elastic_flow_id_1],
             flow_rate_shares.tx_shares[elastic_flow_id_2],
             delta=0.001,
-            msg="All streams should send at the same rate"
+            msg="All streams should send at the same rate",
         )
         self.assertAlmostEqual(
             flow_rate_shares.tx_shares[elastic_flow_id_1],
             flow_rate_shares.tx_shares[best_effort_flow_id_3],
             delta=0.001,
-            msg="All streams should send at the same rate"
+            msg="All streams should send at the same rate",
         )
         self.assertAlmostEqual(
             flow_rate_shares.rx_bps_total / link_bps,

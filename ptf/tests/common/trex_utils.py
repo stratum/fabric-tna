@@ -133,7 +133,8 @@ FlowStats = collections.namedtuple(
 )
 
 FlowRateShares = collections.namedtuple(
-    "FlowRateShares", ["rx_bps", "tx_bps", "rx_bps_total", "tx_bps_total", "rx_shares", "tx_shares"],
+    "FlowRateShares",
+    ["rx_bps", "tx_bps", "rx_bps_total", "tx_bps_total", "rx_shares", "tx_shares"],
 )
 
 PortStats = collections.namedtuple(
@@ -311,16 +312,18 @@ def get_flow_rate_shares(seconds: int, *stats_list: FlowStats) -> FlowRateShares
 
 
 def get_readable_flow_rate_shares(stats: FlowRateShares) -> str:
-    rx_str = "\n".join([
-        f"        pg_id {pg_id}: {format_bps(val)} ({stats.rx_shares[pg_id]:.1%})"
-        for pg_id, val in
-        stats.rx_bps.items()
-    ])
-    tx_str = "\n".join([
-        f"        pg_id {pg_id}: {format_bps(val)} ({stats.tx_shares[pg_id]:.1%})"
-        for pg_id, val in
-        stats.tx_bps.items()
-    ])
+    rx_str = "\n".join(
+        [
+            f"        pg_id {pg_id}: {format_bps(val)} ({stats.rx_shares[pg_id]:.1%})"
+            for pg_id, val in stats.rx_bps.items()
+        ]
+    )
+    tx_str = "\n".join(
+        [
+            f"        pg_id {pg_id}: {format_bps(val)} ({stats.tx_shares[pg_id]:.1%})"
+            for pg_id, val in stats.tx_bps.items()
+        ]
+    )
     return f"""Flow rate shares:
     TX total: {format_bps(stats.tx_bps_total)}\n{tx_str}
     RX total: {format_bps(stats.rx_bps_total)}\n{rx_str}"""
