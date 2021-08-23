@@ -159,12 +159,11 @@ class QosTest(TRexTest, SlicingTest, StatsTest):
             dport=None,
             l2_size=None,
             l1_bps=None,
-            l2_bps=None,
     ) -> STLStream:
         pkt = qos_utils.get_best_effort_traffic_packet(l2_size=l2_size, dport=dport)
         return STLStream(
             packet=STLPktBuilder(pkt=pkt),
-            mode=STLTXCont(bps_L1=l1_bps, bps_L2=l2_bps),
+            mode=STLTXCont(bps_L1=l1_bps),
             flow_stats=STLFlowLatencyStats(pg_id=pg_id),
         )
 
@@ -210,19 +209,19 @@ class FlowCountersSanityTest(QosTest):
         streams = [
             self.create_best_effort_stream(
                 pg_id=pg_id_1,
-                l2_bps=stream_bps,
+                l1_bps=stream_bps,
                 dport=dport_1,
                 l2_size=1400
             ),
             self.create_best_effort_stream(
                 pg_id=pg_id_2,
-                l2_bps=stream_bps,
+                l1_bps=stream_bps,
                 dport=dport_2,
                 l2_size=1400
             ),
             self.create_best_effort_stream(
                 pg_id=pg_id_3,
-                l2_bps=stream_bps,
+                l1_bps=stream_bps,
                 dport=dport_3,
                 l2_size=1400
             ),
@@ -269,7 +268,7 @@ class FlowCountersSanityTest(QosTest):
             readable_stats = get_readable_port_stats(trex_stats[port])
             print("Statistics for port {}: {}".format(port, readable_stats))
 
-        # Get stats from switch switch
+        # Get stats from switch
         switch_flow_stats_1 = self.get_flow_stats_from_switch(
             stats_flow_id=pg_id_1,
             ig_port=switch_ig_port,
