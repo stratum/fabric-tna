@@ -182,10 +182,13 @@ class QosTest(TRexTest, SlicingTest, StatsTest):
         l2_size=750,
     ) -> STLStream:
         pkt = qos_utils.get_elastic_traffic_packet(l2_size=l2_size, dport=dport)
+        stats = None
+        if pg_id is not None:
+            stats = STLFlowLatencyStats(pg_id=pg_id)
         return STLStream(
             packet=STLPktBuilder(pkt=pkt),
             mode=STLTXCont(bps_L1=l1_bps),
-            flow_stats=STLFlowLatencyStats(pg_id=pg_id),
+            flow_stats=stats,
         )
 
     # Create a lower priority best-effort stream.
@@ -197,10 +200,13 @@ class QosTest(TRexTest, SlicingTest, StatsTest):
             l1_bps=None,
     ) -> STLStream:
         pkt = qos_utils.get_best_effort_traffic_packet(l2_size=l2_size, dport=dport)
+        stats = None
+        if pg_id is not None:
+            stats = STLFlowLatencyStats(pg_id=pg_id)
         return STLStream(
             packet=STLPktBuilder(pkt=pkt),
             mode=STLTXCont(bps_L1=l1_bps),
-            flow_stats=STLFlowLatencyStats(pg_id=pg_id),
+            flow_stats=stats,
         )
 
     # Create a second highest priority system stream.
@@ -704,8 +710,8 @@ class ElasticTrafficIsWrrScheduled(QosTest):
         # FIXME: flow stats report egress link utilization greater than 100% and incorrect RX shares.
         #   Could be an issue with the switch counters, or something's wrong with the scheduler
         #   trying to send more than 40Gbps.
-        # print("\nTesting 40G bottleneck...")
-        # self.doRunTest(link_bps=40 * G)
+        print("\nTesting 40G bottleneck...")
+        self.doRunTest(link_bps=40 * G)
 
     @autocleanup
     def doRunTest(self, link_bps) -> None:
@@ -752,19 +758,16 @@ class ElasticTrafficIsWrrScheduled(QosTest):
         assert tx_stream_bps <= 40 * G, "Not enough input bandwidth to create congestion on all queues"
 
         stream_1 = self.create_elastic_stream(
-                pg_id=elastic_flow_id_1,
                 l1_bps=tx_stream_bps,
                 dport=qos_utils.L4_DPORT_ELASTIC_TRAFFIC_1,
                 l2_size=1400,
             )
         stream_2 = self.create_elastic_stream(
-                pg_id=elastic_flow_id_2,
                 l1_bps=tx_stream_bps,
                 dport=qos_utils.L4_DPORT_ELASTIC_TRAFFIC_2,
                 l2_size=1400,
             )
         stream_3 = self.create_best_effort_stream(
-                pg_id=best_effort_flow_id_3,
                 l1_bps=tx_stream_bps,
                 dport=qos_utils.L4_DPORT_BEST_EFFORT_TRAFFIC_1,
                 l2_size=1400,
