@@ -42,6 +42,7 @@ port_templates:
     port_ids:
       - 27
       - 29
+      - 30
     rate_bps: 40000000000 # 40 Gbps
     is_shaping_enabled: false
     queue_count: 16

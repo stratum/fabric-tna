@@ -132,6 +132,10 @@ FlowStats = collections.namedtuple(
     "FlowStats", ["pg_id", "tx_packets", "rx_packets", "tx_bytes", "rx_bytes",],
 )
 
+FlowRateShares = collections.namedtuple(
+    "FlowRateShares",
+    ["rx_bps", "tx_bps", "rx_bps_total", "tx_bps_total", "rx_shares", "tx_shares"],
+)
 
 PortStats = collections.namedtuple(
     "PortStats",
@@ -276,6 +280,53 @@ def get_readable_flow_stats(stats: FlowStats) -> str:
     RX packets: {stats.rx_packets}
     TX bytes: {stats.tx_bytes}
     RX bytes: {stats.rx_bytes}"""
+
+
+def format_bps(bps):
+    n = 0
+    power_labels = {0: "", 1: "K", 2: "M", 3: "G", 4: "T"}
+    while bps >= 1000:
+        bps /= 1000
+        n += 1
+    return f"{round(bps, 1)} {power_labels[n]}bps"
+
+
+def get_flow_rate_shares(seconds: int, *stats_list: FlowStats) -> FlowRateShares:
+    rx_bps = {}
+    tx_bps = {}
+    for stats in stats_list:
+        rx_bps[stats.pg_id] = stats.rx_bytes * 8 / seconds
+        tx_bps[stats.pg_id] = stats.tx_bytes * 8 / seconds
+    rx_bps_total = sum(rx_bps.values())
+    tx_bps_total = sum(tx_bps.values())
+    rx_shares = {k: v / rx_bps_total for k, v in rx_bps.items()}
+    tx_shares = {k: v / tx_bps_total for k, v in tx_bps.items()}
+    return FlowRateShares(
+        rx_bps=rx_bps,
+        tx_bps=tx_bps,
+        rx_bps_total=rx_bps_total,
+        tx_bps_total=tx_bps_total,
+        rx_shares=rx_shares,
+        tx_shares=tx_shares,
+    )
+
+
+def get_readable_flow_rate_shares(stats: FlowRateShares) -> str:
+    rx_str = "\n".join(
+        [
+            f"        pg_id {pg_id}: {format_bps(val)} ({stats.rx_shares[pg_id]:.1%})"
+            for pg_id, val in stats.rx_bps.items()
+        ]
+    )
+    tx_str = "\n".join(
+        [
+            f"        pg_id {pg_id}: {format_bps(val)} ({stats.tx_shares[pg_id]:.1%})"
+            for pg_id, val in stats.tx_bps.items()
+        ]
+    )
+    return f"""Flow rate shares:
+    TX total: {format_bps(stats.tx_bps_total)}\n{tx_str}
+    RX total: {format_bps(stats.rx_bps_total)}\n{rx_str}"""
 
 
 class ParseExtendArgAction(argparse.Action):
