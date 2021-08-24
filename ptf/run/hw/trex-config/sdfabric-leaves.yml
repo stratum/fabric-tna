@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: Copyright 2020-present Open Networking Foundation.
+# SPDX-License-Identifier: Apache-2.0
+
+# This configs includes two ports that connect to leaves from SDFabric PODs
+# 86:00.1: Connects to leaf1, port 29.
+# 86:00.0: Connects to leaf2, port 29.
+
+- version: 2
+  port_limit: 4
+  interfaces: ['86:00.1', '86:00.0']
+  port_bandwidth_gb: 40
+  c: 16
