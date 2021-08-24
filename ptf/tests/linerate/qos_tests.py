@@ -120,7 +120,7 @@ class QosTest(TRexTest, SlicingTest, StatsTest):
         Returns FlowStats populated using switch-maintained counters.
         Requires setting up counters beforehand with StatsTest.set_up_stats_flows().
         :param stats_flow_id: a unique identifier for this flow, could be the same as pg_id
-        :param ig_port: the expected swotch ingress port
+        :param ig_port: the expected switch ingress port
         :param eg_port: the expected switch egress port
         :param ftuple: ACL-like five tuple keyworded parameters (ipv4_src, ipv4_dst, ip_proto, l4_sport, l4_dport)
         :return: FlowStats
