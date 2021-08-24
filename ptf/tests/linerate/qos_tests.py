@@ -146,36 +146,6 @@ class QosTest(TRexTest, SlicingTest, StatsTest):
             rx_bytes=eg_bytes,
         )
 
-    def get_flow_stats_from_switch(
-        self, stats_flow_id, ig_port, eg_port, **ftuple
-    ) -> FlowStats:
-        """
-        Returns FlowStats populated using switch-maintained counters.
-        Requires setting up counters beforehand with StatsTest.set_up_stats_flows().
-        :param stats_flow_id: a unique identifier for this flow, could be the same as pg_id
-        :param ig_port: the expected swotch ingress port
-        :param eg_port: the expected switch egress port
-        :param ftuple: ACL-like five tuple keyworded parameters (ipv4_src, ipv4_dst, ip_proto, l4_sport, l4_dport)
-        :return: FlowStats
-        """
-        ig_bytes, ig_packets = self.get_stats_counter(
-            gress=STATS_INGRESS, stats_flow_id=stats_flow_id, port=ig_port, **ftuple
-        )
-        eg_bytes, eg_packets = self.get_stats_counter(
-            gress=STATS_EGRESS, stats_flow_id=stats_flow_id, port=eg_port, **ftuple
-        )
-        # Switch egress bytes count will include bridged metadata, we need to subtract
-        # that to obtain the actual bytes transmitted by the switch.
-        eg_bytes = eg_bytes - eg_packets * BMD_BYTES
-        # What is transmitted (tx) by Trex is received (rx) by the switch, and vice versa.
-        return FlowStats(
-            pg_id=stats_flow_id,
-            tx_packets=ig_packets,
-            rx_packets=eg_packets,
-            tx_bytes=ig_bytes,
-            rx_bytes=eg_bytes,
-        )
-
     # Create a background traffic stream.
     def create_background_stream(self) -> STLStream:
         pkt = qos_utils.get_best_effort_traffic_packet()
