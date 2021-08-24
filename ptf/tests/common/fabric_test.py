@@ -4618,27 +4618,20 @@ class StatsTest(FabricTest):
         return counter_data.byte_count, counter_data.packet_count
 
     def verify_stats_counter(
-            self, gress, stats_flow_id, port, byte_count, pkt_count, **ftuple
+        self, gress, stats_flow_id, port, byte_count, pkt_count, **ftuple
     ):
         if self.generate_tv:
             # TODO
             return
         actual_byte_count, actual_pkt_count = self.get_stats_counter(
-            gress, stats_flow_id, port,  **ftuple)
-        if (
-                actual_byte_count != byte_count
-                or actual_pkt_count != pkt_count
-        ):
+            gress, stats_flow_id, port, **ftuple
+        )
+        if actual_byte_count != byte_count or actual_pkt_count != pkt_count:
             self.fail(
                 "Counter is not same as expected.\
                 \nActual packet count: %d, Expected packet count: %d\
                 \nActual byte count: %d, Expected byte count: %d\n"
-                % (
-                    actual_pkt_count,
-                    pkt_count,
-                    actual_byte_count,
-                    byte_count,
-                )
+                % (actual_pkt_count, pkt_count, actual_byte_count, byte_count,)
             )
 
     def add_stats_table_entry(self, gress, stats_flow_id, ports, **ftuple):
@@ -4660,8 +4653,7 @@ class StatsTest(FabricTest):
 
     def set_up_stats_flows(self, stats_flow_id, ig_port, eg_port, **ftuple):
         self.add_stats_table_entry(
-            gress=STATS_INGRESS, stats_flow_id=stats_flow_id, ports=[ig_port],
-            **ftuple
+            gress=STATS_INGRESS, stats_flow_id=stats_flow_id, ports=[ig_port], **ftuple
         )
         self.add_stats_table_entry(
             gress=STATS_EGRESS, stats_flow_id=stats_flow_id, ports=[eg_port], **ftuple
@@ -4669,13 +4661,11 @@ class StatsTest(FabricTest):
         # FIXME: check P4RT spec, are counters reset upon table insert?
         self.reset_stats_counter(
             self.build_stats_table_entry(
-                gress=STATS_INGRESS, stats_flow_id=stats_flow_id, port=ig_port,
-                **ftuple
+                gress=STATS_INGRESS, stats_flow_id=stats_flow_id, port=ig_port, **ftuple
             )
         )
         self.reset_stats_counter(
             self.build_stats_table_entry(
-                gress=STATS_EGRESS, stats_flow_id=stats_flow_id, port=eg_port,
-                **ftuple
+                gress=STATS_EGRESS, stats_flow_id=stats_flow_id, port=eg_port, **ftuple
             )
         )
