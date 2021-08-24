@@ -502,7 +502,10 @@ def main():
         trex_daemon_client = CTRexClient(args.trex_address, trex_args=trex_args)
         info("Starting TRex daemon client...")
         success = set_up_trex_server(
-            trex_daemon_client, args.trex_address, args.trex_config, args.trex_force_restart
+            trex_daemon_client,
+            args.trex_address,
+            args.trex_config,
+            args.trex_force_restart,
         )
         if not success:
             error("Failed to set up TRex daemon client!")

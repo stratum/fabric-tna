@@ -7,13 +7,12 @@
 
 import logging
 
-from ptf.testutils import group
-
 import gnmi_utils
 import qos_utils
 import yaml
 from base_test import *
 from fabric_test import *
+from ptf.testutils import group
 from stratum_qos_config import vendor_config
 from trex_stl_lib.api import STLFlowLatencyStats, STLPktBuilder, STLStream, STLTXCont
 from trex_test import TRexTest
@@ -64,7 +63,9 @@ class QosTest(TRexTest, SlicingTest, StatsTest):
             chassis_config = file.read()
         # Auto-generate and append vendor_config
         with open(f"{this_dir}/{yaml_file}", "r") as file:
-            chassis_config += bytes("\n" + vendor_config(yaml.safe_load(file)), encoding="utf8")
+            chassis_config += bytes(
+                "\n" + vendor_config(yaml.safe_load(file)), encoding="utf8"
+            )
         # Write to disk for debugging
         with open(f"{this_dir}/chassis_config.pb.txt.tmp", mode="wb") as file:
             file.write(chassis_config)
@@ -115,7 +116,9 @@ class QosTest(TRexTest, SlicingTest, StatsTest):
         self.add_queue_entry(13, 0, qos_utils.QUEUE_ID_ELASTIC_1)
         self.add_queue_entry(14, 0, qos_utils.QUEUE_ID_ELASTIC_2)
 
-    def get_flow_stats_from_switch(self, stats_flow_id, ig_port, eg_port, **ftuple) -> FlowStats:
+    def get_flow_stats_from_switch(
+        self, stats_flow_id, ig_port, eg_port, **ftuple
+    ) -> FlowStats:
         """
         Returns FlowStats populated using switch-maintained counters.
         Requires setting up counters beforehand with StatsTest.set_up_stats_flows().
@@ -126,9 +129,11 @@ class QosTest(TRexTest, SlicingTest, StatsTest):
         :return: FlowStats
         """
         ig_bytes, ig_packets = self.get_stats_counter(
-            gress=STATS_INGRESS, stats_flow_id=stats_flow_id, port=ig_port, **ftuple)
+            gress=STATS_INGRESS, stats_flow_id=stats_flow_id, port=ig_port, **ftuple
+        )
         eg_bytes, eg_packets = self.get_stats_counter(
-            gress=STATS_EGRESS, stats_flow_id=stats_flow_id, port=eg_port, **ftuple)
+            gress=STATS_EGRESS, stats_flow_id=stats_flow_id, port=eg_port, **ftuple
+        )
         # Switch egress bytes count will include bridged metadata, we need to subtract
         # that to obtain the actual bytes transmitted by the switch.
         eg_bytes = eg_bytes - eg_packets * BMD_BYTES
@@ -141,7 +146,9 @@ class QosTest(TRexTest, SlicingTest, StatsTest):
             rx_bytes=eg_bytes,
         )
 
-    def get_flow_stats_from_switch(self, stats_flow_id, ig_port, eg_port, **ftuple) -> FlowStats:
+    def get_flow_stats_from_switch(
+        self, stats_flow_id, ig_port, eg_port, **ftuple
+    ) -> FlowStats:
         """
         Returns FlowStats populated using switch-maintained counters.
         Requires setting up counters beforehand with StatsTest.set_up_stats_flows().
@@ -152,9 +159,11 @@ class QosTest(TRexTest, SlicingTest, StatsTest):
         :return: FlowStats
         """
         ig_bytes, ig_packets = self.get_stats_counter(
-            gress=STATS_INGRESS, stats_flow_id=stats_flow_id, port=ig_port, **ftuple)
+            gress=STATS_INGRESS, stats_flow_id=stats_flow_id, port=ig_port, **ftuple
+        )
         eg_bytes, eg_packets = self.get_stats_counter(
-            gress=STATS_EGRESS, stats_flow_id=stats_flow_id, port=eg_port, **ftuple)
+            gress=STATS_EGRESS, stats_flow_id=stats_flow_id, port=eg_port, **ftuple
+        )
         # Switch egress bytes count will include bridged metadata, we need to subtract
         # that to obtain the actual bytes transmitted by the switch.
         eg_bytes = eg_bytes - eg_packets * BMD_BYTES
@@ -219,11 +228,7 @@ class QosTest(TRexTest, SlicingTest, StatsTest):
 
     # Create a lower priority best-effort stream.
     def create_best_effort_stream(
-            self,
-            pg_id=None,
-            dport=None,
-            l2_size=None,
-            l1_bps=None,
+        self, pg_id=None, dport=None, l2_size=None, l1_bps=None,
     ) -> STLStream:
         pkt = qos_utils.get_best_effort_traffic_packet(l2_size=l2_size, dport=dport)
         stats = None
@@ -276,22 +281,13 @@ class FlowCountersSanityTest(QosTest):
 
         streams = [
             self.create_best_effort_stream(
-                pg_id=pg_id_1,
-                l1_bps=stream_bps,
-                dport=dport_1,
-                l2_size=1400
+                pg_id=pg_id_1, l1_bps=stream_bps, dport=dport_1, l2_size=1400
             ),
             self.create_best_effort_stream(
-                pg_id=pg_id_2,
-                l1_bps=stream_bps,
-                dport=dport_2,
-                l2_size=1400
+                pg_id=pg_id_2, l1_bps=stream_bps, dport=dport_2, l2_size=1400
             ),
             self.create_best_effort_stream(
-                pg_id=pg_id_3,
-                l1_bps=stream_bps,
-                dport=dport_3,
-                l2_size=1400
+                pg_id=pg_id_3, l1_bps=stream_bps, dport=dport_3, l2_size=1400
             ),
         ]
 
@@ -341,17 +337,20 @@ class FlowCountersSanityTest(QosTest):
             stats_flow_id=pg_id_1,
             ig_port=switch_ig_port,
             eg_port=switch_eg_port,
-            l4_dport=dport_1)
+            l4_dport=dport_1,
+        )
         switch_flow_stats_2 = self.get_flow_stats_from_switch(
             stats_flow_id=pg_id_2,
             ig_port=switch_ig_port,
             eg_port=switch_eg_port,
-            l4_dport=dport_2)
+            l4_dport=dport_2,
+        )
         switch_flow_stats_3 = self.get_flow_stats_from_switch(
             stats_flow_id=pg_id_3,
             ig_port=switch_ig_port,
             eg_port=switch_eg_port,
-            l4_dport=dport_3)
+            l4_dport=dport_3,
+        )
 
         # Compare Trex stats with switch stats
         self.assertEqual(trex_flow_stats_1.tx_packets, switch_flow_stats_1.tx_packets)
