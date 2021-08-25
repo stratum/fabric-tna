@@ -222,6 +222,7 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
                     fwdClassifierRule(port, Ethernet.MPLS_UNICAST, Ethernet.TYPE_IPV4, FWD_MPLS,
                             DEFAULT_FLOW_PRIORITY + 10));
         });
+        // TODO: slicing.p4 DSCP tables for PORT_TYPE_INTERNAL
     }
 
     private void handleResult(Objective obj, ObjectiveTranslation result) {
