@@ -7,8 +7,7 @@ import org.apache.karaf.shell.api.action.Command;
 import org.apache.karaf.shell.api.action.lifecycle.Service;
 import org.onosproject.cli.AbstractShellCommand;
 import org.stratumproject.fabric.tna.slicing.api.QueueId;
-import org.stratumproject.fabric.tna.slicing.api.SlicingService;
-
+import org.stratumproject.fabric.tna.slicing.api.SlicingAdminService;
 /**
  * Reserve queue for TC.
  */
@@ -16,14 +15,14 @@ import org.stratumproject.fabric.tna.slicing.api.SlicingService;
 @Command(scope = "fabric-tna", name = "queue-release", description = "Release queue from TC")
 public class QueueReleaseCommand extends AbstractShellCommand {
     @Argument(index = 0, name = "queueId",
-            description = "queueId. Used to identify a slice.",
+            description = "queueId. Used to identify a queue.",
             required = true, multiValued = false)
     int queueId;
 
     @Override
     protected void doExecute() {
-        SlicingService slicingService = getService(SlicingService.class);
-        boolean result = slicingService.releaseQueue(QueueId.of(queueId));
+        SlicingAdminService slicingAdminService = getService(SlicingAdminService.class);
+        boolean result = slicingAdminService.releaseQueue(QueueId.of(queueId));
         if (result) {
             print("Queue %s released", queueId);
         } else {

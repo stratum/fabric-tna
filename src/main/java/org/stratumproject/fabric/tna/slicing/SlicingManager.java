@@ -39,6 +39,7 @@ import org.stratumproject.fabric.tna.behaviour.P4InfoConstants;
 import org.stratumproject.fabric.tna.slicing.api.Color;
 import org.stratumproject.fabric.tna.slicing.api.QueueId;
 import org.stratumproject.fabric.tna.slicing.api.SliceId;
+import org.stratumproject.fabric.tna.slicing.api.SlicingAdminService;
 import org.stratumproject.fabric.tna.slicing.api.SlicingService;
 import org.stratumproject.fabric.tna.slicing.api.TrafficClass;
 
@@ -62,8 +63,11 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_COLOR_
 /**
  * Implementation of SlicingService.
  */
-@Component(immediate = true, service = SlicingService.class)
-public class SlicingManager implements SlicingService {
+@Component(immediate = true, service = {
+        SlicingService.class,
+        SlicingAdminService.class
+})
+public class SlicingManager implements SlicingService, SlicingAdminService {
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     protected CoreService coreService;
 
@@ -133,6 +137,10 @@ public class SlicingManager implements SlicingService {
         queueStore.put(QueueId.BEST_EFFORT, new QueueStoreValue(TrafficClass.BEST_EFFORT, true));
         queueStore.put(QueueId.SYSTEM, new QueueStoreValue(TrafficClass.SYSTEM, true));
         queueStore.put(QueueId.CONTROL, new QueueStoreValue(TrafficClass.CONTROL, true));
+
+        // FIXME Dedicate queues should be dynamically provisioned via API in the future
+        queueStore.put(QueueId.of(3), new QueueStoreValue(TrafficClass.REAL_TIME, true));
+        queueStore.put(QueueId.of(6), new QueueStoreValue(TrafficClass.REAL_TIME, true));
 
         deviceListener = new InternalDeviceListener();
         deviceExecutor = Executors.newSingleThreadExecutor(groupedThreads("fabric-tna-device-event", "%d", log));

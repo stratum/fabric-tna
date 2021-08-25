@@ -7,7 +7,7 @@ import org.apache.karaf.shell.api.action.Command;
 import org.apache.karaf.shell.api.action.lifecycle.Service;
 import org.onosproject.cli.AbstractShellCommand;
 import org.stratumproject.fabric.tna.slicing.api.QueueId;
-import org.stratumproject.fabric.tna.slicing.api.SlicingService;
+import org.stratumproject.fabric.tna.slicing.api.SlicingAdminService;
 import org.stratumproject.fabric.tna.slicing.api.TrafficClass;
 
 /**
@@ -17,7 +17,7 @@ import org.stratumproject.fabric.tna.slicing.api.TrafficClass;
 @Command(scope = "fabric-tna", name = "queue-reserve", description = "Reserve queue for TC")
 public class QueueReserveCommand extends AbstractShellCommand {
     @Argument(index = 0, name = "queueId",
-            description = "queueId. Used to identify a slice.",
+            description = "queueId. Used to identify a queue.",
             required = true, multiValued = false)
     int queueId;
 
@@ -28,8 +28,8 @@ public class QueueReserveCommand extends AbstractShellCommand {
 
     @Override
     protected void doExecute() {
-        SlicingService slicingService = getService(SlicingService.class);
-        boolean result = slicingService.reserveQueue(QueueId.of(queueId), TrafficClass.valueOf(tc));
+        SlicingAdminService slicingAdminService = getService(SlicingAdminService.class);
+        boolean result = slicingAdminService.reserveQueue(QueueId.of(queueId), TrafficClass.valueOf(tc));
         if (result) {
             print("Queue %s reserved for TC %s", queueId, tc);
         } else {
