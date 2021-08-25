@@ -12,6 +12,7 @@ import static org.stratumproject.fabric.tna.behaviour.Constants.MAX_SLICE_ID;
  */
 public final class SliceId extends Identifier<Integer> {
     public static final Integer MAX = MAX_SLICE_ID;
+    public static final SliceId DEFAULT = SliceId.of(0);
 
     private SliceId(int id) {
         super(id);

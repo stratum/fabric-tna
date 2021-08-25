@@ -117,6 +117,9 @@ public class SlicingManager implements SlicingService {
         sliceExecutor = Executors.newSingleThreadExecutor(groupedThreads("fabric-tna-slice-event", "%d", log));
         sliceStore.addListener(sliceListener);
 
+        // Default slice is pre-provisioned
+        sliceStore.put(new SliceStoreKey(SliceId.DEFAULT, TrafficClass.BEST_EFFORT), QueueId.BEST_EFFORT);
+
         queueStore = storageService.<QueueId, QueueStoreValue>consistentMapBuilder()
                 .withName("fabric-tna-queue")
                 .withRelaxedReadConsistency()
