@@ -9,6 +9,8 @@ import org.onlab.util.KryoNamespace;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
 import org.onosproject.net.DeviceId;
+import org.onosproject.net.device.DeviceEvent;
+import org.onosproject.net.device.DeviceListener;
 import org.onosproject.net.device.DeviceService;
 import org.onosproject.net.flow.DefaultFlowRule;
 import org.onosproject.net.flow.DefaultTrafficSelector;
@@ -91,6 +93,9 @@ public class SlicingManager implements SlicingService {
     private MapEventListener<QueueId, QueueStoreValue> queueListener;
     private ExecutorService queueExecutor;
 
+    private DeviceListener deviceListener;
+    private ExecutorService deviceExecutor;
+
     @Activate
     protected void activate() {
         appId = coreService.registerApplication(APP_NAME);
@@ -109,8 +114,8 @@ public class SlicingManager implements SlicingService {
                 .withSerializer(Serializer.using(serializer.build()))
                 .build();
         sliceListener = new InternalSliceListener();
+        sliceExecutor = Executors.newSingleThreadExecutor(groupedThreads("fabric-tna-slice-event", "%d", log));
         sliceStore.addListener(sliceListener);
-        sliceExecutor =  Executors.newSingleThreadExecutor(groupedThreads("fabric-tna-slice-event", "%d", log));
 
         queueStore = storageService.<QueueId, QueueStoreValue>consistentMapBuilder()
                 .withName("fabric-tna-queue")
@@ -118,13 +123,17 @@ public class SlicingManager implements SlicingService {
                 .withSerializer(Serializer.using(serializer.build()))
                 .build();
         queueListener = new InternalQueueListener();
+        queueExecutor = Executors.newSingleThreadExecutor(groupedThreads("fabric-tna-queue-event", "%d", log));
         queueStore.addListener(queueListener);
-        queueExecutor =  Executors.newSingleThreadExecutor(groupedThreads("fabric-tna-queue-event", "%d", log));
 
         // Shared queues are pre-provisioned and always available
         queueStore.put(QueueId.BEST_EFFORT, new QueueStoreValue(TrafficClass.BEST_EFFORT, true));
         queueStore.put(QueueId.SYSTEM, new QueueStoreValue(TrafficClass.SYSTEM, true));
         queueStore.put(QueueId.CONTROL, new QueueStoreValue(TrafficClass.CONTROL, true));
+
+        deviceListener = new InternalDeviceListener();
+        deviceExecutor = Executors.newSingleThreadExecutor(groupedThreads("fabric-tna-device-event", "%d", log));
+        deviceService.addListener(deviceListener);
 
         log.info("Started");
     }
@@ -138,6 +147,9 @@ public class SlicingManager implements SlicingService {
         queueStore.removeListener(queueListener);
         queueStore.destroy();
         queueExecutor.shutdown();
+
+        deviceService.removeListener(deviceListener);
+        deviceExecutor.shutdown();
 
         log.info("Stopped");
     }
@@ -426,7 +438,29 @@ public class SlicingManager implements SlicingService {
         }
     }
 
-    // TODO Implement device listener. When device up, program queue table
+    private class InternalDeviceListener implements DeviceListener {
+        @Override
+        public void event(DeviceEvent event) {
+            log.info("Processing device event {}", event);
+            deviceExecutor.submit(() -> {
+                switch (event.type()) {
+                    case DEVICE_ADDED:
+                    case DEVICE_AVAILABILITY_CHANGED:
+                        DeviceId deviceId = event.subject().id();
+                        if (workPartitionService.isMine(deviceId, toStringHasher())) {
+                            if (deviceService.isAvailable(deviceId)) {
+                                sliceStore.forEach(e -> addQueueTable(deviceId,
+                                        e.getKey().sliceId(), e.getKey().trafficClass(), e.getValue().value())
+                                );
+                            }
+                        }
+                        break;
+                    default:
+                        break;
+                }
+            });
+        }
+    }
 
     private static <K> Function<K, Long> toStringHasher() {
         return k -> Hashing.sha256().hashUnencodedChars(k.toString()).asLong();
