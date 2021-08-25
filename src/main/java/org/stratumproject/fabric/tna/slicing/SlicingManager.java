@@ -366,7 +366,7 @@ public class SlicingManager implements SlicingService {
         List<FlowRule> flowRules = Lists.newArrayList();
         if (tc == TrafficClass.CONTROL) {
             flowRules.add(buildFlowRule(deviceId, sliceId, tc, queueId, Color.GREEN));
-            flowRules.add(buildFlowRule(deviceId, sliceId, tc, queueId, Color.RED));
+            flowRules.add(buildFlowRule(deviceId, sliceId, tc, QueueId.BEST_EFFORT, Color.RED));
         } else {
             flowRules.add(buildFlowRule(deviceId, sliceId, tc, queueId, null));
         }
