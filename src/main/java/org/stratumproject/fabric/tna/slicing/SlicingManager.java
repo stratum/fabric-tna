@@ -184,6 +184,13 @@ public class SlicingManager implements SlicingService {
 
     @Override
     public boolean addTrafficClass(SliceId sliceId, TrafficClass tc) {
+        // Ensure the presence of BEST_EFFORT TC in the slice
+        SliceStoreKey beKey = new SliceStoreKey(sliceId, TrafficClass.BEST_EFFORT);
+        if (!sliceStore.containsKey(beKey)) {
+            log.warn("Slice {} doesn't exist yet", sliceId);
+            return false;
+        }
+
         AtomicBoolean result = new AtomicBoolean(false);
 
         SliceStoreKey key = new SliceStoreKey(sliceId, tc);
@@ -209,6 +216,12 @@ public class SlicingManager implements SlicingService {
 
     @Override
     public boolean removeTrafficClass(SliceId sliceId, TrafficClass tc) {
+        // Ensure the presence of BEST_EFFORT TC in the slice
+        if (tc == TrafficClass.BEST_EFFORT) {
+            log.warn("Can't remove {} from {}", tc, sliceId);
+            return false;
+        }
+
         AtomicBoolean result = new AtomicBoolean(false);
 
         SliceStoreKey key = new SliceStoreKey(sliceId, tc);
