@@ -484,6 +484,12 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
                 }
             });
         }
+
+        @Override
+        public boolean isRelevant(DeviceEvent event) {
+            return event.type() == DeviceEvent.Type.DEVICE_ADDED ||
+                    event.type() == DeviceEvent.Type.DEVICE_AVAILABILITY_CHANGED;
+        }
     }
 
     private static <K> Function<K, Long> toStringHasher() {

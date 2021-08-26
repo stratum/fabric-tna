@@ -11,7 +11,7 @@ import java.util.Objects;
 /**
  * Value of queue store.
  */
-public class SliceStoreKey {
+public class SliceStoreKey implements Comparable<SliceStoreKey> {
     private SliceId sliceId;
     private TrafficClass tc;
 
@@ -36,6 +36,11 @@ public class SliceStoreKey {
     public SliceStoreKey setTrafficClass(TrafficClass tc) {
         this.tc = tc;
         return this;
+    }
+
+    @Override
+    public int compareTo(SliceStoreKey other) {
+        return this.sliceId.id() - other.sliceId().id();
     }
 
     @Override
