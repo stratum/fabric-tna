@@ -140,7 +140,7 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
 
         // FIXME Dedicate queues should be dynamically provisioned via API in the future
         queueStore.put(QueueId.of(3), new QueueStoreValue(TrafficClass.REAL_TIME, true));
-        queueStore.put(QueueId.of(6), new QueueStoreValue(TrafficClass.REAL_TIME, true));
+        queueStore.put(QueueId.of(6), new QueueStoreValue(TrafficClass.ELASTIC, true));
 
         deviceListener = new InternalDeviceListener();
         deviceExecutor = Executors.newSingleThreadExecutor(groupedThreads("fabric-tna-device-event", "%d", log));
