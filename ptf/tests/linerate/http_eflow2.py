@@ -1,10 +1,5 @@
 # Copyright 2020-present Open Networking Foundation
 # SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
-
-# Example of elephant flow using loop of send (in the server side)
-# 
-#
-#sudo ./t-rex-64 --astf -f astf/http_eflow2.py -m 10 -d 1000 -c 1 -l 1000 -t size=800,loop=100000,win=512,pipe=1
 #
 # size  : is in KB for each chuck in the loop
 # loops : how many chunks to download
@@ -14,7 +9,6 @@
 #######
 
 from trex.astf.api import *
-import argparse
 
 
 # we can send either Python bytes type as below:
@@ -80,38 +74,7 @@ class Prof1():
 
         return profile
 
-    def get_profile(self, tunables, **kwargs):
-        parser = argparse.ArgumentParser(description='Argparser for {}'.format(os.path.basename(__file__)), 
-                                         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-        parser.add_argument('--size',
-                            type=int,
-                            default=1,
-                            help='size is in KB for each chuck in the loop')
-        parser.add_argument('--loop',
-                            type=int,
-                            default=10,
-                            help='how many chunks to download')
-        parser.add_argument('--win',
-                            type=int,
-                            default=32,
-                            help='win: in KB, the maximum window size. make it big for BDP')
-        parser.add_argument('--pipe',
-                            type=int,
-                            default=0,
-                            help="pipe  : Don't block on each send, make them in the pipeline should be 1 for maximum performance.")
-        parser.add_argument('--mss',
-                            type=int,
-                            default=0,
-                            help='the mss of the traffic.')
-        args = parser.parse_args(tunables)
-
-        size = args.size
-        loop = args.loop
-        if loop<2:
-            loop=2
-        mss = args.mss
-        win = args.win
-        pipe= args.pipe
+    def get_profile(self, size=1, loop=10, mss=0, win=32, pipe=0, **kwargs):
         return self.create_profile(size, loop, mss, win, pipe)
 
 

@@ -3,7 +3,7 @@
 
 from datetime import datetime
 
-import astf_path
+import os
 from trex.astf.api import *
 
 from base_test import *
@@ -14,7 +14,7 @@ from trex_utils import list_port_status
 from xnt import analyze_report_pcap
 
 
-TRAFFIC_MULT = "40gbpsl1"
+TRAFFIC_MULT = 1.0
 TEST_DURATION = 10
 CAPTURE_LIMIT = 20
 
@@ -36,11 +36,10 @@ class AstfTcpFlow(TRexAstfTest, SlicingTest):
 
         try:
             # load ASTF profile
-            profile_path = os.path.join(astf_path.get_profiles_path(), 'http_eflow1.py')
+            profile_path = '/fabric-tna/ptf/tests/linerate/http_eflow2.py'
 
-            tunables = {'size': SIZE, 'loop': LOOP, 'win': WIN, 'mss': MSS}
-
-            self.trex_client.load_profile(profile = profile_path, tunables = tunables)
+            profile_tunables = {'size': SIZE, 'loop': LOOP, 'win': WIN, 'mss': MSS}
+            self.trex_client.load_profile(profile = profile_path, tunables = profile_tunables)
 
             print("Injecting with multiplier of '%s' for %s seconds" % (TRAFFIC_MULT, TEST_DURATION))
             self.trex_client.start(mult = TRAFFIC_MULT, duration = TEST_DURATION)
