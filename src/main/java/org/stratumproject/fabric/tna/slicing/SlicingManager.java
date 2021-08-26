@@ -192,11 +192,18 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
 
     @Override
     public boolean addTrafficClass(SliceId sliceId, TrafficClass tc) {
-        // Ensure the presence of BEST_EFFORT TC in the slice
-        SliceStoreKey beKey = new SliceStoreKey(sliceId, TrafficClass.BEST_EFFORT);
-        if (!sliceStore.containsKey(beKey)) {
-            log.warn("Slice {} doesn't exist yet", sliceId);
+        if (tc == TrafficClass.SYSTEM) {
+            log.warn("SYSTEM TC should not be associated with any slice");
             return false;
+        }
+
+        // Ensure the presence of BEST_EFFORT TC in the slice
+        if (tc != TrafficClass.BEST_EFFORT) {
+            SliceStoreKey beKey = new SliceStoreKey(sliceId, TrafficClass.BEST_EFFORT);
+            if (!sliceStore.containsKey(beKey)) {
+                log.warn("Slice {} doesn't exist yet", sliceId);
+                return false;
+            }
         }
 
         AtomicBoolean result = new AtomicBoolean(false);
