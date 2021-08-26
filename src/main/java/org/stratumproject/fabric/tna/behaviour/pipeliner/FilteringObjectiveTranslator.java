@@ -234,7 +234,7 @@ class FilteringObjectiveTranslator
                 // carry the SD-Fabric DSCP field.
                 resultBuilder.addFlowRule(buildEgressDscpRewriter(obj, inPortCriterion, true));
             } else if (portType == PORT_TYPE_INFRA) {
-                // Re need to make sure that traffic exiting an infra port carry
+                // We need to make sure that traffic exiting an infra port carry
                 // SD-Fabric DSCP field.
                 resultBuilder.addFlowRule(buildEgressDscpRewriter(obj, inPortCriterion, false));
                 resultBuilder.addFlowRule(buildTrustDscpEntry(obj, inPortCriterion));

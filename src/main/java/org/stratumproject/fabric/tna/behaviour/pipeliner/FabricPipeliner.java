@@ -223,6 +223,9 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
                             DEFAULT_FLOW_PRIORITY + 10));
         });
         // TODO: slicing.p4 DSCP tables for PORT_TYPE_INTERNAL
+        //  PORT_TYPE_INTERNAL includes packet-outs that's part of the SYSTEM TC
+        //  and should be directed to the System Queue, and recirculation traffic
+        //  (SDFAB-398).
     }
 
     private void handleResult(Objective obj, ObjectiveTranslation result) {
