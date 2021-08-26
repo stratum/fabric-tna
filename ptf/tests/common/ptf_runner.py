@@ -460,6 +460,12 @@ def main():
         action="store_true",
         required=False,
     )
+    parser.add_argument(
+        "--trex-astf-mode",
+        help="Enables TRex ASTF mode for advanced stateful TCP linerate testing",
+        action="store_true",
+        required=False,
+    )
     args, unknown_args = parser.parse_known_args()
 
     if not check_ptf():
@@ -497,6 +503,10 @@ def main():
     if args.trex_address is not None:
         if args.trex_sw_mode:
             trex_args = "--software --no-hw-flow-stat"
+            if args.trex_astf_mode is not None:
+                trex_args += " --astf"
+        elif args.trex_astf_mode is not None:
+            trex_args = "--astf"
         else:
             trex_args = None
         trex_daemon_client = CTRexClient(args.trex_address, trex_args=trex_args)
