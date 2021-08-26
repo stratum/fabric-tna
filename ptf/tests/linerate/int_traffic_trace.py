@@ -99,13 +99,13 @@ class IntFlowFilterWithTrafficTrace(TRexTest, IntTest):
             f"Didn't receive all packets; sent {sent_packets}, received {recv_packets}",
         )
 
-        accuracy_score = results["accuracy_score"]
+        accuracy_score = results["flow_accuracy_score"]
         self.failIf(
             accuracy_score < ACCURACY_RECORD,
             f"Accuracy score should be at least {ACCURACY_RECORD}%, was {accuracy_score}%",
         )
 
-        efficiency_score = results["efficiency_score"]
+        efficiency_score = results["flow_efficiency_score"]
         self.failIf(
             efficiency_score < EFFICIENCY_RECORD,
             f"Efficiency score should be at least {EFFICIENCY_RECORD}%, was {efficiency_score}%",

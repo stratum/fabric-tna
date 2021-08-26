@@ -19,7 +19,6 @@ REMOTE_PCAP_FILE = (
 )
 TOTAL_FLOWS = 921458  # specified in REMOTE_PCAP_DIR/130000.txt
 
-# TODO
 ACCURACY_RECORD = 99.6
 EFFICIENCY_RECORD = 58.3
 
@@ -96,22 +95,22 @@ class IntIngressDropReportFilterWithTrafficTrace(TRexTest, IntTest):
 
         """ 
         Verify the following:
-        - Packet loss: Ensure 0% packet loss
-        - Accuracy score: Ensure test is above a certain threshold
-        - Efficiency score: Ensure efficiency remains above a certain threshold
+        - Packet loss: Ensure 100% packet drop
+        - Accuracy score: Ensure INT accuracy is above a certain threshold
+        - Efficiency score: Ensure INT efficiency is above a certain threshold
         """
         self.failIf(
-            sent_packets != recv_packets,
-            f"Didn't receive all packets; sent {sent_packets}, received {recv_packets}",
+            recv_packets > 0,
+            f"ACL did not drop all packets, received {recv_packets}",
         )
 
-        accuracy_score = results["accuracy_score"]
+        accuracy_score = results["drop_accuracy_score"]
         self.failIf(
             accuracy_score < ACCURACY_RECORD,
             f"Accuracy score should be at least {ACCURACY_RECORD}%, was {accuracy_score}%",
         )
 
-        efficiency_score = results["efficiency_score"]
+        efficiency_score = results["drop_efficiency_score"]
         self.failIf(
             efficiency_score < EFFICIENCY_RECORD,
             f"Efficiency score should be at least {EFFICIENCY_RECORD}%, was {efficiency_score}%",
