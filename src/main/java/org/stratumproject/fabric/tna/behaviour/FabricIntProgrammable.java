@@ -604,18 +604,18 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
     protected List<List<Range<Integer>>> getMatchRangesForTrigger(long threshold) {
         List<List<Range<Integer>>> result = Lists.newArrayList();
         if (threshold <= 0xffff) {
-            // From threshold value to 0x0000ffff
+            // [threshold, 0x0000ffff]
             result.add(ImmutableList.of(Range.closed(0, 0), Range.closed((int) threshold, 0xffff)));
-            // From 0x00010000 to 0xffffffff
+            // [0x00010000, 0xffffffff]
             result.add(ImmutableList.of(Range.closed(1, 0xffff), Range.closed(0, 0xffff)));
         } else if (threshold < 0xffffffffL) {
             int thresholdUpper = (int) (threshold >> 16);
             int thresholdLower = (int) (threshold & 0xffff);
-            // From threshold to 0xTTTTffff, "TTTT" is the upper 16-bit of the threshold.
+            // [threshold, 0xTTTTffff], "TTTT" is the upper 16-bit of the threshold.
             result.add(ImmutableList.of(
                 Range.closed(thresholdUpper, thresholdUpper), Range.closed(thresholdLower, 0xffff)));
             if (thresholdUpper < 0xffff) {
-                // From 0xTTTTffff to 0xffffffff, "TTTT" is the upper 16-bit of the threshold.
+                // [0xTTTTffff, 0xffffffff], "TTTT" is the upper 16-bit of the threshold.
                 result.add(ImmutableList.of(Range.closed(thresholdUpper + 1, 0xffff), Range.closed(0, 0xffff)));
             }
         }
