@@ -295,7 +295,7 @@ def analyze_report_pcap(pcap_file: str, total_flows_from_trace: int = 0) -> dict
         flow_accuracy_score = (
             len(five_tuple_to_prev_local_report_time) * 100 / total_flows_from_trace
         )
-        print("Flow report accuracy score: {}".format(flow_accuracy_score))
+        print("Flow report filter accuracy score: {}".format(flow_accuracy_score))
         results["flow_accuracy_score"] = flow_accuracy_score
 
     if len(valid_local_report_irgs) <= 0:
@@ -306,7 +306,7 @@ def analyze_report_pcap(pcap_file: str, total_flows_from_trace: int = 0) -> dict
             * 100
             / len(valid_local_report_irgs)
         )
-        print("Flow report efficiency score: {}".format(flow_efficiency_score))
+        print("Flow report filter efficiency score: {}".format(flow_efficiency_score))
         results["flow_efficiency_score"] = flow_efficiency_score
 
         # Plot Histogram and CDF
@@ -327,7 +327,7 @@ def analyze_report_pcap(pcap_file: str, total_flows_from_trace: int = 0) -> dict
         drop_accuracy_score = (
             len(five_tuple_to_prev_drop_report_time) * 100 / total_flows_from_trace
         )
-        print("Drop report accuracy score: {}".format(drop_accuracy_score))
+        print("Drop report filter accuracy score: {}".format(drop_accuracy_score))
         results["drop_accuracy_score"] = drop_accuracy_score
 
     if len(valid_drop_report_irgs) <= 0:
@@ -338,7 +338,7 @@ def analyze_report_pcap(pcap_file: str, total_flows_from_trace: int = 0) -> dict
             * 100
             / len(valid_drop_report_irgs)
         )
-        print("Drop report efficiency score: {}".format(drop_efficiency_score))
+        print("Drop report filter efficiency score: {}".format(drop_efficiency_score))
         results["drop_efficiency_score"] = drop_efficiency_score
 
         report_plot_file = abspath(splitext(pcap_file)[0] + "-drop" + ".png")
