@@ -30,6 +30,7 @@ class TRexTest(P4RuntimeTest):
         self.trex_client.disconnect()
         super(TRexTest, self).tearDown()
 
+
 class TRexAstfTest(P4RuntimeTest):
     trex_client: ASTFClient
 
