@@ -190,6 +190,7 @@ public class IntManager {
     private class SrConfigListener implements NetworkConfigListener {
         @Override
         public void event(NetworkConfigEvent event) {
+            log.debug("Got device event {}", event);
             eventExecutor.execute(() -> {
                 switch (event.type()) {
                     case CONFIG_ADDED:
@@ -253,6 +254,7 @@ public class IntManager {
             if (config == null) {
                 return;
             }
+            log.debug("Got device mastership event {}", event);
             eventExecutor.execute(() -> {
                 switch (event.type()) {
                     case MASTER_CHANGED:
