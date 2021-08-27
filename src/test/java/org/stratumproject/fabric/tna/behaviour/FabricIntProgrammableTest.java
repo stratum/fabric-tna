@@ -1027,7 +1027,7 @@ public class FabricIntProgrammableTest {
                 new long[]{0, 0xffff},
                 P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_CHECK_QUOTA);
             rules.add(queueReportFlow);
-        } else if (triggerThreshold != 0xffffffffL) {
+        } else if (triggerThreshold < 0xffffffffL) {
             int thresholdUpper = (int) (triggerThreshold >> 16);
             int thresholdLower = (int) (triggerThreshold & 0xffff);
             queueReportFlow = buildQueueReportFlow(deviceId, queueId,
@@ -1042,13 +1042,7 @@ public class FabricIntProgrammableTest {
             rules.add(queueReportFlow);
         }
 
-        if (resetThreshold < 0xffff && resetThreshold > 0) {
-            queueReportFlow = buildQueueReportFlow(deviceId, queueId,
-                new long[]{0, 0},
-                new long[]{0, resetThreshold - 1},
-                P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_RESET_QUOTA);
-            rules.add(queueReportFlow);
-        } else {
+        if (resetThreshold > 0xffff) {
             int thresholdUpper = (int) (resetThreshold >> 16);
             int thresholdLower = (int) (resetThreshold & 0xffff);
             queueReportFlow = buildQueueReportFlow(deviceId, queueId,
@@ -1059,6 +1053,13 @@ public class FabricIntProgrammableTest {
             queueReportFlow = buildQueueReportFlow(deviceId, queueId,
                 new long[]{thresholdUpper, thresholdUpper},
                 new long[]{0, thresholdLower-1},
+                P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_RESET_QUOTA);
+            rules.add(queueReportFlow);
+
+        } else if (resetThreshold > 0) {
+            queueReportFlow = buildQueueReportFlow(deviceId, queueId,
+                new long[]{0, 0},
+                new long[]{0, resetThreshold - 1},
                 P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_RESET_QUOTA);
             rules.add(queueReportFlow);
         }
