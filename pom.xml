@@ -28,6 +28,13 @@ SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
         <trellis.api.groupId>org.onosproject</trellis.api.groupId>
         <trellis.api.artifactId>segmentrouting-api</trellis.api.artifactId>
         <trellis.api.version>3.0.1-SNAPSHOT</trellis.api.version>
+        <web.context>/onos/fabric-tna</web.context>
+        <api.version>3.0.1</api.version>
+        <api.title>Fabric-tna REST API</api.title>
+        <api.description>
+            REST API for Fabric-tna
+        </api.description>
+        <api.package>org.stratumproject.fabric.tna.web</api.package>
     </properties>
 
     <dependencies>
@@ -128,6 +135,40 @@ SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
             <scope>test</scope>
         </dependency>
 
+        <!-- REST API -->
+        <dependency>
+            <groupId>org.onosproject</groupId>
+            <artifactId>onos-rest</artifactId>
+            <version>${onos.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.onosproject</groupId>
+            <artifactId>onlab-rest</artifactId>
+            <version>${onos.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>javax.ws.rs</groupId>
+            <artifactId>javax.ws.rs-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish.jersey.containers</groupId>
+            <artifactId>jersey-container-servlet</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
     </dependencies>
 
     <build>
@@ -147,6 +188,18 @@ SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
                             org.stratumproject.fabric.tna.stats.cli,
                             org.stratumproject.fabric.tna.behaviour.cli
                         </Karaf-Commands>
+                        <_wab>src/main/java/org/stratumproject/fabric/tna/web/webapp/WEB-INF</_wab>
+                        <Include-Resource>
+                            WEB-INF/classes/apidoc/swagger.json=target/swagger.json,
+                            {maven-resources}
+                        </Include-Resource>
+                        <Bundle-SymbolicName>
+                            ${project.groupId}.${project.artifactId}
+                        </Bundle-SymbolicName>
+                        <Import-Package>
+                            *,org.glassfish.jersey.servlet
+                        </Import-Package>
+                        <Web-ContextPath>${web.context}</Web-ContextPath>
                     </instructions>
                 </configuration>
             </plugin>
