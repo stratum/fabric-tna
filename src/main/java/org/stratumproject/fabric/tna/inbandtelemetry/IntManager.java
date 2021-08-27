@@ -222,11 +222,11 @@ public class IntManager {
     private class CollectorHostListener implements HostListener {
         @Override
         public void event(HostEvent event) {
-            IntReportConfig config = netcfgService.getConfig(appId, IntReportConfig.class);
-            if (config == null) {
-                return;
-            }
             eventExecutor.execute(() -> {
+                IntReportConfig config = netcfgService.getConfig(appId, IntReportConfig.class);
+                if (config == null) {
+                    return;
+                }
                 switch (event.type()) {
                     case HOST_ADDED:
                     case HOST_UPDATED:
@@ -249,11 +249,11 @@ public class IntManager {
 
         @Override
         public void event(MastershipEvent event) {
-            IntReportConfig config = netcfgService.getConfig(appId, IntReportConfig.class);
-            if (config == null) {
-                return;
-            }
             eventExecutor.execute(() -> {
+                IntReportConfig config = netcfgService.getConfig(appId, IntReportConfig.class);
+                if (config == null) {
+                    return;
+                }
                 switch (event.type()) {
                     case MASTER_CHANGED:
                         DeviceId deviceId = event.subject();

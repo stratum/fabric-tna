@@ -596,7 +596,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
     }
 
     /**
-     * Get match ranges that above the goven threshold.
+     * Get ranges matching values above the given threshold.
      *
      * @param threshold the threshold
      * @return the match ranges, empty if threshold is maximum value of 32-bit unsigned integer
@@ -623,10 +623,10 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
     }
 
     /**
-     * Get metch ranges that belows the given threshold.
+     * Get ranges matching values below the given threshold.
      *
      * @param threshold the threshold
-     * @return the range, or empty list if the threshold is 0
+     * @return the ranges, or empty list if the threshold is 0
      */
     protected List<List<Range<Integer>>> getMatchRangesForReset(long threshold) {
         List<List<Range<Integer>>> result = Lists.newArrayList();
