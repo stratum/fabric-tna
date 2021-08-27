@@ -19,7 +19,6 @@ import org.onosproject.net.flow.criteria.EthCriterion;
 import org.onosproject.net.flow.criteria.PiCriterion;
 import org.onosproject.net.flow.criteria.PortCriterion;
 import org.onosproject.net.flow.criteria.VlanIdCriterion;
-import org.onosproject.net.flow.instructions.Instructions;
 import org.onosproject.net.flow.instructions.L2ModificationInstruction.L2SubType;
 import org.onosproject.net.flow.instructions.L2ModificationInstruction.ModVlanIdInstruction;
 import org.onosproject.net.flowobjective.FilteringObjective;
@@ -41,6 +40,11 @@ import static org.onosproject.net.flow.criteria.Criterion.Type.VLAN_VID;
 import static org.onosproject.net.flow.instructions.L2ModificationInstruction.L2SubType.VLAN_ID;
 import static org.onosproject.net.flow.instructions.L2ModificationInstruction.L2SubType.VLAN_POP;
 import static org.onosproject.net.pi.model.PiPipelineInterpreter.PiInterpreterException;
+import static org.onosproject.segmentrouting.metadata.SRMetadataExtensions.CLEANUP_DOUBLE_TAGGED_HOST_ENTRIES;
+import static org.onosproject.segmentrouting.metadata.SRMetadataExtensions.INTERFACE_CONFIG_UPDATE;
+import static org.onosproject.segmentrouting.metadata.SRMetadataExtensions.PAIR_PORT;
+import static org.onosproject.segmentrouting.metadata.SRMetadataExtensions.isSrMetadataSet;
+import static org.onosproject.segmentrouting.metadata.SRMetadataExtensions.isValidSrMetadata;
 import static org.stratumproject.fabric.tna.behaviour.Constants.DEFAULT_PW_TRANSPORT_VLAN;
 import static org.stratumproject.fabric.tna.behaviour.Constants.DEFAULT_VLAN;
 import static org.stratumproject.fabric.tna.behaviour.Constants.ETH_TYPE_EXACT_MASK;
@@ -65,33 +69,6 @@ class FilteringObjectiveTranslator
             .withId(P4InfoConstants.FABRIC_INGRESS_FILTERING_DENY)
             .build();
 
-    //////////////////////////////////////////////////////////////////////////////
-    // 64 .... 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 0 //
-    //  X      X  X  X  X  X  X  X  X  X  X  X  X  X  X  X  X X X X X X X 1 1 1 //
-    //////////////////////////////////////////////////////////////////////////////
-    // Metadata instruction is used as 8 byte sequence to carry up to 64 metadata
-
-    // Check if the given filtering objective is the last filtering objective
-    // for a double-tagged host for a specific port. Used for signalling the driver
-    // to remove vlan table and tmac entry also. SR is setting this metadata when
-    // a double tagged filtering objective is removed and no other hosts is sharing
-    // the same input port.
-    //
-    // See org.onosproject.segmentrouting.RoutingRulePopulator#buildDoubleTaggedFilteringObj()
-    // See org.onosproject.segmentrouting.RoutingRulePopulator#processDoubleTaggedFilter()
-    private static final long CLEANUP_DOUBLE_TAGGED_HOST_ENTRIES = 1;
-
-    // Check if the given filtering objective is triggered by a interface config change.
-    // Used for signalling the driver when not remove tmac entries. SR is setting this
-    // metadata when an interface config update has been performed and thus fwd classifier
-    // rules should not be removed.
-    private static final long INTERFACE_CONFIG_UPDATE = 2;
-
-    // Check if the given filtering objective is for a pair port. Used for signalling the driver
-    // when the config is for the pair port.
-    private static final long PAIR_PORT = 4;
-    private static final long METADATA_MASK = 0x7L;
-
     FilteringObjectiveTranslator(DeviceId deviceId, FabricCapabilities capabilities) {
         super(deviceId, capabilities);
     }
@@ -109,7 +86,7 @@ class FilteringObjectiveTranslator
                     ObjectiveError.BADPARAMS);
         }
 
-        if (!isValidMetadata(obj.meta())) {
+        if (!isValidSrMetadata(obj.meta())) {
             throw new FabricPipelinerException(
                     format("Unsupported metadata configuration: metadata=%s", obj.meta().writeMetadata()),
                     ObjectiveError.BADPARAMS);
@@ -135,22 +112,6 @@ class FilteringObjectiveTranslator
         return resultBuilder.build();
     }
 
-    // Verify metadata configuration with these checks we are
-    // strictly checking the metadata passed from the apps
-    private boolean isValidMetadata(TrafficTreatment metaTreatment) {
-        if (metaTreatment == null) {
-            return true;
-        }
-
-        Instructions.MetadataInstruction metaIns = metaTreatment.writeMetadata();
-        if (metaIns == null) {
-            return true;
-        }
-
-        long meta = metaIns.metadata() & metaIns.metadataMask();
-        return meta != 0 && (meta ^ METADATA_MASK) <= METADATA_MASK;
-    }
-
     private boolean shouldModifyFwdClassifierTable(FilteringObjective obj) {
         // NOTE: in fabric pipeline the forwarding classifier acts similarly
         // to the TMAC table of OFDPA that matches on input port.
@@ -167,23 +128,9 @@ class FilteringObjectiveTranslator
         //     AND it is a port REMOVE event OR
         // - it refers to double tagged traffic
         //     and SR is triggering the removal of forwarding classifier rules.
-        return (obj.op() == Objective.Operation.ADD && !isFlagConfigured(obj, INTERFACE_CONFIG_UPDATE)) ||
-                (!isDoubleTagged(obj) && !isFlagConfigured(obj, INTERFACE_CONFIG_UPDATE)) ||
-                (isDoubleTagged(obj) && isFlagConfigured(obj, CLEANUP_DOUBLE_TAGGED_HOST_ENTRIES));
-    }
-
-    private boolean isFlagConfigured(FilteringObjective obj, long flag) {
-        if (obj.meta() == null) {
-            return false;
-        }
-
-        Instructions.MetadataInstruction metaIns = obj.meta().writeMetadata();
-        if (metaIns == null) {
-            return false;
-        }
-
-        long meta = metaIns.metadata() & metaIns.metadataMask();
-        return (meta & flag) == flag;
+        return (obj.op() == Objective.Operation.ADD && !isSrMetadataSet(obj, INTERFACE_CONFIG_UPDATE)) ||
+                (!isDoubleTagged(obj) && !isSrMetadataSet(obj, INTERFACE_CONFIG_UPDATE)) ||
+                (isDoubleTagged(obj) && isSrMetadataSet(obj, CLEANUP_DOUBLE_TAGGED_HOST_ENTRIES));
     }
 
     private boolean isDoubleTagged(FilteringObjective obj) {
@@ -245,7 +192,7 @@ class FilteringObjectiveTranslator
             }
 
             // Pair port is treated a special infra port with vlans configured
-            if (isFlagConfigured(obj, PAIR_PORT)) {
+            if (isSrMetadataSet(obj, PAIR_PORT)) {
                 portType = PORT_TYPE_INFRA;
             }
 
