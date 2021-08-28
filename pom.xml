@@ -28,7 +28,7 @@ SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
         <trellis.api.groupId>org.onosproject</trellis.api.groupId>
         <trellis.api.artifactId>segmentrouting-api</trellis.api.artifactId>
         <trellis.api.version>3.0.1-SNAPSHOT</trellis.api.version>
-        <web.context>/onos/fabric-tna</web.context>
+        <web.context>/onos/fabrictna</web.context>
         <api.version>3.0.1</api.version>
         <api.title>Fabric-tna REST API</api.title>
         <api.description>
@@ -168,6 +168,24 @@ SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
             <artifactId>jackson-annotations</artifactId>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.service.component.annotations</artifactId>
+            <version>1.4.0</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.core</artifactId>
+            <version>5.0.0</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.12</version>
+            <scope>test</scope>
+        </dependency>
 
     </dependencies>
 
@@ -188,7 +206,7 @@ SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
                             org.stratumproject.fabric.tna.stats.cli,
                             org.stratumproject.fabric.tna.behaviour.cli
                         </Karaf-Commands>
-                        <_wab>src/main/java/org/stratumproject/fabric/tna/web/webapp/WEB-INF</_wab>
+                        <_wab>src/main/webapp</_wab>
                         <Include-Resource>
                             WEB-INF/classes/apidoc/swagger.json=target/swagger.json,
                             {maven-resources}
@@ -208,6 +226,25 @@ SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
                 <artifactId>maven-checkstyle-plugin</artifactId>
                 <configuration>
                     <excludes>**/P4InfoConstants.java</excludes>
+                </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.8.0</version>
+                <configuration>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.felix</groupId>
+                <artifactId>maven-scr-plugin</artifactId>
+                <version>1.26.0</version>
+                <configuration>
+                <supportedProjectTypes>
+                    <supportedProjectType>bundle</supportedProjectType>
+                    <supportedProjectType>war</supportedProjectType>
+                </supportedProjectTypes>
                 </configuration>
             </plugin>
         </plugins>

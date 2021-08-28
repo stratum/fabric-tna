@@ -6,6 +6,7 @@ import com.google.common.collect.Lists;
 import com.google.common.hash.Hashing;
 import org.apache.commons.lang.NotImplementedException;
 import org.onlab.util.KryoNamespace;
+import org.onosproject.codec.CodecService;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
 import org.onosproject.net.DeviceId;
@@ -42,6 +43,8 @@ import org.stratumproject.fabric.tna.slicing.api.SliceId;
 import org.stratumproject.fabric.tna.slicing.api.SlicingAdminService;
 import org.stratumproject.fabric.tna.slicing.api.SlicingService;
 import org.stratumproject.fabric.tna.slicing.api.TrafficClass;
+import org.stratumproject.fabric.tna.web.SliceIdCodec;
+import org.stratumproject.fabric.tna.web.TrafficClassCodec;
 
 import java.util.List;
 import java.util.Map;
@@ -82,6 +85,9 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     protected DeviceService deviceService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY)
+    protected CodecService codecService;
 
     private static final Logger log = getLogger(SlicingManager.class);
     private static final String APP_NAME = "org.stratumproject.fabric.tna.slicing"; // TODO revisit naming
@@ -146,6 +152,9 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
         deviceExecutor = Executors.newSingleThreadExecutor(groupedThreads("fabric-tna-device-event", "%d", log));
         deviceService.addListener(deviceListener);
 
+        codecService.registerCodec(SliceId.class, new SliceIdCodec());
+        codecService.registerCodec(TrafficClass.class, new TrafficClassCodec());
+
         log.info("Started");
     }
 
@@ -161,6 +170,9 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
 
         deviceService.removeListener(deviceListener);
         deviceExecutor.shutdown();
+
+        codecService.unregisterCodec(SliceId.class);
+        codecService.unregisterCodec(TrafficClass.class);
 
         log.info("Stopped");
     }
