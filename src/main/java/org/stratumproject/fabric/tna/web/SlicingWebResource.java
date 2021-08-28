@@ -25,7 +25,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 /**
- * Query, add and remove Slices, TCs and Queues.
+ * Query, add and remove Slice and TrafficClass.
  */
 @Path("slicing")
 public class SlicingWebResource extends AbstractWebResource {
@@ -55,7 +55,7 @@ public class SlicingWebResource extends AbstractWebResource {
      * Add a new slice.
      *
      * @param sliceId id of slice
-     * @return 200 ok and result message
+     * @return 200 ok or 500 server error
      */
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
@@ -78,7 +78,7 @@ public class SlicingWebResource extends AbstractWebResource {
      * Remove an existing slice.
      *
      * @param sliceId id of slice
-     * @return 200 ok and result message
+     * @return 200 ok or 500 server error
      */
     @DELETE
     @Consumes(MediaType.APPLICATION_JSON)
@@ -121,7 +121,7 @@ public class SlicingWebResource extends AbstractWebResource {
      *
      * @param sliceId id of slice
      * @param tc traffic class to be added
-     * @return 200 ok and result message
+     * @return 200 ok or 500 server error
      */
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
@@ -145,7 +145,7 @@ public class SlicingWebResource extends AbstractWebResource {
      *
      * @param sliceId id of slice
      * @param tc traffic class to be removed
-     * @return 200 ok and result message
+     * @return 200 ok or 500 server error
      */
     @DELETE
     @Consumes(MediaType.APPLICATION_JSON)

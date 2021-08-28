@@ -10,6 +10,9 @@ import org.stratumproject.fabric.tna.slicing.api.SliceId;
 
 import static org.onlab.util.Tools.nullIsIllegal;
 
+/**
+ * Codec for SliceId.
+ */
 public final class SliceIdCodec extends JsonCodec<SliceId> {
     //JSON field name
     public static final String SLICE_ID = "SliceId";

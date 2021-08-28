@@ -10,6 +10,9 @@ import org.stratumproject.fabric.tna.slicing.api.TrafficClass;
 
 import static org.onlab.util.Tools.nullIsIllegal;
 
+/**
+ * Codec for TrafficClass.
+ */
 public final class TrafficClassCodec extends JsonCodec<TrafficClass> {
     //JSON field name
     public static final String TRAFFIC_CLASS = "TrafficClass";
