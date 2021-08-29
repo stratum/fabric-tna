@@ -55,7 +55,7 @@ public class SlicingWebResource extends AbstractWebResource {
      * Add a new slice.
      *
      * @param sliceId id of slice
-     * @return 200 ok or 500 server error
+     * @return 200 ok or 400 bad request
      */
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
@@ -68,7 +68,7 @@ public class SlicingWebResource extends AbstractWebResource {
         if (result) {
             response = Response.ok().build();
         } else {
-            response = Response.serverError().build();
+            response = Response.status(400).build();
         }
 
         return response;
@@ -78,7 +78,7 @@ public class SlicingWebResource extends AbstractWebResource {
      * Remove an existing slice.
      *
      * @param sliceId id of slice
-     * @return 200 ok or 500 server error
+     * @return 200 ok or 400 bad request
      */
     @DELETE
     @Consumes(MediaType.APPLICATION_JSON)
@@ -91,7 +91,7 @@ public class SlicingWebResource extends AbstractWebResource {
         if (result) {
             response = Response.ok().build();
         } else {
-            response = Response.serverError().build();
+            response = Response.status(400).build();
         }
 
         return response;
@@ -121,7 +121,7 @@ public class SlicingWebResource extends AbstractWebResource {
      *
      * @param sliceId id of slice
      * @param tc traffic class to be added
-     * @return 200 ok or 500 server error
+     * @return 200 ok or 400 bad request
      */
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
@@ -134,7 +134,7 @@ public class SlicingWebResource extends AbstractWebResource {
         if (result) {
             response = Response.ok().build();
         } else {
-            response = Response.serverError().build();
+            response = Response.status(400).build();
         }
 
         return response;
@@ -145,7 +145,7 @@ public class SlicingWebResource extends AbstractWebResource {
      *
      * @param sliceId id of slice
      * @param tc traffic class to be removed
-     * @return 200 ok or 500 server error
+     * @return 200 ok or 400 bad request
      */
     @DELETE
     @Consumes(MediaType.APPLICATION_JSON)
@@ -158,7 +158,7 @@ public class SlicingWebResource extends AbstractWebResource {
         if (result) {
             response = Response.ok().build();
         } else {
-            response = Response.serverError().build();
+            response = Response.status(400).build();
         }
 
         return response;
