@@ -195,7 +195,7 @@ class FilteringObjectiveTranslator
 
     private void ingressPortVlanRule(
             FilteringObjective obj,
-            Criterion inPortCriterion,
+            PortCriterion inPortCriterion,
             VlanIdCriterion outerVlanCriterion,
             VlanIdCriterion innerVlanCriterion,
             ObjectiveTranslation.Builder resultBuilder)
@@ -257,11 +257,61 @@ class FilteringObjectiveTranslator
                         P4InfoConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN,
                         ex.getMessage()), ObjectiveError.UNSUPPORTED);
             }
+            // Port Type classification is also used to configure the rules
+            // to manage (i.e., clear, carry, trust) DSCP field.
+            // N.B.: we are using the in-port to configure the egress port in
+            // the EgressDscpRewriter table.
+            if (portType == PORT_TYPE_EDGE) {
+                // We need to make sure that traffic exiting an edge port doesn't
+                // carry the SD-Fabric DSCP field.
+                resultBuilder.addFlowRule(buildEgressDscpRewriter(obj, inPortCriterion, true));
+            } else if (portType == PORT_TYPE_INFRA) {
+                // We need to make sure that traffic exiting an infra port carry
+                // SD-Fabric DSCP field.
+                resultBuilder.addFlowRule(buildEgressDscpRewriter(obj, inPortCriterion, false));
+                resultBuilder.addFlowRule(buildTrustDscpEntry(obj, inPortCriterion));
+            }
         }
 
         resultBuilder.addFlowRule(flowRule(
                 obj, P4InfoConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN,
                 selector.build(), treatmentBuilder.build()));
+    }
+
+    private FlowRule buildTrustDscpEntry(FilteringObjective obj, PortCriterion inPortCriterion)
+            throws FabricPipelinerException {
+        final TrafficSelector selector = DefaultTrafficSelector.builder()
+                .add(inPortCriterion)
+                .build();
+        final PiAction action = PiAction.builder()
+                .withId(P4InfoConstants.FABRIC_INGRESS_SLICE_TC_CLASSIFIER_TRUST_DSCP)
+                .build();
+        final TrafficTreatment treatment = DefaultTrafficTreatment.builder()
+                .piTableAction(action)
+                .build();
+        return flowRule(
+                obj, P4InfoConstants.FABRIC_INGRESS_SLICE_TC_CLASSIFIER_CLASSIFIER,
+                selector, treatment);
+    }
+
+    private FlowRule buildEgressDscpRewriter(FilteringObjective obj, PortCriterion egPortCriterion, boolean clear)
+            throws FabricPipelinerException {
+        final PiCriterion outPortCriterion = PiCriterion.builder()
+                .matchExact(P4InfoConstants.HDR_EG_PORT, egPortCriterion.port().toLong())
+                .build();
+        final TrafficSelector selector = DefaultTrafficSelector.builder()
+                .matchPi(outPortCriterion)
+                .build();
+        final PiAction action = PiAction.builder()
+                .withId(clear ? P4InfoConstants.FABRIC_EGRESS_DSCP_REWRITER_CLEAR :
+                                P4InfoConstants.FABRIC_EGRESS_DSCP_REWRITER_REWRITE)
+                .build();
+        final TrafficTreatment treatment = DefaultTrafficTreatment.builder()
+                .piTableAction(action)
+                .build();
+        return flowRule(
+                obj, P4InfoConstants.FABRIC_EGRESS_DSCP_REWRITER_REWRITER,
+                selector, treatment);
     }
 
     private PiAction mapFilteringTreatment(TrafficTreatment treatment, PiTableId tableId, byte portType)
