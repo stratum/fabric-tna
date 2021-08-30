@@ -577,6 +577,10 @@ public class FilteringObjectiveTranslatorTest extends AbstractObjectiveTranslato
                 null,
                 Ethernet.MPLS_UNICAST,
                 FWD_MPLS));
+        // DSCP rewriter rewrite
+        expectedFlowRules.add(buildExpectedEgressDscpRewriter(PORT_1, false));
+        // DSCP ingress trust
+        expectedFlowRules.add(buildExpectedIngressTrustDscp(PORT_1));
 
         ObjectiveTranslation expectedTranslation = buildExpectedTranslation(expectedFlowRules);
         assertEquals(expectedTranslation, actualTranslation);
@@ -600,6 +604,10 @@ public class FilteringObjectiveTranslatorTest extends AbstractObjectiveTranslato
         expectedFlowRules.add(buildExpectedVlanInPortRule(
                 PORT_1, VLAN_100, null, VlanId.NONE, PORT_TYPE_INFRA,
                 P4InfoConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN));
+        // DSCP rewriter rewrite
+        expectedFlowRules.add(buildExpectedEgressDscpRewriter(PORT_1, false));
+        // DSCP ingress trust
+        expectedFlowRules.add(buildExpectedIngressTrustDscp(PORT_1));
         expectedTranslation = buildExpectedTranslation(expectedFlowRules);
         assertEquals(expectedTranslation, actualTranslation);
     }
