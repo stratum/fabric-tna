@@ -85,7 +85,7 @@ public class SlicingWebResource extends AbstractWebResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Path("slice/{sliceId}")
     public Response removeSlice(@PathParam("sliceId") int sliceId) {
-        boolean result =  slicingService.removeSlice(SliceId.of(sliceId));
+        boolean result = slicingService.removeSlice(SliceId.of(sliceId));
 
         Response response;
         if (result) {
@@ -101,7 +101,7 @@ public class SlicingWebResource extends AbstractWebResource {
      * Get all traffic class of a slice.
      *
      * @param sliceId id of slice
-     * @return 200 ok and a collection of traffic class
+     * @return 200 ok and a collection of traffic class or 404 not found if the result is empty
      */
     @GET
     @Produces(MediaType.APPLICATION_JSON)
@@ -109,11 +109,16 @@ public class SlicingWebResource extends AbstractWebResource {
     public Response getTc(@PathParam("sliceId") int sliceId) {
         Set<TrafficClass> result = slicingService.getTrafficClasses(SliceId.of(sliceId));
         ObjectNode root = mapper().createObjectNode();
-        ArrayNode array = root.putArray("TrafficClasses");
 
-        result.forEach(tc -> array.add(codec(TrafficClass.class).encode(tc, this)));
-
-        return Response.ok(root).build();
+        Response response;
+        if (!result.isEmpty()) {
+            ArrayNode array = root.putArray("TrafficClasses");
+            result.forEach(tc -> array.add(codec(TrafficClass.class).encode(tc, this)));
+            response = Response.ok(root).build();
+        } else {
+            response = Response.status(404).build();
+        }
+        return response;
     }
 
     /**
