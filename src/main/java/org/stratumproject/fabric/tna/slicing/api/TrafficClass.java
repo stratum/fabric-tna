@@ -15,7 +15,7 @@ public enum TrafficClass {
     CONTROL(TC_CONTROL),
     REAL_TIME(TC_REAL_TIME),
     ELASTIC(TC_ELASTIC),
-    SYSTEM(-1); // For reserving SYSTEM queue only. Not used for table programming
+    SYSTEM(99); // For reserving SYSTEM queue only. Not used for table programming
 
     public final int tc;
 

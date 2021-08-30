@@ -43,6 +43,7 @@ import org.stratumproject.fabric.tna.slicing.api.SlicingAdminService;
 import org.stratumproject.fabric.tna.slicing.api.SlicingService;
 import org.stratumproject.fabric.tna.slicing.api.TrafficClass;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -167,14 +168,26 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
 
     @Override
     public boolean addSlice(SliceId sliceId) {
+        if (sliceId.equals(SliceId.DEFAULT)) {
+            log.warn("Adding default slice is not allowed");
+            return false;
+        }
+
         return addTrafficClass(sliceId, TrafficClass.BEST_EFFORT);
     }
 
     @Override
     public boolean removeSlice(SliceId sliceId) {
+        if (sliceId.equals(SliceId.DEFAULT)) {
+            log.warn("Removing default slice is not allowed");
+            return false;
+        }
+
         AtomicBoolean result = new AtomicBoolean(true);
 
-        getTrafficClasses(sliceId).forEach(tc -> {
+        getTrafficClasses(sliceId).stream()
+                .sorted(Comparator.comparingInt(TrafficClass::ordinal).reversed()) // Remove BEST_EFFORT the last
+                .forEach(tc -> {
             if (!removeTrafficClass(sliceId, tc)) {
                 result.set(false);
             }
@@ -232,8 +245,9 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
     @Override
     public boolean removeTrafficClass(SliceId sliceId, TrafficClass tc) {
         // Ensure the presence of BEST_EFFORT TC in the slice
-        if (tc == TrafficClass.BEST_EFFORT) {
-            log.warn("Can't remove {} from {}", tc, sliceId);
+        if (tc == TrafficClass.BEST_EFFORT &&
+                getTrafficClasses(sliceId).stream().anyMatch(existTc -> existTc != TrafficClass.BEST_EFFORT)) {
+            log.warn("Can't remove {} from {} while another TC exists", tc, sliceId);
             return false;
         }
 
