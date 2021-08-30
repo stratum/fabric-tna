@@ -32,6 +32,7 @@ import org.onosproject.net.pi.service.PiTranslationService;
 import org.onosproject.p4runtime.api.P4RuntimeController;
 import org.stratumproject.fabric.tna.PipeconfLoader;
 import org.stratumproject.fabric.tna.behaviour.FabricCapabilities;
+import org.stratumproject.fabric.tna.slicing.api.SlicingService;
 
 import java.net.URI;
 import java.nio.ByteBuffer;
@@ -98,6 +99,7 @@ public class FabricUpfProgrammableTest {
         CoreService coreService = createMock(CoreService.class);
         NetworkConfigService netcfgService = createMock(NetworkConfigService.class);
         DeviceService deviceService = createMock(DeviceService.class);
+        SlicingService slicingService = createMock(SlicingService.class);
         PiTranslationService piTranslationService = createMock(PiTranslationService.class);
         expect(coreService.getAppId(anyString())).andReturn(APP_ID).anyTimes();
         expect(netcfgService.getConfig(TestUpfConstants.DEVICE_ID, BasicDeviceConfig.class))
@@ -113,6 +115,7 @@ public class FabricUpfProgrammableTest {
         // Mock DriverHandler to get all the required mocked services
         DriverHandler driverHandler = createMock(DriverHandler.class);
         expect(driverHandler.get(FlowRuleService.class)).andReturn(new MockFlowRuleService()).anyTimes();
+        expect(driverHandler.get(SlicingService.class)).andReturn(slicingService).anyTimes();
         expect(driverHandler.get(PacketService.class)).andReturn(packetService).anyTimes();
         expect(driverHandler.get(DistributedFabricUpfStore.class)).andReturn(upfStore).anyTimes();
         expect(driverHandler.get(NetworkConfigService.class)).andReturn(netcfgService).anyTimes();

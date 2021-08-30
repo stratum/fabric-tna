@@ -3,7 +3,6 @@
 package org.stratumproject.fabric.tna.behaviour.upf;
 
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.onlab.packet.Ip4Prefix;
 import org.onosproject.core.ApplicationId;
@@ -39,6 +38,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.stratumproject.fabric.tna.PipeconfLoader;
 import org.stratumproject.fabric.tna.behaviour.FabricCapabilities;
+import org.stratumproject.fabric.tna.slicing.api.SliceId;
+import org.stratumproject.fabric.tna.slicing.api.SlicingService;
+import org.stratumproject.fabric.tna.slicing.api.TrafficClass;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -47,18 +49,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 import static org.onosproject.net.pi.model.PiCounterType.INDIRECT;
-import static org.stratumproject.fabric.tna.behaviour.Constants.DEFAULT_SLICE_ID;
-import static org.stratumproject.fabric.tna.behaviour.Constants.QUEUE_ID_BEST_EFFORT;
-import static org.stratumproject.fabric.tna.behaviour.Constants.QUEUE_ID_CONTROL;
-import static org.stratumproject.fabric.tna.behaviour.Constants.QUEUE_ID_FIRST_ELASTIC;
-import static org.stratumproject.fabric.tna.behaviour.Constants.QUEUE_ID_FIRST_REAL_TIME;
-import static org.stratumproject.fabric.tna.behaviour.Constants.TC_BEST_EFFORT;
-import static org.stratumproject.fabric.tna.behaviour.Constants.TC_CONTROL;
-import static org.stratumproject.fabric.tna.behaviour.Constants.TC_ELASTIC;
-import static org.stratumproject.fabric.tna.behaviour.Constants.TC_REAL_TIME;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.sliceTcConcat;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_GTPU_ENCAP;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_PDR_COUNTER;
@@ -91,6 +83,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     private static final int PRIORITY_LOW = 10;
 
     protected FlowRuleService flowRuleService;
+    protected SlicingService slicingService;
     protected PacketService packetService;
     protected FabricUpfStore fabricUpfStore;
     protected FabricUpfTranslator upfTranslator;
@@ -119,6 +112,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         }
 
         flowRuleService = handler().get(FlowRuleService.class);
+        slicingService = handler().get(SlicingService.class);
         packetService = handler().get(PacketService.class);
         fabricUpfStore = handler().get(DistributedFabricUpfStore.class);
         upfTranslator = new FabricUpfTranslator(fabricUpfStore);
@@ -144,24 +138,13 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         if (setupBehaviour("init()")) {
             log.info("UpfProgrammable initialized for appId {} and deviceId {}", appId, deviceId);
             // Add static Queue Configuration
-            flowRuleService.applyFlowRules(queuesFlowRules().toArray(new FlowRule[0]));
+            // Default slice and best effort TC will be created by SlicingService by default
+            slicingService.addTrafficClass(SliceId.DEFAULT, TrafficClass.CONTROL);
+            slicingService.addTrafficClass(SliceId.DEFAULT, TrafficClass.REAL_TIME);
+            slicingService.addTrafficClass(SliceId.DEFAULT, TrafficClass.ELASTIC);
             return true;
         }
         return false;
-    }
-
-    private Collection<FlowRule> queuesFlowRules() {
-        // For now we assume only one slice, hence we configure TCs only for the DEFAULT_SLICE_ID.
-        // Meters are not configured, therefore there is no need to match on packet color.
-        // In the future we can drop RED traffic, or send it to different Q (i.e., red control traffic).
-        Collection<FlowRule> flowRules = Lists.newArrayList();
-
-        flowRules.add(setQueueFlowRule(DEFAULT_SLICE_ID, TC_CONTROL, QUEUE_ID_CONTROL));
-        flowRules.add(setQueueFlowRule(DEFAULT_SLICE_ID, TC_REAL_TIME, QUEUE_ID_FIRST_REAL_TIME));
-        flowRules.add(setQueueFlowRule(DEFAULT_SLICE_ID, TC_ELASTIC, QUEUE_ID_FIRST_ELASTIC));
-        flowRules.add(setQueueFlowRule(DEFAULT_SLICE_ID, TC_BEST_EFFORT, QUEUE_ID_BEST_EFFORT));
-
-        return flowRules;
     }
 
     private FlowRule setQueueFlowRule(int sliceId, int tc, int queueId) {
@@ -290,14 +273,10 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
             return;
         }
         log.info("Clearing all UPF-related table entries.");
-        // Getting flow entries by device ID and filtering by Application ID
-        // is more efficient than getting by Application ID and filtering for a
-        // device ID.
-        List<FlowRule> flowEntriesToRemove = StreamSupport.stream(
-                flowRuleService.getFlowEntries(deviceId).spliterator(), false)
-                .filter(flowEntry -> flowEntry.appId() == appId.id()).collect(Collectors.toList());
-        flowEntriesToRemove.addAll(queuesFlowRules());
-        flowRuleService.removeFlowRules(flowEntriesToRemove.toArray(new FlowRule[0]));
+        // Remove static Queue Configuration
+        slicingService.removeTrafficClass(SliceId.DEFAULT, TrafficClass.CONTROL);
+        slicingService.removeTrafficClass(SliceId.DEFAULT, TrafficClass.REAL_TIME);
+        slicingService.removeTrafficClass(SliceId.DEFAULT, TrafficClass.ELASTIC);
         fabricUpfStore.reset();
     }
 
