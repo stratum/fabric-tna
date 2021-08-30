@@ -245,10 +245,15 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
     @Override
     public boolean removeTrafficClass(SliceId sliceId, TrafficClass tc) {
         // Ensure the presence of BEST_EFFORT TC in the slice
-        if (tc == TrafficClass.BEST_EFFORT &&
-                getTrafficClasses(sliceId).stream().anyMatch(existTc -> existTc != TrafficClass.BEST_EFFORT)) {
-            log.warn("Can't remove {} from {} while another TC exists", tc, sliceId);
-            return false;
+        if (tc == TrafficClass.BEST_EFFORT) {
+            if (sliceId.equals(SliceId.DEFAULT)) {
+                log.warn("Removing {} from {} is not allowed", tc, sliceId);
+                return false;
+            }
+            if (getTrafficClasses(sliceId).stream().anyMatch(existTc -> existTc != TrafficClass.BEST_EFFORT)) {
+                log.warn("Can't remove {} from {} while another TC exists", tc, sliceId);
+                return false;
+            }
         }
 
         AtomicBoolean result = new AtomicBoolean(false);
