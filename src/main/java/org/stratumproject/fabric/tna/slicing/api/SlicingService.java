@@ -13,6 +13,7 @@ public interface SlicingService {
 
     /**
      * Adds a slice with given ID.
+     * Adding default slice is not allowed.
      *
      * @param sliceId slice identifier
      * @return true if the slice is added successfully, false otherwise.
@@ -21,6 +22,7 @@ public interface SlicingService {
 
     /**
      * Removes a slice with given ID.
+     * Removing default slice is not allowed.
      *
      * @param sliceId slice identifier
      * @return true if the slice is removed successfully, false otherwise.
@@ -36,6 +38,7 @@ public interface SlicingService {
 
     /**
      * Adds a traffic class to given slice.
+     * BEST_EFFORT traffic class must be added first.
      *
      * @param sliceId slice identifier
      * @param tc traffic class
@@ -45,6 +48,7 @@ public interface SlicingService {
 
     /**
      * Removes a traffic class from given slice.
+     * BEST_EFFORT traffic class must be removed last.
      *
      * @param sliceId slice identifier
      * @param tc traffic class
