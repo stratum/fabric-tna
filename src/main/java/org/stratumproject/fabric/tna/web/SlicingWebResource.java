@@ -59,7 +59,6 @@ public class SlicingWebResource extends AbstractWebResource {
      */
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
     @Path("slice/{sliceId}")
     public Response addSlice(@PathParam("sliceId") int sliceId) {
         boolean result = slicingService.addSlice(SliceId.of(sliceId));
@@ -81,8 +80,6 @@ public class SlicingWebResource extends AbstractWebResource {
      * @return 200 ok or 400 bad request
      */
     @DELETE
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
     @Path("slice/{sliceId}")
     public Response removeSlice(@PathParam("sliceId") int sliceId) {
         boolean result = slicingService.removeSlice(SliceId.of(sliceId));
@@ -130,7 +127,6 @@ public class SlicingWebResource extends AbstractWebResource {
      */
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
     @Path("tc/{sliceId}/{tc}")
     public Response addTc(@PathParam("sliceId") int sliceId, @PathParam("tc") String tc) {
         boolean result = slicingService.addTrafficClass(SliceId.of(sliceId), TrafficClass.valueOf(tc));
@@ -153,8 +149,6 @@ public class SlicingWebResource extends AbstractWebResource {
      * @return 200 ok or 400 bad request
      */
     @DELETE
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
     @Path("tc/{sliceId}/{tc}")
     public Response removeTc(@PathParam("sliceId") int sliceId, @PathParam("tc") String tc) {
         boolean result = slicingService.removeTrafficClass(SliceId.of(sliceId), TrafficClass.valueOf(tc));
