@@ -29,7 +29,7 @@ SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
         <trellis.api.artifactId>segmentrouting-api</trellis.api.artifactId>
         <trellis.api.version>3.0.1-SNAPSHOT</trellis.api.version>
         <web.context>/onos/fabrictna</web.context>
-        <api.version>3.0.1</api.version>
+        <api.version>1.0.0</api.version>
         <api.title>Fabric-tna REST API</api.title>
         <api.description>
             REST API for Fabric-tna
