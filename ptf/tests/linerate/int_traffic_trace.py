@@ -178,8 +178,7 @@ class IntIngressDropReportFilterWithTrafficTrace(TRexTest, IntTest):
         - Efficiency score: Ensure INT efficiency is above a certain threshold
         """
         self.failIf(
-            recv_packets > 0,
-            f"ACL did not drop all packets, received {recv_packets}",
+            recv_packets > 0, f"ACL did not drop all packets, received {recv_packets}",
         )
 
         accuracy_score = results["drop_accuracy_score"]
