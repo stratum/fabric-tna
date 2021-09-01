@@ -13,6 +13,7 @@ import org.onosproject.net.flow.instructions.Instructions;
 import org.onosproject.net.flow.instructions.L2ModificationInstruction;
 import org.onosproject.net.flowobjective.DefaultNextTreatment;
 import org.onosproject.net.flowobjective.NextTreatment;
+import org.onosproject.net.flowobjective.Objective;
 import org.onosproject.net.pi.model.PiPipelineInterpreter;
 import org.onosproject.net.pi.model.PiTableId;
 import org.onosproject.store.serializers.KryoNamespaces;
@@ -25,8 +26,14 @@ import java.util.stream.Collectors;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static java.lang.String.format;
+import static org.onosproject.segmentrouting.metadata.SRObjectiveMetadata.EDGE_PORT;
+import static org.onosproject.segmentrouting.metadata.SRObjectiveMetadata.INFRA_PORT;
+import static org.onosproject.segmentrouting.metadata.SRObjectiveMetadata.PAIR_PORT;
+import static org.onosproject.segmentrouting.metadata.SRObjectiveMetadata.isSrMetadataSet;
 import static org.stratumproject.fabric.tna.behaviour.Constants.MAX_SLICE_ID;
 import static org.stratumproject.fabric.tna.behaviour.Constants.MAX_TC;
+import static org.stratumproject.fabric.tna.behaviour.Constants.METADATA_TO_PORT_TYPE;
+import static org.stratumproject.fabric.tna.behaviour.Constants.PORT_TYPE_UNKNOWN;
 import static org.stratumproject.fabric.tna.behaviour.Constants.TC_BITWIDTH;
 
 /**
@@ -131,5 +138,23 @@ public final class FabricUtils {
         checkArgument(sliceId >= 0 && sliceId <= MAX_SLICE_ID, "Invalid sliceId");
         checkArgument(tc >= 0 && tc <= MAX_TC, "Invalid tc");
         return (sliceId << TC_BITWIDTH) + tc;
+    }
+
+    /**
+     * Port type metadata conversion.
+     *
+     * @param obj the objective
+     * @return the port type associated to the metadata
+     */
+    public static Byte portType(Objective obj) {
+        byte portType = PORT_TYPE_UNKNOWN;
+        if (isSrMetadataSet(obj, PAIR_PORT) && METADATA_TO_PORT_TYPE.containsKey(PAIR_PORT)) {
+            portType = METADATA_TO_PORT_TYPE.get(PAIR_PORT);
+        } else if (isSrMetadataSet(obj, EDGE_PORT) && METADATA_TO_PORT_TYPE.containsKey(EDGE_PORT)) {
+            portType = METADATA_TO_PORT_TYPE.get(EDGE_PORT);
+        } else if (isSrMetadataSet(obj, INFRA_PORT) && METADATA_TO_PORT_TYPE.containsKey(INFRA_PORT)) {
+            portType = METADATA_TO_PORT_TYPE.get(INFRA_PORT);
+        }
+        return portType;
     }
 }

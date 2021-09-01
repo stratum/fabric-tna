@@ -40,24 +40,21 @@ import static org.onosproject.net.flow.criteria.Criterion.Type.VLAN_VID;
 import static org.onosproject.net.flow.instructions.L2ModificationInstruction.L2SubType.VLAN_ID;
 import static org.onosproject.net.flow.instructions.L2ModificationInstruction.L2SubType.VLAN_POP;
 import static org.onosproject.net.pi.model.PiPipelineInterpreter.PiInterpreterException;
-import static org.onosproject.segmentrouting.metadata.SRMetadataExtensions.CLEANUP_DOUBLE_TAGGED_HOST_ENTRIES;
-import static org.onosproject.segmentrouting.metadata.SRMetadataExtensions.INTERFACE_CONFIG_UPDATE;
-import static org.onosproject.segmentrouting.metadata.SRMetadataExtensions.PAIR_PORT;
-import static org.onosproject.segmentrouting.metadata.SRMetadataExtensions.isSrMetadataSet;
-import static org.onosproject.segmentrouting.metadata.SRMetadataExtensions.isValidSrMetadata;
-import static org.stratumproject.fabric.tna.behaviour.Constants.DEFAULT_PW_TRANSPORT_VLAN;
-import static org.stratumproject.fabric.tna.behaviour.Constants.DEFAULT_VLAN;
+import static org.onosproject.segmentrouting.metadata.SRObjectiveMetadata.CLEANUP_DOUBLE_TAGGED_HOST_ENTRIES;
+import static org.onosproject.segmentrouting.metadata.SRObjectiveMetadata.INTERFACE_CONFIG_UPDATE;
+import static org.onosproject.segmentrouting.metadata.SRObjectiveMetadata.isSrMetadataSet;
+import static org.onosproject.segmentrouting.metadata.SRObjectiveMetadata.isValidSrMetadata;
 import static org.stratumproject.fabric.tna.behaviour.Constants.ETH_TYPE_EXACT_MASK;
 import static org.stratumproject.fabric.tna.behaviour.Constants.FWD_IPV4_ROUTING;
 import static org.stratumproject.fabric.tna.behaviour.Constants.FWD_IPV6_ROUTING;
 import static org.stratumproject.fabric.tna.behaviour.Constants.FWD_MPLS;
 import static org.stratumproject.fabric.tna.behaviour.Constants.ONE;
-import static org.stratumproject.fabric.tna.behaviour.Constants.PORT_TYPE_EDGE;
-import static org.stratumproject.fabric.tna.behaviour.Constants.PORT_TYPE_INFRA;
+import static org.stratumproject.fabric.tna.behaviour.Constants.PORT_TYPE_UNKNOWN;
 import static org.stratumproject.fabric.tna.behaviour.Constants.ZERO;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.l2InstructionOrFail;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.criterion;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.l2Instruction;
+import static org.stratumproject.fabric.tna.behaviour.FabricUtils.portType;
 
 /**
  * ObjectiveTranslator implementation for FilteringObjective.
@@ -86,9 +83,9 @@ class FilteringObjectiveTranslator
                     ObjectiveError.BADPARAMS);
         }
 
-        if (!isValidSrMetadata(obj.meta())) {
+        if (!isValidSrMetadata(obj)) {
             throw new FabricPipelinerException(
-                    format("Unsupported metadata configuration: metadata=%s", obj.meta().writeMetadata()),
+                    format("Unsupported metadata configuration: metadata=%s", obj.meta()),
                     ObjectiveError.BADPARAMS);
         }
 
@@ -177,25 +174,13 @@ class FilteringObjectiveTranslator
         if (obj.type().equals(FilteringObjective.Type.DENY)) {
             treatmentBuilder.piTableAction(DENY);
         } else {
-            // FIXME Remove once AETHER-1404 has been implemented
-            // Infrastructure ports are tagged due to the PW transport vlan (4090). Otherwise,
-            // check if the vlan being pushed is the default internal vlan (4094).
-            byte portType = PORT_TYPE_EDGE;
-            if (!innerVlanValid && outerVlanValid &&
-                    outerVlanCriterion.vlanId().toShort() == DEFAULT_PW_TRANSPORT_VLAN) {
-                portType = PORT_TYPE_INFRA;
-            } else if (obj.meta() != null) {
-                ModVlanIdInstruction modVlanIdInstruction = (ModVlanIdInstruction) l2Instruction(obj.meta(), VLAN_ID);
-                if (modVlanIdInstruction != null && modVlanIdInstruction.vlanId().toShort() == DEFAULT_VLAN) {
-                    portType = PORT_TYPE_INFRA;
-                }
+            // FIXME Do we still need AETHER-1404 ?
+            byte portType = portType(obj);
+            if (portType == PORT_TYPE_UNKNOWN) {
+                throw new FabricPipelinerException(
+                        format("Unsupported port_type configuration: metadata=%s", obj.meta()),
+                        ObjectiveError.BADPARAMS);
             }
-
-            // Pair port is treated a special infra port with vlans configured
-            if (isSrMetadataSet(obj, PAIR_PORT)) {
-                portType = PORT_TYPE_INFRA;
-            }
-
             try {
                 treatmentBuilder.piTableAction(mapFilteringTreatment(obj.meta(),
                         P4InfoConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN, portType));

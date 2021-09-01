@@ -17,7 +17,6 @@ import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.net.flow.criteria.Criterion;
 import org.onosproject.net.flow.criteria.EthCriterion;
 import org.onosproject.net.flow.criteria.IPCriterion;
-import org.onosproject.net.flow.criteria.MetadataCriterion;
 import org.onosproject.net.flow.criteria.MplsCriterion;
 import org.onosproject.net.flow.criteria.PiCriterion;
 import org.onosproject.net.flow.criteria.VlanIdCriterion;
@@ -35,11 +34,16 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
+import static org.onosproject.segmentrouting.metadata.SRObjectiveMetadata.PAIR_PORT;
+import static org.onosproject.segmentrouting.metadata.SRObjectiveMetadata.isSrMetadataSet;
+import static org.onosproject.segmentrouting.metadata.SRObjectiveMetadata.isValidSrMetadata;
 import static org.stratumproject.fabric.tna.behaviour.Constants.PORT_TYPE_EDGE;
 import static org.stratumproject.fabric.tna.behaviour.Constants.PORT_TYPE_INFRA;
 import static org.stratumproject.fabric.tna.behaviour.Constants.PORT_TYPE_MASK;
+import static org.stratumproject.fabric.tna.behaviour.Constants.PORT_TYPE_UNKNOWN;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.criterionNotNull;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.outputPort;
+import static org.stratumproject.fabric.tna.behaviour.FabricUtils.portType;
 
 /**
  * ObjectiveTranslator implementation ForwardingObjective.
@@ -94,6 +98,13 @@ class ForwardingObjectiveTranslator
     @Override
     public ObjectiveTranslation doTranslate(ForwardingObjective obj)
             throws FabricPipelinerException {
+
+        if (!isValidSrMetadata(obj)) {
+            throw new FabricPipelinerException(
+                    format("Unsupported metadata configuration: metadata=%s", obj.meta()),
+                    ObjectiveError.BADPARAMS);
+        }
+
         final ObjectiveTranslation.Builder resultBuilder =
                 ObjectiveTranslation.builder();
         switch (obj.flag()) {
@@ -264,8 +275,8 @@ class ForwardingObjectiveTranslator
         }
         TrafficSelector.Builder selectorBuilder = DefaultTrafficSelector.builder(obj.selector());
         // Meta are used to signal the port type which can be edge or infra
-        if (obj.meta() != null && obj.meta().getCriterion(Criterion.Type.METADATA) != null) {
-            long portType = ((MetadataCriterion) obj.meta().getCriterion(Criterion.Type.METADATA)).metadata();
+        long portType = portType(obj);
+        if (portType != PORT_TYPE_UNKNOWN && !isSrMetadataSet(obj, PAIR_PORT)) {
             if (portType == PORT_TYPE_EDGE || portType == PORT_TYPE_INFRA) {
                 selectorBuilder.matchPi(PiCriterion.builder()
                         .matchTernary(P4InfoConstants.HDR_IG_PORT_TYPE, portType, PORT_TYPE_MASK)
