@@ -183,6 +183,11 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
             return false;
         }
 
+        if (getTrafficClasses(sliceId).size() == 0) {
+            log.warn("Cannot remove a non-existent slice {}", sliceId);
+            return false;
+        }
+
         AtomicBoolean result = new AtomicBoolean(true);
 
         getTrafficClasses(sliceId).stream()
