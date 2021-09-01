@@ -25,6 +25,7 @@ import org.onlab.packet.MacAddress;
 import org.onosproject.TestApplicationId;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
+import org.onosproject.mastership.MastershipListener;
 import org.onosproject.mastership.MastershipService;
 import org.onosproject.net.DefaultHost;
 import org.onosproject.net.Device;
@@ -49,7 +50,6 @@ import org.onosproject.segmentrouting.config.SegmentRoutingDeviceConfig;
 import static org.easymock.EasyMock.anyObject;
 import static org.easymock.EasyMock.capture;
 import static org.easymock.EasyMock.expect;
-import static org.easymock.EasyMock.expectLastCall;
 import static org.easymock.EasyMock.newCapture;
 import static org.easymock.EasyMock.replay;
 import static org.easymock.EasyMock.reset;
@@ -94,6 +94,7 @@ public class IntManagerTest extends EasyMockSupport {
     private Capture<NetworkConfigListener> intConfigListener;
     private Capture<NetworkConfigListener> srConfigListener;
     private Capture<HostListener> hostListener;
+    private Capture<MastershipListener> mastershipListener;
 
     @Before
     public void setUp() {
@@ -102,7 +103,6 @@ public class IntManagerTest extends EasyMockSupport {
         expect(mockDevice.as(IntProgrammable.class)).andReturn(intProgrammable).anyTimes();
         expect(coreService.registerApplication(APP_NAME)).andReturn(APP_ID).once();
         netcfgRegistry.registerConfigFactory(anyObject());
-        expectLastCall().once();
         intConfigListener = newCapture();
         netcfgService.addListener(capture(intConfigListener));
         srConfigListener = newCapture();
@@ -111,6 +111,8 @@ public class IntManagerTest extends EasyMockSupport {
         deviceService.addListener(capture(deviceListener));
         hostListener = newCapture();
         hostService.addListener(capture(hostListener));
+        mastershipListener = newCapture();
+        mastershipService.addListener(capture(mastershipListener));
         expect(deviceService.getAvailableDevices()).andReturn(ImmutableList.of(mockDevice)).anyTimes();
         expect(deviceService.isAvailable(anyObject())).andReturn(true).anyTimes();
         expect(mastershipService.isLocalMaster(anyObject())).andReturn(true).anyTimes();
@@ -260,6 +262,7 @@ public class IntManagerTest extends EasyMockSupport {
     public void testActivateWithConfigButDeviceIsNotLocal() {
         reset(mastershipService);
         expect(mastershipService.isLocalMaster(anyObject())).andReturn(false).anyTimes();
+        mastershipService.addListener(anyObject());
         expect(netcfgService.getConfig(APP_ID, IntReportConfig.class)).andReturn(INT_CONFIG_1).anyTimes();
         replay(intProgrammable, netcfgService, mastershipService);
         intManager.activate();
@@ -318,19 +321,17 @@ public class IntManagerTest extends EasyMockSupport {
     }
 
     private void expectedDeactivateProcess() {
-        reset(netcfgService, deviceService, netcfgRegistry, intProgrammable, hostService);
+        reset(netcfgService, deviceService, netcfgRegistry, intProgrammable, hostService, mastershipService);
         netcfgService.removeListener(intConfigListener.getValue());
         netcfgService.removeListener(srConfigListener.getValue());
-        expectLastCall().once();
         deviceService.removeListener(deviceListener.getValue());
-        expectLastCall().once();
         hostService.removeListener(hostListener.getValue());
-        expectLastCall().once();
+        mastershipService.removeListener(mastershipListener.getValue());
         netcfgRegistry.unregisterConfigFactory(anyObject());
-        expectLastCall().once();
         expect(deviceService.getAvailableDevices()).andReturn(ImmutableList.of(mockDevice)).anyTimes();
         expect(deviceService.isAvailable(anyObject())).andReturn(true).anyTimes();
         expect(intProgrammable.cleanup()).andReturn(true).anyTimes();
-        replay(netcfgService, deviceService, netcfgRegistry, intProgrammable, hostService);
+        expect(mastershipService.isLocalMaster(anyObject())).andReturn(true).anyTimes();
+        replay(netcfgService, deviceService, netcfgRegistry, intProgrammable, hostService, mastershipService);
     }
 }

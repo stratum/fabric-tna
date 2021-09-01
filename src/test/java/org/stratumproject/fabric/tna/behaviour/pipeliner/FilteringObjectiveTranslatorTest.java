@@ -99,6 +99,9 @@ public class FilteringObjectiveTranslatorTest extends AbstractObjectiveTranslato
                 Ethernet.MPLS_UNICAST,
                 FWD_MPLS));
 
+        // DSCP rewriter clear
+        expectedFlowRules.add(buildExpectedEgressDscpRewriter(PORT_1, true));
+
         ObjectiveTranslation expectedTranslation = buildExpectedTranslation(expectedFlowRules);
 
         assertEquals(expectedTranslation, actualTranslation);
@@ -144,6 +147,9 @@ public class FilteringObjectiveTranslatorTest extends AbstractObjectiveTranslato
                 Ethernet.TYPE_IPV4,
                 FWD_IPV4_ROUTING));
 
+        // DSCP rewriter clear
+        expectedFlowRules.add(buildExpectedEgressDscpRewriter(PORT_1, true));
+
         ObjectiveTranslation expectedTranslation = buildExpectedTranslation(expectedFlowRules);
 
         assertEquals(expectedTranslation, actualTranslation);
@@ -188,6 +194,9 @@ public class FilteringObjectiveTranslatorTest extends AbstractObjectiveTranslato
                 Ethernet.TYPE_IPV6,
                 FWD_IPV6_ROUTING));
 
+        // DSCP rewriter clear
+        flowRules.add(buildExpectedEgressDscpRewriter(PORT_1, true));
+
         ObjectiveTranslation expectedTranslation = buildExpectedTranslation(flowRules);
 
         assertEquals(expectedTranslation, actualTranslation);
@@ -202,20 +211,23 @@ public class FilteringObjectiveTranslatorTest extends AbstractObjectiveTranslato
         FilteringObjective filteringObjective = buildFilteringObjective(null, EDGE_PORT);
         ObjectiveTranslation actualTranslation = translator.translate(filteringObjective);
 
+        Collection<FlowRule> expectedFlowRules = Lists.newArrayList();
+
         // in port vlan flow rule
-        FlowRule flowRuleExpected = buildExpectedVlanInPortRule(
+        expectedFlowRules.add(buildExpectedVlanInPortRule(
                 PORT_1,
                 VlanId.NONE,
                 VlanId.NONE,
                 VLAN_100,
                 PORT_TYPE_EDGE,
-                P4InfoConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN);
+                P4InfoConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN));
 
         // No rules in forwarding classifier, will do default action: set fwd type to bridging
 
-        ObjectiveTranslation expectedTranslation = ObjectiveTranslation.builder()
-                .addFlowRule(flowRuleExpected)
-                .build();
+        // DSCP rewriter clear
+        expectedFlowRules.add(buildExpectedEgressDscpRewriter(PORT_1, true));
+
+        ObjectiveTranslation expectedTranslation = buildExpectedTranslation(expectedFlowRules);
 
         assertEquals(expectedTranslation, actualTranslation);
     }
@@ -297,6 +309,9 @@ public class FilteringObjectiveTranslatorTest extends AbstractObjectiveTranslato
         expectedFlowRules.addAll(buildExpectedFwdClassifierRule(
                 PORT_1, ROUTER_MAC, null, Ethernet.MPLS_UNICAST,
                 FWD_MPLS));
+        // DSCP rewriter clear
+        expectedFlowRules.add(buildExpectedEgressDscpRewriter(PORT_1, true));
+
         ObjectiveTranslation expectedTranslation = buildExpectedTranslation(expectedFlowRules);
 
         assertEquals(expectedTranslation, actualTranslation);
@@ -356,6 +371,8 @@ public class FilteringObjectiveTranslatorTest extends AbstractObjectiveTranslato
         expectedFlowRules.add(buildExpectedVlanInPortRule(
                 PORT_1, VLAN_100, null, VlanId.NONE, PORT_TYPE_EDGE,
                 P4InfoConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN));
+        // DSCP rewriter clear
+        expectedFlowRules.add(buildExpectedEgressDscpRewriter(PORT_1, true));
         ObjectiveTranslation expectedTranslation = buildExpectedTranslation(expectedFlowRules);
         assertEquals(expectedTranslation, actualTranslation);
 
@@ -379,6 +396,8 @@ public class FilteringObjectiveTranslatorTest extends AbstractObjectiveTranslato
         expectedFlowRules.add(buildExpectedVlanInPortRule(
                 PORT_1, VlanId.NONE, null, VLAN_200, PORT_TYPE_EDGE,
                 P4InfoConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN));
+        // DSCP rewriter clear
+        expectedFlowRules.add(buildExpectedEgressDscpRewriter(PORT_1, true));
         expectedTranslation = buildExpectedTranslation(expectedFlowRules);
         assertEquals(expectedTranslation, actualTranslation);
     }
@@ -428,6 +447,8 @@ public class FilteringObjectiveTranslatorTest extends AbstractObjectiveTranslato
                 null,
                 Ethernet.MPLS_UNICAST,
                 FWD_MPLS));
+        // DSCP rewriter clear
+        expectedFlowRules.add(buildExpectedEgressDscpRewriter(PORT_1, true));
 
         ObjectiveTranslation expectedTranslation = buildExpectedTranslation(expectedFlowRules);
         assertEquals(expectedTranslation, actualTranslation);
@@ -475,6 +496,10 @@ public class FilteringObjectiveTranslatorTest extends AbstractObjectiveTranslato
                 null,
                 Ethernet.MPLS_UNICAST,
                 FWD_MPLS));
+        // DSCP rewriter rewrite
+        expectedFlowRules.add(buildExpectedEgressDscpRewriter(PORT_1, false));
+        // DSCP ingress trust
+        expectedFlowRules.add(buildExpectedIngressTrustDscp(PORT_1));
 
         ObjectiveTranslation expectedTranslation = buildExpectedTranslation(expectedFlowRules);
         assertEquals(expectedTranslation, actualTranslation);
@@ -516,6 +541,10 @@ public class FilteringObjectiveTranslatorTest extends AbstractObjectiveTranslato
                 null,
                 Ethernet.MPLS_UNICAST,
                 FWD_MPLS));
+        // DSCP rewriter rewrite
+        expectedFlowRules.add(buildExpectedEgressDscpRewriter(PORT_1, false));
+        // DSCP ingress trust
+        expectedFlowRules.add(buildExpectedIngressTrustDscp(PORT_1));
 
         expectedTranslation = buildExpectedTranslation(expectedFlowRules);
         assertEquals(expectedTranslation, actualTranslation);
@@ -562,6 +591,10 @@ public class FilteringObjectiveTranslatorTest extends AbstractObjectiveTranslato
                 null,
                 Ethernet.MPLS_UNICAST,
                 FWD_MPLS));
+        // DSCP rewriter rewrite
+        expectedFlowRules.add(buildExpectedEgressDscpRewriter(PORT_1, false));
+        // DSCP ingress trust
+        expectedFlowRules.add(buildExpectedIngressTrustDscp(PORT_1));
 
         ObjectiveTranslation expectedTranslation = buildExpectedTranslation(expectedFlowRules);
         assertEquals(expectedTranslation, actualTranslation);
@@ -585,6 +618,10 @@ public class FilteringObjectiveTranslatorTest extends AbstractObjectiveTranslato
         expectedFlowRules.add(buildExpectedVlanInPortRule(
                 PORT_1, VLAN_100, null, VlanId.NONE, PORT_TYPE_INFRA,
                 P4InfoConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN));
+        // DSCP rewriter rewrite
+        expectedFlowRules.add(buildExpectedEgressDscpRewriter(PORT_1, false));
+        // DSCP ingress trust
+        expectedFlowRules.add(buildExpectedIngressTrustDscp(PORT_1));
         expectedTranslation = buildExpectedTranslation(expectedFlowRules);
         assertEquals(expectedTranslation, actualTranslation);
     }
@@ -614,6 +651,47 @@ public class FilteringObjectiveTranslatorTest extends AbstractObjectiveTranslato
                 .fromApp(APP_ID)
                 .makePermanent();
         return builder.add();
+    }
+
+    private FlowRule buildExpectedEgressDscpRewriter(PortNumber outPort, boolean clear) {
+        TrafficSelector selector = DefaultTrafficSelector.builder()
+                .matchPi(PiCriterion.builder()
+                                 .matchExact(P4InfoConstants.HDR_EG_PORT, outPort.toLong())
+                                 .build())
+                .build();
+        PiAction piAction = PiAction.builder()
+                .withId(clear ? P4InfoConstants.FABRIC_EGRESS_DSCP_REWRITER_CLEAR :
+                                P4InfoConstants.FABRIC_EGRESS_DSCP_REWRITER_REWRITE)
+                .build();
+        return DefaultFlowRule.builder()
+                .withPriority(PRIORITY)
+                .withSelector(selector)
+                .withTreatment(DefaultTrafficTreatment.builder()
+                                       .piTableAction(piAction).build())
+                .fromApp(APP_ID)
+                .forDevice(DEVICE_ID)
+                .makePermanent()
+                .forTable(P4InfoConstants.FABRIC_EGRESS_DSCP_REWRITER_REWRITER)
+                .build();
+    }
+
+    private FlowRule buildExpectedIngressTrustDscp(PortNumber inPort) {
+        TrafficSelector selector = DefaultTrafficSelector.builder()
+                .matchInPort(inPort)
+                .build();
+        PiAction piAction = PiAction.builder()
+                .withId(P4InfoConstants.FABRIC_INGRESS_SLICE_TC_CLASSIFIER_TRUST_DSCP)
+                .build();
+        return DefaultFlowRule.builder()
+                .withPriority(PRIORITY)
+                .withSelector(selector)
+                .withTreatment(DefaultTrafficTreatment.builder()
+                                       .piTableAction(piAction).build())
+                .fromApp(APP_ID)
+                .forDevice(DEVICE_ID)
+                .makePermanent()
+                .forTable(P4InfoConstants.FABRIC_INGRESS_SLICE_TC_CLASSIFIER_CLASSIFIER)
+                .build();
     }
 
     private FlowRule buildExpectedVlanInPortRule(PortNumber inPort,

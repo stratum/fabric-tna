@@ -595,40 +595,52 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         flowRuleService.applyFlowRules(watchlistRule);
     }
 
+    /**
+     * Get ranges matching values above the given threshold.
+     *
+     * @param threshold the threshold
+     * @return the match ranges, empty if threshold is maximum value of 32-bit unsigned integer
+     */
     protected List<List<Range<Integer>>> getMatchRangesForTrigger(long threshold) {
         List<List<Range<Integer>>> result = Lists.newArrayList();
         if (threshold <= 0xffff) {
-            // From threshold value to 0x0000ffff
+            // [threshold, 0x0000ffff]
             result.add(ImmutableList.of(Range.closed(0, 0), Range.closed((int) threshold, 0xffff)));
-            // From 0x00010000 to 0xffffffff
-            result.add(ImmutableList.of(Range.openClosed(0, 0xffff), Range.closed(0, 0xffff)));
-        } else {
+            // [0x00010000, 0xffffffff]
+            result.add(ImmutableList.of(Range.closed(1, 0xffff), Range.closed(0, 0xffff)));
+        } else if (threshold < 0xffffffffL) {
             int thresholdUpper = (int) (threshold >> 16);
             int thresholdLower = (int) (threshold & 0xffff);
-            // From threshold to 0xTTTTffff, "TTTT" is the upper 16-bit of the threshold.
+            // [threshold, 0xTTTTffff], "TTTT" is the upper 16-bit of the threshold.
             result.add(ImmutableList.of(
                 Range.closed(thresholdUpper, thresholdUpper), Range.closed(thresholdLower, 0xffff)));
             if (thresholdUpper < 0xffff) {
-                // From 0xTTTTffff to 0xffffffff, "TTTT" is the upper 16-bit of the threshold.
-                result.add(ImmutableList.of(Range.openClosed(thresholdUpper, 0xffff), Range.closed(0, 0xffff)));
+                // [0xTTTTffff, 0xffffffff], "TTTT" is the upper 16-bit of the threshold.
+                result.add(ImmutableList.of(Range.closed(thresholdUpper + 1, 0xffff), Range.closed(0, 0xffff)));
             }
         }
         return result;
     }
 
+    /**
+     * Get ranges matching values below the given threshold.
+     *
+     * @param threshold the threshold
+     * @return the ranges, or empty list if the threshold is 0
+     */
     protected List<List<Range<Integer>>> getMatchRangesForReset(long threshold) {
         List<List<Range<Integer>>> result = Lists.newArrayList();
-        if (threshold <= 0xffff) {
-            // From 0 to threshold
-            result.add(ImmutableList.of(Range.closed(0, 0), Range.closedOpen(0, (int) threshold)));
-        } else {
-            int thresholdUpper = (int) (threshold >> 16);
-            int thresholdLower = (int) (threshold & 0xffff);
-            // From 0 to 0xTTTT0000, "TTTT" is the upper 16-bit of the threshold.
-            result.add(ImmutableList.of(Range.closedOpen(0, thresholdUpper), Range.closed(0, 0xffff)));
-            // From 0xTTTT0000 to threshold, "TTTT" is the upper 16-bit of the threshold.
+        int thresholdUpper = (int) (threshold >> 16);
+        int thresholdLower = (int) (threshold & 0xffff);
+        if (threshold > 0xffff) {
+            // [0, 0xTTTT0000), "TTTT" is the upper 16-bit of the threshold.
+            result.add(ImmutableList.of(Range.closed(0, thresholdUpper - 1), Range.closed(0, 0xffff)));
+            // [0xTTTT0000, threshold), "TTTT" is the upper 16-bit of the threshold.
             result.add(ImmutableList.of(
-                Range.closed(thresholdUpper, thresholdUpper), Range.closedOpen(0, thresholdLower)));
+                Range.closed(thresholdUpper, thresholdUpper), Range.closed(0, thresholdLower - 1)));
+        } else if (threshold > 0) {
+            // [0, threshold)
+            result.add(ImmutableList.of(Range.closed(0, 0), Range.closed(0, thresholdLower - 1)));
         }
         return result;
     }

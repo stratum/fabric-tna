@@ -44,7 +44,7 @@ public class IntReportConfig extends Config<ApplicationId> {
     private static final String QUEUE_REPORT_LATENCY_THRESHOLDS = "queueReportLatencyThresholds";
     private static final String TRIGGER_NS = "triggerNs";
     private static final String RESET_NS = "resetNs";
-    private static final long DEFAULT_QUEUE_REPORT_TRIGGER_LATENCY_THRESHOLD = 0xffffffff; // do not report.
+    private static final long DEFAULT_QUEUE_REPORT_TRIGGER_LATENCY_THRESHOLD = 0xffffffffL; // do not report.
     private static final long DEFAULT_QUEUE_REPORT_RESET_LATENCY_THRESHOLD = 0; // do not reset.
 
     /**
