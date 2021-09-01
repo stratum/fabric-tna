@@ -121,7 +121,7 @@ public class FabricIntProgrammableTest {
                     .put(0x201, 0xc4)
                     .put(0x202, 0x144)
                     .put(0x203, 0x1c4).build();
-    private static final long DEFAULT_QUEUE_REPORT_TRIGGER_LATENCY_THRESHOLD = 0xffffffff;
+    private static final long DEFAULT_QUEUE_REPORT_TRIGGER_LATENCY_THRESHOLD = 0xffffffffL;
     private static final long DEFAULT_QUEUE_REPORT_RESET_LATENCY_THRESHOLD = 0;
     private static final byte MAX_QUEUES = 32;
     private static final int INT_MIRROR_TRUNCATE_MAX_LEN = 128;
@@ -723,6 +723,30 @@ public class FabricIntProgrammableTest {
         assertFalse(numberInRange(0x0100ff00, ranges));
         assertFalse(numberInRange(0x0ff00000, ranges));
         assertFalse(numberInRange(0xffffffffL, ranges));
+
+
+        // Some edge cases:
+        // Match from 0 to 0xffffffff - 1
+        ranges = intProgrammable.getMatchRangesForReset(0xffffffffL);
+        assertTrue(numberInRange(0x0001ffff, ranges));
+        assertTrue(numberInRange(0x0100feff, ranges));
+        assertTrue(numberInRange(0x0100ff00, ranges));
+        assertTrue(numberInRange(0x0ff00000, ranges));
+        assertTrue(numberInRange(0xfffffffeL, ranges));
+        assertFalse(numberInRange(0xffffffffL, ranges));
+        // Never reset
+        ranges = intProgrammable.getMatchRangesForReset(0);
+        assertEquals(ranges.size(), 0);
+        // Always trigger
+        ranges = intProgrammable.getMatchRangesForTrigger(0);
+        assertTrue(numberInRange(0x0001ffff, ranges));
+        assertTrue(numberInRange(0x0100feff, ranges));
+        assertTrue(numberInRange(0x0100ff00, ranges));
+        assertTrue(numberInRange(0x0ff00000, ranges));
+        assertTrue(numberInRange(0xffffffffL, ranges));
+        // Never trigger
+        ranges = intProgrammable.getMatchRangesForTrigger(0xffffffffL);
+        assertEquals(ranges.size(), 0);
     }
 
     private boolean numberInRange(long number, List<List<Range<Integer>>> ranges) {
@@ -991,23 +1015,55 @@ public class FabricIntProgrammableTest {
     private List<FlowRule> queueReportFlows(DeviceId deviceId, long triggerThreshold,
             long resetThreshold, byte queueId) {
         final List<FlowRule> rules = Lists.newArrayList();
-        FlowRule queueReportFlow = buildQueueReportFlow(deviceId, queueId,
+        FlowRule queueReportFlow;
+        if (triggerThreshold < 0xffff) {
+            queueReportFlow = buildQueueReportFlow(deviceId, queueId,
                 new long[]{0, 0},
                 new long[]{triggerThreshold, 0xffff},
                 P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_CHECK_QUOTA);
-        rules.add(queueReportFlow);
-
-        queueReportFlow = buildQueueReportFlow(deviceId, queueId,
+            rules.add(queueReportFlow);
+            queueReportFlow = buildQueueReportFlow(deviceId, queueId,
                 new long[]{1, 0xffff},
                 new long[]{0, 0xffff},
                 P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_CHECK_QUOTA);
-        rules.add(queueReportFlow);
+            rules.add(queueReportFlow);
+        } else if (triggerThreshold < 0xffffffffL) {
+            int thresholdUpper = (int) (triggerThreshold >> 16);
+            int thresholdLower = (int) (triggerThreshold & 0xffff);
+            queueReportFlow = buildQueueReportFlow(deviceId, queueId,
+                new long[]{thresholdUpper, thresholdUpper},
+                new long[]{thresholdLower, 0xffff},
+                P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_CHECK_QUOTA);
+            rules.add(queueReportFlow);
+            queueReportFlow = buildQueueReportFlow(deviceId, queueId,
+                new long[]{thresholdUpper + 1, 0xffff},
+                new long[]{0, 0xffff},
+                P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_CHECK_QUOTA);
+            rules.add(queueReportFlow);
+        }
 
-        queueReportFlow = buildQueueReportFlow(deviceId, queueId,
+        if (resetThreshold > 0xffff) {
+            int thresholdUpper = (int) (resetThreshold >> 16);
+            int thresholdLower = (int) (resetThreshold & 0xffff);
+            queueReportFlow = buildQueueReportFlow(deviceId, queueId,
+                new long[]{0, thresholdUpper - 1},
+                new long[]{0, 0xffff},
+                P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_RESET_QUOTA);
+            rules.add(queueReportFlow);
+            queueReportFlow = buildQueueReportFlow(deviceId, queueId,
+                new long[]{thresholdUpper, thresholdUpper},
+                new long[]{0, thresholdLower - 1},
+                P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_RESET_QUOTA);
+            rules.add(queueReportFlow);
+
+        } else if (resetThreshold > 0) {
+            queueReportFlow = buildQueueReportFlow(deviceId, queueId,
                 new long[]{0, 0},
                 new long[]{0, resetThreshold - 1},
                 P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_RESET_QUOTA);
-        rules.add(queueReportFlow);
+            rules.add(queueReportFlow);
+        }
+
         return rules;
     }
 }

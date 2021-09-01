@@ -292,22 +292,22 @@ def analyze_report_pcap(pcap_file: str, total_flows_from_trace: int = 0) -> dict
     print("Total bad INT IRGs(<0.9s): {}".format(len(bad_local_report_irgs)))
     print("Total invalid INT IRGs(<=0s): {}".format(len(invalid_local_report_irgs)))
     if total_flows_from_trace != 0:
-        accuracy_score = (
+        flow_accuracy_score = (
             len(five_tuple_to_prev_local_report_time) * 100 / total_flows_from_trace
         )
-        print("Accuracy score: {}".format(accuracy_score))
-        results["accuracy_score"] = accuracy_score
+        print("Flow report filter accuracy score: {}".format(flow_accuracy_score))
+        results["flow_accuracy_score"] = flow_accuracy_score
 
     if len(valid_local_report_irgs) <= 0:
         print("No valid local report IRGs")
     else:
-        efficiency_score = (
+        flow_efficiency_score = (
             (len(valid_local_report_irgs) - len(bad_local_report_irgs))
             * 100
             / len(valid_local_report_irgs)
         )
-        print("Efficiency score: {}".format(efficiency_score))
-        results["efficiency_score"] = efficiency_score
+        print("Flow report filter efficiency score: {}".format(flow_efficiency_score))
+        results["flow_efficiency_score"] = flow_efficiency_score
 
         # Plot Histogram and CDF
         report_plot_file = abspath(splitext(pcap_file)[0] + "-local" + ".png")
@@ -323,17 +323,24 @@ def analyze_report_pcap(pcap_file: str, total_flows_from_trace: int = 0) -> dict
     print("Total invalid INT IRGs(<=0s): {}".format(len(invalid_drop_report_irgs)))
     print("Total report dropped: {}".format(dropped))
     print("Skipped packets: {}".format(skipped))
+    if total_flows_from_trace != 0:
+        drop_accuracy_score = (
+            len(five_tuple_to_prev_drop_report_time) * 100 / total_flows_from_trace
+        )
+        print("Drop report filter accuracy score: {}".format(drop_accuracy_score))
+        results["drop_accuracy_score"] = drop_accuracy_score
 
     if len(valid_drop_report_irgs) <= 0:
         print("No valid drop report IRGs")
     else:
-        print(
-            "Efficiency score: {}".format(
-                (len(valid_drop_report_irgs) - len(bad_drop_report_irgs))
-                * 100
-                / len(valid_drop_report_irgs)
-            )
+        drop_efficiency_score = (
+            (len(valid_drop_report_irgs) - len(bad_drop_report_irgs))
+            * 100
+            / len(valid_drop_report_irgs)
         )
+        print("Drop report filter efficiency score: {}".format(drop_efficiency_score))
+        results["drop_efficiency_score"] = drop_efficiency_score
+
         report_plot_file = abspath(splitext(pcap_file)[0] + "-drop" + ".png")
         plot_histogram_and_cdf(report_plot_file, valid_drop_report_irgs)
 

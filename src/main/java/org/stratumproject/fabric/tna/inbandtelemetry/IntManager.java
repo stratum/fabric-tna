@@ -15,8 +15,11 @@ import com.google.common.collect.Streams;
 
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
+import org.onosproject.mastership.MastershipEvent;
+import org.onosproject.mastership.MastershipListener;
 import org.onosproject.mastership.MastershipService;
 import org.onosproject.net.Device;
+import org.onosproject.net.DeviceId;
 import org.onosproject.net.Host;
 import org.onosproject.net.config.ConfigFactory;
 import org.onosproject.net.config.NetworkConfigEvent;
@@ -65,6 +68,7 @@ public class IntManager {
     private final NetworkConfigListener srConfigListener = new SrConfigListener();
     private final DeviceListener deviceListener = new IntDeviceListener();
     private final HostListener hostListener = new CollectorHostListener();
+    private final MastershipListener mastershipListener = new DeviceMastershipListener();
 
     private final ConfigFactory<ApplicationId, IntReportConfig> intAppConfigFactory = new ConfigFactory<>(
             SubjectFactories.APP_SUBJECT_FACTORY, IntReportConfig.class, "report") {
@@ -83,6 +87,7 @@ public class IntManager {
         netcfgService.addListener(srConfigListener);
         deviceService.addListener(deviceListener);
         hostService.addListener(hostListener);
+        mastershipService.addListener(mastershipListener);
         Streams.stream(deviceService.getAvailableDevices()).forEach(this::initDevice);
         IntReportConfig config = netcfgService.getConfig(appId, IntReportConfig.class);
         if (config != null) {
@@ -97,6 +102,7 @@ public class IntManager {
         netcfgService.removeListener(srConfigListener);
         deviceService.removeListener(deviceListener);
         hostService.removeListener(hostListener);
+        mastershipService.removeListener(mastershipListener);
         eventExecutor.shutdown();
         netcfgRegistry.unregisterConfigFactory(intAppConfigFactory);
         Streams.stream(deviceService.getAvailableDevices()).forEach(this::cleanupDevice);
@@ -216,16 +222,42 @@ public class IntManager {
     private class CollectorHostListener implements HostListener {
         @Override
         public void event(HostEvent event) {
-            IntReportConfig config = netcfgService.getConfig(appId, IntReportConfig.class);
-            if (config == null) {
-                return;
-            }
             eventExecutor.execute(() -> {
+                IntReportConfig config = netcfgService.getConfig(appId, IntReportConfig.class);
+                if (config == null) {
+                    return;
+                }
                 switch (event.type()) {
                     case HOST_ADDED:
                     case HOST_UPDATED:
                         Host host = event.subject();
                         if (host.ipAddresses().contains(config.collectorIp())) {
+                            setUpIntConfig(config);
+                        }
+                        break;
+                    default:
+                        break;
+                }
+            });
+        }
+    }
+
+    /**
+     * To install INT rules when this ONOS instance becomes the master of a device.
+     */
+    private class DeviceMastershipListener implements MastershipListener {
+
+        @Override
+        public void event(MastershipEvent event) {
+            eventExecutor.execute(() -> {
+                IntReportConfig config = netcfgService.getConfig(appId, IntReportConfig.class);
+                if (config == null) {
+                    return;
+                }
+                switch (event.type()) {
+                    case MASTER_CHANGED:
+                        DeviceId deviceId = event.subject();
+                        if (mastershipService.isLocalMaster(deviceId)) {
                             setUpIntConfig(config);
                         }
                         break;

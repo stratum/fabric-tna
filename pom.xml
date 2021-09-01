@@ -28,6 +28,13 @@ SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
         <trellis.api.groupId>org.onosproject</trellis.api.groupId>
         <trellis.api.artifactId>segmentrouting-api</trellis.api.artifactId>
         <trellis.api.version>3.0.1-SNAPSHOT</trellis.api.version>
+        <web.context>/onos/fabrictna</web.context>
+        <api.version>1.0.0</api.version>
+        <api.title>Fabric-tna REST API</api.title>
+        <api.description>
+            REST API for Fabric-tna
+        </api.description>
+        <api.package>org.stratumproject.fabric.tna.web</api.package>
     </properties>
 
     <dependencies>
@@ -128,6 +135,58 @@ SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
             <scope>test</scope>
         </dependency>
 
+        <!-- REST API -->
+        <dependency>
+            <groupId>org.onosproject</groupId>
+            <artifactId>onos-rest</artifactId>
+            <version>${onos.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.onosproject</groupId>
+            <artifactId>onlab-rest</artifactId>
+            <version>${onos.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>javax.ws.rs</groupId>
+            <artifactId>javax.ws.rs-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish.jersey.containers</groupId>
+            <artifactId>jersey-container-servlet</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.service.component.annotations</artifactId>
+            <version>1.4.0</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.core</artifactId>
+            <version>5.0.0</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.12</version>
+            <scope>test</scope>
+        </dependency>
+
     </dependencies>
 
     <build>
@@ -142,7 +201,23 @@ SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
                 <extensions>true</extensions>
                 <configuration>
                     <instructions>
-                        <Karaf-Commands>org.stratumproject.fabric.tna.stats.cli,org.stratumproject.fabric.tna.behaviour.cli</Karaf-Commands>
+                        <Karaf-Commands>
+                            org.stratumproject.fabric.tna.slicing.cli,
+                            org.stratumproject.fabric.tna.stats.cli,
+                            org.stratumproject.fabric.tna.behaviour.cli
+                        </Karaf-Commands>
+                        <_wab>src/main/webapp</_wab>
+                        <Include-Resource>
+                            WEB-INF/classes/apidoc/swagger.json=target/swagger.json,
+                            {maven-resources}
+                        </Include-Resource>
+                        <Bundle-SymbolicName>
+                            ${project.groupId}.${project.artifactId}
+                        </Bundle-SymbolicName>
+                        <Import-Package>
+                            *,org.glassfish.jersey.servlet
+                        </Import-Package>
+                        <Web-ContextPath>${web.context}</Web-ContextPath>
                     </instructions>
                 </configuration>
             </plugin>
