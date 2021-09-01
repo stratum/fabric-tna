@@ -6,6 +6,7 @@ import com.google.common.collect.Lists;
 import com.google.common.hash.Hashing;
 import org.apache.commons.lang.NotImplementedException;
 import org.onlab.util.KryoNamespace;
+import org.onosproject.codec.CodecService;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
 import org.onosproject.net.DeviceId;
@@ -42,7 +43,10 @@ import org.stratumproject.fabric.tna.slicing.api.SliceId;
 import org.stratumproject.fabric.tna.slicing.api.SlicingAdminService;
 import org.stratumproject.fabric.tna.slicing.api.SlicingService;
 import org.stratumproject.fabric.tna.slicing.api.TrafficClass;
+import org.stratumproject.fabric.tna.web.SliceIdCodec;
+import org.stratumproject.fabric.tna.web.TrafficClassCodec;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -82,6 +86,9 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     protected DeviceService deviceService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY)
+    protected CodecService codecService;
 
     private static final Logger log = getLogger(SlicingManager.class);
     private static final String APP_NAME = "org.stratumproject.fabric.tna.slicing"; // TODO revisit naming
@@ -146,6 +153,9 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
         deviceExecutor = Executors.newSingleThreadExecutor(groupedThreads("fabric-tna-device-event", "%d", log));
         deviceService.addListener(deviceListener);
 
+        codecService.registerCodec(SliceId.class, new SliceIdCodec());
+        codecService.registerCodec(TrafficClass.class, new TrafficClassCodec());
+
         log.info("Started");
     }
 
@@ -162,19 +172,34 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
         deviceService.removeListener(deviceListener);
         deviceExecutor.shutdown();
 
+        codecService.unregisterCodec(SliceId.class);
+        codecService.unregisterCodec(TrafficClass.class);
+
         log.info("Stopped");
     }
 
     @Override
     public boolean addSlice(SliceId sliceId) {
+        if (sliceId.equals(SliceId.DEFAULT)) {
+            log.warn("Adding default slice is not allowed");
+            return false;
+        }
+
         return addTrafficClass(sliceId, TrafficClass.BEST_EFFORT);
     }
 
     @Override
     public boolean removeSlice(SliceId sliceId) {
+        if (sliceId.equals(SliceId.DEFAULT)) {
+            log.warn("Removing default slice is not allowed");
+            return false;
+        }
+
         AtomicBoolean result = new AtomicBoolean(true);
 
-        getTrafficClasses(sliceId).forEach(tc -> {
+        getTrafficClasses(sliceId).stream()
+                .sorted(Comparator.comparingInt(TrafficClass::ordinal).reversed()) // Remove BEST_EFFORT the last
+                .forEach(tc -> {
             if (!removeTrafficClass(sliceId, tc)) {
                 result.set(false);
             }
@@ -233,8 +258,14 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
     public boolean removeTrafficClass(SliceId sliceId, TrafficClass tc) {
         // Ensure the presence of BEST_EFFORT TC in the slice
         if (tc == TrafficClass.BEST_EFFORT) {
-            log.warn("Can't remove {} from {}", tc, sliceId);
-            return false;
+            if (sliceId.equals(SliceId.DEFAULT)) {
+                log.warn("Removing {} from {} is not allowed", tc, sliceId);
+                return false;
+            }
+            if (getTrafficClasses(sliceId).stream().anyMatch(existTc -> existTc != TrafficClass.BEST_EFFORT)) {
+                log.warn("Can't remove {} from {} while another TC exists", tc, sliceId);
+                return false;
+            }
         }
 
         AtomicBoolean result = new AtomicBoolean(false);
