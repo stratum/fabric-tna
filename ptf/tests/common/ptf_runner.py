@@ -501,12 +501,11 @@ def main():
 
     # if line rate test, set up and tear down TRex
     if args.trex_address is not None:
+        trex_args = ""
         if args.trex_sw_mode:
             trex_args = "--software --no-hw-flow-stat"
-            if args.trex_astf_mode is not None:
-                trex_args += " --astf"
-        elif args.trex_astf_mode is not None:
-            trex_args = "--astf"
+        if args.trex_astf_mode is True:
+            trex_args += " --astf"
         else:
             trex_args = None
         trex_daemon_client = CTRexClient(args.trex_address, trex_args=trex_args)
