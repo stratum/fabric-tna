@@ -18,7 +18,14 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.onosproject.store.primitives.ConsistentMapBackedJavaMap;
-import org.onosproject.store.service.*;
+import org.onosproject.store.service.AsyncConsistentMap;
+import org.onosproject.store.service.ConsistentMap;
+import org.onosproject.store.service.ConsistentMapAdapter;
+import org.onosproject.store.service.ConsistentMapBuilder;
+import org.onosproject.store.service.MapEvent;
+import org.onosproject.store.service.MapEventListener;
+import org.onosproject.store.service.Serializer;
+import org.onosproject.store.service.Versioned;
 
 import com.google.common.base.Objects;
 

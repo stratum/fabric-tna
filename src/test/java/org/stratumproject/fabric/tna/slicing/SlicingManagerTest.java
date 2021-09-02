@@ -48,10 +48,10 @@ public class SlicingManagerTest {
 
     private final SlicingManager manager = new SlicingManager();
 
-    private static final ApplicationId appId =
+    private static final ApplicationId APP_ID =
         new DefaultApplicationId(0, "org.stratumproject.fabric.tna.slicing.test");
-    private static final ArrayList<SliceId> sliceIds = new ArrayList<>();
-    private static final ArrayList<Device> devices = new ArrayList<>();
+    private static final ArrayList<SliceId> SLICE_IDS = new ArrayList<>();
+    private static final ArrayList<Device> DEVICES = new ArrayList<>();
 
     private static final int QOS_FLOW_PRIORITY = 10;
     private static final DeviceId DID = DeviceId.deviceId("device:s1");
@@ -67,16 +67,16 @@ public class SlicingManagerTest {
 
     @Before
     public void setup() {
-        sliceIds.clear();
-        sliceIds.add(SliceId.DEFAULT);
-        sliceIds.add(SliceId.of(1));
-        sliceIds.add(SliceId.of(2));
-        sliceIds.add(SliceId.of(3));
+        SLICE_IDS.clear();
+        SLICE_IDS.add(SliceId.DEFAULT);
+        SLICE_IDS.add(SliceId.of(1));
+        SLICE_IDS.add(SliceId.of(2));
+        SLICE_IDS.add(SliceId.of(3));
 
-        devices.clear();
-        devices.add(new MockDevice(DID, null));
+        DEVICES.clear();
+        DEVICES.add(new MockDevice(DID, null));
 
-        manager.appId = appId;
+        manager.appId = APP_ID;
         manager.coreService = coreService;
         manager.storageService = storageService;
         manager.flowRuleService = flowRuleService;
@@ -84,14 +84,14 @@ public class SlicingManagerTest {
         manager.workPartitionService = workPartitionService;
         manager.codecService = codecService;
 
-        EasyMock.expect(coreService.registerApplication(EasyMock.anyObject())).andReturn(appId);
+        EasyMock.expect(coreService.registerApplication(EasyMock.anyObject())).andReturn(APP_ID);
         EasyMock.expect(storageService.<SliceStoreKey, QueueId>consistentMapBuilder()).andReturn(
             new MockConsistentMap.Builder<SliceStoreKey, QueueId>());
         EasyMock.expect(storageService.<QueueId, QueueStoreValue>consistentMapBuilder()).andReturn(
             new MockConsistentMap.Builder<QueueId, QueueStoreValue>());
         EasyMock.expect(workPartitionService.isMine(
             EasyMock.anyObject(), EasyMock.anyObject())).andReturn(true).anyTimes();
-        EasyMock.expect(deviceService.getAvailableDevices()).andReturn(devices).anyTimes();
+        EasyMock.expect(deviceService.getAvailableDevices()).andReturn(DEVICES).anyTimes();
         deviceService.addListener(EasyMock.anyObject());
         EasyMock.expectLastCall();
         flowRuleService.applyFlowRules(EasyMock.capture(capturedAddedFlowRules));
@@ -114,50 +114,50 @@ public class SlicingManagerTest {
         // Preparation
         Set<SliceId> expectedSliceIds = new HashSet<>();
         Set<TrafficClass> expectedTcs = new HashSet<>();
-        expectedSliceIds.add(sliceIds.get(0));
+        expectedSliceIds.add(SLICE_IDS.get(0));
         expectedTcs.add(TrafficClass.BEST_EFFORT);
 
         // Normal
-        expectedSliceIds.add(sliceIds.get(1));
-        assertTrue(manager.addSlice(sliceIds.get(1)));
+        expectedSliceIds.add(SLICE_IDS.get(1));
+        assertTrue(manager.addSlice(SLICE_IDS.get(1)));
         assertEquals(expectedSliceIds, manager.getSlices());
 
-        expectedSliceIds.add(sliceIds.get(2));
-        assertTrue(manager.addSlice(sliceIds.get(2)));
+        expectedSliceIds.add(SLICE_IDS.get(2));
+        assertTrue(manager.addSlice(SLICE_IDS.get(2)));
         assertEquals(expectedSliceIds, manager.getSlices());
 
-        assertEquals(expectedTcs, manager.getTrafficClasses(sliceIds.get(0)));
-        assertEquals(expectedTcs, manager.getTrafficClasses(sliceIds.get(1)));
-        assertEquals(expectedTcs, manager.getTrafficClasses(sliceIds.get(2)));
+        assertEquals(expectedTcs, manager.getTrafficClasses(SLICE_IDS.get(0)));
+        assertEquals(expectedTcs, manager.getTrafficClasses(SLICE_IDS.get(1)));
+        assertEquals(expectedTcs, manager.getTrafficClasses(SLICE_IDS.get(2)));
 
         // Abnormal
-        assertFalse(manager.addSlice(sliceIds.get(0)));
-        assertFalse(manager.addSlice(sliceIds.get(1)));
+        assertFalse(manager.addSlice(SLICE_IDS.get(0)));
+        assertFalse(manager.addSlice(SLICE_IDS.get(1)));
     }
 
     @Test
     public void testRemoveSlice() {
         // Preparation
         Set<SliceId> expectedSliceIds = new HashSet<>();
-        expectedSliceIds.add(sliceIds.get(0));
-        expectedSliceIds.add(sliceIds.get(1));
-        expectedSliceIds.add(sliceIds.get(2));
-        manager.addSlice(sliceIds.get(1));
-        manager.addSlice(sliceIds.get(2));
-        manager.addTrafficClass(sliceIds.get(2), TrafficClass.CONTROL);
+        expectedSliceIds.add(SLICE_IDS.get(0));
+        expectedSliceIds.add(SLICE_IDS.get(1));
+        expectedSliceIds.add(SLICE_IDS.get(2));
+        manager.addSlice(SLICE_IDS.get(1));
+        manager.addSlice(SLICE_IDS.get(2));
+        manager.addTrafficClass(SLICE_IDS.get(2), TrafficClass.CONTROL);
 
         // Normal
-        expectedSliceIds.remove(sliceIds.get(1));
-        assertTrue(manager.removeSlice(sliceIds.get(1)));
+        expectedSliceIds.remove(SLICE_IDS.get(1));
+        assertTrue(manager.removeSlice(SLICE_IDS.get(1)));
         assertEquals(expectedSliceIds, manager.getSlices());
 
-        expectedSliceIds.remove(sliceIds.get(2));
-        assertTrue(manager.removeSlice(sliceIds.get(2)));
+        expectedSliceIds.remove(SLICE_IDS.get(2));
+        assertTrue(manager.removeSlice(SLICE_IDS.get(2)));
         assertEquals(expectedSliceIds, manager.getSlices());
 
         // Abnormal
-        assertFalse(manager.removeSlice(sliceIds.get(0)));
-        assertFalse(manager.removeSlice(sliceIds.get(1)));
+        assertFalse(manager.removeSlice(SLICE_IDS.get(0)));
+        assertFalse(manager.removeSlice(SLICE_IDS.get(1)));
     }
 
     @Test
@@ -165,33 +165,33 @@ public class SlicingManagerTest {
         // Preparation
         Set<TrafficClass> expectedTcs = new HashSet<>();
         expectedTcs.add(TrafficClass.BEST_EFFORT);
-        manager.addSlice(sliceIds.get(1));
+        manager.addSlice(SLICE_IDS.get(1));
 
         // Normal
         expectedTcs.add(TrafficClass.CONTROL);
-        assertTrue(manager.addTrafficClass(sliceIds.get(1), TrafficClass.CONTROL));
-        assertEquals(expectedTcs, manager.getTrafficClasses(sliceIds.get(1)));
+        assertTrue(manager.addTrafficClass(SLICE_IDS.get(1), TrafficClass.CONTROL));
+        assertEquals(expectedTcs, manager.getTrafficClasses(SLICE_IDS.get(1)));
 
         expectedTcs.add(TrafficClass.REAL_TIME);
-        assertTrue(manager.addTrafficClass(sliceIds.get(1), TrafficClass.REAL_TIME));
-        assertEquals(expectedTcs, manager.getTrafficClasses(sliceIds.get(1)));
+        assertTrue(manager.addTrafficClass(SLICE_IDS.get(1), TrafficClass.REAL_TIME));
+        assertEquals(expectedTcs, manager.getTrafficClasses(SLICE_IDS.get(1)));
 
         expectedTcs.add(TrafficClass.ELASTIC);
-        assertTrue(manager.addTrafficClass(sliceIds.get(1), TrafficClass.ELASTIC));
-        assertEquals(expectedTcs, manager.getTrafficClasses(sliceIds.get(1)));
+        assertTrue(manager.addTrafficClass(SLICE_IDS.get(1), TrafficClass.ELASTIC));
+        assertEquals(expectedTcs, manager.getTrafficClasses(SLICE_IDS.get(1)));
 
         // Abnormal
-        assertFalse(manager.addTrafficClass(sliceIds.get(1), TrafficClass.BEST_EFFORT));
-        assertFalse(manager.addTrafficClass(sliceIds.get(1), TrafficClass.CONTROL));
-        assertFalse(manager.addTrafficClass(sliceIds.get(1), TrafficClass.SYSTEM));
-        assertFalse(manager.addTrafficClass(sliceIds.get(2), TrafficClass.CONTROL));
+        assertFalse(manager.addTrafficClass(SLICE_IDS.get(1), TrafficClass.BEST_EFFORT));
+        assertFalse(manager.addTrafficClass(SLICE_IDS.get(1), TrafficClass.CONTROL));
+        assertFalse(manager.addTrafficClass(SLICE_IDS.get(1), TrafficClass.SYSTEM));
+        assertFalse(manager.addTrafficClass(SLICE_IDS.get(2), TrafficClass.CONTROL));
 
         // Normal
         // Add BE to non-existent slice is equivalent to add slice
         expectedTcs = new HashSet<>();
         expectedTcs.add(TrafficClass.BEST_EFFORT);
-        assertTrue(manager.addTrafficClass(sliceIds.get(2), TrafficClass.BEST_EFFORT));
-        assertEquals(expectedTcs, manager.getTrafficClasses(sliceIds.get(2)));
+        assertTrue(manager.addTrafficClass(SLICE_IDS.get(2), TrafficClass.BEST_EFFORT));
+        assertEquals(expectedTcs, manager.getTrafficClasses(SLICE_IDS.get(2)));
     }
 
     @Test
@@ -202,39 +202,39 @@ public class SlicingManagerTest {
         expectedTcs.add(TrafficClass.CONTROL);
         expectedTcs.add(TrafficClass.REAL_TIME);
         expectedTcs.add(TrafficClass.ELASTIC);
-        manager.addSlice(sliceIds.get(1));
-        manager.addTrafficClass(sliceIds.get(1), TrafficClass.CONTROL);
-        manager.addTrafficClass(sliceIds.get(1), TrafficClass.REAL_TIME);
-        manager.addTrafficClass(sliceIds.get(1), TrafficClass.ELASTIC);
+        manager.addSlice(SLICE_IDS.get(1));
+        manager.addTrafficClass(SLICE_IDS.get(1), TrafficClass.CONTROL);
+        manager.addTrafficClass(SLICE_IDS.get(1), TrafficClass.REAL_TIME);
+        manager.addTrafficClass(SLICE_IDS.get(1), TrafficClass.ELASTIC);
 
         // Normal
         expectedTcs.remove(TrafficClass.CONTROL);
-        assertTrue(manager.removeTrafficClass(sliceIds.get(1), TrafficClass.CONTROL));
-        assertEquals(expectedTcs, manager.getTrafficClasses(sliceIds.get(1)));
+        assertTrue(manager.removeTrafficClass(SLICE_IDS.get(1), TrafficClass.CONTROL));
+        assertEquals(expectedTcs, manager.getTrafficClasses(SLICE_IDS.get(1)));
 
         // Abnormal
-        assertFalse(manager.removeTrafficClass(sliceIds.get(1), TrafficClass.BEST_EFFORT));
-        assertEquals(expectedTcs, manager.getTrafficClasses(sliceIds.get(1)));
+        assertFalse(manager.removeTrafficClass(SLICE_IDS.get(1), TrafficClass.BEST_EFFORT));
+        assertEquals(expectedTcs, manager.getTrafficClasses(SLICE_IDS.get(1)));
 
         // Normal
         expectedTcs.remove(TrafficClass.REAL_TIME);
-        assertTrue(manager.removeTrafficClass(sliceIds.get(1), TrafficClass.REAL_TIME));
-        assertEquals(expectedTcs, manager.getTrafficClasses(sliceIds.get(1)));
+        assertTrue(manager.removeTrafficClass(SLICE_IDS.get(1), TrafficClass.REAL_TIME));
+        assertEquals(expectedTcs, manager.getTrafficClasses(SLICE_IDS.get(1)));
 
         expectedTcs.remove(TrafficClass.ELASTIC);
-        assertTrue(manager.removeTrafficClass(sliceIds.get(1), TrafficClass.ELASTIC));
-        assertEquals(expectedTcs, manager.getTrafficClasses(sliceIds.get(1)));
+        assertTrue(manager.removeTrafficClass(SLICE_IDS.get(1), TrafficClass.ELASTIC));
+        assertEquals(expectedTcs, manager.getTrafficClasses(SLICE_IDS.get(1)));
 
         // Abnormal
-        assertFalse(manager.removeTrafficClass(sliceIds.get(1), TrafficClass.CONTROL));
-        assertFalse(manager.removeTrafficClass(sliceIds.get(2), TrafficClass.CONTROL));
+        assertFalse(manager.removeTrafficClass(SLICE_IDS.get(1), TrafficClass.CONTROL));
+        assertFalse(manager.removeTrafficClass(SLICE_IDS.get(2), TrafficClass.CONTROL));
 
         // Normal
         // Remove BE from slice is equivalent to remove slice
         // if BE is the last TC of that slice
         expectedTcs.remove(TrafficClass.BEST_EFFORT);
-        assertTrue(manager.removeTrafficClass(sliceIds.get(1), TrafficClass.BEST_EFFORT));
-        assertEquals(expectedTcs, manager.getTrafficClasses(sliceIds.get(1)));
+        assertTrue(manager.removeTrafficClass(SLICE_IDS.get(1), TrafficClass.BEST_EFFORT));
+        assertEquals(expectedTcs, manager.getTrafficClasses(SLICE_IDS.get(1)));
     }
 
     @Test
@@ -243,22 +243,22 @@ public class SlicingManagerTest {
         manager.queueStore.put(QueueId.of(4), new QueueStoreValue(TrafficClass.REAL_TIME, true));
         manager.queueStore.put(QueueId.of(7), new QueueStoreValue(TrafficClass.ELASTIC, true));
         SliceStoreKey key;
-        for (int i=1; i<=3; i++) {
-            manager.addSlice(sliceIds.get(i));
-            manager.addTrafficClass(sliceIds.get(i), TrafficClass.CONTROL);
-            manager.addTrafficClass(sliceIds.get(i), TrafficClass.REAL_TIME);
-            manager.addTrafficClass(sliceIds.get(i), TrafficClass.ELASTIC);
+        for (int i = 1; i <= 3; i++) {
+            manager.addSlice(SLICE_IDS.get(i));
+            manager.addTrafficClass(SLICE_IDS.get(i), TrafficClass.CONTROL);
+            manager.addTrafficClass(SLICE_IDS.get(i), TrafficClass.REAL_TIME);
+            manager.addTrafficClass(SLICE_IDS.get(i), TrafficClass.ELASTIC);
         }
 
         // All BE should point to same queue
-        for (int i=0; i<=3; i++) {
-            key = new SliceStoreKey(sliceIds.get(i), TrafficClass.BEST_EFFORT);
+        for (int i = 0; i <= 3; i++) {
+            key = new SliceStoreKey(SLICE_IDS.get(i), TrafficClass.BEST_EFFORT);
             assertEquals(QueueId.BEST_EFFORT, manager.getSliceStore().get(key));
         }
 
         // All Control should point to same queue
-        for (int i=1; i<=3; i++) {
-            key = new SliceStoreKey(sliceIds.get(i), TrafficClass.CONTROL);
+        for (int i = 1; i <= 3; i++) {
+            key = new SliceStoreKey(SLICE_IDS.get(i), TrafficClass.CONTROL);
             assertEquals(QueueId.CONTROL, manager.getSliceStore().get(key));
         }
 
@@ -267,27 +267,27 @@ public class SlicingManagerTest {
 
         // Each REAL TIME class should point to single queue
         // or point to nothing if there is no available queue
-        key = new SliceStoreKey(sliceIds.get(1), TrafficClass.REAL_TIME);
+        key = new SliceStoreKey(SLICE_IDS.get(1), TrafficClass.REAL_TIME);
         assertEquals(QueueId.of(3), manager.getSliceStore().get(key));
-        key = new SliceStoreKey(sliceIds.get(2), TrafficClass.REAL_TIME);
+        key = new SliceStoreKey(SLICE_IDS.get(2), TrafficClass.REAL_TIME);
         assertEquals(QueueId.of(4), manager.getSliceStore().get(key));
-        key = new SliceStoreKey(sliceIds.get(3), TrafficClass.REAL_TIME);
+        key = new SliceStoreKey(SLICE_IDS.get(3), TrafficClass.REAL_TIME);
         assertEquals(null, manager.getSliceStore().get(key));
 
         // Each ELASTIC class should point to single queue
         // or point to nothing if there is no available queue
-        key = new SliceStoreKey(sliceIds.get(1), TrafficClass.ELASTIC);
+        key = new SliceStoreKey(SLICE_IDS.get(1), TrafficClass.ELASTIC);
         assertEquals(QueueId.of(6), manager.getSliceStore().get(key));
-        key = new SliceStoreKey(sliceIds.get(2), TrafficClass.ELASTIC);
+        key = new SliceStoreKey(SLICE_IDS.get(2), TrafficClass.ELASTIC);
         assertEquals(QueueId.of(7), manager.getSliceStore().get(key));
-        key = new SliceStoreKey(sliceIds.get(3), TrafficClass.ELASTIC);
+        key = new SliceStoreKey(SLICE_IDS.get(3), TrafficClass.ELASTIC);
         assertEquals(null, manager.getSliceStore().get(key));
 
         // After removing a REAL TIME or ELASTIC class, a queue should be released
         // and ready to be allocated
-        manager.removeTrafficClass(sliceIds.get(2), TrafficClass.ELASTIC);
-        manager.addTrafficClass(sliceIds.get(3), TrafficClass.ELASTIC);
-        key = new SliceStoreKey(sliceIds.get(3), TrafficClass.ELASTIC);
+        manager.removeTrafficClass(SLICE_IDS.get(2), TrafficClass.ELASTIC);
+        manager.addTrafficClass(SLICE_IDS.get(3), TrafficClass.ELASTIC);
+        key = new SliceStoreKey(SLICE_IDS.get(3), TrafficClass.ELASTIC);
         assertEquals(QueueId.of(7), manager.getSliceStore().get(key));
     }
 
@@ -299,7 +299,7 @@ public class SlicingManagerTest {
 
         // Adding BE class to slice 1
         capturedAddedFlowRules.reset();
-        manager.addSlice(sliceIds.get(1));
+        manager.addSlice(SLICE_IDS.get(1));
         assertAfter(50, () -> {
             assertEquals(1, capturedAddedFlowRules.getValues().size());
             assertTrue(slice1BE1.exactMatch(capturedAddedFlowRules.getValues().get(0)));
@@ -307,7 +307,7 @@ public class SlicingManagerTest {
 
         // Adding Control class to slice 1
         capturedAddedFlowRules.reset();
-        manager.addTrafficClass(sliceIds.get(1), TrafficClass.CONTROL);
+        manager.addTrafficClass(SLICE_IDS.get(1), TrafficClass.CONTROL);
         assertAfter(50, () -> {
             assertEquals(2, capturedAddedFlowRules.getValues().size());
             assertTrue(slice1Control1.exactMatch(capturedAddedFlowRules.getValues().get(0)));
@@ -316,7 +316,7 @@ public class SlicingManagerTest {
 
         // Removing Control class from slice 1
         capturedRemovedFlowRules.reset();
-        manager.removeTrafficClass(sliceIds.get(1), TrafficClass.CONTROL);
+        manager.removeTrafficClass(SLICE_IDS.get(1), TrafficClass.CONTROL);
         assertAfter(50, () -> {
             assertEquals(2, capturedRemovedFlowRules.getValues().size());
             assertTrue(slice1Control1.exactMatch(capturedRemovedFlowRules.getValues().get(0)));
@@ -325,7 +325,7 @@ public class SlicingManagerTest {
 
         // Removing BE class from slice 1
         capturedRemovedFlowRules.reset();
-        manager.removeTrafficClass(sliceIds.get(1), TrafficClass.BEST_EFFORT);
+        manager.removeTrafficClass(SLICE_IDS.get(1), TrafficClass.BEST_EFFORT);
         assertAfter(50, () -> {
             assertEquals(1, capturedRemovedFlowRules.getValues().size());
             assertTrue(slice1BE1.exactMatch(capturedRemovedFlowRules.getValues().get(0)));
@@ -336,7 +336,7 @@ public class SlicingManagerTest {
         // Hard coded parameters
         PiCriterion.Builder piCriterionBuilder = PiCriterion.builder()
                 .matchExact(P4InfoConstants.HDR_SLICE_TC,
-                    sliceTcConcat(sliceIds.get(1).id(), TrafficClass.BEST_EFFORT.ordinal()));
+                    sliceTcConcat(SLICE_IDS.get(1).id(), TrafficClass.BEST_EFFORT.ordinal()));
 
         PiAction.Builder piTableActionBuilder = PiAction.builder()
                 .withId(P4InfoConstants.FABRIC_INGRESS_QOS_SET_QUEUE)
@@ -345,7 +345,7 @@ public class SlicingManagerTest {
         FlowRule flowRule = DefaultFlowRule.builder()
                 .forDevice(DID)
                 .forTable(PiTableId.of(FABRIC_INGRESS_QOS_QUEUES.id()))
-                .fromApp(appId)
+                .fromApp(APP_ID)
                 .withPriority(QOS_FLOW_PRIORITY)
                 .withSelector(DefaultTrafficSelector.builder().matchPi(piCriterionBuilder.build()).build())
                 .withTreatment(DefaultTrafficTreatment.builder().piTableAction(piTableActionBuilder.build()).build())
@@ -359,7 +359,7 @@ public class SlicingManagerTest {
         // Hard coded parameters
         PiCriterion.Builder piCriterionBuilder = PiCriterion.builder()
                 .matchExact(P4InfoConstants.HDR_SLICE_TC,
-                    sliceTcConcat(sliceIds.get(1).id(), TrafficClass.CONTROL.ordinal()))
+                    sliceTcConcat(SLICE_IDS.get(1).id(), TrafficClass.CONTROL.ordinal()))
                 .matchTernary(HDR_COLOR, Color.GREEN.ordinal(), 1 << HDR_COLOR_BITWIDTH - 1);
 
         PiAction.Builder piTableActionBuilder = PiAction.builder()
@@ -369,7 +369,7 @@ public class SlicingManagerTest {
         FlowRule flowRule = DefaultFlowRule.builder()
                 .forDevice(DID)
                 .forTable(PiTableId.of(FABRIC_INGRESS_QOS_QUEUES.id()))
-                .fromApp(appId)
+                .fromApp(APP_ID)
                 .withPriority(QOS_FLOW_PRIORITY)
                 .withSelector(DefaultTrafficSelector.builder().matchPi(piCriterionBuilder.build()).build())
                 .withTreatment(DefaultTrafficTreatment.builder().piTableAction(piTableActionBuilder.build()).build())
@@ -383,7 +383,7 @@ public class SlicingManagerTest {
         // Hard coded parameters
         PiCriterion.Builder piCriterionBuilder = PiCriterion.builder()
                 .matchExact(P4InfoConstants.HDR_SLICE_TC,
-                    sliceTcConcat(sliceIds.get(1).id(), TrafficClass.CONTROL.ordinal()))
+                    sliceTcConcat(SLICE_IDS.get(1).id(), TrafficClass.CONTROL.ordinal()))
                 .matchTernary(HDR_COLOR, Color.RED.ordinal(), 1 << HDR_COLOR_BITWIDTH - 1);
 
         PiAction.Builder piTableActionBuilder = PiAction.builder()
@@ -393,7 +393,7 @@ public class SlicingManagerTest {
         FlowRule flowRule = DefaultFlowRule.builder()
                 .forDevice(DID)
                 .forTable(PiTableId.of(FABRIC_INGRESS_QOS_QUEUES.id()))
-                .fromApp(appId)
+                .fromApp(APP_ID)
                 .withPriority(QOS_FLOW_PRIORITY)
                 .withSelector(DefaultTrafficSelector.builder().matchPi(piCriterionBuilder.build()).build())
                 .withTreatment(DefaultTrafficTreatment.builder().piTableAction(piTableActionBuilder.build()).build())
