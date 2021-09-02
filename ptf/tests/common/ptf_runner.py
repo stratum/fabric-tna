@@ -504,7 +504,7 @@ def main():
         trex_args = ""
         if args.trex_sw_mode:
             trex_args = "--software --no-hw-flow-stat"
-        if args.trex_astf_mode is True:
+        if args.trex_astf_mode:
             trex_args += " --astf"
         else:
             trex_args = None
