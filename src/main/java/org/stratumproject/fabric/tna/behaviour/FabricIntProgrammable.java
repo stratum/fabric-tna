@@ -29,6 +29,7 @@ import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
 import org.onosproject.net.flow.FlowEntry;
 import org.onosproject.net.flow.FlowRule;
+import org.onosproject.net.flow.FlowRuleOperations;
 import org.onosproject.net.flow.FlowRuleService;
 import org.onosproject.net.flow.TableId;
 import org.onosproject.net.flow.TrafficSelector;
@@ -66,7 +67,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 import static java.lang.String.format;
@@ -101,12 +101,6 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
             ImmutableMap.<Integer, Integer>builder()
                     .put(0x200, 0x44)
                     .put(0x201, 0xc4).build();
-
-    private static final Set<Criterion.Type> SUPPORTED_CRITERION = Sets.newHashSet(
-            Criterion.Type.IPV4_DST, Criterion.Type.IPV4_SRC,
-            Criterion.Type.UDP_SRC, Criterion.Type.UDP_DST,
-            Criterion.Type.TCP_SRC, Criterion.Type.TCP_DST,
-            Criterion.Type.PROTOCOL_INDEPENDENT);
 
     private static final Set<TableId> TABLES_TO_CLEANUP = Sets.newHashSet(
             P4InfoConstants.FABRIC_INGRESS_INT_WATCHLIST_WATCHLIST,
@@ -300,38 +294,6 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
             }
         }
         return builder.matchPi(piBuilder.build()).build();
-    }
-
-    /**
-     * Returns a subset of Criterion from given selector, which is unsupported by
-     * this INT pipeline.
-     *
-     * @param selector a traffic selector
-     * @return a subset of Criterion from given selector, unsupported by this INT
-     *         pipeline, empty if all criteria are supported.
-     */
-    private Set<Criterion> unsupportedSelectors(TrafficSelector selector) {
-        return selector.criteria().stream()
-                .filter(criterion -> !SUPPORTED_CRITERION.contains(criterion.type()))
-                .collect(Collectors.toSet());
-    }
-
-    private boolean installIntWatchListRule(TrafficSelector trafficSelector) {
-        Set<Criterion> unsupportedCriterion = unsupportedSelectors(trafficSelector);
-        if (!unsupportedCriterion.isEmpty()) {
-            log.warn("Criteria {} not supported by {} for INT watchlist", unsupportedCriterion, deviceId);
-            return false;
-        }
-
-        final FlowRule flowRule = buildWatchlistEntry(trafficSelector);
-        if (flowRule != null) {
-            flowRuleService.applyFlowRules(flowRule);
-            log.debug("Watchlist rule {} has been installed to {}", trafficSelector, deviceId);
-            return true;
-        } else {
-            log.warn("Failed to build watchlist rule with selector {} on {}", trafficSelector, deviceId);
-            return false;
-        }
     }
 
     private boolean setUpIntReportInternal(IntReportConfig cfg) {
@@ -565,18 +527,18 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
     }
 
     private void setUpCollectorFlows(IntReportConfig config) {
+        FlowRuleOperations.Builder ops = FlowRuleOperations.builder();
         final PiAction watchlistAction = PiAction.builder()
                 .withId(P4InfoConstants.FABRIC_INGRESS_INT_WATCHLIST_NO_REPORT_COLLECTOR).build();
-        // Remove old flow
         Streams.stream(flowRuleService.getFlowEntriesById(appId))
                 .filter(entry -> entry.deviceId().equals(deviceId))
                 .filter(entry -> entryWithActionId(entry, watchlistAction.id()))
-                .forEach(flowRuleService::removeFlowRules);
+                .forEach(ops::remove);
 
+        ops.newStage();
         final TrafficTreatment watchlistTreatment = DefaultTrafficTreatment.builder()
                 .piTableAction(watchlistAction)
                 .build();
-
         final TrafficSelector watchlistSelector = DefaultTrafficSelector.builder()
                         .matchIPDst(config.collectorIp().toIpPrefix())
                         .matchIPProtocol(IPv4.PROTOCOL_UDP)
@@ -592,7 +554,8 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 .fromApp(appId)
                 .makePermanent()
                 .build();
-        flowRuleService.applyFlowRules(watchlistRule);
+        ops.add(watchlistRule);
+        flowRuleService.apply(ops.build());
     }
 
     /**
@@ -724,19 +687,22 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
     }
 
     private void setUpIntWatchlistRules(List<IpPrefix> watchSubnets) {
-        // Remove old rules.
+        FlowRuleOperations.Builder ops = FlowRuleOperations.builder();
         final PiActionId reportActionId = P4InfoConstants.FABRIC_INGRESS_INT_WATCHLIST_MARK_TO_REPORT;
         Streams.stream(flowRuleService.getFlowEntriesById(appId))
                 .filter(entry -> entry.deviceId().equals(deviceId))
                 .filter(entry -> entryWithActionId(entry, reportActionId))
-                .forEach(flowRuleService::removeFlowRules);
+                .forEach(ops::remove);
+        ops.newStage();
         for (IpPrefix subnet : watchSubnets) {
             if (subnet.prefixLength() == 0) {
-                installIntWatchListRule(buildCollectorSelector(Collections.emptySet()));
+                ops.add(buildWatchlistEntry(buildCollectorSelector(Collections.emptySet())));
                 continue;
             }
-            installIntWatchListRule(buildCollectorSelector(ImmutableSet.of(Criteria.matchIPSrc(subnet))));
-            installIntWatchListRule(buildCollectorSelector(ImmutableSet.of(Criteria.matchIPDst(subnet))));
+            ops.add(buildWatchlistEntry(buildCollectorSelector(ImmutableSet.of(Criteria.matchIPSrc(subnet)))));
+            ops.add(buildWatchlistEntry(buildCollectorSelector(ImmutableSet.of(Criteria.matchIPDst(subnet)))));
         }
+
+        flowRuleService.apply(ops.build());
     }
 }
