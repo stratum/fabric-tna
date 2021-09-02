@@ -11,6 +11,7 @@ import org.easymock.CaptureType;
 import org.easymock.EasyMock;
 import org.junit.Before;
 import org.junit.Test;
+import org.onosproject.codec.CodecService;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
 import org.onosproject.core.DefaultApplicationId;
@@ -60,6 +61,7 @@ public class SlicingManagerTest {
     private final DeviceService deviceService = EasyMock.createMock(DeviceService.class);
     private final FlowRuleService flowRuleService = EasyMock.createMock(FlowRuleService.class);
     private final WorkPartitionService workPartitionService = EasyMock.createMock(WorkPartitionService.class);
+    private final CodecService codecService = EasyMock.createMock(CodecService.class);
     private final Capture<FlowRule> capturedAddedFlowRules = Capture.newInstance(CaptureType.ALL);
     private final Capture<FlowRule> capturedRemovedFlowRules = Capture.newInstance(CaptureType.ALL);
 
@@ -80,6 +82,7 @@ public class SlicingManagerTest {
         manager.flowRuleService = flowRuleService;
         manager.deviceService = deviceService;
         manager.workPartitionService = workPartitionService;
+        manager.codecService = codecService;
 
         EasyMock.expect(coreService.registerApplication(EasyMock.anyObject())).andReturn(appId);
         EasyMock.expect(storageService.<SliceStoreKey, QueueId>consistentMapBuilder()).andReturn(
@@ -95,11 +98,15 @@ public class SlicingManagerTest {
         EasyMock.expectLastCall().anyTimes();
         flowRuleService.removeFlowRules(EasyMock.capture(capturedRemovedFlowRules));
         EasyMock.expectLastCall().anyTimes();
-        EasyMock.replay(coreService, storageService, workPartitionService, deviceService, flowRuleService);
+        codecService.registerCodec(EasyMock.anyObject(), EasyMock.anyObject());
+        EasyMock.expectLastCall().times(2);
+        EasyMock.replay(coreService, storageService, workPartitionService,
+            deviceService, flowRuleService, codecService);
 
         manager.activate();
 
-        EasyMock.verify(coreService, storageService, workPartitionService, deviceService, flowRuleService);
+        EasyMock.verify(coreService, storageService, workPartitionService,
+            deviceService, flowRuleService, codecService);
     }
 
     @Test
