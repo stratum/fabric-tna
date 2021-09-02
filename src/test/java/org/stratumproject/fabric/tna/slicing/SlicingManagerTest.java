@@ -37,6 +37,7 @@ import org.stratumproject.fabric.tna.slicing.api.TrafficClass;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.onlab.junit.TestTools.assertAfter;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.sliceTcConcat;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_QOS_QUEUES;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_COLOR;
@@ -52,6 +53,7 @@ public class SlicingManagerTest {
     private static final ArrayList<Device> devices = new ArrayList<>();
 
     private static final int QOS_FLOW_PRIORITY = 10;
+    private static final DeviceId DID = DeviceId.deviceId("device:s1");
 
     private final CoreService coreService = EasyMock.createMock(CoreService.class);
     private final StorageService storageService = EasyMock.createMock(StorageService.class);
@@ -70,7 +72,7 @@ public class SlicingManagerTest {
         sliceIds.add(SliceId.of(3));
 
         devices.clear();
-        devices.add(new MockDevice(DeviceId.deviceId("device:s1"), null));
+        devices.add(new MockDevice(DID, null));
 
         manager.appId = appId;
         manager.coreService = coreService;
@@ -96,6 +98,8 @@ public class SlicingManagerTest {
         EasyMock.replay(coreService, storageService, workPartitionService, deviceService, flowRuleService);
 
         manager.activate();
+
+        EasyMock.verify(coreService, storageService, workPartitionService, deviceService, flowRuleService);
     }
 
     @Test
@@ -282,60 +286,105 @@ public class SlicingManagerTest {
 
     @Test
     public void testSliceListener() throws Exception {
-        FlowRule slice1BE1 =
-            buildFlowRule(devices.get(0).id(), sliceIds.get(1), TrafficClass.BEST_EFFORT,
-                          QueueId.BEST_EFFORT, null);
-        FlowRule slice1Control1 =
-            buildFlowRule(devices.get(0).id(), sliceIds.get(1), TrafficClass.CONTROL,
-                          QueueId.CONTROL, Color.GREEN);
-        FlowRule slice1Control2 =
-            buildFlowRule(devices.get(0).id(), sliceIds.get(1), TrafficClass.CONTROL,
-                          QueueId.BEST_EFFORT, Color.RED);
+        FlowRule slice1BE1 = buildSlice1BE1();
+        FlowRule slice1Control1 = buildSlice1Control1();
+        FlowRule slice1Control2 = buildSlice1Control2();
 
         // Adding BE class to slice 1
         capturedAddedFlowRules.reset();
         manager.addSlice(sliceIds.get(1));
-        Thread.sleep(100); // Wait executor service finish, better solution?
-        assertEquals(1, capturedAddedFlowRules.getValues().size());
-        assertTrue(slice1BE1.exactMatch(capturedAddedFlowRules.getValues().get(0)));
+        assertAfter(50, () -> {
+            assertEquals(1, capturedAddedFlowRules.getValues().size());
+            assertTrue(slice1BE1.exactMatch(capturedAddedFlowRules.getValues().get(0)));
+        });
 
         // Adding Control class to slice 1
         capturedAddedFlowRules.reset();
         manager.addTrafficClass(sliceIds.get(1), TrafficClass.CONTROL);
-        Thread.sleep(100); // Wait executor service finish, better solution?
-        assertEquals(2, capturedAddedFlowRules.getValues().size());
-        assertTrue(slice1Control1.exactMatch(capturedAddedFlowRules.getValues().get(0)));
-        assertTrue(slice1Control2.exactMatch(capturedAddedFlowRules.getValues().get(1)));
+        assertAfter(50, () -> {
+            assertEquals(2, capturedAddedFlowRules.getValues().size());
+            assertTrue(slice1Control1.exactMatch(capturedAddedFlowRules.getValues().get(0)));
+            assertTrue(slice1Control2.exactMatch(capturedAddedFlowRules.getValues().get(1)));
+        });
 
         // Removing Control class from slice 1
         capturedRemovedFlowRules.reset();
         manager.removeTrafficClass(sliceIds.get(1), TrafficClass.CONTROL);
-        Thread.sleep(100); // Wait executor service finish, better solution?
-        assertEquals(2, capturedRemovedFlowRules.getValues().size());
-        assertTrue(slice1Control1.exactMatch(capturedRemovedFlowRules.getValues().get(0)));
-        assertTrue(slice1Control2.exactMatch(capturedRemovedFlowRules.getValues().get(1)));
+        assertAfter(50, () -> {
+            assertEquals(2, capturedRemovedFlowRules.getValues().size());
+            assertTrue(slice1Control1.exactMatch(capturedRemovedFlowRules.getValues().get(0)));
+            assertTrue(slice1Control2.exactMatch(capturedRemovedFlowRules.getValues().get(1)));
+        });
 
         // Removing BE class from slice 1
         capturedRemovedFlowRules.reset();
         manager.removeTrafficClass(sliceIds.get(1), TrafficClass.BEST_EFFORT);
-        Thread.sleep(100); // Wait executor service finish, better solution?
-        assertEquals(1, capturedRemovedFlowRules.getValues().size());
-        assertTrue(slice1BE1.exactMatch(capturedRemovedFlowRules.getValues().get(0)));
+        assertAfter(50, () -> {
+            assertEquals(1, capturedRemovedFlowRules.getValues().size());
+            assertTrue(slice1BE1.exactMatch(capturedRemovedFlowRules.getValues().get(0)));
+        });
     }
 
-    private FlowRule buildFlowRule(DeviceId deviceId, SliceId sliceId, TrafficClass tc, QueueId queueId, Color color) {
+    private FlowRule buildSlice1BE1() {
+        // Hard coded parameters
         PiCriterion.Builder piCriterionBuilder = PiCriterion.builder()
-                .matchExact(P4InfoConstants.HDR_SLICE_TC, sliceTcConcat(sliceId.id(), tc.ordinal()));
-        if (color != null) {
-            piCriterionBuilder.matchTernary(HDR_COLOR, color.ordinal(), 1 << HDR_COLOR_BITWIDTH - 1);
-        }
+                .matchExact(P4InfoConstants.HDR_SLICE_TC,
+                    sliceTcConcat(sliceIds.get(1).id(), TrafficClass.BEST_EFFORT.ordinal()));
 
         PiAction.Builder piTableActionBuilder = PiAction.builder()
                 .withId(P4InfoConstants.FABRIC_INGRESS_QOS_SET_QUEUE)
-                .withParameter(new PiActionParam(P4InfoConstants.QID, queueId.id()));
+                .withParameter(new PiActionParam(P4InfoConstants.QID, QueueId.BEST_EFFORT.id()));
 
         FlowRule flowRule = DefaultFlowRule.builder()
-                .forDevice(deviceId)
+                .forDevice(DID)
+                .forTable(PiTableId.of(FABRIC_INGRESS_QOS_QUEUES.id()))
+                .fromApp(appId)
+                .withPriority(QOS_FLOW_PRIORITY)
+                .withSelector(DefaultTrafficSelector.builder().matchPi(piCriterionBuilder.build()).build())
+                .withTreatment(DefaultTrafficTreatment.builder().piTableAction(piTableActionBuilder.build()).build())
+                .makePermanent()
+                .build();
+
+        return flowRule;
+    }
+
+    private FlowRule buildSlice1Control1() {
+        // Hard coded parameters
+        PiCriterion.Builder piCriterionBuilder = PiCriterion.builder()
+                .matchExact(P4InfoConstants.HDR_SLICE_TC,
+                    sliceTcConcat(sliceIds.get(1).id(), TrafficClass.CONTROL.ordinal()))
+                .matchTernary(HDR_COLOR, Color.GREEN.ordinal(), 1 << HDR_COLOR_BITWIDTH - 1);
+
+        PiAction.Builder piTableActionBuilder = PiAction.builder()
+                .withId(P4InfoConstants.FABRIC_INGRESS_QOS_SET_QUEUE)
+                .withParameter(new PiActionParam(P4InfoConstants.QID, QueueId.CONTROL.id()));
+
+        FlowRule flowRule = DefaultFlowRule.builder()
+                .forDevice(DID)
+                .forTable(PiTableId.of(FABRIC_INGRESS_QOS_QUEUES.id()))
+                .fromApp(appId)
+                .withPriority(QOS_FLOW_PRIORITY)
+                .withSelector(DefaultTrafficSelector.builder().matchPi(piCriterionBuilder.build()).build())
+                .withTreatment(DefaultTrafficTreatment.builder().piTableAction(piTableActionBuilder.build()).build())
+                .makePermanent()
+                .build();
+
+        return flowRule;
+    }
+
+    private FlowRule buildSlice1Control2() {
+        // Hard coded parameters
+        PiCriterion.Builder piCriterionBuilder = PiCriterion.builder()
+                .matchExact(P4InfoConstants.HDR_SLICE_TC,
+                    sliceTcConcat(sliceIds.get(1).id(), TrafficClass.CONTROL.ordinal()))
+                .matchTernary(HDR_COLOR, Color.RED.ordinal(), 1 << HDR_COLOR_BITWIDTH - 1);
+
+        PiAction.Builder piTableActionBuilder = PiAction.builder()
+                .withId(P4InfoConstants.FABRIC_INGRESS_QOS_SET_QUEUE)
+                .withParameter(new PiActionParam(P4InfoConstants.QID, QueueId.BEST_EFFORT.id()));
+
+        FlowRule flowRule = DefaultFlowRule.builder()
+                .forDevice(DID)
                 .forTable(PiTableId.of(FABRIC_INGRESS_QOS_QUEUES.id()))
                 .fromApp(appId)
                 .withPriority(QOS_FLOW_PRIORITY)

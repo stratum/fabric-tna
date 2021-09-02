@@ -183,14 +183,15 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
             return false;
         }
 
-        if (getTrafficClasses(sliceId).size() == 0) {
+        Set<TrafficClass> tcs = getTrafficClasses(sliceId);
+        if (tcs.isEmpty()) {
             log.warn("Cannot remove a non-existent slice {}", sliceId);
             return false;
         }
 
         AtomicBoolean result = new AtomicBoolean(true);
 
-        getTrafficClasses(sliceId).stream()
+        tcs.stream()
                 .sorted(Comparator.comparingInt(TrafficClass::ordinal).reversed()) // Remove BEST_EFFORT the last
                 .forEach(tc -> {
             if (!removeTrafficClass(sliceId, tc)) {
