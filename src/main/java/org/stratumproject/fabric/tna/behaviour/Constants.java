@@ -24,7 +24,6 @@ public final class Constants {
 
     // Used with port_type metadata
     public static final long PORT_TYPE_MASK = 0x3;
-    public static final byte PORT_TYPE_UNKNOWN = 0x0;
     public static final byte PORT_TYPE_EDGE = 0x1;
     public static final byte PORT_TYPE_INFRA = 0x2;
     public static final byte PORT_TYPE_INTERNAL = 0x3;

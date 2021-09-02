@@ -49,7 +49,8 @@ import static org.stratumproject.fabric.tna.behaviour.Constants.FWD_IPV4_ROUTING
 import static org.stratumproject.fabric.tna.behaviour.Constants.FWD_IPV6_ROUTING;
 import static org.stratumproject.fabric.tna.behaviour.Constants.FWD_MPLS;
 import static org.stratumproject.fabric.tna.behaviour.Constants.ONE;
-import static org.stratumproject.fabric.tna.behaviour.Constants.PORT_TYPE_UNKNOWN;
+import static org.stratumproject.fabric.tna.behaviour.Constants.PORT_TYPE_EDGE;
+import static org.stratumproject.fabric.tna.behaviour.Constants.PORT_TYPE_INFRA;
 import static org.stratumproject.fabric.tna.behaviour.Constants.ZERO;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.l2InstructionOrFail;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.criterion;
@@ -174,9 +175,9 @@ class FilteringObjectiveTranslator
         if (obj.type().equals(FilteringObjective.Type.DENY)) {
             treatmentBuilder.piTableAction(DENY);
         } else {
-            // FIXME Do we still need AETHER-1404 ?
-            byte portType = portType(obj);
-            if (portType == PORT_TYPE_UNKNOWN) {
+            // FIXME SDFAB-52 to complete the work on metadata
+            Byte portType = portType(obj);
+            if (portType == null) {
                 throw new FabricPipelinerException(
                         format("Unsupported port_type configuration: metadata=%s", obj.meta()),
                         ObjectiveError.BADPARAMS);

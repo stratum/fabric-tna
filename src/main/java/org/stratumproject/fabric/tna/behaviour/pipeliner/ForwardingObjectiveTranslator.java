@@ -40,7 +40,6 @@ import static org.onosproject.segmentrouting.metadata.SRObjectiveMetadata.isVali
 import static org.stratumproject.fabric.tna.behaviour.Constants.PORT_TYPE_EDGE;
 import static org.stratumproject.fabric.tna.behaviour.Constants.PORT_TYPE_INFRA;
 import static org.stratumproject.fabric.tna.behaviour.Constants.PORT_TYPE_MASK;
-import static org.stratumproject.fabric.tna.behaviour.Constants.PORT_TYPE_UNKNOWN;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.criterionNotNull;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.outputPort;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.portType;
@@ -275,11 +274,11 @@ class ForwardingObjectiveTranslator
         }
         TrafficSelector.Builder selectorBuilder = DefaultTrafficSelector.builder(obj.selector());
         // Meta are used to signal the port type which can be edge or infra
-        long portType = portType(obj);
-        if (portType != PORT_TYPE_UNKNOWN && !isSrMetadataSet(obj, PAIR_PORT)) {
+        Byte portType = portType(obj);
+        if (portType != null && !isSrMetadataSet(obj, PAIR_PORT)) {
             if (portType == PORT_TYPE_EDGE || portType == PORT_TYPE_INFRA) {
                 selectorBuilder.matchPi(PiCriterion.builder()
-                        .matchTernary(P4InfoConstants.HDR_IG_PORT_TYPE, portType, PORT_TYPE_MASK)
+                        .matchTernary(P4InfoConstants.HDR_IG_PORT_TYPE, (long) portType, PORT_TYPE_MASK)
                         .build());
             } else {
                 throw new FabricPipelinerException(format("Port type '%s' is not allowed for table '%s'",

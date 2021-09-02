@@ -33,7 +33,6 @@ import static org.onosproject.segmentrouting.metadata.SRObjectiveMetadata.isSrMe
 import static org.stratumproject.fabric.tna.behaviour.Constants.MAX_SLICE_ID;
 import static org.stratumproject.fabric.tna.behaviour.Constants.MAX_TC;
 import static org.stratumproject.fabric.tna.behaviour.Constants.METADATA_TO_PORT_TYPE;
-import static org.stratumproject.fabric.tna.behaviour.Constants.PORT_TYPE_UNKNOWN;
 import static org.stratumproject.fabric.tna.behaviour.Constants.TC_BITWIDTH;
 
 /**
@@ -144,10 +143,10 @@ public final class FabricUtils {
      * Port type metadata conversion.
      *
      * @param obj the objective
-     * @return the port type associated to the metadata
+     * @return the port type associated to the metadata, null otherwise
      */
     public static Byte portType(Objective obj) {
-        byte portType = PORT_TYPE_UNKNOWN;
+        Byte portType = null;
         if (isSrMetadataSet(obj, PAIR_PORT) && METADATA_TO_PORT_TYPE.containsKey(PAIR_PORT)) {
             portType = METADATA_TO_PORT_TYPE.get(PAIR_PORT);
         } else if (isSrMetadataSet(obj, EDGE_PORT) && METADATA_TO_PORT_TYPE.containsKey(EDGE_PORT)) {
