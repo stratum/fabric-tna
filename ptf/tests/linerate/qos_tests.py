@@ -51,7 +51,7 @@ RECEIVER_PORT = [1]
 ALL_PORTS = [0, 1, 2, 3]
 
 
-class QosTest(TRexTest, SlicingTest, StatsTest):
+class QosBaseTest(SlicingTest):
     def __init__(self):
         super().__init__()
         self.control_pg_id = 7
@@ -145,6 +145,11 @@ class QosTest(TRexTest, SlicingTest, StatsTest):
             tx_bytes=ig_bytes,
             rx_bytes=eg_bytes,
         )
+
+
+class QosTest(TRexTest, QosBaseTest, SlicingTest, StatsTest):
+    def __init__(self):
+        super().__init__()
 
     # Create a background traffic stream.
     def create_background_stream(self) -> STLStream:
