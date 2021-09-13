@@ -10,6 +10,7 @@ from trex_stl_lib.api import STLPktBuilder, STLStream, STLTXCont
 from trex_test import TRexTest
 from trex_utils import list_port_status
 from xnt import analyze_report_pcap
+import sys
 
 TRAFFIC_MULT = "40gbpsl1"
 TEST_DURATION = 10
@@ -33,6 +34,7 @@ class IntSingleFlow(TRexTest, IntTest):
         is_next_hop_spine,
     ):
 
+        print("int-single-flow: python is {}".format(sys.version))
         # Install routing flows onto hardware switch
         self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine)
         self.runIPv4UnicastTest(

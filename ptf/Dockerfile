@@ -83,9 +83,9 @@ ARG P4RUNTIME_SHELL_VER
 ARG UNITTEST_XML_REPORTING_VER
 
 ENV RUNTIME_DEPS \
-	python3 \
-	python3-pip \
-	python3-setuptools \
+    python3 \
+    python3-pip \
+    python3-setuptools \
     git
 
 ENV PIP_DEPS \
@@ -119,6 +119,7 @@ FROM ubuntu:20.04
 ARG TREX_EXT_LIBS
 ARG TREX_LIBS
 ARG SCAPY_VER
+ARG PTF_VER
 
 #FIXME: Remove tcpdump, netbase after removing ptf
 ENV RUNTIME_DEPS \
@@ -132,6 +133,8 @@ ENV RUNTIME_DEPS \
     python3-dev \
     build-essential \
     python3-pip \
+    wget \
+    git \
     netbase
 
 RUN apt update && apt install -y $RUNTIME_DEPS
@@ -144,6 +147,14 @@ COPY --from=proto-deps /output /usr/lib/python3.8/dist-packages
 COPY --from=ptf-deps /python_output /
 # Install custom scapy version from TRex
 RUN cd ${TREX_EXT_LIBS}/scapy-${SCAPY_VER}/ && python3 setup.py install
+# Build pypy from source and install ptf with pypy
+RUN cd /opt/ && \
+    wget -nv https://downloads.python.org/pypy/pypy3.7-v7.3.5-linux64.tar.bz2 && \
+    tar xf pypy3.7-v7.3.5-linux64.tar.bz2 && \
+    /opt/pypy3.7-v7.3.5-linux64/bin/pypy -m ensurepip && \
+    /opt/pypy3.7-v7.3.5-linux64/bin/pypy -mpip install git+https://github.com/p4lang/ptf@$PTF_VER && \
+    /opt/pypy3.7-v7.3.5-linux64/bin/pypy -mpip show ptf && \
+    which ptf
 RUN ldconfig
 
 ENTRYPOINT []
