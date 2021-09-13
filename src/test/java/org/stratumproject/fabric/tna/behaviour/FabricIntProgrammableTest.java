@@ -220,7 +220,7 @@ public class FabricIntProgrammableTest {
         expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false,
             BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_QUEUE, MIRROR_TYPE_INT_REPORT));
         expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false,
-            BMD_TYPE_EGRESS_MIRROR, (short)(INT_REPORT_TYPE_QUEUE | INT_REPORT_TYPE_LOCAL),
+            BMD_TYPE_EGRESS_MIRROR, (short) (INT_REPORT_TYPE_QUEUE | INT_REPORT_TYPE_LOCAL),
             MIRROR_TYPE_INT_REPORT));
         expectRules.add(buildFilterConfigFlow(LEAF_DEVICE_ID));
 
@@ -288,7 +288,7 @@ public class FabricIntProgrammableTest {
                                 BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_QUEUE, MIRROR_TYPE_INT_REPORT));
         expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false,
                                 BMD_TYPE_EGRESS_MIRROR,
-                                (short)(INT_REPORT_TYPE_QUEUE | INT_REPORT_TYPE_LOCAL),
+                                (short) (INT_REPORT_TYPE_QUEUE | INT_REPORT_TYPE_LOCAL),
                                 MIRROR_TYPE_INT_REPORT));
         expectRules.add(buildFilterConfigFlow(LEAF_DEVICE_ID));
 
@@ -346,7 +346,7 @@ public class FabricIntProgrammableTest {
                                 BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_QUEUE, MIRROR_TYPE_INT_REPORT));
         expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false,
                                 BMD_TYPE_EGRESS_MIRROR,
-                                (short)(INT_REPORT_TYPE_QUEUE | INT_REPORT_TYPE_LOCAL),
+                                (short) (INT_REPORT_TYPE_QUEUE | INT_REPORT_TYPE_LOCAL),
                                 MIRROR_TYPE_INT_REPORT));
         expectRules.add(buildFilterConfigFlow(LEAF_DEVICE_ID));
 
@@ -400,7 +400,7 @@ public class FabricIntProgrammableTest {
                                 BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_QUEUE, MIRROR_TYPE_INT_REPORT));
         expectRules.add(buildReportTableRule(SPINE_DEVICE_ID, true,
                                 BMD_TYPE_EGRESS_MIRROR,
-                                (short)(INT_REPORT_TYPE_QUEUE | INT_REPORT_TYPE_LOCAL),
+                                (short) (INT_REPORT_TYPE_QUEUE | INT_REPORT_TYPE_LOCAL),
                                 MIRROR_TYPE_INT_REPORT));
         expectRules.add(buildFilterConfigFlow(SPINE_DEVICE_ID));
 
@@ -468,7 +468,7 @@ public class FabricIntProgrammableTest {
                                 BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_QUEUE, MIRROR_TYPE_INT_REPORT));
         expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false,
                                 BMD_TYPE_EGRESS_MIRROR,
-                                (short)(INT_REPORT_TYPE_QUEUE | INT_REPORT_TYPE_LOCAL),
+                                (short) (INT_REPORT_TYPE_QUEUE | INT_REPORT_TYPE_LOCAL),
                                 MIRROR_TYPE_INT_REPORT));
         expectRules.add(buildFilterConfigFlow(LEAF_DEVICE_ID));
 
@@ -548,7 +548,7 @@ public class FabricIntProgrammableTest {
                                          INT_REPORT_TYPE_QUEUE, MIRROR_TYPE_INT_REPORT)),
                 buildFlowEntry(
                     buildReportTableRule(SPINE_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR,
-                                         (short)(INT_REPORT_TYPE_QUEUE | INT_REPORT_TYPE_LOCAL),
+                                         (short) (INT_REPORT_TYPE_QUEUE | INT_REPORT_TYPE_LOCAL),
                                          MIRROR_TYPE_INT_REPORT))
         );
         Set<FlowEntry> randomEntries = buildRandomFlowEntries();

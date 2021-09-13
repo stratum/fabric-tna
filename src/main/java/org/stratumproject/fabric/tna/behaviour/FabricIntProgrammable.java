@@ -517,7 +517,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 buildReportEntryWithType(srCfg, intCfg, BMD_TYPE_EGRESS_MIRROR,
                                          INT_REPORT_TYPE_QUEUE, MIRROR_TYPE_INT_REPORT),
                 buildReportEntryWithType(srCfg, intCfg, BMD_TYPE_EGRESS_MIRROR,
-                                         (short)(INT_REPORT_TYPE_LOCAL | INT_REPORT_TYPE_QUEUE),
+                                         (short) (INT_REPORT_TYPE_LOCAL | INT_REPORT_TYPE_QUEUE),
                                          MIRROR_TYPE_INT_REPORT)
         );
     }
