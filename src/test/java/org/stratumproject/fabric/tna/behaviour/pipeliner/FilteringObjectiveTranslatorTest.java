@@ -30,6 +30,9 @@ import java.util.Collection;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
+import static org.onosproject.segmentrouting.metadata.SRObjectiveMetadata.EDGE_PORT;
+import static org.onosproject.segmentrouting.metadata.SRObjectiveMetadata.INFRA_PORT;
+import static org.onosproject.segmentrouting.metadata.SRObjectiveMetadata.PAIR_PORT;
 import static org.stratumproject.fabric.tna.behaviour.Constants.DEFAULT_PW_TRANSPORT_VLAN;
 import static org.stratumproject.fabric.tna.behaviour.Constants.DEFAULT_VLAN;
 import static org.stratumproject.fabric.tna.behaviour.Constants.ETH_TYPE_EXACT_MASK;
@@ -60,7 +63,7 @@ public class FilteringObjectiveTranslatorTest extends AbstractObjectiveTranslato
      */
     @Test
     public void testRouterMacAndVlanFilter() throws FabricPipelinerException {
-        FilteringObjective filteringObjective = buildFilteringObjective(ROUTER_MAC);
+        FilteringObjective filteringObjective = buildFilteringObjective(ROUTER_MAC, EDGE_PORT);
         ObjectiveTranslation actualTranslation = translator.translate(filteringObjective);
         Collection<FlowRule> expectedFlowRules = Lists.newArrayList();
         // in port vlan flow rule
@@ -113,6 +116,7 @@ public class FilteringObjectiveTranslatorTest extends AbstractObjectiveTranslato
         TrafficTreatment treatment = DefaultTrafficTreatment.builder()
                 .pushVlan()
                 .setVlanId(VLAN_100)
+                .writeMetadata(EDGE_PORT, 0xffffffffffffffffL)
                 .build();
         FilteringObjective filteringObjective = DefaultFilteringObjective.builder()
                 .permit()
@@ -160,6 +164,7 @@ public class FilteringObjectiveTranslatorTest extends AbstractObjectiveTranslato
         TrafficTreatment treatment = DefaultTrafficTreatment.builder()
                 .pushVlan()
                 .setVlanId(VLAN_100)
+                .writeMetadata(EDGE_PORT, 0xffffffffffffffffL)
                 .build();
         FilteringObjective filteringObjective = DefaultFilteringObjective.builder()
                 .permit()
@@ -203,7 +208,7 @@ public class FilteringObjectiveTranslatorTest extends AbstractObjectiveTranslato
      */
     @Test
     public void testFwdBridging() throws Exception {
-        FilteringObjective filteringObjective = buildFilteringObjective(null);
+        FilteringObjective filteringObjective = buildFilteringObjective(null, EDGE_PORT);
         ObjectiveTranslation actualTranslation = translator.translate(filteringObjective);
 
         Collection<FlowRule> expectedFlowRules = Lists.newArrayList();
@@ -284,6 +289,7 @@ public class FilteringObjectiveTranslatorTest extends AbstractObjectiveTranslato
                 .fromApp(APP_ID)
                 .withMeta(DefaultTrafficTreatment.builder()
                         .popVlan()
+                        .writeMetadata(EDGE_PORT, 0xffffffffffffffffL)
                         .build())
                 .permit()
                 .add();
@@ -355,7 +361,7 @@ public class FilteringObjectiveTranslatorTest extends AbstractObjectiveTranslato
                 .withPriority(PRIORITY)
                 .fromApp(APP_ID)
                 .withMeta(DefaultTrafficTreatment.builder()
-                        .writeMetadata(2, 0xffffffffffffffffL)
+                        .writeMetadata(10, 0xffffffffffffffffL)
                         .build())
                 .permit()
                 .add();
@@ -380,7 +386,7 @@ public class FilteringObjectiveTranslatorTest extends AbstractObjectiveTranslato
                 .withMeta(DefaultTrafficTreatment.builder()
                         .pushVlan()
                         .setVlanId(VLAN_200)
-                        .writeMetadata(2, 0xffffffffffffffffL)
+                        .writeMetadata(10, 0xffffffffffffffffL)
                         .build())
                 .permit()
                 .add();
@@ -408,7 +414,10 @@ public class FilteringObjectiveTranslatorTest extends AbstractObjectiveTranslato
                 .addCondition(Criteria.matchVlanId(VLAN_100))
                 .withPriority(PRIORITY)
                 .fromApp(APP_ID)
-                .withMeta(DefaultTrafficTreatment.builder().wipeDeferred().build())
+                .withMeta(DefaultTrafficTreatment.builder()
+                        .writeMetadata(EDGE_PORT, 0xffffffffffffffffL)
+                        .wipeDeferred()
+                        .build())
                 .permit()
                 .add();
         ObjectiveTranslation actualTranslation = translator.translate(filteringObjective);
@@ -456,6 +465,10 @@ public class FilteringObjectiveTranslatorTest extends AbstractObjectiveTranslato
                 .addCondition(Criteria.matchEthDst(ROUTER_MAC))
                 .addCondition(Criteria.matchVlanId(VlanId.vlanId((short) DEFAULT_PW_TRANSPORT_VLAN)))
                 .withPriority(PRIORITY)
+                .withMeta(DefaultTrafficTreatment.builder()
+                        .writeMetadata(INFRA_PORT, 0xffffffffffffffffL)
+                        .wipeDeferred()
+                        .build())
                 .fromApp(APP_ID)
                 .permit()
                 .add();
@@ -501,6 +514,7 @@ public class FilteringObjectiveTranslatorTest extends AbstractObjectiveTranslato
                 .withMeta(DefaultTrafficTreatment.builder()
                         .pushVlan()
                         .setVlanId(VlanId.vlanId((short) DEFAULT_VLAN))
+                        .writeMetadata(INFRA_PORT, 0xffffffffffffffffL)
                         .build())
                 .permit()
                 .add();
@@ -536,16 +550,93 @@ public class FilteringObjectiveTranslatorTest extends AbstractObjectiveTranslato
         assertEquals(expectedTranslation, actualTranslation);
     }
 
+    /**
+     * Test is pair port scenarios for filtering objective.
+     */
+    @Test
+    public void testIsPairPort() throws FabricPipelinerException {
+        // Only pair port flag
+        FilteringObjective filteringObjective = DefaultFilteringObjective.builder()
+                .withKey(Criteria.matchInPort(PORT_1))
+                .addCondition(Criteria.matchEthDst(ROUTER_MAC))
+                .addCondition(Criteria.matchVlanId(VLAN_100))
+                .withPriority(PRIORITY)
+                .withMeta(DefaultTrafficTreatment.builder()
+                        .writeMetadata(PAIR_PORT, 0xffffffffffffffffL)
+                        .build())
+                .fromApp(APP_ID)
+                .permit()
+                .add();
+        ObjectiveTranslation actualTranslation = translator.translate(filteringObjective);
+
+        Collection<FlowRule> expectedFlowRules = Lists.newArrayList();
+        expectedFlowRules.add(buildExpectedVlanInPortRule(
+                PORT_1, VLAN_100, null, VlanId.NONE,
+                PORT_TYPE_INFRA, P4InfoConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN));
+        expectedFlowRules.addAll(buildExpectedFwdClassifierRule(
+                PORT_1,
+                ROUTER_MAC,
+                null,
+                Ethernet.TYPE_IPV4,
+                FWD_IPV4_ROUTING));
+        expectedFlowRules.addAll(buildExpectedFwdClassifierRule(
+                PORT_1,
+                ROUTER_MAC,
+                null,
+                Ethernet.TYPE_IPV6,
+                FWD_IPV6_ROUTING));
+        expectedFlowRules.addAll(buildExpectedFwdClassifierRule(
+                PORT_1,
+                ROUTER_MAC,
+                null,
+                Ethernet.MPLS_UNICAST,
+                FWD_MPLS));
+        // DSCP rewriter rewrite
+        expectedFlowRules.add(buildExpectedEgressDscpRewriter(PORT_1, false));
+        // DSCP ingress trust
+        expectedFlowRules.add(buildExpectedIngressTrustDscp(PORT_1));
+
+        ObjectiveTranslation expectedTranslation = buildExpectedTranslation(expectedFlowRules);
+        assertEquals(expectedTranslation, actualTranslation);
+
+        // Pair port and config update flags
+        filteringObjective = DefaultFilteringObjective.builder()
+                .withKey(Criteria.matchInPort(PORT_1))
+                .addCondition(Criteria.matchEthDst(ROUTER_MAC))
+                .addCondition(Criteria.matchVlanId(VLAN_100))
+                .withPriority(PRIORITY)
+                .fromApp(APP_ID)
+                .withMeta(DefaultTrafficTreatment.builder()
+                        .writeMetadata(6, 0xffffffffffffffffL)
+                        .build())
+                .permit()
+                .add();
+
+        actualTranslation = translator.translate(filteringObjective);
+        expectedFlowRules = Lists.newArrayList();
+        // Ingress port vlan rule
+        expectedFlowRules.add(buildExpectedVlanInPortRule(
+                PORT_1, VLAN_100, null, VlanId.NONE, PORT_TYPE_INFRA,
+                P4InfoConstants.FABRIC_INGRESS_FILTERING_INGRESS_PORT_VLAN));
+        // DSCP rewriter rewrite
+        expectedFlowRules.add(buildExpectedEgressDscpRewriter(PORT_1, false));
+        // DSCP ingress trust
+        expectedFlowRules.add(buildExpectedIngressTrustDscp(PORT_1));
+        expectedTranslation = buildExpectedTranslation(expectedFlowRules);
+        assertEquals(expectedTranslation, actualTranslation);
+    }
+
     /* Utilities */
     private void assertError(ObjectiveError error, ObjectiveTranslation actualTranslation) {
         ObjectiveTranslation expectedTranslation = ObjectiveTranslation.ofError(error);
         assertEquals(expectedTranslation, actualTranslation);
     }
 
-    private FilteringObjective buildFilteringObjective(MacAddress dstMac) {
+    private FilteringObjective buildFilteringObjective(MacAddress dstMac, long portType) {
         TrafficTreatment treatment = DefaultTrafficTreatment.builder()
                 .pushVlan()
                 .setVlanId(VLAN_100)
+                .writeMetadata(portType, 0xffffffffffffffffL)
                 .build();
         DefaultFilteringObjective.Builder builder = DefaultFilteringObjective.builder()
                 .permit()

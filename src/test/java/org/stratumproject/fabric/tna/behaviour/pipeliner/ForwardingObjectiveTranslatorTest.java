@@ -31,6 +31,8 @@ import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.onosproject.segmentrouting.metadata.SRObjectiveMetadata.EDGE_PORT;
+import static org.onosproject.segmentrouting.metadata.SRObjectiveMetadata.INFRA_PORT;
 import static org.stratumproject.fabric.tna.behaviour.Constants.*;
 
 /**
@@ -198,7 +200,7 @@ public class ForwardingObjectiveTranslatorTest extends AbstractObjectiveTranslat
                 .matchIPDst(IPV4_UNICAST_ADDR)
                 .build();
         TrafficSelector metaSelector = DefaultTrafficSelector.builder()
-                .matchMetadata(PORT_TYPE_EDGE)
+                .matchMetadata(EDGE_PORT)
                 .build();
         ForwardingObjective fwd = DefaultForwardingObjective.builder()
                 .withSelector(selector)
@@ -243,7 +245,7 @@ public class ForwardingObjectiveTranslatorTest extends AbstractObjectiveTranslat
         assertTrue(expectedFlowRule.exactMatch(actualFlowRule));
 
         metaSelector = DefaultTrafficSelector.builder()
-                .matchMetadata(PORT_TYPE_INFRA)
+                .matchMetadata(INFRA_PORT)
                 .build();
         fwd = DefaultForwardingObjective.builder()
                 .withSelector(selector)
