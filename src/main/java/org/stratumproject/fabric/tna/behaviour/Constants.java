@@ -5,7 +5,14 @@
 
 package org.stratumproject.fabric.tna.behaviour;
 
+import com.google.common.collect.ImmutableMap;
+
 import java.util.List;
+import java.util.Map;
+
+import static org.onosproject.segmentrouting.metadata.SRObjectiveMetadata.EDGE_PORT;
+import static org.onosproject.segmentrouting.metadata.SRObjectiveMetadata.INFRA_PORT;
+import static org.onosproject.segmentrouting.metadata.SRObjectiveMetadata.PAIR_PORT;
 
 /**
  * Constant values.
@@ -62,6 +69,13 @@ public final class Constants {
     public static final int TC_BITWIDTH = 2;
     public static final int MAX_SLICE_ID = (1 << SLICE_ID_BITWIDTH) - 1;
     public static final int MAX_TC = (1 << TC_BITWIDTH) - 1;
+
+    // Metadata to port type mapping
+    public static final Map<Long, Byte> METADATA_TO_PORT_TYPE = ImmutableMap.<Long, Byte>builder()
+            .put(PAIR_PORT, PORT_TYPE_INFRA)
+            .put(EDGE_PORT, PORT_TYPE_EDGE)
+            .put(INFRA_PORT, PORT_TYPE_INFRA)
+            .build();
 
     // hide default constructor
     private Constants() {

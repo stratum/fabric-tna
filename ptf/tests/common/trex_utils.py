@@ -35,7 +35,7 @@ def to_readable(src: int, unit: str = "bps") -> str:
         return "{:.1f} G{}".format(src / 1000_000_000, unit)
 
 
-def get_readable_port_stats(port_stats: str) -> str:
+def get_readable_port_stats(port_stats: dict) -> str:
     opackets = port_stats.get("opackets", 0)
     ipackets = port_stats.get("ipackets", 0)
     obytes = port_stats.get("obytes", 0)
@@ -282,15 +282,6 @@ def get_readable_flow_stats(stats: FlowStats) -> str:
     RX bytes: {stats.rx_bytes}"""
 
 
-def format_bps(bps):
-    n = 0
-    power_labels = {0: "", 1: "K", 2: "M", 3: "G", 4: "T"}
-    while bps >= 1000:
-        bps /= 1000
-        n += 1
-    return f"{round(bps, 1)} {power_labels[n]}bps"
-
-
 def get_flow_rate_shares(seconds: int, *stats_list: FlowStats) -> FlowRateShares:
     rx_bps = {}
     tx_bps = {}
@@ -314,19 +305,19 @@ def get_flow_rate_shares(seconds: int, *stats_list: FlowStats) -> FlowRateShares
 def get_readable_flow_rate_shares(stats: FlowRateShares) -> str:
     rx_str = "\n".join(
         [
-            f"        pg_id {pg_id}: {format_bps(val)} ({stats.rx_shares[pg_id]:.1%})"
+            f"        pg_id {pg_id}: {to_readable(val)} ({stats.rx_shares[pg_id]:.1%})"
             for pg_id, val in stats.rx_bps.items()
         ]
     )
     tx_str = "\n".join(
         [
-            f"        pg_id {pg_id}: {format_bps(val)} ({stats.tx_shares[pg_id]:.1%})"
+            f"        pg_id {pg_id}: {to_readable(val)} ({stats.tx_shares[pg_id]:.1%})"
             for pg_id, val in stats.tx_bps.items()
         ]
     )
     return f"""Flow rate shares:
-    TX total: {format_bps(stats.tx_bps_total)}\n{tx_str}
-    RX total: {format_bps(stats.rx_bps_total)}\n{rx_str}"""
+    TX total: {to_readable(stats.tx_bps_total)}\n{tx_str}
+    RX total: {to_readable(stats.rx_bps_total)}\n{rx_str}"""
 
 
 class ParseExtendArgAction(argparse.Action):
