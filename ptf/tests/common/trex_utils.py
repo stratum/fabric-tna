@@ -129,7 +129,7 @@ LatencyStats = collections.namedtuple(
 )
 
 FlowStats = collections.namedtuple(
-    "FlowStats", ["pg_id", "tx_packets", "rx_packets", "tx_bytes", "rx_bytes",],
+    "FlowStats", ["pg_id", "tx_packets", "rx_packets", "tx_bytes", "rx_bytes", "rtt"],
 )
 
 FlowRateShares = collections.namedtuple(
@@ -274,6 +274,17 @@ def get_flow_stats(pg_id: int, stats) -> FlowStats:
     return ret
 
 
+def flow_stats_delta(start: FlowStats, end: FlowStats):
+    assert start.pg_id == end.pg_id
+    return FlowStats(
+        pg_id=start.pg_id,
+        tx_packets=end.tx_packets - start.tx_packets,
+        rx_packets=end.rx_packets - start.rx_packets,
+        tx_bytes=end.tx_bytes - start.tx_bytes,
+        rx_bytes=end.rx_bytes - start.rx_bytes,
+        rtt=start.rtt,
+    )
+
 def get_readable_flow_stats(stats: FlowStats) -> str:
     return f"""Flow info for pg_id {stats.pg_id}
     TX packets: {stats.tx_packets}
@@ -282,12 +293,12 @@ def get_readable_flow_stats(stats: FlowStats) -> str:
     RX bytes: {stats.rx_bytes}"""
 
 
-def get_flow_rate_shares(seconds: int, *stats_list: FlowStats) -> FlowRateShares:
+def get_flow_rate_shares(seconds: float, *stats_list: FlowStats) -> FlowRateShares:
     rx_bps = {}
     tx_bps = {}
     for stats in stats_list:
-        rx_bps[stats.pg_id] = stats.rx_bytes * 8 / seconds
-        tx_bps[stats.pg_id] = stats.tx_bytes * 8 / seconds
+        rx_bps[stats.pg_id] = stats.rx_bytes
+        tx_bps[stats.pg_id] = stats.tx_bytes
     rx_bps_total = sum(rx_bps.values())
     tx_bps_total = sum(tx_bps.values())
     rx_shares = {k: v / rx_bps_total for k, v in rx_bps.items()}
@@ -305,19 +316,19 @@ def get_flow_rate_shares(seconds: int, *stats_list: FlowStats) -> FlowRateShares
 def get_readable_flow_rate_shares(stats: FlowRateShares) -> str:
     rx_str = "\n".join(
         [
-            f"        pg_id {pg_id}: {to_readable(val)} ({stats.rx_shares[pg_id]:.1%})"
+            f"        pg_id {pg_id}: {to_readable(val, 'B')} ({stats.rx_shares[pg_id]:.1%})"
             for pg_id, val in stats.rx_bps.items()
         ]
     )
     tx_str = "\n".join(
         [
-            f"        pg_id {pg_id}: {to_readable(val)} ({stats.tx_shares[pg_id]:.1%})"
+            f"        pg_id {pg_id}: {to_readable(val, 'B')} ({stats.tx_shares[pg_id]:.1%})"
             for pg_id, val in stats.tx_bps.items()
         ]
     )
     return f"""Flow rate shares:
-    TX total: {to_readable(stats.tx_bps_total)}\n{tx_str}
-    RX total: {to_readable(stats.rx_bps_total)}\n{rx_str}"""
+    TX total: {to_readable(stats.tx_bps_total, 'B')}\n{tx_str}
+    RX total: {to_readable(stats.rx_bps_total, 'B')}\n{rx_str}"""
 
 
 class ParseExtendArgAction(argparse.Action):

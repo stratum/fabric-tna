@@ -1,5 +1,6 @@
 # Copyright 2020-present Open Networking Foundation
 # SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
+from concurrent.futures import ThreadPoolExecutor
 
 from base_test import *
 from trex.stl.api import STLClient
@@ -21,10 +22,12 @@ class TRexTest(P4RuntimeTest):
         self.trex_client.set_port_attr(
             self.trex_client.get_all_ports(), promiscuous=True
         )
+        self.thread_pool = ThreadPoolExecutor(10)
 
     def tearDown(self):
         print("Tearing down STLClient...")
         self.trex_client.stop()
         self.trex_client.release()
         self.trex_client.disconnect()
+        self.thread_pool.shutdown(wait=False)
         super(TRexTest, self).tearDown()
