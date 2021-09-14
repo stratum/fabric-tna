@@ -453,7 +453,7 @@ def vendor_config(yaml_config):
             for port_id in port_template["port_ids"]:
                 temp["port_id"] = port_id
                 temp["is_sdk_port"] = False
-                port_templates.append(temp)
+                port_templates.append(temp.copy())
                 # Shaping can only be applied to front-panel ports,
                 # it doesn't make sense to shape internal ports.
                 if port_template["is_shaping_enabled"]:
@@ -469,7 +469,7 @@ def vendor_config(yaml_config):
             for sdk_port_id in port_template["sdk_port_ids"]:
                 temp["port_id"] = sdk_port_id
                 temp["is_sdk_port"] = True
-                port_templates.append(temp)
+                port_templates.append(temp.copy())
 
     queue_blobs = []
 
