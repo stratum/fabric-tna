@@ -108,7 +108,8 @@ public class FabricIntProgrammableTest {
     private static final short MIRROR_TYPE_INVALID = 0;
     private static final short MIRROR_TYPE_INT_REPORT = 1;
     private static final short INT_REPORT_TYPE_LOCAL = 1;
-    private static final short INT_REPORT_TYPE_DROP = 2;
+    private static final short INT_REPORT_TYPE_QUEUE = 2;
+    private static final short INT_REPORT_TYPE_DROP = 4;
     private static final HostLocation COLLECTOR_LOCATION = new HostLocation(LEAF_DEVICE_ID, PortNumber.P0, 0);
     private static final Host COLLECTOR_HOST =
             new DefaultHost(null, null, null, null, COLLECTOR_LOCATION, Sets.newHashSet());
@@ -216,6 +217,11 @@ public class FabricIntProgrammableTest {
             BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT));
         expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false,
             BMD_TYPE_DEFLECTED, INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID));
+        expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false,
+            BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_QUEUE, MIRROR_TYPE_INT_REPORT));
+        expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false,
+            BMD_TYPE_EGRESS_MIRROR, (short) (INT_REPORT_TYPE_QUEUE | INT_REPORT_TYPE_LOCAL),
+            MIRROR_TYPE_INT_REPORT));
         expectRules.add(buildFilterConfigFlow(LEAF_DEVICE_ID));
 
         // Expected steps of method calls, captures, and results.
@@ -278,6 +284,12 @@ public class FabricIntProgrammableTest {
                                 INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT));
         expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_DEFLECTED,
                                 INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID));
+        expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false,
+                                BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_QUEUE, MIRROR_TYPE_INT_REPORT));
+        expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false,
+                                BMD_TYPE_EGRESS_MIRROR,
+                                (short) (INT_REPORT_TYPE_QUEUE | INT_REPORT_TYPE_LOCAL),
+                                MIRROR_TYPE_INT_REPORT));
         expectRules.add(buildFilterConfigFlow(LEAF_DEVICE_ID));
 
         // Expected steps of method calls, captures, and results.
@@ -330,6 +342,12 @@ public class FabricIntProgrammableTest {
                                 INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT));
         expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_DEFLECTED,
                                 INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID));
+        expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false,
+                                BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_QUEUE, MIRROR_TYPE_INT_REPORT));
+        expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false,
+                                BMD_TYPE_EGRESS_MIRROR,
+                                (short) (INT_REPORT_TYPE_QUEUE | INT_REPORT_TYPE_LOCAL),
+                                MIRROR_TYPE_INT_REPORT));
         expectRules.add(buildFilterConfigFlow(LEAF_DEVICE_ID));
 
         // Expected steps of method calls, captures, and results.
@@ -378,6 +396,12 @@ public class FabricIntProgrammableTest {
                                      INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT));
         expectRules.add(buildReportTableRule(SPINE_DEVICE_ID, true, BMD_TYPE_DEFLECTED,
                                      INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID));
+        expectRules.add(buildReportTableRule(SPINE_DEVICE_ID, true,
+                                BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_QUEUE, MIRROR_TYPE_INT_REPORT));
+        expectRules.add(buildReportTableRule(SPINE_DEVICE_ID, true,
+                                BMD_TYPE_EGRESS_MIRROR,
+                                (short) (INT_REPORT_TYPE_QUEUE | INT_REPORT_TYPE_LOCAL),
+                                MIRROR_TYPE_INT_REPORT));
         expectRules.add(buildFilterConfigFlow(SPINE_DEVICE_ID));
 
         // Expected steps of method calls, captures, and results.
@@ -440,6 +464,12 @@ public class FabricIntProgrammableTest {
             BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT));
         expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false,
             BMD_TYPE_DEFLECTED, INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID));
+        expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false,
+                                BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_QUEUE, MIRROR_TYPE_INT_REPORT));
+        expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false,
+                                BMD_TYPE_EGRESS_MIRROR,
+                                (short) (INT_REPORT_TYPE_QUEUE | INT_REPORT_TYPE_LOCAL),
+                                MIRROR_TYPE_INT_REPORT));
         expectRules.add(buildFilterConfigFlow(LEAF_DEVICE_ID));
 
         List<Capture<FlowRule>> captures = Lists.newArrayList();
@@ -512,7 +542,14 @@ public class FabricIntProgrammableTest {
                                          INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT)),
                 buildFlowEntry(
                     buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_DEFLECTED,
-                                         INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID))
+                                         INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID)),
+                buildFlowEntry(
+                    buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR,
+                                         INT_REPORT_TYPE_QUEUE, MIRROR_TYPE_INT_REPORT)),
+                buildFlowEntry(
+                    buildReportTableRule(SPINE_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR,
+                                         (short) (INT_REPORT_TYPE_QUEUE | INT_REPORT_TYPE_LOCAL),
+                                         MIRROR_TYPE_INT_REPORT))
         );
         Set<FlowEntry> randomEntries = buildRandomFlowEntries();
         Set<FlowEntry> entries = Sets.newHashSet(intEntries);
@@ -801,13 +838,13 @@ public class FabricIntProgrammableTest {
                     P4InfoConstants.MON_LABEL,
                     NODE_SID_IPV4
             ));
-            if (reportType == INT_REPORT_TYPE_LOCAL) {
+            if ((reportType & (INT_REPORT_TYPE_LOCAL | INT_REPORT_TYPE_QUEUE)) != 0) {
                 reportAction.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_LOCAL_REPORT_ENCAP_MPLS);
             } else {
                 reportAction.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_DROP_REPORT_ENCAP_MPLS);
             }
         } else {
-            if (reportType == INT_REPORT_TYPE_LOCAL) {
+            if ((reportType & (INT_REPORT_TYPE_LOCAL | INT_REPORT_TYPE_QUEUE)) != 0) {
                 reportAction.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_LOCAL_REPORT_ENCAP);
             } else {
                 reportAction.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_DROP_REPORT_ENCAP);
