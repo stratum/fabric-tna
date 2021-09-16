@@ -3,7 +3,7 @@
 package org.stratumproject.fabric.tna.slicing;
 
 import com.google.common.base.MoreObjects;
-import org.stratumproject.fabric.tna.slicing.api.TrafficClass;
+import org.onosproject.net.slicing.TrafficClass;
 
 import java.util.Objects;
 

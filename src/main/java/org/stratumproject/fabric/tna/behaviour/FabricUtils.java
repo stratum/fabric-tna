@@ -16,6 +16,7 @@ import org.onosproject.net.flowobjective.NextTreatment;
 import org.onosproject.net.flowobjective.Objective;
 import org.onosproject.net.pi.model.PiPipelineInterpreter;
 import org.onosproject.net.pi.model.PiTableId;
+import org.onosproject.net.slicing.TrafficClass;
 import org.onosproject.store.serializers.KryoNamespaces;
 import org.stratumproject.fabric.tna.behaviour.pipeliner.FabricPipeliner;
 
@@ -33,7 +34,12 @@ import static org.onosproject.segmentrouting.metadata.SRObjectiveMetadata.isSrMe
 import static org.stratumproject.fabric.tna.behaviour.Constants.MAX_SLICE_ID;
 import static org.stratumproject.fabric.tna.behaviour.Constants.MAX_TC;
 import static org.stratumproject.fabric.tna.behaviour.Constants.METADATA_TO_PORT_TYPE;
+import static org.stratumproject.fabric.tna.behaviour.Constants.TC_BEST_EFFORT;
 import static org.stratumproject.fabric.tna.behaviour.Constants.TC_BITWIDTH;
+import static org.stratumproject.fabric.tna.behaviour.Constants.TC_CONTROL;
+import static org.stratumproject.fabric.tna.behaviour.Constants.TC_ELASTIC;
+import static org.stratumproject.fabric.tna.behaviour.Constants.TC_REAL_TIME;
+import static org.stratumproject.fabric.tna.behaviour.Constants.TC_SYSTEM;
 
 /**
  * Utility class with methods common to fabric-tna pipeconf operations.
@@ -137,6 +143,23 @@ public final class FabricUtils {
         checkArgument(sliceId >= 0 && sliceId <= MAX_SLICE_ID, "Invalid sliceId");
         checkArgument(tc >= 0 && tc <= MAX_TC, "Invalid tc");
         return (sliceId << TC_BITWIDTH) + tc;
+    }
+
+    public static int tcToFabricConstants(TrafficClass tc) {
+        switch (tc) {
+            case BEST_EFFORT:
+                return TC_BEST_EFFORT;
+            case CONTROL:
+                return TC_CONTROL;
+            case REAL_TIME:
+                return TC_REAL_TIME;
+            case ELASTIC:
+                return TC_ELASTIC;
+            case SYSTEM:
+                return TC_SYSTEM;
+            default:
+                throw new IllegalArgumentException(String.format("TC %s is not supported", tc));
+        }
     }
 
     /**

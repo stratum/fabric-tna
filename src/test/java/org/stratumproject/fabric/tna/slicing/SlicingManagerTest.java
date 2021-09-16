@@ -28,18 +28,20 @@ import org.onosproject.net.intent.WorkPartitionService;
 import org.onosproject.net.pi.model.PiTableId;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
+import org.onosproject.net.slicing.SliceId;
+import org.onosproject.net.slicing.TrafficClass;
 import org.onosproject.store.service.StorageService;
 import org.stratumproject.fabric.tna.behaviour.P4InfoConstants;
 import org.stratumproject.fabric.tna.slicing.api.Color;
 import org.stratumproject.fabric.tna.slicing.api.QueueId;
-import org.stratumproject.fabric.tna.slicing.api.SliceId;
-import org.stratumproject.fabric.tna.slicing.api.TrafficClass;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.onlab.junit.TestTools.assertAfter;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.sliceTcConcat;
+import static org.stratumproject.fabric.tna.behaviour.FabricUtils.tcToFabricConstants;
+import static org.stratumproject.fabric.tna.behaviour.Constants.DEFAULT_SLICE_ID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_QOS_QUEUES;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_COLOR;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_COLOR_BITWIDTH;
@@ -68,7 +70,7 @@ public class SlicingManagerTest {
     @Before
     public void setup() {
         SLICE_IDS.clear();
-        SLICE_IDS.add(SliceId.DEFAULT);
+        SLICE_IDS.add(SliceId.of(DEFAULT_SLICE_ID));
         SLICE_IDS.add(SliceId.of(1));
         SLICE_IDS.add(SliceId.of(2));
         SLICE_IDS.add(SliceId.of(3));
@@ -131,7 +133,11 @@ public class SlicingManagerTest {
         assertEquals(expectedTcs, manager.getTrafficClasses(SLICE_IDS.get(2)));
 
         // Abnormal
-        assertFalse(manager.addSlice(SLICE_IDS.get(0)));
+        try {
+            manager.addSlice(SLICE_IDS.get(0));
+        } catch (Exception e) {
+            assertEquals(e.getClass(), IllegalArgumentException.class);
+        }
         assertFalse(manager.addSlice(SLICE_IDS.get(1)));
     }
 
@@ -156,7 +162,11 @@ public class SlicingManagerTest {
         assertEquals(expectedSliceIds, manager.getSlices());
 
         // Abnormal
-        assertFalse(manager.removeSlice(SLICE_IDS.get(0)));
+        try {
+            manager.removeSlice(SLICE_IDS.get(0));
+        } catch (Exception e) {
+            assertEquals(e.getClass(), IllegalArgumentException.class);
+        }
         assertFalse(manager.removeSlice(SLICE_IDS.get(1)));
     }
 
@@ -183,7 +193,11 @@ public class SlicingManagerTest {
         // Abnormal
         assertFalse(manager.addTrafficClass(SLICE_IDS.get(1), TrafficClass.BEST_EFFORT));
         assertFalse(manager.addTrafficClass(SLICE_IDS.get(1), TrafficClass.CONTROL));
-        assertFalse(manager.addTrafficClass(SLICE_IDS.get(1), TrafficClass.SYSTEM));
+        try {
+            manager.addTrafficClass(SLICE_IDS.get(1), TrafficClass.SYSTEM);
+        } catch (Exception e) {
+            assertEquals(e.getClass(), IllegalArgumentException.class);
+        }
         assertFalse(manager.addTrafficClass(SLICE_IDS.get(2), TrafficClass.CONTROL));
 
         // Normal
@@ -213,7 +227,11 @@ public class SlicingManagerTest {
         assertEquals(expectedTcs, manager.getTrafficClasses(SLICE_IDS.get(1)));
 
         // Abnormal
-        assertFalse(manager.removeTrafficClass(SLICE_IDS.get(1), TrafficClass.BEST_EFFORT));
+        try {
+            manager.removeTrafficClass(SLICE_IDS.get(1), TrafficClass.BEST_EFFORT);
+        } catch (Exception e) {
+            assertEquals(e.getClass(), IllegalArgumentException.class);
+        }
         assertEquals(expectedTcs, manager.getTrafficClasses(SLICE_IDS.get(1)));
 
         // Normal
@@ -336,7 +354,7 @@ public class SlicingManagerTest {
         // Hard coded parameters
         PiCriterion.Builder piCriterionBuilder = PiCriterion.builder()
                 .matchExact(P4InfoConstants.HDR_SLICE_TC,
-                    sliceTcConcat(SLICE_IDS.get(1).id(), TrafficClass.BEST_EFFORT.ordinal()));
+                    sliceTcConcat(SLICE_IDS.get(1).id(), tcToFabricConstants(TrafficClass.BEST_EFFORT)));
 
         PiAction.Builder piTableActionBuilder = PiAction.builder()
                 .withId(P4InfoConstants.FABRIC_INGRESS_QOS_SET_QUEUE)
@@ -359,7 +377,7 @@ public class SlicingManagerTest {
         // Hard coded parameters
         PiCriterion.Builder piCriterionBuilder = PiCriterion.builder()
                 .matchExact(P4InfoConstants.HDR_SLICE_TC,
-                    sliceTcConcat(SLICE_IDS.get(1).id(), TrafficClass.CONTROL.ordinal()))
+                    sliceTcConcat(SLICE_IDS.get(1).id(), tcToFabricConstants(TrafficClass.CONTROL)))
                 .matchTernary(HDR_COLOR, Color.GREEN.ordinal(), 1 << HDR_COLOR_BITWIDTH - 1);
 
         PiAction.Builder piTableActionBuilder = PiAction.builder()
@@ -383,7 +401,7 @@ public class SlicingManagerTest {
         // Hard coded parameters
         PiCriterion.Builder piCriterionBuilder = PiCriterion.builder()
                 .matchExact(P4InfoConstants.HDR_SLICE_TC,
-                    sliceTcConcat(SLICE_IDS.get(1).id(), TrafficClass.CONTROL.ordinal()))
+                    sliceTcConcat(SLICE_IDS.get(1).id(), tcToFabricConstants(TrafficClass.CONTROL)))
                 .matchTernary(HDR_COLOR, Color.RED.ordinal(), 1 << HDR_COLOR_BITWIDTH - 1);
 
         PiAction.Builder piTableActionBuilder = PiAction.builder()

@@ -55,6 +55,7 @@ public final class Constants {
     public static final int TC_CONTROL = 1;
     public static final int TC_REAL_TIME = 2;
     public static final int TC_ELASTIC = 3;
+    public static final int TC_SYSTEM = 99;
 
     public static final int DEFAULT_SLICE_ID = 0;
 

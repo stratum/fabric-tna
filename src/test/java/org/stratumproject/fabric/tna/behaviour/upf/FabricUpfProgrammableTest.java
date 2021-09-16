@@ -29,10 +29,10 @@ import org.onosproject.net.pi.model.PiCounterModel;
 import org.onosproject.net.pi.model.PiTableModel;
 import org.onosproject.net.pi.service.PiPipeconfService;
 import org.onosproject.net.pi.service.PiTranslationService;
+import org.onosproject.net.slicing.SlicingService;
 import org.onosproject.p4runtime.api.P4RuntimeController;
 import org.stratumproject.fabric.tna.PipeconfLoader;
 import org.stratumproject.fabric.tna.behaviour.FabricCapabilities;
-import org.stratumproject.fabric.tna.slicing.api.SlicingService;
 
 import java.net.URI;
 import java.nio.ByteBuffer;

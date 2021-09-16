@@ -89,4 +89,9 @@ public class MockTableModel implements PiTableModel {
     public Optional<PiMatchFieldModel> matchField(PiMatchFieldId matchFieldId) {
         return Optional.empty();
     }
+
+    @Override
+    public boolean oneShotOnly() {
+        return false;
+    }
 }

@@ -6,7 +6,7 @@ package org.stratumproject.fabric.tna.web;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.onosproject.codec.CodecContext;
 import org.onosproject.codec.JsonCodec;
-import org.stratumproject.fabric.tna.slicing.api.TrafficClass;
+import org.onosproject.net.slicing.TrafficClass;
 
 import static org.onlab.util.Tools.nullIsIllegal;
 

@@ -24,6 +24,9 @@ import org.onosproject.net.intent.WorkPartitionService;
 import org.onosproject.net.pi.model.PiTableId;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
+import org.onosproject.net.slicing.SliceId;
+import org.onosproject.net.slicing.SlicingService;
+import org.onosproject.net.slicing.TrafficClass;
 import org.onosproject.store.serializers.KryoNamespaces;
 import org.onosproject.store.service.ConsistentMap;
 import org.onosproject.store.service.MapEvent;
@@ -39,10 +42,7 @@ import org.slf4j.Logger;
 import org.stratumproject.fabric.tna.behaviour.P4InfoConstants;
 import org.stratumproject.fabric.tna.slicing.api.Color;
 import org.stratumproject.fabric.tna.slicing.api.QueueId;
-import org.stratumproject.fabric.tna.slicing.api.SliceId;
 import org.stratumproject.fabric.tna.slicing.api.SlicingAdminService;
-import org.stratumproject.fabric.tna.slicing.api.SlicingService;
-import org.stratumproject.fabric.tna.slicing.api.TrafficClass;
 import org.stratumproject.fabric.tna.web.SliceIdCodec;
 import org.stratumproject.fabric.tna.web.TrafficClassCodec;
 
@@ -57,9 +57,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static org.onlab.util.Tools.groupedThreads;
 import static org.slf4j.LoggerFactory.getLogger;
+import static org.stratumproject.fabric.tna.behaviour.Constants.DEFAULT_SLICE_ID;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.sliceTcConcat;
+import static org.stratumproject.fabric.tna.behaviour.FabricUtils.tcToFabricConstants;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_QOS_QUEUES;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_COLOR;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_COLOR_BITWIDTH;
@@ -129,7 +132,7 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
         sliceStore.addListener(sliceListener);
 
         // Default slice is pre-provisioned
-        sliceStore.put(new SliceStoreKey(SliceId.DEFAULT, TrafficClass.BEST_EFFORT), QueueId.BEST_EFFORT);
+        sliceStore.put(new SliceStoreKey(SliceId.of(DEFAULT_SLICE_ID), TrafficClass.BEST_EFFORT), QueueId.BEST_EFFORT);
 
         queueStore = storageService.<QueueId, QueueStoreValue>consistentMapBuilder()
                 .withName("fabric-tna-queue")
@@ -180,20 +183,14 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
 
     @Override
     public boolean addSlice(SliceId sliceId) {
-        if (sliceId.equals(SliceId.DEFAULT)) {
-            log.warn("Adding default slice is not allowed");
-            return false;
-        }
+        checkArgument(sliceId.id() != DEFAULT_SLICE_ID, "Adding default slice is not allowed");
 
         return addTrafficClass(sliceId, TrafficClass.BEST_EFFORT);
     }
 
     @Override
     public boolean removeSlice(SliceId sliceId) {
-        if (sliceId.equals(SliceId.DEFAULT)) {
-            log.warn("Removing default slice is not allowed");
-            return false;
-        }
+        checkArgument(sliceId.id() != DEFAULT_SLICE_ID, "Removing default slice is not allowed");
 
         Set<TrafficClass> tcs = getTrafficClasses(sliceId);
         if (tcs.isEmpty()) {
@@ -223,10 +220,7 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
 
     @Override
     public boolean addTrafficClass(SliceId sliceId, TrafficClass tc) {
-        if (tc == TrafficClass.SYSTEM) {
-            log.warn("SYSTEM TC should not be associated with any slice");
-            return false;
-        }
+        checkArgument(tc != TrafficClass.SYSTEM, "SYSTEM TC should not be associated with any slice");
 
         // Ensure the presence of BEST_EFFORT TC in the slice
         if (tc != TrafficClass.BEST_EFFORT) {
@@ -264,14 +258,11 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
     public boolean removeTrafficClass(SliceId sliceId, TrafficClass tc) {
         // Ensure the presence of BEST_EFFORT TC in the slice
         if (tc == TrafficClass.BEST_EFFORT) {
-            if (sliceId.equals(SliceId.DEFAULT)) {
-                log.warn("Removing {} from {} is not allowed", tc, sliceId);
-                return false;
-            }
-            if (getTrafficClasses(sliceId).stream().anyMatch(existTc -> existTc != TrafficClass.BEST_EFFORT)) {
-                log.warn("Can't remove {} from {} while another TC exists", tc, sliceId);
-                return false;
-            }
+            checkArgument(sliceId.id() != DEFAULT_SLICE_ID,
+                String.format("Removing %s from default slice is not allowed", tc));
+
+            checkArgument(!getTrafficClasses(sliceId).stream().anyMatch(existTc -> existTc != TrafficClass.BEST_EFFORT),
+                String.format("Can't remove %s from slice: %s while another TC exists", tc, sliceId));
         }
 
         AtomicBoolean result = new AtomicBoolean(false);
@@ -427,7 +418,7 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
 
     private FlowRule buildFlowRule(DeviceId deviceId, SliceId sliceId, TrafficClass tc, QueueId queueId, Color color) {
         PiCriterion.Builder piCriterionBuilder = PiCriterion.builder()
-                .matchExact(P4InfoConstants.HDR_SLICE_TC, sliceTcConcat(sliceId.id(), tc.ordinal()));
+                .matchExact(P4InfoConstants.HDR_SLICE_TC, sliceTcConcat(sliceId.id(), tcToFabricConstants(tc)));
         if (color != null) {
             piCriterionBuilder.matchTernary(HDR_COLOR, color.ordinal(), 1 << HDR_COLOR_BITWIDTH - 1);
         }
@@ -449,8 +440,6 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
         log.info("{}", flowRule);
         return flowRule;
     }
-
-    // TODO Expose REST API
 
     private class InternalSliceListener implements MapEventListener<SliceStoreKey, QueueId> {
         public void event(MapEvent<SliceStoreKey, QueueId> event) {

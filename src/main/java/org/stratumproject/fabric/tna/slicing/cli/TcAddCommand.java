@@ -6,9 +6,9 @@ import org.apache.karaf.shell.api.action.Argument;
 import org.apache.karaf.shell.api.action.Command;
 import org.apache.karaf.shell.api.action.lifecycle.Service;
 import org.onosproject.cli.AbstractShellCommand;
-import org.stratumproject.fabric.tna.slicing.api.SliceId;
-import org.stratumproject.fabric.tna.slicing.api.SlicingService;
-import org.stratumproject.fabric.tna.slicing.api.TrafficClass;
+import org.onosproject.net.slicing.SliceId;
+import org.onosproject.net.slicing.SlicingService;
+import org.onosproject.net.slicing.TrafficClass;
 
 /**
  * Add traffic class.

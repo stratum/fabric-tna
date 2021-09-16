@@ -34,13 +34,13 @@ import org.onosproject.net.pi.runtime.PiActionParam;
 import org.onosproject.net.pi.runtime.PiCounterCell;
 import org.onosproject.net.pi.runtime.PiCounterCellHandle;
 import org.onosproject.net.pi.runtime.PiCounterCellId;
+import org.onosproject.net.slicing.SliceId;
+import org.onosproject.net.slicing.SlicingService;
+import org.onosproject.net.slicing.TrafficClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.stratumproject.fabric.tna.PipeconfLoader;
 import org.stratumproject.fabric.tna.behaviour.FabricCapabilities;
-import org.stratumproject.fabric.tna.slicing.api.SliceId;
-import org.stratumproject.fabric.tna.slicing.api.SlicingService;
-import org.stratumproject.fabric.tna.slicing.api.TrafficClass;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -51,6 +51,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.onosproject.net.pi.model.PiCounterType.INDIRECT;
+import static org.stratumproject.fabric.tna.behaviour.Constants.DEFAULT_SLICE_ID;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.sliceTcConcat;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_GTPU_ENCAP;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_PDR_COUNTER;
@@ -139,9 +140,9 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
             log.info("UpfProgrammable initialized for appId {} and deviceId {}", appId, deviceId);
             // Add static Queue Configuration
             // Default slice and best effort TC will be created by SlicingService by default
-            slicingService.addTrafficClass(SliceId.DEFAULT, TrafficClass.CONTROL);
-            slicingService.addTrafficClass(SliceId.DEFAULT, TrafficClass.REAL_TIME);
-            slicingService.addTrafficClass(SliceId.DEFAULT, TrafficClass.ELASTIC);
+            slicingService.addTrafficClass(SliceId.of(DEFAULT_SLICE_ID), TrafficClass.CONTROL);
+            slicingService.addTrafficClass(SliceId.of(DEFAULT_SLICE_ID), TrafficClass.REAL_TIME);
+            slicingService.addTrafficClass(SliceId.of(DEFAULT_SLICE_ID), TrafficClass.ELASTIC);
             return true;
         }
         return false;
@@ -274,9 +275,9 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         }
         log.info("Clearing all UPF-related table entries.");
         // Remove static Queue Configuration
-        slicingService.removeTrafficClass(SliceId.DEFAULT, TrafficClass.CONTROL);
-        slicingService.removeTrafficClass(SliceId.DEFAULT, TrafficClass.REAL_TIME);
-        slicingService.removeTrafficClass(SliceId.DEFAULT, TrafficClass.ELASTIC);
+        slicingService.removeTrafficClass(SliceId.of(DEFAULT_SLICE_ID), TrafficClass.CONTROL);
+        slicingService.removeTrafficClass(SliceId.of(DEFAULT_SLICE_ID), TrafficClass.REAL_TIME);
+        slicingService.removeTrafficClass(SliceId.of(DEFAULT_SLICE_ID), TrafficClass.ELASTIC);
         fabricUpfStore.reset();
     }
 

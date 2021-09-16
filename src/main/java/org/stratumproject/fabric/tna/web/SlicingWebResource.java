@@ -5,12 +5,12 @@ package org.stratumproject.fabric.tna.web;
 
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.onosproject.net.slicing.SliceId;
+import org.onosproject.net.slicing.SlicingService;
+import org.onosproject.net.slicing.TrafficClass;
 import org.onosproject.rest.AbstractWebResource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.stratumproject.fabric.tna.slicing.api.SliceId;
-import org.stratumproject.fabric.tna.slicing.api.SlicingService;
-import org.stratumproject.fabric.tna.slicing.api.TrafficClass;
 
 import java.util.Set;
 

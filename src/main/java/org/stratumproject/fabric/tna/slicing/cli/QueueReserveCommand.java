@@ -6,9 +6,9 @@ import org.apache.karaf.shell.api.action.Argument;
 import org.apache.karaf.shell.api.action.Command;
 import org.apache.karaf.shell.api.action.lifecycle.Service;
 import org.onosproject.cli.AbstractShellCommand;
+import org.onosproject.net.slicing.TrafficClass;
 import org.stratumproject.fabric.tna.slicing.api.QueueId;
 import org.stratumproject.fabric.tna.slicing.api.SlicingAdminService;
-import org.stratumproject.fabric.tna.slicing.api.TrafficClass;
 
 /**
  * Reserve queue for TC.
