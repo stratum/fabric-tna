@@ -3,6 +3,7 @@
 
 from base_test import *
 from trex.stl.api import STLClient
+from subprocess import Popen, PIPE
 
 
 class TRexTest(P4RuntimeTest):
@@ -28,3 +29,32 @@ class TRexTest(P4RuntimeTest):
         self.trex_client.release()
         self.trex_client.disconnect()
         super(TRexTest, self).tearDown()
+
+    def pypy_parse_pcap(self, pcap_file: str, total_flows: str = None) -> dict:
+        cmd = ["pypy", "test.py", pcap_file]
+        if total_flows:
+            cmd.append(total_flows)
+
+        try:
+            p = Popen(cmd, stdout=PIPE)
+            output, _ = p.communicate()
+            out = output.decode('UTF-8')
+            print(out)
+
+            results = out.splitlines()
+
+            scores = {}
+            for result in results:
+                if "Drop report filter accuracy" in result:
+                    scores["drop_accuracy_score"] = float(result.split(" ")[-1])
+                elif "Drop report filter efficiency" in result:
+                    scores["drop_efficiency_score"] = float(result.split(" ")[-1])
+                elif "Flow report filter accuracy" in result:
+                    scores["flow_accuracy_score"] = float(result.split(" ")[-1])
+                elif "Flow report filter efficiency" in result:
+                    scores["flow_efficiency_score"] = float(result.split(" ")[-1])
+
+            return scores
+
+        except Exception as e:
+            print("Error when parsing pcap: {}".format(e))

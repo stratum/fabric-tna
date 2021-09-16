@@ -9,16 +9,14 @@ from ptf.testutils import group
 from trex_stl_lib.api import STLPktBuilder, STLStream, STLTXCont
 from trex_test import TRexTest
 from trex_utils import list_port_status
-from xnt import analyze_report_pcap
-import sys
 
 TRAFFIC_MULT = "40gbpsl1"
 TEST_DURATION = 10
 CAPTURE_LIMIT = 20
 
-SENDER_PORTS = [0]
-RECEIVER_PORTS = [1]
-INT_COLLECTOR_PORTS = [2]
+SENDER_PORT = 0
+RECEIVER_PORT = 1
+INT_COLLECTOR_PORT = 2
 
 
 @group("int")
@@ -34,7 +32,6 @@ class IntSingleFlow(TRexTest, IntTest):
         is_next_hop_spine,
     ):
 
-        print("int-single-flow: python is {}".format(sys.version))
         # Install routing flows onto hardware switch
         self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine)
         self.runIPv4UnicastTest(
@@ -52,28 +49,37 @@ class IntSingleFlow(TRexTest, IntTest):
 
         # Define traffic to be sent
         stream = STLStream(packet=STLPktBuilder(pkt=pkt, vm=[]), mode=STLTXCont())
-        self.trex_client.add_streams(stream, ports=SENDER_PORTS)
+        self.trex_client.add_streams(stream, ports=[SENDER_PORT])
 
         # Capture INT packets
-        self.trex_client.set_service_mode(ports=INT_COLLECTOR_PORTS, enabled=True)
+        self.trex_client.set_service_mode(ports=[INT_COLLECTOR_PORT], enabled=True)
         capture = self.trex_client.start_capture(
-            rx_ports=INT_COLLECTOR_PORTS,
+            rx_ports=[INT_COLLECTOR_PORT],
             limit=CAPTURE_LIMIT,
             bpf_filter="udp and dst port 32766",
         )
 
         # Start sending stateless traffic
-        self.trex_client.start(ports=SENDER_PORTS, mult=mult, duration=TEST_DURATION)
-        self.trex_client.wait_on_traffic(ports=SENDER_PORTS)
+        self.trex_client.start(ports=[SENDER_PORT], mult=mult, duration=TEST_DURATION)
+        self.trex_client.wait_on_traffic(ports=[SENDER_PORT])
 
         output = "/tmp/int-single-flow-{}.pcap".format(
             datetime.now().strftime("%Y%m%d-%H%M%S")
         )
         self.trex_client.stop_capture(capture["id"], output)
-        analyze_report_pcap(output)
-        list_port_status(self.trex_client.get_stats())
 
-        # TODO: parse data and verify results
+        self.pypy_parse_pcap(output)
+        port_stats = self.trex_client.get_stats()
+
+        sent_packets = port_stats[SENDER_PORT]["opackets"]
+        recv_packets = port_stats[RECEIVER_PORT]["ipackets"]
+
+        list_port_status(port_stats)
+
+        self.failIf(
+            sent_packets != recv_packets,
+            f"Didn't receive all packets; sent {sent_packets}, received {recv_packets}",
+        )
 
     def runTest(self):
         # TODO: iterate all possible parameters of test
