@@ -5,7 +5,6 @@
 
 import logging
 import os
-import sys
 from os.path import abspath, exists, splitext
 
 import matplotlib.pyplot as plt
@@ -152,9 +151,6 @@ def get_readable_int_report_str(pkt: Packet) -> str:
 
 
 def analyze_report_pcap(pcap_file: str, total_flows_from_trace: int = 0) -> dict:
-
-    print("\nanalyze_report_pcap: python is {}".format(sys.version))
-    
     pcap_reader = PcapReader(pcap_file)
     skipped = 0
     dropped = 0  # based on seq number
