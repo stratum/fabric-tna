@@ -58,7 +58,7 @@ control FlowReportFilter(
     };
 
     apply {
-        if (fabric_md.int_report_md.report_type == INT_REPORT_TYPE_LOCAL) {
+        if (fabric_md.int_report_md.report_type == INT_REPORT_TYPE_FLOW) {
             digest = digester.get({ // burp!
                 fabric_md.bridged.base.ig_port,
                 eg_intr_md.egress_port,
@@ -146,7 +146,7 @@ control IntWatchlist(
 #endif // WITH_DEBUG
 
     action mark_to_report() {
-        fabric_md.bridged.int_bmd.report_type = INT_REPORT_TYPE_LOCAL;
+        fabric_md.bridged.int_bmd.report_type = INT_REPORT_TYPE_FLOW;
         ig_tm_md.deflect_on_drop = 1;
 #ifdef WITH_DEBUG
         watchlist_counter.count();
@@ -238,9 +238,9 @@ control IntIngress(
         const entries = {
             // Explicit drop. Do not report if we are punting to the CPU, since that is
             // implemented as drop+copy_to_cpu.
-            (INT_REPORT_TYPE_LOCAL, 1, false, _, _): report_drop();
+            (INT_REPORT_TYPE_FLOW, 1, false, _, _): report_drop();
             // Likely a table miss
-            (INT_REPORT_TYPE_LOCAL, 0, false, false, 0): report_drop();
+            (INT_REPORT_TYPE_FLOW, 0, false, false, 0): report_drop();
         }
         const default_action = nop();
 #ifdef WITH_DEBUG
@@ -430,10 +430,10 @@ control IntEgress (
         // entries = {
         //      (INT_INGRESS_DROP, INVALID, DROP): ingress drop report
         //      (EGRESS_MIRROR, INT_REPORT, DROP): egress drop report
-        //      (DEFLECTED, INVALID, LOCAL): deflect on drop report
-        //      (EGRESS_MIRROR, INT_REPORT, LOCAL): local report
+        //      (DEFLECTED, INVALID, FLOW): deflect on drop report
+        //      (EGRESS_MIRROR, INT_REPORT, FLOW): flow report
         //      (EGRESS_MIRROR, INT_REPORT, QUEUE): queue report
-        //      (EGRESS_MIRROR, INT_REPORT, QUEUE|LOCAL): queue report
+        //      (EGRESS_MIRROR, INT_REPORT, QUEUE|FLOW): flow+queue report
         // }
 #ifdef WITH_DEBUG
         counters = report_counter;
@@ -477,10 +477,10 @@ control IntEgress (
         const default_action = nop();
         const size = 6;
         const entries = {
-            (INT_REPORT_TYPE_LOCAL, 0, false): init_int_metadata(INT_REPORT_TYPE_LOCAL);
-            (INT_REPORT_TYPE_LOCAL, 0, true): init_int_metadata(INT_REPORT_TYPE_LOCAL|INT_REPORT_TYPE_QUEUE);
-            (INT_REPORT_TYPE_LOCAL, 1, false): init_int_metadata(INT_REPORT_TYPE_DROP);
-            (INT_REPORT_TYPE_LOCAL, 1, true): init_int_metadata(INT_REPORT_TYPE_DROP);
+            (INT_REPORT_TYPE_FLOW, 0, false): init_int_metadata(INT_REPORT_TYPE_FLOW);
+            (INT_REPORT_TYPE_FLOW, 0, true): init_int_metadata(INT_REPORT_TYPE_FLOW|INT_REPORT_TYPE_QUEUE);
+            (INT_REPORT_TYPE_FLOW, 1, false): init_int_metadata(INT_REPORT_TYPE_DROP);
+            (INT_REPORT_TYPE_FLOW, 1, true): init_int_metadata(INT_REPORT_TYPE_DROP);
             // Packets which does not tracked by the watchlist table
             (INT_REPORT_TYPE_NO_REPORT, 0, true): init_int_metadata(INT_REPORT_TYPE_QUEUE);
             (INT_REPORT_TYPE_NO_REPORT, 1, true): init_int_metadata(INT_REPORT_TYPE_QUEUE);

@@ -215,7 +215,7 @@ INT_TOS = 0
 INT_REPORT_TYPE_NO_REPORT = 0
 INT_REPORT_TYPE_DROP = 4
 INT_REPORT_TYPE_QUEUE = 2
-INT_REPORT_TYPE_LOCAL = 1
+INT_REPORT_TYPE_FLOW = 1
 
 INT_DROP_REASON_UNKNOWN = 0
 INT_DROP_REASON_TRAFFIC_MANAGER = 71
@@ -3058,7 +3058,7 @@ class IntTest(IPv4UnicastTest):
     ):
         action = ""
         # local report or queue report or both
-        if (report_type & (INT_REPORT_TYPE_LOCAL | INT_REPORT_TYPE_QUEUE)) != 0:
+        if (report_type & (INT_REPORT_TYPE_FLOW | INT_REPORT_TYPE_QUEUE)) != 0:
             action = "do_local_report_encap"
         elif report_type == INT_REPORT_TYPE_DROP:
             action = "do_drop_report_encap"
@@ -3106,7 +3106,7 @@ class IntTest(IPv4UnicastTest):
             BRIDGED_MD_TYPE_EGRESS_MIRROR, MIRROR_TYPE_INT_REPORT, INT_REPORT_TYPE_DROP
         )
         set_up_report_flow_internal(
-            BRIDGED_MD_TYPE_EGRESS_MIRROR, MIRROR_TYPE_INT_REPORT, INT_REPORT_TYPE_LOCAL
+            BRIDGED_MD_TYPE_EGRESS_MIRROR, MIRROR_TYPE_INT_REPORT, INT_REPORT_TYPE_FLOW
         )
         set_up_report_flow_internal(
             BRIDGED_MD_TYPE_DEFLECTED, MIRROR_TYPE_INVALID, INT_REPORT_TYPE_DROP
@@ -3117,7 +3117,7 @@ class IntTest(IPv4UnicastTest):
         set_up_report_flow_internal(
             BRIDGED_MD_TYPE_EGRESS_MIRROR,
             MIRROR_TYPE_INT_REPORT,
-            INT_REPORT_TYPE_QUEUE | INT_REPORT_TYPE_LOCAL,
+            INT_REPORT_TYPE_QUEUE | INT_REPORT_TYPE_FLOW,
         )
 
     def set_up_report_mirror_flow(self, pipe_id, mirror_id, port):

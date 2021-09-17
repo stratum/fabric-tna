@@ -107,7 +107,7 @@ public class FabricIntProgrammableTest {
     private static final short BMD_TYPE_INT_INGRESS_DROP = 4;
     private static final short MIRROR_TYPE_INVALID = 0;
     private static final short MIRROR_TYPE_INT_REPORT = 1;
-    private static final short INT_REPORT_TYPE_LOCAL = 1;
+    private static final short INT_REPORT_TYPE_FLOW = 1;
     private static final short INT_REPORT_TYPE_QUEUE = 2;
     private static final short INT_REPORT_TYPE_DROP = 4;
     private static final HostLocation COLLECTOR_LOCATION = new HostLocation(LEAF_DEVICE_ID, PortNumber.P0, 0);
@@ -214,13 +214,13 @@ public class FabricIntProgrammableTest {
         expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false,
             BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_DROP, MIRROR_TYPE_INT_REPORT));
         expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false,
-            BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT));
+            BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_FLOW, MIRROR_TYPE_INT_REPORT));
         expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false,
             BMD_TYPE_DEFLECTED, INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID));
         expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false,
             BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_QUEUE, MIRROR_TYPE_INT_REPORT));
         expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false,
-            BMD_TYPE_EGRESS_MIRROR, (short) (INT_REPORT_TYPE_QUEUE | INT_REPORT_TYPE_LOCAL),
+            BMD_TYPE_EGRESS_MIRROR, (short) (INT_REPORT_TYPE_QUEUE | INT_REPORT_TYPE_FLOW),
             MIRROR_TYPE_INT_REPORT));
         expectRules.add(buildFilterConfigFlow(LEAF_DEVICE_ID));
 
@@ -281,14 +281,14 @@ public class FabricIntProgrammableTest {
         expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR,
                                 INT_REPORT_TYPE_DROP, MIRROR_TYPE_INT_REPORT));
         expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR,
-                                INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT));
+                                INT_REPORT_TYPE_FLOW, MIRROR_TYPE_INT_REPORT));
         expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_DEFLECTED,
                                 INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID));
         expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false,
                                 BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_QUEUE, MIRROR_TYPE_INT_REPORT));
         expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false,
                                 BMD_TYPE_EGRESS_MIRROR,
-                                (short) (INT_REPORT_TYPE_QUEUE | INT_REPORT_TYPE_LOCAL),
+                                (short) (INT_REPORT_TYPE_QUEUE | INT_REPORT_TYPE_FLOW),
                                 MIRROR_TYPE_INT_REPORT));
         expectRules.add(buildFilterConfigFlow(LEAF_DEVICE_ID));
 
@@ -339,14 +339,14 @@ public class FabricIntProgrammableTest {
         expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR,
                                 INT_REPORT_TYPE_DROP, MIRROR_TYPE_INT_REPORT));
         expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR,
-                                INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT));
+                                INT_REPORT_TYPE_FLOW, MIRROR_TYPE_INT_REPORT));
         expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_DEFLECTED,
                                 INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID));
         expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false,
                                 BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_QUEUE, MIRROR_TYPE_INT_REPORT));
         expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false,
                                 BMD_TYPE_EGRESS_MIRROR,
-                                (short) (INT_REPORT_TYPE_QUEUE | INT_REPORT_TYPE_LOCAL),
+                                (short) (INT_REPORT_TYPE_QUEUE | INT_REPORT_TYPE_FLOW),
                                 MIRROR_TYPE_INT_REPORT));
         expectRules.add(buildFilterConfigFlow(LEAF_DEVICE_ID));
 
@@ -393,14 +393,14 @@ public class FabricIntProgrammableTest {
         expectRules.add(buildReportTableRule(SPINE_DEVICE_ID, true, BMD_TYPE_EGRESS_MIRROR,
                                      INT_REPORT_TYPE_DROP, MIRROR_TYPE_INT_REPORT));
         expectRules.add(buildReportTableRule(SPINE_DEVICE_ID, true, BMD_TYPE_EGRESS_MIRROR,
-                                     INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT));
+                                     INT_REPORT_TYPE_FLOW, MIRROR_TYPE_INT_REPORT));
         expectRules.add(buildReportTableRule(SPINE_DEVICE_ID, true, BMD_TYPE_DEFLECTED,
                                      INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID));
         expectRules.add(buildReportTableRule(SPINE_DEVICE_ID, true,
                                 BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_QUEUE, MIRROR_TYPE_INT_REPORT));
         expectRules.add(buildReportTableRule(SPINE_DEVICE_ID, true,
                                 BMD_TYPE_EGRESS_MIRROR,
-                                (short) (INT_REPORT_TYPE_QUEUE | INT_REPORT_TYPE_LOCAL),
+                                (short) (INT_REPORT_TYPE_QUEUE | INT_REPORT_TYPE_FLOW),
                                 MIRROR_TYPE_INT_REPORT));
         expectRules.add(buildFilterConfigFlow(SPINE_DEVICE_ID));
 
@@ -461,14 +461,14 @@ public class FabricIntProgrammableTest {
         expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false,
             BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_DROP, MIRROR_TYPE_INT_REPORT));
         expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false,
-            BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT));
+            BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_FLOW, MIRROR_TYPE_INT_REPORT));
         expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false,
             BMD_TYPE_DEFLECTED, INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID));
         expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false,
                                 BMD_TYPE_EGRESS_MIRROR, INT_REPORT_TYPE_QUEUE, MIRROR_TYPE_INT_REPORT));
         expectRules.add(buildReportTableRule(LEAF_DEVICE_ID, false,
                                 BMD_TYPE_EGRESS_MIRROR,
-                                (short) (INT_REPORT_TYPE_QUEUE | INT_REPORT_TYPE_LOCAL),
+                                (short) (INT_REPORT_TYPE_QUEUE | INT_REPORT_TYPE_FLOW),
                                 MIRROR_TYPE_INT_REPORT));
         expectRules.add(buildFilterConfigFlow(LEAF_DEVICE_ID));
 
@@ -539,7 +539,7 @@ public class FabricIntProgrammableTest {
                                          INT_REPORT_TYPE_DROP, MIRROR_TYPE_INT_REPORT)),
                 buildFlowEntry(
                     buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR,
-                                         INT_REPORT_TYPE_LOCAL, MIRROR_TYPE_INT_REPORT)),
+                                         INT_REPORT_TYPE_FLOW, MIRROR_TYPE_INT_REPORT)),
                 buildFlowEntry(
                     buildReportTableRule(LEAF_DEVICE_ID, false, BMD_TYPE_DEFLECTED,
                                          INT_REPORT_TYPE_DROP, MIRROR_TYPE_INVALID)),
@@ -548,7 +548,7 @@ public class FabricIntProgrammableTest {
                                          INT_REPORT_TYPE_QUEUE, MIRROR_TYPE_INT_REPORT)),
                 buildFlowEntry(
                     buildReportTableRule(SPINE_DEVICE_ID, false, BMD_TYPE_EGRESS_MIRROR,
-                                         (short) (INT_REPORT_TYPE_QUEUE | INT_REPORT_TYPE_LOCAL),
+                                         (short) (INT_REPORT_TYPE_QUEUE | INT_REPORT_TYPE_FLOW),
                                          MIRROR_TYPE_INT_REPORT))
         );
         Set<FlowEntry> randomEntries = buildRandomFlowEntries();
@@ -838,13 +838,13 @@ public class FabricIntProgrammableTest {
                     P4InfoConstants.MON_LABEL,
                     NODE_SID_IPV4
             ));
-            if ((reportType & (INT_REPORT_TYPE_LOCAL | INT_REPORT_TYPE_QUEUE)) != 0) {
+            if ((reportType & (INT_REPORT_TYPE_FLOW | INT_REPORT_TYPE_QUEUE)) != 0) {
                 reportAction.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_LOCAL_REPORT_ENCAP_MPLS);
             } else {
                 reportAction.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_DROP_REPORT_ENCAP_MPLS);
             }
         } else {
-            if ((reportType & (INT_REPORT_TYPE_LOCAL | INT_REPORT_TYPE_QUEUE)) != 0) {
+            if ((reportType & (INT_REPORT_TYPE_FLOW | INT_REPORT_TYPE_QUEUE)) != 0) {
                 reportAction.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_LOCAL_REPORT_ENCAP);
             } else {
                 reportAction.withId(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_DO_DROP_REPORT_ENCAP);

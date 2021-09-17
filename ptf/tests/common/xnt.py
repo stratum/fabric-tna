@@ -156,7 +156,7 @@ def analyze_report_pcap(pcap_file: str, total_flows_from_trace: int = 0) -> dict
     dropped = 0  # based on seq number
     prev_seq_no = {}  # HW ID -> seq number
 
-    # Local report
+    # Flow/Queue reports (With local report header)
     local_reports = 0
     five_tuple_to_prev_local_report_time = {}  # 5-tuple -> latest report time
     flow_with_multiple_local_reports = set()
