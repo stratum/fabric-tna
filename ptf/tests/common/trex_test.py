@@ -3,7 +3,8 @@
 
 from base_test import *
 from trex.stl.api import STLClient
-from subprocess import Popen, PIPE
+from subprocess import Popen
+import pickle
 
 
 class TRexTest(P4RuntimeTest):
@@ -31,30 +32,27 @@ class TRexTest(P4RuntimeTest):
         super(TRexTest, self).tearDown()
 
     def pypy_parse_pcap(self, pcap_file: str, total_flows: str = None) -> dict:
-        cmd = ["pypy", "test.py", pcap_file]
+        code = "import pickle\n" \
+               "from xnt import analyze_report_pcap\n"
+
         if total_flows:
-            cmd.append(total_flows)
+            code += f"result = analyze_report_pcap('{pcap_file}', {total_flows})\n"
+        else:
+            code += f"result = analyze_report_pcap('{pcap_file}')\n"
+
+        code += "with open('trace.pickle', 'wb') as handle:\n" \
+                "    pickle.dump(result, handle, protocol=pickle.HIGHEST_PROTOCOL)"
+
+        cmd = ["pypy", "-c", code]
 
         try:
-            p = Popen(cmd, stdout=PIPE)
-            output, _ = p.communicate()
-            out = output.decode('UTF-8')
-            print(out)
+            p = Popen(cmd)
+            p.wait()
 
-            results = out.splitlines()
+            with open('trace.pickle', 'rb') as handle:
+                result = pickle.load(handle)
 
-            scores = {}
-            for result in results:
-                if "Drop report filter accuracy" in result:
-                    scores["drop_accuracy_score"] = float(result.split(" ")[-1])
-                elif "Drop report filter efficiency" in result:
-                    scores["drop_efficiency_score"] = float(result.split(" ")[-1])
-                elif "Flow report filter accuracy" in result:
-                    scores["flow_accuracy_score"] = float(result.split(" ")[-1])
-                elif "Flow report filter efficiency" in result:
-                    scores["flow_efficiency_score"] = float(result.split(" ")[-1])
-
-            return scores
+            return result
 
         except Exception as e:
             print("Error when parsing pcap: {}".format(e))
