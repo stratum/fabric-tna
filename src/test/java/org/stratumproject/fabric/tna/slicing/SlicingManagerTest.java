@@ -38,10 +38,12 @@ import org.stratumproject.fabric.tna.slicing.api.QueueId;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.onlab.junit.TestTools.assertAfter;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.sliceTcConcat;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.tcToFabricConstants;
 import static org.stratumproject.fabric.tna.behaviour.Constants.DEFAULT_SLICE_ID;
+import static org.stratumproject.fabric.tna.behaviour.Constants.MAX_SLICE_ID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_QOS_QUEUES;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_COLOR;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_COLOR_BITWIDTH;
@@ -135,10 +137,17 @@ public class SlicingManagerTest {
         // Abnormal
         try {
             manager.addSlice(SLICE_IDS.get(0));
+            fail();
         } catch (Exception e) {
             assertEquals(e.getClass(), IllegalArgumentException.class);
         }
         assertFalse(manager.addSlice(SLICE_IDS.get(1)));
+        try {
+            manager.addSlice(SliceId.of(MAX_SLICE_ID + 1));
+            fail();
+        } catch (Exception e) {
+            assertEquals(e.getClass(), IllegalArgumentException.class);
+        }
     }
 
     @Test
@@ -164,10 +173,17 @@ public class SlicingManagerTest {
         // Abnormal
         try {
             manager.removeSlice(SLICE_IDS.get(0));
+            fail();
         } catch (Exception e) {
             assertEquals(e.getClass(), IllegalArgumentException.class);
         }
         assertFalse(manager.removeSlice(SLICE_IDS.get(1)));
+        try {
+            manager.removeSlice(SliceId.of(MAX_SLICE_ID + 1));
+            fail();
+        } catch (Exception e) {
+            assertEquals(e.getClass(), IllegalArgumentException.class);
+        }
     }
 
     @Test
@@ -195,6 +211,7 @@ public class SlicingManagerTest {
         assertFalse(manager.addTrafficClass(SLICE_IDS.get(1), TrafficClass.CONTROL));
         try {
             manager.addTrafficClass(SLICE_IDS.get(1), TrafficClass.SYSTEM);
+            fail();
         } catch (Exception e) {
             assertEquals(e.getClass(), IllegalArgumentException.class);
         }
@@ -229,6 +246,7 @@ public class SlicingManagerTest {
         // Abnormal
         try {
             manager.removeTrafficClass(SLICE_IDS.get(1), TrafficClass.BEST_EFFORT);
+            fail();
         } catch (Exception e) {
             assertEquals(e.getClass(), IllegalArgumentException.class);
         }

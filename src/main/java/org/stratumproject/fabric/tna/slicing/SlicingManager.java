@@ -61,6 +61,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static org.onlab.util.Tools.groupedThreads;
 import static org.slf4j.LoggerFactory.getLogger;
 import static org.stratumproject.fabric.tna.behaviour.Constants.DEFAULT_SLICE_ID;
+import static org.stratumproject.fabric.tna.behaviour.Constants.MAX_SLICE_ID;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.sliceTcConcat;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.tcToFabricConstants;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_QOS_QUEUES;
@@ -184,6 +185,7 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
     @Override
     public boolean addSlice(SliceId sliceId) {
         checkArgument(sliceId.id() != DEFAULT_SLICE_ID, "Adding default slice is not allowed");
+        checkArgument(sliceId.id() <= MAX_SLICE_ID, "Invalid slice id");
 
         return addTrafficClass(sliceId, TrafficClass.BEST_EFFORT);
     }
@@ -191,6 +193,7 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
     @Override
     public boolean removeSlice(SliceId sliceId) {
         checkArgument(sliceId.id() != DEFAULT_SLICE_ID, "Removing default slice is not allowed");
+        checkArgument(sliceId.id() <= MAX_SLICE_ID, "Invalid slice id");
 
         Set<TrafficClass> tcs = getTrafficClasses(sliceId);
         if (tcs.isEmpty()) {
