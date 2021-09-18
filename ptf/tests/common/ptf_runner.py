@@ -235,7 +235,7 @@ def set_up_trex_server(trex_daemon_client, trex_address, trex_config, force_rest
         trex_cmd_options = {}
         if trex_astf_mode:
             trex_cmd_options['astf'] = True
-            trex_cmd_options['c'] = 16
+            trex_cmd_options['c'] = 1
 
         trex_daemon_client.start_stateless(cfg=trex_config_file_on_server, **trex_cmd_options)
     except ConnectionRefusedError:

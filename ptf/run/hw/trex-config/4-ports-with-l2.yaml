@@ -28,7 +28,7 @@
     traffic_mbuf_512    : 128
     traffic_mbuf_1024   : 256
     traffic_mbuf_2048   : 128
-    dp_flows    : 10000000
+    dp_flows    : 4096
   platform:
     master_thread_id: 0
     rx_thread_id: 17
