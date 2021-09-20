@@ -363,17 +363,13 @@ def pypy_analyze_int_report_pcap(pcap_file: str, total_flows: int = 0) -> dict:
             "    pickle.dump(result, handle, protocol=pickle.HIGHEST_PROTOCOL)"
 
     cmd = ["pypy", "-c", code]
+    p = Popen(cmd)
+    p.wait()
 
-    try:
-        p = Popen(cmd)
-        p.wait()
+    with open('trace.pickle', 'rb') as handle:
+        result = pickle.load(handle)
 
-        with open('trace.pickle', 'rb') as handle:
-            result = pickle.load(handle)
-
-        return result
-    except Exception as e:
-        raise e
+    return result
 
 
 def plot_histogram_and_cdf(report_plot_file, valid_report_irgs):
