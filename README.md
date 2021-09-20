@@ -29,6 +29,7 @@ To use ONOS to control a Tofino switch, you will need to run the
 * ONOS >= 2.5.1
 * Docker (to run the build scripts without worrying about dependencies)
 * cURL (to interact with the ONOS REST APIs)
+* ip (to 
 
 ### Barefoot SDE Docker Image
 
@@ -43,8 +44,10 @@ Once you obtain such Docker image, set the following environment variables:
 
 ```bash
 export SDE_VERSION=9.5.0
-export SDE_DOCKER_IMG=my-docker-repo/bf-sde:9.5.0-tm
+export SDE_DOCKER_IMG=my-docker-repo/bf-sde:9.5.0
 ```
+
+If you can access ONF's docker registry use the image `9.5.0-tm`.
 
 ## Quick steps
 
