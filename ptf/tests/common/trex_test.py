@@ -3,8 +3,6 @@
 
 from base_test import *
 from trex.stl.api import STLClient
-from subprocess import Popen
-import pickle
 
 
 class TRexTest(P4RuntimeTest):
@@ -30,29 +28,3 @@ class TRexTest(P4RuntimeTest):
         self.trex_client.release()
         self.trex_client.disconnect()
         super(TRexTest, self).tearDown()
-
-    def pypy_parse_pcap(self, pcap_file: str, total_flows: str = None) -> dict:
-        code = "import pickle\n" \
-               "from xnt import analyze_report_pcap\n"
-
-        if total_flows:
-            code += f"result = analyze_report_pcap('{pcap_file}', {total_flows})\n"
-        else:
-            code += f"result = analyze_report_pcap('{pcap_file}')\n"
-
-        code += "with open('trace.pickle', 'wb') as handle:\n" \
-                "    pickle.dump(result, handle, protocol=pickle.HIGHEST_PROTOCOL)"
-
-        cmd = ["pypy", "-c", code]
-
-        try:
-            p = Popen(cmd)
-            p.wait()
-
-            with open('trace.pickle', 'rb') as handle:
-                result = pickle.load(handle)
-
-            return result
-
-        except Exception as e:
-            print("Error when parsing pcap: {}".format(e))

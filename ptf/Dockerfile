@@ -134,7 +134,6 @@ ENV RUNTIME_DEPS \
     build-essential \
     python3-pip \
     wget \
-    git \
     libatlas-base-dev \
     gfortran \
     netbase
@@ -149,15 +148,14 @@ COPY --from=proto-deps /output /usr/lib/python3.8/dist-packages
 COPY --from=ptf-deps /python_output /
 # Install custom scapy version from TRex
 RUN cd ${TREX_EXT_LIBS}/scapy-${SCAPY_VER}/ && python3 setup.py install
-# Build pypy from source and install ptf with pypy
+# Build pypy from source for traffic trace tests
 RUN cd /opt/ && \
     wget -nv https://downloads.python.org/pypy/pypy3.7-v7.3.5-linux64.tar.bz2 && \
     tar xf pypy3.7-v7.3.5-linux64.tar.bz2 && \
     ln -s /opt/pypy3.7-v7.3.5-linux64/bin/pypy /usr/local/bin/pypy
 RUN pypy -m ensurepip && \
-    pypy -mpip install -U pip wheel && \
-    pypy -mpip install git+https://github.com/p4lang/ptf@$PTF_VER && \
-    pypy -mpip install --no-cache-dir six scipy==1.5.4 numpy==1.19.4 matplotlib==3.3.3 pyyaml==5.4.1 scapy==2.4.5
+    pypy -mpip install -U pip wheel
+RUN pypy -mpip install --no-cache-dir six scipy==1.5.4 numpy==1.19.4 matplotlib==3.3.3 pyyaml==5.4.1 scapy==2.4.5
 RUN ldconfig
 
 ENTRYPOINT []

@@ -9,10 +9,13 @@ from ptf.testutils import group
 from trex_stl_lib.api import STLPktBuilder, STLStream, STLTXCont
 from trex_test import TRexTest
 from trex_utils import list_port_status
+from xnt import pypy_analyze_int_report_pcap
 
 TRAFFIC_MULT = "40gbpsl1"
 TEST_DURATION = 10
-CAPTURE_LIMIT = 20
+CAPTURE_LIMIT = 30
+
+MIN_FLOW_REPORTS = 28
 
 SENDER_PORT = 0
 RECEIVER_PORT = 1
@@ -68,7 +71,7 @@ class IntSingleFlow(TRexTest, IntTest):
         )
         self.trex_client.stop_capture(capture["id"], output)
 
-        self.pypy_parse_pcap(output)
+        results = pypy_analyze_int_report_pcap(output)
         port_stats = self.trex_client.get_stats()
 
         sent_packets = port_stats[SENDER_PORT]["opackets"]
@@ -76,9 +79,26 @@ class IntSingleFlow(TRexTest, IntTest):
 
         list_port_status(port_stats)
 
+        """
+        Verify the following:
+        - Packet loss: No packets were dropped during the test
+        - INT reports: 1 INT report per second per flow was generated
+        """
         self.failIf(
             sent_packets != recv_packets,
             f"Didn't receive all packets; sent {sent_packets}, received {recv_packets}",
+        )
+
+        """
+        Although duration is 10, test in reality runs for 29-30 seconds. Since
+        one INT report is generated each second for each flow, and this test has
+        one flow, the expected number of flow reports generated should be at
+        least 28.
+        """
+        local_reports = results["local_reports"]
+        self.failIf(
+            local_reports < MIN_FLOW_REPORTS,
+            f"Flow reports generated for ~30 second test should be at least 28, was {local_reports}",
         )
 
     def runTest(self):
