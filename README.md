@@ -43,7 +43,7 @@ Once you obtain such Docker image, set the following environment variables:
 
 ```bash
 export SDE_VERSION=9.5.0
-export SDE_DOCKER_IMG=my-docker-repo/bf-sde:9.5.0
+export SDE_DOCKER_IMG=my-docker-repo/bf-sde:9.5.0-tm
 ```
 
 ## Quick steps
