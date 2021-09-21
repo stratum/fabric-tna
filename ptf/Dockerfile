@@ -119,7 +119,6 @@ FROM ubuntu:20.04
 ARG TREX_EXT_LIBS
 ARG TREX_LIBS
 ARG SCAPY_VER
-ARG PTF_VER
 
 #FIXME: Remove tcpdump, netbase after removing ptf
 ENV RUNTIME_DEPS \
