@@ -133,9 +133,10 @@ ENV RUNTIME_DEPS \
     build-essential \
     python3-pip \
     wget \
+    netbase \
+    # below packages are necessary dependencies for installing scipy in PyPy
     libatlas-base-dev \
-    gfortran \
-    netbase
+    gfortran
 
 RUN apt update && apt install -y $RUNTIME_DEPS
 RUN pip3 install --no-cache-dir scipy==1.5.4 numpy==1.19.4 matplotlib==3.3.3 pyyaml==5.4.1
