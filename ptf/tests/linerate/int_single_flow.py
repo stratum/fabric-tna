@@ -89,12 +89,8 @@ class IntSingleFlow(TRexTest, IntTest):
             f"Didn't receive all packets; sent {sent_packets}, received {recv_packets}",
         )
 
-        """
-        Although duration is 10, test in reality runs for 29-30 seconds. Since
-        one INT report is generated each second for each flow, and this test has
-        one flow, the expected number of flow reports generated should be at
-        least 28.
-        """
+        # FIXME: Although duration specified is 10, test in reality runs for 29-30 seconds, and
+        # thus generates 28-29 INT flow reports
         local_reports = results["local_reports"]
         self.failIf(
             local_reports < MIN_FLOW_REPORTS,
