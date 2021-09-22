@@ -83,9 +83,9 @@ ARG P4RUNTIME_SHELL_VER
 ARG UNITTEST_XML_REPORTING_VER
 
 ENV RUNTIME_DEPS \
-	python3 \
-	python3-pip \
-	python3-setuptools \
+    python3 \
+    python3-pip \
+    python3-setuptools \
     git
 
 ENV PIP_DEPS \
@@ -132,7 +132,11 @@ ENV RUNTIME_DEPS \
     python3-dev \
     build-essential \
     python3-pip \
-    netbase
+    wget \
+    netbase \
+    # below packages are necessary dependencies for installing scipy in PyPy
+    libatlas-base-dev \
+    gfortran
 
 RUN apt update && apt install -y $RUNTIME_DEPS
 RUN pip3 install --no-cache-dir scipy==1.5.4 numpy==1.19.4 matplotlib==3.3.3 pyyaml==5.4.1
@@ -144,6 +148,14 @@ COPY --from=proto-deps /output /usr/lib/python3.8/dist-packages
 COPY --from=ptf-deps /python_output /
 # Install custom scapy version from TRex
 RUN cd ${TREX_EXT_LIBS}/scapy-${SCAPY_VER}/ && python3 setup.py install
+# Build pypy from source for traffic trace tests
+RUN cd /opt/ && \
+    wget -nv https://downloads.python.org/pypy/pypy3.7-v7.3.5-linux64.tar.bz2 && \
+    tar xf pypy3.7-v7.3.5-linux64.tar.bz2 && \
+    ln -s /opt/pypy3.7-v7.3.5-linux64/bin/pypy /usr/local/bin/pypy
+RUN pypy -m ensurepip && \
+    pypy -mpip install -U pip wheel
+RUN pypy -mpip install --no-cache-dir six scipy==1.5.4 numpy==1.19.4 matplotlib==3.3.3 pyyaml==5.4.1 scapy==2.4.5
 RUN ldconfig
 
 ENTRYPOINT []

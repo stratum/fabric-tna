@@ -1511,7 +1511,7 @@ class FabricSpgwUplinkIntTest(SpgwIntTest):
             "leaf-spine-spine",
         ]:
             for test_args in get_test_args(
-                traffic_dir=traffic_dir, spgw_type="UL_PSC", int_test_type="local"
+                traffic_dir=traffic_dir, spgw_type="UL_PSC", int_test_type="flow"
             ):
                 self.doRunTest(**test_args)
 
@@ -1560,7 +1560,7 @@ class FabricSpgwDownlinkIntTest(SpgwIntTest):
             "leaf-spine-spine",
         ]:
             for test_args in get_test_args(
-                traffic_dir=traffic_dir, spgw_type="DL_PSC", int_test_type="local"
+                traffic_dir=traffic_dir, spgw_type="DL_PSC", int_test_type="flow"
             ):
                 self.doRunTest(**test_args)
 
@@ -1675,7 +1675,7 @@ class FabricSpgwIntDownlinkDropTest(SpgwIntTest):
 
 
 @group("int")
-class FabricIntLocalReportTest(IntTest):
+class FabricIntFlowReportTest(IntTest):
     @tvsetup
     @autocleanup
     def doRunTest(
@@ -1717,7 +1717,7 @@ class FabricIntLocalReportTest(IntTest):
             "leaf-spine-spine",
         ]:
             for test_args in get_test_args(
-                traffic_dir=traffic_dir, int_test_type="local"
+                traffic_dir=traffic_dir, int_test_type="flow"
             ):
                 self.doRunTest(**test_args)
 
@@ -1824,7 +1824,7 @@ class FabricIntEgressDropReportTest(IntTest):
             "leaf-spine-spine",
         ]:
             for test_args in get_test_args(
-                traffic_dir=traffic_dir, int_test_type="local"
+                traffic_dir=traffic_dir, int_test_type="flow"
             ):
                 self.doRunTest(**test_args)
 
@@ -2623,7 +2623,7 @@ class FabricPacketOutLoopbackModeTest(FabricTest):
 
 
 @group("int")
-class FabricIntLocalReportLoopbackModeTest(IntTest):
+class FabricIntFlowReportLoopbackModeTest(IntTest):
     @tvsetup
     @autocleanup
     def doRunTest(self, pkt, next_hop_mac, is_device_spine, send_report_to_spine=False):

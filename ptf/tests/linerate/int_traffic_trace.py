@@ -8,7 +8,7 @@ from fabric_test import *
 from ptf.testutils import group
 from trex_test import TRexTest
 from trex_utils import list_port_status
-from xnt import analyze_report_pcap
+from xnt import pypy_analyze_int_report_pcap
 
 TRAFFIC_SPEEDUP = 1.0
 TEST_DURATION = 60
@@ -77,7 +77,7 @@ class IntFlowFilterWithTrafficTrace(TRexTest, IntTest):
             datetime.now().strftime("%Y%m%d-%H%M%S")
         )
         self.trex_client.stop_capture(capture["id"], output)
-        results = analyze_report_pcap(output, TOTAL_FLOWS)
+        results = pypy_analyze_int_report_pcap(output, TOTAL_FLOWS)
 
         port_stats = self.trex_client.get_stats()
         sent_packets = port_stats[SENDER_PORT]["opackets"]
@@ -161,7 +161,7 @@ class IntIngressDropReportFilterWithTrafficTrace(TRexTest, IntTest):
             datetime.now().strftime("%Y%m%d-%H%M%S")
         )
         self.trex_client.stop_capture(capture["id"], output)
-        results = analyze_report_pcap(output, TOTAL_FLOWS)
+        results = pypy_analyze_int_report_pcap(output, TOTAL_FLOWS)
 
         port_stats = self.trex_client.get_stats()
         sent_packets = port_stats[SENDER_PORT]["opackets"]

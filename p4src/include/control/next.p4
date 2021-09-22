@@ -156,16 +156,21 @@ control Next (inout ingress_headers_t hdr,
         multicast_counter.count();
     }
 
+    action reset_mcast_group_id() {
+        ig_intr_md_for_tm.mcast_grp_a = 0;
+        fabric_md.bridged.base.is_multicast = false;
+    }
+
     table multicast {
         key = {
             fabric_md.next_id: exact @name("next_id");
         }
         actions = {
             set_mcast_group_id;
-            @defaultonly nop;
+            @defaultonly reset_mcast_group_id;
         }
         counters = multicast_counter;
-        const default_action = nop();
+        const default_action = reset_mcast_group_id();
         size = MULTICAST_NEXT_TABLE_SIZE;
     }
 

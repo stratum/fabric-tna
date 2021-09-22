@@ -295,6 +295,8 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.int_watchlist.no_report_collector");
     public static final PiActionId FABRIC_INGRESS_NEXT_OUTPUT_HASHED =
             PiActionId.of("FabricIngress.next.output_hashed");
+    public static final PiActionId FABRIC_INGRESS_NEXT_RESET_MCAST_GROUP_ID =
+            PiActionId.of("FabricIngress.next.reset_mcast_group_id");
     public static final PiActionId FABRIC_INGRESS_NEXT_ROUTING_HASHED =
             PiActionId.of("FabricIngress.next.routing_hashed");
     public static final PiActionId FABRIC_INGRESS_NEXT_SET_MCAST_GROUP_ID =

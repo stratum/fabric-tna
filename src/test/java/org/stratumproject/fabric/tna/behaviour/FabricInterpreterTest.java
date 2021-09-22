@@ -13,7 +13,11 @@ import org.onlab.packet.VlanId;
 import org.onlab.util.ImmutableByteSequence;
 import org.onosproject.net.ConnectPoint;
 import org.onosproject.net.DeviceId;
+import org.onosproject.net.Port;
 import org.onosproject.net.PortNumber;
+import org.onosproject.net.device.DeviceService;
+import org.onosproject.net.driver.DriverData;
+import org.onosproject.net.driver.DriverHandler;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
 import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.net.packet.DefaultInboundPacket;
@@ -21,14 +25,17 @@ import org.onosproject.net.packet.DefaultOutboundPacket;
 import org.onosproject.net.packet.InboundPacket;
 import org.onosproject.net.packet.OutboundPacket;
 import org.onosproject.net.pi.model.PiPacketOperationType;
+import org.onosproject.net.pi.model.PiPipeconf;
 import org.onosproject.net.pi.model.PiPipelineInterpreter;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
 import org.onosproject.net.pi.runtime.PiPacketMetadata;
 import org.onosproject.net.pi.runtime.PiPacketOperation;
+import org.onosproject.net.pi.service.PiPipeconfService;
 
 import java.nio.ByteBuffer;
 import java.util.Collection;
+import java.util.Optional;
 
 import static org.easymock.EasyMock.createNiceMock;
 import static org.easymock.EasyMock.expect;
@@ -48,16 +55,29 @@ public class FabricInterpreterTest {
     private static final DeviceId DEVICE_ID = DeviceId.deviceId("device:1");
 
     private FabricInterpreter interpreter;
-
-    FabricCapabilities allCapabilities;
+    private DeviceService deviceService;
 
     @Before
     public void setup() {
-        allCapabilities = createNiceMock(FabricCapabilities.class);
-        expect(allCapabilities.hasHashedTable()).andReturn(true).anyTimes();
-        expect(allCapabilities.supportDoubleVlanTerm()).andReturn(true).anyTimes();
-        replay(allCapabilities);
-        interpreter = new FabricInterpreter(allCapabilities);
+        DriverData data = createNiceMock(DriverData.class);
+        expect(data.deviceId()).andReturn(DEVICE_ID).anyTimes();
+        replay(data);
+
+        PiPipeconf piPipeconf = createNiceMock(PiPipeconf.class);
+
+        PiPipeconfService piPipeconfService = createNiceMock(PiPipeconfService.class);
+        expect(piPipeconfService.getPipeconf(DEVICE_ID)).andReturn(Optional.of(piPipeconf));
+        replay(piPipeconfService);
+
+        DriverHandler handler = createNiceMock(DriverHandler.class);
+        deviceService = createNiceMock(DeviceService.class);
+        expect(handler.get(DeviceService.class)).andReturn(deviceService).anyTimes();
+        expect(handler.data()).andReturn(data).anyTimes();
+        expect(handler.get(PiPipeconfService.class)).andReturn(piPipeconfService).anyTimes();
+        replay(handler);
+
+        interpreter = new FabricInterpreter();
+        interpreter.setHandler(handler);
     }
 
     /* Forwarding control block */
@@ -392,6 +412,48 @@ public class FabricInterpreterTest {
                 = new DefaultInboundPacket(receiveFrom, packet, ByteBuffer.wrap(packet.serialize()));
 
         assertEquals(result.receivedFrom(), expectedInboundPacket.receivedFrom());
+        assertEquals(result.parsed(), expectedInboundPacket.parsed());
+        assertEquals(result.cookie(), expectedInboundPacket.cookie());
+
+        assertEquals(result.unparsed(), expectedInboundPacket.unparsed());
+    }
+
+    @Test
+    public void testMapInboundPacketWithPortTranslation() throws ImmutableByteSequence.ByteSequenceTrimException,
+            PiPipelineInterpreter.PiInterpreterException {
+        PortNumber inputPort = PortNumber.portNumber(1, "ONE");
+        ConnectPoint receiveFrom = new ConnectPoint(DEVICE_ID, inputPort);
+
+        Port port = createNiceMock(Port.class);
+        expect(port.number()).andReturn(inputPort).anyTimes();
+        replay(port);
+
+        expect(deviceService.getPort(receiveFrom)).andReturn(port).anyTimes();
+        replay(deviceService);
+
+        PiPacketMetadata pktInMetadata = PiPacketMetadata.builder()
+                .withId(P4InfoConstants.INGRESS_PORT)
+                .withValue(ImmutableByteSequence.copyFrom(inputPort.toLong())
+                        .fit(P4InfoConstants.INGRESS_PORT_BITWIDTH))
+                .build();
+        Ethernet packet = new Ethernet();
+        packet.setDestinationMACAddress(SRC_MAC);
+        packet.setSourceMACAddress(DST_MAC);
+        packet.setEtherType((short) 0xBA00);
+        packet.setPayload(new Data());
+
+        PiPacketOperation pktInOp = PiPacketOperation.builder()
+                .withMetadata(pktInMetadata)
+                .withData(ImmutableByteSequence.copyFrom(packet.serialize()))
+                .withType(PiPacketOperationType.PACKET_IN)
+                .build();
+        InboundPacket result = interpreter.mapInboundPacket(pktInOp, DEVICE_ID);
+
+        InboundPacket expectedInboundPacket
+                = new DefaultInboundPacket(receiveFrom, packet, ByteBuffer.wrap(packet.serialize()));
+
+        assertEquals(result.receivedFrom(), expectedInboundPacket.receivedFrom());
+        assertEquals(result.receivedFrom().port().name(), expectedInboundPacket.receivedFrom().port().name());
         assertEquals(result.parsed(), expectedInboundPacket.parsed());
         assertEquals(result.cookie(), expectedInboundPacket.cookie());
 

@@ -314,6 +314,9 @@ public class FabricInterpreter extends AbstractFabricHandlerBehavior
                         .value().fit(P4InfoConstants.INGRESS_PORT_BITWIDTH);
                 short s = portByteSequence.asReadOnlyBuffer().getShort();
                 ConnectPoint receivedFrom = new ConnectPoint(deviceId, PortNumber.portNumber(s));
+                if (!receivedFrom.port().hasName()) {
+                    receivedFrom = translateSwitchPort(receivedFrom);
+                }
                 ByteBuffer rawData = ByteBuffer.wrap(packetIn.data().asArray());
                 return new DefaultInboundPacket(receivedFrom, ethPkt, rawData);
             } catch (ImmutableByteSequence.ByteSequenceTrimException e) {
@@ -339,5 +342,20 @@ public class FabricInterpreter extends AbstractFabricHandlerBehavior
             return Optional.empty();
         }
         return capabilities.cpuPort();
+    }
+
+    /* Connect point generated using sb metadata does not have port name
+       we use the device service as translation service */
+    private ConnectPoint translateSwitchPort(ConnectPoint connectPoint) {
+        final DeviceService deviceService = handler().get(DeviceService.class);
+        if (deviceService == null) {
+            log.warn("Unable to translate switch port due to DeviceService not available");
+            return connectPoint;
+        }
+        Port devicePort = deviceService.getPort(connectPoint);
+        if (devicePort != null) {
+            return new ConnectPoint(connectPoint.deviceId(), devicePort.number());
+        }
+        return connectPoint;
     }
 }
