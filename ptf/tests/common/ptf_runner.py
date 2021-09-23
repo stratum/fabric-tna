@@ -113,7 +113,7 @@ def build_tofino_pipeline_config(tofino_pipeline_config_path):
 
 
 def update_config(
-    p4info_path, tofino_pipeline_config_path, grpc_addr, device_id, generate_tv=False,
+    p4info_path, pipeline_config_path, grpc_addr, device_id, generate_tv=False,
 ):
     """
     Performs a SetForwardingPipelineConfig on the device
@@ -127,7 +127,7 @@ def update_config(
     config = request.config
     with open(p4info_path, "r") as p4info_f:
         google.protobuf.text_format.Merge(p4info_f.read(), config.p4info)
-    device_config = build_tofino_pipeline_config(tofino_pipeline_config_path)
+    device_config = build_tofino_pipeline_config(pipeline_config_path)
     config.p4_device_config = device_config
     request.action = p4runtime_pb2.SetForwardingPipelineConfigRequest.VERIFY_AND_COMMIT
 
@@ -484,7 +484,7 @@ def main():
     if not args.skip_config:
         success = update_config(
             p4info_path=args.p4info,
-            tofino_pipeline_config_path=pipeline_config,
+            pipeline_config_path=pipeline_config,
             grpc_addr=args.grpc_addr,
             device_id=args.device_id,
             generate_tv=args.generate_tv,
