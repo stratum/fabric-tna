@@ -5,9 +5,9 @@
 
 import logging
 import os
+import pickle
 from os.path import abspath, exists, splitext
 from subprocess import Popen
-import pickle
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -350,8 +350,7 @@ def analyze_report_pcap(pcap_file: str, total_flows_from_trace: int = 0) -> dict
 
 
 def pypy_analyze_int_report_pcap(pcap_file: str, total_flows: int = 0) -> dict:
-    code = "import pickle\n" \
-           "from xnt import analyze_report_pcap\n"
+    code = "import pickle\n" "from xnt import analyze_report_pcap\n"
 
     if total_flows:
         code += f"result = analyze_report_pcap('{pcap_file}', {total_flows})\n"
@@ -359,14 +358,16 @@ def pypy_analyze_int_report_pcap(pcap_file: str, total_flows: int = 0) -> dict:
         code += f"result = analyze_report_pcap('{pcap_file}')\n"
 
     # pickle dictionary from analyze_report_pcap
-    code += "with open('trace.pickle', 'wb') as handle:\n" \
-            "    pickle.dump(result, handle, protocol=pickle.HIGHEST_PROTOCOL)"
+    code += (
+        "with open('trace.pickle', 'wb') as handle:\n"
+        "    pickle.dump(result, handle, protocol=pickle.HIGHEST_PROTOCOL)"
+    )
 
     cmd = ["pypy", "-c", code]
     p = Popen(cmd)
     p.wait()
 
-    with open('trace.pickle', 'rb') as handle:
+    with open("trace.pickle", "rb") as handle:
         result = pickle.load(handle)
 
     return result
