@@ -376,7 +376,8 @@ def main():
     )
     parser.add_argument(
         "--pipeline-config",
-        help="Location of the Tofino pipeline config binary " "(pb.bin)",
+        help="Location of the pipeline config file "
+        "(pb.bin for Tofino-model, bmv2.json for BmV2)",
         type=str,
         action="store",
         required=False,
@@ -471,9 +472,7 @@ def main():
         error("P4Info file {} not found".format(args.p4info))
         sys.exit(1)
     if not os.path.exists(args.pipeline_config):
-        error(
-            "Pipeline config file {} not found".format(args.pipeline_config)
-        )
+        error("Pipeline config file {} not found".format(args.pipeline_config))
         sys.exit(1)
     pipeline_config = args.pipeline_config
     if not os.path.exists(args.port_map):

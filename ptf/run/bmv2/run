@@ -17,11 +17,12 @@ echo "*** Starting ${testerRunName}..."
 
 # Do not attach stdin if running in an environment without it (e.g., Jenkins)
 it=$(test -t 0 && echo "-it" || echo "-t")
+# shellcheck disable=SC2068 disable=2086
 docker run --name "${testerRunName}" "${it}" --rm --privileged \
     --network "container:${stratumBmV2RunName}" \
     -e P4C_OUT="${P4C_OUT}" \
     -e PTF_FILTER="${PTF_FILTER}" \
     -v "${FABRIC_TNA_ROOT}":/fabric-tna \
     --entrypoint /fabric-tna/ptf/run/bmv2/start_test.sh \
-    "${TESTER_DOCKER_IMG}" \
-    "${@}"
+    ${TESTER_DOCKER_IMG} \
+    ${@}
