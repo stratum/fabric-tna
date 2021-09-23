@@ -375,7 +375,7 @@ def main():
         required=True,
     )
     parser.add_argument(
-        "--tofino-pipeline-config",
+        "--pipeline-config",
         help="Location of the Tofino pipeline config binary " "(pb.bin)",
         type=str,
         action="store",
@@ -466,16 +466,16 @@ def main():
         error("Cannot find PTF executable")
         sys.exit(1)
 
-    tofino_pipeline_config = None
+    pipeline_config = None
     if not os.path.exists(args.p4info):
         error("P4Info file {} not found".format(args.p4info))
         sys.exit(1)
-    if not os.path.exists(args.tofino_pipeline_config):
+    if not os.path.exists(args.pipeline_config):
         error(
-            "Tofino binary config file {} not found".format(args.tofino_pipeline_config)
+            "Pipeline config file {} not found".format(args.pipeline_config)
         )
         sys.exit(1)
-    tofino_pipeline_config = args.tofino_pipeline_config
+    pipeline_config = args.pipeline_config
     if not os.path.exists(args.port_map):
         info("Port map path '{}' does not exist".format(args.port_map))
         sys.exit(1)
@@ -485,7 +485,7 @@ def main():
     if not args.skip_config:
         success = update_config(
             p4info_path=args.p4info,
-            tofino_pipeline_config_path=tofino_pipeline_config,
+            tofino_pipeline_config_path=pipeline_config,
             grpc_addr=args.grpc_addr,
             device_id=args.device_id,
             generate_tv=args.generate_tv,
