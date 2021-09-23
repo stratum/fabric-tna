@@ -377,7 +377,7 @@ def main():
     parser.add_argument(
         "--pipeline-config",
         help="Location of the pipeline config file "
-        "(pb.bin for Tofino-model, bmv2.json for BmV2)",
+        "(pb.bin for Tofino, bmv2.json for bmv2)",
         type=str,
         action="store",
         required=False,
