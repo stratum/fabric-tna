@@ -10,7 +10,7 @@ define run_tests
 		--ptf-dir ../../tests/unary --cpu-port $(CPUPORT) --device-id 1 \
 		--grpc-addr $(GRPCADDR) \
 		--p4info /fabric-tna/${P4C_OUT}/p4info.txt \
-		--tofino-pipeline-config /fabric-tna/${P4C_OUT}/pipeline_config.pb.bin \
+		--pipeline-config /fabric-tna/${P4C_OUT}/pipeline_config.pb.bin \
 		--generate-tv \
 		--loopback \
 		--profile $(1) \
