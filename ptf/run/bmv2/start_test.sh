@@ -9,7 +9,6 @@ PTF_ROOT=${DIR}/../..
 TEST_DIR=${PTF_ROOT}/tests/common
 
 err_report() {
-    #TODO should we print ptf and stratum log?
 
     echo "************************************************"
     echo "SOME PTF TESTS FAILED :("
