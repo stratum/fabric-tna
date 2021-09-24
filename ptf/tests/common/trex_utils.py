@@ -3,8 +3,10 @@
 import argparse
 import collections
 import logging
+import time
 
 import numpy as np
+from trex.stl.api import STLClient
 
 # Multiplier for data rates
 K = 1000
@@ -101,6 +103,62 @@ def list_port_status(port_status: dict) -> None:
     for port in [0, 1, 2, 3]:
         readable_stats = get_readable_port_stats(port_status[port])
         print("States from port {}: \n{}".format(port, readable_stats))
+
+def cont_list_port_status(port: int, c: STLClient) -> None:
+    """
+    List some port stats continuously while traffic is active 
+
+    :parameters:
+    port_status: dict
+        Port status from Trex client API
+    """
+
+    prev = {
+            0: {"opackets": 0, "ipackets": 0, "obytes": 0, "ibytes": 0},
+            1: {"opackets": 0, "ipackets": 0, "obytes": 0, "ibytes": 0},
+            2: {"opackets": 0, "ipackets": 0, "obytes": 0, "ibytes": 0},
+            3: {"opackets": 0, "ipackets": 0, "obytes": 0, "ibytes": 0}
+           }
+
+    s_time = time.time()
+    while c.is_traffic_active():
+        print("TRAFFIC RUNNING {:.0f} SEC".format(time.time()-s_time))
+        print("--------------------------")
+        # for port in [0, 1, 2, 3]:
+        stats = c.get_stats(ports=[port])
+
+        opackets = stats[port]['opackets']
+        ipackets = stats[port]['ipackets']
+        obytes = stats[port]['obytes']
+        ibytes = stats[port]['ibytes']
+        
+        tx_pps = opackets - prev[port]["opackets"]
+        rx_pps = ipackets - prev[port]["ipackets"]
+        tx_bps = 8 * (obytes - prev[port]["obytes"])
+        rx_bps = 8 * (ibytes - prev[port]["ibytes"])
+
+        print("Status from port {}: ".format(port))
+        print(
+            """
+            TX pps: {}
+            RX pps: {}
+            TX bps: {}
+            RX bps: {}
+            """
+            .format(
+                to_readable(tx_pps, "pps"),
+                to_readable(rx_pps, "pps"),
+                to_readable(tx_bps, "bps"),
+                to_readable(rx_bps, "bps"),
+            )
+        )
+
+        prev[port]["opackets"] = opackets
+        prev[port]["ipackets"] = ipackets
+        prev[port]["obytes"] = obytes
+        prev[port]["ibytes"] = ibytes
+
+        time.sleep(1)
 
 
 LatencyStats = collections.namedtuple(
