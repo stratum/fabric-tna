@@ -11,9 +11,10 @@ from trex_test import TRexTest
 from trex_utils import list_port_status
 from xnt import pypy_analyze_int_report_pcap
 
-TRAFFIC_MULT = "40gbpsl1"
+TRAFFIC_MULT = "1"
+RATE = 40_000_000_000 # 40 Gbps
 TEST_DURATION = 10
-CAPTURE_LIMIT = 30
+CAPTURE_LIMIT = 10
 
 MIN_FLOW_REPORTS = 28
 
@@ -25,24 +26,18 @@ INT_COLLECTOR_PORT = 2
 @group("int")
 class IntSingleFlow(TRexTest, IntTest):
     @autocleanup
-    def doRunTest(
-        self,
-        mult,
-        pkt,
-        tagged,
-        is_device_spine,
-        send_report_to_spine,
-        is_next_hop_spine,
-    ):
+    def runTest(self):
+
+        pkt = testutils.simple_udp_packet(pktlen=1400)
 
         # Install routing flows onto hardware switch
-        self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine)
+        self.set_up_int_flows(is_device_spine=False, pkt=pkt, send_report_to_spine=False)
         self.runIPv4UnicastTest(
             pkt=pkt,
             next_hop_mac=HOST2_MAC,
-            tagged1=tagged[0],
-            tagged2=tagged[1],
-            is_next_hop_spine=is_next_hop_spine,
+            tagged1=False,
+            tagged2=False,
+            is_next_hop_spine=False,
             prefix_len=32,
             with_another_pkt_later=True,
             ig_port=self.port1,
@@ -51,7 +46,7 @@ class IntSingleFlow(TRexTest, IntTest):
         )
 
         # Define traffic to be sent
-        stream = STLStream(packet=STLPktBuilder(pkt=pkt, vm=[]), mode=STLTXCont())
+        stream = STLStream(packet=STLPktBuilder(pkt=pkt, vm=[]), mode=STLTXCont(bps_L1 = RATE))
         self.trex_client.add_streams(stream, ports=[SENDER_PORT])
 
         # Capture INT packets
@@ -63,7 +58,7 @@ class IntSingleFlow(TRexTest, IntTest):
         )
 
         # Start sending stateless traffic
-        self.trex_client.start(ports=[SENDER_PORT], mult=mult, duration=TEST_DURATION)
+        self.trex_client.start(ports=[SENDER_PORT], mult=TRAFFIC_MULT, duration=TEST_DURATION)
         self.trex_client.wait_on_traffic(ports=[SENDER_PORT])
 
         output = "/tmp/int-single-flow-{}.pcap".format(
@@ -82,7 +77,7 @@ class IntSingleFlow(TRexTest, IntTest):
         """
         Verify the following:
         - Packet loss: No packets were dropped during the test
-        - INT reports: 1 INT report per second per flow was generated
+        - Reports: 1 INT report per second per flow was generated
         """
         self.failIf(
             sent_packets != recv_packets,
@@ -96,8 +91,3 @@ class IntSingleFlow(TRexTest, IntTest):
             local_reports < MIN_FLOW_REPORTS,
             f"Flow reports generated for ~30 second test should be at least 28, was {local_reports}",
         )
-
-    def runTest(self):
-        # TODO: iterate all possible parameters of test
-        pkt = testutils.simple_udp_packet()
-        self.doRunTest(TRAFFIC_MULT, pkt, [False, False], False, False, False)
