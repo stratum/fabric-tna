@@ -105,9 +105,9 @@ def remove_dummy_interface():
         return True
 
 
-def build_tofino_pipeline_config(tofino_pipeline_config_path):
+def build_pipeline_config(pipeline_config_path):
     device_config = b""
-    with open(tofino_pipeline_config_path, "rb") as pipeline_config_f:
+    with open(pipeline_config_path, "rb") as pipeline_config_f:
         device_config += pipeline_config_f.read()
     return device_config
 
@@ -127,7 +127,7 @@ def update_config(
     config = request.config
     with open(p4info_path, "r") as p4info_f:
         google.protobuf.text_format.Merge(p4info_f.read(), config.p4info)
-    device_config = build_tofino_pipeline_config(pipeline_config_path)
+    device_config = build_pipeline_config(pipeline_config_path)
     config.p4_device_config = device_config
     request.action = p4runtime_pb2.SetForwardingPipelineConfigRequest.VERIFY_AND_COMMIT
 
