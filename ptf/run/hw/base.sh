@@ -28,7 +28,7 @@ fi
 echo "*** Testing profile '${fabricProfile}'..."
 
 sdeVer_=$(echo "${SDE_VERSION}" | tr . _) # Replace dots with underscores
-P4C_OUT=p4src/build/${fabricProfile}/sde_${sdeVer_}
+P4C_OUT=p4src/tna/build/${fabricProfile}/sde_${sdeVer_}
 echo "*** Using P4 compiler output in ${P4C_OUT}..."
 
 testerRunName=tester-${RANDOM}

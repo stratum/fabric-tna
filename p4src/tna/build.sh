@@ -10,7 +10,7 @@ MONTARA_CPU_PORT=192 # dual-pipe
 # DIR is this file directory.
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 P4_SRC_DIR=${DIR}
-ROOT_DIR="$( cd "${DIR}/../" && pwd )"
+ROOT_DIR="$( cd "${DIR}/../.." && pwd )"
 
 PROFILE=$1
 OTHER_PP_FLAGS=$2
@@ -20,7 +20,7 @@ source "${ROOT_DIR}/.env"
 
 # PWD is the directory where this script is called from (should be the root of
 # this repo).
-P4C_OUT=${ROOT_DIR}/p4src/build/${PROFILE}
+P4C_OUT=${ROOT_DIR}/p4src/tna/build/${PROFILE}
 # Prevent the creation by docker run to avoid having root owner
 mkdir -p "${P4C_OUT}"
 
