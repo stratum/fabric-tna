@@ -35,6 +35,7 @@ import org.onosproject.net.pi.runtime.PiCounterCell;
 import org.onosproject.net.pi.runtime.PiCounterCellHandle;
 import org.onosproject.net.pi.runtime.PiCounterCellId;
 import org.onosproject.net.slicing.SliceId;
+import org.onosproject.net.slicing.SlicingException;
 import org.onosproject.net.slicing.SlicingService;
 import org.onosproject.net.slicing.TrafficClass;
 import org.slf4j.Logger;
@@ -140,10 +141,14 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
             log.info("UpfProgrammable initialized for appId {} and deviceId {}", appId, deviceId);
             // Add static Queue Configuration
             // Default slice and best effort TC will be created by SlicingService by default
-            slicingService.addTrafficClass(SliceId.of(DEFAULT_SLICE_ID), TrafficClass.CONTROL);
-            slicingService.addTrafficClass(SliceId.of(DEFAULT_SLICE_ID), TrafficClass.REAL_TIME);
-            slicingService.addTrafficClass(SliceId.of(DEFAULT_SLICE_ID), TrafficClass.ELASTIC);
-            return true;
+            try {
+                slicingService.addTrafficClass(SliceId.of(DEFAULT_SLICE_ID), TrafficClass.CONTROL);
+                slicingService.addTrafficClass(SliceId.of(DEFAULT_SLICE_ID), TrafficClass.REAL_TIME);
+                slicingService.addTrafficClass(SliceId.of(DEFAULT_SLICE_ID), TrafficClass.ELASTIC);
+                return true;
+            } catch (IllegalArgumentException | SlicingException ex) {
+                log.warn(ex.getMessage());
+            }
         }
         return false;
     }
@@ -275,10 +280,15 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         }
         log.info("Clearing all UPF-related table entries.");
         // Remove static Queue Configuration
-        slicingService.removeTrafficClass(SliceId.of(DEFAULT_SLICE_ID), TrafficClass.CONTROL);
-        slicingService.removeTrafficClass(SliceId.of(DEFAULT_SLICE_ID), TrafficClass.REAL_TIME);
-        slicingService.removeTrafficClass(SliceId.of(DEFAULT_SLICE_ID), TrafficClass.ELASTIC);
-        fabricUpfStore.reset();
+        try {
+            slicingService.removeTrafficClass(SliceId.of(DEFAULT_SLICE_ID), TrafficClass.CONTROL);
+            slicingService.removeTrafficClass(SliceId.of(DEFAULT_SLICE_ID), TrafficClass.REAL_TIME);
+            slicingService.removeTrafficClass(SliceId.of(DEFAULT_SLICE_ID), TrafficClass.ELASTIC);
+        } catch (IllegalArgumentException | SlicingException ex) {
+            log.warn(ex.getMessage());
+        } finally {
+            fabricUpfStore.reset();
+        }
     }
 
     @Override

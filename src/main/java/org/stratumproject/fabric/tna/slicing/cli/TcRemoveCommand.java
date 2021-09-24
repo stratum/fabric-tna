@@ -7,6 +7,7 @@ import org.apache.karaf.shell.api.action.Command;
 import org.apache.karaf.shell.api.action.lifecycle.Service;
 import org.onosproject.cli.AbstractShellCommand;
 import org.onosproject.net.slicing.SliceId;
+import org.onosproject.net.slicing.SlicingException;
 import org.onosproject.net.slicing.SlicingService;
 import org.onosproject.net.slicing.TrafficClass;
 
@@ -27,7 +28,7 @@ public class TcRemoveCommand extends AbstractShellCommand {
     String tc;
 
     @Override
-    protected void doExecute() {
+    protected void doExecute() throws SlicingException {
         SlicingService slicingService = getService(SlicingService.class);
         boolean result = slicingService.removeTrafficClass(SliceId.of(sliceId), TrafficClass.valueOf(tc));
         if (result) {

@@ -29,6 +29,7 @@ import org.onosproject.net.pi.model.PiTableId;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
 import org.onosproject.net.slicing.SliceId;
+import org.onosproject.net.slicing.SlicingException;
 import org.onosproject.net.slicing.TrafficClass;
 import org.onosproject.store.service.StorageService;
 import org.stratumproject.fabric.tna.behaviour.P4InfoConstants;
@@ -48,6 +49,9 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_ING
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_COLOR;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_COLOR_BITWIDTH;
 
+/**
+ * Unit tests of Slicing Manager.
+ */
 public class SlicingManagerTest {
 
     private final SlicingManager manager = new SlicingManager();
@@ -114,7 +118,7 @@ public class SlicingManagerTest {
     }
 
     @Test
-    public void testAddSlice() {
+    public void testAddSliceNormal() {
         // Preparation
         Set<SliceId> expectedSliceIds = new HashSet<>();
         Set<TrafficClass> expectedTcs = new HashSet<>();
@@ -133,15 +137,24 @@ public class SlicingManagerTest {
         assertEquals(expectedTcs, manager.getTrafficClasses(SLICE_IDS.get(0)));
         assertEquals(expectedTcs, manager.getTrafficClasses(SLICE_IDS.get(1)));
         assertEquals(expectedTcs, manager.getTrafficClasses(SLICE_IDS.get(2)));
+    }
+
+    @Test
+    public void testAddSliceAbnormal() {
+        // Preparation
+        manager.addSlice(SLICE_IDS.get(1));
 
         // Abnormal
+        // Cannot add default slice (id 0)
         try {
             manager.addSlice(SLICE_IDS.get(0));
             fail();
         } catch (Exception e) {
             assertEquals(e.getClass(), IllegalArgumentException.class);
         }
+        // Duplicate slice (id 1)
         assertFalse(manager.addSlice(SLICE_IDS.get(1)));
+        // Invalid slice id
         try {
             manager.addSlice(SliceId.of(MAX_SLICE_ID + 1));
             fail();
@@ -151,7 +164,7 @@ public class SlicingManagerTest {
     }
 
     @Test
-    public void testRemoveSlice() {
+    public void testRemoveSliceNormal() throws SlicingException {
         // Preparation
         Set<SliceId> expectedSliceIds = new HashSet<>();
         expectedSliceIds.add(SLICE_IDS.get(0));
@@ -169,15 +182,21 @@ public class SlicingManagerTest {
         expectedSliceIds.remove(SLICE_IDS.get(2));
         assertTrue(manager.removeSlice(SLICE_IDS.get(2)));
         assertEquals(expectedSliceIds, manager.getSlices());
+    }
 
+    @Test
+    public void testRemoveSliceAbnormal() {
         // Abnormal
+        // Cannot remove default slice (id 0)
         try {
             manager.removeSlice(SLICE_IDS.get(0));
             fail();
         } catch (Exception e) {
             assertEquals(e.getClass(), IllegalArgumentException.class);
         }
+        // Slice 1 not exist
         assertFalse(manager.removeSlice(SLICE_IDS.get(1)));
+        // Invalid slice id
         try {
             manager.removeSlice(SliceId.of(MAX_SLICE_ID + 1));
             fail();
@@ -187,7 +206,7 @@ public class SlicingManagerTest {
     }
 
     @Test
-    public void testAddTrafficClass() {
+    public void testAddTrafficClassNormal() throws SlicingException {
         // Preparation
         Set<TrafficClass> expectedTcs = new HashSet<>();
         expectedTcs.add(TrafficClass.BEST_EFFORT);
@@ -206,18 +225,6 @@ public class SlicingManagerTest {
         assertTrue(manager.addTrafficClass(SLICE_IDS.get(1), TrafficClass.ELASTIC));
         assertEquals(expectedTcs, manager.getTrafficClasses(SLICE_IDS.get(1)));
 
-        // Abnormal
-        assertFalse(manager.addTrafficClass(SLICE_IDS.get(1), TrafficClass.BEST_EFFORT));
-        assertFalse(manager.addTrafficClass(SLICE_IDS.get(1), TrafficClass.CONTROL));
-        try {
-            manager.addTrafficClass(SLICE_IDS.get(1), TrafficClass.SYSTEM);
-            fail();
-        } catch (Exception e) {
-            assertEquals(e.getClass(), IllegalArgumentException.class);
-        }
-        assertFalse(manager.addTrafficClass(SLICE_IDS.get(2), TrafficClass.CONTROL));
-
-        // Normal
         // Add BE to non-existent slice is equivalent to add slice
         expectedTcs = new HashSet<>();
         expectedTcs.add(TrafficClass.BEST_EFFORT);
@@ -226,7 +233,28 @@ public class SlicingManagerTest {
     }
 
     @Test
-    public void testRemoveTrafficClass() {
+    public void testAddTrafficClassAbnormal() throws SlicingException {
+        // Preparation
+        manager.addSlice(SLICE_IDS.get(1));
+        manager.addTrafficClass(SLICE_IDS.get(1), TrafficClass.CONTROL);
+
+        // Abnormal
+        // Duplicate TC
+        assertFalse(manager.addTrafficClass(SLICE_IDS.get(1), TrafficClass.BEST_EFFORT));
+        assertFalse(manager.addTrafficClass(SLICE_IDS.get(1), TrafficClass.CONTROL));
+        // SYSTEM should not be added to any slice
+        try {
+            manager.addTrafficClass(SLICE_IDS.get(1), TrafficClass.SYSTEM);
+            fail();
+        } catch (Exception e) {
+            assertEquals(e.getClass(), SlicingException.class);
+        }
+        // Slice 2 not exist
+        assertFalse(manager.addTrafficClass(SLICE_IDS.get(2), TrafficClass.CONTROL));
+    }
+
+    @Test
+    public void testRemoveTrafficClassNormal() throws SlicingException {
         // Preparation
         Set<TrafficClass> expectedTcs = new HashSet<>();
         expectedTcs.add(TrafficClass.BEST_EFFORT);
@@ -243,16 +271,6 @@ public class SlicingManagerTest {
         assertTrue(manager.removeTrafficClass(SLICE_IDS.get(1), TrafficClass.CONTROL));
         assertEquals(expectedTcs, manager.getTrafficClasses(SLICE_IDS.get(1)));
 
-        // Abnormal
-        try {
-            manager.removeTrafficClass(SLICE_IDS.get(1), TrafficClass.BEST_EFFORT);
-            fail();
-        } catch (Exception e) {
-            assertEquals(e.getClass(), IllegalArgumentException.class);
-        }
-        assertEquals(expectedTcs, manager.getTrafficClasses(SLICE_IDS.get(1)));
-
-        // Normal
         expectedTcs.remove(TrafficClass.REAL_TIME);
         assertTrue(manager.removeTrafficClass(SLICE_IDS.get(1), TrafficClass.REAL_TIME));
         assertEquals(expectedTcs, manager.getTrafficClasses(SLICE_IDS.get(1)));
@@ -261,11 +279,6 @@ public class SlicingManagerTest {
         assertTrue(manager.removeTrafficClass(SLICE_IDS.get(1), TrafficClass.ELASTIC));
         assertEquals(expectedTcs, manager.getTrafficClasses(SLICE_IDS.get(1)));
 
-        // Abnormal
-        assertFalse(manager.removeTrafficClass(SLICE_IDS.get(1), TrafficClass.CONTROL));
-        assertFalse(manager.removeTrafficClass(SLICE_IDS.get(2), TrafficClass.CONTROL));
-
-        // Normal
         // Remove BE from slice is equivalent to remove slice
         // if BE is the last TC of that slice
         expectedTcs.remove(TrafficClass.BEST_EFFORT);
@@ -274,7 +287,32 @@ public class SlicingManagerTest {
     }
 
     @Test
-    public void testQueue() {
+    public void testRemoveTrafficClassAbnormal() throws SlicingException {
+        // Preparation
+        Set<TrafficClass> expectedTcs = new HashSet<>();
+        expectedTcs.add(TrafficClass.BEST_EFFORT);
+        expectedTcs.add(TrafficClass.ELASTIC);
+        manager.addSlice(SLICE_IDS.get(1));
+        manager.addTrafficClass(SLICE_IDS.get(1), TrafficClass.ELASTIC);
+
+        // Abnormal
+        // Other TCs must be removed before we can remove BE
+        try {
+            manager.removeTrafficClass(SLICE_IDS.get(1), TrafficClass.BEST_EFFORT);
+            fail();
+        } catch (Exception e) {
+            assertEquals(e.getClass(), SlicingException.class);
+        }
+        assertEquals(expectedTcs, manager.getTrafficClasses(SLICE_IDS.get(1)));
+
+        // CONTROL class does not exist in slice 1
+        // Slice 2 does not exist
+        assertFalse(manager.removeTrafficClass(SLICE_IDS.get(1), TrafficClass.CONTROL));
+        assertFalse(manager.removeTrafficClass(SLICE_IDS.get(2), TrafficClass.CONTROL));
+    }
+
+    @Test
+    public void testQueue() throws SlicingException {
         // Preparation
         manager.queueStore.put(QueueId.of(4), new QueueStoreValue(TrafficClass.REAL_TIME, true));
         manager.queueStore.put(QueueId.of(7), new QueueStoreValue(TrafficClass.ELASTIC, true));
@@ -328,7 +366,7 @@ public class SlicingManagerTest {
     }
 
     @Test
-    public void testSliceListener() throws Exception {
+    public void testSliceListener() throws SlicingException {
         FlowRule slice1BE1 = buildSlice1BE1();
         FlowRule slice1Control1 = buildSlice1Control1();
         FlowRule slice1Control2 = buildSlice1Control2();

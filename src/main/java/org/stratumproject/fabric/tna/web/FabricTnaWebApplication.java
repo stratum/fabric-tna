@@ -14,7 +14,8 @@ public class FabricTnaWebApplication extends AbstractWebApplication {
     @Override
     public Set<Class<?>> getClasses() {
         return getClasses(
-            SlicingWebResource.class
+            SlicingWebResource.class,
+            SlicingExceptionMapper.class
         );
     }
 }

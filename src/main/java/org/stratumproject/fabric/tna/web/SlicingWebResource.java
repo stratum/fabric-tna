@@ -6,6 +6,7 @@ package org.stratumproject.fabric.tna.web;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.onosproject.net.slicing.SliceId;
+import org.onosproject.net.slicing.SlicingException;
 import org.onosproject.net.slicing.SlicingService;
 import org.onosproject.net.slicing.TrafficClass;
 import org.onosproject.rest.AbstractWebResource;
@@ -124,11 +125,12 @@ public class SlicingWebResource extends AbstractWebResource {
      * @param sliceId id of slice
      * @param tc traffic class to be added
      * @return 200 ok or 400 bad request
+     * @throws SlicingException if the action is not supported
      */
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("tc/{sliceId}/{tc}")
-    public Response addTc(@PathParam("sliceId") int sliceId, @PathParam("tc") String tc) {
+    public Response addTc(@PathParam("sliceId") int sliceId, @PathParam("tc") String tc) throws SlicingException {
         boolean result = slicingService.addTrafficClass(SliceId.of(sliceId), TrafficClass.valueOf(tc));
 
         Response response;
@@ -147,10 +149,11 @@ public class SlicingWebResource extends AbstractWebResource {
      * @param sliceId id of slice
      * @param tc traffic class to be removed
      * @return 200 ok or 400 bad request
+     * @throws SlicingException if the action is not supported
      */
     @DELETE
     @Path("tc/{sliceId}/{tc}")
-    public Response removeTc(@PathParam("sliceId") int sliceId, @PathParam("tc") String tc) {
+    public Response removeTc(@PathParam("sliceId") int sliceId, @PathParam("tc") String tc) throws SlicingException {
         boolean result = slicingService.removeTrafficClass(SliceId.of(sliceId), TrafficClass.valueOf(tc));
 
         Response response;

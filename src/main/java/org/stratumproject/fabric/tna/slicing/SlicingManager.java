@@ -18,13 +18,14 @@ import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
 import org.onosproject.net.flow.FlowRule;
 import org.onosproject.net.flow.FlowRuleService;
-import org.onosproject.net.flow.TrafficTreatment;
+import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flow.criteria.PiCriterion;
 import org.onosproject.net.intent.WorkPartitionService;
 import org.onosproject.net.pi.model.PiTableId;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
 import org.onosproject.net.slicing.SliceId;
+import org.onosproject.net.slicing.SlicingException;
 import org.onosproject.net.slicing.SlicingService;
 import org.onosproject.net.slicing.TrafficClass;
 import org.onosproject.store.serializers.KryoNamespaces;
@@ -187,7 +188,14 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
         checkArgument(sliceId.id() != DEFAULT_SLICE_ID, "Adding default slice is not allowed");
         checkArgument(sliceId.id() <= MAX_SLICE_ID, "Invalid slice id");
 
-        return addTrafficClass(sliceId, TrafficClass.BEST_EFFORT);
+        boolean result;
+        try {
+            result = addTrafficClass(sliceId, TrafficClass.BEST_EFFORT);
+        } catch (SlicingException ex) {
+            log.warn("Exception occurs when adding slice {}", sliceId.id());
+            result = false;
+        }
+        return result;
     }
 
     @Override
@@ -206,7 +214,12 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
         tcs.stream()
                 .sorted(Comparator.comparingInt(TrafficClass::ordinal).reversed()) // Remove BEST_EFFORT the last
                 .forEach(tc -> {
-            if (!removeTrafficClass(sliceId, tc)) {
+            try {
+                if (!removeTrafficClass(sliceId, tc)) {
+                    result.set(false);
+                }
+            } catch (SlicingException ex) {
+                log.warn("Exception occurs when removing slice {}", sliceId.id());
                 result.set(false);
             }
         });
@@ -222,8 +235,12 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
     }
 
     @Override
-    public boolean addTrafficClass(SliceId sliceId, TrafficClass tc) {
-        checkArgument(tc != TrafficClass.SYSTEM, "SYSTEM TC should not be associated with any slice");
+    public boolean addTrafficClass(SliceId sliceId, TrafficClass tc) throws SlicingException {
+        checkArgument(sliceId.id() <= MAX_SLICE_ID, "Invalid slice id");
+
+        if (tc == TrafficClass.SYSTEM) {
+            throw new SlicingException("SYSTEM TC should not be associated with any slice");
+        }
 
         // Ensure the presence of BEST_EFFORT TC in the slice
         if (tc != TrafficClass.BEST_EFFORT) {
@@ -258,14 +275,18 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
     }
 
     @Override
-    public boolean removeTrafficClass(SliceId sliceId, TrafficClass tc) {
+    public boolean removeTrafficClass(SliceId sliceId, TrafficClass tc) throws SlicingException {
+        checkArgument(sliceId.id() <= MAX_SLICE_ID, "Invalid slice id");
+
         // Ensure the presence of BEST_EFFORT TC in the slice
         if (tc == TrafficClass.BEST_EFFORT) {
-            checkArgument(sliceId.id() != DEFAULT_SLICE_ID,
-                String.format("Removing %s from default slice is not allowed", tc));
-
-            checkArgument(!getTrafficClasses(sliceId).stream().anyMatch(existTc -> existTc != TrafficClass.BEST_EFFORT),
-                String.format("Can't remove %s from slice: %s while another TC exists", tc, sliceId));
+            if (sliceId.id() == DEFAULT_SLICE_ID) {
+                throw new SlicingException(String.format("Removing %s from default slice is not allowed", tc));
+            }
+            if (getTrafficClasses(sliceId).stream().anyMatch(existTc -> existTc != TrafficClass.BEST_EFFORT)) {
+                throw new SlicingException(
+                    String.format("Can't remove %s from slice: %s while another TC exists", tc, sliceId));
+            }
         }
 
         AtomicBoolean result = new AtomicBoolean(false);
@@ -300,17 +321,17 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
     }
 
     @Override
-    public boolean addFlow(TrafficTreatment treatment, SliceId sliceId, TrafficClass tc) {
+    public boolean addFlow(TrafficSelector selector, SliceId sliceId, TrafficClass tc) {
         throw new NotImplementedException("addFlow is not implemented in Slicing Manager");
     }
 
     @Override
-    public boolean removeFlow(TrafficTreatment treatment, SliceId sliceId, TrafficClass tc) {
+    public boolean removeFlow(TrafficSelector selector, SliceId sliceId, TrafficClass tc) {
         throw new NotImplementedException("removeFlow is not implemented in Slicing Manager");
     }
 
     @Override
-    public Set<TrafficTreatment> getFlows(SliceId sliceId, TrafficClass tc) {
+    public Set<TrafficSelector> getFlows(SliceId sliceId, TrafficClass tc) {
         throw new NotImplementedException("getFlows is not implemented in Slicing Manager");
     }
 
