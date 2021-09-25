@@ -15,7 +15,7 @@ echo "*** Starting ${testerRunName}..."
 it=$(test -t 0 && echo "-it" || echo "-t")
 # shellcheck disable=SC2068 disable=2086
 docker run --name "${testerRunName}" "${it}" --rm --privileged \
-    --network "container:${stratumBmV2RunName}" \
+    --network "container:${stratumBmv2RunName}" \
     -e P4C_OUT="${P4C_OUT}" \
     -e PTF_FILTER="${PTF_FILTER}" \
     -v "${FABRIC_TNA_ROOT}":/fabric-tna \
