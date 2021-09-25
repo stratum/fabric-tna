@@ -21,10 +21,6 @@ if [ -z "${fabricProfile}" ]; then
     exit 1
 fi
 
-if [ "${fabricProfile}" = "all" ]; then
-    echo "Testing 'all' profiles is not supported on tofino-model"
-    exit 1
-fi
 echo "*** Testing profile '${fabricProfile}'..."
 
 echo "Running for BMV2"
@@ -36,20 +32,20 @@ rm -rf "${DIR}"/log
 mkdir "${DIR}"/log
 
 # stratum_bmv2
-stratumBmV2ImageName=${MN_STRATUM_IMG}
-stratumBmV2RunName=stratum-bmv2-${randomNum}
+stratumBmv2ImageName=${MN_STRATUM_IMG}
+stratumBmv2RunName=stratum-bmv2-${randomNum}
 
-function stop_v1model() {
+function stop_stratum_bmv2() {
     set +e
-    echo "*** Stopping ${stratumBmV2RunName}..."
-    docker stop -t0 "${stratumBmV2RunName}" > /dev/null
+    echo "*** Stopping ${stratumBmv2ImageName}..."
+    docker stop -t0 "${stratumBmv2RunName}" > /dev/null
 }
-trap stop_v1model EXIT
+trap stop_stratum_bmv2 EXIT
 
 
-echo "*** Starting ${stratumBmV2RunName}..."
-docker run --name ${stratumBmV2RunName} -d -it --rm --privileged \
+echo "*** Starting ${stratumBmv2RunName}..."
+docker run --name ${stratumBmv2RunName} -d -it --rm --privileged \
 -v "${FABRIC_TNA_ROOT}":/fabric-tna \
 --entrypoint "/fabric-tna/ptf/run/bmv2/stratum_entrypoint.sh" \
-"${stratumBmV2ImageName}"
+"${stratumBmv2ImageName}"
 sleep 2
