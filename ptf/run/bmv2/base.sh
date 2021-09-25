@@ -32,7 +32,7 @@ rm -rf "${DIR}"/log
 mkdir "${DIR}"/log
 
 # stratum_bmv2
-stratumBmv2ImageName=${MN_STRATUM_IMG}
+stratumBmv2ImageName=${STRATUM_BMV2_IMG}
 stratumBmv2RunName=stratum-bmv2-${randomNum}
 
 function stop_stratum_bmv2() {
