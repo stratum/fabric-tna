@@ -23,7 +23,7 @@ header packet_out_header_t {
     QueueId_t         queue_id;
     @padding bit<5>   pad2;
     CpuLoopbackMode_t cpu_loopback_mode; // FIXME Can I treat this as bit<2>? take a look at define.p4;
-                                         // this way I could try to use this same header in V1model.
+                                         // this way I could try to use this same header for Bmv2.
     bit<1>            do_forwarding;
     @padding bit<16>  pad3;
     @padding bit<48>  pad4;
