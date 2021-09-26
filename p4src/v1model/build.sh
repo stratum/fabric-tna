@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2086
 # Copyright 2020-present Open Networking Foundation
 # SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 
@@ -13,6 +14,7 @@ OTHER_PP_FLAGS=$2
 
 SRC_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 OUT_DIR=${SRC_DIR}/build/${PROFILE}/bmv2
+
 
 mkdir -p ${OUT_DIR}
 mkdir -p ${OUT_DIR}/graphs
