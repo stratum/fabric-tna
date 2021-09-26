@@ -13,24 +13,15 @@ parser FabricParser (packet_in packet,
                     inout standard_metadata_t standard_metadata) {
 
     state start {
-        transition select(standard_metadata.ingress_port) {
-            default: parse_ethernet;
-        }
+        transition accept;
     }
 
-    state parse_ethernet {
-        packet.extract(hdr.ethernet);
-        transition accept;
-        }
 }
 
 control FabricDeparser(packet_out packet,
                        in         ingress_headers_t hdr) {
 
-    apply {
-        packet.emit(hdr.packet_in);
-        packet.emit(hdr.ethernet);
-    }
+    apply {}
 }
 
 #endif // __PARSER__
