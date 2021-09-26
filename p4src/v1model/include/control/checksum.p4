@@ -13,7 +13,7 @@ control FabricVerifyChecksum(inout ingress_headers_t hdr,
 }
 
 control FabricComputeChecksum(inout ingress_headers_t hdr,
-                             inout fabric_ingress_metadata_t meta)
+                              inout fabric_ingress_metadata_t meta)
 {
     apply {}
 }
