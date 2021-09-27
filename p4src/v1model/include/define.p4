@@ -29,6 +29,7 @@
 #define PKT_INSTANCE_TYPE_REPLICATION 5
 #define PKT_INSTANCE_TYPE_RESUBMIT 6
 
+
 typedef bit<3>  fwd_type_t;
 typedef bit<32> next_id_t;
 typedef bit<20> mpls_label_t;
@@ -42,6 +43,10 @@ typedef bit<TC_WIDTH> tc_t; // Traffic Class (for QoS) within a slice
 typedef bit<SLICE_TC_WIDTH> slice_tc_t; // Slice and TC identifier
 
 // Start definitions from TNA (For Bmv2).
+// The following typedefs are being defined
+// to use the same names between the TNA and v1model versions.
+// Reference to tofino.p4:
+//  https://github.com/barefootnetworks/Open-Tofino/blob/master/share/p4c/p4include/tofino.p4
 typedef bit<9>  PortId_t;           // Port id
 typedef bit<16> MulticastGroupId_t; // Multicast group id
 typedef bit<5>  QueueId_t;          // Queue id
