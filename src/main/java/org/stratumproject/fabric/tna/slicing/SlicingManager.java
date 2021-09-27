@@ -4,7 +4,6 @@ package org.stratumproject.fabric.tna.slicing;
 
 import com.google.common.collect.Lists;
 import com.google.common.hash.Hashing;
-import org.apache.commons.lang.NotImplementedException;
 import org.onlab.util.KryoNamespace;
 import org.onosproject.codec.CodecService;
 import org.onosproject.core.ApplicationId;
@@ -18,8 +17,13 @@ import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
 import org.onosproject.net.flow.FlowRule;
 import org.onosproject.net.flow.FlowRuleService;
-import org.onosproject.net.flow.TrafficTreatment;
+import org.onosproject.net.flow.TrafficSelector;
+import org.onosproject.net.flow.criteria.Criterion;
+import org.onosproject.net.flow.criteria.IPCriterion;
+import org.onosproject.net.flow.criteria.IPProtocolCriterion;
 import org.onosproject.net.flow.criteria.PiCriterion;
+import org.onosproject.net.flow.criteria.TcpPortCriterion;
+import org.onosproject.net.flow.criteria.UdpPortCriterion;
 import org.onosproject.net.intent.WorkPartitionService;
 import org.onosproject.net.pi.model.PiTableId;
 import org.onosproject.net.pi.runtime.PiAction;
@@ -51,6 +55,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.Map.Entry;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -63,6 +68,12 @@ import static org.stratumproject.fabric.tna.behaviour.FabricUtils.sliceTcConcat;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_QOS_QUEUES;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_COLOR;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_COLOR_BITWIDTH;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_IPV4_SRC;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_IPV4_DST;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_IP_PROTO;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_IP_PROTO_BITWIDTH;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_L4_SPORT;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_L4_DPORT;
 
 /**
  * Implementation of SlicingService.
@@ -103,6 +114,10 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
     protected ConsistentMap<QueueId, QueueStoreValue> queueStore;
     private MapEventListener<QueueId, QueueStoreValue> queueListener;
     private ExecutorService queueExecutor;
+
+    protected ConsistentMap<TrafficSelector, SliceStoreKey> flowStore;
+    private MapEventListener<TrafficSelector, SliceStoreKey> flowListener;
+    private ExecutorService flowExecutor;
 
     private DeviceListener deviceListener;
     private ExecutorService deviceExecutor;
@@ -148,6 +163,15 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
         // FIXME Dedicate queues should be dynamically provisioned via API in the future
         queueStore.put(QueueId.of(3), new QueueStoreValue(TrafficClass.REAL_TIME, true));
         queueStore.put(QueueId.of(6), new QueueStoreValue(TrafficClass.ELASTIC, true));
+
+        flowStore = storageService.<TrafficSelector, SliceStoreKey>consistentMapBuilder()
+                .withName("fabric-tna-classified-flow")
+                .withRelaxedReadConsistency()
+                .withSerializer(Serializer.using(serializer.build()))
+                .build();
+        flowListener = new InternalFlowListener();
+        flowExecutor = Executors.newSingleThreadExecutor(groupedThreads("fabric-tna-flow-event", "%d", log));
+        flowStore.addListener(flowListener);
 
         deviceListener = new InternalDeviceListener();
         deviceExecutor = Executors.newSingleThreadExecutor(groupedThreads("fabric-tna-device-event", "%d", log));
@@ -306,18 +330,40 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
     }
 
     @Override
-    public boolean addFlow(TrafficTreatment treatment, SliceId sliceId, TrafficClass tc) {
-        throw new NotImplementedException("addFlow is not implemented in Slicing Manager");
+    public boolean addFlow(TrafficSelector selector, SliceId sliceId, TrafficClass tc) {
+        // Accept 5-tuples only
+        if (!validFlowSelector(selector)) {
+            log.warn("Only accept 5-tuple {}", selector);
+            return false;
+        }
+
+        SliceStoreKey value = new SliceStoreKey(sliceId, tc);
+        flowStore.compute(selector, (k, v) -> {
+            log.info("Classified flow {} to slice {} tc {}", selector, sliceId, tc);
+            return value;
+        });
+
+        return true;
     }
 
     @Override
-    public boolean removeFlow(TrafficTreatment treatment, SliceId sliceId, TrafficClass tc) {
-        throw new NotImplementedException("removeFlow is not implemented in Slicing Manager");
+    public boolean removeFlow(TrafficSelector selector, SliceId sliceId, TrafficClass tc) {
+        flowStore.compute(selector, (k, v) -> {
+            log.info("Removing flow {} from slice {} tc {}", selector, sliceId, tc);
+            return null;
+        });
+
+        return true;
     }
 
     @Override
-    public Set<TrafficTreatment> getFlows(SliceId sliceId, TrafficClass tc) {
-        throw new NotImplementedException("getFlows is not implemented in Slicing Manager");
+    public Set<TrafficSelector> getFlows(SliceId sliceId, TrafficClass tc) {
+        SliceStoreKey value = new SliceStoreKey(sliceId, tc);
+
+        return flowStore.entrySet().stream()
+                .filter(e -> e.getValue().value().equals(value))
+                .map(Entry::getKey)
+                .collect(Collectors.toSet());
     }
 
     @Override
@@ -405,27 +451,27 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
     }
 
     private void addQueueTable(DeviceId deviceId, SliceId sliceId, TrafficClass tc, QueueId queueId) {
-        buildFlowRules(deviceId, sliceId, tc, queueId).forEach(f -> flowRuleService.applyFlowRules(f));
+        buildSliceFlowRules(deviceId, sliceId, tc, queueId).forEach(f -> flowRuleService.applyFlowRules(f));
         log.info("Add queue table flow on {} for slice {} tc {} queueId {}", deviceId, sliceId, tc, queueId);
     }
 
     private void removeQueueTable(DeviceId deviceId, SliceId sliceId, TrafficClass tc, QueueId queueId) {
-        buildFlowRules(deviceId, sliceId, tc, queueId).forEach(f -> flowRuleService.removeFlowRules(f));
+        buildSliceFlowRules(deviceId, sliceId, tc, queueId).forEach(f -> flowRuleService.removeFlowRules(f));
         log.info("Remove queue table flow on {} for slice {} tc {} queueId {}", deviceId, sliceId, tc, queueId);
     }
 
-    private List<FlowRule> buildFlowRules(DeviceId deviceId, SliceId sliceId, TrafficClass tc, QueueId queueId) {
+    private List<FlowRule> buildSliceFlowRules(DeviceId deviceId, SliceId sliceId, TrafficClass tc, QueueId queueId) {
         List<FlowRule> flowRules = Lists.newArrayList();
         if (tc == TrafficClass.CONTROL) {
-            flowRules.add(buildFlowRule(deviceId, sliceId, tc, queueId, Color.GREEN));
-            flowRules.add(buildFlowRule(deviceId, sliceId, tc, QueueId.BEST_EFFORT, Color.RED));
+            flowRules.add(buildSliceFlowRule(deviceId, sliceId, tc, queueId, Color.GREEN));
+            flowRules.add(buildSliceFlowRule(deviceId, sliceId, tc, QueueId.BEST_EFFORT, Color.RED));
         } else {
-            flowRules.add(buildFlowRule(deviceId, sliceId, tc, queueId, null));
+            flowRules.add(buildSliceFlowRule(deviceId, sliceId, tc, queueId, null));
         }
         return flowRules;
     }
 
-    private FlowRule buildFlowRule(DeviceId deviceId, SliceId sliceId, TrafficClass tc, QueueId queueId, Color color) {
+    private FlowRule buildSliceFlowRule(DeviceId deviceId, SliceId sliceId, TrafficClass tc, QueueId queueId, Color color) {
         PiCriterion.Builder piCriterionBuilder = PiCriterion.builder()
                 .matchExact(P4InfoConstants.HDR_SLICE_TC, sliceTcConcat(sliceId.id(), tc.ordinal()));
         if (color != null) {
@@ -450,7 +496,92 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
         return flowRule;
     }
 
-    // TODO Expose REST API
+    private void addClassifiedTable(DeviceId deviceId, TrafficSelector selector, SliceId sliceId, TrafficClass tc) {
+        FlowRule rule = buildClassifiedFlowRule(deviceId, selector, sliceId, tc);
+        flowRuleService.applyFlowRules(rule);
+        log.info("Add classified table flow on {} for selector {}", deviceId, selector);
+    }
+
+    private void removeClassifiedTable(DeviceId deviceId, TrafficSelector selector, SliceId sliceId, TrafficClass tc) {
+        FlowRule rule = buildClassifiedFlowRule(deviceId, selector, sliceId, tc);
+        flowRuleService.removeFlowRules(rule);
+        log.info("Remove classified table flow on {} for selector {}", deviceId, selector);
+    }
+
+    private FlowRule buildClassifiedFlowRule(DeviceId deviceId, TrafficSelector selector, SliceId sliceId, TrafficClass tc) {
+        PiCriterion.Builder piCriterionBuilder = buildClassifiedPiCriterion(selector);
+
+        PiAction.Builder piTableActionBuilder = PiAction.builder()
+                .withId(P4InfoConstants.FABRIC_INGRESS_SLICE_TC_CLASSIFIER_SET_SLICE_ID_TC)
+                .withParameters(Set.of(new PiActionParam(P4InfoConstants.SLICE_ID, sliceId.id()),
+                                       new PiActionParam(P4InfoConstants.TC, tc.ordinal())));
+
+        FlowRule flowRule = DefaultFlowRule.builder()
+                .forDevice(deviceId)
+                .forTable(P4InfoConstants.FABRIC_INGRESS_SLICE_TC_CLASSIFIER_CLASSIFIER)
+                .fromApp(appId)
+                .withPriority(QOS_FLOW_PRIORITY)
+                .withSelector(DefaultTrafficSelector.builder().matchPi(piCriterionBuilder.build()).build())
+                .withTreatment(DefaultTrafficTreatment.builder().piTableAction(piTableActionBuilder.build()).build())
+                .makePermanent()
+                .build();
+
+        log.info("{}", flowRule);
+        return flowRule;
+    }
+
+    private PiCriterion.Builder buildClassifiedPiCriterion(TrafficSelector selector) {
+        PiCriterion.Builder piCriterionBuilder = PiCriterion.builder();
+        selector.criteria().forEach(c -> {
+            switch (c.type()) {
+                case IPV4_SRC:
+                    piCriterionBuilder.matchTernary(
+                        HDR_IPV4_SRC, ((IPCriterion) c).ip().address().getIp4Address().toInt(), ((IPCriterion) c).ip().prefixLength());
+                    break;
+                case IPV4_DST:
+                    piCriterionBuilder.matchTernary(
+                        HDR_IPV4_DST, ((IPCriterion) c).ip().address().getIp4Address().toInt(), ((IPCriterion) c).ip().prefixLength());
+                    break;
+                case IP_PROTO:
+                    piCriterionBuilder.matchTernary(
+                        HDR_IP_PROTO, ((IPProtocolCriterion) c).protocol(), HDR_IP_PROTO_BITWIDTH);
+                    break;
+                case TCP_SRC:
+                    piCriterionBuilder.matchTernary(
+                        HDR_L4_SPORT, ((TcpPortCriterion) c).tcpPort().toInt(), ((TcpPortCriterion) c).mask().toInt());
+                    break;
+                case TCP_DST:
+                    piCriterionBuilder.matchTernary(
+                        HDR_L4_DPORT, ((TcpPortCriterion) c).tcpPort().toInt(), ((TcpPortCriterion) c).mask().toInt());
+                    break;
+                case UDP_SRC:
+                    piCriterionBuilder.matchTernary(
+                        HDR_L4_SPORT, ((UdpPortCriterion) c).udpPort().toInt(), ((UdpPortCriterion) c).mask().toInt());
+                    break;
+                case UDP_DST:
+                    piCriterionBuilder.matchTernary(
+                        HDR_L4_DPORT, ((UdpPortCriterion) c).udpPort().toInt(), ((UdpPortCriterion) c).mask().toInt());
+                    break;
+                default:
+                    break;
+            }
+        });
+
+        return piCriterionBuilder;
+    }
+
+    private boolean validFlowSelector(TrafficSelector selector) {
+        // 5-tuple only
+        return selector.criteria().stream().allMatch(c -> {
+            return c.type() == Criterion.Type.IPV4_SRC ||
+                   c.type() == Criterion.Type.IPV4_DST ||
+                   c.type() == Criterion.Type.IP_PROTO ||
+                   c.type() == Criterion.Type.TCP_SRC ||
+                   c.type() == Criterion.Type.TCP_DST ||
+                   c.type() == Criterion.Type.UDP_SRC ||
+                   c.type() == Criterion.Type.UDP_DST;
+        });
+    }
 
     private class InternalSliceListener implements MapEventListener<SliceStoreKey, QueueId> {
         public void event(MapEvent<SliceStoreKey, QueueId> event) {
@@ -497,6 +628,35 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
                     case REMOVE:
                         if (workPartitionService.isMine(event.oldValue().value(), toStringHasher())) {
                             // TODO programmatically config queues
+                        }
+                        break;
+                    default:
+                        break;
+                }
+            });
+        }
+    }
+
+    private class InternalFlowListener implements MapEventListener<TrafficSelector, SliceStoreKey> {
+        public void event(MapEvent<TrafficSelector, SliceStoreKey> event) {
+            log.info("Processing flow classified event {}", event);
+            flowExecutor.submit(() -> {
+                switch (event.type()) {
+                    case INSERT:
+                    case UPDATE:
+                        if (workPartitionService.isMine(event.newValue().value(), toStringHasher())) {
+                            deviceService.getAvailableDevices().forEach(device ->
+                                addClassifiedTable(device.id(), event.key(),
+                                    event.newValue().value().sliceId(), event.newValue().value().trafficClass())
+                            );
+                        }
+                        break;
+                    case REMOVE:
+                        if (workPartitionService.isMine(event.oldValue().value(), toStringHasher())) {
+                            deviceService.getAvailableDevices().forEach(device ->
+                                removeClassifiedTable(device.id(), event.key(),
+                                    event.newValue().value().sliceId(), event.newValue().value().trafficClass())
+                            );
                         }
                         break;
                     default:
