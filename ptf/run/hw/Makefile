@@ -9,7 +9,7 @@ define run_tests
         --cpu-port 320 --device-id 1 \
         --grpc-addr $(SWITCH_ADDR) \
         --p4info /fabric-tna/${P4C_OUT}/p4info.txt \
-        --tofino-pipeline-config /fabric-tna/${P4C_OUT}/pipeline_config.pb.bin \
+        --pipeline-config /fabric-tna/${P4C_OUT}/pipeline_config.pb.bin \
         $(TREX_PARAMS) \
         --profile $(1) \
         --xunit \
