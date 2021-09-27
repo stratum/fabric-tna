@@ -1,4 +1,4 @@
-// Copyright 2020-present Open Networking Foundation
+// Copyright 2021-present Open Networking Foundation
 // SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 
 #ifndef __HEADER__
@@ -22,8 +22,7 @@ header packet_out_header_t {
     @padding bit<3>   pad1;
     QueueId_t         queue_id;
     @padding bit<5>   pad2;
-    CpuLoopbackMode_t cpu_loopback_mode; // FIXME Can I treat this as bit<2>? take a look at define.p4;
-                                         // this way I could try to use this same header for Bmv2.
+    CpuLoopbackMode_t cpu_loopback_mode;
     bit<1>            do_forwarding;
     @padding bit<16>  pad3;
     @padding bit<48>  pad4;

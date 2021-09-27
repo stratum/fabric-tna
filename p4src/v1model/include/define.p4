@@ -1,4 +1,4 @@
-// Copyright 2020-present Open Networking Foundation
+// Copyright 2021-present Open Networking Foundation
 // SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 
 #include <v1model.p4>
@@ -124,18 +124,15 @@ const MirrorId_t PACKET_IN_MIRROR_SESSION_ID = 0x210;
 // the CPU port (P4RT packet-out) and expect the same to be delivered back to
 // the CPU (P4RT packet-in). All modes require front-panel ports to be set in
 // loopback mode.
-// enum bit<2> CpuLoopbackMode_t {
-//     // Default mode.
-//     DISABLED = 0,
-//     // Signals that the packet-out should be treated as a regular one.
-//     DIRECT = 1,
-//     // Signals that the packet-out should be processed again by the ingress
-//     // pipeline as if it was a packet coming from a front-panel port (defined by
-//     // hdr.packet_out.egress_port)
-//     INGRESS = 2
-// }
-
-// Treating the CpuLoopbackMode_t as bit<2> for Bmv2. Not sure if it's feasible.
-typedef bit<2> CpuLoopbackMode_t;
+enum bit<2> CpuLoopbackMode_t {
+    // Default mode.
+    DISABLED = 0,
+    // Signals that the packet-out should be treated as a regular one.
+    DIRECT = 1,
+    // Signals that the packet-out should be processed again by the ingress
+    // pipeline as if it was a packet coming from a front-panel port (defined by
+    // hdr.packet_out.egress_port)
+    INGRESS = 2
+}
 
 #endif // __DEFINE__
