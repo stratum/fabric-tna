@@ -672,6 +672,9 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
                                 sliceStore.forEach(e -> addQueueTable(deviceId,
                                         e.getKey().sliceId(), e.getKey().trafficClass(), e.getValue().value())
                                 );
+                                flowStore.forEach(e -> addClassifiedTable(deviceId,
+                                        e.getKey(), e.getValue().value().sliceId(), e.getValue().value().trafficClass())
+                                );
                             }
                         }
                         break;
