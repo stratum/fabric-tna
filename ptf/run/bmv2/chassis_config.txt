@@ -1,0 +1,107 @@
+description: "stratum_bmv2 dut"
+chassis {
+  platform: PLT_P4_SOFT_SWITCH
+  name: "bmv2_dut"
+}
+nodes {
+  id: 1
+  name: "bmv2_dut"
+  slot: 1
+  index: 1
+}
+singleton_ports {
+  id: 0
+  name: "veth1"
+  slot: 1
+  port: 0
+  channel: 1
+  speed_bps: 10000000000
+  config_params {
+    admin_state: ADMIN_STATE_ENABLED
+  }
+  node: 1
+}
+singleton_ports {
+  id: 1
+  name: "veth3"
+  slot: 1
+  port: 1
+  channel: 1
+  speed_bps: 10000000000
+  config_params {
+    admin_state: ADMIN_STATE_ENABLED
+  }
+  node: 1
+}
+singleton_ports {
+  id: 2
+  name: "veth5"
+  slot: 1
+  port: 2
+  channel: 1
+  speed_bps: 10000000000
+  config_params {
+    admin_state: ADMIN_STATE_ENABLED
+  }
+  node: 1
+}
+singleton_ports {
+  id: 3
+  name: "veth7"
+  slot: 1
+  port: 3
+  channel: 1
+  speed_bps: 10000000000
+  config_params {
+    admin_state: ADMIN_STATE_ENABLED
+  }
+  node: 1
+}
+singleton_ports {
+  id: 4
+  name: "veth9"
+  slot: 1
+  port: 4
+  channel: 1
+  speed_bps: 10000000000
+  config_params {
+    admin_state: ADMIN_STATE_ENABLED
+  }
+  node: 1
+}
+singleton_ports {
+  id: 5
+  name: "veth11"
+  slot: 1
+  port: 5
+  channel: 1
+  speed_bps: 10000000000
+  config_params {
+    admin_state: ADMIN_STATE_ENABLED
+  }
+  node: 1
+}
+singleton_ports {
+  id: 6
+  name: "veth13"
+  slot: 1
+  port: 6
+  channel: 1
+  speed_bps: 10000000000
+  config_params {
+    admin_state: ADMIN_STATE_ENABLED
+  }
+  node: 1
+}
+singleton_ports {
+  id: 7
+  name: "veth15"
+  slot: 1
+  port: 7
+  channel: 1
+  speed_bps: 10000000000
+  config_params {
+    admin_state: ADMIN_STATE_ENABLED
+  }
+  node: 1
+}
