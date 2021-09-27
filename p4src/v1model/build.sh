@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC2086
-# Copyright 2020-present Open Networking Foundation
+# Copyright 2021-present Open Networking Foundation
 # SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 
 set -e
@@ -22,7 +22,7 @@ mkdir -p ${OUT_DIR}/graphs
 echo
 echo "## Compiling profile ${PROFILE} in ${OUT_DIR}..."
 
-dockerImage=opennetworking/p4c:stable-20210108
+dockerImage=opennetworking/p4c@sha256:0929ba16ea821d37149aded2e04c103a17886799a158af560686e724b5721b4a
 dockerRun="docker run --rm -w ${SRC_DIR} -v ${SRC_DIR}:${SRC_DIR} -v ${OUT_DIR}:${OUT_DIR} ${dockerImage}"
 
 # Generate preprocessed P4 source (for debugging).
