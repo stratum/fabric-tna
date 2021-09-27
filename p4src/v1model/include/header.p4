@@ -20,6 +20,7 @@ header packet_out_header_t {
     CpuLoopbackMode_t cpu_loopback_mode;
     bit<1>            do_forwarding;
     bit<16>           ether_type;
+    bit<7>            _pad;
 }
 
 header ethernet_t {
