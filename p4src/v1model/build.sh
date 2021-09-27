@@ -13,7 +13,11 @@ PROFILE=$1
 OTHER_PP_FLAGS=$2
 
 SRC_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+ROOT_DIR="$( cd "${SRC_DIR}/../.." && pwd )"
 OUT_DIR=${SRC_DIR}/build/${PROFILE}/bmv2
+
+# shellcheck source=.env
+source "${ROOT_DIR}/.env"
 
 
 mkdir -p ${OUT_DIR}
@@ -22,8 +26,7 @@ mkdir -p ${OUT_DIR}/graphs
 echo
 echo "## Compiling profile ${PROFILE} in ${OUT_DIR}..."
 
-dockerImage=opennetworking/p4c@sha256:0929ba16ea821d37149aded2e04c103a17886799a158af560686e724b5721b4a
-dockerRun="docker run --rm -w ${SRC_DIR} -v ${SRC_DIR}:${SRC_DIR} -v ${OUT_DIR}:${OUT_DIR} ${dockerImage}"
+dockerRun="docker run --rm -w ${SRC_DIR} -v ${SRC_DIR}:${SRC_DIR} -v ${OUT_DIR}:${OUT_DIR} ${P4C_DOCKER_IMG}"
 
 # Generate preprocessed P4 source (for debugging).
 (set -x; ${dockerRun} p4c-bm2-ss --arch v1model \
