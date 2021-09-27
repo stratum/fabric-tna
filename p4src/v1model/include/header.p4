@@ -13,19 +13,12 @@ header packet_in_header_t {
     bit<7>   _pad0;
 }
 
-// This header must have a pseudo ethertype at offset 12, to be parseable as an
-// Ethernet frame in the ingress parser.
 @controller_header("packet_out")
 header packet_out_header_t {
-    @padding bit<7>   pad0;
     PortId_t          egress_port;
-    @padding bit<3>   pad1;
     QueueId_t         queue_id;
-    @padding bit<5>   pad2;
     CpuLoopbackMode_t cpu_loopback_mode;
     bit<1>            do_forwarding;
-    @padding bit<16>  pad3;
-    @padding bit<48>  pad4;
     bit<16>           ether_type;
 }
 
@@ -62,8 +55,6 @@ struct fabric_ingress_metadata_t {
 }
 
 header fake_ethernet_t {
-    @padding bit<48> _pad0;
-    @padding bit<48> _pad1;
     bit<16> ether_type;
 }
 
