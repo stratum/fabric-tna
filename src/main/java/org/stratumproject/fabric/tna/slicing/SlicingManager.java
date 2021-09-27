@@ -18,7 +18,6 @@ import org.onosproject.net.flow.DefaultTrafficTreatment;
 import org.onosproject.net.flow.FlowRule;
 import org.onosproject.net.flow.FlowRuleService;
 import org.onosproject.net.flow.TrafficSelector;
-import org.onosproject.net.flow.criteria.Criterion;
 import org.onosproject.net.flow.criteria.IPCriterion;
 import org.onosproject.net.flow.criteria.IPProtocolCriterion;
 import org.onosproject.net.flow.criteria.PiCriterion;
@@ -64,6 +63,7 @@ import java.util.stream.Collectors;
 
 import static org.onlab.util.Tools.groupedThreads;
 import static org.slf4j.LoggerFactory.getLogger;
+import static org.stratumproject.fabric.tna.behaviour.FabricUtils.fiveTupleOnly;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.sliceTcConcat;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_QOS_QUEUES;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_COLOR;
@@ -333,8 +333,8 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
 
     @Override
     public boolean addFlow(TrafficSelector selector, SliceId sliceId, TrafficClass tc) {
-        // Accept 5-tuples only
-        if (!validFlowSelector(selector)) {
+        // Accept 5-tuple only
+        if (!fiveTupleOnly(selector)) {
             log.warn("Only accept 5-tuple {}", selector);
             return false;
         }
@@ -573,19 +573,6 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
         });
 
         return piCriterionBuilder;
-    }
-
-    private boolean validFlowSelector(TrafficSelector selector) {
-        // 5-tuple only
-        return selector.criteria().stream().allMatch(c -> {
-            return c.type() == Criterion.Type.IPV4_SRC ||
-                   c.type() == Criterion.Type.IPV4_DST ||
-                   c.type() == Criterion.Type.IP_PROTO ||
-                   c.type() == Criterion.Type.TCP_SRC ||
-                   c.type() == Criterion.Type.TCP_DST ||
-                   c.type() == Criterion.Type.UDP_SRC ||
-                   c.type() == Criterion.Type.UDP_DST;
-        });
     }
 
     private class InternalSliceListener implements MapEventListener<SliceStoreKey, QueueId> {
