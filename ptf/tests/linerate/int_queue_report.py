@@ -245,6 +245,7 @@ class IntQueueReportTest(TRexTest, IntTest, SlicingTest):
 
     def runTest(self):
         print("")
+        self.push_chassis_config()
         for is_device_spine in [False, True]:
             for tagged1 in [False, True]:
                 for tagged2 in [False, True]:

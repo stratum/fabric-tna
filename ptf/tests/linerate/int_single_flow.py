@@ -8,7 +8,7 @@ from fabric_test import *
 from ptf.testutils import group
 from trex_stl_lib.api import STLPktBuilder, STLStream, STLTXCont
 from trex_test import TRexTest
-from trex_utils import list_port_status
+from trex_utils import *
 from xnt import pypy_analyze_int_report_pcap
 
 TRAFFIC_MULT = "1"
@@ -16,7 +16,7 @@ RATE = 40_000_000_000 # 40 Gbps
 TEST_DURATION = 10
 CAPTURE_LIMIT = 10
 
-MIN_FLOW_REPORTS = 28
+FLOW_REPORTS = 10
 
 SENDER_PORT = 0
 RECEIVER_PORT = 1
@@ -27,6 +27,7 @@ INT_COLLECTOR_PORT = 2
 class IntSingleFlow(TRexTest, IntTest):
     @autocleanup
     def runTest(self):
+        self.push_chassis_config()
 
         pkt = testutils.simple_udp_packet(pktlen=1400)
 
@@ -84,10 +85,8 @@ class IntSingleFlow(TRexTest, IntTest):
             f"Didn't receive all packets; sent {sent_packets}, received {recv_packets}",
         )
 
-        # FIXME: Although duration specified is 10, test in reality runs for 29-30 seconds, and
-        # thus generates 28-29 INT flow reports
         local_reports = results["local_reports"]
         self.failIf(
-            local_reports < MIN_FLOW_REPORTS,
-            f"Flow reports generated for ~30 second test should be at least 28, was {local_reports}",
+            local_reports != FLOW_REPORTS,
+            f"Flow reports generated for 10 second single flow test should be 10, was {local_reports}",
         )
