@@ -73,7 +73,9 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_IPV4_D
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_IP_PROTO;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_IP_PROTO_BITWIDTH;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_L4_SPORT;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_L4_SPORT_BITWIDTH;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_L4_DPORT;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_L4_DPORT_BITWIDTH;
 
 /**
  * Implementation of SlicingService.
@@ -451,27 +453,27 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
     }
 
     private void addQueueTable(DeviceId deviceId, SliceId sliceId, TrafficClass tc, QueueId queueId) {
-        buildSliceFlowRules(deviceId, sliceId, tc, queueId).forEach(f -> flowRuleService.applyFlowRules(f));
+        buildFlowRules(deviceId, sliceId, tc, queueId).forEach(f -> flowRuleService.applyFlowRules(f));
         log.info("Add queue table flow on {} for slice {} tc {} queueId {}", deviceId, sliceId, tc, queueId);
     }
 
     private void removeQueueTable(DeviceId deviceId, SliceId sliceId, TrafficClass tc, QueueId queueId) {
-        buildSliceFlowRules(deviceId, sliceId, tc, queueId).forEach(f -> flowRuleService.removeFlowRules(f));
+        buildFlowRules(deviceId, sliceId, tc, queueId).forEach(f -> flowRuleService.removeFlowRules(f));
         log.info("Remove queue table flow on {} for slice {} tc {} queueId {}", deviceId, sliceId, tc, queueId);
     }
 
-    private List<FlowRule> buildSliceFlowRules(DeviceId deviceId, SliceId sliceId, TrafficClass tc, QueueId queueId) {
+    private List<FlowRule> buildFlowRules(DeviceId deviceId, SliceId sliceId, TrafficClass tc, QueueId queueId) {
         List<FlowRule> flowRules = Lists.newArrayList();
         if (tc == TrafficClass.CONTROL) {
-            flowRules.add(buildSliceFlowRule(deviceId, sliceId, tc, queueId, Color.GREEN));
-            flowRules.add(buildSliceFlowRule(deviceId, sliceId, tc, QueueId.BEST_EFFORT, Color.RED));
+            flowRules.add(buildFlowRule(deviceId, sliceId, tc, queueId, Color.GREEN));
+            flowRules.add(buildFlowRule(deviceId, sliceId, tc, QueueId.BEST_EFFORT, Color.RED));
         } else {
-            flowRules.add(buildSliceFlowRule(deviceId, sliceId, tc, queueId, null));
+            flowRules.add(buildFlowRule(deviceId, sliceId, tc, queueId, null));
         }
         return flowRules;
     }
 
-    private FlowRule buildSliceFlowRule(DeviceId deviceId, SliceId sliceId, TrafficClass tc, QueueId queueId, Color color) {
+    private FlowRule buildFlowRule(DeviceId deviceId, SliceId sliceId, TrafficClass tc, QueueId queueId, Color color) {
         PiCriterion.Builder piCriterionBuilder = PiCriterion.builder()
                 .matchExact(P4InfoConstants.HDR_SLICE_TC, sliceTcConcat(sliceId.id(), tc.ordinal()));
         if (color != null) {
@@ -508,7 +510,8 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
         log.info("Remove classified table flow on {} for selector {}", deviceId, selector);
     }
 
-    private FlowRule buildClassifiedFlowRule(DeviceId deviceId, TrafficSelector selector, SliceId sliceId, TrafficClass tc) {
+    private FlowRule buildClassifiedFlowRule(DeviceId deviceId,
+        TrafficSelector selector, SliceId sliceId, TrafficClass tc) {
         PiCriterion.Builder piCriterionBuilder = buildClassifiedPiCriterion(selector);
 
         PiAction.Builder piTableActionBuilder = PiAction.builder()
@@ -536,11 +539,13 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
             switch (c.type()) {
                 case IPV4_SRC:
                     piCriterionBuilder.matchTernary(
-                        HDR_IPV4_SRC, ((IPCriterion) c).ip().address().getIp4Address().toInt(), ((IPCriterion) c).ip().prefixLength());
+                        HDR_IPV4_SRC, ((IPCriterion) c).ip().address().getIp4Address().toInt(),
+                            ((IPCriterion) c).ip().prefixLength());
                     break;
                 case IPV4_DST:
                     piCriterionBuilder.matchTernary(
-                        HDR_IPV4_DST, ((IPCriterion) c).ip().address().getIp4Address().toInt(), ((IPCriterion) c).ip().prefixLength());
+                        HDR_IPV4_DST, ((IPCriterion) c).ip().address().getIp4Address().toInt(),
+                            ((IPCriterion) c).ip().prefixLength());
                     break;
                 case IP_PROTO:
                     piCriterionBuilder.matchTernary(
@@ -548,19 +553,19 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
                     break;
                 case TCP_SRC:
                     piCriterionBuilder.matchTernary(
-                        HDR_L4_SPORT, ((TcpPortCriterion) c).tcpPort().toInt(), ((TcpPortCriterion) c).mask().toInt());
+                        HDR_L4_SPORT, ((TcpPortCriterion) c).tcpPort().toInt(), HDR_L4_SPORT_BITWIDTH);
                     break;
                 case TCP_DST:
                     piCriterionBuilder.matchTernary(
-                        HDR_L4_DPORT, ((TcpPortCriterion) c).tcpPort().toInt(), ((TcpPortCriterion) c).mask().toInt());
+                        HDR_L4_DPORT, ((TcpPortCriterion) c).tcpPort().toInt(), HDR_L4_DPORT_BITWIDTH);
                     break;
                 case UDP_SRC:
                     piCriterionBuilder.matchTernary(
-                        HDR_L4_SPORT, ((UdpPortCriterion) c).udpPort().toInt(), ((UdpPortCriterion) c).mask().toInt());
+                        HDR_L4_SPORT, ((UdpPortCriterion) c).udpPort().toInt(), HDR_L4_SPORT_BITWIDTH);
                     break;
                 case UDP_DST:
                     piCriterionBuilder.matchTernary(
-                        HDR_L4_DPORT, ((UdpPortCriterion) c).udpPort().toInt(), ((UdpPortCriterion) c).mask().toInt());
+                        HDR_L4_DPORT, ((UdpPortCriterion) c).udpPort().toInt(), HDR_L4_DPORT_BITWIDTH);
                     break;
                 default:
                     break;

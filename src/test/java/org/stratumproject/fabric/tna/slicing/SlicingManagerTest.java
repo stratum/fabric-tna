@@ -11,6 +11,10 @@ import org.easymock.CaptureType;
 import org.easymock.EasyMock;
 import org.junit.Before;
 import org.junit.Test;
+import org.onlab.packet.Ip4Address;
+import org.onlab.packet.IpPrefix;
+import org.onlab.packet.TpPort;
+import org.onosproject.cli.net.IpProtocol;
 import org.onosproject.codec.CodecService;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
@@ -23,6 +27,7 @@ import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
 import org.onosproject.net.flow.FlowRule;
 import org.onosproject.net.flow.FlowRuleService;
+import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flow.criteria.PiCriterion;
 import org.onosproject.net.intent.WorkPartitionService;
 import org.onosproject.net.pi.model.PiTableId;
@@ -43,6 +48,14 @@ import static org.stratumproject.fabric.tna.behaviour.FabricUtils.sliceTcConcat;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_QOS_QUEUES;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_COLOR;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_COLOR_BITWIDTH;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_IPV4_SRC;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_IPV4_DST;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_IP_PROTO;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_IP_PROTO_BITWIDTH;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_L4_SPORT;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_L4_SPORT_BITWIDTH;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_L4_DPORT;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_L4_DPORT_BITWIDTH;
 
 public class SlicingManagerTest {
 
@@ -89,6 +102,8 @@ public class SlicingManagerTest {
             new MockConsistentMap.Builder<SliceStoreKey, QueueId>());
         EasyMock.expect(storageService.<QueueId, QueueStoreValue>consistentMapBuilder()).andReturn(
             new MockConsistentMap.Builder<QueueId, QueueStoreValue>());
+        EasyMock.expect(storageService.<TrafficSelector, SliceStoreKey>consistentMapBuilder()).andReturn(
+            new MockConsistentMap.Builder<TrafficSelector, SliceStoreKey>());
         EasyMock.expect(workPartitionService.isMine(
             EasyMock.anyObject(), EasyMock.anyObject())).andReturn(true).anyTimes();
         EasyMock.expect(deviceService.getAvailableDevices()).andReturn(DEVICES).anyTimes();
@@ -332,6 +347,26 @@ public class SlicingManagerTest {
         });
     }
 
+    @Test
+    public void testFlowListener() throws Exception {
+        FlowRule mock = build5Tuple();
+        TrafficSelector selector = DefaultTrafficSelector.builder()
+            .matchIPSrc(IpPrefix.valueOf("10.20.30.1/32"))
+            .matchIPDst(IpPrefix.valueOf("10.20.30.2/32"))
+            .matchIPProtocol((byte) 0x06)
+            .matchTcpSrc(TpPort.tpPort(80))
+            .matchTcpDst(TpPort.tpPort(1234))
+            .build();
+
+        // Adding mock rule to slice 1 BE
+        capturedAddedFlowRules.reset();
+        manager.addFlow(selector, SLICE_IDS.get(1), TrafficClass.BEST_EFFORT);
+        assertAfter(50, () -> {
+            assertEquals(1, capturedAddedFlowRules.getValues().size());
+            assertTrue(mock.exactMatch(capturedAddedFlowRules.getValues().get(0)));
+        });
+    }
+
     private FlowRule buildSlice1BE1() {
         // Hard coded parameters
         PiCriterion.Builder piCriterionBuilder = PiCriterion.builder()
@@ -401,5 +436,36 @@ public class SlicingManagerTest {
                 .build();
 
         return flowRule;
+    }
+
+    private FlowRule build5Tuple() {
+        // Hard coded parameters
+        Ip4Address ipSrc = Ip4Address.valueOf("10.20.30.1");
+        Ip4Address ipDst = Ip4Address.valueOf("10.20.30.2");
+        IpProtocol ipProtocol = IpProtocol.TCP;
+
+        PiCriterion.Builder piCriterionBuilder = PiCriterion.builder();
+        // The sequence of following matches will affect the assertion
+        // e.g. IpProto, IPv4, IPv4, Sport, Dport is not equals to IPv4, IPv4, IpProto, Sport, Dport
+        piCriterionBuilder.matchTernary(HDR_IP_PROTO, ipProtocol.value(), HDR_IP_PROTO_BITWIDTH);
+        piCriterionBuilder.matchTernary(HDR_IPV4_SRC, ipSrc.toInt(), ipSrc.toIpPrefix().prefixLength());
+        piCriterionBuilder.matchTernary(HDR_IPV4_DST, ipDst.toInt(), ipDst.toIpPrefix().prefixLength());
+        piCriterionBuilder.matchTernary(HDR_L4_SPORT, 80, HDR_L4_SPORT_BITWIDTH);
+        piCriterionBuilder.matchTernary(HDR_L4_DPORT, 1234, HDR_L4_DPORT_BITWIDTH);
+
+        PiAction.Builder piTableActionBuilder = PiAction.builder()
+                .withId(P4InfoConstants.FABRIC_INGRESS_SLICE_TC_CLASSIFIER_SET_SLICE_ID_TC)
+                .withParameters(Set.of(new PiActionParam(P4InfoConstants.SLICE_ID, SLICE_IDS.get(1).id()),
+                                       new PiActionParam(P4InfoConstants.TC, TrafficClass.BEST_EFFORT.ordinal())));
+
+        return DefaultFlowRule.builder()
+                .forDevice(DID)
+                .forTable(P4InfoConstants.FABRIC_INGRESS_SLICE_TC_CLASSIFIER_CLASSIFIER)
+                .fromApp(APP_ID)
+                .withPriority(QOS_FLOW_PRIORITY)
+                .withSelector(DefaultTrafficSelector.builder().matchPi(piCriterionBuilder.build()).build())
+                .withTreatment(DefaultTrafficTreatment.builder().piTableAction(piTableActionBuilder.build()).build())
+                .makePermanent()
+                .build();
     }
 }
