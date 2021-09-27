@@ -122,6 +122,7 @@ sleep 5
 
 # Run Stratum container
 echo "*** Starting ${stratumBfRunName} (from ${STRATUM_DOCKER_IMG})..."
+docker pull "${STRATUM_DOCKER_IMG}"
 # shellcheck disable=SC2086
 docker run --name ${stratumBfRunName} -d --privileged \
     --network "container:${tmRunName}" \
