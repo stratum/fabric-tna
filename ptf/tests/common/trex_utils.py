@@ -104,60 +104,63 @@ def list_port_status(port_status: dict) -> None:
         readable_stats = get_readable_port_stats(port_status[port])
         print("States from port {}: \n{}".format(port, readable_stats))
 
-def cont_list_port_status(port: int, c: STLClient) -> None:
+def cont_list_port_status(c: STLClient) -> None:
     """
     List some port stats continuously while traffic is active 
 
     :parameters:
-    port_status: dict
-        Port status from Trex client API
+    c: STLClient
+        TRex stateless client to continuously grab statistics from
     """
+    ports = [0, 1, 2, 3]
 
     prev = {
-            0: {"opackets": 0, "ipackets": 0, "obytes": 0, "ibytes": 0, "time": 0},
-            1: {"opackets": 0, "ipackets": 0, "obytes": 0, "ibytes": 0, "time": 0},
-            2: {"opackets": 0, "ipackets": 0, "obytes": 0, "ibytes": 0, "time": 0},
-            3: {"opackets": 0, "ipackets": 0, "obytes": 0, "ibytes": 0, "time": 0}
+            0: {"opackets": 0, "ipackets": 0, "obytes": 0, "ibytes": 0, "time": time.time()},
+            1: {"opackets": 0, "ipackets": 0, "obytes": 0, "ibytes": 0, "time": time.time()},
+            2: {"opackets": 0, "ipackets": 0, "obytes": 0, "ibytes": 0, "time": time.time()},
+            3: {"opackets": 0, "ipackets": 0, "obytes": 0, "ibytes": 0, "time": time.time()}
            }
 
     s_time = time.time()
     while c.is_traffic_active():
-        print("\nTRAFFIC RUNNING {:.0f} SEC".format(time.time()-s_time))
-        print("--------------------------")
-        stats = c.get_stats(ports=[port])
+        stats = c.get_stats(ports=ports)
         if not stats:
             break
 
-        opackets = stats[port]['opackets']
-        ipackets = stats[port]['ipackets']
-        obytes = stats[port]['obytes']
-        ibytes = stats[port]['ibytes']
-        time_diff =  time.time() - prev[port]["time"]
-        
-        tx_pps = opackets - prev[port]["opackets"] / time_diff
-        rx_pps = ipackets - prev[port]["ipackets"] / time_diff
-        tx_bps = 8 * (obytes - prev[port]["obytes"]) / time_diff
-        rx_bps = 8 * (ibytes - prev[port]["ibytes"]) / time_diff
-
+        print("\nTRAFFIC RUNNING {:.2f} SEC".format(time.time()-s_time))
         print("Port | TX pps    | RX pps  | TX bps    | RX bps  |")
         print("--------------------------------------------------")
-        print("{}    | {} | {} | {} | {} |"
-                .format(port,
-                        to_readable(tx_pps, "pps"),
-                        to_readable(rx_pps, "pps"),
-                        to_readable(tx_bps, "bps"),
-                        to_readable(rx_bps, "bps"),
-                       )
-        )
-        print("")
 
-        prev[port]["opackets"] = opackets
-        prev[port]["ipackets"] = ipackets
-        prev[port]["obytes"] = obytes
-        prev[port]["ibytes"] = ibytes
-        prev[port]["time"] = time.time()
+        for port in ports:
+
+            opackets = stats[port]['opackets']
+            ipackets = stats[port]['ipackets']
+            obytes = stats[port]['obytes']
+            ibytes = stats[port]['ibytes']
+            time_diff =  time.time() - prev[port]["time"]
+            
+            tx_pps = opackets - prev[port]["opackets"] / time_diff
+            rx_pps = ipackets - prev[port]["ipackets"] / time_diff
+            tx_bps = 8 * (obytes - prev[port]["obytes"]) / time_diff
+            rx_bps = 8 * (ibytes - prev[port]["ibytes"]) / time_diff
+
+            print("{}    | {} | {} | {} | {} |"
+                    .format(port,
+                            to_readable(tx_pps, "pps"),
+                            to_readable(rx_pps, "pps"),
+                            to_readable(tx_bps, "bps"),
+                            to_readable(rx_bps, "bps"),
+                        )
+            )
+
+            prev[port]["opackets"] = opackets
+            prev[port]["ipackets"] = ipackets
+            prev[port]["obytes"] = obytes
+            prev[port]["ibytes"] = ibytes
+            prev[port]["time"] = time.time()
 
         time.sleep(1)
+        print("")
 
 
 LatencyStats = collections.namedtuple(
