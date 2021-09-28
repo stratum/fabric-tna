@@ -114,49 +114,48 @@ def cont_list_port_status(port: int, c: STLClient) -> None:
     """
 
     prev = {
-            0: {"opackets": 0, "ipackets": 0, "obytes": 0, "ibytes": 0},
-            1: {"opackets": 0, "ipackets": 0, "obytes": 0, "ibytes": 0},
-            2: {"opackets": 0, "ipackets": 0, "obytes": 0, "ibytes": 0},
-            3: {"opackets": 0, "ipackets": 0, "obytes": 0, "ibytes": 0}
+            0: {"opackets": 0, "ipackets": 0, "obytes": 0, "ibytes": 0, "time": 0},
+            1: {"opackets": 0, "ipackets": 0, "obytes": 0, "ibytes": 0, "time": 0},
+            2: {"opackets": 0, "ipackets": 0, "obytes": 0, "ibytes": 0, "time": 0},
+            3: {"opackets": 0, "ipackets": 0, "obytes": 0, "ibytes": 0, "time": 0}
            }
 
     s_time = time.time()
     while c.is_traffic_active():
-        print("TRAFFIC RUNNING {:.0f} SEC".format(time.time()-s_time))
+        print("\nTRAFFIC RUNNING {:.0f} SEC".format(time.time()-s_time))
         print("--------------------------")
-        # for port in [0, 1, 2, 3]:
         stats = c.get_stats(ports=[port])
+        if not stats:
+            break
 
         opackets = stats[port]['opackets']
         ipackets = stats[port]['ipackets']
         obytes = stats[port]['obytes']
         ibytes = stats[port]['ibytes']
+        time_diff =  time.time() - prev[port]["time"]
         
-        tx_pps = opackets - prev[port]["opackets"]
-        rx_pps = ipackets - prev[port]["ipackets"]
-        tx_bps = 8 * (obytes - prev[port]["obytes"])
-        rx_bps = 8 * (ibytes - prev[port]["ibytes"])
+        tx_pps = opackets - prev[port]["opackets"] / time_diff
+        rx_pps = ipackets - prev[port]["ipackets"] / time_diff
+        tx_bps = 8 * (obytes - prev[port]["obytes"]) / time_diff
+        rx_bps = 8 * (ibytes - prev[port]["ibytes"]) / time_diff
 
-        print("Status from port {}: ".format(port))
-        print(
-            """
-            TX pps: {}
-            RX pps: {}
-            TX bps: {}
-            RX bps: {}
-            """
-            .format(
-                to_readable(tx_pps, "pps"),
-                to_readable(rx_pps, "pps"),
-                to_readable(tx_bps, "bps"),
-                to_readable(rx_bps, "bps"),
-            )
+        print("Port | TX pps    | RX pps  | TX bps    | RX bps  |")
+        print("--------------------------------------------------")
+        print("{}    | {} | {} | {} | {} |"
+                .format(port,
+                        to_readable(tx_pps, "pps"),
+                        to_readable(rx_pps, "pps"),
+                        to_readable(tx_bps, "bps"),
+                        to_readable(rx_bps, "bps"),
+                       )
         )
+        print("")
 
         prev[port]["opackets"] = opackets
         prev[port]["ipackets"] = ipackets
         prev[port]["obytes"] = obytes
         prev[port]["ibytes"] = ibytes
+        prev[port]["time"] = time.time()
 
         time.sleep(1)
 
