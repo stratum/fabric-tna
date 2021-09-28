@@ -4,7 +4,7 @@
 #include <core.p4>
 #include <tna.p4>
 
-#include "../define.p4"
+#include "shared/define.p4"
 #include "../header.p4"
 
 
