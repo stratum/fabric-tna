@@ -4,7 +4,7 @@
 #ifndef __HEADER__
 #define __HEADER__
 
-#include "shared/define.p4"
+#include "define.p4"
 
 
 @controller_header("packet_in")

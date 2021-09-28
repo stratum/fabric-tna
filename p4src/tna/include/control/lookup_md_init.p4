@@ -5,7 +5,7 @@
 #include <tna.p4>
 
 #include "shared/define.p4"
-#include "../header.p4"
+#include "shared/header.p4"
 
 control LookupMdInit (in ingress_headers_t hdr,
                       out lookup_metadata_t lkp_md) {

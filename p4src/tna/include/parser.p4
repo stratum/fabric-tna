@@ -4,7 +4,7 @@
 #ifndef __PARSER__
 #define __PARSER__
 
-#include "header.p4"
+#include "shared/header.p4"
 #include "shared/define.p4"
 #include "control/packet_in_mirror_parser.p4"
 #ifdef WITH_INT

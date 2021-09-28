@@ -6,7 +6,7 @@
 
 #include "shared/define.p4"
 #include "shared/size.p4"
-#include "include/header.p4"
+#include "shared/header.p4"
 #include "include/parser.p4"
 #include "include/control/packetio.p4"
 #include "include/control/filtering.p4"

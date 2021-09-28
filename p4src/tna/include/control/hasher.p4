@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 
 #include "shared/define.p4"
-#include "../header.p4"
+#include "shared/header.p4"
 
 control Hasher(
     in ingress_headers_t hdr,
