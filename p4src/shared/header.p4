@@ -10,6 +10,7 @@
 @controller_header("packet_in")
 header packet_in_header_t {
     PortId_t ingress_port;
+
     bit<7>   _pad0;
 }
 
@@ -314,6 +315,12 @@ header bridged_metadata_t {
 #ifdef WITH_INT
     int_bridged_metadata_t int_bmd;
 #endif // WITH_INT
+
+#ifdef TARGET_BMV2
+// using padding to make the header
+// multiple of 8 bits, condition required by bmv2.
+    bit<1>                 _pad;
+#endif
 }
 
 // Used for table lookup. Initialized with the parsed headers, or 0 if invalid
