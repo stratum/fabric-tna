@@ -316,8 +316,8 @@ header bridged_metadata_t {
 #endif // WITH_INT
 
 #ifdef TARGET_BMV2
-// using padding to make the header
-// multiple of 8 bits, condition required by bmv2.
+// Use padding to make the header multiple of 8 bits,
+// condition required by p4c when compiling for bmv2.
     bit<1>                 _pad;
 #endif
 }
