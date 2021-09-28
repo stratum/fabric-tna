@@ -1,11 +1,13 @@
 // Copyright 2021-present Open Networking Foundation
 // SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 
+
 #include <core.p4>
 #include <v1model.p4>
 
-#include "include/size.p4"
-#include "include/header.p4"
+#include "../shared/size.p4"
+#include "../shared/define.p4"
+#include "../shared/header.p4"
 #include "include/parser.p4"
 #include "include/control/checksum.p4"
 

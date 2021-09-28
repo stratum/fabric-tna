@@ -4,8 +4,8 @@
 #ifndef __PARSER__
 #define __PARSER__
 
-#include "header.p4"
-#include "define.p4"
+#include "../../shared/header.p4"
+#include "../../shared/define.p4"
 
 parser FabricParser (packet_in packet,
                     out ingress_headers_t hdr,
