@@ -10,7 +10,6 @@
 @controller_header("packet_in")
 header packet_in_header_t {
     PortId_t ingress_port;
-
     bit<7>   _pad0;
 }
 

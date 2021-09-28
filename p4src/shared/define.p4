@@ -65,7 +65,6 @@ const slice_id_t DEFAULT_SLICE_ID = 0;
 const tc_t DEFAULT_TC = 0;
 // Check Stratum's chassis_config for other queue IDs.
 // Should be the same specified in gen-stratum-qos-config.py.
-
 const QueueId_t QUEUE_ID_BEST_EFFORT = 0;
 
 // SPGW types
@@ -181,7 +180,6 @@ enum bit<3> FabricMirrorType_t {
     INT_REPORT = 1,
     PACKET_IN = 2
 }
-
 
 const MirrorId_t PACKET_IN_MIRROR_SESSION_ID = 0x210;
 
