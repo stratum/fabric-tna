@@ -6,15 +6,19 @@
 set -e
 
 BMV2_CPU_PORT="255"
+
+# -D defines the macro used within the P4 files (e.g. -DTARGET_BMV2 will be used as `#ifdef TARGET_BMV2`)
 BMV2_PP_FLAGS="-DTARGET_BMV2 -DCPU_PORT=${BMV2_CPU_PORT} -DWITH_PORT_COUNTER -DWITH_DEBUG"
-FABRIC_P4_FILE=fabric_v1model.p4
 
 PROFILE=$1
 OTHER_PP_FLAGS=$2
 
-SRC_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-ROOT_DIR="$( cd "${SRC_DIR}/../.." && pwd )"
-OUT_DIR=${SRC_DIR}/build/${PROFILE}/bmv2
+# DIR is this file directory.
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+P4_SRC_DIR=${DIR}/..
+ROOT_DIR="$( cd "${DIR}/../.." && pwd )"
+OUT_DIR=${DIR}/build/${PROFILE}/bmv2
+FABRIC_P4_FILE=${DIR}/fabric_v1model.p4
 
 # shellcheck source=.env
 source "${ROOT_DIR}/.env"
@@ -26,7 +30,7 @@ mkdir -p ${OUT_DIR}/graphs
 echo
 echo "## Compiling profile ${PROFILE} in ${OUT_DIR}..."
 
-dockerRun="docker run --rm -w ${SRC_DIR} -v ${SRC_DIR}:${SRC_DIR} -v ${OUT_DIR}:${OUT_DIR} ${P4C_DOCKER_IMG}"
+dockerRun="docker run --rm -w ${P4_SRC_DIR} -v ${P4_SRC_DIR}:${P4_SRC_DIR} -v ${OUT_DIR}:${OUT_DIR} ${P4C_DOCKER_IMG}"
 
 # Generate preprocessed P4 source (for debugging).
 (set -x; ${dockerRun} p4c-bm2-ss --arch v1model \
