@@ -104,7 +104,7 @@ def list_port_status(port_status: dict) -> None:
         readable_stats = get_readable_port_stats(port_status[port])
         print("States from port {}: \n{}".format(port, readable_stats))
 
-def cont_list_port_status(c: STLClient) -> None:
+def monitor_port_stats(c: STLClient) -> None:
     """
     List some port stats continuously while traffic is active 
 
@@ -128,8 +128,8 @@ def cont_list_port_status(c: STLClient) -> None:
             break
 
         print("\nTRAFFIC RUNNING {:.2f} SEC".format(time.time()-s_time))
-        print("Port | TX pps    | RX pps  | TX bps    | RX bps  |")
-        print("--------------------------------------------------")
+        print("{:^4} | {:<10} | {:<10} | {:<10} | {:<10} |".format('Port', 'RX bps', 'TX bps', 'RX pps', 'TX pps'))
+        print("----------------------------------------------------------")
 
         for port in ports:
 
@@ -144,12 +144,12 @@ def cont_list_port_status(c: STLClient) -> None:
             tx_bps = 8 * (obytes - prev[port]["obytes"]) / time_diff
             rx_bps = 8 * (ibytes - prev[port]["ibytes"]) / time_diff
 
-            print("{}    | {} | {} | {} | {} |"
+            print("{:^4} | {:<10} | {:<10} | {:<10} | {:<10} |"
                     .format(port,
-                            to_readable(tx_pps, "pps"),
-                            to_readable(rx_pps, "pps"),
-                            to_readable(tx_bps, "bps"),
                             to_readable(rx_bps, "bps"),
+                            to_readable(tx_bps, "bps"),
+                            to_readable(rx_pps, "pps"),
+                            to_readable(tx_pps, "pps"),
                         )
             )
 
