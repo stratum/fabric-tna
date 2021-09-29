@@ -16,10 +16,11 @@ set -exu -o pipefail
 
 source .env
 
+echo "Pulling all dependencies..."
+make deps
+
 echo "Build all profiles using SDE ${SDE_P4C_DOCKER_IMG}..."
 # Pull first to avoid pulling multiple times in parallel by the make jobs
-docker pull "${SDE_P4C_DOCKER_IMG}"
-docker pull "${TESTER_DOCKER_IMG}"
 docker build -f ptf/Dockerfile -t "${TESTER_DOCKER_IMG}" .
 
 # Jenkins uses 8 cores 15G VM
