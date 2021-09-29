@@ -169,8 +169,14 @@ public class SlicingWebResource extends AbstractWebResource {
         return response;
     }
 
+    /**
+     * Get classified flows by slice id and tc.
+     *
+     * @param sliceId id of slice
+     * @param tc traffic class
+     * @return 200 ok and traffic selectors
+     */
     @GET
-    @Consumes(MediaType.APPLICATION_JSON)
     @Path("flow/{sliceId}/{tc}")
     public Response getFlow(@PathParam("sliceId") int sliceId, @PathParam("tc") String tc) {
         Set<TrafficSelector> result = slicingService.getFlows(SliceId.of(sliceId), TrafficClass.valueOf(tc));
@@ -182,6 +188,14 @@ public class SlicingWebResource extends AbstractWebResource {
         return Response.ok(root).build();
     }
 
+    /**
+     * Classify a flow.
+     *
+     * @param sliceId id of slice
+     * @param tc traffic class
+     * @param input json stream of traffic selector
+     * @return 200 ok or 400 bad request
+     */
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("flow/{sliceId}/{tc}")
@@ -205,6 +219,14 @@ public class SlicingWebResource extends AbstractWebResource {
         return response;
     }
 
+    /**
+     * Remove a classified flow.
+     *
+     * @param sliceId if of slice
+     * @param tc traffic class
+     * @param input json stream of traffic selector
+     * @return 200 ok or 400 bad request
+     */
     @DELETE
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("flow/{sliceId}/{tc}")
