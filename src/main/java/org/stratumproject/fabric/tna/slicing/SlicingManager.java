@@ -18,15 +18,12 @@ import org.onosproject.net.flow.DefaultTrafficTreatment;
 import org.onosproject.net.flow.FlowRule;
 import org.onosproject.net.flow.FlowRuleService;
 import org.onosproject.net.flow.TrafficSelector;
-import org.onosproject.net.flow.criteria.IPCriterion;
-import org.onosproject.net.flow.criteria.IPProtocolCriterion;
 import org.onosproject.net.flow.criteria.PiCriterion;
-import org.onosproject.net.flow.criteria.TcpPortCriterion;
-import org.onosproject.net.flow.criteria.UdpPortCriterion;
 import org.onosproject.net.intent.WorkPartitionService;
 import org.onosproject.net.pi.model.PiTableId;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
+import org.onosproject.net.pi.service.PiTranslationService;
 import org.onosproject.store.serializers.KryoNamespaces;
 import org.onosproject.store.service.ConsistentMap;
 import org.onosproject.store.service.MapEvent;
@@ -68,14 +65,6 @@ import static org.stratumproject.fabric.tna.behaviour.FabricUtils.sliceTcConcat;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_QOS_QUEUES;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_COLOR;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_COLOR_BITWIDTH;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_IPV4_SRC;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_IPV4_DST;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_IP_PROTO;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_IP_PROTO_BITWIDTH;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_L4_SPORT;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_L4_SPORT_BITWIDTH;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_L4_DPORT;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_L4_DPORT_BITWIDTH;
 
 /**
  * Implementation of SlicingService.
@@ -103,9 +92,13 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     protected CodecService codecService;
 
+    @Reference(cardinality = ReferenceCardinality.MANDATORY)
+    protected PiTranslationService piTranslationService;
+
     private static final Logger log = getLogger(SlicingManager.class);
     private static final String APP_NAME = "org.stratumproject.fabric.tna.slicing"; // TODO revisit naming
     private static final int QOS_FLOW_PRIORITY = 10;
+    private static final int CLASSIFIER_FLOW_PRIORITY = 0;
 
     protected ApplicationId appId;
 
@@ -498,21 +491,22 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
         return flowRule;
     }
 
-    private void addClassifiedTable(DeviceId deviceId, TrafficSelector selector, SliceId sliceId, TrafficClass tc) {
-        FlowRule rule = buildClassifiedFlowRule(deviceId, selector, sliceId, tc);
+    private void addClassifierFlowRule(DeviceId deviceId,
+        TrafficSelector selector, SliceId sliceId, TrafficClass tc) {
+        FlowRule rule = buildClassifierFlowRule(deviceId, selector, sliceId, tc);
         flowRuleService.applyFlowRules(rule);
         log.info("Add classified table flow on {} for selector {}", deviceId, selector);
     }
 
-    private void removeClassifiedTable(DeviceId deviceId, TrafficSelector selector, SliceId sliceId, TrafficClass tc) {
-        FlowRule rule = buildClassifiedFlowRule(deviceId, selector, sliceId, tc);
+    private void removeClassifierFlowRule(DeviceId deviceId,
+        TrafficSelector selector, SliceId sliceId, TrafficClass tc) {
+        FlowRule rule = buildClassifierFlowRule(deviceId, selector, sliceId, tc);
         flowRuleService.removeFlowRules(rule);
         log.info("Remove classified table flow on {} for selector {}", deviceId, selector);
     }
 
-    private FlowRule buildClassifiedFlowRule(DeviceId deviceId,
+    private FlowRule buildClassifierFlowRule(DeviceId deviceId,
         TrafficSelector selector, SliceId sliceId, TrafficClass tc) {
-        PiCriterion.Builder piCriterionBuilder = buildClassifiedPiCriterion(selector);
 
         PiAction.Builder piTableActionBuilder = PiAction.builder()
                 .withId(P4InfoConstants.FABRIC_INGRESS_SLICE_TC_CLASSIFIER_SET_SLICE_ID_TC)
@@ -523,56 +517,14 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
                 .forDevice(deviceId)
                 .forTable(P4InfoConstants.FABRIC_INGRESS_SLICE_TC_CLASSIFIER_CLASSIFIER)
                 .fromApp(appId)
-                .withPriority(QOS_FLOW_PRIORITY)
-                .withSelector(DefaultTrafficSelector.builder().matchPi(piCriterionBuilder.build()).build())
+                .withPriority(CLASSIFIER_FLOW_PRIORITY)
+                .withSelector(selector)
                 .withTreatment(DefaultTrafficTreatment.builder().piTableAction(piTableActionBuilder.build()).build())
                 .makePermanent()
                 .build();
 
         log.info("{}", flowRule);
         return flowRule;
-    }
-
-    private PiCriterion.Builder buildClassifiedPiCriterion(TrafficSelector selector) {
-        PiCriterion.Builder piCriterionBuilder = PiCriterion.builder();
-        selector.criteria().forEach(c -> {
-            switch (c.type()) {
-                case IPV4_SRC:
-                    piCriterionBuilder.matchTernary(
-                        HDR_IPV4_SRC, ((IPCriterion) c).ip().address().getIp4Address().toInt(),
-                            ((IPCriterion) c).ip().prefixLength());
-                    break;
-                case IPV4_DST:
-                    piCriterionBuilder.matchTernary(
-                        HDR_IPV4_DST, ((IPCriterion) c).ip().address().getIp4Address().toInt(),
-                            ((IPCriterion) c).ip().prefixLength());
-                    break;
-                case IP_PROTO:
-                    piCriterionBuilder.matchTernary(
-                        HDR_IP_PROTO, ((IPProtocolCriterion) c).protocol(), HDR_IP_PROTO_BITWIDTH);
-                    break;
-                case TCP_SRC:
-                    piCriterionBuilder.matchTernary(
-                        HDR_L4_SPORT, ((TcpPortCriterion) c).tcpPort().toInt(), HDR_L4_SPORT_BITWIDTH);
-                    break;
-                case TCP_DST:
-                    piCriterionBuilder.matchTernary(
-                        HDR_L4_DPORT, ((TcpPortCriterion) c).tcpPort().toInt(), HDR_L4_DPORT_BITWIDTH);
-                    break;
-                case UDP_SRC:
-                    piCriterionBuilder.matchTernary(
-                        HDR_L4_SPORT, ((UdpPortCriterion) c).udpPort().toInt(), HDR_L4_SPORT_BITWIDTH);
-                    break;
-                case UDP_DST:
-                    piCriterionBuilder.matchTernary(
-                        HDR_L4_DPORT, ((UdpPortCriterion) c).udpPort().toInt(), HDR_L4_DPORT_BITWIDTH);
-                    break;
-                default:
-                    break;
-            }
-        });
-
-        return piCriterionBuilder;
     }
 
     private class InternalSliceListener implements MapEventListener<SliceStoreKey, QueueId> {
@@ -638,7 +590,7 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
                     case UPDATE:
                         if (workPartitionService.isMine(event.newValue().value(), toStringHasher())) {
                             deviceService.getAvailableDevices().forEach(device ->
-                                addClassifiedTable(device.id(), event.key(),
+                                addClassifierFlowRule(device.id(), event.key(),
                                     event.newValue().value().sliceId(), event.newValue().value().trafficClass())
                             );
                         }
@@ -646,7 +598,7 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
                     case REMOVE:
                         if (workPartitionService.isMine(event.oldValue().value(), toStringHasher())) {
                             deviceService.getAvailableDevices().forEach(device ->
-                                removeClassifiedTable(device.id(), event.key(),
+                                removeClassifierFlowRule(device.id(), event.key(),
                                     event.newValue().value().sliceId(), event.newValue().value().trafficClass())
                             );
                         }
@@ -672,7 +624,7 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
                                 sliceStore.forEach(e -> addQueueTable(deviceId,
                                         e.getKey().sliceId(), e.getKey().trafficClass(), e.getValue().value())
                                 );
-                                flowStore.forEach(e -> addClassifiedTable(deviceId,
+                                flowStore.forEach(e -> addClassifierFlowRule(deviceId,
                                         e.getKey(), e.getValue().value().sliceId(), e.getValue().value().trafficClass())
                                 );
                             }
