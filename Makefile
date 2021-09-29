@@ -31,6 +31,15 @@ PIPECONF_OAR_FILE := $(DIR)/target/fabric-tna-1.0.0-SNAPSHOT.oar
 # Profiles to build by default (all)
 PROFILES ?= fabric fabric-spgw fabric-int fabric-spgw-int
 
+deps:
+	docker pull $(SDE_TM_DOCKER_IMG)
+	docker pull $(SDE_P4C_DOCKER_IMG)
+	docker pull $(STRATUM_DOCKER_IMG)
+	docker pull $(STRATUM_BMV2_IMG)
+	docker pull $(TESTER_DOCKER_IMG)
+	docker pull $(PIPELINE_CONFIG_BUILDER_IMG)
+	docker pull $(MAVEN_DOCKER_IMAGE)
+
 build: clean $(PROFILES) pipeconf
 
 all: $(PROFILES)
