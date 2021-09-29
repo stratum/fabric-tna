@@ -104,7 +104,7 @@ def list_port_status(port_status: dict) -> None:
         readable_stats = get_readable_port_stats(port_status[port])
         print("States from port {}: \n{}".format(port, readable_stats))
 
-def monitor_port_stats(c: STLClient) -> None:
+def monitor_port_stats(c: STLClient) -> dict:
     """
     List some port stats continuously while traffic is active 
 
@@ -113,6 +113,14 @@ def monitor_port_stats(c: STLClient) -> None:
         TRex stateless client to continuously grab statistics from
     """
     ports = [0, 1, 2, 3]
+
+    results = {
+               "duration": [],
+               0: {"rx_bps": [], "tx_bps": [], "rx_pps": [], "tx_pps": []},
+               1: {"rx_bps": [], "tx_bps": [], "rx_pps": [], "tx_pps": []},
+               2: {"rx_bps": [], "tx_bps": [], "rx_pps": [], "tx_pps": []},
+               3: {"rx_bps": [], "tx_bps": [], "rx_pps": [], "tx_pps": []}
+              }
 
     prev = {
             0: {"opackets": 0, "ipackets": 0, "obytes": 0, "ibytes": 0, "time": time.time()},
@@ -139,10 +147,10 @@ def monitor_port_stats(c: STLClient) -> None:
             ibytes = stats[port]['ibytes']
             time_diff =  time.time() - prev[port]["time"]
             
-            tx_pps = opackets - prev[port]["opackets"] / time_diff
-            rx_pps = ipackets - prev[port]["ipackets"] / time_diff
-            tx_bps = 8 * (obytes - prev[port]["obytes"]) / time_diff
             rx_bps = 8 * (ibytes - prev[port]["ibytes"]) / time_diff
+            tx_bps = 8 * (obytes - prev[port]["obytes"]) / time_diff
+            rx_pps = ipackets - prev[port]["ipackets"] / time_diff
+            tx_pps = opackets - prev[port]["opackets"] / time_diff
 
             print("{:^4} | {:<10} | {:<10} | {:<10} | {:<10} |"
                     .format(port,
@@ -153,6 +161,12 @@ def monitor_port_stats(c: STLClient) -> None:
                         )
             )
 
+            results["duration"].append(time.time()-s_time)
+            results[port]["rx_bps"].append(rx_bps)
+            results[port]["tx_bps"].append(tx_bps)
+            results[port]["rx_pps"].append(rx_pps)
+            results[port]["tx_pps"].append(tx_pps)
+
             prev[port]["opackets"] = opackets
             prev[port]["ipackets"] = ipackets
             prev[port]["obytes"] = obytes
@@ -161,6 +175,8 @@ def monitor_port_stats(c: STLClient) -> None:
 
         time.sleep(1)
         print("")
+
+    return results
 
 
 LatencyStats = collections.namedtuple(
