@@ -14,9 +14,9 @@ from xnt import pypy_analyze_int_report_pcap
 TRAFFIC_MULT = "1"
 RATE = 40_000_000_000 # 40 Gbps
 TEST_DURATION = 10
-CAPTURE_LIMIT = 10
+CAPTURE_LIMIT = 30
 
-FLOW_REPORTS = 10
+EXPECTED_FLOW_REPORTS = 10
 
 SENDER_PORT = 0
 RECEIVER_PORT = 1
@@ -87,6 +87,6 @@ class IntSingleFlow(TRexTest, IntTest):
 
         local_reports = results["local_reports"]
         self.failIf(
-            local_reports != FLOW_REPORTS,
+            local_reports != EXPECTED_FLOW_REPORTS,
             f"Flow reports generated for 10 second single flow test should be 10, was {local_reports}",
         )
