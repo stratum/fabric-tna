@@ -23,7 +23,6 @@ import org.onosproject.net.intent.WorkPartitionService;
 import org.onosproject.net.pi.model.PiTableId;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
-import org.onosproject.net.pi.service.PiTranslationService;
 import org.onosproject.store.serializers.KryoNamespaces;
 import org.onosproject.store.service.ConsistentMap;
 import org.onosproject.store.service.MapEvent;
@@ -91,9 +90,6 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     protected CodecService codecService;
-
-    @Reference(cardinality = ReferenceCardinality.MANDATORY)
-    protected PiTranslationService piTranslationService;
 
     private static final Logger log = getLogger(SlicingManager.class);
     private static final String APP_NAME = "org.stratumproject.fabric.tna.slicing"; // TODO revisit naming
