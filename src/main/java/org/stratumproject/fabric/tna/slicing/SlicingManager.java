@@ -322,6 +322,10 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
 
     @Override
     public boolean addFlow(TrafficSelector selector, SliceId sliceId, TrafficClass tc) {
+        if (selector.equals(DefaultTrafficSelector.emptySelector())) {
+            log.warn("Empty traffic selector is not allowed");
+            return false;
+        }
         // Accept 5-tuple only
         if (!fiveTupleOnly(selector)) {
             log.warn("Only accept 5-tuple {}", selector);
