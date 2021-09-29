@@ -19,6 +19,7 @@ import org.onosproject.core.CoreService;
 import org.onosproject.core.DefaultApplicationId;
 import org.onosproject.net.Device;
 import org.onosproject.net.DeviceId;
+import org.onosproject.net.config.NetworkConfigService;
 import org.onosproject.net.device.DeviceService;
 import org.onosproject.net.flow.DefaultFlowRule;
 import org.onosproject.net.flow.DefaultTrafficSelector;
@@ -31,6 +32,7 @@ import org.onosproject.net.intent.WorkPartitionService;
 import org.onosproject.net.pi.model.PiTableId;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
+import org.onosproject.segmentrouting.config.SegmentRoutingDeviceConfig;
 import org.onosproject.store.service.StorageService;
 import org.stratumproject.fabric.tna.behaviour.P4InfoConstants;
 import org.stratumproject.fabric.tna.slicing.api.Color;
@@ -66,6 +68,7 @@ public class SlicingManagerTest {
     private final FlowRuleService flowRuleService = EasyMock.createMock(FlowRuleService.class);
     private final WorkPartitionService workPartitionService = EasyMock.createMock(WorkPartitionService.class);
     private final CodecService codecService = EasyMock.createMock(CodecService.class);
+    private final NetworkConfigService nwCfgService = EasyMock.createMock(NetworkConfigService.class);
     private final Capture<FlowRule> capturedAddedFlowRules = Capture.newInstance(CaptureType.ALL);
     private final Capture<FlowRule> capturedRemovedFlowRules = Capture.newInstance(CaptureType.ALL);
 
@@ -87,6 +90,7 @@ public class SlicingManagerTest {
         manager.deviceService = deviceService;
         manager.workPartitionService = workPartitionService;
         manager.codecService = codecService;
+        manager.networkCfgService = nwCfgService;
 
         EasyMock.expect(coreService.registerApplication(EasyMock.anyObject())).andReturn(APP_ID);
         EasyMock.expect(storageService.<SliceStoreKey, QueueId>consistentMapBuilder()).andReturn(
@@ -98,6 +102,15 @@ public class SlicingManagerTest {
         EasyMock.expect(workPartitionService.isMine(
             EasyMock.anyObject(), EasyMock.anyObject())).andReturn(true).anyTimes();
         EasyMock.expect(deviceService.getAvailableDevices()).andReturn(DEVICES).anyTimes();
+        EasyMock.expect(nwCfgService.getConfig(EasyMock.anyObject(), EasyMock.eq(SegmentRoutingDeviceConfig.class)))
+        .andReturn(
+            new SegmentRoutingDeviceConfig() {
+                @Override
+                public Boolean isEdgeRouter() {
+                    return true;
+                }
+            }
+        ).anyTimes();
         deviceService.addListener(EasyMock.anyObject());
         EasyMock.expectLastCall();
         flowRuleService.applyFlowRules(EasyMock.capture(capturedAddedFlowRules));
@@ -107,12 +120,12 @@ public class SlicingManagerTest {
         codecService.registerCodec(EasyMock.anyObject(), EasyMock.anyObject());
         EasyMock.expectLastCall().times(2);
         EasyMock.replay(coreService, storageService, workPartitionService,
-            deviceService, flowRuleService, codecService);
+            deviceService, flowRuleService, codecService, nwCfgService);
 
         manager.activate();
 
         EasyMock.verify(coreService, storageService, workPartitionService,
-            deviceService, flowRuleService, codecService);
+            deviceService, flowRuleService, codecService, nwCfgService);
     }
 
     @Test

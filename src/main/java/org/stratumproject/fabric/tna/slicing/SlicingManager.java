@@ -9,6 +9,7 @@ import org.onosproject.codec.CodecService;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
 import org.onosproject.net.DeviceId;
+import org.onosproject.net.config.NetworkConfigService;
 import org.onosproject.net.device.DeviceEvent;
 import org.onosproject.net.device.DeviceListener;
 import org.onosproject.net.device.DeviceService;
@@ -23,6 +24,7 @@ import org.onosproject.net.intent.WorkPartitionService;
 import org.onosproject.net.pi.model.PiTableId;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
+import org.onosproject.segmentrouting.config.SegmentRoutingDeviceConfig;
 import org.onosproject.store.serializers.KryoNamespaces;
 import org.onosproject.store.service.ConsistentMap;
 import org.onosproject.store.service.MapEvent;
@@ -90,6 +92,9 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     protected CodecService codecService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY)
+    protected NetworkConfigService networkCfgService;
 
     private static final Logger log = getLogger(SlicingManager.class);
     private static final String APP_NAME = "org.stratumproject.fabric.tna.slicing"; // TODO revisit naming
@@ -589,18 +594,26 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
                     case INSERT:
                     case UPDATE:
                         if (workPartitionService.isMine(event.newValue().value(), toStringHasher())) {
-                            deviceService.getAvailableDevices().forEach(device ->
-                                addClassifierFlowRule(device.id(), event.key(),
-                                    event.newValue().value().sliceId(), event.newValue().value().trafficClass())
-                            );
+                            deviceService.getAvailableDevices().forEach(device -> {
+                                SegmentRoutingDeviceConfig cfg =
+                                    networkCfgService.getConfig(device.id(), SegmentRoutingDeviceConfig.class);
+                                if (cfg != null && cfg.isEdgeRouter()) {
+                                    addClassifierFlowRule(device.id(), event.key(),
+                                        event.newValue().value().sliceId(), event.newValue().value().trafficClass());
+                                }
+                            });
                         }
                         break;
                     case REMOVE:
                         if (workPartitionService.isMine(event.oldValue().value(), toStringHasher())) {
-                            deviceService.getAvailableDevices().forEach(device ->
-                                removeClassifierFlowRule(device.id(), event.key(),
-                                    event.newValue().value().sliceId(), event.newValue().value().trafficClass())
-                            );
+                            deviceService.getAvailableDevices().forEach(device -> {
+                                SegmentRoutingDeviceConfig cfg =
+                                    networkCfgService.getConfig(device.id(), SegmentRoutingDeviceConfig.class);
+                                if (cfg != null && cfg.isEdgeRouter()) {
+                                    removeClassifierFlowRule(device.id(), event.key(),
+                                        event.newValue().value().sliceId(), event.newValue().value().trafficClass());
+                                }
+                            });
                         }
                         break;
                     default:
@@ -624,9 +637,13 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
                                 sliceStore.forEach(e -> addQueueTable(deviceId,
                                         e.getKey().sliceId(), e.getKey().trafficClass(), e.getValue().value())
                                 );
-                                flowStore.forEach(e -> addClassifierFlowRule(deviceId,
+                                SegmentRoutingDeviceConfig cfg =
+                                    networkCfgService.getConfig(deviceId, SegmentRoutingDeviceConfig.class);
+                                if (cfg != null && cfg.isEdgeRouter()) {
+                                    flowStore.forEach(e -> addClassifierFlowRule(deviceId,
                                         e.getKey(), e.getValue().value().sliceId(), e.getValue().value().trafficClass())
-                                );
+                                    );
+                                }
                             }
                         }
                         break;
