@@ -57,19 +57,25 @@ class QosBaseTest(SlicingTest):
         self.control_pg_id = 7
         self.system_pg_id = 2
 
-    def push_chassis_config(self, yaml_file="qos-config-1g.yaml") -> None:
-        this_dir = os.path.dirname(os.path.realpath(__file__))
-        with open(f"{this_dir}/chassis_config.pb.txt", mode="rb") as file:
-            chassis_config = file.read()
-        # Auto-generate and append vendor_config
-        with open(f"{this_dir}/{yaml_file}", "r") as file:
-            chassis_config += bytes(
-                "\n" + vendor_config(yaml.safe_load(file)), encoding="utf8"
-            )
-        # Write to disk for debugging
-        with open(f"{this_dir}/chassis_config.pb.txt.tmp", mode="wb") as file:
-            file.write(chassis_config)
-        gnmi_utils.push_chassis_config(chassis_config)
+    def push_chassis_config(self, yaml_file="qos-config-1g.yaml", no_shaping=False) -> None:
+        if no_shaping:
+            this_dir = os.path.dirname(os.path.realpath(__file__))
+            with open(f"{this_dir}/../linerate/chassis_config.pb.txt", mode="rb") as file:
+                chassis_config = file.read()
+            gnmi_utils.push_chassis_config(chassis_config)
+        else:
+            this_dir = os.path.dirname(os.path.realpath(__file__))
+            with open(f"{this_dir}/chassis_config.pb.txt", mode="rb") as file:
+                chassis_config = file.read()
+            # Auto-generate and append vendor_config
+            with open(f"{this_dir}/{yaml_file}", "r") as file:
+                chassis_config += bytes(
+                    "\n" + vendor_config(yaml.safe_load(file)), encoding="utf8"
+                )
+            # Write to disk for debugging
+            with open(f"{this_dir}/chassis_config.pb.txt.tmp", mode="wb") as file:
+                file.write(chassis_config)
+            gnmi_utils.push_chassis_config(chassis_config)
 
     def _setup_basic_forwarding(self, out_port) -> None:
         in_ports = [self.port1, self.port2, self.port3, self.port4]

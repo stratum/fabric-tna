@@ -42,6 +42,7 @@ class IntFlowFilterWithTrafficTrace(TRexTest, IntTest):
 
     @autocleanup
     def runTest(self):
+        self.push_chassis_config()
 
         pkt = testutils.simple_udp_packet()
         self.set_up_int_flows(
