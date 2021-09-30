@@ -595,9 +595,7 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
                     case UPDATE:
                         if (workPartitionService.isMine(event.newValue().value(), toStringHasher())) {
                             deviceService.getAvailableDevices().forEach(device -> {
-                                SegmentRoutingDeviceConfig cfg =
-                                    networkCfgService.getConfig(device.id(), SegmentRoutingDeviceConfig.class);
-                                if (cfg != null && cfg.isEdgeRouter()) {
+                                if (isLeafSwitch(device.id())) {
                                     addClassifierFlowRule(device.id(), event.key(),
                                         event.newValue().value().sliceId(), event.newValue().value().trafficClass());
                                 }
@@ -607,9 +605,7 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
                     case REMOVE:
                         if (workPartitionService.isMine(event.oldValue().value(), toStringHasher())) {
                             deviceService.getAvailableDevices().forEach(device -> {
-                                SegmentRoutingDeviceConfig cfg =
-                                    networkCfgService.getConfig(device.id(), SegmentRoutingDeviceConfig.class);
-                                if (cfg != null && cfg.isEdgeRouter()) {
+                                if (isLeafSwitch(device.id())) {
                                     removeClassifierFlowRule(device.id(), event.key(),
                                         event.newValue().value().sliceId(), event.newValue().value().trafficClass());
                                 }
@@ -637,9 +633,7 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
                                 sliceStore.forEach(e -> addQueueTable(deviceId,
                                         e.getKey().sliceId(), e.getKey().trafficClass(), e.getValue().value())
                                 );
-                                SegmentRoutingDeviceConfig cfg =
-                                    networkCfgService.getConfig(deviceId, SegmentRoutingDeviceConfig.class);
-                                if (cfg != null && cfg.isEdgeRouter()) {
+                                if (isLeafSwitch(deviceId)) {
                                     flowStore.forEach(e -> addClassifierFlowRule(deviceId,
                                         e.getKey(), e.getValue().value().sliceId(), e.getValue().value().trafficClass())
                                     );
@@ -662,5 +656,14 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
 
     private static <K> Function<K, Long> toStringHasher() {
         return k -> Hashing.sha256().hashUnencodedChars(k.toString()).asLong();
+    }
+
+    private boolean isLeafSwitch(DeviceId deviceId) {
+        SegmentRoutingDeviceConfig cfg = networkCfgService.getConfig(deviceId, SegmentRoutingDeviceConfig.class);
+        if (cfg != null && cfg.isEdgeRouter()) {
+            return true;
+        } else {
+            return false;
+        }
     }
 }
