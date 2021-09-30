@@ -99,6 +99,9 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
     private static final Logger log = getLogger(SlicingManager.class);
     private static final String APP_NAME = "org.stratumproject.fabric.tna.slicing"; // TODO revisit naming
     private static final int QOS_FLOW_PRIORITY = 10;
+
+    // We use the lowest priority to avoid overriding the port-based trust_dscp rules installed
+    // when translating filtering objectives.
     private static final int CLASSIFIER_FLOW_PRIORITY = 0;
 
     protected ApplicationId appId;
@@ -161,7 +164,7 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
         queueStore.put(QueueId.of(6), new QueueStoreValue(TrafficClass.ELASTIC, true));
 
         flowStore = storageService.<TrafficSelector, SliceStoreKey>consistentMapBuilder()
-                .withName("fabric-tna-classified-flow")
+                .withName("fabric-tna-classifier-flow")
                 .withRelaxedReadConsistency()
                 .withSerializer(Serializer.using(serializer.build()))
                 .build();
@@ -339,7 +342,7 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
 
         SliceStoreKey value = new SliceStoreKey(sliceId, tc);
         flowStore.compute(selector, (k, v) -> {
-            log.info("Classified flow {} to slice {} tc {}", selector, sliceId, tc);
+            log.info("classifier flow {} to slice {} tc {}", selector, sliceId, tc);
             return value;
         });
 
@@ -500,14 +503,14 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
         TrafficSelector selector, SliceId sliceId, TrafficClass tc) {
         FlowRule rule = buildClassifierFlowRule(deviceId, selector, sliceId, tc);
         flowRuleService.applyFlowRules(rule);
-        log.info("Add classified table flow on {} for selector {}", deviceId, selector);
+        log.info("Add classifier table flow on {} for selector {}", deviceId, selector);
     }
 
     private void removeClassifierFlowRule(DeviceId deviceId,
         TrafficSelector selector, SliceId sliceId, TrafficClass tc) {
         FlowRule rule = buildClassifierFlowRule(deviceId, selector, sliceId, tc);
         flowRuleService.removeFlowRules(rule);
-        log.info("Remove classified table flow on {} for selector {}", deviceId, selector);
+        log.info("Remove classifier table flow on {} for selector {}", deviceId, selector);
     }
 
     private FlowRule buildClassifierFlowRule(DeviceId deviceId,
@@ -588,7 +591,7 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
 
     private class InternalFlowListener implements MapEventListener<TrafficSelector, SliceStoreKey> {
         public void event(MapEvent<TrafficSelector, SliceStoreKey> event) {
-            log.info("Processing flow classified event {}", event);
+            log.info("Processing flow classifier event {}", event);
             flowExecutor.submit(() -> {
                 switch (event.type()) {
                     case INSERT:

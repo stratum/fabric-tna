@@ -14,15 +14,16 @@ import org.stratumproject.fabric.tna.slicing.api.TrafficClass;
  * Get flows from slice.
  */
 @Service
-@Command(scope = "fabric-tna", name = "classified-flow-get", description = "Get classified flow by slice id and tc")
+@Command(scope = "fabric-tna", name = "classifier-flow-get", description = "Get classifier flow by slice id and tc")
 public class FlowGetCommand extends AbstractShellCommand {
     @Argument(index = 0, name = "sliceId",
-            description = "sliceId. Used to identify a slice.",
+            description = "SliceId (0 - 15)",
             required = true, multiValued = false)
     int sliceId;
 
     @Argument(index = 1, name = "tc",
-            description = "Traffic class. Used to classify the traffic.",
+            description = "Traffic class. Used to classify the traffic." +
+                " Possible values: BEST_EFFORT, CONTROL, REAL_TIME, ELASTIC",
             required = true, multiValued = false)
     String tc;
 

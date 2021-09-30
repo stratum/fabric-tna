@@ -21,38 +21,39 @@ import org.stratumproject.fabric.tna.slicing.api.TrafficClass;
  * Remove flow from slice.
  */
 @Service
-@Command(scope = "fabric-tna", name = "classified-flow-remove", description = "Remove a classified flow")
+@Command(scope = "fabric-tna", name = "classifier-flow-remove", description = "Remove a classifier flow")
 public class FlowRemoveCommand extends AbstractShellCommand {
     @Argument(index = 0, name = "sliceId",
-            description = "sliceId. Used to identify a slice.",
+            description = "SliceId (0 - 15)",
             required = true, multiValued = false)
     int sliceId;
 
     @Argument(index = 1, name = "tc",
-            description = "Traffic class. Used to classify the traffic.",
+            description = "Traffic class. Used to classify the traffic." +
+                " Possible values: BEST_EFFORT, CONTROL, REAL_TIME, ELASTIC",
             required = true, multiValued = false)
     String tc;
 
     @Option(name = "-sip", aliases = "--srcIp",
-            description = "src IP",
-            valueToShowInHelp = "10.0.0.1",
+            description = "Source IP prefix",
+            valueToShowInHelp = "10.0.0.1/32",
             multiValued = false)
     String srcIp;
 
     @Option(name = "-sp", aliases = "--srcPort",
-            description = "src port",
+            description = "Source L4 port",
             valueToShowInHelp = "1001",
             multiValued = false)
     short srcPort;
 
     @Option(name = "-dip", aliases = "--dstIp",
-            description = "dst IP",
-            valueToShowInHelp = "10.0.0.2",
+            description = "Destination IP prefix",
+            valueToShowInHelp = "10.0.0.2/32",
             multiValued = false)
     String dstIp;
 
     @Option(name = "-dp", aliases = "--dstPort",
-            description = "dst port",
+            description = "Destination L4 port",
             valueToShowInHelp = "1002",
             multiValued = false)
     short dstPort;

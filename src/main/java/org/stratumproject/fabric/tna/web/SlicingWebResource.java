@@ -170,7 +170,7 @@ public class SlicingWebResource extends AbstractWebResource {
     }
 
     /**
-     * Get classified flows by slice id and tc.
+     * Get classifier flows by slice id and tc.
      *
      * @param sliceId id of slice
      * @param tc traffic class
@@ -220,7 +220,7 @@ public class SlicingWebResource extends AbstractWebResource {
     }
 
     /**
-     * Remove a classified flow.
+     * Remove a classifier flow.
      *
      * @param sliceId if of slice
      * @param tc traffic class
