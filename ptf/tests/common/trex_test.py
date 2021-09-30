@@ -3,6 +3,7 @@
 
 from base_test import *
 from trex.stl.api import STLClient
+import gnmi_utils
 
 
 class TRexTest(P4RuntimeTest):
@@ -28,3 +29,9 @@ class TRexTest(P4RuntimeTest):
         self.trex_client.release()
         self.trex_client.disconnect()
         super(TRexTest, self).tearDown()
+
+    def push_chassis_config(self) -> None:
+        this_dir = os.path.dirname(os.path.realpath(__file__))
+        with open(f"{this_dir}/../linerate/chassis_config.pb.txt", mode="rb") as file:
+            chassis_config = file.read()
+        gnmi_utils.push_chassis_config(chassis_config)

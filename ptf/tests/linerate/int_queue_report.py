@@ -11,7 +11,8 @@ from scapy.utils import PcapReader
 from trex_stl_lib.api import STLVM, STLPktBuilder, STLStream, STLTXCont
 from trex_test import TRexTest
 
-TRAFFIC_MULT = "1000pps"
+TRAFFIC_MULT = "1"
+RATE = 1000  # pps
 TEST_DURATION = 3
 DEFAULT_QID = 1
 SLICE_ID = 1
@@ -89,7 +90,7 @@ class IntQueueReportTest(TRexTest, IntTest, SlicingTest):
             step=1,
         )
         vm.write(fv_name="ip_src", pkt_offset="IP.src")
-        stream = STLStream(packet=STLPktBuilder(pkt=pkt, vm=vm), mode=STLTXCont())
+        stream = STLStream(packet=STLPktBuilder(pkt=pkt, vm=vm), mode=STLTXCont(pps = RATE))
         self.trex_client.add_streams(stream, ports=[SENDER_PORT])
 
         # Put RX ports to promiscuous mode, otherwise it will drop all packets if the
@@ -244,6 +245,7 @@ class IntQueueReportTest(TRexTest, IntTest, SlicingTest):
 
     def runTest(self):
         print("")
+        self.push_chassis_config()
         for is_device_spine in [False, True]:
             for tagged1 in [False, True]:
                 for tagged2 in [False, True]:
