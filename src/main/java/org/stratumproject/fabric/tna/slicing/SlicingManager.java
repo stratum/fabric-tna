@@ -663,10 +663,6 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
 
     private boolean isLeafSwitch(DeviceId deviceId) {
         SegmentRoutingDeviceConfig cfg = networkCfgService.getConfig(deviceId, SegmentRoutingDeviceConfig.class);
-        if (cfg != null && cfg.isEdgeRouter()) {
-            return true;
-        } else {
-            return false;
-        }
+        return cfg != null && cfg.isEdgeRouter();
     }
 }
