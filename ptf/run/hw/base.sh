@@ -28,20 +28,28 @@ fi
 echo "*** Testing profile '${fabricProfile}'..."
 
 sdeVer_=$(echo "${SDE_VERSION}" | tr . _) # Replace dots with underscores
-P4C_OUT=p4src/build/${fabricProfile}/sde_${sdeVer_}
+P4C_OUT=p4src/tna/build/${fabricProfile}/sde_${sdeVer_}
 echo "*** Using P4 compiler output in ${P4C_OUT}..."
 
 testerRunName=tester-${RANDOM}
+function stop() {
+    set +e
+    echo "*** Stopping ${testerRunName}..."
+    docker stop -t0 ${testerRunName} > /dev/null 2>&1
+    docker cp ${testerRunName}:/tmp/. "${DIR}"/log > /dev/null 2>&1
+    docker rm ${testerRunName} > /dev/null 2>&1
+}
+trap stop EXIT
+
 echo "*** Starting ${testerRunName}..."
 # Do not attach stdin if running in an environment without it (e.g., Jenkins)
 it=$(test -t 0 && echo "-it" || echo "-t")
 # shellcheck disable=SC2068
 # mount localtime to container so test pcap time in name matches machine's local time
-docker run --name "${testerRunName}" "${it}" --rm \
+docker run --name "${testerRunName}" "${it}" \
     --network host \
     --privileged \
     -v "${FABRIC_TNA_ROOT}":/fabric-tna \
-    -v "${DIR}/log":/tmp \
     -v /etc/localtime:/etc/localtime \
     -e P4C_OUT="${P4C_OUT}" \
     -e PTF_FILTER="${PTF_FILTER}" \

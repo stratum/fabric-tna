@@ -22,3 +22,11 @@ License: LicenseRef-ONF-Member-Only-1.0
 Files: ptf/run/hw/port_map.trex.json
 Copyright: 2020-present Open Networking Foundation
 License: LicenseRef-ONF-Member-Only-1.0
+
+Files: ptf/run/bmv2/chassis_config.txt
+Copyright: 2021-present Open Networking Foundation
+License: LicenseRef-ONF-Member-Only-1.0
+
+Files: ptf/run/bmv2/port_map.veth.json
+Copyright: 2021-present Open Networking Foundation
+License: LicenseRef-ONF-Member-Only-1.0

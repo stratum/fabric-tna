@@ -90,7 +90,9 @@ class IntQueueReportTest(TRexTest, IntTest, SlicingTest):
             step=1,
         )
         vm.write(fv_name="ip_src", pkt_offset="IP.src")
-        stream = STLStream(packet=STLPktBuilder(pkt=pkt, vm=vm), mode=STLTXCont(pps = RATE))
+        stream = STLStream(
+            packet=STLPktBuilder(pkt=pkt, vm=vm), mode=STLTXCont(pps=RATE)
+        )
         self.trex_client.add_streams(stream, ports=[SENDER_PORT])
 
         # Put RX ports to promiscuous mode, otherwise it will drop all packets if the

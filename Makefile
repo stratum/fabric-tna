@@ -31,38 +31,48 @@ PIPECONF_OAR_FILE := $(DIR)/target/fabric-tna-1.0.0-SNAPSHOT.oar
 # Profiles to build by default (all)
 PROFILES ?= fabric fabric-spgw fabric-int fabric-spgw-int
 
+deps:
+	docker pull $(SDE_TM_DOCKER_IMG)
+	docker pull $(SDE_P4C_DOCKER_IMG)
+	docker pull $(STRATUM_DOCKER_IMG)
+	docker pull $(STRATUM_BMV2_IMG)
+	docker pull $(TESTER_DOCKER_IMG)
+	docker pull $(PIPELINE_CONFIG_BUILDER_IMG)
+	docker pull $(MAVEN_DOCKER_IMAGE)
+
 build: clean $(PROFILES) pipeconf
 
 all: $(PROFILES)
 
 fabric:
-	@$(DIR)/p4src/build.sh fabric ""
+	@$(DIR)/p4src/tna/build.sh fabric ""
+
 
 # Profiles which are not completed yet.
 # fabric-simple:
-# 	@$(DIR)/p4src/build.sh fabric-simple "-DWITH_SIMPLE_NEXT"
+# 	@$(DIR)/p4src/tna/build.sh fabric-simple "-DWITH_SIMPLE_NEXT"
 
 # fabric-bng:
-# 	@$(DIR)/p4src/build.sh fabric-bng "-DWITH_BNG -DWITHOUT_XCONNECT"
+# 	@$(DIR)/p4src/tna/build.sh fabric-bng "-DWITH_BNG -DWITHOUT_XCONNECT"
 
 fabric-int:
-	@$(DIR)/p4src/build.sh fabric-int "-DWITH_INT"
+	@$(DIR)/p4src/tna/build.sh fabric-int "-DWITH_INT"
 
 fabric-spgw:
-	@$(DIR)/p4src/build.sh fabric-spgw "-DWITH_SPGW"
+	@$(DIR)/p4src/tna/build.sh fabric-spgw "-DWITH_SPGW"
 
 fabric-spgw-int:
-	@$(DIR)/p4src/build.sh fabric-spgw-int "-DWITH_SPGW -DWITH_INT"
+	@$(DIR)/p4src/tna/build.sh fabric-spgw-int "-DWITH_SPGW -DWITH_INT"
 
 constants:
 	docker run -v $(DIR):$(DIR) -w $(DIR) --rm --user $(UID) \
 		--entrypoint ./util/gen-p4-constants.py $(TESTER_DOCKER_IMG) \
 		-o $(DIR)/src/main/java/org/stratumproject/fabric/tna/behaviour/P4InfoConstants.java \
-		p4info $(DIR)/p4src/build/fabric-spgw-int/sde_$(SDE_VER_)/p4info.txt
+		p4info $(DIR)/p4src/tna/build/fabric-spgw-int/sde_$(SDE_VER_)/p4info.txt
 	docker run -v $(DIR):$(DIR) -w $(DIR) --rm \
 		--user $(UID) \
 		$(SDE_P4C_DOCKER_IMG) \
-		get-hdr-size.py --py-out "$(DIR)/ptf/tests/common/bmd_bytes.py" "$(DIR)/p4src/build"
+		get-hdr-size.py --py-out "$(DIR)/ptf/tests/common/bmd_bytes.py" "$(DIR)/p4src/tna/build"
 
 _m2_vol:
 	docker volume create --opt o=uid=$(UID) --opt device=tmpfs --opt type=tmpfs $(MVN_CACHE)
@@ -117,7 +127,7 @@ netcfg:
 
 p4i:
 	$(info *** Started p4i app at http://localhost:3000)
-	docker run -d --rm --name p4i -v$(DIR):$(DIR)/p4src/build -w $(DIR)/p4src/build -p 3000:3000/tcp --init --cap-add CAP_SYS_ADMIN --cap-add CAP_NET_ADMIN $(SDE_P4I_DOCKER_IMG) xvfb-run /opt/p4i/p4i
+	docker run -d --rm --name p4i -v$(DIR):$(DIR)/p4src/tna/build -w $(DIR)/p4src/tna/build -p 3000:3000/tcp --init --cap-add CAP_SYS_ADMIN --cap-add CAP_NET_ADMIN $(SDE_P4I_DOCKER_IMG) xvfb-run /opt/p4i/p4i
 
 p4i-stop:
 	docker kill p4i
@@ -133,7 +143,7 @@ format:
 
 clean:
 	-rm -rf src/main/resources/p4c-out
-	-rm -rf p4src/build
+	-rm -rf p4src/tna/build
 	-rm -rf target
 
 deep-clean: clean

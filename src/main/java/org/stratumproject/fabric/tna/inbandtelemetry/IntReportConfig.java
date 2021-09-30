@@ -153,8 +153,11 @@ public class IntReportConfig extends Config<ApplicationId> {
                 ObjectNode threshold = JsonUtils.node(thresholds, queueIdStr);
                 if (threshold.hasNonNull(RESET_NS)) {
                     return (long) JsonUtils.number(threshold, RESET_NS);
-                } else {
+                } else if (threshold.hasNonNull(TRIGGER_NS)) {
                     return queueReportTriggerLatencyThresholdNs(queueId) / 2;
+                } else {
+                    // Both tiggerNs and resetNs are not present.
+                    return DEFAULT_QUEUE_REPORT_RESET_LATENCY_THRESHOLD;
                 }
             } else {
                 return DEFAULT_QUEUE_REPORT_RESET_LATENCY_THRESHOLD;

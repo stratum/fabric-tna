@@ -5,6 +5,7 @@
     "watchSubnets": [],
     "queueReportLatencyThresholds": {
         "0": {"triggerNs": 1888, "resetNs": 388},
-        "7": {"triggerNs": 500}
+        "7": {"triggerNs": 500},
+        "8": {"_comment_": "Never trigger report or reset quota."}
     }
 }
