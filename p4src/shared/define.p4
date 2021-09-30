@@ -48,7 +48,7 @@ typedef bit<TC_WIDTH> tc_t; // Traffic Class (for QoS) whitin a slice
 typedef bit<SLICE_TC_WIDTH> slice_tc_t; // Slice and TC identifier
 
 
-#ifdef TARGET_BMV2
+#ifdef TARGET_V1MODEL
 // Start definitions from TNA (For Bmv2).
 // The following typedefs are being defined
 // to use the same names between the TNA and v1model versions.
