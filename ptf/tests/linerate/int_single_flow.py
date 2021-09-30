@@ -12,7 +12,7 @@ from trex_utils import *
 from xnt import pypy_analyze_int_report_pcap
 
 TRAFFIC_MULT = "1"
-RATE = 40_000_000_000 # 40 Gbps
+RATE = 40_000_000_000  # 40 Gbps
 TEST_DURATION = 10
 CAPTURE_LIMIT = 30
 
@@ -32,7 +32,9 @@ class IntSingleFlow(TRexTest, IntTest):
         pkt = testutils.simple_udp_packet(pktlen=1400)
 
         # Install routing flows onto hardware switch
-        self.set_up_int_flows(is_device_spine=False, pkt=pkt, send_report_to_spine=False)
+        self.set_up_int_flows(
+            is_device_spine=False, pkt=pkt, send_report_to_spine=False
+        )
         self.runIPv4UnicastTest(
             pkt=pkt,
             next_hop_mac=HOST2_MAC,
@@ -47,7 +49,9 @@ class IntSingleFlow(TRexTest, IntTest):
         )
 
         # Define traffic to be sent
-        stream = STLStream(packet=STLPktBuilder(pkt=pkt, vm=[]), mode=STLTXCont(bps_L1 = RATE))
+        stream = STLStream(
+            packet=STLPktBuilder(pkt=pkt, vm=[]), mode=STLTXCont(bps_L1=RATE)
+        )
         self.trex_client.add_streams(stream, ports=[SENDER_PORT])
 
         # Capture INT packets
@@ -59,7 +63,9 @@ class IntSingleFlow(TRexTest, IntTest):
         )
 
         # Start sending stateless traffic
-        self.trex_client.start(ports=[SENDER_PORT], mult=TRAFFIC_MULT, duration=TEST_DURATION)
+        self.trex_client.start(
+            ports=[SENDER_PORT], mult=TRAFFIC_MULT, duration=TEST_DURATION
+        )
         self.trex_client.wait_on_traffic(ports=[SENDER_PORT])
 
         output = "/tmp/int-single-flow-{}.pcap".format(
