@@ -315,7 +315,7 @@ header bridged_metadata_t {
     int_bridged_metadata_t int_bmd;
 #endif // WITH_INT
 
-#ifdef TARGET_V1MODEL
+#ifdef V1MODEL
 // Use padding to make the header multiple of 8 bits,
 // condition required by p4c when compiling for bmv2.
     bit<1>                 _pad;

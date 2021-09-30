@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 
 
-#ifndef TARGET_V1MODEL
-#define TARGET_V1MODEL
+#ifndef V1MODEL
+#define V1MODEL
 #endif
 
 #include <core.p4>
