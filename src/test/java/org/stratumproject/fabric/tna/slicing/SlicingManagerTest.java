@@ -11,23 +11,28 @@ import org.easymock.CaptureType;
 import org.easymock.EasyMock;
 import org.junit.Before;
 import org.junit.Test;
+import org.onlab.packet.IpPrefix;
+import org.onlab.packet.TpPort;
 import org.onosproject.codec.CodecService;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
 import org.onosproject.core.DefaultApplicationId;
 import org.onosproject.net.Device;
 import org.onosproject.net.DeviceId;
+import org.onosproject.net.config.NetworkConfigService;
 import org.onosproject.net.device.DeviceService;
 import org.onosproject.net.flow.DefaultFlowRule;
 import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
 import org.onosproject.net.flow.FlowRule;
 import org.onosproject.net.flow.FlowRuleService;
+import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flow.criteria.PiCriterion;
 import org.onosproject.net.intent.WorkPartitionService;
 import org.onosproject.net.pi.model.PiTableId;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
+import org.onosproject.segmentrouting.config.SegmentRoutingDeviceConfig;
 import org.onosproject.store.service.StorageService;
 import org.stratumproject.fabric.tna.behaviour.P4InfoConstants;
 import org.stratumproject.fabric.tna.slicing.api.Color;
@@ -54,6 +59,7 @@ public class SlicingManagerTest {
     private static final ArrayList<Device> DEVICES = new ArrayList<>();
 
     private static final int QOS_FLOW_PRIORITY = 10;
+    private static final int CLASSIFIER_FLOW_PRIORITY = 0;
     private static final DeviceId DID = DeviceId.deviceId("device:s1");
 
     private final CoreService coreService = EasyMock.createMock(CoreService.class);
@@ -62,6 +68,7 @@ public class SlicingManagerTest {
     private final FlowRuleService flowRuleService = EasyMock.createMock(FlowRuleService.class);
     private final WorkPartitionService workPartitionService = EasyMock.createMock(WorkPartitionService.class);
     private final CodecService codecService = EasyMock.createMock(CodecService.class);
+    private final NetworkConfigService nwCfgService = EasyMock.createMock(NetworkConfigService.class);
     private final Capture<FlowRule> capturedAddedFlowRules = Capture.newInstance(CaptureType.ALL);
     private final Capture<FlowRule> capturedRemovedFlowRules = Capture.newInstance(CaptureType.ALL);
 
@@ -83,15 +90,27 @@ public class SlicingManagerTest {
         manager.deviceService = deviceService;
         manager.workPartitionService = workPartitionService;
         manager.codecService = codecService;
+        manager.networkCfgService = nwCfgService;
 
         EasyMock.expect(coreService.registerApplication(EasyMock.anyObject())).andReturn(APP_ID);
         EasyMock.expect(storageService.<SliceStoreKey, QueueId>consistentMapBuilder()).andReturn(
             new MockConsistentMap.Builder<SliceStoreKey, QueueId>());
         EasyMock.expect(storageService.<QueueId, QueueStoreValue>consistentMapBuilder()).andReturn(
             new MockConsistentMap.Builder<QueueId, QueueStoreValue>());
+        EasyMock.expect(storageService.<TrafficSelector, SliceStoreKey>consistentMapBuilder()).andReturn(
+            new MockConsistentMap.Builder<TrafficSelector, SliceStoreKey>());
         EasyMock.expect(workPartitionService.isMine(
             EasyMock.anyObject(), EasyMock.anyObject())).andReturn(true).anyTimes();
         EasyMock.expect(deviceService.getAvailableDevices()).andReturn(DEVICES).anyTimes();
+        EasyMock.expect(nwCfgService.getConfig(EasyMock.anyObject(), EasyMock.eq(SegmentRoutingDeviceConfig.class)))
+        .andReturn(
+            new SegmentRoutingDeviceConfig() {
+                @Override
+                public Boolean isEdgeRouter() {
+                    return true;
+                }
+            }
+        ).anyTimes();
         deviceService.addListener(EasyMock.anyObject());
         EasyMock.expectLastCall();
         flowRuleService.applyFlowRules(EasyMock.capture(capturedAddedFlowRules));
@@ -101,12 +120,12 @@ public class SlicingManagerTest {
         codecService.registerCodec(EasyMock.anyObject(), EasyMock.anyObject());
         EasyMock.expectLastCall().times(2);
         EasyMock.replay(coreService, storageService, workPartitionService,
-            deviceService, flowRuleService, codecService);
+            deviceService, flowRuleService, codecService, nwCfgService);
 
         manager.activate();
 
         EasyMock.verify(coreService, storageService, workPartitionService,
-            deviceService, flowRuleService, codecService);
+            deviceService, flowRuleService, codecService, nwCfgService);
     }
 
     @Test
@@ -332,6 +351,26 @@ public class SlicingManagerTest {
         });
     }
 
+    @Test
+    public void testFlowListener() throws Exception {
+        FlowRule mock = build5Tuple();
+        TrafficSelector selector = DefaultTrafficSelector.builder()
+            .matchIPSrc(IpPrefix.valueOf("10.20.30.1/32"))
+            .matchIPDst(IpPrefix.valueOf("10.20.30.2/32"))
+            .matchIPProtocol((byte) 0x06)
+            .matchTcpSrc(TpPort.tpPort(80))
+            .matchTcpDst(TpPort.tpPort(1234))
+            .build();
+
+        // Adding mock rule to slice 1 BE
+        capturedAddedFlowRules.reset();
+        manager.addFlow(selector, SLICE_IDS.get(1), TrafficClass.BEST_EFFORT);
+        assertAfter(50, () -> {
+            assertEquals(1, capturedAddedFlowRules.getValues().size());
+            assertTrue(mock.exactMatch(capturedAddedFlowRules.getValues().get(0)));
+        });
+    }
+
     private FlowRule buildSlice1BE1() {
         // Hard coded parameters
         PiCriterion.Builder piCriterionBuilder = PiCriterion.builder()
@@ -401,5 +440,31 @@ public class SlicingManagerTest {
                 .build();
 
         return flowRule;
+    }
+
+    private FlowRule build5Tuple() {
+        // Hard coded parameters
+        TrafficSelector selector = DefaultTrafficSelector.builder()
+            .matchIPSrc(IpPrefix.valueOf("10.20.30.1/32"))
+            .matchIPDst(IpPrefix.valueOf("10.20.30.2/32"))
+            .matchIPProtocol((byte) 0x06)
+            .matchTcpSrc(TpPort.tpPort(80))
+            .matchTcpDst(TpPort.tpPort(1234))
+            .build();
+
+        PiAction.Builder piTableActionBuilder = PiAction.builder()
+                .withId(P4InfoConstants.FABRIC_INGRESS_SLICE_TC_CLASSIFIER_SET_SLICE_ID_TC)
+                .withParameters(Set.of(new PiActionParam(P4InfoConstants.SLICE_ID, SLICE_IDS.get(1).id()),
+                                       new PiActionParam(P4InfoConstants.TC, TrafficClass.BEST_EFFORT.ordinal())));
+
+        return DefaultFlowRule.builder()
+                .forDevice(DID)
+                .forTable(P4InfoConstants.FABRIC_INGRESS_SLICE_TC_CLASSIFIER_CLASSIFIER)
+                .fromApp(APP_ID)
+                .withPriority(CLASSIFIER_FLOW_PRIORITY)
+                .withSelector(selector)
+                .withTreatment(DefaultTrafficTreatment.builder().piTableAction(piTableActionBuilder.build()).build())
+                .makePermanent()
+                .build();
     }
 }
