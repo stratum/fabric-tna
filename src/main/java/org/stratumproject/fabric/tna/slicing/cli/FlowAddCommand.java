@@ -17,6 +17,8 @@ import org.stratumproject.fabric.tna.slicing.api.SliceId;
 import org.stratumproject.fabric.tna.slicing.api.SlicingService;
 import org.stratumproject.fabric.tna.slicing.api.TrafficClass;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 /**
  * Add flow from slice.
  */
@@ -87,6 +89,7 @@ public class FlowAddCommand extends AbstractShellCommand {
         byte ipProtocol = 0;
         if (proto != null) {
             ipProtocol = (byte) (0xFF & IpProtocol.parseFromString(proto));
+            checkArgument(ipProtocol == 0x06 || ipProtocol == 0x11, "Support TCP and UDP only");
             trafficSelectorBuilder.matchIPProtocol(ipProtocol);
         }
         if (srcPort != 0) {

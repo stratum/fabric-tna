@@ -114,9 +114,9 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
     private MapEventListener<QueueId, QueueStoreValue> queueListener;
     private ExecutorService queueExecutor;
 
-    protected ConsistentMap<TrafficSelector, SliceStoreKey> flowStore;
-    private MapEventListener<TrafficSelector, SliceStoreKey> flowListener;
-    private ExecutorService flowExecutor;
+    protected ConsistentMap<TrafficSelector, SliceStoreKey> classifierFlowStore;
+    private MapEventListener<TrafficSelector, SliceStoreKey> classifierFlowListener;
+    private ExecutorService classifierFlowExecutor;
 
     private DeviceListener deviceListener;
     private ExecutorService deviceExecutor;
@@ -163,14 +163,14 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
         queueStore.put(QueueId.of(3), new QueueStoreValue(TrafficClass.REAL_TIME, true));
         queueStore.put(QueueId.of(6), new QueueStoreValue(TrafficClass.ELASTIC, true));
 
-        flowStore = storageService.<TrafficSelector, SliceStoreKey>consistentMapBuilder()
+        classifierFlowStore = storageService.<TrafficSelector, SliceStoreKey>consistentMapBuilder()
                 .withName("fabric-tna-classifier-flow")
                 .withRelaxedReadConsistency()
                 .withSerializer(Serializer.using(serializer.build()))
                 .build();
-        flowListener = new InternalFlowListener();
-        flowExecutor = Executors.newSingleThreadExecutor(groupedThreads("fabric-tna-flow-event", "%d", log));
-        flowStore.addListener(flowListener);
+        classifierFlowListener = new InternalFlowListener();
+        classifierFlowExecutor = Executors.newSingleThreadExecutor(groupedThreads("fabric-tna-flow-event", "%d", log));
+        classifierFlowStore.addListener(classifierFlowListener);
 
         deviceListener = new InternalDeviceListener();
         deviceExecutor = Executors.newSingleThreadExecutor(groupedThreads("fabric-tna-device-event", "%d", log));
@@ -341,7 +341,7 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
         }
 
         SliceStoreKey value = new SliceStoreKey(sliceId, tc);
-        flowStore.compute(selector, (k, v) -> {
+        classifierFlowStore.compute(selector, (k, v) -> {
             log.info("classifier flow {} to slice {} tc {}", selector, sliceId, tc);
             return value;
         });
@@ -351,7 +351,7 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
 
     @Override
     public boolean removeFlow(TrafficSelector selector, SliceId sliceId, TrafficClass tc) {
-        flowStore.compute(selector, (k, v) -> {
+        classifierFlowStore.compute(selector, (k, v) -> {
             log.info("Removing flow {} from slice {} tc {}", selector, sliceId, tc);
             return null;
         });
@@ -363,7 +363,7 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
     public Set<TrafficSelector> getFlows(SliceId sliceId, TrafficClass tc) {
         SliceStoreKey value = new SliceStoreKey(sliceId, tc);
 
-        return flowStore.entrySet().stream()
+        return classifierFlowStore.entrySet().stream()
                 .filter(e -> e.getValue().value().equals(value))
                 .map(Entry::getKey)
                 .collect(Collectors.toSet());
@@ -592,7 +592,7 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
     private class InternalFlowListener implements MapEventListener<TrafficSelector, SliceStoreKey> {
         public void event(MapEvent<TrafficSelector, SliceStoreKey> event) {
             log.info("Processing flow classifier event {}", event);
-            flowExecutor.submit(() -> {
+            classifierFlowExecutor.submit(() -> {
                 switch (event.type()) {
                     case INSERT:
                     case UPDATE:
@@ -637,7 +637,7 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
                                         e.getKey().sliceId(), e.getKey().trafficClass(), e.getValue().value())
                                 );
                                 if (isLeafSwitch(deviceId)) {
-                                    flowStore.forEach(e -> addClassifierFlowRule(deviceId,
+                                    classifierFlowStore.forEach(e -> addClassifierFlowRule(deviceId,
                                         e.getKey(), e.getValue().value().sliceId(), e.getValue().value().trafficClass())
                                     );
                                 }
