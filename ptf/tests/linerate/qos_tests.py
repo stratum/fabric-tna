@@ -57,13 +57,8 @@ class QosBaseTest(SlicingTest):
         self.control_pg_id = 7
         self.system_pg_id = 2
 
-    def push_chassis_config(self, yaml_file="qos-config-1g.yaml", no_shaping=False) -> None:
-        if no_shaping:
-            this_dir = os.path.dirname(os.path.realpath(__file__))
-            with open(f"{this_dir}/../linerate/chassis_config.pb.txt", mode="rb") as file:
-                chassis_config = file.read()
-            gnmi_utils.push_chassis_config(chassis_config)
-        else:
+    def push_chassis_config(self, yaml_file="qos-config-1g.yaml", with_shaping=True) -> None:
+        if with_shaping:
             this_dir = os.path.dirname(os.path.realpath(__file__))
             with open(f"{this_dir}/chassis_config.pb.txt", mode="rb") as file:
                 chassis_config = file.read()
@@ -75,6 +70,11 @@ class QosBaseTest(SlicingTest):
             # Write to disk for debugging
             with open(f"{this_dir}/chassis_config.pb.txt.tmp", mode="wb") as file:
                 file.write(chassis_config)
+            gnmi_utils.push_chassis_config(chassis_config)
+        else:
+            this_dir = os.path.dirname(os.path.realpath(__file__))
+            with open(f"{this_dir}/../linerate/chassis_config.pb.txt", mode="rb") as file:
+                chassis_config = file.read()
             gnmi_utils.push_chassis_config(chassis_config)
 
     def _setup_basic_forwarding(self, out_port) -> None:
