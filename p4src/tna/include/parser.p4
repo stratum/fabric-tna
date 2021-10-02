@@ -4,11 +4,11 @@
 #ifndef __PARSER__
 #define __PARSER__
 
-#include "header.p4"
-#include "define.p4"
-#include "control/packet_in_mirror_parser.p4"
+#include "shared/header.p4"
+#include "shared/define.p4"
+#include "tna/include/control/packet_in_mirror_parser.p4"
 #ifdef WITH_INT
-#include "control/int_parser.p4"
+#include "tna/include/control/int_parser.p4"
 #endif // WITH_INT
 
 parser FabricIngressParser (packet_in  packet,

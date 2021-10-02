@@ -9,7 +9,7 @@ MONTARA_CPU_PORT=192 # dual-pipe
 
 # DIR is this file directory.
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-P4_SRC_DIR=${DIR}
+P4_SRC_DIR=${DIR}/..
 ROOT_DIR="$( cd "${DIR}/../.." && pwd )"
 
 PROFILE=$1
