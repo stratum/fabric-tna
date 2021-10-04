@@ -7,7 +7,7 @@
 
 control Filtering (inout ingress_headers_t hdr,
                    inout fabric_ingress_metadata_t fabric_md,
-                   in standard_metadata_t standard_md) {
+                   inout standard_metadata_t standard_md) {
 
     /*
      * Ingress Port VLAN Table.

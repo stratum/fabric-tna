@@ -13,10 +13,9 @@ parser FabricParser (packet_in packet,
                      inout standard_metadata_t standard_md) {
 
     state start {
-        
         // packet.extract(ig_intr_md);
         //packet.advance(PORT_METADATA_SIZE);
-        //fabric_md.bridged.setValid(); //FIXME Does it make sense for Bmv2?
+        fabric_md.bridged.setValid();
         fabric_md.bridged.bmd_type = BridgedMdType_t.INGRESS_TO_EGRESS;
         fabric_md.bridged.base.ig_port = standard_md.ingress_port;
         fabric_md.bridged.base.ig_tstamp = standard_md.ingress_global_timestamp;
