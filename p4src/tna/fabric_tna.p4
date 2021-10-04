@@ -4,25 +4,25 @@
 #include <core.p4>
 #include <tna.p4>
 
-#include "include/define.p4"
-#include "include/size.p4"
-#include "include/header.p4"
-#include "include/parser.p4"
-#include "include/control/packetio.p4"
-#include "include/control/filtering.p4"
-#include "include/control/forwarding.p4"
-#include "include/control/pre_next.p4"
-#include "include/control/lookup_md_init.p4"
-#include "include/control/acl.p4"
-#include "include/control/next.p4"
-#include "include/control/hasher.p4"
-#include "include/control/stats.p4"
-#include "include/control/slicing.p4"
+#include "shared/define.p4"
+#include "shared/size.p4"
+#include "shared/header.p4"
+#include "tna/include/parser.p4"
+#include "tna/include/control/packetio.p4"
+#include "tna/include/control/filtering.p4"
+#include "tna/include/control/forwarding.p4"
+#include "tna/include/control/pre_next.p4"
+#include "tna/include/control/lookup_md_init.p4"
+#include "tna/include/control/acl.p4"
+#include "tna/include/control/next.p4"
+#include "tna/include/control/hasher.p4"
+#include "tna/include/control/stats.p4"
+#include "tna/include/control/slicing.p4"
 #ifdef WITH_SPGW
-#include "include/control/spgw.p4"
+#include "tna/include/control/spgw.p4"
 #endif // WITH_SPGW
 #ifdef WITH_INT
-#include "include/control/int.p4"
+#include "tna/include/control/int.p4"
 #endif
 
 control FabricIngress (

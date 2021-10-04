@@ -9,7 +9,7 @@ import org.stratumproject.fabric.tna.slicing.api.TrafficClass;
 import java.util.Objects;
 
 /**
- * Value of queue store.
+ * Key of slice store.
  */
 public class SliceStoreKey implements Comparable<SliceStoreKey> {
     private SliceId sliceId;

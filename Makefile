@@ -46,7 +46,7 @@ all: $(PROFILES)
 
 fabric:
 	@$(DIR)/p4src/tna/build.sh fabric ""
-
+	@${DIR}/p4src/v1model/build.sh fabric ""
 
 # Profiles which are not completed yet.
 # fabric-simple:
@@ -144,6 +144,7 @@ format:
 clean:
 	-rm -rf src/main/resources/p4c-out
 	-rm -rf p4src/tna/build
+	-rm -rf p4src/v1model/build
 	-rm -rf target
 
 deep-clean: clean

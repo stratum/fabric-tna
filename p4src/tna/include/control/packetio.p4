@@ -1,7 +1,7 @@
 // Copyright 2020-present Open Networking Foundation
 // SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 
-#include "../header.p4"
+#include "shared/header.p4"
 
 control PacketIoIngress(inout ingress_headers_t hdr,
                         inout fabric_ingress_metadata_t fabric_md,

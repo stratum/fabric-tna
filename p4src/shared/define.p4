@@ -1,7 +1,6 @@
 // Copyright 2020-present Open Networking Foundation
 // SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 
-#include <tna.p4>
 #include "size.p4"
 
 #ifndef __DEFINE__
@@ -47,6 +46,20 @@ typedef bit<32> flow_hash_t;
 typedef bit<SLICE_ID_WIDTH> slice_id_t;
 typedef bit<TC_WIDTH> tc_t; // Traffic Class (for QoS) whitin a slice
 typedef bit<SLICE_TC_WIDTH> slice_tc_t; // Slice and TC identifier
+
+
+#ifdef V1MODEL
+// Start definitions from TNA (For Bmv2).
+// The following typedefs are being defined
+// to use the same names between the TNA and v1model versions.
+// Reference to tofino.p4:
+//  https://github.com/barefootnetworks/Open-Tofino/blob/master/share/p4c/p4include/tofino.p4
+typedef bit<9>  PortId_t;           // Port id
+typedef bit<16> MulticastGroupId_t; // Multicast group id
+typedef bit<5>  QueueId_t;          // Queue id
+typedef bit<10> MirrorId_t;         // Mirror session id
+typedef bit<16> ReplicationId_t;    // Replication id
+#endif
 
 const slice_id_t DEFAULT_SLICE_ID = 0;
 const tc_t DEFAULT_TC = 0;

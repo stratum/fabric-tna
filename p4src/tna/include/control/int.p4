@@ -4,8 +4,8 @@
 #ifndef __INT_MAIN__
 #define __INT_MAIN__
 
-#include "../define.p4"
-#include "../header.p4"
+#include "shared/define.p4"
+#include "shared/header.p4"
 
 // By default report every 2^30 ns (~1 second)
 const bit<48> DEFAULT_TIMESTAMP_MASK = 0xffffc0000000;

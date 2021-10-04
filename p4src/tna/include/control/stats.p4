@@ -1,7 +1,7 @@
 // Copyright 2021-present Open Networking Foundation
 // SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 
-#include "../header.p4"
+#include "shared/header.p4"
 
 // The control plane should never use this flow ID.
 // Used to force initialization of stats_flow_id metadata.
