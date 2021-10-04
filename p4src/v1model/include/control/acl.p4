@@ -1,4 +1,4 @@
-// Copyright 2020-present Open Networking Foundation
+// Copyright 2021-present Open Networking Foundation
 // SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 
 #include <core.p4>
@@ -16,7 +16,7 @@ control Acl (inout ingress_headers_t hdr,
      */
     direct_counter(CounterType.packets_and_bytes) acl_counter;
 
-    // Set clone session id for a I2E clone session
+    // Set clone session id for a I2E clone session, to perform mirroring
     action set_clone_session_id(bit<32> clone_id) {
         // Warning for clone3() function: https://github.com/p4lang/p4c/issues/1669#issuecomment-639752860
         clone3(CloneType.I2E, clone_id, {standard_md.ingress_port});
@@ -46,7 +46,7 @@ control Acl (inout ingress_headers_t hdr,
 
 
     action copy_to_cpu() {
-        //TODO should use the set_clone_session_id for cloning the packet to CPU
+        //TODO should use the set_clone_session_id for cloning the packet to CPU?
         standard_md.egress_spec = CPU_PORT;
         acl_counter.count();
     }
