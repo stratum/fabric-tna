@@ -373,6 +373,14 @@ struct fabric_ingress_metadata_t {
     tc_t                     spgw_tc;
     PortType_t               ig_port_type;
     common_mirror_metadata_t mirror;
+
+#ifdef V1MODEL
+    // integrating missing headers from egress metadata.
+    // this way we can use only the ingress metadata, for Bmv2.
+    PortId_t                cpu_port;
+    bit<16>               pkt_length;
+    bit<2>                packet_color;
+#endif
 }
 
 // Egress pipeline-only metadata
