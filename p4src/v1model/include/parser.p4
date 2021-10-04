@@ -8,9 +8,9 @@
 #include "shared/define.p4"
 
 parser FabricParser (packet_in packet,
-                    out ingress_headers_t hdr,
-                    inout fabric_ingress_metadata_t fabric_metadata,
-                    inout standard_metadata_t standard_metadata) {
+                     out ingress_headers_t hdr,
+                     inout fabric_ingress_metadata_t fabric_md,
+                     inout standard_metadata_t standard_md) {
 
     state start {
         
