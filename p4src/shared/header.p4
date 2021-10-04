@@ -379,7 +379,6 @@ struct fabric_ingress_metadata_t {
     // this way we can use only the ingress metadata, for Bmv2.
     PortId_t                cpu_port;
     bit<16>               pkt_length;
-    bit<2>                packet_color;
 #endif
 }
 
