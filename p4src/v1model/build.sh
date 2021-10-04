@@ -5,7 +5,7 @@
 
 set -e
 
-BMV2_CPU_PORT="255"
+BMV2_CPU_PORT=255
 
 # -D defines the macro used within the P4 files (e.g. -DTARGET_BMV2 will be used as `#ifdef TARGET_BMV2`)
 BMV2_PP_FLAGS="-DTARGET_BMV2 -DCPU_PORT=${BMV2_CPU_PORT} -DWITH_PORT_COUNTER -DWITH_DEBUG"
