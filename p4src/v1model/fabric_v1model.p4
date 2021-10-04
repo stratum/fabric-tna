@@ -29,9 +29,9 @@ control FabricIngress (inout ingress_headers_t hdr,
 
     LookupMdInit() lkp_md_init;
     StatsIngress() stats;
+    PacketIoIngress() pkt_io;
     Filtering() filtering;
     Forwarding() forwarding;
-    PacketIoIngress() pkt_io;
     PreNext() pre_next;
     Acl() acl;
     Next() next;
