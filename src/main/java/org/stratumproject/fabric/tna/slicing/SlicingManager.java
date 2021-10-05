@@ -610,7 +610,7 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
                             deviceService.getAvailableDevices().forEach(device -> {
                                 if (isLeafSwitch(device.id())) {
                                     removeClassifierFlowRule(device.id(), event.key(),
-                                        event.newValue().value().sliceId(), event.newValue().value().trafficClass());
+                                        event.oldValue().value().sliceId(), event.oldValue().value().trafficClass());
                                 }
                             });
                         }
