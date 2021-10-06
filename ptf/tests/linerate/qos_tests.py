@@ -6,6 +6,7 @@
 # https://docs.google.com/document/d/1jq6NH-fffe8ImMo4EC_yMwH1djlrhWaQu2lpLFJKljA
 
 import logging
+from tenacity import retry, stop_after_attempt, retry_if_exception_type
 
 import gnmi_utils
 import qos_utils
@@ -348,6 +349,7 @@ class MinFlowrateWithSoftwareLatencyMeasurement(QosTest):
             flow_stats=STLFlowLatencyStats(pg_id=pg_id),
         )
 
+    @retry(reraise=True, stop=stop_after_attempt(3), retry=retry_if_exception_type(AssertionError))
     @autocleanup
     def runTest(self):
         self.push_chassis_config()
@@ -401,6 +403,7 @@ class MinFlowrateWithSoftwareLatencyMeasurement(QosTest):
 
 
 class StrictPriorityControlTrafficIsPrioritized(QosTest):
+    @retry(reraise=True, stop=stop_after_attempt(3), retry=retry_if_exception_type(AssertionError))
     @autocleanup
     def runTest(self) -> None:
         self.push_chassis_config()
@@ -463,6 +466,7 @@ class StrictPriorityControlTrafficIsPrioritized(QosTest):
 
 
 class ControlTrafficIsNotPrioritizedWithoutRules(QosTest):
+    @retry(reraise=True, stop=stop_after_attempt(3), retry=retry_if_exception_type(AssertionError))
     @autocleanup
     def runTest(self) -> None:
         self.push_chassis_config()
@@ -519,6 +523,7 @@ class ControlTrafficIsNotPrioritizedWithoutRules(QosTest):
 
 
 class ControlTrafficIsShaped(QosTest):
+    @retry(reraise=True, stop=stop_after_attempt(3), retry=retry_if_exception_type(AssertionError))
     @autocleanup
     def runTest(self) -> None:
         self.push_chassis_config()
@@ -580,6 +585,7 @@ class RealtimeTrafficIsRrScheduled(QosTest):
     experience the lowest latency and no packet drops, while the other streams should.
     """
 
+    @retry(reraise=True, stop=stop_after_attempt(3), retry=retry_if_exception_type(AssertionError))
     @autocleanup
     def runTest(self) -> None:
         self.realtime_pg_id_1 = 1
@@ -699,7 +705,6 @@ class ElasticTrafficIsWrrScheduled(QosTest):
     """
 
     def runTest(self) -> None:
-        print("\nTesting 1G bottleneck...")
         self.doRunTest(link_bps=1 * G)
 
         # FIXME: flow stats report egress link utilization greater than 100% and incorrect RX shares.
@@ -708,8 +713,10 @@ class ElasticTrafficIsWrrScheduled(QosTest):
         # print("\nTesting 40G bottleneck...")
         # self.doRunTest(link_bps=40 * G)
 
+    @retry(reraise=True, stop=stop_after_attempt(3), retry=retry_if_exception_type(AssertionError))
     @autocleanup
     def doRunTest(self, link_bps) -> None:
+        print("\nTesting {} bottleneck...".format(to_readable(link_bps)))
         elastic_flow_id_1 = 1
         elastic_flow_id_2 = 2
         best_effort_flow_id_3 = 3
