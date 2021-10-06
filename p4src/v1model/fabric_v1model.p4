@@ -21,6 +21,7 @@
 #include "v1model/include/control/pre_next.p4"
 #include "v1model/include/control/next.p4"
 #include "v1model/include/control/forwarding.p4"
+#include "v1model/include/control/hasher.p4"
 #include "v1model/include/control/stats.p4"
 
 control FabricIngress (inout ingress_headers_t hdr,
@@ -35,6 +36,7 @@ control FabricIngress (inout ingress_headers_t hdr,
     PreNext() pre_next;
     Acl() acl;
     Next() next;
+    Hasher() hasher;
 
     apply {
         lkp_md_init.apply(hdr, fabric_md.lkp);
@@ -48,6 +50,9 @@ control FabricIngress (inout ingress_headers_t hdr,
         if (!fabric_md.skip_forwarding) {
             forwarding.apply(hdr, fabric_md);
         }
+
+        hasher.apply(hdr, fabric_md);
+        
         if (!fabric_md.skip_next) {
             pre_next.apply(hdr, fabric_md);
         }
