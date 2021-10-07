@@ -32,7 +32,6 @@ control Acl (inout ingress_headers_t hdr,
 
     action copy_to_cpu_post_ingress() {
         // Unused by Bmv2
-        //ig_intr_md_for_tm.copy_to_cpu = 1;
         acl_counter.count();
     }
 
@@ -40,15 +39,13 @@ control Acl (inout ingress_headers_t hdr,
     action punt_to_cpu_post_ingress() {
         // Unused by Bmv2
         copy_to_cpu_post_ingress();
-        //ig_intr_md_for_dprsr.drop_ctl = 1;
         fabric_md.skip_next = true;
         fabric_md.punt_to_cpu = true;
     }
 
 
     action copy_to_cpu() {
-        //TODO should use the set_clone_session_id for cloning the packet to CPU
-        //TODO should perform mirroring
+        // Should not be used by Bmv2. Use set_clone_session_id instead.
         standard_md.egress_spec = CPU_PORT;
         acl_counter.count();
     }
@@ -56,7 +53,6 @@ control Acl (inout ingress_headers_t hdr,
     
     action punt_to_cpu() {
         copy_to_cpu();
-        //ig_intr_md_for_dprsr.drop_ctl = 1;
         fabric_md.skip_next = true;
         fabric_md.punt_to_cpu = true;
     }
