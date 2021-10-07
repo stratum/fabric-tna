@@ -94,6 +94,20 @@ fabric-spgw-int   basic, SPGW, INT, SPGW+INT, INT-dod
   * Drop by PDR table
   * Drop by FAR table
 
+## The line rate test plan
+
+Another type of test is called `line rate test`, which uses `Trex <https://trex-tgn.cisco.com>`_ framework to generate
+the traffic with higher rate(e.g., 40Gbps).
+
+These type of test allows us to test some scenario like QoS, Meter, INT queue congestion report, and so on.
+
+Here is the list of the current line rate test plan:
+
+* INT single flow report: To verify if the INT flow report filter works in a simple line rate traffic.
+* INT queue report: To create device queue congestion and verify if device can generate INT queue reports.
+* INT traffic trace: Use a realistic traffic trace to test both INT flow report filter and drop report filter.
+* QoS test: To verify if QoS policy we installed works correctly or not.
+
 ## Steps to run tests on tofino-model with Stratum
 
 The run scripts assume that you have access to a containerized version of the
