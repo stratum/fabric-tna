@@ -52,9 +52,6 @@ control PacketIoIngress(inout ingress_headers_t hdr,
                        hdr.fake_ethernet.ether_type == ETHERTYPE_CPU_LOOPBACK_EGRESS) {
             // CPU loopback pkt entering the ingress pipe a second time (after
             // going through egress). Punt to CPU now, skip egress.
-            //ig_intr_md_for_tm.copy_to_cpu = 1;
-            //ig_intr_md_for_dprsr.drop_ctl = 1;
-            //ig_intr_md_for_tm.bypass_egress = 1;
             fabric_md.bridged.setInvalid();
             hdr.fake_ethernet.setInvalid();
             hdr.packet_in.setValid();
