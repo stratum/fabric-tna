@@ -9,12 +9,10 @@ control PacketIoIngress(inout ingress_headers_t hdr,
     @hidden
     action do_packet_out() {
         standard_md.egress_spec = hdr.packet_out.egress_port;
-        //ig_intr_md_for_tm.qid = hdr.packet_out.queue_id; //doesn't make sense. bmv2 has only one queue.
         fabric_md.egress_port_set = true;
         hdr.packet_out.setInvalid();
         // Straight to output port.
         fabric_md.bridged.setInvalid();
-        //ig_intr_md_for_tm.bypass_egress = 1;
         exit;
     }
 
@@ -40,9 +38,9 @@ control PacketIoIngress(inout ingress_headers_t hdr,
         const entries = {
             // Regular packet-out.
             CpuLoopbackMode_t.DISABLED: do_packet_out();
-            // Pkt should go directly to CPU after port loopback. // Bmv2 set port to CPU.
+            // Pkt should go directly to CPU after port loopback. Not used in Bmv2
             CpuLoopbackMode_t.DIRECT: do_cpu_loopback(ETHERTYPE_CPU_LOOPBACK_EGRESS);
-            // Pkt should go through ingress after port loopback. //Bmv2 use recirculate
+            // Pkt should go through ingress after port loopback. Not used in Bmv2
             CpuLoopbackMode_t.INGRESS: do_cpu_loopback(ETHERTYPE_CPU_LOOPBACK_INGRESS);
         }
     }
@@ -83,22 +81,6 @@ control PacketIoEgress(inout ingress_headers_t hdr,
         const size = 1;
     }
 
-    table debug {
-        key = {
-            hdr.packet_in.ingress_port:  exact;
-            hdr.packet_in._pad0:         exact;
-            hdr.ethernet.src_addr:     exact;
-            hdr.ethernet.dst_addr:     exact;
-            fabric_md.cpu_port:          exact;
-            standard_md.egress_port:     exact;
-            standard_md.ingress_port:    exact;
-            fabric_md.bridged.base.ig_port: exact;
-        }
-        actions = {nop;}
-        default_action = nop;
-        const size = 1;
-    }
-
     apply {
         switch_info.apply();
 
@@ -106,7 +88,6 @@ control PacketIoEgress(inout ingress_headers_t hdr,
             hdr.packet_in.ingress_port = standard_md.ingress_port;
             hdr.packet_in.setValid();
             hdr.fake_ethernet.setInvalid();
-            debug.apply(); //FIXME remove this. Used for debugging Packetio.
             exit;
         }
 
