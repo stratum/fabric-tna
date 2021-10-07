@@ -41,8 +41,8 @@ control StatsIngress (in lookup_metadata_t lkp,
 }
 
 control StatsEgress (in bit<STATS_FLOW_ID_WIDTH> stats_flow_id,
-                      in PortId_t eg_port,
-                      in BridgedMdType_t bmd_type) {
+                     in PortId_t eg_port,
+                     in BridgedMdType_t bmd_type) {
 
     direct_counter(CounterType.packets_and_bytes) flow_counter;
 
