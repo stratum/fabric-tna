@@ -14,16 +14,16 @@
 #include "shared/header.p4"
 #include "v1model/include/parser.p4"
 #include "v1model/include/control/acl.p4"
-#include "v1model/include/control/checksum.p4"
-#include "v1model/include/control/lookup_md_init.p4"
-#include "v1model/include/control/filtering.p4"
-#include "v1model/include/control/packetio.p4"
-#include "v1model/include/control/pre_next.p4"
 #include "v1model/include/control/next.p4"
-#include "v1model/include/control/forwarding.p4"
+#include "v1model/include/control/stats.p4"
 #include "v1model/include/control/hasher.p4"
 #include "v1model/include/control/slicing.p4"
-#include "v1model/include/control/stats.p4"
+#include "v1model/include/control/checksum.p4"
+#include "v1model/include/control/packetio.p4"
+#include "v1model/include/control/pre_next.p4"
+#include "v1model/include/control/filtering.p4"
+#include "v1model/include/control/forwarding.p4"
+#include "v1model/include/control/lookup_md_init.p4"
 
 control FabricIngress (inout ingress_headers_t hdr,
                        inout fabric_ingress_metadata_t fabric_md,
