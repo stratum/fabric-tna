@@ -22,6 +22,7 @@
 #include "v1model/include/control/next.p4"
 #include "v1model/include/control/forwarding.p4"
 #include "v1model/include/control/hasher.p4"
+#include "v1model/include/control/slicing.p4"
 #include "v1model/include/control/stats.p4"
 
 control FabricIngress (inout ingress_headers_t hdr,
@@ -37,6 +38,8 @@ control FabricIngress (inout ingress_headers_t hdr,
     Acl() acl;
     Next() next;
     Hasher() hasher;
+    IngressSliceTcClassifier() slice_tc_classifier;
+    IngressQos() qos;
 
     apply {
         lkp_md_init.apply(hdr, fabric_md.lkp);
@@ -44,6 +47,7 @@ control FabricIngress (inout ingress_headers_t hdr,
         stats.apply(fabric_md.lkp, standard_md.ingress_port,
             fabric_md.bridged.base.stats_flow_id);
 
+        slice_tc_classifier.apply(hdr, standard_md, fabric_md);
         filtering.apply(hdr, fabric_md, standard_md);
 
         
@@ -62,6 +66,7 @@ control FabricIngress (inout ingress_headers_t hdr,
         if (!fabric_md.skip_next) {
             next.apply(hdr, fabric_md, standard_md);
         }
+        qos.apply(fabric_md, standard_md);
     }
 }
 
@@ -72,12 +77,14 @@ control FabricEgress (inout ingress_headers_t hdr,
     StatsEgress() stats;
     PacketIoEgress() pkt_io_egress;
     EgressNextControl() egress_next;
+    EgressDscpRewriter() dscp_rewriter;
 
     apply {
         pkt_io_egress.apply(hdr, fabric_md, standard_md);
         stats.apply(fabric_md.bridged.base.stats_flow_id, standard_md.egress_port,
              fabric_md.bridged.bmd_type);
         egress_next.apply(hdr, fabric_md, standard_md);
+        dscp_rewriter.apply(fabric_md, standard_md, hdr);
     }
 }
 

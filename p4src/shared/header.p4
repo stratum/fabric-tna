@@ -377,8 +377,9 @@ struct fabric_ingress_metadata_t {
 #ifdef V1MODEL
     // integrating missing headers from egress metadata.
     // this way we can use only the ingress metadata, for Bmv2.
-    PortId_t                cpu_port;
+    bit<2>                packet_color; // only 3 values: GREEN, YELLOW, RED
     bit<16>               pkt_length;
+    PortId_t              cpu_port;
 #endif
 }
 
