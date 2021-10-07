@@ -272,16 +272,31 @@ control FabricDeparser(packet_out packet,
                        in         ingress_headers_t hdr) {
 
     apply {
-        packet.emit(hdr.packet_in);
         packet.emit(hdr.fake_ethernet);
+        packet.emit(hdr.packet_in);
         packet.emit(hdr.ethernet);
         packet.emit(hdr.vlan_tag);
+#if defined(WITH_XCONNECT) || defined(WITH_DOUBLE_VLAN_TERMINATION)
+        packet.emit(hdr.inner_vlan_tag);
+#endif // WITH_XCONNECT || WITH_DOUBLE_VLAN_TERMINATION
         packet.emit(hdr.eth_type);
         packet.emit(hdr.mpls);
         packet.emit(hdr.ipv4);
         packet.emit(hdr.ipv6);
         packet.emit(hdr.tcp);
         packet.emit(hdr.udp);
+        packet.emit(hdr.icmp);
+        // in case we parsed a GTPU packet but did not decap it        
+        packet.emit(hdr.gtpu);
+        packet.emit(hdr.gtpu_options);
+        packet.emit(hdr.gtpu_ext_psc);
+        packet.emit(hdr.vxlan);
+        packet.emit(hdr.inner_ethernet);
+        packet.emit(hdr.inner_eth_type);
+        packet.emit(hdr.inner_ipv4);
+        packet.emit(hdr.inner_tcp);
+        packet.emit(hdr.inner_udp);
+        packet.emit(hdr.inner_icmp);
     }
 }
 
