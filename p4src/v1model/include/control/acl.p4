@@ -18,6 +18,7 @@ control Acl (inout ingress_headers_t hdr,
 
     // Set clone session id for a I2E clone session, to perform mirroring
     action set_clone_session_id(bit<32> clone_id) {
+        // Architecture specific code (for Bmv2)
         // Warning for clone3() function: https://github.com/p4lang/p4c/issues/1669#issuecomment-639752860
         clone3(CloneType.I2E, clone_id, {standard_md.ingress_port});
         acl_counter.count();
@@ -46,7 +47,8 @@ control Acl (inout ingress_headers_t hdr,
 
 
     action copy_to_cpu() {
-        //TODO should use the set_clone_session_id for cloning the packet to CPU?
+        //TODO should use the set_clone_session_id for cloning the packet to CPU
+        //TODO should perform mirroring
         standard_md.egress_spec = CPU_PORT;
         acl_counter.count();
     }
