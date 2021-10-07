@@ -280,6 +280,12 @@ struct int_metadata_t {
 }
 #endif // WITH_INT
 
+#ifdef V1MODEL
+error {
+    PacketRejectedByParser
+}
+#endif // V1MODEL
+
 // Common metadata which is bridged from ingress to egress.
 @flexible
 struct bridged_metadata_base_t {

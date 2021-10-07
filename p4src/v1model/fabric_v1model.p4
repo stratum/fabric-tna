@@ -42,6 +42,12 @@ control FabricIngress (inout ingress_headers_t hdr,
     IngressQos() qos;
 
     apply {
+        if (standard_md.parser_error == error.PacketRejectedByParser) {
+            // packet was rejected by parser -> drop.
+            mark_to_drop(standard_md);
+            exit;
+        }
+
         lkp_md_init.apply(hdr, fabric_md.lkp);
         pkt_io.apply(hdr, fabric_md, standard_md);
         stats.apply(fabric_md.lkp, standard_md.ingress_port,

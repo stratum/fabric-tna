@@ -124,12 +124,21 @@ parser FabricParser (packet_in packet,
         // There is only one MPLS label for this fabric.
         // Assume header after MPLS header is IPv4/IPv6
         // Lookup first 4 bits for version
+
+        
         transition select(packet.lookahead<bit<IP_VER_BITS>>()) {
             IP_VERSION_4: parse_ipv4;
             IP_VERSION_6: parse_ipv6;
-            default: reject; // FIXME Not supported by Bmv2.
-                             // Use verify() to set the parser error and use it to drop in Ingress.
+            
+            default: reject_packet;        
         }
+    }
+
+    state reject_packet{
+        // 'default: reject;' Not supported by Bmv2.
+        // Use verify(false, error.PacketRejectedByParser) to set the parser error and use it to drop in Ingress.
+        verify(false, error.PacketRejectedByParser);
+        transition accept;
     }
 
 
