@@ -9,9 +9,90 @@ This directory maintains the test case definitions (written in Python), as well
 as scripts to run them on different targets. Test cases can be found inside the
 directory `tests/`. Run scripts can be found in `run/`.
 
-Currently, we provide scripts to run PTF tests against two targets:
-* Stratum running on top of tofino-model
-* dummy target used to generate Stratum TestVectors
+Currently, we provide scripts to run these types of tests:
+
+* Stratum running on top of tofino-model and hardware
+* Line rate test on top of hardware with realistic traffic
+* Dummy target used to generate Stratum TestVectors
+
+## The unary test plan
+
+In ``fabric-tna`` repository, we provide a collection of tests that test all features
+from the pipeline.
+
+Each test installs several table entries and use `scapy` packet library to craft and send
+packets to the test device, and waiting for expected packets from the device.
+
+Sometimes we also check the device state such as counter and register during the test.
+
+Here are test groups for different pipeline profiles:
+
+================  ======================================
+Profile            Test group
+================  ======================================
+fabric            basic
+fabric-int        basic, INT, INT-dod
+fabric-spgw       basic, SPGW
+fabric-spgw-int   basic, SPGW, INT, SPGW+INT, INT-dod
+================  ======================================
+
+### The basic test group
+
+* PacketIO tests
+* Bridging tests
+
+  * VLAN tagged/untagged tests
+  * ARP broadcast tests
+
+* IPv4 Unicast tests
+
+  * 5-tuple ECMP tests
+  * MPLS tests
+
+* IPv4 Multicast tests
+
+### The SPGW/UPF test group
+
+* Downlink tests
+
+  * GTP-aware load balancing tests
+  * Send to DBuf
+  * Receive from DBuf
+
+* Uplink tests
+
+  * With/Without recirculate UE traffic
+
+### The INT test group
+
+* Flow report tests
+
+  * Flow report filter tests
+  * Loopback mode tests
+
+* Drop report tests
+
+  * Drop by ACL table
+  * Drop by egress VLAN table
+  * Drop report filter tests
+
+* Queue report tests
+
+  * Queue report filter quota tests
+
+### The SPGW plus INT test group
+
+* Downlink INT flow report tests
+* Downlink INT drop report tests
+
+  * Drop by PDR table
+  * Drop by FAR table
+
+* Uplink INT flow report tests
+* Uplink INT drop report tests
+
+  * Drop by PDR table
+  * Drop by FAR table
 
 ## Steps to run tests on tofino-model with Stratum
 
@@ -102,6 +183,7 @@ The instructions to generate TVs are similar to running PTF tests on tofino-mode
     ```bash
     ./run/tv/run <profile> [device] [portmap] [grpcaddr] [cpuport] [test-case]
     ```
+
    Default values for optional arguments are:
    1. `device`: `tofino`
    2. `portmap`: `portmap.veth.json`
@@ -132,16 +214,35 @@ The instructions to generate TVs are similar to running PTF tests on tofino-mode
 To run PTF with a hardware switch, it requires a server with 4 network
 interfaces (e.g., QSFP) which attached to the switch.
 
+Figure below is an example of the topology, the current tests requires at least `4` links
+connected to the device.
+
 Before starting the test, check the `ptf/run/hw/port_map.hw.json` file to make sure each
 port is configured correctly.
 
-For example, the interface `xl710c5p1` connect to switch port `296`, the config will be:
+![example figure](images/pipeline-test-hw.svg)
+
+Based on this example, we can modify the file `ptf/run/hw/port_map.hw.json` with the port configuration like:
 
 ```json
-    {
-        "p4_port": 296,
-        "iface_name": "xl710c5p1"
-    }
+    [
+        {
+            "p4_port": 1,
+            "iface_name": "eth0"
+        },
+        {
+            "p4_port": 2,
+            "iface_name": "eth1"
+        },
+        {
+            "p4_port": 3,
+            "iface_name": "eth2"
+        },
+        {
+            "p4_port": 4,
+            "iface_name": "eth3"
+        }
+    ]
 ```
 
 Before running the test, make sure all interfaces list in the port map file can be found
@@ -150,10 +251,13 @@ by `ip link` command.
 To run PTF tests with hardware:
 
 ```bash
-./ptf/run/hw/unary <profile>
+./ptf/run/hw/unary <profile> [TEST=test-case]
 ```
 
 ## Running line rate tests with hardware device
+
+Before start running the line rate tests, you need to install TRex on your test server
+see [TRex installation guide](https://trex-tgn.cisco.com/trex/doc/trex_manual.html#_download_and_installation) for more information.
 
 Line rate tests for fabric-tna also requires a server with 4 network interfaces
 attached to the switch.
