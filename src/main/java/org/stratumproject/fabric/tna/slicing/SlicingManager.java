@@ -160,8 +160,17 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
         queueStore.put(QueueId.CONTROL, new QueueStoreValue(TrafficClass.CONTROL, true));
 
         // FIXME Dedicate queues should be dynamically provisioned via API in the future
+        // This configuration is based on the util/sample-qos-config.yaml queues configuration
+        // Max rate = 45 Mbps
         queueStore.put(QueueId.of(3), new QueueStoreValue(TrafficClass.REAL_TIME, true));
+        // Max rate = 30 Mbps
+        queueStore.put(QueueId.of(4), new QueueStoreValue(TrafficClass.REAL_TIME, true));
+        // Max rate = 25 Mbps
+        queueStore.put(QueueId.of(5), new QueueStoreValue(TrafficClass.REAL_TIME, true));
+        // Min guaranteed rate = 100 Mbps
         queueStore.put(QueueId.of(6), new QueueStoreValue(TrafficClass.ELASTIC, true));
+        // Min guaranteed rate = 200 Mbps
+        queueStore.put(QueueId.of(7), new QueueStoreValue(TrafficClass.ELASTIC, true));
 
         classifierFlowStore = storageService.<TrafficSelector, SliceStoreKey>consistentMapBuilder()
                 .withName("fabric-tna-classifier-flow")

@@ -79,6 +79,7 @@ public class SlicingManagerTest {
         SLICE_IDS.add(SliceId.of(1));
         SLICE_IDS.add(SliceId.of(2));
         SLICE_IDS.add(SliceId.of(3));
+        SLICE_IDS.add(SliceId.of(4));
 
         DEVICES.clear();
         DEVICES.add(new MockDevice(DID, null));
@@ -259,10 +260,10 @@ public class SlicingManagerTest {
     @Test
     public void testQueue() {
         // Preparation
-        manager.queueStore.put(QueueId.of(4), new QueueStoreValue(TrafficClass.REAL_TIME, true));
-        manager.queueStore.put(QueueId.of(7), new QueueStoreValue(TrafficClass.ELASTIC, true));
+//        manager.queueStore.put(QueueId.of(4), new QueueStoreValue(TrafficClass.REAL_TIME, true));
+//        manager.queueStore.put(QueueId.of(7), new QueueStoreValue(TrafficClass.ELASTIC, true));
         SliceStoreKey key;
-        for (int i = 1; i <= 3; i++) {
+        for (int i = 1; i <= 4; i++) {
             manager.addSlice(SLICE_IDS.get(i));
             manager.addTrafficClass(SLICE_IDS.get(i), TrafficClass.CONTROL);
             manager.addTrafficClass(SLICE_IDS.get(i), TrafficClass.REAL_TIME);
@@ -270,13 +271,13 @@ public class SlicingManagerTest {
         }
 
         // All BE should point to same queue
-        for (int i = 0; i <= 3; i++) {
+        for (int i = 0; i <= 4; i++) {
             key = new SliceStoreKey(SLICE_IDS.get(i), TrafficClass.BEST_EFFORT);
             assertEquals(QueueId.BEST_EFFORT, manager.getSliceStore().get(key));
         }
 
         // All Control should point to same queue
-        for (int i = 1; i <= 3; i++) {
+        for (int i = 1; i <= 4; i++) {
             key = new SliceStoreKey(SLICE_IDS.get(i), TrafficClass.CONTROL);
             assertEquals(QueueId.CONTROL, manager.getSliceStore().get(key));
         }
@@ -290,7 +291,7 @@ public class SlicingManagerTest {
         assertEquals(QueueId.of(3), manager.getSliceStore().get(key));
         key = new SliceStoreKey(SLICE_IDS.get(2), TrafficClass.REAL_TIME);
         assertEquals(QueueId.of(4), manager.getSliceStore().get(key));
-        key = new SliceStoreKey(SLICE_IDS.get(3), TrafficClass.REAL_TIME);
+        key = new SliceStoreKey(SLICE_IDS.get(4), TrafficClass.REAL_TIME);
         assertEquals(null, manager.getSliceStore().get(key));
 
         // Each ELASTIC class should point to single queue
