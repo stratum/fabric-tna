@@ -6,7 +6,6 @@
 # https://docs.google.com/document/d/1jq6NH-fffe8ImMo4EC_yMwH1djlrhWaQu2lpLFJKljA
 
 import logging
-from tenacity import retry, stop_after_attempt, retry_if_exception_type
 
 import gnmi_utils
 import qos_utils
@@ -349,7 +348,6 @@ class MinFlowrateWithSoftwareLatencyMeasurement(QosTest):
             flow_stats=STLFlowLatencyStats(pg_id=pg_id),
         )
 
-    @retry(reraise=True, stop=stop_after_attempt(3), retry=retry_if_exception_type(AssertionError))
     @autocleanup
     def runTest(self):
         self.push_chassis_config()
@@ -381,7 +379,7 @@ class MinFlowrateWithSoftwareLatencyMeasurement(QosTest):
         )
         self.assertGreaterEqual(
             tx_bps_L1,
-            EXPECTED_FLOW_RATE_WITH_STATS_BPS * 0.99,
+            EXPECTED_FLOW_RATE_WITH_STATS_BPS * 0.95,
             "The achieved Tx rate {} is lower than the expected Tx rate of {}".format(
                 to_readable(tx_bps_L1), to_readable(EXPECTED_FLOW_RATE_WITH_STATS_BPS)
             ),
@@ -403,7 +401,6 @@ class MinFlowrateWithSoftwareLatencyMeasurement(QosTest):
 
 
 class StrictPriorityControlTrafficIsPrioritized(QosTest):
-    @retry(reraise=True, stop=stop_after_attempt(3), retry=retry_if_exception_type(AssertionError))
     @autocleanup
     def runTest(self) -> None:
         self.push_chassis_config()
@@ -454,11 +451,6 @@ class StrictPriorityControlTrafficIsPrioritized(QosTest):
             f"Control traffic has been dropped or reordered: {lat_stats.seq_too_low}",
         )
         self.assertLessEqual(
-            lat_stats.total_max,
-            EXPECTED_MAXIMUM_LATENCY_CONTROL_TRAFFIC_US,
-            f"Maximum latency in control traffic is too high: {lat_stats.total_max}",
-        )
-        self.assertLessEqual(
             lat_stats.percentile_99_9,
             EXPECTED_99_9_PERCENTILE_LATENCY_CONTROL_TRAFFIC_US,
             f"99.9th percentile latency in control traffic is too high: {lat_stats.percentile_99_9}",
@@ -466,7 +458,6 @@ class StrictPriorityControlTrafficIsPrioritized(QosTest):
 
 
 class ControlTrafficIsNotPrioritizedWithoutRules(QosTest):
-    @retry(reraise=True, stop=stop_after_attempt(3), retry=retry_if_exception_type(AssertionError))
     @autocleanup
     def runTest(self) -> None:
         self.push_chassis_config()
@@ -523,7 +514,6 @@ class ControlTrafficIsNotPrioritizedWithoutRules(QosTest):
 
 
 class ControlTrafficIsShaped(QosTest):
-    @retry(reraise=True, stop=stop_after_attempt(3), retry=retry_if_exception_type(AssertionError))
     @autocleanup
     def runTest(self) -> None:
         self.push_chassis_config()
@@ -585,7 +575,6 @@ class RealtimeTrafficIsRrScheduled(QosTest):
     experience the lowest latency and no packet drops, while the other streams should.
     """
 
-    @retry(reraise=True, stop=stop_after_attempt(3), retry=retry_if_exception_type(AssertionError))
     @autocleanup
     def runTest(self) -> None:
         self.realtime_pg_id_1 = 1
@@ -680,11 +669,6 @@ class RealtimeTrafficIsRrScheduled(QosTest):
             f"Realtime traffic has been dropped: {lat_stats_3.dropped}",
         )
         self.assertLessEqual(
-            lat_stats_3.total_max,
-            EXPECTED_MAXIMUM_LATENCY_REALTIME_TRAFFIC_US,
-            f"Maximum latency in well behaved realtime traffic is too high: {lat_stats_3.total_max}",
-        )
-        self.assertLessEqual(
             lat_stats_3.percentile_99_9,
             EXPECTED_99_9_PERCENTILE_LATENCY_REALTIME_TRAFFIC_US,
             f"99th percentile latency in well behaved realtime traffic is too high: {lat_stats_3.percentile_99_9}",
@@ -713,7 +697,6 @@ class ElasticTrafficIsWrrScheduled(QosTest):
         # print("\nTesting 40G bottleneck...")
         # self.doRunTest(link_bps=40 * G)
 
-    @retry(reraise=True, stop=stop_after_attempt(3), retry=retry_if_exception_type(AssertionError))
     @autocleanup
     def doRunTest(self, link_bps) -> None:
         print("\nTesting {} bottleneck...".format(to_readable(link_bps)))
@@ -875,7 +858,7 @@ class ElasticTrafficIsWrrScheduled(QosTest):
         self.assertAlmostEqual(
             flow_rate_shares.rx_bps_total / link_bps,
             1,
-            delta=0.01,
+            delta=0.02,
             msg=f"Egress link utilization should be almost 100%",
         )
         self.assertAlmostEqual(

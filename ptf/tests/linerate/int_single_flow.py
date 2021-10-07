@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 
 from datetime import datetime
-from tenacity import retry, stop_after_attempt, retry_if_exception_type
 
 from base_test import *
 from fabric_test import *
@@ -26,7 +25,6 @@ INT_COLLECTOR_PORT = 2
 
 @group("int")
 class IntSingleFlow(TRexTest, IntTest):
-    @retry(reraise=True, stop=stop_after_attempt(3), retry=retry_if_exception_type(AssertionError))
     @autocleanup
     def runTest(self):
         self.push_chassis_config()
@@ -88,13 +86,14 @@ class IntSingleFlow(TRexTest, IntTest):
         - Packet loss: No packets were dropped during the test
         - Reports: 1 INT report per second per flow was generated
         """
-        self.failIf(
-            sent_packets != recv_packets,
+        self.assertEqual(
+            sent_packets,
+            recv_packets,
             f"Didn't receive all packets; sent {sent_packets}, received {recv_packets}",
         )
 
         local_reports = results["local_reports"]
-        self.failIf(
-            local_reports != EXPECTED_FLOW_REPORTS,
-            f"Flow reports generated for 10 second single flow test should be 10, was {local_reports}",
+        self.assertTrue(
+            local_reports in [EXPECTED_FLOW_REPORTS, 11],
+            f"Flow reports generated for 10 second single flow test should be 10 or 11, was {local_reports}",
         )

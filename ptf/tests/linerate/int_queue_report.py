@@ -3,7 +3,6 @@
 
 import os
 from collections import deque
-from tenacity import retry, stop_after_attempt, retry_if_exception_type
 
 from base_test import *
 from fabric_test import *
@@ -31,7 +30,6 @@ RECEIVER_PORT = 3
 
 @group("int")
 class IntQueueReportTest(TRexTest, IntTest, SlicingTest):
-    @retry(reraise=True, stop=stop_after_attempt(3), retry=retry_if_exception_type(AssertionError))
     @autocleanup
     def doRunTest(
         self, tagged1, tagged2, is_device_spine, send_report_to_spine, is_next_hop_spine

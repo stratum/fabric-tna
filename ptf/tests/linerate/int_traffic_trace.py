@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 
 from datetime import datetime
-from tenacity import retry, stop_after_attempt, retry_if_exception_type
 
 from base_test import *
 from fabric_test import *
@@ -41,7 +40,6 @@ class IntFlowFilterWithTrafficTrace(TRexTest, IntTest):
     its performance when encountering bloom filter collisions.
     """
 
-    @retry(reraise=True, stop=stop_after_attempt(3), retry=retry_if_exception_type(AssertionError))
     @autocleanup
     def runTest(self):
         self.push_chassis_config()
@@ -126,7 +124,6 @@ class IntIngressDropReportFilterWithTrafficTrace(TRexTest, IntTest):
     flows, simulating a real-world scenario.
     """
 
-    @retry(reraise=True, stop=stop_after_attempt(3), retry=retry_if_exception_type(AssertionError))
     @autocleanup
     def runTest(self):
 
