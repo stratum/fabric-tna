@@ -148,14 +148,12 @@ control Next (inout ingress_headers_t hdr,
     direct_counter(CounterType.packets_and_bytes) multicast_counter;
 
     action set_mcast_group_id(MulticastGroupId_t group_id) {
-        //ig_intr_md_for_tm.mcast_grp_a = group_id;
         standard_md.mcast_grp = group_id;
         fabric_md.bridged.base.is_multicast = true;
         multicast_counter.count();
     }
 
     action reset_mcast_group_id() {
-        //g_intr_md_for_tm.mcast_grp_a = 0;
         standard_md.mcast_grp = 0;
         fabric_md.bridged.base.is_multicast = false;
     }
@@ -257,7 +255,7 @@ control EgressNextControl (inout ingress_headers_t hdr,
     table egress_vlan {
         key = {
             fabric_md.bridged.base.vlan_id : exact @name("vlan_id");
-            standard_md.egress_port    : exact @name("eg_port");
+            standard_md.egress_port        : exact @name("eg_port");
         }
         actions = {
             push_vlan;
