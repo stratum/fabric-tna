@@ -226,7 +226,7 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
 
         Set<TrafficSelector> classifierFlows = getFlows(sliceId);
         if (!classifierFlows.isEmpty()) {
-            log.warn("Cannot remove a the slice {} with {} Flow Classifier Rules",
+            log.warn("Cannot remove slice {} with {} Flow Classifier Rules",
                      sliceId, classifierFlows.size());
             return false;
         }
@@ -306,7 +306,7 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
 
         Set<TrafficSelector> classifierFlows = getFlows(sliceId, tc);
         if (!classifierFlows.isEmpty()) {
-            log.warn("Cannot remove {} from {} with {} Flow Classifier Rules",
+            log.warn("Cannot remove {} from slice {} with {} Flow Classifier Rules",
                      tc, sliceId, classifierFlows.size());
             return false;
         }
@@ -368,7 +368,7 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
         AtomicBoolean result = new AtomicBoolean(false);
         classifierFlowStore.compute(selector, (k, v) -> {
             if (v == null) {
-                log.warn("Flow {} is not on slice {} tc {}", selector, sliceId, tc);
+                log.warn("There is no such Flow Classifier Rule {} for slice {}  and TC {}", selector, sliceId, tc);
                 return null;
             }
             log.info("Removing flow {} from slice {} tc {}", selector, sliceId, tc);
