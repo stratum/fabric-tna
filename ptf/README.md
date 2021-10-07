@@ -302,5 +302,143 @@ To run the line rate test:
 ./ptf/run/hw/linerate <profile>
 ```
 
+## Test result
+
+The output of each test contains 3 parts:
+
+* The test name
+* The test log (if any)
+* The test result and time
+
+Below is an example of running the ``FabricBridgingTest``:
+
+```text
+test.FabricBridgingTest ...
+Testing udp packet with VLAN tag->tag..
+Testing gtp_psc_dl_udp packet with VLAN tag->tag..
+                        <...skip...>
+Testing gtp_psc_ul_icmp packet with VLAN untag->tag..
+Testing tcp packet with VLAN untag->tag..
+ok
+
+----------------------------------------------------------------------
+Ran 1 test in 10.154s
+
+OK
+```
+
+When a test failed, it prints the error messages.
+
+For example, when the expected packet is the the same as the actual packet:
+
+```text
+test.FabricBridgingTest ...
+======================================================================
+FAIL: test.FabricBridgingTest
+----------------------------------------------------------------------
+                        <...skip...>
+AssertionError: Did not receive expected packets on port 1 for device 0.
+========== EXPECTED ==========
+dst        : MACField                            = '00:01:02:03:04:05' ("'00:00:00:01:00:00'")
+src        : MACField                            = '00:00:10:00:00:00' ("'00:00:00:02:00:00'")
+                        <...skip...>
+========== RECEIVED ==========
+1 total packets. Displaying most recent 1 packets:
+------------------------------
+dst        : MACField                            = '00:01:02:03:04:05' ("'00:00:00:01:00:00'")
+src        : MACField                            = '00:06:07:08:09:0a' ("'00:00:00:02:00:00'")
+                        <...skip...>
+----------------------------------------------------------------------
+Ran 1 test in 2.078s
+
+FAILED (failures=1)
+```
+
+Note that when one test failed, the PTF will keep running until every test completed.
+
+You will get the following message when test completed:
+
+```text
+    ******************************************
+    ATTENTION: SOME TESTS DID NOT PASS!!!
+
+    The following tests failed:
+    Test1, Test2, ....
+    ******************************************
+```
+
+Tip: You can use a diff tool(e.g., vimdiff) to compare the expected and actual result.
+
+## Contribute new test cases
+
+To create a new test for a new P4 pipeline feature, we have to understand few things:
+
+* Which types of packet we want to support and where it enters the switch?
+
+  * VLAN, IP, or special type like GTP
+  * Packet from the normal port
+  * Packet from the control plane
+
+* How P4 pipeline process a packet?
+
+  * Processed by which table, ASIC primitives, or the Traffic Manager component.
+
+* What is the output, where we expect to get them?
+
+  * Packet modification
+  * Output with ECMP group
+  * Output to the control plane
+  * Packet dropped
+
+* Do we expect any state updated?
+
+  * Counter increased
+  * Register changed
+
+Once we can answer all questions above, we can start to create a new test.
+
+### Create a new test class
+
+There are 3 directories under `ptf/tests` directory.
+
+The `common` directory contains common test functions and classes shared by unary test
+and line rate tests.
+
+Unary tests and line rate tests are placed in the `unary` and `linerate` directory.
+
+Most of unary test groups such as `basic`, `spgw`, and `int` are placed in `ptf/tests/unary/test.py`.
+
+Each class will be consider as a test. A test can contain multiple test cases that uses
+different parameters.
+
+Also, there are several base test classes in the repository, each base class provides different
+utility functions for specific scenario.
+
+![Test calsses](images/pipeline-test-classes.svg)
+
+To create a new unary test, create a new class in the `ptf/tests/unary/test.py`, we recommend
+you to use the following template
+
+```python
+class MyTest(FabricTest):
+
+    @autocleanup
+    def doRunTest(self, param1, param2):
+        # Actual test code with parameters
+
+    def runTest(self):
+        # The entrypoint of this test
+        # Iterate all possible parameters and calls `doRunTest` function
+```
+
+The `@autocleanup` annotation will remove every P4Runtime entries after the test, which ensures
+the state is clean before start running next test.
+
+It alwaysis easiler to reuse base test classes and utilities from `ptf/tests/common/fabric_test.py`
+module.
+
+For example, extend the `IntTest` class for new INT tests, or extend `TRexTest`
+if you want to create new line rate test.
+
 [testvectors-runner]: https://github.com/stratum/testvectors-runner
 [TestVectors]: https://github.com/stratum/testvectors
