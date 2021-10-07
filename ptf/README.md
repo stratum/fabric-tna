@@ -262,10 +262,12 @@ see [TRex installation guide](https://trex-tgn.cisco.com/trex/doc/trex_manual.ht
 Line rate tests for fabric-tna also requires a server with 4 network interfaces
 attached to the switch.
 
-Before running the test make sure TRex config file (`ptf/run/hw/trex-config/4-ports-with-l2.yaml`)
-includes correct interface configuration.
-
 For example, we have 4 QSFP(40Gbps) interface connect to the switch:
+
+![line rate test](images/pipeline-test-line-rate.svg)
+
+Before running the test, make sure TRex config file (`ptf/run/hw/trex-config/4-ports-with-l2.yaml`)
+includes correct interface configuration.
 
 ```yaml
   port_limit: 4
