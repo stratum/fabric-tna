@@ -139,7 +139,7 @@ ENV RUNTIME_DEPS \
     gfortran
 
 RUN apt update && apt install -y $RUNTIME_DEPS
-RUN pip3 install --no-cache-dir scipy==1.5.4 numpy==1.19.4 matplotlib==3.3.3 pyyaml==5.4.1 tenacity
+RUN pip3 install --no-cache-dir scipy==1.5.4 numpy==1.19.4 matplotlib==3.3.3 pyyaml==5.4.1 tenacity==8.0.1
 
 ENV TREX_EXT_LIBS=${TREX_EXT_LIBS}
 ENV PYTHONPATH=${TREX_EXT_LIBS}:${TREX_LIBS}
