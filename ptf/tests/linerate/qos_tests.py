@@ -689,6 +689,7 @@ class ElasticTrafficIsWrrScheduled(QosTest):
     """
 
     def runTest(self) -> None:
+        print("\nTesting 1G bottleneck...")
         self.doRunTest(link_bps=1 * G)
 
         # FIXME: flow stats report egress link utilization greater than 100% and incorrect RX shares.
@@ -699,7 +700,6 @@ class ElasticTrafficIsWrrScheduled(QosTest):
 
     @autocleanup
     def doRunTest(self, link_bps) -> None:
-        print("\nTesting {} bottleneck...".format(to_readable(link_bps)))
         elastic_flow_id_1 = 1
         elastic_flow_id_2 = 2
         best_effort_flow_id_3 = 3
