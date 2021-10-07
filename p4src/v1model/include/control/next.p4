@@ -8,8 +8,6 @@
 control Next (inout ingress_headers_t hdr,
               inout fabric_ingress_metadata_t fabric_md,
               inout standard_metadata_t standard_md
-              //in    ingress_intrinsic_metadata_t ig_intr_md,
-              //inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm
               ) {
 
     /*
@@ -109,13 +107,7 @@ control Next (inout ingress_headers_t hdr,
      * Execute an action profile selector based on next id.
      */
     // TODO: Find a good size for Hash
-    //action_profile(HASHED_ACT_PROFILE_SIZE) hashed_profile;
-    //hash(HashAlgorithm_t.CRC16) selector_hash;
-    // action_selector(hashed_profile,
-    //                selector_hash,
-    //                SelectorMode_t.FAIR,
-    //                HASHED_SELECTOR_MAX_GROUP_SIZE,
-    //                HASHED_NEXT_TABLE_SIZE) hashed_selector;
+    action_profile(HASHED_ACT_PROFILE_SIZE) hashed_profile; //currently unused
     action_selector(HashAlgorithm.crc16, 
         HASHED_SELECTOR_MAX_GROUP_SIZE, 
         HASHED_NEXT_TABLE_SIZE) hashed_selector;
@@ -142,7 +134,7 @@ control Next (inout ingress_headers_t hdr,
             routing_hashed;
             @defaultonly nop;
         }
-        implementation = hashed_selector;
+        @mode("fair") implementation = hashed_selector;
         counters = hashed_counter;
         const default_action = nop();
         size = HASHED_NEXT_TABLE_SIZE;
@@ -199,8 +191,6 @@ control Next (inout ingress_headers_t hdr,
 control EgressNextControl (inout ingress_headers_t hdr,
                            inout fabric_ingress_metadata_t fabric_md,
                            inout standard_metadata_t standard_md
-                           //in    egress_intrinsic_metadata_t eg_intr_md,
-                           //inout egress_intrinsic_metadata_for_deparser_t eg_dprsr_md
                            ) {
     @hidden
     action pop_mpls_if_present() {
