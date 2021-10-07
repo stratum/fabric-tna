@@ -4,9 +4,8 @@
 #include "shared/define.p4"
 #include "shared/header.p4"
 
-control Hasher(
-    inout ingress_headers_t hdr,
-    inout fabric_ingress_metadata_t fabric_md) {
+control Hasher(inout ingress_headers_t hdr,
+               inout fabric_ingress_metadata_t fabric_md) {
 
     // From v1model.p4, how to use hash():
     // hash<O, T, D, M>(out O result, in HashAlgorithm algo, in T base, in D data, in M max);
