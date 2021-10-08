@@ -12,6 +12,7 @@ import org.easymock.EasyMock;
 import org.junit.Before;
 import org.junit.Test;
 import org.onlab.packet.IpPrefix;
+import org.onlab.packet.MacAddress;
 import org.onlab.packet.TpPort;
 import org.onosproject.codec.CodecService;
 import org.onosproject.core.ApplicationId;
@@ -258,6 +259,70 @@ public class SlicingManagerTest {
     }
 
     @Test
+    public void testAddFlowClassifier() {
+        // Preparation
+        capturedAddedFlowRules.reset();
+        TrafficSelector selector = DefaultTrafficSelector.builder().matchUdpDst(TpPort.tpPort(100)).build();
+        TrafficSelector wrongSelector = DefaultTrafficSelector.builder().matchEthDst(MacAddress.IPV4_MULTICAST).build();
+        FlowRule classifier = buildClassifierFromSelector(SLICE_IDS.get(1), TrafficClass.REAL_TIME, selector);
+        manager.addSlice(SLICE_IDS.get(1));
+        manager.addTrafficClass(SLICE_IDS.get(1), TrafficClass.REAL_TIME);
+
+        // Normal
+        manager.addFlow(selector, SLICE_IDS.get(1), TrafficClass.REAL_TIME);
+
+        assertAfter(50, () -> {
+            assertTrue(capturedAddedFlowRules.getValues().size() >= 3);
+            assertTrue(capturedAddedFlowRules.getValues().stream()
+                               .anyMatch(fl -> fl.exactMatch(classifier)));
+        });
+        assertEquals(1, manager.getFlows(SLICE_IDS.get(1), TrafficClass.REAL_TIME).size());
+        assertTrue(manager.getFlows(SLICE_IDS.get(1), TrafficClass.REAL_TIME).contains(selector));
+
+        // Abnormal
+        assertFalse(manager.addFlow(DefaultTrafficSelector.builder().build(),
+                                    SLICE_IDS.get(1), TrafficClass.REAL_TIME));
+        assertFalse(manager.addFlow(wrongSelector, SLICE_IDS.get(1), TrafficClass.REAL_TIME));
+
+    }
+
+    @Test
+    public void testRemoveFlowClassifier() {
+        // Preparation
+        capturedRemovedFlowRules.reset();
+        TrafficSelector selector = DefaultTrafficSelector.builder().matchUdpDst(TpPort.tpPort(100)).build();
+        TrafficSelector wrongSelector = DefaultTrafficSelector.builder().matchTcpDst(TpPort.tpPort(100)).build();
+        FlowRule classifier = buildClassifierFromSelector(SLICE_IDS.get(1), TrafficClass.REAL_TIME, selector);
+        manager.addSlice(SLICE_IDS.get(1));
+        manager.addTrafficClass(SLICE_IDS.get(1), TrafficClass.REAL_TIME);
+        manager.addFlow(selector, SLICE_IDS.get(1), TrafficClass.REAL_TIME);
+
+        // Abnormal
+        assertFalse(manager.removeFlow(wrongSelector, SLICE_IDS.get(1), TrafficClass.REAL_TIME));
+
+        // Normal
+        assertTrue(manager.removeFlow(selector, SLICE_IDS.get(1), TrafficClass.REAL_TIME));
+        assertAfter(50, () -> {
+            assertEquals(1, capturedRemovedFlowRules.getValues().size());
+            assertTrue(classifier.exactMatch(capturedRemovedFlowRules.getValues().get(0)));
+        });
+    }
+
+
+    @Test
+    public void testRemoveSliceAndTcWithFlowClassifier() {
+        // Preparation
+        TrafficSelector selector = DefaultTrafficSelector.builder().matchUdpDst(TpPort.tpPort(100)).build();
+        manager.addSlice(SLICE_IDS.get(1));
+        manager.addTrafficClass(SLICE_IDS.get(1), TrafficClass.REAL_TIME);
+        manager.addFlow(selector, SLICE_IDS.get(1), TrafficClass.REAL_TIME);
+
+        // Fail to remove Slice and TC when Flow Classifier
+        assertFalse(manager.removeTrafficClass(SLICE_IDS.get(1), TrafficClass.REAL_TIME));
+        assertFalse(manager.removeSlice(SLICE_IDS.get(1)));
+    }
+
+    @Test
     public void testQueue() {
         // Preparation
 //        manager.queueStore.put(QueueId.of(4), new QueueStoreValue(TrafficClass.REAL_TIME, true));
@@ -453,10 +518,14 @@ public class SlicingManagerTest {
             .matchTcpDst(TpPort.tpPort(1234))
             .build();
 
+        return buildClassifierFromSelector(SLICE_IDS.get(1), TrafficClass.BEST_EFFORT, selector);
+    }
+
+    private FlowRule buildClassifierFromSelector(SliceId sliceId, TrafficClass tc, TrafficSelector selector) {
         PiAction.Builder piTableActionBuilder = PiAction.builder()
                 .withId(P4InfoConstants.FABRIC_INGRESS_SLICE_TC_CLASSIFIER_SET_SLICE_ID_TC)
-                .withParameters(Set.of(new PiActionParam(P4InfoConstants.SLICE_ID, SLICE_IDS.get(1).id()),
-                                       new PiActionParam(P4InfoConstants.TC, TrafficClass.BEST_EFFORT.ordinal())));
+                .withParameters(Set.of(new PiActionParam(P4InfoConstants.SLICE_ID, sliceId.id()),
+                                       new PiActionParam(P4InfoConstants.TC, tc.ordinal())));
 
         return DefaultFlowRule.builder()
                 .forDevice(DID)
