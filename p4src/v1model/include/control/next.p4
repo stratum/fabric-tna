@@ -107,7 +107,6 @@ control Next (inout ingress_headers_t hdr,
      * Execute an action profile selector based on next id.
      */
     // TODO: Find a good size for Hash
-    action_profile(HASHED_ACT_PROFILE_SIZE) hashed_profile; //currently unused
     action_selector(HashAlgorithm.crc16, 
         HASHED_SELECTOR_MAX_GROUP_SIZE, 
         HASHED_NEXT_TABLE_SIZE) hashed_selector;
