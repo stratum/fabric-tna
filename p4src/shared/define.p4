@@ -182,6 +182,7 @@ enum bit<3> FabricMirrorType_t {
 }
 
 const MirrorId_t PACKET_IN_MIRROR_SESSION_ID = 0x210;
+const PortId_t BMV2_PACKET_IN_MIRROR_SESSION_ID = 0x1FF;
 
 // Modes for CPU loopback testing, where a process can inject packets through
 // the CPU port (P4RT packet-out) and expect the same to be delivered back to

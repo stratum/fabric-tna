@@ -82,8 +82,8 @@ control PacketIoEgress(inout ingress_headers_t hdr,
         switch_info.apply();
 
         if (standard_md.egress_port == fabric_md.cpu_port) {
-            hdr.packet_in.ingress_port = standard_md.ingress_port;
             hdr.packet_in.setValid();
+            hdr.packet_in.ingress_port = standard_md.ingress_port;
             hdr.fake_ethernet.setInvalid();
             exit;
         }

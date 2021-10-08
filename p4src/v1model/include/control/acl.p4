@@ -16,14 +16,6 @@ control Acl (inout ingress_headers_t hdr,
      */
     direct_counter(CounterType.packets_and_bytes) acl_counter;
 
-    // Set clone session id for a I2E clone session, to perform mirroring
-    action set_clone_session_id(bit<32> clone_id) {
-        // Architecture specific code (for Bmv2)
-        // Warning for clone3() function: https://github.com/p4lang/p4c/issues/1669#issuecomment-639752860
-        clone3(CloneType.I2E, clone_id, {standard_md.ingress_port});
-        acl_counter.count();
-    }
-
     action set_next_id_acl(next_id_t next_id) {
         fabric_md.next_id = next_id;
         acl_counter.count();
@@ -45,14 +37,14 @@ control Acl (inout ingress_headers_t hdr,
 
 
     action copy_to_cpu() {
-        // Should not be used by Bmv2. Use set_clone_session_id instead.
-        standard_md.egress_spec = CPU_PORT;
+        bit<32> clone_id = (bit<32>)BMV2_PACKET_IN_MIRROR_SESSION_ID;
+        clone3(CloneType.I2E, clone_id, {standard_md.ingress_port});
         acl_counter.count();
     }
 
     
     action punt_to_cpu() {
-        copy_to_cpu();
+        standard_md.egress_spec = CPU_PORT;
         fabric_md.skip_next = true;
         fabric_md.punt_to_cpu = true;
     }
@@ -102,7 +94,6 @@ control Acl (inout ingress_headers_t hdr,
             copy_to_cpu;
             punt_to_cpu_post_ingress;
             copy_to_cpu_post_ingress;
-            set_clone_session_id;
             drop;
             set_output_port;
             nop_acl;
