@@ -94,6 +94,6 @@ class IntSingleFlow(TRexTest, IntTest):
 
         local_reports = results["local_reports"]
         self.assertTrue(
-            local_reports in [EXPECTED_FLOW_REPORTS, 11],
+            local_reports in [EXPECTED_FLOW_REPORTS, EXPECTED_FLOW_REPORTS + 1],
             f"Flow reports generated for 10 second single flow test should be 10 or 11, was {local_reports}",
         )
