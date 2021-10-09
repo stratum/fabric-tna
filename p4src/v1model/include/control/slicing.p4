@@ -61,8 +61,6 @@ control IngressSliceTcClassifier (inout    ingress_headers_t hdr,
 // applied after any other block writing slice_id and tc.
 control IngressQos (inout fabric_ingress_metadata_t fabric_md,
                     inout standard_metadata_t standard_md){
-                    //inout ingress_intrinsic_metadata_for_deparser_t ig_dprsr_md,
-                    //inout ingress_intrinsic_metadata_for_tm_t ig_tm_md) {
 
     // From now on we use the concatenated slice_id++tc to aid the compiler in
     // optimizing resource allocation.
