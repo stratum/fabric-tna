@@ -9,20 +9,20 @@
 
 parser FabricParser (packet_in packet,
                      out ingress_headers_t hdr,
-                     inout fabric_ingress_metadata_t fabric_md,
+                     inout fabric_v1model_metadata_t fabric_md,
                      inout standard_metadata_t standard_md) {
 
     state start {
         // packet.extract(ig_intr_md);
         //packet.advance(PORT_METADATA_SIZE);
-        fabric_md.bridged.setValid();
-        fabric_md.bridged.bmd_type = BridgedMdType_t.INGRESS_TO_EGRESS;
-        fabric_md.bridged.base.ig_port = standard_md.ingress_port;
-        fabric_md.bridged.base.ig_tstamp = standard_md.ingress_global_timestamp;
-        fabric_md.egress_port_set = false;
-        fabric_md.punt_to_cpu = false;
-        fabric_md.bridged.base.ip_eth_type = 0;
-        fabric_md.bridged.base.encap_presence = EncapPresence.NONE;        
+        fabric_md.ingress_md.bridged.setValid();
+        fabric_md.ingress_md.bridged.bmd_type = BridgedMdType_t.INGRESS_TO_EGRESS;
+        fabric_md.ingress_md.bridged.base.ig_port = standard_md.ingress_port;
+        fabric_md.ingress_md.bridged.base.ig_tstamp = standard_md.ingress_global_timestamp;
+        fabric_md.ingress_md.egress_port_set = false;
+        fabric_md.ingress_md.punt_to_cpu = false;
+        fabric_md.ingress_md.bridged.base.ip_eth_type = 0;
+        fabric_md.ingress_md.bridged.base.encap_presence = EncapPresence.NONE;        
 
         transition select (standard_md.ingress_port) {
             CPU_PORT: check_packet_out;
@@ -91,9 +91,9 @@ parser FabricParser (packet_in packet,
         packet.extract(hdr.vlan_tag);
         // Initialize lookup metadata. Packets without a VLAN header will be
         // treated as belonging to a default VLAN ID
-        fabric_md.bridged.base.vlan_id = hdr.vlan_tag.vlan_id;
-        // fabric_md.bridged.base.vlan_cfi = hdr.vlan_tag.cfi;
-        // fabric_md.bridged.base.vlan_pri = hdr.vlan_tag.pri;
+        fabric_md.ingress_md.bridged.base.vlan_id = hdr.vlan_tag.vlan_id;
+        // fabric_md.ingress_md.bridged.base.vlan_cfi = hdr.vlan_tag.cfi;
+        // fabric_md.ingress_md.bridged.base.vlan_pri = hdr.vlan_tag.pri;
         transition select(packet.lookahead<bit<16>>()) {
             default: parse_eth_type;
         }
@@ -101,9 +101,9 @@ parser FabricParser (packet_in packet,
 
     state parse_untagged {
         // Sets default vlan
-        fabric_md.bridged.base.vlan_id = DEFAULT_VLAN_ID;
-        // fabric_md.bridged.base.vlan_cfi = 3w0;
-        // fabric_md.bridged.base.vlan_pri = 1w0;
+        fabric_md.ingress_md.bridged.base.vlan_id = DEFAULT_VLAN_ID;
+        // fabric_md.ingress_md.bridged.base.vlan_cfi = 3w0;
+        // fabric_md.ingress_md.bridged.base.vlan_pri = 1w0;
         transition parse_eth_type;
     }
 
@@ -119,8 +119,8 @@ parser FabricParser (packet_in packet,
 
     state parse_mpls {
         packet.extract(hdr.mpls);
-        fabric_md.bridged.base.mpls_label = hdr.mpls.label;
-        fabric_md.bridged.base.mpls_ttl = hdr.mpls.ttl;
+        fabric_md.ingress_md.bridged.base.mpls_label = hdr.mpls.label;
+        fabric_md.ingress_md.bridged.base.mpls_ttl = hdr.mpls.ttl;
         // There is only one MPLS label for this fabric.
         // Assume header after MPLS header is IPv4/IPv6
         // Lookup first 4 bits for version
@@ -144,8 +144,8 @@ parser FabricParser (packet_in packet,
 
 
     state parse_non_mpls {
-        fabric_md.bridged.base.mpls_label = 0;
-        fabric_md.bridged.base.mpls_ttl = DEFAULT_MPLS_TTL + 1;
+        fabric_md.ingress_md.bridged.base.mpls_label = 0;
+        fabric_md.ingress_md.bridged.base.mpls_ttl = DEFAULT_MPLS_TTL + 1;
         transition select(hdr.eth_type.value) {
             ETHERTYPE_IPV4: parse_ipv4;
             ETHERTYPE_IPV6: parse_ipv6;
@@ -155,10 +155,10 @@ parser FabricParser (packet_in packet,
 
     state parse_ipv4 {
         packet.extract(hdr.ipv4);
-        fabric_md.routing_ipv4_dst = hdr.ipv4.dst_addr;
-        fabric_md.bridged.base.ip_eth_type = ETHERTYPE_IPV4;
+        fabric_md.ingress_md.routing_ipv4_dst = hdr.ipv4.dst_addr;
+        fabric_md.ingress_md.bridged.base.ip_eth_type = ETHERTYPE_IPV4;
         //ipv4_checksum.add(hdr.ipv4);
-        //fabric_md.ipv4_checksum_err = ipv4_checksum.verify();
+        //fabric_md.ingress_md.ipv4_checksum_err = ipv4_checksum.verify();
         // Need header verification?
         transition select(hdr.ipv4.protocol) {
             PROTO_TCP: parse_tcp;
@@ -172,8 +172,8 @@ parser FabricParser (packet_in packet,
         packet.extract(hdr.ipv6);
         // FIXME: remove ipv6 support or test it
         //  https://github.com/stratum/fabric-tna/pull/227
-        // fabric_md.ip_proto = hdr.ipv6.next_hdr;
-        fabric_md.bridged.base.ip_eth_type = ETHERTYPE_IPV6;
+        // fabric_md.ingress_md.ip_proto = hdr.ipv6.next_hdr;
+        fabric_md.ingress_md.bridged.base.ip_eth_type = ETHERTYPE_IPV6;
         transition select(hdr.ipv6.next_hdr) {
             PROTO_TCP: parse_tcp;
             PROTO_UDP: parse_udp;
@@ -212,7 +212,7 @@ parser FabricParser (packet_in packet,
     }
 
     state set_gtpu_only {
-        fabric_md.bridged.base.encap_presence = EncapPresence.GTPU_ONLY;
+        fabric_md.ingress_md.bridged.base.encap_presence = EncapPresence.GTPU_ONLY;
         transition parse_inner_ipv4;
     }
 
@@ -227,7 +227,7 @@ parser FabricParser (packet_in packet,
 
     state parse_gtpu_ext_psc {
         packet.extract(hdr.gtpu_ext_psc);
-        fabric_md.bridged.base.encap_presence = EncapPresence.GTPU_WITH_PSC;
+        fabric_md.ingress_md.bridged.base.encap_presence = EncapPresence.GTPU_WITH_PSC;
         transition select(hdr.gtpu_ext_psc.next_ext) {
             GTPU_NEXT_EXT_NONE: parse_inner_ipv4;
             default: accept;
@@ -236,7 +236,7 @@ parser FabricParser (packet_in packet,
 
     state parse_vxlan {
         packet.extract(hdr.vxlan);
-        fabric_md.bridged.base.encap_presence = EncapPresence.VXLAN;
+        fabric_md.ingress_md.bridged.base.encap_presence = EncapPresence.VXLAN;
         transition parse_inner_ethernet;
     }
 
@@ -252,7 +252,7 @@ parser FabricParser (packet_in packet,
     state parse_inner_ipv4 {
         packet.extract(hdr.inner_ipv4);
         //inner_ipv4_checksum.add(hdr.inner_ipv4);
-        //fabric_md.inner_ipv4_checksum_err = inner_ipv4_checksum.verify();
+        //fabric_md.ingress_md.inner_ipv4_checksum_err = inner_ipv4_checksum.verify();
         transition select(hdr.inner_ipv4.protocol) {
             PROTO_TCP: parse_inner_tcp;
             PROTO_UDP: parse_inner_udp;

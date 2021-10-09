@@ -140,7 +140,7 @@ control IngressQos (inout fabric_ingress_metadata_t fabric_md,
 
 // Allows per-egress port rewriting of the outermost IPv4 DSCP field to
 // piggyback slice_id and tc across the fabric.
-control EgressDscpRewriter (inout fabric_ingress_metadata_t fabric_md,
+control EgressDscpRewriter (inout fabric_egress_metadata_t fabric_md,
                             inout standard_metadata_t standard_md,
                             inout ingress_headers_t hdr) {
 

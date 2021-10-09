@@ -381,11 +381,8 @@ struct fabric_ingress_metadata_t {
     common_mirror_metadata_t mirror;
 
 #ifdef V1MODEL
-    // integrating missing headers from egress metadata.
-    // this way we can use only the ingress metadata, for Bmv2.
+    // integrating missing header for slicing and policing.
     bit<2>                packet_color; // only 3 values: GREEN, YELLOW, RED
-    bit<16>               pkt_length;
-    PortId_t              cpu_port;
 #endif
 }
 
@@ -422,6 +419,15 @@ struct fabric_egress_metadata_t {
 #endif // WITH_INT
     bit<16>               pkt_length;
 }
+
+#ifdef V1MODEL
+// This struct encapsulates the ingress and egress metadata for Bmv2.
+// The reason behind this struct is to have the same metadata structure defined for TNA.
+struct fabric_v1model_metadata_t {
+    fabric_ingress_metadata_t ingress_md;
+    fabric_egress_metadata_t egress_md;
+}
+#endif // V1MODEL
 
 header fake_ethernet_t {
     @padding bit<48> _pad0;

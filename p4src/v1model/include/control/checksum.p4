@@ -8,7 +8,7 @@
 #include "shared/define.p4"
 
 control FabricVerifyChecksum(inout ingress_headers_t hdr,
-                             inout fabric_ingress_metadata_t meta) {
+                             inout fabric_v1model_metadata_t meta) {
     apply {
         verify_checksum(hdr.ipv4.isValid(),
             {
@@ -32,7 +32,7 @@ control FabricVerifyChecksum(inout ingress_headers_t hdr,
 }
 
 control FabricComputeChecksum(inout ingress_headers_t hdr,
-                              inout fabric_ingress_metadata_t meta){
+                              inout fabric_v1model_metadata_t meta){
     apply {
         update_checksum(hdr.ipv4.isValid(),
             {
