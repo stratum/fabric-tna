@@ -86,8 +86,8 @@ control PacketIoEgress(inout ingress_headers_t hdr,
     apply {
         switch_info.apply();
 
-        if (hdr.packet_out.isValid()){
-            hdr.packet_out.setInvalid();
+        if (hdr.packet_out.isValid()){ // assuming port is already set in control above PacketIoIngress.do_packet_out()
+            hdr.packet_out.setInvalid(); // strip the packet_out header
             exit;
         }
 
