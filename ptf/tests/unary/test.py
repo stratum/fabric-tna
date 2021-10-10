@@ -4,9 +4,9 @@
 
 import difflib
 import time
-from unittest import skip
+from unittest import skip, skipIf
 
-from base_test import autocleanup, tvsetup, tvskip
+from base_test import autocleanup, is_bmv2, tvsetup, tvskip
 from fabric_test import *  # noqa
 from p4.config.v1 import p4info_pb2
 from ptf.testutils import group
@@ -2507,9 +2507,10 @@ class CounterTest(BridgingTest):
 
 
 # FIXME: remove when will start running TVs on hardware
+@skipIf(is_bmv2(), "CPU loopback unsupported for Bmv2.")
 class FabricIpv4UnicastLoopbackModeTest(IPv4UnicastTest):
     """Emulates TV loopback mode for Ipv4UnicastTest"""
-
+    
     @tvsetup
     @autocleanup
     def doRunTest(self, pkt, next_hop_mac):
@@ -2553,6 +2554,7 @@ class FabricIpv4UnicastLoopbackModeTest(IPv4UnicastTest):
 
 
 # FIXME: remove when will start running TVs on hardware
+@skipIf(is_bmv2(), "CPU loopback unsupported for Bmv2.")
 class FabricPacketInLoopbackModeTest(FabricTest):
     """Emulates TV loopback mode for packet-in tests"""
 
@@ -2592,6 +2594,7 @@ class FabricPacketInLoopbackModeTest(FabricTest):
 
 
 # FIXME: remove when we start running TVs on hardware
+@skipIf(is_bmv2(), "CPU loopback unsupported for Bmv2.")
 class FabricPacketOutLoopbackModeTest(FabricTest):
     """Emulates TV loopback mode for packet-out tests"""
 
@@ -2623,6 +2626,7 @@ class FabricPacketOutLoopbackModeTest(FabricTest):
 
 
 @group("int")
+@skipIf(is_bmv2(), "CPU loopback unsupported for Bmv2.")
 class FabricIntFlowReportLoopbackModeTest(IntTest):
     @tvsetup
     @autocleanup
@@ -2723,7 +2727,7 @@ class FabricIntFlowReportLoopbackModeTest(IntTest):
                 )
                 self.doRunTest(pkt, HOST2_MAC, is_device_spine)
 
-
+@skipIf(is_bmv2(), "Optimized Field are not supported by Bmv2, because of Canonical Bytestrings.") #FIXME not sure if I should fix this test for Bmv2
 class FabricOptimizedFieldDetectorTest(FabricTest):
     """Finds action paramters or header fields that were optimized out by the
     compiler"""
