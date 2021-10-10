@@ -65,6 +65,8 @@ control IngressQos (inout fabric_ingress_metadata_t fabric_md,
     // From now on we use the concatenated slice_id++tc to aid the compiler in
     // optimizing resource allocation.
 
+    bit<2> packet_color = 0;
+
     @hidden
     action use_spgw() {
         fabric_md.bridged.base.slice_tc = fabric_md.spgw_slice_id++fabric_md.spgw_tc;
@@ -115,7 +117,8 @@ control IngressQos (inout fabric_ingress_metadata_t fabric_md,
             // fabric_md.bridged.base.slice_tc[SLICE_ID_WIDTH+TC_WIDTH-1:TC_WIDTH]: exact @name("slice_id");
             // fabric_md.bridged.base.slice_tc[TC_WIDTH-1:0]: exact @name("tc");
             fabric_md.bridged.base.slice_tc: exact   @name("slice_tc");
-            fabric_md.packet_color:          ternary @name("color"); // 0=GREEN, 1=YELLOW, 2=RED
+            //fabric_md.packet_color:          ternary @name("color"); // 0=GREEN, 1=YELLOW, 2=RED
+            packet_color: ternary @name("color");
         }
         actions = {
             set_queue;
@@ -131,7 +134,8 @@ control IngressQos (inout fabric_ingress_metadata_t fabric_md,
     apply {
         // Meter index should be 0 for all packets with default slice_id and tc.
         set_slice_tc.apply();
-        slice_tc_meter.execute_meter((bit<32>) fabric_md.bridged.base.slice_tc, fabric_md.packet_color);
+        //slice_tc_meter.execute_meter((bit<32>) fabric_md.bridged.base.slice_tc, fabric_md.packet_color);
+        slice_tc_meter.execute_meter((bit<32>) fabric_md.bridged.base.slice_tc, packet_color);
         queues.apply();
     }
 }

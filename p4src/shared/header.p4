@@ -379,11 +379,6 @@ struct fabric_ingress_metadata_t {
     tc_t                     spgw_tc;
     PortType_t               ig_port_type;
     common_mirror_metadata_t mirror;
-
-#ifdef V1MODEL
-    // integrating missing header for slicing and policing.
-    bit<2>                packet_color; // only 3 values: GREEN, YELLOW, RED
-#endif
 }
 
 // Egress pipeline-only metadata
