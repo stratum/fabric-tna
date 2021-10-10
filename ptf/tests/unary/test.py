@@ -1036,6 +1036,7 @@ class FabricDefaultVlanPacketInTest(FabricTest):
 
 
 @group("packetio")
+@skipIf(is_bmv2(), "Packet-in post ingress not supported for Bmv2.")
 class FabricPacketInPostIngressTest(IPv4UnicastTest):
     """
     Packet-in generated using clone/punt_to_cpu_post_ingress actions should include changes
