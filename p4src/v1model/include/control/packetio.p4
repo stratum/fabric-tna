@@ -5,17 +5,14 @@
 
 control PacketIoIngress(inout ingress_headers_t hdr,
                         inout fabric_ingress_metadata_t fabric_md,
+                        inout bool skip_egress,
                         inout standard_metadata_t standard_md) {
     @hidden
     action do_packet_out() {
         standard_md.egress_spec = hdr.packet_out.egress_port;
         fabric_md.egress_port_set = true;
-        //hdr.packet_out.setInvalid();
-
-        // FIXME fabric_md.egress_port_set is within the fabric_ingress_metadata_t, so this information won't be available in egress.
-        // should we introduce a var in bridging to let the egress know that is processing a packet-out
-        // or can I use the hdr.packet_out.isValid() function to process the packet-out?
-
+        hdr.packet_out.setInvalid();
+        skip_egress = true;
         // Straight to output port.
         fabric_md.bridged.setInvalid(); 
         exit; // This will start the egress pipeline.
@@ -68,6 +65,7 @@ control PacketIoIngress(inout ingress_headers_t hdr,
 
 control PacketIoEgress(inout ingress_headers_t hdr,
                         inout fabric_egress_metadata_t fabric_md,
+                        inout bool skip_egress,
                         inout standard_metadata_t standard_md) {
 
     action set_switch_info(PortId_t cpu_port) {
@@ -86,8 +84,7 @@ control PacketIoEgress(inout ingress_headers_t hdr,
     apply {
         switch_info.apply();
 
-        if (hdr.packet_out.isValid()){ // assuming port is already set in control above PacketIoIngress.do_packet_out()
-            hdr.packet_out.setInvalid(); // strip the packet_out header
+        if (skip_egress){
             exit;
         }
 
