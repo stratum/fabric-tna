@@ -1437,14 +1437,9 @@ class FabricTest(P4RuntimeTest):
     def add_next_hashed_indirect_action(self, next_id, action_name, params):
         next_id_ = stringify(next_id, 4)
         mbr_id = self.get_next_mbr_id()
-        if not is_bmv2():
-            self.send_request_add_member(
-                "FabricIngress.next.hashed_profile", mbr_id, action_name, params
-            )
-        else: # Bmv2
-            self.send_request_add_member(
-                "FabricIngress.next.hashed_selector", mbr_id, action_name, params
-            )
+        self.send_request_add_member(
+            "FabricIngress.next.hashed_profile", mbr_id, action_name, params
+        )
         self.send_request_add_entry_to_member(
             "next.hashed", [self.Exact("next_id", next_id_)], mbr_id
         )
@@ -1457,28 +1452,15 @@ class FabricTest(P4RuntimeTest):
         for action in actions:
             mbr_id = self.get_next_mbr_id()
             mbr_ids.append(mbr_id)
-            if not is_bmv2():
-                self.send_request_add_member(
-                    "FabricIngress.next.hashed_profile", mbr_id, *action
-                )
-            else:
-                self.send_request_add_member(
-                    "FabricIngress.next.hashed_selector", mbr_id, *action
-                )
-        if not is_bmv2():
-            self.send_request_add_group(
-                "FabricIngress.next.hashed_profile",
-                grp_id,
-                grp_size=len(mbr_ids),
-                mbr_ids=mbr_ids,
+            self.send_request_add_member(
+                "FabricIngress.next.hashed_profile", mbr_id, *action
             )
-        if is_bmv2(): 
-            self.send_request_add_group(
-                "FabricIngress.next.hashed_selector",
-                grp_id,
-                grp_size=len(mbr_ids),
-                mbr_ids=mbr_ids,
-            )
+        self.send_request_add_group(
+            "FabricIngress.next.hashed_profile",
+            grp_id,
+            grp_size=len(mbr_ids),
+            mbr_ids=mbr_ids,
+        )
         self.send_request_add_entry_to_group(
             "next.hashed", [self.Exact("next_id", next_id_)], grp_id
         )
@@ -4396,8 +4378,7 @@ class PppoeTest(DoubleVlanTerminationTest):
         )
 
         # Verify that upstream counters were updated as expected.
-        if not is_bmv2():
-            time.sleep(1)
+        time.sleep(1)
         new_terminated = self.read_byte_count_upstream("terminated", line_id)
         new_dropped = self.read_byte_count_upstream("dropped", line_id)
 
@@ -4438,8 +4419,7 @@ class PppoeTest(DoubleVlanTerminationTest):
         self.verify_packet_in(pppoed_pkt, self.port1)
         self.verify_no_other_packets()
 
-        if not is_bmv2():
-            time.sleep(1)
+        time.sleep(1)
         new_terminated = self.read_byte_count_upstream("terminated", line_id)
         new_dropped = self.read_byte_count_upstream("dropped", line_id)
 
@@ -4506,8 +4486,7 @@ class PppoeTest(DoubleVlanTerminationTest):
             verify_pkt=line_enabled,
         )
 
-        if not is_bmv2():
-            time.sleep(1)
+        time.sleep(1)
         new_rx_count = self.read_byte_count_downstream_rx(line_id)
         new_tx_count = self.read_byte_count_downstream_tx(line_id)
 

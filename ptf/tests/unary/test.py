@@ -175,6 +175,8 @@ class FabricIPv4UnicastTest(IPv4UnicastTest):
                             tagged[1],
                             tc_name=tc_name,
                         )
+                        if is_bmv2():
+                            time.sleep(0.5)
 
 
 class FabricIPv4UnicastFromPacketOutTest(IPv4UnicastTest):
@@ -956,8 +958,6 @@ class FabricIPv4UnicastAclOuterDropTest(IPv4UnicastTest):
             l4_sport=5061,
             l4_dport=5060,
         )
-        if is_bmv2():
-            time.sleep(0.5)
         self.runIPv4UnicastTest(pkt, next_hop_mac=HOST2_MAC, verify_pkt=False)
 
 
@@ -2733,9 +2733,9 @@ class FabricIntFlowReportLoopbackModeTest(IntTest):
                 )
                 self.doRunTest(pkt, HOST2_MAC, is_device_spine)
 
-@skipIf(is_bmv2(), "Optimized Field are not supported by Bmv2, because of Canonical Bytestrings.") #FIXME not sure if I should fix this test for Bmv2
+@skipIf(is_bmv2(), "Optimized Field are not supported by Bmv2, because of Canonical Bytestrings.")
 class FabricOptimizedFieldDetectorTest(FabricTest):
-    """Finds action paramters or header fields that were optimized out by the
+    """Finds action parameters or header fields that were optimized out by the
     compiler"""
 
     # Returns a byte string encoded value fitting into bitwidth.
