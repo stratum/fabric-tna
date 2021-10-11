@@ -37,8 +37,10 @@ control Acl (inout ingress_headers_t hdr,
 
 
     action copy_to_cpu() {
-        bit<32> clone_id =(bit<32>) PACKET_IN_MIRROR_SESSION_ID;
-        clone3(CloneType.I2E, clone_id, {standard_md.ingress_port});
+        clone3(CloneType.I2E,
+            (bit<32>) PACKET_IN_MIRROR_SESSION_ID,
+            {standard_md.ingress_port}
+        );
         acl_counter.count();
     }
 
