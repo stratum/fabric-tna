@@ -1171,6 +1171,9 @@ class FabricGtpUnicastEcmpBasedOnTeid(FabricTest):
             [exp_pkt_to2, exp_pkt_to3], [self.port2, self.port3]
         )
 
+        if is_bmv2():
+            time.sleep(0.5)
+
     def runTest(self):
         for pkt_type in BASE_PKT_TYPES:
             self.doRunTest(pkt_type)
