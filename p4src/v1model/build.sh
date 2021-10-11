@@ -32,7 +32,6 @@ function base_build() {
   echo "*** Output in ${P4C_OUT}"
 
   mkdir -p ${P4C_OUT}
-  mkdir -p ${P4C_OUT}/graphs
 
   # Generate preprocessed P4 source (for debugging).
   (
