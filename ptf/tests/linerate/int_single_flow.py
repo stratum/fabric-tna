@@ -86,13 +86,14 @@ class IntSingleFlow(TRexTest, IntTest):
         - Packet loss: No packets were dropped during the test
         - Reports: 1 INT report per second per flow was generated
         """
-        self.failIf(
-            sent_packets != recv_packets,
+        self.assertEqual(
+            sent_packets,
+            recv_packets,
             f"Didn't receive all packets; sent {sent_packets}, received {recv_packets}",
         )
 
         local_reports = results["local_reports"]
-        self.failIf(
-            local_reports != EXPECTED_FLOW_REPORTS,
-            f"Flow reports generated for 10 second single flow test should be 10, was {local_reports}",
+        self.assertTrue(
+            local_reports in [EXPECTED_FLOW_REPORTS, EXPECTED_FLOW_REPORTS + 1],
+            f"Flow reports generated for 10 second single flow test should be 10 or 11, was {local_reports}",
         )

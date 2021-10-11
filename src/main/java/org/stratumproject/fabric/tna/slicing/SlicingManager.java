@@ -160,8 +160,17 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
         queueStore.put(QueueId.CONTROL, new QueueStoreValue(TrafficClass.CONTROL, true));
 
         // FIXME Dedicate queues should be dynamically provisioned via API in the future
+        // This configuration is based on the util/sample-qos-config.yaml queues configuration
+        // Max rate = 45 Mbps
         queueStore.put(QueueId.of(3), new QueueStoreValue(TrafficClass.REAL_TIME, true));
+        // Max rate = 30 Mbps
+        queueStore.put(QueueId.of(4), new QueueStoreValue(TrafficClass.REAL_TIME, true));
+        // Max rate = 25 Mbps
+        queueStore.put(QueueId.of(5), new QueueStoreValue(TrafficClass.REAL_TIME, true));
+        // Min guaranteed rate = 100 Mbps
         queueStore.put(QueueId.of(6), new QueueStoreValue(TrafficClass.ELASTIC, true));
+        // Min guaranteed rate = 200 Mbps
+        queueStore.put(QueueId.of(7), new QueueStoreValue(TrafficClass.ELASTIC, true));
 
         classifierFlowStore = storageService.<TrafficSelector, SliceStoreKey>consistentMapBuilder()
                 .withName("fabric-tna-classifier-flow")
@@ -221,6 +230,13 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
         Set<TrafficClass> tcs = getTrafficClasses(sliceId);
         if (tcs.isEmpty()) {
             log.warn("Cannot remove a non-existent slice {}", sliceId);
+            return false;
+        }
+
+        Set<TrafficSelector> classifierFlows = getFlows(sliceId);
+        if (!classifierFlows.isEmpty()) {
+            log.warn("Cannot remove slice {} with {} Flow Classifier Rules",
+                     sliceId, classifierFlows.size());
             return false;
         }
 
@@ -297,6 +313,13 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
             }
         }
 
+        Set<TrafficSelector> classifierFlows = getFlows(sliceId, tc);
+        if (!classifierFlows.isEmpty()) {
+            log.warn("Cannot remove {} from slice {} with {} Flow Classifier Rules",
+                     tc, sliceId, classifierFlows.size());
+            return false;
+        }
+
         AtomicBoolean result = new AtomicBoolean(false);
 
         SliceStoreKey key = new SliceStoreKey(sliceId, tc);
@@ -351,12 +374,17 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
 
     @Override
     public boolean removeFlow(TrafficSelector selector, SliceId sliceId, TrafficClass tc) {
+        AtomicBoolean result = new AtomicBoolean(false);
         classifierFlowStore.compute(selector, (k, v) -> {
+            if (v == null) {
+                log.warn("There is no such Flow Classifier Rule {} for slice {}  and TC {}", selector, sliceId, tc);
+                return null;
+            }
             log.info("Removing flow {} from slice {} tc {}", selector, sliceId, tc);
+            result.set(true);
             return null;
         });
-
-        return true;
+        return result.get();
     }
 
     @Override
@@ -365,6 +393,13 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
 
         return classifierFlowStore.entrySet().stream()
                 .filter(e -> e.getValue().value().equals(value))
+                .map(Entry::getKey)
+                .collect(Collectors.toSet());
+    }
+
+    private Set<TrafficSelector> getFlows(SliceId sliceId) {
+        return classifierFlowStore.entrySet().stream()
+                .filter(e -> e.getValue().value().sliceId().equals(sliceId))
                 .map(Entry::getKey)
                 .collect(Collectors.toSet());
     }
