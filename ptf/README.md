@@ -11,13 +11,15 @@ directory `tests/`. Run scripts can be found in `run/`.
 
 Currently, we provide scripts to run these types of tests:
 
-* Stratum running on top of tofino-model and hardware
-* Line rate test on top of hardware with realistic traffic
-* Dummy target used to generate Stratum TestVectors
+* **unary** tests that can run on top of:
+  * Stratum with tofino-model
+  * Stratum with a hardware Tofino switch
+  * dummy target used to generate Stratum TestVectors
+* **line rate** tests that can run with Stratum and a hardware Tofino switch to generate realistic traffic
 
 ## The unary test plan
 
-In ``fabric-tna`` repository, we provide a collection of tests that test all features
+In `fabric-tna` repository, we provide a collection of tests that test all features
 from the pipeline.
 
 Each test installs several table entries and use `scapy` packet library to craft and send
@@ -27,14 +29,12 @@ Sometimes we also check the device state such as counter and register during the
 
 Here are test groups for different pipeline profiles:
 
-================  ======================================
-Profile            Test group
-================  ======================================
-fabric            basic
-fabric-int        basic, INT, INT-dod
-fabric-spgw       basic, SPGW
-fabric-spgw-int   basic, SPGW, INT, SPGW+INT, INT-dod
-================  ======================================
+Profile          |  Test group
+-----------------|---------------------------------------
+fabric           | basic
+fabric-int       | basic, INT, INT-dod
+fabric-spgw      | basic, SPGW
+fabric-spgw-int  | basic, SPGW, INT, SPGW+INT, INT-dod
 
 ### The basic test group
 
@@ -96,8 +96,8 @@ fabric-spgw-int   basic, SPGW, INT, SPGW+INT, INT-dod
 
 ## The line rate test plan
 
-Another type of test is called `line rate test`, which uses `Trex <https://trex-tgn.cisco.com>`_ framework to generate
-the traffic with higher rate(e.g., 40Gbps).
+Another type of test is called `line rate test`, which uses [Trex](https://trex-tgn.cisco.com) framework to generate
+the traffic with a higher rate (e.g., 40Gbps).
 
 These type of test allows us to test some scenario like QoS, Meter, INT queue congestion report, and so on.
 
