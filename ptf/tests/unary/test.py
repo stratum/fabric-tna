@@ -956,6 +956,8 @@ class FabricIPv4UnicastAclOuterDropTest(IPv4UnicastTest):
             l4_sport=5061,
             l4_dport=5060,
         )
+        if is_bmv2():
+            time.sleep(0.5)
         self.runIPv4UnicastTest(pkt, next_hop_mac=HOST2_MAC, verify_pkt=False)
 
 
