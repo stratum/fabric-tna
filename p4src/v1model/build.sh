@@ -16,30 +16,54 @@ OTHER_PP_FLAGS=$2
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 P4_SRC_DIR=${DIR}/..
 ROOT_DIR="$( cd "${DIR}/../.." && pwd )"
-OUT_DIR=${DIR}/build/${PROFILE}/bmv2
+P4C_OUT=${ROOT_DIR}/p4src/v1model/build/bmv2/${PROFILE}
 FABRIC_P4_FILE=${DIR}/fabric_v1model.p4
+
+# Where the compiler output should be placed to be included in the pipeconf.
+DEST_DIR=${ROOT_DIR}/src/main/resources/p4c-out/${PROFILE}
 
 # shellcheck source=.env
 source "${ROOT_DIR}/.env"
 
+dockerRun="docker run --rm -w ${P4_SRC_DIR} -v ${P4_SRC_DIR}:${P4_SRC_DIR} -v ${P4C_OUT}:${P4C_OUT} ${P4C_DOCKER_IMG}"
 
-mkdir -p ${OUT_DIR}
-mkdir -p ${OUT_DIR}/graphs
+function base_build() {
+  echo "## Compiling profile ${PROFILE} in ${P4C_OUT}..."
+  echo "*** Output in ${P4C_OUT}"
 
-echo
-echo "## Compiling profile ${PROFILE} in ${OUT_DIR}..."
+  mkdir -p ${P4C_OUT}
+  mkdir -p ${P4C_OUT}/graphs
 
-dockerRun="docker run --rm -w ${P4_SRC_DIR} -v ${P4_SRC_DIR}:${P4_SRC_DIR} -v ${OUT_DIR}:${OUT_DIR} ${P4C_DOCKER_IMG}"
+  # Generate preprocessed P4 source (for debugging).
+  (
+    ${dockerRun} p4c-bm2-ss --arch v1model \
+    ${BMV2_PP_FLAGS} ${OTHER_PP_FLAGS} -I ${P4_SRC_DIR}\
+    --pp ${P4C_OUT}/_pp.p4 ${FABRIC_P4_FILE}
+  )
 
-# Generate preprocessed P4 source (for debugging).
-(set -x; ${dockerRun} p4c-bm2-ss --arch v1model \
-        ${BMV2_PP_FLAGS} ${OTHER_PP_FLAGS} -I ${P4_SRC_DIR}\
-        --pp ${OUT_DIR}/_pp.p4 ${FABRIC_P4_FILE})
+  # Generate BMv2 JSON and P4Info.
+  (
+    ${dockerRun} p4c-bm2-ss --arch v1model -o ${P4C_OUT}/bmv2.json \
+    ${BMV2_PP_FLAGS} ${OTHER_PP_FLAGS} -I ${P4_SRC_DIR}\
+    --p4runtime-files ${P4C_OUT}/p4info.txt ${FABRIC_P4_FILE}
+  )
+}
 
-# Generate BMv2 JSON and P4Info.
-(set -x; ${dockerRun} p4c-bm2-ss --arch v1model -o ${OUT_DIR}/bmv2.json \
-        ${BMV2_PP_FLAGS} ${OTHER_PP_FLAGS} -I ${P4_SRC_DIR}\
-        --p4runtime-files ${OUT_DIR}/p4info.txt ${FABRIC_P4_FILE})
+function gen_profile() {
+  output_dir="${P4C_OUT}"
+  pltf="bmv2"
+  cpu_port=$1
 
-# CPU port.
-(set -x; echo ${BMV2_CPU_PORT} > ${OUT_DIR}/cpu_port.txt)
+  # Copy only the relevant files to the pipeconf resources.
+  mkdir -p "${DEST_DIR}/${pltf}"
+  cp "${output_dir}/p4info.txt" "${DEST_DIR}/${pltf}"
+  echo "${cpu_port}" > "${DEST_DIR}/${pltf}/cpu_port.txt"
+  cp "${output_dir}/bmv2.json" "${DEST_DIR}/${pltf}/"
+  echo
+
+  # CPU port.
+  echo ${cpu_port} > ${P4C_OUT}/cpu_port.txt
+}
+
+base_build
+gen_profile BMV2_CPU_PORT

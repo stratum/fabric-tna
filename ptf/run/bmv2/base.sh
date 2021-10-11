@@ -24,7 +24,7 @@ fi
 echo "*** Testing profile '${fabricProfile}'..."
 
 echo "Running for BMV2"
-P4C_OUT=p4src/v1model/build/${fabricProfile}/bmv2
+P4C_OUT=p4src/v1model/build/bmv2/${fabricProfile}
 echo "*** Using P4 compiler output in ${P4C_OUT}..."
 
 # Clean up old logs (if any)
