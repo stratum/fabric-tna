@@ -181,8 +181,12 @@ enum bit<3> FabricMirrorType_t {
     PACKET_IN = 2
 }
 
+#ifdef V1MODEL
+// Bmv2 does not support values greater than 511 (0xFF) for session_IDs.
+const MirrorId_t PACKET_IN_MIRROR_SESSION_ID = 0x1FF;
+#else
 const MirrorId_t PACKET_IN_MIRROR_SESSION_ID = 0x210;
-const bit<32> BMV2_PACKET_IN_MIRROR_SESSION_ID = 0x1FF;
+#endif // V1MODEL
 
 // Modes for CPU loopback testing, where a process can inject packets through
 // the CPU port (P4RT packet-out) and expect the same to be delivered back to
