@@ -65,7 +65,6 @@ control PacketIoIngress(inout ingress_headers_t hdr,
 
 control PacketIoEgress(inout ingress_headers_t hdr,
                         inout fabric_egress_metadata_t fabric_md,
-                        inout bool skip_egress,
                         inout standard_metadata_t standard_md) {
 
     action set_switch_info(PortId_t cpu_port) {
@@ -83,11 +82,6 @@ control PacketIoEgress(inout ingress_headers_t hdr,
 
     apply {
         switch_info.apply();
-
-        if (skip_egress){
-            exit;
-        }
-
         if (standard_md.egress_port == fabric_md.cpu_port) {
             hdr.packet_in.setValid();
             hdr.packet_in.ingress_port = standard_md.ingress_port;

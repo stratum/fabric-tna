@@ -89,7 +89,12 @@ control FabricEgress (inout ingress_headers_t hdr,
     EgressDscpRewriter() dscp_rewriter;
 
     apply {
-        pkt_io_egress.apply(hdr, fabric_md.egress_md, fabric_md.skip_egress ,standard_md);
+
+        if (fabric_md.skip_egress){
+            exit;
+        }
+
+        pkt_io_egress.apply(hdr, fabric_md.egress_md ,standard_md);
         stats.apply(fabric_md.egress_md.bridged.base.stats_flow_id, standard_md.egress_port,
              fabric_md.egress_md.bridged.bmd_type);
         egress_next.apply(hdr, fabric_md.egress_md, standard_md);
