@@ -42,42 +42,40 @@ control FabricIngress (inout ingress_headers_t hdr,
     IngressQos() qos;
 
     apply {
-        fabric_ingress_metadata_t ingress_md = fabric_md.ingress_md;
-
         if (standard_md.parser_error == error.PacketRejectedByParser) {
             // packet was rejected by parser -> drop.
             mark_to_drop(standard_md);
             exit;
         }
 
-        lkp_md_init.apply(hdr, ingress_md.lkp);
-        pkt_io.apply(hdr, ingress_md, standard_md);
-        stats.apply(ingress_md.lkp, standard_md.ingress_port,
-            ingress_md.bridged.base.stats_flow_id);
+        lkp_md_init.apply(hdr, fabric_md.ingress_md.lkp);
+        pkt_io.apply(hdr, fabric_md.ingress_md, fabric_md.skip_egress ,standard_md);
+        stats.apply(fabric_md.ingress_md.lkp, standard_md.ingress_port,
+            fabric_md.ingress_md.bridged.base.stats_flow_id);
 
-        slice_tc_classifier.apply(hdr, standard_md, ingress_md);
-        filtering.apply(hdr, ingress_md, standard_md);
+        slice_tc_classifier.apply(hdr, standard_md, fabric_md.ingress_md);
+        filtering.apply(hdr, fabric_md.ingress_md, standard_md);
 
         
-        if (!ingress_md.skip_forwarding) {
-            forwarding.apply(hdr, ingress_md);
+        if (!fabric_md.ingress_md.skip_forwarding) {
+            forwarding.apply(hdr, fabric_md.ingress_md);
         }
 
-        hasher.apply(hdr, ingress_md);
+        hasher.apply(hdr, fabric_md.ingress_md);
         
-        if (!ingress_md.skip_next) {
-            pre_next.apply(hdr, ingress_md);
+        if (!fabric_md.ingress_md.skip_next) {
+            pre_next.apply(hdr, fabric_md.ingress_md);
         }
 
-        acl.apply(hdr, ingress_md, standard_md);
+        acl.apply(hdr, fabric_md.ingress_md, standard_md);
 
-        if (!ingress_md.skip_next) {
-            next.apply(hdr, ingress_md, standard_md);
+        if (!fabric_md.ingress_md.skip_next) {
+            next.apply(hdr, fabric_md.ingress_md, standard_md);
         }
-        qos.apply(ingress_md, standard_md);
+        qos.apply(fabric_md.ingress_md, standard_md);
 
         // Emulating TNA behavior through bridged metadata.
-        fabric_md.egress_md.bridged = ingress_md.bridged;
+        fabric_md.egress_md.bridged = fabric_md.ingress_md.bridged;
     }
 }
 
@@ -91,13 +89,11 @@ control FabricEgress (inout ingress_headers_t hdr,
     EgressDscpRewriter() dscp_rewriter;
 
     apply {
-        fabric_egress_metadata_t egress_md = fabric_md.egress_md;
-
-        pkt_io_egress.apply(hdr, egress_md, standard_md);
-        stats.apply(egress_md.bridged.base.stats_flow_id, standard_md.egress_port,
-             egress_md.bridged.bmd_type);
-        egress_next.apply(hdr, egress_md, standard_md);
-        dscp_rewriter.apply(egress_md, standard_md, hdr);
+        pkt_io_egress.apply(hdr, fabric_md.egress_md, fabric_md.skip_egress ,standard_md);
+        stats.apply(fabric_md.egress_md.bridged.base.stats_flow_id, standard_md.egress_port,
+             fabric_md.egress_md.bridged.bmd_type);
+        egress_next.apply(hdr, fabric_md.egress_md, standard_md);
+        dscp_rewriter.apply(fabric_md.egress_md, standard_md, hdr);
     }
 }
 

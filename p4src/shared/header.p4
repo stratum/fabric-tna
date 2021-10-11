@@ -419,8 +419,9 @@ struct fabric_egress_metadata_t {
 // This struct encapsulates the ingress and egress metadata for Bmv2.
 // The reason behind this struct is to have the same metadata structure defined for TNA.
 struct fabric_v1model_metadata_t {
+    bool                      skip_egress;
     fabric_ingress_metadata_t ingress_md;
-    fabric_egress_metadata_t egress_md;
+    fabric_egress_metadata_t  egress_md;
 }
 #endif // V1MODEL
 
