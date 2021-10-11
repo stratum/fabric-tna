@@ -93,6 +93,13 @@ def format_exp_rcv(expected, received):
 
 
 def get_controller_packet_metadata(p4info, meta_type, name):
+    """
+    This method retrieves the controller metadata from a p4info file.
+    :param p4info: The p4info file
+    :param meta_type: The type of metadata (e.g. packet_in)
+    :param name: The name of the metadata to retrieve
+    :return: The controller metadata.
+    """
     for t in p4info.controller_packet_metadata:
         pre = t.preamble
         if pre.name == meta_type:
@@ -102,24 +109,24 @@ def get_controller_packet_metadata(p4info, meta_type, name):
                         return m
 
 
-def de_canonicalize_bytes(p4info, chunksize, input):
+def de_canonicalize_bytes(bitwidth: int, input: bytes):
     """
-    This function adds a padding to the 'input' param.
-    Needed for Bmv2 since it uses Canonical Bytestrings; this representation
-    trims the data to the lowest amount of bytes for that particular value
+    This method adds a padding to the 'input' param.
+    Needed for Bmv2 since it uses Canonical Bytestrings: this representation
+    trims the data to the lowest amount of bytes needed for that particular value
     (e.g. 0x0 for PacketIn.ingress_port will be interpreted by Bmv2 using 1 byte, instead of 9 bits,
     as declared in header.p4)
-    :param padding_bytes:
-    :param input:
-    :return:
+    :param bitwidth: the desired size of input.
+    :param input: the byte string to be padded.
+    :return: padded input with bytes such that: len(bin(input)) >= bitwidth.
     """
-    bitwidth = 0
-    metadata = get_controller_packet_metadata(p4info=p4info, meta_type='packet_in')
+    if bitwidth <= 0:
+        raise ValueError("bitwidth must be a positive integer")
+    if input is None:
+        raise ValueError("input must be a byte string")
 
-
-
-    input = input.rjust(chunksize, b'\0') # padding right <-> BigEndian
-    raise NotImplemented
+    bytes_to_pad = math.ceil(bitwidth / 8)
+    return input.rjust(bytes_to_pad, b'\0') # right padding <-> BigEndian
 
 
 # Used to indicate that the gRPC error Status object returned by the server has
@@ -357,13 +364,10 @@ class P4RuntimeTest(BaseTest):
             pkt_in_msg = self.get_packet_in(timeout=timeout)
             rx_in_port_ = pkt_in_msg.metadata[0].value
             bytes(rx_in_port_)
-            rx_in_port_ = rx_in_port_.rjust(2, b'\0') #TODO move the de-canonicalize in the method above
-            print("DEBUG: rx_in_port_: {}".format(rx_in_port_))
-            print("DEBUG: expected_port:{}".format(in_port_))
-            md = get_controller_packet_metadata(self.p4info, meta_type='packet_in', name='ingress_port')
-            bitwidth = md.bitwidth
-            #rx_in_port_ = de_canonicalize_bytes(p4info, chunksize, input)
-
+            if is_bmv2():
+                pkt_in_metadata = get_controller_packet_metadata(self.p4info, meta_type='packet_in', name='ingress_port')
+                pkt_in_ig_port_bitwidth = pkt_in_metadata.bitwidth
+                rx_in_port_ = de_canonicalize_bytes(pkt_in_ig_port_bitwidth, rx_in_port_)
 
             if in_port_ != rx_in_port_:
                 rx_inport = struct.unpack("!h", rx_in_port_)[0]
