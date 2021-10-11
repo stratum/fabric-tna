@@ -110,7 +110,8 @@ control Next (inout ingress_headers_t hdr,
     @max_group_size(HASHED_SELECTOR_MAX_GROUP_SIZE)
     action_selector(HashAlgorithm.crc16, 
         HASHED_SELECTOR_MAX_GROUP_SIZE, 
-        32w16) hashed_selector;
+        32w16) hashed_profile; // Still an action_selector. This name is used to limit 
+                               // the usage of custom testing code between TNA and bmv2, for action_selectors.
 
     direct_counter(CounterType.packets_and_bytes) hashed_counter;
 
@@ -134,7 +135,7 @@ control Next (inout ingress_headers_t hdr,
             routing_hashed;
             @defaultonly nop;
         }
-        implementation = hashed_selector;
+        implementation = hashed_profile;
         counters = hashed_counter;
         const default_action = nop();
         size = HASHED_NEXT_TABLE_SIZE;
