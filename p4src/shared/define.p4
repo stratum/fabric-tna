@@ -49,7 +49,7 @@ typedef bit<SLICE_TC_WIDTH> slice_tc_t; // Slice and TC identifier
 
 
 #ifdef V1MODEL
-// Start definitions from TNA (For Bmv2).
+// Start definitions from TNA (For bmv2).
 // The following typedefs are being defined
 // to use the same names between the TNA and v1model versions.
 // Reference to tofino.p4:
@@ -182,7 +182,7 @@ enum bit<3> FabricMirrorType_t {
 }
 
 #ifdef V1MODEL
-// Bmv2 does not support values greater than 511 (0xFF) for session_IDs.
+// bmv2 does not support values greater than 511 (0xFF) for session_IDs.
 const MirrorId_t PACKET_IN_MIRROR_SESSION_ID = 0x1FF;
 #else
 const MirrorId_t PACKET_IN_MIRROR_SESSION_ID = 0x210;

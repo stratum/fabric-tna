@@ -40,9 +40,9 @@ control PacketIoIngress(inout ingress_headers_t hdr,
         const entries = {
             // Regular packet-out.
             CpuLoopbackMode_t.DISABLED: do_packet_out();
-            // Pkt should go directly to CPU after port loopback. Not used in Bmv2
+            // Pkt should go directly to CPU after port loopback. Not used in bmv2
             CpuLoopbackMode_t.DIRECT: do_cpu_loopback(ETHERTYPE_CPU_LOOPBACK_EGRESS);
-            // Pkt should go through ingress after port loopback. Not used in Bmv2
+            // Pkt should go through ingress after port loopback. Not used in bmv2
             CpuLoopbackMode_t.INGRESS: do_cpu_loopback(ETHERTYPE_CPU_LOOPBACK_INGRESS);
         }
     }

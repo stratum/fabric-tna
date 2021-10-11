@@ -23,13 +23,13 @@ control Acl (inout ingress_headers_t hdr,
 
 
     action copy_to_cpu_post_ingress() {
-        // Unused by Bmv2
+        // Unused by bmv2
         acl_counter.count();
     }
 
 
     action punt_to_cpu_post_ingress() {
-        // Unused by Bmv2
+        // Unused by bmv2
         copy_to_cpu_post_ingress();
         fabric_md.skip_next = true;
         fabric_md.punt_to_cpu = true;

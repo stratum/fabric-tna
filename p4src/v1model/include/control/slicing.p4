@@ -97,7 +97,7 @@ control IngressQos (inout fabric_ingress_metadata_t fabric_md,
     direct_counter(CounterType.packets) queues_stats;
 
     action set_queue(QueueId_t qid) {
-        //ig_tm_md.qid = qid; //Useless for Bmv2.
+        // Setting the queue id is useless for Bmv2.
         queues_stats.count();
     }
 
