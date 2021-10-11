@@ -38,10 +38,14 @@ from scapy.layers.l2 import Ether
 # https://github.com/stratum/testvectors/tree/master/utils/python
 from testvector import tvutils
 
-
 # Convert integer (with length) to binary byte string
 def stringify(n, length):
     return n.to_bytes(length, byteorder="big")
+
+def is_bmv2():
+    # using parameter 'pltfm' to get information if running for Bmv2.
+    _is_bmv2 = testutils.test_param_get("pltfm")
+    return True if _is_bmv2 is not None and _is_bmv2 == "bmv2" else False
 
 
 def ipv4_to_binary(addr):
@@ -86,6 +90,36 @@ def format_exp_rcv(expected, received):
     buf += str(received)
     buf += "=============================="
     return buf
+
+
+def get_controller_packet_metadata(p4info, meta_type, name):
+    for t in p4info.controller_packet_metadata:
+        pre = t.preamble
+        if pre.name == meta_type:
+            for m in t.metadata:
+                if name is not None:
+                    if m.name == name:
+                        return m
+
+
+def de_canonicalize_bytes(p4info, chunksize, input):
+    """
+    This function adds a padding to the 'input' param.
+    Needed for Bmv2 since it uses Canonical Bytestrings; this representation
+    trims the data to the lowest amount of bytes for that particular value
+    (e.g. 0x0 for PacketIn.ingress_port will be interpreted by Bmv2 using 1 byte, instead of 9 bits,
+    as declared in header.p4)
+    :param padding_bytes:
+    :param input:
+    :return:
+    """
+    bitwidth = 0
+    metadata = get_controller_packet_metadata(p4info=p4info, meta_type='packet_in')
+
+
+
+    input = input.rjust(chunksize, b'\0') # padding right <-> BigEndian
+    raise NotImplemented
 
 
 # Used to indicate that the gRPC error Status object returned by the server has
@@ -322,6 +356,15 @@ class P4RuntimeTest(BaseTest):
         else:
             pkt_in_msg = self.get_packet_in(timeout=timeout)
             rx_in_port_ = pkt_in_msg.metadata[0].value
+            bytes(rx_in_port_)
+            rx_in_port_ = rx_in_port_.rjust(2, b'\0') #TODO move the de-canonicalize in the method above
+            print("DEBUG: rx_in_port_: {}".format(rx_in_port_))
+            print("DEBUG: expected_port:{}".format(in_port_))
+            md = get_controller_packet_metadata(self.p4info, meta_type='packet_in', name='ingress_port')
+            bitwidth = md.bitwidth
+            #rx_in_port_ = de_canonicalize_bytes(p4info, chunksize, input)
+
+
             if in_port_ != rx_in_port_:
                 rx_inport = struct.unpack("!h", rx_in_port_)[0]
                 self.fail(

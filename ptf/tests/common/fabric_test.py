@@ -10,7 +10,7 @@ import struct
 import time
 
 import xnt
-from base_test import P4RuntimeTest, ipv4_to_binary, mac_to_binary, stringify, tvcreate
+from base_test import P4RuntimeTest, ipv4_to_binary, is_bmv2, mac_to_binary, stringify, tvcreate
 from bmd_bytes import BMD_BYTES
 from p4.v1 import p4runtime_pb2
 from ptf import testutils
@@ -284,6 +284,7 @@ DEST_OPTIONS = ["host", "leaf", "spine"]
 
 COLOR_GREEN = 0
 COLOR_YELLOW = 1
+BMV2_COLOR_RED = 2
 COLOR_RED = 3
 
 STATS_INGRESS = "Ingress"
@@ -891,11 +892,17 @@ class FabricTest(P4RuntimeTest):
 
     @tvcreate("setup/set_up_packet_in_mirror")
     def set_up_packet_in_mirror(self):
-        self.add_clone_group(PACKET_IN_MIRROR_ID, [self.cpu_port], store=False)
+        if is_bmv2():
+            self.add_clone_group(CPU_CLONE_SESSION_ID, [self.cpu_port], store=False)
+        else:
+            self.add_clone_group(PACKET_IN_MIRROR_ID, [self.cpu_port], store=False)
 
     @tvcreate("teardown/reset_packet_in_mirror")
     def reset_packet_in_mirror(self):
-        self.delete_clone_group(PACKET_IN_MIRROR_ID, [self.cpu_port], store=False)
+        if is_bmv2():
+            self.delete_clone_group(CPU_CLONE_SESSION_ID, [self.cpu_port], store=False)
+        else:
+            self.delete_clone_group(PACKET_IN_MIRROR_ID, [self.cpu_port], store=False)
 
     def build_packet_out(
         self,
@@ -1430,9 +1437,14 @@ class FabricTest(P4RuntimeTest):
     def add_next_hashed_indirect_action(self, next_id, action_name, params):
         next_id_ = stringify(next_id, 4)
         mbr_id = self.get_next_mbr_id()
-        self.send_request_add_member(
-            "FabricIngress.next.hashed_profile", mbr_id, action_name, params
-        )
+        if not is_bmv2():
+            self.send_request_add_member(
+                "FabricIngress.next.hashed_profile", mbr_id, action_name, params
+            )
+        else: # Bmv2
+            self.send_request_add_member(
+                "FabricIngress.next.hashed_selector", mbr_id, action_name, params
+            )
         self.send_request_add_entry_to_member(
             "next.hashed", [self.Exact("next_id", next_id_)], mbr_id
         )
@@ -1445,15 +1457,28 @@ class FabricTest(P4RuntimeTest):
         for action in actions:
             mbr_id = self.get_next_mbr_id()
             mbr_ids.append(mbr_id)
-            self.send_request_add_member(
-                "FabricIngress.next.hashed_profile", mbr_id, *action
+            if not is_bmv2():
+                self.send_request_add_member(
+                    "FabricIngress.next.hashed_profile", mbr_id, *action
+                )
+            else:
+                self.send_request_add_member(
+                    "FabricIngress.next.hashed_selector", mbr_id, *action
+                )
+        if not is_bmv2():
+            self.send_request_add_group(
+                "FabricIngress.next.hashed_profile",
+                grp_id,
+                grp_size=len(mbr_ids),
+                mbr_ids=mbr_ids,
             )
-        self.send_request_add_group(
-            "FabricIngress.next.hashed_profile",
-            grp_id,
-            grp_size=len(mbr_ids),
-            mbr_ids=mbr_ids,
-        )
+        if is_bmv2(): 
+            self.send_request_add_group(
+                "FabricIngress.next.hashed_selector",
+                grp_id,
+                grp_size=len(mbr_ids),
+                mbr_ids=mbr_ids,
+            )
         self.send_request_add_entry_to_group(
             "next.hashed", [self.Exact("next_id", next_id_)], grp_id
         )
@@ -1746,6 +1771,10 @@ class ArpBroadcastTest(FabricTest):
         for port in untagged_ports:
             self.set_ingress_port_vlan(port, False, 0, vlan_id)
         self.add_bridging_entry(vlan_id, None, None, next_id)
+        # if is_bmv2():
+        #     # Add the clone group
+        #     self.add_forwarding_acl_set_clone_session_id(eth_type=ETH_TYPE_ARP, clone_group_id=CPU_CLONE_SESSION_ID)
+        # else:
         self.add_forwarding_acl_copy_to_cpu(eth_type=ETH_TYPE_ARP)
         self.add_next_multicast(next_id, mcast_group_id)
         # Add the multicast group, here we use instance id 1 by default
@@ -4371,7 +4400,7 @@ class PppoeTest(DoubleVlanTerminationTest):
         )
 
         # Verify that upstream counters were updated as expected.
-        if not self.is_bmv2():
+        if not is_bmv2():
             time.sleep(1)
         new_terminated = self.read_byte_count_upstream("terminated", line_id)
         new_dropped = self.read_byte_count_upstream("dropped", line_id)
@@ -4413,7 +4442,7 @@ class PppoeTest(DoubleVlanTerminationTest):
         self.verify_packet_in(pppoed_pkt, self.port1)
         self.verify_no_other_packets()
 
-        if not self.is_bmv2():
+        if not is_bmv2():
             time.sleep(1)
         new_terminated = self.read_byte_count_upstream("terminated", line_id)
         new_dropped = self.read_byte_count_upstream("dropped", line_id)
@@ -4481,7 +4510,7 @@ class PppoeTest(DoubleVlanTerminationTest):
             verify_pkt=line_enabled,
         )
 
-        if not self.is_bmv2():
+        if not is_bmv2():
             time.sleep(1)
         new_rx_count = self.read_byte_count_downstream_rx(line_id)
         new_tx_count = self.read_byte_count_downstream_tx(line_id)
