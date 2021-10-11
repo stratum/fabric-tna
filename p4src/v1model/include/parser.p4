@@ -13,8 +13,6 @@ parser FabricParser (packet_in packet,
                      inout standard_metadata_t standard_md) {
 
     state start {
-        // packet.extract(ig_intr_md);
-        //packet.advance(PORT_METADATA_SIZE);
         fabric_md.ingress_md.bridged.setValid();
         fabric_md.ingress_md.bridged.bmd_type = BridgedMdType_t.INGRESS_TO_EGRESS;
         fabric_md.ingress_md.bridged.base.ig_port = standard_md.ingress_port;
@@ -22,12 +20,9 @@ parser FabricParser (packet_in packet,
         fabric_md.ingress_md.egress_port_set = false;
         fabric_md.ingress_md.punt_to_cpu = false;
         fabric_md.ingress_md.bridged.base.ip_eth_type = 0;
-        fabric_md.ingress_md.bridged.base.encap_presence = EncapPresence.NONE;        
+        fabric_md.ingress_md.bridged.base.encap_presence = EncapPresence.NONE;
 
-        transition select (standard_md.ingress_port) {
-            CPU_PORT: check_packet_out;
-            default: check_ethernet;
-        }
+        transition check_ethernet;
     }
 
     state check_ethernet {
