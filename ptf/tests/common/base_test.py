@@ -43,7 +43,7 @@ def stringify(n, length):
     return n.to_bytes(length, byteorder="big")
 
 def is_bmv2():
-    # using parameter 'pltfm' to get information if running for Bmv2.
+    # using parameter 'pltfm' to get information if running for bmv2.
     _is_bmv2 = testutils.test_param_get("pltfm")
     return True if _is_bmv2 is not None and _is_bmv2 == "bmv2" else False
 
@@ -112,9 +112,9 @@ def get_controller_packet_metadata(p4info, meta_type, name):
 def de_canonicalize_bytes(bitwidth: int, input: bytes):
     """
     This method adds a padding to the 'input' param.
-    Needed for Bmv2 since it uses Canonical Bytestrings: this representation
+    Needed for bmv2 since it uses Canonical Bytestrings: this representation
     trims the data to the lowest amount of bytes needed for that particular value
-    (e.g. 0x0 for PacketIn.ingress_port will be interpreted by Stratum Bmv2 using 1 byte, instead of 9 bits,
+    (e.g. 0x0 for PacketIn.ingress_port will be interpreted by Stratum bmv2 using 1 byte, instead of 9 bits,
     as declared in header.p4)
     :param bitwidth: the desired size of input.
     :param input: the byte string to be padded.
