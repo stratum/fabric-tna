@@ -295,6 +295,3 @@ class FabricIPv4UnicastWithPolicingTest(SlicingTest, IPv4UnicastTest):
                 self.doRunTest(
                     pkt=pkt, policing=policing, next_hop_mac=HOST2_MAC, tc_name=tc_name,
                 )
-                if is_bmv2():
-                    # needed by Bmv2; without this, the test could fail(because of packet processing timings, perhaps).
-                    time.sleep(0.5)

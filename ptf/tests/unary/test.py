@@ -175,8 +175,6 @@ class FabricIPv4UnicastTest(IPv4UnicastTest):
                             tagged[1],
                             tc_name=tc_name,
                         )
-                        if is_bmv2():
-                            time.sleep(0.5)
 
 
 class FabricIPv4UnicastFromPacketOutTest(IPv4UnicastTest):
@@ -1172,9 +1170,6 @@ class FabricGtpUnicastEcmpBasedOnTeid(FabricTest):
         self.verify_each_packet_on_each_port(
             [exp_pkt_to2, exp_pkt_to3], [self.port2, self.port3]
         )
-
-        if is_bmv2():
-            time.sleep(0.5)
 
     def runTest(self):
         for pkt_type in BASE_PKT_TYPES:
@@ -2516,7 +2511,7 @@ class CounterTest(BridgingTest):
 @skipIf(is_bmv2(), "CPU loopback unsupported for Bmv2.")
 class FabricIpv4UnicastLoopbackModeTest(IPv4UnicastTest):
     """Emulates TV loopback mode for Ipv4UnicastTest"""
-    
+
     @tvsetup
     @autocleanup
     def doRunTest(self, pkt, next_hop_mac):
