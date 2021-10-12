@@ -72,22 +72,13 @@ control Forwarding (inout ingress_headers_t hdr,
     /*
      * IPv4 Routing Table.
      */
-#ifdef WITH_DEBUG
-    direct_counter(CounterType.packets_and_bytes) routing_v4_counter;
-#endif // WITH_DEBUG
 
     action set_next_id_routing_v4(next_id_t next_id) {
         set_next_id(next_id);
-#ifdef WITH_DEBUG
-        routing_v4_counter.count();
-#endif // WITH_DEBUG
     }
 
     action nop_routing_v4() {
         // no-op
-#ifdef WITH_DEBUG
-        routing_v4_counter.count();
-#endif // WITH_DEBUG
     }
 
     table routing_v4 {
@@ -100,24 +91,15 @@ control Forwarding (inout ingress_headers_t hdr,
             @defaultonly nop;
         }
         default_action = nop();
-#ifdef WITH_DEBUG
-        counters = routing_v4_counter;
-#endif // WITH_DEBUG
         size = ROUTING_V4_TABLE_SIZE;
     }
 
     /*
      * IPv6 Routing Table.
      */
-#ifdef WITH_DEBUG
-    direct_counter(CounterType.packets_and_bytes) routing_v6_counter;
-#endif // WITH_DEBUG
 
     action set_next_id_routing_v6(next_id_t next_id) {
         set_next_id(next_id);
-#ifdef WITH_DEBUG
-        routing_v6_counter.count();
-#endif // WITH_DEBUG
     }
 
     table routing_v6 {
@@ -129,9 +111,6 @@ control Forwarding (inout ingress_headers_t hdr,
             @defaultonly nop;
         }
         default_action = nop();
-#ifdef WITH_DEBUG
-        counters = routing_v6_counter;
-#endif // WITH_DEBUG
         size = ROUTING_V6_TABLE_SIZE;
     }
 
