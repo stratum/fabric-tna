@@ -56,7 +56,7 @@ control Next (inout ingress_headers_t hdr,
     table xconnect {
         key = {
             standard_md.ingress_port: exact @name("ig_port");
-            fabric_md.next_id: exact @name("next_id");
+            fabric_md.next_id       : exact @name("next_id");
         }
         actions = {
             output_xconnect;
