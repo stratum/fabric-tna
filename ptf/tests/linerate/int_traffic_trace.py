@@ -116,12 +116,12 @@ class IntFlowFilterWithTrafficTrace(TRexTest, IntTest):
 class IntIngressDropReportFilterWithTrafficTrace(TRexTest, IntTest):
     """ 
     This test observes the behaviour of our P4 implementation of an INT drop
-    report filter when we install an ACL entry to drop all packets, and set an
-    INT watchlist flow to watch all packet drops.
+    report filter when we install an ACL entry to drop all packets in the
+    ingress pipeline.
 
-    The purpose of this test is to observe the efficiency and accuracy of our drop
-    report filter when handling high-speed traffic from hundreds of thousands of
-    flows, simulating a real-world scenario.
+    The purpose of this test is to observe the efficiency and accuracy of our
+    ingress drop report filter when handling high-speed traffic from hundreds of
+    thousands of flows, simulating a real-world scenario.
     """
 
     @autocleanup
@@ -141,14 +141,16 @@ class IntIngressDropReportFilterWithTrafficTrace(TRexTest, IntTest):
             switch_mac="00:90:fb:71:64:8a",  # so switch mac matches with ethernet dst of packets in pcap
         )
 
-        # Capture INT packets
+        # Add ACL rule to drop packets in ingress pipeline
         self.add_forwarding_acl_drop_ingress_port(ingress_port=self.port1)
+
+        # Capture INT packets
         self.trex_client.set_service_mode(ports=[INT_COLLECTOR_PORT], enabled=True)
         capture = self.trex_client.start_capture(
             rx_ports=[INT_COLLECTOR_PORT], limit=CAPTURE_LIMIT
         )
 
-        # Start sending pcap traffic
+        # Start replaying pcap traffic
         pcap_file = REMOTE_PCAP_DIR + REMOTE_PCAP_FILE
         self.trex_client.push_remote(
             pcap_file,
@@ -180,6 +182,104 @@ class IntIngressDropReportFilterWithTrafficTrace(TRexTest, IntTest):
         """
         self.failIf(
             recv_packets > 0, f"ACL did not drop all packets, received {recv_packets}",
+        )
+
+        accuracy_score = results["drop_accuracy_score"]
+        self.failIf(
+            accuracy_score < ACCURACY_RECORD,
+            f"Accuracy score should be at least {ACCURACY_RECORD}%, was {accuracy_score}%",
+        )
+
+        efficiency_score = results["drop_efficiency_score"]
+        self.failIf(
+            efficiency_score < EFFICIENCY_RECORD,
+            f"Efficiency score should be at least {EFFICIENCY_RECORD}%, was {efficiency_score}%",
+        )
+
+@group("int")
+class IntEgressDropReportFilterWithTrafficTrace(TRexTest, IntTest):
+    """ 
+    This test observes the behavior of our P4 implementation of an INT drop
+    report filter when we only configure the ingress VLAN table, so all traffic
+    is dropped in the egress pipeline by the egress VLAN table.
+
+    The purpose of this test is to observe the efficiency and accuracy of our
+    egress drop report filter when handling high-speed traffic from hundreds of
+    thousands of flows, simulating a real-world scenario.
+    """
+
+    @autocleanup
+    def runTest(self):
+
+        pkt = testutils.simple_udp_packet()
+        self.set_up_int_flows(
+            is_device_spine=False, pkt=pkt, send_report_to_spine=False
+        )
+        self.set_up_watchlist_flow()
+
+        next_id = 100
+        dst_ipv4 = "0.0.0.0"
+        switch_mac = "00:90:fb:71:64:8a"
+        port_type = PORT_TYPE_EDGE
+        ig_port=self.port1
+        eg_port=self.port2
+
+        # Only configure ingress_vlan table, so packets will be dropped by the
+        # egress_vlan table
+        self.set_ingress_port_vlan(
+            ig_port, vlan_valid=False, vlan_id=VLAN_ID_1, port_type=port_type
+        )
+
+        # Forwarding type -> routing v4
+        self.set_forwarding_type(
+            ig_port,
+            switch_mac,
+            ethertype=ETH_TYPE_IPV4,
+            fwd_type=FORWARDING_TYPE_UNICAST_IPV4,
+        )
+
+        self.add_forwarding_routing_v4_entry(dst_ipv4, 32, next_id)
+        self.add_next_routing(next_id, eg_port, switch_mac, HOST2_MAC)
+        self.add_next_vlan(next_id, VLAN_ID_2)
+
+        # Capture INT packets
+        self.trex_client.set_service_mode(ports=[INT_COLLECTOR_PORT], enabled=True)
+        capture = self.trex_client.start_capture(
+            rx_ports=[INT_COLLECTOR_PORT], limit=CAPTURE_LIMIT
+        )
+
+        # Start replaying pcap traffic
+        pcap_file = REMOTE_PCAP_DIR + REMOTE_PCAP_FILE
+        self.trex_client.push_remote(
+            pcap_file,
+            ports=[SENDER_PORT],
+            speedup=TRAFFIC_SPEEDUP,
+            duration=TEST_DURATION,
+        )
+        self.trex_client.wait_on_traffic(ports=[SENDER_PORT])
+
+        output = "/tmp/int-traffic-trace-eg-drop-{}.pcap".format(
+            datetime.now().strftime("%Y%m%d-%H%M%S")
+        )
+        self.trex_client.stop_capture(capture["id"], output)
+        results = pypy_analyze_int_report_pcap(output, TOTAL_FLOWS)
+
+        port_stats = self.trex_client.get_stats()
+        sent_packets = port_stats[SENDER_PORT]["opackets"]
+        recv_packets = port_stats[RECEIVER_PORT]["ipackets"]
+        int_packets = port_stats[INT_COLLECTOR_PORT]["ipackets"]
+
+        print(f"Sent {sent_packets}, recv {recv_packets}, INT {int_packets}")
+        list_port_status(port_stats)
+
+        """ 
+        Verify the following:
+        - Packet loss: Ensure 100% packet drop
+        - Accuracy score: Ensure INT accuracy is above a certain threshold
+        - Efficiency score: Ensure INT efficiency is above a certain threshold
+        """
+        self.failIf(
+            recv_packets > 0, f"Egress VLAN table did not drop all packets, received {recv_packets}",
         )
 
         accuracy_score = results["drop_accuracy_score"]
