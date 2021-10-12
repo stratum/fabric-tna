@@ -130,7 +130,7 @@ parser FabricParser (packet_in packet,
     }
 
     state reject_packet{
-        // 'default: reject;' Not supported by Bmv2.
+        // 'default: reject;' Not supported by bmv2.
         // Use verify(false, error.PacketRejectedByParser) to set the parser error and use it to drop in Ingress.
         // for more information https://github.com/p4lang/behavioral-model/blob/971732f48570f848a27a8f54b25b7447732d8591/docs/simple_switch.md
         verify(false, error.PacketRejectedByParser);
