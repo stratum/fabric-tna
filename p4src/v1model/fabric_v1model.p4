@@ -56,13 +56,13 @@ control FabricIngress (inout ingress_headers_t hdr,
         slice_tc_classifier.apply(hdr, standard_md, fabric_md.ingress_md);
         filtering.apply(hdr, fabric_md.ingress_md, standard_md);
 
-        
+
         if (!fabric_md.ingress_md.skip_forwarding) {
             forwarding.apply(hdr, fabric_md.ingress_md);
         }
 
         hasher.apply(hdr, fabric_md.ingress_md);
-        
+
         if (!fabric_md.ingress_md.skip_next) {
             pre_next.apply(hdr, fabric_md.ingress_md);
         }
@@ -89,6 +89,9 @@ control FabricEgress (inout ingress_headers_t hdr,
     EgressDscpRewriter() dscp_rewriter;
 
     apply {
+        // Setting other fields in egress_md, related to TNA's FabricEgressParser.
+        fabric_md.egress_md.cpu_port = 0;
+        fabric_md.egress_md.pkt_length = (bit<16>) standard_md.packet_length;
 
         if (fabric_md.skip_egress){
             exit;
