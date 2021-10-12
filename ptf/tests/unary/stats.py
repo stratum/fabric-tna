@@ -46,7 +46,7 @@ class StatsIPv4UnicastTest(StatsTest, IPv4UnicastTest):
         )
         self.runIPv4UnicastTest(**kwargs)
         if is_bmv2():
-            # apparently, Bmv2 does not count FCS bytes.
+            # bmv2 does not count FCS bytes. Reason is because we're using 'veth'.
             expected_ingress_bytes = len(pkt)
         else:
             expected_ingress_bytes = len(pkt) + ETH_FCS_BYTES
@@ -55,6 +55,7 @@ class StatsIPv4UnicastTest(StatsTest, IPv4UnicastTest):
         if self.loopback:
             expected_ingress_bytes += CPU_LOOPBACK_FAKE_ETH_BYTES
         if is_bmv2():
+            # Do not count bridged metadata for bmv2.
             expected_egress_bytes = expected_ingress_bytes
         else:
             expected_egress_bytes = expected_ingress_bytes + BMD_BYTES
