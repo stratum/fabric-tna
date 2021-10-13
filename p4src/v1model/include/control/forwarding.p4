@@ -32,7 +32,7 @@ control Forwarding (inout ingress_headers_t hdr,
     table bridging {
         key = {
             fabric_md.bridged.base.vlan_id : exact @name("vlan_id");
-            hdr.ethernet.dst_addr     : ternary @name("eth_dst");
+            hdr.ethernet.dst_addr          : ternary @name("eth_dst");
         }
         actions = {
             set_next_id_bridging;
