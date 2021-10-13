@@ -14,7 +14,7 @@ control PacketIoIngress(inout ingress_headers_t hdr,
         hdr.packet_out.setInvalid();
         skip_egress = true;
         // Straight to output port.
-        fabric_md.bridged.setInvalid(); 
+        fabric_md.bridged.setInvalid();
         exit; // This will start the egress pipeline.
     }
 
@@ -36,7 +36,7 @@ control PacketIoIngress(inout ingress_headers_t hdr,
             @defaultonly nop;
         }
         const default_action = nop();
-        //size = 3;
+        size = 3;
         const entries = {
             // Regular packet-out.
             CpuLoopbackMode_t.DISABLED: do_packet_out();
