@@ -182,7 +182,7 @@ enum bit<3> FabricMirrorType_t {
 }
 
 #ifdef V1MODEL
-// bmv2 does not support values greater than 511 (0xFF) for session_IDs.
+// bmv2 does not support values greater than 511 (0x1FF) for session_IDs.
 const MirrorId_t PACKET_IN_MIRROR_SESSION_ID = 0x1FF;
 #else
 const MirrorId_t PACKET_IN_MIRROR_SESSION_ID = 0x210;
