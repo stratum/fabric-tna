@@ -363,7 +363,6 @@ class P4RuntimeTest(BaseTest):
         else:
             pkt_in_msg = self.get_packet_in(timeout=timeout)
             rx_in_port_ = pkt_in_msg.metadata[0].value
-            bytes(rx_in_port_)
             if is_bmv2():
                 pkt_in_metadata = get_controller_packet_metadata(self.p4info, meta_type='packet_in', name='ingress_port')
                 pkt_in_ig_port_bitwidth = pkt_in_metadata.bitwidth
