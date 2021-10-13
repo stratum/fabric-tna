@@ -121,10 +121,9 @@ def de_canonicalize_bytes(bitwidth: int, input: bytes):
     :return: padded input with bytes such that: len(bin(input)) >= bitwidth.
     """
     if bitwidth <= 0:
-        raise ValueError("bitwidth must be a positive integer")
-    if input is None or len(input) < 1 :
-        raise ValueError("input must be a byte string with length >= 1 (bytes)")
-
+        raise ValueError("bitwidth must be a positive integer.")
+    if input is None :
+        raise ValueError("input cannot be of NoneType.")
 
     byte_width = (bitwidth +7) // 8 # use integer division to avoid floating point rounding errors.
     return input.rjust(byte_width, b'\0') # right padding <-> BigEndian
