@@ -21,21 +21,6 @@ control Acl (inout ingress_headers_t hdr,
         acl_counter.count();
     }
 
-
-    action copy_to_cpu_post_ingress() {
-        // Unused by bmv2
-        acl_counter.count();
-    }
-
-
-    action punt_to_cpu_post_ingress() {
-        // Unused by bmv2
-        copy_to_cpu_post_ingress();
-        fabric_md.skip_next = true;
-        fabric_md.punt_to_cpu = true;
-    }
-
-
     action copy_to_cpu() {
         clone3(CloneType.I2E,
             (bit<32>) PACKET_IN_MIRROR_SESSION_ID,
@@ -44,7 +29,6 @@ control Acl (inout ingress_headers_t hdr,
         acl_counter.count();
     }
 
-    
     action punt_to_cpu() {
         standard_md.egress_spec = CPU_PORT;
         fabric_md.skip_next = true;
@@ -94,8 +78,6 @@ control Acl (inout ingress_headers_t hdr,
             set_next_id_acl;
             punt_to_cpu;
             copy_to_cpu;
-            punt_to_cpu_post_ingress;
-            copy_to_cpu_post_ingress;
             drop;
             set_output_port;
             nop_acl;
