@@ -30,7 +30,6 @@ control Acl (inout ingress_headers_t hdr,
     }
 
     action punt_to_cpu() {
-        standard_md.egress_spec = CPU_PORT;
         fabric_md.skip_next = true;
         fabric_md.punt_to_cpu = true;
     }
