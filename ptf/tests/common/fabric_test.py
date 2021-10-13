@@ -4378,7 +4378,8 @@ class PppoeTest(DoubleVlanTerminationTest):
         )
 
         # Verify that upstream counters were updated as expected.
-        time.sleep(1)
+        if not is_bmv2():
+            time.sleep(1)
         new_terminated = self.read_byte_count_upstream("terminated", line_id)
         new_dropped = self.read_byte_count_upstream("dropped", line_id)
 
@@ -4419,7 +4420,8 @@ class PppoeTest(DoubleVlanTerminationTest):
         self.verify_packet_in(pppoed_pkt, self.port1)
         self.verify_no_other_packets()
 
-        time.sleep(1)
+        if not is_bmv2():
+            time.sleep(1)
         new_terminated = self.read_byte_count_upstream("terminated", line_id)
         new_dropped = self.read_byte_count_upstream("dropped", line_id)
 
@@ -4486,7 +4488,8 @@ class PppoeTest(DoubleVlanTerminationTest):
             verify_pkt=line_enabled,
         )
 
-        time.sleep(1)
+        if not is_bmv2():
+            time.sleep(1)
         new_rx_count = self.read_byte_count_downstream_rx(line_id)
         new_tx_count = self.read_byte_count_downstream_tx(line_id)
 
