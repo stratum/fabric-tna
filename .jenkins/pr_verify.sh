@@ -67,7 +67,7 @@ for profile in "fabric-int" "fabric-spgw-int"; do
   mv ptf/tests/common/ptf.pcap "logs/${profile}/"
 done
 
-# Running PTF for bmv2. TODO: Move from pr_verify.sh to Jenkins' declarative pipeline.
+# Running PTF for bmv2.
 #shellcheck disable=SC2043
 for profile in "fabric"; do # Only 1 profile, for now.
 
