@@ -68,6 +68,7 @@ for profile in "fabric-int" "fabric-spgw-int"; do
 done
 
 # Running PTF for bmv2. TODO: Move from pr_verify.sh to Jenkins' declarative pipeline.
+#shellcheck disable=SC2043
 for profile in "fabric"; do # Only 1 profile, for now.
 
   echo "Run PTF tests for bmv2, profile ${profile}"
