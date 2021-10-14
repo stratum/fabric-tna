@@ -73,6 +73,10 @@ control Filtering (inout ingress_headers_t hdr,
         fwd_classifier_counter.count();
     }
 
+#ifdef WITH_DEBUG
+    counter(8, CounterType.packets_and_bytes) fwd_type_counter;
+#endif //WITH_DEBUG
+
     table fwd_classifier {
         key = {
             standard_md.ingress_port                : exact @name("ig_port");
@@ -93,5 +97,8 @@ control Filtering (inout ingress_headers_t hdr,
         // we don't check if Ethernet and eth_type is valid,
         // because it is always extracted in the Parser.
         fwd_classifier.apply();
+#ifdef WITH_DEBUG
+        fwd_type_counter.count((bit<32>)fabric_md.bridged.base.fwd_type);
+#endif // WITH_DEBUG
     }
 }
