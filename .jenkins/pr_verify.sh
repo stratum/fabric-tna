@@ -66,3 +66,16 @@ for profile in "fabric-int" "fabric-spgw-int"; do
   mv ptf/tests/common/ptf.log "logs/${profile}/"
   mv ptf/tests/common/ptf.pcap "logs/${profile}/"
 done
+
+# Running PTF for bmv2. TODO: Move from pr_verify.sh to Jenkins' declarative pipeline.
+for profile in "fabric"; do # Only 1 profile, for now.
+
+  echo "Run PTF tests for bmv2, profile ${profile}"
+  ./ptf/run/bmv2/run "${profile}"
+
+  rm -rf "logs/bmv2/${profile}"
+  mkdir -p "logs/bmv2/${profile}"
+  mv ptf/run/bmv2/log "logs/bmv2/${profile}"
+  mv ptf/tests/common/ptf.log "logs/bmv2/${profile}/"
+  mv ptf/tests/common/ptf.pcap "logs/bmv2/${profile}/"
+done
