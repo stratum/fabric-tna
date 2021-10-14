@@ -45,7 +45,7 @@ def stringify(n, length):
 def is_bmv2():
     # using parameter 'pltfm' to get information if running for bmv2.
     _is_bmv2 = testutils.test_param_get("pltfm")
-    return True if _is_bmv2 is not None and _is_bmv2 == "bmv2" else False
+    return _is_bmv2 == "bmv2"
 
 
 def ipv4_to_binary(addr):
