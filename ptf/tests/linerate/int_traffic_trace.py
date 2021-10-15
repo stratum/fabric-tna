@@ -164,7 +164,8 @@ class IntIngressDropReportFilterWithTrafficTrace(TRexTest, IntTest):
             datetime.now().strftime("%Y%m%d-%H%M%S")
         )
         self.trex_client.stop_capture(capture["id"], output)
-        results = pypy_analyze_int_report_pcap(output, TOTAL_FLOWS)
+        DROP_REASON_ACL_DENY = 80
+        results = pypy_analyze_int_report_pcap(output, TOTAL_FLOWS, DROP_REASON_ACL_DENY)
 
         port_stats = self.trex_client.get_stats()
         sent_packets = port_stats[SENDER_PORT]["opackets"]
@@ -179,6 +180,7 @@ class IntIngressDropReportFilterWithTrafficTrace(TRexTest, IntTest):
         - Packet loss: Ensure 100% packet drop
         - Accuracy score: Ensure INT accuracy is above a certain threshold
         - Efficiency score: Ensure INT efficiency is above a certain threshold
+        - Drop reports: All drop reports were dropped because of the ACL
         """
         self.failIf(
             recv_packets > 0, f"ACL did not drop all packets, received {recv_packets}",
@@ -194,6 +196,13 @@ class IntIngressDropReportFilterWithTrafficTrace(TRexTest, IntTest):
         self.failIf(
             efficiency_score < EFFICIENCY_RECORD,
             f"Efficiency score should be at least {EFFICIENCY_RECORD}%, was {efficiency_score}%",
+        )
+
+        total_drop_reports = results["drop_reports"]
+        correct_drop_reports = results["correct_drop_reports"]
+        self.failIf(
+            total_drop_reports != correct_drop_reports,
+            f"All drop reports should be for reason DROP_REASON_ACL_DENY, {total_drop_reports - correct_drop_reports} were not.",
         )
 
 @group("int")
@@ -218,7 +227,8 @@ class IntEgressDropReportFilterWithTrafficTrace(TRexTest, IntTest):
         self.set_up_watchlist_flow()
 
         next_id = 100
-        dst_ipv4 = "0.0.0.0"
+        dst_ipv4 = DEFAULT_ROUTE_IPV4
+        prefix_len = PREFIX_DEFAULT_ROUTE
         switch_mac = "00:90:fb:71:64:8a"
         port_type = PORT_TYPE_EDGE
         ig_port=self.port1
@@ -238,7 +248,7 @@ class IntEgressDropReportFilterWithTrafficTrace(TRexTest, IntTest):
             fwd_type=FORWARDING_TYPE_UNICAST_IPV4,
         )
 
-        self.add_forwarding_routing_v4_entry(dst_ipv4, 32, next_id)
+        self.add_forwarding_routing_v4_entry(dst_ipv4, prefix_len, next_id)
         self.add_next_routing(next_id, eg_port, switch_mac, HOST2_MAC)
         self.add_next_vlan(next_id, VLAN_ID_2)
 
@@ -262,7 +272,8 @@ class IntEgressDropReportFilterWithTrafficTrace(TRexTest, IntTest):
             datetime.now().strftime("%Y%m%d-%H%M%S")
         )
         self.trex_client.stop_capture(capture["id"], output)
-        results = pypy_analyze_int_report_pcap(output, TOTAL_FLOWS)
+        DROP_REASON_EGRESS_NEXT_MISS = 130
+        results = pypy_analyze_int_report_pcap(output, TOTAL_FLOWS, DROP_REASON_EGRESS_NEXT_MISS)
 
         port_stats = self.trex_client.get_stats()
         sent_packets = port_stats[SENDER_PORT]["opackets"]
@@ -292,4 +303,11 @@ class IntEgressDropReportFilterWithTrafficTrace(TRexTest, IntTest):
         self.failIf(
             efficiency_score < EFFICIENCY_RECORD,
             f"Efficiency score should be at least {EFFICIENCY_RECORD}%, was {efficiency_score}%",
+        )
+
+        total_drop_reports = results["drop_reports"]
+        correct_drop_reports = results["correct_drop_reports"]
+        self.failIf(
+            total_drop_reports != correct_drop_reports,
+            f"All drop reports should be for reason DROP_REASON_EGRESS_NEXT_MISS, {total_drop_reports - correct_drop_reports} were not.",
         )
