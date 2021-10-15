@@ -60,11 +60,11 @@ for profile in "fabric-int" "fabric-spgw-int"; do
   # Special case to test INT drop report with deflected packet.
   TM_DOD=1 ./ptf/run/tv/run "${profile}" TEST=int-dod
 
-  rm -rf "logs/${profile}"
-  mkdir -p "logs/${profile}"
-  mv ptf/run/tm/log "logs/${profile}"
-  mv ptf/tests/common/ptf.log "logs/${profile}/"
-  mv ptf/tests/common/ptf.pcap "logs/${profile}/"
+  rm -rf "logs/tna/${profile}"
+  mkdir -p "logs/tna/${profile}"
+  mv ptf/run/tm/log "logs/tna/${profile}"
+  mv ptf/tests/common/ptf.log "logs/tna/${profile}/"
+  mv ptf/tests/common/ptf.pcap "logs/tna/${profile}/"
 done
 
 # Running PTF for bmv2.
