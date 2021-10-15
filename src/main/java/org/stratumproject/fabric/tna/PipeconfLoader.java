@@ -152,11 +152,14 @@ public class PipeconfLoader {
             throws FileNotFoundException {
 
         final String pipelineConfig;
+        final ExtensionType extensionType;
         if(platform.toLowerCase().contains("bmv2")){
             pipelineConfig = BMV2_PIPELINE_CONFIG;
+            extensionType = ExtensionType.BMV2_JSON;
         }
         else { //TNA
             pipelineConfig = PIPELINE_CONFIG;
+            extensionType = ExtensionType.RAW_DEVICE_CONFIG;
         }
 
         final URL pipelineConfigUrl = this.getClass().getResource(format(
@@ -174,7 +177,7 @@ public class PipeconfLoader {
                 .withId(new PiPipeconfId(format(
                         "%s.%s.%s", BASE_PIPECONF_ID, profile, platform)))
                 .withPipelineModel(parseP4Info(p4InfoUrl))
-                .addExtension(ExtensionType.RAW_DEVICE_CONFIG, pipelineConfigUrl) //FIXME is RAW_DEVICE_CONFIG usable also for bmv2?
+                .addExtension(extensionType, pipelineConfigUrl)
                 .addExtension(ExtensionType.P4_INFO_TEXT, p4InfoUrl)
                 .addExtension(ExtensionType.CPU_PORT_TXT, cpuPortUrl);
 
