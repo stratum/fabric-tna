@@ -65,4 +65,4 @@ function gen_profile() {
 }
 
 base_build
-gen_profile BMV2_CPU_PORT
+gen_profile "${BMV2_CPU_PORT}"
