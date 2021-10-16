@@ -153,11 +153,10 @@ public class PipeconfLoader {
 
         final String pipelineConfig;
         final ExtensionType extensionType;
-        if(platform.toLowerCase().contains("bmv2")){
+        if (platform.toLowerCase().contains("bmv2")) {
             pipelineConfig = BMV2_PIPELINE_CONFIG;
             extensionType = ExtensionType.BMV2_JSON;
-        }
-        else { //TNA
+        } else { //TNA
             pipelineConfig = PIPELINE_CONFIG;
             extensionType = ExtensionType.RAW_DEVICE_CONFIG;
         }
