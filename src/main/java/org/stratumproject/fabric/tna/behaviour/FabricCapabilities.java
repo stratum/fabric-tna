@@ -56,7 +56,7 @@ public class FabricCapabilities {
     }
 
     public boolean isBmv2() {
-        return pipeconf.id().toString().contains(BMV2);
+        return pipeconf.id().toString().toLowerCase().contains(BMV2);
     }
 
     public Optional<Integer> cpuPort() {
