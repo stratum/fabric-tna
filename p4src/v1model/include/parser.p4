@@ -118,7 +118,6 @@ parser FabricParser (packet_in packet,
         // There is only one MPLS label for this fabric.
         // Assume header after MPLS header is IPv4/IPv6
         // Lookup first 4 bits for version
-
         transition select(packet.lookahead<bit<IP_VER_BITS>>()) {
             IP_VERSION_4: parse_ipv4;
             IP_VERSION_6: parse_ipv6;
