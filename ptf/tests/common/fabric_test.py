@@ -59,8 +59,6 @@ FORWARDING_TYPE_IPV6_UNICAST = 4
 FORWARDING_TYPE_IPV6_MULTICAST = 5
 FORWARDING_TYPE_UNKNOWN = 7
 
-CPU_CLONE_SESSION_ID = 511
-
 DEFAULT_MPLS_TTL = 64
 MIN_PKT_LEN = 80
 
@@ -192,7 +190,7 @@ INT_INS_TO_NAME = {
     INT_EG_PORT_TX: "eg_port_tx",
 }
 
-PACKET_IN_MIRROR_ID = 0x210
+PACKET_IN_MIRROR_ID = 0x1FF
 INT_REPORT_MIRROR_IDS = [0x200, 0x201, 0x202, 0x203]
 RECIRCULATE_PORTS = [68, 196, 324, 452]
 SWITCH_ID = 1
@@ -892,17 +890,11 @@ class FabricTest(P4RuntimeTest):
 
     @tvcreate("setup/set_up_packet_in_mirror")
     def set_up_packet_in_mirror(self):
-        if is_bmv2():
-            self.add_clone_group(CPU_CLONE_SESSION_ID, [self.cpu_port], store=False)
-        else:
-            self.add_clone_group(PACKET_IN_MIRROR_ID, [self.cpu_port], store=False)
+        self.add_clone_group(PACKET_IN_MIRROR_ID, [self.cpu_port], store=False)
 
     @tvcreate("teardown/reset_packet_in_mirror")
     def reset_packet_in_mirror(self):
-        if is_bmv2():
-            self.delete_clone_group(CPU_CLONE_SESSION_ID, [self.cpu_port], store=False)
-        else:
-            self.delete_clone_group(PACKET_IN_MIRROR_ID, [self.cpu_port], store=False)
+        self.delete_clone_group(PACKET_IN_MIRROR_ID, [self.cpu_port], store=False)
 
     def build_packet_out(
         self,

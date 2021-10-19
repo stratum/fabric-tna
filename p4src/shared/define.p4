@@ -49,7 +49,7 @@ typedef bit<SLICE_TC_WIDTH> slice_tc_t; // Slice and TC identifier
 
 
 #ifdef V1MODEL
-// Start definitions from TNA (For bmv2).
+// Start definitions from TNA (for bmv2).
 // The following typedefs are being defined
 // to use the same names between the TNA and v1model versions.
 // Reference to tofino.p4:
@@ -181,12 +181,7 @@ enum bit<3> FabricMirrorType_t {
     PACKET_IN = 2
 }
 
-#ifdef V1MODEL
-// bmv2 does not support values greater than 511 (0x1FF) for session_IDs.
 const MirrorId_t PACKET_IN_MIRROR_SESSION_ID = 0x1FF;
-#else
-const MirrorId_t PACKET_IN_MIRROR_SESSION_ID = 0x210;
-#endif // V1MODEL
 
 // Modes for CPU loopback testing, where a process can inject packets through
 // the CPU port (P4RT packet-out) and expect the same to be delivered back to
