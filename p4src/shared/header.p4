@@ -280,12 +280,6 @@ struct int_metadata_t {
 }
 #endif // WITH_INT
 
-#ifdef V1MODEL
-error {
-    PacketRejectedByParser
-}
-#endif // V1MODEL
-
 // Common metadata which is bridged from ingress to egress.
 @flexible
 struct bridged_metadata_base_t {
@@ -414,20 +408,6 @@ struct fabric_egress_metadata_t {
 #endif // WITH_INT
     bit<16>               pkt_length;
 }
-
-#ifdef V1MODEL
-// This struct encapsulates the ingress and egress metadata for bmv2.
-// The reason behind this struct is to have the same metadata structure defined for TNA.
-struct fabric_v1model_metadata_t {
-
-    // The skip_egress emulates the bypass_egress bit in intrinsic metadata for TNA. 
-    // Reference: https://github.com/barefootnetworks/Open-Tofino/blob/6a8432eab97bfd1d4805cf24c2c838470840f522/share/p4c/p4include/tofino.p4#L126-L127
-    bool                      skip_egress;
-
-    fabric_ingress_metadata_t ingress_md;
-    fabric_egress_metadata_t  egress_md;
-}
-#endif // V1MODEL
 
 header fake_ethernet_t {
     @padding bit<48> _pad0;
