@@ -1,0 +1,173 @@
+{
+  "devices": {
+    "device:leaf1": {
+      "basic": {
+        "managementAddress": "grpc://mininet:50001?device_id=1",
+        "driver": "stratum-bmv2",
+        "pipeconf": "org.stratumproject.fabric.bmv2",
+        "locType": "grid",
+        "gridX": 200,
+        "gridY": 600
+      },
+      "segmentrouting": {
+        "name": "leaf1",
+        "ipv4NodeSid": 101,
+        "ipv4Loopback": "192.168.1.1",
+        "routerMac": "00:AA:00:00:00:01",
+        "isEdgeRouter": true,
+        "adjacencySids": []
+      }
+    },
+    "device:leaf2": {
+      "basic": {
+        "managementAddress": "grpc://mininet:50002?device_id=1",
+        "driver": "stratum-bmv2",
+        "pipeconf": "org.stratumproject.fabric.bmv2",
+        "locType": "grid",
+        "gridX": 800,
+        "gridY": 600
+      },
+      "segmentrouting": {
+        "name": "leaf2",
+        "ipv4NodeSid": 102,
+        "ipv4Loopback": "192.168.1.2",
+        "routerMac": "00:AA:00:00:00:02",
+        "isEdgeRouter": true,
+        "adjacencySids": []
+      }
+    },
+    "device:spine1": {
+      "basic": {
+        "managementAddress": "grpc://mininet:50003?device_id=1",
+        "driver": "stratum-bmv2",
+        "pipeconf": "org.stratumproject.fabric.bmv2",
+        "locType": "grid",
+        "gridX": 400,
+        "gridY": 400
+      },
+      "segmentrouting": {
+        "name": "spine1",
+        "ipv4NodeSid": 201,
+        "ipv4Loopback": "192.168.2.1",
+        "routerMac": "00:BB:00:00:00:01",
+        "isEdgeRouter": false,
+        "adjacencySids": []
+      }
+    },
+    "device:spine2": {
+      "basic": {
+        "managementAddress": "grpc://mininet:50004?device_id=1",
+        "driver": "stratum-bmv2",
+        "pipeconf": "org.stratumproject.fabric.bmv2",
+        "locType": "grid",
+        "gridX": 600,
+        "gridY": 400
+      },
+      "segmentrouting": {
+        "name": "spine2",
+        "ipv4NodeSid": 202,
+        "ipv4Loopback": "192.168.2.2",
+        "routerMac": "00:BB:00:00:00:02",
+        "isEdgeRouter": false,
+        "adjacencySids": []
+      }
+    }
+  },
+  "ports": {
+    "device:leaf1/1": {
+      "interfaces": [
+        {
+          "name": "leaf1-1",
+          "ips": [
+            "140.0.100.254/24"
+          ],
+          "vlan-untagged": 100
+        }
+      ]
+    },
+    "device:leaf1/2": {
+      "interfaces": [
+        {
+          "name": "leaf1-2",
+          "ips": [
+            "140.0.99.254/24"
+          ],
+          "vlan-untagged": 99
+        }
+      ]
+    },
+    "device:leaf2/1": {
+      "interfaces": [
+        {
+          "name": "leaf2-1",
+          "ips": [
+            "140.0.200.254/24"
+          ],
+          "vlan-untagged": 200
+        }
+      ]
+    }
+  },
+  "hosts": {
+    "00:00:00:00:00:10/None": {
+      "basic": {
+        "name": "enodeb",
+        "gridX": 100,
+        "gridY": 700,
+        "locType": "grid",
+        "ips": [
+          "140.0.100.1"
+        ],
+        "locations": [
+          "device:leaf1/1"
+        ]
+      }
+    },
+    "00:00:00:00:db:0f/None": {
+      "basic": {
+        "name": "dbuf1",
+        "gridX": 400,
+        "gridY": 700,
+        "locType": "grid",
+        "ips": [
+          "140.0.99.1"
+        ],
+        "locations": [
+          "device:leaf1/2"
+        ]
+      }
+    },
+    "00:00:00:00:00:20/None": {
+      "basic": {
+        "name": "pdn",
+        "gridX": 850,
+        "gridY": 700,
+        "locType": "grid",
+        "ips": [
+          "140.0.200.1"
+        ],
+        "locations": [
+          "device:leaf2/1"
+        ]
+      }
+    }
+  },
+  "apps": {
+    "org.omecproject.up4": {
+      "up4": {
+        "devices": [
+          "device:leaf1",
+          "device:leaf2"
+        ],
+        "s1uAddr": "140.0.0.1",
+        "maxUes": 32,
+        "uePools": [
+          "17.0.0.0/24"
+        ],
+        "dbufDrainAddr": "140.0.0.2",
+        "pscEncapEnabled": false,
+        "defaultQfi": 0
+      }
+    }
+  }
+}
