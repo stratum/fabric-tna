@@ -55,19 +55,14 @@ control FabricIngress (inout ingress_headers_t hdr,
 
         slice_tc_classifier.apply(hdr, standard_md, fabric_md.ingress);
         filtering.apply(hdr, fabric_md.ingress, standard_md);
-
         if (!fabric_md.ingress.skip_forwarding) {
             forwarding.apply(hdr, fabric_md.ingress);
         }
-
         hasher.apply(hdr, fabric_md.ingress);
-
         if (!fabric_md.ingress.skip_next) {
             pre_next.apply(hdr, fabric_md.ingress);
         }
-
         acl.apply(hdr, fabric_md.ingress, standard_md);
-
         if (!fabric_md.ingress.skip_next) {
             next.apply(hdr, fabric_md.ingress, standard_md);
         }
