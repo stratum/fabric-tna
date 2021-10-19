@@ -3,7 +3,7 @@
 
 #include <core.p4>
 
-#include "shared/header.p4"
+#include "v1model/include/header_v1model.p4"
 
 // ACL-like classification, maps lookup metadata to slice_id and tc. For UE
 // traffic, the classification provided by the SPGW tables takes precendence.

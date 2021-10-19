@@ -10,9 +10,8 @@
 #include <v1model.p4>
 
 #include "shared/size.p4"
-#include "shared/define.p4"
-#include "shared/header.p4"
-#include "v1model/include/header_v1model.p4"
+#include "v1model/include/define_v1model.p4" // shared/define.p4 included in define_v1model.p4
+#include "v1model/include/header_v1model.p4" // shared/header.p4 included in header_v1model.p4
 #include "v1model/include/parser.p4"
 #include "v1model/include/control/acl.p4"
 #include "v1model/include/control/next.p4"

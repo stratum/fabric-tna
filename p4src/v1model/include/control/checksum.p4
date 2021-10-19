@@ -4,8 +4,8 @@
 #ifndef __CHECKSUM__
 #define __CHECKSUM__
 
-#include "shared/header.p4"
-#include "shared/define.p4"
+#include "v1model/include/define_v1model.p4"
+#include "v1model/include/header_v1model.p4"
 
 control FabricVerifyChecksum(inout ingress_headers_t hdr,
                              inout fabric_v1model_metadata_t meta) {

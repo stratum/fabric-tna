@@ -2,8 +2,14 @@
 // SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 
 /*
-    This file contains additional headers used by bmv2.
+    This file contains additional headers/structs used by bmv2.
+    Extending p4src/shared/header.p4 with this file to avoid `#ifdef`s.
 */
+
+#ifndef __HEADER_V1MODEL__
+#define __HEADER_V1MODEL__
+
+#include "shared/header.p4"
 
 // This struct encapsulates the ingress and egress metadata for bmv2.
 // The reason behind this struct is to have the same metadata structure defined for TNA.
@@ -17,7 +23,8 @@ struct fabric_v1model_metadata_t {
     fabric_egress_metadata_t  egress;
 }
 
-
 error {
     PacketRejectedByParser
 }
+
+#endif // __HEADER_V1MODEL__

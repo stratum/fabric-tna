@@ -4,8 +4,8 @@
 #ifndef __PARSER__
 #define __PARSER__
 
-#include "shared/header.p4"
-#include "shared/define.p4"
+#include "v1model/include/header_v1model.p4"
+#include "v1model/include/define_v1model.p4"
 
 parser FabricParser (packet_in packet,
                      out ingress_headers_t hdr,
@@ -62,7 +62,6 @@ parser FabricParser (packet_in packet,
         packet.extract(hdr.fake_ethernet);
         fake_ethernet_t tmp = packet.lookahead<fake_ethernet_t>();
         transition select(tmp.ether_type) {
-
             default: parse_ethernet;
         }
     }
@@ -120,11 +119,9 @@ parser FabricParser (packet_in packet,
         // Assume header after MPLS header is IPv4/IPv6
         // Lookup first 4 bits for version
 
-
         transition select(packet.lookahead<bit<IP_VER_BITS>>()) {
             IP_VERSION_4: parse_ipv4;
             IP_VERSION_6: parse_ipv6;
-
             default: reject_packet;
         }
     }
@@ -136,7 +133,6 @@ parser FabricParser (packet_in packet,
         verify(false, error.PacketRejectedByParser);
         transition accept;
     }
-
 
     state parse_non_mpls {
         fabric_md.ingress.bridged.base.mpls_label = 0;

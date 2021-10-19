@@ -3,8 +3,8 @@
 
 #include <core.p4>
 
-#include "shared/define.p4"
-#include "shared/header.p4"
+#include "v1model/include/define_v1model.p4"
+#include "v1model/include/header_v1model.p4"
 
 
 control Forwarding (inout ingress_headers_t hdr,

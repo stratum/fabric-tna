@@ -3,7 +3,7 @@
 
 #include <core.p4>
 
-#include "shared/header.p4"
+#include "v1model/include/header_v1model.p4"
 
 control Filtering (inout ingress_headers_t hdr,
                    inout fabric_ingress_metadata_t fabric_md,

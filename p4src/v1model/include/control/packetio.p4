@@ -1,7 +1,7 @@
 // Copyright 2021-present Open Networking Foundation
 // SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 
-#include "shared/header.p4"
+#include "v1model/include/header_v1model.p4"
 
 control PacketIoIngress(inout ingress_headers_t hdr,
                         inout fabric_ingress_metadata_t fabric_md,
@@ -18,47 +18,9 @@ control PacketIoIngress(inout ingress_headers_t hdr,
         exit; // This will start the egress pipeline.
     }
 
-    @hidden
-    action do_cpu_loopback(bit<16> fake_ether_type) {
-        hdr.fake_ethernet.setValid();
-        hdr.fake_ethernet.ether_type = fake_ether_type;
-        do_packet_out();
-    }
-
-    @hidden
-    table packet_out_modes {
-        key = {
-            hdr.packet_out.cpu_loopback_mode: exact;
-        }
-        actions = {
-            do_packet_out;
-            do_cpu_loopback;
-            @defaultonly nop;
-        }
-        const default_action = nop();
-        size = 3;
-        const entries = {
-            // Regular packet-out.
-            CpuLoopbackMode_t.DISABLED: do_packet_out();
-            // Pkt should go directly to CPU after port loopback. Not used in bmv2
-            CpuLoopbackMode_t.DIRECT: do_cpu_loopback(ETHERTYPE_CPU_LOOPBACK_EGRESS);
-            // Pkt should go through ingress after port loopback. Not used in bmv2
-            CpuLoopbackMode_t.INGRESS: do_cpu_loopback(ETHERTYPE_CPU_LOOPBACK_INGRESS);
-        }
-    }
-
     apply {
         if (hdr.packet_out.isValid()) {
-            packet_out_modes.apply();
-        } else if (hdr.fake_ethernet.isValid() &&
-                       hdr.fake_ethernet.ether_type == ETHERTYPE_CPU_LOOPBACK_EGRESS) {
-            // CPU loopback pkt entering the ingress pipe a second time (after
-            // going through egress). Punt to CPU now, skip egress.
-            fabric_md.bridged.setInvalid();
-            hdr.fake_ethernet.setInvalid();
-            hdr.packet_in.setValid();
-            hdr.packet_in.ingress_port = standard_md.ingress_port;
-            exit;
+            do_packet_out();
         }
     }
 }

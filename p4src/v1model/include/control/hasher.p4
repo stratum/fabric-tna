@@ -1,8 +1,8 @@
 // Copyright 2021-present Open Networking Foundation
 // SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 
-#include "shared/define.p4"
-#include "shared/header.p4"
+#include "v1model/include/define_v1model.p4"
+#include "v1model/include/header_v1model.p4"
 
 control Hasher(inout ingress_headers_t hdr,
                inout fabric_ingress_metadata_t fabric_md) {
@@ -15,8 +15,8 @@ control Hasher(inout ingress_headers_t hdr,
         // GTP packets (either encapped by this switch or passthrough), as we
         // want to do dedup and anomaly detection on the inner flow only.
         hash(
-            fabric_md.bridged.base.inner_hash, 
-            HashAlgorithm.crc32, 
+            fabric_md.bridged.base.inner_hash,
+            HashAlgorithm.crc32,
             base,
             {fabric_md.lkp.ipv4_src, fabric_md.lkp.ipv4_dst, fabric_md.lkp.ip_proto, fabric_md.lkp.l4_sport, fabric_md.lkp.l4_dport},
             max
@@ -25,8 +25,8 @@ control Hasher(inout ingress_headers_t hdr,
         // GTP-aware ECMP for passthrough GTP packets.
         if (hdr.gtpu.isValid()){
             hash(
-                fabric_md.ecmp_hash, 
-                HashAlgorithm.crc32, 
+                fabric_md.ecmp_hash,
+                HashAlgorithm.crc32,
                 base,
                 {hdr.ipv4.src_addr, hdr.ipv4.dst_addr, hdr.gtpu.teid},
                 max
@@ -35,7 +35,7 @@ control Hasher(inout ingress_headers_t hdr,
             // Regular 5-tuple-based ECMP. If here, the innermost IPv4 header
             // will be the only IPv4 header valid. Includes GTPU decapped pkts
             // by the spgw control.
-            fabric_md.ecmp_hash = fabric_md.bridged.base.inner_hash;            
+            fabric_md.ecmp_hash = fabric_md.bridged.base.inner_hash;
         }
         // FIXME: remove ipv6 support or test it
         //  https://github.com/stratum/fabric-tna/pull/227
@@ -53,8 +53,8 @@ control Hasher(inout ingress_headers_t hdr,
             // We will never process this packet through the INT pipeline.
             fabric_md.bridged.base.inner_hash = 0;
             hash(
-                fabric_md.ecmp_hash, 
-                HashAlgorithm.crc32, 
+                fabric_md.ecmp_hash,
+                HashAlgorithm.crc32,
                 base,
                 {hdr.ethernet.dst_addr, hdr.ethernet.src_addr, hdr.eth_type.value},
                 max
