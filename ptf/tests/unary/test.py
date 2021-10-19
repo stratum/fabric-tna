@@ -2728,7 +2728,7 @@ class FabricIntFlowReportLoopbackModeTest(IntTest):
                 )
                 self.doRunTest(pkt, HOST2_MAC, is_device_spine)
 
-@skipIf(is_bmv2(), "Optimized Field are not supported by Bmv2, because of Canonical Bytestrings.")
+@skipIf(is_bmv2(), "Bmv2 is not subject to compiler field optimizations")
 class FabricOptimizedFieldDetectorTest(FabricTest):
     """Finds action parameters or header fields that were optimized out by the
     compiler"""
