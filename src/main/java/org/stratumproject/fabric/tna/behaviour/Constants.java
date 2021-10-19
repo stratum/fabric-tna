@@ -40,7 +40,7 @@ public final class Constants {
 
     public static final int DEFAULT_VLAN = 4094;
     public static final int DEFAULT_PW_TRANSPORT_VLAN = 4090;
-    public static final int PKT_IN_MIRROR_SESSION_ID = 0x210;
+    public static final int PKT_IN_MIRROR_SESSION_ID = 0x1FF;
 
     // Static Queue IDs (should match those in gen-stratum-qos-config.py)
     public static final int QUEUE_ID_BEST_EFFORT = 0;
