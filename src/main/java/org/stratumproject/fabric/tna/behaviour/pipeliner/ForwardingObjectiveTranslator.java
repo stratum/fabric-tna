@@ -256,12 +256,12 @@ class ForwardingObjectiveTranslator
                 final PiAction aclAction;
                 if (treatment.clearedDeferred()) {
                     aclAction = PiAction.builder()
-                            .withId(P4InfoConstants.FABRIC_INGRESS_ACL_PUNT_TO_CPU_POST_INGRESS)
+                            .withId(P4InfoConstants.FABRIC_INGRESS_ACL_PUNT_TO_CPU)
                             .build();
                 } else {
                     // Action is COPY_TO_CPU
                     aclAction = PiAction.builder()
-                            .withId(P4InfoConstants.FABRIC_INGRESS_ACL_COPY_TO_CPU_POST_INGRESS)
+                            .withId(P4InfoConstants.FABRIC_INGRESS_ACL_COPY_TO_CPU)
                             .build();
                 }
                 final TrafficTreatment piTreatment = DefaultTrafficTreatment.builder()
