@@ -15,6 +15,10 @@ Files: ptf/run/bmv2/port_map.veth.json
 Copyright: 2021-present Open Networking Foundation
 License: LicenseRef-ONF-Member-Only-1.0
 
+Files: ptf/images/*
+Copyright: 2021-present Open Networking Foundation
+License: LicenseRef-ONF-Member-Only-1.0
+
 Files: src/main/resources/META-INF/NOTICE
 Copyright: No Copyright
 License: CC0-1.0
