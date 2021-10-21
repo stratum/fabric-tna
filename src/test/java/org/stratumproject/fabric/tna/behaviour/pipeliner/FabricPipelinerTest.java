@@ -272,6 +272,7 @@ public class FabricPipelinerTest {
         capabilities = createMock(FabricCapabilities.class);
         expect(capabilities.isBmv2()).andReturn(true).anyTimes();
         replay(capabilities);
+        // Using same pipeline initializer structure defined for TNA.
         commonTestInitializePipeline();
     }
 

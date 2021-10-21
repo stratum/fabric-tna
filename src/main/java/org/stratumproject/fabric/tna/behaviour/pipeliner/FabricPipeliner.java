@@ -209,7 +209,7 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
         // Set up mirror session for packet-in.
         groupService.addGroup(packetInCloneGroup());
 
-        // Set up recirculation ports as untagged (used for INT reports and
+        // Set up recirculation ports, as untagged only for TNA (used for INT reports and
         // UE-to-UE in SPGW pipe).
         if (!capabilities.isBmv2()) {
             RECIRC_PORTS.forEach(port -> {
