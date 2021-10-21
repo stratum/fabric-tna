@@ -5,7 +5,8 @@ SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 
 # Fabric-TNA
 
-[![Build Status](https://jenkins.onosproject.org/buildStatus/icon?job=fabric-tna-postmerge)](https://jenkins.onosproject.org/job/fabric-tna-postmerge/)
+[![Build Status](https://jenkins.onosproject.org/buildStatus/icon?job=fabric-tna-postmerge&subject=Build)](https://jenkins.onosproject.org/job/fabric-tna-postmerge/)
+[![Build Status](https://jenkins.onosproject.org/buildStatus/icon?job=fabric-tna-linerate-tests&subject=Line-Rate+Tests)](https://jenkins.onosproject.org/job/fabric-tna-linerate-tests/)
 
 `fabric-tna` is a P4 program designed to work with [Trellis](trellis), a set of
 SDN applications running on top of ONOS to provide the control plane for an IP
