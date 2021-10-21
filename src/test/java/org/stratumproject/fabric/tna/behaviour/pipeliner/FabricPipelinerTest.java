@@ -70,11 +70,12 @@ public class FabricPipelinerTest {
     private GroupService groupService;
     private FabricCapabilities capabilities;
 
-    @Before
-    public void setup() throws IOException {
+
+    private void setup(boolean isBmv2) throws IOException {
+        // Common setup between TNA and bmv2
         capabilities = createMock(FabricCapabilities.class);
         expect(capabilities.cpuPort()).andReturn(Optional.of(CPU_PORT)).anyTimes();
-        expect(capabilities.isBmv2()).andReturn(false).anyTimes();
+        expect(capabilities.isBmv2()).andReturn(isBmv2).anyTimes();
         replay(capabilities);
 
         // Services mock
@@ -219,23 +220,25 @@ public class FabricPipelinerTest {
         groupService.addGroup(capture(capturedCloneGroup));
         expectLastCall().once();
 
-        RECIRC_PORTS.forEach(port -> {
-            expectedIgPortVlanRules.add(buildIngressVlanRule(port));
-            expectedEgVlanRules.add(buildEgressVlanRule(port));
-            expectedFwdClsIpRules.add(
-                    buildFwdClsRule(port, null, Ethernet.TYPE_IPV4, FWD_IPV4_ROUTING, DEFAULT_FLOW_PRIORITY));
-            expectedFwdClsMplsRules.add(
-                    buildFwdClsRule(port,
-                                    Ethernet.MPLS_UNICAST,
-                                    Ethernet.TYPE_IPV4,
-                                    FWD_MPLS,
-                                    DEFAULT_FLOW_PRIORITY + 10));
-            flowRuleService.applyFlowRules(
-                    capture(capturedIgPortVlanRule),
-                    capture(capturedEgVlanRule),
-                    capture(capturedFwdClsIpRules),
-                    capture(capturedFwdClsMplsRules));
-        });
+        if (!capabilities.isBmv2()) {
+            RECIRC_PORTS.forEach(port -> {
+                expectedIgPortVlanRules.add(buildIngressVlanRule(port));
+                expectedEgVlanRules.add(buildEgressVlanRule(port));
+                expectedFwdClsIpRules.add(
+                        buildFwdClsRule(port, null, Ethernet.TYPE_IPV4, FWD_IPV4_ROUTING, DEFAULT_FLOW_PRIORITY));
+                expectedFwdClsMplsRules.add(
+                        buildFwdClsRule(port,
+                                        Ethernet.MPLS_UNICAST,
+                                        Ethernet.TYPE_IPV4,
+                                        FWD_MPLS,
+                                        DEFAULT_FLOW_PRIORITY + 10));
+                flowRuleService.applyFlowRules(
+                        capture(capturedIgPortVlanRule),
+                        capture(capturedEgVlanRule),
+                        capture(capturedFwdClsIpRules),
+                        capture(capturedFwdClsMplsRules));
+            });
+        }
 
         replay(flowRuleService);
         replay(groupService);
@@ -246,20 +249,22 @@ public class FabricPipelinerTest {
         assertTrue(expectedCpuFwdClsRule.exactMatch(capturedCpuFwdClsRule.getValue()));
         assertEquals(expectedPacketInCloneGroup, capturedCloneGroup.getValue());
 
-        for (int i = 0; i < RECIRC_PORTS.size(); i++) {
-            FlowRule expectIgPortVlanRule = expectedIgPortVlanRules.get(i);
-            FlowRule actualIgPortVlanRule = capturedIgPortVlanRule.getValues().get(i);
-            FlowRule expectEgVlanRule = expectedEgVlanRules.get(i);
-            FlowRule actualEgVlanRule = capturedEgVlanRule.getValues().get(i);
-            FlowRule expectedFwdClsIpRule = expectedFwdClsIpRules.get(i);
-            FlowRule actualFwdClsIpRule = capturedFwdClsIpRules.getValues().get(i);
-            FlowRule expectedFwdClsMplsRule = expectedFwdClsMplsRules.get(i);
-            FlowRule actualFwdClsMplsRule = capturedFwdClsMplsRules.getValues().get(i);
-            assertTrue(expectIgPortVlanRule.exactMatch(actualIgPortVlanRule));
-            assertEquals(expectEgVlanRule, actualEgVlanRule);
-            assertTrue(expectEgVlanRule.exactMatch(actualEgVlanRule));
-            assertTrue(expectedFwdClsIpRule.exactMatch(actualFwdClsIpRule));
-            assertTrue(expectedFwdClsMplsRule.exactMatch(actualFwdClsMplsRule));
+        if (!capabilities.isBmv2()) {
+            for (int i = 0; i < RECIRC_PORTS.size(); i++) {
+                FlowRule expectIgPortVlanRule = expectedIgPortVlanRules.get(i);
+                FlowRule actualIgPortVlanRule = capturedIgPortVlanRule.getValues().get(i);
+                FlowRule expectEgVlanRule = expectedEgVlanRules.get(i);
+                FlowRule actualEgVlanRule = capturedEgVlanRule.getValues().get(i);
+                FlowRule expectedFwdClsIpRule = expectedFwdClsIpRules.get(i);
+                FlowRule actualFwdClsIpRule = capturedFwdClsIpRules.getValues().get(i);
+                FlowRule expectedFwdClsMplsRule = expectedFwdClsMplsRules.get(i);
+                FlowRule actualFwdClsMplsRule = capturedFwdClsMplsRules.getValues().get(i);
+                assertTrue(expectIgPortVlanRule.exactMatch(actualIgPortVlanRule));
+                assertEquals(expectEgVlanRule, actualEgVlanRule);
+                assertTrue(expectEgVlanRule.exactMatch(actualEgVlanRule));
+                assertTrue(expectedFwdClsIpRule.exactMatch(actualFwdClsIpRule));
+                assertTrue(expectedFwdClsMplsRule.exactMatch(actualFwdClsMplsRule));
+            }
         }
 
         verify(flowRuleService);
@@ -268,16 +273,23 @@ public class FabricPipelinerTest {
 
     @Test
     public void testBmv2InitializePipeline() {
-        //FIXME find a better way to test also for bmv2.
-        capabilities = createMock(FabricCapabilities.class);
-        expect(capabilities.isBmv2()).andReturn(true).anyTimes();
-        replay(capabilities);
+        try {
+            setup(true);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
         // Using same pipeline initializer structure defined for TNA.
         commonTestInitializePipeline();
     }
 
     @Test
     public void testTofinoInitializePipeline() {
+        try {
+            setup(false);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         commonTestInitializePipeline();
     }
 
