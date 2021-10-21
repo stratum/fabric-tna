@@ -1,7 +1,7 @@
 # Copyright 2021-present Open Networking Foundation
 # SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0 AND Apache-2.0
 
-from base_test import autocleanup, stringify, tvsetup
+from base_test import autocleanup, stringify, tvsetup, is_bmv2
 from fabric_test import *  # noqa
 from p4.v1 import p4runtime_pb2
 from scapy.contrib.gtp import GTP_U_Header
@@ -45,12 +45,20 @@ class StatsIPv4UnicastTest(StatsTest, IPv4UnicastTest):
             **ftuple
         )
         self.runIPv4UnicastTest(**kwargs)
-        expected_ingress_bytes = len(pkt) + ETH_FCS_BYTES
+        if is_bmv2():
+            # bmv2 does not count FCS bytes because it uses software interfaces ('veth').
+            expected_ingress_bytes = len(pkt)
+        else:
+            expected_ingress_bytes = len(pkt) + ETH_FCS_BYTES
         if kwargs["tagged1"]:
             expected_ingress_bytes += VLAN_BYTES
         if self.loopback:
             expected_ingress_bytes += CPU_LOOPBACK_FAKE_ETH_BYTES
-        expected_egress_bytes = expected_ingress_bytes + BMD_BYTES
+        if is_bmv2():
+            # Do not count bridged metadata for bmv2.
+            expected_egress_bytes = expected_ingress_bytes
+        else:
+            expected_egress_bytes = expected_ingress_bytes + BMD_BYTES
 
         self.verify_stats_counter(
             gress=STATS_INGRESS,

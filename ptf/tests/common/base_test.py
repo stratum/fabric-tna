@@ -38,10 +38,14 @@ from scapy.layers.l2 import Ether
 # https://github.com/stratum/testvectors/tree/master/utils/python
 from testvector import tvutils
 
-
 # Convert integer (with length) to binary byte string
 def stringify(n, length):
     return n.to_bytes(length, byteorder="big")
+
+def is_bmv2():
+    # using parameter 'pltfm' to get information if running for bmv2.
+    _is_bmv2 = testutils.test_param_get("pltfm")
+    return _is_bmv2 == "bmv2"
 
 
 def ipv4_to_binary(addr):
@@ -86,6 +90,43 @@ def format_exp_rcv(expected, received):
     buf += str(received)
     buf += "=============================="
     return buf
+
+
+def get_controller_packet_metadata(p4info, meta_type, name):
+    """
+    This method retrieves the controller metadata from a p4info file.
+    :param p4info: The p4info file
+    :param meta_type: The type of metadata (e.g. packet_in)
+    :param name: The name of the metadata to retrieve (e.g. bitwidth)
+    :return: The controller metadata.
+    """
+    for t in p4info.controller_packet_metadata:
+        pre = t.preamble
+        if pre.name == meta_type:
+            for m in t.metadata:
+                if name is not None:
+                    if m.name == name:
+                        return m
+
+
+def de_canonicalize_bytes(bitwidth: int, input: bytes):
+    """
+    This method adds a padding to the 'input' param.
+    Needed for bmv2 since it uses Canonical Bytestrings: this representation
+    trims the data to the lowest amount of bytes needed for that particular value
+    (e.g. 0x0 for PacketIn.ingress_port will be interpreted by Stratum bmv2 using 1 byte, instead of 9 bits,
+    as declared in header.p4)
+    :param bitwidth: the desired size of input.
+    :param input: the byte string to be padded.
+    :return: padded input with bytes such that: len(bin(input)) >= bitwidth.
+    """
+    if bitwidth <= 0:
+        raise ValueError("bitwidth must be a positive integer.")
+    if input is None :
+        raise ValueError("input cannot be of NoneType.")
+
+    byte_width = (bitwidth +7) // 8 # use integer division to avoid floating point rounding errors.
+    return input.rjust(byte_width, b'\0') # right padding <-> BigEndian
 
 
 # Used to indicate that the gRPC error Status object returned by the server has
@@ -322,6 +363,11 @@ class P4RuntimeTest(BaseTest):
         else:
             pkt_in_msg = self.get_packet_in(timeout=timeout)
             rx_in_port_ = pkt_in_msg.metadata[0].value
+            if is_bmv2():
+                pkt_in_metadata = get_controller_packet_metadata(self.p4info, meta_type='packet_in', name='ingress_port')
+                pkt_in_ig_port_bitwidth = pkt_in_metadata.bitwidth
+                rx_in_port_ = de_canonicalize_bytes(pkt_in_ig_port_bitwidth, rx_in_port_)
+
             if in_port_ != rx_in_port_:
                 rx_inport = struct.unpack("!h", rx_in_port_)[0]
                 self.fail(

@@ -47,20 +47,6 @@ typedef bit<SLICE_ID_WIDTH> slice_id_t;
 typedef bit<TC_WIDTH> tc_t; // Traffic Class (for QoS) whitin a slice
 typedef bit<SLICE_TC_WIDTH> slice_tc_t; // Slice and TC identifier
 
-
-#ifdef V1MODEL
-// Start definitions from TNA (For Bmv2).
-// The following typedefs are being defined
-// to use the same names between the TNA and v1model versions.
-// Reference to tofino.p4:
-//  https://github.com/barefootnetworks/Open-Tofino/blob/master/share/p4c/p4include/tofino.p4
-typedef bit<9>  PortId_t;           // Port id
-typedef bit<16> MulticastGroupId_t; // Multicast group id
-typedef bit<5>  QueueId_t;          // Queue id
-typedef bit<10> MirrorId_t;         // Mirror session id
-typedef bit<16> ReplicationId_t;    // Replication id
-#endif
-
 const slice_id_t DEFAULT_SLICE_ID = 0;
 const tc_t DEFAULT_TC = 0;
 // Check Stratum's chassis_config for other queue IDs.
@@ -181,7 +167,7 @@ enum bit<3> FabricMirrorType_t {
     PACKET_IN = 2
 }
 
-const MirrorId_t PACKET_IN_MIRROR_SESSION_ID = 0x210;
+const MirrorId_t PACKET_IN_MIRROR_SESSION_ID = 0x1FF;
 
 // Modes for CPU loopback testing, where a process can inject packets through
 // the CPU port (P4RT packet-out) and expect the same to be delivered back to
