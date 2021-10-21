@@ -225,7 +225,11 @@ public class FabricPipelinerTest {
             expectedFwdClsIpRules.add(
                     buildFwdClsRule(port, null, Ethernet.TYPE_IPV4, FWD_IPV4_ROUTING, DEFAULT_FLOW_PRIORITY));
             expectedFwdClsMplsRules.add(
-                    buildFwdClsRule(port, Ethernet.MPLS_UNICAST, Ethernet.TYPE_IPV4, FWD_MPLS, DEFAULT_FLOW_PRIORITY + 10));
+                    buildFwdClsRule(port,
+                                    Ethernet.MPLS_UNICAST,
+                                    Ethernet.TYPE_IPV4,
+                                    FWD_MPLS,
+                                    DEFAULT_FLOW_PRIORITY + 10));
             flowRuleService.applyFlowRules(
                     capture(capturedIgPortVlanRule),
                     capture(capturedEgVlanRule),
@@ -263,11 +267,12 @@ public class FabricPipelinerTest {
     }
 
     @Test
-    public void testBmv2InitializePipeline(){ //FIXME find a better way to test also for bmv2.
+    public void testBmv2InitializePipeline() {
+        //FIXME find a better way to test also for bmv2.
         capabilities = createMock(FabricCapabilities.class);
         expect(capabilities.isBmv2()).andReturn(true).anyTimes();
         replay(capabilities);
-        commonTestInitializePipeline(); // Using same structure defined for TNA. Does it make sense?
+        commonTestInitializePipeline();
     }
 
     @Test
