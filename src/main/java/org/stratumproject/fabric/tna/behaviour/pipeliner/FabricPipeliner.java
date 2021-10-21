@@ -211,17 +211,19 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
 
         // Set up recirculation ports as untagged (used for INT reports and
         // UE-to-UE in SPGW pipe).
-        RECIRC_PORTS.forEach(port -> {
-            flowRuleService.applyFlowRules(
-                    ingressVlanRule(port, false, DEFAULT_VLAN, PORT_TYPE_INTERNAL),
-                    egressVlanRule(port, DEFAULT_VLAN, false),
-                    fwdClassifierRule(port, null, Ethernet.TYPE_IPV4, FWD_IPV4_ROUTING,
-                            DEFAULT_FLOW_PRIORITY),
-                    // Use higher priority for MPLS rule since the one for IPv4
-                    // matches all IPv4 traffic independently of the eth_type.
-                    fwdClassifierRule(port, Ethernet.MPLS_UNICAST, Ethernet.TYPE_IPV4, FWD_MPLS,
-                            DEFAULT_FLOW_PRIORITY + 10));
-        });
+        if (!capabilities.isBmv2()) {
+            RECIRC_PORTS.forEach(port -> {
+                flowRuleService.applyFlowRules(
+                        ingressVlanRule(port, false, DEFAULT_VLAN, PORT_TYPE_INTERNAL),
+                        egressVlanRule(port, DEFAULT_VLAN, false),
+                        fwdClassifierRule(port, null, Ethernet.TYPE_IPV4, FWD_IPV4_ROUTING,
+                                          DEFAULT_FLOW_PRIORITY),
+                        // Use higher priority for MPLS rule since the one for IPv4
+                        // matches all IPv4 traffic independently of the eth_type.
+                        fwdClassifierRule(port, Ethernet.MPLS_UNICAST, Ethernet.TYPE_IPV4, FWD_MPLS,
+                                          DEFAULT_FLOW_PRIORITY + 10));
+            });
+        }
         // TODO: slicing.p4 DSCP tables for PORT_TYPE_INTERNAL
         //  PORT_TYPE_INTERNAL includes packet-outs that's part of the SYSTEM TC
         //  and should be directed to the System Queue (SDFAB-520), and recirculation
