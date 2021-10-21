@@ -51,28 +51,30 @@ import static org.junit.Assert.assertTrue;
 import static org.onosproject.net.group.DefaultGroupBucket.createCloneGroupBucket;
 import static org.stratumproject.fabric.tna.behaviour.Constants.PORT_TYPE_INTERNAL;
 import static org.stratumproject.fabric.tna.behaviour.Constants.ZERO;
+import static org.stratumproject.fabric.tna.behaviour.Constants.RECIRC_PORTS;
+import static org.stratumproject.fabric.tna.behaviour.Constants.PKT_IN_MIRROR_SESSION_ID;
+import static org.stratumproject.fabric.tna.behaviour.Constants.DEFAULT_VLAN;
+import static org.stratumproject.fabric.tna.behaviour.Constants.FWD_MPLS;
+import static org.stratumproject.fabric.tna.behaviour.Constants.FWD_IPV4_ROUTING;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.KRYO;
 
 public class FabricPipelinerTest {
 
     private static final ApplicationId APP_ID = TestApplicationId.create("FabricPipelinerTest");
     private static final DeviceId DEVICE_ID = DeviceId.deviceId("device:1");
-    private static final List<Integer> RECIRC_PORTS = List.of(0x44, 0xc4, 0x144, 0x1c4);
     private static final int DEFAULT_FLOW_PRIORITY = 100;
     private static final int CPU_PORT = 320;
-    private static final byte FWD_MPLS = 1;
-    private static final byte FWD_IPV4_ROUTING = 2;
-    private static final int DEFAULT_VLAN = 4094;
-    private static final int PKT_IN_MIRROR_SESSION_ID = 0x210;
 
     private FabricPipeliner pipeliner;
     private FlowRuleService flowRuleService;
     private GroupService groupService;
+    private FabricCapabilities capabilities;
 
     @Before
     public void setup() throws IOException {
-        FabricCapabilities capabilities = createMock(FabricCapabilities.class);
+        capabilities = createMock(FabricCapabilities.class);
         expect(capabilities.cpuPort()).andReturn(Optional.of(CPU_PORT)).anyTimes();
+        expect(capabilities.isBmv2()).andReturn(false).anyTimes();
         replay(capabilities);
 
         // Services mock
@@ -189,8 +191,7 @@ public class FabricPipelinerTest {
                     PKT_IN_MIRROR_SESSION_ID, APP_ID);
     }
 
-    @Test
-    public void testInitializePipeline() {
+    private void commonTestInitializePipeline() {
         final Capture<FlowRule> capturedSwitchInfoRule = newCapture(CaptureType.ALL);
         final Capture<FlowRule> capturedCpuIgVlanRule = newCapture(CaptureType.ALL);
         final Capture<FlowRule> capturedCpuFwdClsRule = newCapture(CaptureType.ALL);
@@ -222,9 +223,13 @@ public class FabricPipelinerTest {
             expectedIgPortVlanRules.add(buildIngressVlanRule(port));
             expectedEgVlanRules.add(buildEgressVlanRule(port));
             expectedFwdClsIpRules.add(
-                buildFwdClsRule(port, null, Ethernet.TYPE_IPV4, FWD_IPV4_ROUTING, DEFAULT_FLOW_PRIORITY));
+                    buildFwdClsRule(port, null, Ethernet.TYPE_IPV4, FWD_IPV4_ROUTING, DEFAULT_FLOW_PRIORITY));
             expectedFwdClsMplsRules.add(
-                buildFwdClsRule(port, Ethernet.MPLS_UNICAST, Ethernet.TYPE_IPV4, FWD_MPLS, DEFAULT_FLOW_PRIORITY + 10));
+                    buildFwdClsRule(port,
+                                    Ethernet.MPLS_UNICAST,
+                                    Ethernet.TYPE_IPV4,
+                                    FWD_MPLS,
+                                    DEFAULT_FLOW_PRIORITY + 10));
             flowRuleService.applyFlowRules(
                     capture(capturedIgPortVlanRule),
                     capture(capturedEgVlanRule),
@@ -260,4 +265,20 @@ public class FabricPipelinerTest {
         verify(flowRuleService);
         reset(flowRuleService);
     }
+
+    @Test
+    public void testBmv2InitializePipeline() {
+        //FIXME find a better way to test also for bmv2.
+        capabilities = createMock(FabricCapabilities.class);
+        expect(capabilities.isBmv2()).andReturn(true).anyTimes();
+        replay(capabilities);
+        // Using same pipeline initializer structure defined for TNA.
+        commonTestInitializePipeline();
+    }
+
+    @Test
+    public void testTofinoInitializePipeline() {
+        commonTestInitializePipeline();
+    }
+
 }

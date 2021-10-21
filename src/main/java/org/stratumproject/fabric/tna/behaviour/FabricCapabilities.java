@@ -24,6 +24,7 @@ public class FabricCapabilities {
 
     private static final String MAVERICKS = "mavericks";
     private static final String MONTARA = "montara";
+    private static final String BMV2 = "bmv2";
 
     private final Logger log = getLogger(getClass());
 
@@ -52,6 +53,10 @@ public class FabricCapabilities {
     public boolean hasHashedTable() {
         return pipeconf.pipelineModel()
                 .table(P4InfoConstants.FABRIC_INGRESS_NEXT_HASHED).isPresent();
+    }
+
+    public boolean isBmv2() {
+        return pipeconf.id().toString().toLowerCase().contains(BMV2);
     }
 
     public Optional<Integer> cpuPort() {

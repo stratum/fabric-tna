@@ -64,6 +64,10 @@ public final class Constants {
     public static final int COLOR_YELLOW = 1;
     public static final int COLOR_RED = 3;
 
+    // bmv2 Meter Colors
+    // see: https://github.com/p4lang/p4c/blob/main/p4include/v1model.p4
+    public static final int BMV2_COLOR_RED = 2;
+
     // Bitwidths (not present in P4InfoConstants)
     public static final int SLICE_ID_BITWIDTH = 4;
     public static final int TC_BITWIDTH = 2;
