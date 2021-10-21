@@ -68,11 +68,13 @@ public class FabricPipelinerTest {
     private FabricPipeliner pipeliner;
     private FlowRuleService flowRuleService;
     private GroupService groupService;
+    private FabricCapabilities capabilities;
 
     @Before
     public void setup() throws IOException {
-        FabricCapabilities capabilities = createMock(FabricCapabilities.class);
+        capabilities = createMock(FabricCapabilities.class);
         expect(capabilities.cpuPort()).andReturn(Optional.of(CPU_PORT)).anyTimes();
+        expect(capabilities.isBmv2()).andReturn(false).anyTimes();
         replay(capabilities);
 
         // Services mock
@@ -189,8 +191,7 @@ public class FabricPipelinerTest {
                     PKT_IN_MIRROR_SESSION_ID, APP_ID);
     }
 
-    @Test
-    public void testInitializePipeline() {
+    private void commonTestInitializePipeline() {
         final Capture<FlowRule> capturedSwitchInfoRule = newCapture(CaptureType.ALL);
         final Capture<FlowRule> capturedCpuIgVlanRule = newCapture(CaptureType.ALL);
         final Capture<FlowRule> capturedCpuFwdClsRule = newCapture(CaptureType.ALL);
@@ -222,9 +223,9 @@ public class FabricPipelinerTest {
             expectedIgPortVlanRules.add(buildIngressVlanRule(port));
             expectedEgVlanRules.add(buildEgressVlanRule(port));
             expectedFwdClsIpRules.add(
-                buildFwdClsRule(port, null, Ethernet.TYPE_IPV4, FWD_IPV4_ROUTING, DEFAULT_FLOW_PRIORITY));
+                    buildFwdClsRule(port, null, Ethernet.TYPE_IPV4, FWD_IPV4_ROUTING, DEFAULT_FLOW_PRIORITY));
             expectedFwdClsMplsRules.add(
-                buildFwdClsRule(port, Ethernet.MPLS_UNICAST, Ethernet.TYPE_IPV4, FWD_MPLS, DEFAULT_FLOW_PRIORITY + 10));
+                    buildFwdClsRule(port, Ethernet.MPLS_UNICAST, Ethernet.TYPE_IPV4, FWD_MPLS, DEFAULT_FLOW_PRIORITY + 10));
             flowRuleService.applyFlowRules(
                     capture(capturedIgPortVlanRule),
                     capture(capturedEgVlanRule),
@@ -260,4 +261,18 @@ public class FabricPipelinerTest {
         verify(flowRuleService);
         reset(flowRuleService);
     }
+
+    @Test
+    public void testBmv2InitializePipeline(){ //FIXME find a better way to test also for bmv2.
+        capabilities = createMock(FabricCapabilities.class);
+        expect(capabilities.isBmv2()).andReturn(true).anyTimes();
+        replay(capabilities);
+        commonTestInitializePipeline(); // Using same structure defined for TNA. Does it make sense?
+    }
+
+    @Test
+    public void testTofinoInitializePipeline() {
+        commonTestInitializePipeline();
+    }
+
 }
