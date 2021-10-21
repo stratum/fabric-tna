@@ -179,7 +179,7 @@ class IntIngressDropReportFilterWithTrafficTrace(TRexTest, IntTest):
         - Packet loss: Ensure 100% packet drop
         - Accuracy score: Ensure INT accuracy is above a certain threshold
         - Efficiency score: Ensure INT efficiency is above a certain threshold
-        - Drop reason: All drop reports were dropped because of the ACL
+        - Drop reason: All packets were dropped because of the installed ACL rule
         """
         self.failIf(
             recv_packets > 0, f"ACL did not drop all packets, received {recv_packets}",
@@ -286,7 +286,7 @@ class IntEgressDropReportFilterWithTrafficTrace(TRexTest, IntTest):
         - Packet loss: Ensure 100% packet drop
         - Accuracy score: Ensure INT accuracy is above a certain threshold
         - Efficiency score: Ensure INT efficiency is above a certain threshold
-        - Drop reason: All drop reports were dropped in egress pipeline
+        - Drop reason: All packets were dropped because they did not hit the egress VLAN table
         """
         self.failIf(
             recv_packets > 0, f"Egress VLAN table did not drop all packets, received {recv_packets}",
