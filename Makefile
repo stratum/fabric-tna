@@ -26,7 +26,7 @@ ONOS_URL ?= http://$(ONOS_HOST):8181/onos
 ONOS_CURL := curl --fail -sSL --user onos:rocks --noproxy localhost
 
 PIPECONF_APP_NAME := org.stratumproject.fabric-tna
-PIPECONF_OAR_FILE := $(DIR)/target/fabric-tna-1.0.0-SNAPSHOT.oar
+PIPECONF_OAR_FILE := $(DIR)/target/fabric-tna-1.1.0-SNAPSHOT.oar
 
 # Profiles to build by default (all)
 PROFILES ?= fabric fabric-spgw fabric-int fabric-spgw-int
