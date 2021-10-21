@@ -10,7 +10,7 @@ import struct
 import time
 
 import xnt
-from base_test import P4RuntimeTest, ipv4_to_binary, mac_to_binary, stringify, tvcreate
+from base_test import P4RuntimeTest, ipv4_to_binary, is_bmv2, mac_to_binary, stringify, tvcreate
 from bmd_bytes import BMD_BYTES
 from p4.v1 import p4runtime_pb2
 from ptf import testutils
@@ -58,8 +58,6 @@ FORWARDING_TYPE_IPV4_MULTICAST = 3
 FORWARDING_TYPE_IPV6_UNICAST = 4
 FORWARDING_TYPE_IPV6_MULTICAST = 5
 FORWARDING_TYPE_UNKNOWN = 7
-
-CPU_CLONE_SESSION_ID = 511
 
 DEFAULT_MPLS_TTL = 64
 MIN_PKT_LEN = 80
@@ -192,7 +190,7 @@ INT_INS_TO_NAME = {
     INT_EG_PORT_TX: "eg_port_tx",
 }
 
-PACKET_IN_MIRROR_ID = 0x210
+PACKET_IN_MIRROR_ID = 0x1FF
 INT_REPORT_MIRROR_IDS = [0x200, 0x201, 0x202, 0x203]
 RECIRCULATE_PORTS = [68, 196, 324, 452]
 SWITCH_ID = 1
@@ -284,6 +282,7 @@ DEST_OPTIONS = ["host", "leaf", "spine"]
 
 COLOR_GREEN = 0
 COLOR_YELLOW = 1
+BMV2_COLOR_RED = 2
 COLOR_RED = 3
 
 STATS_INGRESS = "Ingress"
@@ -4371,7 +4370,7 @@ class PppoeTest(DoubleVlanTerminationTest):
         )
 
         # Verify that upstream counters were updated as expected.
-        if not self.is_bmv2():
+        if not is_bmv2():
             time.sleep(1)
         new_terminated = self.read_byte_count_upstream("terminated", line_id)
         new_dropped = self.read_byte_count_upstream("dropped", line_id)
@@ -4413,7 +4412,7 @@ class PppoeTest(DoubleVlanTerminationTest):
         self.verify_packet_in(pppoed_pkt, self.port1)
         self.verify_no_other_packets()
 
-        if not self.is_bmv2():
+        if not is_bmv2():
             time.sleep(1)
         new_terminated = self.read_byte_count_upstream("terminated", line_id)
         new_dropped = self.read_byte_count_upstream("dropped", line_id)
@@ -4481,7 +4480,7 @@ class PppoeTest(DoubleVlanTerminationTest):
             verify_pkt=line_enabled,
         )
 
-        if not self.is_bmv2():
+        if not is_bmv2():
             time.sleep(1)
         new_rx_count = self.read_byte_count_downstream_rx(line_id)
         new_tx_count = self.read_byte_count_downstream_tx(line_id)
