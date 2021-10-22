@@ -50,6 +50,8 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_ING
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_LOAD_NORMAL_FAR;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_LOAD_PDR;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_LOAD_PDR_DECAP;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_LOAD_PDR_DECAP_QOS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_LOAD_PDR_QOS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_LOAD_TUNNEL_FAR;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_RECIRC_ALLOW;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_RECIRC_DENY;
@@ -86,7 +88,7 @@ public class FabricUpfTranslator {
             //  specifying a QFI in PDRs. We do this to maintain backward
             //  compatibility with PFCP Agent, but eventually all PDRs will have
             //  a QFI.
-            // (byte) 0, TC_BEST_EFFORT, --> Used for PDRs without QFI
+            (byte) 0, TC_BEST_EFFORT,
             (byte) 1, TC_CONTROL,
             (byte) 2, TC_REAL_TIME,
             (byte) 3, TC_ELASTIC);
@@ -355,18 +357,14 @@ public class FabricUpfTranslator {
                         new PiActionParam(CTR_ID, pdr.counterId()),
                         new PiActionParam(FAR_ID, fabricUpfStore.globalFarIdOf(pdr.sessionId(), pdr.farId()))));
 
-        final int tc;
         if (pdr.hasQfi()) {
             if (!QFI_TO_TC.containsKey(pdr.qfi())) {
                 throw new UpfProgrammableException(format(
                         "QFI value '%d' not supported, unable to map to TC", pdr.qfi()));
             }
-            tc = QFI_TO_TC.get(pdr.qfi());
-        } else {
-            // FIXME: allow explicit QFI mapping to Best-Effort
-            tc = TC_BEST_EFFORT;
+            actionBuilder.withParameter(new PiActionParam(TC, QFI_TO_TC.get(pdr.qfi())));
         }
-        actionBuilder.withParameter(new PiActionParam(TC, tc));
+        // If no QFI, then fall back to use the default TC
 
         if (pdr.matchesEncapped()) {
             match = PiCriterion.builder()
@@ -374,13 +372,17 @@ public class FabricUpfTranslator {
                     .matchExact(HDR_TUNNEL_IPV4_DST, pdr.tunnelDest().toInt())
                     .build();
             tableId = FABRIC_INGRESS_SPGW_UPLINK_PDRS;
-            actionBuilder.withId(FABRIC_INGRESS_SPGW_LOAD_PDR_DECAP);
+            actionBuilder.withId(pdr.hasQfi() ?
+                                         FABRIC_INGRESS_SPGW_LOAD_PDR_DECAP_QOS :
+                                         FABRIC_INGRESS_SPGW_LOAD_PDR_DECAP);
         } else if (pdr.matchesUnencapped()) {
             match = PiCriterion.builder()
                     .matchExact(HDR_UE_ADDR, pdr.ueAddress().toInt())
                     .build();
             tableId = FABRIC_INGRESS_SPGW_DOWNLINK_PDRS;
-            actionBuilder.withId(FABRIC_INGRESS_SPGW_LOAD_PDR);
+            actionBuilder.withId(pdr.hasQfi() ?
+                                         FABRIC_INGRESS_SPGW_LOAD_PDR_QOS :
+                                         FABRIC_INGRESS_SPGW_LOAD_PDR);
         } else {
             throw new UpfProgrammableException("Flexible PDRs not yet supported! Cannot translate " + pdr);
         }

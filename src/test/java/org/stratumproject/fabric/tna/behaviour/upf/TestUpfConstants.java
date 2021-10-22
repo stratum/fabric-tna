@@ -33,6 +33,8 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_ING
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_LOAD_NORMAL_FAR;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_LOAD_PDR;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_LOAD_PDR_DECAP;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_LOAD_PDR_DECAP_QOS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_LOAD_PDR_QOS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_LOAD_TUNNEL_FAR;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_PDRS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FAR_ID;
@@ -154,8 +156,7 @@ public final class TestUpfConstants {
                                                           .withId(FABRIC_INGRESS_SPGW_LOAD_PDR_DECAP)
                                                           .withParameters(Arrays.asList(
                                                                   new PiActionParam(CTR_ID, UPLINK_COUNTER_CELL_ID),
-                                                                  new PiActionParam(FAR_ID, UPLINK_PHYSICAL_FAR_ID),
-                                                                  new PiActionParam(TC, TC_BEST_EFFORT)
+                                                                  new PiActionParam(FAR_ID, UPLINK_PHYSICAL_FAR_ID)
                                                           ))
                                                           .build()).build())
             .withPriority(DEFAULT_PRIORITY)
@@ -172,7 +173,7 @@ public final class TestUpfConstants {
             .withTreatment(DefaultTrafficTreatment.builder()
                                    .piTableAction(
                                            PiAction.builder()
-                                                   .withId(FABRIC_INGRESS_SPGW_LOAD_PDR_DECAP)
+                                                   .withId(FABRIC_INGRESS_SPGW_LOAD_PDR_DECAP_QOS)
                                                    .withParameters(Arrays.asList(
                                                            new PiActionParam(CTR_ID, UPLINK_COUNTER_CELL_ID),
                                                            new PiActionParam(FAR_ID, UPLINK_PHYSICAL_FAR_ID),
@@ -195,8 +196,7 @@ public final class TestUpfConstants {
                                                           .withId(FABRIC_INGRESS_SPGW_LOAD_PDR)
                                                           .withParameters(Arrays.asList(
                                                                   new PiActionParam(CTR_ID, DOWNLINK_COUNTER_CELL_ID),
-                                                                  new PiActionParam(FAR_ID, DOWNLINK_PHYSICAL_FAR_ID),
-                                                                  new PiActionParam(TC, TC_BEST_EFFORT)
+                                                                  new PiActionParam(FAR_ID, DOWNLINK_PHYSICAL_FAR_ID)
                                                           ))
                                                           .build()).build())
             .withPriority(DEFAULT_PRIORITY)
@@ -212,7 +212,7 @@ public final class TestUpfConstants {
             .withTreatment(DefaultTrafficTreatment.builder()
                                    .piTableAction(
                                            PiAction.builder()
-                                                   .withId(FABRIC_INGRESS_SPGW_LOAD_PDR)
+                                                   .withId(FABRIC_INGRESS_SPGW_LOAD_PDR_QOS)
                                                    .withParameters(Arrays.asList(
                                                            new PiActionParam(CTR_ID, DOWNLINK_COUNTER_CELL_ID),
                                                            new PiActionParam(FAR_ID, DOWNLINK_PHYSICAL_FAR_ID),

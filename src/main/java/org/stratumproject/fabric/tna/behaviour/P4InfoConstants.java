@@ -169,6 +169,8 @@ public final class P4InfoConstants {
             PiTableId.of("FabricIngress.pre_next.next_mpls");
     public static final PiTableId FABRIC_INGRESS_PRE_NEXT_NEXT_VLAN =
             PiTableId.of("FabricIngress.pre_next.next_vlan");
+    public static final PiTableId FABRIC_INGRESS_QOS_DEFAULT_TC =
+            PiTableId.of("FabricIngress.qos.default_tc");
     public static final PiTableId FABRIC_INGRESS_QOS_QUEUES =
             PiTableId.of("FabricIngress.qos.queues");
     public static final PiTableId FABRIC_INGRESS_SLICE_TC_CLASSIFIER_CLASSIFIER =
@@ -310,10 +312,10 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.pre_next.set_vlan");
     public static final PiActionId FABRIC_INGRESS_QOS_METER_DROP =
             PiActionId.of("FabricIngress.qos.meter_drop");
+    public static final PiActionId FABRIC_INGRESS_QOS_SET_DEFAULT_TC =
+            PiActionId.of("FabricIngress.qos.set_default_tc");
     public static final PiActionId FABRIC_INGRESS_QOS_SET_QUEUE =
             PiActionId.of("FabricIngress.qos.set_queue");
-    public static final PiActionId FABRIC_INGRESS_QOS_SET_QUEUE_AND_OVERRIDE_TC =
-            PiActionId.of("FabricIngress.qos.set_queue_and_override_tc");
     public static final PiActionId FABRIC_INGRESS_SLICE_TC_CLASSIFIER_NO_CLASSIFICATION =
             PiActionId.of("FabricIngress.slice_tc_classifier.no_classification");
     public static final PiActionId FABRIC_INGRESS_SLICE_TC_CLASSIFIER_SET_SLICE_ID_TC =
@@ -340,6 +342,10 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.spgw.load_pdr");
     public static final PiActionId FABRIC_INGRESS_SPGW_LOAD_PDR_DECAP =
             PiActionId.of("FabricIngress.spgw.load_pdr_decap");
+    public static final PiActionId FABRIC_INGRESS_SPGW_LOAD_PDR_DECAP_QOS =
+            PiActionId.of("FabricIngress.spgw.load_pdr_decap_qos");
+    public static final PiActionId FABRIC_INGRESS_SPGW_LOAD_PDR_QOS =
+            PiActionId.of("FabricIngress.spgw.load_pdr_qos");
     public static final PiActionId FABRIC_INGRESS_SPGW_LOAD_TUNNEL_FAR =
             PiActionId.of("FabricIngress.spgw.load_tunnel_far");
     public static final PiActionId FABRIC_INGRESS_SPGW_RECIRC_ALLOW =
