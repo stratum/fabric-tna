@@ -23,7 +23,13 @@ control IngressSliceTcClassifier (in    ingress_headers_t hdr,
     action set_slice_id_tc(slice_id_t slice_id, tc_t tc) {
         fabric_md.slice_id = slice_id;
         fabric_md.tc = tc;
+        fabric_md.tc_unknown = false;
         classifier_stats.count();
+    }
+
+    action no_classification() {
+        set_slice_id_tc(DEFAULT_SLICE_ID, DEFAULT_TC);
+        fabric_md.tc_unknown = true;
     }
 
     // Should be used only for infrastructure ports (leaf-leaf, or leaf-spine),
@@ -32,6 +38,7 @@ control IngressSliceTcClassifier (in    ingress_headers_t hdr,
     action trust_dscp() {
         fabric_md.slice_id = hdr.ipv4.dscp[SLICE_ID_WIDTH+TC_WIDTH-1:TC_WIDTH];
         fabric_md.tc = hdr.ipv4.dscp[TC_WIDTH-1:0];
+        fabric_md.tc_unknown = false;
         classifier_stats.count();
     }
 
@@ -47,8 +54,9 @@ control IngressSliceTcClassifier (in    ingress_headers_t hdr,
         actions = {
             set_slice_id_tc;
             trust_dscp;
+            @defaultonly no_classification;
         }
-        const default_action = set_slice_id_tc(DEFAULT_SLICE_ID, DEFAULT_TC);
+        const default_action = no_classification();
         counters = classifier_stats;
         size = QOS_CLASSIFIER_TABLE_SIZE;
     }
@@ -119,7 +127,7 @@ control IngressQos (inout fabric_ingress_metadata_t fabric_md,
             //  spec." Try removing workaround with future SDE releases.
             // fabric_md.bridged.base.slice_tc[SLICE_ID_WIDTH+TC_WIDTH-1:TC_WIDTH]: exact @name("slice_id");
             // fabric_md.bridged.base.slice_tc[TC_WIDTH-1:0]: exact @name("tc");
-            fabric_md.bridged.base.slice_tc: exact   @name("slice_tc");
+            fabric_md.bridged.base.slice_tc: ternary @name("slice_tc");
             ig_tm_md.packet_color:           ternary @name("color");
         }
         actions = {
@@ -133,9 +141,35 @@ control IngressQos (inout fabric_ingress_metadata_t fabric_md,
         size = 1 << (SLICE_TC_WIDTH + 1);
     }
 
+    action set_default_tc(tc_t tc) {
+        // TODO: does this work? Or we need a workaround as for table match?
+        fabric_md.bridged.base.slice_tc = fabric_md.bridged.base.slice_tc[SLICE_ID_WIDTH+TC_WIDTH-1:TC_WIDTH]++tc;
+    }
+
+    // This table can be merged with queues table to obtain a more optimized pipeline
+    table default_tc {
+        key = {
+            // FIXME: match on slice_id and tc instead of concatenated slice_tc
+            //  Using bit-slicing to define two match fields causes a Stratum
+            //  runtime bug with the context JSON produced with SDE 9.3.0:
+            //  "Could not find field fabric_md.bridged.base_slice_tc in match
+            //  spec." Try removing workaround with future SDE releases.
+            // fabric_md.bridged.base.slice_tc[SLICE_ID_WIDTH+TC_WIDTH-1:TC_WIDTH]: exact @name("slice_id");
+            fabric_md.bridged.base.slice_tc: ternary @name("slice_tc");
+            fabric_md.tc_unknown:            exact @name("tc_unknown");
+        }
+        actions = {
+            set_default_tc;
+            @defaultonly nop;
+        }
+        const default_action = nop;
+        size = 1 << (SLICE_ID_WIDTH);
+    }
+
     apply {
         // Meter index should be 0 for all packets with default slice_id and tc.
         set_slice_tc.apply();
+        default_tc.apply();
         ig_tm_md.packet_color = (bit<2>) slice_tc_meter.execute(fabric_md.bridged.base.slice_tc);
         queues.apply();
     }
