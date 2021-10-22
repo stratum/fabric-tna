@@ -170,10 +170,9 @@ public class FabricUpfTranslator {
             throw new UpfProgrammableException("Read malformed PDR from dataplane!:" + entry);
         }
 
-
-        int tc = FabricUpfTranslatorUtil.getParamInt(action, TC);
-        // FIXME: allow explicit QFI mapping to Best-Effort
-        if (tc != TC_BEST_EFFORT) {
+        if (action.id().equals(FABRIC_INGRESS_SPGW_LOAD_PDR_QOS) ||
+                action.id().equals(FABRIC_INGRESS_SPGW_LOAD_PDR_DECAP_QOS)) {
+            int tc = FabricUpfTranslatorUtil.getParamInt(action, TC);
             Byte qfi = QFI_TO_TC.inverse().getOrDefault(tc, null);
             if (qfi != null) {
                 pdrBuilder.withQfi(qfi);
@@ -184,7 +183,6 @@ public class FabricUpfTranslator {
                         tc, entry));
             }
         }
-
 
         return pdrBuilder.build();
     }

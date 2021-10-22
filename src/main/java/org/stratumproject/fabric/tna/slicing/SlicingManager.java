@@ -520,7 +520,7 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
 
     private FlowRule buildDefaultTcFlowRule(DeviceId deviceId, SliceId sliceId, TrafficClass tc) {
         PiCriterion.Builder piCriterionBuilder = PiCriterion.builder()
-                .matchTernary(P4InfoConstants.HDR_SLICE_TC, sliceTcConcat(sliceId.id(),0x00), 0x3C)
+                .matchTernary(P4InfoConstants.HDR_SLICE_TC, sliceTcConcat(sliceId.id(), 0x00), 0x3C)
                 .matchExact(P4InfoConstants.HDR_TC_UNKNOWN, 1);
 
         PiAction.Builder piTableActionBuilder = PiAction.builder()
