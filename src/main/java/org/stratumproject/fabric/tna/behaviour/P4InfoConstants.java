@@ -111,6 +111,9 @@ public final class P4InfoConstants {
     public static final PiMatchFieldId HDR_STATS_FLOW_ID =
             PiMatchFieldId.of("stats_flow_id");
     public static final int HDR_STATS_FLOW_ID_BITWIDTH = 10;
+    public static final PiMatchFieldId HDR_TC_UNKNOWN =
+            PiMatchFieldId.of("tc_unknown");
+    public static final int HDR_TC_UNKNOWN_BITWIDTH = 1;
     public static final PiMatchFieldId HDR_TEID = PiMatchFieldId.of("teid");
     public static final int HDR_TEID_BITWIDTH = 32;
     public static final PiMatchFieldId HDR_TUNNEL_IPV4_DST =
@@ -309,6 +312,10 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.qos.meter_drop");
     public static final PiActionId FABRIC_INGRESS_QOS_SET_QUEUE =
             PiActionId.of("FabricIngress.qos.set_queue");
+    public static final PiActionId FABRIC_INGRESS_QOS_SET_QUEUE_AND_OVERRIDE_TC =
+            PiActionId.of("FabricIngress.qos.set_queue_and_override_tc");
+    public static final PiActionId FABRIC_INGRESS_SLICE_TC_CLASSIFIER_NO_CLASSIFICATION =
+            PiActionId.of("FabricIngress.slice_tc_classifier.no_classification");
     public static final PiActionId FABRIC_INGRESS_SLICE_TC_CLASSIFIER_SET_SLICE_ID_TC =
             PiActionId.of("FabricIngress.slice_tc_classifier.set_slice_id_tc");
     public static final PiActionId FABRIC_INGRESS_SLICE_TC_CLASSIFIER_TRUST_DSCP =

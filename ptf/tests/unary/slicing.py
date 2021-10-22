@@ -14,7 +14,7 @@ class FabricIPv4UnicastWithDscpClassificationAndRewriteTest(
 
     @tvsetup
     @autocleanup
-    def doRunTest(self, pkt, trust_dscp, rewrite, tc_name, **kwargs):
+    def doRunTest(self, pkt, trust_dscp, rewrite, tc_name, use_default_tc, **kwargs):
         eg_port = self.port2
 
         # dscp = 0b000001
@@ -27,10 +27,13 @@ class FabricIPv4UnicastWithDscpClassificationAndRewriteTest(
         if trust_dscp:
             self.add_slice_tc_classifier_entry(trust_dscp=True, ipv4_src=pkt[IP].src)
         else:
-            # Classify using slice_id and tc different than what found in dscp
-            self.add_slice_tc_classifier_entry(
-                slice_id=default_slice_id, tc=default_tc, ipv4_src=pkt[IP].src
-            )
+            if use_default_tc:
+                self.set_default_tc(slice_id=default_slice_id, tc=default_tc)
+            else:
+                # Classify using slice_id and tc different than what found in dscp
+                self.add_slice_tc_classifier_entry(
+                    slice_id=default_slice_id, tc=default_tc, ipv4_src=pkt[IP].src
+                )
 
         exp_pkt_base = pkt.copy()
         if rewrite == "rewrite":
@@ -54,27 +57,29 @@ class FabricIPv4UnicastWithDscpClassificationAndRewriteTest(
         print("")
         for pkt_type in BASE_PKT_TYPES | GTP_PKT_TYPES | VXLAN_PKT_TYPES:
             for trust_dscp in [True, False]:
-                for rewrite in ["rewrite", "clear", "nop"]:
-                    tc_name = (
-                        f"{pkt_type}_{'trustdscp_' if trust_dscp else ''}_{rewrite}"
-                    )
-                    print(
-                        f"pkt_type={pkt_type}, trust_dscp={trust_dscp}, rewrite={rewrite}..."
-                    )
-                    pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
-                        eth_src=HOST1_MAC,
-                        eth_dst=SWITCH_MAC,
-                        ip_src=HOST1_IPV4,
-                        ip_dst=HOST2_IPV4,
-                        pktlen=MIN_PKT_LEN,
-                    )
-                    self.doRunTest(
-                        pkt=pkt,
-                        next_hop_mac=HOST2_MAC,
-                        trust_dscp=trust_dscp,
-                        rewrite=rewrite,
-                        tc_name=tc_name,
-                    )
+                for use_default_tc in [True, False]:
+                    for rewrite in ["rewrite", "clear", "nop"]:
+                        tc_name = (
+                            f"{pkt_type}_{'trustdscp_' if trust_dscp else ''}_{rewrite}"
+                        )
+                        print(
+                            f"pkt_type={pkt_type}, trust_dscp={trust_dscp}, rewrite={rewrite}..."
+                        )
+                        pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
+                            eth_src=HOST1_MAC,
+                            eth_dst=SWITCH_MAC,
+                            ip_src=HOST1_IPV4,
+                            ip_dst=HOST2_IPV4,
+                            pktlen=MIN_PKT_LEN,
+                        )
+                        self.doRunTest(
+                            pkt=pkt,
+                            next_hop_mac=HOST2_MAC,
+                            trust_dscp=trust_dscp,
+                            rewrite=rewrite,
+                            tc_name=tc_name,
+                            use_default_tc=use_default_tc,
+                        )
 
 
 @group("spgw")
@@ -89,6 +94,7 @@ class FabricSpgwDownlinkWithDscpRewriteTest(SpgwSimpleTest, SlicingTest):
         with_psc,
         is_next_hop_spine,
         is_next_hop_dscp_aware,
+        use_default_tc,
         tc_name,
     ):
         # Use non-zero values to test dscp_rewriter clear action
@@ -99,10 +105,13 @@ class FabricSpgwDownlinkWithDscpRewriteTest(SpgwSimpleTest, SlicingTest):
         upf_tc = 2
         eg_port = self.port2
 
-        # slice_id and tc should be rewritten by the SPGW tables.
-        self.add_slice_tc_classifier_entry(
-            slice_id=default_slice_id, tc=default_tc, ipv4_src=pkt[IP].src
-        )
+        if use_default_tc:
+            self.set_default_tc(slice_id=default_slice_id, tc=default_tc)
+        else:
+            # slice_id and tc should be rewritten by the SPGW tables.
+            self.add_slice_tc_classifier_entry(
+                slice_id=default_slice_id, tc=default_tc, ipv4_src=pkt[IP].src
+            )
 
         if is_next_hop_dscp_aware:
             self.add_dscp_rewriter_entry(eg_port)
@@ -116,7 +125,7 @@ class FabricSpgwDownlinkWithDscpRewriteTest(SpgwSimpleTest, SlicingTest):
             with_psc=with_psc,
             is_next_hop_spine=is_next_hop_spine,
             slice_id=upf_slice_id,
-            tc=upf_tc,
+            tc=None if use_default_tc else upf_tc,
             dscp_rewrite=is_next_hop_dscp_aware,
             eg_port=eg_port,
             verify_counters=False,
@@ -175,7 +184,7 @@ class FabricSpgwUplinkWithDscpRewriteTest(SpgwSimpleTest, SlicingTest):
     @tvsetup
     @autocleanup
     def doRunTest(
-        self, pkt, tagged1, tagged2, with_psc, is_next_hop_spine, is_next_hop_dscp_aware
+        self, pkt, tagged1, tagged2, with_psc, is_next_hop_spine, is_next_hop_dscp_aware, use_default_tc
     ):
         # Use non-zero values to test dscp_rewriter clear action
         default_slice_id = 1
@@ -185,10 +194,13 @@ class FabricSpgwUplinkWithDscpRewriteTest(SpgwSimpleTest, SlicingTest):
         upf_tc = 2
         eg_port = self.port2
 
-        # slice_id and tc should be rewritten by the SPGW tables.
-        self.add_slice_tc_classifier_entry(
-            slice_id=default_slice_id, tc=default_tc, ipv4_src=pkt[IP].src
-        )
+        if use_default_tc:
+            self.set_default_tc(slice_id=default_slice_id, tc=default_tc)
+        else:
+            # slice_id and tc should be rewritten by the SPGW tables.
+            self.add_slice_tc_classifier_entry(
+                slice_id=default_slice_id, tc=default_tc, ipv4_src=pkt[IP].src
+            )
 
         if is_next_hop_dscp_aware:
             self.add_dscp_rewriter_entry(eg_port)
@@ -202,7 +214,7 @@ class FabricSpgwUplinkWithDscpRewriteTest(SpgwSimpleTest, SlicingTest):
             with_psc=with_psc,
             is_next_hop_spine=is_next_hop_spine,
             slice_id=upf_slice_id,
-            tc=upf_tc,
+            tc=upf_tc if use_default_tc else None,
             dscp_rewrite=is_next_hop_dscp_aware,
             eg_port=eg_port,
             verify_counters=False,
