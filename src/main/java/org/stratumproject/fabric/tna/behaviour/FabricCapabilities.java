@@ -56,6 +56,9 @@ public class FabricCapabilities {
     }
 
     public boolean isBmv2() {
+        // TODO We could define the architecture ad an extension to the pipeconf,
+        //  or otherwise, load the architecture directly from the P4Info,
+        //  making it part of the pipeline model
         return pipeconf.id().toString().toLowerCase().contains(BMV2);
     }
 
