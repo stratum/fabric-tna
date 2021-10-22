@@ -164,7 +164,9 @@ class IntIngressDropReportFilterWithTrafficTrace(TRexTest, IntTest):
             datetime.now().strftime("%Y%m%d-%H%M%S")
         )
         self.trex_client.stop_capture(capture["id"], output)
-        results = pypy_analyze_int_report_pcap(output, TOTAL_FLOWS, INT_DROP_REASON_ACL_DENY)
+        results = pypy_analyze_int_report_pcap(
+            output, TOTAL_FLOWS, INT_DROP_REASON_ACL_DENY
+        )
 
         port_stats = self.trex_client.get_stats()
         sent_packets = port_stats[SENDER_PORT]["opackets"]
@@ -204,6 +206,7 @@ class IntIngressDropReportFilterWithTrafficTrace(TRexTest, IntTest):
             f"All drop reports should be for reason DROP_REASON_ACL_DENY, {total_drop_reports - correct_drop_reports} were not.",
         )
 
+
 @group("int")
 class IntEgressDropReportFilterWithTrafficTrace(TRexTest, IntTest):
     """ 
@@ -230,8 +233,8 @@ class IntEgressDropReportFilterWithTrafficTrace(TRexTest, IntTest):
         prefix_len = PREFIX_DEFAULT_ROUTE
         switch_mac = "00:90:fb:71:64:8a"
         port_type = PORT_TYPE_EDGE
-        ig_port=self.port1
-        eg_port=self.port2
+        ig_port = self.port1
+        eg_port = self.port2
 
         # Only configure ingress_vlan table, so packets will be dropped by the
         # egress_vlan table
@@ -271,7 +274,9 @@ class IntEgressDropReportFilterWithTrafficTrace(TRexTest, IntTest):
             datetime.now().strftime("%Y%m%d-%H%M%S")
         )
         self.trex_client.stop_capture(capture["id"], output)
-        results = pypy_analyze_int_report_pcap(output, TOTAL_FLOWS, INT_DROP_REASON_EGRESS_NEXT_MISS)
+        results = pypy_analyze_int_report_pcap(
+            output, TOTAL_FLOWS, INT_DROP_REASON_EGRESS_NEXT_MISS
+        )
 
         port_stats = self.trex_client.get_stats()
         sent_packets = port_stats[SENDER_PORT]["opackets"]
@@ -289,7 +294,8 @@ class IntEgressDropReportFilterWithTrafficTrace(TRexTest, IntTest):
         - Drop reason: All packets were dropped because they did not hit the egress VLAN table
         """
         self.failIf(
-            recv_packets > 0, f"Egress VLAN table did not drop all packets, received {recv_packets}",
+            recv_packets > 0,
+            f"Egress VLAN table did not drop all packets, received {recv_packets}",
         )
 
         accuracy_score = results["drop_accuracy_score"]

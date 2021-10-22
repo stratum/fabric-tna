@@ -1,6 +1,6 @@
 # Copyright 2021-present Open Networking Foundation
 # SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0 AND Apache-2.0
-from base_test import autocleanup, tvsetup, is_bmv2
+from base_test import autocleanup, is_bmv2, tvsetup
 from fabric_test import *  # noqa
 from ptf.testutils import group
 from scapy.layers.inet import IP
