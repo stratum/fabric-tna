@@ -22,7 +22,6 @@ import org.onosproject.net.pi.runtime.PiActionParam;
 
 import java.util.Arrays;
 
-import static org.stratumproject.fabric.tna.behaviour.Constants.TC_BEST_EFFORT;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.CTR_ID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.DROP;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_PDRS;
