@@ -152,7 +152,9 @@ def get_readable_int_report_str(pkt: Packet) -> str:
     )
 
 
-def analyze_report_pcap(pcap_file: str, total_flows_from_trace: int = 0, drop_reason: int = 0) -> dict:
+def analyze_report_pcap(
+    pcap_file: str, total_flows_from_trace: int = 0, drop_reason: int = 0
+) -> dict:
     pcap_reader = PcapReader(pcap_file)
     skipped = 0
     dropped = 0  # based on seq number
@@ -353,7 +355,9 @@ def analyze_report_pcap(pcap_file: str, total_flows_from_trace: int = 0, drop_re
     return results
 
 
-def pypy_analyze_int_report_pcap(pcap_file: str, total_flows: int = 0, drop_reason: int = 0) -> dict:
+def pypy_analyze_int_report_pcap(
+    pcap_file: str, total_flows: int = 0, drop_reason: int = 0
+) -> dict:
     code = "import pickle\n" "from xnt import analyze_report_pcap\n"
 
     if total_flows:
