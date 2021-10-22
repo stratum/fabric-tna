@@ -137,6 +137,7 @@ control SpgwIngress(
         }
         actions = {
             load_pdr;
+            load_pdr_qos;
             @defaultonly downlink_pdr_drop;
         }
         size = NUM_DOWNLINK_PDRS;
@@ -150,6 +151,7 @@ control SpgwIngress(
         }
         actions = {
             load_pdr_decap;
+            load_pdr_decap_qos;
             @defaultonly uplink_pdr_drop;
         }
         size = NUM_UPLINK_PDRS;
