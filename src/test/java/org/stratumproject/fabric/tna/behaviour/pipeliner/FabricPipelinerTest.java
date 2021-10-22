@@ -272,24 +272,15 @@ public class FabricPipelinerTest {
     }
 
     @Test
-    public void testBmv2InitializePipeline() {
-        try {
-            setup(true);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
+    public void testBmv2InitializePipeline() throws IOException {
+        setup(true);
         // Using same pipeline initializer structure defined for TNA.
         commonTestInitializePipeline();
     }
 
     @Test
-    public void testTofinoInitializePipeline() {
-        try {
-            setup(false);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+    public void testTofinoInitializePipeline() throws IOException {
+        setup(false);
         commonTestInitializePipeline();
     }
 
