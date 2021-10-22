@@ -68,12 +68,10 @@ public class FabricPipelinerTest {
     private FabricPipeliner pipeliner;
     private FlowRuleService flowRuleService;
     private GroupService groupService;
-    private FabricCapabilities capabilities;
 
-
-    private void setup(boolean isBmv2) throws IOException {
+    private void setup(boolean isBmv2) {
         // Common setup between TNA and bmv2
-        capabilities = createMock(FabricCapabilities.class);
+        FabricCapabilities capabilities = createMock(FabricCapabilities.class);
         expect(capabilities.cpuPort()).andReturn(Optional.of(CPU_PORT)).anyTimes();
         expect(capabilities.isBmv2()).andReturn(isBmv2).anyTimes();
         replay(capabilities);
@@ -192,7 +190,7 @@ public class FabricPipelinerTest {
                     PKT_IN_MIRROR_SESSION_ID, APP_ID);
     }
 
-    private void commonTestInitializePipeline() {
+    private void testInitializePipeline(boolean isBmv2) {
         final Capture<FlowRule> capturedSwitchInfoRule = newCapture(CaptureType.ALL);
         final Capture<FlowRule> capturedCpuIgVlanRule = newCapture(CaptureType.ALL);
         final Capture<FlowRule> capturedCpuFwdClsRule = newCapture(CaptureType.ALL);
@@ -220,7 +218,7 @@ public class FabricPipelinerTest {
         groupService.addGroup(capture(capturedCloneGroup));
         expectLastCall().once();
 
-        if (!capabilities.isBmv2()) {
+        if (!isBmv2) {
             RECIRC_PORTS.forEach(port -> {
                 expectedIgPortVlanRules.add(buildIngressVlanRule(port));
                 expectedEgVlanRules.add(buildEgressVlanRule(port));
@@ -249,7 +247,7 @@ public class FabricPipelinerTest {
         assertTrue(expectedCpuFwdClsRule.exactMatch(capturedCpuFwdClsRule.getValue()));
         assertEquals(expectedPacketInCloneGroup, capturedCloneGroup.getValue());
 
-        if (!capabilities.isBmv2()) {
+        if (!isBmv2) {
             for (int i = 0; i < RECIRC_PORTS.size(); i++) {
                 FlowRule expectIgPortVlanRule = expectedIgPortVlanRules.get(i);
                 FlowRule actualIgPortVlanRule = capturedIgPortVlanRule.getValues().get(i);
@@ -272,16 +270,18 @@ public class FabricPipelinerTest {
     }
 
     @Test
-    public void testBmv2InitializePipeline() throws IOException {
-        setup(true);
+    public void testBmv2InitializePipeline() {
+        final boolean isBmv2 = true;
+        setup(isBmv2);
         // Using same pipeline initializer structure defined for TNA.
-        commonTestInitializePipeline();
+        testInitializePipeline(isBmv2);
     }
 
     @Test
-    public void testTofinoInitializePipeline() throws IOException {
-        setup(false);
-        commonTestInitializePipeline();
+    public void testTofinoInitializePipeline() {
+        final boolean isBmv2 = false;
+        setup(isBmv2);
+        testInitializePipeline(isBmv2);
     }
 
 }
