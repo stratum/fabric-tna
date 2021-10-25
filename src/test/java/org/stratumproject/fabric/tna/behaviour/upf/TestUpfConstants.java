@@ -55,7 +55,7 @@ public final class TestUpfConstants {
     public static final DeviceId DEVICE_ID = DeviceId.deviceId("CoolSwitch91");
     public static final ApplicationId APP_ID = new DefaultApplicationId(5000, "up4");
     public static final int DEFAULT_PRIORITY = 10;
-    private static final int DEFAULT_SLICE_ID = 0;
+    private static final int SLICE_MOBILE = 0xF;
     private static final int DEFAULT_TC = 0;
     // SESSION_ID_BITWIDTH / 8 = 12
     public static final ImmutableByteSequence SESSION_ID = ImmutableByteSequence.ofOnes(12);
@@ -272,7 +272,7 @@ public final class TestUpfConstants {
                             .piTableAction(
                                     PiAction.builder()
                                             .withId(FABRIC_INGRESS_SPGW_IFACE_ACCESS)
-                                            .withParameter(new PiActionParam(SLICE_ID, DEFAULT_SLICE_ID))
+                                            .withParameter(new PiActionParam(SLICE_ID, SLICE_MOBILE))
                                             .build()).build())
             .withPriority(DEFAULT_PRIORITY)
             .build();
@@ -291,7 +291,7 @@ public final class TestUpfConstants {
                     DefaultTrafficTreatment.builder()
                             .piTableAction(PiAction.builder()
                                                    .withId(FABRIC_INGRESS_SPGW_IFACE_CORE)
-                                                   .withParameter(new PiActionParam(SLICE_ID, DEFAULT_SLICE_ID))
+                                                   .withParameter(new PiActionParam(SLICE_ID, SLICE_MOBILE))
                                                    .build()).build())
             .withPriority(DEFAULT_PRIORITY)
             .build();

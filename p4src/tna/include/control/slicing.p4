@@ -127,7 +127,7 @@ control IngressQos (inout fabric_ingress_metadata_t fabric_md,
             //  spec." Try removing workaround with future SDE releases.
             // fabric_md.bridged.base.slice_tc[SLICE_ID_WIDTH+TC_WIDTH-1:TC_WIDTH]: exact @name("slice_id");
             // fabric_md.bridged.base.slice_tc[TC_WIDTH-1:0]: exact @name("tc");
-            fabric_md.bridged.base.slice_tc: ternary @name("slice_tc");
+            fabric_md.bridged.base.slice_tc: exact @name("slice_tc");
             ig_tm_md.packet_color:           ternary @name("color");
         }
         actions = {

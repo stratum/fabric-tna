@@ -95,7 +95,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
     private ApplicationId appId;
 
-    private static final SliceId SLICE_MOBILE = SliceId.of(0xF);
+    static final SliceId SLICE_MOBILE = SliceId.of(0xF);
 
     @Override
     protected boolean setupBehaviour(String opName) {
