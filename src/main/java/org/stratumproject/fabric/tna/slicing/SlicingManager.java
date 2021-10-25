@@ -372,8 +372,7 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
 
     @Override
     public TrafficClass getDefaultTrafficClass(SliceId sliceId) {
-        Versioned<TrafficClass> result = defaultTcStore.get(sliceId);
-        return result != null ? result.value() : null;
+        return Versioned.valueOrNull(defaultTcStore.get(sliceId));
     }
 
     @Override
