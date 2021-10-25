@@ -381,7 +381,7 @@ public class SlicingManagerTest {
         // Default TC after adding a Slice
         capturedAddedFlowRules.reset();
         manager.addSlice(SLICE_IDS.get(1));
-        assertAfter(100, () -> {
+        assertAfter(50, () -> {
             assertEquals(3, capturedAddedFlowRules.getValues().size());
             assertTrue(slice1BE1.exactMatch(capturedAddedFlowRules.getValues().get(0)));
             assertTrue(slice1BE1.exactMatch(capturedAddedFlowRules.getValues().get(1)));
