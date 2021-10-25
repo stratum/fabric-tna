@@ -738,7 +738,7 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
                         }
                         break;
                     case REMOVE:
-                        if (workPartitionService.isMine(event.newValue().value(), toStringHasher())) {
+                        if (workPartitionService.isMine(event.oldValue().value(), toStringHasher())) {
                             deviceService.getAvailableDevices().forEach(device -> {
                                 if (isLeafSwitch(device.id())) {
                                     resetDefaultTrafficClass(device.id(), event.key(),
@@ -772,6 +772,8 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
                                     classifierFlowStore.forEach(e -> addClassifierFlowRule(deviceId,
                                         e.getKey(), e.getValue().value().sliceId(), e.getValue().value().trafficClass())
                                     );
+                                    defaultTcStore.forEach(e -> setDefaultTrafficClass(
+                                            deviceId, e.getKey(), e.getValue().value()));
                                 }
                             }
                         }
