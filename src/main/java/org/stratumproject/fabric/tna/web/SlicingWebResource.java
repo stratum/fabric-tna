@@ -148,6 +148,52 @@ public class SlicingWebResource extends AbstractWebResource {
     }
 
     /**
+     * Get default traffic class given a slice.
+     *
+     * @param sliceId id of slice
+     * @return 200 ok the default traffic class or 404 not found if the result is empty
+     */
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("defaulttc/{sliceId}")
+    public Response getDefaultTc(@PathParam("sliceId") int sliceId) {
+        TrafficClass result = slicingService.getDefaultTrafficClass(SliceId.of(sliceId));
+        ObjectNode root = mapper().createObjectNode();
+
+        Response response;
+        if (result != null) {
+            root.set("TrafficClass", codec(TrafficClass.class).encode(result, this));
+            response = Response.ok(root).build();
+        } else {
+            response = Response.status(404).build();
+        }
+        return response;
+    }
+
+    /**
+     * Set the default traffic class for a slice.
+     *
+     * @param sliceId id of slice
+     * @param tc traffic class to be used as default
+     * @return 200 ok or 400 bad request
+     */
+    @POST
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Path("defaulttc/{sliceId}/{tc}")
+    public Response setDefaultTc(@PathParam("sliceId") int sliceId, @PathParam("tc") String tc) {
+        boolean result = slicingService.setDefaultTrafficClass(SliceId.of(sliceId), TrafficClass.valueOf(tc));
+
+        Response response;
+        if (result) {
+            response = Response.ok().build();
+        } else {
+            response = Response.status(400).build();
+        }
+
+        return response;
+    }
+
+    /**
      * Remove a traffic class from a slice.
      *
      * @param sliceId id of slice
