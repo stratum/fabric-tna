@@ -24,41 +24,41 @@ echo "Build all profiles using SDE ${SDE_P4C_DOCKER_IMG}..."
 docker build -f ptf/Dockerfile -t "${TESTER_DOCKER_IMG}" .
 
 # Jenkins uses 8 cores 15G VM
-make -j8 all
+make -j8 fabric-spgw
 
-echo "Build and verify Java pipeconf"
-make constants pipeconf-ci MVN_FLAGS="-Pci-verify -Pcoverage"
-
-echo "Upload coverage to codecov"
-bash .jenkins/codecov.sh -Z
+#echo "Build and verify Java pipeconf"
+#make constants pipeconf-ci MVN_FLAGS="-Pci-verify -Pcoverage"
+#
+#echo "Upload coverage to codecov"
+#bash .jenkins/codecov.sh -Z
 
 # Since the Java build is based on auto-generated P4InfoConstants.java (make
 # constants above), check that checked-in file is up-to-date:
-modified=$(git status --porcelain)
-if [ -n "$modified" ]; then
-  echo "The following build artifacts do not correspond to the expected ones,"
-  echo "please run the build locally before pushing a new change:"
-  echo "$modified"
-  exit 1
-fi
+#modified=$(git status --porcelain)
+#if [ -n "$modified" ]; then
+#  echo "The following build artifacts do not correspond to the expected ones,"
+#  echo "please run the build locally before pushing a new change:"
+#  echo "$modified"
+#  exit 1
+#fi
 
 # We limit running PTF tests for only those profiles used in Aether, otherwise
 # we exceed the 45 min limit on Jenkins.
 # FIXME: revert once the PTF tests execution time is optimized (#238)
-for profile in "fabric-int" "fabric-spgw-int"; do
+for profile in "fabric-spgw"; do
 # Run PTF tests for all profiles we just built
 #for d in ./p4src/build/*/; do
 #  profile=$(basename "${d}")
 
   echo "Run PTF tests for profile ${profile}"
   ./ptf/run/tm/run "${profile}"
-  # Special case to test INT drop report with deflected packet.
-  TM_DOD=1 ./ptf/run/tm/run "${profile}" TEST=int-dod
-
-  echo "Verify TV generation for profile ${profile}"
-  ./ptf/run/tv/run "${profile}"
-  # Special case to test INT drop report with deflected packet.
-  TM_DOD=1 ./ptf/run/tv/run "${profile}" TEST=int-dod
+#  # Special case to test INT drop report with deflected packet.
+#  TM_DOD=1 ./ptf/run/tm/run "${profile}" TEST=int-dod
+#
+#  echo "Verify TV generation for profile ${profile}"
+#  ./ptf/run/tv/run "${profile}"
+#  # Special case to test INT drop report with deflected packet.
+#  TM_DOD=1 ./ptf/run/tv/run "${profile}" TEST=int-dod
 
   rm -rf "logs/tna/${profile}"
   mkdir -p "logs/tna/${profile}"
@@ -69,14 +69,14 @@ done
 
 # Running PTF for bmv2.
 #shellcheck disable=SC2043
-for profile in "fabric"; do # Only 1 profile, for now.
-
-  echo "Run PTF tests for bmv2, profile ${profile}"
-  ./ptf/run/bmv2/run "${profile}"
-
-  rm -rf "logs/bmv2/${profile}"
-  mkdir -p "logs/bmv2/${profile}"
-  mv ptf/run/bmv2/log "logs/bmv2/${profile}"
-  mv ptf/tests/common/ptf.log "logs/bmv2/${profile}/"
-  mv ptf/tests/common/ptf.pcap "logs/bmv2/${profile}/"
-done
+#for profile in "fabric"; do # Only 1 profile, for now.
+#
+#  echo "Run PTF tests for bmv2, profile ${profile}"
+#  ./ptf/run/bmv2/run "${profile}"
+#
+#  rm -rf "logs/bmv2/${profile}"
+#  mkdir -p "logs/bmv2/${profile}"
+#  mv ptf/run/bmv2/log "logs/bmv2/${profile}"
+#  mv ptf/tests/common/ptf.log "logs/bmv2/${profile}/"
+#  mv ptf/tests/common/ptf.pcap "logs/bmv2/${profile}/"
+#done
