@@ -320,12 +320,6 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
 
     @Override
     public boolean removeTrafficClass(SliceId sliceId, TrafficClass tc) {
-        // Ensure the presence of the TC if that is being used as Default TC
-        if (tc == getDefaultTrafficClass(sliceId)) {
-            log.warn("Can't remove {} from {} while it is being used as Default TC", tc, sliceId);
-            return false;
-        }
-
         Set<TrafficSelector> classifierFlows = getFlows(sliceId, tc);
         if (!classifierFlows.isEmpty()) {
             log.warn("Cannot remove {} from slice {} with {} Flow Classifier Rules",
@@ -340,6 +334,11 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
             if (v == null) {
                 log.warn("TC {} has not been allocated to slice {}", tc, sliceId);
                 return null;
+            }
+            // Ensure the TC is not being used as Default TC
+            if (tc == getDefaultTrafficClass(sliceId)) {
+                log.warn("Can't remove {} from {} while it is being used as Default TC", tc, sliceId);
+                return v;
             }
 
             deallocateQueue(v);
