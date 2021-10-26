@@ -152,7 +152,9 @@ def get_readable_int_report_str(pkt: Packet) -> str:
     )
 
 
-def analyze_report_pcap(pcap_file: str, total_flows_from_trace: int = 0) -> dict:
+def analyze_report_pcap(
+    pcap_file: str, total_flows_from_trace: int = 0, drop_reason: int = 0
+) -> dict:
     pcap_reader = PcapReader(pcap_file)
     skipped = 0
     dropped = 0  # based on seq number
@@ -168,6 +170,7 @@ def analyze_report_pcap(pcap_file: str, total_flows_from_trace: int = 0) -> dict
 
     # Drop report
     drop_reports = 0
+    correct_drop_reports = 0
     five_tuple_to_prev_drop_report_time = {}  # 5-tuple -> latest report time
     flow_with_multiple_drop_reports = set()
     valid_drop_report_irgs = []
@@ -207,6 +210,8 @@ def analyze_report_pcap(pcap_file: str, total_flows_from_trace: int = 0) -> dict
             valid_report_irgs = valid_drop_report_irgs
             bad_report_irgs = bad_drop_report_irgs
             invalid_report_irgs = invalid_drop_report_irgs
+            if drop_reason and int_report.drop_reason == drop_reason:
+                correct_drop_reports += 1
         else:
             # TODO: handle queue report
             skipped += 1
@@ -281,6 +286,7 @@ def analyze_report_pcap(pcap_file: str, total_flows_from_trace: int = 0) -> dict
         "invalid_drop_report_irgs": len(invalid_drop_report_irgs),
         "dropped": dropped,
         "skipped": skipped,
+        "correct_drop_reports": correct_drop_reports,
     }
 
     print("Pkt processed: {}".format(pkt_processed))
@@ -349,13 +355,15 @@ def analyze_report_pcap(pcap_file: str, total_flows_from_trace: int = 0) -> dict
     return results
 
 
-def pypy_analyze_int_report_pcap(pcap_file: str, total_flows: int = 0) -> dict:
+def pypy_analyze_int_report_pcap(
+    pcap_file: str, total_flows: int = 0, drop_reason: int = 0
+) -> dict:
     code = "import pickle\n" "from xnt import analyze_report_pcap\n"
 
     if total_flows:
-        code += f"result = analyze_report_pcap('{pcap_file}', {total_flows})\n"
+        code += f"result = analyze_report_pcap('{pcap_file}', {total_flows}, {drop_reason})\n"
     else:
-        code += f"result = analyze_report_pcap('{pcap_file}')\n"
+        code += f"result = analyze_report_pcap('{pcap_file}', {drop_reason})\n"
 
     # pickle dictionary from analyze_report_pcap
     code += (

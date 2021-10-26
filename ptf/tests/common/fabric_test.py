@@ -10,7 +10,14 @@ import struct
 import time
 
 import xnt
-from base_test import P4RuntimeTest, ipv4_to_binary, is_bmv2, mac_to_binary, stringify, tvcreate
+from base_test import (
+    P4RuntimeTest,
+    ipv4_to_binary,
+    is_bmv2,
+    mac_to_binary,
+    stringify,
+    tvcreate,
+)
 from bmd_bytes import BMD_BYTES
 from p4.v1 import p4runtime_pb2
 from ptf import testutils
