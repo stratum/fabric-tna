@@ -32,13 +32,12 @@
 #define INT_QUEUE_REPORT_TABLE_SIZE 32 * 4
 
 // Constants for the SPGW control block.
-#define NUM_UES 100000
+#define NUM_UES 10240
 // We expect between 4 and 8 tunnels per UE.
 #define MAX_GTP_TUNNELS_PER_UE 1
 #define NUM_GTP_TUNNLES (NUM_UES * MAX_GTP_TUNNELS_PER_UE)
-// Not all PDRs can have a counter. It's up to the control plane to decide when
-// to allocate counters.
-#define MAX_PDR_COUNTERS 4096
+// One counter for down and uplink direction.
+#define MAX_PDR_COUNTERS (2 * NUM_GTP_TUNNLES)
 #define NUM_UPLINK_PDRS NUM_GTP_TUNNLES
 #define NUM_DOWNLINK_PDRS NUM_GTP_TUNNLES
 // One table entry per down and uplink direction.
