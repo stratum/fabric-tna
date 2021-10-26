@@ -211,7 +211,11 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
 
         // Set up recirculation ports as untagged (used for INT reports and
         // UE-to-UE in SPGW pipe).
-        if (!capabilities.isBmv2()) {
+        if (!capabilities.isTargetBmv2()) {
+            // Setting recirculation ports only for TNA.
+            //  Recirculation ports are currently unused when running for bmv2.
+            //  TODO (emanuele) find out if recirc. ports can be used for bmv2
+            //   when INT and SPGW profiles are ported also for bmv2.
             RECIRC_PORTS.forEach(port -> {
                 flowRuleService.applyFlowRules(
                         ingressVlanRule(port, false, DEFAULT_VLAN, PORT_TYPE_INTERNAL),

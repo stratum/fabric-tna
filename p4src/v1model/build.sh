@@ -16,7 +16,7 @@ OTHER_PP_FLAGS=$2
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 P4_SRC_DIR=${DIR}/..
 ROOT_DIR="$( cd "${DIR}/../.." && pwd )"
-P4C_OUT=${ROOT_DIR}/p4src/v1model/build/${PROFILE}
+P4C_OUT=${ROOT_DIR}/p4src/v1model/build/${PROFILE}/bmv2
 FABRIC_P4_FILE=${DIR}/fabric_v1model.p4
 
 # Where the compiler output should be placed to be included in the pipeconf.

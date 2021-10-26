@@ -21,9 +21,11 @@ import org.onosproject.net.flow.FlowRuleService;
 import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flow.criteria.PiCriterion;
 import org.onosproject.net.intent.WorkPartitionService;
+import org.onosproject.net.pi.model.PiPipeconf;
 import org.onosproject.net.pi.model.PiTableId;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
+import org.onosproject.net.pi.service.PiPipeconfService;
 import org.onosproject.segmentrouting.config.SegmentRoutingDeviceConfig;
 import org.onosproject.store.serializers.KryoNamespaces;
 import org.onosproject.store.service.ConsistentMap;
@@ -37,6 +39,7 @@ import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.slf4j.Logger;
+import org.stratumproject.fabric.tna.behaviour.FabricCapabilities;
 import org.stratumproject.fabric.tna.behaviour.P4InfoConstants;
 import org.stratumproject.fabric.tna.slicing.api.Color;
 import org.stratumproject.fabric.tna.slicing.api.QueueId;
@@ -95,6 +98,10 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     protected NetworkConfigService networkCfgService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY)
+    protected PiPipeconfService pipeconfService;
+
 
     private static final Logger log = getLogger(SlicingManager.class);
     private static final String APP_NAME = "org.stratumproject.fabric.tna.slicing"; // TODO revisit naming
@@ -498,11 +505,20 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
         log.info("Remove queue table flow on {} for slice {} tc {} queueId {}", deviceId, sliceId, tc, queueId);
     }
 
+    private FabricCapabilities getCapabilities(DeviceId device) {
+        // FIXME this method is declared as a workaround to access device's capabilities;
+        //  it is currently used only for accessing method isTargetBmv2().
+        Optional<PiPipeconf> pipeconf = pipeconfService.getPipeconf(device);
+        return pipeconf.map(FabricCapabilities::new).orElse(null);
+    }
+
     private List<FlowRule> buildFlowRules(DeviceId deviceId, SliceId sliceId, TrafficClass tc, QueueId queueId) {
         List<FlowRule> flowRules = Lists.newArrayList();
         if (tc == TrafficClass.CONTROL) {
+            // Color red is different between TNA and BMV2
+            Color red = getCapabilities(deviceId).isTargetBmv2() ? Color.BMV2_RED : Color.RED;
             flowRules.add(buildFlowRule(deviceId, sliceId, tc, queueId, Color.GREEN));
-            flowRules.add(buildFlowRule(deviceId, sliceId, tc, QueueId.BEST_EFFORT, Color.RED));
+            flowRules.add(buildFlowRule(deviceId, sliceId, tc, QueueId.BEST_EFFORT, red));
         } else {
             flowRules.add(buildFlowRule(deviceId, sliceId, tc, queueId, null));
         }

@@ -7,7 +7,6 @@ import com.google.common.collect.Lists;
 
 import org.easymock.Capture;
 import org.easymock.CaptureType;
-import org.junit.Before;
 import org.junit.Test;
 import org.onlab.packet.Ethernet;
 import org.onosproject.TestApplicationId;
@@ -34,7 +33,6 @@ import org.onosproject.net.pi.runtime.PiActionParam;
 import org.stratumproject.fabric.tna.behaviour.FabricCapabilities;
 import org.stratumproject.fabric.tna.behaviour.P4InfoConstants;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 
@@ -73,7 +71,7 @@ public class FabricPipelinerTest {
         // Common setup between TNA and bmv2
         FabricCapabilities capabilities = createMock(FabricCapabilities.class);
         expect(capabilities.cpuPort()).andReturn(Optional.of(CPU_PORT)).anyTimes();
-        expect(capabilities.isBmv2()).andReturn(isBmv2).anyTimes();
+        expect(capabilities.isTargetBmv2()).andReturn(isBmv2).anyTimes();
         replay(capabilities);
 
         // Services mock
