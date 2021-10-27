@@ -93,7 +93,7 @@ public class SlicingManagerTest {
         DEVICES.add(new MockDevice(DID, null));
         DEVICES.add(new MockDevice(DID_BMV2, null));
 
-        // Creating pipeconfs for both bmv2 and non-bmv2
+        // Creating pipeconfs for both bmv2 and non-bmv2.
         String bmv2PipeconfId = "org.stratumproject.fabric.bmv2";
         String tnaPipeconfId = "org.stratumproject.fabric.montara_sde_9_5_0";
         MockPipeconf bmv2MockPipeconf = new MockPipeconf(new PiPipeconfId(bmv2PipeconfId));
