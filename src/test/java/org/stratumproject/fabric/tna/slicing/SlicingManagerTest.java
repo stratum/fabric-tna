@@ -10,7 +10,6 @@ import java.util.Set;
 import org.easymock.Capture;
 import org.easymock.CaptureType;
 import org.easymock.EasyMock;
-import org.easymock.Mock;
 import org.junit.Before;
 import org.junit.Test;
 import org.onlab.packet.IpPrefix;
@@ -99,8 +98,6 @@ public class SlicingManagerTest {
         String tnaPipeconfId = "org.stratumproject.fabric.montara_sde_9_5_0";
         MockPipeconf bmv2MockPipeconf = new MockPipeconf(new PiPipeconfId(bmv2PipeconfId));
         MockPipeconf tnaMockPipeconf = new MockPipeconf(new PiPipeconfId(tnaPipeconfId));
-        Optional<PiPipeconf> bmv2OptionalMockPipeconf = Optional.of(bmv2MockPipeconf);
-        Optional<PiPipeconf> tnaOptionalMockPipeconf = Optional.of(tnaMockPipeconf);
 
         manager.appId = APP_ID;
         manager.coreService = coreService;
@@ -139,8 +136,8 @@ public class SlicingManagerTest {
         EasyMock.expectLastCall().anyTimes();
         codecService.registerCodec(EasyMock.anyObject(), EasyMock.anyObject());
         EasyMock.expectLastCall().times(2);
-        EasyMock.expect(pipeconfService.getPipeconf(DID_BMV2)).andReturn(bmv2OptionalMockPipeconf).anyTimes();
-        EasyMock.expect(pipeconfService.getPipeconf(DID)).andReturn(tnaOptionalMockPipeconf).anyTimes();
+        EasyMock.expect(pipeconfService.getPipeconf(DID_BMV2)).andReturn(Optional.of(bmv2MockPipeconf)).anyTimes();
+        EasyMock.expect(pipeconfService.getPipeconf(DID)).andReturn(Optional.of(tnaMockPipeconf)).anyTimes();
 
         EasyMock.replay(coreService, storageService, workPartitionService,
             deviceService, flowRuleService, codecService, nwCfgService, pipeconfService);
