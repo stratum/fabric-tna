@@ -106,6 +106,9 @@ public class HighlightManager implements HighlightService {
         uiExtensionService.register(trafficFactory);
         uiExtensionService.register(allFactory);
 
+        // bootstrap the internal highlighters
+        highLightExecutor.submit(this::bootstrapHighlighters);
+
         log.info("Started");
     }
 
@@ -126,6 +129,15 @@ public class HighlightManager implements HighlightService {
         uiExtensionService.unregister(allFactory);
 
         log.info("Stopped");
+    }
+
+    private void bootstrapHighlighters() {
+        log.debug("Bootstrap the highlighters");
+        highlightStore.forEach(highlightKey -> {
+            nameHighlighter.addHighlighter(highlightKey);
+            trafficHighlighter.addHighlighter(highlightKey);
+            allHighlighter.addHighlighter(highlightKey);
+        });
     }
 
     @Override
