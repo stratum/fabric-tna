@@ -383,9 +383,10 @@ public class SlicingManagerTest {
         manager.addSlice(SLICE_IDS.get(1));
         assertAfter(50, () -> {
             assertEquals(3, capturedAddedFlowRules.getValues().size());
-            assertTrue(slice1BE1.exactMatch(capturedAddedFlowRules.getValues().get(0)));
-            assertTrue(slice1BE1.exactMatch(capturedAddedFlowRules.getValues().get(1)));
-            assertTrue(defaulTc1BE.exactMatch(capturedAddedFlowRules.getValues().get(2)));
+            assertEquals(2, capturedAddedFlowRules.getValues().stream()
+                    .filter(flowRule -> flowRule.exactMatch(slice1BE1)).count());
+            assertEquals(1, capturedAddedFlowRules.getValues().stream()
+                    .filter(flowRule -> flowRule.exactMatch(defaulTc1BE)).count());
         });
 
         // Adding Control class to slice 1
