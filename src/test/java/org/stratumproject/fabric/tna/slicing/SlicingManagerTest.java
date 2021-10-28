@@ -398,9 +398,9 @@ public class SlicingManagerTest {
     public void testSliceListener() {
         FlowRule slice1BE1 = buildSlice1BE1();
         FlowRule slice1Control1 = buildSlice1Control1(DID);
-        FlowRule slice1Control2 = buildSlice1Control2(DID);
+        FlowRule slice1Control2 = buildSlice1Control2(DID, false);
         FlowRule bmv2Slice1Control1 = buildSlice1Control1(DID_BMV2);
-        FlowRule bmv2Slice1Control2 = buildSlice1Control2(DID_BMV2);
+        FlowRule bmv2Slice1Control2 = buildSlice1Control2(DID_BMV2, true);
         int numDevices = DEVICES.size();
 
         // Adding BE class to slice 1
@@ -512,11 +512,8 @@ public class SlicingManagerTest {
         return flowRule;
     }
 
-    private FlowRule buildSlice1Control2(DeviceId deviceId) {
+    private FlowRule buildSlice1Control2(DeviceId deviceId, boolean isBmv2) {
         // Hard coded parameters
-
-        Optional<PiPipeconf> pipeconf = pipeconfService.getPipeconf(deviceId);
-        boolean isBmv2 = pipeconf.map(FabricCapabilities::new).orElse(null).isTargetBmv2();
         Color red = isBmv2 ? Color.BMV2_RED : Color.RED;
 
         PiCriterion.Builder piCriterionBuilder = PiCriterion.builder()
