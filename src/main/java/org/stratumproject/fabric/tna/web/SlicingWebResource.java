@@ -40,9 +40,10 @@ public class SlicingWebResource extends AbstractWebResource {
     private SlicingService slicingService = getService(SlicingService.class);
 
     /**
-     * Get all slices.
+     * Get all slices currently programmed.
+     * DEFAULT_SLICE=0, MOBILE_SLICE=15
      *
-     * @return 200 ok and a collection of Slice ID
+     * @return 200 ok and a collection of Slice IDs
      */
     @GET
     @Produces(MediaType.APPLICATION_JSON)
@@ -60,7 +61,7 @@ public class SlicingWebResource extends AbstractWebResource {
     /**
      * Add a new slice.
      *
-     * @param sliceId id of slice
+     * @param sliceId ID of the slice (DEFAULT_SLICE=0, MOBILE_SLICE=15)
      * @return 200 ok or 400 bad request
      */
     @POST
@@ -82,7 +83,7 @@ public class SlicingWebResource extends AbstractWebResource {
     /**
      * Remove an existing slice.
      *
-     * @param sliceId id of slice
+     * @param sliceId ID of the slice (DEFAULT_SLICE=0, MOBILE_SLICE=15)
      * @return 200 ok or 400 bad request
      */
     @DELETE
@@ -103,7 +104,7 @@ public class SlicingWebResource extends AbstractWebResource {
     /**
      * Get all traffic class of a slice.
      *
-     * @param sliceId id of slice
+     * @param sliceId ID of the slice (DEFAULT_SLICE=0, MOBILE_SLICE=15)
      * @return 200 ok and a collection of traffic class or 404 not found if the result is empty
      */
     @GET
@@ -127,8 +128,9 @@ public class SlicingWebResource extends AbstractWebResource {
     /**
      * Add a traffic class to a slice.
      *
-     * @param sliceId id of slice
-     * @param tc traffic class to be added
+     * @param sliceId ID of the slice (DEFAULT_SLICE=0, MOBILE_SLICE=15)
+     * @param tc Traffic class to be added to the given slice
+     *           (possible values: CONTROL, REAL_TIME, ELASTIC, BEST_EFFORT)
      * @return 200 ok or 400 bad request
      */
     @POST
@@ -150,7 +152,7 @@ public class SlicingWebResource extends AbstractWebResource {
     /**
      * Get default traffic class given a slice.
      *
-     * @param sliceId id of slice
+     * @param sliceId ID of the slice (DEFAULT_SLICE=0, MOBILE_SLICE=15)
      * @return 200 ok the default traffic class or 404 not found if the result is empty
      */
     @GET
@@ -158,12 +160,10 @@ public class SlicingWebResource extends AbstractWebResource {
     @Path("defaulttc/{sliceId}")
     public Response getDefaultTc(@PathParam("sliceId") int sliceId) {
         TrafficClass result = slicingService.getDefaultTrafficClass(SliceId.of(sliceId));
-        ObjectNode root = mapper().createObjectNode();
 
         Response response;
         if (result != null) {
-            root.set("TrafficClass", codec(TrafficClass.class).encode(result, this));
-            response = Response.ok(root).build();
+            response = Response.ok(codec(TrafficClass.class).encode(result, this)).build();
         } else {
             response = Response.status(404).build();
         }
@@ -173,8 +173,9 @@ public class SlicingWebResource extends AbstractWebResource {
     /**
      * Set the default traffic class for a slice.
      *
-     * @param sliceId id of slice
-     * @param tc traffic class to be used as default
+     * @param sliceId ID of the slice (DEFAULT_SLICE=0, MOBILE_SLICE=15)
+     * @param tc Traffic class to be used as default (CONTROL, REAL_TIME, ELASTIC, BEST_EFFORT),
+     *           traffic class must be part already of the given slice.
      * @return 200 ok or 400 bad request
      */
     @POST
@@ -196,8 +197,8 @@ public class SlicingWebResource extends AbstractWebResource {
     /**
      * Remove a traffic class from a slice.
      *
-     * @param sliceId id of slice
-     * @param tc traffic class to be removed
+     * @param sliceId ID of the slice (DEFAULT_SLICE=0, MOBILE_SLICE=15)
+     * @param tc Traffic class to be removed
      * @return 200 ok or 400 bad request
      */
     @DELETE
@@ -216,10 +217,10 @@ public class SlicingWebResource extends AbstractWebResource {
     }
 
     /**
-     * Get classifier flows by slice id and tc.
+     * Get classifier flows by slice ID and traffic class.
      *
-     * @param sliceId id of slice
-     * @param tc traffic class
+     * @param sliceId ID of the slice (DEFAULT_SLICE=0, MOBILE_SLICE=15)
+     * @param tc Traffic class
      * @return 200 ok and traffic selectors
      */
     @GET
@@ -235,11 +236,24 @@ public class SlicingWebResource extends AbstractWebResource {
     }
 
     /**
-     * Classify a flow.
+     * Push a classifier flow to classify traffic as part of the given slice and traffic class.
      *
-     * @param sliceId id of slice
-     * @param tc traffic class
-     * @param input json stream of traffic selector
+     * @param sliceId ID of slice (DEFAULT_SLICE=0, MOBILE_SLICE=15)
+     * @param tc Traffic class
+     * @param input JSON stream of traffic selector
+     *              (e.g., {
+     *                      "criteria" : [
+     *                      {
+     *                          "type" : "IP_PROTO",
+     *                          "protocol": 6
+     *                      },
+     *                      {
+     *                          "type": "IPV4_SRC",
+     *                          "ip": "192.168.1.1/32"
+     *                      }
+     *                      ]
+     *                    }
+     *             )
      * @return 200 ok or 400 bad request
      */
     @POST
@@ -266,11 +280,11 @@ public class SlicingWebResource extends AbstractWebResource {
     }
 
     /**
-     * Remove a classifier flow.
+     * Remove a classifier flow for the given slice and traffic class.
      *
-     * @param sliceId if of slice
-     * @param tc traffic class
-     * @param input json stream of traffic selector
+     * @param sliceId ID of slice
+     * @param tc Traffic class
+     * @param input JSON stream of traffic selector
      * @return 200 ok or 400 bad request
      */
     @DELETE
