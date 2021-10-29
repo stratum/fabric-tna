@@ -203,12 +203,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         }
         setUpCollectorFlows(config);
         setUpIntWatchlistRules(config.watchSubnets());
-        for (byte queueId = 0; queueId < MAX_QUEUES; queueId++) {
-            setUpQueueReportThreshold(
-                    queueId,
-                    config.queueReportTriggerLatencyThresholdNs(queueId),
-                    config.queueReportResetLatencyThresholdNs(queueId));
-        }
+        setUpAllQueueReportThresholds(config);
         return setUpIntReportInternal(config);
     }
 
@@ -643,7 +638,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
     }
 
     private void setUpQueueReportThresholdInternal(byte queueId, Range<Integer> upperRange,
-            Range<Integer> lowerRange, PiActionId actionId) {
+            Range<Integer> lowerRange, PiActionId actionId, FlowRuleOperations.Builder flowOpsBuilder) {
         Integer[] thresholdUpper = rangeToIntArray(upperRange);
         Integer[] thresholdLower = rangeToIntArray(lowerRange);
         final PiCriterion.Builder matchCriterionBuilder = PiCriterion.builder()
@@ -675,20 +670,40 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
             .fromApp(appId)
             .withPriority(DEFAULT_PRIORITY)
             .build();
-        flowRuleService.applyFlowRules(queueReportFlow);
+        flowOpsBuilder.add(queueReportFlow);
+    }
+
+    private void setUpAllQueueReportThresholds(IntReportConfig config) {
+        // Remove old entries
+        FlowRuleOperations.Builder ops = FlowRuleOperations.builder();
+        Streams.stream(flowRuleService.getFlowEntriesById(appId))
+                .filter(entry -> entry.deviceId().equals(deviceId))
+                .filter(entry -> entry.table().equals(
+                        P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_QUEUE_LATENCY_THRESHOLDS))
+                .forEach(ops::remove);
+        ops.newStage();
+        // Add new entries
+        for (byte queueId = 0; queueId < MAX_QUEUES; queueId++) {
+            setUpQueueReportThreshold(
+                    queueId,
+                    config.queueReportTriggerLatencyThresholdNs(queueId),
+                    config.queueReportResetLatencyThresholdNs(queueId),
+                    ops);
+        }
+        flowRuleService.apply(ops.build());
     }
 
     private void setUpQueueReportThreshold(byte queueId, long thresholdToTrigger,
-        long thresholdToReset) {
-        // Latency values higher than this threshold, should trigger a quota check and report generation.
+        long thresholdToReset, FlowRuleOperations.Builder flowOpsBuilder) {
+        // Latency value higher than this threshold, should trigger a quota check and report generation.
         for (List<Range<Integer>> ranges : getMatchRangesForTrigger(thresholdToTrigger)) {
             setUpQueueReportThresholdInternal(queueId, ranges.get(0), ranges.get(1),
-                    P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_CHECK_QUOTA);
+                    P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_CHECK_QUOTA, flowOpsBuilder);
         }
         // Latency values lower than the threshold, resets the queue report quota.
         for (List<Range<Integer>> ranges : getMatchRangesForReset(thresholdToReset)) {
             setUpQueueReportThresholdInternal(queueId, ranges.get(0), ranges.get(1),
-                    P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_RESET_QUOTA);
+                    P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_RESET_QUOTA, flowOpsBuilder);
         }
     }
 
