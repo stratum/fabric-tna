@@ -142,7 +142,7 @@ control IngressQos (inout fabric_ingress_metadata_t fabric_md,
 // piggyback slice_id and tc across the fabric.
 control EgressDscpRewriter (inout fabric_egress_metadata_t fabric_md,
                             inout standard_metadata_t standard_md,
-                            inout ingress_headers_t hdr) {
+                            inout egress_headers_t hdr) {
 
     bit<6> tmp_dscp = fabric_md.bridged.base.slice_tc;
 

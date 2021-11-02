@@ -187,7 +187,7 @@ control Next (inout ingress_headers_t hdr,
     }
 }
 
-control EgressNextControl (inout ingress_headers_t hdr,
+control EgressNextControl (inout egress_headers_t hdr,
                            inout fabric_egress_metadata_t fabric_md,
                            inout standard_metadata_t standard_md
                            ) {

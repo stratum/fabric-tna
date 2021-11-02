@@ -24,8 +24,11 @@
 #include "v1model/include/control/filtering.p4"
 #include "v1model/include/control/forwarding.p4"
 #include "v1model/include/control/lookup_md_init.p4"
+#ifdef WITH_SPGW
+#include "v1model/include/control/spgw.p4"
+#endif
 
-control FabricIngress (inout ingress_headers_t hdr,
+control FabricIngress (inout v1model_header_t hdr,
                        inout fabric_v1model_metadata_t fabric_md,
                        inout standard_metadata_t standard_md) {
 
@@ -40,6 +43,9 @@ control FabricIngress (inout ingress_headers_t hdr,
     Hasher() hasher;
     IngressSliceTcClassifier() slice_tc_classifier;
     IngressQos() qos;
+#ifdef WITH_SPGW
+    SpgwIngress() spgw;
+#endif // WITH_SPGW
 
     apply {
         if (standard_md.parser_error == error.PacketRejectedByParser) {
@@ -48,32 +54,46 @@ control FabricIngress (inout ingress_headers_t hdr,
             exit;
         }
 
-        lkp_md_init.apply(hdr, fabric_md.ingress.lkp);
-        pkt_io.apply(hdr, fabric_md.ingress, fabric_md.skip_egress ,standard_md);
+        lkp_md_init.apply(hdr.ingress_h, fabric_md.ingress.lkp);
+        pkt_io.apply(hdr.ingress_h, fabric_md.ingress, fabric_md.skip_egress ,standard_md);
         stats.apply(fabric_md.ingress.lkp, standard_md.ingress_port,
             fabric_md.ingress.bridged.base.stats_flow_id);
 
-        slice_tc_classifier.apply(hdr, standard_md, fabric_md.ingress);
-        filtering.apply(hdr, fabric_md.ingress, standard_md);
+        slice_tc_classifier.apply(hdr.ingress_h, standard_md, fabric_md.ingress);
+        filtering.apply(hdr.ingress_h, fabric_md.ingress, standard_md);
+#ifdef WITH_SPGW
         if (!fabric_md.ingress.skip_forwarding) {
-            forwarding.apply(hdr, fabric_md.ingress);
+            spgw.apply(hdr.ingress_h, fabric_md.ingress, standard_md);
         }
-        hasher.apply(hdr, fabric_md.ingress);
-        if (!fabric_md.ingress.skip_next) {
-            pre_next.apply(hdr, fabric_md.ingress);
+#endif // WITH_SPGW
+        if (!fabric_md.ingress.skip_forwarding) {
+            forwarding.apply(hdr.ingress_h, fabric_md.ingress);
         }
-        acl.apply(hdr, fabric_md.ingress, standard_md);
+        hasher.apply(hdr.ingress_h, fabric_md.ingress);
         if (!fabric_md.ingress.skip_next) {
-            next.apply(hdr, fabric_md.ingress, standard_md);
+            pre_next.apply(hdr.ingress_h, fabric_md.ingress);
+        }
+        acl.apply(hdr.ingress_h, fabric_md.ingress, standard_md);
+        if (!fabric_md.ingress.skip_next) {
+            next.apply(hdr.ingress_h, fabric_md.ingress, standard_md);
         }
         qos.apply(fabric_md.ingress, standard_md);
 
         // Emulating TNA behavior through bridged metadata.
         fabric_md.egress.bridged = fabric_md.ingress.bridged;
+// #ifdef WITH_SPGW
+//         // GTP-U encapsulation.
+//         ipv4_t outer_ipv4;
+//         udp_t outer_udp;
+//         gtpu_t outer_gtpu;
+//         gtpu_options_t outer_gtpu_options;
+//         gtpu_ext_psc_t outer_gtpu_ext_psc;
+// #endif // WITH_SPGW
+
     }
 }
 
-control FabricEgress (inout ingress_headers_t hdr,
+control FabricEgress (inout v1model_header_t hdr,
                       inout fabric_v1model_metadata_t fabric_md,
                       inout standard_metadata_t standard_md) {
 
@@ -81,21 +101,40 @@ control FabricEgress (inout ingress_headers_t hdr,
     PacketIoEgress() pkt_io_egress;
     EgressNextControl() egress_next;
     EgressDscpRewriter() dscp_rewriter;
+#ifdef WITH_SPGW
+    SpgwEgress() spgw;
+#endif // WITH_SPGW
 
     apply {
         // Setting other fields in egress metadata, related to TNA's FabricEgressParser.
         fabric_md.egress.cpu_port = 0;
         fabric_md.egress.pkt_length = (bit<16>) standard_md.packet_length;
 
+        hdr.egress_h.packet_in = hdr.ingress_h.packet_in;
+        hdr.egress_h.fake_ethernet = hdr.ingress_h.fake_ethernet;
+        hdr.egress_h.ethernet = hdr.ingress_h.ethernet;
+        hdr.egress_h.vlan_tag = hdr.ingress_h.vlan_tag;
+#if defined(WITH_XCONNECT) || defined(WITH_DOUBLE_VLAN_TERMINATION)
+        hdr.egress_h.inner_vlan_tag = hdr.ingress_h.inner_vlan_tag;
+#endif // WITH_XCONNECT || WITH_DOUBLE_VLAN_TERMINATION
+        hdr.egress_h.eth_type = hdr.ingress_h.eth_type;
+        hdr.egress_h.mpls = hdr.ingress_h.mpls;
+        hdr.egress_h.ipv4 = hdr.ingress_h.ipv4;
+        hdr.egress_h.ipv6 = hdr.ingress_h.ipv6;
+        hdr.egress_h.udp = hdr.ingress_h.udp;
+
         if (fabric_md.skip_egress){
             exit;
         }
 
-        pkt_io_egress.apply(hdr, fabric_md.egress ,standard_md);
+        pkt_io_egress.apply(hdr.egress_h, fabric_md.egress ,standard_md);
         stats.apply(fabric_md.egress.bridged.base.stats_flow_id, standard_md.egress_port,
              fabric_md.egress.bridged.bmd_type);
-        egress_next.apply(hdr, fabric_md.egress, standard_md);
-        dscp_rewriter.apply(fabric_md.egress, standard_md, hdr);
+        egress_next.apply(hdr.egress_h, fabric_md.egress, standard_md);
+#ifdef WITH_SPGW
+        spgw.apply(hdr.egress_h, fabric_md.egress);
+#endif // WITH_SPGW
+        dscp_rewriter.apply(fabric_md.egress, standard_md, hdr.egress_h);
     }
 }
 
