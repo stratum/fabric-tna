@@ -11,18 +11,18 @@
 control SpgwIngress(
         /* Fabric.p4 */
         inout ingress_headers_t           hdr,
-        inout fabric_ingress_metadata_t   fabric_md,
+        inout fabric_v1model_metadata_t   fabric_v1model,
         inout standard_metadata_t         standard_md) {
-        /* TNA */
-        //in ingress_intrinsic_metadata_t             ig_intr_md,
-        //inout ingress_intrinsic_metadata_for_tm_t   ig_tm_md,
-        //inout ingress_intrinsic_metadata_for_deparser_t ig_dprsr_md) {
 
     //========================//
     //===== Misc Things ======//
     //========================//
 
     counter(MAX_PDR_COUNTERS, CounterType.packets_and_bytes) pdr_counter;
+    // Using this local ariable (fabric_md) to avoid editing all the actions, since
+    // the control parameter is fabric_v1model_metadata_t, instead of fabric_ingress_metadata_t.
+    // This local var will be copied in fabric_v1model in apply{} section, to maintaing all the edits. FIXME this comment.
+    fabric_ingress_metadata_t fabric_md = fabric_v1model.ingress;
 
     bool is_pdr_hit = false;
     far_id_t md_far_id = 0;
@@ -38,6 +38,8 @@ control SpgwIngress(
         hdr.gtpu_options.setInvalid();
         hdr.gtpu_ext_psc.setInvalid();
         fabric_md.bridged.base.encap_presence = EncapPresence.NONE;
+        // bmv2 specific code. Needed to handle the case of gtpu decap, in egress.
+        fabric_v1model.is_gtpu_decapped = true;
     }
 
 
@@ -222,6 +224,8 @@ control SpgwIngress(
     action recirc_allow() {
         // Pick a recirculation port within same ingress pipe to distribute load.
         standard_md.egress_spec = standard_md.ingress_port[8:7]++RECIRC_PORT_NUMBER;
+        // bmv2 specific to use recirculation, performed only in egress.
+        fabric_v1model.recirculate = true;
         fabric_md.bridged.base.vlan_id = DEFAULT_VLAN_ID;
         fabric_md.egress_port_set = true;
         fabric_md.skip_forwarding = true;
@@ -289,6 +293,9 @@ control SpgwIngress(
             // Forwarding is done by other parts of the ingress, and
             // encapsulation is done in the egress
         }
+
+        // As last step, synchronize local var to parameter passed in control.
+        fabric_v1model.ingress = fabric_md;
     }
 }
 
@@ -303,11 +310,60 @@ control SpgwEgress(
     counter(MAX_PDR_COUNTERS, CounterType.packets_and_bytes) pdr_counter;
 
     @hidden
+    action _encap_initialize() {
+        // Allocate GTP-U encap fields on the T-PHV. Set headers as valid later.
+        // For bmv2 the initialization needs to be done after the hdr.outer_*.setValid() is called,
+        // otherwise the assignments have no effect.
+        /** outer_ipv4 **/
+        hdr.outer_ipv4.version           = 4w4;
+        hdr.outer_ipv4.ihl               = 4w5;
+        hdr.outer_ipv4.dscp              = 0;
+        hdr.outer_ipv4.ecn               = 0;
+        // hdr.outer_ipv4.total_len      = update later
+        hdr.outer_ipv4.identification    = 0x1513; // From NGIC, TODO: Needs to be dynamic
+        hdr.outer_ipv4.flags             = 0;
+        hdr.outer_ipv4.frag_offset       = 0;
+        hdr.outer_ipv4.ttl               = DEFAULT_IPV4_TTL;
+        hdr.outer_ipv4.protocol          = PROTO_UDP;
+        // hdr.outer_ipv4.hdr_checksum   = update later
+        hdr.outer_ipv4.src_addr          = fabric_md.bridged.spgw.gtpu_tunnel_sip;
+        hdr.outer_ipv4.dst_addr          = fabric_md.bridged.spgw.gtpu_tunnel_dip;
+        /** outer_udp **/
+        hdr.outer_udp.sport              = fabric_md.bridged.spgw.gtpu_tunnel_sport;
+        hdr.outer_udp.dport              = GTPU_UDP_PORT;
+        // hdr.outer_udp.len             = update later
+        // hdr.outer_udp.checksum        = update later
+        /** outer_gtpu **/
+        hdr.outer_gtpu.version           = GTP_V1;
+        hdr.outer_gtpu.pt                = GTP_PROTOCOL_TYPE_GTP;
+        hdr.outer_gtpu.spare             = 0;
+        // hdr.outer_gtpu.ex_flag        = update later
+        hdr.outer_gtpu.seq_flag          = 0;
+        hdr.outer_gtpu.npdu_flag         = 0;
+        hdr.outer_gtpu.msgtype           = GTPU_GPDU;
+        // hdr.outer_gtpu.msglen         = update later
+        hdr.outer_gtpu.teid              = fabric_md.bridged.spgw.gtpu_teid;
+        /** outer_gtpu_options **/
+        hdr.outer_gtpu_options.seq_num   = 0;
+        hdr.outer_gtpu_options.n_pdu_num = 0;
+        hdr.outer_gtpu_options.next_ext  = GTPU_NEXT_EXT_PSC;
+        /** outer_gtpu_ext_psc **/
+        hdr.outer_gtpu_ext_psc.len       = GTPU_EXT_PSC_LEN;
+        hdr.outer_gtpu_ext_psc.type      = GTPU_EXT_PSC_TYPE_DL;
+        hdr.outer_gtpu_ext_psc.spare0    = 0;
+        hdr.outer_gtpu_ext_psc.ppp       = 0;
+        hdr.outer_gtpu_ext_psc.rqi       = 0;
+        // hdr.outer_gtpu_ext_psc.qfi    = update later
+        hdr.outer_gtpu_ext_psc.next_ext  = GTPU_NEXT_EXT_NONE;
+    }
+
+    @hidden
     action _encap_common() {
         // Constant fields initialized in the parser.
         hdr.outer_ipv4.setValid();
         hdr.outer_udp.setValid();
         hdr.outer_gtpu.setValid();
+        _encap_initialize();
     }
 
     // Do regular GTP-U encap.
@@ -359,51 +415,6 @@ control SpgwEgress(
                 pdr_counter.count((bit<32>)fabric_md.bridged.spgw.pdr_ctr_id);
             }
         }
-
-        // Allocate GTP-U encap fields on the T-PHV. Set headers as valid later.
-        //  for bmv2 this needs to be done here, after the hdr.outer_*.setValid() is called,
-        //  otherwise these assignments have no effect.
-        /** outer_ipv4 **/
-        hdr.outer_ipv4.version           = 4w4;
-        hdr.outer_ipv4.ihl               = 4w5;
-        hdr.outer_ipv4.dscp              = 0;
-        hdr.outer_ipv4.ecn               = 0;
-        // hdr.outer_ipv4.total_len      = update later
-        hdr.outer_ipv4.identification    = 0x1513; // From NGIC, TODO: Needs to be dynamic
-        hdr.outer_ipv4.flags             = 0;
-        hdr.outer_ipv4.frag_offset       = 0;
-        hdr.outer_ipv4.ttl               = DEFAULT_IPV4_TTL;
-        hdr.outer_ipv4.protocol          = PROTO_UDP;
-        // hdr.outer_ipv4.hdr_checksum   = update later
-        hdr.outer_ipv4.src_addr          = fabric_md.bridged.spgw.gtpu_tunnel_sip;
-        hdr.outer_ipv4.dst_addr          = fabric_md.bridged.spgw.gtpu_tunnel_dip;
-        /** outer_udp **/
-        hdr.outer_udp.sport              = fabric_md.bridged.spgw.gtpu_tunnel_sport;
-        hdr.outer_udp.dport              = GTPU_UDP_PORT;
-        // hdr.outer_udp.len             = update later
-        // hdr.outer_udp.checksum        = update later
-        /** outer_gtpu **/
-        hdr.outer_gtpu.version           = GTP_V1;
-        hdr.outer_gtpu.pt                = GTP_PROTOCOL_TYPE_GTP;
-        hdr.outer_gtpu.spare             = 0;
-        // hdr.outer_gtpu.ex_flag        = update later
-        hdr.outer_gtpu.seq_flag          = 0;
-        hdr.outer_gtpu.npdu_flag         = 0;
-        hdr.outer_gtpu.msgtype           = GTPU_GPDU;
-        // hdr.outer_gtpu.msglen         = update later
-        hdr.outer_gtpu.teid              = fabric_md.bridged.spgw.gtpu_teid;
-        /** outer_gtpu_options **/
-        hdr.outer_gtpu_options.seq_num   = 0;
-        hdr.outer_gtpu_options.n_pdu_num = 0;
-        hdr.outer_gtpu_options.next_ext  = GTPU_NEXT_EXT_PSC;
-        /** outer_gtpu_ext_psc **/
-        hdr.outer_gtpu_ext_psc.len       = GTPU_EXT_PSC_LEN;
-        hdr.outer_gtpu_ext_psc.type      = GTPU_EXT_PSC_TYPE_DL;
-        hdr.outer_gtpu_ext_psc.spare0    = 0;
-        hdr.outer_gtpu_ext_psc.ppp       = 0;
-        hdr.outer_gtpu_ext_psc.rqi       = 0;
-        // hdr.outer_gtpu_ext_psc.qfi    = update later
-        hdr.outer_gtpu_ext_psc.next_ext  = GTPU_NEXT_EXT_NONE;
     }
 }
 #endif // __SPGW__
