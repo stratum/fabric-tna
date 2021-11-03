@@ -81,15 +81,6 @@ control FabricIngress (inout v1model_header_t hdr,
 
         // Emulating TNA behavior through bridged metadata.
         fabric_md.egress.bridged = fabric_md.ingress.bridged;
-// #ifdef WITH_SPGW
-//         // GTP-U encapsulation.
-//         ipv4_t outer_ipv4;
-//         udp_t outer_udp;
-//         gtpu_t outer_gtpu;
-//         gtpu_options_t outer_gtpu_options;
-//         gtpu_ext_psc_t outer_gtpu_ext_psc;
-// #endif // WITH_SPGW
-
     }
 }
 
@@ -104,6 +95,19 @@ control FabricEgress (inout v1model_header_t hdr,
 #ifdef WITH_SPGW
     SpgwEgress() spgw;
 #endif // WITH_SPGW
+
+    table debug {
+            key = {
+                hdr.egress_h.outer_ipv4.src_addr : exact;
+                hdr.egress_h.outer_ipv4.dst_addr : exact;
+                hdr.egress_h.outer_ipv4.version  : exact;
+            }
+            actions = {
+                nop;
+            }
+            default_action = nop();
+            const size = 1;
+    }
 
     apply {
         // Setting other fields in egress metadata, related to TNA's FabricEgressParser.
@@ -123,6 +127,16 @@ control FabricEgress (inout v1model_header_t hdr,
         hdr.egress_h.ipv6 = hdr.ingress_h.ipv6;
         hdr.egress_h.udp = hdr.ingress_h.udp;
 
+        // Performing logic for Deparser (if statements are not supported within deparser on target bmv2.)
+        if (!hdr.egress_h.ipv4.isValid())
+            if (hdr.ingress_h.inner_ipv4.isValid())
+                if (!hdr.ingress_h.gtpu.isValid()) {
+                    // gtpu has been decapped. hdr.egress_h.ipv4 should be = to inner_ipv4.
+                    hdr.egress_h.ipv4.setValid();
+                    hdr.egress_h.ipv4 = hdr.ingress_h.inner_ipv4;
+                    hdr.ingress_h.inner_ipv4.setInvalid();
+                }
+
         if (fabric_md.skip_egress){
             exit;
         }
@@ -135,6 +149,8 @@ control FabricEgress (inout v1model_header_t hdr,
         spgw.apply(hdr.egress_h, fabric_md.egress);
 #endif // WITH_SPGW
         dscp_rewriter.apply(fabric_md.egress, standard_md, hdr.egress_h);
+
+        debug.apply();
     }
 }
 

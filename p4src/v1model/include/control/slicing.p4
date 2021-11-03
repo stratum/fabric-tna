@@ -171,6 +171,11 @@ control EgressDscpRewriter (inout fabric_egress_metadata_t fabric_md,
 
     apply {
         if (rewriter.apply().hit) {
+#ifdef WITH_SPGW
+            if (hdr.outer_ipv4.isValid()) {
+                hdr.outer_ipv4.dscp = tmp_dscp;
+            } else
+#endif // WITH_SPGW
             if (hdr.ipv4.isValid()) {
                 hdr.ipv4.dscp = tmp_dscp;
             }

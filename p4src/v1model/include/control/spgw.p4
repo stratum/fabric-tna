@@ -278,7 +278,7 @@ control SpgwIngress(
                 // **from** dbuf (iface_dbuf), since we already updated it when
                 // first sending the same packets **to** dbuf (iface_core).
                 // However, putting a condition on the iface type introduces a
-                // stage depenency. We trade resource utilization with
+                // stage dependency. We trade resource utilization with
                 // accounting inaccuracy. Assuming that relatively few packets
                 // can be stored at dbuf, and assuming this will be deployed
                 // mostly in enterprise settings where we are not billing users,
@@ -360,6 +360,54 @@ control SpgwEgress(
                 pdr_counter.count((bit<32>)fabric_md.bridged.spgw.pdr_ctr_id);
             }
         }
+
+#ifdef WITH_SPGW
+        // Allocate GTP-U encap fields on the T-PHV. Set headers as valid later.
+        //  for bmv2 this needs to be done here, after the hdr.outer_*.setValid() is called,
+        //  otherwise these assignments have no effect.
+        /** outer_ipv4 **/
+        hdr.outer_ipv4.version           = 4w4;
+        hdr.outer_ipv4.ihl               = 4w5;
+        hdr.outer_ipv4.dscp              = 0;
+        hdr.outer_ipv4.ecn               = 0;
+        // hdr.outer_ipv4.total_len      = update later
+        hdr.outer_ipv4.identification    = 0x1513; // From NGIC, TODO: Needs to be dynamic
+        hdr.outer_ipv4.flags             = 0;
+        hdr.outer_ipv4.frag_offset       = 0;
+        hdr.outer_ipv4.ttl               = DEFAULT_IPV4_TTL;
+        hdr.outer_ipv4.protocol          = PROTO_UDP;
+        // hdr.outer_ipv4.hdr_checksum   = update later
+        hdr.outer_ipv4.src_addr          = fabric_md.bridged.spgw.gtpu_tunnel_sip;
+        hdr.outer_ipv4.dst_addr          = fabric_md.bridged.spgw.gtpu_tunnel_dip;
+        /** outer_udp **/
+        hdr.outer_udp.sport              = fabric_md.bridged.spgw.gtpu_tunnel_sport;
+        hdr.outer_udp.dport              = GTPU_UDP_PORT;
+        // hdr.outer_udp.len             = update later
+        // hdr.outer_udp.checksum        = update later
+        /** outer_gtpu **/
+        hdr.outer_gtpu.version           = GTP_V1;
+        hdr.outer_gtpu.pt                = GTP_PROTOCOL_TYPE_GTP;
+        hdr.outer_gtpu.spare             = 0;
+        // hdr.outer_gtpu.ex_flag        = update later
+        hdr.outer_gtpu.seq_flag          = 0;
+        hdr.outer_gtpu.npdu_flag         = 0;
+        hdr.outer_gtpu.msgtype           = GTPU_GPDU;
+        // hdr.outer_gtpu.msglen         = update later
+        hdr.outer_gtpu.teid              = fabric_md.bridged.spgw.gtpu_teid;
+        /** outer_gtpu_options **/
+        hdr.outer_gtpu_options.seq_num   = 0;
+        hdr.outer_gtpu_options.n_pdu_num = 0;
+        hdr.outer_gtpu_options.next_ext  = GTPU_NEXT_EXT_PSC;
+        /** outer_gtpu_ext_psc **/
+        hdr.outer_gtpu_ext_psc.len       = GTPU_EXT_PSC_LEN;
+        hdr.outer_gtpu_ext_psc.type      = GTPU_EXT_PSC_TYPE_DL;
+        hdr.outer_gtpu_ext_psc.spare0    = 0;
+        hdr.outer_gtpu_ext_psc.ppp       = 0;
+        hdr.outer_gtpu_ext_psc.rqi       = 0;
+        // hdr.outer_gtpu_ext_psc.qfi    = update later
+        hdr.outer_gtpu_ext_psc.next_ext  = GTPU_NEXT_EXT_NONE;
+#endif // WITH_SPGW
+
     }
 }
 #endif // __SPGW__

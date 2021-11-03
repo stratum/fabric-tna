@@ -22,51 +22,6 @@ parser FabricParser (packet_in packet,
         fabric_md.ingress.bridged.base.ip_eth_type = 0;
         fabric_md.ingress.bridged.base.encap_presence = EncapPresence.NONE;
 
-#ifdef WITH_SPGW
-        // Allocate GTP-U encap fields on the T-PHV. Set headers as valid later.
-        /** outer_ipv4 **/
-        hdr.egress_h.outer_ipv4.version           = 4w4;
-        hdr.egress_h.outer_ipv4.ihl               = 4w5;
-        hdr.egress_h.outer_ipv4.dscp              = 0;
-        hdr.egress_h.outer_ipv4.ecn               = 0;
-        // hdr.egress_h.outer_ipv4.total_len      = update later
-        hdr.egress_h.outer_ipv4.identification    = 0x1513; // From NGIC, TODO: Needs to be dynamic
-        hdr.egress_h.outer_ipv4.flags             = 0;
-        hdr.egress_h.outer_ipv4.frag_offset       = 0;
-        hdr.egress_h.outer_ipv4.ttl               = DEFAULT_IPV4_TTL;
-        hdr.egress_h.outer_ipv4.protocol          = PROTO_UDP;
-        // hdr.egress_h.outer_ipv4.hdr_checksum   = update later
-        hdr.egress_h.outer_ipv4.src_addr          = fabric_md.bridged.spgw.gtpu_tunnel_sip;
-        hdr.egress_h.outer_ipv4.dst_addr          = fabric_md.bridged.spgw.gtpu_tunnel_dip;
-        /** outer_udp **/
-        hdr.egress_h.outer_udp.sport              = fabric_md.bridged.spgw.gtpu_tunnel_sport;
-        hdr.egress_h.outer_udp.dport              = GTPU_UDP_PORT;
-        // hdr.egress_h.outer_udp.len             = update later
-        // hdr.egress_h.outer_udp.checksum        = update later
-        /** outer_gtpu **/
-        hdr.egress_h.outer_gtpu.version           = GTP_V1;
-        hdr.egress_h.outer_gtpu.pt                = GTP_PROTOCOL_TYPE_GTP;
-        hdr.egress_h.outer_gtpu.spare             = 0;
-        // hdr.egress_h.outer_gtpu.ex_flag        = update later
-        hdr.egress_h.outer_gtpu.seq_flag          = 0;
-        hdr.egress_h.outer_gtpu.npdu_flag         = 0;
-        hdr.egress_h.outer_gtpu.msgtype           = GTPU_GPDU;
-        // hdr.egress_h.outer_gtpu.msglen         = update later
-        hdr.egress_h.outer_gtpu.teid              = fabric_md.bridged.spgw.gtpu_teid;
-        /** outer_gtpu_options **/
-        hdr.egress_h.outer_gtpu_options.seq_num   = 0;
-        hdr.egress_h.outer_gtpu_options.n_pdu_num = 0;
-        hdr.egress_h.outer_gtpu_options.next_ext  = GTPU_NEXT_EXT_PSC;
-        /** outer_gtpu_ext_psc **/
-        hdr.egress_h.outer_gtpu_ext_psc.len       = GTPU_EXT_PSC_LEN;
-        hdr.egress_h.outer_gtpu_ext_psc.type      = GTPU_EXT_PSC_TYPE_DL;
-        hdr.egress_h.outer_gtpu_ext_psc.spare0    = 0;
-        hdr.egress_h.outer_gtpu_ext_psc.ppp       = 0;
-        hdr.egress_h.outer_gtpu_ext_psc.rqi       = 0;
-        // hdr.egress_h.outer_gtpu_ext_psc.qfi    = update later
-        hdr.egress_h.outer_gtpu_ext_psc.next_ext  = GTPU_NEXT_EXT_NONE;
-#endif // WITH_SPGW
-
         transition check_ethernet;
     }
 
@@ -251,12 +206,6 @@ parser FabricParser (packet_in packet,
         transition parse_inner_ipv4;
     }
 
-//     state decap_gtpu_egress() {
-//         // This state emulates the gtpu that is decapped
-//         //  in the egress parser.
-
-//     }
-
     state parse_gtpu_options {
         packet.extract(hdr.ingress_h.gtpu_options);
         bit<8> gtpu_ext_len = packet.lookahead<bit<8>>();
@@ -342,10 +291,11 @@ control FabricDeparser(packet_out       packet,
         packet.emit(hdr.egress_h.outer_gtpu_options);
         packet.emit(hdr.egress_h.outer_gtpu_ext_psc);
 #endif // WITH_SPGW
-        packet.emit(hdr.egress_h.ipv4);
+        packet.emit(hdr.egress_h.ipv4);  //FIXME
+        // packet.emit(hdr.ingress_h.ipv4);
         packet.emit(hdr.egress_h.ipv6);
-        packet.emit(hdr.ingress_h.tcp);
         packet.emit(hdr.egress_h.udp);
+        packet.emit(hdr.ingress_h.tcp);
         packet.emit(hdr.ingress_h.icmp);
         // in case we parsed a GTPU packet but did not decap it
         packet.emit(hdr.ingress_h.gtpu);
