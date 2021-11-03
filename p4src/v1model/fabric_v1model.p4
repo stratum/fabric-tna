@@ -96,18 +96,18 @@ control FabricEgress (inout v1model_header_t hdr,
     SpgwEgress() spgw;
 #endif // WITH_SPGW
 
-    table debug {
-            key = {
-                hdr.egress_h.outer_ipv4.src_addr : exact;
-                hdr.egress_h.outer_ipv4.dst_addr : exact;
-                hdr.egress_h.outer_ipv4.version  : exact;
-            }
-            actions = {
-                nop;
-            }
-            default_action = nop();
-            const size = 1;
-    }
+    // table debug {
+    //         key = {
+    //             hdr.egress_h.outer_ipv4.src_addr : exact;
+    //             hdr.egress_h.outer_ipv4.dst_addr : exact;
+    //             hdr.egress_h.outer_ipv4.version  : exact;
+    //         }
+    //         actions = {
+    //             nop;
+    //         }
+    //         default_action = nop();
+    //         const size = 1;
+    // }
 
     apply {
         // Setting other fields in egress metadata, related to TNA's FabricEgressParser.
@@ -158,7 +158,7 @@ control FabricEgress (inout v1model_header_t hdr,
 #endif // WITH_SPGW
         dscp_rewriter.apply(fabric_md.egress, standard_md, hdr.egress_h);
 
-        debug.apply();
+        // debug.apply();
     }
 }
 
