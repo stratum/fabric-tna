@@ -210,7 +210,7 @@ def update_config(
         stream_recv_thread.join()
 
 
-def set_up_trex_server(trex_daemon_client, trex_address, trex_config, force_restart):
+def set_up_trex_server(trex_daemon_client, trex_address, trex_config, force_restart, trex_astf_mode):
 
     try:
         # TODO: Generate TRex config based on port_map json file (e.g., include pci address in port map)
@@ -231,7 +231,13 @@ def set_up_trex_server(trex_daemon_client, trex_address, trex_config, force_rest
             return False
 
         trex_config_file_on_server = TREX_FILES_DIR + os.path.basename(trex_config)
-        trex_daemon_client.start_stateless(cfg=trex_config_file_on_server)
+
+        trex_cmd_options = {}
+        if trex_astf_mode:
+            trex_cmd_options['astf'] = True
+            trex_cmd_options['c'] = 1
+
+        trex_daemon_client.start_stateless(cfg=trex_config_file_on_server, **trex_cmd_options)
     except ConnectionRefusedError:
         error(
             "Unable to connect to server %s.\n" + "Did you start the Trex daemon?",
@@ -461,6 +467,12 @@ def main():
         action="store_true",
         required=False,
     )
+    parser.add_argument(
+        "--trex-astf-mode",
+        help="Enables TRex ASTF mode for advanced stateful TCP linerate testing",
+        action="store_true",
+        required=False,
+    )
     args, unknown_args = parser.parse_known_args()
 
     if not check_ptf():
@@ -494,8 +506,11 @@ def main():
 
     # if line rate test, set up and tear down TRex
     if args.trex_address is not None:
+        trex_args = ""
         if args.trex_sw_mode:
             trex_args = "--software --no-hw-flow-stat"
+        if args.trex_astf_mode:
+            trex_args += " --astf"
         else:
             trex_args = None
         trex_daemon_client = CTRexClient(args.trex_address, trex_args=trex_args)
@@ -505,6 +520,7 @@ def main():
             args.trex_address,
             args.trex_config,
             args.trex_force_restart,
+            args.trex_astf_mode,
         )
         if not success:
             error("Failed to set up TRex daemon client!")

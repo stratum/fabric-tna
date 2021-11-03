@@ -4,6 +4,8 @@
 import gnmi_utils
 from base_test import *
 from trex.stl.api import STLClient
+from trex.astf.api import ASTFClient
+import gnmi_utils
 
 
 class TRexTest(P4RuntimeTest):
@@ -35,3 +37,28 @@ class TRexTest(P4RuntimeTest):
         with open(f"{this_dir}/../linerate/chassis_config.pb.txt", mode="rb") as file:
             chassis_config = file.read()
         gnmi_utils.push_chassis_config(chassis_config)
+
+
+class TRexAstfTest(P4RuntimeTest):
+    trex_client: ASTFClient
+
+    def setUp(self):
+        super(TRexAstfTest, self).setUp()
+        trex_server_addr = ptf.testutils.test_param_get("trex_server_addr")
+        self.trex_client = ASTFClient(server=trex_server_addr)
+        self.trex_client.connect()
+        self.trex_client.acquire()
+        self.trex_client.reset()  # Resets configs from all ports
+        self.trex_client.clear_stats()  # Clear status from all ports
+        # Put all ports to promiscuous mode, otherwise they will drop all
+        # incoming packets if the destination mac is not the port mac address.
+        self.trex_client.set_port_attr(
+            self.trex_client.get_all_ports(), promiscuous=True
+        )
+
+    def tearDown(self):
+        print("Tearing down ASTFClient...")
+        self.trex_client.stop()
+        self.trex_client.release()
+        self.trex_client.disconnect()
+        super(TRexAstfTest, self).tearDown()
