@@ -15,6 +15,7 @@ import sys
 import threading
 import time
 from collections import OrderedDict
+from signal import signal, SIGINT
 
 import google.protobuf.text_format
 import grpc
@@ -509,6 +510,14 @@ def main():
         if not success:
             error("Failed to set up TRex daemon client!")
             sys.exit(3)
+
+        # if test is force quit after trex is started, catch signal and close trex
+        def close_trex_before_quit(sig, frame):
+            print("SIGINT received. Closing TRex...")
+            trex_daemon_client.stop_trex()
+            sys.exit(0)
+
+        signal(SIGINT, close_trex_before_quit)
 
         if not args.skip_test:
             info("Running linerate tests...")
