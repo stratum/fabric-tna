@@ -221,7 +221,6 @@ control SpgwIngress(
 
     action recirc_allow() {
         // Pick a recirculation port within same ingress pipe to distribute load.
-        //ig_tm_md.ucast_egress_port = ig_intr_md.ingress_port[8:7]++RECIRC_PORT_NUMBER;
         standard_md.egress_spec = standard_md.ingress_port[8:7]++RECIRC_PORT_NUMBER;
         fabric_md.bridged.base.vlan_id = DEFAULT_VLAN_ID;
         fabric_md.egress_port_set = true;
@@ -361,7 +360,6 @@ control SpgwEgress(
             }
         }
 
-#ifdef WITH_SPGW
         // Allocate GTP-U encap fields on the T-PHV. Set headers as valid later.
         //  for bmv2 this needs to be done here, after the hdr.outer_*.setValid() is called,
         //  otherwise these assignments have no effect.
@@ -406,8 +404,6 @@ control SpgwEgress(
         hdr.outer_gtpu_ext_psc.rqi       = 0;
         // hdr.outer_gtpu_ext_psc.qfi    = update later
         hdr.outer_gtpu_ext_psc.next_ext  = GTPU_NEXT_EXT_NONE;
-#endif // WITH_SPGW
-
     }
 }
 #endif // __SPGW__

@@ -132,9 +132,17 @@ control FabricEgress (inout v1model_header_t hdr,
             if (hdr.ingress_h.inner_ipv4.isValid())
                 if (!hdr.ingress_h.gtpu.isValid()) {
                     // gtpu has been decapped. hdr.egress_h.ipv4 should be = to inner_ipv4.
+                    // this is due to the actual deparser structure. This workaround minimizes
+                    // the number of edits on PTF and allows to have the exact same structure also for bmv2.
                     hdr.egress_h.ipv4.setValid();
+                    hdr.egress_h.udp.setValid();
+                    hdr.ingress_h.tcp.setValid();
                     hdr.egress_h.ipv4 = hdr.ingress_h.inner_ipv4;
+                    hdr.egress_h.udp = hdr.ingress_h.inner_udp;
+                    hdr.ingress_h.tcp = hdr.ingress_h.inner_tcp;
                     hdr.ingress_h.inner_ipv4.setInvalid();
+                    hdr.ingress_h.inner_udp.setInvalid();
+                    hdr.ingress_h.inner_tcp.setInvalid();
                 }
 
         if (fabric_md.skip_egress){
