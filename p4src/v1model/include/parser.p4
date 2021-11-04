@@ -271,7 +271,7 @@ parser FabricParser (packet_in packet,
 control FabricDeparser(packet_out       packet,
                        in v1model_header_t hdr) {
 
-    // bmv2 deparser should emit headers contained in egress_header or v1model_header_t, not ingress_headers_t.
+    // bmv2 deparser should emit headers contained in egress_header or egress_extended_header_t, not ingress_headers_t.
     //  This behavior is intended to keep things as consistent as possible w.r.t. TNA implementation.
     apply {
         packet.emit(hdr.egress_h.fake_ethernet);
@@ -286,25 +286,20 @@ control FabricDeparser(packet_out       packet,
 #ifdef WITH_SPGW
         packet.emit(hdr.egress_h.outer_ipv4);
         packet.emit(hdr.egress_h.outer_udp);
+        packet.emit(hdr.egress_extended_h.outer_tcp);
+        packet.emit(hdr.egress_extended_h.outer_icmp);
         packet.emit(hdr.egress_h.outer_gtpu);
         packet.emit(hdr.egress_h.outer_gtpu_options);
         packet.emit(hdr.egress_h.outer_gtpu_ext_psc);
 #endif // WITH_SPGW
-        packet.emit(hdr.egress_h.ipv4);  //FIXME
+        // in case we parsed a GTPU packet but did not decap it
+        packet.emit(hdr.egress_extended_h.vxlan);
+        packet.emit(hdr.egress_extended_h.inner_ethernet);
+        packet.emit(hdr.egress_extended_h.inner_eth_type);
+        packet.emit(hdr.egress_h.ipv4);
         packet.emit(hdr.egress_h.ipv6);
         packet.emit(hdr.egress_h.udp);
-        packet.emit(hdr.egress_extended_h.outer_tcp);
-        packet.emit(hdr.egress_extended_h.outer_icmp);
-        // in case we parsed a GTPU packet but did not decap it
-        packet.emit(hdr.egress_extended_h.outer_gtpu);
-        packet.emit(hdr.egress_extended_h.outer_gtpu_options);
-        packet.emit(hdr.egress_extended_h.outer_gtpu_ext_psc);
-        packet.emit(hdr.egress_extended_h.outer_vxlan);
-        packet.emit(hdr.egress_extended_h.ethernet);
-        packet.emit(hdr.egress_extended_h.eth_type);
-        packet.emit(hdr.egress_extended_h.ipv4);
         packet.emit(hdr.egress_extended_h.tcp);
-        packet.emit(hdr.egress_extended_h.udp);
         packet.emit(hdr.egress_extended_h.icmp);
     }
 }

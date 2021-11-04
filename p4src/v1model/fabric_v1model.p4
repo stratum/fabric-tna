@@ -110,46 +110,37 @@ control FabricEgress (inout v1model_header_t hdr,
 #endif // WITH_XCONNECT || WITH_DOUBLE_VLAN_TERMINATION
         hdr.egress_h.eth_type = hdr.ingress_h.eth_type;
         hdr.egress_h.mpls = hdr.ingress_h.mpls;
-        hdr.egress_h.ipv4 = hdr.ingress_h.ipv4;
+        
+        hdr.egress_extended_h.vxlan = hdr.ingress_h.vxlan;
+        hdr.egress_extended_h.inner_eth_type = hdr.ingress_h.inner_eth_type;
+        hdr.egress_extended_h.inner_ethernet = hdr.ingress_h.inner_ethernet;
+
         hdr.egress_h.ipv6 = hdr.ingress_h.ipv6;
-        hdr.egress_h.udp = hdr.ingress_h.udp;
 
-        hdr.egress_extended_h.outer_tcp = hdr.ingress_h.tcp;
-        hdr.egress_extended_h.outer_icmp = hdr.ingress_h.icmp;
-        hdr.egress_extended_h.outer_gtpu = hdr.ingress_h.gtpu;
-        hdr.egress_extended_h.outer_gtpu_options = hdr.ingress_h.gtpu_options;
-        hdr.egress_extended_h.outer_gtpu_ext_psc = hdr.ingress_h.gtpu_ext_psc;
-        hdr.egress_extended_h.outer_vxlan = hdr.ingress_h.vxlan;
-        hdr.egress_extended_h.ethernet = hdr.ingress_h.inner_ethernet;
-        hdr.egress_extended_h.eth_type = hdr.ingress_h.inner_eth_type;
-        hdr.egress_extended_h.ipv4 = hdr.ingress_h.inner_ipv4;
-        hdr.egress_extended_h.tcp = hdr.ingress_h.inner_tcp;
-        hdr.egress_extended_h.udp = hdr.ingress_h.inner_udp;
-        hdr.egress_extended_h.icmp = hdr.ingress_h.inner_icmp;
+        if (fabric_md.egress.bridged.spgw.needs_gtpu_encap) {
+            hdr.egress_h.ipv4 = hdr.ingress_h.ipv4;
+            hdr.egress_h.udp = hdr.ingress_h.udp;
 
-        // Performing logic for Deparser (if statements are not supported within deparser on target bmv2.)
-        if (fabric_md.is_gtpu_decapped){
-            // gtpu has been decapped. hdr.egress_h.ipv4 should be = to inner_ipv4.
-            // this is due to the actual deparser structure. This workaround minimizes
-            // the number of edits on PTF and allows to have the exact same structure also for bmv2.
-            hdr.egress_h.ipv4.setValid();
-            hdr.egress_h.udp.setValid();
-            // hdr.tcp.setValid();
-            // hdr.icmp.setValid();
+            hdr.egress_extended_h.tcp = hdr.ingress_h.tcp;
+            hdr.egress_extended_h.icmp = hdr.ingress_h.icmp;
+        } else {
+            hdr.egress_h.outer_ipv4 = hdr.ingress_h.ipv4;
+            hdr.egress_h.outer_udp = hdr.ingress_h.udp;
+            hdr.egress_h.outer_gtpu = hdr.ingress_h.gtpu;
+            hdr.egress_h.outer_gtpu_options = hdr.ingress_h.gtpu_options;
+            hdr.egress_h.outer_gtpu_ext_psc = hdr.ingress_h.gtpu_ext_psc;
+
+            hdr.egress_extended_h.outer_tcp = hdr.ingress_h.tcp;
+            hdr.egress_extended_h.outer_icmp = hdr.ingress_h.icmp;
+
             hdr.egress_h.ipv4 = hdr.ingress_h.inner_ipv4;
             hdr.egress_h.udp = hdr.ingress_h.inner_udp;
-            hdr.egress_extended_h.ipv4.setInvalid();
-            hdr.egress_extended_h.udp.setInvalid();
-            // hdr.inner_tcp.setInvalid();
-            // hdr.inner_icmp.setInvalid();
+
+            hdr.egress_extended_h.tcp = hdr.ingress_h.inner_tcp;
+            hdr.egress_extended_h.icmp = hdr.ingress_h.inner_icmp;
         }
 
         if (fabric_md.skip_egress){
-            exit;
-        }
-        if (fabric_md.recirculate) {
-            // Recirculate the spgw traffic UE to UE.
-            recirculate({});
             exit;
         }
 
@@ -161,7 +152,13 @@ control FabricEgress (inout v1model_header_t hdr,
         spgw.apply(hdr.egress_h, fabric_md.egress);
 #endif // WITH_SPGW
         dscp_rewriter.apply(fabric_md.egress, standard_md, hdr.egress_h);
-    }
+
+        if (fabric_md.do_recirculate) {
+            // Recirculate the spgw traffic UE to UE.
+            recirculate({});
+            exit;
+        }
+    } // end of apply{}
 }
 
 V1Switch(

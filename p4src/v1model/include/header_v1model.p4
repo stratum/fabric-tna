@@ -19,7 +19,7 @@ struct fabric_v1model_metadata_t {
     // Reference: https://github.com/barefootnetworks/Open-Tofino/blob/6a8432eab97bfd1d4805cf24c2c838470840f522/share/p4c/p4include/tofino.p4#L126-L127
     bool                      skip_egress;
     // Recirculate flag is needed for bmv2 to handle the SPGW UE to UE traffic.
-    bool                      recirculate;
+    bool                      do_recirculate;
     // Needed to handle the case gtpu traffic being decapped in ingress controls.
     bool                      is_gtpu_decapped;
 
@@ -27,21 +27,19 @@ struct fabric_v1model_metadata_t {
     fabric_egress_metadata_t  egress;
 }
 
-// This struct encapsulates all the headers that are in ingress_headers but not in egress_headers.
+// This struct encapsulates all the headers that are in ingress_headers but not
+// in egress_headers. In this way, we're consistent in the deparser (we do not see hdr.ingress_h being deparsed.)
 struct egress_extended_headers_t {
-    // Add the ingress headers that are missing in the egress_headers to be consistent in deparser.
+    // Some Fields in this struct are renamed (outer_*).
+    // To better understand their meaning, look at deparser.
+    // A document with all the mapping is being redacted. TODO
     tcp_t outer_tcp;
     icmp_t outer_icmp;
-    gtpu_t outer_gtpu;
-    gtpu_options_t outer_gtpu_options;
-    gtpu_ext_psc_t outer_gtpu_ext_psc;
-    vxlan_t outer_vxlan;
-    // What before was inner_*, it is now no more. For better understanding when deparsing, in bmv2.
-    ethernet_t ethernet;
-    eth_type_t eth_type;
-    ipv4_t ipv4;
+    vxlan_t vxlan;
+    // Inner ethernet and eth_types are needed in vxlan.
+    ethernet_t inner_ethernet;
+    eth_type_t inner_eth_type;
     tcp_t tcp;
-    udp_t udp;
     icmp_t icmp;
 }
 
@@ -50,7 +48,8 @@ struct v1model_header_t {
     egress_headers_t egress_h;
     egress_extended_headers_t egress_extended_h;
 
-    // Remember to synchronize the headers between ingress and egress.
+    // In case of edit in some header, remember to synchronize the ingress and egress headers,
+    // at the end of ingress pipeline or at the beginning of the egress pipeline.
 
 
     // TODO add this info in readme for bmv2. If you add a header in ingress header and not in egress header, then

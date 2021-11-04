@@ -223,9 +223,9 @@ control SpgwIngress(
 
     action recirc_allow() {
         // Pick a recirculation port within same ingress pipe to distribute load.
-        standard_md.egress_spec = standard_md.ingress_port[8:7]++RECIRC_PORT_NUMBER;
+        // standard_md.egress_spec = standard_md.ingress_port[8:7]++RECIRC_PORT_NUMBER;
         // bmv2 specific to use recirculation, performed only in egress.
-        fabric_v1model.recirculate = true;
+        fabric_v1model.do_recirculate = true;
         fabric_md.bridged.base.vlan_id = DEFAULT_VLAN_ID;
         fabric_md.egress_port_set = true;
         fabric_md.skip_forwarding = true;
@@ -234,6 +234,7 @@ control SpgwIngress(
     }
 
     action recirc_deny() {
+        fabric_v1model.do_recirculate = false;
         fabric_md.skip_forwarding = true;
         fabric_md.skip_next = true;
         recirc_stats.count();
@@ -363,6 +364,7 @@ control SpgwEgress(
         hdr.outer_ipv4.setValid();
         hdr.outer_udp.setValid();
         hdr.outer_gtpu.setValid();
+
         _encap_initialize();
     }
 
@@ -380,6 +382,9 @@ control SpgwEgress(
     // configurable QFI.
     // TODO: allow setting different QFIs in ingress
     action gtpu_with_psc(bit<6> qfi) {
+        // Need to set valid before assign any value, in bmv2.
+        hdr.outer_gtpu_options.setValid();
+        hdr.outer_gtpu_ext_psc.setValid();
         _encap_common();
         hdr.outer_ipv4.total_len = IPV4_HDR_BYTES + UDP_HDR_BYTES + GTPU_HDR_BYTES
                 + GTPU_OPTIONS_HDR_BYTES + GTPU_EXT_PSC_HDR_BYTES
@@ -390,8 +395,6 @@ control SpgwEgress(
         hdr.outer_gtpu.msglen = GTPU_OPTIONS_HDR_BYTES + GTPU_EXT_PSC_HDR_BYTES
                 + hdr.ipv4.total_len;
         hdr.outer_gtpu.ex_flag = 1;
-        hdr.outer_gtpu_options.setValid();
-        hdr.outer_gtpu_ext_psc.setValid();
         hdr.outer_gtpu_ext_psc.qfi = qfi;
     }
 
