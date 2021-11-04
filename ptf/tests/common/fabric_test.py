@@ -2677,16 +2677,20 @@ class SpgwSimpleTest(IPv4UnicastTest):
             ingress_bytes += VLAN_BYTES
         if self.loopback:
             ingress_bytes += CPU_LOOPBACK_FAKE_ETH_BYTES
-        # Counters are updated with bytes seen at egress parser. GTP decap
-        # happens at ingress deparser. VLAN/MPLS push/pop happens at egress
-        # deparser, hence not reflected in counter increment.
-        egress_bytes = (
-            ingress_bytes + BMD_BYTES - IP_HDR_BYTES - UDP_HDR_BYTES - GTPU_HDR_BYTES
-        )
-        if with_psc:
-            egress_bytes = egress_bytes - GTPU_OPTIONS_HDR_BYTES - GTPU_EXT_PSC_BYTES
+        if is_bmv2():
+            # In bmv2/v1model, GTP decap, VLAN/MPLS push/pop happens at egress deparser,
+            # hence not reflected in counter increment. TODO add this info in readme
+            egress_bytes = ingress_bytes
+        else :
+            # In Tofino/TNA, counters are updated with bytes seen at egress parser. GTP decap
+            # happens at ingress deparser. VLAN/MPLS push/pop happens at egress
+            # deparser, hence not reflected in counter increment.
+            egress_bytes = (
+                ingress_bytes + BMD_BYTES - IP_HDR_BYTES - UDP_HDR_BYTES - GTPU_HDR_BYTES
+            )
+            if with_psc:
+                egress_bytes = egress_bytes - GTPU_OPTIONS_HDR_BYTES - GTPU_EXT_PSC_BYTES
 
-        egress_bytes = egress_bytes if not is_bmv2() else (egress_bytes - ETH_FCS_BYTES) #FIXME emanuele. Still not working on bmv2
         # Verify the Ingress and Egress PDR counters
         self.verify_pdr_counters(UPLINK_PDR_CTR_IDX, ingress_bytes, egress_bytes, 1, 1)
 
