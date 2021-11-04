@@ -2672,7 +2672,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             return
 
         # Do not count FCS bytes if target is bmv2.
-        ingress_bytes = (len(gtp_pkt) + ETH_FCS_BYTES) if not is_bmv2() else len(gtp_pkt)
+        ingress_bytes = len(gtp_pkt) if  is_bmv2() else (len(gtp_pkt) + ETH_FCS_BYTES)
         if tagged1:
             ingress_bytes += VLAN_BYTES
         if self.loopback:
@@ -2772,19 +2772,26 @@ class SpgwSimpleTest(IPv4UnicastTest):
         )
 
         # Do not count FCS if target is bmv2
-        uplink_ingress_bytes = (len(pkt) + ETH_FCS_BYTES) if not is_bmv2() else len(pkt)
-        uplink_egress_bytes = (
-            uplink_ingress_bytes
-            + BMD_BYTES
-            - IP_HDR_BYTES
-            - UDP_HDR_BYTES
-            - GTPU_HDR_BYTES
-        )
-        downlink_ingress_bytes = uplink_egress_bytes - BMD_BYTES
+        uplink_ingress_bytes =  len(pkt) if is_bmv2() else (len(pkt) + ETH_FCS_BYTES)
+        if is_bmv2():
+            # In bmv2/v1model, GTP decap, VLAN/MPLS push/pop happens at egress deparser,
+            # hence not reflected in counter increment.
+            uplink_egress_bytes = uplink_ingress_bytes
+            # Downlink traffic is decapped.
+            downlink_ingress_bytes = uplink_egress_bytes - IP_HDR_BYTES - UDP_HDR_BYTES - GTPU_HDR_BYTES
+        else :
+            uplink_egress_bytes = (
+                uplink_ingress_bytes
+                + BMD_BYTES
+                - IP_HDR_BYTES
+                - UDP_HDR_BYTES
+                - GTPU_HDR_BYTES
+            )
+            downlink_ingress_bytes = uplink_egress_bytes - BMD_BYTES
         # Egress counters are updated with bytes seen at egress parser. GTP
         # encap happens at egress deparser, hence not reflected in uplink
         # counter increment.
-        downlink_egress_bytes = (downlink_ingress_bytes + BMD_BYTES) if not is_bmv2() else downlink_ingress_bytes
+        downlink_egress_bytes = downlink_ingress_bytes if is_bmv2() else (downlink_ingress_bytes + BMD_BYTES)
 
         # Uplink output/downlink input is always untagged (recirculation
         # port). tagged1 refers only to uplink input.
@@ -2881,7 +2888,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         if not verify_counters:
             return
 
-        ingress_bytes = (len(pkt) + ETH_FCS_BYTES) if not is_bmv2() else len(pkt)
+        ingress_bytes = len(pkt) if is_bmv2() else  (len(pkt) + ETH_FCS_BYTES)
         if tagged1:
             ingress_bytes += VLAN_BYTES
         if self.loopback:
@@ -2889,7 +2896,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         # Egress sees same bytes as ingress. GTP encap and VLAN/MPLS push/pop
         # happen at egress deparser, hence after counter update
         # Do not count Bridged Metadata if target is bmv2.
-        egress_bytes = (ingress_bytes + BMD_BYTES) if not is_bmv2() else ingress_bytes
+        egress_bytes = ingress_bytes if is_bmv2() else  (ingress_bytes + BMD_BYTES)
 
         # Verify the Ingress and Egress PDR counters
         self.verify_pdr_counters(
@@ -2944,7 +2951,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             is_next_hop_spine=is_next_hop_spine,
         )
 
-        ingress_bytes = (len(pkt) + ETH_FCS_BYTES) if not is_bmv2() else len(pkt)
+        ingress_bytes = len(pkt) if is_bmv2() else (len(pkt) + ETH_FCS_BYTES)
         egress_bytes = 0
         if tagged1:
             ingress_bytes += VLAN_BYTES
@@ -3026,7 +3033,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         #  updated it when first sending the same packets **to** dbuf. However,
         #  to improve Tofino resource utilization, we decided to allow for
         #  accounting inaccuracy. See comment in spgw.p4 for more context.
-        ingress_bytes = (len(pkt_from_dbuf) + ETH_FCS_BYTES) if not is_bmv2() else len(pkt_from_dbuf)
+        ingress_bytes = len(pkt_from_dbuf) if is_bmv2() else (len(pkt_from_dbuf) + ETH_FCS_BYTES)
         # GTP encap and VLAN/MPLS push/pop happen at egress deparser, but
         # counters are updated with bytes seen at egress parser.
         egress_bytes = (
@@ -3037,7 +3044,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             - GTPU_HDR_BYTES
         )
         # Do not count FCS bytes if target is bmv2
-        egress_bytes = egress_bytes if not is_bmv2() else (egress_bytes - ETH_FCS_BYTES)
+        egress_bytes = (egress_bytes - ETH_FCS_BYTES) if is_bmv2() else egress_bytes
         if tagged1:
             ingress_bytes += VLAN_BYTES
             egress_bytes += VLAN_BYTES
