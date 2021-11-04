@@ -19,9 +19,9 @@ control SpgwIngress(
     //========================//
 
     counter(MAX_PDR_COUNTERS, CounterType.packets_and_bytes) pdr_counter;
-    // Using this local ariable (fabric_md) to avoid editing all the actions, since
-    // the control parameter is fabric_v1model_metadata_t, instead of fabric_ingress_metadata_t.
-    // This local var will be copied in fabric_v1model in apply{} section, to maintaing all the edits. FIXME this comment.
+    // Using this local variable (fabric_md) to avoid editing all the actions, since
+    // the control parameter is of type fabric_v1model_metadata_t, instead of fabric_ingress_metadata_t.
+    // fabric_v1model.ingress is then updated in apply{} section, to to maintain all the edits made to fabric_md.
     fabric_ingress_metadata_t fabric_md = fabric_v1model.ingress;
 
     bool is_pdr_hit = false;
@@ -38,8 +38,6 @@ control SpgwIngress(
         hdr.gtpu_options.setInvalid();
         hdr.gtpu_ext_psc.setInvalid();
         fabric_md.bridged.base.encap_presence = EncapPresence.NONE;
-        // bmv2 specific code. Needed to handle the case of gtpu decap, in egress.
-        fabric_v1model.is_gtpu_decapped = true;
     }
 
 

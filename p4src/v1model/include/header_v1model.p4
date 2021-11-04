@@ -20,17 +20,15 @@ struct fabric_v1model_metadata_t {
     bool                      skip_egress;
     // Recirculate flag is needed for bmv2 to handle the SPGW UE to UE traffic.
     bool                      do_recirculate;
-    // Needed to handle the case gtpu traffic being decapped in ingress controls.
-    bool                      is_gtpu_decapped;
 
     fabric_ingress_metadata_t ingress;
     fabric_egress_metadata_t  egress;
 }
 
 // This struct encapsulates all the headers that are in ingress_headers but not
-// in egress_headers. In this way, we're consistent in the deparser (we do not see hdr.ingress_h being deparsed.)
+// in egress_headers. In this way, we're consistent in the deparser (we do not see hdr.ingress_h being deparsed)
 struct egress_extended_headers_t {
-    // Some Fields in this struct are renamed (outer_*).
+    // Some fields in this struct are renamed (outer_*).
     // To better understand their meaning, look at deparser.
     // A document with all the mapping is being redacted. TODO
     tcp_t outer_tcp;
@@ -50,7 +48,6 @@ struct v1model_header_t {
 
     // In case of edit in some header, remember to synchronize the ingress and egress headers,
     // at the end of ingress pipeline or at the beginning of the egress pipeline.
-
 
     // TODO add this info in readme for bmv2. If you add a header in ingress header and not in egress header, then
     // you have to specify it in this struct (for bmv2)

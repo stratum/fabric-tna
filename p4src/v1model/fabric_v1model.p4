@@ -101,6 +101,8 @@ control FabricEgress (inout v1model_header_t hdr,
         fabric_md.egress.cpu_port = 0;
         fabric_md.egress.pkt_length = (bit<16>) standard_md.packet_length;
 
+        // Emulating TNA behavior copying the headers from ingress to egress.
+        // Some headers are not present in egress_header_t; for more information, look at /include/header_v1model.p4
         hdr.egress_h.packet_in = hdr.ingress_h.packet_in;
         hdr.egress_h.fake_ethernet = hdr.ingress_h.fake_ethernet;
         hdr.egress_h.ethernet = hdr.ingress_h.ethernet;
@@ -110,7 +112,7 @@ control FabricEgress (inout v1model_header_t hdr,
 #endif // WITH_XCONNECT || WITH_DOUBLE_VLAN_TERMINATION
         hdr.egress_h.eth_type = hdr.ingress_h.eth_type;
         hdr.egress_h.mpls = hdr.ingress_h.mpls;
-        
+
         hdr.egress_extended_h.vxlan = hdr.ingress_h.vxlan;
         hdr.egress_extended_h.inner_eth_type = hdr.ingress_h.inner_eth_type;
         hdr.egress_extended_h.inner_ethernet = hdr.ingress_h.inner_ethernet;
@@ -118,12 +120,16 @@ control FabricEgress (inout v1model_header_t hdr,
         hdr.egress_h.ipv6 = hdr.ingress_h.ipv6;
 
         if (fabric_md.egress.bridged.spgw.needs_gtpu_encap) {
+            // gtpu encapped traffic by ingress spgw.
+            // Move outer_ingress_* header to inner_egress_* header, because of gtp encapsulation.
             hdr.egress_h.ipv4 = hdr.ingress_h.ipv4;
             hdr.egress_h.udp = hdr.ingress_h.udp;
 
+            // Move missing ingress headers not present in egress header, in extended struct.
             hdr.egress_extended_h.tcp = hdr.ingress_h.tcp;
             hdr.egress_extended_h.icmp = hdr.ingress_h.icmp;
         } else {
+            // Base case. These operations handle all the other types of traffic.
             hdr.egress_h.outer_ipv4 = hdr.ingress_h.ipv4;
             hdr.egress_h.outer_udp = hdr.ingress_h.udp;
             hdr.egress_h.outer_gtpu = hdr.ingress_h.gtpu;
@@ -153,11 +159,11 @@ control FabricEgress (inout v1model_header_t hdr,
 #endif // WITH_SPGW
         dscp_rewriter.apply(fabric_md.egress, standard_md, hdr.egress_h);
 
-        if (fabric_md.do_recirculate) {
-            // Recirculate the spgw traffic UE to UE.
-            recirculate({});
-            exit;
-        }
+        // if (fabric_md.do_recirculate) {
+        //     // Recirculate the spgw traffic UE to UE.
+        //     recirculate({});
+        //     exit;
+        // }
     } // end of apply{}
 }
 
