@@ -68,8 +68,7 @@ for profile in "fabric-int" "fabric-spgw-int"; do
 done
 
 # Running PTF for bmv2.
-#shellcheck disable=SC2043
-for profile in "fabric"; do # Only 1 profile, for now.
+for profile in "fabric" "fabric-spgw"; do
 
   echo "Run PTF tests for bmv2, profile ${profile}"
   ./ptf/run/bmv2/run "${profile}"
