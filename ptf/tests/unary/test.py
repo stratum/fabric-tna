@@ -1374,6 +1374,7 @@ class FabricSpgwUplinkTest(SpgwSimpleTest):
 
 
 @group("spgw")
+@skipIf(is_bmv2(), "Recirculation is not supported in bmv2")
 class FabricSpgwUplinkRecircTest(SpgwSimpleTest):
     @tvsetup
     @autocleanup
