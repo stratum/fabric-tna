@@ -15,7 +15,6 @@ import sys
 import threading
 import time
 from collections import OrderedDict
-from signal import signal, SIGINT
 
 import google.protobuf.text_format
 import grpc
@@ -211,25 +210,19 @@ def update_config(
         stream_recv_thread.join()
 
 
-def set_up_trex_server(trex_daemon_client, trex_address, trex_config, force_restart):
+def set_up_trex_server(trex_daemon_client, trex_address, trex_config):
 
     try:
         # TODO: Generate TRex config based on port_map json file (e.g., include pci address in port map)
-        info("Pushing Trex config %s to the server", trex_config)
+        info("Pushing TRex config %s to the server", trex_config)
         if not trex_daemon_client.push_files(trex_config):
             error("Unable to push %s to Trex server", trex_config)
             return False
 
-        if force_restart:
-            trex_daemon_client.kill_all_trexes()
-
         if not trex_daemon_client.is_idle():
-            info("The Trex server process is running")
-            warn(
-                "A Trex server process is still running, "
-                + "use --trex-force-restart to kill it if necessary."
-            )
-            return False
+            warn("The TRex daemon client is still running! Killing it for you...")
+            trex_daemon_client.kill_all_trexes()
+            trex_daemon_client.force_kill(confirm=False)
 
         trex_config_file_on_server = TREX_FILES_DIR + os.path.basename(trex_config)
         trex_daemon_client.start_stateless(cfg=trex_config_file_on_server)
@@ -451,12 +444,6 @@ def main():
         required=False,
     )
     parser.add_argument(
-        "--trex-force-restart",
-        help="Restart the TRex daemon core process before running tests if there is one running",
-        action="store_true",
-        required=False,
-    )
-    parser.add_argument(
         "--trex-sw-mode",
         help="Disables NIC HW acceleration, required to compute Trex per-flow stats",
         action="store_true",
@@ -505,19 +492,10 @@ def main():
             trex_daemon_client,
             args.trex_address,
             args.trex_config,
-            args.trex_force_restart,
         )
         if not success:
             error("Failed to set up TRex daemon client!")
             sys.exit(3)
-
-        # if test is force quit after trex is started, catch signal and close trex
-        def close_trex_before_quit(sig, frame):
-            print("SIGINT received. Closing TRex...")
-            trex_daemon_client.stop_trex()
-            sys.exit(0)
-
-        signal(SIGINT, close_trex_before_quit)
 
         if not args.skip_test:
             info("Running linerate tests...")
