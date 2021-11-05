@@ -31,6 +31,10 @@ struct egress_extended_headers_t {
     // Some fields in this struct are renamed (outer_*).
     // To better understand their meaning, look at deparser.
     // A document with all the mapping is being redacted. TODO
+
+    // If you add a header in ingress_header_t and not in egress_header_t, then
+    // you have to specify it in this struct (for bmv2)
+
     tcp_t outer_tcp;
     icmp_t outer_icmp;
     vxlan_t vxlan;
@@ -48,9 +52,7 @@ struct v1model_header_t {
 
     // In case of edit in some header, remember to synchronize the ingress and egress headers,
     // at the end of ingress pipeline or at the beginning of the egress pipeline.
-
-    // TODO add this info in readme for bmv2. If you add a header in ingress header and not in egress header, then
-    // you have to specify it in this struct (for bmv2)
+    // TODO add this info in readme for bmv2.
 }
 
 error {
