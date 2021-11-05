@@ -16,18 +16,26 @@ GITHUB_URL = "git@github.com:stratum/fabric-tna.git"
 pipeline {
     agent { label "${params.buildNode}" }
     stages {
-        stage("Resolve dependencies") {
+        stage("Prepare environment") {
             steps {
                 environmentCleanup()
                 gitCheckout(GITHUB_URL, commitHash)
                 dockerLogin()
                 //Set JDK 11
                 sh "sudo update-java-alternatives -s java-11-amazon-corretto"
-
+            }
+        }
+        stage("Build dependencies") {
+            steps {
                 buildDependencies()
                 buildP4()
                 buildJavaCoverageAndUpload()
                 checkP4InfoConstants()
+            }
+        }
+        stage("Build Docker image") {
+            steps {
+                buildDockerImage(TESTER_DOCKER_IMG)
             }
         }
         stage("Run PTF") {
@@ -36,13 +44,15 @@ pipeline {
                 runPTFTest(PLATFORM, PROFILE)
             }
             post {
-                always { exportPTFArtifacts() }
-                failure { alert() }
+                always {
+                    exportPTFArtifacts()
+                }
+                failure {
+                    alert()
                 }
             }
         }
-        stage("Build Success") {
-            // We will delegate any static agent to perform post stuff
+        stage("Export build status") {
             steps {
                 script {
                     if (!params.ghprbPullId?.trim()) {
@@ -105,12 +115,19 @@ void buildP4() {
     }
 }
 
+void buildDockerImage(String image) {
+    dir ("${env.WORKSPACE}/fabric-tna") {
+        sh """
+            DOCKER_BUILDKIT=1 docker build -f ptf/Dockerfile --build-arg=BUILDKIT_INLINE_CACHE=1 --cache-from "${image}" -t "${image}" .
+        """
+    }
+}
+
 void buildDependencies() {
     dir ("${env.WORKSPACE}/fabric-tna") {
         sh '''
             . ./.env
             make deps
-            DOCKER_BUILDKIT=1 docker build -f ptf/Dockerfile --build-arg=BUILDKIT_INLINE_CACHE=1 --cache-from "${TESTER_DOCKER_IMG}" -t "${TESTER_DOCKER_IMG}" .
         '''
     }
 }
