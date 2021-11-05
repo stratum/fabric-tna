@@ -8,7 +8,7 @@ ARG PROTOBUF_VER=3.12
 ARG SCAPY_VER=2.4.5
 ARG PTF_VER=c5299ea2e27386653209af458757b3b15e5dec5d
 ARG P4RUNTIME_SHELL_VER=0.0.1
-ARG TREX_VER=3b19ddcf67e33934f268b09d3364cd87275d48db
+ARG TREX_VER=2.92-scapy-2.4.5
 ARG TREX_EXT_LIBS=/external_libs
 ARG TREX_LIBS=/trex_python
 ARG UNITTEST_XML_REPORTING_VER=3.0.4
@@ -106,8 +106,8 @@ ARG TREX_LIBS
 # Install Trex library
 ENV TREX_SCRIPT_DIR=/trex-core-${TREX_VER}/scripts
 # RUN apt update && apt install -y wget
-RUN wget https://github.com/stratum/trex-core/archive/${TREX_VER}.zip
-RUN unzip -qq ${TREX_VER}.zip && \
+RUN wget https://github.com/dariusgrassi/trex-core/archive/v${TREX_VER}.zip && \
+    unzip -qq v${TREX_VER}.zip && \
     mkdir -p /output/${TREX_EXT_LIBS} && \
     mkdir -p /output/${TREX_LIBS} && \
     cp -r ${TREX_SCRIPT_DIR}/automation/trex_control_plane/interactive/* /output/${TREX_LIBS} && \
