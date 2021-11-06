@@ -9,8 +9,8 @@ CODECOV_TOKEN = "${params.CODECOV_TOKEN}"
 // Profile and Platform will be set through Jenkins'job parameters.
 PROFILE = params.profile ? params.profile : "fabric"
 PLATFORM = params.platform ? params.platform : "tna"
-// Apparently, there is no way to access the env vars set from .env file.
-TESTER_DOCKER_IMG = params.testerImage ? params.testerImage : "stratumproject/testvectors:ptf"
+//EnvFile will be populated by reading file '.env', contained in repository.
+EnvFile = ""
 GITHUB_URL = "git@github.com:stratum/fabric-tna.git"
 
 pipeline {
@@ -25,22 +25,37 @@ pipeline {
                 sh "sudo update-java-alternatives -s java-11-amazon-corretto"
             }
         }
+        stage("Import envs from file") {
+            steps {
+                dir("${env.WORKSPACE}/fabric-tna") {
+                    script {
+                        EnvFile = readFile('.env').readLines().findAll { it.contains('=') }
+                    }
+                }
+            }
+        }
         stage("Build dependencies") {
             steps {
+                echo "Start building dependencies"
                 buildDependencies()
                 buildP4()
-                buildJavaCoverageAndUpload()
                 checkP4InfoConstants()
+                buildJavaCoverageAndUpload()
             }
         }
         stage("Build Docker image") {
             steps {
-                buildDockerImage(TESTER_DOCKER_IMG)
+                echo "Building docker image"
+                dir("${env.WORKSPACE}/fabric-tna") {
+                    withEnv(EnvFile as List) {
+                        buildDockerImage("${TESTER_DOCKER_IMG}")
+                    }
+                }
             }
         }
         stage("Run PTF") {
             steps {
-                echo "Running profile ${PROFILE}"
+                echo "Running profile ${PROFILE} for platform ${PLATFORM}"
                 runPTFTest(PLATFORM, PROFILE)
             }
             post {
@@ -50,6 +65,9 @@ pipeline {
                 failure {
                     alert()
                 }
+                success {
+                    setBuildStatus("Build succeeded", "SUCCESS", GITHUB_URL)
+                }
             }
         }
         stage("Export build status") {
@@ -57,10 +75,9 @@ pipeline {
                 script {
                     if (!params.ghprbPullId?.trim()) {
                         // Post Merge.
-                        setBuildStatus("Build succeeded", "SUCCESS", GITHUB_URL)
-                        // Push the new Container
-                        dockerPush(TESTER_DOCKER_IMG)
-
+                        withEnv(EnvFile as List) {
+                            dockerPush("${TESTER_DOCKER_IMG}")
+                        }
                     }
                 }
             }
@@ -118,36 +135,37 @@ void buildP4() {
 void buildDockerImage(String image) {
     dir ("${env.WORKSPACE}/fabric-tna") {
         sh """
-            DOCKER_BUILDKIT=1 docker build -f ptf/Dockerfile --build-arg=BUILDKIT_INLINE_CACHE=1 --cache-from "${image}" -t "${image}" .
+            DOCKER_BUILDKIT=1 docker build -f ptf/Dockerfile\
+            --build-arg=BUILDKIT_INLINE_CACHE=1\
+            --cache-from "${image}" -t "${image}" .
         """
     }
 }
 
 void buildDependencies() {
     dir ("${env.WORKSPACE}/fabric-tna") {
-        sh '''
-            . ./.env
-            make deps
-        '''
+        withEnv(EnvFile as List) {
+            sh "make deps"
+        }
     }
 }
 
 void checkP4InfoConstants() {
-  // Since the Java build is based on auto-generated P4InfoConstants.java (make
-  // constants above), check that checked-in file is up-to-date:
-  dir ("${env.WORKSPACE}/fabric-tna") {
-      String modified=sh(
-              script: 'git status --porcelain',
-              returnStdout: true
-      ).trim()
+    // Since the Java build is based on auto-generated P4InfoConstants.java
+    // (using `make constants`) check that checked-in file is up-to-date:
+    dir ("${env.WORKSPACE}/fabric-tna") {
+        String modified=sh(
+                script: 'git status --porcelain',
+                returnStdout: true
+        ).trim()
 
-      if ( modified.length() > 0 ) {
-        echo "The following build artifacts do not correspond to the expected ones,"
-        echo "please run the build locally before pushing a new change:"
-        echo "$modified"
-        exit 1
-      }
-  }
+        if ( modified.length() > 0 ) {
+            echo "The following build artifacts do not correspond to the expected ones,"
+            echo "please run the build locally before pushing a new change:"
+            echo "$modified"
+            exit 1
+        }
+    }
 }
 
 void runPTFTest(String platform, String profile) {
@@ -208,7 +226,7 @@ void dockerPush(String image) {
         if (!params.ghprbPullId?.trim()) {
             // Push the image only in case of Post Merge.
             echo "Pushing image ${image}"
-            sh "docker push ${image}"
+            // sh "docker push ${image}"
         } else {
             echo "not in Post merge. Do not push the image"
         }
@@ -245,6 +263,7 @@ void alert() {
 }
 
 void setBuildStatus(String message, String state, String url) {
+    echo "Setting build status to success"
   step([
       $class: "GitHubCommitStatusSetter",
       reposSource: [$class: "ManuallyEnteredRepositorySource", url: url],
