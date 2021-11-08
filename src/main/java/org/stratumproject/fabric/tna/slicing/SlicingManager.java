@@ -506,8 +506,6 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
     }
 
     private FabricCapabilities getCapabilities(DeviceId device) {
-        // FIXME this method is declared as a workaround to access device's capabilities;
-        //  it is currently used only for accessing method isTargetBmv2().
         Optional<PiPipeconf> pipeconf = pipeconfService.getPipeconf(device);
         return pipeconf.map(FabricCapabilities::new).orElse(null);
     }
