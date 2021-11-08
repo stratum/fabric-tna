@@ -55,11 +55,15 @@ public class FabricCapabilities {
                 .table(P4InfoConstants.FABRIC_INGRESS_NEXT_HASHED).isPresent();
     }
 
-    public boolean isTargetBmv2() {
+    public boolean isArchBmv2() {
         // TODO We could define the architecture ad an extension to the pipeconf,
         //  or otherwise, load the architecture directly from the P4Info,
         //  making it part of the pipeline model
         return pipeconf.id().toString().toLowerCase().contains(BMV2);
+    }
+
+    public boolean isArchTNA() {
+        return !isArchBmv2();
     }
 
     public Optional<Integer> cpuPort() {

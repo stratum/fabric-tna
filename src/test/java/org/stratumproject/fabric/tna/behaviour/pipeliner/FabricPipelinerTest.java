@@ -71,7 +71,7 @@ public class FabricPipelinerTest {
         // Common setup between TNA and bmv2
         FabricCapabilities capabilities = createMock(FabricCapabilities.class);
         expect(capabilities.cpuPort()).andReturn(Optional.of(CPU_PORT)).anyTimes();
-        expect(capabilities.isTargetBmv2()).andReturn(isBmv2).anyTimes();
+        expect(capabilities.isArchBmv2()).andReturn(isBmv2).anyTimes();
         replay(capabilities);
 
         // Services mock

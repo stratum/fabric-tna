@@ -68,7 +68,7 @@ public class PipeconfLoader {
 
     private static final String P4INFO_TXT = "p4info.txt";
     private static final String CPU_PORT_TXT = "cpu_port.txt";
-    private static final String PIPELINE_CONFIG = "pipeline_config.pb.bin";
+    private static final String TOFINO_PIPELINE_CONFIG = "pipeline_config.pb.bin";
     private static final String BMV2_PIPELINE_CONFIG = "bmv2.json";
 
     private static final String INT_PROFILE_SUFFIX = "-int";
@@ -153,11 +153,11 @@ public class PipeconfLoader {
 
         final String pipelineConfig;
         final ExtensionType extensionType;
-        if (platform.toLowerCase().contains("bmv2")) {
+        if (platform.equalsIgnoreCase("bmv2")) {
             pipelineConfig = BMV2_PIPELINE_CONFIG;
             extensionType = ExtensionType.BMV2_JSON;
         } else { //TNA
-            pipelineConfig = PIPELINE_CONFIG;
+            pipelineConfig = TOFINO_PIPELINE_CONFIG;
             extensionType = ExtensionType.RAW_DEVICE_CONFIG;
         }
 
