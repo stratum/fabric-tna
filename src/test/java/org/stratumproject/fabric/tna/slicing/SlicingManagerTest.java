@@ -485,8 +485,7 @@ public class SlicingManagerTest {
 
     private FlowRule buildSlice1Control1(DeviceId deviceId) {
         // Hard coded parameters
-        // No distinction here between tna and bmv2
-        //  because tna's color green = 0 = bmv2 color's green
+
         PiCriterion.Builder piCriterionBuilder = PiCriterion.builder()
                 .matchExact(P4InfoConstants.HDR_SLICE_TC,
                     sliceTcConcat(SLICE_IDS.get(1).id(), TrafficClass.CONTROL.ordinal()))
