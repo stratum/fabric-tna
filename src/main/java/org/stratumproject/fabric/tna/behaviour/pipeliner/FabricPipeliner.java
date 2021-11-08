@@ -211,7 +211,7 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
 
         // Set up recirculation ports as untagged (used for INT reports and
         // UE-to-UE in SPGW pipe).
-        if (capabilities.isArchTNA()) {
+        if (capabilities.isArchTna()) {
             // Setting recirculation ports only for TNA.
             //  Recirculation ports are currently unused when running for bmv2.
             RECIRC_PORTS.forEach(port -> {

@@ -72,6 +72,7 @@ public class FabricPipelinerTest {
         FabricCapabilities capabilities = createMock(FabricCapabilities.class);
         expect(capabilities.cpuPort()).andReturn(Optional.of(CPU_PORT)).anyTimes();
         expect(capabilities.isArchBmv2()).andReturn(isBmv2).anyTimes();
+        expect(capabilities.isArchTna()).andReturn(!isBmv2).anyTimes();
         replay(capabilities);
 
         // Services mock

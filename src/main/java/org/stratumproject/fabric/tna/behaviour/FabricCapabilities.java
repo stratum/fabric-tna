@@ -62,7 +62,7 @@ public class FabricCapabilities {
         return pipeconf.id().toString().toLowerCase().contains(BMV2);
     }
 
-    public boolean isArchTNA() {
+    public boolean isArchTna() {
         return !isArchBmv2();
     }
 
