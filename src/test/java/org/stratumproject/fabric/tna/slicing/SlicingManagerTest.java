@@ -31,6 +31,7 @@ import org.onosproject.net.flow.FlowRuleService;
 import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flow.criteria.PiCriterion;
 import org.onosproject.net.intent.WorkPartitionService;
+import org.onosproject.net.pi.model.PiPipeconf;
 import org.onosproject.net.pi.model.PiPipeconfId;
 import org.onosproject.net.pi.model.PiTableId;
 import org.onosproject.net.pi.runtime.PiAction;
@@ -38,6 +39,7 @@ import org.onosproject.net.pi.runtime.PiActionParam;
 import org.onosproject.net.pi.service.PiPipeconfService;
 import org.onosproject.segmentrouting.config.SegmentRoutingDeviceConfig;
 import org.onosproject.store.service.StorageService;
+import org.stratumproject.fabric.tna.behaviour.FabricCapabilities;
 import org.stratumproject.fabric.tna.behaviour.P4InfoConstants;
 import org.stratumproject.fabric.tna.slicing.api.Color;
 import org.stratumproject.fabric.tna.slicing.api.QueueId;
@@ -77,6 +79,11 @@ public class SlicingManagerTest {
     private final PiPipeconfService pipeconfService = EasyMock.createMock(PiPipeconfService.class);
     private final Capture<FlowRule> capturedAddedFlowRules = Capture.newInstance(CaptureType.ALL);
     private final Capture<FlowRule> capturedRemovedFlowRules = Capture.newInstance(CaptureType.ALL);
+
+    private FabricCapabilities getCapabilities(DeviceId deviceId) {
+        Optional<PiPipeconf> pipeconf = pipeconfService.getPipeconf(deviceId);
+        return pipeconf.map(FabricCapabilities::new).orElse(null);
+    }
 
     @Before
     public void setup() {
@@ -486,10 +493,12 @@ public class SlicingManagerTest {
     private FlowRule buildSlice1Control1(DeviceId deviceId) {
         // Hard coded parameters
 
+        int colorGreen = getCapabilities(deviceId).getMeterColor(Color.GREEN);
+
         PiCriterion.Builder piCriterionBuilder = PiCriterion.builder()
                 .matchExact(P4InfoConstants.HDR_SLICE_TC,
                     sliceTcConcat(SLICE_IDS.get(1).id(), TrafficClass.CONTROL.ordinal()))
-                .matchTernary(HDR_COLOR, Color.GREEN.ordinal(), 1 << HDR_COLOR_BITWIDTH - 1);
+                .matchTernary(HDR_COLOR, colorGreen, 1 << HDR_COLOR_BITWIDTH - 1);
 
         PiAction.Builder piTableActionBuilder = PiAction.builder()
                 .withId(P4InfoConstants.FABRIC_INGRESS_QOS_SET_QUEUE)
@@ -510,12 +519,13 @@ public class SlicingManagerTest {
 
     private FlowRule buildSlice1Control2(DeviceId deviceId, boolean isBmv2) {
         // Hard coded parameters
-        Color red = isBmv2 ? Color.BMV2_RED : Color.RED;
+
+        int colorRed = getCapabilities(deviceId).getMeterColor(Color.RED);
 
         PiCriterion.Builder piCriterionBuilder = PiCriterion.builder()
                 .matchExact(P4InfoConstants.HDR_SLICE_TC,
                     sliceTcConcat(SLICE_IDS.get(1).id(), TrafficClass.CONTROL.ordinal()))
-                .matchTernary(HDR_COLOR, red.ordinal(), 1 << HDR_COLOR_BITWIDTH - 1);
+                .matchTernary(HDR_COLOR, colorRed, 1 << HDR_COLOR_BITWIDTH - 1);
 
         PiAction.Builder piTableActionBuilder = PiAction.builder()
                 .withId(P4InfoConstants.FABRIC_INGRESS_QOS_SET_QUEUE)

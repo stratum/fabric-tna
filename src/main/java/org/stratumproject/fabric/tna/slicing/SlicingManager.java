@@ -513,8 +513,9 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
     private List<FlowRule> buildFlowRules(DeviceId deviceId, SliceId sliceId, TrafficClass tc, QueueId queueId) {
         List<FlowRule> flowRules = Lists.newArrayList();
         if (tc == TrafficClass.CONTROL) {
-            Color red = getCapabilities(deviceId).isArchBmv2() ? Color.BMV2_RED : Color.RED;
-            flowRules.add(buildFlowRule(deviceId, sliceId, tc, queueId, Color.GREEN));
+            int red = getCapabilities(deviceId).getMeterColor(Color.RED);
+            int green = getCapabilities(deviceId).getMeterColor(Color.GREEN);
+            flowRules.add(buildFlowRule(deviceId, sliceId, tc, queueId, green));
             flowRules.add(buildFlowRule(deviceId, sliceId, tc, QueueId.BEST_EFFORT, red));
         } else {
             flowRules.add(buildFlowRule(deviceId, sliceId, tc, queueId, null));
@@ -522,11 +523,15 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
         return flowRules;
     }
 
-    private FlowRule buildFlowRule(DeviceId deviceId, SliceId sliceId, TrafficClass tc, QueueId queueId, Color color) {
+    private FlowRule buildFlowRule(DeviceId deviceId,
+                                   SliceId sliceId,
+                                   TrafficClass tc,
+                                   QueueId queueId,
+                                   Integer color) {
         PiCriterion.Builder piCriterionBuilder = PiCriterion.builder()
                 .matchExact(P4InfoConstants.HDR_SLICE_TC, sliceTcConcat(sliceId.id(), tc.ordinal()));
         if (color != null) {
-            piCriterionBuilder.matchTernary(HDR_COLOR, color.ordinal(), 1 << HDR_COLOR_BITWIDTH - 1);
+            piCriterionBuilder.matchTernary(HDR_COLOR, color, 1 << HDR_COLOR_BITWIDTH - 1);
         }
 
         PiAction.Builder piTableActionBuilder = PiAction.builder()

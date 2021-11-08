@@ -5,6 +5,7 @@ package org.stratumproject.fabric.tna.behaviour;
 
 import org.onosproject.net.pi.model.PiPipeconf;
 import org.slf4j.Logger;
+import org.stratumproject.fabric.tna.slicing.api.Color;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -15,6 +16,7 @@ import java.util.Optional;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.onosproject.net.pi.model.PiPipeconf.ExtensionType.CPU_PORT_TXT;
 import static org.slf4j.LoggerFactory.getLogger;
+import static org.stratumproject.fabric.tna.behaviour.Constants.BMV2_COLOR_RED;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_PDRS;
 
 /**
@@ -55,7 +57,7 @@ public class FabricCapabilities {
                 .table(P4InfoConstants.FABRIC_INGRESS_NEXT_HASHED).isPresent();
     }
 
-    public boolean isArchBmv2() {
+    public boolean isArchV1model() {
         // TODO We could define the architecture ad an extension to the pipeconf,
         //  or otherwise, load the architecture directly from the P4Info,
         //  making it part of the pipeline model
@@ -63,7 +65,15 @@ public class FabricCapabilities {
     }
 
     public boolean isArchTna() {
-        return !isArchBmv2();
+        return !isArchV1model();
+    }
+
+    public int getMeterColor(Color color) {
+        if (isArchV1model() && color == Color.RED) {
+            return BMV2_COLOR_RED;
+        } else {
+            return color.ordinal();
+        }
     }
 
     public Optional<Integer> cpuPort() {
