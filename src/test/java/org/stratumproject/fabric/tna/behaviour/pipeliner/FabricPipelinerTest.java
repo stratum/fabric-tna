@@ -271,7 +271,6 @@ public class FabricPipelinerTest {
     public void testBmv2InitializePipeline() {
         final boolean isBmv2 = true;
         setup(isBmv2);
-        // Using same pipeline initializer structure defined for TNA.
         testInitializePipeline(isBmv2);
     }
 

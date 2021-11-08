@@ -515,7 +515,6 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
     private List<FlowRule> buildFlowRules(DeviceId deviceId, SliceId sliceId, TrafficClass tc, QueueId queueId) {
         List<FlowRule> flowRules = Lists.newArrayList();
         if (tc == TrafficClass.CONTROL) {
-            // Color red is different between TNA and BMV2
             Color red = getCapabilities(deviceId).isArchBmv2() ? Color.BMV2_RED : Color.RED;
             flowRules.add(buildFlowRule(deviceId, sliceId, tc, queueId, Color.GREEN));
             flowRules.add(buildFlowRule(deviceId, sliceId, tc, QueueId.BEST_EFFORT, red));

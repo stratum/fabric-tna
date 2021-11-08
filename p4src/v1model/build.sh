@@ -27,42 +27,33 @@ source "${ROOT_DIR}/.env"
 
 dockerRun="docker run --rm -w ${P4_SRC_DIR} -v ${P4_SRC_DIR}:${P4_SRC_DIR} -v ${P4C_OUT}:${P4C_OUT} ${P4C_DOCKER_IMG}"
 
-function base_build() {
-  echo "## Compiling profile ${PROFILE} in ${P4C_OUT}..."
-  echo "*** Output in ${P4C_OUT}"
+echo "## Compiling profile ${PROFILE} in ${P4C_OUT}..."
+echo "*** Output in ${P4C_OUT}"
+mkdir -p ${P4C_OUT}
 
-  mkdir -p ${P4C_OUT}
+# Generate preprocessed P4 source (for debugging).
+(
+  ${dockerRun} p4c-bm2-ss --arch v1model \
+  ${BMV2_PP_FLAGS} ${OTHER_PP_FLAGS} -I ${P4_SRC_DIR}\
+  --pp ${P4C_OUT}/_pp.p4 ${FABRIC_P4_FILE}
+)
 
-  # Generate preprocessed P4 source (for debugging).
-  (
-    ${dockerRun} p4c-bm2-ss --arch v1model \
-    ${BMV2_PP_FLAGS} ${OTHER_PP_FLAGS} -I ${P4_SRC_DIR}\
-    --pp ${P4C_OUT}/_pp.p4 ${FABRIC_P4_FILE}
-  )
+# Generate BMv2 JSON and P4Info.
+(
+  ${dockerRun} p4c-bm2-ss --arch v1model -o ${P4C_OUT}/bmv2.json \
+  ${BMV2_PP_FLAGS} ${OTHER_PP_FLAGS} -I ${P4_SRC_DIR}\
+  --p4runtime-files ${P4C_OUT}/p4info.txt ${FABRIC_P4_FILE}
+)
 
-  # Generate BMv2 JSON and P4Info.
-  (
-    ${dockerRun} p4c-bm2-ss --arch v1model -o ${P4C_OUT}/bmv2.json \
-    ${BMV2_PP_FLAGS} ${OTHER_PP_FLAGS} -I ${P4_SRC_DIR}\
-    --p4runtime-files ${P4C_OUT}/p4info.txt ${FABRIC_P4_FILE}
-  )
-}
+output_dir="${P4C_OUT}"
+pltf="bmv2"
 
-function gen_profile() {
-  output_dir="${P4C_OUT}"
-  pltf="bmv2"
-  cpu_port=$1
+# Copy only the relevant files to the pipeconf resources.
+mkdir -p "${DEST_DIR}/${pltf}"
+cp "${output_dir}/p4info.txt" "${DEST_DIR}/${pltf}"
+echo "${BMV2_CPU_PORT}" > "${DEST_DIR}/${pltf}/cpu_port.txt"
+cp "${output_dir}/bmv2.json" "${DEST_DIR}/${pltf}/"
+echo
 
-  # Copy only the relevant files to the pipeconf resources.
-  mkdir -p "${DEST_DIR}/${pltf}"
-  cp "${output_dir}/p4info.txt" "${DEST_DIR}/${pltf}"
-  echo "${cpu_port}" > "${DEST_DIR}/${pltf}/cpu_port.txt"
-  cp "${output_dir}/bmv2.json" "${DEST_DIR}/${pltf}/"
-  echo
-
-  # CPU port.
-  echo ${cpu_port} > ${P4C_OUT}/cpu_port.txt
-}
-
-base_build
-gen_profile "${BMV2_CPU_PORT}"
+# CPU port.
+echo ${BMV2_CPU_PORT} > ${P4C_OUT}/cpu_port.txt
