@@ -5,10 +5,9 @@
 
 // sha1 used for PRs, while commitHash is populated for postmerge
 commitHash = params.commitHash ? params.commitHash : params.sha1
-CODECOV_TOKEN = "${params.CODECOV_TOKEN}"
 // Profile and Platform will be set through Jenkins'job parameters.
 PROFILE = params.profile ? params.profile : "fabric"
-PLATFORM = params.platform ? params.platform : "tna"
+ARCHITECTURE = params.platform ? params.platform : "tna"
 //EnvFile will be populated by reading file '.env', contained in repository.
 EnvFile = ""
 GITHUB_URL = "git@github.com:stratum/fabric-tna.git"
@@ -18,15 +17,11 @@ pipeline {
     stages {
         stage("Prepare environment") {
             steps {
-                environmentCleanup()
+                step([$class: "WsCleanup"])
                 gitCheckout(GITHUB_URL, commitHash)
-                dockerLogin()
+                dockerLogins()
                 //Set JDK 11
                 sh "sudo update-java-alternatives -s java-11-amazon-corretto"
-            }
-        }
-        stage("Import envs from file") {
-            steps {
                 dir("${env.WORKSPACE}/fabric-tna") {
                     script {
                         EnvFile = readFile('.env').readLines().findAll { it.contains('=') }
@@ -36,41 +31,52 @@ pipeline {
         }
         stage("Build dependencies") {
             steps {
-                echo "Start building dependencies"
-                buildDependencies()
-                buildP4()
-                checkP4InfoConstants()
-                buildJavaCoverageAndUpload()
-            }
-        }
-        stage("Build Docker image") {
-            steps {
-                echo "Building docker image"
-                dir("${env.WORKSPACE}/fabric-tna") {
+                dir ("${env.WORKSPACE}/fabric-tna") {
                     withEnv(EnvFile as List) {
-                        buildDockerImage("${TESTER_DOCKER_IMG}")
+                        sh "make deps"
+                        sh """
+                            DOCKER_BUILDKIT=1 docker build -f ptf/Dockerfile\
+                            --build-arg=BUILDKIT_INLINE_CACHE=1\
+                            --cache-from "${TESTER_DOCKER_IMG}" -t "${TESTER_DOCKER_IMG}" .
+                        """
                     }
                 }
             }
         }
-        stage("Run PTF") {
+        stage("Build P4") {
             steps {
-                echo "Running profile ${PROFILE} for platform ${PLATFORM}"
-                runPTFTest(PLATFORM, PROFILE)
-            }
-            post {
-                always {
-                    exportPTFArtifacts()
-                }
-                failure {
-                    alert()
-                }
-                success {
-                    setBuildStatus("Build succeeded", "SUCCESS", GITHUB_URL)
+                dir ("${env.WORKSPACE}/fabric-tna") {
+                    // Making selected profile
+                    sh "make -j8 ${PROFILE}"
                 }
             }
         }
-        stage("Export build status") {
+        stage("Make constants and pipeconf tests") {
+            when {
+                expression {
+                    return PROFILE == "fabric-spgw-int"
+                }
+            }
+            steps {
+                dir ("${env.WORKSPACE}/fabric-tna") {
+                    sh "make constants pipeconf-ci MVN_FLAGS=\"-B -Pci-verify -Pcoverage\""
+                    sh "bash .jenkins/codecov.sh"
+                }
+                checkP4InfoConstants()
+            }
+        }
+        stage("Run PTF") {
+            steps {
+                echo "Running profile ${PROFILE} for architecture ${ARCHITECTURE}"
+                runPTFTest(ARCHITECTURE, PROFILE)
+            }
+            post {
+                always {
+                    exportPTFArtifacts(ARCHITECTURE, PROFILE)
+                }
+            }
+        }
+        stage("Docker push image") {
             steps {
                 script {
                     if (!params.ghprbPullId?.trim()) {
@@ -81,6 +87,19 @@ pipeline {
                     }
                 }
             }
+        }
+    }
+    post {
+        success {
+            script {
+                if (!params.ghprbPullId?.trim()) {
+                    // Post Merge
+                    setBuildStatus("Build succeeded", "SUCCESS", GITHUB_URL)
+                }
+            }
+        }
+        failure {
+            alert()
         }
     }
 }
@@ -98,55 +117,11 @@ void gitCheckout(String url, String commitHash) {
   ],)
 }
 
-void environmentCleanup() {
-  step([$class: "WsCleanup"])
-}
-
-void dockerLogin() {
-  withCredentials([[$class          : "UsernamePasswordMultiBinding",
-                    credentialsId   : "onf-internal-registry",
-                    usernameVariable: "USERNAME",
-                    passwordVariable: "PASSWORD"]]) {
-    sh 'docker login registry.opennetworking.org -u $USERNAME -p $PASSWORD'
-  }
-}
-
-void buildJavaCoverageAndUpload() {
+void dockerLogins() {
     dir ("${env.WORKSPACE}/fabric-tna") {
-        sh "make constants pipeconf-ci MVN_FLAGS=\"-B -Pci-verify -Pcoverage\""
-
-        // Upload coverage to codecov
-        //FIXME (it returns: There was an error running the uploader: Token found by arguments with length 18 did not pass validation)
-        // sh"""
-        //     curl -Os https://uploader.codecov.io/latest/linux/codecov
-        //     chmod +x codecov
-        //     ./codecov -t ${CODECOV_TOKEN}
-        // """
-    }
-}
-
-void buildP4() {
-    dir ("${env.WORKSPACE}/fabric-tna") {
-        // Making all profiles
-        sh "make -j8 all"
-    }
-}
-
-void buildDockerImage(String image) {
-    dir ("${env.WORKSPACE}/fabric-tna") {
-        sh """
-            DOCKER_BUILDKIT=1 docker build -f ptf/Dockerfile\
-            --build-arg=BUILDKIT_INLINE_CACHE=1\
-            --cache-from "${image}" -t "${image}" .
-        """
-    }
-}
-
-void buildDependencies() {
-    dir ("${env.WORKSPACE}/fabric-tna") {
-        withEnv(EnvFile as List) {
-            sh "make deps"
-        }
+        sh "docker login registry.opennetworking.org -u $ONF_REGISTRY_USERNAME -p $ONF_REGISTRY_PASSWORD"
+        sh "docker login registry.aetherproject.org -u $AETHER_REGISTRY_USERNAME -p $AETHER_REGISTRY_PASSWORD"
+        sh "docker login -u $DOCKERHUB_USERNAME -p $DOCKERHUB_PASSWORD"
     }
 }
 
@@ -168,15 +143,15 @@ void checkP4InfoConstants() {
     }
 }
 
-void runPTFTest(String platform, String profile) {
-    if (platform.toLowerCase() == "tna") {
-        runTnaPTFTests(profile)
+void runPTFTest(String architecture, String profile) {
+    if (architecture.toLowerCase() == "tna") {
+        runTmPTFTests(profile)
     } else { // bmv2
         runBmv2PTFTests(profile)
     }
 }
 
-void runTnaPTFTests(String profile) {
+void runTmPTFTests(String profile) {
     dir ("${env.WORKSPACE}/fabric-tna") {
         echo "Run PTF tests for profile ${profile}"
         sh "./ptf/run/tm/run \"${profile}\""
@@ -192,15 +167,6 @@ void runTnaPTFTests(String profile) {
             sh "TM_DOD=1 ./ptf/run/tm/run \"${profile}\" TEST=int-dod"
             sh "TM_DOD=1 ./ptf/run/tv/run \"${profile}\" TEST=int-dod"
         }
-
-        // Export logs
-        sh """
-            rm -rf \"logs/tna/${profile}\"
-            mkdir -p \"logs/tna/${profile}\"
-            mv ptf/run/tm/log \"logs/tna/${profile}\"
-            mv ptf/tests/common/ptf.log \"logs/tna/${profile}/\"
-            mv ptf/tests/common/ptf.pcap \"logs/tna/${profile}/\"
-        """
     }
 }
 
@@ -208,33 +174,37 @@ void runBmv2PTFTests(String profile) {
     dir ("${env.WORKSPACE}/fabric-tna") {
         echo "Run PTF tests for bmv2, profile ${profile}"
         sh "./ptf/run/bmv2/run \"${profile}\""
-
-        // Export logs
-        sh """
-            rm -rf \"logs/bmv2/${profile}\"
-            mkdir -p \"logs/bmv2/${profile}\"
-            mv ptf/run/bmv2/log \"logs/bmv2/${profile}\"
-            mv ptf/tests/common/ptf.log \"logs/bmv2/${profile}/\"
-            mv ptf/tests/common/ptf.pcap \"logs/bmv2/${profile}/\"
-        """
     }
 }
 
 void dockerPush(String image) {
-    // consider adding another condition to push the image only once.
     dir("${env.WORKSPACE}/fabric-tna") {
         if (!params.ghprbPullId?.trim()) {
             // Push the image only in case of Post Merge.
             echo "Pushing image ${image}"
-            // sh "docker push ${image}"
+             sh "docker push ${image}"
         } else {
             echo "not in Post merge. Do not push the image"
         }
     }
 }
 
-void exportPTFArtifacts() {
+void exportPTFArtifacts(String architecture, String profile) {
     dir ("${env.WORKSPACE}/fabric-tna") {
+        // Export logs
+        String target = "tm"
+        if (architecture.toLowerCase() == "v1model") {
+            target = "bmv2"
+        }
+
+        sh """
+            rm -rf \"logs/${target}/${profile}\"
+            mkdir -p \"logs/${target}/${profile}\"
+            mv ptf/run/${target}/log \"logs/${target}/${profile}\"
+            mv ptf/tests/common/ptf.log \"logs/${target}/${profile}/\"
+            mv ptf/tests/common/ptf.pcap \"logs/${target}/${profile}/\"
+        """
+
         // Compress the logs in a single tar ball
         sh "tar -czvf logs.tar.gz logs/"
         archiveArtifacts artifacts: "logs.tar.gz", fingerprint: true
@@ -242,22 +212,21 @@ void exportPTFArtifacts() {
 }
 
 void alert() {
-    if (params.ghprbPullId?.trim()) {
-        // Pull request, alert author
-        echo "PR. sending emails to author"
-        emailext(
-            subject: "[${env.JOB_NAME}] ${currentBuild.currentResult}: pull request #${params.ghprbPullId}",
-            body: "Check results at ${env.BUILD_URL}\n\nTriggered by GitHub pull request at ${params.ghprbPullLink}",
-            to: "${params.ghprbPullAuthorEmail}"
-        )
-    } else {
+    if (!params.ghprbPullId?.trim()) {
         // Post-merge, alert project maintainers
         echo "build status failed. alerting maintainers"
         setBuildStatus("Build failed", "FAILURE", "${env.GITHUB_URL}")
         emailext(
-            subject: "[${env.JOB_NAME}] ${currentBuild.currentResult}: ${params.sha1}",
-            body: "Check results at ${env.BUILD_URL}",
-            to: "carmelo@opennetworking.org"
+                subject: "[${env.JOB_NAME}] ${currentBuild.currentResult}: ${params.sha1}",
+                body: "Check results at ${env.BUILD_URL}",
+                to: "carmelo@opennetworking.org"
+        )
+    } else {
+        // Pull request, alert author
+        emailext(
+                subject: "[${env.JOB_NAME}] ${currentBuild.currentResult}: pull request #${params.ghprbPullId}",
+                body: "Check results at ${env.BUILD_URL}\n\nTriggered by GitHub pull request at ${params.ghprbPullLink}",
+                to: "${params.ghprbPullAuthorEmail}"
         )
     }
 }
@@ -267,7 +236,7 @@ void setBuildStatus(String message, String state, String url) {
   step([
       $class: "GitHubCommitStatusSetter",
       reposSource: [$class: "ManuallyEnteredRepositorySource", url: url],
-      contextSource: [$class: "ManuallyEnteredCommitContextSource", context: "fabric-tna-pr-verify"],
+      contextSource: [$class: "ManuallyEnteredCommitContextSource", context: "${env.JOB_NAME}"],
       statusResultSource: [ $class: "ConditionalStatusResultSource", results: [[$class: "AnyBuildResult", message: message, state: state]] ]
   ]);
 }
