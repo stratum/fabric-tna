@@ -38,6 +38,7 @@ control SpgwIngress(
         hdr.gtpu_options.setInvalid();
         hdr.gtpu_ext_psc.setInvalid();
         fabric_md.bridged.base.encap_presence = EncapPresence.NONE;
+        fabric_v1model.decapsulated = true;
     }
 
 

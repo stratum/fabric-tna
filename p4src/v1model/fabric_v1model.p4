@@ -119,7 +119,7 @@ control FabricEgress (inout v1model_header_t hdr,
 
         hdr.egress_h.ipv6 = hdr.ingress_h.ipv6;
 
-        if (fabric_md.egress.bridged.spgw.needs_gtpu_encap) {
+        if (fabric_md.egress.bridged.spgw.needs_gtpu_encap && !fabric_md.decapsulated) {
             // gtpu encapped traffic by ingress spgw.
             // Move outer_ingress_* header to inner_egress_* header, because of gtp encapsulation.
             hdr.egress_h.ipv4 = hdr.ingress_h.ipv4;

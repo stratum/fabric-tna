@@ -20,6 +20,8 @@ struct fabric_v1model_metadata_t {
     bool                      skip_egress;
     // Recirculate flag is needed for bmv2 to handle the SPGW UE to UE traffic.
     bool                      do_recirculate;
+    // Packet has been decapsulated from GTP header, in ingress pipeline.
+    bool                      decapsulated;
 
     fabric_ingress_metadata_t ingress;
     fabric_egress_metadata_t  egress;
