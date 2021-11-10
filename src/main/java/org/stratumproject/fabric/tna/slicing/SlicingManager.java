@@ -505,9 +505,13 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
         log.info("Remove queue table flow on {} for slice {} tc {} queueId {}", deviceId, sliceId, tc, queueId);
     }
 
-    private FabricCapabilities getCapabilities(DeviceId device) {
-        Optional<PiPipeconf> pipeconf = pipeconfService.getPipeconf(device);
-        return pipeconf.map(FabricCapabilities::new).orElse(null);
+    private FabricCapabilities getCapabilities(DeviceId deviceId) throws RuntimeException {
+        Optional<PiPipeconf> pipeconf = pipeconfService.getPipeconf(deviceId);
+        return pipeconf
+                .map(FabricCapabilities::new)
+                .orElseThrow(
+                    () -> new RuntimeException("Cannot get capabilities for deviceId " + deviceId.toString()
+                ));
     }
 
     private List<FlowRule> buildFlowRules(DeviceId deviceId, SliceId sliceId, TrafficClass tc, QueueId queueId) {

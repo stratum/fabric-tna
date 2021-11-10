@@ -80,9 +80,13 @@ public class SlicingManagerTest {
     private final Capture<FlowRule> capturedAddedFlowRules = Capture.newInstance(CaptureType.ALL);
     private final Capture<FlowRule> capturedRemovedFlowRules = Capture.newInstance(CaptureType.ALL);
 
-    private FabricCapabilities getCapabilities(DeviceId deviceId) {
+    private FabricCapabilities getCapabilities(DeviceId deviceId) throws RuntimeException {
         Optional<PiPipeconf> pipeconf = pipeconfService.getPipeconf(deviceId);
-        return pipeconf.map(FabricCapabilities::new).orElse(null);
+        return pipeconf
+                .map(FabricCapabilities::new)
+                .orElseThrow(
+                    () -> new RuntimeException("Cannot get capabilities for device " + deviceId.toString()
+                ));
     }
 
     @Before
