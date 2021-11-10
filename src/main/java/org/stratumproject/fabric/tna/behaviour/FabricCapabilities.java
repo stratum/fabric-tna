@@ -5,6 +5,7 @@ package org.stratumproject.fabric.tna.behaviour;
 
 import org.onosproject.net.pi.model.PiPipeconf;
 import org.slf4j.Logger;
+import org.stratumproject.fabric.tna.slicing.api.Color;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -15,6 +16,7 @@ import java.util.Optional;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.onosproject.net.pi.model.PiPipeconf.ExtensionType.CPU_PORT_TXT;
 import static org.slf4j.LoggerFactory.getLogger;
+import static org.stratumproject.fabric.tna.behaviour.Constants.BMV2_COLOR_RED;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_PDRS;
 
 /**
@@ -24,6 +26,7 @@ public class FabricCapabilities {
 
     private static final String MAVERICKS = "mavericks";
     private static final String MONTARA = "montara";
+    private static final String BMV2 = "bmv2";
 
     private final Logger log = getLogger(getClass());
 
@@ -52,6 +55,23 @@ public class FabricCapabilities {
     public boolean hasHashedTable() {
         return pipeconf.pipelineModel()
                 .table(P4InfoConstants.FABRIC_INGRESS_NEXT_HASHED).isPresent();
+    }
+
+    public boolean isArchV1model() {
+        // TODO SDFAB-758 read architecture from the pipeline model
+        return pipeconf.id().toString().toLowerCase().contains(BMV2);
+    }
+
+    public boolean isArchTna() {
+        return !isArchV1model();
+    }
+
+    public int getMeterColor(Color color) {
+        if (isArchV1model() && color == Color.RED) {
+            return BMV2_COLOR_RED;
+        } else {
+            return color.ordinal();
+        }
     }
 
     public Optional<Integer> cpuPort() {
