@@ -58,9 +58,7 @@ public class FabricCapabilities {
     }
 
     public boolean isArchV1model() {
-        // TODO We could define the architecture ad an extension to the pipeconf,
-        //  or otherwise, load the architecture directly from the P4Info,
-        //  making it part of the pipeline model
+        // TODO SDFAB-758 read architecture from the pipeline model
         return pipeconf.id().toString().toLowerCase().contains(BMV2);
     }
 
