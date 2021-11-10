@@ -274,33 +274,32 @@ control FabricDeparser(packet_out       packet,
     // bmv2 deparser should emit headers contained in egress_header or egress_extended_header_t, not ingress_headers_t.
     //  This behavior is intended to keep things as consistent as possible w.r.t. TNA implementation.
     apply {
-        packet.emit(hdr.egress_h.fake_ethernet);
-        packet.emit(hdr.egress_h.packet_in);
-        packet.emit(hdr.egress_h.ethernet);
-        packet.emit(hdr.egress_h.vlan_tag);
+
+            packet.emit(hdr.ingress_h.fake_ethernet);
+            packet.emit(hdr.ingress_h.packet_in);
+            packet.emit(hdr.ingress_h.ethernet);
+            packet.emit(hdr.ingress_h.vlan_tag);
 #if defined(WITH_XCONNECT) || defined(WITH_DOUBLE_VLAN_TERMINATION)
-        packet.emit(hdr.egress_h.inner_vlan_tag);
+            packet.emit(hdr.ingress_h.inner_vlan_tag);
 #endif // WITH_XCONNECT || WITH_DOUBLE_VLAN_TERMINATION
-        packet.emit(hdr.egress_h.eth_type);
-        packet.emit(hdr.egress_h.mpls);
-#ifdef WITH_SPGW
-        packet.emit(hdr.egress_h.outer_ipv4);
-        packet.emit(hdr.egress_h.outer_udp);
-        packet.emit(hdr.egress_extended_h.outer_tcp);
-        packet.emit(hdr.egress_extended_h.outer_icmp);
-        packet.emit(hdr.egress_h.outer_gtpu);
-        packet.emit(hdr.egress_h.outer_gtpu_options);
-        packet.emit(hdr.egress_h.outer_gtpu_ext_psc);
-#endif // WITH_SPGW
-        // in case we parsed a GTPU packet but did not decap it
-        packet.emit(hdr.egress_extended_h.vxlan);
-        packet.emit(hdr.egress_extended_h.inner_ethernet);
-        packet.emit(hdr.egress_extended_h.inner_eth_type);
-        packet.emit(hdr.egress_h.ipv4);
-        packet.emit(hdr.egress_h.ipv6);
-        packet.emit(hdr.egress_h.udp);
-        packet.emit(hdr.egress_extended_h.tcp);
-        packet.emit(hdr.egress_extended_h.icmp);
+            packet.emit(hdr.ingress_h.eth_type);
+            packet.emit(hdr.ingress_h.mpls);
+            packet.emit(hdr.ingress_h.ipv4);
+            packet.emit(hdr.ingress_h.ipv6);
+            packet.emit(hdr.ingress_h.tcp);
+            packet.emit(hdr.ingress_h.udp);
+            packet.emit(hdr.ingress_h.icmp);
+            // in case we parsed a GTPU packet but did not decap it
+            packet.emit(hdr.ingress_h.gtpu);
+            packet.emit(hdr.ingress_h.gtpu_options);
+            packet.emit(hdr.ingress_h.gtpu_ext_psc);
+            packet.emit(hdr.ingress_h.vxlan);
+            packet.emit(hdr.ingress_h.inner_ethernet);
+            packet.emit(hdr.ingress_h.inner_eth_type);
+            packet.emit(hdr.ingress_h.inner_ipv4);
+            packet.emit(hdr.ingress_h.inner_tcp);
+            packet.emit(hdr.ingress_h.inner_udp);
+            packet.emit(hdr.ingress_h.inner_icmp);
     }
 }
 

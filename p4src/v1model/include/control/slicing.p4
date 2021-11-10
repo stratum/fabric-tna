@@ -142,7 +142,7 @@ control IngressQos (inout fabric_ingress_metadata_t fabric_md,
 // piggyback slice_id and tc across the fabric.
 control EgressDscpRewriter (inout fabric_egress_metadata_t fabric_md,
                             inout standard_metadata_t standard_md,
-                            inout egress_headers_t hdr) {
+                            inout ingress_headers_t hdr) {
 
     bit<6> tmp_dscp = fabric_md.bridged.base.slice_tc;
 
@@ -172,8 +172,8 @@ control EgressDscpRewriter (inout fabric_egress_metadata_t fabric_md,
     apply {
         if (rewriter.apply().hit) {
 #ifdef WITH_SPGW
-            if (hdr.outer_ipv4.isValid()) {
-                hdr.outer_ipv4.dscp = tmp_dscp;
+            if (hdr.ipv4.isValid()) {
+                hdr.ipv4.dscp = tmp_dscp;
             } else
 #endif // WITH_SPGW
             if (hdr.ipv4.isValid()) {

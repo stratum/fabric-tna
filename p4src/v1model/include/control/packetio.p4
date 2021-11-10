@@ -25,7 +25,7 @@ control PacketIoIngress(inout ingress_headers_t hdr,
     }
 }
 
-control PacketIoEgress(inout egress_headers_t hdr,
+control PacketIoEgress(inout ingress_headers_t hdr,
                         inout fabric_egress_metadata_t fabric_md,
                         inout standard_metadata_t standard_md) {
 

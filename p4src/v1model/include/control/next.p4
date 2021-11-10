@@ -187,7 +187,7 @@ control Next (inout ingress_headers_t hdr,
     }
 }
 
-control EgressNextControl (inout egress_headers_t hdr,
+control EgressNextControl (inout ingress_headers_t hdr,
                            inout fabric_egress_metadata_t fabric_md,
                            inout standard_metadata_t standard_md
                            ) {
@@ -304,14 +304,7 @@ control EgressNextControl (inout egress_headers_t hdr,
                 mark_to_drop(standard_md);
             }
         } else {
-            if (hdr.outer_ipv4.isValid() && fabric_md.bridged.base.fwd_type != FWD_BRIDGING) {
-                // Needed in case we're dealing GTP traffic that was neither decapped or encapped.
-                hdr.outer_ipv4.ttl = hdr.outer_ipv4.ttl - 1;
-
-                if (hdr.outer_ipv4.ttl == 0) {
-                    mark_to_drop(standard_md);
-                }
-            } else if (hdr.ipv4.isValid() && fabric_md.bridged.base.fwd_type != FWD_BRIDGING) {
+             if (hdr.ipv4.isValid() && fabric_md.bridged.base.fwd_type != FWD_BRIDGING) {
                     hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
 
                     if (hdr.ipv4.ttl == 0) {

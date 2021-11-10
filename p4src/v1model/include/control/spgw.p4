@@ -304,7 +304,7 @@ control SpgwIngress(
 //============== Egress ==============//
 //====================================//
 control SpgwEgress(
-        inout egress_headers_t hdr,
+        inout ingress_headers_t hdr,
         inout fabric_egress_metadata_t fabric_md) {
 
     counter(MAX_PDR_COUNTERS, CounterType.packets_and_bytes) pdr_counter;
@@ -314,55 +314,62 @@ control SpgwEgress(
         // Allocate GTP-U encap fields on the T-PHV. Set headers as valid later.
         // For bmv2 the initialization needs to be done after the hdr.outer_*.setValid() is called,
         // otherwise the assignments have no effect.
-        /** outer_ipv4 **/
-        hdr.outer_ipv4.version           = 4w4;
-        hdr.outer_ipv4.ihl               = 4w5;
-        hdr.outer_ipv4.dscp              = 0;
-        hdr.outer_ipv4.ecn               = 0;
+
+        // hdr.inner_ipv4 = hdr.ipv4; // outer ipv4 is now inner.
+        // hdr.inner_udp = hdr.udp; // outer udp is now inner.
+        // hdr.inner_tcp = hdr.tcp; // outer tcp is now inner.
+        // hdr.inner_icmp = hdr.icmp; // outer icmp is now inner.
+
+        /** hdr.ipv4 is now outer_ipv4 **/
+        hdr.ipv4.version           = 4w4;
+        hdr.ipv4.ihl               = 4w5;
+        hdr.ipv4.dscp              = 0;
+        hdr.ipv4.ecn               = 0;
         // hdr.outer_ipv4.total_len      = update later
-        hdr.outer_ipv4.identification    = 0x1513; // From NGIC, TODO: Needs to be dynamic
-        hdr.outer_ipv4.flags             = 0;
-        hdr.outer_ipv4.frag_offset       = 0;
-        hdr.outer_ipv4.ttl               = DEFAULT_IPV4_TTL;
-        hdr.outer_ipv4.protocol          = PROTO_UDP;
+        hdr.ipv4.identification    = 0x1513; // From NGIC, TODO: Needs to be dynamic
+        hdr.ipv4.flags             = 0;
+        hdr.ipv4.frag_offset       = 0;
+        hdr.ipv4.ttl               = DEFAULT_IPV4_TTL;
+        hdr.ipv4.protocol          = PROTO_UDP;
         // hdr.outer_ipv4.hdr_checksum   = update later
-        hdr.outer_ipv4.src_addr          = fabric_md.bridged.spgw.gtpu_tunnel_sip;
-        hdr.outer_ipv4.dst_addr          = fabric_md.bridged.spgw.gtpu_tunnel_dip;
-        /** outer_udp **/
-        hdr.outer_udp.sport              = fabric_md.bridged.spgw.gtpu_tunnel_sport;
-        hdr.outer_udp.dport              = GTPU_UDP_PORT;
-        // hdr.outer_udp.len             = update later
-        // hdr.outer_udp.checksum        = update later
+        hdr.ipv4.src_addr          = fabric_md.bridged.spgw.gtpu_tunnel_sip;
+        hdr.ipv4.dst_addr          = fabric_md.bridged.spgw.gtpu_tunnel_dip;
+        /** hdr.udp is now outer_udp **/
+        hdr.udp.sport              = fabric_md.bridged.spgw.gtpu_tunnel_sport;
+        hdr.udp.dport              = GTPU_UDP_PORT;
+        // hdr.udp.len             = update later
+        // hdr.udp.checksum        = update later
         /** outer_gtpu **/
-        hdr.outer_gtpu.version           = GTP_V1;
-        hdr.outer_gtpu.pt                = GTP_PROTOCOL_TYPE_GTP;
-        hdr.outer_gtpu.spare             = 0;
-        // hdr.outer_gtpu.ex_flag        = update later
-        hdr.outer_gtpu.seq_flag          = 0;
-        hdr.outer_gtpu.npdu_flag         = 0;
-        hdr.outer_gtpu.msgtype           = GTPU_GPDU;
-        // hdr.outer_gtpu.msglen         = update later
-        hdr.outer_gtpu.teid              = fabric_md.bridged.spgw.gtpu_teid;
-        /** outer_gtpu_options **/
-        hdr.outer_gtpu_options.seq_num   = 0;
-        hdr.outer_gtpu_options.n_pdu_num = 0;
-        hdr.outer_gtpu_options.next_ext  = GTPU_NEXT_EXT_PSC;
-        /** outer_gtpu_ext_psc **/
-        hdr.outer_gtpu_ext_psc.len       = GTPU_EXT_PSC_LEN;
-        hdr.outer_gtpu_ext_psc.type      = GTPU_EXT_PSC_TYPE_DL;
-        hdr.outer_gtpu_ext_psc.spare0    = 0;
-        hdr.outer_gtpu_ext_psc.ppp       = 0;
-        hdr.outer_gtpu_ext_psc.rqi       = 0;
-        // hdr.outer_gtpu_ext_psc.qfi    = update later
-        hdr.outer_gtpu_ext_psc.next_ext  = GTPU_NEXT_EXT_NONE;
+        hdr.gtpu.version           = GTP_V1;
+        hdr.gtpu.pt                = GTP_PROTOCOL_TYPE_GTP;
+        hdr.gtpu.spare             = 0;
+        // hdr.gtpu.ex_flag        = update later
+        hdr.gtpu.seq_flag          = 0;
+        hdr.gtpu.npdu_flag         = 0;
+        hdr.gtpu.msgtype           = GTPU_GPDU;
+        // hdr.gtpu.msglen         = update later
+        hdr.gtpu.teid              = fabric_md.bridged.spgw.gtpu_teid;
+        /** gtpu_options **/
+        hdr.gtpu_options.seq_num   = 0;
+        hdr.gtpu_options.n_pdu_num = 0;
+        hdr.gtpu_options.next_ext  = GTPU_NEXT_EXT_PSC;
+        /** gtpu_ext_psc **/
+        hdr.gtpu_ext_psc.len       = GTPU_EXT_PSC_LEN;
+        hdr.gtpu_ext_psc.type      = GTPU_EXT_PSC_TYPE_DL;
+        hdr.gtpu_ext_psc.spare0    = 0;
+        hdr.gtpu_ext_psc.ppp       = 0;
+        hdr.gtpu_ext_psc.rqi       = 0;
+        // hdr.gtpu_ext_psc.qfi    = update later
+        hdr.gtpu_ext_psc.next_ext  = GTPU_NEXT_EXT_NONE;
     }
 
     @hidden
     action _encap_common() {
         // Constant fields initialized in the parser.
-        hdr.outer_ipv4.setValid();
-        hdr.outer_udp.setValid();
-        hdr.outer_gtpu.setValid();
+        // hdr.inner_ipv4.setValid();
+        // hdr.inner_udp.setValid();
+        hdr.udp.setValid();
+        hdr.gtpu.setValid();
 
         _encap_initialize();
     }
@@ -370,11 +377,11 @@ control SpgwEgress(
     // Do regular GTP-U encap.
     action gtpu_only() {
         _encap_common();
-        hdr.outer_ipv4.total_len = IPV4_HDR_BYTES + UDP_HDR_BYTES + GTPU_HDR_BYTES
-                + hdr.ipv4.total_len;
-        hdr.outer_udp.len = UDP_HDR_BYTES + GTPU_HDR_BYTES
-                + hdr.ipv4.total_len;
-        hdr.outer_gtpu.msglen = hdr.ipv4.total_len;
+        hdr.ipv4.total_len = IPV4_HDR_BYTES + UDP_HDR_BYTES + GTPU_HDR_BYTES
+                + hdr.inner_ipv4.total_len;
+        hdr.udp.len = UDP_HDR_BYTES + GTPU_HDR_BYTES
+                + hdr.inner_ipv4.total_len;
+        hdr.gtpu.msglen = hdr.inner_ipv4.total_len;
     }
 
     // Do GTP-U encap with PDU Session Container extension for 5G NG-RAN with
@@ -382,19 +389,19 @@ control SpgwEgress(
     // TODO: allow setting different QFIs in ingress
     action gtpu_with_psc(bit<6> qfi) {
         // Need to set valid before assign any value, in bmv2.
-        hdr.outer_gtpu_options.setValid();
-        hdr.outer_gtpu_ext_psc.setValid();
+        hdr.gtpu_options.setValid();
+        hdr.gtpu_ext_psc.setValid();
         _encap_common();
-        hdr.outer_ipv4.total_len = IPV4_HDR_BYTES + UDP_HDR_BYTES + GTPU_HDR_BYTES
+        hdr.ipv4.total_len = IPV4_HDR_BYTES + UDP_HDR_BYTES + GTPU_HDR_BYTES
                 + GTPU_OPTIONS_HDR_BYTES + GTPU_EXT_PSC_HDR_BYTES
-                + hdr.ipv4.total_len;
-        hdr.outer_udp.len = UDP_HDR_BYTES + GTPU_HDR_BYTES
+                + hdr.inner_ipv4.total_len;
+        hdr.udp.len = UDP_HDR_BYTES + GTPU_HDR_BYTES
                 + GTPU_OPTIONS_HDR_BYTES + GTPU_EXT_PSC_HDR_BYTES
-                + hdr.ipv4.total_len;
-        hdr.outer_gtpu.msglen = GTPU_OPTIONS_HDR_BYTES + GTPU_EXT_PSC_HDR_BYTES
-                + hdr.ipv4.total_len;
-        hdr.outer_gtpu.ex_flag = 1;
-        hdr.outer_gtpu_ext_psc.qfi = qfi;
+                + hdr.inner_ipv4.total_len;
+        hdr.gtpu.msglen = GTPU_OPTIONS_HDR_BYTES + GTPU_EXT_PSC_HDR_BYTES
+                + hdr.inner_ipv4.total_len;
+        hdr.gtpu.ex_flag = 1;
+        hdr.gtpu_ext_psc.qfi = qfi;
     }
 
     // By default, do regular GTP-U encap. Allow the control plane to enable
@@ -411,6 +418,26 @@ control SpgwEgress(
     apply {
         if (!fabric_md.bridged.spgw.skip_spgw) {
             if (fabric_md.bridged.spgw.needs_gtpu_encap) {
+                if (hdr.ipv4.isValid()) {
+                    hdr.inner_ipv4.setValid();
+                    hdr.inner_ipv4 = hdr.ipv4;
+                }
+                if (hdr.udp.isValid()) {
+                    hdr.inner_udp.setValid();
+                    hdr.inner_udp = hdr.udp;
+                    hdr.udp.setInvalid();
+                }
+                if (hdr.tcp.isValid()) {
+                    hdr.inner_tcp.setValid();
+                    hdr.inner_tcp = hdr.tcp;
+                    hdr.tcp.setInvalid();
+                }
+                if (hdr.icmp.isValid()) {
+                    hdr.inner_icmp.setValid();
+                    hdr.inner_icmp = hdr.icmp;
+                    hdr.icmp.setInvalid();
+                }
+
                 gtpu_encap.apply();
             }
             if (!fabric_md.bridged.spgw.skip_egress_pdr_ctr) {
@@ -419,4 +446,75 @@ control SpgwEgress(
         }
     }
 }
+
+control FabricComputeChecksum(inout v1model_header_t hdr,
+                              inout fabric_v1model_metadata_t fabric_md){
+    apply {
+        update_checksum(hdr.ingress_h.ipv4.isValid(),
+            {
+                hdr.ingress_h.ipv4.version,
+                hdr.ingress_h.ipv4.ihl,
+                hdr.ingress_h.ipv4.dscp,
+                hdr.ingress_h.ipv4.ecn,
+                hdr.ingress_h.ipv4.total_len,
+                hdr.ingress_h.ipv4.identification,
+                hdr.ingress_h.ipv4.flags,
+                hdr.ingress_h.ipv4.frag_offset,
+                hdr.ingress_h.ipv4.ttl,
+                hdr.ingress_h.ipv4.protocol,
+                hdr.ingress_h.ipv4.src_addr,
+                hdr.ingress_h.ipv4.dst_addr
+            },
+            hdr.ingress_h.ipv4.hdr_checksum,
+            HashAlgorithm.csum16
+        );
+        update_checksum(hdr.ingress_h.inner_ipv4.isValid(),
+            {
+                hdr.ingress_h.inner_ipv4.version,
+                hdr.ingress_h.inner_ipv4.ihl,
+                hdr.ingress_h.inner_ipv4.dscp,
+                hdr.ingress_h.inner_ipv4.ecn,
+                hdr.ingress_h.inner_ipv4.total_len,
+                hdr.ingress_h.inner_ipv4.identification,
+                hdr.ingress_h.inner_ipv4.flags,
+                hdr.ingress_h.inner_ipv4.frag_offset,
+                hdr.ingress_h.inner_ipv4.ttl,
+                hdr.ingress_h.inner_ipv4.protocol,
+                hdr.ingress_h.inner_ipv4.src_addr,
+                hdr.ingress_h.inner_ipv4.dst_addr
+            },
+            hdr.ingress_h.inner_ipv4.hdr_checksum,
+            HashAlgorithm.csum16
+        );
+        // updating udp only if has been encapped.
+        // update_checksum(hdr.ingress_h.udp.isValid() && !fabric_md.ingress.bridged.spgw.needs_gtpu_encap,
+        //     {
+        //         hdr.ingress_h.ipv4.src_addr,
+        //         hdr.ingress_h.ipv4.dst_addr,
+        //         8w0,
+        //         hdr.ingress_h.ipv4.protocol,
+        //         hdr.ingress_h.udp.len,
+        //         hdr.ingress_h.inner_udp.sport,
+        //         hdr.ingress_h.inner_udp.dport,
+        //         hdr.ingress_h.inner_udp.len,
+        //         hdr.ingress_h.gtpu,
+        //         hdr.ingress_h.inner_ipv4,
+        //         hdr.ingress_h.inner_udp
+        //     },
+        //     hdr.ingress_h.udp.checksum,
+        //     HashAlgorithm.csum16
+        // );
+
+        // update_checksum(hdr.ingress_h.udp.isValid(),
+        //     {
+        //         hdr.ingress_h.udp.sport,
+        //         hdr.ingress_h.udp.dport,
+        //         hdr.ingress_h.udp.len
+        //     },
+        //     hdr.ingress_h.udp.checksum,
+        //     HashAlgorithm.csum16
+        // );
+    }
+}
+
 #endif // __SPGW__
