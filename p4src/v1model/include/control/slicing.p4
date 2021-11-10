@@ -173,7 +173,6 @@ control EgressDscpRewriter (inout fabric_v1model_metadata_t fabric_md,
         if (rewriter.apply().hit) {
 #ifdef WITH_SPGW
             if (hdr.inner_ipv4.isValid() && fabric_md.decapsulated) {
-                // in case of decapsulation, only header inner_ipv4 is valid.
                 hdr.inner_ipv4.dscp = tmp_dscp;
             } else
 #endif // WITH_SPGW
