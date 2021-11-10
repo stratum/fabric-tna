@@ -4,6 +4,7 @@ package org.stratumproject.fabric.tna.slicing;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 
 import org.easymock.Capture;
@@ -30,11 +31,15 @@ import org.onosproject.net.flow.FlowRuleService;
 import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flow.criteria.PiCriterion;
 import org.onosproject.net.intent.WorkPartitionService;
+import org.onosproject.net.pi.model.PiPipeconf;
+import org.onosproject.net.pi.model.PiPipeconfId;
 import org.onosproject.net.pi.model.PiTableId;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
+import org.onosproject.net.pi.service.PiPipeconfService;
 import org.onosproject.segmentrouting.config.SegmentRoutingDeviceConfig;
 import org.onosproject.store.service.StorageService;
+import org.stratumproject.fabric.tna.behaviour.FabricCapabilities;
 import org.stratumproject.fabric.tna.behaviour.P4InfoConstants;
 import org.stratumproject.fabric.tna.slicing.api.Color;
 import org.stratumproject.fabric.tna.slicing.api.QueueId;
@@ -62,6 +67,7 @@ public class SlicingManagerTest {
     private static final int QOS_FLOW_PRIORITY = 10;
     private static final int CLASSIFIER_FLOW_PRIORITY = 0;
     private static final DeviceId DID = DeviceId.deviceId("device:s1");
+    private static final DeviceId DID_BMV2 = DeviceId.deviceId("device:s2");
 
     private final CoreService coreService = EasyMock.createMock(CoreService.class);
     private final StorageService storageService = EasyMock.createMock(StorageService.class);
@@ -70,8 +76,18 @@ public class SlicingManagerTest {
     private final WorkPartitionService workPartitionService = EasyMock.createMock(WorkPartitionService.class);
     private final CodecService codecService = EasyMock.createMock(CodecService.class);
     private final NetworkConfigService nwCfgService = EasyMock.createMock(NetworkConfigService.class);
+    private final PiPipeconfService pipeconfService = EasyMock.createMock(PiPipeconfService.class);
     private final Capture<FlowRule> capturedAddedFlowRules = Capture.newInstance(CaptureType.ALL);
     private final Capture<FlowRule> capturedRemovedFlowRules = Capture.newInstance(CaptureType.ALL);
+
+    private FabricCapabilities getCapabilities(DeviceId deviceId) throws RuntimeException {
+        Optional<PiPipeconf> pipeconf = pipeconfService.getPipeconf(deviceId);
+        return pipeconf
+                .map(FabricCapabilities::new)
+                .orElseThrow(
+                    () -> new RuntimeException("Cannot get capabilities for device " + deviceId.toString()
+                ));
+    }
 
     @Before
     public void setup() {
@@ -84,6 +100,12 @@ public class SlicingManagerTest {
 
         DEVICES.clear();
         DEVICES.add(new MockDevice(DID, null));
+        DEVICES.add(new MockDevice(DID_BMV2, null));
+
+        String bmv2PipeconfId = "org.stratumproject.fabric.bmv2";
+        String tnaPipeconfId = "org.stratumproject.fabric.montara_sde_9_5_0";
+        MockPipeconf bmv2MockPipeconf = new MockPipeconf(new PiPipeconfId(bmv2PipeconfId));
+        MockPipeconf tnaMockPipeconf = new MockPipeconf(new PiPipeconfId(tnaPipeconfId));
 
         manager.appId = APP_ID;
         manager.coreService = coreService;
@@ -93,6 +115,7 @@ public class SlicingManagerTest {
         manager.workPartitionService = workPartitionService;
         manager.codecService = codecService;
         manager.networkCfgService = nwCfgService;
+        manager.pipeconfService = pipeconfService;
 
         EasyMock.expect(coreService.registerApplication(EasyMock.anyObject())).andReturn(APP_ID);
         EasyMock.expect(storageService.<SliceStoreKey, QueueId>consistentMapBuilder()).andReturn(
@@ -121,13 +144,16 @@ public class SlicingManagerTest {
         EasyMock.expectLastCall().anyTimes();
         codecService.registerCodec(EasyMock.anyObject(), EasyMock.anyObject());
         EasyMock.expectLastCall().times(2);
+        EasyMock.expect(pipeconfService.getPipeconf(DID_BMV2)).andReturn(Optional.of(bmv2MockPipeconf)).anyTimes();
+        EasyMock.expect(pipeconfService.getPipeconf(DID)).andReturn(Optional.of(tnaMockPipeconf)).anyTimes();
+
         EasyMock.replay(coreService, storageService, workPartitionService,
-            deviceService, flowRuleService, codecService, nwCfgService);
+            deviceService, flowRuleService, codecService, nwCfgService, pipeconfService);
 
         manager.activate();
 
         EasyMock.verify(coreService, storageService, workPartitionService,
-            deviceService, flowRuleService, codecService, nwCfgService);
+            deviceService, flowRuleService, codecService, nwCfgService, pipeconfService);
     }
 
     @Test
@@ -296,6 +322,7 @@ public class SlicingManagerTest {
         manager.addSlice(SLICE_IDS.get(1));
         manager.addTrafficClass(SLICE_IDS.get(1), TrafficClass.REAL_TIME);
         manager.addFlow(selector, SLICE_IDS.get(1), TrafficClass.REAL_TIME);
+        int numDevices = DEVICES.size();
 
         // Abnormal
         assertFalse(manager.removeFlow(wrongSelector, SLICE_IDS.get(1), TrafficClass.REAL_TIME));
@@ -303,11 +330,10 @@ public class SlicingManagerTest {
         // Normal
         assertTrue(manager.removeFlow(selector, SLICE_IDS.get(1), TrafficClass.REAL_TIME));
         assertAfter(50, () -> {
-            assertEquals(1, capturedRemovedFlowRules.getValues().size());
+            assertEquals(1 * numDevices, capturedRemovedFlowRules.getValues().size());
             assertTrue(classifier.exactMatch(capturedRemovedFlowRules.getValues().get(0)));
         });
     }
-
 
     @Test
     public void testRemoveSliceAndTcWithFlowClassifier() {
@@ -377,16 +403,19 @@ public class SlicingManagerTest {
     }
 
     @Test
-    public void testSliceListener() throws Exception {
+    public void testSliceListener() {
         FlowRule slice1BE1 = buildSlice1BE1();
-        FlowRule slice1Control1 = buildSlice1Control1();
-        FlowRule slice1Control2 = buildSlice1Control2();
+        FlowRule slice1Control1 = buildSlice1Control1(DID);
+        FlowRule slice1Control2 = buildSlice1Control2(DID, false);
+        FlowRule bmv2Slice1Control1 = buildSlice1Control1(DID_BMV2);
+        FlowRule bmv2Slice1Control2 = buildSlice1Control2(DID_BMV2, true);
+        int numDevices = DEVICES.size();
 
         // Adding BE class to slice 1
         capturedAddedFlowRules.reset();
         manager.addSlice(SLICE_IDS.get(1));
         assertAfter(50, () -> {
-            assertEquals(1, capturedAddedFlowRules.getValues().size());
+            assertEquals(1 * numDevices, capturedAddedFlowRules.getValues().size());
             assertTrue(slice1BE1.exactMatch(capturedAddedFlowRules.getValues().get(0)));
         });
 
@@ -394,31 +423,35 @@ public class SlicingManagerTest {
         capturedAddedFlowRules.reset();
         manager.addTrafficClass(SLICE_IDS.get(1), TrafficClass.CONTROL);
         assertAfter(50, () -> {
-            assertEquals(2, capturedAddedFlowRules.getValues().size());
+            assertEquals(2 * numDevices, capturedAddedFlowRules.getValues().size());
             assertTrue(slice1Control1.exactMatch(capturedAddedFlowRules.getValues().get(0)));
             assertTrue(slice1Control2.exactMatch(capturedAddedFlowRules.getValues().get(1)));
+            assertTrue(bmv2Slice1Control1.exactMatch(capturedAddedFlowRules.getValues().get(2)));
+            assertTrue(bmv2Slice1Control2.exactMatch(capturedAddedFlowRules.getValues().get(3)));
         });
 
         // Removing Control class from slice 1
         capturedRemovedFlowRules.reset();
         manager.removeTrafficClass(SLICE_IDS.get(1), TrafficClass.CONTROL);
         assertAfter(50, () -> {
-            assertEquals(2, capturedRemovedFlowRules.getValues().size());
+            assertEquals(2 * numDevices, capturedRemovedFlowRules.getValues().size());
             assertTrue(slice1Control1.exactMatch(capturedRemovedFlowRules.getValues().get(0)));
             assertTrue(slice1Control2.exactMatch(capturedRemovedFlowRules.getValues().get(1)));
+            assertTrue(bmv2Slice1Control1.exactMatch(capturedAddedFlowRules.getValues().get(2)));
+            assertTrue(bmv2Slice1Control2.exactMatch(capturedAddedFlowRules.getValues().get(3)));
         });
 
         // Removing BE class from slice 1
         capturedRemovedFlowRules.reset();
         manager.removeTrafficClass(SLICE_IDS.get(1), TrafficClass.BEST_EFFORT);
         assertAfter(50, () -> {
-            assertEquals(1, capturedRemovedFlowRules.getValues().size());
+            assertEquals(1 * numDevices, capturedRemovedFlowRules.getValues().size());
             assertTrue(slice1BE1.exactMatch(capturedRemovedFlowRules.getValues().get(0)));
         });
     }
 
     @Test
-    public void testFlowListener() throws Exception {
+    public void testFlowListener() {
         FlowRule mock = build5Tuple();
         TrafficSelector selector = DefaultTrafficSelector.builder()
             .matchIPSrc(IpPrefix.valueOf("10.20.30.1/32"))
@@ -427,12 +460,13 @@ public class SlicingManagerTest {
             .matchTcpSrc(TpPort.tpPort(80))
             .matchTcpDst(TpPort.tpPort(1234))
             .build();
+        int numDevices = DEVICES.size();
 
         // Adding mock rule to slice 1 BE
         capturedAddedFlowRules.reset();
         manager.addFlow(selector, SLICE_IDS.get(1), TrafficClass.BEST_EFFORT);
         assertAfter(50, () -> {
-            assertEquals(1, capturedAddedFlowRules.getValues().size());
+            assertEquals(1 * numDevices, capturedAddedFlowRules.getValues().size());
             assertTrue(mock.exactMatch(capturedAddedFlowRules.getValues().get(0)));
         });
     }
@@ -460,19 +494,22 @@ public class SlicingManagerTest {
         return flowRule;
     }
 
-    private FlowRule buildSlice1Control1() {
+    private FlowRule buildSlice1Control1(DeviceId deviceId) {
         // Hard coded parameters
+
+        int colorGreen = getCapabilities(deviceId).getMeterColor(Color.GREEN);
+
         PiCriterion.Builder piCriterionBuilder = PiCriterion.builder()
                 .matchExact(P4InfoConstants.HDR_SLICE_TC,
                     sliceTcConcat(SLICE_IDS.get(1).id(), TrafficClass.CONTROL.ordinal()))
-                .matchTernary(HDR_COLOR, Color.GREEN.ordinal(), 1 << HDR_COLOR_BITWIDTH - 1);
+                .matchTernary(HDR_COLOR, colorGreen, 1 << HDR_COLOR_BITWIDTH - 1);
 
         PiAction.Builder piTableActionBuilder = PiAction.builder()
                 .withId(P4InfoConstants.FABRIC_INGRESS_QOS_SET_QUEUE)
                 .withParameter(new PiActionParam(P4InfoConstants.QID, QueueId.CONTROL.id()));
 
         FlowRule flowRule = DefaultFlowRule.builder()
-                .forDevice(DID)
+                .forDevice(deviceId)
                 .forTable(PiTableId.of(FABRIC_INGRESS_QOS_QUEUES.id()))
                 .fromApp(APP_ID)
                 .withPriority(QOS_FLOW_PRIORITY)
@@ -484,19 +521,22 @@ public class SlicingManagerTest {
         return flowRule;
     }
 
-    private FlowRule buildSlice1Control2() {
+    private FlowRule buildSlice1Control2(DeviceId deviceId, boolean isBmv2) {
         // Hard coded parameters
+
+        int colorRed = getCapabilities(deviceId).getMeterColor(Color.RED);
+
         PiCriterion.Builder piCriterionBuilder = PiCriterion.builder()
                 .matchExact(P4InfoConstants.HDR_SLICE_TC,
                     sliceTcConcat(SLICE_IDS.get(1).id(), TrafficClass.CONTROL.ordinal()))
-                .matchTernary(HDR_COLOR, Color.RED.ordinal(), 1 << HDR_COLOR_BITWIDTH - 1);
+                .matchTernary(HDR_COLOR, colorRed, 1 << HDR_COLOR_BITWIDTH - 1);
 
         PiAction.Builder piTableActionBuilder = PiAction.builder()
                 .withId(P4InfoConstants.FABRIC_INGRESS_QOS_SET_QUEUE)
                 .withParameter(new PiActionParam(P4InfoConstants.QID, QueueId.BEST_EFFORT.id()));
 
         FlowRule flowRule = DefaultFlowRule.builder()
-                .forDevice(DID)
+                .forDevice(deviceId)
                 .forTable(PiTableId.of(FABRIC_INGRESS_QOS_QUEUES.id()))
                 .fromApp(APP_ID)
                 .withPriority(QOS_FLOW_PRIORITY)
