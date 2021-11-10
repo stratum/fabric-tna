@@ -373,7 +373,8 @@ control SpgwEgress(
     @hidden
     action _encap_common() {
         // Constant fields initialized in the parser.
-        // hdr.inner_ipv4.setValid();
+        hdr.inner_ipv4.setValid();
+        hdr.inner_ipv4 = hdr.ipv4;
         // hdr.inner_udp.setValid();
         hdr.udp.setValid();
         hdr.gtpu.setValid();
@@ -425,10 +426,10 @@ control SpgwEgress(
     apply {
         if (!fabric_md.bridged.spgw.skip_spgw) {
             if (fabric_md.bridged.spgw.needs_gtpu_encap) {
-                if (hdr.ipv4.isValid()) {
-                    hdr.inner_ipv4.setValid();
-                    hdr.inner_ipv4 = hdr.ipv4;
-                }
+                // if (hdr.ipv4.isValid()) {
+                //     hdr.inner_ipv4.setValid();
+                //     hdr.inner_ipv4 = hdr.ipv4;
+                // }
                 if (hdr.udp.isValid()) {
                     hdr.inner_udp.setValid();
                     hdr.inner_udp = hdr.udp;
