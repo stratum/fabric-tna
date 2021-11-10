@@ -81,6 +81,11 @@ pipeline {
             }
         }
         stage("Docker push image") {
+            when {
+                expression {
+                    returns PROFILE == "fabric-spgw-int"
+                }
+            }
             steps {
                 script {
                     if (!params.ghprbPullId?.trim()) {
