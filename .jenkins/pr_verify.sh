@@ -21,7 +21,7 @@ make deps
 
 echo "Build all profiles using SDE ${SDE_P4C_DOCKER_IMG}..."
 # Pull first to avoid pulling multiple times in parallel by the make jobs
-docker build -f ptf/Dockerfile -t "${TESTER_DOCKER_IMG}" .
+DOCKER_BUILDKIT=1 docker build --cache-from stratumproject/testvectors:ptf --build-arg=BUILDKIT_INLINE_CACHE=1 -f ptf/Dockerfile -t "${TESTER_DOCKER_IMG}" .
 
 # Jenkins uses 8 cores 15G VM
 make -j8 all

@@ -24,23 +24,18 @@ ENV BUILD_DEPS \
     curl \
     g++ \
     net-tools
-RUN apt-get update
-RUN apt-get install -y $BUILD_DEPS
+RUN apt-get update && \
+    apt-get install -y $BUILD_DEPS
 RUN pip install grpcio-tools==$GRPC_VER
 
 RUN mkdir -p /output
 RUN echo "Building gnmi proto"
-RUN git clone https://github.com/openconfig/gnmi.git /tmp/github.com/openconfig/gnmi
-WORKDIR /tmp/github.com/openconfig/gnmi/proto
-RUN sed -i "s|github.com/openconfig/gnmi/proto/gnmi_ext|gnmi_ext|g" /tmp/github.com/openconfig/gnmi/proto/gnmi/gnmi.proto
+RUN git clone https://github.com/openconfig/gnmi.git /tmp/github.com/openconfig/gnmi && \
+    cd /tmp/github.com/openconfig/gnmi/proto && \
+    sed -i "s|github.com/openconfig/gnmi/proto/gnmi_ext|gnmi_ext|g" /tmp/github.com/openconfig/gnmi/proto/gnmi/gnmi.proto && \
+    python -m grpc_tools.protoc -I=/tmp/github.com/openconfig/gnmi/proto --python_out=/output gnmi_ext/gnmi_ext.proto && \
+    python -m grpc_tools.protoc -I=/tmp/github.com/openconfig/gnmi/proto --python_out=/output --grpc_python_out=/output gnmi/gnmi.proto
 
-RUN python -m grpc_tools.protoc -I=/tmp/github.com/openconfig/gnmi/proto --python_out=/output gnmi_ext/gnmi_ext.proto
-RUN python -m grpc_tools.protoc -I=/tmp/github.com/openconfig/gnmi/proto --python_out=/output --grpc_python_out=/output gnmi/gnmi.proto
-
-RUN echo "Building p4runtime proto"
-RUN git clone https://github.com/p4lang/p4runtime.git /tmp/github.com/p4lang/p4runtime
-RUN git clone https://github.com/googleapis/googleapis /tmp/github.com/googleapis/googleapis
-WORKDIR /tmp/github.com/p4lang/p4runtime/proto
 ENV PROTOS="\
 /tmp/github.com/p4lang/p4runtime/proto/p4/v1/p4data.proto \
 /tmp/github.com/p4lang/p4runtime/proto/p4/v1/p4runtime.proto \
@@ -48,17 +43,22 @@ ENV PROTOS="\
 /tmp/github.com/p4lang/p4runtime/proto/p4/config/v1/p4types.proto \
 /tmp/github.com/googleapis/googleapis/google/rpc/status.proto \
 /tmp/github.com/googleapis/googleapis/google/rpc/code.proto"
-RUN python -m grpc_tools.protoc -I=/tmp/github.com/p4lang/p4runtime/proto:/tmp/github.com/googleapis/googleapis --python_out=/output --grpc_python_out=/output $PROTOS
+
+RUN echo "Building p4runtime proto"
+RUN git clone https://github.com/p4lang/p4runtime.git /tmp/github.com/p4lang/p4runtime && \
+    git clone https://github.com/googleapis/googleapis /tmp/github.com/googleapis/googleapis && \
+    cd /tmp/github.com/p4lang/p4runtime/proto && \
+    python -m grpc_tools.protoc -I=/tmp/github.com/p4lang/p4runtime/proto:/tmp/github.com/googleapis/googleapis --python_out=/output --grpc_python_out=/output $PROTOS
 
 RUN echo "Building testvector proto"
-RUN git clone https://github.com/stratum/testvectors /tmp/github.com/stratum/testvectors
-WORKDIR /tmp/github.com/stratum/testvectors/proto
-RUN python -m grpc_tools.protoc -I=.:/tmp/github.com/openconfig/gnmi/proto:/tmp/github.com/p4lang/p4runtime/proto:/tmp/github.com/googleapis/googleapis --python_out=/output testvector/tv.proto
-RUN python -m grpc_tools.protoc -I=. --python_out=/output target/target.proto
-RUN python -m grpc_tools.protoc -I=. --python_out=/output portmap/portmap.proto
-RUN cp /tmp/github.com/stratum/testvectors/utils/python/tvutils.py /output/testvector/tvutils.py
-RUN cp /tmp/github.com/stratum/testvectors/utils/python/pmutils.py /output/portmap/pmutils.py
-RUN cp /tmp/github.com/stratum/testvectors/utils/python/targetutils.py /output/target/targetutils.py
+RUN git clone https://github.com/stratum/testvectors /tmp/github.com/stratum/testvectors && \
+    cd /tmp/github.com/stratum/testvectors/proto && \
+    python -m grpc_tools.protoc -I=.:/tmp/github.com/openconfig/gnmi/proto:/tmp/github.com/p4lang/p4runtime/proto:/tmp/github.com/googleapis/googleapis --python_out=/output testvector/tv.proto && \
+    python -m grpc_tools.protoc -I=. --python_out=/output target/target.proto && \
+    python -m grpc_tools.protoc -I=. --python_out=/output portmap/portmap.proto && \
+    cp /tmp/github.com/stratum/testvectors/utils/python/tvutils.py /output/testvector/tvutils.py && \
+    cp /tmp/github.com/stratum/testvectors/utils/python/pmutils.py /output/portmap/pmutils.py && \
+    cp /tmp/github.com/stratum/testvectors/utils/python/targetutils.py /output/target/targetutils.py
 
 RUN touch /output/gnmi_ext/__init__.py
 RUN touch /output/gnmi/__init__.py
@@ -95,7 +95,8 @@ ENV PIP_DEPS \
     p4runtime-shell==$P4RUNTIME_SHELL_VER \
     unittest-xml-reporting==$UNITTEST_XML_REPORTING_VER
 
-RUN apt update && apt install -y $RUNTIME_DEPS
+RUN apt update && \
+    apt install -y $RUNTIME_DEPS
 RUN pip3 install --no-cache-dir --root /python_output $PIP_DEPS
 
 # Install TRex deps
@@ -106,8 +107,8 @@ ARG TREX_LIBS
 # Install Trex library
 ENV TREX_SCRIPT_DIR=/trex-core-${TREX_VER}/scripts
 # RUN apt update && apt install -y wget
-RUN wget https://github.com/stratum/trex-core/archive/${TREX_VER}.zip
-RUN unzip -qq ${TREX_VER}.zip && \
+RUN wget https://github.com/stratum/trex-core/archive/${TREX_VER}.zip && \
+    unzip -qq ${TREX_VER}.zip && \
     mkdir -p /output/${TREX_EXT_LIBS} && \
     mkdir -p /output/${TREX_LIBS} && \
     cp -r ${TREX_SCRIPT_DIR}/automation/trex_control_plane/interactive/* /output/${TREX_LIBS} && \
@@ -138,7 +139,9 @@ ENV RUNTIME_DEPS \
     libatlas-base-dev \
     gfortran
 
-RUN apt update && apt install -y $RUNTIME_DEPS
+RUN apt update && \
+    apt install -y $RUNTIME_DEPS && \
+    rm -rf /var/lib/apt/lists/*
 RUN pip3 install --no-cache-dir scipy==1.5.4 numpy==1.19.4 matplotlib==3.3.3 pyyaml==5.4.1
 
 ENV TREX_EXT_LIBS=${TREX_EXT_LIBS}
