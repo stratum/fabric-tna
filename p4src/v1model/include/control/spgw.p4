@@ -32,8 +32,14 @@ control SpgwIngress(
         fabric_md.bridged.base.ip_eth_type = ETHERTYPE_IPV4;
         fabric_md.routing_ipv4_dst = hdr.inner_ipv4.dst_addr;
         // Move GTPU and inner L3 headers out
-        hdr.ipv4.setInvalid();
-        hdr.udp.setInvalid();
+        // hdr.ipv4.setInvalid();
+        // hdr.udp.setInvalid();
+
+        hdr.ipv4 = hdr.inner_ipv4;
+        hdr.inner_ipv4.setInvalid();
+        hdr.udp = hdr.inner_udp;
+        hdr.inner_udp.setInvalid();
+
         hdr.gtpu.setInvalid();
         hdr.gtpu_options.setInvalid();
         hdr.gtpu_ext_psc.setInvalid();
@@ -305,9 +311,10 @@ control SpgwIngress(
 //====================================//
 control SpgwEgress(
         inout ingress_headers_t hdr,
-        inout fabric_egress_metadata_t fabric_md) {
+        inout fabric_v1model_metadata_t fabric_v1model) {
 
     counter(MAX_PDR_COUNTERS, CounterType.packets_and_bytes) pdr_counter;
+    fabric_egress_metadata_t fabric_md = fabric_v1model.egress;
 
     @hidden
     action _encap_initialize() {
@@ -444,6 +451,7 @@ control SpgwEgress(
                 pdr_counter.count((bit<32>)fabric_md.bridged.spgw.pdr_ctr_id);
             }
         }
+        fabric_v1model.egress = fabric_md;
     }
 }
 

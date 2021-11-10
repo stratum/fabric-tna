@@ -110,7 +110,7 @@ control FabricEgress (inout v1model_header_t hdr,
              fabric_md.egress.bridged.bmd_type);
         egress_next.apply(hdr.ingress_h, fabric_md.egress, standard_md);
 #ifdef WITH_SPGW
-        spgw.apply(hdr.ingress_h, fabric_md.egress);
+        spgw.apply(hdr.ingress_h, fabric_md);
 #endif // WITH_SPGW
         dscp_rewriter.apply(fabric_md, standard_md, hdr.ingress_h);
 
