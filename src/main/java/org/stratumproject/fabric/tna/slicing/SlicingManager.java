@@ -363,13 +363,12 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
     @Override
     public boolean addFlow(TrafficSelector selector, SliceId sliceId, TrafficClass tc) {
         if (selector.equals(DefaultTrafficSelector.emptySelector())) {
-            log.warn("Empty traffic selector is not allowed");
-            return false;
+            throw new SlicingException(INVALID, "Empty traffic selector is not allowed");
         }
         // Accept 5-tuple only
         if (!fiveTupleOnly(selector)) {
-            log.warn("Only accept 5-tuple {}", selector);
-            return false;
+            throw new SlicingException(UNSUPPORTED,
+                String.format("Only accept 5-tuple %s", selector.toString()));
         }
 
         SliceStoreKey value = new SliceStoreKey(sliceId, tc);
@@ -383,16 +382,24 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
 
     @Override
     public boolean removeFlow(TrafficSelector selector, SliceId sliceId, TrafficClass tc) {
+        StringBuilder errorMessage = new StringBuilder();
         AtomicBoolean result = new AtomicBoolean(false);
         classifierFlowStore.compute(selector, (k, v) -> {
             if (v == null) {
-                log.warn("There is no such Flow Classifier Rule {} for slice {}  and TC {}", selector, sliceId, tc);
+                errorMessage.append(
+                    String.format("There is no such Flow Classifier Rule %s for slice %s and TC %s",
+                        selector, sliceId, tc));
                 return null;
             }
             log.info("Removing flow {} from slice {} tc {}", selector, sliceId, tc);
             result.set(true);
             return null;
         });
+
+        if (errorMessage.length() != 0) {
+            throw new SlicingException(FAILED, errorMessage.toString());
+        }
+
         return result.get();
     }
 
