@@ -486,7 +486,6 @@ control FabricComputeChecksum(inout v1model_header_t hdr,
             hdr.ingress_h.inner_ipv4.hdr_checksum,
             HashAlgorithm.csum16
         );
-        // updating udp only if has been encapped.
         // update_checksum(hdr.ingress_h.udp.isValid() && !fabric_md.ingress.bridged.spgw.needs_gtpu_encap,
         //     {
         //         hdr.ingress_h.ipv4.src_addr,
@@ -500,16 +499,6 @@ control FabricComputeChecksum(inout v1model_header_t hdr,
         //         hdr.ingress_h.gtpu,
         //         hdr.ingress_h.inner_ipv4,
         //         hdr.ingress_h.inner_udp
-        //     },
-        //     hdr.ingress_h.udp.checksum,
-        //     HashAlgorithm.csum16
-        // );
-
-        // update_checksum(hdr.ingress_h.udp.isValid(),
-        //     {
-        //         hdr.ingress_h.udp.sport,
-        //         hdr.ingress_h.udp.dport,
-        //         hdr.ingress_h.udp.len
         //     },
         //     hdr.ingress_h.udp.checksum,
         //     HashAlgorithm.csum16
