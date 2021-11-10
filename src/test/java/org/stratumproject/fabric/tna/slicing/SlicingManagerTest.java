@@ -432,7 +432,7 @@ public class SlicingManagerTest {
         // Fail to remove Slice and TC when Flow Classifier
         exceptionRule.expect(SlicingException.class);
         exceptionRule.expectMessage("Cannot remove slice 1 with 1 Flow Classifier Rules");
-        assertFalse(manager.removeTrafficClass(SLICE_IDS.get(1), TrafficClass.REAL_TIME));
+        assertFalse(manager.removeSlice(SLICE_IDS.get(1)));
     }
 
     @Test
