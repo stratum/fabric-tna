@@ -314,6 +314,12 @@ header bridged_metadata_t {
 #ifdef WITH_INT
     int_bridged_metadata_t int_bmd;
 #endif // WITH_INT
+
+#ifdef V1MODEL
+// Use padding to make the header multiple of 8 bits,
+// condition required by p4c when compiling for bmv2.
+    bit<1>                 _pad;
+#endif
 }
 
 // Used for table lookup. Initialized with the parsed headers, or 0 if invalid

@@ -3,22 +3,22 @@ Upstream-Name: fabric-tna
 Upstream-Contact: Stratum Developers <stratum-dev@lists.stratumproject.org>
 Source: https://github.com/stratum/fabric-tna
 
-Files: tofino-netcfg.json ptf/run/tm/*.json src/test/resources/*.json
+Files: tofino-netcfg.json ptf/run/tm/*.json ptf/run/hw/*.json src/test/resources/*.json .vscode/settings.json
 Copyright: 2020-present Open Networking Foundation
 License: LicenseRef-ONF-Member-Only-1.0
 
-Files: .vscode/settings.json
-Copyright: 2020-present Open Networking Foundation
+Files: ptf/run/bmv2/chassis_config.txt
+Copyright: 2021-present Open Networking Foundation
 License: LicenseRef-ONF-Member-Only-1.0
 
-Files: ptf/run/tm/32qs-ports.json
-Copyright: 2020-present Open Networking Foundation
+Files: ptf/run/bmv2/port_map.veth.json
+Copyright: 2021-present Open Networking Foundation
 License: LicenseRef-ONF-Member-Only-1.0
 
-Files: ptf/run/hw/port_map.hw.json
-Copyright: 2020-present Open Networking Foundation
+Files: ptf/images/*
+Copyright: 2021-present Open Networking Foundation
 License: LicenseRef-ONF-Member-Only-1.0
 
-Files: ptf/run/hw/port_map.trex.json
-Copyright: 2020-present Open Networking Foundation
-License: LicenseRef-ONF-Member-Only-1.0
+Files: src/main/resources/META-INF/NOTICE
+Copyright: No Copyright
+License: CC0-1.0

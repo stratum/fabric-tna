@@ -16,11 +16,12 @@ set -exu -o pipefail
 
 source .env
 
+echo "Pulling all dependencies..."
+make deps
+
 echo "Build all profiles using SDE ${SDE_P4C_DOCKER_IMG}..."
 # Pull first to avoid pulling multiple times in parallel by the make jobs
-docker pull "${SDE_P4C_DOCKER_IMG}"
-docker pull "${TESTER_DOCKER_IMG}"
-docker build -f ptf/Dockerfile -t "${TESTER_DOCKER_IMG}" .
+DOCKER_BUILDKIT=1 docker build --cache-from stratumproject/testvectors:ptf --build-arg=BUILDKIT_INLINE_CACHE=1 -f ptf/Dockerfile -t "${TESTER_DOCKER_IMG}" .
 
 # Jenkins uses 8 cores 15G VM
 make -j8 all
@@ -59,9 +60,23 @@ for profile in "fabric-int" "fabric-spgw-int"; do
   # Special case to test INT drop report with deflected packet.
   TM_DOD=1 ./ptf/run/tv/run "${profile}" TEST=int-dod
 
-  rm -rf "logs/${profile}"
-  mkdir -p "logs/${profile}"
-  mv ptf/run/tm/log "logs/${profile}"
-  mv ptf/tests/common/ptf.log "logs/${profile}/"
-  mv ptf/tests/common/ptf.pcap "logs/${profile}/"
+  rm -rf "logs/tna/${profile}"
+  mkdir -p "logs/tna/${profile}"
+  mv ptf/run/tm/log "logs/tna/${profile}"
+  mv ptf/tests/common/ptf.log "logs/tna/${profile}/"
+  mv ptf/tests/common/ptf.pcap "logs/tna/${profile}/"
+done
+
+# Running PTF for bmv2.
+#shellcheck disable=SC2043
+for profile in "fabric"; do # Only 1 profile, for now.
+
+  echo "Run PTF tests for bmv2, profile ${profile}"
+  ./ptf/run/bmv2/run "${profile}"
+
+  rm -rf "logs/bmv2/${profile}"
+  mkdir -p "logs/bmv2/${profile}"
+  mv ptf/run/bmv2/log "logs/bmv2/${profile}"
+  mv ptf/tests/common/ptf.log "logs/bmv2/${profile}/"
+  mv ptf/tests/common/ptf.pcap "logs/bmv2/${profile}/"
 done

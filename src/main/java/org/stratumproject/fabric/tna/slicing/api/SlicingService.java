@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 package org.stratumproject.fabric.tna.slicing.api;
 
-import org.onosproject.net.flow.TrafficTreatment;
+import org.onosproject.net.flow.TrafficSelector;
 
 import java.util.Set;
 
@@ -65,24 +65,24 @@ public interface SlicingService {
     Set<TrafficClass> getTrafficClasses(SliceId sliceId);
 
     /**
-     * Associates flow identified by given treatment with given slice ID and traffic class.
+     * Associates flow identified by given selector with given slice ID and traffic class.
      *
-     * @param treatment flow identifier
+     * @param selector flow identifier
      * @param sliceId slice identifier
      * @param tc traffic class
      * @return true if the flow is associated with given slice/tc successfully, false otherwise.
      */
-    boolean addFlow(TrafficTreatment treatment, SliceId sliceId, TrafficClass tc);
+    boolean addFlow(TrafficSelector selector, SliceId sliceId, TrafficClass tc);
 
     /**
-     * Dissociates flow identified by given treatment with given slice ID and traffic class.
+     * Dissociates flow identified by given selector with given slice ID and traffic class.
      *
-     * @param treatment flow identifier
+     * @param selector flow identifier
      * @param sliceId slice identifier
      * @param tc traffic class
      * @return true if the flow is dissociate with given slice/tc successfully, false otherwise.
      */
-    boolean removeFlow(TrafficTreatment treatment, SliceId sliceId, TrafficClass tc);
+    boolean removeFlow(TrafficSelector selector, SliceId sliceId, TrafficClass tc);
 
     /**
      * Gets all flows in given sliceId and traffic class.
@@ -91,5 +91,5 @@ public interface SlicingService {
      * @param tc traffic class
      * @return set of flow identifiers
      */
-    Set<TrafficTreatment> getFlows(SliceId sliceId, TrafficClass tc);
+    Set<TrafficSelector> getFlows(SliceId sliceId, TrafficClass tc);
 }

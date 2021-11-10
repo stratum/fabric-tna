@@ -379,7 +379,7 @@ class MinFlowrateWithSoftwareLatencyMeasurement(QosTest):
         )
         self.assertGreaterEqual(
             tx_bps_L1,
-            EXPECTED_FLOW_RATE_WITH_STATS_BPS * 0.99,
+            EXPECTED_FLOW_RATE_WITH_STATS_BPS * 0.95,
             "The achieved Tx rate {} is lower than the expected Tx rate of {}".format(
                 to_readable(tx_bps_L1), to_readable(EXPECTED_FLOW_RATE_WITH_STATS_BPS)
             ),
@@ -449,11 +449,6 @@ class StrictPriorityControlTrafficIsPrioritized(QosTest):
             lat_stats.seq_too_low,
             0,
             f"Control traffic has been dropped or reordered: {lat_stats.seq_too_low}",
-        )
-        self.assertLessEqual(
-            lat_stats.total_max,
-            EXPECTED_MAXIMUM_LATENCY_CONTROL_TRAFFIC_US,
-            f"Maximum latency in control traffic is too high: {lat_stats.total_max}",
         )
         self.assertLessEqual(
             lat_stats.percentile_99_9,
@@ -674,11 +669,6 @@ class RealtimeTrafficIsRrScheduled(QosTest):
             f"Realtime traffic has been dropped: {lat_stats_3.dropped}",
         )
         self.assertLessEqual(
-            lat_stats_3.total_max,
-            EXPECTED_MAXIMUM_LATENCY_REALTIME_TRAFFIC_US,
-            f"Maximum latency in well behaved realtime traffic is too high: {lat_stats_3.total_max}",
-        )
-        self.assertLessEqual(
             lat_stats_3.percentile_99_9,
             EXPECTED_99_9_PERCENTILE_LATENCY_REALTIME_TRAFFIC_US,
             f"99th percentile latency in well behaved realtime traffic is too high: {lat_stats_3.percentile_99_9}",
@@ -868,7 +858,7 @@ class ElasticTrafficIsWrrScheduled(QosTest):
         self.assertAlmostEqual(
             flow_rate_shares.rx_bps_total / link_bps,
             1,
-            delta=0.01,
+            delta=0.02,
             msg=f"Egress link utilization should be almost 100%",
         )
         self.assertAlmostEqual(

@@ -287,6 +287,14 @@ public class StatisticManager implements StatisticService {
     protected class InternalStatsCollector implements Runnable {
         @Override
         public void run() {
+            try {
+                updateStats();
+            } catch (Exception e) {
+                log.error("Error during stats update: {}", e.getMessage());
+            }
+        }
+
+        private void updateStats() {
             flowRuleService.getFlowEntriesById(appId).forEach(flowEntry -> {
                 TrafficSelector flowSelector = flowEntry.selector();
 

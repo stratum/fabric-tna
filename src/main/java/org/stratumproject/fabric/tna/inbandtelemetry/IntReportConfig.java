@@ -46,6 +46,7 @@ public class IntReportConfig extends Config<ApplicationId> {
     private static final String RESET_NS = "resetNs";
     private static final long DEFAULT_QUEUE_REPORT_TRIGGER_LATENCY_THRESHOLD = 0xffffffffL; // do not report.
     private static final long DEFAULT_QUEUE_REPORT_RESET_LATENCY_THRESHOLD = 0; // do not reset.
+    private static final int DEFAULT_MIN_FLOW_HOP_LATENCY_CHANGE_NS = 256;
 
     /**
      * IP address of the collector. This is the destination IP address that will be
@@ -90,7 +91,7 @@ public class IntReportConfig extends Config<ApplicationId> {
         if (object.hasNonNull(MIN_FLOW_HOP_LATENCY_CHANGE_NS)) {
             return (int) JsonUtils.number(object, MIN_FLOW_HOP_LATENCY_CHANGE_NS);
         } else {
-            return 0;
+            return DEFAULT_MIN_FLOW_HOP_LATENCY_CHANGE_NS;
         }
     }
 
@@ -153,8 +154,11 @@ public class IntReportConfig extends Config<ApplicationId> {
                 ObjectNode threshold = JsonUtils.node(thresholds, queueIdStr);
                 if (threshold.hasNonNull(RESET_NS)) {
                     return (long) JsonUtils.number(threshold, RESET_NS);
-                } else {
+                } else if (threshold.hasNonNull(TRIGGER_NS)) {
                     return queueReportTriggerLatencyThresholdNs(queueId) / 2;
+                } else {
+                    // Both tiggerNs and resetNs are not present.
+                    return DEFAULT_QUEUE_REPORT_RESET_LATENCY_THRESHOLD;
                 }
             } else {
                 return DEFAULT_QUEUE_REPORT_RESET_LATENCY_THRESHOLD;

@@ -13,23 +13,29 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.onlab.packet.IpPrefix;
+import org.onlab.packet.MacAddress;
+import org.onlab.packet.TpPort;
 import org.onosproject.codec.CodecService;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
 import org.onosproject.core.DefaultApplicationId;
 import org.onosproject.net.Device;
 import org.onosproject.net.DeviceId;
+import org.onosproject.net.config.NetworkConfigService;
 import org.onosproject.net.device.DeviceService;
 import org.onosproject.net.flow.DefaultFlowRule;
 import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
 import org.onosproject.net.flow.FlowRule;
 import org.onosproject.net.flow.FlowRuleService;
+import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flow.criteria.PiCriterion;
 import org.onosproject.net.intent.WorkPartitionService;
 import org.onosproject.net.pi.model.PiTableId;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
+import org.onosproject.segmentrouting.config.SegmentRoutingDeviceConfig;
 import org.onosproject.store.service.StorageService;
 import org.stratumproject.fabric.tna.behaviour.P4InfoConstants;
 import org.stratumproject.fabric.tna.slicing.api.Color;
@@ -57,6 +63,7 @@ public class SlicingManagerTest {
     private static final ArrayList<Device> DEVICES = new ArrayList<>();
 
     private static final int QOS_FLOW_PRIORITY = 10;
+    private static final int CLASSIFIER_FLOW_PRIORITY = 0;
     private static final DeviceId DID = DeviceId.deviceId("device:s1");
 
     private final CoreService coreService = EasyMock.createMock(CoreService.class);
@@ -65,6 +72,7 @@ public class SlicingManagerTest {
     private final FlowRuleService flowRuleService = EasyMock.createMock(FlowRuleService.class);
     private final WorkPartitionService workPartitionService = EasyMock.createMock(WorkPartitionService.class);
     private final CodecService codecService = EasyMock.createMock(CodecService.class);
+    private final NetworkConfigService nwCfgService = EasyMock.createMock(NetworkConfigService.class);
     private final Capture<FlowRule> capturedAddedFlowRules = Capture.newInstance(CaptureType.ALL);
     private final Capture<FlowRule> capturedRemovedFlowRules = Capture.newInstance(CaptureType.ALL);
 
@@ -78,6 +86,7 @@ public class SlicingManagerTest {
         SLICE_IDS.add(SliceId.of(1));
         SLICE_IDS.add(SliceId.of(2));
         SLICE_IDS.add(SliceId.of(3));
+        SLICE_IDS.add(SliceId.of(4));
 
         DEVICES.clear();
         DEVICES.add(new MockDevice(DID, null));
@@ -89,15 +98,27 @@ public class SlicingManagerTest {
         manager.deviceService = deviceService;
         manager.workPartitionService = workPartitionService;
         manager.codecService = codecService;
+        manager.networkCfgService = nwCfgService;
 
         EasyMock.expect(coreService.registerApplication(EasyMock.anyObject())).andReturn(APP_ID);
         EasyMock.expect(storageService.<SliceStoreKey, QueueId>consistentMapBuilder()).andReturn(
             new MockConsistentMap.Builder<SliceStoreKey, QueueId>());
         EasyMock.expect(storageService.<QueueId, QueueStoreValue>consistentMapBuilder()).andReturn(
             new MockConsistentMap.Builder<QueueId, QueueStoreValue>());
+        EasyMock.expect(storageService.<TrafficSelector, SliceStoreKey>consistentMapBuilder()).andReturn(
+            new MockConsistentMap.Builder<TrafficSelector, SliceStoreKey>());
         EasyMock.expect(workPartitionService.isMine(
             EasyMock.anyObject(), EasyMock.anyObject())).andReturn(true).anyTimes();
         EasyMock.expect(deviceService.getAvailableDevices()).andReturn(DEVICES).anyTimes();
+        EasyMock.expect(nwCfgService.getConfig(EasyMock.anyObject(), EasyMock.eq(SegmentRoutingDeviceConfig.class)))
+        .andReturn(
+            new SegmentRoutingDeviceConfig() {
+                @Override
+                public Boolean isEdgeRouter() {
+                    return true;
+                }
+            }
+        ).anyTimes();
         deviceService.addListener(EasyMock.anyObject());
         EasyMock.expectLastCall();
         flowRuleService.applyFlowRules(EasyMock.capture(capturedAddedFlowRules));
@@ -107,12 +128,12 @@ public class SlicingManagerTest {
         codecService.registerCodec(EasyMock.anyObject(), EasyMock.anyObject());
         EasyMock.expectLastCall().times(2);
         EasyMock.replay(coreService, storageService, workPartitionService,
-            deviceService, flowRuleService, codecService);
+            deviceService, flowRuleService, codecService, nwCfgService);
 
         manager.activate();
 
         EasyMock.verify(coreService, storageService, workPartitionService,
-            deviceService, flowRuleService, codecService);
+            deviceService, flowRuleService, codecService, nwCfgService);
     }
 
     @Test
@@ -291,13 +312,75 @@ public class SlicingManagerTest {
         manager.removeTrafficClass(SLICE_IDS.get(0), TrafficClass.BEST_EFFORT);
     }
 
+    public void testAddFlowClassifier() {
+        // Preparation
+        capturedAddedFlowRules.reset();
+        TrafficSelector selector = DefaultTrafficSelector.builder().matchUdpDst(TpPort.tpPort(100)).build();
+        TrafficSelector wrongSelector = DefaultTrafficSelector.builder().matchEthDst(MacAddress.IPV4_MULTICAST).build();
+        FlowRule classifier = buildClassifierFromSelector(SLICE_IDS.get(1), TrafficClass.REAL_TIME, selector);
+        manager.addSlice(SLICE_IDS.get(1));
+        manager.addTrafficClass(SLICE_IDS.get(1), TrafficClass.REAL_TIME);
+
+        // Normal
+        manager.addFlow(selector, SLICE_IDS.get(1), TrafficClass.REAL_TIME);
+
+        assertAfter(50, () -> {
+            assertTrue(capturedAddedFlowRules.getValues().size() >= 3);
+            assertTrue(capturedAddedFlowRules.getValues().stream()
+                               .anyMatch(fl -> fl.exactMatch(classifier)));
+        });
+        assertEquals(1, manager.getFlows(SLICE_IDS.get(1), TrafficClass.REAL_TIME).size());
+        assertTrue(manager.getFlows(SLICE_IDS.get(1), TrafficClass.REAL_TIME).contains(selector));
+
+        // Abnormal
+        assertFalse(manager.addFlow(DefaultTrafficSelector.builder().build(),
+                                    SLICE_IDS.get(1), TrafficClass.REAL_TIME));
+        assertFalse(manager.addFlow(wrongSelector, SLICE_IDS.get(1), TrafficClass.REAL_TIME));
+    }
+
+    @Test
+    public void testRemoveFlowClassifier() {
+        // Preparation
+        capturedRemovedFlowRules.reset();
+        TrafficSelector selector = DefaultTrafficSelector.builder().matchUdpDst(TpPort.tpPort(100)).build();
+        TrafficSelector wrongSelector = DefaultTrafficSelector.builder().matchTcpDst(TpPort.tpPort(100)).build();
+        FlowRule classifier = buildClassifierFromSelector(SLICE_IDS.get(1), TrafficClass.REAL_TIME, selector);
+        manager.addSlice(SLICE_IDS.get(1));
+        manager.addTrafficClass(SLICE_IDS.get(1), TrafficClass.REAL_TIME);
+        manager.addFlow(selector, SLICE_IDS.get(1), TrafficClass.REAL_TIME);
+
+        // Abnormal
+        assertFalse(manager.removeFlow(wrongSelector, SLICE_IDS.get(1), TrafficClass.REAL_TIME));
+
+        // Normal
+        assertTrue(manager.removeFlow(selector, SLICE_IDS.get(1), TrafficClass.REAL_TIME));
+        assertAfter(50, () -> {
+            assertEquals(1, capturedRemovedFlowRules.getValues().size());
+            assertTrue(classifier.exactMatch(capturedRemovedFlowRules.getValues().get(0)));
+        });
+    }
+
+
+    @Test
+    public void testRemoveSliceAndTcWithFlowClassifier() {
+        // Preparation
+        TrafficSelector selector = DefaultTrafficSelector.builder().matchUdpDst(TpPort.tpPort(100)).build();
+        manager.addSlice(SLICE_IDS.get(1));
+        manager.addTrafficClass(SLICE_IDS.get(1), TrafficClass.REAL_TIME);
+        manager.addFlow(selector, SLICE_IDS.get(1), TrafficClass.REAL_TIME);
+
+        // Fail to remove Slice and TC when Flow Classifier
+        assertFalse(manager.removeTrafficClass(SLICE_IDS.get(1), TrafficClass.REAL_TIME));
+        assertFalse(manager.removeSlice(SLICE_IDS.get(1)));
+    }
+
     @Test
     public void testQueue() {
         // Preparation
         manager.queueStore.put(QueueId.of(4), new QueueStoreValue(TrafficClass.REAL_TIME, true));
         manager.queueStore.put(QueueId.of(7), new QueueStoreValue(TrafficClass.ELASTIC, true));
         SliceStoreKey key;
-        for (int i = 1; i <= 3; i++) {
+        for (int i = 1; i <= 4; i++) {
             manager.addSlice(SLICE_IDS.get(i));
             manager.addTrafficClass(SLICE_IDS.get(i), TrafficClass.CONTROL);
             // The following actions may throw a slicing exception
@@ -313,13 +396,13 @@ public class SlicingManagerTest {
         }
 
         // All BE should point to same queue
-        for (int i = 0; i <= 3; i++) {
+        for (int i = 0; i <= 4; i++) {
             key = new SliceStoreKey(SLICE_IDS.get(i), TrafficClass.BEST_EFFORT);
             assertEquals(QueueId.BEST_EFFORT, manager.getSliceStore().get(key));
         }
 
         // All Control should point to same queue
-        for (int i = 1; i <= 3; i++) {
+        for (int i = 1; i <= 4; i++) {
             key = new SliceStoreKey(SLICE_IDS.get(i), TrafficClass.CONTROL);
             assertEquals(QueueId.CONTROL, manager.getSliceStore().get(key));
         }
@@ -333,7 +416,7 @@ public class SlicingManagerTest {
         assertEquals(QueueId.of(3), manager.getSliceStore().get(key));
         key = new SliceStoreKey(SLICE_IDS.get(2), TrafficClass.REAL_TIME);
         assertEquals(QueueId.of(4), manager.getSliceStore().get(key));
-        key = new SliceStoreKey(SLICE_IDS.get(3), TrafficClass.REAL_TIME);
+        key = new SliceStoreKey(SLICE_IDS.get(4), TrafficClass.REAL_TIME);
         assertEquals(null, manager.getSliceStore().get(key));
 
         // Each ELASTIC class should point to single queue
@@ -391,6 +474,26 @@ public class SlicingManagerTest {
         assertAfter(50, () -> {
             assertEquals(1, capturedRemovedFlowRules.getValues().size());
             assertTrue(slice1BE1.exactMatch(capturedRemovedFlowRules.getValues().get(0)));
+        });
+    }
+
+    @Test
+    public void testFlowListener() throws Exception {
+        FlowRule mock = build5Tuple();
+        TrafficSelector selector = DefaultTrafficSelector.builder()
+            .matchIPSrc(IpPrefix.valueOf("10.20.30.1/32"))
+            .matchIPDst(IpPrefix.valueOf("10.20.30.2/32"))
+            .matchIPProtocol((byte) 0x06)
+            .matchTcpSrc(TpPort.tpPort(80))
+            .matchTcpDst(TpPort.tpPort(1234))
+            .build();
+
+        // Adding mock rule to slice 1 BE
+        capturedAddedFlowRules.reset();
+        manager.addFlow(selector, SLICE_IDS.get(1), TrafficClass.BEST_EFFORT);
+        assertAfter(50, () -> {
+            assertEquals(1, capturedAddedFlowRules.getValues().size());
+            assertTrue(mock.exactMatch(capturedAddedFlowRules.getValues().get(0)));
         });
     }
 
@@ -463,5 +566,35 @@ public class SlicingManagerTest {
                 .build();
 
         return flowRule;
+    }
+
+    private FlowRule build5Tuple() {
+        // Hard coded parameters
+        TrafficSelector selector = DefaultTrafficSelector.builder()
+            .matchIPSrc(IpPrefix.valueOf("10.20.30.1/32"))
+            .matchIPDst(IpPrefix.valueOf("10.20.30.2/32"))
+            .matchIPProtocol((byte) 0x06)
+            .matchTcpSrc(TpPort.tpPort(80))
+            .matchTcpDst(TpPort.tpPort(1234))
+            .build();
+
+        return buildClassifierFromSelector(SLICE_IDS.get(1), TrafficClass.BEST_EFFORT, selector);
+    }
+
+    private FlowRule buildClassifierFromSelector(SliceId sliceId, TrafficClass tc, TrafficSelector selector) {
+        PiAction.Builder piTableActionBuilder = PiAction.builder()
+                .withId(P4InfoConstants.FABRIC_INGRESS_SLICE_TC_CLASSIFIER_SET_SLICE_ID_TC)
+                .withParameters(Set.of(new PiActionParam(P4InfoConstants.SLICE_ID, sliceId.id()),
+                                       new PiActionParam(P4InfoConstants.TC, tc.ordinal())));
+
+        return DefaultFlowRule.builder()
+                .forDevice(DID)
+                .forTable(P4InfoConstants.FABRIC_INGRESS_SLICE_TC_CLASSIFIER_CLASSIFIER)
+                .fromApp(APP_ID)
+                .withPriority(CLASSIFIER_FLOW_PRIORITY)
+                .withSelector(selector)
+                .withTreatment(DefaultTrafficTreatment.builder().piTableAction(piTableActionBuilder.build()).build())
+                .makePermanent()
+                .build();
     }
 }

@@ -4,7 +4,7 @@
 #include <core.p4>
 #include <tna.p4>
 
-#include "../header.p4"
+#include "shared/header.p4"
 
 control Next (inout ingress_headers_t hdr,
               inout fabric_ingress_metadata_t fabric_md,

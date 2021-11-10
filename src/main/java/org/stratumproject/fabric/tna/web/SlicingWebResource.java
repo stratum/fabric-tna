@@ -5,6 +5,8 @@ package org.stratumproject.fabric.tna.web;
 
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+
+import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.rest.AbstractWebResource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,6 +14,8 @@ import org.stratumproject.fabric.tna.slicing.api.SliceId;
 import org.stratumproject.fabric.tna.slicing.api.SlicingService;
 import org.stratumproject.fabric.tna.slicing.api.TrafficClass;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.Set;
 
 import javax.ws.rs.Consumes;
@@ -23,6 +27,8 @@ import javax.ws.rs.POST;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+
+import static org.onlab.util.Tools.readTreeFromStream;
 
 /**
  * Query, add and remove Slice and TrafficClass.
@@ -154,6 +160,87 @@ public class SlicingWebResource extends AbstractWebResource {
         boolean result = slicingService.removeTrafficClass(SliceId.of(sliceId), TrafficClass.valueOf(tc));
 
         Response response;
+        if (result) {
+            response = Response.ok().build();
+        } else {
+            response = Response.status(400).build();
+        }
+
+        return response;
+    }
+
+    /**
+     * Get classifier flows by slice id and tc.
+     *
+     * @param sliceId id of slice
+     * @param tc traffic class
+     * @return 200 ok and traffic selectors
+     */
+    @GET
+    @Path("flow/{sliceId}/{tc}")
+    public Response getFlow(@PathParam("sliceId") int sliceId, @PathParam("tc") String tc) {
+        Set<TrafficSelector> result = slicingService.getFlows(SliceId.of(sliceId), TrafficClass.valueOf(tc));
+        ObjectNode root = mapper().createObjectNode();
+        ArrayNode array = root.putArray("TrafficSelector");
+
+        result.forEach(id -> array.add(codec(TrafficSelector.class).encode(id, this)));
+
+        return Response.ok(root).build();
+    }
+
+    /**
+     * Classify a flow.
+     *
+     * @param sliceId id of slice
+     * @param tc traffic class
+     * @param input json stream of traffic selector
+     * @return 200 ok or 400 bad request
+     */
+    @POST
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Path("flow/{sliceId}/{tc}")
+    public Response addFlow(@PathParam("sliceId") int sliceId, @PathParam("tc") String tc, InputStream input) {
+        boolean result;
+        Response response;
+        try {
+            ObjectNode jsonTree = readTreeFromStream(mapper(), input);
+            TrafficSelector selector = codec(TrafficSelector.class).decode(jsonTree, this);
+            result = slicingService.addFlow(selector, SliceId.of(sliceId), TrafficClass.valueOf(tc));
+        } catch (IOException ex) {
+            throw new IllegalArgumentException(ex);
+        }
+
+        if (result) {
+            response = Response.ok().build();
+        } else {
+            response = Response.status(400).build();
+        }
+
+        return response;
+    }
+
+    /**
+     * Remove a classifier flow.
+     *
+     * @param sliceId if of slice
+     * @param tc traffic class
+     * @param input json stream of traffic selector
+     * @return 200 ok or 400 bad request
+     */
+    @DELETE
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Path("flow/{sliceId}/{tc}")
+    public Response removeFlow(@PathParam("sliceId") int sliceId, @PathParam("tc") String tc, InputStream input) {
+        boolean result;
+        Response response;
+        try {
+            ObjectNode jsonTree = readTreeFromStream(mapper(), input);
+            TrafficSelector selector = codec(TrafficSelector.class).decode(jsonTree, this);
+            result = slicingService.removeFlow(selector, SliceId.of(sliceId), TrafficClass.valueOf(tc));
+        } catch (IOException ex) {
+            throw new IllegalArgumentException(ex);
+        }
+
         if (result) {
             response = Response.ok().build();
         } else {

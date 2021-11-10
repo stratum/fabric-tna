@@ -26,19 +26,27 @@ ONOS_URL ?= http://$(ONOS_HOST):8181/onos
 ONOS_CURL := curl --fail -sSL --user onos:rocks --noproxy localhost
 
 PIPECONF_APP_NAME := org.stratumproject.fabric-tna
-PIPECONF_OAR_FILE := $(DIR)/target/fabric-tna-1.0.0-SNAPSHOT.oar
+PIPECONF_OAR_FILE := $(DIR)/target/fabric-tna-1.1.0-SNAPSHOT.oar
 
 # Profiles to build by default (all)
 PROFILES ?= fabric fabric-spgw fabric-int fabric-spgw-int
+
+deps:
+	docker pull $(SDE_TM_DOCKER_IMG)
+	docker pull $(SDE_P4C_DOCKER_IMG)
+	docker pull $(STRATUM_DOCKER_IMG)
+	docker pull $(STRATUM_BMV2_IMG)
+	docker pull $(TESTER_DOCKER_IMG)
+	docker pull $(PIPELINE_CONFIG_BUILDER_IMG)
+	docker pull $(MAVEN_DOCKER_IMAGE)
 
 build: clean $(PROFILES) pipeconf
 
 all: $(PROFILES)
 
-
 fabric:
 	@$(DIR)/p4src/tna/build.sh fabric ""
-
+	@${DIR}/p4src/v1model/build.sh fabric ""
 
 # Profiles which are not completed yet.
 # fabric-simple:
@@ -136,6 +144,7 @@ format:
 clean:
 	-rm -rf src/main/resources/p4c-out
 	-rm -rf p4src/tna/build
+	-rm -rf p4src/v1model/build
 	-rm -rf target
 
 deep-clean: clean
