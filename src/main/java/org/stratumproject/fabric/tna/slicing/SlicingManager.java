@@ -41,6 +41,7 @@ import org.stratumproject.fabric.tna.slicing.api.Color;
 import org.stratumproject.fabric.tna.slicing.api.QueueId;
 import org.stratumproject.fabric.tna.slicing.api.SliceId;
 import org.stratumproject.fabric.tna.slicing.api.SlicingAdminService;
+import org.stratumproject.fabric.tna.slicing.api.SlicingException;
 import org.stratumproject.fabric.tna.slicing.api.SlicingService;
 import org.stratumproject.fabric.tna.slicing.api.TrafficClass;
 import org.stratumproject.fabric.tna.web.SliceIdCodec;
@@ -63,6 +64,9 @@ import static org.stratumproject.fabric.tna.behaviour.FabricUtils.sliceTcConcat;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_QOS_QUEUES;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_COLOR;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_COLOR_BITWIDTH;
+import static org.stratumproject.fabric.tna.slicing.api.SlicingException.ErrorType.FAILED;
+import static org.stratumproject.fabric.tna.slicing.api.SlicingException.ErrorType.INVALID;
+import static org.stratumproject.fabric.tna.slicing.api.SlicingException.ErrorType.UNSUPPORTED;
 
 /**
  * Implementation of SlicingService.
@@ -181,8 +185,7 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
     @Override
     public boolean addSlice(SliceId sliceId) {
         if (sliceId.equals(SliceId.DEFAULT)) {
-            log.warn("Adding default slice is not allowed");
-            return false;
+            throw new SlicingException(INVALID, "Adding default slice is not allowed");
         }
 
         return addTrafficClass(sliceId, TrafficClass.BEST_EFFORT);
@@ -191,14 +194,12 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
     @Override
     public boolean removeSlice(SliceId sliceId) {
         if (sliceId.equals(SliceId.DEFAULT)) {
-            log.warn("Removing default slice is not allowed");
-            return false;
+            throw new SlicingException(INVALID, "Removing default slice is not allowed");
         }
 
         Set<TrafficClass> tcs = getTrafficClasses(sliceId);
         if (tcs.isEmpty()) {
-            log.warn("Cannot remove a non-existent slice {}", sliceId);
-            return false;
+            throw new SlicingException(FAILED, String.format("Cannot remove a non-existent slice %s", sliceId));
         }
 
         AtomicBoolean result = new AtomicBoolean(true);
@@ -224,31 +225,30 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
     @Override
     public boolean addTrafficClass(SliceId sliceId, TrafficClass tc) {
         if (tc == TrafficClass.SYSTEM) {
-            log.warn("SYSTEM TC should not be associated with any slice");
-            return false;
+            throw new SlicingException(INVALID, "SYSTEM TC should not be associated with any slice");
         }
 
         // Ensure the presence of BEST_EFFORT TC in the slice
         if (tc != TrafficClass.BEST_EFFORT) {
             SliceStoreKey beKey = new SliceStoreKey(sliceId, TrafficClass.BEST_EFFORT);
             if (!sliceStore.containsKey(beKey)) {
-                log.warn("Slice {} doesn't exist yet", sliceId);
-                return false;
+                throw new SlicingException(FAILED, String.format("Slice %s doesn't exist yet", sliceId));
             }
         }
 
         AtomicBoolean result = new AtomicBoolean(false);
 
+        StringBuilder errorMessage = new StringBuilder();
         SliceStoreKey key = new SliceStoreKey(sliceId, tc);
         sliceStore.compute(key, (k, v) -> {
             if (v != null) {
-               log.warn("TC {} is already allocated for slice {}", tc, sliceId);
-               return v;
+                errorMessage.append(String.format("TC %s is already allocated for slice %s", tc, sliceId));
+                return v;
             }
 
             QueueId queueId = allocateQueue(tc);
             if (queueId == null) {
-                log.warn("Unable to find available queue for {}", tc);
+                errorMessage.append(String.format("Unable to find available queue for %s", tc));
                 return null;
             }
 
@@ -256,6 +256,10 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
             result.set(true);
             return queueId;
         });
+
+        if (errorMessage.length() != 0) {
+            throw new SlicingException(FAILED, errorMessage.toString());
+        }
 
         return result.get();
     }
@@ -265,21 +269,22 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
         // Ensure the presence of BEST_EFFORT TC in the slice
         if (tc == TrafficClass.BEST_EFFORT) {
             if (sliceId.equals(SliceId.DEFAULT)) {
-                log.warn("Removing {} from {} is not allowed", tc, sliceId);
-                return false;
+                throw new SlicingException(INVALID,
+                    String.format("Removing %s from slice %s is not allowed", tc, sliceId));
             }
             if (getTrafficClasses(sliceId).stream().anyMatch(existTc -> existTc != TrafficClass.BEST_EFFORT)) {
-                log.warn("Can't remove {} from {} while another TC exists", tc, sliceId);
-                return false;
+                throw new SlicingException(UNSUPPORTED,
+                    String.format("Can't remove %s from slice %s while another TC exists", tc, sliceId));
             }
         }
 
         AtomicBoolean result = new AtomicBoolean(false);
 
+        StringBuilder errorMessage = new StringBuilder();
         SliceStoreKey key = new SliceStoreKey(sliceId, tc);
         sliceStore.compute(key, (k, v) -> {
             if (v == null) {
-                log.warn("TC {} has not been allocated to slice {}", tc, sliceId);
+                errorMessage.append(String.format("TC %s has not been allocated to slice %s", tc, sliceId));
                 return null;
             }
 
@@ -288,6 +293,10 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
             result.set(true);
             return null;
         });
+
+        if (errorMessage.length() != 0) {
+            throw new SlicingException(FAILED, errorMessage.toString());
+        }
 
         return result.get();
     }
