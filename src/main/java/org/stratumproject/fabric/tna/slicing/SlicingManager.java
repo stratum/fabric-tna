@@ -243,9 +243,9 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
 
         Set<TrafficSelector> classifierFlows = getFlows(sliceId);
         if (!classifierFlows.isEmpty()) {
-            log.warn("Cannot remove slice {} with {} Flow Classifier Rules",
-                     sliceId, classifierFlows.size());
-            return false;
+            throw new SlicingException(FAILED,
+                String.format("Cannot remove slice %s with %d Flow Classifier Rules",
+                    sliceId, classifierFlows.size()));
         }
 
         AtomicBoolean result = new AtomicBoolean(true);
@@ -326,9 +326,9 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
 
         Set<TrafficSelector> classifierFlows = getFlows(sliceId, tc);
         if (!classifierFlows.isEmpty()) {
-            log.warn("Cannot remove {} from slice {} with {} Flow Classifier Rules",
-                     tc, sliceId, classifierFlows.size());
-            return false;
+            throw new SlicingException(FAILED,
+                String.format("Cannot remove %s from slice %s with %d Flow Classifier Rules",
+                    tc, sliceId, classifierFlows.size()));
         }
 
         AtomicBoolean result = new AtomicBoolean(false);
