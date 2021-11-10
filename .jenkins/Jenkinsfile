@@ -7,8 +7,8 @@
 commitHash = params.commitHash ? params.commitHash : params.sha1
 // Profile and Platform will be set through Jenkins'job parameters.
 PROFILE = params.profile ? params.profile : "fabric"
-ARCHITECTURE = params.platform ? params.platform : "tna"
-//EnvFile will be populated by reading file '.env', contained in repository.
+ARCHITECTURE = params.architecture ? params.architecture : "tna"
+//EnvFile will be populated by reading .env file
 EnvFile = ""
 GITHUB_URL = "git@github.com:stratum/fabric-tna.git"
 
@@ -22,9 +22,13 @@ pipeline {
                 dockerLogins()
                 //Set JDK 11
                 sh "sudo update-java-alternatives -s java-11-amazon-corretto"
-                dir("${env.WORKSPACE}/fabric-tna") {
-                    script {
-                        EnvFile = readFile('.env').readLines().findAll { it.contains('=') }
+
+                script {
+                    dir ("${env.WORKSPACE}/fabric-tna") {
+                        EnvFile = sh(
+                                script: 'make env',
+                                returnStdout: true
+                        ).trim().split("\n")
                     }
                 }
             }
@@ -33,12 +37,12 @@ pipeline {
             steps {
                 dir ("${env.WORKSPACE}/fabric-tna") {
                     withEnv(EnvFile as List) {
-                        sh "make deps"
-                        sh """
+                        sh '''
+                            make deps
                             DOCKER_BUILDKIT=1 docker build -f ptf/Dockerfile\
                             --build-arg=BUILDKIT_INLINE_CACHE=1\
                             --cache-from "${TESTER_DOCKER_IMG}" -t "${TESTER_DOCKER_IMG}" .
-                        """
+                        '''
                     }
                 }
             }
@@ -81,8 +85,10 @@ pipeline {
                 script {
                     if (!params.ghprbPullId?.trim()) {
                         // Post Merge.
-                        withEnv(EnvFile as List) {
-                            dockerPush("${TESTER_DOCKER_IMG}")
+                        dir("${env.WORKSPACE}/fabric-tna") {
+                            withEnv(EnvFile as List) {
+                                sh 'docker push "${TESTER_DOCKER_IMG}"'
+                            }
                         }
                     }
                 }
@@ -174,18 +180,6 @@ void runBmv2PTFTests(String profile) {
     dir ("${env.WORKSPACE}/fabric-tna") {
         echo "Run PTF tests for bmv2, profile ${profile}"
         sh "./ptf/run/bmv2/run \"${profile}\""
-    }
-}
-
-void dockerPush(String image) {
-    dir("${env.WORKSPACE}/fabric-tna") {
-        if (!params.ghprbPullId?.trim()) {
-            // Push the image only in case of Post Merge.
-            echo "Pushing image ${image}"
-             sh "docker push ${image}"
-        } else {
-            echo "not in Post merge. Do not push the image"
-        }
     }
 }
 
