@@ -110,7 +110,6 @@ pipeline {
             }
         }
         failure {
-            setBuildStatus("Build failed", "FAILURE", GITHUB_URL)
             alert()
         }
     }
@@ -214,6 +213,7 @@ void alert() {
     if (!params.ghprbPullId?.trim()) {
         // Post-merge, alert project maintainers
         echo "build status failed. alerting maintainers"
+        setBuildStatus("Build failed", "FAILURE", GITHUB_URL)
         emailext(
                 subject: "[${env.JOB_NAME}] ${currentBuild.currentResult}: ${params.sha1}",
                 body: "Check results at ${env.BUILD_URL}",
