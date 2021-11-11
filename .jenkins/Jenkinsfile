@@ -58,7 +58,8 @@ pipeline {
         stage("Make constants and pipeconf tests") {
             when {
                 expression {
-                    return PROFILE == "fabric-spgw-int"
+                    return (PROFILE == "fabric-spgw-int") &&
+                        (ARCHITECTURE == "tna")
                 }
             }
             steps {
@@ -83,19 +84,14 @@ pipeline {
         stage("Docker push image") {
             when {
                 expression {
-                    returns PROFILE == "fabric-spgw-int"
+                    returns (PROFILE == "fabric-spgw-int") &&
+                        (!params.ghprbPullId?.trim())
                 }
             }
             steps {
-                script {
-                    if (!params.ghprbPullId?.trim()) {
-                        // Post Merge.
-                        dir("${env.WORKSPACE}/fabric-tna") {
-                            withEnv(EnvFile as List) {
-                                sh 'docker push "${TESTER_DOCKER_IMG}"'
-                            }
-                        }
-                    }
+                // Post Merge.
+                withEnv(EnvFile as List) {
+                    sh 'docker push "${TESTER_DOCKER_IMG}"'
                 }
             }
         }
@@ -110,7 +106,25 @@ pipeline {
             }
         }
         failure {
-            alert()
+            script {
+                if (!params.ghprbPullId?.trim()) {
+                    // Post-merge, alert project maintainers
+                    echo "build status failed. alerting maintainers"
+                    setBuildStatus("Build failed", "FAILURE", GITHUB_URL)
+                    emailext(
+                            subject: "[${env.JOB_NAME}] ${currentBuild.currentResult}: ${params.sha1}",
+                            body: "Check results at ${env.BUILD_URL}",
+                            to: "carmelo@opennetworking.org"
+                    )
+                } else {
+                    // Pull request, alert author
+                    emailext(
+                            subject: "[${env.JOB_NAME}] ${currentBuild.currentResult}: pull request #${params.ghprbPullId}",
+                            body: "Check results at ${env.BUILD_URL}\n\nTriggered by GitHub pull request at ${params.ghprbPullLink}",
+                            to: "${params.ghprbPullAuthorEmail}"
+                    )
+                }
+            }
         }
     }
 }
@@ -206,26 +220,6 @@ void exportPTFArtifacts(String architecture, String profile) {
         // Compress the logs in a single tar ball
         sh "tar -czvf logs.tar.gz logs/"
         archiveArtifacts artifacts: "logs.tar.gz", fingerprint: true
-    }
-}
-
-void alert() {
-    if (!params.ghprbPullId?.trim()) {
-        // Post-merge, alert project maintainers
-        echo "build status failed. alerting maintainers"
-        setBuildStatus("Build failed", "FAILURE", GITHUB_URL)
-        emailext(
-                subject: "[${env.JOB_NAME}] ${currentBuild.currentResult}: ${params.sha1}",
-                body: "Check results at ${env.BUILD_URL}",
-                to: "carmelo@opennetworking.org"
-        )
-    } else {
-        // Pull request, alert author
-        emailext(
-                subject: "[${env.JOB_NAME}] ${currentBuild.currentResult}: pull request #${params.ghprbPullId}",
-                body: "Check results at ${env.BUILD_URL}\n\nTriggered by GitHub pull request at ${params.ghprbPullLink}",
-                to: "${params.ghprbPullAuthorEmail}"
-        )
     }
 }
 
