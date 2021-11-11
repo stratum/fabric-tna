@@ -5,7 +5,7 @@
 
 // sha1 used for PRs, while commitHash is populated for postmerge
 commitHash = params.commitHash ? params.commitHash : params.sha1
-// Profile and Platform will be set through Jenkins'job parameters.
+// Profile and Architecture will be set through Jenkins'job parameters.
 PROFILE = params.profile ? params.profile : "fabric"
 ARCHITECTURE = params.architecture ? params.architecture : "tna"
 //EnvFile will be populated by reading .env file
@@ -110,6 +110,7 @@ pipeline {
             }
         }
         failure {
+            setBuildStatus("Build failed", "FAILURE", GITHUB_URL)
             alert()
         }
     }
@@ -171,8 +172,7 @@ void runTmPTFTests(String profile) {
         sh "./ptf/run/tv/run \"${profile}\""
 
         if (profile.toLowerCase().contains("int")) {
-            // int-dod is failing because of missing 'watchlist' table that
-            //  gets truncated by p4c being unused, if profile does not contain 'int'.
+            // int-dod tests are executed only for profiles '*-int'.
 
             // Special case to test INT drop report with deflected packet.
             sh "TM_DOD=1 ./ptf/run/tm/run \"${profile}\" TEST=int-dod"
@@ -214,7 +214,6 @@ void alert() {
     if (!params.ghprbPullId?.trim()) {
         // Post-merge, alert project maintainers
         echo "build status failed. alerting maintainers"
-        setBuildStatus("Build failed", "FAILURE", "${env.GITHUB_URL}")
         emailext(
                 subject: "[${env.JOB_NAME}] ${currentBuild.currentResult}: ${params.sha1}",
                 body: "Check results at ${env.BUILD_URL}",
@@ -232,10 +231,10 @@ void alert() {
 
 void setBuildStatus(String message, String state, String url) {
     echo "Setting build status to success"
-  step([
-      $class: "GitHubCommitStatusSetter",
-      reposSource: [$class: "ManuallyEnteredRepositorySource", url: url],
-      contextSource: [$class: "ManuallyEnteredCommitContextSource", context: "${env.JOB_NAME}"],
-      statusResultSource: [ $class: "ConditionalStatusResultSource", results: [[$class: "AnyBuildResult", message: message, state: state]] ]
-  ]);
+    step([
+        $class: "GitHubCommitStatusSetter",
+        reposSource: [$class: "ManuallyEnteredRepositorySource", url: url],
+        contextSource: [$class: "ManuallyEnteredCommitContextSource", context: "${env.JOB_NAME}"],
+        statusResultSource: [ $class: "ConditionalStatusResultSource", results: [[$class: "AnyBuildResult", message: message, state: state]] ]
+    ]);
 }
