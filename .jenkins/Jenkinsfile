@@ -17,6 +17,12 @@ pipeline {
     stages {
         stage("Prepare environment") {
             steps {
+                step([$class: "WsCleanup"])
+                gitCheckout(GITHUB_URL, commitHash)
+                dockerLogins()
+                //Set JDK 11
+                sh "sudo update-java-alternatives -s java-11-amazon-corretto"
+
                 script {
                     if (!PROFILE?.trim() || !ARCHITECTURE?.trim()) {
                         currentBuild.result = "FAILURE"
@@ -29,11 +35,6 @@ pipeline {
                         ).trim().split("\n")
                     }
                 }
-                step([$class: "WsCleanup"])
-                gitCheckout(GITHUB_URL, commitHash)
-                dockerLogins()
-                //Set JDK 11
-                sh "sudo update-java-alternatives -s java-11-amazon-corretto"
             }
         }
         stage("Build dependencies") {
