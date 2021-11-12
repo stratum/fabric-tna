@@ -63,6 +63,7 @@ import static org.stratumproject.fabric.tna.behaviour.FabricUtils.portType;
 class FilteringObjectiveTranslator
         extends AbstractObjectiveTranslator<FilteringObjective> {
 
+    // Port-based trust DSCP entries should override flow classifier rules.
     private static final int TRUST_DSCP_PRIORITY = 100;
     private static final int DSCP_REWRITER_PRIORITY = 100;
 
