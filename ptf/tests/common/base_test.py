@@ -49,6 +49,9 @@ def is_bmv2():
     _is_bmv2 = testutils.test_param_get("pltfm")
     return _is_bmv2 == "bmv2"
 
+def is_tofino():
+    return not is_bmv2()
+
 
 def ipv4_to_binary(addr):
     return socket.inet_aton(addr)
