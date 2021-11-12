@@ -6,8 +6,8 @@
 // sha1 used for PRs, while commitHash is populated for postmerge
 commitHash = params.commitHash ? params.commitHash : params.sha1
 // Profile and Architecture will be set through Jenkins'job parameters.
-PROFILE = params.profile ? params.profile : "fabric"
-ARCHITECTURE = params.architecture ? params.architecture : "tna"
+PROFILE = params.profile
+ARCHITECTURE = params.architecture
 //EnvFile will be populated by reading .env file
 EnvFile = ""
 GITHUB_URL = "git@github.com:stratum/fabric-tna.git"
@@ -17,13 +17,11 @@ pipeline {
     stages {
         stage("Prepare environment") {
             steps {
-                step([$class: "WsCleanup"])
-                gitCheckout(GITHUB_URL, commitHash)
-                dockerLogins()
-                //Set JDK 11
-                sh "sudo update-java-alternatives -s java-11-amazon-corretto"
-
                 script {
+                    if (!PROFILE?.trim() || !ARCHITECTURE?.trim()) {
+                        currentBuild.result = "FAILURE"
+                        error("Parameters are null or empty.")
+                    }
                     dir ("${env.WORKSPACE}/fabric-tna") {
                         EnvFile = sh(
                                 script: 'make env',
@@ -31,6 +29,11 @@ pipeline {
                         ).trim().split("\n")
                     }
                 }
+                step([$class: "WsCleanup"])
+                gitCheckout(GITHUB_URL, commitHash)
+                dockerLogins()
+                //Set JDK 11
+                sh "sudo update-java-alternatives -s java-11-amazon-corretto"
             }
         }
         stage("Build dependencies") {
@@ -89,7 +92,6 @@ pipeline {
                 }
             }
             steps {
-                // Post Merge.
                 withEnv(EnvFile as List) {
                     sh 'docker push "${TESTER_DOCKER_IMG}"'
                 }
