@@ -32,19 +32,14 @@ control SpgwIngress(
         fabric_md.bridged.base.ip_eth_type = ETHERTYPE_IPV4;
         fabric_md.routing_ipv4_dst = hdr.inner_ipv4.dst_addr;
         // Move GTPU and inner L3 headers out
-        // hdr.ipv4.setInvalid();
-        // hdr.udp.setInvalid();
-
         hdr.ipv4 = hdr.inner_ipv4;
         hdr.inner_ipv4.setInvalid();
         hdr.udp = hdr.inner_udp;
         hdr.inner_udp.setInvalid();
-
         hdr.gtpu.setInvalid();
         hdr.gtpu_options.setInvalid();
         hdr.gtpu_ext_psc.setInvalid();
         fabric_md.bridged.base.encap_presence = EncapPresence.NONE;
-        fabric_v1model.decapsulated = true;
     }
 
 
@@ -229,8 +224,8 @@ control SpgwIngress(
     action recirc_allow() {
         // Pick a recirculation port within same ingress pipe to distribute load.
         // standard_md.egress_spec = standard_md.ingress_port[8:7]++RECIRC_PORT_NUMBER;
-        // bmv2 specific to use recirculation, performed only in egress.
-        fabric_v1model.do_recirculate = true;
+        // bmv2 specific code, to use recirculation, performed only in egress.
+        fabric_v1model.recirculate = true;
         fabric_md.bridged.base.vlan_id = DEFAULT_VLAN_ID;
         fabric_md.egress_port_set = true;
         fabric_md.skip_forwarding = true;
@@ -239,7 +234,7 @@ control SpgwIngress(
     }
 
     action recirc_deny() {
-        fabric_v1model.do_recirculate = false;
+        fabric_v1model.recirculate = false;
         fabric_md.skip_forwarding = true;
         fabric_md.skip_next = true;
         recirc_stats.count();
@@ -426,10 +421,6 @@ control SpgwEgress(
     apply {
         if (!fabric_md.bridged.spgw.skip_spgw) {
             if (fabric_md.bridged.spgw.needs_gtpu_encap) {
-                // if (hdr.ipv4.isValid()) {
-                //     hdr.inner_ipv4.setValid();
-                //     hdr.inner_ipv4 = hdr.ipv4;
-                // }
                 if (hdr.udp.isValid()) {
                     hdr.inner_udp.setValid();
                     hdr.inner_udp = hdr.udp;
