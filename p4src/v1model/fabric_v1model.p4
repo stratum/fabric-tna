@@ -113,12 +113,6 @@ control FabricEgress (inout v1model_header_t hdr,
         spgw.apply(hdr.ingress, fabric_md);
 #endif // WITH_SPGW
         dscp_rewriter.apply(fabric_md, standard_md, hdr.ingress);
-
-        // if (fabric_md.do_recirculate) {
-        //     // Recirculate the spgw traffic UE to UE.
-        //     recirculate({});
-        //     exit;
-        // }
     } // end of apply{}
 }
 
