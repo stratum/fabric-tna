@@ -10,40 +10,40 @@
 control FabricVerifyChecksum(inout v1model_header_t hdr,
                              inout fabric_v1model_metadata_t meta) {
     apply {
-        verify_checksum(hdr.ig.ipv4.isValid(),
+        verify_checksum(hdr.ingress.ipv4.isValid(),
             {
-                hdr.ig.ipv4.version,
-                hdr.ig.ipv4.ihl,
-                hdr.ig.ipv4.dscp,
-                hdr.ig.ipv4.ecn,
-                hdr.ig.ipv4.total_len,
-                hdr.ig.ipv4.identification,
-                hdr.ig.ipv4.flags,
-                hdr.ig.ipv4.frag_offset,
-                hdr.ig.ipv4.ttl,
-                hdr.ig.ipv4.protocol,
-                hdr.ig.ipv4.src_addr,
-                hdr.ig.ipv4.dst_addr
+                hdr.ingress.ipv4.version,
+                hdr.ingress.ipv4.ihl,
+                hdr.ingress.ipv4.dscp,
+                hdr.ingress.ipv4.ecn,
+                hdr.ingress.ipv4.total_len,
+                hdr.ingress.ipv4.identification,
+                hdr.ingress.ipv4.flags,
+                hdr.ingress.ipv4.frag_offset,
+                hdr.ingress.ipv4.ttl,
+                hdr.ingress.ipv4.protocol,
+                hdr.ingress.ipv4.src_addr,
+                hdr.ingress.ipv4.dst_addr
             },
-            hdr.ig.ipv4.hdr_checksum,
+            hdr.ingress.ipv4.hdr_checksum,
             HashAlgorithm.csum16
         );
-        verify_checksum(hdr.ig.ipv4.isValid(),
+        verify_checksum(hdr.ingress.ipv4.isValid(),
             {
-                hdr.ig.ipv4.version,
-                hdr.ig.ipv4.ihl,
-                hdr.ig.ipv4.dscp,
-                hdr.ig.ipv4.ecn,
-                hdr.ig.ipv4.total_len,
-                hdr.ig.ipv4.identification,
-                hdr.ig.ipv4.flags,
-                hdr.ig.ipv4.frag_offset,
-                hdr.ig.ipv4.ttl,
-                hdr.ig.ipv4.protocol,
-                hdr.ig.ipv4.src_addr,
-                hdr.ig.ipv4.dst_addr
+                hdr.ingress.ipv4.version,
+                hdr.ingress.ipv4.ihl,
+                hdr.ingress.ipv4.dscp,
+                hdr.ingress.ipv4.ecn,
+                hdr.ingress.ipv4.total_len,
+                hdr.ingress.ipv4.identification,
+                hdr.ingress.ipv4.flags,
+                hdr.ingress.ipv4.frag_offset,
+                hdr.ingress.ipv4.ttl,
+                hdr.ingress.ipv4.protocol,
+                hdr.ingress.ipv4.src_addr,
+                hdr.ingress.ipv4.dst_addr
             },
-            hdr.ig.ipv4.hdr_checksum,
+            hdr.ingress.ipv4.hdr_checksum,
             HashAlgorithm.csum16
         );
     }
@@ -52,40 +52,40 @@ control FabricVerifyChecksum(inout v1model_header_t hdr,
 control FabricComputeChecksum(inout v1model_header_t hdr,
                               inout fabric_v1model_metadata_t fabric_md){
     apply {
-        update_checksum(hdr.ig.ipv4.isValid(),
+        update_checksum(hdr.ingress.ipv4.isValid(),
             {
-                hdr.ig.ipv4.version,
-                hdr.ig.ipv4.ihl,
-                hdr.ig.ipv4.dscp,
-                hdr.ig.ipv4.ecn,
-                hdr.ig.ipv4.total_len,
-                hdr.ig.ipv4.identification,
-                hdr.ig.ipv4.flags,
-                hdr.ig.ipv4.frag_offset,
-                hdr.ig.ipv4.ttl,
-                hdr.ig.ipv4.protocol,
-                hdr.ig.ipv4.src_addr,
-                hdr.ig.ipv4.dst_addr
+                hdr.ingress.ipv4.version,
+                hdr.ingress.ipv4.ihl,
+                hdr.ingress.ipv4.dscp,
+                hdr.ingress.ipv4.ecn,
+                hdr.ingress.ipv4.total_len,
+                hdr.ingress.ipv4.identification,
+                hdr.ingress.ipv4.flags,
+                hdr.ingress.ipv4.frag_offset,
+                hdr.ingress.ipv4.ttl,
+                hdr.ingress.ipv4.protocol,
+                hdr.ingress.ipv4.src_addr,
+                hdr.ingress.ipv4.dst_addr
             },
-            hdr.ig.ipv4.hdr_checksum,
+            hdr.ingress.ipv4.hdr_checksum,
             HashAlgorithm.csum16
         );
-        update_checksum(hdr.ig.inner_ipv4.isValid(),
+        update_checksum(hdr.ingress.inner_ipv4.isValid(),
             {
-                hdr.ig.inner_ipv4.version,
-                hdr.ig.inner_ipv4.ihl,
-                hdr.ig.inner_ipv4.dscp,
-                hdr.ig.inner_ipv4.ecn,
-                hdr.ig.inner_ipv4.total_len,
-                hdr.ig.inner_ipv4.identification,
-                hdr.ig.inner_ipv4.flags,
-                hdr.ig.inner_ipv4.frag_offset,
-                hdr.ig.inner_ipv4.ttl,
-                hdr.ig.inner_ipv4.protocol,
-                hdr.ig.inner_ipv4.src_addr,
-                hdr.ig.inner_ipv4.dst_addr
+                hdr.ingress.inner_ipv4.version,
+                hdr.ingress.inner_ipv4.ihl,
+                hdr.ingress.inner_ipv4.dscp,
+                hdr.ingress.inner_ipv4.ecn,
+                hdr.ingress.inner_ipv4.total_len,
+                hdr.ingress.inner_ipv4.identification,
+                hdr.ingress.inner_ipv4.flags,
+                hdr.ingress.inner_ipv4.frag_offset,
+                hdr.ingress.inner_ipv4.ttl,
+                hdr.ingress.inner_ipv4.protocol,
+                hdr.ingress.inner_ipv4.src_addr,
+                hdr.ingress.inner_ipv4.dst_addr
             },
-            hdr.ig.inner_ipv4.hdr_checksum,
+            hdr.ingress.inner_ipv4.hdr_checksum,
             HashAlgorithm.csum16
         );
     }

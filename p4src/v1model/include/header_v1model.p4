@@ -26,8 +26,8 @@ struct fabric_v1model_metadata_t {
 }
 
 struct v1model_header_t {
-    ingress_headers_t ig;
-    egress_headers_t eg;
+    ingress_headers_t ingress;
+    egress_headers_t egress;
 
     // In case of edit in some header, remember to synchronize the ingress and egress headers,
     // at the end of ingress pipeline or at the beginning of the egress pipeline.
