@@ -8,8 +8,6 @@ commitHash = params.commitHash ? params.commitHash : params.sha1
 // P4 program profile and architecture to build and test.
 PROFILE = params.profile.trim().toLowerCase()
 ARCHITECTURE = params.architecture.trim().toLowerCase()
-// FIXME credentials binding not working with pipeline.
-//  find the correct mapping to use the codecov credential as parameter.
 CODECOV_TOKEN = params.codecov_token
 GITHUB_URL = "git@github.com:stratum/fabric-tna.git"
 
