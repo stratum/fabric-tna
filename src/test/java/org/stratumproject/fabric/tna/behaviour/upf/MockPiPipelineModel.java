@@ -5,6 +5,7 @@ package org.stratumproject.fabric.tna.behaviour.upf;
 import com.google.common.collect.Maps;
 import org.onosproject.net.pi.model.PiActionProfileId;
 import org.onosproject.net.pi.model.PiActionProfileModel;
+import org.onosproject.net.pi.model.PiArchitectureId;
 import org.onosproject.net.pi.model.PiCounterId;
 import org.onosproject.net.pi.model.PiCounterModel;
 import org.onosproject.net.pi.model.PiMeterId;
@@ -26,12 +27,21 @@ import java.util.Optional;
 public class MockPiPipelineModel implements PiPipelineModel {
 
     private final Map<PiTableId, PiTableModel> tableMap = Maps.newHashMap();
+    private final PiArchitectureId architecture;
 
     private final List<PiCounterModel> counters;
 
-    public MockPiPipelineModel(Collection<PiTableModel> tables, Collection<PiCounterModel> counters) {
+    public MockPiPipelineModel(Collection<PiTableModel> tables,
+                               Collection<PiCounterModel> counters,
+                               PiArchitectureId architecture) {
         tables.forEach(tableModel -> tableMap.put(tableModel.id(), tableModel));
         this.counters = List.copyOf(counters);
+        this.architecture = architecture;
+    }
+
+    @Override
+    public PiArchitectureId architecture() {
+        return this.architecture;
     }
 
     @Override

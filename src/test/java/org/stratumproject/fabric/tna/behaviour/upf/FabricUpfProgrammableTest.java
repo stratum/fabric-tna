@@ -25,6 +25,7 @@ import org.onosproject.net.flow.DefaultTrafficTreatment;
 import org.onosproject.net.flow.FlowRuleService;
 import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.net.packet.PacketService;
+import org.onosproject.net.pi.model.PiArchitectureId;
 import org.onosproject.net.pi.model.PiCounterModel;
 import org.onosproject.net.pi.model.PiTableModel;
 import org.onosproject.net.pi.service.PiPipeconfService;
@@ -123,7 +124,7 @@ public class FabricUpfProgrammableTest {
         expect(driverHandler.get(DeviceService.class)).andReturn(deviceService).anyTimes();
         expect(driverHandler.get(PiTranslationService.class)).andReturn(piTranslationService).anyTimes();
         expect(driverHandler.get(PiPipeconfService.class))
-                .andReturn(new MockPiPipeconfService(TABLE_MODELS, COUNTER_MODELS))
+                .andReturn(new MockPiPipeconfService(TABLE_MODELS, COUNTER_MODELS, PiArchitectureId.TNA))
                 .anyTimes();
         expect(driverHandler.get(P4RuntimeController.class))
                 .andReturn(new MockP4RuntimeController(TestUpfConstants.DEVICE_ID,

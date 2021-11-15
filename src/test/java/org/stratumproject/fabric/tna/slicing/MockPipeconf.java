@@ -14,9 +14,11 @@ import java.util.Optional;
 public class MockPipeconf implements PiPipeconf {
 
     private final PiPipeconfId pipeconfId;
+    private final PiPipelineModel pipelineModel;
 
-    public MockPipeconf(PiPipeconfId pipeconfId) {
+    public MockPipeconf(PiPipeconfId pipeconfId, PiPipelineModel pipelineModel) {
         this.pipeconfId = pipeconfId;
+        this.pipelineModel = pipelineModel;
     }
 
     @Override
@@ -26,7 +28,7 @@ public class MockPipeconf implements PiPipeconf {
 
     @Override
     public PiPipelineModel pipelineModel() {
-        return null;
+        return this.pipelineModel;
     }
 
     @Override

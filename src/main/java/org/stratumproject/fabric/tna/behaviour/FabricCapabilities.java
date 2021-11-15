@@ -3,6 +3,7 @@
 
 package org.stratumproject.fabric.tna.behaviour;
 
+import org.onosproject.net.pi.model.PiArchitectureId;
 import org.onosproject.net.pi.model.PiPipeconf;
 import org.slf4j.Logger;
 import org.stratumproject.fabric.tna.slicing.api.Color;
@@ -26,7 +27,6 @@ public class FabricCapabilities {
 
     private static final String MAVERICKS = "mavericks";
     private static final String MONTARA = "montara";
-    private static final String BMV2 = "bmv2";
 
     private final Logger log = getLogger(getClass());
 
@@ -58,12 +58,11 @@ public class FabricCapabilities {
     }
 
     public boolean isArchV1model() {
-        // TODO SDFAB-758 read architecture from the pipeline model
-        return pipeconf.id().toString().toLowerCase().contains(BMV2);
+        return pipeconf.pipelineModel().architecture() == PiArchitectureId.V1MODEL;
     }
 
     public boolean isArchTna() {
-        return !isArchV1model();
+        return pipeconf.pipelineModel().architecture() == PiArchitectureId.TNA;
     }
 
     public int getMeterColor(Color color) {
