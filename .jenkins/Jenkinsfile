@@ -5,12 +5,15 @@
 
 // sha1 used for PRs, while commitHash is populated for postmerge
 commitHash = params.commitHash ? params.commitHash : params.sha1
-// Profile and Architecture will be set through Jenkins'job parameters.
-PROFILE = params.profile
-ARCHITECTURE = params.architecture
-//EnvFile will be populated by reading .env file
-EnvFile = ""
+// P4 program profile and architecture to build and test.
+PROFILE = params.profile.trim().toLowerCase()
+ARCHITECTURE = params.architecture.trim().toLowerCase()
 GITHUB_URL = "git@github.com:stratum/fabric-tna.git"
+
+if (!PROFILE || !ARCHITECTURE) {
+    currentBuild.result = "FAILURE"
+    error("Parameters are null or empty.")
+}
 
 pipeline {
     agent { label "${params.buildNode}" }
@@ -22,32 +25,15 @@ pipeline {
                 dockerLogins()
                 //Set JDK 11
                 sh "sudo update-java-alternatives -s java-11-amazon-corretto"
-
-                script {
-                    if (!PROFILE?.trim() || !ARCHITECTURE?.trim()) {
-                        currentBuild.result = "FAILURE"
-                        error("Parameters are null or empty.")
-                    }
-                    dir ("${env.WORKSPACE}/fabric-tna") {
-                        EnvFile = sh(
-                                script: 'make env',
-                                returnStdout: true
-                        ).trim().split("\n")
-                    }
-                }
             }
         }
         stage("Build dependencies") {
             steps {
                 dir ("${env.WORKSPACE}/fabric-tna") {
-                    withEnv(EnvFile as List) {
-                        sh '''
-                            make deps
-                            DOCKER_BUILDKIT=1 docker build -f ptf/Dockerfile\
-                            --build-arg=BUILDKIT_INLINE_CACHE=1\
-                            --cache-from "${TESTER_DOCKER_IMG}" -t "${TESTER_DOCKER_IMG}" .
-                        '''
-                    }
+                    sh '''
+                        make deps
+                        make build-tester-img
+                    '''
                 }
             }
         }
@@ -55,11 +41,13 @@ pipeline {
             steps {
                 dir ("${env.WORKSPACE}/fabric-tna") {
                     // Making selected profile
-                    sh "make -j8 ${PROFILE}"
+                    sh "make ${PROFILE}"
                 }
             }
         }
         stage("Make constants and pipeconf tests") {
+            // make constants requires the full profile. Moreover, we do
+            // upload the coverage to codecov only once.
             when {
                 expression {
                     return (PROFILE == "fabric-spgw-int") &&
@@ -76,12 +64,12 @@ pipeline {
         }
         stage("Run PTF") {
             steps {
-                echo "Running profile ${PROFILE} for architecture ${ARCHITECTURE}"
-                runPTFTest(ARCHITECTURE, PROFILE)
+                echo "Testing ${PROFILE} profile for ${ARCHITECTURE} architecture"
+                runPtfTest()
             }
             post {
                 always {
-                    exportPTFArtifacts(ARCHITECTURE, PROFILE)
+                    exportPtfArtifacts()
                 }
             }
         }
@@ -93,8 +81,8 @@ pipeline {
                 }
             }
             steps {
-                withEnv(EnvFile as List) {
-                    sh 'docker push "${TESTER_DOCKER_IMG}"'
+                dir("${env.WORKSPACE}/fabric-tna") {
+                    sh 'make push-tester-img'
                 }
             }
         }
@@ -171,53 +159,53 @@ void checkP4InfoConstants() {
     }
 }
 
-void runPTFTest(String architecture, String profile) {
-    if (architecture.toLowerCase() == "tna") {
-        runTmPTFTests(profile)
+void runPtfTest() {
+    if (ARCHITECTURE == "tna") {
+        runTmPtfTests()
     } else { // bmv2
-        runBmv2PTFTests(profile)
+        runBmv2PtfTests()
     }
 }
 
-void runTmPTFTests(String profile) {
+void runTmPtfTests() {
     dir ("${env.WORKSPACE}/fabric-tna") {
-        echo "Run PTF tests for profile ${profile}"
-        sh "./ptf/run/tm/run \"${profile}\""
+        echo "Run PTF tests for profile ${PROFILE}"
+        sh "./ptf/run/tm/run \"${PROFILE}\""
 
-        echo "Verify TV generation for profile ${profile}"
-        sh "./ptf/run/tv/run \"${profile}\""
+        echo "Verify TV generation for profile ${PROFILE}"
+        sh "./ptf/run/tv/run \"${PROFILE}\""
 
-        if (profile.toLowerCase().contains("int")) {
-            // int-dod tests are executed only for profiles '*-int'.
+        if (PROFILE.contains("int")) {
+            // Deflect-on-Drop tests are required only for '*-int' profiles.
 
             // Special case to test INT drop report with deflected packet.
-            sh "TM_DOD=1 ./ptf/run/tm/run \"${profile}\" TEST=int-dod"
-            sh "TM_DOD=1 ./ptf/run/tv/run \"${profile}\" TEST=int-dod"
+            sh "TM_DOD=1 ./ptf/run/tm/run \"${PROFILE}\" TEST=int-dod"
+            sh "TM_DOD=1 ./ptf/run/tv/run \"${PROFILE}\" TEST=int-dod"
         }
     }
 }
 
-void runBmv2PTFTests(String profile) {
+void runBmv2PtfTests() {
     dir ("${env.WORKSPACE}/fabric-tna") {
-        echo "Run PTF tests for bmv2, profile ${profile}"
-        sh "./ptf/run/bmv2/run \"${profile}\""
+        echo "Run PTF tests for bmv2, profile ${PROFILE}"
+        sh "./ptf/run/bmv2/run \"${PROFILE}\""
     }
 }
 
-void exportPTFArtifacts(String architecture, String profile) {
+void exportPtfArtifacts() {
     dir ("${env.WORKSPACE}/fabric-tna") {
         // Export logs
         String target = "tm"
-        if (architecture.toLowerCase() == "v1model") {
+        if (ARCHITECTURE == "v1model") {
             target = "bmv2"
         }
 
         sh """
-            rm -rf \"logs/${target}/${profile}\"
-            mkdir -p \"logs/${target}/${profile}\"
-            mv ptf/run/${target}/log \"logs/${target}/${profile}\"
-            mv ptf/tests/common/ptf.log \"logs/${target}/${profile}/\"
-            mv ptf/tests/common/ptf.pcap \"logs/${target}/${profile}/\"
+            rm -rf \"logs/${target}/${PROFILE}\"
+            mkdir -p \"logs/${target}/${PROFILE}\"
+            mv ptf/run/${target}/log \"logs/${target}/${PROFILE}\"
+            mv ptf/tests/common/ptf.log \"logs/${target}/${PROFILE}/\"
+            mv ptf/tests/common/ptf.pcap \"logs/${target}/${PROFILE}/\"
         """
 
         // Compress the logs in a single tar ball
