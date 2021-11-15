@@ -56,6 +56,8 @@ pipeline {
             }
             steps {
                 dir ("${env.WORKSPACE}/fabric-tna") {
+                    // before executing `make constants`, all profiles should be compiled.
+                    sh "make -j4 all"
                     sh "make constants pipeconf-ci MVN_FLAGS=\"-B -Pci-verify -Pcoverage\""
                     withCredentials([string(credentialsId: 'codecov-fabric-tna', variable: 'CODECOV_TOKEN')]) {
                         sh 'bash .jenkins/codecov.sh -t ${CODECOV_TOKEN}'
