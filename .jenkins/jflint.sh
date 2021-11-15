@@ -20,13 +20,13 @@ JENKINS_URL=https://jenkins.onosproject.org/
 JF_LIST=()
 JF_FAIL=0
 # if no args, and there's a Jenkinsfile in cwd, check it
-if [ ! -n "$1" ] && [ -f "Jenkinsfile" ] ; then
+if [ -z "$1" ] && [ -f "Jenkinsfile" ] ; then
   JF_LIST+=("Jenkinsfile")
 else
 # iterate over all args, check if they exist, then add to list of jenkinsfiles to check
   for arg in "$@"; do
     if [ -f "$arg" ]; then
-      JF_LIST+=($arg)
+      JF_LIST+=("$arg")
     else
       echo "File does not exist: ${arg}"
       exit 1;

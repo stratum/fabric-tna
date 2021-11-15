@@ -51,10 +51,6 @@ pipeline {
         stage("Make constants and pipeconf tests") {
             // make constants requires the full profile. Moreover, we do
             // upload the coverage to codecov only once.
-            environment {
-
-                CODECOV_TOKEN =
-            }
             when {
                 expression {
                     return (PROFILE == "fabric-spgw-int") &&
