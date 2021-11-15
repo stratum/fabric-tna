@@ -141,6 +141,13 @@ env:
 format:
 	.github/format.sh
 
+build-tester-img:
+	DOCKER_BUILDKIT=1 docker build -f ptf/Dockerfile --build-arg=BUILDKIT_INLINE_CACHE=1 \
+ 		--cache-from "${TESTER_DOCKER_IMG}" -t "${TESTER_DOCKER_IMG}" .
+
+push-tester-img:
+	docker push "${TESTER_DOCKER_IMG}"
+
 clean:
 	-rm -rf src/main/resources/p4c-out
 	-rm -rf p4src/tna/build

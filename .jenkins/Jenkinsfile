@@ -1,0 +1,225 @@
+// Copyright 2021-present Open Networking Foundation
+// SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
+
+// To validate: ./jflint.sh Jenkinsfile
+
+// sha1 used for PRs, while commitHash is populated for postmerge
+commitHash = params.commitHash ? params.commitHash : params.sha1
+// P4 program profile and architecture to build and test.
+PROFILE = params.profile.trim().toLowerCase()
+ARCHITECTURE = params.architecture.trim().toLowerCase()
+GITHUB_URL = "git@github.com:stratum/fabric-tna.git"
+
+if (!PROFILE || !ARCHITECTURE) {
+    currentBuild.result = "FAILURE"
+    error("Parameters are null or empty.")
+}
+
+pipeline {
+    agent { label "${params.buildNode}" }
+    stages {
+        stage("Prepare environment") {
+            steps {
+                step([$class: "WsCleanup"])
+                gitCheckout(GITHUB_URL, commitHash)
+                dockerLogins()
+                //Set JDK 11
+                sh "sudo update-java-alternatives -s java-11-amazon-corretto"
+            }
+        }
+        stage("Build dependencies") {
+            steps {
+                dir ("${env.WORKSPACE}/fabric-tna") {
+                    sh '''
+                        make deps
+                        make build-tester-img
+                    '''
+                }
+            }
+        }
+        stage("Build P4") {
+            steps {
+                dir ("${env.WORKSPACE}/fabric-tna") {
+                    // Making selected profile
+                    sh "make ${PROFILE}"
+                }
+            }
+        }
+        stage("Make constants and pipeconf tests") {
+            // make constants requires the full profile. Moreover, we do
+            // upload the coverage to codecov only once.
+            when {
+                expression {
+                    return (PROFILE == "fabric-spgw-int") &&
+                        (ARCHITECTURE == "tna")
+                }
+            }
+            steps {
+                dir ("${env.WORKSPACE}/fabric-tna") {
+                    sh "make constants pipeconf-ci MVN_FLAGS=\"-B -Pci-verify -Pcoverage\""
+                    sh "bash .jenkins/codecov.sh"
+                }
+                checkP4InfoConstants()
+            }
+        }
+        stage("Run PTF") {
+            steps {
+                echo "Testing ${PROFILE} profile for ${ARCHITECTURE} architecture"
+                runPtfTest()
+            }
+            post {
+                always {
+                    exportPtfArtifacts()
+                }
+            }
+        }
+        stage("Docker push image") {
+            when {
+                expression {
+                    returns (PROFILE == "fabric-spgw-int") &&
+                        (!params.ghprbPullId?.trim())
+                }
+            }
+            steps {
+                dir("${env.WORKSPACE}/fabric-tna") {
+                    sh 'make push-tester-img'
+                }
+            }
+        }
+    }
+    post {
+        success {
+            script {
+                if (!params.ghprbPullId?.trim()) {
+                    // Post Merge
+                    setBuildStatus("Build succeeded", "SUCCESS", GITHUB_URL)
+                }
+            }
+        }
+        failure {
+            script {
+                if (!params.ghprbPullId?.trim()) {
+                    // Post-merge, alert project maintainers
+                    echo "build status failed. alerting maintainers"
+                    setBuildStatus("Build failed", "FAILURE", GITHUB_URL)
+                    emailext(
+                            subject: "[${env.JOB_NAME}] ${currentBuild.currentResult}: ${params.sha1}",
+                            body: "Check results at ${env.BUILD_URL}",
+                            to: "carmelo@opennetworking.org"
+                    )
+                } else {
+                    // Pull request, alert author
+                    emailext(
+                            subject: "[${env.JOB_NAME}] ${currentBuild.currentResult}: pull request #${params.ghprbPullId}",
+                            body: "Check results at ${env.BUILD_URL}\n\nTriggered by GitHub pull request at ${params.ghprbPullLink}",
+                            to: "${params.ghprbPullAuthorEmail}"
+                    )
+                }
+            }
+        }
+    }
+}
+
+void gitCheckout(String url, String commitHash) {
+  checkout([
+          $class           : "GitSCM",
+          userRemoteConfigs: [[url          : url,
+                               refspec      : "+refs/heads/*:refs/remotes/origin/* +refs/pull/*:refs/remotes/origin/pr/*",
+                               credentialsId: "github-onf-bot-ssh-key",]],
+          branches         : [[name: commitHash]],
+          extensions       : [
+                  [$class: "RelativeTargetDirectory", relativeTargetDir: "fabric-tna"],
+                  [$class: "SubmoduleOption", recursiveSubmodules: true, parentCredentials: true]]
+  ],)
+}
+
+void dockerLogins() {
+    dir ("${env.WORKSPACE}/fabric-tna") {
+        sh "docker login registry.opennetworking.org -u $ONF_REGISTRY_USERNAME -p $ONF_REGISTRY_PASSWORD"
+        sh "docker login registry.aetherproject.org -u $AETHER_REGISTRY_USERNAME -p $AETHER_REGISTRY_PASSWORD"
+        sh "docker login -u $DOCKERHUB_USERNAME -p $DOCKERHUB_PASSWORD"
+    }
+}
+
+void checkP4InfoConstants() {
+    // Since the Java build is based on auto-generated P4InfoConstants.java
+    // (using `make constants`) check that checked-in file is up-to-date:
+    dir ("${env.WORKSPACE}/fabric-tna") {
+        String modified=sh(
+                script: 'git status --porcelain',
+                returnStdout: true
+        ).trim()
+
+        if ( modified.length() > 0 ) {
+            echo "The following build artifacts do not correspond to the expected ones,"
+            echo "please run the build locally before pushing a new change:"
+            echo "$modified"
+            exit 1
+        }
+    }
+}
+
+void runPtfTest() {
+    if (ARCHITECTURE == "tna") {
+        runTmPtfTests()
+    } else { // bmv2
+        runBmv2PtfTests()
+    }
+}
+
+void runTmPtfTests() {
+    dir ("${env.WORKSPACE}/fabric-tna") {
+        echo "Run PTF tests for profile ${PROFILE}"
+        sh "./ptf/run/tm/run \"${PROFILE}\""
+
+        echo "Verify TV generation for profile ${PROFILE}"
+        sh "./ptf/run/tv/run \"${PROFILE}\""
+
+        if (PROFILE.contains("int")) {
+            // Deflect-on-Drop tests are required only for '*-int' profiles.
+
+            // Special case to test INT drop report with deflected packet.
+            sh "TM_DOD=1 ./ptf/run/tm/run \"${PROFILE}\" TEST=int-dod"
+            sh "TM_DOD=1 ./ptf/run/tv/run \"${PROFILE}\" TEST=int-dod"
+        }
+    }
+}
+
+void runBmv2PtfTests() {
+    dir ("${env.WORKSPACE}/fabric-tna") {
+        echo "Run PTF tests for bmv2, profile ${PROFILE}"
+        sh "./ptf/run/bmv2/run \"${PROFILE}\""
+    }
+}
+
+void exportPtfArtifacts() {
+    dir ("${env.WORKSPACE}/fabric-tna") {
+        // Export logs
+        String target = "tm"
+        if (ARCHITECTURE == "v1model") {
+            target = "bmv2"
+        }
+
+        sh """
+            rm -rf \"logs/${target}/${PROFILE}\"
+            mkdir -p \"logs/${target}/${PROFILE}\"
+            mv ptf/run/${target}/log \"logs/${target}/${PROFILE}\"
+            mv ptf/tests/common/ptf.log \"logs/${target}/${PROFILE}/\"
+            mv ptf/tests/common/ptf.pcap \"logs/${target}/${PROFILE}/\"
+        """
+
+        // Compress the logs in a single tar ball
+        sh "tar -czvf logs.tar.gz logs/"
+        archiveArtifacts artifacts: "logs.tar.gz", fingerprint: true
+    }
+}
+
+void setBuildStatus(String message, String state, String url) {
+    echo "Setting build status to success"
+    step([
+        $class: "GitHubCommitStatusSetter",
+        reposSource: [$class: "ManuallyEnteredRepositorySource", url: url],
+        contextSource: [$class: "ManuallyEnteredCommitContextSource", context: "${env.JOB_NAME}"],
+        statusResultSource: [ $class: "ConditionalStatusResultSource", results: [[$class: "AnyBuildResult", message: message, state: state]] ]
+    ]);
+}
