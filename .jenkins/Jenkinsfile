@@ -58,7 +58,7 @@ pipeline {
                 dir ("${env.WORKSPACE}/fabric-tna") {
                     sh "make constants pipeconf-ci MVN_FLAGS=\"-B -Pci-verify -Pcoverage\""
                     withCredentials([string(credentialsId: 'codecov-fabric-tna', variable: 'CODECOV_TOKEN')]) {
-                        sh "bash .jenkins/codecov.sh -t ${CODECOV_TOKEN}"
+                        sh 'bash .jenkins/codecov.sh -t ${CODECOV_TOKEN}'
                     }
                 }
                 checkP4InfoConstants()
