@@ -8,7 +8,6 @@ commitHash = params.commitHash ? params.commitHash : params.sha1
 // P4 program profile and architecture to build and test.
 PROFILE = params.profile.trim().toLowerCase()
 ARCHITECTURE = params.architecture.trim().toLowerCase()
-CODECOV_TOKEN = params.codecov_token
 GITHUB_URL = "git@github.com:stratum/fabric-tna.git"
 
 if (!PROFILE || !ARCHITECTURE) {
@@ -58,7 +57,9 @@ pipeline {
             steps {
                 dir ("${env.WORKSPACE}/fabric-tna") {
                     sh "make constants pipeconf-ci MVN_FLAGS=\"-B -Pci-verify -Pcoverage\""
-                    sh "bash .jenkins/codecov.sh"
+                    withCredentials([string(credentialsId: 'codecov-fabric-tna', variable: 'CODECOV_TOKEN')]) {
+                        sh "bash .jenkins/codecov.sh -t ${CODECOV_TOKEN}"
+                    }
                 }
                 checkP4InfoConstants()
             }
