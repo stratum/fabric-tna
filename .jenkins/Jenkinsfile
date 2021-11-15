@@ -173,7 +173,7 @@ void checkP4InfoConstants() {
             echo "The following build artifacts do not correspond to the expected ones,"
             echo "please run the build locally before pushing a new change:"
             echo "$modified"
-            exit 1
+            error("git status --porcelain failed.")
         }
     }
 }
