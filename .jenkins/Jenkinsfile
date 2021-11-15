@@ -135,9 +135,26 @@ void gitCheckout(String url, String commitHash) {
 
 void dockerLogins() {
     dir ("${env.WORKSPACE}/fabric-tna") {
-        sh "docker login registry.opennetworking.org -u $ONF_REGISTRY_USERNAME -p $ONF_REGISTRY_PASSWORD"
-        sh "docker login registry.aetherproject.org -u $AETHER_REGISTRY_USERNAME -p $AETHER_REGISTRY_PASSWORD"
-        sh "docker login -u $DOCKERHUB_USERNAME -p $DOCKERHUB_PASSWORD"
+        withCredentials([[$class          : "UsernamePasswordMultiBinding",
+                          credentialsId   : "docker-artifact-push-credentials",
+                          usernameVariable: "USERNAME",
+                          passwordVariable: "PASSWORD"]]) {
+            sh 'docker login -u $USERNAME -p $PASSWORD'
+        }
+
+        withCredentials([[$class          : "UsernamePasswordMultiBinding",
+                          credentialsId   : "aether-internal-registry",
+                          usernameVariable: "USERNAME",
+                          passwordVariable: "PASSWORD"]]) {
+            sh 'docker login registry.aetherproject.org -u $USERNAME -p $PASSWORD'
+        }
+
+        withCredentials([[$class          : "UsernamePasswordMultiBinding",
+                          credentialsId   : "onf-internal-registry",
+                          usernameVariable: "USERNAME",
+                          passwordVariable: "PASSWORD"]]) {
+            sh 'docker login registry.opennetworking.org -u $USERNAME -p $PASSWORD'
+        }
     }
 }
 
