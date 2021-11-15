@@ -77,7 +77,7 @@ pipeline {
         stage("Docker push image") {
             when {
                 expression {
-                    returns (PROFILE == "fabric-spgw-int") &&
+                    return (PROFILE == "fabric-spgw-int") &&
                         (!params.ghprbPullId?.trim())
                 }
             }
