@@ -176,7 +176,7 @@ void checkP4InfoConstants() {
             echo "The following build artifacts do not correspond to the expected ones,"
             echo "please run the build locally before pushing a new change:"
             echo "$modified"
-            error("git status --porcelain failed.")
+            error("Constants outdated, please run the build locally before pushing a new change")
         }
     }
 }
