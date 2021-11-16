@@ -70,9 +70,9 @@ import static org.stratumproject.fabric.tna.behaviour.FabricUtils.sliceTcConcat;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_QOS_QUEUES;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_COLOR;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_COLOR_BITWIDTH;
-import static org.stratumproject.fabric.tna.slicing.api.SlicingException.ErrorType.FAILED;
-import static org.stratumproject.fabric.tna.slicing.api.SlicingException.ErrorType.INVALID;
-import static org.stratumproject.fabric.tna.slicing.api.SlicingException.ErrorType.UNSUPPORTED;
+import static org.stratumproject.fabric.tna.slicing.api.SlicingException.Type.FAILED;
+import static org.stratumproject.fabric.tna.slicing.api.SlicingException.Type.INVALID;
+import static org.stratumproject.fabric.tna.slicing.api.SlicingException.Type.UNSUPPORTED;
 
 /**
  * Implementation of SlicingService.
@@ -319,7 +319,7 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
                     String.format("Removing %s from slice %s is not allowed", tc, sliceId));
             }
             if (getTrafficClasses(sliceId).stream().anyMatch(existTc -> existTc != TrafficClass.BEST_EFFORT)) {
-                throw new SlicingException(UNSUPPORTED,
+                throw new SlicingException(INVALID,
                     String.format("Can't remove %s from slice %s while another TC exists", tc, sliceId));
             }
         }
