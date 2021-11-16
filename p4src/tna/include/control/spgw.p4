@@ -227,23 +227,37 @@ control SpgwIngress(
         // TODO: add INT drop reason
     }
 
-    action load_flow(pdr_ctr_id_t ctr_id,
-                     tc_t tc) {
+    action load_flow_params(pdr_ctr_id_t ctr_id,
+                            tc_t tc) {
         fabric_md.bridged.spgw.pdr_ctr_id = ctr_id;
         fabric_md.spgw_tc = tc;
         is_pdr_hit = true;
     }
 
-    action load_flow_encap(pdr_ctr_id_t ctr_id,
-                           tc_t         tc,
-                           teid_t       teid,
-                           // QFI should always equal 0 for 4G flows
-                           bit<6>       qfi) {
-        load_flow(ctr_id, tc);
+    action load_flow_params_encap(pdr_ctr_id_t ctr_id,
+                                  tc_t         tc,
+                                  teid_t       teid,
+                                  // QFI should always equal 0 for 4G flows
+                                  bit<6>       qfi) {
+        load_flow_params(ctr_id, tc);
+        fabric_md.bridged.spgw.skip_egress_pdr_ctr = false;
         fabric_md.bridged.spgw.needs_gtpu_encap = true;
         fabric_md.bridged.spgw.gtpu_teid = teid;
         fabric_md.bridged.spgw.qfi = qfi;
         is_pdr_hit = true;
+    }
+
+    action load_flow_params_encap_dbuf(pdr_ctr_id_t ctr_id,
+                                       tc_t         tc,
+                                       teid_t       teid,
+                                       // QFI should always equal 0 for 4G flows
+                                       bit<6>       qfi) {
+        load_flow_params(ctr_id, tc);
+        fabric_md.bridged.spgw.needs_gtpu_encap = true;
+        fabric_md.bridged.spgw.gtpu_teid = teid;
+        fabric_md.bridged.spgw.qfi = qfi;
+        is_pdr_hit = true;
+        fabric_md.bridged.spgw.skip_egress_pdr_ctr = true;
     }
 
     table uplink_flows {
@@ -253,21 +267,24 @@ control SpgwIngress(
         }
 
         actions = {
-            load_flow;
+            load_flow_params;
             uplink_flow_drop;
         }
+        const default_action = uplink_flow_drop();
         const size = NUM_MOBILE_FLOWS;
     }
 
     table downlink_flows {
         key = {
-            fabric_md.slice_id   : exact @name("slice_id");
-            fabric_md.ue_session : exact @name("ue_session");
+            fabric_md.spgw_slice_id   : exact @name("slice_id");
+            fabric_md.ue_session      : exact @name("ue_session");
         }
         actions = {
-            load_flow_encap;
+            load_flow_params_encap;
+            load_flow_params_encap_dbuf;
             downlink_flow_drop;
         }
+        const default_action = downlink_flow_drop();
         const size = NUM_MOBILE_FLOWS;
     }
 

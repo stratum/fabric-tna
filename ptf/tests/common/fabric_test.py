@@ -167,6 +167,7 @@ UPLINK_FAR_ID = 23
 DOWNLINK_FAR_ID = 24
 S1U_ENB_TUNNEL_PEER_ID = 10
 S1U_SGW_TUNNEL_PEER_ID = 20
+DBUF_TUNNEL_PEER_ID = 256
 
 # INT instructions
 INT_SWITCH_ID = 1 << 15
@@ -2416,6 +2417,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         drain_dst_addr=DBUF_DRAIN_DST_IPV4,
         dbuf_far_id=DBUF_FAR_ID,
         dbuf_teid=DBUF_TEID,
+        dbuf_tunnel_peer_id=DBUF_TUNNEL_PEER_ID,
     ):
         # Switch interface for traffic to/from dbuf device
         self._add_spgw_iface(
@@ -2424,6 +2426,8 @@ class SpgwSimpleTest(IPv4UnicastTest):
             iface_type=SPGW_IFACE_FROM_DBUF,
             gtpu_valid=True,
         )
+
+        
 
         # FAR that tunnels to the dbuf device
         return self._add_far(
@@ -2485,7 +2489,38 @@ class SpgwSimpleTest(IPv4UnicastTest):
         )
         self.write_request(req)
 
-    def add_downlink_ue_session(self, ue_addr, tunnel_peer_id, tunnel_dst_addr):
+    def setup_uplink_ue_session(self, tunnel_dst_addr, teid):
+        req = self.get_new_write_request()
+        self.push_update_add_entry_to_action(
+            req,
+            "FabricIngress.spgw.uplink_sessions",
+            [
+                self.Exact("teid", stringify(teid, 4)),
+                self.Exact("tunnel_ipv4_dst", ipv4_to_binary(tunnel_dst_addr)),
+            ],
+            "FabricIngress.spgw.load_uplink_session_params_decap",
+            [],
+        )
+        self.write_request(req)
+
+    def setup_uplink_flow(self, slice_id, ue_session, ctr_id, tc=DEFAULT_TC):
+        req = self.get_new_write_request()
+        self.push_update_add_entry_to_action(
+            req,
+            "FabricIngress.spgw.uplink_flows",
+            [
+                self.Exact("slice_id", stringify(slice_id, 4)),
+                self.Exact("ue_session", ipv4_to_binary(ue_session)),
+            ],
+            "FabricIngress.spgw.load_flow_params",
+            [
+                ("ctr_id", stringify(ctr_id, 2)),
+                ("tc", stringify(tc, 1)),
+            ],
+        )
+        self.write_request(req)
+
+    def setup_downlink_ue_session(self, ue_addr, tunnel_peer_id, tunnel_dst_addr):
         req = self.get_new_write_request()
 
         self.push_update_add_entry_to_action(
@@ -2507,7 +2542,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             "FabricIngress.spgw.downlink_flows",
             [self.Exact("slice_id", stringify(slice_id, 4)),
              self.Exact("ue_session", ipv4_to_binary(ue_session))],
-            "FabricIngress.spgw.load_flow_encap",
+            "FabricIngress.spgw.load_flow_params_encap",
             [
                 ("ctr_id", stringify(ctr_id, 2)),
                 ("tc", stringify(tc, 1)),
@@ -2594,6 +2629,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
 
     def setup_uplink(
         self,
+        ue_addr,
         s1u_sgw_addr,
         teid,
         ctr_id,
@@ -2602,10 +2638,9 @@ class SpgwSimpleTest(IPv4UnicastTest):
         tc=DEFAULT_TC,
     ):
         self.add_s1u_iface(s1u_addr=s1u_sgw_addr, slice_id=slice_id)
-        self.add_uplink_pdr(
-            ctr_id=ctr_id, far_id=far_id, teid=teid, tunnel_dst_addr=s1u_sgw_addr, tc=tc
-        )
-        self.add_normal_far(far_id=far_id)
+        self.setup_uplink_ue_session(teid=teid, tunnel_dst_addr=s1u_sgw_addr)
+        self.setup_uplink_flow(slice_id=slice_id, ue_session=ue_addr,
+                               ctr_id=ctr_id, tc=tc)
 
     def setup_downlink(
         self,
@@ -2619,13 +2654,10 @@ class SpgwSimpleTest(IPv4UnicastTest):
         tc=DEFAULT_TC,
     ):
         self.add_ue_pool(pool_addr=ue_addr, slice_id=slice_id)
-        self.add_downlink_ue_session(ue_addr=ue_addr,
-                                     tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID,
-                                     tunnel_dst_addr=s1u_enb_addr)
+        self.setup_downlink_ue_session(ue_addr=ue_addr,
+                                       tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID,
+                                       tunnel_dst_addr=s1u_enb_addr)
         self.add_downlink_flow(slice_id=slice_id, ue_session=ue_addr, ctr_id=ctr_id, teid=teid, tc=tc)
-        self.add_gtp_tunnel_peer(tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID,
-                                 tunnel_src_addr=s1u_sgw_addr,
-                                 tunnel_dst_addr=s1u_enb_addr)
 
     def enable_encap_with_psc(self, qfi=0):
         self.send_request_add_entry_to_action(
@@ -2700,6 +2732,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             exp_pkt = pkt_set_dscp(exp_pkt, slice_id=slice_id, tc=tc)
 
         self.setup_uplink(
+            ue_addr=ue_out_pkt[IP].src,
             s1u_sgw_addr=S1U_SGW_IPV4,
             teid=UPLINK_TEID,
             ctr_id=UPLINK_PDR_CTR_IDX,
@@ -2778,8 +2811,15 @@ class SpgwSimpleTest(IPv4UnicastTest):
             exp_pkt = pkt_add_vlan(exp_pkt, VLAN_ID_2)
 
         self.setup_uplink(
-            s1u_sgw_addr=S1U_SGW_IPV4, teid=UPLINK_TEID, ctr_id=UPLINK_PDR_CTR_IDX,
+            ue_addr=UE1_IPV4,
+            s1u_sgw_addr=S1U_SGW_IPV4,
+            teid=UPLINK_TEID,
+            ctr_id=UPLINK_PDR_CTR_IDX,
         )
+
+        self.add_gtp_tunnel_peer(tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID,
+                                 tunnel_src_addr=S1U_SGW_IPV4,
+                                 tunnel_dst_addr=S1U_ENB_IPV4)
 
         self.setup_downlink(
             s1u_sgw_addr=S1U_SGW_IPV4,
@@ -2907,6 +2947,10 @@ class SpgwSimpleTest(IPv4UnicastTest):
             tc=tc,
         )
 
+        self.add_gtp_tunnel_peer(tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID,
+                                 tunnel_src_addr=S1U_SGW_IPV4,
+                                 tunnel_dst_addr=S1U_ENB_IPV4)
+
         if with_psc:
             self.enable_encap_with_psc()
 
@@ -2964,6 +3008,12 @@ class SpgwSimpleTest(IPv4UnicastTest):
 
         # Add the UE pool interface and the PDR pointing to the DBUF FAR
         self.add_ue_pool(UE1_IPV4)
+
+
+        self.add_gtp_tunnel_peer(tunnel_peer_id=DBUF_TUNNEL_PEER_ID,
+                                 )
+
+
         self.add_downlink_pdr(
             ctr_id=DOWNLINK_PDR_CTR_IDX, far_id=DBUF_FAR_ID, ue_addr=UE1_IPV4
         )
@@ -3986,7 +4036,10 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
 
         # Set up entries for uplink
         self.setup_uplink(
-            s1u_sgw_addr=S1U_SGW_IPV4, teid=UPLINK_TEID, ctr_id=UPLINK_PDR_CTR_IDX,
+            ue_addr=pkt[IP].src,
+            s1u_sgw_addr=S1U_SGW_IPV4,
+            teid=UPLINK_TEID,
+            ctr_id=UPLINK_PDR_CTR_IDX,
         )
 
         # Set collector, report table, and mirror sessions
