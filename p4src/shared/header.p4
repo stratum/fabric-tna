@@ -167,14 +167,13 @@ header gtpu_ext_psc_t {
 
 @flexible
 struct spgw_bridged_metadata_t {
-    bool            needs_gtpu_encap;
-    bool            skip_spgw;
-    bool            skip_egress_pdr_ctr;
-    teid_t          gtpu_teid;
-    ipv4_addr_t     gtpu_tunnel_sip;
-    ipv4_addr_t     gtpu_tunnel_dip;
-    l4_port_t       gtpu_tunnel_sport;
-    pdr_ctr_id_t    pdr_ctr_id;
+    bool             needs_gtpu_encap;
+    bool             skip_spgw;
+    bool             skip_egress_pdr_ctr;
+    teid_t           gtpu_teid;
+    tunnel_peer_id_t gtpu_tunnel_peer_id;
+    pdr_ctr_id_t     pdr_ctr_id;
+    bit<6>           qfi;
 }
 
 #ifdef WITH_INT
@@ -358,6 +357,8 @@ struct fabric_ingress_metadata_t {
     flow_hash_t              ecmp_hash;
     lookup_metadata_t        lkp;
     bit<32>                  routing_ipv4_dst; // Outermost
+    bit<32>                  spgw_gtpu_tunnel_sip;
+    ue_session_id_t          ue_session;
     bool                     skip_forwarding;
     bool                     skip_next;
     next_id_t                next_id;

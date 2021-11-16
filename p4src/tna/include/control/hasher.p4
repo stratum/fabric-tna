@@ -31,8 +31,12 @@ control Hasher(
         // GTP-aware ECMP for downlink packets encapped by this switch.
         if (fabric_md.bridged.spgw.needs_gtpu_encap) {
             fabric_md.ecmp_hash = encap_gtp_flow_hasher.get({
-                fabric_md.bridged.spgw.gtpu_tunnel_sip,
-                fabric_md.bridged.spgw.gtpu_tunnel_dip,
+                // TODO: decide whether we can use gtpu_tunnel_peer_id to calculate hash
+                //  Currently, we set spgw_gtpu_tunnel_sip in FAR table only for this purpose.
+                fabric_md.spgw_gtpu_tunnel_sip,
+                // If needs_gtpu_encap, routing_ipv4_dst always equals to
+                // GTP tunnel destination IP address.
+                fabric_md.routing_ipv4_dst,
                 fabric_md.bridged.spgw.gtpu_teid
             });
         } else

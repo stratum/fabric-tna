@@ -58,6 +58,9 @@ typedef bit<32> teid_t;
 // FIXME: use less than 32 bits for far_id_t, enough to index up to MAX_FARS
 typedef bit<32> far_id_t;
 typedef bit<16> pdr_ctr_id_t;
+// We support up to 254 base stations + 1 dbuf endpoint. ID 0 is reserved.
+typedef bit<8> tunnel_peer_id_t;
+typedef bit<32> ue_session_id_t;
 
 // According to our design choice, we report only the inner headers to the INT collector.
 // The EncapPresence keeps track of the encapsulation protocol in use.

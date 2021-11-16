@@ -165,6 +165,8 @@ UPLINK_PDR_CTR_IDX = 1
 DOWNLINK_PDR_CTR_IDX = 2
 UPLINK_FAR_ID = 23
 DOWNLINK_FAR_ID = 24
+S1U_ENB_TUNNEL_PEER_ID = 10
+S1U_SGW_TUNNEL_PEER_ID = 20
 
 # INT instructions
 INT_SWITCH_ID = 1 << 15
@@ -278,6 +280,7 @@ PORT_TYPE_INTERNAL = b"\x03"
 
 DEFAULT_SLICE_ID = 0
 DEFAULT_TC = 0
+DEFAULT_QFI = 0
 TC_WIDTH = 2  # bits
 
 # High-level parameter specification options for get_test_args function
@@ -2482,6 +2485,38 @@ class SpgwSimpleTest(IPv4UnicastTest):
         )
         self.write_request(req)
 
+    def add_downlink_ue_session(self, ue_addr, tunnel_peer_id, tunnel_dst_addr):
+        req = self.get_new_write_request()
+
+        self.push_update_add_entry_to_action(
+            req,
+            "FabricIngress.spgw.downlink_sessions",
+            [self.Exact("ue_addr", ipv4_to_binary(ue_addr))],
+            "FabricIngress.spgw.load_downlink_session_params",
+            [
+                ("tunnel_peer_id", stringify(tunnel_peer_id, 1)),
+                ("tunnel_dst_addr", ipv4_to_binary(tunnel_dst_addr)),
+            ],
+        )
+        self.write_request(req)
+
+    def add_downlink_flow(self, slice_id, ue_session, ctr_id, teid, tc=DEFAULT_TC, qfi=DEFAULT_QFI):
+        req = self.get_new_write_request()
+        self.push_update_add_entry_to_action(
+            req,
+            "FabricIngress.spgw.downlink_flows",
+            [self.Exact("slice_id", stringify(slice_id, 4)),
+             self.Exact("ue_session", ipv4_to_binary(ue_session))],
+            "FabricIngress.spgw.load_flow_encap",
+            [
+                ("ctr_id", stringify(ctr_id, 2)),
+                ("tc", stringify(tc, 1)),
+                ("teid", stringify(teid, 4)),
+                ("qfi", stringify(qfi, 1)),
+            ],
+        )
+        self.write_request(req)
+
     def add_downlink_pdr(self, ctr_id, far_id, ue_addr, tc=DEFAULT_TC):
         req = self.get_new_write_request()
 
@@ -2494,6 +2529,26 @@ class SpgwSimpleTest(IPv4UnicastTest):
                 ("ctr_id", stringify(ctr_id, 2)),
                 ("far_id", stringify(far_id, 4)),
                 ("tc", stringify(tc, 1)),
+            ],
+        )
+        self.write_request(req)
+
+    def add_gtp_tunnel_peer(self,
+                            tunnel_peer_id,
+                            tunnel_src_addr,
+                            tunnel_dst_addr,
+                            tunnel_src_port=DEFAULT_GTP_TUNNEL_SPORT):
+        req = self.get_new_write_request()
+
+        self.push_update_add_entry_to_action(
+            req,
+            "FabricEgress.spgw.tunnel_peers",
+            [self.Exact("gtpu_tunnel_peer_id", stringify(tunnel_peer_id, 1))],
+            "FabricEgress.spgw.load_tunnel_params",
+            [
+                ("tunnel_src_port", stringify(tunnel_src_port, 2)),
+                ("tunnel_src_addr", ipv4_to_binary(tunnel_src_addr)),
+                ("tunnel_dst_addr", ipv4_to_binary(tunnel_dst_addr)),
             ],
         )
         self.write_request(req)
@@ -2564,13 +2619,13 @@ class SpgwSimpleTest(IPv4UnicastTest):
         tc=DEFAULT_TC,
     ):
         self.add_ue_pool(pool_addr=ue_addr, slice_id=slice_id)
-        self.add_downlink_pdr(ctr_id=ctr_id, far_id=far_id, ue_addr=ue_addr, tc=tc)
-        self.add_tunnel_far(
-            far_id=far_id,
-            teid=teid,
-            tunnel_src_addr=s1u_sgw_addr,
-            tunnel_dst_addr=s1u_enb_addr,
-        )
+        self.add_downlink_ue_session(ue_addr=ue_addr,
+                                     tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID,
+                                     tunnel_dst_addr=s1u_enb_addr)
+        self.add_downlink_flow(slice_id=slice_id, ue_session=ue_addr, ctr_id=ctr_id, teid=teid, tc=tc)
+        self.add_gtp_tunnel_peer(tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID,
+                                 tunnel_src_addr=s1u_sgw_addr,
+                                 tunnel_dst_addr=s1u_enb_addr)
 
     def enable_encap_with_psc(self, qfi=0):
         self.send_request_add_entry_to_action(

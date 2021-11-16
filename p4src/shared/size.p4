@@ -26,6 +26,9 @@
 #define QOS_CLASSIFIER_TABLE_SIZE 512
 #define DSCP_REWRITER_TABLE_SIZE 512
 
+// Support only 1 slice for now.
+#define NUM_SLICES 1
+
 // Constants for the INT control block.
 #define INT_WATCHLIST_TABLE_SIZE 64
 // 4 entries per queue (for double range match on latency chunks) with up to 32 queues per port
@@ -33,6 +36,7 @@
 
 // Constants for the SPGW control block.
 #define NUM_UES 10240
+#define NUM_MOBILE_FLOWS (NUM_UES * NUM_SLICES)
 // We expect between 4 and 8 tunnels per UE.
 #define MAX_GTP_TUNNELS_PER_UE 1
 #define NUM_GTP_TUNNLES (NUM_UES * MAX_GTP_TUNNELS_PER_UE)
@@ -45,5 +49,6 @@
 #define NUM_SPGW_INTERFACES 64
 #define NUM_QOS_CLASSES 128
 #define MAX_UPLINK_RECIRC_RULES 64
+#define MAX_GTP_TUNNEL_PEERS 256
 
 #endif  //__TABLE_SIZE__

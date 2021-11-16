@@ -415,10 +415,10 @@ parser FabricEgressParser (packet_in packet,
         hdr.outer_ipv4.ttl               = DEFAULT_IPV4_TTL;
         hdr.outer_ipv4.protocol          = PROTO_UDP;
         // hdr.outer_ipv4.hdr_checksum   = update later
-        hdr.outer_ipv4.src_addr          = fabric_md.bridged.spgw.gtpu_tunnel_sip;
-        hdr.outer_ipv4.dst_addr          = fabric_md.bridged.spgw.gtpu_tunnel_dip;
+        // hdr.outer_ipv4.src_addr       = update later
+        // hdr.outer_ipv4.dst_addr       = update later
         /** outer_udp **/
-        hdr.outer_udp.sport              = fabric_md.bridged.spgw.gtpu_tunnel_sport;
+        // hdr.outer_udp.sport           = update later
         hdr.outer_udp.dport              = GTPU_UDP_PORT;
         // hdr.outer_udp.len             = update later
         // hdr.outer_udp.checksum        = update later
