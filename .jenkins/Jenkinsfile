@@ -56,8 +56,13 @@ pipeline {
             }
             steps {
                 dir ("${env.WORKSPACE}/fabric-tna") {
+                    // before executing `make constants`, all profiles should be compiled.
+                    // FIXME SDFAB-801
+                    sh "make -j4 all"
                     sh "make constants pipeconf-ci MVN_FLAGS=\"-B -Pci-verify -Pcoverage\""
-                    sh "bash .jenkins/codecov.sh"
+                    withCredentials([string(credentialsId: 'codecov-fabric-tna', variable: 'CODECOV_TOKEN')]) {
+                        sh 'bash .jenkins/codecov.sh -t ${CODECOV_TOKEN}'
+                    }
                 }
                 checkP4InfoConstants()
             }
@@ -76,7 +81,7 @@ pipeline {
         stage("Docker push image") {
             when {
                 expression {
-                    returns (PROFILE == "fabric-spgw-int") &&
+                    return (PROFILE == "fabric-spgw-int") &&
                         (!params.ghprbPullId?.trim())
                 }
             }
@@ -135,9 +140,26 @@ void gitCheckout(String url, String commitHash) {
 
 void dockerLogins() {
     dir ("${env.WORKSPACE}/fabric-tna") {
-        sh "docker login registry.opennetworking.org -u $ONF_REGISTRY_USERNAME -p $ONF_REGISTRY_PASSWORD"
-        sh "docker login registry.aetherproject.org -u $AETHER_REGISTRY_USERNAME -p $AETHER_REGISTRY_PASSWORD"
-        sh "docker login -u $DOCKERHUB_USERNAME -p $DOCKERHUB_PASSWORD"
+        withCredentials([[$class          : "UsernamePasswordMultiBinding",
+                          credentialsId   : "docker-artifact-push-credentials",
+                          usernameVariable: "USERNAME",
+                          passwordVariable: "PASSWORD"]]) {
+            sh 'docker login -u $USERNAME -p $PASSWORD'
+        }
+
+        withCredentials([[$class          : "UsernamePasswordMultiBinding",
+                          credentialsId   : "aether-internal-registry",
+                          usernameVariable: "USERNAME",
+                          passwordVariable: "PASSWORD"]]) {
+            sh 'docker login registry.aetherproject.org -u $USERNAME -p $PASSWORD'
+        }
+
+        withCredentials([[$class          : "UsernamePasswordMultiBinding",
+                          credentialsId   : "onf-internal-registry",
+                          usernameVariable: "USERNAME",
+                          passwordVariable: "PASSWORD"]]) {
+            sh 'docker login registry.opennetworking.org -u $USERNAME -p $PASSWORD'
+        }
     }
 }
 
@@ -154,7 +176,7 @@ void checkP4InfoConstants() {
             echo "The following build artifacts do not correspond to the expected ones,"
             echo "please run the build locally before pushing a new change:"
             echo "$modified"
-            exit 1
+            error("Constants outdated, please run the build locally before pushing a new change")
         }
     }
 }
