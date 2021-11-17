@@ -186,7 +186,6 @@ control SpgwIngress(
         fabric_md.bridged.spgw.needs_gtpu_encap = true;
         fabric_md.bridged.spgw.gtpu_teid = teid;
         fabric_md.bridged.spgw.qfi = qfi;
-        is_pdr_hit = true;
     }
 
     action load_flow_params_encap_dbuf(pdr_ctr_id_t ctr_id,
@@ -198,7 +197,6 @@ control SpgwIngress(
         fabric_md.bridged.spgw.needs_gtpu_encap = true;
         fabric_md.bridged.spgw.gtpu_teid = teid;
         fabric_md.bridged.spgw.qfi = qfi;
-        is_pdr_hit = true;
         fabric_md.bridged.spgw.skip_egress_pdr_ctr = true;
     }
 
