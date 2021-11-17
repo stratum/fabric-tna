@@ -55,8 +55,6 @@ const QueueId_t QUEUE_ID_BEST_EFFORT = 0;
 
 // SPGW types
 typedef bit<32> teid_t;
-// FIXME: use less than 32 bits for far_id_t, enough to index up to MAX_FARS
-typedef bit<32> far_id_t;
 typedef bit<16> pdr_ctr_id_t;
 // We support up to 254 base stations + 1 dbuf endpoint. ID 0 is reserved.
 typedef bit<8> tunnel_peer_id_t;

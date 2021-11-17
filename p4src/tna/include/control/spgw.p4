@@ -5,7 +5,6 @@
 #define __SPGW__
 
 #define DEFAULT_PDR_CTR_ID 0
-#define DEFAULT_FAR_ID 0
 
 control SpgwIngress(
         /* Fabric.p4 */

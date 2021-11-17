@@ -42,10 +42,6 @@
 #define NUM_GTP_TUNNLES (NUM_UES * MAX_GTP_TUNNELS_PER_UE)
 // One counter for down and uplink direction.
 #define MAX_PDR_COUNTERS (2 * NUM_GTP_TUNNLES)
-#define NUM_UPLINK_PDRS NUM_GTP_TUNNLES
-#define NUM_DOWNLINK_PDRS NUM_GTP_TUNNLES
-// One table entry per down and uplink direction.
-#define NUM_FARS (2 * NUM_GTP_TUNNLES)
 #define NUM_SPGW_INTERFACES 64
 #define NUM_QOS_CLASSES 128
 #define MAX_UPLINK_RECIRC_RULES 64

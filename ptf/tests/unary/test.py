@@ -1219,7 +1219,6 @@ class FabricSpgwDownlinkEcmpTest(SpgwSimpleTest):
         teid_toport = [None, None]
         for i in range(50):
             ue_ipv4 = "10.0.0." + str(i)
-            far_id = i
             test_teid = i * 3
 
             self.setup_downlink(
@@ -1569,8 +1568,8 @@ class FabricSpgwDownlinkIntTest(SpgwIntTest):
                 self.doRunTest(**test_args)
 
 
-# This test will assume the packet hits spgw interface and miss the uplink PDR table or
-# the FAR table
+# This test will assume the packet hits spgw interface and miss the uplink UE Session table or
+# the uplink Flows table
 @group("int")
 @group("spgw")
 class FabricSpgwIntUplinkDropTest(SpgwIntTest):
@@ -1625,8 +1624,8 @@ class FabricSpgwIntUplinkDropTest(SpgwIntTest):
                 self.doRunTest(**test_args)
 
 
-# This test will assume the packet hits spgw interface and miss the downlink PDR table or
-# the FAR table
+# This test will assume the packet hits spgw interface and miss the downlink UE Sessions table or
+# the downlink Flows table
 @group("int")
 @group("spgw")
 class FabricSpgwIntDownlinkDropTest(SpgwIntTest):
