@@ -107,8 +107,7 @@ control SpgwIngress(
     }
 
     action load_downlink_session_params(tunnel_peer_id_t tunnel_peer_id,
-                                        // TODO: shouldn't we set dst tnl IP in termination table?
-                                        ipv4_addr_t  tunnel_dst_addr) {
+                                        ipv4_addr_t tunnel_dst_addr) {
         // by using UE IP address as UE Session identifier we save PHV resources used by action.
         ue_session = fabric_md.routing_ipv4_dst;
         fabric_md.bridged.spgw.gtpu_tunnel_peer_id = tunnel_peer_id;
@@ -206,7 +205,7 @@ control SpgwIngress(
     table uplink_flows {
         key = {
             fabric_md.spgw_slice_id   : exact @name("slice_id");
-            ue_session      : exact @name("ue_session");
+            ue_session                : exact @name("ue_session");
         }
 
         actions = {
@@ -220,7 +219,7 @@ control SpgwIngress(
     table downlink_flows {
         key = {
             fabric_md.spgw_slice_id   : exact @name("slice_id");
-            ue_session      : exact @name("ue_session");
+            ue_session                : exact @name("ue_session");
         }
         actions = {
             load_flow_params_encap;
@@ -354,7 +353,6 @@ control SpgwEgress(
         const default_action = nop();
         const size = MAX_GTP_TUNNEL_PEERS;
     }
-
 
     //========================//
     //===== GTP-U Encap ======//

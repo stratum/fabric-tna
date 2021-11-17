@@ -2505,10 +2505,10 @@ class SpgwSimpleTest(IPv4UnicastTest):
         )
         self.write_request(req)
 
-    def add_downlink_flow_tunnel(self, ue_session, ctr_id, teid,
-                                 slice_id=DEFAULT_SLICE_ID,
-                                 tc=DEFAULT_TC,
-                                 qfi=DEFAULT_QFI):
+    def setup_downlink_flow_tunnel(self, ue_session, ctr_id, teid,
+                                   slice_id=DEFAULT_SLICE_ID,
+                                   tc=DEFAULT_TC,
+                                   qfi=DEFAULT_QFI):
         req = self.get_new_write_request()
         self.push_update_add_entry_to_action(
             req,
@@ -2525,11 +2525,11 @@ class SpgwSimpleTest(IPv4UnicastTest):
         )
         self.write_request(req)
 
-    def add_downlink_flow_to_dbuf(self, ue_session, ctr_id,
-                                  teid=DBUF_TEID,
-                                  slice_id=DEFAULT_SLICE_ID,
-                                  tc=DEFAULT_TC,
-                                  qfi=DEFAULT_QFI):
+    def setup_downlink_flow_to_dbuf(self, ue_session, ctr_id,
+                                    teid=DBUF_TEID,
+                                    slice_id=DEFAULT_SLICE_ID,
+                                    tc=DEFAULT_TC,
+                                    qfi=DEFAULT_QFI):
         req = self.get_new_write_request()
         self.push_update_add_entry_to_action(
             req,
@@ -2595,8 +2595,8 @@ class SpgwSimpleTest(IPv4UnicastTest):
         self.setup_downlink_ue_session(ue_addr=ue_addr,
                                        tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID,
                                        tunnel_dst_addr=s1u_enb_addr)
-        self.add_downlink_flow_tunnel(slice_id=slice_id, ue_session=ue_addr,
-                                      ctr_id=ctr_id, teid=teid, tc=tc, qfi=qfi)
+        self.setup_downlink_flow_tunnel(slice_id=slice_id, ue_session=ue_addr,
+                                        ctr_id=ctr_id, teid=teid, tc=tc, qfi=qfi)
 
     def enable_encap_with_psc(self, qfi=DEFAULT_QFI):
         self.send_request_add_entry_to_action(
@@ -2957,9 +2957,9 @@ class SpgwSimpleTest(IPv4UnicastTest):
             drain_dst_addr=DBUF_DRAIN_DST_IPV4
         )
 
-        self.add_downlink_flow_to_dbuf(ue_session=UE1_IPV4,
-                                       ctr_id=DOWNLINK_PDR_CTR_IDX,
-                                       teid=DBUF_TEID)
+        self.setup_downlink_flow_to_dbuf(ue_session=UE1_IPV4,
+                                         ctr_id=DOWNLINK_PDR_CTR_IDX,
+                                         teid=DBUF_TEID)
 
         # Clear SPGW counters before sending the packet
         self.reset_pdr_counters(DOWNLINK_PDR_CTR_IDX)
