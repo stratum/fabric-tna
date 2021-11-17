@@ -107,17 +107,15 @@ pipeline {
                     // Post-merge, alert project maintainers
                     echo "build status failed. alerting maintainers"
                     setBuildStatus("Build failed", "FAILURE", GITHUB_URL)
-                    emailext(
-                            subject: "[${env.JOB_NAME}] ${currentBuild.currentResult}: ${params.sha1}",
-                            body: "Check results at ${env.BUILD_URL}",
-                            to: "carmelo@opennetworking.org"
+                    mail(to: 'carmelo@opennetworking.org',
+                        subject: "[${env.JOB_NAME}] ${currentBuild.currentResult}: ${params.sha1}",
+                        body: "Check results at ${env.BUILD_URL}"
                     )
                 } else {
                     // Pull request, alert author
-                    emailext(
-                            subject: "[${env.JOB_NAME}] ${currentBuild.currentResult}: pull request #${params.ghprbPullId}",
-                            body: "Check results at ${env.BUILD_URL}\n\nTriggered by GitHub pull request at ${params.ghprbPullLink}",
-                            to: "${params.ghprbPullAuthorEmail}"
+                    mail(to: '${params.ghprbPullAuthorEmail}',
+                        subject: "[${env.JOB_NAME}] ${currentBuild.currentResult}: pull request #${params.ghprbPullId}",
+                        body: "Check results at ${env.BUILD_URL}\n\nTriggered by GitHub pull request at ${params.ghprbPullLink}"
                     )
                 }
             }
