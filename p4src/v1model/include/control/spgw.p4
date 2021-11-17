@@ -223,7 +223,7 @@ control SpgwIngress(
 
     action recirc_allow() {
         // Pick a recirculation port within same ingress pipe to distribute load.
-        // standard_md.egress_spec = standard_md.ingress_port[8:7]++RECIRC_PORT_NUMBER;
+        standard_md.egress_spec = standard_md.ingress_port[8:7]++RECIRC_PORT_NUMBER;
         // bmv2 specific code, to use recirculation, performed only in egress.
         fabric_v1model.recirculate = true;
         fabric_md.bridged.base.vlan_id = DEFAULT_VLAN_ID;
