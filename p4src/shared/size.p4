@@ -35,13 +35,13 @@
 #define INT_QUEUE_REPORT_TABLE_SIZE 32 * 4
 
 // Constants for the SPGW control block.
-#define NUM_UES 10240
+#define NUM_UES 100000
 #define NUM_MOBILE_FLOWS (NUM_UES * NUM_SLICES)
 // We expect between 4 and 8 tunnels per UE.
 #define MAX_GTP_TUNNELS_PER_UE 1
 #define NUM_GTP_TUNNLES (NUM_UES * MAX_GTP_TUNNELS_PER_UE)
 // One counter for down and uplink direction.
-#define MAX_PDR_COUNTERS (2 * NUM_GTP_TUNNLES)
+#define MAX_PDR_COUNTERS 4096
 #define NUM_SPGW_INTERFACES 64
 #define NUM_QOS_CLASSES 128
 #define MAX_UPLINK_RECIRC_RULES 64
