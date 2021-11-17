@@ -3,7 +3,6 @@
 
 package org.stratumproject.fabric.tna.behaviour;
 
-import org.onosproject.net.pi.model.PiArchitectureId;
 import org.onosproject.net.pi.model.PiPipeconf;
 import org.slf4j.Logger;
 import org.stratumproject.fabric.tna.slicing.api.Color;
@@ -18,6 +17,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static org.onosproject.net.pi.model.PiPipeconf.ExtensionType.CPU_PORT_TXT;
 import static org.slf4j.LoggerFactory.getLogger;
 import static org.stratumproject.fabric.tna.behaviour.Constants.BMV2_COLOR_RED;
+import static org.stratumproject.fabric.tna.behaviour.Constants.TNA;
+import static org.stratumproject.fabric.tna.behaviour.Constants.V1MODEL;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_PDRS;
 
 /**
@@ -58,11 +59,15 @@ public class FabricCapabilities {
     }
 
     public boolean isArchV1model() {
-        return pipeconf.pipelineModel().architecture() == PiArchitectureId.V1MODEL;
+        return pipeconf.pipelineModel().architecture()
+                .map(a -> a.equals(V1MODEL))
+                .orElse(false);
     }
 
     public boolean isArchTna() {
-        return pipeconf.pipelineModel().architecture() == PiArchitectureId.TNA;
+        return pipeconf.pipelineModel().architecture()
+                .map(a -> a.equals(TNA))
+                .orElse(false);
     }
 
     public int getMeterColor(Color color) {

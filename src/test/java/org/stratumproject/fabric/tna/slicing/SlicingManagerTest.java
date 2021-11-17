@@ -32,7 +32,6 @@ import org.onosproject.net.flow.FlowRuleService;
 import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flow.criteria.PiCriterion;
 import org.onosproject.net.intent.WorkPartitionService;
-import org.onosproject.net.pi.model.PiArchitectureId;
 import org.onosproject.net.pi.model.PiPipeconf;
 import org.onosproject.net.pi.model.PiPipeconfId;
 import org.onosproject.net.pi.model.PiTableId;
@@ -53,6 +52,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.onlab.junit.TestTools.assertAfter;
+import static org.stratumproject.fabric.tna.behaviour.Constants.TNA;
+import static org.stratumproject.fabric.tna.behaviour.Constants.V1MODEL;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.sliceTcConcat;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_QOS_QUEUES;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_COLOR;
@@ -110,11 +111,11 @@ public class SlicingManagerTest {
         MockPiPipelineModel bmv2PipelineModel =
                 new MockPiPipelineModel(Collections.EMPTY_LIST,
                                         Collections.EMPTY_LIST,
-                                        PiArchitectureId.V1MODEL);
+                                        V1MODEL);
         MockPiPipelineModel tmPipelineModel =
                 new MockPiPipelineModel(Collections.EMPTY_LIST,
                                         Collections.EMPTY_LIST,
-                                        PiArchitectureId.TNA);
+                                        TNA);
         MockPipeconf bmv2MockPipeconf =
                 new MockPipeconf(new PiPipeconfId(bmv2PipeconfId), bmv2PipelineModel);
         MockPipeconf tmMockPipeconf =

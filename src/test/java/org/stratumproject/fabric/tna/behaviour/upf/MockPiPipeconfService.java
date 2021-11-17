@@ -3,7 +3,6 @@
 package org.stratumproject.fabric.tna.behaviour.upf;
 
 import org.onosproject.net.DeviceId;
-import org.onosproject.net.pi.model.PiArchitectureId;
 import org.onosproject.net.pi.model.PiCounterModel;
 import org.onosproject.net.pi.model.PiPipeconf;
 import org.onosproject.net.pi.model.PiPipeconfId;
@@ -24,7 +23,7 @@ public class MockPiPipeconfService implements PiPipeconfService {
 
     public MockPiPipeconfService(Collection<PiTableModel> tables,
                                  Collection<PiCounterModel> counters,
-                                 PiArchitectureId architecture) {
+                                 String architecture) {
         mockPiPipeconf = createMock(PiPipeconf.class);
         expect(mockPiPipeconf.pipelineModel())
                 .andReturn(new MockPiPipelineModel(tables, counters, architecture))
