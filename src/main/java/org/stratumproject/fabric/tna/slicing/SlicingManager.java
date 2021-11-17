@@ -248,17 +248,13 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
                     sliceId, classifierFlows.size()));
         }
 
-        AtomicBoolean result = new AtomicBoolean(true);
-
         tcs.stream()
                 .sorted(Comparator.comparingInt(TrafficClass::ordinal).reversed()) // Remove BEST_EFFORT the last
                 .forEach(tc -> {
-            if (!removeTrafficClass(sliceId, tc)) {
-                result.set(false);
-            }
+                    removeTrafficClass(sliceId, tc);
         });
 
-        return result.get();
+        return true;
     }
 
     @Override
@@ -282,8 +278,6 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
             }
         }
 
-        AtomicBoolean result = new AtomicBoolean(false);
-
         StringBuilder errorMessage = new StringBuilder();
         SliceStoreKey key = new SliceStoreKey(sliceId, tc);
         sliceStore.compute(key, (k, v) -> {
@@ -299,7 +293,6 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
             }
 
             log.info("Allocate queue {} for slice {} tc {}", queueId, sliceId, tc);
-            result.set(true);
             return queueId;
         });
 
@@ -307,7 +300,7 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
             throw new SlicingException(FAILED, errorMessage.toString());
         }
 
-        return result.get();
+        return true;
     }
 
     @Override
@@ -331,8 +324,6 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
                     tc, sliceId, classifierFlows.size()));
         }
 
-        AtomicBoolean result = new AtomicBoolean(false);
-
         StringBuilder errorMessage = new StringBuilder();
         SliceStoreKey key = new SliceStoreKey(sliceId, tc);
         sliceStore.compute(key, (k, v) -> {
@@ -343,7 +334,6 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
 
             deallocateQueue(v);
             log.info("Deallocate queue {} for slice {} tc {}", v, sliceId, tc);
-            result.set(true);
             return null;
         });
 
@@ -351,7 +341,7 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
             throw new SlicingException(FAILED, errorMessage.toString());
         }
 
-        return result.get();
+        return true;
     }
 
     @Override
@@ -390,7 +380,6 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
     @Override
     public boolean removeFlow(TrafficSelector selector, SliceId sliceId, TrafficClass tc) {
         StringBuilder errorMessage = new StringBuilder();
-        AtomicBoolean result = new AtomicBoolean(false);
         classifierFlowStore.compute(selector, (k, v) -> {
             if (v == null) {
                 errorMessage.append(
@@ -399,7 +388,6 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
                 return null;
             }
             log.info("Removing flow {} from slice {} tc {}", selector, sliceId, tc);
-            result.set(true);
             return null;
         });
 
@@ -407,7 +395,7 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
             throw new SlicingException(FAILED, errorMessage.toString());
         }
 
-        return result.get();
+        return true;
     }
 
     @Override
@@ -427,6 +415,7 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
                 .collect(Collectors.toSet());
     }
 
+    //FIXME: Apply slicing exception on Queue APIs when dynamic queue config is ready
     @Override
     public boolean reserveQueue(QueueId queueId, TrafficClass tc) {
         AtomicBoolean result = new AtomicBoolean(false);
