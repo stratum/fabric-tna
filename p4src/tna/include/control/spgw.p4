@@ -85,66 +85,6 @@ control SpgwIngress(
         const size = NUM_SPGW_INTERFACES;
     }
 
-    //=======================//
-    //===== PDR Tables ======//
-    //=======================//
-
-    action downlink_pdr_drop() {
-        ig_dprsr_md.drop_ctl = 1;
-        fabric_md.skip_forwarding = true;
-        fabric_md.skip_next = true;
-#ifdef WITH_INT
-        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_DOWNLINK_PDR_MISS;
-#endif // WITH_INT
-    }
-
-    action uplink_pdr_drop() {
-        ig_dprsr_md.drop_ctl = 1;
-        fabric_md.skip_forwarding = true;
-        fabric_md.skip_next = true;
-#ifdef WITH_INT
-        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UPLINK_PDR_MISS;
-#endif // WITH_INT
-    }
-
-    action load_pdr(pdr_ctr_id_t ctr_id, far_id_t far_id, tc_t tc) {
-        md_far_id = far_id;
-        fabric_md.bridged.spgw.pdr_ctr_id = ctr_id;
-        fabric_md.spgw_tc = tc;
-        is_pdr_hit = true;
-    }
-
-    action load_pdr_decap(pdr_ctr_id_t ctr_id, far_id_t far_id, tc_t tc) {
-        load_pdr(ctr_id, far_id, tc);
-        _gtpu_decap();
-    }
-
-    // These two tables scale well and cover the average case PDR
-    table downlink_pdrs {
-        key = {
-            fabric_md.routing_ipv4_dst : exact @name("ue_addr");
-        }
-        actions = {
-            load_pdr;
-            @defaultonly downlink_pdr_drop;
-        }
-        size = NUM_DOWNLINK_PDRS;
-        const default_action = downlink_pdr_drop();
-    }
-
-    table uplink_pdrs {
-        key = {
-            hdr.ipv4.dst_addr : exact @name("tunnel_ipv4_dst");
-            hdr.gtpu.teid     : exact @name("teid");
-        }
-        actions = {
-            load_pdr_decap;
-            @defaultonly uplink_pdr_drop;
-        }
-        size = NUM_UPLINK_PDRS;
-        const default_action = uplink_pdr_drop();
-    }
-
     //===============================//
     //===== UE Sessions Tables ======//
     //===============================//
@@ -154,7 +94,7 @@ control SpgwIngress(
         fabric_md.skip_forwarding = true;
         fabric_md.skip_next = true;
 #ifdef WITH_INT
-        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UPLINK_PDR_MISS;
+        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UPLINK_UE_SESSION_MISS;
 #endif // WITH_INT
     }
 
@@ -163,7 +103,7 @@ control SpgwIngress(
         fabric_md.skip_forwarding = true;
         fabric_md.skip_next = true;
 #ifdef WITH_INT
-        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_DOWNLINK_PDR_MISS;
+        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_DOWNLINK_UE_SESSION_MISS;
 #endif // WITH_INT
     }
 
@@ -207,24 +147,28 @@ control SpgwIngress(
         const default_action = uplink_session_drop();
     }
 
-    // TODO: look for better name,
+    // TODO: look for better name (maybe PDRs?),
     //  but I tried to make it consistent with Figure 5.7.1.5-1 from 3GPP 23.501
-    //=========================//
-    //===== Mobile Flows ======//
-    //=========================//
+    //===================================//
+    //===== Per-Slice Mobile Flows ======//
+    //===================================//
 
     action downlink_flow_drop() {
         ig_dprsr_md.drop_ctl = 1;
         fabric_md.skip_forwarding = true;
         fabric_md.skip_next = true;
-        // TODO: add INT drop reason
+#ifdef WITH_INT
+        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_DOWNLINK_FLOW_MISS;
+#endif // WITH_INT
     }
 
     action uplink_flow_drop() {
         ig_dprsr_md.drop_ctl = 1;
         fabric_md.skip_forwarding = true;
         fabric_md.skip_next = true;
-        // TODO: add INT drop reason
+#ifdef WITH_INT
+        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UPLINK_FLOW_MISS;
+#endif // WITH_INT
     }
 
     action load_flow_params(pdr_ctr_id_t ctr_id,
@@ -287,81 +231,6 @@ control SpgwIngress(
         const default_action = downlink_flow_drop();
         const size = NUM_MOBILE_FLOWS;
     }
-
-    //=======================//
-    //===== FAR Tables ======//
-    //=======================//
-
-    action far_drop() {
-        ig_dprsr_md.drop_ctl = 1;
-        fabric_md.skip_forwarding = true;
-        fabric_md.skip_next = true;
-        fabric_md.bridged.spgw.needs_gtpu_encap = false;
-        fabric_md.bridged.spgw.skip_egress_pdr_ctr = false;
-#ifdef WITH_INT
-        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_FAR_MISS;
-#endif // WITH_INT
-    }
-
-    action load_normal_far(bool drop) {
-        fabric_md.skip_forwarding = drop;
-        fabric_md.skip_next = drop;
-        fabric_md.bridged.spgw.needs_gtpu_encap = false;
-        fabric_md.bridged.spgw.skip_egress_pdr_ctr = false;
-        // FIXME: set INT drop reason if drop
-    }
-
-    // A commom part that being used for load_tunnel_far and load_dbuf_far
-    @hidden
-    action load_common_far(bool         drop,
-                           tunnel_peer_id_t tunnel_peer_id,
-                           ipv4_addr_t  tunnel_src_addr,
-                           ipv4_addr_t  tunnel_dst_addr,
-                           teid_t       teid) {
-        fabric_md.skip_forwarding = drop;
-        fabric_md.skip_next = drop;
-        // GTP tunnel attributes
-        fabric_md.bridged.spgw.needs_gtpu_encap = true;
-        fabric_md.bridged.spgw.gtpu_teid = teid;
-        fabric_md.bridged.spgw.gtpu_tunnel_peer_id = tunnel_peer_id;
-        fabric_md.spgw_gtpu_tunnel_sip = tunnel_src_addr;
-        //fabric_md.bridged.spgw.gtpu_tunnel_sip = tunnel_src_addr;
-        //fabric_md.bridged.spgw.gtpu_tunnel_dip = tunnel_dst_addr;
-        fabric_md.routing_ipv4_dst = tunnel_dst_addr;
-    }
-
-    action load_tunnel_far(bool         drop,
-                           tunnel_peer_id_t tunnel_peer_id,
-                           ipv4_addr_t  tunnel_src_addr,
-                           ipv4_addr_t  tunnel_dst_addr,
-                           teid_t       teid) {
-        load_common_far(drop, tunnel_peer_id, tunnel_src_addr, tunnel_dst_addr, teid);
-        fabric_md.bridged.spgw.skip_egress_pdr_ctr = false;
-    }
-
-    action load_dbuf_far(bool           drop,
-                         tunnel_peer_id_t tunnel_peer_id,
-                         ipv4_addr_t  tunnel_src_addr,
-                         ipv4_addr_t  tunnel_dst_addr,
-                         teid_t         teid) {
-        load_common_far(drop, tunnel_peer_id, tunnel_src_addr, tunnel_dst_addr, teid);
-        fabric_md.bridged.spgw.skip_egress_pdr_ctr = true;
-    }
-
-    table fars {
-        key = {
-            md_far_id : exact @name("far_id");
-        }
-        actions = {
-            load_normal_far;
-            load_tunnel_far;
-            load_dbuf_far;
-            @defaultonly far_drop;
-        }
-        const default_action = far_drop();
-        size = NUM_FARS;
-    }
-
 
     //=================================//
     //===== Uplink Recirculation ======//
