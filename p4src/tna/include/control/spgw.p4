@@ -24,7 +24,7 @@ control SpgwIngress(
 
     // TODO: we might want to rename it as we don't use PDR abstraction anymore.
     bool is_pdr_hit = false;
-    far_id_t md_far_id = 0;
+    ue_session_id_t ue_session;
 
     @hidden
     action _gtpu_decap() {
@@ -111,14 +111,14 @@ control SpgwIngress(
                                         // TODO: shouldn't we set dst tnl IP in termination table?
                                         ipv4_addr_t  tunnel_dst_addr) {
         // by using UE IP address as UE Session identifier we save PHV resources used by action.
-        fabric_md.ue_session = fabric_md.routing_ipv4_dst;
+        ue_session = fabric_md.routing_ipv4_dst;
         fabric_md.bridged.spgw.gtpu_tunnel_peer_id = tunnel_peer_id;
         fabric_md.routing_ipv4_dst = tunnel_dst_addr;
     }
 
     action load_uplink_session_params_decap() {
         // by using UE IP address as UE Session identifier we save PHV resources used by action.
-        fabric_md.ue_session = fabric_md.lkp.ipv4_src;
+        ue_session = fabric_md.lkp.ipv4_src;
         _gtpu_decap();
     }
 
@@ -207,7 +207,7 @@ control SpgwIngress(
     table uplink_flows {
         key = {
             fabric_md.spgw_slice_id   : exact @name("slice_id");
-            fabric_md.ue_session      : exact @name("ue_session");
+            ue_session      : exact @name("ue_session");
         }
 
         actions = {
@@ -221,7 +221,7 @@ control SpgwIngress(
     table downlink_flows {
         key = {
             fabric_md.spgw_slice_id   : exact @name("slice_id");
-            fabric_md.ue_session      : exact @name("ue_session");
+            ue_session      : exact @name("ue_session");
         }
         actions = {
             load_flow_params_encap;

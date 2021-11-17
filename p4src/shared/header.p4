@@ -358,7 +358,6 @@ struct fabric_ingress_metadata_t {
     lookup_metadata_t        lkp;
     bit<32>                  routing_ipv4_dst; // Outermost
     bit<32>                  spgw_gtpu_tunnel_sip;
-    ue_session_id_t          ue_session;
     bool                     skip_forwarding;
     bool                     skip_next;
     next_id_t                next_id;
