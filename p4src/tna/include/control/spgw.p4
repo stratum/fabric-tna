@@ -392,6 +392,10 @@ control SpgwEgress(
         hdr.outer_gtpu.ex_flag = 1;
         hdr.outer_gtpu_options.setValid();
         hdr.outer_gtpu_ext_psc.setValid();
+        // FIXME: these fields should be intialized in the parser,
+        // but due to PARSER_ERROR_MULTIWRITE the initialization is postponed.
+        hdr.outer_gtpu_ext_psc.len = GTPU_EXT_PSC_LEN;
+        hdr.outer_gtpu_ext_psc.rqi = 0;
 #ifdef WITH_INT
         fabric_md.int_report_md.encap_presence = EncapPresence.GTPU_WITH_PSC;
 #endif // WITH_INT
