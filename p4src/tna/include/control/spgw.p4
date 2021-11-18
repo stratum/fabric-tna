@@ -23,7 +23,7 @@ control SpgwIngress(
 
     // TODO: we might want to rename it as we don't use PDR abstraction anymore.
     bool is_pdr_hit = false;
-    ue_session_id_t ue_session;
+    ue_session_id_t ue_session = 0;
 
     @hidden
     action _gtpu_decap() {

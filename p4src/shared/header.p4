@@ -357,7 +357,6 @@ struct fabric_ingress_metadata_t {
     flow_hash_t              ecmp_hash;
     lookup_metadata_t        lkp;
     bit<32>                  routing_ipv4_dst; // Outermost
-    bit<32>                  spgw_gtpu_tunnel_sip;
     bool                     skip_forwarding;
     bool                     skip_next;
     next_id_t                next_id;
