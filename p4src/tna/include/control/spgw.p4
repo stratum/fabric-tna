@@ -182,8 +182,8 @@ control SpgwIngress(
                                   // QFI should always equal 0 for 4G flows
                                   bit<6>       qfi) {
         load_flow_params(ctr_id, tc);
-        fabric_md.bridged.spgw.skip_egress_pdr_ctr = false;
         fabric_md.bridged.spgw.needs_gtpu_encap = true;
+        fabric_md.bridged.spgw.skip_egress_pdr_ctr = false;
         fabric_md.bridged.spgw.gtpu_teid = teid;
         fabric_md.bridged.spgw.qfi = qfi;
     }
@@ -195,9 +195,9 @@ control SpgwIngress(
                                        bit<6>       qfi) {
         load_flow_params(ctr_id, tc);
         fabric_md.bridged.spgw.needs_gtpu_encap = true;
+        fabric_md.bridged.spgw.skip_egress_pdr_ctr = true;
         fabric_md.bridged.spgw.gtpu_teid = teid;
         fabric_md.bridged.spgw.qfi = qfi;
-        fabric_md.bridged.spgw.skip_egress_pdr_ctr = true;
     }
 
     table uplink_flows {
@@ -379,8 +379,7 @@ control SpgwEgress(
 
     // Do GTP-U encap with PDU Session Container extension for 5G NG-RAN with
     // configurable QFI.
-    // TODO: allow setting different QFIs in ingress
-    action gtpu_with_psc(bit<6> qfi) {
+    action gtpu_with_psc() {
         _encap_common();
         hdr.outer_ipv4.total_len = IPV4_HDR_BYTES + UDP_HDR_BYTES + GTPU_HDR_BYTES
                 + GTPU_OPTIONS_HDR_BYTES + GTPU_EXT_PSC_HDR_BYTES
@@ -393,7 +392,6 @@ control SpgwEgress(
         hdr.outer_gtpu.ex_flag = 1;
         hdr.outer_gtpu_options.setValid();
         hdr.outer_gtpu_ext_psc.setValid();
-        hdr.outer_gtpu_ext_psc.qfi = qfi;
 #ifdef WITH_INT
         fabric_md.int_report_md.encap_presence = EncapPresence.GTPU_WITH_PSC;
 #endif // WITH_INT

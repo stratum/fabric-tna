@@ -40,7 +40,6 @@
 // We expect between 4 and 8 tunnels per UE.
 #define MAX_GTP_TUNNELS_PER_UE 1
 #define NUM_GTP_TUNNLES (NUM_UES * MAX_GTP_TUNNELS_PER_UE)
-// One counter for down and uplink direction.
 #define MAX_PDR_COUNTERS 4096
 #define NUM_SPGW_INTERFACES 64
 #define NUM_QOS_CLASSES 128

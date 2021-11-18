@@ -2598,12 +2598,12 @@ class SpgwSimpleTest(IPv4UnicastTest):
         self.setup_downlink_flow_tunnel(slice_id=slice_id, ue_session=ue_addr,
                                         ctr_id=ctr_id, teid=teid, tc=tc, qfi=qfi)
 
-    def enable_encap_with_psc(self, qfi=DEFAULT_QFI):
+    def enable_encap_with_psc(self):
         self.send_request_add_entry_to_action(
             "FabricEgress.spgw.gtpu_encap",
             None,
             "FabricEgress.spgw.gtpu_with_psc",
-            [("qfi", stringify(qfi, 1))],
+            [],
         )
 
     def reset_pdr_counters(self, ctr_idx):
