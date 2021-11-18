@@ -340,10 +340,12 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.spgw.iface_miss");
     public static final PiActionId FABRIC_INGRESS_SPGW_LOAD_DOWNLINK_SESSION_PARAMS =
             PiActionId.of("FabricIngress.spgw.load_downlink_session_params");
-    public static final PiActionId FABRIC_INGRESS_SPGW_LOAD_FLOW =
-            PiActionId.of("FabricIngress.spgw.load_flow");
-    public static final PiActionId FABRIC_INGRESS_SPGW_LOAD_FLOW_ENCAP =
-            PiActionId.of("FabricIngress.spgw.load_flow_encap");
+    public static final PiActionId FABRIC_INGRESS_SPGW_LOAD_FLOW_PARAMS =
+            PiActionId.of("FabricIngress.spgw.load_flow_params");
+    public static final PiActionId FABRIC_INGRESS_SPGW_LOAD_FLOW_PARAMS_ENCAP =
+            PiActionId.of("FabricIngress.spgw.load_flow_params_encap");
+    public static final PiActionId FABRIC_INGRESS_SPGW_LOAD_FLOW_PARAMS_ENCAP_DBUF =
+            PiActionId.of("FabricIngress.spgw.load_flow_params_encap_dbuf");
     public static final PiActionId FABRIC_INGRESS_SPGW_LOAD_UPLINK_SESSION_PARAMS_DECAP =
             PiActionId.of("FabricIngress.spgw.load_uplink_session_params_decap");
     public static final PiActionId FABRIC_INGRESS_SPGW_RECIRC_ALLOW =

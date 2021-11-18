@@ -10,7 +10,7 @@ if profile_name == "fabric":
 elif profile_name == "fabric-int":
     BMD_BYTES = 33
 elif profile_name == "fabric-spgw":
-    BMD_BYTES = 31
+    BMD_BYTES = 32
 elif profile_name == "fabric-spgw-int":
     BMD_BYTES = 40
 else:
