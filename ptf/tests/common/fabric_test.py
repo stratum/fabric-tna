@@ -1800,12 +1800,20 @@ class IPv4UnicastTest(FabricTest):
         vlan1=VLAN_ID_1,
         vlan2=VLAN_ID_2,
         mpls_label=MPLS_LABEL_2,
+        is_recirc_test=False,
     ):
 
         group_id = next_id
 
         # Setup ports.
         self.setup_port(ig_port, vlan1, port_type1, tagged1)
+        if is_bmv2():
+            if is_recirc_test and tagged1:
+                # This is to cover the cases when expecting a tagged packet:
+                # e.g. vlan_conf=tag->untag, pkt_type=*, with_psc=*, is_next_hop_spine=*, pkt_len=*, is_device_spine=*, allow_ue_recirculation=True
+                # When recirculated, the packet is no more tagged with vlan because vlan has been invalidated by egress next control.
+                self.setup_port(ig_port, 0, port_type1, not tagged1)
+
         # This is to prevent sending duplicate table entries for tests like
         # FabricIntDeflectedDropTest, where we already set up the recirculation port as
         # part of `set_up_int_flows()`.
@@ -1884,6 +1892,7 @@ class IPv4UnicastTest(FabricTest):
         port_type1=PORT_TYPE_EDGE,
         port_type2=PORT_TYPE_EDGE,
         from_packet_out=False,
+        is_recirc_test=False,
     ):
         """
         Execute an IPv4 unicast routing test.
@@ -1915,6 +1924,7 @@ class IPv4UnicastTest(FabricTest):
         :param port_type1: port type to be used for the programming of the ig port
         :param port_type2: port type to be used for the programming of the eg port
         :param from_packet_out: ingress packet is a packet-out (enables do_forwarding)
+        :param is_recirc_test: flag to check if running a recirculation test
         """
         if IP not in pkt or Ether not in pkt:
             self.fail("Cannot do IPv4 test with packet that is not IP")
@@ -1975,6 +1985,7 @@ class IPv4UnicastTest(FabricTest):
             vlan1,
             vlan2,
             mpls_label,
+            is_recirc_test,
         )
 
         if exp_pkt is None:
@@ -2771,6 +2782,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             tagged2=tagged2,
             is_next_hop_spine=is_next_hop_spine,
             verify_pkt=allow,
+            is_recirc_test=True
         )
 
         # Do not count FCS if target is bmv2

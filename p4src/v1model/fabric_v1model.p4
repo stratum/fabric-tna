@@ -48,6 +48,9 @@ control FabricIngress (inout v1model_header_t hdr,
 #endif // WITH_SPGW
 
     apply {
+        // Forcing the override of port 0 which has an undefined behavior.
+        // for more information see https://github.com/p4lang/behavioral-model/issues/992
+        mark_to_drop(standard_md);
         if (standard_md.parser_error == error.PacketRejectedByParser) {
             // packet was rejected by parser -> drop.
             mark_to_drop(standard_md);
@@ -116,7 +119,7 @@ control FabricEgress (inout v1model_header_t hdr,
 
         if (fabric_md.recirculate) {
             // Recirculate the spgw traffic UE to UE.
-            recirculate({});
+            recirculate(standard_md);
             exit;
         }
 

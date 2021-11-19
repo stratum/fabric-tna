@@ -222,7 +222,10 @@ control SpgwIngress(
     direct_counter(CounterType.packets) recirc_stats;
 
     action recirc_allow() {
-        // Pick a recirculation port within same ingress pipe to distribute load.
+        // Recirculation in bmv2 is obtained via recirculate() primitive, invoked in the egress pipeline.
+        // We still need to set an egress_spec and configure the corresponding egress_vlan entry,
+        // otherwise packets will be dropped by the default egress_vlan action (drop()).
+        // We use the same ports defined for TNA.
         standard_md.egress_spec = standard_md.ingress_port[8:7]++RECIRC_PORT_NUMBER;
         // bmv2 specific code, to use recirculation, performed only in egress.
         fabric_v1model.recirculate = true;
@@ -317,11 +320,6 @@ control SpgwEgress(
         // For bmv2 the initialization needs to be done after the hdr.outer_*.setValid() is called,
         // otherwise the assignments have no effect.
 
-        // hdr.inner_ipv4 = hdr.ipv4; // outer ipv4 is now inner.
-        // hdr.inner_udp = hdr.udp; // outer udp is now inner.
-        // hdr.inner_tcp = hdr.tcp; // outer tcp is now inner.
-        // hdr.inner_icmp = hdr.icmp; // outer icmp is now inner.
-
         /** hdr.ipv4 is now outer_ipv4 **/
         hdr.ipv4.version           = 4w4;
         hdr.ipv4.ihl               = 4w5;
@@ -370,7 +368,6 @@ control SpgwEgress(
         // Constant fields initialized in the parser.
         hdr.inner_ipv4.setValid();
         hdr.inner_ipv4 = hdr.ipv4;
-        // hdr.inner_udp.setValid();
         hdr.udp.setValid();
         hdr.gtpu.setValid();
 
