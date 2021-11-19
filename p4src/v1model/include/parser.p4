@@ -272,32 +272,31 @@ control FabricDeparser(packet_out       packet,
                        in v1model_header_t hdr) {
 
     apply {
-
-            packet.emit(hdr.ingress.fake_ethernet);
-            packet.emit(hdr.ingress.packet_in);
-            packet.emit(hdr.ingress.ethernet);
-            packet.emit(hdr.ingress.vlan_tag);
+        packet.emit(hdr.ingress.fake_ethernet);
+        packet.emit(hdr.ingress.packet_in);
+        packet.emit(hdr.ingress.ethernet);
+        packet.emit(hdr.ingress.vlan_tag);
 #if defined(WITH_XCONNECT) || defined(WITH_DOUBLE_VLAN_TERMINATION)
-            packet.emit(hdr.ingress.inner_vlan_tag);
+        packet.emit(hdr.ingress.inner_vlan_tag);
 #endif // WITH_XCONNECT || WITH_DOUBLE_VLAN_TERMINATION
-            packet.emit(hdr.ingress.eth_type);
-            packet.emit(hdr.ingress.mpls);
-            packet.emit(hdr.ingress.ipv4);
-            packet.emit(hdr.ingress.ipv6);
-            packet.emit(hdr.ingress.tcp);
-            packet.emit(hdr.ingress.udp);
-            packet.emit(hdr.ingress.icmp);
-            // in case we parsed a GTPU packet but did not decap it
-            packet.emit(hdr.ingress.gtpu);
-            packet.emit(hdr.ingress.gtpu_options);
-            packet.emit(hdr.ingress.gtpu_ext_psc);
-            packet.emit(hdr.ingress.vxlan);
-            packet.emit(hdr.ingress.inner_ethernet);
-            packet.emit(hdr.ingress.inner_eth_type);
-            packet.emit(hdr.ingress.inner_ipv4);
-            packet.emit(hdr.ingress.inner_tcp);
-            packet.emit(hdr.ingress.inner_udp);
-            packet.emit(hdr.ingress.inner_icmp);
+        packet.emit(hdr.ingress.eth_type);
+        packet.emit(hdr.ingress.mpls);
+        packet.emit(hdr.ingress.ipv4);
+        packet.emit(hdr.ingress.ipv6);
+        packet.emit(hdr.ingress.tcp);
+        packet.emit(hdr.ingress.udp);
+        packet.emit(hdr.ingress.icmp);
+        // in case we parsed a GTPU packet but did not decap it
+        packet.emit(hdr.ingress.gtpu);
+        packet.emit(hdr.ingress.gtpu_options);
+        packet.emit(hdr.ingress.gtpu_ext_psc);
+        packet.emit(hdr.ingress.vxlan);
+        packet.emit(hdr.ingress.inner_ethernet);
+        packet.emit(hdr.ingress.inner_eth_type);
+        packet.emit(hdr.ingress.inner_ipv4);
+        packet.emit(hdr.ingress.inner_tcp);
+        packet.emit(hdr.ingress.inner_udp);
+        packet.emit(hdr.ingress.inner_icmp);
     }
 }
 

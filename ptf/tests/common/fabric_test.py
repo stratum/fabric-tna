@@ -1807,12 +1807,11 @@ class IPv4UnicastTest(FabricTest):
 
         # Setup ports.
         self.setup_port(ig_port, vlan1, port_type1, tagged1)
-        if is_bmv2():
-            if is_recirc_test and tagged1:
+        if is_bmv2() and is_recirc_test and tagged1:
                 # This is to cover the cases when expecting a tagged packet:
                 # e.g. vlan_conf=tag->untag, pkt_type=*, with_psc=*, is_next_hop_spine=*, pkt_len=*, is_device_spine=*, allow_ue_recirculation=True
                 # When recirculated, the packet is no more tagged with vlan because vlan has been invalidated by egress next control.
-                self.setup_port(ig_port, 0, port_type1, not tagged1)
+                self.setup_port(ig_port, 0, port_type1, False)
 
         # This is to prevent sending duplicate table entries for tests like
         # FabricIntDeflectedDropTest, where we already set up the recirculation port as
