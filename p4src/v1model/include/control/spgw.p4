@@ -228,7 +228,7 @@ control SpgwIngress(
         // We use the same ports defined for TNA.
         standard_md.egress_spec = standard_md.ingress_port[8:7]++RECIRC_PORT_NUMBER;
         // bmv2 specific code, to use recirculation, performed only in egress.
-        fabric_v1model.recirculate = true;
+        fabric_v1model.do_spgw_uplink_recirc = true;
         fabric_md.bridged.base.vlan_id = DEFAULT_VLAN_ID;
         fabric_md.egress_port_set = true;
         fabric_md.skip_forwarding = true;
@@ -237,7 +237,7 @@ control SpgwIngress(
     }
 
     action recirc_deny() {
-        fabric_v1model.recirculate = false;
+        fabric_v1model.do_spgw_uplink_recirc = false;
         fabric_md.skip_forwarding = true;
         fabric_md.skip_next = true;
         recirc_stats.count();
