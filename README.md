@@ -5,7 +5,13 @@ SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 
 # Fabric-TNA
 
-[![Build Status](https://jenkins.onosproject.org/buildStatus/icon?job=fabric-tna-postmerge&subject=Build)](https://jenkins.onosproject.org/job/fabric-tna-postmerge/)
+[![Build Status](https://jenkins.onosproject.org/buildStatus/icon?job=postmerge-fabric-tna&subject=Fabric-tna)](https://jenkins.onosproject.org/view/fabric-tna/job/postmerge-fabric-tna/)
+[![Build Status](https://jenkins.onosproject.org/buildStatus/icon?job=postmerge-fabric-int-tna&subject=Fabric-int-tna)](https://jenkins.onosproject.org/view/fabric-tna/job/postmerge-fabric-int-tna/)
+[![Build Status](https://jenkins.onosproject.org/buildStatus/icon?Subject=postmerge&job=postmerge-fabric-spgw-int-tna&subject=Fabric-spgw-int-tna)](https://jenkins.onosproject.org/view/fabric-tna/job/postmerge-fabric-spgw-int-tna/)
+[![Build Status](https://jenkins.onosproject.org/buildStatus/icon?job=postmerge-fabric-spgw-tna&subject=Fabric-spgw-tna)](https://jenkins.onosproject.org/view/fabric-tna/job/postmerge-fabric-spgw-tna/)
+[![Build Status](https://jenkins.onosproject.org/buildStatus/icon?job=postmerge-fabric-v1model&subject=Fabric-v1model)](https://jenkins.onosproject.org/view/fabric-tna/job/postmerge-fabric-v1model/)
+[![Build Status](https://jenkins.onosproject.org/buildStatus/icon?job=postmerge-fabric-spgw-v1model&subject=Fabric-spgw-v1model)](https://jenkins.onosproject.org/view/fabric-tna/job/postmerge-fabric-spgw-v1model/)
+
 [![Build Status](https://jenkins.onosproject.org/buildStatus/icon?job=fabric-tna-linerate-tests&subject=Line-Rate+Tests)](https://jenkins.onosproject.org/job/fabric-tna-linerate-tests/)
 
 `fabric-tna` is a P4 program designed to work with [Trellis](trellis), a set of
