@@ -118,7 +118,7 @@ def get_controller_packet_metadata(p4info, meta_type, name):
 def de_canonicalize_bytes(bitwidth: int, input: bytes):
     """
     This method adds a padding to the 'input' param.
-    Needed for target bmv2 since it uses Canonical Bytestrings: this representation
+    Needed for bmv2 since it uses Canonical Bytestrings: this representation
     trims the data to the lowest amount of bytes needed for that particular value
     (e.g. 0x0 for PacketIn.ingress_port will be interpreted by Stratum bmv2 using 1 byte, instead of 9 bits,
     as declared in header.p4)

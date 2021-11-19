@@ -1806,7 +1806,6 @@ class IPv4UnicastTest(FabricTest):
 
         # Setup ports.
         self.setup_port(ig_port, vlan1, port_type1, tagged1)
-
         # This is to prevent sending duplicate table entries for tests like
         # FabricIntDeflectedDropTest, where we already set up the recirculation port as
         # part of `set_up_int_flows()`.
