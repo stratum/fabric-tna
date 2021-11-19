@@ -1800,18 +1800,12 @@ class IPv4UnicastTest(FabricTest):
         vlan1=VLAN_ID_1,
         vlan2=VLAN_ID_2,
         mpls_label=MPLS_LABEL_2,
-        is_recirc_test=False,
     ):
 
         group_id = next_id
 
         # Setup ports.
         self.setup_port(ig_port, vlan1, port_type1, tagged1)
-        if is_v1model() and is_recirc_test and tagged1:
-                # This is to cover the cases when expecting a tagged packet:
-                # e.g. vlan_conf=tag->untag, pkt_type=*, with_psc=*, is_next_hop_spine=*, pkt_len=*, is_device_spine=*, allow_ue_recirculation=True
-                # When recirculated, the packet is no more tagged with vlan because vlan has been invalidated by egress next control.
-                self.setup_port(ig_port, 0, port_type1, False)
 
         # This is to prevent sending duplicate table entries for tests like
         # FabricIntDeflectedDropTest, where we already set up the recirculation port as
@@ -1891,7 +1885,6 @@ class IPv4UnicastTest(FabricTest):
         port_type1=PORT_TYPE_EDGE,
         port_type2=PORT_TYPE_EDGE,
         from_packet_out=False,
-        is_recirc_test=False,
     ):
         """
         Execute an IPv4 unicast routing test.
@@ -1923,7 +1916,6 @@ class IPv4UnicastTest(FabricTest):
         :param port_type1: port type to be used for the programming of the ig port
         :param port_type2: port type to be used for the programming of the eg port
         :param from_packet_out: ingress packet is a packet-out (enables do_forwarding)
-        :param is_recirc_test: flag to check if running a recirculation test
         """
         if IP not in pkt or Ether not in pkt:
             self.fail("Cannot do IPv4 test with packet that is not IP")
@@ -1984,7 +1976,6 @@ class IPv4UnicastTest(FabricTest):
             vlan1,
             vlan2,
             mpls_label,
-            is_recirc_test,
         )
 
         if exp_pkt is None:
@@ -2752,7 +2743,8 @@ class SpgwSimpleTest(IPv4UnicastTest):
             ctr_id=DOWNLINK_PDR_CTR_IDX,
         )
 
-        self.set_up_recirc_ports()
+        if is_tna():
+            self.set_up_recirc_ports()
 
         # By default deny all UE-to-UE communication.
         self.add_uplink_recirc_rule(
@@ -2781,7 +2773,6 @@ class SpgwSimpleTest(IPv4UnicastTest):
             tagged2=tagged2,
             is_next_hop_spine=is_next_hop_spine,
             verify_pkt=allow,
-            is_recirc_test=True
         )
 
         uplink_ingress_bytes =  len(pkt)
@@ -2816,6 +2807,10 @@ class SpgwSimpleTest(IPv4UnicastTest):
             # deparser, after counter update.
             uplink_ingress_bytes += VLAN_BYTES
             uplink_egress_bytes += VLAN_BYTES
+            if is_v1model():
+                # Recirculated Pkt is vlan tagged. Count in downlink.
+                downlink_ingress_bytes += VLAN_BYTES
+                downlink_egress_bytes += VLAN_BYTES
         if self.loopback:
             uplink_ingress_bytes += CPU_LOOPBACK_FAKE_ETH_BYTES
             uplink_egress_bytes += CPU_LOOPBACK_FAKE_ETH_BYTES

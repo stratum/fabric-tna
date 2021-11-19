@@ -225,11 +225,12 @@ control SpgwIngress(
         // Recirculation in bmv2 is obtained via recirculate() primitive, invoked in the egress pipeline.
         // We still need to set an egress_spec and configure the corresponding egress_vlan entry,
         // otherwise packets will be dropped by the default egress_vlan action (drop()).
-        // We use the same ports defined for TNA.
-        standard_md.egress_spec = standard_md.ingress_port[8:7]++RECIRC_PORT_NUMBER;
-        // bmv2 specific code, to use recirculation, performed only in egress.
+        // The main difference (w.r.t. TNA) is that when recirculating,
+        // the ingress_port is not the same as egress.
+        standard_md.egress_spec = standard_md.ingress_port;
+        // Do not overwrite the vlan_id; linked to the issue mentioned above:
+        // fabric_md.bridged.base.vlan_id = DEFAULT_VLAN_ID;
         fabric_v1model.do_spgw_uplink_recirc = true;
-        fabric_md.bridged.base.vlan_id = DEFAULT_VLAN_ID;
         fabric_md.egress_port_set = true;
         fabric_md.skip_forwarding = true;
         fabric_md.skip_next = true;
