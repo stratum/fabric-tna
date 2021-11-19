@@ -13,8 +13,8 @@ import xnt
 from base_test import (
     P4RuntimeTest,
     ipv4_to_binary,
-    is_bmv2,
-    is_tofino,
+    is_v1model,
+    is_tna,
     mac_to_binary,
     stringify,
     tvcreate,
@@ -1807,7 +1807,7 @@ class IPv4UnicastTest(FabricTest):
 
         # Setup ports.
         self.setup_port(ig_port, vlan1, port_type1, tagged1)
-        if is_bmv2() and is_recirc_test and tagged1:
+        if is_v1model() and is_recirc_test and tagged1:
                 # This is to cover the cases when expecting a tagged packet:
                 # e.g. vlan_conf=tag->untag, pkt_type=*, with_psc=*, is_next_hop_spine=*, pkt_len=*, is_device_spine=*, allow_ue_recirculation=True
                 # When recirculated, the packet is no more tagged with vlan because vlan has been invalidated by egress next control.
@@ -2683,18 +2683,18 @@ class SpgwSimpleTest(IPv4UnicastTest):
             return
 
         ingress_bytes = len(gtp_pkt)
-        if is_tofino() :
+        if is_tna() :
             ingress_bytes += ETH_FCS_BYTES
         if tagged1:
             ingress_bytes += VLAN_BYTES
         if self.loopback:
             ingress_bytes += CPU_LOOPBACK_FAKE_ETH_BYTES
-        if is_bmv2():
-            # In bmv2/v1model, GTP decap, VLAN/MPLS push/pop happens at egress deparser,
+        if is_v1model():
+            # In v1model, GTP decap, VLAN/MPLS push/pop happens at egress deparser,
             # hence not reflected in counter increment.
             egress_bytes = ingress_bytes
         else :
-            # In Tofino/TNA, counters are updated with bytes seen at egress parser. GTP decap
+            # In TNA, counters are updated with bytes seen at egress parser. GTP decap
             # happens at ingress deparser. VLAN/MPLS push/pop happens at egress
             # deparser, hence not reflected in counter increment.
             egress_bytes = (
@@ -2784,12 +2784,11 @@ class SpgwSimpleTest(IPv4UnicastTest):
             is_recirc_test=True
         )
 
-        # Do not count FCS if target is bmv2
         uplink_ingress_bytes =  len(pkt)
-        if is_tofino() :
+        if is_tna() :
             uplink_ingress_bytes += ETH_FCS_BYTES
-        if is_bmv2():
-            # In bmv2/v1model, GTP decap, VLAN/MPLS push/pop happens at egress deparser,
+        if is_v1model():
+            # In v1model, GTP decap, VLAN/MPLS push/pop happens at egress deparser,
             # hence not reflected in counter increment.
             uplink_egress_bytes = uplink_ingress_bytes
             # Downlink traffic is decapsulated.
@@ -2807,7 +2806,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         # encap happens at egress deparser, hence not reflected in uplink
         # counter increment.
         downlink_egress_bytes = downlink_ingress_bytes
-        if is_tofino():
+        if is_tna():
             downlink_egress_bytes += BMD_BYTES
 
         # Uplink output/downlink input is always untagged (recirculation
@@ -2906,7 +2905,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             return
 
         ingress_bytes = len(pkt)
-        if is_tofino():
+        if is_tna():
             ingress_bytes += ETH_FCS_BYTES
         if tagged1:
             ingress_bytes += VLAN_BYTES
@@ -2914,9 +2913,8 @@ class SpgwSimpleTest(IPv4UnicastTest):
             ingress_bytes += CPU_LOOPBACK_FAKE_ETH_BYTES
         # Egress sees same bytes as ingress. GTP encap and VLAN/MPLS push/pop
         # happen at egress deparser, hence after counter update
-        # Do not count Bridged Metadata if target is bmv2.
         egress_bytes = ingress_bytes
-        if is_tofino():
+        if is_tna():
             egress_bytes += BMD_BYTES
 
         # Verify the Ingress and Egress PDR counters
@@ -2973,7 +2971,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         )
 
         ingress_bytes = len(pkt)
-        if is_tofino():
+        if is_tna():
             ingress_bytes += ETH_FCS_BYTES
         egress_bytes = 0
         if tagged1:
@@ -3057,7 +3055,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         #  to improve Tofino resource utilization, we decided to allow for
         #  accounting inaccuracy. See comment in spgw.p4 for more context.
         ingress_bytes = len(pkt_from_dbuf)
-        if is_tofino():
+        if is_tna():
             ingress_bytes += ETH_FCS_BYTES
         # GTP encap and VLAN/MPLS push/pop happen at egress deparser, but
         # counters are updated with bytes seen at egress parser.
@@ -3068,8 +3066,8 @@ class SpgwSimpleTest(IPv4UnicastTest):
             - UDP_HDR_BYTES
             - GTPU_HDR_BYTES
         )
-        if is_bmv2():
-            # In bmv2/v1model, GTP decap, VLAN/MPLS push/pop happens at egress deparser,
+        if is_v1model():
+            # In v1model, GTP decap, VLAN/MPLS push/pop happens at egress deparser,
             # hence not reflected in counter increment.
             egress_bytes = ingress_bytes
         if tagged1:
@@ -4420,7 +4418,7 @@ class PppoeTest(DoubleVlanTerminationTest):
         )
 
         # Verify that upstream counters were updated as expected.
-        if is_tofino():
+        if is_tna():
             time.sleep(1)
         new_terminated = self.read_byte_count_upstream("terminated", line_id)
         new_dropped = self.read_byte_count_upstream("dropped", line_id)
@@ -4462,7 +4460,7 @@ class PppoeTest(DoubleVlanTerminationTest):
         self.verify_packet_in(pppoed_pkt, self.port1)
         self.verify_no_other_packets()
 
-        if is_tofino():
+        if is_tna():
             time.sleep(1)
         new_terminated = self.read_byte_count_upstream("terminated", line_id)
         new_dropped = self.read_byte_count_upstream("dropped", line_id)
@@ -4530,7 +4528,7 @@ class PppoeTest(DoubleVlanTerminationTest):
             verify_pkt=line_enabled,
         )
 
-        if is_tofino():
+        if is_tna():
             time.sleep(1)
         new_rx_count = self.read_byte_count_downstream_rx(line_id)
         new_tx_count = self.read_byte_count_downstream_tx(line_id)

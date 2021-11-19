@@ -44,13 +44,14 @@ def stringify(n, length):
     return n.to_bytes(length, byteorder="big")
 
 
-def is_bmv2():
+def is_v1model():
     # using parameter 'pltfm' to get information if running for bmv2.
     _is_bmv2 = testutils.test_param_get("pltfm")
     return _is_bmv2 == "bmv2"
 
-def is_tofino():
-    return not is_bmv2()
+
+def is_tna():
+    return not is_v1model()
 
 
 def ipv4_to_binary(addr):
@@ -117,7 +118,7 @@ def get_controller_packet_metadata(p4info, meta_type, name):
 def de_canonicalize_bytes(bitwidth: int, input: bytes):
     """
     This method adds a padding to the 'input' param.
-    Needed for bmv2 since it uses Canonical Bytestrings: this representation
+    Needed for target bmv2 since it uses Canonical Bytestrings: this representation
     trims the data to the lowest amount of bytes needed for that particular value
     (e.g. 0x0 for PacketIn.ingress_port will be interpreted by Stratum bmv2 using 1 byte, instead of 9 bits,
     as declared in header.p4)
@@ -370,7 +371,7 @@ class P4RuntimeTest(BaseTest):
         else:
             pkt_in_msg = self.get_packet_in(timeout=timeout)
             rx_in_port_ = pkt_in_msg.metadata[0].value
-            if is_bmv2():
+            if is_v1model():
                 pkt_in_metadata = get_controller_packet_metadata(
                     self.p4info, meta_type="packet_in", name="ingress_port"
                 )
