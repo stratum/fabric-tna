@@ -26,8 +26,6 @@ public class SliceAddCommand extends AbstractShellCommand {
         boolean result = slicingService.addSlice(SliceId.of(sliceId));
         if (result) {
             print("Slice %s added", sliceId);
-        } else {
-            print("Failed to add slice %s", sliceId);
         }
     }
 }
