@@ -25,10 +25,6 @@ struct fabric_v1model_metadata_t {
     fabric_egress_metadata_t  egress;
 }
 
-struct v1model_header_t {
-    ingress_headers_t ingress;
-}
-
 error {
     PacketRejectedByParser
 }

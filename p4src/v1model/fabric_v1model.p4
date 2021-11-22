@@ -11,7 +11,7 @@
 
 #include "shared/size.p4"
 #include "v1model/include/define_v1model.p4" // shared/define.p4 included in define_v1model.p4
-#include "v1model/include/header_v1model.p4" // shared/header.p4 included in header_v1model.p4
+#include "v1model/include/header_v1model.p4"
 #include "v1model/include/parser.p4"
 #include "v1model/include/control/acl.p4"
 #include "v1model/include/control/next.p4"
@@ -28,7 +28,7 @@
 #include "v1model/include/control/spgw.p4"
 #endif
 
-control FabricIngress (inout v1model_header_t hdr,
+control FabricIngress (inout ingress_headers_t hdr,
                        inout fabric_v1model_metadata_t fabric_md,
                        inout standard_metadata_t standard_md) {
 
@@ -57,28 +57,28 @@ control FabricIngress (inout v1model_header_t hdr,
             exit;
         }
 
-        lkp_md_init.apply(hdr.ingress, fabric_md.ingress.lkp);
-        pkt_io.apply(hdr.ingress, fabric_md.ingress, fabric_md.skip_egress ,standard_md);
+        lkp_md_init.apply(hdr, fabric_md.ingress.lkp);
+        pkt_io.apply(hdr, fabric_md.ingress, fabric_md.skip_egress ,standard_md);
         stats.apply(fabric_md.ingress.lkp, standard_md.ingress_port,
             fabric_md.ingress.bridged.base.stats_flow_id);
 
-        slice_tc_classifier.apply(hdr.ingress, standard_md, fabric_md.ingress);
-        filtering.apply(hdr.ingress, fabric_md.ingress, standard_md);
+        slice_tc_classifier.apply(hdr, standard_md, fabric_md.ingress);
+        filtering.apply(hdr, fabric_md.ingress, standard_md);
 #ifdef WITH_SPGW
         if (!fabric_md.ingress.skip_forwarding) {
-            spgw.apply(hdr.ingress, fabric_md, standard_md);
+            spgw.apply(hdr, fabric_md, standard_md);
         }
 #endif // WITH_SPGW
         if (!fabric_md.ingress.skip_forwarding) {
-            forwarding.apply(hdr.ingress, fabric_md.ingress);
+            forwarding.apply(hdr, fabric_md.ingress);
         }
-        hasher.apply(hdr.ingress, fabric_md.ingress);
+        hasher.apply(hdr, fabric_md.ingress);
         if (!fabric_md.ingress.skip_next) {
-            pre_next.apply(hdr.ingress, fabric_md.ingress);
+            pre_next.apply(hdr, fabric_md.ingress);
         }
-        acl.apply(hdr.ingress, fabric_md.ingress, standard_md);
+        acl.apply(hdr, fabric_md.ingress, standard_md);
         if (!fabric_md.ingress.skip_next) {
-            next.apply(hdr.ingress, fabric_md.ingress, standard_md);
+            next.apply(hdr, fabric_md.ingress, standard_md);
         }
         qos.apply(fabric_md.ingress, standard_md);
 
@@ -87,7 +87,7 @@ control FabricIngress (inout v1model_header_t hdr,
     }
 }
 
-control FabricEgress (inout v1model_header_t hdr,
+control FabricEgress (inout ingress_headers_t hdr,
                       inout fabric_v1model_metadata_t fabric_md,
                       inout standard_metadata_t standard_md) {
 
@@ -108,14 +108,14 @@ control FabricEgress (inout v1model_header_t hdr,
             exit;
         }
 
-        pkt_io_egress.apply(hdr.ingress, fabric_md.egress ,standard_md);
+        pkt_io_egress.apply(hdr, fabric_md.egress ,standard_md);
         stats.apply(fabric_md.egress.bridged.base.stats_flow_id, standard_md.egress_port,
              fabric_md.egress.bridged.bmd_type);
-        egress_next.apply(hdr.ingress, fabric_md.egress, standard_md);
+        egress_next.apply(hdr, fabric_md.egress, standard_md);
 #ifdef WITH_SPGW
-        spgw.apply(hdr.ingress, fabric_md);
+        spgw.apply(hdr, fabric_md);
 #endif // WITH_SPGW
-        dscp_rewriter.apply(fabric_md, standard_md, hdr.ingress);
+        dscp_rewriter.apply(fabric_md, standard_md, hdr);
 
         if (fabric_md.do_spgw_uplink_recirc) {
             // Recirculate the spgw traffic UE to UE.
