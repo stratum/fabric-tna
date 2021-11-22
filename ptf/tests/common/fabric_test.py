@@ -2489,7 +2489,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         )
         self.write_request(req)
 
-    def setup_downlink_ue_session(self, ue_addr, tunnel_peer_id, tunnel_dst_addr):
+    def setup_downlink_ue_session(self, ue_addr, tunnel_peer_id):
         req = self.get_new_write_request()
 
         self.push_update_add_entry_to_action(
@@ -2499,7 +2499,6 @@ class SpgwSimpleTest(IPv4UnicastTest):
             "FabricIngress.spgw.set_downlink_session",
             [
                 ("tun_peer_id", stringify(tunnel_peer_id, 1)),
-                ("tun_dst_addr", ipv4_to_binary(tunnel_dst_addr)),
             ],
         )
         self.write_request(req)
@@ -2547,10 +2546,21 @@ class SpgwSimpleTest(IPv4UnicastTest):
                             tunnel_dst_addr,
                             tunnel_src_port=DEFAULT_GTP_TUNNEL_SPORT):
         req = self.get_new_write_request()
-
         self.push_update_add_entry_to_action(
             req,
-            "FabricEgress.spgw.tunnel_peers",
+            "FabricIngress.spgw.ig_tunnel_peers",
+            [self.Exact("tun_peer_id", stringify(tunnel_peer_id, 1))],
+            "FabricIngress.spgw.set_routing_ipv4_dst",
+            [
+                ("tun_dst_addr", ipv4_to_binary(tunnel_dst_addr)),
+            ],
+        )
+        self.write_request(req)
+
+        req = self.get_new_write_request()
+        self.push_update_add_entry_to_action(
+            req,
+            "FabricEgress.spgw.eg_tunnel_peers",
             [self.Exact("tun_peer_id", stringify(tunnel_peer_id, 1))],
             "FabricEgress.spgw.load_tunnel_params",
             [
@@ -2587,8 +2597,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
     ):
         self.add_ue_pool(pool_addr=ue_addr, slice_id=slice_id)
         self.setup_downlink_ue_session(ue_addr=ue_addr,
-                                       tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID,
-                                       tunnel_dst_addr=s1u_enb_addr)
+                                       tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID)
         self.setup_downlink_termination_tunnel(ue_session=ue_addr, ctr_id=ctr_id,
                                                teid=teid, tc=tc, qfi=qfi)
 
@@ -2943,8 +2952,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         # Add the UE pool interface and the UE Sessions/Terminations pointing to the DBUF
         self.add_ue_pool(UE1_IPV4)
         self.setup_downlink_ue_session(ue_addr=UE1_IPV4,
-                                       tunnel_peer_id=DBUF_TUNNEL_PEER_ID,
-                                       tunnel_dst_addr=DBUF_IPV4)
+                                       tunnel_peer_id=DBUF_TUNNEL_PEER_ID)
 
         self.add_dbuf_device(
             dbuf_addr=DBUF_IPV4,
@@ -4244,8 +4252,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             pass
         elif drop_reason == INT_DROP_REASON_DOWNLINK_TERMINATION_MISS:
             self.setup_downlink_ue_session(ue_addr=pkt[IP].dst,
-                                           tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID,
-                                           tunnel_dst_addr=S1U_ENB_IPV4)
+                                           tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID)
 
         # TODO: Use MPLS test instead of IPv4 test if device is spine.
         # TODO: In these tests, there is only one egress port although the

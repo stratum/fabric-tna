@@ -105,12 +105,10 @@ control SpgwIngress(
 #endif // WITH_INT
     }
 
-    action set_downlink_session(tun_peer_id_t tun_peer_id,
-                                ipv4_addr_t   tun_dst_addr) {
+    action set_downlink_session(tun_peer_id_t tun_peer_id) {
         // Set UE IP address.
         ue_session_id = fabric_md.routing_ipv4_dst;
         fabric_md.bridged.spgw.tun_peer_id = tun_peer_id;
-        fabric_md.routing_ipv4_dst = tun_dst_addr;
     }
 
     action set_uplink_session() {
@@ -224,6 +222,27 @@ control SpgwIngress(
     }
 
     //=================================//
+    //===== Ingress Tunnel Peers ======//
+    //=================================//
+
+    action set_routing_ipv4_dst(ipv4_addr_t tun_dst_addr) {
+        fabric_md.routing_ipv4_dst = tun_dst_addr;
+    }
+
+    table ig_tunnel_peers {
+        key = {
+            fabric_md.bridged.spgw.tun_peer_id : exact @name("tun_peer_id");
+        }
+
+        actions = {
+            set_routing_ipv4_dst;
+            nop;
+        }
+        const default_action = nop();
+        const size = MAX_GTP_TUNNEL_PEERS;
+    }
+
+    //=================================//
     //===== Uplink Recirculation ======//
     //=================================//
 
@@ -294,6 +313,7 @@ control SpgwIngress(
                     }
                 }
             }
+            ig_tunnel_peers.apply();
             if (upf_termination_hit) {
                 // NOTE We should not update this counter for packets coming
                 // **from** dbuf (iface_dbuf), since we already updated it when
@@ -335,7 +355,7 @@ control SpgwEgress(
         hdr.outer_udp.sport = tunnel_src_port;
     }
 
-    table tunnel_peers {
+    table eg_tunnel_peers {
         key = {
             fabric_md.bridged.spgw.tun_peer_id : exact @name("tun_peer_id");
         }
@@ -410,7 +430,7 @@ control SpgwEgress(
     apply {
         if (!fabric_md.bridged.spgw.skip_spgw) {
             if (fabric_md.bridged.spgw.needs_gtpu_encap) {
-                tunnel_peers.apply();
+                eg_tunnel_peers.apply();
                 gtpu_encap.apply();
             }
             if (!fabric_md.bridged.spgw.skip_egress_pdr_ctr) {
