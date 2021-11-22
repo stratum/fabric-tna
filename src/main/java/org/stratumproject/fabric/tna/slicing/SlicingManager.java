@@ -369,13 +369,22 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
 
     @Override
     public boolean setDefaultTrafficClass(SliceId sliceId, TrafficClass tc) {
-        AtomicBoolean result = new AtomicBoolean(false);
-        sliceStore.computeIfPresent(new SliceStoreKey(sliceId, tc), (k, v) -> {
-            result.set(true);
-            defaultTcStore.put(sliceId, tc);
+        StringBuilder errorMessage = new StringBuilder();
+        sliceStore.compute(new SliceStoreKey(sliceId, tc), (k, v) -> {
+            if (v == null) {
+                errorMessage.append(String.format("Can't set %s as default TC because it has not" +
+                    " been allocated to slice %s", tc, sliceId));
+            } else {
+                defaultTcStore.put(sliceId, tc);
+            }
             return v;
         });
-        return result.get();
+
+        if (errorMessage.length() != 0) {
+            throw new SlicingException(FAILED, errorMessage.toString());
+        }
+
+        return true;
     }
 
     @Override
@@ -551,7 +560,7 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
                 .makePermanent()
                 .build();
 
-        log.info("{}", flowRule);
+        log.debug("buildDefaultTcFlowRule: {}", flowRule);
         return flowRule;
     }
 
@@ -622,7 +631,7 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
                 .makePermanent()
                 .build();
 
-        log.info("{}", flowRule);
+        log.debug("buildFlowRule: {}", flowRule);
         return flowRule;
     }
 
@@ -658,7 +667,7 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
                 .makePermanent()
                 .build();
 
-        log.info("{}", flowRule);
+        log.debug("buildClassifierFlowRule: {}", flowRule);
         return flowRule;
     }
 
