@@ -2778,7 +2778,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         uplink_egress_bytes = uplink_ingress_bytes
         if is_tna():
             uplink_ingress_bytes += ETH_FCS_BYTES
-            uplink_egress_bytes +=  BMD_BYTES - IP_HDR_BYTES - UDP_HDR_BYTES - GTPU_HDR_BYTES
+            uplink_egress_bytes =  uplink_ingress_bytes + BMD_BYTES - IP_HDR_BYTES - UDP_HDR_BYTES - GTPU_HDR_BYTES
             downlink_ingress_bytes = uplink_egress_bytes - BMD_BYTES
         else:
             # In v1model, GTP decap, VLAN/MPLS push/pop happens at egress deparser,
