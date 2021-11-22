@@ -3,6 +3,7 @@
 package org.stratumproject.fabric.tna.slicing;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
@@ -43,6 +44,7 @@ import org.onosproject.segmentrouting.config.SegmentRoutingDeviceConfig;
 import org.onosproject.store.service.StorageService;
 import org.stratumproject.fabric.tna.behaviour.FabricCapabilities;
 import org.stratumproject.fabric.tna.behaviour.P4InfoConstants;
+import org.stratumproject.fabric.tna.behaviour.upf.MockPiPipelineModel;
 import org.stratumproject.fabric.tna.slicing.api.Color;
 import org.stratumproject.fabric.tna.slicing.api.QueueId;
 import org.stratumproject.fabric.tna.slicing.api.SliceId;
@@ -53,6 +55,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.onlab.junit.TestTools.assertAfter;
+import static org.stratumproject.fabric.tna.behaviour.Constants.TNA;
+import static org.stratumproject.fabric.tna.behaviour.Constants.V1MODEL;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.sliceTcConcat;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_QOS_QUEUES;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_COLOR;
@@ -109,9 +113,19 @@ public class SlicingManagerTest {
         DEVICES.add(new MockDevice(DID_BMV2, null));
 
         String bmv2PipeconfId = "org.stratumproject.fabric.bmv2";
-        String tnaPipeconfId = "org.stratumproject.fabric.montara_sde_9_5_0";
-        MockPipeconf bmv2MockPipeconf = new MockPipeconf(new PiPipeconfId(bmv2PipeconfId));
-        MockPipeconf tnaMockPipeconf = new MockPipeconf(new PiPipeconfId(tnaPipeconfId));
+        String tmPipeconfId = "org.stratumproject.fabric.montara_sde_9_5_0";
+        MockPiPipelineModel bmv2PipelineModel =
+                new MockPiPipelineModel(Collections.EMPTY_LIST,
+                                        Collections.EMPTY_LIST,
+                                        V1MODEL);
+        MockPiPipelineModel tmPipelineModel =
+                new MockPiPipelineModel(Collections.EMPTY_LIST,
+                                        Collections.EMPTY_LIST,
+                                        TNA);
+        MockPipeconf bmv2MockPipeconf =
+                new MockPipeconf(new PiPipeconfId(bmv2PipeconfId), bmv2PipelineModel);
+        MockPipeconf tmMockPipeconf =
+                new MockPipeconf(new PiPipeconfId(tmPipeconfId), tmPipelineModel);
 
         manager.appId = APP_ID;
         manager.coreService = coreService;
@@ -151,7 +165,7 @@ public class SlicingManagerTest {
         codecService.registerCodec(EasyMock.anyObject(), EasyMock.anyObject());
         EasyMock.expectLastCall().times(2);
         EasyMock.expect(pipeconfService.getPipeconf(DID_BMV2)).andReturn(Optional.of(bmv2MockPipeconf)).anyTimes();
-        EasyMock.expect(pipeconfService.getPipeconf(DID)).andReturn(Optional.of(tnaMockPipeconf)).anyTimes();
+        EasyMock.expect(pipeconfService.getPipeconf(DID)).andReturn(Optional.of(tmMockPipeconf)).anyTimes();
 
         EasyMock.replay(coreService, storageService, workPartitionService,
             deviceService, flowRuleService, codecService, nwCfgService, pipeconfService);
