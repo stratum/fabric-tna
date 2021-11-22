@@ -32,8 +32,6 @@ public class TcRemoveCommand extends AbstractShellCommand {
         boolean result = slicingService.removeTrafficClass(SliceId.of(sliceId), TrafficClass.valueOf(tc));
         if (result) {
             print("TC %s removed from slice %s", tc, sliceId);
-        } else {
-            print("Failed to remove TC %s from slice %s", tc, sliceId);
         }
     }
 }

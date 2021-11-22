@@ -68,7 +68,8 @@ public class PipeconfLoader {
 
     private static final String P4INFO_TXT = "p4info.txt";
     private static final String CPU_PORT_TXT = "cpu_port.txt";
-    private static final String PIPELINE_CONFIG = "pipeline_config.pb.bin";
+    private static final String TOFINO_PIPELINE_CONFIG = "pipeline_config.pb.bin";
+    private static final String BMV2_PIPELINE_CONFIG = "bmv2.json";
 
     private static final String INT_PROFILE_SUFFIX = "-int";
     private static final String UPF_PROFILE_SUFFIX = "-spgw";
@@ -149,14 +150,25 @@ public class PipeconfLoader {
 
     private DefaultPiPipeconf.Builder buildPipeconf(String profile, String platform)
             throws FileNotFoundException {
-        final URL tofinoPipelineConfigUrl = this.getClass().getResource(format(
-                P4C_RES_BASE_PATH + PIPELINE_CONFIG, profile, platform));
+
+        final String pipelineConfig;
+        final ExtensionType extensionType;
+        if (platform.equalsIgnoreCase("bmv2")) {
+            pipelineConfig = BMV2_PIPELINE_CONFIG;
+            extensionType = ExtensionType.BMV2_JSON;
+        } else { //TNA
+            pipelineConfig = TOFINO_PIPELINE_CONFIG;
+            extensionType = ExtensionType.RAW_DEVICE_CONFIG;
+        }
+
+        final URL pipelineConfigUrl = this.getClass().getResource(format(
+                P4C_RES_BASE_PATH + pipelineConfig, profile, platform));
         final URL p4InfoUrl = this.getClass().getResource(format(
                 P4C_RES_BASE_PATH + P4INFO_TXT, profile, platform));
         final URL cpuPortUrl = this.getClass().getResource(format(
                 P4C_RES_BASE_PATH + CPU_PORT_TXT, profile, platform));
 
-        checkFileExists(tofinoPipelineConfigUrl, PIPELINE_CONFIG);
+        checkFileExists(pipelineConfigUrl, pipelineConfig);
         checkFileExists(p4InfoUrl, P4INFO_TXT);
         checkFileExists(cpuPortUrl, CPU_PORT_TXT);
 
@@ -164,7 +176,7 @@ public class PipeconfLoader {
                 .withId(new PiPipeconfId(format(
                         "%s.%s.%s", BASE_PIPECONF_ID, profile, platform)))
                 .withPipelineModel(parseP4Info(p4InfoUrl))
-                .addExtension(ExtensionType.RAW_DEVICE_CONFIG, tofinoPipelineConfigUrl)
+                .addExtension(extensionType, pipelineConfigUrl)
                 .addExtension(ExtensionType.P4_INFO_TEXT, p4InfoUrl)
                 .addExtension(ExtensionType.CPU_PORT_TXT, cpuPortUrl);
 

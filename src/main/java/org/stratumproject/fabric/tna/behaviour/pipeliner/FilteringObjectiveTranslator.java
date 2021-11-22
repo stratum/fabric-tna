@@ -63,6 +63,10 @@ import static org.stratumproject.fabric.tna.behaviour.FabricUtils.portType;
 class FilteringObjectiveTranslator
         extends AbstractObjectiveTranslator<FilteringObjective> {
 
+    // Port-based trust DSCP entries should override flow classifier rules.
+    private static final int TRUST_DSCP_PRIORITY = 100;
+    private static final int DSCP_REWRITER_PRIORITY = 100;
+
     private static final PiAction DENY = PiAction.builder()
             .withId(P4InfoConstants.FABRIC_INGRESS_FILTERING_DENY)
             .build();
@@ -224,7 +228,7 @@ class FilteringObjectiveTranslator
                 .build();
         return flowRule(
                 obj, P4InfoConstants.FABRIC_INGRESS_SLICE_TC_CLASSIFIER_CLASSIFIER,
-                selector, treatment);
+                selector, treatment, TRUST_DSCP_PRIORITY);
     }
 
     private FlowRule buildEgressDscpRewriter(FilteringObjective obj, PortCriterion egPortCriterion, boolean clear)
@@ -244,7 +248,7 @@ class FilteringObjectiveTranslator
                 .build();
         return flowRule(
                 obj, P4InfoConstants.FABRIC_EGRESS_DSCP_REWRITER_REWRITER,
-                selector, treatment);
+                selector, treatment, DSCP_REWRITER_PRIORITY);
     }
 
     private PiAction mapFilteringTreatment(TrafficTreatment treatment, PiTableId tableId, byte portType)

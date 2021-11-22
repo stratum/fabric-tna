@@ -21,9 +21,11 @@ import org.onosproject.net.flow.FlowRuleService;
 import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flow.criteria.PiCriterion;
 import org.onosproject.net.intent.WorkPartitionService;
+import org.onosproject.net.pi.model.PiPipeconf;
 import org.onosproject.net.pi.model.PiTableId;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
+import org.onosproject.net.pi.service.PiPipeconfService;
 import org.onosproject.segmentrouting.config.SegmentRoutingDeviceConfig;
 import org.onosproject.store.serializers.KryoNamespaces;
 import org.onosproject.store.service.ConsistentMap;
@@ -38,11 +40,13 @@ import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.slf4j.Logger;
+import org.stratumproject.fabric.tna.behaviour.FabricCapabilities;
 import org.stratumproject.fabric.tna.behaviour.P4InfoConstants;
 import org.stratumproject.fabric.tna.slicing.api.Color;
 import org.stratumproject.fabric.tna.slicing.api.QueueId;
 import org.stratumproject.fabric.tna.slicing.api.SliceId;
 import org.stratumproject.fabric.tna.slicing.api.SlicingAdminService;
+import org.stratumproject.fabric.tna.slicing.api.SlicingException;
 import org.stratumproject.fabric.tna.slicing.api.SlicingService;
 import org.stratumproject.fabric.tna.slicing.api.TrafficClass;
 import org.stratumproject.fabric.tna.web.SliceIdCodec;
@@ -68,6 +72,9 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_ING
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_QOS_QUEUES;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_COLOR;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_COLOR_BITWIDTH;
+import static org.stratumproject.fabric.tna.slicing.api.SlicingException.Type.FAILED;
+import static org.stratumproject.fabric.tna.slicing.api.SlicingException.Type.INVALID;
+import static org.stratumproject.fabric.tna.slicing.api.SlicingException.Type.UNSUPPORTED;
 
 /**
  * Implementation of SlicingService.
@@ -97,6 +104,10 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     protected NetworkConfigService networkCfgService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY)
+    protected PiPipeconfService pipeconfService;
+
 
     private static final Logger log = getLogger(SlicingManager.class);
     private static final String APP_NAME = "org.stratumproject.fabric.tna.slicing"; // TODO revisit naming
@@ -234,8 +245,7 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
     @Override
     public boolean addSlice(SliceId sliceId) {
         if (sliceId.equals(SliceId.DEFAULT)) {
-            log.warn("Adding default slice is not allowed");
-            return false;
+            throw new SlicingException(INVALID, "Adding default slice is not allowed");
         }
         // FIXME: not sure if we need to add the BE TC, we could create a wildcard
         //  match on the queues table that maps to BE by default or rely on the
@@ -248,24 +258,21 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
     @Override
     public boolean removeSlice(SliceId sliceId) {
         if (sliceId.equals(SliceId.DEFAULT)) {
-            log.warn("Removing default slice is not allowed");
-            return false;
+            throw new SlicingException(INVALID, "Removing default slice is not allowed");
         }
 
         Set<TrafficClass> tcs = getTrafficClasses(sliceId);
+
         if (tcs.isEmpty() && !defaultTcStore.containsKey(sliceId)) {
-            log.warn("Cannot remove a non-existent slice {}", sliceId);
-            return false;
+            throw new SlicingException(FAILED, String.format("Cannot remove a non-existent slice %s", sliceId));
         }
 
         Set<TrafficSelector> classifierFlows = getFlows(sliceId);
         if (!classifierFlows.isEmpty()) {
-            log.warn("Cannot remove slice {} with {} Flow Classifier Rules",
-                     sliceId, classifierFlows.size());
-            return false;
+            throw new SlicingException(FAILED,
+                String.format("Cannot remove slice %s with %d Flow Classifier Rules",
+                    sliceId, classifierFlows.size()));
         }
-
-        AtomicBoolean result = new AtomicBoolean(true);
 
         // Ensure to remove the default TC before removing the actual traffic classes
         defaultTcStore.remove(sliceId);
@@ -273,12 +280,10 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
         tcs.stream()
                 .sorted(Comparator.comparingInt(TrafficClass::ordinal).reversed()) // Remove BEST_EFFORT the last
                 .forEach(tc -> {
-            if (!removeTrafficClass(sliceId, tc)) {
-                result.set(false);
-            }
+                    removeTrafficClass(sliceId, tc);
         });
 
-        return result.get();
+        return true;
     }
 
     @Override
@@ -291,63 +296,67 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
     @Override
     public boolean addTrafficClass(SliceId sliceId, TrafficClass tc) {
         if (tc == TrafficClass.SYSTEM) {
-            log.warn("SYSTEM TC should not be associated with any slice");
-            return false;
+            throw new SlicingException(INVALID, "SYSTEM TC should not be associated with any slice");
         }
 
-        AtomicBoolean result = new AtomicBoolean(false);
-
+        StringBuilder errorMessage = new StringBuilder();
         SliceStoreKey key = new SliceStoreKey(sliceId, tc);
         sliceStore.compute(key, (k, v) -> {
             if (v != null) {
-               log.warn("TC {} is already allocated for slice {}", tc, sliceId);
-               return v;
+                errorMessage.append(String.format("TC %s is already allocated for slice %s", tc, sliceId));
+                return v;
             }
 
             QueueId queueId = allocateQueue(tc);
             if (queueId == null) {
-                log.warn("Unable to find available queue for {}", tc);
+                errorMessage.append(String.format("Unable to find available queue for %s", tc));
                 return null;
             }
 
             log.info("Allocate queue {} for slice {} tc {}", queueId, sliceId, tc);
-            result.set(true);
             return queueId;
         });
 
-        return result.get();
+        if (errorMessage.length() != 0) {
+            throw new SlicingException(FAILED, errorMessage.toString());
+        }
+
+        return true;
     }
 
     @Override
     public boolean removeTrafficClass(SliceId sliceId, TrafficClass tc) {
         Set<TrafficSelector> classifierFlows = getFlows(sliceId, tc);
         if (!classifierFlows.isEmpty()) {
-            log.warn("Cannot remove {} from slice {} with {} Flow Classifier Rules",
-                     tc, sliceId, classifierFlows.size());
-            return false;
+            throw new SlicingException(FAILED,
+                String.format("Cannot remove %s from slice %s with %d Flow Classifier Rules",
+                    tc, sliceId, classifierFlows.size()));
         }
 
-        AtomicBoolean result = new AtomicBoolean(false);
-
+        StringBuilder errorMessage = new StringBuilder();
         SliceStoreKey key = new SliceStoreKey(sliceId, tc);
         sliceStore.compute(key, (k, v) -> {
             if (v == null) {
-                log.warn("TC {} has not been allocated to slice {}", tc, sliceId);
+                errorMessage.append(String.format("TC %s has not been allocated to slice %s", tc, sliceId));
                 return null;
             }
             // Ensure the TC is not being used as Default TC
             if (tc == getDefaultTrafficClass(sliceId)) {
-                log.warn("Can't remove {} from {} while it is being used as Default TC", tc, sliceId);
+                errorMessage.append(String.format("Can't remove %s from slice %s while it is being used as Default TC",
+                    tc, sliceId));
                 return v;
             }
 
             deallocateQueue(v);
             log.info("Deallocate queue {} for slice {} tc {}", v, sliceId, tc);
-            result.set(true);
             return null;
         });
 
-        return result.get();
+        if (errorMessage.length() != 0) {
+            throw new SlicingException(FAILED, errorMessage.toString());
+        }
+
+        return true;
     }
 
     @Override
@@ -382,13 +391,12 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
     @Override
     public boolean addFlow(TrafficSelector selector, SliceId sliceId, TrafficClass tc) {
         if (selector.equals(DefaultTrafficSelector.emptySelector())) {
-            log.warn("Empty traffic selector is not allowed");
-            return false;
+            throw new SlicingException(INVALID, "Empty traffic selector is not allowed");
         }
         // Accept 5-tuple only
         if (!fiveTupleOnly(selector)) {
-            log.warn("Only accept 5-tuple {}", selector);
-            return false;
+            throw new SlicingException(UNSUPPORTED,
+                String.format("Only accept 5-tuple %s", selector.toString()));
         }
 
         SliceStoreKey value = new SliceStoreKey(sliceId, tc);
@@ -402,17 +410,23 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
 
     @Override
     public boolean removeFlow(TrafficSelector selector, SliceId sliceId, TrafficClass tc) {
-        AtomicBoolean result = new AtomicBoolean(false);
+        StringBuilder errorMessage = new StringBuilder();
         classifierFlowStore.compute(selector, (k, v) -> {
             if (v == null) {
-                log.warn("There is no such Flow Classifier Rule {} for slice {}  and TC {}", selector, sliceId, tc);
+                errorMessage.append(
+                    String.format("There is no such Flow Classifier Rule %s for slice %s and TC %s",
+                        selector, sliceId, tc));
                 return null;
             }
             log.info("Removing flow {} from slice {} tc {}", selector, sliceId, tc);
-            result.set(true);
             return null;
         });
-        return result.get();
+
+        if (errorMessage.length() != 0) {
+            throw new SlicingException(FAILED, errorMessage.toString());
+        }
+
+        return true;
     }
 
     @Override
@@ -432,6 +446,7 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
                 .collect(Collectors.toSet());
     }
 
+    //FIXME: Apply slicing exception on Queue APIs when dynamic queue config is ready
     @Override
     public boolean reserveQueue(QueueId queueId, TrafficClass tc) {
         AtomicBoolean result = new AtomicBoolean(false);
@@ -560,22 +575,37 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
         log.info("Remove queue table flow on {} for slice {} tc {} queueId {}", deviceId, sliceId, tc, queueId);
     }
 
+    private FabricCapabilities getCapabilities(DeviceId deviceId) throws RuntimeException {
+        Optional<PiPipeconf> pipeconf = pipeconfService.getPipeconf(deviceId);
+        return pipeconf
+                .map(FabricCapabilities::new)
+                .orElseThrow(
+                    () -> new RuntimeException("Cannot get capabilities for deviceId " + deviceId.toString()
+                ));
+    }
+
     private List<FlowRule> buildFlowRules(DeviceId deviceId, SliceId sliceId, TrafficClass tc, QueueId queueId) {
         List<FlowRule> flowRules = Lists.newArrayList();
         if (tc == TrafficClass.CONTROL) {
-            flowRules.add(buildFlowRule(deviceId, sliceId, tc, queueId, Color.GREEN));
-            flowRules.add(buildFlowRule(deviceId, sliceId, tc, QueueId.BEST_EFFORT, Color.RED));
+            int red = getCapabilities(deviceId).getMeterColor(Color.RED);
+            int green = getCapabilities(deviceId).getMeterColor(Color.GREEN);
+            flowRules.add(buildFlowRule(deviceId, sliceId, tc, queueId, green));
+            flowRules.add(buildFlowRule(deviceId, sliceId, tc, QueueId.BEST_EFFORT, red));
         } else {
             flowRules.add(buildFlowRule(deviceId, sliceId, tc, queueId, null));
         }
         return flowRules;
     }
 
-    private FlowRule buildFlowRule(DeviceId deviceId, SliceId sliceId, TrafficClass tc, QueueId queueId, Color color) {
+    private FlowRule buildFlowRule(DeviceId deviceId,
+                                   SliceId sliceId,
+                                   TrafficClass tc,
+                                   QueueId queueId,
+                                   Integer color) {
         PiCriterion.Builder piCriterionBuilder = PiCriterion.builder()
                 .matchExact(P4InfoConstants.HDR_SLICE_TC, sliceTcConcat(sliceId.id(), tc.ordinal()));
         if (color != null) {
-            piCriterionBuilder.matchTernary(HDR_COLOR, color.ordinal(), 1 << HDR_COLOR_BITWIDTH - 1);
+            piCriterionBuilder.matchTernary(HDR_COLOR, color, 1 << HDR_COLOR_BITWIDTH - 1);
         }
 
         PiAction.Builder piTableActionBuilder = PiAction.builder()
