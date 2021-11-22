@@ -167,13 +167,13 @@ header gtpu_ext_psc_t {
 
 @flexible
 struct spgw_bridged_metadata_t {
-    tunnel_peer_id_t gtpu_tunnel_peer_id;
+    tun_peer_id_t    tun_peer_id;
     pdr_ctr_id_t     pdr_ctr_id;
     bit<6>           qfi;
     bool             needs_gtpu_encap;
     bool             skip_spgw;
     bool             skip_egress_pdr_ctr;
-    teid_t           gtpu_teid;
+    teid_t           teid;
 }
 
 #ifdef WITH_INT

@@ -21,9 +21,8 @@ control SpgwIngress(
 
     Counter<bit<64>, bit<16>>(MAX_PDR_COUNTERS, CounterType_t.PACKETS_AND_BYTES) pdr_counter;
 
-    // TODO: we might want to rename it as we don't use PDR abstraction anymore.
-    bool is_pdr_hit = false;
-    ue_session_id_t ue_session = 0;
+    bool upf_termination_hit = false;
+    ue_session_id_t ue_session_id = 0;
 
     @hidden
     action _gtpu_decap() {
@@ -106,17 +105,17 @@ control SpgwIngress(
 #endif // WITH_INT
     }
 
-    action load_downlink_session_params(tunnel_peer_id_t tunnel_peer_id,
-                                        ipv4_addr_t tunnel_dst_addr) {
-        // by using UE IP address as UE Session identifier we save PHV resources used by action.
-        ue_session = fabric_md.routing_ipv4_dst;
-        fabric_md.bridged.spgw.gtpu_tunnel_peer_id = tunnel_peer_id;
-        fabric_md.routing_ipv4_dst = tunnel_dst_addr;
+    action set_downlink_session(tun_peer_id_t tun_peer_id,
+                                ipv4_addr_t   tun_dst_addr) {
+        // Set UE IP address.
+        ue_session_id = fabric_md.routing_ipv4_dst;
+        fabric_md.bridged.spgw.tun_peer_id = tun_peer_id;
+        fabric_md.routing_ipv4_dst = tun_dst_addr;
     }
 
-    action load_uplink_session_params_decap() {
-        // by using UE IP address as UE Session identifier we save PHV resources used by action.
-        ue_session = fabric_md.lkp.ipv4_src;
+    action set_uplink_session() {
+        // Set UE IP address.
+        ue_session_id = fabric_md.lkp.ipv4_src;
         _gtpu_decap();
     }
 
@@ -125,7 +124,7 @@ control SpgwIngress(
             fabric_md.routing_ipv4_dst : exact @name("ue_addr");
         }
         actions = {
-            load_downlink_session_params;
+            set_downlink_session;
             @defaultonly downlink_session_drop;
         }
         size = NUM_UES;
@@ -138,94 +137,90 @@ control SpgwIngress(
             hdr.gtpu.teid     : exact @name("teid");
         }
         actions = {
-            load_uplink_session_params_decap;
+            set_uplink_session;
             @defaultonly uplink_session_drop;
         }
-        size = NUM_UES;
+        size = NUM_UPLINK_SESSIONS;
         const default_action = uplink_session_drop();
     }
 
-    // TODO: look for better name (maybe PDRs?),
-    //  but I tried to make it consistent with Figure 5.7.1.5-1 from 3GPP 23.501
-    //===================================//
-    //===== Per-Slice Mobile Flows ======//
-    //===================================//
+    //=============================//
+    //===== UPF Terminations ======//
+    //=============================//
 
-    action downlink_flow_drop() {
+    action downlink_drop() {
         ig_dprsr_md.drop_ctl = 1;
         fabric_md.skip_forwarding = true;
         fabric_md.skip_next = true;
 #ifdef WITH_INT
-        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_DOWNLINK_FLOW_MISS;
+        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_DOWNLINK_UPF_TERMINATION_MISS;
 #endif // WITH_INT
     }
 
-    action uplink_flow_drop() {
+    action uplink_drop() {
         ig_dprsr_md.drop_ctl = 1;
         fabric_md.skip_forwarding = true;
         fabric_md.skip_next = true;
 #ifdef WITH_INT
-        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UPLINK_FLOW_MISS;
+        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UPLINK_UPF_TERMINATION_MISS;
 #endif // WITH_INT
     }
 
-    action load_flow_params(pdr_ctr_id_t ctr_id,
-                            tc_t tc) {
+    action app_fwd(pdr_ctr_id_t ctr_id,
+                   tc_t tc) {
         fabric_md.bridged.spgw.pdr_ctr_id = ctr_id;
         fabric_md.spgw_tc = tc;
-        is_pdr_hit = true;
+        upf_termination_hit = true;
     }
 
-    action load_flow_params_encap(pdr_ctr_id_t ctr_id,
-                                  tc_t         tc,
-                                  teid_t       teid,
-                                  // QFI should always equal 0 for 4G flows
-                                  bit<6>       qfi) {
-        load_flow_params(ctr_id, tc);
+    action downlink_fwd_encap(pdr_ctr_id_t ctr_id,
+                              tc_t         tc,
+                              teid_t       teid,
+                              // QFI should always equal 0 for 4G flows
+                              bit<6>       qfi) {
+        app_fwd(ctr_id, tc);
         fabric_md.bridged.spgw.needs_gtpu_encap = true;
         fabric_md.bridged.spgw.skip_egress_pdr_ctr = false;
-        fabric_md.bridged.spgw.gtpu_teid = teid;
+        fabric_md.bridged.spgw.teid = teid;
         fabric_md.bridged.spgw.qfi = qfi;
     }
 
-    action load_flow_params_encap_dbuf(pdr_ctr_id_t ctr_id,
-                                       tc_t         tc,
-                                       teid_t       teid,
-                                       // QFI should always equal 0 for 4G flows
-                                       bit<6>       qfi) {
-        load_flow_params(ctr_id, tc);
+    action downlink_fwd_encap_dbuf(pdr_ctr_id_t ctr_id,
+                                   tc_t         tc,
+                                   teid_t       teid,
+                                   // QFI should always equal 0 for 4G flows
+                                   bit<6>       qfi) {
+        app_fwd(ctr_id, tc);
         fabric_md.bridged.spgw.needs_gtpu_encap = true;
         fabric_md.bridged.spgw.skip_egress_pdr_ctr = true;
-        fabric_md.bridged.spgw.gtpu_teid = teid;
+        fabric_md.bridged.spgw.teid = teid;
         fabric_md.bridged.spgw.qfi = qfi;
     }
 
-    table uplink_flows {
+    table uplink_terminations {
         key = {
-            fabric_md.spgw_slice_id   : exact @name("slice_id");
-            ue_session                : exact @name("ue_session");
+            ue_session_id             : exact @name("ue_session_id");
         }
 
         actions = {
-            load_flow_params;
-            uplink_flow_drop;
+            app_fwd;
+            uplink_drop;
         }
-        const default_action = uplink_flow_drop();
-        const size = NUM_MOBILE_FLOWS;
+        const default_action = uplink_drop();
+        const size = NUM_UPF_TERMINATIONS;
     }
 
-    table downlink_flows {
+    table downlink_terminations {
         key = {
-            fabric_md.spgw_slice_id   : exact @name("slice_id");
-            ue_session                : exact @name("ue_session");
+            ue_session_id             : exact @name("ue_session_id");
         }
         actions = {
-            load_flow_params_encap;
-            load_flow_params_encap_dbuf;
-            downlink_flow_drop;
+            downlink_fwd_encap;
+            downlink_fwd_encap_dbuf;
+            downlink_drop;
         }
-        const default_action = downlink_flow_drop();
-        const size = NUM_MOBILE_FLOWS;
+        const default_action = downlink_drop();
+        const size = NUM_UPF_TERMINATIONS;
     }
 
     //=================================//
@@ -283,23 +278,23 @@ control SpgwIngress(
                 iface_access: {
                     if (fabric_md.bridged.base.encap_presence != EncapPresence.NONE) {
                         if (uplink_sessions.apply().hit) {
-                            uplink_flows.apply();
+                            uplink_terminations.apply();
                             uplink_recirc_rules.apply();
                         }
                     }
                 }
                 iface_core: {
                     if (downlink_sessions.apply().hit) {
-                        downlink_flows.apply();
+                        downlink_terminations.apply();
                     }
                 }
                 iface_dbuf: {
                     if (downlink_sessions.apply().hit) {
-                        downlink_flows.apply();
+                        downlink_terminations.apply();
                     }
                 }
             }
-            if (is_pdr_hit) {
+            if (upf_termination_hit) {
                 // NOTE We should not update this counter for packets coming
                 // **from** dbuf (iface_dbuf), since we already updated it when
                 // first sending the same packets **to** dbuf (iface_core).
@@ -342,7 +337,7 @@ control SpgwEgress(
 
     table tunnel_peers {
         key = {
-            fabric_md.bridged.spgw.gtpu_tunnel_peer_id : exact @name("gtpu_tunnel_peer_id");
+            fabric_md.bridged.spgw.tun_peer_id : exact @name("tun_peer_id");
         }
         actions = {
             load_tunnel_params;

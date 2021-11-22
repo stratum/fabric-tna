@@ -431,7 +431,7 @@ parser FabricEgressParser (packet_in packet,
         hdr.outer_gtpu.npdu_flag         = 0;
         hdr.outer_gtpu.msgtype           = GTPU_GPDU;
         // hdr.outer_gtpu.msglen         = update later
-        hdr.outer_gtpu.teid              = fabric_md.bridged.spgw.gtpu_teid;
+        hdr.outer_gtpu.teid              = fabric_md.bridged.spgw.teid;
         /** outer_gtpu_options **/
         hdr.outer_gtpu_options.seq_num   = 0;
         hdr.outer_gtpu_options.n_pdu_num = 0;
@@ -442,6 +442,8 @@ parser FabricEgressParser (packet_in packet,
         hdr.outer_gtpu_ext_psc.next_ext  = GTPU_NEXT_EXT_NONE;
         hdr.outer_gtpu_ext_psc.type      = GTPU_EXT_PSC_TYPE_DL;
         hdr.outer_gtpu_ext_psc.spare0    = 0;
+        // hdr.outer_gtpu_ext_psc.len    = update later
+        // hdr.outer_gtpu_ext_psc.rqi    = update later
 
 #endif // WITH_SPGW
 #ifdef WITH_INT

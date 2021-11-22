@@ -229,8 +229,8 @@ INT_DROP_REASON_ROUTING_V4_MISS = 29
 INT_DROP_REASON_EGRESS_NEXT_MISS = 130
 INT_DROP_REASON_DOWNLINK_UE_SESSION_MISS = 132
 INT_DROP_REASON_UPLINK_UE_SESSION_MISS = 133
-INT_DROP_REASON_DOWNLINK_FLOW_MISS = 134
-INT_DROP_REASON_UPLINK_FLOW_MISS = 135
+INT_DROP_REASON_DOWNLINK_TERMINATION_MISS = 134
+INT_DROP_REASON_UPLINK_TERMINATION_MISS = 135
 INT_DEFAULT_QUEUE_REPORT_QUOTA = 1024
 INT_MIRROR_TRUNCATE_MAX_LEN = 128
 INT_MIRROR_BYTES = 27  # TODO: autogenerate it
@@ -726,12 +726,12 @@ def get_test_args(
         if spgw_dir == "DL":
             drop_reason_list = [
                 INT_DROP_REASON_DOWNLINK_UE_SESSION_MISS,
-                INT_DROP_REASON_DOWNLINK_FLOW_MISS,
+                INT_DROP_REASON_DOWNLINK_TERMINATION_MISS,
             ]
         elif spgw_dir == "UL":
             drop_reason_list = [
                 INT_DROP_REASON_UPLINK_UE_SESSION_MISS,
-                INT_DROP_REASON_UPLINK_FLOW_MISS,
+                INT_DROP_REASON_UPLINK_TERMINATION_MISS,
             ]
         else:
             drop_reason_list = [INT_DROP_REASON_EGRESS_NEXT_MISS]
@@ -2468,21 +2468,20 @@ class SpgwSimpleTest(IPv4UnicastTest):
                 self.Exact("teid", stringify(teid, 4)),
                 self.Exact("tunnel_ipv4_dst", ipv4_to_binary(tunnel_dst_addr)),
             ],
-            "FabricIngress.spgw.load_uplink_session_params_decap",
+            "FabricIngress.spgw.set_uplink_session",
             [],
         )
         self.write_request(req)
 
-    def setup_uplink_flow(self, slice_id, ue_session, ctr_id, tc=DEFAULT_TC):
+    def setup_uplink_termination(self, ue_session, ctr_id, tc=DEFAULT_TC):
         req = self.get_new_write_request()
         self.push_update_add_entry_to_action(
             req,
-            "FabricIngress.spgw.uplink_flows",
+            "FabricIngress.spgw.uplink_terminations",
             [
-                self.Exact("slice_id", stringify(slice_id, 4)),
-                self.Exact("ue_session", ipv4_to_binary(ue_session)),
+                self.Exact("ue_session_id", ipv4_to_binary(ue_session)),
             ],
-            "FabricIngress.spgw.load_flow_params",
+            "FabricIngress.spgw.app_fwd",
             [
                 ("ctr_id", stringify(ctr_id, 2)),
                 ("tc", stringify(tc, 1)),
@@ -2497,25 +2496,23 @@ class SpgwSimpleTest(IPv4UnicastTest):
             req,
             "FabricIngress.spgw.downlink_sessions",
             [self.Exact("ue_addr", ipv4_to_binary(ue_addr))],
-            "FabricIngress.spgw.load_downlink_session_params",
+            "FabricIngress.spgw.set_downlink_session",
             [
-                ("tunnel_peer_id", stringify(tunnel_peer_id, 1)),
-                ("tunnel_dst_addr", ipv4_to_binary(tunnel_dst_addr)),
+                ("tun_peer_id", stringify(tunnel_peer_id, 1)),
+                ("tun_dst_addr", ipv4_to_binary(tunnel_dst_addr)),
             ],
         )
         self.write_request(req)
 
-    def setup_downlink_flow_tunnel(self, ue_session, ctr_id, teid,
-                                   slice_id=DEFAULT_SLICE_ID,
-                                   tc=DEFAULT_TC,
-                                   qfi=DEFAULT_QFI):
+    def setup_downlink_termination_tunnel(self, ue_session, ctr_id, teid,
+                                          tc=DEFAULT_TC,
+                                          qfi=DEFAULT_QFI):
         req = self.get_new_write_request()
         self.push_update_add_entry_to_action(
             req,
-            "FabricIngress.spgw.downlink_flows",
-            [self.Exact("slice_id", stringify(slice_id, 4)),
-             self.Exact("ue_session", ipv4_to_binary(ue_session))],
-            "FabricIngress.spgw.load_flow_params_encap",
+            "FabricIngress.spgw.downlink_terminations",
+            [self.Exact("ue_session_id", ipv4_to_binary(ue_session))],
+            "FabricIngress.spgw.downlink_fwd_encap",
             [
                 ("ctr_id", stringify(ctr_id, 2)),
                 ("tc", stringify(tc, 1)),
@@ -2525,18 +2522,16 @@ class SpgwSimpleTest(IPv4UnicastTest):
         )
         self.write_request(req)
 
-    def setup_downlink_flow_to_dbuf(self, ue_session, ctr_id,
-                                    teid=DBUF_TEID,
-                                    slice_id=DEFAULT_SLICE_ID,
-                                    tc=DEFAULT_TC,
-                                    qfi=DEFAULT_QFI):
+    def setup_downlink_termination_dbuf(self, ue_session, ctr_id,
+                                        teid=DBUF_TEID,
+                                        tc=DEFAULT_TC,
+                                        qfi=DEFAULT_QFI):
         req = self.get_new_write_request()
         self.push_update_add_entry_to_action(
             req,
-            "FabricIngress.spgw.downlink_flows",
-            [self.Exact("slice_id", stringify(slice_id, 4)),
-             self.Exact("ue_session", ipv4_to_binary(ue_session))],
-            "FabricIngress.spgw.load_flow_params_encap_dbuf",
+            "FabricIngress.spgw.downlink_terminations",
+            [self.Exact("ue_session_id", ipv4_to_binary(ue_session))],
+            "FabricIngress.spgw.downlink_fwd_encap_dbuf",
             [
                 ("ctr_id", stringify(ctr_id, 2)),
                 ("tc", stringify(tc, 1)),
@@ -2556,7 +2551,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         self.push_update_add_entry_to_action(
             req,
             "FabricEgress.spgw.tunnel_peers",
-            [self.Exact("gtpu_tunnel_peer_id", stringify(tunnel_peer_id, 1))],
+            [self.Exact("tun_peer_id", stringify(tunnel_peer_id, 1))],
             "FabricEgress.spgw.load_tunnel_params",
             [
                 ("tunnel_src_port", stringify(tunnel_src_port, 2)),
@@ -2577,8 +2572,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
     ):
         self.add_s1u_iface(s1u_addr=s1u_sgw_addr, slice_id=slice_id)
         self.setup_uplink_ue_session(teid=teid, tunnel_dst_addr=s1u_sgw_addr)
-        self.setup_uplink_flow(slice_id=slice_id, ue_session=ue_addr,
-                               ctr_id=ctr_id, tc=tc)
+        self.setup_uplink_termination(ue_session=ue_addr, ctr_id=ctr_id, tc=tc)
 
     def setup_downlink(
         self,
@@ -2595,8 +2589,8 @@ class SpgwSimpleTest(IPv4UnicastTest):
         self.setup_downlink_ue_session(ue_addr=ue_addr,
                                        tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID,
                                        tunnel_dst_addr=s1u_enb_addr)
-        self.setup_downlink_flow_tunnel(slice_id=slice_id, ue_session=ue_addr,
-                                        ctr_id=ctr_id, teid=teid, tc=tc, qfi=qfi)
+        self.setup_downlink_termination_tunnel(ue_session=ue_addr, ctr_id=ctr_id,
+                                               teid=teid, tc=tc, qfi=qfi)
 
     def enable_encap_with_psc(self):
         self.send_request_add_entry_to_action(
@@ -2946,7 +2940,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         if tagged2:
             exp_pkt = pkt_add_vlan(exp_pkt, VLAN_ID_2)
 
-        # Add the UE pool interface and the UE Sessions/Flows pointing to the DBUF
+        # Add the UE pool interface and the UE Sessions/Terminations pointing to the DBUF
         self.add_ue_pool(UE1_IPV4)
         self.setup_downlink_ue_session(ue_addr=UE1_IPV4,
                                        tunnel_peer_id=DBUF_TUNNEL_PEER_ID,
@@ -2957,9 +2951,9 @@ class SpgwSimpleTest(IPv4UnicastTest):
             drain_dst_addr=DBUF_DRAIN_DST_IPV4
         )
 
-        self.setup_downlink_flow_to_dbuf(ue_session=UE1_IPV4,
-                                         ctr_id=DOWNLINK_PDR_CTR_IDX,
-                                         teid=DBUF_TEID)
+        self.setup_downlink_termination_dbuf(ue_session=UE1_IPV4,
+                                             ctr_id=DOWNLINK_PDR_CTR_IDX,
+                                             teid=DBUF_TEID)
 
         # Clear SPGW counters before sending the packet
         self.reset_pdr_counters(DOWNLINK_PDR_CTR_IDX)
@@ -4166,7 +4160,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         if drop_reason == INT_DROP_REASON_UPLINK_UE_SESSION_MISS:
             # Install nothing to sessions nor flows table
             pass
-        elif drop_reason == INT_DROP_REASON_UPLINK_FLOW_MISS:
+        elif drop_reason == INT_DROP_REASON_UPLINK_TERMINATION_MISS:
             self.setup_uplink_ue_session(tunnel_dst_addr=S1U_SGW_IPV4,
                                          teid=UPLINK_TEID)
 
@@ -4248,7 +4242,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         if drop_reason == INT_DROP_REASON_DOWNLINK_UE_SESSION_MISS:
             # Install nothing to sessions nor flows table
             pass
-        elif drop_reason == INT_DROP_REASON_DOWNLINK_FLOW_MISS:
+        elif drop_reason == INT_DROP_REASON_DOWNLINK_TERMINATION_MISS:
             self.setup_downlink_ue_session(ue_addr=pkt[IP].dst,
                                            tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID,
                                            tunnel_dst_addr=S1U_ENB_IPV4)

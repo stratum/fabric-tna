@@ -36,7 +36,7 @@ control Hasher(
                 // In addition to TEID, we only use dest IP addr to calculate a hash,
                 // as src IP addr is always the same for GTP tunnels towards different eNBs.
                 fabric_md.routing_ipv4_dst,
-                fabric_md.bridged.spgw.gtpu_teid
+                fabric_md.bridged.spgw.teid
             });
         } else
 #endif // WITH_SPGW

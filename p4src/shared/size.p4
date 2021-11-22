@@ -36,7 +36,6 @@
 
 // Constants for the SPGW control block.
 #define NUM_UES 100000
-#define NUM_MOBILE_FLOWS (NUM_UES * NUM_SLICES)
 // We expect between 4 and 8 tunnels per UE.
 #define MAX_GTP_TUNNELS_PER_UE 1
 #define NUM_GTP_TUNNLES (NUM_UES * MAX_GTP_TUNNELS_PER_UE)
@@ -45,5 +44,8 @@
 #define NUM_QOS_CLASSES 128
 #define MAX_UPLINK_RECIRC_RULES 64
 #define MAX_GTP_TUNNEL_PEERS 256
+
+#define NUM_UPLINK_SESSIONS  (NUM_UES * MAX_GTP_TUNNELS_PER_UE)
+#define NUM_UPF_TERMINATIONS NUM_UES
 
 #endif  //__TABLE_SIZE__
