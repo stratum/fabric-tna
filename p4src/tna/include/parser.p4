@@ -437,13 +437,13 @@ parser FabricEgressParser (packet_in packet,
         hdr.outer_gtpu_options.n_pdu_num = 0;
         hdr.outer_gtpu_options.next_ext  = GTPU_NEXT_EXT_PSC;
         /** outer_gtpu_ext_psc **/
-        hdr.outer_gtpu_ext_psc.ppp       = 0;
-        hdr.outer_gtpu_ext_psc.qfi       = fabric_md.bridged.spgw.qfi;
-        hdr.outer_gtpu_ext_psc.next_ext  = GTPU_NEXT_EXT_NONE;
+        // hdr.outer_gtpu_ext_psc.len    = update later
         hdr.outer_gtpu_ext_psc.type      = GTPU_EXT_PSC_TYPE_DL;
         hdr.outer_gtpu_ext_psc.spare0    = 0;
-        // hdr.outer_gtpu_ext_psc.len    = update later
+        hdr.outer_gtpu_ext_psc.ppp       = 0;
         // hdr.outer_gtpu_ext_psc.rqi    = update later
+        hdr.outer_gtpu_ext_psc.qfi       = fabric_md.bridged.spgw.qfi;
+        hdr.outer_gtpu_ext_psc.next_ext  = GTPU_NEXT_EXT_NONE;
 
 #endif // WITH_SPGW
 #ifdef WITH_INT
