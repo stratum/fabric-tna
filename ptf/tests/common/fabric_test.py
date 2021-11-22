@@ -2775,23 +2775,17 @@ class SpgwSimpleTest(IPv4UnicastTest):
         )
 
         uplink_ingress_bytes =  len(pkt)
-        if is_tna() :
+        uplink_egress_bytes = uplink_ingress_bytes
+        if is_tna():
             uplink_ingress_bytes += ETH_FCS_BYTES
-        if is_v1model():
+            uplink_egress_bytes +=  BMD_BYTES - IP_HDR_BYTES - UDP_HDR_BYTES - GTPU_HDR_BYTES
+            downlink_ingress_bytes = uplink_egress_bytes - BMD_BYTES
+        else:
             # In v1model, GTP decap, VLAN/MPLS push/pop happens at egress deparser,
             # hence not reflected in counter increment.
             uplink_egress_bytes = uplink_ingress_bytes
             # Downlink traffic is decapsulated.
             downlink_ingress_bytes = uplink_egress_bytes - IP_HDR_BYTES - UDP_HDR_BYTES - GTPU_HDR_BYTES
-        else :
-            uplink_egress_bytes = (
-                uplink_ingress_bytes
-                + BMD_BYTES
-                - IP_HDR_BYTES
-                - UDP_HDR_BYTES
-                - GTPU_HDR_BYTES
-            )
-            downlink_ingress_bytes = uplink_egress_bytes - BMD_BYTES
         # Egress counters are updated with bytes seen at egress parser. GTP
         # encap happens at egress deparser, hence not reflected in uplink
         # counter increment.

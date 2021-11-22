@@ -36,6 +36,10 @@ control SpgwIngress(
         hdr.inner_ipv4.setInvalid();
         hdr.udp = hdr.inner_udp;
         hdr.inner_udp.setInvalid();
+        hdr.tcp = hdr.inner_tcp;
+        hdr.inner_tcp.setInvalid();
+        hdr.icmp = hdr.inner_icmp;
+        hdr.inner_icmp.setInvalid();
         hdr.gtpu.setInvalid();
         hdr.gtpu_options.setInvalid();
         hdr.gtpu_ext_psc.setInvalid();
@@ -223,13 +227,11 @@ control SpgwIngress(
 
     action recirc_allow() {
         // Recirculation in bmv2 is obtained via recirculate() primitive, invoked in the egress pipeline.
-        // We still need to set an egress_spec and configure the corresponding egress_vlan entry,
-        // otherwise packets will be dropped by the default egress_vlan action (drop()).
-        // The main difference (w.r.t. TNA) is that when recirculating,
-        // the ingress_port is not the same as egress.
+        // We set the egress_spec to the ingress_port so that we can match on the egress_vlan without dropping.
+        // Also, setting the egress_spec as the ingress_port lets the recirculated packet in the pipeline, by
+        // matching the ingress_port_vlan.
         standard_md.egress_spec = standard_md.ingress_port;
-        // Do not overwrite the vlan_id; linked to the issue mentioned above:
-        // fabric_md.bridged.base.vlan_id = DEFAULT_VLAN_ID;
+        // Do not overwrite the vlan_id; linked to the issue mentioned above.
         fabric_v1model.do_spgw_uplink_recirc = true;
         fabric_md.egress_port_set = true;
         fabric_md.skip_forwarding = true;

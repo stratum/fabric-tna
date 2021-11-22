@@ -27,7 +27,6 @@ struct fabric_v1model_metadata_t {
 
 struct v1model_header_t {
     ingress_headers_t ingress;
-    egress_headers_t egress;
 }
 
 error {
