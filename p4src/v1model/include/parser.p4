@@ -269,7 +269,7 @@ parser FabricParser (packet_in packet,
 
 }
 
-control FabricDeparser(packet_out       packet,
+control FabricDeparser(packet_out packet,
                        in ingress_headers_t hdr) {
 
     apply {

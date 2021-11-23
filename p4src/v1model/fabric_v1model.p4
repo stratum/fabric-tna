@@ -48,7 +48,7 @@ control FabricIngress (inout ingress_headers_t hdr,
 #endif // WITH_SPGW
 
     apply {
-        // Forcing the override of port 0 which has an undefined behavior.
+        // Override default egress port 0 which has an undefined behavior.
         // for more information see https://github.com/p4lang/behavioral-model/issues/992
         mark_to_drop(standard_md);
         if (standard_md.parser_error == error.PacketRejectedByParser) {
@@ -118,7 +118,7 @@ control FabricEgress (inout ingress_headers_t hdr,
         dscp_rewriter.apply(fabric_md, standard_md, hdr);
 
         if (fabric_md.do_spgw_uplink_recirc) {
-            // Recirculate the spgw traffic UE to UE.
+            // Recirculate UE-to-UE traffic.
             recirculate(standard_md);
         }
 

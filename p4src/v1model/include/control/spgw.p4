@@ -319,10 +319,6 @@ control SpgwEgress(
 
     @hidden
     action _encap_initialize() {
-        // Allocate GTP-U encap fields on the T-PHV. Set headers as valid later.
-        // For bmv2 the initialization needs to be done after the hdr.outer_*.setValid() is called,
-        // otherwise the assignments have no effect.
-
         /** hdr.ipv4 is now outer_ipv4 **/
         hdr.ipv4.version           = 4w4;
         hdr.ipv4.ihl               = 4w5;
@@ -373,7 +369,8 @@ control SpgwEgress(
         hdr.inner_ipv4 = hdr.ipv4;
         hdr.udp.setValid();
         hdr.gtpu.setValid();
-
+        // For bmv2 the initialization needs to be done after the hdr.*.setValid() is called,
+        // otherwise the assignments made in _encap_initialize() have no effect.
         _encap_initialize();
     }
 
