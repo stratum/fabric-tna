@@ -13,8 +13,8 @@ import xnt
 from base_test import (
     P4RuntimeTest,
     ipv4_to_binary,
-    is_v1model,
     is_tna,
+    is_v1model,
     mac_to_binary,
     stringify,
     tvcreate,
@@ -2673,7 +2673,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             return
 
         ingress_bytes = len(gtp_pkt)
-        if is_tna() :
+        if is_tna():
             ingress_bytes += ETH_FCS_BYTES
         if tagged1:
             ingress_bytes += VLAN_BYTES
@@ -2683,15 +2683,21 @@ class SpgwSimpleTest(IPv4UnicastTest):
             # In v1model, GTP decap, VLAN/MPLS push/pop happens at egress deparser,
             # hence not reflected in counter increment.
             egress_bytes = ingress_bytes
-        else :
+        else:
             # In TNA, counters are updated with bytes seen at egress parser. GTP decap
             # happens at ingress deparser. VLAN/MPLS push/pop happens at egress
             # deparser, hence not reflected in counter increment.
             egress_bytes = (
-                ingress_bytes + BMD_BYTES - IP_HDR_BYTES - UDP_HDR_BYTES - GTPU_HDR_BYTES
+                ingress_bytes
+                + BMD_BYTES
+                - IP_HDR_BYTES
+                - UDP_HDR_BYTES
+                - GTPU_HDR_BYTES
             )
             if with_psc:
-                egress_bytes = egress_bytes - GTPU_OPTIONS_HDR_BYTES - GTPU_EXT_PSC_BYTES
+                egress_bytes = (
+                    egress_bytes - GTPU_OPTIONS_HDR_BYTES - GTPU_EXT_PSC_BYTES
+                )
 
         # Verify the Ingress and Egress PDR counters
         self.verify_pdr_counters(UPLINK_PDR_CTR_IDX, ingress_bytes, egress_bytes, 1, 1)
@@ -2774,18 +2780,26 @@ class SpgwSimpleTest(IPv4UnicastTest):
             verify_pkt=allow,
         )
 
-        uplink_ingress_bytes =  len(pkt)
+        uplink_ingress_bytes = len(pkt)
         uplink_egress_bytes = uplink_ingress_bytes
         if is_tna():
             uplink_ingress_bytes += ETH_FCS_BYTES
-            uplink_egress_bytes =  uplink_ingress_bytes + BMD_BYTES - IP_HDR_BYTES - UDP_HDR_BYTES - GTPU_HDR_BYTES
+            uplink_egress_bytes = (
+                uplink_ingress_bytes
+                + BMD_BYTES
+                - IP_HDR_BYTES
+                - UDP_HDR_BYTES
+                - GTPU_HDR_BYTES
+            )
             downlink_ingress_bytes = uplink_egress_bytes - BMD_BYTES
         else:
             # In v1model, GTP decap, VLAN/MPLS push/pop happens at egress deparser,
             # hence not reflected in counter increment.
             uplink_egress_bytes = uplink_ingress_bytes
             # Downlink traffic is decapsulated.
-            downlink_ingress_bytes = uplink_egress_bytes - IP_HDR_BYTES - UDP_HDR_BYTES - GTPU_HDR_BYTES
+            downlink_ingress_bytes = (
+                uplink_egress_bytes - IP_HDR_BYTES - UDP_HDR_BYTES - GTPU_HDR_BYTES
+            )
         # Egress counters are updated with bytes seen at egress parser. GTP
         # encap happens at egress deparser, hence not reflected in uplink
         # counter increment.
@@ -3048,11 +3062,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         # GTP encap and VLAN/MPLS push/pop happen at egress deparser, but
         # counters are updated with bytes seen at egress parser.
         egress_bytes = (
-            ingress_bytes
-            + BMD_BYTES
-            - IP_HDR_BYTES
-            - UDP_HDR_BYTES
-            - GTPU_HDR_BYTES
+            ingress_bytes + BMD_BYTES - IP_HDR_BYTES - UDP_HDR_BYTES - GTPU_HDR_BYTES
         )
         if is_v1model():
             # In v1model, GTP decap, VLAN/MPLS push/pop happens at egress deparser,
