@@ -11,7 +11,7 @@
 
 #include "shared/size.p4"
 #include "v1model/include/define_v1model.p4" // shared/define.p4 included in define_v1model.p4
-#include "v1model/include/header_v1model.p4" // shared/header.p4 included in header_v1model.p4
+#include "v1model/include/header_v1model.p4"
 #include "v1model/include/parser.p4"
 #include "v1model/include/control/acl.p4"
 #include "v1model/include/control/next.p4"
@@ -24,6 +24,9 @@
 #include "v1model/include/control/filtering.p4"
 #include "v1model/include/control/forwarding.p4"
 #include "v1model/include/control/lookup_md_init.p4"
+#ifdef WITH_SPGW
+#include "v1model/include/control/spgw.p4"
+#endif
 
 control FabricIngress (inout ingress_headers_t hdr,
                        inout fabric_v1model_metadata_t fabric_md,
@@ -40,8 +43,14 @@ control FabricIngress (inout ingress_headers_t hdr,
     Hasher() hasher;
     IngressSliceTcClassifier() slice_tc_classifier;
     IngressQos() qos;
+#ifdef WITH_SPGW
+    SpgwIngress() spgw;
+#endif // WITH_SPGW
 
     apply {
+        // Override default egress port 0 which has an undefined behavior.
+        // for more information see https://github.com/p4lang/behavioral-model/issues/992
+        mark_to_drop(standard_md);
         if (standard_md.parser_error == error.PacketRejectedByParser) {
             // packet was rejected by parser -> drop.
             mark_to_drop(standard_md);
@@ -55,6 +64,11 @@ control FabricIngress (inout ingress_headers_t hdr,
 
         slice_tc_classifier.apply(hdr, standard_md, fabric_md.ingress);
         filtering.apply(hdr, fabric_md.ingress, standard_md);
+#ifdef WITH_SPGW
+        if (!fabric_md.ingress.skip_forwarding) {
+            spgw.apply(hdr, fabric_md, standard_md);
+        }
+#endif // WITH_SPGW
         if (!fabric_md.ingress.skip_forwarding) {
             forwarding.apply(hdr, fabric_md.ingress);
         }
@@ -81,6 +95,9 @@ control FabricEgress (inout ingress_headers_t hdr,
     PacketIoEgress() pkt_io_egress;
     EgressNextControl() egress_next;
     EgressDscpRewriter() dscp_rewriter;
+#ifdef WITH_SPGW
+    SpgwEgress() spgw;
+#endif // WITH_SPGW
 
     apply {
         // Setting other fields in egress metadata, related to TNA's FabricEgressParser.
@@ -95,8 +112,17 @@ control FabricEgress (inout ingress_headers_t hdr,
         stats.apply(fabric_md.egress.bridged.base.stats_flow_id, standard_md.egress_port,
              fabric_md.egress.bridged.bmd_type);
         egress_next.apply(hdr, fabric_md.egress, standard_md);
-        dscp_rewriter.apply(fabric_md.egress, standard_md, hdr);
-    }
+#ifdef WITH_SPGW
+        spgw.apply(hdr, fabric_md);
+#endif // WITH_SPGW
+        dscp_rewriter.apply(fabric_md, standard_md, hdr);
+
+        if (fabric_md.do_spgw_uplink_recirc) {
+            // Recirculate UE-to-UE traffic.
+            recirculate(standard_md);
+        }
+
+    } // end of apply{}
 }
 
 V1Switch(
