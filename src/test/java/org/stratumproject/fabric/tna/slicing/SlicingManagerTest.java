@@ -334,6 +334,39 @@ public class SlicingManagerTest {
     }
 
     @Test
+    public void testSetDefaultTrafficClass() {
+        // Preparation
+        manager.addSlice(SLICE_IDS.get(1));
+
+        assertEquals(TrafficClass.BEST_EFFORT, manager.getDefaultTrafficClass(SLICE_IDS.get(1)));
+        manager.addTrafficClass(SLICE_IDS.get(1), TrafficClass.CONTROL);
+        manager.setDefaultTrafficClass(SLICE_IDS.get(1), TrafficClass.CONTROL);
+        assertEquals(TrafficClass.CONTROL, manager.getDefaultTrafficClass(SLICE_IDS.get(1)));
+    }
+
+    @Test
+    public void testSetDefaultTrafficClassException1() {
+        // Preparation
+        manager.addSlice(SLICE_IDS.get(1));
+
+        exceptionRule.expect(SlicingException.class);
+        exceptionRule.expectMessage("Can't set CONTROL as default TC because it has not been allocated to slice 1");
+        manager.setDefaultTrafficClass(SLICE_IDS.get(1), TrafficClass.CONTROL);
+    }
+
+    @Test
+    public void testRemoveDefaultTrafficClassException() {
+        // Preparation
+        manager.addSlice(SLICE_IDS.get(1));
+        manager.addTrafficClass(SLICE_IDS.get(1), TrafficClass.CONTROL);
+        manager.setDefaultTrafficClass(SLICE_IDS.get(1), TrafficClass.CONTROL);
+
+        exceptionRule.expect(SlicingException.class);
+        exceptionRule.expectMessage("Can't remove CONTROL from slice 1 while it is being used as Default TC");
+        manager.removeTrafficClass(SLICE_IDS.get(1), TrafficClass.CONTROL);
+    }
+
+    @Test
     public void testAddFlowClassifier() {
         // Preparation
         capturedAddedFlowRules.reset();
