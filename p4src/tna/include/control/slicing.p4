@@ -142,7 +142,6 @@ control IngressQos (inout fabric_ingress_metadata_t fabric_md,
     }
 
     action set_default_tc(tc_t tc) {
-        // TODO: does this work? Or we need a workaround as for table match?
         fabric_md.bridged.base.slice_tc = fabric_md.bridged.base.slice_tc[SLICE_ID_WIDTH+TC_WIDTH-1:TC_WIDTH]++tc;
     }
 
