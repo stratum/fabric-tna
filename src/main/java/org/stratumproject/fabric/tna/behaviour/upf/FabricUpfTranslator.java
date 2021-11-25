@@ -10,9 +10,6 @@ import org.onlab.packet.Ip4Prefix;
 import org.onlab.util.ImmutableByteSequence;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.net.DeviceId;
-import org.onosproject.net.behaviour.upf.ForwardingActionRule;
-import org.onosproject.net.behaviour.upf.GtpTunnel;
-import org.onosproject.net.behaviour.upf.PacketDetectionRule;
 import org.onosproject.net.behaviour.upf.UpfInterface;
 import org.onosproject.net.behaviour.upf.UpfProgrammableException;
 import org.onosproject.net.flow.DefaultFlowRule;
@@ -35,48 +32,13 @@ import static org.stratumproject.fabric.tna.behaviour.Constants.TC_BEST_EFFORT;
 import static org.stratumproject.fabric.tna.behaviour.Constants.TC_CONTROL;
 import static org.stratumproject.fabric.tna.behaviour.Constants.TC_ELASTIC;
 import static org.stratumproject.fabric.tna.behaviour.Constants.TC_REAL_TIME;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.CTR_ID;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.DROP;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_GTPU_ENCAP;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_GTPU_ONLY;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_GTPU_WITH_PSC;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_PDRS;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_FARS;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_IFACE_ACCESS;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_IFACE_CORE;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_IFACE_DBUF;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_INTERFACES;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_LOAD_DBUF_FAR;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_LOAD_NORMAL_FAR;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_LOAD_PDR;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_LOAD_PDR_DECAP;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_LOAD_TUNNEL_FAR;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_RECIRC_ALLOW;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_RECIRC_DENY;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_PDRS;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_RECIRC_RULES;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FAR_ID;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_FAR_ID;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_GTPU_IS_VALID;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_IPV4_DST_ADDR;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_TEID;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_TUNNEL_IPV4_DST;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_UE_ADDR;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.QFI;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.SLICE_ID;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TC;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TEID;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TUNNEL_DST_ADDR;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TUNNEL_SRC_ADDR;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TUNNEL_SRC_PORT;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.*;
 
 /**
  * Provides logic to translate UPF entities into pipeline-specific ones and vice-versa.
  * Implementation should be stateless, with all state delegated to FabricUpfStore.
  */
 public class FabricUpfTranslator {
-
-    private final FabricUpfStore fabricUpfStore;
 
     // TODO: agree on a mapping with the PFCP agent
     //  Make sure to have a 1 to 1 mapping between QFI and TC.
@@ -91,31 +53,28 @@ public class FabricUpfTranslator {
             (byte) 2, TC_REAL_TIME,
             (byte) 3, TC_ELASTIC);
 
-    public FabricUpfTranslator(FabricUpfStore fabricUpfStore) {
-        this.fabricUpfStore = fabricUpfStore;
+    /**
+     * Returns true if the given table entry is a UE Session rule from the physical fabric pipeline, and
+     * false otherwise.
+     *
+     * @param entry the entry that may or may not be a fabric.p4 UE Session rule
+     * @return true if the entry is a fabric.p4 UE Session rule
+     */
+    public boolean isFabricUeSessionRule(FlowRule entry) {
+        return entry.table().equals(FABRIC_INGRESS_SPGW_UPLINK_SESSIONS)
+                || entry.table().equals(FABRIC_INGRESS_SPGW_DOWNLINK_SESSIONS);
     }
 
     /**
-     * Returns true if the given table entry is a Packet Detection Rule from the physical fabric pipeline, and
+     * Returns true if the given table entry is a UPF Termination rule from the physical fabric pipeline, and
      * false otherwise.
      *
-     * @param entry the entry that may or may not be a fabric.p4 PDR
-     * @return true if the entry is a fabric.p4 PDR
+     * @param entry the entry that may or may not be a fabric.p4 UPF Termination rule
+     * @return true if the entry is a fabric.p4 UPF Termination rule
      */
-    public boolean isFabricPdr(FlowRule entry) {
-        return entry.table().equals(FABRIC_INGRESS_SPGW_UPLINK_PDRS)
-                || entry.table().equals(FABRIC_INGRESS_SPGW_DOWNLINK_PDRS);
-    }
-
-    /**
-     * Returns true if the given table entry is a Forwarding Action Rule from the physical fabric pipeline, and
-     * false otherwise.
-     *
-     * @param entry the entry that may or may not be a fabric.p4 FAR
-     * @return true if the entry is a fabric.p4 FAR
-     */
-    public boolean isFabricFar(FlowRule entry) {
-        return entry.table().equals(FABRIC_INGRESS_SPGW_FARS);
+    public boolean isFabricUpfTerminationRule(FlowRule entry) {
+        return entry.table().equals(FABRIC_INGRESS_SPGW_UPLINK_TERMINATIONS)
+                || entry.table().equals(FABRIC_INGRESS_SPGW_DOWNLINK_TERMINATIONS);
     }
 
     /**
@@ -127,114 +86,6 @@ public class FabricUpfTranslator {
      */
     public boolean isFabricInterface(FlowRule entry) {
         return entry.table().equals(FABRIC_INGRESS_SPGW_INTERFACES);
-    }
-
-
-    /**
-     * Translate a fabric.p4 PDR table entry to a PacketDetectionRule instance for easier handling.
-     *
-     * @param entry the fabric.p4 entry to translate
-     * @return the corresponding PacketDetectionRule
-     * @throws UpfProgrammableException if the entry cannot be translated
-     */
-    public PacketDetectionRule fabricEntryToPdr(FlowRule entry)
-            throws UpfProgrammableException {
-        var pdrBuilder = PacketDetectionRule.builder();
-        Pair<PiCriterion, PiTableAction> matchActionPair = FabricUpfTranslatorUtil.fabricEntryToPiPair(entry);
-        PiCriterion match = matchActionPair.getLeft();
-        PiAction action = (PiAction) matchActionPair.getRight();
-
-        // Grab keys and parameters that are present for all PDRs
-        int globalFarId = FabricUpfTranslatorUtil.getParamInt(action, FAR_ID);
-        UpfRuleIdentifier farId = fabricUpfStore.localFarIdOf(globalFarId);
-        if (farId == null) {
-            throw new UpfProgrammableException(format("Unable to find local far id of %s", globalFarId));
-        }
-
-        pdrBuilder.withCounterId(FabricUpfTranslatorUtil.getParamInt(action, CTR_ID))
-                .withLocalFarId(farId.getSessionLocalId())
-                .withSessionId(farId.getPfcpSessionId());
-
-        if (FabricUpfTranslatorUtil.fieldIsPresent(match, HDR_TEID)) {
-            // F-TEID is only present for GTP-matching PDRs
-            ImmutableByteSequence teid = FabricUpfTranslatorUtil.getFieldValue(match, HDR_TEID);
-            Ip4Address tunnelDst = FabricUpfTranslatorUtil.getFieldAddress(match, HDR_TUNNEL_IPV4_DST);
-            pdrBuilder.withTeid(teid)
-                    .withTunnelDst(tunnelDst);
-        } else if (FabricUpfTranslatorUtil.fieldIsPresent(match, HDR_UE_ADDR)) {
-            // And UE address is only present for non-GTP-matching PDRs
-            pdrBuilder.withUeAddr(FabricUpfTranslatorUtil.getFieldAddress(match, HDR_UE_ADDR));
-        } else {
-            throw new UpfProgrammableException("Read malformed PDR from dataplane!:" + entry);
-        }
-
-
-        int tc = FabricUpfTranslatorUtil.getParamInt(action, TC);
-        // FIXME: allow explicit QFI mapping to Best-Effort
-        if (tc != TC_BEST_EFFORT) {
-            Byte qfi = QFI_TO_TC.inverse().getOrDefault(tc, null);
-            if (qfi != null) {
-                pdrBuilder.withQfi(qfi);
-            } else {
-                throw new UpfProgrammableException(format(
-                        "TC value '%d' unsupported, unable to map to QFI -- " +
-                                "how did we manage to write this entry? BUG? [%s]",
-                        tc, entry));
-            }
-        }
-
-
-        return pdrBuilder.build();
-    }
-
-    /**
-     * Translate a fabric.p4 FAR table entry to a ForwardActionRule instance for easier handling.
-     *
-     * @param entry the fabric.p4 entry to translate
-     * @return the corresponding ForwardingActionRule
-     * @throws UpfProgrammableException if the entry cannot be translated
-     */
-    public ForwardingActionRule fabricEntryToFar(FlowRule entry)
-            throws UpfProgrammableException {
-        var farBuilder = ForwardingActionRule.builder();
-        Pair<PiCriterion, PiTableAction> matchActionPair = FabricUpfTranslatorUtil.fabricEntryToPiPair(entry);
-        PiCriterion match = matchActionPair.getLeft();
-        PiAction action = (PiAction) matchActionPair.getRight();
-
-        int globalFarId = FabricUpfTranslatorUtil.getFieldInt(match, HDR_FAR_ID);
-        UpfRuleIdentifier farId = fabricUpfStore.localFarIdOf(globalFarId);
-        if (farId == null) {
-            throw new UpfProgrammableException(format("Unable to find local far id of %s", globalFarId));
-        }
-
-        // Match keys
-        farBuilder.withSessionId(farId.getPfcpSessionId())
-                .setFarId(farId.getSessionLocalId());
-
-        // Parameters common to all types of FARs
-        PiActionId actionId = action.id();
-        farBuilder.setDropFlag(FabricUpfTranslatorUtil.getParamInt(action, DROP) > 0)
-                .setNotifyFlag(actionId.equals(FABRIC_INGRESS_SPGW_LOAD_DBUF_FAR));
-
-        if (actionId.equals(FABRIC_INGRESS_SPGW_LOAD_TUNNEL_FAR)
-                || actionId.equals(FABRIC_INGRESS_SPGW_LOAD_DBUF_FAR)) {
-            // Grab parameters specific to encapsulating FARs if they're present
-            Ip4Address tunnelSrc = FabricUpfTranslatorUtil.getParamAddress(action, TUNNEL_SRC_ADDR);
-            Ip4Address tunnelDst = FabricUpfTranslatorUtil.getParamAddress(action, TUNNEL_DST_ADDR);
-            ImmutableByteSequence teid = FabricUpfTranslatorUtil.getParamValue(action, TEID);
-            short tunnelSrcPort = (short) FabricUpfTranslatorUtil.getParamInt(action, TUNNEL_SRC_PORT);
-
-            farBuilder.setBufferFlag(actionId.equals(FABRIC_INGRESS_SPGW_LOAD_DBUF_FAR));
-
-            farBuilder.setTunnel(
-                    GtpTunnel.builder()
-                            .setSrc(tunnelSrc)
-                            .setDst(tunnelDst)
-                            .setTeid(teid)
-                            .setSrcPort(tunnelSrcPort)
-                            .build());
-        }
-        return farBuilder.build();
     }
 
     /**
@@ -264,134 +115,6 @@ public class FabricUpfTranslator {
         }
 
         return ifaceBuilder.build();
-    }
-
-    /**
-     * Translate a ForwardingActionRule to a FlowRule to be inserted into the fabric.p4 pipeline.
-     * A side effect of calling this method is the FAR object's globalFarId is assigned if it was not already.
-     *
-     * @param far      The FAR to be translated
-     * @param deviceId the ID of the device the FlowRule should be installed on
-     * @param appId    the ID of the application that will insert the FlowRule
-     * @param priority the FlowRule's priority
-     * @return the FAR translated to a FlowRule
-     * @throws UpfProgrammableException if the FAR to be translated is malformed
-     */
-    public FlowRule farToFabricEntry(ForwardingActionRule far, DeviceId deviceId, ApplicationId appId, int priority)
-            throws UpfProgrammableException {
-        PiAction action;
-        if (!far.encaps()) {
-            action = PiAction.builder()
-                    .withId(FABRIC_INGRESS_SPGW_LOAD_NORMAL_FAR)
-                    .withParameter(new PiActionParam(DROP, far.drops() ? 1 : 0))
-                    .build();
-
-        } else {
-            if (far.tunnelSrc() == null || far.tunnelDst() == null
-                    || far.teid() == null || far.tunnel().srcPort() == null) {
-                throw new UpfProgrammableException(
-                        "Not all action parameters present when translating " +
-                                "intermediate encapsulating/buffering FAR to physical FAR!");
-            }
-            // TODO: copy tunnel destination port from logical switch write requests, instead of hardcoding 2152
-            PiActionId actionId;
-            if (far.buffers()) {
-                if (!far.notifies()) {
-                    throw new UpfProgrammableException(
-                            "The buffer flag is set but not the notify one is not, " +
-                                    "we do not support buffering without notifying the CP");
-                }
-                actionId = FABRIC_INGRESS_SPGW_LOAD_DBUF_FAR;
-            } else {
-                actionId = FABRIC_INGRESS_SPGW_LOAD_TUNNEL_FAR;
-            }
-            action = PiAction.builder()
-                    .withId(actionId)
-                    .withParameters(Arrays.asList(
-                            new PiActionParam(DROP, far.drops() ? 1 : 0),
-                            new PiActionParam(TEID, far.teid()),
-                            new PiActionParam(TUNNEL_SRC_ADDR, far.tunnelSrc().toInt()),
-                            new PiActionParam(TUNNEL_DST_ADDR, far.tunnelDst().toInt()),
-                            new PiActionParam(TUNNEL_SRC_PORT, far.tunnel().srcPort())
-                    ))
-                    .build();
-        }
-        PiCriterion match = PiCriterion.builder()
-                .matchExact(HDR_FAR_ID, fabricUpfStore.globalFarIdOf(far.sessionId(), far.farId()))
-                .build();
-        return DefaultFlowRule.builder()
-                .forDevice(deviceId).fromApp(appId).makePermanent()
-                .forTable(FABRIC_INGRESS_SPGW_FARS)
-                .withSelector(DefaultTrafficSelector.builder().matchPi(match).build())
-                .withTreatment(DefaultTrafficTreatment.builder().piTableAction(action).build())
-                .withPriority(priority)
-                .build();
-    }
-
-    /**
-     * Translate a PacketDetectionRule to a FlowRule to be inserted into the fabric.p4 pipeline.
-     * A side effect of calling this method is the PDR object's globalFarId is assigned if it was not already.
-     *
-     * @param pdr      The PDR to be translated
-     * @param deviceId the ID of the device the FlowRule should be installed on
-     * @param appId    the ID of the application that will insert the FlowRule
-     * @param priority the FlowRule's priority
-     * @return the FAR translated to a FlowRule
-     * @throws UpfProgrammableException if the PDR to be translated is malformed
-     */
-    public FlowRule pdrToFabricEntry(PacketDetectionRule pdr, DeviceId deviceId, ApplicationId appId, int priority)
-            throws UpfProgrammableException {
-        // TODO: add QFI match and push to the pipeline
-        if (pdr.matchQfi()) {
-            throw new UpfProgrammableException("Match QFI not yet supported! Cannot translate " + pdr);
-        } else if (pdr.pushQfi()) {
-            throw new UpfProgrammableException("Push QFI not yet supported! Cannot translate " + pdr);
-        }
-        final PiCriterion match;
-        final PiTableId tableId;
-
-        final PiAction.Builder actionBuilder = PiAction.builder()
-                .withParameters(Arrays.asList(
-                        new PiActionParam(CTR_ID, pdr.counterId()),
-                        new PiActionParam(FAR_ID, fabricUpfStore.globalFarIdOf(pdr.sessionId(), pdr.farId()))));
-
-        final int tc;
-        if (pdr.hasQfi()) {
-            if (!QFI_TO_TC.containsKey(pdr.qfi())) {
-                throw new UpfProgrammableException(format(
-                        "QFI value '%d' not supported, unable to map to TC", pdr.qfi()));
-            }
-            tc = QFI_TO_TC.get(pdr.qfi());
-        } else {
-            // FIXME: allow explicit QFI mapping to Best-Effort
-            tc = TC_BEST_EFFORT;
-        }
-        actionBuilder.withParameter(new PiActionParam(TC, tc));
-
-        if (pdr.matchesEncapped()) {
-            match = PiCriterion.builder()
-                    .matchExact(HDR_TEID, pdr.teid().asArray())
-                    .matchExact(HDR_TUNNEL_IPV4_DST, pdr.tunnelDest().toInt())
-                    .build();
-            tableId = FABRIC_INGRESS_SPGW_UPLINK_PDRS;
-            actionBuilder.withId(FABRIC_INGRESS_SPGW_LOAD_PDR_DECAP);
-        } else if (pdr.matchesUnencapped()) {
-            match = PiCriterion.builder()
-                    .matchExact(HDR_UE_ADDR, pdr.ueAddress().toInt())
-                    .build();
-            tableId = FABRIC_INGRESS_SPGW_DOWNLINK_PDRS;
-            actionBuilder.withId(FABRIC_INGRESS_SPGW_LOAD_PDR);
-        } else {
-            throw new UpfProgrammableException("Flexible PDRs not yet supported! Cannot translate " + pdr);
-        }
-
-        return DefaultFlowRule.builder()
-                .forDevice(deviceId).fromApp(appId).makePermanent()
-                .forTable(tableId)
-                .withSelector(DefaultTrafficSelector.builder().matchPi(match).build())
-                .withTreatment(DefaultTrafficTreatment.builder().piTableAction(actionBuilder.build()).build())
-                .withPriority(priority)
-                .build();
     }
 
     /**
@@ -478,10 +201,9 @@ public class FabricUpfTranslator {
                 .build();
     }
 
-    public FlowRule buildGtpuWithPscEncapRule(DeviceId deviceId, ApplicationId appId, int qfi) {
+    public FlowRule buildGtpuWithPscEncapRule(DeviceId deviceId, ApplicationId appId) {
         PiAction action = PiAction.builder()
                 .withId(FABRIC_EGRESS_SPGW_GTPU_WITH_PSC)
-                .withParameter(new PiActionParam(QFI, qfi))
                 .build();
         // Default entry, no selector.
         return DefaultFlowRule.builder()

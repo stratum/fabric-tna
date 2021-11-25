@@ -9,9 +9,9 @@ import org.onlab.util.ImmutableByteSequence;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.DefaultApplicationId;
 import org.onosproject.net.DeviceId;
-import org.onosproject.net.behaviour.upf.ForwardingActionRule;
-import org.onosproject.net.behaviour.upf.PacketDetectionRule;
+import org.onosproject.net.behaviour.upf.UeSession;
 import org.onosproject.net.behaviour.upf.UpfInterface;
+import org.onosproject.net.behaviour.upf.UpfTerminationRule;
 import org.onosproject.net.flow.DefaultFlowRule;
 import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
@@ -22,32 +22,8 @@ import org.onosproject.net.pi.runtime.PiActionParam;
 
 import java.util.Arrays;
 
-import static org.stratumproject.fabric.tna.behaviour.Constants.TC_BEST_EFFORT;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.CTR_ID;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.DROP;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_PDRS;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_FARS;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_IFACE_ACCESS;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_IFACE_CORE;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_INTERFACES;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_LOAD_NORMAL_FAR;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_LOAD_PDR;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_LOAD_PDR_DECAP;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_LOAD_TUNNEL_FAR;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_PDRS;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FAR_ID;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_FAR_ID;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_GTPU_IS_VALID;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_IPV4_DST_ADDR;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_TEID;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_TUNNEL_IPV4_DST;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_UE_ADDR;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.SLICE_ID;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TC;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TEID;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TUNNEL_DST_ADDR;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TUNNEL_SRC_ADDR;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TUNNEL_SRC_PORT;
+import static org.stratumproject.fabric.tna.behaviour.Constants.*;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.*;
 import static org.stratumproject.fabric.tna.behaviour.upf.FabricUpfTranslator.QFI_TO_TC;
 
 public final class TestUpfConstants {
@@ -79,6 +55,7 @@ public final class TestUpfConstants {
     public static final byte UPLINK_QFI = 0x1;
     public static final byte DOWNLINK_QFI = 0x3;
 
+    public static final int ENB_GTP_TUNNEL_PEER = 0x1;
     public static final ImmutableByteSequence TEID_VALUE = ImmutableByteSequence.copyFrom(0xff);
     public static final ImmutableByteSequence TEID_VALUE_QOS = ImmutableByteSequence.copyFrom(0xfe);
     public static final Ip4Address UE_ADDR = Ip4Address.valueOf("17.0.0.1");
@@ -89,172 +66,174 @@ public final class TestUpfConstants {
     // TODO: tunnel source port currently not stored on writes, so all reads are 0
     public static final short TUNNEL_SPORT = 2160;
     public static final int PHYSICAL_COUNTER_SIZE = 512;
-    public static final int PHYSICAL_MAX_PDRS = 512;
-    public static final int PHYSICAL_MAX_FARS = 512;
+    public static final int PHYSICAL_MAX_UE_SESSIONS = 512;
+    public static final int PHYSICAL_MAX_UPF_TERMINATIONS = 512;
 
     public static final long COUNTER_BYTES = 12;
     public static final long COUNTER_PKTS = 15;
 
-    public static final PacketDetectionRule UPLINK_PDR = PacketDetectionRule.builder()
-            .withTunnelDst(S1U_ADDR)
+    public static final UeSession UPLINK_UE_SESSION = UeSession.builder()
             .withTeid(TEID_VALUE)
-            .withLocalFarId(UPLINK_FAR_ID)
-            .withSessionId(SESSION_ID)
-            .withCounterId(UPLINK_COUNTER_CELL_ID)
+            .withIpv4Address(UE_ADDR)
             .build();
 
-    public static final PacketDetectionRule DOWNLINK_PDR = PacketDetectionRule.builder()
-            .withUeAddr(UE_ADDR)
-            .withLocalFarId(DOWNLINK_FAR_ID)
-            .withSessionId(SESSION_ID)
+    public static final UeSession DOWNLINK_UE_SESSION = UeSession.builder()
+            .withIpv4Address(UE_ADDR)
+            .withTeid(TEID_VALUE)
+            .withQfi(DOWNLINK_QFI)
+            .withGtpTunnelPeerId(ENB_GTP_TUNNEL_PEER)
+            .build();
+
+    public static final UpfTerminationRule UPLINK_UPF_TERMINATION = UpfTerminationRule.builder()
+            .withSliceId((short) DEFAULT_SLICE_ID)
+            .withUeSessionId(UE_ADDR)
+            .withCounterId(UPLINK_COUNTER_CELL_ID)
+            .withTrafficClass(DEFAULT_TC)
+            .build();
+
+    public static final UpfTerminationRule DOWNLINK_UPF_TERMINATION = UpfTerminationRule.builder()
+            .withSliceId((short) DEFAULT_SLICE_ID)
+            .withUeSessionId(UE_ADDR)
             .withCounterId(DOWNLINK_COUNTER_CELL_ID)
+            .withTrafficClass(DEFAULT_TC)
+            .withTeid(TEID_VALUE)
+            .withQfi((byte) 0)  // no QFI
             .build();
 
-    public static final PacketDetectionRule UPLINK_QOS_PDR = PacketDetectionRule.builder()
-            .withTunnelDst(S1U_ADDR)
-            .withTeid(TEID_VALUE_QOS)
-            .withLocalFarId(UPLINK_FAR_ID)
-            .withSessionId(SESSION_ID)
+    public static final UpfTerminationRule UPLINK_UPF_TERMINATION_QOS = UpfTerminationRule.builder()
+            .withSliceId((short) DEFAULT_SLICE_ID)
+            .withUeSessionId(UE_ADDR_QOS)
             .withCounterId(UPLINK_COUNTER_CELL_ID)
+            .withTrafficClass(TC_CONTROL)
+            .withTeid(TEID_VALUE_QOS)
             .withQfi(UPLINK_QFI)
             .build();
 
-    public static final PacketDetectionRule DOWNLINK_QOS_PDR = PacketDetectionRule.builder()
-            .withUeAddr(UE_ADDR_QOS)
-            .withLocalFarId(DOWNLINK_FAR_ID)
-            .withSessionId(SESSION_ID)
+    public static final UpfTerminationRule DOWNLINK_UPF_TERMINATION_QOS = UpfTerminationRule.builder()
+            .withSliceId((short) DEFAULT_SLICE_ID)
+            .withUeSessionId(UE_ADDR_QOS)
             .withCounterId(DOWNLINK_COUNTER_CELL_ID)
+            .withTrafficClass(TC_ELASTIC)
+            .withTeid(TEID_VALUE_QOS)
             .withQfi(DOWNLINK_QFI)
             .build();
 
-    public static final ForwardingActionRule UPLINK_FAR = ForwardingActionRule.builder()
-            .setFarId(UPLINK_FAR_ID)
-            .withSessionId(SESSION_ID).build();
-
-    public static final ForwardingActionRule DOWNLINK_FAR = ForwardingActionRule.builder()
-            .setFarId(DOWNLINK_FAR_ID)
-            .withSessionId(SESSION_ID)
-            .setTunnel(S1U_ADDR, ENB_ADDR, TEID_VALUE, TUNNEL_SPORT)
-            .build();
+    // TODO: what about GtpTunnelPeer?
 
     public static final UpfInterface UPLINK_INTERFACE = UpfInterface.createS1uFrom(S1U_ADDR);
 
     public static final UpfInterface DOWNLINK_INTERFACE = UpfInterface.createUePoolFrom(UE_POOL);
 
-    public static final FlowRule FABRIC_UPLINK_PDR = DefaultFlowRule.builder()
+    public static final FlowRule FABRIC_UPLINK_UE_SESSION = DefaultFlowRule.builder()
             .forDevice(DEVICE_ID).fromApp(APP_ID).makePermanent()
-            .forTable(FABRIC_INGRESS_SPGW_UPLINK_PDRS)
+            .forTable(FABRIC_INGRESS_SPGW_UPLINK_SESSIONS)
             .withSelector(DefaultTrafficSelector.builder()
-                                  .matchPi(PiCriterion.builder()
-                                                   .matchExact(HDR_TEID, TEID_VALUE.asArray())
-                                                   .matchExact(HDR_TUNNEL_IPV4_DST, S1U_ADDR.toInt())
-                                                   .build()).build())
+                                    .matchPi(PiCriterion.builder()
+                                            .matchExact(HDR_TEID, TEID_VALUE.asArray())
+                                            .matchExact(HDR_TUNNEL_IPV4_DST, S1U_ADDR.toInt())
+                                            .build()).build())
             .withTreatment(DefaultTrafficTreatment.builder()
-                                   .piTableAction(PiAction.builder()
-                                                          .withId(FABRIC_INGRESS_SPGW_LOAD_PDR_DECAP)
-                                                          .withParameters(Arrays.asList(
-                                                                  new PiActionParam(CTR_ID, UPLINK_COUNTER_CELL_ID),
-                                                                  new PiActionParam(FAR_ID, UPLINK_PHYSICAL_FAR_ID),
-                                                                  new PiActionParam(TC, TC_BEST_EFFORT)
-                                                          ))
-                                                          .build()).build())
+                    .piTableAction(PiAction.builder()
+                            .withId(FABRIC_INGRESS_SPGW_SET_UPLINK_SESSION)
+                            .build()).build())
             .withPriority(DEFAULT_PRIORITY)
             .build();
 
-    public static final FlowRule FABRIC_UPLINK_QOS_PDR = DefaultFlowRule.builder()
+    public static final FlowRule FABRIC_DOWNLINK_UE_SESSION = DefaultFlowRule.builder()
             .forDevice(DEVICE_ID).fromApp(APP_ID).makePermanent()
-            .forTable(FABRIC_INGRESS_SPGW_UPLINK_PDRS)
+            .forTable(FABRIC_INGRESS_SPGW_DOWNLINK_SESSIONS)
             .withSelector(DefaultTrafficSelector.builder()
-                                  .matchPi(PiCriterion.builder()
-                                                   .matchExact(HDR_TEID, TEID_VALUE_QOS.asArray())
-                                                   .matchExact(HDR_TUNNEL_IPV4_DST, S1U_ADDR.toInt())
-                                                   .build()).build())
+                    .matchPi(PiCriterion.builder()
+                            .matchExact(HDR_UE_ADDR, UE_ADDR.toInt())
+                            .build()).build())
             .withTreatment(DefaultTrafficTreatment.builder()
-                                   .piTableAction(
-                                           PiAction.builder()
-                                                   .withId(FABRIC_INGRESS_SPGW_LOAD_PDR_DECAP)
-                                                   .withParameters(Arrays.asList(
-                                                           new PiActionParam(CTR_ID, UPLINK_COUNTER_CELL_ID),
-                                                           new PiActionParam(FAR_ID, UPLINK_PHYSICAL_FAR_ID),
-                                                           new PiActionParam(
-                                                               TC, QFI_TO_TC.get(UPLINK_QFI))
-                                                   ))
-                                                   .build()).build())
+                    .piTableAction(
+                            PiAction.builder()
+                                    .withId(FABRIC_INGRESS_SPGW_SET_DOWNLINK_SESSION)
+                                    .withParameters(Arrays.asList(
+                                            new PiActionParam(TUN_PEER_ID, ENB_GTP_TUNNEL_PEER)
+                                    ))
+                                    .build()).build())
             .withPriority(DEFAULT_PRIORITY)
             .build();
 
-    public static final FlowRule FABRIC_DOWNLINK_PDR = DefaultFlowRule.builder()
+    public static final FlowRule FABRIC_UPLINK_UPF_TERMINATION = DefaultFlowRule.builder()
             .forDevice(DEVICE_ID).fromApp(APP_ID).makePermanent()
-            .forTable(FABRIC_INGRESS_SPGW_DOWNLINK_PDRS)
+            .forTable(FABRIC_INGRESS_SPGW_UPLINK_TERMINATIONS)
             .withSelector(DefaultTrafficSelector.builder()
-                                  .matchPi(PiCriterion.builder()
-                                                   .matchExact(HDR_UE_ADDR, UE_ADDR.toInt())
-                                                   .build()).build())
+                    .matchPi(PiCriterion.builder()
+                            // we don't match on slice_id, becuase we assume distint UE pools per slice
+                            .matchExact(HDR_UE_SESSION_ID, UE_ADDR.toInt())
+                            .build()).build())
             .withTreatment(DefaultTrafficTreatment.builder()
-                                   .piTableAction(PiAction.builder()
-                                                          .withId(FABRIC_INGRESS_SPGW_LOAD_PDR)
-                                                          .withParameters(Arrays.asList(
-                                                                  new PiActionParam(CTR_ID, DOWNLINK_COUNTER_CELL_ID),
-                                                                  new PiActionParam(FAR_ID, DOWNLINK_PHYSICAL_FAR_ID),
-                                                                  new PiActionParam(TC, TC_BEST_EFFORT)
-                                                          ))
-                                                          .build()).build())
+                    .piTableAction(PiAction.builder()
+                            .withId(FABRIC_INGRESS_SPGW_APP_FWD)
+                            .withParameters(Arrays.asList(
+                                    new PiActionParam(CTR_ID, UPLINK_COUNTER_CELL_ID),
+                                    new PiActionParam(TC, TC_BEST_EFFORT)
+                            ))
+                            .build()).build())
             .withPriority(DEFAULT_PRIORITY)
             .build();
 
-    public static final FlowRule FABRIC_DOWNLINK_QOS_PDR = DefaultFlowRule.builder()
+    public static final FlowRule FABRIC_UPLINK_UPF_TERMINATION_QOS = DefaultFlowRule.builder()
             .forDevice(DEVICE_ID).fromApp(APP_ID).makePermanent()
-            .forTable(FABRIC_INGRESS_SPGW_DOWNLINK_PDRS)
+            .forTable(FABRIC_INGRESS_SPGW_UPLINK_TERMINATIONS)
             .withSelector(DefaultTrafficSelector.builder()
-                                  .matchPi(PiCriterion.builder()
-                                                   .matchExact(HDR_UE_ADDR, UE_ADDR_QOS.toInt())
-                                                   .build()).build())
+                    .matchPi(PiCriterion.builder()
+                            // we don't match on slice_id, becuase we assume distint UE pools per slice
+                            .matchExact(HDR_UE_SESSION_ID, UE_ADDR_QOS.toInt())
+                            .build()).build())
             .withTreatment(DefaultTrafficTreatment.builder()
-                                   .piTableAction(
-                                           PiAction.builder()
-                                                   .withId(FABRIC_INGRESS_SPGW_LOAD_PDR)
-                                                   .withParameters(Arrays.asList(
-                                                           new PiActionParam(CTR_ID, DOWNLINK_COUNTER_CELL_ID),
-                                                           new PiActionParam(FAR_ID, DOWNLINK_PHYSICAL_FAR_ID),
-                                                           new PiActionParam(TC, QFI_TO_TC.get(DOWNLINK_QFI))
-                                                   ))
-                                                   .build()).build())
+                    .piTableAction(PiAction.builder()
+                            .withId(FABRIC_INGRESS_SPGW_APP_FWD)
+                            .withParameters(Arrays.asList(
+                                    new PiActionParam(CTR_ID, UPLINK_COUNTER_CELL_ID),
+                                    new PiActionParam(TC, QFI_TO_TC.get(UPLINK_QFI))
+                            ))
+                            .build()).build())
             .withPriority(DEFAULT_PRIORITY)
             .build();
 
-    public static final FlowRule FABRIC_UPLINK_FAR = DefaultFlowRule.builder()
+    public static final FlowRule FABRIC_DOWNLINK_UPF_TERMINATION = DefaultFlowRule.builder()
             .forDevice(DEVICE_ID).fromApp(APP_ID).makePermanent()
-            .forTable(FABRIC_INGRESS_SPGW_FARS)
+            .forTable(FABRIC_INGRESS_SPGW_DOWNLINK_TERMINATIONS)
             .withSelector(DefaultTrafficSelector.builder()
-                                  .matchPi(PiCriterion.builder()
-                                                   .matchExact(HDR_FAR_ID, UPLINK_PHYSICAL_FAR_ID)
-                                                   .build()).build())
+                    .matchPi(PiCriterion.builder()
+                            // we don't match on slice_id, becuase we assume distint UE pools per slice
+                            .matchExact(HDR_UE_SESSION_ID, UE_ADDR.toInt())
+                            .build()).build())
             .withTreatment(DefaultTrafficTreatment.builder()
-                                   .piTableAction(PiAction.builder()
-                                                          .withId(FABRIC_INGRESS_SPGW_LOAD_NORMAL_FAR)
-                                                          .withParameter(new PiActionParam(DROP, 0))
-                                                          .build()).build())
+                    .piTableAction(PiAction.builder()
+                            .withId(FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP)
+                            .withParameters(Arrays.asList(
+                                    new PiActionParam(CTR_ID, UPLINK_COUNTER_CELL_ID),
+                                    new PiActionParam(TC, TC_BEST_EFFORT),
+                                    new PiActionParam(TEID, TEID_VALUE),
+                                    new PiActionParam(QFI, 0)
+                            ))
+                            .build()).build())
             .withPriority(DEFAULT_PRIORITY)
             .build();
 
-    public static final FlowRule FABRIC_DOWNLINK_FAR = DefaultFlowRule.builder()
+    public static final FlowRule FABRIC_DOWNLINK_UPF_TERMINATION_QOS = DefaultFlowRule.builder()
             .forDevice(DEVICE_ID).fromApp(APP_ID).makePermanent()
-            .forTable(FABRIC_INGRESS_SPGW_FARS)
+            .forTable(FABRIC_INGRESS_SPGW_DOWNLINK_TERMINATIONS)
             .withSelector(DefaultTrafficSelector.builder()
-                                  .matchPi(PiCriterion.builder()
-                                                   .matchExact(HDR_FAR_ID, DOWNLINK_PHYSICAL_FAR_ID)
-                                                   .build()).build())
+                    .matchPi(PiCriterion.builder()
+                            // we don't match on slice_id, becuase we assume distint UE pools per slice
+                            .matchExact(HDR_UE_SESSION_ID, UE_ADDR_QOS.toInt())
+                            .build()).build())
             .withTreatment(DefaultTrafficTreatment.builder()
-                                   .piTableAction(PiAction.builder()
-                                                          .withId(FABRIC_INGRESS_SPGW_LOAD_TUNNEL_FAR)
-                                                          .withParameters(Arrays.asList(
-                                                                  new PiActionParam(DROP, 0),
-                                                                  new PiActionParam(TEID, TEID_VALUE),
-                                                                  new PiActionParam(TUNNEL_SRC_ADDR, S1U_ADDR.toInt()),
-                                                                  new PiActionParam(TUNNEL_DST_ADDR, ENB_ADDR.toInt()),
-                                                                  new PiActionParam(TUNNEL_SRC_PORT, TUNNEL_SPORT)
-                                                          ))
-                                                          .build()).build())
+                    .piTableAction(PiAction.builder()
+                            .withId(FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP)
+                            .withParameters(Arrays.asList(
+                                    new PiActionParam(CTR_ID, DOWNLINK_COUNTER_CELL_ID),
+                                    new PiActionParam(TC, QFI_TO_TC.get(DOWNLINK_QFI)),
+                                    new PiActionParam(TEID, TEID_VALUE_QOS),
+                                    new PiActionParam(QFI, 0)
+                            ))
+                            .build()).build())
             .withPriority(DEFAULT_PRIORITY)
             .build();
 

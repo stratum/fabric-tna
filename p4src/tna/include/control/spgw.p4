@@ -114,6 +114,7 @@ control SpgwIngress(
     action set_uplink_session() {
         // Set UE IP address.
         ue_session_id = fabric_md.lkp.ipv4_src;
+        // implicit decap
         _gtpu_decap();
     }
 

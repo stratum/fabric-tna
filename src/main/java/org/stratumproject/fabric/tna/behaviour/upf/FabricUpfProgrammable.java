@@ -9,12 +9,7 @@ import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
 import org.onosproject.drivers.p4runtime.AbstractP4RuntimeHandlerBehaviour;
 import org.onosproject.net.PortNumber;
-import org.onosproject.net.behaviour.upf.ForwardingActionRule;
-import org.onosproject.net.behaviour.upf.PacketDetectionRule;
-import org.onosproject.net.behaviour.upf.PdrStats;
-import org.onosproject.net.behaviour.upf.UpfInterface;
-import org.onosproject.net.behaviour.upf.UpfProgrammable;
-import org.onosproject.net.behaviour.upf.UpfProgrammableException;
+import org.onosproject.net.behaviour.upf.*;
 import org.onosproject.net.flow.DefaultFlowRule;
 import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
@@ -52,23 +47,7 @@ import java.util.stream.Collectors;
 
 import static org.onosproject.net.pi.model.PiCounterType.INDIRECT;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.sliceTcConcat;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_GTPU_ENCAP;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_PDR_COUNTER;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_QOS_QUEUES;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_QOS_SET_QUEUE;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_PDRS;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_FARS;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_INTERFACES;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_PDR_COUNTER;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_PDRS;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_FAR_ID;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_GTPU_IS_VALID;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_IPV4_DST_ADDR;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_SLICE_TC;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_TEID;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_TUNNEL_IPV4_DST;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_UE_ADDR;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.QID;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.*;
 
 /**
  * Implementation of a UPF programmable device behavior.
@@ -85,12 +64,12 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     protected FlowRuleService flowRuleService;
     protected SlicingService slicingService;
     protected PacketService packetService;
-    protected FabricUpfStore fabricUpfStore;
     protected FabricUpfTranslator upfTranslator;
 
-    private long farTableSize;
-    private long encappedPdrTableSize;
-    private long unencappedPdrTableSize;
+    private long uplinkUeSessionsTableSize;
+    private long downlinkUeSessionsTableSize;
+    private long uplinkUpfTerminationsTableSize;
+    private long downlinkUpfTerminationsTableSize;
     private long pdrCounterSize;
 
     private ApplicationId appId;
@@ -114,8 +93,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         flowRuleService = handler().get(FlowRuleService.class);
         slicingService = handler().get(SlicingService.class);
         packetService = handler().get(PacketService.class);
-        fabricUpfStore = handler().get(DistributedFabricUpfStore.class);
-        upfTranslator = new FabricUpfTranslator(fabricUpfStore);
+        upfTranslator = new FabricUpfTranslator();
         final CoreService coreService = handler().get(CoreService.class);
         appId = coreService.getAppId(PipeconfLoader.APP_NAME_UPF);
         if (appId == null) {
@@ -172,38 +150,43 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     }
 
     /**
-     * Grab the capacities for the PDR and FAR tables from the pipeconf. Runs only once, on initialization.
+     * Grab the capacities for the UE Sessions and UPF Terminations tables from the pipeconf.
+     * Runs only once, on initialization.
      *
      * @return true if resource is fetched successfully, false otherwise.
-     * @throws IllegalStateException when FAR or PDR table can't be found in the pipeline model.
+     * @throws IllegalStateException when UE Sessions or UPF Terminations table can't be found in the pipeline model.
      */
     private boolean computeHardwareResourceSizes() {
-        long farTableSize = 0;
-        long encappedPdrTableSize = 0;
-        long unencappedPdrTableSize = 0;
+        long uplinkUeSessionsTableSize = 0;
+        long downlinkUeSessionsTableSize = 0;
+        long uplinkUpfTerminationsTableSize = 0;
+        long downlinkUpfTerminationsTableSize = 0;
 
         // Get table sizes of interest
         for (PiTableModel piTable : pipeconf.pipelineModel().tables()) {
-            if (piTable.id().equals(FABRIC_INGRESS_SPGW_UPLINK_PDRS)) {
-                encappedPdrTableSize = piTable.maxSize();
-            } else if (piTable.id().equals(FABRIC_INGRESS_SPGW_DOWNLINK_PDRS)) {
-                unencappedPdrTableSize = piTable.maxSize();
-            } else if (piTable.id().equals(FABRIC_INGRESS_SPGW_FARS)) {
-                farTableSize = piTable.maxSize();
+            if (piTable.id().equals(FABRIC_INGRESS_SPGW_UPLINK_SESSIONS)) {
+                uplinkUeSessionsTableSize = piTable.maxSize();
+            } else if (piTable.id().equals(FABRIC_INGRESS_SPGW_DOWNLINK_SESSIONS)) {
+                downlinkUeSessionsTableSize = piTable.maxSize();
+            } else if (piTable.id().equals(FABRIC_INGRESS_SPGW_UPLINK_TERMINATIONS)) {
+                uplinkUpfTerminationsTableSize = piTable.maxSize();
+            } else if (piTable.id().equals(FABRIC_INGRESS_SPGW_DOWNLINK_TERMINATIONS)) {
+                downlinkUpfTerminationsTableSize = piTable.maxSize();
             }
         }
-        if (encappedPdrTableSize == 0) {
-            throw new IllegalStateException("Unable to find uplink PDR table in pipeline model.");
+        if (uplinkUeSessionsTableSize == 0) {
+            throw new IllegalStateException("Unable to find uplink UE Sessions table in pipeline model.");
         }
-        if (unencappedPdrTableSize == 0) {
-            throw new IllegalStateException("Unable to find downlink PDR table in pipeline model.");
+        if (downlinkUeSessionsTableSize == 0) {
+            throw new IllegalStateException("Unable to find downlink UE Sessions table in pipeline model.");
         }
-        if (encappedPdrTableSize != unencappedPdrTableSize) {
-            log.warn("The uplink and downlink PDR tables don't have equal sizes! Using the minimum of the two.");
+        if (uplinkUpfTerminationsTableSize == 0) {
+            throw new IllegalStateException("Unable to find uplink UPF Terminations table in pipeline model.");
         }
-        if (farTableSize == 0) {
-            throw new IllegalStateException("Unable to find FAR table in pipeline model.");
+        if (downlinkUpfTerminationsTableSize == 0) {
+            throw new IllegalStateException("Unable to find downlink UPF Terminations table in pipeline model.");
         }
+
         // Get counter sizes of interest
         long ingressCounterSize = 0;
         long egressCounterSize = 0;
@@ -217,15 +200,18 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         if (ingressCounterSize != egressCounterSize) {
             log.warn("PDR ingress and egress counter sizes are not equal! Using the minimum of the two.");
         }
-        this.farTableSize = farTableSize;
-        this.encappedPdrTableSize = encappedPdrTableSize;
-        this.unencappedPdrTableSize = unencappedPdrTableSize;
+
+        this.uplinkUeSessionsTableSize = uplinkUeSessionsTableSize;
+        this.downlinkUeSessionsTableSize = downlinkUeSessionsTableSize;
+        this.uplinkUpfTerminationsTableSize = uplinkUpfTerminationsTableSize;
+        this.downlinkUpfTerminationsTableSize = downlinkUpfTerminationsTableSize;
         this.pdrCounterSize = Math.min(ingressCounterSize, egressCounterSize);
+
         return true;
     }
 
     @Override
-    public void enablePscEncap(int defaultQfi) {
+    public void enablePscEncap() {
         if (!setupBehaviour("enablePscEncap()")) {
             return;
         }
@@ -235,7 +221,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
             return;
         }
         flowRuleService.applyFlowRules(upfTranslator.buildGtpuWithPscEncapRule(
-                deviceId, appId, defaultQfi));
+                deviceId, appId));
     }
 
     @Override
@@ -277,7 +263,6 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         slicingService.removeTrafficClass(SliceId.DEFAULT, TrafficClass.CONTROL);
         slicingService.removeTrafficClass(SliceId.DEFAULT, TrafficClass.REAL_TIME);
         slicingService.removeTrafficClass(SliceId.DEFAULT, TrafficClass.ELASTIC);
-        fabricUpfStore.reset();
     }
 
     @Override
@@ -307,19 +292,34 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         if (!setupBehaviour("clearFlows()")) {
             return;
         }
-        log.info("Clearing all UE sessions.");
-        int pdrsCleared = 0;
-        int farsCleared = 0;
+        log.info("Clearing all UE sessions and UPF Terminations.");
+        int ueSessionsCleared = 0;
+        int upfTerminationsCleared = 0;
         for (FlowRule entry : flowRuleService.getFlowEntries(deviceId)) {
-            if (upfTranslator.isFabricPdr(entry)) {
-                pdrsCleared++;
+            if (upfTranslator.isFabricUeSessionRule(entry)) {
+                ueSessionsCleared++;
                 flowRuleService.removeFlowRules(entry);
-            } else if (upfTranslator.isFabricFar(entry)) {
-                farsCleared++;
+            } else if (upfTranslator.isFabricUpfTerminationRule(entry)) {
+                upfTerminationsCleared++;
                 flowRuleService.removeFlowRules(entry);
             }
         }
-        log.info("Cleared {} PDRs and {} FARS.", pdrsCleared, farsCleared);
+        log.info("Cleared {} UE sessions and {} UPF Terminations.", ueSessionsCleared, upfTerminationsCleared);
+    }
+
+    @Override
+    public java.util.Collection<GtpTunnelPeer> getGtpTunnelPeers() throws UpfProgrammableException {
+        return null;
+    }
+
+    @Override
+    public java.util.Collection<UeSession> getUeSessions() throws UpfProgrammableException {
+        return null;
+    }
+
+    @Override
+    public java.util.Collection<UpfTerminationRule> getUpfTerminationRules() throws UpfProgrammableException {
+        return null;
     }
 
 
@@ -386,27 +386,40 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     }
 
     @Override
+    public long gtpTunnelPeersTableSize() {
+        if (!setupBehaviour("gtpTunnelPeersTableSize()")) {
+            return -1;
+        }
+        // TODO: return gtpTunnelPeersTableSize
+        return 0;
+    }
+
+    @Override
+    public long ueSessionTableSize() {
+        if (!setupBehaviour("ueSessionTableSize()")) {
+            return -1;
+        }
+        // TODO: the size of uplink UE Session table is greater than downlink as we might have multiple TEIDs per UE
+        //  decide what to return as ueSessionTableSize
+        return Math.min(this.uplinkUeSessionsTableSize, this.downlinkUeSessionsTableSize);
+    }
+
+    @Override
+    public long upfTerminationTableSize() {
+        if (!setupBehaviour("upfTerminationTableSize()")) {
+            return -1;
+        }
+
+        // use min, but the size of uplink and downlink tables should be equal.
+        return Math.min(this.uplinkUpfTerminationsTableSize, this.downlinkUpfTerminationsTableSize);
+    }
+
+    @Override
     public long pdrCounterSize() {
         if (!setupBehaviour("pdrCounterSize()")) {
             return -1;
         }
         return pdrCounterSize;
-    }
-
-    @Override
-    public long farTableSize() {
-        if (!setupBehaviour("farTableSize()")) {
-            return -1;
-        }
-        return farTableSize;
-    }
-
-    @Override
-    public long pdrTableSize() {
-        if (!setupBehaviour("pdrTableSize()")) {
-            return -1;
-        }
-        return Math.min(encappedPdrTableSize, unencappedPdrTableSize) * 2;
     }
 
     @Override
@@ -452,34 +465,6 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
             }
         });
         return stats.build();
-    }
-
-
-    @Override
-    public void addPdr(PacketDetectionRule pdr) throws UpfProgrammableException {
-        if (!setupBehaviour("addPdr()")) {
-            return;
-        }
-        if (pdr.counterId() >= pdrCounterSize() || pdr.counterId() < 0) {
-            throw new UpfProgrammableException("Counter cell index referenced by PDR is out of bounds.",
-                    UpfProgrammableException.Type.COUNTER_INDEX_OUT_OF_RANGE);
-        }
-        FlowRule fabricPdr = upfTranslator.pdrToFabricEntry(pdr, deviceId, appId, DEFAULT_PRIORITY);
-        log.info("Installing {}", pdr.toString());
-        flowRuleService.applyFlowRules(fabricPdr);
-        log.debug("PDR added with flowID {}", fabricPdr.id().value());
-    }
-
-
-    @Override
-    public void addFar(ForwardingActionRule far) throws UpfProgrammableException {
-        if (!setupBehaviour("addFar()")) {
-            return;
-        }
-        FlowRule fabricFar = upfTranslator.farToFabricEntry(far, deviceId, appId, DEFAULT_PRIORITY);
-        log.info("Installing {}", far.toString());
-        flowRuleService.applyFlowRules(fabricFar);
-        log.debug("FAR added with flowID {}", fabricFar.id().value());
     }
 
     @Override
@@ -528,34 +513,6 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     }
 
     @Override
-    public Collection<PacketDetectionRule> getPdrs() throws UpfProgrammableException {
-        if (!setupBehaviour("getPdrs()")) {
-            return null;
-        }
-        ArrayList<PacketDetectionRule> pdrs = new ArrayList<>();
-        for (FlowRule flowRule : flowRuleService.getFlowEntries(deviceId)) {
-            if (upfTranslator.isFabricPdr(flowRule)) {
-                pdrs.add(upfTranslator.fabricEntryToPdr(flowRule));
-            }
-        }
-        return pdrs;
-    }
-
-    @Override
-    public Collection<ForwardingActionRule> getFars() throws UpfProgrammableException {
-        if (!setupBehaviour("getFars()")) {
-            return null;
-        }
-        ArrayList<ForwardingActionRule> fars = new ArrayList<>();
-        for (FlowRule flowRule : flowRuleService.getFlowEntries(deviceId)) {
-            if (upfTranslator.isFabricFar(flowRule)) {
-                fars.add(upfTranslator.fabricEntryToFar(flowRule));
-            }
-        }
-        return fars;
-    }
-
-    @Override
     public Collection<UpfInterface> getInterfaces() throws UpfProgrammableException {
         if (!setupBehaviour("getInterfaces()")) {
             return null;
@@ -570,40 +527,33 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     }
 
     @Override
-    public void removePdr(PacketDetectionRule pdr) throws UpfProgrammableException {
-        if (!setupBehaviour("removePdr()")) {
-            return;
-        }
-        final PiCriterion match;
-        final PiTableId tableId;
-        if (pdr.matchesEncapped()) {
-            match = PiCriterion.builder()
-                    .matchExact(HDR_TEID, pdr.teid().asArray())
-                    .matchExact(HDR_TUNNEL_IPV4_DST, pdr.tunnelDest().toInt())
-                    .build();
-            tableId = FABRIC_INGRESS_SPGW_UPLINK_PDRS;
-        } else {
-            match = PiCriterion.builder()
-                    .matchExact(HDR_UE_ADDR, pdr.ueAddress().toInt())
-                    .build();
-            tableId = FABRIC_INGRESS_SPGW_DOWNLINK_PDRS;
-        }
-        log.info("Removing {}", pdr.toString());
-        removeEntry(match, tableId, false);
+    public void addGtpTunnelPeer(GtpTunnelPeer peer) throws UpfProgrammableException {
+
     }
 
     @Override
-    public void removeFar(ForwardingActionRule far) throws UpfProgrammableException {
-        if (!setupBehaviour("removeFar()")) {
-            return;
-        }
-        log.info("Removing {}", far.toString());
+    public void removeGtpTunnelPeer(GtpTunnelPeer peer) throws UpfProgrammableException {
 
-        PiCriterion match = PiCriterion.builder()
-                .matchExact(HDR_FAR_ID, fabricUpfStore.removeGlobalFarId(far.sessionId(), far.farId()))
-                .build();
+    }
 
-        removeEntry(match, FABRIC_INGRESS_SPGW_FARS, false);
+    @Override
+    public void addUeSession(UeSession ueSession) throws UpfProgrammableException {
+
+    }
+
+    @Override
+    public void removeUeSession(UeSession ueSession) throws UpfProgrammableException {
+
+    }
+
+    @Override
+    public void addUpfTerminationRule(UpfTerminationRule upfTerminationRule) throws UpfProgrammableException {
+
+    }
+
+    @Override
+    public void removeUpfTerminationRule(UpfTerminationRule upfTerminationRule) throws UpfProgrammableException {
+
     }
 
     @Override

@@ -46,9 +46,6 @@ public final class P4InfoConstants {
     public static final PiMatchFieldId HDR_GTPU_IS_VALID =
             PiMatchFieldId.of("gtpu_is_valid");
     public static final int HDR_GTPU_IS_VALID_BITWIDTH = 1;
-    public static final PiMatchFieldId HDR_GTPU_TUNNEL_PEER_ID =
-            PiMatchFieldId.of("gtpu_tunnel_peer_id");
-    public static final int HDR_GTPU_TUNNEL_PEER_ID_BITWIDTH = 8;
     public static final PiMatchFieldId HDR_HOP_LATENCY_LOWER =
             PiMatchFieldId.of("hop_latency_lower");
     public static final int HDR_HOP_LATENCY_LOWER_BITWIDTH = 16;
@@ -106,9 +103,6 @@ public final class P4InfoConstants {
     public static final PiMatchFieldId HDR_NEXT_ID =
             PiMatchFieldId.of("next_id");
     public static final int HDR_NEXT_ID_BITWIDTH = 32;
-    public static final PiMatchFieldId HDR_SLICE_ID =
-            PiMatchFieldId.of("slice_id");
-    public static final int HDR_SLICE_ID_BITWIDTH = 4;
     public static final PiMatchFieldId HDR_SLICE_TC =
             PiMatchFieldId.of("slice_tc");
     public static final int HDR_SLICE_TC_BITWIDTH = 6;
@@ -117,15 +111,18 @@ public final class P4InfoConstants {
     public static final int HDR_STATS_FLOW_ID_BITWIDTH = 10;
     public static final PiMatchFieldId HDR_TEID = PiMatchFieldId.of("teid");
     public static final int HDR_TEID_BITWIDTH = 32;
+    public static final PiMatchFieldId HDR_TUN_PEER_ID =
+            PiMatchFieldId.of("tun_peer_id");
+    public static final int HDR_TUN_PEER_ID_BITWIDTH = 8;
     public static final PiMatchFieldId HDR_TUNNEL_IPV4_DST =
             PiMatchFieldId.of("tunnel_ipv4_dst");
     public static final int HDR_TUNNEL_IPV4_DST_BITWIDTH = 32;
     public static final PiMatchFieldId HDR_UE_ADDR =
             PiMatchFieldId.of("ue_addr");
     public static final int HDR_UE_ADDR_BITWIDTH = 32;
-    public static final PiMatchFieldId HDR_UE_SESSION =
-            PiMatchFieldId.of("ue_session");
-    public static final int HDR_UE_SESSION_BITWIDTH = 32;
+    public static final PiMatchFieldId HDR_UE_SESSION_ID =
+            PiMatchFieldId.of("ue_session_id");
+    public static final int HDR_UE_SESSION_ID_BITWIDTH = 32;
     public static final PiMatchFieldId HDR_VLAN_ID =
             PiMatchFieldId.of("vlan_id");
     public static final int HDR_VLAN_ID_BITWIDTH = 12;
@@ -145,10 +142,10 @@ public final class P4InfoConstants {
             PiTableId.of("FabricEgress.int_egress.report");
     public static final PiTableId FABRIC_EGRESS_PKT_IO_EGRESS_SWITCH_INFO =
             PiTableId.of("FabricEgress.pkt_io_egress.switch_info");
+    public static final PiTableId FABRIC_EGRESS_SPGW_EG_TUNNEL_PEERS =
+            PiTableId.of("FabricEgress.spgw.eg_tunnel_peers");
     public static final PiTableId FABRIC_EGRESS_SPGW_GTPU_ENCAP =
             PiTableId.of("FabricEgress.spgw.gtpu_encap");
-    public static final PiTableId FABRIC_EGRESS_SPGW_TUNNEL_PEERS =
-            PiTableId.of("FabricEgress.spgw.tunnel_peers");
     public static final PiTableId FABRIC_EGRESS_STATS_FLOWS =
             PiTableId.of("FabricEgress.stats.flows");
     public static final PiTableId FABRIC_INGRESS_ACL_ACL =
@@ -179,18 +176,20 @@ public final class P4InfoConstants {
             PiTableId.of("FabricIngress.qos.queues");
     public static final PiTableId FABRIC_INGRESS_SLICE_TC_CLASSIFIER_CLASSIFIER =
             PiTableId.of("FabricIngress.slice_tc_classifier.classifier");
-    public static final PiTableId FABRIC_INGRESS_SPGW_DOWNLINK_FLOWS =
-            PiTableId.of("FabricIngress.spgw.downlink_flows");
     public static final PiTableId FABRIC_INGRESS_SPGW_DOWNLINK_SESSIONS =
             PiTableId.of("FabricIngress.spgw.downlink_sessions");
+    public static final PiTableId FABRIC_INGRESS_SPGW_DOWNLINK_TERMINATIONS =
+            PiTableId.of("FabricIngress.spgw.downlink_terminations");
+    public static final PiTableId FABRIC_INGRESS_SPGW_IG_TUNNEL_PEERS =
+            PiTableId.of("FabricIngress.spgw.ig_tunnel_peers");
     public static final PiTableId FABRIC_INGRESS_SPGW_INTERFACES =
             PiTableId.of("FabricIngress.spgw.interfaces");
-    public static final PiTableId FABRIC_INGRESS_SPGW_UPLINK_FLOWS =
-            PiTableId.of("FabricIngress.spgw.uplink_flows");
     public static final PiTableId FABRIC_INGRESS_SPGW_UPLINK_RECIRC_RULES =
             PiTableId.of("FabricIngress.spgw.uplink_recirc_rules");
     public static final PiTableId FABRIC_INGRESS_SPGW_UPLINK_SESSIONS =
             PiTableId.of("FabricIngress.spgw.uplink_sessions");
+    public static final PiTableId FABRIC_INGRESS_SPGW_UPLINK_TERMINATIONS =
+            PiTableId.of("FabricIngress.spgw.uplink_terminations");
     public static final PiTableId FABRIC_INGRESS_STATS_FLOWS =
             PiTableId.of("FabricIngress.stats.flows");
     // Indirect Counter IDs
@@ -326,8 +325,14 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.slice_tc_classifier.set_slice_id_tc");
     public static final PiActionId FABRIC_INGRESS_SLICE_TC_CLASSIFIER_TRUST_DSCP =
             PiActionId.of("FabricIngress.slice_tc_classifier.trust_dscp");
-    public static final PiActionId FABRIC_INGRESS_SPGW_DOWNLINK_FLOW_DROP =
-            PiActionId.of("FabricIngress.spgw.downlink_flow_drop");
+    public static final PiActionId FABRIC_INGRESS_SPGW_APP_FWD =
+            PiActionId.of("FabricIngress.spgw.app_fwd");
+    public static final PiActionId FABRIC_INGRESS_SPGW_DOWNLINK_DROP =
+            PiActionId.of("FabricIngress.spgw.downlink_drop");
+    public static final PiActionId FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP =
+            PiActionId.of("FabricIngress.spgw.downlink_fwd_encap");
+    public static final PiActionId FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP_DBUF =
+            PiActionId.of("FabricIngress.spgw.downlink_fwd_encap_dbuf");
     public static final PiActionId FABRIC_INGRESS_SPGW_DOWNLINK_SESSION_DROP =
             PiActionId.of("FabricIngress.spgw.downlink_session_drop");
     public static final PiActionId FABRIC_INGRESS_SPGW_IFACE_ACCESS =
@@ -338,24 +343,20 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.spgw.iface_dbuf");
     public static final PiActionId FABRIC_INGRESS_SPGW_IFACE_MISS =
             PiActionId.of("FabricIngress.spgw.iface_miss");
-    public static final PiActionId FABRIC_INGRESS_SPGW_LOAD_DOWNLINK_SESSION_PARAMS =
-            PiActionId.of("FabricIngress.spgw.load_downlink_session_params");
-    public static final PiActionId FABRIC_INGRESS_SPGW_LOAD_FLOW_PARAMS =
-            PiActionId.of("FabricIngress.spgw.load_flow_params");
-    public static final PiActionId FABRIC_INGRESS_SPGW_LOAD_FLOW_PARAMS_ENCAP =
-            PiActionId.of("FabricIngress.spgw.load_flow_params_encap");
-    public static final PiActionId FABRIC_INGRESS_SPGW_LOAD_FLOW_PARAMS_ENCAP_DBUF =
-            PiActionId.of("FabricIngress.spgw.load_flow_params_encap_dbuf");
-    public static final PiActionId FABRIC_INGRESS_SPGW_LOAD_UPLINK_SESSION_PARAMS_DECAP =
-            PiActionId.of("FabricIngress.spgw.load_uplink_session_params_decap");
     public static final PiActionId FABRIC_INGRESS_SPGW_RECIRC_ALLOW =
             PiActionId.of("FabricIngress.spgw.recirc_allow");
     public static final PiActionId FABRIC_INGRESS_SPGW_RECIRC_DENY =
             PiActionId.of("FabricIngress.spgw.recirc_deny");
     public static final PiActionId FABRIC_INGRESS_SPGW_RECIRC_MISS =
             PiActionId.of("FabricIngress.spgw.recirc_miss");
-    public static final PiActionId FABRIC_INGRESS_SPGW_UPLINK_FLOW_DROP =
-            PiActionId.of("FabricIngress.spgw.uplink_flow_drop");
+    public static final PiActionId FABRIC_INGRESS_SPGW_SET_DOWNLINK_SESSION =
+            PiActionId.of("FabricIngress.spgw.set_downlink_session");
+    public static final PiActionId FABRIC_INGRESS_SPGW_SET_ROUTING_IPV4_DST =
+            PiActionId.of("FabricIngress.spgw.set_routing_ipv4_dst");
+    public static final PiActionId FABRIC_INGRESS_SPGW_SET_UPLINK_SESSION =
+            PiActionId.of("FabricIngress.spgw.set_uplink_session");
+    public static final PiActionId FABRIC_INGRESS_SPGW_UPLINK_DROP =
+            PiActionId.of("FabricIngress.spgw.uplink_drop");
     public static final PiActionId FABRIC_INGRESS_SPGW_UPLINK_SESSION_DROP =
             PiActionId.of("FabricIngress.spgw.uplink_session_drop");
     public static final PiActionId FABRIC_INGRESS_STATS_COUNT =
@@ -399,10 +400,12 @@ public final class P4InfoConstants {
     public static final PiActionParamId TEID = PiActionParamId.of("teid");
     public static final PiActionParamId TIMESTAMP_MASK =
             PiActionParamId.of("timestamp_mask");
+    public static final PiActionParamId TUN_DST_ADDR =
+            PiActionParamId.of("tun_dst_addr");
+    public static final PiActionParamId TUN_PEER_ID =
+            PiActionParamId.of("tun_peer_id");
     public static final PiActionParamId TUNNEL_DST_ADDR =
             PiActionParamId.of("tunnel_dst_addr");
-    public static final PiActionParamId TUNNEL_PEER_ID =
-            PiActionParamId.of("tunnel_peer_id");
     public static final PiActionParamId TUNNEL_SRC_ADDR =
             PiActionParamId.of("tunnel_src_addr");
     public static final PiActionParamId TUNNEL_SRC_PORT =
