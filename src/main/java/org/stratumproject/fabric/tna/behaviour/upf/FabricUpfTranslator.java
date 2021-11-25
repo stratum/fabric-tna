@@ -12,6 +12,7 @@ import org.onosproject.core.ApplicationId;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.behaviour.upf.UpfInterface;
 import org.onosproject.net.behaviour.upf.UpfProgrammableException;
+import org.onosproject.net.behaviour.upf.UpfTerminationRule;
 import org.onosproject.net.flow.DefaultFlowRule;
 import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
@@ -86,6 +87,41 @@ public class FabricUpfTranslator {
      */
     public boolean isFabricInterface(FlowRule entry) {
         return entry.table().equals(FABRIC_INGRESS_SPGW_INTERFACES);
+    }
+
+    /**
+     * Translate a fabric.p4 interface table entry to a UpfTerminationRule instance for easier handling.
+     *
+     * @param entry the fabric.p4 entry to translate
+     * @return the corresponding UpfTerminationRule
+     * @throws UpfProgrammableException if the entry cannot be translated
+     */
+    public UpfTerminationRule fabricEntryToUpfTerminationRule(FlowRule entry)
+            throws UpfProgrammableException {
+        var builder = UpfTerminationRule.builder();
+        Pair<PiCriterion, PiTableAction> matchActionPair = FabricUpfTranslatorUtil.fabricEntryToPiPair(entry);
+        PiCriterion match = matchActionPair.getLeft();
+        PiAction action = (PiAction) matchActionPair.getRight();
+
+        // Match keys
+        Ip4Address ueSessionId = FabricUpfTranslatorUtil.getFieldAddress(match, HDR_UE_SESSION_ID);
+        // FIXME: how to retrieve sliceId from fabric.p4?
+        builder.withSliceId((short)0);
+        builder.withUeSessionId(ueSessionId);
+
+        // Parameters common to all types of UPF Termination rules
+        builder.withCounterId(FabricUpfTranslatorUtil.getParamInt(action, CTR_ID))
+                .withTrafficClass(FabricUpfTranslatorUtil.getParamInt(action, TC));
+
+        PiActionId actionId = action.id();
+        if (actionId.equals(FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP) ||
+            actionId.equals(FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP_DBUF)) {
+            // Grab parameters specific to downlink UPF Termination rules if they're present
+            builder.withTeid(FabricUpfTranslatorUtil.getParamValue(action, TEID))
+                    .withQfi(FabricUpfTranslatorUtil.getParamValue(action, QFI).asArray()[0]);
+        }
+
+        return builder.build();
     }
 
     /**

@@ -22,7 +22,9 @@ import org.onosproject.net.pi.runtime.PiActionParam;
 
 import java.util.Arrays;
 
-import static org.stratumproject.fabric.tna.behaviour.Constants.*;
+import static org.stratumproject.fabric.tna.behaviour.Constants.TC_BEST_EFFORT;
+import static org.stratumproject.fabric.tna.behaviour.Constants.TC_CONTROL;
+import static org.stratumproject.fabric.tna.behaviour.Constants.TC_ELASTIC;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.*;
 import static org.stratumproject.fabric.tna.behaviour.upf.FabricUpfTranslator.QFI_TO_TC;
 
@@ -72,17 +74,17 @@ public final class TestUpfConstants {
     public static final long COUNTER_BYTES = 12;
     public static final long COUNTER_PKTS = 15;
 
-    public static final UeSession UPLINK_UE_SESSION = UeSession.builder()
-            .withTeid(TEID_VALUE)
-            .withIpv4Address(UE_ADDR)
-            .build();
-
-    public static final UeSession DOWNLINK_UE_SESSION = UeSession.builder()
-            .withIpv4Address(UE_ADDR)
-            .withTeid(TEID_VALUE)
-            .withQfi(DOWNLINK_QFI)
-            .withGtpTunnelPeerId(ENB_GTP_TUNNEL_PEER)
-            .build();
+//    public static final UeSession UPLINK_UE_SESSION = UeSession.builder()
+//            .withTeid(TEID_VALUE)
+//            .withIpv4Address(UE_ADDR)
+//            .build();
+//
+//    public static final UeSession DOWNLINK_UE_SESSION = UeSession.builder()
+//            .withIpv4Address(UE_ADDR)
+//            .withTeid(TEID_VALUE)
+//            .withQfi(DOWNLINK_QFI)
+//            .withGtpTunnelPeerId(ENB_GTP_TUNNEL_PEER)
+//            .build();
 
     public static final UpfTerminationRule UPLINK_UPF_TERMINATION = UpfTerminationRule.builder()
             .withSliceId((short) DEFAULT_SLICE_ID)
@@ -97,16 +99,7 @@ public final class TestUpfConstants {
             .withCounterId(DOWNLINK_COUNTER_CELL_ID)
             .withTrafficClass(DEFAULT_TC)
             .withTeid(TEID_VALUE)
-            .withQfi((byte) 0)  // no QFI
-            .build();
-
-    public static final UpfTerminationRule UPLINK_UPF_TERMINATION_QOS = UpfTerminationRule.builder()
-            .withSliceId((short) DEFAULT_SLICE_ID)
-            .withUeSessionId(UE_ADDR_QOS)
-            .withCounterId(UPLINK_COUNTER_CELL_ID)
-            .withTrafficClass(TC_CONTROL)
-            .withTeid(TEID_VALUE_QOS)
-            .withQfi(UPLINK_QFI)
+            .withQfi((byte) 0)
             .build();
 
     public static final UpfTerminationRule DOWNLINK_UPF_TERMINATION_QOS = UpfTerminationRule.builder()
@@ -118,44 +111,51 @@ public final class TestUpfConstants {
             .withQfi(DOWNLINK_QFI)
             .build();
 
+    public static final UpfTerminationRule UPLINK_UPF_TERMINATION_QOS = UpfTerminationRule.builder()
+            .withSliceId((short) DEFAULT_SLICE_ID)
+            .withUeSessionId(UE_ADDR_QOS)
+            .withCounterId(UPLINK_COUNTER_CELL_ID)
+            .withTrafficClass(TC_CONTROL)
+            .build();
+
     // TODO: what about GtpTunnelPeer?
 
     public static final UpfInterface UPLINK_INTERFACE = UpfInterface.createS1uFrom(S1U_ADDR);
 
     public static final UpfInterface DOWNLINK_INTERFACE = UpfInterface.createUePoolFrom(UE_POOL);
 
-    public static final FlowRule FABRIC_UPLINK_UE_SESSION = DefaultFlowRule.builder()
-            .forDevice(DEVICE_ID).fromApp(APP_ID).makePermanent()
-            .forTable(FABRIC_INGRESS_SPGW_UPLINK_SESSIONS)
-            .withSelector(DefaultTrafficSelector.builder()
-                                    .matchPi(PiCriterion.builder()
-                                            .matchExact(HDR_TEID, TEID_VALUE.asArray())
-                                            .matchExact(HDR_TUNNEL_IPV4_DST, S1U_ADDR.toInt())
-                                            .build()).build())
-            .withTreatment(DefaultTrafficTreatment.builder()
-                    .piTableAction(PiAction.builder()
-                            .withId(FABRIC_INGRESS_SPGW_SET_UPLINK_SESSION)
-                            .build()).build())
-            .withPriority(DEFAULT_PRIORITY)
-            .build();
-
-    public static final FlowRule FABRIC_DOWNLINK_UE_SESSION = DefaultFlowRule.builder()
-            .forDevice(DEVICE_ID).fromApp(APP_ID).makePermanent()
-            .forTable(FABRIC_INGRESS_SPGW_DOWNLINK_SESSIONS)
-            .withSelector(DefaultTrafficSelector.builder()
-                    .matchPi(PiCriterion.builder()
-                            .matchExact(HDR_UE_ADDR, UE_ADDR.toInt())
-                            .build()).build())
-            .withTreatment(DefaultTrafficTreatment.builder()
-                    .piTableAction(
-                            PiAction.builder()
-                                    .withId(FABRIC_INGRESS_SPGW_SET_DOWNLINK_SESSION)
-                                    .withParameters(Arrays.asList(
-                                            new PiActionParam(TUN_PEER_ID, ENB_GTP_TUNNEL_PEER)
-                                    ))
-                                    .build()).build())
-            .withPriority(DEFAULT_PRIORITY)
-            .build();
+//    public static final FlowRule FABRIC_UPLINK_UE_SESSION = DefaultFlowRule.builder()
+//            .forDevice(DEVICE_ID).fromApp(APP_ID).makePermanent()
+//            .forTable(FABRIC_INGRESS_SPGW_UPLINK_SESSIONS)
+//            .withSelector(DefaultTrafficSelector.builder()
+//                                    .matchPi(PiCriterion.builder()
+//                                            .matchExact(HDR_TEID, TEID_VALUE.asArray())
+//                                            .matchExact(HDR_TUNNEL_IPV4_DST, S1U_ADDR.toInt())
+//                                            .build()).build())
+//            .withTreatment(DefaultTrafficTreatment.builder()
+//                    .piTableAction(PiAction.builder()
+//                            .withId(FABRIC_INGRESS_SPGW_SET_UPLINK_SESSION)
+//                            .build()).build())
+//            .withPriority(DEFAULT_PRIORITY)
+//            .build();
+//
+//    public static final FlowRule FABRIC_DOWNLINK_UE_SESSION = DefaultFlowRule.builder()
+//            .forDevice(DEVICE_ID).fromApp(APP_ID).makePermanent()
+//            .forTable(FABRIC_INGRESS_SPGW_DOWNLINK_SESSIONS)
+//            .withSelector(DefaultTrafficSelector.builder()
+//                    .matchPi(PiCriterion.builder()
+//                            .matchExact(HDR_UE_ADDR, UE_ADDR.toInt())
+//                            .build()).build())
+//            .withTreatment(DefaultTrafficTreatment.builder()
+//                    .piTableAction(
+//                            PiAction.builder()
+//                                    .withId(FABRIC_INGRESS_SPGW_SET_DOWNLINK_SESSION)
+//                                    .withParameters(Arrays.asList(
+//                                            new PiActionParam(TUN_PEER_ID, ENB_GTP_TUNNEL_PEER)
+//                                    ))
+//                                    .build()).build())
+//            .withPriority(DEFAULT_PRIORITY)
+//            .build();
 
     public static final FlowRule FABRIC_UPLINK_UPF_TERMINATION = DefaultFlowRule.builder()
             .forDevice(DEVICE_ID).fromApp(APP_ID).makePermanent()
@@ -207,10 +207,10 @@ public final class TestUpfConstants {
                     .piTableAction(PiAction.builder()
                             .withId(FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP)
                             .withParameters(Arrays.asList(
-                                    new PiActionParam(CTR_ID, UPLINK_COUNTER_CELL_ID),
+                                    new PiActionParam(CTR_ID, DOWNLINK_COUNTER_CELL_ID),
                                     new PiActionParam(TC, TC_BEST_EFFORT),
                                     new PiActionParam(TEID, TEID_VALUE),
-                                    new PiActionParam(QFI, 0)
+                                    new PiActionParam(QFI, 0)  // 4G case
                             ))
                             .build()).build())
             .withPriority(DEFAULT_PRIORITY)
@@ -231,7 +231,7 @@ public final class TestUpfConstants {
                                     new PiActionParam(CTR_ID, DOWNLINK_COUNTER_CELL_ID),
                                     new PiActionParam(TC, QFI_TO_TC.get(DOWNLINK_QFI)),
                                     new PiActionParam(TEID, TEID_VALUE_QOS),
-                                    new PiActionParam(QFI, 0)
+                                    new PiActionParam(QFI, DOWNLINK_QFI)  // 5G case
                             ))
                             .build()).build())
             .withPriority(DEFAULT_PRIORITY)

@@ -5,6 +5,7 @@ package org.stratumproject.fabric.tna.behaviour.upf;
 import org.junit.Test;
 import org.onosproject.net.behaviour.upf.UpfInterface;
 import org.onosproject.net.behaviour.upf.UpfProgrammableException;
+import org.onosproject.net.behaviour.upf.UpfTerminationRule;
 import org.onosproject.net.flow.FlowRule;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -31,23 +32,75 @@ public class FabricUpfTranslatorTest {
 
     @Test
     public void fabricEntryToUplinkUpfTerminationTest() {
+        UpfTerminationRule translatedUpfTerminationRule;
+        UpfTerminationRule expected = TestUpfConstants.UPLINK_UPF_TERMINATION;
+        try {
+            translatedUpfTerminationRule = upfTranslator
+                    .fabricEntryToUpfTerminationRule(TestUpfConstants.FABRIC_UPLINK_UPF_TERMINATION);
+        } catch (UpfProgrammableException e) {
+            assertThat("Fabric uplink interface should correctly translate to abstract interface without error",
+                    false);
+            return;
+        }
 
+        assertThat("Translated UPF Termination rule should be uplink.", translatedUpfTerminationRule.isUplink());
+        assertThat(translatedUpfTerminationRule, equalTo(expected));
     }
 
     @Test
     public void fabricEntryToUplinkUpfQosTerminationTest() {
+        UpfTerminationRule translatedUpfTerminationRule;
+        UpfTerminationRule expected = TestUpfConstants.UPLINK_UPF_TERMINATION_QOS;
+        try {
+            translatedUpfTerminationRule = upfTranslator
+                    .fabricEntryToUpfTerminationRule(TestUpfConstants.FABRIC_UPLINK_UPF_TERMINATION_QOS);
+        } catch (UpfProgrammableException e) {
+            assertThat("Fabric uplink interface should correctly translate to abstract interface without error",
+                    false);
+            return;
+        }
 
+        assertThat("Translated UPF Termination rule should be uplink.", translatedUpfTerminationRule.isUplink());
+        assertThat(translatedUpfTerminationRule, equalTo(expected));
     }
+
 
     @Test
     public void fabricEntryToDownlinkUpfQosTerminationTest() {
+        UpfTerminationRule translatedUpfTerminationRule;
+        UpfTerminationRule expected = TestUpfConstants.DOWNLINK_UPF_TERMINATION_QOS;
+        try {
+            translatedUpfTerminationRule = upfTranslator
+                    .fabricEntryToUpfTerminationRule(TestUpfConstants.FABRIC_DOWNLINK_UPF_TERMINATION_QOS);
+        } catch (UpfProgrammableException e) {
+            assertThat("Fabric uplink interface should correctly translate to abstract interface without error",
+                    false);
+            return;
+        }
 
+        assertThat("Translated UPF Termination rule should be downlink.",
+                !translatedUpfTerminationRule.isUplink());
+        assertThat(translatedUpfTerminationRule, equalTo(expected));
     }
 
     @Test
     public void fabricEntryToDownlinkUpfTerminationTest() {
+        UpfTerminationRule translatedUpfTerminationRule;
+        UpfTerminationRule expected = TestUpfConstants.DOWNLINK_UPF_TERMINATION;
+        try {
+            translatedUpfTerminationRule = upfTranslator
+                    .fabricEntryToUpfTerminationRule(TestUpfConstants.FABRIC_DOWNLINK_UPF_TERMINATION);
+        } catch (UpfProgrammableException e) {
+            assertThat("Fabric uplink interface should correctly translate to abstract interface without error",
+                    false);
+            return;
+        }
 
+        assertThat("Translated UPF Termination rule should be downlink.",
+                !translatedUpfTerminationRule.isUplink());
+        assertThat(translatedUpfTerminationRule, equalTo(expected));
     }
+
 
     @Test
     public void fabricEntryToUplinkInterfaceTest() {
