@@ -32,8 +32,6 @@ public class TcAddCommand extends AbstractShellCommand {
         boolean result = slicingService.addTrafficClass(SliceId.of(sliceId), TrafficClass.valueOf(tc));
         if (result) {
             print("TC %s added to slice %s", tc, sliceId);
-        } else {
-            print("Failed to add TC %s to slice %s", tc, sliceId);
         }
     }
 }

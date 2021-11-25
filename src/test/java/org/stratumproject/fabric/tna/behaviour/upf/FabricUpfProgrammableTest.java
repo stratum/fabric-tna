@@ -48,7 +48,13 @@ import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.replay;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.*;
+import static org.stratumproject.fabric.tna.behaviour.Constants.TNA;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_PDR_COUNTER;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_PDR_COUNTER;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_SESSIONS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_SESSIONS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_TERMINATIONS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_TERMINATIONS;
 
 public class FabricUpfProgrammableTest {
 
@@ -119,7 +125,7 @@ public class FabricUpfProgrammableTest {
         expect(driverHandler.get(DeviceService.class)).andReturn(deviceService).anyTimes();
         expect(driverHandler.get(PiTranslationService.class)).andReturn(piTranslationService).anyTimes();
         expect(driverHandler.get(PiPipeconfService.class))
-                .andReturn(new MockPiPipeconfService(TABLE_MODELS, COUNTER_MODELS))
+                .andReturn(new MockPiPipeconfService(TABLE_MODELS, COUNTER_MODELS, TNA))
                 .anyTimes();
         expect(driverHandler.get(P4RuntimeController.class))
                 .andReturn(new MockP4RuntimeController(TestUpfConstants.DEVICE_ID,

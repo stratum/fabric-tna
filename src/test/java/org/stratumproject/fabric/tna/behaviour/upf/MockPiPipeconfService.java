@@ -22,10 +22,11 @@ public class MockPiPipeconfService implements PiPipeconfService {
     private final PiPipeconf mockPiPipeconf;
 
     public MockPiPipeconfService(Collection<PiTableModel> tables,
-                                 Collection<PiCounterModel> counters) {
+                                 Collection<PiCounterModel> counters,
+                                 String architecture) {
         mockPiPipeconf = createMock(PiPipeconf.class);
         expect(mockPiPipeconf.pipelineModel())
-                .andReturn(new MockPiPipelineModel(tables, counters))
+                .andReturn(new MockPiPipelineModel(tables, counters, architecture))
                 .anyTimes();
         replay(mockPiPipeconf);
     }

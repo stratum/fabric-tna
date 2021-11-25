@@ -18,6 +18,7 @@ struct fabric_v1model_metadata_t {
     // The skip_egress emulates the bypass_egress bit in intrinsic metadata for TNA.
     // Reference: https://github.com/barefootnetworks/Open-Tofino/blob/6a8432eab97bfd1d4805cf24c2c838470840f522/share/p4c/p4include/tofino.p4#L126-L127
     bool                      skip_egress;
+    bool                      do_spgw_uplink_recirc;
 
     fabric_ingress_metadata_t ingress;
     fabric_egress_metadata_t  egress;

@@ -4,6 +4,7 @@
 #ifndef __PARSER__
 #define __PARSER__
 
+#include "shared/header.p4"
 #include "v1model/include/header_v1model.p4"
 #include "v1model/include/define_v1model.p4"
 
@@ -269,7 +270,7 @@ parser FabricParser (packet_in packet,
 }
 
 control FabricDeparser(packet_out packet,
-                       in         ingress_headers_t hdr) {
+                       in ingress_headers_t hdr) {
 
     apply {
         packet.emit(hdr.fake_ethernet);

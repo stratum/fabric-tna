@@ -1,6 +1,6 @@
 # Copyright 2021-present Open Networking Foundation
 # SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0 AND Apache-2.0
-from base_test import autocleanup, is_bmv2, tvsetup
+from base_test import autocleanup, is_v1model, tvsetup
 from fabric_test import *  # noqa
 from ptf.testutils import group
 from scapy.layers.inet import IP
@@ -264,7 +264,7 @@ class FabricIPv4UnicastWithPolicingTest(SlicingTest, IPv4UnicastTest):
             slice_id=slice_id, tc=tc, cir=1, cburst=1, pir=1, pburst=1
         )
         if policing:
-            color_red = BMV2_COLOR_RED if is_bmv2() else COLOR_RED
+            color_red = BMV2_COLOR_RED if is_v1model() else COLOR_RED
             self.enable_policing(slice_id=slice_id, tc=tc, color=color_red)
         else:
             self.add_queue_entry(slice_id=slice_id, tc=tc, qid=1)

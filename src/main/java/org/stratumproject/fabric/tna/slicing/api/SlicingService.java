@@ -16,7 +16,8 @@ public interface SlicingService {
      * Adding default slice is not allowed.
      *
      * @param sliceId slice identifier
-     * @return true if the slice is added successfully, false otherwise.
+     * @return true if the slice is added successfully.
+     * @throws SlicingException if an error occurred.
      */
     boolean addSlice(SliceId sliceId);
 
@@ -25,7 +26,8 @@ public interface SlicingService {
      * Removing default slice is not allowed.
      *
      * @param sliceId slice identifier
-     * @return true if the slice is removed successfully, false otherwise.
+     * @return true if the slice is removed successfully.
+     * @throws SlicingException if an error occurred.
      */
     boolean removeSlice(SliceId sliceId);
 
@@ -42,7 +44,8 @@ public interface SlicingService {
      *
      * @param sliceId slice identifier
      * @param tc traffic class
-     * @return true if the traffic class is added to given slice successfully, false otherwise.
+     * @return true if the traffic class is added to given slice successfully.
+     * @throws SlicingException if an error occurred.
      */
     boolean addTrafficClass(SliceId sliceId, TrafficClass tc);
 
@@ -52,7 +55,8 @@ public interface SlicingService {
      *
      * @param sliceId slice identifier
      * @param tc traffic class
-     * @return true if the traffic class is removed from given slice successfully, false otherwise.
+     * @return true if the traffic class is removed from given slice successfully.
+     * @throws SlicingException if an error occurred.
      */
     boolean removeTrafficClass(SliceId sliceId, TrafficClass tc);
 
@@ -70,7 +74,8 @@ public interface SlicingService {
      * @param selector flow identifier
      * @param sliceId slice identifier
      * @param tc traffic class
-     * @return true if the flow is associated with given slice/tc successfully, false otherwise.
+     * @return true if the flow is associated with given slice/tc successfully.
+     * @throws SlicingException if an error occurred.
      */
     boolean addFlow(TrafficSelector selector, SliceId sliceId, TrafficClass tc);
 
@@ -80,7 +85,8 @@ public interface SlicingService {
      * @param selector flow identifier
      * @param sliceId slice identifier
      * @param tc traffic class
-     * @return true if the flow is dissociate with given slice/tc successfully, false otherwise.
+     * @return true if the flow is dissociate with given slice/tc successfully.
+     * @throws SlicingException if an error occurred.
      */
     boolean removeFlow(TrafficSelector selector, SliceId sliceId, TrafficClass tc);
 

@@ -26,12 +26,21 @@ import java.util.Optional;
 public class MockPiPipelineModel implements PiPipelineModel {
 
     private final Map<PiTableId, PiTableModel> tableMap = Maps.newHashMap();
+    private final String architecture;
 
     private final List<PiCounterModel> counters;
 
-    public MockPiPipelineModel(Collection<PiTableModel> tables, Collection<PiCounterModel> counters) {
+    public MockPiPipelineModel(Collection<PiTableModel> tables,
+                               Collection<PiCounterModel> counters,
+                               String architecture) {
         tables.forEach(tableModel -> tableMap.put(tableModel.id(), tableModel));
         this.counters = List.copyOf(counters);
+        this.architecture = architecture;
+    }
+
+    @Override
+    public Optional<String> architecture() {
+        return Optional.of(this.architecture);
     }
 
     @Override

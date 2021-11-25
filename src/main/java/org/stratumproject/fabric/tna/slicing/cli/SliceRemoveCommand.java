@@ -26,8 +26,6 @@ public class SliceRemoveCommand extends AbstractShellCommand {
         boolean result =  slicingService.removeSlice(SliceId.of(sliceId));
         if (result) {
             print("Slice %s removed", sliceId);
-        } else {
-            print("Failed to remove slice %s", sliceId);
         }
     }
 }
