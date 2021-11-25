@@ -26,7 +26,13 @@
 #include "v1model/include/control/lookup_md_init.p4"
 #ifdef WITH_SPGW
 #include "v1model/include/control/spgw.p4"
-#endif
+#endif // WITH_SPGW
+#ifdef WITH_INT
+#include "v1model/include/control/int.p4"
+#endif // WITH_INT
+
+#define IS_RECIRCULATED(std_meta) (std_meta.instance_type == PKT_INSTANCE_TYPE_INGRESS_RECIRC)
+#define IS_E2E_CLONE(std_meta) (std_meta.instance_type == PKT_INSTANCE_TYPE_EGRESS_CLONE)
 
 control FabricIngress (inout v1model_header_t hdr,
                        inout fabric_v1model_metadata_t fabric_md,
@@ -81,6 +87,10 @@ control FabricIngress (inout v1model_header_t hdr,
             next.apply(hdr.ingress, fabric_md.ingress, standard_md);
         }
         qos.apply(fabric_md.ingress, standard_md);
+#ifdef WITH_INT
+        // Should always apply last to guarantee generation of drop reports.
+        int_ingress.apply(hdr, fabric_md, standard_md);
+#endif // WITH_INT
 
         // Emulating TNA behavior through bridged metadata.
         fabric_md.egress.bridged = fabric_md.ingress.bridged;
@@ -104,6 +114,16 @@ control FabricEgress (inout v1model_header_t hdr,
         fabric_md.egress.cpu_port = 0;
         fabric_md.egress.pkt_length = (bit<16>) standard_md.packet_length;
 
+#ifdef WITH_INT
+        // bmv2 specific code.
+        // Emulate mirroring and TNA Egress Parser by cloning the packet and recirculating it.
+
+        clone3(standard_md, fabric_md);
+        if (IS_E2E_CLONE(standard_md)){
+            recirculate(standard_md, fabric_md);
+        }
+#endif // WITH_INT
+
         if (fabric_md.skip_egress){
             exit;
         }
@@ -115,6 +135,9 @@ control FabricEgress (inout v1model_header_t hdr,
 #ifdef WITH_SPGW
         spgw.apply(hdr.ingress, fabric_md);
 #endif // WITH_SPGW
+#ifdef WITH_INT
+        int_egress.apply(hdr, fabric_md, standard_md);
+#endif // WITH_INT
         dscp_rewriter.apply(fabric_md, standard_md, hdr.ingress);
 
         if (fabric_md.do_spgw_uplink_recirc) {
