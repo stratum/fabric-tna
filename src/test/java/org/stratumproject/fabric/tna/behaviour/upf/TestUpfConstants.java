@@ -109,6 +109,16 @@ public final class TestUpfConstants {
             .withQfi((byte) 0)
             .build();
 
+    public static final UpfTerminationRule DOWNLINK_UPF_TERMINATION_DBUF = UpfTerminationRule.builder()
+            .withSliceId((short) DEFAULT_SLICE_ID)
+            .withUeSessionId(UE_ADDR)
+            .withCounterId(DOWNLINK_COUNTER_CELL_ID)
+            .withTrafficClass(DEFAULT_TC)
+            .withTeid(TEID_VALUE)
+            .withQfi((byte) 0)
+            .withSkipEgressCtr()
+            .build();
+
     public static final UpfTerminationRule DOWNLINK_UPF_TERMINATION_QOS = UpfTerminationRule.builder()
             .withSliceId((short) DEFAULT_SLICE_ID)
             .withUeSessionId(UE_ADDR_QOS)
@@ -249,6 +259,27 @@ public final class TestUpfConstants {
             .withTreatment(DefaultTrafficTreatment.builder()
                     .piTableAction(PiAction.builder()
                             .withId(FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP)
+                            .withParameters(Arrays.asList(
+                                    new PiActionParam(CTR_ID, DOWNLINK_COUNTER_CELL_ID),
+                                    new PiActionParam(TC, TC_BEST_EFFORT),
+                                    new PiActionParam(TEID, TEID_VALUE),
+                                    new PiActionParam(QFI, 0)  // 4G case
+                            ))
+                            .build()).build())
+            .withPriority(DEFAULT_PRIORITY)
+            .build();
+
+    public static final FlowRule FABRIC_DOWNLINK_UPF_TERMINATION_DBUF = DefaultFlowRule.builder()
+            .forDevice(DEVICE_ID).fromApp(APP_ID).makePermanent()
+            .forTable(FABRIC_INGRESS_SPGW_DOWNLINK_TERMINATIONS)
+            .withSelector(DefaultTrafficSelector.builder()
+                    .matchPi(PiCriterion.builder()
+                            // we don't match on slice_id, becuase we assume distint UE pools per slice
+                            .matchExact(HDR_UE_SESSION_ID, UE_ADDR.toInt())
+                            .build()).build())
+            .withTreatment(DefaultTrafficTreatment.builder()
+                    .piTableAction(PiAction.builder()
+                            .withId(FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP_DBUF)
                             .withParameters(Arrays.asList(
                                     new PiActionParam(CTR_ID, DOWNLINK_COUNTER_CELL_ID),
                                     new PiActionParam(TC, TC_BEST_EFFORT),

@@ -27,7 +27,9 @@ import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
 import org.onosproject.net.pi.runtime.PiTableAction;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.Flow;
 
 import static java.lang.String.format;
@@ -277,6 +279,88 @@ public class FabricUpfTranslator {
                 .build();
 
         return Pair.of(ingressEntry, egressEntry);
+    }
+
+    /**
+     * Translate a UeSession to a FlowRule to be inserted into the fabric.p4 pipeline.
+     *
+     * @param ueSession The UE Session to be translated
+     * @param deviceId  the ID of the device the FlowRule should be installed on
+     * @param appId     the ID of the application that will insert the FlowRule
+     * @param priority  the FlowRule's priority
+     * @return the UE Session translated to a FlowRule
+     * @throws UpfProgrammableException if the UE session cannot be translated
+     */
+    public FlowRule ueSessionToFabricEntry(UeSession ueSession, DeviceId deviceId,
+                                           ApplicationId appId, int priority)
+            throws UpfProgrammableException {
+        final PiCriterion match;
+        final PiTableId tableId;
+
+        final PiAction.Builder actionBuilder = PiAction.builder();
+
+        if (ueSession.isUplink()) {
+            match = PiCriterion.builder()
+                    .matchExact(HDR_TEID, ueSession.teid().asArray())
+                    .matchExact(HDR_TUNNEL_IPV4_DST, ueSession.ipv4Address().toInt())
+                    .build();
+            tableId = FABRIC_INGRESS_SPGW_UPLINK_SESSIONS;
+            actionBuilder.withId(FABRIC_INGRESS_SPGW_SET_UPLINK_SESSION);
+        } else {
+            match = PiCriterion.builder()
+                    .matchExact(HDR_UE_ADDR, ueSession.ipv4Address().toInt())
+                    .build();
+            tableId = FABRIC_INGRESS_SPGW_DOWNLINK_SESSIONS;
+            actionBuilder.withId(FABRIC_INGRESS_SPGW_SET_DOWNLINK_SESSION)
+                    .withParameter(new PiActionParam(TUN_PEER_ID, ueSession.tunPeerId()));
+        }
+
+        return DefaultFlowRule.builder()
+                .forDevice(deviceId).fromApp(appId).makePermanent()
+                .forTable(tableId)
+                .withSelector(DefaultTrafficSelector.builder().matchPi(match).build())
+                .withTreatment(DefaultTrafficTreatment.builder().piTableAction(actionBuilder.build()).build())
+                .withPriority(priority)
+                .build();
+    }
+
+    public FlowRule upfTerminationToFabricEntry(UpfTerminationRule upfTerminationRule, DeviceId deviceId,
+                                                ApplicationId appId, int priority)
+            throws UpfProgrammableException {
+        final PiTableId tableId;
+        final PiCriterion match = PiCriterion.builder()
+                .matchExact(HDR_UE_SESSION_ID, upfTerminationRule.ueSessionId().toInt())
+                .build();
+        final PiAction.Builder actionBuilder = PiAction.builder();
+
+        List<PiActionParam> paramList = new ArrayList<>(Arrays.asList(
+                new PiActionParam(CTR_ID, upfTerminationRule.counterId()),
+                new PiActionParam(TC, upfTerminationRule.trafficClass())
+        ));
+
+        if (upfTerminationRule.isUplink()) {
+            tableId = FABRIC_INGRESS_SPGW_UPLINK_TERMINATIONS;
+            actionBuilder.withId(FABRIC_INGRESS_SPGW_APP_FWD);
+        } else {
+            tableId = FABRIC_INGRESS_SPGW_DOWNLINK_TERMINATIONS;
+            if (!upfTerminationRule.skipEgressCtr()) {
+                actionBuilder.withId(FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP);
+            } else {
+                actionBuilder.withId(FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP_DBUF);
+            }
+            paramList.add(new PiActionParam(TEID, upfTerminationRule.teid()));
+            paramList.add(new PiActionParam(QFI, upfTerminationRule.qfi()));
+        }
+
+        actionBuilder.withParameters(paramList);
+
+        return DefaultFlowRule.builder()
+                .forDevice(deviceId).fromApp(appId).makePermanent()
+                .forTable(tableId)
+                .withSelector(DefaultTrafficSelector.builder().matchPi(match).build())
+                .withTreatment(DefaultTrafficTreatment.builder().piTableAction(actionBuilder.build()).build())
+                .withPriority(priority)
+                .build();
     }
 
     /**

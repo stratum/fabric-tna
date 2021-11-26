@@ -226,31 +226,134 @@ public class FabricUpfTranslatorTest {
 
     @Test
     public void uplinkUeSessionToFabricEntryTest() {
-
+        FlowRule translatedRule;
+        FlowRule expectedRule = TestUpfConstants.FABRIC_UPLINK_UE_SESSION;
+        try {
+            translatedRule = upfTranslator.ueSessionToFabricEntry(TestUpfConstants.UPLINK_UE_SESSION,
+                    TestUpfConstants.DEVICE_ID,
+                    TestUpfConstants.APP_ID,
+                    TestUpfConstants.DEFAULT_PRIORITY);
+        } catch (UpfProgrammableException e) {
+            assertThat("Abstract uplink UE session should correctly " +
+                            "translate to Fabric UE session without error",
+                    false);
+            return;
+        }
+        assertThat(translatedRule, equalTo(expectedRule));
+        assertThat(translatedRule.treatment(), equalTo(expectedRule.treatment()));
     }
 
     @Test
     public void downlinkUeSessionToFabricEntryTest() {
-
+        FlowRule translatedRule;
+        FlowRule expectedRule = TestUpfConstants.FABRIC_DOWNLINK_UE_SESSION;
+        try {
+            translatedRule = upfTranslator.ueSessionToFabricEntry(TestUpfConstants.DOWNLINK_UE_SESSION,
+                    TestUpfConstants.DEVICE_ID,
+                    TestUpfConstants.APP_ID,
+                    TestUpfConstants.DEFAULT_PRIORITY);
+        } catch (UpfProgrammableException e) {
+            assertThat("Abstract downlink UE session should correctly " +
+                            "translate to Fabric UE session without error",
+                    false);
+            return;
+        }
+        assertThat(translatedRule, equalTo(expectedRule));
+        assertThat(translatedRule.treatment(), equalTo(expectedRule.treatment()));
     }
 
     @Test
     public void uplinkUpfTerminationToFabricEntryTest() {
-
+        FlowRule translatedRule;
+        FlowRule expectedRule = TestUpfConstants.FABRIC_UPLINK_UPF_TERMINATION;
+        try {
+            translatedRule = upfTranslator.upfTerminationToFabricEntry(TestUpfConstants.UPLINK_UPF_TERMINATION,
+                    TestUpfConstants.DEVICE_ID,
+                    TestUpfConstants.APP_ID,
+                    TestUpfConstants.DEFAULT_PRIORITY);
+        } catch (UpfProgrammableException e) {
+            assertThat("Abstract uplink UPF Termination should correctly " +
+                            "translate to Fabric UPF Termination without error",
+                    false);
+            return;
+        }
+        assertThat(translatedRule, equalTo(expectedRule));
+        assertThat(translatedRule.treatment(), equalTo(expectedRule.treatment()));
     }
 
     @Test
     public void uplinkUpfQosTerminationToFabricEntryTest() {
-
+        FlowRule translatedRule;
+        FlowRule expectedRule = TestUpfConstants.FABRIC_UPLINK_UPF_TERMINATION_QOS;
+        try {
+            translatedRule = upfTranslator.upfTerminationToFabricEntry(TestUpfConstants.UPLINK_UPF_TERMINATION_QOS,
+                    TestUpfConstants.DEVICE_ID,
+                    TestUpfConstants.APP_ID,
+                    TestUpfConstants.DEFAULT_PRIORITY);
+        } catch (UpfProgrammableException e) {
+            assertThat("Abstract uplink UPF Termination should correctly " +
+                            "translate to Fabric UPF Termination without error",
+                    false);
+            return;
+        }
+        assertThat(translatedRule, equalTo(expectedRule));
+        assertThat(translatedRule.treatment(), equalTo(expectedRule.treatment()));
     }
 
     @Test
     public void downlinkUpfTerminationToFabricEntryTest() {
+        FlowRule translatedRule;
+        FlowRule expectedRule = TestUpfConstants.FABRIC_DOWNLINK_UPF_TERMINATION;
+        try {
+            translatedRule = upfTranslator.upfTerminationToFabricEntry(TestUpfConstants.DOWNLINK_UPF_TERMINATION,
+                    TestUpfConstants.DEVICE_ID,
+                    TestUpfConstants.APP_ID,
+                    TestUpfConstants.DEFAULT_PRIORITY);
+        } catch (UpfProgrammableException e) {
+            assertThat("Abstract downlink UPF Termination should correctly " +
+                            "translate to Fabric UPF Termination without error",
+                    false);
+            return;
+        }
+        assertThat(translatedRule, equalTo(expectedRule));
+        assertThat(translatedRule.treatment(), equalTo(expectedRule.treatment()));
+    }
 
+    @Test
+    public void downlinkUpfTerminationToDbufToFabricEntryTest() {
+        FlowRule translatedRule;
+        FlowRule expectedRule = TestUpfConstants.FABRIC_DOWNLINK_UPF_TERMINATION_DBUF;
+        try {
+            translatedRule = upfTranslator.upfTerminationToFabricEntry(TestUpfConstants.DOWNLINK_UPF_TERMINATION_DBUF,
+                    TestUpfConstants.DEVICE_ID,
+                    TestUpfConstants.APP_ID,
+                    TestUpfConstants.DEFAULT_PRIORITY);
+        } catch (UpfProgrammableException e) {
+            assertThat("Abstract downlink UPF Termination to DBUF should correctly " +
+                            "translate to Fabric UPF Termination without error",
+                    false);
+            return;
+        }
+        assertThat(translatedRule, equalTo(expectedRule));
+        assertThat(translatedRule.treatment(), equalTo(expectedRule.treatment()));
     }
 
     @Test
     public void downlinkUpfQosTerminationToFabricEntryTest() {
-
+        FlowRule translatedRule;
+        FlowRule expectedRule = TestUpfConstants.FABRIC_DOWNLINK_UPF_TERMINATION_QOS;
+        try {
+            translatedRule = upfTranslator.upfTerminationToFabricEntry(TestUpfConstants.DOWNLINK_UPF_TERMINATION_QOS,
+                    TestUpfConstants.DEVICE_ID,
+                    TestUpfConstants.APP_ID,
+                    TestUpfConstants.DEFAULT_PRIORITY);
+        } catch (UpfProgrammableException e) {
+            assertThat("Abstract downlink UPF Termination should correctly " +
+                            "translate to Fabric UPF Termination without error",
+                    false);
+            return;
+        }
+        assertThat(translatedRule, equalTo(expectedRule));
+        assertThat(translatedRule.treatment(), equalTo(expectedRule.treatment()));
     }
 }
