@@ -4,6 +4,7 @@ package org.stratumproject.fabric.tna.behaviour.upf;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
+import org.apache.commons.lang3.tuple.Pair;
 import org.onlab.packet.Ip4Prefix;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
@@ -37,6 +38,7 @@ import org.stratumproject.fabric.tna.slicing.api.SliceId;
 import org.stratumproject.fabric.tna.slicing.api.SlicingService;
 import org.stratumproject.fabric.tna.slicing.api.TrafficClass;
 
+import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -308,18 +310,49 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     }
 
     @Override
-    public java.util.Collection<GtpTunnelPeer> getGtpTunnelPeers() throws UpfProgrammableException {
-        return null;
+    public Collection<GtpTunnelPeer> getGtpTunnelPeers() throws UpfProgrammableException {
+        if (!setupBehaviour("getGtpTunnelPeers()")) {
+            return null;
+        }
+
+        ArrayList<GtpTunnelPeer> gtpTunnelPeers = new ArrayList<>();
+        for (FlowRule flowRule : flowRuleService.getFlowEntries(deviceId)) {
+            if (upfTranslator.isFabricGtpTunnelPeer(flowRule)) {
+                gtpTunnelPeers.add(upfTranslator.fabricEntryToGtpTunnelPeer(flowRule));
+            }
+        }
+        return gtpTunnelPeers;
     }
 
     @Override
-    public java.util.Collection<UeSession> getUeSessions() throws UpfProgrammableException {
-        return null;
+    public Collection<UeSession> getUeSessions() throws UpfProgrammableException {
+        if (!setupBehaviour("getUeSessions()")) {
+            return null;
+        }
+
+        ArrayList<UeSession> ueSessions = new ArrayList<>();
+        for (FlowRule flowRule : flowRuleService.getFlowEntries(deviceId)) {
+            if (upfTranslator.isFabricUeSessionRule(flowRule)) {
+                ueSessions.add(upfTranslator.fabricEntryToUeSession(flowRule));
+            }
+        }
+        return ueSessions;
     }
 
     @Override
-    public java.util.Collection<UpfTerminationRule> getUpfTerminationRules() throws UpfProgrammableException {
-        return null;
+    public Collection<UpfTerminationRule> getUpfTerminationRules() throws UpfProgrammableException {
+        if (!setupBehaviour("getUpfTerminationRules()")) {
+            return null;
+        }
+
+        ArrayList<UpfTerminationRule> upfTerminationRules = new ArrayList<>();
+        for (FlowRule flowRule : flowRuleService.getFlowEntries(deviceId)) {
+            if (upfTranslator.isFabricUpfTerminationRule(flowRule)) {
+                upfTerminationRules.add(upfTranslator.fabricEntryToUpfTerminationRule(flowRule));
+            }
+        }
+
+        return upfTerminationRules;
     }
 
 
@@ -528,32 +561,96 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
     @Override
     public void addGtpTunnelPeer(GtpTunnelPeer peer) throws UpfProgrammableException {
+        if (!setupBehaviour("addGtpTunnelPeer()")) {
+            return;
+        }
 
+        Pair<FlowRule, FlowRule> fabricGtpTunnelPeers = upfTranslator.gtpTunnelPeerToFabricEntry(
+                peer, deviceId, appId, DEFAULT_PRIORITY);
+        log.info("Installing ingress and egress rules {}, {}",
+                fabricGtpTunnelPeers.getLeft().toString(), fabricGtpTunnelPeers.getRight().toString());
+        flowRuleService.applyFlowRules(fabricGtpTunnelPeers.getLeft(), fabricGtpTunnelPeers.getRight());
+        log.debug("GTP tunnel peer added with flowIDs ingress={}, egress={}",
+                fabricGtpTunnelPeers.getLeft().id().value(), fabricGtpTunnelPeers.getRight().id().value());
     }
 
     @Override
     public void removeGtpTunnelPeer(GtpTunnelPeer peer) throws UpfProgrammableException {
+        if (!setupBehaviour("removeGtpTunnelPeer()")) {
+            return;
+        }
 
+        PiCriterion match = PiCriterion.builder()
+                .matchExact(HDR_TUN_PEER_ID, peer.tunPeerId())
+                .build();
+
+        // TODO: make it atomic
+        removeEntry(match, FABRIC_INGRESS_SPGW_IG_TUNNEL_PEERS, false);
+        removeEntry(match, FABRIC_EGRESS_SPGW_EG_TUNNEL_PEERS, false);
     }
 
     @Override
     public void addUeSession(UeSession ueSession) throws UpfProgrammableException {
-
+        if (!setupBehaviour("addUeSession()")) {
+            return;
+        }
+        FlowRule fabricUeSession = upfTranslator.ueSessionToFabricEntry(ueSession, deviceId, appId, DEFAULT_PRIORITY);
+        log.info("Installing {}", ueSession.toString());
+        flowRuleService.applyFlowRules(fabricUeSession);
+        log.debug("UE session added with flowID {}", fabricUeSession.id().value());
     }
 
     @Override
     public void removeUeSession(UeSession ueSession) throws UpfProgrammableException {
+        if (!setupBehaviour("removeUeSession()")) {
+            return;
+        }
+        final PiCriterion match;
+        final PiTableId tableId;
 
+        if (ueSession.isUplink()) {
+            match = PiCriterion.builder()
+                    .matchExact(HDR_TEID, ueSession.teid().asArray())
+                    .matchExact(HDR_TUNNEL_IPV4_DST, ueSession.ipv4Address().toInt())
+                    .build();
+            tableId = FABRIC_INGRESS_SPGW_UPLINK_SESSIONS;
+        } else {
+            match = PiCriterion.builder()
+                    .matchExact(HDR_UE_ADDR, ueSession.ipv4Address().toInt())
+                    .build();
+            tableId = FABRIC_INGRESS_SPGW_DOWNLINK_SESSIONS;
+        }
+
+        log.info("Removing {}", ueSession.toString());
+        removeEntry(match, tableId, false);
     }
 
     @Override
     public void addUpfTerminationRule(UpfTerminationRule upfTerminationRule) throws UpfProgrammableException {
-
+        if (!setupBehaviour("addUpfTerminationRule()")) {
+            return;
+        }
+        FlowRule fabricUpfTermination = upfTranslator.upfTerminationToFabricEntry(
+                upfTerminationRule, deviceId, appId, DEFAULT_PRIORITY);
+        log.info("Installing {}", upfTerminationRule.toString());
+        flowRuleService.applyFlowRules(fabricUpfTermination);
+        log.debug("UPF termination added with flowID {}", fabricUpfTermination.id().value());
     }
 
     @Override
     public void removeUpfTerminationRule(UpfTerminationRule upfTerminationRule) throws UpfProgrammableException {
+        if (!setupBehaviour("removeUpfTerminationRule()")) {
+            return;
+        }
+        final PiCriterion match = PiCriterion.builder()
+                .matchExact(HDR_UE_SESSION_ID, upfTerminationRule.ueSessionId().toInt())
+                .build();
+        final PiTableId tableId = upfTerminationRule.isUplink() ?
+                FABRIC_INGRESS_SPGW_UPLINK_TERMINATIONS :
+                FABRIC_INGRESS_SPGW_DOWNLINK_TERMINATIONS;
 
+        log.info("Removing {}", upfTerminationRule.toString());
+        removeEntry(match, tableId, false);
     }
 
     @Override

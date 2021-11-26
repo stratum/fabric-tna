@@ -142,7 +142,7 @@ public class FabricUpfProgrammableTest {
         ConcurrentMap<DeviceId, URI> channelUris = TestUtils.getField(upfProgrammable, "CHANNEL_URIS");
         channelUris.put(TestUpfConstants.DEVICE_ID, new URI("grpc://localhost:1234?device_id=1"));
     }
-/*
+
     @Test
     public void testUplinkUeSession() throws Exception {
         assertTrue(upfProgrammable.getUeSessions().isEmpty());
@@ -153,7 +153,7 @@ public class FabricUpfProgrammableTest {
         for (var readUeSession : installedUeSessions) {
             assertThat(readUeSession, equalTo(expectedUeSession));
         }
-        upfProgrammable.removeUeSession(expectedUeSession.withoutActionParams());
+        upfProgrammable.removeUeSession(expectedUeSession);
         assertTrue(upfProgrammable.getUeSessions().isEmpty());
     }
 
@@ -167,7 +167,7 @@ public class FabricUpfProgrammableTest {
         for (var readUeSession : installedUeSessions) {
             assertThat(readUeSession, equalTo(expectedUeSession));
         }
-        upfProgrammable.removeUeSession(expectedUeSession.withoutActionParams());
+        upfProgrammable.removeUeSession(expectedUeSession);
         assertTrue(upfProgrammable.getUeSessions().isEmpty());
     }
 
@@ -181,7 +181,7 @@ public class FabricUpfProgrammableTest {
         for (var readUpfTermination : installedUpfTerminations) {
             assertThat(readUpfTermination, equalTo(expected));
         }
-        upfProgrammable.removeUpfTerminationRule(expected.withoutActionParams());
+        upfProgrammable.removeUpfTerminationRule(expected);
         assertTrue(upfProgrammable.getUpfTerminationRules().isEmpty());
     }
 
@@ -195,10 +195,10 @@ public class FabricUpfProgrammableTest {
         for (var readUpfTermination : installedUpfTerminations) {
             assertThat(readUpfTermination, equalTo(expected));
         }
-        upfProgrammable.removeUpfTerminationRule(expected.withoutActionParams());
+        upfProgrammable.removeUpfTerminationRule(expected);
         assertTrue(upfProgrammable.getUpfTerminationRules().isEmpty());
     }
-*/
+
     @Test
     public void testUplinkInterface() throws Exception {
         assertTrue(upfProgrammable.getInterfaces().isEmpty());

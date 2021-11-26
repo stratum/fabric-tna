@@ -59,6 +59,13 @@ public class FabricUpfTranslator {
             (byte) 2, TC_REAL_TIME,
             (byte) 3, TC_ELASTIC);
 
+
+    public boolean isFabricGtpTunnelPeer(FlowRule entry) {
+        // we return egress tunnel_peers table, because only this table
+        // contains all necessary information to create GtpTunnelPeer instance.
+        return entry.table().equals(FABRIC_EGRESS_SPGW_EG_TUNNEL_PEERS);
+    }
+
     /**
      * Returns true if the given table entry is a UE Session rule from the physical fabric pipeline, and
      * false otherwise.
