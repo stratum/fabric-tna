@@ -2,10 +2,9 @@
 // SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 package org.stratumproject.fabric.tna.behaviour.upf;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.junit.Test;
-import org.onosproject.net.behaviour.upf.UpfInterface;
-import org.onosproject.net.behaviour.upf.UpfProgrammableException;
-import org.onosproject.net.behaviour.upf.UpfTerminationRule;
+import org.onosproject.net.behaviour.upf.*;
 import org.onosproject.net.flow.FlowRule;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -17,17 +16,48 @@ public class FabricUpfTranslatorTest {
 
     @Test
     public void fabricEntryToGtpTunnelPeerTest() {
-
+        GtpTunnelPeer translated;
+        GtpTunnelPeer expected = TestUpfConstants.GTP_TUNNEL_PEER;
+        try {
+            translated = upfTranslator.fabricEntryToGtpTunnelPeer(TestUpfConstants.FABRIC_EGRESS_GTP_TUNNEL_PEER);
+        } catch (UpfProgrammableException e) {
+            assertThat("Fabric GTP tunnel peer should correctly translate to abstract GTP tunnel peer without error",
+                    false);
+            return;
+        }
+        assertThat(translated, equalTo(expected));
     }
 
     @Test
     public void fabricEntryToUplinkUeSessionTest() {
-
+        UeSession translated;
+        UeSession expected = TestUpfConstants.UPLINK_UE_SESSION;
+        try {
+            translated = upfTranslator.fabricEntryToUeSession(TestUpfConstants.FABRIC_UPLINK_UE_SESSION);
+        } catch (UpfProgrammableException e) {
+            assertThat("Fabric uplink UE session should correctly translate to abstract UE session without error",
+                    false);
+            return;
+        }
+        assertThat("Translated UE Session should be uplink.",
+                translated.isUplink());
+        assertThat(translated, equalTo(expected));
     }
 
     @Test
     public void fabricEntryToDownlinkUeSessionTest() {
-
+        UeSession translated;
+        UeSession expected = TestUpfConstants.DOWNLINK_UE_SESSION;
+        try {
+            translated = upfTranslator.fabricEntryToUeSession(TestUpfConstants.FABRIC_DOWNLINK_UE_SESSION);
+        } catch (UpfProgrammableException e) {
+            assertThat("Fabric uplink UE session should correctly translate to abstract UE session without error",
+                    false);
+            return;
+        }
+        assertThat("Translated UE Session should be downlink.",
+                !translated.isUplink());
+        assertThat(translated, equalTo(expected));
     }
 
     @Test
@@ -38,12 +68,14 @@ public class FabricUpfTranslatorTest {
             translatedUpfTerminationRule = upfTranslator
                     .fabricEntryToUpfTerminationRule(TestUpfConstants.FABRIC_UPLINK_UPF_TERMINATION);
         } catch (UpfProgrammableException e) {
-            assertThat("Fabric uplink interface should correctly translate to abstract interface without error",
+            assertThat("Fabric uplink UPF termination rule should correctly " +
+                            "translate to abstract UPF termination without error",
                     false);
             return;
         }
 
-        assertThat("Translated UPF Termination rule should be uplink.", translatedUpfTerminationRule.isUplink());
+        assertThat("Translated UPF Termination rule should be uplink.",
+                translatedUpfTerminationRule.isUplink());
         assertThat(translatedUpfTerminationRule, equalTo(expected));
     }
 
@@ -55,12 +87,14 @@ public class FabricUpfTranslatorTest {
             translatedUpfTerminationRule = upfTranslator
                     .fabricEntryToUpfTerminationRule(TestUpfConstants.FABRIC_UPLINK_UPF_TERMINATION_QOS);
         } catch (UpfProgrammableException e) {
-            assertThat("Fabric uplink interface should correctly translate to abstract interface without error",
+            assertThat("Fabric uplink UPF termination rule should correctly " +
+                            "translate to abstract UPF termination without error",
                     false);
             return;
         }
 
-        assertThat("Translated UPF Termination rule should be uplink.", translatedUpfTerminationRule.isUplink());
+        assertThat("Translated UPF Termination rule should be uplink.",
+                translatedUpfTerminationRule.isUplink());
         assertThat(translatedUpfTerminationRule, equalTo(expected));
     }
 
@@ -91,7 +125,8 @@ public class FabricUpfTranslatorTest {
             translatedUpfTerminationRule = upfTranslator
                     .fabricEntryToUpfTerminationRule(TestUpfConstants.FABRIC_DOWNLINK_UPF_TERMINATION);
         } catch (UpfProgrammableException e) {
-            assertThat("Fabric uplink interface should correctly translate to abstract interface without error",
+            assertThat("Fabric uplink UPF termination rule should correctly " +
+                            "translate to abstract UPF termination without error",
                     false);
             return;
         }
@@ -168,7 +203,25 @@ public class FabricUpfTranslatorTest {
 
     @Test
     public void gtpTunnelPeerToFabricEntryTest() {
-
+        Pair<FlowRule, FlowRule> translatedRule;
+        Pair<FlowRule, FlowRule> expected = Pair.of(
+                TestUpfConstants.FABRIC_INGRESS_GTP_TUNNEL_PEER,
+                TestUpfConstants.FABRIC_EGRESS_GTP_TUNNEL_PEER);
+        try {
+            translatedRule = upfTranslator.gtpTunnelPeerToFabricEntry(
+                    TestUpfConstants.GTP_TUNNEL_PEER,
+                    TestUpfConstants.DEVICE_ID,
+                    TestUpfConstants.APP_ID,
+                    TestUpfConstants.DEFAULT_PRIORITY);
+        } catch (UpfProgrammableException e) {
+            assertThat("Abstract GTP tunnel peer should correctly translate to Fabric flow rules without error",
+                    false);
+            return;
+        }
+        assertThat(translatedRule.getLeft(), equalTo(expected.getLeft()));
+        assertThat(translatedRule.getLeft().treatment(), equalTo(expected.getLeft().treatment()));
+        assertThat(translatedRule.getRight(), equalTo(expected.getRight()));
+        assertThat(translatedRule.getRight().treatment(), equalTo(expected.getRight().treatment()));
     }
 
     @Test

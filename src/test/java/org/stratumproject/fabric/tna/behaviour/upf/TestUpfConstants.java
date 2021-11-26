@@ -9,6 +9,7 @@ import org.onlab.util.ImmutableByteSequence;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.DefaultApplicationId;
 import org.onosproject.net.DeviceId;
+import org.onosproject.net.behaviour.upf.GtpTunnelPeer;
 import org.onosproject.net.behaviour.upf.UeSession;
 import org.onosproject.net.behaviour.upf.UpfInterface;
 import org.onosproject.net.behaviour.upf.UpfTerminationRule;
@@ -21,6 +22,7 @@ import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
 
 import java.util.Arrays;
+import java.util.concurrent.Flow;
 
 import static org.stratumproject.fabric.tna.behaviour.Constants.TC_BEST_EFFORT;
 import static org.stratumproject.fabric.tna.behaviour.Constants.TC_CONTROL;
@@ -74,17 +76,22 @@ public final class TestUpfConstants {
     public static final long COUNTER_BYTES = 12;
     public static final long COUNTER_PKTS = 15;
 
-//    public static final UeSession UPLINK_UE_SESSION = UeSession.builder()
-//            .withTeid(TEID_VALUE)
-//            .withIpv4Address(UE_ADDR)
-//            .build();
-//
-//    public static final UeSession DOWNLINK_UE_SESSION = UeSession.builder()
-//            .withIpv4Address(UE_ADDR)
-//            .withTeid(TEID_VALUE)
-//            .withQfi(DOWNLINK_QFI)
-//            .withGtpTunnelPeerId(ENB_GTP_TUNNEL_PEER)
-//            .build();
+    public static final GtpTunnelPeer GTP_TUNNEL_PEER = GtpTunnelPeer.builder()
+            .withTunnelPeerId(ENB_GTP_TUNNEL_PEER)
+            .withSrcAddr(S1U_ADDR)
+            .withDstAddr(ENB_ADDR)
+            .withSrcPort(TUNNEL_SPORT)
+            .build();
+
+    public static final UeSession UPLINK_UE_SESSION = UeSession.builder()
+            .withTeid(TEID_VALUE)
+            .withIpv4Address(S1U_ADDR)
+            .build();
+
+    public static final UeSession DOWNLINK_UE_SESSION = UeSession.builder()
+            .withIpv4Address(UE_ADDR)
+            .withGtpTunnelPeerId(ENB_GTP_TUNNEL_PEER)
+            .build();
 
     public static final UpfTerminationRule UPLINK_UPF_TERMINATION = UpfTerminationRule.builder()
             .withSliceId((short) DEFAULT_SLICE_ID)
@@ -124,38 +131,74 @@ public final class TestUpfConstants {
 
     public static final UpfInterface DOWNLINK_INTERFACE = UpfInterface.createUePoolFrom(UE_POOL);
 
-//    public static final FlowRule FABRIC_UPLINK_UE_SESSION = DefaultFlowRule.builder()
-//            .forDevice(DEVICE_ID).fromApp(APP_ID).makePermanent()
-//            .forTable(FABRIC_INGRESS_SPGW_UPLINK_SESSIONS)
-//            .withSelector(DefaultTrafficSelector.builder()
-//                                    .matchPi(PiCriterion.builder()
-//                                            .matchExact(HDR_TEID, TEID_VALUE.asArray())
-//                                            .matchExact(HDR_TUNNEL_IPV4_DST, S1U_ADDR.toInt())
-//                                            .build()).build())
-//            .withTreatment(DefaultTrafficTreatment.builder()
-//                    .piTableAction(PiAction.builder()
-//                            .withId(FABRIC_INGRESS_SPGW_SET_UPLINK_SESSION)
-//                            .build()).build())
-//            .withPriority(DEFAULT_PRIORITY)
-//            .build();
-//
-//    public static final FlowRule FABRIC_DOWNLINK_UE_SESSION = DefaultFlowRule.builder()
-//            .forDevice(DEVICE_ID).fromApp(APP_ID).makePermanent()
-//            .forTable(FABRIC_INGRESS_SPGW_DOWNLINK_SESSIONS)
-//            .withSelector(DefaultTrafficSelector.builder()
-//                    .matchPi(PiCriterion.builder()
-//                            .matchExact(HDR_UE_ADDR, UE_ADDR.toInt())
-//                            .build()).build())
-//            .withTreatment(DefaultTrafficTreatment.builder()
-//                    .piTableAction(
-//                            PiAction.builder()
-//                                    .withId(FABRIC_INGRESS_SPGW_SET_DOWNLINK_SESSION)
-//                                    .withParameters(Arrays.asList(
-//                                            new PiActionParam(TUN_PEER_ID, ENB_GTP_TUNNEL_PEER)
-//                                    ))
-//                                    .build()).build())
-//            .withPriority(DEFAULT_PRIORITY)
-//            .build();
+    public static final FlowRule FABRIC_INGRESS_GTP_TUNNEL_PEER = DefaultFlowRule.builder()
+            .forDevice(DEVICE_ID).fromApp(APP_ID).makePermanent()
+            .forTable(FABRIC_INGRESS_SPGW_IG_TUNNEL_PEERS)
+            .withSelector(DefaultTrafficSelector.builder()
+                    .matchPi(PiCriterion.builder()
+                            .matchExact(HDR_TUN_PEER_ID, ENB_GTP_TUNNEL_PEER)
+                            .build()).build())
+            .withTreatment(DefaultTrafficTreatment.builder()
+                    .piTableAction(
+                            PiAction.builder()
+                                    .withId(FABRIC_INGRESS_SPGW_SET_ROUTING_IPV4_DST)
+                                    .withParameter(new PiActionParam(TUN_DST_ADDR, ENB_ADDR.toInt()))
+                                    .build()).build())
+            .withPriority(DEFAULT_PRIORITY)
+            .build();
+
+    public static final FlowRule FABRIC_EGRESS_GTP_TUNNEL_PEER = DefaultFlowRule.builder()
+            .forDevice(DEVICE_ID).fromApp(APP_ID).makePermanent()
+            .forTable(FABRIC_EGRESS_SPGW_EG_TUNNEL_PEERS)
+            .withSelector(DefaultTrafficSelector.builder()
+                    .matchPi(PiCriterion.builder()
+                            .matchExact(HDR_TUN_PEER_ID, ENB_GTP_TUNNEL_PEER)
+                            .build()).build())
+            .withTreatment(DefaultTrafficTreatment.builder()
+                    .piTableAction(
+                            PiAction.builder()
+                                    .withId(FABRIC_EGRESS_SPGW_LOAD_TUNNEL_PARAMS)
+                                    .withParameters(Arrays.asList(
+                                            new PiActionParam(TUNNEL_SRC_ADDR, S1U_ADDR.toInt()),
+                                            new PiActionParam(TUNNEL_DST_ADDR, ENB_ADDR.toInt()),
+                                            new PiActionParam(TUNNEL_SRC_PORT, TUNNEL_SPORT)
+                                    ))
+                                    .build()).build())
+            .withPriority(DEFAULT_PRIORITY)
+            .build();
+
+    public static final FlowRule FABRIC_UPLINK_UE_SESSION = DefaultFlowRule.builder()
+            .forDevice(DEVICE_ID).fromApp(APP_ID).makePermanent()
+            .forTable(FABRIC_INGRESS_SPGW_UPLINK_SESSIONS)
+            .withSelector(DefaultTrafficSelector.builder()
+                                    .matchPi(PiCriterion.builder()
+                                            .matchExact(HDR_TEID, TEID_VALUE.asArray())
+                                            .matchExact(HDR_TUNNEL_IPV4_DST, S1U_ADDR.toInt())
+                                            .build()).build())
+            .withTreatment(DefaultTrafficTreatment.builder()
+                    .piTableAction(PiAction.builder()
+                            .withId(FABRIC_INGRESS_SPGW_SET_UPLINK_SESSION)
+                            .build()).build())
+            .withPriority(DEFAULT_PRIORITY)
+            .build();
+
+    public static final FlowRule FABRIC_DOWNLINK_UE_SESSION = DefaultFlowRule.builder()
+            .forDevice(DEVICE_ID).fromApp(APP_ID).makePermanent()
+            .forTable(FABRIC_INGRESS_SPGW_DOWNLINK_SESSIONS)
+            .withSelector(DefaultTrafficSelector.builder()
+                    .matchPi(PiCriterion.builder()
+                            .matchExact(HDR_UE_ADDR, UE_ADDR.toInt())
+                            .build()).build())
+            .withTreatment(DefaultTrafficTreatment.builder()
+                    .piTableAction(
+                            PiAction.builder()
+                                    .withId(FABRIC_INGRESS_SPGW_SET_DOWNLINK_SESSION)
+                                    .withParameters(Arrays.asList(
+                                            new PiActionParam(TUN_PEER_ID, ENB_GTP_TUNNEL_PEER)
+                                    ))
+                                    .build()).build())
+            .withPriority(DEFAULT_PRIORITY)
+            .build();
 
     public static final FlowRule FABRIC_UPLINK_UPF_TERMINATION = DefaultFlowRule.builder()
             .forDevice(DEVICE_ID).fromApp(APP_ID).makePermanent()

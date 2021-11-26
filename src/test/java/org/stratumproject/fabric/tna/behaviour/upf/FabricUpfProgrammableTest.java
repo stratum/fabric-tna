@@ -142,7 +142,7 @@ public class FabricUpfProgrammableTest {
         ConcurrentMap<DeviceId, URI> channelUris = TestUtils.getField(upfProgrammable, "CHANNEL_URIS");
         channelUris.put(TestUpfConstants.DEVICE_ID, new URI("grpc://localhost:1234?device_id=1"));
     }
-
+/*
     @Test
     public void testUplinkUeSession() throws Exception {
         assertTrue(upfProgrammable.getUeSessions().isEmpty());
@@ -198,7 +198,7 @@ public class FabricUpfProgrammableTest {
         upfProgrammable.removeUpfTerminationRule(expected.withoutActionParams());
         assertTrue(upfProgrammable.getUpfTerminationRules().isEmpty());
     }
-
+*/
     @Test
     public void testUplinkInterface() throws Exception {
         assertTrue(upfProgrammable.getInterfaces().isEmpty());

@@ -10,6 +10,8 @@ import org.onlab.packet.Ip4Prefix;
 import org.onlab.util.ImmutableByteSequence;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.net.DeviceId;
+import org.onosproject.net.behaviour.upf.GtpTunnelPeer;
+import org.onosproject.net.behaviour.upf.UeSession;
 import org.onosproject.net.behaviour.upf.UpfInterface;
 import org.onosproject.net.behaviour.upf.UpfProgrammableException;
 import org.onosproject.net.behaviour.upf.UpfTerminationRule;
@@ -26,6 +28,7 @@ import org.onosproject.net.pi.runtime.PiActionParam;
 import org.onosproject.net.pi.runtime.PiTableAction;
 
 import java.util.Arrays;
+import java.util.concurrent.Flow;
 
 import static java.lang.String.format;
 import static org.stratumproject.fabric.tna.behaviour.Constants.DEFAULT_SLICE_ID;
@@ -90,6 +93,75 @@ public class FabricUpfTranslator {
     }
 
     /**
+     * Translate a fabric.p4 interface table entry to a GtpTunnelPeer instance for easier handling.
+     *
+     * @param entry the fabric.p4 entry to translate, the method expects FlowRule from eg_tunnel_peers table.
+     * @return the corresponding GtpTunnelPeer
+     * @throws UpfProgrammableException if the entry cannot be translated
+     */
+    public GtpTunnelPeer fabricEntryToGtpTunnelPeer(FlowRule entry)
+            throws UpfProgrammableException {
+        var builder = GtpTunnelPeer.builder();
+
+        // verify input first
+        if (!entry.table().equals(FABRIC_EGRESS_SPGW_EG_TUNNEL_PEERS)) {
+            throw new UpfProgrammableException("The FlowRule for " + FABRIC_EGRESS_SPGW_EG_TUNNEL_PEERS.toString() +
+                    " expected, provided: " + entry);
+        }
+
+        // Translate ingress entry first
+        Pair<PiCriterion, PiTableAction> matchActionPair = FabricUpfTranslatorUtil.fabricEntryToPiPair(entry);
+        PiCriterion match = matchActionPair.getLeft();
+        PiAction action = (PiAction) matchActionPair.getRight();
+        builder.withTunnelPeerId(FabricUpfTranslatorUtil.getFieldInt(match, HDR_TUN_PEER_ID));
+
+        if (action.id() != FABRIC_EGRESS_SPGW_LOAD_TUNNEL_PARAMS) {
+            throw new UpfProgrammableException("Invalid action provided, cannot build GtpTunnelPeer instance: " +
+                    action.id().toString());
+        }
+
+        builder.withSrcAddr(FabricUpfTranslatorUtil.getParamAddress(action, TUNNEL_SRC_ADDR))
+                .withDstAddr(FabricUpfTranslatorUtil.getParamAddress(action, TUNNEL_DST_ADDR))
+                .withSrcPort((short) FabricUpfTranslatorUtil.getParamInt(action, TUNNEL_SRC_PORT));
+
+        return builder.build();
+    }
+
+    /**
+     * Translate a fabric.p4 interface table entry to a UeSession instance for easier handling.
+     *
+     * @param entry the fabric.p4 entry to translate
+     * @return the corresponding UeSession
+     * @throws UpfProgrammableException if the entry cannot be translated
+     */
+    public UeSession fabricEntryToUeSession(FlowRule entry)
+            throws UpfProgrammableException {
+        var builder = UeSession.builder();
+        Pair<PiCriterion, PiTableAction> matchActionPair = FabricUpfTranslatorUtil.fabricEntryToPiPair(entry);
+        PiCriterion match = matchActionPair.getLeft();
+        PiAction action = (PiAction) matchActionPair.getRight();
+
+        if (FabricUpfTranslatorUtil.fieldIsPresent(match, HDR_UE_ADDR)) {
+            // UE address is only present for downlink UE Session
+            builder.withIpv4Address(FabricUpfTranslatorUtil.getFieldAddress(match, HDR_UE_ADDR));
+        } else if (FabricUpfTranslatorUtil.fieldIsPresent(match, HDR_TEID)) {
+            // F-TEID is only present for uplink UE Session
+            builder.withIpv4Address(FabricUpfTranslatorUtil.getFieldAddress(match, HDR_TUNNEL_IPV4_DST))
+                    .withTeid(FabricUpfTranslatorUtil.getFieldValue(match, HDR_TEID));
+        } else {
+            throw new UpfProgrammableException("Read malformed PDR from dataplane!:" + entry);
+        }
+
+        PiActionId actionId = action.id();
+        if (actionId == FABRIC_INGRESS_SPGW_SET_DOWNLINK_SESSION) {
+            // action parameters for downlink session
+            builder.withGtpTunnelPeerId(FabricUpfTranslatorUtil.getParamInt(action, TUN_PEER_ID));
+        }
+
+        return builder.build();
+    }
+
+    /**
      * Translate a fabric.p4 interface table entry to a UpfTerminationRule instance for easier handling.
      *
      * @param entry the fabric.p4 entry to translate
@@ -151,6 +223,60 @@ public class FabricUpfTranslator {
         }
 
         return ifaceBuilder.build();
+    }
+
+    /**
+     * Translate a GtpTunnelPeer to two FlowRules to be inserted into the fabric.p4 pipeline.
+     *
+     * @param gtpTunnelPeer the GTP tunnel peer to be translated
+     * @param deviceId the ID of the device the FlowRule should be installed on
+     * @param appId the ID of the application that will insert the FlowRule
+     * @param priority the FlowRules' priority
+     * @return a pair of FlowRules translated from GTP tunnel peer
+     * @throws UpfProgrammableException if the interface cannot be translated
+     */
+    public Pair<FlowRule, FlowRule> gtpTunnelPeerToFabricEntry(GtpTunnelPeer gtpTunnelPeer, DeviceId deviceId,
+                                                               ApplicationId appId, int priority)
+            throws UpfProgrammableException {
+        FlowRule ingressEntry;
+        FlowRule egressEntry;
+
+        if (gtpTunnelPeer.src() == null || gtpTunnelPeer.dst() == null) {
+            throw new UpfProgrammableException(
+                    "Not all action parameters present when translating " +
+                            "intermediate GTP tunnel peer to physical representation!");
+        }
+
+        PiCriterion match = PiCriterion.builder()
+                .matchExact(HDR_TUN_PEER_ID, gtpTunnelPeer.tunPeerId())
+                .build();
+
+        FlowRule.Builder base = DefaultFlowRule.builder()
+                .forDevice(deviceId).fromApp(appId).makePermanent()
+                .withPriority(priority)
+                .withSelector(DefaultTrafficSelector.builder().matchPi(match).build());
+
+        PiAction ingressAction = PiAction.builder()
+                .withId(FABRIC_INGRESS_SPGW_SET_ROUTING_IPV4_DST)
+                .withParameter(new PiActionParam(TUN_DST_ADDR, gtpTunnelPeer.dst().toInt()))
+                .build();
+        ingressEntry = base.forTable(FABRIC_INGRESS_SPGW_IG_TUNNEL_PEERS)
+                .withTreatment(DefaultTrafficTreatment.builder().piTableAction(ingressAction).build())
+                .build();
+
+        PiAction egressAction = PiAction.builder()
+                .withId(FABRIC_EGRESS_SPGW_LOAD_TUNNEL_PARAMS)
+                .withParameters(Arrays.asList(
+                        new PiActionParam(TUNNEL_SRC_ADDR, gtpTunnelPeer.src().toInt()),
+                        new PiActionParam(TUNNEL_DST_ADDR, gtpTunnelPeer.dst().toInt()),
+                        new PiActionParam(TUNNEL_SRC_PORT, gtpTunnelPeer.srcPort())
+                ))
+                .build();
+        egressEntry = base.forTable(FABRIC_EGRESS_SPGW_EG_TUNNEL_PEERS)
+                .withTreatment(DefaultTrafficTreatment.builder().piTableAction(egressAction).build())
+                .build();
+
+        return Pair.of(ingressEntry, egressEntry);
     }
 
     /**
