@@ -318,7 +318,10 @@ header bridged_metadata_t {
 #ifdef V1MODEL
 // Use padding to make the header multiple of 8 bits,
 // condition required by p4c when compiling for bmv2.
-    bit<1>                 _pad;
+    bit<1>                 _pad0;
+#ifdef WITH_SPGW
+    bit<5>                 _pad1;
+#endif // WITH_SPGW
 #endif
 }
 

@@ -22,6 +22,18 @@ control Hasher(inout ingress_headers_t hdr,
             max
         );
 
+#ifdef WITH_SPGW
+        // GTP-aware ECMP for downlink packets encapped by this switch.
+        if (fabric_md.bridged.spgw.needs_gtpu_encap) {
+            hash(
+                fabric_md.ecmp_hash,
+                HashAlgorithm.crc32,
+                base,
+                {fabric_md.bridged.spgw.gtpu_tunnel_sip, fabric_md.bridged.spgw.gtpu_tunnel_dip, fabric_md.bridged.spgw.gtpu_teid},
+                max
+            );
+        } else
+#endif // WITH_SPGW
         // GTP-aware ECMP for passthrough GTP packets.
         if (hdr.gtpu.isValid()){
             hash(

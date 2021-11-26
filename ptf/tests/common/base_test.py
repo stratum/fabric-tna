@@ -44,10 +44,14 @@ def stringify(n, length):
     return n.to_bytes(length, byteorder="big")
 
 
-def is_bmv2():
+def is_v1model():
     # using parameter 'pltfm' to get information if running for bmv2.
     _is_bmv2 = testutils.test_param_get("pltfm")
     return _is_bmv2 == "bmv2"
+
+
+def is_tna():
+    return not is_v1model()
 
 
 def ipv4_to_binary(addr):
@@ -367,7 +371,7 @@ class P4RuntimeTest(BaseTest):
         else:
             pkt_in_msg = self.get_packet_in(timeout=timeout)
             rx_in_port_ = pkt_in_msg.metadata[0].value
-            if is_bmv2():
+            if is_v1model():
                 pkt_in_metadata = get_controller_packet_metadata(
                     self.p4info, meta_type="packet_in", name="ingress_port"
                 )
