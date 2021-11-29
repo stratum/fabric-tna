@@ -20,6 +20,13 @@ parser FabricParser (packet_in packet,
         fabric_md.ingress.egress_port_set = false;
         fabric_md.ingress.punt_to_cpu = false;
         fabric_md.ingress.bridged.base.ip_eth_type = 0;
+#ifdef WITH_INT
+        // If using the designed structure to emulate using clone3 and recirculate,
+        // this initialization must not be performed.
+        // How? a possible solution could be to put it in another state.
+        fabric_md.ingress.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UNKNOWN;
+        fabric_md.ingress.bridged.int_bmd.wip_type = INT_IS_NOT_WIP;
+#endif // WITH_INT
         fabric_md.ingress.bridged.base.encap_presence = EncapPresence.NONE;
 
         transition check_ethernet;

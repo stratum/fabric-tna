@@ -22,6 +22,8 @@ typedef bit<16> ReplicationId_t;    // Replication id
 
 typedef bit<1> BOOL;
 
+const PortId_t BMV2_DROP_PORT = 511;
+
 #include "shared/define.p4" // Must be included AFTER defining the above typedefs.
 
 #endif // __DEFINE_V1MODEL__

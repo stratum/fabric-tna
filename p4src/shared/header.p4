@@ -322,6 +322,9 @@ header bridged_metadata_t {
 #ifdef WITH_SPGW
     bit<5>                 _pad1;
 #endif // WITH_SPGW
+#ifdef WITH_INT
+    bit<5>                 _pad2;
+#endif // WITH_INT
 #endif
 }
 

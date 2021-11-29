@@ -52,6 +52,9 @@ control FabricIngress (inout v1model_header_t hdr,
 #ifdef WITH_SPGW
     SpgwIngress() spgw;
 #endif // WITH_SPGW
+#ifdef WITH_INT
+    IntIngress() int_ingress;
+#endif // WITH_INT
 
     apply {
         // Override default egress port 0 which has an undefined behavior.
@@ -89,7 +92,7 @@ control FabricIngress (inout v1model_header_t hdr,
         qos.apply(fabric_md.ingress, standard_md);
 #ifdef WITH_INT
         // Should always apply last to guarantee generation of drop reports.
-        int_ingress.apply(hdr, fabric_md, standard_md);
+        int_ingress.apply(hdr.ingress, fabric_md.ingress, standard_md);
 #endif // WITH_INT
 
         // Emulating TNA behavior through bridged metadata.
@@ -108,6 +111,9 @@ control FabricEgress (inout v1model_header_t hdr,
 #ifdef WITH_SPGW
     SpgwEgress() spgw;
 #endif // WITH_SPGW
+#ifdef WITH_INT
+    IntEgress() int_egress;
+#endif // WITH_INT
 
     apply {
         // Setting other fields in egress metadata, related to TNA's FabricEgressParser.
@@ -115,12 +121,17 @@ control FabricEgress (inout v1model_header_t hdr,
         fabric_md.egress.pkt_length = (bit<16>) standard_md.packet_length;
 
 #ifdef WITH_INT
-        // bmv2 specific code.
         // Emulate mirroring and TNA Egress Parser by cloning the packet and recirculating it.
+        const bit<32> E2E_CLONE_SESSION_ID = 0x1f;
 
-        clone3(standard_md, fabric_md);
+        if(fabric_md.int_mirror_type == FabricMirrorType_t.INT_REPORT) {
+            clone3(CloneType.E2E, E2E_CLONE_SESSION_ID,{standard_md, fabric_md});
+            // do not exit. Let the Int egress control do its work.
+        }
+
         if (IS_E2E_CLONE(standard_md)){
-            recirculate(standard_md, fabric_md);
+            recirculate({standard_md, fabric_md});
+            exit;
         }
 #endif // WITH_INT
 
@@ -136,7 +147,7 @@ control FabricEgress (inout v1model_header_t hdr,
         spgw.apply(hdr.ingress, fabric_md);
 #endif // WITH_SPGW
 #ifdef WITH_INT
-        int_egress.apply(hdr, fabric_md, standard_md);
+        int_egress.apply(hdr.egress, fabric_md, standard_md);
 #endif // WITH_INT
         dscp_rewriter.apply(fabric_md, standard_md, hdr.ingress);
 

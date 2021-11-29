@@ -20,7 +20,8 @@ struct fabric_v1model_metadata_t {
     bool                      skip_egress;
     bool                      do_spgw_uplink_recirc;
     // Mirror flag for INT
-    bool                      int_mirror_type;
+    bit<3>                    int_mirror_type;
+    bool                      int_deflect_on_drop;
 
     fabric_ingress_metadata_t ingress;
     fabric_egress_metadata_t  egress;
