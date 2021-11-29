@@ -24,8 +24,8 @@ control SpgwIngress(
     // fabric_v1model.ingress is then updated in apply{} section, to to maintain all the edits made to fabric_md.
     fabric_ingress_metadata_t fabric_md = fabric_v1model.ingress;
 
-    bool is_pdr_hit = false;
-    far_id_t md_far_id = 0;
+    bool upf_termination_hit = false;
+    ue_session_id_t ue_session_id = 0;
 
     @hidden
     action _gtpu_decap() {
@@ -92,132 +92,151 @@ control SpgwIngress(
         const size = NUM_SPGW_INTERFACES;
     }
 
-    //=======================//
-    //===== PDR Tables ======//
-    //=======================//
-
-    action downlink_pdr_drop() {
+    //===============================//
+    //===== UE Sessions Tables ======//
+    //===============================//
+    action uplink_session_drop() {
         mark_to_drop(standard_md);
         fabric_md.skip_forwarding = true;
         fabric_md.skip_next = true;
     }
 
-    action uplink_pdr_drop() {
+    action downlink_session_drop() {
         mark_to_drop(standard_md);
         fabric_md.skip_forwarding = true;
         fabric_md.skip_next = true;
     }
 
-    action load_pdr(pdr_ctr_id_t ctr_id, far_id_t far_id, tc_t tc) {
-        md_far_id = far_id;
-        fabric_md.bridged.spgw.pdr_ctr_id = ctr_id;
-        fabric_md.spgw_tc = tc;
-        is_pdr_hit = true;
+    action set_downlink_session(tun_peer_id_t tun_peer_id) {
+        // Set UE IP address.
+        ue_session_id = fabric_md.routing_ipv4_dst;
+        fabric_md.bridged.spgw.tun_peer_id = tun_peer_id;
     }
 
-    action load_pdr_decap(pdr_ctr_id_t ctr_id, far_id_t far_id, tc_t tc) {
-        load_pdr(ctr_id, far_id, tc);
+    action set_uplink_session() {
+        // Set UE IP address.
+        ue_session_id = fabric_md.lkp.ipv4_src;
+        // implicit decap
         _gtpu_decap();
     }
 
-    // These two tables scale well and cover the average case PDR
-    table downlink_pdrs {
+    table downlink_sessions {
         key = {
             fabric_md.routing_ipv4_dst : exact @name("ue_addr");
         }
         actions = {
-            load_pdr;
-            @defaultonly downlink_pdr_drop;
+            set_downlink_session;
+            @defaultonly downlink_session_drop;
         }
-        size = NUM_DOWNLINK_PDRS;
-        const default_action = downlink_pdr_drop();
+        size = NUM_UES;
+        const default_action = downlink_session_drop();
     }
 
-    table uplink_pdrs {
+    table uplink_sessions {
         key = {
             hdr.ipv4.dst_addr : exact @name("tunnel_ipv4_dst");
             hdr.gtpu.teid     : exact @name("teid");
         }
         actions = {
-            load_pdr_decap;
-            @defaultonly uplink_pdr_drop;
+            set_uplink_session;
+            @defaultonly uplink_session_drop;
         }
-        size = NUM_UPLINK_PDRS;
-        const default_action = uplink_pdr_drop();
+        size = NUM_UPLINK_SESSIONS;
+        const default_action = uplink_session_drop();
     }
 
-    //=======================//
-    //===== FAR Tables ======//
-    //=======================//
-
-    action far_drop() {
+    //=============================//
+    //===== UPF Terminations ======//
+    //=============================//
+    action downlink_drop() {
         mark_to_drop(standard_md);
         fabric_md.skip_forwarding = true;
         fabric_md.skip_next = true;
-        fabric_md.bridged.spgw.needs_gtpu_encap = false;
-        fabric_md.bridged.spgw.skip_egress_pdr_ctr = false;
     }
 
-    action load_normal_far(BOOL drop) {
-        fabric_md.skip_forwarding =(bool) drop;
-        fabric_md.skip_next =(bool) drop;
-        fabric_md.bridged.spgw.needs_gtpu_encap = false;
-        fabric_md.bridged.spgw.skip_egress_pdr_ctr = false;
-        // FIXME: set INT drop reason if drop
+    action uplink_drop() {
+        mark_to_drop(standard_md);
+        fabric_md.skip_forwarding = true;
+        fabric_md.skip_next = true;
     }
 
-    // A commom part that being used for load_tunnel_far and load_dbuf_far
-    @hidden
-    action load_common_far(BOOL         drop,
-                           l4_port_t    tunnel_src_port,
-                           ipv4_addr_t  tunnel_src_addr,
-                           ipv4_addr_t  tunnel_dst_addr,
-                           teid_t       teid) {
-        fabric_md.skip_forwarding =(bool) drop;
-        fabric_md.skip_next =(bool) drop;
-        // GTP tunnel attributes
+    action app_fwd(pdr_ctr_id_t ctr_id,
+                   tc_t tc) {
+        fabric_md.bridged.spgw.pdr_ctr_id = ctr_id;
+        fabric_md.spgw_tc = tc;
+        upf_termination_hit = true;
+    }
+
+    action downlink_fwd_encap(pdr_ctr_id_t ctr_id,
+                              tc_t         tc,
+                              teid_t       teid,
+                              // QFI should always equal 0 for 4G flows
+                              bit<6>       qfi) {
+        app_fwd(ctr_id, tc);
         fabric_md.bridged.spgw.needs_gtpu_encap = true;
-        fabric_md.bridged.spgw.gtpu_teid = teid;
-        fabric_md.bridged.spgw.gtpu_tunnel_sport = tunnel_src_port;
-        fabric_md.bridged.spgw.gtpu_tunnel_sip = tunnel_src_addr;
-        fabric_md.bridged.spgw.gtpu_tunnel_dip = tunnel_dst_addr;
-        fabric_md.routing_ipv4_dst = tunnel_dst_addr;
-    }
-
-    action load_tunnel_far(BOOL         drop,
-                           l4_port_t    tunnel_src_port,
-                           ipv4_addr_t  tunnel_src_addr,
-                           ipv4_addr_t  tunnel_dst_addr,
-                           teid_t       teid) {
-        load_common_far(drop, tunnel_src_port, tunnel_src_addr,
-                        tunnel_dst_addr, teid);
         fabric_md.bridged.spgw.skip_egress_pdr_ctr = false;
+        fabric_md.bridged.spgw.teid = teid;
+        fabric_md.bridged.spgw.qfi = qfi;
     }
 
-    action load_dbuf_far(BOOL           drop,
-                         l4_port_t      tunnel_src_port,
-                         ipv4_addr_t    tunnel_src_addr,
-                         ipv4_addr_t    tunnel_dst_addr,
-                         teid_t         teid) {
-        load_common_far(drop, tunnel_src_port, tunnel_src_addr,
-                        tunnel_dst_addr, teid);
+    action downlink_fwd_encap_dbuf(pdr_ctr_id_t ctr_id,
+                                   tc_t         tc,
+                                   teid_t       teid,
+                                   // QFI should always equal 0 for 4G flows
+                                   bit<6>       qfi) {
+        app_fwd(ctr_id, tc);
+        fabric_md.bridged.spgw.needs_gtpu_encap = true;
         fabric_md.bridged.spgw.skip_egress_pdr_ctr = true;
+        fabric_md.bridged.spgw.teid = teid;
+        fabric_md.bridged.spgw.qfi = qfi;
     }
 
-    table fars {
+    table uplink_terminations {
         key = {
-            md_far_id : exact @name("far_id");
+            ue_session_id             : exact @name("ue_session_id");
+        }
+
+        actions = {
+            app_fwd;
+            uplink_drop;
+        }
+        const default_action = uplink_drop();
+        const size = NUM_UPF_TERMINATIONS;
+    }
+
+    table downlink_terminations {
+        key = {
+            ue_session_id             : exact @name("ue_session_id");
         }
         actions = {
-            load_normal_far;
-            load_tunnel_far;
-            load_dbuf_far;
-            @defaultonly far_drop;
+            downlink_fwd_encap;
+            downlink_fwd_encap_dbuf;
+            downlink_drop;
         }
-        const default_action = far_drop();
-        size = NUM_FARS;
+        const default_action = downlink_drop();
+        const size = NUM_UPF_TERMINATIONS;
     }
 
+    //=================================//
+    //===== Ingress Tunnel Peers ======//
+    //=================================//
+
+    action set_routing_ipv4_dst(ipv4_addr_t tun_dst_addr) {
+        fabric_md.routing_ipv4_dst = tun_dst_addr;
+    }
+
+    table ig_tunnel_peers {
+        key = {
+            fabric_md.bridged.spgw.tun_peer_id : exact @name("tun_peer_id");
+        }
+
+        actions = {
+            set_routing_ipv4_dst;
+            nop;
+        }
+        const default_action = nop();
+        const size = MAX_GTP_TUNNEL_PEERS;
+    }
 
     //=================================//
     //===== Uplink Recirculation ======//
@@ -275,15 +294,25 @@ control SpgwIngress(
             switch(interfaces.apply().action_run) {
                 iface_access: {
                     if (fabric_md.bridged.base.encap_presence != EncapPresence.NONE) {
-                        if (uplink_pdrs.apply().hit) {
+                        if (uplink_sessions.apply().hit) {
+                            uplink_terminations.apply();
                             uplink_recirc_rules.apply();
                         }
                     }
                 }
-                iface_core: { downlink_pdrs.apply(); }
-                iface_dbuf: { downlink_pdrs.apply(); }
+                iface_core: {
+                    if (downlink_sessions.apply().hit) {
+                        downlink_terminations.apply();
+                    }
+                }
+                iface_dbuf: {
+                    if (downlink_sessions.apply().hit) {
+                        downlink_terminations.apply();
+                    }
+                }
             }
-            if (is_pdr_hit) {
+            ig_tunnel_peers.apply();
+            if (upf_termination_hit) {
                 // NOTE We should not update this counter for packets coming
                 // **from** dbuf (iface_dbuf), since we already updated it when
                 // first sending the same packets **to** dbuf (iface_core).
@@ -294,7 +323,6 @@ control SpgwIngress(
                 // mostly in enterprise settings where we are not billing users,
                 // the effects of such inaccuracy should be negligible.
                 pdr_counter.count((bit<32>)fabric_md.bridged.spgw.pdr_ctr_id);
-                fars.apply();
             }
             // Nothing to be done immediately for forwarding or encapsulation.
             // Forwarding is done by other parts of the ingress, and
@@ -317,6 +345,30 @@ control SpgwEgress(
     counter(MAX_PDR_COUNTERS, CounterType.packets_and_bytes) pdr_counter;
     fabric_egress_metadata_t fabric_md = fabric_v1model.egress;
 
+    //=========================//
+    //===== Tunnel Peers ======//
+    //=========================//
+
+    action load_tunnel_params(l4_port_t    tunnel_src_port,
+                              ipv4_addr_t  tunnel_src_addr,
+                              ipv4_addr_t  tunnel_dst_addr) {
+        hdr.ipv4.src_addr = tunnel_src_addr;
+        hdr.ipv4.dst_addr = tunnel_dst_addr;
+        hdr.udp.sport = tunnel_src_port;
+    }
+
+    table eg_tunnel_peers {
+        key = {
+            fabric_md.bridged.spgw.tun_peer_id : exact @name("tun_peer_id");
+        }
+        actions = {
+            load_tunnel_params;
+            nop;
+        }
+        const default_action = nop();
+        const size = MAX_GTP_TUNNEL_PEERS;
+    }
+
     @hidden
     action _encap_initialize() {
         /** hdr.ipv4 is now outer_ipv4 **/
@@ -331,10 +383,10 @@ control SpgwEgress(
         hdr.ipv4.ttl               = DEFAULT_IPV4_TTL;
         hdr.ipv4.protocol          = PROTO_UDP;
         // hdr.outer_ipv4.hdr_checksum   = update later
-        hdr.ipv4.src_addr          = fabric_md.bridged.spgw.gtpu_tunnel_sip;
-        hdr.ipv4.dst_addr          = fabric_md.bridged.spgw.gtpu_tunnel_dip;
+        // hdr.ipv4.src_addr       = update earlier
+        // hdr.ipv4.dst_addr       = update earlier
         /** hdr.udp is now outer_udp **/
-        hdr.udp.sport              = fabric_md.bridged.spgw.gtpu_tunnel_sport;
+        // hdr.udp.sport           = update earlier
         hdr.udp.dport              = GTPU_UDP_PORT;
         // hdr.udp.len             = update later
         // hdr.udp.checksum        = update later
@@ -347,7 +399,7 @@ control SpgwEgress(
         hdr.gtpu.npdu_flag         = 0;
         hdr.gtpu.msgtype           = GTPU_GPDU;
         // hdr.gtpu.msglen         = update later
-        hdr.gtpu.teid              = fabric_md.bridged.spgw.gtpu_teid;
+        hdr.gtpu.teid              = fabric_md.bridged.spgw.teid;
         /** gtpu_options **/
         hdr.gtpu_options.seq_num   = 0;
         hdr.gtpu_options.n_pdu_num = 0;
@@ -386,8 +438,7 @@ control SpgwEgress(
 
     // Do GTP-U encap with PDU Session Container extension for 5G NG-RAN with
     // configurable QFI.
-    // TODO: allow setting different QFIs in ingress
-    action gtpu_with_psc(bit<6> qfi) {
+    action gtpu_with_psc() {
         // Need to set valid before assign any value, in bmv2.
         hdr.gtpu_options.setValid();
         hdr.gtpu_ext_psc.setValid();
@@ -401,7 +452,7 @@ control SpgwEgress(
         hdr.gtpu.msglen = GTPU_OPTIONS_HDR_BYTES + GTPU_EXT_PSC_HDR_BYTES
                 + hdr.inner_ipv4.total_len;
         hdr.gtpu.ex_flag = 1;
-        hdr.gtpu_ext_psc.qfi = qfi;
+        hdr.gtpu_ext_psc.qfi = fabric_md.bridged.spgw.qfi;
     }
 
     // By default, do regular GTP-U encap. Allow the control plane to enable
@@ -433,8 +484,8 @@ control SpgwEgress(
                     hdr.inner_icmp = hdr.icmp;
                     hdr.icmp.setInvalid();
                 }
-
                 gtpu_encap.apply();
+                eg_tunnel_peers.apply();
             }
             if (!fabric_md.bridged.spgw.skip_egress_pdr_ctr) {
                 pdr_counter.count((bit<32>)fabric_md.bridged.spgw.pdr_ctr_id);

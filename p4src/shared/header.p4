@@ -319,7 +319,7 @@ header bridged_metadata_t {
 // condition required by p4c when compiling for bmv2.
     bit<1>                 _pad0;
 #ifdef WITH_SPGW
-    bit<5>                 _pad1;
+    bit<7>                 _pad1;
 #endif // WITH_SPGW
 #endif
 }
