@@ -144,7 +144,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
             try {
                 Set<TrafficClass> tcs = slicingService.getTrafficClasses(SliceId.DEFAULT);
                 Arrays.stream(TrafficClass.values()).forEach(tc -> {
-                    if(tcs.contains(tc) || tc.equals(TrafficClass.BEST_EFFORT) ||
+                    if (tcs.contains(tc) || tc.equals(TrafficClass.BEST_EFFORT) ||
                             tc.equals(TrafficClass.SYSTEM)) {
                         return;
                     }
