@@ -45,6 +45,7 @@ import org.stratumproject.fabric.tna.slicing.api.TrafficClass;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -142,15 +143,13 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
             // Default slice and best effort TC will be created by SlicingService by default
             try {
                 Set<TrafficClass> tcs = slicingService.getTrafficClasses(SliceId.DEFAULT);
-                if (!tcs.contains(TrafficClass.CONTROL)) {
-                    slicingService.addTrafficClass(SliceId.DEFAULT, TrafficClass.CONTROL);
-                }
-                if (!tcs.contains(TrafficClass.REAL_TIME)) {
-                    slicingService.addTrafficClass(SliceId.DEFAULT, TrafficClass.REAL_TIME);
-                }
-                if (!tcs.contains(TrafficClass.ELASTIC)) {
-                    slicingService.addTrafficClass(SliceId.DEFAULT, TrafficClass.ELASTIC);
-                }
+                Arrays.stream(TrafficClass.values()).forEach(tc -> {
+                    if(tcs.contains(tc) || tc.equals(TrafficClass.BEST_EFFORT) ||
+                            tc.equals(TrafficClass.SYSTEM)) {
+                        return;
+                    }
+                    slicingService.addTrafficClass(SliceId.DEFAULT, tc);
+                });
             } catch (SlicingException e) {
                 log.error("Exception while configuring traffic class for Mobile Slice: {}", e.getMessage());
                 return false;
