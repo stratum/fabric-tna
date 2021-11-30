@@ -158,7 +158,7 @@ public class FabricUpfTranslator {
             builder.withIpv4Address(FabricUpfTranslatorUtil.getFieldAddress(match, HDR_TUNNEL_IPV4_DST))
                     .withTeid(FabricUpfTranslatorUtil.getFieldValue(match, HDR_TEID));
         } else {
-            throw new UpfProgrammableException("Read malformed PDR from dataplane!:" + entry);
+            throw new UpfProgrammableException("Read malformed UE Session from dataplane!:" + entry);
         }
 
         PiActionId actionId = action.id();

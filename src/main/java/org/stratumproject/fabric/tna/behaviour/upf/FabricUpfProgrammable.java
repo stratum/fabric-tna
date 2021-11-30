@@ -218,9 +218,9 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         long ingressCounterSize = 0;
         long egressCounterSize = 0;
         for (PiCounterModel piCounter : pipeconf.pipelineModel().counters()) {
-            if (piCounter.id().equals(FABRIC_INGRESS_SPGW_PDR_COUNTER)) {
+            if (piCounter.id().equals(FABRIC_INGRESS_SPGW_UPF_COUNTER)) {
                 ingressCounterSize = piCounter.size();
-            } else if (piCounter.id().equals(FABRIC_EGRESS_SPGW_PDR_COUNTER)) {
+            } else if (piCounter.id().equals(FABRIC_EGRESS_SPGW_UPF_COUNTER)) {
                 egressCounterSize = piCounter.size();
             }
         }
@@ -443,7 +443,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
             counterSize = Math.min(maxCounterId, counterSize);
         }
 
-        // Prepare PdrStats object builders, one for each counter ID currently in use
+        // Prepare UpfCounter object builders, one for each counter ID currently in use
         Map<Integer, UpfCounter.Builder> upfCounterBuilders = Maps.newHashMap();
         for (int cellId = 0; cellId < counterSize; cellId++) {
             upfCounterBuilders.put(cellId, UpfCounter.builder().withCellId(cellId));
@@ -451,8 +451,8 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
         // Generate the counter cell IDs.
         Set<PiCounterId> counterIds = ImmutableSet.of(
-                FABRIC_INGRESS_SPGW_PDR_COUNTER,
-                FABRIC_EGRESS_SPGW_PDR_COUNTER
+                FABRIC_INGRESS_SPGW_UPF_COUNTER,
+                FABRIC_EGRESS_SPGW_UPF_COUNTER
         );
 
         // Query the device.
@@ -476,10 +476,10 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                 return;
             }
             UpfCounter.Builder statsBuilder = upfCounterBuilders.get((int) counterCell.cellId().index());
-            if (counterCell.cellId().counterId().equals(FABRIC_INGRESS_SPGW_PDR_COUNTER)) {
+            if (counterCell.cellId().counterId().equals(FABRIC_INGRESS_SPGW_UPF_COUNTER)) {
                 statsBuilder.setIngress(counterCell.data().packets(),
                         counterCell.data().bytes());
-            } else if (counterCell.cellId().counterId().equals(FABRIC_EGRESS_SPGW_PDR_COUNTER)) {
+            } else if (counterCell.cellId().counterId().equals(FABRIC_EGRESS_SPGW_UPF_COUNTER)) {
                 statsBuilder.setEgress(counterCell.data().packets(),
                         counterCell.data().bytes());
             } else {
@@ -524,7 +524,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
     public UpfCounter readCounter(int cellId) throws UpfProgrammableException {
         if (cellId >= upfCounterSize || cellId < 0) {
-            throw new UpfProgrammableException("Requested PDR counter cell index is out of bounds.",
+            throw new UpfProgrammableException("Requested UPF counter cell index is out of bounds.",
                     UpfProgrammableException.Type.ENTITY_OUT_OF_RANGE);
         }
         UpfCounter.Builder stats = UpfCounter.builder().withCellId(cellId);
@@ -532,9 +532,9 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         // Make list of cell handles we want to read.
         List<PiCounterCellHandle> counterCellHandles = List.of(
                 PiCounterCellHandle.of(deviceId,
-                        PiCounterCellId.ofIndirect(FABRIC_INGRESS_SPGW_PDR_COUNTER, cellId)),
+                        PiCounterCellId.ofIndirect(FABRIC_INGRESS_SPGW_UPF_COUNTER, cellId)),
                 PiCounterCellHandle.of(deviceId,
-                        PiCounterCellId.ofIndirect(FABRIC_EGRESS_SPGW_PDR_COUNTER, cellId)));
+                        PiCounterCellId.ofIndirect(FABRIC_EGRESS_SPGW_UPF_COUNTER, cellId)));
 
         // Query the device.
         Collection<PiCounterCell> counterEntryResponse = client.read(
@@ -552,9 +552,9 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                 log.warn("Unrecognized counter index {}, skipping", counterCell);
                 return;
             }
-            if (counterCell.cellId().counterId().equals(FABRIC_INGRESS_SPGW_PDR_COUNTER)) {
+            if (counterCell.cellId().counterId().equals(FABRIC_INGRESS_SPGW_UPF_COUNTER)) {
                 stats.setIngress(counterCell.data().packets(), counterCell.data().bytes());
-            } else if (counterCell.cellId().counterId().equals(FABRIC_EGRESS_SPGW_PDR_COUNTER)) {
+            } else if (counterCell.cellId().counterId().equals(FABRIC_EGRESS_SPGW_UPF_COUNTER)) {
                 stats.setEgress(counterCell.data().packets(), counterCell.data().bytes());
             } else {
                 log.warn("Unrecognized counter ID {}, skipping", counterCell);

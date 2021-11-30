@@ -1226,7 +1226,7 @@ class FabricSpgwDownlinkEcmpTest(SpgwSimpleTest):
                 s1u_enb_addr=S1U_ENB_IPV4,
                 teid=test_teid,
                 ue_addr=ue_ipv4,
-                ctr_id=DOWNLINK_PDR_CTR_IDX,
+                ctr_id=DOWNLINK_UPF_CTR_IDX,
             )
 
             pkt_from1 = getattr(testutils, "simple_%s_packet" % pkt_type)(

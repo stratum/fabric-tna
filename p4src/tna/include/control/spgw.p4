@@ -4,7 +4,7 @@
 #ifndef __SPGW__
 #define __SPGW__
 
-#define DEFAULT_PDR_CTR_ID 0
+#define DEFAULT_UPF_CTR_ID 0
 
 control SpgwIngress(
         /* Fabric.p4 */
@@ -19,7 +19,7 @@ control SpgwIngress(
     //===== Misc Things ======//
     //========================//
 
-    Counter<bit<64>, bit<16>>(MAX_PDR_COUNTERS, CounterType_t.PACKETS_AND_BYTES) pdr_counter;
+    Counter<bit<64>, bit<16>>(MAX_UPF_COUNTERS, CounterType_t.PACKETS_AND_BYTES) upf_counter;
 
     bool upf_termination_hit = false;
     ue_session_id_t ue_session_id = 0;
@@ -165,33 +165,33 @@ control SpgwIngress(
 #endif // WITH_INT
     }
 
-    action app_fwd(pdr_ctr_id_t ctr_id,
+    action app_fwd(upf_ctr_id_t ctr_id,
                    tc_t tc) {
-        fabric_md.bridged.spgw.pdr_ctr_id = ctr_id;
+        fabric_md.bridged.spgw.upf_ctr_id = ctr_id;
         fabric_md.spgw_tc = tc;
         upf_termination_hit = true;
     }
 
-    action downlink_fwd_encap(pdr_ctr_id_t ctr_id,
+    action downlink_fwd_encap(upf_ctr_id_t ctr_id,
                               tc_t         tc,
                               teid_t       teid,
                               // QFI should always equal 0 for 4G flows
                               bit<6>       qfi) {
         app_fwd(ctr_id, tc);
         fabric_md.bridged.spgw.needs_gtpu_encap = true;
-        fabric_md.bridged.spgw.skip_egress_pdr_ctr = false;
+        fabric_md.bridged.spgw.skip_egress_upf_ctr = false;
         fabric_md.bridged.spgw.teid = teid;
         fabric_md.bridged.spgw.qfi = qfi;
     }
 
-    action downlink_fwd_encap_dbuf(pdr_ctr_id_t ctr_id,
+    action downlink_fwd_encap_dbuf(upf_ctr_id_t ctr_id,
                                    tc_t         tc,
                                    teid_t       teid,
                                    // QFI should always equal 0 for 4G flows
                                    bit<6>       qfi) {
         app_fwd(ctr_id, tc);
         fabric_md.bridged.spgw.needs_gtpu_encap = true;
-        fabric_md.bridged.spgw.skip_egress_pdr_ctr = true;
+        fabric_md.bridged.spgw.skip_egress_upf_ctr = true;
         fabric_md.bridged.spgw.teid = teid;
         fabric_md.bridged.spgw.qfi = qfi;
     }
@@ -325,7 +325,7 @@ control SpgwIngress(
                 // can be stored at dbuf, and assuming this will be deployed
                 // mostly in enterprise settings where we are not billing users,
                 // the effects of such inaccuracy should be negligible.
-                pdr_counter.count(fabric_md.bridged.spgw.pdr_ctr_id);
+                upf_counter.count(fabric_md.bridged.spgw.upf_ctr_id);
             }
             // Nothing to be done immediately for forwarding or encapsulation.
             // Forwarding is done by other parts of the ingress, and
@@ -342,7 +342,7 @@ control SpgwEgress(
         inout egress_headers_t hdr,
         inout fabric_egress_metadata_t fabric_md) {
 
-    Counter<bit<64>, bit<16>>(MAX_PDR_COUNTERS, CounterType_t.PACKETS_AND_BYTES) pdr_counter;
+    Counter<bit<64>, bit<16>>(MAX_UPF_COUNTERS, CounterType_t.PACKETS_AND_BYTES) upf_counter;
 
     //=========================//
     //===== Tunnel Peers ======//
@@ -434,8 +434,8 @@ control SpgwEgress(
                 eg_tunnel_peers.apply();
                 gtpu_encap.apply();
             }
-            if (!fabric_md.bridged.spgw.skip_egress_pdr_ctr) {
-                pdr_counter.count(fabric_md.bridged.spgw.pdr_ctr_id);
+            if (!fabric_md.bridged.spgw.skip_egress_upf_ctr) {
+                upf_counter.count(fabric_md.bridged.spgw.upf_ctr_id);
             }
         }
     }

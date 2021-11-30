@@ -144,8 +144,8 @@ DBUF_IPV4 = "141.0.0.1"
 DBUF_DRAIN_DST_IPV4 = "142.0.0.1"
 DBUF_TEID = 0
 
-PDR_COUNTER_INGRESS = "FabricIngress.spgw.pdr_counter"
-PDR_COUNTER_EGRESS = "FabricEgress.spgw.pdr_counter"
+UPF_COUNTER_INGRESS = "FabricIngress.spgw.upf_counter"
+UPF_COUNTER_EGRESS = "FabricEgress.spgw.upf_counter"
 
 SPGW_IFACE_ACCESS = "iface_access"
 SPGW_IFACE_CORE = "iface_core"
@@ -161,8 +161,8 @@ MPLS_LABEL_2 = 200
 
 UPLINK_TEID = 0xEEFFC0F0
 DOWNLINK_TEID = 0xEEFFC0F1
-UPLINK_PDR_CTR_IDX = 1
-DOWNLINK_PDR_CTR_IDX = 2
+UPLINK_UPF_CTR_IDX = 1
+DOWNLINK_UPF_CTR_IDX = 2
 S1U_ENB_TUNNEL_PEER_ID = 10
 S1U_SGW_TUNNEL_PEER_ID = 20
 DBUF_TUNNEL_PEER_ID = 255
@@ -2610,14 +2610,14 @@ class SpgwSimpleTest(IPv4UnicastTest):
             [],
         )
 
-    def reset_pdr_counters(self, ctr_idx):
-        """Reset the ingress and egress PDR counter packet and byte counts to
+    def reset_upf_counters(self, ctr_idx):
+        """Reset the ingress and egress UPF counter packet and byte counts to
         0 for the given index.
         """
-        self.write_indirect_counter(PDR_COUNTER_INGRESS, ctr_idx, 0, 0)
-        self.write_indirect_counter(PDR_COUNTER_EGRESS, ctr_idx, 0, 0)
+        self.write_indirect_counter(UPF_COUNTER_INGRESS, ctr_idx, 0, 0)
+        self.write_indirect_counter(UPF_COUNTER_EGRESS, ctr_idx, 0, 0)
 
-    def verify_pdr_counters(
+    def verify_upf_counters(
         self,
         ctr_idx,
         exp_ingress_bytes,
@@ -2625,15 +2625,15 @@ class SpgwSimpleTest(IPv4UnicastTest):
         exp_ingress_pkts,
         exp_egress_pkts,
     ):
-        """ Verify that the PDR ingress and egress counters for index 'ctr_idx' are now
+        """ Verify that the UPF ingress and egress counters for index 'ctr_idx' are now
             'exp_ingress_bytes', 'exp_ingress_pkts' and 'exp_egress_bytes',
             'exp_egress_pkts' respectively upon reading.
         """
         self.verify_indirect_counter(
-            PDR_COUNTER_INGRESS, ctr_idx, "BOTH", exp_ingress_bytes, exp_ingress_pkts,
+            UPF_COUNTER_INGRESS, ctr_idx, "BOTH", exp_ingress_bytes, exp_ingress_pkts,
         )
         self.verify_indirect_counter(
-            PDR_COUNTER_EGRESS, ctr_idx, "BOTH", exp_egress_bytes, exp_egress_pkts,
+            UPF_COUNTER_EGRESS, ctr_idx, "BOTH", exp_egress_bytes, exp_egress_pkts,
         )
 
     def runUplinkTest(
@@ -2678,14 +2678,14 @@ class SpgwSimpleTest(IPv4UnicastTest):
             ue_addr=ue_out_pkt[IP].src,
             s1u_sgw_addr=S1U_SGW_IPV4,
             teid=UPLINK_TEID,
-            ctr_id=UPLINK_PDR_CTR_IDX,
+            ctr_id=UPLINK_UPF_CTR_IDX,
             slice_id=slice_id,
             tc=tc,
         )
 
         if verify_counters:
             # Clear SPGW counters before sending the packet
-            self.reset_pdr_counters(UPLINK_PDR_CTR_IDX)
+            self.reset_upf_counters(UPLINK_UPF_CTR_IDX)
 
         self.runIPv4UnicastTest(
             pkt=gtp_pkt,
@@ -2729,8 +2729,8 @@ class SpgwSimpleTest(IPv4UnicastTest):
                     egress_bytes - GTPU_OPTIONS_HDR_BYTES - GTPU_EXT_PSC_BYTES
                 )
 
-        # Verify the Ingress and Egress PDR counters
-        self.verify_pdr_counters(UPLINK_PDR_CTR_IDX, ingress_bytes, egress_bytes, 1, 1)
+        # Verify the Ingress and Egress UPF counters
+        self.verify_upf_counters(UPLINK_UPF_CTR_IDX, ingress_bytes, egress_bytes, 1, 1)
 
     def runUplinkRecircTest(
         self, ue_out_pkt, allow, tagged1, tagged2, is_next_hop_spine
@@ -2770,7 +2770,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             ue_addr=UE1_IPV4,
             s1u_sgw_addr=S1U_SGW_IPV4,
             teid=UPLINK_TEID,
-            ctr_id=UPLINK_PDR_CTR_IDX,
+            ctr_id=UPLINK_UPF_CTR_IDX,
         )
 
         self.add_gtp_tunnel_peer(tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID,
@@ -2782,7 +2782,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             s1u_enb_addr=S1U_ENB_IPV4,
             teid=DOWNLINK_TEID,
             ue_addr=UE2_IPV4,
-            ctr_id=DOWNLINK_PDR_CTR_IDX,
+            ctr_id=DOWNLINK_UPF_CTR_IDX,
         )
 
         if is_tna():
@@ -2802,8 +2802,8 @@ class SpgwSimpleTest(IPv4UnicastTest):
             )
 
         # Clear SPGW counters before sending the packet
-        self.reset_pdr_counters(UPLINK_PDR_CTR_IDX)
-        self.reset_pdr_counters(DOWNLINK_PDR_CTR_IDX)
+        self.reset_upf_counters(UPLINK_UPF_CTR_IDX)
+        self.reset_upf_counters(DOWNLINK_UPF_CTR_IDX)
 
         self.runIPv4UnicastTest(
             pkt=pkt,
@@ -2862,11 +2862,11 @@ class SpgwSimpleTest(IPv4UnicastTest):
             downlink_egress_bytes += CPU_LOOPBACK_FAKE_ETH_BYTES
 
         if allow:
-            self.verify_pdr_counters(
-                UPLINK_PDR_CTR_IDX, uplink_ingress_bytes, uplink_egress_bytes, 1, 1
+            self.verify_upf_counters(
+                UPLINK_UPF_CTR_IDX, uplink_ingress_bytes, uplink_egress_bytes, 1, 1
             )
-            self.verify_pdr_counters(
-                DOWNLINK_PDR_CTR_IDX,
+            self.verify_upf_counters(
+                DOWNLINK_UPF_CTR_IDX,
                 downlink_ingress_bytes,
                 downlink_egress_bytes,
                 1,
@@ -2874,8 +2874,8 @@ class SpgwSimpleTest(IPv4UnicastTest):
             )
         else:
             # Only uplink ingress should be incremented.
-            self.verify_pdr_counters(UPLINK_PDR_CTR_IDX, uplink_ingress_bytes, 0, 1, 0)
-            self.verify_pdr_counters(DOWNLINK_PDR_CTR_IDX, 0, 0, 0, 0)
+            self.verify_upf_counters(UPLINK_UPF_CTR_IDX, uplink_ingress_bytes, 0, 1, 0)
+            self.verify_upf_counters(DOWNLINK_UPF_CTR_IDX, 0, 0, 0, 0)
 
     def runDownlinkTest(
         self,
@@ -2916,7 +2916,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             s1u_enb_addr=S1U_ENB_IPV4,
             teid=DOWNLINK_TEID,
             ue_addr=UE1_IPV4,
-            ctr_id=DOWNLINK_PDR_CTR_IDX,
+            ctr_id=DOWNLINK_UPF_CTR_IDX,
             slice_id=slice_id,
             tc=tc,
             qfi=DEFAULT_QFI
@@ -2931,7 +2931,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
 
         if verify_counters:
             # Clear SPGW counters before sending the packet
-            self.reset_pdr_counters(DOWNLINK_PDR_CTR_IDX)
+            self.reset_upf_counters(DOWNLINK_UPF_CTR_IDX)
 
         self.runIPv4UnicastTest(
             pkt=pkt,
@@ -2961,9 +2961,9 @@ class SpgwSimpleTest(IPv4UnicastTest):
         if is_tna():
             egress_bytes += BMD_BYTES
 
-        # Verify the Ingress and Egress PDR counters
-        self.verify_pdr_counters(
-            DOWNLINK_PDR_CTR_IDX, ingress_bytes, egress_bytes, 1, 1
+        # Verify the Ingress and Egress UPF counters
+        self.verify_upf_counters(
+            DOWNLINK_UPF_CTR_IDX, ingress_bytes, egress_bytes, 1, 1
         )
 
     def runDownlinkToDbufTest(self, pkt, tagged1, tagged2, is_next_hop_spine):
@@ -2996,11 +2996,11 @@ class SpgwSimpleTest(IPv4UnicastTest):
         )
 
         self.setup_downlink_termination_dbuf(ue_session=UE1_IPV4,
-                                             ctr_id=DOWNLINK_PDR_CTR_IDX,
+                                             ctr_id=DOWNLINK_UPF_CTR_IDX,
                                              teid=DBUF_TEID)
 
         # Clear SPGW counters before sending the packet
-        self.reset_pdr_counters(DOWNLINK_PDR_CTR_IDX)
+        self.reset_upf_counters(DOWNLINK_UPF_CTR_IDX)
 
         self.runIPv4UnicastTest(
             pkt=pkt,
@@ -3022,10 +3022,10 @@ class SpgwSimpleTest(IPv4UnicastTest):
         if self.loopback:
             ingress_bytes += CPU_LOOPBACK_FAKE_ETH_BYTES
 
-        # Verify the Ingress PDR packet counter increased, but the egress did
+        # Verify the Ingress UPF packet counter increased, but the egress did
         # not.
-        self.verify_pdr_counters(
-            DOWNLINK_PDR_CTR_IDX, ingress_bytes, egress_bytes, 1, 0
+        self.verify_upf_counters(
+            DOWNLINK_UPF_CTR_IDX, ingress_bytes, egress_bytes, 1, 0
         )
 
     def runDownlinkFromDbufTest(self, pkt, tagged1, tagged2, is_next_hop_spine):
@@ -3066,7 +3066,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             s1u_enb_addr=S1U_ENB_IPV4,
             teid=DOWNLINK_TEID,
             ue_addr=UE1_IPV4,
-            ctr_id=DOWNLINK_PDR_CTR_IDX,
+            ctr_id=DOWNLINK_UPF_CTR_IDX,
         )
 
         # Add eNB as GTP Tunnel peer
@@ -3082,7 +3082,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         )
 
         # Clear SPGW counters before sending the packet
-        self.reset_pdr_counters(DOWNLINK_PDR_CTR_IDX)
+        self.reset_upf_counters(DOWNLINK_UPF_CTR_IDX)
 
         self.runIPv4UnicastTest(
             pkt=pkt_from_dbuf,
@@ -3118,10 +3118,10 @@ class SpgwSimpleTest(IPv4UnicastTest):
         if self.loopback:
             egress_bytes += CPU_LOOPBACK_FAKE_ETH_BYTES
 
-        # Verify the Ingress PDR packet counter did not increase, but the
+        # Verify the Ingress UPF packet counter did not increase, but the
         # egress did
-        self.verify_pdr_counters(
-            DOWNLINK_PDR_CTR_IDX, ingress_bytes, egress_bytes, 1, 1
+        self.verify_upf_counters(
+            DOWNLINK_UPF_CTR_IDX, ingress_bytes, egress_bytes, 1, 1
         )
 
 
@@ -4017,7 +4017,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             ue_addr=pkt[IP].src,
             s1u_sgw_addr=S1U_SGW_IPV4,
             teid=UPLINK_TEID,
-            ctr_id=UPLINK_PDR_CTR_IDX,
+            ctr_id=UPLINK_UPF_CTR_IDX,
         )
 
         # Set collector, report table, and mirror sessions
@@ -4105,7 +4105,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             s1u_enb_addr=S1U_ENB_IPV4,
             teid=DOWNLINK_TEID,
             ue_addr=pkt[IP].dst,
-            ctr_id=DOWNLINK_PDR_CTR_IDX,
+            ctr_id=DOWNLINK_UPF_CTR_IDX,
             qfi=DEFAULT_QFI
         )
 

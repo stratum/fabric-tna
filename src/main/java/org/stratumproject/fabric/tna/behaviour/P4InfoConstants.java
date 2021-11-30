@@ -193,10 +193,10 @@ public final class P4InfoConstants {
     public static final PiTableId FABRIC_INGRESS_STATS_FLOWS =
             PiTableId.of("FabricIngress.stats.flows");
     // Indirect Counter IDs
-    public static final PiCounterId FABRIC_EGRESS_SPGW_PDR_COUNTER =
-            PiCounterId.of("FabricEgress.spgw.pdr_counter");
-    public static final PiCounterId FABRIC_INGRESS_SPGW_PDR_COUNTER =
-            PiCounterId.of("FabricIngress.spgw.pdr_counter");
+    public static final PiCounterId FABRIC_EGRESS_SPGW_UPF_COUNTER =
+            PiCounterId.of("FabricEgress.spgw.upf_counter");
+    public static final PiCounterId FABRIC_INGRESS_SPGW_UPF_COUNTER =
+            PiCounterId.of("FabricIngress.spgw.upf_counter");
     // Direct Counter IDs
     public static final PiCounterId FABRIC_EGRESS_EGRESS_NEXT_EGRESS_VLAN_COUNTER =
             PiCounterId.of("FabricEgress.egress_next.egress_vlan_counter");
