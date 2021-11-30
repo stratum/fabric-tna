@@ -53,6 +53,7 @@ control FabricIngress (inout v1model_header_t hdr,
     SpgwIngress() spgw;
 #endif // WITH_SPGW
 #ifdef WITH_INT
+    IntWatchlist() int_watchlist;
     IntIngress() int_ingress;
 #endif // WITH_INT
 
@@ -68,6 +69,9 @@ control FabricIngress (inout v1model_header_t hdr,
 
         lkp_md_init.apply(hdr.ingress, fabric_md.ingress.lkp);
         pkt_io.apply(hdr.ingress, fabric_md.ingress, fabric_md.skip_egress ,standard_md);
+#ifdef WITH_INT
+        int_watchlist.apply(hdr.ingress, fabric_md, standard_md);
+#endif // WITH_INT
         stats.apply(fabric_md.ingress.lkp, standard_md.ingress_port,
             fabric_md.ingress.bridged.base.stats_flow_id);
 

@@ -319,9 +319,7 @@ control IntIngress(
             // implemented as drop+copy_to_cpu.
             (INT_REPORT_TYPE_FLOW, 1, false, _, _): report_drop();
             // Likely a table miss
-            // for bmv2, need to duplicate rules because of some unsupported don't care types.
             (INT_REPORT_TYPE_FLOW, 0, false, 0, 0): report_drop();
-            (INT_REPORT_TYPE_FLOW, 1, false, 0, 0): report_drop();
         }
         const default_action = nop();
         counters = drop_report_counter;
@@ -343,6 +341,8 @@ control IntIngress(
         drop_report.apply();
         if (drop_ctl == 1) {
             mark_to_drop(standard_md);
+            // if performed in ingress, packet will dropped at the end of Ingress pipeline.
+            // Maybe it's ok to skip this mark_to_drop(), to emulate deflection on drop.
         }
 
         // fabric_v1model.ingress = fabric_md;
@@ -367,7 +367,6 @@ control IntEgress (
     direct_counter(CounterType.packets_and_bytes) int_metadata_counter;
 
     QueueId_t egress_qid = 0; // bmv2 specific. Only one queue present.
-    bool report_var = false; // need to change name otherwise it clashes with report table.
     bool check_quota_and_report = false;
     queue_report_filter_index_t quota = 0;
     bit<1> drop_ctl = 0;
@@ -425,7 +424,6 @@ control IntEgress (
 
     action reset_quota() {
         // fabric_md.int_md.queue_report = reset_report_quota.execute(queue_report_filter_index);
-        // bit<32> temp = (bit<32>)DEFAULT_QUEUE_REPORT_QUOTA;
         queue_report_quota.write((bit<32>)queue_report_filter_index, DEFAULT_QUEUE_REPORT_QUOTA);
     }
 
@@ -653,9 +651,9 @@ control IntEgress (
         if (check_quota_and_report) {
             if (quota > 0) {
                 quota = quota - 1;
-                report_var = true;
+                fabric_md.int_md.queue_report = true;
             } else {
-                report_var = false;
+                fabric_md.int_md.queue_report = false;
             }
         }
 
