@@ -62,11 +62,11 @@ public class FabricUpfTranslatorTest {
 
     @Test
     public void fabricEntryToUplinkUpfTerminationTest() {
-        UpfTerminationRule translatedUpfTerminationRule;
-        UpfTerminationRule expected = TestUpfConstants.UPLINK_UPF_TERMINATION;
+        UpfTermination translatedUpfTerminationRule;
+        UpfTermination expected = TestUpfConstants.UPLINK_UPF_TERMINATION;
         try {
             translatedUpfTerminationRule = upfTranslator
-                    .fabricEntryToUpfTerminationRule(TestUpfConstants.FABRIC_UPLINK_UPF_TERMINATION);
+                    .fabricEntryToUpfTermination(TestUpfConstants.FABRIC_UPLINK_UPF_TERMINATION);
         } catch (UpfProgrammableException e) {
             assertThat("Fabric uplink UPF termination rule should correctly " +
                             "translate to abstract UPF termination without error",
@@ -81,11 +81,11 @@ public class FabricUpfTranslatorTest {
 
     @Test
     public void fabricEntryToUplinkUpfQosTerminationTest() {
-        UpfTerminationRule translatedUpfTerminationRule;
-        UpfTerminationRule expected = TestUpfConstants.UPLINK_UPF_TERMINATION_QOS;
+        UpfTermination translatedUpfTerminationRule;
+        UpfTermination expected = TestUpfConstants.UPLINK_UPF_TERMINATION_QOS;
         try {
             translatedUpfTerminationRule = upfTranslator
-                    .fabricEntryToUpfTerminationRule(TestUpfConstants.FABRIC_UPLINK_UPF_TERMINATION_QOS);
+                    .fabricEntryToUpfTermination(TestUpfConstants.FABRIC_UPLINK_UPF_TERMINATION_QOS);
         } catch (UpfProgrammableException e) {
             assertThat("Fabric uplink UPF termination rule should correctly " +
                             "translate to abstract UPF termination without error",
@@ -101,11 +101,11 @@ public class FabricUpfTranslatorTest {
 
     @Test
     public void fabricEntryToDownlinkUpfQosTerminationTest() {
-        UpfTerminationRule translatedUpfTerminationRule;
-        UpfTerminationRule expected = TestUpfConstants.DOWNLINK_UPF_TERMINATION_QOS;
+        UpfTermination translatedUpfTerminationRule;
+        UpfTermination expected = TestUpfConstants.DOWNLINK_UPF_TERMINATION_QOS;
         try {
             translatedUpfTerminationRule = upfTranslator
-                    .fabricEntryToUpfTerminationRule(TestUpfConstants.FABRIC_DOWNLINK_UPF_TERMINATION_QOS);
+                    .fabricEntryToUpfTermination(TestUpfConstants.FABRIC_DOWNLINK_UPF_TERMINATION_QOS);
         } catch (UpfProgrammableException e) {
             assertThat("Fabric uplink interface should correctly translate to abstract interface without error",
                     false);
@@ -119,11 +119,11 @@ public class FabricUpfTranslatorTest {
 
     @Test
     public void fabricEntryToDownlinkUpfTerminationTest() {
-        UpfTerminationRule translatedUpfTerminationRule;
-        UpfTerminationRule expected = TestUpfConstants.DOWNLINK_UPF_TERMINATION;
+        UpfTermination translatedUpfTerminationRule;
+        UpfTermination expected = TestUpfConstants.DOWNLINK_UPF_TERMINATION;
         try {
             translatedUpfTerminationRule = upfTranslator
-                    .fabricEntryToUpfTerminationRule(TestUpfConstants.FABRIC_DOWNLINK_UPF_TERMINATION);
+                    .fabricEntryToUpfTermination(TestUpfConstants.FABRIC_DOWNLINK_UPF_TERMINATION);
         } catch (UpfProgrammableException e) {
             assertThat("Fabric uplink UPF termination rule should correctly " +
                             "translate to abstract UPF termination without error",

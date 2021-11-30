@@ -12,7 +12,7 @@ import org.onosproject.net.DeviceId;
 import org.onosproject.net.behaviour.upf.GtpTunnelPeer;
 import org.onosproject.net.behaviour.upf.UeSession;
 import org.onosproject.net.behaviour.upf.UpfInterface;
-import org.onosproject.net.behaviour.upf.UpfTerminationRule;
+import org.onosproject.net.behaviour.upf.UpfTermination;
 import org.onosproject.net.flow.DefaultFlowRule;
 import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
@@ -93,14 +93,14 @@ public final class TestUpfConstants {
             .withGtpTunnelPeerId(ENB_GTP_TUNNEL_PEER)
             .build();
 
-    public static final UpfTerminationRule UPLINK_UPF_TERMINATION = UpfTerminationRule.builder()
+    public static final UpfTermination UPLINK_UPF_TERMINATION = UpfTermination.builder()
             .withSliceId((short) DEFAULT_SLICE_ID)
             .withUeSessionId(UE_ADDR)
             .withCounterId(UPLINK_COUNTER_CELL_ID)
             .withTrafficClass(DEFAULT_TC)
             .build();
 
-    public static final UpfTerminationRule DOWNLINK_UPF_TERMINATION = UpfTerminationRule.builder()
+    public static final UpfTermination DOWNLINK_UPF_TERMINATION = UpfTermination.builder()
             .withSliceId((short) DEFAULT_SLICE_ID)
             .withUeSessionId(UE_ADDR)
             .withCounterId(DOWNLINK_COUNTER_CELL_ID)
@@ -109,7 +109,7 @@ public final class TestUpfConstants {
             .withQfi((byte) 0)
             .build();
 
-    public static final UpfTerminationRule DOWNLINK_UPF_TERMINATION_DBUF = UpfTerminationRule.builder()
+    public static final UpfTermination DOWNLINK_UPF_TERMINATION_DBUF = UpfTermination.builder()
             .withSliceId((short) DEFAULT_SLICE_ID)
             .withUeSessionId(UE_ADDR)
             .withCounterId(DOWNLINK_COUNTER_CELL_ID)
@@ -119,7 +119,7 @@ public final class TestUpfConstants {
             .withSkipEgressCtr()
             .build();
 
-    public static final UpfTerminationRule DOWNLINK_UPF_TERMINATION_QOS = UpfTerminationRule.builder()
+    public static final UpfTermination DOWNLINK_UPF_TERMINATION_QOS = UpfTermination.builder()
             .withSliceId((short) DEFAULT_SLICE_ID)
             .withUeSessionId(UE_ADDR_QOS)
             .withCounterId(DOWNLINK_COUNTER_CELL_ID)
@@ -128,7 +128,7 @@ public final class TestUpfConstants {
             .withQfi(DOWNLINK_QFI)
             .build();
 
-    public static final UpfTerminationRule UPLINK_UPF_TERMINATION_QOS = UpfTerminationRule.builder()
+    public static final UpfTermination UPLINK_UPF_TERMINATION_QOS = UpfTermination.builder()
             .withSliceId((short) DEFAULT_SLICE_ID)
             .withUeSessionId(UE_ADDR_QOS)
             .withCounterId(UPLINK_COUNTER_CELL_ID)

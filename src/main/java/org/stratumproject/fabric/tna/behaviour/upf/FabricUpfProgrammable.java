@@ -10,7 +10,15 @@ import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
 import org.onosproject.drivers.p4runtime.AbstractP4RuntimeHandlerBehaviour;
 import org.onosproject.net.PortNumber;
-import org.onosproject.net.behaviour.upf.*;
+import org.onosproject.net.behaviour.upf.GtpTunnelPeer;
+import org.onosproject.net.behaviour.upf.UeSession;
+import org.onosproject.net.behaviour.upf.UpfCounter;
+import org.onosproject.net.behaviour.upf.UpfEntity;
+import org.onosproject.net.behaviour.upf.UpfEntityType;
+import org.onosproject.net.behaviour.upf.UpfInterface;
+import org.onosproject.net.behaviour.upf.UpfProgrammable;
+import org.onosproject.net.behaviour.upf.UpfProgrammableException;
+import org.onosproject.net.behaviour.upf.UpfTermination;
 import org.onosproject.net.flow.DefaultFlowRule;
 import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
@@ -38,7 +46,6 @@ import org.stratumproject.fabric.tna.slicing.api.SliceId;
 import org.stratumproject.fabric.tna.slicing.api.SlicingService;
 import org.stratumproject.fabric.tna.slicing.api.TrafficClass;
 
-import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -47,6 +54,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static java.lang.String.format;
 import static org.onosproject.net.pi.model.PiCounterType.INDIRECT;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.sliceTcConcat;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.*;
@@ -68,11 +76,13 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     protected PacketService packetService;
     protected FabricUpfTranslator upfTranslator;
 
+    private long interfaceTableSize;
     private long uplinkUeSessionsTableSize;
     private long downlinkUeSessionsTableSize;
     private long uplinkUpfTerminationsTableSize;
     private long downlinkUpfTerminationsTableSize;
-    private long pdrCounterSize;
+    private long upfCounterSize;
+    private long gtpTunnelPeersTableSize;
 
     private ApplicationId appId;
 
@@ -163,6 +173,8 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         long downlinkUeSessionsTableSize = 0;
         long uplinkUpfTerminationsTableSize = 0;
         long downlinkUpfTerminationsTableSize = 0;
+        long ingressGtpTunnelPeersTableSize = 0;
+        long egressGtpTunnelPeersTableSize = 0;
 
         // Get table sizes of interest
         for (PiTableModel piTable : pipeconf.pipelineModel().tables()) {
@@ -174,6 +186,10 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                 uplinkUpfTerminationsTableSize = piTable.maxSize();
             } else if (piTable.id().equals(FABRIC_INGRESS_SPGW_DOWNLINK_TERMINATIONS)) {
                 downlinkUpfTerminationsTableSize = piTable.maxSize();
+            } else if (piTable.id().equals(FABRIC_INGRESS_SPGW_IG_TUNNEL_PEERS)) {
+                ingressGtpTunnelPeersTableSize = piTable.maxSize();
+            } else if (piTable.id().equals(FABRIC_EGRESS_SPGW_EG_TUNNEL_PEERS)) {
+                egressGtpTunnelPeersTableSize = piTable.maxSize();
             }
         }
         if (uplinkUeSessionsTableSize == 0) {
@@ -188,6 +204,15 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         if (downlinkUpfTerminationsTableSize == 0) {
             throw new IllegalStateException("Unable to find downlink UPF Terminations table in pipeline model.");
         }
+        if (ingressGtpTunnelPeersTableSize == 0) {
+            throw new IllegalStateException("Unable to find ingress GTP tunnel peers table in pipeline model.");
+        }
+        if (egressGtpTunnelPeersTableSize == 0) {
+            throw new IllegalStateException("Unable to find egress GTP tunnel peers table in pipeline model.");
+        }
+        if (ingressGtpTunnelPeersTableSize != egressGtpTunnelPeersTableSize) {
+            log.warn("GTP tunnel peers ingress and egress table sizes are not equal! Using the minimum of the two.");
+        }
 
         // Get counter sizes of interest
         long ingressCounterSize = 0;
@@ -200,14 +225,15 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
             }
         }
         if (ingressCounterSize != egressCounterSize) {
-            log.warn("PDR ingress and egress counter sizes are not equal! Using the minimum of the two.");
+            log.warn("UPF ingress and egress counter sizes are not equal! Using the minimum of the two.");
         }
 
         this.uplinkUeSessionsTableSize = uplinkUeSessionsTableSize;
         this.downlinkUeSessionsTableSize = downlinkUeSessionsTableSize;
         this.uplinkUpfTerminationsTableSize = uplinkUpfTerminationsTableSize;
         this.downlinkUpfTerminationsTableSize = downlinkUpfTerminationsTableSize;
-        this.pdrCounterSize = Math.min(ingressCounterSize, egressCounterSize);
+        this.upfCounterSize = Math.min(ingressCounterSize, egressCounterSize);
+        this.gtpTunnelPeersTableSize = Math.min(ingressGtpTunnelPeersTableSize, egressGtpTunnelPeersTableSize);
 
         return true;
     }
@@ -267,110 +293,160 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         slicingService.removeTrafficClass(SliceId.DEFAULT, TrafficClass.ELASTIC);
     }
 
-    @Override
-    public void clearInterfaces() {
-        if (!setupBehaviour("clearInterfaces()")) {
-            return;
-        }
-        log.info("Clearing all UPF interfaces.");
-        for (FlowRule entry : flowRuleService.getFlowEntries(deviceId)) {
-            if (upfTranslator.isFabricInterface(entry)) {
-                try {
-                    var iface = upfTranslator.fabricEntryToInterface(entry);
-                    if (iface.isCore()) {
-                        applyUplinkRecirculation(iface.prefix(), true);
-                    }
-                } catch (UpfProgrammableException e) {
-                    log.error("Error when translating interface entry, " +
-                            "will skip removing uplink recirculation rules: {} [{}]", e.getMessage(), entry);
-                }
-                flowRuleService.removeFlowRules(entry);
+    public void clearInterface(FlowRule entry) {
+        try {
+            var iface = upfTranslator.fabricEntryToInterface(entry);
+            if (iface.isCore()) {
+                applyUplinkRecirculation(iface.prefix(), true);
             }
+        } catch (UpfProgrammableException e) {
+            log.error("Error when translating interface entry, " +
+                    "will skip removing uplink recirculation rules: {} [{}]", e.getMessage(), entry);
         }
+        flowRuleService.removeFlowRules(entry);
     }
 
     @Override
-    public void clearFlows() {
-        if (!setupBehaviour("clearFlows()")) {
+    public void clearUpfEntities() {
+        if (!setupBehaviour("clearUpfEntities()")) {
             return;
         }
-        log.info("Clearing all UE sessions and UPF Terminations.");
+
+        log.info("Clearing all UPF entities.");
+        int interfacesCleared = 0;
         int ueSessionsCleared = 0;
         int upfTerminationsCleared = 0;
+        int gtpTunnelPeersCleared = 0;
         for (FlowRule entry : flowRuleService.getFlowEntries(deviceId)) {
-            if (upfTranslator.isFabricUeSessionRule(entry)) {
+            if (upfTranslator.isFabricInterface(entry)) {
+                clearInterface(entry);
+                interfacesCleared++;
+            } else if (upfTranslator.isFabricUeSession(entry)) {
                 ueSessionsCleared++;
                 flowRuleService.removeFlowRules(entry);
-            } else if (upfTranslator.isFabricUpfTerminationRule(entry)) {
+            } else if (upfTranslator.isFabricUpfTermination(entry)) {
                 upfTerminationsCleared++;
+                flowRuleService.removeFlowRules(entry);
+            } else if (upfTranslator.isFabricGtpTunnelPeer(entry)) {
+                gtpTunnelPeersCleared++;
                 flowRuleService.removeFlowRules(entry);
             }
         }
-        log.info("Cleared {} UE sessions and {} UPF Terminations.", ueSessionsCleared, upfTerminationsCleared);
+        log.info("Cleared {} interfaces, {} UE sessions, {} UPF Terminations and {} GTP tunnel peers.",
+                interfacesCleared, ueSessionsCleared, upfTerminationsCleared, gtpTunnelPeersCleared);
     }
 
     @Override
-    public Collection<GtpTunnelPeer> getGtpTunnelPeers() throws UpfProgrammableException {
-        if (!setupBehaviour("getGtpTunnelPeers()")) {
+    public Collection<UpfEntity> readUpfEntities(UpfEntityType entityType)
+            throws UpfProgrammableException {
+        if (!setupBehaviour("readUpfEntities()")) {
             return null;
         }
 
-        ArrayList<GtpTunnelPeer> gtpTunnelPeers = new ArrayList<>();
+        switch (entityType) {
+            case INTERFACE:
+                return getInterfaces(-1);
+            case SESSION:
+                return getUeSessions(-1);
+            case TERMINATION:
+                return getUpfTerminations(-1);
+            case TUNNEL_PEER:
+                return getGtpTunnelPeers(-1);
+            case COUNTER:
+                return readAllCounters(-1);
+            default:
+                throw new UpfProgrammableException(format("Reading entity type %s not supported.",
+                        entityType.humanReadableName()));
+        }
+    }
+
+    @Override
+    public Collection<UpfEntity> readUpfEntities(UpfEntityType entityType, int limit)
+            throws UpfProgrammableException {
+        if (!setupBehaviour("readUpfEntities()")) {
+            return null;
+        }
+
+        switch (entityType) {
+            case INTERFACE:
+                return getInterfaces(limit);
+            case SESSION:
+                return getUeSessions(limit);
+            case TERMINATION:
+                return getUpfTerminations(limit);
+            case TUNNEL_PEER:
+                return getGtpTunnelPeers(limit);
+            case COUNTER:
+                return readAllCounters(limit);
+            default:
+                throw new UpfProgrammableException(format("Reading entity type %s not supported.",
+                        entityType.humanReadableName()));
+        }
+    }
+
+    private Collection<UpfEntity> getInterfaces(int limit) throws UpfProgrammableException {
+        ArrayList<UpfEntity> ifaces = new ArrayList<>();
+        for (FlowRule flowRule : flowRuleService.getFlowEntries(deviceId)) {
+            if (upfTranslator.isFabricInterface(flowRule)) {
+                ifaces.add(upfTranslator.fabricEntryToInterface(flowRule));
+            }
+            if (limit != -1 && ifaces.size() == limit) {
+                break;
+            }
+        }
+        return ifaces;
+    }
+
+    private Collection<UpfEntity> getGtpTunnelPeers(int limit) throws UpfProgrammableException {
+        ArrayList<UpfEntity> gtpTunnelPeers = new ArrayList<>();
         for (FlowRule flowRule : flowRuleService.getFlowEntries(deviceId)) {
             if (upfTranslator.isFabricGtpTunnelPeer(flowRule)) {
                 gtpTunnelPeers.add(upfTranslator.fabricEntryToGtpTunnelPeer(flowRule));
+            }
+            if (limit != -1 && gtpTunnelPeers.size() == limit) {
+                break;
             }
         }
         return gtpTunnelPeers;
     }
 
-    @Override
-    public Collection<UeSession> getUeSessions() throws UpfProgrammableException {
-        if (!setupBehaviour("getUeSessions()")) {
-            return null;
-        }
-
-        ArrayList<UeSession> ueSessions = new ArrayList<>();
+    private Collection<UpfEntity> getUeSessions(int limit) throws UpfProgrammableException {
+        ArrayList<UpfEntity> ueSessions = new ArrayList<>();
         for (FlowRule flowRule : flowRuleService.getFlowEntries(deviceId)) {
-            if (upfTranslator.isFabricUeSessionRule(flowRule)) {
+            if (upfTranslator.isFabricUeSession(flowRule)) {
                 ueSessions.add(upfTranslator.fabricEntryToUeSession(flowRule));
+            }
+            if (limit != -1 && ueSessions.size() == limit) {
+                break;
             }
         }
         return ueSessions;
     }
 
-    @Override
-    public Collection<UpfTerminationRule> getUpfTerminationRules() throws UpfProgrammableException {
-        if (!setupBehaviour("getUpfTerminationRules()")) {
-            return null;
-        }
-
-        ArrayList<UpfTerminationRule> upfTerminationRules = new ArrayList<>();
+    private Collection<UpfEntity> getUpfTerminations(int limit) throws UpfProgrammableException {
+        ArrayList<UpfEntity> upfTerminations = new ArrayList<>();
         for (FlowRule flowRule : flowRuleService.getFlowEntries(deviceId)) {
-            if (upfTranslator.isFabricUpfTerminationRule(flowRule)) {
-                upfTerminationRules.add(upfTranslator.fabricEntryToUpfTerminationRule(flowRule));
+            if (upfTranslator.isFabricUpfTermination(flowRule)) {
+                upfTerminations.add(upfTranslator.fabricEntryToUpfTermination(flowRule));
+            }
+            if (limit != -1 && upfTerminations.size() == limit) {
+                break;
             }
         }
-
-        return upfTerminationRules;
+        return upfTerminations;
     }
 
 
-    @Override
-    public Collection<PdrStats> readAllCounters(long maxCounterId) {
-        if (!setupBehaviour("readAllCounters()")) {
-            return null;
-        }
-
-        long counterSize = pdrCounterSize();
+    private Collection<UpfEntity> readAllCounters(long maxCounterId) {
+        long counterSize = upfCounterSize;
         if (maxCounterId != -1) {
             counterSize = Math.min(maxCounterId, counterSize);
         }
 
         // Prepare PdrStats object builders, one for each counter ID currently in use
-        Map<Integer, PdrStats.Builder> pdrStatBuilders = Maps.newHashMap();
+        Map<Integer, UpfCounter.Builder> upfCounterBuilders = Maps.newHashMap();
         for (int cellId = 0; cellId < counterSize; cellId++) {
-            pdrStatBuilders.put(cellId, PdrStats.builder().withCellId(cellId));
+            upfCounterBuilders.put(cellId, UpfCounter.builder().withCellId(cellId));
         }
 
         // Generate the counter cell IDs.
@@ -392,14 +468,14 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                 log.warn("Invalid counter data type {}, skipping", counterCell.cellId().counterType());
                 return;
             }
-            if (!pdrStatBuilders.containsKey((int) counterCell.cellId().index())) {
+            if (!upfCounterBuilders.containsKey((int) counterCell.cellId().index())) {
                 // Most likely Up4config.maxUes() is set to a value smaller than what the switch
                 // pipeline can hold.
                 log.debug("Unrecognized index {} when reading all counters, " +
                         "that's expected if we are manually limiting maxUes", counterCell);
                 return;
             }
-            PdrStats.Builder statsBuilder = pdrStatBuilders.get((int) counterCell.cellId().index());
+            UpfCounter.Builder statsBuilder = upfCounterBuilders.get((int) counterCell.cellId().index());
             if (counterCell.cellId().counterId().equals(FABRIC_INGRESS_SPGW_PDR_COUNTER)) {
                 statsBuilder.setIngress(counterCell.data().packets(),
                         counterCell.data().bytes());
@@ -411,60 +487,47 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
             }
         });
 
-        return pdrStatBuilders
+        return upfCounterBuilders
                 .values()
                 .stream()
-                .map(PdrStats.Builder::build)
+                .map(UpfCounter.Builder::build)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public long gtpTunnelPeersTableSize() {
-        if (!setupBehaviour("gtpTunnelPeersTableSize()")) {
-            return -1;
-        }
-        // TODO: return gtpTunnelPeersTableSize
-        return 0;
-    }
-
-    @Override
-    public long ueSessionTableSize() {
-        if (!setupBehaviour("ueSessionTableSize()")) {
-            return -1;
-        }
-        // TODO: the size of uplink UE Session table is greater than downlink as we might have multiple TEIDs per UE
-        //  decide what to return as ueSessionTableSize
-        return Math.min(this.uplinkUeSessionsTableSize, this.downlinkUeSessionsTableSize);
-    }
-
-    @Override
-    public long upfTerminationTableSize() {
-        if (!setupBehaviour("upfTerminationTableSize()")) {
+    public long getEntitySize(UpfEntityType entityType) {
+        if (!setupBehaviour("getEntitySize()")) {
             return -1;
         }
 
-        // use min, but the size of uplink and downlink tables should be equal.
-        return Math.min(this.uplinkUpfTerminationsTableSize, this.downlinkUpfTerminationsTableSize);
+        switch (entityType) {
+            case INTERFACE:
+                return interfaceTableSize;
+            case TUNNEL_PEER:
+                return gtpTunnelPeersTableSize;
+            case SESSION:
+                // TODO: the size of uplink UE Session table is greater than downlink
+                //  as we might have multiple TEIDs per UE
+                //  decide what to return as ueSessionTableSize
+                return Math.min(this.uplinkUeSessionsTableSize, this.downlinkUeSessionsTableSize);
+            case TERMINATION:
+                // use min, but the size of uplink and downlink tables should be equal.
+                return Math.min(this.uplinkUpfTerminationsTableSize, this.downlinkUpfTerminationsTableSize);
+            case COUNTER:
+                return upfCounterSize;
+            default:
+                // TODO: throw UpfProgrammableExecption
+                //  throw new UpfProgrammableExecption(format("Entity type %s not supported.", entityType.humanReadableName()));
+                return 0;
+        }
     }
 
-    @Override
-    public long pdrCounterSize() {
-        if (!setupBehaviour("pdrCounterSize()")) {
-            return -1;
-        }
-        return pdrCounterSize;
-    }
-
-    @Override
-    public PdrStats readCounter(int cellId) throws UpfProgrammableException {
-        if (!setupBehaviour("readCounter()")) {
-            return null;
-        }
-        if (cellId >= pdrCounterSize() || cellId < 0) {
+    public UpfCounter readCounter(int cellId) throws UpfProgrammableException {
+        if (cellId >= upfCounterSize || cellId < 0) {
             throw new UpfProgrammableException("Requested PDR counter cell index is out of bounds.",
-                    UpfProgrammableException.Type.COUNTER_INDEX_OUT_OF_RANGE);
+                    UpfProgrammableException.Type.ENTITY_OUT_OF_RANGE);
         }
-        PdrStats.Builder stats = PdrStats.builder().withCellId(cellId);
+        UpfCounter.Builder stats = UpfCounter.builder().withCellId(cellId);
 
         // Make list of cell handles we want to read.
         List<PiCounterCellHandle> counterCellHandles = List.of(
@@ -501,10 +564,32 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     }
 
     @Override
-    public void addInterface(UpfInterface upfInterface) throws UpfProgrammableException {
-        if (!setupBehaviour("addInterface()")) {
+    public void applyUpfEntity(UpfEntity entity) throws UpfProgrammableException {
+        if (!setupBehaviour("applyUpfEntity()")) {
             return;
         }
+
+        switch (entity.upfEntityType()) {
+            case INTERFACE:
+                addInterface((UpfInterface) entity);
+                break;
+            case SESSION:
+                addUeSession((UeSession) entity);
+                break;
+            case TERMINATION:
+                addUpfTermination((UpfTermination) entity);
+                break;
+            case TUNNEL_PEER:
+                addGtpTunnelPeer((GtpTunnelPeer) entity);
+                break;
+            case COUNTER:
+            default:
+                throw new UpfProgrammableException(format("Adding entity type %s not supported.",
+                        entity.upfEntityType().humanReadableName()));
+        }
+    }
+
+    private void addInterface(UpfInterface upfInterface) throws UpfProgrammableException {
         FlowRule flowRule = upfTranslator.interfaceToFabricEntry(upfInterface, deviceId, appId, DEFAULT_PRIORITY);
         log.info("Installing {}", upfInterface);
         flowRuleService.applyFlowRules(flowRule);
@@ -513,6 +598,57 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         // TODO: allow enabling/disabling UE-to-UE via netcfg or other API.
         if (upfInterface.isCore()) {
             applyUplinkRecirculation(upfInterface.prefix(), false);
+        }
+    }
+
+    private void addGtpTunnelPeer(GtpTunnelPeer peer) throws UpfProgrammableException {
+        Pair<FlowRule, FlowRule> fabricGtpTunnelPeers = upfTranslator.gtpTunnelPeerToFabricEntry(
+                peer, deviceId, appId, DEFAULT_PRIORITY);
+        log.info("Installing ingress and egress rules {}, {}",
+                fabricGtpTunnelPeers.getLeft().toString(), fabricGtpTunnelPeers.getRight().toString());
+        flowRuleService.applyFlowRules(fabricGtpTunnelPeers.getLeft(), fabricGtpTunnelPeers.getRight());
+        log.debug("GTP tunnel peer added with flowIDs ingress={}, egress={}",
+                fabricGtpTunnelPeers.getLeft().id().value(), fabricGtpTunnelPeers.getRight().id().value());
+    }
+
+    private void addUeSession(UeSession ueSession) throws UpfProgrammableException {
+        FlowRule fabricUeSession = upfTranslator.ueSessionToFabricEntry(ueSession, deviceId, appId, DEFAULT_PRIORITY);
+        log.info("Installing {}", ueSession.toString());
+        flowRuleService.applyFlowRules(fabricUeSession);
+        log.debug("UE session added with flowID {}", fabricUeSession.id().value());
+    }
+
+    private void addUpfTermination(UpfTermination upfTermination) throws UpfProgrammableException {
+        FlowRule fabricUpfTermination = upfTranslator.upfTerminationToFabricEntry(
+                upfTermination, deviceId, appId, DEFAULT_PRIORITY);
+        log.info("Installing {}", upfTermination.toString());
+        flowRuleService.applyFlowRules(fabricUpfTermination);
+        log.debug("UPF termination added with flowID {}", fabricUpfTermination.id().value());
+    }
+
+    @Override
+    public void deleteUpfEntity(UpfEntity entity) throws UpfProgrammableException {
+        if (!setupBehaviour("deleteUpfEntity()")) {
+            return;
+        }
+
+        switch (entity.upfEntityType()) {
+            case INTERFACE:
+                removeInterface((UpfInterface) entity);
+                break;
+            case SESSION:
+                removeUeSession((UeSession) entity);
+                break;
+            case TERMINATION:
+                removeUpfTermination((UpfTermination) entity);
+                break;
+            case TUNNEL_PEER:
+                removeGtpTunnelPeer((GtpTunnelPeer) entity);
+                break;
+            case COUNTER:
+            default:
+                throw new UpfProgrammableException(format("Deleting entity type %s not supported.",
+                        entity.upfEntityType().humanReadableName()));
         }
     }
 
@@ -545,119 +681,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         return false;
     }
 
-    @Override
-    public Collection<UpfInterface> getInterfaces() throws UpfProgrammableException {
-        if (!setupBehaviour("getInterfaces()")) {
-            return null;
-        }
-        ArrayList<UpfInterface> ifaces = new ArrayList<>();
-        for (FlowRule flowRule : flowRuleService.getFlowEntries(deviceId)) {
-            if (upfTranslator.isFabricInterface(flowRule)) {
-                ifaces.add(upfTranslator.fabricEntryToInterface(flowRule));
-            }
-        }
-        return ifaces;
-    }
-
-    @Override
-    public void addGtpTunnelPeer(GtpTunnelPeer peer) throws UpfProgrammableException {
-        if (!setupBehaviour("addGtpTunnelPeer()")) {
-            return;
-        }
-
-        Pair<FlowRule, FlowRule> fabricGtpTunnelPeers = upfTranslator.gtpTunnelPeerToFabricEntry(
-                peer, deviceId, appId, DEFAULT_PRIORITY);
-        log.info("Installing ingress and egress rules {}, {}",
-                fabricGtpTunnelPeers.getLeft().toString(), fabricGtpTunnelPeers.getRight().toString());
-        flowRuleService.applyFlowRules(fabricGtpTunnelPeers.getLeft(), fabricGtpTunnelPeers.getRight());
-        log.debug("GTP tunnel peer added with flowIDs ingress={}, egress={}",
-                fabricGtpTunnelPeers.getLeft().id().value(), fabricGtpTunnelPeers.getRight().id().value());
-    }
-
-    @Override
-    public void removeGtpTunnelPeer(GtpTunnelPeer peer) throws UpfProgrammableException {
-        if (!setupBehaviour("removeGtpTunnelPeer()")) {
-            return;
-        }
-
-        PiCriterion match = PiCriterion.builder()
-                .matchExact(HDR_TUN_PEER_ID, peer.tunPeerId())
-                .build();
-
-        // TODO: make it atomic
-        removeEntry(match, FABRIC_INGRESS_SPGW_IG_TUNNEL_PEERS, false);
-        removeEntry(match, FABRIC_EGRESS_SPGW_EG_TUNNEL_PEERS, false);
-    }
-
-    @Override
-    public void addUeSession(UeSession ueSession) throws UpfProgrammableException {
-        if (!setupBehaviour("addUeSession()")) {
-            return;
-        }
-        FlowRule fabricUeSession = upfTranslator.ueSessionToFabricEntry(ueSession, deviceId, appId, DEFAULT_PRIORITY);
-        log.info("Installing {}", ueSession.toString());
-        flowRuleService.applyFlowRules(fabricUeSession);
-        log.debug("UE session added with flowID {}", fabricUeSession.id().value());
-    }
-
-    @Override
-    public void removeUeSession(UeSession ueSession) throws UpfProgrammableException {
-        if (!setupBehaviour("removeUeSession()")) {
-            return;
-        }
-        final PiCriterion match;
-        final PiTableId tableId;
-
-        if (ueSession.isUplink()) {
-            match = PiCriterion.builder()
-                    .matchExact(HDR_TEID, ueSession.teid().asArray())
-                    .matchExact(HDR_TUNNEL_IPV4_DST, ueSession.ipv4Address().toInt())
-                    .build();
-            tableId = FABRIC_INGRESS_SPGW_UPLINK_SESSIONS;
-        } else {
-            match = PiCriterion.builder()
-                    .matchExact(HDR_UE_ADDR, ueSession.ipv4Address().toInt())
-                    .build();
-            tableId = FABRIC_INGRESS_SPGW_DOWNLINK_SESSIONS;
-        }
-
-        log.info("Removing {}", ueSession.toString());
-        removeEntry(match, tableId, false);
-    }
-
-    @Override
-    public void addUpfTerminationRule(UpfTerminationRule upfTerminationRule) throws UpfProgrammableException {
-        if (!setupBehaviour("addUpfTerminationRule()")) {
-            return;
-        }
-        FlowRule fabricUpfTermination = upfTranslator.upfTerminationToFabricEntry(
-                upfTerminationRule, deviceId, appId, DEFAULT_PRIORITY);
-        log.info("Installing {}", upfTerminationRule.toString());
-        flowRuleService.applyFlowRules(fabricUpfTermination);
-        log.debug("UPF termination added with flowID {}", fabricUpfTermination.id().value());
-    }
-
-    @Override
-    public void removeUpfTerminationRule(UpfTerminationRule upfTerminationRule) throws UpfProgrammableException {
-        if (!setupBehaviour("removeUpfTerminationRule()")) {
-            return;
-        }
-        final PiCriterion match = PiCriterion.builder()
-                .matchExact(HDR_UE_SESSION_ID, upfTerminationRule.ueSessionId().toInt())
-                .build();
-        final PiTableId tableId = upfTerminationRule.isUplink() ?
-                FABRIC_INGRESS_SPGW_UPLINK_TERMINATIONS :
-                FABRIC_INGRESS_SPGW_DOWNLINK_TERMINATIONS;
-
-        log.info("Removing {}", upfTerminationRule.toString());
-        removeEntry(match, tableId, false);
-    }
-
-    @Override
-    public void removeInterface(UpfInterface upfInterface) throws UpfProgrammableException {
-        if (!setupBehaviour("removeInterface()")) {
-            return;
-        }
+    private void removeInterface(UpfInterface upfInterface) throws UpfProgrammableException {
         Ip4Prefix ifacePrefix = upfInterface.getPrefix();
         if (upfInterface.isCore()) {
             applyUplinkRecirculation(ifacePrefix, true);
@@ -682,6 +706,49 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                 .matchExact(HDR_GTPU_IS_VALID, 0)
                 .build();
         removeEntry(match2, FABRIC_INGRESS_SPGW_INTERFACES, false);
+    }
+
+    private void removeUeSession(UeSession ueSession) throws UpfProgrammableException {
+        final PiCriterion match;
+        final PiTableId tableId;
+
+        if (ueSession.isUplink()) {
+            match = PiCriterion.builder()
+                    .matchExact(HDR_TEID, ueSession.teid().asArray())
+                    .matchExact(HDR_TUNNEL_IPV4_DST, ueSession.ipv4Address().toInt())
+                    .build();
+            tableId = FABRIC_INGRESS_SPGW_UPLINK_SESSIONS;
+        } else {
+            match = PiCriterion.builder()
+                    .matchExact(HDR_UE_ADDR, ueSession.ipv4Address().toInt())
+                    .build();
+            tableId = FABRIC_INGRESS_SPGW_DOWNLINK_SESSIONS;
+        }
+
+        log.info("Removing {}", ueSession.toString());
+        removeEntry(match, tableId, false);
+    }
+
+    private void removeUpfTermination(UpfTermination upfTermination) throws UpfProgrammableException {
+        final PiCriterion match = PiCriterion.builder()
+                .matchExact(HDR_UE_SESSION_ID, upfTermination.ueSessionId().toInt())
+                .build();
+        final PiTableId tableId = upfTermination.isUplink() ?
+                FABRIC_INGRESS_SPGW_UPLINK_TERMINATIONS :
+                FABRIC_INGRESS_SPGW_DOWNLINK_TERMINATIONS;
+
+        log.info("Removing {}", upfTermination.toString());
+        removeEntry(match, tableId, false);
+    }
+
+    private void removeGtpTunnelPeer(GtpTunnelPeer peer) throws UpfProgrammableException {
+        PiCriterion match = PiCriterion.builder()
+                .matchExact(HDR_TUN_PEER_ID, peer.tunPeerId())
+                .build();
+
+        // TODO: make it atomic
+        removeEntry(match, FABRIC_INGRESS_SPGW_IG_TUNNEL_PEERS, false);
+        removeEntry(match, FABRIC_EGRESS_SPGW_EG_TUNNEL_PEERS, false);
     }
 
     private void applyUplinkRecirculation(Ip4Prefix subnet, boolean remove) {

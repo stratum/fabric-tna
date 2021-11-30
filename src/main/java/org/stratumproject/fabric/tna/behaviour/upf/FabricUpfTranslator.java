@@ -14,7 +14,7 @@ import org.onosproject.net.behaviour.upf.GtpTunnelPeer;
 import org.onosproject.net.behaviour.upf.UeSession;
 import org.onosproject.net.behaviour.upf.UpfInterface;
 import org.onosproject.net.behaviour.upf.UpfProgrammableException;
-import org.onosproject.net.behaviour.upf.UpfTerminationRule;
+import org.onosproject.net.behaviour.upf.UpfTermination;
 import org.onosproject.net.flow.DefaultFlowRule;
 import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
@@ -73,7 +73,7 @@ public class FabricUpfTranslator {
      * @param entry the entry that may or may not be a fabric.p4 UE Session rule
      * @return true if the entry is a fabric.p4 UE Session rule
      */
-    public boolean isFabricUeSessionRule(FlowRule entry) {
+    public boolean isFabricUeSession(FlowRule entry) {
         return entry.table().equals(FABRIC_INGRESS_SPGW_UPLINK_SESSIONS)
                 || entry.table().equals(FABRIC_INGRESS_SPGW_DOWNLINK_SESSIONS);
     }
@@ -85,7 +85,7 @@ public class FabricUpfTranslator {
      * @param entry the entry that may or may not be a fabric.p4 UPF Termination rule
      * @return true if the entry is a fabric.p4 UPF Termination rule
      */
-    public boolean isFabricUpfTerminationRule(FlowRule entry) {
+    public boolean isFabricUpfTermination(FlowRule entry) {
         return entry.table().equals(FABRIC_INGRESS_SPGW_UPLINK_TERMINATIONS)
                 || entry.table().equals(FABRIC_INGRESS_SPGW_DOWNLINK_TERMINATIONS);
     }
@@ -171,15 +171,15 @@ public class FabricUpfTranslator {
     }
 
     /**
-     * Translate a fabric.p4 interface table entry to a UpfTerminationRule instance for easier handling.
+     * Translate a fabric.p4 interface table entry to a UpfTermination instance for easier handling.
      *
      * @param entry the fabric.p4 entry to translate
-     * @return the corresponding UpfTerminationRule
+     * @return the corresponding UpfTermination
      * @throws UpfProgrammableException if the entry cannot be translated
      */
-    public UpfTerminationRule fabricEntryToUpfTerminationRule(FlowRule entry)
+    public UpfTermination fabricEntryToUpfTermination(FlowRule entry)
             throws UpfProgrammableException {
-        var builder = UpfTerminationRule.builder();
+        var builder = UpfTermination.builder();
         Pair<PiCriterion, PiTableAction> matchActionPair = FabricUpfTranslatorUtil.fabricEntryToPiPair(entry);
         PiCriterion match = matchActionPair.getLeft();
         PiAction action = (PiAction) matchActionPair.getRight();
@@ -331,32 +331,42 @@ public class FabricUpfTranslator {
                 .build();
     }
 
-    public FlowRule upfTerminationToFabricEntry(UpfTerminationRule upfTerminationRule, DeviceId deviceId,
+    /**
+     * Translate a UpfTermination to a FlowRule to be inserted into the fabric.p4 pipeline.
+     *
+     * @param upfTermination The UPF Termination to be translated
+     * @param deviceId  the ID of the device the FlowRule should be installed on
+     * @param appId     the ID of the application that will insert the FlowRule
+     * @param priority  the FlowRule's priority
+     * @return the UPF Termination translated to a FlowRule
+     * @throws UpfProgrammableException if the UPF Termination cannot be translated
+     */
+    public FlowRule upfTerminationToFabricEntry(UpfTermination upfTermination, DeviceId deviceId,
                                                 ApplicationId appId, int priority)
             throws UpfProgrammableException {
         final PiTableId tableId;
         final PiCriterion match = PiCriterion.builder()
-                .matchExact(HDR_UE_SESSION_ID, upfTerminationRule.ueSessionId().toInt())
+                .matchExact(HDR_UE_SESSION_ID, upfTermination.ueSessionId().toInt())
                 .build();
         final PiAction.Builder actionBuilder = PiAction.builder();
 
         List<PiActionParam> paramList = new ArrayList<>(Arrays.asList(
-                new PiActionParam(CTR_ID, upfTerminationRule.counterId()),
-                new PiActionParam(TC, upfTerminationRule.trafficClass())
+                new PiActionParam(CTR_ID, upfTermination.counterId()),
+                new PiActionParam(TC, upfTermination.trafficClass())
         ));
 
-        if (upfTerminationRule.isUplink()) {
+        if (upfTermination.isUplink()) {
             tableId = FABRIC_INGRESS_SPGW_UPLINK_TERMINATIONS;
             actionBuilder.withId(FABRIC_INGRESS_SPGW_APP_FWD);
         } else {
             tableId = FABRIC_INGRESS_SPGW_DOWNLINK_TERMINATIONS;
-            if (!upfTerminationRule.skipEgressCtr()) {
+            if (!upfTermination.skipEgressCtr()) {
                 actionBuilder.withId(FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP);
             } else {
                 actionBuilder.withId(FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP_DBUF);
             }
-            paramList.add(new PiActionParam(TEID, upfTerminationRule.teid()));
-            paramList.add(new PiActionParam(QFI, upfTerminationRule.qfi()));
+            paramList.add(new PiActionParam(TEID, upfTermination.teid()));
+            paramList.add(new PiActionParam(QFI, upfTermination.qfi()));
         }
 
         actionBuilder.withParameters(paramList);
