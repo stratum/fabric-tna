@@ -237,7 +237,7 @@ public class FabricUpfProgrammableTest {
 
     @Test
     public void testReadAllCounters() throws Exception {
-        Collection<UpfEntity> allStats = upfProgrammable.readUpfEntities(UpfEntityType.COUNTER, -1);
+        Collection<UpfEntity> allStats = upfProgrammable.readUpfEntities(UpfEntityType.COUNTER);
         assertThat(allStats.size(), equalTo(TestUpfConstants.PHYSICAL_COUNTER_SIZE));
         for (UpfEntity entity : allStats) {
             UpfCounter stat = (UpfCounter) entity;
@@ -250,13 +250,13 @@ public class FabricUpfProgrammableTest {
 
     @Test
     public void testReadAllCountersLimitedCounters() throws Exception {
-        Collection<UpfEntity> allStats = upfProgrammable.readUpfEntities(UpfEntityType.COUNTER, 10);
+        Collection<UpfCounter> allStats = upfProgrammable.readCounters(10);
         assertThat(allStats.size(), equalTo(10));
     }
 
     @Test
     public void testReadAllCountersPhysicalLimit() throws Exception {
-        Collection<UpfEntity> allStats = upfProgrammable.readUpfEntities(UpfEntityType.COUNTER, 1024);
+        Collection<UpfCounter> allStats = upfProgrammable.readCounters(1024);
         assertThat(allStats.size(), equalTo(TestUpfConstants.PHYSICAL_COUNTER_SIZE));
     }
 

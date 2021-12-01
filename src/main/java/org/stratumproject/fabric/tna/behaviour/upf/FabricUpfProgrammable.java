@@ -307,8 +307,8 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     }
 
     @Override
-    public void clearUpfEntities() {
-        if (!setupBehaviour("clearUpfEntities()")) {
+    public void deleteAllUpfEntities() {
+        if (!setupBehaviour("deleteAllUpfEntities()")) {
             return;
         }
 
@@ -337,6 +337,41 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     }
 
     @Override
+    public void deleteUpfEntities(UpfEntityType entityType) throws UpfProgrammableException {
+        if (!setupBehaviour("deleteUpfEntities()")) {
+            return;
+        }
+
+        log.info(format("Clearing all UPF entities of type %s.", entityType.humanReadableName()));
+        int entitiesCleared = 0;
+        for (FlowRule entry : flowRuleService.getFlowEntries(deviceId)) {
+            switch (entityType) {
+                case INTERFACE:
+                    if (upfTranslator.isFabricInterface(entry)) {
+                        clearInterface(entry);
+                        entitiesCleared++;
+                    }
+                case SESSION:
+                    if (upfTranslator.isFabricUeSession(entry)) {
+                        flowRuleService.removeFlowRules(entry);
+                        entitiesCleared++;
+                    }
+                case TERMINATION:
+                    if (upfTranslator.isFabricUpfTermination(entry)) {
+                        flowRuleService.removeFlowRules(entry);
+                        entitiesCleared++;
+                    }
+                case TUNNEL_PEER:
+                    if (upfTranslator.isFabricGtpTunnelPeer(entry)) {
+                        flowRuleService.removeFlowRules(entry);
+                        entitiesCleared++;
+                    }
+            }
+        }
+        log.info("Cleared {} UPF entities of type {}", entitiesCleared, entityType.humanReadableName());
+    }
+
+    @Override
     public Collection<UpfEntity> readUpfEntities(UpfEntityType entityType)
             throws UpfProgrammableException {
         if (!setupBehaviour("readUpfEntities()")) {
@@ -345,99 +380,72 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
         switch (entityType) {
             case INTERFACE:
-                return getInterfaces(-1);
+                return getInterfaces();
             case SESSION:
-                return getUeSessions(-1);
+                return getUeSessions();
             case TERMINATION:
-                return getUpfTerminations(-1);
+                return getUpfTerminations();
             case TUNNEL_PEER:
-                return getGtpTunnelPeers(-1);
+                return getGtpTunnelPeers();
             case COUNTER:
-                return readAllCounters(-1);
+                return readAllCounters();
             default:
                 throw new UpfProgrammableException(format("Reading entity type %s not supported.",
                         entityType.humanReadableName()));
         }
     }
 
-    @Override
-    public Collection<UpfEntity> readUpfEntities(UpfEntityType entityType, int limit)
-            throws UpfProgrammableException {
-        if (!setupBehaviour("readUpfEntities()")) {
-            return null;
-        }
-
-        switch (entityType) {
-            case INTERFACE:
-                return getInterfaces(limit);
-            case SESSION:
-                return getUeSessions(limit);
-            case TERMINATION:
-                return getUpfTerminations(limit);
-            case TUNNEL_PEER:
-                return getGtpTunnelPeers(limit);
-            case COUNTER:
-                return readAllCounters(limit);
-            default:
-                throw new UpfProgrammableException(format("Reading entity type %s not supported.",
-                        entityType.humanReadableName()));
-        }
-    }
-
-    private Collection<UpfEntity> getInterfaces(int limit) throws UpfProgrammableException {
+    private Collection<UpfEntity> getInterfaces() throws UpfProgrammableException {
         ArrayList<UpfEntity> ifaces = new ArrayList<>();
         for (FlowRule flowRule : flowRuleService.getFlowEntries(deviceId)) {
             if (upfTranslator.isFabricInterface(flowRule)) {
                 ifaces.add(upfTranslator.fabricEntryToInterface(flowRule));
             }
-            if (limit != -1 && ifaces.size() == limit) {
-                break;
-            }
         }
         return ifaces;
     }
 
-    private Collection<UpfEntity> getGtpTunnelPeers(int limit) throws UpfProgrammableException {
+    private Collection<UpfEntity> getGtpTunnelPeers() throws UpfProgrammableException {
         ArrayList<UpfEntity> gtpTunnelPeers = new ArrayList<>();
         for (FlowRule flowRule : flowRuleService.getFlowEntries(deviceId)) {
             if (upfTranslator.isFabricGtpTunnelPeer(flowRule)) {
                 gtpTunnelPeers.add(upfTranslator.fabricEntryToGtpTunnelPeer(flowRule));
             }
-            if (limit != -1 && gtpTunnelPeers.size() == limit) {
-                break;
-            }
         }
         return gtpTunnelPeers;
     }
 
-    private Collection<UpfEntity> getUeSessions(int limit) throws UpfProgrammableException {
+    private Collection<UpfEntity> getUeSessions() throws UpfProgrammableException {
         ArrayList<UpfEntity> ueSessions = new ArrayList<>();
         for (FlowRule flowRule : flowRuleService.getFlowEntries(deviceId)) {
             if (upfTranslator.isFabricUeSession(flowRule)) {
                 ueSessions.add(upfTranslator.fabricEntryToUeSession(flowRule));
             }
-            if (limit != -1 && ueSessions.size() == limit) {
-                break;
-            }
         }
         return ueSessions;
     }
 
-    private Collection<UpfEntity> getUpfTerminations(int limit) throws UpfProgrammableException {
+    private Collection<UpfEntity> getUpfTerminations() throws UpfProgrammableException {
         ArrayList<UpfEntity> upfTerminations = new ArrayList<>();
         for (FlowRule flowRule : flowRuleService.getFlowEntries(deviceId)) {
             if (upfTranslator.isFabricUpfTermination(flowRule)) {
                 upfTerminations.add(upfTranslator.fabricEntryToUpfTermination(flowRule));
             }
-            if (limit != -1 && upfTerminations.size() == limit) {
-                break;
-            }
         }
         return upfTerminations;
     }
 
+    private Collection<UpfEntity> readAllCounters() {
+        // FIXME: unnecessary copy, remove once we return <? extends UpfEntity> in the readUpfEntities() API.
+        return new ArrayList<>(readCounters(-1));
+    }
 
-    private Collection<UpfEntity> readAllCounters(long maxCounterId) {
+    @Override
+    public Collection<UpfCounter> readCounters(long maxCounterId) {
+        if (!setupBehaviour("readCounters()")) {
+            return null;
+        }
+
         long counterSize = upfCounterSize;
         if (maxCounterId != -1) {
             counterSize = Math.min(maxCounterId, counterSize);
@@ -495,7 +503,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     }
 
     @Override
-    public long getEntitySize(UpfEntityType entityType) {
+    public long getEntitySize(UpfEntityType entityType) throws UpfProgrammableException {
         if (!setupBehaviour("getEntitySize()")) {
             return -1;
         }
@@ -516,12 +524,12 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
             case COUNTER:
                 return upfCounterSize;
             default:
-                // TODO: throw UpfProgrammableExecption
-                //  throw new UpfProgrammableExecption(format("Entity type %s not supported.", entityType.humanReadableName()));
-                return 0;
+                throw new UpfProgrammableException(format("Getting size of entity type %s not supported.",
+                        entityType.humanReadableName()));
         }
     }
 
+    @Override
     public UpfCounter readCounter(int cellId) throws UpfProgrammableException {
         if (cellId >= upfCounterSize || cellId < 0) {
             throw new UpfProgrammableException("Requested UPF counter cell index is out of bounds.",
