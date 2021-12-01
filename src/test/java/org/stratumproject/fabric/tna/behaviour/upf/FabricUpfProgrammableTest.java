@@ -226,13 +226,12 @@ public class FabricUpfProgrammableTest {
 
     @Test
     public void testClearInterfaces() throws Exception {
-        // FIXME: UpfProgrammableAPI doesn't currently provide a way to clear just interfaces.
-        //        assertTrue(upfProgrammable.getInterfaces().isEmpty());
-        //        upfProgrammable.addInterface(TestUpfConstants.UPLINK_INTERFACE);
-        //        upfProgrammable.addInterface(TestUpfConstants.DOWNLINK_INTERFACE);
-        //        assertThat(upfProgrammable.getInterfaces().size(), equalTo(2));
-        //        upfProgrammable.clearInterfaces();
-        //        assertTrue(upfProgrammable.getInterfaces().isEmpty());
+        assertTrue(upfProgrammable.readUpfEntities(UpfEntityType.INTERFACE).isEmpty());
+        upfProgrammable.applyUpfEntity(TestUpfConstants.UPLINK_INTERFACE);
+        upfProgrammable.applyUpfEntity(TestUpfConstants.DOWNLINK_INTERFACE);
+        assertThat(upfProgrammable.readUpfEntities(UpfEntityType.INTERFACE).size(), equalTo(2));
+        upfProgrammable.deleteUpfEntities(UpfEntityType.INTERFACE);
+        assertTrue(upfProgrammable.readUpfEntities(UpfEntityType.INTERFACE).isEmpty());
     }
 
     @Test
