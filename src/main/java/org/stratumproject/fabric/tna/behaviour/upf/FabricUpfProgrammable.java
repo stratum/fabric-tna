@@ -372,7 +372,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     }
 
     @Override
-    public Collection<UpfEntity> readUpfEntities(UpfEntityType entityType)
+    public Collection<? extends UpfEntity> readUpfEntities(UpfEntityType entityType)
             throws UpfProgrammableException {
         if (!setupBehaviour("readUpfEntities()")) {
             return null;
@@ -388,7 +388,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
             case TUNNEL_PEER:
                 return getGtpTunnelPeers();
             case COUNTER:
-                return readAllCounters();
+                return readCounters(-1);
             default:
                 throw new UpfProgrammableException(format("Reading entity type %s not supported.",
                         entityType.humanReadableName()));
@@ -433,11 +433,6 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
             }
         }
         return upfTerminations;
-    }
-
-    private Collection<UpfEntity> readAllCounters() {
-        // FIXME: unnecessary copy, remove once we return <? extends UpfEntity> in the readUpfEntities() API.
-        return new ArrayList<>(readCounters(-1));
     }
 
     @Override
