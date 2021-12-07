@@ -4,7 +4,6 @@ package org.stratumproject.fabric.tna.behaviour.upf;
 
 import org.onlab.packet.Ip4Address;
 import org.onlab.packet.Ip4Prefix;
-import org.onlab.util.ImmutableByteSequence;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.DefaultApplicationId;
 import org.onosproject.net.DeviceId;
@@ -21,29 +20,60 @@ import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
 
 import java.util.Arrays;
-import java.util.concurrent.Flow;
 
 import static org.stratumproject.fabric.tna.behaviour.Constants.TC_BEST_EFFORT;
 import static org.stratumproject.fabric.tna.behaviour.Constants.TC_CONTROL;
 import static org.stratumproject.fabric.tna.behaviour.Constants.TC_ELASTIC;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.*;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.CTR_ID;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_EG_TUNNEL_PEERS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_LOAD_TUNNEL_PARAMS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_APP_FWD;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP_DBUF;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_SESSIONS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_TERMINATIONS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_IFACE_ACCESS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_IFACE_CORE;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_IG_TUNNEL_PEERS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_INTERFACES;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_SET_DOWNLINK_SESSION;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_SET_ROUTING_IPV4_DST;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_SET_UPLINK_SESSION;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_SESSIONS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_TERMINATIONS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_GTPU_IS_VALID;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_IPV4_DST_ADDR;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_TEID;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_TUNNEL_IPV4_DST;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_TUN_PEER_ID;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_UE_ADDR;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_UE_SESSION_ID;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.QFI;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.SLICE_ID;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TC;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TEID;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TUNNEL_DST_ADDR;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TUNNEL_SRC_ADDR;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TUNNEL_SRC_PORT;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TUN_DST_ADDR;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TUN_PEER_ID;
 import static org.stratumproject.fabric.tna.behaviour.upf.FabricUpfTranslator.QFI_TO_TC;
 
 public final class TestUpfConstants {
     public static final DeviceId DEVICE_ID = DeviceId.deviceId("CoolSwitch91");
     public static final ApplicationId APP_ID = new DefaultApplicationId(5000, "up4");
     public static final int DEFAULT_PRIORITY = 10;
-    private static final int DEFAULT_SLICE_ID = 0;
-    private static final int DEFAULT_TC = 0;
+    private static final byte DEFAULT_SLICE_ID = 0;
+    private static final byte DEFAULT_TC = 0;
     public static final int UPLINK_COUNTER_CELL_ID = 1;
     public static final int DOWNLINK_COUNTER_CELL_ID = 2;
 
     public static final byte UPLINK_QFI = 0x1;
     public static final byte DOWNLINK_QFI = 0x3;
 
-    public static final int ENB_GTP_TUNNEL_PEER = 0x1;
-    public static final ImmutableByteSequence TEID_VALUE = ImmutableByteSequence.copyFrom(0xff);
-    public static final ImmutableByteSequence TEID_VALUE_QOS = ImmutableByteSequence.copyFrom(0xfe);
+    public static final byte ENB_GTP_TUNNEL_PEER = 0x1;
+    public static final int TEID_VALUE = 0xff;
+    public static final int TEID_VALUE_QOS = 0xfe;
     public static final Ip4Address UE_ADDR = Ip4Address.valueOf("17.0.0.1");
     public static final Ip4Address UE_ADDR_QOS = Ip4Address.valueOf("17.0.0.2");
     public static final Ip4Address S1U_ADDR = Ip4Address.valueOf("192.168.0.1");
@@ -54,6 +84,7 @@ public final class TestUpfConstants {
     public static final int PHYSICAL_COUNTER_SIZE = 512;
     public static final int PHYSICAL_MAX_UE_SESSIONS = 512;
     public static final int PHYSICAL_MAX_UPF_TERMINATIONS = 512;
+    public static final int PHYSICAL_MAX_TUNNELS = 256;
 
     public static final long COUNTER_BYTES = 12;
     public static final long COUNTER_PKTS = 15;
@@ -76,14 +107,14 @@ public final class TestUpfConstants {
             .build();
 
     public static final UpfTermination UPLINK_UPF_TERMINATION = UpfTermination.builder()
-            .withSliceId((short) DEFAULT_SLICE_ID)
+            .withSliceId(DEFAULT_SLICE_ID)
             .withUeSessionId(UE_ADDR)
             .withCounterId(UPLINK_COUNTER_CELL_ID)
             .withTrafficClass(DEFAULT_TC)
             .build();
 
     public static final UpfTermination DOWNLINK_UPF_TERMINATION = UpfTermination.builder()
-            .withSliceId((short) DEFAULT_SLICE_ID)
+            .withSliceId(DEFAULT_SLICE_ID)
             .withUeSessionId(UE_ADDR)
             .withCounterId(DOWNLINK_COUNTER_CELL_ID)
             .withTrafficClass(DEFAULT_TC)
@@ -92,7 +123,7 @@ public final class TestUpfConstants {
             .build();
 
     public static final UpfTermination DOWNLINK_UPF_TERMINATION_DBUF = UpfTermination.builder()
-            .withSliceId((short) DEFAULT_SLICE_ID)
+            .withSliceId(DEFAULT_SLICE_ID)
             .withUeSessionId(UE_ADDR)
             .withCounterId(DOWNLINK_COUNTER_CELL_ID)
             .withTrafficClass(DEFAULT_TC)
@@ -102,19 +133,19 @@ public final class TestUpfConstants {
             .build();
 
     public static final UpfTermination DOWNLINK_UPF_TERMINATION_QOS = UpfTermination.builder()
-            .withSliceId((short) DEFAULT_SLICE_ID)
+            .withSliceId(DEFAULT_SLICE_ID)
             .withUeSessionId(UE_ADDR_QOS)
             .withCounterId(DOWNLINK_COUNTER_CELL_ID)
-            .withTrafficClass(TC_ELASTIC)
+            .withTrafficClass((byte) TC_ELASTIC)
             .withTeid(TEID_VALUE_QOS)
             .withQfi(DOWNLINK_QFI)
             .build();
 
     public static final UpfTermination UPLINK_UPF_TERMINATION_QOS = UpfTermination.builder()
-            .withSliceId((short) DEFAULT_SLICE_ID)
+            .withSliceId(DEFAULT_SLICE_ID)
             .withUeSessionId(UE_ADDR_QOS)
             .withCounterId(UPLINK_COUNTER_CELL_ID)
-            .withTrafficClass(TC_CONTROL)
+            .withTrafficClass((byte) TC_CONTROL)
             .build();
 
     // TODO: what about GtpTunnelPeer?
@@ -164,7 +195,7 @@ public final class TestUpfConstants {
             .forTable(FABRIC_INGRESS_SPGW_UPLINK_SESSIONS)
             .withSelector(DefaultTrafficSelector.builder()
                                     .matchPi(PiCriterion.builder()
-                                            .matchExact(HDR_TEID, TEID_VALUE.asArray())
+                                            .matchExact(HDR_TEID, TEID_VALUE)
                                             .matchExact(HDR_TUNNEL_IPV4_DST, S1U_ADDR.toInt())
                                             .build()).build())
             .withTreatment(DefaultTrafficTreatment.builder()
@@ -205,7 +236,7 @@ public final class TestUpfConstants {
                             .withId(FABRIC_INGRESS_SPGW_APP_FWD)
                             .withParameters(Arrays.asList(
                                     new PiActionParam(CTR_ID, UPLINK_COUNTER_CELL_ID),
-                                    new PiActionParam(TC, TC_BEST_EFFORT)
+                                    new PiActionParam(TC, (byte) TC_BEST_EFFORT)
                             ))
                             .build()).build())
             .withPriority(DEFAULT_PRIORITY)
@@ -224,7 +255,7 @@ public final class TestUpfConstants {
                             .withId(FABRIC_INGRESS_SPGW_APP_FWD)
                             .withParameters(Arrays.asList(
                                     new PiActionParam(CTR_ID, UPLINK_COUNTER_CELL_ID),
-                                    new PiActionParam(TC, QFI_TO_TC.get(UPLINK_QFI))
+                                    new PiActionParam(TC, QFI_TO_TC.get(UPLINK_QFI).byteValue())
                             ))
                             .build()).build())
             .withPriority(DEFAULT_PRIORITY)
@@ -243,9 +274,9 @@ public final class TestUpfConstants {
                             .withId(FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP)
                             .withParameters(Arrays.asList(
                                     new PiActionParam(CTR_ID, DOWNLINK_COUNTER_CELL_ID),
-                                    new PiActionParam(TC, TC_BEST_EFFORT),
+                                    new PiActionParam(TC, (byte) TC_BEST_EFFORT),
                                     new PiActionParam(TEID, TEID_VALUE),
-                                    new PiActionParam(QFI, 0)  // 4G case
+                                    new PiActionParam(QFI, (byte) 0)  // 4G case
                             ))
                             .build()).build())
             .withPriority(DEFAULT_PRIORITY)
@@ -264,9 +295,9 @@ public final class TestUpfConstants {
                             .withId(FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP_DBUF)
                             .withParameters(Arrays.asList(
                                     new PiActionParam(CTR_ID, DOWNLINK_COUNTER_CELL_ID),
-                                    new PiActionParam(TC, TC_BEST_EFFORT),
+                                    new PiActionParam(TC, (byte) TC_BEST_EFFORT),
                                     new PiActionParam(TEID, TEID_VALUE),
-                                    new PiActionParam(QFI, 0)  // 4G case
+                                    new PiActionParam(QFI, (byte) 0)  // 4G case
                             ))
                             .build()).build())
             .withPriority(DEFAULT_PRIORITY)
@@ -285,7 +316,7 @@ public final class TestUpfConstants {
                             .withId(FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP)
                             .withParameters(Arrays.asList(
                                     new PiActionParam(CTR_ID, DOWNLINK_COUNTER_CELL_ID),
-                                    new PiActionParam(TC, QFI_TO_TC.get(DOWNLINK_QFI)),
+                                    new PiActionParam(TC, QFI_TO_TC.get(DOWNLINK_QFI).byteValue()),
                                     new PiActionParam(TEID, TEID_VALUE_QOS),
                                     new PiActionParam(QFI, DOWNLINK_QFI)  // 5G case
                             ))

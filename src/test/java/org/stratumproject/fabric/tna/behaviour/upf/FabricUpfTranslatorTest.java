@@ -4,7 +4,11 @@ package org.stratumproject.fabric.tna.behaviour.upf;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.junit.Test;
-import org.onosproject.net.behaviour.upf.*;
+import org.onosproject.net.behaviour.upf.GtpTunnelPeer;
+import org.onosproject.net.behaviour.upf.UeSession;
+import org.onosproject.net.behaviour.upf.UpfInterface;
+import org.onosproject.net.behaviour.upf.UpfProgrammableException;
+import org.onosproject.net.behaviour.upf.UpfTermination;
 import org.onosproject.net.flow.FlowRule;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -316,8 +320,7 @@ public class FabricUpfTranslatorTest {
             return;
         }
         assertThat(translatedRule, equalTo(expectedRule));
-        // FIXME: this fails even if there is no difference, to troubleshoot
-        //  assertThat(translatedRule.treatment(), equalTo(expectedRule.treatment()));
+        assertThat(translatedRule.treatment(), equalTo(expectedRule.treatment()));
     }
 
     @Test
@@ -336,8 +339,7 @@ public class FabricUpfTranslatorTest {
             return;
         }
         assertThat(translatedRule, equalTo(expectedRule));
-        // FIXME: this fails even if there is no difference, to troubleshoot
-        //  assertThat(translatedRule.treatment(), equalTo(expectedRule.treatment()));
+        assertThat(translatedRule.treatment(), equalTo(expectedRule.treatment()));
     }
 
     @Test

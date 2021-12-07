@@ -7,7 +7,6 @@ import com.google.common.collect.ImmutableBiMap;
 import org.apache.commons.lang3.tuple.Pair;
 import org.onlab.packet.Ip4Address;
 import org.onlab.packet.Ip4Prefix;
-import org.onlab.util.ImmutableByteSequence;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.behaviour.upf.GtpTunnelPeer;
@@ -30,15 +29,51 @@ import org.onosproject.net.pi.runtime.PiTableAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.Flow;
 
-import static java.lang.String.format;
 import static org.stratumproject.fabric.tna.behaviour.Constants.DEFAULT_SLICE_ID;
-import static org.stratumproject.fabric.tna.behaviour.Constants.TC_BEST_EFFORT;
 import static org.stratumproject.fabric.tna.behaviour.Constants.TC_CONTROL;
 import static org.stratumproject.fabric.tna.behaviour.Constants.TC_ELASTIC;
 import static org.stratumproject.fabric.tna.behaviour.Constants.TC_REAL_TIME;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.*;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.CTR_ID;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_EG_TUNNEL_PEERS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_GTPU_ENCAP;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_GTPU_ONLY;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_GTPU_WITH_PSC;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_LOAD_TUNNEL_PARAMS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_APP_FWD;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP_DBUF;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_SESSIONS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_TERMINATIONS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_IFACE_ACCESS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_IFACE_CORE;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_IFACE_DBUF;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_IG_TUNNEL_PEERS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_INTERFACES;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_RECIRC_ALLOW;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_RECIRC_DENY;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_SET_DOWNLINK_SESSION;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_SET_ROUTING_IPV4_DST;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_SET_UPLINK_SESSION;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_RECIRC_RULES;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_SESSIONS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_TERMINATIONS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_GTPU_IS_VALID;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_IPV4_DST_ADDR;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_TEID;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_TUNNEL_IPV4_DST;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_TUN_PEER_ID;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_UE_ADDR;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_UE_SESSION_ID;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.QFI;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.SLICE_ID;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TC;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TEID;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TUNNEL_DST_ADDR;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TUNNEL_SRC_ADDR;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TUNNEL_SRC_PORT;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TUN_DST_ADDR;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TUN_PEER_ID;
 
 /**
  * Provides logic to translate UPF entities into pipeline-specific ones and vice-versa.
@@ -122,7 +157,7 @@ public class FabricUpfTranslator {
         Pair<PiCriterion, PiTableAction> matchActionPair = FabricUpfTranslatorUtil.fabricEntryToPiPair(entry);
         PiCriterion match = matchActionPair.getLeft();
         PiAction action = (PiAction) matchActionPair.getRight();
-        builder.withTunnelPeerId(FabricUpfTranslatorUtil.getFieldInt(match, HDR_TUN_PEER_ID));
+        builder.withTunnelPeerId(FabricUpfTranslatorUtil.getFieldByte(match, HDR_TUN_PEER_ID));
 
         if (action.id() != FABRIC_EGRESS_SPGW_LOAD_TUNNEL_PARAMS) {
             throw new UpfProgrammableException("Invalid action provided, cannot build GtpTunnelPeer instance: " +
@@ -156,7 +191,7 @@ public class FabricUpfTranslator {
         } else if (FabricUpfTranslatorUtil.fieldIsPresent(match, HDR_TEID)) {
             // F-TEID is only present for uplink UE Session
             builder.withIpv4Address(FabricUpfTranslatorUtil.getFieldAddress(match, HDR_TUNNEL_IPV4_DST))
-                    .withTeid(FabricUpfTranslatorUtil.getFieldValue(match, HDR_TEID));
+                    .withTeid(FabricUpfTranslatorUtil.getFieldInt(match, HDR_TEID));
         } else {
             throw new UpfProgrammableException("Read malformed UE Session from dataplane!:" + entry);
         }
@@ -164,7 +199,7 @@ public class FabricUpfTranslator {
         PiActionId actionId = action.id();
         if (actionId == FABRIC_INGRESS_SPGW_SET_DOWNLINK_SESSION) {
             // action parameters for downlink session
-            builder.withGtpTunnelPeerId(FabricUpfTranslatorUtil.getParamInt(action, TUN_PEER_ID));
+            builder.withGtpTunnelPeerId(FabricUpfTranslatorUtil.getParamByte(action, TUN_PEER_ID));
         }
 
         return builder.build();
@@ -187,18 +222,18 @@ public class FabricUpfTranslator {
         // Match keys
         Ip4Address ueSessionId = FabricUpfTranslatorUtil.getFieldAddress(match, HDR_UE_SESSION_ID);
         // FIXME: how to retrieve sliceId from fabric.p4?
-        builder.withSliceId((short)0);
+        builder.withSliceId((byte) 0);
         builder.withUeSessionId(ueSessionId);
 
         // Parameters common to all types of UPF Termination rules
         builder.withCounterId(FabricUpfTranslatorUtil.getParamInt(action, CTR_ID))
-                .withTrafficClass(FabricUpfTranslatorUtil.getParamInt(action, TC));
+                .withTrafficClass(FabricUpfTranslatorUtil.getParamByte(action, TC));
 
         PiActionId actionId = action.id();
         if (actionId.equals(FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP) ||
             actionId.equals(FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP_DBUF)) {
             // Grab parameters specific to downlink UPF Termination rules if they're present
-            builder.withTeid(FabricUpfTranslatorUtil.getParamValue(action, TEID))
+            builder.withTeid(FabricUpfTranslatorUtil.getParamInt(action, TEID))
                     .withQfi(FabricUpfTranslatorUtil.getParamValue(action, QFI).asArray()[0]);
         }
 
@@ -308,7 +343,7 @@ public class FabricUpfTranslator {
 
         if (ueSession.isUplink()) {
             match = PiCriterion.builder()
-                    .matchExact(HDR_TEID, ueSession.teid().asArray())
+                    .matchExact(HDR_TEID, ueSession.teid())
                     .matchExact(HDR_TUNNEL_IPV4_DST, ueSession.ipv4Address().toInt())
                     .build();
             tableId = FABRIC_INGRESS_SPGW_UPLINK_SESSIONS;

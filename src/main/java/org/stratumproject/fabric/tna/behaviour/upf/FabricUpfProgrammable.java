@@ -307,36 +307,6 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     }
 
     @Override
-    public void deleteAllUpfEntities() {
-        if (!setupBehaviour("deleteAllUpfEntities()")) {
-            return;
-        }
-
-        log.info("Clearing all UPF entities.");
-        int interfacesCleared = 0;
-        int ueSessionsCleared = 0;
-        int upfTerminationsCleared = 0;
-        int gtpTunnelPeersCleared = 0;
-        for (FlowRule entry : flowRuleService.getFlowEntries(deviceId)) {
-            if (upfTranslator.isFabricInterface(entry)) {
-                clearInterface(entry);
-                interfacesCleared++;
-            } else if (upfTranslator.isFabricUeSession(entry)) {
-                ueSessionsCleared++;
-                flowRuleService.removeFlowRules(entry);
-            } else if (upfTranslator.isFabricUpfTermination(entry)) {
-                upfTerminationsCleared++;
-                flowRuleService.removeFlowRules(entry);
-            } else if (upfTranslator.isFabricGtpTunnelPeer(entry)) {
-                gtpTunnelPeersCleared++;
-                flowRuleService.removeFlowRules(entry);
-            }
-        }
-        log.info("Cleared {} interfaces, {} UE sessions, {} UPF Terminations and {} GTP tunnel peers.",
-                interfacesCleared, ueSessionsCleared, upfTerminationsCleared, gtpTunnelPeersCleared);
-    }
-
-    @Override
     public void deleteUpfEntities(UpfEntityType entityType) throws UpfProgrammableException {
         if (!setupBehaviour("deleteUpfEntities()")) {
             return;
@@ -366,6 +336,9 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                         flowRuleService.removeFlowRules(entry);
                         entitiesCleared++;
                     }
+                default:
+                    log.warn("Unsupported entity type!");
+                    break;
             }
         }
         log.info("Cleared {} UPF entities of type {}", entitiesCleared, entityType.humanReadableName());
@@ -717,7 +690,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
         if (ueSession.isUplink()) {
             match = PiCriterion.builder()
-                    .matchExact(HDR_TEID, ueSession.teid().asArray())
+                    .matchExact(HDR_TEID, ueSession.teid())
                     .matchExact(HDR_TUNNEL_IPV4_DST, ueSession.ipv4Address().toInt())
                     .build();
             tableId = FABRIC_INGRESS_SPGW_UPLINK_SESSIONS;
