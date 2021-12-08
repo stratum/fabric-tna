@@ -42,7 +42,6 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGR
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_LOAD_TUNNEL_PARAMS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_APP_FWD;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP_DBUF;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_SESSIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_TERMINATIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_IFACE_ACCESS;
@@ -53,6 +52,7 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_ING
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_RECIRC_ALLOW;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_RECIRC_DENY;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_SET_DOWNLINK_SESSION;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_SET_DOWNLINK_SESSION_DBUF;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_SET_ROUTING_IPV4_DST;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_SET_UPLINK_SESSION;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_RECIRC_RULES;
@@ -159,9 +159,9 @@ public class FabricUpfTranslator {
         PiAction action = (PiAction) matchActionPair.getRight();
         builder.withTunnelPeerId(FabricUpfTranslatorUtil.getFieldByte(match, HDR_TUN_PEER_ID));
 
-        if (action.id() != FABRIC_EGRESS_SPGW_LOAD_TUNNEL_PARAMS) {
+        if (!action.id().equals(FABRIC_EGRESS_SPGW_LOAD_TUNNEL_PARAMS)) {
             throw new UpfProgrammableException("Invalid action provided, cannot build GtpTunnelPeer instance: " +
-                    action.id().toString());
+                    action.id());
         }
 
         builder.withSrcAddr(FabricUpfTranslatorUtil.getParamAddress(action, TUNNEL_SRC_ADDR))
@@ -197,9 +197,10 @@ public class FabricUpfTranslator {
         }
 
         PiActionId actionId = action.id();
-        if (actionId == FABRIC_INGRESS_SPGW_SET_DOWNLINK_SESSION) {
+        if (!actionId.equals(FABRIC_INGRESS_SPGW_SET_UPLINK_SESSION)) {
             // action parameters for downlink session
             builder.withGtpTunnelPeerId(FabricUpfTranslatorUtil.getParamByte(action, TUN_PEER_ID));
+            builder.withBuffering(actionId.equals(FABRIC_INGRESS_SPGW_SET_DOWNLINK_SESSION_DBUF));
         }
 
         return builder.build();
@@ -230,8 +231,7 @@ public class FabricUpfTranslator {
                 .withTrafficClass(FabricUpfTranslatorUtil.getParamByte(action, TC));
 
         PiActionId actionId = action.id();
-        if (actionId.equals(FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP) ||
-            actionId.equals(FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP_DBUF)) {
+        if (actionId.equals(FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP)) {
             // Grab parameters specific to downlink UPF Termination rules if they're present
             builder.withTeid(FabricUpfTranslatorUtil.getParamInt(action, TEID))
                     .withQfi(FabricUpfTranslatorUtil.getParamValue(action, QFI).asArray()[0]);
@@ -353,8 +353,12 @@ public class FabricUpfTranslator {
                     .matchExact(HDR_UE_ADDR, ueSession.ipv4Address().toInt())
                     .build();
             tableId = FABRIC_INGRESS_SPGW_DOWNLINK_SESSIONS;
-            actionBuilder.withId(FABRIC_INGRESS_SPGW_SET_DOWNLINK_SESSION)
-                    .withParameter(new PiActionParam(TUN_PEER_ID, ueSession.tunPeerId()));
+            if (ueSession.needsBuffering()) {
+                actionBuilder.withId(FABRIC_INGRESS_SPGW_SET_DOWNLINK_SESSION_DBUF);
+            } else {
+                actionBuilder.withId(FABRIC_INGRESS_SPGW_SET_DOWNLINK_SESSION);
+            }
+            actionBuilder.withParameter(new PiActionParam(TUN_PEER_ID, ueSession.tunPeerId()));
         }
 
         return DefaultFlowRule.builder()
@@ -395,11 +399,7 @@ public class FabricUpfTranslator {
             actionBuilder.withId(FABRIC_INGRESS_SPGW_APP_FWD);
         } else {
             tableId = FABRIC_INGRESS_SPGW_DOWNLINK_TERMINATIONS;
-            if (!upfTermination.skipEgressCtr()) {
-                actionBuilder.withId(FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP);
-            } else {
-                actionBuilder.withId(FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP_DBUF);
-            }
+            actionBuilder.withId(FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP);
             paramList.add(new PiActionParam(TEID, upfTermination.teid()));
             paramList.add(new PiActionParam(QFI, upfTermination.qfi()));
         }

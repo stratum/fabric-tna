@@ -2504,6 +2504,21 @@ class SpgwSimpleTest(IPv4UnicastTest):
         )
         self.write_request(req)
 
+    def setup_downlink_ue_session_dbuf(self, ue_addr, tunnel_peer_id):
+        req = self.get_new_write_request()
+
+        self.push_update_add_entry_to_action(
+            req,
+            "FabricIngress.spgw.downlink_sessions",
+            [self.Exact("ue_addr", ipv4_to_binary(ue_addr))],
+            "FabricIngress.spgw.set_downlink_session_dbuf",
+            [
+                ("tun_peer_id", stringify(tunnel_peer_id, 1)),
+            ],
+        )
+        self.write_request(req)
+
+
     def setup_downlink_termination_tunnel(self, ue_session, ctr_id, teid,
                                           tc=DEFAULT_TC,
                                           qfi=DEFAULT_QFI):
@@ -2513,25 +2528,6 @@ class SpgwSimpleTest(IPv4UnicastTest):
             "FabricIngress.spgw.downlink_terminations",
             [self.Exact("ue_session_id", ipv4_to_binary(ue_session))],
             "FabricIngress.spgw.downlink_fwd_encap",
-            [
-                ("ctr_id", stringify(ctr_id, 2)),
-                ("tc", stringify(tc, 1)),
-                ("teid", stringify(teid, 4)),
-                ("qfi", stringify(qfi, 1)),
-            ],
-        )
-        self.write_request(req)
-
-    def setup_downlink_termination_dbuf(self, ue_session, ctr_id,
-                                        teid=DBUF_TEID,
-                                        tc=DEFAULT_TC,
-                                        qfi=DEFAULT_QFI):
-        req = self.get_new_write_request()
-        self.push_update_add_entry_to_action(
-            req,
-            "FabricIngress.spgw.downlink_terminations",
-            [self.Exact("ue_session_id", ipv4_to_binary(ue_session))],
-            "FabricIngress.spgw.downlink_fwd_encap_dbuf",
             [
                 ("ctr_id", stringify(ctr_id, 2)),
                 ("tc", stringify(tc, 1)),
@@ -2987,17 +2983,17 @@ class SpgwSimpleTest(IPv4UnicastTest):
 
         # Add the UE pool interface and the UE Sessions/Terminations pointing to the DBUF
         self.add_ue_pool(UE1_IPV4)
-        self.setup_downlink_ue_session(ue_addr=UE1_IPV4,
-                                       tunnel_peer_id=DBUF_TUNNEL_PEER_ID)
+        self.setup_downlink_ue_session_dbuf(ue_addr=UE1_IPV4,
+                                            tunnel_peer_id=DBUF_TUNNEL_PEER_ID)
 
         self.add_dbuf_device(
             dbuf_addr=DBUF_IPV4,
             drain_dst_addr=DBUF_DRAIN_DST_IPV4
         )
 
-        self.setup_downlink_termination_dbuf(ue_session=UE1_IPV4,
-                                             ctr_id=DOWNLINK_UPF_CTR_IDX,
-                                             teid=DBUF_TEID)
+        self.setup_downlink_termination_tunnel(ue_session=UE1_IPV4,
+                                               ctr_id=DOWNLINK_UPF_CTR_IDX,
+                                               teid=DBUF_TEID)
 
         # Clear SPGW counters before sending the packet
         self.reset_upf_counters(DOWNLINK_UPF_CTR_IDX)

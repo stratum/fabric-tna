@@ -109,6 +109,14 @@ control SpgwIngress(
         // Set UE IP address.
         ue_session_id = fabric_md.routing_ipv4_dst;
         fabric_md.bridged.spgw.tun_peer_id = tun_peer_id;
+        fabric_md.bridged.spgw.skip_egress_upf_ctr = false;
+    }
+
+    action set_downlink_session_dbuf(tun_peer_id_t tun_peer_id) {
+        // Set UE IP address.
+        ue_session_id = fabric_md.routing_ipv4_dst;
+        fabric_md.bridged.spgw.tun_peer_id = tun_peer_id;
+        fabric_md.bridged.spgw.skip_egress_upf_ctr = true;
     }
 
     action set_uplink_session() {
@@ -124,6 +132,7 @@ control SpgwIngress(
         }
         actions = {
             set_downlink_session;
+            set_downlink_session_dbuf;
             @defaultonly downlink_session_drop;
         }
         size = NUM_UES;
@@ -179,19 +188,6 @@ control SpgwIngress(
                               bit<6>       qfi) {
         app_fwd(ctr_id, tc);
         fabric_md.bridged.spgw.needs_gtpu_encap = true;
-        fabric_md.bridged.spgw.skip_egress_upf_ctr = false;
-        fabric_md.bridged.spgw.teid = teid;
-        fabric_md.bridged.spgw.qfi = qfi;
-    }
-
-    action downlink_fwd_encap_dbuf(upf_ctr_id_t ctr_id,
-                                   tc_t         tc,
-                                   teid_t       teid,
-                                   // QFI should always equal 0 for 4G flows
-                                   bit<6>       qfi) {
-        app_fwd(ctr_id, tc);
-        fabric_md.bridged.spgw.needs_gtpu_encap = true;
-        fabric_md.bridged.spgw.skip_egress_upf_ctr = true;
         fabric_md.bridged.spgw.teid = teid;
         fabric_md.bridged.spgw.qfi = qfi;
     }
@@ -215,7 +211,6 @@ control SpgwIngress(
         }
         actions = {
             downlink_fwd_encap;
-            downlink_fwd_encap_dbuf;
             downlink_drop;
         }
         const default_action = downlink_drop();

@@ -55,12 +55,31 @@ public class FabricUpfTranslatorTest {
         try {
             translated = upfTranslator.fabricEntryToUeSession(TestUpfConstants.FABRIC_DOWNLINK_UE_SESSION);
         } catch (UpfProgrammableException e) {
-            assertThat("Fabric uplink UE session should correctly translate to abstract UE session without error",
+            assertThat("Fabric downlink UE session should correctly translate to abstract UE session without error",
                     false);
             return;
         }
         assertThat("Translated UE Session should be downlink.",
                 !translated.isUplink());
+        assertThat(translated, equalTo(expected));
+    }
+
+    @Test
+    public void fabricEntryToDownlinkUeSessionDbufTest() {
+        UeSession translated;
+        UeSession expected = TestUpfConstants.DOWNLINK_UE_SESSION_DBUF;
+        try {
+            translated = upfTranslator.fabricEntryToUeSession(TestUpfConstants.FABRIC_DOWNLINK_UE_SESSION_DBUF);
+        } catch (UpfProgrammableException e) {
+            assertThat("Fabric downlink DBUF UE session should correctly " +
+                               "translate to abstract UE session without error",
+                       false);
+            return;
+        }
+        assertThat("Translated UE Session should be downlink.",
+                   !translated.isUplink());
+        assertThat("Translated UE Session should be buffering.",
+                   translated.needsBuffering());
         assertThat(translated, equalTo(expected));
     }
 
@@ -267,6 +286,25 @@ public class FabricUpfTranslatorTest {
     }
 
     @Test
+    public void downlinkUeSessionDbufToFabricEntryTest() {
+        FlowRule translatedRule;
+        FlowRule expectedRule = TestUpfConstants.FABRIC_DOWNLINK_UE_SESSION_DBUF;
+        try {
+            translatedRule = upfTranslator.ueSessionToFabricEntry(TestUpfConstants.DOWNLINK_UE_SESSION_DBUF,
+                                                                  TestUpfConstants.DEVICE_ID,
+                                                                  TestUpfConstants.APP_ID,
+                                                                  TestUpfConstants.DEFAULT_PRIORITY);
+        } catch (UpfProgrammableException e) {
+            assertThat("Abstract downlink DBUF UE session should correctly " +
+                               "translate to Fabric UE session without error",
+                       false);
+            return;
+        }
+        assertThat(translatedRule, equalTo(expectedRule));
+        assertThat(translatedRule.treatment(), equalTo(expectedRule.treatment()));
+    }
+
+    @Test
     public void uplinkUpfTerminationToFabricEntryTest() {
         FlowRule translatedRule;
         FlowRule expectedRule = TestUpfConstants.FABRIC_UPLINK_UPF_TERMINATION;
@@ -315,25 +353,6 @@ public class FabricUpfTranslatorTest {
                     TestUpfConstants.DEFAULT_PRIORITY);
         } catch (UpfProgrammableException e) {
             assertThat("Abstract downlink UPF Termination should correctly " +
-                            "translate to Fabric UPF Termination without error",
-                    false);
-            return;
-        }
-        assertThat(translatedRule, equalTo(expectedRule));
-        assertThat(translatedRule.treatment(), equalTo(expectedRule.treatment()));
-    }
-
-    @Test
-    public void downlinkUpfTerminationToDbufToFabricEntryTest() {
-        FlowRule translatedRule;
-        FlowRule expectedRule = TestUpfConstants.FABRIC_DOWNLINK_UPF_TERMINATION_DBUF;
-        try {
-            translatedRule = upfTranslator.upfTerminationToFabricEntry(TestUpfConstants.DOWNLINK_UPF_TERMINATION_DBUF,
-                    TestUpfConstants.DEVICE_ID,
-                    TestUpfConstants.APP_ID,
-                    TestUpfConstants.DEFAULT_PRIORITY);
-        } catch (UpfProgrammableException e) {
-            assertThat("Abstract downlink UPF Termination to DBUF should correctly " +
                             "translate to Fabric UPF Termination without error",
                     false);
             return;

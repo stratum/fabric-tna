@@ -319,7 +319,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     }
 
     @Override
-    public void deleteUpfEntities(UpfEntityType entityType) throws UpfProgrammableException {
+    public void deleteAll(UpfEntityType entityType) throws UpfProgrammableException {
         if (!setupBehaviour("deleteUpfEntities()")) {
             return;
         }
@@ -357,7 +357,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     }
 
     @Override
-    public Collection<? extends UpfEntity> readUpfEntities(UpfEntityType entityType)
+    public Collection<? extends UpfEntity> readAll(UpfEntityType entityType)
             throws UpfProgrammableException {
         if (!setupBehaviour("readUpfEntities()")) {
             return null;
@@ -483,7 +483,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     }
 
     @Override
-    public long getEntitySize(UpfEntityType entityType) throws UpfProgrammableException {
+    public long tableSize(UpfEntityType entityType) throws UpfProgrammableException {
         if (!setupBehaviour("getEntitySize()")) {
             return -1;
         }
@@ -552,12 +552,12 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     }
 
     @Override
-    public void applyUpfEntity(UpfEntity entity) throws UpfProgrammableException {
+    public void apply(UpfEntity entity) throws UpfProgrammableException {
         if (!setupBehaviour("applyUpfEntity()")) {
             return;
         }
 
-        switch (entity.upfEntityType()) {
+        switch (entity.type()) {
             case INTERFACE:
                 addInterface((UpfInterface) entity);
                 break;
@@ -573,7 +573,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
             case COUNTER:
             default:
                 throw new UpfProgrammableException(format("Adding entity type %s not supported.",
-                        entity.upfEntityType().humanReadableName()));
+                        entity.type().humanReadableName()));
         }
     }
 
@@ -615,12 +615,12 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     }
 
     @Override
-    public void deleteUpfEntity(UpfEntity entity) throws UpfProgrammableException {
+    public void delete(UpfEntity entity) throws UpfProgrammableException {
         if (!setupBehaviour("deleteUpfEntity()")) {
             return;
         }
 
-        switch (entity.upfEntityType()) {
+        switch (entity.type()) {
             case INTERFACE:
                 removeInterface((UpfInterface) entity);
                 break;
@@ -636,7 +636,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
             case COUNTER:
             default:
                 throw new UpfProgrammableException(format("Deleting entity type %s not supported.",
-                        entity.upfEntityType().humanReadableName()));
+                        entity.type().humanReadableName()));
         }
     }
 
