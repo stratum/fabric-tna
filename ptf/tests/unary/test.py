@@ -2509,7 +2509,7 @@ class CounterTest(BridgingTest):
 
 # Disable the loopback mode test since we are going to use Stratum main.p4 for CCP instead of fabric-tna
 # and we will remove loopback mode from fabric-tna once we move all CCP tests to main.p4.
-@skip()
+@skip("Deprecated")
 class FabricIpv4UnicastLoopbackModeTest(IPv4UnicastTest):
     """Emulates TV loopback mode for Ipv4UnicastTest"""
 
@@ -2557,7 +2557,7 @@ class FabricIpv4UnicastLoopbackModeTest(IPv4UnicastTest):
 
 # Disable the loopback mode test since we are going to use Stratum main.p4 for CCP instead of fabric-tna
 # and we will remove loopback mode from fabric-tna once we move all CCP tests to main.p4.
-@skip()
+@skip("Deprecated")
 class FabricPacketInLoopbackModeTest(FabricTest):
     """Emulates TV loopback mode for packet-in tests"""
 
@@ -2598,7 +2598,7 @@ class FabricPacketInLoopbackModeTest(FabricTest):
 
 # Disable the loopback mode test since we are going to use Stratum main.p4 for CCP instead of fabric-tna
 # and we will remove loopback mode from fabric-tna once we move all CCP tests to main.p4.
-@skip()
+@skip("Deprecated")
 class FabricPacketOutLoopbackModeTest(FabricTest):
     """Emulates TV loopback mode for packet-out tests"""
 
@@ -2632,7 +2632,7 @@ class FabricPacketOutLoopbackModeTest(FabricTest):
 # Disable the loopback mode test since we are going to use Stratum main.p4 for CCP instead of fabric-tna
 # and we will remove loopback mode from fabric-tna once we move all CCP tests to main.p4.
 @group("int")
-@skip()
+@skip("Deprecated")
 class FabricIntFlowReportLoopbackModeTest(IntTest):
     @tvsetup
     @autocleanup
