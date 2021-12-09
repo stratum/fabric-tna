@@ -139,7 +139,7 @@ control IngressQos (inout fabric_ingress_metadata_t fabric_md,
     }
 
     action set_default_tc(tc_t tc) {
-        fabric_md.bridged.base.slice_tc =  fabric_md.bridged.base.slice_tc&(6w0b111100|(bit<6>)tc);
+        fabric_md.bridged.base.slice_tc = fabric_md.bridged.base.slice_tc[SLICE_ID_WIDTH+TC_WIDTH-1:TC_WIDTH]++tc;
     }
 
     // This table can be merged with queues table to obtain a more optimized pipeline
