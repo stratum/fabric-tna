@@ -51,6 +51,15 @@ final class FabricTreatmentInterpreter {
                     .put(P4InfoConstants.FABRIC_EGRESS_EGRESS_NEXT_EGRESS_VLAN,
                          P4InfoConstants.FABRIC_EGRESS_EGRESS_NEXT_POP_VLAN)
                     .build();
+    private static final ImmutableMap<PiTableId, PiActionId> DROP_ACTIONS =
+            ImmutableMap.<PiTableId, PiActionId>builder()
+                    .put(P4InfoConstants.FABRIC_INGRESS_ACL_ACL,
+                         P4InfoConstants.FABRIC_INGRESS_ACL_DROP)
+                    .put(P4InfoConstants.FABRIC_INGRESS_FORWARDING_ROUTING_V4,
+                         P4InfoConstants.FABRIC_INGRESS_FORWARDING_DROP_ROUTING_V4)
+                    .put(P4InfoConstants.FABRIC_INGRESS_FORWARDING_ROUTING_V6,
+                         P4InfoConstants.FABRIC_INGRESS_FORWARDING_DROP_ROUTING_V6)
+                    .build();
 
 
     FabricTreatmentInterpreter(FabricCapabilities capabilities) {
@@ -59,6 +68,9 @@ final class FabricTreatmentInterpreter {
 
     static PiAction mapForwardingTreatment(TrafficTreatment treatment, PiTableId tableId)
             throws PiInterpreterException {
+        if (isDrop(treatment)) {
+            return drop(tableId);
+        }
         if (isNoAction(treatment)) {
             return nop(tableId);
         }
@@ -226,10 +238,10 @@ final class FabricTreatmentInterpreter {
     }
 
     private static PiAction drop(PiTableId tableId) throws PiInterpreterException {
-        if (!tableId.equals(P4InfoConstants.FABRIC_INGRESS_ACL_ACL)) {
+        if (!DROP_ACTIONS.containsKey(tableId)) {
             throw new PiInterpreterException(format("table '%s' doe not specify a drop action", tableId));
         }
-        return PiAction.builder().withId(P4InfoConstants.FABRIC_INGRESS_ACL_DROP).build();
+        return PiAction.builder().withId(DROP_ACTIONS.get(tableId)).build();
     }
 
     // NOTE: clearDeferred is used by the routing application to implement ACL drop and route black-holing
