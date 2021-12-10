@@ -21,9 +21,6 @@ import org.onosproject.net.pi.runtime.PiActionParam;
 
 import java.util.Arrays;
 
-import static org.stratumproject.fabric.tna.behaviour.Constants.TC_BEST_EFFORT;
-import static org.stratumproject.fabric.tna.behaviour.Constants.TC_CONTROL;
-import static org.stratumproject.fabric.tna.behaviour.Constants.TC_ELASTIC;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.CTR_ID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_EG_TUNNEL_PEERS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_LOAD_TUNNEL_PARAMS;
@@ -57,7 +54,6 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TUNNEL_SRC
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TUNNEL_SRC_PORT;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TUN_DST_ADDR;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TUN_PEER_ID;
-import static org.stratumproject.fabric.tna.behaviour.upf.FabricUpfTranslator.QFI_TO_TC;
 
 public final class TestUpfConstants {
     public static final DeviceId DEVICE_ID = DeviceId.deviceId("CoolSwitch91");
@@ -69,7 +65,9 @@ public final class TestUpfConstants {
     public static final int DOWNLINK_COUNTER_CELL_ID = 2;
 
     public static final byte UPLINK_QFI = 0x1;
+    public static final byte UPLINK_TC = 0x1;
     public static final byte DOWNLINK_QFI = 0x3;
+    public static final byte DOWNLINK_TC = 0x3;
 
     public static final byte ENB_GTP_TUNNEL_PEER = 0x2;
     public static final byte DBUF_TUNNEL_PEER = 0x1;
@@ -114,35 +112,31 @@ public final class TestUpfConstants {
             .build();
 
     public static final UpfTermination UPLINK_UPF_TERMINATION = UpfTermination.builder()
-            .withSliceId(DEFAULT_SLICE_ID)
             .withUeSessionId(UE_ADDR)
             .withCounterId(UPLINK_COUNTER_CELL_ID)
-            .withTrafficClass(DEFAULT_TC)
+            .withTrafficClass(UPLINK_TC)
             .build();
 
     public static final UpfTermination DOWNLINK_UPF_TERMINATION = UpfTermination.builder()
-            .withSliceId(DEFAULT_SLICE_ID)
             .withUeSessionId(UE_ADDR)
             .withCounterId(DOWNLINK_COUNTER_CELL_ID)
-            .withTrafficClass(DEFAULT_TC)
+            .withTrafficClass(DOWNLINK_TC)
             .withTeid(TEID_VALUE)
             .withQfi((byte) 0)
             .build();
 
     public static final UpfTermination DOWNLINK_UPF_TERMINATION_QOS = UpfTermination.builder()
-            .withSliceId(DEFAULT_SLICE_ID)
             .withUeSessionId(UE_ADDR_QOS)
             .withCounterId(DOWNLINK_COUNTER_CELL_ID)
-            .withTrafficClass((byte) TC_ELASTIC)
+            .withTrafficClass(DOWNLINK_TC)
             .withTeid(TEID_VALUE_QOS)
             .withQfi(DOWNLINK_QFI)
             .build();
 
     public static final UpfTermination UPLINK_UPF_TERMINATION_QOS = UpfTermination.builder()
-            .withSliceId(DEFAULT_SLICE_ID)
             .withUeSessionId(UE_ADDR_QOS)
             .withCounterId(UPLINK_COUNTER_CELL_ID)
-            .withTrafficClass((byte) TC_CONTROL)
+            .withTrafficClass(UPLINK_TC)
             .build();
 
     // TODO: what about GtpTunnelPeer?
@@ -239,7 +233,7 @@ public final class TestUpfConstants {
             .forTable(FABRIC_INGRESS_SPGW_UPLINK_TERMINATIONS)
             .withSelector(DefaultTrafficSelector.builder()
                     .matchPi(PiCriterion.builder()
-                            // we don't match on slice_id, becuase we assume distint UE pools per slice
+                            // we don't match on slice_id, because we assume distinct UE pools per slice
                             .matchExact(HDR_UE_SESSION_ID, UE_ADDR.toInt())
                             .build()).build())
             .withTreatment(DefaultTrafficTreatment.builder()
@@ -247,7 +241,7 @@ public final class TestUpfConstants {
                             .withId(FABRIC_INGRESS_SPGW_APP_FWD)
                             .withParameters(Arrays.asList(
                                     new PiActionParam(CTR_ID, UPLINK_COUNTER_CELL_ID),
-                                    new PiActionParam(TC, (byte) TC_BEST_EFFORT)
+                                    new PiActionParam(TC, UPLINK_TC)
                             ))
                             .build()).build())
             .withPriority(DEFAULT_PRIORITY)
@@ -258,7 +252,7 @@ public final class TestUpfConstants {
             .forTable(FABRIC_INGRESS_SPGW_UPLINK_TERMINATIONS)
             .withSelector(DefaultTrafficSelector.builder()
                     .matchPi(PiCriterion.builder()
-                            // we don't match on slice_id, becuase we assume distint UE pools per slice
+                            // we don't match on slice_id, because we assume distinct UE pools per slice
                             .matchExact(HDR_UE_SESSION_ID, UE_ADDR_QOS.toInt())
                             .build()).build())
             .withTreatment(DefaultTrafficTreatment.builder()
@@ -266,7 +260,7 @@ public final class TestUpfConstants {
                             .withId(FABRIC_INGRESS_SPGW_APP_FWD)
                             .withParameters(Arrays.asList(
                                     new PiActionParam(CTR_ID, UPLINK_COUNTER_CELL_ID),
-                                    new PiActionParam(TC, QFI_TO_TC.get(UPLINK_QFI).byteValue())
+                                    new PiActionParam(TC, UPLINK_TC)
                             ))
                             .build()).build())
             .withPriority(DEFAULT_PRIORITY)
@@ -277,7 +271,7 @@ public final class TestUpfConstants {
             .forTable(FABRIC_INGRESS_SPGW_DOWNLINK_TERMINATIONS)
             .withSelector(DefaultTrafficSelector.builder()
                     .matchPi(PiCriterion.builder()
-                            // we don't match on slice_id, becuase we assume distint UE pools per slice
+                            // we don't match on slice_id, because we assume distinct UE pools per slice
                             .matchExact(HDR_UE_SESSION_ID, UE_ADDR.toInt())
                             .build()).build())
             .withTreatment(DefaultTrafficTreatment.builder()
@@ -285,7 +279,7 @@ public final class TestUpfConstants {
                             .withId(FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP)
                             .withParameters(Arrays.asList(
                                     new PiActionParam(CTR_ID, DOWNLINK_COUNTER_CELL_ID),
-                                    new PiActionParam(TC, (byte) TC_BEST_EFFORT),
+                                    new PiActionParam(TC, DOWNLINK_TC),
                                     new PiActionParam(TEID, TEID_VALUE),
                                     new PiActionParam(QFI, (byte) 0)  // 4G case
                             ))
@@ -306,7 +300,7 @@ public final class TestUpfConstants {
                             .withId(FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP)
                             .withParameters(Arrays.asList(
                                     new PiActionParam(CTR_ID, DOWNLINK_COUNTER_CELL_ID),
-                                    new PiActionParam(TC, QFI_TO_TC.get(DOWNLINK_QFI).byteValue()),
+                                    new PiActionParam(TC, DOWNLINK_TC),
                                     new PiActionParam(TEID, TEID_VALUE_QOS),
                                     new PiActionParam(QFI, DOWNLINK_QFI)  // 5G case
                             ))
