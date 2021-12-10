@@ -95,7 +95,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
     private ApplicationId appId;
 
-    static final SliceId SLICE_MOBILE = SliceId.of(0xF);
+    static final SliceId SLICE_MOBILE = SliceId.MAX_SLICE_ID;
 
     @Override
     protected boolean setupBehaviour(String opName) {
@@ -139,11 +139,22 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     public boolean init() {
         if (setupBehaviour("init()")) {
             log.info("UpfProgrammable initialized for appId {} and deviceId {}", appId, deviceId);
-            // Default TC is associated directly by the slicing manager
+// Add static Queue Configuration
+            // Default slice and best effort TC will be created by SlicingService by default
             slicingService.addSlice(SLICE_MOBILE);
-            slicingService.addTrafficClass(SLICE_MOBILE, TrafficClass.CONTROL);
-            slicingService.addTrafficClass(SLICE_MOBILE, TrafficClass.REAL_TIME);
-            slicingService.addTrafficClass(SLICE_MOBILE, TrafficClass.ELASTIC);
+            try {
+                Set<TrafficClass> tcs = slicingService.getTrafficClasses(SLICE_MOBILE);
+                Arrays.stream(TrafficClass.values()).forEach(tc -> {
+                    if (tcs.contains(tc) || tc.equals(TrafficClass.BEST_EFFORT) ||
+                            tc.equals(TrafficClass.SYSTEM)) {
+                        return;
+                    }
+                    slicingService.addTrafficClass(SLICE_MOBILE, tc);
+                });
+            } catch (SlicingException e) {
+                log.error("Exception while configuring traffic class for Mobile Slice: {}", e.getMessage());
+                return false;
+            }
             return true;
         }
         return false;
