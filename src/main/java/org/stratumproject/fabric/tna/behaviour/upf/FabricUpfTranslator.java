@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 package org.stratumproject.fabric.tna.behaviour.upf;
 
-import com.google.common.collect.BiMap;
-import com.google.common.collect.ImmutableBiMap;
 import org.apache.commons.lang3.tuple.Pair;
 import org.onlab.packet.Ip4Address;
 import org.onlab.packet.Ip4Prefix;
@@ -31,9 +29,6 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.stratumproject.fabric.tna.behaviour.Constants.DEFAULT_SLICE_ID;
-import static org.stratumproject.fabric.tna.behaviour.Constants.TC_CONTROL;
-import static org.stratumproject.fabric.tna.behaviour.Constants.TC_ELASTIC;
-import static org.stratumproject.fabric.tna.behaviour.Constants.TC_REAL_TIME;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.CTR_ID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_EG_TUNNEL_PEERS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_GTPU_ENCAP;
@@ -80,21 +75,13 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TUN_PEER_I
  * Implementation should be stateless, with all state delegated to FabricUpfStore.
  */
 public class FabricUpfTranslator {
-
-    // TODO: agree on a mapping with the PFCP agent
-    //  Make sure to have a 1 to 1 mapping between QFI and TC.
-    static final BiMap<Byte, Integer> QFI_TO_TC = ImmutableBiMap.of(
-            // FIXME: allow explicit QFI mapping to Best-Effort. Currently,
-            //  the only way the mobile core can set Best-Effort is by not
-            //  specifying a QFI in PDRs. We do this to maintain backward
-            //  compatibility with PFCP Agent, but eventually all PDRs will have
-            //  a QFI.
-            // (byte) 0, TC_BEST_EFFORT, --> Used for PDRs without QFI
-            (byte) 1, TC_CONTROL,
-            (byte) 2, TC_REAL_TIME,
-            (byte) 3, TC_ELASTIC);
-
-
+    /**
+     * Returns true if the given table entry is a GTP tunnel peer rule from the
+     * physical fabric pipeline, and false otherwise.
+     *
+     * @param entry the flow rule entry
+     * @return true if the entry is a fabric.p4 GTP tunnel peer
+     */
     public boolean isFabricGtpTunnelPeer(FlowRule entry) {
         // we return egress tunnel_peers table, because only this table
         // contains all necessary information to create GtpTunnelPeer instance.
@@ -137,7 +124,7 @@ public class FabricUpfTranslator {
     }
 
     /**
-     * Translate a fabric.p4 interface table entry to a GtpTunnelPeer instance for easier handling.
+     * Translate a fabric.p4 GTP tunnel peer table entry to a GtpTunnelPeer instance for easier handling.
      *
      * @param entry the fabric.p4 entry to translate, the method expects FlowRule from eg_tunnel_peers table.
      * @return the corresponding GtpTunnelPeer
@@ -153,7 +140,6 @@ public class FabricUpfTranslator {
                     " expected, provided: " + entry);
         }
 
-        // Translate ingress entry first
         Pair<PiCriterion, PiTableAction> matchActionPair = FabricUpfTranslatorUtil.fabricEntryToPiPair(entry);
         PiCriterion match = matchActionPair.getLeft();
         PiAction action = (PiAction) matchActionPair.getRight();
@@ -172,7 +158,7 @@ public class FabricUpfTranslator {
     }
 
     /**
-     * Translate a fabric.p4 interface table entry to a UeSession instance for easier handling.
+     * Translate a fabric.p4 session table entry to a UeSession instance for easier handling.
      *
      * @param entry the fabric.p4 entry to translate
      * @return the corresponding UeSession
@@ -207,7 +193,7 @@ public class FabricUpfTranslator {
     }
 
     /**
-     * Translate a fabric.p4 interface table entry to a UpfTermination instance for easier handling.
+     * Translate a fabric.p4 termination table entry to a UpfTermination instance for easier handling.
      *
      * @param entry the fabric.p4 entry to translate
      * @return the corresponding UpfTermination
@@ -222,8 +208,7 @@ public class FabricUpfTranslator {
 
         // Match keys
         Ip4Address ueSessionId = FabricUpfTranslatorUtil.getFieldAddress(match, HDR_UE_SESSION_ID);
-        // FIXME: how to retrieve sliceId from fabric.p4?
-        builder.withSliceId((byte) 0);
+        // TODO: update when we support multiple slice in P4-UPF
         builder.withUeSessionId(ueSessionId);
 
         // Parameters common to all types of UPF Termination rules
@@ -473,9 +458,6 @@ public class FabricUpfTranslator {
      * @param priority the FlowRule's priority
      * @return FlowRule for the uplink recirculation table
      */
-    // FIXME: this method is specific to fabric-tna and might be removed once we create proper
-    //   pipeconf behavior for fabric-v1model, unless we add the same uplink recirculation
-    //   capability to that P4 program as well.
     public FlowRule buildFabricUplinkRecircEntry(DeviceId deviceId, ApplicationId appId,
                                                  Ip4Prefix src, Ip4Prefix dst,
                                                  boolean allow, int priority) {

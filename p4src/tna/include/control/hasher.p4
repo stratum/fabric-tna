@@ -31,11 +31,10 @@ control Hasher(
         // GTP-aware ECMP for downlink packets encapped by this switch.
         if (fabric_md.bridged.spgw.needs_gtpu_encap) {
             fabric_md.ecmp_hash = encap_gtp_flow_hasher.get({
-                // If needs_gtpu_encap, routing_ipv4_dst always equals to
-                // GTP tunnel destination IP address.
-                // In addition to TEID, we only use dest IP addr to calculate a hash,
-                // as src IP addr is always the same for GTP tunnels towards different eNBs.
-                fabric_md.routing_ipv4_dst,
+                // If needs_gtpu_encap, tun_peer_id represents the GTP tunnel entpoint.
+                // In addition to TEID, we use tunnel_peer_id that conveys information
+                // about the source IP (UPF) and the destination IP (eNB).
+                fabric_md.bridged.spgw.tun_peer_id,
                 fabric_md.bridged.spgw.teid
             });
         } else

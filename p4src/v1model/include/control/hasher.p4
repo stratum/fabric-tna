@@ -29,7 +29,7 @@ control Hasher(inout ingress_headers_t hdr,
                 fabric_md.ecmp_hash,
                 HashAlgorithm.crc32,
                 base,
-                {fabric_md.routing_ipv4_dst, fabric_md.bridged.spgw.teid},
+                {fabric_md.bridged.spgw.tun_peer_id, fabric_md.bridged.spgw.teid},
                 max
             );
         } else

@@ -3,6 +3,7 @@
 package org.stratumproject.fabric.tna.behaviour.upf;
 
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.apache.commons.lang3.tuple.Pair;
 import org.onlab.packet.Ip4Prefix;
@@ -320,7 +321,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
     @Override
     public void deleteAll(UpfEntityType entityType) throws UpfProgrammableException {
-        if (!setupBehaviour("deleteUpfEntities()")) {
+        if (!setupBehaviour("deleteAll()")) {
             return;
         }
 
@@ -359,7 +360,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     @Override
     public Collection<? extends UpfEntity> readAll(UpfEntityType entityType)
             throws UpfProgrammableException {
-        if (!setupBehaviour("readUpfEntities()")) {
+        if (!setupBehaviour("readAll()")) {
             return null;
         }
 
@@ -396,6 +397,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
             if (upfTranslator.isFabricGtpTunnelPeer(flowRule)) {
                 gtpTunnelPeers.add(upfTranslator.fabricEntryToGtpTunnelPeer(flowRule));
             }
+            // TODO: should we ensure the corresponding IG_TUNNEL_PEER rule is installed?
         }
         return gtpTunnelPeers;
     }
@@ -484,7 +486,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
     @Override
     public long tableSize(UpfEntityType entityType) throws UpfProgrammableException {
-        if (!setupBehaviour("getEntitySize()")) {
+        if (!setupBehaviour("tableSize()")) {
             return -1;
         }
 
@@ -511,6 +513,9 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
     @Override
     public UpfCounter readCounter(int cellId) throws UpfProgrammableException {
+        if (!setupBehaviour("readCounter()")) {
+            return null;
+        }
         if (cellId >= upfCounterSize || cellId < 0) {
             throw new UpfProgrammableException("Requested UPF counter cell index is out of bounds.",
                     UpfProgrammableException.Type.ENTITY_OUT_OF_RANGE);
@@ -553,7 +558,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
     @Override
     public void apply(UpfEntity entity) throws UpfProgrammableException {
-        if (!setupBehaviour("applyUpfEntity()")) {
+        if (!setupBehaviour("apply()")) {
             return;
         }
 
@@ -616,7 +621,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
     @Override
     public void delete(UpfEntity entity) throws UpfProgrammableException {
-        if (!setupBehaviour("deleteUpfEntity()")) {
+        if (!setupBehaviour("delete()")) {
             return;
         }
 
@@ -642,15 +647,21 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
     private boolean removeEntry(PiCriterion match, PiTableId tableId, boolean failSilent)
             throws UpfProgrammableException {
-        FlowRule entry = DefaultFlowRule.builder()
+        return removeEntries(Lists.newArrayList(Pair.of(tableId, match)), failSilent);
+    }
+
+    private boolean removeEntries(Collection<Pair<PiTableId, PiCriterion>> entriesToRemove, boolean failSilent)
+            throws UpfProgrammableException {
+        Collection<FlowRule> entries = entriesToRemove.stream().map(e -> DefaultFlowRule.builder()
                 .forDevice(deviceId).fromApp(appId).makePermanent()
-                .forTable(tableId)
-                .withSelector(DefaultTrafficSelector.builder().matchPi(match).build())
+                .forTable(e.getKey())
+                .withSelector(DefaultTrafficSelector.builder().matchPi(e.getValue()).build())
                 .withPriority(DEFAULT_PRIORITY)
-                .build();
+                .build())
+                .collect(Collectors.toList());
 
         try {
-            flowRuleService.removeFlowRules(entry);
+            flowRuleService.removeFlowRules(entries.toArray(FlowRule[]::new));
             // TODO in future we may need to send other notifications to the pfcp agent
             //if (!failSilent) {
             //    throw new UpfProgrammableException("Match criterion " + match.toString() +
@@ -663,8 +674,10 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         // Assumes that the ONOS state is ok and the pfcp agent
         // is not asking to remove wrong flows
         if (!failSilent) {
-            throw new UpfProgrammableException("Unable to remove FlowRule with match criterion " + match.toString() +
-                    " in table " + tableId.toString());
+            String errorString = entriesToRemove.stream()
+                    .map(e -> "    Match: " + e.getValue() + " Table: " + e.getKey() + "\n")
+                    .collect(Collectors.joining());
+            throw new UpfProgrammableException("Unable to remove FlowRules\n " + errorString);
         }
         return false;
     }
@@ -733,10 +746,9 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         PiCriterion match = PiCriterion.builder()
                 .matchExact(HDR_TUN_PEER_ID, peer.tunPeerId())
                 .build();
-
-        // TODO: make it atomic
-        removeEntry(match, FABRIC_INGRESS_SPGW_IG_TUNNEL_PEERS, false);
-        removeEntry(match, FABRIC_EGRESS_SPGW_EG_TUNNEL_PEERS, false);
+        removeEntries(Lists.newArrayList(Pair.of(FABRIC_INGRESS_SPGW_IG_TUNNEL_PEERS, match),
+                                         Pair.of(FABRIC_EGRESS_SPGW_EG_TUNNEL_PEERS, match)),
+                      false);
     }
 
     private void applyUplinkRecirculation(Ip4Prefix subnet, boolean remove) {
