@@ -247,9 +247,6 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
         if (sliceId.equals(SliceId.DEFAULT)) {
             throw new SlicingException(INVALID, "Adding default slice is not allowed");
         }
-        // FIXME: not sure if we need to add the BE TC, we could create a wildcard
-        //  match on the queues table that maps to BE by default or rely on the
-        //  default action of the queues table?
 
         return addTrafficClass(sliceId, TrafficClass.BEST_EFFORT) &&
                 setDefaultTrafficClass(sliceId, TrafficClass.BEST_EFFORT);

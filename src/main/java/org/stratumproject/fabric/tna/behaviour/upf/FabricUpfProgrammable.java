@@ -139,7 +139,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     public boolean init() {
         if (setupBehaviour("init()")) {
             log.info("UpfProgrammable initialized for appId {} and deviceId {}", appId, deviceId);
-// Add static Queue Configuration
+            // Add static Queue Configuration
             // Default slice and best effort TC will be created by SlicingService by default
             slicingService.addSlice(SLICE_MOBILE);
             try {
