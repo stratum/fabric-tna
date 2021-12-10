@@ -24,6 +24,9 @@ typedef bit<1> BOOL;
 
 const PortId_t BMV2_DROP_PORT = 511;
 
+#define IS_RECIRCULATED(std_meta) (std_meta.instance_type == PKT_INSTANCE_TYPE_INGRESS_RECIRC)
+#define IS_E2E_CLONE(std_meta) (std_meta.instance_type == PKT_INSTANCE_TYPE_EGRESS_CLONE)
+
 #include "shared/define.p4" // Must be included AFTER defining the above typedefs.
 
 #endif // __DEFINE_V1MODEL__

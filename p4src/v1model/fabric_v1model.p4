@@ -31,9 +31,6 @@
 #include "v1model/include/control/int.p4"
 #endif // WITH_INT
 
-#define IS_RECIRCULATED(std_meta) (std_meta.instance_type == PKT_INSTANCE_TYPE_INGRESS_RECIRC)
-#define IS_E2E_CLONE(std_meta) (std_meta.instance_type == PKT_INSTANCE_TYPE_EGRESS_CLONE)
-
 control FabricIngress (inout v1model_header_t hdr,
                        inout fabric_v1model_metadata_t fabric_md,
                        inout standard_metadata_t standard_md) {
@@ -63,7 +60,6 @@ control FabricIngress (inout v1model_header_t hdr,
         mark_to_drop(standard_md);
         if (standard_md.parser_error == error.PacketRejectedByParser) {
             // packet was rejected by parser -> drop.
-            mark_to_drop(standard_md);
             exit;
         }
 
@@ -96,7 +92,7 @@ control FabricIngress (inout v1model_header_t hdr,
         qos.apply(fabric_md.ingress, standard_md);
 #ifdef WITH_INT
         // Should always apply last to guarantee generation of drop reports.
-        int_ingress.apply(hdr.ingress, fabric_md.ingress, standard_md);
+        int_ingress.apply(hdr.ingress, fabric_md, standard_md);
 #endif // WITH_INT
 
         // Emulating TNA behavior through bridged metadata.
@@ -126,16 +122,21 @@ control FabricEgress (inout v1model_header_t hdr,
 
 #ifdef WITH_INT
         // Emulate mirroring and TNA Egress Parser by cloning the packet and recirculating it.
-        const bit<32> E2E_CLONE_SESSION_ID = 0x1f;
+        if (IS_RECIRCULATED(standard_md)) {
+            // INT mirrored and recirculated packet.
+            fabric_md.egress.is_int_recirc = true;
+        }
 
-        if(fabric_md.int_mirror_type == FabricMirrorType_t.INT_REPORT) {
-            clone3(CloneType.E2E, E2E_CLONE_SESSION_ID,{standard_md, fabric_md});
-            // do not exit. Let the Int egress control do its work.
+        if(fabric_md.egress.bridged.int_bmd.mirror_session_id != 0 && !IS_E2E_CLONE(standard_md)) {
+            // INT packet to be mirrored through clone.
+            clone3(CloneType.E2E,
+             (bit<32>)fabric_md.egress.bridged.int_bmd.mirror_session_id,
+             {standard_md, fabric_md}); // pls p4c, do preserve metadata.
         }
 
         if (IS_E2E_CLONE(standard_md)){
-            recirculate({standard_md, fabric_md});
-            exit;
+            // INT mirrored packet -> recirculate.
+            recirculate({standard_md});
         }
 #endif // WITH_INT
 
@@ -151,7 +152,7 @@ control FabricEgress (inout v1model_header_t hdr,
         spgw.apply(hdr.ingress, fabric_md);
 #endif // WITH_SPGW
 #ifdef WITH_INT
-        int_egress.apply(hdr.egress, fabric_md, standard_md);
+        int_egress.apply(hdr, fabric_md, standard_md);
 #endif // WITH_INT
         dscp_rewriter.apply(fabric_md, standard_md, hdr.ingress);
 
@@ -159,7 +160,6 @@ control FabricEgress (inout v1model_header_t hdr,
             // Recirculate UE-to-UE traffic.
             recirculate(standard_md);
         }
-
     } // end of apply{}
 }
 

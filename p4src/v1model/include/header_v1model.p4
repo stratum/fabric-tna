@@ -21,7 +21,8 @@ struct fabric_v1model_metadata_t {
     bool                      do_spgw_uplink_recirc;
     // Mirror flag for INT
     bit<3>                    int_mirror_type;
-    bool                      int_deflect_on_drop;
+    bit<1>                    deflect_on_drop;
+    bit<1>                    int_deflect_on_drop;
 
     fabric_ingress_metadata_t ingress;
     fabric_egress_metadata_t  egress;

@@ -10,6 +10,11 @@
 control Forwarding (inout ingress_headers_t hdr,
                     inout fabric_ingress_metadata_t fabric_md) {
 
+#ifdef WITH_INT
+    action set_int_drop_reason(bit<8> drop_reason) {
+        fabric_md.bridged.int_bmd.drop_reason = (IntDropReason_t)drop_reason;
+    }
+#endif // WITH_INT
 
     @hidden
     action set_next_id(next_id_t next_id) {
@@ -32,13 +37,21 @@ control Forwarding (inout ingress_headers_t hdr,
     table bridging {
         key = {
             fabric_md.bridged.base.vlan_id : exact @name("vlan_id");
-            hdr.ethernet.dst_addr          : ternary @name("eth_dst");
+            hdr.ethernet.dst_addr     : ternary @name("eth_dst");
         }
         actions = {
             set_next_id_bridging;
+#ifdef WITH_INT
+            @defaultonly set_int_drop_reason;
+#else
             @defaultonly nop;
+#endif // WITH_INT
         }
+#ifdef WITH_INT
+        const default_action = set_int_drop_reason(IntDropReason_t.DROP_REASON_BRIDGING_MISS);
+#else
         const default_action = nop();
+#endif // WITH_INT
         counters = bridging_counter;
         size = BRIDGING_TABLE_SIZE;
     }
@@ -62,9 +75,17 @@ control Forwarding (inout ingress_headers_t hdr,
         }
         actions = {
             pop_mpls_and_next;
+#ifdef WITH_INT
+            @defaultonly set_int_drop_reason;
+#else
             @defaultonly nop;
+#endif // WITH_INT
         }
+#ifdef WITH_INT
+        const default_action = set_int_drop_reason(IntDropReason_t.DROP_REASON_MPLS_MISS);
+#else
         const default_action = nop();
+#endif // WITH_INT
         counters = mpls_counter;
         size = MPLS_TABLE_SIZE;
     }
@@ -91,9 +112,17 @@ control Forwarding (inout ingress_headers_t hdr,
         actions = {
             set_next_id_routing_v4;
             nop_routing_v4;
+#ifdef WITH_INT
+            @defaultonly set_int_drop_reason;
+#else
             @defaultonly nop;
+#endif // WITH_INT
         }
+#ifdef WITH_INT
+        default_action = set_int_drop_reason(IntDropReason_t.DROP_REASON_ROUTING_V4_MISS);
+#else
         default_action = nop();
+#endif // WITH_INT
         counters = routing_v4_counter;
         size = ROUTING_V4_TABLE_SIZE;
     }
@@ -114,9 +143,17 @@ control Forwarding (inout ingress_headers_t hdr,
         }
         actions = {
             set_next_id_routing_v6;
+#ifdef WITH_INT
+            @defaultonly set_int_drop_reason;
+#else
             @defaultonly nop;
+#endif // WITH_INT
         }
+#ifdef WITH_INT
+        default_action = set_int_drop_reason(IntDropReason_t.DROP_REASON_ROUTING_V6_MISS);
+#else
         default_action = nop();
+#endif // WITH_INT
         counters = routing_v6_counter;
         size = ROUTING_V6_TABLE_SIZE;
     }

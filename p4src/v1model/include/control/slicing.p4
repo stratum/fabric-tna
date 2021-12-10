@@ -104,6 +104,9 @@ control IngressQos (inout fabric_ingress_metadata_t fabric_md,
     // For policing.
     action meter_drop() {
         mark_to_drop(standard_md);
+#ifdef WITH_INT
+        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_INGRESS_QOS_METER;
+#endif // WITH_INT
         queues_stats.count();
     }
 

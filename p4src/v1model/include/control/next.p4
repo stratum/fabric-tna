@@ -250,6 +250,9 @@ control EgressNextControl (inout ingress_headers_t hdr,
     action drop() {
         mark_to_drop(standard_md);
         egress_vlan_counter.count();
+#ifdef WITH_INT
+        fabric_md.int_report_md.drop_reason = IntDropReason_t.DROP_REASON_EGRESS_NEXT_MISS;
+#endif // WITH_INT
     }
 
     table egress_vlan {
@@ -290,8 +293,13 @@ control EgressNextControl (inout ingress_headers_t hdr,
 #endif // WITH_DOUBLE_VLAN_TERMINATION
             // Port-based VLAN tagging; if there is no match drop the packet!
 
+#ifdef WITH_INT
+        if(!fabric_md.is_int_recirc) {
+#endif // WITH_INT
             egress_vlan.apply();
-
+#ifdef WITH_INT
+        }
+#endif // WITH_INT
 #ifdef WITH_DOUBLE_VLAN_TERMINATION
         }
 #endif // WITH_DOUBLE_VLAN_TERMINATION
@@ -301,17 +309,26 @@ control EgressNextControl (inout ingress_headers_t hdr,
             hdr.mpls.ttl = hdr.mpls.ttl - 1;
             if (hdr.mpls.ttl == 0) {
                 mark_to_drop(standard_md);
+#ifdef WITH_INT
+                fabric_md.int_report_md.drop_reason = IntDropReason_t.DROP_REASON_MPLS_TTL_ZERO;
+#endif // WITH_INT
             }
         } else {
             if (hdr.ipv4.isValid() && fabric_md.bridged.base.fwd_type != FWD_BRIDGING) {
                 hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
                 if (hdr.ipv4.ttl == 0) {
                     mark_to_drop(standard_md);
+#ifdef WITH_INT
+                    fabric_md.int_report_md.drop_reason = IntDropReason_t.DROP_REASON_IP_TTL_ZERO;
+#endif // WITH_INT
                 }
             } else if (hdr.ipv6.isValid() && fabric_md.bridged.base.fwd_type != FWD_BRIDGING) {
                 hdr.ipv6.hop_limit = hdr.ipv6.hop_limit - 1;
                 if (hdr.ipv6.hop_limit == 0) {
                     mark_to_drop(standard_md);
+#ifdef WITH_INT
+                    fabric_md.int_report_md.drop_reason = IntDropReason_t.DROP_REASON_IP_TTL_ZERO;
+#endif // WITH_INT
                 }
             }
         }

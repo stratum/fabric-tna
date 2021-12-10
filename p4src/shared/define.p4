@@ -192,6 +192,7 @@ const bit<16> REPORT_FIXED_HEADER_BYTES = 12;
 const bit<16> DROP_REPORT_HEADER_BYTES = 12;
 const bit<16> LOCAL_REPORT_HEADER_BYTES = 16;
 const bit<8>  INT_MIRROR_SESSION_BASE = 0x80;
+const bit<10> BMV2_INT_MIRROR_SESSION = 0x1FA;
 
 #define FLOW_REPORT_FILTER_WIDTH 16
 typedef bit<FLOW_REPORT_FILTER_WIDTH> flow_report_filter_index_t;

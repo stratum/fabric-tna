@@ -30,7 +30,6 @@ control FlowReportFilter(
     // inout egress_intrinsic_metadata_for_deparser_t eg_dprsr_md
     ) {
 
-    // Hash<bit<16>>(HashAlgorithm_t.CRC16) digester;
     fabric_egress_metadata_t fabric_md = fabric_v1model.egress;
     bit<16> digest = 0;
     bit<16> stored_digest = 0;
@@ -84,24 +83,15 @@ control FlowReportFilter(
                 },
                 max
             );
-            // digest = digester.get({ // burp!
-            //     fabric_md.bridged.base.ig_port,
-            //     eg_intr_md.egress_port,
-            //     fabric_md.int_md.hop_latency,
-            //     fabric_md.bridged.base.inner_hash,
-            //     fabric_md.int_md.timestamp
-            // });
 
             // filter1 get and set
             filter1.read(stored_digest, (bit<32>)fabric_md.bridged.base.inner_hash[31:16]);
             flag = digest == stored_digest ? 1w1 : 1w0;
-            stored_digest = digest;
-            filter1.write((bit<32>)fabric_md.bridged.base.inner_hash[31:16], stored_digest);
+            filter1.write((bit<32>)fabric_md.bridged.base.inner_hash[31:16], digest);
             // filter2 get and set
             filter2.read(stored_digest, (bit<32>)fabric_md.bridged.base.inner_hash[15:0]);
             flag = flag | (digest == stored_digest ? 1w1 : 1w0);
-            stored_digest = digest;
-            filter2.write((bit<32>)fabric_md.bridged.base.inner_hash[15:0], stored_digest);
+            filter2.write((bit<32>)fabric_md.bridged.base.inner_hash[15:0], digest);
 
             // flag = filter_get_and_set1.execute(fabric_md.bridged.base.inner_hash[31:16]);
             // flag = flag | filter_get_and_set2.execute(fabric_md.bridged.base.inner_hash[15:0]);
@@ -122,7 +112,6 @@ control DropReportFilter(
     // inout egress_intrinsic_metadata_for_deparser_t eg_dprsr_md
     ) {
 
-    // Hash<bit<16>>(HashAlgorithm_t.CRC16) digester;
     bit<16> digest = 0;
     bit<16> stored_digest = 0;
     bit<1> flag = 0;
@@ -166,29 +155,19 @@ control DropReportFilter(
                 HashAlgorithm.crc16,
                 base,
                 {
-                    fabric_md.bridged.base.ig_port,
-                    standard_md.egress_spec,
-                    fabric_md.int_md.hop_latency,
-                    fabric_md.bridged.base.inner_hash,
+                    fabric_md.int_report_md.flow_hash,
                     fabric_md.int_md.timestamp
                 },
                 max
             );
-
-            // digest = digester.get({ // burp!
-            //     fabric_md.int_report_md.flow_hash,
-            //     fabric_md.int_md.timestamp
-            // });
-
+            // filter 1 get and set
             filter1.read(stored_digest, (bit<32>)fabric_md.bridged.base.inner_hash[31:16]);
             flag = digest == stored_digest ? 1w1 : 1w0;
-            stored_digest = digest;
-            filter1.write((bit<32>)fabric_md.bridged.base.inner_hash[31:16], stored_digest);
-            // filter 2
+            filter1.write((bit<32>)fabric_md.bridged.base.inner_hash[31:16], digest);
+            // filter 2 get and set
             filter2.read(stored_digest, (bit<32>)fabric_md.bridged.base.inner_hash[15:0]);
             flag = flag | (digest == stored_digest ? 1w1 : 1w0);
-            stored_digest = digest;
-            filter2.write((bit<32>)fabric_md.bridged.base.inner_hash[15:0], stored_digest);
+            filter2.write((bit<32>)fabric_md.bridged.base.inner_hash[15:0], digest);
 
             // flag = filter_get_and_set1.execute(fabric_md.int_report_md.flow_hash[31:16]);
             // flag = flag | filter_get_and_set2.execute(fabric_md.int_report_md.flow_hash[15:0]);
@@ -196,7 +175,7 @@ control DropReportFilter(
             if (flag == 1) {
                 // eg_dprsr_md.drop_ctl = 1;
                 mark_to_drop(standard_md);
-                exit;
+                // exit;
             }
         }
     }
@@ -216,7 +195,7 @@ control IntWatchlist(
 
     action mark_to_report() {
         fabric_md.bridged.int_bmd.report_type = INT_REPORT_TYPE_FLOW;
-        fabric_v1model.int_deflect_on_drop = true;
+        fabric_v1model.int_deflect_on_drop = 1w1;
         // ig_tm_md.deflect_on_drop = 1;
 
         watchlist_counter.count();
@@ -250,7 +229,6 @@ control IntWatchlist(
         const size = INT_WATCHLIST_TABLE_SIZE;
 
         counters = watchlist_counter;
-
     }
 
     apply {
@@ -261,15 +239,15 @@ control IntWatchlist(
 
 control IntIngress(
     inout ingress_headers_t hdr,
-    // inout fabric_v1model_metadata_t fabric_v1model,
-    inout fabric_ingress_metadata_t fabric_md,
+    inout fabric_v1model_metadata_t fabric_v1model,
+    // inout fabric_ingress_metadata_t fabric_md,
     inout standard_metadata_t standard_md
     // in    ingress_intrinsic_metadata_t ig_intr_md,
     // inout ingress_intrinsic_metadata_for_deparser_t ig_dprsr_md,
     // inout ingress_intrinsic_metadata_for_tm_t ig_tm_md
     ) {
 
-    // fabric_ingress_metadata_t fabric_md = fabric_v1model.ingress;
+    fabric_ingress_metadata_t fabric_md = fabric_v1model.ingress;
     bit<1> drop_ctl = 0;
     // Convert from bool to int because of ternary match not supporting bool.
     bit<1> egress_port_set = (bit<1>)fabric_md.egress_port_set;
@@ -286,13 +264,13 @@ control IntIngress(
 #endif // WITH_SPGW
         // Redirect to the recirculation port of the pipeline
         // ig_tm_md.ucast_egress_port = ig_intr_md.ingress_port[8:7] ++ RECIRC_PORT_NUMBER;
-        standard_md.egress_spec = standard_md.ingress_port[8:7] ++ RECIRC_PORT_NUMBER; //FIXME bmv2 should invoke recirculate.
+        // standard_md.egress_spec = standard_md.ingress_port[8:7] ++ RECIRC_PORT_NUMBER; //FIXME bmv2 should invoke recirculate.
 
         // The drop flag may be set by other tables, need to reset it so the packet can
         // be forward to the recirculation port.
         // ig_dprsr_md.drop_ctl = 0;
         drop_ctl = 0; //FIXME what if mark_to_drop was invoked? should override egress_spec.
-        // standard_md.egress_spec = 0;
+        // standard_md.egress_spec = 1;
 
         drop_report_counter.count();
     }
@@ -313,7 +291,6 @@ control IntIngress(
             report_drop;
             @defaultonly nop;
         }
-        const size = 2;
         const entries = {
             // Explicit drop. Do not report if we are punting to the CPU, since that is
             // implemented as drop+copy_to_cpu.
@@ -329,7 +306,7 @@ control IntIngress(
         // Here we use 0b10000000xx as the mirror session ID where "xx" is the 2-bit
         // pipeline number(0~3).
         // fabric_md.bridged.int_bmd.mirror_session_id = INT_MIRROR_SESSION_BASE ++ ig_intr_md.ingress_port[8:7];
-        fabric_md.bridged.int_bmd.mirror_session_id = INT_MIRROR_SESSION_BASE ++ standard_md.ingress_port[8:7];
+        fabric_md.bridged.int_bmd.mirror_session_id = BMV2_INT_MIRROR_SESSION; // for bmv2, use a single mirror session ID.
         // When the traffic manager deflects a packet, the egress port and queue id
         // of egress intrinsic metadata will be the port and queue used for deflection.
         // We need to bridge the egress port and queue id from ingress to the egress
@@ -341,16 +318,278 @@ control IntIngress(
         drop_report.apply();
         if (drop_ctl == 1) {
             mark_to_drop(standard_md);
-            // if performed in ingress, packet will dropped at the end of Ingress pipeline.
-            // Maybe it's ok to skip this mark_to_drop(), to emulate deflection on drop.
         }
 
-        // fabric_v1model.ingress = fabric_md;
+        fabric_v1model.ingress = fabric_md;
+    }
+}
+
+control IntEgressParserEmulator (
+    inout v1model_header_t hdr_v1model,
+    // inout egress_headers_t hdr,
+    inout fabric_v1model_metadata_t fabric_v1model,
+    inout standard_metadata_t standard_md) {
+
+// This control wraps all the logic defined within the TNA egress parser.
+// It actually does not perform any parsing of the packet.
+
+    egress_headers_t hdr = hdr_v1model.egress;
+    // fabric_ingress_metadata_t fabric_md = fabric_v1model.ingress;
+    fabric_egress_metadata_t fabric_md = fabric_v1model.egress;
+
+    @hidden
+    action drop() {
+        mark_to_drop(standard_md);
+    }
+
+    @hidden
+    action reject() {
+        drop();
+        exit;
+    }
+
+    @hidden
+    action set_common_int_headers() {
+        // Initialize report headers here to allocate constant fields on the
+        // T-PHV (and save on PHV resources).
+        /** report_ethernet **/
+        hdr.report_ethernet.setValid();
+        // hdr.report_ethernet.dst_addr = update later
+        // hdr.report_ethernet.src_addr = update later
+
+        /** report_eth_type **/
+        hdr.report_eth_type.setValid();
+        // hdr.report_eth_type.value = update later
+
+        /** report_mpls (set valid later) **/
+        // hdr.report_mpls.label = update later
+        hdr.report_mpls.tc = 0;
+        hdr.report_mpls.bos = 0;
+        hdr.report_mpls.ttl = DEFAULT_MPLS_TTL;
+
+        /** report_ipv4 **/
+        hdr.report_ipv4.setValid();
+        hdr.report_ipv4.version = 4w4;
+        hdr.report_ipv4.ihl = 4w5;
+        // TODO BEFORE MERGE: confirm with DI team whether this can be zero
+        hdr.report_ipv4.dscp = 0;
+        hdr.report_ipv4.ecn = 2w0;
+        // hdr.report_ipv4.total_len = update later
+        // hdr.report_ipv4.identification = update later
+        hdr.report_ipv4.flags = 0;
+        hdr.report_ipv4.frag_offset = 0;
+        hdr.report_ipv4.ttl = DEFAULT_IPV4_TTL;
+        hdr.report_ipv4.protocol = PROTO_UDP;
+        // hdr.report_ipv4.hdr_checksum = update later
+        // hdr.report_ipv4.src_addr = update later
+        // hdr.report_ipv4.dst_addr = update later
+
+        /** report_udp **/
+        hdr.report_udp.setValid();
+        hdr.report_udp.sport = 0;
+        // hdr.report_udp.dport = update later
+        // hdr.report_udp.len = update later
+        // hdr.report_udp.checksum = update never!
+
+        /** report_fixed_header **/
+        hdr.report_fixed_header.setValid();
+        hdr.report_fixed_header.ver = 0;
+        hdr.report_fixed_header.nproto = NPROTO_TELEMETRY_SWITCH_LOCAL_HEADER;
+        // hdr.report_fixed_header.d = update later
+        // hdr.report_fixed_header.q = update later
+        // hdr.report_fixed_header.f = update later
+        hdr.report_fixed_header.rsvd = 0;
+        // hdr.report_fixed_header.hw_id = update later
+        // hdr.report_fixed_header.seq_no = update later
+
+        /** common_report_header **/
+        hdr.common_report_header.setValid();
+        // hdr.common_report_header.switch_id = update later
+    }
+
+    @hidden
+    action set_common_int_drop_headers() {
+        fabric_md.int_report_md.setValid();
+        fabric_md.int_report_md.ip_eth_type = ETHERTYPE_IPV4;
+        fabric_md.int_report_md.report_type = INT_REPORT_TYPE_DROP;
+        fabric_md.int_report_md.mirror_type = FabricMirrorType_t.INVALID;
+
+        /** drop_report_header **/
+        hdr.drop_report_header.setValid();
+        // transition set_common_int_headers;
+        set_common_int_headers();
+    }
+
+    @hidden
+    action parse_int_deflected_drop() {
+        fabric_md.int_report_md.bmd_type = BridgedMdType_t.DEFLECTED;
+        fabric_md.int_report_md.encap_presence = fabric_md.bridged.base.encap_presence;
+        fabric_md.int_report_md.flow_hash = fabric_md.bridged.base.inner_hash;
+
+        /** drop_report_header **/
+        hdr.drop_report_header.drop_reason = IntDropReason_t.DROP_REASON_TRAFFIC_MANAGER;
+        /** report_fixed_header **/
+        hdr.report_fixed_header.ig_tstamp = fabric_md.bridged.base.ig_tstamp[31:0];
+        /** common_report_header **/
+        hdr.common_report_header.ig_port = fabric_md.bridged.base.ig_port;
+        hdr.common_report_header.eg_port = fabric_md.bridged.int_bmd.egress_port;
+        hdr.common_report_header.queue_id = fabric_md.bridged.int_bmd.queue_id;
+
+        // transition set_common_int_drop_headers;
+        set_common_int_drop_headers();
+    }
+
+    @hidden
+    action parse_int_ingress_drop() {
+        fabric_md.int_report_md.bmd_type = BridgedMdType_t.INT_INGRESS_DROP;
+        fabric_md.int_report_md.encap_presence = fabric_md.bridged.base.encap_presence;
+        fabric_md.int_report_md.flow_hash = fabric_md.bridged.base.inner_hash;
+
+        /** drop_report_header **/
+        hdr.drop_report_header.drop_reason = fabric_md.bridged.int_bmd.drop_reason;
+        /** report_fixed_header **/
+        hdr.report_fixed_header.ig_tstamp = fabric_md.bridged.base.ig_tstamp[31:0];
+        /** common_report_header **/
+        hdr.common_report_header.ig_port = fabric_md.bridged.base.ig_port;
+        hdr.common_report_header.eg_port = 0;
+        hdr.common_report_header.queue_id = 0;
+
+        // transition set_common_int_drop_headers;
+        set_common_int_drop_headers();
+    }
+
+    @hidden
+    action parse_int_report_mirror() {
+        fabric_md.bridged.bmd_type = fabric_md.int_report_md.bmd_type;
+        fabric_md.bridged.base.vlan_id = DEFAULT_VLAN_ID;
+        fabric_md.bridged.base.mpls_label = 0; // do not push an MPLS label
+        #ifdef WITH_SPGW
+            fabric_md.bridged.spgw.skip_spgw = true;
+        #endif // WITH_SPGW
+
+        /** report_fixed_header **/
+        hdr.report_fixed_header.ig_tstamp = fabric_md.int_report_md.ig_tstamp;
+
+        /** common_report_header **/
+        hdr.common_report_header.ig_port = fabric_md.int_report_md.ig_port;
+        hdr.common_report_header.eg_port = fabric_md.int_report_md.eg_port;
+        hdr.common_report_header.queue_id = fabric_md.int_report_md.queue_id;
+
+        /** local/drop_report_header (set valid later) **/
+        hdr.local_report_header.queue_occupancy = fabric_md.int_report_md.queue_occupancy;
+        hdr.local_report_header.eg_tstamp = fabric_md.int_report_md.eg_tstamp;
+        hdr.drop_report_header.drop_reason = fabric_md.int_report_md.drop_reason;
+
+        // transition set_common_int_headers;
+        set_common_int_headers();
+    }
+
+    @hidden
+    table start_transition_select {
+        key = {
+            // using ternary to allow use of don't care operator.
+            fabric_v1model.deflect_on_drop: ternary;
+            fabric_md.bridged.bmd_type: ternary;
+            fabric_v1model.int_mirror_type: ternary;
+        }
+        actions = {
+            parse_int_deflected_drop;
+            parse_int_ingress_drop;
+            parse_int_report_mirror;
+            @defaultonly drop;
+        }
+        const entries = {
+            (1, _, _): parse_int_deflected_drop();
+            (0, BridgedMdType_t.INT_INGRESS_DROP, _): parse_int_ingress_drop();
+            (0, BridgedMdType_t.EGRESS_MIRROR, FabricMirrorType_t.INT_REPORT): parse_int_report_mirror();
+        }
+        const default_action = drop();
+    }
+
+    @hidden
+    action strip_vlan() {
+        hdr_v1model.ingress.vlan_tag.setInvalid();
+#if defined(WITH_XCONNECT) || defined(WITH_DOUBLE_VLAN_TERMINATION)
+        hdr_v1model.ingress.inner_vlan.setInvalid();
+#endif // WITH_XCONNECT || WITH_DOUBLE_VLAN_TERMINATION
+    }
+
+    @hidden
+    action strip_mpls() {
+        hdr_v1model.ingress.mpls.setInvalid();
+    }
+
+    @hidden
+    action handle_ipv4() {
+        fabric_md.int_ipv4_len = hdr.ipv4.total_len;
+    }
+
+    @hidden
+    action strip_ipv4_udp_gtpu() {
+        // hdr.ipv4 = hdr_v1model.ingress.inner_ipv4;
+        // hdr.udp = hdr_v1model.ingress.inner_udp;
+        // hdr.tcp = hdr_v1model.ingress.inner_tcp;
+        // hdr.icmp = hdr_v1model.ingress.inner_icmp;
+
+        hdr_v1model.ingress.gtpu.setInvalid();
+        hdr_v1model.ingress.ipv4.setInvalid();
+        // hdr_v1model.ingress.inner_ipv4.setInvalid();
+        hdr_v1model.ingress.inner_udp.setInvalid();
+        hdr_v1model.ingress.inner_tcp.setInvalid();
+        hdr_v1model.ingress.inner_icmp.setInvalid();
+
+    }
+
+    @hidden
+    action strip_ipv4_udp_gtpu_psc() {
+        hdr_v1model.ingress.ipv4.setInvalid();
+        hdr_v1model.ingress.gtpu.setInvalid();
+        hdr_v1model.ingress.gtpu_options.setInvalid();
+        hdr_v1model.ingress.gtpu_ext_psc.setInvalid();
+        // hdr_v1model.ingress.inner_ipv4.setInvalid();
+        hdr_v1model.ingress.inner_udp.setInvalid();
+        hdr_v1model.ingress.inner_tcp.setInvalid();
+        hdr_v1model.ingress.inner_icmp.setInvalid();
+
+    }
+
+    @hidden
+    table state_parse_eth_hdr {
+        key = {
+            // hdr.eth_type.isValid(): ternary;
+            hdr_v1model.ingress.eth_type.value: ternary;
+            fabric_md.int_report_md.encap_presence: ternary;
+        }
+        actions = {
+            strip_vlan;
+            strip_mpls;
+            handle_ipv4;
+            strip_ipv4_udp_gtpu;
+            @defaultonly nop;
+        }
+        const entries = {
+            (ETHERTYPE_VLAN &&& 0xEFFF, _): strip_vlan();
+            (ETHERTYPE_MPLS, _): strip_mpls();
+            (ETHERTYPE_IPV4, EncapPresence.NONE): handle_ipv4();
+            (ETHERTYPE_IPV4, EncapPresence.GTPU_ONLY): strip_ipv4_udp_gtpu;
+        }
+        const default_action = nop();
+    }
+
+    apply {
+        // state start
+        start_transition_select.apply();
+
+        state_parse_eth_hdr.apply();
+
+        hdr_v1model.egress = hdr;
+        fabric_v1model.egress = fabric_md;
     }
 }
 
 control IntEgress (
-    inout egress_headers_t hdr,
+    // inout egress_headers_t hdr,
+    inout v1model_header_t hdr_v1model,
     inout fabric_v1model_metadata_t fabric_v1model,
     inout standard_metadata_t standard_md
     // in    egress_intrinsic_metadata_t eg_intr_md,
@@ -358,9 +597,11 @@ control IntEgress (
     // inout egress_intrinsic_metadata_for_deparser_t eg_dprsr_md
     ) {
 
+    egress_headers_t hdr = hdr_v1model.egress;
     fabric_egress_metadata_t fabric_md = fabric_v1model.egress;
     FlowReportFilter() flow_report_filter;
     DropReportFilter() drop_report_filter;
+    IntEgressParserEmulator() parser_emulator;
     queue_report_filter_index_t queue_report_filter_index;
 
     direct_counter(CounterType.packets_and_bytes) report_counter;
@@ -593,13 +834,12 @@ control IntEgress (
             @defaultonly nop();
         }
         const default_action = nop();
-        const size = 6;
         const entries = {
             (INT_REPORT_TYPE_FLOW, 0, false): init_int_metadata(INT_REPORT_TYPE_FLOW);
             (INT_REPORT_TYPE_FLOW, 0, true): init_int_metadata(INT_REPORT_TYPE_FLOW|INT_REPORT_TYPE_QUEUE);
             (INT_REPORT_TYPE_FLOW, 1, false): init_int_metadata(INT_REPORT_TYPE_DROP);
             (INT_REPORT_TYPE_FLOW, 1, true): init_int_metadata(INT_REPORT_TYPE_DROP);
-            // Packets which does not tracked by the watchlist table
+            // Packets which are not tracked by the watchlist table
             (INT_REPORT_TYPE_NO_REPORT, 0, true): init_int_metadata(INT_REPORT_TYPE_QUEUE);
             (INT_REPORT_TYPE_NO_REPORT, 1, true): init_int_metadata(INT_REPORT_TYPE_QUEUE);
         }
@@ -624,7 +864,6 @@ control IntEgress (
             adjust_ip_udp_len;
         }
         const default_action = nop();
-        const size = 2;
         const entries = {
             INT_IS_WIP: adjust_ip_udp_len(INT_WIP_ADJUST_IP_BYTES, INT_WIP_ADJUST_UDP_BYTES);
             INT_IS_WIP_WITH_MPLS: adjust_ip_udp_len(INT_WIP_ADJUST_IP_MPLS_BYTES, INT_WIP_ADJUST_UDP_MPLS_BYTES);
@@ -632,6 +871,10 @@ control IntEgress (
     }
 
     apply {
+        if (IS_E2E_CLONE(standard_md)) {
+            // Apply emulator only on mirrored packet.
+            parser_emulator.apply(hdr_v1model, fabric_v1model, standard_md);
+        }
         // fabric_md.int_md.hop_latency = eg_prsr_md.global_tstamp[31:0] - fabric_md.bridged.base.ig_tstamp[31:0];
         fabric_md.int_md.hop_latency = standard_md.egress_global_timestamp[31:0] - fabric_md.bridged.base.ig_tstamp[31:0];
 
@@ -647,7 +890,7 @@ control IntEgress (
         // latency which is not quantized.
         queue_latency_thresholds.apply();
         // In v1model, we're not allowed to have an apply{} section within an action,
-        // so the conditional that was present in RegisterAction was brought here.
+        // so the conditional that was present in RegisterAction is now here.
         if (check_quota_and_report) {
             if (quota > 0) {
                 quota = quota - 1;

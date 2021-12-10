@@ -24,8 +24,8 @@ parser FabricParser (packet_in packet,
         // If using the designed structure to emulate using clone3 and recirculate,
         // this initialization must not be performed.
         // How? a possible solution could be to put it in another state.
-        fabric_md.ingress.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UNKNOWN;
-        fabric_md.ingress.bridged.int_bmd.wip_type = INT_IS_NOT_WIP;
+        // fabric_md.ingress.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UNKNOWN;
+        // fabric_md.ingress.bridged.int_bmd.wip_type = INT_IS_NOT_WIP;
 #endif // WITH_INT
         fabric_md.ingress.bridged.base.encap_presence = EncapPresence.NONE;
 
@@ -40,18 +40,44 @@ parser FabricParser (packet_in packet,
             ETHERTYPE_CPU_LOOPBACK_INGRESS: parse_fake_ethernet;
             ETHERTYPE_CPU_LOOPBACK_EGRESS: parse_fake_ethernet_and_accept;
             ETHERTYPE_PACKET_OUT: check_packet_out;
+#ifdef WITH_INT
+            ETHERTYPE_INT_WIP_IPV4: parse_int_wip_ipv4;
+            ETHERTYPE_INT_WIP_MPLS: parse_int_wip_mpls;
+#endif // WITH_INT
 
             default: parse_ethernet;
         }
     }
 
     state check_packet_out {
-            packet_out_header_t tmp = packet.lookahead<packet_out_header_t>();
-            transition select(tmp.do_forwarding) {
-                0: parse_packet_out_and_accept;
-                default: strip_packet_out;
-            }
+        packet_out_header_t tmp = packet.lookahead<packet_out_header_t>();
+        transition select(tmp.do_forwarding) {
+            0: parse_packet_out_and_accept;
+            default: strip_packet_out;
+        }
     }
+
+#ifdef WITH_INT
+    state parse_int_wip_ipv4 {
+        hdr.ingress.ethernet.setValid();
+        hdr.ingress.eth_type.setValid();
+        hdr.ingress.eth_type.value = ETHERTYPE_IPV4;
+        fabric_md.ingress.bridged.int_bmd.wip_type = INT_IS_WIP;
+        fabric_md.ingress.bridged.base.mpls_label = 0;
+        fabric_md.ingress.bridged.base.mpls_ttl = DEFAULT_MPLS_TTL + 1;
+        packet.advance(ETH_HDR_BYTES * 8);
+        transition parse_ipv4;
+    }
+
+    state parse_int_wip_mpls {
+        hdr.ingress.ethernet.setValid();
+        hdr.ingress.eth_type.setValid();
+        hdr.ingress.eth_type.value = ETHERTYPE_MPLS;
+        fabric_md.ingress.bridged.int_bmd.wip_type = INT_IS_WIP_WITH_MPLS;
+        packet.advance(ETH_HDR_BYTES * 8);
+        transition parse_mpls;
+    }
+#endif // WITH_INT
 
     state parse_packet_out_and_accept {
         // Will transmit over requested egress port as-is. No need to parse further.
@@ -69,6 +95,10 @@ parser FabricParser (packet_in packet,
         packet.extract(hdr.ingress.fake_ethernet);
         fake_ethernet_t tmp = packet.lookahead<fake_ethernet_t>();
         transition select(tmp.ether_type) {
+#ifdef WITH_INT
+            ETHERTYPE_INT_WIP_IPV4: parse_int_wip_ipv4;
+            ETHERTYPE_INT_WIP_MPLS: parse_int_wip_mpls;
+#endif // WITH_INT
             default: parse_ethernet;
         }
     }
@@ -96,9 +126,22 @@ parser FabricParser (packet_in packet,
         // fabric_md.ingress.bridged.base.vlan_cfi = hdr.ingress.vlan_tag.cfi;
         // fabric_md.ingress.bridged.base.vlan_pri = hdr.ingress.vlan_tag.pri;
         transition select(packet.lookahead<bit<16>>()) {
+#if defined(WITH_XCONNECT) || defined(WITH_DOUBLE_VLAN_TERMINATION)
+            ETHERTYPE_VLAN: parse_inner_vlan_tag;
+#endif // WITH_XCONNECT || WITH_DOUBLE_VLAN_TERMINATION
             default: parse_eth_type;
         }
     }
+
+#if defined(WITH_XCONNECT) || defined(WITH_DOUBLE_VLAN_TERMINATION)
+    state parse_inner_vlan_tag {
+        packet.extract(hdr.inner_vlan_tag);
+        fabric_md.bridged.base.inner_vlan_id = hdr.inner_vlan_tag.vlan_id;
+        // fabric_md.bridged.base.inner_vlan_cfi = hdr.inner_vlan_tag.cfi;
+        // fabric_md.bridged.base.inner_vlan_pri = hdr.inner_vlan_tag.pri;
+        transition parse_eth_type;
+    }
+#endif // WITH_XCONNECT || WITH_DOUBLE_VLAN_TERMINATION
 
     state parse_untagged {
         // Sets default vlan
@@ -281,6 +324,17 @@ control FabricDeparser(packet_out packet,
     apply {
         packet.emit(hdr.ingress.fake_ethernet);
         packet.emit(hdr.ingress.packet_in);
+#ifdef WITH_INT
+        packet.emit(hdr.egress.report_ethernet);
+        packet.emit(hdr.egress.report_eth_type);
+        packet.emit(hdr.egress.report_mpls);
+        packet.emit(hdr.egress.report_ipv4);
+        packet.emit(hdr.egress.report_udp);
+        packet.emit(hdr.egress.report_fixed_header);
+        packet.emit(hdr.egress.common_report_header);
+        packet.emit(hdr.egress.local_report_header);
+        packet.emit(hdr.egress.drop_report_header);
+#endif // WITH_INT
         packet.emit(hdr.ingress.ethernet);
         packet.emit(hdr.ingress.vlan_tag);
 #if defined(WITH_XCONNECT) || defined(WITH_DOUBLE_VLAN_TERMINATION)

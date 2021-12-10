@@ -100,12 +100,18 @@ control SpgwIngress(
         mark_to_drop(standard_md);
         fabric_md.skip_forwarding = true;
         fabric_md.skip_next = true;
+#ifdef WITH_INT
+        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_DOWNLINK_PDR_MISS;
+#endif // WITH_INT
     }
 
     action uplink_pdr_drop() {
         mark_to_drop(standard_md);
         fabric_md.skip_forwarding = true;
         fabric_md.skip_next = true;
+#ifdef WITH_INT
+        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UPLINK_PDR_MISS;
+#endif // WITH_INT
     }
 
     action load_pdr(pdr_ctr_id_t ctr_id, far_id_t far_id, tc_t tc) {
@@ -156,6 +162,9 @@ control SpgwIngress(
         fabric_md.skip_next = true;
         fabric_md.bridged.spgw.needs_gtpu_encap = false;
         fabric_md.bridged.spgw.skip_egress_pdr_ctr = false;
+#ifdef WITH_INT
+        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_FAR_MISS;
+#endif // WITH_INT
     }
 
     action load_normal_far(BOOL drop) {
@@ -240,6 +249,9 @@ control SpgwIngress(
     }
 
     action recirc_deny() {
+#ifdef WITH_INT
+        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_SPGW_UPLINK_RECIRC_DENY;
+#endif // WITH_INT
         fabric_v1model.do_spgw_uplink_recirc = false;
         fabric_md.skip_forwarding = true;
         fabric_md.skip_next = true;
@@ -382,6 +394,9 @@ control SpgwEgress(
         hdr.udp.len = UDP_HDR_BYTES + GTPU_HDR_BYTES
                 + hdr.inner_ipv4.total_len;
         hdr.gtpu.msglen = hdr.inner_ipv4.total_len;
+#ifdef WITH_INT
+        fabric_md.int_report_md.encap_presence = EncapPresence.GTPU_ONLY;
+#endif // WITH_INT
     }
 
     // Do GTP-U encap with PDU Session Container extension for 5G NG-RAN with
@@ -402,6 +417,9 @@ control SpgwEgress(
                 + hdr.inner_ipv4.total_len;
         hdr.gtpu.ex_flag = 1;
         hdr.gtpu_ext_psc.qfi = qfi;
+#ifdef WITH_INT
+        fabric_md.int_report_md.encap_presence = EncapPresence.GTPU_WITH_PSC;
+#endif // WITH_INT
     }
 
     // By default, do regular GTP-U encap. Allow the control plane to enable

@@ -39,6 +39,9 @@ control Acl (inout ingress_headers_t hdr,
     action drop() {
         mark_to_drop(standard_md);
         fabric_md.skip_next = true;
+#ifdef WITH_INT
+        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_ACL_DENY;
+#endif // WITH_INT
         acl_counter.count();
     }
 
