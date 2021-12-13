@@ -16,7 +16,12 @@ if (!PROFILE || !ARCHITECTURE) {
 }
 
 pipeline {
-    agent { label "${params.buildNode}" }
+    agent {
+        label "${params.buildNode}"
+    }
+    options {
+        timeout(time: 80, unit: 'MINUTES')
+    }
     stages {
         stage("Prepare environment") {
             steps {
