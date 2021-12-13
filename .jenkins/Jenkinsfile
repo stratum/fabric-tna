@@ -20,7 +20,7 @@ pipeline {
         label "${params.buildNode}"
     }
     options {
-        timeout(time: 80, unit: 'MINUTES')
+        timeout(time: 1, unit: 'HOURS')
     }
     stages {
         stage("Prepare environment") {
