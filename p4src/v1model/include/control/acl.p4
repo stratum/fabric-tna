@@ -8,12 +8,14 @@
 #include "v1model/include/header_v1model.p4"
 
 control Acl (inout ingress_headers_t hdr,
-             inout fabric_ingress_metadata_t fabric_md,
+            //  inout fabric_ingress_metadata_t fabric_md,
+             inout fabric_v1model_metadata_t fabric_v1model,
              inout standard_metadata_t standard_md) {
 
     /*
      * ACL Table.
      */
+    fabric_ingress_metadata_t fabric_md = fabric_v1model.ingress;
     direct_counter(CounterType.packets_and_bytes) acl_counter;
 
     action set_next_id_acl(next_id_t next_id) {
@@ -33,11 +35,13 @@ control Acl (inout ingress_headers_t hdr,
         copy_to_cpu();
         fabric_md.skip_next = true;
         fabric_md.punt_to_cpu = true;
-        mark_to_drop(standard_md);
+        // mark_to_drop(standard_md);
+        fabric_v1model.drop_ctl = 1;
     }
 
     action drop() {
-        mark_to_drop(standard_md);
+        // mark_to_drop(standard_md);
+        fabric_v1model.drop_ctl = 1;
         fabric_md.skip_next = true;
 #ifdef WITH_INT
         fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_ACL_DENY;
@@ -94,5 +98,6 @@ control Acl (inout ingress_headers_t hdr,
 
     apply {
         acl.apply();
+        fabric_v1model.ingress = fabric_md;
     }
 }

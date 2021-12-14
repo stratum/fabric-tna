@@ -85,15 +85,24 @@ control FabricIngress (inout v1model_header_t hdr,
         if (!fabric_md.ingress.skip_next) {
             pre_next.apply(hdr.ingress, fabric_md.ingress);
         }
-        acl.apply(hdr.ingress, fabric_md.ingress, standard_md);
+        acl.apply(hdr.ingress, fabric_md, standard_md);
         if (!fabric_md.ingress.skip_next) {
-            next.apply(hdr.ingress, fabric_md.ingress, standard_md);
+            next.apply(hdr.ingress, fabric_md, standard_md);
         }
-        qos.apply(fabric_md.ingress, standard_md);
+        qos.apply(fabric_md, standard_md);
 #ifdef WITH_INT
         // Should always apply last to guarantee generation of drop reports.
         int_ingress.apply(hdr.ingress, fabric_md, standard_md);
 #endif // WITH_INT
+
+        if ((bool)fabric_md.drop_ctl) {
+            // confirm the drop.
+            // override the default mark_to_drop(standard_md) called at the start.
+            // This change is due to INT profile making use of drop_ctl logic.
+            // to set the egress_spec to a value different than 0.
+            mark_to_drop(standard_md);
+            exit;
+        }
 
         // Emulating TNA behavior through bridged metadata.
         fabric_md.egress.bridged = fabric_md.ingress.bridged;
@@ -131,7 +140,7 @@ control FabricEgress (inout v1model_header_t hdr,
             // INT packet to be mirrored through clone.
             clone3(CloneType.E2E,
              (bit<32>)fabric_md.egress.bridged.int_bmd.mirror_session_id,
-             {standard_md, fabric_md}); // pls p4c, do preserve metadata.
+             {standard_md});
         }
 
         if (IS_E2E_CLONE(standard_md)){
@@ -147,7 +156,7 @@ control FabricEgress (inout v1model_header_t hdr,
         pkt_io_egress.apply(hdr.ingress, fabric_md.egress ,standard_md);
         stats.apply(fabric_md.egress.bridged.base.stats_flow_id, standard_md.egress_port,
              fabric_md.egress.bridged.bmd_type);
-        egress_next.apply(hdr.ingress, fabric_md.egress, standard_md);
+        egress_next.apply(hdr.ingress, fabric_md, standard_md);
 #ifdef WITH_SPGW
         spgw.apply(hdr.ingress, fabric_md);
 #endif // WITH_SPGW
@@ -159,6 +168,10 @@ control FabricEgress (inout v1model_header_t hdr,
         if (fabric_md.do_spgw_uplink_recirc) {
             // Recirculate UE-to-UE traffic.
             recirculate(standard_md);
+        }
+
+        if ((bool)fabric_md.drop_ctl) {
+            mark_to_drop(standard_md);
         }
     } // end of apply{}
 }

@@ -59,13 +59,15 @@ control IngressSliceTcClassifier (inout    ingress_headers_t hdr,
 
 // Provides metering and mapping to queues based on slice_id and tc. Should be
 // applied after any other block writing slice_id and tc.
-control IngressQos (inout fabric_ingress_metadata_t fabric_md,
+control IngressQos (//inout fabric_ingress_metadata_t fabric_md,
+                    inout fabric_v1model_metadata_t fabric_v1model,
                     inout standard_metadata_t standard_md){
 
     // From now on we use the concatenated slice_id++tc to aid the compiler in
     // optimizing resource allocation.
 
     bit<2> packet_color = 2w0;
+    fabric_ingress_metadata_t fabric_md = fabric_v1model.ingress;
 
     @hidden
     action use_spgw() {
@@ -103,7 +105,8 @@ control IngressQos (inout fabric_ingress_metadata_t fabric_md,
 
     // For policing.
     action meter_drop() {
-        mark_to_drop(standard_md);
+        // mark_to_drop(standard_md);
+        fabric_v1model.drop_ctl = 1w1;
 #ifdef WITH_INT
         fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_INGRESS_QOS_METER;
 #endif // WITH_INT
@@ -138,6 +141,8 @@ control IngressQos (inout fabric_ingress_metadata_t fabric_md,
         set_slice_tc.apply();
         slice_tc_meter.execute_meter((bit<32>) fabric_md.bridged.base.slice_tc, packet_color);
         queues.apply();
+
+        fabric_v1model.ingress = fabric_md;
     }
 }
 

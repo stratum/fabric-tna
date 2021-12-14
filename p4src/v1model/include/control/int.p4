@@ -175,7 +175,7 @@ control DropReportFilter(
             if (flag == 1) {
                 // eg_dprsr_md.drop_ctl = 1;
                 mark_to_drop(standard_md);
-                // exit;
+                exit;
             }
         }
     }
@@ -184,18 +184,14 @@ control DropReportFilter(
 control IntWatchlist(
     inout ingress_headers_t hdr,
     inout fabric_v1model_metadata_t fabric_v1model,
-    inout standard_metadata_t standard_md
-    // in    ingress_intrinsic_metadata_t ig_intr_md,
-    // inout ingress_intrinsic_metadata_for_deparser_t ig_dprsr_md,
-    // inout ingress_intrinsic_metadata_for_tm_t ig_tm_md
-    ) {
+    inout standard_metadata_t standard_md) {
 
     direct_counter(CounterType.packets_and_bytes) watchlist_counter;
     fabric_ingress_metadata_t fabric_md = fabric_v1model.ingress;
 
     action mark_to_report() {
         fabric_md.bridged.int_bmd.report_type = INT_REPORT_TYPE_FLOW;
-        fabric_v1model.int_deflect_on_drop = 1w1;
+        fabric_v1model.int_deflect_on_drop = 1w1; //useless for bmv2
         // ig_tm_md.deflect_on_drop = 1;
 
         watchlist_counter.count();
@@ -248,9 +244,8 @@ control IntIngress(
     ) {
 
     fabric_ingress_metadata_t fabric_md = fabric_v1model.ingress;
-    bit<1> drop_ctl = 0;
+    bit<1> drop_ctl = fabric_v1model.drop_ctl;
     // Convert from bool to int because of ternary match not supporting bool.
-    bit<1> egress_port_set = (bit<1>)fabric_md.egress_port_set;
     direct_counter(CounterType.packets_and_bytes) drop_report_counter;
 
     @hidden
@@ -269,8 +264,8 @@ control IntIngress(
         // The drop flag may be set by other tables, need to reset it so the packet can
         // be forward to the recirculation port.
         // ig_dprsr_md.drop_ctl = 0;
-        drop_ctl = 0; //FIXME what if mark_to_drop was invoked? should override egress_spec.
-        // standard_md.egress_spec = 1;
+        fabric_v1model.drop_ctl = 0; //FIXME what if mark_to_drop was invoked? should override egress_spec.
+        standard_md.egress_spec = standard_md.ingress_port;
 
         drop_report_counter.count();
     }
@@ -283,7 +278,7 @@ control IntIngress(
             drop_ctl: exact @name("drop_ctl");
             fabric_md.punt_to_cpu: exact @name("punt_to_cpu");
             // fabric_md.egress_port_set: ternary @name("egress_port_set");
-            egress_port_set: ternary @name("egress_port_set");
+            fabric_md.egress_port_set: exact @name("egress_port_set");
             // ig_tm_md.mcast_grp_a: ternary @name("mcast_group_id");
             standard_md.mcast_grp: ternary @name("mcast_group_id");
         }
@@ -294,9 +289,10 @@ control IntIngress(
         const entries = {
             // Explicit drop. Do not report if we are punting to the CPU, since that is
             // implemented as drop+copy_to_cpu.
-            (INT_REPORT_TYPE_FLOW, 1, false, _, _): report_drop();
+            (INT_REPORT_TYPE_FLOW, 1, false, false, _): report_drop();
+            (INT_REPORT_TYPE_FLOW, 1, false, true, _): report_drop(); // ternary on bool not supported by p4c -> enumerating all entries using exact match.
             // Likely a table miss
-            (INT_REPORT_TYPE_FLOW, 0, false, 0, 0): report_drop();
+            (INT_REPORT_TYPE_FLOW, 0, false, false, 0): report_drop();
         }
         const default_action = nop();
         counters = drop_report_counter;
@@ -316,9 +312,9 @@ control IntIngress(
         fabric_md.bridged.int_bmd.egress_port = standard_md.egress_spec;
         fabric_md.bridged.int_bmd.queue_id = 0; //bmv2 has only 1 queue.
         drop_report.apply();
-        if (drop_ctl == 1) {
-            mark_to_drop(standard_md);
-        }
+        // if (drop_ctl == 1) {
+        //     mark_to_drop(standard_md);
+        // }
 
         fabric_v1model.ingress = fabric_md;
     }
@@ -476,6 +472,7 @@ control IntEgressParserEmulator (
         hdr.common_report_header.queue_id = fabric_md.int_report_md.queue_id;
 
         /** local/drop_report_header (set valid later) **/
+        hdr.local_report_header.setValid();
         hdr.local_report_header.queue_occupancy = fabric_md.int_report_md.queue_occupancy;
         hdr.local_report_header.eg_tstamp = fabric_md.int_report_md.eg_tstamp;
         hdr.drop_report_header.drop_reason = fabric_md.int_report_md.drop_reason;
@@ -520,8 +517,8 @@ control IntEgressParserEmulator (
     }
 
     @hidden
-    action handle_ipv4() {
-        fabric_md.int_ipv4_len = hdr.ipv4.total_len;
+    action strip_icmp() {
+        hdr_v1model.ingress.icmp.setInvalid();
     }
 
     @hidden
@@ -533,6 +530,9 @@ control IntEgressParserEmulator (
 
         hdr_v1model.ingress.gtpu.setInvalid();
         hdr_v1model.ingress.ipv4.setInvalid();
+        hdr_v1model.ingress.icmp.setInvalid();
+        hdr_v1model.ingress.tcp.setInvalid();
+        hdr_v1model.ingress.udp.setInvalid();
         // hdr_v1model.ingress.inner_ipv4.setInvalid();
         hdr_v1model.ingress.inner_udp.setInvalid();
         hdr_v1model.ingress.inner_tcp.setInvalid();
@@ -543,6 +543,9 @@ control IntEgressParserEmulator (
     @hidden
     action strip_ipv4_udp_gtpu_psc() {
         hdr_v1model.ingress.ipv4.setInvalid();
+        hdr_v1model.ingress.icmp.setInvalid();
+        hdr_v1model.ingress.tcp.setInvalid();
+        hdr_v1model.ingress.udp.setInvalid();
         hdr_v1model.ingress.gtpu.setInvalid();
         hdr_v1model.ingress.gtpu_options.setInvalid();
         hdr_v1model.ingress.gtpu_ext_psc.setInvalid();
@@ -551,6 +554,15 @@ control IntEgressParserEmulator (
         hdr_v1model.ingress.inner_tcp.setInvalid();
         hdr_v1model.ingress.inner_icmp.setInvalid();
 
+    }
+
+    @hidden
+    action handle_ipv4() {
+        strip_vlan();
+        strip_mpls();
+        strip_icmp();
+
+        fabric_md.int_ipv4_len = hdr.ipv4.total_len;
     }
 
     @hidden
@@ -578,10 +590,13 @@ control IntEgressParserEmulator (
 
     apply {
         // state start
-        start_transition_select.apply();
+        parse_int_report_mirror();
+        strip_ipv4_udp_gtpu_psc();
+        // start_transition_select.apply();
 
-        state_parse_eth_hdr.apply();
+        // state_parse_eth_hdr.apply();
 
+        // Synch with output struct.
         hdr_v1model.egress = hdr;
         fabric_v1model.egress = fabric_md;
     }

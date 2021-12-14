@@ -19,8 +19,10 @@ struct fabric_v1model_metadata_t {
     // Reference: https://github.com/barefootnetworks/Open-Tofino/blob/6a8432eab97bfd1d4805cf24c2c838470840f522/share/p4c/p4include/tofino.p4#L126-L127
     bool                      skip_egress;
     bool                      do_spgw_uplink_recirc;
+    bit<1>                    drop_ctl;
     // Mirror flag for INT
     bit<3>                    int_mirror_type;
+    // Emulate the deflect_on_drop (Unused)
     bit<1>                    deflect_on_drop;
     bit<1>                    int_deflect_on_drop;
 
