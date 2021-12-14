@@ -18,6 +18,7 @@ control Acl (inout ingress_headers_t hdr,
 
     action set_next_id_acl(next_id_t next_id) {
         fabric_md.next_id = next_id;
+        fabric_md.skip_next = false;
         acl_counter.count();
     }
 
