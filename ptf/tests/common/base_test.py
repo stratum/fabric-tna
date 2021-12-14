@@ -652,7 +652,7 @@ class P4RuntimeTest(BaseTest):
 
     def _write(self, req):
         try:
-            return self.stub.Write(req)
+            return self.stub.Write(req, timeout=2)
         except grpc.RpcError as e:
             if e.code() != grpc.StatusCode.UNKNOWN:
                 raise e
@@ -664,7 +664,7 @@ class P4RuntimeTest(BaseTest):
             return entities
         else:
             try:
-                for resp in self.stub.Read(req):
+                for resp in self.stub.Read(req, timeout=2):
                     entities.extend(resp.entities)
             except grpc.RpcError as e:
                 if e.code() != grpc.StatusCode.UNKNOWN:
