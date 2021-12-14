@@ -208,6 +208,26 @@ class FabricIPv4UnicastFromPacketOutTest(IPv4UnicastTest):
                 )
 
 
+class FabricIPv4UnicastDropTest(IPv4UnicastTest):
+    @tvsetup
+    @autocleanup
+    def runTest(self):
+        pkt = testutils.simple_udp_packet(
+            eth_src=HOST1_MAC,
+            eth_dst=SWITCH_MAC,
+            ip_src=HOST1_IPV4,
+            ip_dst=HOST2_IPV4,
+            udp_sport=5061,
+            udp_dport=5060,
+            pktlen=128,
+        )
+        self.add_forwarding_routing_v4_drop(
+            ipv4_dstAddr=HOST2_IPV4,
+            ipv4_pLen=32,
+        )
+        self.runIPv4UnicastTest(pkt, next_hop_mac=HOST2_MAC, verify_pkt=False)
+
+
 class FabricIPv4UnicastDefaultRouteTest(FabricIPv4UnicastTest):
     def runTest(self):
         self.runTestInternal(DEFAULT_ROUTE_IPV4, [PREFIX_DEFAULT_ROUTE])
