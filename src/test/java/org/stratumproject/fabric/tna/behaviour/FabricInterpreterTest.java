@@ -83,7 +83,7 @@ public class FabricInterpreterTest {
     /* Forwarding control block */
 
     /**
-     * Map empty treatment for routing v4 table.
+     * Map empty treatment to NOP for routing v4 table.
      */
     @Test
     public void testRoutingV4TreatmentEmpty() throws Exception {
@@ -92,6 +92,20 @@ public class FabricInterpreterTest {
                 treatment, P4InfoConstants.FABRIC_INGRESS_FORWARDING_ROUTING_V4);
         PiAction expectedAction = PiAction.builder()
                 .withId(P4InfoConstants.FABRIC_INGRESS_FORWARDING_NOP_ROUTING_V4)
+                .build();
+        assertEquals(expectedAction, mappedAction);
+    }
+
+    /**
+     * Map wipeDeferred treatment to DROP for routing v4 table.
+     */
+    @Test
+    public void testRoutingV4TreatmentCleared() throws Exception {
+        TrafficTreatment treatment = DefaultTrafficTreatment.builder().wipeDeferred().build();
+        PiAction mappedAction = interpreter.mapTreatment(
+                treatment, P4InfoConstants.FABRIC_INGRESS_FORWARDING_ROUTING_V4);
+        PiAction expectedAction = PiAction.builder()
+                .withId(P4InfoConstants.FABRIC_INGRESS_FORWARDING_DROP_ROUTING_V4)
                 .build();
         assertEquals(expectedAction, mappedAction);
     }
