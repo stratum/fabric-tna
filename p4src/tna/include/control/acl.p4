@@ -20,6 +20,8 @@ control Acl (inout ingress_headers_t hdr,
 
     action set_next_id_acl(next_id_t next_id) {
         fabric_md.next_id = next_id;
+        ig_intr_md_for_dprsr.drop_ctl = 0;
+        fabric_md.skip_next = false;
         acl_counter.count();
     }
 
@@ -67,6 +69,7 @@ control Acl (inout ingress_headers_t hdr,
         ig_intr_md_for_tm.ucast_egress_port = port_num;
         fabric_md.egress_port_set = true;
         fabric_md.skip_next = true;
+        ig_intr_md_for_dprsr.drop_ctl = 0;
         acl_counter.count();
     }
 
