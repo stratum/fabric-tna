@@ -329,10 +329,10 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.spgw.app_fwd");
     public static final PiActionId FABRIC_INGRESS_SPGW_DOWNLINK_DROP =
             PiActionId.of("FabricIngress.spgw.downlink_drop");
+    public static final PiActionId FABRIC_INGRESS_SPGW_DOWNLINK_DROP_MISS =
+            PiActionId.of("FabricIngress.spgw.downlink_drop_miss");
     public static final PiActionId FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP =
             PiActionId.of("FabricIngress.spgw.downlink_fwd_encap");
-    public static final PiActionId FABRIC_INGRESS_SPGW_DOWNLINK_SESSION_DROP =
-            PiActionId.of("FabricIngress.spgw.downlink_session_drop");
     public static final PiActionId FABRIC_INGRESS_SPGW_IFACE_ACCESS =
             PiActionId.of("FabricIngress.spgw.iface_access");
     public static final PiActionId FABRIC_INGRESS_SPGW_IFACE_CORE =
@@ -349,16 +349,26 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.spgw.recirc_miss");
     public static final PiActionId FABRIC_INGRESS_SPGW_SET_DOWNLINK_SESSION =
             PiActionId.of("FabricIngress.spgw.set_downlink_session");
-    public static final PiActionId FABRIC_INGRESS_SPGW_SET_DOWNLINK_SESSION_DBUF =
-            PiActionId.of("FabricIngress.spgw.set_downlink_session_dbuf");
+    public static final PiActionId FABRIC_INGRESS_SPGW_SET_DOWNLINK_SESSION_BUF =
+            PiActionId.of("FabricIngress.spgw.set_downlink_session_buf");
+    public static final PiActionId FABRIC_INGRESS_SPGW_SET_DOWNLINK_SESSION_BUF_DROP =
+            PiActionId.of("FabricIngress.spgw.set_downlink_session_buf_drop");
+    public static final PiActionId FABRIC_INGRESS_SPGW_SET_DOWNLINK_SESSION_DROP =
+            PiActionId.of("FabricIngress.spgw.set_downlink_session_drop");
+    public static final PiActionId FABRIC_INGRESS_SPGW_SET_DOWNLINK_SESSION_MISS =
+            PiActionId.of("FabricIngress.spgw.set_downlink_session_miss");
     public static final PiActionId FABRIC_INGRESS_SPGW_SET_ROUTING_IPV4_DST =
             PiActionId.of("FabricIngress.spgw.set_routing_ipv4_dst");
     public static final PiActionId FABRIC_INGRESS_SPGW_SET_UPLINK_SESSION =
             PiActionId.of("FabricIngress.spgw.set_uplink_session");
+    public static final PiActionId FABRIC_INGRESS_SPGW_SET_UPLINK_SESSION_DROP =
+            PiActionId.of("FabricIngress.spgw.set_uplink_session_drop");
+    public static final PiActionId FABRIC_INGRESS_SPGW_SET_UPLINK_SESSION_MISS =
+            PiActionId.of("FabricIngress.spgw.set_uplink_session_miss");
     public static final PiActionId FABRIC_INGRESS_SPGW_UPLINK_DROP =
             PiActionId.of("FabricIngress.spgw.uplink_drop");
-    public static final PiActionId FABRIC_INGRESS_SPGW_UPLINK_SESSION_DROP =
-            PiActionId.of("FabricIngress.spgw.uplink_session_drop");
+    public static final PiActionId FABRIC_INGRESS_SPGW_UPLINK_DROP_MISS =
+            PiActionId.of("FabricIngress.spgw.uplink_drop_miss");
     public static final PiActionId FABRIC_INGRESS_STATS_COUNT =
             PiActionId.of("FabricIngress.stats.count");
     public static final PiActionId NO_ACTION = PiActionId.of("NoAction");

@@ -25,6 +25,19 @@ control SpgwIngress(
     ue_session_id_t ue_session_id = 0;
 
     @hidden
+    action _drop_common() {
+        ig_dprsr_md.drop_ctl = 1;
+        fabric_md.skip_forwarding = true;
+        fabric_md.skip_next = true;
+    }
+
+    @hidden
+    action _term_hit(upf_ctr_id_t ctr_id) {
+        fabric_md.bridged.spgw.upf_ctr_id = ctr_id;
+        upf_termination_hit = true;
+    }
+
+    @hidden
     action _gtpu_decap() {
         fabric_md.bridged.base.ip_eth_type = ETHERTYPE_IPV4;
         fabric_md.routing_ipv4_dst = hdr.inner_ipv4.dst_addr;
@@ -87,21 +100,31 @@ control SpgwIngress(
     //===== UE Sessions Tables ======//
     //===============================//
 
-    action uplink_session_drop() {
-        ig_dprsr_md.drop_ctl = 1;
-        fabric_md.skip_forwarding = true;
-        fabric_md.skip_next = true;
+    action set_uplink_session_miss() {
+        _drop_common();
 #ifdef WITH_INT
         fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UPLINK_UE_SESSION_MISS;
 #endif // WITH_INT
     }
 
-    action downlink_session_drop() {
-        ig_dprsr_md.drop_ctl = 1;
-        fabric_md.skip_forwarding = true;
-        fabric_md.skip_next = true;
+    action set_uplink_session_drop() {
+        _drop_common();
+#ifdef WITH_INT
+        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UPLINK_UE_SESSION_DROP;
+#endif // WITH_INT
+    }
+
+    action set_downlink_session_miss() {
+        _drop_common();
 #ifdef WITH_INT
         fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_DOWNLINK_UE_SESSION_MISS;
+#endif // WITH_INT
+    }
+
+    action set_downlink_session_drop() {
+        _drop_common();
+#ifdef WITH_INT
+        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_DOWNLINK_UE_SESSION_DROP;
 #endif // WITH_INT
     }
 
@@ -112,11 +135,21 @@ control SpgwIngress(
         fabric_md.bridged.spgw.skip_egress_upf_ctr = false;
     }
 
-    action set_downlink_session_dbuf(tun_peer_id_t tun_peer_id) {
+    action set_downlink_session_buf(tun_peer_id_t tun_peer_id) {
         // Set UE IP address.
         ue_session_id = fabric_md.routing_ipv4_dst;
         fabric_md.bridged.spgw.tun_peer_id = tun_peer_id;
         fabric_md.bridged.spgw.skip_egress_upf_ctr = true;
+    }
+
+    action set_downlink_session_buf_drop() {
+        // Set UE IP address, so we can match on the terminations table and
+        // count packets in the ingress UPF counter.
+        ue_session_id = fabric_md.routing_ipv4_dst;
+        _drop_common();
+#ifdef WITH_INT
+        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UPLINK_UE_SESSION_DROP_BUFF;
+#endif // WITH_INT
     }
 
     action set_uplink_session() {
@@ -132,11 +165,13 @@ control SpgwIngress(
         }
         actions = {
             set_downlink_session;
-            set_downlink_session_dbuf;
-            @defaultonly downlink_session_drop;
+            set_downlink_session_buf;
+            set_downlink_session_buf_drop;
+            set_downlink_session_drop;
+            @defaultonly set_downlink_session_miss;
         }
         size = NUM_UES;
-        const default_action = downlink_session_drop();
+        const default_action = set_downlink_session_miss();
     }
 
     table uplink_sessions {
@@ -146,39 +181,51 @@ control SpgwIngress(
         }
         actions = {
             set_uplink_session;
-            @defaultonly uplink_session_drop;
+            set_uplink_session_drop;
+            @defaultonly set_uplink_session_miss;
         }
         size = NUM_UPLINK_SESSIONS;
-        const default_action = uplink_session_drop();
+        const default_action = set_uplink_session_miss();
     }
 
     //=============================//
     //===== UPF Terminations ======//
     //=============================//
 
-    action downlink_drop() {
-        ig_dprsr_md.drop_ctl = 1;
-        fabric_md.skip_forwarding = true;
-        fabric_md.skip_next = true;
-#ifdef WITH_INT
-        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_DOWNLINK_UPF_TERMINATION_MISS;
-#endif // WITH_INT
-    }
-
-    action uplink_drop() {
-        ig_dprsr_md.drop_ctl = 1;
-        fabric_md.skip_forwarding = true;
-        fabric_md.skip_next = true;
+    action uplink_drop_miss() {
+        _drop_common();
 #ifdef WITH_INT
         fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UPLINK_UPF_TERMINATION_MISS;
 #endif // WITH_INT
     }
 
+    action downlink_drop_miss() {
+        _drop_common();
+#ifdef WITH_INT
+        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_DOWNLINK_UPF_TERMINATION_MISS;
+#endif // WITH_INT
+    }
+
+    action uplink_drop(upf_ctr_id_t ctr_id) {
+        _drop_common();
+        _term_hit(ctr_id);
+#ifdef WITH_INT
+        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UPLINK_UPF_TERMINATION_DROP;
+#endif // WITH_INT
+    }
+
+    action downlink_drop(upf_ctr_id_t ctr_id) {
+        _drop_common();
+        _term_hit(ctr_id);
+#ifdef WITH_INT
+        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_DOWNLINK_UPF_TERMINATION_DROP;
+#endif // WITH_INT
+    }
+
     action app_fwd(upf_ctr_id_t ctr_id,
                    tc_t tc) {
-        fabric_md.bridged.spgw.upf_ctr_id = ctr_id;
+        _term_hit(ctr_id);
         fabric_md.spgw_tc = tc;
-        upf_termination_hit = true;
     }
 
     action downlink_fwd_encap(upf_ctr_id_t ctr_id,
@@ -200,8 +247,9 @@ control SpgwIngress(
         actions = {
             app_fwd;
             uplink_drop;
+            @defaultonly uplink_drop_miss;
         }
-        const default_action = uplink_drop();
+        const default_action = uplink_drop_miss();
         const size = NUM_UPF_TERMINATIONS;
     }
 
@@ -212,8 +260,9 @@ control SpgwIngress(
         actions = {
             downlink_fwd_encap;
             downlink_drop;
+            @defaultonly downlink_drop_miss;
         }
-        const default_action = downlink_drop();
+        const default_action = downlink_drop_miss();
         const size = NUM_UPF_TERMINATIONS;
     }
 
@@ -232,7 +281,7 @@ control SpgwIngress(
 
         actions = {
             set_routing_ipv4_dst;
-            nop;
+            @defaultonly nop;
         }
         const default_action = nop();
         const size = MAX_GTP_TUNNEL_PEERS;
@@ -357,7 +406,7 @@ control SpgwEgress(
         }
         actions = {
             load_tunnel_params;
-            nop;
+            @defaultonly nop;
         }
         const default_action = nop();
         const size = MAX_GTP_TUNNEL_PEERS;

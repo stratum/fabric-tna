@@ -12,14 +12,16 @@ import org.onosproject.core.CoreService;
 import org.onosproject.drivers.p4runtime.AbstractP4RuntimeHandlerBehaviour;
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.behaviour.upf.GtpTunnelPeer;
-import org.onosproject.net.behaviour.upf.UeSession;
+import org.onosproject.net.behaviour.upf.SessionDownlink;
+import org.onosproject.net.behaviour.upf.SessionUplink;
 import org.onosproject.net.behaviour.upf.UpfCounter;
 import org.onosproject.net.behaviour.upf.UpfEntity;
 import org.onosproject.net.behaviour.upf.UpfEntityType;
 import org.onosproject.net.behaviour.upf.UpfInterface;
 import org.onosproject.net.behaviour.upf.UpfProgrammable;
 import org.onosproject.net.behaviour.upf.UpfProgrammableException;
-import org.onosproject.net.behaviour.upf.UpfTermination;
+import org.onosproject.net.behaviour.upf.UpfTerminationDownlink;
+import org.onosproject.net.behaviour.upf.UpfTerminationUplink;
 import org.onosproject.net.flow.DefaultFlowRule;
 import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
@@ -60,7 +62,27 @@ import java.util.stream.Collectors;
 import static java.lang.String.format;
 import static org.onosproject.net.pi.model.PiCounterType.INDIRECT;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.sliceTcConcat;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.*;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_EG_TUNNEL_PEERS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_GTPU_ENCAP;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_UPF_COUNTER;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_QOS_QUEUES;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_QOS_SET_QUEUE;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_SESSIONS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_TERMINATIONS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_IG_TUNNEL_PEERS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_INTERFACES;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPF_COUNTER;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_SESSIONS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_TERMINATIONS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_GTPU_IS_VALID;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_IPV4_DST_ADDR;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_SLICE_TC;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_TEID;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_TUNNEL_IPV4_DST;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_TUN_PEER_ID;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_UE_ADDR;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_UE_SESSION_ID;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.QID;
 
 /**
  * Implementation of a UPF programmable device behavior.
@@ -314,7 +336,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
             }
         } catch (UpfProgrammableException e) {
             log.error("Error when translating interface entry, " +
-                    "will skip removing uplink recirculation rules: {} [{}]", e.getMessage(), entry);
+                              "will skip removing uplink recirculation rules: {} [{}]", e.getMessage(), entry);
         }
         flowRuleService.removeFlowRules(entry);
     }
@@ -334,21 +356,37 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                         clearInterface(entry);
                         entitiesCleared++;
                     }
-                case SESSION:
-                    if (upfTranslator.isFabricUeSession(entry)) {
+                    break;
+                case SESSION_UPLINK:
+                    if (upfTranslator.isFabricUeSessionUplink(entry)) {
                         flowRuleService.removeFlowRules(entry);
                         entitiesCleared++;
                     }
-                case TERMINATION:
-                    if (upfTranslator.isFabricUpfTermination(entry)) {
+                    break;
+                case SESSION_DOWNLINK:
+                    if (upfTranslator.isFabricUeSessionDownlink(entry)) {
                         flowRuleService.removeFlowRules(entry);
                         entitiesCleared++;
                     }
+                    break;
+                case TERMINATION_UPLINK:
+                    if (upfTranslator.isFabricUpfTerminationUplink(entry)) {
+                        flowRuleService.removeFlowRules(entry);
+                        entitiesCleared++;
+                    }
+                    break;
+                case TERMINATION_DOWNLINK:
+                    if (upfTranslator.isFabricUpfTerminationDownlink(entry)) {
+                        flowRuleService.removeFlowRules(entry);
+                        entitiesCleared++;
+                    }
+                    break;
                 case TUNNEL_PEER:
                     if (upfTranslator.isFabricGtpTunnelPeer(entry)) {
                         flowRuleService.removeFlowRules(entry);
                         entitiesCleared++;
                     }
+                    break;
                 default:
                     log.warn("Unsupported entity type!");
                     break;
@@ -367,17 +405,21 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         switch (entityType) {
             case INTERFACE:
                 return getInterfaces();
-            case SESSION:
-                return getUeSessions();
-            case TERMINATION:
-                return getUpfTerminations();
+            case SESSION_UPLINK:
+                return getUeSessionsUplink();
+            case SESSION_DOWNLINK:
+                return getUeSessionsDownlink();
+            case TERMINATION_UPLINK:
+                return getUpfTerminationsUplink();
+            case TERMINATION_DOWNLINK:
+                return getUpfTerminationsDownlink();
             case TUNNEL_PEER:
                 return getGtpTunnelPeers();
             case COUNTER:
                 return readCounters(-1);
             default:
                 throw new UpfProgrammableException(format("Reading entity type %s not supported.",
-                        entityType.humanReadableName()));
+                                                          entityType.humanReadableName()));
         }
     }
 
@@ -402,21 +444,41 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         return gtpTunnelPeers;
     }
 
-    private Collection<UpfEntity> getUeSessions() throws UpfProgrammableException {
+    private Collection<UpfEntity> getUeSessionsUplink() throws UpfProgrammableException {
         ArrayList<UpfEntity> ueSessions = new ArrayList<>();
         for (FlowRule flowRule : flowRuleService.getFlowEntries(deviceId)) {
-            if (upfTranslator.isFabricUeSession(flowRule)) {
-                ueSessions.add(upfTranslator.fabricEntryToUeSession(flowRule));
+            if (upfTranslator.isFabricUeSessionUplink(flowRule)) {
+                ueSessions.add(upfTranslator.fabricEntryToUeSessionUplink(flowRule));
             }
         }
         return ueSessions;
     }
 
-    private Collection<UpfEntity> getUpfTerminations() throws UpfProgrammableException {
+    private Collection<UpfEntity> getUeSessionsDownlink() throws UpfProgrammableException {
+        ArrayList<UpfEntity> ueSessions = new ArrayList<>();
+        for (FlowRule flowRule : flowRuleService.getFlowEntries(deviceId)) {
+            if (upfTranslator.isFabricUeSessionDownlink(flowRule)) {
+                ueSessions.add(upfTranslator.fabricEntryToUeSessionDownlink(flowRule));
+            }
+        }
+        return ueSessions;
+    }
+
+    private Collection<UpfEntity> getUpfTerminationsUplink() throws UpfProgrammableException {
         ArrayList<UpfEntity> upfTerminations = new ArrayList<>();
         for (FlowRule flowRule : flowRuleService.getFlowEntries(deviceId)) {
-            if (upfTranslator.isFabricUpfTermination(flowRule)) {
-                upfTerminations.add(upfTranslator.fabricEntryToUpfTermination(flowRule));
+            if (upfTranslator.isFabricUpfTerminationUplink(flowRule)) {
+                upfTerminations.add(upfTranslator.fabricEntryToUpfTerminationUplink(flowRule));
+            }
+        }
+        return upfTerminations;
+    }
+
+    private Collection<UpfEntity> getUpfTerminationsDownlink() throws UpfProgrammableException {
+        ArrayList<UpfEntity> upfTerminations = new ArrayList<>();
+        for (FlowRule flowRule : flowRuleService.getFlowEntries(deviceId)) {
+            if (upfTranslator.isFabricUpfTerminationDownlink(flowRule)) {
+                upfTerminations.add(upfTranslator.fabricEntryToUpfTerminationDownlink(flowRule));
             }
         }
         return upfTerminations;
@@ -462,16 +524,16 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                 // Most likely Up4config.maxUes() is set to a value smaller than what the switch
                 // pipeline can hold.
                 log.debug("Unrecognized index {} when reading all counters, " +
-                        "that's expected if we are manually limiting maxUes", counterCell);
+                                  "that's expected if we are manually limiting maxUes", counterCell);
                 return;
             }
             UpfCounter.Builder statsBuilder = upfCounterBuilders.get((int) counterCell.cellId().index());
             if (counterCell.cellId().counterId().equals(FABRIC_INGRESS_SPGW_UPF_COUNTER)) {
                 statsBuilder.setIngress(counterCell.data().packets(),
-                        counterCell.data().bytes());
+                                        counterCell.data().bytes());
             } else if (counterCell.cellId().counterId().equals(FABRIC_EGRESS_SPGW_UPF_COUNTER)) {
                 statsBuilder.setEgress(counterCell.data().packets(),
-                        counterCell.data().bytes());
+                                       counterCell.data().bytes());
             } else {
                 log.warn("Unrecognized counter ID {}, skipping", counterCell);
             }
@@ -495,19 +557,19 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                 return interfaceTableSize;
             case TUNNEL_PEER:
                 return gtpTunnelPeersTableSize;
-            case SESSION:
-                // TODO: the size of uplink UE Session table is greater than downlink
-                //  as we might have multiple TEIDs per UE
-                //  decide what to return as ueSessionTableSize
-                return Math.min(this.uplinkUeSessionsTableSize, this.downlinkUeSessionsTableSize);
-            case TERMINATION:
-                // use min, but the size of uplink and downlink tables should be equal.
-                return Math.min(this.uplinkUpfTerminationsTableSize, this.downlinkUpfTerminationsTableSize);
+            case SESSION_UPLINK:
+                return this.uplinkUeSessionsTableSize;
+            case SESSION_DOWNLINK:
+                return this.downlinkUeSessionsTableSize;
+            case TERMINATION_UPLINK:
+                return this.uplinkUpfTerminationsTableSize;
+            case TERMINATION_DOWNLINK:
+                return this.downlinkUpfTerminationsTableSize;
             case COUNTER:
                 return upfCounterSize;
             default:
                 throw new UpfProgrammableException(format("Getting size of entity type %s not supported.",
-                        entityType.humanReadableName()));
+                                                          entityType.humanReadableName()));
         }
     }
 
@@ -518,16 +580,16 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         }
         if (cellId >= upfCounterSize || cellId < 0) {
             throw new UpfProgrammableException("Requested UPF counter cell index is out of bounds.",
-                    UpfProgrammableException.Type.ENTITY_OUT_OF_RANGE);
+                                               UpfProgrammableException.Type.ENTITY_OUT_OF_RANGE);
         }
         UpfCounter.Builder stats = UpfCounter.builder().withCellId(cellId);
 
         // Make list of cell handles we want to read.
         List<PiCounterCellHandle> counterCellHandles = List.of(
                 PiCounterCellHandle.of(deviceId,
-                        PiCounterCellId.ofIndirect(FABRIC_INGRESS_SPGW_UPF_COUNTER, cellId)),
+                                       PiCounterCellId.ofIndirect(FABRIC_INGRESS_SPGW_UPF_COUNTER, cellId)),
                 PiCounterCellHandle.of(deviceId,
-                        PiCounterCellId.ofIndirect(FABRIC_EGRESS_SPGW_UPF_COUNTER, cellId)));
+                                       PiCounterCellId.ofIndirect(FABRIC_EGRESS_SPGW_UPF_COUNTER, cellId)));
 
         // Query the device.
         Collection<PiCounterCell> counterEntryResponse = client.read(
@@ -566,11 +628,17 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
             case INTERFACE:
                 addInterface((UpfInterface) entity);
                 break;
-            case SESSION:
-                addUeSession((UeSession) entity);
+            case SESSION_UPLINK:
+                addUeSessionUplink((SessionUplink) entity);
                 break;
-            case TERMINATION:
-                addUpfTermination((UpfTermination) entity);
+            case SESSION_DOWNLINK:
+                addUeSessionDownlink((SessionDownlink) entity);
+                break;
+            case TERMINATION_UPLINK:
+                addUpfTerminationUplink((UpfTerminationUplink) entity);
+                break;
+            case TERMINATION_DOWNLINK:
+                addUpfTerminationDownlink((UpfTerminationDownlink) entity);
                 break;
             case TUNNEL_PEER:
                 addGtpTunnelPeer((GtpTunnelPeer) entity);
@@ -578,7 +646,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
             case COUNTER:
             default:
                 throw new UpfProgrammableException(format("Adding entity type %s not supported.",
-                        entity.type().humanReadableName()));
+                                                          entity.type().humanReadableName()));
         }
     }
 
@@ -598,25 +666,42 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         Pair<FlowRule, FlowRule> fabricGtpTunnelPeers = upfTranslator.gtpTunnelPeerToFabricEntry(
                 peer, deviceId, appId, DEFAULT_PRIORITY);
         log.info("Installing ingress and egress rules {}, {}",
-                fabricGtpTunnelPeers.getLeft().toString(), fabricGtpTunnelPeers.getRight().toString());
+                 fabricGtpTunnelPeers.getLeft().toString(), fabricGtpTunnelPeers.getRight().toString());
         flowRuleService.applyFlowRules(fabricGtpTunnelPeers.getLeft(), fabricGtpTunnelPeers.getRight());
         log.debug("GTP tunnel peer added with flowIDs ingress={}, egress={}",
-                fabricGtpTunnelPeers.getLeft().id().value(), fabricGtpTunnelPeers.getRight().id().value());
+                  fabricGtpTunnelPeers.getLeft().id().value(), fabricGtpTunnelPeers.getRight().id().value());
     }
 
-    private void addUeSession(UeSession ueSession) throws UpfProgrammableException {
-        FlowRule fabricUeSession = upfTranslator.ueSessionToFabricEntry(ueSession, deviceId, appId, DEFAULT_PRIORITY);
+    private void addUeSessionUplink(SessionUplink ueSession) throws UpfProgrammableException {
+        FlowRule fabricUeSession = upfTranslator.sessionUplinkToFabricEntry(
+                ueSession, deviceId, appId, DEFAULT_PRIORITY);
         log.info("Installing {}", ueSession.toString());
         flowRuleService.applyFlowRules(fabricUeSession);
-        log.debug("UE session added with flowID {}", fabricUeSession.id().value());
+        log.debug("Uplink UE session added with flowID {}", fabricUeSession.id().value());
     }
 
-    private void addUpfTermination(UpfTermination upfTermination) throws UpfProgrammableException {
-        FlowRule fabricUpfTermination = upfTranslator.upfTerminationToFabricEntry(
+    private void addUeSessionDownlink(SessionDownlink ueSession) throws UpfProgrammableException {
+        FlowRule fabricUeSession = upfTranslator.sessionDownlinkToFabricEntry(
+                ueSession, deviceId, appId, DEFAULT_PRIORITY);
+        log.info("Installing {}", ueSession.toString());
+        flowRuleService.applyFlowRules(fabricUeSession);
+        log.debug("Downlink UE session added with flowID {}", fabricUeSession.id().value());
+    }
+
+    private void addUpfTerminationUplink(UpfTerminationUplink upfTermination) throws UpfProgrammableException {
+        FlowRule fabricUpfTermination = upfTranslator.upfTerminationUplinkToFabricEntry(
                 upfTermination, deviceId, appId, DEFAULT_PRIORITY);
         log.info("Installing {}", upfTermination.toString());
         flowRuleService.applyFlowRules(fabricUpfTermination);
-        log.debug("UPF termination added with flowID {}", fabricUpfTermination.id().value());
+        log.debug("Uplink UPF termination added with flowID {}", fabricUpfTermination.id().value());
+    }
+
+    private void addUpfTerminationDownlink(UpfTerminationDownlink upfTermination) throws UpfProgrammableException {
+        FlowRule fabricUpfTermination = upfTranslator.upfTerminationDownlinkToFabricEntry(
+                upfTermination, deviceId, appId, DEFAULT_PRIORITY);
+        log.info("Installing {}", upfTermination.toString());
+        flowRuleService.applyFlowRules(fabricUpfTermination);
+        log.debug("Downlink UPF termination added with flowID {}", fabricUpfTermination.id().value());
     }
 
     @Override
@@ -629,11 +714,17 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
             case INTERFACE:
                 removeInterface((UpfInterface) entity);
                 break;
-            case SESSION:
-                removeUeSession((UeSession) entity);
+            case SESSION_UPLINK:
+                removeSessionUplink((SessionUplink) entity);
                 break;
-            case TERMINATION:
-                removeUpfTermination((UpfTermination) entity);
+            case SESSION_DOWNLINK:
+                removeSessionDownlink((SessionDownlink) entity);
+                break;
+            case TERMINATION_UPLINK:
+                removeUpfTerminationUplink((UpfTerminationUplink) entity);
+                break;
+            case TERMINATION_DOWNLINK:
+                removeUpfTerminationDownlink((UpfTerminationDownlink) entity);
                 break;
             case TUNNEL_PEER:
                 removeGtpTunnelPeer((GtpTunnelPeer) entity);
@@ -641,7 +732,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
             case COUNTER:
             default:
                 throw new UpfProgrammableException(format("Deleting entity type %s not supported.",
-                        entity.type().humanReadableName()));
+                                                          entity.type().humanReadableName()));
         }
     }
 
@@ -692,7 +783,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         if (!upfInterface.isCore()) {
             PiCriterion match1 = PiCriterion.builder()
                     .matchLpm(HDR_IPV4_DST_ADDR, ifacePrefix.address().toInt(),
-                            ifacePrefix.prefixLength())
+                              ifacePrefix.prefixLength())
                     .matchExact(HDR_GTPU_IS_VALID, 1)
                     .build();
             // removeEntry does return false only for severe issues, before we had
@@ -703,43 +794,52 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         // This additional step might be also needed in case of unknown interfaces
         PiCriterion match2 = PiCriterion.builder()
                 .matchLpm(HDR_IPV4_DST_ADDR, ifacePrefix.address().toInt(),
-                        ifacePrefix.prefixLength())
+                          ifacePrefix.prefixLength())
                 .matchExact(HDR_GTPU_IS_VALID, 0)
                 .build();
         removeEntry(match2, FABRIC_INGRESS_SPGW_INTERFACES, false);
     }
 
-    private void removeUeSession(UeSession ueSession) throws UpfProgrammableException {
+    private void removeSessionUplink(SessionUplink ueSession) throws UpfProgrammableException {
         final PiCriterion match;
-        final PiTableId tableId;
 
-        if (ueSession.isUplink()) {
-            match = PiCriterion.builder()
-                    .matchExact(HDR_TEID, ueSession.teid())
-                    .matchExact(HDR_TUNNEL_IPV4_DST, ueSession.ipv4Address().toInt())
-                    .build();
-            tableId = FABRIC_INGRESS_SPGW_UPLINK_SESSIONS;
-        } else {
-            match = PiCriterion.builder()
-                    .matchExact(HDR_UE_ADDR, ueSession.ipv4Address().toInt())
-                    .build();
-            tableId = FABRIC_INGRESS_SPGW_DOWNLINK_SESSIONS;
-        }
-
-        log.info("Removing {}", ueSession.toString());
-        removeEntry(match, tableId, false);
+        match = PiCriterion.builder()
+                .matchExact(HDR_TEID, ueSession.teid())
+                .matchExact(HDR_TUNNEL_IPV4_DST, ueSession.tunDstAddr().toOctets())
+                .build();
+        log.info("Removing {}", ueSession);
+        removeEntry(match, FABRIC_INGRESS_SPGW_UPLINK_SESSIONS, false);
     }
 
-    private void removeUpfTermination(UpfTermination upfTermination) throws UpfProgrammableException {
+    private void removeSessionDownlink(SessionDownlink ueSession) throws UpfProgrammableException {
+        final PiCriterion match;
+
+        match = PiCriterion.builder()
+                .matchExact(HDR_UE_ADDR, ueSession.ueAddress().toOctets())
+                .build();
+
+        log.info("Removing {}", ueSession.toString());
+        removeEntry(match, FABRIC_INGRESS_SPGW_DOWNLINK_SESSIONS, false);
+    }
+
+    private void removeUpfTerminationUplink(UpfTerminationUplink upfTermination)
+            throws UpfProgrammableException {
         final PiCriterion match = PiCriterion.builder()
                 .matchExact(HDR_UE_SESSION_ID, upfTermination.ueSessionId().toInt())
                 .build();
-        final PiTableId tableId = upfTermination.isUplink() ?
-                FABRIC_INGRESS_SPGW_UPLINK_TERMINATIONS :
-                FABRIC_INGRESS_SPGW_DOWNLINK_TERMINATIONS;
 
         log.info("Removing {}", upfTermination.toString());
-        removeEntry(match, tableId, false);
+        removeEntry(match, FABRIC_INGRESS_SPGW_UPLINK_TERMINATIONS, false);
+    }
+
+    private void removeUpfTerminationDownlink(UpfTerminationDownlink upfTermination)
+            throws UpfProgrammableException {
+        final PiCriterion match = PiCriterion.builder()
+                .matchExact(HDR_UE_SESSION_ID, upfTermination.ueSessionId().toInt())
+                .build();
+
+        log.info("Removing {}", upfTermination.toString());
+        removeEntry(match, FABRIC_INGRESS_SPGW_DOWNLINK_TERMINATIONS, false);
     }
 
     private void removeGtpTunnelPeer(GtpTunnelPeer peer) throws UpfProgrammableException {
@@ -753,7 +853,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
     private void applyUplinkRecirculation(Ip4Prefix subnet, boolean remove) {
         log.warn("{} uplink recirculation rules on {} for subnet {}",
-                remove ? "Removing" : "Installing", deviceId, subnet);
+                 remove ? "Removing" : "Installing", deviceId, subnet);
         // By default deny all uplink traffic with IP dst on the given UE subnet
         FlowRule denyRule = upfTranslator.buildFabricUplinkRecircEntry(
                 deviceId, appId, null, subnet, false, DEFAULT_PRIORITY);
