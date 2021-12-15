@@ -178,11 +178,6 @@ public class SlicingManagerTest {
 
         EasyMock.verify(coreService, storageService, workPartitionService,
             deviceService, flowRuleService, codecService, nwCfgService, pipeconfService);
-
-        // Wait all Executors
-        // e.g. queueExecutor installs queue flows on activation stage, if the tests start immediately,
-        // the captured flows may include queue flows (unexpceted).
-        assertAfter(50, 100, () -> capturedAddedFlowRules.reset());
     }
 
     @Test
@@ -388,13 +383,14 @@ public class SlicingManagerTest {
     @Test
     public void testAddFlowClassifier() {
         // Preparation
-        capturedAddedFlowRules.reset();
         TrafficSelector selector = DefaultTrafficSelector.builder().matchUdpDst(TpPort.tpPort(100)).build();
         FlowRule classifier = buildClassifierFromSelector(SLICE_IDS.get(1), TrafficClass.REAL_TIME, selector);
+        flowsPreCheck();
         manager.addSlice(SLICE_IDS.get(1));
         manager.addTrafficClass(SLICE_IDS.get(1), TrafficClass.REAL_TIME);
 
         // Normal
+        capturedAddedFlowRules.reset();
         manager.addFlow(selector, SLICE_IDS.get(1), TrafficClass.REAL_TIME);
 
         assertAfter(50, () -> {
@@ -553,6 +549,7 @@ public class SlicingManagerTest {
         FlowRule bmv2Slice1Control1 = buildSlice1Control1(DID_BMV2);
         FlowRule bmv2Slice1Control2 = buildSlice1Control2(DID_BMV2, true);
         int numDevices = DEVICES.size();
+        flowsPreCheck();
 
         // Default TC after adding a Slice
         capturedAddedFlowRules.reset();
@@ -599,6 +596,7 @@ public class SlicingManagerTest {
             .matchTcpDst(TpPort.tpPort(1234))
             .build();
         int numDevices = DEVICES.size();
+        flowsPreCheck();
 
         // Adding mock rule to slice 1 BE
         capturedAddedFlowRules.reset();
@@ -657,7 +655,6 @@ public class SlicingManagerTest {
 
     private FlowRule buildSlice1Control1(DeviceId deviceId) {
         // Hard coded parameters
-
         int colorGreen = getCapabilities(deviceId).getMeterColor(Color.GREEN);
 
         PiCriterion.Builder piCriterionBuilder = PiCriterion.builder()
@@ -737,5 +734,18 @@ public class SlicingManagerTest {
                 .withTreatment(DefaultTrafficTreatment.builder().piTableAction(piTableActionBuilder.build()).build())
                 .makePermanent()
                 .build();
+    }
+
+    private void flowsPreCheck() {
+        // We install init flows during start up stage
+        // Do a quick check here and reset the capture object
+        // e.g. sliceExecutor installs slice flows on activation stage, if the tests start immediately,
+        // the captured flows may include slice flows (unexpceted).
+        assertAfter(100, 250, () -> {
+            // Number of init flows are variant
+            // For now we install 2 flows for each device
+            assertEquals(2 * DEVICES.size(), capturedAddedFlowRules.getValues().size());
+            capturedAddedFlowRules.reset();
+        });
     }
 }
