@@ -178,6 +178,13 @@ public class SlicingManagerTest {
 
         EasyMock.verify(coreService, storageService, workPartitionService,
             deviceService, flowRuleService, codecService, nwCfgService, pipeconfService);
+
+        // Wait all Executors
+        // e.g. queueExecutor installs queue flows on activation stage, if the tests start immediately,
+        // the captured flows may include queue flows (unexpceted).
+        try {
+            Thread.sleep(50);
+        } catch (Exception e) { }
     }
 
     @Test
