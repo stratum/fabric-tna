@@ -179,6 +179,7 @@ class P4RuntimeErrorIterator:
                     "Cannot convert Any message to p4.Error"
                 )
             if p4_error.canonical_code == code_pb2.OK:
+                self.idx += 1
                 continue
             v = self.idx, p4_error
             self.idx += 1
