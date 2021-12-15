@@ -6,7 +6,7 @@ import difflib
 import time
 from unittest import skip, skipIf
 
-from base_test import autocleanup, is_bmv2, tvsetup, tvskip
+from base_test import autocleanup, is_v1model, tvsetup, tvskip
 from fabric_test import *  # noqa
 from p4.config.v1 import p4info_pb2
 from ptf.testutils import group
@@ -1036,7 +1036,7 @@ class FabricDefaultVlanPacketInTest(FabricTest):
 
 
 @group("packetio")
-@skipIf(is_bmv2(), "Packet-in post ingress not supported for Bmv2.")
+@skipIf(is_v1model(), "Packet-in post ingress not supported for Bmv2.")
 class FabricPacketInPostIngressTest(IPv4UnicastTest):
     """
     Packet-in generated using clone/punt_to_cpu_post_ingress actions should include changes
@@ -2507,8 +2507,9 @@ class CounterTest(BridgingTest):
         self.doRunTest()
 
 
-# FIXME: remove when will start running TVs on hardware
-@skipIf(is_bmv2(), "CPU loopback unsupported for Bmv2.")
+# Disable the loopback mode test since we are going to use Stratum main.p4 for CCP instead of fabric-tna
+# and we will remove loopback mode from fabric-tna once we move all CCP tests to main.p4.
+@skip("Deprecated")
 class FabricIpv4UnicastLoopbackModeTest(IPv4UnicastTest):
     """Emulates TV loopback mode for Ipv4UnicastTest"""
 
@@ -2554,8 +2555,9 @@ class FabricIpv4UnicastLoopbackModeTest(IPv4UnicastTest):
             self.doRunTest(pkt, HOST2_MAC)
 
 
-# FIXME: remove when will start running TVs on hardware
-@skipIf(is_bmv2(), "CPU loopback unsupported for Bmv2.")
+# Disable the loopback mode test since we are going to use Stratum main.p4 for CCP instead of fabric-tna
+# and we will remove loopback mode from fabric-tna once we move all CCP tests to main.p4.
+@skip("Deprecated")
 class FabricPacketInLoopbackModeTest(FabricTest):
     """Emulates TV loopback mode for packet-in tests"""
 
@@ -2594,8 +2596,9 @@ class FabricPacketInLoopbackModeTest(FabricTest):
                 self.doRunTest(pkt, tagged)
 
 
-# FIXME: remove when we start running TVs on hardware
-@skipIf(is_bmv2(), "CPU loopback unsupported for Bmv2.")
+# Disable the loopback mode test since we are going to use Stratum main.p4 for CCP instead of fabric-tna
+# and we will remove loopback mode from fabric-tna once we move all CCP tests to main.p4.
+@skip("Deprecated")
 class FabricPacketOutLoopbackModeTest(FabricTest):
     """Emulates TV loopback mode for packet-out tests"""
 
@@ -2626,8 +2629,10 @@ class FabricPacketOutLoopbackModeTest(FabricTest):
             self.doRunTest(pkt)
 
 
+# Disable the loopback mode test since we are going to use Stratum main.p4 for CCP instead of fabric-tna
+# and we will remove loopback mode from fabric-tna once we move all CCP tests to main.p4.
 @group("int")
-@skipIf(is_bmv2(), "CPU loopback unsupported for Bmv2.")
+@skip("Deprecated")
 class FabricIntFlowReportLoopbackModeTest(IntTest):
     @tvsetup
     @autocleanup
@@ -2729,7 +2734,7 @@ class FabricIntFlowReportLoopbackModeTest(IntTest):
                 self.doRunTest(pkt, HOST2_MAC, is_device_spine)
 
 
-@skipIf(is_bmv2(), "Bmv2 is not subject to compiler field optimizations")
+@skipIf(is_v1model(), "Bmv2 is not subject to compiler field optimizations")
 class FabricOptimizedFieldDetectorTest(FabricTest):
     """Finds action parameters or header fields that were optimized out by the
     compiler"""

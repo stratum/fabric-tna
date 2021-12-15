@@ -73,8 +73,6 @@ public class FlowAddCommand extends AbstractShellCommand {
 
         if (slicingService.addFlow(selector, SliceId.of(sliceId), TrafficClass.valueOf(tc))) {
             print("Flow %s added to slice %d tc %s", selector.toString(), sliceId, tc);
-        } else {
-            print("Failed to add flow %s to slice %d tc %s", selector.toString(), sliceId, tc);
         }
     }
 
