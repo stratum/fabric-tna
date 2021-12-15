@@ -230,7 +230,7 @@ void exportPtfArtifacts() {
             mkdir -p \"logs/${target}/${PROFILE}\"
             [ -d ptf/run/${target}/log ] && mv ptf/run/${target}/log \"logs/${target}/${PROFILE}\"
             [ -f ptf/tests/common/ptf.log ] && mv ptf/tests/common/ptf.log \"logs/${target}/${PROFILE}/\"
-            [ -f mv ptf/tests/common/ptf.pcap ] && mv ptf/tests/common/ptf.pcap \"logs/${target}/${PROFILE}/\"
+            [ -f ptf/tests/common/ptf.pcap ] && mv ptf/tests/common/ptf.pcap \"logs/${target}/${PROFILE}/\"
         """
 
         // Compress the logs in a single tar ball
