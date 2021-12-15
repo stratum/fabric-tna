@@ -265,7 +265,7 @@ control IntIngress(
         // be forward to the recirculation port.
         // ig_dprsr_md.drop_ctl = 0;
         fabric_v1model.drop_ctl = 0; //FIXME what if mark_to_drop was invoked? should override egress_spec.
-        standard_md.egress_spec = standard_md.ingress_port;
+        // standard_md.egress_spec = standard_md.ingress_port;
 
         drop_report_counter.count();
     }
@@ -335,7 +335,8 @@ control IntEgressParserEmulator (
 
     @hidden
     action drop() {
-        mark_to_drop(standard_md);
+        fabric_v1model.drop_ctl = 1w1;
+        // mark_to_drop(standard_md);
     }
 
     @hidden
@@ -589,7 +590,9 @@ control IntEgressParserEmulator (
     }
 
     apply {
-        // state start
+        fabric_md.is_int_recirc = true;
+
+
         parse_int_report_mirror();
         strip_ipv4_udp_gtpu_psc();
         // start_transition_select.apply();
@@ -616,7 +619,7 @@ control IntEgress (
     fabric_egress_metadata_t fabric_md = fabric_v1model.egress;
     FlowReportFilter() flow_report_filter;
     DropReportFilter() drop_report_filter;
-    IntEgressParserEmulator() parser_emulator;
+    // IntEgressParserEmulator() parser_emulator;
     queue_report_filter_index_t queue_report_filter_index;
 
     direct_counter(CounterType.packets_and_bytes) report_counter;
@@ -625,7 +628,7 @@ control IntEgress (
     QueueId_t egress_qid = 0; // bmv2 specific. Only one queue present.
     bool check_quota_and_report = false;
     queue_report_filter_index_t quota = 0;
-    bit<1> drop_ctl = 0;
+    // bit<1> drop_ctl = 0;
 
     // @hidden
     // Random<bit<16>>() ip_id_gen;
@@ -841,7 +844,7 @@ control IntEgress (
             fabric_md.bridged.int_bmd.report_type: exact @name("int_report_type");
             // eg_dprsr_md.drop_ctl: exact @name("drop_ctl");
             // drop_ctl not available as intrinsic metadata.
-            drop_ctl: exact @name("drop_ctl"); //FIXME declare drop_ctl as custom metadata
+            fabric_v1model.drop_ctl: exact @name("drop_ctl"); //FIXME declare drop_ctl as custom metadata
             fabric_md.int_md.queue_report: exact @name("queue_report");
         }
         actions = {
@@ -886,10 +889,10 @@ control IntEgress (
     }
 
     apply {
-        if (IS_E2E_CLONE(standard_md)) {
-            // Apply emulator only on mirrored packet.
-            parser_emulator.apply(hdr_v1model, fabric_v1model, standard_md);
-        }
+        // if (IS_E2E_CLONE(standard_md)) {
+        //     // Apply emulator only on mirrored packet.
+        //     parser_emulator.apply(hdr_v1model, fabric_v1model, standard_md);
+        // }
         // fabric_md.int_md.hop_latency = eg_prsr_md.global_tstamp[31:0] - fabric_md.bridged.base.ig_tstamp[31:0];
         fabric_md.int_md.hop_latency = standard_md.egress_global_timestamp[31:0] - fabric_md.bridged.base.ig_tstamp[31:0];
 
@@ -931,7 +934,7 @@ control IntEgress (
         //  ingress/egress table (e.g., routing table miss, egress vlan table
         //  miss, etc.)?
         // drop_report_filter.apply(hdr, fabric_md, eg_dprsr_md);
-        drop_report_filter.apply(hdr, fabric_md, standard_md);
+        // drop_report_filter.apply(hdr, fabric_md, standard_md);
 
         if (fabric_md.int_report_md.isValid()) {
             // Packet is mirrored (egress or deflected) or an ingress drop.

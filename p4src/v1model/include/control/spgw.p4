@@ -97,7 +97,6 @@ control SpgwIngress(
     //=======================//
 
     action downlink_pdr_drop() {
-        // mark_to_drop(standard_md);
         fabric_v1model.drop_ctl = 1w1;
         fabric_md.skip_forwarding = true;
         fabric_md.skip_next = true;
@@ -107,7 +106,6 @@ control SpgwIngress(
     }
 
     action uplink_pdr_drop() {
-        // mark_to_drop(standard_md);
         fabric_v1model.drop_ctl = 1w1;
         fabric_md.skip_forwarding = true;
         fabric_md.skip_next = true;
@@ -159,7 +157,6 @@ control SpgwIngress(
     //=======================//
 
     action far_drop() {
-        // mark_to_drop(standard_md);
         fabric_v1model.drop_ctl = 1w1;
         fabric_md.skip_forwarding = true;
         fabric_md.skip_next = true;

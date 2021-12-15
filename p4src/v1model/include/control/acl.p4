@@ -35,12 +35,10 @@ control Acl (inout ingress_headers_t hdr,
         copy_to_cpu();
         fabric_md.skip_next = true;
         fabric_md.punt_to_cpu = true;
-        // mark_to_drop(standard_md);
         fabric_v1model.drop_ctl = 1;
     }
 
     action drop() {
-        // mark_to_drop(standard_md);
         fabric_v1model.drop_ctl = 1;
         fabric_md.skip_next = true;
 #ifdef WITH_INT

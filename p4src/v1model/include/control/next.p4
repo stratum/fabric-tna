@@ -283,7 +283,6 @@ control EgressNextControl (inout ingress_headers_t hdr,
     apply {
         if (fabric_md.bridged.base.is_multicast
              && fabric_md.bridged.base.ig_port == standard_md.egress_port) {
-            // mark_to_drop(standard_md);
             fabric_v1model.drop_ctl = 1w1;
         }
 
@@ -319,7 +318,6 @@ control EgressNextControl (inout ingress_headers_t hdr,
         if (hdr.mpls.isValid()) {
             hdr.mpls.ttl = hdr.mpls.ttl - 1;
             if (hdr.mpls.ttl == 0) {
-                // mark_to_drop(standard_md);
                 fabric_v1model.drop_ctl = 1w1;
 #ifdef WITH_INT
                 fabric_md.int_report_md.drop_reason = IntDropReason_t.DROP_REASON_MPLS_TTL_ZERO;
@@ -329,7 +327,6 @@ control EgressNextControl (inout ingress_headers_t hdr,
             if (hdr.ipv4.isValid() && fabric_md.bridged.base.fwd_type != FWD_BRIDGING) {
                 hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
                 if (hdr.ipv4.ttl == 0) {
-                    // mark_to_drop(standard_md);
                     fabric_v1model.drop_ctl = 1w1;
 #ifdef WITH_INT
                     fabric_md.int_report_md.drop_reason = IntDropReason_t.DROP_REASON_IP_TTL_ZERO;
@@ -338,7 +335,6 @@ control EgressNextControl (inout ingress_headers_t hdr,
             } else if (hdr.ipv6.isValid() && fabric_md.bridged.base.fwd_type != FWD_BRIDGING) {
                 hdr.ipv6.hop_limit = hdr.ipv6.hop_limit - 1;
                 if (hdr.ipv6.hop_limit == 0) {
-                    // mark_to_drop(standard_md);
                     fabric_v1model.drop_ctl = 1w1;
 #ifdef WITH_INT
                     fabric_md.int_report_md.drop_reason = IntDropReason_t.DROP_REASON_IP_TTL_ZERO;

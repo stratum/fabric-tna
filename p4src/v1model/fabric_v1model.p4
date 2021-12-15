@@ -121,6 +121,7 @@ control FabricEgress (inout v1model_header_t hdr,
     SpgwEgress() spgw;
 #endif // WITH_SPGW
 #ifdef WITH_INT
+    IntEgressParserEmulator() parser_emulator;
     IntEgress() int_egress;
 #endif // WITH_INT
 
@@ -131,10 +132,10 @@ control FabricEgress (inout v1model_header_t hdr,
 
 #ifdef WITH_INT
         // Emulate mirroring and TNA Egress Parser by cloning the packet and recirculating it.
-        if (IS_RECIRCULATED(standard_md)) {
-            // INT mirrored and recirculated packet.
-            fabric_md.egress.is_int_recirc = true;
-        }
+        // if (IS_RECIRCULATED(standard_md)) {
+        //     // INT mirrored and recirculated packet.
+            // fabric_md.egress.is_int_recirc = true;
+        // }
 
         if(fabric_md.egress.bridged.int_bmd.mirror_session_id != 0 && !IS_E2E_CLONE(standard_md)) {
             // INT packet to be mirrored through clone.
@@ -144,8 +145,9 @@ control FabricEgress (inout v1model_header_t hdr,
         }
 
         if (IS_E2E_CLONE(standard_md)){
-            // INT mirrored packet -> recirculate.
-            recirculate({standard_md});
+            // INT mirrored packet -> apply parser emulator and recirculate.
+            parser_emulator.apply(hdr, fabric_md, standard_md);
+            recirculate({});
         }
 #endif // WITH_INT
 
@@ -170,7 +172,11 @@ control FabricEgress (inout v1model_header_t hdr,
             recirculate(standard_md);
         }
 
-        if ((bool)fabric_md.drop_ctl) {
+        // if (fabric_md.drop_ctl == 1w0 && standard_md.egress_spec == BMV2_DROP_PORT){
+        //     standard_md.egress_spec = standard_md.ingress_port; // do not drop the packet
+        // }
+
+        if (fabric_md.drop_ctl == 1w1) {
             mark_to_drop(standard_md);
         }
     } // end of apply{}
