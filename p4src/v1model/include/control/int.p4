@@ -17,17 +17,12 @@ const queue_report_quota_t DEFAULT_QUEUE_REPORT_QUOTA = 1024;
 const bit<32> max = 0xFFFF;
 const bit<32> base = 0;
 
-#define IS_DROP_CTL_SET(std_meta) (std_meta.egress_spec == 511)
-
 
 control FlowReportFilter(
     inout egress_headers_t hdr,
     // inout fabric_egress_metadata_t fabric_md,
     inout fabric_v1model_metadata_t fabric_v1model,
     inout standard_metadata_t standard_md
-    // in    egress_intrinsic_metadata_t eg_intr_md,
-    // in    egress_intrinsic_metadata_from_parser_t eg_prsr_md,
-    // inout egress_intrinsic_metadata_for_deparser_t eg_dprsr_md
     ) {
 
     fabric_egress_metadata_t fabric_md = fabric_v1model.egress;
@@ -107,11 +102,12 @@ control FlowReportFilter(
 
 control DropReportFilter(
     inout egress_headers_t hdr,
-    inout fabric_egress_metadata_t fabric_md,
+    // inout fabric_egress_metadata_t fabric_md,
+    inout fabric_v1model_metadata_t fabric_v1model,
     inout standard_metadata_t standard_md
-    // inout egress_intrinsic_metadata_for_deparser_t eg_dprsr_md
     ) {
 
+    fabric_egress_metadata_t fabric_md = fabric_v1model.egress;
     bit<16> digest = 0;
     bit<16> stored_digest = 0;
     bit<1> flag = 0;
@@ -173,27 +169,26 @@ control DropReportFilter(
             // flag = flag | filter_get_and_set2.execute(fabric_md.int_report_md.flow_hash[15:0]);
             // Drop the report if we already report it within a period of time.
             if (flag == 1) {
-                // eg_dprsr_md.drop_ctl = 1;
+                // Directly drop and exit.
                 mark_to_drop(standard_md);
                 exit;
             }
+            // fabric_v1model.egress = fabric_md; // no need to synch in this control.
         }
     }
 }
 
 control IntWatchlist(
     inout ingress_headers_t hdr,
-    inout fabric_v1model_metadata_t fabric_v1model,
+    inout fabric_ingress_metadata_t fabric_md,
     inout standard_metadata_t standard_md) {
 
     direct_counter(CounterType.packets_and_bytes) watchlist_counter;
-    fabric_ingress_metadata_t fabric_md = fabric_v1model.ingress;
 
     action mark_to_report() {
         fabric_md.bridged.int_bmd.report_type = INT_REPORT_TYPE_FLOW;
-        fabric_v1model.int_deflect_on_drop = 1w1; //useless for bmv2
+        // fabric_v1model.int_deflect_on_drop = 1w1; //useless for bmv2
         // ig_tm_md.deflect_on_drop = 1;
-
         watchlist_counter.count();
     }
 
@@ -229,7 +224,6 @@ control IntWatchlist(
 
     apply {
         watchlist.apply();
-        fabric_v1model.ingress = fabric_md;
     }
 }
 
@@ -238,14 +232,9 @@ control IntIngress(
     inout fabric_v1model_metadata_t fabric_v1model,
     // inout fabric_ingress_metadata_t fabric_md,
     inout standard_metadata_t standard_md
-    // in    ingress_intrinsic_metadata_t ig_intr_md,
-    // inout ingress_intrinsic_metadata_for_deparser_t ig_dprsr_md,
-    // inout ingress_intrinsic_metadata_for_tm_t ig_tm_md
     ) {
 
     fabric_ingress_metadata_t fabric_md = fabric_v1model.ingress;
-    bit<1> drop_ctl = fabric_v1model.drop_ctl;
-    // Convert from bool to int because of ternary match not supporting bool.
     direct_counter(CounterType.packets_and_bytes) drop_report_counter;
 
     @hidden
@@ -257,15 +246,11 @@ control IntIngress(
 #ifdef WITH_SPGW
         fabric_md.bridged.spgw.skip_spgw = true;
 #endif // WITH_SPGW
-        // Redirect to the recirculation port of the pipeline
-        // ig_tm_md.ucast_egress_port = ig_intr_md.ingress_port[8:7] ++ RECIRC_PORT_NUMBER;
-        // standard_md.egress_spec = standard_md.ingress_port[8:7] ++ RECIRC_PORT_NUMBER; //FIXME bmv2 should invoke recirculate.
+        // In V1model, we set the recirculation port in the egress pipeline.
 
         // The drop flag may be set by other tables, need to reset it so the packet can
         // be forward to the recirculation port.
-        // ig_dprsr_md.drop_ctl = 0;
-        fabric_v1model.drop_ctl = 0; //FIXME what if mark_to_drop was invoked? should override egress_spec.
-        // standard_md.egress_spec = standard_md.ingress_port;
+        fabric_v1model.drop_ctl = 0;
 
         drop_report_counter.count();
     }
@@ -274,12 +259,9 @@ control IntIngress(
     table drop_report {
         key = {
             fabric_md.bridged.int_bmd.report_type: exact @name("int_report_type");
-            // ig_dprsr_md.drop_ctl: exact @name("drop_ctl");
-            drop_ctl: exact @name("drop_ctl");
+            fabric_v1model.drop_ctl: exact @name("drop_ctl");
             fabric_md.punt_to_cpu: exact @name("punt_to_cpu");
-            // fabric_md.egress_port_set: ternary @name("egress_port_set");
             fabric_md.egress_port_set: exact @name("egress_port_set");
-            // ig_tm_md.mcast_grp_a: ternary @name("mcast_group_id");
             standard_md.mcast_grp: ternary @name("mcast_group_id");
         }
         actions = {
@@ -302,19 +284,17 @@ control IntIngress(
         // Here we use 0b10000000xx as the mirror session ID where "xx" is the 2-bit
         // pipeline number(0~3).
         // fabric_md.bridged.int_bmd.mirror_session_id = INT_MIRROR_SESSION_BASE ++ ig_intr_md.ingress_port[8:7];
-        fabric_md.bridged.int_bmd.mirror_session_id = BMV2_INT_MIRROR_SESSION; // for bmv2, use a single mirror session ID.
-        // When the traffic manager deflects a packet, the egress port and queue id
-        // of egress intrinsic metadata will be the port and queue used for deflection.
-        // We need to bridge the egress port and queue id from ingress to the egress
-        // parser to initialize the INT drop report.
-        // fabric_md.bridged.int_bmd.egress_port = ig_tm_md.ucast_egress_port;
-        // fabric_md.bridged.int_bmd.queue_id = ig_tm_md.qid;
-        fabric_md.bridged.int_bmd.egress_port = standard_md.egress_spec;
-        fabric_md.bridged.int_bmd.queue_id = 0; //bmv2 has only 1 queue.
+        // bmv2 specific: mirror_session_id is set in egress pipeline.
+        // BELOW COMMENTS CAN BE DELETED.
+        // // When the traffic manager deflects a packet, the egress port and queue id
+        // // of egress intrinsic metadata will be the port and queue used for deflection.
+        // // We need to bridge the egress port and queue id from ingress to the egress
+        // // parser to initialize the INT drop report.
+        // // fabric_md.bridged.int_bmd.egress_port = ig_tm_md.ucast_egress_port;
+        // // fabric_md.bridged.int_bmd.queue_id = ig_tm_md.qid;
+        // fabric_md.bridged.int_bmd.egress_port = standard_md.egress_spec;
+        // fabric_md.bridged.int_bmd.queue_id = 0; //bmv2 has only 1 queue.
         drop_report.apply();
-        // if (drop_ctl == 1) {
-        //     mark_to_drop(standard_md);
-        // }
 
         fabric_v1model.ingress = fabric_md;
     }
@@ -336,13 +316,11 @@ control IntEgressParserEmulator (
     @hidden
     action drop() {
         fabric_v1model.drop_ctl = 1w1;
-        // mark_to_drop(standard_md);
     }
 
     @hidden
     action reject() {
         drop();
-        exit;
     }
 
     @hidden
@@ -486,7 +464,7 @@ control IntEgressParserEmulator (
     table start_transition_select {
         key = {
             // using ternary to allow use of don't care operator.
-            fabric_v1model.deflect_on_drop: ternary;
+            // fabric_v1model.deflect_on_drop: ternary;
             fabric_md.bridged.bmd_type: ternary;
             fabric_v1model.int_mirror_type: ternary;
         }
@@ -497,9 +475,9 @@ control IntEgressParserEmulator (
             @defaultonly drop;
         }
         const entries = {
-            (1, _, _): parse_int_deflected_drop();
-            (0, BridgedMdType_t.INT_INGRESS_DROP, _): parse_int_ingress_drop();
-            (0, BridgedMdType_t.EGRESS_MIRROR, FabricMirrorType_t.INT_REPORT): parse_int_report_mirror();
+            // (1, _, _): parse_int_deflected_drop();
+            (BridgedMdType_t.INT_INGRESS_DROP, _): parse_int_ingress_drop();
+            (BridgedMdType_t.EGRESS_MIRROR, FabricMirrorType_t.INT_REPORT): parse_int_report_mirror();
         }
         const default_action = drop();
     }
@@ -814,6 +792,8 @@ control IntEgress (
 
     @hidden
     action init_int_metadata(bit<3> report_type) {
+        fabric_md.bridged.int_bmd.mirror_session_id = BMV2_INT_MIRROR_SESSION;
+
         // eg_dprsr_md.mirror_type = (bit<3>)FabricMirrorType_t.INT_REPORT;
         fabric_v1model.int_mirror_type = (bit<3>)FabricMirrorType_t.INT_REPORT;
         fabric_md.int_report_md.bmd_type = BridgedMdType_t.EGRESS_MIRROR;
@@ -854,12 +834,12 @@ control IntEgress (
         const default_action = nop();
         const entries = {
             (INT_REPORT_TYPE_FLOW, 0, false): init_int_metadata(INT_REPORT_TYPE_FLOW);
-            (INT_REPORT_TYPE_FLOW, 0, true): init_int_metadata(INT_REPORT_TYPE_FLOW|INT_REPORT_TYPE_QUEUE);
+            // (INT_REPORT_TYPE_FLOW, 0, true): init_int_metadata(INT_REPORT_TYPE_FLOW|INT_REPORT_TYPE_QUEUE); // this should be useless
             (INT_REPORT_TYPE_FLOW, 1, false): init_int_metadata(INT_REPORT_TYPE_DROP);
-            (INT_REPORT_TYPE_FLOW, 1, true): init_int_metadata(INT_REPORT_TYPE_DROP);
+            (INT_REPORT_TYPE_FLOW, 1, true): init_int_metadata(INT_REPORT_TYPE_DROP); // (not sure)this should be useless.
             // Packets which are not tracked by the watchlist table
-            (INT_REPORT_TYPE_NO_REPORT, 0, true): init_int_metadata(INT_REPORT_TYPE_QUEUE);
-            (INT_REPORT_TYPE_NO_REPORT, 1, true): init_int_metadata(INT_REPORT_TYPE_QUEUE);
+            // (INT_REPORT_TYPE_NO_REPORT, 0, true): init_int_metadata(INT_REPORT_TYPE_QUEUE); useless in v1model.
+            // (INT_REPORT_TYPE_NO_REPORT, 1, true): init_int_metadata(INT_REPORT_TYPE_QUEUE); useless in v1model.
         }
 
         counters = int_metadata_counter;
@@ -934,9 +914,9 @@ control IntEgress (
         //  ingress/egress table (e.g., routing table miss, egress vlan table
         //  miss, etc.)?
         // drop_report_filter.apply(hdr, fabric_md, eg_dprsr_md);
-        // drop_report_filter.apply(hdr, fabric_md, standard_md);
+        // drop_report_filter.apply(hdr, fabric_v1model, standard_md); //FIXME you can uncomment this if you want to use drop_report filter.
 
-        if (fabric_md.int_report_md.isValid()) {
+        if (fabric_md.int_report_md.isValid()) { //FIXME check if mirrored packet bmv2.
             // Packet is mirrored (egress or deflected) or an ingress drop.
             report.apply();
         } else {
@@ -944,7 +924,11 @@ control IntEgress (
             // filter decide whether to generate a mirror or not.
             if (int_metadata.apply().hit) {
                 // flow_report_filter.apply(hdr, fabric_md, eg_intr_md, eg_prsr_md, eg_dprsr_md);
-                flow_report_filter.apply(hdr, fabric_v1model, standard_md);
+                clone3(CloneType.E2E,
+                    (bit<32>)fabric_md.bridged.int_bmd.mirror_session_id,
+                    {standard_md, fabric_md}); // mirroring the packet. It could work only if clone3 preserve the metadata structs.
+                    // the mirrored packet will then generate the report.
+                // flow_report_filter.apply(hdr, fabric_v1model, standard_md); not interested in filtering.
             }
         }
 
