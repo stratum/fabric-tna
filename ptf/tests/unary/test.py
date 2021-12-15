@@ -1416,12 +1416,13 @@ class FabricSpgwDownlinkToDbufTest(SpgwSimpleTest):
 
     @tvsetup
     @autocleanup
-    def doRunTest(self, pkt, tagged1, tagged2, is_next_hop_spine, **kwargs):
+    def doRunTest(self, pkt, tagged1, tagged2, is_next_hop_spine, is_dbuf_present, **kwargs):
         self.runDownlinkToDbufTest(
             pkt=pkt,
             tagged1=tagged1,
             tagged2=tagged2,
             is_next_hop_spine=is_next_hop_spine,
+            is_dbuf_present=is_dbuf_present,
         )
 
     def runTest(self):
@@ -1433,11 +1434,12 @@ class FabricSpgwDownlinkToDbufTest(SpgwSimpleTest):
             "ip_dst": UE1_IPV4,
         }
         for traffic_dir in ["host-leaf-host", "spine-leaf-host", "host-leaf-spine"]:
-            for test_args in get_test_args(
-                traffic_dir=traffic_dir, pkt_addrs=pkt_addrs, spgw_type="DL"
-            ):
-                self.doRunTest(**test_args)
-
+            for dbuf_present in [False, True]:
+                for test_args in get_test_args(
+                    traffic_dir=traffic_dir, pkt_addrs=pkt_addrs, spgw_type="DL"
+                ):
+                    print("is_dbuf_present: " + str(dbuf_present))
+                    self.doRunTest(**test_args, is_dbuf_present=dbuf_present)
 
 @group("spgw")
 class FabricSpgwDownlinkFromDbufTest(SpgwSimpleTest):

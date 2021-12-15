@@ -2504,18 +2504,26 @@ class SpgwSimpleTest(IPv4UnicastTest):
         )
         self.write_request(req)
 
-    def setup_downlink_ue_session_dbuf(self, ue_addr, tunnel_peer_id):
+    def setup_downlink_ue_session_dbuf(self, ue_addr, tunnel_peer_id, is_dbuf_present=True):
         req = self.get_new_write_request()
-
-        self.push_update_add_entry_to_action(
-            req,
-            "FabricIngress.spgw.downlink_sessions",
-            [self.Exact("ue_addr", ipv4_to_binary(ue_addr))],
-            "FabricIngress.spgw.set_downlink_session_dbuf",
-            [
-                ("tun_peer_id", stringify(tunnel_peer_id, 1)),
-            ],
-        )
+        if is_dbuf_present:
+            self.push_update_add_entry_to_action(
+                req,
+                "FabricIngress.spgw.downlink_sessions",
+                [self.Exact("ue_addr", ipv4_to_binary(ue_addr))],
+                "FabricIngress.spgw.set_downlink_session_buf",
+                [
+                    ("tun_peer_id", stringify(tunnel_peer_id, 1)),
+                ],
+            )
+        else:
+            self.push_update_add_entry_to_action(
+                req,
+                "FabricIngress.spgw.downlink_sessions",
+                [self.Exact("ue_addr", ipv4_to_binary(ue_addr))],
+                "FabricIngress.spgw.set_downlink_session_buf_drop",
+                []
+            )
         self.write_request(req)
 
 
@@ -2870,6 +2878,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             )
         else:
             # Only uplink ingress should be incremented.
+            time.sleep(1)
             self.verify_upf_counters(UPLINK_UPF_CTR_IDX, uplink_ingress_bytes, 0, 1, 0)
             self.verify_upf_counters(DOWNLINK_UPF_CTR_IDX, 0, 0, 0, 0)
 
@@ -2962,7 +2971,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             DOWNLINK_UPF_CTR_IDX, ingress_bytes, egress_bytes, 1, 1
         )
 
-    def runDownlinkToDbufTest(self, pkt, tagged1, tagged2, is_next_hop_spine):
+    def runDownlinkToDbufTest(self, pkt, tagged1, tagged2, is_next_hop_spine, is_dbuf_present=True):
         exp_pkt = pkt.copy()
         exp_pkt[Ether].src = SWITCH_MAC
         exp_pkt[Ether].dst = DBUF_MAC
@@ -2984,7 +2993,8 @@ class SpgwSimpleTest(IPv4UnicastTest):
         # Add the UE pool interface and the UE Sessions/Terminations pointing to the DBUF
         self.add_ue_pool(UE1_IPV4)
         self.setup_downlink_ue_session_dbuf(ue_addr=UE1_IPV4,
-                                            tunnel_peer_id=DBUF_TUNNEL_PEER_ID)
+                                            tunnel_peer_id=DBUF_TUNNEL_PEER_ID,
+                                            is_dbuf_present=is_dbuf_present)
 
         self.add_dbuf_device(
             dbuf_addr=DBUF_IPV4,
@@ -3004,6 +3014,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             next_hop_mac=DBUF_MAC,
             prefix_len=32,
             exp_pkt=exp_pkt,
+            verify_pkt=is_dbuf_present,
             tagged1=tagged1,
             tagged2=tagged2,
             is_next_hop_spine=is_next_hop_spine,
@@ -3020,6 +3031,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
 
         # Verify the Ingress UPF packet counter increased, but the egress did
         # not.
+        time.sleep(1)
         self.verify_upf_counters(
             DOWNLINK_UPF_CTR_IDX, ingress_bytes, egress_bytes, 1, 0
         )

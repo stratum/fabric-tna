@@ -12,12 +12,14 @@ import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.PortNumber;
-import org.onosproject.net.behaviour.upf.UeSession;
+import org.onosproject.net.behaviour.upf.SessionDownlink;
+import org.onosproject.net.behaviour.upf.SessionUplink;
 import org.onosproject.net.behaviour.upf.UpfCounter;
 import org.onosproject.net.behaviour.upf.UpfEntity;
 import org.onosproject.net.behaviour.upf.UpfEntityType;
 import org.onosproject.net.behaviour.upf.UpfInterface;
-import org.onosproject.net.behaviour.upf.UpfTermination;
+import org.onosproject.net.behaviour.upf.UpfTerminationDownlink;
+import org.onosproject.net.behaviour.upf.UpfTerminationUplink;
 import org.onosproject.net.config.NetworkConfigService;
 import org.onosproject.net.config.basics.BasicDeviceConfig;
 import org.onosproject.net.device.DeviceService;
@@ -153,60 +155,60 @@ public class FabricUpfProgrammableTest {
 
     @Test
     public void testUplinkUeSession() throws Exception {
-        assertTrue(upfProgrammable.readAll(UpfEntityType.SESSION).isEmpty());
-        UeSession expectedUeSession = TestUpfConstants.UPLINK_UE_SESSION;
+        assertTrue(upfProgrammable.readAll(UpfEntityType.SESSION_UPLINK).isEmpty());
+        SessionUplink expectedUeSession = TestUpfConstants.UPLINK_UE_SESSION;
         upfProgrammable.apply(expectedUeSession);
-        Collection<? extends UpfEntity> installedUeSessions = upfProgrammable.readAll(UpfEntityType.SESSION);
+        Collection<? extends UpfEntity> installedUeSessions = upfProgrammable.readAll(UpfEntityType.SESSION_UPLINK);
         assertThat(installedUeSessions.size(), equalTo(1));
         for (var readUeSession : installedUeSessions) {
             assertThat(readUeSession, equalTo(expectedUeSession));
         }
         upfProgrammable.delete(expectedUeSession);
-        assertTrue(upfProgrammable.readAll(UpfEntityType.SESSION).isEmpty());
+        assertTrue(upfProgrammable.readAll(UpfEntityType.SESSION_UPLINK).isEmpty());
     }
 
     @Test
     public void testDownlinkUeSession() throws Exception {
-        assertTrue(upfProgrammable.readAll(UpfEntityType.SESSION).isEmpty());
-        UeSession expectedUeSession = TestUpfConstants.DOWNLINK_UE_SESSION;
+        assertTrue(upfProgrammable.readAll(UpfEntityType.SESSION_DOWNLINK).isEmpty());
+        SessionDownlink expectedUeSession = TestUpfConstants.DOWNLINK_UE_SESSION;
         upfProgrammable.apply(expectedUeSession);
-        Collection<? extends UpfEntity> installedUeSessions = upfProgrammable.readAll(UpfEntityType.SESSION);
+        Collection<? extends UpfEntity> installedUeSessions = upfProgrammable.readAll(UpfEntityType.SESSION_DOWNLINK);
         assertThat(installedUeSessions.size(), equalTo(1));
         for (var readUeSession : installedUeSessions) {
             assertThat(readUeSession, equalTo(expectedUeSession));
         }
         upfProgrammable.delete(expectedUeSession);
-        assertTrue(upfProgrammable.readAll(UpfEntityType.SESSION).isEmpty());
+        assertTrue(upfProgrammable.readAll(UpfEntityType.SESSION_DOWNLINK).isEmpty());
     }
 
     @Test
     public void testUplinkUpfTermination() throws Exception {
-        assertTrue(upfProgrammable.readAll(UpfEntityType.TERMINATION).isEmpty());
-        UpfTermination expected = TestUpfConstants.UPLINK_UPF_TERMINATION;
+        assertTrue(upfProgrammable.readAll(UpfEntityType.TERMINATION_UPLINK).isEmpty());
+        UpfTerminationUplink expected = TestUpfConstants.UPLINK_UPF_TERMINATION;
         upfProgrammable.apply(expected);
         Collection<? extends UpfEntity> installedUpfTerminations =
-                upfProgrammable.readAll(UpfEntityType.TERMINATION);
+                upfProgrammable.readAll(UpfEntityType.TERMINATION_UPLINK);
         assertThat(installedUpfTerminations.size(), equalTo(1));
         for (var readUpfTermination : installedUpfTerminations) {
             assertThat(readUpfTermination, equalTo(expected));
         }
         upfProgrammable.delete(expected);
-        assertTrue(upfProgrammable.readAll(UpfEntityType.TERMINATION).isEmpty());
+        assertTrue(upfProgrammable.readAll(UpfEntityType.TERMINATION_UPLINK).isEmpty());
     }
 
     @Test
     public void testDownlinkUpfTermination() throws Exception {
-        assertTrue(upfProgrammable.readAll(UpfEntityType.TERMINATION).isEmpty());
-        UpfTermination expected = TestUpfConstants.DOWNLINK_UPF_TERMINATION;
+        assertTrue(upfProgrammable.readAll(UpfEntityType.TERMINATION_DOWNLINK).isEmpty());
+        UpfTerminationDownlink expected = TestUpfConstants.DOWNLINK_UPF_TERMINATION;
         upfProgrammable.apply(expected);
         Collection<? extends UpfEntity> installedUpfTerminations =
-                upfProgrammable.readAll(UpfEntityType.TERMINATION);
+                upfProgrammable.readAll(UpfEntityType.TERMINATION_DOWNLINK);
         assertThat(installedUpfTerminations.size(), equalTo(1));
         for (var readUpfTermination : installedUpfTerminations) {
             assertThat(readUpfTermination, equalTo(expected));
         }
         upfProgrammable.delete(expected);
-        assertTrue(upfProgrammable.readAll(UpfEntityType.TERMINATION).isEmpty());
+        assertTrue(upfProgrammable.readAll(UpfEntityType.TERMINATION_DOWNLINK).isEmpty());
     }
 
     @Test
