@@ -38,6 +38,7 @@ from scapy.layers.l2 import Ether
 # https://github.com/stratum/testvectors/tree/master/utils/python
 from testvector import tvutils
 
+RPC_TIMEOUT = 10 # used when sending Write/Read requests.
 
 # Convert integer (with length) to binary byte string
 def stringify(n, length):
@@ -653,7 +654,7 @@ class P4RuntimeTest(BaseTest):
 
     def _write(self, req):
         try:
-            return self.stub.Write(req, timeout=10)
+            return self.stub.Write(req, timeout=RPC_TIMEOUT)
         except grpc.RpcError as e:
             if e.code() != grpc.StatusCode.UNKNOWN:
                 raise e
@@ -665,7 +666,7 @@ class P4RuntimeTest(BaseTest):
             return entities
         else:
             try:
-                for resp in self.stub.Read(req, timeout=10):
+                for resp in self.stub.Read(req, timeout=RPC_TIMEOUT):
                     entities.extend(resp.entities)
             except grpc.RpcError as e:
                 if e.code() != grpc.StatusCode.UNKNOWN:
