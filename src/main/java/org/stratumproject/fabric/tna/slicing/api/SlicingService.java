@@ -40,7 +40,6 @@ public interface SlicingService {
 
     /**
      * Adds a traffic class to given slice.
-     * BEST_EFFORT traffic class must be added first.
      *
      * @param sliceId slice identifier
      * @param tc traffic class
@@ -51,7 +50,6 @@ public interface SlicingService {
 
     /**
      * Removes a traffic class from given slice.
-     * BEST_EFFORT traffic class must be removed last.
      *
      * @param sliceId slice identifier
      * @param tc traffic class
@@ -67,6 +65,24 @@ public interface SlicingService {
      * @return a set of traffic classes in given slice
      */
     Set<TrafficClass> getTrafficClasses(SliceId sliceId);
+
+    /**
+     * Sets a default traffic class that is applied to all unclassified traffic of a slice.
+     * The given traffic class must be already part of the slice, otherwise this will fail.
+     *
+     * @param sliceId slice identifier
+     * @param tc traffic class
+     * @return true if the default traffic class is set successfully, false otherwise.
+     */
+    boolean setDefaultTrafficClass(SliceId sliceId, TrafficClass tc);
+
+    /**
+     * Gets the default traffic class for a given slice.
+     *
+     * @param sliceId slice identifier
+     * @return The default traffic class for the given slice
+     */
+    TrafficClass getDefaultTrafficClass(SliceId sliceId);
 
     /**
      * Associates flow identified by given selector with given slice ID and traffic class.
