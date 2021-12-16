@@ -250,7 +250,7 @@ control IntIngress(
 
         // The drop flag may be set by other tables, need to reset it so the packet can
         // be forward to the recirculation port.
-        fabric_v1model.drop_ctl = 0;
+        fabric_v1model.drop_ctl = 1w0;
 
         drop_report_counter.count();
     }
@@ -314,16 +314,6 @@ control IntEgressParserEmulator (
     fabric_egress_metadata_t fabric_md = fabric_v1model.egress;
 
     @hidden
-    action drop() {
-        fabric_v1model.drop_ctl = 1w1;
-    }
-
-    @hidden
-    action reject() {
-        drop();
-    }
-
-    @hidden
     action set_common_int_headers() {
         // Initialize report headers here to allocate constant fields on the
         // T-PHV (and save on PHV resources).
@@ -384,6 +374,8 @@ control IntEgressParserEmulator (
 
     @hidden
     action set_common_int_drop_headers() {
+        set_common_int_headers();
+
         fabric_md.int_report_md.setValid();
         fabric_md.int_report_md.ip_eth_type = ETHERTYPE_IPV4;
         fabric_md.int_report_md.report_type = INT_REPORT_TYPE_DROP;
@@ -392,11 +384,12 @@ control IntEgressParserEmulator (
         /** drop_report_header **/
         hdr.drop_report_header.setValid();
         // transition set_common_int_headers;
-        set_common_int_headers();
     }
 
     @hidden
     action parse_int_deflected_drop() {
+        set_common_int_drop_headers();
+
         fabric_md.int_report_md.bmd_type = BridgedMdType_t.DEFLECTED;
         fabric_md.int_report_md.encap_presence = fabric_md.bridged.base.encap_presence;
         fabric_md.int_report_md.flow_hash = fabric_md.bridged.base.inner_hash;
@@ -411,11 +404,13 @@ control IntEgressParserEmulator (
         hdr.common_report_header.queue_id = fabric_md.bridged.int_bmd.queue_id;
 
         // transition set_common_int_drop_headers;
-        set_common_int_drop_headers();
+        // set_common_int_drop_headers();
     }
 
     @hidden
     action parse_int_ingress_drop() {
+        set_common_int_drop_headers();
+
         fabric_md.int_report_md.bmd_type = BridgedMdType_t.INT_INGRESS_DROP;
         fabric_md.int_report_md.encap_presence = fabric_md.bridged.base.encap_presence;
         fabric_md.int_report_md.flow_hash = fabric_md.bridged.base.inner_hash;
@@ -430,7 +425,7 @@ control IntEgressParserEmulator (
         hdr.common_report_header.queue_id = 0;
 
         // transition set_common_int_drop_headers;
-        set_common_int_drop_headers();
+        // set_common_int_drop_headers();
     }
 
     @hidden
@@ -460,27 +455,27 @@ control IntEgressParserEmulator (
         set_common_int_headers();
     }
 
-    @hidden
-    table start_transition_select {
-        key = {
-            // using ternary to allow use of don't care operator.
-            // fabric_v1model.deflect_on_drop: ternary;
-            fabric_md.bridged.bmd_type: ternary;
-            fabric_v1model.int_mirror_type: ternary;
-        }
-        actions = {
-            parse_int_deflected_drop;
-            parse_int_ingress_drop;
-            parse_int_report_mirror;
-            @defaultonly drop;
-        }
-        const entries = {
-            // (1, _, _): parse_int_deflected_drop();
-            (BridgedMdType_t.INT_INGRESS_DROP, _): parse_int_ingress_drop();
-            (BridgedMdType_t.EGRESS_MIRROR, FabricMirrorType_t.INT_REPORT): parse_int_report_mirror();
-        }
-        const default_action = drop();
-    }
+    // @hidden
+    // table start_transition_select {
+    //     key = {
+    //         // using ternary to allow use of don't care operator.
+    //         // fabric_v1model.deflect_on_drop: ternary;
+    //         fabric_md.bridged.bmd_type: ternary;
+    //         fabric_v1model.int_mirror_type: ternary;
+    //     }
+    //     actions = {
+    //         parse_int_deflected_drop;
+    //         parse_int_ingress_drop;
+    //         parse_int_report_mirror;
+    //         @defaultonly nop;
+    //     }
+    //     const entries = {
+    //         // (1, _, _): parse_int_deflected_drop();
+    //         (BridgedMdType_t.INT_INGRESS_DROP, _): parse_int_ingress_drop();
+    //         (BridgedMdType_t.EGRESS_MIRROR, FabricMirrorType_t.INT_REPORT): parse_int_report_mirror();
+    //     }
+    //     const default_action = nop();
+    // }
 
     @hidden
     action strip_vlan() {
@@ -512,7 +507,7 @@ control IntEgressParserEmulator (
         hdr_v1model.ingress.icmp.setInvalid();
         hdr_v1model.ingress.tcp.setInvalid();
         hdr_v1model.ingress.udp.setInvalid();
-        // hdr_v1model.ingress.inner_ipv4.setInvalid();
+        hdr_v1model.ingress.inner_ipv4.setInvalid();
         hdr_v1model.ingress.inner_udp.setInvalid();
         hdr_v1model.ingress.inner_tcp.setInvalid();
         hdr_v1model.ingress.inner_icmp.setInvalid();
@@ -528,7 +523,7 @@ control IntEgressParserEmulator (
         hdr_v1model.ingress.gtpu.setInvalid();
         hdr_v1model.ingress.gtpu_options.setInvalid();
         hdr_v1model.ingress.gtpu_ext_psc.setInvalid();
-        // hdr_v1model.ingress.inner_ipv4.setInvalid();
+        hdr_v1model.ingress.inner_ipv4.setInvalid();
         hdr_v1model.ingress.inner_udp.setInvalid();
         hdr_v1model.ingress.inner_tcp.setInvalid();
         hdr_v1model.ingress.inner_icmp.setInvalid();
@@ -544,34 +539,35 @@ control IntEgressParserEmulator (
         fabric_md.int_ipv4_len = hdr.ipv4.total_len;
     }
 
-    @hidden
-    table state_parse_eth_hdr {
-        key = {
-            // hdr.eth_type.isValid(): ternary;
-            hdr_v1model.ingress.eth_type.value: ternary;
-            fabric_md.int_report_md.encap_presence: ternary;
-        }
-        actions = {
-            strip_vlan;
-            strip_mpls;
-            handle_ipv4;
-            strip_ipv4_udp_gtpu;
-            @defaultonly nop;
-        }
-        const entries = {
-            (ETHERTYPE_VLAN &&& 0xEFFF, _): strip_vlan();
-            (ETHERTYPE_MPLS, _): strip_mpls();
-            (ETHERTYPE_IPV4, EncapPresence.NONE): handle_ipv4();
-            (ETHERTYPE_IPV4, EncapPresence.GTPU_ONLY): strip_ipv4_udp_gtpu;
-        }
-        const default_action = nop();
-    }
+    // @hidden
+    // table state_parse_eth_hdr {
+    //     key = {
+    //         // hdr.eth_type.isValid(): ternary;
+    //         hdr_v1model.ingress.eth_type.value: ternary;
+    //         fabric_md.int_report_md.encap_presence: ternary;
+    //     }
+    //     actions = {
+    //         strip_vlan;
+    //         strip_mpls;
+    //         handle_ipv4;
+    //         strip_ipv4_udp_gtpu;
+    //         @defaultonly nop;
+    //     }
+    //     const entries = {
+    //         (ETHERTYPE_VLAN &&& 0xEFFF, _): strip_vlan();
+    //         (ETHERTYPE_MPLS, _): strip_mpls();
+    //         (ETHERTYPE_IPV4, EncapPresence.NONE): handle_ipv4();
+    //         (ETHERTYPE_IPV4, EncapPresence.GTPU_ONLY): strip_ipv4_udp_gtpu;
+    //     }
+    //     const default_action = nop();
+    // }
 
     apply {
         fabric_md.is_int_recirc = true;
 
-
-        parse_int_report_mirror();
+        // perform this only for Ingress drop reports.
+        parse_int_ingress_drop();
+        // parse_int_report_mirror();
         strip_ipv4_udp_gtpu_psc();
         // start_transition_select.apply();
 
@@ -588,16 +584,12 @@ control IntEgress (
     inout v1model_header_t hdr_v1model,
     inout fabric_v1model_metadata_t fabric_v1model,
     inout standard_metadata_t standard_md
-    // in    egress_intrinsic_metadata_t eg_intr_md,
-    // in    egress_intrinsic_metadata_from_parser_t eg_prsr_md,
-    // inout egress_intrinsic_metadata_for_deparser_t eg_dprsr_md
     ) {
 
     egress_headers_t hdr = hdr_v1model.egress;
     fabric_egress_metadata_t fabric_md = fabric_v1model.egress;
     FlowReportFilter() flow_report_filter;
     DropReportFilter() drop_report_filter;
-    // IntEgressParserEmulator() parser_emulator;
     queue_report_filter_index_t queue_report_filter_index;
 
     direct_counter(CounterType.packets_and_bytes) report_counter;
@@ -606,10 +598,6 @@ control IntEgress (
     QueueId_t egress_qid = 0; // bmv2 specific. Only one queue present.
     bool check_quota_and_report = false;
     queue_report_filter_index_t quota = 0;
-    // bit<1> drop_ctl = 0;
-
-    // @hidden
-    // Random<bit<16>>() ip_id_gen;
     @hidden
     register<bit<32>>(1024) seq_number;
     // RegisterAction<bit<32>, bit<6>, bit<32>>(seq_number) get_seq_number = {
@@ -702,6 +690,8 @@ control IntEgress (
         // Constant fields are initialized in int_mirror_parser.p4.
         // hdr.report_ipv4.identification = ip_id_gen.get();
         random(hdr.report_ipv4.identification, 0, 0xffff);
+
+        hdr.report_ethernet.dst_addr = hdr_v1model.ingress.ethernet.dst_addr;
 
         hdr.report_ipv4.src_addr = src_ip;
         hdr.report_ipv4.dst_addr = mon_ip;
@@ -822,9 +812,7 @@ control IntEgress (
     table int_metadata {
         key = {
             fabric_md.bridged.int_bmd.report_type: exact @name("int_report_type");
-            // eg_dprsr_md.drop_ctl: exact @name("drop_ctl");
-            // drop_ctl not available as intrinsic metadata.
-            fabric_v1model.drop_ctl: exact @name("drop_ctl"); //FIXME declare drop_ctl as custom metadata
+            fabric_v1model.drop_ctl: exact @name("drop_ctl");
             fabric_md.int_md.queue_report: exact @name("queue_report");
         }
         actions = {
@@ -933,7 +921,9 @@ control IntEgress (
         }
 
         adjust_int_report_hdr_length.apply();
+
         fabric_v1model.egress = fabric_md;
+        hdr_v1model.egress = hdr;
     }
 }
 #endif

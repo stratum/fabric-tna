@@ -14,6 +14,7 @@ parser FabricParser (packet_in packet,
 
     state start {
         fabric_md.ingress.bridged.setValid();
+        fabric_md.drop_ctl = 0;
         fabric_md.ingress.bridged.bmd_type = BridgedMdType_t.INGRESS_TO_EGRESS;
         fabric_md.ingress.bridged.base.ig_port = standard_md.ingress_port;
         fabric_md.ingress.bridged.base.ig_tstamp = standard_md.ingress_global_timestamp;
@@ -24,8 +25,8 @@ parser FabricParser (packet_in packet,
         // If using the designed structure to emulate using clone3 and recirculate,
         // this initialization must not be performed.
         // How? a possible solution could be to put it in another state.
-        // fabric_md.ingress.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UNKNOWN;
-        // fabric_md.ingress.bridged.int_bmd.wip_type = INT_IS_NOT_WIP;
+        fabric_md.ingress.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UNKNOWN;
+        fabric_md.ingress.bridged.int_bmd.wip_type = INT_IS_NOT_WIP;
 #endif // WITH_INT
         fabric_md.ingress.bridged.base.encap_presence = EncapPresence.NONE;
 
@@ -197,9 +198,6 @@ parser FabricParser (packet_in packet,
         packet.extract(hdr.ingress.ipv4);
         fabric_md.ingress.routing_ipv4_dst = hdr.ingress.ipv4.dst_addr;
         fabric_md.ingress.bridged.base.ip_eth_type = ETHERTYPE_IPV4;
-        //ipv4_checksum.add(hdr.ingress.ipv4);
-        //fabric_md.ingress.ipv4_checksum_err = ipv4_checksum.verify();
-        // Need header verification?
         transition select(hdr.ingress.ipv4.protocol) {
             PROTO_TCP: parse_tcp;
             PROTO_UDP: parse_udp;

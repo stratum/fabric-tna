@@ -95,10 +95,20 @@ control FabricIngress (inout v1model_header_t hdr,
         int_ingress.apply(hdr.ingress, fabric_md, standard_md);
 #endif // WITH_INT
 
-        if (!((bool)fabric_md.drop_ctl) && standard_md.egress_spec == BMV2_DROP_PORT) {
+        if (fabric_md.drop_ctl == 0 && !fabric_md.ingress.egress_port_set) {
             // Override mark_to_drop() and avoid the packet to be dropped at end of ingress pipeline.
             // Needed when dealing with INT drops.
-            standard_md.egress_spec = DROP_OVERRIDE_FAKE_PORT;
+            // This will also inevitably override the egress_spec set by 'next' control,
+            // leading to a miss and a subsequent drop by egress.next control.
+            // This case is handled by the test, inserting a new rule matching on this fake_port, in 'egress.next' control.
+            // No other way to avoid this.
+            // standard_md.egress_spec = DROP_OVERRIDE_FAKE_PORT;
+            standard_md.egress_spec = standard_md.ingress_port;
+        }
+        if IS_RECIRCULATED(standard_md) {
+            //FIXME remove this. used to debug.
+            fabric_md.egress.is_int_recirc = true;
+            standard_md.egress_spec = 2;
         }
 
         // Emulating TNA behavior through bridged metadata.
@@ -131,7 +141,13 @@ control FabricEgress (inout v1model_header_t hdr,
         if ((bit<8>)fabric_md.egress.bridged.int_bmd.report_type == BridgedMdType_t.INT_INGRESS_DROP){
             // Ingress drops become themselves a report. Mirroring is not performed.
             parser_emulator.apply(hdr, fabric_md, standard_md);
-            recirculate({});
+            recirculate(standard_md);
+        }
+
+        if (IS_E2E_CLONE(standard_md)) {
+            // Mirrored packet that will be transformed in report.
+            parser_emulator.apply(hdr, fabric_md, standard_md);
+            recirculate(standard_md);
         }
 #endif // WITH_INT
 
@@ -156,9 +172,9 @@ control FabricEgress (inout v1model_header_t hdr,
             recirculate(standard_md);
         }
 
-        if ((bool)fabric_md.drop_ctl) {
-            mark_to_drop(standard_md);
-        }
+        // if (fabric_md.drop_ctl == 1) {
+        //     mark_to_drop(standard_md);
+        // }
     } // end of apply{}
 }
 

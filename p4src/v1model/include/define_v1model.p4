@@ -23,9 +23,9 @@ typedef bit<16> ReplicationId_t;    // Replication id
 typedef bit<1> BOOL;
 
 const PortId_t BMV2_DROP_PORT = 511;
-// The fake port is used to override the mark_to_drop(standard_md).
+// The DROP_OVERRIDE_FAKE_PORT is used to override the mark_to_drop() primitive.
 // Especially in INT, when dropping a packet we still want the packet to go through the egress pipeline.
-// If egress_spec == BMV2_DROP_PORT, the packet will be dropped at the end of Ingress pipeline.
+// Calling mark_to_drop() will set the egress_spec = BMV2_DROP_PORT, leading to packet being dropped at the end of ingress pipeline.
 // This port shouldn't be used for any other reason.
 const PortId_t DROP_OVERRIDE_FAKE_PORT = 510;
 
