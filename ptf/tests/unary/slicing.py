@@ -182,7 +182,14 @@ class FabricSpgwUplinkWithDscpRewriteTest(SpgwSimpleTest, SlicingTest):
     @tvsetup
     @autocleanup
     def doRunTest(
-        self, pkt, tagged1, tagged2, with_psc, is_next_hop_spine, is_next_hop_dscp_aware, use_default_tc
+        self,
+        pkt,
+        tagged1,
+        tagged2,
+        with_psc,
+        is_next_hop_spine,
+        is_next_hop_dscp_aware,
+        use_default_tc,
     ):
         # Use non-zero values to test dscp_rewriter clear action
         default_slice_id = 1

@@ -38,7 +38,7 @@ from scapy.layers.l2 import Ether
 # https://github.com/stratum/testvectors/tree/master/utils/python
 from testvector import tvutils
 
-RPC_TIMEOUT = 10 # used when sending Write/Read requests.
+RPC_TIMEOUT = 10  # used when sending Write/Read requests.
 
 # Convert integer (with length) to binary byte string
 def stringify(n, length):

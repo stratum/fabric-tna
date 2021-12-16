@@ -2505,7 +2505,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             "FabricIngress.spgw.downlink_pdrs",
             [self.Exact("ue_addr", ipv4_to_binary(ue_addr))],
             action,
-            action_params
+            action_params,
         )
         self.write_request(req)
 
@@ -4563,8 +4563,8 @@ class SlicingTest(FabricTest):
 
     def set_default_tc(self, slice_id=None, tc=None):
         matches = [
-            self.Ternary("slice_tc", stringify(slice_id<<2, 1), stringify(0x3C, 1)),
-            self.Exact("tc_unknown", stringify(1, 1))
+            self.Ternary("slice_tc", stringify(slice_id << 2, 1), stringify(0x3C, 1)),
+            self.Exact("tc_unknown", stringify(1, 1)),
         ]
         action = "FabricIngress.qos.set_default_tc"
         action_params = [("tc", stringify(tc, 1))]
