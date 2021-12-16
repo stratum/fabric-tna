@@ -272,7 +272,6 @@ public class SlicingManagerTest {
         assertTrue(manager.addTrafficClass(SLICE_IDS.get(1), TrafficClass.ELASTIC));
         assertEquals(expectedTcs, manager.getTrafficClasses(SLICE_IDS.get(1)));
 
-        // Normal
         // Add BE to non-existent slice is equivalent to add slice
         expectedTcs = new HashSet<>();
         expectedTcs.add(TrafficClass.BEST_EFFORT);
@@ -309,7 +308,6 @@ public class SlicingManagerTest {
         assertTrue(manager.removeTrafficClass(SLICE_IDS.get(1), TrafficClass.CONTROL));
         assertEquals(expectedTcs, manager.getTrafficClasses(SLICE_IDS.get(1)));
 
-        // Normal
         expectedTcs.remove(TrafficClass.REAL_TIME);
         assertTrue(manager.removeTrafficClass(SLICE_IDS.get(1), TrafficClass.REAL_TIME));
         assertEquals(expectedTcs, manager.getTrafficClasses(SLICE_IDS.get(1)));
@@ -359,7 +357,7 @@ public class SlicingManagerTest {
     }
 
     @Test
-    public void testSetDefaultTrafficClassException1() {
+    public void testSetDefaultTrafficClassException() {
         // Preparation
         manager.addSlice(SLICE_IDS.get(1));
 
@@ -384,20 +382,11 @@ public class SlicingManagerTest {
     public void testAddFlowClassifier() {
         // Preparation
         TrafficSelector selector = DefaultTrafficSelector.builder().matchUdpDst(TpPort.tpPort(100)).build();
-        FlowRule classifier = buildClassifierFromSelector(SLICE_IDS.get(1), TrafficClass.REAL_TIME, selector);
-        flowsPreCheck();
         manager.addSlice(SLICE_IDS.get(1));
         manager.addTrafficClass(SLICE_IDS.get(1), TrafficClass.REAL_TIME);
 
         // Normal
-        capturedAddedFlowRules.reset();
         manager.addFlow(selector, SLICE_IDS.get(1), TrafficClass.REAL_TIME);
-
-        assertAfter(50, () -> {
-            assertTrue(capturedAddedFlowRules.getValues().size() >= 3);
-            assertTrue(capturedAddedFlowRules.getValues().stream()
-                               .anyMatch(fl -> fl.exactMatch(classifier)));
-        });
         assertEquals(1, manager.getFlows(SLICE_IDS.get(1), TrafficClass.REAL_TIME).size());
         assertTrue(manager.getFlows(SLICE_IDS.get(1), TrafficClass.REAL_TIME).contains(selector));
     }
@@ -423,20 +412,15 @@ public class SlicingManagerTest {
     @Test
     public void testRemoveFlowClassifier() {
         // Preparation
-        capturedRemovedFlowRules.reset();
         TrafficSelector selector = DefaultTrafficSelector.builder().matchUdpDst(TpPort.tpPort(100)).build();
-        FlowRule classifier = buildClassifierFromSelector(SLICE_IDS.get(1), TrafficClass.REAL_TIME, selector);
         manager.addSlice(SLICE_IDS.get(1));
         manager.addTrafficClass(SLICE_IDS.get(1), TrafficClass.REAL_TIME);
         manager.addFlow(selector, SLICE_IDS.get(1), TrafficClass.REAL_TIME);
-        int numDevices = DEVICES.size();
 
         // Normal
-        assertTrue(manager.removeFlow(selector, SLICE_IDS.get(1), TrafficClass.REAL_TIME));
-        assertAfter(50, () -> {
-            assertEquals(1 * numDevices, capturedRemovedFlowRules.getValues().size());
-            assertTrue(classifier.exactMatch(capturedRemovedFlowRules.getValues().get(0)));
-        });
+        assertEquals(1, manager.getFlows(SLICE_IDS.get(1), TrafficClass.REAL_TIME).size());
+        manager.removeFlow(selector, SLICE_IDS.get(1), TrafficClass.REAL_TIME);
+        assertEquals(0, manager.getFlows(SLICE_IDS.get(1), TrafficClass.REAL_TIME).size());
     }
 
     @Test
@@ -567,10 +551,14 @@ public class SlicingManagerTest {
         manager.addTrafficClass(SLICE_IDS.get(1), TrafficClass.CONTROL);
         assertAfter(50, () -> {
             assertEquals(2 * numDevices, capturedAddedFlowRules.getValues().size());
-            assertTrue(slice1Control1.exactMatch(capturedAddedFlowRules.getValues().get(0)));
-            assertTrue(slice1Control2.exactMatch(capturedAddedFlowRules.getValues().get(1)));
-            assertTrue(bmv2Slice1Control1.exactMatch(capturedAddedFlowRules.getValues().get(2)));
-            assertTrue(bmv2Slice1Control2.exactMatch(capturedAddedFlowRules.getValues().get(3)));
+            assertTrue(capturedAddedFlowRules.getValues()
+                        .stream().anyMatch(f -> f.exactMatch(slice1Control1)));
+            assertTrue(capturedAddedFlowRules.getValues()
+                        .stream().anyMatch(f -> f.exactMatch(slice1Control2)));
+            assertTrue(capturedAddedFlowRules.getValues()
+                        .stream().anyMatch(f -> f.exactMatch(bmv2Slice1Control1)));
+            assertTrue(capturedAddedFlowRules.getValues()
+                        .stream().anyMatch(f -> f.exactMatch(bmv2Slice1Control2)));
         });
 
         // Removing Control class from slice 1
@@ -578,10 +566,14 @@ public class SlicingManagerTest {
         manager.removeTrafficClass(SLICE_IDS.get(1), TrafficClass.CONTROL);
         assertAfter(50, () -> {
             assertEquals(2 * numDevices, capturedRemovedFlowRules.getValues().size());
-            assertTrue(slice1Control1.exactMatch(capturedRemovedFlowRules.getValues().get(0)));
-            assertTrue(slice1Control2.exactMatch(capturedRemovedFlowRules.getValues().get(1)));
-            assertTrue(bmv2Slice1Control1.exactMatch(capturedAddedFlowRules.getValues().get(2)));
-            assertTrue(bmv2Slice1Control2.exactMatch(capturedAddedFlowRules.getValues().get(3)));
+            assertTrue(capturedRemovedFlowRules.getValues()
+                        .stream().anyMatch(f -> f.exactMatch(slice1Control1)));
+            assertTrue(capturedRemovedFlowRules.getValues()
+                        .stream().anyMatch(f -> f.exactMatch(slice1Control2)));
+            assertTrue(capturedRemovedFlowRules.getValues()
+                        .stream().anyMatch(f -> f.exactMatch(bmv2Slice1Control1)));
+            assertTrue(capturedRemovedFlowRules.getValues()
+                        .stream().anyMatch(f -> f.exactMatch(bmv2Slice1Control2)));
         });
     }
 
@@ -603,7 +595,17 @@ public class SlicingManagerTest {
         manager.addFlow(selector, SLICE_IDS.get(1), TrafficClass.BEST_EFFORT);
         assertAfter(50, () -> {
             assertEquals(1 * numDevices, capturedAddedFlowRules.getValues().size());
-            assertTrue(mock.exactMatch(capturedAddedFlowRules.getValues().get(0)));
+            assertTrue(capturedAddedFlowRules.getValues()
+                        .stream().anyMatch(f -> f.exactMatch(mock)));
+        });
+
+        // Removing mock rule from slice 1 BE
+        capturedRemovedFlowRules.reset();
+        manager.removeFlow(selector, SLICE_IDS.get(1), TrafficClass.BEST_EFFORT);
+        assertAfter(50, () -> {
+            assertEquals(1 * numDevices, capturedRemovedFlowRules.getValues().size());
+            assertTrue(capturedRemovedFlowRules.getValues()
+                        .stream().anyMatch(f -> f.exactMatch(mock)));
         });
     }
 
@@ -738,14 +740,13 @@ public class SlicingManagerTest {
 
     private void flowsPreCheck() {
         // We install init flows during start up stage
-        // Do a quick check here and reset the capture object
+        // So we do a quick check here as a precondition
         // e.g. sliceExecutor installs slice flows on activation stage, if the tests start immediately,
         // the captured flows may include slice flows (unexpceted).
         assertAfter(100, 250, () -> {
             // Number of init flows are variant
             // For now we install 2 flows for each device
             assertEquals(2 * DEVICES.size(), capturedAddedFlowRules.getValues().size());
-            capturedAddedFlowRules.reset();
         });
     }
 }
