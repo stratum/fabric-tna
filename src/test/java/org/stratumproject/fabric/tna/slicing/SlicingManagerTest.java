@@ -113,7 +113,7 @@ public class SlicingManagerTest {
         DEVICES.add(new MockDevice(DID_BMV2, null));
 
         String bmv2PipeconfId = "org.stratumproject.fabric.bmv2";
-        String tmPipeconfId = "org.stratumproject.fabric.montara_sde_9_5_0";
+        String tmPipeconfId = "org.stratumproject.fabric.montara_sde_9_7_0";
         MockPiPipelineModel bmv2PipelineModel =
                 new MockPiPipelineModel(Collections.EMPTY_LIST,
                                         Collections.EMPTY_LIST,
