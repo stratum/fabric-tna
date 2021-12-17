@@ -370,6 +370,7 @@ struct fabric_ingress_metadata_t {
     bool                     inner_ipv4_checksum_err;
     slice_id_t               slice_id;
     tc_t                     tc;
+    bool                     tc_unknown;
     bool                     is_spgw_hit;
     slice_id_t               spgw_slice_id;
     tc_t                     spgw_tc;

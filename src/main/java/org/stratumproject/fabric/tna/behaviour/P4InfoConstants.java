@@ -109,6 +109,9 @@ public final class P4InfoConstants {
     public static final PiMatchFieldId HDR_STATS_FLOW_ID =
             PiMatchFieldId.of("stats_flow_id");
     public static final int HDR_STATS_FLOW_ID_BITWIDTH = 10;
+    public static final PiMatchFieldId HDR_TC_UNKNOWN =
+            PiMatchFieldId.of("tc_unknown");
+    public static final int HDR_TC_UNKNOWN_BITWIDTH = 1;
     public static final PiMatchFieldId HDR_TEID = PiMatchFieldId.of("teid");
     public static final int HDR_TEID_BITWIDTH = 32;
     public static final PiMatchFieldId HDR_TUN_PEER_ID =
@@ -172,6 +175,8 @@ public final class P4InfoConstants {
             PiTableId.of("FabricIngress.pre_next.next_mpls");
     public static final PiTableId FABRIC_INGRESS_PRE_NEXT_NEXT_VLAN =
             PiTableId.of("FabricIngress.pre_next.next_vlan");
+    public static final PiTableId FABRIC_INGRESS_QOS_DEFAULT_TC =
+            PiTableId.of("FabricIngress.qos.default_tc");
     public static final PiTableId FABRIC_INGRESS_QOS_QUEUES =
             PiTableId.of("FabricIngress.qos.queues");
     public static final PiTableId FABRIC_INGRESS_SLICE_TC_CLASSIFIER_CLASSIFIER =
@@ -319,8 +324,12 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.pre_next.set_vlan");
     public static final PiActionId FABRIC_INGRESS_QOS_METER_DROP =
             PiActionId.of("FabricIngress.qos.meter_drop");
+    public static final PiActionId FABRIC_INGRESS_QOS_SET_DEFAULT_TC =
+            PiActionId.of("FabricIngress.qos.set_default_tc");
     public static final PiActionId FABRIC_INGRESS_QOS_SET_QUEUE =
             PiActionId.of("FabricIngress.qos.set_queue");
+    public static final PiActionId FABRIC_INGRESS_SLICE_TC_CLASSIFIER_NO_CLASSIFICATION =
+            PiActionId.of("FabricIngress.slice_tc_classifier.no_classification");
     public static final PiActionId FABRIC_INGRESS_SLICE_TC_CLASSIFIER_SET_SLICE_ID_TC =
             PiActionId.of("FabricIngress.slice_tc_classifier.set_slice_id_tc");
     public static final PiActionId FABRIC_INGRESS_SLICE_TC_CLASSIFIER_TRUST_DSCP =

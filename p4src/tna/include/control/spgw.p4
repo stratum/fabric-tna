@@ -226,6 +226,12 @@ control SpgwIngress(
                    tc_t tc) {
         _term_hit(ctr_id);
         fabric_md.spgw_tc = tc;
+        fabric_md.tc_unknown = false;
+    }
+
+    action app_fwd_no_tc(upf_ctr_id_t ctr_id) {
+        _term_hit(ctr_id);
+        fabric_md.tc_unknown = true;
     }
 
     action downlink_fwd_encap(upf_ctr_id_t ctr_id,
@@ -239,6 +245,16 @@ control SpgwIngress(
         fabric_md.bridged.spgw.qfi = qfi;
     }
 
+    action downlink_fwd_encap_no_tc(upf_ctr_id_t ctr_id,
+                                    teid_t       teid,
+                                    // QFI should always equal 0 for 4G flows
+                                    bit<6>       qfi) {
+        app_fwd_no_tc(ctr_id);
+        fabric_md.bridged.spgw.needs_gtpu_encap = true;
+        fabric_md.bridged.spgw.teid = teid;
+        fabric_md.bridged.spgw.qfi = qfi;
+    }
+
     table uplink_terminations {
         key = {
             ue_session_id             : exact @name("ue_session_id");
@@ -246,6 +262,7 @@ control SpgwIngress(
 
         actions = {
             app_fwd;
+            app_fwd_no_tc;
             uplink_drop;
             @defaultonly uplink_drop_miss;
         }
@@ -259,6 +276,7 @@ control SpgwIngress(
         }
         actions = {
             downlink_fwd_encap;
+            downlink_fwd_encap_no_tc;
             downlink_drop;
             @defaultonly downlink_drop_miss;
         }

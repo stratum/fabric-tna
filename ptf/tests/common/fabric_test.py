@@ -2476,17 +2476,22 @@ class SpgwSimpleTest(IPv4UnicastTest):
 
     def setup_uplink_termination(self, ue_session, ctr_id, tc=DEFAULT_TC):
         req = self.get_new_write_request()
+        action_params = [
+            ("ctr_id", stringify(ctr_id, 2)),
+        ]
+        if tc is not None:
+            action_name = "FabricIngress.spgw.app_fwd"
+            action_params.append(("tc", stringify(tc, 1)))
+        else:
+            action_name = "FabricIngress.spgw.app_fwd_no_tc"
         self.push_update_add_entry_to_action(
             req,
             "FabricIngress.spgw.uplink_terminations",
             [
                 self.Exact("ue_session_id", ipv4_to_binary(ue_session)),
             ],
-            "FabricIngress.spgw.app_fwd",
-            [
-                ("ctr_id", stringify(ctr_id, 2)),
-                ("tc", stringify(tc, 1)),
-            ],
+            action_name,
+            action_params,
         )
         self.write_request(req)
 
@@ -2531,17 +2536,22 @@ class SpgwSimpleTest(IPv4UnicastTest):
                                           tc=DEFAULT_TC,
                                           qfi=DEFAULT_QFI):
         req = self.get_new_write_request()
+        action_params = [
+            ("ctr_id", stringify(ctr_id, 2)),
+            ("qfi", stringify(qfi, 1)),
+            ("teid", stringify(teid, 4)),
+        ]
+        if tc is not None:
+            action_name = "FabricIngress.spgw.downlink_fwd_encap"
+            action_params.append(("tc", stringify(tc, 1)))
+        else:
+            action_name = "FabricIngress.spgw.downlink_fwd_encap_no_tc"
         self.push_update_add_entry_to_action(
             req,
             "FabricIngress.spgw.downlink_terminations",
             [self.Exact("ue_session_id", ipv4_to_binary(ue_session))],
-            "FabricIngress.spgw.downlink_fwd_encap",
-            [
-                ("ctr_id", stringify(ctr_id, 2)),
-                ("tc", stringify(tc, 1)),
-                ("teid", stringify(teid, 4)),
-                ("qfi", stringify(qfi, 1)),
-            ],
+            action_name,
+            action_params,
         )
         self.write_request(req)
 
@@ -2583,7 +2593,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         teid,
         ctr_id,
         slice_id=DEFAULT_SLICE_ID,
-        tc=DEFAULT_TC,
+        tc=None,
     ):
         self.add_s1u_iface(s1u_addr=s1u_sgw_addr, slice_id=slice_id)
         self.setup_uplink_ue_session(teid=teid, tunnel_dst_addr=s1u_sgw_addr)
@@ -2597,7 +2607,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         ue_addr,
         ctr_id,
         slice_id=DEFAULT_SLICE_ID,
-        tc=DEFAULT_TC,
+        tc=None,
         qfi=DEFAULT_QFI
     ):
         self.add_ue_pool(pool_addr=ue_addr, slice_id=slice_id)
@@ -2648,7 +2658,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         with_psc,
         is_next_hop_spine,
         slice_id=DEFAULT_SLICE_ID,
-        tc=DEFAULT_TC,
+        tc=None,
         dscp_rewrite=False,
         verify_counters=True,
         eg_port=None,
@@ -2676,7 +2686,11 @@ class SpgwSimpleTest(IPv4UnicastTest):
         if tagged2:
             exp_pkt = pkt_add_vlan(exp_pkt, VLAN_ID_2)
         if dscp_rewrite:
-            exp_pkt = pkt_set_dscp(exp_pkt, slice_id=slice_id, tc=tc)
+            if tc is None:
+                # Use default TC
+                exp_pkt = pkt_set_dscp(exp_pkt, slice_id=slice_id, tc=DEFAULT_TC)
+            else:
+                exp_pkt = pkt_set_dscp(exp_pkt, slice_id=slice_id, tc=tc)
 
         self.setup_uplink(
             ue_addr=ue_out_pkt[IP].src,
@@ -2878,7 +2892,6 @@ class SpgwSimpleTest(IPv4UnicastTest):
             )
         else:
             # Only uplink ingress should be incremented.
-            time.sleep(1)
             self.verify_upf_counters(UPLINK_UPF_CTR_IDX, uplink_ingress_bytes, 0, 1, 0)
             self.verify_upf_counters(DOWNLINK_UPF_CTR_IDX, 0, 0, 0, 0)
 
@@ -2890,7 +2903,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         with_psc,
         is_next_hop_spine,
         slice_id=DEFAULT_SLICE_ID,
-        tc=DEFAULT_TC,
+        tc=None,
         dscp_rewrite=False,
         verify_counters=True,
         eg_port=None,
@@ -2914,7 +2927,10 @@ class SpgwSimpleTest(IPv4UnicastTest):
             exp_pkt = pkt_add_vlan(exp_pkt, VLAN_ID_2)
         if dscp_rewrite:
             # Modify outer IPV4
-            exp_pkt = pkt_set_dscp(exp_pkt, slice_id=slice_id, tc=tc)
+            if tc is None:
+                exp_pkt = pkt_set_dscp(exp_pkt, slice_id=slice_id, tc=DEFAULT_TC)
+            else:
+                exp_pkt = pkt_set_dscp(exp_pkt, slice_id=slice_id, tc=tc)
 
         self.setup_downlink(
             s1u_sgw_addr=S1U_SGW_IPV4,
@@ -3031,7 +3047,6 @@ class SpgwSimpleTest(IPv4UnicastTest):
 
         # Verify the Ingress UPF packet counter increased, but the egress did
         # not.
-        time.sleep(1)
         self.verify_upf_counters(
             DOWNLINK_UPF_CTR_IDX, ingress_bytes, egress_bytes, 1, 0
         )
@@ -4600,6 +4615,21 @@ class PppoeTest(DoubleVlanTerminationTest):
 class SlicingTest(FabricTest):
     """Mixin class with methods to manipulate QoS entities
     """
+
+    def set_default_tc(self, slice_id=None, tc=None):
+        matches = [
+            self.Ternary("slice_tc", stringify(slice_id << 2, 1), stringify(0x3C, 1)),
+            self.Exact("tc_unknown", stringify(1, 1)),
+        ]
+        action = "FabricIngress.qos.set_default_tc"
+        action_params = [("tc", stringify(tc, 1))]
+        self.send_request_add_entry_to_action(
+            "FabricIngress.qos.default_tc",
+            matches,
+            action,
+            action_params,
+            DEFAULT_PRIORITY,
+        )
 
     def add_slice_tc_classifier_entry(
         self, slice_id=None, tc=None, trust_dscp=False, **ftuple
