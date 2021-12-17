@@ -70,7 +70,7 @@ control FabricIngress (
         }
 #endif // WITH_SPGW
         if (!fabric_md.skip_forwarding) {
-            forwarding.apply(hdr, fabric_md);
+            forwarding.apply(hdr, fabric_md, ig_dprsr_md);
         }
         hasher.apply(hdr, fabric_md);
         if (!fabric_md.skip_next) {

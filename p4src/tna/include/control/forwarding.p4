@@ -9,7 +9,8 @@
 
 
 control Forwarding (inout ingress_headers_t hdr,
-                    inout fabric_ingress_metadata_t fabric_md) {
+                    inout fabric_ingress_metadata_t fabric_md,
+                    inout ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr) {
 
 #ifdef WITH_INT
     action set_int_drop_reason(bit<8> drop_reason) {
@@ -112,6 +113,17 @@ control Forwarding (inout ingress_headers_t hdr,
 #endif // WITH_DEBUG
     }
 
+    action drop_routing_v4() {
+        ig_intr_md_for_dprsr.drop_ctl = 1;
+        fabric_md.skip_next = true;
+#ifdef WITH_INT
+        set_int_drop_reason(IntDropReason_t.DROP_REASON_ROUTING_V4_DROP);
+#endif // WITH_INT
+#ifdef WITH_DEBUG
+        routing_v4_counter.count();
+#endif // WITH_DEBUG
+    }
+
     table routing_v4 {
         key = {
             fabric_md.routing_ipv4_dst: lpm @name("ipv4_dst");
@@ -119,6 +131,7 @@ control Forwarding (inout ingress_headers_t hdr,
         actions = {
             set_next_id_routing_v4;
             nop_routing_v4;
+            drop_routing_v4;
 #ifdef WITH_INT
             @defaultonly set_int_drop_reason;
 #else
@@ -150,12 +163,24 @@ control Forwarding (inout ingress_headers_t hdr,
 #endif // WITH_DEBUG
     }
 
+    action drop_routing_v6() {
+        ig_intr_md_for_dprsr.drop_ctl = 1;
+        fabric_md.skip_next = true;
+#ifdef WITH_INT
+        set_int_drop_reason(IntDropReason_t.DROP_REASON_ROUTING_V6_DROP);
+#endif // WITH_INT
+#ifdef WITH_DEBUG
+        routing_v6_counter.count();
+#endif // WITH_DEBUG
+    }
+
     table routing_v6 {
         key = {
             hdr.ipv6.dst_addr: lpm @name("ipv6_dst");
         }
         actions = {
             set_next_id_routing_v6;
+            drop_routing_v6;
 #ifdef WITH_INT
             @defaultonly set_int_drop_reason;
 #else

@@ -280,6 +280,10 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.filtering.permit_with_internal_vlan");
     public static final PiActionId FABRIC_INGRESS_FILTERING_SET_FORWARDING_TYPE =
             PiActionId.of("FabricIngress.filtering.set_forwarding_type");
+    public static final PiActionId FABRIC_INGRESS_FORWARDING_DROP_ROUTING_V4 =
+            PiActionId.of("FabricIngress.forwarding.drop_routing_v4");
+    public static final PiActionId FABRIC_INGRESS_FORWARDING_DROP_ROUTING_V6 =
+            PiActionId.of("FabricIngress.forwarding.drop_routing_v6");
     public static final PiActionId FABRIC_INGRESS_FORWARDING_NOP_ROUTING_V4 =
             PiActionId.of("FabricIngress.forwarding.nop_routing_v4");
     public static final PiActionId FABRIC_INGRESS_FORWARDING_POP_MPLS_AND_NEXT =
