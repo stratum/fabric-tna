@@ -30,12 +30,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import static java.lang.String.format;
-import static org.stratumproject.fabric.tna.behaviour.Constants.TC_BEST_EFFORT;
-import static org.stratumproject.fabric.tna.behaviour.Constants.TC_CONTROL;
-import static org.stratumproject.fabric.tna.behaviour.Constants.TC_ELASTIC;
-import static org.stratumproject.fabric.tna.behaviour.Constants.TC_REAL_TIME;
-import static org.stratumproject.fabric.tna.behaviour.Constants.DEFAULT_SLICE_ID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.CTR_ID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_EG_TUNNEL_PEERS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_GTPU_ENCAP;
@@ -79,9 +73,9 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TEID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TUNNEL_DST_ADDR;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TUNNEL_SRC_ADDR;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TUNNEL_SRC_PORT;
-import static org.stratumproject.fabric.tna.behaviour.upf.FabricUpfProgrammable.SLICE_MOBILE;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TUN_DST_ADDR;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TUN_PEER_ID;
+import static org.stratumproject.fabric.tna.behaviour.upf.FabricUpfProgrammable.SLICE_MOBILE;
 
 /**
  * Provides logic to translate UPF entities into pipeline-specific ones and vice-versa.

@@ -198,10 +198,10 @@ public final class P4InfoConstants {
     public static final PiTableId FABRIC_INGRESS_STATS_FLOWS =
             PiTableId.of("FabricIngress.stats.flows");
     // Indirect Counter IDs
-    public static final PiCounterId FABRIC_EGRESS_SPGW_UPF_COUNTER =
-            PiCounterId.of("FabricEgress.spgw.upf_counter");
-    public static final PiCounterId FABRIC_INGRESS_SPGW_UPF_COUNTER =
-            PiCounterId.of("FabricIngress.spgw.upf_counter");
+    public static final PiCounterId FABRIC_EGRESS_SPGW_TERMINATIONS_COUNTER =
+            PiCounterId.of("FabricEgress.spgw.terminations_counter");
+    public static final PiCounterId FABRIC_INGRESS_SPGW_TERMINATIONS_COUNTER =
+            PiCounterId.of("FabricIngress.spgw.terminations_counter");
     // Direct Counter IDs
     public static final PiCounterId FABRIC_EGRESS_EGRESS_NEXT_EGRESS_VLAN_COUNTER =
             PiCounterId.of("FabricEgress.egress_next.egress_vlan_counter");
@@ -340,12 +340,16 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.slice_tc_classifier.trust_dscp");
     public static final PiActionId FABRIC_INGRESS_SPGW_APP_FWD =
             PiActionId.of("FabricIngress.spgw.app_fwd");
+    public static final PiActionId FABRIC_INGRESS_SPGW_APP_FWD_NO_TC =
+            PiActionId.of("FabricIngress.spgw.app_fwd_no_tc");
     public static final PiActionId FABRIC_INGRESS_SPGW_DOWNLINK_DROP =
             PiActionId.of("FabricIngress.spgw.downlink_drop");
     public static final PiActionId FABRIC_INGRESS_SPGW_DOWNLINK_DROP_MISS =
             PiActionId.of("FabricIngress.spgw.downlink_drop_miss");
     public static final PiActionId FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP =
             PiActionId.of("FabricIngress.spgw.downlink_fwd_encap");
+    public static final PiActionId FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP_NO_TC =
+            PiActionId.of("FabricIngress.spgw.downlink_fwd_encap_no_tc");
     public static final PiActionId FABRIC_INGRESS_SPGW_IFACE_ACCESS =
             PiActionId.of("FabricIngress.spgw.iface_access");
     public static final PiActionId FABRIC_INGRESS_SPGW_IFACE_CORE =

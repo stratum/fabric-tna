@@ -54,11 +54,11 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.stratumproject.fabric.tna.behaviour.Constants.TNA;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_EG_TUNNEL_PEERS;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_UPF_COUNTER;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_TERMINATIONS_COUNTER;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_SESSIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_TERMINATIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_IG_TUNNEL_PEERS;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPF_COUNTER;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_TERMINATIONS_COUNTER;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_SESSIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_TERMINATIONS;
 
@@ -95,9 +95,9 @@ public class FabricUpfProgrammableTest {
                                TestUpfConstants.PHYSICAL_MAX_TUNNELS)
     );
     private static final List<PiCounterModel> COUNTER_MODELS = ImmutableList.of(
-            new MockCounterModel(FABRIC_INGRESS_SPGW_UPF_COUNTER,
+            new MockCounterModel(FABRIC_INGRESS_SPGW_TERMINATIONS_COUNTER,
                                  TestUpfConstants.PHYSICAL_COUNTER_SIZE),
-            new MockCounterModel(FABRIC_EGRESS_SPGW_UPF_COUNTER,
+            new MockCounterModel(FABRIC_EGRESS_SPGW_TERMINATIONS_COUNTER,
                                  TestUpfConstants.PHYSICAL_COUNTER_SIZE)
     );
 

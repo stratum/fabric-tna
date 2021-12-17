@@ -19,7 +19,7 @@ control SpgwIngress(
     //===== Misc Things ======//
     //========================//
 
-    Counter<bit<64>, bit<16>>(MAX_UPF_COUNTERS, CounterType_t.PACKETS_AND_BYTES) upf_counter;
+    Counter<bit<64>, bit<16>>(MAX_UPF_COUNTERS, CounterType_t.PACKETS_AND_BYTES) terminations_counter;
 
     bool upf_termination_hit = false;
     ue_session_id_t ue_session_id = 0;
@@ -103,28 +103,28 @@ control SpgwIngress(
     action set_uplink_session_miss() {
         _drop_common();
 #ifdef WITH_INT
-        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UPLINK_UE_SESSION_MISS;
+        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UPF_UL_SESSION_MISS;
 #endif // WITH_INT
     }
 
     action set_uplink_session_drop() {
         _drop_common();
 #ifdef WITH_INT
-        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UPLINK_UE_SESSION_DROP;
+        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UPF_UL_SESSION_DROP;
 #endif // WITH_INT
     }
 
     action set_downlink_session_miss() {
         _drop_common();
 #ifdef WITH_INT
-        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_DOWNLINK_UE_SESSION_MISS;
+        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UPF_DL_SESSION_MISS;
 #endif // WITH_INT
     }
 
     action set_downlink_session_drop() {
         _drop_common();
 #ifdef WITH_INT
-        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_DOWNLINK_UE_SESSION_DROP;
+        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UPF_DL_SESSION_DROP;
 #endif // WITH_INT
     }
 
@@ -148,7 +148,7 @@ control SpgwIngress(
         ue_session_id = fabric_md.routing_ipv4_dst;
         _drop_common();
 #ifdef WITH_INT
-        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UPLINK_UE_SESSION_DROP_BUFF;
+        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UPF_UL_SESSION_DROP_BUFF;
 #endif // WITH_INT
     }
 
@@ -195,14 +195,14 @@ control SpgwIngress(
     action uplink_drop_miss() {
         _drop_common();
 #ifdef WITH_INT
-        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UPLINK_UPF_TERMINATION_MISS;
+        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UPF_UL_TERMINATION_MISS;
 #endif // WITH_INT
     }
 
     action downlink_drop_miss() {
         _drop_common();
 #ifdef WITH_INT
-        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_DOWNLINK_UPF_TERMINATION_MISS;
+        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UPF_DL_TERMINATION_MISS;
 #endif // WITH_INT
     }
 
@@ -210,7 +210,7 @@ control SpgwIngress(
         _drop_common();
         _term_hit(ctr_id);
 #ifdef WITH_INT
-        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UPLINK_UPF_TERMINATION_DROP;
+        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UPF_UL_TERMINATION_DROP;
 #endif // WITH_INT
     }
 
@@ -218,7 +218,7 @@ control SpgwIngress(
         _drop_common();
         _term_hit(ctr_id);
 #ifdef WITH_INT
-        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_DOWNLINK_UPF_TERMINATION_DROP;
+        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UPF_DL_TERMINATION_DROP;
 #endif // WITH_INT
     }
 
@@ -387,7 +387,7 @@ control SpgwIngress(
                 // can be stored at dbuf, and assuming this will be deployed
                 // mostly in enterprise settings where we are not billing users,
                 // the effects of such inaccuracy should be negligible.
-                upf_counter.count(fabric_md.bridged.spgw.upf_ctr_id);
+                terminations_counter.count(fabric_md.bridged.spgw.upf_ctr_id);
             }
             // Nothing to be done immediately for forwarding or encapsulation.
             // Forwarding is done by other parts of the ingress, and
@@ -404,7 +404,7 @@ control SpgwEgress(
         inout egress_headers_t hdr,
         inout fabric_egress_metadata_t fabric_md) {
 
-    Counter<bit<64>, bit<16>>(MAX_UPF_COUNTERS, CounterType_t.PACKETS_AND_BYTES) upf_counter;
+    Counter<bit<64>, bit<16>>(MAX_UPF_COUNTERS, CounterType_t.PACKETS_AND_BYTES) terminations_counter;
 
     //=========================//
     //===== Tunnel Peers ======//
@@ -497,7 +497,7 @@ control SpgwEgress(
                 gtpu_encap.apply();
             }
             if (!fabric_md.bridged.spgw.skip_egress_upf_ctr) {
-                upf_counter.count(fabric_md.bridged.spgw.upf_ctr_id);
+                terminations_counter.count(fabric_md.bridged.spgw.upf_ctr_id);
             }
         }
     }

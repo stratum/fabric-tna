@@ -144,8 +144,8 @@ DBUF_IPV4 = "141.0.0.1"
 DBUF_DRAIN_DST_IPV4 = "142.0.0.1"
 DBUF_TEID = 0
 
-UPF_COUNTER_INGRESS = "FabricIngress.spgw.upf_counter"
-UPF_COUNTER_EGRESS = "FabricEgress.spgw.upf_counter"
+UPF_COUNTER_INGRESS = "FabricIngress.spgw.terminations_counter"
+UPF_COUNTER_EGRESS = "FabricEgress.spgw.terminations_counter"
 
 SPGW_IFACE_ACCESS = "iface_access"
 SPGW_IFACE_CORE = "iface_core"
