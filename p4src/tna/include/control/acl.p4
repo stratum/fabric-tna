@@ -72,7 +72,7 @@ control Acl (inout ingress_headers_t hdr,
         fabric_md.egress_port_set = true;
         fabric_md.skip_next = true;
         acl_counter.count();
-        // FIXME: If the forwarding type is ROUTING, although we have overrided the action to Bridging here
+        // FIXME: If the forwarding type is ROUTING, although we have overriden the action to Bridging here
         // ttl will still -1 in the egress pipeline
         ig_intr_md_for_dprsr.drop_ctl = 0;
     }
