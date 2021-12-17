@@ -52,7 +52,7 @@ control Acl (inout ingress_headers_t hdr,
      * the packet might get forwarded with unexpected MPLS and VLAG tags.
      */
     action set_output_port(PortId_t port_num) {
-        // FIXME: If the forwarding type is ROUTING, although we have overrided the action to Bridging here
+        // FIXME: If the forwarding type is ROUTING, although we have overriden the action to Bridging here
         // ttl will still -1 in the egress pipeline
         standard_md.egress_spec = port_num;
         fabric_md.egress_port_set = true;
