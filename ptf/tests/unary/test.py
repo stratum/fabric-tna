@@ -216,8 +216,7 @@ class FabricIPv4UnicastDropTest(IPv4UnicastTest):
         self.setup_port(eg_port, 1, PORT_TYPE_EDGE)
         self.set_forwarding_type(ig_port, SWITCH_MAC)
         self.add_forwarding_routing_v4_drop(
-            ipv4_dstAddr=ipv4_dst,
-            ipv4_pLen=ipv4_len,
+            ipv4_dstAddr=ipv4_dst, ipv4_pLen=ipv4_len,
         )
         self.send_packet(ig_port, pkt)
         self.verify_no_other_packets()
@@ -244,12 +243,10 @@ class FabricIPv4DropWithACLOverrideRoutingTest(IPv4UnicastTest):
         self.set_forwarding_type(ig_port, SWITCH_MAC)
         self.add_next_routing(400, eg_port, SWITCH_MAC, HOST2_MAC)
         self.add_forwarding_acl_next(
-            next_id=400,
-            ig_port_type=PORT_TYPE_EDGE,
-            ipv4_dst=ipv4_dst)
+            next_id=400, ig_port_type=PORT_TYPE_EDGE, ipv4_dst=ipv4_dst
+        )
         self.add_forwarding_routing_v4_drop(
-            ipv4_dstAddr=ipv4_dst,
-            ipv4_pLen=ipv4_len,
+            ipv4_dstAddr=ipv4_dst, ipv4_pLen=ipv4_len,
         )
         self.send_packet(ig_port, pkt)
         self.verify_packet(exp_pkt, eg_port)
@@ -263,10 +260,7 @@ class FabricIPv4DropWithACLOverrideRoutingTest(IPv4UnicastTest):
             ip_dst=HOST2_IPV4,
             ip_ttl=64,
         )
-        exp_pkt = self.build_exp_ipv4_unicast_packet(
-            pkt,
-            HOST2_MAC
-        )
+        exp_pkt = self.build_exp_ipv4_unicast_packet(pkt, HOST2_MAC)
         self.doRunTest(self.port1, self.port2, HOST2_IPV4, 32, pkt, exp_pkt)
 
 
@@ -279,13 +273,9 @@ class FabricIPv4DropWithACLOverrideOutputTest(IPv4UnicastTest):
         self.setup_port(ig_port, 1, PORT_TYPE_EDGE)
         self.setup_port(eg_port, 1, PORT_TYPE_EDGE)
         self.set_forwarding_type(ig_port, SWITCH_MAC)
-        self.add_forwarding_acl_set_output_port(
-            eg_port,
-            ipv4_dst = ipv4_dst
-        )
+        self.add_forwarding_acl_set_output_port(eg_port, ipv4_dst=ipv4_dst)
         self.add_forwarding_routing_v4_drop(
-            ipv4_dstAddr=ipv4_dst,
-            ipv4_pLen=ipv4_len,
+            ipv4_dstAddr=ipv4_dst, ipv4_pLen=ipv4_len,
         )
         self.send_packet(ig_port, pkt)
         self.verify_packet(exp_pkt, eg_port)
@@ -301,9 +291,7 @@ class FabricIPv4DropWithACLOverrideOutputTest(IPv4UnicastTest):
         )
         # Although we are testing set output port (bridging)
         # the fowarding type is "Routing v4" because we need the v4 routing table
-        exp_pkt = self.build_exp_ipv4_unicast_packet(
-            pkt, SWITCH_MAC, HOST1_MAC
-        )
+        exp_pkt = self.build_exp_ipv4_unicast_packet(pkt, SWITCH_MAC, HOST1_MAC)
         self.doRunTest(self.port1, self.port2, HOST2_IPV4, 32, pkt, exp_pkt)
 
 
