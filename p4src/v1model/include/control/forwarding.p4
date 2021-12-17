@@ -89,6 +89,7 @@ control Forwarding (inout ingress_headers_t hdr,
         mark_to_drop(standard_md);
         fabric_md.skip_next = true;
         routing_v4_counter.count();
+        // TODO: drop_ctl should set to 1 here when drop_ctl is supported
     }
 
     table routing_v4 {
@@ -120,6 +121,7 @@ control Forwarding (inout ingress_headers_t hdr,
         mark_to_drop(standard_md);
         fabric_md.skip_next = true;
         routing_v6_counter.count();
+        // TODO: drop_ctl should set to 1 here when drop_ctl is supported
     }
 
     table routing_v6 {
