@@ -211,6 +211,17 @@ class FabricIPv4UnicastFromPacketOutTest(IPv4UnicastTest):
 class FabricIPv4UnicastDropTest(IPv4UnicastTest):
     @tvsetup
     @autocleanup
+    def doRunTest(self, ig_port, eg_port, ipv4_dst, ipv4_len, pkt):
+        self.setup_port(ig_port, 1, PORT_TYPE_EDGE)
+        self.setup_port(eg_port, 1, PORT_TYPE_EDGE)
+        self.set_forwarding_type(ig_port, SWITCH_MAC)
+        self.add_forwarding_routing_v4_drop(
+            ipv4_dstAddr=ipv4_dst,
+            ipv4_pLen=ipv4_len,
+        )
+        self.send_packet(ig_port, pkt)
+        self.verify_no_other_packets()
+
     def runTest(self):
         pkt = testutils.simple_udp_packet(
             eth_src=HOST1_MAC,
@@ -221,11 +232,46 @@ class FabricIPv4UnicastDropTest(IPv4UnicastTest):
             udp_dport=5060,
             pktlen=128,
         )
+        self.doRunTest(self.port1, self.port2, HOST2_IPV4, 32, pkt)
+
+
+class FabricIPv4UnicastDropWithACLOverrideTest(IPv4UnicastTest):
+    # ACL should override the actions made by previous table
+    # InstallDrop in routing_v4 and Set next routing in ACL
+    # pkts should be routed correctly
+    @tvsetup
+    @autocleanup
+    def doRunTest(self, ig_port, eg_port, ipv4_dst, ipv4_len, pkt, exp_pkt):
+        self.setup_port(ig_port, 1, PORT_TYPE_EDGE)
+        self.setup_port(eg_port, 1, PORT_TYPE_EDGE)
+        self.set_forwarding_type(ig_port, SWITCH_MAC)
+        self.add_next_routing(400, eg_port, SWITCH_MAC, HOST2_MAC)
+        self.add_forwarding_acl_next(
+            next_id=400,
+            ig_port_type=PORT_TYPE_EDGE,
+            ipv4_dst=ipv4_dst)
         self.add_forwarding_routing_v4_drop(
-            ipv4_dstAddr=HOST2_IPV4,
-            ipv4_pLen=32,
+            ipv4_dstAddr=ipv4_dst,
+            ipv4_pLen=ipv4_len,
         )
-        self.runIPv4UnicastTest(pkt, next_hop_mac=HOST2_MAC, verify_pkt=False)
+        self.send_packet(ig_port, pkt)
+        self.verify_packet(exp_pkt, eg_port)
+
+    def runTest(self):
+        pkt = testutils.simple_udp_packet(
+            eth_src=HOST1_MAC,
+            eth_dst=SWITCH_MAC,
+            ip_src=HOST1_IPV4,
+            ip_dst=HOST2_IPV4,
+            udp_sport=5061,
+            udp_dport=5060,
+            pktlen=128,
+        )
+        exp_pkt = self.build_exp_ipv4_unicast_packet(
+            pkt,
+            HOST2_MAC
+        )
+        self.doRunTest(self.port1, self.port2, HOST2_IPV4, 32, pkt, exp_pkt)
 
 
 class FabricIPv4UnicastDefaultRouteTest(FabricIPv4UnicastTest):

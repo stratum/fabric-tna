@@ -117,7 +117,7 @@ control Forwarding (inout ingress_headers_t hdr,
         ig_intr_md_for_dprsr.drop_ctl = 1;
         fabric_md.skip_next = true;
 #ifdef WITH_INT
-        set_int_drop_reason(IntDropReason_t.DROP_REASON_ROUTING_DROP);
+        set_int_drop_reason(IntDropReason_t.DROP_REASON_ROUTING_V4_DROP);
 #endif // WITH_INT
 #ifdef WITH_DEBUG
         routing_v4_counter.count();
@@ -167,7 +167,7 @@ control Forwarding (inout ingress_headers_t hdr,
         ig_intr_md_for_dprsr.drop_ctl = 1;
         fabric_md.skip_next = true;
 #ifdef WITH_INT
-        set_int_drop_reason(IntDropReason_t.DROP_REASON_ROUTING_DROP);
+        set_int_drop_reason(IntDropReason_t.DROP_REASON_ROUTING_V6_DROP);
 #endif // WITH_INT
 #ifdef WITH_DEBUG
         routing_v6_counter.count();
