@@ -21,6 +21,10 @@ control Acl (inout ingress_headers_t hdr,
     action set_next_id_acl(next_id_t next_id) {
         fabric_md.next_id = next_id;
         acl_counter.count();
+        // FIXME: We have to rewrite other fields to perform correct override action
+        // e.g. forwarding type == "ROUTING" while we want to override the action to "BRIDGE" in NEXT table
+        ig_intr_md_for_dprsr.drop_ctl = 0;
+        fabric_md.skip_next = false;
     }
 
     action copy_to_cpu_post_ingress() {
@@ -68,6 +72,9 @@ control Acl (inout ingress_headers_t hdr,
         fabric_md.egress_port_set = true;
         fabric_md.skip_next = true;
         acl_counter.count();
+        // FIXME: If the forwarding type is ROUTING, although we have overriden the action to Bridging here
+        // ttl will still -1 in the egress pipeline
+        ig_intr_md_for_dprsr.drop_ctl = 0;
     }
 
     action nop_acl() {

@@ -70,7 +70,7 @@ control FabricIngress (inout ingress_headers_t hdr,
         }
 #endif // WITH_SPGW
         if (!fabric_md.ingress.skip_forwarding) {
-            forwarding.apply(hdr, fabric_md.ingress);
+            forwarding.apply(hdr, fabric_md.ingress, standard_md);
         }
         hasher.apply(hdr, fabric_md.ingress);
         if (!fabric_md.ingress.skip_next) {

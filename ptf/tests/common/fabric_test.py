@@ -1184,6 +1184,15 @@ class FabricTest(P4RuntimeTest):
             [("next_id", next_id_)],
         )
 
+    def add_forwarding_routing_v4_drop(self, ipv4_dstAddr, ipv4_pLen):
+        ipv4_dstAddr_ = ipv4_to_binary(ipv4_dstAddr)
+        self.send_request_add_entry_to_action(
+            "forwarding.routing_v4",
+            [self.Lpm("ipv4_dst", ipv4_dstAddr_, ipv4_pLen)],
+            "forwarding.drop_routing_v4",
+            [],
+        )
+
     def add_forwarding_mpls_entry(self, label, next_id):
         label_ = stringify(label, 3)
         next_id_ = stringify(next_id, 4)
