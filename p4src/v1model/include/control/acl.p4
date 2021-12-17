@@ -24,9 +24,13 @@ control Acl (inout ingress_headers_t hdr,
     }
 
     action copy_to_cpu() {
-        clone3(CloneType.I2E,
+        // clone3(CloneType.I2E,
+        //     (bit<32>) PACKET_IN_MIRROR_SESSION_ID,
+        //     {standard_md.ingress_port}
+        // );
+        clone_preserving_field_list(CloneType.I2E,
             (bit<32>) PACKET_IN_MIRROR_SESSION_ID,
-            {standard_md.ingress_port}
+            0
         );
         acl_counter.count();
     }

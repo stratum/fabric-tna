@@ -46,6 +46,7 @@ control FabricVerifyChecksum(inout v1model_header_t hdr,
             hdr.ingress.inner_ipv4.hdr_checksum,
             HashAlgorithm.csum16
         );
+#ifdef WITH_INT
         verify_checksum(hdr.egress.report_ipv4.isValid(),
             {
                 hdr.egress.report_ipv4.version,
@@ -64,6 +65,7 @@ control FabricVerifyChecksum(inout v1model_header_t hdr,
             hdr.egress.report_ipv4.hdr_checksum,
             HashAlgorithm.csum16
         );
+#endif // WITH_INT
     }
 }
 
@@ -106,6 +108,7 @@ control FabricComputeChecksum(inout v1model_header_t hdr,
             hdr.ingress.inner_ipv4.hdr_checksum,
             HashAlgorithm.csum16
         );
+#ifdef WITH_INT
         update_checksum(hdr.egress.report_ipv4.isValid(),
             {
                 hdr.egress.report_ipv4.version,
@@ -124,6 +127,7 @@ control FabricComputeChecksum(inout v1model_header_t hdr,
             hdr.egress.report_ipv4.hdr_checksum,
             HashAlgorithm.csum16
         );
+#endif
     }
 }
 

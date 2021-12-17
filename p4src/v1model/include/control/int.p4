@@ -44,24 +44,7 @@ control FlowReportFilter(
     @hidden
     register<bit<16>>(1 << FLOW_REPORT_FILTER_WIDTH) filter2;
 
-    // Meaning of the result:
-    // 1 digest did NOT change
-    // 0 change detected
-    // @reduction_or_group("filter")
-    // RegisterAction<bit<16>, flow_report_filter_index_t, bit<1>>(filter1) filter_get_and_set1 = {
-    //     void apply(inout bit<16> stored_digest, out bit<1> result) {
-    //         result = stored_digest == digest ? 1w1 : 1w0;
-    //         stored_digest = digest;
-    //     }
-    // };
 
-    // @reduction_or_group("filter")
-    // RegisterAction<bit<16>, flow_report_filter_index_t, bit<1>>(filter2) filter_get_and_set2 = {
-    //     void apply(inout bit<16> stored_digest, out bit<1> result) {
-    //         result = stored_digest == digest ? 1w1 : 1w0;
-    //         stored_digest = digest;
-    //     }
-    // };
 
     apply {
         if (fabric_md.int_report_md.report_type == INT_REPORT_TYPE_FLOW) {
@@ -78,6 +61,9 @@ control FlowReportFilter(
                 },
                 max
             );
+            // Meaning of the result:
+            // 1 digest did NOT change
+            // 0 change detected
 
             // filter1 get and set
             filter1.read(stored_digest, (bit<32>)fabric_md.bridged.base.inner_hash[31:16]);
@@ -88,13 +74,12 @@ control FlowReportFilter(
             flag = flag | (digest == stored_digest ? 1w1 : 1w0);
             filter2.write((bit<32>)fabric_md.bridged.base.inner_hash[15:0], digest);
 
-            // flag = filter_get_and_set1.execute(fabric_md.bridged.base.inner_hash[31:16]);
-            // flag = flag | filter_get_and_set2.execute(fabric_md.bridged.base.inner_hash[15:0]);
             // Generate report only when ALL register actions detect a change.
             if (flag == 1) {
                 fabric_v1model.int_mirror_type = (bit<3>)FabricMirrorType_t.INVALID;
                 // eg_dprsr_md.mirror_type = (bit<3>)FabricMirrorType_t.INVALID;
             }
+            fabric_v1model.egress = fabric_md;
         }
     }
 }
@@ -102,12 +87,10 @@ control FlowReportFilter(
 
 control DropReportFilter(
     inout egress_headers_t hdr,
-    // inout fabric_egress_metadata_t fabric_md,
-    inout fabric_v1model_metadata_t fabric_v1model,
+    inout fabric_egress_metadata_t fabric_md,
     inout standard_metadata_t standard_md
     ) {
 
-    fabric_egress_metadata_t fabric_md = fabric_v1model.egress;
     bit<16> digest = 0;
     bit<16> stored_digest = 0;
     bit<1> flag = 0;
@@ -123,25 +106,6 @@ control DropReportFilter(
     @hidden
     register<bit<16>>(1 << DROP_REPORT_FILTER_WIDTH) filter2;
 
-    // Meaning of the result:
-    // 1 digest did NOT change
-    // 0 change detected
-    // @reduction_or_group("filter")
-    // RegisterAction<bit<16>, drop_report_filter_index_t, bit<1>>(filter1) filter_get_and_set1 = {
-    //     void apply(inout bit<16> stored_digest, out bit<1> result) {
-    //         result = stored_digest == digest ? 1w1 : 1w0;
-    //         stored_digest = digest;
-    //     }
-    // };
-
-    // @reduction_or_group("filter")
-    // RegisterAction<bit<16>, drop_report_filter_index_t, bit<1>>(filter2) filter_get_and_set2 = {
-    //     void apply(inout bit<16> stored_digest, out bit<1> result) {
-    //         result = stored_digest == digest ? 1w1 : 1w0;
-    //         stored_digest = digest;
-    //     }
-    // };
-
     apply {
         // This control is applied to all pkts, but we filter only INT mirrors.
         if (fabric_md.int_report_md.isValid() &&
@@ -156,6 +120,11 @@ control DropReportFilter(
                 },
                 max
             );
+
+            // Meaning of the result:
+            // flag = 1 digest did NOT change
+            // flag = 0 change detected
+
             // filter 1 get and set
             filter1.read(stored_digest, (bit<32>)fabric_md.bridged.base.inner_hash[31:16]);
             flag = digest == stored_digest ? 1w1 : 1w0;
@@ -165,15 +134,12 @@ control DropReportFilter(
             flag = flag | (digest == stored_digest ? 1w1 : 1w0);
             filter2.write((bit<32>)fabric_md.bridged.base.inner_hash[15:0], digest);
 
-            // flag = filter_get_and_set1.execute(fabric_md.int_report_md.flow_hash[31:16]);
-            // flag = flag | filter_get_and_set2.execute(fabric_md.int_report_md.flow_hash[15:0]);
             // Drop the report if we already report it within a period of time.
             if (flag == 1) {
                 // Directly drop and exit.
                 mark_to_drop(standard_md);
                 exit;
             }
-            // fabric_v1model.egress = fabric_md; // no need to synch in this control.
         }
     }
 }
@@ -250,7 +216,7 @@ control IntIngress(
 
         // The drop flag may be set by other tables, need to reset it so the packet can
         // be forward to the recirculation port.
-        fabric_v1model.drop_ctl = 1w0;
+        fabric_v1model.drop_ctl = 0;
 
         drop_report_counter.count();
     }
@@ -292,8 +258,8 @@ control IntIngress(
         // // parser to initialize the INT drop report.
         // // fabric_md.bridged.int_bmd.egress_port = ig_tm_md.ucast_egress_port;
         // // fabric_md.bridged.int_bmd.queue_id = ig_tm_md.qid;
-        // fabric_md.bridged.int_bmd.egress_port = standard_md.egress_spec;
-        // fabric_md.bridged.int_bmd.queue_id = 0; //bmv2 has only 1 queue.
+        fabric_md.bridged.int_bmd.egress_port = standard_md.egress_spec;
+        fabric_md.bridged.int_bmd.queue_id = 0; //bmv2 has only 1 queue.
         drop_report.apply();
 
         fabric_v1model.ingress = fabric_md;
@@ -479,43 +445,35 @@ control IntEgressParserEmulator (
 
     @hidden
     action strip_vlan() {
+
+    }
+
+    // @hidden
+    // action strip_ipv4_udp_gtpu() {
+    //     // hdr.ipv4 = hdr_v1model.ingress.inner_ipv4;
+    //     // hdr.udp = hdr_v1model.ingress.inner_udp;
+    //     // hdr.tcp = hdr_v1model.ingress.inner_tcp;
+    //     // hdr.icmp = hdr_v1model.ingress.inner_icmp;
+
+    //     hdr_v1model.ingress.gtpu.setInvalid();
+    //     hdr_v1model.ingress.ipv4.setInvalid();
+    //     hdr_v1model.ingress.icmp.setInvalid();
+    //     hdr_v1model.ingress.tcp.setInvalid();
+    //     hdr_v1model.ingress.udp.setInvalid();
+    //     hdr_v1model.ingress.inner_ipv4.setInvalid();
+    //     hdr_v1model.ingress.inner_udp.setInvalid();
+    //     hdr_v1model.ingress.inner_tcp.setInvalid();
+    //     hdr_v1model.ingress.inner_icmp.setInvalid();
+    // }
+
+    @hidden
+    action strip_ipv4_udp_gtpu_psc() {
+
         hdr_v1model.ingress.vlan_tag.setInvalid();
 #if defined(WITH_XCONNECT) || defined(WITH_DOUBLE_VLAN_TERMINATION)
         hdr_v1model.ingress.inner_vlan.setInvalid();
 #endif // WITH_XCONNECT || WITH_DOUBLE_VLAN_TERMINATION
-    }
 
-    @hidden
-    action strip_mpls() {
-        hdr_v1model.ingress.mpls.setInvalid();
-    }
-
-    @hidden
-    action strip_icmp() {
-        hdr_v1model.ingress.icmp.setInvalid();
-    }
-
-    @hidden
-    action strip_ipv4_udp_gtpu() {
-        // hdr.ipv4 = hdr_v1model.ingress.inner_ipv4;
-        // hdr.udp = hdr_v1model.ingress.inner_udp;
-        // hdr.tcp = hdr_v1model.ingress.inner_tcp;
-        // hdr.icmp = hdr_v1model.ingress.inner_icmp;
-
-        hdr_v1model.ingress.gtpu.setInvalid();
-        hdr_v1model.ingress.ipv4.setInvalid();
-        hdr_v1model.ingress.icmp.setInvalid();
-        hdr_v1model.ingress.tcp.setInvalid();
-        hdr_v1model.ingress.udp.setInvalid();
-        hdr_v1model.ingress.inner_ipv4.setInvalid();
-        hdr_v1model.ingress.inner_udp.setInvalid();
-        hdr_v1model.ingress.inner_tcp.setInvalid();
-        hdr_v1model.ingress.inner_icmp.setInvalid();
-
-    }
-
-    @hidden
-    action strip_ipv4_udp_gtpu_psc() {
         hdr_v1model.ingress.ipv4.setInvalid();
         hdr_v1model.ingress.icmp.setInvalid();
         hdr_v1model.ingress.tcp.setInvalid();
@@ -527,16 +485,6 @@ control IntEgressParserEmulator (
         hdr_v1model.ingress.inner_udp.setInvalid();
         hdr_v1model.ingress.inner_tcp.setInvalid();
         hdr_v1model.ingress.inner_icmp.setInvalid();
-
-    }
-
-    @hidden
-    action handle_ipv4() {
-        strip_vlan();
-        strip_mpls();
-        strip_icmp();
-
-        fabric_md.int_ipv4_len = hdr.ipv4.total_len;
     }
 
     // @hidden
@@ -691,7 +639,8 @@ control IntEgress (
         // hdr.report_ipv4.identification = ip_id_gen.get();
         random(hdr.report_ipv4.identification, 0, 0xffff);
 
-        hdr.report_ethernet.dst_addr = hdr_v1model.ingress.ethernet.dst_addr;
+        // hdr.report_ethernet.dst_addr = hdr_v1model.ingress.ethernet.dst_addr;
+        // hdr.report_ethernet.src_addr = hdr_v1model.ingress.ethernet.src_addr;
 
         hdr.report_ipv4.src_addr = src_ip;
         hdr.report_ipv4.dst_addr = mon_ip;
@@ -857,10 +806,6 @@ control IntEgress (
     }
 
     apply {
-        // if (IS_E2E_CLONE(standard_md)) {
-        //     // Apply emulator only on mirrored packet.
-        //     parser_emulator.apply(hdr_v1model, fabric_v1model, standard_md);
-        // }
         // fabric_md.int_md.hop_latency = eg_prsr_md.global_tstamp[31:0] - fabric_md.bridged.base.ig_tstamp[31:0];
         fabric_md.int_md.hop_latency = standard_md.egress_global_timestamp[31:0] - fabric_md.bridged.base.ig_tstamp[31:0];
 

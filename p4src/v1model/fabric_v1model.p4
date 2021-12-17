@@ -103,13 +103,16 @@ control FabricIngress (inout v1model_header_t hdr,
             // This case is handled by the test, inserting a new rule matching on this fake_port, in 'egress.next' control.
             // No other way to avoid this.
             // standard_md.egress_spec = DROP_OVERRIDE_FAKE_PORT;
+            // standard_md.egress_spec = 2;
             standard_md.egress_spec = standard_md.ingress_port;
         }
+#ifdef WITH_INT
         if IS_RECIRCULATED(standard_md) {
             //FIXME remove this. used to debug.
             fabric_md.egress.is_int_recirc = true;
             standard_md.egress_spec = 2;
         }
+#endif // WITH_INT
 
         // Emulating TNA behavior through bridged metadata.
         fabric_md.egress.bridged = fabric_md.ingress.bridged;
@@ -141,14 +144,14 @@ control FabricEgress (inout v1model_header_t hdr,
         if ((bit<8>)fabric_md.egress.bridged.int_bmd.report_type == BridgedMdType_t.INT_INGRESS_DROP){
             // Ingress drops become themselves a report. Mirroring is not performed.
             parser_emulator.apply(hdr, fabric_md, standard_md);
-            recirculate(standard_md);
+            recirculate_preserving_field_list(0);
         }
 
-        if (IS_E2E_CLONE(standard_md)) {
-            // Mirrored packet that will be transformed in report.
-            parser_emulator.apply(hdr, fabric_md, standard_md);
-            recirculate(standard_md);
-        }
+        // if (IS_E2E_CLONE(standard_md)) {
+        //     // Mirrored packet that will be transformed in report.
+        //     parser_emulator.apply(hdr, fabric_md, standard_md);
+        //     recirculate(standard_md);
+        // }
 #endif // WITH_INT
 
         if (fabric_md.skip_egress){
@@ -169,12 +172,13 @@ control FabricEgress (inout v1model_header_t hdr,
 
         if (fabric_md.do_spgw_uplink_recirc) {
             // Recirculate UE-to-UE traffic.
-            recirculate(standard_md);
+            recirculate_preserving_field_list(0);
         }
 
-        // if (fabric_md.drop_ctl == 1) {
-        //     mark_to_drop(standard_md);
-        // }
+        if (fabric_md.drop_ctl == 1) {
+            //FIXME INT recirculated report will be dropped here. Find a new condition to override this drop_ctl.
+            mark_to_drop(standard_md);
+        }
     } // end of apply{}
 }
 
