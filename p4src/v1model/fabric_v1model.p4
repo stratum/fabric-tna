@@ -62,6 +62,25 @@ control FabricIngress (inout v1model_header_t hdr,
             // packet was rejected by parser -> drop.
             exit;
         }
+#ifdef WITH_LATEST_P4C
+        if (standard_md.instance_type == 0 ) {
+            // Packet was not recirculated or cloned -> save standard_metadata in custom struct to preserve it.
+            fabric_md.v1model_standard_md.ingress_port = standard_md.ingress_port;
+            fabric_md.v1model_standard_md.egress_port = standard_md.egress_port;
+            fabric_md.v1model_standard_md.egress_spec = standard_md.egress_spec;
+        }
+
+        if (standard_md.instance_type != 0) {
+            // restore preserved metadata
+            standard_md.ingress_port = fabric_md.v1model_standard_md.ingress_port;
+        }
+#endif //WITH_LATEST_P4C
+
+        if (standard_md.instance_type != 0) {
+            // DEBUG. REMOVE
+            // restore preserved metadata
+            standard_md.ingress_port = fabric_md.v1model_standard_md.ingress_port;
+        }
 
         lkp_md_init.apply(hdr.ingress, fabric_md.ingress.lkp);
         pkt_io.apply(hdr.ingress, fabric_md.ingress, fabric_md.skip_egress ,standard_md);
@@ -95,7 +114,7 @@ control FabricIngress (inout v1model_header_t hdr,
         int_ingress.apply(hdr.ingress, fabric_md, standard_md);
 #endif // WITH_INT
 
-        if (fabric_md.drop_ctl == 0 && !fabric_md.ingress.egress_port_set) {
+        if (fabric_md.drop_ctl == 0 && standard_md.egress_spec == BMV2_DROP_PORT) {
             // Override mark_to_drop() and avoid the packet to be dropped at end of ingress pipeline.
             // Needed when dealing with INT drops.
             // This will also inevitably override the egress_spec set by 'next' control,
@@ -144,11 +163,15 @@ control FabricEgress (inout v1model_header_t hdr,
         if ((bit<8>)fabric_md.egress.bridged.int_bmd.report_type == BridgedMdType_t.INT_INGRESS_DROP){
             // Ingress drops become themselves a report. Mirroring is not performed.
             parser_emulator.apply(hdr, fabric_md, standard_md);
-            recirculate_preserving_field_list(0);
+#ifdef WITH_LATEST_P4C
+            ecirculate_preserving_field_list(PRESERVE_STANDARD_MD);
+#else
+            recirculate({});
+#endif // WITH_LATEST_P4C
         }
 
         // if (IS_E2E_CLONE(standard_md)) {
-        //     // Mirrored packet that will be transformed in report.
+        //     // Mirrored packet that will be transformed in report. needed for EgressDropReport.
         //     parser_emulator.apply(hdr, fabric_md, standard_md);
         //     recirculate(standard_md);
         // }
@@ -172,7 +195,11 @@ control FabricEgress (inout v1model_header_t hdr,
 
         if (fabric_md.do_spgw_uplink_recirc) {
             // Recirculate UE-to-UE traffic.
-            recirculate_preserving_field_list(0);
+#ifdef WITH_LATEST_P4C
+            ecirculate_preserving_field_list(PRESERVE_STANDARD_MD);
+#else
+            recirculate(standard_md);
+#endif // WITH_LATEST_P4C
         }
 
         if (fabric_md.drop_ctl == 1) {

@@ -443,11 +443,6 @@ control IntEgressParserEmulator (
     //     const default_action = nop();
     // }
 
-    @hidden
-    action strip_vlan() {
-
-    }
-
     // @hidden
     // action strip_ipv4_udp_gtpu() {
     //     // hdr.ipv4 = hdr_v1model.ingress.inner_ipv4;
@@ -857,10 +852,19 @@ control IntEgress (
             // filter decide whether to generate a mirror or not.
             if (int_metadata.apply().hit) {
                 // flow_report_filter.apply(hdr, fabric_md, eg_intr_md, eg_prsr_md, eg_dprsr_md);
+
+                // Mirroring the packet. It could work only if clone3 preserve the metadata structs.
+                // The mirrored packet will then generate the report.
+#ifdef WITH_LATEST_P4C
+                clone_preserving_field_list(CloneType.E2E,
+                    (bit<32>)fabric_md.bridged.int_bmd.mirror_session_id,
+                    PRESERVE_FABRIC_MD_AND_STANDARD_MD);
+#else
                 clone3(CloneType.E2E,
                     (bit<32>)fabric_md.bridged.int_bmd.mirror_session_id,
-                    {standard_md, fabric_md}); // mirroring the packet. It could work only if clone3 preserve the metadata structs.
-                    // the mirrored packet will then generate the report.
+                    {standard_md, fabric_md});
+#endif // WITH_LATEST_P4C
+
                 // flow_report_filter.apply(hdr, fabric_v1model, standard_md); not interested in filtering.
             }
         }
