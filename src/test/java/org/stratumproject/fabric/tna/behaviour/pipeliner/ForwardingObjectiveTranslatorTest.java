@@ -426,6 +426,52 @@ public class ForwardingObjectiveTranslatorTest extends AbstractObjectiveTranslat
     }
 
     @Test
+    public void testIPv4Drop() throws FabricPipelinerException {
+        TrafficTreatment treatment = DefaultTrafficTreatment.builder()
+                .wipeDeferred()
+                .build();
+        TrafficSelector selector = DefaultTrafficSelector.builder()
+                .matchEthType(Ethernet.TYPE_IPV4)
+                .matchIPDst(IPV4_UNICAST_ADDR)
+                .build();
+        TrafficSelector expectedSelector = DefaultTrafficSelector.builder()
+                .matchIPDst(IPV4_UNICAST_ADDR)
+                .build();
+        ForwardingObjective fwd = DefaultForwardingObjective.builder()
+                .withSelector(selector)
+                .withPriority(PRIORITY)
+                .fromApp(APP_ID)
+                .makePermanent()
+                .withFlag(ForwardingObjective.Flag.SPECIFIC)
+                .withTreatment(treatment)
+                .add();
+
+        ObjectiveTranslation result = translator.translate(fwd);
+
+        List<FlowRule> flowRulesInstalled = (List<FlowRule>) result.flowRules();
+        List<GroupDescription> groupsInstalled = (List<GroupDescription>) result.groups();
+        assertEquals(1, flowRulesInstalled.size());
+        assertTrue(groupsInstalled.isEmpty());
+
+        FlowRule actualFlowRule = flowRulesInstalled.get(0);
+        PiAction piAction = PiAction.builder()
+                .withId(P4InfoConstants.FABRIC_INGRESS_FORWARDING_DROP_ROUTING_V4)
+                .build();
+        FlowRule expectedFlowRule = DefaultFlowRule.builder()
+                .forDevice(DEVICE_ID)
+                .forTable(P4InfoConstants.FABRIC_INGRESS_FORWARDING_ROUTING_V4)
+                .withPriority(PRIORITY)
+                .makePermanent()
+                .withSelector(expectedSelector)
+                .withTreatment(DefaultTrafficTreatment.builder()
+                        .piTableAction(piAction).build())
+                .fromApp(APP_ID)
+                .build();
+
+        assertTrue(expectedFlowRule.exactMatch(actualFlowRule));
+    }
+
+    @Test
     @Ignore
     public void testIPv4Multicast() throws FabricPipelinerException {
         TrafficSelector selector = DefaultTrafficSelector.builder()

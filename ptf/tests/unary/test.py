@@ -208,6 +208,93 @@ class FabricIPv4UnicastFromPacketOutTest(IPv4UnicastTest):
                 )
 
 
+class FabricIPv4UnicastDropTest(IPv4UnicastTest):
+    @tvsetup
+    @autocleanup
+    def doRunTest(self, ig_port, eg_port, ipv4_dst, ipv4_len, pkt):
+        self.setup_port(ig_port, 1, PORT_TYPE_EDGE)
+        self.setup_port(eg_port, 1, PORT_TYPE_EDGE)
+        self.set_forwarding_type(ig_port, SWITCH_MAC)
+        self.add_forwarding_routing_v4_drop(
+            ipv4_dstAddr=ipv4_dst, ipv4_pLen=ipv4_len,
+        )
+        self.send_packet(ig_port, pkt)
+        self.verify_no_other_packets()
+
+    def runTest(self):
+        pkt = testutils.simple_tcp_packet(
+            eth_src=HOST1_MAC,
+            eth_dst=SWITCH_MAC,
+            ip_src=HOST1_IPV4,
+            ip_dst=HOST2_IPV4,
+            ip_ttl=64,
+        )
+        self.doRunTest(self.port1, self.port2, HOST2_IPV4, 32, pkt)
+
+
+class FabricIPv4DropWithACLOverrideRoutingTest(IPv4UnicastTest):
+    # ACL should override the actions made by previous table
+    # pkts should be routed correctly
+    @tvsetup
+    @autocleanup
+    def doRunTest(self, ig_port, eg_port, ipv4_dst, ipv4_len, pkt, exp_pkt):
+        self.setup_port(ig_port, 1, PORT_TYPE_EDGE)
+        self.setup_port(eg_port, 1, PORT_TYPE_EDGE)
+        self.set_forwarding_type(ig_port, SWITCH_MAC)
+        self.add_next_routing(400, eg_port, SWITCH_MAC, HOST2_MAC)
+        self.add_forwarding_acl_next(
+            next_id=400, ig_port_type=PORT_TYPE_EDGE, ipv4_dst=ipv4_dst
+        )
+        self.add_forwarding_routing_v4_drop(
+            ipv4_dstAddr=ipv4_dst, ipv4_pLen=ipv4_len,
+        )
+        self.send_packet(ig_port, pkt)
+        self.verify_packet(exp_pkt, eg_port)
+        self.verify_no_other_packets()
+
+    def runTest(self):
+        pkt = testutils.simple_tcp_packet(
+            eth_src=HOST1_MAC,
+            eth_dst=SWITCH_MAC,
+            ip_src=HOST1_IPV4,
+            ip_dst=HOST2_IPV4,
+            ip_ttl=64,
+        )
+        exp_pkt = self.build_exp_ipv4_unicast_packet(pkt, HOST2_MAC)
+        self.doRunTest(self.port1, self.port2, HOST2_IPV4, 32, pkt, exp_pkt)
+
+
+class FabricIPv4DropWithACLOverrideOutputTest(IPv4UnicastTest):
+    # ACL should override the actions made by previous table
+    # pkts should be output correctly
+    @tvsetup
+    @autocleanup
+    def doRunTest(self, ig_port, eg_port, ipv4_dst, ipv4_len, pkt, exp_pkt):
+        self.setup_port(ig_port, 1, PORT_TYPE_EDGE)
+        self.setup_port(eg_port, 1, PORT_TYPE_EDGE)
+        self.set_forwarding_type(ig_port, SWITCH_MAC)
+        self.add_forwarding_acl_set_output_port(eg_port, ipv4_dst=ipv4_dst)
+        self.add_forwarding_routing_v4_drop(
+            ipv4_dstAddr=ipv4_dst, ipv4_pLen=ipv4_len,
+        )
+        self.send_packet(ig_port, pkt)
+        self.verify_packet(exp_pkt, eg_port)
+        self.verify_no_other_packets()
+
+    def runTest(self):
+        pkt = testutils.simple_tcp_packet(
+            eth_src=HOST1_MAC,
+            eth_dst=SWITCH_MAC,
+            ip_src=HOST1_IPV4,
+            ip_dst=HOST2_IPV4,
+            ip_ttl=64,
+        )
+        # Although we are testing set output port (bridging)
+        # the fowarding type is "Routing v4" because we need the v4 routing table
+        exp_pkt = self.build_exp_ipv4_unicast_packet(pkt, SWITCH_MAC, HOST1_MAC)
+        self.doRunTest(self.port1, self.port2, HOST2_IPV4, 32, pkt, exp_pkt)
+
+
 class FabricIPv4UnicastDefaultRouteTest(FabricIPv4UnicastTest):
     def runTest(self):
         self.runTestInternal(DEFAULT_ROUTE_IPV4, [PREFIX_DEFAULT_ROUTE])
@@ -2511,8 +2598,9 @@ class CounterTest(BridgingTest):
         self.doRunTest()
 
 
-# FIXME: remove when will start running TVs on hardware
-@skipIf(is_v1model(), "CPU loopback unsupported for Bmv2.")
+# Disable the loopback mode test since we are going to use Stratum main.p4 for CCP instead of fabric-tna
+# and we will remove loopback mode from fabric-tna once we move all CCP tests to main.p4.
+@skip("Deprecated")
 class FabricIpv4UnicastLoopbackModeTest(IPv4UnicastTest):
     """Emulates TV loopback mode for Ipv4UnicastTest"""
 
@@ -2558,8 +2646,9 @@ class FabricIpv4UnicastLoopbackModeTest(IPv4UnicastTest):
             self.doRunTest(pkt, HOST2_MAC)
 
 
-# FIXME: remove when will start running TVs on hardware
-@skipIf(is_v1model(), "CPU loopback unsupported for Bmv2.")
+# Disable the loopback mode test since we are going to use Stratum main.p4 for CCP instead of fabric-tna
+# and we will remove loopback mode from fabric-tna once we move all CCP tests to main.p4.
+@skip("Deprecated")
 class FabricPacketInLoopbackModeTest(FabricTest):
     """Emulates TV loopback mode for packet-in tests"""
 
@@ -2598,8 +2687,9 @@ class FabricPacketInLoopbackModeTest(FabricTest):
                 self.doRunTest(pkt, tagged)
 
 
-# FIXME: remove when we start running TVs on hardware
-@skipIf(is_v1model(), "CPU loopback unsupported for Bmv2.")
+# Disable the loopback mode test since we are going to use Stratum main.p4 for CCP instead of fabric-tna
+# and we will remove loopback mode from fabric-tna once we move all CCP tests to main.p4.
+@skip("Deprecated")
 class FabricPacketOutLoopbackModeTest(FabricTest):
     """Emulates TV loopback mode for packet-out tests"""
 
@@ -2630,8 +2720,10 @@ class FabricPacketOutLoopbackModeTest(FabricTest):
             self.doRunTest(pkt)
 
 
+# Disable the loopback mode test since we are going to use Stratum main.p4 for CCP instead of fabric-tna
+# and we will remove loopback mode from fabric-tna once we move all CCP tests to main.p4.
 @group("int")
-@skipIf(is_v1model(), "CPU loopback unsupported for Bmv2.")
+@skip("Deprecated")
 class FabricIntFlowReportLoopbackModeTest(IntTest):
     @tvsetup
     @autocleanup

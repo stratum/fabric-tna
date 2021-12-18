@@ -64,14 +64,14 @@ import static org.onosproject.net.pi.model.PiCounterType.INDIRECT;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.sliceTcConcat;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_EG_TUNNEL_PEERS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_GTPU_ENCAP;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_UPF_COUNTER;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_TERMINATIONS_COUNTER;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_QOS_QUEUES;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_QOS_SET_QUEUE;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_SESSIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_TERMINATIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_IG_TUNNEL_PEERS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_INTERFACES;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPF_COUNTER;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_TERMINATIONS_COUNTER;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_SESSIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_TERMINATIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_GTPU_IS_VALID;
@@ -110,6 +110,8 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     private long gtpTunnelPeersTableSize;
 
     private ApplicationId appId;
+
+    static final SliceId SLICE_MOBILE = SliceId.of(SliceId.MAX);
 
     @Override
     protected boolean setupBehaviour(String opName) {
@@ -154,14 +156,15 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
             log.info("UpfProgrammable initialized for appId {} and deviceId {}", appId, deviceId);
             // Add static Queue Configuration
             // Default slice and best effort TC will be created by SlicingService by default
+            slicingService.addSlice(SLICE_MOBILE);
             try {
-                Set<TrafficClass> tcs = slicingService.getTrafficClasses(SliceId.DEFAULT);
+                Set<TrafficClass> tcs = slicingService.getTrafficClasses(SLICE_MOBILE);
                 Arrays.stream(TrafficClass.values()).forEach(tc -> {
                     if (tcs.contains(tc) || tc.equals(TrafficClass.BEST_EFFORT) ||
                             tc.equals(TrafficClass.SYSTEM)) {
                         return;
                     }
-                    slicingService.addTrafficClass(SliceId.DEFAULT, tc);
+                    slicingService.addTrafficClass(SLICE_MOBILE, tc);
                 });
             } catch (SlicingException e) {
                 log.error("Exception while configuring traffic class for Mobile Slice: {}", e.getMessage());
@@ -253,9 +256,9 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         long ingressCounterSize = 0;
         long egressCounterSize = 0;
         for (PiCounterModel piCounter : pipeconf.pipelineModel().counters()) {
-            if (piCounter.id().equals(FABRIC_INGRESS_SPGW_UPF_COUNTER)) {
+            if (piCounter.id().equals(FABRIC_INGRESS_SPGW_TERMINATIONS_COUNTER)) {
                 ingressCounterSize = piCounter.size();
-            } else if (piCounter.id().equals(FABRIC_EGRESS_SPGW_UPF_COUNTER)) {
+            } else if (piCounter.id().equals(FABRIC_EGRESS_SPGW_TERMINATIONS_COUNTER)) {
                 egressCounterSize = piCounter.size();
             }
         }
@@ -323,9 +326,10 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         }
         log.info("Clearing all UPF-related table entries.");
         // Remove static Queue Configuration
-        slicingService.removeTrafficClass(SliceId.DEFAULT, TrafficClass.CONTROL);
-        slicingService.removeTrafficClass(SliceId.DEFAULT, TrafficClass.REAL_TIME);
-        slicingService.removeTrafficClass(SliceId.DEFAULT, TrafficClass.ELASTIC);
+        slicingService.removeTrafficClass(SLICE_MOBILE, TrafficClass.ELASTIC);
+        slicingService.removeTrafficClass(SLICE_MOBILE, TrafficClass.REAL_TIME);
+        slicingService.removeTrafficClass(SLICE_MOBILE, TrafficClass.CONTROL);
+        slicingService.removeSlice(SLICE_MOBILE);
     }
 
     public void clearInterface(FlowRule entry) {
@@ -503,8 +507,8 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
         // Generate the counter cell IDs.
         Set<PiCounterId> counterIds = ImmutableSet.of(
-                FABRIC_INGRESS_SPGW_UPF_COUNTER,
-                FABRIC_EGRESS_SPGW_UPF_COUNTER
+                FABRIC_INGRESS_SPGW_TERMINATIONS_COUNTER,
+                FABRIC_EGRESS_SPGW_TERMINATIONS_COUNTER
         );
 
         // Query the device.
@@ -528,10 +532,10 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                 return;
             }
             UpfCounter.Builder statsBuilder = upfCounterBuilders.get((int) counterCell.cellId().index());
-            if (counterCell.cellId().counterId().equals(FABRIC_INGRESS_SPGW_UPF_COUNTER)) {
+            if (counterCell.cellId().counterId().equals(FABRIC_INGRESS_SPGW_TERMINATIONS_COUNTER)) {
                 statsBuilder.setIngress(counterCell.data().packets(),
                                         counterCell.data().bytes());
-            } else if (counterCell.cellId().counterId().equals(FABRIC_EGRESS_SPGW_UPF_COUNTER)) {
+            } else if (counterCell.cellId().counterId().equals(FABRIC_EGRESS_SPGW_TERMINATIONS_COUNTER)) {
                 statsBuilder.setEgress(counterCell.data().packets(),
                                        counterCell.data().bytes());
             } else {
@@ -587,9 +591,9 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         // Make list of cell handles we want to read.
         List<PiCounterCellHandle> counterCellHandles = List.of(
                 PiCounterCellHandle.of(deviceId,
-                                       PiCounterCellId.ofIndirect(FABRIC_INGRESS_SPGW_UPF_COUNTER, cellId)),
+                                       PiCounterCellId.ofIndirect(FABRIC_INGRESS_SPGW_TERMINATIONS_COUNTER, cellId)),
                 PiCounterCellHandle.of(deviceId,
-                                       PiCounterCellId.ofIndirect(FABRIC_EGRESS_SPGW_UPF_COUNTER, cellId)));
+                                       PiCounterCellId.ofIndirect(FABRIC_EGRESS_SPGW_TERMINATIONS_COUNTER, cellId)));
 
         // Query the device.
         Collection<PiCounterCell> counterEntryResponse = client.read(
@@ -607,9 +611,9 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                 log.warn("Unrecognized counter index {}, skipping", counterCell);
                 return;
             }
-            if (counterCell.cellId().counterId().equals(FABRIC_INGRESS_SPGW_UPF_COUNTER)) {
+            if (counterCell.cellId().counterId().equals(FABRIC_INGRESS_SPGW_TERMINATIONS_COUNTER)) {
                 stats.setIngress(counterCell.data().packets(), counterCell.data().bytes());
-            } else if (counterCell.cellId().counterId().equals(FABRIC_EGRESS_SPGW_UPF_COUNTER)) {
+            } else if (counterCell.cellId().counterId().equals(FABRIC_EGRESS_SPGW_TERMINATIONS_COUNTER)) {
                 stats.setEgress(counterCell.data().packets(), counterCell.data().bytes());
             } else {
                 log.warn("Unrecognized counter ID {}, skipping", counterCell);

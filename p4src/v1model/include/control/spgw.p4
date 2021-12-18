@@ -18,7 +18,7 @@ control SpgwIngress(
     //===== Misc Things ======//
     //========================//
 
-    counter(MAX_UPF_COUNTERS, CounterType.packets_and_bytes) upf_counter;
+    counter(MAX_UPF_COUNTERS, CounterType.packets_and_bytes) terminations_counter;
     // Using this local variable (fabric_md) to avoid editing all the actions, since
     // the control parameter is of type fabric_v1model_metadata_t, instead of fabric_ingress_metadata_t.
     // fabric_v1model.ingress is then updated in apply{} section, to to maintain all the edits made to fabric_md.
@@ -208,6 +208,12 @@ control SpgwIngress(
                    tc_t tc) {
         _term_hit(ctr_id);
         fabric_md.spgw_tc = tc;
+        fabric_md.tc_unknown = false;
+    }
+
+    action app_fwd_no_tc(upf_ctr_id_t ctr_id) {
+        _term_hit(ctr_id);
+        fabric_md.tc_unknown = true;
     }
 
     action downlink_fwd_encap(upf_ctr_id_t ctr_id,
@@ -221,6 +227,16 @@ control SpgwIngress(
         fabric_md.bridged.spgw.qfi = qfi;
     }
 
+    action downlink_fwd_encap_no_tc(upf_ctr_id_t ctr_id,
+                                    teid_t       teid,
+                                    // QFI should always equal 0 for 4G flows
+                                    bit<6>       qfi) {
+        app_fwd_no_tc(ctr_id);
+        fabric_md.bridged.spgw.needs_gtpu_encap = true;
+        fabric_md.bridged.spgw.teid = teid;
+        fabric_md.bridged.spgw.qfi = qfi;
+    }
+
     table uplink_terminations {
         key = {
             ue_session_id             : exact @name("ue_session_id");
@@ -228,6 +244,7 @@ control SpgwIngress(
 
         actions = {
             app_fwd;
+            app_fwd_no_tc;
             uplink_drop;
             @defaultonly uplink_drop_miss;
         }
@@ -241,6 +258,7 @@ control SpgwIngress(
         }
         actions = {
             downlink_fwd_encap;
+            downlink_fwd_encap_no_tc;
             downlink_drop;
             @defaultonly downlink_drop_miss;
         }
@@ -353,7 +371,7 @@ control SpgwIngress(
                 // can be stored at dbuf, and assuming this will be deployed
                 // mostly in enterprise settings where we are not billing users,
                 // the effects of such inaccuracy should be negligible.
-                upf_counter.count((bit<32>)fabric_md.bridged.spgw.upf_ctr_id);
+                terminations_counter.count((bit<32>)fabric_md.bridged.spgw.upf_ctr_id);
             }
             // Nothing to be done immediately for forwarding or encapsulation.
             // Forwarding is done by other parts of the ingress, and
@@ -373,7 +391,7 @@ control SpgwEgress(
         inout ingress_headers_t hdr,
         inout fabric_v1model_metadata_t fabric_v1model) {
 
-    counter(MAX_UPF_COUNTERS, CounterType.packets_and_bytes) upf_counter;
+    counter(MAX_UPF_COUNTERS, CounterType.packets_and_bytes) terminations_counter;
     fabric_egress_metadata_t fabric_md = fabric_v1model.egress;
 
     //=========================//
@@ -519,7 +537,7 @@ control SpgwEgress(
                 eg_tunnel_peers.apply();
             }
             if (!fabric_md.bridged.spgw.skip_egress_upf_ctr) {
-                upf_counter.count((bit<32>)fabric_md.bridged.spgw.upf_ctr_id);
+                terminations_counter.count((bit<32>)fabric_md.bridged.spgw.upf_ctr_id);
             }
         }
         fabric_v1model.egress = fabric_md;
