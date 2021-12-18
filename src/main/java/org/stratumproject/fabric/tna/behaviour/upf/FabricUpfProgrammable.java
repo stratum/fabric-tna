@@ -141,11 +141,13 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     public boolean init() {
         if (setupBehaviour("init()")) {
             log.info("UpfProgrammable initialized for appId {} and deviceId {}", appId, deviceId);
-            // Add static Queue Configuration
-            // Default slice and best effort TC will be created by SlicingService by default
-            slicingService.addSlice(SLICE_MOBILE);
             try {
+                /* Add MOBILE slice and BEST_EFFORT tc if needed
+                   and initialize the remaining traffic classes */
                 Set<TrafficClass> tcs = slicingService.getTrafficClasses(SLICE_MOBILE);
+                if (tcs.isEmpty()) {
+                    slicingService.addSlice(SLICE_MOBILE);
+                }
                 Arrays.stream(TrafficClass.values()).forEach(tc -> {
                     if (tcs.contains(tc) || tc.equals(TrafficClass.BEST_EFFORT) ||
                             tc.equals(TrafficClass.SYSTEM)) {
