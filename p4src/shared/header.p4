@@ -9,7 +9,7 @@
 
 @controller_header("packet_in")
 header packet_in_header_t {
-    PortId_t ingress_port;
+    FabricPortId_t ingress_port;
     bit<7>   _pad0;
 }
 
@@ -18,7 +18,7 @@ header packet_in_header_t {
 @controller_header("packet_out")
 header packet_out_header_t {
     @padding bit<7>   pad0;
-    PortId_t          egress_port;
+    FabricPortId_t          egress_port;
     @padding bit<3>   pad1;
     QueueId_t         queue_id;
     @padding bit<5>   pad2;
