@@ -3057,7 +3057,9 @@ class FabricIntDeflectDropReportTest(IntTest):
         # Send the WIP packet out to recirculate port so it will be recirculated back to
         # the ingress pipeline and the rest of pipeline will help build the expected INT
         # report packet.
-        pkt_out = self.build_packet_out(exp_wip_int_pkt_masked.exp_pkt, RECIRCULATE_PORTS[0])
+        pkt_out = self.build_packet_out(
+            exp_wip_int_pkt_masked.exp_pkt, RECIRCULATE_PORTS[0]
+        )
         self.send_packet_out(pkt_out)
         self.verify_packet(exp_int_report_pkt_masked, self.port3)
         self.verify_no_other_packets()
