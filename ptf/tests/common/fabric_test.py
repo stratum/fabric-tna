@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0 AND Apache-2.0
 
 import codecs
-import fnmatch
 import re
 import socket
 import struct
@@ -200,6 +199,7 @@ INT_INS_TO_NAME = {
 
 PACKET_IN_MIRROR_ID = 0x1FF
 INT_REPORT_MIRROR_IDS = [0x200, 0x201, 0x202, 0x203]
+V1MODEL_INT_REPORT_MIRROR_ID = 0x1FA
 RECIRCULATE_PORTS = [68, 196, 324, 452]
 SWITCH_ID = 1
 INT_REPORT_PORT = 32766
@@ -3454,14 +3454,18 @@ class IntTest(IPv4UnicastTest):
             SWITCH_ID,
             MPLS_LABEL_1 if is_device_spine else None,
         )
-        for i in range(0, 4):
-            self.set_up_report_mirror_flow(
-                i, INT_REPORT_MIRROR_IDS[i], RECIRCULATE_PORTS[i]
-            )
+        if is_tna():
+            for i in range(0, 4):
+                self.set_up_report_mirror_flow(
+                    i, INT_REPORT_MIRROR_IDS[i], RECIRCULATE_PORTS[i]
+                )
+            self.set_up_recirc_ports()
+        if is_v1model():
+            self.add_clone_group(V1MODEL_INT_REPORT_MIRROR_ID, [self.port3], store=False)
+
         self.set_up_report_table_entries(
             self.port3, is_device_spine, send_report_to_spine
         )
-        self.set_up_recirc_ports()
 
     def set_up_latency_threshold_for_q_report(
         self, threshold_trigger, threshold_reset, queue_id=0
@@ -3693,6 +3697,7 @@ class IntTest(IPv4UnicastTest):
             install_routing_entry=install_routing_entry,
         )
 
+        time.sleep(0.5)
         if expect_int_report:
             self.verify_packet(exp_int_report_pkt_masked, self.port3)
         self.verify_no_other_packets()

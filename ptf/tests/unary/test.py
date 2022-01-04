@@ -1763,6 +1763,7 @@ class FabricIntIngressDropReportTest(IntTest):
         )
 
     def runTest(self):
+        count = 0 # DEBUG
         print("")
         # FIXME: Add INT_DROP_REASON_ROUTING_V4_MISS. Currently, there is an unknown bug
         #        which cause unexpected table(drop_report) miss.
@@ -1775,7 +1776,10 @@ class FabricIntIngressDropReportTest(IntTest):
             for test_args in get_test_args(
                 traffic_dir=traffic_dir, int_test_type="ig_drop"
             ):
+                count +=1 # DEBUG
                 self.doRunTest(**test_args)
+                if count == 1: # DEBUG
+                    return
 
 
 @group("int")
@@ -1817,6 +1821,7 @@ class FabricIntEgressDropReportTest(IntTest):
         )
 
     def runTest(self):
+        count = 0 # DEBUG. remove this.
         print("")
         for traffic_dir in [
             "host-leaf-host",
@@ -1827,7 +1832,10 @@ class FabricIntEgressDropReportTest(IntTest):
             for test_args in get_test_args(
                 traffic_dir=traffic_dir, int_test_type="flow"
             ):
+                count += 1 # DEBUG. Remove this.
                 self.doRunTest(**test_args)
+                if count == 1: # DEBUG. Remove this.
+                    return
 
 
 @group("int")
