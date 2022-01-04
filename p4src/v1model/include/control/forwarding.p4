@@ -8,7 +8,8 @@
 
 
 control Forwarding (inout ingress_headers_t hdr,
-                    inout fabric_ingress_metadata_t fabric_md) {
+                    inout fabric_ingress_metadata_t fabric_md,
+                    inout standard_metadata_t standard_md) {
 
 
     @hidden
@@ -84,6 +85,13 @@ control Forwarding (inout ingress_headers_t hdr,
         routing_v4_counter.count();
     }
 
+    action drop_routing_v4() {
+        mark_to_drop(standard_md);
+        fabric_md.skip_next = true;
+        routing_v4_counter.count();
+        // TODO: drop_ctl should set to 1 here when drop_ctl is supported
+    }
+
     table routing_v4 {
         key = {
             fabric_md.routing_ipv4_dst: lpm @name("ipv4_dst");
@@ -91,6 +99,7 @@ control Forwarding (inout ingress_headers_t hdr,
         actions = {
             set_next_id_routing_v4;
             nop_routing_v4;
+            drop_routing_v4;
             @defaultonly nop;
         }
         default_action = nop();
@@ -108,12 +117,20 @@ control Forwarding (inout ingress_headers_t hdr,
         routing_v6_counter.count();
     }
 
+    action drop_routing_v6() {
+        mark_to_drop(standard_md);
+        fabric_md.skip_next = true;
+        routing_v6_counter.count();
+        // TODO: drop_ctl should set to 1 here when drop_ctl is supported
+    }
+
     table routing_v6 {
         key = {
             hdr.ipv6.dst_addr: lpm @name("ipv6_dst");
         }
         actions = {
             set_next_id_routing_v6;
+            drop_routing_v6;
             @defaultonly nop;
         }
         default_action = nop();

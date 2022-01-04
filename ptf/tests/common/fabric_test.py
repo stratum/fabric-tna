@@ -1181,6 +1181,15 @@ class FabricTest(P4RuntimeTest):
             [("next_id", next_id_)],
         )
 
+    def add_forwarding_routing_v4_drop(self, ipv4_dstAddr, ipv4_pLen):
+        ipv4_dstAddr_ = ipv4_to_binary(ipv4_dstAddr)
+        self.send_request_add_entry_to_action(
+            "forwarding.routing_v4",
+            [self.Lpm("ipv4_dst", ipv4_dstAddr_, ipv4_pLen)],
+            "forwarding.drop_routing_v4",
+            [],
+        )
+
     def add_forwarding_mpls_entry(self, label, next_id):
         label_ = stringify(label, 3)
         next_id_ = stringify(next_id, 4)
@@ -2436,8 +2445,17 @@ class SpgwSimpleTest(IPv4UnicastTest):
             ],
         )
 
-    def add_uplink_pdr(self, ctr_id, far_id, teid, tunnel_dst_addr, tc=DEFAULT_TC):
+    def add_uplink_pdr(self, ctr_id, far_id, teid, tunnel_dst_addr, tc=None):
         req = self.get_new_write_request()
+        action_params = [
+            ("ctr_id", stringify(ctr_id, 2)),
+            ("far_id", stringify(far_id, 4)),
+        ]
+        if tc is None:
+            action = "FabricIngress.spgw.load_pdr_decap"
+        else:
+            action = "FabricIngress.spgw.load_pdr_decap_qos"
+            action_params.append(("tc", stringify(tc, 1)))
         self.push_update_add_entry_to_action(
             req,
             "FabricIngress.spgw.uplink_pdrs",
@@ -2445,12 +2463,8 @@ class SpgwSimpleTest(IPv4UnicastTest):
                 self.Exact("teid", stringify(teid, 4)),
                 self.Exact("tunnel_ipv4_dst", ipv4_to_binary(tunnel_dst_addr)),
             ],
-            "FabricIngress.spgw.load_pdr_decap",
-            [
-                ("ctr_id", stringify(ctr_id, 2)),
-                ("far_id", stringify(far_id, 4)),
-                ("tc", stringify(tc, 1)),
-            ],
+            action,
+            action_params,
         )
         self.write_request(req)
 
@@ -2483,19 +2497,24 @@ class SpgwSimpleTest(IPv4UnicastTest):
         )
         self.write_request(req)
 
-    def add_downlink_pdr(self, ctr_id, far_id, ue_addr, tc=DEFAULT_TC):
+    def add_downlink_pdr(self, ctr_id, far_id, ue_addr, tc=None):
         req = self.get_new_write_request()
+        action_params = [
+            ("ctr_id", stringify(ctr_id, 2)),
+            ("far_id", stringify(far_id, 4)),
+        ]
+        if tc is None:
+            action = "FabricIngress.spgw.load_pdr"
+        else:
+            action = "FabricIngress.spgw.load_pdr_qos"
+            action_params.append(("tc", stringify(tc, 1)))
 
         self.push_update_add_entry_to_action(
             req,
             "FabricIngress.spgw.downlink_pdrs",
             [self.Exact("ue_addr", ipv4_to_binary(ue_addr))],
-            "FabricIngress.spgw.load_pdr",
-            [
-                ("ctr_id", stringify(ctr_id, 2)),
-                ("far_id", stringify(far_id, 4)),
-                ("tc", stringify(tc, 1)),
-            ],
+            action,
+            action_params,
         )
         self.write_request(req)
 
@@ -2545,7 +2564,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         ctr_id,
         far_id=UPLINK_FAR_ID,
         slice_id=DEFAULT_SLICE_ID,
-        tc=DEFAULT_TC,
+        tc=None,
     ):
         self.add_s1u_iface(s1u_addr=s1u_sgw_addr, slice_id=slice_id)
         self.add_uplink_pdr(
@@ -2562,7 +2581,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         ctr_id,
         far_id=DOWNLINK_FAR_ID,
         slice_id=DEFAULT_SLICE_ID,
-        tc=DEFAULT_TC,
+        tc=None,
     ):
         self.add_ue_pool(pool_addr=ue_addr, slice_id=slice_id)
         self.add_downlink_pdr(ctr_id=ctr_id, far_id=far_id, ue_addr=ue_addr, tc=tc)
@@ -2615,7 +2634,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         with_psc,
         is_next_hop_spine,
         slice_id=DEFAULT_SLICE_ID,
-        tc=DEFAULT_TC,
+        tc=None,
         dscp_rewrite=False,
         verify_counters=True,
         eg_port=None,
@@ -2643,7 +2662,11 @@ class SpgwSimpleTest(IPv4UnicastTest):
         if tagged2:
             exp_pkt = pkt_add_vlan(exp_pkt, VLAN_ID_2)
         if dscp_rewrite:
-            exp_pkt = pkt_set_dscp(exp_pkt, slice_id=slice_id, tc=tc)
+            if tc is None:
+                # Use default TC
+                exp_pkt = pkt_set_dscp(exp_pkt, slice_id=slice_id, tc=DEFAULT_TC)
+            else:
+                exp_pkt = pkt_set_dscp(exp_pkt, slice_id=slice_id, tc=tc)
 
         self.setup_uplink(
             s1u_sgw_addr=S1U_SGW_IPV4,
@@ -2848,7 +2871,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         with_psc,
         is_next_hop_spine,
         slice_id=DEFAULT_SLICE_ID,
-        tc=DEFAULT_TC,
+        tc=None,
         dscp_rewrite=False,
         verify_counters=True,
         eg_port=None,
@@ -2872,7 +2895,10 @@ class SpgwSimpleTest(IPv4UnicastTest):
             exp_pkt = pkt_add_vlan(exp_pkt, VLAN_ID_2)
         if dscp_rewrite:
             # Modify outer IPV4
-            exp_pkt = pkt_set_dscp(exp_pkt, slice_id=slice_id, tc=tc)
+            if tc is None:
+                exp_pkt = pkt_set_dscp(exp_pkt, slice_id=slice_id, tc=DEFAULT_TC)
+            else:
+                exp_pkt = pkt_set_dscp(exp_pkt, slice_id=slice_id, tc=tc)
 
         self.setup_downlink(
             s1u_sgw_addr=S1U_SGW_IPV4,
@@ -4559,6 +4585,21 @@ class PppoeTest(DoubleVlanTerminationTest):
 class SlicingTest(FabricTest):
     """Mixin class with methods to manipulate QoS entities
     """
+
+    def set_default_tc(self, slice_id=None, tc=None):
+        matches = [
+            self.Ternary("slice_tc", stringify(slice_id << 2, 1), stringify(0x3C, 1)),
+            self.Exact("tc_unknown", stringify(1, 1)),
+        ]
+        action = "FabricIngress.qos.set_default_tc"
+        action_params = [("tc", stringify(tc, 1))]
+        self.send_request_add_entry_to_action(
+            "FabricIngress.qos.default_tc",
+            matches,
+            action,
+            action_params,
+            DEFAULT_PRIORITY,
+        )
 
     def add_slice_tc_classifier_entry(
         self, slice_id=None, tc=None, trust_dscp=False, **ftuple

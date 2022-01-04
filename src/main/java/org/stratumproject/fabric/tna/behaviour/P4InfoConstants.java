@@ -111,6 +111,9 @@ public final class P4InfoConstants {
     public static final PiMatchFieldId HDR_STATS_FLOW_ID =
             PiMatchFieldId.of("stats_flow_id");
     public static final int HDR_STATS_FLOW_ID_BITWIDTH = 10;
+    public static final PiMatchFieldId HDR_TC_UNKNOWN =
+            PiMatchFieldId.of("tc_unknown");
+    public static final int HDR_TC_UNKNOWN_BITWIDTH = 1;
     public static final PiMatchFieldId HDR_TEID = PiMatchFieldId.of("teid");
     public static final int HDR_TEID_BITWIDTH = 32;
     public static final PiMatchFieldId HDR_TUNNEL_IPV4_DST =
@@ -166,6 +169,8 @@ public final class P4InfoConstants {
             PiTableId.of("FabricIngress.pre_next.next_mpls");
     public static final PiTableId FABRIC_INGRESS_PRE_NEXT_NEXT_VLAN =
             PiTableId.of("FabricIngress.pre_next.next_vlan");
+    public static final PiTableId FABRIC_INGRESS_QOS_DEFAULT_TC =
+            PiTableId.of("FabricIngress.qos.default_tc");
     public static final PiTableId FABRIC_INGRESS_QOS_QUEUES =
             PiTableId.of("FabricIngress.qos.queues");
     public static final PiTableId FABRIC_INGRESS_SLICE_TC_CLASSIFIER_CLASSIFIER =
@@ -275,6 +280,10 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.filtering.permit_with_internal_vlan");
     public static final PiActionId FABRIC_INGRESS_FILTERING_SET_FORWARDING_TYPE =
             PiActionId.of("FabricIngress.filtering.set_forwarding_type");
+    public static final PiActionId FABRIC_INGRESS_FORWARDING_DROP_ROUTING_V4 =
+            PiActionId.of("FabricIngress.forwarding.drop_routing_v4");
+    public static final PiActionId FABRIC_INGRESS_FORWARDING_DROP_ROUTING_V6 =
+            PiActionId.of("FabricIngress.forwarding.drop_routing_v6");
     public static final PiActionId FABRIC_INGRESS_FORWARDING_NOP_ROUTING_V4 =
             PiActionId.of("FabricIngress.forwarding.nop_routing_v4");
     public static final PiActionId FABRIC_INGRESS_FORWARDING_POP_MPLS_AND_NEXT =
@@ -307,8 +316,12 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.pre_next.set_vlan");
     public static final PiActionId FABRIC_INGRESS_QOS_METER_DROP =
             PiActionId.of("FabricIngress.qos.meter_drop");
+    public static final PiActionId FABRIC_INGRESS_QOS_SET_DEFAULT_TC =
+            PiActionId.of("FabricIngress.qos.set_default_tc");
     public static final PiActionId FABRIC_INGRESS_QOS_SET_QUEUE =
             PiActionId.of("FabricIngress.qos.set_queue");
+    public static final PiActionId FABRIC_INGRESS_SLICE_TC_CLASSIFIER_NO_CLASSIFICATION =
+            PiActionId.of("FabricIngress.slice_tc_classifier.no_classification");
     public static final PiActionId FABRIC_INGRESS_SLICE_TC_CLASSIFIER_SET_SLICE_ID_TC =
             PiActionId.of("FabricIngress.slice_tc_classifier.set_slice_id_tc");
     public static final PiActionId FABRIC_INGRESS_SLICE_TC_CLASSIFIER_TRUST_DSCP =
@@ -333,6 +346,10 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.spgw.load_pdr");
     public static final PiActionId FABRIC_INGRESS_SPGW_LOAD_PDR_DECAP =
             PiActionId.of("FabricIngress.spgw.load_pdr_decap");
+    public static final PiActionId FABRIC_INGRESS_SPGW_LOAD_PDR_DECAP_QOS =
+            PiActionId.of("FabricIngress.spgw.load_pdr_decap_qos");
+    public static final PiActionId FABRIC_INGRESS_SPGW_LOAD_PDR_QOS =
+            PiActionId.of("FabricIngress.spgw.load_pdr_qos");
     public static final PiActionId FABRIC_INGRESS_SPGW_LOAD_TUNNEL_FAR =
             PiActionId.of("FabricIngress.spgw.load_tunnel_far");
     public static final PiActionId FABRIC_INGRESS_SPGW_RECIRC_ALLOW =

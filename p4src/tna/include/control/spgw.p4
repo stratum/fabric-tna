@@ -106,15 +106,27 @@ control SpgwIngress(
 #endif // WITH_INT
     }
 
-    action load_pdr(pdr_ctr_id_t ctr_id, far_id_t far_id, tc_t tc) {
+    action load_pdr_qos(pdr_ctr_id_t ctr_id, far_id_t far_id, tc_t tc) {
         md_far_id = far_id;
         fabric_md.bridged.spgw.pdr_ctr_id = ctr_id;
         fabric_md.spgw_tc = tc;
+        fabric_md.tc_unknown = false;
         is_pdr_hit = true;
     }
 
-    action load_pdr_decap(pdr_ctr_id_t ctr_id, far_id_t far_id, tc_t tc) {
-        load_pdr(ctr_id, far_id, tc);
+    action load_pdr_decap_qos(pdr_ctr_id_t ctr_id, far_id_t far_id, tc_t tc) {
+        load_pdr_qos(ctr_id, far_id, tc);
+        _gtpu_decap();
+    }
+
+    action load_pdr(pdr_ctr_id_t ctr_id, far_id_t far_id) {
+        md_far_id = far_id;
+        fabric_md.bridged.spgw.pdr_ctr_id = ctr_id;
+        is_pdr_hit = true;
+    }
+
+    action load_pdr_decap(pdr_ctr_id_t ctr_id, far_id_t far_id) {
+        load_pdr(ctr_id, far_id);
         _gtpu_decap();
     }
 
@@ -125,6 +137,7 @@ control SpgwIngress(
         }
         actions = {
             load_pdr;
+            load_pdr_qos;
             @defaultonly downlink_pdr_drop;
         }
         size = NUM_DOWNLINK_PDRS;
@@ -138,6 +151,7 @@ control SpgwIngress(
         }
         actions = {
             load_pdr_decap;
+            load_pdr_decap_qos;
             @defaultonly uplink_pdr_drop;
         }
         size = NUM_UPLINK_PDRS;
