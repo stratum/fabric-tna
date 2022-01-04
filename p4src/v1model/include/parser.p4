@@ -13,6 +13,10 @@ parser FabricParser (packet_in packet,
                      inout standard_metadata_t standard_md) {
 
     state start {
+        // pkt_length is set here because in egress pkt_length value
+        // may be different than the one used in egress pipeline due to internal stuff.
+        fabric_md.egress.pkt_length = (bit<16>) standard_md.packet_length;
+
         fabric_md.ingress.bridged.setValid();
         fabric_md.drop_ctl = 0;
         fabric_md.ingress.bridged.bmd_type = BridgedMdType_t.INGRESS_TO_EGRESS;
@@ -22,9 +26,6 @@ parser FabricParser (packet_in packet,
         fabric_md.ingress.punt_to_cpu = false;
         fabric_md.ingress.bridged.base.ip_eth_type = 0;
 #ifdef WITH_INT
-        // If using the designed structure to emulate using clone3 and recirculate,
-        // this initialization must not be performed.
-        // How? a possible solution could be to put it in another state.
         fabric_md.ingress.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UNKNOWN;
         fabric_md.ingress.bridged.int_bmd.wip_type = INT_IS_NOT_WIP;
 #endif // WITH_INT

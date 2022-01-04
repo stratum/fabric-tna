@@ -11,7 +11,7 @@
 
 #ifndef WITH_LATEST_P4C //FIXME used to swtich between stable and latest p4c. Remove this ifdef and all the others when decided to use one or the other.
 // remember to switch latest or stable in .env
-//#define WITH_LATEST_P4C // if this is commented, stable p4c is being used.
+// #define WITH_LATEST_P4C // if this is commented, stable p4c is being used.
 #endif // WITH_LATEST_P4C
 
 // Start definitions from TNA (for bmv2).

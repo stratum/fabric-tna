@@ -409,7 +409,7 @@ control IntEgressParserEmulator (
     }
 
     @hidden
-    action strip_ipv4_udp_gtpu_psc() {
+    action strip_unused_headers_for_report() {
 
         hdr_v1model.ingress.vlan_tag.setInvalid();
 #if defined(WITH_XCONNECT) || defined(WITH_DOUBLE_VLAN_TERMINATION)
@@ -417,26 +417,39 @@ control IntEgressParserEmulator (
 #endif // WITH_XCONNECT || WITH_DOUBLE_VLAN_TERMINATION
 
         hdr_v1model.ingress.ipv4.setInvalid();
-        hdr_v1model.ingress.icmp.setInvalid();
         hdr_v1model.ingress.tcp.setInvalid();
         hdr_v1model.ingress.udp.setInvalid();
+        hdr_v1model.ingress.icmp.setInvalid();
+
+        hdr_v1model.ingress.vxlan.setInvalid();
+        hdr_v1model.ingress.inner_ethernet.setInvalid();
+        hdr_v1model.ingress.inner_eth_type.setInvalid();
+        
         hdr_v1model.ingress.gtpu.setInvalid();
         hdr_v1model.ingress.gtpu_options.setInvalid();
         hdr_v1model.ingress.gtpu_ext_psc.setInvalid();
-        // hdr_v1model.ingress.inner_ipv4.setInvalid();
-        // hdr_v1model.ingress.inner_udp.setInvalid();
-        // hdr_v1model.ingress.inner_tcp.setInvalid();
-        // hdr_v1model.ingress.inner_icmp.setInvalid();
     }
 
     apply {
-        // the is_int_recirc is set in ingress
-        // fabric_md.is_int_recirc = true;
+        /* Deparser logic */
+        // This section is needed to address various header deparsing combinations that
+        // do not appear in TNA because of different deparsers between Ingress and Egress pipelines.
 
-        // perform this only for Ingress drop reports.
+        if (!hdr_v1model.ingress.inner_ipv4.isValid()
+            && hdr_v1model.ingress.ipv4.isValid()) {
+                hdr_v1model.ingress.inner_ipv4 = hdr_v1model.ingress.ipv4;
+        }
+
+        if (!hdr_v1model.ingress.gtpu.isValid()
+            && hdr_v1model.ingress.udp.isValid()) {
+                hdr_v1model.ingress.inner_udp = hdr_v1model.ingress.udp;
+        }
+
+        /* End of Deparser logic */
+
         parse_int_ingress_drop();
-        // parse_int_report_mirror();
-        strip_ipv4_udp_gtpu_psc();
+        // parse_int_report_mirror(); // TODO
+        strip_unused_headers_for_report();
 
         // Synch with output struct.
         hdr_v1model.egress = hdr;
@@ -613,7 +626,6 @@ control IntEgress (
     action init_int_metadata(bit<3> report_type) {
         fabric_md.bridged.int_bmd.mirror_session_id = BMV2_INT_MIRROR_SESSION;
 
-        // eg_dprsr_md.mirror_type = (bit<3>)FabricMirrorType_t.INT_REPORT;
         fabric_v1model.int_mirror_type = (bit<3>)FabricMirrorType_t.INT_REPORT;
         fabric_md.int_report_md.bmd_type = BridgedMdType_t.EGRESS_MIRROR;
         fabric_md.int_report_md.mirror_type = FabricMirrorType_t.INT_REPORT;
@@ -660,8 +672,10 @@ control IntEgress (
 
     @hidden
     action adjust_ip_udp_len(bit<16> adjust_ip, bit<16> adjust_udp) {
+        // This action will be performed when a INT report is recirculated. This is why here
+        // we use the canonical header structs (ipv4, udp, etc.) instead of report_ipv4, report_udp, etc.
         hdr_v1model.ingress.ipv4.total_len = fabric_md.pkt_length + adjust_ip;
-        hdr_v1model.ingress.udp.len = fabric_md.pkt_length + adjust_udp;
+        hdr_v1model.ingress.udp.len = fabric_md.pkt_length + adjust_udp - 1;
     }
 
     @hidden
@@ -699,22 +713,17 @@ control IntEgress (
     }
 
     apply {
-        // fabric_md.int_md.hop_latency = eg_prsr_md.global_tstamp[31:0] - fabric_md.bridged.base.ig_tstamp[31:0];
         fabric_md.int_md.hop_latency = standard_md.egress_global_timestamp[31:0] - fabric_md.bridged.base.ig_tstamp[31:0];
 
-        // fabric_md.int_md.timestamp = eg_prsr_md.global_tstamp;
         fabric_md.int_md.timestamp = standard_md.egress_global_timestamp;
-        // Here we use the lower 7-bit of port number with qid as the register index
-        // Only 7-bit because registers are independent between pipes.
         // queue_report_filter_index = eg_intr_md.egress_port[6:0] ++ eg_intr_md.egress_qid;
         queue_report_filter_index = standard_md.egress_spec[6:0] ++ egress_qid; //FIXME in case of bmv2 this is always 0. is it ok?
-        // _initialize_register((bit<32>)queue_report_filter_index);
 
         // Check the queue alert before the config table since we need to check the
         // latency which is not quantized.
         queue_latency_thresholds.apply();
         // In v1model, we're not allowed to have an apply{} section within an action,
-        // so the conditional that was present in RegisterAction is now here.
+        // so the conditional that was present in TNA's RegisterAction is now here.
         if (check_quota_and_report) {
             if (quota > 0) {
                 quota = quota - 1;
@@ -725,7 +734,6 @@ control IntEgress (
         }
 
         config.apply();
-        // hdr.report_fixed_header.hw_id = 4w0 ++ eg_intr_md.egress_port[8:7];
         hdr.report_fixed_header.hw_id = 4w0 ++ standard_md.egress_spec[8:7];
 
         // Filtering for drop reports is done after mirroring to handle all drop
@@ -751,7 +759,7 @@ control IntEgress (
             if (int_metadata.apply().hit) {
                 // flow_report_filter.apply(hdr, fabric_md, eg_intr_md, eg_prsr_md, eg_dprsr_md);
 
-                // Mirroring the packet. It could work only if clone3 preserve the metadata structs.
+                // Mirroring the packet. It could work only if clone preserves the metadata structs.
                 // The mirrored packet will then generate the report.
 #ifdef WITH_LATEST_P4C
                 clone_preserving_field_list(CloneType.E2E,

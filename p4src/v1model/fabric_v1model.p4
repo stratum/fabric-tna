@@ -128,7 +128,6 @@ control FabricIngress (inout v1model_header_t hdr,
 #ifdef WITH_INT
         // Remove all of this. Used to debug PTF.
         if IS_RECIRCULATED(standard_md) {
-            fabric_md.egress.is_int_recirc = true;
             standard_md.egress_spec = 2; //hard code egress port because recirculated packet cannot rely on preserve metadata.
         }
 #endif // WITH_INT
@@ -157,11 +156,11 @@ control FabricEgress (inout v1model_header_t hdr,
     apply {
         // Setting other fields in egress metadata, related to TNA's FabricEgressParser.
         fabric_md.egress.cpu_port = 0;
-        fabric_md.egress.pkt_length = (bit<16>) standard_md.packet_length;
 
 #ifdef WITH_INT
         if ((bit<8>)fabric_md.egress.bridged.int_bmd.report_type == BridgedMdType_t.INT_INGRESS_DROP){
             // Ingress drops become themselves a report. Mirroring is not performed.
+            fabric_md.egress.is_int_recirc = true;
             parser_emulator.apply(hdr, fabric_md, standard_md);
 #ifdef WITH_LATEST_P4C
             recirculate_preserving_field_list(PRESERVE_STANDARD_MD);
