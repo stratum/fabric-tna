@@ -39,11 +39,13 @@ import org.slf4j.LoggerFactory;
 import org.stratumproject.fabric.tna.PipeconfLoader;
 import org.stratumproject.fabric.tna.behaviour.FabricCapabilities;
 import org.stratumproject.fabric.tna.slicing.api.SliceId;
+import org.stratumproject.fabric.tna.slicing.api.SlicingException;
 import org.stratumproject.fabric.tna.slicing.api.SlicingService;
 import org.stratumproject.fabric.tna.slicing.api.TrafficClass;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -95,6 +97,8 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
     private ApplicationId appId;
 
+    static final SliceId SLICE_MOBILE = SliceId.of(SliceId.MAX);
+
     @Override
     protected boolean setupBehaviour(String opName) {
         // Already initialized.
@@ -137,11 +141,24 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     public boolean init() {
         if (setupBehaviour("init()")) {
             log.info("UpfProgrammable initialized for appId {} and deviceId {}", appId, deviceId);
-            // Add static Queue Configuration
-            // Default slice and best effort TC will be created by SlicingService by default
-            slicingService.addTrafficClass(SliceId.DEFAULT, TrafficClass.CONTROL);
-            slicingService.addTrafficClass(SliceId.DEFAULT, TrafficClass.REAL_TIME);
-            slicingService.addTrafficClass(SliceId.DEFAULT, TrafficClass.ELASTIC);
+            try {
+                /* Add MOBILE slice and BEST_EFFORT tc if needed
+                   and initialize the remaining traffic classes */
+                Set<TrafficClass> tcs = slicingService.getTrafficClasses(SLICE_MOBILE);
+                if (tcs.isEmpty()) {
+                    slicingService.addSlice(SLICE_MOBILE);
+                }
+                Arrays.stream(TrafficClass.values()).forEach(tc -> {
+                    if (tcs.contains(tc) || tc.equals(TrafficClass.BEST_EFFORT) ||
+                            tc.equals(TrafficClass.SYSTEM)) {
+                        return;
+                    }
+                    slicingService.addTrafficClass(SLICE_MOBILE, tc);
+                });
+            } catch (SlicingException e) {
+                log.error("Exception while configuring traffic class for Mobile Slice: {}", e.getMessage());
+                return false;
+            }
             return true;
         }
         return false;
@@ -274,9 +291,10 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         }
         log.info("Clearing all UPF-related table entries.");
         // Remove static Queue Configuration
-        slicingService.removeTrafficClass(SliceId.DEFAULT, TrafficClass.CONTROL);
-        slicingService.removeTrafficClass(SliceId.DEFAULT, TrafficClass.REAL_TIME);
-        slicingService.removeTrafficClass(SliceId.DEFAULT, TrafficClass.ELASTIC);
+        slicingService.removeTrafficClass(SLICE_MOBILE, TrafficClass.ELASTIC);
+        slicingService.removeTrafficClass(SLICE_MOBILE, TrafficClass.REAL_TIME);
+        slicingService.removeTrafficClass(SLICE_MOBILE, TrafficClass.CONTROL);
+        slicingService.removeSlice(SLICE_MOBILE);
         fabricUpfStore.reset();
     }
 

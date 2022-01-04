@@ -22,7 +22,6 @@ import org.onosproject.net.pi.runtime.PiActionParam;
 
 import java.util.Arrays;
 
-import static org.stratumproject.fabric.tna.behaviour.Constants.TC_BEST_EFFORT;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.CTR_ID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.DROP;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_PDRS;
@@ -33,6 +32,8 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_ING
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_LOAD_NORMAL_FAR;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_LOAD_PDR;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_LOAD_PDR_DECAP;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_LOAD_PDR_DECAP_QOS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_LOAD_PDR_QOS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_LOAD_TUNNEL_FAR;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_PDRS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FAR_ID;
@@ -54,7 +55,7 @@ public final class TestUpfConstants {
     public static final DeviceId DEVICE_ID = DeviceId.deviceId("CoolSwitch91");
     public static final ApplicationId APP_ID = new DefaultApplicationId(5000, "up4");
     public static final int DEFAULT_PRIORITY = 10;
-    private static final int DEFAULT_SLICE_ID = 0;
+    private static final int SLICE_MOBILE = 0xF;
     private static final int DEFAULT_TC = 0;
     // SESSION_ID_BITWIDTH / 8 = 12
     public static final ImmutableByteSequence SESSION_ID = ImmutableByteSequence.ofOnes(12);
@@ -154,8 +155,7 @@ public final class TestUpfConstants {
                                                           .withId(FABRIC_INGRESS_SPGW_LOAD_PDR_DECAP)
                                                           .withParameters(Arrays.asList(
                                                                   new PiActionParam(CTR_ID, UPLINK_COUNTER_CELL_ID),
-                                                                  new PiActionParam(FAR_ID, UPLINK_PHYSICAL_FAR_ID),
-                                                                  new PiActionParam(TC, TC_BEST_EFFORT)
+                                                                  new PiActionParam(FAR_ID, UPLINK_PHYSICAL_FAR_ID)
                                                           ))
                                                           .build()).build())
             .withPriority(DEFAULT_PRIORITY)
@@ -172,7 +172,7 @@ public final class TestUpfConstants {
             .withTreatment(DefaultTrafficTreatment.builder()
                                    .piTableAction(
                                            PiAction.builder()
-                                                   .withId(FABRIC_INGRESS_SPGW_LOAD_PDR_DECAP)
+                                                   .withId(FABRIC_INGRESS_SPGW_LOAD_PDR_DECAP_QOS)
                                                    .withParameters(Arrays.asList(
                                                            new PiActionParam(CTR_ID, UPLINK_COUNTER_CELL_ID),
                                                            new PiActionParam(FAR_ID, UPLINK_PHYSICAL_FAR_ID),
@@ -195,8 +195,7 @@ public final class TestUpfConstants {
                                                           .withId(FABRIC_INGRESS_SPGW_LOAD_PDR)
                                                           .withParameters(Arrays.asList(
                                                                   new PiActionParam(CTR_ID, DOWNLINK_COUNTER_CELL_ID),
-                                                                  new PiActionParam(FAR_ID, DOWNLINK_PHYSICAL_FAR_ID),
-                                                                  new PiActionParam(TC, TC_BEST_EFFORT)
+                                                                  new PiActionParam(FAR_ID, DOWNLINK_PHYSICAL_FAR_ID)
                                                           ))
                                                           .build()).build())
             .withPriority(DEFAULT_PRIORITY)
@@ -212,7 +211,7 @@ public final class TestUpfConstants {
             .withTreatment(DefaultTrafficTreatment.builder()
                                    .piTableAction(
                                            PiAction.builder()
-                                                   .withId(FABRIC_INGRESS_SPGW_LOAD_PDR)
+                                                   .withId(FABRIC_INGRESS_SPGW_LOAD_PDR_QOS)
                                                    .withParameters(Arrays.asList(
                                                            new PiActionParam(CTR_ID, DOWNLINK_COUNTER_CELL_ID),
                                                            new PiActionParam(FAR_ID, DOWNLINK_PHYSICAL_FAR_ID),
@@ -273,7 +272,7 @@ public final class TestUpfConstants {
                             .piTableAction(
                                     PiAction.builder()
                                             .withId(FABRIC_INGRESS_SPGW_IFACE_ACCESS)
-                                            .withParameter(new PiActionParam(SLICE_ID, DEFAULT_SLICE_ID))
+                                            .withParameter(new PiActionParam(SLICE_ID, SLICE_MOBILE))
                                             .build()).build())
             .withPriority(DEFAULT_PRIORITY)
             .build();
@@ -292,7 +291,7 @@ public final class TestUpfConstants {
                     DefaultTrafficTreatment.builder()
                             .piTableAction(PiAction.builder()
                                                    .withId(FABRIC_INGRESS_SPGW_IFACE_CORE)
-                                                   .withParameter(new PiActionParam(SLICE_ID, DEFAULT_SLICE_ID))
+                                                   .withParameter(new PiActionParam(SLICE_ID, SLICE_MOBILE))
                                                    .build()).build())
             .withPriority(DEFAULT_PRIORITY)
             .build();
