@@ -444,7 +444,6 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
             if (upfTranslator.isFabricGtpTunnelPeer(flowRule)) {
                 gtpTunnelPeers.add(upfTranslator.fabricEntryToGtpTunnelPeer(flowRule));
             }
-            // TODO: should we ensure the corresponding IG_TUNNEL_PEER rule is installed?
         }
         return gtpTunnelPeers;
     }
