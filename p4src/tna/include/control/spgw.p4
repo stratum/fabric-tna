@@ -4,8 +4,6 @@
 #ifndef __SPGW__
 #define __SPGW__
 
-#define DEFAULT_UPF_CTR_ID 0
-
 control SpgwIngress(
         /* Fabric.p4 */
         inout ingress_headers_t                      hdr,
@@ -35,6 +33,15 @@ control SpgwIngress(
     action _term_hit(upf_ctr_id_t ctr_id) {
         fabric_md.bridged.spgw.upf_ctr_id = ctr_id;
         upf_termination_hit = true;
+    }
+
+    @hidden
+    action _set_field_encap(teid_t  teid,
+                            // QFI should always equal 0 for 4G flows
+                            bit<6>  qfi) {
+        fabric_md.bridged.spgw.needs_gtpu_encap = true;
+        fabric_md.bridged.spgw.teid = teid;
+        fabric_md.bridged.spgw.qfi = qfi;
     }
 
     @hidden
@@ -240,9 +247,7 @@ control SpgwIngress(
                               // QFI should always equal 0 for 4G flows
                               bit<6>       qfi) {
         app_fwd(ctr_id, tc);
-        fabric_md.bridged.spgw.needs_gtpu_encap = true;
-        fabric_md.bridged.spgw.teid = teid;
-        fabric_md.bridged.spgw.qfi = qfi;
+        _set_field_encap(teid, qfi);
     }
 
     action downlink_fwd_encap_no_tc(upf_ctr_id_t ctr_id,
@@ -250,9 +255,7 @@ control SpgwIngress(
                                     // QFI should always equal 0 for 4G flows
                                     bit<6>       qfi) {
         app_fwd_no_tc(ctr_id);
-        fabric_md.bridged.spgw.needs_gtpu_encap = true;
-        fabric_md.bridged.spgw.teid = teid;
-        fabric_md.bridged.spgw.qfi = qfi;
+        _set_field_encap(teid, qfi);
     }
 
     table uplink_terminations {

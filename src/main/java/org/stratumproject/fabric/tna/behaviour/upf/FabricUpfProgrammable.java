@@ -334,19 +334,6 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         slicingService.removeSlice(SLICE_MOBILE);
     }
 
-    public void clearInterface(FlowRule entry) {
-        try {
-            var iface = upfTranslator.fabricEntryToInterface(entry);
-            if (iface.isCore()) {
-                applyUplinkRecirculation(iface.prefix(), true);
-            }
-        } catch (UpfProgrammableException e) {
-            log.error("Error when translating interface entry, " +
-                              "will skip removing uplink recirculation rules: {} [{}]", e.getMessage(), entry);
-        }
-        flowRuleService.removeFlowRules(entry);
-    }
-
     @Override
     public void deleteAll(UpfEntityType entityType) throws UpfProgrammableException {
         if (!setupBehaviour("deleteAll()")) {
@@ -355,41 +342,52 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
         log.info(format("Clearing all UPF entities of type %s.", entityType.humanReadableName()));
         int entitiesCleared = 0;
+        List<FlowRule> toBeRemoved = Lists.newArrayList();
         for (FlowRule entry : flowRuleService.getFlowEntries(deviceId)) {
             switch (entityType) {
                 case INTERFACE:
                     if (upfTranslator.isFabricInterface(entry)) {
-                        clearInterface(entry);
+                        try {
+                            UpfInterface iface = upfTranslator.fabricEntryToInterface(entry);
+                            if (iface.isCore()) {
+                                applyUplinkRecirculation(iface.prefix(), true);
+                            }
+                        } catch (UpfProgrammableException e) {
+                            log.error("Error when translating interface entry, " +
+                                              "will skip removing uplink recirculation rules: {} [{}]",
+                                      e.getMessage(), entry);
+                        }
+                        toBeRemoved.add(entry);
                         entitiesCleared++;
                     }
                     break;
                 case SESSION_UPLINK:
                     if (upfTranslator.isFabricUeSessionUplink(entry)) {
-                        flowRuleService.removeFlowRules(entry);
+                        toBeRemoved.add(entry);
                         entitiesCleared++;
                     }
                     break;
                 case SESSION_DOWNLINK:
                     if (upfTranslator.isFabricUeSessionDownlink(entry)) {
-                        flowRuleService.removeFlowRules(entry);
+                        toBeRemoved.add(entry);
                         entitiesCleared++;
                     }
                     break;
                 case TERMINATION_UPLINK:
                     if (upfTranslator.isFabricUpfTerminationUplink(entry)) {
-                        flowRuleService.removeFlowRules(entry);
+                        toBeRemoved.add(entry);
                         entitiesCleared++;
                     }
                     break;
                 case TERMINATION_DOWNLINK:
                     if (upfTranslator.isFabricUpfTerminationDownlink(entry)) {
-                        flowRuleService.removeFlowRules(entry);
+                        toBeRemoved.add(entry);
                         entitiesCleared++;
                     }
                     break;
                 case TUNNEL_PEER:
                     if (upfTranslator.isFabricGtpTunnelPeer(entry)) {
-                        flowRuleService.removeFlowRules(entry);
+                        toBeRemoved.add(entry);
                         entitiesCleared++;
                     }
                     break;
@@ -398,6 +396,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                     break;
             }
         }
+        flowRuleService.removeFlowRules(toBeRemoved.toArray(FlowRule[]::new));
         log.info("Cleared {} UPF entities of type {}", entitiesCleared, entityType.humanReadableName());
     }
 
