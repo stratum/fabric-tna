@@ -126,10 +126,10 @@ control FabricIngress (inout v1model_header_t hdr,
             standard_md.egress_spec = standard_md.ingress_port;
         }
 #ifdef WITH_INT
+        // Remove all of this. Used to debug PTF.
         if IS_RECIRCULATED(standard_md) {
-            //FIXME remove this. used to debug.
             fabric_md.egress.is_int_recirc = true;
-            standard_md.egress_spec = 2;
+            standard_md.egress_spec = 2; //hard code egress port because recirculated packet cannot rely on preserve metadata.
         }
 #endif // WITH_INT
 
@@ -164,7 +164,7 @@ control FabricEgress (inout v1model_header_t hdr,
             // Ingress drops become themselves a report. Mirroring is not performed.
             parser_emulator.apply(hdr, fabric_md, standard_md);
 #ifdef WITH_LATEST_P4C
-            ecirculate_preserving_field_list(PRESERVE_STANDARD_MD);
+            recirculate_preserving_field_list(PRESERVE_STANDARD_MD);
 #else
             recirculate({});
 #endif // WITH_LATEST_P4C
@@ -196,16 +196,16 @@ control FabricEgress (inout v1model_header_t hdr,
         if (fabric_md.do_spgw_uplink_recirc) {
             // Recirculate UE-to-UE traffic.
 #ifdef WITH_LATEST_P4C
-            ecirculate_preserving_field_list(PRESERVE_STANDARD_MD);
+            recirculate_preserving_field_list(PRESERVE_STANDARD_MD);
 #else
             recirculate(standard_md);
 #endif // WITH_LATEST_P4C
         }
 
-        if (fabric_md.drop_ctl == 1) {
+        // if (fabric_md.drop_ctl == 1) {
             //FIXME INT recirculated report will be dropped here. Find a new condition to override this drop_ctl.
-            mark_to_drop(standard_md);
-        }
+            // mark_to_drop(standard_md);
+        // }
     } // end of apply{}
 }
 
