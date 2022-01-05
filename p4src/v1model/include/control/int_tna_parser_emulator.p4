@@ -31,11 +31,13 @@ control IntEgressParserEmulator (
         hdr.report_eth_type.setValid();
         // hdr.report_eth_type.value = update later
 
-        /** report_mpls (set valid later) **/ //FIXME, if set valid later, this assignments have no effect.
+        /** report_mpls (set valid later) **/
+        // For bmv2, The MPLS header is initialized in int.p4/do_local_report_encap_mpls action,
+        // because assignments before using the setValid() have no effect.
         // hdr.report_mpls.label = update later
-        hdr.report_mpls.tc = 0;
-        hdr.report_mpls.bos = 0;
-        hdr.report_mpls.ttl = DEFAULT_MPLS_TTL;
+        // hdr.report_mpls.tc = 0;
+        // hdr.report_mpls.bos = 0;
+        // hdr.report_mpls.ttl = DEFAULT_MPLS_TTL;
 
         /** report_ipv4 **/
         hdr.report_ipv4.setValid();
@@ -162,9 +164,12 @@ control IntEgressParserEmulator (
 #if defined(WITH_XCONNECT) || defined(WITH_DOUBLE_VLAN_TERMINATION)
         hdr_v1model.ingress.inner_vlan.setInvalid();
 #endif // WITH_XCONNECT || WITH_DOUBLE_VLAN_TERMINATION
+        hdr_v1model.ingress.mpls.setInvalid();
 
         //FIXME TTL of original packet is still decremented. Doesn't happen when running for TNA. investigate.
-        hdr_v1model.ingress.ipv4.ttl = hdr_v1model.ingress.ipv4.ttl + 1;
+        if (hdr_v1model.ingress.ipv4.isValid()) {
+            hdr_v1model.ingress.ipv4.ttl = hdr_v1model.ingress.ipv4.ttl + 1;
+        }
 
         if(hdr_v1model.ingress.gtpu.isValid() || hdr_v1model.ingress.vxlan.isValid()) {
             hdr_v1model.ingress.ipv4.setInvalid();

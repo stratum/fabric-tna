@@ -378,6 +378,9 @@ control IntEgress (
         do_local_report_encap(src_ip, mon_ip, mon_port, switch_id);
         hdr.report_eth_type.value = ETHERTYPE_INT_WIP_MPLS;
         hdr.report_mpls.setValid();
+        hdr.report_mpls.tc = 0;
+        hdr.report_mpls.bos = 0;
+        hdr.report_mpls.ttl = DEFAULT_MPLS_TTL;
         hdr.report_mpls.label = mon_label;
     }
 
