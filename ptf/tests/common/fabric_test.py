@@ -2771,8 +2771,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             ctr_id=DOWNLINK_PDR_CTR_IDX,
         )
 
-        if is_tna():
-            self.set_up_recirc_ports()
+        self.set_up_recirc_ports()
 
         # By default deny all UE-to-UE communication.
         self.add_uplink_recirc_rule(
