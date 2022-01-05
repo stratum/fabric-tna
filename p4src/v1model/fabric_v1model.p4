@@ -62,24 +62,24 @@ control FabricIngress (inout v1model_header_t hdr,
             // packet was rejected by parser -> drop.
             exit;
         }
-#ifdef WITH_LATEST_P4C
-        if (standard_md.instance_type == 0 ) {
-            // Packet was not recirculated or cloned -> save standard_metadata in custom struct to preserve it.
-            fabric_md.v1model_standard_md.ingress_port = standard_md.ingress_port;
-            fabric_md.v1model_standard_md.egress_port = standard_md.egress_port;
-            fabric_md.v1model_standard_md.egress_spec = standard_md.egress_spec;
-        }
+// #ifdef WITH_LATEST_P4C
+//         if (standard_md.instance_type == 0 ) {
+//             // Packet was not recirculated or cloned -> save standard_metadata in custom struct to preserve it.
+//             fabric_md.v1model_standard_md.ingress_port = standard_md.ingress_port;
+//             fabric_md.v1model_standard_md.egress_port = standard_md.egress_port;
+//             fabric_md.v1model_standard_md.egress_spec = standard_md.egress_spec;
+//         }
 
-        if (standard_md.instance_type != 0) {
-            // restore preserved metadata
-            standard_md.ingress_port = fabric_md.v1model_standard_md.ingress_port;
-        }
-#endif //WITH_LATEST_P4C
+//         if (standard_md.instance_type != 0) {
+//             // restore preserved metadata
+//             standard_md.ingress_port = fabric_md.v1model_standard_md.ingress_port;
+//         }
+// #endif //WITH_LATEST_P4C
 
         if (IS_RECIRCULATED(standard_md)) {
             // After recirculation is performed, override ingress port to match TNA recirc port.
             // This workaround allows to have the same PTF structure, avoid inserting new entries to tables.
-            standard_md.ingress_port = (bit<9>) RECIRC_PORT_NUMBER;
+            standard_md.ingress_port = DROP_OVERRIDE_FAKE_PORT; // emulates TNA recirc port
         }
 
         lkp_md_init.apply(hdr.ingress, fabric_md.ingress.lkp);
@@ -113,12 +113,6 @@ control FabricIngress (inout v1model_header_t hdr,
         // Should always apply last to guarantee generation of drop reports.
         int_ingress.apply(hdr.ingress, fabric_md, standard_md);
 #endif // WITH_INT
-
-        if (fabric_md.drop_ctl == 0 && standard_md.egress_spec == BMV2_DROP_PORT) {
-            // Override mark_to_drop() and avoid the packet to be dropped at end of ingress pipeline.
-            // Needed when dealing with INT drops.
-            standard_md.egress_spec = standard_md.ingress_port;
-        }
 
         // Emulating TNA behavior through bridged metadata.
         fabric_md.egress.bridged = fabric_md.ingress.bridged;

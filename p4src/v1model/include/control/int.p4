@@ -214,6 +214,7 @@ control IntIngress(
         // The drop flag may be set by other tables, need to reset it so the packet can
         // be forward to the recirculation port.
         fabric_v1model.drop_ctl = 0;
+        standard_md.egress_spec = DROP_OVERRIDE_FAKE_PORT; // This port emulates the recirc port in TNA. see
 
         drop_report_counter.count();
     }
@@ -424,7 +425,7 @@ control IntEgressParserEmulator (
         hdr_v1model.ingress.vxlan.setInvalid();
         hdr_v1model.ingress.inner_ethernet.setInvalid();
         hdr_v1model.ingress.inner_eth_type.setInvalid();
-        
+
         hdr_v1model.ingress.gtpu.setInvalid();
         hdr_v1model.ingress.gtpu_options.setInvalid();
         hdr_v1model.ingress.gtpu_ext_psc.setInvalid();
@@ -675,7 +676,7 @@ control IntEgress (
         // This action will be performed when a INT report is recirculated. This is why here
         // we use the canonical header structs (ipv4, udp, etc.) instead of report_ipv4, report_udp, etc.
         hdr_v1model.ingress.ipv4.total_len = fabric_md.pkt_length + adjust_ip;
-        hdr_v1model.ingress.udp.len = fabric_md.pkt_length + adjust_udp - 1;
+        hdr_v1model.ingress.udp.len = fabric_md.pkt_length + adjust_udp;
     }
 
     @hidden

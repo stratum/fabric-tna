@@ -220,7 +220,7 @@ const IntWipType_t INT_IS_WIP_WITH_MPLS = 2;
 // Convert values to negative value since we need to subtract length of INT headers
 // from the packet length.
 #ifdef V1MODEL
-    const bit<16> INT_WIP_ADJUST_IP_BYTES = (ETH_HDR_BYTES) ^ 0xFFFF;
+    const bit<16> INT_WIP_ADJUST_IP_BYTES = (ETH_HDR_BYTES -1) ^ 0xFFFF;
 #else
     const bit<16> INT_WIP_ADJUST_IP_BYTES = (ETH_HDR_BYTES + ETH_FCS_BYTES - 1) ^ 0xFFFF;
 #endif // V1MODEL

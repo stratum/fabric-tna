@@ -201,6 +201,7 @@ PACKET_IN_MIRROR_ID = 0x1FF
 INT_REPORT_MIRROR_IDS = [0x200, 0x201, 0x202, 0x203]
 V1MODEL_INT_REPORT_MIRROR_ID = 0x1FA
 RECIRCULATE_PORTS = [68, 196, 324, 452]
+RECIRCULATE_PORT_BMV2 = [510]
 SWITCH_ID = 1
 INT_REPORT_PORT = 32766
 NPROTO_ETHERNET = 0
@@ -1123,21 +1124,38 @@ class FabricTest(P4RuntimeTest):
     def set_up_recirc_ports(self):
         # All recirculation ports are configured as untagged with DEFAULT_VLAN
         # as the internal one.
-        for port in RECIRCULATE_PORTS:
-            self.set_ingress_port_vlan(
-                ingress_port=port,
-                vlan_valid=False,
-                vlan_id=0,
-                internal_vlan_id=DEFAULT_VLAN,
-                port_type=PORT_TYPE_INTERNAL,
-            )
-            self.set_egress_vlan(port, DEFAULT_VLAN, push_vlan=False)
-            self.set_forwarding_type(
-                port, ethertype=ETH_TYPE_IPV4, fwd_type=FORWARDING_TYPE_UNICAST_IPV4,
-            )
-            self.set_forwarding_type(
-                port, ethertype=ETH_TYPE_MPLS_UNICAST, fwd_type=FORWARDING_TYPE_MPLS,
-            )
+        if is_tna():
+            for port in RECIRCULATE_PORTS:
+                self.set_ingress_port_vlan(
+                    ingress_port=port,
+                    vlan_valid=False,
+                    vlan_id=0,
+                    internal_vlan_id=DEFAULT_VLAN,
+                    port_type=PORT_TYPE_INTERNAL,
+                )
+                self.set_egress_vlan(port, DEFAULT_VLAN, push_vlan=False)
+                self.set_forwarding_type(
+                    port, ethertype=ETH_TYPE_IPV4, fwd_type=FORWARDING_TYPE_UNICAST_IPV4,
+                )
+                self.set_forwarding_type(
+                    port, ethertype=ETH_TYPE_MPLS_UNICAST, fwd_type=FORWARDING_TYPE_MPLS,
+                )
+        if is_v1model():
+            for port in RECIRCULATE_PORT_BMV2:
+                self.set_ingress_port_vlan(
+                    ingress_port=port,
+                    vlan_valid=False,
+                    vlan_id=0,
+                    internal_vlan_id=DEFAULT_VLAN,
+                    port_type=PORT_TYPE_INTERNAL,
+                )
+                self.set_egress_vlan(port, DEFAULT_VLAN, push_vlan=False)
+                self.set_forwarding_type(
+                    port, ethertype=ETH_TYPE_IPV4, fwd_type=FORWARDING_TYPE_UNICAST_IPV4,
+                )
+                self.set_forwarding_type(
+                    port, ethertype=ETH_TYPE_MPLS_UNICAST, fwd_type=FORWARDING_TYPE_MPLS,
+                )
 
     def add_bridging_entry(
         self,
@@ -3485,9 +3503,8 @@ class IntTest(IPv4UnicastTest):
                     i, INT_REPORT_MIRROR_IDS[i], RECIRCULATE_PORTS[i]
                 )
         if is_v1model():
-            self.add_clone_group(V1MODEL_INT_REPORT_MIRROR_ID, [self.port3], store=False)
-        # setting recirc ports for v1model too allows to maintain the same test structure.
-        # in v1model, when recirculating the packet, the ingress_port will be overriden to one of the recirc_ports of TNA.
+            # self.add_clone_group(V1MODEL_INT_REPORT_MIRROR_ID, [self.port3], store=False)
+            print ("DEBUG")
         self.set_up_recirc_ports()
         self.set_up_report_table_entries(
             self.port3, is_device_spine, send_report_to_spine

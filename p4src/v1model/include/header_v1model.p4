@@ -37,9 +37,8 @@ struct fabric_v1model_metadata_t {
     bool                      do_spgw_uplink_recirc;
     @field_list(PRESERVE_FABRIC_MD, PRESERVE_FABRIC_MD_AND_STANDARD_MD)
     bit<1>                    drop_ctl;
-    // Mirror flag for INT
     @field_list(PRESERVE_FABRIC_MD, PRESERVE_FABRIC_MD_AND_STANDARD_MD)
-    bit<3>                    int_mirror_type; //FIXME unused. Verify
+    bit<3>                    int_mirror_type;
     @field_list(PRESERVE_FABRIC_MD, PRESERVE_FABRIC_MD_AND_STANDARD_MD)
     bool                      do_int_mirroring;
 
