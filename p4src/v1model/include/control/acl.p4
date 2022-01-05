@@ -8,7 +8,6 @@
 #include "v1model/include/header_v1model.p4"
 
 control Acl (inout ingress_headers_t hdr,
-            //  inout fabric_ingress_metadata_t fabric_md,
              inout fabric_v1model_metadata_t fabric_v1model,
              inout standard_metadata_t standard_md) {
 
@@ -69,6 +68,7 @@ control Acl (inout ingress_headers_t hdr,
         standard_md.egress_spec = port_num;
         fabric_md.egress_port_set = true;
         fabric_md.skip_next = true;
+        fabric_v1model.drop_ctl = 0;
         acl_counter.count();
     }
 
