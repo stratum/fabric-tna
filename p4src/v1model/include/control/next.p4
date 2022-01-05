@@ -10,11 +10,9 @@ control Next (inout ingress_headers_t hdr,
               inout fabric_v1model_metadata_t fabric_v1model,
               inout standard_metadata_t standard_md) {
 
-    /*
-     * General actions.
-     */
      fabric_ingress_metadata_t fabric_md = fabric_v1model.ingress;
 
+    /** General actions. */
     @hidden
     action output(PortId_t port_num) {
         standard_md.egress_spec = port_num;
@@ -192,7 +190,6 @@ control Next (inout ingress_headers_t hdr,
 }
 
 control EgressNextControl (inout ingress_headers_t hdr,
-                        //    inout fabric_egress_metadata_t fabric_md,
                            inout fabric_v1model_metadata_t fabric_v1model,
                            inout standard_metadata_t standard_md
                            ) {

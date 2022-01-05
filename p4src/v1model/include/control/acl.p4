@@ -24,7 +24,7 @@ control Acl (inout ingress_headers_t hdr,
         // FIXME: We have to rewrite other fields to perform correct override action
         // e.g. forwarding type == "ROUTING" while we want to override the action to "BRIDGE" in NEXT table
         fabric_md.skip_next = false;
-        // TODO: drop_ctl should set to 0 here when drop_ctl is supported
+        fabric_v1model.drop_ctl = 0;
     }
 
     action copy_to_cpu() {

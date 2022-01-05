@@ -3485,10 +3485,11 @@ class IntTest(IPv4UnicastTest):
                 self.set_up_report_mirror_flow(
                     i, INT_REPORT_MIRROR_IDS[i], RECIRCULATE_PORTS[i]
                 )
-            self.set_up_recirc_ports()
         if is_v1model():
             self.add_clone_group(V1MODEL_INT_REPORT_MIRROR_ID, [self.port3], store=False)
-
+        # setting recirc ports for v1model too allows to maintain the same test structure.
+        # in v1model, when recirculating the packet, the ingress_port will be overriden to one of the recirc_ports of TNA.
+        self.set_up_recirc_ports()
         self.set_up_report_table_entries(
             self.port3, is_device_spine, send_report_to_spine
         )

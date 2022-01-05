@@ -76,10 +76,10 @@ control FabricIngress (inout v1model_header_t hdr,
         }
 #endif //WITH_LATEST_P4C
 
-        if (standard_md.instance_type != 0) {
-            // DEBUG. REMOVE
-            // restore preserved metadata
-            standard_md.ingress_port = fabric_md.v1model_standard_md.ingress_port;
+        if (IS_RECIRCULATED(standard_md)) {
+            // After recirculation is performed, override ingress port to match TNA recirc port.
+            // This workaround allows to have the same PTF structure, avoid inserting new entries to tables.
+            standard_md.ingress_port = (bit<9>) RECIRC_PORT_NUMBER;
         }
 
         lkp_md_init.apply(hdr.ingress, fabric_md.ingress.lkp);
@@ -117,20 +117,8 @@ control FabricIngress (inout v1model_header_t hdr,
         if (fabric_md.drop_ctl == 0 && standard_md.egress_spec == BMV2_DROP_PORT) {
             // Override mark_to_drop() and avoid the packet to be dropped at end of ingress pipeline.
             // Needed when dealing with INT drops.
-            // This will also inevitably override the egress_spec set by 'next' control,
-            // leading to a miss and a subsequent drop by egress.next control.
-            // This case is handled by the test, inserting a new rule matching on this fake_port, in 'egress.next' control.
-            // No other way to avoid this.
-            // standard_md.egress_spec = DROP_OVERRIDE_FAKE_PORT;
-            // standard_md.egress_spec = 2;
             standard_md.egress_spec = standard_md.ingress_port;
         }
-#ifdef WITH_INT
-        // Remove all of this. Used to debug PTF.
-        if IS_RECIRCULATED(standard_md) {
-            standard_md.egress_spec = 2; //hard code egress port because recirculated packet cannot rely on preserve metadata.
-        }
-#endif // WITH_INT
 
         // Emulating TNA behavior through bridged metadata.
         fabric_md.egress.bridged = fabric_md.ingress.bridged;
@@ -170,6 +158,7 @@ control FabricEgress (inout v1model_header_t hdr,
         }
 
         // if (IS_E2E_CLONE(standard_md)) {
+               // NOT IMPLEMENTED.
         //     // Mirrored packet that will be transformed in report. needed for EgressDropReport.
         //     parser_emulator.apply(hdr, fabric_md, standard_md);
         //     recirculate(standard_md);
@@ -201,10 +190,11 @@ control FabricEgress (inout v1model_header_t hdr,
 #endif // WITH_LATEST_P4C
         }
 
-        // if (fabric_md.drop_ctl == 1) {
-            //FIXME INT recirculated report will be dropped here. Find a new condition to override this drop_ctl.
-            // mark_to_drop(standard_md);
-        // }
+        if (fabric_md.drop_ctl == 1) {
+            // NOTE: for INT, if ingress_port is not overriden in Ingress to match one of the recirc_ports,
+            // the report will miss egress.next leading to a drop here.
+            mark_to_drop(standard_md);
+        }
     } // end of apply{}
 }
 
