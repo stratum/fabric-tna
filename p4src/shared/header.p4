@@ -354,6 +354,12 @@ struct common_mirror_metadata_t {
 }
 
 // Ingress pipeline-only metadata
+//FIXME: workaround, without putting is_term_hit on a separate PHV container,
+//  it ends up in dirtying the INT report_type in the egress parser, even if the
+//  two values don't share the PHV. This is because it shares the PHV with the
+//  bridged INT report_type, that share the PHV with the INT report_type in the
+//  egress pipeline.
+@pa_solitary("ingress", "fabric_md.is_term_hit")
 @pa_auto_init_metadata
 struct fabric_ingress_metadata_t {
     bridged_metadata_t       bridged;
@@ -372,6 +378,7 @@ struct fabric_ingress_metadata_t {
     tc_t                     tc;
     bool                     tc_unknown;
     bool                     is_spgw_hit;
+    bool                     is_term_hit;
     slice_id_t               spgw_slice_id;
     tc_t                     spgw_tc;
     PortType_t               ig_port_type;

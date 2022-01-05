@@ -19,7 +19,6 @@ control SpgwIngress(
 
     Counter<bit<64>, bit<16>>(MAX_UPF_COUNTERS, CounterType_t.PACKETS_AND_BYTES) terminations_counter;
 
-    bool upf_termination_hit = false;
     ue_session_id_t ue_session_id = 0;
 
     @hidden
@@ -32,7 +31,7 @@ control SpgwIngress(
     @hidden
     action _term_hit(upf_ctr_id_t ctr_id) {
         fabric_md.bridged.spgw.upf_ctr_id = ctr_id;
-        upf_termination_hit = true;
+        fabric_md.is_term_hit = true;
     }
 
     @hidden
@@ -380,7 +379,7 @@ control SpgwIngress(
                 }
             }
             ig_tunnel_peers.apply();
-            if (upf_termination_hit) {
+            if (fabric_md.is_term_hit) {
                 // NOTE We should not update this counter for packets coming
                 // **from** dbuf (iface_dbuf), since we already updated it when
                 // first sending the same packets **to** dbuf (iface_core).
