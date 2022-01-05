@@ -29,6 +29,7 @@
 #endif // WITH_SPGW
 #ifdef WITH_INT
 #include "v1model/include/control/int.p4"
+#include "v1model/include/control/int_tna_parser_emulator.p4"
 #endif // WITH_INT
 
 control FabricIngress (inout v1model_header_t hdr,
