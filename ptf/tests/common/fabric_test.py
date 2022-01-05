@@ -228,10 +228,15 @@ INT_DROP_REASON_TRAFFIC_MANAGER = 71
 INT_DROP_REASON_ACL_DENY = 80
 INT_DROP_REASON_ROUTING_V4_MISS = 29
 INT_DROP_REASON_EGRESS_NEXT_MISS = 130
-INT_DROP_REASON_DOWNLINK_UE_SESSION_MISS = 132
-INT_DROP_REASON_UPLINK_UE_SESSION_MISS = 133
-INT_DROP_REASON_DOWNLINK_TERMINATION_MISS = 134
-INT_DROP_REASON_UPLINK_TERMINATION_MISS = 135
+INT_DROP_REASON_UPF_DL_SESSION_MISS = 132
+INT_DROP_REASON_UPF_DL_SESSION_DROP = 133
+INT_DROP_REASON_UPF_UL_SESSION_MISS = 134
+INT_DROP_REASON_UPF_UL_SESSION_DROP = 135
+INT_DROP_REASON_UPF_UL_SESSION_DROP_BUFF = 136
+INT_DROP_REASON_UPF_DL_TERMINATION_MISS = 137
+INT_DROP_REASON_UPF_DL_TERMINATION_DROP = 138
+INT_DROP_REASON_UPF_UL_TERMINATION_MISS = 139
+INT_DROP_REASON_UPF_UL_TERMINATION_DROP = 140
 INT_DEFAULT_QUEUE_REPORT_QUOTA = 1024
 INT_MIRROR_TRUNCATE_MAX_LEN = 128
 INT_MIRROR_BYTES = 27  # TODO: autogenerate it
@@ -726,13 +731,15 @@ def get_test_args(
     elif int_test_type == "eg_drop":
         if spgw_dir == "DL":
             drop_reason_list = [
-                INT_DROP_REASON_DOWNLINK_UE_SESSION_MISS,
-                INT_DROP_REASON_DOWNLINK_TERMINATION_MISS,
+                INT_DROP_REASON_UPF_DL_TERMINATION_MISS,
+                INT_DROP_REASON_UPF_DL_TERMINATION_DROP,
+                INT_DROP_REASON_UPF_DL_SESSION_MISS,
             ]
         elif spgw_dir == "UL":
             drop_reason_list = [
-                INT_DROP_REASON_UPLINK_UE_SESSION_MISS,
-                INT_DROP_REASON_UPLINK_TERMINATION_MISS,
+                INT_DROP_REASON_UPF_UL_TERMINATION_DROP,
+                INT_DROP_REASON_UPF_UL_TERMINATION_MISS,
+                INT_DROP_REASON_UPF_UL_SESSION_MISS,
             ]
         else:
             drop_reason_list = [INT_DROP_REASON_EGRESS_NEXT_MISS]
@@ -2469,8 +2476,12 @@ class SpgwSimpleTest(IPv4UnicastTest):
         )
         self.write_request(req)
 
-    def setup_uplink_ue_session(self, tunnel_dst_addr, teid):
+    def setup_uplink_ue_session(self, tunnel_dst_addr, teid, drop=False):
         req = self.get_new_write_request()
+        if not drop:
+            action_name = "FabricIngress.spgw.set_uplink_session"
+        else:
+            action_name = "FabricIngress.spgw.set_uplink_session_drop"
         self.push_update_add_entry_to_action(
             req,
             "FabricIngress.spgw.uplink_sessions",
@@ -2478,21 +2489,24 @@ class SpgwSimpleTest(IPv4UnicastTest):
                 self.Exact("teid", stringify(teid, 4)),
                 self.Exact("tunnel_ipv4_dst", ipv4_to_binary(tunnel_dst_addr)),
             ],
-            "FabricIngress.spgw.set_uplink_session",
+            action_name,
             [],
         )
         self.write_request(req)
 
-    def setup_uplink_termination(self, ue_session, ctr_id, tc=DEFAULT_TC):
+    def setup_uplink_termination(self, ue_session, ctr_id, tc=DEFAULT_TC, drop=False):
         req = self.get_new_write_request()
         action_params = [
             ("ctr_id", stringify(ctr_id, 2)),
         ]
-        if tc is not None:
-            action_name = "FabricIngress.spgw.app_fwd"
-            action_params.append(("tc", stringify(tc, 1)))
+        if not drop:
+            if tc is not None:
+                action_name = "FabricIngress.spgw.app_fwd"
+                action_params.append(("tc", stringify(tc, 1)))
+            else:
+                action_name = "FabricIngress.spgw.app_fwd_no_tc"
         else:
-            action_name = "FabricIngress.spgw.app_fwd_no_tc"
+            action_name = "FabricIngress.spgw.uplink_drop"
         self.push_update_add_entry_to_action(
             req,
             "FabricIngress.spgw.uplink_terminations",
@@ -2504,17 +2518,22 @@ class SpgwSimpleTest(IPv4UnicastTest):
         )
         self.write_request(req)
 
-    def setup_downlink_ue_session(self, ue_addr, tunnel_peer_id):
+    def setup_downlink_ue_session(self, ue_addr, tunnel_peer_id, drop=False):
         req = self.get_new_write_request()
-
+        if not drop:
+            action_name = "FabricIngress.spgw.set_downlink_session"
+            action_params = [
+                ("tun_peer_id", stringify(tunnel_peer_id, 1)),
+            ]
+        else:
+            action_name = "FabricIngress.spgw.set_downlink_session_drop"
+            action_params = []
         self.push_update_add_entry_to_action(
             req,
             "FabricIngress.spgw.downlink_sessions",
             [self.Exact("ue_addr", ipv4_to_binary(ue_addr))],
-            "FabricIngress.spgw.set_downlink_session",
-            [
-                ("tun_peer_id", stringify(tunnel_peer_id, 1)),
-            ],
+            action_name,
+            action_params,
         )
         self.write_request(req)
 
@@ -2543,18 +2562,25 @@ class SpgwSimpleTest(IPv4UnicastTest):
 
     def setup_downlink_termination_tunnel(self, ue_session, ctr_id, teid,
                                           tc=DEFAULT_TC,
-                                          qfi=DEFAULT_QFI):
+                                          qfi=DEFAULT_QFI,
+                                          drop=False):
         req = self.get_new_write_request()
         action_params = [
-            ("ctr_id", stringify(ctr_id, 2)),
-            ("qfi", stringify(qfi, 1)),
-            ("teid", stringify(teid, 4)),
+            ("ctr_id", stringify(ctr_id, 2))
         ]
-        if tc is not None:
-            action_name = "FabricIngress.spgw.downlink_fwd_encap"
-            action_params.append(("tc", stringify(tc, 1)))
+        if not drop:
+            action_params = [
+                ("ctr_id", stringify(ctr_id, 2))
+            ]
+            action_params.append(("qfi", stringify(qfi, 1)))
+            action_params.append(("teid", stringify(teid, 4)))
+            if tc is not None:
+                action_name = "FabricIngress.spgw.downlink_fwd_encap"
+                action_params.append(("tc", stringify(tc, 1)))
+            else:
+                action_name = "FabricIngress.spgw.downlink_fwd_encap_no_tc"
         else:
-            action_name = "FabricIngress.spgw.downlink_fwd_encap_no_tc"
+            action_name = "FabricIngress.spgw.downlink_drop"
         self.push_update_add_entry_to_action(
             req,
             "FabricIngress.spgw.downlink_terminations",
@@ -4236,12 +4262,18 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine)
 
         self.add_s1u_iface(S1U_SGW_IPV4)
-        if drop_reason == INT_DROP_REASON_UPLINK_UE_SESSION_MISS:
+        if drop_reason == INT_DROP_REASON_UPF_UL_SESSION_MISS:
             # Install nothing to sessions nor flows table
             pass
-        elif drop_reason == INT_DROP_REASON_UPLINK_TERMINATION_MISS:
+        elif drop_reason == INT_DROP_REASON_UPF_UL_TERMINATION_MISS:
             self.setup_uplink_ue_session(tunnel_dst_addr=S1U_SGW_IPV4,
                                          teid=UPLINK_TEID)
+        elif drop_reason == INT_DROP_REASON_UPF_UL_TERMINATION_DROP:
+            self.setup_uplink_ue_session(tunnel_dst_addr=S1U_SGW_IPV4,
+                                         teid=UPLINK_TEID)
+            self.setup_uplink_termination(ue_session=pkt[IP].src,
+                                          ctr_id=UPLINK_UPF_CTR_IDX,
+                                          drop=True)
 
         # TODO: Use MPLS test instead of IPv4 test if device is spine.
         # TODO: In these tests, there is only one egress port although the
@@ -4318,12 +4350,26 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
 
         # Add the UE pool interface
         self.add_ue_pool(pkt[IP].dst)
-        if drop_reason == INT_DROP_REASON_DOWNLINK_UE_SESSION_MISS:
+        if drop_reason == INT_DROP_REASON_UPF_DL_SESSION_MISS:
             # Install nothing to sessions nor flows table
             pass
-        elif drop_reason == INT_DROP_REASON_DOWNLINK_TERMINATION_MISS:
+        elif drop_reason == INT_DROP_REASON_UPF_DL_TERMINATION_MISS:
             self.setup_downlink_ue_session(ue_addr=pkt[IP].dst,
                                            tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID)
+        elif drop_reason == INT_DROP_REASON_UPF_DL_SESSION_DROP:
+            self.setup_downlink_ue_session(ue_addr=pkt[IP].dst,
+                                           tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID,
+                                           drop=True)
+            self.setup_downlink_termination_tunnel(ue_session=pkt[IP].dst,
+                                                   ctr_id=DOWNLINK_UPF_CTR_IDX,
+                                                   teid=DOWNLINK_TEID)
+        elif drop_reason == INT_DROP_REASON_UPF_DL_TERMINATION_DROP:
+            self.setup_downlink_ue_session(ue_addr=pkt[IP].dst,
+                                           tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID)
+            self.setup_downlink_termination_tunnel(ue_session=pkt[IP].dst,
+                                                   ctr_id=DOWNLINK_UPF_CTR_IDX,
+                                                   teid=DOWNLINK_TEID,
+                                                   drop=True)
 
         # TODO: Use MPLS test instead of IPv4 test if device is spine.
         # TODO: In these tests, there is only one egress port although the
