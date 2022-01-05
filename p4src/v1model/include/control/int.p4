@@ -409,48 +409,40 @@ control IntEgressParserEmulator (
         set_common_int_headers();
     }
 
-    @hidden
-    action strip_unused_headers_for_report() {
-
-        hdr_v1model.ingress.vlan_tag.setInvalid();
-#if defined(WITH_XCONNECT) || defined(WITH_DOUBLE_VLAN_TERMINATION)
-        hdr_v1model.ingress.inner_vlan.setInvalid();
-#endif // WITH_XCONNECT || WITH_DOUBLE_VLAN_TERMINATION
-
-        hdr_v1model.ingress.ipv4.setInvalid();
-        hdr_v1model.ingress.tcp.setInvalid();
-        hdr_v1model.ingress.udp.setInvalid();
-        hdr_v1model.ingress.icmp.setInvalid();
-
-        hdr_v1model.ingress.vxlan.setInvalid();
-        hdr_v1model.ingress.inner_ethernet.setInvalid();
-        hdr_v1model.ingress.inner_eth_type.setInvalid();
-
-        hdr_v1model.ingress.gtpu.setInvalid();
-        hdr_v1model.ingress.gtpu_options.setInvalid();
-        hdr_v1model.ingress.gtpu_ext_psc.setInvalid();
-    }
-
     apply {
         /* Deparser logic */
-        // This section is needed to address various header deparsing combinations that
-        // do not appear in TNA because of different deparsers between Ingress and Egress pipelines.
+        // This section is needed to address various header deparsing combinations, when generating the INT report,
+        // all unused headers will be stripped.
 
-        if (!hdr_v1model.ingress.inner_ipv4.isValid()
-            && hdr_v1model.ingress.ipv4.isValid()) {
-                hdr_v1model.ingress.inner_ipv4 = hdr_v1model.ingress.ipv4;
-        }
+        //FIXME TTL of original packet is still decremented. Doesn't happen when running for TNA. investigate.
+        hdr_v1model.ingress.ipv4.ttl = hdr_v1model.ingress.ipv4.ttl + 1;
 
-        if (!hdr_v1model.ingress.gtpu.isValid()
-            && hdr_v1model.ingress.udp.isValid()) {
-                hdr_v1model.ingress.inner_udp = hdr_v1model.ingress.udp;
+        if(hdr_v1model.ingress.gtpu.isValid() || hdr_v1model.ingress.vxlan.isValid()) {
+            hdr_v1model.ingress.vlan_tag.setInvalid();
+#if defined(WITH_XCONNECT) || defined(WITH_DOUBLE_VLAN_TERMINATION)
+            hdr_v1model.ingress.inner_vlan.setInvalid();
+#endif // WITH_XCONNECT || WITH_DOUBLE_VLAN_TERMINATION
+
+            hdr_v1model.ingress.ipv4.setInvalid();
+            hdr_v1model.ingress.tcp.setInvalid();
+            hdr_v1model.ingress.udp.setInvalid();
+            hdr_v1model.ingress.icmp.setInvalid();
+
+            hdr_v1model.ingress.vxlan.setInvalid();
+            hdr_v1model.ingress.inner_ethernet.setInvalid();
+            hdr_v1model.ingress.inner_eth_type.setInvalid();
+
+            hdr_v1model.ingress.gtpu.setInvalid();
+            hdr_v1model.ingress.gtpu_options.setInvalid();
+            hdr_v1model.ingress.gtpu_ext_psc.setInvalid();
+
+            // in case of encapsulated traffic, only inner headers are allowed.
         }
 
         /* End of Deparser logic */
 
         parse_int_ingress_drop();
         // parse_int_report_mirror(); // TODO
-        strip_unused_headers_for_report();
 
         // Synch with output struct.
         hdr_v1model.egress = hdr;
