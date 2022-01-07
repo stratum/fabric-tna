@@ -6,7 +6,6 @@
 #include "v1model/include/header_v1model.p4"
 
 control Next (inout ingress_headers_t hdr,
-              //inout fabric_ingress_metadata_t fabric_md,
               inout fabric_v1model_metadata_t fabric_v1model,
               inout standard_metadata_t standard_md) {
 
@@ -311,6 +310,12 @@ control EgressNextControl (inout ingress_headers_t hdr,
 #endif // WITH_DOUBLE_VLAN_TERMINATION
 
         // TTL decrement and check.
+        bool regular_packet = true;
+#ifdef WITH_INT
+        // Decrement TTL/HopLimit only for regular packets that do not have to be reported through INT.
+        regular_packet = !fabric_md.int_report_md.isValid();
+#endif // WITH_INT
+
         if (hdr.mpls.isValid()) {
             hdr.mpls.ttl = hdr.mpls.ttl - 1;
             if (hdr.mpls.ttl == 0) {
@@ -321,7 +326,9 @@ control EgressNextControl (inout ingress_headers_t hdr,
             }
         } else {
             if (hdr.ipv4.isValid() && fabric_md.bridged.base.fwd_type != FWD_BRIDGING) {
-                hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
+                if(regular_packet) {
+                    hdr.ipv4.ttl = hdr.ipv4.ttl - 1;
+                }
                 if (hdr.ipv4.ttl == 0) {
                     fabric_v1model.drop_ctl = 1;
 #ifdef WITH_INT
@@ -329,7 +336,9 @@ control EgressNextControl (inout ingress_headers_t hdr,
 #endif // WITH_INT
                 }
             } else if (hdr.ipv6.isValid() && fabric_md.bridged.base.fwd_type != FWD_BRIDGING) {
-                hdr.ipv6.hop_limit = hdr.ipv6.hop_limit - 1;
+                if(regular_packet) {
+                    hdr.ipv6.hop_limit = hdr.ipv6.hop_limit - 1;
+                }
                 if (hdr.ipv6.hop_limit == 0) {
                     fabric_v1model.drop_ctl = 1;
 #ifdef WITH_INT

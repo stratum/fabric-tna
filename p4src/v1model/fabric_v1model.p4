@@ -63,24 +63,12 @@ control FabricIngress (inout v1model_header_t hdr,
             // packet was rejected by parser -> drop.
             exit;
         }
-// #ifdef WITH_LATEST_P4C
-//         if (standard_md.instance_type == 0 ) {
-//             // Packet was not recirculated or cloned -> save standard_metadata in custom struct to preserve it.
-//             fabric_md.v1model_standard_md.ingress_port = standard_md.ingress_port;
-//             fabric_md.v1model_standard_md.egress_port = standard_md.egress_port;
-//             fabric_md.v1model_standard_md.egress_spec = standard_md.egress_spec;
-//         }
-
-//         if (standard_md.instance_type != 0) {
-//             // restore preserved metadata
-//             standard_md.ingress_port = fabric_md.v1model_standard_md.ingress_port;
-//         }
-// #endif //WITH_LATEST_P4C
 
         if (IS_RECIRCULATED(standard_md)) {
-            // After recirculation is performed, override ingress port to match TNA recirc port.
-            // This workaround allows to have the same PTF structure, avoid inserting new entries to tables.
-            standard_md.ingress_port = DROP_OVERRIDE_FAKE_PORT; // emulates TNA recirc port
+            // After recirculation is performed, override ingress port, emulating TNA recirc port.
+            // This workaround allows to have the same PTF structure.
+            standard_md.ingress_port = DROP_OVERRIDE_FAKE_PORT;
+            fabric_md.ingress.bridged.base.ig_port = DROP_OVERRIDE_FAKE_PORT; // Can't we use this md to match ingress port instead of overriding standard_md.ingress_port?
         }
 
         lkp_md_init.apply(hdr.ingress, fabric_md.ingress.lkp);
@@ -132,7 +120,7 @@ control FabricEgress (inout v1model_header_t hdr,
     SpgwEgress() spgw;
 #endif // WITH_SPGW
 #ifdef WITH_INT
-    IntEgressParserEmulator() parser_emulator;
+    IntTnaEgressParserEmulator() parser_emulator;
     IntEgress() int_egress;
 #endif // WITH_INT
 
@@ -186,8 +174,6 @@ control FabricEgress (inout v1model_header_t hdr,
         }
 
         if (fabric_md.drop_ctl == 1) {
-            // NOTE: for INT, if ingress_port is not overriden in Ingress to match one of the recirc_ports,
-            // the report will miss egress.next leading to a drop here.
             mark_to_drop(standard_md);
         }
     } // end of apply{}

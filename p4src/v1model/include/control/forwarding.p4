@@ -122,10 +122,10 @@ control Forwarding (inout ingress_headers_t hdr,
         actions = {
             set_next_id_routing_v4;
             nop_routing_v4;
+            drop_routing_v4;
 #ifdef WITH_INT
             @defaultonly set_int_drop_reason;
 #else
-            drop_routing_v4;
             @defaultonly nop;
 #endif // WITH_INT
         }
@@ -161,10 +161,10 @@ control Forwarding (inout ingress_headers_t hdr,
         }
         actions = {
             set_next_id_routing_v6;
+            drop_routing_v6;
 #ifdef WITH_INT
             @defaultonly set_int_drop_reason;
 #else
-            drop_routing_v6;
             @defaultonly nop;
 #endif // WITH_INT
         }

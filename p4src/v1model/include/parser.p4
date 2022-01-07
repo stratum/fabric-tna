@@ -13,12 +13,11 @@ parser FabricParser (packet_in packet,
                      inout standard_metadata_t standard_md) {
 
     state start {
-        // pkt_length is set here because in egress pkt_length value
-        // may be different than the one used in egress pipeline due to internal stuff.
+        // pkt_length is set here because in egress pipeline, pkt_length value
+        // may be different than the one in ingress pipeline due to internal operations.
         fabric_md.egress.pkt_length = (bit<16>) standard_md.packet_length;
 
         fabric_md.ingress.bridged.setValid();
-        fabric_md.drop_ctl = 0;
         fabric_md.ingress.bridged.bmd_type = BridgedMdType_t.INGRESS_TO_EGRESS;
         fabric_md.ingress.bridged.base.ig_port = standard_md.ingress_port;
         fabric_md.ingress.bridged.base.ig_tstamp = standard_md.ingress_global_timestamp;

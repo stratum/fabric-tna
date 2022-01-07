@@ -9,7 +9,7 @@
 #ifndef __DEFINE_V1MODEL__
 #define __DEFINE_V1MODEL__
 
-#ifndef WITH_LATEST_P4C //FIXME used to swtich between stable and latest p4c. Remove this ifdef and all the others when decided to use one or the other.
+#ifndef WITH_LATEST_P4C //FIXME used to swtich between stable and latest p4c. Remove this ifdef and all the others when latest feature of p4c does not cause bmv2 to crash.
 // remember to switch latest or stable p4c in .env
 // #define WITH_LATEST_P4C // if this is commented, stable p4c is being used.
 #endif // WITH_LATEST_P4C
@@ -33,15 +33,16 @@ const PortId_t BMV2_DROP_PORT = 511;
 // The DROP_OVERRIDE_FAKE_PORT is used to override the mark_to_drop() primitive.
 // Especially in INT, when dropping a packet we still want the packet to go through the egress pipeline.
 // Calling mark_to_drop() will set the egress_spec = BMV2_DROP_PORT, leading to packet being dropped at the end of ingress pipeline.
+// This port is also used as recirculation port, emulating TNA behavior.
 // This port shouldn't be used for any other reason.
 const PortId_t DROP_OVERRIDE_FAKE_PORT = 510;
 
-// When calling recirculate/clone primitive, this index is used to inform p4c
-// that standard_metadata has to be preserved in v1model_standard_md_t.
+/** Field list values for metadata preservation */
 const FieldListIndex_t PRESERVE_STANDARD_MD = 255;
 const FieldListIndex_t PRESERVE_FABRIC_MD = 251;
 const FieldListIndex_t PRESERVE_FABRIC_MD_AND_STANDARD_MD = 250;
 const FieldListIndex_t NO_PRESERVATION = 0;
+/** emd pf Field list values */
 
 #define IS_RECIRCULATED(std_meta) (std_meta.instance_type == PKT_INSTANCE_TYPE_INGRESS_RECIRC)
 #define IS_E2E_CLONE(std_meta) (std_meta.instance_type == PKT_INSTANCE_TYPE_EGRESS_CLONE)

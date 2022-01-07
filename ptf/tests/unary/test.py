@@ -1904,7 +1904,6 @@ class FabricIntEgressDropReportTest(IntTest):
         )
 
     def runTest(self):
-        count = 0 # DEBUG. remove this.
         print("")
         for traffic_dir in [
             "host-leaf-host",
@@ -1915,10 +1914,7 @@ class FabricIntEgressDropReportTest(IntTest):
             for test_args in get_test_args(
                 traffic_dir=traffic_dir, int_test_type="flow"
             ):
-                count += 1 # DEBUG. Remove this.
                 self.doRunTest(**test_args)
-                if count == 1: # DEBUG. Remove this.
-                    return
 
 
 @group("int")
@@ -2099,6 +2095,7 @@ class FabricDropReportFilterTest(IntTest):
 
 
 @group("int")
+@skipIf(is_v1model(), "Queue report useless for v1model. Only 1 queue present.")
 class FabricIntQueueReportTest(IntTest):
     @tvsetup
     @autocleanup

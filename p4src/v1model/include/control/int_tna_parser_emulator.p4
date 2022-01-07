@@ -8,7 +8,7 @@
 #include "v1model/include/header_v1model.p4"
 
 
-control IntEgressParserEmulator (
+control IntTnaEgressParserEmulator (
     inout v1model_header_t hdr_v1model,
     inout fabric_v1model_metadata_t fabric_v1model,
     inout standard_metadata_t standard_md) {
@@ -32,8 +32,8 @@ control IntEgressParserEmulator (
         // hdr.report_eth_type.value = update later
 
         /** report_mpls (set valid later) **/
-        // For bmv2, The MPLS header is initialized in int.p4/do_local_report_encap_mpls action,
-        // because assignments before using the setValid() have no effect.
+        // in V1model, The MPLS header is initialized in int.p4/*_encap_mpls actions,
+        // because assignments made before using the setValid() have no effect.
         // hdr.report_mpls.label = update later
         // hdr.report_mpls.tc = 0;
         // hdr.report_mpls.bos = 0;
@@ -157,19 +157,13 @@ control IntEgressParserEmulator (
 
     apply {
         /* Deparser logic */
-        // This section is needed to address various header deparsing combinations, when generating the INT report,
-        // all unused headers will be stripped.
+        // This section is needed to address various header deparsing combinations.
+        // When generating the INT report, all unused headers will be stripped.
 
         hdr_v1model.ingress.vlan_tag.setInvalid();
 #if defined(WITH_XCONNECT) || defined(WITH_DOUBLE_VLAN_TERMINATION)
         hdr_v1model.ingress.inner_vlan.setInvalid();
 #endif // WITH_XCONNECT || WITH_DOUBLE_VLAN_TERMINATION
-        hdr_v1model.ingress.mpls.setInvalid();
-
-        //FIXME TTL of original packet is still decremented. Doesn't happen when running for TNA. investigate.
-        if (hdr_v1model.ingress.ipv4.isValid()) {
-            hdr_v1model.ingress.ipv4.ttl = hdr_v1model.ingress.ipv4.ttl + 1;
-        }
 
         if(hdr_v1model.ingress.gtpu.isValid() || hdr_v1model.ingress.vxlan.isValid()) {
             hdr_v1model.ingress.ipv4.setInvalid();
@@ -191,7 +185,9 @@ control IntEgressParserEmulator (
         /* End of Deparser logic */
 
         parse_int_ingress_drop();
-        // parse_int_report_mirror(); // TODO
+        // if (IS_E2E_CLONE(standard_md)) {
+             // parse_int_report_mirror(); //TODO, for egress drop reports.
+        // }
 
         // Synch with output struct.
         hdr_v1model.egress = hdr;

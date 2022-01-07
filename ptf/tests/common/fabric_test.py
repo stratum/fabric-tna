@@ -3502,9 +3502,6 @@ class IntTest(IPv4UnicastTest):
                 self.set_up_report_mirror_flow(
                     i, INT_REPORT_MIRROR_IDS[i], RECIRCULATE_PORTS[i]
                 )
-        if is_v1model():
-            # self.add_clone_group(V1MODEL_INT_REPORT_MIRROR_ID, [self.port3], store=False)
-            print ("DEBUG")
         self.set_up_recirc_ports()
         self.set_up_report_table_entries(
             self.port3, is_device_spine, send_report_to_spine
@@ -3740,7 +3737,8 @@ class IntTest(IPv4UnicastTest):
             install_routing_entry=install_routing_entry,
         )
 
-        time.sleep(0.5)
+        if is_v1model():
+            time.sleep(0.5)
         if expect_int_report:
             self.verify_packet(exp_int_report_pkt_masked, self.port3)
         self.verify_no_other_packets()

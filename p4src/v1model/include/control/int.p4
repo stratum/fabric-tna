@@ -20,7 +20,6 @@ const bit<32> base = 0;
 
 control FlowReportFilter(
     inout egress_headers_t hdr,
-    // inout fabric_egress_metadata_t fabric_md,
     inout fabric_v1model_metadata_t fabric_v1model,
     inout standard_metadata_t standard_md
     ) {
@@ -77,7 +76,6 @@ control FlowReportFilter(
             // Generate report only when ALL register actions detect a change.
             if (flag == 1) {
                 fabric_v1model.int_mirror_type = (bit<3>)FabricMirrorType_t.INVALID;
-                // eg_dprsr_md.mirror_type = (bit<3>)FabricMirrorType_t.INVALID;
             }
             fabric_v1model.egress = fabric_md;
         }
@@ -136,7 +134,6 @@ control DropReportFilter(
 
             // Drop the report if we already report it within a period of time.
             if (flag == 1) {
-                // Directly drop and exit.
                 mark_to_drop(standard_md);
                 exit;
             }
@@ -209,12 +206,12 @@ control IntIngress(
 #ifdef WITH_SPGW
         fabric_md.bridged.spgw.skip_spgw = true;
 #endif // WITH_SPGW
-        // In V1model, we set the recirculation port in the egress pipeline.
+        // In V1model, we use the recirculate primitive, in the egress pipeline.
 
         // The drop flag may be set by other tables, need to reset it so the packet can
-        // be forward to the recirculation port.
+        // be forward to egress pipeline and be recirculated.
         fabric_v1model.drop_ctl = 0;
-        standard_md.egress_spec = DROP_OVERRIDE_FAKE_PORT; // This port emulates the recirc port in TNA. see
+        standard_md.egress_spec = DROP_OVERRIDE_FAKE_PORT;
 
         drop_report_counter.count();
     }
@@ -236,7 +233,7 @@ control IntIngress(
             // Explicit drop. Do not report if we are punting to the CPU, since that is
             // implemented as drop+copy_to_cpu.
             (INT_REPORT_TYPE_FLOW, 1, false, false, _): report_drop();
-            (INT_REPORT_TYPE_FLOW, 1, false, true, _): report_drop(); // ternary on bool not supported by p4c -> enumerating all entries using exact match.
+            (INT_REPORT_TYPE_FLOW, 1, false, true, _): report_drop();
             // Likely a table miss
             (INT_REPORT_TYPE_FLOW, 0, false, false, 0): report_drop();
         }
@@ -245,17 +242,7 @@ control IntIngress(
     }
 
     apply {
-        // Here we use 0b10000000xx as the mirror session ID where "xx" is the 2-bit
-        // pipeline number(0~3).
-        // fabric_md.bridged.int_bmd.mirror_session_id = INT_MIRROR_SESSION_BASE ++ ig_intr_md.ingress_port[8:7];
         // bmv2 specific: mirror_session_id is set in egress pipeline.
-        // BELOW COMMENTS CAN BE DELETED.
-        // // When the traffic manager deflects a packet, the egress port and queue id
-        // // of egress intrinsic metadata will be the port and queue used for deflection.
-        // // We need to bridge the egress port and queue id from ingress to the egress
-        // // parser to initialize the INT drop report.
-        // // fabric_md.bridged.int_bmd.egress_port = ig_tm_md.ucast_egress_port;
-        // // fabric_md.bridged.int_bmd.queue_id = ig_tm_md.qid;
         fabric_md.bridged.int_bmd.egress_port = standard_md.egress_spec;
         fabric_md.bridged.int_bmd.queue_id = 0; //bmv2 has only 1 queue.
         drop_report.apply();
@@ -280,7 +267,11 @@ control IntEgress (
     direct_counter(CounterType.packets_and_bytes) report_counter;
     direct_counter(CounterType.packets_and_bytes) int_metadata_counter;
 
-    QueueId_t egress_qid = 0; // bmv2 specific. Only one queue present.
+    // bmv2 specific. Only one queue present.
+    // It could be set to a random value between 0-31, emulating TNA's 32 queues.
+    // If filter report is not used, leaving egress_qid = 0 single value is enough.
+    QueueId_t egress_qid = 0;
+
     bool check_quota_and_report = false;
     queue_report_filter_index_t quota = 0;
     @hidden
@@ -311,7 +302,7 @@ control IntEgress (
             // In SD-Fabric, we use the same traffic class<>queue ID mapping for all ports.
             // Hence, there's no need to match on the egress port, we can use the same
             // per-queue thresholds for all ports.
-            // eg_intr_md.egress_qid: exact @name("egress_qid");
+            // in V1model, qid is emulated and has no meaning since the Traffic Manager has only 1 Queue.
             egress_qid: exact @name("egress_qid");
             fabric_md.int_md.hop_latency[31:16]: range @name("hop_latency_upper");
             fabric_md.int_md.hop_latency[15:0]: range @name("hop_latency_lower");
@@ -341,7 +332,7 @@ control IntEgress (
     @hidden
     action _report_encap_common(ipv4_addr_t src_ip, ipv4_addr_t mon_ip,
                                 l4_port_t mon_port, bit<32> switch_id) {
-        // Constant fields are initialized in IntEgressParserEmulator control.
+        // Constant fields are initialized in IntTnaEgressParserEmulator control.
         random(hdr.report_ipv4.identification, 0, 0xffff);
 
         hdr.report_ipv4.src_addr = src_ip;
@@ -351,9 +342,6 @@ control IntEgress (
         get_seq_number((bit<32>)hdr.report_fixed_header.hw_id, hdr.report_fixed_header.seq_no);
         hdr.report_fixed_header.dqf = fabric_md.int_report_md.report_type;
         hdr.common_report_header.switch_id = switch_id;
-        // This is required to correct a (buggy?) @flexible allocation of
-        // bridged metadata that causes non-zero values to be extracted by the
-        // egress parser onto the below padding fields.
         hdr.common_report_header.pad1 = 0;
         hdr.common_report_header.pad2 = 0;
         hdr.common_report_header.pad3 = 0;
@@ -398,6 +386,10 @@ control IntEgress (
         do_drop_report_encap(src_ip, mon_ip, mon_port, switch_id);
         hdr.report_eth_type.value = ETHERTYPE_INT_WIP_MPLS;
         hdr.report_mpls.setValid();
+        hdr.report_mpls.tc = 0;
+        hdr.report_mpls.bos = 0;
+        hdr.report_mpls.ttl = DEFAULT_MPLS_TTL;
+        hdr.report_mpls.label = mon_label;
         hdr.report_mpls.label = mon_label;
     }
 
@@ -448,7 +440,7 @@ control IntEgress (
         fabric_md.int_report_md.eg_tstamp = standard_md.egress_global_timestamp[31:0];
         fabric_md.int_report_md.ip_eth_type = fabric_md.bridged.base.ip_eth_type;
         fabric_md.int_report_md.flow_hash = fabric_md.bridged.base.inner_hash;
-        // fabric_md.int_report_md.encap_presence set by the parser
+        // fabric_md.int_report_md.encap_presence set by the parser emulator
 
         fabric_md.int_report_md.report_type = report_type;
         int_metadata_counter.count();
@@ -471,7 +463,7 @@ control IntEgress (
             (INT_REPORT_TYPE_FLOW, 0, false): init_int_metadata(INT_REPORT_TYPE_FLOW);
             // (INT_REPORT_TYPE_FLOW, 0, true): init_int_metadata(INT_REPORT_TYPE_FLOW|INT_REPORT_TYPE_QUEUE); // this should be useless
             (INT_REPORT_TYPE_FLOW, 1, false): init_int_metadata(INT_REPORT_TYPE_DROP);
-            (INT_REPORT_TYPE_FLOW, 1, true): init_int_metadata(INT_REPORT_TYPE_DROP); // (not sure)this should be useless.
+            // (INT_REPORT_TYPE_FLOW, 1, true): init_int_metadata(INT_REPORT_TYPE_DROP); // (not sure) this should be useless.
             // Packets which are not tracked by the watchlist table
             // (INT_REPORT_TYPE_NO_REPORT, 0, true): init_int_metadata(INT_REPORT_TYPE_QUEUE); useless in v1model.
             // (INT_REPORT_TYPE_NO_REPORT, 1, true): init_int_metadata(INT_REPORT_TYPE_QUEUE); useless in v1model.
@@ -486,23 +478,6 @@ control IntEgress (
         // we use the canonical header structs (ipv4, udp, etc.) instead of report_ipv4, report_udp, etc.
         hdr_v1model.ingress.ipv4.total_len = fabric_md.pkt_length + adjust_ip;
         hdr_v1model.ingress.udp.len = fabric_md.pkt_length + adjust_udp;
-    }
-
-    @hidden
-    table debug {
-        key = {
-            fabric_md.pkt_length: exact;
-            hdr.ipv4.isValid()     : exact;
-            hdr.udp.isValid() : exact;
-            hdr.report_ipv4.isValid(): exact;
-            hdr.report_udp.isValid(): exact;
-            hdr.report_ipv4.total_len: exact;
-            hdr.report_udp.len: exact;
-        }
-        actions = {
-            nop();
-        }
-        const default_action = nop();
     }
 
     @hidden
@@ -523,17 +498,20 @@ control IntEgress (
     }
 
     apply {
-        fabric_md.int_md.hop_latency = standard_md.egress_global_timestamp[31:0] - fabric_md.bridged.base.ig_tstamp[31:0];
 
+        // Emulating 32 Queues. Needed for filtering reports.
+        // If flow report filter is not used, the following statement makes no sense and can be removed.
+        random(egress_qid, 0, 0x1f);
+
+        fabric_md.int_md.hop_latency = standard_md.egress_global_timestamp[31:0] - fabric_md.bridged.base.ig_tstamp[31:0];
         fabric_md.int_md.timestamp = standard_md.egress_global_timestamp;
-        // queue_report_filter_index = eg_intr_md.egress_port[6:0] ++ eg_intr_md.egress_qid;
-        queue_report_filter_index = standard_md.egress_spec[6:0] ++ egress_qid; //FIXME in case of bmv2 this is always 0. is it ok?
+        queue_report_filter_index = standard_md.egress_spec[6:0] ++ egress_qid;
 
         // Check the queue alert before the config table since we need to check the
         // latency which is not quantized.
         queue_latency_thresholds.apply();
         // In v1model, we're not allowed to have an apply{} section within an action,
-        // so the conditional that was present in TNA's RegisterAction is now here.
+        // so the logic that was contained in TNA's RegisterAction is now here.
         if (check_quota_and_report) {
             if (quota > 0) {
                 quota = quota - 1;
@@ -550,43 +528,34 @@ control IntEgress (
         // cases with one filter:
         // - drop by ingress tables (ingress mirroring)
         // - drop by egress table (egress mirroring)
-        // - drop by the traffic manager (deflect on drop, TODO)
-        // The penalty we pay for using one filter is that we might congest the
-        // mirroring facilities and recirculation port.
-        // FIXME: should we worry about this, or can we assume that packet drops
-        //  are a rare event? What happens if a 100Gbps flow gets dropped by an
-        //  ingress/egress table (e.g., routing table miss, egress vlan table
-        //  miss, etc.)?
-        // drop_report_filter.apply(hdr, fabric_md, eg_dprsr_md);
-        // drop_report_filter.apply(hdr, fabric_v1model, standard_md); //FIXME you can uncomment this if you want to use drop_report filter.
+        // drop_report_filter.apply(hdr, fabric_v1model, standard_md); // comment this if not interested in using drop_report filter.
 
-        if (fabric_md.int_report_md.isValid()) { //FIXME check if mirrored packet bmv2.
+        if (fabric_md.int_report_md.isValid()) {
             // Packet is mirrored (egress or deflected) or an ingress drop.
             report.apply();
         } else {
             // Regular packet. Initialize INT mirror metadata but let
             // filter decide whether to generate a mirror or not.
             if (int_metadata.apply().hit) {
-                // flow_report_filter.apply(hdr, fabric_md, eg_intr_md, eg_prsr_md, eg_dprsr_md);
-
                 // Mirroring the packet. It could work only if clone preserves the metadata structs.
                 // The mirrored packet will then generate the report.
+
+                flow_report_filter.apply(hdr, fabric_v1model, standard_md); // comment this if not interested in filtering.
+
 #ifdef WITH_LATEST_P4C
                 clone_preserving_field_list(CloneType.E2E,
                     (bit<32>)fabric_md.bridged.int_bmd.mirror_session_id,
-                    PRESERVE_FABRIC_MD_AND_STANDARD_MD);
+                    PRESERVE_FABRIC_MD_AND_STANDARD_MD); // TODO, recover standard_md from custom metadata struct.
 #else
                 clone3(CloneType.E2E,
                     (bit<32>)fabric_md.bridged.int_bmd.mirror_session_id,
                     {standard_md, fabric_md});
 #endif // WITH_LATEST_P4C
 
-                // flow_report_filter.apply(hdr, fabric_v1model, standard_md); not interested in filtering.
             }
         }
 
         adjust_int_report_hdr_length.apply();
-        debug.apply();
 
         fabric_v1model.egress = fabric_md;
         hdr_v1model.egress = hdr;

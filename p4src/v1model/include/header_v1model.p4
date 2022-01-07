@@ -12,7 +12,8 @@
 #include "shared/header.p4"
 
 struct v1model_standard_md_t {
-    // This struct is needed to preserve standard_metadata when recirculating/cloning the packet.
+    // This struct is needed to preserve standard_metadata when recirculating/cloning the packet,
+    // Using the latest feature from p4c.
 
     PortId_t    ingress_port;
     PortId_t    egress_spec;
