@@ -67,7 +67,7 @@ control FabricIngress (inout v1model_header_t hdr,
         if (IS_RECIRCULATED(standard_md)) {
             // After recirculation is performed, override ingress port, emulating TNA recirc port.
             // This workaround allows to have the same PTF structure.
-            standard_md.ingress_port = FAKE_PORT;
+            // standard_md.ingress_port = FAKE_PORT;
             fabric_md.ingress.bridged.base.ig_port = FAKE_PORT;
         }
 
