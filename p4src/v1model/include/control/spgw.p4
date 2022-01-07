@@ -253,8 +253,9 @@ control SpgwIngress(
         // We set the egress_spec to the ingress_port so that we can match on the egress_vlan without dropping.
         // Also, setting the egress_spec as the ingress_port lets the recirculated packet in the pipeline, by
         // matching the ingress_port_vlan.
-        standard_md.egress_spec = standard_md.ingress_port;
-        // Do not overwrite the vlan_id; linked to the issue mentioned above.
+        // standard_md.egress_spec = standard_md.ingress_port;
+        standard_md.egress_spec = DROP_OVERRIDE_FAKE_PORT;
+        fabric_md.bridged.base.vlan_id = DEFAULT_VLAN_ID;
         fabric_v1model.do_spgw_uplink_recirc = true;
         fabric_md.egress_port_set = true;
         fabric_md.skip_forwarding = true;

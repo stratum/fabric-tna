@@ -1763,6 +1763,7 @@ class FabricSpgwIntDownlinkDropTest(SpgwIntTest):
 
 
 @group("int")
+@skipIf(is_v1model(), "Flow report not implemented for v1model.")
 class FabricIntFlowReportTest(IntTest):
     @tvsetup
     @autocleanup
@@ -1866,6 +1867,7 @@ class FabricIntIngressDropReportTest(IntTest):
 
 
 @group("int")
+@skipIf(is_v1model(), "Egress drop reports not yet implemented for v1model.")
 class FabricIntEgressDropReportTest(IntTest):
     @tvsetup
     @autocleanup
@@ -1890,6 +1892,11 @@ class FabricIntEgressDropReportTest(IntTest):
         pkt = getattr(testutils, "simple_{}_packet".format(pkt_type))(
             ip_dst=self.get_single_use_ip()
         )
+
+        if is_v1model():
+            # Perform mirroring of original packet to build the INT report.
+            self.add_clone_group(V1MODEL_INT_REPORT_MIRROR_ID, [self.port3], store=False)
+
         self.runEgressIntDropTest(
             pkt=pkt,
             tagged1=tagged1,
@@ -1918,6 +1925,7 @@ class FabricIntEgressDropReportTest(IntTest):
 
 
 @group("int")
+@skipIf(is_v1model(), "Flow report filter not implemented for v1model.")
 class FabricFlowReportFilterNoChangeTest(IntTest):
     @tvsetup
     @autocleanup
@@ -1974,6 +1982,7 @@ class FabricFlowReportFilterNoChangeTest(IntTest):
 
 
 @group("int")
+@skipIf(is_v1model(), "Flow report filter not implemented for v1model.")
 class FabricFlowReportFilterChangeTest(IntTest):
     @tvsetup
     @autocleanup
@@ -2038,6 +2047,7 @@ class FabricFlowReportFilterChangeTest(IntTest):
 
 
 @group("int")
+@skipIf(is_v1model(), "Drop report filter not implemented for v1model.")
 class FabricDropReportFilterTest(IntTest):
     @tvsetup
     @autocleanup
@@ -2095,7 +2105,7 @@ class FabricDropReportFilterTest(IntTest):
 
 
 @group("int")
-@skipIf(is_v1model(), "Queue report useless for v1model. Only 1 queue present.")
+@skipIf(is_v1model(), "Queue report not implemented for v1model.")
 class FabricIntQueueReportTest(IntTest):
     @tvsetup
     @autocleanup
@@ -2158,6 +2168,7 @@ class FabricIntQueueReportTest(IntTest):
 
 
 @group("int")
+@skipIf(is_v1model(), "Queue reports not implemented for v1model.")
 # Skip HW PTF test
 # We cannot varify value from the register which not belong to pipe 0 since the current
 # P4Runtime and Stratum only allows us to read register from pipe 0.
