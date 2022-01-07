@@ -1134,38 +1134,22 @@ class FabricTest(P4RuntimeTest):
     def set_up_recirc_ports(self):
         # All recirculation ports are configured as untagged with DEFAULT_VLAN
         # as the internal one.
-        if is_tna():
-            for port in RECIRCULATE_PORTS:
-                self.set_ingress_port_vlan(
-                    ingress_port=port,
-                    vlan_valid=False,
-                    vlan_id=0,
-                    internal_vlan_id=DEFAULT_VLAN,
-                    port_type=PORT_TYPE_INTERNAL,
-                )
-                self.set_egress_vlan(port, DEFAULT_VLAN, push_vlan=False)
-                self.set_forwarding_type(
-                    port, ethertype=ETH_TYPE_IPV4, fwd_type=FORWARDING_TYPE_UNICAST_IPV4,
-                )
-                self.set_forwarding_type(
-                    port, ethertype=ETH_TYPE_MPLS_UNICAST, fwd_type=FORWARDING_TYPE_MPLS,
-                )
-        if is_v1model():
-            for port in RECIRCULATE_PORT_BMV2:
-                self.set_ingress_port_vlan(
-                    ingress_port=port,
-                    vlan_valid=False,
-                    vlan_id=0,
-                    internal_vlan_id=DEFAULT_VLAN,
-                    port_type=PORT_TYPE_INTERNAL,
-                )
-                self.set_egress_vlan(port, DEFAULT_VLAN, push_vlan=False)
-                self.set_forwarding_type(
-                    port, ethertype=ETH_TYPE_IPV4, fwd_type=FORWARDING_TYPE_UNICAST_IPV4,
-                )
-                self.set_forwarding_type(
-                    port, ethertype=ETH_TYPE_MPLS_UNICAST, fwd_type=FORWARDING_TYPE_MPLS,
-                )
+        ports = RECIRCULATE_PORTS if is_tna() else RECIRCULATE_PORT_BMV2
+        for port in ports:
+            self.set_ingress_port_vlan(
+                ingress_port=port,
+                vlan_valid=False,
+                vlan_id=0,
+                internal_vlan_id=DEFAULT_VLAN,
+                port_type=PORT_TYPE_INTERNAL,
+            )
+            self.set_egress_vlan(port, DEFAULT_VLAN, push_vlan=False)
+            self.set_forwarding_type(
+                port, ethertype=ETH_TYPE_IPV4, fwd_type=FORWARDING_TYPE_UNICAST_IPV4,
+            )
+            self.set_forwarding_type(
+                port, ethertype=ETH_TYPE_MPLS_UNICAST, fwd_type=FORWARDING_TYPE_MPLS,
+            )
 
     def add_bridging_entry(
         self,
@@ -3809,8 +3793,6 @@ class IntTest(IPv4UnicastTest):
             install_routing_entry=install_routing_entry,
         )
 
-        # if is_v1model():
-        #     time.sleep(0.5)
         if expect_int_report:
             self.verify_packet(exp_int_report_pkt_masked, self.port3)
         self.verify_no_other_packets()

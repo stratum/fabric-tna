@@ -42,7 +42,7 @@ const FieldListIndex_t PRESERVE_STANDARD_MD = 255;
 const FieldListIndex_t PRESERVE_FABRIC_MD = 251;
 const FieldListIndex_t PRESERVE_FABRIC_MD_AND_STANDARD_MD = 250;
 const FieldListIndex_t NO_PRESERVATION = 0;
-/** emd pf Field list values */
+/** end of Field list values */
 
 #define IS_RECIRCULATED(std_meta) (std_meta.instance_type == PKT_INSTANCE_TYPE_INGRESS_RECIRC)
 #define IS_E2E_CLONE(std_meta) (std_meta.instance_type == PKT_INSTANCE_TYPE_EGRESS_CLONE)
