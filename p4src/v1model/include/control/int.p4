@@ -129,7 +129,7 @@ control IntEgress (
     egress_headers_t hdr = hdr_v1model.egress;
     fabric_egress_metadata_t fabric_md = fabric_v1model.egress;
 
-    FlowReportFilter() flow_report_filter; // Unused. Left for 
+    FlowReportFilter() flow_report_filter;
     DropReportFilter() drop_report_filter;
     queue_report_filter_index_t queue_report_filter_index;
 
@@ -389,7 +389,7 @@ control IntEgress (
         // cases with one filter:
         // - drop by ingress tables (ingress mirroring)
         // - drop by egress table (egress mirroring)
-        // drop_report_filter.apply(hdr, fabric_v1model, standard_md); // Drop report filter unusable with only 1 Queue.
+        // drop_report_filter.apply(hdr, fabric_v1model, standard_md); // Drop report filter not used.
 
         if (fabric_md.int_report_md.isValid()) {
             // Packet is mirrored (egress or deflected) or an ingress drop.
@@ -401,7 +401,7 @@ control IntEgress (
                 // Mirroring the packet. It could work only if clone preserves the metadata structs.
                 // The mirrored packet will then generate the report.
 
-                // flow_report_filter.apply(hdr, fabric_v1model, standard_md); // Flow report filter unusable with is only 1 queue.
+                // flow_report_filter.apply(hdr, fabric_v1model, standard_md); // Flow report filter not used.
 
 #ifdef WITH_LATEST_P4C
                 clone_preserving_field_list(CloneType.E2E,

@@ -9,7 +9,7 @@
 
 /*
     This file contains the porting of FlowReportFilter and DropReportFilter.
-    These controls are actually unused due to v1model having only 1 queue.
+    These controls are actually unused.
  */
 
 // By default report every 2^30 ns (~1 second)
