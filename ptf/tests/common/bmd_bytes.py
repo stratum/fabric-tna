@@ -10,8 +10,8 @@ if profile_name == "fabric":
 elif profile_name == "fabric-int":
     BMD_BYTES = 33
 elif profile_name == "fabric-spgw":
-    BMD_BYTES = 40
+    BMD_BYTES = 32
 elif profile_name == "fabric-spgw-int":
-    BMD_BYTES = 49
+    BMD_BYTES = 40
 else:
     raise Exception(f"Invalid profile {profile_name}, cannot set BMD_BYTES")

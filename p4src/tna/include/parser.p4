@@ -415,10 +415,10 @@ parser FabricEgressParser (packet_in packet,
         hdr.outer_ipv4.ttl               = DEFAULT_IPV4_TTL;
         hdr.outer_ipv4.protocol          = PROTO_UDP;
         // hdr.outer_ipv4.hdr_checksum   = update later
-        hdr.outer_ipv4.src_addr          = fabric_md.bridged.spgw.gtpu_tunnel_sip;
-        hdr.outer_ipv4.dst_addr          = fabric_md.bridged.spgw.gtpu_tunnel_dip;
+        // hdr.outer_ipv4.src_addr       = update later
+        // hdr.outer_ipv4.dst_addr       = update later
         /** outer_udp **/
-        hdr.outer_udp.sport              = fabric_md.bridged.spgw.gtpu_tunnel_sport;
+        // hdr.outer_udp.sport           = update later
         hdr.outer_udp.dport              = GTPU_UDP_PORT;
         // hdr.outer_udp.len             = update later
         // hdr.outer_udp.checksum        = update later
@@ -431,19 +431,20 @@ parser FabricEgressParser (packet_in packet,
         hdr.outer_gtpu.npdu_flag         = 0;
         hdr.outer_gtpu.msgtype           = GTPU_GPDU;
         // hdr.outer_gtpu.msglen         = update later
-        hdr.outer_gtpu.teid              = fabric_md.bridged.spgw.gtpu_teid;
+        hdr.outer_gtpu.teid              = fabric_md.bridged.spgw.teid;
         /** outer_gtpu_options **/
         hdr.outer_gtpu_options.seq_num   = 0;
         hdr.outer_gtpu_options.n_pdu_num = 0;
         hdr.outer_gtpu_options.next_ext  = GTPU_NEXT_EXT_PSC;
         /** outer_gtpu_ext_psc **/
-        hdr.outer_gtpu_ext_psc.len       = GTPU_EXT_PSC_LEN;
+        // hdr.outer_gtpu_ext_psc.len    = update later
         hdr.outer_gtpu_ext_psc.type      = GTPU_EXT_PSC_TYPE_DL;
         hdr.outer_gtpu_ext_psc.spare0    = 0;
         hdr.outer_gtpu_ext_psc.ppp       = 0;
-        hdr.outer_gtpu_ext_psc.rqi       = 0;
-        // hdr.outer_gtpu_ext_psc.qfi    = update later
+        // hdr.outer_gtpu_ext_psc.rqi    = update later
+        hdr.outer_gtpu_ext_psc.qfi       = fabric_md.bridged.spgw.qfi;
         hdr.outer_gtpu_ext_psc.next_ext  = GTPU_NEXT_EXT_NONE;
+
 #endif // WITH_SPGW
 #ifdef WITH_INT
         fabric_md.int_report_md.encap_presence = fabric_md.bridged.base.encap_presence;

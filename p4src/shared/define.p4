@@ -55,9 +55,10 @@ const QueueId_t QUEUE_ID_BEST_EFFORT = 0;
 
 // SPGW types
 typedef bit<32> teid_t;
-// FIXME: use less than 32 bits for far_id_t, enough to index up to MAX_FARS
-typedef bit<32> far_id_t;
-typedef bit<16> pdr_ctr_id_t;
+typedef bit<16> upf_ctr_id_t;
+// We support up to 254 base stations + 1 dbuf endpoint. ID 0 is reserved.
+typedef bit<8> tun_peer_id_t;
+typedef bit<32> ue_session_id_t;
 
 // According to our design choice, we report only the inner headers to the INT collector.
 // The EncapPresence keeps track of the encapsulation protocol in use.
@@ -238,9 +239,15 @@ enum bit<8> IntDropReason_t {
     DROP_REASON_MPLS_MISS = 129,
     DROP_REASON_EGRESS_NEXT_MISS = 130,
     DROP_REASON_MPLS_TTL_ZERO = 131,
-    DROP_REASON_DOWNLINK_PDR_MISS = 132,
-    DROP_REASON_UPLINK_PDR_MISS = 133,
-    DROP_REASON_FAR_MISS = 134,
+    DROP_REASON_UPF_DL_SESSION_MISS = 132,
+    DROP_REASON_UPF_DL_SESSION_DROP = 133,
+    DROP_REASON_UPF_UL_SESSION_MISS = 134,
+    DROP_REASON_UPF_UL_SESSION_DROP = 135,
+    DROP_REASON_UPF_UL_SESSION_DROP_BUFF = 136,
+    DROP_REASON_UPF_DL_TERMINATION_MISS = 137,
+    DROP_REASON_UPF_DL_TERMINATION_DROP = 138,
+    DROP_REASON_UPF_UL_TERMINATION_MISS = 139,
+    DROP_REASON_UPF_UL_TERMINATION_DROP = 140,
     DROP_REASON_SPGW_UPLINK_RECIRC_DENY = 150,
     DROP_REASON_INGRESS_QOS_METER = 160,
     DROP_REASON_ROUTING_V4_DROP = 170,

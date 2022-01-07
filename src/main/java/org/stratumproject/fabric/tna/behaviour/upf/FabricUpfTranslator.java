@@ -2,19 +2,18 @@
 // SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 package org.stratumproject.fabric.tna.behaviour.upf;
 
-import com.google.common.collect.BiMap;
-import com.google.common.collect.ImmutableBiMap;
 import org.apache.commons.lang3.tuple.Pair;
 import org.onlab.packet.Ip4Address;
 import org.onlab.packet.Ip4Prefix;
-import org.onlab.util.ImmutableByteSequence;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.net.DeviceId;
-import org.onosproject.net.behaviour.upf.ForwardingActionRule;
-import org.onosproject.net.behaviour.upf.GtpTunnel;
-import org.onosproject.net.behaviour.upf.PacketDetectionRule;
+import org.onosproject.net.behaviour.upf.GtpTunnelPeer;
+import org.onosproject.net.behaviour.upf.SessionDownlink;
+import org.onosproject.net.behaviour.upf.SessionUplink;
 import org.onosproject.net.behaviour.upf.UpfInterface;
 import org.onosproject.net.behaviour.upf.UpfProgrammableException;
+import org.onosproject.net.behaviour.upf.UpfTerminationDownlink;
+import org.onosproject.net.behaviour.upf.UpfTerminationUplink;
 import org.onosproject.net.flow.DefaultFlowRule;
 import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
@@ -27,42 +26,46 @@ import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
 import org.onosproject.net.pi.runtime.PiTableAction;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
-import static java.lang.String.format;
-import static org.stratumproject.fabric.tna.behaviour.Constants.TC_BEST_EFFORT;
-import static org.stratumproject.fabric.tna.behaviour.Constants.TC_CONTROL;
-import static org.stratumproject.fabric.tna.behaviour.Constants.TC_ELASTIC;
-import static org.stratumproject.fabric.tna.behaviour.Constants.TC_REAL_TIME;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.CTR_ID;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.DROP;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_EG_TUNNEL_PEERS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_GTPU_ENCAP;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_GTPU_ONLY;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_GTPU_WITH_PSC;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_PDRS;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_FARS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_LOAD_TUNNEL_PARAMS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_APP_FWD;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_DROP;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_SESSIONS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_TERMINATIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_IFACE_ACCESS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_IFACE_CORE;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_IFACE_DBUF;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_IG_TUNNEL_PEERS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_INTERFACES;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_LOAD_DBUF_FAR;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_LOAD_NORMAL_FAR;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_LOAD_PDR;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_LOAD_PDR_DECAP;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_LOAD_PDR_DECAP_QOS;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_LOAD_PDR_QOS;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_LOAD_TUNNEL_FAR;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_RECIRC_ALLOW;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_RECIRC_DENY;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_PDRS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_SET_DOWNLINK_SESSION;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_SET_DOWNLINK_SESSION_BUF;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_SET_DOWNLINK_SESSION_BUF_DROP;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_SET_DOWNLINK_SESSION_DROP;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_SET_ROUTING_IPV4_DST;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_SET_UPLINK_SESSION;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_SET_UPLINK_SESSION_DROP;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_DROP;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_RECIRC_RULES;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FAR_ID;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_FAR_ID;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_SESSIONS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_TERMINATIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_GTPU_IS_VALID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_IPV4_DST_ADDR;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_TEID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_TUNNEL_IPV4_DST;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_TUN_PEER_ID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_UE_ADDR;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_UE_SESSION_ID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.QFI;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.SLICE_ID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TC;
@@ -70,6 +73,8 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TEID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TUNNEL_DST_ADDR;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TUNNEL_SRC_ADDR;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TUNNEL_SRC_PORT;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TUN_DST_ADDR;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TUN_PEER_ID;
 import static org.stratumproject.fabric.tna.behaviour.upf.FabricUpfProgrammable.SLICE_MOBILE;
 
 /**
@@ -77,47 +82,62 @@ import static org.stratumproject.fabric.tna.behaviour.upf.FabricUpfProgrammable.
  * Implementation should be stateless, with all state delegated to FabricUpfStore.
  */
 public class FabricUpfTranslator {
-
-    private final FabricUpfStore fabricUpfStore;
-
-    // TODO: agree on a mapping with the PFCP agent
-    //  Make sure to have a 1 to 1 mapping between QFI and TC.
-    static final BiMap<Byte, Integer> QFI_TO_TC = ImmutableBiMap.of(
-            // FIXME: allow explicit QFI mapping to Best-Effort. Currently,
-            //  the only way the mobile core can set Best-Effort is by not
-            //  specifying a QFI in PDRs. We do this to maintain backward
-            //  compatibility with PFCP Agent, but eventually all PDRs will have
-            //  a QFI.
-            (byte) 0, TC_BEST_EFFORT,
-            (byte) 1, TC_CONTROL,
-            (byte) 2, TC_REAL_TIME,
-            (byte) 3, TC_ELASTIC);
-
-    public FabricUpfTranslator(FabricUpfStore fabricUpfStore) {
-        this.fabricUpfStore = fabricUpfStore;
+    /**
+     * Returns true if the given table entry is a GTP tunnel peer rule from the
+     * physical fabric pipeline, and false otherwise.
+     *
+     * @param entry the flow rule entry
+     * @return true if the entry is a fabric.p4 GTP tunnel peer
+     */
+    public boolean isFabricGtpTunnelPeer(FlowRule entry) {
+        // we return egress tunnel_peers table, because only this table
+        // contains all necessary information to create GtpTunnelPeer instance.
+        return entry.table().equals(FABRIC_EGRESS_SPGW_EG_TUNNEL_PEERS);
     }
 
     /**
-     * Returns true if the given table entry is a Packet Detection Rule from the physical fabric pipeline, and
+     * Returns true if the given table entry is a uplink UE Session rule from the physical fabric pipeline, and
      * false otherwise.
      *
-     * @param entry the entry that may or may not be a fabric.p4 PDR
-     * @return true if the entry is a fabric.p4 PDR
+     * @param entry the entry that may or may not be a fabric.p4 UE Session rule
+     * @return true if the entry is a fabric.p4 UE Session rule
      */
-    public boolean isFabricPdr(FlowRule entry) {
-        return entry.table().equals(FABRIC_INGRESS_SPGW_UPLINK_PDRS)
-                || entry.table().equals(FABRIC_INGRESS_SPGW_DOWNLINK_PDRS);
+    public boolean isFabricUeSessionUplink(FlowRule entry) {
+        return entry.table().equals(FABRIC_INGRESS_SPGW_UPLINK_SESSIONS);
+    }
+
+
+    /**
+     * Returns true if the given table entry is a downlink UE Session rule from the physical fabric pipeline, and
+     * false otherwise.
+     *
+     * @param entry the entry that may or may not be a fabric.p4 UE Session rule
+     * @return true if the entry is a fabric.p4 UE Session rule
+     */
+    public boolean isFabricUeSessionDownlink(FlowRule entry) {
+        return entry.table().equals(FABRIC_INGRESS_SPGW_DOWNLINK_SESSIONS);
     }
 
     /**
-     * Returns true if the given table entry is a Forwarding Action Rule from the physical fabric pipeline, and
+     * Returns true if the given table entry is a UPF Termination rule from the physical fabric pipeline, and
      * false otherwise.
      *
-     * @param entry the entry that may or may not be a fabric.p4 FAR
-     * @return true if the entry is a fabric.p4 FAR
+     * @param entry the entry that may or may not be a fabric.p4 UPF Termination rule
+     * @return true if the entry is a fabric.p4 UPF Termination rule
      */
-    public boolean isFabricFar(FlowRule entry) {
-        return entry.table().equals(FABRIC_INGRESS_SPGW_FARS);
+    public boolean isFabricUpfTerminationUplink(FlowRule entry) {
+        return entry.table().equals(FABRIC_INGRESS_SPGW_UPLINK_TERMINATIONS);
+    }
+
+    /**
+     * Returns true if the given table entry is a UPF Termination rule from the physical fabric pipeline, and
+     * false otherwise.
+     *
+     * @param entry the entry that may or may not be a fabric.p4 UPF Termination rule
+     * @return true if the entry is a fabric.p4 UPF Termination rule
+     */
+    public boolean isFabricUpfTerminationDownlink(FlowRule entry) {
+        return entry.table().equals(FABRIC_INGRESS_SPGW_DOWNLINK_TERMINATIONS);
     }
 
     /**
@@ -131,110 +151,169 @@ public class FabricUpfTranslator {
         return entry.table().equals(FABRIC_INGRESS_SPGW_INTERFACES);
     }
 
-
-    /**
-     * Translate a fabric.p4 PDR table entry to a PacketDetectionRule instance for easier handling.
-     *
-     * @param entry the fabric.p4 entry to translate
-     * @return the corresponding PacketDetectionRule
-     * @throws UpfProgrammableException if the entry cannot be translated
-     */
-    public PacketDetectionRule fabricEntryToPdr(FlowRule entry)
-            throws UpfProgrammableException {
-        var pdrBuilder = PacketDetectionRule.builder();
-        Pair<PiCriterion, PiTableAction> matchActionPair = FabricUpfTranslatorUtil.fabricEntryToPiPair(entry);
-        PiCriterion match = matchActionPair.getLeft();
-        PiAction action = (PiAction) matchActionPair.getRight();
-
-        // Grab keys and parameters that are present for all PDRs
-        int globalFarId = FabricUpfTranslatorUtil.getParamInt(action, FAR_ID);
-        UpfRuleIdentifier farId = fabricUpfStore.localFarIdOf(globalFarId);
-        if (farId == null) {
-            throw new UpfProgrammableException(format("Unable to find local far id of %s", globalFarId));
+    private void assertTableId(FlowRule entry, PiTableId tableId) throws UpfProgrammableException {
+        if (!entry.table().equals(tableId)) {
+            throw new UpfProgrammableException(
+                    "The FlowRule for " + tableId + " expected, provided: " + entry);
         }
-
-        pdrBuilder.withCounterId(FabricUpfTranslatorUtil.getParamInt(action, CTR_ID))
-                .withLocalFarId(farId.getSessionLocalId())
-                .withSessionId(farId.getPfcpSessionId());
-
-        if (FabricUpfTranslatorUtil.fieldIsPresent(match, HDR_TEID)) {
-            // F-TEID is only present for GTP-matching PDRs
-            ImmutableByteSequence teid = FabricUpfTranslatorUtil.getFieldValue(match, HDR_TEID);
-            Ip4Address tunnelDst = FabricUpfTranslatorUtil.getFieldAddress(match, HDR_TUNNEL_IPV4_DST);
-            pdrBuilder.withTeid(teid)
-                    .withTunnelDst(tunnelDst);
-        } else if (FabricUpfTranslatorUtil.fieldIsPresent(match, HDR_UE_ADDR)) {
-            // And UE address is only present for non-GTP-matching PDRs
-            pdrBuilder.withUeAddr(FabricUpfTranslatorUtil.getFieldAddress(match, HDR_UE_ADDR));
-        } else {
-            throw new UpfProgrammableException("Read malformed PDR from dataplane!:" + entry);
-        }
-
-        if (action.id().equals(FABRIC_INGRESS_SPGW_LOAD_PDR_QOS) ||
-                action.id().equals(FABRIC_INGRESS_SPGW_LOAD_PDR_DECAP_QOS)) {
-            int tc = FabricUpfTranslatorUtil.getParamInt(action, TC);
-            Byte qfi = QFI_TO_TC.inverse().getOrDefault(tc, null);
-            if (qfi != null) {
-                pdrBuilder.withQfi(qfi);
-            } else {
-                throw new UpfProgrammableException(format(
-                        "TC value '%d' unsupported, unable to map to QFI -- " +
-                                "how did we manage to write this entry? BUG? [%s]",
-                        tc, entry));
-            }
-        }
-
-        return pdrBuilder.build();
     }
 
     /**
-     * Translate a fabric.p4 FAR table entry to a ForwardActionRule instance for easier handling.
+     * Translate a fabric.p4 GTP tunnel peer table entry to a GtpTunnelPeer instance for easier handling.
      *
-     * @param entry the fabric.p4 entry to translate
-     * @return the corresponding ForwardingActionRule
+     * @param entry the fabric.p4 entry to translate, the method expects FlowRule from eg_tunnel_peers table.
+     * @return the corresponding GtpTunnelPeer
      * @throws UpfProgrammableException if the entry cannot be translated
      */
-    public ForwardingActionRule fabricEntryToFar(FlowRule entry)
+    public GtpTunnelPeer fabricEntryToGtpTunnelPeer(FlowRule entry)
             throws UpfProgrammableException {
-        var farBuilder = ForwardingActionRule.builder();
+        assertTableId(entry, FABRIC_EGRESS_SPGW_EG_TUNNEL_PEERS);
+        GtpTunnelPeer.Builder builder = GtpTunnelPeer.builder();
+
+        Pair<PiCriterion, PiTableAction> matchActionPair = FabricUpfTranslatorUtil.fabricEntryToPiPair(entry);
+        PiCriterion match = matchActionPair.getLeft();
+        PiAction action = (PiAction) matchActionPair.getRight();
+        builder.withTunnelPeerId(FabricUpfTranslatorUtil.getFieldByte(match, HDR_TUN_PEER_ID));
+
+        if (!action.id().equals(FABRIC_EGRESS_SPGW_LOAD_TUNNEL_PARAMS)) {
+            throw new UpfProgrammableException(
+                    "Invalid action provided, cannot build GtpTunnelPeer instance: " + action.id());
+        }
+
+        builder.withSrcAddr(FabricUpfTranslatorUtil.getParamAddress(action, TUNNEL_SRC_ADDR))
+                .withDstAddr(FabricUpfTranslatorUtil.getParamAddress(action, TUNNEL_DST_ADDR))
+                .withSrcPort((short) FabricUpfTranslatorUtil.getParamInt(action, TUNNEL_SRC_PORT));
+
+        return builder.build();
+    }
+
+    /**
+     * Translate a fabric.p4 session table entry to a UeSession instance for easier handling.
+     *
+     * @param entry the fabric.p4 entry to translate
+     * @return the corresponding UeSession
+     * @throws UpfProgrammableException if the entry cannot be translated
+     */
+    public SessionUplink fabricEntryToUeSessionUplink(FlowRule entry)
+            throws UpfProgrammableException {
+        assertTableId(entry, FABRIC_INGRESS_SPGW_UPLINK_SESSIONS);
+        SessionUplink.Builder builder = SessionUplink.builder();
+
+        Pair<PiCriterion, PiTableAction> matchActionPair = FabricUpfTranslatorUtil.fabricEntryToPiPair(entry);
+        PiCriterion match = matchActionPair.getLeft();
+        PiAction action = (PiAction) matchActionPair.getRight();
+        if (!(FabricUpfTranslatorUtil.fieldIsPresent(match, HDR_TEID) ||
+                FabricUpfTranslatorUtil.fieldIsPresent(match, HDR_TUNNEL_IPV4_DST))) {
+            throw new UpfProgrammableException("Malformed uplink session from dataplane!: " + entry);
+        }
+        builder.withTunDstAddr(FabricUpfTranslatorUtil.getFieldAddress(match, HDR_TUNNEL_IPV4_DST))
+                .withTeid(FabricUpfTranslatorUtil.getFieldInt(match, HDR_TEID));
+
+        PiActionId actionId = action.id();
+        if (actionId.equals(FABRIC_INGRESS_SPGW_SET_UPLINK_SESSION_DROP)) {
+            builder.needsDropping(true);
+        }
+        return builder.build();
+    }
+
+    /**
+     * Translate a fabric.p4 session table entry to a UeSession instance for easier handling.
+     *
+     * @param entry the fabric.p4 entry to translate
+     * @return the corresponding UeSession
+     * @throws UpfProgrammableException if the entry cannot be translated
+     */
+    public SessionDownlink fabricEntryToUeSessionDownlink(FlowRule entry)
+            throws UpfProgrammableException {
+        assertTableId(entry, FABRIC_INGRESS_SPGW_DOWNLINK_SESSIONS);
+        SessionDownlink.Builder builder = SessionDownlink.builder();
+        Pair<PiCriterion, PiTableAction> matchActionPair = FabricUpfTranslatorUtil.fabricEntryToPiPair(entry);
+        PiCriterion match = matchActionPair.getLeft();
+        PiAction action = (PiAction) matchActionPair.getRight();
+        if (!FabricUpfTranslatorUtil.fieldIsPresent(match, HDR_UE_ADDR)) {
+            throw new UpfProgrammableException("Malformed downlink session from dataplane!: " + entry);
+        }
+        builder.withUeAddress(FabricUpfTranslatorUtil.getFieldAddress(match, HDR_UE_ADDR));
+        PiActionId actionId = action.id();
+        if (actionId.equals(FABRIC_INGRESS_SPGW_SET_DOWNLINK_SESSION_DROP)) {
+            builder.needsDropping(true);
+        } else if (actionId.equals(FABRIC_INGRESS_SPGW_SET_DOWNLINK_SESSION_BUF_DROP)) {
+            builder.needsDropping(true);
+            builder.needsBuffering(true);
+        } else {
+            builder.withGtpTunnelPeerId(FabricUpfTranslatorUtil.getParamByte(action, TUN_PEER_ID));
+            if (actionId.equals(FABRIC_INGRESS_SPGW_SET_DOWNLINK_SESSION_BUF)) {
+                builder.needsBuffering(true);
+            }
+        }
+        return builder.build();
+    }
+
+    /**
+     * Translate a fabric.p4 termination table entry to a uplink UpfTermination instance for easier handling.
+     *
+     * @param entry the fabric.p4 entry to translate
+     * @return the corresponding UpfTerminationUplink
+     * @throws UpfProgrammableException if the entry cannot be translated
+     */
+    public UpfTerminationUplink fabricEntryToUpfTerminationUplink(FlowRule entry)
+            throws UpfProgrammableException {
+        assertTableId(entry, FABRIC_INGRESS_SPGW_UPLINK_TERMINATIONS);
+        UpfTerminationUplink.Builder builder = UpfTerminationUplink.builder();
         Pair<PiCriterion, PiTableAction> matchActionPair = FabricUpfTranslatorUtil.fabricEntryToPiPair(entry);
         PiCriterion match = matchActionPair.getLeft();
         PiAction action = (PiAction) matchActionPair.getRight();
 
-        int globalFarId = FabricUpfTranslatorUtil.getFieldInt(match, HDR_FAR_ID);
-        UpfRuleIdentifier farId = fabricUpfStore.localFarIdOf(globalFarId);
-        if (farId == null) {
-            throw new UpfProgrammableException(format("Unable to find local far id of %s", globalFarId));
+        if (!FabricUpfTranslatorUtil.fieldIsPresent(match, HDR_UE_SESSION_ID)) {
+            throw new UpfProgrammableException("Malformed uplink termination from dataplane!: " + entry);
         }
-
         // Match keys
-        farBuilder.withSessionId(farId.getPfcpSessionId())
-                .setFarId(farId.getSessionLocalId());
+        Ip4Address ueSessionId = FabricUpfTranslatorUtil.getFieldAddress(match, HDR_UE_SESSION_ID);
+        builder.withUeSessionId(ueSessionId);
 
-        // Parameters common to all types of FARs
         PiActionId actionId = action.id();
-        farBuilder.setDropFlag(FabricUpfTranslatorUtil.getParamInt(action, DROP) > 0)
-                .setNotifyFlag(actionId.equals(FABRIC_INGRESS_SPGW_LOAD_DBUF_FAR));
-
-        if (actionId.equals(FABRIC_INGRESS_SPGW_LOAD_TUNNEL_FAR)
-                || actionId.equals(FABRIC_INGRESS_SPGW_LOAD_DBUF_FAR)) {
-            // Grab parameters specific to encapsulating FARs if they're present
-            Ip4Address tunnelSrc = FabricUpfTranslatorUtil.getParamAddress(action, TUNNEL_SRC_ADDR);
-            Ip4Address tunnelDst = FabricUpfTranslatorUtil.getParamAddress(action, TUNNEL_DST_ADDR);
-            ImmutableByteSequence teid = FabricUpfTranslatorUtil.getParamValue(action, TEID);
-            short tunnelSrcPort = (short) FabricUpfTranslatorUtil.getParamInt(action, TUNNEL_SRC_PORT);
-
-            farBuilder.setBufferFlag(actionId.equals(FABRIC_INGRESS_SPGW_LOAD_DBUF_FAR));
-
-            farBuilder.setTunnel(
-                    GtpTunnel.builder()
-                            .setSrc(tunnelSrc)
-                            .setDst(tunnelDst)
-                            .setTeid(teid)
-                            .setSrcPort(tunnelSrcPort)
-                            .build());
+        builder.withCounterId(FabricUpfTranslatorUtil.getParamInt(action, CTR_ID));
+        if (actionId.equals(FABRIC_INGRESS_SPGW_UPLINK_DROP)) {
+            builder.needsDropping(true);
+        } else {
+            builder.withTrafficClass(FabricUpfTranslatorUtil.getParamByte(action, TC));
         }
-        return farBuilder.build();
+        return builder.build();
+    }
+
+    /**
+     * Translate a fabric.p4 termination table entry to a downlink UpfTermination instance for easier handling.
+     *
+     * @param entry the fabric.p4 entry to translate
+     * @return the corresponding UpfTerminationDownlink
+     * @throws UpfProgrammableException if the entry cannot be translated
+     */
+    public UpfTerminationDownlink fabricEntryToUpfTerminationDownlink(FlowRule entry)
+            throws UpfProgrammableException {
+        assertTableId(entry, FABRIC_INGRESS_SPGW_DOWNLINK_TERMINATIONS);
+        UpfTerminationDownlink.Builder builder = UpfTerminationDownlink.builder();
+        Pair<PiCriterion, PiTableAction> matchActionPair = FabricUpfTranslatorUtil.fabricEntryToPiPair(entry);
+        PiCriterion match = matchActionPair.getLeft();
+        PiAction action = (PiAction) matchActionPair.getRight();
+
+        if (!FabricUpfTranslatorUtil.fieldIsPresent(match, HDR_UE_SESSION_ID)) {
+            throw new UpfProgrammableException("Malformed downlink termination from dataplane!: " + entry);
+        }
+        // Match keys
+        Ip4Address ueSessionId = FabricUpfTranslatorUtil.getFieldAddress(match, HDR_UE_SESSION_ID);
+        builder.withUeSessionId(ueSessionId);
+
+        PiActionId actionId = action.id();
+        builder.withCounterId(FabricUpfTranslatorUtil.getParamInt(action, CTR_ID));
+        if (actionId.equals(FABRIC_INGRESS_SPGW_DOWNLINK_DROP)) {
+            builder.needsDropping(true);
+        } else {
+            // Parameters common to all types of UPF Termination rules
+            builder.withTrafficClass(FabricUpfTranslatorUtil.getParamByte(action, TC))
+                    .withTeid(FabricUpfTranslatorUtil.getParamInt(action, TEID))
+                    .withQfi(FabricUpfTranslatorUtil.getParamByte(action, QFI));
+        }
+        return builder.build();
     }
 
     /**
@@ -246,6 +325,7 @@ public class FabricUpfTranslator {
      */
     public UpfInterface fabricEntryToInterface(FlowRule entry)
             throws UpfProgrammableException {
+        assertTableId(entry, FABRIC_INGRESS_SPGW_INTERFACES);
         Pair<PiCriterion, PiTableAction> matchActionPair = FabricUpfTranslatorUtil.fabricEntryToPiPair(entry);
         PiCriterion match = matchActionPair.getLeft();
         PiAction action = (PiAction) matchActionPair.getRight();
@@ -267,127 +347,217 @@ public class FabricUpfTranslator {
     }
 
     /**
-     * Translate a ForwardingActionRule to a FlowRule to be inserted into the fabric.p4 pipeline.
-     * A side effect of calling this method is the FAR object's globalFarId is assigned if it was not already.
+     * Translate a GtpTunnelPeer to two FlowRules to be inserted into the fabric.p4 pipeline.
      *
-     * @param far      The FAR to be translated
-     * @param deviceId the ID of the device the FlowRule should be installed on
-     * @param appId    the ID of the application that will insert the FlowRule
-     * @param priority the FlowRule's priority
-     * @return the FAR translated to a FlowRule
-     * @throws UpfProgrammableException if the FAR to be translated is malformed
+     * @param gtpTunnelPeer the GTP tunnel peer to be translated
+     * @param deviceId      the ID of the device the FlowRule should be installed on
+     * @param appId         the ID of the application that will insert the FlowRule
+     * @param priority      the FlowRules' priority
+     * @return a pair of FlowRules translated from GTP tunnel peer
+     * @throws UpfProgrammableException if the interface cannot be translated
      */
-    public FlowRule farToFabricEntry(ForwardingActionRule far, DeviceId deviceId, ApplicationId appId, int priority)
+    public Pair<FlowRule, FlowRule> gtpTunnelPeerToFabricEntry(GtpTunnelPeer gtpTunnelPeer, DeviceId deviceId,
+                                                               ApplicationId appId, int priority)
             throws UpfProgrammableException {
-        PiAction action;
-        if (!far.encaps()) {
-            action = PiAction.builder()
-                    .withId(FABRIC_INGRESS_SPGW_LOAD_NORMAL_FAR)
-                    .withParameter(new PiActionParam(DROP, far.drops() ? 1 : 0))
-                    .build();
+        FlowRule ingressEntry;
+        FlowRule egressEntry;
 
-        } else {
-            if (far.tunnelSrc() == null || far.tunnelDst() == null
-                    || far.teid() == null || far.tunnel().srcPort() == null) {
-                throw new UpfProgrammableException(
-                        "Not all action parameters present when translating " +
-                                "intermediate encapsulating/buffering FAR to physical FAR!");
-            }
-            // TODO: copy tunnel destination port from logical switch write requests, instead of hardcoding 2152
-            PiActionId actionId;
-            if (far.buffers()) {
-                if (!far.notifies()) {
-                    throw new UpfProgrammableException(
-                            "The buffer flag is set but not the notify one is not, " +
-                                    "we do not support buffering without notifying the CP");
-                }
-                actionId = FABRIC_INGRESS_SPGW_LOAD_DBUF_FAR;
-            } else {
-                actionId = FABRIC_INGRESS_SPGW_LOAD_TUNNEL_FAR;
-            }
-            action = PiAction.builder()
-                    .withId(actionId)
-                    .withParameters(Arrays.asList(
-                            new PiActionParam(DROP, far.drops() ? 1 : 0),
-                            new PiActionParam(TEID, far.teid()),
-                            new PiActionParam(TUNNEL_SRC_ADDR, far.tunnelSrc().toInt()),
-                            new PiActionParam(TUNNEL_DST_ADDR, far.tunnelDst().toInt()),
-                            new PiActionParam(TUNNEL_SRC_PORT, far.tunnel().srcPort())
-                    ))
-                    .build();
+        if (gtpTunnelPeer.src() == null || gtpTunnelPeer.dst() == null) {
+            throw new UpfProgrammableException(
+                    "Not all action parameters present when translating " +
+                            "intermediate GTP tunnel peer to physical representation!");
         }
+
         PiCriterion match = PiCriterion.builder()
-                .matchExact(HDR_FAR_ID, fabricUpfStore.globalFarIdOf(far.sessionId(), far.farId()))
+                .matchExact(HDR_TUN_PEER_ID, gtpTunnelPeer.tunPeerId())
                 .build();
-        return DefaultFlowRule.builder()
+
+        FlowRule.Builder base = DefaultFlowRule.builder()
                 .forDevice(deviceId).fromApp(appId).makePermanent()
-                .forTable(FABRIC_INGRESS_SPGW_FARS)
+                .withPriority(priority)
+                .withSelector(DefaultTrafficSelector.builder().matchPi(match).build());
+
+        PiAction ingressAction = PiAction.builder()
+                .withId(FABRIC_INGRESS_SPGW_SET_ROUTING_IPV4_DST)
+                .withParameter(new PiActionParam(TUN_DST_ADDR, gtpTunnelPeer.dst().toInt()))
+                .build();
+        ingressEntry = base.forTable(FABRIC_INGRESS_SPGW_IG_TUNNEL_PEERS)
+                .withTreatment(DefaultTrafficTreatment.builder().piTableAction(ingressAction).build())
+                .build();
+
+        PiAction egressAction = PiAction.builder()
+                .withId(FABRIC_EGRESS_SPGW_LOAD_TUNNEL_PARAMS)
+                .withParameters(Arrays.asList(
+                        new PiActionParam(TUNNEL_SRC_ADDR, gtpTunnelPeer.src().toInt()),
+                        new PiActionParam(TUNNEL_DST_ADDR, gtpTunnelPeer.dst().toInt()),
+                        new PiActionParam(TUNNEL_SRC_PORT, gtpTunnelPeer.srcPort())
+                ))
+                .build();
+        egressEntry = base.forTable(FABRIC_EGRESS_SPGW_EG_TUNNEL_PEERS)
+                .withTreatment(DefaultTrafficTreatment.builder().piTableAction(egressAction).build())
+                .build();
+
+        return Pair.of(ingressEntry, egressEntry);
+    }
+
+    /**
+     * Translate a uplink session to a FlowRule to be inserted into the fabric.p4 pipeline.
+     *
+     * @param ueSession The uplink UE Session to be translated
+     * @param deviceId  the ID of the device the FlowRule should be installed on
+     * @param appId     the ID of the application that will insert the FlowRule
+     * @param priority  the FlowRule's priority
+     * @return the uplink ue session translated to a FlowRule
+     * @throws UpfProgrammableException if the UE session cannot be translated
+     */
+    public FlowRule sessionUplinkToFabricEntry(SessionUplink ueSession, DeviceId deviceId,
+                                               ApplicationId appId, int priority)
+            throws UpfProgrammableException {
+        final PiCriterion match;
+        final PiAction.Builder actionBuilder = PiAction.builder();
+
+        match = PiCriterion.builder()
+                .matchExact(HDR_TEID, ueSession.teid())
+                .matchExact(HDR_TUNNEL_IPV4_DST, ueSession.tunDstAddr().toOctets())
+                .build();
+        if (ueSession.needsDropping()) {
+            actionBuilder.withId(FABRIC_INGRESS_SPGW_SET_UPLINK_SESSION_DROP);
+        } else {
+            actionBuilder.withId(FABRIC_INGRESS_SPGW_SET_UPLINK_SESSION);
+        }
+        return DefaultFlowRule.builder()
+                .forDevice(deviceId)
+                .fromApp(appId)
+                .makePermanent()
+                .forTable(FABRIC_INGRESS_SPGW_UPLINK_SESSIONS)
                 .withSelector(DefaultTrafficSelector.builder().matchPi(match).build())
-                .withTreatment(DefaultTrafficTreatment.builder().piTableAction(action).build())
+                .withTreatment(DefaultTrafficTreatment.builder().piTableAction(actionBuilder.build()).build())
                 .withPriority(priority)
                 .build();
     }
 
     /**
-     * Translate a PacketDetectionRule to a FlowRule to be inserted into the fabric.p4 pipeline.
-     * A side effect of calling this method is the PDR object's globalFarId is assigned if it was not already.
+     * Translate a downlink session to a FlowRule to be inserted into the fabric.p4 pipeline.
      *
-     * @param pdr      The PDR to be translated
-     * @param deviceId the ID of the device the FlowRule should be installed on
-     * @param appId    the ID of the application that will insert the FlowRule
-     * @param priority the FlowRule's priority
-     * @return the FAR translated to a FlowRule
-     * @throws UpfProgrammableException if the PDR to be translated is malformed
+     * @param ueSession The downlink UE Session to be translated
+     * @param deviceId  the ID of the device the FlowRule should be installed on
+     * @param appId     the ID of the application that will insert the FlowRule
+     * @param priority  the FlowRule's priority
+     * @return the downlink ue session translated to a FlowRule
+     * @throws UpfProgrammableException if the UE session cannot be translated
      */
-    public FlowRule pdrToFabricEntry(PacketDetectionRule pdr, DeviceId deviceId, ApplicationId appId, int priority)
+    public FlowRule sessionDownlinkToFabricEntry(SessionDownlink ueSession, DeviceId deviceId,
+                                                 ApplicationId appId, int priority)
             throws UpfProgrammableException {
-        // TODO: add QFI match and push to the pipeline
-        if (pdr.matchQfi()) {
-            throw new UpfProgrammableException("Match QFI not yet supported! Cannot translate " + pdr);
-        } else if (pdr.pushQfi()) {
-            throw new UpfProgrammableException("Push QFI not yet supported! Cannot translate " + pdr);
-        }
         final PiCriterion match;
-        final PiTableId tableId;
+        final PiAction.Builder actionBuilder = PiAction.builder();
 
-        final PiAction.Builder actionBuilder = PiAction.builder()
-                .withParameters(Arrays.asList(
-                        new PiActionParam(CTR_ID, pdr.counterId()),
-                        new PiActionParam(FAR_ID, fabricUpfStore.globalFarIdOf(pdr.sessionId(), pdr.farId()))));
-
-        if (pdr.hasQfi()) {
-            if (!QFI_TO_TC.containsKey(pdr.qfi())) {
-                throw new UpfProgrammableException(format(
-                        "QFI value '%d' not supported, unable to map to TC", pdr.qfi()));
-            }
-            actionBuilder.withParameter(new PiActionParam(TC, QFI_TO_TC.get(pdr.qfi())));
-        }
-        // If no QFI, then fall back to use the default TC
-
-        if (pdr.matchesEncapped()) {
-            match = PiCriterion.builder()
-                    .matchExact(HDR_TEID, pdr.teid().asArray())
-                    .matchExact(HDR_TUNNEL_IPV4_DST, pdr.tunnelDest().toInt())
-                    .build();
-            tableId = FABRIC_INGRESS_SPGW_UPLINK_PDRS;
-            actionBuilder.withId(pdr.hasQfi() ?
-                                         FABRIC_INGRESS_SPGW_LOAD_PDR_DECAP_QOS :
-                                         FABRIC_INGRESS_SPGW_LOAD_PDR_DECAP);
-        } else if (pdr.matchesUnencapped()) {
-            match = PiCriterion.builder()
-                    .matchExact(HDR_UE_ADDR, pdr.ueAddress().toInt())
-                    .build();
-            tableId = FABRIC_INGRESS_SPGW_DOWNLINK_PDRS;
-            actionBuilder.withId(pdr.hasQfi() ?
-                                         FABRIC_INGRESS_SPGW_LOAD_PDR_QOS :
-                                         FABRIC_INGRESS_SPGW_LOAD_PDR);
+        match = PiCriterion.builder()
+                .matchExact(HDR_UE_ADDR, ueSession.ueAddress().toOctets())
+                .build();
+        if (ueSession.needsDropping() && ueSession.needsBuffering()) {
+            actionBuilder.withId(FABRIC_INGRESS_SPGW_SET_DOWNLINK_SESSION_BUF_DROP);
+        } else if (ueSession.needsDropping()) {
+            actionBuilder.withId(FABRIC_INGRESS_SPGW_SET_DOWNLINK_SESSION_DROP);
         } else {
-            throw new UpfProgrammableException("Flexible PDRs not yet supported! Cannot translate " + pdr);
+            actionBuilder.withParameter(new PiActionParam(TUN_PEER_ID, ueSession.tunPeerId()));
+            if (ueSession.needsBuffering()) {
+                actionBuilder.withId(FABRIC_INGRESS_SPGW_SET_DOWNLINK_SESSION_BUF);
+            } else {
+                actionBuilder.withId(FABRIC_INGRESS_SPGW_SET_DOWNLINK_SESSION);
+            }
         }
+        return DefaultFlowRule.builder()
+                .forDevice(deviceId)
+                .fromApp(appId)
+                .makePermanent()
+                .forTable(FABRIC_INGRESS_SPGW_DOWNLINK_SESSIONS)
+                .withSelector(DefaultTrafficSelector.builder().matchPi(match).build())
+                .withTreatment(DefaultTrafficTreatment.builder().piTableAction(actionBuilder.build()).build())
+                .withPriority(priority)
+                .build();
+    }
+
+    /**
+     * Translate a Uplink UpfTermination to a FlowRule to be inserted into the fabric.p4 pipeline.
+     *
+     * @param upfTermination The uplink UPF Termination to be translated
+     * @param deviceId       the ID of the device the FlowRule should be installed on
+     * @param appId          the ID of the application that will insert the FlowRule
+     * @param priority       the FlowRule's priority
+     * @return the uplink UPF Termination translated to a FlowRule
+     * @throws UpfProgrammableException if the UPF Termination cannot be translated
+     */
+    public FlowRule upfTerminationUplinkToFabricEntry(
+            UpfTerminationUplink upfTermination, DeviceId deviceId,
+            ApplicationId appId, int priority)
+            throws UpfProgrammableException {
+        final PiCriterion match = PiCriterion.builder()
+                .matchExact(HDR_UE_SESSION_ID, upfTermination.ueSessionId().toInt())
+                .build();
+        final PiAction.Builder actionBuilder = PiAction.builder();
+
+        List<PiActionParam> paramList = new ArrayList<>(Arrays.asList(
+                new PiActionParam(CTR_ID, upfTermination.counterId())
+        ));
+
+        if (upfTermination.needsDropping()) {
+            actionBuilder.withId(FABRIC_INGRESS_SPGW_DOWNLINK_DROP);
+        } else {
+            actionBuilder.withId(FABRIC_INGRESS_SPGW_APP_FWD);
+            paramList.add(new PiActionParam(TC, upfTermination.trafficClass()));
+        }
+        actionBuilder.withParameters(paramList);
 
         return DefaultFlowRule.builder()
-                .forDevice(deviceId).fromApp(appId).makePermanent()
-                .forTable(tableId)
+                .forDevice(deviceId)
+                .fromApp(appId)
+                .makePermanent()
+                .forTable(FABRIC_INGRESS_SPGW_UPLINK_TERMINATIONS)
+                .withSelector(DefaultTrafficSelector.builder().matchPi(match).build())
+                .withTreatment(DefaultTrafficTreatment.builder().piTableAction(actionBuilder.build()).build())
+                .withPriority(priority)
+                .build();
+    }
+
+    /**
+     * Translate a downlink UpfTermination to a FlowRule to be inserted into the fabric.p4 pipeline.
+     *
+     * @param upfTermination The downlink UPF Termination to be translated
+     * @param deviceId       the ID of the device the FlowRule should be installed on
+     * @param appId          the ID of the application that will insert the FlowRule
+     * @param priority       the FlowRule's priority
+     * @return the downlink UPF Termination translated to a FlowRule
+     * @throws UpfProgrammableException if the UPF Termination cannot be translated
+     */
+    public FlowRule upfTerminationDownlinkToFabricEntry(
+            UpfTerminationDownlink upfTermination, DeviceId deviceId,
+            ApplicationId appId, int priority)
+            throws UpfProgrammableException {
+        final PiCriterion match = PiCriterion.builder()
+                .matchExact(HDR_UE_SESSION_ID, upfTermination.ueSessionId().toInt())
+                .build();
+        final PiAction.Builder actionBuilder = PiAction.builder();
+
+        List<PiActionParam> paramList = new ArrayList<>(Arrays.asList(
+                new PiActionParam(CTR_ID, upfTermination.counterId())
+        ));
+
+        if (upfTermination.needsDropping()) {
+            actionBuilder.withId(FABRIC_INGRESS_SPGW_DOWNLINK_DROP);
+        } else {
+            actionBuilder.withId(FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP);
+            paramList.add(new PiActionParam(TC, upfTermination.trafficClass()));
+            paramList.add(new PiActionParam(TEID, upfTermination.teid()));
+            paramList.add(new PiActionParam(QFI, upfTermination.qfi()));
+        }
+        actionBuilder.withParameters(paramList);
+
+        return DefaultFlowRule.builder()
+                .forDevice(deviceId)
+                .fromApp(appId)
+                .makePermanent()
+                .forTable(FABRIC_INGRESS_SPGW_DOWNLINK_TERMINATIONS)
                 .withSelector(DefaultTrafficSelector.builder().matchPi(match).build())
                 .withTreatment(DefaultTrafficTreatment.builder().piTableAction(actionBuilder.build()).build())
                 .withPriority(priority)
@@ -424,8 +594,8 @@ public class FabricUpfTranslator {
 
         PiCriterion match = PiCriterion.builder()
                 .matchLpm(HDR_IPV4_DST_ADDR,
-                        upfInterface.prefix().address().toInt(),
-                        upfInterface.prefix().prefixLength())
+                          upfInterface.prefix().address().toInt(),
+                          upfInterface.prefix().prefixLength())
                 .matchExact(HDR_GTPU_IS_VALID, gtpuValidity)
                 .build();
         PiAction action = PiAction.builder()
@@ -452,9 +622,6 @@ public class FabricUpfTranslator {
      * @param priority the FlowRule's priority
      * @return FlowRule for the uplink recirculation table
      */
-    // FIXME: this method is specific to fabric-tna and might be removed once we create proper
-    //   pipeconf behavior for fabric-v1model, unless we add the same uplink recirculation
-    //   capability to that P4 program as well.
     public FlowRule buildFabricUplinkRecircEntry(DeviceId deviceId, ApplicationId appId,
                                                  Ip4Prefix src, Ip4Prefix dst,
                                                  boolean allow, int priority) {
@@ -467,7 +634,7 @@ public class FabricUpfTranslator {
         }
         PiAction action = PiAction.builder()
                 .withId(allow ? FABRIC_INGRESS_SPGW_RECIRC_ALLOW
-                        : FABRIC_INGRESS_SPGW_RECIRC_DENY)
+                                : FABRIC_INGRESS_SPGW_RECIRC_DENY)
                 .build();
         return DefaultFlowRule.builder()
                 .forDevice(deviceId).fromApp(appId).makePermanent()
@@ -478,10 +645,9 @@ public class FabricUpfTranslator {
                 .build();
     }
 
-    public FlowRule buildGtpuWithPscEncapRule(DeviceId deviceId, ApplicationId appId, int qfi) {
+    public FlowRule buildGtpuWithPscEncapRule(DeviceId deviceId, ApplicationId appId) {
         PiAction action = PiAction.builder()
                 .withId(FABRIC_EGRESS_SPGW_GTPU_WITH_PSC)
-                .withParameter(new PiActionParam(QFI, qfi))
                 .build();
         // Default entry, no selector.
         return DefaultFlowRule.builder()

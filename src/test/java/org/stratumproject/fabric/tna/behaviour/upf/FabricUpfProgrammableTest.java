@@ -12,10 +12,14 @@ import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.PortNumber;
-import org.onosproject.net.behaviour.upf.ForwardingActionRule;
-import org.onosproject.net.behaviour.upf.PacketDetectionRule;
-import org.onosproject.net.behaviour.upf.PdrStats;
+import org.onosproject.net.behaviour.upf.SessionDownlink;
+import org.onosproject.net.behaviour.upf.SessionUplink;
+import org.onosproject.net.behaviour.upf.UpfCounter;
+import org.onosproject.net.behaviour.upf.UpfEntity;
+import org.onosproject.net.behaviour.upf.UpfEntityType;
 import org.onosproject.net.behaviour.upf.UpfInterface;
+import org.onosproject.net.behaviour.upf.UpfTerminationDownlink;
+import org.onosproject.net.behaviour.upf.UpfTerminationUplink;
 import org.onosproject.net.config.NetworkConfigService;
 import org.onosproject.net.config.basics.BasicDeviceConfig;
 import org.onosproject.net.device.DeviceService;
@@ -49,18 +53,20 @@ import static org.easymock.EasyMock.replay;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.stratumproject.fabric.tna.behaviour.Constants.TNA;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_PDR_COUNTER;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_PDRS;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_FARS;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_PDR_COUNTER;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_PDRS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_EG_TUNNEL_PEERS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_TERMINATIONS_COUNTER;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_SESSIONS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_TERMINATIONS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_IG_TUNNEL_PEERS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_TERMINATIONS_COUNTER;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_SESSIONS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_TERMINATIONS;
 
 public class FabricUpfProgrammableTest {
 
     private static final ApplicationId APP_ID =
             TestApplicationId.create(PipeconfLoader.APP_NAME);
 
-    private final DistributedFabricUpfStore upfStore = TestDistributedFabricUpfStore.build();
     private MockPacketService packetService;
     private FabricUpfProgrammable upfProgrammable;
 
@@ -75,17 +81,23 @@ public class FabricUpfProgrammableTest {
             .build();
 
     private static final List<PiTableModel> TABLE_MODELS = ImmutableList.of(
-            new MockTableModel(FABRIC_INGRESS_SPGW_UPLINK_PDRS,
-                               TestUpfConstants.PHYSICAL_MAX_PDRS / 2),
-            new MockTableModel(FABRIC_INGRESS_SPGW_DOWNLINK_PDRS,
-                               TestUpfConstants.PHYSICAL_MAX_PDRS / 2),
-            new MockTableModel(FABRIC_INGRESS_SPGW_FARS,
-                               TestUpfConstants.PHYSICAL_MAX_FARS)
+            new MockTableModel(FABRIC_INGRESS_SPGW_UPLINK_SESSIONS,
+                               TestUpfConstants.PHYSICAL_MAX_UE_SESSIONS / 2),
+            new MockTableModel(FABRIC_INGRESS_SPGW_DOWNLINK_SESSIONS,
+                               TestUpfConstants.PHYSICAL_MAX_UE_SESSIONS / 2),
+            new MockTableModel(FABRIC_INGRESS_SPGW_UPLINK_TERMINATIONS,
+                               TestUpfConstants.PHYSICAL_MAX_UPF_TERMINATIONS / 2),
+            new MockTableModel(FABRIC_INGRESS_SPGW_DOWNLINK_TERMINATIONS,
+                               TestUpfConstants.PHYSICAL_MAX_UPF_TERMINATIONS / 2),
+            new MockTableModel(FABRIC_INGRESS_SPGW_IG_TUNNEL_PEERS,
+                               TestUpfConstants.PHYSICAL_MAX_TUNNELS),
+            new MockTableModel(FABRIC_EGRESS_SPGW_EG_TUNNEL_PEERS,
+                               TestUpfConstants.PHYSICAL_MAX_TUNNELS)
     );
     private static final List<PiCounterModel> COUNTER_MODELS = ImmutableList.of(
-            new MockCounterModel(FABRIC_INGRESS_SPGW_PDR_COUNTER,
+            new MockCounterModel(FABRIC_INGRESS_SPGW_TERMINATIONS_COUNTER,
                                  TestUpfConstants.PHYSICAL_COUNTER_SIZE),
-            new MockCounterModel(FABRIC_EGRESS_SPGW_PDR_COUNTER,
+            new MockCounterModel(FABRIC_EGRESS_SPGW_TERMINATIONS_COUNTER,
                                  TestUpfConstants.PHYSICAL_COUNTER_SIZE)
     );
 
@@ -118,7 +130,6 @@ public class FabricUpfProgrammableTest {
         expect(driverHandler.get(FlowRuleService.class)).andReturn(new MockFlowRuleService()).anyTimes();
         expect(driverHandler.get(SlicingService.class)).andReturn(slicingService).anyTimes();
         expect(driverHandler.get(PacketService.class)).andReturn(packetService).anyTimes();
-        expect(driverHandler.get(DistributedFabricUpfStore.class)).andReturn(upfStore).anyTimes();
         expect(driverHandler.get(NetworkConfigService.class)).andReturn(netcfgService).anyTimes();
         expect(driverHandler.get(CoreService.class)).andReturn(coreService).anyTimes();
         expect(driverHandler.get(DeviceService.class)).andReturn(deviceService).anyTimes();
@@ -143,104 +154,109 @@ public class FabricUpfProgrammableTest {
     }
 
     @Test
-    public void testUplinkPdr() throws Exception {
-        assertTrue(upfProgrammable.getPdrs().isEmpty());
-        PacketDetectionRule expectedPdr = TestUpfConstants.UPLINK_PDR;
-        upfProgrammable.addPdr(expectedPdr);
-        Collection<PacketDetectionRule> installedPdrs = upfProgrammable.getPdrs();
-        assertThat(installedPdrs.size(), equalTo(1));
-        for (var readPdr : installedPdrs) {
-            assertThat(readPdr, equalTo(expectedPdr));
+    public void testUplinkUeSession() throws Exception {
+        assertTrue(upfProgrammable.readAll(UpfEntityType.SESSION_UPLINK).isEmpty());
+        SessionUplink expectedUeSession = TestUpfConstants.UPLINK_UE_SESSION;
+        upfProgrammable.apply(expectedUeSession);
+        Collection<? extends UpfEntity> installedUeSessions = upfProgrammable.readAll(UpfEntityType.SESSION_UPLINK);
+        assertThat(installedUeSessions.size(), equalTo(1));
+        for (var readUeSession : installedUeSessions) {
+            assertThat(readUeSession, equalTo(expectedUeSession));
         }
-        upfProgrammable.removePdr(expectedPdr.withoutActionParams());
-        assertTrue(upfProgrammable.getPdrs().isEmpty());
+        upfProgrammable.delete(expectedUeSession);
+        assertTrue(upfProgrammable.readAll(UpfEntityType.SESSION_UPLINK).isEmpty());
     }
 
     @Test
-    public void testDownlinkPdr() throws Exception {
-        assertTrue(upfProgrammable.getPdrs().isEmpty());
-        PacketDetectionRule expectedPdr = TestUpfConstants.DOWNLINK_PDR;
-        upfProgrammable.addPdr(expectedPdr);
-        Collection<PacketDetectionRule> installedPdrs = upfProgrammable.getPdrs();
-        assertThat(installedPdrs.size(), equalTo(1));
-        for (var readPdr : installedPdrs) {
-            assertThat(readPdr, equalTo(expectedPdr));
+    public void testDownlinkUeSession() throws Exception {
+        assertTrue(upfProgrammable.readAll(UpfEntityType.SESSION_DOWNLINK).isEmpty());
+        SessionDownlink expectedUeSession = TestUpfConstants.DOWNLINK_UE_SESSION;
+        upfProgrammable.apply(expectedUeSession);
+        Collection<? extends UpfEntity> installedUeSessions = upfProgrammable.readAll(UpfEntityType.SESSION_DOWNLINK);
+        assertThat(installedUeSessions.size(), equalTo(1));
+        for (var readUeSession : installedUeSessions) {
+            assertThat(readUeSession, equalTo(expectedUeSession));
         }
-        upfProgrammable.removePdr(expectedPdr.withoutActionParams());
-        assertTrue(upfProgrammable.getPdrs().isEmpty());
+        upfProgrammable.delete(expectedUeSession);
+        assertTrue(upfProgrammable.readAll(UpfEntityType.SESSION_DOWNLINK).isEmpty());
     }
 
     @Test
-    public void testUplinkFar() throws Exception {
-        assertTrue(upfProgrammable.getFars().isEmpty());
-        ForwardingActionRule expectedFar = TestUpfConstants.UPLINK_FAR;
-        upfProgrammable.addFar(expectedFar);
-        Collection<ForwardingActionRule> installedFars = upfProgrammable.getFars();
-        assertThat(installedFars.size(), equalTo(1));
-        for (var readFar : installedFars) {
-            assertThat(readFar, equalTo(expectedFar));
+    public void testUplinkUpfTermination() throws Exception {
+        assertTrue(upfProgrammable.readAll(UpfEntityType.TERMINATION_UPLINK).isEmpty());
+        UpfTerminationUplink expected = TestUpfConstants.UPLINK_UPF_TERMINATION;
+        upfProgrammable.apply(expected);
+        Collection<? extends UpfEntity> installedUpfTerminations =
+                upfProgrammable.readAll(UpfEntityType.TERMINATION_UPLINK);
+        assertThat(installedUpfTerminations.size(), equalTo(1));
+        for (var readUpfTermination : installedUpfTerminations) {
+            assertThat(readUpfTermination, equalTo(expected));
         }
-        upfProgrammable.removeFar(expectedFar.withoutActionParams());
-        assertTrue(upfProgrammable.getFars().isEmpty());
+        upfProgrammable.delete(expected);
+        assertTrue(upfProgrammable.readAll(UpfEntityType.TERMINATION_UPLINK).isEmpty());
     }
 
     @Test
-    public void testDownlinkFar() throws Exception {
-        assertTrue(upfProgrammable.getFars().isEmpty());
-        ForwardingActionRule expectedFar = TestUpfConstants.DOWNLINK_FAR;
-        upfProgrammable.addFar(expectedFar);
-        Collection<ForwardingActionRule> installedFars = upfProgrammable.getFars();
-        assertThat(installedFars.size(), equalTo(1));
-        for (var readFar : installedFars) {
-            assertThat(readFar, equalTo(expectedFar));
+    public void testDownlinkUpfTermination() throws Exception {
+        assertTrue(upfProgrammable.readAll(UpfEntityType.TERMINATION_DOWNLINK).isEmpty());
+        UpfTerminationDownlink expected = TestUpfConstants.DOWNLINK_UPF_TERMINATION;
+        upfProgrammable.apply(expected);
+        Collection<? extends UpfEntity> installedUpfTerminations =
+                upfProgrammable.readAll(UpfEntityType.TERMINATION_DOWNLINK);
+        assertThat(installedUpfTerminations.size(), equalTo(1));
+        for (var readUpfTermination : installedUpfTerminations) {
+            assertThat(readUpfTermination, equalTo(expected));
         }
-        upfProgrammable.removeFar(expectedFar.withoutActionParams());
-        assertTrue(upfProgrammable.getFars().isEmpty());
+        upfProgrammable.delete(expected);
+        assertTrue(upfProgrammable.readAll(UpfEntityType.TERMINATION_DOWNLINK).isEmpty());
     }
 
     @Test
     public void testUplinkInterface() throws Exception {
-        assertTrue(upfProgrammable.getInterfaces().isEmpty());
+        assertTrue(upfProgrammable.readAll(UpfEntityType.INTERFACE).isEmpty());
         UpfInterface expectedInterface = TestUpfConstants.UPLINK_INTERFACE;
-        upfProgrammable.addInterface(expectedInterface);
-        Collection<UpfInterface> installedInterfaces = upfProgrammable.getInterfaces();
+        upfProgrammable.apply(expectedInterface);
+        Collection<? extends UpfEntity> installedInterfaces =
+                upfProgrammable.readAll(UpfEntityType.INTERFACE);
         assertThat(installedInterfaces.size(), equalTo(1));
         for (var readInterface : installedInterfaces) {
             assertThat(readInterface, equalTo(expectedInterface));
         }
-        upfProgrammable.removeInterface(expectedInterface);
-        assertTrue(upfProgrammable.getInterfaces().isEmpty());
+        upfProgrammable.delete(expectedInterface);
+        assertTrue(upfProgrammable.readAll(UpfEntityType.INTERFACE).isEmpty());
     }
 
     @Test
     public void testDownlinkInterface() throws Exception {
-        assertTrue(upfProgrammable.getInterfaces().isEmpty());
+        assertTrue(upfProgrammable.readAll(UpfEntityType.INTERFACE).isEmpty());
         UpfInterface expectedInterface = TestUpfConstants.DOWNLINK_INTERFACE;
-        upfProgrammable.addInterface(expectedInterface);
-        Collection<UpfInterface> installedInterfaces = upfProgrammable.getInterfaces();
+        upfProgrammable.apply(expectedInterface);
+        Collection<? extends UpfEntity> installedInterfaces =
+                upfProgrammable.readAll(UpfEntityType.INTERFACE);
         assertThat(installedInterfaces.size(), equalTo(1));
         for (var readInterface : installedInterfaces) {
             assertThat(readInterface, equalTo(expectedInterface));
         }
-        upfProgrammable.removeInterface(expectedInterface);
-        assertTrue(upfProgrammable.getInterfaces().isEmpty());
+        upfProgrammable.delete(expectedInterface);
+        assertTrue(upfProgrammable.readAll(UpfEntityType.INTERFACE).isEmpty());
     }
 
     @Test
     public void testClearInterfaces() throws Exception {
-        assertTrue(upfProgrammable.getInterfaces().isEmpty());
-        upfProgrammable.addInterface(TestUpfConstants.UPLINK_INTERFACE);
-        upfProgrammable.addInterface(TestUpfConstants.DOWNLINK_INTERFACE);
-        assertThat(upfProgrammable.getInterfaces().size(), equalTo(2));
-        upfProgrammable.clearInterfaces();
-        assertTrue(upfProgrammable.getInterfaces().isEmpty());
+        assertTrue(upfProgrammable.readAll(UpfEntityType.INTERFACE).isEmpty());
+        upfProgrammable.apply(TestUpfConstants.UPLINK_INTERFACE);
+        upfProgrammable.apply(TestUpfConstants.DOWNLINK_INTERFACE);
+        assertThat(upfProgrammable.readAll(UpfEntityType.INTERFACE).size(), equalTo(2));
+        upfProgrammable.deleteAll(UpfEntityType.INTERFACE);
+        assertTrue(upfProgrammable.readAll(UpfEntityType.INTERFACE).isEmpty());
     }
 
     @Test
-    public void testReadAllCounters() {
-        Collection<PdrStats> allStats = upfProgrammable.readAllCounters(-1);
+    public void testReadAllCounters() throws Exception {
+        Collection<? extends UpfEntity> allStats = upfProgrammable.readAll(UpfEntityType.COUNTER);
         assertThat(allStats.size(), equalTo(TestUpfConstants.PHYSICAL_COUNTER_SIZE));
-        for (PdrStats stat : allStats) {
+        for (UpfEntity entity : allStats) {
+            UpfCounter stat = (UpfCounter) entity;
             assertThat(stat.getIngressBytes(), equalTo(TestUpfConstants.COUNTER_BYTES));
             assertThat(stat.getEgressBytes(), equalTo(TestUpfConstants.COUNTER_BYTES));
             assertThat(stat.getIngressPkts(), equalTo(TestUpfConstants.COUNTER_PKTS));
@@ -249,14 +265,14 @@ public class FabricUpfProgrammableTest {
     }
 
     @Test
-    public void testReadAllCountersLimitedCounters() {
-        Collection<PdrStats> allStats = upfProgrammable.readAllCounters(10);
+    public void testReadAllCountersLimitedCounters() throws Exception {
+        Collection<UpfCounter> allStats = upfProgrammable.readCounters(10);
         assertThat(allStats.size(), equalTo(10));
     }
 
     @Test
-    public void testReadAllCountersPhysicalLimit() {
-        Collection<PdrStats> allStats = upfProgrammable.readAllCounters(1024);
+    public void testReadAllCountersPhysicalLimit() throws Exception {
+        Collection<UpfCounter> allStats = upfProgrammable.readCounters(1024);
         assertThat(allStats.size(), equalTo(TestUpfConstants.PHYSICAL_COUNTER_SIZE));
     }
 

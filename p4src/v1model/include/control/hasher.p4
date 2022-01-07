@@ -29,7 +29,7 @@ control Hasher(inout ingress_headers_t hdr,
                 fabric_md.ecmp_hash,
                 HashAlgorithm.crc32,
                 base,
-                {fabric_md.bridged.spgw.gtpu_tunnel_sip, fabric_md.bridged.spgw.gtpu_tunnel_dip, fabric_md.bridged.spgw.gtpu_teid},
+                {fabric_md.bridged.spgw.tun_peer_id, fabric_md.bridged.spgw.teid},
                 max
             );
         } else
