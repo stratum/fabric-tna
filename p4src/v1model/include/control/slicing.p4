@@ -43,7 +43,8 @@ control IngressSliceTcClassifier (inout    ingress_headers_t hdr,
 
     table classifier {
         key = {
-            standard_md.ingress_port : ternary @name("ig_port");
+            // standard_md.ingress_port : ternary @name("ig_port");
+            fabric_md.bridged.base.ig_port : ternary @name("ig_port");
             fabric_md.lkp.ipv4_src   : ternary @name("ipv4_src");
             fabric_md.lkp.ipv4_dst   : ternary @name("ipv4_dst");
             fabric_md.lkp.ip_proto   : ternary @name("ip_proto");

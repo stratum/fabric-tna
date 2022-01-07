@@ -6,140 +6,9 @@
 
 #include "v1model/include/define_v1model.p4"
 #include "v1model/include/header_v1model.p4"
-
-// By default report every 2^30 ns (~1 second)
-const bit<48> DEFAULT_TIMESTAMP_MASK = 0xffffc0000000;
-// or for hop latency changes greater than 2^8 ns
-const bit<32> DEFAULT_HOP_LATENCY_MASK = 0xffffff00;
-const queue_report_quota_t DEFAULT_QUEUE_REPORT_QUOTA = 1024;
-
-// bmv2 specific for hash function.
-const bit<32> max = 0xFFFF;
-const bit<32> base = 0;
+#include "v1model/include/control/int_unused_filters.p4"
 
 
-control FlowReportFilter(
-    inout egress_headers_t hdr,
-    inout fabric_v1model_metadata_t fabric_v1model,
-    inout standard_metadata_t standard_md
-    ) {
-
-    fabric_egress_metadata_t fabric_md = fabric_v1model.egress;
-    bit<16> digest = 0;
-    bit<16> stored_digest = 0;
-    bit<1> flag = 0;
-
-    // Bloom filter with 2 hash functions storing flow digests. The digest is
-    // the hash of:
-    // - flow state (ingress port, egress port, quantized hop latency);
-    // - quantized timestamp (to generate periodic reports).
-    // - 5-tuple hash (to detect collisions);
-    // We use such filter to reduce the volume of reports that the collector has
-    // to ingest. We generate a report only when we detect a change, that is,
-    // when the digest of the packet is different than the one of the previous
-    // packet of the same flow.
-    @hidden
-    register<bit<16>>(1 << FLOW_REPORT_FILTER_WIDTH) filter1;
-    @hidden
-    register<bit<16>>(1 << FLOW_REPORT_FILTER_WIDTH) filter2;
-
-
-
-    apply {
-        if (fabric_md.int_report_md.report_type == INT_REPORT_TYPE_FLOW) {
-            hash(
-                digest,
-                HashAlgorithm.crc16,
-                base,
-                {
-                    fabric_md.bridged.base.ig_port,
-                    standard_md.egress_spec,
-                    fabric_md.int_md.hop_latency,
-                    fabric_md.bridged.base.inner_hash,
-                    fabric_md.int_md.timestamp
-                },
-                max
-            );
-            // Meaning of the result:
-            // 1 digest did NOT change
-            // 0 change detected
-
-            // filter1 get and set
-            filter1.read(stored_digest, (bit<32>)fabric_md.bridged.base.inner_hash[31:16]);
-            flag = digest == stored_digest ? 1w1 : 1w0;
-            filter1.write((bit<32>)fabric_md.bridged.base.inner_hash[31:16], digest);
-            // filter2 get and set
-            filter2.read(stored_digest, (bit<32>)fabric_md.bridged.base.inner_hash[15:0]);
-            flag = flag | (digest == stored_digest ? 1w1 : 1w0);
-            filter2.write((bit<32>)fabric_md.bridged.base.inner_hash[15:0], digest);
-
-            // Generate report only when ALL register actions detect a change.
-            if (flag == 1) {
-                fabric_v1model.int_mirror_type = (bit<3>)FabricMirrorType_t.INVALID;
-            }
-            fabric_v1model.egress = fabric_md;
-        }
-    }
-}
-
-
-control DropReportFilter(
-    inout egress_headers_t hdr,
-    inout fabric_egress_metadata_t fabric_md,
-    inout standard_metadata_t standard_md
-    ) {
-
-    bit<16> digest = 0;
-    bit<16> stored_digest = 0;
-    bit<1> flag = 0;
-
-    // Bloom filter with 2 hash functions storing flow digests. The digest is
-    // the hash of:
-    // - quantized timestamp (to generate periodic reports).
-    // - 5-tuple hash (to detect collisions);
-    // We use such filter to reduce the volume of reports that the collector has
-    // to ingest.
-    @hidden
-    register<bit<16>>(1 << DROP_REPORT_FILTER_WIDTH) filter1;
-    @hidden
-    register<bit<16>>(1 << DROP_REPORT_FILTER_WIDTH) filter2;
-
-    apply {
-        // This control is applied to all pkts, but we filter only INT mirrors.
-        if (fabric_md.int_report_md.isValid() &&
-                fabric_md.int_report_md.report_type == INT_REPORT_TYPE_DROP) {
-            hash(
-                digest,
-                HashAlgorithm.crc16,
-                base,
-                {
-                    fabric_md.int_report_md.flow_hash,
-                    fabric_md.int_md.timestamp
-                },
-                max
-            );
-
-            // Meaning of the result:
-            // flag = 1 digest did NOT change
-            // flag = 0 change detected
-
-            // filter 1 get and set
-            filter1.read(stored_digest, (bit<32>)fabric_md.bridged.base.inner_hash[31:16]);
-            flag = digest == stored_digest ? 1w1 : 1w0;
-            filter1.write((bit<32>)fabric_md.bridged.base.inner_hash[31:16], digest);
-            // filter 2 get and set
-            filter2.read(stored_digest, (bit<32>)fabric_md.bridged.base.inner_hash[15:0]);
-            flag = flag | (digest == stored_digest ? 1w1 : 1w0);
-            filter2.write((bit<32>)fabric_md.bridged.base.inner_hash[15:0], digest);
-
-            // Drop the report if we already report it within a period of time.
-            if (flag == 1) {
-                mark_to_drop(standard_md);
-                exit;
-            }
-        }
-    }
-}
 
 control IntWatchlist(
     inout ingress_headers_t hdr,
@@ -268,8 +137,6 @@ control IntEgress (
     direct_counter(CounterType.packets_and_bytes) int_metadata_counter;
 
     // bmv2 specific. Only one queue present.
-    // It could be set to a random value between 0-31, emulating TNA's 32 queues.
-    // If filter report is not used, leaving egress_qid = 0 single value is enough.
     QueueId_t egress_qid = 0;
 
     bool check_quota_and_report = false;
@@ -302,7 +169,7 @@ control IntEgress (
             // In SD-Fabric, we use the same traffic class<>queue ID mapping for all ports.
             // Hence, there's no need to match on the egress port, we can use the same
             // per-queue thresholds for all ports.
-            // in V1model, qid is emulated and has no meaning since the Traffic Manager has only 1 Queue.
+            // in V1model, qid is emulated and has no meaning.
             egress_qid: exact @name("egress_qid");
             fabric_md.int_md.hop_latency[31:16]: range @name("hop_latency_upper");
             fabric_md.int_md.hop_latency[15:0]: range @name("hop_latency_lower");
@@ -461,12 +328,12 @@ control IntEgress (
         const default_action = nop();
         const entries = {
             (INT_REPORT_TYPE_FLOW, 0, false): init_int_metadata(INT_REPORT_TYPE_FLOW);
-            // (INT_REPORT_TYPE_FLOW, 0, true): init_int_metadata(INT_REPORT_TYPE_FLOW|INT_REPORT_TYPE_QUEUE); // this should be useless
+            // (INT_REPORT_TYPE_FLOW, 0, true): init_int_metadata(INT_REPORT_TYPE_FLOW|INT_REPORT_TYPE_QUEUE); // Queue report useless in V1model.
             (INT_REPORT_TYPE_FLOW, 1, false): init_int_metadata(INT_REPORT_TYPE_DROP);
-            // (INT_REPORT_TYPE_FLOW, 1, true): init_int_metadata(INT_REPORT_TYPE_DROP); // (not sure) this should be useless.
+            // (INT_REPORT_TYPE_FLOW, 1, true): init_int_metadata(INT_REPORT_TYPE_DROP); // Queue report useless in V1model.
             // Packets which are not tracked by the watchlist table
-            // (INT_REPORT_TYPE_NO_REPORT, 0, true): init_int_metadata(INT_REPORT_TYPE_QUEUE); useless in v1model.
-            // (INT_REPORT_TYPE_NO_REPORT, 1, true): init_int_metadata(INT_REPORT_TYPE_QUEUE); useless in v1model.
+            // (INT_REPORT_TYPE_NO_REPORT, 0, true): init_int_metadata(INT_REPORT_TYPE_QUEUE); // Queue report useless in v1model.
+            // (INT_REPORT_TYPE_NO_REPORT, 1, true): init_int_metadata(INT_REPORT_TYPE_QUEUE); // Queue report useless in v1model.
         }
 
         counters = int_metadata_counter;
@@ -499,10 +366,6 @@ control IntEgress (
 
     apply {
 
-        // Emulating 32 Queues. Needed for filtering reports.
-        // If flow report filter is not used, the following statement makes no sense and can be removed.
-        random(egress_qid, 0, 0x1f);
-
         fabric_md.int_md.hop_latency = standard_md.egress_global_timestamp[31:0] - fabric_md.bridged.base.ig_tstamp[31:0];
         fabric_md.int_md.timestamp = standard_md.egress_global_timestamp;
         queue_report_filter_index = standard_md.egress_spec[6:0] ++ egress_qid;
@@ -510,8 +373,6 @@ control IntEgress (
         // Check the queue alert before the config table since we need to check the
         // latency which is not quantized.
         queue_latency_thresholds.apply();
-        // In v1model, we're not allowed to have an apply{} section within an action,
-        // so the logic that was contained in TNA's RegisterAction is now here.
         if (check_quota_and_report) {
             if (quota > 0) {
                 quota = quota - 1;
@@ -528,7 +389,7 @@ control IntEgress (
         // cases with one filter:
         // - drop by ingress tables (ingress mirroring)
         // - drop by egress table (egress mirroring)
-        // drop_report_filter.apply(hdr, fabric_v1model, standard_md); // comment this if not interested in using drop_report filter.
+        // drop_report_filter.apply(hdr, fabric_v1model, standard_md); // Drop report filter unusable if there is only 1 Queue.
 
         if (fabric_md.int_report_md.isValid()) {
             // Packet is mirrored (egress or deflected) or an ingress drop.
@@ -540,7 +401,7 @@ control IntEgress (
                 // Mirroring the packet. It could work only if clone preserves the metadata structs.
                 // The mirrored packet will then generate the report.
 
-                flow_report_filter.apply(hdr, fabric_v1model, standard_md); // comment this if not interested in filtering.
+                // flow_report_filter.apply(hdr, fabric_v1model, standard_md); // Flow report filter will drop everything since there is only 1 queue.
 
 #ifdef WITH_LATEST_P4C
                 clone_preserving_field_list(CloneType.E2E,

@@ -68,7 +68,7 @@ control FabricIngress (inout v1model_header_t hdr,
             // After recirculation is performed, override ingress port, emulating TNA recirc port.
             // This workaround allows to have the same PTF structure.
             standard_md.ingress_port = DROP_OVERRIDE_FAKE_PORT;
-            fabric_md.ingress.bridged.base.ig_port = DROP_OVERRIDE_FAKE_PORT; // Can't we use this md to match ingress port instead of overriding standard_md.ingress_port?
+            fabric_md.ingress.bridged.base.ig_port = DROP_OVERRIDE_FAKE_PORT;
         }
 
         lkp_md_init.apply(hdr.ingress, fabric_md.ingress.lkp);
@@ -139,13 +139,6 @@ control FabricEgress (inout v1model_header_t hdr,
             recirculate({});
 #endif // WITH_LATEST_P4C
         }
-
-        // if (IS_E2E_CLONE(standard_md)) {
-               // NOT IMPLEMENTED.
-        //     // Mirrored packet that will be transformed in report. needed for EgressDropReport.
-        //     parser_emulator.apply(hdr, fabric_md, standard_md);
-        //     recirculate(standard_md);
-        // }
 #endif // WITH_INT
 
         if (fabric_md.skip_egress){

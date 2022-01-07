@@ -97,7 +97,7 @@ control SpgwIngress(
     //=======================//
 
     action downlink_pdr_drop() {
-        fabric_v1model.drop_ctl = 1w1;
+        fabric_v1model.drop_ctl = 1;
         fabric_md.skip_forwarding = true;
         fabric_md.skip_next = true;
 #ifdef WITH_INT
@@ -106,7 +106,7 @@ control SpgwIngress(
     }
 
     action uplink_pdr_drop() {
-        fabric_v1model.drop_ctl = 1w1;
+        fabric_v1model.drop_ctl = 1;
         fabric_md.skip_forwarding = true;
         fabric_md.skip_next = true;
 #ifdef WITH_INT
@@ -171,7 +171,7 @@ control SpgwIngress(
     //=======================//
 
     action far_drop() {
-        fabric_v1model.drop_ctl = 1w1;
+        fabric_v1model.drop_ctl = 1;
         fabric_md.skip_forwarding = true;
         fabric_md.skip_next = true;
         fabric_md.bridged.spgw.needs_gtpu_encap = false;
