@@ -1295,6 +1295,10 @@ class FabricSpgwDownlinkEcmpTest(SpgwSimpleTest):
         self.set_egress_vlan(self.port2, vlan_id, False)
         self.set_egress_vlan(self.port3, vlan_id, False)
 
+        self.add_gtp_tunnel_peer(tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID,
+                                 tunnel_src_addr=S1U_SGW_IPV4,
+                                 tunnel_dst_addr=S1U_ENB_IPV4)
+
         # ue_ipv4_toport list is used to learn the ue_ipv4 address for a given packet.
         ue_ipv4_toport = [None, None]
         # teid_toport list is used to learn the teid
@@ -1302,7 +1306,6 @@ class FabricSpgwDownlinkEcmpTest(SpgwSimpleTest):
         teid_toport = [None, None]
         for i in range(50):
             ue_ipv4 = "10.0.0." + str(i)
-            far_id = i
             test_teid = i * 3
 
             self.setup_downlink(
@@ -1310,8 +1313,7 @@ class FabricSpgwDownlinkEcmpTest(SpgwSimpleTest):
                 s1u_enb_addr=S1U_ENB_IPV4,
                 teid=test_teid,
                 ue_addr=ue_ipv4,
-                ctr_id=DOWNLINK_PDR_CTR_IDX,
-                far_id=far_id,
+                ctr_id=DOWNLINK_UPF_CTR_IDX,
             )
 
             pkt_from1 = getattr(testutils, "simple_%s_packet" % pkt_type)(
@@ -1501,12 +1503,13 @@ class FabricSpgwDownlinkToDbufTest(SpgwSimpleTest):
 
     @tvsetup
     @autocleanup
-    def doRunTest(self, pkt, tagged1, tagged2, is_next_hop_spine, **kwargs):
+    def doRunTest(self, pkt, tagged1, tagged2, is_next_hop_spine, is_dbuf_present, **kwargs):
         self.runDownlinkToDbufTest(
             pkt=pkt,
             tagged1=tagged1,
             tagged2=tagged2,
             is_next_hop_spine=is_next_hop_spine,
+            is_dbuf_present=is_dbuf_present,
         )
 
     def runTest(self):
@@ -1518,11 +1521,12 @@ class FabricSpgwDownlinkToDbufTest(SpgwSimpleTest):
             "ip_dst": UE1_IPV4,
         }
         for traffic_dir in ["host-leaf-host", "spine-leaf-host", "host-leaf-spine"]:
-            for test_args in get_test_args(
-                traffic_dir=traffic_dir, pkt_addrs=pkt_addrs, spgw_type="DL"
-            ):
-                self.doRunTest(**test_args)
-
+            for dbuf_present in [False, True]:
+                for test_args in get_test_args(
+                    traffic_dir=traffic_dir, pkt_addrs=pkt_addrs, spgw_type="DL"
+                ):
+                    print("is_dbuf_present: " + str(dbuf_present))
+                    self.doRunTest(**test_args, is_dbuf_present=dbuf_present)
 
 @group("spgw")
 class FabricSpgwDownlinkFromDbufTest(SpgwSimpleTest):
@@ -1655,8 +1659,8 @@ class FabricSpgwDownlinkIntTest(SpgwIntTest):
                 self.doRunTest(**test_args)
 
 
-# This test will assume the packet hits spgw interface and miss the uplink PDR table or
-# the FAR table
+# This test will assume the packet hits spgw interface and miss the uplink UE Session table or
+# the uplink Flows table
 @group("int")
 @group("spgw")
 class FabricSpgwIntUplinkDropTest(SpgwIntTest):
@@ -1711,8 +1715,8 @@ class FabricSpgwIntUplinkDropTest(SpgwIntTest):
                 self.doRunTest(**test_args)
 
 
-# This test will assume the packet hits spgw interface and miss the downlink PDR table or
-# the FAR table
+# This test will assume the packet hits spgw interface and miss the downlink UE Sessions table or
+# the downlink Flows table
 @group("int")
 @group("spgw")
 class FabricSpgwIntDownlinkDropTest(SpgwIntTest):

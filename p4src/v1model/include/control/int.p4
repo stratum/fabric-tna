@@ -75,12 +75,12 @@ control IntIngress(
 #ifdef WITH_SPGW
         fabric_md.bridged.spgw.skip_spgw = true;
 #endif // WITH_SPGW
-        // In V1model, we use the recirculate primitive, in the egress pipeline.
+        // In V1model, we use the recirculate primitive, in egress pipeline.
 
         // The drop flag may be set by other tables, need to reset it so the packet can
         // be forward to egress pipeline and be recirculated.
         fabric_v1model.drop_ctl = 0;
-        standard_md.egress_spec = DROP_OVERRIDE_FAKE_PORT;
+        standard_md.egress_spec = FAKE_PORT;
 
         drop_report_counter.count();
     }

@@ -85,14 +85,14 @@ fabric-spgw-int  | basic, SPGW, INT, SPGW+INT, INT-dod
 * Downlink INT flow report tests
 * Downlink INT drop report tests
 
-  * Drop by PDR table
-  * Drop by FAR table
+  * Drop by UE Sessions table
+  * Drop by Per-Slice Mobile Flows table
 
 * Uplink INT flow report tests
 * Uplink INT drop report tests
 
-  * Drop by PDR table
-  * Drop by FAR table
+  * Drop by UE Sessions table
+  * Drop by Per-Slice Mobile Flows table
 
 ## The line rate test plan
 
