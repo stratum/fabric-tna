@@ -1557,6 +1557,7 @@ class FabricSpgwDownlinkFromDbufTest(SpgwSimpleTest):
 
 @group("int")
 @group("spgw")
+@skipIf(is_v1model(), "SpgwUplinkIntTest not implemented yet.")
 class FabricSpgwUplinkIntTest(SpgwIntTest):
     @tvsetup
     @autocleanup
@@ -1606,6 +1607,7 @@ class FabricSpgwUplinkIntTest(SpgwIntTest):
 
 @group("int")
 @group("spgw")
+@skipIf(is_v1model(), "SpgwDownlinkIntTest not implemented yet.")
 class FabricSpgwDownlinkIntTest(SpgwIntTest):
     @tvsetup
     @autocleanup
@@ -2988,6 +2990,7 @@ class FabricOptimizedFieldDetectorTest(FabricTest):
 
 
 @group("int-dod")
+@skipIf(is_v1model(), "Deflect on drop not supported in v1model.")
 class FabricIntDeflectDropReportTest(IntTest):
     @autocleanup
     def doRunTest(

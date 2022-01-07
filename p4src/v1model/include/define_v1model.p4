@@ -9,9 +9,9 @@
 #ifndef __DEFINE_V1MODEL__
 #define __DEFINE_V1MODEL__
 
-#ifndef WITH_LATEST_P4C //FIXME used to swtich between stable and latest p4c.
+#ifndef WITH_LATEST_P4C //FIXME used to switch between stable and latest p4c.
 // Remove this ifdef and all the others when latest feature of p4c does not cause bmv2 to crash.
-// remember to switch latest or stable p4c in .env
+// remember to switch latest or stable p4c in .env file
 // #define WITH_LATEST_P4C // if this is commented, stable p4c is being used.
 #endif // WITH_LATEST_P4C
 
@@ -31,12 +31,11 @@ typedef bit<1> BOOL;
 typedef bit<8> FieldListIndex_t;
 
 const PortId_t BMV2_DROP_PORT = 511;
-// The DROP_OVERRIDE_FAKE_PORT is used to override the mark_to_drop() primitive.
+// The FAKE_PORT is used to override the mark_to_drop() primitive and/or to emulate TNA's recirc port.
 // Especially in INT, when dropping a packet we still want the packet to go through the egress pipeline.
 // Calling mark_to_drop() will set the egress_spec = BMV2_DROP_PORT, leading to packet being dropped at the end of ingress pipeline.
-// This port is also used as recirculation port, emulating TNA behavior.
 // This port shouldn't be used for any other reason.
-const PortId_t DROP_OVERRIDE_FAKE_PORT = 510;
+const PortId_t FAKE_PORT = 510;
 
 /** Field list values for metadata preservation */
 const FieldListIndex_t PRESERVE_STANDARD_MD = 255;

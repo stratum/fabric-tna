@@ -2854,10 +2854,6 @@ class SpgwSimpleTest(IPv4UnicastTest):
             # deparser, after counter update.
             uplink_ingress_bytes += VLAN_BYTES
             uplink_egress_bytes += VLAN_BYTES
-            if is_v1model():
-                # Recirculated Pkt is vlan tagged. Count in downlink.
-                downlink_ingress_bytes += VLAN_BYTES
-                downlink_egress_bytes += VLAN_BYTES
         if self.loopback:
             uplink_ingress_bytes += CPU_LOOPBACK_FAKE_ETH_BYTES
             uplink_egress_bytes += CPU_LOOPBACK_FAKE_ETH_BYTES
@@ -3737,8 +3733,8 @@ class IntTest(IPv4UnicastTest):
             install_routing_entry=install_routing_entry,
         )
 
-        if is_v1model():
-            time.sleep(0.5)
+        # if is_v1model():
+        #     time.sleep(0.5)
         if expect_int_report:
             self.verify_packet(exp_int_report_pkt_masked, self.port3)
         self.verify_no_other_packets()
