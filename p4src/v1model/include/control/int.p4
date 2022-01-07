@@ -129,7 +129,7 @@ control IntEgress (
     egress_headers_t hdr = hdr_v1model.egress;
     fabric_egress_metadata_t fabric_md = fabric_v1model.egress;
 
-    FlowReportFilter() flow_report_filter;
+    FlowReportFilter() flow_report_filter; // Unused. Left for 
     DropReportFilter() drop_report_filter;
     queue_report_filter_index_t queue_report_filter_index;
 

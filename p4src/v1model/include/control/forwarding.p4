@@ -109,7 +109,6 @@ control Forwarding (inout ingress_headers_t hdr,
     }
 
     action drop_routing_v4() {
-        mark_to_drop(standard_md);
         fabric_md.skip_next = true;
         routing_v4_counter.count();
         fabric_v1model.drop_ctl = 1;
@@ -149,7 +148,6 @@ control Forwarding (inout ingress_headers_t hdr,
     }
 
     action drop_routing_v6() {
-        mark_to_drop(standard_md);
         fabric_md.skip_next = true;
         routing_v6_counter.count();
         fabric_v1model.drop_ctl = 1;

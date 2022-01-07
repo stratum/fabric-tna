@@ -45,7 +45,7 @@ build: clean $(PROFILES) pipeconf
 all: $(PROFILES)
 
 fabric:
-#	@$(DIR)/p4src/tna/build.sh fabric ""
+	@$(DIR)/p4src/tna/build.sh fabric ""
 	@${DIR}/p4src/v1model/build.sh fabric ""
 
 # Profiles which are not completed yet.
@@ -56,15 +56,15 @@ fabric:
 # 	@$(DIR)/p4src/tna/build.sh fabric-bng "-DWITH_BNG -DWITHOUT_XCONNECT"
 
 fabric-int:
-#	@$(DIR)/p4src/tna/build.sh fabric-int "-DWITH_INT"
+	@$(DIR)/p4src/tna/build.sh fabric-int "-DWITH_INT"
 	@$(DIR)/p4src/v1model/build.sh fabric-int "-DWITH_INT"
 
 fabric-spgw:
-#	@$(DIR)/p4src/tna/build.sh fabric-spgw "-DWITH_SPGW"
+	@$(DIR)/p4src/tna/build.sh fabric-spgw "-DWITH_SPGW"
 	@$(DIR)/p4src/v1model/build.sh fabric-spgw "-DWITH_SPGW"
 
 fabric-spgw-int:
-#	@$(DIR)/p4src/tna/build.sh fabric-spgw-int "-DWITH_SPGW -DWITH_INT"
+	@$(DIR)/p4src/tna/build.sh fabric-spgw-int "-DWITH_SPGW -DWITH_INT"
 	@$(DIR)/p4src/v1model/build.sh fabric-spgw-int "-DWITH_SPGW -DWITH_INT"
 
 constants:

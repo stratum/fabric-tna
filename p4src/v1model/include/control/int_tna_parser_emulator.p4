@@ -158,7 +158,7 @@ control IntTnaEgressParserEmulator (
     apply {
         /* Deparser logic */
         // This section is needed to address various header deparsing combinations.
-        // When generating the INT report, all unused headers will be stripped.
+        // When generating the INT report, all unused headers are stripped here.
 
         hdr_v1model.ingress.vlan_tag.setInvalid();
 #if defined(WITH_XCONNECT) || defined(WITH_DOUBLE_VLAN_TERMINATION)
@@ -179,7 +179,7 @@ control IntTnaEgressParserEmulator (
             hdr_v1model.ingress.gtpu_options.setInvalid();
             hdr_v1model.ingress.gtpu_ext_psc.setInvalid();
 
-            // in case of encapsulated traffic, only inner headers are allowed.
+            // in case of encapsulated traffic, we're interested only in inner headers.
         }
 
         /* End of Deparser logic */
