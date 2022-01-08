@@ -131,7 +131,7 @@ control FabricEgress (inout v1model_header_t hdr,
 #ifdef WITH_INT
         if ((bit<8>)fabric_md.egress.bridged.int_bmd.report_type == BridgedMdType_t.INT_INGRESS_DROP){
             // Ingress drops become themselves a report. Mirroring is not performed.
-            parser_emulator.apply(hdr, fabric_md, standard_md);
+            parser_emulator.apply(hdr, fabric_md.egress, standard_md);
             recirculate({});
         }
 #endif // WITH_INT

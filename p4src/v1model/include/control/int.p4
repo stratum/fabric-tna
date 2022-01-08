@@ -6,7 +6,6 @@
 
 #include "v1model/include/define_v1model.p4"
 #include "v1model/include/header_v1model.p4"
-#include "v1model/include/control/int_unused_filters.p4"
 
 control IntWatchlist(inout ingress_headers_t         hdr,
                      inout fabric_ingress_metadata_t fabric_md,
@@ -118,11 +117,15 @@ control IntEgress (inout v1model_header_t          hdr_v1model,
                    inout fabric_v1model_metadata_t fabric_v1model,
                    inout standard_metadata_t       standard_md) {
 
+    // By default report every 2^30 ns (~1 second)
+    const bit<48> DEFAULT_TIMESTAMP_MASK = 0xffffc0000000;
+    // or for hop latency changes greater than 2^8 ns
+    const bit<32> DEFAULT_HOP_LATENCY_MASK = 0xffffff00;
+    const queue_report_quota_t DEFAULT_QUEUE_REPORT_QUOTA = 1024;
+
     egress_headers_t hdr = hdr_v1model.egress;
     fabric_egress_metadata_t fabric_md = fabric_v1model.egress;
 
-    FlowReportFilter() flow_report_filter;
-    DropReportFilter() drop_report_filter;
     queue_report_filter_index_t queue_report_filter_index;
 
     direct_counter(CounterType.packets_and_bytes) report_counter;
@@ -377,23 +380,14 @@ control IntEgress (inout v1model_header_t          hdr_v1model,
         config.apply();
         hdr.report_fixed_header.hw_id = 4w0 ++ standard_md.egress_spec[8:7];
 
-        // Filtering for drop reports is done after mirroring to handle all drop
-        // cases with one filter:
-        // - drop by ingress tables (ingress mirroring)
-        // - drop by egress table (egress mirroring)
-        // drop_report_filter.apply(hdr, fabric_v1model, standard_md); // Drop report filter not used.
-
         if (fabric_md.int_report_md.isValid()) {
             // Packet is mirrored (egress or deflected) or an ingress drop.
             report.apply();
         } else {
-            // Regular packet. Initialize INT mirror metadata but let
-            // filter decide whether to generate a mirror or not.
+            // Regular packet. Initialize INT mirror metadata.
             if (int_metadata.apply().hit) {
                 // Mirroring the packet. It could work only if clone preserves the metadata structs.
                 // The mirrored packet will then generate the report.
-
-                // flow_report_filter.apply(hdr, fabric_v1model, standard_md); // Flow report filter not used.
 
                 clone3(CloneType.E2E,
                     (bit<32>)fabric_md.bridged.int_bmd.mirror_session_id,
