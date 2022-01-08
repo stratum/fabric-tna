@@ -27,17 +27,10 @@ control Acl (inout ingress_headers_t         hdr,
     }
 
     action copy_to_cpu() {
-#ifdef WITH_LATEST_P4C
-        clone_preserving_field_list(CloneType.I2E,
-            (bit<32>) PACKET_IN_MIRROR_SESSION_ID,
-            PRESERVE_STANDARD_MD
-        );
-#else
         clone3(CloneType.I2E,
             (bit<32>) PACKET_IN_MIRROR_SESSION_ID,
             {standard_md.ingress_port}
         );
-#endif // WITH_LATEST_P4C
         acl_counter.count();
     }
 

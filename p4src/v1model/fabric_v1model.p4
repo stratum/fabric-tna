@@ -132,11 +132,7 @@ control FabricEgress (inout v1model_header_t hdr,
         if ((bit<8>)fabric_md.egress.bridged.int_bmd.report_type == BridgedMdType_t.INT_INGRESS_DROP){
             // Ingress drops become themselves a report. Mirroring is not performed.
             parser_emulator.apply(hdr, fabric_md, standard_md);
-#ifdef WITH_LATEST_P4C
-            recirculate_preserving_field_list(PRESERVE_STANDARD_MD);
-#else
             recirculate({});
-#endif // WITH_LATEST_P4C
         }
 #endif // WITH_INT
 
@@ -158,11 +154,7 @@ control FabricEgress (inout v1model_header_t hdr,
 
         if (fabric_md.do_spgw_uplink_recirc) {
             // Recirculate UE-to-UE traffic.
-#ifdef WITH_LATEST_P4C
-            recirculate_preserving_field_list(PRESERVE_STANDARD_MD);
-#else
             recirculate(standard_md);
-#endif // WITH_LATEST_P4C
         }
 
         if (fabric_md.drop_ctl == 1) {

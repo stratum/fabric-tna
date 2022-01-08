@@ -395,16 +395,9 @@ control IntEgress (inout v1model_header_t          hdr_v1model,
 
                 // flow_report_filter.apply(hdr, fabric_v1model, standard_md); // Flow report filter not used.
 
-#ifdef WITH_LATEST_P4C
-                clone_preserving_field_list(CloneType.E2E,
-                    (bit<32>)fabric_md.bridged.int_bmd.mirror_session_id,
-                    PRESERVE_FABRIC_MD_AND_STANDARD_MD); // TODO, recover standard_md from custom metadata struct.
-#else
                 clone3(CloneType.E2E,
                     (bit<32>)fabric_md.bridged.int_bmd.mirror_session_id,
                     {standard_md, fabric_md});
-#endif // WITH_LATEST_P4C
-
             }
         }
 
