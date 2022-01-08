@@ -4,14 +4,9 @@
 #ifndef __INT_PARSER_EMU__
 #define __INT_PARSER_EMU__
 
-#include "v1model/include/define_v1model.p4"
-#include "v1model/include/header_v1model.p4"
-
-
-control IntTnaEgressParserEmulator (
-    inout v1model_header_t hdr_v1model,
-    inout fabric_v1model_metadata_t fabric_v1model,
-    inout standard_metadata_t standard_md) {
+control IntTnaEgressParserEmulator (inout v1model_header_t          hdr_v1model,
+                                    inout fabric_v1model_metadata_t fabric_v1model,
+                                    inout standard_metadata_t       standard_md) {
 
 // This control wraps all the logic defined within the TNA egress parser.
 // It actually does not perform any parsing of the packet.
@@ -94,6 +89,7 @@ control IntTnaEgressParserEmulator (
 
     @hidden
     action parse_int_deflected_drop() {
+        /* unused in V1model. Could be deleted */
         set_common_int_drop_headers();
 
         fabric_md.int_report_md.bmd_type = BridgedMdType_t.DEFLECTED;
@@ -156,6 +152,8 @@ control IntTnaEgressParserEmulator (
     }
 
     apply {
+        fabric_md.is_int_recirc = true;
+
         /* Deparser logic */
         // This section is needed to address various header deparsing combinations.
         // When generating the INT report, all unused headers are stripped here.
@@ -165,7 +163,8 @@ control IntTnaEgressParserEmulator (
         hdr_v1model.ingress.inner_vlan.setInvalid();
 #endif // WITH_XCONNECT || WITH_DOUBLE_VLAN_TERMINATION
 
-        if(hdr_v1model.ingress.gtpu.isValid() || hdr_v1model.ingress.vxlan.isValid()) {
+        if(fabric_md.bridged.base.encap_presence != EncapPresence.NONE) {
+            // in case of encapsulated traffic, we're interested only in inner headers.
             hdr_v1model.ingress.ipv4.setInvalid();
             hdr_v1model.ingress.tcp.setInvalid();
             hdr_v1model.ingress.udp.setInvalid();
@@ -178,8 +177,6 @@ control IntTnaEgressParserEmulator (
             hdr_v1model.ingress.gtpu.setInvalid();
             hdr_v1model.ingress.gtpu_options.setInvalid();
             hdr_v1model.ingress.gtpu_ext_psc.setInvalid();
-
-            // in case of encapsulated traffic, we're interested only in inner headers.
         }
 
         /* End of Deparser logic */

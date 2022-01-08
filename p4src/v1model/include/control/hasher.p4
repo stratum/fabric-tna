@@ -4,7 +4,7 @@
 #include "v1model/include/define_v1model.p4"
 #include "v1model/include/header_v1model.p4"
 
-control Hasher(inout ingress_headers_t hdr,
+control Hasher(inout ingress_headers_t         hdr,
                inout fabric_ingress_metadata_t fabric_md) {
 
     flow_hash_t max = 0xFFFFFFFF;

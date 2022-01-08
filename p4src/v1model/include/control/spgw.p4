@@ -7,26 +7,24 @@
 
 control SpgwIngress(
         /* Fabric.p4 */
-        inout ingress_headers_t           hdr,
-        inout fabric_v1model_metadata_t   fabric_v1model,
-        inout standard_metadata_t         standard_md) {
+        inout ingress_headers_t          hdr,
+        inout fabric_ingress_metadata_t  fabric_md,
+        inout standard_metadata_t        standard_md,
+        inout bool                       do_spgw_uplink_recirc,
+        inout bit<1>                     drop_ctl) {
 
     //========================//
     //===== Misc Things ======//
     //========================//
 
     counter(MAX_UPF_COUNTERS, CounterType.packets_and_bytes) terminations_counter;
-    // Using this local variable (fabric_md) to avoid editing all the actions, since
-    // the control parameter is of type fabric_v1model_metadata_t, instead of fabric_ingress_metadata_t.
-    // fabric_v1model.ingress is then updated in apply{} section, to to maintain all the edits made to fabric_md.
-    fabric_ingress_metadata_t fabric_md = fabric_v1model.ingress;
 
     bool upf_termination_hit = false;
     ue_session_id_t ue_session_id = 0;
 
     @hidden
     action _drop_common() {
-        fabric_v1model.drop_ctl = 1;
+        drop_ctl = 1;
         fabric_md.skip_forwarding = true;
         fabric_md.skip_next = true;
     }
@@ -328,7 +326,7 @@ control SpgwIngress(
         // For more info on FAKE_PORT, see v1model/define_v1model.p4
         standard_md.egress_spec = FAKE_PORT;
         fabric_md.bridged.base.vlan_id = DEFAULT_VLAN_ID;
-        fabric_v1model.do_spgw_uplink_recirc = true;
+        do_spgw_uplink_recirc = true;
         fabric_md.egress_port_set = true;
         fabric_md.skip_forwarding = true;
         fabric_md.skip_next = true;
@@ -339,7 +337,7 @@ control SpgwIngress(
 #ifdef WITH_INT
         fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_SPGW_UPLINK_RECIRC_DENY;
 #endif // WITH_INT
-        fabric_v1model.do_spgw_uplink_recirc = false;
+        do_spgw_uplink_recirc = false;
         fabric_md.skip_forwarding = true;
         fabric_md.skip_next = true;
         recirc_stats.count();
@@ -408,9 +406,6 @@ control SpgwIngress(
             // Forwarding is done by other parts of the ingress, and
             // encapsulation is done in the egress
         }
-
-        // As last step, synchronize local var to parameter passed in control.
-        fabric_v1model.ingress = fabric_md;
     }
 }
 
@@ -418,12 +413,10 @@ control SpgwIngress(
 //====================================//
 //============== Egress ==============//
 //====================================//
-control SpgwEgress(
-        inout ingress_headers_t hdr,
-        inout fabric_v1model_metadata_t fabric_v1model) {
+control SpgwEgress(inout ingress_headers_t          hdr,
+                   inout fabric_egress_metadata_t  fabric_md) {
 
     counter(MAX_UPF_COUNTERS, CounterType.packets_and_bytes) terminations_counter;
-    fabric_egress_metadata_t fabric_md = fabric_v1model.egress;
 
     //=========================//
     //===== Tunnel Peers ======//
@@ -577,7 +570,6 @@ control SpgwEgress(
                 terminations_counter.count((bit<32>)fabric_md.bridged.spgw.upf_ctr_id);
             }
         }
-        fabric_v1model.egress = fabric_md;
     }
 }
 

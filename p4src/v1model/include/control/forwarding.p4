@@ -7,11 +7,10 @@
 #include "v1model/include/header_v1model.p4"
 
 
-control Forwarding (inout ingress_headers_t hdr,
-                    inout fabric_v1model_metadata_t fabric_v1model,
-                    inout standard_metadata_t standard_md) {
-
-    fabric_ingress_metadata_t fabric_md = fabric_v1model.ingress;
+control Forwarding (inout ingress_headers_t         hdr,
+                    inout fabric_ingress_metadata_t fabric_md,
+                    inout standard_metadata_t       standard_md,
+                    inout bit<1>                    drop_ctl) {
 
 #ifdef WITH_INT
     action set_int_drop_reason(bit<8> drop_reason) {
@@ -40,7 +39,7 @@ control Forwarding (inout ingress_headers_t hdr,
     table bridging {
         key = {
             fabric_md.bridged.base.vlan_id : exact @name("vlan_id");
-            hdr.ethernet.dst_addr     : ternary @name("eth_dst");
+            hdr.ethernet.dst_addr          : ternary @name("eth_dst");
         }
         actions = {
             set_next_id_bridging;
@@ -111,7 +110,7 @@ control Forwarding (inout ingress_headers_t hdr,
     action drop_routing_v4() {
         fabric_md.skip_next = true;
         routing_v4_counter.count();
-        fabric_v1model.drop_ctl = 1;
+        drop_ctl = 1;
     }
 
     table routing_v4 {
@@ -150,7 +149,7 @@ control Forwarding (inout ingress_headers_t hdr,
     action drop_routing_v6() {
         fabric_md.skip_next = true;
         routing_v6_counter.count();
-        fabric_v1model.drop_ctl = 1;
+        drop_ctl = 1;
     }
 
     table routing_v6 {
@@ -190,7 +189,5 @@ control Forwarding (inout ingress_headers_t hdr,
                        fabric_md.bridged.base.fwd_type == FWD_IPV6_UNICAST) {
             routing_v6.apply();
         }
-
-        fabric_v1model.ingress = fabric_md;
     }
 }

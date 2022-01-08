@@ -8,12 +8,9 @@
 #include "v1model/include/header_v1model.p4"
 #include "v1model/include/control/int_unused_filters.p4"
 
-
-
-control IntWatchlist(
-    inout ingress_headers_t hdr,
-    inout fabric_ingress_metadata_t fabric_md,
-    inout standard_metadata_t standard_md) {
+control IntWatchlist(inout ingress_headers_t         hdr,
+                     inout fabric_ingress_metadata_t fabric_md,
+                     inout standard_metadata_t       standard_md) {
 
     direct_counter(CounterType.packets_and_bytes) watchlist_counter;
 
@@ -57,13 +54,11 @@ control IntWatchlist(
     }
 }
 
-control IntIngress(
-    inout ingress_headers_t hdr,
-    inout fabric_v1model_metadata_t fabric_v1model,
-    inout standard_metadata_t standard_md
-    ) {
+control IntIngress(inout ingress_headers_t         hdr,
+                   inout fabric_ingress_metadata_t fabric_md,
+                   inout standard_metadata_t       standard_md,
+                   inout bit<1>                    drop_ctl) {
 
-    fabric_ingress_metadata_t fabric_md = fabric_v1model.ingress;
     direct_counter(CounterType.packets_and_bytes) drop_report_counter;
 
     @hidden
@@ -79,7 +74,7 @@ control IntIngress(
 
         // The drop flag may be set by other tables, need to reset it so the packet can
         // be forward to egress pipeline and be recirculated.
-        fabric_v1model.drop_ctl = 0;
+        drop_ctl = 0;
         standard_md.egress_spec = FAKE_PORT;
 
         drop_report_counter.count();
@@ -89,7 +84,7 @@ control IntIngress(
     table drop_report {
         key = {
             fabric_md.bridged.int_bmd.report_type: exact @name("int_report_type");
-            fabric_v1model.drop_ctl: exact @name("drop_ctl");
+            drop_ctl: exact @name("drop_ctl");
             fabric_md.punt_to_cpu: exact @name("punt_to_cpu");
             fabric_md.egress_port_set: exact @name("egress_port_set");
             standard_md.mcast_grp: ternary @name("mcast_group_id");
@@ -116,15 +111,12 @@ control IntIngress(
         fabric_md.bridged.int_bmd.queue_id = 0; //bmv2 has only 1 queue.
         drop_report.apply();
 
-        fabric_v1model.ingress = fabric_md;
     }
 }
 
-control IntEgress (
-    inout v1model_header_t hdr_v1model,
-    inout fabric_v1model_metadata_t fabric_v1model,
-    inout standard_metadata_t standard_md
-    ) {
+control IntEgress (inout v1model_header_t          hdr_v1model,
+                   inout fabric_v1model_metadata_t fabric_v1model,
+                   inout standard_metadata_t       standard_md) {
 
     egress_headers_t hdr = hdr_v1model.egress;
     fabric_egress_metadata_t fabric_md = fabric_v1model.egress;

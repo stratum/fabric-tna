@@ -7,10 +7,10 @@
 #include "v1model/include/header_v1model.p4"
 #include "v1model/include/define_v1model.p4"
 
-parser FabricParser (packet_in packet,
-                     out v1model_header_t hdr,
-                     inout fabric_v1model_metadata_t fabric_md,
-                     inout standard_metadata_t standard_md) {
+parser FabricParser (packet_in                            packet,
+                     out        v1model_header_t          hdr,
+                     inout      fabric_v1model_metadata_t fabric_md,
+                     inout      standard_metadata_t       standard_md) {
 
     state start {
         // pkt_length is set here because in egress pipeline, pkt_length value

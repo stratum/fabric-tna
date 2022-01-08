@@ -72,35 +72,35 @@ control FabricIngress (inout v1model_header_t hdr,
         }
 
         lkp_md_init.apply(hdr.ingress, fabric_md.ingress.lkp);
-        pkt_io.apply(hdr.ingress, fabric_md.ingress, fabric_md.skip_egress ,standard_md);
+        pkt_io.apply(hdr.ingress, fabric_md.ingress, fabric_md.skip_egress, standard_md);
 #ifdef WITH_INT
         int_watchlist.apply(hdr.ingress, fabric_md.ingress, standard_md);
 #endif // WITH_INT
-        stats.apply(fabric_md.ingress.lkp, standard_md.ingress_port,
+        stats.apply(fabric_md.ingress.lkp, fabric_md.ingress.bridged.base.ig_port,
             fabric_md.ingress.bridged.base.stats_flow_id);
 
         slice_tc_classifier.apply(hdr.ingress, standard_md, fabric_md.ingress);
         filtering.apply(hdr.ingress, fabric_md.ingress, standard_md);
 #ifdef WITH_SPGW
         if (!fabric_md.ingress.skip_forwarding) {
-            spgw.apply(hdr.ingress, fabric_md, standard_md);
+            spgw.apply(hdr.ingress, fabric_md.ingress, standard_md, fabric_md.do_spgw_uplink_recirc, fabric_md.drop_ctl);
         }
 #endif // WITH_SPGW
         if (!fabric_md.ingress.skip_forwarding) {
-            forwarding.apply(hdr.ingress, fabric_md, standard_md);
+            forwarding.apply(hdr.ingress, fabric_md.ingress, standard_md, fabric_md.drop_ctl);
         }
         hasher.apply(hdr.ingress, fabric_md.ingress);
         if (!fabric_md.ingress.skip_next) {
             pre_next.apply(hdr.ingress, fabric_md.ingress);
         }
-        acl.apply(hdr.ingress, fabric_md, standard_md);
+        acl.apply(hdr.ingress, fabric_md.ingress, standard_md, fabric_md.drop_ctl);
         if (!fabric_md.ingress.skip_next) {
-            next.apply(hdr.ingress, fabric_md, standard_md);
+            next.apply(hdr.ingress, fabric_md.ingress, standard_md);
         }
-        qos.apply(fabric_md, standard_md);
+        qos.apply(fabric_md.ingress, standard_md, fabric_md.drop_ctl);
 #ifdef WITH_INT
         // Should always apply last to guarantee generation of drop reports.
-        int_ingress.apply(hdr.ingress, fabric_md, standard_md);
+        int_ingress.apply(hdr.ingress, fabric_md.ingress, standard_md, fabric_md.drop_ctl);
 #endif // WITH_INT
 
         // Emulating TNA behavior through bridged metadata.
@@ -131,7 +131,6 @@ control FabricEgress (inout v1model_header_t hdr,
 #ifdef WITH_INT
         if ((bit<8>)fabric_md.egress.bridged.int_bmd.report_type == BridgedMdType_t.INT_INGRESS_DROP){
             // Ingress drops become themselves a report. Mirroring is not performed.
-            fabric_md.egress.is_int_recirc = true;
             parser_emulator.apply(hdr, fabric_md, standard_md);
 #ifdef WITH_LATEST_P4C
             recirculate_preserving_field_list(PRESERVE_STANDARD_MD);
@@ -148,14 +147,14 @@ control FabricEgress (inout v1model_header_t hdr,
         pkt_io_egress.apply(hdr.ingress, fabric_md.egress ,standard_md);
         stats.apply(fabric_md.egress.bridged.base.stats_flow_id, standard_md.egress_port,
              fabric_md.egress.bridged.bmd_type);
-        egress_next.apply(hdr.ingress, fabric_md, standard_md);
+        egress_next.apply(hdr.ingress, fabric_md.egress, standard_md, fabric_md.drop_ctl);
 #ifdef WITH_SPGW
-        spgw.apply(hdr.ingress, fabric_md);
+        spgw.apply(hdr.ingress, fabric_md.egress);
 #endif // WITH_SPGW
 #ifdef WITH_INT
         int_egress.apply(hdr, fabric_md, standard_md);
 #endif // WITH_INT
-        dscp_rewriter.apply(fabric_md, standard_md, hdr.ingress);
+        dscp_rewriter.apply(fabric_md.egress, standard_md, hdr.ingress);
 
         if (fabric_md.do_spgw_uplink_recirc) {
             // Recirculate UE-to-UE traffic.
