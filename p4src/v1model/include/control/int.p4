@@ -9,12 +9,14 @@
 
 control IntWatchlist(inout ingress_headers_t         hdr,
                      inout fabric_ingress_metadata_t fabric_md,
-                     inout standard_metadata_t       standard_md) {
+                     inout standard_metadata_t       standard_md,
+                     inout IntReportType_t           preserved_report_type) {
 
     direct_counter(CounterType.packets_and_bytes) watchlist_counter;
 
     action mark_to_report() {
         fabric_md.bridged.int_bmd.report_type = INT_REPORT_TYPE_FLOW;
+        preserved_report_type = INT_REPORT_TYPE_FLOW;
         watchlist_counter.count();
     }
 
@@ -289,13 +291,15 @@ control IntEgress (inout v1model_header_t          hdr_v1model,
     @hidden
     action init_int_metadata(bit<3> report_type) {
         fabric_md.bridged.int_bmd.mirror_session_id = BMV2_INT_MIRROR_SESSION;
+        fabric_md.int_report_md.setValid();
 
         fabric_v1model.int_mirror_type = (bit<3>)FabricMirrorType_t.INT_REPORT;
         fabric_md.int_report_md.bmd_type = BridgedMdType_t.EGRESS_MIRROR;
         fabric_md.int_report_md.mirror_type = FabricMirrorType_t.INT_REPORT;
         fabric_md.int_report_md.report_type = fabric_md.bridged.int_bmd.report_type;
         fabric_md.int_report_md.ig_port = fabric_md.bridged.base.ig_port;
-        fabric_md.int_report_md.eg_port = standard_md.egress_spec;
+        // fabric_md.int_report_md.eg_port = standard_md.egress_spec;
+        fabric_md.int_report_md.eg_port = fabric_v1model.preserved_egress_port;
         fabric_md.int_report_md.queue_id = egress_qid;
         fabric_md.int_report_md.queue_occupancy = standard_md.deq_qdepth;
         fabric_md.int_report_md.ig_tstamp = fabric_md.bridged.base.ig_tstamp[31:0];
@@ -381,17 +385,16 @@ control IntEgress (inout v1model_header_t          hdr_v1model,
         hdr.report_fixed_header.hw_id = 4w0 ++ standard_md.egress_spec[8:7];
 
         if (fabric_md.int_report_md.isValid()) {
-            // Packet is mirrored (egress or deflected) or an ingress drop.
+            // Packet is mirrored (egress) or an ingress drop.
             report.apply();
         } else {
             // Regular packet. Initialize INT mirror metadata.
             if (int_metadata.apply().hit) {
                 // Mirroring the packet. It could work only if clone preserves the metadata structs.
                 // The mirrored packet will then generate the report.
-
-                clone3(CloneType.E2E,
+                clone_preserving_field_list(CloneType.E2E,
                     (bit<32>)fabric_md.bridged.int_bmd.mirror_session_id,
-                    {standard_md, fabric_md});
+                    PRESERVE_REPORT_TYPE_MD);
             }
         }
 

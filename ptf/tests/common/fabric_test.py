@@ -3793,6 +3793,8 @@ class IntTest(IPv4UnicastTest):
             install_routing_entry=install_routing_entry,
         )
 
+        if is_v1model():
+            time.sleep(0.5) # DEBUG. Remove
         if expect_int_report:
             self.verify_packet(exp_int_report_pkt_masked, self.port3)
         self.verify_no_other_packets()

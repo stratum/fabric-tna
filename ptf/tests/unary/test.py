@@ -1561,7 +1561,6 @@ class FabricSpgwDownlinkFromDbufTest(SpgwSimpleTest):
 
 @group("int")
 @group("spgw")
-@skipIf(is_v1model(), "SpgwUplinkIntTest not implemented yet.")
 class FabricSpgwUplinkIntTest(SpgwIntTest):
     @tvsetup
     @autocleanup
@@ -1603,6 +1602,11 @@ class FabricSpgwUplinkIntTest(SpgwIntTest):
             "leaf-spine-leaf",
             "leaf-spine-spine",
         ]:
+            if is_v1model():
+                # Perform mirroring of original packet to build the INT report.
+                # FIXME find another place for this.
+                self.add_clone_group(V1MODEL_INT_REPORT_MIRROR_ID, [self.port3], store=False)
+
             for test_args in get_test_args(
                 traffic_dir=traffic_dir, spgw_type="UL_PSC", int_test_type="flow"
             ):
@@ -1611,7 +1615,6 @@ class FabricSpgwUplinkIntTest(SpgwIntTest):
 
 @group("int")
 @group("spgw")
-@skipIf(is_v1model(), "SpgwDownlinkIntTest not implemented yet.")
 class FabricSpgwDownlinkIntTest(SpgwIntTest):
     @tvsetup
     @autocleanup
@@ -1653,6 +1656,11 @@ class FabricSpgwDownlinkIntTest(SpgwIntTest):
             "leaf-spine-leaf",
             "leaf-spine-spine",
         ]:
+            if is_v1model():
+                    # Perform mirroring of original packet to build the INT report.
+                    # FIXME find another place for this.
+                    self.add_clone_group(V1MODEL_INT_REPORT_MIRROR_ID, [self.port3], store=False)
+
             for test_args in get_test_args(
                 traffic_dir=traffic_dir, spgw_type="DL_PSC", int_test_type="flow"
             ):

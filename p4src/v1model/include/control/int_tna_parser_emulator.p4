@@ -83,7 +83,6 @@ control IntTnaEgressParserEmulator (inout v1model_header_t          hdr_v1model,
 
         /** drop_report_header **/
         hdr.drop_report_header.setValid();
-        // transition set_common_int_headers;
     }
 
     @hidden
@@ -102,6 +101,32 @@ control IntTnaEgressParserEmulator (inout v1model_header_t          hdr_v1model,
         hdr.common_report_header.ig_port = fabric_md.bridged.base.ig_port;
         hdr.common_report_header.eg_port = 0;
         hdr.common_report_header.queue_id = 0;
+    }
+
+    @hidden
+    action parse_int_report_mirror() {
+        set_common_int_headers();
+
+        fabric_md.bridged.bmd_type = fabric_md.int_report_md.bmd_type;
+        fabric_md.bridged.base.vlan_id = DEFAULT_VLAN_ID;
+        fabric_md.bridged.base.mpls_label = 0; // do not push an MPLS label
+        #ifdef WITH_SPGW
+            fabric_md.bridged.spgw.skip_spgw = true;
+        #endif // WITH_SPGW
+
+        /** report_fixed_header **/
+        hdr.report_fixed_header.ig_tstamp = fabric_md.int_report_md.ig_tstamp;
+
+        /** common_report_header **/
+        hdr.common_report_header.ig_port = fabric_md.int_report_md.ig_port;
+        hdr.common_report_header.eg_port = fabric_md.int_report_md.eg_port;
+        hdr.common_report_header.queue_id = fabric_md.int_report_md.queue_id;
+
+        /** local/drop_report_header (set valid later) **/
+        hdr.local_report_header.setValid();
+        hdr.local_report_header.queue_occupancy = fabric_md.int_report_md.queue_occupancy;
+        hdr.local_report_header.eg_tstamp = fabric_md.int_report_md.eg_tstamp;
+        hdr.drop_report_header.drop_reason = fabric_md.int_report_md.drop_reason;
     }
 
     apply {
@@ -134,7 +159,11 @@ control IntTnaEgressParserEmulator (inout v1model_header_t          hdr_v1model,
 
         /* End of Deparser logic */
 
-        parse_int_ingress_drop();
+        if (!IS_E2E_CLONE(standard_md)) {
+            parse_int_ingress_drop();
+        } else {
+            parse_int_report_mirror();
+        }
 
         // Synch with output struct.
         hdr_v1model.egress = hdr;

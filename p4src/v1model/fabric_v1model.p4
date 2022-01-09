@@ -74,7 +74,7 @@ control FabricIngress (inout v1model_header_t hdr,
         lkp_md_init.apply(hdr.ingress, fabric_md.ingress.lkp);
         pkt_io.apply(hdr.ingress, fabric_md.ingress, fabric_md.skip_egress, standard_md);
 #ifdef WITH_INT
-        int_watchlist.apply(hdr.ingress, fabric_md.ingress, standard_md);
+        int_watchlist.apply(hdr.ingress, fabric_md.ingress, standard_md, fabric_md.preserved_report_type);
 #endif // WITH_INT
         stats.apply(fabric_md.ingress.lkp, fabric_md.ingress.bridged.base.ig_port,
             fabric_md.ingress.bridged.base.stats_flow_id);
@@ -93,9 +93,9 @@ control FabricIngress (inout v1model_header_t hdr,
         if (!fabric_md.ingress.skip_next) {
             pre_next.apply(hdr.ingress, fabric_md.ingress);
         }
-        acl.apply(hdr.ingress, fabric_md.ingress, standard_md, fabric_md.drop_ctl);
+        acl.apply(hdr.ingress, fabric_md.ingress, standard_md, fabric_md.preserved_egress_port, fabric_md.drop_ctl);
         if (!fabric_md.ingress.skip_next) {
-            next.apply(hdr.ingress, fabric_md.ingress, standard_md);
+            next.apply(hdr.ingress, fabric_md.ingress, standard_md, fabric_md.preserved_egress_port);
         }
         qos.apply(fabric_md.ingress, standard_md, fabric_md.drop_ctl);
 #ifdef WITH_INT
@@ -129,10 +129,25 @@ control FabricEgress (inout v1model_header_t hdr,
         fabric_md.egress.cpu_port = 0;
 
 #ifdef WITH_INT
-        if ((bit<8>)fabric_md.egress.bridged.int_bmd.report_type == BridgedMdType_t.INT_INGRESS_DROP){
+        if (IS_E2E_CLONE(standard_md)) {
+            // Packet must generate the flow report or is an egress drop.
+            if (fabric_md.preserved_report_type != 0) {
+                // Restore preserved metadata
+                fabric_md.egress.bridged.int_bmd.report_type = fabric_md.preserved_report_type;
+            }
+            parser_emulator.apply(hdr, fabric_md.egress, standard_md);
+            if (fabric_md.preserved_egress_port != 0) {
+                // performed directly in INT_init_metadata
+                // TODO set preserved_egress_port also in acl and other places.
+                fabric_md.egress.int_report_md.eg_port = fabric_md.preserved_egress_port;
+            }
+            recirculate_preserving_field_list(PRESERVE_REPORT_TYPE_MD);
+        }
+
+       if ((bit<8>)fabric_md.egress.bridged.int_bmd.report_type == BridgedMdType_t.INT_INGRESS_DROP){
             // Ingress drops become themselves a report. Mirroring is not performed.
             parser_emulator.apply(hdr, fabric_md.egress, standard_md);
-            recirculate({});
+            recirculate_preserving_field_list(NO_PRESERVATION);
         }
 #endif // WITH_INT
 
@@ -154,7 +169,7 @@ control FabricEgress (inout v1model_header_t hdr,
 
         if (fabric_md.do_spgw_uplink_recirc) {
             // Recirculate UE-to-UE traffic.
-            recirculate(standard_md);
+            recirculate_preserving_field_list(NO_PRESERVATION);
         }
 
         if (fabric_md.drop_ctl == 1) {

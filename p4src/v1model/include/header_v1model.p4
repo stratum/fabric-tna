@@ -25,6 +25,16 @@ struct fabric_v1model_metadata_t {
 
     fabric_ingress_metadata_t ingress;
     fabric_egress_metadata_t  egress;
+
+    // Needed for Egress INT reports (drop or flow)
+    @field_list(PRESERVE_REPORT_TYPE_MD)
+    IntReportType_t preserved_report_type;
+    // Needed for Egress INT reports (drop or flow)
+    @field_list(PRESERVE_REPORT_TYPE_MD)
+    PortId_t    preserved_egress_port;
+    // Needed for Packet-INs
+    @field_list(PRESERVE_INGRESS_PORT)
+    PortId_t    preserved_ingress_port;
 }
 
 struct v1model_header_t {

@@ -31,6 +31,12 @@ const PortId_t BMV2_DROP_PORT = 511;
 // This port shouldn't be used for any other reason.
 const PortId_t FAKE_PORT = 510;
 
+/** Field list values for metadata preservation */
+const FieldListIndex_t PRESERVE_REPORT_TYPE_MD = 241;
+const FieldListIndex_t PRESERVE_INGRESS_PORT = 231;
+const FieldListIndex_t NO_PRESERVATION = 0;
+/** end of Field list values */
+
 #define IS_RECIRCULATED(std_meta) (std_meta.instance_type == PKT_INSTANCE_TYPE_INGRESS_RECIRC)
 #define IS_E2E_CLONE(std_meta) (std_meta.instance_type == PKT_INSTANCE_TYPE_EGRESS_CLONE)
 

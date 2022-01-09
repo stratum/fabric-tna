@@ -10,6 +10,7 @@
 control Acl (inout ingress_headers_t         hdr,
              inout fabric_ingress_metadata_t fabric_md,
              inout standard_metadata_t       standard_md,
+             inout PortId_t                  preserved_egress_port,
              inout bit<1>                    drop_ctl ) {
 
     /*
@@ -27,10 +28,17 @@ control Acl (inout ingress_headers_t         hdr,
     }
 
     action copy_to_cpu() {
-        clone3(CloneType.I2E,
+// #ifdef WITH_LATEST_P4C
+        clone_preserving_field_list(CloneType.I2E,
             (bit<32>) PACKET_IN_MIRROR_SESSION_ID,
-            {standard_md.ingress_port}
-        );
+            PRESERVE_INGRESS_PORT
+        ); // TODO: preserve ingress_port
+// #else
+//         clone3(CloneType.I2E,
+//             (bit<32>) PACKET_IN_MIRROR_SESSION_ID,
+//             {standard_md.ingress_port}
+//         );
+// #endif // WITH_LATEST_P4C
         acl_counter.count();
     }
 
@@ -59,6 +67,7 @@ control Acl (inout ingress_headers_t         hdr,
         // FIXME: If the forwarding type is ROUTING, although we have overriden the action to Bridging here
         // ttl will still -1 in the egress pipeline
         standard_md.egress_spec = port_num;
+        preserved_egress_port = port_num;
         fabric_md.egress_port_set = true;
         fabric_md.skip_next = true;
         drop_ctl = 0;

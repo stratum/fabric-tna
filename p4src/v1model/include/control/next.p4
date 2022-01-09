@@ -7,12 +7,14 @@
 
 control Next (inout ingress_headers_t         hdr,
               inout fabric_ingress_metadata_t fabric_md,
-              inout standard_metadata_t       standard_md) {
+              inout standard_metadata_t       standard_md,
+              inout PortId_t                  preserved_egress_port) {
 
     /** General actions. */
     @hidden
     action output(PortId_t port_num) {
         standard_md.egress_spec = port_num;
+        preserved_egress_port = port_num; // Needed by INT.
         fabric_md.egress_port_set = true;
     }
 
@@ -309,7 +311,8 @@ control EgressNextControl (inout ingress_headers_t        hdr,
         bool regular_packet = true;
 // #ifdef WITH_INT
         // Decrement TTL/HopLimit only for regular packets that do not have to be reported through INT.
-        regular_packet = !(fabric_md.bridged.bmd_type == BridgedMdType_t.INT_INGRESS_DROP);
+        regular_packet = ! ((fabric_md.bridged.bmd_type == BridgedMdType_t.INT_INGRESS_DROP) ||
+            (fabric_md.bridged.bmd_type == BridgedMdType_t.EGRESS_MIRROR));
 // #endif // WITH_INT
 
         if (hdr.mpls.isValid()) {
