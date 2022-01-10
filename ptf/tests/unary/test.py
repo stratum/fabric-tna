@@ -1903,11 +1903,6 @@ class FabricIntEgressDropReportTest(IntTest):
         pkt = getattr(testutils, "simple_{}_packet".format(pkt_type))(
             ip_dst=self.get_single_use_ip()
         )
-
-        if is_v1model():
-            # Perform mirroring of original packet to build the INT report.
-            self.add_clone_group(V1MODEL_INT_REPORT_MIRROR_ID, [self.port3], store=False)
-
         self.runEgressIntDropTest(
             pkt=pkt,
             tagged1=tagged1,

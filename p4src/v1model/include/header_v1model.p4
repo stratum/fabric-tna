@@ -20,8 +20,7 @@ struct fabric_v1model_metadata_t {
     bool                      skip_egress;
     bool                      do_spgw_uplink_recirc;
     bit<1>                    drop_ctl;
-    bit<3>                    int_mirror_type;
-    bool                      do_int_mirroring;
+    IntReportType_t           int_mirror_type;
 
     fabric_ingress_metadata_t ingress;
     fabric_egress_metadata_t  egress;
