@@ -32,13 +32,7 @@ control Acl (inout ingress_headers_t         hdr,
         clone_preserving_field_list(CloneType.I2E,
             (bit<32>) PACKET_IN_MIRROR_SESSION_ID,
             PRESERVE_INGRESS_PORT
-        ); // TODO: preserve ingress_port
-// #else
-//         clone3(CloneType.I2E,
-//             (bit<32>) PACKET_IN_MIRROR_SESSION_ID,
-//             {standard_md.ingress_port}
-//         );
-// #endif // WITH_LATEST_P4C
+        );
         acl_counter.count();
     }
 
@@ -80,8 +74,7 @@ control Acl (inout ingress_headers_t         hdr,
 
     table acl {
         key = {
-            // standard_md.ingress_port         : ternary @name("ig_port");   // 9
-            fabric_md.bridged.base.ig_port         : ternary @name("ig_port");   // 9
+            fabric_md.bridged.base.ig_port   : ternary @name("ig_port");   // 9
             fabric_md.lkp.eth_dst            : ternary @name("eth_dst");   // 48
             fabric_md.lkp.eth_src            : ternary @name("eth_src");   // 48
             fabric_md.lkp.vlan_id            : ternary @name("vlan_id");   // 12

@@ -160,9 +160,12 @@ control IntTnaEgressParserEmulator (inout v1model_header_t          hdr_v1model,
         /* End of Deparser logic */
 
         if (!IS_E2E_CLONE(standard_md)) {
+            // TODO find a better if condition
             parse_int_ingress_drop();
+            recirculate_preserving_field_list(NO_PRESERVATION);
         } else {
             parse_int_report_mirror();
+            recirculate_preserving_field_list(PRESERVE_REPORT_TYPE_MD);
         }
 
         // Synch with output struct.

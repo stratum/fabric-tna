@@ -22,6 +22,7 @@ control IntWatchlist(inout ingress_headers_t         hdr,
 
     action no_report() {
         fabric_md.bridged.int_bmd.report_type = INT_REPORT_TYPE_NO_REPORT;
+        preserved_report_type = INT_REPORT_TYPE_NO_REPORT;
     }
 
     // Required by the control plane to distinguish entries used to exclude the INT
@@ -74,7 +75,7 @@ control IntIngress(inout ingress_headers_t         hdr,
         // In V1model, we use the recirculate primitive, in egress pipeline.
 
         // The drop flag may be set by other tables, need to reset it so the packet can
-        // be forward to egress pipeline and be recirculated.
+        // be forwarded to egress pipeline and be recirculated.
         drop_ctl = 0;
         standard_md.egress_spec = FAKE_PORT;
 
@@ -298,7 +299,6 @@ control IntEgress (inout v1model_header_t          hdr_v1model,
         fabric_md.int_report_md.mirror_type = FabricMirrorType_t.INT_REPORT;
         fabric_md.int_report_md.report_type = fabric_md.bridged.int_bmd.report_type;
         fabric_md.int_report_md.ig_port = fabric_md.bridged.base.ig_port;
-        // fabric_md.int_report_md.eg_port = standard_md.egress_spec;
         fabric_md.int_report_md.eg_port =(PortId_t)fabric_v1model.preserved_egress_port;
         fabric_md.int_report_md.queue_id = egress_qid;
         fabric_md.int_report_md.queue_occupancy = standard_md.deq_qdepth;

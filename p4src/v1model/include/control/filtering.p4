@@ -41,7 +41,6 @@ control Filtering (inout ingress_headers_t         hdr,
 
     table ingress_port_vlan {
         key = {
-            // standard_md.ingress_port   : exact @name("ig_port");
             fabric_md.bridged.base.ig_port   : exact @name("ig_port");
             hdr.vlan_tag.isValid()     : exact @name("vlan_is_valid");
             hdr.vlan_tag.vlan_id       : ternary @name("vlan_id");
@@ -80,7 +79,6 @@ control Filtering (inout ingress_headers_t         hdr,
 
     table fwd_classifier {
         key = {
-            // standard_md.ingress_port                : exact @name("ig_port");
             fabric_md.bridged.base.ig_port                : exact @name("ig_port");
             fabric_md.lkp.eth_dst                   : ternary @name("eth_dst");
             fabric_md.lkp.eth_type                  : ternary @name("eth_type");

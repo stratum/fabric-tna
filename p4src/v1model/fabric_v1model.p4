@@ -67,7 +67,6 @@ control FabricIngress (inout v1model_header_t hdr,
         if (IS_RECIRCULATED(standard_md)) {
             // After recirculation is performed, override ingress port, emulating TNA recirc port.
             // This workaround allows to have the same PTF structure.
-            // standard_md.ingress_port = FAKE_PORT;
             fabric_md.ingress.bridged.base.ig_port = FAKE_PORT;
         }
 
@@ -135,23 +134,17 @@ control FabricEgress (inout v1model_header_t hdr,
 #ifdef WITH_INT
         if (IS_E2E_CLONE(standard_md)) {
             // Packet must generate the flow report or is an egress drop.
-            if (fabric_md.preserved_report_type != 0) {
-                // Restore preserved metadata
-                fabric_md.egress.bridged.int_bmd.report_type = fabric_md.preserved_report_type;
-            }
-            // DEBUG: performed directly in INT_init_metadata
-            // TODO set preserved_egress_port also in acl and other places.
+
+            // Restore preserved metadata
+            fabric_md.egress.bridged.int_bmd.report_type = fabric_md.preserved_report_type;
             fabric_md.egress.int_report_md.eg_port = (PortId_t)fabric_md.preserved_egress_port;
 
             parser_emulator.apply(hdr, fabric_md.egress, standard_md);
-
-            recirculate_preserving_field_list(PRESERVE_REPORT_TYPE_MD);
         }
 
        if ((bit<8>)fabric_md.egress.bridged.int_bmd.report_type == BridgedMdType_t.INT_INGRESS_DROP){
             // Ingress drops become themselves a report. Mirroring is not performed.
             parser_emulator.apply(hdr, fabric_md.egress, standard_md);
-            recirculate_preserving_field_list(NO_PRESERVATION);
         }
 #endif // WITH_INT
 

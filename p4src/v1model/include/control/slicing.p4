@@ -43,13 +43,12 @@ control IngressSliceTcClassifier (inout ingress_headers_t         hdr,
 
     table classifier {
         key = {
-            // standard_md.ingress_port : ternary @name("ig_port");
             fabric_md.bridged.base.ig_port : ternary @name("ig_port");
-            fabric_md.lkp.ipv4_src   : ternary @name("ipv4_src");
-            fabric_md.lkp.ipv4_dst   : ternary @name("ipv4_dst");
-            fabric_md.lkp.ip_proto   : ternary @name("ip_proto");
-            fabric_md.lkp.l4_sport   : ternary @name("l4_sport");
-            fabric_md.lkp.l4_dport   : ternary @name("l4_dport");
+            fabric_md.lkp.ipv4_src         : ternary @name("ipv4_src");
+            fabric_md.lkp.ipv4_dst         : ternary @name("ipv4_dst");
+            fabric_md.lkp.ip_proto         : ternary @name("ip_proto");
+            fabric_md.lkp.l4_sport         : ternary @name("l4_sport");
+            fabric_md.lkp.l4_dport         : ternary @name("l4_dport");
         }
         actions = {
             set_slice_id_tc;
