@@ -11,8 +11,8 @@ control Next (inout ingress_headers_t         hdr,
 
     /** General actions. */
     @hidden
-    action output(PortId_t port_num) {
-        standard_md.egress_spec = port_num;
+    action output(FabricPortId_t port_num) {
+        standard_md.egress_spec = (PortId_t)port_num;
         fabric_md.egress_port_set = true;
     }
 
@@ -27,7 +27,7 @@ control Next (inout ingress_headers_t         hdr,
     }
 
     @hidden
-    action routing(PortId_t port_num, mac_addr_t smac, mac_addr_t dmac) {
+    action routing(FabricPortId_t port_num, mac_addr_t smac, mac_addr_t dmac) {
         rewrite_smac(smac);
         rewrite_dmac(dmac);
         output(port_num);
@@ -40,7 +40,7 @@ control Next (inout ingress_headers_t         hdr,
      */
     direct_counter(CounterType.packets_and_bytes) xconnect_counter;
 
-    action output_xconnect(PortId_t port_num) {
+    action output_xconnect(FabricPortId_t port_num) {
         output(port_num);
         xconnect_counter.count();
     }
@@ -74,12 +74,12 @@ control Next (inout ingress_headers_t         hdr,
      */
     direct_counter(CounterType.packets_and_bytes) simple_counter;
 
-    action output_simple(PortId_t port_num) {
+    action output_simple(FabricPortId_t port_num) {
         output(port_num);
         simple_counter.count();
     }
 
-    action routing_simple(PortId_t port_num, mac_addr_t smac, mac_addr_t dmac) {
+    action routing_simple(FabricPortId_t port_num, mac_addr_t smac, mac_addr_t dmac) {
         routing(port_num, smac, dmac);
         simple_counter.count();
     }
@@ -113,12 +113,12 @@ control Next (inout ingress_headers_t         hdr,
 
     direct_counter(CounterType.packets_and_bytes) hashed_counter;
 
-    action output_hashed(PortId_t port_num) {
+    action output_hashed(FabricPortId_t port_num) {
         output(port_num);
         hashed_counter.count();
     }
 
-    action routing_hashed(PortId_t port_num, mac_addr_t smac, mac_addr_t dmac) {
+    action routing_hashed(FabricPortId_t port_num, mac_addr_t smac, mac_addr_t dmac) {
         routing(port_num, smac, dmac);
         hashed_counter.count();
     }

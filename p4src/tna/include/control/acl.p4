@@ -67,8 +67,8 @@ control Acl (inout ingress_headers_t hdr,
      * So, if this action is applied, even though skip_next is set to true
      * the packet might get forwarded with unexpected MPLS and VLAG tags.
      */
-    action set_output_port(PortId_t port_num) {
-        ig_intr_md_for_tm.ucast_egress_port = port_num;
+    action set_output_port(FabricPortId_t port_num) {
+        ig_intr_md_for_tm.ucast_egress_port = (PortId_t)port_num;
         fabric_md.egress_port_set = true;
         fabric_md.skip_next = true;
         acl_counter.count();

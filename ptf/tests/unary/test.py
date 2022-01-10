@@ -1295,9 +1295,11 @@ class FabricSpgwDownlinkEcmpTest(SpgwSimpleTest):
         self.set_egress_vlan(self.port2, vlan_id, False)
         self.set_egress_vlan(self.port3, vlan_id, False)
 
-        self.add_gtp_tunnel_peer(tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID,
-                                 tunnel_src_addr=S1U_SGW_IPV4,
-                                 tunnel_dst_addr=S1U_ENB_IPV4)
+        self.add_gtp_tunnel_peer(
+            tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID,
+            tunnel_src_addr=S1U_SGW_IPV4,
+            tunnel_dst_addr=S1U_ENB_IPV4,
+        )
 
         # ue_ipv4_toport list is used to learn the ue_ipv4 address for a given packet.
         ue_ipv4_toport = [None, None]
@@ -1503,7 +1505,9 @@ class FabricSpgwDownlinkToDbufTest(SpgwSimpleTest):
 
     @tvsetup
     @autocleanup
-    def doRunTest(self, pkt, tagged1, tagged2, is_next_hop_spine, is_dbuf_present, **kwargs):
+    def doRunTest(
+        self, pkt, tagged1, tagged2, is_next_hop_spine, is_dbuf_present, **kwargs
+    ):
         self.runDownlinkToDbufTest(
             pkt=pkt,
             tagged1=tagged1,
@@ -1527,6 +1531,7 @@ class FabricSpgwDownlinkToDbufTest(SpgwSimpleTest):
                 ):
                     print("is_dbuf_present: " + str(dbuf_present))
                     self.doRunTest(**test_args, is_dbuf_present=dbuf_present)
+
 
 @group("spgw")
 class FabricSpgwDownlinkFromDbufTest(SpgwSimpleTest):
