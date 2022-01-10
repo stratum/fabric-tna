@@ -37,8 +37,10 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGR
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_GTPU_WITH_PSC;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_LOAD_TUNNEL_PARAMS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_APP_FWD;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_APP_FWD_NO_TC;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_DROP;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP_NO_TC;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_SESSIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_TERMINATIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_IFACE_ACCESS;
@@ -275,7 +277,7 @@ public class FabricUpfTranslator {
         builder.withCounterId(FabricUpfTranslatorUtil.getParamInt(action, CTR_ID));
         if (actionId.equals(FABRIC_INGRESS_SPGW_UPLINK_DROP)) {
             builder.needsDropping(true);
-        } else {
+        } else if (actionId.equals(FABRIC_INGRESS_SPGW_APP_FWD)) {
             builder.withTrafficClass(FabricUpfTranslatorUtil.getParamByte(action, TC));
         }
         return builder.build();
@@ -308,10 +310,11 @@ public class FabricUpfTranslator {
         if (actionId.equals(FABRIC_INGRESS_SPGW_DOWNLINK_DROP)) {
             builder.needsDropping(true);
         } else {
-            // Parameters common to all types of UPF Termination rules
-            builder.withTrafficClass(FabricUpfTranslatorUtil.getParamByte(action, TC))
-                    .withTeid(FabricUpfTranslatorUtil.getParamInt(action, TEID))
+            builder.withTeid(FabricUpfTranslatorUtil.getParamInt(action, TEID))
                     .withQfi(FabricUpfTranslatorUtil.getParamByte(action, QFI));
+            if (actionId.equals(FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP)) {
+                builder.withTrafficClass(FabricUpfTranslatorUtil.getParamByte(action, TC));
+            }
         }
         return builder.build();
     }
@@ -502,7 +505,9 @@ public class FabricUpfTranslator {
         ));
 
         if (upfTermination.needsDropping()) {
-            actionBuilder.withId(FABRIC_INGRESS_SPGW_DOWNLINK_DROP);
+            actionBuilder.withId(FABRIC_INGRESS_SPGW_UPLINK_DROP);
+        } else if (upfTermination.trafficClass() == null) {
+            actionBuilder.withId(FABRIC_INGRESS_SPGW_APP_FWD_NO_TC);
         } else {
             actionBuilder.withId(FABRIC_INGRESS_SPGW_APP_FWD);
             paramList.add(new PiActionParam(TC, upfTermination.trafficClass()));
@@ -546,10 +551,14 @@ public class FabricUpfTranslator {
         if (upfTermination.needsDropping()) {
             actionBuilder.withId(FABRIC_INGRESS_SPGW_DOWNLINK_DROP);
         } else {
-            actionBuilder.withId(FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP);
-            paramList.add(new PiActionParam(TC, upfTermination.trafficClass()));
             paramList.add(new PiActionParam(TEID, upfTermination.teid()));
             paramList.add(new PiActionParam(QFI, upfTermination.qfi()));
+            if (upfTermination.trafficClass() == null) {
+                actionBuilder.withId(FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP_NO_TC);
+            } else {
+                actionBuilder.withId(FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP);
+                paramList.add(new PiActionParam(TC, upfTermination.trafficClass()));
+            }
         }
         actionBuilder.withParameters(paramList);
 
