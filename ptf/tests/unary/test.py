@@ -1609,7 +1609,6 @@ class FabricSpgwUplinkIntTest(SpgwIntTest):
         ]:
             if is_v1model():
                 # Perform mirroring of original packet to build the INT report.
-                # FIXME find another place for this.
                 self.add_clone_group(V1MODEL_INT_REPORT_MIRROR_ID, [self.port3], store=False)
 
             for test_args in get_test_args(
@@ -1663,7 +1662,6 @@ class FabricSpgwDownlinkIntTest(SpgwIntTest):
         ]:
             if is_v1model():
                     # Perform mirroring of original packet to build the INT report.
-                    # FIXME find another place for this.
                     self.add_clone_group(V1MODEL_INT_REPORT_MIRROR_ID, [self.port3], store=False)
 
             for test_args in get_test_args(
@@ -1782,7 +1780,6 @@ class FabricSpgwIntDownlinkDropTest(SpgwIntTest):
 
 
 @group("int")
-@skipIf(is_v1model(), "Flow report not implemented for v1model.")
 class FabricIntFlowReportTest(IntTest):
     @tvsetup
     @autocleanup
@@ -1824,6 +1821,9 @@ class FabricIntFlowReportTest(IntTest):
             "leaf-spine-leaf",
             "leaf-spine-spine",
         ]:
+            if is_v1model():
+                # Perform mirroring of original packet to build the INT report.
+                self.add_clone_group(V1MODEL_INT_REPORT_MIRROR_ID, [self.port3], store=False)
             for test_args in get_test_args(
                 traffic_dir=traffic_dir, int_test_type="flow"
             ):
@@ -1886,7 +1886,6 @@ class FabricIntIngressDropReportTest(IntTest):
 
 
 @group("int")
-@skipIf(is_v1model(), "Egress drop reports not yet implemented for v1model.")
 class FabricIntEgressDropReportTest(IntTest):
     @tvsetup
     @autocleanup
@@ -1932,6 +1931,9 @@ class FabricIntEgressDropReportTest(IntTest):
             "leaf-spine-leaf",
             "leaf-spine-spine",
         ]:
+            if is_v1model():
+                # Perform mirroring of original packet to build the INT report.
+                self.add_clone_group(V1MODEL_INT_REPORT_MIRROR_ID, [self.port3], store=False)
             for test_args in get_test_args(
                 traffic_dir=traffic_dir, int_test_type="flow"
             ):

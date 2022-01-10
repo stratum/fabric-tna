@@ -135,6 +135,9 @@ control FabricEgress (inout v1model_header_t hdr,
         if (IS_E2E_CLONE(standard_md)) {
             // Packet must generate the flow report or is an egress drop.
 
+            // Truncate mirrored packet. TODO find if truncation can be set by ctrl plane.
+            truncate(INT_MIRROR_TRUNCATE_MAX_LEN);
+
             // Restore preserved metadata
             fabric_md.egress.bridged.int_bmd.report_type = fabric_md.preserved_report_type;
             fabric_md.egress.int_report_md.eg_port = (PortId_t)fabric_md.preserved_egress_port;
