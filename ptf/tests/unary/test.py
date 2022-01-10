@@ -3000,11 +3000,11 @@ class FabricIntDeflectDropReportTest(IntTest):
         # procedded by the egress next block.
         int_inner_pkt = pkt_route(int_inner_pkt, HOST2_MAC)
 
-        # The WIP packet which should be sent to the recirculation port. However, the
-        # Tofino-model will send this packet to port 0 when a packet is deflected
-        # We will check if the WIP packet is correct and send this packet to the
-        # recirculation port so the rest of pipeline can fill rest of fields of
-        # headers.
+        # This is the WIP report packet which should be sent to the recirculation port according to
+        # the deflect-on-drop configuration in the Stratum's chassis config. However, Tofino-model
+        # always sends deflected packets to port 0, independently of the chassis config.
+        # Here we check if the WIP packet is correct, and we re-inject it in the switch through the
+        # recirculation port so the rest of pipeline can populate the rest of the header fields.
         exp_wip_int_pkt_masked = self.build_int_drop_report(
             0,  # both source and destination mac will be zero since it is a WIP packet.
             0,
@@ -3051,12 +3051,8 @@ class FabricIntDeflectDropReportTest(IntTest):
             eg_port=eg_port,
             verify_pkt=False,
         )
-        # Tofino model will send deflected packet to port 0 by default
         self.verify_packet(exp_wip_int_pkt_masked, 0)
 
-        # Send the WIP packet out to recirculate port so it will be recirculated back to
-        # the ingress pipeline and the rest of pipeline will help build the expected INT
-        # report packet.
         pkt_out = self.build_packet_out(
             exp_wip_int_pkt_masked.exp_pkt, RECIRCULATE_PORTS[0]
         )
