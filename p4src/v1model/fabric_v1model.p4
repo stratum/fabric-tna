@@ -128,6 +128,10 @@ control FabricEgress (inout v1model_header_t hdr,
         // Setting other fields in egress metadata, related to TNA's FabricEgressParser.
         fabric_md.egress.cpu_port = 0;
 
+        if (fabric_md.skip_egress){
+            exit;
+        }
+
 #ifdef WITH_INT
         if (IS_E2E_CLONE(standard_md)) {
             // Packet must generate the flow report or is an egress drop.
@@ -135,12 +139,12 @@ control FabricEgress (inout v1model_header_t hdr,
                 // Restore preserved metadata
                 fabric_md.egress.bridged.int_bmd.report_type = fabric_md.preserved_report_type;
             }
+            // DEBUG: performed directly in INT_init_metadata
+            // TODO set preserved_egress_port also in acl and other places.
+            fabric_md.egress.int_report_md.eg_port = (PortId_t)fabric_md.preserved_egress_port;
+
             parser_emulator.apply(hdr, fabric_md.egress, standard_md);
-            if (fabric_md.preserved_egress_port != 0) {
-                // performed directly in INT_init_metadata
-                // TODO set preserved_egress_port also in acl and other places.
-                fabric_md.egress.int_report_md.eg_port = fabric_md.preserved_egress_port;
-            }
+
             recirculate_preserving_field_list(PRESERVE_REPORT_TYPE_MD);
         }
 
@@ -151,11 +155,7 @@ control FabricEgress (inout v1model_header_t hdr,
         }
 #endif // WITH_INT
 
-        if (fabric_md.skip_egress){
-            exit;
-        }
-
-        pkt_io_egress.apply(hdr.ingress, fabric_md.egress ,standard_md);
+        pkt_io_egress.apply(hdr.ingress, fabric_md.egress ,standard_md, fabric_md.preserved_ingress_port);
         stats.apply(fabric_md.egress.bridged.base.stats_flow_id, standard_md.egress_port,
              fabric_md.egress.bridged.bmd_type);
         egress_next.apply(hdr.ingress, fabric_md.egress, standard_md, fabric_md.drop_ctl);

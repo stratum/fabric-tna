@@ -299,7 +299,7 @@ control IntEgress (inout v1model_header_t          hdr_v1model,
         fabric_md.int_report_md.report_type = fabric_md.bridged.int_bmd.report_type;
         fabric_md.int_report_md.ig_port = fabric_md.bridged.base.ig_port;
         // fabric_md.int_report_md.eg_port = standard_md.egress_spec;
-        fabric_md.int_report_md.eg_port = fabric_v1model.preserved_egress_port;
+        fabric_md.int_report_md.eg_port =(PortId_t)fabric_v1model.preserved_egress_port;
         fabric_md.int_report_md.queue_id = egress_qid;
         fabric_md.int_report_md.queue_occupancy = standard_md.deq_qdepth;
         fabric_md.int_report_md.ig_tstamp = fabric_md.bridged.base.ig_tstamp[31:0];
@@ -334,7 +334,6 @@ control IntEgress (inout v1model_header_t          hdr_v1model,
             // (INT_REPORT_TYPE_NO_REPORT, 0, true): init_int_metadata(INT_REPORT_TYPE_QUEUE); // Queue report useless in v1model.
             // (INT_REPORT_TYPE_NO_REPORT, 1, true): init_int_metadata(INT_REPORT_TYPE_QUEUE); // Queue report useless in v1model.
         }
-
         counters = int_metadata_counter;
     }
 

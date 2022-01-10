@@ -10,7 +10,7 @@ control PacketIoIngress(inout ingress_headers_t hdr,
                         inout ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr) {
     @hidden
     action do_packet_out() {
-        ig_intr_md_for_tm.ucast_egress_port = hdr.packet_out.egress_port;
+        ig_intr_md_for_tm.ucast_egress_port = (PortId_t)hdr.packet_out.egress_port;
         ig_intr_md_for_tm.qid = hdr.packet_out.queue_id;
         fabric_md.egress_port_set = true;
         hdr.packet_out.setInvalid();
@@ -62,7 +62,7 @@ control PacketIoIngress(inout ingress_headers_t hdr,
             fabric_md.bridged.setInvalid();
             hdr.fake_ethernet.setInvalid();
             hdr.packet_in.setValid();
-            hdr.packet_in.ingress_port = ig_intr_md.ingress_port;
+            hdr.packet_in.ingress_port = (FabricPortId_t)ig_intr_md.ingress_port;
             exit;
         }
     }
@@ -72,8 +72,8 @@ control PacketIoEgress(inout egress_headers_t hdr,
                        inout fabric_egress_metadata_t fabric_md,
                        in egress_intrinsic_metadata_t eg_intr_md) {
 
-    action set_switch_info(PortId_t cpu_port) {
-        fabric_md.cpu_port = cpu_port;
+    action set_switch_info(FabricPortId_t cpu_port) {
+        fabric_md.cpu_port = (PortId_t) cpu_port;
     }
 
     table switch_info {
@@ -89,7 +89,7 @@ control PacketIoEgress(inout egress_headers_t hdr,
         switch_info.apply();
         if (eg_intr_md.egress_port == fabric_md.cpu_port) {
             hdr.packet_in.setValid();
-            hdr.packet_in.ingress_port = fabric_md.bridged.base.ig_port;
+            hdr.packet_in.ingress_port = (FabricPortId_t)fabric_md.bridged.base.ig_port;
             hdr.fake_ethernet.setInvalid();
             // Straight to CPU. No need to process through the rest of the
             // egress pipe.

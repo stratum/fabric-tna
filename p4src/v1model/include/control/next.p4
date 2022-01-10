@@ -8,12 +8,12 @@
 control Next (inout ingress_headers_t         hdr,
               inout fabric_ingress_metadata_t fabric_md,
               inout standard_metadata_t       standard_md,
-              inout PortId_t                  preserved_egress_port) {
+              inout FabricPortId_t            preserved_egress_port) {
 
     /** General actions. */
     @hidden
-    action output(PortId_t port_num) {
-        standard_md.egress_spec = port_num;
+    action output(FabricPortId_t port_num) {
+        standard_md.egress_spec = (PortId_t)port_num;
         preserved_egress_port = port_num; // Needed by INT.
         fabric_md.egress_port_set = true;
     }
@@ -29,7 +29,7 @@ control Next (inout ingress_headers_t         hdr,
     }
 
     @hidden
-    action routing(PortId_t port_num, mac_addr_t smac, mac_addr_t dmac) {
+    action routing(FabricPortId_t port_num, mac_addr_t smac, mac_addr_t dmac) {
         rewrite_smac(smac);
         rewrite_dmac(dmac);
         output(port_num);
@@ -42,7 +42,7 @@ control Next (inout ingress_headers_t         hdr,
      */
     direct_counter(CounterType.packets_and_bytes) xconnect_counter;
 
-    action output_xconnect(PortId_t port_num) {
+    action output_xconnect(FabricPortId_t port_num) {
         output(port_num);
         xconnect_counter.count();
     }
@@ -76,12 +76,12 @@ control Next (inout ingress_headers_t         hdr,
      */
     direct_counter(CounterType.packets_and_bytes) simple_counter;
 
-    action output_simple(PortId_t port_num) {
+    action output_simple(FabricPortId_t port_num) {
         output(port_num);
         simple_counter.count();
     }
 
-    action routing_simple(PortId_t port_num, mac_addr_t smac, mac_addr_t dmac) {
+    action routing_simple(FabricPortId_t port_num, mac_addr_t smac, mac_addr_t dmac) {
         routing(port_num, smac, dmac);
         simple_counter.count();
     }
@@ -115,12 +115,12 @@ control Next (inout ingress_headers_t         hdr,
 
     direct_counter(CounterType.packets_and_bytes) hashed_counter;
 
-    action output_hashed(PortId_t port_num) {
+    action output_hashed(FabricPortId_t port_num) {
         output(port_num);
         hashed_counter.count();
     }
 
-    action routing_hashed(PortId_t port_num, mac_addr_t smac, mac_addr_t dmac) {
+    action routing_hashed(FabricPortId_t port_num, mac_addr_t smac, mac_addr_t dmac) {
         routing(port_num, smac, dmac);
         hashed_counter.count();
     }
@@ -309,11 +309,9 @@ control EgressNextControl (inout ingress_headers_t        hdr,
 
         // TTL decrement and check.
         bool regular_packet = true;
-// #ifdef WITH_INT
         // Decrement TTL/HopLimit only for regular packets that do not have to be reported through INT.
         regular_packet = ! ((fabric_md.bridged.bmd_type == BridgedMdType_t.INT_INGRESS_DROP) ||
             (fabric_md.bridged.bmd_type == BridgedMdType_t.EGRESS_MIRROR));
-// #endif // WITH_INT
 
         if (hdr.mpls.isValid()) {
             hdr.mpls.ttl = hdr.mpls.ttl - 1;

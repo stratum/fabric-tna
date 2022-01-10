@@ -2429,11 +2429,12 @@ class SpgwSimpleTest(IPv4UnicastTest):
             slice_id=slice_id,
         )
 
-
-    def add_dbuf_device(self,
-                        dbuf_addr=DBUF_IPV4,
-                        drain_dst_addr=DBUF_DRAIN_DST_IPV4,
-                        dbuf_tunnel_peer_id=DBUF_TUNNEL_PEER_ID):
+    def add_dbuf_device(
+        self,
+        dbuf_addr=DBUF_IPV4,
+        drain_dst_addr=DBUF_DRAIN_DST_IPV4,
+        dbuf_tunnel_peer_id=DBUF_TUNNEL_PEER_ID,
+    ):
 
         # Switch interface for traffic to/from dbuf device
         self._add_spgw_iface(
@@ -2444,10 +2445,12 @@ class SpgwSimpleTest(IPv4UnicastTest):
         )
 
         # Configure DBUF as GTP tunnel peer
-        self.add_gtp_tunnel_peer(tunnel_peer_id=dbuf_tunnel_peer_id,
-                                 tunnel_src_addr=drain_dst_addr,
-                                 tunnel_dst_addr=dbuf_addr,
-                                 tunnel_src_port=UDP_GTP_PORT)
+        self.add_gtp_tunnel_peer(
+            tunnel_peer_id=dbuf_tunnel_peer_id,
+            tunnel_src_addr=drain_dst_addr,
+            tunnel_dst_addr=dbuf_addr,
+            tunnel_src_port=UDP_GTP_PORT,
+        )
 
     def add_uplink_recirc_rule(
         self, ipv4_dst_and_mask, ipv4_src_and_mask=None, allow=True, priority=1
@@ -2512,9 +2515,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         self.push_update_add_entry_to_action(
             req,
             "FabricIngress.spgw.uplink_terminations",
-            [
-                self.Exact("ue_session_id", ipv4_to_binary(ue_session)),
-            ],
+            [self.Exact("ue_session_id", ipv4_to_binary(ue_session)),],
             action_name,
             action_params,
         )
@@ -2539,7 +2540,9 @@ class SpgwSimpleTest(IPv4UnicastTest):
         )
         self.write_request(req)
 
-    def setup_downlink_ue_session_dbuf(self, ue_addr, tunnel_peer_id, is_dbuf_present=True):
+    def setup_downlink_ue_session_dbuf(
+        self, ue_addr, tunnel_peer_id, is_dbuf_present=True
+    ):
         req = self.get_new_write_request()
         if is_dbuf_present:
             self.push_update_add_entry_to_action(
@@ -2547,9 +2550,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
                 "FabricIngress.spgw.downlink_sessions",
                 [self.Exact("ue_addr", ipv4_to_binary(ue_addr))],
                 "FabricIngress.spgw.set_downlink_session_buf",
-                [
-                    ("tun_peer_id", stringify(tunnel_peer_id, 1)),
-                ],
+                [("tun_peer_id", stringify(tunnel_peer_id, 1)),],
             )
         else:
             self.push_update_add_entry_to_action(
@@ -2557,23 +2558,17 @@ class SpgwSimpleTest(IPv4UnicastTest):
                 "FabricIngress.spgw.downlink_sessions",
                 [self.Exact("ue_addr", ipv4_to_binary(ue_addr))],
                 "FabricIngress.spgw.set_downlink_session_buf_drop",
-                []
+                [],
             )
         self.write_request(req)
 
-
-    def setup_downlink_termination_tunnel(self, ue_session, ctr_id, teid,
-                                          tc=DEFAULT_TC,
-                                          qfi=DEFAULT_QFI,
-                                          drop=False):
+    def setup_downlink_termination_tunnel(
+        self, ue_session, ctr_id, teid, tc=DEFAULT_TC, qfi=DEFAULT_QFI, drop=False
+    ):
         req = self.get_new_write_request()
-        action_params = [
-            ("ctr_id", stringify(ctr_id, 2))
-        ]
+        action_params = [("ctr_id", stringify(ctr_id, 2))]
         if not drop:
-            action_params = [
-                ("ctr_id", stringify(ctr_id, 2))
-            ]
+            action_params = [("ctr_id", stringify(ctr_id, 2))]
             action_params.append(("qfi", stringify(qfi, 1)))
             action_params.append(("teid", stringify(teid, 4)))
             if tc is not None:
@@ -2592,20 +2587,20 @@ class SpgwSimpleTest(IPv4UnicastTest):
         )
         self.write_request(req)
 
-    def add_gtp_tunnel_peer(self,
-                            tunnel_peer_id,
-                            tunnel_src_addr,
-                            tunnel_dst_addr,
-                            tunnel_src_port=DEFAULT_GTP_TUNNEL_SPORT):
+    def add_gtp_tunnel_peer(
+        self,
+        tunnel_peer_id,
+        tunnel_src_addr,
+        tunnel_dst_addr,
+        tunnel_src_port=DEFAULT_GTP_TUNNEL_SPORT,
+    ):
         req = self.get_new_write_request()
         self.push_update_add_entry_to_action(
             req,
             "FabricIngress.spgw.ig_tunnel_peers",
             [self.Exact("tun_peer_id", stringify(tunnel_peer_id, 1))],
             "FabricIngress.spgw.set_routing_ipv4_dst",
-            [
-                ("tun_dst_addr", ipv4_to_binary(tunnel_dst_addr)),
-            ],
+            [("tun_dst_addr", ipv4_to_binary(tunnel_dst_addr)),],
         )
         self.write_request(req)
 
@@ -2624,13 +2619,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         self.write_request(req)
 
     def setup_uplink(
-        self,
-        ue_addr,
-        s1u_sgw_addr,
-        teid,
-        ctr_id,
-        slice_id=DEFAULT_SLICE_ID,
-        tc=None,
+        self, ue_addr, s1u_sgw_addr, teid, ctr_id, slice_id=DEFAULT_SLICE_ID, tc=None,
     ):
         self.add_s1u_iface(s1u_addr=s1u_sgw_addr, slice_id=slice_id)
         self.setup_uplink_ue_session(teid=teid, tunnel_dst_addr=s1u_sgw_addr)
@@ -2645,20 +2634,19 @@ class SpgwSimpleTest(IPv4UnicastTest):
         ctr_id,
         slice_id=DEFAULT_SLICE_ID,
         tc=None,
-        qfi=DEFAULT_QFI
+        qfi=DEFAULT_QFI,
     ):
         self.add_ue_pool(pool_addr=ue_addr, slice_id=slice_id)
-        self.setup_downlink_ue_session(ue_addr=ue_addr,
-                                       tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID)
-        self.setup_downlink_termination_tunnel(ue_session=ue_addr, ctr_id=ctr_id,
-                                               teid=teid, tc=tc, qfi=qfi)
+        self.setup_downlink_ue_session(
+            ue_addr=ue_addr, tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID
+        )
+        self.setup_downlink_termination_tunnel(
+            ue_session=ue_addr, ctr_id=ctr_id, teid=teid, tc=tc, qfi=qfi
+        )
 
     def enable_encap_with_psc(self):
         self.send_request_add_entry_to_action(
-            "FabricEgress.spgw.gtpu_encap",
-            None,
-            "FabricEgress.spgw.gtpu_with_psc",
-            [],
+            "FabricEgress.spgw.gtpu_encap", None, "FabricEgress.spgw.gtpu_with_psc", [],
         )
 
     def reset_upf_counters(self, ctr_idx):
@@ -2828,9 +2816,11 @@ class SpgwSimpleTest(IPv4UnicastTest):
             ctr_id=UPLINK_UPF_CTR_IDX,
         )
 
-        self.add_gtp_tunnel_peer(tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID,
-                                 tunnel_src_addr=S1U_SGW_IPV4,
-                                 tunnel_dst_addr=S1U_ENB_IPV4)
+        self.add_gtp_tunnel_peer(
+            tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID,
+            tunnel_src_addr=S1U_SGW_IPV4,
+            tunnel_dst_addr=S1U_ENB_IPV4,
+        )
 
         self.setup_downlink(
             s1u_sgw_addr=S1U_SGW_IPV4,
@@ -2972,12 +2962,14 @@ class SpgwSimpleTest(IPv4UnicastTest):
             ctr_id=DOWNLINK_UPF_CTR_IDX,
             slice_id=slice_id,
             tc=tc,
-            qfi=DEFAULT_QFI
+            qfi=DEFAULT_QFI,
         )
 
-        self.add_gtp_tunnel_peer(tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID,
-                                 tunnel_src_addr=S1U_SGW_IPV4,
-                                 tunnel_dst_addr=S1U_ENB_IPV4)
+        self.add_gtp_tunnel_peer(
+            tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID,
+            tunnel_src_addr=S1U_SGW_IPV4,
+            tunnel_dst_addr=S1U_ENB_IPV4,
+        )
 
         if with_psc:
             self.enable_encap_with_psc()
@@ -3019,7 +3011,9 @@ class SpgwSimpleTest(IPv4UnicastTest):
             DOWNLINK_UPF_CTR_IDX, ingress_bytes, egress_bytes, 1, 1
         )
 
-    def runDownlinkToDbufTest(self, pkt, tagged1, tagged2, is_next_hop_spine, is_dbuf_present=True):
+    def runDownlinkToDbufTest(
+        self, pkt, tagged1, tagged2, is_next_hop_spine, is_dbuf_present=True
+    ):
         exp_pkt = pkt.copy()
         exp_pkt[Ether].src = SWITCH_MAC
         exp_pkt[Ether].dst = DBUF_MAC
@@ -3040,18 +3034,17 @@ class SpgwSimpleTest(IPv4UnicastTest):
 
         # Add the UE pool interface and the UE Sessions/Terminations pointing to the DBUF
         self.add_ue_pool(UE1_IPV4)
-        self.setup_downlink_ue_session_dbuf(ue_addr=UE1_IPV4,
-                                            tunnel_peer_id=DBUF_TUNNEL_PEER_ID,
-                                            is_dbuf_present=is_dbuf_present)
-
-        self.add_dbuf_device(
-            dbuf_addr=DBUF_IPV4,
-            drain_dst_addr=DBUF_DRAIN_DST_IPV4
+        self.setup_downlink_ue_session_dbuf(
+            ue_addr=UE1_IPV4,
+            tunnel_peer_id=DBUF_TUNNEL_PEER_ID,
+            is_dbuf_present=is_dbuf_present,
         )
 
-        self.setup_downlink_termination_tunnel(ue_session=UE1_IPV4,
-                                               ctr_id=DOWNLINK_UPF_CTR_IDX,
-                                               teid=DBUF_TEID)
+        self.add_dbuf_device(dbuf_addr=DBUF_IPV4, drain_dst_addr=DBUF_DRAIN_DST_IPV4)
+
+        self.setup_downlink_termination_tunnel(
+            ue_session=UE1_IPV4, ctr_id=DOWNLINK_UPF_CTR_IDX, teid=DBUF_TEID
+        )
 
         # Clear SPGW counters before sending the packet
         self.reset_upf_counters(DOWNLINK_UPF_CTR_IDX)
@@ -3125,16 +3118,15 @@ class SpgwSimpleTest(IPv4UnicastTest):
         )
 
         # Add eNB as GTP Tunnel peer
-        self.add_gtp_tunnel_peer(tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID,
-                                 tunnel_src_addr=S1U_SGW_IPV4,
-                                 tunnel_dst_addr=S1U_ENB_IPV4)
+        self.add_gtp_tunnel_peer(
+            tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID,
+            tunnel_src_addr=S1U_SGW_IPV4,
+            tunnel_dst_addr=S1U_ENB_IPV4,
+        )
 
         # Add rules for sending/receiving packets to/from dbuf
         # (sending isn't done by this test though)
-        self.add_dbuf_device(
-            dbuf_addr=DBUF_IPV4,
-            drain_dst_addr=DBUF_DRAIN_DST_IPV4
-        )
+        self.add_dbuf_device(dbuf_addr=DBUF_IPV4, drain_dst_addr=DBUF_DRAIN_DST_IPV4)
 
         # Clear SPGW counters before sending the packet
         self.reset_upf_counters(DOWNLINK_UPF_CTR_IDX)
@@ -4136,7 +4128,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             out_ipv4_dst=S1U_ENB_IPV4,
             teid=DOWNLINK_TEID,
             ext_psc_type=GTPU_EXT_PSC_TYPE_DL if with_psc else None,
-            ext_psc_qfi=DEFAULT_QFI
+            ext_psc_qfi=DEFAULT_QFI,
         )
         if tagged2 and Dot1Q not in exp_pkt:
             exp_pkt = pkt_add_vlan(exp_pkt, VLAN_ID_2)
@@ -4164,13 +4156,15 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             teid=DOWNLINK_TEID,
             ue_addr=pkt[IP].dst,
             ctr_id=DOWNLINK_UPF_CTR_IDX,
-            qfi=DEFAULT_QFI
+            qfi=DEFAULT_QFI,
         )
 
         # Add eNB as GTP Tunnel peer
-        self.add_gtp_tunnel_peer(tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID,
-                                 tunnel_src_addr=S1U_SGW_IPV4,
-                                 tunnel_dst_addr=S1U_ENB_IPV4)
+        self.add_gtp_tunnel_peer(
+            tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID,
+            tunnel_src_addr=S1U_SGW_IPV4,
+            tunnel_dst_addr=S1U_ENB_IPV4,
+        )
 
         if with_psc:
             self.enable_encap_with_psc()
@@ -4266,14 +4260,12 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             # Install nothing to sessions nor flows table
             pass
         elif drop_reason == INT_DROP_REASON_UPF_UL_TERMINATION_MISS:
-            self.setup_uplink_ue_session(tunnel_dst_addr=S1U_SGW_IPV4,
-                                         teid=UPLINK_TEID)
+            self.setup_uplink_ue_session(tunnel_dst_addr=S1U_SGW_IPV4, teid=UPLINK_TEID)
         elif drop_reason == INT_DROP_REASON_UPF_UL_TERMINATION_DROP:
-            self.setup_uplink_ue_session(tunnel_dst_addr=S1U_SGW_IPV4,
-                                         teid=UPLINK_TEID)
-            self.setup_uplink_termination(ue_session=pkt[IP].src,
-                                          ctr_id=UPLINK_UPF_CTR_IDX,
-                                          drop=True)
+            self.setup_uplink_ue_session(tunnel_dst_addr=S1U_SGW_IPV4, teid=UPLINK_TEID)
+            self.setup_uplink_termination(
+                ue_session=pkt[IP].src, ctr_id=UPLINK_UPF_CTR_IDX, drop=True
+            )
 
         # TODO: Use MPLS test instead of IPv4 test if device is spine.
         # TODO: In these tests, there is only one egress port although the
@@ -4354,22 +4346,26 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             # Install nothing to sessions nor flows table
             pass
         elif drop_reason == INT_DROP_REASON_UPF_DL_TERMINATION_MISS:
-            self.setup_downlink_ue_session(ue_addr=pkt[IP].dst,
-                                           tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID)
+            self.setup_downlink_ue_session(
+                ue_addr=pkt[IP].dst, tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID
+            )
         elif drop_reason == INT_DROP_REASON_UPF_DL_SESSION_DROP:
-            self.setup_downlink_ue_session(ue_addr=pkt[IP].dst,
-                                           tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID,
-                                           drop=True)
-            self.setup_downlink_termination_tunnel(ue_session=pkt[IP].dst,
-                                                   ctr_id=DOWNLINK_UPF_CTR_IDX,
-                                                   teid=DOWNLINK_TEID)
+            self.setup_downlink_ue_session(
+                ue_addr=pkt[IP].dst, tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID, drop=True
+            )
+            self.setup_downlink_termination_tunnel(
+                ue_session=pkt[IP].dst, ctr_id=DOWNLINK_UPF_CTR_IDX, teid=DOWNLINK_TEID
+            )
         elif drop_reason == INT_DROP_REASON_UPF_DL_TERMINATION_DROP:
-            self.setup_downlink_ue_session(ue_addr=pkt[IP].dst,
-                                           tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID)
-            self.setup_downlink_termination_tunnel(ue_session=pkt[IP].dst,
-                                                   ctr_id=DOWNLINK_UPF_CTR_IDX,
-                                                   teid=DOWNLINK_TEID,
-                                                   drop=True)
+            self.setup_downlink_ue_session(
+                ue_addr=pkt[IP].dst, tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID
+            )
+            self.setup_downlink_termination_tunnel(
+                ue_session=pkt[IP].dst,
+                ctr_id=DOWNLINK_UPF_CTR_IDX,
+                teid=DOWNLINK_TEID,
+                drop=True,
+            )
 
         # TODO: Use MPLS test instead of IPv4 test if device is spine.
         # TODO: In these tests, there is only one egress port although the

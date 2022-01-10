@@ -9,7 +9,7 @@ control PacketIoIngress(inout ingress_headers_t         hdr,
                         inout standard_metadata_t       standard_md) {
     @hidden
     action do_packet_out() {
-        standard_md.egress_spec = hdr.packet_out.egress_port;
+        standard_md.egress_spec = (PortId_t)hdr.packet_out.egress_port;
         fabric_md.egress_port_set = true;
         hdr.packet_out.setInvalid();
         skip_egress = true;
@@ -27,10 +27,11 @@ control PacketIoIngress(inout ingress_headers_t         hdr,
 
 control PacketIoEgress(inout ingress_headers_t        hdr,
                        inout fabric_egress_metadata_t fabric_md,
-                       inout standard_metadata_t      standard_md) {
+                       inout standard_metadata_t      standard_md,
+                       inout FabricPortId_t           preserved_ig_port) {
 
-    action set_switch_info(PortId_t cpu_port) {
-        fabric_md.cpu_port = cpu_port;
+    action set_switch_info(FabricPortId_t cpu_port) {
+        fabric_md.cpu_port = (PortId_t)cpu_port;
     }
 
     table switch_info {
@@ -46,7 +47,7 @@ control PacketIoEgress(inout ingress_headers_t        hdr,
         switch_info.apply();
         if (standard_md.egress_port == fabric_md.cpu_port) {
             hdr.packet_in.setValid();
-            hdr.packet_in.ingress_port = standard_md.ingress_port;
+            hdr.packet_in.ingress_port = preserved_ig_port;
             hdr.fake_ethernet.setInvalid();
             exit;
         }
