@@ -307,10 +307,8 @@ control EgressNextControl (inout ingress_headers_t        hdr,
 
         // TTL decrement and check.
         bool regular_packet = true;
-// #ifdef WITH_INT
         // Decrement TTL/HopLimit only for regular packets that do not have to be reported through INT.
         regular_packet = !(fabric_md.bridged.bmd_type == BridgedMdType_t.INT_INGRESS_DROP);
-// #endif // WITH_INT
 
         if (hdr.mpls.isValid()) {
             hdr.mpls.ttl = hdr.mpls.ttl - 1;
