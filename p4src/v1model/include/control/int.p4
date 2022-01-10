@@ -74,7 +74,7 @@ control IntIngress(inout ingress_headers_t         hdr,
         // The drop flag may be set by other tables, need to reset it so the packet can
         // be forward to egress pipeline and be recirculated.
         drop_ctl = 0;
-        standard_md.egress_spec = FAKE_PORT;
+        standard_md.egress_spec = FAKE_V1MODEL_RECIRC_PORT;
 
         drop_report_counter.count();
     }

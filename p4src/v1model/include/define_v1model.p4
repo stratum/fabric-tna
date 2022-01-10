@@ -25,11 +25,11 @@ typedef bit<1> BOOL;
 typedef bit<8> FieldListIndex_t;
 
 const PortId_t BMV2_DROP_PORT = 511;
-// The FAKE_PORT is used to override the mark_to_drop() primitive and/or to emulate TNA's recirc port.
+// The FAKE_V1MODEL_RECIRC_PORT is used to override the mark_to_drop() primitive and/or to emulate TNA's recirc port.
 // Especially in INT, when dropping a packet we still want the packet to go through the egress pipeline.
 // Calling mark_to_drop() will set the egress_spec = BMV2_DROP_PORT, leading to packet being dropped at the end of ingress pipeline.
 // This port shouldn't be used for any other reason.
-const PortId_t FAKE_PORT = 510;
+const PortId_t FAKE_V1MODEL_RECIRC_PORT = 510;
 
 #define IS_RECIRCULATED(std_meta) (std_meta.instance_type == PKT_INSTANCE_TYPE_INGRESS_RECIRC)
 #define IS_E2E_CLONE(std_meta) (std_meta.instance_type == PKT_INSTANCE_TYPE_EGRESS_CLONE)
