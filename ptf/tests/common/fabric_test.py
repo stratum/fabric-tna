@@ -4261,6 +4261,13 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             pass
         elif drop_reason == INT_DROP_REASON_UPF_UL_TERMINATION_MISS:
             self.setup_uplink_ue_session(tunnel_dst_addr=S1U_SGW_IPV4, teid=UPLINK_TEID)
+        elif drop_reason == INT_DROP_REASON_UPF_UL_SESSION_DROP:
+            self.setup_uplink_ue_session(
+                    tunnel_dst_addr=S1U_SGW_IPV4, teid=UPLINK_TEID, drop=True
+            )
+            self.setup_uplink_termination(
+                    ue_session=pkt[IP].src, ctr_id=UPLINK_UPF_CTR_IDX
+            )
         elif drop_reason == INT_DROP_REASON_UPF_UL_TERMINATION_DROP:
             self.setup_uplink_ue_session(tunnel_dst_addr=S1U_SGW_IPV4, teid=UPLINK_TEID)
             self.setup_uplink_termination(
