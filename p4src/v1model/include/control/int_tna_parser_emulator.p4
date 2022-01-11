@@ -141,8 +141,9 @@ control IntTnaEgressParserEmulator (inout v1model_header_t          hdr_v1model,
         hdr_v1model.ingress.inner_vlan.setInvalid();
 #endif // WITH_XCONNECT || WITH_DOUBLE_VLAN_TERMINATION
 
-        if(fabric_md.bridged.base.encap_presence != EncapPresence.NONE) {
-            // in case of encapsulated traffic, we're interested only in some of the inner headers.
+        if(hdr_v1model.ingress.gtpu.isValid() || hdr_v1model.ingress.vxlan.isValid()) {
+            // Using directly the headers validity bit to avoid preserving EncapPresence metadata.
+            // In case of encapsulated traffic, we're interested only in some of the inner headers.
             hdr_v1model.ingress.ipv4.setInvalid();
             hdr_v1model.ingress.tcp.setInvalid();
             hdr_v1model.ingress.udp.setInvalid();
