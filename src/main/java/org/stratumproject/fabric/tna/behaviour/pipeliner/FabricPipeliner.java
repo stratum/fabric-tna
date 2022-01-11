@@ -213,7 +213,7 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
         // Set up recirculation ports as untagged (used for INT reports and
         // UE-to-UE in SPGW pipe).
         List<Integer> recircPorts = capabilities.isArchTna() ? RECIRC_PORTS : FAKE_V1MODEL_RECIRC_PORT;
-        // Setting recirculation ports only for TNA. When running for bmv2, a single fake recirculation port is used.
+        // Setting recirculation ports for v1model and TNA. V1model uses a single fake recirculation port.
         recircPorts.forEach(port -> {
             flowRuleService.applyFlowRules(
                     ingressVlanRule(port, false, DEFAULT_VLAN, PORT_TYPE_INTERNAL),

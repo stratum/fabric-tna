@@ -192,8 +192,14 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         // Mirroring sessions for report cloning.
         sessionToPortMap.forEach((sessionId, port) -> {
             // Set up mirror sessions
+            TrafficTreatment.Builder trafficTreatment = DefaultTrafficTreatment.builder()
+                    .setOutput(PortNumber.portNumber(port));
+            if (capabilities.isArchTna()) {
+                trafficTreatment.truncate(INT_MIRROR_TRUNCATE_MAX_LEN);
+            }
             final List<GroupBucket> buckets = ImmutableList.of(
-                    getCloneBucket(port));
+                    createCloneGroupBucket(trafficTreatment.build())
+            );
             groupService.addGroup(new DefaultGroupDescription(
                     deviceId, GroupDescription.Type.CLONE,
                     new GroupBuckets(buckets),
@@ -201,19 +207,6 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                     sessionId, appId));
         });
         return true;
-    }
-
-    private GroupBucket getCloneBucket(Integer port) {
-        if (capabilities.isArchV1model()) {
-            return createCloneGroupBucket(DefaultTrafficTreatment.builder()
-                                                  .setOutput(PortNumber.portNumber(port))
-                                                  .build());
-        }
-        // TNA
-        return createCloneGroupBucket(DefaultTrafficTreatment.builder()
-                                                     .truncate(INT_MIRROR_TRUNCATE_MAX_LEN)
-                                                     .setOutput(PortNumber.portNumber(port))
-                                                     .build());
     }
 
     @Override
@@ -265,11 +258,6 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 .fromApp(appId)
                 .makePermanent()
                 .build();
-    }
-
-    private ImmutableMap<Integer, Integer> getSessionToPortMap() {
-
-        return null;
     }
 
     private TrafficSelector buildCollectorSelector(Set<Criterion> criteria) {

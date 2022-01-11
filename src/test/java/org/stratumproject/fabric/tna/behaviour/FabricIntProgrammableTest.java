@@ -158,7 +158,7 @@ public class FabricIntProgrammableTest {
     }
 
     @Parameterized.Parameters(name = "Test - {index}, isBmv2: {0}")
-    public static Collection values () {
+    public static Collection values() {
         return Arrays.asList(new Object[][] {
                 {true},
                 {false}
