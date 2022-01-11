@@ -71,8 +71,7 @@ control Acl (inout ingress_headers_t         hdr,
 
     table acl {
         key = {
-            // standard_md.ingress_port         : ternary @name("ig_port");   // 9
-            fabric_md.bridged.base.ig_port         : ternary @name("ig_port");   // 9
+            fabric_md.bridged.base.ig_port   : ternary @name("ig_port");   // 9
             fabric_md.lkp.eth_dst            : ternary @name("eth_dst");   // 48
             fabric_md.lkp.eth_src            : ternary @name("eth_src");   // 48
             fabric_md.lkp.vlan_id            : ternary @name("vlan_id");   // 12

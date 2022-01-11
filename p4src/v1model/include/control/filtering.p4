@@ -41,10 +41,9 @@ control Filtering (inout ingress_headers_t         hdr,
 
     table ingress_port_vlan {
         key = {
-            // standard_md.ingress_port   : exact @name("ig_port");
             fabric_md.bridged.base.ig_port   : exact @name("ig_port");
-            hdr.vlan_tag.isValid()     : exact @name("vlan_is_valid");
-            hdr.vlan_tag.vlan_id       : ternary @name("vlan_id");
+            hdr.vlan_tag.isValid()           : exact @name("vlan_is_valid");
+            hdr.vlan_tag.vlan_id             : ternary @name("vlan_id");
         }
         actions = {
             deny();
