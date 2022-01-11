@@ -70,6 +70,7 @@ import static org.stratumproject.fabric.tna.behaviour.Constants.FWD_MPLS;
 import static org.stratumproject.fabric.tna.behaviour.Constants.ONE;
 import static org.stratumproject.fabric.tna.behaviour.Constants.PORT_TYPE_INTERNAL;
 import static org.stratumproject.fabric.tna.behaviour.Constants.RECIRC_PORTS;
+import static org.stratumproject.fabric.tna.behaviour.Constants.FAKE_V1MODEL_RECIRC_PORT;
 import static org.stratumproject.fabric.tna.behaviour.Constants.ZERO;
 import static org.stratumproject.fabric.tna.behaviour.Constants.PKT_IN_MIRROR_SESSION_ID;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.KRYO;
@@ -150,7 +151,7 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
         if (obj.op() == Objective.Operation.VERIFY) {
             if (obj.type() != NextObjective.Type.HASHED) {
                 log.warn("VERIFY operation not yet supported for NextObjective {}, will return failure :(",
-                        obj.type());
+                         obj.type());
                 fail(obj, ObjectiveError.UNSUPPORTED);
                 return;
             }
@@ -169,7 +170,7 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
 
         if (obj.op() == Objective.Operation.MODIFY && obj.type() != NextObjective.Type.SIMPLE) {
             log.warn("MODIFY operation not yet supported for {} NextObjective, will return failure :(",
-                    obj.type());
+                     obj.type());
             if (log.isTraceEnabled()) {
                 log.trace("Objective {}", obj);
             }
@@ -205,27 +206,25 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
                 egressSwitchInfoRule(cpuPort),
                 ingressVlanRule(cpuPort, false, DEFAULT_VLAN, PORT_TYPE_INTERNAL),
                 fwdClassifierRule(cpuPort, null, Ethernet.TYPE_IPV4, FWD_IPV4_ROUTING,
-                        DEFAULT_FLOW_PRIORITY));
+                                  DEFAULT_FLOW_PRIORITY));
         // Set up mirror session for packet-in.
         groupService.addGroup(packetInCloneGroup());
 
         // Set up recirculation ports as untagged (used for INT reports and
         // UE-to-UE in SPGW pipe).
-        if (capabilities.isArchTna()) {
-            // Setting recirculation ports only for TNA.
-            //  Recirculation ports are currently unused when running for bmv2.
-            RECIRC_PORTS.forEach(port -> {
-                flowRuleService.applyFlowRules(
-                        ingressVlanRule(port, false, DEFAULT_VLAN, PORT_TYPE_INTERNAL),
-                        egressVlanRule(port, DEFAULT_VLAN, false),
-                        fwdClassifierRule(port, null, Ethernet.TYPE_IPV4, FWD_IPV4_ROUTING,
-                                          DEFAULT_FLOW_PRIORITY),
-                        // Use higher priority for MPLS rule since the one for IPv4
-                        // matches all IPv4 traffic independently of the eth_type.
-                        fwdClassifierRule(port, Ethernet.MPLS_UNICAST, Ethernet.TYPE_IPV4, FWD_MPLS,
-                                          DEFAULT_FLOW_PRIORITY + 10));
-            });
-        }
+        List<Integer> recircPorts = capabilities.isArchTna() ? RECIRC_PORTS : FAKE_V1MODEL_RECIRC_PORT;
+        // Setting recirculation ports only for TNA. When running for bmv2, a single fake recirculation port is used.
+        recircPorts.forEach(port -> {
+            flowRuleService.applyFlowRules(
+                    ingressVlanRule(port, false, DEFAULT_VLAN, PORT_TYPE_INTERNAL),
+                    egressVlanRule(port, DEFAULT_VLAN, false),
+                    fwdClassifierRule(port, null, Ethernet.TYPE_IPV4, FWD_IPV4_ROUTING,
+                                      DEFAULT_FLOW_PRIORITY),
+                    // Use higher priority for MPLS rule since the one for IPv4
+                    // matches all IPv4 traffic independently of the eth_type.
+                    fwdClassifierRule(port, Ethernet.MPLS_UNICAST, Ethernet.TYPE_IPV4, FWD_MPLS,
+                                      DEFAULT_FLOW_PRIORITY + 10));
+        });
         // TODO: slicing.p4 DSCP tables for PORT_TYPE_INTERNAL
         //  PORT_TYPE_INTERNAL includes packet-outs that's part of the SYSTEM TC
         //  and should be directed to the System Queue (SDFAB-520), and recirculation
@@ -380,9 +379,9 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
     public FlowRule egressSwitchInfoRule(int cpuPort) {
         final TrafficTreatment treatment = DefaultTrafficTreatment.builder()
                 .piTableAction(PiAction.builder()
-                        .withId(P4InfoConstants.FABRIC_EGRESS_PKT_IO_EGRESS_SET_SWITCH_INFO)
-                        .withParameter(new PiActionParam(P4InfoConstants.CPU_PORT, cpuPort))
-                        .build())
+                                       .withId(P4InfoConstants.FABRIC_EGRESS_PKT_IO_EGRESS_SET_SWITCH_INFO)
+                                       .withParameter(new PiActionParam(P4InfoConstants.CPU_PORT, cpuPort))
+                                       .build())
                 .build();
         return DefaultFlowRule.builder()
                 .forDevice(deviceId)
@@ -398,17 +397,17 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
         final TrafficSelector selector = DefaultTrafficSelector.builder()
                 .add(Criteria.matchInPort(PortNumber.portNumber(port)))
                 .add(PiCriterion.builder()
-                        .matchExact(P4InfoConstants.HDR_VLAN_IS_VALID, vlanValid ? ONE : ZERO)
-                        .build())
+                             .matchExact(P4InfoConstants.HDR_VLAN_IS_VALID, vlanValid ? ONE : ZERO)
+                             .build())
                 .build();
         final TrafficTreatment treatment = DefaultTrafficTreatment.builder()
                 .piTableAction(PiAction.builder()
-                        .withId(vlanValid ?
-                                P4InfoConstants.FABRIC_INGRESS_FILTERING_PERMIT
-                                : P4InfoConstants.FABRIC_INGRESS_FILTERING_PERMIT_WITH_INTERNAL_VLAN)
-                        .withParameter(new PiActionParam(P4InfoConstants.VLAN_ID, vlanId))
-                        .withParameter(new PiActionParam(P4InfoConstants.PORT_TYPE, portType))
-                        .build())
+                                       .withId(vlanValid ?
+                                           P4InfoConstants.FABRIC_INGRESS_FILTERING_PERMIT
+                                           : P4InfoConstants.FABRIC_INGRESS_FILTERING_PERMIT_WITH_INTERNAL_VLAN)
+                                       .withParameter(new PiActionParam(P4InfoConstants.VLAN_ID, vlanId))
+                                       .withParameter(new PiActionParam(P4InfoConstants.PORT_TYPE, portType))
+                                       .build())
                 .build();
         return DefaultFlowRule.builder()
                 .withSelector(selector)
@@ -425,17 +424,17 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
         final TrafficSelector.Builder selectorBuilder = DefaultTrafficSelector.builder()
                 .matchInPort(PortNumber.portNumber(port))
                 .matchPi(PiCriterion.builder()
-                        .matchExact(P4InfoConstants.HDR_IP_ETH_TYPE, ipEthType)
-                        .build());
+                                 .matchExact(P4InfoConstants.HDR_IP_ETH_TYPE, ipEthType)
+                                 .build());
         if (ethType != null) {
             selectorBuilder.matchEthType(ethType);
         }
         final TrafficTreatment treatment = DefaultTrafficTreatment.builder()
                 .piTableAction(PiAction.builder()
-                        .withId(P4InfoConstants.FABRIC_INGRESS_FILTERING_SET_FORWARDING_TYPE)
-                        .withParameter(new PiActionParam(
-                                P4InfoConstants.FWD_TYPE, fwdType))
-                        .build())
+                                       .withId(P4InfoConstants.FABRIC_INGRESS_FILTERING_SET_FORWARDING_TYPE)
+                                       .withParameter(new PiActionParam(
+                                               P4InfoConstants.FWD_TYPE, fwdType))
+                                       .build())
                 .build();
         return DefaultFlowRule.builder()
                 .withSelector(selectorBuilder.build())
@@ -451,16 +450,16 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
     public FlowRule egressVlanRule(int port, int vlanId, boolean tagged) {
         final TrafficSelector selector = DefaultTrafficSelector.builder()
                 .add(PiCriterion.builder()
-                        .matchExact(P4InfoConstants.HDR_VLAN_ID, vlanId)
-                        .matchExact(P4InfoConstants.HDR_EG_PORT, port)
-                        .build())
+                             .matchExact(P4InfoConstants.HDR_VLAN_ID, vlanId)
+                             .matchExact(P4InfoConstants.HDR_EG_PORT, port)
+                             .build())
                 .build();
         final TrafficTreatment treatment = DefaultTrafficTreatment.builder()
                 .piTableAction(PiAction.builder()
-                        .withId(tagged ?
-                                P4InfoConstants.FABRIC_EGRESS_EGRESS_NEXT_PUSH_VLAN
-                                : P4InfoConstants.FABRIC_EGRESS_EGRESS_NEXT_POP_VLAN)
-                        .build())
+                                       .withId(tagged ?
+                                                       P4InfoConstants.FABRIC_EGRESS_EGRESS_NEXT_PUSH_VLAN
+                                                       : P4InfoConstants.FABRIC_EGRESS_EGRESS_NEXT_POP_VLAN)
+                                       .build())
                 .build();
         return DefaultFlowRule.builder()
                 .withSelector(selector)
@@ -475,9 +474,9 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
 
     GroupDescription packetInCloneGroup() {
         final List<GroupBucket> buckets = ImmutableList.of(
-            createCloneGroupBucket(DefaultTrafficTreatment.builder()
-                    .setOutput(PortNumber.CONTROLLER)
-                    .build()));
+                createCloneGroupBucket(DefaultTrafficTreatment.builder()
+                                               .setOutput(PortNumber.CONTROLLER)
+                                               .build()));
         return new DefaultGroupDescription(
                 deviceId, GroupDescription.Type.CLONE,
                 new GroupBuckets(buckets),
@@ -511,8 +510,8 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
         Set<GroupBucket> bucketsFromStore = Sets.newHashSet(groupFromStore.buckets().buckets());
         if (groupFromStore.buckets().buckets().size() > bucketsFromStore.size()) {
             log.warn("Duplicated buckets detected in device:{}, nextId:{}, before-size" +
-                            ":{} after-size:{} .. correcting", deviceId,
-                    nextObjective.id(), groupFromStore.buckets().buckets().size(), bucketsFromStore.size());
+                             ":{} after-size:{} .. correcting", deviceId,
+                     nextObjective.id(), groupFromStore.buckets().buckets().size(), bucketsFromStore.size());
             final GroupBuckets bucketToSet = new GroupBuckets(Lists.newArrayList(bucketsFromStore));
             groupService.setBucketsForGroup(deviceId, groupKey, bucketToSet, groupKey, nextObjective.appId());
             // Forge temporary the group to avoid race condition with the store
@@ -538,9 +537,9 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
 
         if (!toAdd.isEmpty() || !toRemove.isEmpty()) {
             log.warn("Mismatch detected in device:{}, nextId:{}, groupFromTranslation-size:{} " +
-                            "groupFromStore-size:{} toAdd-size:{} toRemove-size: {} .. correcting",
-                    deviceId, nextObjective.id(), bucketsToFlows.size(), groupFromStore.buckets().buckets().size(),
-                    toAdd.size(), toRemove.size());
+                             "groupFromStore-size:{} toAdd-size:{} toRemove-size: {} .. correcting",
+                     deviceId, nextObjective.id(), bucketsToFlows.size(), groupFromStore.buckets().buckets().size(),
+                     toAdd.size(), toRemove.size());
         }
 
         if (!toAdd.isEmpty()) {
@@ -563,7 +562,7 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
             }
             final GroupBuckets bucketsToRemove = new GroupBuckets(toRemove);
             groupService.removeBucketsFromGroup(deviceId, groupKey, bucketsToRemove, groupKey,
-                    nextObjective.appId());
+                                                nextObjective.appId());
         }
 
         return null;
