@@ -731,12 +731,14 @@ def get_test_args(
     elif int_test_type == "eg_drop":
         if spgw_dir == "DL":
             drop_reason_list = [
+                INT_DROP_REASON_UPF_DL_SESSION_DROP,
                 INT_DROP_REASON_UPF_DL_TERMINATION_MISS,
                 INT_DROP_REASON_UPF_DL_TERMINATION_DROP,
                 INT_DROP_REASON_UPF_DL_SESSION_MISS,
             ]
         elif spgw_dir == "UL":
             drop_reason_list = [
+                INT_DROP_REASON_UPF_UL_SESSION_DROP,
                 INT_DROP_REASON_UPF_UL_TERMINATION_DROP,
                 INT_DROP_REASON_UPF_UL_TERMINATION_MISS,
                 INT_DROP_REASON_UPF_UL_SESSION_MISS,

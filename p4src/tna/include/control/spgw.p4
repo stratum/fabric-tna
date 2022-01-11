@@ -114,6 +114,8 @@ control SpgwIngress(
     }
 
     action set_uplink_session_drop() {
+        // Set UE IP address.
+        ue_session_id = fabric_md.routing_ipv4_dst;
         _drop_common();
 #ifdef WITH_INT
         fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UPF_UL_SESSION_DROP;
@@ -128,6 +130,8 @@ control SpgwIngress(
     }
 
     action set_downlink_session_drop() {
+        // Set UE IP address.
+        ue_session_id = fabric_md.routing_ipv4_dst;
         _drop_common();
 #ifdef WITH_INT
         fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UPF_DL_SESSION_DROP;

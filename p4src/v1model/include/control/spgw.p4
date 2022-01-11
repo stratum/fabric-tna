@@ -21,7 +21,6 @@ control SpgwIngress(
     // fabric_v1model.ingress is then updated in apply{} section, to to maintain all the edits made to fabric_md.
     fabric_ingress_metadata_t fabric_md = fabric_v1model.ingress;
 
-    bool upf_termination_hit = false;
     ue_session_id_t ue_session_id = 0;
 
     @hidden
@@ -34,7 +33,7 @@ control SpgwIngress(
     @hidden
     action _term_hit(upf_ctr_id_t ctr_id) {
         fabric_md.bridged.spgw.upf_ctr_id = ctr_id;
-        upf_termination_hit = true;
+        fabric_md.is_term_hit = true;
     }
 
     @hidden
@@ -124,10 +123,14 @@ control SpgwIngress(
     }
 
     action set_uplink_session_drop() {
+        // Set UE IP address.
+        ue_session_id = fabric_md.routing_ipv4_dst;
         _drop_common();
     }
 
     action set_downlink_session_drop() {
+        // Set UE IP address.
+        ue_session_id = fabric_md.routing_ipv4_dst;
         _drop_common();
     }
 
@@ -363,7 +366,7 @@ control SpgwIngress(
                 }
             }
             ig_tunnel_peers.apply();
-            if (upf_termination_hit) {
+            if (fabric_md.is_term_hit) {
                 // NOTE We should not update this counter for packets coming
                 // **from** dbuf (iface_dbuf), since we already updated it when
                 // first sending the same packets **to** dbuf (iface_core).
