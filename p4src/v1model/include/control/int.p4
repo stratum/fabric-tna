@@ -288,7 +288,7 @@ control IntEgress (inout v1model_header_t          hdr_v1model,
 
     @hidden
     action init_int_metadata(bit<3> report_type) {
-        fabric_md.bridged.int_bmd.mirror_session_id = BMV2_INT_MIRROR_SESSION;
+        fabric_md.bridged.int_bmd.mirror_session_id = V1MODEL_INT_MIRROR_SESSION;
 
         fabric_v1model.int_mirror_type = (bit<3>)FabricMirrorType_t.INT_REPORT;
         fabric_md.int_report_md.bmd_type = BridgedMdType_t.EGRESS_MIRROR;
