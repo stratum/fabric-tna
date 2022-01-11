@@ -57,6 +57,9 @@ import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
 import org.onosproject.segmentrouting.config.SegmentRoutingDeviceConfig;
 import org.stratumproject.fabric.tna.PipeconfLoader;
+import org.stratumproject.fabric.tna.behaviour.FabricCapabilities;
+import org.stratumproject.fabric.tna.behaviour.FabricIntProgrammable;
+import org.stratumproject.fabric.tna.behaviour.P4InfoConstants;
 import org.stratumproject.fabric.tna.inbandtelemetry.IntReportConfig;
 
 import java.util.Collections;
@@ -82,18 +85,17 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.onosproject.net.group.DefaultGroupBucket.createCloneGroupBucket;
 import static org.slf4j.LoggerFactory.getLogger;
+import static org.stratumproject.fabric.tna.behaviour.Constants.FAKE_V1MODEL_RECIRC_PORT;
+import static org.stratumproject.fabric.tna.behaviour.Constants.V1MODEL_INT_REPORT_MIRROR_ID;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.KRYO;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.doCareRangeMatch;
 import static org.stratumproject.fabric.tna.utils.TestUtils.getIntReportConfig;
 import static org.stratumproject.fabric.tna.utils.TestUtils.getSrConfig;
 
-import static org.stratumproject.fabric.tna.behaviour.Constants.FAKE_V1MODEL_RECIRC_PORT;
-import static org.stratumproject.fabric.tna.behaviour.Constants.V1MODEL_INT_REPORT_MIRROR_ID;
-
 /**
  * Tests for fabric INT programmable behaviour.
  */
-public class FabricIntProgrammableTest {
+public class FabricIntV1modelProgrammableTest {
     private static final int NODE_SID_IPV4 = 101;
     private static final IpAddress ROUTER_IP = IpAddress.valueOf("10.0.1.254");
 
@@ -148,8 +150,8 @@ public class FabricIntProgrammableTest {
     @Before
     public void setup() {
         FabricCapabilities capabilities = createMock(FabricCapabilities.class);
-        expect(capabilities.isArchTna()).andReturn(true).anyTimes();
-        expect(capabilities.isArchV1model()).andReturn(false).anyTimes();
+        expect(capabilities.isArchTna()).andReturn(false).anyTimes();
+        expect(capabilities.isArchV1model()).andReturn(true).anyTimes();
         expect(capabilities.hasHashedTable()).andReturn(true).anyTimes();
         expect(capabilities.supportDoubleVlanTerm()).andReturn(false).anyTimes();
         expect(capabilities.hwPipeCount()).andReturn(4).anyTimes();
@@ -185,7 +187,7 @@ public class FabricIntProgrammableTest {
         intProgrammable = partialMockBuilder(FabricIntProgrammable.class)
                 .addMockedMethod("getFieldSize").createMock();
         expect(intProgrammable.getFieldSize(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_QUEUE_LATENCY_THRESHOLDS,
-                P4InfoConstants.HDR_HOP_LATENCY_UPPER)).andReturn(16).anyTimes();
+                                            P4InfoConstants.HDR_HOP_LATENCY_UPPER)).andReturn(16).anyTimes();
         expect(intProgrammable.getFieldSize(P4InfoConstants.FABRIC_EGRESS_INT_EGRESS_QUEUE_LATENCY_THRESHOLDS,
                 P4InfoConstants.HDR_HOP_LATENCY_LOWER)).andReturn(16).anyTimes();
         replay(intProgrammable);
