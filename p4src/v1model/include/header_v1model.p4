@@ -30,9 +30,11 @@ struct fabric_v1model_metadata_t {
     // Needed for Egress INT reports (drop or flow)
     @field_list(PRESERVE_REPORT_TYPE_MD)
     IntReportType_t preserved_report_type;
-    // Needed for Egress INT reports (drop or flow)
     @field_list(PRESERVE_REPORT_TYPE_MD)
     FabricPortId_t    preserved_egress_port;
+    @field_list(PRESERVE_REPORT_TYPE_MD)
+    IntDropReason_t   preserved_drop_reason;
+
     // Needed for Packet-INs
     @field_list(PRESERVE_INGRESS_PORT)
     FabricPortId_t    preserved_ingress_port;

@@ -122,11 +122,12 @@ control IntTnaEgressParserEmulator (inout v1model_header_t          hdr_v1model,
         hdr.common_report_header.eg_port = fabric_md.int_report_md.eg_port;
         hdr.common_report_header.queue_id = fabric_md.int_report_md.queue_id;
 
-        /** local/drop_report_header (set valid later) **/
+        /** local/drop_report_header (drop_report set valid later) **/
         hdr.local_report_header.setValid();
         hdr.local_report_header.queue_occupancy = fabric_md.int_report_md.queue_occupancy;
         hdr.local_report_header.eg_tstamp = fabric_md.int_report_md.eg_tstamp;
-        hdr.drop_report_header.drop_reason = fabric_md.int_report_md.drop_reason;
+        // Drop reason is set when drop report is being encapped.
+        // hdr.drop_report_header.drop_reason = fabric_md.int_report_md.drop_reason;
     }
 
     apply {

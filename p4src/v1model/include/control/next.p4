@@ -190,6 +190,7 @@ control Next (inout ingress_headers_t         hdr,
 control EgressNextControl (inout ingress_headers_t        hdr,
                            inout fabric_egress_metadata_t fabric_md,
                            inout standard_metadata_t      standard_md,
+                           inout IntDropReason_t          preserved_drop_reason,
                            inout bit<1>                   drop_ctl) {
 
     @hidden
@@ -254,6 +255,8 @@ control EgressNextControl (inout ingress_headers_t        hdr,
         egress_vlan_counter.count();
 #ifdef WITH_INT
         fabric_md.int_report_md.drop_reason = IntDropReason_t.DROP_REASON_EGRESS_NEXT_MISS;
+        // fabric_md.int_report_md is invalid in case of Egress Drop reports. Use preserved_drop_reason.
+        preserved_drop_reason = IntDropReason_t.DROP_REASON_EGRESS_NEXT_MISS;
 #endif // WITH_INT
     }
 
@@ -318,6 +321,7 @@ control EgressNextControl (inout ingress_headers_t        hdr,
                 drop_ctl = 1;
 #ifdef WITH_INT
                 fabric_md.int_report_md.drop_reason = IntDropReason_t.DROP_REASON_MPLS_TTL_ZERO;
+                preserved_drop_reason = IntDropReason_t.DROP_REASON_MPLS_TTL_ZERO;
 #endif // WITH_INT
             }
         } else {
@@ -329,6 +333,7 @@ control EgressNextControl (inout ingress_headers_t        hdr,
                     drop_ctl = 1;
 #ifdef WITH_INT
                     fabric_md.int_report_md.drop_reason = IntDropReason_t.DROP_REASON_IP_TTL_ZERO;
+                    preserved_drop_reason = IntDropReason_t.DROP_REASON_IP_TTL_ZERO;
 #endif // WITH_INT
                 }
             } else if (hdr.ipv6.isValid() && fabric_md.bridged.base.fwd_type != FWD_BRIDGING) {
@@ -339,6 +344,7 @@ control EgressNextControl (inout ingress_headers_t        hdr,
                     drop_ctl = 1;
 #ifdef WITH_INT
                     fabric_md.int_report_md.drop_reason = IntDropReason_t.DROP_REASON_IP_TTL_ZERO;
+                    preserved_drop_reason = IntDropReason_t.DROP_REASON_IP_TTL_ZERO;
 #endif // WITH_INT
                 }
             }

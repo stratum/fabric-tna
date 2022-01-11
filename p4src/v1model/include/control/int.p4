@@ -203,7 +203,6 @@ control IntEgress (inout v1model_header_t          hdr_v1model,
         hdr.report_ipv4.src_addr = src_ip;
         hdr.report_ipv4.dst_addr = mon_ip;
         hdr.report_udp.dport = mon_port;
-        // hdr.report_fixed_header.seq_no = get_seq_number.execute(hdr.report_fixed_header.hw_id);
         get_seq_number((bit<32>)hdr.report_fixed_header.hw_id, hdr.report_fixed_header.seq_no);
         hdr.report_fixed_header.dqf = fabric_md.int_report_md.report_type;
         hdr.common_report_header.switch_id = switch_id;
@@ -243,6 +242,11 @@ control IntEgress (inout v1model_header_t          hdr_v1model,
         hdr.report_eth_type.value = ETHERTYPE_INT_WIP_IPV4;
         hdr.report_fixed_header.nproto = NPROTO_TELEMETRY_DROP_HEADER;
         hdr.drop_report_header.setValid();
+        // If drop_report, need to set the local_report invalid.
+        //local_report was setValid() in parser emulator to allow its initialization.
+        hdr.local_report_header.setInvalid();
+        // hdr.drop_report_header.drop_reason = fabric_v1model.preserved_drop_reason;
+        hdr.drop_report_header.drop_reason = fabric_md.bridged.int_bmd.drop_reason;
     }
 
     action do_drop_report_encap_mpls(ipv4_addr_t src_ip, ipv4_addr_t mon_ip,

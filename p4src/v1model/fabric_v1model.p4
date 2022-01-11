@@ -136,7 +136,8 @@ control FabricEgress (inout v1model_header_t hdr,
         if (IS_E2E_CLONE(standard_md)) {
             // Packet must generate the flow report or is an egress drop.
 
-            // Restore preserved metadata
+            // Restore preserved metadata for Egress Drop/Flow reports.
+            fabric_md.egress.bridged.int_bmd.drop_reason = fabric_md.preserved_drop_reason;
             fabric_md.egress.bridged.int_bmd.report_type = fabric_md.preserved_report_type;
             fabric_md.egress.int_report_md.eg_port = (PortId_t)fabric_md.preserved_egress_port;
 
@@ -152,12 +153,13 @@ control FabricEgress (inout v1model_header_t hdr,
         pkt_io_egress.apply(hdr.ingress, fabric_md.egress ,standard_md, fabric_md.preserved_ingress_port);
         stats.apply(fabric_md.egress.bridged.base.stats_flow_id, standard_md.egress_port,
              fabric_md.egress.bridged.bmd_type);
-        egress_next.apply(hdr.ingress, fabric_md.egress, standard_md, fabric_md.drop_ctl);
+        egress_next.apply(hdr.ingress, fabric_md.egress, standard_md, fabric_md.preserved_drop_reason, fabric_md.drop_ctl);
 #ifdef WITH_SPGW
         spgw.apply(hdr.ingress, fabric_md.egress);
 #endif // WITH_SPGW
 #ifdef WITH_INT
         int_egress.apply(hdr, fabric_md, standard_md);
+
 #endif // WITH_INT
         dscp_rewriter.apply(fabric_md.egress, standard_md, hdr.ingress);
 
