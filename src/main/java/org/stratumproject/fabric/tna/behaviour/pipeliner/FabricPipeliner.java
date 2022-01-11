@@ -403,8 +403,8 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
         final TrafficTreatment treatment = DefaultTrafficTreatment.builder()
                 .piTableAction(PiAction.builder()
                                        .withId(vlanValid ?
-                                                       P4InfoConstants.FABRIC_INGRESS_FILTERING_PERMIT
-                                                       : P4InfoConstants.FABRIC_INGRESS_FILTERING_PERMIT_WITH_INTERNAL_VLAN)
+                                           P4InfoConstants.FABRIC_INGRESS_FILTERING_PERMIT
+                                           : P4InfoConstants.FABRIC_INGRESS_FILTERING_PERMIT_WITH_INTERNAL_VLAN)
                                        .withParameter(new PiActionParam(P4InfoConstants.VLAN_ID, vlanId))
                                        .withParameter(new PiActionParam(P4InfoConstants.PORT_TYPE, portType))
                                        .build())
