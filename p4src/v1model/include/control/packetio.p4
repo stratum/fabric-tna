@@ -28,7 +28,7 @@ control PacketIoIngress(inout ingress_headers_t         hdr,
 control PacketIoEgress(inout ingress_headers_t        hdr,
                        inout fabric_egress_metadata_t fabric_md,
                        inout standard_metadata_t      standard_md,
-                       inout FabricPortId_t           preserved_ig_port) {
+                       in    FabricPortId_t           preserved_ig_port) {
 
     action set_switch_info(FabricPortId_t cpu_port) {
         fabric_md.cpu_port = (PortId_t)cpu_port;

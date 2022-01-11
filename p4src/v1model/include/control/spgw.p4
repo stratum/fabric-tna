@@ -322,9 +322,9 @@ control SpgwIngress(
 
     action recirc_allow() {
         // Recirculation in bmv2 is obtained via recirculate() primitive, invoked in the egress pipeline.
-        // We set the egress_spec to the FAKE_PORT, that is intended also as a recirculation port.
-        // For more info on FAKE_PORT, see v1model/define_v1model.p4
-        standard_md.egress_spec = FAKE_PORT;
+        // We set the egress_spec to the FAKE_V1MODEL_RECIRC_PORT, that is intended also as a recirculation port.
+        // For more info on FAKE_V1MODEL_RECIRC_PORT, see v1model/define_v1model.p4
+        standard_md.egress_spec = FAKE_V1MODEL_RECIRC_PORT;
         fabric_md.bridged.base.vlan_id = DEFAULT_VLAN_ID;
         do_spgw_uplink_recirc = true;
         fabric_md.egress_port_set = true;

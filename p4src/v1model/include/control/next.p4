@@ -343,5 +343,5 @@ control EgressNextControl (inout ingress_headers_t        hdr,
                 }
             }
         }
-    } // end of apply{}
+    }
 }
