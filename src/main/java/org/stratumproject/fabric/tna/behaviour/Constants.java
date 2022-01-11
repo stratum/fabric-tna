@@ -42,6 +42,9 @@ public final class Constants {
     // Recirculation ports, ordered per hw pipe (from 0 to 3).
     public static final List<Integer> RECIRC_PORTS = List.of(0x44, 0xc4, 0x144, 0x1c4);
 
+    // Fake recirculation port used in V1model to emulate TNA's behavior.
+    public static final List<Integer> FAKE_V1MODEL_RECIRC_PORT = List.of(510);
+
     public static final int DEFAULT_VLAN = 4094;
     public static final int DEFAULT_PW_TRANSPORT_VLAN = 4090;
     public static final int PKT_IN_MIRROR_SESSION_ID = 0x1FF;

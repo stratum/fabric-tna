@@ -47,6 +47,7 @@ import static org.easymock.EasyMock.verify;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.onosproject.net.group.DefaultGroupBucket.createCloneGroupBucket;
+import static org.stratumproject.fabric.tna.behaviour.Constants.FAKE_V1MODEL_RECIRC_PORT;
 import static org.stratumproject.fabric.tna.behaviour.Constants.PORT_TYPE_INTERNAL;
 import static org.stratumproject.fabric.tna.behaviour.Constants.ZERO;
 import static org.stratumproject.fabric.tna.behaviour.Constants.RECIRC_PORTS;
@@ -208,6 +209,7 @@ public class FabricPipelinerTest {
         final FlowRule expectedCpuFwdClsRule =
                 buildFwdClsRule(CPU_PORT, null, Ethernet.TYPE_IPV4, FWD_IPV4_ROUTING, DEFAULT_FLOW_PRIORITY);
         final GroupDescription expectedPacketInCloneGroup = buildPacketInCloneGroup();
+        final List<Integer> recircPorts = isBmv2 ? FAKE_V1MODEL_RECIRC_PORT : RECIRC_PORTS;
 
         flowRuleService.applyFlowRules(
                 capture(capturedSwitchInfoRule),
@@ -217,25 +219,23 @@ public class FabricPipelinerTest {
         groupService.addGroup(capture(capturedCloneGroup));
         expectLastCall().once();
 
-        if (!isBmv2) {
-            RECIRC_PORTS.forEach(port -> {
-                expectedIgPortVlanRules.add(buildIngressVlanRule(port));
-                expectedEgVlanRules.add(buildEgressVlanRule(port));
-                expectedFwdClsIpRules.add(
-                        buildFwdClsRule(port, null, Ethernet.TYPE_IPV4, FWD_IPV4_ROUTING, DEFAULT_FLOW_PRIORITY));
-                expectedFwdClsMplsRules.add(
-                        buildFwdClsRule(port,
-                                        Ethernet.MPLS_UNICAST,
-                                        Ethernet.TYPE_IPV4,
-                                        FWD_MPLS,
-                                        DEFAULT_FLOW_PRIORITY + 10));
-                flowRuleService.applyFlowRules(
-                        capture(capturedIgPortVlanRule),
-                        capture(capturedEgVlanRule),
-                        capture(capturedFwdClsIpRules),
-                        capture(capturedFwdClsMplsRules));
-            });
-        }
+        recircPorts.forEach(port -> {
+            expectedIgPortVlanRules.add(buildIngressVlanRule(port));
+            expectedEgVlanRules.add(buildEgressVlanRule(port));
+            expectedFwdClsIpRules.add(
+                    buildFwdClsRule(port, null, Ethernet.TYPE_IPV4, FWD_IPV4_ROUTING, DEFAULT_FLOW_PRIORITY));
+            expectedFwdClsMplsRules.add(
+                    buildFwdClsRule(port,
+                                    Ethernet.MPLS_UNICAST,
+                                    Ethernet.TYPE_IPV4,
+                                    FWD_MPLS,
+                                    DEFAULT_FLOW_PRIORITY + 10));
+            flowRuleService.applyFlowRules(
+                    capture(capturedIgPortVlanRule),
+                    capture(capturedEgVlanRule),
+                    capture(capturedFwdClsIpRules),
+                    capture(capturedFwdClsMplsRules));
+        });
 
         replay(flowRuleService);
         replay(groupService);
@@ -246,22 +246,20 @@ public class FabricPipelinerTest {
         assertTrue(expectedCpuFwdClsRule.exactMatch(capturedCpuFwdClsRule.getValue()));
         assertEquals(expectedPacketInCloneGroup, capturedCloneGroup.getValue());
 
-        if (!isBmv2) {
-            for (int i = 0; i < RECIRC_PORTS.size(); i++) {
-                FlowRule expectIgPortVlanRule = expectedIgPortVlanRules.get(i);
-                FlowRule actualIgPortVlanRule = capturedIgPortVlanRule.getValues().get(i);
-                FlowRule expectEgVlanRule = expectedEgVlanRules.get(i);
-                FlowRule actualEgVlanRule = capturedEgVlanRule.getValues().get(i);
-                FlowRule expectedFwdClsIpRule = expectedFwdClsIpRules.get(i);
-                FlowRule actualFwdClsIpRule = capturedFwdClsIpRules.getValues().get(i);
-                FlowRule expectedFwdClsMplsRule = expectedFwdClsMplsRules.get(i);
-                FlowRule actualFwdClsMplsRule = capturedFwdClsMplsRules.getValues().get(i);
-                assertTrue(expectIgPortVlanRule.exactMatch(actualIgPortVlanRule));
-                assertEquals(expectEgVlanRule, actualEgVlanRule);
-                assertTrue(expectEgVlanRule.exactMatch(actualEgVlanRule));
-                assertTrue(expectedFwdClsIpRule.exactMatch(actualFwdClsIpRule));
-                assertTrue(expectedFwdClsMplsRule.exactMatch(actualFwdClsMplsRule));
-            }
+        for (int i = 0; i < recircPorts.size(); i++) {
+            FlowRule expectIgPortVlanRule = expectedIgPortVlanRules.get(i);
+            FlowRule actualIgPortVlanRule = capturedIgPortVlanRule.getValues().get(i);
+            FlowRule expectEgVlanRule = expectedEgVlanRules.get(i);
+            FlowRule actualEgVlanRule = capturedEgVlanRule.getValues().get(i);
+            FlowRule expectedFwdClsIpRule = expectedFwdClsIpRules.get(i);
+            FlowRule actualFwdClsIpRule = capturedFwdClsIpRules.getValues().get(i);
+            FlowRule expectedFwdClsMplsRule = expectedFwdClsMplsRules.get(i);
+            FlowRule actualFwdClsMplsRule = capturedFwdClsMplsRules.getValues().get(i);
+            assertTrue(expectIgPortVlanRule.exactMatch(actualIgPortVlanRule));
+            assertEquals(expectEgVlanRule, actualEgVlanRule);
+            assertTrue(expectEgVlanRule.exactMatch(actualEgVlanRule));
+            assertTrue(expectedFwdClsIpRule.exactMatch(actualFwdClsIpRule));
+            assertTrue(expectedFwdClsMplsRule.exactMatch(actualFwdClsMplsRule));
         }
 
         verify(flowRuleService);
