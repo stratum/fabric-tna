@@ -13,6 +13,8 @@ import org.easymock.CaptureType;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.onlab.junit.TestUtils;
 import org.onlab.packet.IPv4;
 import org.onlab.packet.IpAddress;
@@ -59,6 +61,8 @@ import org.onosproject.segmentrouting.config.SegmentRoutingDeviceConfig;
 import org.stratumproject.fabric.tna.PipeconfLoader;
 import org.stratumproject.fabric.tna.inbandtelemetry.IntReportConfig;
 
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -93,6 +97,7 @@ import static org.stratumproject.fabric.tna.behaviour.Constants.V1MODEL_INT_REPO
 /**
  * Tests for fabric INT programmable behaviour.
  */
+@RunWith(Parameterized.class)
 public class FabricIntProgrammableTest {
     private static final int NODE_SID_IPV4 = 101;
     private static final IpAddress ROUTER_IP = IpAddress.valueOf("10.0.1.254");
@@ -145,11 +150,26 @@ public class FabricIntProgrammableTest {
     private HostService hostService;
     private DriverData driverData;
 
+    private boolean isBmv2;
+
+    public FabricIntProgrammableTest(boolean isBmv2) {
+        // Needed for JUnit parameterized test.
+        this.isBmv2 = isBmv2;
+    }
+
+    @Parameterized.Parameters(name = "Test - {index}, isBmv2: {0}")
+    public static Collection values () {
+        return Arrays.asList(new Object[][] {
+                {true},
+                {false}
+        });
+    }
+
     @Before
     public void setup() {
         FabricCapabilities capabilities = createMock(FabricCapabilities.class);
-        expect(capabilities.isArchTna()).andReturn(true).anyTimes();
-        expect(capabilities.isArchV1model()).andReturn(false).anyTimes();
+        expect(capabilities.isArchTna()).andReturn(!this.isBmv2).anyTimes();
+        expect(capabilities.isArchV1model()).andReturn(this.isBmv2).anyTimes();
         expect(capabilities.hasHashedTable()).andReturn(true).anyTimes();
         expect(capabilities.supportDoubleVlanTerm()).andReturn(false).anyTimes();
         expect(capabilities.hwPipeCount()).andReturn(4).anyTimes();
