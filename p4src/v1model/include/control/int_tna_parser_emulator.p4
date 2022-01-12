@@ -162,8 +162,7 @@ control IntTnaEgressParserEmulator (inout v1model_header_t          hdr_v1model,
 
         /* End of Deparser logic */
 
-        if (!IS_E2E_CLONE(standard_md)) {
-            // TODO find a better if condition
+        if ((bit<8>)fabric_md.bridged.int_bmd.report_type == BridgedMdType_t.INT_INGRESS_DROP) {
             parse_int_ingress_drop();
             recirculate_preserving_field_list(NO_PRESERVATION);
         } else {
