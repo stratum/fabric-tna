@@ -397,7 +397,7 @@ control IntEgress (inout v1model_header_t          hdr_v1model,
                 // The mirrored packet will then generate the report.
                 clone_preserving_field_list(CloneType.E2E,
                     (bit<32>)fabric_md.bridged.int_bmd.mirror_session_id,
-                    PRESERVE_REPORT_TYPE_MD);
+                    PRESERVE_INT_MD);
             }
         }
 

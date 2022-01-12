@@ -38,7 +38,7 @@ const PortId_t FAKE_V1MODEL_RECIRC_PORT = 510;
 #define INT_MIRROR_TRUNCATE_MAX_LEN 128
 
 /** Field list values for metadata preservation */
-const FieldListIndex_t PRESERVE_REPORT_TYPE_MD = 241;
+const FieldListIndex_t PRESERVE_INT_MD = 241;
 const FieldListIndex_t PRESERVE_INGRESS_PORT = 231;
 const FieldListIndex_t NO_PRESERVATION = 0;
 /** end of Field list values */

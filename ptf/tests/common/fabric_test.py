@@ -201,7 +201,7 @@ PACKET_IN_MIRROR_ID = 0x1FF
 INT_REPORT_MIRROR_IDS = [0x200, 0x201, 0x202, 0x203]
 V1MODEL_INT_REPORT_MIRROR_ID = 0x1FA
 RECIRCULATE_PORTS = [68, 196, 324, 452]
-RECIRCULATE_PORT_BMV2 = [510]
+RECIRCULATE_PORT_V1MODEL = [510]
 SWITCH_ID = 1
 INT_REPORT_PORT = 32766
 NPROTO_ETHERNET = 0
@@ -299,7 +299,7 @@ DEST_OPTIONS = ["host", "leaf", "spine"]
 
 COLOR_GREEN = 0
 COLOR_YELLOW = 1
-BMV2_COLOR_RED = 2
+V1MODEL_COLOR_RED = 2
 COLOR_RED = 3
 
 STATS_INGRESS = "Ingress"
@@ -1134,7 +1134,7 @@ class FabricTest(P4RuntimeTest):
     def set_up_recirc_ports(self):
         # All recirculation ports are configured as untagged with DEFAULT_VLAN
         # as the internal one.
-        ports = RECIRCULATE_PORTS if is_tna() else RECIRCULATE_PORT_BMV2
+        ports = RECIRCULATE_PORTS if is_tna() else RECIRCULATE_PORT_V1MODEL
         for port in ports:
             self.set_ingress_port_vlan(
                 ingress_port=port,

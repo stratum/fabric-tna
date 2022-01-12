@@ -67,7 +67,6 @@ control FabricIngress (inout v1model_header_t hdr,
         if (IS_RECIRCULATED(standard_md)) {
             // After recirculation is performed, override ingress port, emulating TNA recirc port.
             // This workaround allows to have the same PTF structure.
-            // FIXME use the fabric_md.bridged.base.ig_port everywhere once p4c is correctly preserving metadata.
             fabric_md.ingress.bridged.base.ig_port = FAKE_V1MODEL_RECIRC_PORT;
         }
 
@@ -159,7 +158,6 @@ control FabricEgress (inout v1model_header_t hdr,
 #endif // WITH_SPGW
 #ifdef WITH_INT
         int_egress.apply(hdr, fabric_md, standard_md);
-
 #endif // WITH_INT
         dscp_rewriter.apply(fabric_md.egress, standard_md, hdr.ingress);
 
