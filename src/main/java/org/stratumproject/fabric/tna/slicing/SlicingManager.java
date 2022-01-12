@@ -170,23 +170,9 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
         queueExecutor = Executors.newSingleThreadExecutor(groupedThreads("fabric-tna-queue-event", "%d", log));
         queueStore.addListener(queueListener);
 
+        // FIXME: should BEST-EFFORT be configured via netcfg?
         // Shared queues are pre-provisioned and always available
         queueStore.put(QueueId.BEST_EFFORT, new QueueStoreValue(TrafficClass.BEST_EFFORT, true));
-        queueStore.put(QueueId.SYSTEM, new QueueStoreValue(TrafficClass.SYSTEM, true));
-        queueStore.put(QueueId.CONTROL, new QueueStoreValue(TrafficClass.CONTROL, true));
-
-        // FIXME Dedicate queues should be dynamically provisioned via API in the future
-        // This configuration is based on the util/sample-qos-config.yaml queues configuration
-        // Max rate = 45 Mbps
-        queueStore.put(QueueId.of(3), new QueueStoreValue(TrafficClass.REAL_TIME, true));
-        // Max rate = 30 Mbps
-        queueStore.put(QueueId.of(4), new QueueStoreValue(TrafficClass.REAL_TIME, true));
-        // Max rate = 25 Mbps
-        queueStore.put(QueueId.of(5), new QueueStoreValue(TrafficClass.REAL_TIME, true));
-        // Min guaranteed rate = 100 Mbps
-        queueStore.put(QueueId.of(6), new QueueStoreValue(TrafficClass.ELASTIC, true));
-        // Min guaranteed rate = 200 Mbps
-        queueStore.put(QueueId.of(7), new QueueStoreValue(TrafficClass.ELASTIC, true));
 
         classifierFlowStore = storageService.<TrafficSelector, SliceStoreKey>consistentMapBuilder()
                 .withName("fabric-tna-classifier-flow")
@@ -293,10 +279,6 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
 
     @Override
     public boolean addTrafficClass(SliceId sliceId, TrafficClass tc) {
-        if (tc == TrafficClass.SYSTEM) {
-            throw new SlicingException(INVALID, "SYSTEM TC should not be associated with any slice");
-        }
-
         StringBuilder errorMessage = new StringBuilder();
         SliceStoreKey key = new SliceStoreKey(sliceId, tc);
         sliceStore.compute(key, (k, v) -> {
@@ -507,7 +489,6 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
         if (queueId.isPresent()) {
             // Don't mark shared queues as they are always available.
             if (tc != TrafficClass.BEST_EFFORT &&
-                    tc != TrafficClass.SYSTEM &&
                     tc != TrafficClass.CONTROL) {
                 queueStore.compute(queueId.get(), (k, v) -> {
                     v.setAvailable(false);
