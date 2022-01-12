@@ -209,19 +209,6 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         return true;
     }
 
-    private GroupBucket getCloneBucket(Integer port) {
-        if (capabilities.isArchV1model()) {
-            return createCloneGroupBucket(DefaultTrafficTreatment.builder()
-                                                  .setOutput(PortNumber.portNumber(port))
-                                                  .build());
-        }
-        // TNA
-        return createCloneGroupBucket(DefaultTrafficTreatment.builder()
-                                                     .truncate(INT_MIRROR_TRUNCATE_MAX_LEN)
-                                                     .setOutput(PortNumber.portNumber(port))
-                                                     .build());
-    }
-
     @Override
     public boolean setUpIntConfig(IntReportConfig config) {
 
@@ -271,11 +258,6 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
                 .fromApp(appId)
                 .makePermanent()
                 .build();
-    }
-
-    private ImmutableMap<Integer, Integer> getSessionToPortMap() {
-
-        return null;
     }
 
     private TrafficSelector buildCollectorSelector(Set<Criterion> criteria) {
