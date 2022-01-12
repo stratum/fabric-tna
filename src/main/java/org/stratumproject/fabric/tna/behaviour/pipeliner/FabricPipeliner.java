@@ -70,7 +70,7 @@ import static org.stratumproject.fabric.tna.behaviour.Constants.FWD_MPLS;
 import static org.stratumproject.fabric.tna.behaviour.Constants.ONE;
 import static org.stratumproject.fabric.tna.behaviour.Constants.PORT_TYPE_INTERNAL;
 import static org.stratumproject.fabric.tna.behaviour.Constants.RECIRC_PORTS;
-import static org.stratumproject.fabric.tna.behaviour.Constants.FAKE_V1MODEL_RECIRC_PORT;
+import static org.stratumproject.fabric.tna.behaviour.Constants.V1MODEL_RECIRC_PORT;
 import static org.stratumproject.fabric.tna.behaviour.Constants.ZERO;
 import static org.stratumproject.fabric.tna.behaviour.Constants.PKT_IN_MIRROR_SESSION_ID;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.KRYO;
@@ -212,8 +212,7 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
 
         // Set up recirculation ports as untagged (used for INT reports and
         // UE-to-UE in SPGW pipe).
-        List<Integer> recircPorts = capabilities.isArchTna() ? RECIRC_PORTS : FAKE_V1MODEL_RECIRC_PORT;
-        // Setting recirculation ports only for TNA. When running for bmv2, a single fake recirculation port is used.
+        List<Integer> recircPorts = capabilities.isArchTna() ? RECIRC_PORTS : V1MODEL_RECIRC_PORT;
         recircPorts.forEach(port -> {
             flowRuleService.applyFlowRules(
                     ingressVlanRule(port, false, DEFAULT_VLAN, PORT_TYPE_INTERNAL),

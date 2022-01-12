@@ -75,7 +75,7 @@ import static org.stratumproject.fabric.tna.behaviour.FabricUtils.KRYO;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.doCareRangeMatch;
 
 import static org.stratumproject.fabric.tna.behaviour.Constants.V1MODEL_INT_REPORT_MIRROR_ID;
-import static org.stratumproject.fabric.tna.behaviour.Constants.FAKE_V1MODEL_RECIRC_PORT;
+import static org.stratumproject.fabric.tna.behaviour.Constants.V1MODEL_RECIRC_PORT;
 
 /**
  * Implementation of INT programmable behavior for fabric.p4.
@@ -107,7 +107,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
 
     private static final Map<Integer, Integer> V1MODEL_MIRROR_SESS_TO_RECIRC_PORT =
             ImmutableMap.<Integer, Integer>builder()
-            .put(V1MODEL_INT_REPORT_MIRROR_ID, FAKE_V1MODEL_RECIRC_PORT.get(0)).build();
+            .put(V1MODEL_INT_REPORT_MIRROR_ID, V1MODEL_RECIRC_PORT.get(0)).build();
 
     private static final Set<TableId> TABLES_TO_CLEANUP = Sets.newHashSet(
             P4InfoConstants.FABRIC_INGRESS_INT_WATCHLIST_WATCHLIST,
@@ -192,8 +192,14 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         // Mirroring sessions for report cloning.
         sessionToPortMap.forEach((sessionId, port) -> {
             // Set up mirror sessions
+            TrafficTreatment.Builder trafficTreatment = DefaultTrafficTreatment.builder()
+                    .setOutput(PortNumber.portNumber(port));
+            if (capabilities.isArchTna()) {
+                trafficTreatment.truncate(INT_MIRROR_TRUNCATE_MAX_LEN);
+            }
             final List<GroupBucket> buckets = ImmutableList.of(
-                    getCloneBucket(port));
+                    createCloneGroupBucket(trafficTreatment.build())
+            );
             groupService.addGroup(new DefaultGroupDescription(
                     deviceId, GroupDescription.Type.CLONE,
                     new GroupBuckets(buckets),

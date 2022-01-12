@@ -23,6 +23,7 @@ control IntWatchlist(inout ingress_headers_t         hdr,
     action no_report() {
         fabric_md.bridged.int_bmd.report_type = INT_REPORT_TYPE_NO_REPORT;
         preserved_report_type = INT_REPORT_TYPE_NO_REPORT;
+
     }
 
     // Required by the control plane to distinguish entries used to exclude the INT
@@ -124,12 +125,9 @@ control IntEgress (inout v1model_header_t          hdr_v1model,
     const bit<48> DEFAULT_TIMESTAMP_MASK = 0xffffc0000000;
     // or for hop latency changes greater than 2^8 ns
     const bit<32> DEFAULT_HOP_LATENCY_MASK = 0xffffff00;
-    const queue_report_quota_t DEFAULT_QUEUE_REPORT_QUOTA = 1024;
 
     egress_headers_t hdr = hdr_v1model.egress;
     fabric_egress_metadata_t fabric_md = fabric_v1model.egress;
-
-    queue_report_filter_index_t queue_report_filter_index = 0;
 
     direct_counter(CounterType.packets_and_bytes) report_counter;
     direct_counter(CounterType.packets_and_bytes) int_metadata_counter;
@@ -137,7 +135,6 @@ control IntEgress (inout v1model_header_t          hdr_v1model,
     // bmv2 specific. Only one queue present.
     QueueId_t egress_qid = 0;
 
-    bool check_quota_and_report = false;
     @hidden
     register<bit<32>>(1024) seq_number;
 
@@ -150,15 +147,12 @@ control IntEgress (inout v1model_header_t          hdr_v1model,
         seq_number.write(seq_number_idx, reg);
     }
 
-    register<queue_report_quota_t>(1 << QUEUE_REPORT_FILTER_WIDTH) queue_report_quota;
-
     action check_quota() {
-        // The logic is performed in apply{} section.
-        check_quota_and_report = true;
+
     }
 
     action reset_quota() {
-        queue_report_quota.write((bit<32>)queue_report_filter_index, DEFAULT_QUEUE_REPORT_QUOTA);
+
     }
 
     table queue_latency_thresholds {
@@ -330,12 +324,12 @@ control IntEgress (inout v1model_header_t          hdr_v1model,
         const default_action = nop();
         const entries = {
             (INT_REPORT_TYPE_FLOW, 0, false): init_int_metadata(INT_REPORT_TYPE_FLOW);
-            (INT_REPORT_TYPE_FLOW, 0, true): init_int_metadata(INT_REPORT_TYPE_FLOW|INT_REPORT_TYPE_QUEUE); // Queue report useless in V1model.
+            // (INT_REPORT_TYPE_FLOW, 0, true): init_int_metadata(INT_REPORT_TYPE_FLOW|INT_REPORT_TYPE_QUEUE);
             (INT_REPORT_TYPE_FLOW, 1, false): init_int_metadata(INT_REPORT_TYPE_DROP);
-            (INT_REPORT_TYPE_FLOW, 1, true): init_int_metadata(INT_REPORT_TYPE_DROP); // Queue report useless in V1model.
+            // (INT_REPORT_TYPE_FLOW, 1, true): init_int_metadata(INT_REPORT_TYPE_DROP);
             // Packets which are not tracked by the watchlist table
-            (INT_REPORT_TYPE_NO_REPORT, 0, true): init_int_metadata(INT_REPORT_TYPE_QUEUE); // Queue report useless in v1model.
-            (INT_REPORT_TYPE_NO_REPORT, 1, true): init_int_metadata(INT_REPORT_TYPE_QUEUE); // Queue report useless in v1model.
+            // (INT_REPORT_TYPE_NO_REPORT, 0, true): init_int_metadata(INT_REPORT_TYPE_QUEUE);
+            // (INT_REPORT_TYPE_NO_REPORT, 1, true): init_int_metadata(INT_REPORT_TYPE_QUEUE);
         }
         counters = int_metadata_counter;
     }
@@ -369,15 +363,10 @@ control IntEgress (inout v1model_header_t          hdr_v1model,
 
         fabric_md.int_md.hop_latency = standard_md.egress_global_timestamp[31:0] - fabric_md.bridged.base.ig_tstamp[31:0];
         fabric_md.int_md.timestamp = standard_md.egress_global_timestamp;
-        queue_report_filter_index = standard_md.egress_spec[6:0] ++ egress_qid;
 
         // Check the queue alert before the config table since we need to check the
         // latency which is not quantized.
         queue_latency_thresholds.apply();
-        if (check_quota_and_report) {
-            // Don't care about quotas.
-            fabric_md.int_md.queue_report = true;
-        }
 
         config.apply();
         hdr.report_fixed_header.hw_id = 4w0 ++ standard_md.egress_spec[8:7];

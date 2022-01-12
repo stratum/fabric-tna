@@ -13,6 +13,8 @@ import org.easymock.CaptureType;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.onlab.junit.TestUtils;
 import org.onlab.packet.IPv4;
 import org.onlab.packet.IpAddress;
@@ -59,6 +61,8 @@ import org.onosproject.segmentrouting.config.SegmentRoutingDeviceConfig;
 import org.stratumproject.fabric.tna.PipeconfLoader;
 import org.stratumproject.fabric.tna.inbandtelemetry.IntReportConfig;
 
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -87,12 +91,13 @@ import static org.stratumproject.fabric.tna.behaviour.FabricUtils.doCareRangeMat
 import static org.stratumproject.fabric.tna.utils.TestUtils.getIntReportConfig;
 import static org.stratumproject.fabric.tna.utils.TestUtils.getSrConfig;
 
-import static org.stratumproject.fabric.tna.behaviour.Constants.FAKE_V1MODEL_RECIRC_PORT;
+import static org.stratumproject.fabric.tna.behaviour.Constants.V1MODEL_RECIRC_PORT;
 import static org.stratumproject.fabric.tna.behaviour.Constants.V1MODEL_INT_REPORT_MIRROR_ID;
 
 /**
  * Tests for fabric INT programmable behaviour.
  */
+@RunWith(Parameterized.class)
 public class FabricIntProgrammableTest {
     private static final int NODE_SID_IPV4 = 101;
     private static final IpAddress ROUTER_IP = IpAddress.valueOf("10.0.1.254");
@@ -130,7 +135,7 @@ public class FabricIntProgrammableTest {
                     .put(0x203, 0x1c4).build();
     private static final Map<Integer, Integer> V1MODEL_MIRROR_SESS_TO_RECIRC_PORTS =
             ImmutableMap.<Integer, Integer>builder()
-                    .put(V1MODEL_INT_REPORT_MIRROR_ID, FAKE_V1MODEL_RECIRC_PORT.get(0)).build();
+                    .put(V1MODEL_INT_REPORT_MIRROR_ID, V1MODEL_RECIRC_PORT.get(0)).build();
     private static final long DEFAULT_QUEUE_REPORT_TRIGGER_LATENCY_THRESHOLD = 0xffffffffL;
     private static final long DEFAULT_QUEUE_REPORT_RESET_LATENCY_THRESHOLD = 0;
     private static final byte MAX_QUEUES = 32;
@@ -145,11 +150,26 @@ public class FabricIntProgrammableTest {
     private HostService hostService;
     private DriverData driverData;
 
+    private boolean isArchV1model;
+
+    public FabricIntProgrammableTest(boolean isV1model) {
+        // Needed for JUnit parameterized test.
+        this.isArchV1model = isV1model;
+    }
+
+    @Parameterized.Parameters(name = "Test - {index}, isV1model: {0}")
+    public static Collection values() {
+        return Arrays.asList(new Object[][] {
+                {true},
+                {false}
+        });
+    }
+
     @Before
     public void setup() {
         FabricCapabilities capabilities = createMock(FabricCapabilities.class);
-        expect(capabilities.isArchTna()).andReturn(true).anyTimes();
-        expect(capabilities.isArchV1model()).andReturn(false).anyTimes();
+        expect(capabilities.isArchTna()).andReturn(!this.isArchV1model).anyTimes();
+        expect(capabilities.isArchV1model()).andReturn(this.isArchV1model).anyTimes();
         expect(capabilities.hasHashedTable()).andReturn(true).anyTimes();
         expect(capabilities.supportDoubleVlanTerm()).andReturn(false).anyTimes();
         expect(capabilities.hwPipeCount()).andReturn(4).anyTimes();
