@@ -27,7 +27,6 @@ import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
 import org.onosproject.net.flow.FlowRule;
 import org.onosproject.net.flow.FlowRuleService;
-import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flow.criteria.PiCriterion;
 import org.onosproject.net.packet.DefaultOutboundPacket;
 import org.onosproject.net.packet.OutboundPacket;
@@ -36,8 +35,6 @@ import org.onosproject.net.pi.model.PiCounterId;
 import org.onosproject.net.pi.model.PiCounterModel;
 import org.onosproject.net.pi.model.PiTableId;
 import org.onosproject.net.pi.model.PiTableModel;
-import org.onosproject.net.pi.runtime.PiAction;
-import org.onosproject.net.pi.runtime.PiActionParam;
 import org.onosproject.net.pi.runtime.PiCounterCell;
 import org.onosproject.net.pi.runtime.PiCounterCellHandle;
 import org.onosproject.net.pi.runtime.PiCounterCellId;
@@ -46,13 +43,9 @@ import org.slf4j.LoggerFactory;
 import org.stratumproject.fabric.tna.PipeconfLoader;
 import org.stratumproject.fabric.tna.behaviour.FabricCapabilities;
 import org.stratumproject.fabric.tna.slicing.api.SliceId;
-import org.stratumproject.fabric.tna.slicing.api.SlicingException;
-import org.stratumproject.fabric.tna.slicing.api.SlicingService;
-import org.stratumproject.fabric.tna.slicing.api.TrafficClass;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -61,12 +54,9 @@ import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static org.onosproject.net.pi.model.PiCounterType.INDIRECT;
-import static org.stratumproject.fabric.tna.behaviour.FabricUtils.sliceTcConcat;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_EG_TUNNEL_PEERS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_GTPU_ENCAP;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_TERMINATIONS_COUNTER;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_QOS_QUEUES;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_QOS_SET_QUEUE;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_SESSIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_TERMINATIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_IG_TUNNEL_PEERS;
@@ -76,13 +66,11 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_ING
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_TERMINATIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_GTPU_IS_VALID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_IPV4_DST_ADDR;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_SLICE_TC;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_TEID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_TUNNEL_IPV4_DST;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_TUN_PEER_ID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_UE_ADDR;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_UE_SESSION_ID;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.QID;
 
 /**
  * Implementation of a UPF programmable device behavior.
@@ -97,7 +85,6 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     private static final int PRIORITY_LOW = 10;
 
     protected FlowRuleService flowRuleService;
-    protected SlicingService slicingService;
     protected PacketService packetService;
     protected FabricUpfTranslator upfTranslator;
 
@@ -130,7 +117,6 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         }
 
         flowRuleService = handler().get(FlowRuleService.class);
-        slicingService = handler().get(SlicingService.class);
         packetService = handler().get(PacketService.class);
         upfTranslator = new FabricUpfTranslator();
         final CoreService coreService = handler().get(CoreService.class);
@@ -154,45 +140,9 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     public boolean init() {
         if (setupBehaviour("init()")) {
             log.info("UpfProgrammable initialized for appId {} and deviceId {}", appId, deviceId);
-            try {
-                /* Add MOBILE slice and BEST_EFFORT tc if needed
-                   and initialize the remaining traffic classes */
-                Set<TrafficClass> tcs = slicingService.getTrafficClasses(SLICE_MOBILE);
-                if (tcs.isEmpty()) {
-                    slicingService.addSlice(SLICE_MOBILE);
-                }
-                Arrays.stream(TrafficClass.values()).forEach(tc -> {
-                    if (tcs.contains(tc) || tc.equals(TrafficClass.BEST_EFFORT) ||
-                            tc.equals(TrafficClass.SYSTEM)) {
-                        return;
-                    }
-                    slicingService.addTrafficClass(SLICE_MOBILE, tc);
-                });
-            } catch (SlicingException e) {
-                log.error("Exception while configuring traffic class for Mobile Slice: {}", e.getMessage());
-                return false;
-            }
             return true;
         }
         return false;
-    }
-
-    private FlowRule setQueueFlowRule(int sliceId, int tc, int queueId) {
-        TrafficSelector trafficSelector = DefaultTrafficSelector.builder()
-                .matchPi(PiCriterion.builder().matchExact(HDR_SLICE_TC, sliceTcConcat(sliceId, tc)).build())
-                .build();
-        PiAction action = PiAction.builder()
-                .withId(FABRIC_INGRESS_QOS_SET_QUEUE)
-                .withParameter(new PiActionParam(QID, queueId))
-                .build();
-
-        return DefaultFlowRule.builder()
-                .forDevice(deviceId).fromApp(appId).makePermanent()
-                .forTable(FABRIC_INGRESS_QOS_QUEUES)
-                .withSelector(trafficSelector)
-                .withTreatment(DefaultTrafficTreatment.builder().piTableAction(action).build())
-                .withPriority(PRIORITY_LOW)
-                .build();
     }
 
     @Override
@@ -327,11 +277,6 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
             return;
         }
         log.info("Clearing all UPF-related table entries.");
-        // Remove static Queue Configuration
-        slicingService.removeTrafficClass(SLICE_MOBILE, TrafficClass.ELASTIC);
-        slicingService.removeTrafficClass(SLICE_MOBILE, TrafficClass.REAL_TIME);
-        slicingService.removeTrafficClass(SLICE_MOBILE, TrafficClass.CONTROL);
-        slicingService.removeSlice(SLICE_MOBILE);
     }
 
     @Override
