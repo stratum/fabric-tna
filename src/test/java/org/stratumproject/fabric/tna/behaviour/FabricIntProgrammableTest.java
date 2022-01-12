@@ -91,7 +91,7 @@ import static org.stratumproject.fabric.tna.behaviour.FabricUtils.doCareRangeMat
 import static org.stratumproject.fabric.tna.utils.TestUtils.getIntReportConfig;
 import static org.stratumproject.fabric.tna.utils.TestUtils.getSrConfig;
 
-import static org.stratumproject.fabric.tna.behaviour.Constants.FAKE_V1MODEL_RECIRC_PORT;
+import static org.stratumproject.fabric.tna.behaviour.Constants.V1MODEL_RECIRC_PORT;
 import static org.stratumproject.fabric.tna.behaviour.Constants.V1MODEL_INT_REPORT_MIRROR_ID;
 
 /**
@@ -135,7 +135,7 @@ public class FabricIntProgrammableTest {
                     .put(0x203, 0x1c4).build();
     private static final Map<Integer, Integer> V1MODEL_MIRROR_SESS_TO_RECIRC_PORTS =
             ImmutableMap.<Integer, Integer>builder()
-                    .put(V1MODEL_INT_REPORT_MIRROR_ID, FAKE_V1MODEL_RECIRC_PORT.get(0)).build();
+                    .put(V1MODEL_INT_REPORT_MIRROR_ID, V1MODEL_RECIRC_PORT.get(0)).build();
     private static final long DEFAULT_QUEUE_REPORT_TRIGGER_LATENCY_THRESHOLD = 0xffffffffL;
     private static final long DEFAULT_QUEUE_REPORT_RESET_LATENCY_THRESHOLD = 0;
     private static final byte MAX_QUEUES = 32;
@@ -150,14 +150,14 @@ public class FabricIntProgrammableTest {
     private HostService hostService;
     private DriverData driverData;
 
-    private boolean isBmv2;
+    private boolean isArchV1model;
 
-    public FabricIntProgrammableTest(boolean isBmv2) {
+    public FabricIntProgrammableTest(boolean isV1model) {
         // Needed for JUnit parameterized test.
-        this.isBmv2 = isBmv2;
+        this.isArchV1model = isV1model;
     }
 
-    @Parameterized.Parameters(name = "Test - {index}, isBmv2: {0}")
+    @Parameterized.Parameters(name = "Test - {index}, isV1model: {0}")
     public static Collection values() {
         return Arrays.asList(new Object[][] {
                 {true},
@@ -168,8 +168,8 @@ public class FabricIntProgrammableTest {
     @Before
     public void setup() {
         FabricCapabilities capabilities = createMock(FabricCapabilities.class);
-        expect(capabilities.isArchTna()).andReturn(!this.isBmv2).anyTimes();
-        expect(capabilities.isArchV1model()).andReturn(this.isBmv2).anyTimes();
+        expect(capabilities.isArchTna()).andReturn(!this.isArchV1model).anyTimes();
+        expect(capabilities.isArchV1model()).andReturn(this.isArchV1model).anyTimes();
         expect(capabilities.hasHashedTable()).andReturn(true).anyTimes();
         expect(capabilities.supportDoubleVlanTerm()).andReturn(false).anyTimes();
         expect(capabilities.hwPipeCount()).andReturn(4).anyTimes();
