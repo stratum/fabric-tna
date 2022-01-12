@@ -1412,13 +1412,14 @@ class FabricSpgwDownlinkEcmpTest(SpgwSimpleTest):
 class FabricSpgwDownlinkTest(SpgwSimpleTest):
     @tvsetup
     @autocleanup
-    def doRunTest(self, pkt, tagged1, tagged2, with_psc, is_next_hop_spine, **kwargs):
+    def doRunTest(self, pkt, tagged1, tagged2, with_psc, is_next_hop_spine, spgw_app_filtering, **kwargs):
         self.runDownlinkTest(
             pkt=pkt,
             tagged1=tagged1,
             tagged2=tagged2,
             with_psc=with_psc,
             is_next_hop_spine=is_next_hop_spine,
+            app_filtering=spgw_app_filtering,
         )
 
     def runTest(self):
@@ -1430,23 +1431,25 @@ class FabricSpgwDownlinkTest(SpgwSimpleTest):
             "ip_dst": UE1_IPV4,
         }
         for traffic_dir in ["host-leaf-host", "spine-leaf-host", "host-leaf-spine"]:
-            for test_args in get_test_args(
-                traffic_dir=traffic_dir, pkt_addrs=pkt_addrs, spgw_type="DL_PSC"
-            ):
-                self.doRunTest(**test_args)
+            for spgw_app_filtering in [False, True]:
+                for test_args in get_test_args(
+                    traffic_dir=traffic_dir, pkt_addrs=pkt_addrs, spgw_type="DL_PSC", spgw_app_filtering=spgw_app_filtering,
+                ):
+                    self.doRunTest(**test_args)
 
 
 @group("spgw")
 class FabricSpgwUplinkTest(SpgwSimpleTest):
     @tvsetup
     @autocleanup
-    def doRunTest(self, pkt, tagged1, tagged2, with_psc, is_next_hop_spine, **kwargs):
+    def doRunTest(self, pkt, tagged1, tagged2, with_psc, is_next_hop_spine, spgw_app_filtering, **kwargs):
         self.runUplinkTest(
             ue_out_pkt=pkt,
             tagged1=tagged1,
             tagged2=tagged2,
             with_psc=with_psc,
             is_next_hop_spine=is_next_hop_spine,
+            app_filtering=spgw_app_filtering,
         )
 
     def runTest(self):
@@ -1458,10 +1461,11 @@ class FabricSpgwUplinkTest(SpgwSimpleTest):
             "ip_dst": HOST2_IPV4,
         }
         for traffic_dir in ["host-leaf-host", "host-leaf-spine", "spine-leaf-host"]:
-            for test_args in get_test_args(
-                traffic_dir=traffic_dir, pkt_addrs=pkt_addrs, spgw_type="UL_PSC"
-            ):
-                self.doRunTest(**test_args)
+            for spgw_app_filtering in [False, True]:
+                for test_args in get_test_args(
+                    traffic_dir=traffic_dir, pkt_addrs=pkt_addrs, spgw_type="UL_PSC", spgw_app_filtering=spgw_app_filtering
+                ):
+                    self.doRunTest(**test_args)
 
 
 @group("spgw")

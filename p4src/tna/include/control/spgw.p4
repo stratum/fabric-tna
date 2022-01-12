@@ -19,6 +19,12 @@ control SpgwIngress(
 
     Counter<bit<64>, bit<16>>(MAX_UPF_COUNTERS, CounterType_t.PACKETS_AND_BYTES) terminations_counter;
 
+    SpgwIfaceType_t iface_type = SpgwIfaceType_t.UNKNOWN;
+    bool sess_hit = false;
+    bit<32> ipv4_app_addr = 0;
+    l4_port_t app_port = 0;
+    bit<8> proto = 0;
+    bit<8> internal_app_id = DEFAULT_APP_ID;
     ue_session_id_t ue_session_id = 0;
 
     @hidden
@@ -114,6 +120,7 @@ control SpgwIngress(
     }
 
     action set_uplink_session_drop() {
+        sess_hit = true;
         _drop_common();
 #ifdef WITH_INT
         fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UPF_UL_SESSION_DROP;
@@ -128,6 +135,7 @@ control SpgwIngress(
     }
 
     action set_downlink_session_drop() {
+        sess_hit = true;
         _drop_common();
 #ifdef WITH_INT
         fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UPF_DL_SESSION_DROP;
@@ -135,6 +143,7 @@ control SpgwIngress(
     }
 
     action set_downlink_session(tun_peer_id_t tun_peer_id) {
+        sess_hit = true;
         // Set UE IP address.
         ue_session_id = fabric_md.routing_ipv4_dst;
         fabric_md.bridged.spgw.tun_peer_id = tun_peer_id;
@@ -142,6 +151,7 @@ control SpgwIngress(
     }
 
     action set_downlink_session_buf(tun_peer_id_t tun_peer_id) {
+        sess_hit = true;
         // Set UE IP address.
         ue_session_id = fabric_md.routing_ipv4_dst;
         fabric_md.bridged.spgw.tun_peer_id = tun_peer_id;
@@ -149,6 +159,7 @@ control SpgwIngress(
     }
 
     action set_downlink_session_buf_drop() {
+        sess_hit = true;
         // Set UE IP address, so we can match on the terminations table and
         // count packets in the ingress UPF counter.
         ue_session_id = fabric_md.routing_ipv4_dst;
@@ -159,6 +170,7 @@ control SpgwIngress(
     }
 
     action set_uplink_session() {
+        sess_hit = true;
         // Set UE IP address.
         ue_session_id = fabric_md.lkp.ipv4_src;
         // implicit decap
@@ -260,6 +272,7 @@ control SpgwIngress(
     table uplink_terminations {
         key = {
             ue_session_id             : exact @name("ue_session_id");
+            internal_app_id           : exact @name("app_id");
         }
 
         actions = {
@@ -275,6 +288,7 @@ control SpgwIngress(
     table downlink_terminations {
         key = {
             ue_session_id             : exact @name("ue_session_id");
+            internal_app_id           : exact @name("app_id");
         }
         actions = {
             downlink_fwd_encap;
@@ -305,6 +319,28 @@ control SpgwIngress(
         }
         const default_action = nop();
         const size = MAX_GTP_TUNNEL_PEERS;
+    }
+
+    //=================================//
+    //===== Application Filtering =====//
+    //=================================//
+    action set_app_id(bit<8> app_id) {
+        internal_app_id = app_id;
+    }
+
+    table applications {
+        key  = {
+            fabric_md.slice_id  : exact   @name("slice_id");
+            ipv4_app_addr       : lpm     @name("app_ip_address");
+            app_port            : ternary @name("app_l4_port");
+            proto               : ternary @name("ip_proto");
+        }
+        actions = {
+            set_app_id;
+            @defaultonly nop;
+        }
+        const default_action = nop();
+        size = MAX_APPLICATIONS;
     }
 
     //=================================//
@@ -360,24 +396,42 @@ control SpgwIngress(
         if (hdr.ipv4.isValid()) {
             switch(interfaces.apply().action_run) {
                 iface_access: {
+                    iface_type=SpgwIfaceType_t.ACCESS;
+                    ipv4_app_addr = fabric_md.lkp.ipv4_dst;
+                    app_port = fabric_md.lkp.l4_dport;
+                    proto = fabric_md.lkp.ip_proto;
                     if (fabric_md.bridged.base.encap_presence != EncapPresence.NONE) {
-                        if (uplink_sessions.apply().hit) {
-                            uplink_terminations.apply();
-                            uplink_recirc_rules.apply();
-                        }
+                        uplink_sessions.apply();
                     }
                 }
                 iface_core: {
-                    if (downlink_sessions.apply().hit) {
-                        downlink_terminations.apply();
-                    }
+                    iface_type=SpgwIfaceType_t.CORE;
+                    ipv4_app_addr = fabric_md.lkp.ipv4_src;
+                    app_port = fabric_md.lkp.l4_sport;
+                    proto = fabric_md.lkp.ip_proto;
+                    downlink_sessions.apply();
                 }
                 iface_dbuf: {
-                    if (downlink_sessions.apply().hit) {
-                        downlink_terminations.apply();
-                    }
+                    iface_type=SpgwIfaceType_t.DBUF;
+                    ipv4_app_addr = fabric_md.lkp.ipv4_src;
+                    app_port = fabric_md.lkp.l4_sport;
+                    proto = fabric_md.lkp.ip_proto;
+                    downlink_sessions.apply();
                 }
             }
+
+            applications.apply();
+
+            if (sess_hit) {
+                if (iface_type == SpgwIfaceType_t.ACCESS) {
+                    uplink_terminations.apply();
+                    uplink_recirc_rules.apply();
+                } else if (iface_type == SpgwIfaceType_t.CORE ||
+                            iface_type == SpgwIfaceType_t.DBUF) {
+                    downlink_terminations.apply();
+                }
+            }
+
             ig_tunnel_peers.apply();
             if (fabric_md.is_term_hit) {
                 // NOTE We should not update this counter for packets coming

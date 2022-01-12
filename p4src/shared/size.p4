@@ -29,6 +29,8 @@
 // Support only 1 slice for now.
 #define NUM_SLICES 1
 
+#define NUM_APP_PER_SLICE 5
+
 // Constants for the INT control block.
 #define INT_WATCHLIST_TABLE_SIZE 64
 // 4 entries per queue (for double range match on latency chunks) with up to 32 queues per port
@@ -44,6 +46,7 @@
 #define NUM_QOS_CLASSES 128
 #define MAX_UPLINK_RECIRC_RULES 64
 #define MAX_GTP_TUNNEL_PEERS 256
+#define MAX_APPLICATIONS (NUM_APP_PER_SLICE * NUM_SLICES)
 
 #define NUM_UPLINK_SESSIONS  (NUM_UES * MAX_GTP_TUNNELS_PER_UE)
 #define NUM_UPF_TERMINATIONS NUM_UES

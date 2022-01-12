@@ -50,6 +50,8 @@ typedef bit<SLICE_TC_WIDTH> slice_tc_t; // Slice and TC identifier
 @p4runtime_translation("tna/PortId_t", 9)
 type bit<9> FabricPortId_t;
 
+const bit<8> DEFAULT_APP_ID = 0;
+
 const slice_id_t DEFAULT_SLICE_ID = 0;
 const tc_t DEFAULT_TC = 0;
 // Check Stratum's chassis_config for other queue IDs.
@@ -255,6 +257,13 @@ enum bit<8> IntDropReason_t {
     DROP_REASON_INGRESS_QOS_METER = 160,
     DROP_REASON_ROUTING_V4_DROP = 170,
     DROP_REASON_ROUTING_V6_DROP = 171
+}
+
+enum bit<3> SpgwIfaceType_t {
+    UNKNOWN = 0,
+    ACCESS = 1,
+    CORE = 2,
+    DBUF = 4
 }
 
 #endif // __DEFINE__
