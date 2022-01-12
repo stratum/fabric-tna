@@ -42,7 +42,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.stratumproject.fabric.tna.PipeconfLoader;
 import org.stratumproject.fabric.tna.behaviour.FabricCapabilities;
-import org.stratumproject.fabric.tna.slicing.api.SliceId;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -82,8 +81,6 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     private static final int DEFAULT_PRIORITY = 128;
     private static final long DEFAULT_P4_DEVICE_ID = 1;
 
-    private static final int PRIORITY_LOW = 10;
-
     protected FlowRuleService flowRuleService;
     protected PacketService packetService;
     protected FabricUpfTranslator upfTranslator;
@@ -97,8 +94,6 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     private long gtpTunnelPeersTableSize;
 
     private ApplicationId appId;
-
-    static final SliceId SLICE_MOBILE = SliceId.of(SliceId.MAX);
 
     @Override
     protected boolean setupBehaviour(String opName) {

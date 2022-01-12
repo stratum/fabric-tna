@@ -75,7 +75,6 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TUNNEL_SRC
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TUNNEL_SRC_PORT;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TUN_DST_ADDR;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TUN_PEER_ID;
-import static org.stratumproject.fabric.tna.behaviour.upf.FabricUpfProgrammable.SLICE_MOBILE;
 
 /**
  * Provides logic to translate UPF entities into pipeline-specific ones and vice-versa.
@@ -600,7 +599,8 @@ public class FabricUpfTranslator {
                 .build();
         PiAction action = PiAction.builder()
                 .withId(actionId)
-                .withParameter(new PiActionParam(SLICE_ID, SLICE_MOBILE.id()))
+                // FIXME: slice id should come from UP4
+                .withParameter(new PiActionParam(SLICE_ID, 99))
                 .build();
         return DefaultFlowRule.builder()
                 .forDevice(deviceId).fromApp(appId).makePermanent()
