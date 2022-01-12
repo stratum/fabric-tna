@@ -110,7 +110,7 @@ control Next (inout ingress_headers_t         hdr,
     action_selector(HashAlgorithm.crc16,
         HASHED_SELECTOR_MAX_GROUP_SIZE,
         32w16) hashed_profile; // Still an action_selector. This name is used to limit
-                               // the usage of custom testing code between TNA and bmv2, for action_selectors.
+                               // the usage of custom testing code between TNA and v1model, for action_selectors.
 
     direct_counter(CounterType.packets_and_bytes) hashed_counter;
 
@@ -322,7 +322,6 @@ control EgressNextControl (inout ingress_headers_t        hdr,
             if (hdr.mpls.ttl == 0) {
                 drop_ctl = 1;
 #ifdef WITH_INT
-                // fabric_md.int_report_md.drop_reason = IntDropReason_t.DROP_REASON_MPLS_TTL_ZERO;
                 preserved_drop_reason = IntDropReason_t.DROP_REASON_MPLS_TTL_ZERO;
 #endif // WITH_INT
             }
@@ -334,7 +333,6 @@ control EgressNextControl (inout ingress_headers_t        hdr,
                 if (hdr.ipv4.ttl == 0) {
                     drop_ctl = 1;
 #ifdef WITH_INT
-                    // fabric_md.int_report_md.drop_reason = IntDropReason_t.DROP_REASON_IP_TTL_ZERO;
                     preserved_drop_reason = IntDropReason_t.DROP_REASON_IP_TTL_ZERO;
 #endif // WITH_INT
                 }
@@ -345,7 +343,6 @@ control EgressNextControl (inout ingress_headers_t        hdr,
                 if (hdr.ipv6.hop_limit == 0) {
                     drop_ctl = 1;
 #ifdef WITH_INT
-                    // fabric_md.int_report_md.drop_reason = IntDropReason_t.DROP_REASON_IP_TTL_ZERO;
                     preserved_drop_reason = IntDropReason_t.DROP_REASON_IP_TTL_ZERO;
 #endif // WITH_INT
                 }

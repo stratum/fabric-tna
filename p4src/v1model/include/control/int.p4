@@ -148,11 +148,11 @@ control IntEgress (inout v1model_header_t          hdr_v1model,
     }
 
     action check_quota() {
-
+        // Left for P4Info compatibility.
     }
 
     action reset_quota() {
-
+        // Left for P4Info compatibility.
     }
 
     table queue_latency_thresholds {

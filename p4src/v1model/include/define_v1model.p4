@@ -31,12 +31,6 @@ const PortId_t BMV2_DROP_PORT = 511;
 // This port shouldn't be used for any other reason.
 const PortId_t FAKE_V1MODEL_RECIRC_PORT = 510;
 
-// In TNA, the truncation is set through the control plane and used when mirroring the packet.
-// In V1model, it is hardcoded and used when the packet is deparsed.
-// WARN: if packet is recirculated, the truncate() has no effect
-// because standard_md.pkt_length is overriden by the parser.
-#define INT_MIRROR_TRUNCATE_MAX_LEN 128
-
 /** Field list values for metadata preservation */
 const FieldListIndex_t PRESERVE_INT_MD = 241;
 const FieldListIndex_t PRESERVE_INGRESS_PORT = 231;
