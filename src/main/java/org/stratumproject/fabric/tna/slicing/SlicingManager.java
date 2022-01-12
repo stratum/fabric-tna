@@ -47,6 +47,7 @@ import org.stratumproject.fabric.tna.slicing.api.QueueId;
 import org.stratumproject.fabric.tna.slicing.api.SliceId;
 import org.stratumproject.fabric.tna.slicing.api.SlicingAdminService;
 import org.stratumproject.fabric.tna.slicing.api.SlicingException;
+import org.stratumproject.fabric.tna.slicing.api.SlicingProviderService;
 import org.stratumproject.fabric.tna.slicing.api.SlicingService;
 import org.stratumproject.fabric.tna.slicing.api.TrafficClass;
 import org.stratumproject.fabric.tna.web.SliceIdCodec;
@@ -83,7 +84,7 @@ import static org.stratumproject.fabric.tna.slicing.api.SlicingException.Type.UN
         SlicingService.class,
         SlicingAdminService.class
 })
-public class SlicingManager implements SlicingService, SlicingAdminService {
+public class SlicingManager implements SlicingService, SlicingProviderService, SlicingAdminService {
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     protected CoreService coreService;
 

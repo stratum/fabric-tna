@@ -12,51 +12,11 @@ import java.util.Set;
 public interface SlicingService {
 
     /**
-     * Adds a slice with given ID.
-     * Adding default slice is not allowed.
-     *
-     * @param sliceId slice identifier
-     * @return true if the slice is added successfully.
-     * @throws SlicingException if an error occurred.
-     */
-    boolean addSlice(SliceId sliceId);
-
-    /**
-     * Removes a slice with given ID.
-     * Removing default slice is not allowed.
-     *
-     * @param sliceId slice identifier
-     * @return true if the slice is removed successfully.
-     * @throws SlicingException if an error occurred.
-     */
-    boolean removeSlice(SliceId sliceId);
-
-    /**
      * Gets all slice IDs.
      *
      * @return set of slice IDs
      */
     Set<SliceId> getSlices();
-
-    /**
-     * Adds a traffic class to given slice.
-     *
-     * @param sliceId slice identifier
-     * @param tc traffic class
-     * @return true if the traffic class is added to given slice successfully.
-     * @throws SlicingException if an error occurred.
-     */
-    boolean addTrafficClass(SliceId sliceId, TrafficClass tc);
-
-    /**
-     * Removes a traffic class from given slice.
-     *
-     * @param sliceId slice identifier
-     * @param tc traffic class
-     * @return true if the traffic class is removed from given slice successfully.
-     * @throws SlicingException if an error occurred.
-     */
-    boolean removeTrafficClass(SliceId sliceId, TrafficClass tc);
 
     /**
      * Gets all traffic classes in given slice.
@@ -83,6 +43,8 @@ public interface SlicingService {
      * @return The default traffic class for the given slice
      */
     TrafficClass getDefaultTrafficClass(SliceId sliceId);
+
+    // TODO: get traffic class parameters
 
     /**
      * Associates flow identified by given selector with given slice ID and traffic class.
