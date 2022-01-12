@@ -1566,7 +1566,6 @@ class FabricSpgwDownlinkFromDbufTest(SpgwSimpleTest):
 
 @group("int")
 @group("spgw")
-@skipIf(is_v1model(), "SpgwUplinkIntTest not implemented yet.")
 class FabricSpgwUplinkIntTest(SpgwIntTest):
     @tvsetup
     @autocleanup
@@ -1616,7 +1615,6 @@ class FabricSpgwUplinkIntTest(SpgwIntTest):
 
 @group("int")
 @group("spgw")
-@skipIf(is_v1model(), "SpgwDownlinkIntTest not implemented yet.")
 class FabricSpgwDownlinkIntTest(SpgwIntTest):
     @tvsetup
     @autocleanup
@@ -1774,7 +1772,6 @@ class FabricSpgwIntDownlinkDropTest(SpgwIntTest):
 
 
 @group("int")
-@skipIf(is_v1model(), "Flow report not implemented for v1model.")
 class FabricIntFlowReportTest(IntTest):
     @tvsetup
     @autocleanup
@@ -1878,7 +1875,6 @@ class FabricIntIngressDropReportTest(IntTest):
 
 
 @group("int")
-@skipIf(is_v1model(), "Egress drop reports not yet implemented for v1model.")
 class FabricIntEgressDropReportTest(IntTest):
     @tvsetup
     @autocleanup

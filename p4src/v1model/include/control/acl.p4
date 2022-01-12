@@ -28,7 +28,6 @@ control Acl (inout ingress_headers_t         hdr,
     }
 
     action copy_to_cpu() {
-// #ifdef WITH_LATEST_P4C
         clone_preserving_field_list(CloneType.I2E,
             (bit<32>) PACKET_IN_MIRROR_SESSION_ID,
             PRESERVE_INGRESS_PORT
