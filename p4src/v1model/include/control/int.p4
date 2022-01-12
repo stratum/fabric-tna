@@ -129,7 +129,7 @@ control IntEgress (inout v1model_header_t          hdr_v1model,
     egress_headers_t hdr = hdr_v1model.egress;
     fabric_egress_metadata_t fabric_md = fabric_v1model.egress;
 
-    queue_report_filter_index_t queue_report_filter_index;
+    queue_report_filter_index_t queue_report_filter_index = 0;
 
     direct_counter(CounterType.packets_and_bytes) report_counter;
     direct_counter(CounterType.packets_and_bytes) int_metadata_counter;
@@ -138,7 +138,6 @@ control IntEgress (inout v1model_header_t          hdr_v1model,
     QueueId_t egress_qid = 0;
 
     bool check_quota_and_report = false;
-    queue_report_filter_index_t quota = 0;
     @hidden
     register<bit<32>>(1024) seq_number;
 
@@ -331,12 +330,12 @@ control IntEgress (inout v1model_header_t          hdr_v1model,
         const default_action = nop();
         const entries = {
             (INT_REPORT_TYPE_FLOW, 0, false): init_int_metadata(INT_REPORT_TYPE_FLOW);
-            // (INT_REPORT_TYPE_FLOW, 0, true): init_int_metadata(INT_REPORT_TYPE_FLOW|INT_REPORT_TYPE_QUEUE); // Queue report useless in V1model.
+            (INT_REPORT_TYPE_FLOW, 0, true): init_int_metadata(INT_REPORT_TYPE_FLOW|INT_REPORT_TYPE_QUEUE); // Queue report useless in V1model.
             (INT_REPORT_TYPE_FLOW, 1, false): init_int_metadata(INT_REPORT_TYPE_DROP);
-            // (INT_REPORT_TYPE_FLOW, 1, true): init_int_metadata(INT_REPORT_TYPE_DROP); // Queue report useless in V1model.
+            (INT_REPORT_TYPE_FLOW, 1, true): init_int_metadata(INT_REPORT_TYPE_DROP); // Queue report useless in V1model.
             // Packets which are not tracked by the watchlist table
-            // (INT_REPORT_TYPE_NO_REPORT, 0, true): init_int_metadata(INT_REPORT_TYPE_QUEUE); // Queue report useless in v1model.
-            // (INT_REPORT_TYPE_NO_REPORT, 1, true): init_int_metadata(INT_REPORT_TYPE_QUEUE); // Queue report useless in v1model.
+            (INT_REPORT_TYPE_NO_REPORT, 0, true): init_int_metadata(INT_REPORT_TYPE_QUEUE); // Queue report useless in v1model.
+            (INT_REPORT_TYPE_NO_REPORT, 1, true): init_int_metadata(INT_REPORT_TYPE_QUEUE); // Queue report useless in v1model.
         }
         counters = int_metadata_counter;
     }
@@ -376,12 +375,8 @@ control IntEgress (inout v1model_header_t          hdr_v1model,
         // latency which is not quantized.
         queue_latency_thresholds.apply();
         if (check_quota_and_report) {
-            if (quota > 0) {
-                quota = quota - 1;
-                fabric_md.int_md.queue_report = true;
-            } else {
-                fabric_md.int_md.queue_report = false;
-            }
+            // Don't care about quotas.
+            fabric_md.int_md.queue_report = true;
         }
 
         config.apply();

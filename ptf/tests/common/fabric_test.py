@@ -3630,17 +3630,19 @@ class IntTest(IPv4UnicastTest):
 
     def set_queue_report_quota(self, port, qid, quota):
         # We are using port[6:0] ++ qid as register index.
-        index = (port & 0x7F) << 5 | qid
-        self.write_register(
-            "FabricEgress.int_egress.queue_report_quota", index, stringify(quota, 2)
-        )
+        if is_tna():
+            index = (port & 0x7F) << 5 | qid
+            self.write_register(
+                "FabricEgress.int_egress.queue_report_quota", index, stringify(quota, 2)
+            )
 
     def verify_quota(self, port, qid, quota):
         # We are using port[6:0] ++ qid as register index.
-        index = (port & 0x7F) << 5 | qid
-        self.verify_register(
-            "FabricEgress.int_egress.queue_report_quota", index, stringify(quota, 2)
-        )
+        if is_tna():
+            index = (port & 0x7F) << 5 | qid
+            self.verify_register(
+                "FabricEgress.int_egress.queue_report_quota", index, stringify(quota, 2)
+            )
 
     def runIntTest(
         self,
@@ -3975,7 +3977,8 @@ class IntTest(IPv4UnicastTest):
         # Sets the quota for the output port/queue of INT report to zero to make sure
         # we won't keep getting reports for this type of packet.
         self.set_queue_report_quota(port=self.port3, qid=0, quota=0)
-        for recirc_port in RECIRCULATE_PORTS:
+        recirc_ports = RECIRCULATE_PORTS if is_tna() else RECIRCULATE_PORT_V1MODEL
+        for recirc_port in recirc_ports:
             self.set_queue_report_quota(port=recirc_port, qid=0, quota=0)
         if reset_quota:
             # To ensure we have enough quota to send a queue report.

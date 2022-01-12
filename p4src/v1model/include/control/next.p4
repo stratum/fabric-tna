@@ -255,7 +255,9 @@ control EgressNextControl (inout ingress_headers_t        hdr,
         egress_vlan_counter.count();
 #ifdef WITH_INT
         // fabric_md.int_report_md.drop_reason = IntDropReason_t.DROP_REASON_EGRESS_NEXT_MISS;
-        // fabric_md.int_report_md is invalid in case of Egress Drop reports. Use preserved_drop_reason.
+        // fabric_md.int_report_md is still invalid in case of Egress Drop report.
+        // This approach works well for TNA because assignments made before setValid() are effective, while this is not true for V1model.
+        // Use preserved_drop_reason.
         preserved_drop_reason = IntDropReason_t.DROP_REASON_EGRESS_NEXT_MISS;
 #endif // WITH_INT
     }
