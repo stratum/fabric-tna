@@ -7,9 +7,10 @@
 #include "v1model/include/define_v1model.p4"
 #include "v1model/include/header_v1model.p4"
 
-control Acl (inout ingress_headers_t hdr,
+control Acl (inout ingress_headers_t         hdr,
              inout fabric_ingress_metadata_t fabric_md,
-             inout standard_metadata_t standard_md) {
+             inout standard_metadata_t       standard_md,
+             inout bit<1>                    drop_ctl ) {
 
     /*
      * ACL Table.
@@ -22,7 +23,7 @@ control Acl (inout ingress_headers_t hdr,
         // FIXME: We have to rewrite other fields to perform correct override action
         // e.g. forwarding type == "ROUTING" while we want to override the action to "BRIDGE" in NEXT table
         fabric_md.skip_next = false;
-        // TODO: drop_ctl should set to 0 here when drop_ctl is supported
+        drop_ctl = 0;
     }
 
     action copy_to_cpu() {
@@ -37,12 +38,15 @@ control Acl (inout ingress_headers_t hdr,
         copy_to_cpu();
         fabric_md.skip_next = true;
         fabric_md.punt_to_cpu = true;
-        mark_to_drop(standard_md);
+        drop_ctl = 1;
     }
 
     action drop() {
-        mark_to_drop(standard_md);
+        drop_ctl = 1;
         fabric_md.skip_next = true;
+#ifdef WITH_INT
+        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_ACL_DENY;
+#endif // WITH_INT
         acl_counter.count();
     }
 
@@ -57,6 +61,7 @@ control Acl (inout ingress_headers_t hdr,
         standard_md.egress_spec = (PortId_t)port_num;
         fabric_md.egress_port_set = true;
         fabric_md.skip_next = true;
+        drop_ctl = 0;
         acl_counter.count();
     }
 
@@ -66,7 +71,7 @@ control Acl (inout ingress_headers_t hdr,
 
     table acl {
         key = {
-            standard_md.ingress_port         : ternary @name("ig_port");   // 9
+            fabric_md.bridged.base.ig_port   : ternary @name("ig_port");   // 9
             fabric_md.lkp.eth_dst            : ternary @name("eth_dst");   // 48
             fabric_md.lkp.eth_src            : ternary @name("eth_src");   // 48
             fabric_md.lkp.vlan_id            : ternary @name("vlan_id");   // 12

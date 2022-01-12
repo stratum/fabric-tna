@@ -57,6 +57,7 @@ fabric:
 
 fabric-int:
 	@$(DIR)/p4src/tna/build.sh fabric-int "-DWITH_INT"
+	@$(DIR)/p4src/v1model/build.sh fabric-int "-DWITH_INT"
 
 fabric-spgw:
 	@$(DIR)/p4src/tna/build.sh fabric-spgw "-DWITH_SPGW"
@@ -64,6 +65,7 @@ fabric-spgw:
 
 fabric-spgw-int:
 	@$(DIR)/p4src/tna/build.sh fabric-spgw-int "-DWITH_SPGW -DWITH_INT"
+	@$(DIR)/p4src/v1model/build.sh fabric-spgw-int "-DWITH_SPGW -DWITH_INT"
 
 constants:
 	docker run -v $(DIR):$(DIR) -w $(DIR) --rm --user $(UID) \

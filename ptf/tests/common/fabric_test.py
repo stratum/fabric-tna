@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0 AND Apache-2.0
 
 import codecs
-import fnmatch
 import re
 import socket
 import struct
@@ -200,7 +199,9 @@ INT_INS_TO_NAME = {
 
 PACKET_IN_MIRROR_ID = 0x1FF
 INT_REPORT_MIRROR_IDS = [0x200, 0x201, 0x202, 0x203]
+V1MODEL_INT_REPORT_MIRROR_ID = 0x1FA
 RECIRCULATE_PORTS = [68, 196, 324, 452]
+RECIRCULATE_PORT_BMV2 = [510]
 SWITCH_ID = 1
 INT_REPORT_PORT = 32766
 NPROTO_ETHERNET = 0
@@ -1133,7 +1134,8 @@ class FabricTest(P4RuntimeTest):
     def set_up_recirc_ports(self):
         # All recirculation ports are configured as untagged with DEFAULT_VLAN
         # as the internal one.
-        for port in RECIRCULATE_PORTS:
+        ports = RECIRCULATE_PORTS if is_tna() else RECIRCULATE_PORT_BMV2
+        for port in ports:
             self.set_ingress_port_vlan(
                 ingress_port=port,
                 vlan_valid=False,
@@ -2828,8 +2830,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             ctr_id=DOWNLINK_UPF_CTR_IDX,
         )
 
-        if is_tna():
-            self.set_up_recirc_ports()
+        self.set_up_recirc_ports()
 
         # By default deny all UE-to-UE communication.
         self.add_uplink_recirc_rule(
@@ -2894,10 +2895,6 @@ class SpgwSimpleTest(IPv4UnicastTest):
             # deparser, after counter update.
             uplink_ingress_bytes += VLAN_BYTES
             uplink_egress_bytes += VLAN_BYTES
-            if is_v1model():
-                # Recirculated Pkt is vlan tagged. Count in downlink.
-                downlink_ingress_bytes += VLAN_BYTES
-                downlink_egress_bytes += VLAN_BYTES
         if self.loopback:
             uplink_ingress_bytes += CPU_LOOPBACK_FAKE_ETH_BYTES
             uplink_egress_bytes += CPU_LOOPBACK_FAKE_ETH_BYTES
@@ -3548,14 +3545,15 @@ class IntTest(IPv4UnicastTest):
             SWITCH_ID,
             MPLS_LABEL_1 if is_device_spine else None,
         )
-        for i in range(0, 4):
-            self.set_up_report_mirror_flow(
-                i, INT_REPORT_MIRROR_IDS[i], RECIRCULATE_PORTS[i]
-            )
+        if is_tna():
+            for i in range(0, 4):
+                self.set_up_report_mirror_flow(
+                    i, INT_REPORT_MIRROR_IDS[i], RECIRCULATE_PORTS[i]
+                )
+        self.set_up_recirc_ports()
         self.set_up_report_table_entries(
             self.port3, is_device_spine, send_report_to_spine
         )
-        self.set_up_recirc_ports()
 
     def set_up_latency_threshold_for_q_report(
         self, threshold_trigger, threshold_reset, queue_id=0

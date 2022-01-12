@@ -19,9 +19,18 @@ struct fabric_v1model_metadata_t {
     // Reference: https://github.com/barefootnetworks/Open-Tofino/blob/6a8432eab97bfd1d4805cf24c2c838470840f522/share/p4c/p4include/tofino.p4#L126-L127
     bool                      skip_egress;
     bool                      do_spgw_uplink_recirc;
+    // The drop_ctl emulates the drop_ctl bit in intrinsic metadata for TNA.
+    bit<1>                    drop_ctl;
+    // The int_mirror_type emulates the mirror_type flag in ingress_intrinsic_metadata_for_deparser_t.
+    IntReportType_t           int_mirror_type;
 
     fabric_ingress_metadata_t ingress;
     fabric_egress_metadata_t  egress;
+}
+
+struct v1model_header_t {
+    ingress_headers_t ingress;
+    egress_headers_t egress;
 }
 
 error {

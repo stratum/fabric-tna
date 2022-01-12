@@ -7,26 +7,24 @@
 
 control SpgwIngress(
         /* Fabric.p4 */
-        inout ingress_headers_t           hdr,
-        inout fabric_v1model_metadata_t   fabric_v1model,
-        inout standard_metadata_t         standard_md) {
+        inout ingress_headers_t          hdr,
+        inout fabric_ingress_metadata_t  fabric_md,
+        inout standard_metadata_t        standard_md,
+        inout bool                       do_spgw_uplink_recirc,
+        inout bit<1>                     drop_ctl) {
 
     //========================//
     //===== Misc Things ======//
     //========================//
 
     counter(MAX_UPF_COUNTERS, CounterType.packets_and_bytes) terminations_counter;
-    // Using this local variable (fabric_md) to avoid editing all the actions, since
-    // the control parameter is of type fabric_v1model_metadata_t, instead of fabric_ingress_metadata_t.
-    // fabric_v1model.ingress is then updated in apply{} section, to to maintain all the edits made to fabric_md.
-    fabric_ingress_metadata_t fabric_md = fabric_v1model.ingress;
 
     bool upf_termination_hit = false;
     ue_session_id_t ue_session_id = 0;
 
     @hidden
     action _drop_common() {
-        mark_to_drop(standard_md);
+        drop_ctl = 1;
         fabric_md.skip_forwarding = true;
         fabric_md.skip_next = true;
     }
@@ -117,18 +115,30 @@ control SpgwIngress(
 
     action set_uplink_session_miss() {
         _drop_common();
-    }
-
-    action set_downlink_session_miss() {
-        _drop_common();
+#ifdef WITH_INT
+        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UPF_UL_SESSION_MISS;
+#endif // WITH_INT
     }
 
     action set_uplink_session_drop() {
         _drop_common();
+#ifdef WITH_INT
+        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UPF_UL_SESSION_DROP;
+#endif // WITH_INT
+    }
+
+    action set_downlink_session_miss() {
+        _drop_common();
+#ifdef WITH_INT
+        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UPF_DL_SESSION_MISS;
+#endif // WITH_INT
     }
 
     action set_downlink_session_drop() {
         _drop_common();
+#ifdef WITH_INT
+        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UPF_DL_SESSION_DROP;
+#endif // WITH_INT
     }
 
     action set_downlink_session(tun_peer_id_t tun_peer_id) {
@@ -150,6 +160,9 @@ control SpgwIngress(
         // count packets in the ingress UPF counter.
         ue_session_id = fabric_md.routing_ipv4_dst;
         _drop_common();
+#ifdef WITH_INT
+        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UPF_UL_SESSION_DROP_BUFF;
+#endif // WITH_INT
     }
 
     action set_uplink_session() {
@@ -194,20 +207,32 @@ control SpgwIngress(
 
     action uplink_drop_miss() {
         _drop_common();
+#ifdef WITH_INT
+        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UPF_UL_TERMINATION_MISS;
+#endif // WITH_INT
     }
 
     action downlink_drop_miss() {
         _drop_common();
+#ifdef WITH_INT
+        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UPF_DL_TERMINATION_MISS;
+#endif // WITH_INT
     }
 
-    action uplink_drop(upf_ctr_id_t ctr_id)  {
+    action uplink_drop(upf_ctr_id_t ctr_id) {
         _drop_common();
         _term_hit(ctr_id);
+#ifdef WITH_INT
+        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UPF_UL_TERMINATION_DROP;
+#endif // WITH_INT
     }
 
-    action downlink_drop(upf_ctr_id_t ctr_id)  {
+    action downlink_drop(upf_ctr_id_t ctr_id) {
         _drop_common();
         _term_hit(ctr_id);
+#ifdef WITH_INT
+        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UPF_DL_TERMINATION_DROP;
+#endif // WITH_INT
     }
 
     action app_fwd(upf_ctr_id_t ctr_id,
@@ -297,12 +322,11 @@ control SpgwIngress(
 
     action recirc_allow() {
         // Recirculation in bmv2 is obtained via recirculate() primitive, invoked in the egress pipeline.
-        // We set the egress_spec to the ingress_port so that we can match on the egress_vlan without dropping.
-        // Also, setting the egress_spec as the ingress_port lets the recirculated packet in the pipeline, by
-        // matching the ingress_port_vlan.
-        standard_md.egress_spec = standard_md.ingress_port;
-        // Do not overwrite the vlan_id; linked to the issue mentioned above.
-        fabric_v1model.do_spgw_uplink_recirc = true;
+        // We set the egress_spec to the FAKE_V1MODEL_RECIRC_PORT, that is intended also as a recirculation port.
+        // For more info on FAKE_V1MODEL_RECIRC_PORT, see v1model/define_v1model.p4
+        standard_md.egress_spec = FAKE_V1MODEL_RECIRC_PORT;
+        fabric_md.bridged.base.vlan_id = DEFAULT_VLAN_ID;
+        do_spgw_uplink_recirc = true;
         fabric_md.egress_port_set = true;
         fabric_md.skip_forwarding = true;
         fabric_md.skip_next = true;
@@ -310,7 +334,10 @@ control SpgwIngress(
     }
 
     action recirc_deny() {
-        fabric_v1model.do_spgw_uplink_recirc = false;
+#ifdef WITH_INT
+        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_SPGW_UPLINK_RECIRC_DENY;
+#endif // WITH_INT
+        do_spgw_uplink_recirc = false;
         fabric_md.skip_forwarding = true;
         fabric_md.skip_next = true;
         recirc_stats.count();
@@ -379,9 +406,6 @@ control SpgwIngress(
             // Forwarding is done by other parts of the ingress, and
             // encapsulation is done in the egress
         }
-
-        // As last step, synchronize local var to parameter passed in control.
-        fabric_v1model.ingress = fabric_md;
     }
 }
 
@@ -389,12 +413,10 @@ control SpgwIngress(
 //====================================//
 //============== Egress ==============//
 //====================================//
-control SpgwEgress(
-        inout ingress_headers_t hdr,
-        inout fabric_v1model_metadata_t fabric_v1model) {
+control SpgwEgress(inout ingress_headers_t          hdr,
+                   inout fabric_egress_metadata_t  fabric_md) {
 
     counter(MAX_UPF_COUNTERS, CounterType.packets_and_bytes) terminations_counter;
-    fabric_egress_metadata_t fabric_md = fabric_v1model.egress;
 
     //=========================//
     //===== Tunnel Peers ======//
@@ -485,6 +507,9 @@ control SpgwEgress(
         hdr.udp.len = UDP_HDR_BYTES + GTPU_HDR_BYTES
                 + hdr.inner_ipv4.total_len;
         hdr.gtpu.msglen = hdr.inner_ipv4.total_len;
+#ifdef WITH_INT
+        fabric_md.int_report_md.encap_presence = EncapPresence.GTPU_ONLY;
+#endif // WITH_INT
     }
 
     // Do GTP-U encap with PDU Session Container extension for 5G NG-RAN with
@@ -504,6 +529,9 @@ control SpgwEgress(
                 + hdr.inner_ipv4.total_len;
         hdr.gtpu.ex_flag = 1;
         hdr.gtpu_ext_psc.qfi = fabric_md.bridged.spgw.qfi;
+#ifdef WITH_INT
+        fabric_md.int_report_md.encap_presence = EncapPresence.GTPU_WITH_PSC;
+#endif // WITH_INT
     }
 
     // By default, do regular GTP-U encap. Allow the control plane to enable
@@ -542,7 +570,6 @@ control SpgwEgress(
                 terminations_counter.count((bit<32>)fabric_md.bridged.spgw.upf_ctr_id);
             }
         }
-        fabric_v1model.egress = fabric_md;
     }
 }
 

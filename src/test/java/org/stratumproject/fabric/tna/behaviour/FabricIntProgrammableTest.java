@@ -13,6 +13,8 @@ import org.easymock.CaptureType;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.onlab.junit.TestUtils;
 import org.onlab.packet.IPv4;
 import org.onlab.packet.IpAddress;
@@ -59,6 +61,8 @@ import org.onosproject.segmentrouting.config.SegmentRoutingDeviceConfig;
 import org.stratumproject.fabric.tna.PipeconfLoader;
 import org.stratumproject.fabric.tna.inbandtelemetry.IntReportConfig;
 
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -87,9 +91,13 @@ import static org.stratumproject.fabric.tna.behaviour.FabricUtils.doCareRangeMat
 import static org.stratumproject.fabric.tna.utils.TestUtils.getIntReportConfig;
 import static org.stratumproject.fabric.tna.utils.TestUtils.getSrConfig;
 
+import static org.stratumproject.fabric.tna.behaviour.Constants.V1MODEL_RECIRC_PORT;
+import static org.stratumproject.fabric.tna.behaviour.Constants.V1MODEL_INT_REPORT_MIRROR_ID;
+
 /**
  * Tests for fabric INT programmable behaviour.
  */
+@RunWith(Parameterized.class)
 public class FabricIntProgrammableTest {
     private static final int NODE_SID_IPV4 = 101;
     private static final IpAddress ROUTER_IP = IpAddress.valueOf("10.0.1.254");
@@ -125,6 +133,9 @@ public class FabricIntProgrammableTest {
                     .put(0x201, 0xc4)
                     .put(0x202, 0x144)
                     .put(0x203, 0x1c4).build();
+    private static final Map<Integer, Integer> V1MODEL_MIRROR_SESS_TO_RECIRC_PORTS =
+            ImmutableMap.<Integer, Integer>builder()
+                    .put(V1MODEL_INT_REPORT_MIRROR_ID, V1MODEL_RECIRC_PORT.get(0)).build();
     private static final long DEFAULT_QUEUE_REPORT_TRIGGER_LATENCY_THRESHOLD = 0xffffffffL;
     private static final long DEFAULT_QUEUE_REPORT_RESET_LATENCY_THRESHOLD = 0;
     private static final byte MAX_QUEUES = 32;
@@ -139,9 +150,26 @@ public class FabricIntProgrammableTest {
     private HostService hostService;
     private DriverData driverData;
 
+    private boolean isArchV1model;
+
+    public FabricIntProgrammableTest(boolean isV1model) {
+        // Needed for JUnit parameterized test.
+        this.isArchV1model = isV1model;
+    }
+
+    @Parameterized.Parameters(name = "Test - {index}, isV1model: {0}")
+    public static Collection values() {
+        return Arrays.asList(new Object[][] {
+                {true},
+                {false}
+        });
+    }
+
     @Before
     public void setup() {
         FabricCapabilities capabilities = createMock(FabricCapabilities.class);
+        expect(capabilities.isArchTna()).andReturn(!this.isArchV1model).anyTimes();
+        expect(capabilities.isArchV1model()).andReturn(this.isArchV1model).anyTimes();
         expect(capabilities.hasHashedTable()).andReturn(true).anyTimes();
         expect(capabilities.supportDoubleVlanTerm()).andReturn(false).anyTimes();
         expect(capabilities.hwPipeCount()).andReturn(4).anyTimes();
@@ -1006,13 +1034,13 @@ public class FabricIntProgrammableTest {
     private void testInit() {
         final List<GroupDescription> expectedGroups = Lists.newArrayList();
         final Capture<GroupDescription> capturedGroup = newCapture(CaptureType.ALL);
-        QUAD_PIPE_MIRROR_SESS_TO_RECIRC_PORTS.forEach((sessionId, port) -> {
+        final Map<Integer, Integer> recircPorts = intProgrammable.capabilities.isArchV1model() ?
+                V1MODEL_MIRROR_SESS_TO_RECIRC_PORTS : QUAD_PIPE_MIRROR_SESS_TO_RECIRC_PORTS;
+
+        recircPorts.forEach((sessionId, port) -> {
             // Set up mirror sessions
             final List<GroupBucket> buckets = ImmutableList.of(
-                    createCloneGroupBucket(DefaultTrafficTreatment.builder()
-                            .setOutput(PortNumber.portNumber(port))
-                            .truncate(INT_MIRROR_TRUNCATE_MAX_LEN)
-                            .build()));
+                    getCloneBucket(port));
             expectedGroups.add(new DefaultGroupDescription(
                     LEAF_DEVICE_ID, GroupDescription.Type.CLONE,
                     new GroupBuckets(buckets),
@@ -1024,7 +1052,7 @@ public class FabricIntProgrammableTest {
         replay(groupService, flowRuleService);
         assertTrue(intProgrammable.init());
 
-        for (int i = 0; i < QUAD_PIPE_MIRROR_SESS_TO_RECIRC_PORTS.size(); i++) {
+        for (int i = 0; i < recircPorts.size(); i++) {
             GroupDescription expectGroup = expectedGroups.get(i);
             GroupDescription actualGroup = capturedGroup.getValues().get(i);
             assertEquals(expectGroup, actualGroup);
@@ -1032,6 +1060,18 @@ public class FabricIntProgrammableTest {
 
         verify(groupService, flowRuleService);
         reset(groupService, flowRuleService);
+    }
+
+    private GroupBucket getCloneBucket(Integer port) {
+        if (intProgrammable.capabilities.isArchV1model()) {
+            return createCloneGroupBucket(DefaultTrafficTreatment.builder()
+                                                  .setOutput(PortNumber.portNumber(port))
+                                                  .build());
+        }
+        return createCloneGroupBucket(DefaultTrafficTreatment.builder()
+                                              .setOutput(PortNumber.portNumber(port))
+                                              .truncate(INT_MIRROR_TRUNCATE_MAX_LEN)
+                                              .build());
     }
 
     private FlowRule buildCollectorWatchlistRule(DeviceId deviceId) {
