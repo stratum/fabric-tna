@@ -1570,6 +1570,7 @@ class FabricSpgwDownlinkFromDbufTest(SpgwSimpleTest):
 
 @group("int")
 @group("spgw")
+@skipIf(is_v1model(), "SpgwUplinkIntTest not implemented yet.")
 class FabricSpgwUplinkIntTest(SpgwIntTest):
     @tvsetup
     @autocleanup
@@ -1619,6 +1620,7 @@ class FabricSpgwUplinkIntTest(SpgwIntTest):
 
 @group("int")
 @group("spgw")
+@skipIf(is_v1model(), "SpgwDownlinkIntTest not implemented yet.")
 class FabricSpgwDownlinkIntTest(SpgwIntTest):
     @tvsetup
     @autocleanup
@@ -1776,6 +1778,7 @@ class FabricSpgwIntDownlinkDropTest(SpgwIntTest):
 
 
 @group("int")
+@skipIf(is_v1model(), "Flow report not implemented for v1model.")
 class FabricIntFlowReportTest(IntTest):
     @tvsetup
     @autocleanup
@@ -1879,6 +1882,7 @@ class FabricIntIngressDropReportTest(IntTest):
 
 
 @group("int")
+@skipIf(is_v1model(), "Egress drop reports not yet implemented for v1model.")
 class FabricIntEgressDropReportTest(IntTest):
     @tvsetup
     @autocleanup
@@ -1931,6 +1935,7 @@ class FabricIntEgressDropReportTest(IntTest):
 
 
 @group("int")
+@skipIf(is_v1model(), "Flow report filter not implemented for v1model.")
 class FabricFlowReportFilterNoChangeTest(IntTest):
     @tvsetup
     @autocleanup
@@ -1987,6 +1992,7 @@ class FabricFlowReportFilterNoChangeTest(IntTest):
 
 
 @group("int")
+@skipIf(is_v1model(), "Flow report filter not implemented for v1model.")
 class FabricFlowReportFilterChangeTest(IntTest):
     @tvsetup
     @autocleanup
@@ -2051,6 +2057,7 @@ class FabricFlowReportFilterChangeTest(IntTest):
 
 
 @group("int")
+@skipIf(is_v1model(), "Drop report filter not implemented for v1model.")
 class FabricDropReportFilterTest(IntTest):
     @tvsetup
     @autocleanup
@@ -2108,6 +2115,7 @@ class FabricDropReportFilterTest(IntTest):
 
 
 @group("int")
+@skipIf(is_v1model(), "Queue report not implemented for v1model.")
 class FabricIntQueueReportTest(IntTest):
     @tvsetup
     @autocleanup
@@ -2170,6 +2178,7 @@ class FabricIntQueueReportTest(IntTest):
 
 
 @group("int")
+@skipIf(is_v1model(), "Queue reports not implemented for v1model.")
 # Skip HW PTF test
 # We cannot varify value from the register which not belong to pipe 0 since the current
 # P4Runtime and Stratum only allows us to read register from pipe 0.
@@ -2989,6 +2998,7 @@ class FabricOptimizedFieldDetectorTest(FabricTest):
 
 
 @group("int-dod")
+@skipIf(is_v1model(), "Deflect on drop not supported in v1model.")
 class FabricIntDeflectDropReportTest(IntTest):
     @autocleanup
     def doRunTest(

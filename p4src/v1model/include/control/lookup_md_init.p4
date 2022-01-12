@@ -6,7 +6,7 @@
 #include "v1model/include/define_v1model.p4"
 #include "v1model/include/header_v1model.p4"
 
-control LookupMdInit (in ingress_headers_t hdr,
+control LookupMdInit (in  ingress_headers_t hdr,
                       out lookup_metadata_t lkp_md) {
 
       apply {

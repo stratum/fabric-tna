@@ -251,6 +251,7 @@ control IntIngress(
     apply {
         // Here we use 0b10000000xx as the mirror session ID where "xx" is the 2-bit
         // pipeline number(0~3).
+        // FIXME: set mirror_session_id in egress to save bmd resources
         fabric_md.bridged.int_bmd.mirror_session_id = INT_MIRROR_SESSION_BASE ++ ig_intr_md.ingress_port[8:7];
         // When the traffic manager deflects a packet, the egress port and queue id
         // of egress intrinsic metadata will be the port and queue used for deflection.
