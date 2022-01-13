@@ -62,7 +62,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -126,10 +125,6 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
     private MapEventListener<SliceStoreKey, TrafficClassConfig> sliceListener;
     private ExecutorService sliceExecutor;
 
-    protected ConsistentMap<QueueId, QueueStoreValue> queueStore;
-    private MapEventListener<QueueId, QueueStoreValue> queueListener;
-    private ExecutorService queueExecutor;
-
     protected ConsistentMap<TrafficSelector, SliceStoreKey> classifierFlowStore;
     private MapEventListener<TrafficSelector, SliceStoreKey> classifierFlowListener;
     private ExecutorService classifierFlowExecutor;
@@ -162,19 +157,6 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
         sliceListener = new InternalSliceListener();
         sliceExecutor = Executors.newSingleThreadExecutor(groupedThreads("fabric-tna-slice-event", "%d", log));
         sliceStore.addListener(sliceListener);
-
-        queueStore = storageService.<QueueId, QueueStoreValue>consistentMapBuilder()
-                .withName("fabric-tna-queue")
-                .withRelaxedReadConsistency()
-                .withSerializer(Serializer.using(serializer.build()))
-                .build();
-        queueListener = new InternalQueueListener();
-        queueExecutor = Executors.newSingleThreadExecutor(groupedThreads("fabric-tna-queue-event", "%d", log));
-        queueStore.addListener(queueListener);
-
-        // FIXME: should BEST-EFFORT be configured via netcfg?
-        // Shared queues are pre-provisioned and always available
-        queueStore.put(QueueId.BEST_EFFORT, new QueueStoreValue(TrafficClass.BEST_EFFORT, true));
 
         classifierFlowStore = storageService.<TrafficSelector, SliceStoreKey>consistentMapBuilder()
                 .withName("fabric-tna-classifier-flow")
@@ -213,10 +195,6 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
         sliceStore.removeListener(sliceListener);
         sliceStore.destroy();
         sliceExecutor.shutdown();
-
-        queueStore.removeListener(queueListener);
-        queueStore.destroy();
-        queueExecutor.shutdown();
 
         deviceService.removeListener(deviceListener);
         deviceExecutor.shutdown();
@@ -289,19 +267,12 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
                 return v;
             }
 
-            // FIXME: queue allocation must go, it's now provided by users via netcfg
-            QueueId queueId = allocateQueue(tcConfig.trafficClass());
-            if (queueId == null) {
-                errorMessage.append(String.format("Unable to find available queue for %s", tcConfig));
-                return null;
-            }
-
-            log.info("Allocate queue {} for slice {} tc {}", queueId, sliceId, tcConfig);
+            log.info("Added traffic class {} to slice {}: {}", tcConfig.trafficClass(), sliceId, tcConfig);
             return tcConfig;
         });
 
         if (errorMessage.length() != 0) {
-            // FIXME: SlicingProviderException
+            // FIXME: SlicingProviderException should be checked
             throw new SlicingException(FAILED, errorMessage.toString());
         }
 
@@ -331,8 +302,7 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
                 return v;
             }
 
-            deallocateQueue(v.queueId());
-            log.info("Deallocate queue {} for slice {} tc {}", v, sliceId, tc);
+            log.info("Removed traffic class {} from slice {}", tc, sliceId);
             return null;
         });
 
@@ -440,90 +410,6 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
                 .filter(e -> e.getValue().value().sliceId().equals(sliceId))
                 .map(Entry::getKey)
                 .collect(Collectors.toSet());
-    }
-
-    //FIXME: Apply slicing exception on Queue APIs when dynamic queue config is ready
-    @Override
-    public boolean reserveQueue(QueueId queueId, TrafficClass tc) {
-        AtomicBoolean result = new AtomicBoolean(false);
-
-        queueStore.compute(queueId, (k, v) -> {
-            if (v != null) {
-                log.warn("Queue {} has already been allocated to TC {}", k, v);
-                return v;
-            }
-            log.info("Queue {} successfully reserved for TC {}", k, tc);
-            result.set(true);
-            return new QueueStoreValue(tc, true);
-        });
-
-        return result.get();
-    }
-
-    @Override
-    public boolean releaseQueue(QueueId queueId) {
-        AtomicBoolean result = new AtomicBoolean(false);
-
-        queueStore.compute(queueId, (k, v) -> {
-            if (v == null) {
-               log.warn("Queue {} is not reserved", queueId);
-               return null;
-            }
-            if (!v.available()) {
-               log.warn("Queue {} in use", queueId);
-               return v;
-            }
-            log.info("Queue {} is released from TC {}", queueId, v.trafficClass());
-            result.set(true);
-            return null;
-        });
-
-        return result.get();
-    }
-
-    @Override
-    public Map<QueueId, QueueStoreValue> getQueueStore() {
-        return Map.copyOf(queueStore.asJavaMap());
-    }
-
-    private QueueId allocateQueue(TrafficClass tc) {
-        Optional<QueueId> queueId = queueStore.stream()
-                .filter(e -> e.getValue().value().trafficClass() == tc)
-                .filter(e -> e.getValue().value().available())
-                .findFirst()
-                .map(Map.Entry::getKey);
-
-        if (queueId.isPresent()) {
-            // Don't mark shared queues as they are always available.
-            if (tc != TrafficClass.BEST_EFFORT &&
-                    tc != TrafficClass.CONTROL) {
-                queueStore.compute(queueId.get(), (k, v) -> {
-                    v.setAvailable(false);
-                    return v;
-                });
-            }
-            log.info("Allocated queue {} to TC {}", queueId.get(), tc);
-            return queueId.get();
-        } else {
-            log.warn("No queue available for TC {}", tc);
-            return null;
-        }
-    }
-
-    private boolean deallocateQueue(QueueId queueId) {
-        AtomicBoolean result = new AtomicBoolean(false);
-
-        queueStore.compute(queueId, (k, v) -> {
-           if (v == null) {
-               log.warn("Queue {} not reserved yet", queueId);
-               return v;
-           }
-           v.setAvailable(true);
-           result.set(true);
-           return v;
-        });
-
-        return result.get();
     }
 
     private FlowRule buildDefaultTcFlowRule(DeviceId deviceId, SliceId sliceId, TrafficClass tc) {
@@ -678,30 +564,6 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
                                 removeQueueTable(device.id(),
                                         event.key().sliceId(), event.key().trafficClass(), event.oldValue().value().queueId())
                             );
-                        }
-                        break;
-                    default:
-                        break;
-                }
-            });
-        }
-    }
-
-    private class InternalQueueListener implements MapEventListener<QueueId, QueueStoreValue> {
-        public void event(MapEvent<QueueId, QueueStoreValue> event) {
-            // Distributed work based on QueueId. Consistent with InternalQueueListener
-            log.info("Processing queue event {}", event);
-            sliceExecutor.submit(() -> {
-                switch (event.type()) {
-                    case INSERT:
-                    case UPDATE:
-                        if (workPartitionService.isMine(event.newValue().value(), toStringHasher())) {
-                            // TODO programmatically config queues
-                        }
-                        break;
-                    case REMOVE:
-                        if (workPartitionService.isMine(event.oldValue().value(), toStringHasher())) {
-                            // TODO programmatically config queues
                         }
                         break;
                     default:
