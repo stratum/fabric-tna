@@ -2659,27 +2659,21 @@ class SpgwSimpleTest(IPv4UnicastTest):
 
     def setup_downlink(
         self,
-        s1u_sgw_addr,
-        s1u_enb_addr,
         teid,
         ue_addr,
         ctr_id,
         slice_id=DEFAULT_SLICE_ID,
         tc=None,
         qfi=DEFAULT_QFI,
+        tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID,
         app_id=NO_APP_ID,
     ):
         self.add_ue_pool(pool_addr=ue_addr, slice_id=slice_id)
         self.setup_downlink_ue_session(
-            ue_addr=ue_addr, tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID
+            ue_addr=ue_addr, tunnel_peer_id=tunnel_peer_id
         )
         self.setup_downlink_termination_tunnel(
             ue_session=ue_addr, ctr_id=ctr_id, teid=teid, tc=tc, qfi=qfi, app_id=app_id
-        )
-        self.add_gtp_tunnel_peer(
-            tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID,
-            tunnel_src_addr=s1u_sgw_addr,
-            tunnel_dst_addr=s1u_enb_addr,
         )
 
     def enable_encap_with_psc(self):
@@ -2873,11 +2867,15 @@ class SpgwSimpleTest(IPv4UnicastTest):
         )
 
         self.setup_downlink(
-            s1u_sgw_addr=S1U_SGW_IPV4,
-            s1u_enb_addr=S1U_ENB_IPV4,
             teid=DOWNLINK_TEID,
             ue_addr=UE2_IPV4,
             ctr_id=DOWNLINK_UPF_CTR_IDX,
+            tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID,
+        )
+        self.add_gtp_tunnel_peer(
+            tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID,
+            tunnel_src_addr=S1U_SGW_IPV4,
+            tunnel_dst_addr=S1U_ENB_IPV4,
         )
 
         self.set_up_recirc_ports()
@@ -3022,8 +3020,6 @@ class SpgwSimpleTest(IPv4UnicastTest):
             self.setup_app_filtering(app_id=app_id, slice_id=slice_id, app_ipv4_addr=app_ipv4, app_ipv4_prefix=32, l4_port=l4_port, ip_proto=ip_proto)
 
         self.setup_downlink(
-            s1u_sgw_addr=S1U_SGW_IPV4,
-            s1u_enb_addr=S1U_ENB_IPV4,
             teid=DOWNLINK_TEID,
             ue_addr=UE1_IPV4,
             ctr_id=DOWNLINK_UPF_CTR_IDX,
@@ -3031,6 +3027,12 @@ class SpgwSimpleTest(IPv4UnicastTest):
             tc=tc,
             qfi=DEFAULT_QFI,
             app_id=app_id,
+            tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID,
+        )
+        self.add_gtp_tunnel_peer(
+            tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID,
+            tunnel_src_addr=S1U_SGW_IPV4,
+            tunnel_dst_addr=S1U_ENB_IPV4,
         )
 
         if with_psc:
@@ -3172,11 +3174,15 @@ class SpgwSimpleTest(IPv4UnicastTest):
 
         # Normal downlink rules
         self.setup_downlink(
-            s1u_sgw_addr=S1U_SGW_IPV4,
-            s1u_enb_addr=S1U_ENB_IPV4,
             teid=DOWNLINK_TEID,
             ue_addr=UE1_IPV4,
             ctr_id=DOWNLINK_UPF_CTR_IDX,
+            tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID,
+        )
+        self.add_gtp_tunnel_peer(
+            tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID,
+            tunnel_src_addr=S1U_SGW_IPV4,
+            tunnel_dst_addr=S1U_ENB_IPV4,
         )
 
         # Add rules for sending/receiving packets to/from dbuf
@@ -4204,12 +4210,16 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
 
         # Set up entries for downlink.
         self.setup_downlink(
-            s1u_sgw_addr=S1U_SGW_IPV4,
-            s1u_enb_addr=S1U_ENB_IPV4,
             teid=DOWNLINK_TEID,
             ue_addr=pkt[IP].dst,
             ctr_id=DOWNLINK_UPF_CTR_IDX,
             qfi=DEFAULT_QFI,
+            tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID,
+        )
+        self.add_gtp_tunnel_peer(
+            tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID,
+            tunnel_src_addr=S1U_SGW_IPV4,
+            tunnel_dst_addr=S1U_ENB_IPV4,
         )
 
         if with_psc:

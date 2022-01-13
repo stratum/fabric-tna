@@ -1311,11 +1311,10 @@ class FabricSpgwDownlinkEcmpTest(SpgwSimpleTest):
             test_teid = i * 3
 
             self.setup_downlink(
-                s1u_sgw_addr=S1U_SGW_IPV4,
-                s1u_enb_addr=S1U_ENB_IPV4,
                 teid=test_teid,
                 ue_addr=ue_ipv4,
                 ctr_id=DOWNLINK_UPF_CTR_IDX,
+                tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID,
             )
 
             pkt_from1 = getattr(testutils, "simple_%s_packet" % pkt_type)(
