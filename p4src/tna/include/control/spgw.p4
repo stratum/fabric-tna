@@ -332,7 +332,7 @@ control SpgwIngress(
         key  = {
             fabric_md.slice_id  : exact   @name("slice_id");
             ipv4_app_addr       : lpm     @name("app_ip_address");
-            app_port            : ternary @name("app_l4_port");
+            app_port            : range   @name("app_l4_port");
             proto               : ternary @name("ip_proto");
         }
         actions = {

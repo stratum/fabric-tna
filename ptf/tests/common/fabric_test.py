@@ -2464,7 +2464,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         if app_ipv4_addr:
             match_fields.append(self.Lpm("app_ip_address", ipv4_to_binary(app_ipv4_addr), app_ipv4_prefix))
         if l4_port:
-            match_fields.append(self.Ternary("app_l4_port", stringify(l4_port, 2), stringify(0xFFFF, 2)))
+            match_fields.append(self.Range("app_l4_port", stringify(l4_port, 2), stringify(l4_port, 2)))
         if ip_proto:
             match_fields.append(self.Ternary("ip_proto", stringify(ip_proto, 1), stringify(0xFF, 1)))
 
