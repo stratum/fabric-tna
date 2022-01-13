@@ -367,8 +367,13 @@ control IntEgress (inout v1model_header_t          hdr_v1model,
 
         // Check the queue alert before the config table since we need to check the
         // latency which is not quantized.
+        if (fabric_md.int_report_md.report_type == INT_REPORT_TYPE_QUEUE) {
+            // Set report to different queue, emulating TNA behavior,
+            // to avoid that Queue report generates another report.
+            egress_qid = 1;
+        }
         queue_latency_thresholds.apply();
-        if (check_quota_and_report && !IS_E2E_CLONE(standard_md)) {
+        if (check_quota_and_report) {
             fabric_md.int_md.queue_report = true;
         }
 
