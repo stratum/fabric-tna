@@ -2,11 +2,13 @@
 // SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 package org.stratumproject.fabric.tna.behaviour.upf;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.onlab.packet.Ip4Address;
 import org.onlab.packet.Ip4Prefix;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.DefaultApplicationId;
 import org.onosproject.net.DeviceId;
+import org.onosproject.net.behaviour.upf.Application;
 import org.onosproject.net.behaviour.upf.GtpTunnelPeer;
 import org.onosproject.net.behaviour.upf.SessionDownlink;
 import org.onosproject.net.behaviour.upf.SessionUplink;
@@ -20,12 +22,14 @@ import org.onosproject.net.flow.FlowRule;
 import org.onosproject.net.flow.criteria.PiCriterion;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
+import org.stratumproject.fabric.tna.behaviour.P4InfoConstants;
 
 import java.util.Arrays;
 
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.CTR_ID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_EG_TUNNEL_PEERS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_LOAD_TUNNEL_PARAMS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_APPLICATIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_APP_FWD;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_SESSIONS;
@@ -34,14 +38,19 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_ING
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_IFACE_CORE;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_IG_TUNNEL_PEERS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_INTERFACES;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_SET_APP_ID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_SET_DOWNLINK_SESSION;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_SET_DOWNLINK_SESSION_BUF;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_SET_ROUTING_IPV4_DST;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_SET_UPLINK_SESSION;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_SESSIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_TERMINATIONS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_APP_IP_ADDRESS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_APP_L4_PORT;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_GTPU_IS_VALID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_IPV4_DST_ADDR;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_IP_PROTO;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_SLICE_ID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_TEID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_TUNNEL_IPV4_DST;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_TUN_PEER_ID;
@@ -85,9 +94,16 @@ public final class TestUpfConstants {
     public static final int PHYSICAL_MAX_UE_SESSIONS = 512;
     public static final int PHYSICAL_MAX_UPF_TERMINATIONS = 512;
     public static final int PHYSICAL_MAX_TUNNELS = 256;
+    public static final int PHYSICAL_MAX_APPLICATIONS = 5;
 
     public static final long COUNTER_BYTES = 12;
     public static final long COUNTER_PKTS = 15;
+
+    public static final byte APP_FILTERING_ID = 10;
+    public static final int APP_FILTERING_PRIORITY = 10;
+    public static final Ip4Prefix APP_IP_PREFIX = Ip4Prefix.valueOf("10.0.0.0/24");
+    public static final Pair<Short, Short> APP_L4_RANGE = Pair.of((short) 100, (short) 1000);
+    public static final byte APP_IP_PROTO = 6;
 
     public static final GtpTunnelPeer GTP_TUNNEL_PEER = GtpTunnelPeer.builder()
             .withTunnelPeerId(ENB_GTP_TUNNEL_PEER)
@@ -124,6 +140,14 @@ public final class TestUpfConstants {
             .withTrafficClass(DOWNLINK_TC)
             .withTeid(TEID_VALUE_QOS)
             .withQfi(DOWNLINK_QFI)
+            .build();
+
+    public static final Application APPLICATION_FILTERING = Application.builder()
+            .withAppId(APP_FILTERING_ID)
+            .withIp4Prefix(APP_IP_PREFIX)
+            .withL4PortRange(APP_L4_RANGE.getLeft(), APP_L4_RANGE.getRight())
+            .withIpProto(APP_IP_PROTO)
+            .withPriority(APP_FILTERING_PRIORITY)
             .build();
 
     // TODO: what about GtpTunnelPeer?
@@ -292,6 +316,33 @@ public final class TestUpfConstants {
                                                    .withParameter(new PiActionParam(SLICE_ID, SLICE_MOBILE))
                                                    .build()).build())
             .withPriority(DEFAULT_PRIORITY)
+            .build();
+
+    public static final FlowRule FABRIC_APPLICATION_FILTERING = DefaultFlowRule.builder()
+            .forDevice(DEVICE_ID).fromApp(APP_ID).makePermanent()
+            .forTable(FABRIC_INGRESS_SPGW_APPLICATIONS)
+            .withSelector(
+                    DefaultTrafficSelector.builder()
+                            .matchPi(PiCriterion.builder()
+                                             .matchExact(HDR_SLICE_ID, SLICE_MOBILE)
+                                             .matchLpm(HDR_APP_IP_ADDRESS,
+                                                       APP_IP_PREFIX.address().toOctets(),
+                                                       APP_IP_PREFIX.prefixLength())
+                                             .matchRange(HDR_APP_L4_PORT,
+                                                         APP_L4_RANGE.getLeft(),
+                                                         APP_L4_RANGE.getRight())
+                                             .matchTernary(HDR_IP_PROTO,
+                                                           APP_IP_PROTO,
+                                                           0xF)
+                                             .build()).build())
+            .withTreatment(
+                    DefaultTrafficTreatment.builder().piTableAction(
+                            PiAction.builder()
+                                    .withId(FABRIC_INGRESS_SPGW_SET_APP_ID)
+                                    .withParameter(new PiActionParam(
+                                            P4InfoConstants.APP_ID, APP_FILTERING_ID))
+                                    .build()).build())
+            .withPriority(APP_FILTERING_PRIORITY)
             .build();
 
     /**

@@ -2466,7 +2466,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         if l4_port:
             match_fields.append(self.Range("app_l4_port", stringify(l4_port, 2), stringify(l4_port, 2)))
         if ip_proto:
-            match_fields.append(self.Ternary("ip_proto", stringify(ip_proto, 1), stringify(0xFF, 1)))
+            match_fields.append(self.Ternary("app_ip_proto", stringify(ip_proto, 1), stringify(0xFF, 1)))
 
         self.push_update_add_entry_to_action(
             req,

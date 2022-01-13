@@ -4,6 +4,7 @@ package org.stratumproject.fabric.tna.behaviour.upf;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.junit.Test;
+import org.onosproject.net.behaviour.upf.Application;
 import org.onosproject.net.behaviour.upf.GtpTunnelPeer;
 import org.onosproject.net.behaviour.upf.SessionDownlink;
 import org.onosproject.net.behaviour.upf.SessionUplink;
@@ -139,6 +140,21 @@ public class FabricUpfTranslatorTest {
             return;
         }
         assertThat("Translated interface should be downlink.", translatedInterface.isCore());
+        assertThat(translatedInterface, equalTo(expectedInterface));
+    }
+
+    @Test
+    public void fabricEntryToApplicationFilteringTest() {
+        Application translatedInterface;
+        Application expectedInterface = TestUpfConstants.APPLICATION_FILTERING;
+        try {
+            translatedInterface = upfTranslator.fabricEntryToApplicationFiltering(
+                    TestUpfConstants.FABRIC_APPLICATION_FILTERING);
+        } catch (UpfProgrammableException e) {
+            assertThat("Fabric application filtering should correctly translate to abstract application without error",
+                       false);
+            return;
+        }
         assertThat(translatedInterface, equalTo(expectedInterface));
     }
 
@@ -292,6 +308,25 @@ public class FabricUpfTranslatorTest {
         } catch (UpfProgrammableException e) {
             assertThat("Abstract downlink UPF Termination should correctly " +
                                "translate to Fabric UPF Termination without error",
+                       false);
+            return;
+        }
+        assertThat(translatedRule, equalTo(expectedRule));
+        assertThat(translatedRule.treatment(), equalTo(expectedRule.treatment()));
+    }
+
+    @Test
+    public void applicationFilteringToFabricEntryTest() {
+        FlowRule translatedRule;
+        FlowRule expectedRule = TestUpfConstants.FABRIC_APPLICATION_FILTERING;
+        try {
+            translatedRule = upfTranslator.applicationFilteringToFabricEntry(
+                    TestUpfConstants.APPLICATION_FILTERING,
+                    TestUpfConstants.DEVICE_ID,
+                    TestUpfConstants.APP_ID);
+        } catch (UpfProgrammableException e) {
+            assertThat("Abstract application should correctly translate " +
+                               "to Fabric application filtering without error",
                        false);
             return;
         }
