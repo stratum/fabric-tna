@@ -2706,7 +2706,6 @@ class SpgwSimpleTest(IPv4UnicastTest):
             'exp_ingress_bytes', 'exp_ingress_pkts' and 'exp_egress_bytes',
             'exp_egress_pkts' respectively upon reading.
         """
-        time.sleep(1)
         self.verify_indirect_counter(
             UPF_COUNTER_INGRESS, ctr_idx, "BOTH", exp_ingress_bytes, exp_ingress_pkts,
         )
