@@ -134,6 +134,7 @@ control IntEgress (inout v1model_header_t          hdr_v1model,
 
     // bmv2 specific. Only one queue present.
     QueueId_t egress_qid = 0;
+    bool check_quota_and_report = false;
 
     @hidden
     register<bit<32>>(1024) seq_number;
@@ -148,7 +149,7 @@ control IntEgress (inout v1model_header_t          hdr_v1model,
     }
 
     action check_quota() {
-        // Left for P4Info compatibility.
+        check_quota_and_report = true;
     }
 
     action reset_quota() {
@@ -324,12 +325,12 @@ control IntEgress (inout v1model_header_t          hdr_v1model,
         const default_action = nop();
         const entries = {
             (INT_REPORT_TYPE_FLOW, 0, false): init_int_metadata(INT_REPORT_TYPE_FLOW);
-            // (INT_REPORT_TYPE_FLOW, 0, true): init_int_metadata(INT_REPORT_TYPE_FLOW|INT_REPORT_TYPE_QUEUE);
+            (INT_REPORT_TYPE_FLOW, 0, true): init_int_metadata(INT_REPORT_TYPE_FLOW|INT_REPORT_TYPE_QUEUE);
             (INT_REPORT_TYPE_FLOW, 1, false): init_int_metadata(INT_REPORT_TYPE_DROP);
-            // (INT_REPORT_TYPE_FLOW, 1, true): init_int_metadata(INT_REPORT_TYPE_DROP);
+            (INT_REPORT_TYPE_FLOW, 1, true): init_int_metadata(INT_REPORT_TYPE_DROP);
             // Packets which are not tracked by the watchlist table
-            // (INT_REPORT_TYPE_NO_REPORT, 0, true): init_int_metadata(INT_REPORT_TYPE_QUEUE);
-            // (INT_REPORT_TYPE_NO_REPORT, 1, true): init_int_metadata(INT_REPORT_TYPE_QUEUE);
+            (INT_REPORT_TYPE_NO_REPORT, 0, true): init_int_metadata(INT_REPORT_TYPE_QUEUE);
+            (INT_REPORT_TYPE_NO_REPORT, 1, true): init_int_metadata(INT_REPORT_TYPE_QUEUE);
         }
         counters = int_metadata_counter;
     }
@@ -367,6 +368,9 @@ control IntEgress (inout v1model_header_t          hdr_v1model,
         // Check the queue alert before the config table since we need to check the
         // latency which is not quantized.
         queue_latency_thresholds.apply();
+        if (check_quota_and_report && !IS_E2E_CLONE(standard_md)) {
+            fabric_md.int_md.queue_report = true;
+        }
 
         config.apply();
         hdr.report_fixed_header.hw_id = 4w0 ++ standard_md.egress_spec[8:7];

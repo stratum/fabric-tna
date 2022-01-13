@@ -3630,17 +3630,19 @@ class IntTest(IPv4UnicastTest):
 
     def set_queue_report_quota(self, port, qid, quota):
         # We are using port[6:0] ++ qid as register index.
-        index = (port & 0x7F) << 5 | qid
-        self.write_register(
-            "FabricEgress.int_egress.queue_report_quota", index, stringify(quota, 2)
-        )
+        if is_tna():
+            index = (port & 0x7F) << 5 | qid
+            self.write_register(
+                "FabricEgress.int_egress.queue_report_quota", index, stringify(quota, 2)
+            )
 
     def verify_quota(self, port, qid, quota):
         # We are using port[6:0] ++ qid as register index.
-        index = (port & 0x7F) << 5 | qid
-        self.verify_register(
-            "FabricEgress.int_egress.queue_report_quota", index, stringify(quota, 2)
-        )
+        if is_tna():
+            index = (port & 0x7F) << 5 | qid
+            self.verify_register(
+                "FabricEgress.int_egress.queue_report_quota", index, stringify(quota, 2)
+            )
 
     def runIntTest(
         self,

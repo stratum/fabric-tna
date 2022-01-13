@@ -2107,7 +2107,6 @@ class FabricDropReportFilterTest(IntTest):
 
 
 @group("int")
-@skipIf(is_v1model(), "Queue report not implemented for v1model.")
 class FabricIntQueueReportTest(IntTest):
     @tvsetup
     @autocleanup
