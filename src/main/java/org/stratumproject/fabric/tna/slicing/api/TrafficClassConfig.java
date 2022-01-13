@@ -8,11 +8,13 @@ import com.google.common.base.MoreObjects;
 import java.util.Objects;
 
 /**
- * Configuration of a traffic class.
+ * Describes the configuration of a traffic class within a slice.
  */
 public class TrafficClassConfig {
+
     private static final int UNLIMITED_MAX_RATE = Integer.MAX_VALUE;
 
+    // Common to all slices. No bandwidth guarantees or limitations.
     public static final TrafficClassConfig BEST_EFFORT = new TrafficClassConfig(
             TrafficClass.BEST_EFFORT, QueueId.BEST_EFFORT, UNLIMITED_MAX_RATE, 0);
 
