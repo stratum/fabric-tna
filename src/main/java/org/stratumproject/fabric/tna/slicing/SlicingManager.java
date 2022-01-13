@@ -41,7 +41,7 @@ import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.slf4j.Logger;
 import org.stratumproject.fabric.tna.behaviour.FabricCapabilities;
 import org.stratumproject.fabric.tna.behaviour.P4InfoConstants;
-import org.stratumproject.fabric.tna.slicing.api.Color;
+import org.stratumproject.fabric.tna.slicing.api.MeterColor;
 import org.stratumproject.fabric.tna.slicing.api.QueueId;
 import org.stratumproject.fabric.tna.slicing.api.SliceId;
 import org.stratumproject.fabric.tna.slicing.api.SlicingAdminService;
@@ -63,6 +63,7 @@ import java.util.concurrent.Executors;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import static java.lang.String.format;
 import static org.onlab.util.Tools.groupedThreads;
 import static org.slf4j.LoggerFactory.getLogger;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.fiveTupleOnly;
@@ -472,8 +473,8 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
     private List<FlowRule> buildQueuesFlowRules(DeviceId deviceId, SliceId sliceId, TrafficClass tc, QueueId queueId) {
         List<FlowRule> flowRules = Lists.newArrayList();
         if (tc == TrafficClass.CONTROL) {
-            int red = getCapabilities(deviceId).getMeterColor(Color.RED);
-            int green = getCapabilities(deviceId).getMeterColor(Color.GREEN);
+            int red = getCapabilities(deviceId).getMeterColor(MeterColor.RED);
+            int green = getCapabilities(deviceId).getMeterColor(MeterColor.GREEN);
             flowRules.add(buildQueuesFlowRule(deviceId, sliceId, tc, queueId, green));
             flowRules.add(buildQueuesFlowRule(deviceId, sliceId, tc, QueueId.BEST_EFFORT, red));
         } else {

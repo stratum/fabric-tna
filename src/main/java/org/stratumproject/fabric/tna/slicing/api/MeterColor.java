@@ -9,14 +9,23 @@ import static org.stratumproject.fabric.tna.behaviour.Constants.COLOR_YELLOW;
 /**
  * Meter bucket color.
  */
-public enum Color {
+public enum MeterColor {
     GREEN(COLOR_GREEN),
     YELLOW(COLOR_YELLOW),
     RED(COLOR_RED);
 
-    public final int color;
+    public final int intValue;
 
-    Color(int color) {
-        this.color = color;
+    MeterColor(int intValue) {
+        this.intValue = intValue;
+    }
+
+    /**
+     * Returns the integer value of this color to be used for flow programming.
+     *
+     * @return integer value
+     */
+    public int toInt() {
+        return intValue;
     }
 }

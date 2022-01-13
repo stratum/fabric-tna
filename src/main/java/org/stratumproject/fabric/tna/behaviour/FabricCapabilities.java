@@ -5,7 +5,7 @@ package org.stratumproject.fabric.tna.behaviour;
 
 import org.onosproject.net.pi.model.PiPipeconf;
 import org.slf4j.Logger;
-import org.stratumproject.fabric.tna.slicing.api.Color;
+import org.stratumproject.fabric.tna.slicing.api.MeterColor;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -70,11 +70,11 @@ public class FabricCapabilities {
                 .orElse(false);
     }
 
-    public int getMeterColor(Color color) {
-        if (isArchV1model() && color == Color.RED) {
+    public int getMeterColor(MeterColor color) {
+        if (isArchV1model() && color == MeterColor.RED) {
             return BMV2_COLOR_RED;
         } else {
-            return color.ordinal();
+            return color.toInt();
         }
     }
 
