@@ -29,18 +29,16 @@ public interface SlicingProviderService {
 
     /**
      * Adds a traffic class to given slice.
-     * BEST_EFFORT traffic class must be added first.
      *
      * @param sliceId slice identifier
-     * @param tc traffic class config
+     * @param tcConfig traffic class config
      * @return true if the traffic class is added to given slice successfully.
      * @throws SlicingException if an error occurred.
      */
-    boolean addTrafficClass(SliceId sliceId, TrafficClass tc);
+    boolean addTrafficClass(SliceId sliceId, TrafficClassConfig tcConfig);
 
     /**
      * Removes a traffic class from given slice.
-     * BEST_EFFORT traffic class must be removed last.
      *
      * @param sliceId slice identifier
      * @param tc traffic class

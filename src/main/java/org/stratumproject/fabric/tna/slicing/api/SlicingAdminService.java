@@ -17,7 +17,7 @@ public interface SlicingAdminService {
      *
      * @return map of slice store
      */
-    Map<SliceStoreKey, QueueId> getSliceStore();
+    Map<SliceStoreKey, TrafficClassConfig> getSliceStore();
 
     /**
      * Reserves a queue for the queue pool of given traffic class.
