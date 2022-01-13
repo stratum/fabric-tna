@@ -13,8 +13,8 @@
 // only happen at the ingress leaf switch (implementing the UPF function).
 // As such, for traffic coming from selected ports, we allow trusting the
 // slice_id and tc values carried in the dscp.
-control IngressSliceTcClassifier (inout    ingress_headers_t hdr,
-                                  inout    standard_metadata_t standard_md,
+control IngressSliceTcClassifier (inout ingress_headers_t         hdr,
+                                  inout standard_metadata_t       standard_md,
                                   inout fabric_ingress_metadata_t fabric_md) {
 
     direct_counter(CounterType.packets) classifier_stats;
@@ -43,12 +43,12 @@ control IngressSliceTcClassifier (inout    ingress_headers_t hdr,
 
     table classifier {
         key = {
-            standard_md.ingress_port : ternary @name("ig_port");
-            fabric_md.lkp.ipv4_src   : ternary @name("ipv4_src");
-            fabric_md.lkp.ipv4_dst   : ternary @name("ipv4_dst");
-            fabric_md.lkp.ip_proto   : ternary @name("ip_proto");
-            fabric_md.lkp.l4_sport   : ternary @name("l4_sport");
-            fabric_md.lkp.l4_dport   : ternary @name("l4_dport");
+            fabric_md.bridged.base.ig_port : ternary @name("ig_port");
+            fabric_md.lkp.ipv4_src         : ternary @name("ipv4_src");
+            fabric_md.lkp.ipv4_dst         : ternary @name("ipv4_dst");
+            fabric_md.lkp.ip_proto         : ternary @name("ip_proto");
+            fabric_md.lkp.l4_sport         : ternary @name("l4_sport");
+            fabric_md.lkp.l4_dport         : ternary @name("l4_dport");
         }
         actions = {
             set_slice_id_tc;
@@ -68,7 +68,8 @@ control IngressSliceTcClassifier (inout    ingress_headers_t hdr,
 // Provides metering and mapping to queues based on slice_id and tc. Should be
 // applied after any other block writing slice_id and tc.
 control IngressQos (inout fabric_ingress_metadata_t fabric_md,
-                    inout standard_metadata_t standard_md){
+                    inout standard_metadata_t       standard_md,
+                    inout bit<1>                    drop_ctl){
 
     // From now on we use the concatenated slice_id++tc to aid the compiler in
     // optimizing resource allocation.
@@ -111,7 +112,10 @@ control IngressQos (inout fabric_ingress_metadata_t fabric_md,
 
     // For policing.
     action meter_drop() {
-        mark_to_drop(standard_md);
+        drop_ctl = 1;
+#ifdef WITH_INT
+        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_INGRESS_QOS_METER;
+#endif // WITH_INT
         queues_stats.count();
     }
 
@@ -173,11 +177,11 @@ control IngressQos (inout fabric_ingress_metadata_t fabric_md,
 
 // Allows per-egress port rewriting of the outermost IPv4 DSCP field to
 // piggyback slice_id and tc across the fabric.
-control EgressDscpRewriter (inout fabric_v1model_metadata_t fabric_md,
-                            inout standard_metadata_t standard_md,
-                            inout ingress_headers_t hdr) {
+control EgressDscpRewriter (inout fabric_egress_metadata_t fabric_md,
+                            inout standard_metadata_t      standard_md,
+                            inout ingress_headers_t        hdr) {
 
-    bit<6> tmp_dscp = fabric_md.egress.bridged.base.slice_tc;
+    bit<6> tmp_dscp = fabric_md.bridged.base.slice_tc;
 
     action rewrite() {
         // Do nothing, tmp_dscp is already initialized.

@@ -251,6 +251,7 @@ control IntIngress(
     apply {
         // Here we use 0b10000000xx as the mirror session ID where "xx" is the 2-bit
         // pipeline number(0~3).
+        // FIXME: set mirror_session_id in egress to save bmd resources
         fabric_md.bridged.int_bmd.mirror_session_id = INT_MIRROR_SESSION_BASE ++ ig_intr_md.ingress_port[8:7];
         // When the traffic manager deflects a packet, the egress port and queue id
         // of egress intrinsic metadata will be the port and queue used for deflection.
@@ -387,6 +388,7 @@ control IntEgress (
         do_local_report_encap(src_ip, mon_ip, mon_port, switch_id);
         hdr.report_eth_type.value = ETHERTYPE_INT_WIP_MPLS;
         hdr.report_mpls.setValid();
+        hdr.report_mpls.bos = 1;
         hdr.report_mpls.label = mon_label;
     }
 
@@ -404,6 +406,7 @@ control IntEgress (
         do_drop_report_encap(src_ip, mon_ip, mon_port, switch_id);
         hdr.report_eth_type.value = ETHERTYPE_INT_WIP_MPLS;
         hdr.report_mpls.setValid();
+        hdr.report_mpls.bos = 1;
         hdr.report_mpls.label = mon_label;
     }
 

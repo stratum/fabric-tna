@@ -5,9 +5,9 @@
 
 #include "v1model/include/header_v1model.p4"
 
-control Filtering (inout ingress_headers_t hdr,
+control Filtering (inout ingress_headers_t         hdr,
                    inout fabric_ingress_metadata_t fabric_md,
-                   inout standard_metadata_t standard_md) {
+                   inout standard_metadata_t       standard_md) {
 
     /*
      * Ingress Port VLAN Table.
@@ -22,7 +22,9 @@ control Filtering (inout ingress_headers_t hdr,
         fabric_md.skip_forwarding = true;
         fabric_md.skip_next = true;
         fabric_md.ig_port_type = PortType_t.UNKNOWN;
-
+#ifdef WITH_INT
+        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_PORT_VLAN_MAPPING_MISS;
+#endif // WITH_INT
         ingress_port_vlan_counter.count();
     }
 
@@ -39,9 +41,9 @@ control Filtering (inout ingress_headers_t hdr,
 
     table ingress_port_vlan {
         key = {
-            standard_md.ingress_port   : exact @name("ig_port");
-            hdr.vlan_tag.isValid()     : exact @name("vlan_is_valid");
-            hdr.vlan_tag.vlan_id       : ternary @name("vlan_id");
+            fabric_md.bridged.base.ig_port   : exact @name("ig_port");
+            hdr.vlan_tag.isValid()           : exact @name("vlan_is_valid");
+            hdr.vlan_tag.vlan_id             : ternary @name("vlan_id");
         }
         actions = {
             deny();
@@ -77,7 +79,7 @@ control Filtering (inout ingress_headers_t hdr,
 
     table fwd_classifier {
         key = {
-            standard_md.ingress_port                : exact @name("ig_port");
+            fabric_md.bridged.base.ig_port          : exact @name("ig_port");
             fabric_md.lkp.eth_dst                   : ternary @name("eth_dst");
             fabric_md.lkp.eth_type                  : ternary @name("eth_type");
             fabric_md.bridged.base.ip_eth_type      : exact @name("ip_eth_type");

@@ -74,6 +74,9 @@ import static org.onosproject.net.group.DefaultGroupBucket.createCloneGroupBucke
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.KRYO;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.doCareRangeMatch;
 
+import static org.stratumproject.fabric.tna.behaviour.Constants.V1MODEL_INT_REPORT_MIRROR_ID;
+import static org.stratumproject.fabric.tna.behaviour.Constants.V1MODEL_RECIRC_PORT;
+
 /**
  * Implementation of INT programmable behavior for fabric.p4.
  */
@@ -101,6 +104,10 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
             ImmutableMap.<Integer, Integer>builder()
                     .put(0x200, 0x44)
                     .put(0x201, 0xc4).build();
+
+    private static final Map<Integer, Integer> V1MODEL_MIRROR_SESS_TO_RECIRC_PORT =
+            ImmutableMap.<Integer, Integer>builder()
+            .put(V1MODEL_INT_REPORT_MIRROR_ID, V1MODEL_RECIRC_PORT.get(0)).build();
 
     private static final Set<TableId> TABLES_TO_CLEANUP = Sets.newHashSet(
             P4InfoConstants.FABRIC_INGRESS_INT_WATCHLIST_WATCHLIST,
@@ -164,28 +171,35 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
             return false;
         }
 
-        final Map<Integer, Integer> sessionToPortMap;
-        final int hwPipeCount = capabilities.hwPipeCount();
-        switch (hwPipeCount) {
-            case 4:
-                sessionToPortMap = QUAD_PIPE_MIRROR_SESS_TO_RECIRC_PORTS;
-                break;
-            case 2:
-                sessionToPortMap = DUAL_PIPE_MIRROR_SESS_TO_RECIRC_PORTS;
-                break;
-            default:
-                log.error("{} it not a valid HW pipe count", hwPipeCount);
-                return false;
+        Map<Integer, Integer> sessionToPortMap = null;
+        if (capabilities.isArchTna()) {
+            final int hwPipeCount = capabilities.hwPipeCount();
+            switch (hwPipeCount) {
+                case 4:
+                    sessionToPortMap = QUAD_PIPE_MIRROR_SESS_TO_RECIRC_PORTS;
+                    break;
+                case 2:
+                    sessionToPortMap = DUAL_PIPE_MIRROR_SESS_TO_RECIRC_PORTS;
+                    break;
+                default:
+                    log.error("{} it not a valid HW pipe count", hwPipeCount);
+                    return false;
+            }
+        } else if (capabilities.isArchV1model()) {
+            sessionToPortMap = V1MODEL_MIRROR_SESS_TO_RECIRC_PORT;
         }
 
         // Mirroring sessions for report cloning.
         sessionToPortMap.forEach((sessionId, port) -> {
             // Set up mirror sessions
+            TrafficTreatment.Builder trafficTreatment = DefaultTrafficTreatment.builder()
+                    .setOutput(PortNumber.portNumber(port));
+            if (capabilities.isArchTna()) {
+                trafficTreatment.truncate(INT_MIRROR_TRUNCATE_MAX_LEN);
+            }
             final List<GroupBucket> buckets = ImmutableList.of(
-                    createCloneGroupBucket(DefaultTrafficTreatment.builder()
-                            .truncate(INT_MIRROR_TRUNCATE_MAX_LEN)
-                            .setOutput(PortNumber.portNumber(port))
-                            .build()));
+                    createCloneGroupBucket(trafficTreatment.build())
+            );
             groupService.addGroup(new DefaultGroupDescription(
                     deviceId, GroupDescription.Type.CLONE,
                     new GroupBuckets(buckets),

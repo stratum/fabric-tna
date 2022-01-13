@@ -3,10 +3,10 @@
 
 #include "v1model/include/header_v1model.p4"
 
-control PacketIoIngress(inout ingress_headers_t hdr,
+control PacketIoIngress(inout ingress_headers_t         hdr,
                         inout fabric_ingress_metadata_t fabric_md,
-                        inout bool skip_egress,
-                        inout standard_metadata_t standard_md) {
+                        inout bool                      skip_egress,
+                        inout standard_metadata_t       standard_md) {
     @hidden
     action do_packet_out() {
         standard_md.egress_spec = (PortId_t)hdr.packet_out.egress_port;
@@ -25,9 +25,9 @@ control PacketIoIngress(inout ingress_headers_t hdr,
     }
 }
 
-control PacketIoEgress(inout ingress_headers_t hdr,
-                        inout fabric_egress_metadata_t fabric_md,
-                        inout standard_metadata_t standard_md) {
+control PacketIoEgress(inout ingress_headers_t        hdr,
+                       inout fabric_egress_metadata_t fabric_md,
+                       inout standard_metadata_t      standard_md) {
 
     action set_switch_info(FabricPortId_t cpu_port) {
         fabric_md.cpu_port = (PortId_t)cpu_port;
