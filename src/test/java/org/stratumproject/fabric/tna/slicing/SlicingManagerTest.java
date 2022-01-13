@@ -386,16 +386,16 @@ public class SlicingManagerTest {
         manager.addTrafficClass(SLICE_IDS.get(1), TrafficClass.REAL_TIME);
 
         // Normal
-        manager.addFlow(selector, SLICE_IDS.get(1), TrafficClass.REAL_TIME);
-        assertEquals(1, manager.getFlows(SLICE_IDS.get(1), TrafficClass.REAL_TIME).size());
-        assertTrue(manager.getFlows(SLICE_IDS.get(1), TrafficClass.REAL_TIME).contains(selector));
+        manager.addClassifierFlow(selector, SLICE_IDS.get(1), TrafficClass.REAL_TIME);
+        assertEquals(1, manager.getClassifierFlows(SLICE_IDS.get(1), TrafficClass.REAL_TIME).size());
+        assertTrue(manager.getClassifierFlows(SLICE_IDS.get(1), TrafficClass.REAL_TIME).contains(selector));
     }
 
     @Test
     public void testAddFlowClassifierException1() {
         exceptionRule.expect(SlicingException.class);
         exceptionRule.expectMessage("Empty traffic selector is not allowed");
-        manager.addFlow(DefaultTrafficSelector.builder().build(),
+        manager.addClassifierFlow(DefaultTrafficSelector.builder().build(),
                                     SLICE_IDS.get(1), TrafficClass.REAL_TIME);
     }
 
@@ -406,7 +406,7 @@ public class SlicingManagerTest {
 
         exceptionRule.expect(SlicingException.class);
         exceptionRule.expectMessage("Only accept 5-tuple DefaultTrafficSelector{criteria=[ETH_DST:01:00:5E:00:00:00]}");
-        manager.addFlow(wrongSelector, SLICE_IDS.get(1), TrafficClass.REAL_TIME);
+        manager.addClassifierFlow(wrongSelector, SLICE_IDS.get(1), TrafficClass.REAL_TIME);
     }
 
     @Test
@@ -415,12 +415,12 @@ public class SlicingManagerTest {
         TrafficSelector selector = DefaultTrafficSelector.builder().matchUdpDst(TpPort.tpPort(100)).build();
         manager.addSlice(SLICE_IDS.get(1));
         manager.addTrafficClass(SLICE_IDS.get(1), TrafficClass.REAL_TIME);
-        manager.addFlow(selector, SLICE_IDS.get(1), TrafficClass.REAL_TIME);
+        manager.addClassifierFlow(selector, SLICE_IDS.get(1), TrafficClass.REAL_TIME);
 
         // Normal
-        assertEquals(1, manager.getFlows(SLICE_IDS.get(1), TrafficClass.REAL_TIME).size());
-        manager.removeFlow(selector, SLICE_IDS.get(1), TrafficClass.REAL_TIME);
-        assertEquals(0, manager.getFlows(SLICE_IDS.get(1), TrafficClass.REAL_TIME).size());
+        assertEquals(1, manager.getClassifierFlows(SLICE_IDS.get(1), TrafficClass.REAL_TIME).size());
+        manager.removeClassifierFlow(selector, SLICE_IDS.get(1), TrafficClass.REAL_TIME);
+        assertEquals(0, manager.getClassifierFlows(SLICE_IDS.get(1), TrafficClass.REAL_TIME).size());
     }
 
     @Test
@@ -431,7 +431,7 @@ public class SlicingManagerTest {
         exceptionRule.expect(SlicingException.class);
         exceptionRule.expectMessage("There is no such Flow Classifier Rule " +
             "DefaultTrafficSelector{criteria=[TCP_DST:100]} for slice 1 and TC REAL_TIME");
-        manager.removeFlow(wrongSelector, SLICE_IDS.get(1), TrafficClass.REAL_TIME);
+        manager.removeClassifierFlow(wrongSelector, SLICE_IDS.get(1), TrafficClass.REAL_TIME);
     }
 
     @Test
@@ -440,7 +440,7 @@ public class SlicingManagerTest {
         TrafficSelector selector = DefaultTrafficSelector.builder().matchUdpDst(TpPort.tpPort(100)).build();
         manager.addSlice(SLICE_IDS.get(1));
         manager.addTrafficClass(SLICE_IDS.get(1), TrafficClass.REAL_TIME);
-        manager.addFlow(selector, SLICE_IDS.get(1), TrafficClass.REAL_TIME);
+        manager.addClassifierFlow(selector, SLICE_IDS.get(1), TrafficClass.REAL_TIME);
 
         // Fail to remove Slice and TC when Flow Classifier
         exceptionRule.expect(SlicingException.class);
@@ -454,7 +454,7 @@ public class SlicingManagerTest {
         TrafficSelector selector = DefaultTrafficSelector.builder().matchUdpDst(TpPort.tpPort(100)).build();
         manager.addSlice(SLICE_IDS.get(1));
         manager.addTrafficClass(SLICE_IDS.get(1), TrafficClass.REAL_TIME);
-        manager.addFlow(selector, SLICE_IDS.get(1), TrafficClass.REAL_TIME);
+        manager.addClassifierFlow(selector, SLICE_IDS.get(1), TrafficClass.REAL_TIME);
 
         // Fail to remove Slice and TC when Flow Classifier
         exceptionRule.expect(SlicingException.class);
@@ -592,7 +592,7 @@ public class SlicingManagerTest {
 
         // Adding mock rule to slice 1 BE
         capturedAddedFlowRules.reset();
-        manager.addFlow(selector, SLICE_IDS.get(1), TrafficClass.BEST_EFFORT);
+        manager.addClassifierFlow(selector, SLICE_IDS.get(1), TrafficClass.BEST_EFFORT);
         assertAfter(50, () -> {
             assertEquals(1 * numDevices, capturedAddedFlowRules.getValues().size());
             assertTrue(capturedAddedFlowRules.getValues()
@@ -601,7 +601,7 @@ public class SlicingManagerTest {
 
         // Removing mock rule from slice 1 BE
         capturedRemovedFlowRules.reset();
-        manager.removeFlow(selector, SLICE_IDS.get(1), TrafficClass.BEST_EFFORT);
+        manager.removeClassifierFlow(selector, SLICE_IDS.get(1), TrafficClass.BEST_EFFORT);
         assertAfter(50, () -> {
             assertEquals(1 * numDevices, capturedRemovedFlowRules.getValues().size());
             assertTrue(capturedRemovedFlowRules.getValues()

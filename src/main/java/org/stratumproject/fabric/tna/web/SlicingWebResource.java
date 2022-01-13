@@ -141,7 +141,7 @@ public class SlicingWebResource extends AbstractWebResource {
     @GET
     @Path("flow/{sliceId}/{tc}")
     public Response getFlow(@PathParam("sliceId") int sliceId, @PathParam("tc") String tc) {
-        Set<TrafficSelector> result = slicingService.getFlows(SliceId.of(sliceId), TrafficClass.valueOf(tc));
+        Set<TrafficSelector> result = slicingService.getClassifierFlows(SliceId.of(sliceId), TrafficClass.valueOf(tc));
         ObjectNode root = mapper().createObjectNode();
         ArrayNode array = root.putArray("TrafficSelector");
 
@@ -182,7 +182,7 @@ public class SlicingWebResource extends AbstractWebResource {
         try {
             ObjectNode jsonTree = readTreeFromStream(mapper(), input);
             TrafficSelector selector = codec(TrafficSelector.class).decode(jsonTree, this);
-            result = slicingService.addFlow(selector, SliceId.of(sliceId), TrafficClass.valueOf(tc));
+            result = slicingService.addClassifierFlow(selector, SliceId.of(sliceId), TrafficClass.valueOf(tc));
         } catch (IOException ex) {
             throw new IllegalArgumentException(ex);
         }
@@ -215,7 +215,7 @@ public class SlicingWebResource extends AbstractWebResource {
         try {
             ObjectNode jsonTree = readTreeFromStream(mapper(), input);
             TrafficSelector selector = codec(TrafficSelector.class).decode(jsonTree, this);
-            result = slicingService.removeFlow(selector, SliceId.of(sliceId), TrafficClass.valueOf(tc));
+            result = slicingService.removeClassifierFlow(selector, SliceId.of(sliceId), TrafficClass.valueOf(tc));
         } catch (IOException ex) {
             throw new IllegalArgumentException(ex);
         }

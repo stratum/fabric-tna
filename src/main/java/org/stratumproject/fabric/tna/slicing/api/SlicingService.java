@@ -55,7 +55,7 @@ public interface SlicingService {
      * @return true if the flow is associated with given slice/tc successfully.
      * @throws SlicingException if an error occurred.
      */
-    boolean addFlow(TrafficSelector selector, SliceId sliceId, TrafficClass tc);
+    boolean addClassifierFlow(TrafficSelector selector, SliceId sliceId, TrafficClass tc);
 
     /**
      * Dissociates flow identified by given selector with given slice ID and traffic class.
@@ -66,7 +66,7 @@ public interface SlicingService {
      * @return true if the flow is dissociate with given slice/tc successfully.
      * @throws SlicingException if an error occurred.
      */
-    boolean removeFlow(TrafficSelector selector, SliceId sliceId, TrafficClass tc);
+    boolean removeClassifierFlow(TrafficSelector selector, SliceId sliceId, TrafficClass tc);
 
     /**
      * Gets all flows in given sliceId and traffic class.
@@ -75,5 +75,5 @@ public interface SlicingService {
      * @param tc traffic class
      * @return set of flow identifiers
      */
-    Set<TrafficSelector> getFlows(SliceId sliceId, TrafficClass tc);
+    Set<TrafficSelector> getClassifierFlows(SliceId sliceId, TrafficClass tc);
 }
