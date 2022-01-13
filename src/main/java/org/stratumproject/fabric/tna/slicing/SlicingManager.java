@@ -148,8 +148,7 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
                 .register(TrafficClass.class)
                 .register(TrafficClassConfig.class)
                 .register(QueueId.class)
-                .register(SliceStoreKey.class)
-                .register(QueueStoreValue.class);
+                .register(SliceStoreKey.class);
 
         sliceStore = storageService.<SliceStoreKey, TrafficClassConfig>consistentMapBuilder()
                 .withName("fabric-tna-slice")

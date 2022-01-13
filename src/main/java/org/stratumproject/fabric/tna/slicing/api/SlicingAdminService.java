@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 package org.stratumproject.fabric.tna.slicing.api;
 
-import org.stratumproject.fabric.tna.slicing.QueueStoreValue;
 import org.stratumproject.fabric.tna.slicing.SliceStoreKey;
 
 import java.util.Map;
