@@ -224,7 +224,11 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
             throw new SlicingException(INVALID, "Adding the default slice is not allowed");
         }
 
-        return addTrafficClass(sliceId, TrafficClassConfig.BEST_EFFORT) &&
+        if (sliceExists(sliceId)) {
+            throw new SlicingException(FAILED, format("Slice %s already exists", sliceId));
+        }
+
+        return addTrafficClassInternal(true, sliceId, TrafficClassConfig.BEST_EFFORT) &&
                 setDefaultTrafficClass(sliceId, TrafficClass.BEST_EFFORT);
     }
 
@@ -237,24 +241,26 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
         Set<TrafficClass> tcs = getTrafficClasses(sliceId);
 
         if (tcs.isEmpty() && !defaultTcStore.containsKey(sliceId)) {
-            throw new SlicingException(FAILED, String.format("Cannot remove non-existent slice %s", sliceId));
+            throw new SlicingException(FAILED, format("Cannot remove non-existent slice %s", sliceId));
         }
 
         Set<TrafficSelector> classifierFlows = getClassifierFlows(sliceId);
         if (!classifierFlows.isEmpty()) {
             throw new SlicingException(FAILED,
-                    String.format("Cannot remove slice %s with %d classifier flow rules",
+                    format("Cannot remove slice %s with %d classifier flow rules",
                             sliceId, classifierFlows.size()));
         }
 
         // Remove the default TC before removing the actual traffic classes.
         defaultTcStore.remove(sliceId);
 
-        tcs.stream()
-                .sorted(Comparator.comparingInt(TrafficClass::ordinal).reversed()) // Remove BEST_EFFORT the last
-                .forEach(tc -> removeTrafficClass(sliceId, tc));
+        tcs.forEach(tc -> removeTrafficClassInternal(true, sliceId, tc));
 
         return true;
+    }
+
+    private boolean sliceExists(SliceId sliceId) {
+        return !getTrafficClasses(sliceId).isEmpty();
     }
 
     @Override
@@ -266,11 +272,21 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
 
     @Override
     public boolean addTrafficClass(SliceId sliceId, TrafficClassConfig tcConfig) {
+        return addTrafficClassInternal(false, sliceId, tcConfig);
+    }
+
+    private boolean addTrafficClassInternal(boolean addSlice, SliceId sliceId, TrafficClassConfig tcConfig) {
+        if (!addSlice && !sliceExists(sliceId)) {
+            throw new SlicingException(INVALID, format(
+                    "Cannot add traffic class to non-existent slice %s", sliceId));
+        }
+
         StringBuilder errorMessage = new StringBuilder();
         SliceStoreKey key = new SliceStoreKey(sliceId, tcConfig.trafficClass());
         sliceStore.compute(key, (k, v) -> {
             if (v != null) {
-                errorMessage.append(String.format("TC %s is already allocated for slice %s", tcConfig, sliceId));
+                errorMessage.append(format("TC %s is already allocated for slice %s",
+                        tcConfig.trafficClass(), sliceId));
                 return v;
             }
 
@@ -288,24 +304,42 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
 
     @Override
     public boolean removeTrafficClass(SliceId sliceId, TrafficClass tc) {
+        return removeTrafficClassInternal(false, sliceId, tc);
+    }
+
+    private boolean removeTrafficClassInternal(boolean removeSlice, SliceId sliceId, TrafficClass tc) {
+        if (!sliceExists(sliceId)) {
+            throw new SlicingException(INVALID, format(
+                    "Cannot remove a traffic class from non-existent slice %s", sliceId));
+        }
+
+        if (!removeSlice && tc == TrafficClass.BEST_EFFORT) {
+            throw new SlicingException(INVALID,
+                    "Cannot remove BEST_EFFORT traffic class from any slice");
+        }
+
         Set<TrafficSelector> classifierFlows = getClassifierFlows(sliceId, tc);
         if (!classifierFlows.isEmpty()) {
             throw new SlicingException(FAILED,
-                String.format("Cannot remove %s from slice %s with %d Flow Classifier Rules",
-                    tc, sliceId, classifierFlows.size()));
+                    format("Cannot remove %s from slice %s with %d classifier flow rules",
+                            tc, sliceId, classifierFlows.size()));
         }
 
         StringBuilder errorMessage = new StringBuilder();
         SliceStoreKey key = new SliceStoreKey(sliceId, tc);
         sliceStore.compute(key, (k, v) -> {
             if (v == null) {
-                errorMessage.append(String.format("TC %s has not been allocated to slice %s", tc, sliceId));
+                errorMessage.append(format(
+                        "Traffic class %s has not been allocated for slice %s",
+                        tc, sliceId));
                 return null;
             }
             // Ensure the TC is not being used as Default TC
             if (tc == getDefaultTrafficClass(sliceId)) {
-                errorMessage.append(String.format("Can't remove %s from slice %s while it is being used as Default TC",
-                    tc, sliceId));
+                errorMessage.append(format(
+                        "Cannot remove %s from slice %s while it is being used " +
+                                "as the default traffic class",
+                        tc, sliceId));
                 return v;
             }
 
@@ -336,7 +370,7 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
         //  then the switch should pick best effort.
         sliceStore.compute(new SliceStoreKey(sliceId, tc), (k, v) -> {
             if (v == null) {
-                errorMessage.append(String.format("Can't set %s as default TC because it has not" +
+                errorMessage.append(format("Cannot set %s as the default traffic class because it has not" +
                         " been allocated to slice %s", tc, sliceId));
             } else {
                 defaultTcStore.put(sliceId, tc);
@@ -369,7 +403,7 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
         // Accept 5-tuple only
         if (!fiveTupleOnly(selector)) {
             throw new SlicingException(UNSUPPORTED,
-                    String.format("Only accept 5-tuple %s", selector));
+                    "Selector can only express a match on the L3-L4 5-tuple fields");
         }
 
         SliceStoreKey value = new SliceStoreKey(sliceId, tc);
@@ -387,7 +421,7 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
         classifierFlowStore.compute(selector, (k, v) -> {
             if (v == null) {
                 errorMessage.append(
-                        String.format("There is no such Flow Classifier Rule %s for slice %s and TC %s",
+                        format("There is no such Flow Classifier Rule %s for slice %s and TC %s",
                                 selector, sliceId, tc));
                 return null;
             }
@@ -426,7 +460,7 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
 
         PiAction.Builder piTableActionBuilder = PiAction.builder()
                 .withId(P4InfoConstants.FABRIC_INGRESS_QOS_SET_DEFAULT_TC)
-                .withParameter(new PiActionParam(P4InfoConstants.TC, tc.ordinal()));
+                .withParameter(new PiActionParam(P4InfoConstants.TC, tc.toInt()));
 
         FlowRule flowRule = DefaultFlowRule.builder()
                 .forDevice(deviceId)
@@ -489,7 +523,7 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
                                          QueueId queueId,
                                          Integer color) {
         PiCriterion.Builder piCriterionBuilder = PiCriterion.builder()
-                .matchExact(P4InfoConstants.HDR_SLICE_TC, sliceTcConcat(sliceId.id(), tc.ordinal()));
+                .matchExact(P4InfoConstants.HDR_SLICE_TC, sliceTcConcat(sliceId.id(), tc.toInt()));
         if (color != null) {
             piCriterionBuilder.matchTernary(HDR_COLOR, color, 1 << HDR_COLOR_BITWIDTH - 1);
         }
@@ -532,7 +566,7 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
         PiAction.Builder piTableActionBuilder = PiAction.builder()
                 .withId(P4InfoConstants.FABRIC_INGRESS_SLICE_TC_CLASSIFIER_SET_SLICE_ID_TC)
                 .withParameters(Set.of(new PiActionParam(P4InfoConstants.SLICE_ID, sliceId.id()),
-                                       new PiActionParam(P4InfoConstants.TC, tc.ordinal())));
+                                       new PiActionParam(P4InfoConstants.TC, tc.toInt())));
 
         FlowRule flowRule = DefaultFlowRule.builder()
                 .forDevice(deviceId)
