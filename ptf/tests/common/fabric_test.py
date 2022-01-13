@@ -3412,6 +3412,7 @@ class IntTest(IPv4UnicastTest):
         send_report_to_spine,
         hw_id,
         truncate=True,
+        wip_pkt=False,
     ):
         if truncate:
             inner_packet = Ether(
@@ -3446,14 +3447,29 @@ class IntTest(IPv4UnicastTest):
             )
             / inner_packet
         )
-        if send_report_to_spine:
-            mpls_ttl = DEFAULT_MPLS_TTL
+
+        if wip_pkt:
+            pkt[Ether].src = 0
+            pkt[Ether].dst = 0
+            pkt[IP].len = 0
+            pkt[UDP].len = 0
             if is_device_spine:
-                # MPLS label swap
-                mpls_ttl -= 1
-            pkt = pkt_add_mpls(pkt, label=MPLS_LABEL_2, ttl=mpls_ttl)
+                # Using MPLS label 1(label/sid of the device) since we are sending the
+                # WIP packet to the device.
+                pkt = pkt_add_mpls(pkt, label=MPLS_LABEL_1, ttl=DEFAULT_MPLS_TTL)
+                pkt[Ether].type = 0xBF05
+            else:
+                pkt[Ether].type = 0xBF04
+
         else:
-            pkt_decrement_ttl(pkt)
+            if send_report_to_spine:
+                mpls_ttl = DEFAULT_MPLS_TTL
+                if is_device_spine:
+                    # MPLS label swap
+                    mpls_ttl -= 1
+                pkt = pkt_add_mpls(pkt, label=MPLS_LABEL_2, ttl=mpls_ttl)
+            else:
+                pkt_decrement_ttl(pkt)
 
         mask_pkt = Mask(pkt)
         # IPv4 identification
