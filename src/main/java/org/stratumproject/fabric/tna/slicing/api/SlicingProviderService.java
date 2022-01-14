@@ -35,7 +35,7 @@ public interface SlicingProviderService {
      * @return true if the traffic class is added to given slice successfully.
      * @throws SlicingException if an error occurred.
      */
-    boolean addTrafficClass(SliceId sliceId, TrafficClassConfig tcConfig);
+    boolean addTrafficClass(SliceId sliceId, TrafficClassDescription tcConfig);
 
     /**
      * Removes a traffic class from given slice.

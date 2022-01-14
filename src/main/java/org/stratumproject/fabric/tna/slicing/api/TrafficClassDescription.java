@@ -7,14 +7,14 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 
 /**
- * Describes the configuration of a traffic class within a slice.
+ * Describes an instance of a traffic class within a slice.
  */
-public class TrafficClassConfig {
+public class TrafficClassDescription {
 
     public static final long UNLIMITED_BPS = Long.MAX_VALUE;
 
     // Common to all slices. No bandwidth guarantees or limitations.
-    public static final TrafficClassConfig BEST_EFFORT = new TrafficClassConfig(
+    public static final TrafficClassDescription BEST_EFFORT = new TrafficClassDescription(
             TrafficClass.BEST_EFFORT, QueueId.BEST_EFFORT, UNLIMITED_BPS, 0, false);
 
     private final TrafficClass tc;
@@ -24,7 +24,7 @@ public class TrafficClassConfig {
     private final boolean isSystemTc;
 
     /**
-     * Creates a new traffic class config.
+     * Creates a new traffic class description.
      *
      * @param tc          traffic class enum value
      * @param qid         queue ID
@@ -32,8 +32,8 @@ public class TrafficClassConfig {
      * @param gminRateBps guaranteed minimum rate in bps
      * @param isSystemTc  whether this traffic class is to be used for system traffic
      */
-    public TrafficClassConfig(TrafficClass tc, QueueId qid, long maxRateBps,
-                              long gminRateBps, boolean isSystemTc) {
+    public TrafficClassDescription(TrafficClass tc, QueueId qid, long maxRateBps,
+                                   long gminRateBps, boolean isSystemTc) {
         this.tc = tc;
         this.qid = qid;
         this.maxRateBps = maxRateBps;
@@ -109,7 +109,7 @@ public class TrafficClassConfig {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        TrafficClassConfig that = (TrafficClassConfig) o;
+        TrafficClassDescription that = (TrafficClassDescription) o;
         return maxRateBps == that.maxRateBps &&
                 gminRateBps == that.gminRateBps &&
                 isSystemTc == that.isSystemTc &&

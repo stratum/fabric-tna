@@ -16,5 +16,5 @@ public interface SlicingAdminService {
      *
      * @return map of slice store
      */
-    Map<SliceStoreKey, TrafficClassConfig> getSliceStore();
+    Map<SliceStoreKey, TrafficClassDescription> getSliceStore();
 }

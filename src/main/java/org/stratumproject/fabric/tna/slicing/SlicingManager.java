@@ -49,11 +49,10 @@ import org.stratumproject.fabric.tna.slicing.api.SlicingException;
 import org.stratumproject.fabric.tna.slicing.api.SlicingProviderService;
 import org.stratumproject.fabric.tna.slicing.api.SlicingService;
 import org.stratumproject.fabric.tna.slicing.api.TrafficClass;
-import org.stratumproject.fabric.tna.slicing.api.TrafficClassConfig;
+import org.stratumproject.fabric.tna.slicing.api.TrafficClassDescription;
 import org.stratumproject.fabric.tna.web.SliceIdCodec;
 import org.stratumproject.fabric.tna.web.TrafficClassCodec;
 
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -121,8 +120,8 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
     protected ApplicationId appId;
 
     // Stores currently allocated slices and their traffic classes.
-    protected ConsistentMap<SliceStoreKey, TrafficClassConfig> sliceStore;
-    private MapEventListener<SliceStoreKey, TrafficClassConfig> sliceListener;
+    protected ConsistentMap<SliceStoreKey, TrafficClassDescription> sliceStore;
+    private MapEventListener<SliceStoreKey, TrafficClassDescription> sliceListener;
     private ExecutorService sliceExecutor;
 
     // Stores classifier flows.
@@ -146,11 +145,11 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
                 .register(KryoNamespaces.API)
                 .register(SliceId.class)
                 .register(TrafficClass.class)
-                .register(TrafficClassConfig.class)
+                .register(TrafficClassDescription.class)
                 .register(QueueId.class)
                 .register(SliceStoreKey.class);
 
-        sliceStore = storageService.<SliceStoreKey, TrafficClassConfig>consistentMapBuilder()
+        sliceStore = storageService.<SliceStoreKey, TrafficClassDescription>consistentMapBuilder()
                 .withName("fabric-tna-slice")
                 .withRelaxedReadConsistency()
                 .withSerializer(Serializer.using(serializer.build()))
@@ -181,7 +180,7 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
         defaultTcStore.addListener(defaultTcListener);
 
         // Default slice is pre-provisioned.
-        sliceStore.put(new SliceStoreKey(SliceId.DEFAULT, TrafficClass.BEST_EFFORT), TrafficClassConfig.BEST_EFFORT);
+        sliceStore.put(new SliceStoreKey(SliceId.DEFAULT, TrafficClass.BEST_EFFORT), TrafficClassDescription.BEST_EFFORT);
         defaultTcStore.put(SliceId.DEFAULT, TrafficClass.BEST_EFFORT);
 
         deviceListener = new InternalDeviceListener();
@@ -227,7 +226,7 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
             throw new SlicingException(FAILED, format("Slice %s already exists", sliceId));
         }
 
-        return addTrafficClassInternal(true, sliceId, TrafficClassConfig.BEST_EFFORT) &&
+        return addTrafficClassInternal(true, sliceId, TrafficClassDescription.BEST_EFFORT) &&
                 setDefaultTrafficClass(sliceId, TrafficClass.BEST_EFFORT);
     }
 
@@ -270,11 +269,11 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
     }
 
     @Override
-    public boolean addTrafficClass(SliceId sliceId, TrafficClassConfig tcConfig) {
+    public boolean addTrafficClass(SliceId sliceId, TrafficClassDescription tcConfig) {
         return addTrafficClassInternal(false, sliceId, tcConfig);
     }
 
-    private boolean addTrafficClassInternal(boolean addSlice, SliceId sliceId, TrafficClassConfig tcConfig) {
+    private boolean addTrafficClassInternal(boolean addSlice, SliceId sliceId, TrafficClassDescription tcConfig) {
         if (!addSlice && !sliceExists(sliceId)) {
             throw new SlicingException(INVALID, format(
                     "Cannot add traffic class to non-existent slice %s", sliceId));
@@ -390,7 +389,7 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
     }
 
     @Override
-    public Map<SliceStoreKey, TrafficClassConfig> getSliceStore() {
+    public Map<SliceStoreKey, TrafficClassDescription> getSliceStore() {
         return Map.copyOf(sliceStore.asJavaMap());
     }
 
@@ -581,8 +580,8 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
         return flowRule;
     }
 
-    private class InternalSliceListener implements MapEventListener<SliceStoreKey, TrafficClassConfig> {
-        public void event(MapEvent<SliceStoreKey, TrafficClassConfig> event) {
+    private class InternalSliceListener implements MapEventListener<SliceStoreKey, TrafficClassDescription> {
+        public void event(MapEvent<SliceStoreKey, TrafficClassDescription> event) {
             // Update queues table on all devices.
             // Distribute work based on QueueId.
             log.info("Processing slice event {}", event);

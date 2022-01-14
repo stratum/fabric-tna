@@ -42,7 +42,7 @@ import org.stratumproject.fabric.tna.slicing.api.QueueId;
 import org.stratumproject.fabric.tna.slicing.api.SliceId;
 import org.stratumproject.fabric.tna.slicing.api.SlicingException;
 import org.stratumproject.fabric.tna.slicing.api.TrafficClass;
-import org.stratumproject.fabric.tna.slicing.api.TrafficClassConfig;
+import org.stratumproject.fabric.tna.slicing.api.TrafficClassDescription;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -84,11 +84,11 @@ public class SlicingManagerTest {
     private static final QueueId QUEUE_ID_ELASTIC = QueueId.of(3);
 
 
-    private static final TrafficClassConfig TC_CONFIG_CONTROL = new TrafficClassConfig(
+    private static final TrafficClassDescription TC_CONFIG_CONTROL = new TrafficClassDescription(
             TrafficClass.CONTROL, QUEUE_ID_CONTROL, 0, 0, false);
-    private static final TrafficClassConfig TC_CONFIG_REAL_TIME = new TrafficClassConfig(
+    private static final TrafficClassDescription TC_CONFIG_REAL_TIME = new TrafficClassDescription(
             TrafficClass.REAL_TIME, QUEUE_ID_REAL_TIME, 0, 0, false);
-    private static final TrafficClassConfig TC_CONFIG_ELASTIC = new TrafficClassConfig(
+    private static final TrafficClassDescription TC_CONFIG_ELASTIC = new TrafficClassDescription(
             TrafficClass.ELASTIC, QUEUE_ID_ELASTIC, 0, 0, false);
 
     private final CoreService coreService = EasyMock.createMock(CoreService.class);
@@ -136,7 +136,7 @@ public class SlicingManagerTest {
         manager.pipeconfService = pipeconfService;
 
         EasyMock.expect(coreService.registerApplication(EasyMock.anyObject())).andReturn(APP_ID);
-        EasyMock.expect(storageService.<SliceStoreKey, TrafficClassConfig>consistentMapBuilder()).andReturn(
+        EasyMock.expect(storageService.<SliceStoreKey, TrafficClassDescription>consistentMapBuilder()).andReturn(
                 new MockConsistentMap.Builder<>());
         EasyMock.expect(storageService.<TrafficSelector, SliceStoreKey>consistentMapBuilder()).andReturn(
                 new MockConsistentMap.Builder<>());
@@ -281,7 +281,7 @@ public class SlicingManagerTest {
     public void testAddTrafficClassExceptionNonExistentSlice() {
         exceptionRule.expect(SlicingException.class);
         exceptionRule.expectMessage("Cannot add traffic class to non-existent slice 1");
-        manager.addTrafficClass(SLICE_IDS.get(1), TrafficClassConfig.BEST_EFFORT);
+        manager.addTrafficClass(SLICE_IDS.get(1), TrafficClassDescription.BEST_EFFORT);
     }
 
     @Test
