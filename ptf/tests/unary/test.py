@@ -6,7 +6,7 @@ import difflib
 import time
 from unittest import skip, skipIf
 
-from base_test import autocleanup, is_v1model, tvsetup, tvskip
+from base_test import autocleanup, is_v1model, tvsetup
 from fabric_test import *  # noqa
 from p4.config.v1 import p4info_pb2
 from ptf.testutils import group
@@ -290,7 +290,7 @@ class FabricIPv4DropWithACLOverrideOutputTest(IPv4UnicastTest):
             ip_ttl=64,
         )
         # Although we are testing set output port (bridging)
-        # the fowarding type is "Routing v4" because we need the v4 routing table
+        # the forwarding type is "Routing v4" because we need the v4 routing table
         exp_pkt = self.build_exp_ipv4_unicast_packet(pkt, SWITCH_MAC, HOST1_MAC)
         self.doRunTest(self.port1, self.port2, HOST2_IPV4, 32, pkt, exp_pkt)
 
@@ -403,10 +403,10 @@ class FabricIPv4UnicastGroupTestAllPortTcpSport(FabricTest):
                 tcp_sport=test_tcp_sport,
             )
             self.send_packet(self.port1, pkt_from1)
-            out_port_indx = self.verify_any_packet_any_port(
+            out_port_index = self.verify_any_packet_any_port(
                 [exp_pkt_to2, exp_pkt_to3], [self.port2, self.port3]
             )
-            tcpsport_toport[out_port_indx] = test_tcp_sport
+            tcpsport_toport[out_port_index] = test_tcp_sport
 
         pkt_toport2 = testutils.simple_tcp_packet(
             eth_src=HOST1_MAC,
@@ -504,10 +504,10 @@ class FabricIPv4UnicastGroupTestAllPortTcpDport(FabricTest):
                 tcp_dport=test_tcp_dport,
             )
             self.send_packet(self.port1, pkt_from1)
-            out_port_indx = self.verify_any_packet_any_port(
+            out_port_index = self.verify_any_packet_any_port(
                 [exp_pkt_to2, exp_pkt_to3], [self.port2, self.port3]
             )
-            tcpdport_toport[out_port_indx] = test_tcp_dport
+            tcpdport_toport[out_port_index] = test_tcp_dport
 
         pkt_toport2 = testutils.simple_tcp_packet(
             eth_src=HOST1_MAC,
@@ -604,10 +604,10 @@ class FabricIPv4UnicastGroupTestAllPortIpSrc(FabricTest):
                 ip_ttl=63,
             )
             self.send_packet(self.port1, pkt_from1)
-            out_port_indx = self.verify_any_packet_any_port(
+            out_port_index = self.verify_any_packet_any_port(
                 [exp_pkt_to2, exp_pkt_to3], [self.port2, self.port3]
             )
-            ipsource_toport[out_port_indx] = test_ipsource
+            ipsource_toport[out_port_index] = test_ipsource
 
         pkt_toport2 = getattr(testutils, "simple_%s_packet" % pkt_type)(
             eth_src=HOST1_MAC,
@@ -711,10 +711,10 @@ class FabricIPv4UnicastGroupTestAllPortIpDst(FabricTest):
                 ip_ttl=63,
             )
             self.send_packet(self.port1, pkt_from1)
-            out_port_indx = self.verify_any_packet_any_port(
+            out_port_index = self.verify_any_packet_any_port(
                 [exp_pkt_to2, exp_pkt_to3], [self.port2, self.port3]
             )
-            ipdst_toport[out_port_indx] = test_ipdst
+            ipdst_toport[out_port_index] = test_ipdst
 
         pkt_toport2 = getattr(testutils, "simple_%s_packet" % pkt_type)(
             eth_src=HOST1_MAC,
@@ -1166,7 +1166,7 @@ class FabricGtpUnicastEcmpBasedOnTeid(FabricTest):
     @autocleanup
     def doRunTest(self, pkt_type):
         # In this test we check that packets are forwarded to all ports when we
-        # change one of the values used for hash calculcation and we have an ECMP-like
+        # change one of the values used for hash calculation and we have an ECMP-like
         # distribution.
         # In this case, we change TEID for GTP-encapsulated packets
         vlan_id = 10
@@ -1219,10 +1219,10 @@ class FabricGtpUnicastEcmpBasedOnTeid(FabricTest):
             exp_pkt_to3[IP].ttl = 63
 
             self.send_packet(self.port1, pkt_from1)
-            out_port_indx = self.verify_any_packet_any_port(
+            out_port_index = self.verify_any_packet_any_port(
                 [exp_pkt_to2, exp_pkt_to3], [self.port2, self.port3]
             )
-            teid_toport[out_port_indx] = test_teid
+            teid_toport[out_port_index] = test_teid
 
         pkt_toport2 = pkt_add_gtp(
             pkt,
@@ -1349,11 +1349,11 @@ class FabricSpgwDownlinkEcmpTest(SpgwSimpleTest):
             exp_pkt_to3[Ether].dst = S1U_ENB_NEXTHOP2_MAC
 
             self.send_packet(self.port1, pkt_from1)
-            out_port_indx = self.verify_any_packet_any_port(
+            out_port_index = self.verify_any_packet_any_port(
                 [exp_pkt_to2, exp_pkt_to3], [self.port2, self.port3]
             )
-            ue_ipv4_toport[out_port_indx] = ue_ipv4
-            teid_toport[out_port_indx] = test_teid
+            ue_ipv4_toport[out_port_index] = ue_ipv4
+            teid_toport[out_port_index] = test_teid
 
         pkt_toport2 = getattr(testutils, "simple_%s_packet" % pkt_type)(
             eth_src=HOST1_MAC,
@@ -1683,7 +1683,7 @@ class FabricSpgwIntUplinkDropTest(SpgwIntTest):
         drop_reason,
         **kwargs
     ):
-        # Change the IP destination to ensure we are using differnt
+        # Change the IP destination to ensure we are using different
         # flow for diffrent test cases since the flow report filter
         # might disable the report.
         # TODO: Remove this part when we are able to reset the register
@@ -1982,7 +1982,7 @@ class FabricFlowReportFilterNoChangeTest(IntTest):
                         ip_dst,
                     )
 
-                    # We should expect not receving any report after the first
+                    # We should expect not receiving any report after the first
                     # report since packet uses 5-tuple as flow ID.
                     expect_int_report = False
 
@@ -2105,7 +2105,7 @@ class FabricDropReportFilterTest(IntTest):
                         ip_dst,
                     )
 
-                    # We should expect not receving any report after the first
+                    # We should expect not receiving any report after the first
                     # report since packet uses 5-tuple as flow ID.
                     expect_int_report = False
 
@@ -2176,7 +2176,7 @@ class FabricIntQueueReportTest(IntTest):
 @group("int")
 @skipIf(is_v1model(), "Queue reports not implemented for v1model.")
 # Skip HW PTF test
-# We cannot varify value from the register which not belong to pipe 0 since the current
+# We cannot verify value from the register which not belong to pipe 0 since the current
 # P4Runtime and Stratum only allows us to read register from pipe 0.
 @group("no-hw")
 class FabricIntQueueReportQuotaTest(IntTest):
@@ -2211,7 +2211,7 @@ class FabricIntQueueReportQuotaTest(IntTest):
         print("")
         # Initialize the queue report quota for output port and queue to just 1
         # After that, configure the threshold to a small value and send a packet to the
-        # device to trigger queue report. We should expect to recevice an INT queue
+        # device to trigger queue report. We should expect to receive an INT queue
         # report and the quota should become zero.
         self.set_queue_report_quota(port=self.port2, qid=0, quota=1)
         self.doRunTest(
@@ -2414,202 +2414,6 @@ class FabricDoubleTaggedHostDownstream(DoubleVlanTerminationTest):
                     pktlen=120
                 )
                 self.doRunTest(pkt, in_tagged)
-
-
-@group("p4rt")
-class TableEntryReadWriteTest(FabricTest):
-    @tvsetup
-    @autocleanup
-    def doRunTest(self):
-        req, _ = self.add_bridging_entry(1, "00:00:00:00:00:01", "ff:ff:ff:ff:ff:ff", 1)
-        expected_bridging_entry = req.updates[0].entity.table_entry
-        received_bridging_entry = self.read_bridging_entry(
-            1, "00:00:00:00:00:01", "ff:ff:ff:ff:ff:ff"
-        )
-        self.verify_p4runtime_entity(expected_bridging_entry, received_bridging_entry)
-
-        req, _ = self.add_forwarding_acl_punt_to_cpu(ETH_TYPE_IPV4)
-        expected_acl_entry = req.updates[0].entity.table_entry
-        received_acl_entry = self.read_forwarding_acl_punt_to_cpu(ETH_TYPE_IPV4)
-        self.verify_p4runtime_entity(expected_acl_entry, received_acl_entry)
-
-    def runTest(self):
-        print("")
-        self.doRunTest()
-
-
-@group("p4rt")
-class ActionProfileMemberReadWriteTest(FabricTest):
-    @tvsetup
-    @autocleanup
-    def doRunTest(self):
-        req, _ = self.add_next_hashed_group_member(
-            "output_hashed", [("port_num", stringify(1, 2))]
-        )
-        expected_action_profile_member = req.updates[0].entity.action_profile_member
-        mbr_id = expected_action_profile_member.member_id
-        received_action_profile_member = self.read_next_hashed_group_member(mbr_id)
-        self.verify_p4runtime_entity(
-            expected_action_profile_member, received_action_profile_member
-        )
-
-    def runTest(self):
-        print("")
-        self.doRunTest()
-
-
-@group("p4rt")
-class ActionProfileGroupReadWriteTest(FabricTest):
-    @tvsetup
-    @autocleanup
-    def doRunTest(self):
-        req, _ = self.add_next_hashed_group_member(
-            "output_hashed", [("port_num", stringify(1, 2))]
-        )
-        member_installed = req.updates[0].entity.action_profile_member
-        mbr_id = member_installed.member_id
-
-        grp_id = 1
-        req, _ = self.add_next_hashed_group(grp_id, [mbr_id])
-        expected_action_profile_group = req.updates[0].entity.action_profile_group
-        self.verify_next_hashed_group(grp_id, expected_action_profile_group)
-
-    def runTest(self):
-        print("")
-        self.doRunTest()
-
-
-@group("p4rt")
-class ActionProfileGroupModificationTest(FabricTest):
-    @tvsetup
-    @autocleanup
-    def doRunTest(self):
-        # Insert members
-        mbr_ids = []
-        for port_num in range(1, 4):
-            req, _ = self.add_next_hashed_group_member(
-                "output_hashed", [("port_num", stringify(port_num, 2))]
-            )
-            member_installed = req.updates[0].entity.action_profile_member
-            mbr_ids.append(member_installed.member_id)
-
-        # Insert group with member-1 and member-2
-        grp_id = 1
-        req, _ = self.add_next_hashed_group(grp_id, mbr_ids[:2])
-        expected_action_profile_group = req.updates[0].entity.action_profile_group
-        received_action_profile_group = self.read_next_hashed_group(grp_id)
-        self.verify_p4runtime_entity(
-            expected_action_profile_group, received_action_profile_group
-        )
-
-        # Modify group with member-2 and member-3
-        req, _ = self.modify_next_hashed_group(grp_id, mbr_ids[1:], grp_size=2)
-        expected_action_profile_group = req.updates[0].entity.action_profile_group
-        received_action_profile_group = self.read_next_hashed_group(grp_id)
-        self.verify_p4runtime_entity(
-            expected_action_profile_group, received_action_profile_group
-        )
-
-    def runTest(self):
-        print("")
-        self.doRunTest()
-
-
-@group("p4rt")
-class MulticastGroupReadWriteTest(FabricTest):
-    @tvsetup
-    @autocleanup
-    def doRunTest(self):
-        grp_id = 10
-        replicas = [(0, 1), (0, 2), (0, 3)]  # (instance, port)
-        req, _ = self.add_mcast_group(grp_id, replicas)
-        expected_mc_entry = req.updates[
-            0
-        ].entity.packet_replication_engine_entry.multicast_group_entry
-        self.verify_mcast_group(grp_id, expected_mc_entry)
-
-    def runTest(self):
-        print("")
-        self.doRunTest()
-
-
-@group("p4rt")
-class MulticastGroupModificationTest(FabricTest):
-
-    # Not using the auto cleanup since the Stratum modifies the
-    # multicast node table internally
-    @tvsetup
-    def doRunTest(self):
-        # Add group with egress port 1~3 (instance 1 and 2)
-        grp_id = 10
-        # (instance, port)
-        replicas = [(1, 1), (1, 2), (1, 3), (2, 1), (2, 2), (2, 3)]
-        self.add_mcast_group(grp_id, replicas)
-
-        # Modify the group with egress port 2~4 (instance 2 and 3)
-        # (instance, port)
-        replicas = [(2, 2), (2, 3), (2, 4), (3, 2), (3, 3), (3, 4)]
-        req, _ = self.modify_mcast_group(grp_id, replicas)
-        expected_mc_entry = req.updates[
-            0
-        ].entity.packet_replication_engine_entry.multicast_group_entry
-        self.verify_mcast_group(grp_id, expected_mc_entry)
-
-        # Cleanup
-        self.delete_mcast_group(grp_id)
-
-    def runTest(self):
-        print("")
-        self.doRunTest()
-
-
-@group("p4rt")
-class CounterTest(BridgingTest):
-    @tvsetup
-    @autocleanup
-    def doRunTest(self):
-        pkt = getattr(testutils, "simple_tcp_packet")(pktlen=120)
-        self.runBridgingTest(False, False, pkt)
-        # Check direct counters from 'ingress_port_vlan' table
-        table_entries = [
-            req.updates[0].entity.table_entry
-            for req in self.reqs
-            if req.updates[0].entity.HasField("table_entry")
-        ]
-        ingress_port_vlan_tid = self.get_table_id("ingress_port_vlan")
-        table_entries = [
-            te for te in table_entries if te.table_id == ingress_port_vlan_tid
-        ]
-
-        # Here, both table entries hits once with a
-        # simple TCP packet(120 bytes + 2*2 bytes checksum inserted by scapy)
-        for table_entry in table_entries:
-            self.verify_direct_counter(table_entry, 124, 1)
-
-        # Check that direct counters can be set/cleared.
-        for table_entry in table_entries:
-            self.write_direct_counter(table_entry, 0, 0)
-            self.verify_direct_counter(table_entry, 0, 0)
-
-            self.write_direct_counter(table_entry, 1024, 1024)
-            self.verify_direct_counter(table_entry, 1024, 1024)
-
-        try:
-            self.get_counter("fwd_type_counter")
-        except Exception:
-            print("Unable to find indirect counter `fwd_type_counter`, skip")
-            return
-
-        # Read indirect counter (fwd_type_counter)
-        # Here we are trying to read counter for traffic class "0"
-        # which means how many traffic for bridging
-        # In the bridging test we sent two TCP packets and both packets
-        # are classified as bridging class.
-        self.verify_indirect_counter("fwd_type_counter", 0, "BOTH", 248, 2)
-
-    def runTest(self):
-        print("")
-        self.doRunTest()
 
 
 # Disable the loopback mode test since we are going to use Stratum main.p4 for CCP instead of fabric-tna
@@ -3016,7 +2820,7 @@ class FabricIntDeflectDropReportTest(IntTest):
 
         # The packet will still be routed, but dropped by traffic manager.
         # Note that the pipeline won't change IP TTL since the packet will not be
-        # procedded by the egress next block.
+        # proceeded by the egress next block.
         int_inner_pkt = pkt_route(int_inner_pkt, HOST2_MAC)
 
         # This is the WIP report packet which should be sent to the recirculation port according to

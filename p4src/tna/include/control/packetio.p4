@@ -72,8 +72,10 @@ control PacketIoEgress(inout egress_headers_t hdr,
                        inout fabric_egress_metadata_t fabric_md,
                        in egress_intrinsic_metadata_t eg_intr_md) {
 
-    action set_switch_info(FabricPortId_t cpu_port) {
-        fabric_md.cpu_port = (PortId_t) cpu_port;
+    // TODO(Yi Tseng): Currently, we don't translate the CPU port, but maybe we
+    // can use a fixed number for CPU port in the chassis config.
+    action set_switch_info(PortId_t cpu_port) {
+        fabric_md.cpu_port = cpu_port;
     }
 
     table switch_info {

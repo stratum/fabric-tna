@@ -7,7 +7,8 @@ set -eu -o pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
 FABRIC_TNA_ROOT="${DIR}"/../../..
 TM_PORT_JSON=${TM_PORT_JSON:-""}
-TM_DOD=${TM_DOD:=""}
+TM_DOD=${TM_DOD:-""}
+ENABLE_P4RUNTIME_TRANSLATION=${ENABLE_P4RUNTIME_TRANSLATION:-""}
 
 # shellcheck source=.env
 source "${FABRIC_TNA_ROOT}"/.env
@@ -120,6 +121,10 @@ docker run --name ${tmRunName} -d -t --privileged \
     "${SDE_TM_DOCKER_IMG}"
 sleep 5
 
+if [[ -n "${ENABLE_P4RUNTIME_TRANSLATION}" ]]; then
+  STRATUM_ARGS+=("--enable_p4runtime_translation")
+fi
+
 # Run Stratum container
 echo "*** Starting ${stratumBfRunName} (from ${STRATUM_DOCKER_IMG})..."
 # shellcheck disable=SC2086
@@ -128,6 +133,7 @@ docker run --name ${stratumBfRunName} -d --privileged \
     -v "${DIR}":/workdir -w /workdir \
     --entrypoint ./stratum_entrypoint.sh \
     ${STRATUM_DOCKER_FLAG} \
-    "${STRATUM_DOCKER_IMG}"
+    "${STRATUM_DOCKER_IMG}" \
+    "${STRATUM_ARGS[@]}"
 sleep 5
 wait_for ${stratumBfRunName} 28000 600
