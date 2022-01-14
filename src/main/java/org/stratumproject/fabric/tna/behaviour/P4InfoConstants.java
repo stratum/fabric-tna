@@ -25,12 +25,12 @@ public final class P4InfoConstants {
     // Header field IDs
     public static final PiMatchFieldId HDR_APP_ID = PiMatchFieldId.of("app_id");
     public static final int HDR_APP_ID_BITWIDTH = 8;
-    public static final PiMatchFieldId HDR_APP_IP_ADDRESS =
-            PiMatchFieldId.of("app_ip_address");
-    public static final int HDR_APP_IP_ADDRESS_BITWIDTH = 32;
     public static final PiMatchFieldId HDR_APP_IP_PROTO =
             PiMatchFieldId.of("app_ip_proto");
     public static final int HDR_APP_IP_PROTO_BITWIDTH = 8;
+    public static final PiMatchFieldId HDR_APP_IPV4_ADDRESS =
+            PiMatchFieldId.of("app_ipv4_address");
+    public static final int HDR_APP_IPV4_ADDRESS_BITWIDTH = 32;
     public static final PiMatchFieldId HDR_APP_L4_PORT =
             PiMatchFieldId.of("app_l4_port");
     public static final int HDR_APP_L4_PORT_BITWIDTH = 16;

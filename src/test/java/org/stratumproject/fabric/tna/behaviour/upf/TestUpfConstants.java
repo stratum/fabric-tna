@@ -45,7 +45,7 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_ING
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_SET_UPLINK_SESSION;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_SESSIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_TERMINATIONS;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_APP_IP_ADDRESS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_APP_IPV4_ADDRESS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_APP_L4_PORT;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_GTPU_IS_VALID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_IPV4_DST_ADDR;
@@ -325,7 +325,7 @@ public final class TestUpfConstants {
                     DefaultTrafficSelector.builder()
                             .matchPi(PiCriterion.builder()
                                              .matchExact(HDR_SLICE_ID, SLICE_MOBILE)
-                                             .matchLpm(HDR_APP_IP_ADDRESS,
+                                             .matchLpm(HDR_APP_IPV4_ADDRESS,
                                                        APP_IP_PREFIX.address().toOctets(),
                                                        APP_IP_PREFIX.prefixLength())
                                              .matchRange(HDR_APP_L4_PORT,

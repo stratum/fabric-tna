@@ -63,7 +63,7 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_ING
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_RECIRC_RULES;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_SESSIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_TERMINATIONS;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_APP_IP_ADDRESS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_APP_IPV4_ADDRESS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_APP_L4_PORT;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_GTPU_IS_VALID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_IPV4_DST_ADDR;
@@ -374,8 +374,8 @@ public class FabricUpfTranslator {
         Application.Builder appFilteringBuilder = Application.builder()
                 .withAppId(FabricUpfTranslatorUtil.getParamByte(action, APP_ID))
                 .withPriority(entry.priority());
-        if (FabricUpfTranslatorUtil.fieldIsPresent(match, HDR_APP_IP_ADDRESS)) {
-            appFilteringBuilder.withIp4Prefix(FabricUpfTranslatorUtil.getFieldPrefix(match, HDR_APP_IP_ADDRESS));
+        if (FabricUpfTranslatorUtil.fieldIsPresent(match, HDR_APP_IPV4_ADDRESS)) {
+            appFilteringBuilder.withIp4Prefix(FabricUpfTranslatorUtil.getFieldPrefix(match, HDR_APP_IPV4_ADDRESS));
         }
         if (FabricUpfTranslatorUtil.fieldIsPresent(match, HDR_APP_L4_PORT)) {
             Pair<Short, Short> l4PortRange = FabricUpfTranslatorUtil.getFieldRangeShort(match, HDR_APP_L4_PORT);
@@ -677,7 +677,7 @@ public class FabricUpfTranslator {
         matchBuilder.matchExact(HDR_SLICE_ID, SLICE_MOBILE.id());
         if (appFiltering.ip4Prefix().isPresent()) {
             Ip4Prefix ip4Prefix = appFiltering.ip4Prefix().get();
-            matchBuilder.matchLpm(HDR_APP_IP_ADDRESS, ip4Prefix.address().toOctets(), ip4Prefix.prefixLength());
+            matchBuilder.matchLpm(HDR_APP_IPV4_ADDRESS, ip4Prefix.address().toOctets(), ip4Prefix.prefixLength());
         }
         if (appFiltering.l4PortRange().isPresent()) {
             Pair<Short, Short> l4PortRange = appFiltering.l4PortRange().get();
