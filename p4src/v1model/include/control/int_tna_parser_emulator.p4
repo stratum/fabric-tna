@@ -29,9 +29,9 @@ control IntTnaEgressParserEmulator (inout v1model_header_t          hdr_v1model,
         // in V1model, The MPLS header is initialized in int.p4/*_encap_mpls actions,
         // because assignments made before using the setValid() have no effect.
         // hdr.report_mpls.label = update later
-        // hdr.report_mpls.tc = 0;
-        // hdr.report_mpls.bos = 0;
-        // hdr.report_mpls.ttl = DEFAULT_MPLS_TTL;
+        // hdr.report_mpls.tc = update later;
+        // hdr.report_mpls.bos = update later;
+        // hdr.report_mpls.ttl = update later;
 
         /** report_ipv4 **/
         hdr.report_ipv4.setValid();
