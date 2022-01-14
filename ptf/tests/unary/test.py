@@ -3012,13 +3012,7 @@ class FabricIntDeflectDropReportTest(IntTest):
         )
         int_inner_pkt = pkt.copy()
         ig_port = self.port1
-        # Since the tofino model only sets the deflected_flag to 1 and forward the packet
-        # normally to the egress port we set in the ingress pipe, we need to set the
-        # egress port to recirculate port in the ingress pipe.
-        # On the hardware switch, we won't set the egress port to recirculate port
-        # since the traffic manager will deflect the packet to the port we set in the
-        # chassis config.
-        eg_port = RECIRCULATE_PORTS[0]
+        eg_port = self.port2
 
         if tagged1:
             pkt = pkt_add_vlan(pkt, VLAN_ID_1)
@@ -3027,6 +3021,28 @@ class FabricIntDeflectDropReportTest(IntTest):
         # Note that the pipeline won't change IP TTL since the packet will not be
         # procedded by the egress next block.
         int_inner_pkt = pkt_route(int_inner_pkt, HOST2_MAC)
+
+        # This is the WIP report packet which should be sent to the recirculation port according to
+        # the deflect-on-drop configuration in the Stratum's chassis config. However, Tofino-model
+        # always sends deflected packets to port 0, independently of the chassis config.
+        # Here we check if the WIP packet is correct, and we re-inject it in the switch through the
+        # recirculation port so the rest of pipeline can populate the rest of the header fields.
+        exp_wip_int_pkt_masked = self.build_int_drop_report(
+            0,  # both source and destination mac will be zero since it is a WIP packet.
+            0,
+            SWITCH_IPV4,
+            INT_COLLECTOR_IPV4,
+            ig_port,
+            eg_port,
+            INT_DROP_REASON_TRAFFIC_MANAGER,
+            SWITCH_ID,
+            int_inner_pkt,
+            is_device_spine,
+            send_report_to_spine,
+            0,  # hw_id,
+            truncate=False,  # packet will not be truncated
+            wip_pkt=True,
+        )
 
         exp_int_report_pkt_masked = self.build_int_drop_report(
             SWITCH_MAC,
@@ -3057,7 +3073,12 @@ class FabricIntDeflectDropReportTest(IntTest):
             eg_port=eg_port,
             verify_pkt=False,
         )
+        self.verify_packet(exp_wip_int_pkt_masked, 0)
 
+        pkt_out = self.build_packet_out(
+            exp_wip_int_pkt_masked.exp_pkt, RECIRCULATE_PORTS[0]
+        )
+        self.send_packet_out(pkt_out)
         self.verify_packet(exp_int_report_pkt_masked, self.port3)
         self.verify_no_other_packets()
 
