@@ -4,7 +4,7 @@ package org.stratumproject.fabric.tna.behaviour.upf;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.junit.Test;
-import org.onosproject.net.behaviour.upf.Application;
+import org.onosproject.net.behaviour.upf.ApplicationFilter;
 import org.onosproject.net.behaviour.upf.GtpTunnelPeer;
 import org.onosproject.net.behaviour.upf.SessionDownlink;
 import org.onosproject.net.behaviour.upf.SessionUplink;
@@ -208,8 +208,8 @@ public class FabricUpfTranslatorTest {
 
     @Test
     public void fabricEntryToApplicationFilteringTest() {
-        Application translatedInterface;
-        Application expectedInterface = TestUpfConstants.APPLICATION_FILTERING;
+        ApplicationFilter translatedInterface;
+        ApplicationFilter expectedInterface = TestUpfConstants.APPLICATION_FILTERING;
         try {
             translatedInterface = upfTranslator.fabricEntryToApplicationFiltering(
                     TestUpfConstants.FABRIC_APPLICATION_FILTERING);

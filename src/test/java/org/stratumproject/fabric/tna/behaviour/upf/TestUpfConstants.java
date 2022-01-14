@@ -2,13 +2,14 @@
 // SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 package org.stratumproject.fabric.tna.behaviour.upf;
 
+import com.google.common.collect.Range;
 import org.apache.commons.lang3.tuple.Pair;
 import org.onlab.packet.Ip4Address;
 import org.onlab.packet.Ip4Prefix;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.DefaultApplicationId;
 import org.onosproject.net.DeviceId;
-import org.onosproject.net.behaviour.upf.Application;
+import org.onosproject.net.behaviour.upf.ApplicationFilter;
 import org.onosproject.net.behaviour.upf.GtpTunnelPeer;
 import org.onosproject.net.behaviour.upf.SessionDownlink;
 import org.onosproject.net.behaviour.upf.SessionUplink;
@@ -49,7 +50,7 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_ING
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_DROP;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_SESSIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_TERMINATIONS;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_APP_IPV4_ADDRESS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_APP_IPV4_ADDR;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_APP_L4_PORT;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_GTPU_IS_VALID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_IPV4_DST_ADDR;
@@ -157,10 +158,10 @@ public final class TestUpfConstants {
             .withQfi(DOWNLINK_QFI)
             .build();
 
-    public static final Application APPLICATION_FILTERING = Application.builder()
+    public static final ApplicationFilter APPLICATION_FILTERING = ApplicationFilter.builder()
             .withAppId(APP_FILTERING_ID)
             .withIp4Prefix(APP_IP_PREFIX)
-            .withL4PortRange(APP_L4_RANGE.getLeft(), APP_L4_RANGE.getRight())
+            .withL4PortRange(Range.closed(APP_L4_RANGE.getLeft(), APP_L4_RANGE.getRight()))
             .withIpProto(APP_IP_PROTO)
             .withPriority(APP_FILTERING_PRIORITY)
             .build();
@@ -177,8 +178,6 @@ public final class TestUpfConstants {
             .withCounterId(DOWNLINK_COUNTER_CELL_ID)
             .needsDropping(true)
             .build();
-
-    // TODO: what about GtpTunnelPeer?
 
     public static final UpfInterface UPLINK_INTERFACE = UpfInterface.createS1uFrom(S1U_ADDR);
 
@@ -427,7 +426,7 @@ public final class TestUpfConstants {
                     DefaultTrafficSelector.builder()
                             .matchPi(PiCriterion.builder()
                                              .matchExact(HDR_SLICE_ID, SLICE_MOBILE)
-                                             .matchLpm(HDR_APP_IPV4_ADDRESS,
+                                             .matchLpm(HDR_APP_IPV4_ADDR,
                                                        APP_IP_PREFIX.address().toOctets(),
                                                        APP_IP_PREFIX.prefixLength())
                                              .matchRange(HDR_APP_L4_PORT,

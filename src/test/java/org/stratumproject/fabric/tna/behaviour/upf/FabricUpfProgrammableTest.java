@@ -12,7 +12,7 @@ import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.PortNumber;
-import org.onosproject.net.behaviour.upf.Application;
+import org.onosproject.net.behaviour.upf.ApplicationFilter;
 import org.onosproject.net.behaviour.upf.SessionDownlink;
 import org.onosproject.net.behaviour.upf.SessionUplink;
 import org.onosproject.net.behaviour.upf.UpfCounter;
@@ -247,17 +247,17 @@ public class FabricUpfProgrammableTest {
 
     @Test
     public void testApplicationFiltering() throws Exception {
-        assertTrue(upfProgrammable.readAll(UpfEntityType.APPLICATION).isEmpty());
-        Application expectedAppFiltering = TestUpfConstants.APPLICATION_FILTERING;
+        assertTrue(upfProgrammable.readAll(UpfEntityType.APPLICATION_FILTER).isEmpty());
+        ApplicationFilter expectedAppFiltering = TestUpfConstants.APPLICATION_FILTERING;
         upfProgrammable.apply(expectedAppFiltering);
         Collection<? extends UpfEntity> installedAppFiltering =
-                upfProgrammable.readAll(UpfEntityType.APPLICATION);
+                upfProgrammable.readAll(UpfEntityType.APPLICATION_FILTER);
         assertThat(installedAppFiltering.size(), equalTo(1));
         for (var readAppFiltering : installedAppFiltering) {
             assertThat(readAppFiltering, equalTo(expectedAppFiltering));
         }
         upfProgrammable.delete(expectedAppFiltering);
-        assertTrue(upfProgrammable.readAll(UpfEntityType.APPLICATION).isEmpty());
+        assertTrue(upfProgrammable.readAll(UpfEntityType.APPLICATION_FILTER).isEmpty());
     }
 
     @Test

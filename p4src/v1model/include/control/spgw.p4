@@ -19,7 +19,8 @@ control SpgwIngress(
 
     counter(MAX_UPF_COUNTERS, CounterType.packets_and_bytes) terminations_counter;
 
-    SpgwIfaceType_t iface_type = SpgwIfaceType_t.UNKNOWN;
+    bool is_uplink = false;
+    bool term_hit = false;
     bool sess_hit = false;
     bit<32> app_ipv4_addr = 0;
     l4_port_t app_l4_port = 0;
@@ -37,7 +38,7 @@ control SpgwIngress(
     @hidden
     action _term_hit(upf_ctr_id_t ctr_id) {
         fabric_md.bridged.spgw.upf_ctr_id = ctr_id;
-        fabric_md.is_term_hit = true;
+        term_hit = true;
     }
 
     @hidden
@@ -337,7 +338,7 @@ control SpgwIngress(
     table applications {
         key  = {
             fabric_md.spgw_slice_id : exact   @name("slice_id");
-            app_ipv4_addr           : lpm     @name("app_ipv4_address");
+            app_ipv4_addr           : lpm     @name("app_ipv4_addr");
             app_l4_port             : range   @name("app_l4_port");
             app_ip_proto            : ternary @name("app_ip_proto");
         }
@@ -406,7 +407,7 @@ control SpgwIngress(
         if (hdr.ipv4.isValid()) {
             switch(interfaces.apply().action_run) {
                 iface_access: {
-                    iface_type=SpgwIfaceType_t.ACCESS;
+                    is_uplink = true;
                     app_ipv4_addr = fabric_md.lkp.ipv4_dst;
                     app_l4_port = fabric_md.lkp.l4_dport;
                     app_ip_proto = fabric_md.lkp.ip_proto;
@@ -415,14 +416,12 @@ control SpgwIngress(
                     }
                 }
                 iface_core: {
-                    iface_type = SpgwIfaceType_t.CORE;
                     app_ipv4_addr = fabric_md.lkp.ipv4_src;
                     app_l4_port = fabric_md.lkp.l4_sport;
                     app_ip_proto = fabric_md.lkp.ip_proto;
                     downlink_sessions.apply();
                 }
                 iface_dbuf: {
-                    iface_type = SpgwIfaceType_t.DBUF;
                     app_ipv4_addr = fabric_md.lkp.ipv4_src;
                     app_l4_port = fabric_md.lkp.l4_sport;
                     app_ip_proto = fabric_md.lkp.ip_proto;
@@ -433,17 +432,16 @@ control SpgwIngress(
            applications.apply();
 
             if (sess_hit) {
-                if (iface_type == SpgwIfaceType_t.ACCESS) {
+                if (is_uplink) {
                     uplink_terminations.apply();
                     uplink_recirc_rules.apply();
-                } else if (iface_type == SpgwIfaceType_t.CORE ||
-                            iface_type == SpgwIfaceType_t.DBUF) {
+                } else {
                     downlink_terminations.apply();
                 }
             }
 
             ig_tunnel_peers.apply();
-            if (fabric_md.is_term_hit) {
+            if (term_hit) {
                 // NOTE We should not update this counter for packets coming
                 // **from** dbuf (iface_dbuf), since we already updated it when
                 // first sending the same packets **to** dbuf (iface_core).

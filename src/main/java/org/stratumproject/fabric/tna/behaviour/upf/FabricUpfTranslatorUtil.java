@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 package org.stratumproject.fabric.tna.behaviour.upf;
 
+import com.google.common.collect.Range;
 import org.apache.commons.lang3.tuple.Pair;
 import org.onosproject.net.behaviour.upf.UpfProgrammableException;
 import org.onlab.packet.Ip4Address;
@@ -115,13 +116,13 @@ final class FabricUpfTranslatorUtil {
         return Ip4Address.valueOf(getFieldValue(criterion, fieldId).asArray());
     }
 
-    static Pair<Short, Short> getFieldRangeShort(PiCriterion criterion, PiMatchFieldId fieldId) {
+    static Range<Short> getFieldRangeShort(PiCriterion criterion, PiMatchFieldId fieldId) {
         Optional<PiFieldMatch> optField = criterion.fieldMatch(fieldId);
         if (optField.isEmpty()) {
             return null;
         }
         PiRangeFieldMatch field = (PiRangeFieldMatch) optField.get();
-        return Pair.of(byteSeqToShort(field.lowValue()), byteSeqToShort(field.highValue()));
+        return Range.closed(byteSeqToShort(field.lowValue()), byteSeqToShort(field.highValue()));
     }
 
     static int byteSeqToInt(ImmutableByteSequence sequence) {

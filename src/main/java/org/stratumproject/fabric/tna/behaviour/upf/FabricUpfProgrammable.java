@@ -11,7 +11,7 @@ import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
 import org.onosproject.drivers.p4runtime.AbstractP4RuntimeHandlerBehaviour;
 import org.onosproject.net.PortNumber;
-import org.onosproject.net.behaviour.upf.Application;
+import org.onosproject.net.behaviour.upf.ApplicationFilter;
 import org.onosproject.net.behaviour.upf.GtpTunnelPeer;
 import org.onosproject.net.behaviour.upf.SessionDownlink;
 import org.onosproject.net.behaviour.upf.SessionUplink;
@@ -375,7 +375,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                         entitiesCleared++;
                     }
                     break;
-                case APPLICATION:
+                case APPLICATION_FILTER:
                     if (upfTranslator.isFabricApplication(entry)) {
                         toBeRemoved.add(entry);
                         entitiesCleared++;
@@ -411,7 +411,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                 return getGtpTunnelPeers();
             case COUNTER:
                 return readCounters(-1);
-            case APPLICATION:
+            case APPLICATION_FILTER:
                 return getApplicationFiltering();
             default:
                 throw new UpfProgrammableException(format("Reading entity type %s not supported.",
@@ -572,7 +572,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                 return this.downlinkUpfTerminationsTableSize;
             case COUNTER:
                 return upfCounterSize;
-            case APPLICATION:
+            case APPLICATION_FILTER:
                 return applicationTableSize;
             default:
                 throw new UpfProgrammableException(format("Getting size of entity type %s not supported.",
@@ -650,8 +650,8 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
             case TUNNEL_PEER:
                 addGtpTunnelPeer((GtpTunnelPeer) entity);
                 break;
-            case APPLICATION:
-                addApplicationFiltering((Application) entity);
+            case APPLICATION_FILTER:
+                addApplicationFiltering((ApplicationFilter) entity);
                 break;
             case COUNTER:
             default:
@@ -660,9 +660,9 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         }
     }
 
-    private void addApplicationFiltering(Application appFiltering) throws UpfProgrammableException {
-        FlowRule flowRule = upfTranslator.applicationFilteringToFabricEntry(appFiltering, deviceId, appId);
-        log.info("Installing {}", appFiltering);
+    private void addApplicationFiltering(ApplicationFilter appFilter) throws UpfProgrammableException {
+        FlowRule flowRule = upfTranslator.applicationFilteringToFabricEntry(appFilter, deviceId, appId);
+        log.info("Installing {}", appFilter);
         flowRuleService.applyFlowRules(flowRule);
         log.debug("Application added with flowID {}", flowRule.id().value());
     }
@@ -746,8 +746,8 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
             case TUNNEL_PEER:
                 removeGtpTunnelPeer((GtpTunnelPeer) entity);
                 break;
-            case APPLICATION:
-                removeApplicationFiltering((Application) entity);
+            case APPLICATION_FILTER:
+                removeApplicationFiltering((ApplicationFilter) entity);
                 break;
             case COUNTER:
             default:
@@ -876,10 +876,10 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                       false, DEFAULT_PRIORITY);
     }
 
-    private void removeApplicationFiltering(Application appFiltering)
+    private void removeApplicationFiltering(ApplicationFilter appFilter)
             throws UpfProgrammableException {
-        PiCriterion match = upfTranslator.buildApplicationFilteringCriterion(appFiltering);
-        removeEntry(match, FABRIC_INGRESS_SPGW_APPLICATIONS, false, appFiltering.priority());
+        PiCriterion match = upfTranslator.buildApplicationFilteringCriterion(appFilter);
+        removeEntry(match, FABRIC_INGRESS_SPGW_APPLICATIONS, false, appFilter.priority());
     }
 
     private void applyUplinkRecirculation(Ip4Prefix subnet, boolean remove) {

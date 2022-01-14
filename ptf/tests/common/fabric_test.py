@@ -2462,7 +2462,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             self.Exact("slice_id", stringify(slice_id, 1)),
         ]
         if app_ipv4_addr:
-            match_fields.append(self.Lpm("app_ipv4_address", ipv4_to_binary(app_ipv4_addr), app_ipv4_prefix))
+            match_fields.append(self.Lpm("app_ipv4_addr", ipv4_to_binary(app_ipv4_addr), app_ipv4_prefix))
         if l4_port:
             match_fields.append(self.Range("app_l4_port", stringify(l4_port, 2), stringify(l4_port, 2)))
         if ip_proto:
