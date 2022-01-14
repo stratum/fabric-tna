@@ -85,11 +85,11 @@ public class SlicingManagerTest {
 
 
     private static final TrafficClassConfig TC_CONFIG_CONTROL = new TrafficClassConfig(
-            TrafficClass.CONTROL, QUEUE_ID_CONTROL, 0, 0);
+            TrafficClass.CONTROL, QUEUE_ID_CONTROL, 0, 0, false);
     private static final TrafficClassConfig TC_CONFIG_REAL_TIME = new TrafficClassConfig(
-            TrafficClass.REAL_TIME, QUEUE_ID_REAL_TIME, 0, 0);
+            TrafficClass.REAL_TIME, QUEUE_ID_REAL_TIME, 0, 0, false);
     private static final TrafficClassConfig TC_CONFIG_ELASTIC = new TrafficClassConfig(
-            TrafficClass.ELASTIC, QUEUE_ID_ELASTIC, 0, 0);
+            TrafficClass.ELASTIC, QUEUE_ID_ELASTIC, 0, 0, false);
 
     private final CoreService coreService = EasyMock.createMock(CoreService.class);
     private final StorageService storageService = EasyMock.createMock(StorageService.class);

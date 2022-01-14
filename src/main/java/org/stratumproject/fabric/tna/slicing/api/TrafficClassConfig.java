@@ -4,24 +4,24 @@
 package org.stratumproject.fabric.tna.slicing.api;
 
 import com.google.common.base.MoreObjects;
-
-import java.util.Objects;
+import com.google.common.base.Objects;
 
 /**
  * Describes the configuration of a traffic class within a slice.
  */
 public class TrafficClassConfig {
 
-    private static final int UNLIMITED_MAX_RATE = Integer.MAX_VALUE;
+    public static final long UNLIMITED_BPS = Long.MAX_VALUE;
 
     // Common to all slices. No bandwidth guarantees or limitations.
     public static final TrafficClassConfig BEST_EFFORT = new TrafficClassConfig(
-            TrafficClass.BEST_EFFORT, QueueId.BEST_EFFORT, UNLIMITED_MAX_RATE, 0);
+            TrafficClass.BEST_EFFORT, QueueId.BEST_EFFORT, UNLIMITED_BPS, 0, false);
 
     private final TrafficClass tc;
     private final QueueId qid;
-    private final int maxRateBps;
-    private final int gminRateBps;
+    private final long maxRateBps;
+    private final long gminRateBps;
+    private final boolean isSystemTc;
 
     /**
      * Creates a new traffic class config.
@@ -30,12 +30,15 @@ public class TrafficClassConfig {
      * @param qid         queue ID
      * @param maxRateBps  maximum bitrate in bps
      * @param gminRateBps guaranteed minimum rate in bps
+     * @param isSystemTc  whether this traffic class is to be used for system traffic
      */
-    public TrafficClassConfig(TrafficClass tc, QueueId qid, int maxRateBps, int gminRateBps) {
+    public TrafficClassConfig(TrafficClass tc, QueueId qid, long maxRateBps,
+                              long gminRateBps, boolean isSystemTc) {
         this.tc = tc;
         this.qid = qid;
         this.maxRateBps = maxRateBps;
         this.gminRateBps = gminRateBps;
+        this.isSystemTc = isSystemTc;
     }
 
     /**
@@ -63,7 +66,7 @@ public class TrafficClassConfig {
      *
      * @return maximum bitrate in bps
      */
-    public int getMaxRateBps() {
+    public long getMaxRateBps() {
         return maxRateBps;
     }
 
@@ -73,7 +76,7 @@ public class TrafficClassConfig {
      * @return true if rate is unlimited
      */
     public boolean isMaxRateUnlimited() {
-        return maxRateBps == UNLIMITED_MAX_RATE;
+        return maxRateBps == UNLIMITED_BPS;
     }
 
     /**
@@ -85,8 +88,17 @@ public class TrafficClassConfig {
      *
      * @return guaranteed minimum bitrate in bps
      */
-    public int getGminRateBps() {
+    public long getGminRateBps() {
         return gminRateBps;
+    }
+
+    /**
+     * Returns true if this class is expected to carry system traffic.
+     *
+     * @return true if this is the system traffic class
+     */
+    public boolean isSystemTc() {
+        return isSystemTc;
     }
 
     @Override
@@ -100,13 +112,14 @@ public class TrafficClassConfig {
         TrafficClassConfig that = (TrafficClassConfig) o;
         return maxRateBps == that.maxRateBps &&
                 gminRateBps == that.gminRateBps &&
+                isSystemTc == that.isSystemTc &&
                 tc == that.tc &&
-                Objects.equals(qid, that.qid);
+                Objects.equal(qid, that.qid);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(tc, qid, maxRateBps, gminRateBps);
+        return Objects.hashCode(tc, qid, maxRateBps, gminRateBps, isSystemTc);
     }
 
     @Override
@@ -116,6 +129,7 @@ public class TrafficClassConfig {
                 .add("qid", qid)
                 .add("maxRateBps", maxRateBps)
                 .add("gminRateBps", gminRateBps)
+                .add("isSystemTc", isSystemTc)
                 .toString();
     }
 
