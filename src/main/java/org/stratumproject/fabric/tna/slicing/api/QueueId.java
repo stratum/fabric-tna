@@ -12,6 +12,7 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_EGRESS
  * Queue identifier.
  */
 public final class QueueId extends Identifier<Integer> implements Comparable<QueueId> {
+    public static final Integer MIN = 0;
     public static final Integer MAX = 1 << HDR_EGRESS_QID_BITWIDTH - 1;
     public static final QueueId BEST_EFFORT = QueueId.of(QUEUE_ID_BEST_EFFORT);
 
@@ -27,7 +28,7 @@ public final class QueueId extends Identifier<Integer> implements Comparable<Que
      * @throws IllegalArgumentException if given id is invalid
      */
     public static QueueId of(int id) {
-        checkArgument(id >= 0 && id <= MAX, "Invalid id %s. Valid range is from %s to %s", id, 0, MAX);
+        checkArgument(id >= MIN && id <= MAX, "Invalid id %s. Valid range is from %s to %s", id, 0, MAX);
         return new QueueId(id);
     }
 
