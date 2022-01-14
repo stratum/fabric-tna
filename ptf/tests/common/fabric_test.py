@@ -3968,6 +3968,10 @@ class IntTest(IPv4UnicastTest):
             q_flag=1,
         )
 
+        if is_v1model():
+            # in V1model we emulate different QueueIDs using the QoS set Queue action.
+            self.add_queue_entry(slice_id=1, tc=1, qid=1)
+
         # Set collector, report table, and mirror sessions
         self.set_up_int_flows(
             is_device_spine, pkt, send_report_to_spine, watch_flow=watch_flow

@@ -133,7 +133,7 @@ control IntEgress (inout v1model_header_t          hdr_v1model,
     direct_counter(CounterType.packets_and_bytes) int_metadata_counter;
 
     // bmv2 specific. Only one queue present.
-    QueueId_t egress_qid = 0;
+    // QueueId_t egress_qid = 0;
     bool check_quota_and_report = false;
 
     @hidden
@@ -162,7 +162,7 @@ control IntEgress (inout v1model_header_t          hdr_v1model,
             // Hence, there's no need to match on the egress port, we can use the same
             // per-queue thresholds for all ports.
             // in V1model, qid is emulated and has no meaning.
-            egress_qid: exact @name("egress_qid");
+            fabric_v1model.qid: exact @name("egress_qid");
             fabric_md.int_md.hop_latency[31:16]: range @name("hop_latency_upper");
             fabric_md.int_md.hop_latency[15:0]: range @name("hop_latency_lower");
         }
@@ -298,7 +298,7 @@ control IntEgress (inout v1model_header_t          hdr_v1model,
         fabric_md.int_report_md.report_type = fabric_md.bridged.int_bmd.report_type;
         fabric_md.int_report_md.ig_port = fabric_md.bridged.base.ig_port;
         fabric_md.int_report_md.eg_port =(PortId_t)fabric_v1model.preserved_egress_port;
-        fabric_md.int_report_md.queue_id = egress_qid;
+        fabric_md.int_report_md.queue_id = fabric_v1model.qid;
         fabric_md.int_report_md.queue_occupancy = standard_md.deq_qdepth;
         fabric_md.int_report_md.ig_tstamp = fabric_md.bridged.base.ig_tstamp[31:0];
         fabric_md.int_report_md.eg_tstamp = standard_md.egress_global_timestamp[31:0];
@@ -370,7 +370,7 @@ control IntEgress (inout v1model_header_t          hdr_v1model,
         if (fabric_md.int_report_md.report_type == INT_REPORT_TYPE_QUEUE) {
             // Set report to different queue, emulating TNA behavior,
             // to avoid that Queue report generates another report.
-            egress_qid = 1;
+            fabric_v1model.qid = 1;
         }
         queue_latency_thresholds.apply();
         if (check_quota_and_report) {

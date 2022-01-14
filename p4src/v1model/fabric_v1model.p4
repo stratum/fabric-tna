@@ -96,7 +96,7 @@ control FabricIngress (inout v1model_header_t hdr,
         if (!fabric_md.ingress.skip_next) {
             next.apply(hdr.ingress, fabric_md.ingress, standard_md, fabric_md.preserved_egress_port);
         }
-        qos.apply(fabric_md.ingress, standard_md, fabric_md.drop_ctl);
+        qos.apply(fabric_md.ingress, standard_md, fabric_md.drop_ctl, fabric_md.qid);
 #ifdef WITH_INT
         // Should always apply last to guarantee generation of drop reports.
         int_ingress.apply(hdr.ingress, fabric_md.ingress, standard_md, fabric_md.drop_ctl);

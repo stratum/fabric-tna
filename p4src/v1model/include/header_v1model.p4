@@ -23,6 +23,8 @@ struct fabric_v1model_metadata_t {
     bit<1>                    drop_ctl;
     // The int_mirror_type emulates the mirror_type flag in ingress_intrinsic_metadata_for_deparser_t.
     IntReportType_t           int_mirror_type;
+    // This flag will emulate different queueIDs. Needed for Queue reports mainly.
+    QueueId_t                 qid;
 
     fabric_ingress_metadata_t ingress;
     fabric_egress_metadata_t  egress;

@@ -2107,7 +2107,7 @@ class FabricDropReportFilterTest(IntTest):
 
 
 @group("int")
-class FabricIntQueueReportTest(IntTest):
+class FabricIntQueueReportTest(IntTest, SlicingTest):
     @tvsetup
     @autocleanup
     def doRunTest(

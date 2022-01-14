@@ -69,7 +69,8 @@ control IngressSliceTcClassifier (inout ingress_headers_t         hdr,
 // applied after any other block writing slice_id and tc.
 control IngressQos (inout fabric_ingress_metadata_t fabric_md,
                     inout standard_metadata_t       standard_md,
-                    inout bit<1>                    drop_ctl){
+                    inout bit<1>                    drop_ctl,
+                    inout QueueId_t                 queueId){
 
     // From now on we use the concatenated slice_id++tc to aid the compiler in
     // optimizing resource allocation.
@@ -106,7 +107,8 @@ control IngressQos (inout fabric_ingress_metadata_t fabric_md,
     direct_counter(CounterType.packets) queues_stats;
 
     action set_queue(QueueId_t qid) {
-        // Setting the queue id is useless for bmv2.
+        // Emulating different Queue IDs.
+        queueId = qid;
         queues_stats.count();
     }
 
