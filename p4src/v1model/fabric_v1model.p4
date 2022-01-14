@@ -138,7 +138,6 @@ control FabricEgress (inout v1model_header_t hdr,
             // Restore preserved metadata.
             fabric_md.egress.bridged.int_bmd.drop_reason = fabric_md.preserved_drop_reason;
             fabric_md.egress.bridged.int_bmd.report_type = fabric_md.preserved_report_type;
-            fabric_md.egress.int_report_md.eg_port = (PortId_t)fabric_md.preserved_egress_port;
 
             parser_emulator.apply(hdr, fabric_md.egress, standard_md);
         }
