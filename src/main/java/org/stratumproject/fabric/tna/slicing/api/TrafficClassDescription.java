@@ -66,7 +66,7 @@ public class TrafficClassDescription {
      *
      * @return maximum bitrate in bps
      */
-    public long getMaxRateBps() {
+    public long maxRateBps() {
         return maxRateBps;
     }
 
@@ -88,7 +88,7 @@ public class TrafficClassDescription {
      *
      * @return guaranteed minimum bitrate in bps
      */
-    public long getGminRateBps() {
+    public long gminRateBps() {
         return gminRateBps;
     }
 

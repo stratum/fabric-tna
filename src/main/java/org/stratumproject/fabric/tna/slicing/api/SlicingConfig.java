@@ -154,10 +154,7 @@ public class SlicingConfig extends Config<ApplicationId> {
         while (jsonSlices.hasNext()) {
             var jsonSlice = jsonSlices.next();
             var sliceId = SliceId.of(Integer.parseInt(jsonSlice.getKey()));
-            var sliceConfig = slice(sliceId);
-            if (sliceConfig != null) {
-                sliceConfigs.add(sliceConfig);
-            }
+            sliceConfigs.add(slice(sliceId));
         }
         return sliceConfigs;
     }
@@ -193,7 +190,10 @@ public class SlicingConfig extends Config<ApplicationId> {
     }
 
     public TrafficClassDescription tcConfig(SliceId sliceId, TrafficClass tc) throws ConfigException {
-        var tcNode = object.path(SLICES).path(sliceId.toString()).path(tc.name());
+        var tcNode = object.path(SLICES)
+                .path(sliceId.toString())
+                .path(TCS)
+                .path(tc.name());
         if (tcNode.isMissingNode()) {
             return null;
         }
