@@ -71,7 +71,7 @@ control FabricIngress (inout v1model_header_t hdr,
         }
 
         lkp_md_init.apply(hdr.ingress, fabric_md.ingress.lkp);
-        pkt_io.apply(hdr.ingress, fabric_md.ingress, fabric_md.skip_egress, standard_md);
+        pkt_io.apply(hdr.ingress, fabric_md.ingress, fabric_md.skip_egress, standard_md, fabric_md.preserved_egress_port);
 #ifdef WITH_INT
         int_watchlist.apply(hdr.ingress, fabric_md.ingress, standard_md, fabric_md.preserved_report_type);
 #endif // WITH_INT

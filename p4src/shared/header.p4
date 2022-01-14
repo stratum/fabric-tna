@@ -263,6 +263,7 @@ header int_report_metadata_t {
 
 @flexible
 struct int_bridged_metadata_t {
+    @field_list
     bit<3>          report_type;
     MirrorId_t      mirror_session_id;
     IntDropReason_t drop_reason;

@@ -23,7 +23,6 @@ control IntWatchlist(inout ingress_headers_t         hdr,
     action no_report() {
         fabric_md.bridged.int_bmd.report_type = INT_REPORT_TYPE_NO_REPORT;
         preserved_report_type = INT_REPORT_TYPE_NO_REPORT;
-
     }
 
     // Required by the control plane to distinguish entries used to exclude the INT
@@ -296,7 +295,7 @@ control IntEgress (inout v1model_header_t          hdr_v1model,
         fabric_md.int_report_md.mirror_type = FabricMirrorType_t.INT_REPORT;
         fabric_md.int_report_md.report_type = fabric_md.bridged.int_bmd.report_type;
         fabric_md.int_report_md.ig_port = fabric_md.bridged.base.ig_port;
-        fabric_md.int_report_md.eg_port =(PortId_t)fabric_v1model.preserved_egress_port;
+        fabric_md.int_report_md.eg_port = (PortId_t)fabric_v1model.preserved_egress_port;
         fabric_md.int_report_md.queue_id = egress_qid;
         fabric_md.int_report_md.queue_occupancy = standard_md.deq_qdepth;
         fabric_md.int_report_md.ig_tstamp = fabric_md.bridged.base.ig_tstamp[31:0];

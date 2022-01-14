@@ -8,7 +8,6 @@ control IntTnaEgressParserEmulator (inout v1model_header_t          hdr_v1model,
                                     inout fabric_egress_metadata_t  fabric_md,
                                     inout standard_metadata_t       standard_md) {
 
-
     // This control wraps all the logic defined within the TNA egress parser.
     // It actually does not perform any parsing of the packet.
 

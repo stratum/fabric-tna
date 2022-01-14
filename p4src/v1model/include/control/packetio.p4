@@ -6,10 +6,12 @@
 control PacketIoIngress(inout ingress_headers_t         hdr,
                         inout fabric_ingress_metadata_t fabric_md,
                         inout bool                      skip_egress,
-                        inout standard_metadata_t       standard_md) {
+                        inout standard_metadata_t       standard_md,
+                        inout FabricPortId_t            preserved_egress_port) {
     @hidden
     action do_packet_out() {
         standard_md.egress_spec = (PortId_t)hdr.packet_out.egress_port;
+        preserved_egress_port = hdr.packet_out.egress_port;
         fabric_md.egress_port_set = true;
         hdr.packet_out.setInvalid();
         skip_egress = true;
