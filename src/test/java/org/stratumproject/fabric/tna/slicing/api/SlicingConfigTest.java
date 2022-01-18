@@ -42,9 +42,9 @@ public class SlicingConfigTest {
         sliceDescr = config.slice(SliceId.of(0));
         assertEquals(SliceId.of(0), sliceDescr.id());
         assertEquals("Default", sliceDescr.name());
-        assertEquals(1, sliceDescr.tcConfigs().size());
+        assertEquals(1, sliceDescr.tcDescriptions().size());
 
-        tcDescr = sliceDescr.tcConfig(TrafficClass.REAL_TIME);
+        tcDescr = sliceDescr.tcDescription(TrafficClass.REAL_TIME);
         assertNotNull(tcDescr);
         assertEquals(QueueId.of(1), tcDescr.queueId());
         assertEquals(TrafficClassDescription.UNLIMITED_BPS, tcDescr.maxRateBps());
@@ -54,23 +54,23 @@ public class SlicingConfigTest {
         sliceDescr = config.slice(SliceId.of(1));
         assertEquals(SliceId.of(1), sliceDescr.id());
         assertEquals("P4-UPF", sliceDescr.name());
-        assertEquals(3, sliceDescr.tcConfigs().size());
+        assertEquals(3, sliceDescr.tcDescriptions().size());
 
-        tcDescr = sliceDescr.tcConfig(TrafficClass.CONTROL);
+        tcDescr = sliceDescr.tcDescription(TrafficClass.CONTROL);
         assertNotNull(tcDescr);
         assertEquals(QueueId.of(2), tcDescr.queueId());
         assertEquals(2000000, tcDescr.maxRateBps());
         assertEquals(0, tcDescr.gminRateBps());
         assertFalse(tcDescr.isSystemTc());
 
-        tcDescr = sliceDescr.tcConfig(TrafficClass.REAL_TIME);
+        tcDescr = sliceDescr.tcDescription(TrafficClass.REAL_TIME);
         assertNotNull(tcDescr);
         assertEquals(QueueId.of(3), tcDescr.queueId());
         assertEquals(50000000, tcDescr.maxRateBps());
         assertEquals(0, tcDescr.gminRateBps());
         assertFalse(tcDescr.isSystemTc());
 
-        tcDescr = sliceDescr.tcConfig(TrafficClass.ELASTIC);
+        tcDescr = sliceDescr.tcDescription(TrafficClass.ELASTIC);
         assertNotNull(tcDescr);
         assertEquals(QueueId.of(4), tcDescr.queueId());
         assertEquals(TrafficClassDescription.UNLIMITED_BPS, tcDescr.maxRateBps());
@@ -80,9 +80,9 @@ public class SlicingConfigTest {
         sliceDescr = config.slice(SliceId.of(2));
         assertEquals(SliceId.of(2), sliceDescr.id());
         assertEquals("BESS-UPF", sliceDescr.name());
-        assertEquals(1, sliceDescr.tcConfigs().size());
+        assertEquals(1, sliceDescr.tcDescriptions().size());
 
-        tcDescr = sliceDescr.tcConfig(TrafficClass.ELASTIC);
+        tcDescr = sliceDescr.tcDescription(TrafficClass.ELASTIC);
         assertNotNull(tcDescr);
         assertEquals(QueueId.of(5), tcDescr.queueId());
         assertEquals(TrafficClassDescription.UNLIMITED_BPS, tcDescr.maxRateBps());

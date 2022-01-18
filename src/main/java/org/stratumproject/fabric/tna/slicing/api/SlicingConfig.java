@@ -104,9 +104,12 @@ public class SlicingConfig extends Config<ApplicationId> {
             for (JsonNode tcNode : sliceNode.path(TCS)) {
                 if (!(hasOnlyFields((ObjectNode) tcNode, QUEUE_ID, MAX_RATE_BPS, GMIN_RATE_BPS, IS_SYSTEM_TC) &&
                         hasFields((ObjectNode) tcNode, QUEUE_ID) &&
-                        isIntegralNumber((ObjectNode) tcNode, QUEUE_ID, FieldPresence.MANDATORY, QueueId.MIN, QueueId.MAX) &&
-                        isIntegralNumber((ObjectNode) tcNode, MAX_RATE_BPS, FieldPresence.OPTIONAL, 0, TrafficClassDescription.UNLIMITED_BPS)) &&
-                        isIntegralNumber((ObjectNode) tcNode, GMIN_RATE_BPS, FieldPresence.OPTIONAL, 0, TrafficClassDescription.UNLIMITED_BPS) &&
+                        isIntegralNumber((ObjectNode) tcNode, QUEUE_ID, FieldPresence.MANDATORY,
+                                QueueId.MIN, QueueId.MAX) &&
+                        isIntegralNumber((ObjectNode) tcNode, MAX_RATE_BPS, FieldPresence.OPTIONAL, 0,
+                                TrafficClassDescription.UNLIMITED_BPS)) &&
+                        isIntegralNumber((ObjectNode) tcNode, GMIN_RATE_BPS, FieldPresence.OPTIONAL,
+                                0, TrafficClassDescription.UNLIMITED_BPS) &&
                         isBoolean((ObjectNode) tcNode, IS_SYSTEM_TC, FieldPresence.OPTIONAL)) {
                     return false;
                 }
@@ -120,8 +123,8 @@ public class SlicingConfig extends Config<ApplicationId> {
 
                 var systemTcsCount = 0;
                 for (SliceDescription sliceConfig : slices) {
-                    for (TrafficClassDescription tcConfig : sliceConfig.tcConfigs()) {
-                        if (tcConfig.isSystemTc()) {
+                    for (TrafficClassDescription tcDescription : sliceConfig.tcDescriptions()) {
+                        if (tcDescription.isSystemTc()) {
                             systemTcsCount++;
                         }
                     }
@@ -171,11 +174,11 @@ public class SlicingConfig extends Config<ApplicationId> {
                     "Slice %s must have a valid name", sliceId));
         }
 
-        Map<TrafficClass, TrafficClassDescription> tcConfigs = Maps.newHashMap();
-        var tcConfigFields = sliceNode.path(TCS).fields();
-        while (tcConfigFields.hasNext()) {
-            var tcConfigField = tcConfigFields.next();
-            var tcName = tcConfigField.getKey();
+        Map<TrafficClass, TrafficClassDescription> tcDescriptions = Maps.newHashMap();
+        var tcDescriptionFields = sliceNode.path(TCS).fields();
+        while (tcDescriptionFields.hasNext()) {
+            var tcDescriptionField = tcDescriptionFields.next();
+            var tcName = tcDescriptionField.getKey();
             TrafficClass tc;
             try {
                 tc = TrafficClass.valueOf(tcName);
@@ -183,13 +186,13 @@ public class SlicingConfig extends Config<ApplicationId> {
                 throw new ConfigException(format(
                         "%s is not a valid traffic class for slice %s", tcName, sliceId), e);
             }
-            tcConfigs.put(tc, tcConfig(sliceId, tc));
+            tcDescriptions.put(tc, tcDescription(sliceId, tc));
         }
 
-        return new SliceDescription(sliceId, name, tcConfigs);
+        return new SliceDescription(sliceId, name, tcDescriptions);
     }
 
-    public TrafficClassDescription tcConfig(SliceId sliceId, TrafficClass tc) throws ConfigException {
+    public TrafficClassDescription tcDescription(SliceId sliceId, TrafficClass tc) throws ConfigException {
         var tcNode = object.path(SLICES)
                 .path(sliceId.toString())
                 .path(TCS)

@@ -28,14 +28,14 @@ public interface SlicingProviderService {
     boolean removeSlice(SliceId sliceId);
 
     /**
-     * Adds a traffic class to given slice.
+     * Adds a traffic class to the given slice.
      *
      * @param sliceId slice identifier
-     * @param tcConfig traffic class config
+     * @param tcDescription traffic class config
      * @return true if the traffic class is added to given slice successfully.
      * @throws SlicingException if an error occurred.
      */
-    boolean addTrafficClass(SliceId sliceId, TrafficClassDescription tcConfig);
+    boolean addTrafficClass(SliceId sliceId, TrafficClassDescription tcDescription);
 
     /**
      * Removes a traffic class from given slice.

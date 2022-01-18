@@ -360,7 +360,8 @@ public class SlicingManagerTest {
         manager.addSlice(SLICE_IDS.get(1));
 
         exceptionRule.expect(SlicingException.class);
-        exceptionRule.expectMessage("Cannot set CONTROL as the default traffic class because it has not been allocated to slice 1");
+        exceptionRule.expectMessage("Cannot set CONTROL as the default traffic " +
+                "class because it has not been allocated to slice 1");
         manager.setDefaultTrafficClass(SLICE_IDS.get(1), TrafficClass.CONTROL);
     }
 

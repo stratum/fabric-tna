@@ -18,11 +18,11 @@ public class SliceDescription {
 
     private final SliceId id;
     private final String name;
-    private final ImmutableMap<TrafficClass, TrafficClassDescription> tcConfigs;
+    private final ImmutableMap<TrafficClass, TrafficClassDescription> tcDescriptions;
 
-    public SliceDescription(SliceId id, String name, Map<TrafficClass, TrafficClassDescription> tcConfigs) {
+    public SliceDescription(SliceId id, String name, Map<TrafficClass, TrafficClassDescription> tcDescriptions) {
         this.id = id;
-        this.tcConfigs = ImmutableMap.copyOf(tcConfigs);
+        this.tcDescriptions = ImmutableMap.copyOf(tcDescriptions);
         this.name = name;
     }
 
@@ -30,12 +30,12 @@ public class SliceDescription {
         return id;
     }
 
-    public Collection<TrafficClassDescription> tcConfigs() {
-        return tcConfigs.values();
+    public Collection<TrafficClassDescription> tcDescriptions() {
+        return tcDescriptions.values();
     }
 
-    public TrafficClassDescription tcConfig(TrafficClass tc) {
-        return tcConfigs.get(tc);
+    public TrafficClassDescription tcDescription(TrafficClass tc) {
+        return tcDescriptions.get(tc);
     }
 
     public String name() {
@@ -53,12 +53,12 @@ public class SliceDescription {
         SliceDescription that = (SliceDescription) o;
         return Objects.equal(id, that.id) &&
                 Objects.equal(name, that.name) &&
-                Objects.equal(tcConfigs, that.tcConfigs);
+                Objects.equal(tcDescriptions, that.tcDescriptions);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(id, name, tcConfigs);
+        return Objects.hashCode(id, name, tcDescriptions);
     }
 
     @Override
@@ -66,7 +66,7 @@ public class SliceDescription {
         return MoreObjects.toStringHelper(this)
                 .add("id", id)
                 .add("name", name)
-                .add("tcConfigs", tcConfigs)
+                .add("tcs", tcDescriptions)
                 .toString();
     }
 

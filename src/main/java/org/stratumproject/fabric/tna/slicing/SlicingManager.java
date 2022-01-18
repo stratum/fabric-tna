@@ -180,7 +180,8 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
         defaultTcStore.addListener(defaultTcListener);
 
         // Default slice is pre-provisioned.
-        sliceStore.put(new SliceStoreKey(SliceId.DEFAULT, TrafficClass.BEST_EFFORT), TrafficClassDescription.BEST_EFFORT);
+        sliceStore.put(new SliceStoreKey(SliceId.DEFAULT, TrafficClass.BEST_EFFORT),
+                TrafficClassDescription.BEST_EFFORT);
         defaultTcStore.put(SliceId.DEFAULT, TrafficClass.BEST_EFFORT);
 
         deviceListener = new InternalDeviceListener();
@@ -269,27 +270,27 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
     }
 
     @Override
-    public boolean addTrafficClass(SliceId sliceId, TrafficClassDescription tcConfig) {
-        return addTrafficClassInternal(false, sliceId, tcConfig);
+    public boolean addTrafficClass(SliceId sliceId, TrafficClassDescription tcDescription) {
+        return addTrafficClassInternal(false, sliceId, tcDescription);
     }
 
-    private boolean addTrafficClassInternal(boolean addSlice, SliceId sliceId, TrafficClassDescription tcConfig) {
+    private boolean addTrafficClassInternal(boolean addSlice, SliceId sliceId, TrafficClassDescription tcDescription) {
         if (!addSlice && !sliceExists(sliceId)) {
             throw new SlicingException(INVALID, format(
                     "Cannot add traffic class to non-existent slice %s", sliceId));
         }
 
         StringBuilder errorMessage = new StringBuilder();
-        SliceStoreKey key = new SliceStoreKey(sliceId, tcConfig.trafficClass());
+        SliceStoreKey key = new SliceStoreKey(sliceId, tcDescription.trafficClass());
         sliceStore.compute(key, (k, v) -> {
             if (v != null) {
                 errorMessage.append(format("TC %s is already allocated for slice %s",
-                        tcConfig.trafficClass(), sliceId));
+                        tcDescription.trafficClass(), sliceId));
                 return v;
             }
 
-            log.info("Added traffic class {} to slice {}: {}", tcConfig.trafficClass(), sliceId, tcConfig);
-            return tcConfig;
+            log.info("Added traffic class {} to slice {}: {}", tcDescription.trafficClass(), sliceId, tcDescription);
+            return tcDescription;
         });
 
         if (errorMessage.length() != 0) {
@@ -592,7 +593,8 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
                         if (workPartitionService.isMine(event.newValue().value(), toStringHasher())) {
                             deviceService.getAvailableDevices().forEach(device ->
                                     addQueuesFlowRules(device.id(),
-                                            event.key().sliceId(), event.key().trafficClass(), event.newValue().value().queueId())
+                                            event.key().sliceId(), event.key().trafficClass(),
+                                            event.newValue().value().queueId())
                             );
                         }
                         break;
@@ -600,7 +602,8 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
                         if (workPartitionService.isMine(event.oldValue().value(), toStringHasher())) {
                             deviceService.getAvailableDevices().forEach(device ->
                                     removeQueuesFlowRules(device.id(),
-                                            event.key().sliceId(), event.key().trafficClass(), event.oldValue().value().queueId())
+                                            event.key().sliceId(), event.key().trafficClass(),
+                                            event.oldValue().value().queueId())
                             );
                         }
                         break;
