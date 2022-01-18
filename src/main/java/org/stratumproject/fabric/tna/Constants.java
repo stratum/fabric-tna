@@ -1,9 +1,7 @@
 // Copyright 2020-present Open Networking Foundation
 // SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 
-// Do not modify this file manually, use `make constants` to generate this file.
-
-package org.stratumproject.fabric.tna.behaviour;
+package org.stratumproject.fabric.tna;
 
 import com.google.common.collect.ImmutableMap;
 

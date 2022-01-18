@@ -16,9 +16,9 @@ import java.util.Optional;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.onosproject.net.pi.model.PiPipeconf.ExtensionType.CPU_PORT_TXT;
 import static org.slf4j.LoggerFactory.getLogger;
-import static org.stratumproject.fabric.tna.behaviour.Constants.BMV2_COLOR_RED;
-import static org.stratumproject.fabric.tna.behaviour.Constants.TNA;
-import static org.stratumproject.fabric.tna.behaviour.Constants.V1MODEL;
+import static org.stratumproject.fabric.tna.Constants.BMV2_COLOR_RED;
+import static org.stratumproject.fabric.tna.Constants.TNA;
+import static org.stratumproject.fabric.tna.Constants.V1MODEL;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_SESSIONS;
 
 /**

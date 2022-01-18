@@ -33,7 +33,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.onosproject.segmentrouting.metadata.SRObjectiveMetadata.EDGE_PORT;
 import static org.onosproject.segmentrouting.metadata.SRObjectiveMetadata.INFRA_PORT;
-import static org.stratumproject.fabric.tna.behaviour.Constants.*;
+import static org.stratumproject.fabric.tna.Constants.PORT_TYPE_EDGE;
+import static org.stratumproject.fabric.tna.Constants.PORT_TYPE_INFRA;
+import static org.stratumproject.fabric.tna.Constants.PORT_TYPE_MASK;
 
 /**
  * Test cases for ForwardingObjectiveTranslator.

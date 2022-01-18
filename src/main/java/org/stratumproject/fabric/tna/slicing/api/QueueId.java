@@ -5,7 +5,7 @@ package org.stratumproject.fabric.tna.slicing.api;
 import org.onlab.util.Identifier;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static org.stratumproject.fabric.tna.behaviour.Constants.QUEUE_ID_BEST_EFFORT;
+import static org.stratumproject.fabric.tna.Constants.QUEUE_ID_BEST_EFFORT;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_EGRESS_QID_BITWIDTH;
 
 /**

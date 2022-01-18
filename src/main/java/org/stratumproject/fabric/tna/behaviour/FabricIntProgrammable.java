@@ -74,8 +74,8 @@ import static org.onosproject.net.group.DefaultGroupBucket.createCloneGroupBucke
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.KRYO;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.doCareRangeMatch;
 
-import static org.stratumproject.fabric.tna.behaviour.Constants.V1MODEL_INT_REPORT_MIRROR_ID;
-import static org.stratumproject.fabric.tna.behaviour.Constants.V1MODEL_RECIRC_PORT;
+import static org.stratumproject.fabric.tna.Constants.V1MODEL_INT_REPORT_MIRROR_ID;
+import static org.stratumproject.fabric.tna.Constants.V1MODEL_RECIRC_PORT;
 
 /**
  * Implementation of INT programmable behavior for fabric.p4.

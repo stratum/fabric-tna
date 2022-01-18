@@ -91,8 +91,8 @@ import static org.stratumproject.fabric.tna.behaviour.FabricUtils.doCareRangeMat
 import static org.stratumproject.fabric.tna.utils.TestUtils.getIntReportConfig;
 import static org.stratumproject.fabric.tna.utils.TestUtils.getSrConfig;
 
-import static org.stratumproject.fabric.tna.behaviour.Constants.V1MODEL_RECIRC_PORT;
-import static org.stratumproject.fabric.tna.behaviour.Constants.V1MODEL_INT_REPORT_MIRROR_ID;
+import static org.stratumproject.fabric.tna.Constants.V1MODEL_RECIRC_PORT;
+import static org.stratumproject.fabric.tna.Constants.V1MODEL_INT_REPORT_MIRROR_ID;
 
 /**
  * Tests for fabric INT programmable behaviour.
