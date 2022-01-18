@@ -40,7 +40,7 @@ import org.onosproject.net.pi.runtime.PiCounterCellHandle;
 import org.onosproject.net.pi.runtime.PiCounterCellId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.stratumproject.fabric.tna.PipeconfLoader;
+import org.stratumproject.fabric.tna.Constants;
 import org.stratumproject.fabric.tna.behaviour.FabricCapabilities;
 
 import java.nio.ByteBuffer;
@@ -115,7 +115,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         packetService = handler().get(PacketService.class);
         upfTranslator = new FabricUpfTranslator();
         final CoreService coreService = handler().get(CoreService.class);
-        appId = coreService.getAppId(PipeconfLoader.APP_NAME_UPF);
+        appId = coreService.getAppId(Constants.APP_NAME_UPF);
         if (appId == null) {
             log.warn("Application ID is null. Cannot initialize behaviour.");
             return false;

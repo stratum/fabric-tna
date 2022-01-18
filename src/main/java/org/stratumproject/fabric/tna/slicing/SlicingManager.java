@@ -65,6 +65,7 @@ import java.util.stream.Collectors;
 import static java.lang.String.format;
 import static org.onlab.util.Tools.groupedThreads;
 import static org.slf4j.LoggerFactory.getLogger;
+import static org.stratumproject.fabric.tna.Constants.APP_NAME_SLICING;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.fiveTupleOnly;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.sliceTcConcat;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_QOS_DEFAULT_TC;
@@ -109,7 +110,6 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
 
 
     private static final Logger log = getLogger(SlicingManager.class);
-    private static final String APP_NAME = "org.stratumproject.fabric.tna.slicing"; // TODO revisit naming
     private static final int QOS_FLOW_PRIORITY = 10;
     private static final int DEFAULT_TC_PRIORITY = 10;
 
@@ -139,7 +139,7 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
 
     @Activate
     protected void activate() {
-        appId = coreService.registerApplication(APP_NAME);
+        appId = coreService.registerApplication(APP_NAME_SLICING);
 
         KryoNamespace.Builder serializer = KryoNamespace.newBuilder()
                 .register(KryoNamespaces.API)

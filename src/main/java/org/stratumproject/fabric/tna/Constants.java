@@ -1,4 +1,4 @@
-// Copyright 2020-present Open Networking Foundation
+// Copyright $today.year-present Open Networking Foundation
 // SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 
 package org.stratumproject.fabric.tna;
@@ -16,6 +16,13 @@ import static org.onosproject.segmentrouting.metadata.SRObjectiveMetadata.PAIR_P
  * Constant values.
  */
 public final class Constants {
+
+    // TODO: use consistent naming, and potentially just one app name
+    //  After all, the actual app in the ONOS sense is just one.
+    public static final String APP_NAME = "org.stratumproject.fabric-tna";
+    public static final String APP_NAME_UPF = "org.stratumproject.fabric-tna.upf";
+    public static final String APP_NAME_SLICING = "org.stratumproject.fabric.tna.slicing";
+    public static final String APP_NAME_INT = "org.stratumproject.fabric.tna.inbandtelemetry";
 
     public static final byte[] ONE = new byte[]{1};
     public static final byte[] ZERO = new byte[]{0};

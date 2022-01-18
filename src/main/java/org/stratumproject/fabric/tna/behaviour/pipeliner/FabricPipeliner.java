@@ -47,7 +47,7 @@ import org.onosproject.net.group.GroupService;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
 import org.slf4j.Logger;
-import org.stratumproject.fabric.tna.PipeconfLoader;
+import org.stratumproject.fabric.tna.Constants;
 import org.stratumproject.fabric.tna.behaviour.AbstractFabricHandlerBehavior;
 import org.stratumproject.fabric.tna.behaviour.FabricCapabilities;
 import org.stratumproject.fabric.tna.behaviour.P4InfoConstants;
@@ -129,7 +129,7 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
         this.forwardingTranslator = new ForwardingObjectiveTranslator(deviceId, capabilities);
         this.nextTranslator = new NextObjectiveTranslator(deviceId, capabilities);
         this.coreService = context.directory().get(CoreService.class);
-        this.appId = coreService.getAppId(PipeconfLoader.APP_NAME);
+        this.appId = coreService.getAppId(Constants.APP_NAME);
 
         initializePipeline();
     }

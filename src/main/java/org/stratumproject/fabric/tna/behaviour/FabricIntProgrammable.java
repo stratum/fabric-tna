@@ -57,7 +57,7 @@ import org.onosproject.net.pi.model.PiTableModel;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
 import org.onosproject.segmentrouting.config.SegmentRoutingDeviceConfig;
-import org.stratumproject.fabric.tna.PipeconfLoader;
+import org.stratumproject.fabric.tna.Constants;
 import org.stratumproject.fabric.tna.inbandtelemetry.IntProgrammable;
 import org.stratumproject.fabric.tna.inbandtelemetry.IntReportConfig;
 
@@ -157,7 +157,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
         cfgService = handler().get(NetworkConfigService.class);
         hostService = handler().get(HostService.class);
         final CoreService coreService = handler().get(CoreService.class);
-        appId = coreService.getAppId(PipeconfLoader.APP_NAME);
+        appId = coreService.getAppId(Constants.APP_NAME);
         if (appId == null) {
             log.warn("Application ID is null. Cannot initialize behaviour.");
             return false;
