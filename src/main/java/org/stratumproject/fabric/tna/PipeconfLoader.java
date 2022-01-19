@@ -44,7 +44,7 @@ import static org.slf4j.LoggerFactory.getLogger;
  * Component responsible for registering the fabric-tna pipeconf
  * at app activation.
  */
-@Component(immediate = true)
+@Component(immediate = true, service = PipeconfLoader.class)
 public class PipeconfLoader {
 
     private static Logger log = getLogger(PipeconfLoader.class);

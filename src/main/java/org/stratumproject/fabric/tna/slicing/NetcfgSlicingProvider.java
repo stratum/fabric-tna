@@ -3,11 +3,13 @@ package org.stratumproject.fabric.tna.slicing;
 import com.google.common.hash.Hashing;
 import org.onlab.util.SharedExecutors;
 import org.onosproject.core.ApplicationId;
+import org.onosproject.core.CoreService;
 import org.onosproject.net.config.ConfigException;
 import org.onosproject.net.config.ConfigFactory;
 import org.onosproject.net.config.NetworkConfigEvent;
 import org.onosproject.net.config.NetworkConfigListener;
 import org.onosproject.net.config.NetworkConfigRegistry;
+import org.onosproject.net.config.NetworkConfigService;
 import org.onosproject.net.config.basics.SubjectFactories;
 import org.onosproject.net.intent.WorkPartitionService;
 import org.osgi.service.component.annotations.Activate;
@@ -17,20 +19,23 @@ import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.stratumproject.fabric.tna.PipeconfLoader;
 import org.stratumproject.fabric.tna.slicing.api.SliceId;
 import org.stratumproject.fabric.tna.slicing.api.SlicingConfig;
 import org.stratumproject.fabric.tna.slicing.api.SlicingException;
 import org.stratumproject.fabric.tna.slicing.api.SlicingProviderService;
 import org.stratumproject.fabric.tna.slicing.api.SlicingService;
 
-import java.util.function.Function;
-
+import static org.stratumproject.fabric.tna.Constants.APP_NAME;
 import static org.stratumproject.fabric.tna.Constants.APP_NAME_SLICING;
 
 @Component(immediate = true)
 public class NetcfgSlicingProvider {
 
     private static final Logger log = LoggerFactory.getLogger(NetcfgSlicingProvider.class);
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY)
+    protected CoreService coreService;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     protected SlicingService slicingService;
@@ -42,7 +47,16 @@ public class NetcfgSlicingProvider {
     protected NetworkConfigRegistry netcfgRegistry;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
+    protected NetworkConfigService netcfgService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY)
     protected WorkPartitionService workPartitionService;
+
+    // Unused. Forces activation after PipeconfLoader, so we can obtain an appId.
+    @Reference(cardinality = ReferenceCardinality.MANDATORY)
+    protected PipeconfLoader pipeconfLoader;
+
+    private ApplicationId appId;
 
     private final InternalNetworkConfigListener netcfgListener = new InternalNetworkConfigListener();
     private final ConfigFactory<ApplicationId, SlicingConfig> configFactory = new ConfigFactory<>(
@@ -55,7 +69,8 @@ public class NetcfgSlicingProvider {
 
     @Activate
     protected void activate() {
-
+        // App already registered by PipeconfLoader.
+        appId = coreService.getAppId(APP_NAME);
         netcfgRegistry.registerConfigFactory(configFactory);
         netcfgRegistry.addListener(netcfgListener);
 
@@ -73,8 +88,13 @@ public class NetcfgSlicingProvider {
     }
 
     private void readInitialConfig() {
-        // TODO: implement
-        log.warn("Read initial config unimplemented");
+        if (shouldDoWork()) {
+            SlicingConfig config = netcfgService.getConfig(appId, SlicingConfig.class);
+            if (config != null) {
+                log.info("Reading initial config");
+                SharedExecutors.getSingleThreadExecutor().execute(() -> configAdded(config));
+            }
+        }
     }
 
     private void configAdded(SlicingConfig config) {
@@ -134,13 +154,17 @@ public class NetcfgSlicingProvider {
         log.info("Slicing config removed");
     }
 
+    private boolean shouldDoWork() {
+        return workPartitionService.isMine(APP_NAME_SLICING,
+                k -> Hashing.sha256().hashUnencodedChars(k).asLong());
+    }
+
     private class InternalNetworkConfigListener implements NetworkConfigListener {
         @Override
         public void event(NetworkConfigEvent event) {
             switch (event.type()) {
                 case CONFIG_ADDED:
-                    if (event.config().isPresent() &&
-                            workPartitionService.isMine(APP_NAME_SLICING, toStringHasher())) {
+                    if (event.config().isPresent() && shouldDoWork()) {
                         SharedExecutors.getSingleThreadExecutor().execute(
                                 () -> configAdded((SlicingConfig) event.config().get()));
                     }
@@ -150,8 +174,7 @@ public class NetcfgSlicingProvider {
                             "please remove and re-add the config");
                     break;
                 case CONFIG_REMOVED:
-                    if (event.prevConfig().isPresent() &&
-                            workPartitionService.isMine(APP_NAME_SLICING, toStringHasher())) {
+                    if (event.prevConfig().isPresent() && shouldDoWork()) {
                         SharedExecutors.getSingleThreadExecutor().execute(
                                 () -> configRemoved((SlicingConfig) event.prevConfig().get()));
                     }
@@ -166,9 +189,4 @@ public class NetcfgSlicingProvider {
             return event.configClass().equals(SlicingConfig.class);
         }
     }
-
-    private static <K> Function<K, Long> toStringHasher() {
-        return k -> Hashing.sha256().hashUnencodedChars(k.toString()).asLong();
-    }
-
 }
