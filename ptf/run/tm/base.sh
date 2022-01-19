@@ -9,6 +9,7 @@ FABRIC_TNA_ROOT="${DIR}"/../../..
 TM_PORT_JSON=${TM_PORT_JSON:-""}
 TM_DOD=${TM_DOD:-""}
 ENABLE_P4RUNTIME_TRANSLATION=${ENABLE_P4RUNTIME_TRANSLATION:-""}
+STRATUM_ARGS=()
 
 # shellcheck source=.env
 source "${FABRIC_TNA_ROOT}"/.env
@@ -122,7 +123,7 @@ docker run --name ${tmRunName} -d -t --privileged \
 sleep 5
 
 if [[ -n "${ENABLE_P4RUNTIME_TRANSLATION}" ]]; then
-  STRATUM_ARGS+=("--enable_p4runtime_translation")
+  STRATUM_ARGS+=("--experimental_enable_p4runtime_translation")
 fi
 
 # Run Stratum container

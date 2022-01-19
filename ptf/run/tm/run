@@ -5,6 +5,7 @@
 set -eu -o pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
+TEST=${TEST:-}
 # shellcheck source=ptf/run/tm/base.sh
 source "${DIR}/base.sh"
 testerRunName=tester-${randomNum}
@@ -18,6 +19,7 @@ docker run --name "${testerRunName}" "${it}" --privileged --rm \
     -v "${FABRIC_TNA_ROOT}":/fabric-tna \
     -e P4C_OUT="${P4C_OUT}" \
     -e PTF_FILTER="${PTF_FILTER}" \
+    -e TEST="${TEST}" \
     --entrypoint /fabric-tna/ptf/run/tm/start_test.sh \
     "${TESTER_DOCKER_IMG}" \
     ${@}
