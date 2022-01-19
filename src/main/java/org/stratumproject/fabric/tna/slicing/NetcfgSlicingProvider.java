@@ -73,7 +73,7 @@ public class NetcfgSlicingProvider {
     }
 
     private void readInitialConfig() {
-        // FIXME: implement
+        // TODO: implement
         log.warn("Read initial config unimplemented");
     }
 
