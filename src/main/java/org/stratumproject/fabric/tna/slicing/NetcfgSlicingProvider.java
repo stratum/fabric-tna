@@ -92,12 +92,12 @@ public class NetcfgSlicingProvider {
             SlicingConfig config = netcfgService.getConfig(appId, SlicingConfig.class);
             if (config != null) {
                 log.info("Reading initial config");
-                SharedExecutors.getSingleThreadExecutor().execute(() -> configAdded(config));
+                SharedExecutors.getSingleThreadExecutor().execute(() -> addConfig(config));
             }
         }
     }
 
-    private void configAdded(SlicingConfig config) {
+    private void addConfig(SlicingConfig config) {
         try {
             config.slices().forEach(sliceDescr -> {
                 if (!sliceDescr.id().equals(SliceId.DEFAULT)) {
@@ -127,7 +127,7 @@ public class NetcfgSlicingProvider {
         log.info("Slicing config added");
     }
 
-    private void configRemoved(SlicingConfig config) {
+    private void removeConfig(SlicingConfig config) {
         try {
             config.slices().forEach(sliceDescr -> {
                 if (sliceDescr.id().equals(SliceId.DEFAULT)) {
@@ -166,7 +166,7 @@ public class NetcfgSlicingProvider {
                 case CONFIG_ADDED:
                     if (event.config().isPresent() && shouldDoWork()) {
                         SharedExecutors.getSingleThreadExecutor().execute(
-                                () -> configAdded((SlicingConfig) event.config().get()));
+                                () -> addConfig((SlicingConfig) event.config().get()));
                     }
                     break;
                 case CONFIG_UPDATED:
@@ -176,7 +176,7 @@ public class NetcfgSlicingProvider {
                 case CONFIG_REMOVED:
                     if (event.prevConfig().isPresent() && shouldDoWork()) {
                         SharedExecutors.getSingleThreadExecutor().execute(
-                                () -> configRemoved((SlicingConfig) event.prevConfig().get()));
+                                () -> removeConfig((SlicingConfig) event.prevConfig().get()));
                     }
                     break;
                 default:
