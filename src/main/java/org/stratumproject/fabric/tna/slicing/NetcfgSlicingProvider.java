@@ -1,20 +1,15 @@
 package org.stratumproject.fabric.tna.slicing;
 
-import org.onlab.packet.EthType;
-import org.onlab.packet.IpAddress;
-import org.onlab.packet.MacAddress;
-import org.onlab.packet.VlanId;
+import com.google.common.hash.Hashing;
+import org.onlab.util.SharedExecutors;
 import org.onosproject.core.ApplicationId;
-import org.onosproject.net.HostId;
-import org.onosproject.net.HostLocation;
 import org.onosproject.net.config.ConfigException;
 import org.onosproject.net.config.ConfigFactory;
 import org.onosproject.net.config.NetworkConfigEvent;
 import org.onosproject.net.config.NetworkConfigListener;
 import org.onosproject.net.config.NetworkConfigRegistry;
-import org.onosproject.net.config.NetworkConfigService;
-import org.onosproject.net.config.basics.BasicHostConfig;
 import org.onosproject.net.config.basics.SubjectFactories;
+import org.onosproject.net.intent.WorkPartitionService;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
@@ -22,23 +17,20 @@ import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.stratumproject.fabric.tna.slicing.api.SliceId;
 import org.stratumproject.fabric.tna.slicing.api.SlicingConfig;
+import org.stratumproject.fabric.tna.slicing.api.SlicingException;
 import org.stratumproject.fabric.tna.slicing.api.SlicingProviderService;
 import org.stratumproject.fabric.tna.slicing.api.SlicingService;
-import org.stratumproject.fabric.tna.slicing.api.TrafficClass;
 
-import java.util.Set;
-import java.util.concurrent.ExecutorService;
-import java.util.stream.Collectors;
+import java.util.function.Function;
 
-import static java.util.concurrent.Executors.newSingleThreadScheduledExecutor;
-import static org.onlab.util.Tools.groupedThreads;
-import static org.stratumproject.fabric.tna.PipeconfLoader.APP_NAME;
+import static org.stratumproject.fabric.tna.Constants.APP_NAME_SLICING;
 
-@Component(immediate = true, service = {
-        NetcfgSlicingProvider.class,
-})
+@Component(immediate = true)
 public class NetcfgSlicingProvider {
+
+    private static final Logger log = LoggerFactory.getLogger(NetcfgSlicingProvider.class);
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     protected SlicingService slicingService;
@@ -50,14 +42,9 @@ public class NetcfgSlicingProvider {
     protected NetworkConfigRegistry netcfgRegistry;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
-    protected NetworkConfigService netcfgService;
+    protected WorkPartitionService workPartitionService;
 
-    private ExecutorService eventExecutor;
-
-    private final Logger log = LoggerFactory.getLogger(getClass());
-    private final InternalNetworkConfigListener netcfgListener =
-            new InternalNetworkConfigListener();
-
+    private final InternalNetworkConfigListener netcfgListener = new InternalNetworkConfigListener();
     private final ConfigFactory<ApplicationId, SlicingConfig> configFactory = new ConfigFactory<>(
             SubjectFactories.APP_SUBJECT_FACTORY, SlicingConfig.class, "slicing") {
         @Override
@@ -68,7 +55,7 @@ public class NetcfgSlicingProvider {
 
     @Activate
     protected void activate() {
-        eventExecutor = newSingleThreadScheduledExecutor(groupedThreads("fabric-tna-slicing-netcfg", "events-%d", log));
+
         netcfgRegistry.registerConfigFactory(configFactory);
         netcfgRegistry.addListener(netcfgListener);
 
@@ -80,85 +67,94 @@ public class NetcfgSlicingProvider {
     @Deactivate
     protected void deactivate() {
         netcfgRegistry.removeListener(netcfgListener);
-        eventExecutor.shutdown();
         netcfgRegistry.unregisterConfigFactory(configFactory);
 
         log.info("Stopped");
     }
 
     private void readInitialConfig() {
-
+        // FIXME: implement
+        log.warn("Read initial config unimplemented");
     }
 
-    private void configAdded(SlicingConfig config) throws ConfigException {
-        config.slices().forEach(sliceDescr -> {
-            slicingProviderService.addSlice(sliceDescr.id());
-            sliceDescr.tcDescriptions().forEach(tcDescr -> {
-                slicingProviderService.addTrafficClass(sliceDescr.id(), tcDescr);
-            });
-        });
-    }
-
-    private void configRemoved() throws ConfigException {
-        slicingService.getSlices().forEach(sliceId -> {
-            slicingService.getTrafficClasses(sliceId).forEach(tc -> {
-                if (tc.equals(TrafficClass.BEST_EFFORT)) {
-                    return;
+    private void configAdded(SlicingConfig config) {
+        try {
+            config.slices().forEach(sliceDescr -> {
+                if (!sliceDescr.id().equals(SliceId.DEFAULT)) {
+                    try {
+                        slicingProviderService.addSlice(sliceDescr.id());
+                    } catch (SlicingException e) {
+                        log.error("Error adding slice", e);
+                    }
                 }
-                slicingProviderService.removeTrafficClass(sliceId, tc);
+                sliceDescr.tcDescriptions().forEach(tcDescr -> {
+                    try {
+                        slicingProviderService.addTrafficClass(sliceDescr.id(), tcDescr);
+                    } catch (SlicingException e) {
+                        log.error("Error adding traffic class", e);
+                    }
+                });
             });
-            slicingProviderService.removeSlice(sliceId);
-        });
+        } catch (ConfigException e) {
+            // TODO: Consider adding a reconciliation thread to eventually apply
+            //  the netcfg changes to the SlicingManager stores. Applies to
+            //  configRemoved() as well.
+            // SlicingExceptions might due to transient errors, e.g., ald slice
+            // pending removal. We should keep retrying and logging the error to
+            // signal the inconsistent state.
+            log.error("Error in slicing config", e);
+        }
+        log.info("Slicing config added");
     }
 
-    private void configUpdated(SlicingConfig config) {
-        // TODO: not supported for now? Remove all, then re-add
-        //  Maybe add CLI command to wipe out all slicing state? Including classifier flows?
-        // Remove removed slices
-
-        // Add added slices
-
-        // Add/remove tcs
+    private void configRemoved(SlicingConfig config) {
+        try {
+            config.slices().forEach(sliceDescr -> {
+                if (sliceDescr.id().equals(SliceId.DEFAULT)) {
+                    // Cannot remove default slice. Must remove individual
+                    // traffic classes, leaving BEST_EFFORT in place.
+                    sliceDescr.tcDescriptions().forEach(tcDescr -> {
+                        try {
+                            slicingProviderService.removeTrafficClass(sliceDescr.id(), tcDescr.trafficClass());
+                        } catch (SlicingException e) {
+                            log.error("Error removing traffic class from default slice", e);
+                        }
+                    });
+                } else {
+                    try {
+                        slicingProviderService.removeSlice(sliceDescr.id());
+                    } catch (SlicingException e) {
+                        log.error("Error removing slice", e);
+                    }
+                }
+            });
+        } catch (ConfigException e) {
+            log.error("Error in slicing config", e);
+        }
+        log.info("Slicing config removed");
     }
-
-    // TODO: listen for netcfg, register slices/tcs with slicingProviderService
-    // Use reconciliation to notify errors periodically
-
-    /*
-    Get event
-    Work distribution? Checl netcfg link provider
-    Compare slicing description event with current store state
-    Should we check diff? netcfg generates event only if diff
-
-    Reconciliation
-    Every 30 seconds
-    Gett current netcfg
-    Diff with slicingmanager store
-    If diff -> correct, log errors
-
-    Example errors could be classifier flows still using the slice or TC
-    Or default TCs, but we can change the default TC...
-     */
-
-    // New slicing config
-    // Remove slicing config -> Error
-    // Add slice to existing config -> Error
-    // Remove slice from existing config -> Error
-    //
 
     private class InternalNetworkConfigListener implements NetworkConfigListener {
         @Override
         public void event(NetworkConfigEvent event) {
-
             switch (event.type()) {
                 case CONFIG_ADDED:
-                    // TODO: add slices and tcs
+                    if (event.config().isPresent() &&
+                            workPartitionService.isMine(APP_NAME_SLICING, toStringHasher())) {
+                        SharedExecutors.getSingleThreadExecutor().execute(
+                                () -> configAdded((SlicingConfig) event.config().get()));
+                    }
                     break;
                 case CONFIG_UPDATED:
-                    // TODO: some slices / tcs have been updated
-=                    break;
+                    log.error("Updating the slicing config is not supported," +
+                            "please remove and re-add the config");
+                    break;
                 case CONFIG_REMOVED:
-                    // TODO: remove all slices and tcs
+                    if (event.prevConfig().isPresent() &&
+                            workPartitionService.isMine(APP_NAME_SLICING, toStringHasher())) {
+                        SharedExecutors.getSingleThreadExecutor().execute(
+                                () -> configRemoved((SlicingConfig) event.prevConfig().get()));
+                    }
                     break;
                 default:
                     break;
@@ -169,6 +165,10 @@ public class NetcfgSlicingProvider {
         public boolean isRelevant(NetworkConfigEvent event) {
             return event.configClass().equals(SlicingConfig.class);
         }
+    }
+
+    private static <K> Function<K, Long> toStringHasher() {
+        return k -> Hashing.sha256().hashUnencodedChars(k.toString()).asLong();
     }
 
 }

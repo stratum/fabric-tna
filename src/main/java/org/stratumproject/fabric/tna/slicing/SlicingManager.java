@@ -81,6 +81,7 @@ import static org.stratumproject.fabric.tna.slicing.api.SlicingException.Type.UN
  */
 @Component(immediate = true, service = {
         SlicingService.class,
+        SlicingProviderService.class,
         SlicingAdminService.class
 })
 public class SlicingManager implements SlicingService, SlicingProviderService, SlicingAdminService {

@@ -11,6 +11,7 @@ import com.google.common.base.Objects;
  */
 public class TrafficClassDescription {
 
+    public static final String UNLIMITED = "UNLIMITED";
     public static final long UNLIMITED_BPS = Long.MAX_VALUE;
 
     // Common to all slices. No bandwidth guarantees or limitations.
@@ -127,7 +128,7 @@ public class TrafficClassDescription {
         return MoreObjects.toStringHelper(this)
                 .add("tc", tc)
                 .add("qid", qid)
-                .add("maxRateBps", maxRateBps)
+                .add("maxRateBps", isMaxRateUnlimited() ? UNLIMITED : maxRateBps)
                 .add("gminRateBps", gminRateBps)
                 .add("isSystemTc", isSystemTc)
                 .toString();
