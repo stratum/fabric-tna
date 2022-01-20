@@ -211,7 +211,7 @@ public class FabricUpfTranslatorTest {
         ApplicationFilter translatedInterface;
         ApplicationFilter expectedInterface = TestUpfConstants.APPLICATION_FILTERING;
         try {
-            translatedInterface = upfTranslator.fabricEntryToApplicationFiltering(
+            translatedInterface = upfTranslator.fabricEntryToApplicationFilter(
                     TestUpfConstants.FABRIC_APPLICATION_FILTERING);
         } catch (UpfProgrammableException e) {
             assertThat("Fabric application filtering should correctly translate to abstract application without error",
@@ -423,7 +423,7 @@ public class FabricUpfTranslatorTest {
         FlowRule translatedRule;
         FlowRule expectedRule = TestUpfConstants.FABRIC_APPLICATION_FILTERING;
         try {
-            translatedRule = upfTranslator.applicationFilteringToFabricEntry(
+            translatedRule = upfTranslator.applicationFilterToFabricEntry(
                     TestUpfConstants.APPLICATION_FILTERING,
                     TestUpfConstants.DEVICE_ID,
                     TestUpfConstants.APP_ID);

@@ -103,7 +103,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     private long downlinkUpfTerminationsTableSize;
     private long upfCounterSize;
     private long gtpTunnelPeersTableSize;
-    private long applicationTableSize;
+    private long applicationFiltersTableSize;
 
     private ApplicationId appId;
 
@@ -193,7 +193,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         long downlinkUpfTerminationsTableSize = 0;
         long ingressGtpTunnelPeersTableSize = 0;
         long egressGtpTunnelPeersTableSize = 0;
-        long applicationTableSize = 0;
+        long applicationFiltersTableSize = 0;
 
         // Get table sizes of interest
         for (PiTableModel piTable : pipeconf.pipelineModel().tables()) {
@@ -206,7 +206,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
             } else if (piTable.id().equals(FABRIC_INGRESS_SPGW_DOWNLINK_TERMINATIONS)) {
                 downlinkUpfTerminationsTableSize = piTable.maxSize();
             } else if (piTable.id().equals(FABRIC_INGRESS_SPGW_APPLICATION_FILTERS)) {
-                applicationTableSize = piTable.maxSize();
+                applicationFiltersTableSize = piTable.maxSize();
             } else if (piTable.id().equals(FABRIC_INGRESS_SPGW_IG_TUNNEL_PEERS)) {
                 ingressGtpTunnelPeersTableSize = piTable.maxSize();
             } else if (piTable.id().equals(FABRIC_EGRESS_SPGW_EG_TUNNEL_PEERS)) {
@@ -225,8 +225,8 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         if (downlinkUpfTerminationsTableSize == 0) {
             throw new IllegalStateException("Unable to find downlink UPF Terminations table in pipeline model.");
         }
-        if (applicationTableSize == 0) {
-            throw new IllegalStateException("Unable to find applications table in pipeline model.");
+        if (applicationFiltersTableSize == 0) {
+            throw new IllegalStateException("Unable to find application filters table in pipeline model.");
         }
         if (ingressGtpTunnelPeersTableSize == 0) {
             throw new IllegalStateException("Unable to find ingress GTP tunnel peers table in pipeline model.");
@@ -256,7 +256,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         this.downlinkUeSessionsTableSize = downlinkUeSessionsTableSize;
         this.uplinkUpfTerminationsTableSize = uplinkUpfTerminationsTableSize;
         this.downlinkUpfTerminationsTableSize = downlinkUpfTerminationsTableSize;
-        this.applicationTableSize = applicationTableSize;
+        this.applicationFiltersTableSize = applicationFiltersTableSize;
         this.upfCounterSize = Math.min(ingressCounterSize, egressCounterSize);
         this.gtpTunnelPeersTableSize = Math.min(ingressGtpTunnelPeersTableSize, egressGtpTunnelPeersTableSize);
 
@@ -377,7 +377,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                     }
                     break;
                 case APPLICATION_FILTER:
-                    if (upfTranslator.isFabricApplication(entry)) {
+                    if (upfTranslator.isFabricApplicationFilter(entry)) {
                         toBeRemoved.add(entry);
                         entitiesCleared++;
                     }
@@ -423,8 +423,8 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     private Collection<UpfEntity> getApplicationFiltering() throws UpfProgrammableException {
         ArrayList<UpfEntity> appFiltering = new ArrayList<>();
         for (FlowRule flowRule : flowRuleService.getFlowEntries(deviceId)) {
-            if (upfTranslator.isFabricApplication(flowRule)) {
-                appFiltering.add(upfTranslator.fabricEntryToApplicationFiltering(flowRule));
+            if (upfTranslator.isFabricApplicationFilter(flowRule)) {
+                appFiltering.add(upfTranslator.fabricEntryToApplicationFilter(flowRule));
             }
         }
         return appFiltering;
@@ -574,7 +574,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
             case COUNTER:
                 return upfCounterSize;
             case APPLICATION_FILTER:
-                return applicationTableSize;
+                return applicationFiltersTableSize;
             default:
                 throw new UpfProgrammableException(format("Getting size of entity type %s not supported.",
                                                           entityType.humanReadableName()));
@@ -662,7 +662,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     }
 
     private void addApplicationFiltering(ApplicationFilter appFilter) throws UpfProgrammableException {
-        FlowRule flowRule = upfTranslator.applicationFilteringToFabricEntry(appFilter, deviceId, appId);
+        FlowRule flowRule = upfTranslator.applicationFilterToFabricEntry(appFilter, deviceId, appId);
         log.info("Installing {}", appFilter);
         flowRuleService.applyFlowRules(flowRule);
         log.debug("Application added with flowID {}", flowRule.id().value());
@@ -881,7 +881,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
     private void removeApplicationFiltering(ApplicationFilter appFilter)
             throws UpfProgrammableException {
-        PiCriterion match = upfTranslator.buildApplicationFilteringCriterion(appFilter);
+        PiCriterion match = upfTranslator.buildApplicationFilterCriterion(appFilter);
         removeEntry(match, FABRIC_INGRESS_SPGW_APPLICATION_FILTERS, false, appFilter.priority());
     }
 

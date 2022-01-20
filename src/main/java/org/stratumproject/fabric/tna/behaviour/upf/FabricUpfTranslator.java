@@ -164,13 +164,13 @@ public class FabricUpfTranslator {
     }
 
     /**
-     * Returns true if the given table entry is an applications table entry from the fabric.p4 physical pipeline, and
-     * false otherwise.
+     * Returns true if the given table entry is an application filters table entry
+     * from the fabric.p4 physical pipeline, and false otherwise.
      *
      * @param entry the entry that may or may not be a fabric.p4 application
-     * @return true if the entry is a fabric.p4 application
+     * @return true if the entry is a fabric.p4 application filter
      */
-    public boolean isFabricApplication(FlowRule entry) {
+    public boolean isFabricApplicationFilter(FlowRule entry) {
         return entry.table().equals(FABRIC_INGRESS_SPGW_APPLICATION_FILTERS);
     }
 
@@ -376,7 +376,7 @@ public class FabricUpfTranslator {
         return ifaceBuilder.build();
     }
 
-    public ApplicationFilter fabricEntryToApplicationFiltering(FlowRule entry)
+    public ApplicationFilter fabricEntryToApplicationFilter(FlowRule entry)
             throws UpfProgrammableException {
         assertTableId(entry, FABRIC_INGRESS_SPGW_APPLICATION_FILTERS);
         Pair<PiCriterion, PiTableAction> matchActionPair = FabricUpfTranslatorUtil.fabricEntryToPiPair(entry);
@@ -669,10 +669,10 @@ public class FabricUpfTranslator {
                 .build();
     }
 
-    public FlowRule applicationFilteringToFabricEntry(
+    public FlowRule applicationFilterToFabricEntry(
             ApplicationFilter appFilter, DeviceId deviceId, ApplicationId appId)
             throws UpfProgrammableException {
-        PiCriterion match = buildApplicationFilteringCriterion(appFilter);
+        PiCriterion match = buildApplicationFilterCriterion(appFilter);
         PiAction action = PiAction.builder()
                 .withId(FABRIC_INGRESS_SPGW_SET_APP_ID)
                 .withParameter(new PiActionParam(APP_ID, appFilter.appId()))
@@ -686,7 +686,7 @@ public class FabricUpfTranslator {
                 .build();
     }
 
-    public PiCriterion buildApplicationFilteringCriterion(ApplicationFilter appFilter) {
+    public PiCriterion buildApplicationFilterCriterion(ApplicationFilter appFilter) {
         PiCriterion.Builder matchBuilder = PiCriterion.builder();
         // FIXME: SLICE_MOBILE should come from the north instead of hardcoding.
         matchBuilder.matchExact(HDR_SLICE_ID, SLICE_MOBILE.id());
