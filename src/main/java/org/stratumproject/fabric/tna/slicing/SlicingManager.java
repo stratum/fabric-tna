@@ -135,6 +135,9 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
     private MapEventListener<SliceId, TrafficClass> defaultTcListener;
     private ExecutorService defaultTcExecutor;
 
+    private SliceId systemSliceId;
+    private TrafficClassDescription systemTc;
+
     private DeviceListener deviceListener;
     private ExecutorService deviceExecutor;
 
@@ -446,6 +449,16 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
                 .collect(Collectors.toSet());
     }
 
+    @Override
+    public SliceId getSystemSlice() {
+        return systemSliceId == null ? SliceId.DEFAULT : systemSliceId;
+    }
+
+    @Override
+    public TrafficClassDescription getSystemTrafficClass() {
+        return systemTc == null ? TrafficClassDescription.BEST_EFFORT : systemTc;
+    }
+
     private Set<TrafficSelector> getClassifierFlows(SliceId sliceId) {
         return classifierFlowStore.entrySet().stream()
                 .filter(e -> e.getValue().value().sliceId().equals(sliceId))
@@ -582,12 +595,46 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
         return flowRule;
     }
 
+    private void updateSystemTc() {
+        // Use getters to resolve null to the default values.
+        SliceId oldSystemSliceId = getSystemSlice();
+        TrafficClassDescription oldSystemTc = getSystemTrafficClass();
+        Set<SliceStoreKey> newSystemKeys = sliceStore.stream()
+                .filter(e -> e.getValue().value().isSystemTc())
+                .map(Entry::getKey)
+                .collect(Collectors.toSet());
+        if (newSystemKeys.isEmpty()) {
+            systemSliceId = null;
+            systemTc = null;
+        } else {
+            if (newSystemKeys.size() > 1) {
+                log.warn("Found more than one system traffic class, will pick a random one: {}", newSystemKeys);
+            }
+            var randomKey = newSystemKeys.iterator().next();
+            Versioned<TrafficClassDescription> entry = sliceStore.get(randomKey);
+            if (entry == null) {
+                log.error("Missing slice store entry for the system traffic class, BUG?");
+                systemSliceId = null;
+                systemTc = null;
+            } else {
+                systemSliceId = randomKey.sliceId();
+                systemTc = entry.value();
+            }
+        }
+        if (!getSystemSlice().equals(oldSystemSliceId) ||
+                !getSystemTrafficClass().equals(oldSystemTc)) {
+            log.info("System slice or traffic class updated: sliceId={}, tc={}",
+                    getSystemSlice(), getSystemTrafficClass());
+        }
+    }
+
     private class InternalSliceListener implements MapEventListener<SliceStoreKey, TrafficClassDescription> {
         public void event(MapEvent<SliceStoreKey, TrafficClassDescription> event) {
             // Update queues table on all devices.
             // Distribute work based on QueueId.
             log.info("Processing slice event {}", event);
             sliceExecutor.submit(() -> {
+                updateSystemTc();
                 switch (event.type()) {
                     case INSERT:
                     case UPDATE:
@@ -600,6 +647,7 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
                         }
                         break;
                     case REMOVE:
+
                         if (workPartitionService.isMine(event.oldValue().value(), toStringHasher())) {
                             deviceService.getAvailableDevices().forEach(device ->
                                     removeQueuesFlowRules(device.id(),

@@ -72,8 +72,23 @@ public interface SlicingService {
      * Gets all flows in given sliceId and traffic class.
      *
      * @param sliceId slice identifier
-     * @param tc traffic class
+     * @param tc      traffic class
      * @return set of flow identifiers
      */
     Set<TrafficSelector> getClassifierFlows(SliceId sliceId, TrafficClass tc);
+
+    /**
+     * Returns the ID of the slice to be used for system traffic.
+     *
+     * @return slice ID
+     */
+    SliceId getSystemSlice();
+
+    /**
+     * Returns the traffic class within the system slice ({@link
+     * #getSystemSlice()}) to be used for system traffic.
+     *
+     * @return traffic class description
+     */
+    TrafficClassDescription getSystemTrafficClass();
 }
