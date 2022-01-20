@@ -647,7 +647,6 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
                         }
                         break;
                     case REMOVE:
-
                         if (workPartitionService.isMine(event.oldValue().value(), toStringHasher())) {
                             deviceService.getAvailableDevices().forEach(device ->
                                     removeQueuesFlowRules(device.id(),
