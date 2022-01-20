@@ -56,7 +56,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.stratumproject.fabric.tna.behaviour.Constants.TNA;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_EG_TUNNEL_PEERS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_TERMINATIONS_COUNTER;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_APPLICATIONS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_APPLICATION_FILTERS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_SESSIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_TERMINATIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_IG_TUNNEL_PEERS;
@@ -95,7 +95,7 @@ public class FabricUpfProgrammableTest {
                                TestUpfConstants.PHYSICAL_MAX_TUNNELS),
             new MockTableModel(FABRIC_EGRESS_SPGW_EG_TUNNEL_PEERS,
                                TestUpfConstants.PHYSICAL_MAX_TUNNELS),
-            new MockTableModel(FABRIC_INGRESS_SPGW_APPLICATIONS,
+            new MockTableModel(FABRIC_INGRESS_SPGW_APPLICATION_FILTERS,
                                TestUpfConstants.PHYSICAL_MAX_APPLICATIONS)
     );
     private static final List<PiCounterModel> COUNTER_MODELS = ImmutableList.of(

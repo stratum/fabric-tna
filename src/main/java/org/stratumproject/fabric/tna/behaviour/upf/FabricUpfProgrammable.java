@@ -62,7 +62,7 @@ import static org.onosproject.net.pi.model.PiCounterType.INDIRECT;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_EG_TUNNEL_PEERS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_GTPU_ENCAP;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_TERMINATIONS_COUNTER;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_APPLICATIONS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_APPLICATION_FILTERS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_SESSIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_TERMINATIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_IG_TUNNEL_PEERS;
@@ -204,7 +204,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                 uplinkUpfTerminationsTableSize = piTable.maxSize();
             } else if (piTable.id().equals(FABRIC_INGRESS_SPGW_DOWNLINK_TERMINATIONS)) {
                 downlinkUpfTerminationsTableSize = piTable.maxSize();
-            } else if (piTable.id().equals(FABRIC_INGRESS_SPGW_APPLICATIONS)) {
+            } else if (piTable.id().equals(FABRIC_INGRESS_SPGW_APPLICATION_FILTERS)) {
                 applicationTableSize = piTable.maxSize();
             } else if (piTable.id().equals(FABRIC_INGRESS_SPGW_IG_TUNNEL_PEERS)) {
                 ingressGtpTunnelPeersTableSize = piTable.maxSize();
@@ -879,7 +879,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     private void removeApplicationFiltering(ApplicationFilter appFilter)
             throws UpfProgrammableException {
         PiCriterion match = upfTranslator.buildApplicationFilteringCriterion(appFilter);
-        removeEntry(match, FABRIC_INGRESS_SPGW_APPLICATIONS, false, appFilter.priority());
+        removeEntry(match, FABRIC_INGRESS_SPGW_APPLICATION_FILTERS, false, appFilter.priority());
     }
 
     private void applyUplinkRecirculation(Ip4Prefix subnet, boolean remove) {

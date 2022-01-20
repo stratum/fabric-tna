@@ -195,8 +195,8 @@ public final class P4InfoConstants {
             PiTableId.of("FabricIngress.qos.queues");
     public static final PiTableId FABRIC_INGRESS_SLICE_TC_CLASSIFIER_CLASSIFIER =
             PiTableId.of("FabricIngress.slice_tc_classifier.classifier");
-    public static final PiTableId FABRIC_INGRESS_SPGW_APPLICATIONS =
-            PiTableId.of("FabricIngress.spgw.applications");
+    public static final PiTableId FABRIC_INGRESS_SPGW_APPLICATION_FILTERS =
+            PiTableId.of("FabricIngress.spgw.application_filters");
     public static final PiTableId FABRIC_INGRESS_SPGW_DOWNLINK_SESSIONS =
             PiTableId.of("FabricIngress.spgw.downlink_sessions");
     public static final PiTableId FABRIC_INGRESS_SPGW_DOWNLINK_TERMINATIONS =

@@ -335,7 +335,7 @@ control SpgwIngress(
         internal_app_id = app_id;
     }
 
-    table applications {
+    table application_filters {
         key  = {
             fabric_md.spgw_slice_id : exact   @name("slice_id");
             app_ipv4_addr           : lpm     @name("app_ipv4_addr");
@@ -347,7 +347,7 @@ control SpgwIngress(
             @defaultonly nop;
         }
         const default_action = nop();
-        size = MAX_APPLICATIONS;
+        size = MAX_APPLICATION_FILTERS;
     }
 
     //=================================//
@@ -425,7 +425,7 @@ control SpgwIngress(
                 }
             }
 
-           applications.apply();
+           application_filters.apply();
 
             if (sess_hit) {
                 if (is_uplink) {
