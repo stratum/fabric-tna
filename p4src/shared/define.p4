@@ -47,7 +47,7 @@ typedef bit<SLICE_ID_WIDTH> slice_id_t;
 typedef bit<TC_WIDTH> tc_t; // Traffic Class (for QoS) whitin a slice
 typedef bit<SLICE_TC_WIDTH> slice_tc_t; // Slice and TC identifier
 
-@p4runtime_translation("tna/PortId_t", 9)
+@p4runtime_translation("tna/PortId_t", 32)
 type bit<9> FabricPortId_t;
 
 const slice_id_t DEFAULT_SLICE_ID = 0;

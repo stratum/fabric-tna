@@ -211,7 +211,15 @@ void runTmPtfTests() {
         if (PROFILE.equals("fabric")) {
           // Special case to test P4Runtime translation feature.
           // Will be removed once we enable the P4Runtime translation by default.
-          sh "TEST=\"p4rt.TableEntryReadWriteTest\" ENABLE_P4RUNTIME_TRANSLATION=1 ./ptf/run/tm/run \"${PROFILE}\""
+          String[] testList = [
+            "p4rt.TableEntryReadWriteTest",
+            "p4rt.ActionProfileGroupReadWriteTest",
+            "p4rt.ActionProfileGroupModificationTest",
+            "p4rt.MulticastGroupReadWriteTest",
+            "p4rt.MulticastGroupModificationTest",
+          ]
+          String tests = " ".join(tests);
+          sh "TEST=\"${tests}\" ENABLE_P4RUNTIME_TRANSLATION=1 ./ptf/run/tm/run \"${PROFILE}\""
         }
     }
 }

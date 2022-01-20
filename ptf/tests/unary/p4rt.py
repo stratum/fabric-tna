@@ -39,7 +39,7 @@ class ActionProfileMemberReadWriteTest(FabricTest):
     @autocleanup
     def doRunTest(self):
         req, _ = self.add_next_hashed_group_member(
-            "output_hashed", [("port_num", stringify(1, 2))]
+            "output_hashed", [("port_num", stringify(self.port1, 4))]
         )
         expected_action_profile_member = req.updates[0].entity.action_profile_member
         mbr_id = expected_action_profile_member.member_id
@@ -59,7 +59,7 @@ class ActionProfileGroupReadWriteTest(FabricTest):
     @autocleanup
     def doRunTest(self):
         req, _ = self.add_next_hashed_group_member(
-            "output_hashed", [("port_num", stringify(1, 2))]
+            "output_hashed", [("port_num", stringify(1, 4))]
         )
         member_installed = req.updates[0].entity.action_profile_member
         mbr_id = member_installed.member_id
@@ -83,7 +83,7 @@ class ActionProfileGroupModificationTest(FabricTest):
         mbr_ids = []
         for port_num in range(1, 4):
             req, _ = self.add_next_hashed_group_member(
-                "output_hashed", [("port_num", stringify(port_num, 2))]
+                "output_hashed", [("port_num", stringify(port_num, 4))]
             )
             member_installed = req.updates[0].entity.action_profile_member
             mbr_ids.append(member_installed.member_id)
@@ -116,7 +116,8 @@ class MulticastGroupReadWriteTest(FabricTest):
     @autocleanup
     def doRunTest(self):
         grp_id = 10
-        replicas = [(0, 1), (0, 2), (0, 3)]  # (instance, port)
+        # (instance, port)
+        replicas = [(0, self.port1), (0, self.port2), (0, self.port3)]
         req, _ = self.add_mcast_group(grp_id, replicas)
         expected_mc_entry = req.updates[
             0
@@ -138,7 +139,14 @@ class MulticastGroupModificationTest(FabricTest):
         # Add group with egress port 1~3 (instance 1 and 2)
         grp_id = 10
         # (instance, port)
-        replicas = [(1, 1), (1, 2), (1, 3), (2, 1), (2, 2), (2, 3)]
+        replicas = [
+          (1, self.port1),
+          (1, self.port2),
+          (1, self.port3),
+          (2, self.port1),
+          (2, self.port2),
+          (2, self.port3),
+        ]
         self.add_mcast_group(grp_id, replicas)
 
         # Modify the group with egress port 2~4 (instance 2 and 3)

@@ -200,7 +200,7 @@ INT_INS_TO_NAME = {
 PACKET_IN_MIRROR_ID = 0x1FF
 INT_REPORT_MIRROR_IDS = [0x200, 0x201, 0x202, 0x203]
 V1MODEL_INT_REPORT_MIRROR_ID = 0x1FA
-RECIRCULATE_PORTS = [68, 196, 324, 452]
+RECIRCULATE_PORTS = [p for p in range(0xFFFFFF00, 0xFFFFFF04)]
 RECIRCULATE_PORT_BMV2 = [510]
 SWITCH_ID = 1
 INT_REPORT_PORT = 32766
@@ -895,7 +895,7 @@ class FabricTest(P4RuntimeTest):
             "FabricEgress.pkt_io_egress.switch_info",
             None,
             "FabricEgress.pkt_io_egress.set_switch_info",
-            [("cpu_port", stringify(self.cpu_port, 2))],
+            [("cpu_port", stringify(self.cpu_port, 4))],
         )
         return req, self.write_request(req, store=False)
 
@@ -1238,7 +1238,7 @@ class FabricTest(P4RuntimeTest):
             "acl.acl",
             matches,
             "acl.set_output_port",
-            [("port_num", stringify(output_port, 2))],
+            [("port_num", stringify(output_port, 4))],
             priority,
         )
 
@@ -1367,8 +1367,8 @@ class FabricTest(P4RuntimeTest):
 
     def add_xconnect(self, next_id, port1, port2):
         next_id_ = stringify(next_id, 4)
-        port1_ = stringify(port1, 2)
-        port2_ = stringify(port2, 2)
+        port1_ = stringify(port1, 4)
+        port2_ = stringify(port2, 4)
         for (inport, outport) in ((port1_, port2_), (port2_, port1_)):
             self.send_request_add_entry_to_action(
                 "next.xconnect",
@@ -1378,14 +1378,14 @@ class FabricTest(P4RuntimeTest):
             )
 
     def add_next_output(self, next_id, egress_port):
-        egress_port_ = stringify(egress_port, 2)
+        egress_port_ = stringify(egress_port, 4)
         self.add_next_hashed_indirect_action(
             next_id, "next.output_hashed", [("port_num", egress_port_)]
         )
 
     def add_next_output_simple(self, next_id, egress_port):
         next_id_ = stringify(next_id, 4)
-        egress_port_ = stringify(egress_port, 2)
+        egress_port_ = stringify(egress_port, 4)
         self.send_request_add_entry_to_action(
             "next.simple",
             [self.Exact("next_id", next_id_)],
@@ -1414,7 +1414,7 @@ class FabricTest(P4RuntimeTest):
         )
 
     def add_next_routing(self, next_id, egress_port, smac, dmac):
-        egress_port_ = stringify(egress_port, 2)
+        egress_port_ = stringify(egress_port, 4)
         smac_ = mac_to_binary(smac)
         dmac_ = mac_to_binary(dmac)
         self.add_next_hashed_group_action(
@@ -1430,7 +1430,7 @@ class FabricTest(P4RuntimeTest):
 
     def add_next_routing_simple(self, next_id, egress_port, smac, dmac):
         next_id_ = stringify(next_id, 4)
-        egress_port_ = stringify(egress_port, 2)
+        egress_port_ = stringify(egress_port, 4)
         smac_ = mac_to_binary(smac)
         dmac_ = mac_to_binary(dmac)
         self.send_request_add_entry_to_action(
@@ -1497,7 +1497,7 @@ class FabricTest(P4RuntimeTest):
         actions = []
         if next_hops is not None:
             for (egress_port, smac, dmac) in next_hops:
-                egress_port_ = stringify(egress_port, 2)
+                egress_port_ = stringify(egress_port, 4)
                 smac_ = mac_to_binary(smac)
                 dmac_ = mac_to_binary(dmac)
                 actions.append(
@@ -1530,7 +1530,7 @@ class FabricTest(P4RuntimeTest):
             self.add_next_mpls(next_id, mpls_labels[0])
 
             for (egress_port, smac, dmac, _) in next_hops:
-                egress_port_ = stringify(egress_port, 2)
+                egress_port_ = stringify(egress_port, 4)
                 smac_ = mac_to_binary(smac)
                 dmac_ = mac_to_binary(dmac)
                 actions.append(
