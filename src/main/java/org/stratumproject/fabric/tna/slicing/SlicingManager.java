@@ -193,7 +193,6 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
                 "fabric-tna-device-event", "%d", log));
         deviceService.addListener(deviceListener);
 
-        // FIXME: do we still need these? REST APIs for manipulating slices are gone.
         codecService.registerCodec(SliceId.class, new SliceIdCodec());
         codecService.registerCodec(TrafficClass.class, new TrafficClassCodec());
 
@@ -367,22 +366,14 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
 
     @Override
     public boolean setDefaultTrafficClass(SliceId sliceId, TrafficClass tc) {
-        StringBuilder errorMessage = new StringBuilder();
-        // FIXME: this is ugly and race prone. should we let the data plane
-        //  handle inconsistencies? E.g. if a default TC has not been allocated,
-        //  then the switch should pick best effort.
-        sliceStore.compute(new SliceStoreKey(sliceId, tc), (k, v) -> {
-            if (v == null) {
-                errorMessage.append(format("Cannot set %s as the default traffic class because it has not" +
-                        " been allocated to slice %s", tc, sliceId));
-            } else {
-                defaultTcStore.put(sliceId, tc);
-            }
-            return v;
-        });
+        defaultTcStore.put(sliceId, tc);
 
-        if (errorMessage.length() != 0) {
-            throw new SlicingException(FAILED, errorMessage.toString());
+        boolean exists = sliceStore.containsKey(new SliceStoreKey(sliceId, tc));
+        if (!exists) {
+            log.warn("Default traffic class {} has not been allocated yet to slice {}, " +
+                            "devices might forward packets as BEST_EFFORT until the " +
+                            "traffic class is allocated",
+                    tc, sliceId);
         }
 
         return true;
@@ -640,18 +631,16 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
                     case UPDATE:
                         if (workPartitionService.isMine(event.newValue().value(), toStringHasher())) {
                             deviceService.getAvailableDevices().forEach(device ->
-                                    addQueuesFlowRules(device.id(),
-                                            event.key().sliceId(), event.key().trafficClass(),
-                                            event.newValue().value().queueId())
+                                    addQueuesFlowRules(device.id(), event.key().sliceId(),
+                                            event.key().trafficClass(), event.newValue().value().queueId())
                             );
                         }
                         break;
                     case REMOVE:
                         if (workPartitionService.isMine(event.oldValue().value(), toStringHasher())) {
                             deviceService.getAvailableDevices().forEach(device ->
-                                    removeQueuesFlowRules(device.id(),
-                                            event.key().sliceId(), event.key().trafficClass(),
-                                            event.oldValue().value().queueId())
+                                    removeQueuesFlowRules(device.id(), event.key().sliceId(),
+                                            event.key().trafficClass(), event.oldValue().value().queueId())
                             );
                         }
                         break;

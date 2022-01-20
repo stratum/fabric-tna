@@ -356,16 +356,6 @@ public class SlicingManagerTest {
     }
 
     @Test
-    public void testSetDefaultTrafficClassExceptionNotAllocated() {
-        manager.addSlice(SLICE_IDS.get(1));
-
-        exceptionRule.expect(SlicingException.class);
-        exceptionRule.expectMessage("Cannot set CONTROL as the default traffic " +
-                "class because it has not been allocated to slice 1");
-        manager.setDefaultTrafficClass(SLICE_IDS.get(1), TrafficClass.CONTROL);
-    }
-
-    @Test
     public void testRemoveTrafficClassExceptionDefaultTc() {
         manager.addTrafficClass(SLICE_IDS.get(0), TC_CONFIG_CONTROL);
         manager.setDefaultTrafficClass(SLICE_IDS.get(0), TrafficClass.CONTROL);
@@ -464,10 +454,10 @@ public class SlicingManagerTest {
         capturedAddedFlowRules.reset();
         manager.addSlice(SLICE_IDS.get(1));
         assertAfter(50, () -> {
-            assertEquals(3 * numDevices, capturedAddedFlowRules.getValues().size());
-            assertEquals(2, capturedAddedFlowRules.getValues().stream()
+            assertEquals(2 * numDevices, capturedAddedFlowRules.getValues().size());
+            assertEquals(numDevices, capturedAddedFlowRules.getValues().stream()
                     .filter(flowRule -> flowRule.exactMatch(queuesFlowRuleSlice1BestEffort)).count());
-            assertEquals(1, capturedAddedFlowRules.getValues().stream()
+            assertEquals(numDevices, capturedAddedFlowRules.getValues().stream()
                     .filter(flowRule -> flowRule.exactMatch(defaultTcFlowRuleSlice1BestEffort)).count());
         });
 
@@ -632,7 +622,7 @@ public class SlicingManagerTest {
         // activation stage, if the tests start immediately, the captured flows
         // may include slice flows (unexpceted).
         assertAfter(100, 250, () -> {
-            // Number of init flows are variant
+            // Number of init flows is variable.
             // For now we install 2 flows for each device
             assertEquals(2 * DEVICES.size(), capturedAddedFlowRules.getValues().size());
         });
