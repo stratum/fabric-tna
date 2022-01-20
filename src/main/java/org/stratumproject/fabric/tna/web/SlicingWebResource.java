@@ -39,7 +39,6 @@ public class SlicingWebResource extends AbstractWebResource {
 
     /**
      * Get all slices currently programmed.
-     * Pre-defined slice IDs: Default Slice = 0, Mobile Traffic Slice = 15
      *
      * @return 200 ok and a collection of Slice IDs
      */
@@ -58,7 +57,6 @@ public class SlicingWebResource extends AbstractWebResource {
 
     /**
      * Get all traffic class of a slice.
-     * Pre-defined slice IDs: Default Slice = 0, Mobile Traffic Slice = 15
      *
      * @param sliceId ID of the slice
      * @return 200 ok and a collection of traffic class or 404 not found if the result is empty
@@ -83,7 +81,6 @@ public class SlicingWebResource extends AbstractWebResource {
 
     /**
      * Get default traffic class given a slice.
-     * Pre-defined slice IDs: Default Slice = 0, Mobile Traffic Slice = 15
      *
      * @param sliceId ID of the slice
      * @return 200 ok the default traffic class or 404 not found if the result is empty
@@ -105,7 +102,6 @@ public class SlicingWebResource extends AbstractWebResource {
 
     /**
      * Set the default traffic class for a slice.
-     * Pre-defined slice IDs: Default Slice = 0, Mobile Traffic Slice = 15
      * Traffic class values: CONTROL, REAL_TIME, ELASTIC, BEST_EFFORT
      *
      * @param sliceId ID of the slice
@@ -131,7 +127,6 @@ public class SlicingWebResource extends AbstractWebResource {
 
     /**
      * Get classifier flows by slice ID and traffic class.
-     * Pre-defined slice IDs: Default Slice = 0, Mobile Traffic Slice = 15
      * Traffic class values: CONTROL, REAL_TIME, ELASTIC, BEST_EFFORT
      *
      * @param sliceId ID of the slice
@@ -152,7 +147,6 @@ public class SlicingWebResource extends AbstractWebResource {
 
     /**
      * Push a classifier flow to classify traffic as part of the given slice and traffic class.
-     * Pre-defined slice IDs: Default Slice = 0, Mobile Traffic Slice = 15
      * Traffic class values: CONTROL, REAL_TIME, ELASTIC, BEST_EFFORT
      * Traffic Selector Example:
      *   {
@@ -198,7 +192,6 @@ public class SlicingWebResource extends AbstractWebResource {
 
     /**
      * Remove a classifier flow for the given slice and traffic class.
-     * Pre-defined slice IDs: Default Slice = 0, Mobile Traffic Slice = 15
      * Traffic class values: CONTROL, REAL_TIME, ELASTIC, BEST_EFFORT
      *
      * @param sliceId ID of slice
