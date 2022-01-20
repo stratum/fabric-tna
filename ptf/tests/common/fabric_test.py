@@ -668,6 +668,7 @@ def get_test_args(
     :param traffic_dir: traffic direction, e.g. "host-leaf-spine"
     :param pkt_addrs: packet header addresses, e.g. {eth_src, eth_dst, ip_src, ip_dst}
     :param spgw_type: SPGW direction, e.g. "DL" for downlink, "UL" for uplink
+    :param spgw_app_filtering: install SPGW application filtering rule
     :param int_test_type: INT test drop reason, e.g. "eg_drop" for egress drop type
     :param test_multiple_pkt_len: generate multiple packet lengths
     :param test_multiple_prefix_len: generate multiple prefix lengths
