@@ -70,6 +70,7 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_ING
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_TERMINATIONS_COUNTER;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_SESSIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_TERMINATIONS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_APP_ID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_GTPU_IS_VALID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_IPV4_DST_ADDR;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_TEID;
@@ -851,6 +852,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
             throws UpfProgrammableException {
         final PiCriterion match = PiCriterion.builder()
                 .matchExact(HDR_UE_SESSION_ID, upfTermination.ueSessionId().toInt())
+                .matchExact(HDR_APP_ID, upfTermination.applicationId())
                 .build();
 
         log.info("Removing {}", upfTermination.toString());
@@ -861,6 +863,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
             throws UpfProgrammableException {
         final PiCriterion match = PiCriterion.builder()
                 .matchExact(HDR_UE_SESSION_ID, upfTermination.ueSessionId().toInt())
+                .matchExact(HDR_APP_ID, upfTermination.applicationId())
                 .build();
 
         log.info("Removing {}", upfTermination.toString());

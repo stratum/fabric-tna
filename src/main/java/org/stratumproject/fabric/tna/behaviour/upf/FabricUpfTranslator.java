@@ -66,6 +66,7 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_ING
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_RECIRC_RULES;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_SESSIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_TERMINATIONS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_APP_ID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_APP_IPV4_ADDR;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_APP_L4_PORT;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_GTPU_IS_VALID;
@@ -286,12 +287,15 @@ public class FabricUpfTranslator {
         PiCriterion match = matchActionPair.getLeft();
         PiAction action = (PiAction) matchActionPair.getRight();
 
-        if (!FabricUpfTranslatorUtil.fieldIsPresent(match, HDR_UE_SESSION_ID)) {
+        if (!FabricUpfTranslatorUtil.fieldIsPresent(match, HDR_UE_SESSION_ID) ||
+                !FabricUpfTranslatorUtil.fieldIsPresent(match, HDR_APP_ID)) {
             throw new UpfProgrammableException("Malformed uplink termination from dataplane!: " + entry);
         }
         // Match keys
         Ip4Address ueSessionId = FabricUpfTranslatorUtil.getFieldAddress(match, HDR_UE_SESSION_ID);
         builder.withUeSessionId(ueSessionId);
+        byte applicationId = FabricUpfTranslatorUtil.getFieldByte(match, HDR_APP_ID);
+        builder.withApplicationId(applicationId);
 
         PiActionId actionId = action.id();
         builder.withCounterId(FabricUpfTranslatorUtil.getParamInt(action, CTR_ID));
@@ -318,12 +322,15 @@ public class FabricUpfTranslator {
         PiCriterion match = matchActionPair.getLeft();
         PiAction action = (PiAction) matchActionPair.getRight();
 
-        if (!FabricUpfTranslatorUtil.fieldIsPresent(match, HDR_UE_SESSION_ID)) {
+        if (!FabricUpfTranslatorUtil.fieldIsPresent(match, HDR_UE_SESSION_ID) ||
+                !FabricUpfTranslatorUtil.fieldIsPresent(match, HDR_APP_ID)) {
             throw new UpfProgrammableException("Malformed downlink termination from dataplane!: " + entry);
         }
         // Match keys
         Ip4Address ueSessionId = FabricUpfTranslatorUtil.getFieldAddress(match, HDR_UE_SESSION_ID);
         builder.withUeSessionId(ueSessionId);
+        byte applicationId = FabricUpfTranslatorUtil.getFieldByte(match, HDR_APP_ID);
+        builder.withApplicationId(applicationId);
 
         PiActionId actionId = action.id();
         builder.withCounterId(FabricUpfTranslatorUtil.getParamInt(action, CTR_ID));
@@ -538,6 +545,7 @@ public class FabricUpfTranslator {
             throws UpfProgrammableException {
         final PiCriterion match = PiCriterion.builder()
                 .matchExact(HDR_UE_SESSION_ID, upfTermination.ueSessionId().toInt())
+                .matchExact(HDR_APP_ID, upfTermination.applicationId())
                 .build();
         final PiAction.Builder actionBuilder = PiAction.builder();
 
@@ -582,6 +590,7 @@ public class FabricUpfTranslator {
             throws UpfProgrammableException {
         final PiCriterion match = PiCriterion.builder()
                 .matchExact(HDR_UE_SESSION_ID, upfTermination.ueSessionId().toInt())
+                .matchExact(HDR_APP_ID, upfTermination.applicationId())
                 .build();
         final PiAction.Builder actionBuilder = PiAction.builder();
 

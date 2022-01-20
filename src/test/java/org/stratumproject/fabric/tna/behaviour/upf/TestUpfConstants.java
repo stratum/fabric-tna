@@ -50,6 +50,7 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_ING
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_DROP;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_SESSIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_TERMINATIONS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_APP_ID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_APP_IPV4_ADDR;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_APP_L4_PORT;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_GTPU_IS_VALID;
@@ -105,6 +106,7 @@ public final class TestUpfConstants {
     public static final long COUNTER_PKTS = 15;
 
     public static final byte APP_FILTERING_ID = 10;
+    public static final byte DEFAULT_APP_ID = 0;
     public static final int APP_FILTERING_PRIORITY = 10;
     public static final Ip4Prefix APP_IP_PREFIX = Ip4Prefix.valueOf("10.0.0.0/24");
     public static final Pair<Short, Short> APP_L4_RANGE = Pair.of((short) 100, (short) 1000);
@@ -135,6 +137,7 @@ public final class TestUpfConstants {
 
     public static final UpfTerminationUplink UPLINK_UPF_TERMINATION = UpfTerminationUplink.builder()
             .withUeSessionId(UE_ADDR)
+            .withApplicationId(APP_FILTERING_ID)
             .withCounterId(UPLINK_COUNTER_CELL_ID)
             .withTrafficClass(UPLINK_TC)
             .build();
@@ -152,6 +155,7 @@ public final class TestUpfConstants {
 
     public static final UpfTerminationDownlink DOWNLINK_UPF_TERMINATION = UpfTerminationDownlink.builder()
             .withUeSessionId(UE_ADDR)
+            .withApplicationId(APP_FILTERING_ID)
             .withCounterId(DOWNLINK_COUNTER_CELL_ID)
             .withTrafficClass(DOWNLINK_TC)
             .withTeid(TEID_VALUE_QOS)
@@ -273,6 +277,7 @@ public final class TestUpfConstants {
                     .matchPi(PiCriterion.builder()
                             // we don't match on slice_id, because we assume distinct UE pools per slice
                             .matchExact(HDR_UE_SESSION_ID, UE_ADDR.toInt())
+                            .matchExact(HDR_APP_ID, APP_FILTERING_ID)
                             .build()).build())
             .withTreatment(DefaultTrafficTreatment.builder()
                     .piTableAction(PiAction.builder()
@@ -292,6 +297,7 @@ public final class TestUpfConstants {
                       .matchPi(PiCriterion.builder()
                                // we don't match on slice_id, because we assume distinct UE pools per slice
                                .matchExact(HDR_UE_SESSION_ID, UE_ADDR.toInt())
+                               .matchExact(HDR_APP_ID, DEFAULT_APP_ID)
                                .build()).build())
             .withTreatment(DefaultTrafficTreatment.builder()
                                    .piTableAction(PiAction.builder()
@@ -310,6 +316,7 @@ public final class TestUpfConstants {
                       .matchPi(PiCriterion.builder()
                                // we don't match on slice_id, because we assume distinct UE pools per slice
                                .matchExact(HDR_UE_SESSION_ID, UE_ADDR.toInt())
+                               .matchExact(HDR_APP_ID, DEFAULT_APP_ID)
                                .build()).build())
             .withTreatment(DefaultTrafficTreatment.builder()
                                    .piTableAction(PiAction.builder()
@@ -328,6 +335,7 @@ public final class TestUpfConstants {
                     .matchPi(PiCriterion.builder()
                             // we don't match on slice_id, because we assume distinct UE pools per slice
                             .matchExact(HDR_UE_SESSION_ID, UE_ADDR.toInt())
+                            .matchExact(HDR_APP_ID, APP_FILTERING_ID)
                             .build()).build())
             .withTreatment(DefaultTrafficTreatment.builder()
                     .piTableAction(PiAction.builder()
@@ -349,6 +357,7 @@ public final class TestUpfConstants {
                       .matchPi(PiCriterion.builder()
                                // we don't match on slice_id, because we assume distinct UE pools per slice
                                .matchExact(HDR_UE_SESSION_ID, UE_ADDR.toInt())
+                               .matchExact(HDR_APP_ID, DEFAULT_APP_ID)
                                .build()).build())
             .withTreatment(DefaultTrafficTreatment.builder()
                                    .piTableAction(PiAction.builder()
@@ -369,6 +378,7 @@ public final class TestUpfConstants {
                       .matchPi(PiCriterion.builder()
                                // we don't match on slice_id, because we assume distinct UE pools per slice
                                .matchExact(HDR_UE_SESSION_ID, UE_ADDR.toInt())
+                               .matchExact(HDR_APP_ID, DEFAULT_APP_ID)
                                .build()).build())
             .withTreatment(DefaultTrafficTreatment.builder()
                                    .piTableAction(PiAction.builder()
