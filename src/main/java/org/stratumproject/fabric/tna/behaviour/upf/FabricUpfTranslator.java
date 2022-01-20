@@ -25,6 +25,7 @@ import org.onosproject.net.pi.model.PiTableId;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
 import org.onosproject.net.pi.runtime.PiTableAction;
+import org.stratumproject.fabric.tna.slicing.api.SliceId;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -599,8 +600,9 @@ public class FabricUpfTranslator {
                 .build();
         PiAction action = PiAction.builder()
                 .withId(actionId)
-                // FIXME: slice id should come from UP4
-                .withParameter(new PiActionParam(SLICE_ID, 99))
+                // FIXME: Use a different slice id, provided by UP4
+                //  This will likely require updating UpfInterface.
+                .withParameter(new PiActionParam(SLICE_ID, SliceId.DEFAULT.id()))
                 .build();
         return DefaultFlowRule.builder()
                 .forDevice(deviceId).fromApp(appId).makePermanent()
