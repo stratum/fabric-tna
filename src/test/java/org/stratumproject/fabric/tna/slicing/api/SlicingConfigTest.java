@@ -28,8 +28,6 @@ public class SlicingConfigTest {
 
         assertTrue(config.isValid());
 
-        assertEquals(QueueId.of(0), config.bestEffortQueueId());
-
         assertEquals(3, config.slices().size());
         assertNotNull(config.slice(SliceId.of(0)));
         assertNotNull(config.slice(SliceId.of(1)));
