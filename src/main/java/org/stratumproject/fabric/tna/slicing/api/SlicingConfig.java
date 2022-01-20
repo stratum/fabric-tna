@@ -27,7 +27,6 @@ import static java.lang.String.format;
  *   "apps": {
  *     "org.stratumproject.fabric-tna": {
  *       "slicing": {
- *         "bestEffortQueueId": 0,
  *         "slices": {
  *           "0": {
  *             "name": "Default",
@@ -73,7 +72,6 @@ import static java.lang.String.format;
 // TODO: javadoc
 public class SlicingConfig extends Config<ApplicationId> {
     private static final String SLICES = "slices";
-    private static final String BEST_EFFORT_QUEUE_ID = "bestEffortQueueId";
     private static final String TCS = "tcs";
     private static final String NAME = "name";
     private static final String QUEUE_ID = "queueId";
@@ -81,16 +79,13 @@ public class SlicingConfig extends Config<ApplicationId> {
     private static final String MAX_RATE_BPS = "maxRateBps";
     private static final String GMIN_RATE_BPS = "gminRateBps";
 
-    private static final int DEFAULT_BEST_EFFORT_QUEUE_ID = QueueId.BEST_EFFORT.id();
     private static final long DEFAULT_MAX_RATE_BPS = TrafficClassDescription.UNLIMITED_BPS;
     private static final long DEFAULT_GMIN_RATE_BPS = 0;
     private static final boolean DEFAULT_IS_SYSTEM_TC = false;
 
     @Override
     public boolean isValid() {
-        if (!(hasOnlyFields(object, BEST_EFFORT_QUEUE_ID, SLICES) &&
-                isIntegralNumber(object, BEST_EFFORT_QUEUE_ID, FieldPresence.OPTIONAL,
-                        (long) QueueId.MIN, (long) QueueId.MAX))) {
+        if (!(hasOnlyFields(object, SLICES))) {
             return false;
         }
 
@@ -146,11 +141,6 @@ public class SlicingConfig extends Config<ApplicationId> {
         return true;
     }
 
-    public QueueId bestEffortQueueId() {
-        return QueueId.of(object.path(BEST_EFFORT_QUEUE_ID)
-                .asInt(DEFAULT_BEST_EFFORT_QUEUE_ID));
-    }
-
     public Collection<SliceDescription> slices() throws ConfigException {
         List<SliceDescription> sliceConfigs = Lists.newArrayList();
         var jsonSlices = object.path(SLICES).fields();
@@ -185,6 +175,9 @@ public class SlicingConfig extends Config<ApplicationId> {
             } catch (IllegalArgumentException e) {
                 throw new ConfigException(format(
                         "%s is not a valid traffic class for slice %s", tcName, sliceId), e);
+            }
+            if (tc.equals(TrafficClass.BEST_EFFORT)) {
+                throw new ConfigException("BEST_EFFORT is implicit for all slices and cannot be configured");
             }
             tcDescriptions.put(tc, tcDescription(sliceId, tc));
         }
