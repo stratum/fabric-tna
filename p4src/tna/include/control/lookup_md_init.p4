@@ -8,7 +8,7 @@
 #include "shared/header.p4"
 
 control LookupMdInit (in ingress_headers_t hdr,
-                      in  ingress_intrinsic_metadata_t ig_intr_md,
+                      in ingress_intrinsic_metadata_t ig_intr_md,
                       out lookup_metadata_t lkp_md) {
 
       apply {

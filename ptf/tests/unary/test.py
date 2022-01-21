@@ -2207,7 +2207,7 @@ class FabricIntQueueReportQuotaTest(IntTest):
             threshold_trigger=threshold_trigger,
             threshold_reset=threshold_reset,
         )
-        self.verify_quota(port=self.port2, qid=0, quota=quota_left)
+        self.verify_quota(port=SDN_TO_SDK_PORT[self.port2], qid=0, quota=quota_left)
 
     def runTest(self):
         print("")
@@ -2215,7 +2215,7 @@ class FabricIntQueueReportQuotaTest(IntTest):
         # After that, configure the threshold to a small value and send a packet to the
         # device to trigger queue report. We should expect to receive an INT queue
         # report and the quota should become zero.
-        self.set_queue_report_quota(port=self.port2, qid=0, quota=1)
+        self.set_queue_report_quota(port=SDN_TO_SDK_PORT[self.port2], qid=0, quota=1)
         self.doRunTest(
             expect_int_report=True,
             quota_left=0,
@@ -2571,8 +2571,8 @@ class FabricIntFlowReportLoopbackModeTest(IntTest):
             INT_COLLECTOR_MAC,
             SWITCH_IPV4,
             INT_COLLECTOR_IPV4,
-            self.port1,
-            self.port2,
+            SDN_TO_SDK_PORT[self.port1],
+            SDN_TO_SDK_PORT[self.port2],
             SWITCH_ID,
             routed_pkt,
             is_device_spine,
@@ -2836,8 +2836,8 @@ class FabricIntDeflectDropReportTest(IntTest):
             0,
             SWITCH_IPV4,
             INT_COLLECTOR_IPV4,
-            ig_port,
-            eg_port,
+            SDN_TO_SDK_PORT[ig_port],
+            SDN_TO_SDK_PORT[eg_port],
             INT_DROP_REASON_TRAFFIC_MANAGER,
             SWITCH_ID,
             int_inner_pkt,
@@ -2853,8 +2853,8 @@ class FabricIntDeflectDropReportTest(IntTest):
             INT_COLLECTOR_MAC,
             SWITCH_IPV4,
             INT_COLLECTOR_IPV4,
-            ig_port,
-            eg_port,
+            SDN_TO_SDK_PORT[ig_port],
+            SDN_TO_SDK_PORT[eg_port],
             INT_DROP_REASON_TRAFFIC_MANAGER,
             SWITCH_ID,
             int_inner_pkt,

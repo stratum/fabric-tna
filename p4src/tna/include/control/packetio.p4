@@ -73,7 +73,7 @@ control PacketIoEgress(inout egress_headers_t hdr,
                        in egress_intrinsic_metadata_t eg_intr_md) {
 
     action set_switch_info(FabricPortId_t cpu_port) {
-        fabric_md.cpu_port = (PortId_t)cpu_port;
+        fabric_md.cpu_port = (PortId_t) cpu_port;
     }
 
     table switch_info {
