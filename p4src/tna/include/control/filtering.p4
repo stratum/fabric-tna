@@ -88,7 +88,7 @@ control Filtering (inout ingress_headers_t hdr,
 
     table fwd_classifier {
         key = {
-            fabric_md.lkp.ingress_port                 : exact @name("ig_port");
+            fabric_md.lkp.ingress_port              : exact @name("ig_port");
             fabric_md.lkp.eth_dst                   : ternary @name("eth_dst");
             fabric_md.lkp.eth_type                  : ternary @name("eth_type");
             fabric_md.bridged.base.ip_eth_type      : exact @name("ip_eth_type");

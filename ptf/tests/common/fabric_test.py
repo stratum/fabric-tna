@@ -2046,7 +2046,6 @@ class IPv4UnicastTest(FabricTest):
         verify_port = eg_port
         if override_eg_port:
             verify_port = override_eg_port
-        # import pdb; pdb.set_trace()
         if verify_pkt:
             self.verify_packet(exp_pkt, verify_port)
 
