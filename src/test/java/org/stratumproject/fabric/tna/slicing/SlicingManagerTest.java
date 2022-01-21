@@ -135,7 +135,7 @@ public class SlicingManagerTest {
         manager.networkCfgService = nwCfgService;
         manager.pipeconfService = pipeconfService;
 
-        EasyMock.expect(coreService.registerApplication(EasyMock.anyObject())).andReturn(APP_ID);
+        EasyMock.expect(coreService.registerApplication(EasyMock.anyObject(), EasyMock.anyObject())).andReturn(APP_ID);
         EasyMock.expect(storageService.<SliceStoreKey, TrafficClassDescription>consistentMapBuilder()).andReturn(
                 new MockConsistentMap.Builder<>());
         EasyMock.expect(storageService.<TrafficSelector, SliceStoreKey>consistentMapBuilder()).andReturn(
