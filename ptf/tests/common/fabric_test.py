@@ -201,7 +201,7 @@ PACKET_IN_MIRROR_ID = 0x1FF
 INT_REPORT_MIRROR_IDS = [0x200, 0x201, 0x202, 0x203]
 V1MODEL_INT_REPORT_MIRROR_ID = 0x1FA
 RECIRCULATE_PORTS = [68, 196, 324, 452]
-RECIRCULATE_PORT_BMV2 = [510]
+RECIRCULATE_PORT_V1MODEL = [510]
 SWITCH_ID = 1
 INT_REPORT_PORT = 32766
 NPROTO_ETHERNET = 0
@@ -299,7 +299,7 @@ DEST_OPTIONS = ["host", "leaf", "spine"]
 
 COLOR_GREEN = 0
 COLOR_YELLOW = 1
-BMV2_COLOR_RED = 2
+V1MODEL_COLOR_RED = 2
 COLOR_RED = 3
 
 STATS_INGRESS = "Ingress"
@@ -1134,7 +1134,7 @@ class FabricTest(P4RuntimeTest):
     def set_up_recirc_ports(self):
         # All recirculation ports are configured as untagged with DEFAULT_VLAN
         # as the internal one.
-        ports = RECIRCULATE_PORTS if is_tna() else RECIRCULATE_PORT_BMV2
+        ports = RECIRCULATE_PORTS if is_tna() else RECIRCULATE_PORT_V1MODEL
         for port in ports:
             self.set_ingress_port_vlan(
                 ingress_port=port,
@@ -3347,12 +3347,16 @@ class IntTest(IPv4UnicastTest):
         f_flag=1,
         q_flag=0,
     ):
-        # Mirrored packet will be truncated first
-        inner_packet = Ether(
-            bytes(int_pre_mirrored_packet)[
-                : INT_MIRROR_TRUNCATE_MAX_LEN - INT_MIRROR_BYTES
-            ]
-        )
+        if is_tna():
+            # Mirrored packet will be truncated first
+            inner_packet = Ether(
+                bytes(int_pre_mirrored_packet)[
+                    : INT_MIRROR_TRUNCATE_MAX_LEN - INT_MIRROR_BYTES
+                ]
+            )
+        else: # is_v1model()
+            inner_packet = Ether(bytes(int_pre_mirrored_packet))
+
         # The switch should always strip VLAN, MPLS, GTP-U and VXLAN headers inside INT reports.
         if GTP_U_Header in inner_packet:
             inner_packet = pkt_remove_gtp(inner_packet)
@@ -3422,6 +3426,10 @@ class IntTest(IPv4UnicastTest):
             )
         else:
             inner_packet = int_pre_mirrored_packet
+        if is_v1model():
+            # Truncation not performed in V1model
+            inner_packet = Ether(bytes(int_pre_mirrored_packet))
+
         # The switch should always strip VLAN, MPLS, GTP-U and VXLAN headers inside INT reports.
         if GTP_U_Header in inner_packet:
             inner_packet = pkt_remove_gtp(inner_packet)
@@ -3566,6 +3574,9 @@ class IntTest(IPv4UnicastTest):
                 self.set_up_report_mirror_flow(
                     i, INT_REPORT_MIRROR_IDS[i], RECIRCULATE_PORTS[i]
                 )
+        if is_v1model():
+            # Perform mirroring of original packet to build the INT report.
+            self.add_clone_group(V1MODEL_INT_REPORT_MIRROR_ID, [self.port3])
         self.set_up_recirc_ports()
         self.set_up_report_table_entries(
             self.port3, is_device_spine, send_report_to_spine
@@ -3980,7 +3991,8 @@ class IntTest(IPv4UnicastTest):
         # Sets the quota for the output port/queue of INT report to zero to make sure
         # we won't keep getting reports for this type of packet.
         self.set_queue_report_quota(port=self.port3, qid=0, quota=0)
-        for recirc_port in RECIRCULATE_PORTS:
+        recirc_ports = RECIRCULATE_PORTS if is_tna() else RECIRCULATE_PORT_V1MODEL
+        for recirc_port in recirc_ports:
             self.set_queue_report_quota(port=recirc_port, qid=0, quota=0)
         if reset_quota:
             # To ensure we have enough quota to send a queue report.

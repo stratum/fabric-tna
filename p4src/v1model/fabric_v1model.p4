@@ -67,14 +67,13 @@ control FabricIngress (inout v1model_header_t hdr,
         if (IS_RECIRCULATED(standard_md)) {
             // After recirculation is performed, override ingress port, emulating TNA recirc port.
             // This workaround allows to have the same PTF structure.
-            // FIXME use the fabric_md.bridged.base.ig_port everywhere once p4c is correctly preserving metadata.
             fabric_md.ingress.bridged.base.ig_port = FAKE_V1MODEL_RECIRC_PORT;
         }
 
         lkp_md_init.apply(hdr.ingress, fabric_md.ingress.lkp);
-        pkt_io.apply(hdr.ingress, fabric_md.ingress, fabric_md.skip_egress, standard_md);
+        pkt_io.apply(hdr.ingress, fabric_md.ingress, fabric_md.skip_egress, standard_md, fabric_md.recirc_preserved_egress_port);
 #ifdef WITH_INT
-        int_watchlist.apply(hdr.ingress, fabric_md.ingress, standard_md);
+        int_watchlist.apply(hdr.ingress, fabric_md.ingress, standard_md, fabric_md.recirc_preserved_report_type);
 #endif // WITH_INT
         stats.apply(fabric_md.ingress.lkp, fabric_md.ingress.bridged.base.ig_port,
             fabric_md.ingress.bridged.base.stats_flow_id);
@@ -93,9 +92,9 @@ control FabricIngress (inout v1model_header_t hdr,
         if (!fabric_md.ingress.skip_next) {
             pre_next.apply(hdr.ingress, fabric_md.ingress);
         }
-        acl.apply(hdr.ingress, fabric_md.ingress, standard_md, fabric_md.drop_ctl);
+        acl.apply(hdr.ingress, fabric_md.ingress, standard_md, fabric_md.recirc_preserved_egress_port, fabric_md.drop_ctl);
         if (!fabric_md.ingress.skip_next) {
-            next.apply(hdr.ingress, fabric_md.ingress, standard_md);
+            next.apply(hdr.ingress, fabric_md.ingress, standard_md, fabric_md.recirc_preserved_egress_port);
         }
         qos.apply(fabric_md.ingress, standard_md, fabric_md.drop_ctl);
 #ifdef WITH_INT
@@ -128,22 +127,31 @@ control FabricEgress (inout v1model_header_t hdr,
         // Setting other fields in egress metadata, related to TNA's FabricEgressParser.
         fabric_md.egress.cpu_port = 0;
 
-#ifdef WITH_INT
-        if ((bit<8>)fabric_md.egress.bridged.int_bmd.report_type == BridgedMdType_t.INT_INGRESS_DROP){
-            // Ingress drops become themselves a report. Mirroring is not performed.
-            parser_emulator.apply(hdr, fabric_md.egress, standard_md);
-            recirculate({});
-        }
-#endif // WITH_INT
-
         if (fabric_md.skip_egress){
             exit;
         }
 
-        pkt_io_egress.apply(hdr.ingress, fabric_md.egress ,standard_md);
+#ifdef WITH_INT
+        if (IS_E2E_CLONE(standard_md)) {
+            // Packet must generate the flow report or is an egress drop.
+
+            // Restore preserved metadata.
+            fabric_md.egress.bridged.int_bmd.drop_reason = fabric_md.recirc_preserved_drop_reason;
+            fabric_md.egress.bridged.int_bmd.report_type = fabric_md.recirc_preserved_report_type;
+
+            parser_emulator.apply(hdr, fabric_md.egress, standard_md);
+        }
+
+       if ((bit<8>)fabric_md.egress.bridged.int_bmd.report_type == BridgedMdType_t.INT_INGRESS_DROP){
+            // Ingress drops become themselves a report. Mirroring is not performed.
+            parser_emulator.apply(hdr, fabric_md.egress, standard_md);
+        }
+#endif // WITH_INT
+
+        pkt_io_egress.apply(hdr.ingress, fabric_md.egress ,standard_md, fabric_md.recirc_preserved_ingress_port);
         stats.apply(fabric_md.egress.bridged.base.stats_flow_id, standard_md.egress_port,
              fabric_md.egress.bridged.bmd_type);
-        egress_next.apply(hdr.ingress, fabric_md.egress, standard_md, fabric_md.drop_ctl);
+        egress_next.apply(hdr.ingress, fabric_md.egress, standard_md, fabric_md.recirc_preserved_drop_reason, fabric_md.drop_ctl);
 #ifdef WITH_SPGW
         spgw.apply(hdr.ingress, fabric_md.egress);
 #endif // WITH_SPGW
@@ -154,7 +162,7 @@ control FabricEgress (inout v1model_header_t hdr,
 
         if (fabric_md.do_spgw_uplink_recirc) {
             // Recirculate UE-to-UE traffic.
-            recirculate(standard_md);
+            recirculate_preserving_field_list(NO_PRESERVATION);
         }
 
         if (fabric_md.drop_ctl == 1) {
