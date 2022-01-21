@@ -264,11 +264,4 @@ enum bit<8> IntDropReason_t {
     DROP_REASON_ROUTING_V6_DROP = 171
 }
 
-enum bit<3> SpgwIfaceType_t {
-    UNKNOWN = 0,
-    ACCESS = 1,
-    CORE = 2,
-    DBUF = 4
-}
-
 #endif // __DEFINE__
