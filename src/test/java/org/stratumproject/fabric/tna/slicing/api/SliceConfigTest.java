@@ -21,17 +21,14 @@ import static org.junit.Assert.assertTrue;
 /**
  * Tests for SlicingConfig.
  */
-public class SlicingConfigTest {
-
-    private static final String APP_NAME = "foobar";
-    private static final ApplicationId APP_ID = new TestApplicationId(APP_NAME);
+public class SliceConfigTest {
 
     @Rule
     public ExpectedException exceptionRule = ExpectedException.none();
 
     @Test
     public void testConstruction() throws Exception {
-        SlicingConfig config = TestUtils.getSlicingConfig(APP_ID, "/slicing.json");
+        SliceConfig config = TestUtils.getSlicingConfig(APP_ID, "/slicing.json");
 
         assertTrue(config.isValid());
 
@@ -97,7 +94,7 @@ public class SlicingConfigTest {
 
     @Test
     public void testInvalidEmpty() {
-        SlicingConfig config = TestUtils.getSlicingConfig(APP_ID, "/slicing-invalid-empty.json");
+        SliceConfig config = TestUtils.getSlicingConfig(APP_ID, "/slicing-invalid-empty.json");
         exceptionRule.expect(InvalidFieldException.class);
         exceptionRule.expectMessage("At least one slice should be specified");
         config.isValid();
@@ -106,7 +103,7 @@ public class SlicingConfigTest {
 
     @Test
     public void testInvalidMissingSystemTc() {
-        SlicingConfig config = TestUtils.getSlicingConfig(APP_ID, "/slicing-invalid-no-system-tc.json");
+        SliceConfig config = TestUtils.getSlicingConfig(APP_ID, "/slicing-invalid-no-system-tc.json");
         exceptionRule.expect(InvalidFieldException.class);
         exceptionRule.expectMessage("At least one traffic class should be set as the system one");
         config.isValid();
@@ -114,7 +111,7 @@ public class SlicingConfigTest {
 
     @Test
     public void testInvalidTooManySystemTcs() {
-        SlicingConfig config = TestUtils.getSlicingConfig(APP_ID, "/slicing-invalid-too-many-system-tcs.json");
+        SliceConfig config = TestUtils.getSlicingConfig(APP_ID, "/slicing-invalid-too-many-system-tcs.json");
         exceptionRule.expect(InvalidFieldException.class);
         exceptionRule.expectMessage("Too many traffic classes are set as the system one");
         config.isValid();
@@ -122,7 +119,7 @@ public class SlicingConfigTest {
 
     @Test
     public void testInvalidTrafficClass() {
-        SlicingConfig config = TestUtils.getSlicingConfig(APP_ID, "/slicing-invalid-traffic-class.json");
+        SliceConfig config = TestUtils.getSlicingConfig(APP_ID, "/slicing-invalid-traffic-class.json");
         exceptionRule.expect(InvalidFieldException.class);
         exceptionRule.expectMessage("not a valid traffic class");
         config.isValid();
@@ -130,7 +127,7 @@ public class SlicingConfigTest {
 
     @Test
     public void testInvalidSliceId() {
-        SlicingConfig config = TestUtils.getSlicingConfig(APP_ID, "/slicing-invalid-slice-id.json");
+        SliceConfig config = TestUtils.getSlicingConfig(APP_ID, "/slicing-invalid-slice-id.json");
         exceptionRule.expect(InvalidFieldException.class);
         exceptionRule.expectMessage("is not a valid slice ID");
         config.isValid();
@@ -138,7 +135,7 @@ public class SlicingConfigTest {
 
     @Test
     public void testInvalidBestEffortQueueId() {
-        SlicingConfig config = TestUtils.getSlicingConfig(APP_ID, "/slicing-invalid-best-effort.json");
+        SliceConfig config = TestUtils.getSlicingConfig(APP_ID, "/slicing-invalid-best-effort.json");
         exceptionRule.expect(InvalidFieldException.class);
         exceptionRule.expectMessage("Field must be greater than 1");
         config.isValid();
@@ -146,7 +143,7 @@ public class SlicingConfigTest {
 
     @Test
     public void testInvalidBestEffortTcName() throws ConfigException {
-        SlicingConfig config = TestUtils.getSlicingConfig(APP_ID, "/slicing-invalid-best-effort.json");
+        SliceConfig config = TestUtils.getSlicingConfig(APP_ID, "/slicing-invalid-best-effort.json");
         exceptionRule.expect(ConfigException.class);
         exceptionRule.expectMessage("BEST_EFFORT is implicit for all slices and cannot be configured");
         config.slice(SliceId.of(0));
@@ -154,7 +151,7 @@ public class SlicingConfigTest {
 
     @Test
     public void testInvalidQueueId() throws ConfigException {
-        SlicingConfig config = TestUtils.getSlicingConfig(APP_ID, "/slicing-invalid-queue-id.json");
+        SliceConfig config = TestUtils.getSlicingConfig(APP_ID, "/slicing-invalid-queue-id.json");
         exceptionRule.expect(ConfigException.class);
         exceptionRule.expectMessage("is not a valid queue ID");
         config.slice(SliceId.of(0));
@@ -162,7 +159,7 @@ public class SlicingConfigTest {
 
     @Test
     public void testInvalidQueueIdMissing() throws ConfigException {
-        SlicingConfig config = TestUtils.getSlicingConfig(APP_ID, "/slicing-invalid-queue-id-missing.json");
+        SliceConfig config = TestUtils.getSlicingConfig(APP_ID, "/slicing-invalid-queue-id-missing.json");
         exceptionRule.expect(InvalidFieldException.class);
         exceptionRule.expectMessage("Field \"queueId\" is invalid: Mandatory field is not present");
         config.isValid();

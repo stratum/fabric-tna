@@ -14,7 +14,8 @@ import org.onosproject.net.DeviceId;
 
 import org.onosproject.segmentrouting.config.SegmentRoutingDeviceConfig;
 import org.stratumproject.fabric.tna.inbandtelemetry.IntReportConfig;
-import org.stratumproject.fabric.tna.slicing.api.SlicingConfig;
+import org.stratumproject.fabric.tna.slicing.api.SliceConfig;
+import org.stratumproject.fabric.tna.slicing.api.SliceId;
 
 import static org.junit.Assert.fail;
 
@@ -57,8 +58,8 @@ public final class TestUtils {
         return config;
     }
 
-    public static SlicingConfig getSlicingConfig(ApplicationId appId, String filename) {
-        SlicingConfig config = new SlicingConfig();
+    public static SliceConfig getSlicingConfig(SliceId sliceId, String filename) {
+        SliceConfig config = new SliceConfig();
         InputStream jsonStream = TestUtils.class.getResourceAsStream(filename);
         ObjectMapper mapper = new ObjectMapper();
         JsonNode jsonNode;
