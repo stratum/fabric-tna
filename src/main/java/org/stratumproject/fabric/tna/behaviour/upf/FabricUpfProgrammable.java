@@ -11,10 +11,10 @@ import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
 import org.onosproject.drivers.p4runtime.AbstractP4RuntimeHandlerBehaviour;
 import org.onosproject.net.PortNumber;
-import org.onosproject.net.behaviour.upf.ApplicationFilter;
 import org.onosproject.net.behaviour.upf.GtpTunnelPeer;
 import org.onosproject.net.behaviour.upf.SessionDownlink;
 import org.onosproject.net.behaviour.upf.SessionUplink;
+import org.onosproject.net.behaviour.upf.UpfApplication;
 import org.onosproject.net.behaviour.upf.UpfCounter;
 import org.onosproject.net.behaviour.upf.UpfEntity;
 import org.onosproject.net.behaviour.upf.UpfEntityType;
@@ -62,7 +62,7 @@ import static org.onosproject.net.pi.model.PiCounterType.INDIRECT;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_EG_TUNNEL_PEERS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_GTPU_ENCAP;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_TERMINATIONS_COUNTER;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_APPLICATION_FILTERS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_APPLICATIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_SESSIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_TERMINATIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_IG_TUNNEL_PEERS;
@@ -103,7 +103,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     private long downlinkUpfTerminationsTableSize;
     private long upfCounterSize;
     private long gtpTunnelPeersTableSize;
-    private long applicationFiltersTableSize;
+    private long applicationsTableSize;
 
     private ApplicationId appId;
 
@@ -193,7 +193,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         long downlinkUpfTerminationsTableSize = 0;
         long ingressGtpTunnelPeersTableSize = 0;
         long egressGtpTunnelPeersTableSize = 0;
-        long applicationFiltersTableSize = 0;
+        long applicationsTableSize = 0;
 
         // Get table sizes of interest
         for (PiTableModel piTable : pipeconf.pipelineModel().tables()) {
@@ -205,8 +205,8 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                 uplinkUpfTerminationsTableSize = piTable.maxSize();
             } else if (piTable.id().equals(FABRIC_INGRESS_SPGW_DOWNLINK_TERMINATIONS)) {
                 downlinkUpfTerminationsTableSize = piTable.maxSize();
-            } else if (piTable.id().equals(FABRIC_INGRESS_SPGW_APPLICATION_FILTERS)) {
-                applicationFiltersTableSize = piTable.maxSize();
+            } else if (piTable.id().equals(FABRIC_INGRESS_SPGW_APPLICATIONS)) {
+                applicationsTableSize = piTable.maxSize();
             } else if (piTable.id().equals(FABRIC_INGRESS_SPGW_IG_TUNNEL_PEERS)) {
                 ingressGtpTunnelPeersTableSize = piTable.maxSize();
             } else if (piTable.id().equals(FABRIC_EGRESS_SPGW_EG_TUNNEL_PEERS)) {
@@ -225,8 +225,8 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         if (downlinkUpfTerminationsTableSize == 0) {
             throw new IllegalStateException("Unable to find downlink UPF Terminations table in pipeline model.");
         }
-        if (applicationFiltersTableSize == 0) {
-            throw new IllegalStateException("Unable to find application filters table in pipeline model.");
+        if (applicationsTableSize == 0) {
+            throw new IllegalStateException("Unable to find applications table in pipeline model.");
         }
         if (ingressGtpTunnelPeersTableSize == 0) {
             throw new IllegalStateException("Unable to find ingress GTP tunnel peers table in pipeline model.");
@@ -256,7 +256,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         this.downlinkUeSessionsTableSize = downlinkUeSessionsTableSize;
         this.uplinkUpfTerminationsTableSize = uplinkUpfTerminationsTableSize;
         this.downlinkUpfTerminationsTableSize = downlinkUpfTerminationsTableSize;
-        this.applicationFiltersTableSize = applicationFiltersTableSize;
+        this.applicationsTableSize = applicationsTableSize;
         this.upfCounterSize = Math.min(ingressCounterSize, egressCounterSize);
         this.gtpTunnelPeersTableSize = Math.min(ingressGtpTunnelPeersTableSize, egressGtpTunnelPeersTableSize);
 
@@ -376,8 +376,8 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                         entitiesCleared++;
                     }
                     break;
-                case APPLICATION_FILTER:
-                    if (upfTranslator.isFabricApplicationFilter(entry)) {
+                case APPLICATION:
+                    if (upfTranslator.isFabricApplication(entry)) {
                         toBeRemoved.add(entry);
                         entitiesCleared++;
                     }
@@ -412,19 +412,19 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                 return getGtpTunnelPeers();
             case COUNTER:
                 return readCounters(-1);
-            case APPLICATION_FILTER:
-                return getApplicationFiltering();
+            case APPLICATION:
+                return getUpfApplication();
             default:
                 throw new UpfProgrammableException(format("Reading entity type %s not supported.",
                                                           entityType.humanReadableName()));
         }
     }
 
-    private Collection<UpfEntity> getApplicationFiltering() throws UpfProgrammableException {
+    private Collection<UpfEntity> getUpfApplication() throws UpfProgrammableException {
         ArrayList<UpfEntity> appFiltering = new ArrayList<>();
         for (FlowRule flowRule : flowRuleService.getFlowEntries(deviceId)) {
-            if (upfTranslator.isFabricApplicationFilter(flowRule)) {
-                appFiltering.add(upfTranslator.fabricEntryToApplicationFilter(flowRule));
+            if (upfTranslator.isFabricApplication(flowRule)) {
+                appFiltering.add(upfTranslator.fabricEntryToUpfApplication(flowRule));
             }
         }
         return appFiltering;
@@ -573,8 +573,8 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                 return this.downlinkUpfTerminationsTableSize;
             case COUNTER:
                 return upfCounterSize;
-            case APPLICATION_FILTER:
-                return applicationFiltersTableSize;
+            case APPLICATION:
+                return applicationsTableSize;
             default:
                 throw new UpfProgrammableException(format("Getting size of entity type %s not supported.",
                                                           entityType.humanReadableName()));
@@ -651,8 +651,8 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
             case TUNNEL_PEER:
                 addGtpTunnelPeer((GtpTunnelPeer) entity);
                 break;
-            case APPLICATION_FILTER:
-                addApplicationFiltering((ApplicationFilter) entity);
+            case APPLICATION:
+                addUpfApplication((UpfApplication) entity);
                 break;
             case COUNTER:
             default:
@@ -661,8 +661,8 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         }
     }
 
-    private void addApplicationFiltering(ApplicationFilter appFilter) throws UpfProgrammableException {
-        FlowRule flowRule = upfTranslator.applicationFilterToFabricEntry(appFilter, deviceId, appId);
+    private void addUpfApplication(UpfApplication appFilter) throws UpfProgrammableException {
+        FlowRule flowRule = upfTranslator.upfApplicationToFabricEntry(appFilter, deviceId, appId);
         log.info("Installing {}", appFilter);
         flowRuleService.applyFlowRules(flowRule);
         log.debug("Application added with flowID {}", flowRule.id().value());
@@ -747,8 +747,8 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
             case TUNNEL_PEER:
                 removeGtpTunnelPeer((GtpTunnelPeer) entity);
                 break;
-            case APPLICATION_FILTER:
-                removeApplicationFiltering((ApplicationFilter) entity);
+            case APPLICATION:
+                removeUpfApplication((UpfApplication) entity);
                 break;
             case COUNTER:
             default:
@@ -879,10 +879,10 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                       false, DEFAULT_PRIORITY);
     }
 
-    private void removeApplicationFiltering(ApplicationFilter appFilter)
+    private void removeUpfApplication(UpfApplication appFilter)
             throws UpfProgrammableException {
-        PiCriterion match = upfTranslator.buildApplicationFilterCriterion(appFilter);
-        removeEntry(match, FABRIC_INGRESS_SPGW_APPLICATION_FILTERS, false, appFilter.priority());
+        PiCriterion match = upfTranslator.buildApplicationCriterion(appFilter);
+        removeEntry(match, FABRIC_INGRESS_SPGW_APPLICATIONS, false, appFilter.priority());
     }
 
     private void applyUplinkRecirculation(Ip4Prefix subnet, boolean remove) {

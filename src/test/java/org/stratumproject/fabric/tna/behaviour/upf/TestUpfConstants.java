@@ -9,10 +9,10 @@ import org.onlab.packet.Ip4Prefix;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.DefaultApplicationId;
 import org.onosproject.net.DeviceId;
-import org.onosproject.net.behaviour.upf.ApplicationFilter;
 import org.onosproject.net.behaviour.upf.GtpTunnelPeer;
 import org.onosproject.net.behaviour.upf.SessionDownlink;
 import org.onosproject.net.behaviour.upf.SessionUplink;
+import org.onosproject.net.behaviour.upf.UpfApplication;
 import org.onosproject.net.behaviour.upf.UpfInterface;
 import org.onosproject.net.behaviour.upf.UpfTerminationDownlink;
 import org.onosproject.net.behaviour.upf.UpfTerminationUplink;
@@ -30,7 +30,7 @@ import java.util.Arrays;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.CTR_ID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_EG_TUNNEL_PEERS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_LOAD_TUNNEL_PARAMS;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_APPLICATION_FILTERS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_APPLICATIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_APP_FWD;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_APP_FWD_NO_TC;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_DROP;
@@ -162,7 +162,7 @@ public final class TestUpfConstants {
             .withQfi(DOWNLINK_QFI)
             .build();
 
-    public static final ApplicationFilter APPLICATION_FILTERING = ApplicationFilter.builder()
+    public static final UpfApplication APPLICATION_FILTERING = UpfApplication.builder()
             .withAppId(APP_FILTERING_ID)
             .withIp4Prefix(APP_IP_PREFIX)
             .withL4PortRange(Range.closed(APP_L4_RANGE.getLeft(), APP_L4_RANGE.getRight()))
@@ -431,7 +431,7 @@ public final class TestUpfConstants {
 
     public static final FlowRule FABRIC_APPLICATION_FILTERING = DefaultFlowRule.builder()
             .forDevice(DEVICE_ID).fromApp(APP_ID).makePermanent()
-            .forTable(FABRIC_INGRESS_SPGW_APPLICATION_FILTERS)
+            .forTable(FABRIC_INGRESS_SPGW_APPLICATIONS)
             .withSelector(
                     DefaultTrafficSelector.builder()
                             .matchPi(PiCriterion.builder()

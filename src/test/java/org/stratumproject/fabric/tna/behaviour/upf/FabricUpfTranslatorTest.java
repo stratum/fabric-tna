@@ -4,10 +4,10 @@ package org.stratumproject.fabric.tna.behaviour.upf;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.junit.Test;
-import org.onosproject.net.behaviour.upf.ApplicationFilter;
 import org.onosproject.net.behaviour.upf.GtpTunnelPeer;
 import org.onosproject.net.behaviour.upf.SessionDownlink;
 import org.onosproject.net.behaviour.upf.SessionUplink;
+import org.onosproject.net.behaviour.upf.UpfApplication;
 import org.onosproject.net.behaviour.upf.UpfInterface;
 import org.onosproject.net.behaviour.upf.UpfProgrammableException;
 import org.onosproject.net.behaviour.upf.UpfTerminationDownlink;
@@ -207,11 +207,11 @@ public class FabricUpfTranslatorTest {
     }
 
     @Test
-    public void fabricEntryToApplicationFilteringTest() {
-        ApplicationFilter translatedInterface;
-        ApplicationFilter expectedInterface = TestUpfConstants.APPLICATION_FILTERING;
+    public void fabricEntryToUpfApplicationTest() {
+        UpfApplication translatedInterface;
+        UpfApplication expectedInterface = TestUpfConstants.APPLICATION_FILTERING;
         try {
-            translatedInterface = upfTranslator.fabricEntryToApplicationFilter(
+            translatedInterface = upfTranslator.fabricEntryToUpfApplication(
                     TestUpfConstants.FABRIC_APPLICATION_FILTERING);
         } catch (UpfProgrammableException e) {
             assertThat("Fabric application filtering should correctly translate to abstract application without error",
@@ -419,11 +419,11 @@ public class FabricUpfTranslatorTest {
     }
 
     @Test
-    public void applicationFilteringToFabricEntryTest() {
+    public void upfApplicationToFabricEntryTest() {
         FlowRule translatedRule;
         FlowRule expectedRule = TestUpfConstants.FABRIC_APPLICATION_FILTERING;
         try {
-            translatedRule = upfTranslator.applicationFilterToFabricEntry(
+            translatedRule = upfTranslator.upfApplicationToFabricEntry(
                     TestUpfConstants.APPLICATION_FILTERING,
                     TestUpfConstants.DEVICE_ID,
                     TestUpfConstants.APP_ID);

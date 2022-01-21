@@ -2471,7 +2471,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
 
         self.push_update_add_entry_to_action(
             req,
-            "FabricIngress.spgw.application_filters",
+            "FabricIngress.spgw.applications",
             match_fields,
             "FabricIngress.spgw.set_app_id",
             [

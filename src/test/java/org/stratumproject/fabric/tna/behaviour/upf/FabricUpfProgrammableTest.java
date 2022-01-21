@@ -12,9 +12,9 @@ import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.PortNumber;
-import org.onosproject.net.behaviour.upf.ApplicationFilter;
 import org.onosproject.net.behaviour.upf.SessionDownlink;
 import org.onosproject.net.behaviour.upf.SessionUplink;
+import org.onosproject.net.behaviour.upf.UpfApplication;
 import org.onosproject.net.behaviour.upf.UpfCounter;
 import org.onosproject.net.behaviour.upf.UpfEntity;
 import org.onosproject.net.behaviour.upf.UpfEntityType;
@@ -56,7 +56,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.stratumproject.fabric.tna.behaviour.Constants.TNA;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_EG_TUNNEL_PEERS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_TERMINATIONS_COUNTER;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_APPLICATION_FILTERS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_APPLICATIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_SESSIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_TERMINATIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_IG_TUNNEL_PEERS;
@@ -95,7 +95,7 @@ public class FabricUpfProgrammableTest {
                                TestUpfConstants.PHYSICAL_MAX_TUNNELS),
             new MockTableModel(FABRIC_EGRESS_SPGW_EG_TUNNEL_PEERS,
                                TestUpfConstants.PHYSICAL_MAX_TUNNELS),
-            new MockTableModel(FABRIC_INGRESS_SPGW_APPLICATION_FILTERS,
+            new MockTableModel(FABRIC_INGRESS_SPGW_APPLICATIONS,
                                TestUpfConstants.PHYSICAL_MAX_APPLICATIONS)
     );
     private static final List<PiCounterModel> COUNTER_MODELS = ImmutableList.of(
@@ -246,18 +246,18 @@ public class FabricUpfProgrammableTest {
     }
 
     @Test
-    public void testApplicationFiltering() throws Exception {
-        assertTrue(upfProgrammable.readAll(UpfEntityType.APPLICATION_FILTER).isEmpty());
-        ApplicationFilter expectedAppFiltering = TestUpfConstants.APPLICATION_FILTERING;
+    public void testUpfApplication() throws Exception {
+        assertTrue(upfProgrammable.readAll(UpfEntityType.APPLICATION).isEmpty());
+        UpfApplication expectedAppFiltering = TestUpfConstants.APPLICATION_FILTERING;
         upfProgrammable.apply(expectedAppFiltering);
         Collection<? extends UpfEntity> installedAppFiltering =
-                upfProgrammable.readAll(UpfEntityType.APPLICATION_FILTER);
+                upfProgrammable.readAll(UpfEntityType.APPLICATION);
         assertThat(installedAppFiltering.size(), equalTo(1));
         for (var readAppFiltering : installedAppFiltering) {
             assertThat(readAppFiltering, equalTo(expectedAppFiltering));
         }
         upfProgrammable.delete(expectedAppFiltering);
-        assertTrue(upfProgrammable.readAll(UpfEntityType.APPLICATION_FILTER).isEmpty());
+        assertTrue(upfProgrammable.readAll(UpfEntityType.APPLICATION).isEmpty());
     }
 
     @Test

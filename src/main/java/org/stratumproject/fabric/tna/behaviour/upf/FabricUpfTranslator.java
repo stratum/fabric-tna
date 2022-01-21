@@ -8,10 +8,10 @@ import org.onlab.packet.Ip4Address;
 import org.onlab.packet.Ip4Prefix;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.net.DeviceId;
-import org.onosproject.net.behaviour.upf.ApplicationFilter;
 import org.onosproject.net.behaviour.upf.GtpTunnelPeer;
 import org.onosproject.net.behaviour.upf.SessionDownlink;
 import org.onosproject.net.behaviour.upf.SessionUplink;
+import org.onosproject.net.behaviour.upf.UpfApplication;
 import org.onosproject.net.behaviour.upf.UpfInterface;
 import org.onosproject.net.behaviour.upf.UpfProgrammableException;
 import org.onosproject.net.behaviour.upf.UpfTerminationDownlink;
@@ -39,7 +39,7 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGR
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_GTPU_ONLY;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_GTPU_WITH_PSC;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_LOAD_TUNNEL_PARAMS;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_APPLICATION_FILTERS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_APPLICATIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_APP_FWD;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_APP_FWD_NO_TC;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_DROP;
@@ -164,14 +164,14 @@ public class FabricUpfTranslator {
     }
 
     /**
-     * Returns true if the given table entry is an application filters table entry
-     * from the fabric.p4 physical pipeline, and false otherwise.
+     * Returns true if the given table entry is an application table entry from
+     * the fabric.p4 physical pipeline, and false otherwise.
      *
      * @param entry the entry that may or may not be a fabric.p4 application
-     * @return true if the entry is a fabric.p4 application filter
+     * @return true if the entry is a fabric.p4 application
      */
-    public boolean isFabricApplicationFilter(FlowRule entry) {
-        return entry.table().equals(FABRIC_INGRESS_SPGW_APPLICATION_FILTERS);
+    public boolean isFabricApplication(FlowRule entry) {
+        return entry.table().equals(FABRIC_INGRESS_SPGW_APPLICATIONS);
     }
 
     private void assertTableId(FlowRule entry, PiTableId tableId) throws UpfProgrammableException {
@@ -376,13 +376,13 @@ public class FabricUpfTranslator {
         return ifaceBuilder.build();
     }
 
-    public ApplicationFilter fabricEntryToApplicationFilter(FlowRule entry)
+    public UpfApplication fabricEntryToUpfApplication(FlowRule entry)
             throws UpfProgrammableException {
-        assertTableId(entry, FABRIC_INGRESS_SPGW_APPLICATION_FILTERS);
+        assertTableId(entry, FABRIC_INGRESS_SPGW_APPLICATIONS);
         Pair<PiCriterion, PiTableAction> matchActionPair = FabricUpfTranslatorUtil.fabricEntryToPiPair(entry);
         PiCriterion match = matchActionPair.getLeft();
         PiAction action = (PiAction) matchActionPair.getRight();
-        ApplicationFilter.Builder appFilteringBuilder = ApplicationFilter.builder()
+        UpfApplication.Builder appFilteringBuilder = UpfApplication.builder()
                 .withAppId(FabricUpfTranslatorUtil.getParamByte(action, APP_ID))
                 .withPriority(entry.priority());
         if (FabricUpfTranslatorUtil.fieldIsPresent(match, HDR_APP_IPV4_ADDR)) {
@@ -669,24 +669,24 @@ public class FabricUpfTranslator {
                 .build();
     }
 
-    public FlowRule applicationFilterToFabricEntry(
-            ApplicationFilter appFilter, DeviceId deviceId, ApplicationId appId)
+    public FlowRule upfApplicationToFabricEntry(
+            UpfApplication appFilter, DeviceId deviceId, ApplicationId appId)
             throws UpfProgrammableException {
-        PiCriterion match = buildApplicationFilterCriterion(appFilter);
+        PiCriterion match = buildApplicationCriterion(appFilter);
         PiAction action = PiAction.builder()
                 .withId(FABRIC_INGRESS_SPGW_SET_APP_ID)
                 .withParameter(new PiActionParam(APP_ID, appFilter.appId()))
                 .build();
         return DefaultFlowRule.builder()
                 .forDevice(deviceId).fromApp(appId).makePermanent()
-                .forTable(FABRIC_INGRESS_SPGW_APPLICATION_FILTERS)
+                .forTable(FABRIC_INGRESS_SPGW_APPLICATIONS)
                 .withSelector(DefaultTrafficSelector.builder().matchPi(match).build())
                 .withTreatment(DefaultTrafficTreatment.builder().piTableAction(action).build())
                 .withPriority(appFilter.priority())
                 .build();
     }
 
-    public PiCriterion buildApplicationFilterCriterion(ApplicationFilter appFilter) {
+    public PiCriterion buildApplicationCriterion(UpfApplication appFilter) {
         PiCriterion.Builder matchBuilder = PiCriterion.builder();
         // FIXME: SLICE_MOBILE should come from the north instead of hardcoding.
         matchBuilder.matchExact(HDR_SLICE_ID, SLICE_MOBILE.id());
