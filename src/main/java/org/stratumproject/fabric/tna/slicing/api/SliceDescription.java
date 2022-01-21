@@ -1,4 +1,4 @@
-// Copyright $today.year-present Open Networking Foundation
+// Copyright 2022-present Open Networking Foundation
 // SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 
 package org.stratumproject.fabric.tna.slicing.api;
@@ -13,31 +13,59 @@ import java.util.Map;
 /**
  * Describes a slice.
  */
-// TODO: javadoc
 public class SliceDescription {
 
     private final SliceId id;
     private final String name;
-    private final ImmutableMap<TrafficClass, TrafficClassDescription> tcDescriptions;
+    private final ImmutableMap<TrafficClass, TrafficClassDescription> tcDescrs;
 
-    public SliceDescription(SliceId id, String name, Map<TrafficClass, TrafficClassDescription> tcDescriptions) {
+    /**
+     * Creates a new slice description.
+     *
+     * @param id       slice ID
+     * @param name     name
+     * @param tcDescrs traffic class descriptions
+     */
+    public SliceDescription(SliceId id, String name,
+                            Map<TrafficClass, TrafficClassDescription> tcDescrs) {
         this.id = id;
-        this.tcDescriptions = ImmutableMap.copyOf(tcDescriptions);
+        this.tcDescrs = ImmutableMap.copyOf(tcDescrs);
         this.name = name;
     }
 
+    /**
+     * Returns the slice ID.
+     *
+     * @return slice ID
+     */
     public SliceId id() {
         return id;
     }
 
+    /**
+     * Returns the descriptions of the traffic classes within this slice.
+     *
+     * @return traffic class descriptions
+     */
     public Collection<TrafficClassDescription> tcDescriptions() {
-        return tcDescriptions.values();
+        return tcDescrs.values();
     }
 
+    /**
+     * Returns the description for the given traffic class.
+     *
+     * @param tc traffic class
+     * @return traffic class description
+     */
     public TrafficClassDescription tcDescription(TrafficClass tc) {
-        return tcDescriptions.get(tc);
+        return tcDescrs.get(tc);
     }
 
+    /**
+     * Returns the name of this slice.
+     *
+     * @return slice name
+     */
     public String name() {
         return name;
     }
@@ -53,12 +81,12 @@ public class SliceDescription {
         SliceDescription that = (SliceDescription) o;
         return Objects.equal(id, that.id) &&
                 Objects.equal(name, that.name) &&
-                Objects.equal(tcDescriptions, that.tcDescriptions);
+                Objects.equal(tcDescrs, that.tcDescrs);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(id, name, tcDescriptions);
+        return Objects.hashCode(id, name, tcDescrs);
     }
 
     @Override
@@ -66,9 +94,7 @@ public class SliceDescription {
         return MoreObjects.toStringHelper(this)
                 .add("id", id)
                 .add("name", name)
-                .add("tcs", tcDescriptions)
+                .add("tcs", tcDescrs)
                 .toString();
     }
-
-    // TODO: builder
 }

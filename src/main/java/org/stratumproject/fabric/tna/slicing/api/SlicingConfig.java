@@ -28,7 +28,7 @@ import static java.lang.String.format;
  *     "org.stratumproject.fabric-tna": {
  *       "slicing": {
  *         "slices": {
- *           "0": {
+ *           0: {
  *             "name": "Default",
  *             "tcs": {
  *               "REAL_TIME": {
@@ -37,7 +37,7 @@ import static java.lang.String.format;
  *               }
  *             }
  *           },
- *           "1": {
+ *           1: {
  *             "name": "P4-UPF",
  *             "tcs": {
  *               "CONTROL": {
@@ -54,7 +54,7 @@ import static java.lang.String.format;
  *               }
  *             }
  *           },
- *           "3": {
+ *           2: {
  *             "name": "BESS-UPF",
  *             "tcs": {
  *               "ELASTIC": {
@@ -69,8 +69,8 @@ import static java.lang.String.format;
  * }
  * </pre>
  */
-// TODO: javadoc
 public class SlicingConfig extends Config<ApplicationId> {
+
     private static final String SLICES = "slices";
     private static final String TCS = "tcs";
     private static final String NAME = "name";
@@ -141,6 +141,12 @@ public class SlicingConfig extends Config<ApplicationId> {
         return true;
     }
 
+    /**
+     * Returns the collection of slice descriptions defined in this config.
+     *
+     * @return collection of slice descriptions
+     * @throws ConfigException if the config is invalid
+     */
     public Collection<SliceDescription> slices() throws ConfigException {
         List<SliceDescription> sliceConfigs = Lists.newArrayList();
         var jsonSlices = object.path(SLICES).fields();
@@ -152,6 +158,14 @@ public class SlicingConfig extends Config<ApplicationId> {
         return sliceConfigs;
     }
 
+    /**
+     * Returns the description of the specific slice with the given ID, or null
+     * if such slice is not defined in this config.
+     *
+     * @param sliceId slice ID
+     * @return slice description
+     * @throws ConfigException if the config is invalid
+     */
     public SliceDescription slice(SliceId sliceId) throws ConfigException {
         var sliceNode = object.path(SLICES).path(sliceId.toString());
         if (sliceNode.isMissingNode()) {
@@ -185,6 +199,15 @@ public class SlicingConfig extends Config<ApplicationId> {
         return new SliceDescription(sliceId, name, tcDescriptions);
     }
 
+    /**
+     * Returns the description of the given traffic class whitin the given
+     * slice, or null if missing from this config.
+     *
+     * @param sliceId slice ID
+     * @param tc      traffic class
+     * @return traffic class description
+     * @throws ConfigException if the config is invalid
+     */
     public TrafficClassDescription tcDescription(SliceId sliceId, TrafficClass tc) throws ConfigException {
         var tcNode = object.path(SLICES)
                 .path(sliceId.toString())
