@@ -139,7 +139,7 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
 
     @Activate
     protected void activate() {
-        appId = coreService.registerApplication(APP_NAME);
+        appId = coreService.registerApplication(APP_NAME, this::preDeactivate);
 
         KryoNamespace.Builder serializer = KryoNamespace.newBuilder()
                 .register(KryoNamespaces.API)
@@ -195,17 +195,21 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
         log.info("Started");
     }
 
-    @Deactivate
-    protected void deactivate() {
+    // Called only when we intentionally deactivate the app.
+    protected void preDeactivate() {
         sliceStore.removeListener(sliceListener);
         sliceStore.destroy();
-        sliceExecutor.shutdown();
 
         deviceService.removeListener(deviceListener);
-        deviceExecutor.shutdown();
 
         defaultTcStore.removeListener(defaultTcListener);
         defaultTcStore.destroy();
+    }
+
+    @Deactivate
+    protected void deactivate() {
+        sliceExecutor.shutdown();
+        deviceExecutor.shutdown();
         defaultTcExecutor.shutdown();
 
         // FIXME: clean up classifier flow rules and store
