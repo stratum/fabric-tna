@@ -28,7 +28,7 @@ import static java.lang.String.format;
  *     "org.stratumproject.fabric-tna": {
  *       "slicing": {
  *         "slices": {
- *           0: {
+ *           "0": {
  *             "name": "Default",
  *             "tcs": {
  *               "REAL_TIME": {
@@ -37,7 +37,7 @@ import static java.lang.String.format;
  *               }
  *             }
  *           },
- *           1: {
+ *           "1": {
  *             "name": "P4-UPF",
  *             "tcs": {
  *               "CONTROL": {
@@ -54,7 +54,7 @@ import static java.lang.String.format;
  *               }
  *             }
  *           },
- *           2: {
+ *           "2": {
  *             "name": "BESS-UPF",
  *             "tcs": {
  *               "ELASTIC": {
