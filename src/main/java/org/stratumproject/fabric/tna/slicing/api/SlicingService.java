@@ -27,8 +27,10 @@ public interface SlicingService {
     Set<TrafficClass> getTrafficClasses(SliceId sliceId);
 
     /**
-     * Sets a default traffic class that is applied to all unclassified traffic of a slice.
-     * The given traffic class must be already part of the slice, otherwise this will fail.
+     * Sets a default traffic class that is applied to all unclassified traffic
+     * of a slice. The implementation does not attempt to verify that the given
+     * traffic class has been already allocated for the given slice. If not
+     * allocated, the device is expected to forward traffic as best effort.
      *
      * @param sliceId slice identifier
      * @param tc traffic class
