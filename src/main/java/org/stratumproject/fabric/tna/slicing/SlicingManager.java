@@ -629,6 +629,7 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
                 switch (event.type()) {
                     case INSERT:
                     case UPDATE:
+                        // FIXME: should we handle UPDATE differently? E.g., removing old queues entries?
                         if (workPartitionService.isMine(event.newValue().value(), toStringHasher())) {
                             deviceService.getAvailableDevices().forEach(device ->
                                     addQueuesFlowRules(device.id(), event.key().sliceId(),
