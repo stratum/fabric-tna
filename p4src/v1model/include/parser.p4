@@ -20,7 +20,7 @@ parser FabricParser (packet_in                            packet,
         fabric_md.ingress.bridged.setValid();
         fabric_md.ingress.bridged.bmd_type = BridgedMdType_t.INGRESS_TO_EGRESS;
         fabric_md.ingress.bridged.base.ig_port = standard_md.ingress_port;
-        fabric_md.preserved_ingress_port = (FabricPortId_t)standard_md.ingress_port;
+        fabric_md.recirc_preserved_ingress_port = (FabricPortId_t)standard_md.ingress_port;
         fabric_md.ingress.bridged.base.ig_tstamp = standard_md.ingress_global_timestamp;
         fabric_md.ingress.egress_port_set = false;
         fabric_md.ingress.punt_to_cpu = false;

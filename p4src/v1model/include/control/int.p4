@@ -10,19 +10,19 @@
 control IntWatchlist(inout ingress_headers_t         hdr,
                      inout fabric_ingress_metadata_t fabric_md,
                      inout standard_metadata_t       standard_md,
-                     inout IntReportType_t           preserved_report_type) {
+                     inout IntReportType_t           recirc_preserved_report_type) {
 
     direct_counter(CounterType.packets_and_bytes) watchlist_counter;
 
     action mark_to_report() {
         fabric_md.bridged.int_bmd.report_type = INT_REPORT_TYPE_FLOW;
-        preserved_report_type = INT_REPORT_TYPE_FLOW;
+        recirc_preserved_report_type = INT_REPORT_TYPE_FLOW;
         watchlist_counter.count();
     }
 
     action no_report() {
         fabric_md.bridged.int_bmd.report_type = INT_REPORT_TYPE_NO_REPORT;
-        preserved_report_type = INT_REPORT_TYPE_NO_REPORT;
+        recirc_preserved_report_type = INT_REPORT_TYPE_NO_REPORT;
     }
 
     // Required by the control plane to distinguish entries used to exclude the INT
@@ -147,11 +147,13 @@ control IntEgress (inout v1model_header_t          hdr_v1model,
     }
 
     action check_quota() {
-        // Left for P4Info compatibility.
+        // Queue reports are not supported yet on v1model.
+        // Leaving this action for P4Info compatibility with the TNA program.
     }
 
     action reset_quota() {
-        // Left for P4Info compatibility.
+        // Queue reports are not supported yet on v1model.
+        // Leaving this action for P4Info compatibility with the TNA program.
     }
 
     table queue_latency_thresholds {
@@ -237,7 +239,7 @@ control IntEgress (inout v1model_header_t          hdr_v1model,
         // If drop_report, need to set the local_report invalid.
         //local_report was setValid() in parser emulator to allow its initialization.
         hdr.local_report_header.setInvalid();
-        // hdr.drop_report_header.drop_reason = fabric_v1model.preserved_drop_reason;
+        // hdr.drop_report_header.drop_reason = fabric_v1model.recirc_preserved_drop_reason;
         hdr.drop_report_header.drop_reason = fabric_md.bridged.int_bmd.drop_reason;
     }
 
@@ -295,7 +297,7 @@ control IntEgress (inout v1model_header_t          hdr_v1model,
         fabric_md.int_report_md.mirror_type = FabricMirrorType_t.INT_REPORT;
         fabric_md.int_report_md.report_type = fabric_md.bridged.int_bmd.report_type;
         fabric_md.int_report_md.ig_port = fabric_md.bridged.base.ig_port;
-        fabric_md.int_report_md.eg_port = (PortId_t)fabric_v1model.preserved_egress_port;
+        fabric_md.int_report_md.eg_port = (PortId_t)fabric_v1model.recirc_preserved_egress_port;
         fabric_md.int_report_md.queue_id = egress_qid;
         fabric_md.int_report_md.queue_occupancy = standard_md.deq_qdepth;
         fabric_md.int_report_md.ig_tstamp = fabric_md.bridged.base.ig_tstamp[31:0];

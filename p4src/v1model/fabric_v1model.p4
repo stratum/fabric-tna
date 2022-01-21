@@ -71,9 +71,9 @@ control FabricIngress (inout v1model_header_t hdr,
         }
 
         lkp_md_init.apply(hdr.ingress, fabric_md.ingress.lkp);
-        pkt_io.apply(hdr.ingress, fabric_md.ingress, fabric_md.skip_egress, standard_md, fabric_md.preserved_egress_port);
+        pkt_io.apply(hdr.ingress, fabric_md.ingress, fabric_md.skip_egress, standard_md, fabric_md.recirc_preserved_egress_port);
 #ifdef WITH_INT
-        int_watchlist.apply(hdr.ingress, fabric_md.ingress, standard_md, fabric_md.preserved_report_type);
+        int_watchlist.apply(hdr.ingress, fabric_md.ingress, standard_md, fabric_md.recirc_preserved_report_type);
 #endif // WITH_INT
         stats.apply(fabric_md.ingress.lkp, fabric_md.ingress.bridged.base.ig_port,
             fabric_md.ingress.bridged.base.stats_flow_id);
@@ -92,9 +92,9 @@ control FabricIngress (inout v1model_header_t hdr,
         if (!fabric_md.ingress.skip_next) {
             pre_next.apply(hdr.ingress, fabric_md.ingress);
         }
-        acl.apply(hdr.ingress, fabric_md.ingress, standard_md, fabric_md.preserved_egress_port, fabric_md.drop_ctl);
+        acl.apply(hdr.ingress, fabric_md.ingress, standard_md, fabric_md.recirc_preserved_egress_port, fabric_md.drop_ctl);
         if (!fabric_md.ingress.skip_next) {
-            next.apply(hdr.ingress, fabric_md.ingress, standard_md, fabric_md.preserved_egress_port);
+            next.apply(hdr.ingress, fabric_md.ingress, standard_md, fabric_md.recirc_preserved_egress_port);
         }
         qos.apply(fabric_md.ingress, standard_md, fabric_md.drop_ctl);
 #ifdef WITH_INT
@@ -136,8 +136,8 @@ control FabricEgress (inout v1model_header_t hdr,
             // Packet must generate the flow report or is an egress drop.
 
             // Restore preserved metadata.
-            fabric_md.egress.bridged.int_bmd.drop_reason = fabric_md.preserved_drop_reason;
-            fabric_md.egress.bridged.int_bmd.report_type = fabric_md.preserved_report_type;
+            fabric_md.egress.bridged.int_bmd.drop_reason = fabric_md.recirc_preserved_drop_reason;
+            fabric_md.egress.bridged.int_bmd.report_type = fabric_md.recirc_preserved_report_type;
 
             parser_emulator.apply(hdr, fabric_md.egress, standard_md);
         }
@@ -148,10 +148,10 @@ control FabricEgress (inout v1model_header_t hdr,
         }
 #endif // WITH_INT
 
-        pkt_io_egress.apply(hdr.ingress, fabric_md.egress ,standard_md, fabric_md.preserved_ingress_port);
+        pkt_io_egress.apply(hdr.ingress, fabric_md.egress ,standard_md, fabric_md.recirc_preserved_ingress_port);
         stats.apply(fabric_md.egress.bridged.base.stats_flow_id, standard_md.egress_port,
              fabric_md.egress.bridged.bmd_type);
-        egress_next.apply(hdr.ingress, fabric_md.egress, standard_md, fabric_md.preserved_drop_reason, fabric_md.drop_ctl);
+        egress_next.apply(hdr.ingress, fabric_md.egress, standard_md, fabric_md.recirc_preserved_drop_reason, fabric_md.drop_ctl);
 #ifdef WITH_SPGW
         spgw.apply(hdr.ingress, fabric_md.egress);
 #endif // WITH_SPGW
