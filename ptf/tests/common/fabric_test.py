@@ -3354,7 +3354,7 @@ class IntTest(IPv4UnicastTest):
                     : INT_MIRROR_TRUNCATE_MAX_LEN - INT_MIRROR_BYTES
                 ]
             )
-        else: # is_v1model()
+        else:  # is_v1model()
             inner_packet = Ether(bytes(int_pre_mirrored_packet))
 
         # The switch should always strip VLAN, MPLS, GTP-U and VXLAN headers inside INT reports.
