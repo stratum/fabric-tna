@@ -132,6 +132,4 @@ public class TrafficClassDescription {
                 .add("isSystemTc", isSystemTc)
                 .toString();
     }
-
-    // TODO: builder
 }

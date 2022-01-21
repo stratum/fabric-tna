@@ -109,33 +109,33 @@ public class SlicingConfig extends Config<ApplicationId> {
                     return false;
                 }
             }
+        }
 
-            try {
-                var slices = slices();
-                if (slices.isEmpty()) {
-                    throw new InvalidFieldException(SLICES, "At least one slice should be specified");
-                }
+        try {
+            var slices = slices();
+            if (slices.isEmpty()) {
+                throw new InvalidFieldException(SLICES, "At least one slice should be specified");
+            }
 
-                var systemTcsCount = 0;
-                for (SliceDescription sliceConfig : slices) {
-                    for (TrafficClassDescription tcDescription : sliceConfig.tcDescriptions()) {
-                        if (tcDescription.isSystemTc()) {
-                            systemTcsCount++;
-                        }
+            var systemTcsCount = 0;
+            for (SliceDescription sliceConfig : slices) {
+                for (TrafficClassDescription tcDescription : sliceConfig.tcDescriptions()) {
+                    if (tcDescription.isSystemTc()) {
+                        systemTcsCount++;
                     }
                 }
-                if (systemTcsCount == 0) {
-                    throw new InvalidFieldException(SLICES, format(
-                            "At least one traffic class should be set as the system one (%s=true)",
-                            IS_SYSTEM_TC));
-                }
-                if (systemTcsCount > 1) {
-                    throw new InvalidFieldException(SLICES,
-                            "Too many traffic classes are set as the system one, only one is allowed");
-                }
-            } catch (ConfigException e) {
-                throw new InvalidFieldException(SLICES, e);
             }
+            if (systemTcsCount == 0) {
+                throw new InvalidFieldException(SLICES, format(
+                        "At least one traffic class should be set as the system one (%s=true)",
+                        IS_SYSTEM_TC));
+            }
+            if (systemTcsCount > 1) {
+                throw new InvalidFieldException(SLICES,
+                        "Too many traffic classes are set as the system one, only one is allowed");
+            }
+        } catch (ConfigException e) {
+            throw new InvalidFieldException(SLICES, e);
         }
 
         return true;
@@ -152,7 +152,15 @@ public class SlicingConfig extends Config<ApplicationId> {
         var jsonSlices = object.path(SLICES).fields();
         while (jsonSlices.hasNext()) {
             var jsonSlice = jsonSlices.next();
-            var sliceId = SliceId.of(Integer.parseInt(jsonSlice.getKey()));
+            SliceId sliceId;
+            try {
+                sliceId = SliceId.of(Integer.parseInt(jsonSlice.getKey()));
+            } catch (IllegalArgumentException e) {
+                // This is catching also NumberFormatException (subclass of
+                // IllegalArgumentException) thrown by parseInt.
+                throw new ConfigException(format(
+                        "\"%s\" is not a valid slice ID", jsonSlice.getKey()), e);
+            }
             sliceConfigs.add(slice(sliceId));
         }
         return sliceConfigs;
@@ -188,7 +196,7 @@ public class SlicingConfig extends Config<ApplicationId> {
                 tc = TrafficClass.valueOf(tcName);
             } catch (IllegalArgumentException e) {
                 throw new ConfigException(format(
-                        "%s is not a valid traffic class for slice %s", tcName, sliceId), e);
+                        "\"%s\" is not a valid traffic class for slice %s", tcName, sliceId), e);
             }
             if (tc.equals(TrafficClass.BEST_EFFORT)) {
                 throw new ConfigException("BEST_EFFORT is implicit for all slices and cannot be configured");
@@ -222,7 +230,7 @@ public class SlicingConfig extends Config<ApplicationId> {
             queueId = QueueId.of(tcNode.path(QUEUE_ID).asInt());
         } catch (IllegalArgumentException e) {
             throw new ConfigException(format(
-                    "'%s' is not a valid queue ID for traffic class %s of slice %s",
+                    "\"%s\" is not a valid queue ID for traffic class %s of slice %s",
                     tcNode.path(QUEUE_ID).asText(), tc, sliceId), e);
         }
 
