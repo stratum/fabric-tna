@@ -932,7 +932,7 @@ class FabricTest(P4RuntimeTest):
         # egress_port
         port_md = packet_out.metadata.add()
         port_md.metadata_id = 2
-        port_md.value = stringify(port, 2)
+        port_md.value = stringify(port, 4)
         # pad1
         pad_md = packet_out.metadata.add()
         pad_md.metadata_id = 3
@@ -1038,7 +1038,7 @@ class FabricTest(P4RuntimeTest):
         inner_vlan_id=None,
         port_type=PORT_TYPE_EDGE,
     ):
-        ingress_port_ = stringify(ingress_port, 2)
+        ingress_port_ = stringify(ingress_port, 4)
         vlan_valid_ = b"\x01" if vlan_valid else b"\x00"
         vlan_id_ = stringify(vlan_id, 2)
         vlan_id_mask_ = stringify(4095 if vlan_valid else 0, 2)
@@ -1070,7 +1070,7 @@ class FabricTest(P4RuntimeTest):
         )
 
     def set_egress_vlan(self, egress_port, vlan_id, push_vlan=False):
-        egress_port = stringify(egress_port, 2)
+        egress_port = stringify(egress_port, 4)
         vlan_id = stringify(vlan_id, 2)
         action_name = "push_vlan" if push_vlan else "pop_vlan"
         self.send_request_add_entry_to_action(
@@ -1081,7 +1081,7 @@ class FabricTest(P4RuntimeTest):
         )
 
     def set_keep_egress_vlan_config(self, egress_port, vlan_id):
-        egress_port = stringify(egress_port, 2)
+        egress_port = stringify(egress_port, 4)
         vlan_id = stringify(vlan_id, 2)
         self.send_request_add_entry_to_action(
             "egress_next.egress_vlan",
@@ -1098,7 +1098,7 @@ class FabricTest(P4RuntimeTest):
         ethertype=ETH_TYPE_IPV4,
         fwd_type=FORWARDING_TYPE_UNICAST_IPV4,
     ):
-        ingress_port_ = stringify(ingress_port, 2)
+        ingress_port_ = stringify(ingress_port, 4)
         priority = DEFAULT_PRIORITY
         if ethertype == ETH_TYPE_IPV4:
             ethertype_ = stringify(0, 2)
@@ -1267,8 +1267,8 @@ class FabricTest(P4RuntimeTest):
         )
 
     def add_forwarding_acl_drop_ingress_port(self, ingress_port):
-        ingress_port_ = stringify(ingress_port, 2)
-        ingress_port_mask_ = stringify(0x1FF, 2)
+        ingress_port_ = stringify(ingress_port, 4)
+        ingress_port_mask_ = stringify(0x1FF, 4)
         self.send_request_add_entry_to_action(
             "acl.acl",
             [self.Ternary("ig_port", ingress_port_, ingress_port_mask_)],
@@ -1334,8 +1334,8 @@ class FabricTest(P4RuntimeTest):
             l4_dport_mask = stringify(0xFFFF, 2)
             matches.append(self.Ternary("l4_dport", l4_dport_, l4_dport_mask))
         if ig_port is not None:
-            ig_port_ = stringify(ig_port, 2)
-            ig_port_mask = stringify(0x01FF, 2)
+            ig_port_ = stringify(ig_port, 4)
+            ig_port_mask = stringify(0x01FF, 4)
             matches.append(self.Ternary("ig_port", ig_port_, ig_port_mask))
         return matches
 
@@ -2023,8 +2023,11 @@ class IPv4UnicastTest(FabricTest):
             return
 
         if from_packet_out:
+            # FIXME(Yi Tseng): Port should be unset(zero).
+            # The reason we put a number here is that Stratum will always tries to
+            # translate the port number, but port zero is an invalid port.
             self.send_packet_out(
-                self.build_packet_out(pkt=pkt, port=0, do_forwarding=True)
+                self.build_packet_out(pkt=pkt, port=eg_port, do_forwarding=True)
             )
         else:
             self.send_packet(ig_port, pkt)
@@ -2032,7 +2035,7 @@ class IPv4UnicastTest(FabricTest):
         verify_port = eg_port
         if override_eg_port:
             verify_port = override_eg_port
-
+        # import pdb; pdb.set_trace()
         if verify_pkt:
             self.verify_packet(exp_pkt, verify_port)
 
@@ -4774,7 +4777,7 @@ class StatsTest(FabricTest):
     """
 
     def build_stats_matches(self, gress, stats_flow_id, port, **ftuple):
-        port_ = stringify(port, 2)
+        port_ = stringify(port, 4)
         stats_flow_id_ = stringify(stats_flow_id, 2)
         if gress == STATS_INGRESS:
             matches = self.build_acl_matches(**ftuple)

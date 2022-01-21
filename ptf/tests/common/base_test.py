@@ -362,7 +362,7 @@ class P4RuntimeTest(BaseTest):
             return msg.packet
 
     def verify_packet_in(self, exp_pkt, exp_in_port, timeout=2):
-        in_port_ = stringify(exp_in_port, 2)
+        in_port_ = stringify(exp_in_port, 4)
         if self.generate_tv:
             exp_pkt_in = p4runtime_pb2.PacketIn()
             exp_pkt_in.payload = bytes(exp_pkt)
@@ -383,7 +383,7 @@ class P4RuntimeTest(BaseTest):
                 )
 
             if in_port_ != rx_in_port_:
-                rx_inport = struct.unpack("!h", rx_in_port_)[0]
+                rx_inport = struct.unpack("!I", rx_in_port_)[0]
                 self.fail(
                     "Wrong packet-in ingress port, "
                     + "expected {} but received was {}".format(exp_in_port, rx_inport)

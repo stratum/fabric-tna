@@ -44,7 +44,7 @@ control IngressSliceTcClassifier (in    ingress_headers_t hdr,
 
     table classifier {
         key = {
-            ig_intr_md.ingress_port : ternary @name("ig_port");
+            fabric_md.lkp.ingress_port : ternary @name("ig_port");
             fabric_md.lkp.ipv4_src  : ternary @name("ipv4_src");
             fabric_md.lkp.ipv4_dst  : ternary @name("ipv4_dst");
             fabric_md.lkp.ip_proto  : ternary @name("ip_proto");
@@ -194,7 +194,7 @@ control EgressDscpRewriter (in    fabric_egress_metadata_t fabric_md,
 
     table rewriter {
         key = {
-            eg_intr_md.egress_port : exact @name("eg_port");
+            fabric_md.egress_port : exact @name("eg_port");
         }
         actions = {
             rewrite;

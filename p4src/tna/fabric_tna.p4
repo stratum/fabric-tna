@@ -55,13 +55,12 @@ control FabricIngress (
 #endif // WITH_INT
 
     apply {
-        lkp_md_init.apply(hdr, fabric_md.lkp);
+        lkp_md_init.apply(hdr, ig_intr_md, fabric_md.lkp);
         pkt_io.apply(hdr, fabric_md, ig_intr_md, ig_tm_md, ig_dprsr_md);
 #ifdef WITH_INT
         int_watchlist.apply(hdr, fabric_md, ig_intr_md, ig_dprsr_md, ig_tm_md);
 #endif // WITH_INT
-        stats.apply(fabric_md.lkp, ig_intr_md.ingress_port,
-                    fabric_md.bridged.base.stats_flow_id);
+        stats.apply(fabric_md.lkp, fabric_md.bridged.base.stats_flow_id);
         slice_tc_classifier.apply(hdr, ig_intr_md, fabric_md);
         filtering.apply(hdr, fabric_md, ig_intr_md);
 #ifdef WITH_SPGW
@@ -110,8 +109,9 @@ control FabricEgress (
 #endif // WITH_INT
 
     apply {
+        fabric_md.egress_port = (FabricPortId_t)eg_intr_md.egress_port;
         pkt_io_egress.apply(hdr, fabric_md, eg_intr_md);
-        stats.apply(fabric_md.bridged.base.stats_flow_id, eg_intr_md.egress_port, fabric_md.bridged.bmd_type);
+        stats.apply(fabric_md.bridged.base.stats_flow_id, fabric_md.egress_port, fabric_md.bridged.bmd_type);
         egress_next.apply(hdr, fabric_md, eg_intr_md, eg_dprsr_md);
 #ifdef WITH_SPGW
         spgw.apply(hdr, fabric_md);

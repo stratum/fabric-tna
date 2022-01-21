@@ -5,30 +5,14 @@
     },
     {
         "p4_port": 2,
-        "iface_name": "veth3"
-    },
-    {
-        "p4_port": 3,
-        "iface_name": "veth5"
-    },
-    {
-        "p4_port": 4,
-        "iface_name": "veth7"
-    },
-    {
-        "p4_port": 5,
         "iface_name": "veth9"
     },
     {
-        "p4_port": 6,
-        "iface_name": "veth11"
+        "p4_port": 3,
+        "iface_name": "veth17"
     },
     {
-        "p4_port": 7,
-        "iface_name": "veth13"
-    },
-    {
-        "p4_port": 8,
-        "iface_name": "veth15"
+        "p4_port": 4,
+        "iface_name": "veth25"
     }
 ]

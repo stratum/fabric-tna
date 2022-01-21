@@ -8,7 +8,6 @@
 const bit<STATS_FLOW_ID_WIDTH> UNSET_FLOW_ID = 0;
 
 control StatsIngress (in lookup_metadata_t lkp,
-                      in PortId_t ig_port,
                       out bit<STATS_FLOW_ID_WIDTH> stats_flow_id) {
 
     DirectCounter<bit<64>>(CounterType_t.PACKETS_AND_BYTES) flow_counter;
@@ -20,12 +19,12 @@ control StatsIngress (in lookup_metadata_t lkp,
 
     table flows {
         key = {
-            lkp.ipv4_src : ternary @name("ipv4_src");
-            lkp.ipv4_dst : ternary @name("ipv4_dst");
-            lkp.ip_proto : ternary @name("ip_proto");
-            lkp.l4_sport : ternary @name("l4_sport");
-            lkp.l4_dport : ternary @name("l4_dport");
-            ig_port      : exact @name("ig_port");
+            lkp.ipv4_src     : ternary @name("ipv4_src");
+            lkp.ipv4_dst     : ternary @name("ipv4_dst");
+            lkp.ip_proto     : ternary @name("ip_proto");
+            lkp.l4_sport     : ternary @name("l4_sport");
+            lkp.l4_dport     : ternary @name("l4_dport");
+            lkp.ingress_port : exact @name("ig_port");
         }
         actions = {
             count;
@@ -41,8 +40,8 @@ control StatsIngress (in lookup_metadata_t lkp,
 }
 
 control StatsEgress (in bit<STATS_FLOW_ID_WIDTH> stats_flow_id,
-                      in PortId_t eg_port,
-                      in BridgedMdType_t bmd_type) {
+                     in FabricPortId_t eg_port,
+                     in BridgedMdType_t bmd_type) {
 
     DirectCounter<bit<64>>(CounterType_t.PACKETS_AND_BYTES) flow_counter;
 

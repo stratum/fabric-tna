@@ -56,7 +56,7 @@ control Next (inout ingress_headers_t hdr,
 
     table xconnect {
         key = {
-            ig_intr_md.ingress_port: exact @name("ig_port");
+            fabric_md.lkp.ingress_port: exact @name("ig_port");
             fabric_md.next_id: exact @name("next_id");
         }
         actions = {
@@ -261,7 +261,7 @@ control EgressNextControl (inout egress_headers_t hdr,
     table egress_vlan {
         key = {
             fabric_md.bridged.base.vlan_id : exact @name("vlan_id");
-            eg_intr_md.egress_port    : exact @name("eg_port");
+            fabric_md.egress_port          : exact @name("eg_port");
         }
         actions = {
             push_vlan;
