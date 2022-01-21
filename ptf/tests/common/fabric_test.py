@@ -2034,11 +2034,8 @@ class IPv4UnicastTest(FabricTest):
             return
 
         if from_packet_out:
-            # FIXME(Yi Tseng): Port should be unset(zero).
-            # The reason we put a number here is that Stratum will always tries to
-            # translate the port number, but port zero is an invalid port.
             self.send_packet_out(
-                self.build_packet_out(pkt=pkt, port=eg_port, do_forwarding=True)
+                self.build_packet_out(pkt=pkt, port=0, do_forwarding=True)
             )
         else:
             self.send_packet(ig_port, pkt)
