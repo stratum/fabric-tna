@@ -16,7 +16,8 @@
 // slice_id and tc values carried in the dscp.
 control IngressSliceTcClassifier (in    ingress_headers_t hdr,
                                   in    ingress_intrinsic_metadata_t ig_intr_md,
-                                  inout fabric_ingress_metadata_t fabric_md) {
+                                  inout fabric_ingress_metadata_t fabric_md,
+                                  in FabricPortId_t ingress_port) {
 
     DirectCounter<bit<32>>(CounterType_t.PACKETS) classifier_stats;
 
@@ -44,12 +45,12 @@ control IngressSliceTcClassifier (in    ingress_headers_t hdr,
 
     table classifier {
         key = {
-            fabric_md.lkp.ingress_port : ternary @name("ig_port");
-            fabric_md.lkp.ipv4_src     : ternary @name("ipv4_src");
-            fabric_md.lkp.ipv4_dst     : ternary @name("ipv4_dst");
-            fabric_md.lkp.ip_proto     : ternary @name("ip_proto");
-            fabric_md.lkp.l4_sport     : ternary @name("l4_sport");
-            fabric_md.lkp.l4_dport     : ternary @name("l4_dport");
+            ingress_port           : ternary @name("ig_port");
+            fabric_md.lkp.ipv4_src : ternary @name("ipv4_src");
+            fabric_md.lkp.ipv4_dst : ternary @name("ipv4_dst");
+            fabric_md.lkp.ip_proto : ternary @name("ip_proto");
+            fabric_md.lkp.l4_sport : ternary @name("l4_sport");
+            fabric_md.lkp.l4_dport : ternary @name("l4_dport");
         }
         actions = {
             set_slice_id_tc;
@@ -178,7 +179,8 @@ control IngressQos (inout fabric_ingress_metadata_t fabric_md,
 // piggyback slice_id and tc across the fabric.
 control EgressDscpRewriter (in    fabric_egress_metadata_t fabric_md,
                             in    egress_intrinsic_metadata_t eg_intr_md,
-                            inout egress_headers_t hdr) {
+                            inout egress_headers_t hdr,
+                            in    FabricPortId_t egress_port) {
 
     bit<6> tmp_dscp = fabric_md.bridged.base.slice_tc;
 
@@ -194,7 +196,7 @@ control EgressDscpRewriter (in    fabric_egress_metadata_t fabric_md,
 
     table rewriter {
         key = {
-            fabric_md.egress_port : exact @name("eg_port");
+            egress_port : exact @name("eg_port");
         }
         actions = {
             rewrite;

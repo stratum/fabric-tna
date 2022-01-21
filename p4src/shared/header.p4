@@ -346,7 +346,6 @@ struct lookup_metadata_t {
     l4_port_t               l4_dport;
     bit<8>                  icmp_type;
     bit<8>                  icmp_code;
-    FabricPortId_t          ingress_port;
 }
 
 // Used for holding basic mirror information.
@@ -421,7 +420,6 @@ struct fabric_egress_metadata_t {
                                          // recirculated later as an INT report.
 #endif // WITH_INT
     bit<16>               pkt_length;
-    FabricPortId_t        egress_port;
 }
 
 header fake_ethernet_t {

@@ -9,7 +9,8 @@
 control Next (inout ingress_headers_t hdr,
               inout fabric_ingress_metadata_t fabric_md,
               in    ingress_intrinsic_metadata_t ig_intr_md,
-              inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm) {
+              inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm,
+              in FabricPortId_t ingress_port) {
 
     /*
      * General actions.
@@ -56,8 +57,8 @@ control Next (inout ingress_headers_t hdr,
 
     table xconnect {
         key = {
-            fabric_md.lkp.ingress_port: exact @name("ig_port");
-            fabric_md.next_id: exact @name("next_id");
+            ingress_port      : exact @name("ig_port");
+            fabric_md.next_id : exact @name("next_id");
         }
         actions = {
             output_xconnect;
@@ -192,7 +193,8 @@ control Next (inout ingress_headers_t hdr,
 control EgressNextControl (inout egress_headers_t hdr,
                            inout fabric_egress_metadata_t fabric_md,
                            in    egress_intrinsic_metadata_t eg_intr_md,
-                           inout egress_intrinsic_metadata_for_deparser_t eg_dprsr_md) {
+                           inout egress_intrinsic_metadata_for_deparser_t eg_dprsr_md,
+                           in    FabricPortId_t egress_port) {
     @hidden
     action pop_mpls_if_present() {
         hdr.mpls.setInvalid();
@@ -261,7 +263,7 @@ control EgressNextControl (inout egress_headers_t hdr,
     table egress_vlan {
         key = {
             fabric_md.bridged.base.vlan_id : exact @name("vlan_id");
-            fabric_md.egress_port          : exact @name("eg_port");
+            egress_port                    : exact @name("eg_port");
         }
         actions = {
             push_vlan;

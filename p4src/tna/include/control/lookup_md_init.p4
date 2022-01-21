@@ -17,7 +17,6 @@ control LookupMdInit (in ingress_headers_t hdr,
         lkp_md.eth_dst = hdr.ethernet.dst_addr;
         lkp_md.eth_src = hdr.ethernet.src_addr;
         lkp_md.eth_type = hdr.eth_type.value;
-        lkp_md.ingress_port = (FabricPortId_t)ig_intr_md.ingress_port;
 
         lkp_md.vlan_id = 0;
         if (hdr.vlan_tag.isValid()) {
