@@ -19,6 +19,7 @@ import static org.slf4j.LoggerFactory.getLogger;
 import static org.stratumproject.fabric.tna.behaviour.Constants.BMV2_COLOR_RED;
 import static org.stratumproject.fabric.tna.behaviour.Constants.TNA;
 import static org.stratumproject.fabric.tna.behaviour.Constants.V1MODEL;
+import static org.stratumproject.fabric.tna.behaviour.Constants.SDN_PORT_CPU;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_SESSIONS;
 
 /**
@@ -78,12 +79,12 @@ public class FabricCapabilities {
         }
     }
 
-    public Optional<Integer> cpuPort() {
+    public Optional<Long> cpuPort() {
         // This is probably brittle, but needed to dynamically get the CPU port
         // for different platforms.
         if (pipeconf.extension(CPU_PORT_TXT).isEmpty()) {
             log.warn("Missing {} extension in pipeconf {}", CPU_PORT_TXT, pipeconf.id());
-            return Optional.empty();
+            return Optional.of(SDN_PORT_CPU);
         }
         try {
             final InputStream stream = pipeconf.extension(CPU_PORT_TXT).get();
@@ -96,7 +97,7 @@ public class FabricCapabilities {
                 return Optional.empty();
             }
             try {
-                return Optional.of(Integer.parseInt(str));
+                return Optional.of(Long.parseLong(str));
             } catch (NumberFormatException e) {
                 log.error("Invalid CPU port for {}: {}", pipeconf.id(), str);
                 return Optional.empty();

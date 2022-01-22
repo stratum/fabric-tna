@@ -201,7 +201,7 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
     protected void initializePipeline() {
         // Set up CPU port for packet-in/out. For packet-out, we support only
         // IPv4 routing when do_forwarding=1.
-        final int cpuPort = capabilities.cpuPort().get();
+        final long cpuPort = capabilities.cpuPort().get();
         flowRuleService.applyFlowRules(
                 egressSwitchInfoRule(cpuPort),
                 ingressVlanRule(cpuPort, false, DEFAULT_VLAN, PORT_TYPE_INTERNAL),
@@ -375,7 +375,7 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
         }
     }
 
-    public FlowRule egressSwitchInfoRule(int cpuPort) {
+    public FlowRule egressSwitchInfoRule(long cpuPort) {
         final TrafficTreatment treatment = DefaultTrafficTreatment.builder()
                 .piTableAction(PiAction.builder()
                                        .withId(P4InfoConstants.FABRIC_EGRESS_PKT_IO_EGRESS_SET_SWITCH_INFO)
@@ -419,7 +419,7 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
                 .build();
     }
 
-    public FlowRule fwdClassifierRule(int port, Short ethType, short ipEthType, byte fwdType, int priority) {
+    public FlowRule fwdClassifierRule(long port, Short ethType, short ipEthType, byte fwdType, int priority) {
         final TrafficSelector.Builder selectorBuilder = DefaultTrafficSelector.builder()
                 .matchInPort(PortNumber.portNumber(port))
                 .matchPi(PiCriterion.builder()

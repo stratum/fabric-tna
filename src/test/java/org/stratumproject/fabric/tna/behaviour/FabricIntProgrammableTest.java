@@ -129,10 +129,10 @@ public class FabricIntProgrammableTest {
             HexString.fromHexString("00000000ffffff00", ""));
     private static final Map<Integer, Integer> QUAD_PIPE_MIRROR_SESS_TO_RECIRC_PORTS =
             ImmutableMap.<Integer, Integer>builder()
-                    .put(0x200, 0x44)
-                    .put(0x201, 0xc4)
-                    .put(0x202, 0x144)
-                    .put(0x203, 0x1c4).build();
+                    .put(0x200, 0xFFFFFF00)
+                    .put(0x201, 0xFFFFFF01)
+                    .put(0x202, 0xFFFFFF02)
+                    .put(0x203, 0xFFFFFF03).build();
     private static final Map<Integer, Integer> V1MODEL_MIRROR_SESS_TO_RECIRC_PORTS =
             ImmutableMap.<Integer, Integer>builder()
                     .put(V1MODEL_INT_REPORT_MIRROR_ID, V1MODEL_RECIRC_PORT.get(0)).build();

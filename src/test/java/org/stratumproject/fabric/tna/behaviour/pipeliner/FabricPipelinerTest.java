@@ -60,6 +60,7 @@ import static org.stratumproject.fabric.tna.behaviour.Constants.PKT_IN_MIRROR_SE
 import static org.stratumproject.fabric.tna.behaviour.Constants.DEFAULT_VLAN;
 import static org.stratumproject.fabric.tna.behaviour.Constants.FWD_MPLS;
 import static org.stratumproject.fabric.tna.behaviour.Constants.FWD_IPV4_ROUTING;
+import static org.stratumproject.fabric.tna.behaviour.Constants.SDN_PORT_CPU;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.KRYO;
 
 @RunWith(Parameterized.class)
@@ -68,7 +69,7 @@ public class FabricPipelinerTest {
     private static final ApplicationId APP_ID = TestApplicationId.create("FabricPipelinerTest");
     private static final DeviceId DEVICE_ID = DeviceId.deviceId("device:1");
     private static final int DEFAULT_FLOW_PRIORITY = 100;
-    private static final int CPU_PORT = 320;
+    private static final long CPU_PORT = 0xFFFFFFFDL;
 
     private FabricPipeliner pipeliner;
     private FlowRuleService flowRuleService;
@@ -93,7 +94,7 @@ public class FabricPipelinerTest {
     public void setup() {
         // Common setup between TNA and bmv2
         FabricCapabilities capabilities = createMock(FabricCapabilities.class);
-        expect(capabilities.cpuPort()).andReturn(Optional.of(CPU_PORT)).anyTimes();
+        expect(capabilities.cpuPort()).andReturn(Optional.of(SDN_PORT_CPU)).anyTimes();
         expect(capabilities.isArchV1model()).andReturn(this.isArchV1model).anyTimes();
         expect(capabilities.isArchTna()).andReturn(!this.isArchV1model).anyTimes();
         replay(capabilities);
@@ -126,7 +127,7 @@ public class FabricPipelinerTest {
                 .build();
     }
 
-    private FlowRule buildIngressVlanRule(int port) {
+    private FlowRule buildIngressVlanRule(long port) {
         final TrafficSelector cpuIgVlanSelector = DefaultTrafficSelector.builder()
         .add(Criteria.matchInPort(PortNumber.portNumber(port)))
         .add(PiCriterion.builder()
@@ -174,7 +175,7 @@ public class FabricPipelinerTest {
                 .build();
     }
 
-    private FlowRule buildFwdClsRule(int port, Short etherType, short ipEtherType, byte fwdType, int priority) {
+    private FlowRule buildFwdClsRule(long port, Short etherType, short ipEtherType, byte fwdType, int priority) {
         final TrafficSelector.Builder fwdClsSelector = DefaultTrafficSelector.builder()
                 .matchInPort(PortNumber.portNumber(port))
                 .matchPi(PiCriterion.builder()

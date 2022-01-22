@@ -341,7 +341,15 @@ public class FabricInterpreter extends AbstractFabricHandlerBehavior
         if (!port.equals(CONTROLLER)) {
             return Optional.empty();
         }
-        return capabilities.cpuPort();
+        Optional<Long> cpuPort = capabilities.cpuPort();
+        if (cpuPort.isPresent()) {
+          // FIXME(Yi Tseng): This could be wrong if CPU port number is bigger than
+          //                  0x7FFFFFFF since the port number number will become
+          //                  negative number.
+          return Optional.of(cpuPort.get().intValue());
+        } else {
+          return Optional.empty();
+        }
     }
 
     /* Connect point generated using sb metadata does not have port name

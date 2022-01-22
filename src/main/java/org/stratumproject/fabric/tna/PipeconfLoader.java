@@ -67,7 +67,6 @@ public class PipeconfLoader {
     private Collection<PiPipeconf> pipeconfs;
 
     private static final String P4INFO_TXT = "p4info.txt";
-    private static final String CPU_PORT_TXT = "cpu_port.txt";
     private static final String TOFINO_PIPELINE_CONFIG = "pipeline_config.pb.bin";
     private static final String BMV2_PIPELINE_CONFIG = "bmv2.json";
 
@@ -113,7 +112,7 @@ public class PipeconfLoader {
         String[] pieces = path.split(SEP);
         // We expect a path of 3 elements, e.g.
         // p4c-out/<profile>/<platform>
-        // p4c-out/fabric/mavericks_sde_v_e_r
+        // p4c-out/fabric/sde_v_e_r
         if (pieces.length != 3) {
             return null;
         }
@@ -165,21 +164,16 @@ public class PipeconfLoader {
                 P4C_RES_BASE_PATH + pipelineConfig, profile, platform));
         final URL p4InfoUrl = this.getClass().getResource(format(
                 P4C_RES_BASE_PATH + P4INFO_TXT, profile, platform));
-        final URL cpuPortUrl = this.getClass().getResource(format(
-                P4C_RES_BASE_PATH + CPU_PORT_TXT, profile, platform));
 
         checkFileExists(pipelineConfigUrl, pipelineConfig);
         checkFileExists(p4InfoUrl, P4INFO_TXT);
-        checkFileExists(cpuPortUrl, CPU_PORT_TXT);
 
         return DefaultPiPipeconf.builder()
                 .withId(new PiPipeconfId(format(
                         "%s.%s.%s", BASE_PIPECONF_ID, profile, platform)))
                 .withPipelineModel(parseP4Info(p4InfoUrl))
                 .addExtension(extensionType, pipelineConfigUrl)
-                .addExtension(ExtensionType.P4_INFO_TEXT, p4InfoUrl)
-                .addExtension(ExtensionType.CPU_PORT_TXT, cpuPortUrl);
-
+                .addExtension(ExtensionType.P4_INFO_TEXT, p4InfoUrl);
     }
 
     private void checkFileExists(URL url, String name)

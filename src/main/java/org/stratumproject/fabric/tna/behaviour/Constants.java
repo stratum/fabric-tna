@@ -90,6 +90,9 @@ public final class Constants {
             .put(INFRA_PORT, PORT_TYPE_INFRA)
             .build();
 
+    public static final long SDN_PORT_UNSPECIFIED = 0;
+    public static final long SDN_PORT_CPU = 0xFFFFFFFDL;
+
     // hide default constructor
     private Constants() {
     }

@@ -95,15 +95,10 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
 
     private static final Map<Integer, Integer> QUAD_PIPE_MIRROR_SESS_TO_RECIRC_PORTS =
             ImmutableMap.<Integer, Integer>builder()
-                    .put(0x200, 0x44)
-                    .put(0x201, 0xc4)
-                    .put(0x202, 0x144)
-                    .put(0x203, 0x1c4).build();
-
-    private static final Map<Integer, Integer> DUAL_PIPE_MIRROR_SESS_TO_RECIRC_PORTS =
-            ImmutableMap.<Integer, Integer>builder()
-                    .put(0x200, 0x44)
-                    .put(0x201, 0xc4).build();
+                    .put(0x200, 0xFFFFFF00)
+                    .put(0x201, 0xFFFFFF01)
+                    .put(0x202, 0xFFFFFF02)
+                    .put(0x203, 0xFFFFFF03).build();
 
     private static final Map<Integer, Integer> V1MODEL_MIRROR_SESS_TO_RECIRC_PORT =
             ImmutableMap.<Integer, Integer>builder()
@@ -173,18 +168,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
 
         Map<Integer, Integer> sessionToPortMap = null;
         if (capabilities.isArchTna()) {
-            final int hwPipeCount = capabilities.hwPipeCount();
-            switch (hwPipeCount) {
-                case 4:
-                    sessionToPortMap = QUAD_PIPE_MIRROR_SESS_TO_RECIRC_PORTS;
-                    break;
-                case 2:
-                    sessionToPortMap = DUAL_PIPE_MIRROR_SESS_TO_RECIRC_PORTS;
-                    break;
-                default:
-                    log.error("{} it not a valid HW pipe count", hwPipeCount);
-                    return false;
-            }
+            sessionToPortMap = QUAD_PIPE_MIRROR_SESS_TO_RECIRC_PORTS;
         } else if (capabilities.isArchV1model()) {
             sessionToPortMap = V1MODEL_MIRROR_SESS_TO_RECIRC_PORT;
         }
