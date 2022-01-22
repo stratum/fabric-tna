@@ -1,11 +1,7 @@
 {
-  "slices": {
-    "0": {
-      "name": "Default",
-      "tcs": {
-        "REAL_TIME": {
-        }
-      }
+  "name": "foobar",
+  "tcs": {
+    "REAL_TIME": {
     }
   }
 }

@@ -110,7 +110,7 @@ public class NetcfgSlicingProvider {
                     log.error("Error adding slice", e);
                 }
             }
-            config.trafficClasses().forEach(tcDescr -> {
+            config.tcDescriptions().forEach(tcDescr -> {
                 try {
                     slicingProviderService.addTrafficClass(sliceId, tcDescr);
                 } catch (SlicingException e) {
@@ -134,7 +134,7 @@ public class NetcfgSlicingProvider {
             if (sliceId.equals(SliceId.DEFAULT)) {
                 // Cannot remove default slice. Must remove individual
                 // traffic classes, leaving BEST_EFFORT in place.
-                config.trafficClasses().forEach(tcDescr -> {
+                config.tcDescriptions().forEach(tcDescr -> {
                     try {
                         slicingProviderService.removeTrafficClass(sliceId, tcDescr.trafficClass());
                     } catch (SlicingException e) {

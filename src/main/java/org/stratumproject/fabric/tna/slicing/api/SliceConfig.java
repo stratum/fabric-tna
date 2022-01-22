@@ -100,7 +100,7 @@ public class SliceConfig extends Config<SliceId> {
             }
 
         try {
-            if (trafficClasses().isEmpty()) {
+            if (tcDescriptions().isEmpty()) {
                 throw new InvalidFieldException(TCS, "At least one traffic class should be specified");
             }
         } catch (ConfigException e) {
@@ -130,7 +130,7 @@ public class SliceConfig extends Config<SliceId> {
      * @return traffic classes description
      * @throws ConfigException if the config is invalid
      */
-    public Collection<TrafficClassDescription> trafficClasses() throws ConfigException {
+    public Collection<TrafficClassDescription> tcDescriptions() throws ConfigException {
         List<TrafficClassDescription> tcDescriptions = Lists.newArrayList();
         var tcFields = object.path(TCS).fields();
         while (tcFields.hasNext()) {
@@ -142,9 +142,6 @@ public class SliceConfig extends Config<SliceId> {
             } catch (IllegalArgumentException e) {
                 throw new ConfigException(format(
                         "\"%s\" is not a valid traffic class", tcName), e);
-            }
-            if (tc.equals(TrafficClass.BEST_EFFORT)) {
-                throw new ConfigException("BEST_EFFORT is implicit for all slices and cannot be configured");
             }
             tcDescriptions.add(tcDescription(tc));
         }
@@ -163,6 +160,10 @@ public class SliceConfig extends Config<SliceId> {
         var tcNode = object.path(TCS).path(tc.name());
         if (tcNode.isMissingNode()) {
             return null;
+        }
+
+        if (tc.equals(TrafficClass.BEST_EFFORT)) {
+            throw new ConfigException("BEST_EFFORT is implicit for all slices and cannot be configured");
         }
 
         QueueId queueId;

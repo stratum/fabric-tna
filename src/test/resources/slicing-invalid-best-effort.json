@@ -1,12 +1,8 @@
 {
-  "slices": {
-    "0": {
-      "name": "Default",
-      "tcs": {
-        "BEST_EFFORT": {
-          "queueId": 0
-        }
-      }
+  "name": "foobar",
+  "tcs": {
+    "BEST_EFFORT": {
+      "queueId": 0
     }
   }
 }

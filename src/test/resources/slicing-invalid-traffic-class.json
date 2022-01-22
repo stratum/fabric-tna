@@ -1,12 +1,8 @@
 {
-  "slices": {
-    "0": {
-      "name": "Default",
-      "tcs": {
-        "FOO": {
-          "queueId": "1"
-        }
-      }
+  "name": "foobar",
+  "tcs": {
+    "INVALID": {
+      "queueId": "1"
     }
   }
 }

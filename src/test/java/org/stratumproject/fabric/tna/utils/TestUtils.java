@@ -25,7 +25,7 @@ import static org.junit.Assert.fail;
 public final class TestUtils {
     private static final String INT_REPORT_CONFIG_KEY = "report";
     private static final String SR_CONFIG_KEY = "segmentrouting";
-    private static final String SLICING_CONFIG_KEY = "slicing";
+    private static final String SLICING_CONFIG_KEY = "slices";
 
     private TestUtils() { }
 
@@ -65,7 +65,7 @@ public final class TestUtils {
         JsonNode jsonNode;
         try {
             jsonNode = mapper.readTree(jsonStream);
-            config.init(appId, SLICING_CONFIG_KEY, jsonNode, mapper, c -> { });
+            config.init(sliceId, SLICING_CONFIG_KEY, jsonNode, mapper, c -> { });
         } catch (Exception e) {
             fail("Got error when reading file " + filename + " : " + e.getMessage());
         }
