@@ -15,6 +15,7 @@ import java.util.List;
 
 import static java.lang.String.format;
 
+// TODO: update
 /**
  * Configuration for slicing.
  * <p>
@@ -60,9 +61,10 @@ import static java.lang.String.format;
  * }
  * </pre>
  */
-public class SliceConfig extends Config<SliceId> {
+public class BasicSliceConfig extends Config<SliceId> {
 
-    private static final String SLICES = "slices";
+    public static final String CONFIG_KEY = "basic";
+
     private static final String TCS = "tcs";
     private static final String NAME = "name";
     private static final String QUEUE_ID = "queueId";
@@ -104,7 +106,7 @@ public class SliceConfig extends Config<SliceId> {
                 throw new InvalidFieldException(TCS, "At least one traffic class should be specified");
             }
         } catch (ConfigException e) {
-            throw new InvalidFieldException(SLICES, e);
+            throw new InvalidFieldException(TCS, e);
         }
 
         return true;

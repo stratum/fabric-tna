@@ -18,7 +18,7 @@ import static org.junit.Assert.assertTrue;
 /**
  * Tests for SlicingConfig.
  */
-public class SliceConfigTest {
+public class BasicSliceConfigTest {
 
     private static final SliceId SLICE_ID = SliceId.of(1);
 
@@ -27,7 +27,7 @@ public class SliceConfigTest {
 
     @Test
     public void testConstruction() throws Exception {
-        SliceConfig config = TestUtils.getSlicingConfig(SLICE_ID, "/slicing.json");
+        BasicSliceConfig config = TestUtils.getSlicingConfig(SLICE_ID, "/slicing.json");
 
         assertTrue(config.isValid());
 
@@ -59,7 +59,7 @@ public class SliceConfigTest {
 
     @Test
     public void testInvalidEmpty() {
-        SliceConfig config = TestUtils.getSlicingConfig(SLICE_ID, "/slicing-invalid-empty.json");
+        BasicSliceConfig config = TestUtils.getSlicingConfig(SLICE_ID, "/slicing-invalid-empty.json");
         exceptionRule.expect(InvalidFieldException.class);
         exceptionRule.expectMessage("Mandatory field is not present");
         config.isValid();
@@ -67,7 +67,7 @@ public class SliceConfigTest {
 
     @Test
     public void testInvalidTrafficClass() {
-        SliceConfig config = TestUtils.getSlicingConfig(SLICE_ID, "/slicing-invalid-traffic-class.json");
+        BasicSliceConfig config = TestUtils.getSlicingConfig(SLICE_ID, "/slicing-invalid-traffic-class.json");
         exceptionRule.expect(InvalidFieldException.class);
         exceptionRule.expectMessage("not a valid traffic class");
         config.isValid();
@@ -75,7 +75,7 @@ public class SliceConfigTest {
 
     @Test
     public void testInvalidBestEffortQueueId() {
-        SliceConfig config = TestUtils.getSlicingConfig(SLICE_ID, "/slicing-invalid-best-effort.json");
+        BasicSliceConfig config = TestUtils.getSlicingConfig(SLICE_ID, "/slicing-invalid-best-effort.json");
         exceptionRule.expect(InvalidFieldException.class);
         exceptionRule.expectMessage("Field must be greater than 1");
         config.isValid();
@@ -83,7 +83,7 @@ public class SliceConfigTest {
 
     @Test
     public void testInvalidBestEffortTcName() throws ConfigException {
-        SliceConfig config = TestUtils.getSlicingConfig(SLICE_ID, "/slicing-invalid-best-effort.json");
+        BasicSliceConfig config = TestUtils.getSlicingConfig(SLICE_ID, "/slicing-invalid-best-effort.json");
         exceptionRule.expect(ConfigException.class);
         exceptionRule.expectMessage("BEST_EFFORT is implicit for all slices and cannot be configured");
         config.tcDescriptions();
@@ -91,7 +91,7 @@ public class SliceConfigTest {
 
     @Test
     public void testInvalidQueueId() throws ConfigException {
-        SliceConfig config = TestUtils.getSlicingConfig(SLICE_ID, "/slicing-invalid-queue-id.json");
+        BasicSliceConfig config = TestUtils.getSlicingConfig(SLICE_ID, "/slicing-invalid-queue-id.json");
         exceptionRule.expect(ConfigException.class);
         exceptionRule.expectMessage("is not a valid queue ID");
         config.tcDescriptions();
@@ -99,7 +99,7 @@ public class SliceConfigTest {
 
     @Test
     public void testInvalidQueueIdMissing() throws ConfigException {
-        SliceConfig config = TestUtils.getSlicingConfig(SLICE_ID, "/slicing-invalid-queue-id-missing.json");
+        BasicSliceConfig config = TestUtils.getSlicingConfig(SLICE_ID, "/slicing-invalid-queue-id-missing.json");
         exceptionRule.expect(InvalidFieldException.class);
         exceptionRule.expectMessage("Field \"queueId\" is invalid: Mandatory field is not present");
         config.isValid();

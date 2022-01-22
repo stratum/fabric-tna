@@ -17,7 +17,7 @@ import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.stratumproject.fabric.tna.slicing.api.SliceConfig;
+import org.stratumproject.fabric.tna.slicing.api.BasicSliceConfig;
 import org.stratumproject.fabric.tna.slicing.api.SliceId;
 import org.stratumproject.fabric.tna.slicing.api.SlicingException;
 import org.stratumproject.fabric.tna.slicing.api.SlicingProviderService;
@@ -61,11 +61,11 @@ public class NetcfgSlicingProvider {
                 }
             };
 
-    private final ConfigFactory<SliceId, SliceConfig> configFactory = new ConfigFactory<>(
-            SLICE_SUBJECT_FACTORY, SliceConfig.class, SLICES) {
+    private final ConfigFactory<SliceId, BasicSliceConfig> configFactory = new ConfigFactory<>(
+            SLICE_SUBJECT_FACTORY, BasicSliceConfig.class, BasicSliceConfig.CONFIG_KEY) {
         @Override
-        public SliceConfig createConfig() {
-            return new SliceConfig();
+        public BasicSliceConfig createConfig() {
+            return new BasicSliceConfig();
         }
     };
 
@@ -92,7 +92,7 @@ public class NetcfgSlicingProvider {
             SharedExecutors.getSingleThreadExecutor().execute(() -> {
                 log.info("Reading initial config");
                 netcfgService.getSubjects(SliceId.class).forEach(sliceId -> {
-                    SliceConfig config = netcfgService.getConfig(sliceId, SliceConfig.class);
+                    BasicSliceConfig config = netcfgService.getConfig(sliceId, BasicSliceConfig.class);
                     if (config != null) {
                         addConfig(sliceId, config);
                     }
@@ -101,7 +101,7 @@ public class NetcfgSlicingProvider {
         }
     }
 
-    private void addConfig(SliceId sliceId, SliceConfig config) {
+    private void addConfig(SliceId sliceId, BasicSliceConfig config) {
         try {
             if (!sliceId.equals(SliceId.DEFAULT)) {
                 try {
@@ -129,7 +129,7 @@ public class NetcfgSlicingProvider {
         log.info("Slicing config added");
     }
 
-    private void removeConfig(SliceId sliceId, SliceConfig config) {
+    private void removeConfig(SliceId sliceId, BasicSliceConfig config) {
         try {
             if (sliceId.equals(SliceId.DEFAULT)) {
                 // Cannot remove default slice. Must remove individual
@@ -167,7 +167,7 @@ public class NetcfgSlicingProvider {
                     if (event.config().isPresent() && shouldDoWork()) {
                         SharedExecutors.getSingleThreadExecutor().execute(
                                 () -> addConfig((SliceId) event.subject(),
-                                        (SliceConfig) event.config().get()));
+                                        (BasicSliceConfig) event.config().get()));
                     }
                     break;
                 case CONFIG_UPDATED:
@@ -178,7 +178,7 @@ public class NetcfgSlicingProvider {
                     if (event.prevConfig().isPresent() && shouldDoWork()) {
                         SharedExecutors.getSingleThreadExecutor().execute(
                                 () -> removeConfig((SliceId) event.subject(),
-                                        (SliceConfig) event.prevConfig().get()));
+                                        (BasicSliceConfig) event.prevConfig().get()));
                     }
                     break;
                 default:
@@ -188,7 +188,7 @@ public class NetcfgSlicingProvider {
 
         @Override
         public boolean isRelevant(NetworkConfigEvent event) {
-            return event.configClass().equals(SliceConfig.class);
+            return event.configClass().equals(BasicSliceConfig.class);
         }
     }
 }
