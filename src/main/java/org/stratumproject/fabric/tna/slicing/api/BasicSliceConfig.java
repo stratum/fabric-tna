@@ -15,7 +15,6 @@ import java.util.List;
 
 import static java.lang.String.format;
 
-// TODO: update
 /**
  * Configuration for slicing.
  * <p>
@@ -24,36 +23,42 @@ import static java.lang.String.format;
  * {
  *   "slices": {
  *     "0": {
- *       "name": "Default",
- *       "tcs": {
- *         "REAL_TIME": {
- *           "queueId": 1,
- *           "isSystemTc": true
+ *       "basic": {
+ *         "name": "Default",
+ *         "tcs": {
+ *           "REAL_TIME": {
+ *             "queueId": 1,
+ *             "isSystemTc": true
+ *           }
  *         }
  *       }
  *     },
  *     "1": {
- *       "name": "P4-UPF",
- *       "tcs": {
- *         "CONTROL": {
- *           "queueId": 2,
- *           "maxRateBps": "2000000"
- *         },
- *         "REAL_TIME": {
- *           "queueId": 3,
- *           "maxRateBps": "50000000"
- *         },
- *         "ELASTIC": {
- *           "queueId": 4,
- *           "gminRateBps": "10000000"
+ *       "basic": {
+ *         "name": "P4-UPF",
+ *         "tcs": {
+ *           "CONTROL": {
+ *             "queueId": 2,
+ *             "maxRateBps": "2000000"
+ *           },
+ *           "REAL_TIME": {
+ *             "queueId": 3,
+ *             "maxRateBps": "50000000"
+ *           },
+ *           "ELASTIC": {
+ *             "queueId": 4,
+ *             "gminRateBps": "10000000"
+ *           }
  *         }
  *       }
  *     },
  *     "2": {
- *       "name": "BESS-UPF",
- *       "tcs": {
- *         "ELASTIC": {
- *           "queueId": 5
+ *       "basic": {
+ *         "name": "BESS-UPF",
+ *         "tcs": {
+ *           "ELASTIC": {
+ *             "queueId": 5
+ *           }
  *         }
  *       }
  *     }
