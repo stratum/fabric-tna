@@ -1,12 +1,8 @@
 {
-  "slices": {
-    "0": {
-      "name": "Default",
-      "tcs": {
-        "REAL_TIME": {
-          "queueId": "foo"
-        }
-      }
+  "name": "foobar",
+  "tcs": {
+    "REAL_TIME": {
+      "queueId": "foo"
     }
   }
 }

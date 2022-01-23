@@ -14,7 +14,8 @@ import org.onosproject.net.DeviceId;
 
 import org.onosproject.segmentrouting.config.SegmentRoutingDeviceConfig;
 import org.stratumproject.fabric.tna.inbandtelemetry.IntReportConfig;
-import org.stratumproject.fabric.tna.slicing.api.SlicingConfig;
+import org.stratumproject.fabric.tna.slicing.api.BasicSliceConfig;
+import org.stratumproject.fabric.tna.slicing.api.SliceId;
 
 import static org.junit.Assert.fail;
 
@@ -24,7 +25,7 @@ import static org.junit.Assert.fail;
 public final class TestUtils {
     private static final String INT_REPORT_CONFIG_KEY = "report";
     private static final String SR_CONFIG_KEY = "segmentrouting";
-    private static final String SLICING_CONFIG_KEY = "slicing";
+    private static final String SLICING_CONFIG_KEY = "slices";
 
     private TestUtils() { }
 
@@ -57,14 +58,14 @@ public final class TestUtils {
         return config;
     }
 
-    public static SlicingConfig getSlicingConfig(ApplicationId appId, String filename) {
-        SlicingConfig config = new SlicingConfig();
+    public static BasicSliceConfig getSlicingConfig(SliceId sliceId, String filename) {
+        BasicSliceConfig config = new BasicSliceConfig();
         InputStream jsonStream = TestUtils.class.getResourceAsStream(filename);
         ObjectMapper mapper = new ObjectMapper();
         JsonNode jsonNode;
         try {
             jsonNode = mapper.readTree(jsonStream);
-            config.init(appId, SLICING_CONFIG_KEY, jsonNode, mapper, c -> { });
+            config.init(sliceId, SLICING_CONFIG_KEY, jsonNode, mapper, c -> { });
         } catch (Exception e) {
             fail("Got error when reading file " + filename + " : " + e.getMessage());
         }
