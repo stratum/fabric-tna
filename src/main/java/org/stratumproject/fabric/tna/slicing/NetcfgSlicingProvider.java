@@ -1,3 +1,5 @@
+// Copyright 2022-present Open Networking Foundation
+// SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 package org.stratumproject.fabric.tna.slicing;
 
 import com.google.common.hash.Hashing;
@@ -26,10 +28,18 @@ import org.stratumproject.fabric.tna.slicing.api.SlicingException;
 import org.stratumproject.fabric.tna.slicing.api.SlicingProviderService;
 import org.stratumproject.fabric.tna.slicing.api.SlicingService;
 
+import static java.lang.String.format;
 import static org.stratumproject.fabric.tna.Constants.APP_NAME;
 import static org.stratumproject.fabric.tna.Constants.APP_NAME_SLICING;
 
+/**
+ * Slicing provider that uses network config to discover slices.
+ */
 @Component(immediate = true)
+// TODO: add actual provider infrastructure by extending AbstractProvider
+//  and by making SlicingProviderService extend ONOS's ProviderService.
+// This will be useful when we will have multiple providers, e.g., to handle
+// dynamic provisioning of slices (including device queue configuration).
 public class NetcfgSlicingProvider {
 
     private static final Logger log = LoggerFactory.getLogger(NetcfgSlicingProvider.class);
@@ -60,7 +70,7 @@ public class NetcfgSlicingProvider {
 
     private final InternalNetworkConfigListener netcfgListener = new InternalNetworkConfigListener();
     private final ConfigFactory<ApplicationId, SlicingConfig> configFactory = new ConfigFactory<>(
-            SubjectFactories.APP_SUBJECT_FACTORY, SlicingConfig.class, "slicing") {
+            SubjectFactories.APP_SUBJECT_FACTORY, SlicingConfig.class, SlicingConfig.CONFIG_KEY) {
         @Override
         public SlicingConfig createConfig() {
             return new SlicingConfig();
@@ -89,11 +99,13 @@ public class NetcfgSlicingProvider {
 
     private void readInitialConfig() {
         if (shouldDoWork()) {
-            SlicingConfig config = netcfgService.getConfig(appId, SlicingConfig.class);
-            if (config != null) {
-                log.info("Reading initial config");
-                SharedExecutors.getSingleThreadExecutor().execute(() -> addConfig(config));
-            }
+            spawn(() -> {
+                SlicingConfig config = netcfgService.getConfig(appId, SlicingConfig.class);
+                if (config != null) {
+                    log.info("Reading initial config");
+                    addConfig(config);
+                }
+            }, "reading initial config");
         }
     }
 
@@ -119,7 +131,7 @@ public class NetcfgSlicingProvider {
             // TODO: Consider adding a reconciliation thread to eventually apply
             //  the netcfg changes to the SlicingManager stores. Applies to
             //  configRemoved() as well.
-            // SlicingExceptions might due to transient errors, e.g., ald slice
+            // SlicingExceptions might due to transient errors, e.g., old slice
             // pending removal. We should keep retrying and logging the error to
             // signal the inconsistent state.
             log.error("Error in slicing config", e);
@@ -155,6 +167,14 @@ public class NetcfgSlicingProvider {
     }
 
     private boolean shouldDoWork() {
+        // Partitioning on a constant (APP_NAME_SLICING) will cause all events
+        // to always be handled by the same instance, unless that instance
+        // fails. We could consider a more load balanced strategy where work is
+        // partitioned based on slice IDs. However, the performance gain will
+        // likely be negligible, at the expense of introducing additional
+        // complexity. Netcfg events are infrequent and lightweight (just a
+        // handful of slices to update), it seems ok to have just one instance
+        // handle updates for all slices.
         return workPartitionService.isMine(APP_NAME_SLICING,
                 k -> Hashing.sha256().hashUnencodedChars(k).asLong());
     }
@@ -162,31 +182,44 @@ public class NetcfgSlicingProvider {
     private class InternalNetworkConfigListener implements NetworkConfigListener {
         @Override
         public void event(NetworkConfigEvent event) {
-            switch (event.type()) {
-                case CONFIG_ADDED:
-                    if (event.config().isPresent() && shouldDoWork()) {
-                        SharedExecutors.getSingleThreadExecutor().execute(
-                                () -> addConfig((SlicingConfig) event.config().get()));
-                    }
-                    break;
-                case CONFIG_UPDATED:
-                    log.error("Updating the slicing config is not supported," +
-                            "please remove and re-add the config");
-                    break;
-                case CONFIG_REMOVED:
-                    if (event.prevConfig().isPresent() && shouldDoWork()) {
-                        SharedExecutors.getSingleThreadExecutor().execute(
-                                () -> removeConfig((SlicingConfig) event.prevConfig().get()));
-                    }
-                    break;
-                default:
-                    break;
-            }
+            spawn(() -> {
+                if (event.config().isEmpty() || !shouldDoWork()) {
+                    return;
+                }
+                SlicingConfig config = (SlicingConfig) event.config().get();
+                switch (event.type()) {
+                    case CONFIG_ADDED:
+                        addConfig(config);
+                        break;
+                    case CONFIG_UPDATED:
+                        log.error("Updating the slicing config is not supported," +
+                                "please remove and re-add the config");
+                        break;
+                    case CONFIG_REMOVED:
+                        removeConfig(config);
+                        break;
+                    default:
+                        break;
+                }
+            }, format("handling %s event", event.type()));
         }
 
         @Override
         public boolean isRelevant(NetworkConfigEvent event) {
             return event.configClass().equals(SlicingConfig.class);
         }
+    }
+
+    private void spawn(Runnable runnable, String taskDescription) {
+        // Using the shared executor might introduce delay in events processing.
+        // However, config is pushed infrequently (mostly at startup) and it's
+        // not critical to apply that immediately.
+        SharedExecutors.getSingleThreadExecutor().execute(() -> {
+            try {
+                runnable.run();
+            } catch (Throwable e) {
+                log.error("Error while " + taskDescription, e);
+            }
+        });
     }
 }

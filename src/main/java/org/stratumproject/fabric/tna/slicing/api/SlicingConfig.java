@@ -71,6 +71,8 @@ import static java.lang.String.format;
  */
 public class SlicingConfig extends Config<ApplicationId> {
 
+    public static final String CONFIG_KEY = "slicing";
+
     private static final String SLICES = "slices";
     private static final String TCS = "tcs";
     private static final String NAME = "name";
