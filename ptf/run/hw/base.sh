@@ -9,6 +9,7 @@ PTF_FILTER=${PTF_FILTER:-}
 TREX_PARAMS=${TREX_PARAMS:-}
 PORT_MAP=${PORT_MAP:-}
 PTF_DIR=${PTF_DIR:-}
+TEST=${TEST:-}
 
 mkdir -p "${FABRIC_TNA_ROOT}/ptf/run/hw/log"
 
@@ -57,6 +58,7 @@ docker run --name "${testerRunName}" "${it}" \
     -e TREX_PARAMS="${TREX_PARAMS}" \
     -e PORT_MAP="${PORT_MAP}" \
     -e PTF_DIR="${PTF_DIR}" \
+    -e TEST="${TEST}" \
     --entrypoint /fabric-tna/ptf/run/hw/start_test.sh \
     "${TESTER_DOCKER_IMG}" \
     ${@}

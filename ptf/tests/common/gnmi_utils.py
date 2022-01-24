@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 
 import time
+import re
 
 from base_test import *
 from gnmi import gnmi_pb2, gnmi_pb2_grpc

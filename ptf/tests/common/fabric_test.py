@@ -8,6 +8,7 @@ import socket
 import struct
 import time
 
+import gnmi_utils
 import xnt
 from base_test import (
     P4RuntimeTest,
@@ -40,10 +41,6 @@ vlan_confs = {
 }
 
 SDN_TO_SDK_PORT = {
-  1: 0,
-  2: 4,
-  3: 8,
-  4: 12,
   0xFFFFFF00: 0x44,
   0xFFFFFF01: 0xC4,
   0xFFFFFF02: 0x144,
@@ -881,6 +878,7 @@ class FabricTest(P4RuntimeTest):
         self.port2 = self.swports(1)
         self.port3 = self.swports(2)
         self.port4 = self.swports(3)
+        self.build_port_to_sdk_port_map()
         self.setup_switch_info()
         self.set_up_packet_in_mirror()
 
@@ -897,6 +895,22 @@ class FabricTest(P4RuntimeTest):
     def get_single_use_ip(self):
         FabricTest.next_single_use_ips += 1
         return socket.inet_ntoa(struct.pack("!I", FabricTest.next_single_use_ips))
+
+    def build_port_to_sdk_port_map(self):
+        port_name_to_id = {}
+        req = gnmi_utils.build_gnmi_get_req("/interfaces/interface[name=*]/state/id")
+        resp = gnmi_utils.do_get(req)
+        for notification in resp.notification:
+            port_id = notification.update[0].val.uint_val
+            name = notification.update[0].path.elem[1].key['name']
+            port_name_to_id[name] = port_id
+        req = gnmi_utils.build_gnmi_get_req("/interfaces/interface[name=*]/state/ifindex")
+        resp = gnmi_utils.do_get(req)
+        for notification in resp.notification:
+            name = notification.update[0].path.elem[1].key['name']
+            sdk_id = notification.update[0].val.uint_val
+            port_id = port_name_to_id[name]
+            SDN_TO_SDK_PORT[port_id] = sdk_id
 
     @tvcreate("setup/setup_switch_info")
     def setup_switch_info(self):
@@ -3785,7 +3799,7 @@ class IntTest(IPv4UnicastTest):
             int_inner_pkt,
             is_device_spine,
             send_report_to_spine,
-            ig_port >> 7,  # hw_id,
+            SDN_TO_SDK_PORT[ig_port] >> 7,  # hw_id,
             truncate=False,
         )
 
@@ -3873,7 +3887,7 @@ class IntTest(IPv4UnicastTest):
             int_pre_mirrored_packet,
             is_device_spine,
             send_report_to_spine,
-            eg_port >> 7,  # hw_id
+            SDN_TO_SDK_PORT[eg_port] >> 7,  # hw_id
             truncate=True,
         )
 
@@ -4278,7 +4292,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             bridged_packet,
             is_device_spine,
             send_report_to_spine,
-            eg_port >> 7,  # hw_id,
+            SDN_TO_SDK_PORT[eg_port] >> 7,  # hw_id,
             truncate=False,  # Never truncated since this is a ingress drop.
         )
 
@@ -4363,7 +4377,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             bridged_packet,
             is_device_spine,
             send_report_to_spine,
-            eg_port >> 7,  # hw_id,
+            SDN_TO_SDK_PORT[eg_port] >> 7,  # hw_id,
             truncate=False,  # Never truncated since this is a ingress drop.
         )
 
