@@ -19,7 +19,13 @@ control SpgwIngress(
 
     counter(MAX_UPF_COUNTERS, CounterType.packets_and_bytes) terminations_counter;
 
-    bool upf_termination_hit = false;
+    bool is_uplink = false;
+    bool term_hit = false;
+    bool sess_hit = false;
+    bit<32> app_ipv4_addr = 0;
+    l4_port_t app_l4_port = 0;
+    bit<8> app_ip_proto = 0;
+    bit<8> internal_app_id = DEFAULT_APP_ID;
     ue_session_id_t ue_session_id = 0;
 
     @hidden
@@ -32,7 +38,7 @@ control SpgwIngress(
     @hidden
     action _term_hit(upf_ctr_id_t ctr_id) {
         fabric_md.bridged.spgw.upf_ctr_id = ctr_id;
-        upf_termination_hit = true;
+        term_hit = true;
     }
 
     @hidden
@@ -121,6 +127,7 @@ control SpgwIngress(
     }
 
     action set_uplink_session_drop() {
+        sess_hit = true;
         _drop_common();
 #ifdef WITH_INT
         fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UPF_UL_SESSION_DROP;
@@ -135,6 +142,7 @@ control SpgwIngress(
     }
 
     action set_downlink_session_drop() {
+        sess_hit = true;
         _drop_common();
 #ifdef WITH_INT
         fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UPF_DL_SESSION_DROP;
@@ -142,6 +150,7 @@ control SpgwIngress(
     }
 
     action set_downlink_session(tun_peer_id_t tun_peer_id) {
+        sess_hit = true;
         // Set UE IP address.
         ue_session_id = fabric_md.routing_ipv4_dst;
         fabric_md.bridged.spgw.tun_peer_id = tun_peer_id;
@@ -149,6 +158,7 @@ control SpgwIngress(
     }
 
     action set_downlink_session_buf(tun_peer_id_t tun_peer_id) {
+        sess_hit = true;
         // Set UE IP address.
         ue_session_id = fabric_md.routing_ipv4_dst;
         fabric_md.bridged.spgw.tun_peer_id = tun_peer_id;
@@ -156,6 +166,7 @@ control SpgwIngress(
     }
 
     action set_downlink_session_buf_drop() {
+        sess_hit = true;
         // Set UE IP address, so we can match on the terminations table and
         // count packets in the ingress UPF counter.
         ue_session_id = fabric_md.routing_ipv4_dst;
@@ -166,6 +177,7 @@ control SpgwIngress(
     }
 
     action set_uplink_session() {
+        sess_hit = true;
         // Set UE IP address.
         ue_session_id = fabric_md.lkp.ipv4_src;
         // implicit decap
@@ -267,6 +279,7 @@ control SpgwIngress(
     table uplink_terminations {
         key = {
             ue_session_id             : exact @name("ue_session_id");
+            internal_app_id           : exact @name("app_id");
         }
 
         actions = {
@@ -282,6 +295,7 @@ control SpgwIngress(
     table downlink_terminations {
         key = {
             ue_session_id             : exact @name("ue_session_id");
+            internal_app_id           : exact @name("app_id");
         }
         actions = {
             downlink_fwd_encap;
@@ -312,6 +326,28 @@ control SpgwIngress(
         }
         const default_action = nop();
         const size = MAX_GTP_TUNNEL_PEERS;
+    }
+
+    //=================================//
+    //===== Application Filtering =====//
+    //=================================//
+    action set_app_id(bit<8> app_id) {
+        internal_app_id = app_id;
+    }
+
+    table applications {
+        key  = {
+            fabric_md.spgw_slice_id : exact   @name("slice_id");
+            app_ipv4_addr           : lpm     @name("app_ipv4_addr");
+            app_l4_port             : range   @name("app_l4_port");
+            app_ip_proto            : ternary @name("app_ip_proto");
+        }
+        actions = {
+            set_app_id;
+            @defaultonly nop;
+        }
+        const default_action = nop();
+        size = MAX_APPLICATIONS;
     }
 
     //=================================//
@@ -371,26 +407,41 @@ control SpgwIngress(
         if (hdr.ipv4.isValid()) {
             switch(interfaces.apply().action_run) {
                 iface_access: {
+                    is_uplink = true;
+                    app_ipv4_addr = fabric_md.lkp.ipv4_dst;
+                    app_l4_port = fabric_md.lkp.l4_dport;
+                    app_ip_proto = fabric_md.lkp.ip_proto;
                     if (fabric_md.bridged.base.encap_presence != EncapPresence.NONE) {
-                        if (uplink_sessions.apply().hit) {
-                            uplink_terminations.apply();
-                            uplink_recirc_rules.apply();
-                        }
+                        uplink_sessions.apply();
                     }
                 }
                 iface_core: {
-                    if (downlink_sessions.apply().hit) {
-                        downlink_terminations.apply();
-                    }
+                    app_ipv4_addr = fabric_md.lkp.ipv4_src;
+                    app_l4_port = fabric_md.lkp.l4_sport;
+                    app_ip_proto = fabric_md.lkp.ip_proto;
+                    downlink_sessions.apply();
                 }
                 iface_dbuf: {
-                    if (downlink_sessions.apply().hit) {
-                        downlink_terminations.apply();
-                    }
+                    app_ipv4_addr = fabric_md.lkp.ipv4_src;
+                    app_l4_port = fabric_md.lkp.l4_sport;
+                    app_ip_proto = fabric_md.lkp.ip_proto;
+                    downlink_sessions.apply();
                 }
             }
+
+           applications.apply();
+
+            if (sess_hit) {
+                if (is_uplink) {
+                    uplink_terminations.apply();
+                    uplink_recirc_rules.apply();
+                } else {
+                    downlink_terminations.apply();
+                }
+            }
+
             ig_tunnel_peers.apply();
-            if (upf_termination_hit) {
+            if (term_hit) {
                 // NOTE We should not update this counter for packets coming
                 // **from** dbuf (iface_dbuf), since we already updated it when
                 // first sending the same packets **to** dbuf (iface_core).
