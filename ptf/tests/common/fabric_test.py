@@ -25,7 +25,7 @@ from ptf.mask import Mask
 from qos_utils import QUEUE_ID_SYSTEM
 from scapy.contrib.gtp import GTP_U_Header, GTPPDUSessionContainer
 from scapy.contrib.mpls import MPLS
-from scapy.layers.inet import IP, TCP, UDP, ICMP
+from scapy.layers.inet import ICMP, IP, TCP, UDP
 from scapy.layers.l2 import Dot1Q, Ether
 from scapy.layers.ppp import PPP, PPPoE
 from scapy.layers.sctp import SCTP
@@ -2457,30 +2457,44 @@ class SpgwSimpleTest(IPv4UnicastTest):
             tunnel_src_port=UDP_GTP_PORT,
         )
 
-    def setup_app_filtering(self, app_id, slice_id=DEFAULT_SLICE_ID, app_ipv4_addr=None, app_ipv4_prefix=32, l4_port=None, ip_proto=None, priority=DEFAULT_PRIORITY):
+    def setup_app_filtering(
+        self,
+        app_id,
+        slice_id=DEFAULT_SLICE_ID,
+        app_ipv4_addr=None,
+        app_ipv4_prefix=32,
+        l4_port=None,
+        ip_proto=None,
+        priority=DEFAULT_PRIORITY,
+    ):
         req = self.get_new_write_request()
         match_fields = [
             self.Exact("slice_id", stringify(slice_id, 1)),
         ]
         if app_ipv4_addr:
-            match_fields.append(self.Lpm("app_ipv4_addr", ipv4_to_binary(app_ipv4_addr), app_ipv4_prefix))
+            match_fields.append(
+                self.Lpm(
+                    "app_ipv4_addr", ipv4_to_binary(app_ipv4_addr), app_ipv4_prefix
+                )
+            )
         if l4_port:
-            match_fields.append(self.Range("app_l4_port", stringify(l4_port, 2), stringify(l4_port, 2)))
+            match_fields.append(
+                self.Range("app_l4_port", stringify(l4_port, 2), stringify(l4_port, 2))
+            )
         if ip_proto:
-            match_fields.append(self.Ternary("app_ip_proto", stringify(ip_proto, 1), stringify(0xFF, 1)))
+            match_fields.append(
+                self.Ternary("app_ip_proto", stringify(ip_proto, 1), stringify(0xFF, 1))
+            )
 
         self.push_update_add_entry_to_action(
             req,
             "FabricIngress.spgw.applications",
             match_fields,
             "FabricIngress.spgw.set_app_id",
-            [
-                ("app_id", stringify(app_id, 1)),
-            ],
+            [("app_id", stringify(app_id, 1)),],
             priority=priority,
         )
         self.write_request(req)
-
 
     def add_uplink_recirc_rule(
         self, ipv4_dst_and_mask, ipv4_src_and_mask=None, allow=True, priority=1
@@ -2529,11 +2543,12 @@ class SpgwSimpleTest(IPv4UnicastTest):
         )
         self.write_request(req)
 
-    def setup_uplink_termination(self, ue_session, ctr_id, tc=DEFAULT_TC, drop=False, app_id=NO_APP_ID):
+    def setup_uplink_termination(
+        self, ue_session, ctr_id, tc=DEFAULT_TC, drop=False, app_id=NO_APP_ID
+    ):
         req = self.get_new_write_request()
         action_params = [
             ("ctr_id", stringify(ctr_id, 2)),
-
         ]
         if not drop:
             if tc is not None:
@@ -2546,8 +2561,10 @@ class SpgwSimpleTest(IPv4UnicastTest):
         self.push_update_add_entry_to_action(
             req,
             "FabricIngress.spgw.uplink_terminations",
-            [self.Exact("ue_session_id", ipv4_to_binary(ue_session)),
-             self.Exact("app_id", stringify(app_id, 1))],
+            [
+                self.Exact("ue_session_id", ipv4_to_binary(ue_session)),
+                self.Exact("app_id", stringify(app_id, 1)),
+            ],
             action_name,
             action_params,
         )
@@ -2595,7 +2612,14 @@ class SpgwSimpleTest(IPv4UnicastTest):
         self.write_request(req)
 
     def setup_downlink_termination_tunnel(
-        self, ue_session, ctr_id, teid, tc=DEFAULT_TC, qfi=DEFAULT_QFI, drop=False, app_id=NO_APP_ID
+        self,
+        ue_session,
+        ctr_id,
+        teid,
+        tc=DEFAULT_TC,
+        qfi=DEFAULT_QFI,
+        drop=False,
+        app_id=NO_APP_ID,
     ):
         req = self.get_new_write_request()
         action_params = [("ctr_id", stringify(ctr_id, 2))]
@@ -2613,8 +2637,10 @@ class SpgwSimpleTest(IPv4UnicastTest):
         self.push_update_add_entry_to_action(
             req,
             "FabricIngress.spgw.downlink_terminations",
-            [self.Exact("ue_session_id", ipv4_to_binary(ue_session)),
-             self.Exact("app_id", stringify(app_id, 1))],
+            [
+                self.Exact("ue_session_id", ipv4_to_binary(ue_session)),
+                self.Exact("app_id", stringify(app_id, 1)),
+            ],
             action_name,
             action_params,
         )
@@ -2652,11 +2678,20 @@ class SpgwSimpleTest(IPv4UnicastTest):
         self.write_request(req)
 
     def setup_uplink(
-        self, ue_addr, s1u_sgw_addr, teid, ctr_id, slice_id=DEFAULT_SLICE_ID, tc=None, app_id=NO_APP_ID
+        self,
+        ue_addr,
+        s1u_sgw_addr,
+        teid,
+        ctr_id,
+        slice_id=DEFAULT_SLICE_ID,
+        tc=None,
+        app_id=NO_APP_ID,
     ):
         self.add_s1u_iface(s1u_addr=s1u_sgw_addr, slice_id=slice_id)
         self.setup_uplink_ue_session(teid=teid, tunnel_dst_addr=s1u_sgw_addr)
-        self.setup_uplink_termination(ue_session=ue_addr, ctr_id=ctr_id, tc=tc, app_id=app_id)
+        self.setup_uplink_termination(
+            ue_session=ue_addr, ctr_id=ctr_id, tc=tc, app_id=app_id
+        )
 
     def setup_downlink(
         self,
@@ -2670,9 +2705,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         app_id=NO_APP_ID,
     ):
         self.add_ue_pool(pool_addr=ue_addr, slice_id=slice_id)
-        self.setup_downlink_ue_session(
-            ue_addr=ue_addr, tunnel_peer_id=tunnel_peer_id
-        )
+        self.setup_downlink_ue_session(ue_addr=ue_addr, tunnel_peer_id=tunnel_peer_id)
         self.setup_downlink_termination_tunnel(
             ue_session=ue_addr, ctr_id=ctr_id, teid=teid, tc=tc, qfi=qfi, app_id=app_id
         )
@@ -2765,7 +2798,14 @@ class SpgwSimpleTest(IPv4UnicastTest):
                 l4_port = ue_out_pkt[TCP].dport
             elif ICMP in ue_out_pkt:
                 ip_proto = IP_PROTO_ICMP
-            self.setup_app_filtering(app_id=app_id, slice_id=slice_id, app_ipv4_addr=app_ipv4, app_ipv4_prefix=32, l4_port=l4_port, ip_proto=ip_proto)
+            self.setup_app_filtering(
+                app_id=app_id,
+                slice_id=slice_id,
+                app_ipv4_addr=app_ipv4,
+                app_ipv4_prefix=32,
+                l4_port=l4_port,
+                ip_proto=ip_proto,
+            )
 
         self.setup_uplink(
             ue_addr=ue_out_pkt[IP].src,
@@ -3018,7 +3058,14 @@ class SpgwSimpleTest(IPv4UnicastTest):
                 l4_port = pkt[TCP].sport
             elif ICMP in pkt:
                 ip_proto = IP_PROTO_ICMP
-            self.setup_app_filtering(app_id=app_id, slice_id=slice_id, app_ipv4_addr=app_ipv4, app_ipv4_prefix=32, l4_port=l4_port, ip_proto=ip_proto)
+            self.setup_app_filtering(
+                app_id=app_id,
+                slice_id=slice_id,
+                app_ipv4_addr=app_ipv4,
+                app_ipv4_prefix=32,
+                l4_port=l4_port,
+                ip_proto=ip_proto,
+            )
 
         self.setup_downlink(
             teid=DOWNLINK_TEID,

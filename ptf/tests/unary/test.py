@@ -1411,7 +1411,16 @@ class FabricSpgwDownlinkEcmpTest(SpgwSimpleTest):
 class FabricSpgwDownlinkTest(SpgwSimpleTest):
     @tvsetup
     @autocleanup
-    def doRunTest(self, pkt, tagged1, tagged2, with_psc, is_next_hop_spine, spgw_app_filtering, **kwargs):
+    def doRunTest(
+        self,
+        pkt,
+        tagged1,
+        tagged2,
+        with_psc,
+        is_next_hop_spine,
+        spgw_app_filtering,
+        **kwargs
+    ):
         self.runDownlinkTest(
             pkt=pkt,
             tagged1=tagged1,
@@ -1432,7 +1441,10 @@ class FabricSpgwDownlinkTest(SpgwSimpleTest):
         for traffic_dir in ["host-leaf-host", "spine-leaf-host", "host-leaf-spine"]:
             for spgw_app_filtering in [False, True]:
                 for test_args in get_test_args(
-                    traffic_dir=traffic_dir, pkt_addrs=pkt_addrs, spgw_type="DL_PSC", spgw_app_filtering=spgw_app_filtering,
+                    traffic_dir=traffic_dir,
+                    pkt_addrs=pkt_addrs,
+                    spgw_type="DL_PSC",
+                    spgw_app_filtering=spgw_app_filtering,
                 ):
                     self.doRunTest(**test_args)
 
@@ -1441,7 +1453,16 @@ class FabricSpgwDownlinkTest(SpgwSimpleTest):
 class FabricSpgwUplinkTest(SpgwSimpleTest):
     @tvsetup
     @autocleanup
-    def doRunTest(self, pkt, tagged1, tagged2, with_psc, is_next_hop_spine, spgw_app_filtering, **kwargs):
+    def doRunTest(
+        self,
+        pkt,
+        tagged1,
+        tagged2,
+        with_psc,
+        is_next_hop_spine,
+        spgw_app_filtering,
+        **kwargs
+    ):
         self.runUplinkTest(
             ue_out_pkt=pkt,
             tagged1=tagged1,
@@ -1462,7 +1483,10 @@ class FabricSpgwUplinkTest(SpgwSimpleTest):
         for traffic_dir in ["host-leaf-host", "host-leaf-spine", "spine-leaf-host"]:
             for spgw_app_filtering in [False, True]:
                 for test_args in get_test_args(
-                    traffic_dir=traffic_dir, pkt_addrs=pkt_addrs, spgw_type="UL_PSC", spgw_app_filtering=spgw_app_filtering
+                    traffic_dir=traffic_dir,
+                    pkt_addrs=pkt_addrs,
+                    spgw_type="UL_PSC",
+                    spgw_app_filtering=spgw_app_filtering,
                 ):
                     self.doRunTest(**test_args)
 
