@@ -57,9 +57,6 @@ public class NetcfgSlicingProvider {
     protected NetworkConfigRegistry netcfgRegistry;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
-    protected NetworkConfigService netcfgService;
-
-    @Reference(cardinality = ReferenceCardinality.MANDATORY)
     protected WorkPartitionService workPartitionService;
 
     // Unused. Forces activation after PipeconfLoader, so we can obtain an appId.
@@ -100,7 +97,7 @@ public class NetcfgSlicingProvider {
     private void readInitialConfig() {
         if (shouldDoWork()) {
             spawn(() -> {
-                SlicingConfig config = netcfgService.getConfig(appId, SlicingConfig.class);
+                SlicingConfig config = netcfgRegistry.getConfig(appId, SlicingConfig.class);
                 if (config != null) {
                     log.info("Reading initial config");
                     addConfig(config);
