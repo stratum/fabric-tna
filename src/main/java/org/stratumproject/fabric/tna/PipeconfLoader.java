@@ -112,7 +112,7 @@ public class PipeconfLoader {
         String[] pieces = path.split(SEP);
         // We expect a path of 3 elements, e.g.
         // p4c-out/<profile>/<platform>
-        // p4c-out/fabric/sde_v_e_r
+        // p4c-out/fabric/mavericks_sde_v_e_r
         if (pieces.length != 3) {
             return null;
         }

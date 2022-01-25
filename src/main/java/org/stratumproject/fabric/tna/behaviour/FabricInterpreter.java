@@ -343,9 +343,8 @@ public class FabricInterpreter extends AbstractFabricHandlerBehavior
         }
         Optional<Long> cpuPort = capabilities.cpuPort();
         if (cpuPort.isPresent()) {
-          // FIXME(Yi Tseng): This could be wrong if CPU port number is bigger than
-          //                  0x7FFFFFFF since the port number number will become
-          //                  negative number.
+          // TODO(Yi Tseng): this function is deprecated, replace with `mapLogicalPort`
+          //                 later.
           return Optional.of(cpuPort.get().intValue());
         } else {
           return Optional.empty();
