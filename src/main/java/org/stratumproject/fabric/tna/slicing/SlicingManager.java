@@ -21,7 +21,6 @@ import org.onosproject.net.flow.FlowRuleService;
 import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flow.criteria.PiCriterion;
 import org.onosproject.net.intent.WorkPartitionService;
-import org.onosproject.net.pi.model.PiPipeconf;
 import org.onosproject.net.pi.model.PiTableId;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
@@ -42,28 +41,28 @@ import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.slf4j.Logger;
 import org.stratumproject.fabric.tna.behaviour.FabricCapabilities;
 import org.stratumproject.fabric.tna.behaviour.P4InfoConstants;
-import org.stratumproject.fabric.tna.slicing.api.Color;
+import org.stratumproject.fabric.tna.slicing.api.MeterColor;
 import org.stratumproject.fabric.tna.slicing.api.QueueId;
 import org.stratumproject.fabric.tna.slicing.api.SliceId;
 import org.stratumproject.fabric.tna.slicing.api.SlicingAdminService;
 import org.stratumproject.fabric.tna.slicing.api.SlicingException;
+import org.stratumproject.fabric.tna.slicing.api.SlicingProviderService;
 import org.stratumproject.fabric.tna.slicing.api.SlicingService;
 import org.stratumproject.fabric.tna.slicing.api.TrafficClass;
+import org.stratumproject.fabric.tna.slicing.api.TrafficClassDescription;
 import org.stratumproject.fabric.tna.web.SliceIdCodec;
 import org.stratumproject.fabric.tna.web.TrafficClassCodec;
 
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import static java.lang.String.format;
 import static org.onlab.util.Tools.groupedThreads;
 import static org.slf4j.LoggerFactory.getLogger;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.fiveTupleOnly;
@@ -83,7 +82,7 @@ import static org.stratumproject.fabric.tna.slicing.api.SlicingException.Type.UN
         SlicingService.class,
         SlicingAdminService.class
 })
-public class SlicingManager implements SlicingService, SlicingAdminService {
+public class SlicingManager implements SlicingService, SlicingProviderService, SlicingAdminService {
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     protected CoreService coreService;
 
@@ -120,18 +119,17 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
 
     protected ApplicationId appId;
 
-    protected ConsistentMap<SliceStoreKey, QueueId> sliceStore;
-    private MapEventListener<SliceStoreKey, QueueId> sliceListener;
+    // Stores currently allocated slices and their traffic classes.
+    protected ConsistentMap<SliceStoreKey, TrafficClassDescription> sliceStore;
+    private MapEventListener<SliceStoreKey, TrafficClassDescription> sliceListener;
     private ExecutorService sliceExecutor;
 
-    protected ConsistentMap<QueueId, QueueStoreValue> queueStore;
-    private MapEventListener<QueueId, QueueStoreValue> queueListener;
-    private ExecutorService queueExecutor;
-
+    // Stores classifier flows.
     protected ConsistentMap<TrafficSelector, SliceStoreKey> classifierFlowStore;
     private MapEventListener<TrafficSelector, SliceStoreKey> classifierFlowListener;
     private ExecutorService classifierFlowExecutor;
 
+    // Stores the default traffic class for each slice.
     protected ConsistentMap<SliceId, TrafficClass> defaultTcStore;
     private MapEventListener<SliceId, TrafficClass> defaultTcListener;
     private ExecutorService defaultTcExecutor;
@@ -141,59 +139,34 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
 
     @Activate
     protected void activate() {
-        appId = coreService.registerApplication(APP_NAME);
+        appId = coreService.registerApplication(APP_NAME, this::preDeactivate);
 
         KryoNamespace.Builder serializer = KryoNamespace.newBuilder()
                 .register(KryoNamespaces.API)
                 .register(SliceId.class)
                 .register(TrafficClass.class)
+                .register(TrafficClassDescription.class)
                 .register(QueueId.class)
-                .register(SliceStoreKey.class)
-                .register(QueueStoreValue.class);
+                .register(SliceStoreKey.class);
 
-        sliceStore = storageService.<SliceStoreKey, QueueId>consistentMapBuilder()
+        sliceStore = storageService.<SliceStoreKey, TrafficClassDescription>consistentMapBuilder()
                 .withName("fabric-tna-slice")
                 .withRelaxedReadConsistency()
                 .withSerializer(Serializer.using(serializer.build()))
                 .build();
         sliceListener = new InternalSliceListener();
-        sliceExecutor = Executors.newSingleThreadExecutor(groupedThreads("fabric-tna-slice-event", "%d", log));
+        sliceExecutor = Executors.newSingleThreadExecutor(groupedThreads(
+                "fabric-tna-slice-event", "%d", log));
         sliceStore.addListener(sliceListener);
-
-        queueStore = storageService.<QueueId, QueueStoreValue>consistentMapBuilder()
-                .withName("fabric-tna-queue")
-                .withRelaxedReadConsistency()
-                .withSerializer(Serializer.using(serializer.build()))
-                .build();
-        queueListener = new InternalQueueListener();
-        queueExecutor = Executors.newSingleThreadExecutor(groupedThreads("fabric-tna-queue-event", "%d", log));
-        queueStore.addListener(queueListener);
-
-        // Shared queues are pre-provisioned and always available
-        queueStore.put(QueueId.BEST_EFFORT, new QueueStoreValue(TrafficClass.BEST_EFFORT, true));
-        queueStore.put(QueueId.SYSTEM, new QueueStoreValue(TrafficClass.SYSTEM, true));
-        queueStore.put(QueueId.CONTROL, new QueueStoreValue(TrafficClass.CONTROL, true));
-
-        // FIXME Dedicate queues should be dynamically provisioned via API in the future
-        // This configuration is based on the util/sample-qos-config.yaml queues configuration
-        // Max rate = 45 Mbps
-        queueStore.put(QueueId.of(3), new QueueStoreValue(TrafficClass.REAL_TIME, true));
-        // Max rate = 30 Mbps
-        queueStore.put(QueueId.of(4), new QueueStoreValue(TrafficClass.REAL_TIME, true));
-        // Max rate = 25 Mbps
-        queueStore.put(QueueId.of(5), new QueueStoreValue(TrafficClass.REAL_TIME, true));
-        // Min guaranteed rate = 100 Mbps
-        queueStore.put(QueueId.of(6), new QueueStoreValue(TrafficClass.ELASTIC, true));
-        // Min guaranteed rate = 200 Mbps
-        queueStore.put(QueueId.of(7), new QueueStoreValue(TrafficClass.ELASTIC, true));
 
         classifierFlowStore = storageService.<TrafficSelector, SliceStoreKey>consistentMapBuilder()
                 .withName("fabric-tna-classifier-flow")
                 .withRelaxedReadConsistency()
                 .withSerializer(Serializer.using(serializer.build()))
                 .build();
-        classifierFlowListener = new InternalFlowListener();
-        classifierFlowExecutor = Executors.newSingleThreadExecutor(groupedThreads("fabric-tna-flow-event", "%d", log));
+        classifierFlowListener = new InternalClassifierFlowListener();
+        classifierFlowExecutor = Executors.newSingleThreadExecutor(groupedThreads(
+                "fabric-tna-classifier-flow-event", "%d", log));
         classifierFlowStore.addListener(classifierFlowListener);
 
         defaultTcStore = storageService.<SliceId, TrafficClass>consistentMapBuilder()
@@ -202,15 +175,18 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
                 .withSerializer(Serializer.using(serializer.build()))
                 .build();
         defaultTcListener = new InternalDefaultTcListener();
-        defaultTcExecutor = Executors.newSingleThreadExecutor(groupedThreads("fabric-tna-default-tc-event", "%d", log));
+        defaultTcExecutor = Executors.newSingleThreadExecutor(groupedThreads(
+                "fabric-tna-default-tc-event", "%d", log));
         defaultTcStore.addListener(defaultTcListener);
 
-        // Default slice is pre-provisioned
-        sliceStore.put(new SliceStoreKey(SliceId.DEFAULT, TrafficClass.BEST_EFFORT), QueueId.BEST_EFFORT);
+        // Default slice is pre-provisioned.
+        sliceStore.put(new SliceStoreKey(SliceId.DEFAULT, TrafficClass.BEST_EFFORT),
+                TrafficClassDescription.BEST_EFFORT);
         defaultTcStore.put(SliceId.DEFAULT, TrafficClass.BEST_EFFORT);
 
         deviceListener = new InternalDeviceListener();
-        deviceExecutor = Executors.newSingleThreadExecutor(groupedThreads("fabric-tna-device-event", "%d", log));
+        deviceExecutor = Executors.newSingleThreadExecutor(groupedThreads(
+                "fabric-tna-device-event", "%d", log));
         deviceService.addListener(deviceListener);
 
         codecService.registerCodec(SliceId.class, new SliceIdCodec());
@@ -219,22 +195,24 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
         log.info("Started");
     }
 
-    @Deactivate
-    protected void deactivate() {
+    // Called only when we intentionally deactivate the app.
+    protected void preDeactivate() {
         sliceStore.removeListener(sliceListener);
         sliceStore.destroy();
-        sliceExecutor.shutdown();
-
-        queueStore.removeListener(queueListener);
-        queueStore.destroy();
-        queueExecutor.shutdown();
 
         deviceService.removeListener(deviceListener);
-        deviceExecutor.shutdown();
 
         defaultTcStore.removeListener(defaultTcListener);
         defaultTcStore.destroy();
+    }
+
+    @Deactivate
+    protected void deactivate() {
+        sliceExecutor.shutdown();
+        deviceExecutor.shutdown();
         defaultTcExecutor.shutdown();
+
+        // FIXME: clean up classifier flow rules and store
 
         codecService.unregisterCodec(SliceId.class);
         codecService.unregisterCodec(TrafficClass.class);
@@ -245,42 +223,46 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
     @Override
     public boolean addSlice(SliceId sliceId) {
         if (sliceId.equals(SliceId.DEFAULT)) {
-            throw new SlicingException(INVALID, "Adding default slice is not allowed");
+            throw new SlicingException(INVALID, "Adding the default slice is not allowed");
         }
 
-        return addTrafficClass(sliceId, TrafficClass.BEST_EFFORT) &&
+        if (sliceExists(sliceId)) {
+            throw new SlicingException(FAILED, format("Slice %s already exists", sliceId));
+        }
+
+        return addTrafficClassInternal(true, sliceId, TrafficClassDescription.BEST_EFFORT) &&
                 setDefaultTrafficClass(sliceId, TrafficClass.BEST_EFFORT);
     }
 
     @Override
     public boolean removeSlice(SliceId sliceId) {
         if (sliceId.equals(SliceId.DEFAULT)) {
-            throw new SlicingException(INVALID, "Removing default slice is not allowed");
+            throw new SlicingException(INVALID, "Removing the default slice is not allowed");
         }
 
         Set<TrafficClass> tcs = getTrafficClasses(sliceId);
 
         if (tcs.isEmpty() && !defaultTcStore.containsKey(sliceId)) {
-            throw new SlicingException(FAILED, String.format("Cannot remove a non-existent slice %s", sliceId));
+            throw new SlicingException(FAILED, format("Cannot remove non-existent slice %s", sliceId));
         }
 
-        Set<TrafficSelector> classifierFlows = getFlows(sliceId);
+        Set<TrafficSelector> classifierFlows = getClassifierFlows(sliceId);
         if (!classifierFlows.isEmpty()) {
             throw new SlicingException(FAILED,
-                String.format("Cannot remove slice %s with %d Flow Classifier Rules",
-                    sliceId, classifierFlows.size()));
+                    format("Cannot remove slice %s with %d classifier flow rules",
+                            sliceId, classifierFlows.size()));
         }
 
-        // Ensure to remove the default TC before removing the actual traffic classes
+        // Remove the default TC before removing the actual traffic classes.
         defaultTcStore.remove(sliceId);
 
-        tcs.stream()
-                .sorted(Comparator.comparingInt(TrafficClass::ordinal).reversed()) // Remove BEST_EFFORT the last
-                .forEach(tc -> {
-                    removeTrafficClass(sliceId, tc);
-        });
+        tcs.forEach(tc -> removeTrafficClassInternal(true, sliceId, tc));
 
         return true;
+    }
+
+    private boolean sliceExists(SliceId sliceId) {
+        return !getTrafficClasses(sliceId).isEmpty();
     }
 
     @Override
@@ -291,30 +273,31 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
     }
 
     @Override
-    public boolean addTrafficClass(SliceId sliceId, TrafficClass tc) {
-        if (tc == TrafficClass.SYSTEM) {
-            throw new SlicingException(INVALID, "SYSTEM TC should not be associated with any slice");
+    public boolean addTrafficClass(SliceId sliceId, TrafficClassDescription tcConfig) {
+        return addTrafficClassInternal(false, sliceId, tcConfig);
+    }
+
+    private boolean addTrafficClassInternal(boolean addSlice, SliceId sliceId, TrafficClassDescription tcConfig) {
+        if (!addSlice && !sliceExists(sliceId)) {
+            throw new SlicingException(INVALID, format(
+                    "Cannot add traffic class to non-existent slice %s", sliceId));
         }
 
         StringBuilder errorMessage = new StringBuilder();
-        SliceStoreKey key = new SliceStoreKey(sliceId, tc);
+        SliceStoreKey key = new SliceStoreKey(sliceId, tcConfig.trafficClass());
         sliceStore.compute(key, (k, v) -> {
             if (v != null) {
-                errorMessage.append(String.format("TC %s is already allocated for slice %s", tc, sliceId));
+                errorMessage.append(format("TC %s is already allocated for slice %s",
+                        tcConfig.trafficClass(), sliceId));
                 return v;
             }
 
-            QueueId queueId = allocateQueue(tc);
-            if (queueId == null) {
-                errorMessage.append(String.format("Unable to find available queue for %s", tc));
-                return null;
-            }
-
-            log.info("Allocate queue {} for slice {} tc {}", queueId, sliceId, tc);
-            return queueId;
+            log.info("Added traffic class {} to slice {}: {}", tcConfig.trafficClass(), sliceId, tcConfig);
+            return tcConfig;
         });
 
         if (errorMessage.length() != 0) {
+            // FIXME: SlicingProviderException should be checked
             throw new SlicingException(FAILED, errorMessage.toString());
         }
 
@@ -323,29 +306,46 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
 
     @Override
     public boolean removeTrafficClass(SliceId sliceId, TrafficClass tc) {
-        Set<TrafficSelector> classifierFlows = getFlows(sliceId, tc);
+        return removeTrafficClassInternal(false, sliceId, tc);
+    }
+
+    private boolean removeTrafficClassInternal(boolean removeSlice, SliceId sliceId, TrafficClass tc) {
+        if (!sliceExists(sliceId)) {
+            throw new SlicingException(INVALID, format(
+                    "Cannot remove a traffic class from non-existent slice %s", sliceId));
+        }
+
+        if (!removeSlice && tc == TrafficClass.BEST_EFFORT) {
+            throw new SlicingException(INVALID,
+                    "Cannot remove BEST_EFFORT traffic class from any slice");
+        }
+
+        Set<TrafficSelector> classifierFlows = getClassifierFlows(sliceId, tc);
         if (!classifierFlows.isEmpty()) {
             throw new SlicingException(FAILED,
-                String.format("Cannot remove %s from slice %s with %d Flow Classifier Rules",
-                    tc, sliceId, classifierFlows.size()));
+                    format("Cannot remove %s from slice %s with %d classifier flow rules",
+                            tc, sliceId, classifierFlows.size()));
         }
 
         StringBuilder errorMessage = new StringBuilder();
         SliceStoreKey key = new SliceStoreKey(sliceId, tc);
         sliceStore.compute(key, (k, v) -> {
             if (v == null) {
-                errorMessage.append(String.format("TC %s has not been allocated to slice %s", tc, sliceId));
+                errorMessage.append(format(
+                        "Traffic class %s has not been allocated for slice %s",
+                        tc, sliceId));
                 return null;
             }
             // Ensure the TC is not being used as Default TC
             if (tc == getDefaultTrafficClass(sliceId)) {
-                errorMessage.append(String.format("Can't remove %s from slice %s while it is being used as Default TC",
-                    tc, sliceId));
+                errorMessage.append(format(
+                        "Cannot remove %s from slice %s while it is being used " +
+                                "as the default traffic class",
+                        tc, sliceId));
                 return v;
             }
 
-            deallocateQueue(v);
-            log.info("Deallocate queue {} for slice {} tc {}", v, sliceId, tc);
+            log.info("Removed traffic class {} from slice {}", tc, sliceId);
             return null;
         });
 
@@ -366,19 +366,14 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
 
     @Override
     public boolean setDefaultTrafficClass(SliceId sliceId, TrafficClass tc) {
-        StringBuilder errorMessage = new StringBuilder();
-        sliceStore.compute(new SliceStoreKey(sliceId, tc), (k, v) -> {
-            if (v == null) {
-                errorMessage.append(String.format("Can't set %s as default TC because it has not" +
-                    " been allocated to slice %s", tc, sliceId));
-            } else {
-                defaultTcStore.put(sliceId, tc);
-            }
-            return v;
-        });
+        defaultTcStore.put(sliceId, tc);
 
-        if (errorMessage.length() != 0) {
-            throw new SlicingException(FAILED, errorMessage.toString());
+        boolean exists = sliceStore.containsKey(new SliceStoreKey(sliceId, tc));
+        if (!exists) {
+            log.warn("Default traffic class {} has not been allocated yet to slice {}, " +
+                            "devices might forward packets as BEST_EFFORT until the " +
+                            "traffic class is allocated",
+                    tc, sliceId);
         }
 
         return true;
@@ -390,19 +385,19 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
     }
 
     @Override
-    public Map<SliceStoreKey, QueueId> getSliceStore() {
+    public Map<SliceStoreKey, TrafficClassDescription> getSliceStore() {
         return Map.copyOf(sliceStore.asJavaMap());
     }
 
     @Override
-    public boolean addFlow(TrafficSelector selector, SliceId sliceId, TrafficClass tc) {
+    public boolean addClassifierFlow(TrafficSelector selector, SliceId sliceId, TrafficClass tc) {
         if (selector.equals(DefaultTrafficSelector.emptySelector())) {
             throw new SlicingException(INVALID, "Empty traffic selector is not allowed");
         }
         // Accept 5-tuple only
         if (!fiveTupleOnly(selector)) {
             throw new SlicingException(UNSUPPORTED,
-                String.format("Only accept 5-tuple %s", selector.toString()));
+                    "Selector can only express a match on the L3-L4 5-tuple fields");
         }
 
         SliceStoreKey value = new SliceStoreKey(sliceId, tc);
@@ -415,13 +410,13 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
     }
 
     @Override
-    public boolean removeFlow(TrafficSelector selector, SliceId sliceId, TrafficClass tc) {
+    public boolean removeClassifierFlow(TrafficSelector selector, SliceId sliceId, TrafficClass tc) {
         StringBuilder errorMessage = new StringBuilder();
         classifierFlowStore.compute(selector, (k, v) -> {
             if (v == null) {
                 errorMessage.append(
-                    String.format("There is no such Flow Classifier Rule %s for slice %s and TC %s",
-                        selector, sliceId, tc));
+                        format("There is no such Flow Classifier Rule %s for slice %s and TC %s",
+                                selector, sliceId, tc));
                 return null;
             }
             log.info("Removing flow {} from slice {} tc {}", selector, sliceId, tc);
@@ -436,7 +431,7 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
     }
 
     @Override
-    public Set<TrafficSelector> getFlows(SliceId sliceId, TrafficClass tc) {
+    public Set<TrafficSelector> getClassifierFlows(SliceId sliceId, TrafficClass tc) {
         SliceStoreKey value = new SliceStoreKey(sliceId, tc);
 
         return classifierFlowStore.entrySet().stream()
@@ -445,96 +440,11 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
                 .collect(Collectors.toSet());
     }
 
-    private Set<TrafficSelector> getFlows(SliceId sliceId) {
+    private Set<TrafficSelector> getClassifierFlows(SliceId sliceId) {
         return classifierFlowStore.entrySet().stream()
                 .filter(e -> e.getValue().value().sliceId().equals(sliceId))
                 .map(Entry::getKey)
                 .collect(Collectors.toSet());
-    }
-
-    //FIXME: Apply slicing exception on Queue APIs when dynamic queue config is ready
-    @Override
-    public boolean reserveQueue(QueueId queueId, TrafficClass tc) {
-        AtomicBoolean result = new AtomicBoolean(false);
-
-        queueStore.compute(queueId, (k, v) -> {
-            if (v != null) {
-                log.warn("Queue {} has already been allocated to TC {}", k, v);
-                return v;
-            }
-            log.info("Queue {} successfully reserved for TC {}", k, tc);
-            result.set(true);
-            return new QueueStoreValue(tc, true);
-        });
-
-        return result.get();
-    }
-
-    @Override
-    public boolean releaseQueue(QueueId queueId) {
-        AtomicBoolean result = new AtomicBoolean(false);
-
-        queueStore.compute(queueId, (k, v) -> {
-            if (v == null) {
-               log.warn("Queue {} is not reserved", queueId);
-               return null;
-            }
-            if (!v.available()) {
-               log.warn("Queue {} in use", queueId);
-               return v;
-            }
-            log.info("Queue {} is released from TC {}", queueId, v.trafficClass());
-            result.set(true);
-            return null;
-        });
-
-        return result.get();
-    }
-
-    @Override
-    public Map<QueueId, QueueStoreValue> getQueueStore() {
-        return Map.copyOf(queueStore.asJavaMap());
-    }
-
-    private QueueId allocateQueue(TrafficClass tc) {
-        Optional<QueueId> queueId = queueStore.stream()
-                .filter(e -> e.getValue().value().trafficClass() == tc)
-                .filter(e -> e.getValue().value().available())
-                .findFirst()
-                .map(Map.Entry::getKey);
-
-        if (queueId.isPresent()) {
-            // Don't mark shared queues as they are always available.
-            if (tc != TrafficClass.BEST_EFFORT &&
-                    tc != TrafficClass.SYSTEM &&
-                    tc != TrafficClass.CONTROL) {
-                queueStore.compute(queueId.get(), (k, v) -> {
-                    v.setAvailable(false);
-                    return v;
-                });
-            }
-            log.info("Allocated queue {} to TC {}", queueId.get(), tc);
-            return queueId.get();
-        } else {
-            log.warn("No queue available for TC {}", tc);
-            return null;
-        }
-    }
-
-    private boolean deallocateQueue(QueueId queueId) {
-        AtomicBoolean result = new AtomicBoolean(false);
-
-        queueStore.compute(queueId, (k, v) -> {
-           if (v == null) {
-               log.warn("Queue {} not reserved yet", queueId);
-               return v;
-           }
-           v.setAvailable(true);
-           result.set(true);
-           return v;
-        });
-
-        return result.get();
     }
 
     private FlowRule buildDefaultTcFlowRule(DeviceId deviceId, SliceId sliceId, TrafficClass tc) {
@@ -544,7 +454,7 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
 
         PiAction.Builder piTableActionBuilder = PiAction.builder()
                 .withId(P4InfoConstants.FABRIC_INGRESS_QOS_SET_DEFAULT_TC)
-                .withParameter(new PiActionParam(P4InfoConstants.TC, tc.ordinal()));
+                .withParameter(new PiActionParam(P4InfoConstants.TC, tc.toInt()));
 
         FlowRule flowRule = DefaultFlowRule.builder()
                 .forDevice(deviceId)
@@ -571,45 +481,43 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
         log.info("Remove default TC on {} for slice {}", deviceId, sliceId);
     }
 
-    private void addQueueTable(DeviceId deviceId, SliceId sliceId, TrafficClass tc, QueueId queueId) {
-        buildFlowRules(deviceId, sliceId, tc, queueId).forEach(f -> flowRuleService.applyFlowRules(f));
+    private void addQueuesFlowRules(DeviceId deviceId, SliceId sliceId, TrafficClass tc, QueueId queueId) {
+        buildQueuesFlowRules(deviceId, sliceId, tc, queueId).forEach(f -> flowRuleService.applyFlowRules(f));
         log.info("Add queue table flow on {} for slice {} tc {} queueId {}", deviceId, sliceId, tc, queueId);
     }
 
-    private void removeQueueTable(DeviceId deviceId, SliceId sliceId, TrafficClass tc, QueueId queueId) {
-        buildFlowRules(deviceId, sliceId, tc, queueId).forEach(f -> flowRuleService.removeFlowRules(f));
+    private void removeQueuesFlowRules(DeviceId deviceId, SliceId sliceId, TrafficClass tc, QueueId queueId) {
+        buildQueuesFlowRules(deviceId, sliceId, tc, queueId).forEach(f -> flowRuleService.removeFlowRules(f));
         log.info("Remove queue table flow on {} for slice {} tc {} queueId {}", deviceId, sliceId, tc, queueId);
     }
 
     private FabricCapabilities getCapabilities(DeviceId deviceId) throws RuntimeException {
-        Optional<PiPipeconf> pipeconf = pipeconfService.getPipeconf(deviceId);
-        return pipeconf
+        return pipeconfService.getPipeconf(deviceId)
                 .map(FabricCapabilities::new)
-                .orElseThrow(
-                    () -> new RuntimeException("Cannot get capabilities for deviceId " + deviceId.toString()
-                ));
+                .orElseThrow(() -> new RuntimeException(
+                        "Cannot get capabilities for deviceId " + deviceId.toString()));
     }
 
-    private List<FlowRule> buildFlowRules(DeviceId deviceId, SliceId sliceId, TrafficClass tc, QueueId queueId) {
+    private List<FlowRule> buildQueuesFlowRules(DeviceId deviceId, SliceId sliceId, TrafficClass tc, QueueId queueId) {
         List<FlowRule> flowRules = Lists.newArrayList();
         if (tc == TrafficClass.CONTROL) {
-            int red = getCapabilities(deviceId).getMeterColor(Color.RED);
-            int green = getCapabilities(deviceId).getMeterColor(Color.GREEN);
-            flowRules.add(buildFlowRule(deviceId, sliceId, tc, queueId, green));
-            flowRules.add(buildFlowRule(deviceId, sliceId, tc, QueueId.BEST_EFFORT, red));
+            int red = getCapabilities(deviceId).getMeterColor(MeterColor.RED);
+            int green = getCapabilities(deviceId).getMeterColor(MeterColor.GREEN);
+            flowRules.add(buildQueuesFlowRule(deviceId, sliceId, tc, queueId, green));
+            flowRules.add(buildQueuesFlowRule(deviceId, sliceId, tc, QueueId.BEST_EFFORT, red));
         } else {
-            flowRules.add(buildFlowRule(deviceId, sliceId, tc, queueId, null));
+            flowRules.add(buildQueuesFlowRule(deviceId, sliceId, tc, queueId, null));
         }
         return flowRules;
     }
 
-    private FlowRule buildFlowRule(DeviceId deviceId,
-                                   SliceId sliceId,
-                                   TrafficClass tc,
-                                   QueueId queueId,
-                                   Integer color) {
+    private FlowRule buildQueuesFlowRule(DeviceId deviceId,
+                                         SliceId sliceId,
+                                         TrafficClass tc,
+                                         QueueId queueId,
+                                         Integer color) {
         PiCriterion.Builder piCriterionBuilder = PiCriterion.builder()
-                .matchExact(P4InfoConstants.HDR_SLICE_TC, sliceTcConcat(sliceId.id(), tc.ordinal()));
+                .matchExact(P4InfoConstants.HDR_SLICE_TC, sliceTcConcat(sliceId.id(), tc.toInt()));
         if (color != null) {
             piCriterionBuilder.matchTernary(HDR_COLOR, color, 1 << HDR_COLOR_BITWIDTH - 1);
         }
@@ -652,7 +560,7 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
         PiAction.Builder piTableActionBuilder = PiAction.builder()
                 .withId(P4InfoConstants.FABRIC_INGRESS_SLICE_TC_CLASSIFIER_SET_SLICE_ID_TC)
                 .withParameters(Set.of(new PiActionParam(P4InfoConstants.SLICE_ID, sliceId.id()),
-                                       new PiActionParam(P4InfoConstants.TC, tc.ordinal())));
+                                       new PiActionParam(P4InfoConstants.TC, tc.toInt())));
 
         FlowRule flowRule = DefaultFlowRule.builder()
                 .forDevice(deviceId)
@@ -668,9 +576,10 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
         return flowRule;
     }
 
-    private class InternalSliceListener implements MapEventListener<SliceStoreKey, QueueId> {
-        public void event(MapEvent<SliceStoreKey, QueueId> event) {
-            // Distributed work based on QueueId. Consistent with InternalQueueListener
+    private class InternalSliceListener implements MapEventListener<SliceStoreKey, TrafficClassDescription> {
+        public void event(MapEvent<SliceStoreKey, TrafficClassDescription> event) {
+            // Update queues table on all devices.
+            // Distribute work based on QueueId.
             log.info("Processing slice event {}", event);
             sliceExecutor.submit(() -> {
                 switch (event.type()) {
@@ -678,16 +587,16 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
                     case UPDATE:
                         if (workPartitionService.isMine(event.newValue().value(), toStringHasher())) {
                             deviceService.getAvailableDevices().forEach(device ->
-                                addQueueTable(device.id(),
-                                        event.key().sliceId(), event.key().trafficClass(), event.newValue().value())
+                                    addQueuesFlowRules(device.id(), event.key().sliceId(),
+                                            event.key().trafficClass(), event.newValue().value().queueId())
                             );
                         }
                         break;
                     case REMOVE:
                         if (workPartitionService.isMine(event.oldValue().value(), toStringHasher())) {
                             deviceService.getAvailableDevices().forEach(device ->
-                                removeQueueTable(device.id(),
-                                        event.key().sliceId(), event.key().trafficClass(), event.oldValue().value())
+                                    removeQueuesFlowRules(device.id(), event.key().sliceId(),
+                                            event.key().trafficClass(), event.oldValue().value().queueId())
                             );
                         }
                         break;
@@ -698,32 +607,9 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
         }
     }
 
-    private class InternalQueueListener implements MapEventListener<QueueId, QueueStoreValue> {
-        public void event(MapEvent<QueueId, QueueStoreValue> event) {
-            // Distributed work based on QueueId. Consistent with InternalQueueListener
-            log.info("Processing queue event {}", event);
-            sliceExecutor.submit(() -> {
-                switch (event.type()) {
-                    case INSERT:
-                    case UPDATE:
-                        if (workPartitionService.isMine(event.newValue().value(), toStringHasher())) {
-                            // TODO programmatically config queues
-                        }
-                        break;
-                    case REMOVE:
-                        if (workPartitionService.isMine(event.oldValue().value(), toStringHasher())) {
-                            // TODO programmatically config queues
-                        }
-                        break;
-                    default:
-                        break;
-                }
-            });
-        }
-    }
-
-    private class InternalFlowListener implements MapEventListener<TrafficSelector, SliceStoreKey> {
+    private class InternalClassifierFlowListener implements MapEventListener<TrafficSelector, SliceStoreKey> {
         public void event(MapEvent<TrafficSelector, SliceStoreKey> event) {
+            // Update classifier table on devices.
             log.info("Processing flow classifier event {}", event);
             classifierFlowExecutor.submit(() -> {
                 switch (event.type()) {
@@ -731,6 +617,7 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
                     case UPDATE:
                         if (workPartitionService.isMine(event.newValue().value(), toStringHasher())) {
                             deviceService.getAvailableDevices().forEach(device -> {
+                                // Classify traffic only at the edge. We use DSCP for intermediate hops.
                                 if (isLeafSwitch(device.id())) {
                                     addClassifierFlowRule(device.id(), event.key(),
                                         event.newValue().value().sliceId(), event.newValue().value().trafficClass());
@@ -758,6 +645,7 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
     private class InternalDefaultTcListener implements  MapEventListener<SliceId, TrafficClass> {
         @Override
         public void event(MapEvent<SliceId, TrafficClass> event) {
+            // Update default tc tables.
             log.info("Processing Default TC event {}", event);
             defaultTcExecutor.submit(() -> {
                 switch (event.type()) {
@@ -792,6 +680,7 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
     private class InternalDeviceListener implements DeviceListener {
         @Override
         public void event(DeviceEvent event) {
+            // Provision all tables on device.
             log.info("Processing device event {}", event);
             deviceExecutor.submit(() -> {
                 switch (event.type()) {
@@ -800,8 +689,8 @@ public class SlicingManager implements SlicingService, SlicingAdminService {
                         DeviceId deviceId = event.subject().id();
                         if (workPartitionService.isMine(deviceId, toStringHasher())) {
                             if (deviceService.isAvailable(deviceId)) {
-                                sliceStore.forEach(e -> addQueueTable(deviceId,
-                                        e.getKey().sliceId(), e.getKey().trafficClass(), e.getValue().value())
+                                sliceStore.forEach(e -> addQueuesFlowRules(deviceId,
+                                        e.getKey().sliceId(), e.getKey().trafficClass(), e.getValue().value().queueId())
                                 );
                                 if (isLeafSwitch(deviceId)) {
                                     classifierFlowStore.forEach(e -> addClassifierFlowRule(deviceId,
