@@ -53,7 +53,6 @@ public final class Constants {
 
     // Static Queue IDs (should match those in gen-stratum-qos-config.py)
     // FIXME: remove hardcoded queue ID, should be derived from netcfg
-    public static final int QUEUE_ID_BEST_EFFORT = 0;
     public static final int QUEUE_ID_SYSTEM = 1;
 
     public static final int DEFAULT_SLICE_ID = 0;
