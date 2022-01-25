@@ -284,7 +284,7 @@ class FabricIPv4UnicastWithPolicingTest(SlicingTest, IPv4UnicastTest):
             slice_id=slice_id, tc=tc, cir=1, cburst=1, pir=1, pburst=1
         )
         if policing:
-            color_red = BMV2_COLOR_RED if is_v1model() else COLOR_RED
+            color_red = V1MODEL_COLOR_RED if is_v1model() else COLOR_RED
             self.enable_policing(slice_id=slice_id, tc=tc, color=color_red)
         else:
             self.add_queue_entry(slice_id=slice_id, tc=tc, qid=1)

@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 package org.stratumproject.fabric.tna.behaviour.upf;
 
+import com.google.common.collect.Range;
+import org.apache.commons.lang3.tuple.Pair;
 import org.onlab.packet.Ip4Address;
 import org.onlab.packet.Ip4Prefix;
 import org.onosproject.core.ApplicationId;
@@ -10,6 +12,7 @@ import org.onosproject.net.DeviceId;
 import org.onosproject.net.behaviour.upf.GtpTunnelPeer;
 import org.onosproject.net.behaviour.upf.SessionDownlink;
 import org.onosproject.net.behaviour.upf.SessionUplink;
+import org.onosproject.net.behaviour.upf.UpfApplication;
 import org.onosproject.net.behaviour.upf.UpfInterface;
 import org.onosproject.net.behaviour.upf.UpfTerminationDownlink;
 import org.onosproject.net.behaviour.upf.UpfTerminationUplink;
@@ -20,28 +23,40 @@ import org.onosproject.net.flow.FlowRule;
 import org.onosproject.net.flow.criteria.PiCriterion;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
+import org.stratumproject.fabric.tna.behaviour.P4InfoConstants;
 
 import java.util.Arrays;
 
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.CTR_ID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_EG_TUNNEL_PEERS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_LOAD_TUNNEL_PARAMS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_APPLICATIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_APP_FWD;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_APP_FWD_NO_TC;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_DROP;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP_NO_TC;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_SESSIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_TERMINATIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_IFACE_ACCESS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_IFACE_CORE;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_IG_TUNNEL_PEERS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_INTERFACES;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_SET_APP_ID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_SET_DOWNLINK_SESSION;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_SET_DOWNLINK_SESSION_BUF;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_SET_ROUTING_IPV4_DST;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_SET_UPLINK_SESSION;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_DROP;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_SESSIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_TERMINATIONS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_APP_ID;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_APP_IPV4_ADDR;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_APP_L4_PORT;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_GTPU_IS_VALID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_IPV4_DST_ADDR;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_IP_PROTO;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_SLICE_ID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_TEID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_TUNNEL_IPV4_DST;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_TUN_PEER_ID;
@@ -85,9 +100,17 @@ public final class TestUpfConstants {
     public static final int PHYSICAL_MAX_UE_SESSIONS = 512;
     public static final int PHYSICAL_MAX_UPF_TERMINATIONS = 512;
     public static final int PHYSICAL_MAX_TUNNELS = 256;
+    public static final int PHYSICAL_MAX_APPLICATIONS = 5;
 
     public static final long COUNTER_BYTES = 12;
     public static final long COUNTER_PKTS = 15;
+
+    public static final byte APP_FILTERING_ID = 10;
+    public static final byte DEFAULT_APP_ID = 0;
+    public static final int APP_FILTERING_PRIORITY = 10;
+    public static final Ip4Prefix APP_IP_PREFIX = Ip4Prefix.valueOf("10.0.0.0/24");
+    public static final Pair<Short, Short> APP_L4_RANGE = Pair.of((short) 100, (short) 1000);
+    public static final byte APP_IP_PROTO = 6;
 
     public static final GtpTunnelPeer GTP_TUNNEL_PEER = GtpTunnelPeer.builder()
             .withTunnelPeerId(ENB_GTP_TUNNEL_PEER)
@@ -114,19 +137,51 @@ public final class TestUpfConstants {
 
     public static final UpfTerminationUplink UPLINK_UPF_TERMINATION = UpfTerminationUplink.builder()
             .withUeSessionId(UE_ADDR)
+            .withApplicationId(APP_FILTERING_ID)
             .withCounterId(UPLINK_COUNTER_CELL_ID)
             .withTrafficClass(UPLINK_TC)
             .build();
 
+    public static final UpfTerminationUplink UPLINK_UPF_TERMINATION_NO_TC = UpfTerminationUplink.builder()
+            .withUeSessionId(UE_ADDR)
+            .withCounterId(UPLINK_COUNTER_CELL_ID)
+            .build();
+
+    public static final UpfTerminationUplink UPLINK_UPF_TERMINATION_DROP = UpfTerminationUplink.builder()
+            .withUeSessionId(UE_ADDR)
+            .withCounterId(UPLINK_COUNTER_CELL_ID)
+            .needsDropping(true)
+            .build();
+
     public static final UpfTerminationDownlink DOWNLINK_UPF_TERMINATION = UpfTerminationDownlink.builder()
             .withUeSessionId(UE_ADDR)
+            .withApplicationId(APP_FILTERING_ID)
             .withCounterId(DOWNLINK_COUNTER_CELL_ID)
             .withTrafficClass(DOWNLINK_TC)
             .withTeid(TEID_VALUE_QOS)
             .withQfi(DOWNLINK_QFI)
             .build();
 
-    // TODO: what about GtpTunnelPeer?
+    public static final UpfApplication APPLICATION_FILTERING = UpfApplication.builder()
+            .withAppId(APP_FILTERING_ID)
+            .withIp4Prefix(APP_IP_PREFIX)
+            .withL4PortRange(Range.closed(APP_L4_RANGE.getLeft(), APP_L4_RANGE.getRight()))
+            .withIpProto(APP_IP_PROTO)
+            .withPriority(APP_FILTERING_PRIORITY)
+            .build();
+
+    public static final UpfTerminationDownlink DOWNLINK_UPF_TERMINATION_NO_TC = UpfTerminationDownlink.builder()
+            .withUeSessionId(UE_ADDR)
+            .withCounterId(DOWNLINK_COUNTER_CELL_ID)
+            .withTeid(TEID_VALUE_QOS)
+            .withQfi(DOWNLINK_QFI)
+            .build();
+
+    public static final UpfTerminationDownlink DOWNLINK_UPF_TERMINATION_DROP = UpfTerminationDownlink.builder()
+            .withUeSessionId(UE_ADDR)
+            .withCounterId(DOWNLINK_COUNTER_CELL_ID)
+            .needsDropping(true)
+            .build();
 
     public static final UpfInterface UPLINK_INTERFACE = UpfInterface.createS1uFrom(S1U_ADDR);
 
@@ -222,6 +277,7 @@ public final class TestUpfConstants {
                     .matchPi(PiCriterion.builder()
                             // we don't match on slice_id, because we assume distinct UE pools per slice
                             .matchExact(HDR_UE_SESSION_ID, UE_ADDR.toInt())
+                            .matchExact(HDR_APP_ID, APP_FILTERING_ID)
                             .build()).build())
             .withTreatment(DefaultTrafficTreatment.builder()
                     .piTableAction(PiAction.builder()
@@ -234,6 +290,44 @@ public final class TestUpfConstants {
             .withPriority(DEFAULT_PRIORITY)
             .build();
 
+    public static final FlowRule FABRIC_UPLINK_UPF_TERMINATION_NO_TC = DefaultFlowRule.builder()
+            .forDevice(DEVICE_ID).fromApp(APP_ID).makePermanent()
+            .forTable(FABRIC_INGRESS_SPGW_UPLINK_TERMINATIONS)
+            .withSelector(DefaultTrafficSelector.builder()
+                      .matchPi(PiCriterion.builder()
+                               // we don't match on slice_id, because we assume distinct UE pools per slice
+                               .matchExact(HDR_UE_SESSION_ID, UE_ADDR.toInt())
+                               .matchExact(HDR_APP_ID, DEFAULT_APP_ID)
+                               .build()).build())
+            .withTreatment(DefaultTrafficTreatment.builder()
+                                   .piTableAction(PiAction.builder()
+                                                          .withId(FABRIC_INGRESS_SPGW_APP_FWD_NO_TC)
+                                                          .withParameters(Arrays.asList(
+                                                                  new PiActionParam(CTR_ID, UPLINK_COUNTER_CELL_ID)
+                                                          ))
+                                                          .build()).build())
+            .withPriority(DEFAULT_PRIORITY)
+            .build();
+
+    public static final FlowRule FABRIC_UPLINK_UPF_TERMINATION_DROP = DefaultFlowRule.builder()
+            .forDevice(DEVICE_ID).fromApp(APP_ID).makePermanent()
+            .forTable(FABRIC_INGRESS_SPGW_UPLINK_TERMINATIONS)
+            .withSelector(DefaultTrafficSelector.builder()
+                      .matchPi(PiCriterion.builder()
+                               // we don't match on slice_id, because we assume distinct UE pools per slice
+                               .matchExact(HDR_UE_SESSION_ID, UE_ADDR.toInt())
+                               .matchExact(HDR_APP_ID, DEFAULT_APP_ID)
+                               .build()).build())
+            .withTreatment(DefaultTrafficTreatment.builder()
+                                   .piTableAction(PiAction.builder()
+                                                          .withId(FABRIC_INGRESS_SPGW_UPLINK_DROP)
+                                                          .withParameters(Arrays.asList(
+                                                                  new PiActionParam(CTR_ID, UPLINK_COUNTER_CELL_ID)
+                                                          ))
+                                                          .build()).build())
+            .withPriority(DEFAULT_PRIORITY)
+            .build();
+
     public static final FlowRule FABRIC_DOWNLINK_UPF_TERMINATION = DefaultFlowRule.builder()
             .forDevice(DEVICE_ID).fromApp(APP_ID).makePermanent()
             .forTable(FABRIC_INGRESS_SPGW_DOWNLINK_TERMINATIONS)
@@ -241,6 +335,7 @@ public final class TestUpfConstants {
                     .matchPi(PiCriterion.builder()
                             // we don't match on slice_id, because we assume distinct UE pools per slice
                             .matchExact(HDR_UE_SESSION_ID, UE_ADDR.toInt())
+                            .matchExact(HDR_APP_ID, APP_FILTERING_ID)
                             .build()).build())
             .withTreatment(DefaultTrafficTreatment.builder()
                     .piTableAction(PiAction.builder()
@@ -252,6 +347,46 @@ public final class TestUpfConstants {
                                     new PiActionParam(QFI, DOWNLINK_QFI)  // 5G case
                             ))
                             .build()).build())
+            .withPriority(DEFAULT_PRIORITY)
+            .build();
+
+    public static final FlowRule FABRIC_DOWNLINK_UPF_TERMINATION_NO_TC = DefaultFlowRule.builder()
+            .forDevice(DEVICE_ID).fromApp(APP_ID).makePermanent()
+            .forTable(FABRIC_INGRESS_SPGW_DOWNLINK_TERMINATIONS)
+            .withSelector(DefaultTrafficSelector.builder()
+                      .matchPi(PiCriterion.builder()
+                               // we don't match on slice_id, because we assume distinct UE pools per slice
+                               .matchExact(HDR_UE_SESSION_ID, UE_ADDR.toInt())
+                               .matchExact(HDR_APP_ID, DEFAULT_APP_ID)
+                               .build()).build())
+            .withTreatment(DefaultTrafficTreatment.builder()
+                                   .piTableAction(PiAction.builder()
+                                                          .withId(FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP_NO_TC)
+                                                          .withParameters(Arrays.asList(
+                                                                  new PiActionParam(CTR_ID, DOWNLINK_COUNTER_CELL_ID),
+                                                                  new PiActionParam(TEID, TEID_VALUE_QOS),
+                                                                  new PiActionParam(QFI, DOWNLINK_QFI)
+                                                          ))
+                                                          .build()).build())
+            .withPriority(DEFAULT_PRIORITY)
+            .build();
+
+    public static final FlowRule FABRIC_DOWNLINK_UPF_TERMINATION_DROP = DefaultFlowRule.builder()
+            .forDevice(DEVICE_ID).fromApp(APP_ID).makePermanent()
+            .forTable(FABRIC_INGRESS_SPGW_DOWNLINK_TERMINATIONS)
+            .withSelector(DefaultTrafficSelector.builder()
+                      .matchPi(PiCriterion.builder()
+                               // we don't match on slice_id, because we assume distinct UE pools per slice
+                               .matchExact(HDR_UE_SESSION_ID, UE_ADDR.toInt())
+                               .matchExact(HDR_APP_ID, DEFAULT_APP_ID)
+                               .build()).build())
+            .withTreatment(DefaultTrafficTreatment.builder()
+                                   .piTableAction(PiAction.builder()
+                                                          .withId(FABRIC_INGRESS_SPGW_DOWNLINK_DROP)
+                                                          .withParameters(Arrays.asList(
+                                                                  new PiActionParam(CTR_ID, DOWNLINK_COUNTER_CELL_ID)
+                                                          ))
+                                                          .build()).build())
             .withPriority(DEFAULT_PRIORITY)
             .build();
 
@@ -292,6 +427,33 @@ public final class TestUpfConstants {
                                                    .withParameter(new PiActionParam(SLICE_ID, SLICE_MOBILE))
                                                    .build()).build())
             .withPriority(DEFAULT_PRIORITY)
+            .build();
+
+    public static final FlowRule FABRIC_APPLICATION_FILTERING = DefaultFlowRule.builder()
+            .forDevice(DEVICE_ID).fromApp(APP_ID).makePermanent()
+            .forTable(FABRIC_INGRESS_SPGW_APPLICATIONS)
+            .withSelector(
+                    DefaultTrafficSelector.builder()
+                            .matchPi(PiCriterion.builder()
+                                             .matchExact(HDR_SLICE_ID, SLICE_MOBILE)
+                                             .matchLpm(HDR_APP_IPV4_ADDR,
+                                                       APP_IP_PREFIX.address().toOctets(),
+                                                       APP_IP_PREFIX.prefixLength())
+                                             .matchRange(HDR_APP_L4_PORT,
+                                                         APP_L4_RANGE.getLeft(),
+                                                         APP_L4_RANGE.getRight())
+                                             .matchTernary(HDR_IP_PROTO,
+                                                           APP_IP_PROTO,
+                                                           0xF)
+                                             .build()).build())
+            .withTreatment(
+                    DefaultTrafficTreatment.builder().piTableAction(
+                            PiAction.builder()
+                                    .withId(FABRIC_INGRESS_SPGW_SET_APP_ID)
+                                    .withParameter(new PiActionParam(
+                                            P4InfoConstants.APP_ID, APP_FILTERING_ID))
+                                    .build()).build())
+            .withPriority(APP_FILTERING_PRIORITY)
             .build();
 
     /**

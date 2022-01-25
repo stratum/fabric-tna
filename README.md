@@ -11,6 +11,8 @@ SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 [![Build Status](https://jenkins.onosproject.org/buildStatus/icon?job=postmerge-fabric-spgw-tna&subject=Fabric-spgw-tna)](https://jenkins.onosproject.org/view/fabric-tna/job/postmerge-fabric-spgw-tna/)
 [![Build Status](https://jenkins.onosproject.org/buildStatus/icon?job=postmerge-fabric-v1model&subject=Fabric-v1model)](https://jenkins.onosproject.org/view/fabric-tna/job/postmerge-fabric-v1model/)
 [![Build Status](https://jenkins.onosproject.org/buildStatus/icon?job=postmerge-fabric-spgw-v1model&subject=Fabric-spgw-v1model)](https://jenkins.onosproject.org/view/fabric-tna/job/postmerge-fabric-spgw-v1model/)
+[![Build Status](https://jenkins.onosproject.org/buildStatus/icon?job=postmerge-fabric-int-v1model&subject=Fabric-int-v1model)](https://jenkins.onosproject.org/view/fabric-tna/job/postmerge-fabric-int-v1model/)
+[![Build Status](https://jenkins.onosproject.org/buildStatus/icon?job=postmerge-fabric-spgw-int-v1model&subject=Fabric-spgw-int-v1model)](https://jenkins.onosproject.org/job/postmerge-fabric-spgw-int-v1model/1/)
 
 [![Build Status](https://jenkins.onosproject.org/buildStatus/icon?job=fabric-tna-linerate-tests&subject=Line-Rate+Tests)](https://jenkins.onosproject.org/job/fabric-tna-linerate-tests/)
 
@@ -24,7 +26,7 @@ can be used to program any switch based on the Intel Barefoot Tofino ASIC.
 `fabric-tna.p4` is not to be confused with [fabric.p4], which is based on the
 v1model architecture and is hosted in the ONOS repository. `fabric-tna.p4`
 follows a similar design to `fabric.p4`, but has evolved significantly to
-provide more advanced capabilities for Inband Network Telemetry (INT) and 45/5G
+provide more advanced capabilities for Inband Network Telemetry (INT) and 4G/5G
 mobile user plane (a.k.a. SPGW in 4G or UPF in 5G).
 
 To use ONOS to control a Tofino switch, you will need to run the

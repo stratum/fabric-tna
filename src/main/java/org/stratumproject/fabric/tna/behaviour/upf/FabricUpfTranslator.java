@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 package org.stratumproject.fabric.tna.behaviour.upf;
 
+import com.google.common.collect.Range;
 import org.apache.commons.lang3.tuple.Pair;
 import org.onlab.packet.Ip4Address;
 import org.onlab.packet.Ip4Prefix;
@@ -10,6 +11,7 @@ import org.onosproject.net.DeviceId;
 import org.onosproject.net.behaviour.upf.GtpTunnelPeer;
 import org.onosproject.net.behaviour.upf.SessionDownlink;
 import org.onosproject.net.behaviour.upf.SessionUplink;
+import org.onosproject.net.behaviour.upf.UpfApplication;
 import org.onosproject.net.behaviour.upf.UpfInterface;
 import org.onosproject.net.behaviour.upf.UpfProgrammableException;
 import org.onosproject.net.behaviour.upf.UpfTerminationDownlink;
@@ -31,15 +33,19 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.APP_ID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.CTR_ID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_EG_TUNNEL_PEERS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_GTPU_ENCAP;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_GTPU_ONLY;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_GTPU_WITH_PSC;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_LOAD_TUNNEL_PARAMS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_APPLICATIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_APP_FWD;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_APP_FWD_NO_TC;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_DROP;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP_NO_TC;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_SESSIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_TERMINATIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_IFACE_ACCESS;
@@ -49,6 +55,7 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_ING
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_INTERFACES;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_RECIRC_ALLOW;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_RECIRC_DENY;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_SET_APP_ID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_SET_DOWNLINK_SESSION;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_SET_DOWNLINK_SESSION_BUF;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_SET_DOWNLINK_SESSION_BUF_DROP;
@@ -60,8 +67,13 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_ING
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_RECIRC_RULES;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_SESSIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_TERMINATIONS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_APP_ID;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_APP_IPV4_ADDR;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_APP_L4_PORT;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_GTPU_IS_VALID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_IPV4_DST_ADDR;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_IP_PROTO;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_SLICE_ID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_TEID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_TUNNEL_IPV4_DST;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_TUN_PEER_ID;
@@ -149,6 +161,17 @@ public class FabricUpfTranslator {
      */
     public boolean isFabricInterface(FlowRule entry) {
         return entry.table().equals(FABRIC_INGRESS_SPGW_INTERFACES);
+    }
+
+    /**
+     * Returns true if the given table entry is an application table entry from
+     * the fabric.p4 physical pipeline, and false otherwise.
+     *
+     * @param entry the entry that may or may not be a fabric.p4 application
+     * @return true if the entry is a fabric.p4 application
+     */
+    public boolean isFabricApplication(FlowRule entry) {
+        return entry.table().equals(FABRIC_INGRESS_SPGW_APPLICATIONS);
     }
 
     private void assertTableId(FlowRule entry, PiTableId tableId) throws UpfProgrammableException {
@@ -264,18 +287,21 @@ public class FabricUpfTranslator {
         PiCriterion match = matchActionPair.getLeft();
         PiAction action = (PiAction) matchActionPair.getRight();
 
-        if (!FabricUpfTranslatorUtil.fieldIsPresent(match, HDR_UE_SESSION_ID)) {
+        if (!FabricUpfTranslatorUtil.fieldIsPresent(match, HDR_UE_SESSION_ID) ||
+                !FabricUpfTranslatorUtil.fieldIsPresent(match, HDR_APP_ID)) {
             throw new UpfProgrammableException("Malformed uplink termination from dataplane!: " + entry);
         }
         // Match keys
         Ip4Address ueSessionId = FabricUpfTranslatorUtil.getFieldAddress(match, HDR_UE_SESSION_ID);
         builder.withUeSessionId(ueSessionId);
+        byte applicationId = FabricUpfTranslatorUtil.getFieldByte(match, HDR_APP_ID);
+        builder.withApplicationId(applicationId);
 
         PiActionId actionId = action.id();
         builder.withCounterId(FabricUpfTranslatorUtil.getParamInt(action, CTR_ID));
         if (actionId.equals(FABRIC_INGRESS_SPGW_UPLINK_DROP)) {
             builder.needsDropping(true);
-        } else {
+        } else if (actionId.equals(FABRIC_INGRESS_SPGW_APP_FWD)) {
             builder.withTrafficClass(FabricUpfTranslatorUtil.getParamByte(action, TC));
         }
         return builder.build();
@@ -296,22 +322,26 @@ public class FabricUpfTranslator {
         PiCriterion match = matchActionPair.getLeft();
         PiAction action = (PiAction) matchActionPair.getRight();
 
-        if (!FabricUpfTranslatorUtil.fieldIsPresent(match, HDR_UE_SESSION_ID)) {
+        if (!FabricUpfTranslatorUtil.fieldIsPresent(match, HDR_UE_SESSION_ID) ||
+                !FabricUpfTranslatorUtil.fieldIsPresent(match, HDR_APP_ID)) {
             throw new UpfProgrammableException("Malformed downlink termination from dataplane!: " + entry);
         }
         // Match keys
         Ip4Address ueSessionId = FabricUpfTranslatorUtil.getFieldAddress(match, HDR_UE_SESSION_ID);
         builder.withUeSessionId(ueSessionId);
+        byte applicationId = FabricUpfTranslatorUtil.getFieldByte(match, HDR_APP_ID);
+        builder.withApplicationId(applicationId);
 
         PiActionId actionId = action.id();
         builder.withCounterId(FabricUpfTranslatorUtil.getParamInt(action, CTR_ID));
         if (actionId.equals(FABRIC_INGRESS_SPGW_DOWNLINK_DROP)) {
             builder.needsDropping(true);
         } else {
-            // Parameters common to all types of UPF Termination rules
-            builder.withTrafficClass(FabricUpfTranslatorUtil.getParamByte(action, TC))
-                    .withTeid(FabricUpfTranslatorUtil.getParamInt(action, TEID))
+            builder.withTeid(FabricUpfTranslatorUtil.getParamInt(action, TEID))
                     .withQfi(FabricUpfTranslatorUtil.getParamByte(action, QFI));
+            if (actionId.equals(FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP)) {
+                builder.withTrafficClass(FabricUpfTranslatorUtil.getParamByte(action, TC));
+            }
         }
         return builder.build();
     }
@@ -344,6 +374,27 @@ public class FabricUpfTranslator {
         }
 
         return ifaceBuilder.build();
+    }
+
+    public UpfApplication fabricEntryToUpfApplication(FlowRule entry)
+            throws UpfProgrammableException {
+        assertTableId(entry, FABRIC_INGRESS_SPGW_APPLICATIONS);
+        Pair<PiCriterion, PiTableAction> matchActionPair = FabricUpfTranslatorUtil.fabricEntryToPiPair(entry);
+        PiCriterion match = matchActionPair.getLeft();
+        PiAction action = (PiAction) matchActionPair.getRight();
+        UpfApplication.Builder appFilteringBuilder = UpfApplication.builder()
+                .withAppId(FabricUpfTranslatorUtil.getParamByte(action, APP_ID))
+                .withPriority(entry.priority());
+        if (FabricUpfTranslatorUtil.fieldIsPresent(match, HDR_APP_IPV4_ADDR)) {
+            appFilteringBuilder.withIp4Prefix(FabricUpfTranslatorUtil.getFieldPrefix(match, HDR_APP_IPV4_ADDR));
+        }
+        if (FabricUpfTranslatorUtil.fieldIsPresent(match, HDR_APP_L4_PORT)) {
+            appFilteringBuilder.withL4PortRange(FabricUpfTranslatorUtil.getFieldRangeShort(match, HDR_APP_L4_PORT));
+        }
+        if (FabricUpfTranslatorUtil.fieldIsPresent(match, HDR_IP_PROTO)) {
+            appFilteringBuilder.withIpProto(FabricUpfTranslatorUtil.getFieldByte(match, HDR_IP_PROTO));
+        }
+        return appFilteringBuilder.build();
     }
 
     /**
@@ -494,6 +545,7 @@ public class FabricUpfTranslator {
             throws UpfProgrammableException {
         final PiCriterion match = PiCriterion.builder()
                 .matchExact(HDR_UE_SESSION_ID, upfTermination.ueSessionId().toInt())
+                .matchExact(HDR_APP_ID, upfTermination.applicationId())
                 .build();
         final PiAction.Builder actionBuilder = PiAction.builder();
 
@@ -502,7 +554,9 @@ public class FabricUpfTranslator {
         ));
 
         if (upfTermination.needsDropping()) {
-            actionBuilder.withId(FABRIC_INGRESS_SPGW_DOWNLINK_DROP);
+            actionBuilder.withId(FABRIC_INGRESS_SPGW_UPLINK_DROP);
+        } else if (upfTermination.trafficClass() == null) {
+            actionBuilder.withId(FABRIC_INGRESS_SPGW_APP_FWD_NO_TC);
         } else {
             actionBuilder.withId(FABRIC_INGRESS_SPGW_APP_FWD);
             paramList.add(new PiActionParam(TC, upfTermination.trafficClass()));
@@ -536,6 +590,7 @@ public class FabricUpfTranslator {
             throws UpfProgrammableException {
         final PiCriterion match = PiCriterion.builder()
                 .matchExact(HDR_UE_SESSION_ID, upfTermination.ueSessionId().toInt())
+                .matchExact(HDR_APP_ID, upfTermination.applicationId())
                 .build();
         final PiAction.Builder actionBuilder = PiAction.builder();
 
@@ -546,10 +601,14 @@ public class FabricUpfTranslator {
         if (upfTermination.needsDropping()) {
             actionBuilder.withId(FABRIC_INGRESS_SPGW_DOWNLINK_DROP);
         } else {
-            actionBuilder.withId(FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP);
-            paramList.add(new PiActionParam(TC, upfTermination.trafficClass()));
             paramList.add(new PiActionParam(TEID, upfTermination.teid()));
             paramList.add(new PiActionParam(QFI, upfTermination.qfi()));
+            if (upfTermination.trafficClass() == null) {
+                actionBuilder.withId(FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP_NO_TC);
+            } else {
+                actionBuilder.withId(FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP);
+                paramList.add(new PiActionParam(TC, upfTermination.trafficClass()));
+            }
         }
         actionBuilder.withParameters(paramList);
 
@@ -576,7 +635,6 @@ public class FabricUpfTranslator {
      */
     public FlowRule interfaceToFabricEntry(UpfInterface upfInterface, DeviceId deviceId,
                                            ApplicationId appId, int priority) throws UpfProgrammableException {
-        int interfaceTypeInt;
         int gtpuValidity;
         PiActionId actionId;
         if (upfInterface.isDbufReceiver()) {
@@ -611,6 +669,42 @@ public class FabricUpfTranslator {
                 .withTreatment(DefaultTrafficTreatment.builder().piTableAction(action).build())
                 .withPriority(priority)
                 .build();
+    }
+
+    public FlowRule upfApplicationToFabricEntry(
+            UpfApplication appFilter, DeviceId deviceId, ApplicationId appId)
+            throws UpfProgrammableException {
+        PiCriterion match = buildApplicationCriterion(appFilter);
+        PiAction action = PiAction.builder()
+                .withId(FABRIC_INGRESS_SPGW_SET_APP_ID)
+                .withParameter(new PiActionParam(APP_ID, appFilter.appId()))
+                .build();
+        return DefaultFlowRule.builder()
+                .forDevice(deviceId).fromApp(appId).makePermanent()
+                .forTable(FABRIC_INGRESS_SPGW_APPLICATIONS)
+                .withSelector(DefaultTrafficSelector.builder().matchPi(match).build())
+                .withTreatment(DefaultTrafficTreatment.builder().piTableAction(action).build())
+                .withPriority(appFilter.priority())
+                .build();
+    }
+
+    public PiCriterion buildApplicationCriterion(UpfApplication appFilter) {
+        PiCriterion.Builder matchBuilder = PiCriterion.builder();
+        // FIXME: SLICE_MOBILE should come from the north instead of hardcoding.
+        matchBuilder.matchExact(HDR_SLICE_ID, SLICE_MOBILE.id());
+        if (appFilter.ip4Prefix().isPresent()) {
+            Ip4Prefix ip4Prefix = appFilter.ip4Prefix().get();
+            matchBuilder.matchLpm(HDR_APP_IPV4_ADDR, ip4Prefix.address().toOctets(), ip4Prefix.prefixLength());
+        }
+        if (appFilter.l4PortRange().isPresent()) {
+            Range<Short> l4PortRange = appFilter.l4PortRange().get();
+            matchBuilder.matchRange(HDR_APP_L4_PORT, l4PortRange.lowerEndpoint(), l4PortRange.upperEndpoint());
+        }
+        if (appFilter.ipProto().isPresent()) {
+            byte ipProto = appFilter.ipProto().get();
+            matchBuilder.matchTernary(HDR_IP_PROTO, ipProto, 0xF);
+        }
+        return matchBuilder.build();
     }
 
     /**
