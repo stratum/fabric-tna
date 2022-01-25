@@ -7,12 +7,14 @@
 
 control Next (inout ingress_headers_t         hdr,
               inout fabric_ingress_metadata_t fabric_md,
-              inout standard_metadata_t       standard_md) {
+              inout standard_metadata_t       standard_md,
+              inout FabricPortId_t            recirc_preserved_egress_port) {
 
     /** General actions. */
     @hidden
     action output(FabricPortId_t port_num) {
         standard_md.egress_spec = (PortId_t)port_num;
+        recirc_preserved_egress_port = port_num; // Needed by INT.
         fabric_md.egress_port_set = true;
     }
 
@@ -108,7 +110,7 @@ control Next (inout ingress_headers_t         hdr,
     action_selector(HashAlgorithm.crc16,
         HASHED_SELECTOR_MAX_GROUP_SIZE,
         32w16) hashed_profile; // Still an action_selector. This name is used to limit
-                               // the usage of custom testing code between TNA and bmv2, for action_selectors.
+                               // the usage of custom testing code between TNA and v1model, for action_selectors.
 
     direct_counter(CounterType.packets_and_bytes) hashed_counter;
 
@@ -188,6 +190,7 @@ control Next (inout ingress_headers_t         hdr,
 control EgressNextControl (inout ingress_headers_t        hdr,
                            inout fabric_egress_metadata_t fabric_md,
                            inout standard_metadata_t      standard_md,
+                           inout IntDropReason_t          recirc_preserved_drop_reason,
                            inout bit<1>                   drop_ctl) {
 
     @hidden
@@ -251,7 +254,10 @@ control EgressNextControl (inout ingress_headers_t        hdr,
         drop_ctl = 1;
         egress_vlan_counter.count();
 #ifdef WITH_INT
-        fabric_md.int_report_md.drop_reason = IntDropReason_t.DROP_REASON_EGRESS_NEXT_MISS;
+        // fabric_md.int_report_md.drop_reason = IntDropReason_t.DROP_REASON_EGRESS_NEXT_MISS;
+        // fabric_md.int_report_md is invalid in case of Egress Drop report.
+        // We need to preserve it using recirc_preserved_drop_reason in any case, because an E2E clone is going to be performed.
+        recirc_preserved_drop_reason = IntDropReason_t.DROP_REASON_EGRESS_NEXT_MISS;
 #endif // WITH_INT
     }
 
@@ -307,14 +313,15 @@ control EgressNextControl (inout ingress_headers_t        hdr,
         // TTL decrement and check.
         bool regular_packet = true;
         // Decrement TTL/HopLimit only for regular packets that do not have to be reported through INT.
-        regular_packet = !(fabric_md.bridged.bmd_type == BridgedMdType_t.INT_INGRESS_DROP);
+        regular_packet = ! ((fabric_md.bridged.bmd_type == BridgedMdType_t.INT_INGRESS_DROP) ||
+            (fabric_md.bridged.bmd_type == BridgedMdType_t.EGRESS_MIRROR));
 
         if (hdr.mpls.isValid()) {
             hdr.mpls.ttl = hdr.mpls.ttl - 1;
             if (hdr.mpls.ttl == 0) {
                 drop_ctl = 1;
 #ifdef WITH_INT
-                fabric_md.int_report_md.drop_reason = IntDropReason_t.DROP_REASON_MPLS_TTL_ZERO;
+                recirc_preserved_drop_reason = IntDropReason_t.DROP_REASON_MPLS_TTL_ZERO;
 #endif // WITH_INT
             }
         } else {
@@ -325,7 +332,7 @@ control EgressNextControl (inout ingress_headers_t        hdr,
                 if (hdr.ipv4.ttl == 0) {
                     drop_ctl = 1;
 #ifdef WITH_INT
-                    fabric_md.int_report_md.drop_reason = IntDropReason_t.DROP_REASON_IP_TTL_ZERO;
+                    recirc_preserved_drop_reason = IntDropReason_t.DROP_REASON_IP_TTL_ZERO;
 #endif // WITH_INT
                 }
             } else if (hdr.ipv6.isValid() && fabric_md.bridged.base.fwd_type != FWD_BRIDGING) {
@@ -335,7 +342,7 @@ control EgressNextControl (inout ingress_headers_t        hdr,
                 if (hdr.ipv6.hop_limit == 0) {
                     drop_ctl = 1;
 #ifdef WITH_INT
-                    fabric_md.int_report_md.drop_reason = IntDropReason_t.DROP_REASON_IP_TTL_ZERO;
+                    recirc_preserved_drop_reason = IntDropReason_t.DROP_REASON_IP_TTL_ZERO;
 #endif // WITH_INT
                 }
             }

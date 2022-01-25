@@ -29,9 +29,9 @@ control IntTnaEgressParserEmulator (inout v1model_header_t          hdr_v1model,
         // in V1model, The MPLS header is initialized in int.p4/*_encap_mpls actions,
         // because assignments made before using the setValid() have no effect.
         // hdr.report_mpls.label = update later
-        // hdr.report_mpls.tc = 0;
-        // hdr.report_mpls.bos = 0;
-        // hdr.report_mpls.ttl = DEFAULT_MPLS_TTL;
+        // hdr.report_mpls.tc = update later;
+        // hdr.report_mpls.bos = update later;
+        // hdr.report_mpls.ttl = update later;
 
         /** report_ipv4 **/
         hdr.report_ipv4.setValid();
@@ -83,7 +83,6 @@ control IntTnaEgressParserEmulator (inout v1model_header_t          hdr_v1model,
 
         /** drop_report_header **/
         hdr.drop_report_header.setValid();
-        // transition set_common_int_headers;
     }
 
     @hidden
@@ -104,6 +103,33 @@ control IntTnaEgressParserEmulator (inout v1model_header_t          hdr_v1model,
         hdr.common_report_header.queue_id = 0;
     }
 
+    @hidden
+    action parse_int_report_mirror() {
+        set_common_int_headers();
+
+        fabric_md.bridged.bmd_type = fabric_md.int_report_md.bmd_type;
+        fabric_md.bridged.base.vlan_id = DEFAULT_VLAN_ID;
+        fabric_md.bridged.base.mpls_label = 0; // do not push an MPLS label
+        #ifdef WITH_SPGW
+            fabric_md.bridged.spgw.skip_spgw = true;
+        #endif // WITH_SPGW
+
+        /** report_fixed_header **/
+        hdr.report_fixed_header.ig_tstamp = fabric_md.int_report_md.ig_tstamp;
+
+        /** common_report_header **/
+        hdr.common_report_header.ig_port = fabric_md.int_report_md.ig_port;
+        hdr.common_report_header.eg_port = fabric_md.int_report_md.eg_port;
+        hdr.common_report_header.queue_id = fabric_md.int_report_md.queue_id;
+
+        /** local/drop_report_header (drop_report set valid later) **/
+        hdr.local_report_header.setValid();
+        hdr.local_report_header.queue_occupancy = fabric_md.int_report_md.queue_occupancy;
+        hdr.local_report_header.eg_tstamp = fabric_md.int_report_md.eg_tstamp;
+        // Drop reason is set when drop report is being encapped.
+        // hdr.drop_report_header.drop_reason = fabric_md.int_report_md.drop_reason;
+    }
+
     apply {
         fabric_md.is_int_recirc = true;
 
@@ -116,8 +142,9 @@ control IntTnaEgressParserEmulator (inout v1model_header_t          hdr_v1model,
         hdr_v1model.ingress.inner_vlan.setInvalid();
 #endif // WITH_XCONNECT || WITH_DOUBLE_VLAN_TERMINATION
 
-        if(fabric_md.bridged.base.encap_presence != EncapPresence.NONE) {
-            // in case of encapsulated traffic, we're interested only in some of the inner headers.
+        if(hdr_v1model.ingress.gtpu.isValid() || hdr_v1model.ingress.vxlan.isValid()) {
+            // Using directly the headers validity bit to avoid preserving EncapPresence metadata.
+            // In case of encapsulated traffic, we're interested only in some of the inner headers.
             hdr_v1model.ingress.ipv4.setInvalid();
             hdr_v1model.ingress.tcp.setInvalid();
             hdr_v1model.ingress.udp.setInvalid();
@@ -134,7 +161,13 @@ control IntTnaEgressParserEmulator (inout v1model_header_t          hdr_v1model,
 
         /* End of Deparser logic */
 
-        parse_int_ingress_drop();
+        if ((bit<8>)fabric_md.bridged.int_bmd.report_type == BridgedMdType_t.INT_INGRESS_DROP) {
+            parse_int_ingress_drop();
+            recirculate_preserving_field_list(NO_PRESERVATION);
+        } else {
+            parse_int_report_mirror();
+            recirculate_preserving_field_list(PRESERVE_INT_MD);
+        }
 
         // Synch with output struct.
         hdr_v1model.egress = hdr;

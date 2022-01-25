@@ -26,6 +26,20 @@ struct fabric_v1model_metadata_t {
 
     fabric_ingress_metadata_t ingress;
     fabric_egress_metadata_t  egress;
+
+    // Needed for Egress INT reports (drop or flow)
+    // The following fields are preserved when recirculating or cloning the packet.
+    // Find out how field_lists work reading the example in v1model.p4 : https://github.com/p4lang/p4c/blob/main/p4include/v1model.p4
+    @field_list(PRESERVE_INT_MD)
+    IntReportType_t  recirc_preserved_report_type;
+    @field_list(PRESERVE_INT_MD)
+    FabricPortId_t   recirc_preserved_egress_port;
+    @field_list(PRESERVE_INT_MD)
+    IntDropReason_t  recirc_preserved_drop_reason;
+
+    // Needed for Packet-INs
+    @field_list(PRESERVE_INGRESS_PORT)
+    FabricPortId_t   recirc_preserved_ingress_port;
 }
 
 struct v1model_header_t {

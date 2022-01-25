@@ -23,6 +23,17 @@ public final class P4InfoConstants {
     }
 
     // Header field IDs
+    public static final PiMatchFieldId HDR_APP_ID = PiMatchFieldId.of("app_id");
+    public static final int HDR_APP_ID_BITWIDTH = 8;
+    public static final PiMatchFieldId HDR_APP_IP_PROTO =
+            PiMatchFieldId.of("app_ip_proto");
+    public static final int HDR_APP_IP_PROTO_BITWIDTH = 8;
+    public static final PiMatchFieldId HDR_APP_IPV4_ADDR =
+            PiMatchFieldId.of("app_ipv4_addr");
+    public static final int HDR_APP_IPV4_ADDR_BITWIDTH = 32;
+    public static final PiMatchFieldId HDR_APP_L4_PORT =
+            PiMatchFieldId.of("app_l4_port");
+    public static final int HDR_APP_L4_PORT_BITWIDTH = 16;
     public static final PiMatchFieldId HDR_BMD_TYPE =
             PiMatchFieldId.of("bmd_type");
     public static final int HDR_BMD_TYPE_BITWIDTH = 8;
@@ -103,6 +114,9 @@ public final class P4InfoConstants {
     public static final PiMatchFieldId HDR_NEXT_ID =
             PiMatchFieldId.of("next_id");
     public static final int HDR_NEXT_ID_BITWIDTH = 32;
+    public static final PiMatchFieldId HDR_SLICE_ID =
+            PiMatchFieldId.of("slice_id");
+    public static final int HDR_SLICE_ID_BITWIDTH = 4;
     public static final PiMatchFieldId HDR_SLICE_TC =
             PiMatchFieldId.of("slice_tc");
     public static final int HDR_SLICE_TC_BITWIDTH = 6;
@@ -181,6 +195,8 @@ public final class P4InfoConstants {
             PiTableId.of("FabricIngress.qos.queues");
     public static final PiTableId FABRIC_INGRESS_SLICE_TC_CLASSIFIER_CLASSIFIER =
             PiTableId.of("FabricIngress.slice_tc_classifier.classifier");
+    public static final PiTableId FABRIC_INGRESS_SPGW_APPLICATIONS =
+            PiTableId.of("FabricIngress.spgw.applications");
     public static final PiTableId FABRIC_INGRESS_SPGW_DOWNLINK_SESSIONS =
             PiTableId.of("FabricIngress.spgw.downlink_sessions");
     public static final PiTableId FABRIC_INGRESS_SPGW_DOWNLINK_TERMINATIONS =
@@ -364,6 +380,8 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.spgw.recirc_deny");
     public static final PiActionId FABRIC_INGRESS_SPGW_RECIRC_MISS =
             PiActionId.of("FabricIngress.spgw.recirc_miss");
+    public static final PiActionId FABRIC_INGRESS_SPGW_SET_APP_ID =
+            PiActionId.of("FabricIngress.spgw.set_app_id");
     public static final PiActionId FABRIC_INGRESS_SPGW_SET_DOWNLINK_SESSION =
             PiActionId.of("FabricIngress.spgw.set_downlink_session");
     public static final PiActionId FABRIC_INGRESS_SPGW_SET_DOWNLINK_SESSION_BUF =
@@ -391,6 +409,7 @@ public final class P4InfoConstants {
     public static final PiActionId NO_ACTION = PiActionId.of("NoAction");
     public static final PiActionId NOP = PiActionId.of("nop");
     // Action Param IDs
+    public static final PiActionParamId APP_ID = PiActionParamId.of("app_id");
     public static final PiActionParamId CPU_PORT =
             PiActionParamId.of("cpu_port");
     public static final PiActionParamId CTR_ID = PiActionParamId.of("ctr_id");

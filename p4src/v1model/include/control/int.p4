@@ -9,17 +9,20 @@
 
 control IntWatchlist(inout ingress_headers_t         hdr,
                      inout fabric_ingress_metadata_t fabric_md,
-                     inout standard_metadata_t       standard_md) {
+                     inout standard_metadata_t       standard_md,
+                     inout IntReportType_t           recirc_preserved_report_type) {
 
     direct_counter(CounterType.packets_and_bytes) watchlist_counter;
 
     action mark_to_report() {
         fabric_md.bridged.int_bmd.report_type = INT_REPORT_TYPE_FLOW;
+        recirc_preserved_report_type = INT_REPORT_TYPE_FLOW;
         watchlist_counter.count();
     }
 
     action no_report() {
         fabric_md.bridged.int_bmd.report_type = INT_REPORT_TYPE_NO_REPORT;
+        recirc_preserved_report_type = INT_REPORT_TYPE_NO_REPORT;
     }
 
     // Required by the control plane to distinguish entries used to exclude the INT
@@ -72,7 +75,7 @@ control IntIngress(inout ingress_headers_t         hdr,
         // In V1model, we use the recirculate primitive, in egress pipeline.
 
         // The drop flag may be set by other tables, need to reset it so the packet can
-        // be forward to egress pipeline and be recirculated.
+        // be forwarded to egress pipeline and be recirculated.
         drop_ctl = 0;
         standard_md.egress_spec = FAKE_V1MODEL_RECIRC_PORT;
 
@@ -144,10 +147,13 @@ control IntEgress (inout v1model_header_t          hdr_v1model,
     }
 
     action check_quota() {
-
+        // Queue reports are not supported yet on v1model.
+        // Leaving this action for P4Info compatibility with the TNA program.
     }
 
     action reset_quota() {
+        // Queue reports are not supported yet on v1model.
+        // Leaving this action for P4Info compatibility with the TNA program.
     }
 
     table queue_latency_thresholds {
@@ -191,7 +197,6 @@ control IntEgress (inout v1model_header_t          hdr_v1model,
         hdr.report_ipv4.src_addr = src_ip;
         hdr.report_ipv4.dst_addr = mon_ip;
         hdr.report_udp.dport = mon_port;
-        // hdr.report_fixed_header.seq_no = get_seq_number.execute(hdr.report_fixed_header.hw_id);
         get_seq_number((bit<32>)hdr.report_fixed_header.hw_id, hdr.report_fixed_header.seq_no);
         hdr.report_fixed_header.dqf = fabric_md.int_report_md.report_type;
         hdr.common_report_header.switch_id = switch_id;
@@ -231,6 +236,11 @@ control IntEgress (inout v1model_header_t          hdr_v1model,
         hdr.report_eth_type.value = ETHERTYPE_INT_WIP_IPV4;
         hdr.report_fixed_header.nproto = NPROTO_TELEMETRY_DROP_HEADER;
         hdr.drop_report_header.setValid();
+        // If drop_report, need to set the local_report invalid.
+        //local_report was setValid() in parser emulator to allow its initialization.
+        hdr.local_report_header.setInvalid();
+        // hdr.drop_report_header.drop_reason = fabric_v1model.recirc_preserved_drop_reason;
+        hdr.drop_report_header.drop_reason = fabric_md.bridged.int_bmd.drop_reason;
     }
 
     action do_drop_report_encap_mpls(ipv4_addr_t src_ip, ipv4_addr_t mon_ip,
@@ -280,13 +290,14 @@ control IntEgress (inout v1model_header_t          hdr_v1model,
     @hidden
     action init_int_metadata(bit<3> report_type) {
         fabric_md.bridged.int_bmd.mirror_session_id = V1MODEL_INT_MIRROR_SESSION;
+        fabric_md.int_report_md.setValid();
 
         fabric_v1model.int_mirror_type = (bit<3>)FabricMirrorType_t.INT_REPORT;
         fabric_md.int_report_md.bmd_type = BridgedMdType_t.EGRESS_MIRROR;
         fabric_md.int_report_md.mirror_type = FabricMirrorType_t.INT_REPORT;
         fabric_md.int_report_md.report_type = fabric_md.bridged.int_bmd.report_type;
         fabric_md.int_report_md.ig_port = fabric_md.bridged.base.ig_port;
-        fabric_md.int_report_md.eg_port = standard_md.egress_spec;
+        fabric_md.int_report_md.eg_port = (PortId_t)fabric_v1model.recirc_preserved_egress_port;
         fabric_md.int_report_md.queue_id = egress_qid;
         fabric_md.int_report_md.queue_occupancy = standard_md.deq_qdepth;
         fabric_md.int_report_md.ig_tstamp = fabric_md.bridged.base.ig_tstamp[31:0];
@@ -321,7 +332,6 @@ control IntEgress (inout v1model_header_t          hdr_v1model,
             // (INT_REPORT_TYPE_NO_REPORT, 0, true): init_int_metadata(INT_REPORT_TYPE_QUEUE);
             // (INT_REPORT_TYPE_NO_REPORT, 1, true): init_int_metadata(INT_REPORT_TYPE_QUEUE);
         }
-
         counters = int_metadata_counter;
     }
 
@@ -363,17 +373,16 @@ control IntEgress (inout v1model_header_t          hdr_v1model,
         hdr.report_fixed_header.hw_id = 4w0 ++ standard_md.egress_spec[8:7];
 
         if (fabric_md.int_report_md.isValid()) {
-            // Packet is mirrored (egress or deflected) or an ingress drop.
+            // Packet is mirrored (egress) or an ingress drop.
             report.apply();
         } else {
             // Regular packet. Initialize INT mirror metadata.
             if (int_metadata.apply().hit) {
                 // Mirroring the packet. It could work only if clone preserves the metadata structs.
                 // The mirrored packet will then generate the report.
-
-                clone3(CloneType.E2E,
+                clone_preserving_field_list(CloneType.E2E,
                     (bit<32>)fabric_md.bridged.int_bmd.mirror_session_id,
-                    {standard_md, fabric_md});
+                    PRESERVE_INT_MD);
             }
         }
 
