@@ -94,15 +94,15 @@ public class NetcfgSlicingProvider {
     }
 
     private void readInitialConfig() {
-        if (shouldDoWork()) {
-            execute(() -> {
+        execute(() -> {
+            if (shouldDoWork()) {
                 SlicingConfig config = netcfgRegistry.getConfig(appId, SlicingConfig.class);
                 if (config != null) {
                     log.info("Reading initial config");
                     addConfig(config);
                 }
-            }, "reading initial config");
-        }
+            }
+        }, "reading initial config");
     }
 
     private void addConfig(SlicingConfig config) {

@@ -59,6 +59,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -135,8 +136,8 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
     private MapEventListener<SliceId, TrafficClass> defaultTcListener;
     private ExecutorService defaultTcExecutor;
 
-    private SliceId systemSliceId;
-    private TrafficClassDescription systemTc;
+    private final AtomicReference<SliceId> systemSliceId = new AtomicReference<>();
+    private final AtomicReference<TrafficClassDescription> systemTc = new AtomicReference<>();
 
     private DeviceListener deviceListener;
     private ExecutorService deviceExecutor;
@@ -446,12 +447,14 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
 
     @Override
     public SliceId getSystemSlice() {
-        return systemSliceId == null ? SliceId.DEFAULT : systemSliceId;
+        var sliceId = systemSliceId.get();
+        return sliceId == null ? SliceId.DEFAULT : sliceId;
     }
 
     @Override
     public TrafficClassDescription getSystemTrafficClass() {
-        return systemTc == null ? TrafficClassDescription.BEST_EFFORT : systemTc;
+        var tc = systemTc.get();
+        return tc == null ? TrafficClassDescription.BEST_EFFORT : tc;
     }
 
     private Set<TrafficSelector> getClassifierFlows(SliceId sliceId) {
@@ -599,21 +602,21 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
                 .map(Entry::getKey)
                 .collect(Collectors.toSet());
         if (newSystemKeys.isEmpty()) {
-            systemSliceId = null;
-            systemTc = null;
+            systemSliceId.set(null);
+            systemTc.set(null);
         } else {
             if (newSystemKeys.size() > 1) {
                 log.warn("Found more than one system traffic class, will pick a random one: {}", newSystemKeys);
             }
-            var randomKey = newSystemKeys.iterator().next();
-            Versioned<TrafficClassDescription> entry = sliceStore.get(randomKey);
+            var key = newSystemKeys.iterator().next();
+            Versioned<TrafficClassDescription> entry = sliceStore.get(key);
             if (entry == null) {
                 log.error("Missing slice store entry for the system traffic class, BUG?");
-                systemSliceId = null;
-                systemTc = null;
+                systemSliceId.set(null);
+                systemTc.set(null);
             } else {
-                systemSliceId = randomKey.sliceId();
-                systemTc = entry.value();
+                systemSliceId.set(key.sliceId());
+                systemTc.set(entry.value());
             }
         }
         if (!getSystemSlice().equals(oldSystemSliceId) ||
