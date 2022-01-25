@@ -82,6 +82,7 @@ public class SlicingManagerTest {
     private static final QueueId QUEUE_ID_CONTROL = QueueId.of(1);
     private static final QueueId QUEUE_ID_REAL_TIME = QueueId.of(2);
     private static final QueueId QUEUE_ID_ELASTIC = QueueId.of(3);
+    private static final QueueId QUEUE_ID_SYSTEM = QueueId.of(4);
 
 
     private static final TrafficClassDescription TC_CONFIG_CONTROL = new TrafficClassDescription(
@@ -90,6 +91,8 @@ public class SlicingManagerTest {
             TrafficClass.REAL_TIME, QUEUE_ID_REAL_TIME, 0, 0, false);
     private static final TrafficClassDescription TC_CONFIG_ELASTIC = new TrafficClassDescription(
             TrafficClass.ELASTIC, QUEUE_ID_ELASTIC, 0, 0, false);
+    private static final TrafficClassDescription TC_CONFIG_SYSTEM = new TrafficClassDescription(
+            TrafficClass.REAL_TIME, QUEUE_ID_SYSTEM, 0, 0, true);
 
     private final CoreService coreService = EasyMock.createMock(CoreService.class);
     private final StorageService storageService = EasyMock.createMock(StorageService.class);
@@ -481,6 +484,25 @@ public class SlicingManagerTest {
                     .stream().anyMatch(f -> f.exactMatch(queuesFlowRuleSlice1ControlGreen)));
             assertTrue(capturedRemovedFlowRules.getValues()
                     .stream().anyMatch(f -> f.exactMatch(queuesFlowRuleSlice1ControlRed)));
+        });
+    }
+
+    @Test
+    public void testSystemTcUpdate() {
+        assertEquals(SliceId.DEFAULT, manager.getSystemSlice());
+        assertEquals(TrafficClassDescription.BEST_EFFORT, manager.getSystemTrafficClass());
+
+        manager.addSlice(SLICE_IDS.get(1));
+        manager.addTrafficClass(SLICE_IDS.get(1), TC_CONFIG_SYSTEM);
+        assertAfter(50, () -> {
+            assertEquals(SLICE_IDS.get(1), manager.getSystemSlice());
+            assertEquals(TC_CONFIG_SYSTEM, manager.getSystemTrafficClass());
+        });
+
+        manager.removeTrafficClass(SLICE_IDS.get(1), TC_CONFIG_SYSTEM.trafficClass());
+        assertAfter(50, () -> {
+            assertEquals(SliceId.DEFAULT, manager.getSystemSlice());
+            assertEquals(TrafficClassDescription.BEST_EFFORT, manager.getSystemTrafficClass());
         });
     }
 
