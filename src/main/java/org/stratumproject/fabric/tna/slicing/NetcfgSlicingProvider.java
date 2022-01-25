@@ -11,7 +11,6 @@ import org.onosproject.net.config.ConfigFactory;
 import org.onosproject.net.config.NetworkConfigEvent;
 import org.onosproject.net.config.NetworkConfigListener;
 import org.onosproject.net.config.NetworkConfigRegistry;
-import org.onosproject.net.config.NetworkConfigService;
 import org.onosproject.net.config.basics.SubjectFactories;
 import org.onosproject.net.intent.WorkPartitionService;
 import org.osgi.service.component.annotations.Activate;
@@ -96,7 +95,7 @@ public class NetcfgSlicingProvider {
 
     private void readInitialConfig() {
         if (shouldDoWork()) {
-            spawn(() -> {
+            execute(() -> {
                 SlicingConfig config = netcfgRegistry.getConfig(appId, SlicingConfig.class);
                 if (config != null) {
                     log.info("Reading initial config");
@@ -113,6 +112,12 @@ public class NetcfgSlicingProvider {
                     try {
                         slicingProviderService.addSlice(sliceDescr.id());
                     } catch (SlicingException e) {
+                        // TODO: Consider adding a reconciliation thread to eventually apply
+                        //  the netcfg changes to the SlicingManager stores. Applies to
+                        //  other instance of SlicingException catch.
+                        // SlicingExceptions might due to transient errors, e.g., old slice
+                        // pending removal. We should keep retrying and logging the error to
+                        // signal the inconsistent state.
                         log.error("Error adding slice", e);
                     }
                 }
@@ -125,12 +130,6 @@ public class NetcfgSlicingProvider {
                 });
             });
         } catch (ConfigException e) {
-            // TODO: Consider adding a reconciliation thread to eventually apply
-            //  the netcfg changes to the SlicingManager stores. Applies to
-            //  configRemoved() as well.
-            // SlicingExceptions might due to transient errors, e.g., old slice
-            // pending removal. We should keep retrying and logging the error to
-            // signal the inconsistent state.
             log.error("Error in slicing config", e);
         }
         log.info("Slicing config added");
@@ -179,21 +178,24 @@ public class NetcfgSlicingProvider {
     private class InternalNetworkConfigListener implements NetworkConfigListener {
         @Override
         public void event(NetworkConfigEvent event) {
-            spawn(() -> {
-                if (event.config().isEmpty() || !shouldDoWork()) {
+            execute(() -> {
+                if (!shouldDoWork()) {
                     return;
                 }
-                SlicingConfig config = (SlicingConfig) event.config().get();
                 switch (event.type()) {
                     case CONFIG_ADDED:
-                        addConfig(config);
+                        if (event.config().isPresent()) {
+                            addConfig((SlicingConfig) event.config().get());
+                        }
                         break;
                     case CONFIG_UPDATED:
                         log.error("Updating the slicing config is not supported," +
                                 "please remove and re-add the config");
                         break;
                     case CONFIG_REMOVED:
-                        removeConfig(config);
+                        if (event.prevConfig().isPresent()) {
+                            removeConfig((SlicingConfig) event.prevConfig().get());
+                        }
                         break;
                     default:
                         break;
@@ -207,7 +209,7 @@ public class NetcfgSlicingProvider {
         }
     }
 
-    private void spawn(Runnable runnable, String taskDescription) {
+    private void execute(Runnable runnable, String taskDescription) {
         // Using the shared executor might introduce delay in events processing.
         // However, config is pushed infrequently (mostly at startup) and it's
         // not critical to apply that immediately.

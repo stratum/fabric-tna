@@ -14,6 +14,7 @@ import org.onosproject.core.CoreService;
 import org.onosproject.core.DefaultApplicationId;
 import org.onosproject.net.config.Config;
 import org.onosproject.net.config.ConfigException;
+import org.onosproject.net.config.NetworkConfigEvent;
 import org.onosproject.net.config.NetworkConfigListener;
 import org.onosproject.net.config.NetworkConfigRegistry;
 import org.onosproject.net.config.NetworkConfigRegistryAdapter;
@@ -36,10 +37,20 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.onlab.junit.TestTools.assertAfter;
+import static org.onosproject.net.config.NetworkConfigEvent.Type.CONFIG_ADDED;
+import static org.onosproject.net.config.NetworkConfigEvent.Type.CONFIG_REMOVED;
 
+/**
+ * Tests for NetcfgSlicingProvider.
+ */
 public class NetcfgSlicingProviderTest {
 
     private static final ApplicationId APP_ID = new DefaultApplicationId(0, "");
+    private static final SlicingConfig SLICING_CONFIG = TestUtils.getSlicingConfig(APP_ID, "/slicing.json");
+    private static final NetworkConfigEvent ADD_EVENT = new NetworkConfigEvent(
+            CONFIG_ADDED, null, SLICING_CONFIG, null, SlicingConfig.class);
+    private static final NetworkConfigEvent REMOVE_EVENT = new NetworkConfigEvent(
+            CONFIG_REMOVED, null, null, SLICING_CONFIG, SlicingConfig.class);
 
     private NetcfgSlicingProvider provider;
 
@@ -65,61 +76,58 @@ public class NetcfgSlicingProviderTest {
         provider.netcfgRegistry = netcfgRegistry;
         provider.workPartitionService = workPartitionService;
 
+        // Populated by MockSlicingProviderService.
         sliceStore = Maps.newHashMap();
-        configListener = null;
-        initialConfig = null;
-
         // The default slice is always pre-provisioned.
         slicingProviderService.addSlice(SliceId.DEFAULT);
 
-        EasyMock.expect(coreService.getAppId(EasyMock.anyString())).andReturn(APP_ID).once();
-        EasyMock.expect(workPartitionService.isMine(
-                EasyMock.anyString(), EasyMock.anyObject())).andReturn(true)
-                .anyTimes();
+        EasyMock.expect(coreService.getAppId(EasyMock.anyString()))
+                .andReturn(APP_ID).anyTimes();
+        EasyMock.expect(workPartitionService.isMine(EasyMock.anyString(), EasyMock.anyObject()))
+                .andReturn(true).anyTimes();
 
         EasyMock.replay(coreService, workPartitionService);
     }
 
     @Test
     public void testActivateWithoutInitialConfig() {
+        initialConfig = null;
         provider.activate();
         EasyMock.verify(coreService, workPartitionService);
-
         // Initial config is handled asynchronously.
-        assertAfter(100, () -> {
-            assertTrue(sliceStore.isEmpty());
-        });
+        assertAfter(50, this::assertStoreIsEmpty);
     }
 
     @Test
     public void testActivateWithInitialConfig() {
-        initialConfig = TestUtils.getSlicingConfig(APP_ID, "/slicing.json");
+        initialConfig = SLICING_CONFIG;
         provider.activate();
         EasyMock.verify(coreService, workPartitionService);
-
-        assertAfter(100, () -> {
-            var expectedEntryCount = 0;
-            try {
-                for (var sliceDescr : initialConfig.slices()) {
-                    assertTrue(sliceStore.containsKey(sliceDescr.id()));
-                    for (var tcDescr : sliceDescr.tcDescriptions()) {
-                        assertTrue(sliceStore.get(sliceDescr.id()).containsKey(tcDescr.trafficClass()));
-                        assertEquals(tcDescr, sliceStore.get(sliceDescr.id()).get(tcDescr.trafficClass()));
-                        expectedEntryCount++;
-                    }
-                }
-            } catch (ConfigException e) {
-                fail(e.getMessage());
-            }
-            // Verify that we only added entries from the initial config.
-            var actualEntryCount = sliceStore.values().stream().mapToLong(Map::size).sum();
-            assertEquals(expectedEntryCount, actualEntryCount);
-        });
+        assertAfter(50, () -> assertStoreContainsConfig(SLICING_CONFIG));
     }
 
     @Test
-    public void testAddConfig() {
-        assertTrue(true);
+    public void testEventAdd() {
+        testActivateWithoutInitialConfig();
+        assertTrue(configListener.isRelevant(ADD_EVENT));
+        configListener.event(ADD_EVENT);
+        assertAfter(50, () -> assertStoreContainsConfig(SLICING_CONFIG));
+    }
+
+    @Test
+    public void testEventRemove() {
+        testActivateWithInitialConfig();
+        assertTrue(configListener.isRelevant(REMOVE_EVENT));
+        configListener.event(REMOVE_EVENT);
+        assertAfter(50, this::assertStoreIsEmpty);
+    }
+
+    @Test
+    public void testDeactivate() {
+        testActivateWithoutInitialConfig();
+        provider.deactivate();
+        // Events should be ignored.
+        assertAfter(50, this::assertStoreIsEmpty);
     }
 
     private class MockNetworkConfigRegistry extends NetworkConfigRegistryAdapter {
@@ -136,6 +144,32 @@ public class NetcfgSlicingProviderTest {
             return null;
         }
     }
+
+    private void assertStoreIsEmpty() {
+        // Only the pre-provisioned default slice is admitted.
+        assertEquals(1, sliceStore.size());
+        assertTrue(sliceStore.containsKey(SliceId.DEFAULT));
+    }
+
+    private void assertStoreContainsConfig(SlicingConfig config) {
+        var expectedEntryCount = 0;
+        try {
+            for (var sliceDescr : config.slices()) {
+                assertTrue(sliceStore.containsKey(sliceDescr.id()));
+                for (var tcDescr : sliceDescr.tcDescriptions()) {
+                    assertTrue(sliceStore.get(sliceDescr.id()).containsKey(tcDescr.trafficClass()));
+                    assertEquals(tcDescr, sliceStore.get(sliceDescr.id()).get(tcDescr.trafficClass()));
+                    expectedEntryCount++;
+                }
+            }
+        } catch (ConfigException e) {
+            fail(e.getMessage());
+        }
+        // Verify that we only added entries from the initial config.
+        var actualEntryCount = sliceStore.values().stream().mapToLong(Map::size).sum();
+        assertEquals(expectedEntryCount, actualEntryCount);
+    }
+
 
     private class MockSlicingService implements SlicingService {
 
@@ -178,8 +212,6 @@ public class NetcfgSlicingProviderTest {
         public Set<TrafficSelector> getClassifierFlows(SliceId sliceId, TrafficClass tc) {
             return null;
         }
-
-        // TODO: add tests in SlicingManagerTest for system slice
 
         @Override
         public SliceId getSystemSlice() {
