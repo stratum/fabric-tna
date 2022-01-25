@@ -1,9 +1,7 @@
 // Copyright 2020-present Open Networking Foundation
 // SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 
-// Do not modify this file manually, use `make constants` to generate this file.
-
-package org.stratumproject.fabric.tna.behaviour;
+package org.stratumproject.fabric.tna;
 
 import com.google.common.collect.ImmutableMap;
 
@@ -18,6 +16,13 @@ import static org.onosproject.segmentrouting.metadata.SRObjectiveMetadata.PAIR_P
  * Constant values.
  */
 public final class Constants {
+
+    // TODO: use consistent naming, and potentially just one app name
+    //  After all, the actual app in the ONOS sense is just one.
+    public static final String APP_NAME = "org.stratumproject.fabric-tna";
+    public static final String APP_NAME_UPF = "org.stratumproject.fabric-tna.upf";
+    public static final String APP_NAME_SLICING = "org.stratumproject.fabric.tna.slicing";
+    public static final String APP_NAME_INT = "org.stratumproject.fabric.tna.inbandtelemetry";
 
     public static final byte[] ONE = new byte[]{1};
     public static final byte[] ZERO = new byte[]{0};
@@ -50,10 +55,6 @@ public final class Constants {
     public static final int DEFAULT_VLAN = 4094;
     public static final int DEFAULT_PW_TRANSPORT_VLAN = 4090;
     public static final int PKT_IN_MIRROR_SESSION_ID = 0x1FF;
-
-    // Static Queue IDs (should match those in gen-stratum-qos-config.py)
-    // FIXME: remove hardcoded queue ID, should be derived from netcfg
-    public static final int QUEUE_ID_SYSTEM = 1;
 
     public static final int DEFAULT_SLICE_ID = 0;
 

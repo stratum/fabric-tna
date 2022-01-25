@@ -59,12 +59,14 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static org.onlab.util.Tools.groupedThreads;
 import static org.slf4j.LoggerFactory.getLogger;
+import static org.stratumproject.fabric.tna.Constants.APP_NAME_SLICING;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.fiveTupleOnly;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.sliceTcConcat;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_QOS_DEFAULT_TC;
@@ -80,6 +82,7 @@ import static org.stratumproject.fabric.tna.slicing.api.SlicingException.Type.UN
  */
 @Component(immediate = true, service = {
         SlicingService.class,
+        SlicingProviderService.class,
         SlicingAdminService.class
 })
 public class SlicingManager implements SlicingService, SlicingProviderService, SlicingAdminService {
@@ -109,7 +112,6 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
 
 
     private static final Logger log = getLogger(SlicingManager.class);
-    private static final String APP_NAME = "org.stratumproject.fabric.tna.slicing"; // TODO revisit naming
     private static final int QOS_FLOW_PRIORITY = 10;
     private static final int DEFAULT_TC_PRIORITY = 10;
 
@@ -134,12 +136,15 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
     private MapEventListener<SliceId, TrafficClass> defaultTcListener;
     private ExecutorService defaultTcExecutor;
 
+    private final AtomicReference<SliceId> systemSliceId = new AtomicReference<>();
+    private final AtomicReference<TrafficClassDescription> systemTc = new AtomicReference<>();
+
     private DeviceListener deviceListener;
     private ExecutorService deviceExecutor;
 
     @Activate
     protected void activate() {
-        appId = coreService.registerApplication(APP_NAME, this::preDeactivate);
+        appId = coreService.registerApplication(APP_NAME_SLICING, this::preDeactivate);
 
         KryoNamespace.Builder serializer = KryoNamespace.newBuilder()
                 .register(KryoNamespaces.API)
@@ -197,19 +202,19 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
 
     // Called only when we intentionally deactivate the app.
     protected void preDeactivate() {
-        sliceStore.removeListener(sliceListener);
         sliceStore.destroy();
-
-        deviceService.removeListener(deviceListener);
-
-        defaultTcStore.removeListener(defaultTcListener);
         defaultTcStore.destroy();
     }
 
     @Deactivate
     protected void deactivate() {
+        sliceStore.removeListener(sliceListener);
         sliceExecutor.shutdown();
+
+        deviceService.removeListener(deviceListener);
         deviceExecutor.shutdown();
+
+        defaultTcStore.removeListener(defaultTcListener);
         defaultTcExecutor.shutdown();
 
         // FIXME: clean up classifier flow rules and store
@@ -440,6 +445,18 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
                 .collect(Collectors.toSet());
     }
 
+    @Override
+    public SliceId getSystemSlice() {
+        var sliceId = systemSliceId.get();
+        return sliceId == null ? SliceId.DEFAULT : sliceId;
+    }
+
+    @Override
+    public TrafficClassDescription getSystemTrafficClass() {
+        var tc = systemTc.get();
+        return tc == null ? TrafficClassDescription.BEST_EFFORT : tc;
+    }
+
     private Set<TrafficSelector> getClassifierFlows(SliceId sliceId) {
         return classifierFlowStore.entrySet().stream()
                 .filter(e -> e.getValue().value().sliceId().equals(sliceId))
@@ -576,15 +593,50 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
         return flowRule;
     }
 
+    private void updateSystemTc() {
+        // Use getters to resolve null to the default values.
+        SliceId oldSystemSliceId = getSystemSlice();
+        TrafficClassDescription oldSystemTc = getSystemTrafficClass();
+        Set<SliceStoreKey> newSystemKeys = sliceStore.stream()
+                .filter(e -> e.getValue().value().isSystemTc())
+                .map(Entry::getKey)
+                .collect(Collectors.toSet());
+        if (newSystemKeys.isEmpty()) {
+            systemSliceId.set(null);
+            systemTc.set(null);
+        } else {
+            if (newSystemKeys.size() > 1) {
+                log.warn("Found more than one system traffic class, will pick a random one: {}", newSystemKeys);
+            }
+            var key = newSystemKeys.iterator().next();
+            Versioned<TrafficClassDescription> entry = sliceStore.get(key);
+            if (entry == null) {
+                log.error("Missing slice store entry for the system traffic class, BUG?");
+                systemSliceId.set(null);
+                systemTc.set(null);
+            } else {
+                systemSliceId.set(key.sliceId());
+                systemTc.set(entry.value());
+            }
+        }
+        if (!getSystemSlice().equals(oldSystemSliceId) ||
+                !getSystemTrafficClass().equals(oldSystemTc)) {
+            log.info("System slice or traffic class updated: sliceId={}, tc={}",
+                    getSystemSlice(), getSystemTrafficClass());
+        }
+    }
+
     private class InternalSliceListener implements MapEventListener<SliceStoreKey, TrafficClassDescription> {
         public void event(MapEvent<SliceStoreKey, TrafficClassDescription> event) {
             // Update queues table on all devices.
             // Distribute work based on QueueId.
             log.info("Processing slice event {}", event);
             sliceExecutor.submit(() -> {
+                updateSystemTc();
                 switch (event.type()) {
                     case INSERT:
                     case UPDATE:
+                        // FIXME: should we handle UPDATE differently? E.g., removing old queues entries?
                         if (workPartitionService.isMine(event.newValue().value(), toStringHasher())) {
                             deviceService.getAvailableDevices().forEach(device ->
                                     addQueuesFlowRules(device.id(), event.key().sliceId(),

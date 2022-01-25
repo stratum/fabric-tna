@@ -52,14 +52,14 @@ import static org.easymock.EasyMock.verify;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.onosproject.net.group.DefaultGroupBucket.createCloneGroupBucket;
-import static org.stratumproject.fabric.tna.behaviour.Constants.V1MODEL_RECIRC_PORT;
-import static org.stratumproject.fabric.tna.behaviour.Constants.PORT_TYPE_INTERNAL;
-import static org.stratumproject.fabric.tna.behaviour.Constants.ZERO;
-import static org.stratumproject.fabric.tna.behaviour.Constants.RECIRC_PORTS;
-import static org.stratumproject.fabric.tna.behaviour.Constants.PKT_IN_MIRROR_SESSION_ID;
-import static org.stratumproject.fabric.tna.behaviour.Constants.DEFAULT_VLAN;
-import static org.stratumproject.fabric.tna.behaviour.Constants.FWD_MPLS;
-import static org.stratumproject.fabric.tna.behaviour.Constants.FWD_IPV4_ROUTING;
+import static org.stratumproject.fabric.tna.Constants.V1MODEL_RECIRC_PORT;
+import static org.stratumproject.fabric.tna.Constants.PORT_TYPE_INTERNAL;
+import static org.stratumproject.fabric.tna.Constants.ZERO;
+import static org.stratumproject.fabric.tna.Constants.RECIRC_PORTS;
+import static org.stratumproject.fabric.tna.Constants.PKT_IN_MIRROR_SESSION_ID;
+import static org.stratumproject.fabric.tna.Constants.DEFAULT_VLAN;
+import static org.stratumproject.fabric.tna.Constants.FWD_MPLS;
+import static org.stratumproject.fabric.tna.Constants.FWD_IPV4_ROUTING;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.KRYO;
 
 @RunWith(Parameterized.class)

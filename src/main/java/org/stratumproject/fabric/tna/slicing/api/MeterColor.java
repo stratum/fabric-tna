@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 package org.stratumproject.fabric.tna.slicing.api;
 
-import static org.stratumproject.fabric.tna.behaviour.Constants.COLOR_GREEN;
-import static org.stratumproject.fabric.tna.behaviour.Constants.COLOR_RED;
-import static org.stratumproject.fabric.tna.behaviour.Constants.COLOR_YELLOW;
+import static org.stratumproject.fabric.tna.Constants.COLOR_GREEN;
+import static org.stratumproject.fabric.tna.Constants.COLOR_RED;
+import static org.stratumproject.fabric.tna.Constants.COLOR_YELLOW;
 
 /**
  * Meter bucket color.

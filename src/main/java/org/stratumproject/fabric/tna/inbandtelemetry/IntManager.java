@@ -34,6 +34,7 @@ import org.onosproject.net.host.HostEvent;
 import org.onosproject.net.host.HostListener;
 import org.onosproject.net.host.HostService;
 import org.onosproject.segmentrouting.config.SegmentRoutingDeviceConfig;
+import org.stratumproject.fabric.tna.Constants;
 
 import static java.util.concurrent.Executors.newSingleThreadScheduledExecutor;
 import static org.slf4j.LoggerFactory.getLogger;
@@ -42,7 +43,6 @@ import static org.onlab.util.Tools.groupedThreads;
 @Component(immediate = true)
 public class IntManager {
     private static final Logger log = getLogger(IntManager.class);
-    private static final String APP_NAME = "org.stratumproject.fabric.tna.inbandtelemetry";
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     protected CoreService coreService;
@@ -80,7 +80,7 @@ public class IntManager {
 
     @Activate
     public void activate() {
-        appId = coreService.registerApplication(APP_NAME);
+        appId = coreService.registerApplication(Constants.APP_NAME_INT);
         eventExecutor = newSingleThreadScheduledExecutor(groupedThreads("onos/int", "events-%d", log));
         netcfgRegistry.registerConfigFactory(intAppConfigFactory);
         netcfgService.addListener(intReportConfigListener);

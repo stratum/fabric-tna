@@ -58,7 +58,7 @@ import org.onosproject.net.pi.model.PiActionId;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
 import org.onosproject.segmentrouting.config.SegmentRoutingDeviceConfig;
-import org.stratumproject.fabric.tna.PipeconfLoader;
+import org.stratumproject.fabric.tna.Constants;
 import org.stratumproject.fabric.tna.inbandtelemetry.IntReportConfig;
 
 import java.util.Arrays;
@@ -91,8 +91,8 @@ import static org.stratumproject.fabric.tna.behaviour.FabricUtils.doCareRangeMat
 import static org.stratumproject.fabric.tna.utils.TestUtils.getIntReportConfig;
 import static org.stratumproject.fabric.tna.utils.TestUtils.getSrConfig;
 
-import static org.stratumproject.fabric.tna.behaviour.Constants.V1MODEL_RECIRC_PORT;
-import static org.stratumproject.fabric.tna.behaviour.Constants.V1MODEL_INT_REPORT_MIRROR_ID;
+import static org.stratumproject.fabric.tna.Constants.V1MODEL_RECIRC_PORT;
+import static org.stratumproject.fabric.tna.Constants.V1MODEL_INT_REPORT_MIRROR_ID;
 
 /**
  * Tests for fabric INT programmable behaviour.
@@ -103,7 +103,7 @@ public class FabricIntProgrammableTest {
     private static final IpAddress ROUTER_IP = IpAddress.valueOf("10.0.1.254");
 
     private static final ApplicationId APP_ID =
-            TestApplicationId.create(PipeconfLoader.APP_NAME);
+            TestApplicationId.create(Constants.APP_NAME);
     private static final DeviceId LEAF_DEVICE_ID = DeviceId.deviceId("device:1");
     private static final DeviceId SPINE_DEVICE_ID = DeviceId.deviceId("device:2");
     private static final IpPrefix SUBNET_1 = IpPrefix.valueOf("10.0.0.0/24");

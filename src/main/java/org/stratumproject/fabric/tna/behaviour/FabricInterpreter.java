@@ -27,6 +27,7 @@ import org.onosproject.net.pi.model.PiTableId;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiPacketMetadata;
 import org.onosproject.net.pi.runtime.PiPacketOperation;
+import org.stratumproject.fabric.tna.slicing.api.SlicingService;
 
 import java.nio.ByteBuffer;
 import java.util.Collection;
@@ -42,9 +43,8 @@ import static org.onosproject.net.PortNumber.FLOOD;
 import static org.onosproject.net.PortNumber.TABLE;
 import static org.onosproject.net.flow.instructions.Instruction.Type.OUTPUT;
 import static org.onosproject.net.pi.model.PiPacketOperationType.PACKET_OUT;
-import static org.stratumproject.fabric.tna.behaviour.Constants.ONE;
-import static org.stratumproject.fabric.tna.behaviour.Constants.QUEUE_ID_SYSTEM;
-import static org.stratumproject.fabric.tna.behaviour.Constants.ZERO;
+import static org.stratumproject.fabric.tna.Constants.ONE;
+import static org.stratumproject.fabric.tna.Constants.ZERO;
 import static org.stratumproject.fabric.tna.behaviour.FabricTreatmentInterpreter.mapAclTreatment;
 import static org.stratumproject.fabric.tna.behaviour.FabricTreatmentInterpreter.mapEgressNextTreatment;
 import static org.stratumproject.fabric.tna.behaviour.FabricTreatmentInterpreter.mapForwardingTreatment;
@@ -118,6 +118,8 @@ public class FabricInterpreter extends AbstractFabricHandlerBehavior
                     .put(P4InfoConstants.FABRIC_INGRESS_FORWARDING_ROUTING_V4, NOP)
                     .build();
 
+    protected SlicingService slicingService;
+
     private FabricTreatmentInterpreter treatmentInterpreter;
 
     /**
@@ -146,6 +148,7 @@ public class FabricInterpreter extends AbstractFabricHandlerBehavior
     public void setHandler(DriverHandler handler) {
         super.setHandler(handler);
         instantiateTreatmentInterpreter();
+        slicingService = handler().get(SlicingService.class);
     }
 
     @Override
@@ -194,6 +197,7 @@ public class FabricInterpreter extends AbstractFabricHandlerBehavior
             long portNumber, boolean doForwarding)
             throws PiInterpreterException {
         try {
+            int queueId = slicingService.getSystemTrafficClass().queueId().id();
             ImmutableList.Builder<PiPacketMetadata> builder = ImmutableList.builder();
             builder.add(PiPacketMetadata.builder()
                     .withId(P4InfoConstants.PAD0)
@@ -212,7 +216,7 @@ public class FabricInterpreter extends AbstractFabricHandlerBehavior
                     .build());
             builder.add(PiPacketMetadata.builder()
                     .withId(P4InfoConstants.QUEUE_ID)
-                    .withValue(copyFrom(QUEUE_ID_SYSTEM)
+                    .withValue(copyFrom(queueId)
                             .fit(P4InfoConstants.QUEUE_ID_BITWIDTH))
                     .build());
             builder.add(PiPacketMetadata.builder()
