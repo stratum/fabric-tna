@@ -202,19 +202,19 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
 
     // Called only when we intentionally deactivate the app.
     protected void preDeactivate() {
-        sliceStore.removeListener(sliceListener);
         sliceStore.destroy();
-
-        deviceService.removeListener(deviceListener);
-
-        defaultTcStore.removeListener(defaultTcListener);
         defaultTcStore.destroy();
     }
 
     @Deactivate
     protected void deactivate() {
+        sliceStore.removeListener(sliceListener);
         sliceExecutor.shutdown();
+
+        deviceService.removeListener(deviceListener);
         deviceExecutor.shutdown();
+
+        defaultTcStore.removeListener(defaultTcListener);
         defaultTcExecutor.shutdown();
 
         // FIXME: clean up classifier flow rules and store
