@@ -94,6 +94,10 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TUN_PEER_I
  * Implementation should be stateless, with all state delegated to FabricUpfStore.
  */
 public class FabricUpfTranslator {
+
+    // FIXME: slice ID should come from UP4
+    private static final SliceId SLICE_MOBILE = SliceId.DEFAULT;
+
     /**
      * Returns true if the given table entry is a GTP tunnel peer rule from the
      * physical fabric pipeline, and false otherwise.
@@ -658,9 +662,7 @@ public class FabricUpfTranslator {
                 .build();
         PiAction action = PiAction.builder()
                 .withId(actionId)
-                // FIXME: Use a different slice id, provided by UP4
-                //  This will likely require updating UpfInterface.
-                .withParameter(new PiActionParam(SLICE_ID, SliceId.DEFAULT.id()))
+                .withParameter(new PiActionParam(SLICE_ID, SLICE_MOBILE.id()))
                 .build();
         return DefaultFlowRule.builder()
                 .forDevice(deviceId).fromApp(appId).makePermanent()
@@ -690,7 +692,6 @@ public class FabricUpfTranslator {
 
     public PiCriterion buildApplicationCriterion(UpfApplication appFilter) {
         PiCriterion.Builder matchBuilder = PiCriterion.builder();
-        // FIXME: SLICE_MOBILE should come from the north instead of hardcoding.
         matchBuilder.matchExact(HDR_SLICE_ID, SLICE_MOBILE.id());
         if (appFilter.ip4Prefix().isPresent()) {
             Ip4Prefix ip4Prefix = appFilter.ip4Prefix().get();

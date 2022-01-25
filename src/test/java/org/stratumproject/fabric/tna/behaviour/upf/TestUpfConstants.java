@@ -76,7 +76,7 @@ public final class TestUpfConstants {
     public static final DeviceId DEVICE_ID = DeviceId.deviceId("CoolSwitch91");
     public static final ApplicationId APP_ID = new DefaultApplicationId(5000, "up4");
     public static final int DEFAULT_PRIORITY = 10;
-    private static final int SLICE_MOBILE = 0xF;
+    private static final int SLICE_MOBILE = 0;
     private static final byte DEFAULT_TC = 0;
     public static final int UPLINK_COUNTER_CELL_ID = 1;
     public static final int DOWNLINK_COUNTER_CELL_ID = 2;
