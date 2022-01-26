@@ -6,6 +6,9 @@
 # Maximum bitrate allowed for system traffic (in bps)
 system_max_rate_bps: 10000000 # 10 Mbps
 
+# The slowest port in the network
+network_bottleneck_bps: 1000000000 # 1 Gbps
+
 # Slice configuration
 # - name: slice friendly name
 #   tcs: list of traffic classes within the slice
