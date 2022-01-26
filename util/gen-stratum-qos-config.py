@@ -51,8 +51,6 @@ CT_PRIORITY = 7  # Control (highest)
 
 # Minimum guaranteed bandwidth for Best-Effort queue.
 BE_MIN_RATE_BPS = 10 * MBPS
-# Maximum bandwidth for the System queue.
-SYS_MAX_RATE_BPS = 10 * MBPS
 # Maximum allowed link utilization for the Control queue.
 CT_MAX_UTIL = 0.10
 
@@ -137,15 +135,18 @@ def queue_config(
     is_sdk_port,
     port_rate_bps,
     port_queue_count,
-    ct_slot_count,
+    ct_max_rates_bps,
     ct_slot_rate_pps,
     ct_slot_burst_pkts,
     ct_mtu_bytes,
     rt_max_rates_bps,
     rt_max_burst_s,
+    rt_slice_names,
     el_min_rates_bps,
+    el_slice_names,
     port_rates_bps,
     pool_sizes,
+    sys_max_rate_bps,
     used_pool_buls,
 ):
     """
@@ -156,16 +157,20 @@ def queue_config(
         false if it's a SingletonPort ID from Stratum's chassis_config
     :param port_rate_bps: link capacity or port shaping rate if set
     :param port_queue_count: how many queues can be allocated to this port
-    :param ct_slot_count: number of Control slots, each slice an use one or more slots
+    :param ct_max_rates_bps: list of max allowed rates for Control tcs, one for each slice
     :param ct_slot_rate_pps: metering rate for each Control slot (in pps)
     :param ct_slot_burst_pkts: metering burst size for each Control slot (in pkts)
     :param ct_mtu_bytes: maximum transmission unit allowed for Control traffic
-    :param rt_max_rates_bps: list of max shaping rates for Real-Time slices, one for each slice
+    :param rt_max_rates_bps: list of max shaping rates for Real-Time tcs, one for each slice
+    :param rt_slice_names: list of names of slices associated to Real-Time tcs
     :param rt_max_burst_s: maximum amount of time that a Real-Time queue is allowed to burst
     :param el_min_rates_bps: list of min guaranteed rates for Elastic slices, one for each slice
+    :param el_slice_names: list of names of slices associated to Elastic tcs
     :param port_rates_bps: the list of rates (link bandwidth or port shaping) for all ports
     configured in this switch
     :param pool_sizes: the list of pool sizes (in cells)
+    :param sys_max_rate_bps: shaping rate for the system queue
+    :param used_pool_buls: control variable
     :return: prints the queue_config blob
     """
 
@@ -187,16 +192,21 @@ def queue_config(
     # Set maximum shaping rate to handle the worst case, where all slices send a burst of packets at
     # the same time. Check that the rate doesn't exceed the maximum utilization threshold to avoid
     # excessive delay for lower priority queues.
-    ct_max_rate_pps = ct_slot_rate_pps * ct_slot_count
-    ct_max_burst_pkts = ct_slot_burst_pkts * ct_slot_count
-    ct_max_rate_bps = ct_max_rate_pps * ct_mtu_bytes * 8
-    ct_max_burst_bytes = ct_max_burst_pkts * ct_mtu_bytes
+    # FIXME: slot-based computation no longer makes sense for the control queue.
+    #  Find a simpler way to determine the burst limit of each slice.
+    #  Maybe provide that in the yaml? Oo proportionally to the rate?
+    ct_max_rate_bps = sum(ct_max_rates_bps)
     ct_util = ct_max_rate_bps / port_rate_bps
     assert ct_util < CT_MAX_UTIL, (
         f"Port utilization for the Control queue exceeds the maximum threshold: "
         f"requested={ct_util}, "
         f"available={CT_MAX_UTIL}"
     )
+
+    ct_max_rate_pps = ceil(ct_max_rate_bps / (ct_mtu_bytes * 8))
+    ct_slot_count = ceil(ct_max_rate_pps / ct_slot_rate_pps)
+    ct_max_burst_pkts = ct_slot_burst_pkts * ct_slot_count
+    ct_max_burst_bytes = ct_max_burst_pkts * ct_mtu_bytes
 
     # Divide the poll equally between all ports (since we have only one Control queue per port).
     ct_base_use_limit = floor(pool_sizes[CT_APP_POOL] / port_count)
@@ -205,7 +215,7 @@ def queue_config(
     ct_wrr_weight = 1
 
     queue_mappings[QUEUE_ID_CONTROL] = queue_mapping(
-        descr=f"Control ({ct_slot_count} slots, "
+        descr=f"Shared Control ({ct_slot_count} slots, "
         f"{ct_slot_rate_pps}pps, {ct_slot_burst_pkts}MTUs burst, {ct_util} util)",
         queue_id=QUEUE_ID_CONTROL,
         app_pool=CT_APP_POOL,
@@ -224,7 +234,7 @@ def queue_config(
     # Each slice requesting Real-Time service gets a dedicated queue, shaped to the given max rate
     # and burst. System is treated as a Real-Time queue.
     rt_max_rates_bps = rt_max_rates_bps.copy()
-    rt_max_rates_bps.append(SYS_MAX_RATE_BPS)
+    rt_max_rates_bps.append(sys_max_rate_bps)
 
     # To simplify configuration, we allow expressing the maximum queue shaping burst as a duration,
     # but we set the corresponding value in bytes (based on the port rate).
@@ -240,7 +250,7 @@ def queue_config(
     # of thumb for sizing buffers, where the bandwidth in our case is the queue max shaping rate. We
     # do this to improve the performance of TCP-like congestion control protocols. While we cannot
     # claim optimal sizing to achieve maximum throughput (we would need to know the average RTT and
-    # number of flows), setting higher base_use_limit for queues with higher speeds helps achieving
+    # number of flows), setting higher base_use_limit for queues with higher speeds helps to achieve
     # that goal.
     rt_queue_count = len(rt_max_rates_bps)
     rt_pool_size = pool_sizes[RT_APP_POOL]
@@ -270,7 +280,7 @@ def queue_config(
             name = f"System"
             queue_id = QUEUE_ID_SYSTEM
         else:
-            name = f"Real-Time {i + 1}"
+            name = f"{rt_slice_names[i]} Real-Time"
             queue_id = next_queue_id
             next_queue_id += 1
         queue_mappings[queue_id] = queue_mapping(
@@ -331,7 +341,7 @@ def queue_config(
             base_use_limit = be_base_use_limit
             queue_id = QUEUE_ID_BEST_EFFORT
         else:
-            name = f"Elastic {i + 1}"
+            name = f"{el_slice_names[i]} Elastic"
             app_pool = EL_APP_POOL
             pool_size = pool_sizes[EL_APP_POOL]
             base_use_limit = el_base_use_limits[i]
@@ -429,14 +439,36 @@ def vendor_config(yaml_config):
 
     pool_sizes = [floor(x / 100 * max_cells) for x in pool_allocations]
 
+    ct_max_rates_bps = []
+    rt_slice_names = []
+    rt_max_rates_bps = []
+    el_slice_names = []
+    el_min_rates_bps = []
+    for slice_config in yaml_config["slices"]:
+        for tc in slice_config["tcs"]:
+            tc_config = slice_config['tcs'][tc]
+            if tc == "realtime":
+                rt_slice_names.append(slice_config["name"])
+                rt_max_rates_bps.append(tc_config["max_rate_bps"])
+            elif tc == "elastic":
+                el_slice_names.append(slice_config["name"])
+                el_min_rates_bps.append(tc_config["gmin_rate_bps"])
+            elif tc == "control":
+                ct_max_rates_bps.append(tc_config["max_rate_bps"])
+            else:
+                raise ValueError(f"Invalid TC: {tc}")
+
     slicing_template = dict(
-        ct_slot_count=yaml_config["control_slot_count"],
+        sys_max_rate_bps=yaml_config["system_max_rate_bps"],
+        ct_max_rates_bps=ct_max_rates_bps,
         ct_slot_rate_pps=yaml_config["control_slot_rate_pps"],
         ct_slot_burst_pkts=yaml_config["control_slot_burst_pkts"],
         ct_mtu_bytes=yaml_config["control_mtu_bytes"],
-        rt_max_rates_bps=yaml_config["realtime_max_rates_bps"],
+        rt_max_rates_bps=rt_max_rates_bps,
+        rt_slice_names=rt_slice_names,
         rt_max_burst_s=yaml_config["realtime_max_burst_s"],
-        el_min_rates_bps=yaml_config["elastic_min_rates_bps"],
+        el_min_rates_bps=el_min_rates_bps,
+        el_slice_names=el_slice_names,
         pool_sizes=pool_sizes,
     )
 

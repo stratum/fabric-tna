@@ -9,22 +9,28 @@ system_max_rate_bps: 10000000 # 10 Mbps
 # Slice configuration
 # - name: slice friendly name
 #   tcs: list of traffic classes within the slice
-#    - <tc-type>: control, realtime, or elastic
-#      - max_rate_bps: maximum bitrate allowed in bps (control and realtime only)
-#      - gmin_rate_bps: guaranteed minimum rate in bps (elastic only)
+#     <tc-type>: control, realtime, or elastic
+#       max_rate_bps: maximum bitrate allowed in bps (control and realtime only)
+#       gmin_rate_bps: required guaranteed minimum rate in bps (elastic only)
 slices:
-  - name: P4-UPF
+  - name: Slice1
     tcs:
-      - control:
-          - max_rate_bps: 10000000 # 10 Mbps
-      - realtime:
-          - max_rate_bps: 100000000 # 100 Mbps
-      - elastic:
-          - max_rate_bps: 50000000 # 50 Mbps
-  - name: BESS-UPF
+      control:
+        max_rate_bps: 10000000 # 10 Mbps
+      realtime:
+        max_rate_bps: 100000000 # 100 Mbps
+      elastic:
+        gmin_rate_bps: 50000000 # 50 Mbps
+  - name: Slice2
     tcs:
-      - elastic:
-          - gmin_rate_bps: 200000000 # 200 Mbps
+      elastic:
+        gmin_rate_bps: 200000000 # 200 Mbps
+  - name: Slice3
+    tcs:
+      control:
+        max_rate_bps: 5000000 # 5 Mbps
+      realtime:
+        max_rate_bps: 80000000 # 80 Mbps
 
 # List of switch ports for which we want to configure queues.
 # - descr: description of the port purpose
@@ -83,7 +89,6 @@ pool_allocations:
 # The available bandwidth dedicated to Control traffic is divided in "slots". Each slot has a
 # maximum rate and burst (in packets of the given MTU). A slice can use one or more slots (by
 # appropriately configuring meters in the ingress pipe).
-control_slot_count: 50
 control_slot_rate_pps: 100
 control_slot_burst_pkts: 10
 control_mtu_bytes: 1500
