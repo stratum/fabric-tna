@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 # -*- utf-8 -*-
 """
-Generates QoS config snippets for ONOS and Stratum that realizes the SD-Fabric
+Generates QoS config snippets for ONOS and Stratum that realize the SD-Fabric
 slicing/QoS model for the given YAML input.
 
 Usage:
