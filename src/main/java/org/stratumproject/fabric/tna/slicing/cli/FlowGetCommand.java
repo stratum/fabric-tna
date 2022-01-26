@@ -30,6 +30,6 @@ public class FlowGetCommand extends AbstractShellCommand {
     @Override
     protected void doExecute() {
         SlicingService slicingService = getService(SlicingService.class);
-        print(slicingService.getFlows(SliceId.of(sliceId), TrafficClass.valueOf(tc)).toString());
+        print(slicingService.getClassifierFlows(SliceId.of(sliceId), TrafficClass.valueOf(tc)).toString());
     }
 }

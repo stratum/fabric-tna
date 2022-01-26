@@ -71,7 +71,7 @@ public class FlowRemoveCommand extends AbstractShellCommand {
         SlicingService slicingService = getService(SlicingService.class);
         TrafficSelector selector = parseArguments();
 
-        if (slicingService.removeFlow(selector, SliceId.of(sliceId), TrafficClass.valueOf(tc))) {
+        if (slicingService.removeClassifierFlow(selector, SliceId.of(sliceId), TrafficClass.valueOf(tc))) {
             print("Flow %s removed from slice %d tc %s", selector.toString(), sliceId, tc);
         }
     }

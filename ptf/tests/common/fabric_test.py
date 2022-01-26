@@ -25,7 +25,7 @@ from ptf.mask import Mask
 from qos_utils import QUEUE_ID_SYSTEM
 from scapy.contrib.gtp import GTP_U_Header, GTPPDUSessionContainer
 from scapy.contrib.mpls import MPLS
-from scapy.layers.inet import IP, TCP, UDP
+from scapy.layers.inet import ICMP, IP, TCP, UDP
 from scapy.layers.l2 import Dot1Q, Ether
 from scapy.layers.ppp import PPP, PPPoE
 from scapy.layers.sctp import SCTP
@@ -132,6 +132,7 @@ UE1_IPV4 = "16.255.255.1"
 UE2_IPV4 = "16.255.255.2"
 UE_SUBNET = "16.255.255.0"
 UE_SUBNET_MASK = "255.255.255.0"
+APP_ID = 10
 
 DEFAULT_ROUTE_IPV4 = "0.0.0.0"
 PREFIX_DEFAULT_ROUTE = 0
@@ -286,6 +287,7 @@ PORT_TYPE_INTERNAL = b"\x03"
 
 DEFAULT_SLICE_ID = 0
 DEFAULT_TC = 0
+NO_APP_ID = 0
 # use sth != 0, 0 is not a fortunate test value
 DEFAULT_QFI = 1
 TC_WIDTH = 2  # bits
@@ -654,6 +656,7 @@ def get_test_args(
     traffic_dir,
     pkt_addrs={},
     spgw_type=None,
+    spgw_app_filtering=None,
     int_test_type=None,
     test_multiple_pkt_len=False,
     test_multiple_prefix_len=False,
@@ -665,6 +668,7 @@ def get_test_args(
     :param traffic_dir: traffic direction, e.g. "host-leaf-spine"
     :param pkt_addrs: packet header addresses, e.g. {eth_src, eth_dst, ip_src, ip_dst}
     :param spgw_type: SPGW direction, e.g. "DL" for downlink, "UL" for uplink
+    :param spgw_app_filtering: install SPGW application filtering rule
     :param int_test_type: INT test drop reason, e.g. "eg_drop" for egress drop type
     :param test_multiple_pkt_len: generate multiple packet lengths
     :param test_multiple_prefix_len: generate multiple prefix lengths
@@ -805,6 +809,7 @@ def get_test_args(
                                         "send_report_to_spine": send_report_to_spine,
                                         "is_device_spine": is_device_spine,
                                         "allow_ue_recirculation": allow_ue_recirculation,
+                                        "spgw_app_filtering": spgw_app_filtering,
                                     }
 
                                     print(
@@ -2452,6 +2457,45 @@ class SpgwSimpleTest(IPv4UnicastTest):
             tunnel_src_port=UDP_GTP_PORT,
         )
 
+    def setup_app_filtering(
+        self,
+        app_id,
+        slice_id=DEFAULT_SLICE_ID,
+        app_ipv4_addr=None,
+        app_ipv4_prefix=32,
+        l4_port=None,
+        ip_proto=None,
+        priority=DEFAULT_PRIORITY,
+    ):
+        req = self.get_new_write_request()
+        match_fields = [
+            self.Exact("slice_id", stringify(slice_id, 1)),
+        ]
+        if app_ipv4_addr:
+            match_fields.append(
+                self.Lpm(
+                    "app_ipv4_addr", ipv4_to_binary(app_ipv4_addr), app_ipv4_prefix
+                )
+            )
+        if l4_port:
+            match_fields.append(
+                self.Range("app_l4_port", stringify(l4_port, 2), stringify(l4_port, 2))
+            )
+        if ip_proto:
+            match_fields.append(
+                self.Ternary("app_ip_proto", stringify(ip_proto, 1), stringify(0xFF, 1))
+            )
+
+        self.push_update_add_entry_to_action(
+            req,
+            "FabricIngress.spgw.applications",
+            match_fields,
+            "FabricIngress.spgw.set_app_id",
+            [("app_id", stringify(app_id, 1)),],
+            priority=priority,
+        )
+        self.write_request(req)
+
     def add_uplink_recirc_rule(
         self, ipv4_dst_and_mask, ipv4_src_and_mask=None, allow=True, priority=1
     ):
@@ -2499,7 +2543,9 @@ class SpgwSimpleTest(IPv4UnicastTest):
         )
         self.write_request(req)
 
-    def setup_uplink_termination(self, ue_session, ctr_id, tc=DEFAULT_TC, drop=False):
+    def setup_uplink_termination(
+        self, ue_session, ctr_id, tc=DEFAULT_TC, drop=False, app_id=NO_APP_ID
+    ):
         req = self.get_new_write_request()
         action_params = [
             ("ctr_id", stringify(ctr_id, 2)),
@@ -2515,7 +2561,10 @@ class SpgwSimpleTest(IPv4UnicastTest):
         self.push_update_add_entry_to_action(
             req,
             "FabricIngress.spgw.uplink_terminations",
-            [self.Exact("ue_session_id", ipv4_to_binary(ue_session)),],
+            [
+                self.Exact("ue_session_id", ipv4_to_binary(ue_session)),
+                self.Exact("app_id", stringify(app_id, 1)),
+            ],
             action_name,
             action_params,
         )
@@ -2563,7 +2612,14 @@ class SpgwSimpleTest(IPv4UnicastTest):
         self.write_request(req)
 
     def setup_downlink_termination_tunnel(
-        self, ue_session, ctr_id, teid, tc=DEFAULT_TC, qfi=DEFAULT_QFI, drop=False
+        self,
+        ue_session,
+        ctr_id,
+        teid,
+        tc=DEFAULT_TC,
+        qfi=DEFAULT_QFI,
+        drop=False,
+        app_id=NO_APP_ID,
     ):
         req = self.get_new_write_request()
         action_params = [("ctr_id", stringify(ctr_id, 2))]
@@ -2581,7 +2637,10 @@ class SpgwSimpleTest(IPv4UnicastTest):
         self.push_update_add_entry_to_action(
             req,
             "FabricIngress.spgw.downlink_terminations",
-            [self.Exact("ue_session_id", ipv4_to_binary(ue_session))],
+            [
+                self.Exact("ue_session_id", ipv4_to_binary(ue_session)),
+                self.Exact("app_id", stringify(app_id, 1)),
+            ],
             action_name,
             action_params,
         )
@@ -2619,29 +2678,36 @@ class SpgwSimpleTest(IPv4UnicastTest):
         self.write_request(req)
 
     def setup_uplink(
-        self, ue_addr, s1u_sgw_addr, teid, ctr_id, slice_id=DEFAULT_SLICE_ID, tc=None,
+        self,
+        ue_addr,
+        s1u_sgw_addr,
+        teid,
+        ctr_id,
+        slice_id=DEFAULT_SLICE_ID,
+        tc=None,
+        app_id=NO_APP_ID,
     ):
         self.add_s1u_iface(s1u_addr=s1u_sgw_addr, slice_id=slice_id)
         self.setup_uplink_ue_session(teid=teid, tunnel_dst_addr=s1u_sgw_addr)
-        self.setup_uplink_termination(ue_session=ue_addr, ctr_id=ctr_id, tc=tc)
+        self.setup_uplink_termination(
+            ue_session=ue_addr, ctr_id=ctr_id, tc=tc, app_id=app_id
+        )
 
     def setup_downlink(
         self,
-        s1u_sgw_addr,
-        s1u_enb_addr,
         teid,
         ue_addr,
         ctr_id,
         slice_id=DEFAULT_SLICE_ID,
         tc=None,
         qfi=DEFAULT_QFI,
+        tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID,
+        app_id=NO_APP_ID,
     ):
         self.add_ue_pool(pool_addr=ue_addr, slice_id=slice_id)
-        self.setup_downlink_ue_session(
-            ue_addr=ue_addr, tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID
-        )
+        self.setup_downlink_ue_session(ue_addr=ue_addr, tunnel_peer_id=tunnel_peer_id)
         self.setup_downlink_termination_tunnel(
-            ue_session=ue_addr, ctr_id=ctr_id, teid=teid, tc=tc, qfi=qfi
+            ue_session=ue_addr, ctr_id=ctr_id, teid=teid, tc=tc, qfi=qfi, app_id=app_id
         )
 
     def enable_encap_with_psc(self):
@@ -2687,6 +2753,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         dscp_rewrite=False,
         verify_counters=True,
         eg_port=None,
+        app_filtering=False,
     ):
         upstream_mac = HOST2_MAC
 
@@ -2717,6 +2784,29 @@ class SpgwSimpleTest(IPv4UnicastTest):
             else:
                 exp_pkt = pkt_set_dscp(exp_pkt, slice_id=slice_id, tc=tc)
 
+        app_id = NO_APP_ID
+        if app_filtering:
+            app_id = APP_ID
+            app_ipv4 = ue_out_pkt[IP].dst
+            l4_port = None
+            ip_proto = None
+            if UDP in ue_out_pkt:
+                ip_proto = IP_PROTO_UDP
+                l4_port = ue_out_pkt[UDP].dport
+            elif TCP in ue_out_pkt:
+                ip_proto = IP_PROTO_TCP
+                l4_port = ue_out_pkt[TCP].dport
+            elif ICMP in ue_out_pkt:
+                ip_proto = IP_PROTO_ICMP
+            self.setup_app_filtering(
+                app_id=app_id,
+                slice_id=slice_id,
+                app_ipv4_addr=app_ipv4,
+                app_ipv4_prefix=32,
+                l4_port=l4_port,
+                ip_proto=ip_proto,
+            )
+
         self.setup_uplink(
             ue_addr=ue_out_pkt[IP].src,
             s1u_sgw_addr=S1U_SGW_IPV4,
@@ -2724,6 +2814,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             ctr_id=UPLINK_UPF_CTR_IDX,
             slice_id=slice_id,
             tc=tc,
+            app_id=app_id,
         )
 
         if verify_counters:
@@ -2816,18 +2907,16 @@ class SpgwSimpleTest(IPv4UnicastTest):
             ctr_id=UPLINK_UPF_CTR_IDX,
         )
 
+        self.setup_downlink(
+            teid=DOWNLINK_TEID,
+            ue_addr=UE2_IPV4,
+            ctr_id=DOWNLINK_UPF_CTR_IDX,
+            tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID,
+        )
         self.add_gtp_tunnel_peer(
             tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID,
             tunnel_src_addr=S1U_SGW_IPV4,
             tunnel_dst_addr=S1U_ENB_IPV4,
-        )
-
-        self.setup_downlink(
-            s1u_sgw_addr=S1U_SGW_IPV4,
-            s1u_enb_addr=S1U_ENB_IPV4,
-            teid=DOWNLINK_TEID,
-            ue_addr=UE2_IPV4,
-            ctr_id=DOWNLINK_UPF_CTR_IDX,
         )
 
         self.set_up_recirc_ports()
@@ -2929,6 +3018,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         dscp_rewrite=False,
         verify_counters=True,
         eg_port=None,
+        app_filtering=False,
     ):
         exp_pkt = pkt.copy()
         exp_pkt[Ether].src = SWITCH_MAC
@@ -2954,17 +3044,39 @@ class SpgwSimpleTest(IPv4UnicastTest):
             else:
                 exp_pkt = pkt_set_dscp(exp_pkt, slice_id=slice_id, tc=tc)
 
+        app_id = NO_APP_ID
+        if app_filtering:
+            app_id = APP_ID
+            app_ipv4 = pkt[IP].src
+            l4_port = None
+            ip_proto = None
+            if UDP in pkt:
+                ip_proto = IP_PROTO_UDP
+                l4_port = pkt[UDP].sport
+            elif TCP in pkt:
+                ip_proto = IP_PROTO_TCP
+                l4_port = pkt[TCP].sport
+            elif ICMP in pkt:
+                ip_proto = IP_PROTO_ICMP
+            self.setup_app_filtering(
+                app_id=app_id,
+                slice_id=slice_id,
+                app_ipv4_addr=app_ipv4,
+                app_ipv4_prefix=32,
+                l4_port=l4_port,
+                ip_proto=ip_proto,
+            )
+
         self.setup_downlink(
-            s1u_sgw_addr=S1U_SGW_IPV4,
-            s1u_enb_addr=S1U_ENB_IPV4,
             teid=DOWNLINK_TEID,
             ue_addr=UE1_IPV4,
             ctr_id=DOWNLINK_UPF_CTR_IDX,
             slice_id=slice_id,
             tc=tc,
             qfi=DEFAULT_QFI,
+            app_id=app_id,
+            tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID,
         )
-
         self.add_gtp_tunnel_peer(
             tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID,
             tunnel_src_addr=S1U_SGW_IPV4,
@@ -3110,14 +3222,11 @@ class SpgwSimpleTest(IPv4UnicastTest):
 
         # Normal downlink rules
         self.setup_downlink(
-            s1u_sgw_addr=S1U_SGW_IPV4,
-            s1u_enb_addr=S1U_ENB_IPV4,
             teid=DOWNLINK_TEID,
             ue_addr=UE1_IPV4,
             ctr_id=DOWNLINK_UPF_CTR_IDX,
+            tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID,
         )
-
-        # Add eNB as GTP Tunnel peer
         self.add_gtp_tunnel_peer(
             tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID,
             tunnel_src_addr=S1U_SGW_IPV4,
@@ -4177,15 +4286,12 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
 
         # Set up entries for downlink.
         self.setup_downlink(
-            s1u_sgw_addr=S1U_SGW_IPV4,
-            s1u_enb_addr=S1U_ENB_IPV4,
             teid=DOWNLINK_TEID,
             ue_addr=pkt[IP].dst,
             ctr_id=DOWNLINK_UPF_CTR_IDX,
             qfi=DEFAULT_QFI,
+            tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID,
         )
-
-        # Add eNB as GTP Tunnel peer
         self.add_gtp_tunnel_peer(
             tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID,
             tunnel_src_addr=S1U_SGW_IPV4,
