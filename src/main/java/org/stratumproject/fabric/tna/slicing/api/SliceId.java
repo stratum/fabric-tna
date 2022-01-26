@@ -5,7 +5,7 @@ package org.stratumproject.fabric.tna.slicing.api;
 import org.onlab.util.Identifier;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static org.stratumproject.fabric.tna.behaviour.Constants.MAX_SLICE_ID;
+import static org.stratumproject.fabric.tna.Constants.MAX_SLICE_ID;
 
 /**
  * Slice Identifier.

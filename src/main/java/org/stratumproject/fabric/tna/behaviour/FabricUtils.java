@@ -30,10 +30,10 @@ import static org.onosproject.segmentrouting.metadata.SRObjectiveMetadata.EDGE_P
 import static org.onosproject.segmentrouting.metadata.SRObjectiveMetadata.INFRA_PORT;
 import static org.onosproject.segmentrouting.metadata.SRObjectiveMetadata.PAIR_PORT;
 import static org.onosproject.segmentrouting.metadata.SRObjectiveMetadata.isSrMetadataSet;
-import static org.stratumproject.fabric.tna.behaviour.Constants.MAX_SLICE_ID;
-import static org.stratumproject.fabric.tna.behaviour.Constants.MAX_TC;
-import static org.stratumproject.fabric.tna.behaviour.Constants.METADATA_TO_PORT_TYPE;
-import static org.stratumproject.fabric.tna.behaviour.Constants.TC_BITWIDTH;
+import static org.stratumproject.fabric.tna.Constants.MAX_SLICE_ID;
+import static org.stratumproject.fabric.tna.Constants.MAX_TC;
+import static org.stratumproject.fabric.tna.Constants.METADATA_TO_PORT_TYPE;
+import static org.stratumproject.fabric.tna.Constants.TC_BITWIDTH;
 
 /**
  * Utility class with methods common to fabric-tna pipeconf operations.

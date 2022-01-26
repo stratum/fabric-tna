@@ -33,16 +33,16 @@ import static org.junit.Assert.assertEquals;
 import static org.onosproject.segmentrouting.metadata.SRObjectiveMetadata.EDGE_PORT;
 import static org.onosproject.segmentrouting.metadata.SRObjectiveMetadata.INFRA_PORT;
 import static org.onosproject.segmentrouting.metadata.SRObjectiveMetadata.PAIR_PORT;
-import static org.stratumproject.fabric.tna.behaviour.Constants.DEFAULT_PW_TRANSPORT_VLAN;
-import static org.stratumproject.fabric.tna.behaviour.Constants.DEFAULT_VLAN;
-import static org.stratumproject.fabric.tna.behaviour.Constants.ETH_TYPE_EXACT_MASK;
-import static org.stratumproject.fabric.tna.behaviour.Constants.FWD_IPV4_ROUTING;
-import static org.stratumproject.fabric.tna.behaviour.Constants.FWD_IPV6_ROUTING;
-import static org.stratumproject.fabric.tna.behaviour.Constants.FWD_MPLS;
-import static org.stratumproject.fabric.tna.behaviour.Constants.ONE;
-import static org.stratumproject.fabric.tna.behaviour.Constants.PORT_TYPE_EDGE;
-import static org.stratumproject.fabric.tna.behaviour.Constants.PORT_TYPE_INFRA;
-import static org.stratumproject.fabric.tna.behaviour.Constants.ZERO;
+import static org.stratumproject.fabric.tna.Constants.DEFAULT_PW_TRANSPORT_VLAN;
+import static org.stratumproject.fabric.tna.Constants.DEFAULT_VLAN;
+import static org.stratumproject.fabric.tna.Constants.ETH_TYPE_EXACT_MASK;
+import static org.stratumproject.fabric.tna.Constants.FWD_IPV4_ROUTING;
+import static org.stratumproject.fabric.tna.Constants.FWD_IPV6_ROUTING;
+import static org.stratumproject.fabric.tna.Constants.FWD_MPLS;
+import static org.stratumproject.fabric.tna.Constants.ONE;
+import static org.stratumproject.fabric.tna.Constants.PORT_TYPE_EDGE;
+import static org.stratumproject.fabric.tna.Constants.PORT_TYPE_INFRA;
+import static org.stratumproject.fabric.tna.Constants.ZERO;
 
 /**
  * Test cases for FilteringObjectiveTranslator.
