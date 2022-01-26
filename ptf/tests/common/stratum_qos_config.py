@@ -10,8 +10,7 @@ import os
 
 # We cannot import directly gen-qos-config because module names cannot contain dashes...
 config_script_path = (
-    os.path.dirname(os.path.realpath(__file__))
-    + "/../../../util/gen-qos-config.py"
+    os.path.dirname(os.path.realpath(__file__)) + "/../../../util/gen-qos-config.py"
 )
 spec = importlib.util.spec_from_file_location(
     "gen_stratum_qos_config", config_script_path

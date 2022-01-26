@@ -234,7 +234,7 @@ def queue_config(
 
     params = dict(
         descr=f"Shared Control ({ct_slot_count} slots, "
-              f"{ct_slot_rate_pps}pps, {ct_slot_burst_pkts}MTUs burst, {ct_util} util)",
+        f"{ct_slot_rate_pps}pps, {ct_slot_burst_pkts}MTUs burst, {ct_util} util)",
         queue_id=QUEUE_ID_CONTROL,
         app_pool=CT_APP_POOL,
         prio=CT_PRIORITY,
@@ -459,10 +459,7 @@ def netcfg(slice_names_to_ids, queue_params):
         slice_params = queue_params[slice_name]
         slice_id = slice_names_to_ids[slice_name]
         key = str(slice_id)
-        config[key] = {
-            "name": slice_name,
-            "tcs": {}
-        }
+        config[key] = {"name": slice_name, "tcs": {}}
         for tc in slice_params:
             tc_conf = slice_params[tc]
             if tc == "control":
@@ -473,12 +470,12 @@ def netcfg(slice_names_to_ids, queue_params):
             elif tc == "realtime":
                 config[key]["tcs"]["REAL_TIME"] = {
                     "queueId": tc_conf["queue_id"],
-                    "maxRateBps": tc_conf["max_rate_bps"]
+                    "maxRateBps": tc_conf["max_rate_bps"],
                 }
             elif tc == "elastic":
                 config[key]["tcs"]["ELASTIC"] = {
                     "queueId": tc_conf["queue_id"],
-                    "gminRateBps": tc_conf["norm_min_rate_bps"]
+                    "gminRateBps": tc_conf["norm_min_rate_bps"],
                 }
             else:
                 raise ValueError(f"Invalid TC: {tc}")
@@ -490,13 +487,7 @@ def netcfg(slice_names_to_ids, queue_params):
     config[str(DEFAULT_SLICE_ID)]["tcs"]["REAL_TIME"]["isSystemTc"] = True
 
     config = {
-        "apps": {
-            "org.stratumproject.fabric-tna": {
-                "slicing": {
-                    "slices": config
-                }
-            }
-        }
+        "apps": {"org.stratumproject.fabric-tna": {"slicing": {"slices": config}}}
     }
 
     return json.dumps(config, indent=2)
@@ -533,8 +524,9 @@ def text_config(yaml_config, type):
     # run the same checks in both cases.
 
     slice_names = [DEFAULT_SLICE_NAME] + [s["name"] for s in yaml_config["slices"]]
-    assert len(slice_names) == len(set(slice_names)),\
-        f"Slice names must be unique: f{slice_names}"
+    assert len(set(slice_names)) == len(
+        slice_names
+    ), f"Slice names must be unique: f{slice_names}"
     slice_ids = [i for i in range(DEFAULT_SLICE_ID, len(slice_names))]
     slice_names_to_ids = {x[0]: x[1] for x in zip(slice_names, slice_ids)}
 
@@ -547,7 +539,7 @@ def text_config(yaml_config, type):
     el_min_rates_bps = []
     for slice_config in yaml_config["slices"]:
         for tc in slice_config["tcs"]:
-            tc_config = slice_config['tcs'][tc]
+            tc_config = slice_config["tcs"][tc]
             if tc == "control":
                 ct_slice_names.append(slice_config["name"])
                 ct_max_rates_bps.append(tc_config["max_rate_bps"])
@@ -651,7 +643,8 @@ def text_config(yaml_config, type):
             enable_color_drop="true",
             limit_yellow=floor(0.90 * pool_sizes[BE_APP_POOL]),
             limit_red=floor(0.80 * pool_sizes[BE_APP_POOL]),
-        )]
+        ),
+    ]
 
     # Control variable: stores the sum of base_use_limit (bul) reservations for all pools.
     used_pool_buls = [0, 0, 0, 0]
@@ -673,9 +666,10 @@ def text_config(yaml_config, type):
         if port["port_rate_bps"] == yaml_config["network_bottleneck_bps"]:
             bottleneck_queue_params = confs
 
-    assert type != "onos" or bottleneck_queue_params is not None, \
-        f"Cannot generate onos config, at least one `port_template` must " \
+    assert type != "onos" or bottleneck_queue_params is not None, (
+        f"Cannot generate onos config, at least one `port_template` must "
         f"have `rate_bps` equal to `network_bottleneck_bps`"
+    )
 
     # Check that we have allocated all pool cells using base_use_limits.
     unused_pool_buls = [
