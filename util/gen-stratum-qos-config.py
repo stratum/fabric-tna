@@ -8,7 +8,7 @@ slicing/QoS model. The output of this script is meant to be appended to an exiti
 
 Usage:
 
-    ./gen-stratum-qos-config.py sample-qos-config.yaml
+    ./gen-qos-config.py sample-qos-config.yaml
 
 Requirements:
 
@@ -590,7 +590,7 @@ def vendor_config(yaml_config):
 
 
 def main():
-    parser = argparse.ArgumentParser(prog="gen-stratum-qos-config.py")
+    parser = argparse.ArgumentParser(prog="gen-qos-config.py")
     parser.add_argument("config", help="Path to yaml QoS config file")
     parser.add_argument("-o", "--output", help="output path", default="-")
     args = parser.parse_args()
