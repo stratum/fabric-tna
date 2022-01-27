@@ -39,11 +39,14 @@ slices:
 # List of switch ports for which we want to configure queues.
 # - descr: description of the port purpose
 # - rate_bps: port speed in bps
-# - is_shaping_enabled: true if rate is enforced using shaping, false if it is the channel speed.
+# - is_shaping_enabled: true if rate is enforced using shaping, false if it is
+#   the channel speed.
 # - shaping_burst_bytes: burst size in bytes, meaningful only if port is shaped.
 # - queue_count: number of queues assigned to the port
-# - port_ids: list of Stratum port IDs with this template (SingletonPort ID from chassis_config)
-# - sdk_port_ids: list of SDK port numbers (Tofino DP_ID) with this template (used for internal ports, e.g., recirculation)
+# - port_ids: list of Stratum port IDs with this template (SingletonPort ID from
+#   chassis_config)
+# - sdk_port_ids: list of SDK port numbers (Tofino DP_ID) with this template
+#   (used for internal ports, e.g., recirculation)
 port_templates:
   - descr: "Base station"
     rate_bps: 1000000000 # 1 Gbps
@@ -80,19 +83,21 @@ port_templates:
 # - TOFINO_64Q, revision A0: 286720
 max_cells: 266240
 
-# Percentage of buffer cells allocated to each traffic class. The sum should be 100.
+# Percentage of buffer cells allocated to each traffic class. Sum should be 100.
 pool_allocations:
   control: 1
   realtime: 9
   elastic: 80
   besteffort: 9
-  # We leave a portion of the buffer unassigned for queues that don't have a pool (yet). Example of
-  # such queues are those for the recirculation port, cpu port, etc.
+  # We leave a portion of the buffer unassigned for queues that don't have a
+  # pool (yet). Example of such queues are those for the recirculation port, cpu
+  # port, etc.
   unassigned: 1
 
-# The available bandwidth dedicated to Control traffic is divided in "slots". Each slot has a
-# maximum rate and burst (in packets of the given MTU). A slice can use one or more slots (by
-# appropriately configuring meters in the ingress pipe).
+# The available bandwidth dedicated to Control traffic is divided in "slots".
+# Each slot has a maximum rate and burst (in packets of the given MTU). A slice
+# can use one or more slots (by appropriately configuring meters in the ingress
+# pipe).
 control_slot_rate_pps: 100
 control_slot_burst_pkts: 10
 control_mtu_bytes: 1500
