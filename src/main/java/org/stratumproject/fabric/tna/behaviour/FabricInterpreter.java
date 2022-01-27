@@ -337,18 +337,11 @@ public class FabricInterpreter extends AbstractFabricHandlerBehavior
     }
 
     @Override
-    public Optional<Integer> mapLogicalPortNumber(PortNumber port) {
-        if (!port.equals(CONTROLLER)) {
-            return Optional.empty();
-        }
-        Optional<Long> cpuPort = capabilities.cpuPort();
-        if (cpuPort.isPresent()) {
-          // TODO(Yi Tseng): this function is deprecated, replace with `mapLogicalPort`
-          //                 later.
-          return Optional.of(cpuPort.get().intValue());
-        } else {
+    public Optional<Long> mapLogicalPort(PortNumber port) {
+      if (!port.equals(CONTROLLER)) {
           return Optional.empty();
-        }
+      }
+      return capabilities.cpuPort();
     }
 
     /* Connect point generated using sb metadata does not have port name
