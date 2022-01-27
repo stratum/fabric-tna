@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: Copyright 2020-present Open Networking Foundation.
 # SPDX-License-Identifier: Apache-2.0
 
+---
 - version: 2
   port_limit: 4
   interfaces: ['5e:00.0', '5e:00.1', '3b:00.1', '3b:00.0']
@@ -16,19 +17,19 @@
     - src_mac: 00:00:00:00:00:04
       dest_mac: 00:90:fb:71:64:8a
   memory:
-    mbuf_64     : 1024
-    mbuf_128    : 512
-    mbuf_256    : 256
-    mbuf_512    : 128
-    mbuf_1024   : 256
-    mbuf_2048   : 128
-    traffic_mbuf_64     : 1024
-    traffic_mbuf_128    : 512
-    traffic_mbuf_256    : 256
-    traffic_mbuf_512    : 128
-    traffic_mbuf_1024   : 256
-    traffic_mbuf_2048   : 128
-    dp_flows    : 4096
+    mbuf_64: 1024
+    mbuf_128: 512
+    mbuf_256: 256
+    mbuf_512: 128
+    mbuf_1024: 256
+    mbuf_2048: 128
+    traffic_mbuf_64: 1024
+    traffic_mbuf_128: 512
+    traffic_mbuf_256: 256
+    traffic_mbuf_512: 128
+    traffic_mbuf_1024: 256
+    traffic_mbuf_2048: 128
+    dp_flows: 4096
   platform:
     master_thread_id: 0
     rx_thread_id: 17
@@ -36,4 +37,5 @@
       - socket: 0
         threads: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
       - socket: 1
-        threads: [48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63]
+        threads: [48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62,
+                  63]
