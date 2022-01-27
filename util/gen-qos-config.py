@@ -212,7 +212,7 @@ def queue_config(
     # excessive delay for lower priority queues.
     # FIXME: slot-based computation no longer makes sense for the control queue.
     #  Find a simpler way to determine the burst limit of each slice.
-    #  Maybe provide that in the yaml? Oo proportionally to the rate?
+    #  Maybe provide that in the yaml? Or proportionally to the rate?
     ct_max_rate_bps = sum(ct_max_rates_bps)
     ct_util = ct_max_rate_bps / port_rate_bps
     assert ct_util < CT_MAX_UTIL, (
