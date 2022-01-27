@@ -190,7 +190,7 @@ def queue_config(
     """
     all_slice_names = set(ct_slice_names + rt_slice_names + el_slice_names)
     all_slice_names.add(DEFAULT_SLICE_NAME)
-    all_params = {x: {} for x in all_slice_names}
+    tc_params = {x: {} for x in all_slice_names}
 
     # Preallocate list as we will not populate it in order.
     queue_mappings = [None] * (3 + len(rt_max_rates_bps) + len(el_min_rates_bps))
@@ -247,8 +247,10 @@ def queue_config(
         port_rate_bps=port_rate_bps,
     )
     queue_mappings[QUEUE_ID_CONTROL] = queue_mapping(**params)
-    for slice_name in ct_slice_names:
-        all_params[slice_name]["control"] = params
+    # Queue is shared by multiple TC instances, generate multiple TC params.
+    for i in range(len(ct_slice_names)):
+        params['max_rate_bps'] = ct_max_rates_bps[i]
+        tc_params[ct_slice_names[i]]["control"] = params.copy()
     used_pool_buls[CT_APP_POOL] += ct_base_use_limit
 
     # -- REAL-TIME
@@ -298,14 +300,15 @@ def queue_config(
 
     next_queue_id = FIRST_QUEUE_ID
     for i in range(rt_queue_count):
-        descr = f"{rt_slice_names[i]} Real-Time"
+        queue_descr = f"{rt_slice_names[i]} Real-Time"
         if i == rt_queue_count - 1:
             queue_id = QUEUE_ID_SYSTEM
+            queue_descr = "System / " + queue_descr
         else:
             queue_id = next_queue_id
             next_queue_id += 1
         params = dict(
-            descr=f"{descr} ({format_bps(rt_max_rates_bps[i])})",
+            descr=f"{queue_descr} ({format_bps(rt_max_rates_bps[i])})",
             queue_id=queue_id,
             app_pool=RT_APP_POOL,
             prio=RT_PRIORITY,
@@ -318,7 +321,7 @@ def queue_config(
             port_rate_bps=port_rate_bps,
         )
         queue_mappings[queue_id] = queue_mapping(**params)
-        all_params[rt_slice_names[i]]["realtime"] = params
+        tc_params[rt_slice_names[i]]["realtime"] = params
         used_pool_buls[RT_APP_POOL] += rt_base_use_limits[i]
 
     # -- ELASTIC
@@ -360,13 +363,13 @@ def queue_config(
     for i in range(el_queue_count):
         if i == el_queue_count - 1:
             # Last one is Best-Effort
-            descr = "Best-Effort"
+            queue_descr = "Best-Effort"
             app_pool = BE_APP_POOL
             pool_size = pool_sizes[BE_APP_POOL]
             base_use_limit = be_base_use_limit
             queue_id = QUEUE_ID_BEST_EFFORT
         else:
-            descr = f"{el_slice_names[i]} Elastic"
+            queue_descr = f"{el_slice_names[i]} Elastic"
             app_pool = EL_APP_POOL
             pool_size = pool_sizes[EL_APP_POOL]
             base_use_limit = el_base_use_limits[i]
@@ -375,7 +378,7 @@ def queue_config(
         # We may be able to allocate more gmin than what was requested.
         norm_min_rate_bps = el_norm_weights[i] * el_avail_bw_bps
         params = dict(
-            descr=f"{descr} ({el_norm_weights[i]:.1%}, gmin {format_bps(norm_min_rate_bps)})",
+            descr=f"{queue_descr} ({el_norm_weights[i]:.1%}, gmin {format_bps(norm_min_rate_bps)})",
             queue_id=queue_id,
             app_pool=app_pool,
             prio=EL_PRIORITY,
@@ -387,7 +390,7 @@ def queue_config(
         )
         queue_mappings[queue_id] = queue_mapping(**params)
         params["norm_min_rate_bps"] = floor(norm_min_rate_bps)
-        all_params[el_slice_names[i]]["elastic"] = params
+        tc_params[el_slice_names[i]]["elastic"] = params
         used_pool_buls[app_pool] += base_use_limit
 
     # Check that we have enough queues.
@@ -405,7 +408,7 @@ def queue_config(
           {port_field}: {port_id}\n{NEW_LINE.join(queue_mappings)}
         }}"""
 
-    return text, all_params
+    return text, tc_params
 
 
 def pool_config(descr, pool, size, enable_color_drop, limit_yellow=0, limit_red=0):
@@ -450,13 +453,13 @@ def port_shaping_config(descr, port_id, rate_bps, burst_bytes):
         }}"""
 
 
-def netcfg(slice_names_to_ids, queue_params):
+def netcfg(slice_names_to_ids, tc_params):
     """
     Return the ONOS netcfg blob.
     """
     config = {}
     for slice_name in slice_names_to_ids:
-        slice_params = queue_params[slice_name]
+        slice_params = tc_params[slice_name]
         slice_id = slice_names_to_ids[slice_name]
         key = str(slice_id)
         config[key] = {"name": slice_name, "tcs": {}}
@@ -655,18 +658,19 @@ def text_config(yaml_config, type):
     # a given Slice/TC across all network? It depends on the traffic path and
     # ports traversed. We assume a worst-case routing, as such we use the
     # slowest port params to generate the ONOS netcfg.
-    bottleneck_queue_params = None
+    bottleneck_tc_params = None
     for port in port_templates:
-        text, confs = queue_config(
+        blob, tc_params = queue_config(
             **port,
             port_rates_bps=[x["port_rate_bps"] for x in port_templates],
             used_pool_buls=used_pool_buls,
             **slicing_template,
         )
+        queue_blobs.append(blob)
         if port["port_rate_bps"] == yaml_config["network_bottleneck_bps"]:
-            bottleneck_queue_params = confs
+            bottleneck_tc_params = tc_params
 
-    assert type != "onos" or bottleneck_queue_params is not None, (
+    assert type != "onos" or bottleneck_tc_params is not None, (
         f"Cannot generate onos config, at least one `port_template` must "
         f"have `rate_bps` equal to `network_bottleneck_bps`"
     )
@@ -686,7 +690,7 @@ def text_config(yaml_config, type):
     if type == "stratum":
         return vendor_config(shaping_blobs, queue_blobs)
     elif type == "onos":
-        return netcfg(slice_names_to_ids, bottleneck_queue_params)
+        return netcfg(slice_names_to_ids, bottleneck_tc_params)
 
 
 def main():

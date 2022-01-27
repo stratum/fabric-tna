@@ -6,7 +6,7 @@
 # Maximum bitrate allowed for system traffic (in bps)
 system_max_rate_bps: 10000000 # 10 Mbps
 
-# The slowest port in the network
+# Bitrate of the slowest port in the network
 network_bottleneck_bps: 1000000000 # 1 Gbps
 
 # Slice configuration
@@ -14,14 +14,14 @@ network_bottleneck_bps: 1000000000 # 1 Gbps
 #   tcs: list of traffic classes within the slice
 #     <tc-type>: control, realtime, or elastic
 #       max_rate_bps: maximum bitrate allowed in bps (control and realtime only)
-#       gmin_rate_bps: required guaranteed minimum rate in bps (elastic only)
+#       gmin_rate_bps: guaranteed minimum rate in bps (elastic only)
 slices:
   - name: Slice1
     tcs:
       control:
         max_rate_bps: 10000000 # 10 Mbps
       realtime:
-        max_rate_bps: 100000000 # 100 Mbps
+        max_rate_bps: 90000000 # 90 Mbps
       elastic:
         gmin_rate_bps: 50000000 # 50 Mbps
   - name: Slice2
@@ -31,7 +31,7 @@ slices:
   - name: Slice3
     tcs:
       control:
-        max_rate_bps: 5000000 # 5 Mbps
+        max_rate_bps: 7000000 # 7 Mbps
       realtime:
         max_rate_bps: 80000000 # 80 Mbps
 
