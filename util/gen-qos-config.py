@@ -249,7 +249,7 @@ def queue_config(
     queue_mappings[QUEUE_ID_CONTROL] = queue_mapping(**params)
     # Queue is shared by multiple TC instances, generate multiple TC params.
     for i in range(len(ct_slice_names)):
-        params['max_rate_bps'] = ct_max_rates_bps[i]
+        params["max_rate_bps"] = ct_max_rates_bps[i]
         tc_params[ct_slice_names[i]]["control"] = params.copy()
     used_pool_buls[CT_APP_POOL] += ct_base_use_limit
 
