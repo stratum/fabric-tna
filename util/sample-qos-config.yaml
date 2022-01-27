@@ -3,6 +3,7 @@
 
 # Sample QoS configuration to be used with gen-qos-config.py
 
+---
 # Maximum bitrate allowed for system traffic (in bps)
 system_max_rate_bps: 10000000 # 10 Mbps
 
