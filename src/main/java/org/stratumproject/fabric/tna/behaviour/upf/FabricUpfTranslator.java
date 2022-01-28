@@ -69,10 +69,10 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_ING
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_TERMINATIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_APP_ID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_APP_IPV4_ADDR;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_APP_IP_PROTO;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_APP_L4_PORT;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_GTPU_IS_VALID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_IPV4_DST_ADDR;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_IP_PROTO;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_SLICE_ID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_TEID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_TUNNEL_IPV4_DST;
@@ -395,8 +395,8 @@ public class FabricUpfTranslator {
         if (FabricUpfTranslatorUtil.fieldIsPresent(match, HDR_APP_L4_PORT)) {
             appFilteringBuilder.withL4PortRange(FabricUpfTranslatorUtil.getFieldRangeShort(match, HDR_APP_L4_PORT));
         }
-        if (FabricUpfTranslatorUtil.fieldIsPresent(match, HDR_IP_PROTO)) {
-            appFilteringBuilder.withIpProto(FabricUpfTranslatorUtil.getFieldByte(match, HDR_IP_PROTO));
+        if (FabricUpfTranslatorUtil.fieldIsPresent(match, HDR_APP_IP_PROTO)) {
+            appFilteringBuilder.withIpProto(FabricUpfTranslatorUtil.getFieldByte(match, HDR_APP_IP_PROTO));
         }
         return appFilteringBuilder.build();
     }
@@ -703,7 +703,7 @@ public class FabricUpfTranslator {
         }
         if (appFilter.ipProto().isPresent()) {
             byte ipProto = appFilter.ipProto().get();
-            matchBuilder.matchTernary(HDR_IP_PROTO, ipProto, 0xF);
+            matchBuilder.matchTernary(HDR_APP_IP_PROTO, ipProto, 0xF);
         }
         return matchBuilder.build();
     }
