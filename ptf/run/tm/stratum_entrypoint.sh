@@ -36,5 +36,6 @@ ${stratumBin} \
     -persistent_config_dir=/tmp \
     -write_req_log_file=./p4rt-write-reqs.log \
     -enable_onlp=false \
+    -experimental_enable_p4runtime_translation \
     "${STRATUM_ARGS[@]}" \
     > ./stratum_bf.log 2>&1
