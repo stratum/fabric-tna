@@ -56,7 +56,6 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_APP_IP
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_APP_L4_PORT;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_GTPU_IS_VALID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_IPV4_DST_ADDR;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_IP_PROTO;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_SLICE_ID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_TEID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_TUNNEL_IPV4_DST;
