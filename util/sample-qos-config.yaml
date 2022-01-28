@@ -1,56 +1,52 @@
 # Copyright 2021-present Open Networking Foundation
 # SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 
-# Sample QoS configuration to be used with gen-stratum-qos-config.py
+# Sample QoS configuration to be used with gen-qos-config.py
 
-# Maximum number of buffer cells, depends on ASIC SKU/revision:
-# - TOFINO_32D, revision A0: 266240
-# - TOFINO_32D, revision B0: 266240
-# - TOFINO_32Q, revision B0: 266240
-# - TOFINO_64Q, revision A0: 286720
-max_cells: 266240
+---
+# Maximum bitrate allowed for system traffic (in bps)
+system_max_rate_bps: 10000000 # 10 Mbps
 
-# Percentage of buffer cells allocated to each traffic class. The sum should be 100.
-pool_allocations:
-  control: 1
-  realtime: 9
-  elastic: 80
-  besteffort: 9
-  # We leave a portion of the buffer unassigned for queues that don't have a pool (yet). Example of
-  # such queues are those for the recirculation port, cpu port, etc.
-  unassigned: 1
+# Bitrate of the slowest port in the network
+network_bottleneck_bps: 1000000000 # 1 Gbps
 
-# The available bandwidth dedicated to Control traffic is divided in "slots". Each slot has a
-# maximum rate and burst (in packets of the given MTU). A slice can use one or more slots (by
-# appropriately configuring meters in the ingress pipe).
-control_slot_count: 50
-control_slot_rate_pps: 100
-control_slot_burst_pkts: 10
-control_mtu_bytes: 1500
-
-# List of maximum shaping rates for Real-Time queues, one per slice requesting such service.
-realtime_max_rates_bps:
-  - 45000000 # 45 Mbps
-  - 30000000 # 30 Mbps
-  - 25000000 # 25 Mbps
-
-# Maximum amount of time that a Real-Time queue can burst at the port speed.
-# Used to limit delay for Elastic queues.
-realtime_max_burst_s: 0.005 # 5 ms
-
-# List of minimum guaranteed rates for Elastic queues, one per slice requesting such service.
-elastic_min_rates_bps:
-  - 100000000 # 100 Mbps
-  - 200000000 # 200 Mbps
+# Slice configuration
+# - name: slice friendly name
+#   tcs: list of traffic classes within the slice
+#     <tc-type>: control, realtime, or elastic
+#       max_rate_bps: maximum bitrate allowed in bps (control and realtime only)
+#       gmin_rate_bps: guaranteed minimum rate in bps (elastic only)
+slices:
+  - name: Slice1
+    tcs:
+      control:
+        max_rate_bps: 10000000 # 10 Mbps
+      realtime:
+        max_rate_bps: 90000000 # 90 Mbps
+      elastic:
+        gmin_rate_bps: 50000000 # 50 Mbps
+  - name: Slice2
+    tcs:
+      elastic:
+        gmin_rate_bps: 200000000 # 200 Mbps
+  - name: Slice3
+    tcs:
+      control:
+        max_rate_bps: 7000000 # 7 Mbps
+      realtime:
+        max_rate_bps: 80000000 # 80 Mbps
 
 # List of switch ports for which we want to configure queues.
 # - descr: description of the port purpose
 # - rate_bps: port speed in bps
-# - is_shaping_enabled: true if rate is enforced using shaping, false if it is the channel speed.
+# - is_shaping_enabled: true if rate is enforced using shaping, false if it is
+#   the channel speed.
 # - shaping_burst_bytes: burst size in bytes, meaningful only if port is shaped.
 # - queue_count: number of queues assigned to the port
-# - port_ids: list of Stratum port IDs with this template (SingletonPort ID from chassis_config)
-# - sdk_port_ids: list of SDK port numbers (Tofino DP_ID) with this template (used for internal ports, e.g., recirculation)
+# - port_ids: list of Stratum port IDs with this template (SingletonPort ID from
+#   chassis_config)
+# - sdk_port_ids: list of SDK port numbers (Tofino DP_ID) with this template
+#   (used for internal ports, e.g., recirculation)
 port_templates:
   - descr: "Base station"
     rate_bps: 1000000000 # 1 Gbps
@@ -67,6 +63,7 @@ port_templates:
     is_shaping_enabled: false
     queue_count: 16
   - descr: "Recirculation"
+    # FIXME: should we use reserved SDN port numbers?
     sdk_port_ids:
       - 68
       - 196
@@ -75,3 +72,36 @@ port_templates:
     rate_bps: 100000000000 # 100 Gbps
     is_shaping_enabled: false
     queue_count: 16
+
+# ** ADVANCED SETTING **
+# Don't change if you don't know what you're doing.
+
+# Maximum number of buffer cells, depends on ASIC SKU/revision:
+# - TOFINO_32D, revision A0: 266240
+# - TOFINO_32D, revision B0: 266240
+# - TOFINO_32Q, revision B0: 266240
+# - TOFINO_64Q, revision A0: 286720
+max_cells: 266240
+
+# Percentage of buffer cells allocated to each traffic class. Sum should be 100.
+pool_allocations:
+  control: 1
+  realtime: 9
+  elastic: 80
+  besteffort: 9
+  # We leave a portion of the buffer unassigned for queues that don't have a
+  # pool (yet). Example of such queues are those for the recirculation port, cpu
+  # port, etc.
+  unassigned: 1
+
+# The available bandwidth dedicated to Control traffic is divided in "slots".
+# Each slot has a maximum rate and burst (in packets of the given MTU). A slice
+# can use one or more slots (by appropriately configuring meters in the ingress
+# pipe).
+control_slot_rate_pps: 100
+control_slot_burst_pkts: 10
+control_mtu_bytes: 1500
+
+# Maximum amount of time that a Real-Time queue can burst at the port speed.
+# Used to limit delay for Elastic queues.
+realtime_max_burst_s: 0.005 # 5 ms

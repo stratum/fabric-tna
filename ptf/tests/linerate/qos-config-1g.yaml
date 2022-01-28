@@ -5,6 +5,31 @@
 
 # See util/sample-qos-config.yaml for a description of each field.
 
+---
+system_max_rate_bps: 10000000 # 10 Mbps
+
+network_bottleneck_bps: 1000000000 # 1 Gbps
+
+slices:
+  - name: Slice1
+    tcs:
+      control:
+        max_rate_bps: 60000000 # 60 Mbps
+      realtime:
+        max_rate_bps: 45000000 # 45 Mbps
+      elastic:
+        gmin_rate_bps: 100000000 # 100 Mbps
+  - name: Slice2
+    tcs:
+      realtime:
+        max_rate_bps: 30000000 # 30 Mbps
+      elastic:
+        gmin_rate_bps: 200000000 # 200 Mbps
+  - name: Slice3
+    tcs:
+      realtime:
+        max_rate_bps: 25000000 # 25 Mbps
+
 max_cells: 266240
 
 pool_allocations:
@@ -14,21 +39,11 @@ pool_allocations:
   besteffort: 9
   unassigned: 1
 
-control_slot_count: 50
 control_slot_rate_pps: 100
 control_slot_burst_pkts: 10
 control_mtu_bytes: 1500
 
-realtime_max_rates_bps:
-  - 45000000 # 45 Mbps
-  - 30000000 # 30 Mbps
-  - 25000000 # 25 Mbps
-
 realtime_max_burst_s: 0.005 # 5 ms
-
-elastic_min_rates_bps:
-  - 100000000 # 100 Mbps
-  - 200000000 # 200 Mbps
 
 port_templates:
   - descr: "Base station"
