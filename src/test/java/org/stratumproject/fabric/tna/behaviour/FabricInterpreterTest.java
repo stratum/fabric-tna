@@ -32,6 +32,8 @@ import org.onosproject.net.pi.runtime.PiActionParam;
 import org.onosproject.net.pi.runtime.PiPacketMetadata;
 import org.onosproject.net.pi.runtime.PiPacketOperation;
 import org.onosproject.net.pi.service.PiPipeconfService;
+import org.stratumproject.fabric.tna.slicing.api.SlicingService;
+import org.stratumproject.fabric.tna.slicing.api.TrafficClassDescription;
 
 import java.nio.ByteBuffer;
 import java.util.Collection;
@@ -41,7 +43,6 @@ import static org.easymock.EasyMock.createNiceMock;
 import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.replay;
 import static org.junit.Assert.assertEquals;
-import static org.stratumproject.fabric.tna.behaviour.Constants.QUEUE_ID_SYSTEM;
 
 /**
  * Test for fabric interpreter.
@@ -53,6 +54,7 @@ public class FabricInterpreterTest {
     private static final MacAddress DST_MAC = MacAddress.valueOf("00:00:00:00:00:02");
     private static final MplsLabel MPLS_10 = MplsLabel.mplsLabel(10);
     private static final DeviceId DEVICE_ID = DeviceId.deviceId("device:1");
+    private static final int SYSTEM_QUEUE_ID = TrafficClassDescription.BEST_EFFORT.queueId().id();
 
     private FabricInterpreter interpreter;
     private DeviceService deviceService;
@@ -69,11 +71,16 @@ public class FabricInterpreterTest {
         expect(piPipeconfService.getPipeconf(DEVICE_ID)).andReturn(Optional.of(piPipeconf));
         replay(piPipeconfService);
 
+        SlicingService slicingService = createNiceMock(SlicingService.class);
+        expect(slicingService.getSystemTrafficClass()).andReturn(TrafficClassDescription.BEST_EFFORT);
+        replay(slicingService);
+
         DriverHandler handler = createNiceMock(DriverHandler.class);
         deviceService = createNiceMock(DeviceService.class);
         expect(handler.get(DeviceService.class)).andReturn(deviceService).anyTimes();
         expect(handler.data()).andReturn(data).anyTimes();
         expect(handler.get(PiPipeconfService.class)).andReturn(piPipeconfService).anyTimes();
+        expect(handler.get(SlicingService.class)).andReturn(slicingService).once();
         replay(handler);
 
         interpreter = new FabricInterpreter();
@@ -252,7 +259,7 @@ public class FabricInterpreterTest {
                 .build());
         builder.add(PiPacketMetadata.builder()
                 .withId(P4InfoConstants.QUEUE_ID)
-                .withValue(ImmutableByteSequence.copyFrom(QUEUE_ID_SYSTEM)
+                .withValue(ImmutableByteSequence.copyFrom(SYSTEM_QUEUE_ID)
                         .fit(P4InfoConstants.QUEUE_ID_BITWIDTH))
                 .build());
         builder.add(PiPacketMetadata.builder()
@@ -325,7 +332,7 @@ public class FabricInterpreterTest {
                 .build());
         builder.add(PiPacketMetadata.builder()
                 .withId(P4InfoConstants.QUEUE_ID)
-                .withValue(ImmutableByteSequence.copyFrom(QUEUE_ID_SYSTEM)
+                .withValue(ImmutableByteSequence.copyFrom(SYSTEM_QUEUE_ID)
                         .fit(P4InfoConstants.QUEUE_ID_BITWIDTH))
                 .build());
         builder.add(PiPacketMetadata.builder()

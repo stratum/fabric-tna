@@ -35,7 +35,7 @@ import org.onosproject.net.pi.model.PiTableModel;
 import org.onosproject.net.pi.service.PiPipeconfService;
 import org.onosproject.net.pi.service.PiTranslationService;
 import org.onosproject.p4runtime.api.P4RuntimeController;
-import org.stratumproject.fabric.tna.PipeconfLoader;
+import org.stratumproject.fabric.tna.Constants;
 import org.stratumproject.fabric.tna.behaviour.FabricCapabilities;
 import org.stratumproject.fabric.tna.slicing.api.SlicingService;
 
@@ -53,7 +53,7 @@ import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.replay;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.stratumproject.fabric.tna.behaviour.Constants.TNA;
+import static org.stratumproject.fabric.tna.Constants.TNA;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_EG_TUNNEL_PEERS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_TERMINATIONS_COUNTER;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_APPLICATIONS;
@@ -67,7 +67,7 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_ING
 public class FabricUpfProgrammableTest {
 
     private static final ApplicationId APP_ID =
-            TestApplicationId.create(PipeconfLoader.APP_NAME);
+            TestApplicationId.create(Constants.APP_NAME);
 
     private MockPacketService packetService;
     private FabricUpfProgrammable upfProgrammable;

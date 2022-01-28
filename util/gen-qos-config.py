@@ -3,19 +3,29 @@
 # SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
 # -*- utf-8 -*-
 """
-Generates vendor_config snippets for Stratum's chassis_config that realizes the SD-Fabric
-slicing/QoS model. The output of this script is meant to be appended to an exiting chassis config.
+Generates QoS config snippets for ONOS and Stratum that realize the SD-Fabric
+slicing/QoS model for the given YAML input.
 
 Usage:
 
-    ./gen-stratum-qos-config.py sample-qos-config.yaml
+    ./gen-qos-config.py -t <onos|stratum> sample-qos-config.yaml
 
 Requirements:
 
     pip3 install pyyaml
 
+Stratum:
+
+ Generate the vendor_config block which is meant to be appended to an exiting
+ chassis config file.
+
+ONOS:
+
+ Generate the slicing part of the fabric-tna app config.
+
 """
 import argparse
+import json
 from math import ceil, floor
 
 import yaml
@@ -51,14 +61,15 @@ CT_PRIORITY = 7  # Control (highest)
 
 # Minimum guaranteed bandwidth for Best-Effort queue.
 BE_MIN_RATE_BPS = 10 * MBPS
-# Maximum bandwidth for the System queue.
-SYS_MAX_RATE_BPS = 10 * MBPS
 # Maximum allowed link utilization for the Control queue.
 CT_MAX_UTIL = 0.10
 
 # Default buffer absorption factor used for all queues (percentage of unused pool cells above
 # base_use_limit).
 DEFAULT_BAF_PERC = 33
+
+DEFAULT_SLICE_ID = 0
+DEFAULT_SLICE_NAME = "Default"
 
 
 def format_bps(bps):
@@ -137,15 +148,19 @@ def queue_config(
     is_sdk_port,
     port_rate_bps,
     port_queue_count,
-    ct_slot_count,
+    ct_slice_names,
+    ct_max_rates_bps,
     ct_slot_rate_pps,
     ct_slot_burst_pkts,
     ct_mtu_bytes,
     rt_max_rates_bps,
     rt_max_burst_s,
+    rt_slice_names,
     el_min_rates_bps,
+    el_slice_names,
     port_rates_bps,
     pool_sizes,
+    sys_max_rate_bps,
     used_pool_buls,
 ):
     """
@@ -156,18 +171,26 @@ def queue_config(
         false if it's a SingletonPort ID from Stratum's chassis_config
     :param port_rate_bps: link capacity or port shaping rate if set
     :param port_queue_count: how many queues can be allocated to this port
-    :param ct_slot_count: number of Control slots, each slice an use one or more slots
+    :param ct_slice_names: list of names of slices associated to Control tcs
+    :param ct_max_rates_bps: list of max allowed rates for Control tcs, one for each slice
     :param ct_slot_rate_pps: metering rate for each Control slot (in pps)
     :param ct_slot_burst_pkts: metering burst size for each Control slot (in pkts)
     :param ct_mtu_bytes: maximum transmission unit allowed for Control traffic
-    :param rt_max_rates_bps: list of max shaping rates for Real-Time slices, one for each slice
+    :param rt_max_rates_bps: list of max shaping rates for Real-Time tcs, one for each slice
+    :param rt_slice_names: list of names of slices associated to Real-Time tcs
     :param rt_max_burst_s: maximum amount of time that a Real-Time queue is allowed to burst
     :param el_min_rates_bps: list of min guaranteed rates for Elastic slices, one for each slice
+    :param el_slice_names: list of names of slices associated to Elastic tcs
     :param port_rates_bps: the list of rates (link bandwidth or port shaping) for all ports
     configured in this switch
     :param pool_sizes: the list of pool sizes (in cells)
-    :return: prints the queue_config blob
+    :param sys_max_rate_bps: shaping rate for the system queue
+    :param used_pool_buls: control variable
+    :return: the queue_config blob (text), dictionary with computed queue parameters
     """
+    all_slice_names = set(ct_slice_names + rt_slice_names + el_slice_names)
+    all_slice_names.add(DEFAULT_SLICE_NAME)
+    tc_params = {x: {} for x in all_slice_names}
 
     # Preallocate list as we will not populate it in order.
     queue_mappings = [None] * (3 + len(rt_max_rates_bps) + len(el_min_rates_bps))
@@ -187,10 +210,10 @@ def queue_config(
     # Set maximum shaping rate to handle the worst case, where all slices send a burst of packets at
     # the same time. Check that the rate doesn't exceed the maximum utilization threshold to avoid
     # excessive delay for lower priority queues.
-    ct_max_rate_pps = ct_slot_rate_pps * ct_slot_count
-    ct_max_burst_pkts = ct_slot_burst_pkts * ct_slot_count
-    ct_max_rate_bps = ct_max_rate_pps * ct_mtu_bytes * 8
-    ct_max_burst_bytes = ct_max_burst_pkts * ct_mtu_bytes
+    # FIXME: slot-based computation no longer makes sense for the control queue.
+    #  Find a simpler way to determine the burst limit of each slice.
+    #  Maybe provide that in the yaml? Or proportionally to the rate?
+    ct_max_rate_bps = sum(ct_max_rates_bps)
     ct_util = ct_max_rate_bps / port_rate_bps
     assert ct_util < CT_MAX_UTIL, (
         f"Port utilization for the Control queue exceeds the maximum threshold: "
@@ -198,14 +221,19 @@ def queue_config(
         f"available={CT_MAX_UTIL}"
     )
 
+    ct_max_rate_pps = ceil(ct_max_rate_bps / (ct_mtu_bytes * 8))
+    ct_slot_count = ceil(ct_max_rate_pps / ct_slot_rate_pps)
+    ct_max_burst_pkts = ct_slot_burst_pkts * ct_slot_count
+    ct_max_burst_bytes = ct_max_burst_pkts * ct_mtu_bytes
+
     # Divide the poll equally between all ports (since we have only one Control queue per port).
     ct_base_use_limit = floor(pool_sizes[CT_APP_POOL] / port_count)
 
     # Weight doesn't matter, this is the only queue in the WRR/priority group
     ct_wrr_weight = 1
 
-    queue_mappings[QUEUE_ID_CONTROL] = queue_mapping(
-        descr=f"Control ({ct_slot_count} slots, "
+    params = dict(
+        descr=f"Shared Control ({ct_slot_count} slots, "
         f"{ct_slot_rate_pps}pps, {ct_slot_burst_pkts}MTUs burst, {ct_util} util)",
         queue_id=QUEUE_ID_CONTROL,
         app_pool=CT_APP_POOL,
@@ -218,13 +246,20 @@ def queue_config(
         max_burst_bytes=ct_max_burst_bytes,
         port_rate_bps=port_rate_bps,
     )
+    queue_mappings[QUEUE_ID_CONTROL] = queue_mapping(**params)
+    # Queue is shared by multiple TC instances, generate multiple TC params.
+    for i in range(len(ct_slice_names)):
+        params["max_rate_bps"] = ct_max_rates_bps[i]
+        tc_params[ct_slice_names[i]]["control"] = params.copy()
     used_pool_buls[CT_APP_POOL] += ct_base_use_limit
 
     # -- REAL-TIME
     # Each slice requesting Real-Time service gets a dedicated queue, shaped to the given max rate
     # and burst. System is treated as a Real-Time queue.
     rt_max_rates_bps = rt_max_rates_bps.copy()
-    rt_max_rates_bps.append(SYS_MAX_RATE_BPS)
+    rt_slice_names = rt_slice_names.copy()
+    rt_max_rates_bps.append(sys_max_rate_bps)
+    rt_slice_names.append(DEFAULT_SLICE_NAME)
 
     # To simplify configuration, we allow expressing the maximum queue shaping burst as a duration,
     # but we set the corresponding value in bytes (based on the port rate).
@@ -240,7 +275,7 @@ def queue_config(
     # of thumb for sizing buffers, where the bandwidth in our case is the queue max shaping rate. We
     # do this to improve the performance of TCP-like congestion control protocols. While we cannot
     # claim optimal sizing to achieve maximum throughput (we would need to know the average RTT and
-    # number of flows), setting higher base_use_limit for queues with higher speeds helps achieving
+    # number of flows), setting higher base_use_limit for queues with higher speeds helps to achieve
     # that goal.
     rt_queue_count = len(rt_max_rates_bps)
     rt_pool_size = pool_sizes[RT_APP_POOL]
@@ -265,16 +300,15 @@ def queue_config(
 
     next_queue_id = FIRST_QUEUE_ID
     for i in range(rt_queue_count):
+        queue_descr = f"{rt_slice_names[i]} Real-Time"
         if i == rt_queue_count - 1:
-            # Last one is System
-            name = f"System"
             queue_id = QUEUE_ID_SYSTEM
+            queue_descr = "System / " + queue_descr
         else:
-            name = f"Real-Time {i + 1}"
             queue_id = next_queue_id
             next_queue_id += 1
-        queue_mappings[queue_id] = queue_mapping(
-            descr=f"{name} ({format_bps(rt_max_rates_bps[i])})",
+        params = dict(
+            descr=f"{queue_descr} ({format_bps(rt_max_rates_bps[i])})",
             queue_id=queue_id,
             app_pool=RT_APP_POOL,
             prio=RT_PRIORITY,
@@ -286,6 +320,8 @@ def queue_config(
             max_burst_bytes=rt_max_burst_bytes,
             port_rate_bps=port_rate_bps,
         )
+        queue_mappings[queue_id] = queue_mapping(**params)
+        tc_params[rt_slice_names[i]]["realtime"] = params
         used_pool_buls[RT_APP_POOL] += rt_base_use_limits[i]
 
     # -- ELASTIC
@@ -293,7 +329,9 @@ def queue_config(
     # given minimum rate during congestion, but allowed to grow when higher priority queues are
     # unused. Best-Effort is treated as an Elastic queues, but uses a different pool.
     el_min_rates_bps = el_min_rates_bps.copy()
+    el_slice_names = el_slice_names.copy()
     el_min_rates_bps.append(BE_MIN_RATE_BPS)
+    el_slice_names.append(DEFAULT_SLICE_NAME)
 
     # Compute WRR scheduling weights to distribute the available bandwidth.
     el_norm_weights = [x / sum(el_min_rates_bps) for x in el_min_rates_bps]
@@ -325,20 +363,22 @@ def queue_config(
     for i in range(el_queue_count):
         if i == el_queue_count - 1:
             # Last one is Best-Effort
-            name = "Best-Effort"
+            queue_descr = "Best-Effort"
             app_pool = BE_APP_POOL
             pool_size = pool_sizes[BE_APP_POOL]
             base_use_limit = be_base_use_limit
             queue_id = QUEUE_ID_BEST_EFFORT
         else:
-            name = f"Elastic {i + 1}"
+            queue_descr = f"{el_slice_names[i]} Elastic"
             app_pool = EL_APP_POOL
             pool_size = pool_sizes[EL_APP_POOL]
             base_use_limit = el_base_use_limits[i]
             queue_id = next_queue_id
             next_queue_id += 1
-        queue_mappings[queue_id] = queue_mapping(
-            descr=f"{name} ({el_norm_weights[i]:.1%}, gmin {format_bps(el_norm_weights[i] * el_avail_bw_bps)})",
+        # We may be able to allocate more gmin than what was requested.
+        norm_min_rate_bps = el_norm_weights[i] * el_avail_bw_bps
+        params = dict(
+            descr=f"{queue_descr} ({el_norm_weights[i]:.1%}, gmin {format_bps(norm_min_rate_bps)})",
             queue_id=queue_id,
             app_pool=app_pool,
             prio=EL_PRIORITY,
@@ -348,6 +388,9 @@ def queue_config(
             pool_size=pool_size,
             port_rate_bps=port_rate_bps,
         )
+        queue_mappings[queue_id] = queue_mapping(**params)
+        params["norm_min_rate_bps"] = floor(norm_min_rate_bps)
+        tc_params[el_slice_names[i]]["elastic"] = params
         used_pool_buls[app_pool] += base_use_limit
 
     # Check that we have enough queues.
@@ -360,10 +403,12 @@ def queue_config(
 
     port_field = "sdk_port" if is_sdk_port else "port"
 
-    return f"""        queue_configs {{
+    text = f"""        queue_configs {{
           # {descr} ({format_bps(port_rate_bps)}, {used_queues} queues)
           {port_field}: {port_id}\n{NEW_LINE.join(queue_mappings)}
         }}"""
+
+    return text, tc_params
 
 
 def pool_config(descr, pool, size, enable_color_drop, limit_yellow=0, limit_red=0):
@@ -408,13 +453,110 @@ def port_shaping_config(descr, port_id, rate_bps, burst_bytes):
         }}"""
 
 
-def vendor_config(yaml_config):
+def netcfg(slice_names_to_ids, tc_params):
     """
-    Returns a vendor_config blob
-    :param yaml_config: yaml QoS config
+    Return the ONOS netcfg blob.
     """
-    max_cells = yaml_config["max_cells"]
+    config = {}
+    for slice_name in slice_names_to_ids:
+        slice_params = tc_params[slice_name]
+        slice_id = slice_names_to_ids[slice_name]
+        key = str(slice_id)
+        config[key] = {"name": slice_name, "tcs": {}}
+        for tc in slice_params:
+            tc_conf = slice_params[tc]
+            if tc == "control":
+                config[key]["tcs"]["CONTROL"] = {
+                    "queueId": tc_conf["queue_id"],
+                    "maxRateBps": tc_conf["max_rate_bps"],
+                }
+            elif tc == "realtime":
+                config[key]["tcs"]["REAL_TIME"] = {
+                    "queueId": tc_conf["queue_id"],
+                    "maxRateBps": tc_conf["max_rate_bps"],
+                }
+            elif tc == "elastic":
+                config[key]["tcs"]["ELASTIC"] = {
+                    "queueId": tc_conf["queue_id"],
+                    "gminRateBps": tc_conf["norm_min_rate_bps"],
+                }
+            else:
+                raise ValueError(f"Invalid TC: {tc}")
+        slice_id += 1
 
+    # The best-effort queue config is implicit in ONOS
+    del config[str(DEFAULT_SLICE_ID)]["tcs"]["ELASTIC"]
+    # Mark system tc
+    config[str(DEFAULT_SLICE_ID)]["tcs"]["REAL_TIME"]["isSystemTc"] = True
+
+    config = {
+        "apps": {"org.stratumproject.fabric-tna": {"slicing": {"slices": config}}}
+    }
+
+    return json.dumps(config, indent=2)
+
+
+def vendor_config(shaping_blobs, queue_blobs):
+    """
+    Returns the Stratum vendor_config block
+    """
+    return f"""vendor_config {{
+  tofino_config {{
+    node_id_to_port_shaping_config {{
+      key: 1 
+      value {{\n{NEW_LINE.join(shaping_blobs)}
+      }}
+    }}
+    node_id_to_qos_config {{
+      key: 1
+      value {{\n{NEW_LINE.join(queue_blobs)}
+      }}
+    }}
+  }}
+}}
+"""
+
+
+def text_config(yaml_config, type):
+    """
+    Computes and returns a text config blob
+    :param yaml_config: yaml QoS config
+    :param type: stratum or onos
+    """
+    # We keep most of the logic the same for both onos and stratum, so we can
+    # run the same checks in both cases.
+
+    slice_names = [DEFAULT_SLICE_NAME] + [s["name"] for s in yaml_config["slices"]]
+    assert len(set(slice_names)) == len(
+        slice_names
+    ), f"Slice names must be unique: f{slice_names}"
+    slice_ids = [i for i in range(DEFAULT_SLICE_ID, len(slice_names))]
+    slice_names_to_ids = {x[0]: x[1] for x in zip(slice_names, slice_ids)}
+
+    # Parse slices
+    ct_slice_names = []
+    ct_max_rates_bps = []
+    rt_slice_names = []
+    rt_max_rates_bps = []
+    el_slice_names = []
+    el_min_rates_bps = []
+    for slice_config in yaml_config["slices"]:
+        for tc in slice_config["tcs"]:
+            tc_config = slice_config["tcs"][tc]
+            if tc == "control":
+                ct_slice_names.append(slice_config["name"])
+                ct_max_rates_bps.append(tc_config["max_rate_bps"])
+            elif tc == "realtime":
+                rt_slice_names.append(slice_config["name"])
+                rt_max_rates_bps.append(tc_config["max_rate_bps"])
+            elif tc == "elastic":
+                el_slice_names.append(slice_config["name"])
+                el_min_rates_bps.append(tc_config["gmin_rate_bps"])
+            else:
+                raise ValueError(f"Invalid TC: {tc}")
+
+    # Allocate buffer cells to pools
+    max_cells = yaml_config["max_cells"]
     pool_allocations = [
         yaml_config["pool_allocations"]["control"],
         yaml_config["pool_allocations"]["realtime"],
@@ -426,17 +568,20 @@ def vendor_config(yaml_config):
         f"Invalid total pool allocation percentage: "
         f"expected=100, actual={sum(pool_allocations)}"
     )
-
     pool_sizes = [floor(x / 100 * max_cells) for x in pool_allocations]
 
     slicing_template = dict(
-        ct_slot_count=yaml_config["control_slot_count"],
+        sys_max_rate_bps=yaml_config["system_max_rate_bps"],
+        ct_slice_names=ct_slice_names,
+        ct_max_rates_bps=ct_max_rates_bps,
         ct_slot_rate_pps=yaml_config["control_slot_rate_pps"],
         ct_slot_burst_pkts=yaml_config["control_slot_burst_pkts"],
         ct_mtu_bytes=yaml_config["control_mtu_bytes"],
-        rt_max_rates_bps=yaml_config["realtime_max_rates_bps"],
+        rt_max_rates_bps=rt_max_rates_bps,
+        rt_slice_names=rt_slice_names,
         rt_max_burst_s=yaml_config["realtime_max_burst_s"],
-        el_min_rates_bps=yaml_config["elastic_min_rates_bps"],
+        el_min_rates_bps=el_min_rates_bps,
+        el_slice_names=el_slice_names,
         pool_sizes=pool_sizes,
     )
 
@@ -471,18 +616,13 @@ def vendor_config(yaml_config):
                 temp["is_sdk_port"] = True
                 port_templates.append(temp.copy())
 
-    queue_blobs = []
-
-    queue_blobs.append(
+    queue_blobs = [
         pool_config(
             descr=f"Control ({pool_allocations[CT_APP_POOL]}%)",
             pool=CT_APP_POOL,
             size=pool_sizes[CT_APP_POOL],
             enable_color_drop="false",
-        )
-    )
-
-    queue_blobs.append(
+        ),
         pool_config(
             descr=f"Real-Time ({pool_allocations[RT_APP_POOL]}%)",
             pool=RT_APP_POOL,
@@ -490,10 +630,7 @@ def vendor_config(yaml_config):
             enable_color_drop="true",
             limit_yellow=floor(0.90 * pool_sizes[RT_APP_POOL]),
             limit_red=floor(0.80 * pool_sizes[RT_APP_POOL]),
-        )
-    )
-
-    queue_blobs.append(
+        ),
         pool_config(
             descr=f"Elastic ({pool_allocations[EL_APP_POOL]}%)",
             pool=EL_APP_POOL,
@@ -501,10 +638,7 @@ def vendor_config(yaml_config):
             enable_color_drop="true",
             limit_yellow=floor(0.90 * pool_sizes[EL_APP_POOL]),
             limit_red=floor(0.80 * pool_sizes[EL_APP_POOL]),
-        )
-    )
-
-    queue_blobs.append(
+        ),
         pool_config(
             descr=f"Best-Effort ({pool_allocations[BE_APP_POOL]}%)",
             pool=BE_APP_POOL,
@@ -512,21 +646,34 @@ def vendor_config(yaml_config):
             enable_color_drop="true",
             limit_yellow=floor(0.90 * pool_sizes[BE_APP_POOL]),
             limit_red=floor(0.80 * pool_sizes[BE_APP_POOL]),
-        )
-    )
+        ),
+    ]
 
     # Control variable: stores the sum of base_use_limit (bul) reservations for all pools.
     used_pool_buls = [0, 0, 0, 0]
 
+    # Generate the Stratum queue config for each port, use the returned params
+    # to generate the corresponding ONOS netcfg. Stratum config is per-device,
+    # while the ONOS config is network-level. What is the maximum bandwidth for
+    # a given Slice/TC across all network? It depends on the traffic path and
+    # ports traversed. We assume a worst-case routing, as such we use the
+    # slowest port params to generate the ONOS netcfg.
+    bottleneck_tc_params = None
     for port in port_templates:
-        queue_blobs.append(
-            queue_config(
-                **port,
-                port_rates_bps=[x["port_rate_bps"] for x in port_templates],
-                used_pool_buls=used_pool_buls,
-                **slicing_template,
-            )
+        blob, tc_params = queue_config(
+            **port,
+            port_rates_bps=[x["port_rate_bps"] for x in port_templates],
+            used_pool_buls=used_pool_buls,
+            **slicing_template,
         )
+        queue_blobs.append(blob)
+        if port["port_rate_bps"] == yaml_config["network_bottleneck_bps"]:
+            bottleneck_tc_params = tc_params
+
+    assert type != "onos" or bottleneck_tc_params is not None, (
+        f"Cannot generate onos config, at least one `port_template` must "
+        f"have `rate_bps` equal to `network_bottleneck_bps`"
+    )
 
     # Check that we have allocated all pool cells using base_use_limits.
     unused_pool_buls = [
@@ -540,27 +687,17 @@ def vendor_config(yaml_config):
         sum(unused_pool_buls) < max_cells * 0.0001
     ), f"Too many unallocated cells, something is wrong with base_use_limit: {unused_pool_buls}"
 
-    return f"""vendor_config {{
-  tofino_config {{
-    node_id_to_port_shaping_config {{
-      key: 1 
-      value {{\n{NEW_LINE.join(shaping_blobs)}
-      }}
-    }}
-    node_id_to_qos_config {{
-      key: 1
-      value {{\n{NEW_LINE.join(queue_blobs)}
-      }}
-    }}
-  }}
-}}
-"""
+    if type == "stratum":
+        return vendor_config(shaping_blobs, queue_blobs)
+    elif type == "onos":
+        return netcfg(slice_names_to_ids, bottleneck_tc_params)
 
 
 def main():
-    parser = argparse.ArgumentParser(prog="gen-stratum-qos-config.py")
+    parser = argparse.ArgumentParser(prog="gen-qos-config.py")
     parser.add_argument("config", help="Path to yaml QoS config file")
     parser.add_argument("-o", "--output", help="output path", default="-")
+    parser.add_argument("-t", "--type", help="onos or stratum", required=True)
     args = parser.parse_args()
 
     yaml_path = args.config
@@ -573,7 +710,7 @@ def main():
             print(ex)
             exit(1)
 
-    text = vendor_config(yaml_config)
+    text = text_config(yaml_config, type=args.type)
     if output_path == "-":
         # std output
         print(text)

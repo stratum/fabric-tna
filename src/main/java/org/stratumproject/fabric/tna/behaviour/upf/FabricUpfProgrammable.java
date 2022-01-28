@@ -41,16 +41,11 @@ import org.onosproject.net.pi.runtime.PiCounterCellHandle;
 import org.onosproject.net.pi.runtime.PiCounterCellId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.stratumproject.fabric.tna.PipeconfLoader;
+import org.stratumproject.fabric.tna.Constants;
 import org.stratumproject.fabric.tna.behaviour.FabricCapabilities;
-import org.stratumproject.fabric.tna.slicing.api.SliceId;
-import org.stratumproject.fabric.tna.slicing.api.SlicingException;
-import org.stratumproject.fabric.tna.slicing.api.SlicingService;
-import org.stratumproject.fabric.tna.slicing.api.TrafficClass;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -89,10 +84,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     private static final int DEFAULT_PRIORITY = 128;
     private static final long DEFAULT_P4_DEVICE_ID = 1;
 
-    private static final int PRIORITY_LOW = 10;
-
     protected FlowRuleService flowRuleService;
-    protected SlicingService slicingService;
     protected PacketService packetService;
     protected FabricUpfTranslator upfTranslator;
 
@@ -106,8 +98,6 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     private long applicationsTableSize;
 
     private ApplicationId appId;
-
-    static final SliceId SLICE_MOBILE = SliceId.of(SliceId.MAX);
 
     @Override
     protected boolean setupBehaviour(String opName) {
@@ -126,11 +116,10 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         }
 
         flowRuleService = handler().get(FlowRuleService.class);
-        slicingService = handler().get(SlicingService.class);
         packetService = handler().get(PacketService.class);
         upfTranslator = new FabricUpfTranslator();
         final CoreService coreService = handler().get(CoreService.class);
-        appId = coreService.getAppId(PipeconfLoader.APP_NAME_UPF);
+        appId = coreService.getAppId(Constants.APP_NAME_UPF);
         if (appId == null) {
             log.warn("Application ID is null. Cannot initialize behaviour.");
             return false;
@@ -150,24 +139,6 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     public boolean init() {
         if (setupBehaviour("init()")) {
             log.info("UpfProgrammable initialized for appId {} and deviceId {}", appId, deviceId);
-            try {
-                /* Add MOBILE slice and BEST_EFFORT tc if needed
-                   and initialize the remaining traffic classes */
-                Set<TrafficClass> tcs = slicingService.getTrafficClasses(SLICE_MOBILE);
-                if (tcs.isEmpty()) {
-                    slicingService.addSlice(SLICE_MOBILE);
-                }
-                Arrays.stream(TrafficClass.values()).forEach(tc -> {
-                    if (tcs.contains(tc) || tc.equals(TrafficClass.BEST_EFFORT) ||
-                            tc.equals(TrafficClass.SYSTEM)) {
-                        return;
-                    }
-                    slicingService.addTrafficClass(SLICE_MOBILE, tc);
-                });
-            } catch (SlicingException e) {
-                log.error("Exception while configuring traffic class for Mobile Slice: {}", e.getMessage());
-                return false;
-            }
             return true;
         }
         return false;
@@ -312,11 +283,6 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
             return;
         }
         log.info("Clearing all UPF-related table entries.");
-        // Remove static Queue Configuration
-        slicingService.removeTrafficClass(SLICE_MOBILE, TrafficClass.ELASTIC);
-        slicingService.removeTrafficClass(SLICE_MOBILE, TrafficClass.REAL_TIME);
-        slicingService.removeTrafficClass(SLICE_MOBILE, TrafficClass.CONTROL);
-        slicingService.removeSlice(SLICE_MOBILE);
     }
 
     @Override

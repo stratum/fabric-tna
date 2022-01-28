@@ -1,0 +1,12 @@
+{
+  "slices": {
+    "0": {
+      "name": "Default",
+      "tcs": {
+        "FOO": {
+          "queueId": "1"
+        }
+      }
+    }
+  }
+}
