@@ -55,12 +55,12 @@ control FabricIngress (
 #endif // WITH_INT
 
     apply {
-        lkp_md_init.apply(hdr, ig_intr_md, fabric_md.lkp);
+        lkp_md_init.apply(hdr, fabric_md.lkp);
         pkt_io.apply(hdr, fabric_md, ig_intr_md, ig_tm_md, ig_dprsr_md);
 #ifdef WITH_INT
         int_watchlist.apply(hdr, fabric_md, ig_intr_md, ig_dprsr_md, ig_tm_md);
 #endif // WITH_INT
-        stats.apply(fabric_md.lkp, fabric_md.bridged.base.stats_flow_id, (FabricPortId_t)ig_intr_md.ingress_port);
+        stats.apply(fabric_md.lkp, (FabricPortId_t)ig_intr_md.ingress_port, fabric_md.bridged.base.stats_flow_id);
         slice_tc_classifier.apply(hdr, ig_intr_md, fabric_md, (FabricPortId_t)ig_intr_md.ingress_port);
         filtering.apply(hdr, fabric_md, ig_intr_md, (FabricPortId_t)ig_intr_md.ingress_port);
 #ifdef WITH_SPGW

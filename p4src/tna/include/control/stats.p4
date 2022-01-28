@@ -8,8 +8,8 @@
 const bit<STATS_FLOW_ID_WIDTH> UNSET_FLOW_ID = 0;
 
 control StatsIngress (in lookup_metadata_t lkp,
-                      out bit<STATS_FLOW_ID_WIDTH> stats_flow_id,
-                      in FabricPortId_t ingress_port) {
+                      in FabricPortId_t ig_port,
+                      out bit<STATS_FLOW_ID_WIDTH> stats_flow_id) {
 
     DirectCounter<bit<64>>(CounterType_t.PACKETS_AND_BYTES) flow_counter;
 
@@ -25,7 +25,7 @@ control StatsIngress (in lookup_metadata_t lkp,
             lkp.ip_proto : ternary @name("ip_proto");
             lkp.l4_sport : ternary @name("l4_sport");
             lkp.l4_dport : ternary @name("l4_dport");
-            ingress_port : exact @name("ig_port");
+            ig_port : exact @name("ig_port");
         }
         actions = {
             count;
