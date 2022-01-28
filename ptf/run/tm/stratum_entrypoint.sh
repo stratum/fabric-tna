@@ -5,7 +5,6 @@
 set -ex
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
-STRATUM_ARGS=("$@")
 
 mkdir /mnt/huge
 mount -t hugetlbfs nodev /mnt/huge
@@ -37,5 +36,4 @@ ${stratumBin} \
     -write_req_log_file=./p4rt-write-reqs.log \
     -enable_onlp=false \
     -experimental_enable_p4runtime_translation \
-    "${STRATUM_ARGS[@]}" \
     > ./stratum_bf.log 2>&1
