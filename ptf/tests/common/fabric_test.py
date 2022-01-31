@@ -883,7 +883,10 @@ class FabricTest(P4RuntimeTest):
         self.port2 = self.swports(1)
         self.port3 = self.swports(2)
         self.port4 = self.swports(3)
-        self.build_port_to_sdk_port_map()
+        if self.generate_tv:
+            self.build_port_to_sdk_port_map_for_tv()
+        else:
+            self.build_port_to_sdk_port_map()
         self.setup_switch_info()
         self.set_up_packet_in_mirror()
 
@@ -900,6 +903,11 @@ class FabricTest(P4RuntimeTest):
     def get_single_use_ip(self):
         FabricTest.next_single_use_ips += 1
         return socket.inet_ntoa(struct.pack("!I", FabricTest.next_single_use_ips))
+
+    def build_port_to_sdk_port_map_for_tv(self):
+        # Build a fake SDN to SDK port mapping for testvector
+        for port_id in range(1, 5):
+          SDN_TO_SDK_PORT[port_id] = port_id
 
     def build_port_to_sdk_port_map(self):
         port_name_to_id = {}
