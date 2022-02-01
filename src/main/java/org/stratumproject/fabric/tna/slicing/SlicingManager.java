@@ -390,6 +390,13 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
     }
 
     @Override
+    public void resetDefaultTrafficClassForAllSlices() {
+        for (SliceId sliceId : defaultTcStore.keySet()) {
+            setDefaultTrafficClass(sliceId, TrafficClass.BEST_EFFORT);
+        }
+    }
+
+    @Override
     public Map<SliceStoreKey, TrafficClassDescription> getSliceStore() {
         return Map.copyOf(sliceStore.asJavaMap());
     }
@@ -433,6 +440,11 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
         }
 
         return true;
+    }
+
+    @Override
+    public void removeAllClassifierFlows() {
+        classifierFlowStore.clear();
     }
 
     @Override
