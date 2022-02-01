@@ -230,7 +230,7 @@ def queue_config(
     ct_base_use_limit = floor(pool_sizes[CT_APP_POOL] / port_count)
 
     # Weight doesn't matter, this is the only queue in the WRR/priority group
-    ct_wrr_weight = 1
+    ct_wrr_weight = 0
 
     params = dict(
         descr=f"Shared Control ({ct_slot_count} slots, "
@@ -503,7 +503,7 @@ def vendor_config(shaping_blobs, queue_blobs):
     return f"""vendor_config {{
   tofino_config {{
     node_id_to_port_shaping_config {{
-      key: 1 
+      key: 1
       value {{\n{NEW_LINE.join(shaping_blobs)}
       }}
     }}
