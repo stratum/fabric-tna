@@ -316,8 +316,10 @@ public class FabricInterpreter extends AbstractFabricHandlerBehavior
             try {
                 ImmutableByteSequence portByteSequence = packetMetadata.get()
                         .value().fit(P4InfoConstants.INGRESS_PORT_BITWIDTH);
-                short s = portByteSequence.asReadOnlyBuffer().getShort();
-                ConnectPoint receivedFrom = new ConnectPoint(deviceId, PortNumber.portNumber(s));
+                // Convert 32-bit signed integer to an unsigned value that stored in a
+                // 64-bit long integer variable.
+                long l = 0x00000000FFFFFFFFL & (long) portByteSequence.asReadOnlyBuffer().getInt();
+                ConnectPoint receivedFrom = new ConnectPoint(deviceId, PortNumber.portNumber(l));
                 if (!receivedFrom.port().hasName()) {
                     receivedFrom = translateSwitchPort(receivedFrom);
                 }
