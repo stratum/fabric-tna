@@ -65,6 +65,13 @@ typedef bit<16> upf_ctr_id_t;
 typedef bit<8> tun_peer_id_t;
 typedef bit<32> ue_session_id_t;
 
+// The bitwidth of these ids should scale with the number of session and app meters.
+// However, consider that using bigger sizes require larger action parameter memory.
+typedef bit<16> session_meter_id_t;
+typedef bit<16> app_meter_id_t;
+const session_meter_id_t DEFAULT_SESSION_METER_ID = 0;
+const app_meter_id_t DEFAULT_APP_METER_ID = 0;
+
 // According to our design choice, we report only the inner headers to the INT collector.
 // The EncapPresence keeps track of the encapsulation protocol in use.
 // The EncapPresence is further needed by the egress INT parser to strip out the outer encapsulation headers
