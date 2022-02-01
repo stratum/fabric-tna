@@ -135,7 +135,7 @@ fail to start or affect test results negatively.
    image that includes tofino-model:
 
    ```bash
-    export SDE_DOCKER_IMG=my-docker-repo/bf-sde:9.5.0
+    export SDE_DOCKER_IMG=my-docker-repo/bf-sde:9.5.2
     ```
 
 3. Run PTF tests using the `run/tm/run` script:
