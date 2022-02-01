@@ -885,6 +885,8 @@ class FabricTest(P4RuntimeTest):
         self.port4 = self.swports(3)
         if self.generate_tv:
             self.build_port_to_sdk_port_map_for_tv()
+        elif is_v1model():
+            self.build_port_to_sdk_port_map_for_bmv2()
         else:
             self.build_port_to_sdk_port_map()
         self.setup_switch_info()
@@ -908,6 +910,12 @@ class FabricTest(P4RuntimeTest):
         # Build a fake SDN to SDK port mapping for testvector
         for port_id in range(1, 5):
           SDN_TO_SDK_PORT[port_id] = port_id
+
+    def build_port_to_sdk_port_map_for_bmv2(self):
+        # Build a fake SDN to SDK port mapping for testvector
+        for port_id in range(0, 5):
+          SDN_TO_SDK_PORT[port_id] = port_id
+        SDN_TO_SDK_PORT[255] = 255 # CPU port for bmv2
 
     def build_port_to_sdk_port_map(self):
         port_name_to_id = {}

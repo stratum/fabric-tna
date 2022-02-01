@@ -383,7 +383,10 @@ class P4RuntimeTest(BaseTest):
                 )
 
             if in_port_ != rx_in_port_:
-                rx_inport = struct.unpack("!I", rx_in_port_)[0]
+                if is_tna():
+                  rx_inport = struct.unpack("!I", rx_in_port_)[0]
+                else:
+                  rx_inport = struct.unpack("!H", rx_in_port_)[0]
                 self.fail(
                     "Wrong packet-in ingress port, "
                     + "expected {} but received was {}".format(exp_in_port, rx_inport)
