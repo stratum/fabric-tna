@@ -60,10 +60,15 @@ const QueueId_t QUEUE_ID_BEST_EFFORT = 0;
 
 // SPGW types
 typedef bit<32> teid_t;
-typedef bit<16> upf_ctr_id_t;
+typedef bit<12> upf_ctr_id_t;
 // We support up to 254 base stations + 1 dbuf endpoint. ID 0 is reserved.
 typedef bit<8> tun_peer_id_t;
 typedef bit<32> ue_session_id_t;
+
+typedef bit<15> session_meter_id_t;
+typedef bit<15> app_meter_id_t;
+const session_meter_id_t DEFAULT_SESSION_METER_ID = 0;
+const app_meter_id_t DEFAULT_APP_METER_ID = 0;
 
 // According to our design choice, we report only the inner headers to the INT collector.
 // The EncapPresence keeps track of the encapsulation protocol in use.

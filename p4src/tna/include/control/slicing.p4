@@ -169,7 +169,10 @@ control IngressQos (inout fabric_ingress_metadata_t fabric_md,
         // Meter index should be 0 for all packets with default slice_id and tc.
         set_slice_tc.apply();
         default_tc.apply();
-        ig_tm_md.packet_color = (bit<2>) slice_tc_meter.execute(fabric_md.bridged.base.slice_tc);
+        // FIXME: last parameter is the "adjust_byte_count", should be optional, but compiler complains if not specified
+        // Use color-aware meter, with color coming from the session meter.
+        // If no SPGW, session_color is GREEN, and the meter behaves as a color-blind.
+        ig_tm_md.packet_color = (bit<2>) slice_tc_meter.execute(fabric_md.bridged.base.slice_tc, fabric_md.session_color, 0);
         queues.apply();
     }
 }

@@ -377,6 +377,8 @@ struct fabric_ingress_metadata_t {
     bool                     is_spgw_hit;
     slice_id_t               spgw_slice_id;
     tc_t                     spgw_tc;
+    MeterColor_t             app_color;
+    MeterColor_t             session_color;
     PortType_t               ig_port_type;
     common_mirror_metadata_t mirror;
 }
