@@ -199,6 +199,11 @@ public class NetcfgSlicingProviderTest {
         }
 
         @Override
+        public void resetDefaultTrafficClassForAllSlices() {
+
+        }
+
+        @Override
         public boolean addClassifierFlow(TrafficSelector selector, SliceId sliceId, TrafficClass tc) {
             return false;
         }
@@ -206,6 +211,11 @@ public class NetcfgSlicingProviderTest {
         @Override
         public boolean removeClassifierFlow(TrafficSelector selector, SliceId sliceId, TrafficClass tc) {
             return false;
+        }
+
+        @Override
+        public void removeAllClassifierFlows() {
+
         }
 
         @Override

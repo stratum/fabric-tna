@@ -360,6 +360,22 @@ public class SlicingManagerTest {
     }
 
     @Test
+    public void testResetDefaultTrafficClass() {
+        manager.addSlice(SLICE_IDS.get(1));
+        manager.addSlice(SLICE_IDS.get(2));
+        manager.addTrafficClass(SLICE_IDS.get(1), TC_CONFIG_CONTROL);
+        manager.setDefaultTrafficClass(SLICE_IDS.get(1), TrafficClass.CONTROL);
+        manager.addTrafficClass(SLICE_IDS.get(2), TC_CONFIG_REAL_TIME);
+        manager.setDefaultTrafficClass(SLICE_IDS.get(2), TrafficClass.REAL_TIME);
+        assertEquals(TrafficClass.CONTROL, manager.getDefaultTrafficClass(SLICE_IDS.get(1)));
+        assertEquals(TrafficClass.REAL_TIME, manager.getDefaultTrafficClass(SLICE_IDS.get(2)));
+
+        manager.resetDefaultTrafficClassForAllSlices();
+        assertEquals(TrafficClass.BEST_EFFORT, manager.getDefaultTrafficClass(SLICE_IDS.get(1)));
+        assertEquals(TrafficClass.BEST_EFFORT, manager.getDefaultTrafficClass(SLICE_IDS.get(2)));
+    }
+
+    @Test
     public void testRemoveTrafficClassExceptionDefaultTc() {
         manager.addTrafficClass(SLICE_IDS.get(0), TC_CONFIG_CONTROL);
         manager.setDefaultTrafficClass(SLICE_IDS.get(0), TrafficClass.CONTROL);
@@ -441,6 +457,20 @@ public class SlicingManagerTest {
 
         assertEquals(1, manager.getClassifierFlows(SLICE_IDS.get(1), TrafficClass.REAL_TIME).size());
         manager.removeClassifierFlow(selector, SLICE_IDS.get(1), TrafficClass.REAL_TIME);
+        assertEquals(0, manager.getClassifierFlows(SLICE_IDS.get(1), TrafficClass.REAL_TIME).size());
+    }
+
+    @Test
+    public void testRemoveAllClassifierFlows() {
+        manager.addSlice(SLICE_IDS.get(1));
+        manager.addTrafficClass(SLICE_IDS.get(1), TC_CONFIG_REAL_TIME);
+        TrafficSelector selector1 = DefaultTrafficSelector.builder().matchUdpDst(TpPort.tpPort(100)).build();
+        manager.addClassifierFlow(selector1, SLICE_IDS.get(1), TrafficClass.REAL_TIME);
+        TrafficSelector selector2 = DefaultTrafficSelector.builder().matchUdpDst(TpPort.tpPort(200)).build();
+        manager.addClassifierFlow(selector2, SLICE_IDS.get(1), TrafficClass.REAL_TIME);
+
+        assertEquals(2, manager.getClassifierFlows(SLICE_IDS.get(1), TrafficClass.REAL_TIME).size());
+        manager.removeAllClassifierFlows();
         assertEquals(0, manager.getClassifierFlows(SLICE_IDS.get(1), TrafficClass.REAL_TIME).size());
     }
 

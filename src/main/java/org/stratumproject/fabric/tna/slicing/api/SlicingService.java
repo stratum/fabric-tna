@@ -46,6 +46,11 @@ public interface SlicingService {
      */
     TrafficClass getDefaultTrafficClass(SliceId sliceId);
 
+    /**
+     * Resets the default traffic class to BEST_EFFORT, for all slices.
+     */
+    void resetDefaultTrafficClassForAllSlices();
+
     // TODO: get traffic class parameters
 
     /**
@@ -69,6 +74,13 @@ public interface SlicingService {
      * @throws SlicingException if an error occurred.
      */
     boolean removeClassifierFlow(TrafficSelector selector, SliceId sliceId, TrafficClass tc);
+
+    /**
+     * Removes all classifier flows in the system.
+     *
+     * @throws SlicingException if an error occurred.
+     */
+    void removeAllClassifierFlows();
 
     /**
      * Gets all flows in given sliceId and traffic class.
