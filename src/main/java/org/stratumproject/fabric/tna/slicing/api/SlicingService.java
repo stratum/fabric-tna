@@ -48,7 +48,6 @@ public interface SlicingService {
 
     /**
      * Resets the default traffic class to BEST_EFFORT, for all slices.
-     *
      */
     void resetDefaultTrafficClassForAllSlices();
 
