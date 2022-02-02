@@ -464,9 +464,15 @@ public class SlicingManagerTest {
     public void testRemoveAllClassifierFlows() {
         manager.addSlice(SLICE_IDS.get(1));
         manager.addTrafficClass(SLICE_IDS.get(1), TC_CONFIG_REAL_TIME);
-        TrafficSelector selector1 = DefaultTrafficSelector.builder().matchUdpDst(TpPort.tpPort(100)).build();
+        TrafficSelector selector1 = DefaultTrafficSelector.builder()
+                .matchIPProtocol((byte) IpProtocol.UDP.value())
+                .matchUdpDst(TpPort.tpPort(100))
+                .build();
         manager.addClassifierFlow(selector1, SLICE_IDS.get(1), TrafficClass.REAL_TIME);
-        TrafficSelector selector2 = DefaultTrafficSelector.builder().matchUdpDst(TpPort.tpPort(200)).build();
+        TrafficSelector selector2 = DefaultTrafficSelector.builder()
+                .matchIPProtocol((byte) IpProtocol.UDP.value())
+                .matchUdpDst(TpPort.tpPort(200))
+                .build();
         manager.addClassifierFlow(selector2, SLICE_IDS.get(1), TrafficClass.REAL_TIME);
 
         assertEquals(2, manager.getClassifierFlows(SLICE_IDS.get(1), TrafficClass.REAL_TIME).size());
