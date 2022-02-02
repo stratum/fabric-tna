@@ -13,6 +13,7 @@ import org.junit.rules.ExpectedException;
 import org.onlab.packet.IpPrefix;
 import org.onlab.packet.MacAddress;
 import org.onlab.packet.TpPort;
+import org.onosproject.cli.net.IpProtocol;
 import org.onosproject.codec.CodecService;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
@@ -374,7 +375,10 @@ public class SlicingManagerTest {
         manager.addSlice(SLICE_IDS.get(1));
         manager.addTrafficClass(SLICE_IDS.get(1), TC_CONFIG_REAL_TIME);
 
-        TrafficSelector selector = DefaultTrafficSelector.builder().matchUdpDst(TpPort.tpPort(100)).build();
+        TrafficSelector selector = DefaultTrafficSelector.builder()
+                .matchIPProtocol((byte) IpProtocol.UDP.value())
+                .matchUdpDst(TpPort.tpPort(100))
+                .build();
         manager.addClassifierFlow(selector, SLICE_IDS.get(1), TrafficClass.REAL_TIME);
         assertEquals(1, manager.getClassifierFlows(SLICE_IDS.get(1), TrafficClass.REAL_TIME).size());
         assertTrue(manager.getClassifierFlows(SLICE_IDS.get(1), TrafficClass.REAL_TIME).contains(selector));
@@ -389,16 +393,48 @@ public class SlicingManagerTest {
     }
 
     @Test
-    public void testAddClassifierFlowExceptionWrongSelector() {
+    public void testAddClassifierFlowExceptionInvalidFiveTuple() {
         TrafficSelector wrongSelector = DefaultTrafficSelector.builder().matchEthDst(MacAddress.IPV4_MULTICAST).build();
         exceptionRule.expect(SlicingException.class);
-        exceptionRule.expectMessage("Selector can only express a match on the L3-L4 5-tuple fields");
+        exceptionRule.expectMessage("only L3-L4 5-tuples fields are supported");
+        manager.addClassifierFlow(wrongSelector, SLICE_IDS.get(1), TrafficClass.REAL_TIME);
+    }
+
+    @Test
+    public void testAddClassifierFlowExceptionMissingIpProtoUdp() {
+        TrafficSelector wrongSelector = DefaultTrafficSelector.builder()
+                .matchUdpDst(TpPort.tpPort(100)).build();
+        exceptionRule.expect(SlicingException.class);
+        exceptionRule.expectMessage("missing or invalid IP_PROTO");
+        manager.addClassifierFlow(wrongSelector, SLICE_IDS.get(1), TrafficClass.REAL_TIME);
+    }
+
+    @Test
+    public void testAddClassifierFlowExceptionInvalidIpProto() {
+        TrafficSelector wrongSelector = DefaultTrafficSelector.builder()
+                .matchIPProtocol((byte) IpProtocol.TCP.value())
+                .matchUdpDst(TpPort.tpPort(100))
+                .build();
+        exceptionRule.expect(SlicingException.class);
+        exceptionRule.expectMessage("missing or invalid IP_PROTO");
+        manager.addClassifierFlow(wrongSelector, SLICE_IDS.get(1), TrafficClass.REAL_TIME);
+    }
+
+    @Test
+    public void testAddClassifierFlowExceptionMissingIpProtoTcp() {
+        TrafficSelector wrongSelector = DefaultTrafficSelector.builder()
+                .matchTcpSrc(TpPort.tpPort(100)).build();
+        exceptionRule.expect(SlicingException.class);
+        exceptionRule.expectMessage("missing or invalid IP_PROTO");
         manager.addClassifierFlow(wrongSelector, SLICE_IDS.get(1), TrafficClass.REAL_TIME);
     }
 
     @Test
     public void testRemoveClassifierFlow() {
-        TrafficSelector selector = DefaultTrafficSelector.builder().matchUdpDst(TpPort.tpPort(100)).build();
+        TrafficSelector selector = DefaultTrafficSelector.builder()
+                .matchIPProtocol((byte) IpProtocol.UDP.value())
+                .matchUdpDst(TpPort.tpPort(100))
+                .build();
         manager.addSlice(SLICE_IDS.get(1));
         manager.addTrafficClass(SLICE_IDS.get(1), TC_CONFIG_REAL_TIME);
         manager.addClassifierFlow(selector, SLICE_IDS.get(1), TrafficClass.REAL_TIME);
@@ -421,7 +457,10 @@ public class SlicingManagerTest {
 
     @Test
     public void testRemoveTcWithClassifierFlowException() {
-        TrafficSelector selector = DefaultTrafficSelector.builder().matchUdpDst(TpPort.tpPort(100)).build();
+        TrafficSelector selector = DefaultTrafficSelector.builder()
+                .matchIPProtocol((byte) IpProtocol.UDP.value())
+                .matchUdpDst(TpPort.tpPort(100))
+                .build();
         manager.addSlice(SLICE_IDS.get(1));
         manager.addTrafficClass(SLICE_IDS.get(1), TC_CONFIG_REAL_TIME);
         manager.addClassifierFlow(selector, SLICE_IDS.get(1), TrafficClass.REAL_TIME);
@@ -433,7 +472,10 @@ public class SlicingManagerTest {
 
     @Test
     public void testRemoveSliceWithClassifierFlowException() {
-        TrafficSelector selector = DefaultTrafficSelector.builder().matchUdpDst(TpPort.tpPort(100)).build();
+        TrafficSelector selector = DefaultTrafficSelector.builder()
+                .matchIPProtocol((byte) IpProtocol.UDP.value())
+                .matchUdpDst(TpPort.tpPort(100))
+                .build();
         manager.addSlice(SLICE_IDS.get(1));
         manager.addTrafficClass(SLICE_IDS.get(1), TC_CONFIG_REAL_TIME);
         manager.addClassifierFlow(selector, SLICE_IDS.get(1), TrafficClass.REAL_TIME);
