@@ -22,8 +22,10 @@ SENDER_PORT = 0
 RECEIVER_PORT = 1
 INT_COLLECTOR_PORT = 2
 
-HOP_LATENCY_MASK = 2**10
+# Report every 2^30 ns (~1 second)
 TIMESTAMP_MASK = 2**30
+# or for hop latency changes greater than 2^10 ns
+HOP_LATENCY_MASK = 2**10
 
 @group("int")
 class IntSingleFlow(TRexTest, IntTest):
