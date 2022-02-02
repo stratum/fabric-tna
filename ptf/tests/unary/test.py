@@ -1117,7 +1117,6 @@ class FabricDefaultVlanPacketInTest(FabricTest):
         pkt = testutils.simple_eth_packet(pktlen=MIN_PKT_LEN)
         self.add_forwarding_acl_punt_to_cpu(eth_type=pkt[Ether].type)
         for port in [self.port1, self.port2]:
-            import pdb; pdb.set_trace()
             self.send_packet(port, pkt)
             self.verify_packet_in(pkt, port)
         self.verify_no_other_packets()
