@@ -1,5 +1,5 @@
 # Copyright 2020-present Open Networking Foundation
-# SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
+# SPDX-License-Identifier: Apache-2.0
 
 PORTMAP ?= /fabric-tna/ptf/run/tm/port_map.veth.json
 GRPCADDR ?= 127.0.0.1:28000

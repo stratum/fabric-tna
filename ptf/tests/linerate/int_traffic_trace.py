@@ -1,5 +1,5 @@
 # Copyright 2020-present Open Networking Foundation
-# SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
+# SPDX-License-Identifier: Apache-2.0
 
 from datetime import datetime
 
@@ -29,7 +29,7 @@ INT_COLLECTOR_PORT = 2
 
 @group("int")
 class IntFlowFilterWithTrafficTrace(TRexTest, IntTest):
-    """ 
+    """
     This test performs a replay of real-time packet traffic captured from an Equinix
     datacenter in Chicago through our PISA switch. The traffic capture is read and
     replayed by TRex, the traffic generator used for our linerate tests.
@@ -114,7 +114,7 @@ class IntFlowFilterWithTrafficTrace(TRexTest, IntTest):
 
 @group("int")
 class IntIngressDropReportFilterWithTrafficTrace(TRexTest, IntTest):
-    """ 
+    """
     This test observes the behaviour of our P4 implementation of an INT drop
     report filter when we install an ACL entry to drop all packets in the
     ingress pipeline.
@@ -209,7 +209,7 @@ class IntIngressDropReportFilterWithTrafficTrace(TRexTest, IntTest):
 
 @group("int")
 class IntEgressDropReportFilterWithTrafficTrace(TRexTest, IntTest):
-    """ 
+    """
     This test observes the behavior of our P4 implementation of an INT drop
     report filter when we only configure the ingress VLAN table, so all traffic
     is dropped in the egress pipeline by the egress VLAN table.
