@@ -3106,7 +3106,7 @@ class FabricIntDeflectDropReportTest(IntTest):
             eg_port=eg_port,
             verify_pkt=False,
         )
-        self.verify_packet(exp_wip_int_pkt_masked, 0)
+        self.verify_packet(exp_wip_int_pkt_masked, self.port1)
 
         pkt_out = self.build_packet_out(
             exp_wip_int_pkt_masked.exp_pkt, RECIRCULATE_PORTS[0]
