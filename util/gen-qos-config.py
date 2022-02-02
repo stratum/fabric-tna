@@ -230,7 +230,7 @@ def queue_config(
     ct_base_use_limit = floor(pool_sizes[CT_APP_POOL] / port_count)
 
     # Weight doesn't matter, this is the only queue in the WRR/priority group
-    ct_wrr_weight = 0
+    ct_wrr_weight = 1
 
     params = dict(
         descr=f"Shared Control ({ct_slot_count} slots, "
