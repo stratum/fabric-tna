@@ -9,9 +9,9 @@ import org.onlab.packet.Ip4Prefix;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.DefaultApplicationId;
 import org.onosproject.net.DeviceId;
-import org.onosproject.net.behaviour.upf.GtpTunnelPeer;
-import org.onosproject.net.behaviour.upf.SessionDownlink;
-import org.onosproject.net.behaviour.upf.SessionUplink;
+import org.onosproject.net.behaviour.upf.UpfGtpTunnelPeer;
+import org.onosproject.net.behaviour.upf.UpfSessionDownlink;
+import org.onosproject.net.behaviour.upf.UpfSessionUplink;
 import org.onosproject.net.behaviour.upf.UpfApplication;
 import org.onosproject.net.behaviour.upf.UpfInterface;
 import org.onosproject.net.behaviour.upf.UpfTerminationDownlink;
@@ -112,24 +112,24 @@ public final class TestUpfConstants {
     public static final Pair<Short, Short> APP_L4_RANGE = Pair.of((short) 100, (short) 1000);
     public static final byte APP_IP_PROTO = 6;
 
-    public static final GtpTunnelPeer GTP_TUNNEL_PEER = GtpTunnelPeer.builder()
+    public static final UpfGtpTunnelPeer GTP_TUNNEL_PEER = UpfGtpTunnelPeer.builder()
             .withTunnelPeerId(ENB_GTP_TUNNEL_PEER)
             .withSrcAddr(S1U_ADDR)
             .withDstAddr(ENB_ADDR)
             .withSrcPort(TUNNEL_SPORT)
             .build();
 
-    public static final SessionUplink UPLINK_UE_SESSION = SessionUplink.builder()
+    public static final UpfSessionUplink UPLINK_UE_SESSION = UpfSessionUplink.builder()
             .withTeid(TEID_VALUE)
             .withTunDstAddr(S1U_ADDR)
             .build();
 
-    public static final SessionDownlink DOWNLINK_UE_SESSION = SessionDownlink.builder()
+    public static final UpfSessionDownlink DOWNLINK_UE_SESSION = UpfSessionDownlink.builder()
             .withUeAddress(UE_ADDR)
             .withGtpTunnelPeerId(ENB_GTP_TUNNEL_PEER)
             .build();
 
-    public static final SessionDownlink DOWNLINK_UE_SESSION_DBUF = SessionDownlink.builder()
+    public static final UpfSessionDownlink DOWNLINK_UE_SESSION_DBUF = UpfSessionDownlink.builder()
             .withUeAddress(UE_ADDR)
             .withGtpTunnelPeerId(DBUF_TUNNEL_PEER)
             .needsBuffering(true)
@@ -168,6 +168,7 @@ public final class TestUpfConstants {
             .withL4PortRange(Range.closed(APP_L4_RANGE.getLeft(), APP_L4_RANGE.getRight()))
             .withIpProto(APP_IP_PROTO)
             .withPriority(APP_FILTERING_PRIORITY)
+            .withSliceId(SLICE_MOBILE)
             .build();
 
     public static final UpfTerminationDownlink DOWNLINK_UPF_TERMINATION_NO_TC = UpfTerminationDownlink.builder()
@@ -183,9 +184,9 @@ public final class TestUpfConstants {
             .needsDropping(true)
             .build();
 
-    public static final UpfInterface UPLINK_INTERFACE = UpfInterface.createS1uFrom(S1U_ADDR);
+    public static final UpfInterface UPLINK_INTERFACE = UpfInterface.createS1uFrom(S1U_ADDR, SLICE_MOBILE);
 
-    public static final UpfInterface DOWNLINK_INTERFACE = UpfInterface.createUePoolFrom(UE_POOL);
+    public static final UpfInterface DOWNLINK_INTERFACE = UpfInterface.createUePoolFrom(UE_POOL, SLICE_MOBILE);
 
     public static final FlowRule FABRIC_INGRESS_GTP_TUNNEL_PEER = DefaultFlowRule.builder()
             .forDevice(DEVICE_ID).fromApp(APP_ID).makePermanent()

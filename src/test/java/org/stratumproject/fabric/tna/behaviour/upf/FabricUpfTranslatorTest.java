@@ -4,9 +4,9 @@ package org.stratumproject.fabric.tna.behaviour.upf;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.junit.Test;
-import org.onosproject.net.behaviour.upf.GtpTunnelPeer;
-import org.onosproject.net.behaviour.upf.SessionDownlink;
-import org.onosproject.net.behaviour.upf.SessionUplink;
+import org.onosproject.net.behaviour.upf.UpfGtpTunnelPeer;
+import org.onosproject.net.behaviour.upf.UpfSessionDownlink;
+import org.onosproject.net.behaviour.upf.UpfSessionUplink;
 import org.onosproject.net.behaviour.upf.UpfApplication;
 import org.onosproject.net.behaviour.upf.UpfInterface;
 import org.onosproject.net.behaviour.upf.UpfProgrammableException;
@@ -23,8 +23,8 @@ public class FabricUpfTranslatorTest {
 
     @Test
     public void fabricEntryToGtpTunnelPeerTest() {
-        GtpTunnelPeer translated;
-        GtpTunnelPeer expected = TestUpfConstants.GTP_TUNNEL_PEER;
+        UpfGtpTunnelPeer translated;
+        UpfGtpTunnelPeer expected = TestUpfConstants.GTP_TUNNEL_PEER;
         try {
             translated = upfTranslator.fabricEntryToGtpTunnelPeer(TestUpfConstants.FABRIC_EGRESS_GTP_TUNNEL_PEER);
         } catch (UpfProgrammableException e) {
@@ -37,8 +37,8 @@ public class FabricUpfTranslatorTest {
 
     @Test
     public void fabricEntryToUplinkUeSessionTest() {
-        SessionUplink translated;
-        SessionUplink expected = TestUpfConstants.UPLINK_UE_SESSION;
+        UpfSessionUplink translated;
+        UpfSessionUplink expected = TestUpfConstants.UPLINK_UE_SESSION;
         try {
             translated = upfTranslator.fabricEntryToUeSessionUplink(TestUpfConstants.FABRIC_UPLINK_UE_SESSION);
         } catch (UpfProgrammableException e) {
@@ -51,8 +51,8 @@ public class FabricUpfTranslatorTest {
 
     @Test
     public void fabricEntryToDownlinkUeSessionTest() {
-        SessionDownlink translated;
-        SessionDownlink expected = TestUpfConstants.DOWNLINK_UE_SESSION;
+        UpfSessionDownlink translated;
+        UpfSessionDownlink expected = TestUpfConstants.DOWNLINK_UE_SESSION;
         try {
             translated = upfTranslator.fabricEntryToUeSessionDownlink(TestUpfConstants.FABRIC_DOWNLINK_UE_SESSION);
         } catch (UpfProgrammableException e) {
@@ -65,8 +65,8 @@ public class FabricUpfTranslatorTest {
 
     @Test
     public void fabricEntryToDownlinkUeSessionDbufTest() {
-        SessionDownlink translated;
-        SessionDownlink expected = TestUpfConstants.DOWNLINK_UE_SESSION_DBUF;
+        UpfSessionDownlink translated;
+        UpfSessionDownlink expected = TestUpfConstants.DOWNLINK_UE_SESSION_DBUF;
         try {
             translated = upfTranslator.fabricEntryToUeSessionDownlink(TestUpfConstants.FABRIC_DOWNLINK_UE_SESSION_DBUF);
         } catch (UpfProgrammableException e) {
