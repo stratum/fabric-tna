@@ -22,7 +22,7 @@ make "${PROFILE}"
 
 # PROFILE env variable set by Jenkins
 echo "Run linerate tests for profile ${PROFILE}"
-./ptf/run/hw/linerate "${PROFILE}" TEST=qos_tests.StrictPriorityControlTrafficIsPrioritized
+./ptf/run/hw/linerate "${PROFILE}"
 
 rm -rf "logs/${PROFILE}"
 mkdir -p "logs/${PROFILE}"
