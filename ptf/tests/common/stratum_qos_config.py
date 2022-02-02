@@ -12,12 +12,10 @@ import os
 config_script_path = (
     os.path.dirname(os.path.realpath(__file__)) + "/../../../util/gen-qos-config.py"
 )
-spec = importlib.util.spec_from_file_location(
-    "gen_stratum_qos_config", config_script_path
-)
-gen_stratum_qos_config = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(gen_stratum_qos_config)
+spec = importlib.util.spec_from_file_location("gen_qos_config", config_script_path)
+gen_qos_config = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(gen_qos_config)
 
 
 def vendor_config(yaml_config):
-    return gen_stratum_qos_config.vendor_config(yaml_config)
+    return gen_qos_config.text_config(yaml_config, type="stratum")
