@@ -131,6 +131,7 @@ def queue_mapping(
             # {descr}
             queue_id: {queue_id}
             priority: PRIO_{prio}
+            remaining_priority: PRIO_{prio}
             weight: {weight}
             minimum_guaranteed_cells: 0
             pool: EGRESS_APP_POOL_{app_pool}
