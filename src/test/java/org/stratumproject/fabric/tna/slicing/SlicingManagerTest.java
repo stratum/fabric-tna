@@ -410,7 +410,8 @@ public class SlicingManagerTest {
 
     @Test
     public void testAddClassifierFlowExceptionInvalidFiveTuple() {
-        TrafficSelector wrongSelector = DefaultTrafficSelector.builder().matchEthDst(MacAddress.IPV4_MULTICAST).build();
+        TrafficSelector wrongSelector = DefaultTrafficSelector.builder()
+                .matchEthDst(MacAddress.IPV4_MULTICAST).build();
         exceptionRule.expect(SlicingException.class);
         exceptionRule.expectMessage("only L3-L4 5-tuples fields are supported");
         manager.addClassifierFlow(wrongSelector, SLICE_IDS.get(1), TrafficClass.REAL_TIME);
@@ -421,18 +422,7 @@ public class SlicingManagerTest {
         TrafficSelector wrongSelector = DefaultTrafficSelector.builder()
                 .matchUdpDst(TpPort.tpPort(100)).build();
         exceptionRule.expect(SlicingException.class);
-        exceptionRule.expectMessage("missing or invalid IP_PROTO");
-        manager.addClassifierFlow(wrongSelector, SLICE_IDS.get(1), TrafficClass.REAL_TIME);
-    }
-
-    @Test
-    public void testAddClassifierFlowExceptionInvalidIpProto() {
-        TrafficSelector wrongSelector = DefaultTrafficSelector.builder()
-                .matchIPProtocol((byte) IpProtocol.TCP.value())
-                .matchUdpDst(TpPort.tpPort(100))
-                .build();
-        exceptionRule.expect(SlicingException.class);
-        exceptionRule.expectMessage("missing or invalid IP_PROTO");
+        exceptionRule.expectMessage("missing or invalid IP_PROTO, expected IP_PROTO=17");
         manager.addClassifierFlow(wrongSelector, SLICE_IDS.get(1), TrafficClass.REAL_TIME);
     }
 
@@ -441,7 +431,36 @@ public class SlicingManagerTest {
         TrafficSelector wrongSelector = DefaultTrafficSelector.builder()
                 .matchTcpSrc(TpPort.tpPort(100)).build();
         exceptionRule.expect(SlicingException.class);
-        exceptionRule.expectMessage("missing or invalid IP_PROTO");
+        exceptionRule.expectMessage("missing or invalid IP_PROTO, expected IP_PROTO=6");
+        manager.addClassifierFlow(wrongSelector, SLICE_IDS.get(1), TrafficClass.REAL_TIME);
+    }
+
+    @Test
+    public void testAddClassifierFlowExceptionInvalidIpProtoTcp() {
+        TrafficSelector wrongSelector = DefaultTrafficSelector.builder()
+                .matchIPProtocol((byte) IpProtocol.TCP.value())
+                .matchUdpDst(TpPort.tpPort(100))
+                .build();
+        exceptionRule.expect(SlicingException.class);
+        exceptionRule.expectMessage("missing or invalid IP_PROTO, expected IP_PROTO=17");
+        manager.addClassifierFlow(wrongSelector, SLICE_IDS.get(1), TrafficClass.REAL_TIME);
+    }
+
+    @Test
+    public void testAddClassifierFlowExceptionInvalidIpProtoUdp() {
+        TrafficSelector wrongSelector = DefaultTrafficSelector.builder()
+                .matchTcpDst(TpPort.tpPort(100))
+                .build();
+        exceptionRule.expect(SlicingException.class);
+        exceptionRule.expectMessage("missing or invalid IP_PROTO, expected IP_PROTO=6");
+        manager.addClassifierFlow(wrongSelector, SLICE_IDS.get(1), TrafficClass.REAL_TIME);
+    }
+
+    @Test
+    public void testAddClassifierFlowValidWithoutIpProto() {
+        TrafficSelector wrongSelector = DefaultTrafficSelector.builder()
+                .matchIPSrc(IpPrefix.IPV4_LINK_LOCAL_PREFIX)
+                .build();
         manager.addClassifierFlow(wrongSelector, SLICE_IDS.get(1), TrafficClass.REAL_TIME);
     }
 
