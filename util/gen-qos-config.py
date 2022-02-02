@@ -503,7 +503,7 @@ def vendor_config(shaping_blobs, queue_blobs):
     return f"""vendor_config {{
   tofino_config {{
     node_id_to_port_shaping_config {{
-      key: 1
+      key: 1 
       value {{\n{NEW_LINE.join(shaping_blobs)}
       }}
     }}
