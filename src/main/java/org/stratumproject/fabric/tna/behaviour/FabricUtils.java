@@ -139,19 +139,6 @@ public final class FabricUtils {
         return (sliceId << TC_BITWIDTH) + tc;
     }
 
-    public static boolean fiveTupleOnly(TrafficSelector selector) {
-        // 5-tuple only
-        return selector.criteria().stream().allMatch(c -> {
-            return c.type() == Criterion.Type.IPV4_SRC ||
-                   c.type() == Criterion.Type.IPV4_DST ||
-                   c.type() == Criterion.Type.IP_PROTO ||
-                   c.type() == Criterion.Type.TCP_SRC ||
-                   c.type() == Criterion.Type.TCP_DST ||
-                   c.type() == Criterion.Type.UDP_SRC ||
-                   c.type() == Criterion.Type.UDP_DST;
-        });
-    }
-
     /**
      * Port type metadata conversion.
      *
