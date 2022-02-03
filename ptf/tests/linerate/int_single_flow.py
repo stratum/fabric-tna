@@ -22,6 +22,10 @@ SENDER_PORT = 0
 RECEIVER_PORT = 1
 INT_COLLECTOR_PORT = 2
 
+# Report every 2^30 ns (~1 second)
+TIMESTAMP_MASK = 2**30
+# or for hop latency changes greater than 2^10 ns
+HOP_LATENCY_MASK = 2**10
 
 @group("int")
 class IntSingleFlow(TRexTest, IntTest):
@@ -32,6 +36,7 @@ class IntSingleFlow(TRexTest, IntTest):
         pkt = testutils.simple_udp_packet(pktlen=1400)
 
         # Install routing flows onto hardware switch
+        self.set_up_flow_report_filter_config(HOP_LATENCY_MASK, TIMESTAMP_MASK)
         self.set_up_int_flows(
             is_device_spine=False, pkt=pkt, send_report_to_spine=False
         )
