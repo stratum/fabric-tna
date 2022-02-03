@@ -3081,7 +3081,6 @@ class FabricIntDeflectDropReportTest(IntTest):
             truncate=False,  # packet will not be truncated
         )
 
-        self.set_up_flow_report_filter_config(0xF0000000, 0xFFFFFFFF)
         self.set_up_int_flows(is_device_spine, pkt, send_report_to_spine)
         self.runIPv4UnicastTest(
             pkt=pkt,
