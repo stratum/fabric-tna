@@ -1,5 +1,6 @@
 # Copyright 2021-present Open Networking Foundation
-# SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0 AND Apache-2.0
+# SPDX-License-Identifier: Apache-2.0
+
 from base_test import autocleanup, is_v1model, tvsetup
 from fabric_test import *  # noqa
 from ptf.testutils import group

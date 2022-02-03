@@ -1,6 +1,6 @@
 <!--
 Copyright 2021-present Open Networking Foundation
-SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
+SPDX-License-Identifier: Apache-2.0
 -->
 
 # Snippets to test deflect on drop INT report with P4Runtime shell

@@ -5,19 +5,11 @@ Source: https://github.com/stratum/fabric-tna
 
 Files: tofino-netcfg.json ptf/run/tm/*.json ptf/run/hw/*.json src/test/resources/*.json .vscode/settings.json
 Copyright: 2020-present Open Networking Foundation
-License: LicenseRef-ONF-Member-Only-1.0
+License: Apache-2.0
 
-Files: ptf/run/bmv2/chassis_config.txt
+Files: ptf/run/bmv2/chassis_config.txt ptf/tests/common/bmd_bytes.py ptf/run/bmv2/port_map.veth.json ptf/images/*
 Copyright: 2021-present Open Networking Foundation
-License: LicenseRef-ONF-Member-Only-1.0
-
-Files: ptf/run/bmv2/port_map.veth.json
-Copyright: 2021-present Open Networking Foundation
-License: LicenseRef-ONF-Member-Only-1.0
-
-Files: ptf/images/*
-Copyright: 2021-present Open Networking Foundation
-License: LicenseRef-ONF-Member-Only-1.0
+License: Apache-2.0
 
 Files: src/main/resources/META-INF/NOTICE
 Copyright: No Copyright
