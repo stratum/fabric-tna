@@ -1,7 +1,3 @@
-# Copyright 2021-present Open Networking Foundation
-# SPDX-License-Identifier: Apache-2.0
-
-
 from ptf import testutils
 
 # Size for different headers
