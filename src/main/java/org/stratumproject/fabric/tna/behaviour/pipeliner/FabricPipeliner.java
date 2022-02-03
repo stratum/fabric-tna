@@ -212,7 +212,7 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
 
         // Set up recirculation ports as untagged (used for INT reports and
         // UE-to-UE in SPGW pipe).
-        List<Integer> recircPorts = capabilities.isArchTna() ? RECIRC_PORTS : V1MODEL_RECIRC_PORT;
+        List<Long> recircPorts = capabilities.isArchTna() ? RECIRC_PORTS : V1MODEL_RECIRC_PORT;
         recircPorts.forEach(port -> {
             flowRuleService.applyFlowRules(
                     ingressVlanRule(port, false, DEFAULT_VLAN, PORT_TYPE_INTERNAL),
@@ -446,7 +446,7 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
                 .build();
     }
 
-    public FlowRule egressVlanRule(int port, int vlanId, boolean tagged) {
+    public FlowRule egressVlanRule(long port, int vlanId, boolean tagged) {
         final TrafficSelector selector = DefaultTrafficSelector.builder()
                 .add(PiCriterion.builder()
                              .matchExact(P4InfoConstants.HDR_VLAN_ID, vlanId)

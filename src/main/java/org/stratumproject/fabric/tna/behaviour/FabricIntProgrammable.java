@@ -93,20 +93,20 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
     // Default latency threshold for queue report and queue size.
     private static final byte MAX_QUEUES = 32;
 
-    private static final Map<Integer, Integer> QUAD_PIPE_MIRROR_SESS_TO_RECIRC_PORTS =
-            ImmutableMap.<Integer, Integer>builder()
-                    .put(0x200, 0xFFFFFF00)
-                    .put(0x201, 0xFFFFFF01)
-                    .put(0x202, 0xFFFFFF02)
-                    .put(0x203, 0xFFFFFF03).build();
+    private static final Map<Integer, Long> QUAD_PIPE_MIRROR_SESS_TO_RECIRC_PORTS =
+            ImmutableMap.<Integer, Long>builder()
+                    .put(0x200, 0xFFFFFF00L)
+                    .put(0x201, 0xFFFFFF01L)
+                    .put(0x202, 0xFFFFFF02L)
+                    .put(0x203, 0xFFFFFF03L).build();
 
-    private static final Map<Integer, Integer> DUAL_PIPE_MIRROR_SESS_TO_RECIRC_PORTS =
-            ImmutableMap.<Integer, Integer>builder()
-                    .put(0x200, 0xFFFFFF00)
-                    .put(0x201, 0xFFFFFF01).build();
+    private static final Map<Integer, Long> DUAL_PIPE_MIRROR_SESS_TO_RECIRC_PORTS =
+            ImmutableMap.<Integer, Long>builder()
+                    .put(0x200, 0xFFFFFF00L)
+                    .put(0x201, 0xFFFFFF01L).build();
 
-    private static final Map<Integer, Integer> V1MODEL_MIRROR_SESS_TO_RECIRC_PORT =
-            ImmutableMap.<Integer, Integer>builder()
+    private static final Map<Integer, Long> V1MODEL_MIRROR_SESS_TO_RECIRC_PORT =
+            ImmutableMap.<Integer, Long>builder()
             .put(V1MODEL_INT_REPORT_MIRROR_ID, V1MODEL_RECIRC_PORT.get(0)).build();
 
     private static final Set<TableId> TABLES_TO_CLEANUP = Sets.newHashSet(
@@ -171,7 +171,7 @@ public class FabricIntProgrammable extends AbstractFabricHandlerBehavior
             return false;
         }
 
-        Map<Integer, Integer> sessionToPortMap = null;
+        Map<Integer, Long> sessionToPortMap = null;
         if (capabilities.isArchTna()) {
             final int hwPipeCount = capabilities.hwPipeCount();
             switch (hwPipeCount) {

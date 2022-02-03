@@ -152,7 +152,7 @@ public class FabricPipelinerTest {
                 .build();
     }
 
-    private FlowRule buildEgressVlanRule(int port) {
+    private FlowRule buildEgressVlanRule(long port) {
         final TrafficSelector egressVlanSelector = DefaultTrafficSelector.builder()
         .add(PiCriterion.builder()
                 .matchExact(P4InfoConstants.HDR_VLAN_ID, DEFAULT_VLAN)
@@ -233,7 +233,7 @@ public class FabricPipelinerTest {
         final FlowRule expectedCpuFwdClsRule =
                 buildFwdClsRule(CPU_PORT, null, Ethernet.TYPE_IPV4, FWD_IPV4_ROUTING, DEFAULT_FLOW_PRIORITY);
         final GroupDescription expectedPacketInCloneGroup = buildPacketInCloneGroup();
-        final List<Integer> recircPorts = this.isArchV1model ? V1MODEL_RECIRC_PORT : RECIRC_PORTS;
+        final List<Long> recircPorts = this.isArchV1model ? V1MODEL_RECIRC_PORT : RECIRC_PORTS;
 
         flowRuleService.applyFlowRules(
                 capture(capturedSwitchInfoRule),
