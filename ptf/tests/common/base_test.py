@@ -1,5 +1,6 @@
 # Copyright 2013-2018 Barefoot Networks, Inc.
-# SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0 AND Apache-2.0
+# SPDX-License-Identifier: Apache-2.0
+
 
 #
 # Antonin Bas (antonin@barefootnetworks.com)

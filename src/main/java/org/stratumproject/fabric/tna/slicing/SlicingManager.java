@@ -1,10 +1,11 @@
 // Copyright 2021-present Open Networking Foundation
-// SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
+// SPDX-License-Identifier: Apache-2.0
 package org.stratumproject.fabric.tna.slicing;
 
 import com.google.common.collect.Lists;
 import com.google.common.hash.Hashing;
 import org.onlab.util.KryoNamespace;
+import org.onosproject.cli.net.IpProtocol;
 import org.onosproject.codec.CodecService;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
@@ -19,6 +20,8 @@ import org.onosproject.net.flow.DefaultTrafficTreatment;
 import org.onosproject.net.flow.FlowRule;
 import org.onosproject.net.flow.FlowRuleService;
 import org.onosproject.net.flow.TrafficSelector;
+import org.onosproject.net.flow.criteria.Criterion;
+import org.onosproject.net.flow.criteria.IPProtocolCriterion;
 import org.onosproject.net.flow.criteria.PiCriterion;
 import org.onosproject.net.intent.WorkPartitionService;
 import org.onosproject.net.pi.model.PiTableId;
@@ -67,7 +70,6 @@ import static java.lang.String.format;
 import static org.onlab.util.Tools.groupedThreads;
 import static org.slf4j.LoggerFactory.getLogger;
 import static org.stratumproject.fabric.tna.Constants.APP_NAME_SLICING;
-import static org.stratumproject.fabric.tna.behaviour.FabricUtils.fiveTupleOnly;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.sliceTcConcat;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_QOS_DEFAULT_TC;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_QOS_QUEUES;
@@ -390,6 +392,13 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
     }
 
     @Override
+    public void resetDefaultTrafficClassForAllSlices() {
+        for (SliceId sliceId : defaultTcStore.keySet()) {
+            setDefaultTrafficClass(sliceId, TrafficClass.BEST_EFFORT);
+        }
+    }
+
+    @Override
     public Map<SliceStoreKey, TrafficClassDescription> getSliceStore() {
         return Map.copyOf(sliceStore.asJavaMap());
     }
@@ -399,10 +408,11 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
         if (selector.equals(DefaultTrafficSelector.emptySelector())) {
             throw new SlicingException(INVALID, "Empty traffic selector is not allowed");
         }
-        // Accept 5-tuple only
-        if (!fiveTupleOnly(selector)) {
-            throw new SlicingException(UNSUPPORTED,
-                    "Selector can only express a match on the L3-L4 5-tuple fields");
+        try {
+            validateFiveTuple(selector);
+        } catch (SlicingException e) {
+            throw new SlicingException(e.type(), format(
+                    "Invalid selector (%s)", e.getMessage()));
         }
 
         SliceStoreKey value = new SliceStoreKey(sliceId, tc);
@@ -433,6 +443,11 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
         }
 
         return true;
+    }
+
+    @Override
+    public void removeAllClassifierFlows() {
+        classifierFlowStore.clear();
     }
 
     @Override
@@ -624,6 +639,36 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
             log.info("System slice or traffic class updated: sliceId={}, tc={}",
                     getSystemSlice(), getSystemTrafficClass());
         }
+    }
+
+    private void validateFiveTuple(TrafficSelector selector)
+            throws SlicingException {
+        // 5-tuple only, IP_PROTO required when matching on L4 ports.
+        short protoNeeded = -1;
+        short protoFound = 0;
+        for (Criterion criterion : selector.criteria()) {
+            Criterion.Type type = criterion.type();
+            if (type == Criterion.Type.IP_PROTO) {
+                protoFound = ((IPProtocolCriterion) criterion).protocol();
+            } else if (type == Criterion.Type.TCP_SRC ||
+                    type == Criterion.Type.TCP_DST) {
+                protoNeeded = IpProtocol.TCP.value();
+            } else if (type == Criterion.Type.UDP_SRC ||
+                    type == Criterion.Type.UDP_DST) {
+                protoNeeded = IpProtocol.UDP.value();
+            } else if (!(type == Criterion.Type.IPV4_SRC ||
+                    type == Criterion.Type.IPV4_DST)) {
+                throw new SlicingException(UNSUPPORTED, format(
+                        "matching on %s is not supported, only L3-L4 5-tuples fields are supported", type));
+            }
+        }
+
+        if (protoNeeded != -1 && protoNeeded != protoFound) {
+            throw new SlicingException(INVALID, format(
+                    "missing or invalid %s, expected %s=%s",
+                    Criterion.Type.IP_PROTO, Criterion.Type.IP_PROTO, protoNeeded));
+        }
+
     }
 
     private class InternalSliceListener implements MapEventListener<SliceStoreKey, TrafficClassDescription> {

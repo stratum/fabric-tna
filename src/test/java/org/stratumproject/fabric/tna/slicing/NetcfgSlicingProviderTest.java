@@ -1,5 +1,5 @@
 // Copyright 2022-present Open Networking Foundation
-// SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
+// SPDX-License-Identifier: Apache-2.0
 
 package org.stratumproject.fabric.tna.slicing;
 
@@ -199,6 +199,11 @@ public class NetcfgSlicingProviderTest {
         }
 
         @Override
+        public void resetDefaultTrafficClassForAllSlices() {
+
+        }
+
+        @Override
         public boolean addClassifierFlow(TrafficSelector selector, SliceId sliceId, TrafficClass tc) {
             return false;
         }
@@ -206,6 +211,11 @@ public class NetcfgSlicingProviderTest {
         @Override
         public boolean removeClassifierFlow(TrafficSelector selector, SliceId sliceId, TrafficClass tc) {
             return false;
+        }
+
+        @Override
+        public void removeAllClassifierFlows() {
+
         }
 
         @Override

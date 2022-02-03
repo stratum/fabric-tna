@@ -1,5 +1,5 @@
 // Copyright 2018-present Open Networking Foundation
-// SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
+// SPDX-License-Identifier: Apache-2.0
 
 package org.stratumproject.fabric.tna.behaviour;
 
@@ -137,19 +137,6 @@ public final class FabricUtils {
         checkArgument(sliceId >= 0 && sliceId <= MAX_SLICE_ID, "Invalid sliceId");
         checkArgument(tc >= 0 && tc <= MAX_TC, "Invalid tc");
         return (sliceId << TC_BITWIDTH) + tc;
-    }
-
-    public static boolean fiveTupleOnly(TrafficSelector selector) {
-        // 5-tuple only
-        return selector.criteria().stream().allMatch(c -> {
-            return c.type() == Criterion.Type.IPV4_SRC ||
-                   c.type() == Criterion.Type.IPV4_DST ||
-                   c.type() == Criterion.Type.IP_PROTO ||
-                   c.type() == Criterion.Type.TCP_SRC ||
-                   c.type() == Criterion.Type.TCP_DST ||
-                   c.type() == Criterion.Type.UDP_SRC ||
-                   c.type() == Criterion.Type.UDP_DST;
-        });
     }
 
     /**
