@@ -6,7 +6,7 @@ import difflib
 import time
 from unittest import skip, skipIf
 
-from base_test import autocleanup, is_v1model, tvsetup
+from base_test import autocleanup, is_v1model, tvsetup, PORT_SIZE_BYTES
 from fabric_test import *  # noqa
 from p4.config.v1 import p4info_pb2
 from ptf.testutils import group
@@ -2471,7 +2471,7 @@ class ActionProfileMemberReadWriteTest(FabricTest):
     @autocleanup
     def doRunTest(self):
         req, _ = self.add_next_hashed_group_member(
-            "output_hashed", [("port_num", stringify(self.port1, 4))]
+            "output_hashed", [("port_num", stringify(self.port1, PORT_SIZE_BYTES))]
         )
         expected_action_profile_member = req.updates[0].entity.action_profile_member
         mbr_id = expected_action_profile_member.member_id
@@ -2491,7 +2491,7 @@ class ActionProfileGroupReadWriteTest(FabricTest):
     @autocleanup
     def doRunTest(self):
         req, _ = self.add_next_hashed_group_member(
-            "output_hashed", [("port_num", stringify(1, 4))]
+            "output_hashed", [("port_num", stringify(1, PORT_SIZE_BYTES))]
         )
         member_installed = req.updates[0].entity.action_profile_member
         mbr_id = member_installed.member_id
@@ -2515,7 +2515,7 @@ class ActionProfileGroupModificationTest(FabricTest):
         mbr_ids = []
         for port_num in range(1, 4):
             req, _ = self.add_next_hashed_group_member(
-                "output_hashed", [("port_num", stringify(port_num, 4))]
+                "output_hashed", [("port_num", stringify(port_num, PORT_SIZE_BYTES))]
             )
             member_installed = req.updates[0].entity.action_profile_member
             mbr_ids.append(member_installed.member_id)

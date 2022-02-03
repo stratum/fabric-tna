@@ -138,6 +138,11 @@ def de_canonicalize_bytes(bitwidth: int, input: bytes):
     return input.rjust(byte_width, b"\0")  # right padding <-> BigEndian
 
 
+# Workaround to choose byte size of port-related fields.
+# TODO: Remove when canonical value is supported on both Stratum and ONOS.
+PORT_SIZE_BYTES = 4 if is_tna() else 2
+PORT_SIZE_BITS = 32 if is_tna() else 9
+
 # Used to indicate that the gRPC error Status object returned by the server has
 # an incorrect format.
 class P4RuntimeErrorFormatException(Exception):
@@ -367,7 +372,7 @@ class P4RuntimeTest(BaseTest):
             exp_pkt_in.payload = bytes(exp_pkt)
             ingress_physical_port = exp_pkt_in.metadata.add()
             ingress_physical_port.metadata_id = 0
-            ingress_physical_port.value = stringify(exp_in_port, 4)
+            ingress_physical_port.value = stringify(exp_in_port, PORT_SIZE_BYTES)
             tvutils.add_packet_in_expectation(self.tc, exp_pkt_in)
         else:
             pkt_in_msg = self.get_packet_in(timeout=timeout)
