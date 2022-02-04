@@ -19,7 +19,7 @@ import static org.slf4j.LoggerFactory.getLogger;
 import static org.stratumproject.fabric.tna.Constants.BMV2_COLOR_RED;
 import static org.stratumproject.fabric.tna.Constants.TNA;
 import static org.stratumproject.fabric.tna.Constants.V1MODEL;
-import static org.stratumproject.fabric.tna.Constants.SDN_PORT_CPU;
+import static org.stratumproject.fabric.tna.Constants.PORT_CPU;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_SESSIONS;
 
 /**
@@ -80,33 +80,7 @@ public class FabricCapabilities {
     }
 
     public Optional<Long> cpuPort() {
-        // This is probably brittle, but needed to dynamically get the CPU port
-        // for different platforms.
-        if (pipeconf.extension(CPU_PORT_TXT).isEmpty()) {
-            log.warn("Missing {} extension in pipeconf {}", CPU_PORT_TXT, pipeconf.id());
-            return Optional.of(SDN_PORT_CPU);
-        }
-        try {
-            final InputStream stream = pipeconf.extension(CPU_PORT_TXT).get();
-            final BufferedReader buff = new BufferedReader(
-                    new InputStreamReader(stream));
-            final String str = buff.readLine();
-            buff.close();
-            if (str == null) {
-                log.error("Empty CPU port file for {}", pipeconf.id());
-                return Optional.empty();
-            }
-            try {
-                return Optional.of(Long.parseLong(str));
-            } catch (NumberFormatException e) {
-                log.error("Invalid CPU port for {}: {}", pipeconf.id(), str);
-                return Optional.empty();
-            }
-        } catch (IOException e) {
-            log.error("Unable to read CPU port file of {}: {}",
-                    pipeconf.id(), e.getMessage());
-            return Optional.empty();
-        }
+        return Optional.of(PORT_CPU);
     }
 
     /**

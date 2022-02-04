@@ -11,9 +11,9 @@ control Acl (inout ingress_headers_t hdr,
              inout fabric_ingress_metadata_t fabric_md,
              in ingress_intrinsic_metadata_t ig_intr_md,
              inout ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr,
-             inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm,
-             in FabricPortId_t ingress_port) {
+             inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm) {
 
+    FabricPortId_t ig_port = (FabricPortId_t)ig_intr_md.ingress_port;
     /*
      * ACL Table.
      */
@@ -84,7 +84,7 @@ control Acl (inout ingress_headers_t hdr,
 
     table acl {
         key = {
-            ingress_port             : ternary @name("ig_port");   // 9
+            ig_port                  : ternary @name("ig_port");   // 9
             fabric_md.lkp.eth_dst    : ternary @name("eth_dst");   // 48
             fabric_md.lkp.eth_src    : ternary @name("eth_src");   // 48
             fabric_md.lkp.vlan_id    : ternary @name("vlan_id");   // 12
@@ -116,6 +116,7 @@ control Acl (inout ingress_headers_t hdr,
     }
 
     apply {
+
         acl.apply();
     }
 }

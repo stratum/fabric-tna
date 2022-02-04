@@ -60,7 +60,7 @@ import static org.stratumproject.fabric.tna.Constants.PKT_IN_MIRROR_SESSION_ID;
 import static org.stratumproject.fabric.tna.Constants.DEFAULT_VLAN;
 import static org.stratumproject.fabric.tna.Constants.FWD_MPLS;
 import static org.stratumproject.fabric.tna.Constants.FWD_IPV4_ROUTING;
-import static org.stratumproject.fabric.tna.Constants.SDN_PORT_CPU;
+import static org.stratumproject.fabric.tna.Constants.PORT_CPU;
 import static org.stratumproject.fabric.tna.behaviour.FabricUtils.KRYO;
 
 @RunWith(Parameterized.class)
@@ -94,7 +94,7 @@ public class FabricPipelinerTest {
     public void setup() {
         // Common setup between TNA and bmv2
         FabricCapabilities capabilities = createMock(FabricCapabilities.class);
-        expect(capabilities.cpuPort()).andReturn(Optional.of(SDN_PORT_CPU)).anyTimes();
+        expect(capabilities.cpuPort()).andReturn(Optional.of(PORT_CPU)).anyTimes();
         expect(capabilities.isArchV1model()).andReturn(this.isArchV1model).anyTimes();
         expect(capabilities.isArchTna()).andReturn(!this.isArchV1model).anyTimes();
         replay(capabilities);

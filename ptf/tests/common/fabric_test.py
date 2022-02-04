@@ -43,13 +43,6 @@ vlan_confs = {
     "untag->tag": [False, True],
 }
 
-SDN_TO_SDK_PORT = {
-  0xFFFFFF00: 0x44,
-  0xFFFFFF01: 0xC4,
-  0xFFFFFF02: 0x144,
-  0xFFFFFF03: 0x1C4,
-}
-
 BASE_PKT_TYPES = {"tcp", "udp", "icmp", "sctp"}
 GTP_PKT_TYPES = {
     "gtp_tcp",
@@ -879,6 +872,7 @@ class FabricTest(P4RuntimeTest):
     def __init__(self):
         super(FabricTest, self).__init__()
         self.next_mbr_id = 1
+        self.sdn_to_sdk_port = {}
 
     def setUp(self):
         super(FabricTest, self).setUp()
@@ -886,14 +880,27 @@ class FabricTest(P4RuntimeTest):
         self.port2 = self.swports(1)
         self.port3 = self.swports(2)
         self.port4 = self.swports(3)
-        if self.generate_tv:
-            self.build_port_to_sdk_port_map_for_tv()
-        elif is_v1model():
-            self.build_port_to_sdk_port_map_for_bmv2()
-        else:
-            self.build_port_to_sdk_port_map()
         self.setup_switch_info()
         self.set_up_packet_in_mirror()
+
+        # Initialize the SDN-to-SDK port mapping, this port mapping is used for tests
+        # which doesn't support port translation.
+        # For example, port numbers in INT reports are not translated to singleton port.
+        if self.generate_tv:
+            # Build a fake SDN to SDK port mapping for testvector
+            self.sdn_to_sdk_port = dict([(_, _) for _ in range(1, 5)])
+        elif is_v1model():
+            # SDN and SDK port numbers are the same in bmv2
+            self.sdn_to_sdk_port = dict([(_, _) for _ in range(0, 4)])
+            self.sdn_to_sdk_port[255] = 255  # CPU port for bmv2
+        else:
+            # For Tofino Model and real hardware, use gNMI to get the SDN port to SDK
+            # port mapping.
+            self.sdn_to_sdk_port = self.build_sdn_to_sdk_port_map_from_gnmi()
+            self.sdn_to_sdk_port[0xFFFFFF00] = 0x44   # Recirculate port for pipe 0
+            self.sdn_to_sdk_port[0xFFFFFF01] = 0xC4   # Recirculate port for pipe 1
+            self.sdn_to_sdk_port[0xFFFFFF02] = 0x144  # Recirculate port for pipe 2
+            self.sdn_to_sdk_port[0xFFFFFF03] = 0x1C4  # Recirculate port for pipe 3
 
     def tearDown(self):
         self.reset_switch_info()
@@ -909,18 +916,8 @@ class FabricTest(P4RuntimeTest):
         FabricTest.next_single_use_ips += 1
         return socket.inet_ntoa(struct.pack("!I", FabricTest.next_single_use_ips))
 
-    def build_port_to_sdk_port_map_for_tv(self):
-        # Build a fake SDN to SDK port mapping for testvector
-        for port_id in range(1, 5):
-          SDN_TO_SDK_PORT[port_id] = port_id
-
-    def build_port_to_sdk_port_map_for_bmv2(self):
-        # Build a fake SDN to SDK port mapping for testvector
-        for port_id in range(0, 5):
-          SDN_TO_SDK_PORT[port_id] = port_id
-        SDN_TO_SDK_PORT[255] = 255 # CPU port for bmv2
-
-    def build_port_to_sdk_port_map(self):
+    def build_sdn_to_sdk_port_map_from_gnmi(self):
+        port_map = {}
         port_name_to_id = {}
         req = gnmi_utils.build_gnmi_get_req("/interfaces/interface[name=*]/state/id")
         resp = gnmi_utils.do_get(req)
@@ -934,7 +931,8 @@ class FabricTest(P4RuntimeTest):
             name = notification.update[0].path.elem[1].key['name']
             sdk_id = notification.update[0].val.uint_val
             port_id = port_name_to_id[name]
-            SDN_TO_SDK_PORT[port_id] = sdk_id
+            port_map[port_id] = sdk_id
+        return port_map
 
     @tvcreate("setup/setup_switch_info")
     def setup_switch_info(self):
@@ -3857,8 +3855,8 @@ class IntTest(IPv4UnicastTest):
             INT_COLLECTOR_MAC,
             SWITCH_IPV4,
             INT_COLLECTOR_IPV4,
-            SDN_TO_SDK_PORT[ig_port],
-            SDN_TO_SDK_PORT[eg_port],
+            self.sdn_to_sdk_port[ig_port],
+            self.sdn_to_sdk_port[eg_port],
             SWITCH_ID,
             int_pre_mirrored_packet,
             is_device_spine,
@@ -3932,14 +3930,14 @@ class IntTest(IPv4UnicastTest):
             INT_COLLECTOR_MAC,
             SWITCH_IPV4,
             INT_COLLECTOR_IPV4,
-            SDN_TO_SDK_PORT[ig_port],
+            self.sdn_to_sdk_port[ig_port],
             0,  # egress port will be unset
             drop_reason,
             SWITCH_ID,
             int_inner_pkt,
             is_device_spine,
             send_report_to_spine,
-            SDN_TO_SDK_PORT[ig_port] >> 7,  # hw_id,
+            self.sdn_to_sdk_port[ig_port] >> 7,  # hw_id,
             truncate=False,
         )
 
@@ -4020,14 +4018,14 @@ class IntTest(IPv4UnicastTest):
             INT_COLLECTOR_MAC,
             SWITCH_IPV4,
             INT_COLLECTOR_IPV4,
-            SDN_TO_SDK_PORT[ig_port],
-            SDN_TO_SDK_PORT[eg_port],
+            self.sdn_to_sdk_port[ig_port],
+            self.sdn_to_sdk_port[eg_port],
             drop_reason,
             SWITCH_ID,
             int_pre_mirrored_packet,
             is_device_spine,
             send_report_to_spine,
-            SDN_TO_SDK_PORT[eg_port] >> 7,  # hw_id
+            self.sdn_to_sdk_port[eg_port] >> 7,  # hw_id
             truncate=True,
         )
 
@@ -4131,8 +4129,8 @@ class IntTest(IPv4UnicastTest):
             INT_COLLECTOR_MAC,
             SWITCH_IPV4,
             INT_COLLECTOR_IPV4,
-            SDN_TO_SDK_PORT[ig_port],
-            SDN_TO_SDK_PORT[eg_port],
+            self.sdn_to_sdk_port[ig_port],
+            self.sdn_to_sdk_port[eg_port],
             SWITCH_ID,
             int_pre_mirrored_packet,
             is_device_spine,
@@ -4149,13 +4147,13 @@ class IntTest(IPv4UnicastTest):
         self.set_up_latency_threshold_for_q_report(threshold_trigger, threshold_reset)
         # Sets the quota for the output port/queue of INT report to zero to make sure
         # we won't keep getting reports for this type of packet.
-        self.set_queue_report_quota(port=SDN_TO_SDK_PORT[self.port3], qid=0, quota=0)
+        self.set_queue_report_quota(port=self.sdn_to_sdk_port[self.port3], qid=0, quota=0)
         recirc_ports = RECIRCULATE_PORTS if is_tna() else RECIRCULATE_PORT_V1MODEL
         for recirc_port in recirc_ports:
-            self.set_queue_report_quota(port=SDN_TO_SDK_PORT[recirc_port], qid=0, quota=0)
+            self.set_queue_report_quota(port=self.sdn_to_sdk_port[recirc_port], qid=0, quota=0)
         if reset_quota:
             # To ensure we have enough quota to send a queue report.
-            self.set_queue_report_quota(port=SDN_TO_SDK_PORT[eg_port], qid=0, quota=1)
+            self.set_queue_report_quota(port=self.sdn_to_sdk_port[eg_port], qid=0, quota=1)
 
         # TODO: Use MPLS test instead of IPv4 test if device is spine.
         # TODO: In these tests, there is only one egress port although the
@@ -4239,8 +4237,8 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             INT_COLLECTOR_MAC,
             SWITCH_IPV4,
             INT_COLLECTOR_IPV4,
-            SDN_TO_SDK_PORT[self.port1],
-            SDN_TO_SDK_PORT[self.port2],
+            self.sdn_to_sdk_port[self.port1],
+            self.sdn_to_sdk_port[self.port2],
             SWITCH_ID,
             exp_pkt,
             is_device_spine,
@@ -4326,8 +4324,8 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             INT_COLLECTOR_MAC,
             SWITCH_IPV4,
             INT_COLLECTOR_IPV4,
-            SDN_TO_SDK_PORT[self.port1],
-            SDN_TO_SDK_PORT[self.port2],
+            self.sdn_to_sdk_port[self.port1],
+            self.sdn_to_sdk_port[self.port2],
             SWITCH_ID,
             exp_pkt,
             is_device_spine,
@@ -4423,14 +4421,14 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             INT_COLLECTOR_MAC,
             SWITCH_IPV4,
             INT_COLLECTOR_IPV4,
-            SDN_TO_SDK_PORT[ig_port],
+            self.sdn_to_sdk_port[ig_port],
             0,  # No egress port set since we drop from ingress pipeline
             drop_reason,
             SWITCH_ID,
             bridged_packet,
             is_device_spine,
             send_report_to_spine,
-            SDN_TO_SDK_PORT[eg_port] >> 7,  # hw_id,
+            self.sdn_to_sdk_port[eg_port] >> 7,  # hw_id,
             truncate=False,  # Never truncated since this is a ingress drop.
         )
 
@@ -4508,14 +4506,14 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
             INT_COLLECTOR_MAC,
             SWITCH_IPV4,
             INT_COLLECTOR_IPV4,
-            SDN_TO_SDK_PORT[ig_port],
+            self.sdn_to_sdk_port[ig_port],
             0,  # No egress port set since we drop from ingress pipeline
             drop_reason,
             SWITCH_ID,
             bridged_packet,
             is_device_spine,
             send_report_to_spine,
-            SDN_TO_SDK_PORT[eg_port] >> 7,  # hw_id,
+            self.sdn_to_sdk_port[eg_port] >> 7,  # hw_id,
             truncate=False,  # Never truncated since this is a ingress drop.
         )
 

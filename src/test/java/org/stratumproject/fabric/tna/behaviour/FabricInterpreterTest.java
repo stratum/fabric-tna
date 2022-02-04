@@ -443,7 +443,7 @@ public class FabricInterpreterTest {
     @Test
     public void testMapInboundPacketWithCpuPort() throws ImmutableByteSequence.ByteSequenceTrimException,
             PiPipelineInterpreter.PiInterpreterException {
-        PortNumber inputPort = PortNumber.portNumber(Constants.SDN_PORT_CPU);
+        PortNumber inputPort = PortNumber.portNumber(Constants.PORT_CPU);
         PiPacketMetadata pktInMetadata = PiPacketMetadata.builder()
                 .withId(P4InfoConstants.INGRESS_PORT)
                 .withValue(ImmutableByteSequence.copyFrom(inputPort.toLong())

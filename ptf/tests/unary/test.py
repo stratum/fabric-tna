@@ -2229,7 +2229,7 @@ class FabricIntQueueReportQuotaTest(IntTest):
             threshold_trigger=threshold_trigger,
             threshold_reset=threshold_reset,
         )
-        self.verify_quota(port=SDN_TO_SDK_PORT[self.port2], qid=0, quota=quota_left)
+        self.verify_quota(port=self.sdn_to_sdk_port[self.port2], qid=0, quota=quota_left)
 
     def runTest(self):
         print("")
@@ -2237,7 +2237,7 @@ class FabricIntQueueReportQuotaTest(IntTest):
         # After that, configure the threshold to a small value and send a packet to the
         # device to trigger queue report. We should expect to receive an INT queue
         # report and the quota should become zero.
-        self.set_queue_report_quota(port=SDN_TO_SDK_PORT[self.port2], qid=0, quota=1)
+        self.set_queue_report_quota(port=self.sdn_to_sdk_port[self.port2], qid=0, quota=1)
         self.doRunTest(
             expect_int_report=True,
             quota_left=0,
@@ -2800,8 +2800,8 @@ class FabricIntFlowReportLoopbackModeTest(IntTest):
             INT_COLLECTOR_MAC,
             SWITCH_IPV4,
             INT_COLLECTOR_IPV4,
-            SDN_TO_SDK_PORT[self.port1],
-            SDN_TO_SDK_PORT[self.port2],
+            self.sdn_to_sdk_port[self.port1],
+            self.sdn_to_sdk_port[self.port2],
             SWITCH_ID,
             routed_pkt,
             is_device_spine,
@@ -3052,7 +3052,7 @@ class FabricIntDeflectDropReportTest(IntTest):
 
         # The packet will still be routed, but dropped by traffic manager.
         # Note that the pipeline won't change IP TTL since the packet will not be
-        # proceeded by the egress next block.
+        # preceded by the egress next block.
         int_inner_pkt = pkt_route(int_inner_pkt, HOST2_MAC)
 
         # This is the WIP report packet which should be sent to the recirculation port according to
@@ -3065,8 +3065,8 @@ class FabricIntDeflectDropReportTest(IntTest):
             0,
             SWITCH_IPV4,
             INT_COLLECTOR_IPV4,
-            SDN_TO_SDK_PORT[ig_port],
-            SDN_TO_SDK_PORT[eg_port],
+            self.sdn_to_sdk_port[ig_port],
+            self.sdn_to_sdk_port[eg_port],
             INT_DROP_REASON_TRAFFIC_MANAGER,
             SWITCH_ID,
             int_inner_pkt,
@@ -3082,8 +3082,8 @@ class FabricIntDeflectDropReportTest(IntTest):
             INT_COLLECTOR_MAC,
             SWITCH_IPV4,
             INT_COLLECTOR_IPV4,
-            SDN_TO_SDK_PORT[ig_port],
-            SDN_TO_SDK_PORT[eg_port],
+            self.sdn_to_sdk_port[ig_port],
+            self.sdn_to_sdk_port[eg_port],
             INT_DROP_REASON_TRAFFIC_MANAGER,
             SWITCH_ID,
             int_inner_pkt,

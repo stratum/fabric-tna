@@ -61,8 +61,8 @@ control FabricIngress (
         int_watchlist.apply(hdr, fabric_md, ig_intr_md, ig_dprsr_md, ig_tm_md);
 #endif // WITH_INT
         stats.apply(fabric_md.lkp, (FabricPortId_t)ig_intr_md.ingress_port, fabric_md.bridged.base.stats_flow_id);
-        slice_tc_classifier.apply(hdr, ig_intr_md, fabric_md, (FabricPortId_t)ig_intr_md.ingress_port);
-        filtering.apply(hdr, fabric_md, ig_intr_md, (FabricPortId_t)ig_intr_md.ingress_port);
+        slice_tc_classifier.apply(hdr, ig_intr_md, fabric_md);
+        filtering.apply(hdr, fabric_md, ig_intr_md);
 #ifdef WITH_SPGW
         if (!fabric_md.skip_forwarding) {
             spgw.apply(hdr, fabric_md, ig_intr_md, ig_tm_md, ig_dprsr_md);
@@ -75,9 +75,9 @@ control FabricIngress (
         if (!fabric_md.skip_next) {
             pre_next.apply(hdr, fabric_md);
         }
-        acl.apply(hdr, fabric_md, ig_intr_md, ig_dprsr_md, ig_tm_md, (FabricPortId_t)ig_intr_md.ingress_port);
+        acl.apply(hdr, fabric_md, ig_intr_md, ig_dprsr_md, ig_tm_md);
         if (!fabric_md.skip_next) {
-            next.apply(hdr, fabric_md, ig_intr_md, ig_tm_md, (FabricPortId_t)ig_intr_md.ingress_port);
+            next.apply(hdr, fabric_md, ig_intr_md, ig_tm_md);
         }
         qos.apply(fabric_md, ig_dprsr_md, ig_tm_md);
 #ifdef WITH_INT
@@ -111,14 +111,14 @@ control FabricEgress (
     apply {
         pkt_io_egress.apply(hdr, fabric_md, eg_intr_md);
         stats.apply(fabric_md.bridged.base.stats_flow_id, (FabricPortId_t)eg_intr_md.egress_port, fabric_md.bridged.bmd_type);
-        egress_next.apply(hdr, fabric_md, eg_intr_md, eg_dprsr_md, (FabricPortId_t)eg_intr_md.egress_port);
+        egress_next.apply(hdr, fabric_md, eg_intr_md, eg_dprsr_md);
 #ifdef WITH_SPGW
         spgw.apply(hdr, fabric_md);
 #endif // WITH_SPGW
 #ifdef WITH_INT
         int_egress.apply(hdr, fabric_md, eg_intr_md, eg_prsr_md, eg_dprsr_md);
 #endif
-        dscp_rewriter.apply(fabric_md, eg_intr_md, hdr, (FabricPortId_t)eg_intr_md.egress_port);
+        dscp_rewriter.apply(fabric_md, eg_intr_md, hdr);
     }
 }
 
