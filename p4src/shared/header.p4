@@ -174,6 +174,9 @@ struct spgw_bridged_metadata_t {
     bool             skip_spgw;
     bool             skip_egress_upf_ctr;
     teid_t           teid;
+#ifdef V1MODEL
+    bit<4>          _pad;
+#endif
 }
 
 #ifdef WITH_INT
@@ -377,8 +380,7 @@ struct fabric_ingress_metadata_t {
     bool                     is_spgw_hit;
     slice_id_t               spgw_slice_id;
     tc_t                     spgw_tc;
-    MeterColor_t             app_color;
-    MeterColor_t             session_color;
+    MeterColor_t             upf_meter_color;
     PortType_t               ig_port_type;
     common_mirror_metadata_t mirror;
 }

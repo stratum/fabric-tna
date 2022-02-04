@@ -170,7 +170,12 @@ control IngressQos (inout fabric_ingress_metadata_t fabric_md,
         // Meter index should be 0 for all packets with default slice_id and tc.
         set_slice_tc.apply();
         default_tc.apply();
-        slice_tc_meter.execute_meter((bit<32>) fabric_md.bridged.base.slice_tc, packet_color);
+        if (fabric_md.upf_meter_color != MeterColor_t.RED) {
+            slice_tc_meter.execute_meter((bit<32>) fabric_md.bridged.base.slice_tc, packet_color);
+        } else {
+            // No color-aware meters in v1model, so we should skip slice meter when UPF meter marked RED.
+            packet_color = MeterColor_t.RED;
+        }
         queues.apply();
     }
 }

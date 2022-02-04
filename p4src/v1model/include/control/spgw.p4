@@ -19,6 +19,9 @@ control SpgwIngress(
 
     counter(MAX_UPF_COUNTERS, CounterType.packets_and_bytes) terminations_counter;
 
+    meter(MAX_SESSION_METERS, MeterType.bytes) session_meter;
+    meter(MAX_APP_METERS, MeterType.bytes) app_meter;
+
     bool is_uplink = false;
     bool term_hit = false;
     bool sess_hit = false;
@@ -27,6 +30,9 @@ control SpgwIngress(
     bit<8> app_ip_proto = 0;
     bit<8> internal_app_id = DEFAULT_APP_ID;
     ue_session_id_t ue_session_id = 0;
+
+    session_meter_idx_t session_meter_id_internal = DEFAULT_SESSION_METER_IDX;
+    app_meter_idx_t app_meter_id_internal = DEFAULT_APP_METER_IDX;
 
     @hidden
     action _drop_common() {
@@ -149,18 +155,20 @@ control SpgwIngress(
 #endif // WITH_INT
     }
 
-    action set_downlink_session(tun_peer_id_t tun_peer_id) {
+    action set_downlink_session(tun_peer_id_t tun_peer_id, session_meter_idx_t session_meter_id) {
         sess_hit = true;
         // Set UE IP address.
         ue_session_id = fabric_md.routing_ipv4_dst;
+        session_meter_id_internal = session_meter_id;
         fabric_md.bridged.spgw.tun_peer_id = tun_peer_id;
         fabric_md.bridged.spgw.skip_egress_upf_ctr = false;
     }
 
-    action set_downlink_session_buf(tun_peer_id_t tun_peer_id) {
+    action set_downlink_session_buf(tun_peer_id_t tun_peer_id, session_meter_idx_t session_meter_id) {
         sess_hit = true;
         // Set UE IP address.
         ue_session_id = fabric_md.routing_ipv4_dst;
+        session_meter_id_internal = session_meter_id;
         fabric_md.bridged.spgw.tun_peer_id = tun_peer_id;
         fabric_md.bridged.spgw.skip_egress_upf_ctr = true;
     }
@@ -176,10 +184,11 @@ control SpgwIngress(
 #endif // WITH_INT
     }
 
-    action set_uplink_session() {
+    action set_uplink_session(session_meter_idx_t session_meter_id) {
         sess_hit = true;
         // Set UE IP address.
         ue_session_id = fabric_md.lkp.ipv4_src;
+        session_meter_id_internal = session_meter_id;
         // implicit decap
         _gtpu_decap();
     }
@@ -248,31 +257,36 @@ control SpgwIngress(
     }
 
     action app_fwd(upf_ctr_id_t ctr_id,
-                   tc_t tc) {
+                   tc_t tc,
+                   app_meter_idx_t app_meter_id) {
         _term_hit(ctr_id);
         fabric_md.spgw_tc = tc;
+        app_meter_id_internal = app_meter_id;
         fabric_md.tc_unknown = false;
     }
 
-    action app_fwd_no_tc(upf_ctr_id_t ctr_id) {
+    action app_fwd_no_tc(upf_ctr_id_t ctr_id, app_meter_idx_t app_meter_id) {
         _term_hit(ctr_id);
         fabric_md.tc_unknown = true;
+        app_meter_id_internal = app_meter_id;
     }
 
     action downlink_fwd_encap(upf_ctr_id_t ctr_id,
                               tc_t         tc,
                               teid_t       teid,
                               // QFI should always equal 0 for 4G flows
-                              bit<6>       qfi) {
-        app_fwd(ctr_id, tc);
+                              bit<6>       qfi,
+                              app_meter_idx_t app_meter_id) {
+        app_fwd(ctr_id, tc, app_meter_id);
         _set_field_encap(teid, qfi);
     }
 
     action downlink_fwd_encap_no_tc(upf_ctr_id_t ctr_id,
                                     teid_t       teid,
                                     // QFI should always equal 0 for 4G flows
-                                    bit<6>       qfi) {
-        app_fwd_no_tc(ctr_id);
+                                    bit<6>       qfi,
+                                    app_meter_idx_t app_meter_id) {
+        app_fwd_no_tc(ctr_id, app_meter_id);
         _set_field_encap(teid, qfi);
     }
 
@@ -429,7 +443,7 @@ control SpgwIngress(
                 }
             }
 
-           applications.apply();
+            applications.apply();
 
             if (sess_hit) {
                 if (is_uplink) {
@@ -439,7 +453,11 @@ control SpgwIngress(
                     downlink_terminations.apply();
                 }
             }
-
+            app_meter.execute_meter((bit<32>) app_meter_id_internal, fabric_md.upf_meter_color);
+            if (fabric_md.upf_meter_color != MeterColor_t.RED) {
+                // No color-aware meters in v1model, so we should skip session_meter when app meter marked RED.
+                session_meter.execute_meter((bit<32>) session_meter_id_internal, fabric_md.upf_meter_color);
+            }
             ig_tunnel_peers.apply();
             if (term_hit) {
                 // NOTE We should not update this counter for packets coming

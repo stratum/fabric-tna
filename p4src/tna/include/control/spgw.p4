@@ -19,8 +19,8 @@ control SpgwIngress(
 
     Counter<bit<64>, upf_ctr_id_t>(MAX_UPF_COUNTERS, CounterType_t.PACKETS_AND_BYTES) terminations_counter;
 
-    Meter<session_meter_id_t>(MAX_SESSION_METERS, MeterType_t.BYTES) session_meter;
-    Meter<app_meter_id_t>(MAX_APP_METERS, MeterType_t.BYTES) app_meter;
+    Meter<session_meter_idx_t>(MAX_SESSION_METERS, MeterType_t.BYTES) session_meter;
+    Meter<app_meter_idx_t>(MAX_APP_METERS, MeterType_t.BYTES) app_meter;
 
     bool is_uplink = false;
     //FIXME: workaround, without putting term_hit on a separate PHV container,
@@ -37,8 +37,10 @@ control SpgwIngress(
     bit<8> internal_app_id = DEFAULT_APP_ID;
     ue_session_id_t ue_session_id = 0;
 
-    session_meter_id_t session_meter_id_internal = DEFAULT_SESSION_METER_ID;
-    app_meter_id_t app_meter_id_internal = DEFAULT_APP_METER_ID;
+    session_meter_idx_t session_meter_id_internal = DEFAULT_SESSION_METER_IDX;
+    app_meter_idx_t app_meter_id_internal = DEFAULT_APP_METER_IDX;
+
+    MeterColor_t app_color;
 
     @hidden
     action _drop_common() {
@@ -115,7 +117,7 @@ control SpgwIngress(
             iface_access;
             iface_core;
             iface_dbuf;
-            @defaultonly iface_miss;
+            @defaulmake conly iface_miss;
         }
         const default_action = iface_miss();
         const size = NUM_SPGW_INTERFACES;
@@ -155,7 +157,7 @@ control SpgwIngress(
 #endif // WITH_INT
     }
 
-    action set_downlink_session(tun_peer_id_t tun_peer_id, session_meter_id_t session_meter_id) {
+    action set_downlink_session(tun_peer_id_t tun_peer_id, session_meter_idx_t session_meter_id) {
         sess_hit = true;
         // Set UE IP address.
         ue_session_id = fabric_md.routing_ipv4_dst;
@@ -164,7 +166,7 @@ control SpgwIngress(
         fabric_md.bridged.spgw.skip_egress_upf_ctr = false;
     }
 
-    action set_downlink_session_buf(tun_peer_id_t tun_peer_id, session_meter_id_t session_meter_id) {
+    action set_downlink_session_buf(tun_peer_id_t tun_peer_id, session_meter_idx_t session_meter_id) {
         sess_hit = true;
         // Set UE IP address.
         ue_session_id = fabric_md.routing_ipv4_dst;
@@ -174,7 +176,6 @@ control SpgwIngress(
     }
 
     action set_downlink_session_buf_drop() {
-        // TODO: should I set the session meter id??
         sess_hit = true;
         // Set UE IP address, so we can match on the terminations table and
         // count packets in the ingress UPF counter.
@@ -185,11 +186,11 @@ control SpgwIngress(
 #endif // WITH_INT
     }
 
-    action set_uplink_session(session_meter_id_t sess_meter_id) {
+    action set_uplink_session(session_meter_idx_t session_meter_id) {
         sess_hit = true;
         // Set UE IP address.
         ue_session_id = fabric_md.lkp.ipv4_src;
-        session_meter_id_internal = sess_meter_id;
+        session_meter_id_internal = session_meter_id;
         // implicit decap
         _gtpu_decap();
     }
@@ -259,14 +260,14 @@ control SpgwIngress(
 
     action app_fwd(upf_ctr_id_t ctr_id,
                    tc_t tc,
-                   app_meter_id_t app_meter_id) {
+                   app_meter_idx_t app_meter_id) {
         _term_hit(ctr_id);
         fabric_md.spgw_tc = tc;
         app_meter_id_internal = app_meter_id;
         fabric_md.tc_unknown = false;
     }
 
-    action app_fwd_no_tc(upf_ctr_id_t ctr_id, app_meter_id_t app_meter_id) {
+    action app_fwd_no_tc(upf_ctr_id_t ctr_id, app_meter_idx_t app_meter_id) {
         _term_hit(ctr_id);
         fabric_md.tc_unknown = true;
         app_meter_id_internal = app_meter_id;
@@ -277,7 +278,7 @@ control SpgwIngress(
                               teid_t       teid,
                               // QFI should always equal 0 for 4G flows
                               bit<6>       qfi,
-                              app_meter_id_t app_meter_id) {
+                              app_meter_idx_t app_meter_id) {
         app_fwd(ctr_id, tc, app_meter_id);
         _set_field_encap(teid, qfi);
     }
@@ -286,7 +287,7 @@ control SpgwIngress(
                                     teid_t       teid,
                                     // QFI should always equal 0 for 4G flows
                                     bit<6>       qfi,
-                                    app_meter_id_t app_meter_id) {
+                                    app_meter_idx_t app_meter_id) {
         app_fwd_no_tc(ctr_id, app_meter_id);
         _set_field_encap(teid, qfi);
     }
@@ -450,11 +451,10 @@ control SpgwIngress(
                     downlink_terminations.apply();
                 }
             }
-            fabric_md.app_color = (MeterColor_t) app_meter.execute(app_meter_id_internal);
-            // FIXME: last parameter is the "adjust_byte_count", should be optional, but compiler complains if not specified
+            app_color = (MeterColor_t) app_meter.execute(app_meter_id_internal);
             // Color-aware meter, if no app_meter, then app_color is GREEN and
             // the meter behaves as a color-blind meter.
-            fabric_md.session_color = (MeterColor_t) session_meter.execute(session_meter_id_internal, fabric_md.app_color, 0);
+            fabric_md.upf_meter_color = (MeterColor_t) session_meter.execute(session_meter_id_internal, app_color, 0);
             ig_tunnel_peers.apply();
             if (term_hit) {
                 // NOTE We should not update this counter for packets coming

@@ -2,18 +2,21 @@
 // SPDX-License-Identifier: Apache-2.0
 package org.stratumproject.fabric.tna.behaviour.upf;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Range;
 import org.apache.commons.lang3.tuple.Pair;
 import org.onlab.packet.Ip4Address;
 import org.onlab.packet.Ip4Prefix;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.net.DeviceId;
+import org.onosproject.net.behaviour.upf.UpfApplication;
+import org.onosproject.net.behaviour.upf.UpfEntityType;
 import org.onosproject.net.behaviour.upf.UpfGtpTunnelPeer;
+import org.onosproject.net.behaviour.upf.UpfInterface;
+import org.onosproject.net.behaviour.upf.UpfMeter;
+import org.onosproject.net.behaviour.upf.UpfProgrammableException;
 import org.onosproject.net.behaviour.upf.UpfSessionDownlink;
 import org.onosproject.net.behaviour.upf.UpfSessionUplink;
-import org.onosproject.net.behaviour.upf.UpfApplication;
-import org.onosproject.net.behaviour.upf.UpfInterface;
-import org.onosproject.net.behaviour.upf.UpfProgrammableException;
 import org.onosproject.net.behaviour.upf.UpfTerminationDownlink;
 import org.onosproject.net.behaviour.upf.UpfTerminationUplink;
 import org.onosproject.net.flow.DefaultFlowRule;
@@ -22,16 +25,27 @@ import org.onosproject.net.flow.DefaultTrafficTreatment;
 import org.onosproject.net.flow.FlowRule;
 import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flow.criteria.PiCriterion;
+import org.onosproject.net.meter.Band;
+import org.onosproject.net.meter.DefaultBand;
+import org.onosproject.net.meter.DefaultMeterRequest;
+import org.onosproject.net.meter.Meter;
+import org.onosproject.net.meter.MeterCellId;
+import org.onosproject.net.meter.MeterRequest;
+import org.onosproject.net.meter.MeterScope;
 import org.onosproject.net.pi.model.PiActionId;
+import org.onosproject.net.pi.model.PiMeterId;
 import org.onosproject.net.pi.model.PiTableId;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
+import org.onosproject.net.pi.runtime.PiMeterCellId;
 import org.onosproject.net.pi.runtime.PiTableAction;
 import org.stratumproject.fabric.tna.slicing.api.SliceId;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.APP_ID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.CTR_ID;
@@ -43,6 +57,7 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGR
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_APPLICATIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_APP_FWD;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_APP_FWD_NO_TC;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_APP_METER;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_DROP;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP_NO_TC;
@@ -55,6 +70,7 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_ING
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_INTERFACES;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_RECIRC_ALLOW;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_RECIRC_DENY;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_SESSION_METER;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_SET_APP_ID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_SET_DOWNLINK_SESSION;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_SET_DOWNLINK_SESSION_BUF;
@@ -179,6 +195,14 @@ public class FabricUpfTranslator {
         if (!entry.table().equals(tableId)) {
             throw new UpfProgrammableException(
                     "The FlowRule for " + tableId + " expected, provided: " + entry);
+        }
+    }
+
+    private void assertMeterId(Meter meter, PiMeterId meterId) throws UpfProgrammableException {
+        if (!meter.meterCellId().type().equals(MeterCellId.MeterCellType.PIPELINE_INDEPENDENT) &&
+                ((PiMeterCellId) meter.meterCellId()).meterId().equals(meterId)) {
+            throw new UpfProgrammableException(
+                    "The Meter for " + meterId + " expected, provided: " + meter);
         }
     }
 
@@ -376,6 +400,43 @@ public class FabricUpfTranslator {
         }
 
         return ifaceBuilder.build();
+    }
+
+    public UpfMeter fabricMeterToUpfSessionMeter(Meter meter) throws UpfProgrammableException {
+        assertMeterId(meter, FABRIC_INGRESS_SPGW_SESSION_METER);
+        List<Band> peakBand = meter.bands().stream()
+                .filter(b -> b.type().equals(Band.Type.MARK_RED))
+                .collect(Collectors.toList());
+        if (peakBand.size() != 1) {
+            throw new UpfProgrammableException("Error, found" + peakBand.size() + " peak bands!");
+        }
+        return UpfMeter.builder()
+                .setSession()
+                .setCellId((int) ((PiMeterCellId) meter.meterCellId()).index())
+                .setPeakBand(peakBand.get(0).rate(), peakBand.get(0).burst())
+                .build();
+    }
+
+    public UpfMeter fabricMeterToUpfAppMeter(Meter meter) throws UpfProgrammableException {
+        assertMeterId(meter, FABRIC_INGRESS_SPGW_APP_METER);
+        List<Band> peakBand = meter.bands().stream()
+                .filter(b -> b.type().equals(Band.Type.MARK_RED)).
+                collect(Collectors.toList());
+        List<Band> committedBand = meter.bands().stream()
+                .filter(b -> b.type().equals(Band.Type.MARK_YELLOW))
+                .collect(Collectors.toList());
+        if (peakBand.size() != 1) {
+            throw new UpfProgrammableException("Error, found " + peakBand.size() + " peak bands!");
+        }
+        if (committedBand.size() != 1) {
+            throw new UpfProgrammableException("Error, found " + committedBand.size() + " committed bands!");
+        }
+        return UpfMeter.builder()
+                .setApplication()
+                .setCellId((int) ((PiMeterCellId) meter.meterCellId()).index())
+                .setPeakBand(peakBand.get(0).rate(), peakBand.get(0).burst())
+                .setCommittedBand(committedBand.get(0).rate(), committedBand.get(0).burst())
+                .build();
     }
 
     public UpfApplication fabricEntryToUpfApplication(FlowRule entry)
@@ -670,6 +731,48 @@ public class FabricUpfTranslator {
                 .withTreatment(DefaultTrafficTreatment.builder().piTableAction(action).build())
                 .withPriority(priority)
                 .build();
+    }
+
+    public MeterRequest upfMeterToFabricMeter(UpfMeter upfMeter, DeviceId deviceId, ApplicationId appId)
+            throws UpfProgrammableException {
+        final PiMeterId meterId;
+        if (upfMeter.type().equals(UpfEntityType.SESSION_METER)) {
+            meterId = FABRIC_INGRESS_SPGW_SESSION_METER;
+        } else if (upfMeter.type().equals((UpfEntityType.APPLICATION_METER))) {
+            meterId = FABRIC_INGRESS_SPGW_APP_METER;
+        } else {
+            // I should never reach this point.
+            throw new UpfProgrammableException("Unknown UPF meter type. I should never reach this point! " + upfMeter);
+        }
+        MeterRequest.Builder meterRequest = DefaultMeterRequest.builder()
+                .forDevice(deviceId)
+                .fromApp(appId)
+                .withScope(MeterScope.of(meterId.id()))
+                .withUnit(Meter.Unit.BYTES_PER_SEC)
+                .withIndex((long) upfMeter.cellId());
+        if (upfMeter.isReset()) {
+            return meterRequest.remove();
+        } else {
+            Collection<Band> bands = Lists.newArrayList();
+            if (upfMeter.committedBand().isPresent()) {
+                bands.add(upfMeter.committedBand().get());
+            } else {
+                bands.add(DefaultBand.builder()
+                                  .ofType(Band.Type.MARK_YELLOW)
+                                  .withRate(0L).burstSize(0L)
+                                  .build());
+            }
+            if (upfMeter.peakBand().isPresent()) {
+                bands.add(upfMeter.peakBand().get());
+            } else {
+                bands.add(DefaultBand.builder()
+                                  .ofType(Band.Type.MARK_RED)
+                                  .withRate(0L).burstSize(0L)
+                                  .build());
+            }
+            meterRequest.withBands(bands);
+            return meterRequest.add();
+        }
     }
 
     public FlowRule upfApplicationToFabricEntry(
