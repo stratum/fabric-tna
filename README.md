@@ -16,18 +16,17 @@ SPDX-License-Identifier: Apache-2.0
 
 [![Build Status](https://jenkins.onosproject.org/buildStatus/icon?job=fabric-tna-linerate-tests&subject=Line-Rate+Tests)](https://jenkins.onosproject.org/job/fabric-tna-linerate-tests/)
 
-`fabric-tna` is a P4 program that realizes the data plane of
-[SD-Fabric](sdfabric), an SDN-enabled programmable network fabric tailored for
-5G-connected edge clouds, with a focus on enterprise, and Industry 4.0 use
-cases.
+`fabric-tna` is a P4 program that realizes the data plane of [SD-Fabric], an
+SDN-enabled programmable network fabric tailored for 5G-connected edge clouds,
+with a focus on enterprise and Industry 4.0 use cases.
 
 `fabric-tna` is based on the Tofino Native Architecture (TNA), hence it can be
 used to program any switch based on the Intel Tofino ASIC. The P4 program is
-specifically designed to run on [Stratum](stratum) switches controlled by the
-[ONOS](onos) SDN controller.
+specifically designed to run on [Stratum]-enabled switches controlled by the
+[ONOS] SDN controller.
 
 `fabric-tna.p4` is not to be confused with [fabric.p4], an older P4 program
-hosted in the ONOS repository originally designed to support [Trellis](trellis).
+hosted in the ONOS repository originally designed to support [Trellis].
 `fabric-tna.p4` follows a similar design to `fabric.p4`, but has evolved
 significantly to provide more advanced capabilities for 4G/5G mobile user plane
 function (UPF), Inband Network Telemetry (INT), slicing, and QoS.
@@ -302,8 +301,8 @@ errors), please contact Intel support.
 To report any other kind of problem, feel free to open a GitHub Issue or reach
 out to the project maintainers on the ONF Community Slack.
 
-[onos]: https://opennetworking.org/onos/
-[stratum]: https://github.com/stratum/stratum
-[trellis]: https://www.opennetworking.org/trellis
-[sdfabric]: https://opennetworking.org/sd-fabric/
+[ONOS]: https://opennetworking.org/onos/
+[Stratum]: https://github.com/stratum/stratum
+[Trellis]: https://www.opennetworking.org/trellis
+[SD-Fabric]: https://opennetworking.org/sd-fabric/
 [fabric.p4]: https://github.com/opennetworkinglab/onos/tree/master/pipelines/fabric/impl/src/main/resources
