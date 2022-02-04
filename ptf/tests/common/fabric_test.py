@@ -145,12 +145,12 @@ DBUF_IPV4 = "141.0.0.1"
 DBUF_DRAIN_DST_IPV4 = "142.0.0.1"
 DBUF_TEID = 0
 
-UPF_COUNTER_INGRESS = "FabricIngress.spgw.terminations_counter"
-UPF_COUNTER_EGRESS = "FabricEgress.spgw.terminations_counter"
+UPF_COUNTER_INGRESS = "FabricIngress.upf.terminations_counter"
+UPF_COUNTER_EGRESS = "FabricEgress.upf.terminations_counter"
 
-SPGW_IFACE_ACCESS = "iface_access"
-SPGW_IFACE_CORE = "iface_core"
-SPGW_IFACE_FROM_DBUF = "iface_dbuf"
+UPF_IFACE_ACCESS = "iface_access"
+UPF_IFACE_CORE = "iface_core"
+UPF_IFACE_FROM_DBUF = "iface_dbuf"
 
 VLAN_ID_1 = 100
 VLAN_ID_2 = 200
@@ -294,7 +294,7 @@ DEFAULT_QFI = 1
 TC_WIDTH = 2  # bits
 
 # High-level parameter specification options for get_test_args function
-SPGW_OPTIONS = ["DL", "UL", "DL_PSC", "UL_PSC"]
+UPF_OPTIONS = ["DL", "UL", "DL_PSC", "UL_PSC"]
 INT_OPTIONS = ["local", "ig_drop", "eg_drop"]
 SOURCE_OPTIONS = ["host", "leaf", "spine"]
 DEVICE_OPTIONS = ["leaf", "spine"]
@@ -656,8 +656,8 @@ def pkt_decrement_ttl(pkt):
 def get_test_args(
     traffic_dir,
     pkt_addrs={},
-    spgw_type=None,
-    spgw_app_filtering=None,
+    upf_type=None,
+    upf_app_filtering=None,
     int_test_type=None,
     test_multiple_pkt_len=False,
     test_multiple_prefix_len=False,
@@ -668,8 +668,8 @@ def get_test_args(
     Generates parameters for doRunTest calls in test cases
     :param traffic_dir: traffic direction, e.g. "host-leaf-spine"
     :param pkt_addrs: packet header addresses, e.g. {eth_src, eth_dst, ip_src, ip_dst}
-    :param spgw_type: SPGW direction, e.g. "DL" for downlink, "UL" for uplink
-    :param spgw_app_filtering: install SPGW application filtering rule
+    :param upf_type: UPF direction, e.g. "DL" for downlink, "UL" for uplink
+    :param upf_app_filtering: install UPF application filtering rule
     :param int_test_type: INT test drop reason, e.g. "eg_drop" for egress drop type
     :param test_multiple_pkt_len: generate multiple packet lengths
     :param test_multiple_prefix_len: generate multiple prefix lengths
@@ -685,13 +685,13 @@ def get_test_args(
     prefix_len_list = []
     allow_ue_recirculation_list = []
 
-    # spgw input structure: "[DL/UL]_[optional: psc]"
-    if spgw_type:
-        spgw_specs = re.split("_", spgw_type)
-        spgw_dir = spgw_specs[0]
-        # if spgw_type includes psc
+    # upf input structure: "[DL/UL]_[optional: psc]"
+    if upf_type:
+        upf_specs = re.split("_", upf_type)
+        upf_dir = upf_specs[0]
+        # if upf_type includes psc
         try:
-            psc_exist = spgw_specs[1]
+            psc_exist = upf_specs[1]
             include_psc = True
         except IndexError:
             include_psc = False
@@ -735,13 +735,13 @@ def get_test_args(
     if int_test_type == "ig_drop":
         drop_reason_list = [INT_DROP_REASON_ACL_DENY]
     elif int_test_type == "eg_drop":
-        if spgw_dir == "DL":
+        if upf_dir == "DL":
             drop_reason_list = [
                 INT_DROP_REASON_UPF_DL_TERMINATION_MISS,
                 INT_DROP_REASON_UPF_DL_TERMINATION_DROP,
                 INT_DROP_REASON_UPF_DL_SESSION_MISS,
             ]
-        elif spgw_dir == "UL":
+        elif upf_dir == "UL":
             drop_reason_list = [
                 INT_DROP_REASON_UPF_UL_TERMINATION_DROP,
                 INT_DROP_REASON_UPF_UL_TERMINATION_MISS,
@@ -752,9 +752,9 @@ def get_test_args(
     else:
         drop_reason_list = [None]
 
-    # Configure arrays for spgw-related tests
-    # spgw only uses base packets and always considers psc
-    if spgw_type in SPGW_OPTIONS:
+    # Configure arrays for upf-related tests
+    # upf only uses base packets and always considers psc
+    if upf_type in UPF_OPTIONS:
         pkt_type_list = BASE_PKT_TYPES - {"sctp"}
         if include_psc:
             with_psc_list = [False, True]
@@ -810,7 +810,7 @@ def get_test_args(
                                         "send_report_to_spine": send_report_to_spine,
                                         "is_device_spine": is_device_spine,
                                         "allow_ue_recirculation": allow_ue_recirculation,
-                                        "spgw_app_filtering": spgw_app_filtering,
+                                        "upf_app_filtering": upf_app_filtering,
                                     }
 
                                     print(
@@ -2393,12 +2393,12 @@ class PacketInTest(FabricTest):
         self.verify_no_other_packets()
 
 
-class SpgwSimpleTest(IPv4UnicastTest):
+class UpfSimpleTest(IPv4UnicastTest):
     def read_counter(self, c_name, idx):
         counter = self.read_indirect_counter(c_name, idx, typ="BOTH")
         return (counter.data.packet_count, counter.data.byte_count)
 
-    def _add_spgw_iface(
+    def _add_upf_iface(
         self, iface_addr, prefix_len, iface_type, gtpu_valid, slice_id=DEFAULT_SLICE_ID
     ):
         req = self.get_new_write_request()
@@ -2407,30 +2407,30 @@ class SpgwSimpleTest(IPv4UnicastTest):
 
         self.push_update_add_entry_to_action(
             req,
-            "FabricIngress.spgw.interfaces",
+            "FabricIngress.upf.interfaces",
             [
                 self.Lpm("ipv4_dst_addr", iface_addr_, prefix_len),
                 self.Exact("gtpu_is_valid", stringify(int(gtpu_valid), 1)),
             ],
-            "FabricIngress.spgw." + iface_type,
+            "FabricIngress.upf." + iface_type,
             [("slice_id", stringify(slice_id, 1)),],
         )
         self.write_request(req)
 
     def add_ue_pool(self, pool_addr, prefix_len=32, slice_id=DEFAULT_SLICE_ID):
-        self._add_spgw_iface(
+        self._add_upf_iface(
             iface_addr=pool_addr,
             prefix_len=prefix_len,
-            iface_type=SPGW_IFACE_CORE,
+            iface_type=UPF_IFACE_CORE,
             gtpu_valid=False,
             slice_id=slice_id,
         )
 
     def add_s1u_iface(self, s1u_addr, prefix_len=32, slice_id=DEFAULT_SLICE_ID):
-        self._add_spgw_iface(
+        self._add_upf_iface(
             iface_addr=s1u_addr,
             prefix_len=prefix_len,
-            iface_type=SPGW_IFACE_ACCESS,
+            iface_type=UPF_IFACE_ACCESS,
             gtpu_valid=True,
             slice_id=slice_id,
         )
@@ -2443,10 +2443,10 @@ class SpgwSimpleTest(IPv4UnicastTest):
     ):
 
         # Switch interface for traffic to/from dbuf device
-        self._add_spgw_iface(
+        self._add_upf_iface(
             iface_addr=drain_dst_addr,
             prefix_len=32,
-            iface_type=SPGW_IFACE_FROM_DBUF,
+            iface_type=UPF_IFACE_FROM_DBUF,
             gtpu_valid=True,
         )
 
@@ -2489,9 +2489,9 @@ class SpgwSimpleTest(IPv4UnicastTest):
 
         self.push_update_add_entry_to_action(
             req,
-            "FabricIngress.spgw.applications",
+            "FabricIngress.upf.applications",
             match_fields,
-            "FabricIngress.spgw.set_app_id",
+            "FabricIngress.upf.set_app_id",
             [("app_id", stringify(app_id, 1)),],
             priority=priority,
         )
@@ -2518,9 +2518,9 @@ class SpgwSimpleTest(IPv4UnicastTest):
             )
         self.push_update_add_entry_to_action(
             req,
-            "FabricIngress.spgw.uplink_recirc_rules",
+            "FabricIngress.upf.uplink_recirc_rules",
             match,
-            "FabricIngress.spgw.recirc_" + ("allow" if allow else "deny"),
+            "FabricIngress.upf.recirc_" + ("allow" if allow else "deny"),
             [],
             priority,
         )
@@ -2529,12 +2529,12 @@ class SpgwSimpleTest(IPv4UnicastTest):
     def setup_uplink_ue_session(self, tunnel_dst_addr, teid, drop=False):
         req = self.get_new_write_request()
         if not drop:
-            action_name = "FabricIngress.spgw.set_uplink_session"
+            action_name = "FabricIngress.upf.set_uplink_session"
         else:
-            action_name = "FabricIngress.spgw.set_uplink_session_drop"
+            action_name = "FabricIngress.upf.set_uplink_session_drop"
         self.push_update_add_entry_to_action(
             req,
-            "FabricIngress.spgw.uplink_sessions",
+            "FabricIngress.upf.uplink_sessions",
             [
                 self.Exact("teid", stringify(teid, 4)),
                 self.Exact("tunnel_ipv4_dst", ipv4_to_binary(tunnel_dst_addr)),
@@ -2553,15 +2553,15 @@ class SpgwSimpleTest(IPv4UnicastTest):
         ]
         if not drop:
             if tc is not None:
-                action_name = "FabricIngress.spgw.app_fwd"
+                action_name = "FabricIngress.upf.app_fwd"
                 action_params.append(("tc", stringify(tc, 1)))
             else:
-                action_name = "FabricIngress.spgw.app_fwd_no_tc"
+                action_name = "FabricIngress.upf.app_fwd_no_tc"
         else:
-            action_name = "FabricIngress.spgw.uplink_drop"
+            action_name = "FabricIngress.upf.uplink_drop"
         self.push_update_add_entry_to_action(
             req,
-            "FabricIngress.spgw.uplink_terminations",
+            "FabricIngress.upf.uplink_terminations",
             [
                 self.Exact("ue_session_id", ipv4_to_binary(ue_session)),
                 self.Exact("app_id", stringify(app_id, 1)),
@@ -2574,16 +2574,16 @@ class SpgwSimpleTest(IPv4UnicastTest):
     def setup_downlink_ue_session(self, ue_addr, tunnel_peer_id, drop=False):
         req = self.get_new_write_request()
         if not drop:
-            action_name = "FabricIngress.spgw.set_downlink_session"
+            action_name = "FabricIngress.upf.set_downlink_session"
             action_params = [
                 ("tun_peer_id", stringify(tunnel_peer_id, 1)),
             ]
         else:
-            action_name = "FabricIngress.spgw.set_downlink_session_drop"
+            action_name = "FabricIngress.upf.set_downlink_session_drop"
             action_params = []
         self.push_update_add_entry_to_action(
             req,
-            "FabricIngress.spgw.downlink_sessions",
+            "FabricIngress.upf.downlink_sessions",
             [self.Exact("ue_addr", ipv4_to_binary(ue_addr))],
             action_name,
             action_params,
@@ -2597,17 +2597,17 @@ class SpgwSimpleTest(IPv4UnicastTest):
         if is_dbuf_present:
             self.push_update_add_entry_to_action(
                 req,
-                "FabricIngress.spgw.downlink_sessions",
+                "FabricIngress.upf.downlink_sessions",
                 [self.Exact("ue_addr", ipv4_to_binary(ue_addr))],
-                "FabricIngress.spgw.set_downlink_session_buf",
+                "FabricIngress.upf.set_downlink_session_buf",
                 [("tun_peer_id", stringify(tunnel_peer_id, 1)),],
             )
         else:
             self.push_update_add_entry_to_action(
                 req,
-                "FabricIngress.spgw.downlink_sessions",
+                "FabricIngress.upf.downlink_sessions",
                 [self.Exact("ue_addr", ipv4_to_binary(ue_addr))],
-                "FabricIngress.spgw.set_downlink_session_buf_drop",
+                "FabricIngress.upf.set_downlink_session_buf_drop",
                 [],
             )
         self.write_request(req)
@@ -2629,15 +2629,15 @@ class SpgwSimpleTest(IPv4UnicastTest):
             action_params.append(("qfi", stringify(qfi, 1)))
             action_params.append(("teid", stringify(teid, 4)))
             if tc is not None:
-                action_name = "FabricIngress.spgw.downlink_fwd_encap"
+                action_name = "FabricIngress.upf.downlink_fwd_encap"
                 action_params.append(("tc", stringify(tc, 1)))
             else:
-                action_name = "FabricIngress.spgw.downlink_fwd_encap_no_tc"
+                action_name = "FabricIngress.upf.downlink_fwd_encap_no_tc"
         else:
-            action_name = "FabricIngress.spgw.downlink_drop"
+            action_name = "FabricIngress.upf.downlink_drop"
         self.push_update_add_entry_to_action(
             req,
-            "FabricIngress.spgw.downlink_terminations",
+            "FabricIngress.upf.downlink_terminations",
             [
                 self.Exact("ue_session_id", ipv4_to_binary(ue_session)),
                 self.Exact("app_id", stringify(app_id, 1)),
@@ -2657,9 +2657,9 @@ class SpgwSimpleTest(IPv4UnicastTest):
         req = self.get_new_write_request()
         self.push_update_add_entry_to_action(
             req,
-            "FabricIngress.spgw.ig_tunnel_peers",
+            "FabricIngress.upf.ig_tunnel_peers",
             [self.Exact("tun_peer_id", stringify(tunnel_peer_id, 1))],
-            "FabricIngress.spgw.set_routing_ipv4_dst",
+            "FabricIngress.upf.set_routing_ipv4_dst",
             [("tun_dst_addr", ipv4_to_binary(tunnel_dst_addr)),],
         )
         self.write_request(req)
@@ -2667,9 +2667,9 @@ class SpgwSimpleTest(IPv4UnicastTest):
         req = self.get_new_write_request()
         self.push_update_add_entry_to_action(
             req,
-            "FabricEgress.spgw.eg_tunnel_peers",
+            "FabricEgress.upf.eg_tunnel_peers",
             [self.Exact("tun_peer_id", stringify(tunnel_peer_id, 1))],
-            "FabricEgress.spgw.load_tunnel_params",
+            "FabricEgress.upf.load_tunnel_params",
             [
                 ("tunnel_src_port", stringify(tunnel_src_port, 2)),
                 ("tunnel_src_addr", ipv4_to_binary(tunnel_src_addr)),
@@ -2713,7 +2713,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
 
     def enable_encap_with_psc(self):
         self.send_request_add_entry_to_action(
-            "FabricEgress.spgw.gtpu_encap", None, "FabricEgress.spgw.gtpu_with_psc", [],
+            "FabricEgress.upf.gtpu_encap", None, "FabricEgress.upf.gtpu_with_psc", [],
         )
 
     def reset_upf_counters(self, ctr_idx):
@@ -2819,7 +2819,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         )
 
         if verify_counters:
-            # Clear SPGW counters before sending the packet
+            # Clear UPF counters before sending the packet
             self.reset_upf_counters(UPLINK_UPF_CTR_IDX)
 
         self.runIPv4UnicastTest(
@@ -2935,7 +2935,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
                 priority=10,
             )
 
-        # Clear SPGW counters before sending the packet
+        # Clear UPF counters before sending the packet
         self.reset_upf_counters(UPLINK_UPF_CTR_IDX)
         self.reset_upf_counters(DOWNLINK_UPF_CTR_IDX)
 
@@ -3088,7 +3088,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             self.enable_encap_with_psc()
 
         if verify_counters:
-            # Clear SPGW counters before sending the packet
+            # Clear UPF counters before sending the packet
             self.reset_upf_counters(DOWNLINK_UPF_CTR_IDX)
 
         self.runIPv4UnicastTest(
@@ -3159,7 +3159,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             ue_session=UE1_IPV4, ctr_id=DOWNLINK_UPF_CTR_IDX, teid=DBUF_TEID
         )
 
-        # Clear SPGW counters before sending the packet
+        # Clear UPF counters before sending the packet
         self.reset_upf_counters(DOWNLINK_UPF_CTR_IDX)
 
         self.runIPv4UnicastTest(
@@ -3238,7 +3238,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         # (sending isn't done by this test though)
         self.add_dbuf_device(dbuf_addr=DBUF_IPV4, drain_dst_addr=DBUF_DRAIN_DST_IPV4)
 
-        # Clear SPGW counters before sending the packet
+        # Clear UPF counters before sending the packet
         self.reset_upf_counters(DOWNLINK_UPF_CTR_IDX)
 
         self.runIPv4UnicastTest(
@@ -3256,7 +3256,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         #  ingress counter for packets coming **from** dbuf, since we already
         #  updated it when first sending the same packets **to** dbuf. However,
         #  to improve Tofino resource utilization, we decided to allow for
-        #  accounting inaccuracy. See comment in spgw.p4 for more context.
+        #  accounting inaccuracy. See comment in upf.p4 for more context.
         ingress_bytes = len(pkt_from_dbuf)
         if is_tna():
             ingress_bytes += ETH_FCS_BYTES
@@ -4130,10 +4130,10 @@ class IntTest(IPv4UnicastTest):
         self.verify_no_other_packets()
 
 
-class SpgwIntTest(SpgwSimpleTest, IntTest):
+class UpfIntTest(UpfSimpleTest, IntTest):
     """
     This test includes two parts:
-    1. Spgw uplink and downlink test which installs entries to route, encap,
+    1. Upf uplink and downlink test which installs entries to route, encap,
        and decap GTP traffic. The test will also emit the packet and check the
        expected packet.
     2. Installs INT related table entries and check the expected report packet.
@@ -4141,7 +4141,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
        without GTPU headers(IP/UDP/GTPU).
     """
 
-    def runSpgwUplinkIntTest(
+    def runUpfUplinkIntTest(
         self,
         pkt,
         tagged1,
@@ -4230,7 +4230,7 @@ class SpgwIntTest(SpgwSimpleTest, IntTest):
         self.verify_packet(exp_int_report_pkt_masked, self.port3)
         self.verify_no_other_packets()
 
-    def runSpgwDownlinkIntTest(
+    def runUpfDownlinkIntTest(
         self,
         pkt,
         tagged1,

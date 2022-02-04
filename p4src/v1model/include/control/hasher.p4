@@ -22,18 +22,18 @@ control Hasher(inout ingress_headers_t         hdr,
             max
         );
 
-#ifdef WITH_SPGW
+#ifdef WITH_UPF
         // GTP-aware ECMP for downlink packets encapped by this switch.
-        if (fabric_md.bridged.spgw.needs_gtpu_encap) {
+        if (fabric_md.bridged.upf.needs_gtpu_encap) {
             hash(
                 fabric_md.ecmp_hash,
                 HashAlgorithm.crc32,
                 base,
-                {fabric_md.bridged.spgw.tun_peer_id, fabric_md.bridged.spgw.teid},
+                {fabric_md.bridged.upf.tun_peer_id, fabric_md.bridged.upf.teid},
                 max
             );
         } else
-#endif // WITH_SPGW
+#endif // WITH_UPF
         // GTP-aware ECMP for passthrough GTP packets.
         if (hdr.gtpu.isValid()){
             hash(
@@ -46,7 +46,7 @@ control Hasher(inout ingress_headers_t         hdr,
         } else if (fabric_md.lkp.is_ipv4) {
             // Regular 5-tuple-based ECMP. If here, the innermost IPv4 header
             // will be the only IPv4 header valid. Includes GTPU decapped pkts
-            // by the spgw control.
+            // by the upf control.
             fabric_md.ecmp_hash = fabric_md.bridged.base.inner_hash;
         }
         // FIXME: remove ipv6 support or test it

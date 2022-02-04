@@ -36,13 +36,13 @@
 // 4 entries per queue (for double range match on latency chunks) with up to 32 queues per port
 #define INT_QUEUE_REPORT_TABLE_SIZE 32 * 4
 
-// Constants for the SPGW control block.
+// Constants for the UPF control block.
 #define NUM_UES 100000
 // We expect between 4 and 8 tunnels per UE.
 #define MAX_GTP_TUNNELS_PER_UE 1
 #define NUM_GTP_TUNNLES (NUM_UES * MAX_GTP_TUNNELS_PER_UE)
 #define MAX_UPF_COUNTERS 4096
-#define NUM_SPGW_INTERFACES 64
+#define NUM_UPF_INTERFACES 64
 #define NUM_QOS_CLASSES 128
 #define MAX_UPLINK_RECIRC_RULES 64
 #define MAX_GTP_TUNNEL_PEERS 256
