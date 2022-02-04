@@ -1,5 +1,5 @@
 // Copyright 2020-present Open Networking Foundation
-// SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
+// SPDX-License-Identifier: Apache-2.0
 package org.stratumproject.fabric.tna.behaviour.upf;
 
 import com.google.common.collect.Range;
@@ -8,9 +8,9 @@ import org.onlab.packet.Ip4Address;
 import org.onlab.packet.Ip4Prefix;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.net.DeviceId;
-import org.onosproject.net.behaviour.upf.GtpTunnelPeer;
-import org.onosproject.net.behaviour.upf.SessionDownlink;
-import org.onosproject.net.behaviour.upf.SessionUplink;
+import org.onosproject.net.behaviour.upf.UpfGtpTunnelPeer;
+import org.onosproject.net.behaviour.upf.UpfSessionDownlink;
+import org.onosproject.net.behaviour.upf.UpfSessionUplink;
 import org.onosproject.net.behaviour.upf.UpfApplication;
 import org.onosproject.net.behaviour.upf.UpfInterface;
 import org.onosproject.net.behaviour.upf.UpfProgrammableException;
@@ -69,10 +69,10 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_ING
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_TERMINATIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_APP_ID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_APP_IPV4_ADDR;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_APP_IP_PROTO;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_APP_L4_PORT;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_GTPU_IS_VALID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_IPV4_DST_ADDR;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_IP_PROTO;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_SLICE_ID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_TEID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_TUNNEL_IPV4_DST;
@@ -95,9 +95,6 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TUN_PEER_I
  */
 public class FabricUpfTranslator {
 
-    // FIXME: slice ID should come from UP4
-    private static final SliceId SLICE_MOBILE = SliceId.DEFAULT;
-
     /**
      * Returns true if the given table entry is a GTP tunnel peer rule from the
      * physical fabric pipeline, and false otherwise.
@@ -107,7 +104,7 @@ public class FabricUpfTranslator {
      */
     public boolean isFabricGtpTunnelPeer(FlowRule entry) {
         // we return egress tunnel_peers table, because only this table
-        // contains all necessary information to create GtpTunnelPeer instance.
+        // contains all necessary information to create UpfGtpTunnelPeer instance.
         return entry.table().equals(FABRIC_EGRESS_SPGW_EG_TUNNEL_PEERS);
     }
 
@@ -186,16 +183,16 @@ public class FabricUpfTranslator {
     }
 
     /**
-     * Translate a fabric.p4 GTP tunnel peer table entry to a GtpTunnelPeer instance for easier handling.
+     * Translate a fabric.p4 GTP tunnel peer table entry to a UpfGtpTunnelPeer instance for easier handling.
      *
      * @param entry the fabric.p4 entry to translate, the method expects FlowRule from eg_tunnel_peers table.
-     * @return the corresponding GtpTunnelPeer
+     * @return the corresponding UpfGtpTunnelPeer
      * @throws UpfProgrammableException if the entry cannot be translated
      */
-    public GtpTunnelPeer fabricEntryToGtpTunnelPeer(FlowRule entry)
+    public UpfGtpTunnelPeer fabricEntryToGtpTunnelPeer(FlowRule entry)
             throws UpfProgrammableException {
         assertTableId(entry, FABRIC_EGRESS_SPGW_EG_TUNNEL_PEERS);
-        GtpTunnelPeer.Builder builder = GtpTunnelPeer.builder();
+        UpfGtpTunnelPeer.Builder builder = UpfGtpTunnelPeer.builder();
 
         Pair<PiCriterion, PiTableAction> matchActionPair = FabricUpfTranslatorUtil.fabricEntryToPiPair(entry);
         PiCriterion match = matchActionPair.getLeft();
@@ -204,7 +201,7 @@ public class FabricUpfTranslator {
 
         if (!action.id().equals(FABRIC_EGRESS_SPGW_LOAD_TUNNEL_PARAMS)) {
             throw new UpfProgrammableException(
-                    "Invalid action provided, cannot build GtpTunnelPeer instance: " + action.id());
+                    "Invalid action provided, cannot build UpfGtpTunnelPeer instance: " + action.id());
         }
 
         builder.withSrcAddr(FabricUpfTranslatorUtil.getParamAddress(action, TUNNEL_SRC_ADDR))
@@ -221,10 +218,10 @@ public class FabricUpfTranslator {
      * @return the corresponding UeSession
      * @throws UpfProgrammableException if the entry cannot be translated
      */
-    public SessionUplink fabricEntryToUeSessionUplink(FlowRule entry)
+    public UpfSessionUplink fabricEntryToUeSessionUplink(FlowRule entry)
             throws UpfProgrammableException {
         assertTableId(entry, FABRIC_INGRESS_SPGW_UPLINK_SESSIONS);
-        SessionUplink.Builder builder = SessionUplink.builder();
+        UpfSessionUplink.Builder builder = UpfSessionUplink.builder();
 
         Pair<PiCriterion, PiTableAction> matchActionPair = FabricUpfTranslatorUtil.fabricEntryToPiPair(entry);
         PiCriterion match = matchActionPair.getLeft();
@@ -250,10 +247,10 @@ public class FabricUpfTranslator {
      * @return the corresponding UeSession
      * @throws UpfProgrammableException if the entry cannot be translated
      */
-    public SessionDownlink fabricEntryToUeSessionDownlink(FlowRule entry)
+    public UpfSessionDownlink fabricEntryToUeSessionDownlink(FlowRule entry)
             throws UpfProgrammableException {
         assertTableId(entry, FABRIC_INGRESS_SPGW_DOWNLINK_SESSIONS);
-        SessionDownlink.Builder builder = SessionDownlink.builder();
+        UpfSessionDownlink.Builder builder = UpfSessionDownlink.builder();
         Pair<PiCriterion, PiTableAction> matchActionPair = FabricUpfTranslatorUtil.fabricEntryToPiPair(entry);
         PiCriterion match = matchActionPair.getLeft();
         PiAction action = (PiAction) matchActionPair.getRight();
@@ -365,7 +362,8 @@ public class FabricUpfTranslator {
         PiAction action = (PiAction) matchActionPair.getRight();
 
         var ifaceBuilder = UpfInterface.builder()
-                .setPrefix(FabricUpfTranslatorUtil.getFieldPrefix(match, HDR_IPV4_DST_ADDR));
+                .setPrefix(FabricUpfTranslatorUtil.getFieldPrefix(match, HDR_IPV4_DST_ADDR))
+                .setSliceId(FabricUpfTranslatorUtil.getParamByte(action, SLICE_ID));
 
         if (action.id().equals(FABRIC_INGRESS_SPGW_IFACE_ACCESS)) {
             ifaceBuilder.setAccess();
@@ -388,6 +386,7 @@ public class FabricUpfTranslator {
         PiAction action = (PiAction) matchActionPair.getRight();
         UpfApplication.Builder appFilteringBuilder = UpfApplication.builder()
                 .withAppId(FabricUpfTranslatorUtil.getParamByte(action, APP_ID))
+                .withSliceId(FabricUpfTranslatorUtil.getFieldInt(match, HDR_SLICE_ID))
                 .withPriority(entry.priority());
         if (FabricUpfTranslatorUtil.fieldIsPresent(match, HDR_APP_IPV4_ADDR)) {
             appFilteringBuilder.withIp4Prefix(FabricUpfTranslatorUtil.getFieldPrefix(match, HDR_APP_IPV4_ADDR));
@@ -395,14 +394,14 @@ public class FabricUpfTranslator {
         if (FabricUpfTranslatorUtil.fieldIsPresent(match, HDR_APP_L4_PORT)) {
             appFilteringBuilder.withL4PortRange(FabricUpfTranslatorUtil.getFieldRangeShort(match, HDR_APP_L4_PORT));
         }
-        if (FabricUpfTranslatorUtil.fieldIsPresent(match, HDR_IP_PROTO)) {
-            appFilteringBuilder.withIpProto(FabricUpfTranslatorUtil.getFieldByte(match, HDR_IP_PROTO));
+        if (FabricUpfTranslatorUtil.fieldIsPresent(match, HDR_APP_IP_PROTO)) {
+            appFilteringBuilder.withIpProto(FabricUpfTranslatorUtil.getFieldByte(match, HDR_APP_IP_PROTO));
         }
         return appFilteringBuilder.build();
     }
 
     /**
-     * Translate a GtpTunnelPeer to two FlowRules to be inserted into the fabric.p4 pipeline.
+     * Translate a UpfGtpTunnelPeer to two FlowRules to be inserted into the fabric.p4 pipeline.
      *
      * @param gtpTunnelPeer the GTP tunnel peer to be translated
      * @param deviceId      the ID of the device the FlowRule should be installed on
@@ -411,7 +410,7 @@ public class FabricUpfTranslator {
      * @return a pair of FlowRules translated from GTP tunnel peer
      * @throws UpfProgrammableException if the interface cannot be translated
      */
-    public Pair<FlowRule, FlowRule> gtpTunnelPeerToFabricEntry(GtpTunnelPeer gtpTunnelPeer, DeviceId deviceId,
+    public Pair<FlowRule, FlowRule> gtpTunnelPeerToFabricEntry(UpfGtpTunnelPeer gtpTunnelPeer, DeviceId deviceId,
                                                                ApplicationId appId, int priority)
             throws UpfProgrammableException {
         FlowRule ingressEntry;
@@ -465,7 +464,7 @@ public class FabricUpfTranslator {
      * @return the uplink ue session translated to a FlowRule
      * @throws UpfProgrammableException if the UE session cannot be translated
      */
-    public FlowRule sessionUplinkToFabricEntry(SessionUplink ueSession, DeviceId deviceId,
+    public FlowRule sessionUplinkToFabricEntry(UpfSessionUplink ueSession, DeviceId deviceId,
                                                ApplicationId appId, int priority)
             throws UpfProgrammableException {
         final PiCriterion match;
@@ -501,7 +500,7 @@ public class FabricUpfTranslator {
      * @return the downlink ue session translated to a FlowRule
      * @throws UpfProgrammableException if the UE session cannot be translated
      */
-    public FlowRule sessionDownlinkToFabricEntry(SessionDownlink ueSession, DeviceId deviceId,
+    public FlowRule sessionDownlinkToFabricEntry(UpfSessionDownlink ueSession, DeviceId deviceId,
                                                  ApplicationId appId, int priority)
             throws UpfProgrammableException {
         final PiCriterion match;
@@ -662,7 +661,7 @@ public class FabricUpfTranslator {
                 .build();
         PiAction action = PiAction.builder()
                 .withId(actionId)
-                .withParameter(new PiActionParam(SLICE_ID, SLICE_MOBILE.id()))
+                .withParameter(new PiActionParam(SLICE_ID, SliceId.of(upfInterface.sliceId()).id()))
                 .build();
         return DefaultFlowRule.builder()
                 .forDevice(deviceId).fromApp(appId).makePermanent()
@@ -692,7 +691,7 @@ public class FabricUpfTranslator {
 
     public PiCriterion buildApplicationCriterion(UpfApplication appFilter) {
         PiCriterion.Builder matchBuilder = PiCriterion.builder();
-        matchBuilder.matchExact(HDR_SLICE_ID, SLICE_MOBILE.id());
+        matchBuilder.matchExact(HDR_SLICE_ID, SliceId.of(appFilter.sliceId()).id());
         if (appFilter.ip4Prefix().isPresent()) {
             Ip4Prefix ip4Prefix = appFilter.ip4Prefix().get();
             matchBuilder.matchLpm(HDR_APP_IPV4_ADDR, ip4Prefix.address().toOctets(), ip4Prefix.prefixLength());
@@ -703,7 +702,7 @@ public class FabricUpfTranslator {
         }
         if (appFilter.ipProto().isPresent()) {
             byte ipProto = appFilter.ipProto().get();
-            matchBuilder.matchTernary(HDR_IP_PROTO, ipProto, 0xF);
+            matchBuilder.matchTernary(HDR_APP_IP_PROTO, ipProto, 0xF);
         }
         return matchBuilder.build();
     }

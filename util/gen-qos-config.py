@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # Copyright 2021-present Open Networking Foundation
-# SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
+# SPDX-License-Identifier: Apache-2.0
 # -*- utf-8 -*-
 """
 Generates QoS config snippets for ONOS and Stratum that realize the SD-Fabric
@@ -684,7 +684,7 @@ def text_config(yaml_config, type):
     ), f"Too many allocated cells, something is wrong with base_use_limit: {unused_pool_buls}"
     # Account for small rounding errors (since we use floor).
     assert (
-        sum(unused_pool_buls) < max_cells * 0.0001
+        sum(unused_pool_buls) < max_cells * 0.0005
     ), f"Too many unallocated cells, something is wrong with base_use_limit: {unused_pool_buls}"
 
     if type == "stratum":

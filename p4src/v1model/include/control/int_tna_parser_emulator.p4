@@ -1,5 +1,5 @@
 // Copyright 2022-present Open Networking Foundation
-// SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
+// SPDX-License-Identifier: Apache-2.0
 
 #ifndef __INT_PARSER_EMU__
 #define __INT_PARSER_EMU__

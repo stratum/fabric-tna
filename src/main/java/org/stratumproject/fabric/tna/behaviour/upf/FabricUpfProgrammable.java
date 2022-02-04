@@ -1,5 +1,5 @@
 // Copyright 2020-present Open Networking Foundation
-// SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
+// SPDX-License-Identifier: Apache-2.0
 package org.stratumproject.fabric.tna.behaviour.upf;
 
 import com.google.common.collect.ImmutableSet;
@@ -11,9 +11,9 @@ import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
 import org.onosproject.drivers.p4runtime.AbstractP4RuntimeHandlerBehaviour;
 import org.onosproject.net.PortNumber;
-import org.onosproject.net.behaviour.upf.GtpTunnelPeer;
-import org.onosproject.net.behaviour.upf.SessionDownlink;
-import org.onosproject.net.behaviour.upf.SessionUplink;
+import org.onosproject.net.behaviour.upf.UpfGtpTunnelPeer;
+import org.onosproject.net.behaviour.upf.UpfSessionDownlink;
+import org.onosproject.net.behaviour.upf.UpfSessionUplink;
 import org.onosproject.net.behaviour.upf.UpfApplication;
 import org.onosproject.net.behaviour.upf.UpfCounter;
 import org.onosproject.net.behaviour.upf.UpfEntity;
@@ -603,10 +603,10 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                 addInterface((UpfInterface) entity);
                 break;
             case SESSION_UPLINK:
-                addUeSessionUplink((SessionUplink) entity);
+                addUeSessionUplink((UpfSessionUplink) entity);
                 break;
             case SESSION_DOWNLINK:
-                addUeSessionDownlink((SessionDownlink) entity);
+                addUeSessionDownlink((UpfSessionDownlink) entity);
                 break;
             case TERMINATION_UPLINK:
                 addUpfTerminationUplink((UpfTerminationUplink) entity);
@@ -615,7 +615,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                 addUpfTerminationDownlink((UpfTerminationDownlink) entity);
                 break;
             case TUNNEL_PEER:
-                addGtpTunnelPeer((GtpTunnelPeer) entity);
+                addGtpTunnelPeer((UpfGtpTunnelPeer) entity);
                 break;
             case APPLICATION:
                 addUpfApplication((UpfApplication) entity);
@@ -646,7 +646,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         }
     }
 
-    private void addGtpTunnelPeer(GtpTunnelPeer peer) throws UpfProgrammableException {
+    private void addGtpTunnelPeer(UpfGtpTunnelPeer peer) throws UpfProgrammableException {
         Pair<FlowRule, FlowRule> fabricGtpTunnelPeers = upfTranslator.gtpTunnelPeerToFabricEntry(
                 peer, deviceId, appId, DEFAULT_PRIORITY);
         log.info("Installing ingress and egress rules {}, {}",
@@ -656,7 +656,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                   fabricGtpTunnelPeers.getLeft().id().value(), fabricGtpTunnelPeers.getRight().id().value());
     }
 
-    private void addUeSessionUplink(SessionUplink ueSession) throws UpfProgrammableException {
+    private void addUeSessionUplink(UpfSessionUplink ueSession) throws UpfProgrammableException {
         FlowRule fabricUeSession = upfTranslator.sessionUplinkToFabricEntry(
                 ueSession, deviceId, appId, DEFAULT_PRIORITY);
         log.info("Installing {}", ueSession.toString());
@@ -664,7 +664,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         log.debug("Uplink UE session added with flowID {}", fabricUeSession.id().value());
     }
 
-    private void addUeSessionDownlink(SessionDownlink ueSession) throws UpfProgrammableException {
+    private void addUeSessionDownlink(UpfSessionDownlink ueSession) throws UpfProgrammableException {
         FlowRule fabricUeSession = upfTranslator.sessionDownlinkToFabricEntry(
                 ueSession, deviceId, appId, DEFAULT_PRIORITY);
         log.info("Installing {}", ueSession.toString());
@@ -699,10 +699,10 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                 removeInterface((UpfInterface) entity);
                 break;
             case SESSION_UPLINK:
-                removeSessionUplink((SessionUplink) entity);
+                removeSessionUplink((UpfSessionUplink) entity);
                 break;
             case SESSION_DOWNLINK:
-                removeSessionDownlink((SessionDownlink) entity);
+                removeSessionDownlink((UpfSessionDownlink) entity);
                 break;
             case TERMINATION_UPLINK:
                 removeUpfTerminationUplink((UpfTerminationUplink) entity);
@@ -711,7 +711,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                 removeUpfTerminationDownlink((UpfTerminationDownlink) entity);
                 break;
             case TUNNEL_PEER:
-                removeGtpTunnelPeer((GtpTunnelPeer) entity);
+                removeGtpTunnelPeer((UpfGtpTunnelPeer) entity);
                 break;
             case APPLICATION:
                 removeUpfApplication((UpfApplication) entity);
@@ -792,7 +792,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         removeEntry(match2, FABRIC_INGRESS_SPGW_INTERFACES, false);
     }
 
-    private void removeSessionUplink(SessionUplink ueSession) throws UpfProgrammableException {
+    private void removeSessionUplink(UpfSessionUplink ueSession) throws UpfProgrammableException {
         final PiCriterion match;
 
         match = PiCriterion.builder()
@@ -803,7 +803,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         removeEntry(match, FABRIC_INGRESS_SPGW_UPLINK_SESSIONS, false);
     }
 
-    private void removeSessionDownlink(SessionDownlink ueSession) throws UpfProgrammableException {
+    private void removeSessionDownlink(UpfSessionDownlink ueSession) throws UpfProgrammableException {
         final PiCriterion match;
 
         match = PiCriterion.builder()
@@ -836,7 +836,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         removeEntry(match, FABRIC_INGRESS_SPGW_DOWNLINK_TERMINATIONS, false);
     }
 
-    private void removeGtpTunnelPeer(GtpTunnelPeer peer) throws UpfProgrammableException {
+    private void removeGtpTunnelPeer(UpfGtpTunnelPeer peer) throws UpfProgrammableException {
         PiCriterion match = PiCriterion.builder()
                 .matchExact(HDR_TUN_PEER_ID, peer.tunPeerId())
                 .build();

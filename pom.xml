@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
 Copyright 2020-present Open Networking Foundation
-SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
+SPDX-License-Identifier: Apache-2.0
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -11,7 +11,7 @@ SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
     <parent>
         <groupId>org.onosproject</groupId>
         <artifactId>onos-dependencies</artifactId>
-        <version>2.5.6-SNAPSHOT</version>
+        <version>2.5.7-SNAPSHOT</version>
     </parent>
 
     <groupId>org.stratumproject</groupId>

@@ -1,5 +1,5 @@
 // Copyright 2020-present Open Networking Foundation
-// SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
+// SPDX-License-Identifier: Apache-2.0
 package org.stratumproject.fabric.tna.behaviour.upf;
 
 import com.google.common.collect.ImmutableList;
@@ -12,8 +12,8 @@ import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.PortNumber;
-import org.onosproject.net.behaviour.upf.SessionDownlink;
-import org.onosproject.net.behaviour.upf.SessionUplink;
+import org.onosproject.net.behaviour.upf.UpfSessionDownlink;
+import org.onosproject.net.behaviour.upf.UpfSessionUplink;
 import org.onosproject.net.behaviour.upf.UpfApplication;
 import org.onosproject.net.behaviour.upf.UpfCounter;
 import org.onosproject.net.behaviour.upf.UpfEntity;
@@ -160,7 +160,7 @@ public class FabricUpfProgrammableTest {
     @Test
     public void testUplinkUeSession() throws Exception {
         assertTrue(upfProgrammable.readAll(UpfEntityType.SESSION_UPLINK).isEmpty());
-        SessionUplink expectedUeSession = TestUpfConstants.UPLINK_UE_SESSION;
+        UpfSessionUplink expectedUeSession = TestUpfConstants.UPLINK_UE_SESSION;
         upfProgrammable.apply(expectedUeSession);
         Collection<? extends UpfEntity> installedUeSessions = upfProgrammable.readAll(UpfEntityType.SESSION_UPLINK);
         assertThat(installedUeSessions.size(), equalTo(1));
@@ -174,7 +174,7 @@ public class FabricUpfProgrammableTest {
     @Test
     public void testDownlinkUeSession() throws Exception {
         assertTrue(upfProgrammable.readAll(UpfEntityType.SESSION_DOWNLINK).isEmpty());
-        SessionDownlink expectedUeSession = TestUpfConstants.DOWNLINK_UE_SESSION;
+        UpfSessionDownlink expectedUeSession = TestUpfConstants.DOWNLINK_UE_SESSION;
         upfProgrammable.apply(expectedUeSession);
         Collection<? extends UpfEntity> installedUeSessions = upfProgrammable.readAll(UpfEntityType.SESSION_DOWNLINK);
         assertThat(installedUeSessions.size(), equalTo(1));

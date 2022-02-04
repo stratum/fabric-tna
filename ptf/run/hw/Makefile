@@ -1,5 +1,5 @@
 # Copyright 2020-present Open Networking Foundation
-# SPDX-License-Identifier: LicenseRef-ONF-Member-Only-1.0
+# SPDX-License-Identifier: Apache-2.0
 # 320 cpu port is for mavericks (65Q)
 
 define run_tests
