@@ -6,6 +6,8 @@ package org.stratumproject.fabric.tna.behaviour;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.primitives.UnsignedInteger;
+
 import org.onlab.packet.DeserializationException;
 import org.onlab.packet.Ethernet;
 import org.onlab.util.ImmutableByteSequence;
@@ -316,10 +318,10 @@ public class FabricInterpreter extends AbstractFabricHandlerBehavior
             try {
                 ImmutableByteSequence portByteSequence = packetMetadata.get()
                         .value().fit(P4InfoConstants.INGRESS_PORT_BITWIDTH);
-                // Convert 32-bit signed integer to an unsigned value that stored in a
-                // 64-bit long integer variable.
-                long l = 0x00000000FFFFFFFFL & (long) portByteSequence.asReadOnlyBuffer().getInt();
-                ConnectPoint receivedFrom = new ConnectPoint(deviceId, PortNumber.portNumber(l));
+                UnsignedInteger ui =
+                    UnsignedInteger.fromIntBits(portByteSequence.asReadOnlyBuffer().getInt());
+                ConnectPoint receivedFrom =
+                    new ConnectPoint(deviceId, PortNumber.portNumber(ui.longValue()));
                 if (!receivedFrom.port().hasName()) {
                     receivedFrom = translateSwitchPort(receivedFrom);
                 }
