@@ -55,7 +55,7 @@ pipeline {
             // upload the coverage to codecov only once.
             when {
                 expression {
-                    return (PROFILE == "fabric-spgw-int") &&
+                    return (PROFILE == "fabric-upf-int") &&
                         (ARCHITECTURE == "tna")
                 }
             }
@@ -86,7 +86,7 @@ pipeline {
         stage("Docker push image") {
             when {
                 expression {
-                    return (PROFILE == "fabric-spgw-int") &&
+                    return (PROFILE == "fabric-upf-int") &&
                         (!params.ghprbPullId?.trim())
                 }
             }

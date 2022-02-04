@@ -7,12 +7,12 @@ SPDX-License-Identifier: Apache-2.0
 
 [![Build Status](https://jenkins.onosproject.org/buildStatus/icon?job=postmerge-fabric-tna&subject=Fabric-tna)](https://jenkins.onosproject.org/view/fabric-tna/job/postmerge-fabric-tna/)
 [![Build Status](https://jenkins.onosproject.org/buildStatus/icon?job=postmerge-fabric-int-tna&subject=Fabric-int-tna)](https://jenkins.onosproject.org/view/fabric-tna/job/postmerge-fabric-int-tna/)
-[![Build Status](https://jenkins.onosproject.org/buildStatus/icon?Subject=postmerge&job=postmerge-fabric-spgw-int-tna&subject=Fabric-spgw-int-tna)](https://jenkins.onosproject.org/view/fabric-tna/job/postmerge-fabric-spgw-int-tna/)
-[![Build Status](https://jenkins.onosproject.org/buildStatus/icon?job=postmerge-fabric-spgw-tna&subject=Fabric-spgw-tna)](https://jenkins.onosproject.org/view/fabric-tna/job/postmerge-fabric-spgw-tna/)
+[![Build Status](https://jenkins.onosproject.org/buildStatus/icon?Subject=postmerge&job=postmerge-fabric-upf-int-tna&subject=Fabric-upf-int-tna)](https://jenkins.onosproject.org/view/fabric-tna/job/postmerge-fabric-upf-int-tna/)
+[![Build Status](https://jenkins.onosproject.org/buildStatus/icon?job=postmerge-fabric-upf-tna&subject=Fabric-upf-tna)](https://jenkins.onosproject.org/view/fabric-tna/job/postmerge-fabric-upf-tna/)
 [![Build Status](https://jenkins.onosproject.org/buildStatus/icon?job=postmerge-fabric-v1model&subject=Fabric-v1model)](https://jenkins.onosproject.org/view/fabric-tna/job/postmerge-fabric-v1model/)
-[![Build Status](https://jenkins.onosproject.org/buildStatus/icon?job=postmerge-fabric-spgw-v1model&subject=Fabric-spgw-v1model)](https://jenkins.onosproject.org/view/fabric-tna/job/postmerge-fabric-spgw-v1model/)
+[![Build Status](https://jenkins.onosproject.org/buildStatus/icon?job=postmerge-fabric-upf-v1model&subject=Fabric-upf-v1model)](https://jenkins.onosproject.org/view/fabric-tna/job/postmerge-fabric-upf-v1model/)
 [![Build Status](https://jenkins.onosproject.org/buildStatus/icon?job=postmerge-fabric-int-v1model&subject=Fabric-int-v1model)](https://jenkins.onosproject.org/view/fabric-tna/job/postmerge-fabric-int-v1model/)
-[![Build Status](https://jenkins.onosproject.org/buildStatus/icon?job=postmerge-fabric-spgw-int-v1model&subject=Fabric-spgw-int-v1model)](https://jenkins.onosproject.org/job/postmerge-fabric-spgw-int-v1model/1/)
+[![Build Status](https://jenkins.onosproject.org/buildStatus/icon?job=postmerge-fabric-upf-int-v1model&subject=Fabric-upf-int-v1model)](https://jenkins.onosproject.org/job/postmerge-fabric-upf-int-v1model/1/)
 
 [![Build Status](https://jenkins.onosproject.org/buildStatus/icon?job=fabric-tna-linerate-tests&subject=Line-Rate+Tests)](https://jenkins.onosproject.org/job/fabric-tna-linerate-tests/)
 
@@ -27,7 +27,7 @@ can be used to program any switch based on the Intel Barefoot Tofino ASIC.
 v1model architecture and is hosted in the ONOS repository. `fabric-tna.p4`
 follows a similar design to `fabric.p4`, but has evolved significantly to
 provide more advanced capabilities for Inband Network Telemetry (INT) and 4G/5G
-mobile user plane (a.k.a. SPGW in 4G or UPF in 5G).
+mobile user plane function (UPF).
 
 To use ONOS to control a Tofino switch, you will need to run the
 [Stratum][stratum] agent on the switch.
@@ -65,13 +65,13 @@ make <profile>
 
 The available profiles are:
 
-| Profile name            | Description                                        |
-| ------------------------|----------------------------------------------------|
-| `fabric`                | Basic Trellis IP/MPLS forwarding capabilities      |
-| `fabric-bng`            | With BNG user plane support (Not available yet)    |
-| `fabric-spgw`           | With 4G/5G mobile user plane support               |
-| `fabric-int`            | With INT support                                   |
-| `fabric-spgw-int`       | WITH SPGW and INT support                          |
+| Profile name     | Description                                     |
+|------------------|-------------------------------------------------|
+| `fabric`         | Basic Trellis IP/MPLS forwarding capabilities   |
+| `fabric-bng`     | With BNG user plane support (Not available yet) |
+| `fabric-upf`     | With 4G/5G mobile user plane support            |
+| `fabric-int`     | With INT support                                |
+| `fabric-upf-int` | WITH UPF and INT support                        |
 
 To run PTF tests on Stratum using Tofino Model:
 

@@ -18,9 +18,9 @@
 #include "tna/include/control/hasher.p4"
 #include "tna/include/control/stats.p4"
 #include "tna/include/control/slicing.p4"
-#ifdef WITH_SPGW
-#include "tna/include/control/spgw.p4"
-#endif // WITH_SPGW
+#ifdef WITH_UPF
+#include "tna/include/control/upf.p4"
+#endif // WITH_UPF
 #ifdef WITH_INT
 #include "tna/include/control/int.p4"
 #endif
@@ -46,9 +46,9 @@ control FabricIngress (
     Hasher() hasher;
     IngressSliceTcClassifier() slice_tc_classifier;
     IngressQos() qos;
-#ifdef WITH_SPGW
-    SpgwIngress() spgw;
-#endif // WITH_SPGW
+#ifdef WITH_UPF
+    UpfIngress() upf;
+#endif // WITH_UPF
 #ifdef WITH_INT
     IntWatchlist() int_watchlist;
     IntIngress() int_ingress;
@@ -64,11 +64,11 @@ control FabricIngress (
                     fabric_md.bridged.base.stats_flow_id);
         slice_tc_classifier.apply(hdr, ig_intr_md, fabric_md);
         filtering.apply(hdr, fabric_md, ig_intr_md);
-#ifdef WITH_SPGW
+#ifdef WITH_UPF
         if (!fabric_md.skip_forwarding) {
-            spgw.apply(hdr, fabric_md, ig_intr_md, ig_tm_md, ig_dprsr_md);
+            upf.apply(hdr, fabric_md, ig_intr_md, ig_tm_md, ig_dprsr_md);
         }
-#endif // WITH_SPGW
+#endif // WITH_UPF
         if (!fabric_md.skip_forwarding) {
             forwarding.apply(hdr, fabric_md, ig_dprsr_md);
         }
@@ -102,9 +102,9 @@ control FabricEgress (
     PacketIoEgress() pkt_io_egress;
     EgressNextControl() egress_next;
     EgressDscpRewriter() dscp_rewriter;
-#ifdef WITH_SPGW
-    SpgwEgress() spgw;
-#endif // WITH_SPGW
+#ifdef WITH_UPF
+    UpfEgress() upf;
+#endif // WITH_UPF
 #ifdef WITH_INT
     IntEgress() int_egress;
 #endif // WITH_INT
@@ -113,9 +113,9 @@ control FabricEgress (
         pkt_io_egress.apply(hdr, fabric_md, eg_intr_md);
         stats.apply(fabric_md.bridged.base.stats_flow_id, eg_intr_md.egress_port, fabric_md.bridged.bmd_type);
         egress_next.apply(hdr, fabric_md, eg_intr_md, eg_dprsr_md);
-#ifdef WITH_SPGW
-        spgw.apply(hdr, fabric_md);
-#endif // WITH_SPGW
+#ifdef WITH_UPF
+        upf.apply(hdr, fabric_md);
+#endif // WITH_UPF
 #ifdef WITH_INT
         int_egress.apply(hdr, fabric_md, eg_intr_md, eg_prsr_md, eg_dprsr_md);
 #endif

@@ -159,10 +159,10 @@ public final class P4InfoConstants {
             PiTableId.of("FabricEgress.int_egress.report");
     public static final PiTableId FABRIC_EGRESS_PKT_IO_EGRESS_SWITCH_INFO =
             PiTableId.of("FabricEgress.pkt_io_egress.switch_info");
-    public static final PiTableId FABRIC_EGRESS_SPGW_EG_TUNNEL_PEERS =
-            PiTableId.of("FabricEgress.spgw.eg_tunnel_peers");
-    public static final PiTableId FABRIC_EGRESS_SPGW_GTPU_ENCAP =
-            PiTableId.of("FabricEgress.spgw.gtpu_encap");
+    public static final PiTableId FABRIC_EGRESS_UPF_EG_TUNNEL_PEERS =
+            PiTableId.of("FabricEgress.upf.eg_tunnel_peers");
+    public static final PiTableId FABRIC_EGRESS_UPF_GTPU_ENCAP =
+            PiTableId.of("FabricEgress.upf.gtpu_encap");
     public static final PiTableId FABRIC_EGRESS_STATS_FLOWS =
             PiTableId.of("FabricEgress.stats.flows");
     public static final PiTableId FABRIC_INGRESS_ACL_ACL =
@@ -195,29 +195,29 @@ public final class P4InfoConstants {
             PiTableId.of("FabricIngress.qos.queues");
     public static final PiTableId FABRIC_INGRESS_SLICE_TC_CLASSIFIER_CLASSIFIER =
             PiTableId.of("FabricIngress.slice_tc_classifier.classifier");
-    public static final PiTableId FABRIC_INGRESS_SPGW_APPLICATIONS =
-            PiTableId.of("FabricIngress.spgw.applications");
-    public static final PiTableId FABRIC_INGRESS_SPGW_DOWNLINK_SESSIONS =
-            PiTableId.of("FabricIngress.spgw.downlink_sessions");
-    public static final PiTableId FABRIC_INGRESS_SPGW_DOWNLINK_TERMINATIONS =
-            PiTableId.of("FabricIngress.spgw.downlink_terminations");
-    public static final PiTableId FABRIC_INGRESS_SPGW_IG_TUNNEL_PEERS =
-            PiTableId.of("FabricIngress.spgw.ig_tunnel_peers");
-    public static final PiTableId FABRIC_INGRESS_SPGW_INTERFACES =
-            PiTableId.of("FabricIngress.spgw.interfaces");
-    public static final PiTableId FABRIC_INGRESS_SPGW_UPLINK_RECIRC_RULES =
-            PiTableId.of("FabricIngress.spgw.uplink_recirc_rules");
-    public static final PiTableId FABRIC_INGRESS_SPGW_UPLINK_SESSIONS =
-            PiTableId.of("FabricIngress.spgw.uplink_sessions");
-    public static final PiTableId FABRIC_INGRESS_SPGW_UPLINK_TERMINATIONS =
-            PiTableId.of("FabricIngress.spgw.uplink_terminations");
+    public static final PiTableId FABRIC_INGRESS_UPF_APPLICATIONS =
+            PiTableId.of("FabricIngress.upf.applications");
+    public static final PiTableId FABRIC_INGRESS_UPF_DOWNLINK_SESSIONS =
+            PiTableId.of("FabricIngress.upf.downlink_sessions");
+    public static final PiTableId FABRIC_INGRESS_UPF_DOWNLINK_TERMINATIONS =
+            PiTableId.of("FabricIngress.upf.downlink_terminations");
+    public static final PiTableId FABRIC_INGRESS_UPF_IG_TUNNEL_PEERS =
+            PiTableId.of("FabricIngress.upf.ig_tunnel_peers");
+    public static final PiTableId FABRIC_INGRESS_UPF_INTERFACES =
+            PiTableId.of("FabricIngress.upf.interfaces");
+    public static final PiTableId FABRIC_INGRESS_UPF_UPLINK_RECIRC_RULES =
+            PiTableId.of("FabricIngress.upf.uplink_recirc_rules");
+    public static final PiTableId FABRIC_INGRESS_UPF_UPLINK_SESSIONS =
+            PiTableId.of("FabricIngress.upf.uplink_sessions");
+    public static final PiTableId FABRIC_INGRESS_UPF_UPLINK_TERMINATIONS =
+            PiTableId.of("FabricIngress.upf.uplink_terminations");
     public static final PiTableId FABRIC_INGRESS_STATS_FLOWS =
             PiTableId.of("FabricIngress.stats.flows");
     // Indirect Counter IDs
-    public static final PiCounterId FABRIC_EGRESS_SPGW_TERMINATIONS_COUNTER =
-            PiCounterId.of("FabricEgress.spgw.terminations_counter");
-    public static final PiCounterId FABRIC_INGRESS_SPGW_TERMINATIONS_COUNTER =
-            PiCounterId.of("FabricIngress.spgw.terminations_counter");
+    public static final PiCounterId FABRIC_EGRESS_UPF_TERMINATIONS_COUNTER =
+            PiCounterId.of("FabricEgress.upf.terminations_counter");
+    public static final PiCounterId FABRIC_INGRESS_UPF_TERMINATIONS_COUNTER =
+            PiCounterId.of("FabricIngress.upf.terminations_counter");
     // Direct Counter IDs
     public static final PiCounterId FABRIC_EGRESS_EGRESS_NEXT_EGRESS_VLAN_COUNTER =
             PiCounterId.of("FabricEgress.egress_next.egress_vlan_counter");
@@ -245,8 +245,8 @@ public final class P4InfoConstants {
             PiCounterId.of("FabricIngress.qos.queues_stats");
     public static final PiCounterId FABRIC_INGRESS_SLICE_TC_CLASSIFIER_CLASSIFIER_STATS =
             PiCounterId.of("FabricIngress.slice_tc_classifier.classifier_stats");
-    public static final PiCounterId FABRIC_INGRESS_SPGW_RECIRC_STATS =
-            PiCounterId.of("FabricIngress.spgw.recirc_stats");
+    public static final PiCounterId FABRIC_INGRESS_UPF_RECIRC_STATS =
+            PiCounterId.of("FabricIngress.upf.recirc_stats");
     public static final PiCounterId FABRIC_INGRESS_STATS_FLOW_COUNTER =
             PiCounterId.of("FabricIngress.stats.flow_counter");
     // Action IDs
@@ -276,12 +276,12 @@ public final class P4InfoConstants {
             PiActionId.of("FabricEgress.int_egress.set_config");
     public static final PiActionId FABRIC_EGRESS_PKT_IO_EGRESS_SET_SWITCH_INFO =
             PiActionId.of("FabricEgress.pkt_io_egress.set_switch_info");
-    public static final PiActionId FABRIC_EGRESS_SPGW_GTPU_ONLY =
-            PiActionId.of("FabricEgress.spgw.gtpu_only");
-    public static final PiActionId FABRIC_EGRESS_SPGW_GTPU_WITH_PSC =
-            PiActionId.of("FabricEgress.spgw.gtpu_with_psc");
-    public static final PiActionId FABRIC_EGRESS_SPGW_LOAD_TUNNEL_PARAMS =
-            PiActionId.of("FabricEgress.spgw.load_tunnel_params");
+    public static final PiActionId FABRIC_EGRESS_UPF_GTPU_ONLY =
+            PiActionId.of("FabricEgress.upf.gtpu_only");
+    public static final PiActionId FABRIC_EGRESS_UPF_GTPU_WITH_PSC =
+            PiActionId.of("FabricEgress.upf.gtpu_with_psc");
+    public static final PiActionId FABRIC_EGRESS_UPF_LOAD_TUNNEL_PARAMS =
+            PiActionId.of("FabricEgress.upf.load_tunnel_params");
     public static final PiActionId FABRIC_EGRESS_STATS_COUNT =
             PiActionId.of("FabricEgress.stats.count");
     public static final PiActionId FABRIC_INGRESS_ACL_COPY_TO_CPU =
@@ -354,56 +354,56 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.slice_tc_classifier.set_slice_id_tc");
     public static final PiActionId FABRIC_INGRESS_SLICE_TC_CLASSIFIER_TRUST_DSCP =
             PiActionId.of("FabricIngress.slice_tc_classifier.trust_dscp");
-    public static final PiActionId FABRIC_INGRESS_SPGW_APP_FWD =
-            PiActionId.of("FabricIngress.spgw.app_fwd");
-    public static final PiActionId FABRIC_INGRESS_SPGW_APP_FWD_NO_TC =
-            PiActionId.of("FabricIngress.spgw.app_fwd_no_tc");
-    public static final PiActionId FABRIC_INGRESS_SPGW_DOWNLINK_DROP =
-            PiActionId.of("FabricIngress.spgw.downlink_drop");
-    public static final PiActionId FABRIC_INGRESS_SPGW_DOWNLINK_DROP_MISS =
-            PiActionId.of("FabricIngress.spgw.downlink_drop_miss");
-    public static final PiActionId FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP =
-            PiActionId.of("FabricIngress.spgw.downlink_fwd_encap");
-    public static final PiActionId FABRIC_INGRESS_SPGW_DOWNLINK_FWD_ENCAP_NO_TC =
-            PiActionId.of("FabricIngress.spgw.downlink_fwd_encap_no_tc");
-    public static final PiActionId FABRIC_INGRESS_SPGW_IFACE_ACCESS =
-            PiActionId.of("FabricIngress.spgw.iface_access");
-    public static final PiActionId FABRIC_INGRESS_SPGW_IFACE_CORE =
-            PiActionId.of("FabricIngress.spgw.iface_core");
-    public static final PiActionId FABRIC_INGRESS_SPGW_IFACE_DBUF =
-            PiActionId.of("FabricIngress.spgw.iface_dbuf");
-    public static final PiActionId FABRIC_INGRESS_SPGW_IFACE_MISS =
-            PiActionId.of("FabricIngress.spgw.iface_miss");
-    public static final PiActionId FABRIC_INGRESS_SPGW_RECIRC_ALLOW =
-            PiActionId.of("FabricIngress.spgw.recirc_allow");
-    public static final PiActionId FABRIC_INGRESS_SPGW_RECIRC_DENY =
-            PiActionId.of("FabricIngress.spgw.recirc_deny");
-    public static final PiActionId FABRIC_INGRESS_SPGW_RECIRC_MISS =
-            PiActionId.of("FabricIngress.spgw.recirc_miss");
-    public static final PiActionId FABRIC_INGRESS_SPGW_SET_APP_ID =
-            PiActionId.of("FabricIngress.spgw.set_app_id");
-    public static final PiActionId FABRIC_INGRESS_SPGW_SET_DOWNLINK_SESSION =
-            PiActionId.of("FabricIngress.spgw.set_downlink_session");
-    public static final PiActionId FABRIC_INGRESS_SPGW_SET_DOWNLINK_SESSION_BUF =
-            PiActionId.of("FabricIngress.spgw.set_downlink_session_buf");
-    public static final PiActionId FABRIC_INGRESS_SPGW_SET_DOWNLINK_SESSION_BUF_DROP =
-            PiActionId.of("FabricIngress.spgw.set_downlink_session_buf_drop");
-    public static final PiActionId FABRIC_INGRESS_SPGW_SET_DOWNLINK_SESSION_DROP =
-            PiActionId.of("FabricIngress.spgw.set_downlink_session_drop");
-    public static final PiActionId FABRIC_INGRESS_SPGW_SET_DOWNLINK_SESSION_MISS =
-            PiActionId.of("FabricIngress.spgw.set_downlink_session_miss");
-    public static final PiActionId FABRIC_INGRESS_SPGW_SET_ROUTING_IPV4_DST =
-            PiActionId.of("FabricIngress.spgw.set_routing_ipv4_dst");
-    public static final PiActionId FABRIC_INGRESS_SPGW_SET_UPLINK_SESSION =
-            PiActionId.of("FabricIngress.spgw.set_uplink_session");
-    public static final PiActionId FABRIC_INGRESS_SPGW_SET_UPLINK_SESSION_DROP =
-            PiActionId.of("FabricIngress.spgw.set_uplink_session_drop");
-    public static final PiActionId FABRIC_INGRESS_SPGW_SET_UPLINK_SESSION_MISS =
-            PiActionId.of("FabricIngress.spgw.set_uplink_session_miss");
-    public static final PiActionId FABRIC_INGRESS_SPGW_UPLINK_DROP =
-            PiActionId.of("FabricIngress.spgw.uplink_drop");
-    public static final PiActionId FABRIC_INGRESS_SPGW_UPLINK_DROP_MISS =
-            PiActionId.of("FabricIngress.spgw.uplink_drop_miss");
+    public static final PiActionId FABRIC_INGRESS_UPF_APP_FWD =
+            PiActionId.of("FabricIngress.upf.app_fwd");
+    public static final PiActionId FABRIC_INGRESS_UPF_APP_FWD_NO_TC =
+            PiActionId.of("FabricIngress.upf.app_fwd_no_tc");
+    public static final PiActionId FABRIC_INGRESS_UPF_DOWNLINK_DROP =
+            PiActionId.of("FabricIngress.upf.downlink_drop");
+    public static final PiActionId FABRIC_INGRESS_UPF_DOWNLINK_DROP_MISS =
+            PiActionId.of("FabricIngress.upf.downlink_drop_miss");
+    public static final PiActionId FABRIC_INGRESS_UPF_DOWNLINK_FWD_ENCAP =
+            PiActionId.of("FabricIngress.upf.downlink_fwd_encap");
+    public static final PiActionId FABRIC_INGRESS_UPF_DOWNLINK_FWD_ENCAP_NO_TC =
+            PiActionId.of("FabricIngress.upf.downlink_fwd_encap_no_tc");
+    public static final PiActionId FABRIC_INGRESS_UPF_IFACE_ACCESS =
+            PiActionId.of("FabricIngress.upf.iface_access");
+    public static final PiActionId FABRIC_INGRESS_UPF_IFACE_CORE =
+            PiActionId.of("FabricIngress.upf.iface_core");
+    public static final PiActionId FABRIC_INGRESS_UPF_IFACE_DBUF =
+            PiActionId.of("FabricIngress.upf.iface_dbuf");
+    public static final PiActionId FABRIC_INGRESS_UPF_IFACE_MISS =
+            PiActionId.of("FabricIngress.upf.iface_miss");
+    public static final PiActionId FABRIC_INGRESS_UPF_RECIRC_ALLOW =
+            PiActionId.of("FabricIngress.upf.recirc_allow");
+    public static final PiActionId FABRIC_INGRESS_UPF_RECIRC_DENY =
+            PiActionId.of("FabricIngress.upf.recirc_deny");
+    public static final PiActionId FABRIC_INGRESS_UPF_RECIRC_MISS =
+            PiActionId.of("FabricIngress.upf.recirc_miss");
+    public static final PiActionId FABRIC_INGRESS_UPF_SET_APP_ID =
+            PiActionId.of("FabricIngress.upf.set_app_id");
+    public static final PiActionId FABRIC_INGRESS_UPF_SET_DOWNLINK_SESSION =
+            PiActionId.of("FabricIngress.upf.set_downlink_session");
+    public static final PiActionId FABRIC_INGRESS_UPF_SET_DOWNLINK_SESSION_BUF =
+            PiActionId.of("FabricIngress.upf.set_downlink_session_buf");
+    public static final PiActionId FABRIC_INGRESS_UPF_SET_DOWNLINK_SESSION_BUF_DROP =
+            PiActionId.of("FabricIngress.upf.set_downlink_session_buf_drop");
+    public static final PiActionId FABRIC_INGRESS_UPF_SET_DOWNLINK_SESSION_DROP =
+            PiActionId.of("FabricIngress.upf.set_downlink_session_drop");
+    public static final PiActionId FABRIC_INGRESS_UPF_SET_DOWNLINK_SESSION_MISS =
+            PiActionId.of("FabricIngress.upf.set_downlink_session_miss");
+    public static final PiActionId FABRIC_INGRESS_UPF_SET_ROUTING_IPV4_DST =
+            PiActionId.of("FabricIngress.upf.set_routing_ipv4_dst");
+    public static final PiActionId FABRIC_INGRESS_UPF_SET_UPLINK_SESSION =
+            PiActionId.of("FabricIngress.upf.set_uplink_session");
+    public static final PiActionId FABRIC_INGRESS_UPF_SET_UPLINK_SESSION_DROP =
+            PiActionId.of("FabricIngress.upf.set_uplink_session_drop");
+    public static final PiActionId FABRIC_INGRESS_UPF_SET_UPLINK_SESSION_MISS =
+            PiActionId.of("FabricIngress.upf.set_uplink_session_miss");
+    public static final PiActionId FABRIC_INGRESS_UPF_UPLINK_DROP =
+            PiActionId.of("FabricIngress.upf.uplink_drop");
+    public static final PiActionId FABRIC_INGRESS_UPF_UPLINK_DROP_MISS =
+            PiActionId.of("FabricIngress.upf.uplink_drop_miss");
     public static final PiActionId FABRIC_INGRESS_STATS_COUNT =
             PiActionId.of("FabricIngress.stats.count");
     public static final PiActionId NO_ACTION = PiActionId.of("NoAction");

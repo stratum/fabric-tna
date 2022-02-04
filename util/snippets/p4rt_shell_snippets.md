@@ -69,7 +69,7 @@ multicast_group_entry(group_id=10).read(lambda e: print(e))
 ### Update an indirect counter
 
 ```python
-ce = counter_entry["FabricIngress.spgw.pdr_counter"]
+ce = counter_entry["FabricIngress.upf.pdr_counter"]
 ce.index = 1
 ce.byte_count = 100
 ce.packet_count = 2
