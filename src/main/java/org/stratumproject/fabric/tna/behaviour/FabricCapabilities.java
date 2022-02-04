@@ -7,14 +7,9 @@ import org.onosproject.net.pi.model.PiPipeconf;
 import org.slf4j.Logger;
 import org.stratumproject.fabric.tna.slicing.api.MeterColor;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.util.Optional;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static org.onosproject.net.pi.model.PiPipeconf.ExtensionType.CPU_PORT_TXT;
 import static org.slf4j.LoggerFactory.getLogger;
 import static org.stratumproject.fabric.tna.Constants.BMV2_COLOR_RED;
 import static org.stratumproject.fabric.tna.Constants.TNA;
