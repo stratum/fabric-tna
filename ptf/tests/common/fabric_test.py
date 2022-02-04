@@ -897,10 +897,12 @@ class FabricTest(P4RuntimeTest):
             # For Tofino Model and real hardware, use gNMI to get the SDN port to SDK
             # port mapping.
             self.sdn_to_sdk_port = self.build_sdn_to_sdk_port_map_from_gnmi()
-            self.sdn_to_sdk_port[0xFFFFFF00] = 0x44   # Recirculate port for pipe 0
-            self.sdn_to_sdk_port[0xFFFFFF01] = 0xC4   # Recirculate port for pipe 1
-            self.sdn_to_sdk_port[0xFFFFFF02] = 0x144  # Recirculate port for pipe 2
-            self.sdn_to_sdk_port[0xFFFFFF03] = 0x1C4  # Recirculate port for pipe 3
+
+        # Common SDN ports
+        self.sdn_to_sdk_port[0xFFFFFF00] = 0x44   # Recirculate port for pipe 0
+        self.sdn_to_sdk_port[0xFFFFFF01] = 0xC4   # Recirculate port for pipe 1
+        self.sdn_to_sdk_port[0xFFFFFF02] = 0x144  # Recirculate port for pipe 2
+        self.sdn_to_sdk_port[0xFFFFFF03] = 0x1C4  # Recirculate port for pipe 3
 
     def tearDown(self):
         self.reset_switch_info()
