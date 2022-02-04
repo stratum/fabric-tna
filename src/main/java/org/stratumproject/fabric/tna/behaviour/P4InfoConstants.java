@@ -159,12 +159,12 @@ public final class P4InfoConstants {
             PiTableId.of("FabricEgress.int_egress.report");
     public static final PiTableId FABRIC_EGRESS_PKT_IO_EGRESS_SWITCH_INFO =
             PiTableId.of("FabricEgress.pkt_io_egress.switch_info");
+    public static final PiTableId FABRIC_EGRESS_STATS_FLOWS =
+            PiTableId.of("FabricEgress.stats.flows");
     public static final PiTableId FABRIC_EGRESS_UPF_EG_TUNNEL_PEERS =
             PiTableId.of("FabricEgress.upf.eg_tunnel_peers");
     public static final PiTableId FABRIC_EGRESS_UPF_GTPU_ENCAP =
             PiTableId.of("FabricEgress.upf.gtpu_encap");
-    public static final PiTableId FABRIC_EGRESS_STATS_FLOWS =
-            PiTableId.of("FabricEgress.stats.flows");
     public static final PiTableId FABRIC_INGRESS_ACL_ACL =
             PiTableId.of("FabricIngress.acl.acl");
     public static final PiTableId FABRIC_INGRESS_FILTERING_FWD_CLASSIFIER =
@@ -195,6 +195,8 @@ public final class P4InfoConstants {
             PiTableId.of("FabricIngress.qos.queues");
     public static final PiTableId FABRIC_INGRESS_SLICE_TC_CLASSIFIER_CLASSIFIER =
             PiTableId.of("FabricIngress.slice_tc_classifier.classifier");
+    public static final PiTableId FABRIC_INGRESS_STATS_FLOWS =
+            PiTableId.of("FabricIngress.stats.flows");
     public static final PiTableId FABRIC_INGRESS_UPF_APPLICATIONS =
             PiTableId.of("FabricIngress.upf.applications");
     public static final PiTableId FABRIC_INGRESS_UPF_DOWNLINK_SESSIONS =
@@ -211,8 +213,6 @@ public final class P4InfoConstants {
             PiTableId.of("FabricIngress.upf.uplink_sessions");
     public static final PiTableId FABRIC_INGRESS_UPF_UPLINK_TERMINATIONS =
             PiTableId.of("FabricIngress.upf.uplink_terminations");
-    public static final PiTableId FABRIC_INGRESS_STATS_FLOWS =
-            PiTableId.of("FabricIngress.stats.flows");
     // Indirect Counter IDs
     public static final PiCounterId FABRIC_EGRESS_UPF_TERMINATIONS_COUNTER =
             PiCounterId.of("FabricEgress.upf.terminations_counter");
@@ -245,10 +245,10 @@ public final class P4InfoConstants {
             PiCounterId.of("FabricIngress.qos.queues_stats");
     public static final PiCounterId FABRIC_INGRESS_SLICE_TC_CLASSIFIER_CLASSIFIER_STATS =
             PiCounterId.of("FabricIngress.slice_tc_classifier.classifier_stats");
-    public static final PiCounterId FABRIC_INGRESS_UPF_RECIRC_STATS =
-            PiCounterId.of("FabricIngress.upf.recirc_stats");
     public static final PiCounterId FABRIC_INGRESS_STATS_FLOW_COUNTER =
             PiCounterId.of("FabricIngress.stats.flow_counter");
+    public static final PiCounterId FABRIC_INGRESS_UPF_RECIRC_STATS =
+            PiCounterId.of("FabricIngress.upf.recirc_stats");
     // Action IDs
     public static final PiActionId FABRIC_EGRESS_DSCP_REWRITER_CLEAR =
             PiActionId.of("FabricEgress.dscp_rewriter.clear");
@@ -276,14 +276,14 @@ public final class P4InfoConstants {
             PiActionId.of("FabricEgress.int_egress.set_config");
     public static final PiActionId FABRIC_EGRESS_PKT_IO_EGRESS_SET_SWITCH_INFO =
             PiActionId.of("FabricEgress.pkt_io_egress.set_switch_info");
+    public static final PiActionId FABRIC_EGRESS_STATS_COUNT =
+            PiActionId.of("FabricEgress.stats.count");
     public static final PiActionId FABRIC_EGRESS_UPF_GTPU_ONLY =
             PiActionId.of("FabricEgress.upf.gtpu_only");
     public static final PiActionId FABRIC_EGRESS_UPF_GTPU_WITH_PSC =
             PiActionId.of("FabricEgress.upf.gtpu_with_psc");
     public static final PiActionId FABRIC_EGRESS_UPF_LOAD_TUNNEL_PARAMS =
             PiActionId.of("FabricEgress.upf.load_tunnel_params");
-    public static final PiActionId FABRIC_EGRESS_STATS_COUNT =
-            PiActionId.of("FabricEgress.stats.count");
     public static final PiActionId FABRIC_INGRESS_ACL_COPY_TO_CPU =
             PiActionId.of("FabricIngress.acl.copy_to_cpu");
     public static final PiActionId FABRIC_INGRESS_ACL_COPY_TO_CPU_POST_INGRESS =
@@ -354,6 +354,8 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.slice_tc_classifier.set_slice_id_tc");
     public static final PiActionId FABRIC_INGRESS_SLICE_TC_CLASSIFIER_TRUST_DSCP =
             PiActionId.of("FabricIngress.slice_tc_classifier.trust_dscp");
+    public static final PiActionId FABRIC_INGRESS_STATS_COUNT =
+            PiActionId.of("FabricIngress.stats.count");
     public static final PiActionId FABRIC_INGRESS_UPF_APP_FWD =
             PiActionId.of("FabricIngress.upf.app_fwd");
     public static final PiActionId FABRIC_INGRESS_UPF_APP_FWD_NO_TC =
@@ -404,8 +406,6 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.upf.uplink_drop");
     public static final PiActionId FABRIC_INGRESS_UPF_UPLINK_DROP_MISS =
             PiActionId.of("FabricIngress.upf.uplink_drop_miss");
-    public static final PiActionId FABRIC_INGRESS_STATS_COUNT =
-            PiActionId.of("FabricIngress.stats.count");
     public static final PiActionId NO_ACTION = PiActionId.of("NoAction");
     public static final PiActionId NOP = PiActionId.of("nop");
     // Action Param IDs
