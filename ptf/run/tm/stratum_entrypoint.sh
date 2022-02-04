@@ -36,4 +36,5 @@ ${stratumBin} \
     -write_req_log_file=./p4rt-write-reqs.log \
     -enable_onlp=false \
     -experimental_enable_p4runtime_translation \
+    -incompatible_enable_bfrt_legacy_bytestring_responses \
     > ./stratum_bf.log 2>&1
