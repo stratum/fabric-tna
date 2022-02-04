@@ -7,35 +7,69 @@ SPDX-License-Identifier: Apache-2.0
 
 [![Build Status](https://jenkins.onosproject.org/buildStatus/icon?job=postmerge-fabric-tna&subject=Fabric-tna)](https://jenkins.onosproject.org/view/fabric-tna/job/postmerge-fabric-tna/)
 [![Build Status](https://jenkins.onosproject.org/buildStatus/icon?job=postmerge-fabric-int-tna&subject=Fabric-int-tna)](https://jenkins.onosproject.org/view/fabric-tna/job/postmerge-fabric-int-tna/)
-[![Build Status](https://jenkins.onosproject.org/buildStatus/icon?Subject=postmerge&job=postmerge-fabric-spgw-int-tna&subject=Fabric-spgw-int-tna)](https://jenkins.onosproject.org/view/fabric-tna/job/postmerge-fabric-spgw-int-tna/)
-[![Build Status](https://jenkins.onosproject.org/buildStatus/icon?job=postmerge-fabric-spgw-tna&subject=Fabric-spgw-tna)](https://jenkins.onosproject.org/view/fabric-tna/job/postmerge-fabric-spgw-tna/)
+[![Build Status](https://jenkins.onosproject.org/buildStatus/icon?Subject=postmerge&job=postmerge-fabric-upf-int-tna&subject=Fabric-upf-int-tna)](https://jenkins.onosproject.org/view/fabric-tna/job/postmerge-fabric-upf-int-tna/)
+[![Build Status](https://jenkins.onosproject.org/buildStatus/icon?job=postmerge-fabric-upf-tna&subject=Fabric-upf-tna)](https://jenkins.onosproject.org/view/fabric-tna/job/postmerge-fabric-upf-tna/)
 [![Build Status](https://jenkins.onosproject.org/buildStatus/icon?job=postmerge-fabric-v1model&subject=Fabric-v1model)](https://jenkins.onosproject.org/view/fabric-tna/job/postmerge-fabric-v1model/)
-[![Build Status](https://jenkins.onosproject.org/buildStatus/icon?job=postmerge-fabric-spgw-v1model&subject=Fabric-spgw-v1model)](https://jenkins.onosproject.org/view/fabric-tna/job/postmerge-fabric-spgw-v1model/)
+[![Build Status](https://jenkins.onosproject.org/buildStatus/icon?job=postmerge-fabric-upf-v1model&subject=Fabric-upf-v1model)](https://jenkins.onosproject.org/view/fabric-tna/job/postmerge-fabric-upf-v1model/)
 [![Build Status](https://jenkins.onosproject.org/buildStatus/icon?job=postmerge-fabric-int-v1model&subject=Fabric-int-v1model)](https://jenkins.onosproject.org/view/fabric-tna/job/postmerge-fabric-int-v1model/)
-[![Build Status](https://jenkins.onosproject.org/buildStatus/icon?job=postmerge-fabric-spgw-int-v1model&subject=Fabric-spgw-int-v1model)](https://jenkins.onosproject.org/job/postmerge-fabric-spgw-int-v1model/1/)
+[![Build Status](https://jenkins.onosproject.org/buildStatus/icon?job=postmerge-fabric-upf-int-v1model&subject=Fabric-upf-int-v1model)](https://jenkins.onosproject.org/job/postmerge-fabric-upf-int-v1model/1/)
 
 [![Build Status](https://jenkins.onosproject.org/buildStatus/icon?job=fabric-tna-linerate-tests&subject=Line-Rate+Tests)](https://jenkins.onosproject.org/job/fabric-tna-linerate-tests/)
 
-`fabric-tna` is a P4 program designed to work with [Trellis](trellis), a set of
-SDN applications running on top of ONOS to provide the control plane for an IP
-fabric based on MPLS segment-routing.
+`fabric-tna` is a P4 program that realizes the data plane of
+[SD-Fabric](sdfabric), an SDN-enabled programmable network fabric tailored for
+5G-connected edge clouds, with a focus on enterprise, and Industry 4.0 use
+cases.
 
-`fabric-tna.p4` is based on the Tofino Native Architecture (TNA), hence it
-can be used to program any switch based on the Intel Barefoot Tofino ASIC.
+`fabric-tna` is based on the Tofino Native Architecture (TNA), hence it can be
+used to program any switch based on the Intel Tofino ASIC. The P4 program is
+specifically designed to run on [Stratum](stratum) switches controlled by the
+[ONOS](onos) SDN controller.
 
-`fabric-tna.p4` is not to be confused with [fabric.p4], which is based on the
-v1model architecture and is hosted in the ONOS repository. `fabric-tna.p4`
-follows a similar design to `fabric.p4`, but has evolved significantly to
-provide more advanced capabilities for Inband Network Telemetry (INT) and 4G/5G
-mobile user plane (a.k.a. SPGW in 4G or UPF in 5G).
+`fabric-tna.p4` is not to be confused with [fabric.p4], an older P4 program
+hosted in the ONOS repository originally designed to support [Trellis](trellis).
+`fabric-tna.p4` follows a similar design to `fabric.p4`, but has evolved
+significantly to provide more advanced capabilities for 4G/5G mobile user plane
+function (UPF), Inband Network Telemetry (INT), slicing, and QoS.
 
-To use ONOS to control a Tofino switch, you will need to run the
-[Stratum][stratum] agent on the switch.
+For up-to-date documentation on the architecture, capabilities, and
+instructions to deploy and use SD-Fabric, please refer to the official
+documentation:
+
+<https://docs.sd-fabric.org/>
+
+## Content
+
+### P4 Program
+
+The directory `p4src/tna` contains the P4 program for the TNA architecture.
+`p4src/v1model` contains an equivalent version of the same program based on the
+V1Model architecture, to be used for development and testing together with the
+BMv2 software switch.
+
+### ONOS Pipeconf
+
+`src/` contains the Java implementation and tests for the ONOS pipeconf, which
+is essentially a set of drivers enabling ONOS to control different aspects of
+the switch pipeline defined by the P4 program.
+
+### PTF Tests
+
+`ptf/` contains an extensive suite of test cases  for the P4 program, based on
+the Packet Test Framework (PTF). These tests are used to validate the forwarding
+behavior of the switch. We provide scripts and instructions to run tests on
+multiple targets:
+
+* Tofino-Model (ASIC emulator)
+* HW switch
+* BMv2 software switch
 
 ## Requirements
 
+To build and test this project you will need the following software:
+
 * Barefoot SDE (a.k.a. Intel P4 Studio) = 9.7.0
-* ONOS >= 2.5.5
+* ONOS >= 2.5.7
 * Docker (to run the build scripts without worrying about dependencies)
 * cURL (to interact with the ONOS REST APIs)
 
@@ -65,13 +99,12 @@ make <profile>
 
 The available profiles are:
 
-| Profile name            | Description                                        |
-| ------------------------|----------------------------------------------------|
-| `fabric`                | Basic Trellis IP/MPLS forwarding capabilities      |
-| `fabric-bng`            | With BNG user plane support (Not available yet)    |
-| `fabric-spgw`           | With 4G/5G mobile user plane support               |
-| `fabric-int`            | With INT support                                   |
-| `fabric-spgw-int`       | WITH SPGW and INT support                          |
+| Profile name     | Description                                     |
+|------------------|-------------------------------------------------|
+| `fabric`         | Basic L2/L3 forwarding capabilities             |
+| `fabric-upf`     | With 4G/5G mobile user plane support            |
+| `fabric-int`     | With INT support                                |
+| `fabric-upf-int` | WITH UPF and INT support                        |
 
 To run PTF tests on Stratum using Tofino Model:
 
@@ -87,10 +120,12 @@ If you want to test the pipeline manually with an interactive P4Runtime shell:
 ./ptf/run/tm/p4rt-shell <profile>
 ```
 
-This command will start Tofino Model with Stratum and a P4Runtime Shell attached to it.
-For more information about using P4Runtime Shell, check [p4lang/p4runtime-shell](https://github.com/p4lang/p4runtime-shell).
+This command will start Tofino Model with Stratum and a P4Runtime Shell attached
+to it. For more information about using P4Runtime Shell, check
+[p4lang/p4runtime-shell](https://github.com/p4lang/p4runtime-shell).
 
-Also, check [p4rt_shell_snippets.md](p4rt_shell_snippets.md) for some examples of how to program tables in fabric-tna.
+Also, check [p4rt_shell_snippets.md](p4rt_shell_snippets.md) for some examples
+of how to program tables in fabric-tna.
 
 To build the ONOS pipeconf `.oar` package which includes the compiled P4
 artifacts for the previously built profile(s):
@@ -114,11 +149,6 @@ the particular P4 program.
 Pipeconfs are distributed as ONOS applications, hence using the `.oar`
 packaging. The following steps provide instructions on how to generate an oar
 package that includes one or more profiles.
-
-The code is organized as follows:
-* `p4src`: contains the P4 code
-* `ptf`: contains PTF tests for the P4 code
-* `src`: contains Java implementation and tests for the pipeconf
 
 To learn more about pipeconfs and how ONOS supports P4-programmable devices:
 <https://github.com/opennetworkinglab/ngsdn-tutorial>
@@ -148,10 +178,7 @@ When done, the pipeconf `.oar` package can be found in
 
 ### 1 - Get and run ONOS
 
-The minimum required ONOS version that works with this pipeconf is 2.2.7.
-
-You can either build from sources (using the `onos-2.2` or `master` branch), or
-run one the released versions:
+You can either build from sources or run one the released versions:
 <https://wiki.onosproject.org/display/ONOS/Downloads>
 
 Pre-built ONOS Docker images are available here:
@@ -185,8 +212,8 @@ new pipeconfs in the system, depending on the profiles compiled before, and the
 Barefoot SDE version:
 
 ```text
-New pipeconf registered: org.stratumproject.fabric.mavericks_sde_9_3_1 (fingerprint=...)
-New pipeconf registered: org.stratumproject.fabric.montara_sde_9_3_1 (fingerprint=...)
+New pipeconf registered: org.stratumproject.fabric.mavericks_sde_9_7_0 (fingerprint=...)
+New pipeconf registered: org.stratumproject.fabric.montara_sde_9_7_0 (fingerprint=...)
 ...
 ```
 
@@ -260,7 +287,7 @@ provided in `tofino-netcfg.json`, for example:
       "basic": {
         "managementAddress": "grpc://10.0.0.1:28000?device_id=1",
         "driver": "stratum-tofino",
-        "pipeconf": "org.stratumproject.fabric.montara_sde_9_3_1"
+        "pipeconf": "org.stratumproject.fabric.montara_sde_9_7_0"
       }
     }
   }
@@ -270,11 +297,13 @@ provided in `tofino-netcfg.json`, for example:
 ## Support
 
 To report issues when compiling `fabric-tna.p4` for Tofino (i.e., P4 compiler
-errors), please contact Intel/Barefoot support.
+errors), please contact Intel support.
 
 To report any other kind of problem, feel free to open a GitHub Issue or reach
 out to the project maintainers on the ONF Community Slack.
 
+[onos]: https://opennetworking.org/onos/
 [stratum]: https://github.com/stratum/stratum
 [trellis]: https://www.opennetworking.org/trellis
+[sdfabric]: https://opennetworking.org/sd-fabric/
 [fabric.p4]: https://github.com/opennetworkinglab/onos/tree/master/pipelines/fabric/impl/src/main/resources
