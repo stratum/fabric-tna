@@ -24,9 +24,9 @@
 #include "v1model/include/control/filtering.p4"
 #include "v1model/include/control/forwarding.p4"
 #include "v1model/include/control/lookup_md_init.p4"
-#ifdef WITH_SPGW
-#include "v1model/include/control/spgw.p4"
-#endif // WITH_SPGW
+#ifdef WITH_UPF
+#include "v1model/include/control/upf.p4"
+#endif // WITH_UPF
 #ifdef WITH_INT
 #include "v1model/include/control/int.p4"
 #include "v1model/include/control/int_tna_parser_emulator.p4"
@@ -47,9 +47,9 @@ control FabricIngress (inout v1model_header_t hdr,
     Hasher() hasher;
     IngressSliceTcClassifier() slice_tc_classifier;
     IngressQos() qos;
-#ifdef WITH_SPGW
-    SpgwIngress() spgw;
-#endif // WITH_SPGW
+#ifdef WITH_UPF
+    UpfIngress() upf;
+#endif // WITH_UPF
 #ifdef WITH_INT
     IntWatchlist() int_watchlist;
     IntIngress() int_ingress;
@@ -80,11 +80,11 @@ control FabricIngress (inout v1model_header_t hdr,
 
         slice_tc_classifier.apply(hdr.ingress, standard_md, fabric_md.ingress);
         filtering.apply(hdr.ingress, fabric_md.ingress, standard_md);
-#ifdef WITH_SPGW
+#ifdef WITH_UPF
         if (!fabric_md.ingress.skip_forwarding) {
-            spgw.apply(hdr.ingress, fabric_md.ingress, standard_md, fabric_md.do_spgw_uplink_recirc, fabric_md.drop_ctl);
+            upf.apply(hdr.ingress, fabric_md.ingress, standard_md, fabric_md.do_upf_uplink_recirc, fabric_md.drop_ctl);
         }
-#endif // WITH_SPGW
+#endif // WITH_UPF
         if (!fabric_md.ingress.skip_forwarding) {
             forwarding.apply(hdr.ingress, fabric_md.ingress, standard_md, fabric_md.drop_ctl);
         }
@@ -115,9 +115,9 @@ control FabricEgress (inout v1model_header_t hdr,
     PacketIoEgress() pkt_io_egress;
     EgressNextControl() egress_next;
     EgressDscpRewriter() dscp_rewriter;
-#ifdef WITH_SPGW
-    SpgwEgress() spgw;
-#endif // WITH_SPGW
+#ifdef WITH_UPF
+    UpfEgress() upf;
+#endif // WITH_UPF
 #ifdef WITH_INT
     IntTnaEgressParserEmulator() parser_emulator;
     IntEgress() int_egress;
@@ -152,15 +152,15 @@ control FabricEgress (inout v1model_header_t hdr,
         stats.apply(fabric_md.egress.bridged.base.stats_flow_id, standard_md.egress_port,
              fabric_md.egress.bridged.bmd_type);
         egress_next.apply(hdr.ingress, fabric_md.egress, standard_md, fabric_md.recirc_preserved_drop_reason, fabric_md.drop_ctl);
-#ifdef WITH_SPGW
-        spgw.apply(hdr.ingress, fabric_md.egress);
-#endif // WITH_SPGW
+#ifdef WITH_UPF
+        upf.apply(hdr.ingress, fabric_md.egress);
+#endif // WITH_UPF
 #ifdef WITH_INT
         int_egress.apply(hdr, fabric_md, standard_md);
 #endif // WITH_INT
         dscp_rewriter.apply(fabric_md.egress, standard_md, hdr.ingress);
 
-        if (fabric_md.do_spgw_uplink_recirc) {
+        if (fabric_md.do_upf_uplink_recirc) {
             // Recirculate UE-to-UE traffic.
             recirculate_preserving_field_list(NO_PRESERVATION);
         }

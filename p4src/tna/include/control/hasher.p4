@@ -10,9 +10,9 @@ control Hasher(
 
     Hash<flow_hash_t>(HashAlgorithm_t.CRC32) ip_hasher;
     Hash<flow_hash_t>(HashAlgorithm_t.CRC32) gtp_flow_hasher;
-#ifdef WITH_SPGW
+#ifdef WITH_UPF
     Hash<flow_hash_t>(HashAlgorithm_t.CRC32) encap_gtp_flow_hasher;
-#endif // WITH_SPGW
+#endif // WITH_UPF
     Hash<flow_hash_t>(HashAlgorithm_t.CRC32) non_ip_hasher;
 
     apply {
@@ -27,18 +27,18 @@ control Hasher(
             fabric_md.lkp.l4_dport
         });
 
-#ifdef WITH_SPGW
+#ifdef WITH_UPF
         // GTP-aware ECMP for downlink packets encapped by this switch.
-        if (fabric_md.bridged.spgw.needs_gtpu_encap) {
+        if (fabric_md.bridged.upf.needs_gtpu_encap) {
             fabric_md.ecmp_hash = encap_gtp_flow_hasher.get({
                 // If needs_gtpu_encap, tun_peer_id represents the GTP tunnel entpoint.
                 // In addition to TEID, we use tunnel_peer_id that conveys information
                 // about the source IP (UPF) and the destination IP (eNB).
-                fabric_md.bridged.spgw.tun_peer_id,
-                fabric_md.bridged.spgw.teid
+                fabric_md.bridged.upf.tun_peer_id,
+                fabric_md.bridged.upf.teid
             });
         } else
-#endif // WITH_SPGW
+#endif // WITH_UPF
         // GTP-aware ECMP for passthrough GTP packets.
         if (hdr.gtpu.isValid()) {
             fabric_md.ecmp_hash = gtp_flow_hasher.get({
@@ -49,7 +49,7 @@ control Hasher(
         } else if (fabric_md.lkp.is_ipv4) {
             // Regular 5-tuple-based ECMP. If here, the innermost IPv4 header
             // will be the only IPv4 header valid. Includes GTPU decapped pkts
-            // by the spgw control.
+            // by the upf control.
             fabric_md.ecmp_hash = fabric_md.bridged.base.inner_hash;
         }
         // FIXME: remove ipv6 support or test it

@@ -78,8 +78,8 @@ class FabricIPv4UnicastWithDscpClassificationAndRewriteTest(
                     )
 
 
-@group("spgw")
-class FabricSpgwDownlinkWithDscpRewriteTest(SpgwSimpleTest, SlicingTest):
+@group("upf")
+class FabricUpfDownlinkWithDscpRewriteTest(UpfSimpleTest, SlicingTest):
     @tvsetup
     @autocleanup
     def doRunTest(
@@ -104,7 +104,7 @@ class FabricSpgwDownlinkWithDscpRewriteTest(SpgwSimpleTest, SlicingTest):
         if use_default_tc:
             self.set_default_tc(slice_id=default_slice_id, tc=default_tc)
         else:
-            # slice_id and tc should be rewritten by the SPGW tables.
+            # slice_id and tc should be rewritten by the UPF tables.
             self.add_slice_tc_classifier_entry(
                 slice_id=default_slice_id, tc=upf_tc, ipv4_src=pkt[IP].src
             )
@@ -178,8 +178,8 @@ class FabricSpgwDownlinkWithDscpRewriteTest(SpgwSimpleTest, SlicingTest):
                                 )
 
 
-@group("spgw")
-class FabricSpgwUplinkWithDscpRewriteTest(SpgwSimpleTest, SlicingTest):
+@group("upf")
+class FabricUpfUplinkWithDscpRewriteTest(UpfSimpleTest, SlicingTest):
     @tvsetup
     @autocleanup
     def doRunTest(
@@ -203,7 +203,7 @@ class FabricSpgwUplinkWithDscpRewriteTest(SpgwSimpleTest, SlicingTest):
         if use_default_tc:
             self.set_default_tc(slice_id=default_slice_id, tc=default_tc)
         else:
-            # slice_id and tc should be rewritten by the SPGW tables.
+            # slice_id and tc should be rewritten by the UPF tables.
             self.add_slice_tc_classifier_entry(
                 slice_id=default_slice_id, tc=default_tc, ipv4_src=pkt[IP].src
             )

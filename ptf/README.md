@@ -29,12 +29,12 @@ Sometimes we also check the device state such as counter and register during the
 
 Here are test groups for different pipeline profiles:
 
-Profile          |  Test group
------------------|---------------------------------------
-fabric           | basic
-fabric-int       | basic, INT, INT-dod
-fabric-spgw      | basic, SPGW
-fabric-spgw-int  | basic, SPGW, INT, SPGW+INT, INT-dod
+| Profile        | Test group                        |
+|----------------|-----------------------------------|
+| fabric         | basic                             |
+| fabric-int     | basic, INT, INT-dod               |
+| fabric-upf     | basic, UPF                        |
+| fabric-upf-int | basic, UPF, INT, UPF+INT, INT-dod |
 
 ### The basic test group
 
@@ -51,7 +51,7 @@ fabric-spgw-int  | basic, SPGW, INT, SPGW+INT, INT-dod
 
 * IPv4 Multicast tests
 
-### The SPGW/UPF test group
+### The UPF/UPF test group
 
 * Downlink tests
 
@@ -80,7 +80,7 @@ fabric-spgw-int  | basic, SPGW, INT, SPGW+INT, INT-dod
 
   * Queue report filter quota tests
 
-### The SPGW plus INT test group
+### The UPF plus INT test group
 
 * Downlink INT flow report tests
 * Downlink INT drop report tests
@@ -151,10 +151,10 @@ fail to start or affect test results negatively.
     ```
 
     To run a specific test case against a specific profile,
-    for example `test.FabricBridgingTest` for the `fabric-spgw` profile:
+    for example `test.FabricBridgingTest` for the `fabric-upf` profile:
 
     ```bash
-    ./run/tm/run fabric-spgw TEST=test.FabricBridgingTest
+    ./run/tm/run fabric-upf TEST=test.FabricBridgingTest
     ```
 
 4. If tests fail, check logs in:
@@ -216,10 +216,10 @@ The instructions to generate TVs are similar to running PTF tests on tofino-mode
     ```
 
     To generate a specific test case for a specific fabric profile,
-    for example `test.FabricBridgingTest` for the `fabric-spgw` profile:
+    for example `test.FabricBridgingTest` for the `fabric-upf` profile:
 
     ```bash
-    ./run/tv/run fabric-spgw TEST=test.FabricBridgingTest
+    ./run/tv/run fabric-upf TEST=test.FabricBridgingTest
     ```
 
 ## Running PTF tests with hardware device
@@ -405,7 +405,7 @@ and line rate tests.
 
 Unary tests and line rate tests are placed in the `unary` and `linerate` directory.
 
-Most of unary test groups such as `basic`, `spgw`, and `int` are placed in `ptf/tests/unary/test.py`.
+Most of unary test groups such as `basic`, `upf`, and `int` are placed in `ptf/tests/unary/test.py`.
 
 Each class will be consider as a test. A test can contain multiple test cases that uses
 different parameters.

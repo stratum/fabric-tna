@@ -69,9 +69,9 @@ control IntIngress(inout ingress_headers_t         hdr,
         fabric_md.bridged.int_bmd.report_type = INT_REPORT_TYPE_DROP;
         fabric_md.bridged.base.vlan_id = DEFAULT_VLAN_ID;
         fabric_md.bridged.base.mpls_label = 0; // do not push an MPLS label
-#ifdef WITH_SPGW
-        fabric_md.bridged.spgw.skip_spgw = true;
-#endif // WITH_SPGW
+#ifdef WITH_UPF
+        fabric_md.bridged.upf.skip_upf = true;
+#endif // WITH_UPF
         // In V1model, we use the recirculate primitive, in egress pipeline.
 
         // The drop flag may be set by other tables, need to reset it so the packet can

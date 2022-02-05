@@ -68,8 +68,8 @@ public class PipeconfLoader {
     private static final String BMV2_PIPELINE_CONFIG = "bmv2.json";
 
     private static final String INT_PROFILE_SUFFIX = "-int";
-    private static final String UPF_PROFILE_SUFFIX = "-spgw";
-    private static final String FULL_PROFILE_SUFFIX = "-spgw-int";
+    private static final String UPF_PROFILE_SUFFIX = "-upf";
+    private static final String FULL_PROFILE_SUFFIX = "-upf-int";
 
     @Activate
     public void activate() {

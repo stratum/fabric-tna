@@ -15,7 +15,7 @@ import static org.stratumproject.fabric.tna.Constants.BMV2_COLOR_RED;
 import static org.stratumproject.fabric.tna.Constants.TNA;
 import static org.stratumproject.fabric.tna.Constants.V1MODEL;
 import static org.stratumproject.fabric.tna.Constants.PORT_CPU;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_SESSIONS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_UPLINK_SESSIONS;
 
 /**
  * Representation of the capabilities of a given fabric-tna pipeconf.
@@ -85,7 +85,7 @@ public class FabricCapabilities {
      */
     public boolean supportUpf() {
         return pipeconf.pipelineModel()
-                .table(FABRIC_INGRESS_SPGW_UPLINK_SESSIONS)
+                .table(FABRIC_INGRESS_UPF_UPLINK_SESSIONS)
                 .isPresent();
     }
 

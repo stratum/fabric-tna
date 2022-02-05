@@ -430,7 +430,7 @@ def main():
         help="The fabric profile",
         type=str,
         required=True,
-        choices=["fabric", "fabric-spgw", "fabric-int", "fabric-spgw-int"],
+        choices=["fabric", "fabric-upf", "fabric-int", "fabric-upf-int"],
     )
     parser.add_argument(
         "--trex-address",

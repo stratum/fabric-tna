@@ -207,9 +207,9 @@ control IntIngress(
         fabric_md.bridged.int_bmd.report_type = INT_REPORT_TYPE_DROP;
         fabric_md.bridged.base.vlan_id = DEFAULT_VLAN_ID;
         fabric_md.bridged.base.mpls_label = 0; // do not push an MPLS label
-#ifdef WITH_SPGW
-        fabric_md.bridged.spgw.skip_spgw = true;
-#endif // WITH_SPGW
+#ifdef WITH_UPF
+        fabric_md.bridged.upf.skip_upf = true;
+#endif // WITH_UPF
         // Redirect to the recirculation port of the pipeline
         ig_tm_md.ucast_egress_port = ig_intr_md.ingress_port[8:7] ++ RECIRC_PORT_NUMBER;
 
