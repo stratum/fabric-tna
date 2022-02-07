@@ -60,14 +60,14 @@ import static org.stratumproject.fabric.tna.Constants.TNA;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_UPF_EG_TUNNEL_PEERS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_UPF_TERMINATIONS_COUNTER;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_APPLICATIONS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_APP_METER;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_DOWNLINK_SESSIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_DOWNLINK_TERMINATIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_IG_TUNNEL_PEERS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_SESSION_METER;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_TERMINATIONS_COUNTER;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_UPLINK_SESSIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_UPLINK_TERMINATIONS;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_APP_METER;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_SESSION_METER;
 
 public class FabricUpfProgrammableTest {
 
@@ -110,9 +110,9 @@ public class FabricUpfProgrammableTest {
                                  TestUpfConstants.PHYSICAL_COUNTER_SIZE)
     );
     private static final List<PiMeterModel> METER_MODELS = ImmutableList.of(
-            new MockMeterModel(FABRIC_INGRESS_SPGW_SESSION_METER,
+            new MockMeterModel(FABRIC_INGRESS_UPF_SESSION_METER,
                                  TestUpfConstants.PHYSICAL_SESSION_METER_SIZE),
-            new MockMeterModel(FABRIC_INGRESS_SPGW_APP_METER,
+            new MockMeterModel(FABRIC_INGRESS_UPF_APP_METER,
                                  TestUpfConstants.PHYSICAL_APP_METER_SIZE)
     );
 

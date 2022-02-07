@@ -73,8 +73,8 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_ING
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_TERMINATIONS_COUNTER;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_UPLINK_SESSIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_UPLINK_TERMINATIONS;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_APP_METER;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_SESSION_METER;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_APP_METER;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_SESSION_METER;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_APP_ID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_GTPU_IS_VALID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_IPV4_DST_ADDR;
@@ -241,9 +241,9 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         long sessionMeterSize = 0;
         long appMeterSize = 0;
         for (PiMeterModel piMeter: pipeconf.pipelineModel().meters()) {
-            if (piMeter.id().equals(FABRIC_INGRESS_SPGW_SESSION_METER)) {
+            if (piMeter.id().equals(FABRIC_INGRESS_UPF_SESSION_METER)) {
                 sessionMeterSize = piMeter.size();
-            } else if (piMeter.id().equals(FABRIC_INGRESS_SPGW_APP_METER)) {
+            } else if (piMeter.id().equals(FABRIC_INGRESS_UPF_APP_METER)) {
                 appMeterSize = piMeter.size();
             }
         }
@@ -424,7 +424,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
     private Collection<UpfEntity> getUpfSessionMeter() throws UpfProgrammableException {
         ArrayList<UpfEntity> sessionMeters = Lists.newArrayList();
-        for (Meter meter : meterService.getMeters(deviceId, MeterScope.of(FABRIC_INGRESS_SPGW_SESSION_METER.id()))) {
+        for (Meter meter : meterService.getMeters(deviceId, MeterScope.of(FABRIC_INGRESS_UPF_SESSION_METER.id()))) {
             sessionMeters.add(upfTranslator.fabricMeterToUpfSessionMeter(meter));
         }
         return sessionMeters;
@@ -432,7 +432,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
     private Collection<UpfEntity> getUpfAppMeter() throws UpfProgrammableException {
         ArrayList<UpfEntity> appMeters = Lists.newArrayList();
-        for (Meter meter : meterService.getMeters(deviceId, MeterScope.of(FABRIC_INGRESS_SPGW_APP_METER.id()))) {
+        for (Meter meter : meterService.getMeters(deviceId, MeterScope.of(FABRIC_INGRESS_UPF_APP_METER.id()))) {
             appMeters.add(upfTranslator.fabricMeterToUpfAppMeter(meter));
         }
         return appMeters;
@@ -693,9 +693,9 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
             log.info("Resetting meter {}", meterRequest);
             final MeterCellId meterCellId;
             if (upfMeter.type().equals(UpfEntityType.SESSION_METER)) {
-                meterCellId = PiMeterCellId.ofIndirect(FABRIC_INGRESS_SPGW_SESSION_METER, upfMeter.cellId());
+                meterCellId = PiMeterCellId.ofIndirect(FABRIC_INGRESS_UPF_SESSION_METER, upfMeter.cellId());
             } else if (upfMeter.type().equals(UpfEntityType.APPLICATION_METER)) {
-                meterCellId = PiMeterCellId.ofIndirect(FABRIC_INGRESS_SPGW_APP_METER, upfMeter.cellId());
+                meterCellId = PiMeterCellId.ofIndirect(FABRIC_INGRESS_UPF_APP_METER, upfMeter.cellId());
             } else {
                 // I should never reach this point!
                 throw new UpfProgrammableException(

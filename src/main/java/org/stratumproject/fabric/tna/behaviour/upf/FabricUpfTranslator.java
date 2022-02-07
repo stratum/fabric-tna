@@ -57,7 +57,7 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGR
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_APPLICATIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_APP_FWD;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_APP_FWD_NO_TC;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_APP_METER;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_APP_METER;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_DOWNLINK_DROP;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_DOWNLINK_FWD_ENCAP;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_DOWNLINK_FWD_ENCAP_NO_TC;
@@ -70,7 +70,7 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_ING
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_INTERFACES;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_RECIRC_ALLOW;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_RECIRC_DENY;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_SESSION_METER;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_SESSION_METER;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_SET_APP_ID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_SET_DOWNLINK_SESSION;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_SET_DOWNLINK_SESSION_BUF;
@@ -403,7 +403,7 @@ public class FabricUpfTranslator {
     }
 
     public UpfMeter fabricMeterToUpfSessionMeter(Meter meter) throws UpfProgrammableException {
-        assertMeterId(meter, FABRIC_INGRESS_SPGW_SESSION_METER);
+        assertMeterId(meter, FABRIC_INGRESS_UPF_SESSION_METER);
         List<Band> peakBand = meter.bands().stream()
                 .filter(b -> b.type().equals(Band.Type.MARK_RED))
                 .collect(Collectors.toList());
@@ -418,7 +418,7 @@ public class FabricUpfTranslator {
     }
 
     public UpfMeter fabricMeterToUpfAppMeter(Meter meter) throws UpfProgrammableException {
-        assertMeterId(meter, FABRIC_INGRESS_SPGW_APP_METER);
+        assertMeterId(meter, FABRIC_INGRESS_UPF_APP_METER);
         List<Band> peakBand = meter.bands().stream()
                 .filter(b -> b.type().equals(Band.Type.MARK_RED)).
                 collect(Collectors.toList());
@@ -737,9 +737,9 @@ public class FabricUpfTranslator {
             throws UpfProgrammableException {
         final PiMeterId meterId;
         if (upfMeter.type().equals(UpfEntityType.SESSION_METER)) {
-            meterId = FABRIC_INGRESS_SPGW_SESSION_METER;
+            meterId = FABRIC_INGRESS_UPF_SESSION_METER;
         } else if (upfMeter.type().equals((UpfEntityType.APPLICATION_METER))) {
-            meterId = FABRIC_INGRESS_SPGW_APP_METER;
+            meterId = FABRIC_INGRESS_UPF_APP_METER;
         } else {
             // I should never reach this point.
             throw new UpfProgrammableException("Unknown UPF meter type. I should never reach this point! " + upfMeter);

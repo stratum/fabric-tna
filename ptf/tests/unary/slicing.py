@@ -265,8 +265,8 @@ class FabricUpfUplinkWithDscpRewriteTest(UpfSimpleTest, SlicingTest):
                                     use_default_tc,
                                 )
 
-@group("spgw")
-class FabricSpgwUplinkWithMeterTest(SpgwSimpleTest, SlicingTest):
+@group("upf")
+class FabricUpfUplinkWithMeterTest(UpfSimpleTest, SlicingTest):
     """Tests meters for UPF. This is mostly a dummmy test class to verify
     basic programming of UPF meters. QoS test for UPF meters and color-aware
     meter behaviour should use linerate traffic generation. """
@@ -319,8 +319,8 @@ class FabricSpgwUplinkWithMeterTest(SpgwSimpleTest, SlicingTest):
                         pkt=pkt, app_bitrate=app_bitrate, session_bitrate=session_bitrate,
                     )
 
-@group("spgw")
-class FabricSpgwDownlinkWithMeterTest(SpgwSimpleTest, SlicingTest):
+@group("upf")
+class FabricUpfDownlinkWithMeterTest(UpfSimpleTest, SlicingTest):
     """Tests meters for UPF. This is mostly a dummmy test class to verify
     basic programming of UPF meters. QoS test for UPF meters and color-aware
     meter behaviour should use linerate traffic generation. """

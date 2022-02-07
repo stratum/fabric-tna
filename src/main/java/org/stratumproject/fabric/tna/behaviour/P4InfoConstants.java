@@ -496,8 +496,8 @@ public final class P4InfoConstants {
     // Meter IDs
     public static final PiMeterId FABRIC_INGRESS_QOS_SLICE_TC_METER =
             PiMeterId.of("FabricIngress.qos.slice_tc_meter");
-    public static final PiMeterId FABRIC_INGRESS_SPGW_APP_METER =
-            PiMeterId.of("FabricIngress.spgw.app_meter");
-    public static final PiMeterId FABRIC_INGRESS_SPGW_SESSION_METER =
-            PiMeterId.of("FabricIngress.spgw.session_meter");
+    public static final PiMeterId FABRIC_INGRESS_UPF_APP_METER =
+            PiMeterId.of("FabricIngress.upf.app_meter");
+    public static final PiMeterId FABRIC_INGRESS_UPF_SESSION_METER =
+            PiMeterId.of("FabricIngress.upf.session_meter");
 }
