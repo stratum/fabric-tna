@@ -1462,8 +1462,6 @@ class FabricUpfUplinkTest(UpfSimpleTest):
         with_psc,
         is_next_hop_spine,
         upf_app_filtering,
-        app_max_bitrate,
-        session_max_bitrate,
         **kwargs
     ):
         self.runUplinkTest(
@@ -1473,8 +1471,6 @@ class FabricUpfUplinkTest(UpfSimpleTest):
             with_psc=with_psc,
             is_next_hop_spine=is_next_hop_spine,
             app_filtering=upf_app_filtering,
-            app_max_bitrate=app_max_bitrate,
-            session_max_bitrate=session_max_bitrate,
         )
 
     def runTest(self):
@@ -1493,7 +1489,6 @@ class FabricUpfUplinkTest(UpfSimpleTest):
                         pkt_addrs=pkt_addrs,
                         upf_type="UL_PSC",
                         upf_app_filtering=upf_app_filtering,
-                        metering=metering,
                     ):
                         self.doRunTest(**test_args)
 

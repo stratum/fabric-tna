@@ -668,7 +668,6 @@ def get_test_args(
     test_multiple_pkt_len=False,
     test_multiple_prefix_len=False,
     ue_recirculation_test=False,
-    metering=False,
 ):
 
     """
@@ -691,8 +690,6 @@ def get_test_args(
     pkt_len_list = []
     prefix_len_list = []
     allow_ue_recirculation_list = []
-    session_meter_bw_list = [None]
-    app_meter_bw_list = [None]
 
     # upf input structure: "[DL/UL]_[optional: psc]"
     if upf_type:
@@ -795,11 +792,6 @@ def get_test_args(
             allow_ue_recirculation_list = [True, False]
     else:
         allow_ue_recirculation_list = [None]
-
-    if metering:
-        session_meter_bw_list = [1, 100000]
-        app_meter_bw_list = [1, 100000]
-
     for drop_reason in drop_reason_list:
         for vlan_conf, tagged in vlan_conf_list.items():
             for pkt_type in pkt_type_list:
