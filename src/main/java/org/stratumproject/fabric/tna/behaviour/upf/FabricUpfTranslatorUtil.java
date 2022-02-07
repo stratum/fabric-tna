@@ -91,6 +91,11 @@ final class FabricUpfTranslatorUtil {
         return byteSeqToInt(getParamValue(action, paramId));
     }
 
+    static short getParamShort(PiAction action, PiActionParamId paramId)
+            throws UpfProgrammableException {
+        return byteSeqToShort(getParamValue(action, paramId));
+    }
+
     static byte getParamByte(PiAction action, PiActionParamId paramId)
             throws UpfProgrammableException {
         return byteSeqToByte(getParamValue(action, paramId));

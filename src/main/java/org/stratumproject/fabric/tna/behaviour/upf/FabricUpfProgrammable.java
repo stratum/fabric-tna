@@ -164,6 +164,12 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                 flowRule.appId() == appId.id();
     }
 
+    @Override
+    public boolean fromThisUpf(Meter meter) {
+        return meter.deviceId().equals(this.deviceId) &&
+                meter.appId().equals(appId);
+    }
+
     /**
      * Grab the capacities for the UE Sessions and UPF Terminations tables from the pipeconf.
      * Runs only once, on initialization.
