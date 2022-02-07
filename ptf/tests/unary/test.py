@@ -1264,8 +1264,8 @@ class FabricGtpUnicastEcmpBasedOnTeid(FabricTest):
             self.doRunTest(pkt_type)
 
 
-@group("spgw")
-class FabricSpgwDownlinkEcmpTest(SpgwSimpleTest):
+@group("upf")
+class FabricUpfDownlinkEcmpTest(UpfSimpleTest):
     """
     This test case verifies if traffic from PDN to UEs (downlink) served by the same
     base station is distributed over next hops using GTP-aware load balancing.
@@ -1305,7 +1305,7 @@ class FabricSpgwDownlinkEcmpTest(SpgwSimpleTest):
         # ue_ipv4_toport list is used to learn the ue_ipv4 address for a given packet.
         ue_ipv4_toport = [None, None]
         # teid_toport list is used to learn the teid
-        # assigned by SPGW for a downlink packet.
+        # assigned by UPF for a downlink packet.
         teid_toport = [None, None]
         for i in range(50):
             ue_ipv4 = "10.0.0." + str(i)
@@ -1408,8 +1408,8 @@ class FabricSpgwDownlinkEcmpTest(SpgwSimpleTest):
             self.doRunTest(pkt_type)
 
 
-@group("spgw")
-class FabricSpgwDownlinkTest(SpgwSimpleTest):
+@group("upf")
+class FabricUpfDownlinkTest(UpfSimpleTest):
     @tvsetup
     @autocleanup
     def doRunTest(
@@ -1419,7 +1419,7 @@ class FabricSpgwDownlinkTest(SpgwSimpleTest):
         tagged2,
         with_psc,
         is_next_hop_spine,
-        spgw_app_filtering,
+        upf_app_filtering,
         **kwargs
     ):
         self.runDownlinkTest(
@@ -1428,7 +1428,7 @@ class FabricSpgwDownlinkTest(SpgwSimpleTest):
             tagged2=tagged2,
             with_psc=with_psc,
             is_next_hop_spine=is_next_hop_spine,
-            app_filtering=spgw_app_filtering,
+            app_filtering=upf_app_filtering,
         )
 
     def runTest(self):
@@ -1440,18 +1440,18 @@ class FabricSpgwDownlinkTest(SpgwSimpleTest):
             "ip_dst": UE1_IPV4,
         }
         for traffic_dir in ["host-leaf-host", "spine-leaf-host", "host-leaf-spine"]:
-            for spgw_app_filtering in [False, True]:
+            for upf_app_filtering in [False, True]:
                 for test_args in get_test_args(
                     traffic_dir=traffic_dir,
                     pkt_addrs=pkt_addrs,
-                    spgw_type="DL_PSC",
-                    spgw_app_filtering=spgw_app_filtering,
+                    upf_type="DL_PSC",
+                    upf_app_filtering=upf_app_filtering,
                 ):
                     self.doRunTest(**test_args)
 
 
-@group("spgw")
-class FabricSpgwUplinkTest(SpgwSimpleTest):
+@group("upf")
+class FabricUpfUplinkTest(UpfSimpleTest):
     @tvsetup
     @autocleanup
     def doRunTest(
@@ -1461,7 +1461,7 @@ class FabricSpgwUplinkTest(SpgwSimpleTest):
         tagged2,
         with_psc,
         is_next_hop_spine,
-        spgw_app_filtering,
+        upf_app_filtering,
         app_max_bitrate,
         session_max_bitrate,
         **kwargs
@@ -1472,7 +1472,7 @@ class FabricSpgwUplinkTest(SpgwSimpleTest):
             tagged2=tagged2,
             with_psc=with_psc,
             is_next_hop_spine=is_next_hop_spine,
-            app_filtering=spgw_app_filtering,
+            app_filtering=upf_app_filtering,
             app_max_bitrate=app_max_bitrate,
             session_max_bitrate=session_max_bitrate,
         )
@@ -1486,20 +1486,20 @@ class FabricSpgwUplinkTest(SpgwSimpleTest):
             "ip_dst": HOST2_IPV4,
         }
         for traffic_dir in ["host-leaf-host", "host-leaf-spine", "spine-leaf-host"]:
-            for spgw_app_filtering in [False, True]:
+            for upf_app_filtering in [False, True]:
                 for metering in [True, False]:
                     for test_args in get_test_args(
                         traffic_dir=traffic_dir,
                         pkt_addrs=pkt_addrs,
-                        spgw_type="UL_PSC",
-                        spgw_app_filtering=spgw_app_filtering,
+                        upf_type="UL_PSC",
+                        upf_app_filtering=upf_app_filtering,
                         metering=metering,
                     ):
                         self.doRunTest(**test_args)
 
 
-@group("spgw")
-class FabricSpgwUplinkRecircTest(SpgwSimpleTest):
+@group("upf")
+class FabricUpfUplinkRecircTest(UpfSimpleTest):
     @tvsetup
     @autocleanup
     def doRunTest(
@@ -1525,14 +1525,14 @@ class FabricSpgwUplinkRecircTest(SpgwSimpleTest):
             for test_args in get_test_args(
                 traffic_dir=traffic_dir,
                 pkt_addrs=pkt_addrs,
-                spgw_type="UL",
+                upf_type="UL",
                 ue_recirculation_test=True,
             ):
                 self.doRunTest(**test_args)
 
 
-@group("spgw")
-class FabricSpgwDownlinkToDbufTest(SpgwSimpleTest):
+@group("upf")
+class FabricUpfDownlinkToDbufTest(UpfSimpleTest):
     """Tests downlink packets arriving from the PDN being routed to
     the dbuf device for buffering.
     """
@@ -1561,14 +1561,14 @@ class FabricSpgwDownlinkToDbufTest(SpgwSimpleTest):
         for traffic_dir in ["host-leaf-host", "spine-leaf-host", "host-leaf-spine"]:
             for dbuf_present in [False, True]:
                 for test_args in get_test_args(
-                    traffic_dir=traffic_dir, pkt_addrs=pkt_addrs, spgw_type="DL"
+                    traffic_dir=traffic_dir, pkt_addrs=pkt_addrs, upf_type="DL"
                 ):
                     print("is_dbuf_present: " + str(dbuf_present))
                     self.doRunTest(**test_args, is_dbuf_present=dbuf_present)
 
 
-@group("spgw")
-class FabricSpgwDownlinkFromDbufTest(SpgwSimpleTest):
+@group("upf")
+class FabricUpfDownlinkFromDbufTest(UpfSimpleTest):
     """Tests downlink packets being drained from the dbuf buffering device
     back into the switch to be tunneled to the enodeb.
     """
@@ -1593,14 +1593,14 @@ class FabricSpgwDownlinkFromDbufTest(SpgwSimpleTest):
         }
         for traffic_dir in ["host-leaf-host", "spine-leaf-host", "host-leaf-spine"]:
             for test_args in get_test_args(
-                traffic_dir=traffic_dir, pkt_addrs=pkt_addrs, spgw_type="DL"
+                traffic_dir=traffic_dir, pkt_addrs=pkt_addrs, upf_type="DL"
             ):
                 self.doRunTest(**test_args)
 
 
 @group("int")
-@group("spgw")
-class FabricSpgwUplinkIntTest(SpgwIntTest):
+@group("upf")
+class FabricUpfUplinkIntTest(UpfIntTest):
     @tvsetup
     @autocleanup
     def doRunTest(
@@ -1622,7 +1622,7 @@ class FabricSpgwUplinkIntTest(SpgwIntTest):
         pkt = getattr(testutils, "simple_{}_packet".format(pkt_type))(
             ip_dst=self.get_single_use_ip()
         )
-        self.runSpgwUplinkIntTest(
+        self.runUpfUplinkIntTest(
             pkt=pkt,
             tagged1=tagged1,
             tagged2=tagged2,
@@ -1642,14 +1642,14 @@ class FabricSpgwUplinkIntTest(SpgwIntTest):
             "leaf-spine-spine",
         ]:
             for test_args in get_test_args(
-                traffic_dir=traffic_dir, spgw_type="UL_PSC", int_test_type="flow"
+                traffic_dir=traffic_dir, upf_type="UL_PSC", int_test_type="flow"
             ):
                 self.doRunTest(**test_args)
 
 
 @group("int")
-@group("spgw")
-class FabricSpgwDownlinkIntTest(SpgwIntTest):
+@group("upf")
+class FabricUpfDownlinkIntTest(UpfIntTest):
     @tvsetup
     @autocleanup
     def doRunTest(
@@ -1671,7 +1671,7 @@ class FabricSpgwDownlinkIntTest(SpgwIntTest):
         pkt = getattr(testutils, "simple_{}_packet".format(pkt_type))(
             ip_dst=self.get_single_use_ip()
         )
-        self.runSpgwDownlinkIntTest(
+        self.runUpfDownlinkIntTest(
             pkt=pkt,
             tagged1=tagged1,
             tagged2=tagged2,
@@ -1691,16 +1691,16 @@ class FabricSpgwDownlinkIntTest(SpgwIntTest):
             "leaf-spine-spine",
         ]:
             for test_args in get_test_args(
-                traffic_dir=traffic_dir, spgw_type="DL_PSC", int_test_type="flow"
+                traffic_dir=traffic_dir, upf_type="DL_PSC", int_test_type="flow"
             ):
                 self.doRunTest(**test_args)
 
 
-# This test will assume the packet hits spgw interface and miss the uplink UE Session table or
+# This test will assume the packet hits upf interface and miss the uplink UE Session table or
 # the uplink Flows table
 @group("int")
-@group("spgw")
-class FabricSpgwIntUplinkDropTest(SpgwIntTest):
+@group("upf")
+class FabricUpfIntUplinkDropTest(UpfIntTest):
     @tvsetup
     @autocleanup
     def doRunTest(
@@ -1747,16 +1747,16 @@ class FabricSpgwIntUplinkDropTest(SpgwIntTest):
             "leaf-spine-spine",
         ]:
             for test_args in get_test_args(
-                traffic_dir=traffic_dir, spgw_type="UL_PSC", int_test_type="eg_drop"
+                traffic_dir=traffic_dir, upf_type="UL_PSC", int_test_type="eg_drop"
             ):
                 self.doRunTest(**test_args)
 
 
-# This test will assume the packet hits spgw interface and miss the downlink UE Sessions table or
+# This test will assume the packet hits upf interface and miss the downlink UE Sessions table or
 # the downlink Flows table
 @group("int")
-@group("spgw")
-class FabricSpgwIntDownlinkDropTest(SpgwIntTest):
+@group("upf")
+class FabricUpfIntDownlinkDropTest(UpfIntTest):
     @tvsetup
     @autocleanup
     def doRunTest(
@@ -1800,7 +1800,7 @@ class FabricSpgwIntDownlinkDropTest(SpgwIntTest):
             "leaf-spine-spine",
         ]:
             for test_args in get_test_args(
-                traffic_dir=traffic_dir, spgw_type="DL", int_test_type="eg_drop"
+                traffic_dir=traffic_dir, upf_type="DL", int_test_type="eg_drop"
             ):
                 self.doRunTest(**test_args)
 

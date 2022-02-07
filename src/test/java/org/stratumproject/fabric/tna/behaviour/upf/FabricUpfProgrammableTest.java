@@ -57,17 +57,17 @@ import static org.easymock.EasyMock.replay;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.stratumproject.fabric.tna.Constants.TNA;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_EG_TUNNEL_PEERS;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_TERMINATIONS_COUNTER;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_APPLICATIONS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_UPF_EG_TUNNEL_PEERS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_UPF_TERMINATIONS_COUNTER;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_APPLICATIONS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_DOWNLINK_SESSIONS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_DOWNLINK_TERMINATIONS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_IG_TUNNEL_PEERS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_TERMINATIONS_COUNTER;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_UPLINK_SESSIONS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_UPLINK_TERMINATIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_APP_METER;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_SESSIONS;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_TERMINATIONS;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_IG_TUNNEL_PEERS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_SESSION_METER;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_TERMINATIONS_COUNTER;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_SESSIONS;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_TERMINATIONS;
 
 public class FabricUpfProgrammableTest {
 
@@ -88,25 +88,25 @@ public class FabricUpfProgrammableTest {
             .build();
 
     private static final List<PiTableModel> TABLE_MODELS = ImmutableList.of(
-            new MockTableModel(FABRIC_INGRESS_SPGW_UPLINK_SESSIONS,
+            new MockTableModel(FABRIC_INGRESS_UPF_UPLINK_SESSIONS,
                                TestUpfConstants.PHYSICAL_MAX_UE_SESSIONS / 2),
-            new MockTableModel(FABRIC_INGRESS_SPGW_DOWNLINK_SESSIONS,
+            new MockTableModel(FABRIC_INGRESS_UPF_DOWNLINK_SESSIONS,
                                TestUpfConstants.PHYSICAL_MAX_UE_SESSIONS / 2),
-            new MockTableModel(FABRIC_INGRESS_SPGW_UPLINK_TERMINATIONS,
+            new MockTableModel(FABRIC_INGRESS_UPF_UPLINK_TERMINATIONS,
                                TestUpfConstants.PHYSICAL_MAX_UPF_TERMINATIONS / 2),
-            new MockTableModel(FABRIC_INGRESS_SPGW_DOWNLINK_TERMINATIONS,
+            new MockTableModel(FABRIC_INGRESS_UPF_DOWNLINK_TERMINATIONS,
                                TestUpfConstants.PHYSICAL_MAX_UPF_TERMINATIONS / 2),
-            new MockTableModel(FABRIC_INGRESS_SPGW_IG_TUNNEL_PEERS,
+            new MockTableModel(FABRIC_INGRESS_UPF_IG_TUNNEL_PEERS,
                                TestUpfConstants.PHYSICAL_MAX_TUNNELS),
-            new MockTableModel(FABRIC_EGRESS_SPGW_EG_TUNNEL_PEERS,
+            new MockTableModel(FABRIC_EGRESS_UPF_EG_TUNNEL_PEERS,
                                TestUpfConstants.PHYSICAL_MAX_TUNNELS),
-            new MockTableModel(FABRIC_INGRESS_SPGW_APPLICATIONS,
+            new MockTableModel(FABRIC_INGRESS_UPF_APPLICATIONS,
                                TestUpfConstants.PHYSICAL_MAX_APPLICATIONS)
     );
     private static final List<PiCounterModel> COUNTER_MODELS = ImmutableList.of(
-            new MockCounterModel(FABRIC_INGRESS_SPGW_TERMINATIONS_COUNTER,
+            new MockCounterModel(FABRIC_INGRESS_UPF_TERMINATIONS_COUNTER,
                                  TestUpfConstants.PHYSICAL_COUNTER_SIZE),
-            new MockCounterModel(FABRIC_EGRESS_SPGW_TERMINATIONS_COUNTER,
+            new MockCounterModel(FABRIC_EGRESS_UPF_TERMINATIONS_COUNTER,
                                  TestUpfConstants.PHYSICAL_COUNTER_SIZE)
     );
     private static final List<PiMeterModel> METER_MODELS = ImmutableList.of(

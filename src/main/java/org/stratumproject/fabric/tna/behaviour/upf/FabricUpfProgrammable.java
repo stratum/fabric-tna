@@ -62,19 +62,19 @@ import java.util.stream.Collectors;
 
 import static java.lang.String.format;
 import static org.onosproject.net.pi.model.PiCounterType.INDIRECT;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_EG_TUNNEL_PEERS;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_GTPU_ENCAP;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_SPGW_TERMINATIONS_COUNTER;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_APPLICATIONS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_UPF_EG_TUNNEL_PEERS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_UPF_GTPU_ENCAP;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_UPF_TERMINATIONS_COUNTER;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_APPLICATIONS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_DOWNLINK_SESSIONS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_DOWNLINK_TERMINATIONS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_IG_TUNNEL_PEERS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_INTERFACES;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_TERMINATIONS_COUNTER;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_UPLINK_SESSIONS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_UPLINK_TERMINATIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_APP_METER;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_SESSIONS;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_DOWNLINK_TERMINATIONS;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_IG_TUNNEL_PEERS;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_INTERFACES;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_SESSION_METER;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_TERMINATIONS_COUNTER;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_SESSIONS;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_SPGW_UPLINK_TERMINATIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_APP_ID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_GTPU_IS_VALID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_IPV4_DST_ADDR;
@@ -182,19 +182,19 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
         // Get table sizes of interest
         for (PiTableModel piTable : pipeconf.pipelineModel().tables()) {
-            if (piTable.id().equals(FABRIC_INGRESS_SPGW_UPLINK_SESSIONS)) {
+            if (piTable.id().equals(FABRIC_INGRESS_UPF_UPLINK_SESSIONS)) {
                 uplinkUeSessionsTableSize = piTable.maxSize();
-            } else if (piTable.id().equals(FABRIC_INGRESS_SPGW_DOWNLINK_SESSIONS)) {
+            } else if (piTable.id().equals(FABRIC_INGRESS_UPF_DOWNLINK_SESSIONS)) {
                 downlinkUeSessionsTableSize = piTable.maxSize();
-            } else if (piTable.id().equals(FABRIC_INGRESS_SPGW_UPLINK_TERMINATIONS)) {
+            } else if (piTable.id().equals(FABRIC_INGRESS_UPF_UPLINK_TERMINATIONS)) {
                 uplinkUpfTerminationsTableSize = piTable.maxSize();
-            } else if (piTable.id().equals(FABRIC_INGRESS_SPGW_DOWNLINK_TERMINATIONS)) {
+            } else if (piTable.id().equals(FABRIC_INGRESS_UPF_DOWNLINK_TERMINATIONS)) {
                 downlinkUpfTerminationsTableSize = piTable.maxSize();
-            } else if (piTable.id().equals(FABRIC_INGRESS_SPGW_APPLICATIONS)) {
+            } else if (piTable.id().equals(FABRIC_INGRESS_UPF_APPLICATIONS)) {
                 applicationsTableSize = piTable.maxSize();
-            } else if (piTable.id().equals(FABRIC_INGRESS_SPGW_IG_TUNNEL_PEERS)) {
+            } else if (piTable.id().equals(FABRIC_INGRESS_UPF_IG_TUNNEL_PEERS)) {
                 ingressGtpTunnelPeersTableSize = piTable.maxSize();
-            } else if (piTable.id().equals(FABRIC_EGRESS_SPGW_EG_TUNNEL_PEERS)) {
+            } else if (piTable.id().equals(FABRIC_EGRESS_UPF_EG_TUNNEL_PEERS)) {
                 egressGtpTunnelPeersTableSize = piTable.maxSize();
             }
         }
@@ -227,9 +227,9 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         long ingressCounterSize = 0;
         long egressCounterSize = 0;
         for (PiCounterModel piCounter : pipeconf.pipelineModel().counters()) {
-            if (piCounter.id().equals(FABRIC_INGRESS_SPGW_TERMINATIONS_COUNTER)) {
+            if (piCounter.id().equals(FABRIC_INGRESS_UPF_TERMINATIONS_COUNTER)) {
                 ingressCounterSize = piCounter.size();
-            } else if (piCounter.id().equals(FABRIC_EGRESS_SPGW_TERMINATIONS_COUNTER)) {
+            } else if (piCounter.id().equals(FABRIC_EGRESS_UPF_TERMINATIONS_COUNTER)) {
                 egressCounterSize = piCounter.size();
             }
         }
@@ -271,9 +271,9 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         if (!setupBehaviour("enablePscEncap()")) {
             return;
         }
-        if (pipeconf.pipelineModel().table(FABRIC_EGRESS_SPGW_GTPU_ENCAP).isEmpty()) {
+        if (pipeconf.pipelineModel().table(FABRIC_EGRESS_UPF_GTPU_ENCAP).isEmpty()) {
             log.error("Missing {} table in {}, cannot enable PSC encap",
-                      FABRIC_EGRESS_SPGW_GTPU_ENCAP, deviceId);
+                      FABRIC_EGRESS_UPF_GTPU_ENCAP, deviceId);
             return;
         }
         flowRuleService.applyFlowRules(upfTranslator.buildGtpuWithPscEncapRule(
@@ -285,9 +285,9 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         if (!setupBehaviour("disablePscEncap()")) {
             return;
         }
-        if (pipeconf.pipelineModel().table(FABRIC_EGRESS_SPGW_GTPU_ENCAP).isEmpty()) {
+        if (pipeconf.pipelineModel().table(FABRIC_EGRESS_UPF_GTPU_ENCAP).isEmpty()) {
             log.debug("Missing {} table in {}, assuming PSC encap is disabled by default",
-                      FABRIC_EGRESS_SPGW_GTPU_ENCAP, deviceId);
+                      FABRIC_EGRESS_UPF_GTPU_ENCAP, deviceId);
             return;
         }
         flowRuleService.applyFlowRules(upfTranslator.buildGtpuOnlyEncapRule(
@@ -527,8 +527,8 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
         // Generate the counter cell IDs.
         Set<PiCounterId> counterIds = ImmutableSet.of(
-                FABRIC_INGRESS_SPGW_TERMINATIONS_COUNTER,
-                FABRIC_EGRESS_SPGW_TERMINATIONS_COUNTER
+                FABRIC_INGRESS_UPF_TERMINATIONS_COUNTER,
+                FABRIC_EGRESS_UPF_TERMINATIONS_COUNTER
         );
 
         // Query the device.
@@ -552,10 +552,10 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                 return;
             }
             UpfCounter.Builder statsBuilder = upfCounterBuilders.get((int) counterCell.cellId().index());
-            if (counterCell.cellId().counterId().equals(FABRIC_INGRESS_SPGW_TERMINATIONS_COUNTER)) {
+            if (counterCell.cellId().counterId().equals(FABRIC_INGRESS_UPF_TERMINATIONS_COUNTER)) {
                 statsBuilder.setIngress(counterCell.data().packets(),
                                         counterCell.data().bytes());
-            } else if (counterCell.cellId().counterId().equals(FABRIC_EGRESS_SPGW_TERMINATIONS_COUNTER)) {
+            } else if (counterCell.cellId().counterId().equals(FABRIC_EGRESS_UPF_TERMINATIONS_COUNTER)) {
                 statsBuilder.setEgress(counterCell.data().packets(),
                                        counterCell.data().bytes());
             } else {
@@ -617,9 +617,9 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         // Make list of cell handles we want to read.
         List<PiCounterCellHandle> counterCellHandles = List.of(
                 PiCounterCellHandle.of(deviceId,
-                                       PiCounterCellId.ofIndirect(FABRIC_INGRESS_SPGW_TERMINATIONS_COUNTER, cellId)),
+                                       PiCounterCellId.ofIndirect(FABRIC_INGRESS_UPF_TERMINATIONS_COUNTER, cellId)),
                 PiCounterCellHandle.of(deviceId,
-                                       PiCounterCellId.ofIndirect(FABRIC_EGRESS_SPGW_TERMINATIONS_COUNTER, cellId)));
+                                       PiCounterCellId.ofIndirect(FABRIC_EGRESS_UPF_TERMINATIONS_COUNTER, cellId)));
 
         // Query the device.
         Collection<PiCounterCell> counterEntryResponse = client.read(
@@ -637,9 +637,9 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                 log.warn("Unrecognized counter index {}, skipping", counterCell);
                 return;
             }
-            if (counterCell.cellId().counterId().equals(FABRIC_INGRESS_SPGW_TERMINATIONS_COUNTER)) {
+            if (counterCell.cellId().counterId().equals(FABRIC_INGRESS_UPF_TERMINATIONS_COUNTER)) {
                 stats.setIngress(counterCell.data().packets(), counterCell.data().bytes());
-            } else if (counterCell.cellId().counterId().equals(FABRIC_EGRESS_SPGW_TERMINATIONS_COUNTER)) {
+            } else if (counterCell.cellId().counterId().equals(FABRIC_EGRESS_UPF_TERMINATIONS_COUNTER)) {
                 stats.setEgress(counterCell.data().packets(), counterCell.data().bytes());
             } else {
                 log.warn("Unrecognized counter ID {}, skipping", counterCell);
@@ -866,7 +866,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
             // removeEntry does return false only for severe issues, before we had
             // a safe fall through. This part should not be affected since core and access
             // flows are different in the match keys and should not result in wrong removal
-            removeEntry(match1, FABRIC_INGRESS_SPGW_INTERFACES, true);
+            removeEntry(match1, FABRIC_INGRESS_UPF_INTERFACES, true);
         }
         // This additional step might be also needed in case of unknown interfaces
         PiCriterion match2 = PiCriterion.builder()
@@ -874,7 +874,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                           ifacePrefix.prefixLength())
                 .matchExact(HDR_GTPU_IS_VALID, 0)
                 .build();
-        removeEntry(match2, FABRIC_INGRESS_SPGW_INTERFACES, false);
+        removeEntry(match2, FABRIC_INGRESS_UPF_INTERFACES, false);
     }
 
     private void removeSessionUplink(UpfSessionUplink ueSession) throws UpfProgrammableException {
@@ -885,7 +885,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                 .matchExact(HDR_TUNNEL_IPV4_DST, ueSession.tunDstAddr().toOctets())
                 .build();
         log.info("Removing {}", ueSession);
-        removeEntry(match, FABRIC_INGRESS_SPGW_UPLINK_SESSIONS, false);
+        removeEntry(match, FABRIC_INGRESS_UPF_UPLINK_SESSIONS, false);
     }
 
     private void removeSessionDownlink(UpfSessionDownlink ueSession) throws UpfProgrammableException {
@@ -896,7 +896,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                 .build();
 
         log.info("Removing {}", ueSession.toString());
-        removeEntry(match, FABRIC_INGRESS_SPGW_DOWNLINK_SESSIONS, false);
+        removeEntry(match, FABRIC_INGRESS_UPF_DOWNLINK_SESSIONS, false);
     }
 
     private void removeUpfTerminationUplink(UpfTerminationUplink upfTermination)
@@ -907,7 +907,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                 .build();
 
         log.info("Removing {}", upfTermination.toString());
-        removeEntry(match, FABRIC_INGRESS_SPGW_UPLINK_TERMINATIONS, false);
+        removeEntry(match, FABRIC_INGRESS_UPF_UPLINK_TERMINATIONS, false);
     }
 
     private void removeUpfTerminationDownlink(UpfTerminationDownlink upfTermination)
@@ -918,22 +918,22 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                 .build();
 
         log.info("Removing {}", upfTermination.toString());
-        removeEntry(match, FABRIC_INGRESS_SPGW_DOWNLINK_TERMINATIONS, false);
+        removeEntry(match, FABRIC_INGRESS_UPF_DOWNLINK_TERMINATIONS, false);
     }
 
     private void removeGtpTunnelPeer(UpfGtpTunnelPeer peer) throws UpfProgrammableException {
         PiCriterion match = PiCriterion.builder()
                 .matchExact(HDR_TUN_PEER_ID, peer.tunPeerId())
                 .build();
-        removeEntries(Lists.newArrayList(Pair.of(FABRIC_INGRESS_SPGW_IG_TUNNEL_PEERS, match),
-                                         Pair.of(FABRIC_EGRESS_SPGW_EG_TUNNEL_PEERS, match)),
+        removeEntries(Lists.newArrayList(Pair.of(FABRIC_INGRESS_UPF_IG_TUNNEL_PEERS, match),
+                                         Pair.of(FABRIC_EGRESS_UPF_EG_TUNNEL_PEERS, match)),
                       false, DEFAULT_PRIORITY);
     }
 
     private void removeUpfApplication(UpfApplication appFilter)
             throws UpfProgrammableException {
         PiCriterion match = upfTranslator.buildApplicationCriterion(appFilter);
-        removeEntry(match, FABRIC_INGRESS_SPGW_APPLICATIONS, false, appFilter.priority());
+        removeEntry(match, FABRIC_INGRESS_UPF_APPLICATIONS, false, appFilter.priority());
     }
 
     private void applyUplinkRecirculation(Ip4Prefix subnet, boolean remove) {

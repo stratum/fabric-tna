@@ -1,28 +1,34 @@
-
-// Copyright 2021-present Open Networking Foundation
+// Copyright 2020-present Open Networking Foundation
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef __SPGW__
-#define __SPGW__
+#ifndef __UPF__
+#define __UPF__
 
-control SpgwIngress(
+control UpfIngress(
         /* Fabric.p4 */
-        inout ingress_headers_t          hdr,
-        inout fabric_ingress_metadata_t  fabric_md,
-        inout standard_metadata_t        standard_md,
-        inout bool                       do_spgw_uplink_recirc,
-        inout bit<1>                     drop_ctl) {
+        inout ingress_headers_t                      hdr,
+        inout fabric_ingress_metadata_t             fabric_md,
+        /* TNA */
+        in ingress_intrinsic_metadata_t             ig_intr_md,
+        inout ingress_intrinsic_metadata_for_tm_t   ig_tm_md,
+        inout ingress_intrinsic_metadata_for_deparser_t ig_dprsr_md) {
 
     //========================//
     //===== Misc Things ======//
     //========================//
 
-    counter(MAX_UPF_COUNTERS, CounterType.packets_and_bytes) terminations_counter;
+    Counter<bit<64>, upf_ctr_id_t>(MAX_UPF_COUNTERS, CounterType_t.PACKETS_AND_BYTES) terminations_counter;
 
-    meter(MAX_SESSION_METERS, MeterType.bytes) session_meter;
-    meter(MAX_APP_METERS, MeterType.bytes) app_meter;
+    Meter<session_meter_idx_t>(MAX_SESSION_METERS, MeterType_t.BYTES) session_meter;
+    Meter<app_meter_idx_t>(MAX_APP_METERS, MeterType_t.BYTES) app_meter;
 
     bool is_uplink = false;
+    //FIXME: workaround, without putting term_hit on a separate PHV container,
+    //  it ends up in dirtying the INT report_type in the egress parser, even if the
+    //  two values don't share the PHV. This is because it shares the PHV with the
+    //  bridged INT report_type, that share the PHV with the INT report_type in the
+    //  egress pipeline.
+    @pa_solitary("ingress", "upf_term_hit")
     bool term_hit = false;
     bool sess_hit = false;
     bit<32> app_ipv4_addr = 0;
@@ -34,16 +40,18 @@ control SpgwIngress(
     session_meter_idx_t session_meter_id_internal = DEFAULT_SESSION_METER_IDX;
     app_meter_idx_t app_meter_id_internal = DEFAULT_APP_METER_IDX;
 
+    MeterColor_t app_color;
+
     @hidden
     action _drop_common() {
-        drop_ctl = 1;
+        ig_dprsr_md.drop_ctl = 1;
         fabric_md.skip_forwarding = true;
         fabric_md.skip_next = true;
     }
 
     @hidden
     action _term_hit(upf_ctr_id_t ctr_id) {
-        fabric_md.bridged.spgw.upf_ctr_id = ctr_id;
+        fabric_md.bridged.upf.upf_ctr_id = ctr_id;
         term_hit = true;
     }
 
@@ -51,9 +59,9 @@ control SpgwIngress(
     action _set_field_encap(teid_t  teid,
                             // QFI should always equal 0 for 4G flows
                             bit<6>  qfi) {
-        fabric_md.bridged.spgw.needs_gtpu_encap = true;
-        fabric_md.bridged.spgw.teid = teid;
-        fabric_md.bridged.spgw.qfi = qfi;
+        fabric_md.bridged.upf.needs_gtpu_encap = true;
+        fabric_md.bridged.upf.teid = teid;
+        fabric_md.bridged.upf.qfi = qfi;
     }
 
     @hidden
@@ -61,14 +69,8 @@ control SpgwIngress(
         fabric_md.bridged.base.ip_eth_type = ETHERTYPE_IPV4;
         fabric_md.routing_ipv4_dst = hdr.inner_ipv4.dst_addr;
         // Move GTPU and inner L3 headers out
-        hdr.ipv4 = hdr.inner_ipv4;
-        hdr.inner_ipv4.setInvalid();
-        hdr.udp = hdr.inner_udp;
-        hdr.inner_udp.setInvalid();
-        hdr.tcp = hdr.inner_tcp;
-        hdr.inner_tcp.setInvalid();
-        hdr.icmp = hdr.inner_icmp;
-        hdr.inner_icmp.setInvalid();
+        hdr.ipv4.setInvalid();
+        hdr.udp.setInvalid();
         hdr.gtpu.setInvalid();
         hdr.gtpu_options.setInvalid();
         hdr.gtpu_ext_psc.setInvalid();
@@ -82,9 +84,9 @@ control SpgwIngress(
 
     @hidden
     action _iface_common(slice_id_t slice_id) {
-        fabric_md.bridged.spgw.skip_spgw = false;
-        fabric_md.is_spgw_hit = true;
-        fabric_md.spgw_slice_id = slice_id;
+        fabric_md.bridged.upf.skip_upf = false;
+        fabric_md.is_upf_hit = true;
+        fabric_md.upf_slice_id = slice_id;
     }
 
     action iface_access(slice_id_t slice_id) {
@@ -101,7 +103,7 @@ control SpgwIngress(
     }
 
     action iface_miss() {
-        fabric_md.bridged.spgw.skip_spgw = true;
+        fabric_md.bridged.upf.skip_upf = true;
     }
 
     table interfaces {
@@ -118,7 +120,7 @@ control SpgwIngress(
             @defaultonly iface_miss;
         }
         const default_action = iface_miss();
-        const size = NUM_SPGW_INTERFACES;
+        const size = NUM_UPF_INTERFACES;
     }
 
     //===============================//
@@ -160,8 +162,8 @@ control SpgwIngress(
         // Set UE IP address.
         ue_session_id = fabric_md.routing_ipv4_dst;
         session_meter_id_internal = session_meter_id;
-        fabric_md.bridged.spgw.tun_peer_id = tun_peer_id;
-        fabric_md.bridged.spgw.skip_egress_upf_ctr = false;
+        fabric_md.bridged.upf.tun_peer_id = tun_peer_id;
+        fabric_md.bridged.upf.skip_egress_upf_ctr = false;
     }
 
     action set_downlink_session_buf(tun_peer_id_t tun_peer_id, session_meter_idx_t session_meter_id) {
@@ -169,8 +171,8 @@ control SpgwIngress(
         // Set UE IP address.
         ue_session_id = fabric_md.routing_ipv4_dst;
         session_meter_id_internal = session_meter_id;
-        fabric_md.bridged.spgw.tun_peer_id = tun_peer_id;
-        fabric_md.bridged.spgw.skip_egress_upf_ctr = true;
+        fabric_md.bridged.upf.tun_peer_id = tun_peer_id;
+        fabric_md.bridged.upf.skip_egress_upf_ctr = true;
     }
 
     action set_downlink_session_buf_drop() {
@@ -260,7 +262,7 @@ control SpgwIngress(
                    tc_t tc,
                    app_meter_idx_t app_meter_id) {
         _term_hit(ctr_id);
-        fabric_md.spgw_tc = tc;
+        fabric_md.upf_tc = tc;
         app_meter_id_internal = app_meter_id;
         fabric_md.tc_unknown = false;
     }
@@ -331,7 +333,7 @@ control SpgwIngress(
 
     table ig_tunnel_peers {
         key = {
-            fabric_md.bridged.spgw.tun_peer_id : exact @name("tun_peer_id");
+            fabric_md.bridged.upf.tun_peer_id : exact @name("tun_peer_id");
         }
 
         actions = {
@@ -351,7 +353,7 @@ control SpgwIngress(
 
     table applications {
         key  = {
-            fabric_md.spgw_slice_id : exact   @name("slice_id");
+            fabric_md.upf_slice_id : exact   @name("slice_id");
             app_ipv4_addr           : lpm     @name("app_ipv4_addr");
             app_l4_port             : range   @name("app_l4_port");
             app_ip_proto            : ternary @name("app_ip_proto");
@@ -368,15 +370,12 @@ control SpgwIngress(
     //===== Uplink Recirculation ======//
     //=================================//
 
-    direct_counter(CounterType.packets) recirc_stats;
+    DirectCounter<bit<16>>(CounterType_t.PACKETS) recirc_stats;
 
     action recirc_allow() {
-        // Recirculation in bmv2 is obtained via recirculate() primitive, invoked in the egress pipeline.
-        // We set the egress_spec to the FAKE_V1MODEL_RECIRC_PORT, that is intended also as a recirculation port.
-        // For more info on FAKE_V1MODEL_RECIRC_PORT, see v1model/define_v1model.p4
-        standard_md.egress_spec = FAKE_V1MODEL_RECIRC_PORT;
+        // Pick a recirculation port within same ingress pipe to distribute load.
+        ig_tm_md.ucast_egress_port = ig_intr_md.ingress_port[8:7]++RECIRC_PORT_NUMBER;
         fabric_md.bridged.base.vlan_id = DEFAULT_VLAN_ID;
-        do_spgw_uplink_recirc = true;
         fabric_md.egress_port_set = true;
         fabric_md.skip_forwarding = true;
         fabric_md.skip_next = true;
@@ -385,9 +384,8 @@ control SpgwIngress(
 
     action recirc_deny() {
 #ifdef WITH_INT
-        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_SPGW_UPLINK_RECIRC_DENY;
+        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UPF_UPLINK_RECIRC_DENY;
 #endif // WITH_INT
-        do_spgw_uplink_recirc = false;
         fabric_md.skip_forwarding = true;
         fabric_md.skip_next = true;
         recirc_stats.count();
@@ -453,23 +451,22 @@ control SpgwIngress(
                     downlink_terminations.apply();
                 }
             }
-            app_meter.execute_meter((bit<32>) app_meter_id_internal, fabric_md.upf_meter_color);
-            if (fabric_md.upf_meter_color != MeterColor_t.RED) {
-                // No color-aware meters in v1model, so we should skip session_meter when app meter marked RED.
-                session_meter.execute_meter((bit<32>) session_meter_id_internal, fabric_md.upf_meter_color);
-            }
+            app_color = (MeterColor_t) app_meter.execute(app_meter_id_internal);
+            // Color-aware meter, if no app_meter, then app_color is GREEN and
+            // the meter behaves as a color-blind meter.
+            fabric_md.upf_meter_color = (MeterColor_t) session_meter.execute(session_meter_id_internal, app_color, 0);
             ig_tunnel_peers.apply();
             if (term_hit) {
                 // NOTE We should not update this counter for packets coming
                 // **from** dbuf (iface_dbuf), since we already updated it when
                 // first sending the same packets **to** dbuf (iface_core).
                 // However, putting a condition on the iface type introduces a
-                // stage dependency. We trade resource utilization with
+                // stage depenency. We trade resource utilization with
                 // accounting inaccuracy. Assuming that relatively few packets
                 // can be stored at dbuf, and assuming this will be deployed
                 // mostly in enterprise settings where we are not billing users,
                 // the effects of such inaccuracy should be negligible.
-                terminations_counter.count((bit<32>)fabric_md.bridged.spgw.upf_ctr_id);
+                terminations_counter.count(fabric_md.bridged.upf.upf_ctr_id);
             }
             // Nothing to be done immediately for forwarding or encapsulation.
             // Forwarding is done by other parts of the ingress, and
@@ -482,10 +479,11 @@ control SpgwIngress(
 //====================================//
 //============== Egress ==============//
 //====================================//
-control SpgwEgress(inout ingress_headers_t          hdr,
-                   inout fabric_egress_metadata_t  fabric_md) {
+control UpfEgress(
+        inout egress_headers_t hdr,
+        inout fabric_egress_metadata_t fabric_md) {
 
-    counter(MAX_UPF_COUNTERS, CounterType.packets_and_bytes) terminations_counter;
+    Counter<bit<64>, upf_ctr_id_t>(MAX_UPF_COUNTERS, CounterType_t.PACKETS_AND_BYTES) terminations_counter;
 
     //=========================//
     //===== Tunnel Peers ======//
@@ -494,14 +492,14 @@ control SpgwEgress(inout ingress_headers_t          hdr,
     action load_tunnel_params(l4_port_t    tunnel_src_port,
                               ipv4_addr_t  tunnel_src_addr,
                               ipv4_addr_t  tunnel_dst_addr) {
-        hdr.ipv4.src_addr = tunnel_src_addr;
-        hdr.ipv4.dst_addr = tunnel_dst_addr;
-        hdr.udp.sport = tunnel_src_port;
+        hdr.outer_ipv4.src_addr = tunnel_src_addr;
+        hdr.outer_ipv4.dst_addr = tunnel_dst_addr;
+        hdr.outer_udp.sport = tunnel_src_port;
     }
 
     table eg_tunnel_peers {
         key = {
-            fabric_md.bridged.spgw.tun_peer_id : exact @name("tun_peer_id");
+            fabric_md.bridged.upf.tun_peer_id : exact @name("tun_peer_id");
         }
         actions = {
             load_tunnel_params;
@@ -511,71 +509,26 @@ control SpgwEgress(inout ingress_headers_t          hdr,
         const size = MAX_GTP_TUNNEL_PEERS;
     }
 
-    @hidden
-    action _encap_initialize() {
-        /** hdr.ipv4 is now outer_ipv4 **/
-        hdr.ipv4.version           = 4w4;
-        hdr.ipv4.ihl               = 4w5;
-        hdr.ipv4.dscp              = 0;
-        hdr.ipv4.ecn               = 0;
-        // hdr.outer_ipv4.total_len      = update later
-        hdr.ipv4.identification    = 0x1513; // From NGIC, TODO: Needs to be dynamic
-        hdr.ipv4.flags             = 0;
-        hdr.ipv4.frag_offset       = 0;
-        hdr.ipv4.ttl               = DEFAULT_IPV4_TTL;
-        hdr.ipv4.protocol          = PROTO_UDP;
-        // hdr.outer_ipv4.hdr_checksum   = update later
-        // hdr.ipv4.src_addr       = update earlier
-        // hdr.ipv4.dst_addr       = update earlier
-        /** hdr.udp is now outer_udp **/
-        // hdr.udp.sport           = update earlier
-        hdr.udp.dport              = GTPU_UDP_PORT;
-        // hdr.udp.len             = update later
-        // hdr.udp.checksum        = update later
-        /** outer_gtpu **/
-        hdr.gtpu.version           = GTP_V1;
-        hdr.gtpu.pt                = GTP_PROTOCOL_TYPE_GTP;
-        hdr.gtpu.spare             = 0;
-        // hdr.gtpu.ex_flag        = update later
-        hdr.gtpu.seq_flag          = 0;
-        hdr.gtpu.npdu_flag         = 0;
-        hdr.gtpu.msgtype           = GTPU_GPDU;
-        // hdr.gtpu.msglen         = update later
-        hdr.gtpu.teid              = fabric_md.bridged.spgw.teid;
-        /** gtpu_options **/
-        hdr.gtpu_options.seq_num   = 0;
-        hdr.gtpu_options.n_pdu_num = 0;
-        hdr.gtpu_options.next_ext  = GTPU_NEXT_EXT_PSC;
-        /** gtpu_ext_psc **/
-        hdr.gtpu_ext_psc.len       = GTPU_EXT_PSC_LEN;
-        hdr.gtpu_ext_psc.type      = GTPU_EXT_PSC_TYPE_DL;
-        hdr.gtpu_ext_psc.spare0    = 0;
-        hdr.gtpu_ext_psc.ppp       = 0;
-        hdr.gtpu_ext_psc.rqi       = 0;
-        // hdr.gtpu_ext_psc.qfi    = update later
-        hdr.gtpu_ext_psc.next_ext  = GTPU_NEXT_EXT_NONE;
-    }
+    //========================//
+    //===== GTP-U Encap ======//
+    //========================//
 
     @hidden
     action _encap_common() {
         // Constant fields initialized in the parser.
-        hdr.inner_ipv4.setValid();
-        hdr.inner_ipv4 = hdr.ipv4;
-        hdr.udp.setValid();
-        hdr.gtpu.setValid();
-        // For bmv2 the initialization needs to be done after the hdr.*.setValid() is called,
-        // otherwise the assignments made in _encap_initialize() have no effect.
-        _encap_initialize();
+        hdr.outer_ipv4.setValid();
+        hdr.outer_udp.setValid();
+        hdr.outer_gtpu.setValid();
     }
 
     // Do regular GTP-U encap.
     action gtpu_only() {
         _encap_common();
-        hdr.ipv4.total_len = IPV4_HDR_BYTES + UDP_HDR_BYTES + GTPU_HDR_BYTES
-                + hdr.inner_ipv4.total_len;
-        hdr.udp.len = UDP_HDR_BYTES + GTPU_HDR_BYTES
-                + hdr.inner_ipv4.total_len;
-        hdr.gtpu.msglen = hdr.inner_ipv4.total_len;
+        hdr.outer_ipv4.total_len = IPV4_HDR_BYTES + UDP_HDR_BYTES + GTPU_HDR_BYTES
+                + hdr.ipv4.total_len;
+        hdr.outer_udp.len = UDP_HDR_BYTES + GTPU_HDR_BYTES
+                + hdr.ipv4.total_len;
+        hdr.outer_gtpu.msglen = hdr.ipv4.total_len;
 #ifdef WITH_INT
         fabric_md.int_report_md.encap_presence = EncapPresence.GTPU_ONLY;
 #endif // WITH_INT
@@ -584,20 +537,23 @@ control SpgwEgress(inout ingress_headers_t          hdr,
     // Do GTP-U encap with PDU Session Container extension for 5G NG-RAN with
     // configurable QFI.
     action gtpu_with_psc() {
-        // Need to set valid before assign any value, in bmv2.
-        hdr.gtpu_options.setValid();
-        hdr.gtpu_ext_psc.setValid();
         _encap_common();
-        hdr.ipv4.total_len = IPV4_HDR_BYTES + UDP_HDR_BYTES + GTPU_HDR_BYTES
+        hdr.outer_ipv4.total_len = IPV4_HDR_BYTES + UDP_HDR_BYTES + GTPU_HDR_BYTES
                 + GTPU_OPTIONS_HDR_BYTES + GTPU_EXT_PSC_HDR_BYTES
-                + hdr.inner_ipv4.total_len;
-        hdr.udp.len = UDP_HDR_BYTES + GTPU_HDR_BYTES
+                + hdr.ipv4.total_len;
+        hdr.outer_udp.len = UDP_HDR_BYTES + GTPU_HDR_BYTES
                 + GTPU_OPTIONS_HDR_BYTES + GTPU_EXT_PSC_HDR_BYTES
-                + hdr.inner_ipv4.total_len;
-        hdr.gtpu.msglen = GTPU_OPTIONS_HDR_BYTES + GTPU_EXT_PSC_HDR_BYTES
-                + hdr.inner_ipv4.total_len;
-        hdr.gtpu.ex_flag = 1;
-        hdr.gtpu_ext_psc.qfi = fabric_md.bridged.spgw.qfi;
+                + hdr.ipv4.total_len;
+        hdr.outer_gtpu.msglen = GTPU_OPTIONS_HDR_BYTES + GTPU_EXT_PSC_HDR_BYTES
+                + hdr.ipv4.total_len;
+        hdr.outer_gtpu.ex_flag = 1;
+        hdr.outer_gtpu_options.setValid();
+        hdr.outer_gtpu_ext_psc.setValid();
+        // FIXME: these fields should be intialized in the parser,
+        // but due to PARSER_ERROR_MULTIWRITE the initialization is postponed.
+        hdr.outer_gtpu_ext_psc.len = GTPU_EXT_PSC_LEN;
+        hdr.outer_gtpu_ext_psc.rqi = 0;
+        hdr.outer_gtpu_ext_psc.ppp = 0;
 #ifdef WITH_INT
         fabric_md.int_report_md.encap_presence = EncapPresence.GTPU_WITH_PSC;
 #endif // WITH_INT
@@ -615,31 +571,15 @@ control SpgwEgress(inout ingress_headers_t          hdr,
     }
 
     apply {
-        if (!fabric_md.bridged.spgw.skip_spgw) {
-            if (fabric_md.bridged.spgw.needs_gtpu_encap) {
-                if (hdr.udp.isValid()) {
-                    hdr.inner_udp.setValid();
-                    hdr.inner_udp = hdr.udp;
-                    hdr.udp.setInvalid();
-                }
-                if (hdr.tcp.isValid()) {
-                    hdr.inner_tcp.setValid();
-                    hdr.inner_tcp = hdr.tcp;
-                    hdr.tcp.setInvalid();
-                }
-                if (hdr.icmp.isValid()) {
-                    hdr.inner_icmp.setValid();
-                    hdr.inner_icmp = hdr.icmp;
-                    hdr.icmp.setInvalid();
-                }
-                gtpu_encap.apply();
+        if (!fabric_md.bridged.upf.skip_upf) {
+            if (fabric_md.bridged.upf.needs_gtpu_encap) {
                 eg_tunnel_peers.apply();
+                gtpu_encap.apply();
             }
-            if (!fabric_md.bridged.spgw.skip_egress_upf_ctr) {
-                terminations_counter.count((bit<32>)fabric_md.bridged.spgw.upf_ctr_id);
+            if (!fabric_md.bridged.upf.skip_egress_upf_ctr) {
+                terminations_counter.count(fabric_md.bridged.upf.upf_ctr_id);
             }
         }
     }
 }
-
-#endif // __SPGW__
+#endif // __UPF__

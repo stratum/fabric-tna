@@ -29,7 +29,7 @@ PIPECONF_APP_NAME := org.stratumproject.fabric-tna
 PIPECONF_OAR_FILE := $(DIR)/target/fabric-tna-1.1.0-SNAPSHOT.oar
 
 # Profiles to build by default (all)
-PROFILES ?= fabric fabric-spgw fabric-int fabric-spgw-int
+PROFILES ?= fabric fabric-upf fabric-int fabric-upf-int
 
 deps:
 	docker pull $(SDE_TM_DOCKER_IMG)
@@ -59,19 +59,19 @@ fabric-int:
 	@$(DIR)/p4src/tna/build.sh fabric-int "-DWITH_INT"
 	@$(DIR)/p4src/v1model/build.sh fabric-int "-DWITH_INT"
 
-fabric-spgw:
-	@$(DIR)/p4src/tna/build.sh fabric-spgw "-DWITH_SPGW"
-	@$(DIR)/p4src/v1model/build.sh fabric-spgw "-DWITH_SPGW"
+fabric-upf:
+	@$(DIR)/p4src/tna/build.sh fabric-upf "-DWITH_UPF"
+	@$(DIR)/p4src/v1model/build.sh fabric-upf "-DWITH_UPF"
 
-fabric-spgw-int:
-	@$(DIR)/p4src/tna/build.sh fabric-spgw-int "-DWITH_SPGW -DWITH_INT"
-	@$(DIR)/p4src/v1model/build.sh fabric-spgw-int "-DWITH_SPGW -DWITH_INT"
+fabric-upf-int:
+	@$(DIR)/p4src/tna/build.sh fabric-upf-int "-DWITH_UPF -DWITH_INT"
+	@$(DIR)/p4src/v1model/build.sh fabric-upf-int "-DWITH_UPF -DWITH_INT"
 
 constants:
 	docker run -v $(DIR):$(DIR) -w $(DIR) --rm --user $(UID) \
 		--entrypoint ./util/gen-p4-constants.py $(TESTER_DOCKER_IMG) \
 		-o $(DIR)/src/main/java/org/stratumproject/fabric/tna/behaviour/P4InfoConstants.java \
-		p4info $(DIR)/p4src/tna/build/fabric-spgw-int/sde_$(SDE_VER_)/p4info.txt
+		p4info $(DIR)/p4src/tna/build/fabric-upf-int/sde_$(SDE_VER_)/p4info.txt
 	docker run -v $(DIR):$(DIR) -w $(DIR) --rm \
 		--user $(UID) \
 		$(SDE_P4C_DOCKER_IMG) \

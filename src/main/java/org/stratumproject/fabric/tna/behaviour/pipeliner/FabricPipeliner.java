@@ -211,7 +211,7 @@ public class FabricPipeliner extends AbstractFabricHandlerBehavior
         groupService.addGroup(packetInCloneGroup());
 
         // Set up recirculation ports as untagged (used for INT reports and
-        // UE-to-UE in SPGW pipe).
+        // UE-to-UE in UPF pipe).
         List<Integer> recircPorts = capabilities.isArchTna() ? RECIRC_PORTS : V1MODEL_RECIRC_PORT;
         recircPorts.forEach(port -> {
             flowRuleService.applyFlowRules(

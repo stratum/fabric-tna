@@ -110,9 +110,9 @@ control IntTnaEgressParserEmulator (inout v1model_header_t          hdr_v1model,
         fabric_md.bridged.bmd_type = fabric_md.int_report_md.bmd_type;
         fabric_md.bridged.base.vlan_id = DEFAULT_VLAN_ID;
         fabric_md.bridged.base.mpls_label = 0; // do not push an MPLS label
-        #ifdef WITH_SPGW
-            fabric_md.bridged.spgw.skip_spgw = true;
-        #endif // WITH_SPGW
+        #ifdef WITH_UPF
+            fabric_md.bridged.upf.skip_upf = true;
+        #endif // WITH_UPF
 
         /** report_fixed_header **/
         hdr.report_fixed_header.ig_tstamp = fabric_md.int_report_md.ig_tstamp;

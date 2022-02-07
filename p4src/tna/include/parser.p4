@@ -402,7 +402,7 @@ parser FabricEgressParser (packet_in packet,
 
     state parse_bridged_md {
         packet.extract(fabric_md.bridged);
-#ifdef WITH_SPGW
+#ifdef WITH_UPF
         // Allocate GTP-U encap fields on the T-PHV. Set headers as valid later.
         /** outer_ipv4 **/
         hdr.outer_ipv4.version           = 4w4;
@@ -432,7 +432,7 @@ parser FabricEgressParser (packet_in packet,
         hdr.outer_gtpu.npdu_flag         = 0;
         hdr.outer_gtpu.msgtype           = GTPU_GPDU;
         // hdr.outer_gtpu.msglen         = update later
-        hdr.outer_gtpu.teid              = fabric_md.bridged.spgw.teid;
+        hdr.outer_gtpu.teid              = fabric_md.bridged.upf.teid;
         /** outer_gtpu_options **/
         hdr.outer_gtpu_options.seq_num   = 0;
         hdr.outer_gtpu_options.n_pdu_num = 0;
@@ -443,10 +443,10 @@ parser FabricEgressParser (packet_in packet,
         hdr.outer_gtpu_ext_psc.spare0    = 0;
         hdr.outer_gtpu_ext_psc.ppp       = 0;
         // hdr.outer_gtpu_ext_psc.rqi    = update later
-        hdr.outer_gtpu_ext_psc.qfi       = fabric_md.bridged.spgw.qfi;
+        hdr.outer_gtpu_ext_psc.qfi       = fabric_md.bridged.upf.qfi;
         hdr.outer_gtpu_ext_psc.next_ext  = GTPU_NEXT_EXT_NONE;
 
-#endif // WITH_SPGW
+#endif // WITH_UPF
 #ifdef WITH_INT
         fabric_md.int_report_md.encap_presence = fabric_md.bridged.base.encap_presence;
 #endif // WITH_INT
@@ -571,9 +571,9 @@ control FabricEgressDeparser(packet_out packet,
     in egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr) {
     Checksum() ipv4_checksum;
     FabricEgressMirror() egress_mirror;
-#ifdef WITH_SPGW
+#ifdef WITH_UPF
     Checksum() outer_ipv4_checksum;
-#endif // WITH_SPGW
+#endif // WITH_UPF
 #ifdef WITH_INT
     Checksum() report_ipv4_checksum;
 #endif // WITH_INT
@@ -595,7 +595,7 @@ control FabricEgressDeparser(packet_out packet,
                 hdr.ipv4.dst_addr
             });
         }
-#ifdef WITH_SPGW
+#ifdef WITH_UPF
         if (hdr.outer_ipv4.isValid()) {
             hdr.outer_ipv4.hdr_checksum = outer_ipv4_checksum.update({
                 hdr.outer_ipv4.version,
@@ -612,7 +612,7 @@ control FabricEgressDeparser(packet_out packet,
                 hdr.outer_ipv4.dst_addr
             });
         }
-#endif // WITH_SPGW
+#endif // WITH_UPF
 #ifdef WITH_INT
         if (hdr.report_ipv4.isValid()) {
             hdr.report_ipv4.hdr_checksum = report_ipv4_checksum.update({
@@ -653,13 +653,13 @@ control FabricEgressDeparser(packet_out packet,
 #endif // WITH_XCONNECT || WITH_DOUBLE_VLAN_TERMINATION
         packet.emit(hdr.eth_type);
         packet.emit(hdr.mpls);
-#ifdef WITH_SPGW
+#ifdef WITH_UPF
         packet.emit(hdr.outer_ipv4);
         packet.emit(hdr.outer_udp);
         packet.emit(hdr.outer_gtpu);
         packet.emit(hdr.outer_gtpu_options);
         packet.emit(hdr.outer_gtpu_ext_psc);
-#endif // WITH_SPGW
+#endif // WITH_UPF
         packet.emit(hdr.ipv4);
         packet.emit(hdr.ipv6);
         packet.emit(hdr.udp);

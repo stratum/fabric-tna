@@ -58,7 +58,7 @@ const tc_t DEFAULT_TC = 0;
 // Should be the same specified in gen-qos-config.py.
 const QueueId_t QUEUE_ID_BEST_EFFORT = 0;
 
-// SPGW types
+// UPF types
 typedef bit<32> teid_t;
 typedef bit<UPF_CTR_IDX_WIDTH> upf_ctr_id_t;
 // We support up to 254 base stations + 1 dbuf endpoint. ID 0 is reserved.
@@ -263,7 +263,7 @@ enum bit<8> IntDropReason_t {
     DROP_REASON_UPF_DL_TERMINATION_DROP = 138,
     DROP_REASON_UPF_UL_TERMINATION_MISS = 139,
     DROP_REASON_UPF_UL_TERMINATION_DROP = 140,
-    DROP_REASON_SPGW_UPLINK_RECIRC_DENY = 150,
+    DROP_REASON_UPF_UPLINK_RECIRC_DENY = 150,
     DROP_REASON_INGRESS_QOS_METER = 160,
     DROP_REASON_ROUTING_V4_DROP = 170,
     DROP_REASON_ROUTING_V6_DROP = 171

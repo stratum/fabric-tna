@@ -105,12 +105,12 @@ header tcp_t {
     // bit<16> urgent_ptr;
 }
 
-// Without @pa_container_size FabricSpgwDownlinkTest fails
+// Without @pa_container_size FabricUpfDownlinkTest fails
 // FIXME: test with future SDE releases and eventually remove pragmas
-#ifdef WITH_SPGW
+#ifdef WITH_UPF
 @pa_container_size("egress", "hdr.outer_udp.sport", 16)
 @pa_container_size("egress", "hdr.outer_udp.dport", 16)
-#endif // WITH_SPGW
+#endif // WITH_UPF
 header udp_t {
     bit<16> sport;
     bit<16> dport;
@@ -166,12 +166,12 @@ header gtpu_ext_psc_t {
 }
 
 @flexible
-struct spgw_bridged_metadata_t {
+struct upf_bridged_metadata_t {
     tun_peer_id_t    tun_peer_id;
     upf_ctr_id_t     upf_ctr_id;
     bit<6>           qfi;
     bool             needs_gtpu_encap;
-    bool             skip_spgw;
+    bool             skip_upf;
     bool             skip_egress_upf_ctr;
     teid_t           teid;
 #ifdef V1MODEL
@@ -310,9 +310,9 @@ struct bridged_metadata_base_t {
 header bridged_metadata_t {
     BridgedMdType_t         bmd_type;
     bridged_metadata_base_t base;
-#ifdef WITH_SPGW
-    spgw_bridged_metadata_t spgw;
-#endif // WITH_SPGW
+#ifdef WITH_UPF
+    upf_bridged_metadata_t  upf;
+#endif // WITH_UPF
 #ifdef WITH_INT
     int_bridged_metadata_t int_bmd;
 #endif // WITH_INT
@@ -321,9 +321,9 @@ header bridged_metadata_t {
 // Use padding to make the header multiple of 8 bits,
 // condition required by p4c when compiling for bmv2.
     bit<1>                 _pad0;
-#ifdef WITH_SPGW
+#ifdef WITH_UPF
     bit<7>                 _pad1;
-#endif // WITH_SPGW
+#endif // WITH_UPF
 #ifdef WITH_INT
     bit<5>                 _pad2;
 #endif // WITH_INT
@@ -377,9 +377,9 @@ struct fabric_ingress_metadata_t {
     slice_id_t               slice_id;
     tc_t                     tc;
     bool                     tc_unknown;
-    bool                     is_spgw_hit;
-    slice_id_t               spgw_slice_id;
-    tc_t                     spgw_tc;
+    bool                     is_upf_hit;
+    slice_id_t               upf_slice_id;
+    tc_t                     upf_tc;
     MeterColor_t             upf_meter_color;
     PortType_t               ig_port_type;
     common_mirror_metadata_t mirror;
@@ -406,9 +406,9 @@ header packet_in_mirror_metadata_t {
 struct fabric_egress_metadata_t {
     bridged_metadata_t    bridged;
     PortId_t              cpu_port;
-#ifdef WITH_SPGW
+#ifdef WITH_UPF
     bool                  inner_ipv4_checksum_err;
-#endif // WITH_SPGW
+#endif // WITH_UPF
 #ifdef WITH_INT
     int_report_metadata_t int_report_md;
     int_metadata_t        int_md;
@@ -475,14 +475,14 @@ struct egress_headers_t {
 #endif // WITH_XCONNECT || WITH_DOUBLE_VLAN_TERMINATION
     eth_type_t eth_type;
     mpls_t mpls;
-#ifdef WITH_SPGW
+#ifdef WITH_UPF
     // GTP-U encapsulation.
     ipv4_t outer_ipv4;
     udp_t outer_udp;
     gtpu_t outer_gtpu;
     gtpu_options_t outer_gtpu_options;
     gtpu_ext_psc_t outer_gtpu_ext_psc;
-#endif // WITH_SPGW
+#endif // WITH_UPF
     ipv4_t ipv4;
     ipv6_t ipv6;
     udp_t udp;

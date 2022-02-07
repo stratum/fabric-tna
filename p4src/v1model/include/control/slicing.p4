@@ -6,7 +6,7 @@
 #include "v1model/include/header_v1model.p4"
 
 // ACL-like classification, maps lookup metadata to slice_id and tc. For UE
-// traffic, the classification provided by the SPGW tables takes precendence.
+// traffic, the classification provided by the UPF tables takes precendence.
 // To apply the same slicing and QoS treatment end-to-end, we use the IPv4 DSCP
 // field to piggyback slice_id and tc (see EgressDscpRewriter). This is
 // especially important for UE traffic, where classification based on PDRs can
@@ -77,8 +77,8 @@ control IngressQos (inout fabric_ingress_metadata_t fabric_md,
     bit<2> packet_color = 2w0;
 
     @hidden
-    action use_spgw() {
-        fabric_md.bridged.base.slice_tc = fabric_md.spgw_slice_id++fabric_md.spgw_tc;
+    action use_upf() {
+        fabric_md.bridged.base.slice_tc = fabric_md.upf_slice_id++fabric_md.upf_tc;
     }
 
     @hidden
@@ -86,14 +86,14 @@ control IngressQos (inout fabric_ingress_metadata_t fabric_md,
         fabric_md.bridged.base.slice_tc = fabric_md.slice_id++fabric_md.tc;
     }
 
-    // Use SPGW classification if the packet was terminated by this switch.
+    // Use UPF classification if the packet was terminated by this switch.
     @hidden
     table set_slice_tc {
-        key = { fabric_md.is_spgw_hit: exact; }
-        actions = { use_spgw; use_default; }
+        key = { fabric_md.is_upf_hit: exact; }
+        actions = { use_upf; use_default; }
         const size = 2;
         const entries = {
-            true: use_spgw;
+            true: use_upf;
             false: use_default;
         }
     }
