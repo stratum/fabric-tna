@@ -134,6 +134,10 @@ UE2_IPV4 = "16.255.255.2"
 UE_SUBNET = "16.255.255.0"
 UE_SUBNET_MASK = "255.255.255.0"
 APP_ID = 10
+APP_METER_IDX = 10
+SESSION_METER_IDX = 10
+
+BURST_DURATION_MS = 100
 
 DEFAULT_ROUTE_IPV4 = "0.0.0.0"
 PREFIX_DEFAULT_ROUTE = 0
@@ -291,6 +295,8 @@ DEFAULT_TC = 0
 NO_APP_ID = 0
 # use sth != 0, 0 is not a fortunate test value
 DEFAULT_QFI = 1
+DEFAULT_SESSION_METER_IDX = 0
+DEFAULT_APP_METER_IDX = 0
 TC_WIDTH = 2  # bits
 
 # High-level parameter specification options for get_test_args function
@@ -662,6 +668,7 @@ def get_test_args(
     test_multiple_pkt_len=False,
     test_multiple_prefix_len=False,
     ue_recirculation_test=False,
+    metering=False,
 ):
 
     """
@@ -684,6 +691,8 @@ def get_test_args(
     pkt_len_list = []
     prefix_len_list = []
     allow_ue_recirculation_list = []
+    session_meter_bw_list = [None]
+    app_meter_bw_list = [None]
 
     # spgw input structure: "[DL/UL]_[optional: psc]"
     if spgw_type:
@@ -787,6 +796,10 @@ def get_test_args(
     else:
         allow_ue_recirculation_list = [None]
 
+    if metering:
+        session_meter_bw_list = [1, 100000]
+        app_meter_bw_list = [1, 100000]
+
     for drop_reason in drop_reason_list:
         for vlan_conf, tagged in vlan_conf_list.items():
             for pkt_type in pkt_type_list:
@@ -797,52 +810,56 @@ def get_test_args(
                                 for (
                                     allow_ue_recirculation
                                 ) in allow_ue_recirculation_list:
-                                    params = {
-                                        "vlan_conf": vlan_conf,
-                                        "pkt_type": pkt_type,
-                                        "tagged1": tagged[0],
-                                        "tagged2": tagged[1],
-                                        "with_psc": with_psc,
-                                        "is_next_hop_spine": is_next_hop_spine,
-                                        "drop_reason": drop_reason,
-                                        "prefix_len": prefix_len,
-                                        "pkt_len": pkt_len,
-                                        "send_report_to_spine": send_report_to_spine,
-                                        "is_device_spine": is_device_spine,
-                                        "allow_ue_recirculation": allow_ue_recirculation,
-                                        "spgw_app_filtering": spgw_app_filtering,
-                                    }
+                                    for session_meter_bw in session_meter_bw_list:
+                                        for app_meter_bw in app_meter_bw_list:
+                                            params = {
+                                                "vlan_conf": vlan_conf,
+                                                "pkt_type": pkt_type,
+                                                "tagged1": tagged[0],
+                                                "tagged2": tagged[1],
+                                                "with_psc": with_psc,
+                                                "is_next_hop_spine": is_next_hop_spine,
+                                                "drop_reason": drop_reason,
+                                                "prefix_len": prefix_len,
+                                                "pkt_len": pkt_len,
+                                                "send_report_to_spine": send_report_to_spine,
+                                                "is_device_spine": is_device_spine,
+                                                "allow_ue_recirculation": allow_ue_recirculation,
+                                                "spgw_app_filtering": spgw_app_filtering,
+                                                "app_max_bitrate": app_meter_bw,
+                                                "session_max_bitrate": session_meter_bw,
+                                            }
 
-                                    print(
-                                        "Testing "
-                                        + ", ".join(
-                                            [
-                                                "{}={}".format(k, v)
-                                                for k, v in params.items()
-                                                if (
-                                                    v is not None
-                                                    and k not in ["tagged1", "tagged2"]
+                                            print(
+                                                "Testing "
+                                                + ", ".join(
+                                                    [
+                                                        "{}={}".format(k, v)
+                                                        for k, v in params.items()
+                                                        if (
+                                                            v is not None
+                                                            and k not in ["tagged1", "tagged2"]
+                                                        )
+                                                    ]
                                                 )
-                                            ]
-                                        )
-                                    )
-                                    tc_name = "_".join(
-                                        [
-                                            "{}_{}".format(k, v)
-                                            for k, v in params.items()
-                                        ]
-                                    )
-                                    params["tc_name"] = tc_name
+                                            )
+                                            tc_name = "_".join(
+                                                [
+                                                    "{}_{}".format(k, v)
+                                                    for k, v in params.items()
+                                                ]
+                                            )
+                                            params["tc_name"] = tc_name
 
-                                    if int_test_type not in INT_OPTIONS:
-                                        pkt = getattr(
-                                            testutils, "simple_%s_packet" % pkt_type
-                                        )(pktlen=pkt_len, **pkt_addrs)
-                                    else:
-                                        pkt = None
-                                    params["pkt"] = pkt
+                                            if int_test_type not in INT_OPTIONS:
+                                                pkt = getattr(
+                                                    testutils, "simple_%s_packet" % pkt_type
+                                                )(pktlen=pkt_len, **pkt_addrs)
+                                            else:
+                                                pkt = None
+                                            params["pkt"] = pkt
 
-                                    yield params
+                                            yield params
 
 
 def slice_tc_concat(slice_id, tc):
@@ -2393,7 +2410,88 @@ class PacketInTest(FabricTest):
         self.verify_no_other_packets()
 
 
-class SpgwSimpleTest(IPv4UnicastTest):
+class SlicingTest(FabricTest):
+    """Mixin class with methods to manipulate QoS entities
+    """
+
+    def set_default_tc(self, slice_id=None, tc=None):
+        matches = [
+            self.Ternary("slice_tc", stringify(slice_id << 2, 1), stringify(0x3C, 1)),
+            self.Exact("tc_unknown", stringify(1, 1)),
+        ]
+        action = "FabricIngress.qos.set_default_tc"
+        action_params = [("tc", stringify(tc, 1))]
+        self.send_request_add_entry_to_action(
+            "FabricIngress.qos.default_tc",
+            matches,
+            action,
+            action_params,
+            DEFAULT_PRIORITY,
+        )
+
+    def add_slice_tc_classifier_entry(
+            self, slice_id=None, tc=None, trust_dscp=False, **ftuple
+    ):
+        if trust_dscp:
+            action = "FabricIngress.slice_tc_classifier.trust_dscp"
+            params = []
+        else:
+            action = "FabricIngress.slice_tc_classifier.set_slice_id_tc"
+            params = [("slice_id", stringify(slice_id, 1)), ("tc", stringify(tc, 1))]
+        self.send_request_add_entry_to_action(
+            "FabricIngress.slice_tc_classifier.classifier",
+            self.build_acl_matches(**ftuple),
+            action,
+            params,
+            DEFAULT_PRIORITY,
+        )
+
+    def configure_slice_tc_meter(self, slice_id, tc, cir, cburst, pir, pburst):
+        self.write_indirect_meter(
+            m_name="FabricIngress.qos.slice_tc_meter",
+            m_index=slice_tc_concat(slice_id, tc),
+            cir=cir,
+            cburst=cburst,
+            pir=pir,
+            pburst=pburst,
+        )
+
+    def add_queue_entry(self, slice_id, tc, qid=None, color=None):
+        slice_tc = slice_tc_concat(slice_id, tc)
+        matches = [
+            self.Exact("slice_tc", stringify(slice_tc, 1)),
+        ]
+        if color is not None:
+            matches.append(
+                self.Ternary("color", stringify(color, 1), stringify(0x3, 1))
+            )
+        if qid is not None:
+            action = "FabricIngress.qos.set_queue"
+            action_params = [("qid", stringify(qid, 1))]
+        else:
+            action = "FabricIngress.qos.meter_drop"
+            action_params = []
+        self.send_request_add_entry_to_action(
+            "FabricIngress.qos.queues",
+            matches,
+            action,
+            action_params,
+            DEFAULT_PRIORITY,
+        )
+
+    def add_dscp_rewriter_entry(self, eg_port, clear=False):
+        self.send_request_add_entry_to_action(
+            "FabricEgress.dscp_rewriter.rewriter",
+            [self.Exact("eg_port", stringify(eg_port, 2))],
+            "FabricEgress.dscp_rewriter." + "clear" if clear else "rewrite",
+            [],
+        )
+
+    def enable_policing(self, slice_id, tc, color=COLOR_RED):
+        self.add_queue_entry(slice_id, tc, None, color=color)
+
+
+class SpgwSimpleTest(IPv4UnicastTest, SlicingTest):
     def read_counter(self, c_name, idx):
         counter = self.read_indirect_counter(c_name, idx, typ="BOTH")
         return (counter.data.packet_count, counter.data.byte_count)
@@ -2526,10 +2624,12 @@ class SpgwSimpleTest(IPv4UnicastTest):
         )
         self.write_request(req)
 
-    def setup_uplink_ue_session(self, tunnel_dst_addr, teid, drop=False):
+    def setup_uplink_ue_session(self, tunnel_dst_addr, teid, session_meter_idx=DEFAULT_SESSION_METER_IDX, drop=False):
         req = self.get_new_write_request()
+        action_params = []
         if not drop:
             action_name = "FabricIngress.spgw.set_uplink_session"
+            action_params = [("session_meter_id", stringify(session_meter_idx, 2))]
         else:
             action_name = "FabricIngress.spgw.set_uplink_session_drop"
         self.push_update_add_entry_to_action(
@@ -2540,18 +2640,19 @@ class SpgwSimpleTest(IPv4UnicastTest):
                 self.Exact("tunnel_ipv4_dst", ipv4_to_binary(tunnel_dst_addr)),
             ],
             action_name,
-            [],
+            action_params,
         )
         self.write_request(req)
 
     def setup_uplink_termination(
-        self, ue_session, ctr_id, tc=DEFAULT_TC, drop=False, app_id=NO_APP_ID
+        self, ue_session, ctr_id, tc=DEFAULT_TC, drop=False, app_id=NO_APP_ID, app_meter_idx=DEFAULT_APP_METER_IDX
     ):
         req = self.get_new_write_request()
         action_params = [
             ("ctr_id", stringify(ctr_id, 2)),
         ]
         if not drop:
+            action_params.append(("app_meter_id", stringify(app_meter_idx, 2)))
             if tc is not None:
                 action_name = "FabricIngress.spgw.app_fwd"
                 action_params.append(("tc", stringify(tc, 1)))
@@ -2571,12 +2672,13 @@ class SpgwSimpleTest(IPv4UnicastTest):
         )
         self.write_request(req)
 
-    def setup_downlink_ue_session(self, ue_addr, tunnel_peer_id, drop=False):
+    def setup_downlink_ue_session(self, ue_addr, tunnel_peer_id, session_meter_idx=DEFAULT_SESSION_METER_IDX, drop=False):
         req = self.get_new_write_request()
         if not drop:
             action_name = "FabricIngress.spgw.set_downlink_session"
             action_params = [
                 ("tun_peer_id", stringify(tunnel_peer_id, 1)),
+                ("session_meter_id", stringify(session_meter_idx, 2))
             ]
         else:
             action_name = "FabricIngress.spgw.set_downlink_session_drop"
@@ -2591,7 +2693,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         self.write_request(req)
 
     def setup_downlink_ue_session_dbuf(
-        self, ue_addr, tunnel_peer_id, is_dbuf_present=True
+        self, ue_addr, tunnel_peer_id, is_dbuf_present=True, session_meter_idx=DEFAULT_SESSION_METER_IDX,
     ):
         req = self.get_new_write_request()
         if is_dbuf_present:
@@ -2600,7 +2702,8 @@ class SpgwSimpleTest(IPv4UnicastTest):
                 "FabricIngress.spgw.downlink_sessions",
                 [self.Exact("ue_addr", ipv4_to_binary(ue_addr))],
                 "FabricIngress.spgw.set_downlink_session_buf",
-                [("tun_peer_id", stringify(tunnel_peer_id, 1)),],
+                [("tun_peer_id", stringify(tunnel_peer_id, 1)),
+                 ("session_meter_id", stringify(session_meter_idx, 2))],
             )
         else:
             self.push_update_add_entry_to_action(
@@ -2621,6 +2724,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
         qfi=DEFAULT_QFI,
         drop=False,
         app_id=NO_APP_ID,
+        app_meter_idx=DEFAULT_APP_METER_IDX,
     ):
         req = self.get_new_write_request()
         action_params = [("ctr_id", stringify(ctr_id, 2))]
@@ -2628,6 +2732,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             action_params = [("ctr_id", stringify(ctr_id, 2))]
             action_params.append(("qfi", stringify(qfi, 1)))
             action_params.append(("teid", stringify(teid, 4)))
+            action_params.append(("app_meter_id", stringify(app_meter_idx, 2)))
             if tc is not None:
                 action_name = "FabricIngress.spgw.downlink_fwd_encap"
                 action_params.append(("tc", stringify(tc, 1)))
@@ -2687,11 +2792,13 @@ class SpgwSimpleTest(IPv4UnicastTest):
         slice_id=DEFAULT_SLICE_ID,
         tc=None,
         app_id=NO_APP_ID,
+        app_meter_idx=DEFAULT_APP_METER_IDX,
+        session_meter_idx=DEFAULT_SESSION_METER_IDX,
     ):
         self.add_s1u_iface(s1u_addr=s1u_sgw_addr, slice_id=slice_id)
-        self.setup_uplink_ue_session(teid=teid, tunnel_dst_addr=s1u_sgw_addr)
+        self.setup_uplink_ue_session(teid=teid, tunnel_dst_addr=s1u_sgw_addr, session_meter_idx=session_meter_idx)
         self.setup_uplink_termination(
-            ue_session=ue_addr, ctr_id=ctr_id, tc=tc, app_id=app_id
+            ue_session=ue_addr, ctr_id=ctr_id, tc=tc, app_id=app_id, app_meter_idx=app_meter_idx
         )
 
     def setup_downlink(
@@ -2704,11 +2811,13 @@ class SpgwSimpleTest(IPv4UnicastTest):
         qfi=DEFAULT_QFI,
         tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID,
         app_id=NO_APP_ID,
+        app_meter_idx=DEFAULT_APP_METER_IDX,
+        session_meter_idx=DEFAULT_SESSION_METER_IDX,
     ):
         self.add_ue_pool(pool_addr=ue_addr, slice_id=slice_id)
-        self.setup_downlink_ue_session(ue_addr=ue_addr, tunnel_peer_id=tunnel_peer_id)
+        self.setup_downlink_ue_session(ue_addr=ue_addr, tunnel_peer_id=tunnel_peer_id, session_meter_idx=session_meter_idx)
         self.setup_downlink_termination_tunnel(
-            ue_session=ue_addr, ctr_id=ctr_id, teid=teid, tc=tc, qfi=qfi, app_id=app_id
+            ue_session=ue_addr, ctr_id=ctr_id, teid=teid, tc=tc, qfi=qfi, app_id=app_id, app_meter_idx=app_meter_idx
         )
 
     def enable_encap_with_psc(self):
@@ -2735,6 +2844,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             'exp_ingress_bytes', 'exp_ingress_pkts' and 'exp_egress_bytes',
             'exp_egress_pkts' respectively upon reading.
         """
+        import time; time.sleep(1)
         self.verify_indirect_counter(
             UPF_COUNTER_INGRESS, ctr_idx, "BOTH", exp_ingress_bytes, exp_ingress_pkts,
         )
@@ -2755,7 +2865,10 @@ class SpgwSimpleTest(IPv4UnicastTest):
         verify_counters=True,
         eg_port=None,
         app_filtering=False,
+        app_max_bitrate=None,
+        session_max_bitrate=None,
     ):
+        meter_drop = app_max_bitrate == 0 or session_max_bitrate == 0
         upstream_mac = HOST2_MAC
 
         gtp_pkt = pkt_add_gtp(
@@ -2807,6 +2920,20 @@ class SpgwSimpleTest(IPv4UnicastTest):
                 l4_port=l4_port,
                 ip_proto=ip_proto,
             )
+        if meter_drop:
+            self.enable_policing(
+                slice_id,
+                DEFAULT_TC if tc is None else tc,
+                V1MODEL_COLOR_RED if is_v1model() else COLOR_RED
+            )
+        app_meter_idx = DEFAULT_APP_METER_IDX
+        if app_max_bitrate is not None:
+            app_meter_idx = APP_METER_IDX
+            self.add_qer_app_meter(app_meter_idx, app_max_bitrate)
+        session_meter_idx = DEFAULT_SESSION_METER_IDX
+        if session_max_bitrate is not None:
+            session_meter_idx = SESSION_METER_IDX
+            self.add_qer_session_meter(session_meter_idx, session_max_bitrate)
 
         self.setup_uplink(
             ue_addr=ue_out_pkt[IP].src,
@@ -2816,6 +2943,8 @@ class SpgwSimpleTest(IPv4UnicastTest):
             slice_id=slice_id,
             tc=tc,
             app_id=app_id,
+            app_meter_idx=app_meter_idx,
+            session_meter_idx=session_meter_idx,
         )
 
         if verify_counters:
@@ -2832,6 +2961,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             tagged2=tagged2,
             is_next_hop_spine=is_next_hop_spine,
             eg_port=eg_port,
+            verify_pkt=not meter_drop
         )
 
         if not verify_counters:
@@ -2844,28 +2974,33 @@ class SpgwSimpleTest(IPv4UnicastTest):
             ingress_bytes += VLAN_BYTES
         if self.loopback:
             ingress_bytes += CPU_LOOPBACK_FAKE_ETH_BYTES
-        if is_v1model():
-            # In v1model, GTP decap, VLAN/MPLS push/pop happens at egress deparser,
-            # hence not reflected in counter increment.
-            egress_bytes = ingress_bytes
+        if meter_drop:
+            # When UPF meter drops traffic, egress counters should not be increased
+            egress_pkts = 0
+            egress_bytes = 0
         else:
-            # In TNA, counters are updated with bytes seen at egress parser. GTP decap
-            # happens at ingress deparser. VLAN/MPLS push/pop happens at egress
-            # deparser, hence not reflected in counter increment.
-            egress_bytes = (
-                ingress_bytes
-                + BMD_BYTES
-                - IP_HDR_BYTES
-                - UDP_HDR_BYTES
-                - GTPU_HDR_BYTES
-            )
-            if with_psc:
+            egress_pkts = 1
+            if is_v1model():
+                # In v1model, GTP decap, VLAN/MPLS push/pop happens at egress deparser,
+                # hence not reflected in counter increment.
+                egress_bytes = ingress_bytes
+            else:
+                # In TNA, counters are updated with bytes seen at egress parser. GTP decap
+                # happens at ingress deparser. VLAN/MPLS push/pop happens at egress
+                # deparser, hence not reflected in counter increment.
                 egress_bytes = (
-                    egress_bytes - GTPU_OPTIONS_HDR_BYTES - GTPU_EXT_PSC_BYTES
+                    ingress_bytes
+                    + BMD_BYTES
+                    - IP_HDR_BYTES
+                    - UDP_HDR_BYTES
+                    - GTPU_HDR_BYTES
                 )
-
+                if with_psc:
+                    egress_bytes = (
+                        egress_bytes - GTPU_OPTIONS_HDR_BYTES - GTPU_EXT_PSC_BYTES
+                    )
         # Verify the Ingress and Egress UPF counters
-        self.verify_upf_counters(UPLINK_UPF_CTR_IDX, ingress_bytes, egress_bytes, 1, 1)
+        self.verify_upf_counters(UPLINK_UPF_CTR_IDX, ingress_bytes, egress_bytes, 1, egress_pkts)
 
     def runUplinkRecircTest(
         self, ue_out_pkt, allow, tagged1, tagged2, is_next_hop_spine
@@ -3020,7 +3155,10 @@ class SpgwSimpleTest(IPv4UnicastTest):
         verify_counters=True,
         eg_port=None,
         app_filtering=False,
+        app_max_bitrate=None,
+        session_max_bitrate=None,
     ):
+        meter_drop = app_max_bitrate == 0 or session_max_bitrate == 0
         exp_pkt = pkt.copy()
         exp_pkt[Ether].src = SWITCH_MAC
         exp_pkt[Ether].dst = S1U_ENB_MAC
@@ -3067,6 +3205,20 @@ class SpgwSimpleTest(IPv4UnicastTest):
                 l4_port=l4_port,
                 ip_proto=ip_proto,
             )
+        if meter_drop:
+            self.enable_policing(
+                slice_id,
+                DEFAULT_TC if tc is None else tc,
+                V1MODEL_COLOR_RED if is_v1model() else COLOR_RED
+            )
+        app_meter_idx = DEFAULT_APP_METER_IDX
+        if app_max_bitrate is not None:
+            app_meter_idx = APP_METER_IDX
+            self.add_qer_app_meter(app_meter_idx, app_max_bitrate)
+        session_meter_idx = DEFAULT_SESSION_METER_IDX
+        if session_max_bitrate is not None:
+            session_meter_idx = SESSION_METER_IDX
+            self.add_qer_session_meter(session_meter_idx, session_max_bitrate)
 
         self.setup_downlink(
             teid=DOWNLINK_TEID,
@@ -3077,6 +3229,8 @@ class SpgwSimpleTest(IPv4UnicastTest):
             qfi=DEFAULT_QFI,
             app_id=app_id,
             tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID,
+            app_meter_idx=app_meter_idx,
+            session_meter_idx=session_meter_idx,
         )
         self.add_gtp_tunnel_peer(
             tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID,
@@ -3101,6 +3255,7 @@ class SpgwSimpleTest(IPv4UnicastTest):
             tagged2=tagged2,
             is_next_hop_spine=is_next_hop_spine,
             eg_port=eg_port,
+            verify_pkt=not meter_drop,
         )
 
         if not verify_counters:
@@ -3113,15 +3268,21 @@ class SpgwSimpleTest(IPv4UnicastTest):
             ingress_bytes += VLAN_BYTES
         if self.loopback:
             ingress_bytes += CPU_LOOPBACK_FAKE_ETH_BYTES
-        # Egress sees same bytes as ingress. GTP encap and VLAN/MPLS push/pop
-        # happen at egress deparser, hence after counter update
-        egress_bytes = ingress_bytes
-        if is_tna():
-            egress_bytes += BMD_BYTES
+
+        if meter_drop:
+            egress_bytes = 0
+            egress_pkts = 0
+        else:
+            egress_pkts = 1
+            # Egress sees same bytes as ingress. GTP encap and VLAN/MPLS push/pop
+            # happen at egress deparser, hence after counter update
+            egress_bytes = ingress_bytes
+            if is_tna():
+                egress_bytes += BMD_BYTES
 
         # Verify the Ingress and Egress UPF counters
         self.verify_upf_counters(
-            DOWNLINK_UPF_CTR_IDX, ingress_bytes, egress_bytes, 1, 1
+            DOWNLINK_UPF_CTR_IDX, ingress_bytes, egress_bytes, 1, egress_pkts
         )
 
     def runDownlinkToDbufTest(
@@ -3281,6 +3442,23 @@ class SpgwSimpleTest(IPv4UnicastTest):
             DOWNLINK_UPF_CTR_IDX, ingress_bytes, egress_bytes, 1, 1
         )
 
+    def add_qer_session_meter(self, session_meter_idx, session_max_bitrate):
+        self.__add_upf_meter("FabricIngress.spgw.session_meter", session_meter_idx, session_max_bitrate)
+
+    def add_qer_app_meter(self, app_meter_idx, app_max_bitrate):
+        self.__add_upf_meter("FabricIngress.spgw.app_meter", app_meter_idx, app_max_bitrate)
+
+    def __add_upf_meter(self, meter_name, meter_idx, max_bitrate):
+        pir = int((max_bitrate / 8))
+        pburst = int((max_bitrate / 8) * BURST_DURATION_MS * 0.001)
+        self.write_indirect_meter(
+            meter_name,
+            meter_idx,
+            cir=1,
+            cburst=1,
+            pir=pir if pir > 0 else 1,
+            pburst=pburst if pburst > 0 else 1,
+        )
 
 class IntTest(IPv4UnicastTest):
     """
@@ -4794,87 +4972,6 @@ class PppoeTest(DoubleVlanTerminationTest):
             self.assertGreaterEqual(new_tx_count, old_tx_count + len(pkt))
         else:
             self.assertEqual(new_tx_count, old_tx_count)
-
-
-class SlicingTest(FabricTest):
-    """Mixin class with methods to manipulate QoS entities
-    """
-
-    def set_default_tc(self, slice_id=None, tc=None):
-        matches = [
-            self.Ternary("slice_tc", stringify(slice_id << 2, 1), stringify(0x3C, 1)),
-            self.Exact("tc_unknown", stringify(1, 1)),
-        ]
-        action = "FabricIngress.qos.set_default_tc"
-        action_params = [("tc", stringify(tc, 1))]
-        self.send_request_add_entry_to_action(
-            "FabricIngress.qos.default_tc",
-            matches,
-            action,
-            action_params,
-            DEFAULT_PRIORITY,
-        )
-
-    def add_slice_tc_classifier_entry(
-        self, slice_id=None, tc=None, trust_dscp=False, **ftuple
-    ):
-        if trust_dscp:
-            action = "FabricIngress.slice_tc_classifier.trust_dscp"
-            params = []
-        else:
-            action = "FabricIngress.slice_tc_classifier.set_slice_id_tc"
-            params = [("slice_id", stringify(slice_id, 1)), ("tc", stringify(tc, 1))]
-        self.send_request_add_entry_to_action(
-            "FabricIngress.slice_tc_classifier.classifier",
-            self.build_acl_matches(**ftuple),
-            action,
-            params,
-            DEFAULT_PRIORITY,
-        )
-
-    def configure_slice_tc_meter(self, slice_id, tc, cir, cburst, pir, pburst):
-        self.write_indirect_meter(
-            m_name="FabricIngress.qos.slice_tc_meter",
-            m_index=slice_tc_concat(slice_id, tc),
-            cir=cir,
-            cburst=cburst,
-            pir=pir,
-            pburst=pburst,
-        )
-
-    def add_queue_entry(self, slice_id, tc, qid=None, color=None):
-        slice_tc = slice_tc_concat(slice_id, tc)
-        matches = [
-            self.Exact("slice_tc", stringify(slice_tc, 1)),
-        ]
-        if color is not None:
-            matches.append(
-                self.Ternary("color", stringify(color, 1), stringify(0x3, 1))
-            )
-        if qid is not None:
-            action = "FabricIngress.qos.set_queue"
-            action_params = [("qid", stringify(qid, 1))]
-        else:
-            action = "FabricIngress.qos.meter_drop"
-            action_params = []
-        self.send_request_add_entry_to_action(
-            "FabricIngress.qos.queues",
-            matches,
-            action,
-            action_params,
-            DEFAULT_PRIORITY,
-        )
-
-    def add_dscp_rewriter_entry(self, eg_port, clear=False):
-        self.send_request_add_entry_to_action(
-            "FabricEgress.dscp_rewriter.rewriter",
-            [self.Exact("eg_port", stringify(eg_port, 2))],
-            "FabricEgress.dscp_rewriter." + "clear" if clear else "rewrite",
-            [],
-        )
-
-    def enable_policing(self, slice_id, tc, color=COLOR_RED):
-        self.add_queue_entry(slice_id, tc, None, color=color)
 
 
 class StatsTest(FabricTest):

@@ -1462,6 +1462,8 @@ class FabricSpgwUplinkTest(SpgwSimpleTest):
         with_psc,
         is_next_hop_spine,
         spgw_app_filtering,
+        app_max_bitrate,
+        session_max_bitrate,
         **kwargs
     ):
         self.runUplinkTest(
@@ -1471,6 +1473,8 @@ class FabricSpgwUplinkTest(SpgwSimpleTest):
             with_psc=with_psc,
             is_next_hop_spine=is_next_hop_spine,
             app_filtering=spgw_app_filtering,
+            app_max_bitrate=app_max_bitrate,
+            session_max_bitrate=session_max_bitrate,
         )
 
     def runTest(self):
@@ -1483,13 +1487,15 @@ class FabricSpgwUplinkTest(SpgwSimpleTest):
         }
         for traffic_dir in ["host-leaf-host", "host-leaf-spine", "spine-leaf-host"]:
             for spgw_app_filtering in [False, True]:
-                for test_args in get_test_args(
-                    traffic_dir=traffic_dir,
-                    pkt_addrs=pkt_addrs,
-                    spgw_type="UL_PSC",
-                    spgw_app_filtering=spgw_app_filtering,
-                ):
-                    self.doRunTest(**test_args)
+                for metering in [True, False]:
+                    for test_args in get_test_args(
+                        traffic_dir=traffic_dir,
+                        pkt_addrs=pkt_addrs,
+                        spgw_type="UL_PSC",
+                        spgw_app_filtering=spgw_app_filtering,
+                        metering=metering,
+                    ):
+                        self.doRunTest(**test_args)
 
 
 @group("spgw")

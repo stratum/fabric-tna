@@ -265,6 +265,113 @@ class FabricSpgwUplinkWithDscpRewriteTest(SpgwSimpleTest, SlicingTest):
                                     use_default_tc,
                                 )
 
+@group("spgw")
+class FabricSpgwUplinkWithMeterTest(SpgwSimpleTest, SlicingTest):
+    """Tests meters for UPF. This is mostly a dummmy test class to verify
+    basic programming of UPF meters. QoS test for UPF meters and color-aware
+    meter behaviour should use linerate traffic generation. """
+
+    @tvsetup
+    @autocleanup
+    def doRunTest(
+        self,
+        pkt,
+        app_bitrate,
+        session_bitrate
+    ):
+        upf_slice_id = 11
+        upf_tc = 2
+        eg_port = self.port2
+
+        self.runUplinkTest(
+            ue_out_pkt=pkt,
+            tagged1=True,
+            tagged2=True,
+            with_psc=False,
+            is_next_hop_spine=False,
+            slice_id=upf_slice_id,
+            tc=upf_tc,
+            eg_port=eg_port,
+            app_max_bitrate=app_bitrate,
+            session_max_bitrate=session_bitrate,
+        )
+
+    def runTest(self):
+        print("")
+        for pkt_type in BASE_PKT_TYPES - {"sctp"}:
+            for app_bitrate in [0, 100000]:
+                for session_bitrate in [0, 100000]:
+                    print(
+                        "Testing pkt={}, app_bitrate={}, session_bitrate={}...".format(
+                            pkt_type,
+                            app_bitrate,
+                            session_bitrate,
+                        )
+                    )
+                    pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
+                        eth_src=HOST1_MAC,
+                        eth_dst=SWITCH_MAC,
+                        ip_src=HOST1_IPV4,
+                        ip_dst=HOST2_IPV4,
+                        pktlen=MIN_PKT_LEN,
+                    )
+                    self.doRunTest(
+                        pkt=pkt, app_bitrate=app_bitrate, session_bitrate=session_bitrate,
+                    )
+
+@group("spgw")
+class FabricSpgwDownlinkWithMeterTest(SpgwSimpleTest, SlicingTest):
+    """Tests meters for UPF. This is mostly a dummmy test class to verify
+    basic programming of UPF meters. QoS test for UPF meters and color-aware
+    meter behaviour should use linerate traffic generation. """
+
+    @tvsetup
+    @autocleanup
+    def doRunTest(
+            self,
+            pkt,
+            app_bitrate,
+            session_bitrate
+    ):
+        upf_slice_id = 11
+        upf_tc = 2
+        eg_port = self.port2
+
+        self.runDownlinkTest(
+            pkt=pkt,
+            tagged1=True,
+            tagged2=True,
+            with_psc=False,
+            is_next_hop_spine=False,
+            slice_id=upf_slice_id,
+            tc=upf_tc,
+            eg_port=eg_port,
+            app_max_bitrate=app_bitrate,
+            session_max_bitrate=session_bitrate,
+        )
+
+    def runTest(self):
+        print("")
+        for pkt_type in BASE_PKT_TYPES - {"sctp"}:
+            for app_bitrate in [0, 100000]:
+                for session_bitrate in [0, 100000]:
+                    print(
+                        "Testing pkt={}, app_bitrate={}, session_bitrate={}...".format(
+                            pkt_type,
+                            app_bitrate,
+                            session_bitrate,
+                        )
+                    )
+                    pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
+                        eth_src=HOST1_MAC,
+                        eth_dst=SWITCH_MAC,
+                        ip_src=HOST1_IPV4,
+                        ip_dst=UE1_IPV4,
+                        pktlen=MIN_PKT_LEN,
+                    )
+                    self.doRunTest(
+                        pkt=pkt, app_bitrate=app_bitrate, session_bitrate=session_bitrate,
+                    )
 
 class FabricIPv4UnicastWithPolicingTest(SlicingTest, IPv4UnicastTest):
     """Tests QoS policer. This is mostly a dummmy test class to verify basic programming of

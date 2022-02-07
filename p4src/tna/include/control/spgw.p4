@@ -117,7 +117,7 @@ control SpgwIngress(
             iface_access;
             iface_core;
             iface_dbuf;
-            @defaulmake conly iface_miss;
+            @defaultonly iface_miss;
         }
         const default_action = iface_miss();
         const size = NUM_SPGW_INTERFACES;
