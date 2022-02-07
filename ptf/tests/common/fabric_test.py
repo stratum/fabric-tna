@@ -792,6 +792,7 @@ def get_test_args(
             allow_ue_recirculation_list = [True, False]
     else:
         allow_ue_recirculation_list = [None]
+
     for drop_reason in drop_reason_list:
         for vlan_conf, tagged in vlan_conf_list.items():
             for pkt_type in pkt_type_list:
@@ -818,36 +819,36 @@ def get_test_args(
                                         "upf_app_filtering": upf_app_filtering,
                                     }
 
-                                            print(
-                                                "Testing "
-                                                + ", ".join(
-                                                    [
-                                                        "{}={}".format(k, v)
-                                                        for k, v in params.items()
-                                                        if (
-                                                            v is not None
-                                                            and k not in ["tagged1", "tagged2"]
-                                                        )
-                                                    ]
+                                    print(
+                                        "Testing "
+                                        + ", ".join(
+                                            [
+                                                "{}={}".format(k, v)
+                                                for k, v in params.items()
+                                                if (
+                                                    v is not None
+                                                    and k not in ["tagged1", "tagged2"]
                                                 )
-                                            )
-                                            tc_name = "_".join(
-                                                [
-                                                    "{}_{}".format(k, v)
-                                                    for k, v in params.items()
-                                                ]
-                                            )
-                                            params["tc_name"] = tc_name
+                                            ]
+                                        )
+                                    )
+                                    tc_name = "_".join(
+                                        [
+                                            "{}_{}".format(k, v)
+                                            for k, v in params.items()
+                                        ]
+                                    )
+                                    params["tc_name"] = tc_name
 
-                                            if int_test_type not in INT_OPTIONS:
-                                                pkt = getattr(
-                                                    testutils, "simple_%s_packet" % pkt_type
-                                                )(pktlen=pkt_len, **pkt_addrs)
-                                            else:
-                                                pkt = None
-                                            params["pkt"] = pkt
+                                    if int_test_type not in INT_OPTIONS:
+                                        pkt = getattr(
+                                            testutils, "simple_%s_packet" % pkt_type
+                                        )(pktlen=pkt_len, **pkt_addrs)
+                                    else:
+                                        pkt = None
+                                    params["pkt"] = pkt
 
-                                            yield params
+                                    yield params
 
 
 def slice_tc_concat(slice_id, tc):
