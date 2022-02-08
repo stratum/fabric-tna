@@ -202,12 +202,11 @@ The instructions to generate TVs are similar to running PTF tests on tofino-mode
    1. `device`: `tofino`
    2. `portmap`: `portmap.veth.json`
    3. `grpcaddr`: `127.0.0.1:28000`
-   4. `cpuport`: `320`
 
    Example command with all the optional arguments set:
 
    ```bash
-   ./run/tv/run fabric DEVICE=tofino PORTMAP=port_map.hw.json GRPCADDR=10.128.13.111:28000 CPUPORT=320 TEST=test.FabricBridgingTest
+   ./run/tv/run fabric DEVICE=tofino PORTMAP=port_map.hw.json GRPCADDR=10.128.13.111:28000 TEST=test.FabricBridgingTest
    ```
 
     To generate TestVectors for the basic `fabric` profile:

@@ -6,6 +6,7 @@ package org.stratumproject.fabric.tna.behaviour;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.primitives.UnsignedInteger;
 import org.onlab.packet.DeserializationException;
 import org.onlab.packet.Ethernet;
 import org.onlab.util.ImmutableByteSequence;
@@ -316,8 +317,10 @@ public class FabricInterpreter extends AbstractFabricHandlerBehavior
             try {
                 ImmutableByteSequence portByteSequence = packetMetadata.get()
                         .value().fit(P4InfoConstants.INGRESS_PORT_BITWIDTH);
-                short s = portByteSequence.asReadOnlyBuffer().getShort();
-                ConnectPoint receivedFrom = new ConnectPoint(deviceId, PortNumber.portNumber(s));
+                UnsignedInteger ui =
+                    UnsignedInteger.fromIntBits(portByteSequence.asReadOnlyBuffer().getInt());
+                ConnectPoint receivedFrom =
+                    new ConnectPoint(deviceId, PortNumber.portNumber(ui.longValue()));
                 if (!receivedFrom.port().hasName()) {
                     receivedFrom = translateSwitchPort(receivedFrom);
                 }
@@ -341,11 +344,11 @@ public class FabricInterpreter extends AbstractFabricHandlerBehavior
     }
 
     @Override
-    public Optional<Integer> mapLogicalPortNumber(PortNumber port) {
-        if (!port.equals(CONTROLLER)) {
-            return Optional.empty();
-        }
-        return capabilities.cpuPort();
+    public Optional<Long> mapLogicalPort(PortNumber port) {
+      if (!port.equals(CONTROLLER)) {
+          return Optional.empty();
+      }
+      return capabilities.cpuPort();
     }
 
     /* Connect point generated using sb metadata does not have port name

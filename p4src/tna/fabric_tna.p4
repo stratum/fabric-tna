@@ -60,8 +60,7 @@ control FabricIngress (
 #ifdef WITH_INT
         int_watchlist.apply(hdr, fabric_md, ig_intr_md, ig_dprsr_md, ig_tm_md);
 #endif // WITH_INT
-        stats.apply(fabric_md.lkp, ig_intr_md.ingress_port,
-                    fabric_md.bridged.base.stats_flow_id);
+        stats.apply(fabric_md.lkp, (FabricPortId_t)ig_intr_md.ingress_port, fabric_md.bridged.base.stats_flow_id);
         slice_tc_classifier.apply(hdr, ig_intr_md, fabric_md);
         filtering.apply(hdr, fabric_md, ig_intr_md);
 #ifdef WITH_UPF
@@ -111,7 +110,7 @@ control FabricEgress (
 
     apply {
         pkt_io_egress.apply(hdr, fabric_md, eg_intr_md);
-        stats.apply(fabric_md.bridged.base.stats_flow_id, eg_intr_md.egress_port, fabric_md.bridged.bmd_type);
+        stats.apply(fabric_md.bridged.base.stats_flow_id, (FabricPortId_t)eg_intr_md.egress_port, fabric_md.bridged.bmd_type);
         egress_next.apply(hdr, fabric_md, eg_intr_md, eg_dprsr_md);
 #ifdef WITH_UPF
         upf.apply(hdr, fabric_md);

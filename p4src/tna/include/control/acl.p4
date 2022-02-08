@@ -13,6 +13,7 @@ control Acl (inout ingress_headers_t hdr,
              inout ingress_intrinsic_metadata_for_deparser_t ig_intr_md_for_dprsr,
              inout ingress_intrinsic_metadata_for_tm_t ig_intr_md_for_tm) {
 
+    FabricPortId_t ig_port = (FabricPortId_t)ig_intr_md.ingress_port;
     /*
      * ACL Table.
      */
@@ -83,19 +84,19 @@ control Acl (inout ingress_headers_t hdr,
 
     table acl {
         key = {
-            ig_intr_md.ingress_port          : ternary @name("ig_port");   // 9
-            fabric_md.lkp.eth_dst            : ternary @name("eth_dst");   // 48
-            fabric_md.lkp.eth_src            : ternary @name("eth_src");   // 48
-            fabric_md.lkp.vlan_id            : ternary @name("vlan_id");   // 12
-            fabric_md.lkp.eth_type           : ternary @name("eth_type");  // 16
-            fabric_md.lkp.ipv4_src           : ternary @name("ipv4_src");  // 32
-            fabric_md.lkp.ipv4_dst           : ternary @name("ipv4_dst");  // 32
-            fabric_md.lkp.ip_proto           : ternary @name("ip_proto");  // 8
-            fabric_md.lkp.icmp_type          : ternary @name("icmp_type"); // 8
-            fabric_md.lkp.icmp_code          : ternary @name("icmp_code"); // 8
-            fabric_md.lkp.l4_sport           : ternary @name("l4_sport");  // 16
-            fabric_md.lkp.l4_dport           : ternary @name("l4_dport");  // 16
-            fabric_md.ig_port_type           : ternary @name("ig_port_type"); // 2
+            ig_port                  : ternary @name("ig_port");   // 9
+            fabric_md.lkp.eth_dst    : ternary @name("eth_dst");   // 48
+            fabric_md.lkp.eth_src    : ternary @name("eth_src");   // 48
+            fabric_md.lkp.vlan_id    : ternary @name("vlan_id");   // 12
+            fabric_md.lkp.eth_type   : ternary @name("eth_type");  // 16
+            fabric_md.lkp.ipv4_src   : ternary @name("ipv4_src");  // 32
+            fabric_md.lkp.ipv4_dst   : ternary @name("ipv4_dst");  // 32
+            fabric_md.lkp.ip_proto   : ternary @name("ip_proto");  // 8
+            fabric_md.lkp.icmp_type  : ternary @name("icmp_type"); // 8
+            fabric_md.lkp.icmp_code  : ternary @name("icmp_code"); // 8
+            fabric_md.lkp.l4_sport   : ternary @name("l4_sport");  // 16
+            fabric_md.lkp.l4_dport   : ternary @name("l4_dport");  // 16
+            fabric_md.ig_port_type   : ternary @name("ig_port_type"); // 2
         }
 
         actions = {

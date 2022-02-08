@@ -127,14 +127,14 @@ public class FabricIntProgrammableTest {
                     HexString.fromHexString("ffffc0000000", ""));
     private static final ImmutableByteSequence DEFAULT_QMASK = ImmutableByteSequence.copyFrom(
             HexString.fromHexString("00000000ffffff00", ""));
-    private static final Map<Integer, Integer> QUAD_PIPE_MIRROR_SESS_TO_RECIRC_PORTS =
-            ImmutableMap.<Integer, Integer>builder()
-                    .put(0x200, 0x44)
-                    .put(0x201, 0xc4)
-                    .put(0x202, 0x144)
-                    .put(0x203, 0x1c4).build();
-    private static final Map<Integer, Integer> V1MODEL_MIRROR_SESS_TO_RECIRC_PORTS =
-            ImmutableMap.<Integer, Integer>builder()
+    private static final Map<Integer, Long> QUAD_PIPE_MIRROR_SESS_TO_RECIRC_PORTS =
+            ImmutableMap.<Integer, Long>builder()
+                    .put(0x200, 0xFFFFFF00L)
+                    .put(0x201, 0xFFFFFF01L)
+                    .put(0x202, 0xFFFFFF02L)
+                    .put(0x203, 0xFFFFFF03L).build();
+    private static final Map<Integer, Long> V1MODEL_MIRROR_SESS_TO_RECIRC_PORTS =
+            ImmutableMap.<Integer, Long>builder()
                     .put(V1MODEL_INT_REPORT_MIRROR_ID, V1MODEL_RECIRC_PORT.get(0)).build();
     private static final long DEFAULT_QUEUE_REPORT_TRIGGER_LATENCY_THRESHOLD = 0xffffffffL;
     private static final long DEFAULT_QUEUE_REPORT_RESET_LATENCY_THRESHOLD = 0;
@@ -1034,7 +1034,7 @@ public class FabricIntProgrammableTest {
     private void testInit() {
         final List<GroupDescription> expectedGroups = Lists.newArrayList();
         final Capture<GroupDescription> capturedGroup = newCapture(CaptureType.ALL);
-        final Map<Integer, Integer> recircPorts = intProgrammable.capabilities.isArchV1model() ?
+        final Map<Integer, Long> recircPorts = intProgrammable.capabilities.isArchV1model() ?
                 V1MODEL_MIRROR_SESS_TO_RECIRC_PORTS : QUAD_PIPE_MIRROR_SESS_TO_RECIRC_PORTS;
 
         recircPorts.forEach((sessionId, port) -> {
@@ -1062,7 +1062,7 @@ public class FabricIntProgrammableTest {
         reset(groupService, flowRuleService);
     }
 
-    private GroupBucket getCloneBucket(Integer port) {
+    private GroupBucket getCloneBucket(Long port) {
         if (intProgrammable.capabilities.isArchV1model()) {
             return createCloneGroupBucket(DefaultTrafficTreatment.builder()
                                                   .setOutput(PortNumber.portNumber(port))

@@ -387,7 +387,7 @@ def main():
         "--device-id", help="Device id for device under test", type=int, default=1,
     )
     parser.add_argument(
-        "--cpu-port", help="CPU port ID of device under test", type=int, required=True,
+        "--cpu-port", help="CPU port ID of device under test", type=int, default=0xFFFFFFFD,
     )
     parser.add_argument(
         "--ptf-dir", help="Directory containing PTF tests", type=str, required=True,

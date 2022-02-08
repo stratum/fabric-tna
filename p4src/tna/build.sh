@@ -4,9 +4,6 @@
 
 set -eu -o pipefail
 
-MAVERICKS_CPU_PORT=320 # quad-pipe
-MONTARA_CPU_PORT=192 # dual-pipe
-
 # DIR is this file directory.
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 P4_SRC_DIR=${DIR}/..
@@ -59,16 +56,13 @@ function base_build() {
 function gen_profile() {
   output_dir="${P4C_OUT}/sde_${SDE_VER//./_}"
   pltf="$1_sde_${SDE_VER//./_}"
-  cpu_port=$2
 
   # Copy only the relevant files to the pipeconf resources.
   mkdir -p "${DEST_DIR}/${pltf}"
   cp "${output_dir}/p4info.txt" "${DEST_DIR}/${pltf}"
-  echo "${cpu_port}" > "${DEST_DIR}/${pltf}/cpu_port.txt"
   cp "${output_dir}/pipeline_config.pb.bin" "${DEST_DIR}/${pltf}/"
-  echo
 }
 
 base_build
-gen_profile "montara" "${MONTARA_CPU_PORT}"
-gen_profile "mavericks" "${MAVERICKS_CPU_PORT}"
+gen_profile "montara"
+gen_profile "mavericks"

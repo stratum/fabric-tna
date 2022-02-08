@@ -7,7 +7,7 @@ set -eu -o pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
 FABRIC_TNA_ROOT="${DIR}"/../../..
 TM_PORT_JSON=${TM_PORT_JSON:-""}
-TM_DOD=${TM_DOD:=""}
+TM_DOD=${TM_DOD:-""}
 
 # shellcheck source=.env
 source "${FABRIC_TNA_ROOT}"/.env
