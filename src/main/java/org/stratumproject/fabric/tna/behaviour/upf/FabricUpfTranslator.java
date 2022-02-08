@@ -39,6 +39,8 @@ import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
 import org.onosproject.net.pi.runtime.PiMeterCellId;
 import org.onosproject.net.pi.runtime.PiTableAction;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.stratumproject.fabric.tna.slicing.api.SliceId;
 
 import java.util.ArrayList;
@@ -112,6 +114,8 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TUN_PEER_I
  * Implementation should be stateless, with all state delegated to FabricUpfStore.
  */
 public class FabricUpfTranslator {
+
+    private final Logger log = LoggerFactory.getLogger(getClass());
 
     /**
      * Returns true if the given table entry is a GTP tunnel peer rule from the
@@ -416,8 +420,15 @@ public class FabricUpfTranslator {
         List<Band> peakBand = meter.bands().stream()
                 .filter(b -> b.type().equals(Band.Type.MARK_RED))
                 .collect(Collectors.toList());
+        List<Band> committedBand = meter.bands().stream()
+                .filter(b -> b.type().equals(Band.Type.MARK_YELLOW))
+                .collect(Collectors.toList());
         if (peakBand.size() != 1) {
             throw new UpfProgrammableException("Error, found" + peakBand.size() + " peak bands!");
+        }
+        if (committedBand.size() != 1 &&
+                (committedBand.get(0).rate() != 1L || committedBand.get(0).burst() != 1L)) {
+            log.warn("Session meter have 1 or more unexpected committed bands - IGNORING: " + committedBand);
         }
         return UpfMeter.builder()
                 .setSession()
@@ -774,7 +785,7 @@ public class FabricUpfTranslator {
             } else {
                 bands.add(DefaultBand.builder()
                                   .ofType(Band.Type.MARK_YELLOW)
-                                  .withRate(0L).burstSize(0L)
+                                  .withRate(1L).burstSize(1L)
                                   .build());
             }
             if (upfMeter.peakBand().isPresent()) {
@@ -782,7 +793,7 @@ public class FabricUpfTranslator {
             } else {
                 bands.add(DefaultBand.builder()
                                   .ofType(Band.Type.MARK_RED)
-                                  .withRate(0L).burstSize(0L)
+                                  .withRate(1L).burstSize(1L)
                                   .build());
             }
             meterRequest.withBands(bands);
