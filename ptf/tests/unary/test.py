@@ -2492,7 +2492,7 @@ class ActionProfileGroupReadWriteTest(FabricTest):
     @autocleanup
     def doRunTest(self):
         req, _ = self.add_next_hashed_group_member(
-            "output_hashed", [("port_num", stringify(1, PORT_SIZE_BYTES))]
+            "output_hashed", [("port_num", stringify(self.port1, PORT_SIZE_BYTES))]
         )
         member_installed = req.updates[0].entity.action_profile_member
         mbr_id = member_installed.member_id

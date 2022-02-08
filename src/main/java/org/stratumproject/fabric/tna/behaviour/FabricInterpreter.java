@@ -7,7 +7,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.primitives.UnsignedInteger;
-
 import org.onlab.packet.DeserializationException;
 import org.onlab.packet.Ethernet;
 import org.onlab.util.ImmutableByteSequence;

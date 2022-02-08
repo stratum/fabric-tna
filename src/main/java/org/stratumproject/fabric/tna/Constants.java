@@ -49,7 +49,7 @@ public final class Constants {
       List.of(0xFFFFFF00L, 0xFFFFFF01L, 0xFFFFFF02L, 0xFFFFFF03L);
 
     // Fake recirculation port used in V1model to emulate TNA's behavior.
-    public static final List<Long> V1MODEL_RECIRC_PORT = List.of(0x1feL);
+    public static final List<Long> V1MODEL_RECIRC_PORT = List.of(0x1FEL);
 
     public static final int V1MODEL_INT_REPORT_MIRROR_ID = 0x1FA;
 

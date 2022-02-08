@@ -116,7 +116,6 @@ control Acl (inout ingress_headers_t hdr,
     }
 
     apply {
-
         acl.apply();
     }
 }
