@@ -101,13 +101,15 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
     @Override
     protected boolean setupBehaviour(String opName) {
+        /* Always setup internally the behavior to refresh
+           the internal references: client, controller, etc*/
+        if (!super.setupBehaviour(opName)) {
+            return false;
+        }
+
         // Already initialized.
         if (appId != null) {
             return true;
-        }
-
-        if (!super.setupBehaviour(opName)) {
-            return false;
         }
 
         if (!computeHardwareResourceSizes()) {
