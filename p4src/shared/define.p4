@@ -60,7 +60,7 @@ const QueueId_t QUEUE_ID_BEST_EFFORT = 0;
 
 // UPF types
 typedef bit<32> teid_t;
-typedef bit<UPF_CTR_IDX_WIDTH> upf_ctr_id_t;
+typedef bit<UPF_CTR_IDX_WIDTH> upf_ctr_idx_t;
 // We support up to 254 base stations + 1 dbuf endpoint. ID 0 is reserved.
 typedef bit<8> tun_peer_id_t;
 typedef bit<32> ue_session_id_t;

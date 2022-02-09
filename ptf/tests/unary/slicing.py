@@ -266,7 +266,7 @@ class FabricUpfUplinkWithDscpRewriteTest(UpfSimpleTest, SlicingTest):
                                 )
 
 @group("upf")
-class FabricUpfUplinkWithMeterTest(UpfSimpleTest, SlicingTest):
+class FabricUpfUplinkWithMeterTest(UpfSimpleTest):
     """Tests meters for UPF. This is mostly a dummmy test class to verify
     basic programming of UPF meters. QoS test for UPF meters and color-aware
     meter behaviour should use linerate traffic generation. """
@@ -276,8 +276,8 @@ class FabricUpfUplinkWithMeterTest(UpfSimpleTest, SlicingTest):
     def doRunTest(
         self,
         pkt,
-        app_bitrate,
-        session_bitrate
+        app_bps,
+        session_bps
     ):
         upf_slice_id = 11
         upf_tc = 2
@@ -292,20 +292,20 @@ class FabricUpfUplinkWithMeterTest(UpfSimpleTest, SlicingTest):
             slice_id=upf_slice_id,
             tc=upf_tc,
             eg_port=eg_port,
-            app_max_bitrate=app_bitrate,
-            session_max_bitrate=session_bitrate,
+            app_max_bps=app_bps,
+            session_max_bps=session_bps,
         )
 
     def runTest(self):
         print("")
         for pkt_type in BASE_PKT_TYPES - {"sctp"}:
-            for app_bitrate in [0, 100000]:
-                for session_bitrate in [0, 100000]:
+            for app_bps in [0, 100000]:
+                for session_bps in [0, 100000]:
                     print(
-                        "Testing pkt={}, app_bitrate={}, session_bitrate={}...".format(
+                        "Testing pkt={}, app_bps={}, session_bps={}...".format(
                             pkt_type,
-                            app_bitrate,
-                            session_bitrate,
+                            app_bps,
+                            session_bps,
                         )
                     )
                     pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
@@ -316,11 +316,11 @@ class FabricUpfUplinkWithMeterTest(UpfSimpleTest, SlicingTest):
                         pktlen=MIN_PKT_LEN,
                     )
                     self.doRunTest(
-                        pkt=pkt, app_bitrate=app_bitrate, session_bitrate=session_bitrate,
+                        pkt=pkt, app_bps=app_bps, session_bps=session_bps,
                     )
 
 @group("upf")
-class FabricUpfDownlinkWithMeterTest(UpfSimpleTest, SlicingTest):
+class FabricUpfDownlinkWithMeterTest(UpfSimpleTest):
     """Tests meters for UPF. This is mostly a dummmy test class to verify
     basic programming of UPF meters. QoS test for UPF meters and color-aware
     meter behaviour should use linerate traffic generation. """
@@ -330,8 +330,8 @@ class FabricUpfDownlinkWithMeterTest(UpfSimpleTest, SlicingTest):
     def doRunTest(
             self,
             pkt,
-            app_bitrate,
-            session_bitrate
+            app_bps,
+            session_bps
     ):
         upf_slice_id = 11
         upf_tc = 2
@@ -346,20 +346,20 @@ class FabricUpfDownlinkWithMeterTest(UpfSimpleTest, SlicingTest):
             slice_id=upf_slice_id,
             tc=upf_tc,
             eg_port=eg_port,
-            app_max_bitrate=app_bitrate,
-            session_max_bitrate=session_bitrate,
+            app_max_bps=app_bps,
+            session_max_bps=session_bps,
         )
 
     def runTest(self):
         print("")
         for pkt_type in BASE_PKT_TYPES - {"sctp"}:
-            for app_bitrate in [0, 100000]:
-                for session_bitrate in [0, 100000]:
+            for app_bps in [0, 100000]:
+                for session_bps in [0, 100000]:
                     print(
-                        "Testing pkt={}, app_bitrate={}, session_bitrate={}...".format(
+                        "Testing pkt={}, app_bps={}, session_bps={}...".format(
                             pkt_type,
-                            app_bitrate,
-                            session_bitrate,
+                            app_bps,
+                            session_bps,
                         )
                     )
                     pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
@@ -370,7 +370,7 @@ class FabricUpfDownlinkWithMeterTest(UpfSimpleTest, SlicingTest):
                         pktlen=MIN_PKT_LEN,
                     )
                     self.doRunTest(
-                        pkt=pkt, app_bitrate=app_bitrate, session_bitrate=session_bitrate,
+                        pkt=pkt, app_bps=app_bps, session_bps=session_bps,
                     )
 
 class FabricIPv4UnicastWithPolicingTest(SlicingTest, IPv4UnicastTest):

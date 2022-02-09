@@ -40,7 +40,7 @@
 #define NUM_UES 100000
 // We expect between 4 and 8 tunnels per UE.
 #define MAX_GTP_TUNNELS_PER_UE 1
-#define NUM_GTP_TUNNLES (NUM_UES * MAX_GTP_TUNNELS_PER_UE)
+#define NUM_GTP_TUNNELS (NUM_UES * MAX_GTP_TUNNELS_PER_UE)
 
 #define UPF_CTR_IDX_WIDTH 12
 #define MAX_UPF_COUNTERS 4096

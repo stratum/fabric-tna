@@ -410,8 +410,8 @@ public final class P4InfoConstants {
     public static final PiActionId NOP = PiActionId.of("nop");
     // Action Param IDs
     public static final PiActionParamId APP_ID = PiActionParamId.of("app_id");
-    public static final PiActionParamId APP_METER_ID =
-            PiActionParamId.of("app_meter_id");
+    public static final PiActionParamId APP_METER_IDX =
+            PiActionParamId.of("app_meter_idx");
     public static final PiActionParamId CPU_PORT =
             PiActionParamId.of("cpu_port");
     public static final PiActionParamId CTR_ID = PiActionParamId.of("ctr_id");
@@ -438,8 +438,8 @@ public final class P4InfoConstants {
             PiActionParamId.of("port_type");
     public static final PiActionParamId QFI = PiActionParamId.of("qfi");
     public static final PiActionParamId QID = PiActionParamId.of("qid");
-    public static final PiActionParamId SESSION_METER_ID =
-            PiActionParamId.of("session_meter_id");
+    public static final PiActionParamId SESSION_METER_IDX =
+            PiActionParamId.of("session_meter_idx");
     public static final PiActionParamId SLICE_ID =
             PiActionParamId.of("slice_id");
     public static final PiActionParamId SMAC = PiActionParamId.of("smac");

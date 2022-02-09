@@ -38,7 +38,7 @@ import org.stratumproject.fabric.tna.behaviour.P4InfoConstants;
 import java.util.Arrays;
 
 import static org.onosproject.net.meter.Meter.Unit.BYTES_PER_SEC;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.APP_METER_ID;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.APP_METER_IDX;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.CTR_ID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_UPF_EG_TUNNEL_PEERS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_UPF_LOAD_TUNNEL_PARAMS;
@@ -77,7 +77,7 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_TUN_PE
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_UE_ADDR;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_UE_SESSION_ID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.QFI;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.SESSION_METER_ID;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.SESSION_METER_IDX;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.SLICE_ID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TC;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TEID;
@@ -281,7 +281,7 @@ public final class TestUpfConstants {
             .withTreatment(DefaultTrafficTreatment.builder()
                     .piTableAction(PiAction.builder()
                             .withId(FABRIC_INGRESS_UPF_SET_UPLINK_SESSION)
-                            .withParameter(new PiActionParam(SESSION_METER_ID, (short) METER_CELL_ID))
+                            .withParameter(new PiActionParam(SESSION_METER_IDX, (short) METER_CELL_ID))
                             .build()).build())
             .withPriority(DEFAULT_PRIORITY)
             .build();
@@ -298,7 +298,7 @@ public final class TestUpfConstants {
                             PiAction.builder()
                                     .withId(FABRIC_INGRESS_UPF_SET_DOWNLINK_SESSION)
                                     .withParameter(new PiActionParam(TUN_PEER_ID, ENB_GTP_TUNNEL_PEER))
-                                    .withParameter(new PiActionParam(SESSION_METER_ID, (short) METER_CELL_ID))
+                                    .withParameter(new PiActionParam(SESSION_METER_IDX, (short) METER_CELL_ID))
                                     .build()).build())
             .withPriority(DEFAULT_PRIORITY)
             .build();
@@ -316,7 +316,7 @@ public final class TestUpfConstants {
                                     PiAction.builder()
                                             .withId(FABRIC_INGRESS_UPF_SET_DOWNLINK_SESSION_BUF)
                                             .withParameter(new PiActionParam(TUN_PEER_ID, DBUF_TUNNEL_PEER))
-                                            .withParameter(new PiActionParam(SESSION_METER_ID, (short) METER_CELL_ID))
+                                            .withParameter(new PiActionParam(SESSION_METER_IDX, (short) METER_CELL_ID))
                                             .build()).build())
             .withPriority(DEFAULT_PRIORITY)
             .build();
@@ -336,7 +336,7 @@ public final class TestUpfConstants {
                             .withParameters(Arrays.asList(
                                     new PiActionParam(CTR_ID, UPLINK_COUNTER_CELL_ID),
                                     new PiActionParam(TC, UPLINK_TC),
-                                    new PiActionParam(APP_METER_ID, (short) METER_CELL_ID)
+                                    new PiActionParam(APP_METER_IDX, (short) METER_CELL_ID)
                             ))
                             .build()).build())
             .withPriority(DEFAULT_PRIORITY)
@@ -356,7 +356,8 @@ public final class TestUpfConstants {
                                                           .withId(FABRIC_INGRESS_UPF_APP_FWD_NO_TC)
                                                           .withParameters(Arrays.asList(
                                                                   new PiActionParam(CTR_ID, UPLINK_COUNTER_CELL_ID),
-                                                                  new PiActionParam(APP_METER_ID, DEFAULT_APP_METER_IDX)
+                                                                  new PiActionParam(APP_METER_IDX,
+                                                                                    DEFAULT_APP_METER_IDX)
                                                           ))
                                                           .build()).build())
             .withPriority(DEFAULT_PRIORITY)
@@ -398,7 +399,7 @@ public final class TestUpfConstants {
                                     new PiActionParam(TC, DOWNLINK_TC),
                                     new PiActionParam(TEID, TEID_VALUE_QOS),
                                     new PiActionParam(QFI, DOWNLINK_QFI),  // 5G case
-                                    new PiActionParam(APP_METER_ID, (short) METER_CELL_ID)
+                                    new PiActionParam(APP_METER_IDX, (short) METER_CELL_ID)
                             ))
                             .build()).build())
             .withPriority(DEFAULT_PRIORITY)
@@ -420,7 +421,8 @@ public final class TestUpfConstants {
                                                                   new PiActionParam(CTR_ID, DOWNLINK_COUNTER_CELL_ID),
                                                                   new PiActionParam(TEID, TEID_VALUE_QOS),
                                                                   new PiActionParam(QFI, DOWNLINK_QFI),
-                                                                  new PiActionParam(APP_METER_ID, DEFAULT_APP_METER_IDX)
+                                                                  new PiActionParam(APP_METER_IDX,
+                                                                                    DEFAULT_APP_METER_IDX)
                                                           ))
                                                           .build()).build())
             .withPriority(DEFAULT_PRIORITY)

@@ -2618,7 +2618,7 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
         action_params = []
         if not drop:
             action_name = "FabricIngress.upf.set_uplink_session"
-            action_params = [("session_meter_id", stringify(session_meter_idx, 2))]
+            action_params = [("session_meter_idx", stringify(session_meter_idx, 2))]
         else:
             action_name = "FabricIngress.upf.set_uplink_session_drop"
         self.push_update_add_entry_to_action(
@@ -2641,7 +2641,7 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
             ("ctr_id", stringify(ctr_id, 2)),
         ]
         if not drop:
-            action_params.append(("app_meter_id", stringify(app_meter_idx, 2)))
+            action_params.append(("app_meter_idx", stringify(app_meter_idx, 2)))
             if tc is not None:
                 action_name = "FabricIngress.upf.app_fwd"
                 action_params.append(("tc", stringify(tc, 1)))
@@ -2667,7 +2667,7 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
             action_name = "FabricIngress.upf.set_downlink_session"
             action_params = [
                 ("tun_peer_id", stringify(tunnel_peer_id, 1)),
-                ("session_meter_id", stringify(session_meter_idx, 2))
+                ("session_meter_idx", stringify(session_meter_idx, 2))
             ]
         else:
             action_name = "FabricIngress.upf.set_downlink_session_drop"
@@ -2692,7 +2692,7 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
                 [self.Exact("ue_addr", ipv4_to_binary(ue_addr))],
                 "FabricIngress.upf.set_downlink_session_buf",
                 [("tun_peer_id", stringify(tunnel_peer_id, 1)),
-                 ("session_meter_id", stringify(session_meter_idx, 2))],
+                 ("session_meter_idx", stringify(session_meter_idx, 2))],
             )
         else:
             self.push_update_add_entry_to_action(
@@ -2721,7 +2721,7 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
             action_params = [("ctr_id", stringify(ctr_id, 2))]
             action_params.append(("qfi", stringify(qfi, 1)))
             action_params.append(("teid", stringify(teid, 4)))
-            action_params.append(("app_meter_id", stringify(app_meter_idx, 2)))
+            action_params.append(("app_meter_idx", stringify(app_meter_idx, 2)))
             if tc is not None:
                 action_name = "FabricIngress.upf.downlink_fwd_encap"
                 action_params.append(("tc", stringify(tc, 1)))
@@ -2753,7 +2753,7 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
             req,
             "FabricIngress.upf.ig_tunnel_peers",
             [self.Exact("tun_peer_id", stringify(tunnel_peer_id, 1))],
-            "FabricIngress.spgw.set_routing_ipv4_dst",
+            "FabricIngress.upf.set_routing_ipv4_dst",
             [("tun_dst_addr", ipv4_to_binary(tunnel_dst_addr)),],
         )
         self.write_request(req)
@@ -2833,7 +2833,6 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
             'exp_ingress_bytes', 'exp_ingress_pkts' and 'exp_egress_bytes',
             'exp_egress_pkts' respectively upon reading.
         """
-        import time; time.sleep(1)
         self.verify_indirect_counter(
             UPF_COUNTER_INGRESS, ctr_idx, "BOTH", exp_ingress_bytes, exp_ingress_pkts,
         )
@@ -2854,10 +2853,10 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
         verify_counters=True,
         eg_port=None,
         app_filtering=False,
-        app_max_bitrate=None,
-        session_max_bitrate=None,
+        app_max_bps=None,
+        session_max_bps=None,
     ):
-        meter_drop = app_max_bitrate == 0 or session_max_bitrate == 0
+        meter_drop = app_max_bps == 0 or session_max_bps == 0
         upstream_mac = HOST2_MAC
 
         gtp_pkt = pkt_add_gtp(
@@ -2916,13 +2915,13 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
                 V1MODEL_COLOR_RED if is_v1model() else COLOR_RED
             )
         app_meter_idx = DEFAULT_APP_METER_IDX
-        if app_max_bitrate is not None:
+        if app_max_bps is not None:
             app_meter_idx = APP_METER_IDX
-            self.add_qer_app_meter(app_meter_idx, app_max_bitrate)
+            self.add_qer_app_meter(app_meter_idx, app_max_bps)
         session_meter_idx = DEFAULT_SESSION_METER_IDX
-        if session_max_bitrate is not None:
+        if session_max_bps is not None:
             session_meter_idx = SESSION_METER_IDX
-            self.add_qer_session_meter(session_meter_idx, session_max_bitrate)
+            self.add_qer_session_meter(session_meter_idx, session_max_bps)
 
         self.setup_uplink(
             ue_addr=ue_out_pkt[IP].src,
@@ -3144,10 +3143,10 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
         verify_counters=True,
         eg_port=None,
         app_filtering=False,
-        app_max_bitrate=None,
-        session_max_bitrate=None,
+        app_max_bps=None,
+        session_max_bps=None,
     ):
-        meter_drop = app_max_bitrate == 0 or session_max_bitrate == 0
+        meter_drop = app_max_bps == 0 or session_max_bps == 0
         exp_pkt = pkt.copy()
         exp_pkt[Ether].src = SWITCH_MAC
         exp_pkt[Ether].dst = S1U_ENB_MAC
@@ -3201,13 +3200,13 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
                 V1MODEL_COLOR_RED if is_v1model() else COLOR_RED
             )
         app_meter_idx = DEFAULT_APP_METER_IDX
-        if app_max_bitrate is not None:
+        if app_max_bps is not None:
             app_meter_idx = APP_METER_IDX
-            self.add_qer_app_meter(app_meter_idx, app_max_bitrate)
+            self.add_qer_app_meter(app_meter_idx, app_max_bps)
         session_meter_idx = DEFAULT_SESSION_METER_IDX
-        if session_max_bitrate is not None:
+        if session_max_bps is not None:
             session_meter_idx = SESSION_METER_IDX
-            self.add_qer_session_meter(session_meter_idx, session_max_bitrate)
+            self.add_qer_session_meter(session_meter_idx, session_max_bps)
 
         self.setup_downlink(
             teid=DOWNLINK_TEID,
@@ -3431,15 +3430,15 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
             DOWNLINK_UPF_CTR_IDX, ingress_bytes, egress_bytes, 1, 1
         )
 
-    def add_qer_session_meter(self, session_meter_idx, session_max_bitrate):
-        self.__add_upf_meter("FabricIngress.spgw.session_meter", session_meter_idx, session_max_bitrate)
+    def add_qer_session_meter(self, session_meter_idx, session_max_bps):
+        self.__add_upf_meter("FabricIngress.upf.session_meter", session_meter_idx, session_max_bps)
 
-    def add_qer_app_meter(self, app_meter_idx, app_max_bitrate):
-        self.__add_upf_meter("FabricIngress.spgw.app_meter", app_meter_idx, app_max_bitrate)
+    def add_qer_app_meter(self, app_meter_idx, app_max_bps):
+        self.__add_upf_meter("FabricIngress.upf.app_meter", app_meter_idx, app_max_bps)
 
-    def __add_upf_meter(self, meter_name, meter_idx, max_bitrate):
-        pir = int((max_bitrate / 8))
-        pburst = int((max_bitrate / 8) * BURST_DURATION_MS * 0.001)
+    def __add_upf_meter(self, meter_name, meter_idx, max_bps):
+        pir = int((max_bps / 8))
+        pburst = int((max_bps / 8) * BURST_DURATION_MS * 0.001)
         self.write_indirect_meter(
             meter_name,
             meter_idx,

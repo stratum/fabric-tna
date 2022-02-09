@@ -168,7 +168,7 @@ header gtpu_ext_psc_t {
 @flexible
 struct upf_bridged_metadata_t {
     tun_peer_id_t    tun_peer_id;
-    upf_ctr_id_t     upf_ctr_id;
+    upf_ctr_idx_t    upf_ctr_id;
     bit<6>           qfi;
     bool             needs_gtpu_encap;
     bool             skip_upf;

@@ -1483,14 +1483,13 @@ class FabricUpfUplinkTest(UpfSimpleTest):
         }
         for traffic_dir in ["host-leaf-host", "host-leaf-spine", "spine-leaf-host"]:
             for upf_app_filtering in [False, True]:
-                for metering in [True, False]:
-                    for test_args in get_test_args(
-                        traffic_dir=traffic_dir,
-                        pkt_addrs=pkt_addrs,
-                        upf_type="UL_PSC",
-                        upf_app_filtering=upf_app_filtering,
-                    ):
-                        self.doRunTest(**test_args)
+                for test_args in get_test_args(
+                    traffic_dir=traffic_dir,
+                    pkt_addrs=pkt_addrs,
+                    upf_type="UL_PSC",
+                    upf_app_filtering=upf_app_filtering,
+                ):
+                    self.doRunTest(**test_args)
 
 
 @group("upf")
