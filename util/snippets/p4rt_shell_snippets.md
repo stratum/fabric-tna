@@ -27,7 +27,7 @@ correctly.
 
 ```python
 te = table_entry['switch_info'](action='set_switch_info')
-te.action['cpu_port'] = '320'  # 192 for 2 pipe
+te.action['cpu_port'] = '0xFFFFFFFD'
 te.is_default = True
 te.modify()
 ```

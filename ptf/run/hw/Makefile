@@ -1,12 +1,11 @@
 # Copyright 2020-present Open Networking Foundation
 # SPDX-License-Identifier: Apache-2.0
-# 320 cpu port is for mavericks (65Q)
 
 define run_tests
     python3 -u ptf_runner.py \
         --port-map $(PORT_MAP) \
         --ptf-dir $(PTF_DIR) \
-        --cpu-port 320 --device-id 1 \
+        --device-id 1 \
         --grpc-addr $(SWITCH_ADDR) \
         --p4info /fabric-tna/${P4C_OUT}/p4info.txt \
         --pipeline-config /fabric-tna/${P4C_OUT}/pipeline_config.pb.bin \

@@ -17,7 +17,7 @@
 control IngressSliceTcClassifier (in    ingress_headers_t hdr,
                                   in    ingress_intrinsic_metadata_t ig_intr_md,
                                   inout fabric_ingress_metadata_t fabric_md) {
-
+    FabricPortId_t ig_port = (FabricPortId_t)ig_intr_md.ingress_port;
     DirectCounter<bit<32>>(CounterType_t.PACKETS) classifier_stats;
 
     action set_slice_id_tc(slice_id_t slice_id, tc_t tc) {
@@ -44,12 +44,12 @@ control IngressSliceTcClassifier (in    ingress_headers_t hdr,
 
     table classifier {
         key = {
-            ig_intr_md.ingress_port : ternary @name("ig_port");
-            fabric_md.lkp.ipv4_src  : ternary @name("ipv4_src");
-            fabric_md.lkp.ipv4_dst  : ternary @name("ipv4_dst");
-            fabric_md.lkp.ip_proto  : ternary @name("ip_proto");
-            fabric_md.lkp.l4_sport  : ternary @name("l4_sport");
-            fabric_md.lkp.l4_dport  : ternary @name("l4_dport");
+            ig_port                : ternary @name("ig_port");
+            fabric_md.lkp.ipv4_src : ternary @name("ipv4_src");
+            fabric_md.lkp.ipv4_dst : ternary @name("ipv4_dst");
+            fabric_md.lkp.ip_proto : ternary @name("ip_proto");
+            fabric_md.lkp.l4_sport : ternary @name("l4_sport");
+            fabric_md.lkp.l4_dport : ternary @name("l4_dport");
         }
         actions = {
             set_slice_id_tc;
@@ -181,7 +181,7 @@ control IngressQos (inout fabric_ingress_metadata_t fabric_md,
 control EgressDscpRewriter (in    fabric_egress_metadata_t fabric_md,
                             in    egress_intrinsic_metadata_t eg_intr_md,
                             inout egress_headers_t hdr) {
-
+    FabricPortId_t eg_port = (FabricPortId_t)eg_intr_md.egress_port;
     bit<6> tmp_dscp = fabric_md.bridged.base.slice_tc;
 
     action rewrite() {
@@ -196,7 +196,7 @@ control EgressDscpRewriter (in    fabric_egress_metadata_t fabric_md,
 
     table rewriter {
         key = {
-            eg_intr_md.egress_port : exact @name("eg_port");
+            eg_port : exact @name("eg_port");
         }
         actions = {
             rewrite;

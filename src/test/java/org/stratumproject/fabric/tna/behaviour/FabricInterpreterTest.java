@@ -32,6 +32,7 @@ import org.onosproject.net.pi.runtime.PiActionParam;
 import org.onosproject.net.pi.runtime.PiPacketMetadata;
 import org.onosproject.net.pi.runtime.PiPacketOperation;
 import org.onosproject.net.pi.service.PiPipeconfService;
+import org.stratumproject.fabric.tna.Constants;
 import org.stratumproject.fabric.tna.slicing.api.SlicingService;
 import org.stratumproject.fabric.tna.slicing.api.TrafficClassDescription;
 
@@ -414,6 +415,39 @@ public class FabricInterpreterTest {
         PiPacketMetadata pktInMetadata = PiPacketMetadata.builder()
                 .withId(P4InfoConstants.INGRESS_PORT)
                 .withValue(ImmutableByteSequence.copyFrom(inputPort.toLong()).fit(8))  // deliberately smaller
+                .build();
+        Ethernet packet = new Ethernet();
+        packet.setDestinationMACAddress(SRC_MAC);
+        packet.setSourceMACAddress(DST_MAC);
+        packet.setEtherType((short) 0xBA00);
+        packet.setPayload(new Data());
+
+        PiPacketOperation pktInOp = PiPacketOperation.builder()
+                .withMetadata(pktInMetadata)
+                .withData(ImmutableByteSequence.copyFrom(packet.serialize()))
+                .withType(PiPacketOperationType.PACKET_IN)
+                .build();
+        InboundPacket result = interpreter.mapInboundPacket(pktInOp, DEVICE_ID);
+
+        ConnectPoint receiveFrom = new ConnectPoint(DEVICE_ID, inputPort);
+        InboundPacket expectedInboundPacket
+                = new DefaultInboundPacket(receiveFrom, packet, ByteBuffer.wrap(packet.serialize()));
+
+        assertEquals(result.receivedFrom(), expectedInboundPacket.receivedFrom());
+        assertEquals(result.parsed(), expectedInboundPacket.parsed());
+        assertEquals(result.cookie(), expectedInboundPacket.cookie());
+
+        assertEquals(result.unparsed(), expectedInboundPacket.unparsed());
+    }
+
+    @Test
+    public void testMapInboundPacketWithCpuPort() throws ImmutableByteSequence.ByteSequenceTrimException,
+            PiPipelineInterpreter.PiInterpreterException {
+        PortNumber inputPort = PortNumber.portNumber(Constants.PORT_CPU);
+        PiPacketMetadata pktInMetadata = PiPacketMetadata.builder()
+                .withId(P4InfoConstants.INGRESS_PORT)
+                .withValue(ImmutableByteSequence.copyFrom(inputPort.toLong())
+                        .fit(P4InfoConstants.INGRESS_PORT_BITWIDTH))
                 .build();
         Ethernet packet = new Ethernet();
         packet.setDestinationMACAddress(SRC_MAC);

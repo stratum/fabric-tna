@@ -41,7 +41,7 @@ public final class P4InfoConstants {
     public static final int HDR_COLOR_BITWIDTH = 2;
     public static final PiMatchFieldId HDR_EG_PORT =
             PiMatchFieldId.of("eg_port");
-    public static final int HDR_EG_PORT_BITWIDTH = 9;
+    public static final int HDR_EG_PORT_BITWIDTH = 32;
     public static final PiMatchFieldId HDR_EGRESS_QID =
             PiMatchFieldId.of("egress_qid");
     public static final int HDR_EGRESS_QID_BITWIDTH = 5;
@@ -71,7 +71,7 @@ public final class P4InfoConstants {
     public static final int HDR_ICMP_TYPE_BITWIDTH = 8;
     public static final PiMatchFieldId HDR_IG_PORT =
             PiMatchFieldId.of("ig_port");
-    public static final int HDR_IG_PORT_BITWIDTH = 9;
+    public static final int HDR_IG_PORT_BITWIDTH = 32;
     public static final PiMatchFieldId HDR_IG_PORT_TYPE =
             PiMatchFieldId.of("ig_port_type");
     public static final int HDR_IG_PORT_TYPE_BITWIDTH = 2;
@@ -473,13 +473,13 @@ public final class P4InfoConstants {
     public static final int DO_FORWARDING_BITWIDTH = 1;
     public static final PiPacketMetadataId EGRESS_PORT =
             PiPacketMetadataId.of("egress_port");
-    public static final int EGRESS_PORT_BITWIDTH = 9;
+    public static final int EGRESS_PORT_BITWIDTH = 32;
     public static final PiPacketMetadataId ETHER_TYPE =
             PiPacketMetadataId.of("ether_type");
     public static final int ETHER_TYPE_BITWIDTH = 16;
     public static final PiPacketMetadataId INGRESS_PORT =
             PiPacketMetadataId.of("ingress_port");
-    public static final int INGRESS_PORT_BITWIDTH = 9;
+    public static final int INGRESS_PORT_BITWIDTH = 32;
     public static final PiPacketMetadataId PAD0 = PiPacketMetadataId.of("pad0");
     public static final int PAD0_BITWIDTH = 7;
     public static final PiPacketMetadataId PAD1 = PiPacketMetadataId.of("pad1");

@@ -8,7 +8,7 @@
 const bit<STATS_FLOW_ID_WIDTH> UNSET_FLOW_ID = 0;
 
 control StatsIngress (in lookup_metadata_t lkp,
-                      in PortId_t ig_port,
+                      in FabricPortId_t ig_port,
                       out bit<STATS_FLOW_ID_WIDTH> stats_flow_id) {
 
     DirectCounter<bit<64>>(CounterType_t.PACKETS_AND_BYTES) flow_counter;
@@ -41,8 +41,8 @@ control StatsIngress (in lookup_metadata_t lkp,
 }
 
 control StatsEgress (in bit<STATS_FLOW_ID_WIDTH> stats_flow_id,
-                      in PortId_t eg_port,
-                      in BridgedMdType_t bmd_type) {
+                     in FabricPortId_t eg_port,
+                     in BridgedMdType_t bmd_type) {
 
     DirectCounter<bit<64>>(CounterType_t.PACKETS_AND_BYTES) flow_counter;
 

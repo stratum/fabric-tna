@@ -9,6 +9,7 @@ import socket
 import struct
 import time
 
+import gnmi_utils
 import xnt
 from base_test import (
     P4RuntimeTest,
@@ -18,6 +19,8 @@ from base_test import (
     mac_to_binary,
     stringify,
     tvcreate,
+    PORT_SIZE_BYTES,
+    PORT_SIZE_BITS,
 )
 from bmd_bytes import BMD_BYTES
 from p4.v1 import p4runtime_pb2
@@ -206,7 +209,7 @@ INT_INS_TO_NAME = {
 PACKET_IN_MIRROR_ID = 0x1FF
 INT_REPORT_MIRROR_IDS = [0x200, 0x201, 0x202, 0x203]
 V1MODEL_INT_REPORT_MIRROR_ID = 0x1FA
-RECIRCULATE_PORTS = [68, 196, 324, 452]
+RECIRCULATE_PORTS = list(range(0xFFFFFF00, 0xFFFFFF04))
 RECIRCULATE_PORT_V1MODEL = [510]
 SWITCH_ID = 1
 INT_REPORT_PORT = 32766
@@ -875,6 +878,7 @@ class FabricTest(P4RuntimeTest):
     def __init__(self):
         super(FabricTest, self).__init__()
         self.next_mbr_id = 1
+        self.sdn_to_sdk_port = {}
 
     def setUp(self):
         super(FabricTest, self).setUp()
@@ -884,6 +888,27 @@ class FabricTest(P4RuntimeTest):
         self.port4 = self.swports(3)
         self.setup_switch_info()
         self.set_up_packet_in_mirror()
+
+        # Initialize the SDN-to-SDK port mapping, this port mapping is used for tests
+        # which doesn't support port translation.
+        # For example, port numbers in INT reports are not translated to singleton port.
+        if self.generate_tv:
+            # Build a fake SDN to SDK port mapping for testvector
+            self.sdn_to_sdk_port = dict([(_, _) for _ in range(1, 5)])
+        elif is_v1model():
+            # SDN and SDK port numbers are the same in bmv2
+            self.sdn_to_sdk_port = dict([(_, _) for _ in range(0, 4)])
+            self.sdn_to_sdk_port[255] = 255  # CPU port for bmv2
+        else:
+            # For Tofino Model and real hardware, use gNMI to get the SDN port to SDK
+            # port mapping.
+            self.sdn_to_sdk_port = self.build_sdn_to_sdk_port_map_from_gnmi()
+
+        # Common SDN ports
+        self.sdn_to_sdk_port[0xFFFFFF00] = 0x44   # Recirculate port for pipe 0
+        self.sdn_to_sdk_port[0xFFFFFF01] = 0xC4   # Recirculate port for pipe 1
+        self.sdn_to_sdk_port[0xFFFFFF02] = 0x144  # Recirculate port for pipe 2
+        self.sdn_to_sdk_port[0xFFFFFF03] = 0x1C4  # Recirculate port for pipe 3
 
     def tearDown(self):
         self.reset_switch_info()
@@ -899,6 +924,24 @@ class FabricTest(P4RuntimeTest):
         FabricTest.next_single_use_ips += 1
         return socket.inet_ntoa(struct.pack("!I", FabricTest.next_single_use_ips))
 
+    def build_sdn_to_sdk_port_map_from_gnmi(self):
+        port_map = {}
+        port_name_to_id = {}
+        req = gnmi_utils.build_gnmi_get_req("/interfaces/interface[name=*]/state/id")
+        resp = gnmi_utils.do_get(req)
+        for notification in resp.notification:
+            port_id = notification.update[0].val.uint_val
+            name = notification.update[0].path.elem[1].key['name']
+            port_name_to_id[name] = port_id
+        req = gnmi_utils.build_gnmi_get_req("/interfaces/interface[name=*]/state/ifindex")
+        resp = gnmi_utils.do_get(req)
+        for notification in resp.notification:
+            name = notification.update[0].path.elem[1].key['name']
+            sdk_id = notification.update[0].val.uint_val
+            port_id = port_name_to_id[name]
+            port_map[port_id] = sdk_id
+        return port_map
+
     @tvcreate("setup/setup_switch_info")
     def setup_switch_info(self):
         req = self.get_new_write_request()
@@ -907,7 +950,7 @@ class FabricTest(P4RuntimeTest):
             "FabricEgress.pkt_io_egress.switch_info",
             None,
             "FabricEgress.pkt_io_egress.set_switch_info",
-            [("cpu_port", stringify(self.cpu_port, 2))],
+            [("cpu_port", stringify(self.cpu_port, PORT_SIZE_BYTES))],
         )
         return req, self.write_request(req, store=False)
 
@@ -944,7 +987,7 @@ class FabricTest(P4RuntimeTest):
         # egress_port
         port_md = packet_out.metadata.add()
         port_md.metadata_id = 2
-        port_md.value = stringify(port, 2)
+        port_md.value = stringify(port, PORT_SIZE_BYTES)
         # pad1
         pad_md = packet_out.metadata.add()
         pad_md.metadata_id = 3
@@ -1050,7 +1093,7 @@ class FabricTest(P4RuntimeTest):
         inner_vlan_id=None,
         port_type=PORT_TYPE_EDGE,
     ):
-        ingress_port_ = stringify(ingress_port, 2)
+        ingress_port_ = stringify(ingress_port, PORT_SIZE_BYTES)
         vlan_valid_ = b"\x01" if vlan_valid else b"\x00"
         vlan_id_ = stringify(vlan_id, 2)
         vlan_id_mask_ = stringify(4095 if vlan_valid else 0, 2)
@@ -1082,7 +1125,7 @@ class FabricTest(P4RuntimeTest):
         )
 
     def set_egress_vlan(self, egress_port, vlan_id, push_vlan=False):
-        egress_port = stringify(egress_port, 2)
+        egress_port = stringify(egress_port, PORT_SIZE_BYTES)
         vlan_id = stringify(vlan_id, 2)
         action_name = "push_vlan" if push_vlan else "pop_vlan"
         self.send_request_add_entry_to_action(
@@ -1093,7 +1136,7 @@ class FabricTest(P4RuntimeTest):
         )
 
     def set_keep_egress_vlan_config(self, egress_port, vlan_id):
-        egress_port = stringify(egress_port, 2)
+        egress_port = stringify(egress_port, PORT_SIZE_BYTES)
         vlan_id = stringify(vlan_id, 2)
         self.send_request_add_entry_to_action(
             "egress_next.egress_vlan",
@@ -1110,7 +1153,7 @@ class FabricTest(P4RuntimeTest):
         ethertype=ETH_TYPE_IPV4,
         fwd_type=FORWARDING_TYPE_UNICAST_IPV4,
     ):
-        ingress_port_ = stringify(ingress_port, 2)
+        ingress_port_ = stringify(ingress_port, PORT_SIZE_BYTES)
         priority = DEFAULT_PRIORITY
         if ethertype == ETH_TYPE_IPV4:
             ethertype_ = stringify(0, 2)
@@ -1250,9 +1293,15 @@ class FabricTest(P4RuntimeTest):
             "acl.acl",
             matches,
             "acl.set_output_port",
-            [("port_num", stringify(output_port, 2))],
+            [("port_num", stringify(output_port, PORT_SIZE_BYTES))],
             priority,
         )
+
+    def read_forwarding_acl_set_output_port(
+      self, priority=DEFAULT_PRIORITY, **matches
+    ):
+        matches = self.build_acl_matches(**matches)
+        return self.read_table_entry("acl.acl", matches, priority)
 
     def read_forwarding_acl_punt_to_cpu(self, eth_type=None, priority=DEFAULT_PRIORITY):
         eth_type_ = stringify(eth_type, 2)
@@ -1273,8 +1322,9 @@ class FabricTest(P4RuntimeTest):
         )
 
     def add_forwarding_acl_drop_ingress_port(self, ingress_port):
-        ingress_port_ = stringify(ingress_port, 2)
-        ingress_port_mask_ = stringify(0x1FF, 2)
+
+        ingress_port_ = stringify(ingress_port, PORT_SIZE_BYTES)
+        ingress_port_mask_ = stringify(2**PORT_SIZE_BITS - 1, PORT_SIZE_BYTES)
         self.send_request_add_entry_to_action(
             "acl.acl",
             [self.Ternary("ig_port", ingress_port_, ingress_port_mask_)],
@@ -1340,8 +1390,8 @@ class FabricTest(P4RuntimeTest):
             l4_dport_mask = stringify(0xFFFF, 2)
             matches.append(self.Ternary("l4_dport", l4_dport_, l4_dport_mask))
         if ig_port is not None:
-            ig_port_ = stringify(ig_port, 2)
-            ig_port_mask = stringify(0x01FF, 2)
+            ig_port_ = stringify(ig_port, PORT_SIZE_BYTES)
+            ig_port_mask = stringify(2**PORT_SIZE_BITS - 1, PORT_SIZE_BYTES)
             matches.append(self.Ternary("ig_port", ig_port_, ig_port_mask))
         return matches
 
@@ -1373,8 +1423,8 @@ class FabricTest(P4RuntimeTest):
 
     def add_xconnect(self, next_id, port1, port2):
         next_id_ = stringify(next_id, 4)
-        port1_ = stringify(port1, 2)
-        port2_ = stringify(port2, 2)
+        port1_ = stringify(port1, PORT_SIZE_BYTES)
+        port2_ = stringify(port2, PORT_SIZE_BYTES)
         for (inport, outport) in ((port1_, port2_), (port2_, port1_)):
             self.send_request_add_entry_to_action(
                 "next.xconnect",
@@ -1384,14 +1434,14 @@ class FabricTest(P4RuntimeTest):
             )
 
     def add_next_output(self, next_id, egress_port):
-        egress_port_ = stringify(egress_port, 2)
+        egress_port_ = stringify(egress_port, PORT_SIZE_BYTES)
         self.add_next_hashed_indirect_action(
             next_id, "next.output_hashed", [("port_num", egress_port_)]
         )
 
     def add_next_output_simple(self, next_id, egress_port):
         next_id_ = stringify(next_id, 4)
-        egress_port_ = stringify(egress_port, 2)
+        egress_port_ = stringify(egress_port, PORT_SIZE_BYTES)
         self.send_request_add_entry_to_action(
             "next.simple",
             [self.Exact("next_id", next_id_)],
@@ -1420,7 +1470,7 @@ class FabricTest(P4RuntimeTest):
         )
 
     def add_next_routing(self, next_id, egress_port, smac, dmac):
-        egress_port_ = stringify(egress_port, 2)
+        egress_port_ = stringify(egress_port, PORT_SIZE_BYTES)
         smac_ = mac_to_binary(smac)
         dmac_ = mac_to_binary(dmac)
         self.add_next_hashed_group_action(
@@ -1436,7 +1486,7 @@ class FabricTest(P4RuntimeTest):
 
     def add_next_routing_simple(self, next_id, egress_port, smac, dmac):
         next_id_ = stringify(next_id, 4)
-        egress_port_ = stringify(egress_port, 2)
+        egress_port_ = stringify(egress_port, PORT_SIZE_BYTES)
         smac_ = mac_to_binary(smac)
         dmac_ = mac_to_binary(dmac)
         self.send_request_add_entry_to_action(
@@ -1503,7 +1553,7 @@ class FabricTest(P4RuntimeTest):
         actions = []
         if next_hops is not None:
             for (egress_port, smac, dmac) in next_hops:
-                egress_port_ = stringify(egress_port, 2)
+                egress_port_ = stringify(egress_port, PORT_SIZE_BYTES)
                 smac_ = mac_to_binary(smac)
                 dmac_ = mac_to_binary(dmac)
                 actions.append(
@@ -1536,7 +1586,7 @@ class FabricTest(P4RuntimeTest):
             self.add_next_mpls(next_id, mpls_labels[0])
 
             for (egress_port, smac, dmac, _) in next_hops:
-                egress_port_ = stringify(egress_port, 2)
+                egress_port_ = stringify(egress_port, PORT_SIZE_BYTES)
                 smac_ = mac_to_binary(smac)
                 dmac_ = mac_to_binary(dmac)
                 actions.append(
@@ -2038,7 +2088,6 @@ class IPv4UnicastTest(FabricTest):
         verify_port = eg_port
         if override_eg_port:
             verify_port = override_eg_port
-
         if verify_pkt:
             self.verify_packet(exp_pkt, verify_port)
 
@@ -3974,8 +4023,8 @@ class IntTest(IPv4UnicastTest):
             INT_COLLECTOR_MAC,
             SWITCH_IPV4,
             INT_COLLECTOR_IPV4,
-            ig_port,
-            eg_port,
+            self.sdn_to_sdk_port[ig_port],
+            self.sdn_to_sdk_port[eg_port],
             SWITCH_ID,
             int_pre_mirrored_packet,
             is_device_spine,
@@ -4049,14 +4098,14 @@ class IntTest(IPv4UnicastTest):
             INT_COLLECTOR_MAC,
             SWITCH_IPV4,
             INT_COLLECTOR_IPV4,
-            ig_port,
+            self.sdn_to_sdk_port[ig_port],
             0,  # egress port will be unset
             drop_reason,
             SWITCH_ID,
             int_inner_pkt,
             is_device_spine,
             send_report_to_spine,
-            ig_port >> 7,  # hw_id,
+            self.sdn_to_sdk_port[ig_port] >> 7,  # hw_id,
             truncate=False,
         )
 
@@ -4137,14 +4186,14 @@ class IntTest(IPv4UnicastTest):
             INT_COLLECTOR_MAC,
             SWITCH_IPV4,
             INT_COLLECTOR_IPV4,
-            ig_port,
-            eg_port,
+            self.sdn_to_sdk_port[ig_port],
+            self.sdn_to_sdk_port[eg_port],
             drop_reason,
             SWITCH_ID,
             int_pre_mirrored_packet,
             is_device_spine,
             send_report_to_spine,
-            eg_port >> 7,  # hw_id
+            self.sdn_to_sdk_port[eg_port] >> 7,  # hw_id
             truncate=True,
         )
 
@@ -4248,8 +4297,8 @@ class IntTest(IPv4UnicastTest):
             INT_COLLECTOR_MAC,
             SWITCH_IPV4,
             INT_COLLECTOR_IPV4,
-            ig_port,
-            eg_port,
+            self.sdn_to_sdk_port[ig_port],
+            self.sdn_to_sdk_port[eg_port],
             SWITCH_ID,
             int_pre_mirrored_packet,
             is_device_spine,
@@ -4266,13 +4315,13 @@ class IntTest(IPv4UnicastTest):
         self.set_up_latency_threshold_for_q_report(threshold_trigger, threshold_reset)
         # Sets the quota for the output port/queue of INT report to zero to make sure
         # we won't keep getting reports for this type of packet.
-        self.set_queue_report_quota(port=self.port3, qid=0, quota=0)
+        self.set_queue_report_quota(port=self.sdn_to_sdk_port[self.port3], qid=0, quota=0)
         recirc_ports = RECIRCULATE_PORTS if is_tna() else RECIRCULATE_PORT_V1MODEL
         for recirc_port in recirc_ports:
-            self.set_queue_report_quota(port=recirc_port, qid=0, quota=0)
+            self.set_queue_report_quota(port=self.sdn_to_sdk_port[recirc_port], qid=0, quota=0)
         if reset_quota:
             # To ensure we have enough quota to send a queue report.
-            self.set_queue_report_quota(port=eg_port, qid=0, quota=1)
+            self.set_queue_report_quota(port=self.sdn_to_sdk_port[eg_port], qid=0, quota=1)
 
         # TODO: Use MPLS test instead of IPv4 test if device is spine.
         # TODO: In these tests, there is only one egress port although the
@@ -4356,8 +4405,8 @@ class UpfIntTest(UpfSimpleTest, IntTest):
             INT_COLLECTOR_MAC,
             SWITCH_IPV4,
             INT_COLLECTOR_IPV4,
-            self.port1,
-            self.port2,
+            self.sdn_to_sdk_port[self.port1],
+            self.sdn_to_sdk_port[self.port2],
             SWITCH_ID,
             exp_pkt,
             is_device_spine,
@@ -4443,8 +4492,8 @@ class UpfIntTest(UpfSimpleTest, IntTest):
             INT_COLLECTOR_MAC,
             SWITCH_IPV4,
             INT_COLLECTOR_IPV4,
-            self.port1,
-            self.port2,
+            self.sdn_to_sdk_port[self.port1],
+            self.sdn_to_sdk_port[self.port2],
             SWITCH_ID,
             exp_pkt,
             is_device_spine,
@@ -4540,14 +4589,14 @@ class UpfIntTest(UpfSimpleTest, IntTest):
             INT_COLLECTOR_MAC,
             SWITCH_IPV4,
             INT_COLLECTOR_IPV4,
-            ig_port,
+            self.sdn_to_sdk_port[ig_port],
             0,  # No egress port set since we drop from ingress pipeline
             drop_reason,
             SWITCH_ID,
             bridged_packet,
             is_device_spine,
             send_report_to_spine,
-            eg_port >> 7,  # hw_id,
+            self.sdn_to_sdk_port[eg_port] >> 7,  # hw_id,
             truncate=False,  # Never truncated since this is a ingress drop.
         )
 
@@ -4625,14 +4674,14 @@ class UpfIntTest(UpfSimpleTest, IntTest):
             INT_COLLECTOR_MAC,
             SWITCH_IPV4,
             INT_COLLECTOR_IPV4,
-            ig_port,
+            self.sdn_to_sdk_port[ig_port],
             0,  # No egress port set since we drop from ingress pipeline
             drop_reason,
             SWITCH_ID,
             bridged_packet,
             is_device_spine,
             send_report_to_spine,
-            eg_port >> 7,  # hw_id,
+            self.sdn_to_sdk_port[eg_port] >> 7,  # hw_id,
             truncate=False,  # Never truncated since this is a ingress drop.
         )
 
@@ -4972,7 +5021,7 @@ class StatsTest(FabricTest):
     """
 
     def build_stats_matches(self, gress, stats_flow_id, port, **ftuple):
-        port_ = stringify(port, 2)
+        port_ = stringify(port, PORT_SIZE_BYTES)
         stats_flow_id_ = stringify(stats_flow_id, 2)
         if gress == STATS_INGRESS:
             matches = self.build_acl_matches(**ftuple)

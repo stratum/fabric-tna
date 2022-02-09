@@ -7,7 +7,7 @@ import difflib
 import time
 from unittest import skip, skipIf
 
-from base_test import autocleanup, is_v1model, tvsetup, tvskip
+from base_test import autocleanup, is_v1model, tvsetup, PORT_SIZE_BYTES
 from fabric_test import *  # noqa
 from p4.config.v1 import p4info_pb2
 from ptf.testutils import group
@@ -291,7 +291,7 @@ class FabricIPv4DropWithACLOverrideOutputTest(IPv4UnicastTest):
             ip_ttl=64,
         )
         # Although we are testing set output port (bridging)
-        # the fowarding type is "Routing v4" because we need the v4 routing table
+        # the forwarding type is "Routing v4" because we need the v4 routing table
         exp_pkt = self.build_exp_ipv4_unicast_packet(pkt, SWITCH_MAC, HOST1_MAC)
         self.doRunTest(self.port1, self.port2, HOST2_IPV4, 32, pkt, exp_pkt)
 
@@ -404,10 +404,10 @@ class FabricIPv4UnicastGroupTestAllPortTcpSport(FabricTest):
                 tcp_sport=test_tcp_sport,
             )
             self.send_packet(self.port1, pkt_from1)
-            out_port_indx = self.verify_any_packet_any_port(
+            out_port_index = self.verify_any_packet_any_port(
                 [exp_pkt_to2, exp_pkt_to3], [self.port2, self.port3]
             )
-            tcpsport_toport[out_port_indx] = test_tcp_sport
+            tcpsport_toport[out_port_index] = test_tcp_sport
 
         pkt_toport2 = testutils.simple_tcp_packet(
             eth_src=HOST1_MAC,
@@ -505,10 +505,10 @@ class FabricIPv4UnicastGroupTestAllPortTcpDport(FabricTest):
                 tcp_dport=test_tcp_dport,
             )
             self.send_packet(self.port1, pkt_from1)
-            out_port_indx = self.verify_any_packet_any_port(
+            out_port_index = self.verify_any_packet_any_port(
                 [exp_pkt_to2, exp_pkt_to3], [self.port2, self.port3]
             )
-            tcpdport_toport[out_port_indx] = test_tcp_dport
+            tcpdport_toport[out_port_index] = test_tcp_dport
 
         pkt_toport2 = testutils.simple_tcp_packet(
             eth_src=HOST1_MAC,
@@ -605,10 +605,10 @@ class FabricIPv4UnicastGroupTestAllPortIpSrc(FabricTest):
                 ip_ttl=63,
             )
             self.send_packet(self.port1, pkt_from1)
-            out_port_indx = self.verify_any_packet_any_port(
+            out_port_index = self.verify_any_packet_any_port(
                 [exp_pkt_to2, exp_pkt_to3], [self.port2, self.port3]
             )
-            ipsource_toport[out_port_indx] = test_ipsource
+            ipsource_toport[out_port_index] = test_ipsource
 
         pkt_toport2 = getattr(testutils, "simple_%s_packet" % pkt_type)(
             eth_src=HOST1_MAC,
@@ -712,10 +712,10 @@ class FabricIPv4UnicastGroupTestAllPortIpDst(FabricTest):
                 ip_ttl=63,
             )
             self.send_packet(self.port1, pkt_from1)
-            out_port_indx = self.verify_any_packet_any_port(
+            out_port_index = self.verify_any_packet_any_port(
                 [exp_pkt_to2, exp_pkt_to3], [self.port2, self.port3]
             )
-            ipdst_toport[out_port_indx] = test_ipdst
+            ipdst_toport[out_port_index] = test_ipdst
 
         pkt_toport2 = getattr(testutils, "simple_%s_packet" % pkt_type)(
             eth_src=HOST1_MAC,
@@ -1167,7 +1167,7 @@ class FabricGtpUnicastEcmpBasedOnTeid(FabricTest):
     @autocleanup
     def doRunTest(self, pkt_type):
         # In this test we check that packets are forwarded to all ports when we
-        # change one of the values used for hash calculcation and we have an ECMP-like
+        # change one of the values used for hash calculation and we have an ECMP-like
         # distribution.
         # In this case, we change TEID for GTP-encapsulated packets
         vlan_id = 10
@@ -1220,10 +1220,10 @@ class FabricGtpUnicastEcmpBasedOnTeid(FabricTest):
             exp_pkt_to3[IP].ttl = 63
 
             self.send_packet(self.port1, pkt_from1)
-            out_port_indx = self.verify_any_packet_any_port(
+            out_port_index = self.verify_any_packet_any_port(
                 [exp_pkt_to2, exp_pkt_to3], [self.port2, self.port3]
             )
-            teid_toport[out_port_indx] = test_teid
+            teid_toport[out_port_index] = test_teid
 
         pkt_toport2 = pkt_add_gtp(
             pkt,
@@ -1349,11 +1349,11 @@ class FabricUpfDownlinkEcmpTest(UpfSimpleTest):
             exp_pkt_to3[Ether].dst = S1U_ENB_NEXTHOP2_MAC
 
             self.send_packet(self.port1, pkt_from1)
-            out_port_indx = self.verify_any_packet_any_port(
+            out_port_index = self.verify_any_packet_any_port(
                 [exp_pkt_to2, exp_pkt_to3], [self.port2, self.port3]
             )
-            ue_ipv4_toport[out_port_indx] = ue_ipv4
-            teid_toport[out_port_indx] = test_teid
+            ue_ipv4_toport[out_port_index] = ue_ipv4
+            teid_toport[out_port_index] = test_teid
 
         pkt_toport2 = getattr(testutils, "simple_%s_packet" % pkt_type)(
             eth_src=HOST1_MAC,
@@ -1709,7 +1709,7 @@ class FabricUpfIntUplinkDropTest(UpfIntTest):
         drop_reason,
         **kwargs
     ):
-        # Change the IP destination to ensure we are using differnt
+        # Change the IP destination to ensure we are using different
         # flow for diffrent test cases since the flow report filter
         # might disable the report.
         # TODO: Remove this part when we are able to reset the register
@@ -2006,7 +2006,7 @@ class FabricFlowReportFilterNoChangeTest(IntTest):
                         ip_dst,
                     )
 
-                    # We should expect not receving any report after the first
+                    # We should expect not receiving any report after the first
                     # report since packet uses 5-tuple as flow ID.
                     expect_int_report = False
 
@@ -2129,7 +2129,7 @@ class FabricDropReportFilterTest(IntTest):
                         ip_dst,
                     )
 
-                    # We should expect not receving any report after the first
+                    # We should expect not receiving any report after the first
                     # report since packet uses 5-tuple as flow ID.
                     expect_int_report = False
 
@@ -2200,7 +2200,7 @@ class FabricIntQueueReportTest(IntTest):
 @group("int")
 @skipIf(is_v1model(), "Queue reports not implemented for v1model.")
 # Skip HW PTF test
-# We cannot varify value from the register which not belong to pipe 0 since the current
+# We cannot verify value from the register which not belong to pipe 0 since the current
 # P4Runtime and Stratum only allows us to read register from pipe 0.
 @group("no-hw")
 class FabricIntQueueReportQuotaTest(IntTest):
@@ -2229,15 +2229,15 @@ class FabricIntQueueReportQuotaTest(IntTest):
             threshold_trigger=threshold_trigger,
             threshold_reset=threshold_reset,
         )
-        self.verify_quota(port=self.port2, qid=0, quota=quota_left)
+        self.verify_quota(port=self.sdn_to_sdk_port[self.port2], qid=0, quota=quota_left)
 
     def runTest(self):
         print("")
         # Initialize the queue report quota for output port and queue to just 1
         # After that, configure the threshold to a small value and send a packet to the
-        # device to trigger queue report. We should expect to recevice an INT queue
+        # device to trigger queue report. We should expect to receive an INT queue
         # report and the quota should become zero.
-        self.set_queue_report_quota(port=self.port2, qid=0, quota=1)
+        self.set_queue_report_quota(port=self.sdn_to_sdk_port[self.port2], qid=0, quota=1)
         self.doRunTest(
             expect_int_report=True,
             quota_left=0,
@@ -2439,7 +2439,6 @@ class FabricDoubleTaggedHostDownstream(DoubleVlanTerminationTest):
                 )
                 self.doRunTest(pkt, in_tagged)
 
-
 @group("p4rt")
 class TableEntryReadWriteTest(FabricTest):
     @tvsetup
@@ -2457,6 +2456,11 @@ class TableEntryReadWriteTest(FabricTest):
         received_acl_entry = self.read_forwarding_acl_punt_to_cpu(ETH_TYPE_IPV4)
         self.verify_p4runtime_entity(expected_acl_entry, received_acl_entry)
 
+        req, _ = self.add_forwarding_acl_set_output_port(self.port2, ig_port=self.port1)
+        expected_acl_entry = req.updates[0].entity.table_entry
+        received_acl_entry = self.read_forwarding_acl_set_output_port(ig_port=self.port1)
+        self.verify_p4runtime_entity(expected_acl_entry, received_acl_entry)
+
     def runTest(self):
         print("")
         self.doRunTest()
@@ -2468,7 +2472,7 @@ class ActionProfileMemberReadWriteTest(FabricTest):
     @autocleanup
     def doRunTest(self):
         req, _ = self.add_next_hashed_group_member(
-            "output_hashed", [("port_num", stringify(1, 2))]
+            "output_hashed", [("port_num", stringify(self.port1, PORT_SIZE_BYTES))]
         )
         expected_action_profile_member = req.updates[0].entity.action_profile_member
         mbr_id = expected_action_profile_member.member_id
@@ -2488,7 +2492,7 @@ class ActionProfileGroupReadWriteTest(FabricTest):
     @autocleanup
     def doRunTest(self):
         req, _ = self.add_next_hashed_group_member(
-            "output_hashed", [("port_num", stringify(1, 2))]
+            "output_hashed", [("port_num", stringify(self.port1, PORT_SIZE_BYTES))]
         )
         member_installed = req.updates[0].entity.action_profile_member
         mbr_id = member_installed.member_id
@@ -2512,7 +2516,7 @@ class ActionProfileGroupModificationTest(FabricTest):
         mbr_ids = []
         for port_num in range(1, 4):
             req, _ = self.add_next_hashed_group_member(
-                "output_hashed", [("port_num", stringify(port_num, 2))]
+                "output_hashed", [("port_num", stringify(port_num, PORT_SIZE_BYTES))]
             )
             member_installed = req.updates[0].entity.action_profile_member
             mbr_ids.append(member_installed.member_id)
@@ -2545,7 +2549,8 @@ class MulticastGroupReadWriteTest(FabricTest):
     @autocleanup
     def doRunTest(self):
         grp_id = 10
-        replicas = [(0, 1), (0, 2), (0, 3)]  # (instance, port)
+        # (instance, port)
+        replicas = [(0, self.port1), (0, self.port2), (0, self.port3)]
         req, _ = self.add_mcast_group(grp_id, replicas)
         expected_mc_entry = req.updates[
             0
@@ -2567,7 +2572,14 @@ class MulticastGroupModificationTest(FabricTest):
         # Add group with egress port 1~3 (instance 1 and 2)
         grp_id = 10
         # (instance, port)
-        replicas = [(1, 1), (1, 2), (1, 3), (2, 1), (2, 2), (2, 3)]
+        replicas = [
+          (1, self.port1),
+          (1, self.port2),
+          (1, self.port3),
+          (2, self.port1),
+          (2, self.port2),
+          (2, self.port3),
+        ]
         self.add_mcast_group(grp_id, replicas)
 
         # Modify the group with egress port 2~4 (instance 2 and 3)
@@ -2634,7 +2646,6 @@ class CounterTest(BridgingTest):
     def runTest(self):
         print("")
         self.doRunTest()
-
 
 # Disable the loopback mode test since we are going to use Stratum main.p4 for CCP instead of fabric-tna
 # and we will remove loopback mode from fabric-tna once we move all CCP tests to main.p4.
@@ -2789,8 +2800,8 @@ class FabricIntFlowReportLoopbackModeTest(IntTest):
             INT_COLLECTOR_MAC,
             SWITCH_IPV4,
             INT_COLLECTOR_IPV4,
-            self.port1,
-            self.port2,
+            self.sdn_to_sdk_port[self.port1],
+            self.sdn_to_sdk_port[self.port2],
             SWITCH_ID,
             routed_pkt,
             is_device_spine,
@@ -2869,8 +2880,8 @@ class FabricOptimizedFieldDetectorTest(FabricTest):
     compiler"""
 
     # Returns a byte string encoded value fitting into bitwidth.
-    def generateBytestring(self, bitwidth):
-        return stringify(1, (bitwidth + 7) // 8)
+    def generateBytestring(self, bitwidth, value=1):
+        return stringify(value, (bitwidth + 7) // 8)
 
     # Since the test uses the same match key for tables with multiple actions,
     # each table entry has to be removed before testing the next.
@@ -2928,7 +2939,8 @@ class FabricOptimizedFieldDetectorTest(FabricTest):
                     match_keys.append(self.Lpm(match.name, match_value, match_len))
                 elif match.match_type == p4info_pb2.MatchField.MatchType.TERNARY:
                     match_value = self.generateBytestring(match.bitwidth)
-                    match_mask = match_value
+                    # Use 0xfff...ff as mask
+                    match_mask = self.generateBytestring(match.bitwidth, (1 << match.bitwidth) - 1)
                     match_keys.append(self.Ternary(match.name, match_value, match_mask))
                     priority = 1
                 elif match.match_type == p4info_pb2.MatchField.MatchType.RANGE:
@@ -3040,7 +3052,7 @@ class FabricIntDeflectDropReportTest(IntTest):
 
         # The packet will still be routed, but dropped by traffic manager.
         # Note that the pipeline won't change IP TTL since the packet will not be
-        # procedded by the egress next block.
+        # preceded by the egress next block.
         int_inner_pkt = pkt_route(int_inner_pkt, HOST2_MAC)
 
         # This is the WIP report packet which should be sent to the recirculation port according to
@@ -3053,8 +3065,8 @@ class FabricIntDeflectDropReportTest(IntTest):
             0,
             SWITCH_IPV4,
             INT_COLLECTOR_IPV4,
-            ig_port,
-            eg_port,
+            self.sdn_to_sdk_port[ig_port],
+            self.sdn_to_sdk_port[eg_port],
             INT_DROP_REASON_TRAFFIC_MANAGER,
             SWITCH_ID,
             int_inner_pkt,
@@ -3070,8 +3082,8 @@ class FabricIntDeflectDropReportTest(IntTest):
             INT_COLLECTOR_MAC,
             SWITCH_IPV4,
             INT_COLLECTOR_IPV4,
-            ig_port,
-            eg_port,
+            self.sdn_to_sdk_port[ig_port],
+            self.sdn_to_sdk_port[eg_port],
             INT_DROP_REASON_TRAFFIC_MANAGER,
             SWITCH_ID,
             int_inner_pkt,
@@ -3094,7 +3106,7 @@ class FabricIntDeflectDropReportTest(IntTest):
             eg_port=eg_port,
             verify_pkt=False,
         )
-        self.verify_packet(exp_wip_int_pkt_masked, 0)
+        self.verify_packet(exp_wip_int_pkt_masked, self.port1)
 
         pkt_out = self.build_packet_out(
             exp_wip_int_pkt_masked.exp_pkt, RECIRCULATE_PORTS[0]

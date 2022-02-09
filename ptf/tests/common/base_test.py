@@ -139,6 +139,11 @@ def de_canonicalize_bytes(bitwidth: int, input: bytes):
     return input.rjust(byte_width, b"\0")  # right padding <-> BigEndian
 
 
+# Workaround to choose byte size of port-related fields.
+# TODO: Remove when canonical value is supported on both Stratum and ONOS.
+PORT_SIZE_BYTES = 4 if is_tna() else 2
+PORT_SIZE_BITS = 32 if is_tna() else 9
+
 # Used to indicate that the gRPC error Status object returned by the server has
 # an incorrect format.
 class P4RuntimeErrorFormatException(Exception):
@@ -363,18 +368,22 @@ class P4RuntimeTest(BaseTest):
             return msg.packet
 
     def verify_packet_in(self, exp_pkt, exp_in_port, timeout=2):
-        in_port_ = stringify(exp_in_port, 2)
         if self.generate_tv:
             exp_pkt_in = p4runtime_pb2.PacketIn()
             exp_pkt_in.payload = bytes(exp_pkt)
             ingress_physical_port = exp_pkt_in.metadata.add()
             ingress_physical_port.metadata_id = 0
-            ingress_physical_port.value = in_port_
+            ingress_physical_port.value = stringify(exp_in_port, PORT_SIZE_BYTES)
             tvutils.add_packet_in_expectation(self.tc, exp_pkt_in)
         else:
             pkt_in_msg = self.get_packet_in(timeout=timeout)
             rx_in_port_ = pkt_in_msg.metadata[0].value
-            if is_v1model():
+
+            # Here we only compare the integer value of ingress port metadata instead
+            # of the byte string.
+            if is_tna():
+                rx_inport = struct.unpack("!I", rx_in_port_)[0]
+            else:
                 pkt_in_metadata = get_controller_packet_metadata(
                     self.p4info, meta_type="packet_in", name="ingress_port"
                 )
@@ -382,9 +391,9 @@ class P4RuntimeTest(BaseTest):
                 rx_in_port_ = de_canonicalize_bytes(
                     pkt_in_ig_port_bitwidth, rx_in_port_
                 )
+                rx_inport = struct.unpack("!H", rx_in_port_)[0]
 
-            if in_port_ != rx_in_port_:
-                rx_inport = struct.unpack("!h", rx_in_port_)[0]
+            if exp_in_port != rx_inport:
                 self.fail(
                     "Wrong packet-in ingress port, "
                     + "expected {} but received was {}".format(exp_in_port, rx_inport)

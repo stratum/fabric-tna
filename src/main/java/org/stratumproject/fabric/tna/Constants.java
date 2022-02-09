@@ -45,10 +45,11 @@ public final class Constants {
     public static final short ETH_TYPE_EXACT_MASK = (short) 0xFFFF;
 
     // Recirculation ports, ordered per hw pipe (from 0 to 3).
-    public static final List<Integer> RECIRC_PORTS = List.of(0x44, 0xc4, 0x144, 0x1c4);
+    public static final List<Long> RECIRC_PORTS =
+      List.of(0xFFFFFF00L, 0xFFFFFF01L, 0xFFFFFF02L, 0xFFFFFF03L);
 
     // Fake recirculation port used in V1model to emulate TNA's behavior.
-    public static final List<Integer> V1MODEL_RECIRC_PORT = List.of(0x1fe);
+    public static final List<Long> V1MODEL_RECIRC_PORT = List.of(0x1FEL);
 
     public static final int V1MODEL_INT_REPORT_MIRROR_ID = 0x1FA;
 
@@ -80,6 +81,9 @@ public final class Constants {
             .put(EDGE_PORT, PORT_TYPE_EDGE)
             .put(INFRA_PORT, PORT_TYPE_INFRA)
             .build();
+
+    public static final long PORT_UNSPECIFIED = 0;
+    public static final long PORT_CPU = 0xFFFFFFFDL;
 
     // hide default constructor
     private Constants() {
