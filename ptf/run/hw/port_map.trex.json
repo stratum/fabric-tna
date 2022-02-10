@@ -1,21 +1,21 @@
 [
     {
-        "p4_port": 296,
+        "p4_port": 27,
         "iface_name": "ptfdummy",
         "_comment": "Use a dummy interface since we don't attach to any interface."
     },
     {
-        "p4_port": 288,
+        "p4_port": 28,
         "iface_name": "ptfdummy",
         "_comment": "Use a dummy interface since we don't attach to any interface."
     },
     {
-        "p4_port": 272,
+        "p4_port": 29,
         "iface_name": "ptfdummy",
         "_comment": "Use a dummy interface since we don't attach to any interface."
     },
     {
-        "p4_port": 280,
+        "p4_port": 30,
         "iface_name": "ptfdummy",
         "_comment": "Use a dummy interface since we don't attach to any interface."
     }
