@@ -29,12 +29,15 @@ public class MockPiPipelineModel implements PiPipelineModel {
     private final String architecture;
 
     private final List<PiCounterModel> counters;
+    private final List<PiMeterModel> meters;
 
     public MockPiPipelineModel(Collection<PiTableModel> tables,
                                Collection<PiCounterModel> counters,
+                               Collection<PiMeterModel> meters,
                                String architecture) {
         tables.forEach(tableModel -> tableMap.put(tableModel.id(), tableModel));
         this.counters = List.copyOf(counters);
+        this.meters = List.copyOf(meters);
         this.architecture = architecture;
     }
 
@@ -70,7 +73,7 @@ public class MockPiPipelineModel implements PiPipelineModel {
 
     @Override
     public Collection<PiMeterModel> meters() {
-        return null;
+        return meters;
     }
 
     @Override

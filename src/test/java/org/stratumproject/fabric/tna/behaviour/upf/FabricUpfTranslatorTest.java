@@ -4,15 +4,17 @@ package org.stratumproject.fabric.tna.behaviour.upf;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.junit.Test;
+import org.onosproject.net.behaviour.upf.UpfApplication;
 import org.onosproject.net.behaviour.upf.UpfGtpTunnelPeer;
+import org.onosproject.net.behaviour.upf.UpfInterface;
+import org.onosproject.net.behaviour.upf.UpfMeter;
+import org.onosproject.net.behaviour.upf.UpfProgrammableException;
 import org.onosproject.net.behaviour.upf.UpfSessionDownlink;
 import org.onosproject.net.behaviour.upf.UpfSessionUplink;
-import org.onosproject.net.behaviour.upf.UpfApplication;
-import org.onosproject.net.behaviour.upf.UpfInterface;
-import org.onosproject.net.behaviour.upf.UpfProgrammableException;
 import org.onosproject.net.behaviour.upf.UpfTerminationDownlink;
 import org.onosproject.net.behaviour.upf.UpfTerminationUplink;
 import org.onosproject.net.flow.FlowRule;
+import org.onosproject.net.meter.MeterRequest;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -221,6 +223,50 @@ public class FabricUpfTranslatorTest {
         assertThat(translatedInterface, equalTo(expectedInterface));
     }
 
+    @Test
+    public void fabricMeterToUpfSessionMeterTest() {
+        UpfMeter translatedMeter;
+        UpfMeter expectedMeter = TestUpfConstants.SESSION_METER;
+        try {
+            translatedMeter = upfTranslator.fabricMeterToUpfSessionMeter(
+                    TestUpfConstants.FABRIC_SESSION_METER);
+        } catch (UpfProgrammableException e) {
+            assertThat("Fabric session meter should correctly translate to abstract UPF meter without error",
+                       false);
+            return;
+        }
+        assertThat(translatedMeter, equalTo(expectedMeter));
+    }
+
+    @Test
+    public void fabricMeterToUpfAppMeterTest() {
+        UpfMeter translatedMeter;
+        UpfMeter expectedMeter = TestUpfConstants.APP_METER;
+        try {
+            translatedMeter = upfTranslator.fabricMeterToUpfAppMeter(
+                    TestUpfConstants.FABRIC_APP_METER);
+        } catch (UpfProgrammableException e) {
+            assertThat("Fabric application meter should correctly " +
+                               "translate to abstract UPF meter without error",
+                       false);
+            return;
+        }
+        assertThat(translatedMeter, equalTo(expectedMeter));
+
+        // THIS SHOULD NEVER BE A CASE FOR US, WE CAN'T READ RESET METER!!!
+//        UpfMeter expectedResetMeter = TestUpfConstants.APP_METER_RESET;
+//        try {
+//            translatedMeter = upfTranslator.fabricMeterToUpfAppMeter(
+//                    TestUpfConstants.FABRIC_APP_METER_RESET);
+//        } catch (UpfProgrammableException e) {
+//            assertThat("Fabric application reset meter should correctly
+//            translate to abstract UPF reset meter without error",
+//                       false);
+//            return;
+//        }
+//        assertThat(translatedMeter, equalTo(expectedResetMeter));
+    }
+    // -------------------------------------------------------------------------
     @Test
     public void uplinkInterfaceToFabricEntryTest() {
         FlowRule translatedRule;
@@ -475,5 +521,101 @@ public class FabricUpfTranslatorTest {
         }
         assertThat(translatedRule, equalTo(expectedRule));
         assertThat(translatedRule.treatment(), equalTo(expectedRule.treatment()));
+    }
+
+    @Test
+    public void sessionUpfMeterToFabricMeterTest() {
+        MeterRequest translatedMeter;
+        MeterRequest expectedMeter = TestUpfConstants.FABRIC_SESSION_METER_REQUEST;
+        try {
+            translatedMeter = upfTranslator.upfMeterToFabricMeter(
+                    TestUpfConstants.SESSION_METER,
+                    TestUpfConstants.DEVICE_ID,
+                    TestUpfConstants.APP_ID);
+        } catch (UpfProgrammableException e) {
+            assertThat("Abstract session UPF meter should correctly " +
+                               "translate to Fabric UPF session meter without error",
+                       false);
+            return;
+        }
+        // TODO: should we implement equals for DefaultMeterRequest?
+        assertThat(translatedMeter.appId(), equalTo(expectedMeter.appId()));
+        assertThat(translatedMeter.deviceId(), equalTo(expectedMeter.deviceId()));
+        assertThat(translatedMeter.isBurst(), equalTo(expectedMeter.isBurst()));
+        assertThat(translatedMeter.scope(), equalTo(expectedMeter.scope()));
+        assertThat(translatedMeter.index(), equalTo(expectedMeter.index()));
+        assertThat(translatedMeter.bands(), equalTo(expectedMeter.bands()));
+    }
+
+    @Test
+    public void sessionUpfMeterResetToFabricMeterResetTest() {
+        MeterRequest translatedMeter;
+        MeterRequest expectedMeter = TestUpfConstants.FABRIC_SESSION_METER_RESET_REQUEST;
+        try {
+            translatedMeter = upfTranslator.upfMeterToFabricMeter(
+                    TestUpfConstants.SESSION_METER_RESET,
+                    TestUpfConstants.DEVICE_ID,
+                    TestUpfConstants.APP_ID);
+        } catch (UpfProgrammableException e) {
+            assertThat("Abstract session UPF meter should correctly " +
+                               "translate to Fabric UPF session meter without error",
+                       false);
+            return;
+        }
+        // TODO: should we implement equals for DefaultMeterRequest?
+        assertThat(translatedMeter.appId(), equalTo(expectedMeter.appId()));
+        assertThat(translatedMeter.deviceId(), equalTo(expectedMeter.deviceId()));
+        assertThat(translatedMeter.isBurst(), equalTo(expectedMeter.isBurst()));
+        assertThat(translatedMeter.scope(), equalTo(expectedMeter.scope()));
+        assertThat(translatedMeter.index(), equalTo(expectedMeter.index()));
+        assertThat(translatedMeter.bands(), equalTo(expectedMeter.bands()));
+    }
+
+    @Test
+    public void appUpfMeterToFabricMeterTest() {
+        MeterRequest translatedMeter;
+        MeterRequest expectedMeter = TestUpfConstants.FABRIC_APP_METER_REQUEST;
+        try {
+            translatedMeter = upfTranslator.upfMeterToFabricMeter(
+                    TestUpfConstants.APP_METER,
+                    TestUpfConstants.DEVICE_ID,
+                    TestUpfConstants.APP_ID);
+        } catch (UpfProgrammableException e) {
+            assertThat("Abstract app UPF meter should correctly " +
+                               "translate to Fabric UPF app meter without error",
+                       false);
+            return;
+        }
+        // TODO: should we implement equals for DefaultMeterRequest?
+        assertThat(translatedMeter.appId(), equalTo(expectedMeter.appId()));
+        assertThat(translatedMeter.deviceId(), equalTo(expectedMeter.deviceId()));
+        assertThat(translatedMeter.isBurst(), equalTo(expectedMeter.isBurst()));
+        assertThat(translatedMeter.scope(), equalTo(expectedMeter.scope()));
+        assertThat(translatedMeter.index(), equalTo(expectedMeter.index()));
+        assertThat(translatedMeter.bands(), equalTo(expectedMeter.bands()));
+    }
+
+    @Test
+    public void appUpfMeterResetToFabricMeterTest() {
+        MeterRequest translatedMeter;
+        MeterRequest expectedMeter = TestUpfConstants.FABRIC_APP_METER_RESET_REQUEST;
+        try {
+            translatedMeter = upfTranslator.upfMeterToFabricMeter(
+                    TestUpfConstants.APP_METER_RESET,
+                    TestUpfConstants.DEVICE_ID,
+                    TestUpfConstants.APP_ID);
+        } catch (UpfProgrammableException e) {
+            assertThat("Abstract app UPF meter should correctly " +
+                               "translate to Fabric UPF app meter without error",
+                       false);
+            return;
+        }
+        // TODO: should we implement equals for DefaultMeterRequest?
+        assertThat(translatedMeter.appId(), equalTo(expectedMeter.appId()));
+        assertThat(translatedMeter.deviceId(), equalTo(expectedMeter.deviceId()));
+        assertThat(translatedMeter.isBurst(), equalTo(expectedMeter.isBurst()));
+        assertThat(translatedMeter.scope(), equalTo(expectedMeter.scope()));
+        assertThat(translatedMeter.index(), equalTo(expectedMeter.index()));
+        assertThat(translatedMeter.bands(), equalTo(expectedMeter.bands()));
     }
 }

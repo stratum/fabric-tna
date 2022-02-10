@@ -125,6 +125,7 @@ public class SlicingManagerTest {
         MockPiPipelineModel pipelineModel =
                 new MockPiPipelineModel(Collections.emptyList(),
                         Collections.emptyList(),
+                        Collections.emptyList(),
                         TNA);
         MockPipeconf mockPipeconf =
                 new MockPipeconf(new PiPipeconfId(pipeconfId), pipelineModel);

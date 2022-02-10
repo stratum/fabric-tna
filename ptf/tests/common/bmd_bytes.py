@@ -9,6 +9,6 @@ elif profile_name == "fabric-int":
 elif profile_name == "fabric-upf":
     BMD_BYTES = 32
 elif profile_name == "fabric-upf-int":
-    BMD_BYTES = 40
+    BMD_BYTES = 39
 else:
     raise Exception(f"Invalid profile {profile_name}, cannot set BMD_BYTES")
