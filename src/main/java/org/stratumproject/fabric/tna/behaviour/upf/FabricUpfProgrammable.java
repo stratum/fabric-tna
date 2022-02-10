@@ -419,16 +419,16 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
             case APPLICATION:
                 return getUpfApplication();
             case SESSION_METER:
-                return getUpfSessionMeter();
+                return getUpfSessionMeters();
             case APPLICATION_METER:
-                return getUpfAppMeter();
+                return getUpfAppMeters();
             default:
                 throw new UpfProgrammableException(format("Reading entity type %s not supported.",
                                                           entityType.humanReadableName()));
         }
     }
 
-    private Collection<UpfEntity> getUpfSessionMeter() throws UpfProgrammableException {
+    private Collection<UpfEntity> getUpfSessionMeters() throws UpfProgrammableException {
         ArrayList<UpfEntity> sessionMeters = Lists.newArrayList();
         for (Meter meter : meterService.getMeters(deviceId, MeterScope.of(FABRIC_INGRESS_UPF_SESSION_METER.id()))) {
             sessionMeters.add(upfTranslator.fabricMeterToUpfSessionMeter(meter));
@@ -436,7 +436,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         return sessionMeters;
     }
 
-    private Collection<UpfEntity> getUpfAppMeter() throws UpfProgrammableException {
+    private Collection<UpfEntity> getUpfAppMeters() throws UpfProgrammableException {
         ArrayList<UpfEntity> appMeters = Lists.newArrayList();
         for (Meter meter : meterService.getMeters(deviceId, MeterScope.of(FABRIC_INGRESS_UPF_APP_METER.id()))) {
             appMeters.add(upfTranslator.fabricMeterToUpfAppMeter(meter));
