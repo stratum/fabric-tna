@@ -5,8 +5,6 @@
 
 set -e
 
-BMV2_CPU_PORT=255
-
 BMV2_PP_FLAGS=""
 
 PROFILE=$1
@@ -47,9 +45,5 @@ pltf="bmv2"
 # Copy only the relevant files to the pipeconf resources.
 mkdir -p "${DEST_DIR}/${pltf}"
 cp "${output_dir}/p4info.txt" "${DEST_DIR}/${pltf}"
-echo "${BMV2_CPU_PORT}" > "${DEST_DIR}/${pltf}/cpu_port.txt"
 cp "${output_dir}/bmv2.json" "${DEST_DIR}/${pltf}/"
 echo
-
-# CPU port.
-echo ${BMV2_CPU_PORT} > ${P4C_OUT}/cpu_port.txt
