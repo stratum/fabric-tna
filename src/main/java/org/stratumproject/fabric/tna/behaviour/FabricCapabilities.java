@@ -12,6 +12,7 @@ import java.util.Optional;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.slf4j.LoggerFactory.getLogger;
 import static org.stratumproject.fabric.tna.Constants.BMV2_COLOR_RED;
+import static org.stratumproject.fabric.tna.Constants.PORT_CPU_BMV2;
 import static org.stratumproject.fabric.tna.Constants.TNA;
 import static org.stratumproject.fabric.tna.Constants.V1MODEL;
 import static org.stratumproject.fabric.tna.Constants.PORT_CPU;
@@ -75,7 +76,7 @@ public class FabricCapabilities {
     }
 
     public Optional<Long> cpuPort() {
-        return Optional.of(PORT_CPU);
+        return isArchTna() ? Optional.of(PORT_CPU) : Optional.of(PORT_CPU_BMV2);
     }
 
     /**
