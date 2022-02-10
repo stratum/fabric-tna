@@ -12,6 +12,8 @@ import time
 import gnmi_utils
 import xnt
 from base_test import (
+    PORT_SIZE_BITS,
+    PORT_SIZE_BYTES,
     P4RuntimeTest,
     ipv4_to_binary,
     is_tna,
@@ -19,8 +21,6 @@ from base_test import (
     mac_to_binary,
     stringify,
     tvcreate,
-    PORT_SIZE_BYTES,
-    PORT_SIZE_BITS,
 )
 from bmd_bytes import BMD_BYTES
 from p4.v1 import p4runtime_pb2
@@ -905,8 +905,8 @@ class FabricTest(P4RuntimeTest):
             self.sdn_to_sdk_port = self.build_sdn_to_sdk_port_map_from_gnmi()
 
         # Common SDN ports
-        self.sdn_to_sdk_port[0xFFFFFF00] = 0x44   # Recirculate port for pipe 0
-        self.sdn_to_sdk_port[0xFFFFFF01] = 0xC4   # Recirculate port for pipe 1
+        self.sdn_to_sdk_port[0xFFFFFF00] = 0x44  # Recirculate port for pipe 0
+        self.sdn_to_sdk_port[0xFFFFFF01] = 0xC4  # Recirculate port for pipe 1
         self.sdn_to_sdk_port[0xFFFFFF02] = 0x144  # Recirculate port for pipe 2
         self.sdn_to_sdk_port[0xFFFFFF03] = 0x1C4  # Recirculate port for pipe 3
 
@@ -931,12 +931,14 @@ class FabricTest(P4RuntimeTest):
         resp = gnmi_utils.do_get(req)
         for notification in resp.notification:
             port_id = notification.update[0].val.uint_val
-            name = notification.update[0].path.elem[1].key['name']
+            name = notification.update[0].path.elem[1].key["name"]
             port_name_to_id[name] = port_id
-        req = gnmi_utils.build_gnmi_get_req("/interfaces/interface[name=*]/state/ifindex")
+        req = gnmi_utils.build_gnmi_get_req(
+            "/interfaces/interface[name=*]/state/ifindex"
+        )
         resp = gnmi_utils.do_get(req)
         for notification in resp.notification:
-            name = notification.update[0].path.elem[1].key['name']
+            name = notification.update[0].path.elem[1].key["name"]
             sdk_id = notification.update[0].val.uint_val
             port_id = port_name_to_id[name]
             port_map[port_id] = sdk_id
@@ -1297,9 +1299,7 @@ class FabricTest(P4RuntimeTest):
             priority,
         )
 
-    def read_forwarding_acl_set_output_port(
-      self, priority=DEFAULT_PRIORITY, **matches
-    ):
+    def read_forwarding_acl_set_output_port(self, priority=DEFAULT_PRIORITY, **matches):
         matches = self.build_acl_matches(**matches)
         return self.read_table_entry("acl.acl", matches, priority)
 
@@ -1324,7 +1324,7 @@ class FabricTest(P4RuntimeTest):
     def add_forwarding_acl_drop_ingress_port(self, ingress_port):
 
         ingress_port_ = stringify(ingress_port, PORT_SIZE_BYTES)
-        ingress_port_mask_ = stringify(2**PORT_SIZE_BITS - 1, PORT_SIZE_BYTES)
+        ingress_port_mask_ = stringify(2 ** PORT_SIZE_BITS - 1, PORT_SIZE_BYTES)
         self.send_request_add_entry_to_action(
             "acl.acl",
             [self.Ternary("ig_port", ingress_port_, ingress_port_mask_)],
@@ -1391,7 +1391,7 @@ class FabricTest(P4RuntimeTest):
             matches.append(self.Ternary("l4_dport", l4_dport_, l4_dport_mask))
         if ig_port is not None:
             ig_port_ = stringify(ig_port, PORT_SIZE_BYTES)
-            ig_port_mask = stringify(2**PORT_SIZE_BITS - 1, PORT_SIZE_BYTES)
+            ig_port_mask = stringify(2 ** PORT_SIZE_BITS - 1, PORT_SIZE_BYTES)
             matches.append(self.Ternary("ig_port", ig_port_, ig_port_mask))
         return matches
 
@@ -2468,7 +2468,7 @@ class SlicingTest(FabricTest):
         )
 
     def add_slice_tc_classifier_entry(
-            self, slice_id=None, tc=None, trust_dscp=False, **ftuple
+        self, slice_id=None, tc=None, trust_dscp=False, **ftuple
     ):
         if trust_dscp:
             action = "FabricIngress.slice_tc_classifier.trust_dscp"
@@ -2662,7 +2662,13 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
         )
         self.write_request(req)
 
-    def setup_uplink_ue_session(self, tunnel_dst_addr, teid, session_meter_idx=DEFAULT_SESSION_METER_IDX, drop=False):
+    def setup_uplink_ue_session(
+        self,
+        tunnel_dst_addr,
+        teid,
+        session_meter_idx=DEFAULT_SESSION_METER_IDX,
+        drop=False,
+    ):
         req = self.get_new_write_request()
         action_params = []
         if not drop:
@@ -2683,7 +2689,13 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
         self.write_request(req)
 
     def setup_uplink_termination(
-        self, ue_session, ctr_id, tc=DEFAULT_TC, drop=False, app_id=NO_APP_ID, app_meter_idx=DEFAULT_APP_METER_IDX
+        self,
+        ue_session,
+        ctr_id,
+        tc=DEFAULT_TC,
+        drop=False,
+        app_id=NO_APP_ID,
+        app_meter_idx=DEFAULT_APP_METER_IDX,
     ):
         req = self.get_new_write_request()
         action_params = [
@@ -2710,13 +2722,19 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
         )
         self.write_request(req)
 
-    def setup_downlink_ue_session(self, ue_addr, tunnel_peer_id, session_meter_idx=DEFAULT_SESSION_METER_IDX, drop=False):
+    def setup_downlink_ue_session(
+        self,
+        ue_addr,
+        tunnel_peer_id,
+        session_meter_idx=DEFAULT_SESSION_METER_IDX,
+        drop=False,
+    ):
         req = self.get_new_write_request()
         if not drop:
             action_name = "FabricIngress.upf.set_downlink_session"
             action_params = [
                 ("tun_peer_id", stringify(tunnel_peer_id, 1)),
-                ("session_meter_idx", stringify(session_meter_idx, 2))
+                ("session_meter_idx", stringify(session_meter_idx, 2)),
             ]
         else:
             action_name = "FabricIngress.upf.set_downlink_session_drop"
@@ -2731,7 +2749,11 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
         self.write_request(req)
 
     def setup_downlink_ue_session_dbuf(
-        self, ue_addr, tunnel_peer_id, is_dbuf_present=True, session_meter_idx=DEFAULT_SESSION_METER_IDX,
+        self,
+        ue_addr,
+        tunnel_peer_id,
+        is_dbuf_present=True,
+        session_meter_idx=DEFAULT_SESSION_METER_IDX,
     ):
         req = self.get_new_write_request()
         if is_dbuf_present:
@@ -2740,8 +2762,10 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
                 "FabricIngress.upf.downlink_sessions",
                 [self.Exact("ue_addr", ipv4_to_binary(ue_addr))],
                 "FabricIngress.upf.set_downlink_session_buf",
-                [("tun_peer_id", stringify(tunnel_peer_id, 1)),
-                 ("session_meter_idx", stringify(session_meter_idx, 2))],
+                [
+                    ("tun_peer_id", stringify(tunnel_peer_id, 1)),
+                    ("session_meter_idx", stringify(session_meter_idx, 2)),
+                ],
             )
         else:
             self.push_update_add_entry_to_action(
@@ -2834,9 +2858,15 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
         session_meter_idx=DEFAULT_SESSION_METER_IDX,
     ):
         self.add_s1u_iface(s1u_addr=s1u_sgw_addr, slice_id=slice_id)
-        self.setup_uplink_ue_session(teid=teid, tunnel_dst_addr=s1u_sgw_addr, session_meter_idx=session_meter_idx)
+        self.setup_uplink_ue_session(
+            teid=teid, tunnel_dst_addr=s1u_sgw_addr, session_meter_idx=session_meter_idx
+        )
         self.setup_uplink_termination(
-            ue_session=ue_addr, ctr_id=ctr_id, tc=tc, app_id=app_id, app_meter_idx=app_meter_idx
+            ue_session=ue_addr,
+            ctr_id=ctr_id,
+            tc=tc,
+            app_id=app_id,
+            app_meter_idx=app_meter_idx,
         )
 
     def setup_downlink(
@@ -2853,9 +2883,19 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
         session_meter_idx=DEFAULT_SESSION_METER_IDX,
     ):
         self.add_ue_pool(pool_addr=ue_addr, slice_id=slice_id)
-        self.setup_downlink_ue_session(ue_addr=ue_addr, tunnel_peer_id=tunnel_peer_id, session_meter_idx=session_meter_idx)
+        self.setup_downlink_ue_session(
+            ue_addr=ue_addr,
+            tunnel_peer_id=tunnel_peer_id,
+            session_meter_idx=session_meter_idx,
+        )
         self.setup_downlink_termination_tunnel(
-            ue_session=ue_addr, ctr_id=ctr_id, teid=teid, tc=tc, qfi=qfi, app_id=app_id, app_meter_idx=app_meter_idx
+            ue_session=ue_addr,
+            ctr_id=ctr_id,
+            teid=teid,
+            tc=tc,
+            qfi=qfi,
+            app_id=app_id,
+            app_meter_idx=app_meter_idx,
         )
 
     def enable_encap_with_psc(self):
@@ -2961,7 +3001,7 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
             self.enable_policing(
                 slice_id,
                 DEFAULT_TC if tc is None else tc,
-                V1MODEL_COLOR_RED if is_v1model() else COLOR_RED
+                V1MODEL_COLOR_RED if is_v1model() else COLOR_RED,
             )
         app_meter_idx = DEFAULT_APP_METER_IDX
         if app_max_bps is not None:
@@ -2998,7 +3038,7 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
             tagged2=tagged2,
             is_next_hop_spine=is_next_hop_spine,
             eg_port=eg_port,
-            verify_pkt=not meter_drop
+            verify_pkt=not meter_drop,
         )
 
         if not verify_counters:
@@ -3037,7 +3077,9 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
                         egress_bytes - GTPU_OPTIONS_HDR_BYTES - GTPU_EXT_PSC_BYTES
                     )
         # Verify the Ingress and Egress UPF counters
-        self.verify_upf_counters(UPLINK_UPF_CTR_IDX, ingress_bytes, egress_bytes, 1, egress_pkts)
+        self.verify_upf_counters(
+            UPLINK_UPF_CTR_IDX, ingress_bytes, egress_bytes, 1, egress_pkts
+        )
 
     def runUplinkRecircTest(
         self, ue_out_pkt, allow, tagged1, tagged2, is_next_hop_spine
@@ -3246,7 +3288,7 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
             self.enable_policing(
                 slice_id,
                 DEFAULT_TC if tc is None else tc,
-                V1MODEL_COLOR_RED if is_v1model() else COLOR_RED
+                V1MODEL_COLOR_RED if is_v1model() else COLOR_RED,
             )
         app_meter_idx = DEFAULT_APP_METER_IDX
         if app_max_bps is not None:
@@ -3480,7 +3522,9 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
         )
 
     def add_qer_session_meter(self, session_meter_idx, session_max_bps):
-        self.__add_upf_meter("FabricIngress.upf.session_meter", session_meter_idx, session_max_bps)
+        self.__add_upf_meter(
+            "FabricIngress.upf.session_meter", session_meter_idx, session_max_bps
+        )
 
     def add_qer_app_meter(self, app_meter_idx, app_max_bps):
         self.__add_upf_meter("FabricIngress.upf.app_meter", app_meter_idx, app_max_bps)
@@ -3496,6 +3540,7 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
             pir=pir if pir > 0 else 1,
             pburst=pburst if pburst > 0 else 1,
         )
+
 
 class IntTest(IPv4UnicastTest):
     """
@@ -4315,13 +4360,19 @@ class IntTest(IPv4UnicastTest):
         self.set_up_latency_threshold_for_q_report(threshold_trigger, threshold_reset)
         # Sets the quota for the output port/queue of INT report to zero to make sure
         # we won't keep getting reports for this type of packet.
-        self.set_queue_report_quota(port=self.sdn_to_sdk_port[self.port3], qid=0, quota=0)
+        self.set_queue_report_quota(
+            port=self.sdn_to_sdk_port[self.port3], qid=0, quota=0
+        )
         recirc_ports = RECIRCULATE_PORTS if is_tna() else RECIRCULATE_PORT_V1MODEL
         for recirc_port in recirc_ports:
-            self.set_queue_report_quota(port=self.sdn_to_sdk_port[recirc_port], qid=0, quota=0)
+            self.set_queue_report_quota(
+                port=self.sdn_to_sdk_port[recirc_port], qid=0, quota=0
+            )
         if reset_quota:
             # To ensure we have enough quota to send a queue report.
-            self.set_queue_report_quota(port=self.sdn_to_sdk_port[eg_port], qid=0, quota=1)
+            self.set_queue_report_quota(
+                port=self.sdn_to_sdk_port[eg_port], qid=0, quota=1
+            )
 
         # TODO: Use MPLS test instead of IPv4 test if device is spine.
         # TODO: In these tests, there is only one egress port although the

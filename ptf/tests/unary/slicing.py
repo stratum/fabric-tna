@@ -265,6 +265,7 @@ class FabricUpfUplinkWithDscpRewriteTest(UpfSimpleTest, SlicingTest):
                                     use_default_tc,
                                 )
 
+
 @group("upf")
 class FabricUpfUplinkWithMeterTest(UpfSimpleTest):
     """Tests meters for UPF. This is mostly a dummmy test class to verify
@@ -273,12 +274,7 @@ class FabricUpfUplinkWithMeterTest(UpfSimpleTest):
 
     @tvsetup
     @autocleanup
-    def doRunTest(
-        self,
-        pkt,
-        app_bps,
-        session_bps
-    ):
+    def doRunTest(self, pkt, app_bps, session_bps):
         upf_slice_id = 11
         upf_tc = 2
         eg_port = self.port2
@@ -303,9 +299,7 @@ class FabricUpfUplinkWithMeterTest(UpfSimpleTest):
                 for session_bps in [0, 100000]:
                     print(
                         "Testing pkt={}, app_bps={}, session_bps={}...".format(
-                            pkt_type,
-                            app_bps,
-                            session_bps,
+                            pkt_type, app_bps, session_bps,
                         )
                     )
                     pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
@@ -319,6 +313,7 @@ class FabricUpfUplinkWithMeterTest(UpfSimpleTest):
                         pkt=pkt, app_bps=app_bps, session_bps=session_bps,
                     )
 
+
 @group("upf")
 class FabricUpfDownlinkWithMeterTest(UpfSimpleTest):
     """Tests meters for UPF. This is mostly a dummmy test class to verify
@@ -327,12 +322,7 @@ class FabricUpfDownlinkWithMeterTest(UpfSimpleTest):
 
     @tvsetup
     @autocleanup
-    def doRunTest(
-            self,
-            pkt,
-            app_bps,
-            session_bps
-    ):
+    def doRunTest(self, pkt, app_bps, session_bps):
         upf_slice_id = 11
         upf_tc = 2
         eg_port = self.port2
@@ -357,9 +347,7 @@ class FabricUpfDownlinkWithMeterTest(UpfSimpleTest):
                 for session_bps in [0, 100000]:
                     print(
                         "Testing pkt={}, app_bps={}, session_bps={}...".format(
-                            pkt_type,
-                            app_bps,
-                            session_bps,
+                            pkt_type, app_bps, session_bps,
                         )
                     )
                     pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
@@ -372,6 +360,7 @@ class FabricUpfDownlinkWithMeterTest(UpfSimpleTest):
                     self.doRunTest(
                         pkt=pkt, app_bps=app_bps, session_bps=session_bps,
                     )
+
 
 class FabricIPv4UnicastWithPolicingTest(SlicingTest, IPv4UnicastTest):
     """Tests QoS policer. This is mostly a dummmy test class to verify basic programming of

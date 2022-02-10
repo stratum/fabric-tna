@@ -7,7 +7,7 @@ import difflib
 import time
 from unittest import skip, skipIf
 
-from base_test import autocleanup, is_v1model, tvsetup, PORT_SIZE_BYTES
+from base_test import PORT_SIZE_BYTES, autocleanup, is_v1model, tvsetup
 from fabric_test import *  # noqa
 from p4.config.v1 import p4info_pb2
 from ptf.testutils import group
@@ -2229,7 +2229,9 @@ class FabricIntQueueReportQuotaTest(IntTest):
             threshold_trigger=threshold_trigger,
             threshold_reset=threshold_reset,
         )
-        self.verify_quota(port=self.sdn_to_sdk_port[self.port2], qid=0, quota=quota_left)
+        self.verify_quota(
+            port=self.sdn_to_sdk_port[self.port2], qid=0, quota=quota_left
+        )
 
     def runTest(self):
         print("")
@@ -2237,7 +2239,9 @@ class FabricIntQueueReportQuotaTest(IntTest):
         # After that, configure the threshold to a small value and send a packet to the
         # device to trigger queue report. We should expect to receive an INT queue
         # report and the quota should become zero.
-        self.set_queue_report_quota(port=self.sdn_to_sdk_port[self.port2], qid=0, quota=1)
+        self.set_queue_report_quota(
+            port=self.sdn_to_sdk_port[self.port2], qid=0, quota=1
+        )
         self.doRunTest(
             expect_int_report=True,
             quota_left=0,
@@ -2439,6 +2443,7 @@ class FabricDoubleTaggedHostDownstream(DoubleVlanTerminationTest):
                 )
                 self.doRunTest(pkt, in_tagged)
 
+
 @group("p4rt")
 class TableEntryReadWriteTest(FabricTest):
     @tvsetup
@@ -2458,7 +2463,9 @@ class TableEntryReadWriteTest(FabricTest):
 
         req, _ = self.add_forwarding_acl_set_output_port(self.port2, ig_port=self.port1)
         expected_acl_entry = req.updates[0].entity.table_entry
-        received_acl_entry = self.read_forwarding_acl_set_output_port(ig_port=self.port1)
+        received_acl_entry = self.read_forwarding_acl_set_output_port(
+            ig_port=self.port1
+        )
         self.verify_p4runtime_entity(expected_acl_entry, received_acl_entry)
 
     def runTest(self):
@@ -2573,12 +2580,12 @@ class MulticastGroupModificationTest(FabricTest):
         grp_id = 10
         # (instance, port)
         replicas = [
-          (1, self.port1),
-          (1, self.port2),
-          (1, self.port3),
-          (2, self.port1),
-          (2, self.port2),
-          (2, self.port3),
+            (1, self.port1),
+            (1, self.port2),
+            (1, self.port3),
+            (2, self.port1),
+            (2, self.port2),
+            (2, self.port3),
         ]
         self.add_mcast_group(grp_id, replicas)
 
@@ -2646,6 +2653,7 @@ class CounterTest(BridgingTest):
     def runTest(self):
         print("")
         self.doRunTest()
+
 
 # Disable the loopback mode test since we are going to use Stratum main.p4 for CCP instead of fabric-tna
 # and we will remove loopback mode from fabric-tna once we move all CCP tests to main.p4.
@@ -2940,7 +2948,9 @@ class FabricOptimizedFieldDetectorTest(FabricTest):
                 elif match.match_type == p4info_pb2.MatchField.MatchType.TERNARY:
                     match_value = self.generateBytestring(match.bitwidth)
                     # Use 0xfff...ff as mask
-                    match_mask = self.generateBytestring(match.bitwidth, (1 << match.bitwidth) - 1)
+                    match_mask = self.generateBytestring(
+                        match.bitwidth, (1 << match.bitwidth) - 1
+                    )
                     match_keys.append(self.Ternary(match.name, match_value, match_mask))
                     priority = 1
                 elif match.match_type == p4info_pb2.MatchField.MatchType.RANGE:
