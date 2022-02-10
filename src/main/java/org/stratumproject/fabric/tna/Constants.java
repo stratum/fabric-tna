@@ -84,6 +84,7 @@ public final class Constants {
 
     public static final long PORT_UNSPECIFIED = 0;
     public static final long PORT_CPU = 0xFFFFFFFDL;
+    public static final long PORT_CPU_BMV2 = 255;
 
     // hide default constructor
     private Constants() {

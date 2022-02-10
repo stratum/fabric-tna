@@ -78,7 +78,7 @@ constants:
 		get-hdr-size.py --py-out "$(DIR)/ptf/tests/common/bmd_bytes.py" "$(DIR)/p4src/tna/build"
 
 _m2_vol:
-	docker volume create --opt o=uid=$(UID) --opt device=tmpfs --opt type=tmpfs $(MVN_CACHE)
+	docker volume create --opt o=uid=$(UID) --opt device=tmpfs --opt type=tmpfs $(MVN_CACHE_DOCKER_VOLUME)
 
 _mvn_package: _m2_vol
 	$(info *** Building ONOS app...)
