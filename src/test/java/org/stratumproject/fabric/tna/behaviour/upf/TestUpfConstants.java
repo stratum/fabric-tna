@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package org.stratumproject.fabric.tna.behaviour.upf;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Range;
 import org.apache.commons.lang3.tuple.Pair;
 import org.onlab.packet.Ip4Address;
@@ -9,11 +10,12 @@ import org.onlab.packet.Ip4Prefix;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.DefaultApplicationId;
 import org.onosproject.net.DeviceId;
+import org.onosproject.net.behaviour.upf.UpfApplication;
 import org.onosproject.net.behaviour.upf.UpfGtpTunnelPeer;
+import org.onosproject.net.behaviour.upf.UpfInterface;
+import org.onosproject.net.behaviour.upf.UpfMeter;
 import org.onosproject.net.behaviour.upf.UpfSessionDownlink;
 import org.onosproject.net.behaviour.upf.UpfSessionUplink;
-import org.onosproject.net.behaviour.upf.UpfApplication;
-import org.onosproject.net.behaviour.upf.UpfInterface;
 import org.onosproject.net.behaviour.upf.UpfTerminationDownlink;
 import org.onosproject.net.behaviour.upf.UpfTerminationUplink;
 import org.onosproject.net.flow.DefaultFlowRule;
@@ -21,18 +23,29 @@ import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
 import org.onosproject.net.flow.FlowRule;
 import org.onosproject.net.flow.criteria.PiCriterion;
+import org.onosproject.net.meter.Band;
+import org.onosproject.net.meter.DefaultBand;
+import org.onosproject.net.meter.DefaultMeter;
+import org.onosproject.net.meter.DefaultMeterRequest;
+import org.onosproject.net.meter.Meter;
+import org.onosproject.net.meter.MeterRequest;
+import org.onosproject.net.meter.MeterScope;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
+import org.onosproject.net.pi.runtime.PiMeterCellId;
 import org.stratumproject.fabric.tna.behaviour.P4InfoConstants;
 
 import java.util.Arrays;
 
+import static org.onosproject.net.meter.Meter.Unit.BYTES_PER_SEC;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.APP_METER_IDX;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.CTR_ID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_UPF_EG_TUNNEL_PEERS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_UPF_LOAD_TUNNEL_PARAMS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_APPLICATIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_APP_FWD;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_APP_FWD_NO_TC;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_APP_METER;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_DOWNLINK_DROP;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_DOWNLINK_FWD_ENCAP;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_DOWNLINK_FWD_ENCAP_NO_TC;
@@ -42,6 +55,7 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_ING
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_IFACE_CORE;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_IG_TUNNEL_PEERS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_INTERFACES;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_SESSION_METER;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_SET_APP_ID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_SET_DOWNLINK_SESSION;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_SET_DOWNLINK_SESSION_BUF;
@@ -63,6 +77,7 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_TUN_PE
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_UE_ADDR;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_UE_SESSION_ID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.QFI;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.SESSION_METER_IDX;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.SLICE_ID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TC;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.TEID;
@@ -97,6 +112,8 @@ public final class TestUpfConstants {
     // TODO: tunnel source port currently not stored on writes, so all reads are 0
     public static final short TUNNEL_SPORT = 2160;
     public static final int PHYSICAL_COUNTER_SIZE = 512;
+    public static final int PHYSICAL_SESSION_METER_SIZE = 512;
+    public static final int PHYSICAL_APP_METER_SIZE = 512;
     public static final int PHYSICAL_MAX_UE_SESSIONS = 512;
     public static final int PHYSICAL_MAX_UPF_TERMINATIONS = 512;
     public static final int PHYSICAL_MAX_TUNNELS = 256;
@@ -112,6 +129,13 @@ public final class TestUpfConstants {
     public static final Pair<Short, Short> APP_L4_RANGE = Pair.of((short) 100, (short) 1000);
     public static final byte APP_IP_PROTO = 6;
 
+    public static final int METER_CELL_ID = 10;
+    public static final short DEFAULT_APP_METER_IDX = 0;
+    public static final int PIR = 10000;
+    public static final int PBURST = 1000;
+    public static final int CIR = 5000;
+    public static final int CBURST = 500;
+
     public static final UpfGtpTunnelPeer GTP_TUNNEL_PEER = UpfGtpTunnelPeer.builder()
             .withTunnelPeerId(ENB_GTP_TUNNEL_PEER)
             .withSrcAddr(S1U_ADDR)
@@ -122,17 +146,20 @@ public final class TestUpfConstants {
     public static final UpfSessionUplink UPLINK_UE_SESSION = UpfSessionUplink.builder()
             .withTeid(TEID_VALUE)
             .withTunDstAddr(S1U_ADDR)
+            .withSessionMeterIdx(METER_CELL_ID)
             .build();
 
     public static final UpfSessionDownlink DOWNLINK_UE_SESSION = UpfSessionDownlink.builder()
             .withUeAddress(UE_ADDR)
             .withGtpTunnelPeerId(ENB_GTP_TUNNEL_PEER)
+            .withSessionMeterIdx(METER_CELL_ID)
             .build();
 
     public static final UpfSessionDownlink DOWNLINK_UE_SESSION_DBUF = UpfSessionDownlink.builder()
             .withUeAddress(UE_ADDR)
             .withGtpTunnelPeerId(DBUF_TUNNEL_PEER)
             .needsBuffering(true)
+            .withSessionMeterIdx(METER_CELL_ID)
             .build();
 
     public static final UpfTerminationUplink UPLINK_UPF_TERMINATION = UpfTerminationUplink.builder()
@@ -140,6 +167,7 @@ public final class TestUpfConstants {
             .withApplicationId(APP_FILTERING_ID)
             .withCounterId(UPLINK_COUNTER_CELL_ID)
             .withTrafficClass(UPLINK_TC)
+            .withAppMeterIdx(METER_CELL_ID)
             .build();
 
     public static final UpfTerminationUplink UPLINK_UPF_TERMINATION_NO_TC = UpfTerminationUplink.builder()
@@ -160,6 +188,7 @@ public final class TestUpfConstants {
             .withTrafficClass(DOWNLINK_TC)
             .withTeid(TEID_VALUE_QOS)
             .withQfi(DOWNLINK_QFI)
+            .withAppMeterIdx(METER_CELL_ID)
             .build();
 
     public static final UpfApplication APPLICATION_FILTERING = UpfApplication.builder()
@@ -187,6 +216,23 @@ public final class TestUpfConstants {
     public static final UpfInterface UPLINK_INTERFACE = UpfInterface.createS1uFrom(S1U_ADDR, SLICE_MOBILE);
 
     public static final UpfInterface DOWNLINK_INTERFACE = UpfInterface.createUePoolFrom(UE_POOL, SLICE_MOBILE);
+
+    public static final UpfMeter APP_METER = UpfMeter.builder()
+            .setApplication()
+            .setCellId(METER_CELL_ID)
+            .setPeakBand(PIR, PBURST)
+            .setCommittedBand(CIR, CBURST)
+            .build();
+
+    public static final UpfMeter APP_METER_RESET = UpfMeter.resetApplication(METER_CELL_ID);
+
+    public static final UpfMeter SESSION_METER = UpfMeter.builder()
+            .setSession()
+            .setCellId(METER_CELL_ID)
+            .setPeakBand(PIR, PBURST)
+            .build();
+
+    public static final UpfMeter SESSION_METER_RESET = UpfMeter.resetSession(METER_CELL_ID);
 
     public static final FlowRule FABRIC_INGRESS_GTP_TUNNEL_PEER = DefaultFlowRule.builder()
             .forDevice(DEVICE_ID).fromApp(APP_ID).makePermanent()
@@ -235,6 +281,7 @@ public final class TestUpfConstants {
             .withTreatment(DefaultTrafficTreatment.builder()
                     .piTableAction(PiAction.builder()
                             .withId(FABRIC_INGRESS_UPF_SET_UPLINK_SESSION)
+                            .withParameter(new PiActionParam(SESSION_METER_IDX, (short) METER_CELL_ID))
                             .build()).build())
             .withPriority(DEFAULT_PRIORITY)
             .build();
@@ -251,6 +298,7 @@ public final class TestUpfConstants {
                             PiAction.builder()
                                     .withId(FABRIC_INGRESS_UPF_SET_DOWNLINK_SESSION)
                                     .withParameter(new PiActionParam(TUN_PEER_ID, ENB_GTP_TUNNEL_PEER))
+                                    .withParameter(new PiActionParam(SESSION_METER_IDX, (short) METER_CELL_ID))
                                     .build()).build())
             .withPriority(DEFAULT_PRIORITY)
             .build();
@@ -262,12 +310,14 @@ public final class TestUpfConstants {
                                   .matchPi(PiCriterion.builder()
                                                    .matchExact(HDR_UE_ADDR, UE_ADDR.toInt())
                                                    .build()).build())
-            .withTreatment(DefaultTrafficTreatment.builder()
-                                   .piTableAction(
-                                           PiAction.builder()
-                                                   .withId(FABRIC_INGRESS_UPF_SET_DOWNLINK_SESSION_BUF)
-                                                   .withParameter(new PiActionParam(TUN_PEER_ID, DBUF_TUNNEL_PEER))
-                                                   .build()).build())
+            .withTreatment(
+                    DefaultTrafficTreatment.builder()
+                            .piTableAction(
+                                    PiAction.builder()
+                                            .withId(FABRIC_INGRESS_UPF_SET_DOWNLINK_SESSION_BUF)
+                                            .withParameter(new PiActionParam(TUN_PEER_ID, DBUF_TUNNEL_PEER))
+                                            .withParameter(new PiActionParam(SESSION_METER_IDX, (short) METER_CELL_ID))
+                                            .build()).build())
             .withPriority(DEFAULT_PRIORITY)
             .build();
 
@@ -285,7 +335,8 @@ public final class TestUpfConstants {
                             .withId(FABRIC_INGRESS_UPF_APP_FWD)
                             .withParameters(Arrays.asList(
                                     new PiActionParam(CTR_ID, UPLINK_COUNTER_CELL_ID),
-                                    new PiActionParam(TC, UPLINK_TC)
+                                    new PiActionParam(TC, UPLINK_TC),
+                                    new PiActionParam(APP_METER_IDX, (short) METER_CELL_ID)
                             ))
                             .build()).build())
             .withPriority(DEFAULT_PRIORITY)
@@ -304,7 +355,9 @@ public final class TestUpfConstants {
                                    .piTableAction(PiAction.builder()
                                                           .withId(FABRIC_INGRESS_UPF_APP_FWD_NO_TC)
                                                           .withParameters(Arrays.asList(
-                                                                  new PiActionParam(CTR_ID, UPLINK_COUNTER_CELL_ID)
+                                                                  new PiActionParam(CTR_ID, UPLINK_COUNTER_CELL_ID),
+                                                                  new PiActionParam(APP_METER_IDX,
+                                                                                    DEFAULT_APP_METER_IDX)
                                                           ))
                                                           .build()).build())
             .withPriority(DEFAULT_PRIORITY)
@@ -345,7 +398,8 @@ public final class TestUpfConstants {
                                     new PiActionParam(CTR_ID, DOWNLINK_COUNTER_CELL_ID),
                                     new PiActionParam(TC, DOWNLINK_TC),
                                     new PiActionParam(TEID, TEID_VALUE_QOS),
-                                    new PiActionParam(QFI, DOWNLINK_QFI)  // 5G case
+                                    new PiActionParam(QFI, DOWNLINK_QFI),  // 5G case
+                                    new PiActionParam(APP_METER_IDX, (short) METER_CELL_ID)
                             ))
                             .build()).build())
             .withPriority(DEFAULT_PRIORITY)
@@ -366,7 +420,9 @@ public final class TestUpfConstants {
                                                           .withParameters(Arrays.asList(
                                                                   new PiActionParam(CTR_ID, DOWNLINK_COUNTER_CELL_ID),
                                                                   new PiActionParam(TEID, TEID_VALUE_QOS),
-                                                                  new PiActionParam(QFI, DOWNLINK_QFI)
+                                                                  new PiActionParam(QFI, DOWNLINK_QFI),
+                                                                  new PiActionParam(APP_METER_IDX,
+                                                                                    DEFAULT_APP_METER_IDX)
                                                           ))
                                                           .build()).build())
             .withPriority(DEFAULT_PRIORITY)
@@ -456,6 +512,62 @@ public final class TestUpfConstants {
                                     .build()).build())
             .withPriority(APP_FILTERING_PRIORITY)
             .build();
+
+    public static final Meter FABRIC_SESSION_METER = DefaultMeter.builder()
+            .forDevice(DEVICE_ID).fromApp(APP_ID)
+            .withCellId(PiMeterCellId.ofIndirect(FABRIC_INGRESS_UPF_SESSION_METER, METER_CELL_ID))
+            .withBands(Lists.newArrayList(
+                    DefaultBand.builder().ofType(Band.Type.MARK_RED).withRate(PIR).burstSize(PBURST).build(),
+                    DefaultBand.builder().ofType(Band.Type.MARK_YELLOW).withRate(1L).burstSize(1L).build()
+            ))
+            .withUnit(BYTES_PER_SEC)
+            .build();
+
+    public static final MeterRequest FABRIC_SESSION_METER_REQUEST = DefaultMeterRequest.builder()
+            .forDevice(DEVICE_ID).fromApp(APP_ID)
+            .withIndex((long) METER_CELL_ID)
+            .withScope(MeterScope.of(FABRIC_INGRESS_UPF_SESSION_METER.id()))
+            .withUnit(BYTES_PER_SEC)
+            .withBands(Lists.newArrayList(
+                    DefaultBand.builder().ofType(Band.Type.MARK_RED).withRate(PIR).burstSize(PBURST).build(),
+                    DefaultBand.builder().ofType(Band.Type.MARK_YELLOW).withRate(1L).burstSize(1L).build()
+            ))
+            .add();
+
+    public static final MeterRequest FABRIC_SESSION_METER_RESET_REQUEST = DefaultMeterRequest.builder()
+            .forDevice(DEVICE_ID).fromApp(APP_ID)
+            .withIndex((long) METER_CELL_ID)
+            .withScope(MeterScope.of(FABRIC_INGRESS_UPF_SESSION_METER.id()))
+            .withUnit(BYTES_PER_SEC)
+            .remove();
+
+    public static final Meter FABRIC_APP_METER = DefaultMeter.builder()
+            .forDevice(DEVICE_ID).fromApp(APP_ID)
+            .withCellId(PiMeterCellId.ofIndirect(FABRIC_INGRESS_UPF_APP_METER, METER_CELL_ID))
+            .withBands(Lists.newArrayList(
+                    DefaultBand.builder().ofType(Band.Type.MARK_RED).withRate(PIR).burstSize(PBURST).build(),
+                    DefaultBand.builder().ofType(Band.Type.MARK_YELLOW).withRate(CIR).burstSize(CBURST).build()
+            ))
+            .withUnit(BYTES_PER_SEC)
+            .build();
+
+    public static final MeterRequest FABRIC_APP_METER_REQUEST = DefaultMeterRequest.builder()
+            .forDevice(DEVICE_ID).fromApp(APP_ID)
+            .withIndex((long) METER_CELL_ID)
+            .withScope(MeterScope.of(FABRIC_INGRESS_UPF_APP_METER.id()))
+            .withUnit(BYTES_PER_SEC)
+            .withBands(Lists.newArrayList(
+                    DefaultBand.builder().ofType(Band.Type.MARK_RED).withRate(PIR).burstSize(PBURST).build(),
+                    DefaultBand.builder().ofType(Band.Type.MARK_YELLOW).withRate(CIR).burstSize(CBURST).build()
+            ))
+            .add();
+
+    public static final MeterRequest FABRIC_APP_METER_RESET_REQUEST = DefaultMeterRequest.builder()
+            .forDevice(DEVICE_ID).fromApp(APP_ID)
+            .withIndex((long) METER_CELL_ID)
+            .withScope(MeterScope.of(FABRIC_INGRESS_UPF_APP_METER.id()))
+            .withUnit(BYTES_PER_SEC)
+            .remove();
 
     /**
      * Hidden constructor for utility class.

@@ -30,6 +30,7 @@ parser FabricParser (packet_in                            packet,
         fabric_md.ingress.bridged.int_bmd.wip_type = INT_IS_NOT_WIP;
 #endif // WITH_INT
         fabric_md.ingress.bridged.base.encap_presence = EncapPresence.NONE;
+        fabric_md.ingress.upf_meter_color = MeterColor_t.GREEN;
 
         transition check_ethernet;
     }

@@ -19,7 +19,11 @@ typedef bit<16> MulticastGroupId_t; // Multicast group id
 typedef bit<5>  QueueId_t;          // Queue id
 typedef bit<10> MirrorId_t;         // Mirror session id
 typedef bit<16> ReplicationId_t;    // Replication id
-
+enum bit<2> MeterColor_t {
+    GREEN = V1MODEL_METER_COLOR_GREEN,
+    YELLOW = V1MODEL_METER_COLOR_YELLOW,
+    RED = V1MODEL_METER_COLOR_RED
+}
 typedef bit<1> BOOL;
 
 typedef bit<8> FieldListIndex_t;

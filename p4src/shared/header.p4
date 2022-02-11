@@ -168,12 +168,15 @@ header gtpu_ext_psc_t {
 @flexible
 struct upf_bridged_metadata_t {
     tun_peer_id_t    tun_peer_id;
-    upf_ctr_id_t     upf_ctr_id;
+    upf_ctr_idx_t    upf_ctr_id;
     bit<6>           qfi;
     bool             needs_gtpu_encap;
     bool             skip_upf;
     bool             skip_egress_upf_ctr;
     teid_t           teid;
+#ifdef V1MODEL
+    bit<4>          _pad;
+#endif
 }
 
 #ifdef WITH_INT
@@ -377,6 +380,7 @@ struct fabric_ingress_metadata_t {
     bool                     is_upf_hit;
     slice_id_t               upf_slice_id;
     tc_t                     upf_tc;
+    MeterColor_t             upf_meter_color;
     PortType_t               ig_port_type;
     common_mirror_metadata_t mirror;
 }

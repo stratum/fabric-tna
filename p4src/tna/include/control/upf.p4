@@ -17,7 +17,10 @@ control UpfIngress(
     //===== Misc Things ======//
     //========================//
 
-    Counter<bit<64>, bit<16>>(MAX_UPF_COUNTERS, CounterType_t.PACKETS_AND_BYTES) terminations_counter;
+    Counter<bit<64>, upf_ctr_idx_t>(MAX_UPF_COUNTERS, CounterType_t.PACKETS_AND_BYTES) terminations_counter;
+
+    Meter<session_meter_idx_t>(MAX_SESSION_METERS, MeterType_t.BYTES) session_meter;
+    Meter<app_meter_idx_t>(MAX_APP_METERS, MeterType_t.BYTES) app_meter;
 
     bool is_uplink = false;
     //FIXME: workaround, without putting term_hit on a separate PHV container,
@@ -34,6 +37,11 @@ control UpfIngress(
     bit<8> internal_app_id = DEFAULT_APP_ID;
     ue_session_id_t ue_session_id = 0;
 
+    session_meter_idx_t session_meter_idx_internal = DEFAULT_SESSION_METER_IDX;
+    app_meter_idx_t app_meter_idx_internal = DEFAULT_APP_METER_IDX;
+
+    MeterColor_t app_color;
+
     @hidden
     action _drop_common() {
         ig_dprsr_md.drop_ctl = 1;
@@ -42,7 +50,7 @@ control UpfIngress(
     }
 
     @hidden
-    action _term_hit(upf_ctr_id_t ctr_id) {
+    action _term_hit(upf_ctr_idx_t ctr_id) {
         fabric_md.bridged.upf.upf_ctr_id = ctr_id;
         term_hit = true;
     }
@@ -149,18 +157,20 @@ control UpfIngress(
 #endif // WITH_INT
     }
 
-    action set_downlink_session(tun_peer_id_t tun_peer_id) {
+    action set_downlink_session(tun_peer_id_t tun_peer_id, session_meter_idx_t session_meter_idx) {
         sess_hit = true;
         // Set UE IP address.
         ue_session_id = fabric_md.routing_ipv4_dst;
+        session_meter_idx_internal = session_meter_idx;
         fabric_md.bridged.upf.tun_peer_id = tun_peer_id;
         fabric_md.bridged.upf.skip_egress_upf_ctr = false;
     }
 
-    action set_downlink_session_buf(tun_peer_id_t tun_peer_id) {
+    action set_downlink_session_buf(tun_peer_id_t tun_peer_id, session_meter_idx_t session_meter_idx) {
         sess_hit = true;
         // Set UE IP address.
         ue_session_id = fabric_md.routing_ipv4_dst;
+        session_meter_idx_internal = session_meter_idx;
         fabric_md.bridged.upf.tun_peer_id = tun_peer_id;
         fabric_md.bridged.upf.skip_egress_upf_ctr = true;
     }
@@ -176,10 +186,11 @@ control UpfIngress(
 #endif // WITH_INT
     }
 
-    action set_uplink_session() {
+    action set_uplink_session(session_meter_idx_t session_meter_idx) {
         sess_hit = true;
         // Set UE IP address.
         ue_session_id = fabric_md.lkp.ipv4_src;
+        session_meter_idx_internal = session_meter_idx;
         // implicit decap
         _gtpu_decap();
     }
@@ -231,7 +242,7 @@ control UpfIngress(
 #endif // WITH_INT
     }
 
-    action uplink_drop(upf_ctr_id_t ctr_id) {
+    action uplink_drop(upf_ctr_idx_t ctr_id) {
         _drop_common();
         _term_hit(ctr_id);
 #ifdef WITH_INT
@@ -239,7 +250,7 @@ control UpfIngress(
 #endif // WITH_INT
     }
 
-    action downlink_drop(upf_ctr_id_t ctr_id) {
+    action downlink_drop(upf_ctr_idx_t ctr_id) {
         _drop_common();
         _term_hit(ctr_id);
 #ifdef WITH_INT
@@ -247,32 +258,37 @@ control UpfIngress(
 #endif // WITH_INT
     }
 
-    action app_fwd(upf_ctr_id_t ctr_id,
-                   tc_t tc) {
+    action app_fwd(upf_ctr_idx_t ctr_id,
+                   tc_t tc,
+                   app_meter_idx_t app_meter_idx) {
         _term_hit(ctr_id);
         fabric_md.upf_tc = tc;
+        app_meter_idx_internal = app_meter_idx;
         fabric_md.tc_unknown = false;
     }
 
-    action app_fwd_no_tc(upf_ctr_id_t ctr_id) {
+    action app_fwd_no_tc(upf_ctr_idx_t ctr_id, app_meter_idx_t app_meter_idx) {
         _term_hit(ctr_id);
         fabric_md.tc_unknown = true;
+        app_meter_idx_internal = app_meter_idx;
     }
 
-    action downlink_fwd_encap(upf_ctr_id_t ctr_id,
+    action downlink_fwd_encap(upf_ctr_idx_t ctr_id,
                               tc_t         tc,
                               teid_t       teid,
                               // QFI should always equal 0 for 4G flows
-                              bit<6>       qfi) {
-        app_fwd(ctr_id, tc);
+                              bit<6>       qfi,
+                              app_meter_idx_t app_meter_idx) {
+        app_fwd(ctr_id, tc, app_meter_idx);
         _set_field_encap(teid, qfi);
     }
 
-    action downlink_fwd_encap_no_tc(upf_ctr_id_t ctr_id,
+    action downlink_fwd_encap_no_tc(upf_ctr_idx_t ctr_id,
                                     teid_t       teid,
                                     // QFI should always equal 0 for 4G flows
-                                    bit<6>       qfi) {
-        app_fwd_no_tc(ctr_id);
+                                    bit<6>       qfi,
+                                    app_meter_idx_t app_meter_idx) {
+        app_fwd_no_tc(ctr_id, app_meter_idx);
         _set_field_encap(teid, qfi);
     }
 
@@ -425,7 +441,7 @@ control UpfIngress(
                 }
             }
 
-           applications.apply();
+            applications.apply();
 
             if (sess_hit) {
                 if (is_uplink) {
@@ -435,7 +451,10 @@ control UpfIngress(
                     downlink_terminations.apply();
                 }
             }
-
+            app_color = (MeterColor_t) app_meter.execute(app_meter_idx_internal);
+            // Color-aware meter, if no app_meter, then app_color is GREEN and
+            // the meter behaves as a color-blind meter.
+            fabric_md.upf_meter_color = (MeterColor_t) session_meter.execute(session_meter_idx_internal, app_color, 0);
             ig_tunnel_peers.apply();
             if (term_hit) {
                 // NOTE We should not update this counter for packets coming
@@ -464,7 +483,7 @@ control UpfEgress(
         inout egress_headers_t hdr,
         inout fabric_egress_metadata_t fabric_md) {
 
-    Counter<bit<64>, bit<16>>(MAX_UPF_COUNTERS, CounterType_t.PACKETS_AND_BYTES) terminations_counter;
+    Counter<bit<64>, upf_ctr_idx_t>(MAX_UPF_COUNTERS, CounterType_t.PACKETS_AND_BYTES) terminations_counter;
 
     //=========================//
     //===== Tunnel Peers ======//

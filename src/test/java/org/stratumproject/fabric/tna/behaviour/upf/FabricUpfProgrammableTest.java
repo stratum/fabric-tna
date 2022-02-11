@@ -12,13 +12,14 @@ import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.PortNumber;
-import org.onosproject.net.behaviour.upf.UpfSessionDownlink;
-import org.onosproject.net.behaviour.upf.UpfSessionUplink;
 import org.onosproject.net.behaviour.upf.UpfApplication;
 import org.onosproject.net.behaviour.upf.UpfCounter;
 import org.onosproject.net.behaviour.upf.UpfEntity;
 import org.onosproject.net.behaviour.upf.UpfEntityType;
 import org.onosproject.net.behaviour.upf.UpfInterface;
+import org.onosproject.net.behaviour.upf.UpfMeter;
+import org.onosproject.net.behaviour.upf.UpfSessionDownlink;
+import org.onosproject.net.behaviour.upf.UpfSessionUplink;
 import org.onosproject.net.behaviour.upf.UpfTerminationDownlink;
 import org.onosproject.net.behaviour.upf.UpfTerminationUplink;
 import org.onosproject.net.config.NetworkConfigService;
@@ -29,8 +30,10 @@ import org.onosproject.net.driver.DriverHandler;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
 import org.onosproject.net.flow.FlowRuleService;
 import org.onosproject.net.flow.TrafficTreatment;
+import org.onosproject.net.meter.MeterService;
 import org.onosproject.net.packet.PacketService;
 import org.onosproject.net.pi.model.PiCounterModel;
+import org.onosproject.net.pi.model.PiMeterModel;
 import org.onosproject.net.pi.model.PiTableModel;
 import org.onosproject.net.pi.service.PiPipeconfService;
 import org.onosproject.net.pi.service.PiTranslationService;
@@ -57,9 +60,11 @@ import static org.stratumproject.fabric.tna.Constants.TNA;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_UPF_EG_TUNNEL_PEERS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_UPF_TERMINATIONS_COUNTER;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_APPLICATIONS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_APP_METER;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_DOWNLINK_SESSIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_DOWNLINK_TERMINATIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_IG_TUNNEL_PEERS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_SESSION_METER;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_TERMINATIONS_COUNTER;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_UPLINK_SESSIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_UPLINK_TERMINATIONS;
@@ -104,6 +109,12 @@ public class FabricUpfProgrammableTest {
             new MockCounterModel(FABRIC_EGRESS_UPF_TERMINATIONS_COUNTER,
                                  TestUpfConstants.PHYSICAL_COUNTER_SIZE)
     );
+    private static final List<PiMeterModel> METER_MODELS = ImmutableList.of(
+            new MockMeterModel(FABRIC_INGRESS_UPF_SESSION_METER,
+                                 TestUpfConstants.PHYSICAL_SESSION_METER_SIZE),
+            new MockMeterModel(FABRIC_INGRESS_UPF_APP_METER,
+                                 TestUpfConstants.PHYSICAL_APP_METER_SIZE)
+    );
 
     @Before
     public void setUp() throws Exception {
@@ -132,6 +143,7 @@ public class FabricUpfProgrammableTest {
         // Mock DriverHandler to get all the required mocked services
         DriverHandler driverHandler = createMock(DriverHandler.class);
         expect(driverHandler.get(FlowRuleService.class)).andReturn(new MockFlowRuleService()).anyTimes();
+        expect(driverHandler.get(MeterService.class)).andReturn(new MockMeterService()).anyTimes();
         expect(driverHandler.get(SlicingService.class)).andReturn(slicingService).anyTimes();
         expect(driverHandler.get(PacketService.class)).andReturn(packetService).anyTimes();
         expect(driverHandler.get(NetworkConfigService.class)).andReturn(netcfgService).anyTimes();
@@ -139,7 +151,8 @@ public class FabricUpfProgrammableTest {
         expect(driverHandler.get(DeviceService.class)).andReturn(deviceService).anyTimes();
         expect(driverHandler.get(PiTranslationService.class)).andReturn(piTranslationService).anyTimes();
         expect(driverHandler.get(PiPipeconfService.class))
-                .andReturn(new MockPiPipeconfService(TABLE_MODELS, COUNTER_MODELS, TNA))
+                .andReturn(new MockPiPipeconfService(
+                        TABLE_MODELS, COUNTER_MODELS, METER_MODELS, TNA))
                 .anyTimes();
         expect(driverHandler.get(P4RuntimeController.class))
                 .andReturn(new MockP4RuntimeController(TestUpfConstants.DEVICE_ID,
@@ -258,6 +271,35 @@ public class FabricUpfProgrammableTest {
         }
         upfProgrammable.delete(expectedAppFiltering);
         assertTrue(upfProgrammable.readAll(UpfEntityType.APPLICATION).isEmpty());
+    }
+
+    @Test
+    public void testUpfMeter() throws Exception {
+        // Application meters
+        assertTrue(upfProgrammable.readAll(UpfEntityType.APPLICATION_METER).isEmpty());
+        UpfMeter expectedAppMeter = TestUpfConstants.APP_METER;
+        upfProgrammable.apply(expectedAppMeter);
+        Collection<? extends UpfEntity> installedAppMeters =
+                upfProgrammable.readAll(UpfEntityType.APPLICATION_METER);
+        assertThat(installedAppMeters.size(), equalTo(1));
+        for (var readAppMeter : installedAppMeters) {
+            assertThat(readAppMeter, equalTo(expectedAppMeter));
+        }
+        upfProgrammable.apply(TestUpfConstants.APP_METER_RESET);
+        assertTrue(upfProgrammable.readAll(UpfEntityType.APPLICATION_METER).isEmpty());
+
+        // Session Meters
+        assertTrue(upfProgrammable.readAll(UpfEntityType.SESSION_METER).isEmpty());
+        UpfMeter expectedSessionMeter = TestUpfConstants.SESSION_METER;
+        upfProgrammable.apply(expectedSessionMeter);
+        Collection<? extends UpfEntity> installedSessionMeters =
+                upfProgrammable.readAll(UpfEntityType.SESSION_METER);
+        assertThat(installedSessionMeters.size(), equalTo(1));
+        for (var readSessionMeter : installedSessionMeters) {
+            assertThat(readSessionMeter, equalTo(expectedSessionMeter));
+        }
+        upfProgrammable.apply(TestUpfConstants.SESSION_METER_RESET);
+        assertTrue(upfProgrammable.readAll(UpfEntityType.SESSION_METER).isEmpty());
     }
 
     @Test

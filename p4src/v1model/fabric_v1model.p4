@@ -104,6 +104,11 @@ control FabricIngress (inout v1model_header_t hdr,
 
         // Emulating TNA behavior through bridged metadata.
         fabric_md.egress.bridged = fabric_md.ingress.bridged;
+
+        // Ensure to drop traffic in the ingress pipe when required
+        if (fabric_md.drop_ctl == 1) {
+            mark_to_drop(standard_md);
+        }
     }
 }
 
