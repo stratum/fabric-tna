@@ -71,7 +71,9 @@ class IntQueueReportTest(TRexTest, IntTest, SlicingTest):
             switch_mac=pkt[Ether].dst,
             vlan2=vlan2,
         )
-        self.set_queue_report_quota(self.sdn_to_sdk_port[self.port4], qid=DEFAULT_QID, quota=DEFAULT_QUOTA)
+        self.set_queue_report_quota(
+            self.sdn_to_sdk_port[self.port4], qid=DEFAULT_QID, quota=DEFAULT_QUOTA
+        )
 
         # To avoid reporting INT report packet, we use queue ID 1 for the traffic.
         self.add_slice_tc_classifier_entry(
@@ -178,7 +180,8 @@ class IntQueueReportTest(TRexTest, IntTest, SlicingTest):
             egress_queue = int_local_report_header.queue_id
 
             self.failIf(
-                egress_port != self.sdn_to_sdk_port[self.port4], f"Unexpected egress port {egress_port}"
+                egress_port != self.sdn_to_sdk_port[self.port4],
+                f"Unexpected egress port {egress_port}",
             )
             self.failIf(
                 egress_queue != DEFAULT_QID, f"Unexpected queue id {egress_queue}"
