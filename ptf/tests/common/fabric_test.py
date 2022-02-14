@@ -2494,6 +2494,20 @@ class SlicingTest(FabricTest):
             pburst=pburst,
         )
 
+    def add_slice_tc_meter(self, slice_id, tc, committed_rate, peak_rate):
+        cir = int(committed_rate / 8)
+        cburst= int(cir * BURST_DURATION_MS * 0.001)
+        pir = int(peak_rate / 8)
+        pburst = int(pir * BURST_DURATION_MS * 0.001)
+        self.configure_slice_tc_meter(
+            slice_id=slice_id,
+            tc=tc,
+            cir=cir if cir > 0 else 1,
+            cburst=cburst if cburst > 0 else 1,
+            pir=pir if pir > 0 else 1,
+            pburst=pburst if pburst > 0 else 1,
+        )
+
     def add_queue_entry(self, slice_id, tc, qid=None, color=None):
         slice_tc = slice_tc_concat(slice_id, tc)
         matches = [

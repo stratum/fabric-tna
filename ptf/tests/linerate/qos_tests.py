@@ -51,6 +51,7 @@ RECEIVER_PORT = [1]
 ALL_PORTS = [0, 1, 2, 3]
 
 
+@group("qos")
 class QosTest(TRexTest, SlicingTest, StatsTest):
     def __init__(self):
         super().__init__()
@@ -224,6 +225,7 @@ class QosTest(TRexTest, SlicingTest, StatsTest):
 # Not executed by default, requires running Trex in SW mode:
 #   TREX_PARAMS="--trex-sw-mode" ./ptf/run/hw/linerate fabric TEST=qos_tests.FlowCountersSanityTest
 @group("trex-sw-mode")
+@group("qos")
 class FlowCountersSanityTest(QosTest):
     """
     This test ensures that switch-maintained P4 counters can be used to produce
@@ -338,6 +340,7 @@ class FlowCountersSanityTest(QosTest):
         self.assertEqual(trex_flow_stats_3.rx_bytes, switch_flow_stats_3.rx_bytes)
 
 
+@group("qos")
 class MinFlowrateWithSoftwareLatencyMeasurement(QosTest):
     # Create a highest priority control stream.
     def create_control_stream(self, pg_id) -> STLStream:
@@ -400,6 +403,7 @@ class MinFlowrateWithSoftwareLatencyMeasurement(QosTest):
         )
 
 
+@group("qos")
 class StrictPriorityControlTrafficIsPrioritized(QosTest):
     @autocleanup
     def runTest(self) -> None:
@@ -457,6 +461,7 @@ class StrictPriorityControlTrafficIsPrioritized(QosTest):
         )
 
 
+@group("qos")
 class ControlTrafficIsNotPrioritizedWithoutRules(QosTest):
     @autocleanup
     def runTest(self) -> None:
@@ -513,6 +518,7 @@ class ControlTrafficIsNotPrioritizedWithoutRules(QosTest):
         )
 
 
+@group("qos")
 class ControlTrafficIsShaped(QosTest):
     @autocleanup
     def runTest(self) -> None:
@@ -566,6 +572,7 @@ class ControlTrafficIsShaped(QosTest):
         )
 
 
+@group("qos")
 class RealtimeTrafficIsRrScheduled(QosTest):
     """
     In this test we check that well behaved realtime traffic is not negatively
@@ -679,6 +686,7 @@ class RealtimeTrafficIsRrScheduled(QosTest):
             print("Statistics for port {}: {}".format(port, readable_stats))
 
 
+@group("qos")
 class ElasticTrafficIsWrrScheduled(QosTest):
     """
     In this test we check that traffic using elastic queues (including
