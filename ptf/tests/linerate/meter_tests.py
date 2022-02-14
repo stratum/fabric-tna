@@ -226,16 +226,15 @@ class AppLevelPolicing(UpfPolicingTest):
 
         print("")
         print("============= STATS UE 1 =============")
+        print(f"   RX Mbps: {rx_bps_ue1/M}")
         print(get_readable_flow_stats(flow_stats_ue1))
         print(get_readable_latency_stats(lat_stats_ue1))
         print(SEPARATOR)
         print("============= STATS UE 2 =============")
+        print(f"   RX Mbps: {rx_bps_ue2/M}")
         print(get_readable_flow_stats(flow_stats_ue2))
         print(get_readable_latency_stats(lat_stats_ue2))
         print(SEPARATOR)
-        # for port in ALL_PORTS:
-        #     readable_stats = get_readable_port_stats(trex_stats[port])
-        #     print("Statistics for port {}: {}".format(port, readable_stats))
 
         # No dropped packets for conforming traffic
         self.assertEqual(
@@ -340,22 +339,20 @@ class SessionLevelPolicing(UpfPolicingTest):
         lat_stats_ue2 = get_latency_stats(pg_id_ue2, trex_stats)
         flow_stats_ue1 = get_flow_stats(pg_id_ue1, trex_stats)
         flow_stats_ue2 = get_flow_stats(pg_id_ue2, trex_stats)
-        # in_port_stats = get_port_stats(TREX_IN_PORT, trex_stats)
 
         rx_bps_ue1 = (flow_stats_ue1.rx_bytes * 8) / TRAFFIC_DURATION_SECONDS
         rx_bps_ue2 = (flow_stats_ue2.rx_bytes * 8) / TRAFFIC_DURATION_SECONDS
 
         print("============= STATS UE 1 =============")
+        print(f"   RX Mbps: {rx_bps_ue1/M}")
         print(get_readable_flow_stats(flow_stats_ue1))
         print(get_readable_latency_stats(lat_stats_ue1))
         print(SEPARATOR)
         print("============= STATS UE 2 =============")
+        print(f"   RX Mbps: {rx_bps_ue2/M}")
         print(get_readable_flow_stats(flow_stats_ue2))
         print(get_readable_latency_stats(lat_stats_ue2))
         print(SEPARATOR)
-        # for port in ALL_PORTS:
-        #     readable_stats = get_readable_port_stats(trex_stats[port])
-        #     print("Statistics for port {}: {}".format(port, readable_stats))
 
         # No dropped packets for conforming traffic
         self.assertEqual(
