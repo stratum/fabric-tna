@@ -106,7 +106,7 @@ public final class TestUpfConstants {
     public static final int TEID_VALUE = 0xff;
     public static final int TEID_VALUE_QOS = 0xfe;
     public static final Ip4Address UE_ADDR = Ip4Address.valueOf("17.0.0.1");
-    public static final Ip4Address S1U_ADDR = Ip4Address.valueOf("192.168.0.1");
+    public static final Ip4Address N3_ADDR = Ip4Address.valueOf("192.168.0.1");
     public static final Ip4Address ENB_ADDR = Ip4Address.valueOf("192.168.0.2");
     public static final Ip4Prefix UE_POOL = Ip4Prefix.valueOf("17.0.0.0/16");
     // TODO: tunnel source port currently not stored on writes, so all reads are 0
@@ -138,14 +138,14 @@ public final class TestUpfConstants {
 
     public static final UpfGtpTunnelPeer GTP_TUNNEL_PEER = UpfGtpTunnelPeer.builder()
             .withTunnelPeerId(ENB_GTP_TUNNEL_PEER)
-            .withSrcAddr(S1U_ADDR)
+            .withSrcAddr(N3_ADDR)
             .withDstAddr(ENB_ADDR)
             .withSrcPort(TUNNEL_SPORT)
             .build();
 
     public static final UpfSessionUplink UPLINK_UE_SESSION = UpfSessionUplink.builder()
             .withTeid(TEID_VALUE)
-            .withTunDstAddr(S1U_ADDR)
+            .withTunDstAddr(N3_ADDR)
             .withSessionMeterIdx(METER_CELL_ID)
             .build();
 
@@ -213,7 +213,7 @@ public final class TestUpfConstants {
             .needsDropping(true)
             .build();
 
-    public static final UpfInterface UPLINK_INTERFACE = UpfInterface.createS1uFrom(S1U_ADDR, SLICE_MOBILE);
+    public static final UpfInterface UPLINK_INTERFACE = UpfInterface.createN3From(N3_ADDR, SLICE_MOBILE);
 
     public static final UpfInterface DOWNLINK_INTERFACE = UpfInterface.createUePoolFrom(UE_POOL, SLICE_MOBILE);
 
@@ -262,7 +262,7 @@ public final class TestUpfConstants {
                             PiAction.builder()
                                     .withId(FABRIC_EGRESS_UPF_LOAD_TUNNEL_PARAMS)
                                     .withParameters(Arrays.asList(
-                                            new PiActionParam(TUNNEL_SRC_ADDR, S1U_ADDR.toInt()),
+                                            new PiActionParam(TUNNEL_SRC_ADDR, N3_ADDR.toInt()),
                                             new PiActionParam(TUNNEL_DST_ADDR, ENB_ADDR.toInt()),
                                             new PiActionParam(TUNNEL_SRC_PORT, TUNNEL_SPORT)
                                     ))
@@ -276,7 +276,7 @@ public final class TestUpfConstants {
             .withSelector(DefaultTrafficSelector.builder()
                                     .matchPi(PiCriterion.builder()
                                             .matchExact(HDR_TEID, TEID_VALUE)
-                                            .matchExact(HDR_TUNNEL_IPV4_DST, S1U_ADDR.toInt())
+                                            .matchExact(HDR_TUNNEL_IPV4_DST, N3_ADDR.toInt())
                                             .build()).build())
             .withTreatment(DefaultTrafficTreatment.builder()
                     .piTableAction(PiAction.builder()
@@ -453,7 +453,7 @@ public final class TestUpfConstants {
             .withSelector(DefaultTrafficSelector.builder()
                                   .matchPi(PiCriterion.builder()
                                                    .matchLpm(HDR_IPV4_DST_ADDR,
-                                                             S1U_ADDR.toInt(),
+                                                             N3_ADDR.toInt(),
                                                              32)
                                                    .matchExact(HDR_GTPU_IS_VALID, 1)
                                                    .build()).build())
