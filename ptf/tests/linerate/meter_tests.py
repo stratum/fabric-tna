@@ -142,7 +142,8 @@ class UpfPolicingTest(TRexTest, UpfSimpleTest, StatsTest):
 @group("meter")
 class AppLevelPolicing(UpfPolicingTest):
     """
-    Verify the behaviour of the application level policing.
+    Verify the behaviour of application level policing.
+    Flows above the app rate should be shaped, flows below the app rate shouldn't.
     """
     def __init__(self):
         super().__init__()
@@ -273,6 +274,11 @@ class AppLevelPolicing(UpfPolicingTest):
 @group("upf")
 @group("meter")
 class SessionLevelPolicing(UpfPolicingTest):
+    """
+    Verify the behaviour of session level policing.
+    Flows above the session rate should be shaped, flows below the session rate shouldn't.
+    """
+
     def __init__(self):
         super().__init__()
 
