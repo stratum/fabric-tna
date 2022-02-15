@@ -163,7 +163,6 @@ control UpfIngress(
         ue_session_id = fabric_md.routing_ipv4_dst;
         session_meter_idx_internal = session_meter_idx;
         fabric_md.bridged.upf.tun_peer_id = tun_peer_id;
-        fabric_md.bridged.upf.skip_egress_upf_ctr = false;
     }
 
     action set_downlink_session_buf(tun_peer_id_t tun_peer_id, session_meter_idx_t session_meter_idx) {
@@ -172,6 +171,8 @@ control UpfIngress(
         ue_session_id = fabric_md.routing_ipv4_dst;
         session_meter_idx_internal = session_meter_idx;
         fabric_md.bridged.upf.tun_peer_id = tun_peer_id;
+        // When sending to dbuf, even if we don't drop traffic, we want to skip
+        // the egress UPF counter.
         fabric_md.bridged.upf.skip_egress_upf_ctr = true;
     }
 
@@ -450,6 +451,11 @@ control UpfIngress(
                 } else {
                     downlink_terminations.apply();
                 }
+            } else {
+                // If we haven't matched in the session table, but for any reasons
+                // we matched on the interfaces table, we should skip egress UPF
+                // counter.
+                fabric_md.bridged.upf.skip_egress_upf_ctr = true;
             }
             app_color = (MeterColor_t) app_meter.execute(app_meter_idx_internal);
             // Color-aware meter, if no app_meter, then app_color is GREEN and
@@ -471,6 +477,11 @@ control UpfIngress(
             // Nothing to be done immediately for forwarding or encapsulation.
             // Forwarding is done by other parts of the ingress, and
             // encapsulation is done in the egress
+            if (ig_dprsr_md.drop_ctl == 1) {
+                // If, for any reasons, we choose to drop, we should skip
+                // the egress UPF counters.
+                fabric_md.bridged.upf.skip_egress_upf_ctr = true;
+            }
         }
     }
 }

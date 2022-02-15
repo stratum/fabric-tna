@@ -13,6 +13,7 @@ from p4.config.v1 import p4info_pb2
 from ptf.testutils import group
 from scapy.layers.inet import IP
 from scapy.layers.ppp import PPPoED
+from scapy.contrib.gtp import GTP_U_Header
 
 
 class FabricBridgingTest(BridgingTest):
@@ -1263,6 +1264,63 @@ class FabricGtpUnicastEcmpBasedOnTeid(FabricTest):
         for pkt_type in BASE_PKT_TYPES:
             self.doRunTest(pkt_type)
 
+@group("upf")
+class FabricUpfCounterUntouchedTest(UpfSimpleTest):
+    """
+    This test case verifies that if we don't match on any UPF table, even if packets
+    are allowed into the UPF pipeline, egress and ingress UPF counters are not
+    incremented in the default index position.
+    """
+
+    @tvsetup
+    @autocleanup
+    def doRunTest(
+            self,
+            pkt,
+            in_port,
+            out_port,
+            exp_pkt,
+            upf_iface
+    ):
+        self.setup_port(in_port, DEFAULT_VLAN, PORT_TYPE_EDGE)
+        self.setup_port(out_port, DEFAULT_VLAN, PORT_TYPE_EDGE)
+        # Allow packets into the UPF pipeline as if it comes from different interfaces
+        if upf_iface == "N3":
+            self.add_s1u_iface(pkt[IP].dst)
+        elif upf_iface == "N6":
+            self.add_ue_pool(pkt[IP].dst)
+        elif upf_iface == "DBUF":
+            self.add_dbuf_iface(pkt[IP].dst)
+            if GTP_U_Header in exp_pkt:
+                exp_pkt = pkt_remove_gtp(exp_pkt)
+        # upf_iface == "NONE": do not configure UPF interfaces table
+        self.add_forwarding_acl_set_output_port(out_port, ig_port=in_port)
+        self.reset_upf_counters(DEFAULT_UPF_COUNTER_IDX)
+        self.send_packet(in_port, pkt)
+        self.verify_packet(exp_pkt, out_port)
+        self.verify_upf_counters(DEFAULT_UPF_COUNTER_IDX, 0, 0, 0, 0)
+
+    def runTest(self):
+        for pkt_type in BASE_PKT_TYPES | GTP_PKT_TYPES:
+            for upf_iface in [None, "N3", "N6", "DBUF"]:
+                if upf_iface is None:
+                    log_str = "not allowed into UPF"
+                else:
+                    log_str = "allow into UPF as coming from: " + upf_iface
+                print("Testing {}, {}...".format(pkt_type, log_str))
+                pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
+                    eth_src=HOST1_MAC,
+                    eth_dst=SWITCH_MAC,
+                    ip_src=HOST1_IPV4,
+                    ip_dst=HOST2_IPV4
+                )
+                self.doRunTest(
+                    pkt,
+                    self.port1,
+                    self.port2,
+                    pkt,
+                    upf_iface
+                )
 
 @group("upf")
 class FabricUpfDownlinkEcmpTest(UpfSimpleTest):
