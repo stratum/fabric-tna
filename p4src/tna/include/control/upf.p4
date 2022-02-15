@@ -477,11 +477,6 @@ control UpfIngress(
             // Nothing to be done immediately for forwarding or encapsulation.
             // Forwarding is done by other parts of the ingress, and
             // encapsulation is done in the egress
-            if (ig_dprsr_md.drop_ctl == 1) {
-                // If, for any reasons, we choose to drop, we should skip
-                // the egress UPF counters.
-                fabric_md.bridged.upf.skip_egress_upf_ctr = true;
-            }
         }
     }
 }
