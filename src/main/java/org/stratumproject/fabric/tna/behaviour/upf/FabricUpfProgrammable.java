@@ -445,8 +445,9 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     private Collection<UpfEntity> getUpfAppMeters() throws UpfProgrammableException {
         ArrayList<UpfEntity> appMeters = Lists.newArrayList();
         for (Meter meter : meterService.getMeters(deviceId, MeterScope.of(FABRIC_INGRESS_UPF_APP_METER.id()))) {
-            if (gettableMeter(meter))
+            if (gettableMeter(meter)) {
                 appMeters.add(upfTranslator.fabricMeterToUpfAppMeter(meter));
+            }
         }
         return appMeters;
     }
@@ -966,10 +967,12 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     }
 
     private boolean gettableFlowEntry(FlowEntry flowEntry) {
-        return flowEntry.state().equals(FlowEntry.FlowEntryState.PENDING_ADD) || flowEntry.state().equals(FlowEntry.FlowEntryState.ADDED);
+        return flowEntry.state().equals(FlowEntry.FlowEntryState.PENDING_ADD) ||
+                flowEntry.state().equals(FlowEntry.FlowEntryState.ADDED);
     }
 
     private boolean gettableMeter(Meter meter) {
-        return meter.state().equals(MeterState.PENDING_ADD) || meter.state().equals(MeterState.ADDED);
+        return meter.state().equals(MeterState.PENDING_ADD) ||
+                meter.state().equals(MeterState.ADDED);
     }
 }
