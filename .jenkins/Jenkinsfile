@@ -55,7 +55,7 @@ pipeline {
             // upload the coverage to codecov only once.
             when {
                 expression {
-                    return (PROFILE == "fabric-upf-int") &&
+                    return (PROFILE == "fabric-upf-int-tna") &&
                         (ARCHITECTURE == "tna")
                 }
             }
@@ -193,27 +193,31 @@ void runPtfTest() {
 }
 
 void runTmPtfTests() {
+    String profile = PROFILE.replace("-tna", "")
+
     dir ("${env.WORKSPACE}/fabric-tna") {
-        echo "Run PTF tests for profile ${PROFILE}"
-        sh "./ptf/run/tm/run \"${PROFILE}\""
+        echo "Run PTF tests for profile ${profile}"
+        sh "./ptf/run/tm/run \"${profile}\""
 
-        echo "Verify TV generation for profile ${PROFILE}"
-        sh "./ptf/run/tv/run \"${PROFILE}\""
+        echo "Verify TV generation for profile ${profile}"
+        sh "./ptf/run/tv/run \"${profile}\""
 
-        if (PROFILE.contains("int")) {
+        if (profile.contains("int")) {
             // Deflect-on-Drop tests are required only for '*-int' profiles.
 
             // Special case to test INT drop report with deflected packet.
-            sh "TM_DOD=1 ./ptf/run/tm/run \"${PROFILE}\" TEST=int-dod"
-            sh "TM_DOD=1 ./ptf/run/tv/run \"${PROFILE}\" TEST=int-dod"
+            sh "TM_DOD=1 ./ptf/run/tm/run \"${profile}\" TEST=int-dod"
+            sh "TM_DOD=1 ./ptf/run/tv/run \"${profile}\" TEST=int-dod"
         }
     }
 }
 
 void runBmv2PtfTests() {
+    String profile = PROFILE.replace("-v1model", "")
+
     dir ("${env.WORKSPACE}/fabric-tna") {
-        echo "Run PTF tests for bmv2, profile ${PROFILE}"
-        sh "./ptf/run/bmv2/run \"${PROFILE}\""
+        echo "Run PTF tests for bmv2, profile ${profile}"
+        sh "./ptf/run/bmv2/run \"${profile}\""
     }
 }
 
@@ -221,16 +225,18 @@ void exportPtfArtifacts() {
     dir ("${env.WORKSPACE}/fabric-tna") {
         // Export logs
         String target = "tm"
+        String profile = PROFILE.replace("-tna", "")
         if (ARCHITECTURE == "v1model") {
             target = "bmv2"
+            profile = PROFILE.replace("-v1model", "")
         }
 
         sh """
-            rm -rf \"logs/${target}/${PROFILE}\"
-            mkdir -p \"logs/${target}/${PROFILE}\"
-            [ -d ptf/run/${target}/log ] && mv ptf/run/${target}/log \"logs/${target}/${PROFILE}\" || true
-            [ -f ptf/tests/common/ptf.log ] && mv ptf/tests/common/ptf.log \"logs/${target}/${PROFILE}/\" || true
-            [ -f ptf/tests/common/ptf.pcap ] && mv ptf/tests/common/ptf.pcap \"logs/${target}/${PROFILE}/\" || true
+            rm -rf \"logs/${target}/${profile}\"
+            mkdir -p \"logs/${target}/${profile}\"
+            [ -d ptf/run/${target}/log ] && mv ptf/run/${target}/log \"logs/${target}/${profile}\" || true
+            [ -f ptf/tests/common/ptf.log ] && mv ptf/tests/common/ptf.log \"logs/${target}/${profile}/\" || true
+            [ -f ptf/tests/common/ptf.pcap ] && mv ptf/tests/common/ptf.pcap \"logs/${target}/${profile}/\" || true
         """
 
         // Compress the logs in a single tar ball
