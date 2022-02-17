@@ -406,6 +406,7 @@ class UpfSessionPolicingTest(UpfPolicingTest):
 class UpfSliceFairPolicingTest(UpfPolicingTest):
     """
     Verifies that traffic above the session rate does not consume slice bandwidth.
+    It is NOT fair for RED packets (to be dropped packets) to consume slice bandwidth.
     Session Rate = 80Mbps
     Slice Rate = 100Mbps
     Two flows for different UEs (sessions):
@@ -533,6 +534,7 @@ class UpfSliceFairPolicingTest(UpfPolicingTest):
 class UpfSessionFairPolicingTest(UpfPolicingTest):
     """
     Verifies that traffic above the app rate does not consume session bandwidth.
+    It is NOT fair for RED packets (to be dropped packets) to consume session bandwidth.
     App Rate = 50Mbps
     Session Rate = 80Mbps
     Slice Rate = 200Mbps
