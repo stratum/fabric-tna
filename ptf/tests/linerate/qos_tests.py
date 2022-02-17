@@ -338,7 +338,7 @@ class FlowCountersSanityTest(QosTest):
         self.assertEqual(trex_flow_stats_3.rx_bytes, switch_flow_stats_3.rx_bytes)
 
 
-@group("hw-trex-mode")
+@group("trex-hw-mode")
 class MinFlowrateWithSoftwareLatencyMeasurement(QosTest):
     # Create a highest priority control stream.
     def create_control_stream(self, pg_id) -> STLStream:
@@ -401,7 +401,7 @@ class MinFlowrateWithSoftwareLatencyMeasurement(QosTest):
         )
 
 
-@group("hw-trex-mode")
+@group("trex-hw-mode")
 class StrictPriorityControlTrafficIsPrioritized(QosTest):
     @autocleanup
     def runTest(self) -> None:
@@ -459,7 +459,7 @@ class StrictPriorityControlTrafficIsPrioritized(QosTest):
         )
 
 
-@group("hw-trex-mode")
+@group("trex-hw-mode")
 class ControlTrafficIsNotPrioritizedWithoutRules(QosTest):
     @autocleanup
     def runTest(self) -> None:
@@ -516,7 +516,7 @@ class ControlTrafficIsNotPrioritizedWithoutRules(QosTest):
         )
 
 
-@group("hw-trex-mode")
+@group("trex-hw-mode")
 class ControlTrafficIsShaped(QosTest):
     @autocleanup
     def runTest(self) -> None:
@@ -570,7 +570,7 @@ class ControlTrafficIsShaped(QosTest):
         )
 
 
-@group("hw-trex-mode")
+@group("trex-hw-mode")
 class RealtimeTrafficIsRrScheduled(QosTest):
     """
     In this test we check that well behaved realtime traffic is not negatively
@@ -684,7 +684,7 @@ class RealtimeTrafficIsRrScheduled(QosTest):
             print("Statistics for port {}: {}".format(port, readable_stats))
 
 
-@group("hw-trex-mode")
+@group("trex-hw-mode")
 class ElasticTrafficIsWrrScheduled(QosTest):
     """
     In this test we check that traffic using elastic queues (including
