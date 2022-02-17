@@ -982,7 +982,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                 meter.state().equals(MeterState.ADDED);
     }
 
-    private void assertSliceId(int sliceId) throws UpfProgrammableException{
+    private void assertSliceId(int sliceId) throws UpfProgrammableException {
         if (!slicingService.getSlices().contains(SliceId.of(sliceId))) {
             throw new UpfProgrammableException(format(
                     "Provided slice ID (%d) is not available in slicing service!",
