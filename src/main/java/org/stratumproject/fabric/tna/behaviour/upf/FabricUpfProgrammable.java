@@ -389,6 +389,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                         toBeRemoved.add(entry);
                         entitiesCleared++;
                     }
+                    break;
                 default:
                     log.warn("Unsupported entity type!");
                     break;
