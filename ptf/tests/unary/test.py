@@ -1265,7 +1265,7 @@ class FabricGtpUnicastEcmpBasedOnTeid(FabricTest):
             self.doRunTest(pkt_type)
 
 @group("upf")
-class FabricUpfCounterUntouchedTest(UpfSimpleTest):
+class FabricUpfCounterBypassTest(UpfSimpleTest):
     """
     This test case verifies that if we don't match on any UPF table, even if packets
     are allowed into the UPF pipeline, egress and ingress UPF counters are not

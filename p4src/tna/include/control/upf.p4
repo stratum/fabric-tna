@@ -171,8 +171,9 @@ control UpfIngress(
         ue_session_id = fabric_md.routing_ipv4_dst;
         session_meter_idx_internal = session_meter_idx;
         fabric_md.bridged.upf.tun_peer_id = tun_peer_id;
-        // When sending to dbuf, even if we don't drop traffic, we want to skip
-        // the egress UPF counter.
+        // Sending to dbuf means buffering, while the egress counter is used only
+        // to keep track of packets effectively sent to UEs. We will update it
+        // when draining from dbuf.
         fabric_md.bridged.upf.skip_egress_upf_ctr = true;
     }
 
@@ -452,9 +453,8 @@ control UpfIngress(
                     downlink_terminations.apply();
                 }
             } else {
-                // If we haven't matched in the session table, but for any reasons
-                // we matched on the interfaces table, we should skip egress UPF
-                // counter.
+                // If here it means we haven't set a counter index and we may have
+                // not dropped the packet.
                 fabric_md.bridged.upf.skip_egress_upf_ctr = true;
             }
             app_color = (MeterColor_t) app_meter.execute(app_meter_idx_internal);
