@@ -11,7 +11,9 @@ export TREX_PARAMS="${TREX_PARAMS:-} --trex-address ${TREX_ADDR} \
 export PORT_MAP="/fabric-tna/ptf/run/hw/port_map.trex.json"
 export PTF_DIR="/fabric-tna/ptf/tests/linerate"
 if [[ "${TREX_PARAMS}" != *"trex-sw-mode"* ]]; then
-  export PTF_FILTER="${PTF_FILTER:-} ^trex-sw-mode"
+  export PTF_FILTER="${PTF_FILTER:-} ^trex-sw-mode trex-hw-mode"
+else
+  export PTF_FILTER="${PTF_FILTER:-} ^trex-hw-mode trex-sw-mode"
 fi
 
 # shellcheck source=ptf/run/hw/base.sh

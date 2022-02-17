@@ -29,6 +29,7 @@ RECEIVER_PORT = 3
 
 
 @group("int")
+@group("hw-trex-mode")
 class IntQueueReportTest(TRexTest, IntTest, SlicingTest):
     @autocleanup
     def doRunTest(

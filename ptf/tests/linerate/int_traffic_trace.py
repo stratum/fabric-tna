@@ -28,6 +28,7 @@ INT_COLLECTOR_PORT = 2
 
 
 @group("int")
+@group("hw-trex-mode")
 class IntFlowFilterWithTrafficTrace(TRexTest, IntTest):
     """
     This test performs a replay of real-time packet traffic captured from an Equinix
@@ -113,6 +114,7 @@ class IntFlowFilterWithTrafficTrace(TRexTest, IntTest):
 
 
 @group("int")
+@group("hw-trex-mode")
 class IntIngressDropReportFilterWithTrafficTrace(TRexTest, IntTest):
     """
     This test observes the behaviour of our P4 implementation of an INT drop
@@ -208,6 +210,7 @@ class IntIngressDropReportFilterWithTrafficTrace(TRexTest, IntTest):
 
 
 @group("int")
+@group("hw-trex-mode")
 class IntEgressDropReportFilterWithTrafficTrace(TRexTest, IntTest):
     """
     This test observes the behavior of our P4 implementation of an INT drop
