@@ -13,13 +13,6 @@ set -exu -o pipefail
 
 source .env
 
-echo "Build all profiles using SDE ${SDE_P4C_DOCKER_IMG}..."
-# Pull first to avoid pulling multiple times in parallel by the make jobs
-docker pull "${SDE_P4C_DOCKER_IMG}"
-docker build -f ptf/Dockerfile -t "${TESTER_DOCKER_IMG}" .
-
-make "${PROFILE}"
-
 # PROFILE env variable set by Jenkins
 echo "Run linerate tests for profile ${PROFILE}"
 ./ptf/run/hw/linerate "${PROFILE}"
