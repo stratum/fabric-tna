@@ -39,7 +39,6 @@ APP2_ID = 20
 
 
 class UpfPolicingTest(TRexTest, UpfSimpleTest, StatsTest):
-
     def setup_queues_table(self):
         """
         Setup the queue table to map GREEN and YELLOW traffic of the default slice
@@ -47,8 +46,18 @@ class UpfPolicingTest(TRexTest, UpfSimpleTest, StatsTest):
         :return:
         """
         # Default TC to BE queue + drop RED traffic
-        self.add_queue_entry(DEFAULT_SLICE_ID, DEFAULT_TC, qid=qos_utils.QUEUE_ID_BEST_EFFORT, color=COLOR_GREEN)
-        self.add_queue_entry(DEFAULT_SLICE_ID, DEFAULT_TC, qid=qos_utils.QUEUE_ID_BEST_EFFORT, color=COLOR_YELLOW)
+        self.add_queue_entry(
+            DEFAULT_SLICE_ID,
+            DEFAULT_TC,
+            qid=qos_utils.QUEUE_ID_BEST_EFFORT,
+            color=COLOR_GREEN,
+        )
+        self.add_queue_entry(
+            DEFAULT_SLICE_ID,
+            DEFAULT_TC,
+            qid=qos_utils.QUEUE_ID_BEST_EFFORT,
+            color=COLOR_YELLOW,
+        )
         self.enable_policing(DEFAULT_SLICE_ID, DEFAULT_TC)
 
     def setup_slice(self, slice_bps):
@@ -59,11 +68,22 @@ class UpfPolicingTest(TRexTest, UpfSimpleTest, StatsTest):
         """
         # Slice level configuration
         self.add_s1u_iface(s1u_addr=N3_ADDR, slice_id=DEFAULT_SLICE_ID)
-        self.add_slice_tc_meter(slice_id=DEFAULT_SLICE_ID, tc=DEFAULT_TC, committed_bps=1, peak_bps=slice_bps)
+        self.add_slice_tc_meter(
+            slice_id=DEFAULT_SLICE_ID,
+            tc=DEFAULT_TC,
+            committed_bps=1,
+            peak_bps=slice_bps,
+        )
 
     def setup_ue_ul(
-            self, ue_addr, ul_teid, app_meter_idx=DEFAULT_APP_METER_IDX, app_meter_bps=None,
-            sess_meter_idx=DEFAULT_SESSION_METER_IDX, session_meter_bps=None, app_id=NO_APP_ID
+        self,
+        ue_addr,
+        ul_teid,
+        app_meter_idx=DEFAULT_APP_METER_IDX,
+        app_meter_bps=None,
+        sess_meter_idx=DEFAULT_SESSION_METER_IDX,
+        session_meter_bps=None,
+        app_id=NO_APP_ID,
     ) -> None:
         """
         Setup UE uplink table entries (UL session and UL termination) and eventually
@@ -77,7 +97,10 @@ class UpfPolicingTest(TRexTest, UpfSimpleTest, StatsTest):
         :param app_id:
         :return:
         """
-        if sess_meter_idx != DEFAULT_SESSION_METER_IDX and session_meter_bps is not None:
+        if (
+            sess_meter_idx != DEFAULT_SESSION_METER_IDX
+            and session_meter_bps is not None
+        ):
             self.add_qer_session_meter(sess_meter_idx, session_meter_bps)
         if app_meter_idx != DEFAULT_APP_METER_IDX and app_meter_bps is not None:
             self.add_qer_app_meter(app_meter_idx, app_meter_bps)
@@ -85,8 +108,11 @@ class UpfPolicingTest(TRexTest, UpfSimpleTest, StatsTest):
             teid=ul_teid, tunnel_dst_addr=N3_ADDR, session_meter_idx=sess_meter_idx
         )
         self.setup_uplink_termination(
-            ue_session=ue_addr, ctr_id=UPF_CTR_IDX, tc=DEFAULT_TC, app_id=app_id,
-            app_meter_idx=app_meter_idx
+            ue_session=ue_addr,
+            ctr_id=UPF_CTR_IDX,
+            tc=DEFAULT_TC,
+            app_id=app_id,
+            app_meter_idx=app_meter_idx,
         )
 
     def setup_acl_forwarding(self, in_ports, out_port) -> None:
@@ -105,10 +131,12 @@ class UpfPolicingTest(TRexTest, UpfSimpleTest, StatsTest):
 
     # Create a stream with GTP encapped traffic.
     def create_gtp_stream(
-            self, ue_addr, teid, pg_id=None, dport=None, l2_size=1400, l1_bps=None,
+        self, ue_addr, teid, pg_id=None, dport=None, l2_size=1400, l1_bps=None,
     ) -> STLStream:
         if dport is not None:
-            pkt = simple_udp_packet(ip_src=ue_addr, pktlen=l2_size - GTPU_HDR_BYTES, udp_dport=dport)
+            pkt = simple_udp_packet(
+                ip_src=ue_addr, pktlen=l2_size - GTPU_HDR_BYTES, udp_dport=dport
+            )
         else:
             pkt = simple_udp_packet(ip_src=ue_addr, pktlen=l2_size - GTPU_HDR_BYTES)
         pkt = pkt_add_gtp(pkt, out_ipv4_src=ENB_IPV4, out_ipv4_dst=N3_ADDR, teid=teid)
@@ -133,12 +161,7 @@ class UpfPolicingTest(TRexTest, UpfSimpleTest, StatsTest):
         max_tx = [max(v["tx_bps"][1:-1]) for (k, v) in stats.items() if k != "duration"]
         min_rx = [min(v["rx_bps"][1:-1]) for (k, v) in stats.items() if k != "duration"]
         max_rx = [max(v["rx_bps"][1:-1]) for (k, v) in stats.items() if k != "duration"]
-        return {
-            "min_tx": min_tx,
-            "max_tx": max_tx,
-            "min_rx": min_rx,
-            "max_rx": max_rx
-        }
+        return {"min_tx": min_tx, "max_tx": max_tx, "min_rx": min_rx, "max_rx": max_rx}
 
 
 @group("trex-sw-mode")
@@ -180,7 +203,7 @@ class UpfAppOnlyPolicingTest(UpfPolicingTest):
             app_meter_idx=UE_1_UL_APP1_METER_IDX,
             app_meter_bps=app_bps,
             sess_meter_idx=UE_1_UL_SESSION_METER_IDX,
-            session_meter_bps=session_bps
+            session_meter_bps=session_bps,
         )
         # UE 2 configuration
         self.setup_ue_ul(
@@ -190,18 +213,24 @@ class UpfAppOnlyPolicingTest(UpfPolicingTest):
             app_meter_idx=UE_2_UL_APP_METER_IDX,
             app_meter_bps=app_bps,
             sess_meter_idx=UE_2_UL_SESSION_METER_IDX,
-            session_meter_bps=session_bps
+            session_meter_bps=session_bps,
         )
 
         streams = [
             self.create_gtp_stream(
-                ue_addr=UE1_ADDR, teid=UE1_UL_TEID,
-                pg_id=pg_id_ue1, l1_bps=stream_bps_ue1, dport=APP1_PORT
+                ue_addr=UE1_ADDR,
+                teid=UE1_UL_TEID,
+                pg_id=pg_id_ue1,
+                l1_bps=stream_bps_ue1,
+                dport=APP1_PORT,
             ),
             self.create_gtp_stream(
-                ue_addr=UE2_ADDR, teid=UE2_UL_TEID,
-                pg_id=pg_id_ue2, l1_bps=stream_bps_ue2, dport=APP1_PORT
-           )
+                ue_addr=UE2_ADDR,
+                teid=UE2_UL_TEID,
+                pg_id=pg_id_ue2,
+                l1_bps=stream_bps_ue2,
+                dport=APP1_PORT,
+            ),
         ]
         self.trex_client.add_streams(streams, ports=TREX_TX_PORT)
         print(f"Starting traffic, duration: {TRAFFIC_DURATION_SECONDS} sec")
@@ -229,32 +258,33 @@ class UpfAppOnlyPolicingTest(UpfPolicingTest):
             live_stats["min_tx"][TREX_TX_PORT] / (stream_bps_ue1 + stream_bps_ue2),
             1,
             delta=0.06,
-            msg="Minimum generated traffic rate was less than expected (issue with TRex?)"
+            msg="Minimum generated traffic rate was less than expected (issue with TRex?)",
         )
         self.assertEqual(
             flow_stats_ue1.tx_packets - flow_stats_ue1.rx_packets,
             0,
-            "Conforming UE shouldn't get packet drops"
+            "Conforming UE shouldn't get packet drops",
         )
         # The number of dropped packets should be proportional to the excess
         # rate over the allowed app limit.
         self.assertAlmostEqual(
-            (flow_stats_ue2.tx_packets - flow_stats_ue2.rx_packets) / flow_stats_ue2.tx_packets,
+            (flow_stats_ue2.tx_packets - flow_stats_ue2.rx_packets)
+            / flow_stats_ue2.tx_packets,
             (stream_bps_ue2 - app_bps) / stream_bps_ue2,
             delta=0.02,
-            msg="Non-conforming UE experienced too much or too little drops"
+            msg="Non-conforming UE experienced too much or too little drops",
         )
         self.assertAlmostEqual(
             rx_bps_ue1 / app_bps,
             1,
             delta=0.05,
-            msg="UE 1 received traffic should be almost equal to the app rate"
+            msg="UE 1 received traffic should be almost equal to the app rate",
         )
         self.assertAlmostEqual(
             rx_bps_ue2 / app_bps,
             1,
             delta=0.05,
-            msg="UE 2 received traffic should be almost equal to the app rate"
+            msg="UE 2 received traffic should be almost equal to the app rate",
         )
 
 
@@ -298,18 +328,22 @@ class UpfSessionPolicingTest(UpfPolicingTest):
             ue_addr=UE2_ADDR,
             ul_teid=UE2_UL_TEID,
             sess_meter_idx=UE_2_UL_SESSION_METER_IDX,
-            session_meter_bps=session_bps
+            session_meter_bps=session_bps,
         )
 
         streams = [
             self.create_gtp_stream(
-                ue_addr=UE1_ADDR, teid=UE1_UL_TEID,
-                pg_id=pg_id_ue1, l1_bps=stream_bps_ue1
+                ue_addr=UE1_ADDR,
+                teid=UE1_UL_TEID,
+                pg_id=pg_id_ue1,
+                l1_bps=stream_bps_ue1,
             ),
             self.create_gtp_stream(
-                ue_addr=UE2_ADDR, teid=UE2_UL_TEID,
-                pg_id=pg_id_ue2, l1_bps=stream_bps_ue2
-            )
+                ue_addr=UE2_ADDR,
+                teid=UE2_UL_TEID,
+                pg_id=pg_id_ue2,
+                l1_bps=stream_bps_ue2,
+            ),
         ]
         self.trex_client.add_streams(streams, ports=TREX_TX_PORT)
         print(f"Starting traffic, duration: {TRAFFIC_DURATION_SECONDS} sec")
@@ -337,32 +371,33 @@ class UpfSessionPolicingTest(UpfPolicingTest):
             live_stats["min_tx"][TREX_TX_PORT] / (stream_bps_ue1 + stream_bps_ue2),
             1,
             delta=0.06,
-            msg="Minimum generated traffic rate was less than expected (issue with TRex?)"
+            msg="Minimum generated traffic rate was less than expected (issue with TRex?)",
         )
         self.assertEqual(
             flow_stats_ue1.tx_packets - flow_stats_ue1.rx_packets,
             0,
-            "Conforming UE shouldn't get packet drops"
+            "Conforming UE shouldn't get packet drops",
         )
         # The number of dropped packets should be proportional to the excess
         # rate over the allowed session limit.
         self.assertAlmostEqual(
-            (flow_stats_ue2.tx_packets - flow_stats_ue2.rx_packets) / flow_stats_ue2.tx_packets,
+            (flow_stats_ue2.tx_packets - flow_stats_ue2.rx_packets)
+            / flow_stats_ue2.tx_packets,
             (stream_bps_ue2 - session_bps) / stream_bps_ue2,
             delta=0.02,
-            msg="Non-conforming UE experienced too much or too little drops"
+            msg="Non-conforming UE experienced too much or too little drops",
         )
         self.assertAlmostEqual(
             rx_bps_ue1 / session_bps,
             1,
             delta=0.05,
-            msg="UE 1 received traffic should be almost equal to the session rate"
+            msg="UE 1 received traffic should be almost equal to the session rate",
         )
         self.assertAlmostEqual(
             rx_bps_ue2 / session_bps,
             1,
             delta=0.05,
-            msg="UE 2 received traffic should be almost equal to the session rate"
+            msg="UE 2 received traffic should be almost equal to the session rate",
         )
 
 
@@ -419,13 +454,17 @@ class UpfSliceFairPolicingTest(UpfPolicingTest):
 
         streams = [
             self.create_gtp_stream(
-                ue_addr=UE1_ADDR, teid=UE1_UL_TEID,
-                pg_id=pg_id_ue1, l1_bps=stream_bps_ue1
+                ue_addr=UE1_ADDR,
+                teid=UE1_UL_TEID,
+                pg_id=pg_id_ue1,
+                l1_bps=stream_bps_ue1,
             ),
             self.create_gtp_stream(
-                ue_addr=UE2_ADDR, teid=UE2_UL_TEID,
-                pg_id=pg_id_ue2, l1_bps=stream_bps_ue2
-            )
+                ue_addr=UE2_ADDR,
+                teid=UE2_UL_TEID,
+                pg_id=pg_id_ue2,
+                l1_bps=stream_bps_ue2,
+            ),
         ]
         self.trex_client.add_streams(streams, ports=TREX_TX_PORT)
         print(f"Starting traffic, duration: {TRAFFIC_DURATION_SECONDS} sec")
@@ -453,38 +492,39 @@ class UpfSliceFairPolicingTest(UpfPolicingTest):
             live_stats["min_tx"][TREX_TX_PORT] / (stream_bps_ue1 + stream_bps_ue2),
             1,
             delta=0.06,
-            msg="Minimum generated traffic rate was less than expected (issue with TRex?)"
+            msg="Minimum generated traffic rate was less than expected (issue with TRex?)",
         )
         self.assertEqual(
             flow_stats_ue1.tx_packets - flow_stats_ue1.rx_packets,
             0,
-            "Conforming UE shouldn't get packet drops"
+            "Conforming UE shouldn't get packet drops",
         )
         # The number of dropped packets should be proportional to the excess
         # rate over the allowed session limit.
         self.assertAlmostEqual(
-            (flow_stats_ue2.tx_packets - flow_stats_ue2.rx_packets) / flow_stats_ue2.tx_packets,
+            (flow_stats_ue2.tx_packets - flow_stats_ue2.rx_packets)
+            / flow_stats_ue2.tx_packets,
             (stream_bps_ue2 - session_bps) / stream_bps_ue2,
             delta=0.02,
-            msg="Non-conforming UE experienced too much or too little drops"
+            msg="Non-conforming UE experienced too much or too little drops",
         )
         self.assertAlmostEqual(
             (rx_bps_ue1 + rx_bps_ue2) / slice_bps,
             1,
             delta=0.05,
-            msg="Received traffic should be almost equal the slice rate"
+            msg="Received traffic should be almost equal the slice rate",
         )
         self.assertAlmostEqual(
             rx_bps_ue1 / stream_bps_ue1,
             1,
             delta=0.05,
-            msg="UE 1 (below session rate) received traffic should not be policed"
+            msg="UE 1 (below session rate) received traffic should not be policed",
         )
         self.assertAlmostEqual(
             rx_bps_ue2 / session_bps,
             1,
             delta=0.05,
-            msg="UE 2 (above session rate) received traffic should be policed to session rate"
+            msg="UE 2 (above session rate) received traffic should be policed to session rate",
         )
 
 
@@ -530,32 +570,46 @@ class UpfSessionFairPolicingTest(UpfPolicingTest):
         #  Setup sessions
         self.add_qer_session_meter(UE_1_UL_SESSION_METER_IDX, session_bps)
         self.setup_uplink_ue_session(
-            teid=UE1_UL_TEID, tunnel_dst_addr=N3_ADDR, session_meter_idx=UE_1_UL_SESSION_METER_IDX
+            teid=UE1_UL_TEID,
+            tunnel_dst_addr=N3_ADDR,
+            session_meter_idx=UE_1_UL_SESSION_METER_IDX,
         )
         #  Application 1
         self.setup_app_filtering(APP1_ID, slice_id=DEFAULT_SLICE_ID, l4_port=APP1_PORT)
         self.add_qer_app_meter(UE_1_UL_APP1_METER_IDX, app_bps)
         self.setup_uplink_termination(
-            ue_session=UE1_ADDR, ctr_id=UPF_CTR_IDX, tc=DEFAULT_TC, app_id=APP1_ID,
-            app_meter_idx=UE_1_UL_APP1_METER_IDX
+            ue_session=UE1_ADDR,
+            ctr_id=UPF_CTR_IDX,
+            tc=DEFAULT_TC,
+            app_id=APP1_ID,
+            app_meter_idx=UE_1_UL_APP1_METER_IDX,
         )
         #  Application 2
         self.setup_app_filtering(APP2_ID, slice_id=DEFAULT_SLICE_ID, l4_port=APP2_PORT)
         self.add_qer_app_meter(UE_1_UL_APP2_METER_IDX, app_bps)
         self.setup_uplink_termination(
-            ue_session=UE1_ADDR, ctr_id=UPF_CTR_IDX, tc=DEFAULT_TC, app_id=APP2_ID,
-            app_meter_idx=UE_1_UL_APP2_METER_IDX
+            ue_session=UE1_ADDR,
+            ctr_id=UPF_CTR_IDX,
+            tc=DEFAULT_TC,
+            app_id=APP2_ID,
+            app_meter_idx=UE_1_UL_APP2_METER_IDX,
         )
 
         streams = [
             self.create_gtp_stream(
-                ue_addr=UE1_ADDR, teid=UE1_UL_TEID,
-                pg_id=pg_id_app1, l1_bps=stream_bps_app1, dport=APP1_PORT
+                ue_addr=UE1_ADDR,
+                teid=UE1_UL_TEID,
+                pg_id=pg_id_app1,
+                l1_bps=stream_bps_app1,
+                dport=APP1_PORT,
             ),
             self.create_gtp_stream(
-                ue_addr=UE1_ADDR, teid=UE1_UL_TEID,
-                pg_id=pg_id_app2, l1_bps=stream_bps_app2, dport=APP2_PORT
-            )
+                ue_addr=UE1_ADDR,
+                teid=UE1_UL_TEID,
+                pg_id=pg_id_app2,
+                l1_bps=stream_bps_app2,
+                dport=APP2_PORT,
+            ),
         ]
         self.trex_client.add_streams(streams, ports=TREX_TX_PORT)
         print(f"Starting traffic, duration: {TRAFFIC_DURATION_SECONDS} sec")
@@ -583,36 +637,37 @@ class UpfSessionFairPolicingTest(UpfPolicingTest):
             live_stats["min_tx"][TREX_TX_PORT] / (stream_bps_app1 + stream_bps_app2),
             1,
             delta=0.06,
-            msg="Minimum generated traffic rate was less than expected (issue with TRex?)"
+            msg="Minimum generated traffic rate was less than expected (issue with TRex?)",
         )
         self.assertEqual(
             flow_stats_app1.tx_packets - flow_stats_app1.rx_packets,
             0,
-            "Conforming UE shouldn't get packet drops"
+            "Conforming UE shouldn't get packet drops",
         )
         # The number of dropped packets should be proportional to the excess
         # rate over the allowed app limit.
         self.assertAlmostEqual(
-            (flow_stats_app2.tx_packets - flow_stats_app2.rx_packets) / flow_stats_app2.tx_packets,
+            (flow_stats_app2.tx_packets - flow_stats_app2.rx_packets)
+            / flow_stats_app2.tx_packets,
             (stream_bps_app2 - app_bps) / stream_bps_app2,
             delta=0.02,
-            msg="Non-conforming UE experienced too much or too little drops"
+            msg="Non-conforming UE experienced too much or too little drops",
         )
         self.assertAlmostEqual(
             (rx_bps_app1 + rx_bps_app2) / session_bps,
             1,
             delta=0.05,
-            msg="Received traffic should be almost equal to the session rate"
+            msg="Received traffic should be almost equal to the session rate",
         )
         self.assertAlmostEqual(
             rx_bps_app1 / stream_bps_app1,
             1,
             delta=0.05,
-            msg="App 1 (below app rate) received traffic should not be policed"
+            msg="App 1 (below app rate) received traffic should not be policed",
         )
         self.assertAlmostEqual(
             rx_bps_app2 / app_bps,
             1,
             delta=0.05,
-            msg="App 2 (above app rate) received traffic should be policed to app rate"
+            msg="App 2 (above app rate) received traffic should be policed to app rate",
         )
