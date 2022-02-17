@@ -44,10 +44,14 @@ public class MockFlowRuleService extends FlowRuleServiceAdapter {
                 switch (flow.type()) {
                     case ADD:
                     case MODIFY: //TODO is this the right behavior for modify?
+                        ((DefaultFlowEntry) flow.rule()).setState(FlowEntry.FlowEntryState.ADDED);
                         flows.add(flow.rule());
                         break;
                     case REMOVE:
+                        // Remove and add in REMOVED state
                         flows.remove(flow.rule());
+                        ((DefaultFlowEntry) flow.rule()).setState(FlowEntry.FlowEntryState.REMOVED);
+                        flows.add(flow.rule());
                         break;
                     default:
                         break;

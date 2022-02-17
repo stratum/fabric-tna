@@ -11,22 +11,23 @@ import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
 import org.onosproject.drivers.p4runtime.AbstractP4RuntimeHandlerBehaviour;
 import org.onosproject.net.PortNumber;
-import org.onosproject.net.behaviour.upf.UpfGtpTunnelPeer;
-import org.onosproject.net.behaviour.upf.UpfSessionDownlink;
-import org.onosproject.net.behaviour.upf.UpfSessionUplink;
 import org.onosproject.net.behaviour.upf.UpfApplication;
 import org.onosproject.net.behaviour.upf.UpfCounter;
 import org.onosproject.net.behaviour.upf.UpfEntity;
 import org.onosproject.net.behaviour.upf.UpfEntityType;
+import org.onosproject.net.behaviour.upf.UpfGtpTunnelPeer;
 import org.onosproject.net.behaviour.upf.UpfInterface;
 import org.onosproject.net.behaviour.upf.UpfMeter;
 import org.onosproject.net.behaviour.upf.UpfProgrammable;
 import org.onosproject.net.behaviour.upf.UpfProgrammableException;
+import org.onosproject.net.behaviour.upf.UpfSessionDownlink;
+import org.onosproject.net.behaviour.upf.UpfSessionUplink;
 import org.onosproject.net.behaviour.upf.UpfTerminationDownlink;
 import org.onosproject.net.behaviour.upf.UpfTerminationUplink;
 import org.onosproject.net.flow.DefaultFlowRule;
 import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
+import org.onosproject.net.flow.FlowEntry;
 import org.onosproject.net.flow.FlowRule;
 import org.onosproject.net.flow.FlowRuleService;
 import org.onosproject.net.flow.criteria.PiCriterion;
@@ -35,6 +36,7 @@ import org.onosproject.net.meter.MeterCellId;
 import org.onosproject.net.meter.MeterRequest;
 import org.onosproject.net.meter.MeterScope;
 import org.onosproject.net.meter.MeterService;
+import org.onosproject.net.meter.MeterState;
 import org.onosproject.net.packet.DefaultOutboundPacket;
 import org.onosproject.net.packet.OutboundPacket;
 import org.onosproject.net.packet.PacketService;
@@ -66,15 +68,15 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGR
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_UPF_GTPU_ENCAP;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_UPF_TERMINATIONS_COUNTER;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_APPLICATIONS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_APP_METER;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_DOWNLINK_SESSIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_DOWNLINK_TERMINATIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_IG_TUNNEL_PEERS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_INTERFACES;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_SESSION_METER;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_TERMINATIONS_COUNTER;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_UPLINK_SESSIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_UPLINK_TERMINATIONS;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_APP_METER;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_SESSION_METER;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_APP_ID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_GTPU_IS_VALID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.HDR_IPV4_DST_ADDR;
@@ -433,7 +435,9 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     private Collection<UpfEntity> getUpfSessionMeters() throws UpfProgrammableException {
         ArrayList<UpfEntity> sessionMeters = Lists.newArrayList();
         for (Meter meter : meterService.getMeters(deviceId, MeterScope.of(FABRIC_INGRESS_UPF_SESSION_METER.id()))) {
-            sessionMeters.add(upfTranslator.fabricMeterToUpfSessionMeter(meter));
+            if (isHereToStay(meter)) {
+                sessionMeters.add(upfTranslator.fabricMeterToUpfSessionMeter(meter));
+            }
         }
         return sessionMeters;
     }
@@ -441,16 +445,18 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     private Collection<UpfEntity> getUpfAppMeters() throws UpfProgrammableException {
         ArrayList<UpfEntity> appMeters = Lists.newArrayList();
         for (Meter meter : meterService.getMeters(deviceId, MeterScope.of(FABRIC_INGRESS_UPF_APP_METER.id()))) {
-            appMeters.add(upfTranslator.fabricMeterToUpfAppMeter(meter));
+            if (isHereToStay(meter)) {
+                appMeters.add(upfTranslator.fabricMeterToUpfAppMeter(meter));
+            }
         }
         return appMeters;
     }
 
     private Collection<UpfEntity> getUpfApplication() throws UpfProgrammableException {
         ArrayList<UpfEntity> appFiltering = new ArrayList<>();
-        for (FlowRule flowRule : flowRuleService.getFlowEntries(deviceId)) {
-            if (upfTranslator.isFabricApplication(flowRule)) {
-                appFiltering.add(upfTranslator.fabricEntryToUpfApplication(flowRule));
+        for (FlowEntry flowEntry : flowRuleService.getFlowEntries(deviceId)) {
+            if (isHereToStay(flowEntry) && upfTranslator.isFabricApplication(flowEntry)) {
+                appFiltering.add(upfTranslator.fabricEntryToUpfApplication(flowEntry));
             }
         }
         return appFiltering;
@@ -458,9 +464,9 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
     private Collection<UpfEntity> getInterfaces() throws UpfProgrammableException {
         ArrayList<UpfEntity> ifaces = new ArrayList<>();
-        for (FlowRule flowRule : flowRuleService.getFlowEntries(deviceId)) {
-            if (upfTranslator.isFabricInterface(flowRule)) {
-                ifaces.add(upfTranslator.fabricEntryToInterface(flowRule));
+        for (FlowEntry flowEntry : flowRuleService.getFlowEntries(deviceId)) {
+            if (isHereToStay(flowEntry) && upfTranslator.isFabricInterface(flowEntry)) {
+                ifaces.add(upfTranslator.fabricEntryToInterface(flowEntry));
             }
         }
         return ifaces;
@@ -468,9 +474,9 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
     private Collection<UpfEntity> getGtpTunnelPeers() throws UpfProgrammableException {
         ArrayList<UpfEntity> gtpTunnelPeers = new ArrayList<>();
-        for (FlowRule flowRule : flowRuleService.getFlowEntries(deviceId)) {
-            if (upfTranslator.isFabricGtpTunnelPeer(flowRule)) {
-                gtpTunnelPeers.add(upfTranslator.fabricEntryToGtpTunnelPeer(flowRule));
+        for (FlowEntry flowEntry : flowRuleService.getFlowEntries(deviceId)) {
+            if (isHereToStay(flowEntry) && upfTranslator.isFabricGtpTunnelPeer(flowEntry)) {
+                gtpTunnelPeers.add(upfTranslator.fabricEntryToGtpTunnelPeer(flowEntry));
             }
         }
         return gtpTunnelPeers;
@@ -478,9 +484,9 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
     private Collection<UpfEntity> getUeSessionsUplink() throws UpfProgrammableException {
         ArrayList<UpfEntity> ueSessions = new ArrayList<>();
-        for (FlowRule flowRule : flowRuleService.getFlowEntries(deviceId)) {
-            if (upfTranslator.isFabricUeSessionUplink(flowRule)) {
-                ueSessions.add(upfTranslator.fabricEntryToUeSessionUplink(flowRule));
+        for (FlowEntry flowEntry : flowRuleService.getFlowEntries(deviceId)) {
+            if (isHereToStay(flowEntry) && upfTranslator.isFabricUeSessionUplink(flowEntry)) {
+                ueSessions.add(upfTranslator.fabricEntryToUeSessionUplink(flowEntry));
             }
         }
         return ueSessions;
@@ -488,9 +494,9 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
     private Collection<UpfEntity> getUeSessionsDownlink() throws UpfProgrammableException {
         ArrayList<UpfEntity> ueSessions = new ArrayList<>();
-        for (FlowRule flowRule : flowRuleService.getFlowEntries(deviceId)) {
-            if (upfTranslator.isFabricUeSessionDownlink(flowRule)) {
-                ueSessions.add(upfTranslator.fabricEntryToUeSessionDownlink(flowRule));
+        for (FlowEntry flowEntry : flowRuleService.getFlowEntries(deviceId)) {
+            if (isHereToStay(flowEntry) && upfTranslator.isFabricUeSessionDownlink(flowEntry)) {
+                ueSessions.add(upfTranslator.fabricEntryToUeSessionDownlink(flowEntry));
             }
         }
         return ueSessions;
@@ -498,9 +504,9 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
     private Collection<UpfEntity> getUpfTerminationsUplink() throws UpfProgrammableException {
         ArrayList<UpfEntity> upfTerminations = new ArrayList<>();
-        for (FlowRule flowRule : flowRuleService.getFlowEntries(deviceId)) {
-            if (upfTranslator.isFabricUpfTerminationUplink(flowRule)) {
-                upfTerminations.add(upfTranslator.fabricEntryToUpfTerminationUplink(flowRule));
+        for (FlowEntry flowEntry : flowRuleService.getFlowEntries(deviceId)) {
+            if (isHereToStay(flowEntry) && upfTranslator.isFabricUpfTerminationUplink(flowEntry)) {
+                upfTerminations.add(upfTranslator.fabricEntryToUpfTerminationUplink(flowEntry));
             }
         }
         return upfTerminations;
@@ -508,9 +514,9 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
     private Collection<UpfEntity> getUpfTerminationsDownlink() throws UpfProgrammableException {
         ArrayList<UpfEntity> upfTerminations = new ArrayList<>();
-        for (FlowRule flowRule : flowRuleService.getFlowEntries(deviceId)) {
-            if (upfTranslator.isFabricUpfTerminationDownlink(flowRule)) {
-                upfTerminations.add(upfTranslator.fabricEntryToUpfTerminationDownlink(flowRule));
+        for (FlowEntry flowEntry : flowRuleService.getFlowEntries(deviceId)) {
+            if (isHereToStay(flowEntry) && upfTranslator.isFabricUpfTerminationDownlink(flowEntry)) {
+                upfTerminations.add(upfTranslator.fabricEntryToUpfTerminationDownlink(flowEntry));
             }
         }
         return upfTerminations;
@@ -958,5 +964,15 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         } else {
             flowRuleService.removeFlowRules(denyRule, allowRule);
         }
+    }
+
+    private boolean isHereToStay(FlowEntry flowEntry) {
+        return flowEntry.state().equals(FlowEntry.FlowEntryState.PENDING_ADD) ||
+                flowEntry.state().equals(FlowEntry.FlowEntryState.ADDED);
+    }
+
+    private boolean isHereToStay(Meter meter) {
+        return meter.state().equals(MeterState.PENDING_ADD) ||
+                meter.state().equals(MeterState.ADDED);
     }
 }
