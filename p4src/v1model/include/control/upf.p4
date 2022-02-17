@@ -161,7 +161,6 @@ control UpfIngress(
         ue_session_id = fabric_md.routing_ipv4_dst;
         session_meter_idx_internal = session_meter_idx;
         fabric_md.bridged.upf.tun_peer_id = tun_peer_id;
-        fabric_md.bridged.upf.skip_egress_upf_ctr = false;
     }
 
     action set_downlink_session_buf(tun_peer_id_t tun_peer_id, session_meter_idx_t session_meter_idx) {
@@ -170,6 +169,9 @@ control UpfIngress(
         ue_session_id = fabric_md.routing_ipv4_dst;
         session_meter_idx_internal = session_meter_idx;
         fabric_md.bridged.upf.tun_peer_id = tun_peer_id;
+        // Sending to dbuf means buffering, while the egress counter is used only
+        // to keep track of packets effectively sent to UEs. We will update it
+        // when draining from dbuf.
         fabric_md.bridged.upf.skip_egress_upf_ctr = true;
     }
 
@@ -452,6 +454,10 @@ control UpfIngress(
                 } else {
                     downlink_terminations.apply();
                 }
+            } else {
+                // If here it means we haven't set a counter index and we may have
+                // not dropped the packet.
+                fabric_md.bridged.upf.skip_egress_upf_ctr = true;
             }
             app_meter.execute_meter((bit<32>) app_meter_idx_internal, fabric_md.upf_meter_color);
             if (fabric_md.upf_meter_color != MeterColor_t.RED) {

@@ -300,6 +300,7 @@ NO_APP_ID = 0
 DEFAULT_QFI = 1
 DEFAULT_SESSION_METER_IDX = 0
 DEFAULT_APP_METER_IDX = 0
+DEFAULT_UPF_COUNTER_IDX = 0
 TC_WIDTH = 2  # bits
 
 # High-level parameter specification options for get_test_args function
@@ -2581,6 +2582,15 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
             slice_id=slice_id,
         )
 
+    def add_dbuf_iface(self, drain_dst_addr, slice_id=DEFAULT_SLICE_ID):
+        self._add_upf_iface(
+            iface_addr=drain_dst_addr,
+            prefix_len=32,
+            iface_type=UPF_IFACE_FROM_DBUF,
+            gtpu_valid=True,
+            slice_id=slice_id,
+        )
+
     def add_dbuf_device(
         self,
         dbuf_addr=DBUF_IPV4,
@@ -2589,12 +2599,7 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
     ):
 
         # Switch interface for traffic to/from dbuf device
-        self._add_upf_iface(
-            iface_addr=drain_dst_addr,
-            prefix_len=32,
-            iface_type=UPF_IFACE_FROM_DBUF,
-            gtpu_valid=True,
-        )
+        self.add_dbuf_iface(drain_dst_addr=drain_dst_addr)
 
         # Configure DBUF as GTP tunnel peer
         self.add_gtp_tunnel_peer(
