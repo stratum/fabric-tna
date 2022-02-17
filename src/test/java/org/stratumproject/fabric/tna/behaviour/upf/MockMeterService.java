@@ -10,6 +10,7 @@ import org.onosproject.net.meter.MeterCellId;
 import org.onosproject.net.meter.MeterRequest;
 import org.onosproject.net.meter.MeterScope;
 import org.onosproject.net.meter.MeterServiceAdapter;
+import org.onosproject.net.meter.MeterState;
 import org.onosproject.net.pi.model.PiMeterId;
 import org.onosproject.net.pi.runtime.PiMeterCellId;
 
@@ -29,6 +30,7 @@ public class MockMeterService extends MeterServiceAdapter {
                 .withBands(meter.bands())
                 .withCellId(PiMeterCellId.ofIndirect(PiMeterId.of(meter.scope().id()), meter.index().get()))
                 .build();
+        ((DefaultMeter) addedMeter).setState(MeterState.ADDED);
         meters.add(addedMeter);
         return addedMeter;
     }
@@ -42,8 +44,10 @@ public class MockMeterService extends MeterServiceAdapter {
                 .withCellId(meterCellId)
                 .withBands(meter.bands())
                 .build();
-        // TODO: does this work????
+        ((DefaultMeter) withDrawnMeter).setState(MeterState.PENDING_REMOVE);
+        // Remove the meter and add it in PENDING_REMOVE state
         meters.remove(withDrawnMeter);
+        meters.add(withDrawnMeter);
     }
 
     @Override
