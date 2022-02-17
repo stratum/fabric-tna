@@ -2578,7 +2578,7 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
             prefix_len=32,
             iface_type=UPF_IFACE_FROM_DBUF,
             gtpu_valid=True,
-            slice_id=slice_id
+            slice_id=slice_id,
         )
 
     def add_dbuf_device(

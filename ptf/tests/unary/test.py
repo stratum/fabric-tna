@@ -11,9 +11,9 @@ from base_test import PORT_SIZE_BYTES, autocleanup, is_v1model, tvsetup
 from fabric_test import *  # noqa
 from p4.config.v1 import p4info_pb2
 from ptf.testutils import group
+from scapy.contrib.gtp import GTP_U_Header
 from scapy.layers.inet import IP
 from scapy.layers.ppp import PPPoED
-from scapy.contrib.gtp import GTP_U_Header
 
 
 class FabricBridgingTest(BridgingTest):
@@ -1264,6 +1264,7 @@ class FabricGtpUnicastEcmpBasedOnTeid(FabricTest):
         for pkt_type in BASE_PKT_TYPES:
             self.doRunTest(pkt_type)
 
+
 @group("upf")
 class FabricUpfCounterBypassTest(UpfSimpleTest):
     """
@@ -1274,14 +1275,7 @@ class FabricUpfCounterBypassTest(UpfSimpleTest):
 
     @tvsetup
     @autocleanup
-    def doRunTest(
-            self,
-            pkt,
-            in_port,
-            out_port,
-            exp_pkt,
-            upf_iface
-    ):
+    def doRunTest(self, pkt, in_port, out_port, exp_pkt, upf_iface):
         self.setup_port(in_port, DEFAULT_VLAN, PORT_TYPE_EDGE)
         self.setup_port(out_port, DEFAULT_VLAN, PORT_TYPE_EDGE)
         # Allow packets into the UPF pipeline as if it comes from different interfaces
@@ -1312,15 +1306,10 @@ class FabricUpfCounterBypassTest(UpfSimpleTest):
                     eth_src=HOST1_MAC,
                     eth_dst=SWITCH_MAC,
                     ip_src=HOST1_IPV4,
-                    ip_dst=HOST2_IPV4
+                    ip_dst=HOST2_IPV4,
                 )
-                self.doRunTest(
-                    pkt,
-                    self.port1,
-                    self.port2,
-                    pkt,
-                    upf_iface
-                )
+                self.doRunTest(pkt, self.port1, self.port2, pkt, upf_iface)
+
 
 @group("upf")
 class FabricUpfDownlinkEcmpTest(UpfSimpleTest):
