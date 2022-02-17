@@ -9,6 +9,7 @@ commitHash = params.commitHash ? params.commitHash : params.sha1
 PROFILE = params.profile.trim().toLowerCase()
 ARCHITECTURE = params.architecture.trim().toLowerCase()
 GITHUB_URL = "git@github.com:stratum/fabric-tna.git"
+SPECIFIC_PROFILE = "${PROFILE}-${ARCHITECTURE}"
 
 if (!PROFILE || !ARCHITECTURE) {
     currentBuild.result = "FAILURE"
@@ -46,8 +47,7 @@ pipeline {
             steps {
                 dir ("${env.WORKSPACE}/fabric-tna") {
                     // Making selected profile
-                    profile = "${PROFILE}-${ARCHITECTURE}"
-                    sh "make $profile"
+                    sh "make ${SPECIFIC_PROFILE}"
                 }
             }
         }
