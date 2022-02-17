@@ -218,18 +218,18 @@ class UpfAppOnlyPolicingTest(UpfPolicingTest):
         rx_bps_ue2 = (flow_stats_ue2.rx_bytes * 8) / TRAFFIC_DURATION_SECONDS
 
         print("============= STATS UE 1 =============")
-        print(f"   RX rate: {to_readable(rx_bps_ue1)}")
+        print(f"    RX Rate: {to_readable(rx_bps_ue1)}")
         print(get_readable_flow_stats(flow_stats_ue1))
         print("============= STATS UE 2 =============")
-        print(f"   RX rate: {to_readable(rx_bps_ue2)}")
+        print(f"    RX Rate: {to_readable(rx_bps_ue2)}")
         print(get_readable_flow_stats(flow_stats_ue2))
         print(SEPARATOR)
 
         self.assertAlmostEqual(
             live_stats["min_tx"][TREX_TX_PORT] / (stream_bps_ue1 + stream_bps_ue2),
             1,
-            delta=0.05,
-            msg="Generated traffic rate was less than expected (issue with TRex?)"
+            delta=0.06,
+            msg="Minimum generated traffic rate was less than expected (issue with TRex?)"
         )
         self.assertEqual(
             flow_stats_ue1.tx_packets - flow_stats_ue1.rx_packets,
@@ -326,17 +326,17 @@ class UpfSessionPolicingTest(UpfPolicingTest):
         rx_bps_ue2 = (flow_stats_ue2.rx_bytes * 8) / TRAFFIC_DURATION_SECONDS
 
         print("============= STATS UE 1 =============")
-        print(f"   RX Rate: {to_readable(rx_bps_ue1)}")
+        print(f"    RX Rate: {to_readable(rx_bps_ue1)}")
         print(get_readable_flow_stats(flow_stats_ue1))
         print("============= STATS UE 2 =============")
-        print(f"   RX Rate: {to_readable(rx_bps_ue2)}")
+        print(f"    RX Rate: {to_readable(rx_bps_ue2)}")
         print(get_readable_flow_stats(flow_stats_ue2))
         print(SEPARATOR)
 
         self.assertAlmostEqual(
             live_stats["min_tx"][TREX_TX_PORT] / (stream_bps_ue1 + stream_bps_ue2),
             1,
-            delta=0.05,
+            delta=0.06,
             msg="Minimum generated traffic rate was less than expected (issue with TRex?)"
         )
         self.assertEqual(
@@ -442,18 +442,18 @@ class UpfSliceFairPolicingTest(UpfPolicingTest):
         rx_bps_ue2 = (flow_stats_ue2.rx_bytes * 8) / TRAFFIC_DURATION_SECONDS
 
         print("============= STATS UE 1 =============")
-        print(f"   RX Rate: {to_readable(rx_bps_ue1)}")
+        print(f"    RX Rate: {to_readable(rx_bps_ue1)}")
         print(get_readable_flow_stats(flow_stats_ue1))
         print("============= STATS UE 2 =============")
-        print(f"   RX Rate: {to_readable(rx_bps_ue2)}")
+        print(f"    RX Rate: {to_readable(rx_bps_ue2)}")
         print(get_readable_flow_stats(flow_stats_ue2))
         print(SEPARATOR)
 
         self.assertAlmostEqual(
             live_stats["min_tx"][TREX_TX_PORT] / (stream_bps_ue1 + stream_bps_ue2),
             1,
-            delta=0.05,
-            msg="Generated traffic rate was less than expected (issue with TRex?)"
+            delta=0.06,
+            msg="Minimum generated traffic rate was less than expected (issue with TRex?)"
         )
         self.assertEqual(
             flow_stats_ue1.tx_packets - flow_stats_ue1.rx_packets,
@@ -572,18 +572,18 @@ class UpfSessionFairPolicingTest(UpfPolicingTest):
         rx_bps_app2 = (flow_stats_app2.rx_bytes * 8) / TRAFFIC_DURATION_SECONDS
 
         print("============= STATS APP 1 =============")
-        print(f"   RX Rate: {to_readable(rx_bps_app1)}")
+        print(f"    RX Rate: {to_readable(rx_bps_app1)}")
         print(get_readable_flow_stats(flow_stats_app1))
         print("============= STATS APP 2 =============")
-        print(f"   RX Rate: {to_readable(rx_bps_app2)}")
+        print(f"    RX Rate: {to_readable(rx_bps_app2)}")
         print(get_readable_flow_stats(flow_stats_app2))
         print(SEPARATOR)
 
         self.assertAlmostEqual(
             live_stats["min_tx"][TREX_TX_PORT] / (stream_bps_app1 + stream_bps_app2),
             1,
-            delta=0.05,
-            msg="Generated traffic rate was less than expected (issue with TRex?)"
+            delta=0.06,
+            msg="Minimum generated traffic rate was less than expected (issue with TRex?)"
         )
         self.assertEqual(
             flow_stats_app1.tx_packets - flow_stats_app1.rx_packets,
@@ -601,7 +601,7 @@ class UpfSessionFairPolicingTest(UpfPolicingTest):
         self.assertAlmostEqual(
             (rx_bps_app1 + rx_bps_app2) / session_bps,
             1,
-            delta=0.1,
+            delta=0.05,
             msg="Received traffic should be almost equal to the session rate"
         )
         self.assertAlmostEqual(
