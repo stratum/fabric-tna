@@ -3,6 +3,8 @@
 
 # This file contains line rate tests checking that the color-aware meters used
 # in the pipeline works as expected.
+# All these tests require software mode
+# TREX_PARAMS="--trex-sw-mode" ./ptf/run/hw/linerate fabric-upf-int TEST=meter_tests
 
 import qos_utils
 from base_test import *
@@ -34,9 +36,6 @@ APP1_PORT = 100
 APP2_PORT = 200
 APP1_ID = 10
 APP2_ID = 20
-
-# All these tests require software mode
-# TREX_PARAMS="--trex-sw-mode" ./ptf/run/hw/linerate fabric-upf-int
 
 
 class UpfPolicingTest(TRexTest, UpfSimpleTest, StatsTest):
@@ -130,16 +129,20 @@ class UpfPolicingTest(TRexTest, UpfSimpleTest, StatsTest):
         :param stats:
         :return: dictionary with per port min and max TX/RX
         """
-        min_tx = [min(v["tx_bps"][1:-1]) for (k, v) in stats.items()if k != "duration"]
-        max_tx = [max(v["tx_bps"][1:-1]) for (k, v) in stats.items()if k != "duration"]
-        min_rx =[min(v["rx_bps"][1:-1]) for (k, v) in stats.items() if k != "duration"]
-        max_rx =[max(v["rx_bps"][1:-1]) for (k, v) in stats.items() if k != "duration"]
-        return {"min_tx": min_tx, "max_tx": max_tx, "min_rx": min_rx, "max_rx" : max_rx}
+        min_tx = [min(v["tx_bps"][1:-1]) for (k, v) in stats.items() if k != "duration"]
+        max_tx = [max(v["tx_bps"][1:-1]) for (k, v) in stats.items() if k != "duration"]
+        min_rx = [min(v["rx_bps"][1:-1]) for (k, v) in stats.items() if k != "duration"]
+        max_rx = [max(v["rx_bps"][1:-1]) for (k, v) in stats.items() if k != "duration"]
+        return {
+            "min_tx": min_tx,
+            "max_tx": max_tx,
+            "min_rx": min_rx,
+            "max_rx": max_rx
+        }
 
 
 @group("trex-sw-mode")
 @group("upf")
-@group("meter")
 class UpfAppOnlyPolicingTest(UpfPolicingTest):
     """
     Verify the behaviour of application level policing.
@@ -158,14 +161,13 @@ class UpfAppOnlyPolicingTest(UpfPolicingTest):
         stream_bps_ue2 = 2 * app_bps
         pg_id_ue2 = 2
         switch_ig_port = self.port3  # Trex port 2
-        TREX_OUT_PORT = 2
+        TREX_TX_PORT = 2
         switch_eg_port = self.port2  # Trex port 1
-        TREX_IN_PORT = 1
+        TREX_RX_PORT = 1
 
         self.push_chassis_config()
         self.setup_queues_table()
         self.setup_slice(slice_bps)
-        # Setup ACL forwarding
         self.setup_acl_forwarding(in_ports=[switch_ig_port], out_port=switch_eg_port)
         # Configure common application between the two UEs
         self.setup_app_filtering(APP1_ID, slice_id=DEFAULT_SLICE_ID, l4_port=APP1_PORT)
@@ -201,11 +203,11 @@ class UpfAppOnlyPolicingTest(UpfPolicingTest):
                 pg_id=pg_id_ue2, l1_bps=stream_bps_ue2, dport=APP1_PORT
            )
         ]
-        self.trex_client.add_streams(streams, ports=TREX_OUT_PORT)
+        self.trex_client.add_streams(streams, ports=TREX_TX_PORT)
         print(f"Starting traffic, duration: {TRAFFIC_DURATION_SECONDS} sec")
-        self.trex_client.start(TREX_OUT_PORT, duration=TRAFFIC_DURATION_SECONDS)
+        self.trex_client.start(TREX_TX_PORT, duration=TRAFFIC_DURATION_SECONDS)
         live_stats = monitor_port_stats(self.trex_client)
-        self.trex_client.wait_on_traffic(ports=TREX_OUT_PORT, rx_delay_ms=100)
+        self.trex_client.wait_on_traffic(ports=TREX_TX_PORT, rx_delay_ms=100)
         live_stats = self.min_max_monitored_port_stats(live_stats)
 
         # Get and print TREX stats
@@ -216,31 +218,31 @@ class UpfAppOnlyPolicingTest(UpfPolicingTest):
         rx_bps_ue2 = (flow_stats_ue2.rx_bytes * 8) / TRAFFIC_DURATION_SECONDS
 
         print("============= STATS UE 1 =============")
-        print(f"   RX Mbps: {rx_bps_ue1/M}")
+        print(f"   RX rate: {to_readable(rx_bps_ue1)}")
         print(get_readable_flow_stats(flow_stats_ue1))
         print("============= STATS UE 2 =============")
-        print(f"   RX Mbps: {rx_bps_ue2/M}")
+        print(f"   RX rate: {to_readable(rx_bps_ue2)}")
         print(get_readable_flow_stats(flow_stats_ue2))
         print(SEPARATOR)
 
         self.assertAlmostEqual(
-            live_stats["min_tx"][TREX_OUT_PORT] / (stream_bps_ue1 + stream_bps_ue2),
+            live_stats["min_tx"][TREX_TX_PORT] / (stream_bps_ue1 + stream_bps_ue2),
             1,
             delta=0.05,
             msg="Generated traffic rate was less than expected (issue with TRex?)"
         )
-        # No dropped packets for conforming flow
         self.assertEqual(
             flow_stats_ue1.tx_packets - flow_stats_ue1.rx_packets,
             0,
             "Conforming UE shouldn't get packet drops"
         )
-        # Dropped packets for flow over the application meter
+        # The number of dropped packets should be proportional to the excess
+        # rate over the allowed app limit.
         self.assertAlmostEqual(
             (flow_stats_ue2.tx_packets - flow_stats_ue2.rx_packets) / flow_stats_ue2.tx_packets,
             (stream_bps_ue2 - app_bps) / stream_bps_ue2,
             delta=0.02,
-            msg="Non-conforming UE should get packet drops"
+            msg="Non-conforming UE experienced too much or too little drops"
         )
         self.assertAlmostEqual(
             rx_bps_ue1 / app_bps,
@@ -258,7 +260,6 @@ class UpfAppOnlyPolicingTest(UpfPolicingTest):
 
 @group("trex-sw-mode")
 @group("upf")
-@group("meter")
 class UpfSessionPolicingTest(UpfPolicingTest):
     """
     Verify the behaviour of session level policing.
@@ -276,14 +277,13 @@ class UpfSessionPolicingTest(UpfPolicingTest):
         stream_bps_ue2 = 2 * session_bps
         pg_id_ue2 = 2
         switch_ig_port = self.port3  # Trex port 2
-        TREX_OUT_PORT = 2
+        TREX_TX_PORT = 2
         switch_eg_port = self.port2  # Trex port 1
-        TREX_IN_PORT = 1
+        TREX_RX_PORT = 1
 
         self.push_chassis_config()
         self.setup_queues_table()
         self.setup_slice(slice_bps)
-        # Setup ACL forwarding
         self.setup_acl_forwarding(in_ports=[switch_ig_port], out_port=switch_eg_port)
 
         # UE 1 configuration
@@ -311,11 +311,11 @@ class UpfSessionPolicingTest(UpfPolicingTest):
                 pg_id=pg_id_ue2, l1_bps=stream_bps_ue2
             )
         ]
-        self.trex_client.add_streams(streams, ports=TREX_OUT_PORT)
+        self.trex_client.add_streams(streams, ports=TREX_TX_PORT)
         print(f"Starting traffic, duration: {TRAFFIC_DURATION_SECONDS} sec")
-        self.trex_client.start(TREX_OUT_PORT, duration=TRAFFIC_DURATION_SECONDS)
+        self.trex_client.start(TREX_TX_PORT, duration=TRAFFIC_DURATION_SECONDS)
         live_stats = monitor_port_stats(self.trex_client)
-        self.trex_client.wait_on_traffic(ports=TREX_OUT_PORT, rx_delay_ms=100)
+        self.trex_client.wait_on_traffic(ports=TREX_TX_PORT, rx_delay_ms=100)
         live_stats = self.min_max_monitored_port_stats(live_stats)
 
         # Get and print TREX stats
@@ -326,32 +326,31 @@ class UpfSessionPolicingTest(UpfPolicingTest):
         rx_bps_ue2 = (flow_stats_ue2.rx_bytes * 8) / TRAFFIC_DURATION_SECONDS
 
         print("============= STATS UE 1 =============")
-        print(f"   RX Mbps: {rx_bps_ue1/M}")
+        print(f"   RX Rate: {to_readable(rx_bps_ue1)}")
         print(get_readable_flow_stats(flow_stats_ue1))
         print("============= STATS UE 2 =============")
-        print(f"   RX Mbps: {rx_bps_ue2/M}")
+        print(f"   RX Rate: {to_readable(rx_bps_ue2)}")
         print(get_readable_flow_stats(flow_stats_ue2))
         print(SEPARATOR)
 
         self.assertAlmostEqual(
-            live_stats["min_tx"][TREX_OUT_PORT] / (stream_bps_ue1 + stream_bps_ue2),
+            live_stats["min_tx"][TREX_TX_PORT] / (stream_bps_ue1 + stream_bps_ue2),
             1,
             delta=0.05,
             msg="Minimum generated traffic rate was less than expected (issue with TRex?)"
         )
-        # No dropped packets for conforming flow
         self.assertEqual(
             flow_stats_ue1.tx_packets - flow_stats_ue1.rx_packets,
             0,
             "Conforming UE shouldn't get packet drops"
         )
-        # Dropped packets for flow over the session meter
-        # We expect around 50% of packets being dropped
+        # The number of dropped packets should be proportional to the excess
+        # rate over the allowed session limit.
         self.assertAlmostEqual(
             (flow_stats_ue2.tx_packets - flow_stats_ue2.rx_packets) / flow_stats_ue2.tx_packets,
             (stream_bps_ue2 - session_bps) / stream_bps_ue2,
             delta=0.02,
-            msg="Non-conforming UE should get packet drops"
+            msg="Non-conforming UE experienced too much or too little drops"
         )
         self.assertAlmostEqual(
             rx_bps_ue1 / session_bps,
@@ -369,13 +368,12 @@ class UpfSessionPolicingTest(UpfPolicingTest):
 
 @group("trex-sw-mode")
 @group("upf")
-@group("meter")
-class ColorAwareSliceMeter(UpfPolicingTest):
+class UpfSliceFairPolicingTest(UpfPolicingTest):
     """
     Verifies that traffic above the session rate does not consume slice bandwidth.
     Session Rate = 80Mbps
     Slice Rate = 100Mbps
-    Two flows for different UEs:
+    Two flows for different UEs (sessions):
      1) conforming to session rate (20Mbps) (flow 1 + session rate = slice rate)
      2) misbehaving, with rate above the session rate (100Mbps)
     Output rate should be equal to the slice rate.
@@ -395,14 +393,13 @@ class ColorAwareSliceMeter(UpfPolicingTest):
         stream_bps_ue2 = 100 * M
         pg_id_ue2 = 2
         switch_ig_port = self.port3  # Trex port 2
-        TREX_OUT_PORT = 2
+        TREX_TX_PORT = 2
         switch_eg_port = self.port2  # Trex port 1
-        TREX_IN_PORT = 1
+        TREX_RX_PORT = 1
 
         self.push_chassis_config()
         self.setup_queues_table()
         self.setup_slice(slice_bps)
-        # Setup ACL forwarding
         self.setup_acl_forwarding(in_ports=[switch_ig_port], out_port=switch_eg_port)
 
         # UE 1 configuration
@@ -430,11 +427,11 @@ class ColorAwareSliceMeter(UpfPolicingTest):
                 pg_id=pg_id_ue2, l1_bps=stream_bps_ue2
             )
         ]
-        self.trex_client.add_streams(streams, ports=TREX_OUT_PORT)
+        self.trex_client.add_streams(streams, ports=TREX_TX_PORT)
         print(f"Starting traffic, duration: {TRAFFIC_DURATION_SECONDS} sec")
-        self.trex_client.start(TREX_OUT_PORT, duration=TRAFFIC_DURATION_SECONDS)
+        self.trex_client.start(TREX_TX_PORT, duration=TRAFFIC_DURATION_SECONDS)
         live_stats = monitor_port_stats(self.trex_client)
-        self.trex_client.wait_on_traffic(ports=TREX_OUT_PORT, rx_delay_ms=100)
+        self.trex_client.wait_on_traffic(ports=TREX_TX_PORT, rx_delay_ms=100)
         live_stats = self.min_max_monitored_port_stats(live_stats)
 
         # Get and print TREX stats
@@ -445,36 +442,36 @@ class ColorAwareSliceMeter(UpfPolicingTest):
         rx_bps_ue2 = (flow_stats_ue2.rx_bytes * 8) / TRAFFIC_DURATION_SECONDS
 
         print("============= STATS UE 1 =============")
-        print(f"   RX Mbps: {rx_bps_ue1/M}")
+        print(f"   RX Rate: {to_readable(rx_bps_ue1)}")
         print(get_readable_flow_stats(flow_stats_ue1))
         print("============= STATS UE 2 =============")
-        print(f"   RX Mbps: {rx_bps_ue2/M}")
+        print(f"   RX Rate: {to_readable(rx_bps_ue2)}")
         print(get_readable_flow_stats(flow_stats_ue2))
         print(SEPARATOR)
 
         self.assertAlmostEqual(
-            live_stats["min_tx"][TREX_OUT_PORT] / (stream_bps_ue1 + stream_bps_ue2),
+            live_stats["min_tx"][TREX_TX_PORT] / (stream_bps_ue1 + stream_bps_ue2),
             1,
             delta=0.05,
             msg="Generated traffic rate was less than expected (issue with TRex?)"
         )
-        # No dropped packets for conforming flow
         self.assertEqual(
             flow_stats_ue1.tx_packets - flow_stats_ue1.rx_packets,
             0,
             "Conforming UE shouldn't get packet drops"
         )
-        # Dropped packets for flow over the application meter
+        # The number of dropped packets should be proportional to the excess
+        # rate over the allowed session limit.
         self.assertAlmostEqual(
             (flow_stats_ue2.tx_packets - flow_stats_ue2.rx_packets) / flow_stats_ue2.tx_packets,
             (stream_bps_ue2 - session_bps) / stream_bps_ue2,
             delta=0.02,
-            msg="Non-conforming UE should get packet drops"
+            msg="Non-conforming UE experienced too much or too little drops"
         )
         self.assertAlmostEqual(
             (rx_bps_ue1 + rx_bps_ue2) / slice_bps,
             1,
-            delta=0.1,
+            delta=0.05,
             msg="Received traffic should be almost equal the slice rate"
         )
         self.assertAlmostEqual(
@@ -493,8 +490,7 @@ class ColorAwareSliceMeter(UpfPolicingTest):
 
 @group("trex-sw-mode")
 @group("upf")
-@group("meter")
-class ColorAwareSessionMeter(UpfPolicingTest):
+class UpfSessionFairPolicingTest(UpfPolicingTest):
     """
     Verifies that traffic above the app rate does not consume session bandwidth.
     App Rate = 50Mbps
@@ -521,14 +517,13 @@ class ColorAwareSessionMeter(UpfPolicingTest):
         stream_bps_app2 = 100 * M
         pg_id_app2 = 2
         switch_ig_port = self.port3  # Trex port 2
-        TREX_OUT_PORT = 2
+        TREX_TX_PORT = 2
         switch_eg_port = self.port2  # Trex port 1
-        TREX_IN_PORT = 1
+        TREX_RX_PORT = 1
 
         self.push_chassis_config()
         self.setup_queues_table()
         self.setup_slice(slice_bps)
-        # Setup ACL forwarding
         self.setup_acl_forwarding(in_ports=[switch_ig_port], out_port=switch_eg_port)
 
         # Single session (UE) with 2 applications
@@ -562,11 +557,11 @@ class ColorAwareSessionMeter(UpfPolicingTest):
                 pg_id=pg_id_app2, l1_bps=stream_bps_app2, dport=APP2_PORT
             )
         ]
-        self.trex_client.add_streams(streams, ports=TREX_OUT_PORT)
+        self.trex_client.add_streams(streams, ports=TREX_TX_PORT)
         print(f"Starting traffic, duration: {TRAFFIC_DURATION_SECONDS} sec")
-        self.trex_client.start(TREX_OUT_PORT, duration=TRAFFIC_DURATION_SECONDS)
+        self.trex_client.start(TREX_TX_PORT, duration=TRAFFIC_DURATION_SECONDS)
         live_stats = monitor_port_stats(self.trex_client)
-        self.trex_client.wait_on_traffic(ports=TREX_OUT_PORT, rx_delay_ms=100)
+        self.trex_client.wait_on_traffic(ports=TREX_TX_PORT, rx_delay_ms=100)
         live_stats = self.min_max_monitored_port_stats(live_stats)
 
         # Get and print TREX stats
@@ -577,31 +572,31 @@ class ColorAwareSessionMeter(UpfPolicingTest):
         rx_bps_app2 = (flow_stats_app2.rx_bytes * 8) / TRAFFIC_DURATION_SECONDS
 
         print("============= STATS APP 1 =============")
-        print(f"   RX Mbps: {rx_bps_app1/M}")
+        print(f"   RX Rate: {to_readable(rx_bps_app1)}")
         print(get_readable_flow_stats(flow_stats_app1))
         print("============= STATS APP 2 =============")
-        print(f"   RX Mbps: {rx_bps_app2/M}")
+        print(f"   RX Rate: {to_readable(rx_bps_app2)}")
         print(get_readable_flow_stats(flow_stats_app2))
         print(SEPARATOR)
 
         self.assertAlmostEqual(
-            live_stats["min_tx"][TREX_OUT_PORT] / (stream_bps_app1 + stream_bps_app2),
+            live_stats["min_tx"][TREX_TX_PORT] / (stream_bps_app1 + stream_bps_app2),
             1,
             delta=0.05,
             msg="Generated traffic rate was less than expected (issue with TRex?)"
         )
-        # No dropped packets for conforming flow
         self.assertEqual(
             flow_stats_app1.tx_packets - flow_stats_app1.rx_packets,
             0,
             "Conforming UE shouldn't get packet drops"
         )
-        # Dropped packets for flow over the application meter
+        # The number of dropped packets should be proportional to the excess
+        # rate over the allowed app limit.
         self.assertAlmostEqual(
             (flow_stats_app2.tx_packets - flow_stats_app2.rx_packets) / flow_stats_app2.tx_packets,
             (stream_bps_app2 - app_bps) / stream_bps_app2,
             delta=0.02,
-            msg="Non-conforming UE should get packet drops"
+            msg="Non-conforming UE experienced too much or too little drops"
         )
         self.assertAlmostEqual(
             (rx_bps_app1 + rx_bps_app2) / session_bps,
@@ -613,11 +608,11 @@ class ColorAwareSessionMeter(UpfPolicingTest):
             rx_bps_app1 / stream_bps_app1,
             1,
             delta=0.05,
-            msg="APP 1 (below app rate) received traffic should not be policed"
+            msg="App 1 (below app rate) received traffic should not be policed"
         )
         self.assertAlmostEqual(
             rx_bps_app2 / app_bps,
             1,
             delta=0.05,
-            msg="APP 2 (above app rate) received traffic should be policed to app rate"
+            msg="App 2 (above app rate) received traffic should be policed to app rate"
         )

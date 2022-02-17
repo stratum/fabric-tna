@@ -2485,7 +2485,7 @@ class SlicingTest(FabricTest):
         )
 
     def configure_slice_tc_meter(self, slice_id, tc, cir, cburst, pir, pburst):
-        # Stratum do not accept 0 as CIR, CBURST, PIR or PBURST.
+        # Stratum does not accept 0 as CIR, CBURST, PIR or PBURST.
         self.write_indirect_meter(
             m_name="FabricIngress.qos.slice_tc_meter",
             m_index=slice_tc_concat(slice_id, tc),
