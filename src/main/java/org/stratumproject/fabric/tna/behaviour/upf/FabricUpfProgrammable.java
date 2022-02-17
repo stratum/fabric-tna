@@ -435,7 +435,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     private Collection<UpfEntity> getUpfSessionMeters() throws UpfProgrammableException {
         ArrayList<UpfEntity> sessionMeters = Lists.newArrayList();
         for (Meter meter : meterService.getMeters(deviceId, MeterScope.of(FABRIC_INGRESS_UPF_SESSION_METER.id()))) {
-            if (gettableMeter(meter)) {
+            if (isHereToStay(meter)) {
                 sessionMeters.add(upfTranslator.fabricMeterToUpfSessionMeter(meter));
             }
         }
@@ -445,7 +445,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     private Collection<UpfEntity> getUpfAppMeters() throws UpfProgrammableException {
         ArrayList<UpfEntity> appMeters = Lists.newArrayList();
         for (Meter meter : meterService.getMeters(deviceId, MeterScope.of(FABRIC_INGRESS_UPF_APP_METER.id()))) {
-            if (gettableMeter(meter)) {
+            if (isHereToStay(meter)) {
                 appMeters.add(upfTranslator.fabricMeterToUpfAppMeter(meter));
             }
         }
@@ -455,7 +455,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     private Collection<UpfEntity> getUpfApplication() throws UpfProgrammableException {
         ArrayList<UpfEntity> appFiltering = new ArrayList<>();
         for (FlowEntry flowEntry : flowRuleService.getFlowEntries(deviceId)) {
-            if (gettableFlowEntry(flowEntry) && upfTranslator.isFabricApplication(flowEntry)) {
+            if (isHereToStay(flowEntry) && upfTranslator.isFabricApplication(flowEntry)) {
                 appFiltering.add(upfTranslator.fabricEntryToUpfApplication(flowEntry));
             }
         }
@@ -465,7 +465,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     private Collection<UpfEntity> getInterfaces() throws UpfProgrammableException {
         ArrayList<UpfEntity> ifaces = new ArrayList<>();
         for (FlowEntry flowEntry : flowRuleService.getFlowEntries(deviceId)) {
-            if (gettableFlowEntry(flowEntry) && upfTranslator.isFabricInterface(flowEntry)) {
+            if (isHereToStay(flowEntry) && upfTranslator.isFabricInterface(flowEntry)) {
                 ifaces.add(upfTranslator.fabricEntryToInterface(flowEntry));
             }
         }
@@ -475,7 +475,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     private Collection<UpfEntity> getGtpTunnelPeers() throws UpfProgrammableException {
         ArrayList<UpfEntity> gtpTunnelPeers = new ArrayList<>();
         for (FlowEntry flowEntry : flowRuleService.getFlowEntries(deviceId)) {
-            if (gettableFlowEntry(flowEntry) && upfTranslator.isFabricGtpTunnelPeer(flowEntry)) {
+            if (isHereToStay(flowEntry) && upfTranslator.isFabricGtpTunnelPeer(flowEntry)) {
                 gtpTunnelPeers.add(upfTranslator.fabricEntryToGtpTunnelPeer(flowEntry));
             }
         }
@@ -485,7 +485,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     private Collection<UpfEntity> getUeSessionsUplink() throws UpfProgrammableException {
         ArrayList<UpfEntity> ueSessions = new ArrayList<>();
         for (FlowEntry flowEntry : flowRuleService.getFlowEntries(deviceId)) {
-            if (gettableFlowEntry(flowEntry) && upfTranslator.isFabricUeSessionUplink(flowEntry)) {
+            if (isHereToStay(flowEntry) && upfTranslator.isFabricUeSessionUplink(flowEntry)) {
                 ueSessions.add(upfTranslator.fabricEntryToUeSessionUplink(flowEntry));
             }
         }
@@ -495,7 +495,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     private Collection<UpfEntity> getUeSessionsDownlink() throws UpfProgrammableException {
         ArrayList<UpfEntity> ueSessions = new ArrayList<>();
         for (FlowEntry flowEntry : flowRuleService.getFlowEntries(deviceId)) {
-            if (gettableFlowEntry(flowEntry) && upfTranslator.isFabricUeSessionDownlink(flowEntry)) {
+            if (isHereToStay(flowEntry) && upfTranslator.isFabricUeSessionDownlink(flowEntry)) {
                 ueSessions.add(upfTranslator.fabricEntryToUeSessionDownlink(flowEntry));
             }
         }
@@ -505,7 +505,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     private Collection<UpfEntity> getUpfTerminationsUplink() throws UpfProgrammableException {
         ArrayList<UpfEntity> upfTerminations = new ArrayList<>();
         for (FlowEntry flowEntry : flowRuleService.getFlowEntries(deviceId)) {
-            if (gettableFlowEntry(flowEntry) && upfTranslator.isFabricUpfTerminationUplink(flowEntry)) {
+            if (isHereToStay(flowEntry) && upfTranslator.isFabricUpfTerminationUplink(flowEntry)) {
                 upfTerminations.add(upfTranslator.fabricEntryToUpfTerminationUplink(flowEntry));
             }
         }
@@ -515,7 +515,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     private Collection<UpfEntity> getUpfTerminationsDownlink() throws UpfProgrammableException {
         ArrayList<UpfEntity> upfTerminations = new ArrayList<>();
         for (FlowEntry flowEntry : flowRuleService.getFlowEntries(deviceId)) {
-            if (gettableFlowEntry(flowEntry) && upfTranslator.isFabricUpfTerminationDownlink(flowEntry)) {
+            if (isHereToStay(flowEntry) && upfTranslator.isFabricUpfTerminationDownlink(flowEntry)) {
                 upfTerminations.add(upfTranslator.fabricEntryToUpfTerminationDownlink(flowEntry));
             }
         }
@@ -966,12 +966,12 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         }
     }
 
-    private boolean gettableFlowEntry(FlowEntry flowEntry) {
+    private boolean isHereToStay(FlowEntry flowEntry) {
         return flowEntry.state().equals(FlowEntry.FlowEntryState.PENDING_ADD) ||
                 flowEntry.state().equals(FlowEntry.FlowEntryState.ADDED);
     }
 
-    private boolean gettableMeter(Meter meter) {
+    private boolean isHereToStay(Meter meter) {
         return meter.state().equals(MeterState.PENDING_ADD) ||
                 meter.state().equals(MeterState.ADDED);
     }
