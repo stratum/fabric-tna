@@ -285,6 +285,12 @@ public class FabricUpfProgrammableTest {
         assertTrue(upfProgrammable.readAll(UpfEntityType.APPLICATION).isEmpty());
     }
 
+    @Test(expected = UpfProgrammableException.class)
+    public void testInvalidSliceIdUpfApplication() throws Exception {
+        assertTrue(upfProgrammable.readAll(UpfEntityType.INTERFACE).isEmpty());
+        upfProgrammable.apply(TestUpfConstants.APPLICATION_FILTERING_INVALID_SLICE_ID);
+    }
+
     @Test
     public void testUpfMeter() throws Exception {
         // Application meters

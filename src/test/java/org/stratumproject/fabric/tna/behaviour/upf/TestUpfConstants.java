@@ -200,6 +200,13 @@ public final class TestUpfConstants {
             .withSliceId(SLICE_MOBILE)
             .build();
 
+    public static final UpfApplication APPLICATION_FILTERING_INVALID_SLICE_ID = UpfApplication.builder()
+            .withAppId(APP_FILTERING_ID)
+            .withIp4Prefix(APP_IP_PREFIX)
+            .withPriority(APP_FILTERING_PRIORITY)
+            .withSliceId(0)
+            .build();
+
     public static final UpfTerminationDownlink DOWNLINK_UPF_TERMINATION_NO_TC = UpfTerminationDownlink.builder()
             .withUeSessionId(UE_ADDR)
             .withCounterId(DOWNLINK_COUNTER_CELL_ID)

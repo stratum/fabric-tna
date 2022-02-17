@@ -722,6 +722,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     }
 
     private void addUpfApplication(UpfApplication appFilter) throws UpfProgrammableException {
+        assertSliceId(appFilter.sliceId());
         FlowRule flowRule = upfTranslator.upfApplicationToFabricEntry(appFilter, deviceId, appId);
         log.info("Installing {}", appFilter);
         flowRuleService.applyFlowRules(flowRule);
@@ -729,12 +730,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     }
 
     private void addInterface(UpfInterface upfInterface) throws UpfProgrammableException {
-        if (!slicingService.getSlices().contains(SliceId.of(upfInterface.sliceId()))) {
-            throw new UpfProgrammableException(format(
-                    "Provided slice ID (%d) is not available in slicing service!",
-                    upfInterface.sliceId()
-            ));
-        }
+        assertSliceId(upfInterface.sliceId());
         FlowRule flowRule = upfTranslator.interfaceToFabricEntry(upfInterface, deviceId, appId, DEFAULT_PRIORITY);
         log.info("Installing {}", upfInterface);
         flowRuleService.applyFlowRules(flowRule);
@@ -967,6 +963,15 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
             flowRuleService.applyFlowRules(denyRule, allowRule);
         } else {
             flowRuleService.removeFlowRules(denyRule, allowRule);
+        }
+    }
+
+    private void assertSliceId(int sliceId) throws UpfProgrammableException{
+        if (!slicingService.getSlices().contains(SliceId.of(sliceId))) {
+            throw new UpfProgrammableException(format(
+                    "Provided slice ID (%d) is not available in slicing service!",
+                    sliceId
+            ));
         }
     }
 }
