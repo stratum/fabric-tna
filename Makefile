@@ -44,13 +44,16 @@ build: clean $(PROFILES) pipeconf
 
 all: $(PROFILES)
 
+fabric: fabric-v1model fabric-tna
+fabric-int: fabric-int-v1model fabric-int-tna
+fabric-upf: fabric-upf-v1model fabric-upf-tna
+fabric-upf-int: fabric-upf-int-v1model fabric-upf-int-tna
+
 fabric-tna:
 	@$(DIR)/p4src/tna/build.sh fabric ""
 
 fabric-v1model:
 	@${DIR}/p4src/v1model/build.sh fabric ""
-
-fabric: fabric-v1model fabric-tna
 
 # Profiles which are not completed yet.
 # fabric-simple:
@@ -65,23 +68,17 @@ fabric-int-tna:
 fabric-int-v1model:
 	@$(DIR)/p4src/v1model/build.sh fabric-int "-DWITH_INT"
 
-fabric-int: fabric-int-v1model fabric-int-tna
-
 fabric-upf-tna:
 	@$(DIR)/p4src/tna/build.sh fabric-upf "-DWITH_UPF"
 
 fabric-upf-v1model:
 	@$(DIR)/p4src/v1model/build.sh fabric-upf "-DWITH_UPF"
 
-fabric-upf: fabric-upf-v1model fabric-upf-tna
-
 fabric-upf-int-tna:
 	@$(DIR)/p4src/tna/build.sh fabric-upf-int "-DWITH_UPF -DWITH_INT"
 
 fabric-upf-int-v1model:
 	@$(DIR)/p4src/v1model/build.sh fabric-upf-int "-DWITH_UPF -DWITH_INT"
-
-fabric-upf-int: fabric-upf-int-v1model fabric-upf-int-tna
 
 constants:
 	docker run -v $(DIR):$(DIR) -w $(DIR) --rm --user $(UID) \
