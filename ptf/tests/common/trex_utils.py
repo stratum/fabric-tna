@@ -105,53 +105,34 @@ def list_port_status(port_status: dict) -> None:
         print("States from port {}: \n{}".format(port, readable_stats))
 
 
-def monitor_port_stats(c: STLClient) -> dict:
+def monitor_port_stats(c: STLClient, ports: []) -> dict:
     """
     List some port stats continuously while traffic is active 
 
     :parameters:
     c: STLClient
         TRex stateless client to continuously grab statistics from
+    ports: []
+        List of ports to monitor
     """
-    ports = [0, 1, 2, 3]
-
     results = {
-        "duration": [],
-        0: {"rx_bps": [], "tx_bps": [], "rx_pps": [], "tx_pps": []},
-        1: {"rx_bps": [], "tx_bps": [], "rx_pps": [], "tx_pps": []},
-        2: {"rx_bps": [], "tx_bps": [], "rx_pps": [], "tx_pps": []},
-        3: {"rx_bps": [], "tx_bps": [], "rx_pps": [], "tx_pps": []},
+        port_id: {"rx_bps": [], "tx_bps": [], "rx_pps": [], "tx_pps": []}
+        for port_id in ports
     }
+    results["duration"] = []
+
+    if not ports:
+        return results
 
     prev = {
-        0: {
+        port_id: {
             "opackets": 0,
             "ipackets": 0,
             "obytes": 0,
             "ibytes": 0,
             "time": time.time(),
-        },
-        1: {
-            "opackets": 0,
-            "ipackets": 0,
-            "obytes": 0,
-            "ibytes": 0,
-            "time": time.time(),
-        },
-        2: {
-            "opackets": 0,
-            "ipackets": 0,
-            "obytes": 0,
-            "ibytes": 0,
-            "time": time.time(),
-        },
-        3: {
-            "opackets": 0,
-            "ipackets": 0,
-            "obytes": 0,
-            "ibytes": 0,
-            "time": time.time(),
-        },
+        }
+        for port_id in ports
     }
 
     s_time = time.time()
