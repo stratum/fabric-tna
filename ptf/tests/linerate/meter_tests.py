@@ -152,15 +152,17 @@ class UpfPolicingTest(TRexTest, UpfSimpleTest, StatsTest):
     def min_max_monitored_port_stats(self, stats) -> {}:
         """
         Minimum and maximum of the TX/RX stats captured live, obtained removing
-        the first and last sample that might be inaccurate due to rump up and down
-        of traffic from TRex.
+        the initial and last 2 samples that might be inaccurate due to rump up
+        and down of traffic from TRex (if we have enough samples).
         :param stats:
         :return: dictionary with per port min and max TX/RX
         """
-        min_tx = [min(v["tx_bps"][1:-1]) for (k, v) in stats.items() if k != "duration"]
-        max_tx = [max(v["tx_bps"][1:-1]) for (k, v) in stats.items() if k != "duration"]
-        min_rx = [min(v["rx_bps"][1:-1]) for (k, v) in stats.items() if k != "duration"]
-        max_rx = [max(v["rx_bps"][1:-1]) for (k, v) in stats.items() if k != "duration"]
+        min_s = 2 if len(stats[0]["tx_bps"]) > 4 else 0
+        max_s = -2 if len(stats[0]["tx_bps"]) > 4 else -1
+        min_tx = [min(v["tx_bps"][min_s:max_s]) for (k, v) in stats.items() if k != "duration"]
+        max_tx = [max(v["tx_bps"][min_s:max_s]) for (k, v) in stats.items() if k != "duration"]
+        min_rx = [min(v["rx_bps"][min_s:max_s]) for (k, v) in stats.items() if k != "duration"]
+        max_rx = [max(v["rx_bps"][min_s:max_s]) for (k, v) in stats.items() if k != "duration"]
         return {"min_tx": min_tx, "max_tx": max_tx, "min_rx": min_rx, "max_rx": max_rx}
 
 
@@ -235,7 +237,7 @@ class UpfAppOnlyPolicingTest(UpfPolicingTest):
         self.trex_client.add_streams(streams, ports=TREX_TX_PORT)
         print(f"Starting traffic, duration: {TRAFFIC_DURATION_SECONDS} sec")
         self.trex_client.start(TREX_TX_PORT, duration=TRAFFIC_DURATION_SECONDS)
-        live_stats = monitor_port_stats(self.trex_client)
+        live_stats = monitor_port_stats(self.trex_client, ALL_PORTS)
         self.trex_client.wait_on_traffic(ports=TREX_TX_PORT, rx_delay_ms=100)
         live_stats = self.min_max_monitored_port_stats(live_stats)
 
@@ -348,7 +350,7 @@ class UpfSessionPolicingTest(UpfPolicingTest):
         self.trex_client.add_streams(streams, ports=TREX_TX_PORT)
         print(f"Starting traffic, duration: {TRAFFIC_DURATION_SECONDS} sec")
         self.trex_client.start(TREX_TX_PORT, duration=TRAFFIC_DURATION_SECONDS)
-        live_stats = monitor_port_stats(self.trex_client)
+        live_stats = monitor_port_stats(self.trex_client, ALL_PORTS)
         self.trex_client.wait_on_traffic(ports=TREX_TX_PORT, rx_delay_ms=100)
         live_stats = self.min_max_monitored_port_stats(live_stats)
 
@@ -470,7 +472,7 @@ class UpfSliceFairPolicingTest(UpfPolicingTest):
         self.trex_client.add_streams(streams, ports=TREX_TX_PORT)
         print(f"Starting traffic, duration: {TRAFFIC_DURATION_SECONDS} sec")
         self.trex_client.start(TREX_TX_PORT, duration=TRAFFIC_DURATION_SECONDS)
-        live_stats = monitor_port_stats(self.trex_client)
+        live_stats = monitor_port_stats(self.trex_client, ALL_PORTS)
         self.trex_client.wait_on_traffic(ports=TREX_TX_PORT, rx_delay_ms=100)
         live_stats = self.min_max_monitored_port_stats(live_stats)
 
@@ -616,7 +618,7 @@ class UpfSessionFairPolicingTest(UpfPolicingTest):
         self.trex_client.add_streams(streams, ports=TREX_TX_PORT)
         print(f"Starting traffic, duration: {TRAFFIC_DURATION_SECONDS} sec")
         self.trex_client.start(TREX_TX_PORT, duration=TRAFFIC_DURATION_SECONDS)
-        live_stats = monitor_port_stats(self.trex_client)
+        live_stats = monitor_port_stats(self.trex_client, ALL_PORTS)
         self.trex_client.wait_on_traffic(ports=TREX_TX_PORT, rx_delay_ms=100)
         live_stats = self.min_max_monitored_port_stats(live_stats)
 
