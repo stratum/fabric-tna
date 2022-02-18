@@ -80,7 +80,7 @@ public class PipeconfLoader {
         coreService.registerApplication(Constants.APP_NAME);
         coreService.registerApplication(Constants.APP_NAME_UPF);
         compCfgService.preSetProperty(
-            "org.onosproject.provider.general.device.impl.GeneralDeviceProvider",
+            "org.onosproject.gnmi.ctl.GnmiControllerImpl",
             "readPortId", "true");
         // Registers all pipeconf at component activation.
         pipeconfs = buildAllPipeconfs();
