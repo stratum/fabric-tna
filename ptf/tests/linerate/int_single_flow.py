@@ -29,6 +29,7 @@ HOP_LATENCY_MASK = 2 ** 10
 
 
 @group("int")
+@group("trex-hw-mode")
 class IntSingleFlow(TRexTest, IntTest):
     @autocleanup
     def runTest(self):

@@ -3,6 +3,7 @@
 
 package org.stratumproject.fabric.tna;
 
+import org.onosproject.cfg.ComponentConfigService;
 import org.onosproject.core.CoreService;
 import org.onosproject.net.behaviour.Pipeliner;
 import org.onosproject.net.behaviour.upf.UpfProgrammable;
@@ -61,6 +62,9 @@ public class PipeconfLoader {
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     private CoreService coreService;
 
+    @Reference(cardinality = ReferenceCardinality.MANDATORY)
+    private ComponentConfigService compCfgService;
+
     private Collection<PiPipeconf> pipeconfs;
 
     private static final String P4INFO_TXT = "p4info.txt";
@@ -75,6 +79,9 @@ public class PipeconfLoader {
     public void activate() {
         coreService.registerApplication(Constants.APP_NAME);
         coreService.registerApplication(Constants.APP_NAME_UPF);
+        compCfgService.preSetProperty(
+            "org.onosproject.gnmi.ctl.GnmiControllerImpl",
+            "readPortId", "true");
         // Registers all pipeconf at component activation.
         pipeconfs = buildAllPipeconfs();
         pipeconfs.forEach(pipeconfService::register);
