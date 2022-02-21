@@ -44,8 +44,15 @@ build: clean $(PROFILES) pipeconf
 
 all: $(PROFILES)
 
-fabric:
+fabric: fabric-v1model fabric-tna
+fabric-int: fabric-int-v1model fabric-int-tna
+fabric-upf: fabric-upf-v1model fabric-upf-tna
+fabric-upf-int: fabric-upf-int-v1model fabric-upf-int-tna
+
+fabric-tna:
 	@$(DIR)/p4src/tna/build.sh fabric ""
+
+fabric-v1model:
 	@${DIR}/p4src/v1model/build.sh fabric ""
 
 # Profiles which are not completed yet.
@@ -55,16 +62,22 @@ fabric:
 # fabric-bng:
 # 	@$(DIR)/p4src/tna/build.sh fabric-bng "-DWITH_BNG -DWITHOUT_XCONNECT"
 
-fabric-int:
+fabric-int-tna:
 	@$(DIR)/p4src/tna/build.sh fabric-int "-DWITH_INT"
+
+fabric-int-v1model:
 	@$(DIR)/p4src/v1model/build.sh fabric-int "-DWITH_INT"
 
-fabric-upf:
+fabric-upf-tna:
 	@$(DIR)/p4src/tna/build.sh fabric-upf "-DWITH_UPF"
+
+fabric-upf-v1model:
 	@$(DIR)/p4src/v1model/build.sh fabric-upf "-DWITH_UPF"
 
-fabric-upf-int:
+fabric-upf-int-tna:
 	@$(DIR)/p4src/tna/build.sh fabric-upf-int "-DWITH_UPF -DWITH_INT"
+
+fabric-upf-int-v1model:
 	@$(DIR)/p4src/v1model/build.sh fabric-upf-int "-DWITH_UPF -DWITH_INT"
 
 constants:
