@@ -159,10 +159,18 @@ class UpfPolicingTest(TRexTest, UpfSimpleTest, StatsTest):
         """
         min_s = 2 if len(stats[0]["tx_bps"]) > 4 else 0
         max_s = -2 if len(stats[0]["tx_bps"]) > 4 else -1
-        min_tx = [min(v["tx_bps"][min_s:max_s]) for (k, v) in stats.items() if k != "duration"]
-        max_tx = [max(v["tx_bps"][min_s:max_s]) for (k, v) in stats.items() if k != "duration"]
-        min_rx = [min(v["rx_bps"][min_s:max_s]) for (k, v) in stats.items() if k != "duration"]
-        max_rx = [max(v["rx_bps"][min_s:max_s]) for (k, v) in stats.items() if k != "duration"]
+        min_tx = [
+            min(v["tx_bps"][min_s:max_s]) for (k, v) in stats.items() if k != "duration"
+        ]
+        max_tx = [
+            max(v["tx_bps"][min_s:max_s]) for (k, v) in stats.items() if k != "duration"
+        ]
+        min_rx = [
+            min(v["rx_bps"][min_s:max_s]) for (k, v) in stats.items() if k != "duration"
+        ]
+        max_rx = [
+            max(v["rx_bps"][min_s:max_s]) for (k, v) in stats.items() if k != "duration"
+        ]
         return {"min_tx": min_tx, "max_tx": max_tx, "min_rx": min_rx, "max_rx": max_rx}
 
 
