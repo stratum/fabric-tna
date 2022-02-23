@@ -82,6 +82,9 @@ public class PipeconfLoader {
         compCfgService.preSetProperty(
             "org.onosproject.gnmi.ctl.GnmiControllerImpl",
             "readPortId", "true");
+        compCfgService.preSetProperty(
+                "org.onosproject.net.meter.impl.MeterManager",
+                "userDefinedIndex", "true");
         // Registers all pipeconf at component activation.
         pipeconfs = buildAllPipeconfs();
         pipeconfs.forEach(pipeconfService::register);
