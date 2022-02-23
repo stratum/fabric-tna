@@ -6,6 +6,7 @@ import com.google.common.collect.ImmutableList;
 import org.junit.Before;
 import org.junit.Test;
 import org.onlab.junit.TestUtils;
+import org.onlab.packet.Ip4Prefix;
 import org.onlab.util.HexString;
 import org.onosproject.TestApplicationId;
 import org.onosproject.core.ApplicationId;
@@ -18,6 +19,7 @@ import org.onosproject.net.behaviour.upf.UpfEntity;
 import org.onosproject.net.behaviour.upf.UpfEntityType;
 import org.onosproject.net.behaviour.upf.UpfInterface;
 import org.onosproject.net.behaviour.upf.UpfMeter;
+import org.onosproject.net.behaviour.upf.UpfProgrammableException;
 import org.onosproject.net.behaviour.upf.UpfSessionDownlink;
 import org.onosproject.net.behaviour.upf.UpfSessionUplink;
 import org.onosproject.net.behaviour.upf.UpfTerminationDownlink;
@@ -40,12 +42,14 @@ import org.onosproject.net.pi.service.PiTranslationService;
 import org.onosproject.p4runtime.api.P4RuntimeController;
 import org.stratumproject.fabric.tna.Constants;
 import org.stratumproject.fabric.tna.behaviour.FabricCapabilities;
+import org.stratumproject.fabric.tna.slicing.api.SliceId;
 import org.stratumproject.fabric.tna.slicing.api.SlicingService;
 
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 
 import static junit.framework.TestCase.assertNotNull;
@@ -68,6 +72,7 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_ING
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_TERMINATIONS_COUNTER;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_UPLINK_SESSIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_UPLINK_TERMINATIONS;
+import static org.stratumproject.fabric.tna.behaviour.upf.TestUpfConstants.SLICE_MOBILE;
 
 public class FabricUpfProgrammableTest {
 
@@ -128,12 +133,13 @@ public class FabricUpfProgrammableTest {
         NetworkConfigService netcfgService = createMock(NetworkConfigService.class);
         DeviceService deviceService = createMock(DeviceService.class);
         SlicingService slicingService = createMock(SlicingService.class);
+        expect(slicingService.getSlices()).andReturn(Set.of(SliceId.of(SLICE_MOBILE))).anyTimes();
         PiTranslationService piTranslationService = createMock(PiTranslationService.class);
         expect(coreService.getAppId(anyString())).andReturn(APP_ID).anyTimes();
         expect(netcfgService.getConfig(TestUpfConstants.DEVICE_ID, BasicDeviceConfig.class))
                 .andReturn(TestUpfUtils.getBasicConfig(TestUpfConstants.DEVICE_ID, "/basic.json"))
                 .anyTimes();
-        replay(coreService, netcfgService);
+        replay(coreService, netcfgService, slicingService);
 
         // Mock driverData to get the right device ID
         DriverData driverData = createMock(DriverData.class);
@@ -258,6 +264,12 @@ public class FabricUpfProgrammableTest {
         assertTrue(upfProgrammable.readAll(UpfEntityType.INTERFACE).isEmpty());
     }
 
+    @Test(expected = UpfProgrammableException.class)
+    public void testInvalidSliceIdInterface() throws Exception {
+        assertTrue(upfProgrammable.readAll(UpfEntityType.INTERFACE).isEmpty());
+        upfProgrammable.apply(UpfInterface.createUePoolFrom(Ip4Prefix.valueOf("10.0.0.0/24"), 0));
+    }
+
     @Test
     public void testUpfApplication() throws Exception {
         assertTrue(upfProgrammable.readAll(UpfEntityType.APPLICATION).isEmpty());
@@ -271,6 +283,12 @@ public class FabricUpfProgrammableTest {
         }
         upfProgrammable.delete(expectedAppFiltering);
         assertTrue(upfProgrammable.readAll(UpfEntityType.APPLICATION).isEmpty());
+    }
+
+    @Test(expected = UpfProgrammableException.class)
+    public void testInvalidSliceIdUpfApplication() throws Exception {
+        assertTrue(upfProgrammable.readAll(UpfEntityType.INTERFACE).isEmpty());
+        upfProgrammable.apply(TestUpfConstants.APPLICATION_FILTERING_INVALID_SLICE_ID);
     }
 
     @Test
