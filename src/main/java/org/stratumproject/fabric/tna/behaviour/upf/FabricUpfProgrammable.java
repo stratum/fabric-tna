@@ -53,6 +53,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.stratumproject.fabric.tna.Constants;
 import org.stratumproject.fabric.tna.behaviour.FabricCapabilities;
+import org.stratumproject.fabric.tna.slicing.api.SliceId;
+import org.stratumproject.fabric.tna.slicing.api.SlicingService;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -99,6 +101,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     protected FlowRuleService flowRuleService;
     protected MeterService meterService;
     protected PacketService packetService;
+    protected SlicingService slicingService;
     protected FabricUpfTranslator upfTranslator;
 
     private long interfaceTableSize;
@@ -135,6 +138,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         flowRuleService = handler().get(FlowRuleService.class);
         meterService = handler().get(MeterService.class);
         packetService = handler().get(PacketService.class);
+        slicingService = handler().get(SlicingService.class);
         upfTranslator = new FabricUpfTranslator();
         final CoreService coreService = handler().get(CoreService.class);
         appId = coreService.getAppId(Constants.APP_NAME_UPF);
@@ -725,6 +729,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     }
 
     private void addUpfApplication(UpfApplication appFilter) throws UpfProgrammableException {
+        assertSliceId(appFilter.sliceId());
         FlowRule flowRule = upfTranslator.upfApplicationToFabricEntry(appFilter, deviceId, appId);
         log.info("Installing {}", appFilter);
         flowRuleService.applyFlowRules(flowRule);
@@ -732,6 +737,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     }
 
     private void addInterface(UpfInterface upfInterface) throws UpfProgrammableException {
+        assertSliceId(upfInterface.sliceId());
         FlowRule flowRule = upfTranslator.interfaceToFabricEntry(upfInterface, deviceId, appId, DEFAULT_PRIORITY);
         log.info("Installing {}", upfInterface);
         flowRuleService.applyFlowRules(flowRule);
@@ -975,5 +981,14 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     private boolean isHereToStay(Meter meter) {
         return meter.state().equals(MeterState.PENDING_ADD) ||
                 meter.state().equals(MeterState.ADDED);
+    }
+
+    private void assertSliceId(int sliceId) throws UpfProgrammableException {
+        if (!slicingService.getSlices().contains(SliceId.of(sliceId))) {
+            throw new UpfProgrammableException(format(
+                    "Provided slice ID (%d) is not available in slicing service!",
+                    sliceId
+            ));
+        }
     }
 }
