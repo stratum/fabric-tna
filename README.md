@@ -29,7 +29,7 @@ specifically designed to run on [Stratum]-enabled switches controlled by the
 hosted in the ONOS repository originally designed to support [Trellis].
 `fabric-tna.p4` follows a similar design to `fabric.p4`, but has evolved
 significantly to provide more advanced capabilities for 4G/5G mobile user plane
-function (UPF), Inband Network Telemetry (INT), slicing, and QoS.
+function (UPF), In-band Network Telemetry (INT), slicing, and QoS.
 
 For up-to-date documentation on the architecture, capabilities, and
 instructions to deploy and use SD-Fabric, please refer to the official
@@ -156,15 +156,14 @@ To build `fabric-tna.p4` using the Barefoot compiler and to create the pipeconf
 `.oar` package in one command:
 
 ```bash
-make build PROFILES=all
+make build [PROFILES=...]
 ```
 
-This command will build the `fabric-tna.p4` profiles specified in the
-`PROFILES` argument.
+This command will build the `fabric-tna.p4` profiles specified in the `PROFILES` argument.
 
-To build all profiles: `PROFILES=all`.
+To build all profiles, leave `PROFILES` unchanged.
 
-To build a subset of the available profiles separate them with whitespaces:
+To build a subset of the available profiles separate them with spaces:
 `PROFILES="fabric fabric-int"`
 
 The P4 compiler outputs to include in the `.oar` package will be placed under
@@ -188,8 +187,17 @@ For more information on how to get and run ONOS:
 
 ### 2 - Start Stratum on your switch
 
-For instructions on how to install and run Stratum on a Tofino switch:
-<https://github.com/stratum/stratum/tree/master/stratum/hal/bin/barefoot>
+To run Stratum on a Tofino-based switch, please follow instructions in this document:
+<https://github.com/stratum/stratum/blob/main/stratum/hal/bin/barefoot/README.run.md>
+
+Note that the `fabric-tna` pipeline uses P4Runtime translation annotation for certain
+tables, you must enable P4Runtime translation with following flags when starting the
+Stratum:
+
+```text
+-experimental_enable_p4runtime_translation
+-incompatible_enable_bfrt_legacy_bytestring_responses
+```
 
 ### 3 - Install pipeconf app in ONOS
 
@@ -259,39 +267,13 @@ REST API to push the `tofino-netcfg.json` file.
 
 Check the ONOS log for potential errors.
 
-## Using Trellis with Stratum+Tofino switches
+## Using SD-Fabric with Stratum+Tofino switches
 
-Check the official Trellis documentation here:
-<https://docs.trellisfabric.org>
+Check the official SD-Fabric documentation here:
+<https://docs.sd-fabric.org>
 
-In the "Device Configuration" section:
-<https://docs.trellisfabric.org/configuration/device-config.html>
-
-make sure to replace the `basic` JSON node for OpenFlow devices with the one
-provided in `tofino-netcfg.json`, for example:
-
-```json
-{
-  "devices" : {
-    "device:leaf-1" : {
-      "segmentrouting" : {
-        "ipv4NodeSid" : 101,
-        "ipv4Loopback" : "192.168.0.201",
-        "ipv6NodeSid" : 111,
-        "ipv6Loopback" : "2000::c0a8:0201",
-        "routerMac" : "00:00:00:00:02:01",
-        "isEdgeRouter" : true,
-        "adjacencySids" : []
-      },
-      "basic": {
-        "managementAddress": "grpc://10.0.0.1:28000?device_id=1",
-        "driver": "stratum-tofino",
-        "pipeconf": "org.stratumproject.fabric.montara_sde_9_7_0"
-      }
-    }
-  }
-}
-```
+In the "Network Configuration" section:
+<https://docs.sd-fabric.org/master/configuration/network.html>
 
 ## Support
 
