@@ -161,7 +161,7 @@ make build [PROFILES=...]
 
 This command will build the `fabric-tna.p4` profiles specified in the `PROFILES` argument.
 
-To build all profiles, leave `PROFILES` unchanged.
+To build all profiles, leave `PROFILES` unset.
 
 To build a subset of the available profiles separate them with spaces:
 `PROFILES="fabric fabric-int"`
@@ -190,8 +190,8 @@ For more information on how to get and run ONOS:
 To run Stratum on a Tofino-based switch, please follow instructions in this document:
 <https://github.com/stratum/stratum/blob/main/stratum/hal/bin/barefoot/README.run.md>
 
-Note that the `fabric-tna` pipeline uses P4Runtime translation annotation for certain
-tables, you must enable P4Runtime translation with following flags when starting the
+Note that `fabric-tna` uses the `@p4runtime_translation` annotation for certain
+P4 tables, you must enable P4Runtime translation with the following flags when starting
 Stratum:
 
 ```text
