@@ -538,8 +538,8 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
         switch (tc) {
             case CONTROL:
                 // The control queue can be shared between multiple slices for
-                // delay-critical low-loss traffic. To avoid starving other
-                // slices, only green traffic can be admitted to the control
+                // delay-critical low-loss traffic. To guarantee isolation
+                // between slices, only green traffic can be admitted to the
                 // queue.
                 flowRules.add(buildQueuesFlowRule(deviceId, sliceId, tc, queueId, green,
                         QUEUES_FLOW_PRIORITY_HIGH));
