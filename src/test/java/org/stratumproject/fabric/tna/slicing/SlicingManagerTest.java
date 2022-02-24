@@ -75,7 +75,8 @@ public class SlicingManagerTest {
     private static final ArrayList<SliceId> SLICE_IDS = new ArrayList<>();
     private static final ArrayList<Device> DEVICES = new ArrayList<>();
 
-    private static final int QOS_FLOW_PRIORITY = 10;
+    private static final int QUEUES_FLOW_PRIORITY_LOW = 10;
+    private static final int QUEUES_FLOW_PRIORITY_HIGH = 20;
     private static final int DEFAULT_TC_PRIORITY = 10;
     private static final int CLASSIFIER_FLOW_PRIORITY = 0;
     private static final DeviceId DEVICE_ID = DeviceId.deviceId("device:s1");
@@ -547,7 +548,11 @@ public class SlicingManagerTest {
         FlowRule queuesFlowRuleSlice1BestEffort = buildQueuesFlowRuleSlice1BestEffort();
         FlowRule defaultTcFlowRuleSlice1BestEffort = buildDefaultTcFlowRuleSlice1BestEffort();
         FlowRule queuesFlowRuleSlice1ControlGreen = buildQueuesFlowRuleSlice1ControlGreen();
-        FlowRule queuesFlowRuleSlice1ControlRed = buildQueuesFlowRuleSlice1ControlRed();
+        FlowRule queuesFlowRuleSlice1ControlRed = buildQueuesFlowRuleSlice1ControlNotGreen();
+        FlowRule queuesFlowRuleSlice1ElasticRed = buildQueuesFlowRuleSlice1ElasticRed();
+        FlowRule queuesFlowRuleSlice1ElasticNotRed = buildQueuesFlowRuleSlice1ElasticNotRed();
+        FlowRule queuesFlowRuleSlice1RealtimeRed = buildQueuesFlowRuleSlice1RealtimeRed();
+        FlowRule queuesFlowRuleSlice1RealtimeNotRed = buildQueuesFlowRuleSlice1RealtimeNotRed();
         int numDevices = DEVICES.size();
         flowsPreCheck();
 
@@ -573,6 +578,28 @@ public class SlicingManagerTest {
                     .stream().anyMatch(f -> f.exactMatch(queuesFlowRuleSlice1ControlRed)));
         });
 
+        // Adding Real-time class to slice 1
+        capturedAddedFlowRules.reset();
+        manager.addTrafficClass(SLICE_IDS.get(1), TC_CONFIG_REAL_TIME);
+        assertAfter(50, () -> {
+            assertEquals(2 * numDevices, capturedAddedFlowRules.getValues().size());
+            assertTrue(capturedAddedFlowRules.getValues()
+                    .stream().anyMatch(f -> f.exactMatch(queuesFlowRuleSlice1RealtimeRed)));
+            assertTrue(capturedAddedFlowRules.getValues()
+                    .stream().anyMatch(f -> f.exactMatch(queuesFlowRuleSlice1RealtimeNotRed)));
+        });
+
+        // Adding Elastic class to slice 1
+        capturedAddedFlowRules.reset();
+        manager.addTrafficClass(SLICE_IDS.get(1), TC_CONFIG_ELASTIC);
+        assertAfter(50, () -> {
+            assertEquals(2 * numDevices, capturedAddedFlowRules.getValues().size());
+            assertTrue(capturedAddedFlowRules.getValues()
+                    .stream().anyMatch(f -> f.exactMatch(queuesFlowRuleSlice1ElasticRed)));
+            assertTrue(capturedAddedFlowRules.getValues()
+                    .stream().anyMatch(f -> f.exactMatch(queuesFlowRuleSlice1ElasticNotRed)));
+        });
+
         // Removing Control class from slice 1
         capturedRemovedFlowRules.reset();
         manager.removeTrafficClass(SLICE_IDS.get(1), TrafficClass.CONTROL);
@@ -582,6 +609,28 @@ public class SlicingManagerTest {
                     .stream().anyMatch(f -> f.exactMatch(queuesFlowRuleSlice1ControlGreen)));
             assertTrue(capturedRemovedFlowRules.getValues()
                     .stream().anyMatch(f -> f.exactMatch(queuesFlowRuleSlice1ControlRed)));
+        });
+
+        // Removing Real-time class from slice 1
+        capturedRemovedFlowRules.reset();
+        manager.removeTrafficClass(SLICE_IDS.get(1), TrafficClass.REAL_TIME);
+        assertAfter(50, () -> {
+            assertEquals(2 * numDevices, capturedRemovedFlowRules.getValues().size());
+            assertTrue(capturedRemovedFlowRules.getValues()
+                    .stream().anyMatch(f -> f.exactMatch(queuesFlowRuleSlice1RealtimeRed)));
+            assertTrue(capturedRemovedFlowRules.getValues()
+                    .stream().anyMatch(f -> f.exactMatch(queuesFlowRuleSlice1RealtimeNotRed)));
+        });
+
+        // Removing Elastic class from slice 1
+        capturedRemovedFlowRules.reset();
+        manager.removeTrafficClass(SLICE_IDS.get(1), TrafficClass.ELASTIC);
+        assertAfter(50, () -> {
+            assertEquals(2 * numDevices, capturedRemovedFlowRules.getValues().size());
+            assertTrue(capturedRemovedFlowRules.getValues()
+                    .stream().anyMatch(f -> f.exactMatch(queuesFlowRuleSlice1ElasticRed)));
+            assertTrue(capturedRemovedFlowRules.getValues()
+                    .stream().anyMatch(f -> f.exactMatch(queuesFlowRuleSlice1ElasticNotRed)));
         });
     }
 
@@ -649,7 +698,7 @@ public class SlicingManagerTest {
                 .forDevice(DEVICE_ID)
                 .forTable(PiTableId.of(FABRIC_INGRESS_QOS_QUEUES.id()))
                 .fromApp(APP_ID)
-                .withPriority(QOS_FLOW_PRIORITY)
+                .withPriority(QUEUES_FLOW_PRIORITY_LOW)
                 .withSelector(DefaultTrafficSelector.builder().matchPi(piCriterionBuilder.build()).build())
                 .withTreatment(DefaultTrafficTreatment.builder().piTableAction(piTableActionBuilder.build()).build())
                 .makePermanent()
@@ -691,18 +740,17 @@ public class SlicingManagerTest {
                 .forDevice(SlicingManagerTest.DEVICE_ID)
                 .forTable(PiTableId.of(FABRIC_INGRESS_QOS_QUEUES.id()))
                 .fromApp(APP_ID)
-                .withPriority(QOS_FLOW_PRIORITY)
+                .withPriority(QUEUES_FLOW_PRIORITY_HIGH)
                 .withSelector(DefaultTrafficSelector.builder().matchPi(piCriterionBuilder.build()).build())
                 .withTreatment(DefaultTrafficTreatment.builder().piTableAction(piTableActionBuilder.build()).build())
                 .makePermanent()
                 .build();
     }
 
-    private FlowRule buildQueuesFlowRuleSlice1ControlRed() {
+    private FlowRule buildQueuesFlowRuleSlice1ControlNotGreen() {
         PiCriterion.Builder piCriterionBuilder = PiCriterion.builder()
                 .matchExact(P4InfoConstants.HDR_SLICE_TC,
-                        sliceTcConcat(SLICE_IDS.get(1).id(), TrafficClass.CONTROL.toInt()))
-                .matchTernary(HDR_COLOR, COLOR_RED, 1 << HDR_COLOR_BITWIDTH - 1);
+                        sliceTcConcat(SLICE_IDS.get(1).id(), TrafficClass.CONTROL.toInt()));
 
         PiAction.Builder piTableActionBuilder = PiAction.builder()
                 .withId(P4InfoConstants.FABRIC_INGRESS_QOS_SET_QUEUE)
@@ -712,7 +760,87 @@ public class SlicingManagerTest {
                 .forDevice(SlicingManagerTest.DEVICE_ID)
                 .forTable(PiTableId.of(FABRIC_INGRESS_QOS_QUEUES.id()))
                 .fromApp(APP_ID)
-                .withPriority(QOS_FLOW_PRIORITY)
+                .withPriority(QUEUES_FLOW_PRIORITY_LOW)
+                .withSelector(DefaultTrafficSelector.builder().matchPi(piCriterionBuilder.build()).build())
+                .withTreatment(DefaultTrafficTreatment.builder().piTableAction(piTableActionBuilder.build()).build())
+                .makePermanent()
+                .build();
+    }
+
+    private FlowRule buildQueuesFlowRuleSlice1ElasticRed() {
+        PiCriterion.Builder piCriterionBuilder = PiCriterion.builder()
+                .matchExact(P4InfoConstants.HDR_SLICE_TC,
+                        sliceTcConcat(SLICE_IDS.get(1).id(), TrafficClass.ELASTIC.toInt()))
+                .matchTernary(HDR_COLOR, COLOR_RED, 1 << HDR_COLOR_BITWIDTH - 1);
+
+        PiAction.Builder piTableActionBuilder = PiAction.builder()
+                .withId(P4InfoConstants.FABRIC_INGRESS_QOS_METER_DROP);
+
+        return DefaultFlowRule.builder()
+                .forDevice(SlicingManagerTest.DEVICE_ID)
+                .forTable(PiTableId.of(FABRIC_INGRESS_QOS_QUEUES.id()))
+                .fromApp(APP_ID)
+                .withPriority(QUEUES_FLOW_PRIORITY_HIGH)
+                .withSelector(DefaultTrafficSelector.builder().matchPi(piCriterionBuilder.build()).build())
+                .withTreatment(DefaultTrafficTreatment.builder().piTableAction(piTableActionBuilder.build()).build())
+                .makePermanent()
+                .build();
+    }
+
+    private FlowRule buildQueuesFlowRuleSlice1ElasticNotRed() {
+        PiCriterion.Builder piCriterionBuilder = PiCriterion.builder()
+                .matchExact(P4InfoConstants.HDR_SLICE_TC,
+                        sliceTcConcat(SLICE_IDS.get(1).id(), TrafficClass.ELASTIC.toInt()));
+
+        PiAction.Builder piTableActionBuilder = PiAction.builder()
+                .withId(P4InfoConstants.FABRIC_INGRESS_QOS_SET_QUEUE)
+                .withParameter(new PiActionParam(P4InfoConstants.QID, QUEUE_ID_ELASTIC.id()));
+
+        return DefaultFlowRule.builder()
+                .forDevice(SlicingManagerTest.DEVICE_ID)
+                .forTable(PiTableId.of(FABRIC_INGRESS_QOS_QUEUES.id()))
+                .fromApp(APP_ID)
+                .withPriority(QUEUES_FLOW_PRIORITY_LOW)
+                .withSelector(DefaultTrafficSelector.builder().matchPi(piCriterionBuilder.build()).build())
+                .withTreatment(DefaultTrafficTreatment.builder().piTableAction(piTableActionBuilder.build()).build())
+                .makePermanent()
+                .build();
+    }
+
+    private FlowRule buildQueuesFlowRuleSlice1RealtimeRed() {
+        PiCriterion.Builder piCriterionBuilder = PiCriterion.builder()
+                .matchExact(P4InfoConstants.HDR_SLICE_TC,
+                        sliceTcConcat(SLICE_IDS.get(1).id(), TrafficClass.REAL_TIME.toInt()))
+                .matchTernary(HDR_COLOR, COLOR_RED, 1 << HDR_COLOR_BITWIDTH - 1);
+
+        PiAction.Builder piTableActionBuilder = PiAction.builder()
+                .withId(P4InfoConstants.FABRIC_INGRESS_QOS_METER_DROP);
+
+        return DefaultFlowRule.builder()
+                .forDevice(SlicingManagerTest.DEVICE_ID)
+                .forTable(PiTableId.of(FABRIC_INGRESS_QOS_QUEUES.id()))
+                .fromApp(APP_ID)
+                .withPriority(QUEUES_FLOW_PRIORITY_HIGH)
+                .withSelector(DefaultTrafficSelector.builder().matchPi(piCriterionBuilder.build()).build())
+                .withTreatment(DefaultTrafficTreatment.builder().piTableAction(piTableActionBuilder.build()).build())
+                .makePermanent()
+                .build();
+    }
+
+    private FlowRule buildQueuesFlowRuleSlice1RealtimeNotRed() {
+        PiCriterion.Builder piCriterionBuilder = PiCriterion.builder()
+                .matchExact(P4InfoConstants.HDR_SLICE_TC,
+                        sliceTcConcat(SLICE_IDS.get(1).id(), TrafficClass.REAL_TIME.toInt()));
+
+        PiAction.Builder piTableActionBuilder = PiAction.builder()
+                .withId(P4InfoConstants.FABRIC_INGRESS_QOS_SET_QUEUE)
+                .withParameter(new PiActionParam(P4InfoConstants.QID, QUEUE_ID_REAL_TIME.id()));
+
+        return DefaultFlowRule.builder()
+                .forDevice(SlicingManagerTest.DEVICE_ID)
+                .forTable(PiTableId.of(FABRIC_INGRESS_QOS_QUEUES.id()))
+                .fromApp(APP_ID)
+                .withPriority(QUEUES_FLOW_PRIORITY_LOW)
                 .withSelector(DefaultTrafficSelector.builder().matchPi(piCriterionBuilder.build()).build())
                 .withTreatment(DefaultTrafficTreatment.builder().piTableAction(piTableActionBuilder.build()).build())
                 .makePermanent()

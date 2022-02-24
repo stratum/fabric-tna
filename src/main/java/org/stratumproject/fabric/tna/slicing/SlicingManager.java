@@ -114,7 +114,8 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
 
 
     private static final Logger log = getLogger(SlicingManager.class);
-    private static final int QOS_FLOW_PRIORITY = 10;
+    private static final int QUEUES_FLOW_PRIORITY_LOW = 10;
+    private static final int QUEUES_FLOW_PRIORITY_HIGH = 20;
     private static final int DEFAULT_TC_PRIORITY = 10;
 
     // We use the lowest priority to avoid overriding the port-based trust_dscp rules installed
@@ -532,13 +533,42 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
 
     private List<FlowRule> buildQueuesFlowRules(DeviceId deviceId, SliceId sliceId, TrafficClass tc, QueueId queueId) {
         List<FlowRule> flowRules = Lists.newArrayList();
-        if (tc == TrafficClass.CONTROL) {
-            int red = getCapabilities(deviceId).getMeterColor(MeterColor.RED);
-            int green = getCapabilities(deviceId).getMeterColor(MeterColor.GREEN);
-            flowRules.add(buildQueuesFlowRule(deviceId, sliceId, tc, queueId, green));
-            flowRules.add(buildQueuesFlowRule(deviceId, sliceId, tc, QueueId.BEST_EFFORT, red));
-        } else {
-            flowRules.add(buildQueuesFlowRule(deviceId, sliceId, tc, queueId, null));
+        int green = getCapabilities(deviceId).getMeterColor(MeterColor.GREEN);
+        int red = getCapabilities(deviceId).getMeterColor(MeterColor.RED);
+        switch (tc) {
+            case CONTROL:
+                // The control queue can be shared between multiple slices for
+                // delay-critical low-loss traffic. To guarantee isolation
+                // between slices, only green traffic can be admitted to the
+                // queue.
+                flowRules.add(buildQueuesFlowRule(deviceId, sliceId, tc, queueId, green,
+                        QUEUES_FLOW_PRIORITY_HIGH));
+                // Given the low-loss property, we do not drop control packets
+                // unless absolutely necessary. Hence, all other colors (yellow,
+                // red) are redirected to best-effort.
+                flowRules.add(buildQueuesFlowRule(deviceId, sliceId, tc, QueueId.BEST_EFFORT, null,
+                        QUEUES_FLOW_PRIORITY_LOW));
+                break;
+            case REAL_TIME:
+            case ELASTIC:
+                // Real-time and elastic queues are dedicated per slice.
+                // However, to limit interference between different users within
+                // the same slice (e.g., different UEs for the P4-UPF slice), we
+                // only admit green and yellow traffic, while red traffic is
+                // dropped.
+                flowRules.add(buildQueuesFlowRule(deviceId, sliceId, tc, null, red,
+                        QUEUES_FLOW_PRIORITY_HIGH));
+                flowRules.add(buildQueuesFlowRule(deviceId, sliceId, tc, queueId, null,
+                        QUEUES_FLOW_PRIORITY_LOW));
+                break;
+            case BEST_EFFORT:
+                // The best-effort queue is shared between all slices. We do not
+                // provide any QoS guarantees, all colors are admitted.
+                flowRules.add(buildQueuesFlowRule(deviceId, sliceId, tc, queueId, null,
+                        QUEUES_FLOW_PRIORITY_LOW));
+                break;
+            default:
+                log.error("Unknown TC {}, cannot generate queues flow rules", tc);
         }
         return flowRules;
     }
@@ -547,22 +577,30 @@ public class SlicingManager implements SlicingService, SlicingProviderService, S
                                          SliceId sliceId,
                                          TrafficClass tc,
                                          QueueId queueId,
-                                         Integer color) {
+                                         Integer color,
+                                         int priority) {
         PiCriterion.Builder piCriterionBuilder = PiCriterion.builder()
                 .matchExact(P4InfoConstants.HDR_SLICE_TC, sliceTcConcat(sliceId.id(), tc.toInt()));
         if (color != null) {
             piCriterionBuilder.matchTernary(HDR_COLOR, color, 1 << HDR_COLOR_BITWIDTH - 1);
         }
 
-        PiAction.Builder piTableActionBuilder = PiAction.builder()
-                .withId(P4InfoConstants.FABRIC_INGRESS_QOS_SET_QUEUE)
-                .withParameter(new PiActionParam(P4InfoConstants.QID, queueId.id()));
+        PiAction.Builder piTableActionBuilder;
+        if (queueId != null) {
+            piTableActionBuilder = PiAction.builder()
+                    .withId(P4InfoConstants.FABRIC_INGRESS_QOS_SET_QUEUE)
+                    .withParameter(new PiActionParam(P4InfoConstants.QID, queueId.id()));
+        } else {
+            // Drop
+            piTableActionBuilder = PiAction.builder()
+                    .withId(P4InfoConstants.FABRIC_INGRESS_QOS_METER_DROP);
+        }
 
         FlowRule flowRule = DefaultFlowRule.builder()
                 .forDevice(deviceId)
                 .forTable(PiTableId.of(FABRIC_INGRESS_QOS_QUEUES.id()))
                 .fromApp(appId)
-                .withPriority(QOS_FLOW_PRIORITY)
+                .withPriority(priority)
                 .withSelector(DefaultTrafficSelector.builder().matchPi(piCriterionBuilder.build()).build())
                 .withTreatment(DefaultTrafficTreatment.builder().piTableAction(piTableActionBuilder.build()).build())
                 .makePermanent()
