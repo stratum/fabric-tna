@@ -427,7 +427,7 @@ public class FabricUpfTranslator {
             throw new UpfProgrammableException("Error, found" + peakBand.size() + " peak bands!");
         }
         if (committedBand.size() != 1 &&
-                (committedBand.get(0).rate() != 1L || committedBand.get(0).burst() != 1L)) {
+                (committedBand.get(0).rate() != 0 || committedBand.get(0).burst() != 0)) {
             log.warn("Session meter have 1 or more unexpected committed bands - IGNORING: " + committedBand);
         }
         return UpfMeter.builder()
@@ -785,7 +785,7 @@ public class FabricUpfTranslator {
             } else {
                 bands.add(DefaultBand.builder()
                                   .ofType(Band.Type.MARK_YELLOW)
-                                  .withRate(1L).burstSize(1L)
+                                  .withRate(0).burstSize(0)
                                   .build());
             }
             if (upfMeter.peakBand().isPresent()) {
@@ -793,7 +793,7 @@ public class FabricUpfTranslator {
             } else {
                 bands.add(DefaultBand.builder()
                                   .ofType(Band.Type.MARK_RED)
-                                  .withRate(1L).burstSize(1L)
+                                  .withRate(0).burstSize(0)
                                   .build());
             }
             meterRequest.withBands(bands);
