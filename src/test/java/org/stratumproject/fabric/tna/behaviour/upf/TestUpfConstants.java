@@ -525,7 +525,7 @@ public final class TestUpfConstants {
             .withCellId(PiMeterCellId.ofIndirect(FABRIC_INGRESS_UPF_SESSION_METER, METER_CELL_ID))
             .withBands(Lists.newArrayList(
                     DefaultBand.builder().ofType(Band.Type.MARK_RED).withRate(PIR).burstSize(PBURST).build(),
-                    DefaultBand.builder().ofType(Band.Type.MARK_YELLOW).withRate(1L).burstSize(1L).build()
+                    DefaultBand.builder().ofType(Band.Type.MARK_YELLOW).withRate(0).burstSize(0).build()
             ))
             .withUnit(BYTES_PER_SEC)
             .build();
@@ -537,7 +537,7 @@ public final class TestUpfConstants {
             .withUnit(BYTES_PER_SEC)
             .withBands(Lists.newArrayList(
                     DefaultBand.builder().ofType(Band.Type.MARK_RED).withRate(PIR).burstSize(PBURST).build(),
-                    DefaultBand.builder().ofType(Band.Type.MARK_YELLOW).withRate(1L).burstSize(1L).build()
+                    DefaultBand.builder().ofType(Band.Type.MARK_YELLOW).withRate(0).burstSize(0).build()
             ))
             .add();
 
