@@ -184,7 +184,7 @@ control UpfIngress(
         ue_session_id = fabric_md.routing_ipv4_dst;
         _drop_common();
 #ifdef WITH_INT
-        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UPF_UL_SESSION_DROP_BUFF;
+        fabric_md.bridged.int_bmd.drop_reason = IntDropReason_t.DROP_REASON_UPF_DL_SESSION_DROP_BUFF;
 #endif // WITH_INT
     }
 
