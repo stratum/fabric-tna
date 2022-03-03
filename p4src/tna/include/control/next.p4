@@ -278,6 +278,7 @@ control EgressNextControl (inout egress_headers_t hdr,
     apply {
         if (fabric_md.bridged.base.is_multicast
              && fabric_md.bridged.base.ig_port == eg_intr_md.egress_port) {
+            fabric_md.bridged.int_bmd.report_type = INT_REPORT_TYPE_NO_REPORT;
             eg_dprsr_md.drop_ctl = 1;
         }
 
