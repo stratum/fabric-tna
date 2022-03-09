@@ -57,13 +57,12 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGR
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_UPF_GTPU_ONLY;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_UPF_GTPU_WITH_PSC;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_UPF_LOAD_TUNNEL_PARAMS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_QOS_SLICE_TC_METER;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_APPLICATIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_APP_FWD;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_APP_FWD_NO_TC;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_APP_METER;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_DOWNLINK_DROP;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_DOWNLINK_FWD_ENCAP;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_DOWNLINK_FWD_ENCAP_NO_TC;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_DOWNLINK_SESSIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_DOWNLINK_TERMINATIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_IFACE_ACCESS;
@@ -417,18 +416,11 @@ public class FabricUpfTranslator {
 
     public UpfMeter fabricMeterToUpfSessionMeter(Meter meter) throws UpfProgrammableException {
         assertMeterId(meter, FABRIC_INGRESS_UPF_SESSION_METER);
-        List<Band> peakBand = meter.bands().stream()
-                .filter(b -> b.type().equals(Band.Type.MARK_RED))
-                .collect(Collectors.toList());
-        List<Band> committedBand = meter.bands().stream()
-                .filter(b -> b.type().equals(Band.Type.MARK_YELLOW))
-                .collect(Collectors.toList());
-        if (peakBand.size() != 1) {
-            throw new UpfProgrammableException("Error, found" + peakBand.size() + " peak bands!");
-        }
-        if (committedBand.size() != 1 &&
-                (committedBand.get(0).rate() != 0 || committedBand.get(0).burst() != 0)) {
-            log.warn("Session meter have 1 or more unexpected committed bands - IGNORING: " + committedBand);
+        assertMeterBands(meter);
+        List<Band> peakBand = getMeterBand(meter, Band.Type.MARK_RED);
+        List<Band> committedBand = getMeterBand(meter, Band.Type.MARK_YELLOW);
+        if (committedBand.get(0).rate() != 0 || committedBand.get(0).burst() != 0) {
+            log.warn("Session meter have unexpected committed band - IGNORING: " + committedBand);
         }
         return UpfMeter.builder()
                 .setSession()
@@ -439,24 +431,50 @@ public class FabricUpfTranslator {
 
     public UpfMeter fabricMeterToUpfAppMeter(Meter meter) throws UpfProgrammableException {
         assertMeterId(meter, FABRIC_INGRESS_UPF_APP_METER);
-        List<Band> peakBand = meter.bands().stream()
-                .filter(b -> b.type().equals(Band.Type.MARK_RED)).
-                collect(Collectors.toList());
-        List<Band> committedBand = meter.bands().stream()
-                .filter(b -> b.type().equals(Band.Type.MARK_YELLOW))
-                .collect(Collectors.toList());
-        if (peakBand.size() != 1) {
-            throw new UpfProgrammableException("Error, found " + peakBand.size() + " peak bands!");
-        }
-        if (committedBand.size() != 1) {
-            throw new UpfProgrammableException("Error, found " + committedBand.size() + " committed bands!");
-        }
+        assertMeterBands(meter);
+        List<Band> peakBand = getMeterBand(meter, Band.Type.MARK_RED);
+        List<Band> committedBand = getMeterBand(meter, Band.Type.MARK_YELLOW);
         return UpfMeter.builder()
                 .setApplication()
                 .setCellId((int) ((PiMeterCellId) meter.meterCellId()).index())
                 .setPeakBand(peakBand.get(0).rate(), peakBand.get(0).burst())
                 .setCommittedBand(committedBand.get(0).rate(), committedBand.get(0).burst())
                 .build();
+    }
+
+    public UpfMeter fabricMeterToSliceMeter(Meter meter) throws UpfProgrammableException {
+        assertMeterId(meter, FABRIC_INGRESS_QOS_SLICE_TC_METER);
+        assertMeterBands(meter);
+        List<Band> peakBand = getMeterBand(meter, Band.Type.MARK_RED);
+        List<Band> committedBand = getMeterBand(meter, Band.Type.MARK_YELLOW);
+        if (committedBand.get(0).rate() != 0 || committedBand.get(0).burst() != 0) {
+            log.warn("Slice meter have unexpected committed band - IGNORING: " + committedBand);
+        }
+        return UpfMeter.builder()
+                .setSlice()
+                .setCellId((int) ((PiMeterCellId) meter.meterCellId()).index())
+                .setPeakBand(peakBand.get(0).rate(), peakBand.get(0).burst())
+                .build();
+    }
+
+    private void assertMeterBands(Meter meter) throws UpfProgrammableException {
+        //Assert that the given meter have a single band per type (peak and committed).
+        List<Band> peakBand = getMeterBand(meter, Band.Type.MARK_RED);
+        List<Band> committedBand = getMeterBand(meter, Band.Type.MARK_YELLOW);
+        if (peakBand.size() != 1) {
+            throw new UpfProgrammableException(
+                    "Error, found " + peakBand.size() + " peak bands for meter " + meter.meterCellId() + "!");
+        }
+        if (committedBand.size() != 1) {
+            throw new UpfProgrammableException(
+                    "Error, found " + committedBand.size() + " committed bands for meter" + meter.meterCellId() + "!");
+        }
+    }
+
+    private List<Band> getMeterBand(Meter meter, Band.Type bandType) {
+        return meter.bands().stream()
+                .filter(b -> b.type().equals(bandType)).
+                collect(Collectors.toList());
     }
 
     public UpfApplication fabricEntryToUpfApplication(FlowRule entry)
@@ -642,13 +660,9 @@ public class FabricUpfTranslator {
         if (upfTermination.needsDropping()) {
             actionBuilder.withId(FABRIC_INGRESS_UPF_UPLINK_DROP);
         } else {
+            actionBuilder.withId(FABRIC_INGRESS_UPF_APP_FWD);
             paramList.add(new PiActionParam(APP_METER_IDX, (short) upfTermination.appMeterIdx()));
-            if (upfTermination.trafficClass() == null) {
-                actionBuilder.withId(FABRIC_INGRESS_UPF_APP_FWD_NO_TC);
-            } else {
-                actionBuilder.withId(FABRIC_INGRESS_UPF_APP_FWD);
-                paramList.add(new PiActionParam(TC, upfTermination.trafficClass()));
-            }
+            paramList.add(new PiActionParam(TC, upfTermination.trafficClass()));
         }
         actionBuilder.withParameters(paramList);
 
@@ -690,15 +704,11 @@ public class FabricUpfTranslator {
         if (upfTermination.needsDropping()) {
             actionBuilder.withId(FABRIC_INGRESS_UPF_DOWNLINK_DROP);
         } else {
+            actionBuilder.withId(FABRIC_INGRESS_UPF_DOWNLINK_FWD_ENCAP);
             paramList.add(new PiActionParam(TEID, upfTermination.teid()));
             paramList.add(new PiActionParam(QFI, upfTermination.qfi()));
             paramList.add(new PiActionParam(APP_METER_IDX, (short) upfTermination.appMeterIdx()));
-            if (upfTermination.trafficClass() == null) {
-                actionBuilder.withId(FABRIC_INGRESS_UPF_DOWNLINK_FWD_ENCAP_NO_TC);
-            } else {
-                actionBuilder.withId(FABRIC_INGRESS_UPF_DOWNLINK_FWD_ENCAP);
-                paramList.add(new PiActionParam(TC, upfTermination.trafficClass()));
-            }
+            paramList.add(new PiActionParam(TC, upfTermination.trafficClass()));
         }
         actionBuilder.withParameters(paramList);
 
@@ -764,8 +774,10 @@ public class FabricUpfTranslator {
         final PiMeterId meterId;
         if (upfMeter.type().equals(UpfEntityType.SESSION_METER)) {
             meterId = FABRIC_INGRESS_UPF_SESSION_METER;
-        } else if (upfMeter.type().equals((UpfEntityType.APPLICATION_METER))) {
+        } else if (upfMeter.type().equals(UpfEntityType.APPLICATION_METER)) {
             meterId = FABRIC_INGRESS_UPF_APP_METER;
+        } else if (upfMeter.type().equals(UpfEntityType.SLICE_METER)) {
+            meterId = FABRIC_INGRESS_QOS_SLICE_TC_METER;
         } else {
             // I should never reach this point.
             throw new UpfProgrammableException("Unknown UPF meter type. I should never reach this point! " + upfMeter);

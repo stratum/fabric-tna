@@ -63,6 +63,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.stratumproject.fabric.tna.Constants.TNA;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_UPF_EG_TUNNEL_PEERS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_UPF_TERMINATIONS_COUNTER;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_QOS_SLICE_TC_METER;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_APPLICATIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_APP_METER;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_DOWNLINK_SESSIONS;
@@ -118,7 +119,9 @@ public class FabricUpfProgrammableTest {
             new MockMeterModel(FABRIC_INGRESS_UPF_SESSION_METER,
                                  TestUpfConstants.PHYSICAL_SESSION_METER_SIZE),
             new MockMeterModel(FABRIC_INGRESS_UPF_APP_METER,
-                                 TestUpfConstants.PHYSICAL_APP_METER_SIZE)
+                                 TestUpfConstants.PHYSICAL_APP_METER_SIZE),
+            new MockMeterModel(FABRIC_INGRESS_QOS_SLICE_TC_METER,
+                               TestUpfConstants.PHYSICAL_MAX_SLICE_METERS)
     );
 
     @Before
@@ -318,6 +321,22 @@ public class FabricUpfProgrammableTest {
         }
         upfProgrammable.apply(TestUpfConstants.SESSION_METER_RESET);
         assertTrue(upfProgrammable.readAll(UpfEntityType.SESSION_METER).isEmpty());
+    }
+
+    @Test
+    public void testSliceMeter() throws Exception {
+        // Slice Meters
+        assertTrue(upfProgrammable.readAll(UpfEntityType.SLICE_METER).isEmpty());
+        UpfMeter expectedSliceMeter = TestUpfConstants.SLICE_METER;
+        upfProgrammable.apply(expectedSliceMeter);
+        Collection<? extends UpfEntity> installedSliceMeters =
+                upfProgrammable.readAll(UpfEntityType.SLICE_METER);
+        assertThat(installedSliceMeters.size(), equalTo(1));
+        for (var readSliceMeter : installedSliceMeters) {
+            assertThat(readSliceMeter, equalTo(expectedSliceMeter));
+        }
+        upfProgrammable.apply(TestUpfConstants.SLICE_METER_RESET);
+        assertTrue(upfProgrammable.readAll(UpfEntityType.SLICE_METER).isEmpty());
     }
 
     @Test

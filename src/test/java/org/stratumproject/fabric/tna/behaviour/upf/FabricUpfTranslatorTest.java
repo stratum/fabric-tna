@@ -99,22 +99,6 @@ public class FabricUpfTranslatorTest {
     }
 
     @Test
-    public void fabricEntryToUplinkUpfTerminationNoTcTest() {
-        UpfTerminationUplink translatedUpfTerminationRule;
-        UpfTerminationUplink expected = TestUpfConstants.UPLINK_UPF_TERMINATION_NO_TC;
-        try {
-            translatedUpfTerminationRule = upfTranslator
-                    .fabricEntryToUpfTerminationUplink(TestUpfConstants.FABRIC_UPLINK_UPF_TERMINATION_NO_TC);
-        } catch (UpfProgrammableException e) {
-            assertThat("Fabric uplink UPF termination rule should correctly " +
-                               "translate to abstract UPF termination without error",
-                       false);
-            return;
-        }
-        assertThat(translatedUpfTerminationRule, equalTo(expected));
-    }
-
-    @Test
     public void fabricEntryToUplinkUpfTerminationDropTest() {
         UpfTerminationUplink translatedUpfTerminationRule;
         UpfTerminationUplink expected = TestUpfConstants.UPLINK_UPF_TERMINATION_DROP;
@@ -137,22 +121,6 @@ public class FabricUpfTranslatorTest {
         try {
             translatedUpfTerminationRule = upfTranslator
                     .fabricEntryToUpfTerminationDownlink(TestUpfConstants.FABRIC_DOWNLINK_UPF_TERMINATION);
-        } catch (UpfProgrammableException e) {
-            assertThat("Fabric downlink UPF termination rule should correctly " +
-                               "translate to abstract UPF termination without error",
-                       false);
-            return;
-        }
-        assertThat(translatedUpfTerminationRule, equalTo(expected));
-    }
-
-    @Test
-    public void fabricEntryToDownlinkUpfTerminationNoTcTest() {
-        UpfTerminationDownlink translatedUpfTerminationRule;
-        UpfTerminationDownlink expected = TestUpfConstants.DOWNLINK_UPF_TERMINATION_NO_TC;
-        try {
-            translatedUpfTerminationRule = upfTranslator
-                    .fabricEntryToUpfTerminationDownlink(TestUpfConstants.FABRIC_DOWNLINK_UPF_TERMINATION_NO_TC);
         } catch (UpfProgrammableException e) {
             assertThat("Fabric downlink UPF termination rule should correctly " +
                                "translate to abstract UPF termination without error",
@@ -266,6 +234,22 @@ public class FabricUpfTranslatorTest {
 //        }
 //        assertThat(translatedMeter, equalTo(expectedResetMeter));
     }
+
+    @Test
+    public void fabricMeterToSliceMeterTest() {
+        UpfMeter translatedMeter;
+        UpfMeter expectedMeter = TestUpfConstants.SLICE_METER;
+        try {
+            translatedMeter = upfTranslator.fabricMeterToSliceMeter(
+                    TestUpfConstants.FABRIC_SLICE_METER);
+        } catch (UpfProgrammableException e) {
+            assertThat("Fabric slice meter should correctly translate to abstract UPF meter without error",
+                       false);
+            return;
+        }
+        assertThat(translatedMeter, equalTo(expectedMeter));
+    }
+
     // -------------------------------------------------------------------------
     @Test
     public void uplinkInterfaceToFabricEntryTest() {
@@ -405,26 +389,6 @@ public class FabricUpfTranslatorTest {
     }
 
     @Test
-    public void uplinkUpfTerminationNoTcToFabricEntryTest() {
-        FlowRule translatedRule;
-        FlowRule expectedRule = TestUpfConstants.FABRIC_UPLINK_UPF_TERMINATION_NO_TC;
-        try {
-            translatedRule = upfTranslator.upfTerminationUplinkToFabricEntry(
-                    TestUpfConstants.UPLINK_UPF_TERMINATION_NO_TC,
-                    TestUpfConstants.DEVICE_ID,
-                    TestUpfConstants.APP_ID,
-                    TestUpfConstants.DEFAULT_PRIORITY);
-        } catch (UpfProgrammableException e) {
-            assertThat("Abstract uplink UPF Termination should correctly " +
-                               "translate to Fabric UPF Termination without error",
-                       false);
-            return;
-        }
-        assertThat(translatedRule, equalTo(expectedRule));
-        assertThat(translatedRule.treatment(), equalTo(expectedRule.treatment()));
-    }
-
-    @Test
     public void uplinkUpfTerminationDropToFabricEntryTest() {
         FlowRule translatedRule;
         FlowRule expectedRule = TestUpfConstants.FABRIC_UPLINK_UPF_TERMINATION_DROP;
@@ -484,26 +448,6 @@ public class FabricUpfTranslatorTest {
     }
 
     @Test
-    public void downlinkUpfTerminationNoTcToFabricEntryTest() {
-        FlowRule translatedRule;
-        FlowRule expectedRule = TestUpfConstants.FABRIC_DOWNLINK_UPF_TERMINATION_NO_TC;
-        try {
-            translatedRule = upfTranslator.upfTerminationDownlinkToFabricEntry(
-                    TestUpfConstants.DOWNLINK_UPF_TERMINATION_NO_TC,
-                    TestUpfConstants.DEVICE_ID,
-                    TestUpfConstants.APP_ID,
-                    TestUpfConstants.DEFAULT_PRIORITY);
-        } catch (UpfProgrammableException e) {
-            assertThat("Abstract downlink UPF Termination should correctly " +
-                               "translate to Fabric UPF Termination without error",
-                       false);
-            return;
-        }
-        assertThat(translatedRule, equalTo(expectedRule));
-        assertThat(translatedRule.treatment(), equalTo(expectedRule.treatment()));
-    }
-
-    @Test
     public void downlinkUpfTerminationDropToFabricEntryTest() {
         FlowRule translatedRule;
         FlowRule expectedRule = TestUpfConstants.FABRIC_DOWNLINK_UPF_TERMINATION_DROP;
@@ -539,12 +483,7 @@ public class FabricUpfTranslatorTest {
             return;
         }
         // TODO: should we implement equals for DefaultMeterRequest?
-        assertThat(translatedMeter.appId(), equalTo(expectedMeter.appId()));
-        assertThat(translatedMeter.deviceId(), equalTo(expectedMeter.deviceId()));
-        assertThat(translatedMeter.isBurst(), equalTo(expectedMeter.isBurst()));
-        assertThat(translatedMeter.scope(), equalTo(expectedMeter.scope()));
-        assertThat(translatedMeter.index(), equalTo(expectedMeter.index()));
-        assertThat(translatedMeter.bands(), equalTo(expectedMeter.bands()));
+        assertMeterRequestEqual(translatedMeter, expectedMeter);
     }
 
     @Test
@@ -563,12 +502,7 @@ public class FabricUpfTranslatorTest {
             return;
         }
         // TODO: should we implement equals for DefaultMeterRequest?
-        assertThat(translatedMeter.appId(), equalTo(expectedMeter.appId()));
-        assertThat(translatedMeter.deviceId(), equalTo(expectedMeter.deviceId()));
-        assertThat(translatedMeter.isBurst(), equalTo(expectedMeter.isBurst()));
-        assertThat(translatedMeter.scope(), equalTo(expectedMeter.scope()));
-        assertThat(translatedMeter.index(), equalTo(expectedMeter.index()));
-        assertThat(translatedMeter.bands(), equalTo(expectedMeter.bands()));
+        assertMeterRequestEqual(translatedMeter, expectedMeter);
     }
 
     @Test
@@ -587,12 +521,7 @@ public class FabricUpfTranslatorTest {
             return;
         }
         // TODO: should we implement equals for DefaultMeterRequest?
-        assertThat(translatedMeter.appId(), equalTo(expectedMeter.appId()));
-        assertThat(translatedMeter.deviceId(), equalTo(expectedMeter.deviceId()));
-        assertThat(translatedMeter.isBurst(), equalTo(expectedMeter.isBurst()));
-        assertThat(translatedMeter.scope(), equalTo(expectedMeter.scope()));
-        assertThat(translatedMeter.index(), equalTo(expectedMeter.index()));
-        assertThat(translatedMeter.bands(), equalTo(expectedMeter.bands()));
+        assertMeterRequestEqual(translatedMeter, expectedMeter);
     }
 
     @Test
@@ -611,11 +540,53 @@ public class FabricUpfTranslatorTest {
             return;
         }
         // TODO: should we implement equals for DefaultMeterRequest?
-        assertThat(translatedMeter.appId(), equalTo(expectedMeter.appId()));
-        assertThat(translatedMeter.deviceId(), equalTo(expectedMeter.deviceId()));
-        assertThat(translatedMeter.isBurst(), equalTo(expectedMeter.isBurst()));
-        assertThat(translatedMeter.scope(), equalTo(expectedMeter.scope()));
-        assertThat(translatedMeter.index(), equalTo(expectedMeter.index()));
-        assertThat(translatedMeter.bands(), equalTo(expectedMeter.bands()));
+        assertMeterRequestEqual(translatedMeter, expectedMeter);
+    }
+
+    @Test
+    public void sliceMeterToFabricMeterTest() {
+        MeterRequest translatedMeter;
+        MeterRequest expectedMeter = TestUpfConstants.FABRIC_SLICE_METER_REQUEST;
+        try {
+            translatedMeter = upfTranslator.upfMeterToFabricMeter(
+                    TestUpfConstants.SLICE_METER,
+                    TestUpfConstants.DEVICE_ID,
+                    TestUpfConstants.APP_ID);
+        } catch (UpfProgrammableException e) {
+            assertThat("Abstract slice meter should correctly " +
+                               "translate to Fabric slice meter without error",
+                       false);
+            return;
+        }
+        // TODO: should we implement equals for DefaultMeterRequest?
+        assertMeterRequestEqual(translatedMeter, expectedMeter);
+    }
+
+    @Test
+    public void sliceMeterResetToFabricMeterResetTest() {
+        MeterRequest translatedMeter;
+        MeterRequest expectedMeter = TestUpfConstants.FABRIC_SLICE_METER_RESET_REQUEST;
+        try {
+            translatedMeter = upfTranslator.upfMeterToFabricMeter(
+                    TestUpfConstants.SLICE_METER_RESET,
+                    TestUpfConstants.DEVICE_ID,
+                    TestUpfConstants.APP_ID);
+        } catch (UpfProgrammableException e) {
+            assertThat("Abstract slice meter should correctly " +
+                               "translate to Fabric slice meter without error",
+                       false);
+            return;
+        }
+        // TODO: should we implement equals for DefaultMeterRequest?
+        assertMeterRequestEqual(translatedMeter, expectedMeter);
+    }
+
+    private void assertMeterRequestEqual(MeterRequest actual, MeterRequest expected) {
+        assertThat(actual.appId(), equalTo(expected.appId()));
+        assertThat(actual.deviceId(), equalTo(expected.deviceId()));
+        assertThat(actual.isBurst(), equalTo(expected.isBurst()));
+        assertThat(actual.scope(), equalTo(expected.scope()));
+        assertThat(actual.index(), equalTo(expected.index()));
+        assertThat(actual.bands(), equalTo(expected.bands()));
     }
 }

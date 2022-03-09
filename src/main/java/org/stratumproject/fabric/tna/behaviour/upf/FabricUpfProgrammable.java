@@ -69,6 +69,7 @@ import static org.onosproject.net.pi.model.PiCounterType.INDIRECT;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_UPF_EG_TUNNEL_PEERS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_UPF_GTPU_ENCAP;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_UPF_TERMINATIONS_COUNTER;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_QOS_SLICE_TC_METER;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_APPLICATIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_APP_METER;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_DOWNLINK_SESSIONS;
@@ -114,6 +115,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     private long applicationsTableSize;
     private long appMeterSize;
     private long sessionMeterSize;
+    private long sliceMeterSize;
 
     private ApplicationId appId;
 
@@ -254,11 +256,14 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         // Get meter size of interest
         long sessionMeterSize = 0;
         long appMeterSize = 0;
+        long sliceMeterSize = 0;
         for (PiMeterModel piMeter: pipeconf.pipelineModel().meters()) {
             if (piMeter.id().equals(FABRIC_INGRESS_UPF_SESSION_METER)) {
                 sessionMeterSize = piMeter.size();
             } else if (piMeter.id().equals(FABRIC_INGRESS_UPF_APP_METER)) {
                 appMeterSize = piMeter.size();
+            } else if (piMeter.id().equals(FABRIC_INGRESS_QOS_SLICE_TC_METER)) {
+                sliceMeterSize = piMeter.size();
             }
         }
         if (sessionMeterSize == 0) {
@@ -276,6 +281,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         this.upfCounterSize = Math.min(ingressCounterSize, egressCounterSize);
         this.gtpTunnelPeersTableSize = Math.min(ingressGtpTunnelPeersTableSize, egressGtpTunnelPeersTableSize);
         this.sessionMeterSize = sessionMeterSize;
+        this.sliceMeterSize = sliceMeterSize;
         this.appMeterSize = appMeterSize;
         return true;
     }
@@ -431,6 +437,8 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                 return getUpfSessionMeters();
             case APPLICATION_METER:
                 return getUpfAppMeters();
+            case SLICE_METER:
+                return getSliceMeters();
             default:
                 throw new UpfProgrammableException(format("Reading entity type %s not supported.",
                                                           entityType.humanReadableName()));
@@ -455,6 +463,16 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
             }
         }
         return appMeters;
+    }
+
+    private Collection<UpfEntity> getSliceMeters() throws UpfProgrammableException {
+        ArrayList<UpfEntity> sliceMeters = Lists.newArrayList();
+        for (Meter meter : meterService.getMeters(deviceId, MeterScope.of(FABRIC_INGRESS_QOS_SLICE_TC_METER.id()))) {
+            if (isHereToStay(meter)) {
+                sliceMeters.add(upfTranslator.fabricMeterToSliceMeter(meter));
+            }
+        }
+        return sliceMeters;
     }
 
     private Collection<UpfEntity> getUpfApplication() throws UpfProgrammableException {
@@ -616,6 +634,8 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                 return appMeterSize;
             case SESSION_METER:
                 return sessionMeterSize;
+            case SLICE_METER:
+                return sliceMeterSize;
             default:
                 throw new UpfProgrammableException(format("Getting size of entity type %s not supported.",
                                                           entityType.humanReadableName()));
@@ -697,6 +717,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                 break;
             case SESSION_METER:
             case APPLICATION_METER:
+            case SLICE_METER:
                 applyUpfMeter((UpfMeter) entity);
                 break;
             case COUNTER:
@@ -715,6 +736,8 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                 meterCellId = PiMeterCellId.ofIndirect(FABRIC_INGRESS_UPF_SESSION_METER, upfMeter.cellId());
             } else if (upfMeter.type().equals(UpfEntityType.APPLICATION_METER)) {
                 meterCellId = PiMeterCellId.ofIndirect(FABRIC_INGRESS_UPF_APP_METER, upfMeter.cellId());
+            } else if (upfMeter.type().equals(UpfEntityType.SLICE_METER)) {
+                meterCellId = PiMeterCellId.ofIndirect(FABRIC_INGRESS_QOS_SLICE_TC_METER, upfMeter.cellId());
             } else {
                 // I should never reach this point!
                 throw new UpfProgrammableException(
@@ -821,6 +844,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                 break;
             case SESSION_METER:
             case APPLICATION_METER:
+            case SLICE_METER:
             // Meter cannot be deleted, only modified.
             case COUNTER:
             default:
