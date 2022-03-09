@@ -2094,7 +2094,9 @@ class IPv4UnicastTest(FabricTest):
 
 
 class IPv4MulticastTest(FabricTest):
-    def runIPv4MulticastTest(self, pkt, in_port, out_ports, in_vlan, out_vlan, with_another_pkt_later=False):
+    def runIPv4MulticastTest(
+        self, pkt, in_port, out_ports, in_vlan, out_vlan, with_another_pkt_later=False
+    ):
         if Dot1Q in pkt:
             print("runIPv4MulticastTest() expects untagged packets")
             return
