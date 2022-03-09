@@ -55,6 +55,7 @@ import org.stratumproject.fabric.tna.Constants;
 import org.stratumproject.fabric.tna.behaviour.FabricCapabilities;
 import org.stratumproject.fabric.tna.slicing.api.SliceId;
 import org.stratumproject.fabric.tna.slicing.api.SlicingService;
+import org.stratumproject.fabric.tna.slicing.api.TrafficClass;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -728,6 +729,13 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     }
 
     private void applyUpfMeter(UpfMeter upfMeter) throws UpfProgrammableException {
+        if (upfMeter.type().equals(UpfEntityType.SLICE_METER)) {
+            // cell ID for slice meter is concatenation of slice ID and traffic class (sliceId++tc)
+            final int sliceId = (upfMeter.cellId() & 0b111100) >> 2;
+            final int tc = upfMeter.cellId() & 0b11;
+            assertSliceId(sliceId);
+            assertTrafficClass(sliceId, tc);
+        }
         MeterRequest meterRequest = upfTranslator.upfMeterToFabricMeter(upfMeter, deviceId, appId);
         if (upfMeter.isReset()) {
             log.info("Resetting meter {}", meterRequest);
@@ -1012,6 +1020,16 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
             throw new UpfProgrammableException(format(
                     "Provided slice ID (%d) is not available in slicing service!",
                     sliceId
+            ));
+        }
+    }
+
+    private void assertTrafficClass(int sliceId, int tc) throws UpfProgrammableException {
+        TrafficClass trafficClass = TrafficClass.fromInteger(tc);
+        if (!slicingService.getTrafficClasses(SliceId.of(sliceId)).contains(trafficClass)) {
+            throw new UpfProgrammableException(format(
+                    "Provided traffic class (%s) is not available for provided slice ID (%d) in slicing service!",
+                    trafficClass, sliceId
             ));
         }
     }

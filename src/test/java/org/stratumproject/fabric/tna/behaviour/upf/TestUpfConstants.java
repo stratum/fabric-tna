@@ -91,6 +91,7 @@ public final class TestUpfConstants {
     public static final ApplicationId APP_ID = new DefaultApplicationId(5000, "up4");
     public static final int DEFAULT_PRIORITY = 10;
     public static final int SLICE_MOBILE = 10;
+    public static final byte ELASTIC_TC = 3;
     private static final byte DEFAULT_TC = 0;
     public static final int UPLINK_COUNTER_CELL_ID = 1;
     public static final int DOWNLINK_COUNTER_CELL_ID = 2;
@@ -131,6 +132,9 @@ public final class TestUpfConstants {
     public static final byte APP_IP_PROTO = 6;
 
     public static final int METER_CELL_ID = 10;
+    public static final int SLICE_METER_CELL_ID = (SLICE_MOBILE << 2) + (ELASTIC_TC & 0b11);
+    public static final int INVALID_SLICE_SLICE_METER_CELL_ID = ELASTIC_TC & 0b11;
+    public static final int INVALID_TC_SLICE_METER_CELL_ID = (SLICE_MOBILE << 2);
     public static final short DEFAULT_APP_METER_IDX = 0;
     public static final int PIR = 10000;
     public static final int PBURST = 1000;
@@ -232,11 +236,23 @@ public final class TestUpfConstants {
 
     public static final UpfMeter SLICE_METER = UpfMeter.builder()
             .setSlice()
-            .setCellId(METER_CELL_ID)
+            .setCellId(SLICE_METER_CELL_ID)
             .setPeakBand(PIR, PBURST)
             .build();
 
-    public static final UpfMeter SLICE_METER_RESET = UpfMeter.resetSlice(METER_CELL_ID);
+    public static final UpfMeter SLICE_METER_INVALID_SLICE_ID = UpfMeter.builder()
+            .setSlice()
+            .setCellId(INVALID_SLICE_SLICE_METER_CELL_ID)
+            .setPeakBand(PIR, PBURST)
+            .build();
+
+    public static final UpfMeter SLICE_METER_INVALID_TC = UpfMeter.builder()
+            .setSlice()
+            .setCellId(INVALID_TC_SLICE_METER_CELL_ID)
+            .setPeakBand(PIR, PBURST)
+            .build();
+
+    public static final UpfMeter SLICE_METER_RESET = UpfMeter.resetSlice(SLICE_METER_CELL_ID);
 
     public static final FlowRule FABRIC_INGRESS_GTP_TUNNEL_PEER = DefaultFlowRule.builder()
             .forDevice(DEVICE_ID).fromApp(APP_ID).makePermanent()
@@ -531,7 +547,7 @@ public final class TestUpfConstants {
 
     public static final Meter FABRIC_SLICE_METER = DefaultMeter.builder()
             .forDevice(DEVICE_ID).fromApp(APP_ID)
-            .withCellId(PiMeterCellId.ofIndirect(FABRIC_INGRESS_QOS_SLICE_TC_METER, METER_CELL_ID))
+            .withCellId(PiMeterCellId.ofIndirect(FABRIC_INGRESS_QOS_SLICE_TC_METER, SLICE_METER_CELL_ID))
             .withBands(Lists.newArrayList(
                     DefaultBand.builder().ofType(Band.Type.MARK_RED).withRate(PIR).burstSize(PBURST).build(),
                     DefaultBand.builder().ofType(Band.Type.MARK_YELLOW).withRate(0).burstSize(0).build()
@@ -541,7 +557,7 @@ public final class TestUpfConstants {
 
     public static final MeterRequest FABRIC_SLICE_METER_REQUEST = DefaultMeterRequest.builder()
             .forDevice(DEVICE_ID).fromApp(APP_ID)
-            .withIndex((long) METER_CELL_ID)
+            .withIndex((long) SLICE_METER_CELL_ID)
             .withScope(MeterScope.of(FABRIC_INGRESS_QOS_SLICE_TC_METER.id()))
             .withUnit(BYTES_PER_SEC)
             .withBands(Lists.newArrayList(
@@ -552,7 +568,7 @@ public final class TestUpfConstants {
 
     public static final MeterRequest FABRIC_SLICE_METER_RESET_REQUEST = DefaultMeterRequest.builder()
             .forDevice(DEVICE_ID).fromApp(APP_ID)
-            .withIndex((long) METER_CELL_ID)
+            .withIndex((long) SLICE_METER_CELL_ID)
             .withScope(MeterScope.of(FABRIC_INGRESS_QOS_SLICE_TC_METER.id()))
             .withUnit(BYTES_PER_SEC)
             .remove();

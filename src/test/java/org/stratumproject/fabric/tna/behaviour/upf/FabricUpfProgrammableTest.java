@@ -4,7 +4,9 @@ package org.stratumproject.fabric.tna.behaviour.upf;
 
 import com.google.common.collect.ImmutableList;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.onlab.junit.TestUtils;
 import org.onlab.packet.Ip4Prefix;
 import org.onlab.util.HexString;
@@ -44,6 +46,7 @@ import org.stratumproject.fabric.tna.Constants;
 import org.stratumproject.fabric.tna.behaviour.FabricCapabilities;
 import org.stratumproject.fabric.tna.slicing.api.SliceId;
 import org.stratumproject.fabric.tna.slicing.api.SlicingService;
+import org.stratumproject.fabric.tna.slicing.api.TrafficClass;
 
 import java.net.URI;
 import java.nio.ByteBuffer;
@@ -124,6 +127,9 @@ public class FabricUpfProgrammableTest {
                                TestUpfConstants.PHYSICAL_MAX_SLICE_METERS)
     );
 
+    @Rule
+    public ExpectedException exceptionRule = ExpectedException.none();
+
     @Before
     public void setUp() throws Exception {
         FabricCapabilities capabilities = createMock(FabricCapabilities.class);
@@ -137,6 +143,8 @@ public class FabricUpfProgrammableTest {
         DeviceService deviceService = createMock(DeviceService.class);
         SlicingService slicingService = createMock(SlicingService.class);
         expect(slicingService.getSlices()).andReturn(Set.of(SliceId.of(SLICE_MOBILE))).anyTimes();
+        expect(slicingService.getTrafficClasses(SliceId.of(SLICE_MOBILE)))
+                .andReturn(Set.of(TrafficClass.ELASTIC)).anyTimes();
         PiTranslationService piTranslationService = createMock(PiTranslationService.class);
         expect(coreService.getAppId(anyString())).andReturn(APP_ID).anyTimes();
         expect(netcfgService.getConfig(TestUpfConstants.DEVICE_ID, BasicDeviceConfig.class))
@@ -267,8 +275,10 @@ public class FabricUpfProgrammableTest {
         assertTrue(upfProgrammable.readAll(UpfEntityType.INTERFACE).isEmpty());
     }
 
-    @Test(expected = UpfProgrammableException.class)
+    @Test
     public void testInvalidSliceIdInterface() throws Exception {
+        exceptionRule.expect(UpfProgrammableException.class);
+        exceptionRule.expectMessage("Provided slice ID (0) is not available in slicing service!");
         assertTrue(upfProgrammable.readAll(UpfEntityType.INTERFACE).isEmpty());
         upfProgrammable.apply(UpfInterface.createUePoolFrom(Ip4Prefix.valueOf("10.0.0.0/24"), 0));
     }
@@ -288,8 +298,10 @@ public class FabricUpfProgrammableTest {
         assertTrue(upfProgrammable.readAll(UpfEntityType.APPLICATION).isEmpty());
     }
 
-    @Test(expected = UpfProgrammableException.class)
+    @Test
     public void testInvalidSliceIdUpfApplication() throws Exception {
+        exceptionRule.expect(UpfProgrammableException.class);
+        exceptionRule.expectMessage("Provided slice ID (0) is not available in slicing service!");
         assertTrue(upfProgrammable.readAll(UpfEntityType.INTERFACE).isEmpty());
         upfProgrammable.apply(TestUpfConstants.APPLICATION_FILTERING_INVALID_SLICE_ID);
     }
@@ -337,6 +349,23 @@ public class FabricUpfProgrammableTest {
         }
         upfProgrammable.apply(TestUpfConstants.SLICE_METER_RESET);
         assertTrue(upfProgrammable.readAll(UpfEntityType.SLICE_METER).isEmpty());
+    }
+
+    @Test
+    public void testInvalidSliceIdSliceMeter() throws Exception {
+        exceptionRule.expect(UpfProgrammableException.class);
+        exceptionRule.expectMessage("Provided slice ID (0) is not available in slicing service!");
+        assertTrue(upfProgrammable.readAll(UpfEntityType.SLICE_METER).isEmpty());
+        upfProgrammable.apply(TestUpfConstants.SLICE_METER_INVALID_SLICE_ID);
+    }
+
+    @Test
+    public void testInvalidTrafficClassSliceMeter() throws Exception {
+        exceptionRule.expect(UpfProgrammableException.class);
+        exceptionRule.expectMessage(
+                "Provided traffic class (BEST_EFFORT) is not available for provided slice ID (10) in slicing service!");
+        assertTrue(upfProgrammable.readAll(UpfEntityType.SLICE_METER).isEmpty());
+        upfProgrammable.apply(TestUpfConstants.SLICE_METER_INVALID_TC);
     }
 
     @Test
