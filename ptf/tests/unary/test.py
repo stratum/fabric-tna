@@ -2331,7 +2331,7 @@ class FabricIntQueueReportQuotaTest(IntTest):
 
 
 @group("int")
-@skipIf(is_v1model(), "Skip for bmv2")
+@skipIf(is_v1model(), "Skip for bmv2, see issue #507")
 class FabricIntMulticastReportTest(IntTest, IPv4MulticastTest):
     @tvsetup
     @autocleanup
