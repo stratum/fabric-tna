@@ -16,7 +16,7 @@ SPDX-License-Identifier: Apache-2.0
 
     <groupId>org.stratumproject</groupId>
     <artifactId>fabric-tna</artifactId>
-    <version>1.1.0-SNAPSHOT</version>
+    <version>1.2.0-SNAPSHOT</version>
     <packaging>bundle</packaging>
 
     <description>
@@ -27,7 +27,7 @@ SPDX-License-Identifier: Apache-2.0
     <properties>
         <trellis.api.groupId>org.onosproject</trellis.api.groupId>
         <trellis.api.artifactId>segmentrouting-api</trellis.api.artifactId>
-        <trellis.api.version>3.2.0-SNAPSHOT</trellis.api.version>
+        <trellis.api.version>3.3.0-SNAPSHOT</trellis.api.version>
         <web.context>/onos/fabrictna</web.context>
         <api.version>1.1.0</api.version>
         <api.title>Fabric-tna REST API</api.title>

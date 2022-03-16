@@ -2330,6 +2330,43 @@ class FabricIntQueueReportQuotaTest(IntTest):
         )
 
 
+@group("int")
+@skipIf(is_v1model(), "Skip for bmv2, see issue #507")
+class FabricIntMulticastReportTest(IntTest, IPv4MulticastTest):
+    @tvsetup
+    @autocleanup
+    def doRunTest(self):
+        pkt = testutils.simple_udp_packet(
+            eth_dst="01:00:5e:00:00:01", ip_dst="224.0.0.1"
+        )
+        in_port = self.port1
+        out_ports = [self.port1, self.port2, self.port4]  # port3 for INT collector.
+        self.set_up_int_flows(False, pkt, False)
+        self.runIPv4MulticastTest(pkt, in_port, out_ports, None, None, True)
+
+        exp_pkt = pkt_decrement_ttl(pkt)
+        for out_port in out_ports:
+            if out_port == in_port:
+                continue
+            flow_report = self.build_int_local_report(
+                SWITCH_MAC,
+                INT_COLLECTOR_MAC,
+                SWITCH_IPV4,
+                INT_COLLECTOR_IPV4,
+                self.sdn_to_sdk_port[in_port],
+                self.sdn_to_sdk_port[out_port],
+                SWITCH_ID,
+                exp_pkt,
+                False,
+                False,
+            )
+            self.verify_packet(flow_report, self.port3)
+        self.verify_no_other_packets()
+
+    def runTest(self):
+        self.doRunTest()
+
+
 @group("bng")
 class FabricPppoeUpstreamTest(PppoeTest):
     @tvsetup

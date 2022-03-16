@@ -893,12 +893,9 @@ class FabricTest(P4RuntimeTest):
         # Initialize the SDN-to-SDK port mapping, this port mapping is used for tests
         # which doesn't support port translation.
         # For example, port numbers in INT reports are not translated to singleton port.
-        if self.generate_tv:
-            # Build a fake SDN to SDK port mapping for testvector
+        if self.generate_tv or is_v1model():
+            # Build a fake SDN to SDK port mapping for testvector and bmv2
             self.sdn_to_sdk_port = dict([(_, _) for _ in range(1, 5)])
-        elif is_v1model():
-            # SDN and SDK port numbers are the same in bmv2
-            self.sdn_to_sdk_port = dict([(_, _) for _ in range(0, 4)])
             self.sdn_to_sdk_port[255] = 255  # CPU port for bmv2
         else:
             # For Tofino Model and real hardware, use gNMI to get the SDN port to SDK
@@ -2097,7 +2094,9 @@ class IPv4UnicastTest(FabricTest):
 
 
 class IPv4MulticastTest(FabricTest):
-    def runIPv4MulticastTest(self, pkt, in_port, out_ports, in_vlan, out_vlan):
+    def runIPv4MulticastTest(
+        self, pkt, in_port, out_ports, in_vlan, out_vlan, with_another_pkt_later=False
+    ):
         if Dot1Q in pkt:
             print("runIPv4MulticastTest() expects untagged packets")
             return
@@ -2113,6 +2112,8 @@ class IPv4MulticastTest(FabricTest):
         # Set port VLAN
         self.setup_port(in_port, internal_in_vlan, PORT_TYPE_EDGE, in_vlan is not None)
         for out_port in out_ports:
+            if out_port == in_port:
+                continue
             self.setup_port(
                 out_port, internal_out_vlan, PORT_TYPE_INFRA, out_vlan is not None
             )
@@ -2149,8 +2150,12 @@ class IPv4MulticastTest(FabricTest):
         # Send packets and verify
         self.send_packet(in_port, pkt)
         for out_port in out_ports:
+            if out_port == in_port:
+                # Packet will be dropped by egress pipeline.
+                continue
             self.verify_packet(expect_pkt, out_port)
-        self.verify_no_other_packets()
+        if not with_another_pkt_later:
+            self.verify_no_other_packets()
 
 
 class DoubleVlanTerminationTest(FabricTest):
