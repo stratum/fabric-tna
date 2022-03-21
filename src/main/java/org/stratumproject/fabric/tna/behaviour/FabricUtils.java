@@ -3,6 +3,7 @@
 
 package org.stratumproject.fabric.tna.behaviour;
 
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.onlab.util.KryoNamespace;
 import org.onosproject.net.PortNumber;
 import org.onosproject.net.flow.TrafficSelector;
@@ -137,6 +138,17 @@ public final class FabricUtils {
         checkArgument(sliceId >= 0 && sliceId <= MAX_SLICE_ID, "Invalid sliceId");
         checkArgument(tc >= 0 && tc <= MAX_TC, "Invalid tc");
         return (sliceId << TC_BITWIDTH) + tc;
+    }
+
+    /**
+     * Return a pair containing slice ID and Traffic Class extracted from the given
+     * slice and TC concatenation.
+     *
+     * @param sliceTc slice ID and TC concatenated
+     * @return Pair containing separate slice ID and TC
+     */
+    public static ImmutablePair<Integer, Integer> sliceTcSplit(int sliceTc) {
+        return ImmutablePair.of((sliceTc & 0b111100) >> 2, sliceTc & 0b11);
     }
 
     /**

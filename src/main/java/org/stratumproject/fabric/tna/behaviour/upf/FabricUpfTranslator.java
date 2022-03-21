@@ -418,10 +418,6 @@ public class FabricUpfTranslator {
         assertMeterId(meter, FABRIC_INGRESS_UPF_SESSION_METER);
         assertMeterBands(meter);
         List<Band> peakBand = getMeterBand(meter, Band.Type.MARK_RED);
-        List<Band> committedBand = getMeterBand(meter, Band.Type.MARK_YELLOW);
-        if (committedBand.get(0).rate() != 0 || committedBand.get(0).burst() != 0) {
-            log.warn("Session meter have unexpected committed band - IGNORING: " + committedBand);
-        }
         return UpfMeter.builder()
                 .setSession()
                 .setCellId((int) ((PiMeterCellId) meter.meterCellId()).index())
@@ -446,10 +442,6 @@ public class FabricUpfTranslator {
         assertMeterId(meter, FABRIC_INGRESS_QOS_SLICE_TC_METER);
         assertMeterBands(meter);
         List<Band> peakBand = getMeterBand(meter, Band.Type.MARK_RED);
-        List<Band> committedBand = getMeterBand(meter, Band.Type.MARK_YELLOW);
-        if (committedBand.get(0).rate() != 0 || committedBand.get(0).burst() != 0) {
-            log.warn("Slice meter have unexpected committed band - IGNORING: " + committedBand);
-        }
         return UpfMeter.builder()
                 .setSlice()
                 .setCellId((int) ((PiMeterCellId) meter.meterCellId()).index())

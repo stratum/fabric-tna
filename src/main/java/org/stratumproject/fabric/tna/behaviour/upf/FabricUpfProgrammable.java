@@ -53,6 +53,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.stratumproject.fabric.tna.Constants;
 import org.stratumproject.fabric.tna.behaviour.FabricCapabilities;
+import org.stratumproject.fabric.tna.behaviour.FabricUtils;
 import org.stratumproject.fabric.tna.slicing.api.SliceId;
 import org.stratumproject.fabric.tna.slicing.api.SlicingService;
 import org.stratumproject.fabric.tna.slicing.api.TrafficClass;
@@ -731,10 +732,9 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     private void applyUpfMeter(UpfMeter upfMeter) throws UpfProgrammableException {
         if (upfMeter.type().equals(UpfEntityType.SLICE_METER)) {
             // cell ID for slice meter is concatenation of slice ID and traffic class (sliceId++tc)
-            final int sliceId = (upfMeter.cellId() & 0b111100) >> 2;
-            final int tc = upfMeter.cellId() & 0b11;
-            assertSliceId(sliceId);
-            assertTrafficClass(sliceId, tc);
+            final Pair<Integer, Integer> sliceAndTc = FabricUtils.sliceTcSplit(upfMeter.cellId());
+            assertSliceId(sliceAndTc.getLeft());
+            assertTrafficClass(sliceAndTc.getLeft(), sliceAndTc.getRight());
         }
         MeterRequest meterRequest = upfTranslator.upfMeterToFabricMeter(upfMeter, deviceId, appId);
         if (upfMeter.isReset()) {
