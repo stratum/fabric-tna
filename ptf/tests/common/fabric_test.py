@@ -2814,7 +2814,7 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
                 ("qfi", stringify(qfi, 1)),
                 ("teid", stringify(teid, 4)),
                 ("app_meter_idx", stringify(app_meter_idx, 2)),
-                ("tc", stringify(tc, 1))
+                ("tc", stringify(tc, 1)),
             ]
         else:
             action_name = "FabricIngress.upf.downlink_drop"
@@ -3011,9 +3011,7 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
             )
         if meter_drop:
             self.enable_policing(
-                slice_id,
-                tc,
-                V1MODEL_COLOR_RED if is_v1model() else COLOR_RED,
+                slice_id, tc, V1MODEL_COLOR_RED if is_v1model() else COLOR_RED,
             )
         app_meter_idx = DEFAULT_APP_METER_IDX
         if app_max_bps is not None:
@@ -3295,9 +3293,7 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
             )
         if meter_drop:
             self.enable_policing(
-                slice_id,
-                tc,
-                V1MODEL_COLOR_RED if is_v1model() else COLOR_RED,
+                slice_id, tc, V1MODEL_COLOR_RED if is_v1model() else COLOR_RED,
             )
         app_meter_idx = DEFAULT_APP_METER_IDX
         if app_max_bps is not None:
