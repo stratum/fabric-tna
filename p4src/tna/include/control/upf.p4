@@ -269,12 +269,6 @@ control UpfIngress(
         fabric_md.tc_unknown = false;
     }
 
-    action app_fwd_no_tc(upf_ctr_idx_t ctr_id, app_meter_idx_t app_meter_idx) {
-        _term_hit(ctr_id);
-        fabric_md.tc_unknown = true;
-        app_meter_idx_internal = app_meter_idx;
-    }
-
     action downlink_fwd_encap(upf_ctr_idx_t ctr_id,
                               tc_t         tc,
                               teid_t       teid,
@@ -282,15 +276,6 @@ control UpfIngress(
                               bit<6>       qfi,
                               app_meter_idx_t app_meter_idx) {
         app_fwd(ctr_id, tc, app_meter_idx);
-        _set_field_encap(teid, qfi);
-    }
-
-    action downlink_fwd_encap_no_tc(upf_ctr_idx_t ctr_id,
-                                    teid_t       teid,
-                                    // QFI should always equal 0 for 4G flows
-                                    bit<6>       qfi,
-                                    app_meter_idx_t app_meter_idx) {
-        app_fwd_no_tc(ctr_id, app_meter_idx);
         _set_field_encap(teid, qfi);
     }
 
@@ -302,7 +287,6 @@ control UpfIngress(
 
         actions = {
             app_fwd;
-            app_fwd_no_tc;
             uplink_drop;
             @defaultonly uplink_drop_miss;
         }
@@ -317,7 +301,6 @@ control UpfIngress(
         }
         actions = {
             downlink_fwd_encap;
-            downlink_fwd_encap_no_tc;
             downlink_drop;
             @defaultonly downlink_drop_miss;
         }

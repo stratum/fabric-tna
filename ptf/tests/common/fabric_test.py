@@ -2722,12 +2722,9 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
             ("ctr_id", stringify(ctr_id, 2)),
         ]
         if not drop:
+            action_name = "FabricIngress.upf.app_fwd"
             action_params.append(("app_meter_idx", stringify(app_meter_idx, 2)))
-            if tc is not None:
-                action_name = "FabricIngress.upf.app_fwd"
-                action_params.append(("tc", stringify(tc, 1)))
-            else:
-                action_name = "FabricIngress.upf.app_fwd_no_tc"
+            action_params.append(("tc", stringify(tc, 1)))
         else:
             action_name = "FabricIngress.upf.uplink_drop"
         self.push_update_add_entry_to_action(
@@ -2811,15 +2808,14 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
         req = self.get_new_write_request()
         action_params = [("ctr_id", stringify(ctr_id, 2))]
         if not drop:
-            action_params = [("ctr_id", stringify(ctr_id, 2))]
-            action_params.append(("qfi", stringify(qfi, 1)))
-            action_params.append(("teid", stringify(teid, 4)))
-            action_params.append(("app_meter_idx", stringify(app_meter_idx, 2)))
-            if tc is not None:
-                action_name = "FabricIngress.upf.downlink_fwd_encap"
-                action_params.append(("tc", stringify(tc, 1)))
-            else:
-                action_name = "FabricIngress.upf.downlink_fwd_encap_no_tc"
+            action_name = "FabricIngress.upf.downlink_fwd_encap"
+            action_params = [
+                ("ctr_id", stringify(ctr_id, 2)),
+                ("qfi", stringify(qfi, 1)),
+                ("teid", stringify(teid, 4)),
+                ("app_meter_idx", stringify(app_meter_idx, 2)),
+                ("tc", stringify(tc, 1))
+            ]
         else:
             action_name = "FabricIngress.upf.downlink_drop"
         self.push_update_add_entry_to_action(
@@ -2872,7 +2868,7 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
         teid,
         ctr_id,
         slice_id=DEFAULT_SLICE_ID,
-        tc=None,
+        tc=DEFAULT_TC,
         app_id=NO_APP_ID,
         app_meter_idx=DEFAULT_APP_METER_IDX,
         session_meter_idx=DEFAULT_SESSION_METER_IDX,
@@ -2895,7 +2891,7 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
         ue_addr,
         ctr_id,
         slice_id=DEFAULT_SLICE_ID,
-        tc=None,
+        tc=DEFAULT_TC,
         qfi=DEFAULT_QFI,
         tunnel_peer_id=S1U_ENB_TUNNEL_PEER_ID,
         app_id=NO_APP_ID,
@@ -2957,7 +2953,7 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
         with_psc,
         is_next_hop_spine,
         slice_id=DEFAULT_SLICE_ID,
-        tc=None,
+        tc=DEFAULT_TC,
         dscp_rewrite=False,
         verify_counters=True,
         eg_port=None,
@@ -2989,11 +2985,7 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
         if tagged2:
             exp_pkt = pkt_add_vlan(exp_pkt, VLAN_ID_2)
         if dscp_rewrite:
-            if tc is None:
-                # Use default TC
-                exp_pkt = pkt_set_dscp(exp_pkt, slice_id=slice_id, tc=DEFAULT_TC)
-            else:
-                exp_pkt = pkt_set_dscp(exp_pkt, slice_id=slice_id, tc=tc)
+            exp_pkt = pkt_set_dscp(exp_pkt, slice_id=slice_id, tc=tc)
 
         app_id = NO_APP_ID
         if app_filtering:
@@ -3020,7 +3012,7 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
         if meter_drop:
             self.enable_policing(
                 slice_id,
-                DEFAULT_TC if tc is None else tc,
+                tc,
                 V1MODEL_COLOR_RED if is_v1model() else COLOR_RED,
             )
         app_meter_idx = DEFAULT_APP_METER_IDX
@@ -3249,7 +3241,7 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
         with_psc,
         is_next_hop_spine,
         slice_id=DEFAULT_SLICE_ID,
-        tc=None,
+        tc=DEFAULT_TC,
         dscp_rewrite=False,
         verify_counters=True,
         eg_port=None,
@@ -3277,10 +3269,7 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
             exp_pkt = pkt_add_vlan(exp_pkt, VLAN_ID_2)
         if dscp_rewrite:
             # Modify outer IPV4
-            if tc is None:
-                exp_pkt = pkt_set_dscp(exp_pkt, slice_id=slice_id, tc=DEFAULT_TC)
-            else:
-                exp_pkt = pkt_set_dscp(exp_pkt, slice_id=slice_id, tc=tc)
+            exp_pkt = pkt_set_dscp(exp_pkt, slice_id=slice_id, tc=tc)
 
         app_id = NO_APP_ID
         if app_filtering:
@@ -3307,7 +3296,7 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
         if meter_drop:
             self.enable_policing(
                 slice_id,
-                DEFAULT_TC if tc is None else tc,
+                tc,
                 V1MODEL_COLOR_RED if is_v1model() else COLOR_RED,
             )
         app_meter_idx = DEFAULT_APP_METER_IDX

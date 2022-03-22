@@ -358,16 +358,12 @@ public final class P4InfoConstants {
             PiActionId.of("FabricIngress.stats.count");
     public static final PiActionId FABRIC_INGRESS_UPF_APP_FWD =
             PiActionId.of("FabricIngress.upf.app_fwd");
-    public static final PiActionId FABRIC_INGRESS_UPF_APP_FWD_NO_TC =
-            PiActionId.of("FabricIngress.upf.app_fwd_no_tc");
     public static final PiActionId FABRIC_INGRESS_UPF_DOWNLINK_DROP =
             PiActionId.of("FabricIngress.upf.downlink_drop");
     public static final PiActionId FABRIC_INGRESS_UPF_DOWNLINK_DROP_MISS =
             PiActionId.of("FabricIngress.upf.downlink_drop_miss");
     public static final PiActionId FABRIC_INGRESS_UPF_DOWNLINK_FWD_ENCAP =
             PiActionId.of("FabricIngress.upf.downlink_fwd_encap");
-    public static final PiActionId FABRIC_INGRESS_UPF_DOWNLINK_FWD_ENCAP_NO_TC =
-            PiActionId.of("FabricIngress.upf.downlink_fwd_encap_no_tc");
     public static final PiActionId FABRIC_INGRESS_UPF_IFACE_ACCESS =
             PiActionId.of("FabricIngress.upf.iface_access");
     public static final PiActionId FABRIC_INGRESS_UPF_IFACE_CORE =
