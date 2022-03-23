@@ -117,26 +117,10 @@ def get_controller_packet_metadata(p4info, meta_type, name):
                         return m
 
 
-def de_canonicalize_bytes(bitwidth: int, input: bytes):
-    """
-    This method adds a padding to the 'input' param.
-    Needed for bmv2 since it uses Canonical Bytestrings: this representation
-    trims the data to the lowest amount of bytes needed for that particular value
-    (e.g. 0x0 for PacketIn.ingress_port will be interpreted by Stratum bmv2 using 1 byte, instead of 9 bits,
-    as declared in header.p4)
-    :param bitwidth: the desired size of input.
-    :param input: the byte string to be padded.
-    :return: padded input with bytes such that: len(bin(input)) >= bitwidth.
-    """
-    if bitwidth <= 0:
-        raise ValueError("bitwidth must be a positive integer.")
-    if input is None:
-        raise ValueError("input cannot be of NoneType.")
-
-    byte_width = (
-        bitwidth + 7
-    ) // 8  # use integer division to avoid floating point rounding errors.
-    return input.rjust(byte_width, b"\0")  # right padding <-> BigEndian
+def canonicalized(byte_string):
+    while len(byte_string) != 1 and byte_string[0] == 0:
+        byte_string = byte_string[1:]
+    return byte_string
 
 
 # Workaround to choose byte size of port-related fields.
@@ -381,17 +365,10 @@ class P4RuntimeTest(BaseTest):
 
             # Here we only compare the integer value of ingress port metadata instead
             # of the byte string.
-            if is_tna():
-                rx_inport = struct.unpack("!I", rx_in_port_)[0]
-            else:
-                pkt_in_metadata = get_controller_packet_metadata(
-                    self.p4info, meta_type="packet_in", name="ingress_port"
-                )
-                pkt_in_ig_port_bitwidth = pkt_in_metadata.bitwidth
-                rx_in_port_ = de_canonicalize_bytes(
-                    pkt_in_ig_port_bitwidth, rx_in_port_
-                )
-                rx_inport = struct.unpack("!H", rx_in_port_)[0]
+            rx_inport = 0
+            for b in rx_in_port_:
+                rx_inport <<= 8
+                rx_inport += b
 
             if exp_in_port != rx_inport:
                 self.fail(
@@ -559,7 +536,7 @@ class P4RuntimeTest(BaseTest):
             self.check_value_size(self.v, bitwidth)
             mf = mk.add()
             mf.field_id = mf_id
-            mf.exact.value = self.v
+            mf.exact.value = canonicalized(self.v)
 
     class Lpm(MF):
         def __init__(self, mf_name, v, pLen):
@@ -589,11 +566,13 @@ class P4RuntimeTest(BaseTest):
             for i in range(first_byte_masked):
                 mf.lpm.value += stringify(self.v[i], 1)
             if first_byte_masked == len(self.v):
+                mf.lpm.value = canonicalized(mf.lpm.value)
                 return
             r = self.pLen % 8
             mf.lpm.value += stringify(self.v[first_byte_masked] & (0xFF << (8 - r)), 1)
             for i in range(first_byte_masked + 1, len(self.v)):
                 mf.lpm.value += b"\x00"
+            mf.lpm.value = canonicalized(mf.lpm.value)
 
     class Ternary(MF):
         def __init__(self, mf_name, v, mask):
@@ -610,12 +589,13 @@ class P4RuntimeTest(BaseTest):
             mf = mk.add()
             mf.field_id = mf_id
             assert len(self.mask) == len(self.v)
-            mf.ternary.mask = self.mask
+            mf.ternary.mask = canonicalized(self.mask)
             mf.ternary.value = b""
             # P4Runtime now has strict rules regarding ternary matches: in the
             # case of Ternary, "don't-care" bits in the value must be set to 0
             for i in range(len(self.mask)):
                 mf.ternary.value += stringify(self.v[i] & self.mask[i], 1)
+            mf.ternary.value = canonicalized(mf.ternary.value)
 
     class Range(MF):
         def __init__(self, mf_name, low, high):
@@ -639,8 +619,8 @@ class P4RuntimeTest(BaseTest):
             mf = mk.add()
             mf.field_id = mf_id
             assert len(self.high) == len(self.low)
-            mf.range.low = self.low
-            mf.range.high = self.high
+            mf.range.low = canonicalized(self.low)
+            mf.range.high = canonicalized(self.high)
 
     # Sets the match key for a p4::TableEntry object. mk needs to be an
     # iterable object of MF instances
@@ -655,7 +635,7 @@ class P4RuntimeTest(BaseTest):
         for p_name, v in params:
             param = action.params.add()
             param.param_id = self.get_param_id(a_name, p_name)
-            param.value = v
+            param.value = canonicalized(v)
 
     # Sets the action & action data for a p4::TableEntry object. params needs
     # to be an iterable object of 2-tuples (<param_name>, <value>).
