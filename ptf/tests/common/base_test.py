@@ -12,12 +12,11 @@ import os
 import queue
 import random
 import socket
-import struct
 import sys
 import threading
 import time
 from collections import Counter
-from functools import partial, partialmethod, wraps
+from functools import partialmethod, wraps
 from io import StringIO
 from unittest import SkipTest
 
@@ -117,7 +116,7 @@ def get_controller_packet_metadata(p4info, meta_type, name):
                         return m
 
 
-def canonicalized(byte_string):
+def canonical(byte_string):
     while len(byte_string) != 1 and byte_string[0] == 0:
         byte_string = byte_string[1:]
     return byte_string
@@ -362,18 +361,12 @@ class P4RuntimeTest(BaseTest):
         else:
             pkt_in_msg = self.get_packet_in(timeout=timeout)
             rx_in_port_ = pkt_in_msg.metadata[0].value
+            rx_in_port = int.from_bytes(rx_in_port_, byteorder='big')
 
-            # Here we only compare the integer value of ingress port metadata instead
-            # of the byte string.
-            rx_inport = 0
-            for b in rx_in_port_:
-                rx_inport <<= 8
-                rx_inport += b
-
-            if exp_in_port != rx_inport:
+            if exp_in_port != rx_in_port:
                 self.fail(
                     "Wrong packet-in ingress port, "
-                    + "expected {} but received was {}".format(exp_in_port, rx_inport)
+                    + "expected {} but received was {}".format(exp_in_port, rx_in_port)
                 )
             rx_pkt = Ether(pkt_in_msg.payload)
             if not match_exp_pkt(exp_pkt, rx_pkt):
@@ -536,7 +529,7 @@ class P4RuntimeTest(BaseTest):
             self.check_value_size(self.v, bitwidth)
             mf = mk.add()
             mf.field_id = mf_id
-            mf.exact.value = canonicalized(self.v)
+            mf.exact.value = canonical(self.v)
 
     class Lpm(MF):
         def __init__(self, mf_name, v, pLen):
@@ -566,13 +559,13 @@ class P4RuntimeTest(BaseTest):
             for i in range(first_byte_masked):
                 mf.lpm.value += stringify(self.v[i], 1)
             if first_byte_masked == len(self.v):
-                mf.lpm.value = canonicalized(mf.lpm.value)
+                mf.lpm.value = canonical(mf.lpm.value)
                 return
             r = self.pLen % 8
             mf.lpm.value += stringify(self.v[first_byte_masked] & (0xFF << (8 - r)), 1)
             for i in range(first_byte_masked + 1, len(self.v)):
                 mf.lpm.value += b"\x00"
-            mf.lpm.value = canonicalized(mf.lpm.value)
+            mf.lpm.value = canonical(mf.lpm.value)
 
     class Ternary(MF):
         def __init__(self, mf_name, v, mask):
@@ -589,13 +582,13 @@ class P4RuntimeTest(BaseTest):
             mf = mk.add()
             mf.field_id = mf_id
             assert len(self.mask) == len(self.v)
-            mf.ternary.mask = canonicalized(self.mask)
+            mf.ternary.mask = canonical(self.mask)
             mf.ternary.value = b""
             # P4Runtime now has strict rules regarding ternary matches: in the
             # case of Ternary, "don't-care" bits in the value must be set to 0
             for i in range(len(self.mask)):
                 mf.ternary.value += stringify(self.v[i] & self.mask[i], 1)
-            mf.ternary.value = canonicalized(mf.ternary.value)
+            mf.ternary.value = canonical(mf.ternary.value)
 
     class Range(MF):
         def __init__(self, mf_name, low, high):
@@ -619,8 +612,8 @@ class P4RuntimeTest(BaseTest):
             mf = mk.add()
             mf.field_id = mf_id
             assert len(self.high) == len(self.low)
-            mf.range.low = canonicalized(self.low)
-            mf.range.high = canonicalized(self.high)
+            mf.range.low = canonical(self.low)
+            mf.range.high = canonical(self.high)
 
     # Sets the match key for a p4::TableEntry object. mk needs to be an
     # iterable object of MF instances
@@ -635,7 +628,7 @@ class P4RuntimeTest(BaseTest):
         for p_name, v in params:
             param = action.params.add()
             param.param_id = self.get_param_id(a_name, p_name)
-            param.value = canonicalized(v)
+            param.value = canonical(v)
 
     # Sets the action & action data for a p4::TableEntry object. params needs
     # to be an iterable object of 2-tuples (<param_name>, <value>).
