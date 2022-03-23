@@ -41,8 +41,12 @@ from testvector import tvutils
 RPC_TIMEOUT = 10  # used when sending Write/Read requests.
 
 # Convert integer (with length) to binary byte string
-def stringify(n, length):
-    return n.to_bytes(length, byteorder="big")
+def stringify(n):
+    byte_length = (n.bit_length() + 7) // 8
+    # We will get 0 `n` is zero, in this case we need to set byte length
+    # to 1 so the final result will be b"\x00".
+    byte_length = byte_length if byte_length != 0 else 1
+    return n.to_bytes(byte_length, byteorder="big")
 
 
 def is_v1model():
@@ -114,6 +118,25 @@ def get_controller_packet_metadata(p4info, meta_type, name):
                 if name is not None:
                     if m.name == name:
                         return m
+
+
+def de_canonical(bitwidth: int, input: bytes):
+    """
+    This method adds padding zeros to the 'input' param.
+
+    :param bitwidth: the desired size of input.
+    :param input: the byte string to be padded.
+    :return: padded input with bytes such that: len(bin(input)) >= bitwidth.
+    """
+    if bitwidth <= 0:
+        raise ValueError("bitwidth must be a positive integer.")
+    if input is None:
+        raise ValueError("input cannot be of NoneType.")
+
+    byte_width = (
+        bitwidth + 7
+    ) // 8  # use integer division to avoid floating point rounding errors.
+    return input.rjust(byte_width, b"\0")  # right padding <-> BigEndian
 
 
 def canonical(byte_string):
@@ -356,7 +379,7 @@ class P4RuntimeTest(BaseTest):
             exp_pkt_in.payload = bytes(exp_pkt)
             ingress_physical_port = exp_pkt_in.metadata.add()
             ingress_physical_port.metadata_id = 0
-            ingress_physical_port.value = stringify(exp_in_port, PORT_SIZE_BYTES)
+            ingress_physical_port.value = stringify(exp_in_port)
             tvutils.add_packet_in_expectation(self.tc, exp_pkt_in)
         else:
             pkt_in_msg = self.get_packet_in(timeout=timeout)
@@ -552,17 +575,19 @@ class P4RuntimeTest(BaseTest):
             mf.lpm.prefix_len = self.pLen
             mf.lpm.value = b""
 
+            # De-canonicalized before removing don't-care bits.
+            self.v = de_canonical(bitwidth, self.v)
             # P4Runtime now has strict rules regarding ternary matches: in the
             # case of LPM, trailing bits in the value (after prefix) must be set
             # to 0.
             first_byte_masked = self.pLen // 8
             for i in range(first_byte_masked):
-                mf.lpm.value += stringify(self.v[i], 1)
+                mf.lpm.value += stringify(self.v[i])
             if first_byte_masked == len(self.v):
                 mf.lpm.value = canonical(mf.lpm.value)
                 return
             r = self.pLen % 8
-            mf.lpm.value += stringify(self.v[first_byte_masked] & (0xFF << (8 - r)), 1)
+            mf.lpm.value += stringify(self.v[first_byte_masked] & (0xFF << (8 - r)))
             for i in range(first_byte_masked + 1, len(self.v)):
                 mf.lpm.value += b"\x00"
             mf.lpm.value = canonical(mf.lpm.value)
@@ -574,6 +599,9 @@ class P4RuntimeTest(BaseTest):
             self.mask = mask
 
         def add_to(self, mf_id, mk, bitwidth):
+            # De-canonicalized before removing don't-care bits.
+            self.v = de_canonical(bitwidth, self.v)
+            self.mask = de_canonical(bitwidth, self.mask)
             # P4Runtime mandates that the match field should be omitted for
             # "don't care" ternary matches (i.e. when mask is zero)
             if all(c == 0 for c in self.mask):
@@ -587,7 +615,7 @@ class P4RuntimeTest(BaseTest):
             # P4Runtime now has strict rules regarding ternary matches: in the
             # case of Ternary, "don't-care" bits in the value must be set to 0
             for i in range(len(self.mask)):
-                mf.ternary.value += stringify(self.v[i] & self.mask[i], 1)
+                mf.ternary.value += stringify(self.v[i] & self.mask[i])
             mf.ternary.value = canonical(mf.ternary.value)
 
     class Range(MF):
@@ -611,7 +639,6 @@ class P4RuntimeTest(BaseTest):
                 return
             mf = mk.add()
             mf.field_id = mf_id
-            assert len(self.high) == len(self.low)
             mf.range.low = canonical(self.low)
             mf.range.high = canonical(self.high)
 

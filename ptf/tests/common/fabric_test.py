@@ -950,7 +950,7 @@ class FabricTest(P4RuntimeTest):
             "FabricEgress.pkt_io_egress.switch_info",
             None,
             "FabricEgress.pkt_io_egress.set_switch_info",
-            [("cpu_port", stringify(self.cpu_port, PORT_SIZE_BYTES))],
+            [("cpu_port", stringify(self.cpu_port))],
         )
         return req, self.write_request(req, store=False)
 
@@ -983,43 +983,43 @@ class FabricTest(P4RuntimeTest):
         # pad0
         pad_md = packet_out.metadata.add()
         pad_md.metadata_id = 1
-        pad_md.value = stringify(0, 1)
+        pad_md.value = stringify(0)
         # egress_port
         port_md = packet_out.metadata.add()
         port_md.metadata_id = 2
-        port_md.value = stringify(port, PORT_SIZE_BYTES)
+        port_md.value = stringify(port)
         # pad1
         pad_md = packet_out.metadata.add()
         pad_md.metadata_id = 3
-        pad_md.value = stringify(0, 1)
+        pad_md.value = stringify(0)
         # queue_id
         queue_md = packet_out.metadata.add()
         queue_md.metadata_id = 4
-        queue_md.value = stringify(queue_id, 1)
+        queue_md.value = stringify(queue_id)
         # pad2
         pad_md = packet_out.metadata.add()
         pad_md.metadata_id = 5
-        pad_md.value = stringify(0, 1)
+        pad_md.value = stringify(0)
         # cpu_loopback_mode
         cpu_loopback_mode_md = packet_out.metadata.add()
         cpu_loopback_mode_md.metadata_id = 6
-        cpu_loopback_mode_md.value = stringify(cpu_loopback_mode, 1)
+        cpu_loopback_mode_md.value = stringify(cpu_loopback_mode)
         # do_forwarding
         do_forwarding_md = packet_out.metadata.add()
         do_forwarding_md.metadata_id = 7
-        do_forwarding_md.value = stringify(1 if do_forwarding else 0, 1)
+        do_forwarding_md.value = stringify(1 if do_forwarding else 0)
         # pad3
         pad_md = packet_out.metadata.add()
         pad_md.metadata_id = 8
-        pad_md.value = stringify(0, 2)
+        pad_md.value = stringify(0)
         # pad4
         pad_md = packet_out.metadata.add()
         pad_md.metadata_id = 9
-        pad_md.value = stringify(0, 6)
+        pad_md.value = stringify(0)
         # ether type
         ether_type_md = packet_out.metadata.add()
         ether_type_md.metadata_id = 10
-        ether_type_md.value = stringify(ETH_TYPE_PACKET_OUT, 2)
+        ether_type_md.value = stringify(ETH_TYPE_PACKET_OUT)
         return packet_out
 
     def setup_int(self):
@@ -1027,13 +1027,13 @@ class FabricTest(P4RuntimeTest):
             "int_egress.int_prep",
             None,
             "int_egress.int_transit",
-            [("switch_id", stringify(1, 4))],
+            [("switch_id", stringify(1))],
         )
 
         req = self.get_new_write_request()
         for i in range(16):
             base = "int_set_header_0003_i"
-            mf = self.Exact("hdr.int_header.instruction_mask_0003", stringify(i, 1))
+            mf = self.Exact("hdr.int_header.instruction_mask_0003", stringify(i))
             action = "int_metadata_insert." + base + str(i)
             self.push_update_add_entry_to_action(
                 req, "int_metadata_insert.int_inst_0003", [mf], action, []
@@ -1043,7 +1043,7 @@ class FabricTest(P4RuntimeTest):
         req = self.get_new_write_request()
         for i in range(16):
             base = "int_set_header_0407_i"
-            mf = self.Exact("hdr.int_header.instruction_mask_0407", stringify(i, 1))
+            mf = self.Exact("hdr.int_header.instruction_mask_0407", stringify(i))
             action = "int_metadata_insert." + base + str(i)
             self.push_update_add_entry_to_action(
                 req, "int_metadata_insert.int_inst_0407", [mf], action, []
@@ -1093,11 +1093,11 @@ class FabricTest(P4RuntimeTest):
         inner_vlan_id=None,
         port_type=PORT_TYPE_EDGE,
     ):
-        ingress_port_ = stringify(ingress_port, PORT_SIZE_BYTES)
+        ingress_port_ = stringify(ingress_port)
         vlan_valid_ = b"\x01" if vlan_valid else b"\x00"
-        vlan_id_ = stringify(vlan_id, 2)
-        vlan_id_mask_ = stringify(4095 if vlan_valid else 0, 2)
-        new_vlan_id_ = stringify(internal_vlan_id, 2)
+        vlan_id_ = stringify(vlan_id)
+        vlan_id_mask_ = stringify(4095 if vlan_valid else 0)
+        new_vlan_id_ = stringify(internal_vlan_id)
         action_name = "permit" if vlan_valid else "permit_with_internal_vlan"
         action_params = [("port_type", port_type)]
         if not vlan_valid:
@@ -1110,8 +1110,8 @@ class FabricTest(P4RuntimeTest):
             matches.append(self.Ternary("vlan_id", vlan_id_, vlan_id_mask_))
         if inner_vlan_id is not None:
             # Match on inner_vlan, only when explicitly requested
-            inner_vlan_id_ = stringify(inner_vlan_id, 2)
-            inner_vlan_id_mask_ = stringify(4095, 2)
+            inner_vlan_id_ = stringify(inner_vlan_id)
+            inner_vlan_id_mask_ = stringify(4095)
             matches.append(
                 self.Ternary("inner_vlan_id", inner_vlan_id_, inner_vlan_id_mask_)
             )
@@ -1125,8 +1125,8 @@ class FabricTest(P4RuntimeTest):
         )
 
     def set_egress_vlan(self, egress_port, vlan_id, push_vlan=False):
-        egress_port = stringify(egress_port, PORT_SIZE_BYTES)
-        vlan_id = stringify(vlan_id, 2)
+        egress_port = stringify(egress_port)
+        vlan_id = stringify(vlan_id)
         action_name = "push_vlan" if push_vlan else "pop_vlan"
         self.send_request_add_entry_to_action(
             "egress_next.egress_vlan",
@@ -1136,8 +1136,8 @@ class FabricTest(P4RuntimeTest):
         )
 
     def set_keep_egress_vlan_config(self, egress_port, vlan_id):
-        egress_port = stringify(egress_port, PORT_SIZE_BYTES)
-        vlan_id = stringify(vlan_id, 2)
+        egress_port = stringify(egress_port)
+        vlan_id = stringify(vlan_id)
         self.send_request_add_entry_to_action(
             "egress_next.egress_vlan",
             [self.Exact("vlan_id", vlan_id), self.Exact("eg_port", egress_port)],
@@ -1153,21 +1153,21 @@ class FabricTest(P4RuntimeTest):
         ethertype=ETH_TYPE_IPV4,
         fwd_type=FORWARDING_TYPE_UNICAST_IPV4,
     ):
-        ingress_port_ = stringify(ingress_port, PORT_SIZE_BYTES)
+        ingress_port_ = stringify(ingress_port)
         priority = DEFAULT_PRIORITY
         if ethertype == ETH_TYPE_IPV4:
-            ethertype_ = stringify(0, 2)
-            ethertype_mask_ = stringify(0, 2)
-            ip_eth_type = stringify(ethertype, 2)
+            ethertype_ = stringify(0)
+            ethertype_mask_ = stringify(0)
+            ip_eth_type = stringify(ethertype)
         elif ethertype == ETH_TYPE_MPLS_UNICAST:
-            ethertype_ = stringify(ETH_TYPE_MPLS_UNICAST, 2)
-            ethertype_mask_ = stringify(0xFFFF, 2)
+            ethertype_ = stringify(ETH_TYPE_MPLS_UNICAST)
+            ethertype_mask_ = stringify(0xFFFF)
             # TODO: install rule for MPLS+IPv6 traffic
-            ip_eth_type = stringify(ETH_TYPE_IPV4, 2)
+            ip_eth_type = stringify(ETH_TYPE_IPV4)
             priority += 10
         else:
             raise Exception("Invalid ethertype")
-        fwd_type_ = stringify(fwd_type, 1)
+        fwd_type_ = stringify(fwd_type)
         matches = [
             self.Exact("ig_port", ingress_port_),
             self.Exact("ip_eth_type", ip_eth_type),
@@ -1214,13 +1214,13 @@ class FabricTest(P4RuntimeTest):
         next_id,
         priority=DEFAULT_PRIORITY,
     ):
-        vlan_id_ = stringify(vlan_id, 2)
+        vlan_id_ = stringify(vlan_id)
         mk = [self.Exact("vlan_id", vlan_id_)]
         if eth_dstAddr is not None and eth_dstAddr_mask is not None:
             eth_dstAddr_ = mac_to_binary(eth_dstAddr)
             eth_dstAddr_mask_ = mac_to_binary(eth_dstAddr_mask)
             mk.append(self.Ternary("eth_dst", eth_dstAddr_, eth_dstAddr_mask_))
-        next_id_ = stringify(next_id, 4)
+        next_id_ = stringify(next_id)
         return self.send_request_add_entry_to_action(
             "forwarding.bridging",
             mk,
@@ -1230,7 +1230,7 @@ class FabricTest(P4RuntimeTest):
         )
 
     def read_bridging_entry(self, vlan_id, eth_dstAddr, eth_dstAddr_mask):
-        vlan_id_ = stringify(vlan_id, 2)
+        vlan_id_ = stringify(vlan_id)
         mk = [self.Exact("vlan_id", vlan_id_)]
         if eth_dstAddr is not None:
             eth_dstAddr_ = mac_to_binary(eth_dstAddr)
@@ -1240,7 +1240,7 @@ class FabricTest(P4RuntimeTest):
 
     def add_forwarding_routing_v4_entry(self, ipv4_dstAddr, ipv4_pLen, next_id):
         ipv4_dstAddr_ = ipv4_to_binary(ipv4_dstAddr)
-        next_id_ = stringify(next_id, 4)
+        next_id_ = stringify(next_id)
         self.send_request_add_entry_to_action(
             "forwarding.routing_v4",
             [self.Lpm("ipv4_dst", ipv4_dstAddr_, ipv4_pLen)],
@@ -1258,8 +1258,8 @@ class FabricTest(P4RuntimeTest):
         )
 
     def add_forwarding_mpls_entry(self, label, next_id):
-        label_ = stringify(label, 3)
-        next_id_ = stringify(next_id, 4)
+        label_ = stringify(label)
+        next_id_ = stringify(next_id)
         self.send_request_add_entry_to_action(
             "forwarding.mpls",
             [self.Exact("mpls_label", label_)],
@@ -1270,8 +1270,8 @@ class FabricTest(P4RuntimeTest):
     def add_forwarding_acl_punt_to_cpu(
         self, eth_type=None, priority=DEFAULT_PRIORITY, post_ingress=False
     ):
-        eth_type_ = stringify(eth_type, 2)
-        eth_type_mask_ = stringify(0xFFFF, 2)
+        eth_type_ = stringify(eth_type)
+        eth_type_mask_ = stringify(0xFFFF)
         action = "acl.punt_to_cpu_post_ingress" if post_ingress else "acl.punt_to_cpu"
         return self.send_request_add_entry_to_action(
             "acl.acl",
@@ -1293,7 +1293,7 @@ class FabricTest(P4RuntimeTest):
             "acl.acl",
             matches,
             "acl.set_output_port",
-            [("port_num", stringify(output_port, PORT_SIZE_BYTES))],
+            [("port_num", stringify(output_port))],
             priority,
         )
 
@@ -1302,14 +1302,14 @@ class FabricTest(P4RuntimeTest):
         return self.read_table_entry("acl.acl", matches, priority)
 
     def read_forwarding_acl_punt_to_cpu(self, eth_type=None, priority=DEFAULT_PRIORITY):
-        eth_type_ = stringify(eth_type, 2)
-        eth_type_mask_ = stringify(0xFFFF, 2)
+        eth_type_ = stringify(eth_type)
+        eth_type_mask_ = stringify(0xFFFF)
         mk = [self.Ternary("eth_type", eth_type_, eth_type_mask_)]
         return self.read_table_entry("acl.acl", mk, priority)
 
     def add_forwarding_acl_copy_to_cpu(self, eth_type=None, post_ingress=False):
-        eth_type_ = stringify(eth_type, 2)
-        eth_type_mask = stringify(0xFFFF, 2)
+        eth_type_ = stringify(eth_type)
+        eth_type_mask = stringify(0xFFFF)
         action = "acl.copy_to_cpu_post_ingress" if post_ingress else "acl.copy_to_cpu"
         self.send_request_add_entry_to_action(
             "acl.acl",
@@ -1321,8 +1321,8 @@ class FabricTest(P4RuntimeTest):
 
     def add_forwarding_acl_drop_ingress_port(self, ingress_port):
 
-        ingress_port_ = stringify(ingress_port, PORT_SIZE_BYTES)
-        ingress_port_mask_ = stringify(2 ** PORT_SIZE_BITS - 1, PORT_SIZE_BYTES)
+        ingress_port_ = stringify(ingress_port)
+        ingress_port_mask_ = stringify(2 ** PORT_SIZE_BITS - 1)
         self.send_request_add_entry_to_action(
             "acl.acl",
             [self.Ternary("ig_port", ingress_port_, ingress_port_mask_)],
@@ -1334,9 +1334,9 @@ class FabricTest(P4RuntimeTest):
     def add_forwarding_acl_set_clone_session_id(
         self, eth_type=None, clone_group_id=None
     ):
-        eth_type_ = stringify(eth_type, 2)
-        eth_type_mask = stringify(0xFFFF, 2)
-        clone_group_id_ = stringify(clone_group_id, 4)
+        eth_type_ = stringify(eth_type)
+        eth_type_mask = stringify(0xFFFF)
+        clone_group_id_ = stringify(clone_group_id)
         self.send_request_add_entry_to_action(
             "acl.acl",
             [self.Ternary("eth_type", eth_type_, eth_type_mask)],
@@ -1369,27 +1369,27 @@ class FabricTest(P4RuntimeTest):
         matches = []
         if ipv4_src is not None:
             ipv4_src_ = ipv4_to_binary(ipv4_src)
-            ipv4_src_mask = stringify(0xFFFFFFFF, 4)
+            ipv4_src_mask = stringify(0xFFFFFFFF)
             matches.append(self.Ternary("ipv4_src", ipv4_src_, ipv4_src_mask))
         if ipv4_dst is not None:
             ipv4_dst_ = ipv4_to_binary(ipv4_dst)
-            ipv4_dst_mask = stringify(0xFFFFFFFF, 4)
+            ipv4_dst_mask = stringify(0xFFFFFFFF)
             matches.append(self.Ternary("ipv4_dst", ipv4_dst_, ipv4_dst_mask))
         if ip_proto is not None:
-            ip_proto_ = stringify(ip_proto, 1)
-            ip_proto_mask = stringify(0xFF, 1)
+            ip_proto_ = stringify(ip_proto)
+            ip_proto_mask = stringify(0xFF)
             matches.append(self.Ternary("ip_proto", ip_proto_, ip_proto_mask))
         if l4_sport is not None:
-            l4_sport_ = stringify(l4_sport, 2)
-            l4_sport_mask = stringify(0xFFFF, 2)
+            l4_sport_ = stringify(l4_sport)
+            l4_sport_mask = stringify(0xFFFF)
             matches.append(self.Ternary("l4_sport", l4_sport_, l4_sport_mask))
         if l4_dport is not None:
-            l4_dport_ = stringify(l4_dport, 2)
-            l4_dport_mask = stringify(0xFFFF, 2)
+            l4_dport_ = stringify(l4_dport)
+            l4_dport_mask = stringify(0xFFFF)
             matches.append(self.Ternary("l4_dport", l4_dport_, l4_dport_mask))
         if ig_port is not None:
-            ig_port_ = stringify(ig_port, PORT_SIZE_BYTES)
-            ig_port_mask = stringify(2 ** PORT_SIZE_BITS - 1, PORT_SIZE_BYTES)
+            ig_port_ = stringify(ig_port)
+            ig_port_mask = stringify(2 ** PORT_SIZE_BITS - 1)
             matches.append(self.Ternary("ig_port", ig_port_, ig_port_mask))
         return matches
 
@@ -1404,7 +1404,7 @@ class FabricTest(P4RuntimeTest):
         l4_dport=None,
     ):
         # Send only if the match keys are not empty
-        next_id_ = stringify(next_id, 4)
+        next_id_ = stringify(next_id)
         ig_port_type_mask = b"\x03"
         matches = self.build_acl_matches(
             ipv4_src, ipv4_dst, ip_proto, l4_sport, l4_dport
@@ -1420,9 +1420,9 @@ class FabricTest(P4RuntimeTest):
             )
 
     def add_xconnect(self, next_id, port1, port2):
-        next_id_ = stringify(next_id, 4)
-        port1_ = stringify(port1, PORT_SIZE_BYTES)
-        port2_ = stringify(port2, PORT_SIZE_BYTES)
+        next_id_ = stringify(next_id)
+        port1_ = stringify(port1)
+        port2_ = stringify(port2)
         for (inport, outport) in ((port1_, port2_), (port2_, port1_)):
             self.send_request_add_entry_to_action(
                 "next.xconnect",
@@ -1432,14 +1432,14 @@ class FabricTest(P4RuntimeTest):
             )
 
     def add_next_output(self, next_id, egress_port):
-        egress_port_ = stringify(egress_port, PORT_SIZE_BYTES)
+        egress_port_ = stringify(egress_port)
         self.add_next_hashed_indirect_action(
             next_id, "next.output_hashed", [("port_num", egress_port_)]
         )
 
     def add_next_output_simple(self, next_id, egress_port):
-        next_id_ = stringify(next_id, 4)
-        egress_port_ = stringify(egress_port, PORT_SIZE_BYTES)
+        next_id_ = stringify(next_id)
+        egress_port_ = stringify(egress_port)
         self.send_request_add_entry_to_action(
             "next.simple",
             [self.Exact("next_id", next_id_)],
@@ -1448,8 +1448,8 @@ class FabricTest(P4RuntimeTest):
         )
 
     def add_next_multicast(self, next_id, mcast_group_id):
-        next_id_ = stringify(next_id, 4)
-        mcast_group_id_ = stringify(mcast_group_id, 2)
+        next_id_ = stringify(next_id)
+        mcast_group_id_ = stringify(mcast_group_id)
         self.send_request_add_entry_to_action(
             "next.multicast",
             [self.Exact("next_id", next_id_)],
@@ -1458,8 +1458,8 @@ class FabricTest(P4RuntimeTest):
         )
 
     def add_next_multicast_simple(self, next_id, mcast_group_id):
-        next_id_ = stringify(next_id, 4)
-        mcast_group_id_ = stringify(mcast_group_id, 2)
+        next_id_ = stringify(next_id)
+        mcast_group_id_ = stringify(mcast_group_id)
         self.send_request_add_entry_to_action(
             "next.multicast",
             [self.Exact("next_id", next_id_)],
@@ -1468,7 +1468,7 @@ class FabricTest(P4RuntimeTest):
         )
 
     def add_next_routing(self, next_id, egress_port, smac, dmac):
-        egress_port_ = stringify(egress_port, PORT_SIZE_BYTES)
+        egress_port_ = stringify(egress_port)
         smac_ = mac_to_binary(smac)
         dmac_ = mac_to_binary(dmac)
         self.add_next_hashed_group_action(
@@ -1483,8 +1483,8 @@ class FabricTest(P4RuntimeTest):
         )
 
     def add_next_routing_simple(self, next_id, egress_port, smac, dmac):
-        next_id_ = stringify(next_id, 4)
-        egress_port_ = stringify(egress_port, PORT_SIZE_BYTES)
+        next_id_ = stringify(next_id)
+        egress_port_ = stringify(egress_port)
         smac_ = mac_to_binary(smac)
         dmac_ = mac_to_binary(dmac)
         self.send_request_add_entry_to_action(
@@ -1495,8 +1495,8 @@ class FabricTest(P4RuntimeTest):
         )
 
     def add_next_vlan(self, next_id, new_vlan_id):
-        next_id_ = stringify(next_id, 4)
-        vlan_id_ = stringify(new_vlan_id, 2)
+        next_id_ = stringify(next_id)
+        vlan_id_ = stringify(new_vlan_id)
         self.send_request_add_entry_to_action(
             "pre_next.next_vlan",
             [self.Exact("next_id", next_id_)],
@@ -1505,9 +1505,9 @@ class FabricTest(P4RuntimeTest):
         )
 
     def add_next_double_vlan(self, next_id, new_vlan_id, new_inner_vlan_id):
-        next_id_ = stringify(next_id, 4)
-        vlan_id_ = stringify(new_vlan_id, 2)
-        inner_vlan_id_ = stringify(new_inner_vlan_id, 2)
+        next_id_ = stringify(next_id)
+        vlan_id_ = stringify(new_vlan_id)
+        inner_vlan_id_ = stringify(new_inner_vlan_id)
         self.send_request_add_entry_to_action(
             "pre_next.next_vlan",
             [self.Exact("next_id", next_id_)],
@@ -1516,7 +1516,7 @@ class FabricTest(P4RuntimeTest):
         )
 
     def add_next_hashed_indirect_action(self, next_id, action_name, params):
-        next_id_ = stringify(next_id, 4)
+        next_id_ = stringify(next_id)
         mbr_id = self.get_next_mbr_id()
         self.send_request_add_member(
             "FabricIngress.next.hashed_profile", mbr_id, action_name, params
@@ -1528,7 +1528,7 @@ class FabricTest(P4RuntimeTest):
     # actions is a tuple (action_name, param_tuples)
     # params_tuples contains a tuple for each param (param_name, param_value)
     def add_next_hashed_group_action(self, next_id, grp_id, actions=()):
-        next_id_ = stringify(next_id, 4)
+        next_id_ = stringify(next_id)
         mbr_ids = []
         for action in actions:
             mbr_id = self.get_next_mbr_id()
@@ -1551,7 +1551,7 @@ class FabricTest(P4RuntimeTest):
         actions = []
         if next_hops is not None:
             for (egress_port, smac, dmac) in next_hops:
-                egress_port_ = stringify(egress_port, PORT_SIZE_BYTES)
+                egress_port_ = stringify(egress_port)
                 smac_ = mac_to_binary(smac)
                 dmac_ = mac_to_binary(dmac)
                 actions.append(
@@ -1563,8 +1563,8 @@ class FabricTest(P4RuntimeTest):
         self.add_next_hashed_group_action(next_id, grp_id, actions)
 
     def add_next_mpls(self, next_id, label):
-        next_id_ = stringify(next_id, 4)
-        label_ = stringify(label, 3)
+        next_id_ = stringify(next_id)
+        label_ = stringify(label)
         self.send_request_add_entry_to_action(
             "pre_next.next_mpls",
             [self.Exact("next_id", next_id_)],
@@ -1584,7 +1584,7 @@ class FabricTest(P4RuntimeTest):
             self.add_next_mpls(next_id, mpls_labels[0])
 
             for (egress_port, smac, dmac, _) in next_hops:
-                egress_port_ = stringify(egress_port, PORT_SIZE_BYTES)
+                egress_port_ = stringify(egress_port)
                 smac_ = mac_to_binary(smac)
                 dmac_ = mac_to_binary(dmac)
                 actions.append(
@@ -2460,11 +2460,11 @@ class SlicingTest(FabricTest):
 
     def set_default_tc(self, slice_id=None, tc=None):
         matches = [
-            self.Ternary("slice_tc", stringify(slice_id << 2, 1), stringify(0x3C, 1)),
-            self.Exact("tc_unknown", stringify(1, 1)),
+            self.Ternary("slice_tc", stringify(slice_id << 2), stringify(0x3C)),
+            self.Exact("tc_unknown", stringify(1)),
         ]
         action = "FabricIngress.qos.set_default_tc"
-        action_params = [("tc", stringify(tc, 1))]
+        action_params = [("tc", stringify(tc))]
         self.send_request_add_entry_to_action(
             "FabricIngress.qos.default_tc",
             matches,
@@ -2481,7 +2481,7 @@ class SlicingTest(FabricTest):
             params = []
         else:
             action = "FabricIngress.slice_tc_classifier.set_slice_id_tc"
-            params = [("slice_id", stringify(slice_id, 1)), ("tc", stringify(tc, 1))]
+            params = [("slice_id", stringify(slice_id)), ("tc", stringify(tc))]
         self.send_request_add_entry_to_action(
             "FabricIngress.slice_tc_classifier.classifier",
             self.build_acl_matches(**ftuple),
@@ -2513,15 +2513,15 @@ class SlicingTest(FabricTest):
     def add_queue_entry(self, slice_id, tc, qid=None, color=None):
         slice_tc = slice_tc_concat(slice_id, tc)
         matches = [
-            self.Exact("slice_tc", stringify(slice_tc, 1)),
+            self.Exact("slice_tc", stringify(slice_tc)),
         ]
         if color is not None:
             matches.append(
-                self.Ternary("color", stringify(color, 1), stringify(0x3, 1))
+                self.Ternary("color", stringify(color), stringify(0x3))
             )
         if qid is not None:
             action = "FabricIngress.qos.set_queue"
-            action_params = [("qid", stringify(qid, 1))]
+            action_params = [("qid", stringify(qid))]
         else:
             action = "FabricIngress.qos.meter_drop"
             action_params = []
@@ -2536,7 +2536,7 @@ class SlicingTest(FabricTest):
     def add_dscp_rewriter_entry(self, eg_port, clear=False):
         self.send_request_add_entry_to_action(
             "FabricEgress.dscp_rewriter.rewriter",
-            [self.Exact("eg_port", stringify(eg_port, 2))],
+            [self.Exact("eg_port", stringify(eg_port))],
             "FabricEgress.dscp_rewriter." + "clear" if clear else "rewrite",
             [],
         )
@@ -2562,10 +2562,10 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
             "FabricIngress.upf.interfaces",
             [
                 self.Lpm("ipv4_dst_addr", iface_addr_, prefix_len),
-                self.Exact("gtpu_is_valid", stringify(int(gtpu_valid), 1)),
+                self.Exact("gtpu_is_valid", stringify(int(gtpu_valid))),
             ],
             "FabricIngress.upf." + iface_type,
-            [("slice_id", stringify(slice_id, 1)),],
+            [("slice_id", stringify(slice_id)),],
         )
         self.write_request(req)
 
@@ -2626,7 +2626,7 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
     ):
         req = self.get_new_write_request()
         match_fields = [
-            self.Exact("slice_id", stringify(slice_id, 1)),
+            self.Exact("slice_id", stringify(slice_id)),
         ]
         if app_ipv4_addr:
             match_fields.append(
@@ -2636,11 +2636,11 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
             )
         if l4_port:
             match_fields.append(
-                self.Range("app_l4_port", stringify(l4_port, 2), stringify(l4_port, 2))
+                self.Range("app_l4_port", stringify(l4_port), stringify(l4_port))
             )
         if ip_proto:
             match_fields.append(
-                self.Ternary("app_ip_proto", stringify(ip_proto, 1), stringify(0xFF, 1))
+                self.Ternary("app_ip_proto", stringify(ip_proto), stringify(0xFF))
             )
 
         self.push_update_add_entry_to_action(
@@ -2648,7 +2648,7 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
             "FabricIngress.upf.applications",
             match_fields,
             "FabricIngress.upf.set_app_id",
-            [("app_id", stringify(app_id, 1)),],
+            [("app_id", stringify(app_id)),],
             priority=priority,
         )
         self.write_request(req)
@@ -2693,14 +2693,14 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
         action_params = []
         if not drop:
             action_name = "FabricIngress.upf.set_uplink_session"
-            action_params = [("session_meter_idx", stringify(session_meter_idx, 2))]
+            action_params = [("session_meter_idx", stringify(session_meter_idx))]
         else:
             action_name = "FabricIngress.upf.set_uplink_session_drop"
         self.push_update_add_entry_to_action(
             req,
             "FabricIngress.upf.uplink_sessions",
             [
-                self.Exact("teid", stringify(teid, 4)),
+                self.Exact("teid", stringify(teid)),
                 self.Exact("tunnel_ipv4_dst", ipv4_to_binary(tunnel_dst_addr)),
             ],
             action_name,
@@ -2719,12 +2719,12 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
     ):
         req = self.get_new_write_request()
         action_params = [
-            ("ctr_id", stringify(ctr_id, 2)),
+            ("ctr_id", stringify(ctr_id)),
         ]
         if not drop:
             action_name = "FabricIngress.upf.app_fwd"
-            action_params.append(("app_meter_idx", stringify(app_meter_idx, 2)))
-            action_params.append(("tc", stringify(tc, 1)))
+            action_params.append(("app_meter_idx", stringify(app_meter_idx)))
+            action_params.append(("tc", stringify(tc)))
         else:
             action_name = "FabricIngress.upf.uplink_drop"
         self.push_update_add_entry_to_action(
@@ -2732,7 +2732,7 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
             "FabricIngress.upf.uplink_terminations",
             [
                 self.Exact("ue_session_id", ipv4_to_binary(ue_session)),
-                self.Exact("app_id", stringify(app_id, 1)),
+                self.Exact("app_id", stringify(app_id)),
             ],
             action_name,
             action_params,
@@ -2750,8 +2750,8 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
         if not drop:
             action_name = "FabricIngress.upf.set_downlink_session"
             action_params = [
-                ("tun_peer_id", stringify(tunnel_peer_id, 1)),
-                ("session_meter_idx", stringify(session_meter_idx, 2)),
+                ("tun_peer_id", stringify(tunnel_peer_id)),
+                ("session_meter_idx", stringify(session_meter_idx)),
             ]
         else:
             action_name = "FabricIngress.upf.set_downlink_session_drop"
@@ -2780,8 +2780,8 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
                 [self.Exact("ue_addr", ipv4_to_binary(ue_addr))],
                 "FabricIngress.upf.set_downlink_session_buf",
                 [
-                    ("tun_peer_id", stringify(tunnel_peer_id, 1)),
-                    ("session_meter_idx", stringify(session_meter_idx, 2)),
+                    ("tun_peer_id", stringify(tunnel_peer_id)),
+                    ("session_meter_idx", stringify(session_meter_idx)),
                 ],
             )
         else:
@@ -2806,15 +2806,15 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
         app_meter_idx=DEFAULT_APP_METER_IDX,
     ):
         req = self.get_new_write_request()
-        action_params = [("ctr_id", stringify(ctr_id, 2))]
+        action_params = [("ctr_id", stringify(ctr_id))]
         if not drop:
             action_name = "FabricIngress.upf.downlink_fwd_encap"
             action_params = [
-                ("ctr_id", stringify(ctr_id, 2)),
-                ("qfi", stringify(qfi, 1)),
-                ("teid", stringify(teid, 4)),
-                ("app_meter_idx", stringify(app_meter_idx, 2)),
-                ("tc", stringify(tc, 1))
+                ("ctr_id", stringify(ctr_id)),
+                ("qfi", stringify(qfi)),
+                ("teid", stringify(teid)),
+                ("app_meter_idx", stringify(app_meter_idx)),
+                ("tc", stringify(tc))
             ]
         else:
             action_name = "FabricIngress.upf.downlink_drop"
@@ -2823,7 +2823,7 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
             "FabricIngress.upf.downlink_terminations",
             [
                 self.Exact("ue_session_id", ipv4_to_binary(ue_session)),
-                self.Exact("app_id", stringify(app_id, 1)),
+                self.Exact("app_id", stringify(app_id)),
             ],
             action_name,
             action_params,
@@ -2841,7 +2841,7 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
         self.push_update_add_entry_to_action(
             req,
             "FabricIngress.upf.ig_tunnel_peers",
-            [self.Exact("tun_peer_id", stringify(tunnel_peer_id, 1))],
+            [self.Exact("tun_peer_id", stringify(tunnel_peer_id))],
             "FabricIngress.upf.set_routing_ipv4_dst",
             [("tun_dst_addr", ipv4_to_binary(tunnel_dst_addr)),],
         )
@@ -2851,10 +2851,10 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
         self.push_update_add_entry_to_action(
             req,
             "FabricEgress.upf.eg_tunnel_peers",
-            [self.Exact("tun_peer_id", stringify(tunnel_peer_id, 1))],
+            [self.Exact("tun_peer_id", stringify(tunnel_peer_id))],
             "FabricEgress.upf.load_tunnel_params",
             [
-                ("tunnel_src_port", stringify(tunnel_src_port, 2)),
+                ("tunnel_src_port", stringify(tunnel_src_port)),
                 ("tunnel_src_addr", ipv4_to_binary(tunnel_src_addr)),
                 ("tunnel_dst_addr", ipv4_to_binary(tunnel_dst_addr)),
             ],
@@ -3583,19 +3583,19 @@ class IntTest(IPv4UnicastTest):
         action_params = [
             ("src_ip", ipv4_to_binary(src_ip)),
             ("mon_ip", ipv4_to_binary(mon_ip)),
-            ("mon_port", stringify(mon_port, 2)),
-            ("switch_id", stringify(switch_id, 4)),
+            ("mon_port", stringify(mon_port)),
+            ("switch_id", stringify(switch_id)),
         ]
         if mon_label:
             action = action + "_mpls"
-            action_params.append(("mon_label", stringify(mon_label, 3)))
+            action_params.append(("mon_label", stringify(mon_label)))
 
         self.send_request_add_entry_to_action(
             "report",
             [
-                self.Exact("bmd_type", stringify(bmd_type, 1)),
-                self.Exact("mirror_type", stringify(mirror_type, 1)),
-                self.Exact("int_report_type", stringify(report_type, 1)),
+                self.Exact("bmd_type", stringify(bmd_type)),
+                self.Exact("mirror_type", stringify(mirror_type)),
+                self.Exact("int_report_type", stringify(report_type)),
             ],
             action,
             action_params,
@@ -3642,9 +3642,9 @@ class IntTest(IPv4UnicastTest):
         # in pipeline.
         # self.send_request_add_entry_to_action(
         #     "tb_set_mirror_session_id",
-        #     [self.Exact("pipe_id", stringify(pipe_id, 1))],
+        #     [self.Exact("pipe_id", stringify(pipe_id))],
         #     "set_mirror_session_id", [
-        #         ("sid", stringify(mirror_id, 2))
+        #         ("sid", stringify(mirror_id))
         #     ])
 
     def set_up_flow_report_filter_config(self, hop_latency_mask, timestamp_mask):
@@ -3653,8 +3653,8 @@ class IntTest(IPv4UnicastTest):
             [],
             "FabricEgress.int_egress.set_config",
             [
-                ("hop_latency_mask", stringify(hop_latency_mask, 4)),
-                ("timestamp_mask", stringify(timestamp_mask, 6)),
+                ("hop_latency_mask", stringify(hop_latency_mask)),
+                ("timestamp_mask", stringify(timestamp_mask)),
             ],
         )
 
@@ -3668,28 +3668,28 @@ class IntTest(IPv4UnicastTest):
     ):
         ipv4_mask = ipv4_to_binary("255.255.255.255")
         # Use full range of TCP/UDP ports by default.
-        sport_low = stringify(0, 2)
-        sport_high = stringify(0xFFFF, 2)
-        dport_low = stringify(0, 2)
-        dport_high = stringify(0xFFFF, 2)
+        sport_low = stringify(0)
+        sport_high = stringify(0xFFFF)
+        dport_low = stringify(0)
+        dport_high = stringify(0xFFFF)
 
-        lower_bound = stringify(0, 2)
-        upper_bound = stringify(0xFFFF, 2)
+        lower_bound = stringify(0)
+        upper_bound = stringify(0xFFFF)
 
         if sport:
-            sport_low = stringify(sport, 2)
-            sport_high = stringify(sport, 2)
+            sport_low = stringify(sport)
+            sport_high = stringify(sport)
 
         if dport:
-            dport_low = stringify(dport, 2)
-            dport_high = stringify(dport, 2)
+            dport_low = stringify(dport)
+            dport_high = stringify(dport)
 
         if collector_action:
             action = "no_report_collector"
         else:
             action = "mark_to_report"
 
-        matches = [self.Exact("ipv4_valid", stringify(1, 1))]
+        matches = [self.Exact("ipv4_valid", stringify(1))]
         if ipv4_src is not None:
             ipv4_src_ = ipv4_to_binary(ipv4_src)
             matches.append(self.Ternary("ipv4_src", ipv4_src_, ipv4_mask))
@@ -3966,14 +3966,14 @@ class IntTest(IPv4UnicastTest):
     ):
         def set_up_queue_report_table_internal(upper, lower, action):
             # Omit dont'care matches
-            matches = [self.Exact("egress_qid", stringify(queue_id, 1))]
+            matches = [self.Exact("egress_qid", stringify(queue_id))]
             if upper[0] != 0 or upper[1] != 0xFFFF:
                 matches.append(
-                    self.Range("hop_latency_upper", *[stringify(v, 2) for v in upper])
+                    self.Range("hop_latency_upper", *[stringify(v) for v in upper])
                 )
             if lower[0] != 0 or lower[1] != 0xFFFF:
                 matches.append(
-                    self.Range("hop_latency_lower", *[stringify(v, 2) for v in lower])
+                    self.Range("hop_latency_lower", *[stringify(v) for v in lower])
                 )
             self.send_request_add_entry_to_action(
                 "FabricEgress.int_egress.queue_latency_thresholds",
@@ -4027,14 +4027,14 @@ class IntTest(IPv4UnicastTest):
         # We are using port[6:0] ++ qid as register index.
         index = (port & 0x7F) << 5 | qid
         self.write_register(
-            "FabricEgress.int_egress.queue_report_quota", index, stringify(quota, 2)
+            "FabricEgress.int_egress.queue_report_quota", index, stringify(quota)
         )
 
     def verify_quota(self, port, qid, quota):
         # We are using port[6:0] ++ qid as register index.
         index = (port & 0x7F) << 5 | qid
         self.verify_register(
-            "FabricEgress.int_egress.queue_report_quota", index, stringify(quota, 2)
+            "FabricEgress.int_egress.queue_report_quota", index, stringify(quota)
         )
 
     def runIntTest(
@@ -4802,9 +4802,9 @@ class UpfIntTest(UpfSimpleTest, IntTest):
 class PppoeTest(DoubleVlanTerminationTest):
     def set_line_map(self, s_tag, c_tag, line_id):
         assert line_id != 0
-        s_tag_ = stringify(s_tag, 2)  # outer
-        c_tag_ = stringify(c_tag, 2)  # inner
-        line_id_ = stringify(line_id, 4)
+        s_tag_ = stringify(s_tag)  # outer
+        c_tag_ = stringify(c_tag)  # inner
+        line_id_ = stringify(line_id)
 
         # Upstream
         self.send_request_add_entry_to_action(
@@ -4822,9 +4822,9 @@ class PppoeTest(DoubleVlanTerminationTest):
         assert line_id != 0
         assert pppoe_session_id != 0
 
-        line_id_ = stringify(line_id, 4)
+        line_id_ = stringify(line_id)
         ipv4_addr_ = ipv4_to_binary(ipv4_addr)
-        pppoe_session_id_ = stringify(pppoe_session_id, 2)
+        pppoe_session_id_ = stringify(pppoe_session_id)
 
         # line map common to up and downstream
         self.set_line_map(s_tag=s_tag, c_tag=c_tag, line_id=line_id)
@@ -4861,7 +4861,7 @@ class PppoeTest(DoubleVlanTerminationTest):
 
     def set_upstream_pppoe_cp_table(self, pppoe_codes=()):
         for code in pppoe_codes:
-            code_ = stringify(code, 1)
+            code_ = stringify(code)
             self.send_request_add_entry_to_action(
                 "bng_ingress.upstream.t_pppoe_cp",
                 [self.Exact("pppoe_code", code_)],
@@ -5081,8 +5081,8 @@ class StatsTest(FabricTest):
     """
 
     def build_stats_matches(self, gress, stats_flow_id, port, **ftuple):
-        port_ = stringify(port, PORT_SIZE_BYTES)
-        stats_flow_id_ = stringify(stats_flow_id, 2)
+        port_ = stringify(port)
+        stats_flow_id_ = stringify(stats_flow_id)
         if gress == STATS_INGRESS:
             matches = self.build_acl_matches(**ftuple)
             matches.append(self.Exact("ig_port", port_))
@@ -5150,7 +5150,7 @@ class StatsTest(FabricTest):
                 gress=gress, stats_flow_id=stats_flow_id, port=port, **ftuple
             )
             if gress == STATS_INGRESS:
-                action_param = [("flow_id", stringify(stats_flow_id, 2))]
+                action_param = [("flow_id", stringify(stats_flow_id))]
             else:
                 action_param = []
             self.send_request_add_entry_to_action(
