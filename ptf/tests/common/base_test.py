@@ -384,7 +384,7 @@ class P4RuntimeTest(BaseTest):
         else:
             pkt_in_msg = self.get_packet_in(timeout=timeout)
             rx_in_port_ = pkt_in_msg.metadata[0].value
-            rx_in_port = int.from_bytes(rx_in_port_, byteorder='big')
+            rx_in_port = int.from_bytes(rx_in_port_, byteorder="big")
 
             if exp_in_port != rx_in_port:
                 self.fail(

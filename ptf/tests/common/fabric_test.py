@@ -2516,9 +2516,7 @@ class SlicingTest(FabricTest):
             self.Exact("slice_tc", stringify(slice_tc)),
         ]
         if color is not None:
-            matches.append(
-                self.Ternary("color", stringify(color), stringify(0x3))
-            )
+            matches.append(self.Ternary("color", stringify(color), stringify(0x3)))
         if qid is not None:
             action = "FabricIngress.qos.set_queue"
             action_params = [("qid", stringify(qid))]
