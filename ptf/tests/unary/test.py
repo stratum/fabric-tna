@@ -2563,7 +2563,7 @@ class ActionProfileMemberReadWriteTest(FabricTest):
     @autocleanup
     def doRunTest(self):
         req, _ = self.add_next_hashed_group_member(
-            "output_hashed", [("port_num", stringify(self.port1, PORT_SIZE_BYTES))]
+            "output_hashed", [("port_num", stringify(self.port1))]
         )
         expected_action_profile_member = req.updates[0].entity.action_profile_member
         mbr_id = expected_action_profile_member.member_id
@@ -2583,7 +2583,7 @@ class ActionProfileGroupReadWriteTest(FabricTest):
     @autocleanup
     def doRunTest(self):
         req, _ = self.add_next_hashed_group_member(
-            "output_hashed", [("port_num", stringify(self.port1, PORT_SIZE_BYTES))]
+            "output_hashed", [("port_num", stringify(self.port1))]
         )
         member_installed = req.updates[0].entity.action_profile_member
         mbr_id = member_installed.member_id
@@ -2607,7 +2607,7 @@ class ActionProfileGroupModificationTest(FabricTest):
         mbr_ids = []
         for port_num in range(1, 4):
             req, _ = self.add_next_hashed_group_member(
-                "output_hashed", [("port_num", stringify(port_num, PORT_SIZE_BYTES))]
+                "output_hashed", [("port_num", stringify(port_num))]
             )
             member_installed = req.updates[0].entity.action_profile_member
             mbr_ids.append(member_installed.member_id)
@@ -2973,7 +2973,7 @@ class FabricOptimizedFieldDetectorTest(FabricTest):
 
     # Returns a byte string encoded value fitting into bitwidth.
     def generateBytestring(self, bitwidth, value=1):
-        return stringify(value, (bitwidth + 7) // 8)
+        return stringify(value)
 
     # Since the test uses the same match key for tables with multiple actions,
     # each table entry has to be removed before testing the next.
