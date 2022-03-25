@@ -124,9 +124,9 @@ def de_canonical(bitwidth: int, input: bytes):
     """
     This method adds padding zeros to the 'input' param.
 
-    :param bitwidth: the desired size of input.
+    :param bitwidth: the desired size of the output in bits.
     :param input: the byte string to be padded.
-    :return: padded input with bytes such that: len(bin(input)) >= bitwidth.
+    :return: input padded with zero bytes such that: len(bin(input)) = bytewidth.
     """
     if bitwidth <= 0:
         raise ValueError("bitwidth must be a positive integer.")
@@ -575,7 +575,7 @@ class P4RuntimeTest(BaseTest):
             mf.lpm.prefix_len = self.pLen
             mf.lpm.value = b""
 
-            # De-canonicalized before removing don't-care bits.
+            # De-canonicalize before zeroing don't-care bits.
             self.v = de_canonical(bitwidth, self.v)
             # P4Runtime now has strict rules regarding ternary matches: in the
             # case of LPM, trailing bits in the value (after prefix) must be set
@@ -599,7 +599,7 @@ class P4RuntimeTest(BaseTest):
             self.mask = mask
 
         def add_to(self, mf_id, mk, bitwidth):
-            # De-canonicalized before removing don't-care bits.
+            # De-canonicalize before zeroing don't-care bits.
             self.v = de_canonical(bitwidth, self.v)
             self.mask = de_canonical(bitwidth, self.mask)
             # P4Runtime mandates that the match field should be omitted for
