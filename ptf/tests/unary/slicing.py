@@ -150,7 +150,7 @@ class FabricUpfDownlinkWithDscpRewriteTest(UpfSimpleTest, SlicingTest):
                                     pkt_type,
                                     with_psc,
                                     is_next_hop_spine,
-                                    is_next_hop_dscp_aware
+                                    is_next_hop_dscp_aware,
                                 )
                             )
                             pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
@@ -176,13 +176,7 @@ class FabricUpfUplinkWithDscpRewriteTest(UpfSimpleTest, SlicingTest):
     @tvsetup
     @autocleanup
     def doRunTest(
-        self,
-        pkt,
-        tagged1,
-        tagged2,
-        with_psc,
-        is_next_hop_spine,
-        is_next_hop_dscp_aware
+        self, pkt, tagged1, tagged2, with_psc, is_next_hop_spine, is_next_hop_dscp_aware
     ):
         # Use non-zero values to test dscp_rewriter clear action
         default_slice_id = 1
@@ -232,7 +226,7 @@ class FabricUpfUplinkWithDscpRewriteTest(UpfSimpleTest, SlicingTest):
                                     pkt_type,
                                     with_psc,
                                     is_next_hop_spine,
-                                    is_next_hop_dscp_aware
+                                    is_next_hop_dscp_aware,
                                 )
                             )
                             pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
