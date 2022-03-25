@@ -43,7 +43,7 @@ RPC_TIMEOUT = 10  # used when sending Write/Read requests.
 # Convert integer (with length) to binary byte string
 def stringify(n):
     byte_length = (n.bit_length() + 7) // 8
-    # We will get 0 `n` is zero, in this case we need to set byte length
+    # We will get 0 if `n` is zero, in this case we need to set byte length
     # to 1 so the final result will be b"\x00".
     byte_length = byte_length if byte_length != 0 else 1
     return n.to_bytes(byte_length, byteorder="big")
@@ -120,7 +120,7 @@ def get_controller_packet_metadata(p4info, meta_type, name):
                         return m
 
 
-def de_canonical(bitwidth: int, input: bytes):
+def pad(bitwidth: int, input: bytes):
     """
     This method adds padding zeros to the 'input' param.
 
@@ -576,7 +576,7 @@ class P4RuntimeTest(BaseTest):
             mf.lpm.value = b""
 
             # De-canonicalize before zeroing don't-care bits.
-            self.v = de_canonical(bitwidth, self.v)
+            self.v = pad(bitwidth, self.v)
             # P4Runtime now has strict rules regarding ternary matches: in the
             # case of LPM, trailing bits in the value (after prefix) must be set
             # to 0.
@@ -600,8 +600,8 @@ class P4RuntimeTest(BaseTest):
 
         def add_to(self, mf_id, mk, bitwidth):
             # De-canonicalize before zeroing don't-care bits.
-            self.v = de_canonical(bitwidth, self.v)
-            self.mask = de_canonical(bitwidth, self.mask)
+            self.v = pad(bitwidth, self.v)
+            self.mask = pad(bitwidth, self.mask)
             # P4Runtime mandates that the match field should be omitted for
             # "don't care" ternary matches (i.e. when mask is zero)
             if all(c == 0 for c in self.mask):
