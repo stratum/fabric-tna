@@ -12,12 +12,11 @@ import os
 import queue
 import random
 import socket
-import struct
 import sys
 import threading
 import time
 from collections import Counter
-from functools import partial, partialmethod, wraps
+from functools import partialmethod, wraps
 from io import StringIO
 from unittest import SkipTest
 
@@ -42,8 +41,12 @@ from testvector import tvutils
 RPC_TIMEOUT = 10  # used when sending Write/Read requests.
 
 # Convert integer (with length) to binary byte string
-def stringify(n, length):
-    return n.to_bytes(length, byteorder="big")
+def stringify(n):
+    byte_length = (n.bit_length() + 7) // 8
+    # We will get 0 if `n` is zero, in this case we need to set byte length
+    # to 1 so the final result will be b"\x00".
+    byte_length = byte_length if byte_length != 0 else 1
+    return n.to_bytes(byte_length, byteorder="big")
 
 
 def is_v1model():
@@ -117,16 +120,13 @@ def get_controller_packet_metadata(p4info, meta_type, name):
                         return m
 
 
-def de_canonicalize_bytes(bitwidth: int, input: bytes):
+def pad(bitwidth: int, input: bytes):
     """
-    This method adds a padding to the 'input' param.
-    Needed for bmv2 since it uses Canonical Bytestrings: this representation
-    trims the data to the lowest amount of bytes needed for that particular value
-    (e.g. 0x0 for PacketIn.ingress_port will be interpreted by Stratum bmv2 using 1 byte, instead of 9 bits,
-    as declared in header.p4)
-    :param bitwidth: the desired size of input.
+    This method adds padding zeros to the 'input' param.
+
+    :param bitwidth: the desired size of the output in bits.
     :param input: the byte string to be padded.
-    :return: padded input with bytes such that: len(bin(input)) >= bitwidth.
+    :return: input padded with zero bytes such that: len(bin(input)) = bytewidth.
     """
     if bitwidth <= 0:
         raise ValueError("bitwidth must be a positive integer.")
@@ -137,6 +137,12 @@ def de_canonicalize_bytes(bitwidth: int, input: bytes):
         bitwidth + 7
     ) // 8  # use integer division to avoid floating point rounding errors.
     return input.rjust(byte_width, b"\0")  # right padding <-> BigEndian
+
+
+def canonical(byte_string):
+    while len(byte_string) != 1 and byte_string[0] == 0:
+        byte_string = byte_string[1:]
+    return byte_string
 
 
 # Workaround to choose byte size of port-related fields.
@@ -373,30 +379,17 @@ class P4RuntimeTest(BaseTest):
             exp_pkt_in.payload = bytes(exp_pkt)
             ingress_physical_port = exp_pkt_in.metadata.add()
             ingress_physical_port.metadata_id = 0
-            ingress_physical_port.value = stringify(exp_in_port, PORT_SIZE_BYTES)
+            ingress_physical_port.value = stringify(exp_in_port)
             tvutils.add_packet_in_expectation(self.tc, exp_pkt_in)
         else:
             pkt_in_msg = self.get_packet_in(timeout=timeout)
             rx_in_port_ = pkt_in_msg.metadata[0].value
+            rx_in_port = int.from_bytes(rx_in_port_, byteorder="big")
 
-            # Here we only compare the integer value of ingress port metadata instead
-            # of the byte string.
-            if is_tna():
-                rx_inport = struct.unpack("!I", rx_in_port_)[0]
-            else:
-                pkt_in_metadata = get_controller_packet_metadata(
-                    self.p4info, meta_type="packet_in", name="ingress_port"
-                )
-                pkt_in_ig_port_bitwidth = pkt_in_metadata.bitwidth
-                rx_in_port_ = de_canonicalize_bytes(
-                    pkt_in_ig_port_bitwidth, rx_in_port_
-                )
-                rx_inport = struct.unpack("!H", rx_in_port_)[0]
-
-            if exp_in_port != rx_inport:
+            if exp_in_port != rx_in_port:
                 self.fail(
                     "Wrong packet-in ingress port, "
-                    + "expected {} but received was {}".format(exp_in_port, rx_inport)
+                    + "expected {} but received was {}".format(exp_in_port, rx_in_port)
                 )
             rx_pkt = Ether(pkt_in_msg.payload)
             if not match_exp_pkt(exp_pkt, rx_pkt):
@@ -559,7 +552,7 @@ class P4RuntimeTest(BaseTest):
             self.check_value_size(self.v, bitwidth)
             mf = mk.add()
             mf.field_id = mf_id
-            mf.exact.value = self.v
+            mf.exact.value = canonical(self.v)
 
     class Lpm(MF):
         def __init__(self, mf_name, v, pLen):
@@ -582,18 +575,22 @@ class P4RuntimeTest(BaseTest):
             mf.lpm.prefix_len = self.pLen
             mf.lpm.value = b""
 
+            # De-canonicalize before zeroing don't-care bits.
+            self.v = pad(bitwidth, self.v)
             # P4Runtime now has strict rules regarding ternary matches: in the
             # case of LPM, trailing bits in the value (after prefix) must be set
             # to 0.
             first_byte_masked = self.pLen // 8
             for i in range(first_byte_masked):
-                mf.lpm.value += stringify(self.v[i], 1)
+                mf.lpm.value += stringify(self.v[i])
             if first_byte_masked == len(self.v):
+                mf.lpm.value = canonical(mf.lpm.value)
                 return
             r = self.pLen % 8
-            mf.lpm.value += stringify(self.v[first_byte_masked] & (0xFF << (8 - r)), 1)
+            mf.lpm.value += stringify(self.v[first_byte_masked] & (0xFF << (8 - r)))
             for i in range(first_byte_masked + 1, len(self.v)):
                 mf.lpm.value += b"\x00"
+            mf.lpm.value = canonical(mf.lpm.value)
 
     class Ternary(MF):
         def __init__(self, mf_name, v, mask):
@@ -602,6 +599,9 @@ class P4RuntimeTest(BaseTest):
             self.mask = mask
 
         def add_to(self, mf_id, mk, bitwidth):
+            # De-canonicalize before zeroing don't-care bits.
+            self.v = pad(bitwidth, self.v)
+            self.mask = pad(bitwidth, self.mask)
             # P4Runtime mandates that the match field should be omitted for
             # "don't care" ternary matches (i.e. when mask is zero)
             if all(c == 0 for c in self.mask):
@@ -610,12 +610,13 @@ class P4RuntimeTest(BaseTest):
             mf = mk.add()
             mf.field_id = mf_id
             assert len(self.mask) == len(self.v)
-            mf.ternary.mask = self.mask
+            mf.ternary.mask = canonical(self.mask)
             mf.ternary.value = b""
             # P4Runtime now has strict rules regarding ternary matches: in the
             # case of Ternary, "don't-care" bits in the value must be set to 0
             for i in range(len(self.mask)):
-                mf.ternary.value += stringify(self.v[i] & self.mask[i], 1)
+                mf.ternary.value += stringify(self.v[i] & self.mask[i])
+            mf.ternary.value = canonical(mf.ternary.value)
 
     class Range(MF):
         def __init__(self, mf_name, low, high):
@@ -638,9 +639,8 @@ class P4RuntimeTest(BaseTest):
                 return
             mf = mk.add()
             mf.field_id = mf_id
-            assert len(self.high) == len(self.low)
-            mf.range.low = self.low
-            mf.range.high = self.high
+            mf.range.low = canonical(self.low)
+            mf.range.high = canonical(self.high)
 
     # Sets the match key for a p4::TableEntry object. mk needs to be an
     # iterable object of MF instances
@@ -655,7 +655,7 @@ class P4RuntimeTest(BaseTest):
         for p_name, v in params:
             param = action.params.add()
             param.param_id = self.get_param_id(a_name, p_name)
-            param.value = v
+            param.value = canonical(v)
 
     # Sets the action & action data for a p4::TableEntry object. params needs
     # to be an iterable object of 2-tuples (<param_name>, <value>).
