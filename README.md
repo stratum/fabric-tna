@@ -68,7 +68,7 @@ multiple targets:
 To build and test this project you will need the following software:
 
 * Barefoot SDE (a.k.a. Intel P4 Studio) = 9.7.0
-* ONOS >= 2.5.7
+* ONOS >= 2.5.8
 * Docker (to run the build scripts without worrying about dependencies)
 * cURL (to interact with the ONOS REST APIs)
 

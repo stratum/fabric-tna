@@ -298,7 +298,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                       FABRIC_EGRESS_UPF_GTPU_ENCAP, deviceId);
             return;
         }
-        flowRuleService.applyFlowRules(upfTranslator.buildGtpuWithPscEncapRule(
+        flowRuleService.applyFlowRules(deviceId.hashCode(), upfTranslator.buildGtpuWithPscEncapRule(
                 deviceId, appId));
     }
 
@@ -312,7 +312,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                       FABRIC_EGRESS_UPF_GTPU_ENCAP, deviceId);
             return;
         }
-        flowRuleService.applyFlowRules(upfTranslator.buildGtpuOnlyEncapRule(
+        flowRuleService.applyFlowRules(deviceId.hashCode(), upfTranslator.buildGtpuOnlyEncapRule(
                 deviceId, appId));
     }
 
@@ -407,7 +407,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                     break;
             }
         }
-        flowRuleService.removeFlowRules(toBeRemoved.toArray(FlowRule[]::new));
+        flowRuleService.removeFlowRules(deviceId.hashCode(), toBeRemoved.toArray(FlowRule[]::new));
         log.info("Cleared {} UPF entities of type {}", entitiesCleared, entityType.humanReadableName());
     }
 
@@ -763,7 +763,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         assertSliceId(appFilter.sliceId());
         FlowRule flowRule = upfTranslator.upfApplicationToFabricEntry(appFilter, deviceId, appId);
         log.info("Installing {}", appFilter);
-        flowRuleService.applyFlowRules(flowRule);
+        flowRuleService.applyFlowRules(deviceId.hashCode(), flowRule);
         log.debug("Application added with flowID {}", flowRule.id().value());
     }
 
@@ -771,7 +771,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         assertSliceId(upfInterface.sliceId());
         FlowRule flowRule = upfTranslator.interfaceToFabricEntry(upfInterface, deviceId, appId, DEFAULT_PRIORITY);
         log.info("Installing {}", upfInterface);
-        flowRuleService.applyFlowRules(flowRule);
+        flowRuleService.applyFlowRules(deviceId.hashCode(), flowRule);
         log.debug("Interface added with flowID {}", flowRule.id().value());
         // By default we enable UE-to-UE communication on the UE subnet identified by the CORE interface.
         // TODO: allow enabling/disabling UE-to-UE via netcfg or other API.
@@ -785,7 +785,8 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                 peer, deviceId, appId, DEFAULT_PRIORITY);
         log.info("Installing ingress and egress rules {}, {}",
                  fabricGtpTunnelPeers.getLeft().toString(), fabricGtpTunnelPeers.getRight().toString());
-        flowRuleService.applyFlowRules(fabricGtpTunnelPeers.getLeft(), fabricGtpTunnelPeers.getRight());
+        flowRuleService.applyFlowRules(deviceId.hashCode(), fabricGtpTunnelPeers.getLeft(),
+                fabricGtpTunnelPeers.getRight());
         log.debug("GTP tunnel peer added with flowIDs ingress={}, egress={}",
                   fabricGtpTunnelPeers.getLeft().id().value(), fabricGtpTunnelPeers.getRight().id().value());
     }
@@ -794,7 +795,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         FlowRule fabricUeSession = upfTranslator.sessionUplinkToFabricEntry(
                 ueSession, deviceId, appId, DEFAULT_PRIORITY);
         log.info("Installing {}", ueSession.toString());
-        flowRuleService.applyFlowRules(fabricUeSession);
+        flowRuleService.applyFlowRules(deviceId.hashCode(), fabricUeSession);
         log.debug("Uplink UE session added with flowID {}", fabricUeSession.id().value());
     }
 
@@ -802,7 +803,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         FlowRule fabricUeSession = upfTranslator.sessionDownlinkToFabricEntry(
                 ueSession, deviceId, appId, DEFAULT_PRIORITY);
         log.info("Installing {}", ueSession.toString());
-        flowRuleService.applyFlowRules(fabricUeSession);
+        flowRuleService.applyFlowRules(deviceId.hashCode(), fabricUeSession);
         log.debug("Downlink UE session added with flowID {}", fabricUeSession.id().value());
     }
 
@@ -810,7 +811,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         FlowRule fabricUpfTermination = upfTranslator.upfTerminationUplinkToFabricEntry(
                 upfTermination, deviceId, appId, DEFAULT_PRIORITY);
         log.info("Installing {}", upfTermination.toString());
-        flowRuleService.applyFlowRules(fabricUpfTermination);
+        flowRuleService.applyFlowRules(deviceId.hashCode(), fabricUpfTermination);
         log.debug("Uplink UPF termination added with flowID {}", fabricUpfTermination.id().value());
     }
 
@@ -818,7 +819,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         FlowRule fabricUpfTermination = upfTranslator.upfTerminationDownlinkToFabricEntry(
                 upfTermination, deviceId, appId, DEFAULT_PRIORITY);
         log.info("Installing {}", upfTermination.toString());
-        flowRuleService.applyFlowRules(fabricUpfTermination);
+        flowRuleService.applyFlowRules(deviceId.hashCode(), fabricUpfTermination);
         log.debug("Downlink UPF termination added with flowID {}", fabricUpfTermination.id().value());
     }
 
@@ -882,7 +883,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                 .collect(Collectors.toList());
 
         try {
-            flowRuleService.removeFlowRules(entries.toArray(FlowRule[]::new));
+            flowRuleService.removeFlowRules(deviceId.hashCode(), entries.toArray(FlowRule[]::new));
             // TODO in future we may need to send other notifications to the pfcp agent
             //if (!failSilent) {
             //    throw new UpfProgrammableException("Match criterion " + match.toString() +
@@ -999,9 +1000,9 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         FlowRule allowRule = upfTranslator.buildFabricUplinkRecircEntry(
                 deviceId, appId, subnet, subnet, true, DEFAULT_PRIORITY + 10);
         if (!remove) {
-            flowRuleService.applyFlowRules(denyRule, allowRule);
+            flowRuleService.applyFlowRules(deviceId.hashCode(), denyRule, allowRule);
         } else {
-            flowRuleService.removeFlowRules(denyRule, allowRule);
+            flowRuleService.removeFlowRules(deviceId.hashCode(), denyRule, allowRule);
         }
     }
 

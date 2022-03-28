@@ -66,6 +66,16 @@ public class MockFlowRuleService extends FlowRuleServiceAdapter {
     }
 
     @Override
+    public void applyFlowRules(int key, FlowRule... flowRules) {
+        applyFlowRules(flowRules);
+    }
+
+    @Override
+    public void removeFlowRules(int key, FlowRule... flowRules) {
+        removeFlowRules(flowRules);
+    }
+
+    @Override
     public int getFlowRuleCount() {
         return flows.size();
     }
