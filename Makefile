@@ -31,6 +31,8 @@ PIPECONF_OAR_FILE := $(DIR)/target/fabric-tna-1.2.0-SNAPSHOT.oar
 # Profiles to build by default (all)
 PROFILES ?= fabric fabric-upf fabric-int fabric-upf-int
 
+SHOW_SENSITIVE_OUTPUT ?= true
+
 deps:
 	docker pull $(SDE_TM_DOCKER_IMG)
 	docker pull $(SDE_P4C_DOCKER_IMG)
@@ -50,7 +52,12 @@ fabric-upf: fabric-upf-v1model fabric-upf-tna
 fabric-upf-int: fabric-upf-int-v1model fabric-upf-int-tna
 
 fabric-tna:
+ifeq ($(SHOW_SENSITIVE_OUTPUT),true)
 	@$(DIR)/p4src/tna/build.sh fabric ""
+else
+	@echo "## Compiling profile fabric for TNA"
+	@$(DIR)/p4src/tna/build.sh fabric "" > /dev/null 2>&1
+endif
 
 fabric-v1model:
 	@${DIR}/p4src/v1model/build.sh fabric ""
@@ -63,19 +70,35 @@ fabric-v1model:
 # 	@$(DIR)/p4src/tna/build.sh fabric-bng "-DWITH_BNG -DWITHOUT_XCONNECT"
 
 fabric-int-tna:
+ifeq ($(SHOW_SENSITIVE_OUTPUT),true)
 	@$(DIR)/p4src/tna/build.sh fabric-int "-DWITH_INT"
+else
+	@echo "## Compiling profile fabric-int for TNA"
+	@$(DIR)/p4src/tna/build.sh fabric-int "-DWITH_INT" > /dev/null 2>&1
+endif
 
 fabric-int-v1model:
 	@$(DIR)/p4src/v1model/build.sh fabric-int "-DWITH_INT"
 
 fabric-upf-tna:
+ifeq ($(SHOW_SENSITIVE_OUTPUT),true)
+
 	@$(DIR)/p4src/tna/build.sh fabric-upf "-DWITH_UPF"
+else
+	@echo "## Compiling profile fabric-upf for TNA"
+	@$(DIR)/p4src/tna/build.sh fabric-upf "-DWITH_UPF" > /dev/null 2>&1
+endif
 
 fabric-upf-v1model:
 	@$(DIR)/p4src/v1model/build.sh fabric-upf "-DWITH_UPF"
 
 fabric-upf-int-tna:
+ifeq ($(SHOW_SENSITIVE_OUTPUT),true)
 	@$(DIR)/p4src/tna/build.sh fabric-upf-int "-DWITH_UPF -DWITH_INT"
+else
+	@echo "## Compiling profile fabric-upf-int for TNA"
+	@$(DIR)/p4src/tna/build.sh fabric-upf-int "-DWITH_UPF -DWITH_INT" > /dev/null 2>&1
+endif
 
 fabric-upf-int-v1model:
 	@$(DIR)/p4src/v1model/build.sh fabric-upf-int "-DWITH_UPF -DWITH_INT"
