@@ -59,7 +59,7 @@ function base_build() {
   )
 
   # Generate the pipeline config binary
-  if [ "${SHOW_SENSITIVE_OUTPUT}" == "true" ]; then
+  if [ "${1}" == "true" ]; then
     docker run --rm -v "${output_dir}:${output_dir}" -w "${output_dir}" --user ${UID} \
       ${PIPELINE_CONFIG_BUILDER_IMG} \
       -p4c_conf_file=./fabric_tna.conf \
