@@ -29,6 +29,8 @@ P4C_CMD="docker run --rm -v ${P4C_OUT}:${P4C_OUT} \
   ${SDE_P4C_DOCKER_IMG} bf-p4c"
 SDE_VER=$( ${P4C_CMD} --version | cut -d' ' -f2 )
 
+SHOW_SENSITIVE_OUTPUT=${SHOW_SENSITIVE_OUTPUT:-"false"}
+
 # shellcheck disable=SC2086
 function base_build() {
   output_dir="${P4C_OUT}/sde_${SDE_VER//./_}"
@@ -37,20 +39,37 @@ function base_build() {
   p4c_flags=""
   mkdir -p ${output_dir}
   (
-    time $P4C_CMD --arch tna -g --create-graphs --verbose 2 \
-      -o ${output_dir} -I ${P4_SRC_DIR} \
-      ${OTHER_PP_FLAGS} \
-      ${p4c_flags} \
-      --p4runtime-files ${output_dir}/p4info.txt \
-      --p4runtime-force-std-externs \
-      ${DIR}/fabric_tna.p4
+    if [ "${SHOW_SENSITIVE_OUTPUT}" == "true" ]; then
+      time $P4C_CMD --arch tna -g --create-graphs --verbose 2 \
+        -o ${output_dir} -I ${P4_SRC_DIR} \
+        ${OTHER_PP_FLAGS} \
+        ${p4c_flags} \
+        --p4runtime-files ${output_dir}/p4info.txt \
+        --p4runtime-force-std-externs \
+        ${DIR}/fabric_tna.p4
+    else
+      time $P4C_CMD --arch tna -g --create-graphs --verbose 2 \
+        -o ${output_dir} -I ${P4_SRC_DIR} \
+        ${OTHER_PP_FLAGS} \
+        ${p4c_flags} \
+        --p4runtime-files ${output_dir}/p4info.txt \
+        --p4runtime-force-std-externs \
+        ${DIR}/fabric_tna.p4 >/dev/null 2>&1
+    fi
   )
 
   # Generate the pipeline config binary
-  docker run --rm -v "${output_dir}:${output_dir}" -w "${output_dir}" --user ${UID} \
-    ${PIPELINE_CONFIG_BUILDER_IMG} \
-    -p4c_conf_file=./fabric_tna.conf \
-    -bf_pipeline_config_binary_file=./pipeline_config.pb.bin
+  if [ "${SHOW_SENSITIVE_OUTPUT}" == "true" ]; then
+    docker run --rm -v "${output_dir}:${output_dir}" -w "${output_dir}" --user ${UID} \
+      ${PIPELINE_CONFIG_BUILDER_IMG} \
+      -p4c_conf_file=./fabric_tna.conf \
+      -bf_pipeline_config_binary_file=./pipeline_config.pb.bin
+  else
+    docker run --rm -v "${output_dir}:${output_dir}" -w "${output_dir}" --user ${UID} \
+      ${PIPELINE_CONFIG_BUILDER_IMG} \
+      -p4c_conf_file=./fabric_tna.conf \
+      -bf_pipeline_config_binary_file=./pipeline_config.pb.bin >/dev/null 2>&1
+  fi
 }
 
 function gen_profile() {
