@@ -39,7 +39,7 @@ function base_build() {
   p4c_flags=""
   mkdir -p ${output_dir}
   (
-    if [ "${SHOW_SENSITIVE_OUTPUT}" == "true" ]; then
+    if [ "${1}" == "true" ]; then
       time $P4C_CMD --arch tna -g --create-graphs --verbose 2 \
         -o ${output_dir} -I ${P4_SRC_DIR} \
         ${OTHER_PP_FLAGS} \
@@ -82,6 +82,6 @@ function gen_profile() {
   cp "${output_dir}/pipeline_config.pb.bin" "${DEST_DIR}/${pltf}/"
 }
 
-base_build
+base_build "${SHOW_SENSITIVE_OUTPUT}"
 gen_profile "montara"
 gen_profile "mavericks"

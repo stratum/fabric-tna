@@ -52,7 +52,7 @@ fabric-upf: fabric-upf-v1model fabric-upf-tna
 fabric-upf-int: fabric-upf-int-v1model fabric-upf-int-tna
 
 fabric-tna:
-	export SHOW_SENSITIVE_OUTPUT=${SHOW_SENSITIVE_OUTPUT} && $(DIR)/p4src/tna/build.sh fabric ""
+	@export SHOW_SENSITIVE_OUTPUT=${SHOW_SENSITIVE_OUTPUT} && $(DIR)/p4src/tna/build.sh fabric ""
 
 fabric-v1model:
 	@${DIR}/p4src/v1model/build.sh fabric ""
