@@ -31,6 +31,8 @@ PIPECONF_OAR_FILE := $(DIR)/target/fabric-tna-1.2.0-SNAPSHOT.oar
 # Profiles to build by default (all)
 PROFILES ?= fabric fabric-upf fabric-int fabric-upf-int
 
+export SHOW_SENSITIVE_OUTPUT ?= true
+
 deps:
 	docker pull $(SDE_TM_DOCKER_IMG)
 	docker pull $(SDE_P4C_DOCKER_IMG)

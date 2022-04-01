@@ -24,10 +24,12 @@ mkdir -p "${P4C_OUT}"
 # Where the compiler output should be placed to be included in the pipeconf.
 DEST_DIR=${ROOT_DIR}/src/main/resources/p4c-out/${PROFILE}
 
-P4C_CMD="docker run --rm -v ${P4C_OUT}:${P4C_OUT} \
+BASE_P4C_CMD="docker run --rm -v ${P4C_OUT}:${P4C_OUT} \
   -v ${P4_SRC_DIR}:${P4_SRC_DIR} -v ${DIR}:${DIR} -w ${DIR} --user ${UID} \
   ${SDE_P4C_DOCKER_IMG} bf-p4c"
-SDE_VER=$( ${P4C_CMD} --version | cut -d' ' -f2 )
+SDE_VER=$( ${BASE_P4C_CMD} --version | cut -d' ' -f2 )
+
+SHOW_SENSITIVE_OUTPUT=${SHOW_SENSITIVE_OUTPUT:-"false"}
 
 # shellcheck disable=SC2086
 function base_build() {
@@ -36,14 +38,20 @@ function base_build() {
   echo "*** Output in ${output_dir}"
   p4c_flags=""
   mkdir -p ${output_dir}
+  COMPILE_P4C_CMD="$BASE_P4C_CMD \
+    --arch tna -g --create-graphs --verbose 2 \
+    -o ${output_dir} -I ${P4_SRC_DIR} \
+    ${OTHER_PP_FLAGS} \
+    ${p4c_flags} \
+    --p4runtime-files ${output_dir}/p4info.txt \
+    --p4runtime-force-std-externs \
+    ${DIR}/fabric_tna.p4"
   (
-    time $P4C_CMD --arch tna -g --create-graphs --verbose 2 \
-      -o ${output_dir} -I ${P4_SRC_DIR} \
-      ${OTHER_PP_FLAGS} \
-      ${p4c_flags} \
-      --p4runtime-files ${output_dir}/p4info.txt \
-      --p4runtime-force-std-externs \
-      ${DIR}/fabric_tna.p4
+    if [ "${SHOW_SENSITIVE_OUTPUT}" == "true" ]; then
+      time $COMPILE_P4C_CMD
+    else
+      time $COMPILE_P4C_CMD >/dev/null 2>&1
+    fi
   )
 
   # Generate the pipeline config binary
