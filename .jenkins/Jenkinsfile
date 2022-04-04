@@ -32,7 +32,7 @@ pipeline {
     \"registry-mirrors\":[\"https://mirror.registry.opennetworking.org\"]
 }
 EOF'"""
-                sh "systemctl restart docker"
+                sh "sudo systemctl restart docker"
                 gitCheckout(GITHUB_URL, commitHash)
                 dockerLogins()
                 //Set JDK 11
