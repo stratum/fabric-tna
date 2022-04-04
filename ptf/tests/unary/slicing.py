@@ -10,8 +10,7 @@ from scapy.layers.inet import IP
 class FabricIPv4UnicastWithDscpClassificationAndRewriteTest(
     SlicingTest, IPv4UnicastTest
 ):
-    """Tests DSCP-based classification and rewrite.
-    """
+    """Tests DSCP-based classification and rewrite."""
 
     @tvsetup
     @autocleanup
@@ -250,7 +249,7 @@ class FabricUpfUplinkWithDscpRewriteTest(UpfSimpleTest, SlicingTest):
 class FabricUpfUplinkWithMeterTest(UpfSimpleTest):
     """Tests meters for UPF. This is mostly a dummmy test class to verify
     basic programming of UPF meters. QoS test for UPF meters and color-aware
-    meter behaviour should use linerate traffic generation. """
+    meter behaviour should use linerate traffic generation."""
 
     @tvsetup
     @autocleanup
@@ -279,7 +278,9 @@ class FabricUpfUplinkWithMeterTest(UpfSimpleTest):
                 for session_bps in [0, 100000]:
                     print(
                         "Testing pkt={}, app_bps={}, session_bps={}...".format(
-                            pkt_type, app_bps, session_bps,
+                            pkt_type,
+                            app_bps,
+                            session_bps,
                         )
                     )
                     pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
@@ -290,7 +291,9 @@ class FabricUpfUplinkWithMeterTest(UpfSimpleTest):
                         pktlen=MIN_PKT_LEN,
                     )
                     self.doRunTest(
-                        pkt=pkt, app_bps=app_bps, session_bps=session_bps,
+                        pkt=pkt,
+                        app_bps=app_bps,
+                        session_bps=session_bps,
                     )
 
 
@@ -298,7 +301,7 @@ class FabricUpfUplinkWithMeterTest(UpfSimpleTest):
 class FabricUpfDownlinkWithMeterTest(UpfSimpleTest):
     """Tests meters for UPF. This is mostly a dummmy test class to verify
     basic programming of UPF meters. QoS test for UPF meters and color-aware
-    meter behaviour should use linerate traffic generation. """
+    meter behaviour should use linerate traffic generation."""
 
     @tvsetup
     @autocleanup
@@ -327,7 +330,9 @@ class FabricUpfDownlinkWithMeterTest(UpfSimpleTest):
                 for session_bps in [0, 100000]:
                     print(
                         "Testing pkt={}, app_bps={}, session_bps={}...".format(
-                            pkt_type, app_bps, session_bps,
+                            pkt_type,
+                            app_bps,
+                            session_bps,
                         )
                     )
                     pkt = getattr(testutils, "simple_%s_packet" % pkt_type)(
@@ -338,13 +343,15 @@ class FabricUpfDownlinkWithMeterTest(UpfSimpleTest):
                         pktlen=MIN_PKT_LEN,
                     )
                     self.doRunTest(
-                        pkt=pkt, app_bps=app_bps, session_bps=session_bps,
+                        pkt=pkt,
+                        app_bps=app_bps,
+                        session_bps=session_bps,
                     )
 
 
 class FabricIPv4UnicastWithPolicingTest(SlicingTest, IPv4UnicastTest):
     """Tests QoS policer. This is mostly a dummmy test class to verify basic programming of
-    QoS-related entities. Most of the QoS tests should use linerate traffic generation. """
+    QoS-related entities. Most of the QoS tests should use linerate traffic generation."""
 
     @tvsetup
     @autocleanup
@@ -388,5 +395,8 @@ class FabricIPv4UnicastWithPolicingTest(SlicingTest, IPv4UnicastTest):
                     pktlen=MIN_PKT_LEN,
                 )
                 self.doRunTest(
-                    pkt=pkt, policing=policing, next_hop_mac=HOST2_MAC, tc_name=tc_name,
+                    pkt=pkt,
+                    policing=policing,
+                    next_hop_mac=HOST2_MAC,
+                    tc_name=tc_name,
                 )

@@ -78,7 +78,9 @@ class IntQueueReportTest(TRexTest, IntTest, SlicingTest):
 
         # To avoid reporting INT report packet, we use queue ID 1 for the traffic.
         self.add_slice_tc_classifier_entry(
-            slice_id=SLICE_ID, tc=TC, ipv4_dst=pkt[IP].dst,
+            slice_id=SLICE_ID,
+            tc=TC,
+            ipv4_dst=pkt[IP].dst,
         )
         self.add_queue_entry(slice_id=SLICE_ID, tc=TC, qid=DEFAULT_QID)
 
