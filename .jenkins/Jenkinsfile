@@ -27,12 +27,6 @@ pipeline {
         stage("Prepare environment") {
             steps {
                 step([$class: "WsCleanup"])
-                sh """sudo bash -c 'cat << EOF > /etc/docker/daemon.json
-{
-    \"registry-mirrors\":[\"https://mirror.registry.opennetworking.org\"]
-}
-EOF'"""
-                sh "sudo systemctl restart docker"
                 gitCheckout(GITHUB_URL, commitHash)
                 dockerLogins()
                 //Set JDK 11
