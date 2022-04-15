@@ -33,7 +33,6 @@ pipeline {
 }
 EOF'"""
                 sh "sudo systemctl restart docker"
-                sh "docker info"
                 gitCheckout(GITHUB_URL, commitHash)
                 dockerLogins()
                 //Set JDK 11
