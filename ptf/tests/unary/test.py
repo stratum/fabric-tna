@@ -83,7 +83,8 @@ class FabricArpBroadcastUntaggedTest(ArpBroadcastTest):
     def runTest(self):
 
         self.runArpBroadcastTest(
-            tagged_ports=[], untagged_ports=[self.port1, self.port2, self.port3],
+            tagged_ports=[],
+            untagged_ports=[self.port1, self.port2, self.port3],
         )
 
 
@@ -93,7 +94,8 @@ class FabricArpBroadcastTaggedTest(ArpBroadcastTest):
     @autocleanup
     def runTest(self):
         self.runArpBroadcastTest(
-            tagged_ports=[self.port1, self.port2, self.port3], untagged_ports=[],
+            tagged_ports=[self.port1, self.port2, self.port3],
+            untagged_ports=[],
         )
 
 
@@ -132,7 +134,11 @@ class FabricIPv4UnicastTest(IPv4UnicastTest):
     @autocleanup
     def doRunTest(self, pkt, mac_dest, prefix_len, tagged1, tagged2, tc_name):
         self.runIPv4UnicastTest(
-            pkt, mac_dest, prefix_len=prefix_len, tagged1=tagged1, tagged2=tagged2,
+            pkt,
+            mac_dest,
+            prefix_len=prefix_len,
+            tagged1=tagged1,
+            tagged2=tagged2,
         )
 
     def runTest(self):
@@ -206,7 +212,10 @@ class FabricIPv4UnicastFromPacketOutTest(IPv4UnicastTest):
                     pktlen=MIN_PKT_LEN,
                 )
                 self.doRunTest(
-                    pkt=pkt, mac_dest=HOST2_MAC, tagged2=tagged2, tc_name=tc_name,
+                    pkt=pkt,
+                    mac_dest=HOST2_MAC,
+                    tagged2=tagged2,
+                    tc_name=tc_name,
                 )
 
 
@@ -218,7 +227,8 @@ class FabricIPv4UnicastDropTest(IPv4UnicastTest):
         self.setup_port(eg_port, 1, PORT_TYPE_EDGE)
         self.set_forwarding_type(ig_port, SWITCH_MAC)
         self.add_forwarding_routing_v4_drop(
-            ipv4_dstAddr=ipv4_dst, ipv4_pLen=ipv4_len,
+            ipv4_dstAddr=ipv4_dst,
+            ipv4_pLen=ipv4_len,
         )
         self.send_packet(ig_port, pkt)
         self.verify_no_other_packets()
@@ -248,7 +258,8 @@ class FabricIPv4DropWithACLOverrideRoutingTest(IPv4UnicastTest):
             next_id=400, ig_port_type=PORT_TYPE_EDGE, ipv4_dst=ipv4_dst
         )
         self.add_forwarding_routing_v4_drop(
-            ipv4_dstAddr=ipv4_dst, ipv4_pLen=ipv4_len,
+            ipv4_dstAddr=ipv4_dst,
+            ipv4_pLen=ipv4_len,
         )
         self.send_packet(ig_port, pkt)
         self.verify_packet(exp_pkt, eg_port)
@@ -277,7 +288,8 @@ class FabricIPv4DropWithACLOverrideOutputTest(IPv4UnicastTest):
         self.set_forwarding_type(ig_port, SWITCH_MAC)
         self.add_forwarding_acl_set_output_port(eg_port, ipv4_dst=ipv4_dst)
         self.add_forwarding_routing_v4_drop(
-            ipv4_dstAddr=ipv4_dst, ipv4_pLen=ipv4_len,
+            ipv4_dstAddr=ipv4_dst,
+            ipv4_pLen=ipv4_len,
         )
         self.send_packet(ig_port, pkt)
         self.verify_packet(exp_pkt, eg_port)
@@ -2007,7 +2019,13 @@ class FabricFlowReportFilterNoChangeTest(IntTest):
     @tvsetup
     @autocleanup
     def doRunTest(
-        self, vlan_conf, tagged, pkt_type, is_next_hop_spine, expect_int_report, ip_dst,
+        self,
+        vlan_conf,
+        tagged,
+        pkt_type,
+        is_next_hop_spine,
+        expect_int_report,
+        ip_dst,
     ):
         self.set_up_flow_report_filter_config(
             hop_latency_mask=0xF0000000, timestamp_mask=0
@@ -2129,7 +2147,13 @@ class FabricDropReportFilterTest(IntTest):
     @tvsetup
     @autocleanup
     def doRunTest(
-        self, vlan_conf, tagged, pkt_type, is_next_hop_spine, expect_int_report, ip_dst,
+        self,
+        vlan_conf,
+        tagged,
+        pkt_type,
+        is_next_hop_spine,
+        expect_int_report,
+        ip_dst,
     ):
         self.set_up_flow_report_filter_config(
             hop_latency_mask=0xF0000000, timestamp_mask=0
@@ -2254,7 +2278,11 @@ class FabricIntQueueReportQuotaTest(IntTest):
     @tvsetup
     @autocleanup
     def doRunTest(
-        self, expect_int_report, quota_left, threshold_trigger, threshold_reset,
+        self,
+        expect_int_report,
+        quota_left,
+        threshold_trigger,
+        threshold_reset,
     ):
         print(
             f"Testing expect_int_report={expect_int_report}, quota_left={quota_left}, "

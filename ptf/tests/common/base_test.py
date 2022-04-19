@@ -1059,7 +1059,8 @@ class P4RuntimeTest(BaseTest):
                 pre_entry = entity.packet_replication_engine_entry
                 if pre_entry.HasField("multicast_group_entry"):
                     self.verify_p4runtime_entity(
-                        pre_entry.multicast_group_entry, expected_multicast_group,
+                        pre_entry.multicast_group_entry,
+                        expected_multicast_group,
                     )
 
     def verify_direct_counter(
@@ -1093,7 +1094,12 @@ class P4RuntimeTest(BaseTest):
         return None
 
     def verify_indirect_counter(
-        self, c_name, c_index, typ, expected_byte_count=0, expected_packet_count=0,
+        self,
+        c_name,
+        c_index,
+        typ,
+        expected_byte_count=0,
+        expected_packet_count=0,
     ):
         # Check counter type with P4Info
         counter = self.get_counter(c_name)
@@ -1150,7 +1156,10 @@ class P4RuntimeTest(BaseTest):
         return None
 
     def verify_register(
-        self, register_name, register_index, expected_value,
+        self,
+        register_name,
+        register_index,
+        expected_value,
     ):
         req = self.get_new_read_request()
         entity = req.entities.add()
@@ -1347,7 +1356,10 @@ def tvcreate(name):
             finally:
                 if test.generate_tv:
                     tv_folder = os.path.join(
-                        os.getcwd(), "testvectors", test.__class__.__name__, sub_dir,
+                        os.getcwd(),
+                        "testvectors",
+                        test.__class__.__name__,
+                        sub_dir,
                     )
                     tvutils.write_to_file(
                         test.tv, tv_folder, tv_name, create_tv_sub_dir=False

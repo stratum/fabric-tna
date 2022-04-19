@@ -186,7 +186,8 @@ class IntIngressDropReportFilterWithTrafficTrace(TRexTest, IntTest):
         - Drop reason: All packets were dropped because of the installed ACL rule
         """
         self.failIf(
-            recv_packets > 0, f"ACL did not drop all packets, received {recv_packets}",
+            recv_packets > 0,
+            f"ACL did not drop all packets, received {recv_packets}",
         )
 
         accuracy_score = results["drop_accuracy_score"]

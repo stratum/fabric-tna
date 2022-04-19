@@ -114,7 +114,11 @@ def build_pipeline_config(pipeline_config_path):
 
 
 def update_config(
-    p4info_path, pipeline_config_path, grpc_addr, device_id, generate_tv=False,
+    p4info_path,
+    pipeline_config_path,
+    grpc_addr,
+    device_id,
+    generate_tv=False,
 ):
     """
     Performs a SetForwardingPipelineConfig on the device
@@ -384,7 +388,10 @@ def main():
         default="localhost:50051",
     )
     parser.add_argument(
-        "--device-id", help="Device id for device under test", type=int, default=1,
+        "--device-id",
+        help="Device id for device under test",
+        type=int,
+        default=1,
     )
     parser.add_argument(
         "--cpu-port",
@@ -393,10 +400,16 @@ def main():
         default=0xFFFFFFFD,
     )
     parser.add_argument(
-        "--ptf-dir", help="Directory containing PTF tests", type=str, required=True,
+        "--ptf-dir",
+        help="Directory containing PTF tests",
+        type=str,
+        required=True,
     )
     parser.add_argument(
-        "--port-map", help="Path to JSON port mapping", type=str, required=True,
+        "--port-map",
+        help="Path to JSON port mapping",
+        type=str,
+        required=True,
     )
     parser.add_argument(
         "--platform",
@@ -493,7 +506,9 @@ def main():
         trex_daemon_client = CTRexClient(args.trex_address, trex_args=trex_args)
         info("Starting TRex daemon client...")
         success = set_up_trex_server(
-            trex_daemon_client, args.trex_address, args.trex_config,
+            trex_daemon_client,
+            args.trex_address,
+            args.trex_config,
         )
         if not success:
             error("Failed to set up TRex daemon client!")

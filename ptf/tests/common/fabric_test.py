@@ -612,7 +612,14 @@ def pkt_add_gtp(
 ):
     gtp_pkt = (
         Ether(src=pkt[Ether].src, dst=pkt[Ether].dst)
-        / IP(src=out_ipv4_src, dst=out_ipv4_dst, tos=0, id=0x1513, flags=0, frag=0,)
+        / IP(
+            src=out_ipv4_src,
+            dst=out_ipv4_dst,
+            tos=0,
+            id=0x1513,
+            flags=0,
+            frag=0,
+        )
         / UDP(sport=sport, dport=dport, chksum=0)
         / GTP_U_Header(gtp_type=255, teid=teid)
     )
@@ -1200,10 +1207,14 @@ class FabricTest(P4RuntimeTest):
             )
             self.set_egress_vlan(port, DEFAULT_VLAN, push_vlan=False)
             self.set_forwarding_type(
-                port, ethertype=ETH_TYPE_IPV4, fwd_type=FORWARDING_TYPE_UNICAST_IPV4,
+                port,
+                ethertype=ETH_TYPE_IPV4,
+                fwd_type=FORWARDING_TYPE_UNICAST_IPV4,
             )
             self.set_forwarding_type(
-                port, ethertype=ETH_TYPE_MPLS_UNICAST, fwd_type=FORWARDING_TYPE_MPLS,
+                port,
+                ethertype=ETH_TYPE_MPLS_UNICAST,
+                fwd_type=FORWARDING_TYPE_MPLS,
             )
 
     def add_bridging_entry(
@@ -1346,7 +1357,12 @@ class FabricTest(P4RuntimeTest):
         )
 
     def add_forwarding_acl_drop(
-        self, ipv4_src=None, ipv4_dst=None, ip_proto=None, l4_sport=None, l4_dport=None,
+        self,
+        ipv4_src=None,
+        ipv4_dst=None,
+        ip_proto=None,
+        l4_sport=None,
+        l4_dport=None,
     ):
         # Send only if the match keys are not empty
         matches = self.build_acl_matches(
@@ -1354,7 +1370,11 @@ class FabricTest(P4RuntimeTest):
         )
         if matches:
             self.send_request_add_entry_to_action(
-                "acl.acl", matches, "acl.drop", [], DEFAULT_PRIORITY,
+                "acl.acl",
+                matches,
+                "acl.drop",
+                [],
+                DEFAULT_PRIORITY,
             )
 
     def build_acl_matches(
@@ -1569,7 +1589,9 @@ class FabricTest(P4RuntimeTest):
             "pre_next.next_mpls",
             [self.Exact("next_id", next_id_)],
             "pre_next.set_mpls_label",
-            [("label", label_),],
+            [
+                ("label", label_),
+            ],
         )
 
     # next_hops is a list of tuples (egress_port, smac, dmac)
@@ -1590,7 +1612,11 @@ class FabricTest(P4RuntimeTest):
                 actions.append(
                     [
                         "next.routing_hashed",
-                        [("port_num", egress_port_), ("smac", smac_), ("dmac", dmac_),],
+                        [
+                            ("port_num", egress_port_),
+                            ("smac", smac_),
+                            ("dmac", dmac_),
+                        ],
                     ]
                 )
         self.add_next_hashed_group_action(next_id, grp_id, actions)
@@ -1647,7 +1673,10 @@ class FabricTest(P4RuntimeTest):
     def add_next_hashed_group_member(self, action_name, params):
         mbr_id = self.get_next_mbr_id()
         return self.send_request_add_member(
-            "FabricIngress.next.hashed_profile", mbr_id, action_name, params,
+            "FabricIngress.next.hashed_profile",
+            mbr_id,
+            action_name,
+            params,
         )
 
     def add_next_hashed_group(self, grp_id, mbr_ids):
@@ -1660,7 +1689,10 @@ class FabricTest(P4RuntimeTest):
 
     def modify_next_hashed_group(self, grp_id, mbr_ids, grp_size):
         return self.send_request_modify_group(
-            "FabricIngress.next.hashed_profile", grp_id, grp_size, mbr_ids,
+            "FabricIngress.next.hashed_profile",
+            grp_id,
+            grp_size,
+            mbr_ids,
         )
 
     def read_next_hashed_group_member(self, mbr_id):
@@ -2455,8 +2487,7 @@ class PacketInTest(FabricTest):
 
 
 class SlicingTest(FabricTest):
-    """Mixin class with methods to manipulate QoS entities
-    """
+    """Mixin class with methods to manipulate QoS entities"""
 
     def set_default_tc(self, slice_id=None, tc=None):
         matches = [
@@ -2507,7 +2538,12 @@ class SlicingTest(FabricTest):
         pir = int(peak_bps / 8)
         pburst = int(pir * BURST_DURATION_MS * 0.001)
         self.configure_slice_tc_meter(
-            slice_id=slice_id, tc=tc, cir=cir, cburst=cburst, pir=pir, pburst=pburst,
+            slice_id=slice_id,
+            tc=tc,
+            cir=cir,
+            cburst=cburst,
+            pir=pir,
+            pburst=pburst,
         )
 
     def add_queue_entry(self, slice_id, tc, qid=None, color=None):
@@ -2563,7 +2599,9 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
                 self.Exact("gtpu_is_valid", stringify(int(gtpu_valid))),
             ],
             "FabricIngress.upf." + iface_type,
-            [("slice_id", stringify(slice_id)),],
+            [
+                ("slice_id", stringify(slice_id)),
+            ],
         )
         self.write_request(req)
 
@@ -2646,7 +2684,9 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
             "FabricIngress.upf.applications",
             match_fields,
             "FabricIngress.upf.set_app_id",
-            [("app_id", stringify(app_id)),],
+            [
+                ("app_id", stringify(app_id)),
+            ],
             priority=priority,
         )
         self.write_request(req)
@@ -2841,7 +2881,9 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
             "FabricIngress.upf.ig_tunnel_peers",
             [self.Exact("tun_peer_id", stringify(tunnel_peer_id))],
             "FabricIngress.upf.set_routing_ipv4_dst",
-            [("tun_dst_addr", ipv4_to_binary(tunnel_dst_addr)),],
+            [
+                ("tun_dst_addr", ipv4_to_binary(tunnel_dst_addr)),
+            ],
         )
         self.write_request(req)
 
@@ -2914,7 +2956,10 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
 
     def enable_encap_with_psc(self):
         self.send_request_add_entry_to_action(
-            "FabricEgress.upf.gtpu_encap", None, "FabricEgress.upf.gtpu_with_psc", [],
+            "FabricEgress.upf.gtpu_encap",
+            None,
+            "FabricEgress.upf.gtpu_with_psc",
+            [],
         )
 
     def reset_upf_counters(self, ctr_idx):
@@ -2932,15 +2977,23 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
         exp_ingress_pkts,
         exp_egress_pkts,
     ):
-        """ Verify that the UPF ingress and egress counters for index 'ctr_idx' are now
-            'exp_ingress_bytes', 'exp_ingress_pkts' and 'exp_egress_bytes',
-            'exp_egress_pkts' respectively upon reading.
+        """Verify that the UPF ingress and egress counters for index 'ctr_idx' are now
+        'exp_ingress_bytes', 'exp_ingress_pkts' and 'exp_egress_bytes',
+        'exp_egress_pkts' respectively upon reading.
         """
         self.verify_indirect_counter(
-            UPF_COUNTER_INGRESS, ctr_idx, "BOTH", exp_ingress_bytes, exp_ingress_pkts,
+            UPF_COUNTER_INGRESS,
+            ctr_idx,
+            "BOTH",
+            exp_ingress_bytes,
+            exp_ingress_pkts,
         )
         self.verify_indirect_counter(
-            UPF_COUNTER_EGRESS, ctr_idx, "BOTH", exp_egress_bytes, exp_egress_pkts,
+            UPF_COUNTER_EGRESS,
+            ctr_idx,
+            "BOTH",
+            exp_egress_bytes,
+            exp_egress_pkts,
         )
 
     def runUplinkTest(
@@ -3009,7 +3062,9 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
             )
         if meter_drop:
             self.enable_policing(
-                slice_id, tc, V1MODEL_COLOR_RED if is_v1model() else COLOR_RED,
+                slice_id,
+                tc,
+                V1MODEL_COLOR_RED if is_v1model() else COLOR_RED,
             )
         app_meter_idx = DEFAULT_APP_METER_IDX
         if app_max_bps is not None:
@@ -3291,7 +3346,9 @@ class UpfSimpleTest(IPv4UnicastTest, SlicingTest):
             )
         if meter_drop:
             self.enable_policing(
-                slice_id, tc, V1MODEL_COLOR_RED if is_v1model() else COLOR_RED,
+                slice_id,
+                tc,
+                V1MODEL_COLOR_RED if is_v1model() else COLOR_RED,
             )
         app_meter_idx = DEFAULT_APP_METER_IDX
         if app_max_bps is not None:
@@ -3696,7 +3753,11 @@ class IntTest(IPv4UnicastTest):
             matches.append(self.Range("l4_dport", dport_low, dport_high))
 
         self.send_request_add_entry_to_action(
-            "watchlist", matches, action, [], priority=DEFAULT_PRIORITY,
+            "watchlist",
+            matches,
+            action,
+            [],
+            priority=DEFAULT_PRIORITY,
         )
 
     def truncate_packet(self, pkt, size):
@@ -3746,7 +3807,9 @@ class IntTest(IPv4UnicastTest):
             / UDP(sport=0, chksum=0)
             / INT_L45_REPORT_FIXED(nproto=2, f=f_flag, q=q_flag, hw_id=(eg_port >> 7))
             / INT_L45_LOCAL_REPORT(
-                switch_id=sw_id, ingress_port_id=ig_port, egress_port_id=eg_port,
+                switch_id=sw_id,
+                ingress_port_id=ig_port,
+                egress_port_id=eg_port,
             )
             / inner_packet
         )
@@ -4809,7 +4872,14 @@ class PppoeTest(DoubleVlanTerminationTest):
         )
 
     def setup_line_v4(
-        self, s_tag, c_tag, line_id, ipv4_addr, mac_src, pppoe_session_id, enabled=True,
+        self,
+        s_tag,
+        c_tag,
+        line_id,
+        ipv4_addr,
+        mac_src,
+        pppoe_session_id,
+        enabled=True,
     ):
         assert s_tag != 0
         assert c_tag != 0
@@ -4907,7 +4977,10 @@ class PppoeTest(DoubleVlanTerminationTest):
 
         # Input is the given packet with double VLAN tags and PPPoE headers.
         pppoe_pkt = pkt_add_pppoe(
-            pkt, type=1, code=PPPOE_CODE_SESSION_STAGE, session_id=pppoe_session_id,
+            pkt,
+            type=1,
+            code=PPPOE_CODE_SESSION_STAGE,
+            session_id=pppoe_session_id,
         )
         pppoe_pkt = pkt_add_vlan(pppoe_pkt, vlan_vid=vlan_id_inner)
         pppoe_pkt = pkt_add_vlan(pppoe_pkt, vlan_vid=vlan_id_outer)
@@ -5030,7 +5103,10 @@ class PppoeTest(DoubleVlanTerminationTest):
         # Build expected packet from the input one, we expect it to be routed
         # and encapsulated in double VLAN tags and PPPoE.
         exp_pkt = pkt_add_pppoe(
-            pkt, type=1, code=PPPOE_CODE_SESSION_STAGE, session_id=pppoe_session_id,
+            pkt,
+            type=1,
+            code=PPPOE_CODE_SESSION_STAGE,
+            session_id=pppoe_session_id,
         )
         exp_pkt = pkt_add_vlan(exp_pkt, vlan_vid=vlan_id_outer)
         exp_pkt = pkt_add_inner_vlan(exp_pkt, vlan_vid=vlan_id_inner)
@@ -5135,7 +5211,12 @@ class StatsTest(FabricTest):
                 "Counter is not same as expected.\
                 \nActual packet count: %d, Expected packet count: %d\
                 \nActual byte count: %d, Expected byte count: %d\n"
-                % (actual_pkt_count, pkt_count, actual_byte_count, byte_count,)
+                % (
+                    actual_pkt_count,
+                    pkt_count,
+                    actual_byte_count,
+                    byte_count,
+                )
             )
 
     def add_stats_table_entry(self, gress, stats_flow_id, ports, **ftuple):

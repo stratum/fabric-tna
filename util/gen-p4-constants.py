@@ -249,13 +249,16 @@ def gen_pkg_path(output, base_name):
 
 def main():
     parser = argparse.ArgumentParser(
-        prog="gen-p4-constants.py", description="P4Info to Java constant generator.",
+        prog="gen-p4-constants.py",
+        description="P4Info to Java constant generator.",
     )
     parser.add_argument("name", help="Name of the constant, will be used as class name")
     parser.add_argument("p4info", help="P4Info file")
     parser.add_argument("-o", "--output", help="output path", default="-")
     parser.add_argument(
-        "--with-package-path", help="Specify the java package path", dest="pkg_path",
+        "--with-package-path",
+        help="Specify the java package path",
+        dest="pkg_path",
     )
     args = parser.parse_args()
 

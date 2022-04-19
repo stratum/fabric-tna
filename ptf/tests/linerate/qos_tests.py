@@ -198,7 +198,11 @@ class QosTest(TRexTest, SlicingTest, StatsTest):
 
     # Create a lower priority best-effort stream.
     def create_best_effort_stream(
-        self, pg_id=None, dport=None, l2_size=None, l1_bps=None,
+        self,
+        pg_id=None,
+        dport=None,
+        l2_size=None,
+        l1_bps=None,
     ) -> STLStream:
         pkt = qos_utils.get_best_effort_traffic_packet(l2_size=l2_size, dport=dport)
         stats = None
@@ -830,7 +834,10 @@ class ElasticTrafficIsWrrScheduled(QosTest):
         print(get_readable_flow_stats(flow_stats_3))
 
         flow_rate_shares = get_flow_rate_shares(
-            TRAFFIC_DURATION_SECONDS, flow_stats_1, flow_stats_2, flow_stats_3,
+            TRAFFIC_DURATION_SECONDS,
+            flow_stats_1,
+            flow_stats_2,
+            flow_stats_3,
         )
         print(get_readable_flow_rate_shares(flow_rate_shares))
 
