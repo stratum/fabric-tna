@@ -46,9 +46,12 @@ import org.onosproject.net.pi.model.PiMeterModel;
 import org.onosproject.net.pi.model.PiTableId;
 import org.onosproject.net.pi.model.PiTableModel;
 import org.onosproject.net.pi.runtime.PiCounterCell;
+import org.onosproject.net.pi.runtime.PiCounterCellData;
 import org.onosproject.net.pi.runtime.PiCounterCellHandle;
 import org.onosproject.net.pi.runtime.PiCounterCellId;
+import org.onosproject.net.pi.runtime.PiEntity;
 import org.onosproject.net.pi.runtime.PiMeterCellId;
+import org.onosproject.p4runtime.api.P4RuntimeWriteClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.stratumproject.fabric.tna.Constants;
@@ -547,6 +550,26 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         return upfTerminations;
     }
 
+    private void applyUpfCounter(UpfCounter upfCounter) throws UpfProgrammableException {
+        PiEntity piIngressCounter = new PiCounterCell(
+                PiCounterCellId.ofIndirect(FABRIC_INGRESS_UPF_TERMINATIONS_COUNTER, upfCounter.getCellId()),
+                new PiCounterCellData(upfCounter.getIngressPkts(), upfCounter.getIngressBytes()));
+        PiEntity piEgressCounter = new PiCounterCell(
+                PiCounterCellId.ofIndirect(FABRIC_EGRESS_UPF_TERMINATIONS_COUNTER, upfCounter.getCellId()),
+                new PiCounterCellData(upfCounter.getEgressPkts(), upfCounter.getEgressBytes()));
+        // Query the device.
+        P4RuntimeWriteClient.WriteResponse writeResponse = client.write(
+                        DEFAULT_P4_DEVICE_ID, pipeconf)
+                .modify(Lists.newArrayList(piIngressCounter, piEgressCounter))
+                .submitSync();
+        if (!writeResponse.failed().isEmpty()) {
+            writeResponse.failed().stream().filter(counterEntryResp -> !counterEntryResp.isSuccess())
+                    .forEach(counterEntryResp -> log.warn("A counter was not modified correctly: {}",
+                                                          counterEntryResp.explanation()));
+            throw new UpfProgrammableException("Failed to modify counters");
+        }
+    }
+
     @Override
     public Collection<UpfCounter> readCounters(long maxCounterId) {
         if (!setupBehaviour("readCounters()")) {
@@ -717,12 +740,14 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
             case APPLICATION:
                 addUpfApplication((UpfApplication) entity);
                 break;
+            case COUNTER:
+                applyUpfCounter((UpfCounter) entity);
+                break;
             case SESSION_METER:
             case APPLICATION_METER:
             case SLICE_METER:
                 applyUpfMeter((UpfMeter) entity);
                 break;
-            case COUNTER:
             default:
                 throw new UpfProgrammableException(format("Adding entity type %s not supported.",
                                                           entity.type().humanReadableName()));
@@ -854,8 +879,8 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
             case SESSION_METER:
             case APPLICATION_METER:
             case SLICE_METER:
-            // Meter cannot be deleted, only modified.
             case COUNTER:
+            // Entities cannot be deleted, only modified.
             default:
                 throw new UpfProgrammableException(format("Deleting entity type %s not supported.",
                                                           entity.type().humanReadableName()));
