@@ -557,14 +557,14 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         PiEntity piEgressCounter = new PiCounterCell(
                 PiCounterCellId.ofIndirect(FABRIC_EGRESS_UPF_TERMINATIONS_COUNTER, upfCounter.getCellId()),
                 new PiCounterCellData(upfCounter.getEgressPkts(), upfCounter.getEgressBytes()));
-        // Query the device.
+        // Write on the device in sync mode.
         P4RuntimeWriteClient.WriteResponse writeResponse = client.write(
                         DEFAULT_P4_DEVICE_ID, pipeconf)
                 .modify(Lists.newArrayList(piIngressCounter, piEgressCounter))
                 .submitSync();
         if (!writeResponse.failed().isEmpty()) {
             writeResponse.failed().stream().filter(counterEntryResp -> !counterEntryResp.isSuccess())
-                    .forEach(counterEntryResp -> log.warn("A counter was not modified correctly: {}",
+                    .forEach(counterEntryResp -> log.error("A counter was not modified correctly: {}",
                                                           counterEntryResp.explanation()));
             throw new UpfProgrammableException("Failed to modify counters");
         }
