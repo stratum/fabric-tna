@@ -107,7 +107,7 @@ def list_port_status(port_status: dict) -> None:
 
 def monitor_port_stats(c: STLClient, ports: []) -> dict:
     """
-    List some port stats continuously while traffic is active 
+    List some port stats continuously while traffic is active
 
     :parameters:
     c: STLClient
@@ -216,7 +216,14 @@ LatencyStats = collections.namedtuple(
 )
 
 FlowStats = collections.namedtuple(
-    "FlowStats", ["pg_id", "tx_packets", "rx_packets", "tx_bytes", "rx_bytes",],
+    "FlowStats",
+    [
+        "pg_id",
+        "tx_packets",
+        "rx_packets",
+        "tx_bytes",
+        "rx_bytes",
+    ],
 )
 
 FlowRateShares = collections.namedtuple(

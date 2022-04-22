@@ -131,7 +131,13 @@ class UpfPolicingTest(TRexTest, UpfSimpleTest, StatsTest):
 
     # Create a stream with GTP encapped traffic.
     def create_gtp_stream(
-        self, ue_addr, teid, pg_id=None, dport=None, l2_size=1400, l1_bps=None,
+        self,
+        ue_addr,
+        teid,
+        pg_id=None,
+        dport=None,
+        l2_size=1400,
+        l1_bps=None,
     ) -> STLStream:
         if dport is not None:
             pkt = simple_udp_packet(

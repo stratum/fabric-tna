@@ -79,8 +79,7 @@ class StatsIPv4UnicastTest(StatsTest, IPv4UnicastTest):
 
 
 class FabricStatsIPv4UnicastTest(StatsIPv4UnicastTest):
-    """Tests stats counters for IPv4 unicast routing with different packet types
-    """
+    """Tests stats counters for IPv4 unicast routing with different packet types"""
 
     @tvsetup
     @autocleanup
