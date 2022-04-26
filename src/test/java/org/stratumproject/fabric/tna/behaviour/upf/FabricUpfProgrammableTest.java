@@ -1,4 +1,3 @@
-// Copyright 2022-present Intel Corporation
 // Copyright 2020-present Open Networking Foundation
 // SPDX-License-Identifier: Apache-2.0
 package org.stratumproject.fabric.tna.behaviour.upf;
@@ -58,12 +57,34 @@ import java.util.concurrent.ConcurrentMap;
 
 import static junit.framework.TestCase.assertNotNull;
 import static junit.framework.TestCase.assertTrue;
-import static org.easymock.EasyMock.*;
+import static org.easymock.EasyMock.anyString;
+import static org.easymock.EasyMock.createMock;
+import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.replay;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.stratumproject.fabric.tna.Constants.TNA;
-import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.*;
-import static org.stratumproject.fabric.tna.behaviour.upf.TestUpfConstants.*;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_UPF_EG_TUNNEL_PEERS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_UPF_TERMINATIONS_COUNTER;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_QOS_SLICE_TC_METER;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_APPLICATIONS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_APP_METER;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_DOWNLINK_SESSIONS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_DOWNLINK_TERMINATIONS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_IG_TUNNEL_PEERS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_SESSION_METER;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_TERMINATIONS_COUNTER;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_UPLINK_SESSIONS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_UPLINK_TERMINATIONS;
+import static org.stratumproject.fabric.tna.behaviour.upf.TestUpfConstants.DL_COUNTER_BYTES;
+import static org.stratumproject.fabric.tna.behaviour.upf.TestUpfConstants.DL_COUNTER_PKTS;
+import static org.stratumproject.fabric.tna.behaviour.upf.TestUpfConstants.DOWNLINK_COUNTER;
+import static org.stratumproject.fabric.tna.behaviour.upf.TestUpfConstants.SLICE_MOBILE;
+import static org.stratumproject.fabric.tna.behaviour.upf.TestUpfConstants.UL_COUNTER_BYTES;
+import static org.stratumproject.fabric.tna.behaviour.upf.TestUpfConstants.UL_COUNTER_PKTS;
+import static org.stratumproject.fabric.tna.behaviour.upf.TestUpfConstants.UPLINK_COUNTER;
+import static org.stratumproject.fabric.tna.behaviour.upf.TestUpfConstants.ZERO_DOWNLINK_COUNTER;
+import static org.stratumproject.fabric.tna.behaviour.upf.TestUpfConstants.ZERO_UPLINK_COUNTER;
 
 public class FabricUpfProgrammableTest {
 
@@ -337,7 +358,7 @@ public class FabricUpfProgrammableTest {
     }
 
     @Test
-    public void testCounter() throws Exception {
+    public void testApplyCounter() throws Exception {
         assertThat(
                 upfProgrammable.readCounter(TestUpfConstants.UPLINK_COUNTER.getCellId()),
                 equalTo(ZERO_UPLINK_COUNTER)

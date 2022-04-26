@@ -10,7 +10,9 @@ import java.util.Collection;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 
-import static org.easymock.EasyMock.*;
+import static org.easymock.EasyMock.createMock;
+import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.replay;
 
 /**
  * For faking writes to a p4runtime client. Currently, only used for testing
