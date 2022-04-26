@@ -1,4 +1,4 @@
-// Copyright 2022-present Intel Corporation
+// Copyright 2022-present Open Networking Foundation
 // SPDX-License-Identifier: Apache-2.0
 
 package org.stratumproject.fabric.tna.behaviour.upf;
