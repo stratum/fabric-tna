@@ -41,16 +41,13 @@ public class MockP4RuntimeClient implements P4RuntimeClient {
         igCounters = Maps.newHashMap();
         egCounters = Maps.newHashMap();
         LongStream.range(0, counterSize).forEach(i -> {
-
-        });
-        for (long i = 0; i < counterSize; i++) {
             igCounters.put(i, new PiCounterCell(
                     PiCounterCellId.ofIndirect(FABRIC_INGRESS_UPF_TERMINATIONS_COUNTER, i),
                     new PiCounterCellData(0, 0)));
             egCounters.put(i, new PiCounterCell(
                     PiCounterCellId.ofIndirect(FABRIC_EGRESS_UPF_TERMINATIONS_COUNTER, i),
                     new PiCounterCellData(0, 0)));
-        }
+        });
     }
 
     @Override
