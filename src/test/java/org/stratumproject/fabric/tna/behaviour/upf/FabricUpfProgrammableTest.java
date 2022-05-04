@@ -55,6 +55,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 
+import static junit.framework.TestCase.assertEquals;
 import static junit.framework.TestCase.assertNotNull;
 import static junit.framework.TestCase.assertTrue;
 import static org.easymock.EasyMock.anyString;
@@ -63,6 +64,10 @@ import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.replay;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
+import static org.onosproject.net.behaviour.upf.UpfEntityType.COUNTER;
+import static org.onosproject.net.behaviour.upf.UpfEntityType.EGRESS_COUNTER;
+import static org.onosproject.net.behaviour.upf.UpfEntityType.INGRESS_COUNTER;
+import static org.onosproject.net.behaviour.upf.UpfEntityType.SLICE_METER;
 import static org.stratumproject.fabric.tna.Constants.TNA;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_UPF_EG_TUNNEL_PEERS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_UPF_TERMINATIONS_COUNTER;
@@ -76,13 +81,21 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_ING
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_TERMINATIONS_COUNTER;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_UPLINK_SESSIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_UPLINK_TERMINATIONS;
-import static org.stratumproject.fabric.tna.behaviour.upf.TestUpfConstants.DL_COUNTER_BYTES;
-import static org.stratumproject.fabric.tna.behaviour.upf.TestUpfConstants.DL_COUNTER_PKTS;
+import static org.stratumproject.fabric.tna.behaviour.upf.TestUpfConstants.DL_EG_COUNTER_BYTES;
+import static org.stratumproject.fabric.tna.behaviour.upf.TestUpfConstants.DL_EG_COUNTER_PKTS;
+import static org.stratumproject.fabric.tna.behaviour.upf.TestUpfConstants.DL_IG_COUNTER_BYTES;
+import static org.stratumproject.fabric.tna.behaviour.upf.TestUpfConstants.DL_IG_COUNTER_PKTS;
 import static org.stratumproject.fabric.tna.behaviour.upf.TestUpfConstants.DOWNLINK_COUNTER;
+import static org.stratumproject.fabric.tna.behaviour.upf.TestUpfConstants.DOWNLINK_EG_COUNTER;
+import static org.stratumproject.fabric.tna.behaviour.upf.TestUpfConstants.DOWNLINK_IG_COUNTER;
 import static org.stratumproject.fabric.tna.behaviour.upf.TestUpfConstants.SLICE_MOBILE;
-import static org.stratumproject.fabric.tna.behaviour.upf.TestUpfConstants.UL_COUNTER_BYTES;
-import static org.stratumproject.fabric.tna.behaviour.upf.TestUpfConstants.UL_COUNTER_PKTS;
+import static org.stratumproject.fabric.tna.behaviour.upf.TestUpfConstants.UL_EG_COUNTER_BYTES;
+import static org.stratumproject.fabric.tna.behaviour.upf.TestUpfConstants.UL_EG_COUNTER_PKTS;
+import static org.stratumproject.fabric.tna.behaviour.upf.TestUpfConstants.UL_IG_COUNTER_BYTES;
+import static org.stratumproject.fabric.tna.behaviour.upf.TestUpfConstants.UL_IG_COUNTER_PKTS;
 import static org.stratumproject.fabric.tna.behaviour.upf.TestUpfConstants.UPLINK_COUNTER;
+import static org.stratumproject.fabric.tna.behaviour.upf.TestUpfConstants.UPLINK_EG_COUNTER;
+import static org.stratumproject.fabric.tna.behaviour.upf.TestUpfConstants.UPLINK_IG_COUNTER;
 import static org.stratumproject.fabric.tna.behaviour.upf.TestUpfConstants.ZERO_DOWNLINK_COUNTER;
 import static org.stratumproject.fabric.tna.behaviour.upf.TestUpfConstants.ZERO_UPLINK_COUNTER;
 
@@ -359,20 +372,43 @@ public class FabricUpfProgrammableTest {
 
     @Test
     public void testApplyCounter() throws Exception {
-        assertThat(
-                upfProgrammable.readCounter(TestUpfConstants.UPLINK_COUNTER.getCellId()),
-                equalTo(ZERO_UPLINK_COUNTER)
-        );
-        UpfCounter expectedCounter = TestUpfConstants.UPLINK_COUNTER;
+        UpfCounter expectedCounter = UPLINK_COUNTER;
         upfProgrammable.apply(expectedCounter);
         UpfCounter installedCounter =
-                upfProgrammable.readCounter(expectedCounter.getCellId());
+                upfProgrammable.readCounter(expectedCounter.getCellId(), COUNTER);
         assertThat(installedCounter, equalTo(expectedCounter));
-        upfProgrammable.apply(ZERO_UPLINK_COUNTER);
-        assertThat(
-                upfProgrammable.readCounter(TestUpfConstants.UPLINK_COUNTER.getCellId()),
-                equalTo(ZERO_UPLINK_COUNTER)
-        );
+    }
+
+    @Test
+    public void testApplyIngressCounter() throws Exception {
+        UpfCounter expectedCounter = UPLINK_IG_COUNTER;
+        upfProgrammable.apply(expectedCounter);
+        UpfCounter installedCounter =
+                upfProgrammable.readCounter(expectedCounter.getCellId(), INGRESS_COUNTER);
+        assertThat(installedCounter, equalTo(expectedCounter));
+    }
+
+    @Test
+    public void testApplyEgressCounter() throws Exception {
+        UpfCounter expectedCounter = UPLINK_EG_COUNTER;
+        upfProgrammable.apply(expectedCounter);
+        UpfCounter installedCounter =
+                upfProgrammable.readCounter(expectedCounter.getCellId(), EGRESS_COUNTER);
+        assertThat(installedCounter, equalTo(expectedCounter));
+    }
+
+    @Test
+    public void testInvalidCounterTypeOnReadCounter() throws Exception {
+        exceptionRule.expect(UpfProgrammableException.class);
+        exceptionRule.expectMessage("Unsupported counter type (SLICE_METER)!");
+        upfProgrammable.readCounter(0, SLICE_METER);
+    }
+
+    @Test
+    public void testInvalidCounterTypeOnReadCounters() throws Exception {
+        exceptionRule.expect(UpfProgrammableException.class);
+        exceptionRule.expectMessage("Unsupported counter type (SLICE_METER)!");
+        upfProgrammable.readCounters(0, SLICE_METER);
     }
 
     @Test
@@ -408,25 +444,100 @@ public class FabricUpfProgrammableTest {
 
         upfProgrammable.apply(UPLINK_COUNTER);
         upfProgrammable.apply(DOWNLINK_COUNTER);
-        Collection<? extends UpfEntity> allStats = upfProgrammable.readAll(UpfEntityType.COUNTER);
+        Collection<? extends UpfEntity> allStats = upfProgrammable.readAll(COUNTER);
         assertThat(allStats.size(), equalTo(TestUpfConstants.PHYSICAL_COUNTER_SIZE));
         for (UpfEntity entity : allStats) {
             UpfCounter stat = (UpfCounter) entity;
             if (stat.getCellId() == UPLINK_COUNTER.getCellId()) {
-                assertThat(stat.getIngressBytes(), equalTo(UL_COUNTER_BYTES));
-                assertThat(stat.getEgressBytes(), equalTo(UL_COUNTER_BYTES));
-                assertThat(stat.getIngressPkts(), equalTo(UL_COUNTER_PKTS));
-                assertThat(stat.getEgressPkts(), equalTo(UL_COUNTER_PKTS));
+                assertEquals(stat.type(), COUNTER);
+                assertThat(stat.getIngressBytes().get(), equalTo(UL_IG_COUNTER_BYTES));
+                assertThat(stat.getEgressBytes().get(), equalTo(UL_EG_COUNTER_BYTES));
+                assertThat(stat.getIngressPkts().get(), equalTo(UL_IG_COUNTER_PKTS));
+                assertThat(stat.getEgressPkts().get(), equalTo(UL_EG_COUNTER_PKTS));
             } else if (stat.getCellId() == DOWNLINK_COUNTER.getCellId()) {
-                assertThat(stat.getIngressBytes(), equalTo(DL_COUNTER_BYTES));
-                assertThat(stat.getEgressBytes(), equalTo(DL_COUNTER_BYTES));
-                assertThat(stat.getIngressPkts(), equalTo(DL_COUNTER_PKTS));
-                assertThat(stat.getEgressPkts(), equalTo(UL_COUNTER_PKTS));
+                assertEquals(stat.type(), COUNTER);
+                assertThat(stat.getIngressBytes().get(), equalTo(DL_IG_COUNTER_BYTES));
+                assertThat(stat.getEgressBytes().get(), equalTo(DL_EG_COUNTER_BYTES));
+                assertThat(stat.getIngressPkts().get(), equalTo(DL_IG_COUNTER_PKTS));
+                assertThat(stat.getEgressPkts().get(), equalTo(DL_EG_COUNTER_PKTS));
             } else {
-                assertThat(stat.getIngressBytes(), equalTo(0L));
-                assertThat(stat.getEgressBytes(), equalTo(0L));
-                assertThat(stat.getIngressPkts(), equalTo(0L));
-                assertThat(stat.getEgressPkts(), equalTo(0L));
+                assertEquals(stat.type(), COUNTER);
+                assertThat(stat.getIngressBytes().get(), equalTo(0L));
+                assertThat(stat.getEgressBytes().get(), equalTo(0L));
+                assertThat(stat.getIngressPkts().get(), equalTo(0L));
+                assertThat(stat.getEgressPkts().get(), equalTo(0L));
+            }
+        }
+
+        upfProgrammable.apply(ZERO_UPLINK_COUNTER);
+        upfProgrammable.apply(ZERO_DOWNLINK_COUNTER);
+        assertAllZeroCounters();
+    }
+
+    @Test
+    public void testReadAllIngressCounters() throws Exception {
+        assertAllZeroCounters();
+
+        upfProgrammable.apply(UPLINK_IG_COUNTER);
+        upfProgrammable.apply(DOWNLINK_IG_COUNTER);
+        Collection<? extends UpfEntity> allStats = upfProgrammable.readAll(INGRESS_COUNTER);
+        assertThat(allStats.size(), equalTo(TestUpfConstants.PHYSICAL_COUNTER_SIZE));
+        for (UpfEntity entity : allStats) {
+            UpfCounter stat = (UpfCounter) entity;
+            if (stat.getCellId() == UPLINK_COUNTER.getCellId()) {
+                assertEquals(stat.type(), INGRESS_COUNTER);
+                assertThat(stat.getIngressBytes().get(), equalTo(UL_IG_COUNTER_BYTES));
+                assertThat(stat.getIngressPkts().get(), equalTo(UL_IG_COUNTER_PKTS));
+                assertTrue(stat.getEgressBytes().isEmpty());
+                assertTrue(stat.getEgressPkts().isEmpty());
+            } else if (stat.getCellId() == DOWNLINK_COUNTER.getCellId()) {
+                assertEquals(stat.type(), INGRESS_COUNTER);
+                assertThat(stat.getIngressBytes().get(), equalTo(DL_IG_COUNTER_BYTES));
+                assertThat(stat.getIngressPkts().get(), equalTo(DL_IG_COUNTER_PKTS));
+                assertTrue(stat.getEgressBytes().isEmpty());
+                assertTrue(stat.getEgressPkts().isEmpty());
+            } else {
+                assertEquals(stat.type(), INGRESS_COUNTER);
+                assertThat(stat.getIngressBytes().get(), equalTo(0L));
+                assertThat(stat.getIngressPkts().get(), equalTo(0L));
+                assertTrue(stat.getEgressBytes().isEmpty());
+                assertTrue(stat.getEgressPkts().isEmpty());
+            }
+        }
+
+        upfProgrammable.apply(ZERO_UPLINK_COUNTER);
+        upfProgrammable.apply(ZERO_DOWNLINK_COUNTER);
+        assertAllZeroCounters();
+    }
+
+    @Test
+    public void testReadAllEgressCounters() throws Exception {
+        assertAllZeroCounters();
+
+        upfProgrammable.apply(UPLINK_EG_COUNTER);
+        upfProgrammable.apply(DOWNLINK_EG_COUNTER);
+        Collection<? extends UpfEntity> allStats = upfProgrammable.readAll(EGRESS_COUNTER);
+        assertThat(allStats.size(), equalTo(TestUpfConstants.PHYSICAL_COUNTER_SIZE));
+        for (UpfEntity entity : allStats) {
+            UpfCounter stat = (UpfCounter) entity;
+            if (stat.getCellId() == UPLINK_COUNTER.getCellId()) {
+                assertEquals(stat.type(), EGRESS_COUNTER);
+                assertThat(stat.getEgressBytes().get(), equalTo(UL_EG_COUNTER_BYTES));
+                assertThat(stat.getEgressPkts().get(), equalTo(UL_EG_COUNTER_PKTS));
+                assertTrue(stat.getIngressBytes().isEmpty());
+                assertTrue(stat.getIngressPkts().isEmpty());
+            } else if (stat.getCellId() == DOWNLINK_COUNTER.getCellId()) {
+                assertEquals(stat.type(), EGRESS_COUNTER);
+                assertThat(stat.getEgressBytes().get(), equalTo(DL_EG_COUNTER_BYTES));
+                assertThat(stat.getEgressPkts().get(), equalTo(DL_EG_COUNTER_PKTS));
+                assertTrue(stat.getIngressBytes().isEmpty());
+                assertTrue(stat.getIngressPkts().isEmpty());
+            } else {
+                assertEquals(stat.type(), EGRESS_COUNTER);
+                assertThat(stat.getEgressBytes().get(), equalTo(0L));
+                assertThat(stat.getEgressPkts().get(), equalTo(0L));
+                assertTrue(stat.getIngressBytes().isEmpty());
+                assertTrue(stat.getIngressPkts().isEmpty());
             }
         }
 
@@ -436,26 +547,26 @@ public class FabricUpfProgrammableTest {
     }
 
     private void assertAllZeroCounters() throws UpfProgrammableException {
-        Collection<? extends UpfEntity> allStats = upfProgrammable.readAll(UpfEntityType.COUNTER);
+        Collection<? extends UpfEntity> allStats = upfProgrammable.readAll(COUNTER);
         assertThat(allStats.size(), equalTo(TestUpfConstants.PHYSICAL_COUNTER_SIZE));
         for (UpfEntity entity : allStats) {
             UpfCounter stat = (UpfCounter) entity;
-            assertThat(stat.getIngressBytes(), equalTo(0L));
-            assertThat(stat.getEgressBytes(), equalTo(0L));
-            assertThat(stat.getIngressPkts(), equalTo(0L));
-            assertThat(stat.getEgressPkts(), equalTo(0L));
+            assertThat(stat.getIngressBytes().get(), equalTo(0L));
+            assertThat(stat.getEgressBytes().get(), equalTo(0L));
+            assertThat(stat.getIngressPkts().get(), equalTo(0L));
+            assertThat(stat.getEgressPkts().get(), equalTo(0L));
         }
     }
 
     @Test
     public void testReadAllCountersLimitedCounters() throws Exception {
-        Collection<UpfCounter> allStats = upfProgrammable.readCounters(10);
+        Collection<UpfCounter> allStats = upfProgrammable.readCounters(10, COUNTER);
         assertThat(allStats.size(), equalTo(10));
     }
 
     @Test
     public void testReadAllCountersPhysicalLimit() throws Exception {
-        Collection<UpfCounter> allStats = upfProgrammable.readCounters(1024);
+        Collection<UpfCounter> allStats = upfProgrammable.readCounters(1024, COUNTER);
         assertThat(allStats.size(), equalTo(TestUpfConstants.PHYSICAL_COUNTER_SIZE));
     }
 

@@ -122,10 +122,14 @@ public final class TestUpfConstants {
     public static final int PHYSICAL_MAX_SLICE_METERS = 1 << 6;
 
 
-    public static final long UL_COUNTER_BYTES = 12;
-    public static final long UL_COUNTER_PKTS = 15;
-    public static final long DL_COUNTER_BYTES = 12;
-    public static final long DL_COUNTER_PKTS = 15;
+    public static final long UL_IG_COUNTER_BYTES = 12;
+    public static final long UL_IG_COUNTER_PKTS = 13;
+    public static final long UL_EG_COUNTER_BYTES = 14;
+    public static final long UL_EG_COUNTER_PKTS = 15;
+    public static final long DL_IG_COUNTER_BYTES = 16;
+    public static final long DL_IG_COUNTER_PKTS = 17;
+    public static final long DL_EG_COUNTER_BYTES = 18;
+    public static final long DL_EG_COUNTER_PKTS = 19;
 
     public static final byte APP_FILTERING_ID = 10;
     public static final byte DEFAULT_APP_ID = 0;
@@ -259,8 +263,18 @@ public final class TestUpfConstants {
 
     public static final UpfCounter UPLINK_COUNTER = UpfCounter.builder()
             .withCellId(UPLINK_COUNTER_CELL_ID)
-            .setIngress(UL_COUNTER_PKTS, UL_COUNTER_BYTES)
-            .setEgress(UL_COUNTER_PKTS, UL_COUNTER_BYTES)
+            .setIngress(UL_IG_COUNTER_PKTS, UL_IG_COUNTER_BYTES)
+            .setEgress(UL_EG_COUNTER_PKTS, UL_EG_COUNTER_BYTES)
+            .build();
+
+    public static final UpfCounter UPLINK_IG_COUNTER = UpfCounter.builder()
+            .withCellId(UPLINK_COUNTER_CELL_ID)
+            .setIngress(UL_IG_COUNTER_PKTS, UL_IG_COUNTER_BYTES)
+            .build();
+
+    public static final UpfCounter UPLINK_EG_COUNTER = UpfCounter.builder()
+            .withCellId(UPLINK_COUNTER_CELL_ID)
+            .setEgress(UL_EG_COUNTER_PKTS, UL_EG_COUNTER_BYTES)
             .build();
 
     public static final UpfCounter ZERO_UPLINK_COUNTER = UpfCounter.builder()
@@ -271,8 +285,18 @@ public final class TestUpfConstants {
 
     public static final UpfCounter DOWNLINK_COUNTER = UpfCounter.builder()
             .withCellId(DOWNLINK_COUNTER_CELL_ID)
-            .setIngress(DL_COUNTER_PKTS, DL_COUNTER_BYTES)
-            .setEgress(DL_COUNTER_PKTS, DL_COUNTER_BYTES)
+            .setIngress(DL_IG_COUNTER_PKTS, DL_IG_COUNTER_BYTES)
+            .setEgress(DL_EG_COUNTER_PKTS, DL_EG_COUNTER_BYTES)
+            .build();
+
+    public static final UpfCounter DOWNLINK_IG_COUNTER = UpfCounter.builder()
+            .withCellId(DOWNLINK_COUNTER_CELL_ID)
+            .setIngress(DL_IG_COUNTER_PKTS, DL_IG_COUNTER_BYTES)
+            .build();
+
+    public static final UpfCounter DOWNLINK_EG_COUNTER = UpfCounter.builder()
+            .withCellId(DOWNLINK_COUNTER_CELL_ID)
+            .setEgress(DL_EG_COUNTER_PKTS, DL_EG_COUNTER_BYTES)
             .build();
 
     public static final UpfCounter ZERO_DOWNLINK_COUNTER = UpfCounter.builder()
