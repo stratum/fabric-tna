@@ -5,8 +5,8 @@ package org.stratumproject.fabric.tna.behaviour.upf;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import org.apache.commons.lang3.tuple.Pair;
-import org.glassfish.jersey.internal.guava.Sets;
 import org.onlab.packet.Ip4Prefix;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
@@ -563,7 +563,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         final List<PiEntity> counterRequests = Lists.newArrayList();
         if (isIngressCounter(upfCounter.type())) {
             if (upfCounter.getIngressPkts().isEmpty() || upfCounter.getIngressBytes().isEmpty()) {
-                throw new UpfProgrammableException("INGRESS counter without ingress packets or bytes!");
+                throw new UpfProgrammableException("Ingress counter without ingress packets or bytes!");
             }
             counterRequests.add(new PiCounterCell(
                     PiCounterCellId.ofIndirect(FABRIC_INGRESS_UPF_TERMINATIONS_COUNTER, upfCounter.getCellId()),
@@ -572,7 +572,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         }
         if (isEgressCounter(upfCounter.type())) {
             if (upfCounter.getEgressPkts().isEmpty() || upfCounter.getEgressBytes().isEmpty()) {
-                throw new UpfProgrammableException("INGRESS counter without ingress packets or bytes!");
+                throw new UpfProgrammableException("Egress counter without ingress packets or bytes!");
             }
             counterRequests.add(new PiCounterCell(
                     PiCounterCellId.ofIndirect(FABRIC_EGRESS_UPF_TERMINATIONS_COUNTER, upfCounter.getCellId()),
@@ -709,14 +709,12 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         List<PiCounterCellHandle> counterCellHandles = Lists.newArrayList();
         if (isIngressCounter(type)) {
             counterCellHandles.add(PiCounterCellHandle.of(
-                    deviceId,
-                    PiCounterCellId.ofIndirect(FABRIC_INGRESS_UPF_TERMINATIONS_COUNTER, cellId)
+                    deviceId, PiCounterCellId.ofIndirect(FABRIC_INGRESS_UPF_TERMINATIONS_COUNTER, cellId)
             ));
         }
         if (isEgressCounter(type)) {
             counterCellHandles.add(PiCounterCellHandle.of(
-                    deviceId,
-                    PiCounterCellId.ofIndirect(FABRIC_EGRESS_UPF_TERMINATIONS_COUNTER, cellId)
+                    deviceId, PiCounterCellId.ofIndirect(FABRIC_EGRESS_UPF_TERMINATIONS_COUNTER, cellId)
             ));
         }
 
@@ -1110,6 +1108,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     private boolean isIngressCounter(UpfEntityType type) {
         return type.equals(UpfEntityType.COUNTER) || type.equals(UpfEntityType.INGRESS_COUNTER);
     }
+
     private boolean isEgressCounter(UpfEntityType type) {
         return type.equals(UpfEntityType.COUNTER) || type.equals(UpfEntityType.EGRESS_COUNTER);
     }
