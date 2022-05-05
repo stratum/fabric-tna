@@ -561,7 +561,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
     private void applyUpfCounter(UpfCounter upfCounter) throws UpfProgrammableException {
         final List<PiEntity> counterRequests = Lists.newArrayList();
-        if (isIngressCounter(upfCounter.type())) {
+        if (isIngressCounter(upfCounter.type()) || isBiCounter(upfCounter.type())) {
             if (upfCounter.getIngressPkts().isEmpty() || upfCounter.getIngressBytes().isEmpty()) {
                 throw new UpfProgrammableException("Ingress counter without ingress packets or bytes!");
             }
@@ -570,7 +570,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                     new PiCounterCellData(upfCounter.getIngressPkts().get(), upfCounter.getIngressBytes().get()))
             );
         }
-        if (isEgressCounter(upfCounter.type())) {
+        if (isEgressCounter(upfCounter.type()) || isBiCounter(upfCounter.type())) {
             if (upfCounter.getEgressPkts().isEmpty() || upfCounter.getEgressBytes().isEmpty()) {
                 throw new UpfProgrammableException("Egress counter without ingress packets or bytes!");
             }
@@ -612,10 +612,10 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
         // Generate the counter cell IDs.
         Set<PiCounterId> counterIds = Sets.newHashSet();
-        if (isIngressCounter(type)) {
+        if (isIngressCounter(type) || isBiCounter(type)) {
             counterIds.add(FABRIC_INGRESS_UPF_TERMINATIONS_COUNTER);
         }
-        if (isEgressCounter(type)) {
+        if (isEgressCounter(type) || isBiCounter(type)) {
             counterIds.add(FABRIC_EGRESS_UPF_TERMINATIONS_COUNTER);
         }
 
@@ -648,6 +648,12 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                                        counterCell.data().bytes());
             } else {
                 log.warn("Unrecognized counter ID {}, skipping", counterCell);
+            }
+            if (isIngressCounter(type)) {
+                statsBuilder.isIngressCounter();
+            }
+            if (isEgressCounter(type)) {
+                statsBuilder.isEgressCounter();
             }
         });
 
@@ -707,12 +713,12 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
 
         // Make list of cell handles we want to read.
         List<PiCounterCellHandle> counterCellHandles = Lists.newArrayList();
-        if (isIngressCounter(type)) {
+        if (isIngressCounter(type) || isBiCounter(type)) {
             counterCellHandles.add(PiCounterCellHandle.of(
                     deviceId, PiCounterCellId.ofIndirect(FABRIC_INGRESS_UPF_TERMINATIONS_COUNTER, cellId)
             ));
         }
-        if (isEgressCounter(type)) {
+        if (isEgressCounter(type) || isBiCounter(type)) {
             counterCellHandles.add(PiCounterCellHandle.of(
                     deviceId, PiCounterCellId.ofIndirect(FABRIC_EGRESS_UPF_TERMINATIONS_COUNTER, cellId)
             ));
@@ -740,6 +746,12 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                 stats.setEgress(counterCell.data().packets(), counterCell.data().bytes());
             } else {
                 log.warn("Unrecognized counter ID {}, skipping", counterCell);
+            }
+            if (isIngressCounter(type)) {
+                stats.isIngressCounter();
+            }
+            if (isEgressCounter(type)) {
+                stats.isEgressCounter();
             }
         });
         return stats.build();
@@ -1106,10 +1118,14 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     }
 
     private boolean isIngressCounter(UpfEntityType type) {
-        return type.equals(UpfEntityType.COUNTER) || type.equals(UpfEntityType.INGRESS_COUNTER);
+        return type.equals(UpfEntityType.INGRESS_COUNTER);
+    }
+
+    private boolean isBiCounter(UpfEntityType type) {
+        return type.equals(UpfEntityType.COUNTER);
     }
 
     private boolean isEgressCounter(UpfEntityType type) {
-        return type.equals(UpfEntityType.COUNTER) || type.equals(UpfEntityType.EGRESS_COUNTER);
+        return type.equals(UpfEntityType.EGRESS_COUNTER);
     }
 }

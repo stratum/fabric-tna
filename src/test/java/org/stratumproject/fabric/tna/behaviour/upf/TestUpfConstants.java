@@ -270,11 +270,13 @@ public final class TestUpfConstants {
     public static final UpfCounter UPLINK_IG_COUNTER = UpfCounter.builder()
             .withCellId(UPLINK_COUNTER_CELL_ID)
             .setIngress(UL_IG_COUNTER_PKTS, UL_IG_COUNTER_BYTES)
+            .isIngressCounter()
             .build();
 
     public static final UpfCounter UPLINK_EG_COUNTER = UpfCounter.builder()
             .withCellId(UPLINK_COUNTER_CELL_ID)
             .setEgress(UL_EG_COUNTER_PKTS, UL_EG_COUNTER_BYTES)
+            .isEgressCounter()
             .build();
 
     public static final UpfCounter ZERO_UPLINK_COUNTER = UpfCounter.builder()
@@ -292,11 +294,13 @@ public final class TestUpfConstants {
     public static final UpfCounter DOWNLINK_IG_COUNTER = UpfCounter.builder()
             .withCellId(DOWNLINK_COUNTER_CELL_ID)
             .setIngress(DL_IG_COUNTER_PKTS, DL_IG_COUNTER_BYTES)
+            .isIngressCounter()
             .build();
 
     public static final UpfCounter DOWNLINK_EG_COUNTER = UpfCounter.builder()
             .withCellId(DOWNLINK_COUNTER_CELL_ID)
             .setEgress(DL_EG_COUNTER_PKTS, DL_EG_COUNTER_BYTES)
+            .isEgressCounter()
             .build();
 
     public static final UpfCounter ZERO_DOWNLINK_COUNTER = UpfCounter.builder()
