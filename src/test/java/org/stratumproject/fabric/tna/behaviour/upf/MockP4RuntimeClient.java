@@ -1,4 +1,4 @@
-// Copyright 2022-present Open Networking Foundation
+// Copyright 2022-present Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 
 package org.stratumproject.fabric.tna.behaviour.upf;
@@ -27,8 +27,8 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_ING
 public class MockP4RuntimeClient implements P4RuntimeClient {
 
     private final DeviceId deviceId;
-    private final Map<Long, PiCounterCell> igCounters;
-    private final Map<Long, PiCounterCell> egCounters;
+    final Map<Long, PiCounterCell> igCounters;
+    final Map<Long, PiCounterCell> egCounters;
 
     /**
      * Used to mock P4Runtime client.

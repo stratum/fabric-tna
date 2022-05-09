@@ -15,7 +15,7 @@ import org.onosproject.p4runtime.api.P4RuntimeEventListener;
  */
 public class MockP4RuntimeController implements P4RuntimeController {
 
-    private final P4RuntimeClient mockP4rtClient;
+    final MockP4RuntimeClient mockP4rtClient;
 
     /**
      * Used to mock counter read/write requests.

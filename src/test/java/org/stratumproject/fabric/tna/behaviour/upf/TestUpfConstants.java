@@ -33,6 +33,9 @@ import org.onosproject.net.meter.MeterRequest;
 import org.onosproject.net.meter.MeterScope;
 import org.onosproject.net.pi.runtime.PiAction;
 import org.onosproject.net.pi.runtime.PiActionParam;
+import org.onosproject.net.pi.runtime.PiCounterCell;
+import org.onosproject.net.pi.runtime.PiCounterCellData;
+import org.onosproject.net.pi.runtime.PiCounterCellId;
 import org.onosproject.net.pi.runtime.PiMeterCellId;
 import org.stratumproject.fabric.tna.behaviour.P4InfoConstants;
 
@@ -43,6 +46,7 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.APP_METER_
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.CTR_ID;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_UPF_EG_TUNNEL_PEERS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_UPF_LOAD_TUNNEL_PARAMS;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_UPF_TERMINATIONS_COUNTER;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_QOS_SLICE_TC_METER;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_APPLICATIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_APP_FWD;
@@ -61,6 +65,7 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_ING
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_SET_DOWNLINK_SESSION_BUF;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_SET_ROUTING_IPV4_DST;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_SET_UPLINK_SESSION;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_TERMINATIONS_COUNTER;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_UPLINK_DROP;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_UPLINK_SESSIONS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_UPLINK_TERMINATIONS;
@@ -279,12 +284,6 @@ public final class TestUpfConstants {
             .isEgressCounter()
             .build();
 
-    public static final UpfCounter ZERO_UPLINK_COUNTER = UpfCounter.builder()
-            .withCellId(UPLINK_COUNTER_CELL_ID)
-            .setIngress(0, 0)
-            .setEgress(0, 0)
-            .build();
-
     public static final UpfCounter DOWNLINK_COUNTER = UpfCounter.builder()
             .withCellId(DOWNLINK_COUNTER_CELL_ID)
             .setIngress(DL_IG_COUNTER_PKTS, DL_IG_COUNTER_BYTES)
@@ -301,12 +300,6 @@ public final class TestUpfConstants {
             .withCellId(DOWNLINK_COUNTER_CELL_ID)
             .setEgress(DL_EG_COUNTER_PKTS, DL_EG_COUNTER_BYTES)
             .isEgressCounter()
-            .build();
-
-    public static final UpfCounter ZERO_DOWNLINK_COUNTER = UpfCounter.builder()
-            .withCellId(DOWNLINK_COUNTER_CELL_ID)
-            .setIngress(0, 0)
-            .setEgress(0, 0)
             .build();
 
     public static final FlowRule FABRIC_INGRESS_GTP_TUNNEL_PEER = DefaultFlowRule.builder()
@@ -627,6 +620,26 @@ public final class TestUpfConstants {
             .withScope(MeterScope.of(FABRIC_INGRESS_QOS_SLICE_TC_METER.id()))
             .withUnit(BYTES_PER_SEC)
             .remove();
+
+    public static final PiCounterCell FABRIC_UPLINK_IG_COUNTER = new PiCounterCell(
+            PiCounterCellId.ofIndirect(FABRIC_INGRESS_UPF_TERMINATIONS_COUNTER, UPLINK_COUNTER_CELL_ID),
+            new PiCounterCellData(UL_IG_COUNTER_PKTS, UL_IG_COUNTER_BYTES)
+    );
+
+    public static final PiCounterCell FABRIC_UPLINK_EG_COUNTER = new PiCounterCell(
+            PiCounterCellId.ofIndirect(FABRIC_EGRESS_UPF_TERMINATIONS_COUNTER, UPLINK_COUNTER_CELL_ID),
+            new PiCounterCellData(UL_EG_COUNTER_PKTS, UL_EG_COUNTER_BYTES)
+    );
+
+    public static final PiCounterCell FABRIC_DOWNLINK_IG_COUNTER = new PiCounterCell(
+            PiCounterCellId.ofIndirect(FABRIC_INGRESS_UPF_TERMINATIONS_COUNTER, DOWNLINK_COUNTER_CELL_ID),
+            new PiCounterCellData(DL_IG_COUNTER_PKTS, DL_IG_COUNTER_BYTES)
+    );
+
+    public static final PiCounterCell FABRIC_DOWNLINK_EG_COUNTER = new PiCounterCell(
+            PiCounterCellId.ofIndirect(FABRIC_EGRESS_UPF_TERMINATIONS_COUNTER, DOWNLINK_COUNTER_CELL_ID),
+            new PiCounterCellData(DL_EG_COUNTER_PKTS, DL_EG_COUNTER_BYTES)
+    );
 
     /**
      * Hidden constructor for utility class.
