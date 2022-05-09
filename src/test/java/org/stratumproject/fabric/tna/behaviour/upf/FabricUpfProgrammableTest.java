@@ -84,10 +84,6 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_ING
 import static org.stratumproject.fabric.tna.behaviour.upf.TestUpfConstants.DOWNLINK_COUNTER;
 import static org.stratumproject.fabric.tna.behaviour.upf.TestUpfConstants.DOWNLINK_EG_COUNTER;
 import static org.stratumproject.fabric.tna.behaviour.upf.TestUpfConstants.DOWNLINK_IG_COUNTER;
-import static org.stratumproject.fabric.tna.behaviour.upf.TestUpfConstants.FABRIC_DOWNLINK_EG_COUNTER;
-import static org.stratumproject.fabric.tna.behaviour.upf.TestUpfConstants.FABRIC_DOWNLINK_IG_COUNTER;
-import static org.stratumproject.fabric.tna.behaviour.upf.TestUpfConstants.FABRIC_UPLINK_EG_COUNTER;
-import static org.stratumproject.fabric.tna.behaviour.upf.TestUpfConstants.FABRIC_UPLINK_IG_COUNTER;
 import static org.stratumproject.fabric.tna.behaviour.upf.TestUpfConstants.SLICE_MOBILE;
 import static org.stratumproject.fabric.tna.behaviour.upf.TestUpfConstants.UPLINK_COUNTER;
 import static org.stratumproject.fabric.tna.behaviour.upf.TestUpfConstants.UPLINK_EG_COUNTER;
