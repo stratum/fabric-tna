@@ -19,6 +19,9 @@ SDE_VER_ := $(shell echo $(SDE_VERSION) | tr . _)
 # local ~/.m2 directory using the MVN_CACHE env.
 MVN_CACHE_DOCKER_VOLUME := mvn-cache-$(DIR_SHA)
 MVN_CACHE ?= $(MVN_CACHE_DOCKER_VOLUME)
+# By default use the maven settings in local ~/.m2, but allow passing a custom
+# settings.
+MVN_SETTINGS ?= $(shell test -f ~/.m2/settings.xml && echo "$${HOME}/.m2/settings.xml")
 MVN_FLAGS ?=
 
 ONOS_HOST ?= localhost
@@ -94,6 +97,9 @@ constants:
 
 _m2_vol:
 	docker volume create --opt o=uid=$(UID) --opt device=tmpfs --opt type=tmpfs $(MVN_CACHE_DOCKER_VOLUME)
+ifneq ($(MVN_SETTINGS),)
+	$(eval MVN_SETTINGS_MOUNT := -v $(MVN_SETTINGS):/.m2/settings.xml)
+endif
 
 _mvn_package: _m2_vol
 	$(info *** Building ONOS app...)
@@ -101,7 +107,8 @@ _mvn_package: _m2_vol
 	docker run --rm -v $(DIR):/mvn-src -w /mvn-src --user $(UID) \
 		-e MAVEN_OPTS=-Dmaven.repo.local=/.m2 \
 		-e MAVEN_CONFIG=/.m2 \
-		-v $(MVN_CACHE):/.m2 $(MAVEN_DOCKER_IMAGE) mvn $(MVN_FLAGS) clean package
+		-v $(MVN_CACHE):/.m2 \
+		$(MVN_SETTINGS_MOUNT) $(MAVEN_DOCKER_IMAGE) mvn $(MVN_FLAGS) clean package
 
 pipeconf: _mvn_package
 	$(info *** ONOS pipeconf .oar package created succesfully)
@@ -112,7 +119,8 @@ pipeconf-test: _mvn_package
 	docker run --rm -v $(DIR):/mvn-src -w /mvn-src --user $(UID) \
 		-e MAVEN_OPTS=-Dmaven.repo.local=/.m2 \
 		-e MAVEN_CONFIG=/.m2 \
-		-v $(MVN_CACHE):/.m2 $(MAVEN_DOCKER_IMAGE) mvn test
+		-v $(MVN_CACHE):/.m2 \
+		$(MVN_SETTINGS_MOUNT) $(MAVEN_DOCKER_IMAGE) mvn test
 
 pipeconf-ci: _m2_vol
 	$(info *** Building ONOS app...)
@@ -120,7 +128,8 @@ pipeconf-ci: _m2_vol
 	docker run --rm -v $(DIR):/mvn-src -w /mvn-src --user $(UID) \
 		-e MAVEN_OPTS=-Dmaven.repo.local=/.m2 \
 		-e MAVEN_CONFIG=/.m2 \
-		-v $(MVN_CACHE):/.m2 $(MAVEN_DOCKER_IMAGE) mvn $(MVN_FLAGS) clean package verify
+		-v $(MVN_CACHE):/.m2 \
+		$(MVN_SETTINGS_MOUNT) $(MAVEN_DOCKER_IMAGE) mvn $(MVN_FLAGS) clean package verify
 
 _pipeconf-oar-exists:
 	@test -f $(PIPECONF_OAR_FILE) || (echo "pipeconf .oar not found" && exit 1)
