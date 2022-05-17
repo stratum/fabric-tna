@@ -47,9 +47,12 @@ import org.onosproject.net.pi.model.PiMeterModel;
 import org.onosproject.net.pi.model.PiTableId;
 import org.onosproject.net.pi.model.PiTableModel;
 import org.onosproject.net.pi.runtime.PiCounterCell;
+import org.onosproject.net.pi.runtime.PiCounterCellData;
 import org.onosproject.net.pi.runtime.PiCounterCellHandle;
 import org.onosproject.net.pi.runtime.PiCounterCellId;
+import org.onosproject.net.pi.runtime.PiEntity;
 import org.onosproject.net.pi.runtime.PiMeterCellId;
+import org.onosproject.p4runtime.api.P4RuntimeWriteClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.stratumproject.fabric.tna.Constants;
@@ -559,6 +562,39 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         return upfTerminations;
     }
 
+    private void applyUpfCounter(UpfCounter upfCounter) throws UpfProgrammableException {
+        final List<PiEntity> counterRequests = Lists.newArrayList();
+        if (isIngressCounter(upfCounter.type()) || isBiCounter(upfCounter.type())) {
+            if (upfCounter.getIngressPkts().isEmpty() || upfCounter.getIngressBytes().isEmpty()) {
+                throw new UpfProgrammableException("Ingress counter without ingress packets or bytes!");
+            }
+            counterRequests.add(new PiCounterCell(
+                    PiCounterCellId.ofIndirect(FABRIC_INGRESS_UPF_TERMINATIONS_COUNTER, upfCounter.getCellId()),
+                    new PiCounterCellData(upfCounter.getIngressPkts().get(), upfCounter.getIngressBytes().get()))
+            );
+        }
+        if (isEgressCounter(upfCounter.type()) || isBiCounter(upfCounter.type())) {
+            if (upfCounter.getEgressPkts().isEmpty() || upfCounter.getEgressBytes().isEmpty()) {
+                throw new UpfProgrammableException("Egress counter without ingress packets or bytes!");
+            }
+            counterRequests.add(new PiCounterCell(
+                    PiCounterCellId.ofIndirect(FABRIC_EGRESS_UPF_TERMINATIONS_COUNTER, upfCounter.getCellId()),
+                    new PiCounterCellData(upfCounter.getEgressPkts().get(), upfCounter.getEgressBytes().get()))
+            );
+        }
+        // Write on the device in sync mode.
+        P4RuntimeWriteClient.WriteResponse writeResponse = client.write(
+                        DEFAULT_P4_DEVICE_ID, pipeconf)
+                .modify(counterRequests)
+                .submitSync();
+        if (!writeResponse.failed().isEmpty()) {
+            writeResponse.failed().stream().filter(counterEntryResp -> !counterEntryResp.isSuccess())
+                    .forEach(counterEntryResp -> log.error("A counter was not modified correctly: {}",
+                                                          counterEntryResp.explanation()));
+            throw new UpfProgrammableException("Failed to modify counters");
+        }
+    }
+
     @Override
     public Collection<UpfCounter> readCounters(long maxCounterId, UpfEntityType type) throws UpfProgrammableException {
         assertCounterType(type);
@@ -752,14 +788,16 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
             case APPLICATION:
                 addUpfApplication((UpfApplication) entity);
                 break;
+            case COUNTER:
+            case INGRESS_COUNTER:
+            case EGRESS_COUNTER:
+                applyUpfCounter((UpfCounter) entity);
+                break;
             case SESSION_METER:
             case APPLICATION_METER:
             case SLICE_METER:
                 applyUpfMeter((UpfMeter) entity);
                 break;
-            case COUNTER:
-            case INGRESS_COUNTER:
-            case EGRESS_COUNTER:
             default:
                 throw new UpfProgrammableException(format("Adding entity type %s not supported.",
                                                           entity.type().humanReadableName()));

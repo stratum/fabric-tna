@@ -84,10 +84,6 @@ import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_ING
 import static org.stratumproject.fabric.tna.behaviour.upf.TestUpfConstants.DOWNLINK_COUNTER;
 import static org.stratumproject.fabric.tna.behaviour.upf.TestUpfConstants.DOWNLINK_EG_COUNTER;
 import static org.stratumproject.fabric.tna.behaviour.upf.TestUpfConstants.DOWNLINK_IG_COUNTER;
-import static org.stratumproject.fabric.tna.behaviour.upf.TestUpfConstants.FABRIC_DOWNLINK_EG_COUNTER;
-import static org.stratumproject.fabric.tna.behaviour.upf.TestUpfConstants.FABRIC_DOWNLINK_IG_COUNTER;
-import static org.stratumproject.fabric.tna.behaviour.upf.TestUpfConstants.FABRIC_UPLINK_EG_COUNTER;
-import static org.stratumproject.fabric.tna.behaviour.upf.TestUpfConstants.FABRIC_UPLINK_IG_COUNTER;
 import static org.stratumproject.fabric.tna.behaviour.upf.TestUpfConstants.SLICE_MOBILE;
 import static org.stratumproject.fabric.tna.behaviour.upf.TestUpfConstants.UPLINK_COUNTER;
 import static org.stratumproject.fabric.tna.behaviour.upf.TestUpfConstants.UPLINK_EG_COUNTER;
@@ -367,6 +363,33 @@ public class FabricUpfProgrammableTest {
     }
 
     @Test
+    public void testApplyCounter() throws Exception {
+        UpfCounter expectedCounter = UPLINK_COUNTER;
+        upfProgrammable.apply(expectedCounter);
+        UpfCounter installedCounter =
+                upfProgrammable.readCounter(expectedCounter.getCellId(), COUNTER);
+        assertThat(installedCounter, equalTo(expectedCounter));
+    }
+
+    @Test
+    public void testApplyIngressCounter() throws Exception {
+        UpfCounter expectedCounter = UPLINK_IG_COUNTER;
+        upfProgrammable.apply(expectedCounter);
+        UpfCounter installedCounter =
+                upfProgrammable.readCounter(expectedCounter.getCellId(), INGRESS_COUNTER);
+        assertThat(installedCounter, equalTo(expectedCounter));
+    }
+
+    @Test
+    public void testApplyEgressCounter() throws Exception {
+        UpfCounter expectedCounter = UPLINK_EG_COUNTER;
+        upfProgrammable.apply(expectedCounter);
+        UpfCounter installedCounter =
+                upfProgrammable.readCounter(expectedCounter.getCellId(), EGRESS_COUNTER);
+        assertThat(installedCounter, equalTo(expectedCounter));
+    }
+
+    @Test
     public void testInvalidCounterTypeOnReadCounter() throws Exception {
         exceptionRule.expect(UpfProgrammableException.class);
         exceptionRule.expectMessage("Unsupported counter type (SLICE_METER)!");
@@ -409,14 +432,8 @@ public class FabricUpfProgrammableTest {
 
     @Test
     public void testReadAllCounters() throws Exception {
-        mockP4RtController.mockP4rtClient.igCounters.put(
-                FABRIC_UPLINK_IG_COUNTER.cellId().index(), FABRIC_UPLINK_IG_COUNTER);
-        mockP4RtController.mockP4rtClient.igCounters.put(
-                FABRIC_DOWNLINK_IG_COUNTER.cellId().index(), FABRIC_DOWNLINK_IG_COUNTER);
-        mockP4RtController.mockP4rtClient.egCounters.put(
-                FABRIC_UPLINK_EG_COUNTER.cellId().index(), FABRIC_UPLINK_EG_COUNTER);
-        mockP4RtController.mockP4rtClient.egCounters.put(
-                FABRIC_DOWNLINK_EG_COUNTER.cellId().index(), FABRIC_DOWNLINK_EG_COUNTER);
+        upfProgrammable.apply(UPLINK_COUNTER);
+        upfProgrammable.apply(DOWNLINK_COUNTER);
 
         Collection<? extends UpfEntity> allStats = upfProgrammable.readAll(COUNTER);
         assertThat(allStats.size(), equalTo(TestUpfConstants.PHYSICAL_COUNTER_SIZE));
@@ -440,10 +457,8 @@ public class FabricUpfProgrammableTest {
 
     @Test
     public void testReadAllIngressCounters() throws Exception {
-        mockP4RtController.mockP4rtClient.igCounters.put(
-                FABRIC_UPLINK_IG_COUNTER.cellId().index(), FABRIC_UPLINK_IG_COUNTER);
-        mockP4RtController.mockP4rtClient.igCounters.put(
-                FABRIC_DOWNLINK_IG_COUNTER.cellId().index(), FABRIC_DOWNLINK_IG_COUNTER);
+        upfProgrammable.apply(UPLINK_IG_COUNTER);
+        upfProgrammable.apply(DOWNLINK_IG_COUNTER);
 
         Collection<? extends UpfEntity> allStats = upfProgrammable.readAll(INGRESS_COUNTER);
         assertThat(allStats.size(), equalTo(TestUpfConstants.PHYSICAL_COUNTER_SIZE));
@@ -467,10 +482,8 @@ public class FabricUpfProgrammableTest {
 
     @Test
     public void testReadAllEgressCounters() throws Exception {
-        mockP4RtController.mockP4rtClient.egCounters.put(
-                FABRIC_UPLINK_EG_COUNTER.cellId().index(), FABRIC_UPLINK_EG_COUNTER);
-        mockP4RtController.mockP4rtClient.egCounters.put(
-                FABRIC_DOWNLINK_EG_COUNTER.cellId().index(), FABRIC_DOWNLINK_EG_COUNTER);
+        upfProgrammable.apply(UPLINK_EG_COUNTER);
+        upfProgrammable.apply(DOWNLINK_EG_COUNTER);
 
         Collection<? extends UpfEntity> allStats = upfProgrammable.readAll(EGRESS_COUNTER);
         assertThat(allStats.size(), equalTo(TestUpfConstants.PHYSICAL_COUNTER_SIZE));
