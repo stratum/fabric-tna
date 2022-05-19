@@ -5,6 +5,7 @@ package org.stratumproject.fabric.tna.behaviour.upf;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import org.apache.commons.lang3.tuple.Pair;
 import org.onlab.packet.Ip4Prefix;
 import org.onosproject.core.ApplicationId;
@@ -65,8 +66,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.LongStream;
 
 import static java.lang.String.format;
+import static org.onosproject.net.behaviour.upf.UpfProgrammableException.Type.UNSUPPORTED_OPERATION;
 import static org.onosproject.net.pi.model.PiCounterType.INDIRECT;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_UPF_EG_TUNNEL_PEERS;
 import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_UPF_GTPU_ENCAP;
@@ -101,6 +104,9 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     private static final int DEFAULT_PRIORITY = 128;
     private static final long DEFAULT_P4_DEVICE_ID = 1;
 
+    private static final ImmutableSet<UpfEntityType> COUNTER_TYPES =
+            ImmutableSet.of(UpfEntityType.COUNTER, UpfEntityType.INGRESS_COUNTER, UpfEntityType.EGRESS_COUNTER);
+
     protected FlowRuleService flowRuleService;
     protected MeterService meterService;
     protected PacketService packetService;
@@ -112,7 +118,8 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     private long downlinkUeSessionsTableSize;
     private long uplinkUpfTerminationsTableSize;
     private long downlinkUpfTerminationsTableSize;
-    private long upfCounterSize;
+    private long ingressUpfCounterSize;
+    private long egressUpfCounterSize;
     private long gtpTunnelPeersTableSize;
     private long applicationsTableSize;
     private long appMeterSize;
@@ -259,7 +266,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         long sessionMeterSize = 0;
         long appMeterSize = 0;
         long sliceMeterSize = 0;
-        for (PiMeterModel piMeter: pipeconf.pipelineModel().meters()) {
+        for (PiMeterModel piMeter : pipeconf.pipelineModel().meters()) {
             if (piMeter.id().equals(FABRIC_INGRESS_UPF_SESSION_METER)) {
                 sessionMeterSize = piMeter.size();
             } else if (piMeter.id().equals(FABRIC_INGRESS_UPF_APP_METER)) {
@@ -280,7 +287,8 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         this.uplinkUpfTerminationsTableSize = uplinkUpfTerminationsTableSize;
         this.downlinkUpfTerminationsTableSize = downlinkUpfTerminationsTableSize;
         this.applicationsTableSize = applicationsTableSize;
-        this.upfCounterSize = Math.min(ingressCounterSize, egressCounterSize);
+        this.ingressUpfCounterSize = ingressCounterSize;
+        this.egressUpfCounterSize = egressCounterSize;
         this.gtpTunnelPeersTableSize = Math.min(ingressGtpTunnelPeersTableSize, egressGtpTunnelPeersTableSize);
         this.sessionMeterSize = sessionMeterSize;
         this.sliceMeterSize = sliceMeterSize;
@@ -432,7 +440,11 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
             case TUNNEL_PEER:
                 return getGtpTunnelPeers();
             case COUNTER:
-                return readCounters(-1);
+                return readCounters(-1, UpfEntityType.COUNTER);
+            case INGRESS_COUNTER:
+                return readCounters(-1, UpfEntityType.INGRESS_COUNTER);
+            case EGRESS_COUNTER:
+                return readCounters(-1, UpfEntityType.EGRESS_COUNTER);
             case APPLICATION:
                 return getUpfApplication();
             case SESSION_METER:
@@ -548,27 +560,25 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     }
 
     @Override
-    public Collection<UpfCounter> readCounters(long maxCounterId) {
+    public Collection<UpfCounter> readCounters(long maxCounterId, UpfEntityType type) throws UpfProgrammableException {
+        assertCounterType(type);
         if (!setupBehaviour("readCounters()")) {
             return null;
         }
 
-        long counterSize = upfCounterSize;
+        long counterSize = getEntitySize(type);
         if (maxCounterId != -1) {
             counterSize = Math.min(maxCounterId, counterSize);
         }
 
-        // Prepare UpfCounter object builders, one for each counter ID currently in use
-        Map<Integer, UpfCounter.Builder> upfCounterBuilders = Maps.newHashMap();
-        for (int cellId = 0; cellId < counterSize; cellId++) {
-            upfCounterBuilders.put(cellId, UpfCounter.builder().withCellId(cellId));
-        }
-
         // Generate the counter cell IDs.
-        Set<PiCounterId> counterIds = ImmutableSet.of(
-                FABRIC_INGRESS_UPF_TERMINATIONS_COUNTER,
-                FABRIC_EGRESS_UPF_TERMINATIONS_COUNTER
-        );
+        Set<PiCounterId> counterIds = Sets.newHashSet();
+        if (isIngressCounter(type) || isBiCounter(type)) {
+            counterIds.add(FABRIC_INGRESS_UPF_TERMINATIONS_COUNTER);
+        }
+        if (isEgressCounter(type) || isBiCounter(type)) {
+            counterIds.add(FABRIC_EGRESS_UPF_TERMINATIONS_COUNTER);
+        }
 
         // Query the device.
         Collection<PiCounterCell> counterEntryResponse = client.read(
@@ -577,20 +587,42 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                 .submitSync()
                 .all(PiCounterCell.class);
 
-        // Process response.
-        counterEntryResponse.forEach(counterCell -> {
+        // Generate list of requested cell indexes
+        List<Long> cellIds = LongStream.range(0, counterSize)
+                .boxed().collect(Collectors.toList());
+
+        return processCounterEntryResponse(
+                counterEntryResponse, cellIds, type);
+    }
+
+    /**
+     * Process the counters read from the device given the expected counter indexes
+     * and the UpfCounter Type.
+     */
+    private List<UpfCounter> processCounterEntryResponse(
+            Collection<PiCounterCell> readCounterEntries,
+            List<Long> expectedCounterIndex,
+            UpfEntityType type
+    ) {
+        // Prepare UpfCounter object builders, one for each expected counter index
+        Map<Long, UpfCounter.Builder> upfCounterBuilders = Maps.newHashMap();
+        expectedCounterIndex.forEach(cellId ->
+            upfCounterBuilders.put(cellId, UpfCounter.builder().withCellId(cellId.intValue()))
+        );
+        readCounterEntries.forEach(counterCell -> {
             if (counterCell.cellId().counterType() != INDIRECT) {
                 log.warn("Invalid counter data type {}, skipping", counterCell.cellId().counterType());
                 return;
             }
-            if (!upfCounterBuilders.containsKey((int) counterCell.cellId().index())) {
-                // Most likely Up4config.maxUes() is set to a value smaller than what the switch
-                // pipeline can hold.
-                log.debug("Unrecognized index {} when reading all counters, " +
+            if (!expectedCounterIndex.contains(counterCell.cellId().index())) {
+                // This can happen if the Up4Config.maxUes() is set to a value
+                // smaller than what the switch pipeline can hold, and we do a
+                // wild card read
+                log.debug("Unrecognized index {} when reading counters, " +
                                   "that's expected if we are manually limiting maxUes", counterCell);
                 return;
             }
-            UpfCounter.Builder statsBuilder = upfCounterBuilders.get((int) counterCell.cellId().index());
+            UpfCounter.Builder statsBuilder = upfCounterBuilders.get(counterCell.cellId().index());
             if (counterCell.cellId().counterId().equals(FABRIC_INGRESS_UPF_TERMINATIONS_COUNTER)) {
                 statsBuilder.setIngress(counterCell.data().packets(),
                                         counterCell.data().bytes());
@@ -600,8 +632,14 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
             } else {
                 log.warn("Unrecognized counter ID {}, skipping", counterCell);
             }
+            // UpfCounter builder defaults to type COUNTER
+            if (isIngressCounter(type)) {
+                statsBuilder.isIngressCounter();
+            }
+            if (isEgressCounter(type)) {
+                statsBuilder.isEgressCounter();
+            }
         });
-
         return upfCounterBuilders
                 .values()
                 .stream()
@@ -614,7 +652,10 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
         if (!setupBehaviour("tableSize()")) {
             return -1;
         }
+        return getEntitySize(entityType);
+    }
 
+    private long getEntitySize(UpfEntityType entityType) throws UpfProgrammableException {
         switch (entityType) {
             case INTERFACE:
                 return interfaceTableSize;
@@ -629,7 +670,11 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
             case TERMINATION_DOWNLINK:
                 return this.downlinkUpfTerminationsTableSize;
             case COUNTER:
-                return upfCounterSize;
+                return Math.min(ingressUpfCounterSize, egressUpfCounterSize);
+            case INGRESS_COUNTER:
+                return ingressUpfCounterSize;
+            case EGRESS_COUNTER:
+                return egressUpfCounterSize;
             case APPLICATION:
                 return applicationsTableSize;
             case APPLICATION_METER:
@@ -645,22 +690,29 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
     }
 
     @Override
-    public UpfCounter readCounter(int cellId) throws UpfProgrammableException {
+    public UpfCounter readCounter(int cellId, UpfEntityType type) throws UpfProgrammableException {
+        assertCounterType(type);
         if (!setupBehaviour("readCounter()")) {
             return null;
         }
-        if (cellId >= upfCounterSize || cellId < 0) {
+        if (cellId >= getEntitySize(type) || cellId < 0) {
             throw new UpfProgrammableException("Requested UPF counter cell index is out of bounds.",
                                                UpfProgrammableException.Type.ENTITY_OUT_OF_RANGE);
         }
         UpfCounter.Builder stats = UpfCounter.builder().withCellId(cellId);
 
         // Make list of cell handles we want to read.
-        List<PiCounterCellHandle> counterCellHandles = List.of(
-                PiCounterCellHandle.of(deviceId,
-                                       PiCounterCellId.ofIndirect(FABRIC_INGRESS_UPF_TERMINATIONS_COUNTER, cellId)),
-                PiCounterCellHandle.of(deviceId,
-                                       PiCounterCellId.ofIndirect(FABRIC_EGRESS_UPF_TERMINATIONS_COUNTER, cellId)));
+        List<PiCounterCellHandle> counterCellHandles = Lists.newArrayList();
+        if (isIngressCounter(type) || isBiCounter(type)) {
+            counterCellHandles.add(PiCounterCellHandle.of(
+                    deviceId, PiCounterCellId.ofIndirect(FABRIC_INGRESS_UPF_TERMINATIONS_COUNTER, cellId)
+            ));
+        }
+        if (isEgressCounter(type) || isBiCounter(type)) {
+            counterCellHandles.add(PiCounterCellHandle.of(
+                    deviceId, PiCounterCellId.ofIndirect(FABRIC_EGRESS_UPF_TERMINATIONS_COUNTER, cellId)
+            ));
+        }
 
         // Query the device.
         Collection<PiCounterCell> counterEntryResponse = client.read(
@@ -668,25 +720,8 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                 .handles(counterCellHandles).submitSync()
                 .all(PiCounterCell.class);
 
-        // Process response.
-        counterEntryResponse.forEach(counterCell -> {
-            if (counterCell.cellId().counterType() != INDIRECT) {
-                log.warn("Invalid counter data type {}, skipping", counterCell.cellId().counterType());
-                return;
-            }
-            if (cellId != counterCell.cellId().index()) {
-                log.warn("Unrecognized counter index {}, skipping", counterCell);
-                return;
-            }
-            if (counterCell.cellId().counterId().equals(FABRIC_INGRESS_UPF_TERMINATIONS_COUNTER)) {
-                stats.setIngress(counterCell.data().packets(), counterCell.data().bytes());
-            } else if (counterCell.cellId().counterId().equals(FABRIC_EGRESS_UPF_TERMINATIONS_COUNTER)) {
-                stats.setEgress(counterCell.data().packets(), counterCell.data().bytes());
-            } else {
-                log.warn("Unrecognized counter ID {}, skipping", counterCell);
-            }
-        });
-        return stats.build();
+        return processCounterEntryResponse(counterEntryResponse, Lists.newArrayList((long) cellId), type)
+                .get(0);
     }
 
     @Override
@@ -723,6 +758,8 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                 applyUpfMeter((UpfMeter) entity);
                 break;
             case COUNTER:
+            case INGRESS_COUNTER:
+            case EGRESS_COUNTER:
             default:
                 throw new UpfProgrammableException(format("Adding entity type %s not supported.",
                                                           entity.type().humanReadableName()));
@@ -854,8 +891,8 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
             case SESSION_METER:
             case APPLICATION_METER:
             case SLICE_METER:
-            // Meter cannot be deleted, only modified.
             case COUNTER:
+            // Entities cannot be deleted, only modified.
             default:
                 throw new UpfProgrammableException(format("Deleting entity type %s not supported.",
                                                           entity.type().humanReadableName()));
@@ -866,6 +903,7 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
             throws UpfProgrammableException {
         return removeEntry(match, tableId, failSilent, DEFAULT_PRIORITY);
     }
+
     private boolean removeEntry(PiCriterion match, PiTableId tableId, boolean failSilent, int priority)
             throws UpfProgrammableException {
         return removeEntries(Lists.newArrayList(Pair.of(tableId, match)), failSilent, priority);
@@ -1033,5 +1071,26 @@ public class FabricUpfProgrammable extends AbstractP4RuntimeHandlerBehaviour
                     trafficClass, sliceId
             ));
         }
+    }
+
+    private void assertCounterType(UpfEntityType type) throws UpfProgrammableException {
+        if (!COUNTER_TYPES.contains(type)) {
+            throw new UpfProgrammableException(
+                    String.format("Unsupported counter type (%s)!", type.toString()),
+                    UNSUPPORTED_OPERATION
+            );
+        }
+    }
+
+    private boolean isIngressCounter(UpfEntityType type) {
+        return type.equals(UpfEntityType.INGRESS_COUNTER);
+    }
+
+    private boolean isBiCounter(UpfEntityType type) {
+        return type.equals(UpfEntityType.COUNTER);
+    }
+
+    private boolean isEgressCounter(UpfEntityType type) {
+        return type.equals(UpfEntityType.EGRESS_COUNTER);
     }
 }

@@ -3,8 +3,8 @@
 package org.stratumproject.fabric.tna.behaviour.upf;
 
 import org.onosproject.net.pi.runtime.PiCounterCell;
-import org.onosproject.net.pi.runtime.PiCounterCellData;
 import org.onosproject.net.pi.runtime.PiCounterCellHandle;
+import org.onosproject.net.pi.runtime.PiCounterCellId;
 import org.onosproject.net.pi.runtime.PiEntity;
 import org.onosproject.net.pi.runtime.PiEntityType;
 import org.onosproject.net.pi.runtime.PiHandle;
@@ -13,8 +13,11 @@ import org.onosproject.p4runtime.api.P4RuntimeReadClient;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_UPF_TERMINATIONS_COUNTER;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_TERMINATIONS_COUNTER;
 
 /**
  * For faking reads to a p4runtime client. Currently only used for testing
@@ -23,13 +26,15 @@ import static com.google.common.base.Preconditions.checkNotNull;
  */
 public class MockReadResponse implements P4RuntimeReadClient.ReadResponse {
     List<PiEntity> entities;
-    long packets;
-    long bytes;
+    Map<Long, PiCounterCell> igCounters;
+    Map<Long, PiCounterCell> egCounters;
 
-    public MockReadResponse(Iterable<? extends PiHandle> handles, long packets, long bytes) {
+    public MockReadResponse(Iterable<? extends PiHandle> handles,
+                            Map<Long, PiCounterCell> igCounters,
+                            Map<Long, PiCounterCell> egCounters) {
         this.entities = new ArrayList<>();
-        this.packets = packets;
-        this.bytes = bytes;
+        this.igCounters = igCounters;
+        this.egCounters = egCounters;
         checkNotNull(handles);
         handles.forEach(this::handle);
     }
@@ -42,13 +47,20 @@ public class MockReadResponse implements P4RuntimeReadClient.ReadResponse {
     public MockReadResponse handle(PiHandle handle) {
         if (handle.entityType().equals(PiEntityType.COUNTER_CELL)) {
             PiCounterCellHandle counterHandle = (PiCounterCellHandle) handle;
-            PiCounterCellData data =
-                    new PiCounterCellData(this.packets, this.bytes);
-            PiEntity entity = new PiCounterCell(counterHandle.cellId(), data);
-            this.entities.add(entity);
+            PiCounterCellId cellId = counterHandle.cellId();
+            if (cellId.counterId().equals(FABRIC_INGRESS_UPF_TERMINATIONS_COUNTER)) {
+                PiEntity entity = new PiCounterCell(
+                        counterHandle.cellId(),
+                        igCounters.get(cellId.index()).data());
+                this.entities.add(entity);
+            } else if (cellId.counterId().equals(FABRIC_EGRESS_UPF_TERMINATIONS_COUNTER)) {
+                PiEntity entity = new PiCounterCell(
+                        counterHandle.cellId(),
+                        egCounters.get(cellId.index()).data());
+                this.entities.add(entity);
+            }
         }
         // Only handles counter cell so far
-
         return this;
     }
 

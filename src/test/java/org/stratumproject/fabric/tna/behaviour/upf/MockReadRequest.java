@@ -7,47 +7,49 @@ import org.onosproject.net.pi.model.PiActionProfileId;
 import org.onosproject.net.pi.model.PiCounterId;
 import org.onosproject.net.pi.model.PiMeterId;
 import org.onosproject.net.pi.model.PiTableId;
+import org.onosproject.net.pi.runtime.PiCounterCell;
 import org.onosproject.net.pi.runtime.PiCounterCellHandle;
-import org.onosproject.net.pi.runtime.PiCounterCellId;
 import org.onosproject.net.pi.runtime.PiHandle;
 import org.onosproject.p4runtime.api.P4RuntimeReadClient;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.LongStream;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_EGRESS_UPF_TERMINATIONS_COUNTER;
+import static org.stratumproject.fabric.tna.behaviour.P4InfoConstants.FABRIC_INGRESS_UPF_TERMINATIONS_COUNTER;
 
 /**
- * For faking reads to a p4runtime client. Currently only used for testing
+ * For faking reads to a p4runtime client. Currently, only used for testing
  * UP4-specific counter reads, because all other P4 entities that UP4 reads can
  * be read via other ONOS services.
  */
 public class MockReadRequest implements P4RuntimeReadClient.ReadRequest {
     List<PiHandle> handles;
     DeviceId deviceId;
-    long packets;
-    long bytes;
-    int counterSize;
+    Map<Long, PiCounterCell> igCounters;
+    Map<Long, PiCounterCell> egCounters;
 
-    public MockReadRequest(DeviceId deviceId, long packets, long bytes, int counterSize) {
+    public MockReadRequest(DeviceId deviceId,
+                           Map<Long, PiCounterCell> igCounters,
+                           Map<Long, PiCounterCell> egCounters) {
         this.handles = new ArrayList<>();
         this.deviceId = deviceId;
-        this.packets = packets;
-        this.bytes = bytes;
-        this.counterSize = counterSize;
+        this.igCounters = igCounters;
+        this.egCounters = egCounters;
     }
 
     @Override
     public CompletableFuture<P4RuntimeReadClient.ReadResponse> submit() {
         return CompletableFuture.completedFuture(
-                new MockReadResponse(this.handles, this.packets, this.bytes));
+                new MockReadResponse(this.handles, this.igCounters, this.egCounters));
     }
 
     @Override
     public P4RuntimeReadClient.ReadResponse submitSync() {
-        return new MockReadResponse(this.handles, this.packets, this.bytes);
+        return new MockReadResponse(this.handles, this.igCounters, this.egCounters);
     }
 
 
@@ -106,21 +108,21 @@ public class MockReadRequest implements P4RuntimeReadClient.ReadRequest {
 
     @Override
     public P4RuntimeReadClient.ReadRequest counterCells(PiCounterId counterId) {
+        if (counterId.equals(FABRIC_INGRESS_UPF_TERMINATIONS_COUNTER)) {
+            igCounters.values().forEach(counterCell -> {
+                this.handles.add(PiCounterCellHandle.of(this.deviceId, counterCell.cellId()));
+            });
+        } else if (counterId.equals(FABRIC_EGRESS_UPF_TERMINATIONS_COUNTER)) {
+            egCounters.values().forEach(counterCell -> {
+                this.handles.add(PiCounterCellHandle.of(this.deviceId, counterCell.cellId()));
+            });
+        }
         return this;
     }
 
     @Override
     public P4RuntimeReadClient.ReadRequest counterCells(Iterable<PiCounterId> counterIds) {
-        counterIds.forEach(counterId -> {
-            LongStream.range(0, this.counterSize)
-                    .forEach(index -> {
-                        PiCounterCellId cellId =
-                                PiCounterCellId.ofIndirect(counterId, index);
-                        PiCounterCellHandle handle =
-                                PiCounterCellHandle.of(this.deviceId, cellId);
-                        this.handle(handle);
-                    });
-        });
+        counterIds.forEach(this::counterCells);
         return this;
     }
 
