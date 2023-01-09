@@ -104,6 +104,8 @@ The available profiles are:
 | `fabric-upf`     | With 4G/5G mobile user plane support |
 | `fabric-int`     | With INT support                     |
 | `fabric-upf-int` | WITH UPF and INT support             |
+| `fabric-upf-tna` | UPF optimized for tofino architecture|
+| `fabric-init-tna`| INT support optimized for tofino
 
 To run PTF tests on Stratum using Tofino Model:
 
@@ -196,7 +198,6 @@ Stratum:
 
 ```text
 -experimental_enable_p4runtime_translation
--incompatible_enable_bfrt_legacy_bytestring_responses
 ```
 
 ### 3 - Install pipeconf app in ONOS
